@@ -349,7 +349,7 @@ export default function Home() {
     recogRef.current = recog
 
     recog.onstart = () => setVoiceState("listening")
-    recog.onresult = (e) => {
+    recog.onresult = (e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       const text = e.results[0][0].transcript
       setVoiceTranscript(text)
       const category = guessCategory(text)
