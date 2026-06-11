@@ -333,11 +333,13 @@ export default function Home() {
   // ── Voice state ────────────────────────────────────────────────────────────
   const [voiceState, setVoiceState] = useState<VoiceState>("idle")
   const [voiceTranscript, setVoiceTranscript] = useState("")
-  const recogRef = useRef<SpeechRecognition | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recogRef = useRef<any>(null)
 
   const startListening = () => {
-    const SR = (window as Window & { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).SpeechRecognition
-      ?? (window as Window & { webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any
+    const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition
     if (!SR) { setVoiceState("error"); setToast("Spraak niet ondersteund in deze browser"); return }
 
     const recog = new SR()
