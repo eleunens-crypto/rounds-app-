@@ -53,6 +53,29 @@ type DrinkForm = {
 
 type VoiceState = "idle" | "listening" | "done" | "error"
 
+type SavedGroup = {
+  id: string
+  name: string
+  invite_code: string
+  savedAt: number
+}
+
+function getSavedGroups(): SavedGroup[] {
+  if (typeof window === "undefined") return []
+  try { return JSON.parse(localStorage.getItem("rondje_saved_groups") || "[]") } catch { return [] }
+}
+
+function saveGroupToStorage(group: Group) {
+  const groups = getSavedGroups().filter((g) => g.id !== group.id)
+  groups.unshift({ id: group.id, name: group.name, invite_code: group.invite_code, savedAt: Date.now() })
+  localStorage.setItem("rondje_saved_groups", JSON.stringify(groups.slice(0, 20)))
+}
+
+function removeGroupFromStorage(id: string) {
+  const groups = getSavedGroups().filter((g) => g.id !== id)
+  localStorage.setItem("rondje_saved_groups", JSON.stringify(groups))
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -303,6 +326,9 @@ export default function Home() {
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
 
+  const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
+  const [savedSearch, setSavedSearch] = useState("")
+  const [isSaved, setIsSaved] = useState(false)
   const [group, setGroup] = useState<Group | null>(null)
   const [groupName, setGroupName] = useState("")
   const [joinCode, setJoinCode] = useState("")
@@ -396,6 +422,8 @@ export default function Home() {
 
   useEffect(() => { loadDrinks(); loadLibrary() }, [loadDrinks, loadLibrary])
 
+  useEffect(() => { setSavedGroups(getSavedGroups()) }, [])
+
   // ── Realtime ───────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -429,19 +457,25 @@ export default function Home() {
       setStarted(true)
       setShowInviteCode(true)
       await loadAll(data.id)
+      saveGroupToStorage(data)
+      setSavedGroups(getSavedGroups())
+      setIsSaved(true)
     } finally { setIsStarting(false) }
   }
 
-  const joinGroup = async () => {
-    if (!joinCode.trim() || isStarting) return
+  const joinGroup = async (codeOverride?: string) => {
+    const code = codeOverride ?? joinCode
+    if (!code.trim() || isStarting) return
     setIsStarting(true)
     try {
       const { data, error } = await supabase
-        .from("groups").select("*").eq("invite_code", joinCode.trim().toUpperCase()).single()
+        .from("groups").select("*").eq("invite_code", code.trim().toUpperCase()).single()
       if (error || !data) { setError("Groep niet gevonden. Controleer de code."); return }
       setGroup(data)
       setStarted(true)
       await loadAll(data.id)
+      setSavedGroups(getSavedGroups())
+      setIsSaved(getSavedGroups().some((g) => g.id === data.id))
     } finally { setIsStarting(false) }
   }
 
@@ -609,63 +643,113 @@ export default function Home() {
   // ─── Start screen ──────────────────────────────────────────────────────────
 
   if (!started) {
+    const filteredSaved = savedGroups.filter((g) =>
+      g.name.toLowerCase().includes(savedSearch.toLowerCase())
+    )
     return (
       <div style={styles.container}>
-        <div style={{ ...styles.card, maxWidth: 420, margin: "80px auto", textAlign: "center", padding: 40 }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>🍺</div>
-          <h2 style={{ ...styles.title, marginBottom: 8 }}>Rondje Bijhouden</h2>
-          <p style={{ color: "#888", marginBottom: 24, fontSize: 14 }}>Maak een groep aan of sluit je aan met een code</p>
-
-          <div style={{ display: "flex", background: "#f0f2f5", borderRadius: 12, padding: 4, marginBottom: 24 }}>
-            {(["create", "join"] as const).map((m) => (
-              <button key={m} onClick={() => setMode(m)} style={{
-                flex: 1, border: "none", borderRadius: 10, padding: "9px 0", fontSize: 14, cursor: "pointer",
-                fontWeight: mode === m ? 700 : 400,
-                background: mode === m ? "#fff" : "transparent",
-                color: mode === m ? "#333" : "#888",
-                boxShadow: mode === m ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
-                transition: "all 0.15s",
-              }}>
-                {m === "create" ? "✨ Nieuwe groep" : "🔗 Deelnemen"}
-              </button>
-            ))}
+        <div style={{ maxWidth: 420, margin: "40px auto" }}>
+          {/* Header */}
+          <div style={{ textAlign: "center", marginBottom: 28 }}>
+            <div style={{ fontSize: 56, marginBottom: 12 }}>🍺</div>
+            <h2 style={{ ...styles.title, marginBottom: 6 }}>Rondje Bijhouden</h2>
+            <p style={{ color: "#888", fontSize: 14 }}>Maak een groep aan of sluit je aan met een code</p>
           </div>
 
-          {mode === "create" ? (
-            <>
+          {/* Saved groups */}
+          {savedGroups.length > 0 && (
+            <div style={{ ...styles.card, marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <b style={{ fontSize: 14, color: "#555" }}>📌 Opgeslagen groepen</b>
+                <span style={{ fontSize: 11, color: "#aaa" }}>{savedGroups.length} groep{savedGroups.length !== 1 ? "en" : ""}</span>
+              </div>
               <input
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && startGroup()}
-                placeholder="Groepsnaam (bv. Vrijdagavond)"
-                style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginBottom: 12 }}
+                value={savedSearch}
+                onChange={(e) => setSavedSearch(e.target.value)}
+                placeholder="🔍 Zoek groep..."
+                style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginBottom: 10, fontSize: 13 }}
               />
-              <button style={{ ...styles.button, ...styles.primary, width: "100%", padding: "12px 0", fontSize: 16 }} onClick={startGroup} disabled={isStarting}>
-                {isStarting ? "Laden..." : "Start groep"}
-              </button>
-            </>
-          ) : (
-            <>
-              <input
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                onKeyDown={(e) => e.key === "Enter" && joinGroup()}
-                placeholder="Uitnodigingscode (bv. AB12CD)"
-                maxLength={6}
-                style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginBottom: 12, letterSpacing: 3, textAlign: "center", fontSize: 18, fontWeight: 700 }}
-              />
-              <button style={{ ...styles.button, ...styles.primary, width: "100%", padding: "12px 0", fontSize: 16 }} onClick={joinGroup} disabled={isStarting}>
-                {isStarting ? "Zoeken..." : "Deelnemen"}
-              </button>
-            </>
-          )}
-
-          {error && (
-            <div style={{ marginTop: 16, color: "#c0392b", fontSize: 13, background: "#fff0f0", borderRadius: 10, padding: "8px 12px" }}>
-              ⚠️ {error}
-              <button onClick={() => setError(null)} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", color: "#c0392b" }}>✕</button>
+              {filteredSaved.length === 0 && (
+                <div style={{ color: "#aaa", fontSize: 13, textAlign: "center", padding: 8 }}>Geen resultaten</div>
+              )}
+              {filteredSaved.map((g) => (
+                <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 6px", borderRadius: 10, borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{g.name}</div>
+                    <div style={{ fontSize: 11, color: "#aaa", letterSpacing: 1 }}>{g.invite_code}</div>
+                  </div>
+                  <button
+                    style={{ ...styles.button, ...styles.primary, fontSize: 12, padding: "5px 12px" }}
+                    onClick={() => joinGroup(g.invite_code)}
+                    disabled={isStarting}
+                  >
+                    Openen
+                  </button>
+                  <button
+                    style={{ ...styles.iconButton }}
+                    title="Verwijderen uit lijst"
+                    onClick={() => { removeGroupFromStorage(g.id); setSavedGroups(getSavedGroups()) }}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
             </div>
           )}
+
+          {/* Create / Join tabs */}
+          <div style={styles.card}>
+            <div style={{ display: "flex", background: "#f0f2f5", borderRadius: 12, padding: 4, marginBottom: 20 }}>
+              {(["create", "join"] as const).map((m) => (
+                <button key={m} onClick={() => setMode(m)} style={{
+                  flex: 1, border: "none", borderRadius: 10, padding: "9px 0", fontSize: 14, cursor: "pointer",
+                  fontWeight: mode === m ? 700 : 400,
+                  background: mode === m ? "#fff" : "transparent",
+                  color: mode === m ? "#333" : "#888",
+                  boxShadow: mode === m ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
+                  transition: "all 0.15s",
+                }}>
+                  {m === "create" ? "✨ Nieuwe groep" : "🔗 Deelnemen"}
+                </button>
+              ))}
+            </div>
+
+            {mode === "create" ? (
+              <>
+                <input
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && startGroup()}
+                  placeholder="Groepsnaam (bv. Vrijdagavond)"
+                  style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginBottom: 12 }}
+                />
+                <button style={{ ...styles.button, ...styles.primary, width: "100%", padding: "12px 0", fontSize: 16 }} onClick={startGroup} disabled={isStarting}>
+                  {isStarting ? "Laden..." : "Start groep"}
+                </button>
+              </>
+            ) : (
+              <>
+                <input
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === "Enter" && joinGroup()}
+                  placeholder="Uitnodigingscode (bv. AB12CD)"
+                  maxLength={6}
+                  style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginBottom: 12, letterSpacing: 3, textAlign: "center", fontSize: 18, fontWeight: 700 }}
+                />
+                <button style={{ ...styles.button, ...styles.primary, width: "100%", padding: "12px 0", fontSize: 16 }} onClick={joinGroup} disabled={isStarting}>
+                  {isStarting ? "Zoeken..." : "Deelnemen"}
+                </button>
+              </>
+            )}
+
+            {error && (
+              <div style={{ marginTop: 12, color: "#c0392b", fontSize: 13, background: "#fff0f0", borderRadius: 10, padding: "8px 12px" }}>
+                ⚠️ {error}
+                <button onClick={() => setError(null)} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", color: "#c0392b" }}>✕</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -735,6 +819,16 @@ export default function Home() {
       <div style={{ display: "flex", gap: 10, margin: "16px 0", flexWrap: "wrap" }}>
         <button style={{ ...styles.button, ...styles.primary }} onClick={() => setShowAddPerson(true)}>+ Persoon</button>
         <button style={styles.button} onClick={newRound}>🔄 Nieuwe ronde ({session} → {nextSession})</button>
+        <button
+          style={{ ...styles.button, marginLeft: "auto", fontSize: 13, background: isSaved ? "#f0fff4" : "#fff", color: isSaved ? "#27ae60" : "#555", border: isSaved ? "1px solid #a8e6c0" : "1px solid rgba(0,0,0,0.09)" }}
+          onClick={() => {
+            if (!group) return
+            if (isSaved) { removeGroupFromStorage(group.id); setSavedGroups(getSavedGroups()); setIsSaved(false); setToast("Groep verwijderd uit opgeslagen") }
+            else { saveGroupToStorage(group); setSavedGroups(getSavedGroups()); setIsSaved(true); setToast("Groep opgeslagen!") }
+          }}
+        >
+          {isSaved ? "✅ Opgeslagen" : "📌 Sla groep op"}
+        </button>
       </div>
 
       {/* Persons */}
