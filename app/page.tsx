@@ -698,7 +698,7 @@ export default function Home() {
         spokenDrink.name.toLowerCase().includes(d.name.toLowerCase())
       )
       if (!matchedDrink) continue
-      for (const assignment of spokenDrink.assignments) {
+      for (const assignment of (spokenDrink.assignments ?? [])) {
         if (assignment.qty <= 0) continue
         for (let i = 0; i < assignment.qty; i++) {
           await syncDrinkChange(matchedDrink, 1, assignment.participantId, newRoundSession, group.id)
@@ -715,14 +715,14 @@ export default function Home() {
       if (qi.id !== itemId) return qi
       const newDrinks = qi.drinks.map((d, i) => {
         if (i !== drinkIdx) return d
-        const existing = d.assignments.find((a) => a.participantId === participantId)
+        const existing = (d.assignments ?? []).find((a) => a.participantId === participantId)
         let newAssignments
         if (qty <= 0) {
-          newAssignments = d.assignments.filter((a) => a.participantId !== participantId)
+          newAssignments = (d.assignments ?? []).filter((a) => a.participantId !== participantId)
         } else if (existing) {
-          newAssignments = d.assignments.map((a) => a.participantId === participantId ? { ...a, qty } : a)
+          newAssignments = (d.assignments ?? []).map((a) => a.participantId === participantId ? { ...a, qty } : a)
         } else {
-          newAssignments = [...d.assignments, { participantId, qty }]
+          newAssignments = [...(d.assignments ?? []), { participantId, qty }]
         }
         return { ...d, assignments: newAssignments }
       })
@@ -731,7 +731,7 @@ export default function Home() {
   }
 
   const assignedQty = (item: QuickOrderItem, drinkIdx: number) =>
-    item.drinks[drinkIdx]?.assignments.reduce((s, a) => s + a.qty, 0) ?? 0
+    (item.drinks[drinkIdx]?.assignments ?? []).reduce((s, a) => s + a.qty, 0)
 
   const removeQuickItem = (id: string) => setQuickItems((prev) => prev.filter((i) => i.id !== id))
 
