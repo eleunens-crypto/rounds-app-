@@ -678,36 +678,36 @@ export default function Home() {
 
   const stopQuickVoice = () => { quickRecogRef.current?.stop(); setQuickVoiceActive(false) }
 
-  const processQuickItem = async (item: QuickOrderItem) => {
-    if (!group) return
+  const processAllQuickItems = async () => {
+    if (!group || quickItems.length === 0) return
     const newRoundSession = nextSession
     setSession(newRoundSession)
 
-    for (const spokenDrink of item.drinks) {
-      const matchedDrink = drinks.find((d) =>
-        d.name.toLowerCase() === spokenDrink.name.toLowerCase() ||
-        d.name.toLowerCase().includes(spokenDrink.name.toLowerCase()) ||
-        spokenDrink.name.toLowerCase().includes(d.name.toLowerCase())
-      )
-      if (!matchedDrink) continue
+    for (const item of quickItems) {
+      for (const spokenDrink of item.drinks) {
+        const matchedDrink = drinks.find((d) =>
+          d.name.toLowerCase() === spokenDrink.name.toLowerCase() ||
+          d.name.toLowerCase().includes(spokenDrink.name.toLowerCase()) ||
+          spokenDrink.name.toLowerCase().includes(d.name.toLowerCase())
+        )
+        if (!matchedDrink) continue
 
-      const assignments = spokenDrink.assignments ?? []
-      const totalAssigned = assignments.reduce((s, a) => s + a.qty, 0)
+        const assignments = spokenDrink.assignments ?? []
+        const totalAssigned = assignments.reduce((s, a) => s + a.qty, 0)
 
-      if (assignments.length > 0 && totalAssigned > 0) {
-        // Add per person what was assigned
-        for (const assignment of assignments) {
-          if (assignment.qty <= 0) continue
-          await syncDrinkChange(matchedDrink, assignment.qty, assignment.participantId, newRoundSession, group.id)
+        if (assignments.length > 0 && totalAssigned > 0) {
+          for (const assignment of assignments) {
+            if (assignment.qty <= 0) continue
+            await syncDrinkChange(matchedDrink, assignment.qty, assignment.participantId, newRoundSession, group.id)
+          }
+        } else if (participants.length > 0) {
+          await syncDrinkChange(matchedDrink, spokenDrink.qty, participants[0].id, newRoundSession, group.id)
         }
-      } else if (participants.length > 0) {
-        // No assignments — add full qty to first participant
-        await syncDrinkChange(matchedDrink, spokenDrink.qty, participants[0].id, newRoundSession, group.id)
       }
     }
     await loadAll(group.id)
-    removeQuickItem(item.id)
-    setToast(`Bestelling verwerkt in ronde ${newRoundSession}`)
+    clearQuickItems()
+    setToast(`Ronde ${newRoundSession} aangemaakt!`)
   }
 
   const updateDrinkAssignment = (itemId: string, drinkIdx: number, participantId: string, qty: number) => {
@@ -1247,12 +1247,11 @@ export default function Home() {
                     )
                   })}
 
-                  <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                     <button style={{ ...styles.button, fontSize: 12 }} onClick={() => {
                       const first = drinks[0]; if (!first) return
                       setQuickItems((prev) => prev.map((qi) => qi.id !== item.id ? qi : { ...qi, drinks: [...qi.drinks, { name: first.name, qty: 1, emoji: first.emoji, assignments: [] as { participantId: string; qty: number }[] }] }))
                     }}>+ Drank</button>
-                    <button style={{ ...styles.button, ...styles.primary, fontSize: 12 }} onClick={() => processQuickItem(item)}>✓ Voeg toe aan nieuwe ronde</button>
                   </div>
                 </div>
               ))}
@@ -1270,6 +1269,14 @@ export default function Home() {
                 </div>
                 <button style={{ ...styles.button, fontSize: 13, width: "100%" }} onClick={() => setQuickFullscreen(true)}>🔍 Volledig scherm voor barman</button>
               </div>
+
+              {/* COMPLEET knop */}
+              <button
+                onClick={processAllQuickItems}
+                style={{ ...styles.button, ...styles.primary, width: "100%", padding: "14px 0", fontSize: 17, fontWeight: 700, marginBottom: 10, boxShadow: "0 6px 20px rgba(79,126,247,0.35)" }}
+              >
+                ✅ Compleet — voeg alles toe aan nieuwe ronde
+              </button>
 
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <input placeholder="Naam om op te slaan..." value={saveOrderName} onChange={(e) => setSaveOrderName(e.target.value)} style={{ ...styles.input, flex: 1, minWidth: 160 }} />
