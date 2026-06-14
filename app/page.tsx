@@ -60,6 +60,22 @@ type SavedGroup = {
   savedAt: number
 }
 
+// ─── Quick Order Types ───────────────────────────────────────────────────────
+
+type QuickOrderItem = {
+  id: string
+  text: string       // raw transcript
+  drinks: { name: string; qty: number; emoji: string }[]
+  timestamp: number
+}
+
+type SavedOrder = {
+  id: string
+  name: string
+  items: QuickOrderItem[]
+  savedAt: number
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -157,6 +173,85 @@ function cleanDrinkName(text: string): string {
     .replace(/\b(voor|prijs|kost|aan|van|alsjeblieft|graag|please|met)\b/gi, "")
     .replace(/\s+/g, " ").trim()
     .replace(/^./, (c) => c.toUpperCase())
+}
+
+// Parse spoken text into drink items for quick order
+function parseSpokenDrinks(text: string): { name: string; qty: number; emoji: string }[] {
+  const lower = text.toLowerCase()
+  const results: { name: string; qty: number; emoji: string }[] = []
+
+  const numberWords: Record<string, number> = {
+    een: 1, twee: 2, drie: 3, vier: 4, vijf: 5, zes: 6, zeven: 7,
+    acht: 8, negen: 9, tien: 10, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5,
+  }
+
+  const drinkPatterns: { pattern: RegExp; name: string; emoji: string }[] = [
+    { pattern: /duvel/i, name: "Duvel", emoji: "🍺" },
+    { pattern: /stella|stella artois/i, name: "Stella Artois", emoji: "🍺" },
+    { pattern: /jupiler/i, name: "Jupiler", emoji: "🍺" },
+    { pattern: /leffe/i, name: "Leffe", emoji: "🍺" },
+    { pattern: /tripel/i, name: "Tripel", emoji: "🍺" },
+    { pattern: /pils|pintje/i, name: "Pils", emoji: "🍺" },
+    { pattern: /gin.?tonic/i, name: "Gin Tonic", emoji: "🍸" },
+    { pattern: /mojito/i, name: "Mojito", emoji: "🍸" },
+    { pattern: /hugo/i, name: "Hugo", emoji: "🍸" },
+    { pattern: /aperol/i, name: "Aperol Spritz", emoji: "🍸" },
+    { pattern: /rosé|rose wijn/i, name: "Rosé", emoji: "🍷" },
+    { pattern: /wijn|wijntje/i, name: "Wijn", emoji: "🍷" },
+    { pattern: /cava|prosecco|champagne/i, name: "Cava", emoji: "🥂" },
+    { pattern: /cola/i, name: "Cola", emoji: "🥤" },
+    { pattern: /fanta/i, name: "Fanta", emoji: "🥤" },
+    { pattern: /sprite/i, name: "Sprite", emoji: "🥤" },
+    { pattern: /water|spa/i, name: "Water", emoji: "💧" },
+    { pattern: /ice.?tea|ijsthee/i, name: "Ice Tea", emoji: "🥤" },
+    { pattern: /tonic/i, name: "Tonic", emoji: "🥤" },
+    { pattern: /limonade/i, name: "Limonade", emoji: "🥤" },
+    { pattern: /whisky|whiskey/i, name: "Whisky", emoji: "🥃" },
+    { pattern: /vodka/i, name: "Vodka", emoji: "🍸" },
+    { pattern: /rum/i, name: "Rum", emoji: "🍸" },
+  ]
+
+  // Try to find quantity + drink combinations like "twee pintjes", "een gin tonic"
+  const words = lower.split(/\s+/)
+  let i = 0
+  while (i < words.length) {
+    const qty = numberWords[words[i]] ?? 1
+    const hasQtyWord = numberWords[words[i]] !== undefined
+    const remaining = words.slice(hasQtyWord ? i + 1 : i).join(" ")
+
+    let matched = false
+    for (const { pattern, name, emoji } of drinkPatterns) {
+      if (pattern.test(remaining)) {
+        const existing = results.find((r) => r.name === name)
+        if (existing) existing.qty += qty
+        else results.push({ name, qty: hasQtyWord ? qty : 1, emoji })
+        matched = true
+        break
+      }
+    }
+
+    if (!matched && !hasQtyWord) {
+      // Try matching just this word + next as unknown drink
+      const twoWords = words.slice(i, i + 2).join(" ")
+      for (const { pattern, name, emoji } of drinkPatterns) {
+        if (pattern.test(twoWords)) {
+          results.push({ name, qty: 1, emoji })
+          i++
+          break
+        }
+      }
+    }
+
+    i++
+  }
+
+  // If nothing matched, just return the raw text as one item
+  if (results.length === 0 && text.trim()) {
+    const cat = guessCategory(text)
+    results.push({ name: cleanDrinkName(text) || text, qty: 1, emoji: EMOJI_MAP[cat] ?? "🍹" })
+  }
+
+  return results
 }
 
 function groupDrinksByCategory(drinks: Drink[]): [string, Drink[]][] {
@@ -304,6 +399,16 @@ export default function Home() {
 
   const [newDrink, setNewDrink] = useState<DrinkForm>({ name: "", price: "", emoji: "", category: "Bier" })
   const [editingDrink, setEditingDrink] = useState<Drink | null>(null)
+
+  // ── Quick Order state ─────────────────────────────────────────────────────
+  const [showQuickOrder, setShowQuickOrder] = useState(false)
+  const [quickItems, setQuickItems] = useState<QuickOrderItem[]>([])
+  const [quickVoiceActive, setQuickVoiceActive] = useState(false)
+  const [quickFullscreen, setQuickFullscreen] = useState(false)
+  const [savedOrders, setSavedOrders] = useState<SavedOrder[]>([])
+  const [showSavedOrders, setShowSavedOrders] = useState(false)
+  const [saveOrderName, setSaveOrderName] = useState("")
+  const quickRecogRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
 
   const [showAddPerson, setShowAddPerson] = useState(false)
   const [showLibraryPicker, setShowLibraryPicker] = useState(false)
@@ -511,6 +616,79 @@ export default function Home() {
     setOrders((prev) => applyDrinkChange(prev, pid, drink, delta, round, group.id))
     try { await syncDrinkChange(drink, delta, pid, round, group.id); await loadAll(group.id) }
     catch { setError("Historiek bijwerken mislukt"); await loadAll(group.id) }
+  }
+
+  // ── Quick Order ───────────────────────────────────────────────────────────────
+
+  const startQuickVoice = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any
+    const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition
+    if (!SR) { setToast("Spraak niet ondersteund in deze browser"); return }
+    const recog = new SR()
+    recog.lang = "nl-BE"
+    recog.interimResults = false
+    recog.maxAlternatives = 1
+    quickRecogRef.current = recog
+    recog.onstart = () => setQuickVoiceActive(true)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recog.onresult = (e: any) => {
+      const text = e.results[0][0].transcript
+      const drinks = parseSpokenDrinks(text)
+      const item: QuickOrderItem = { id: randomId(), text, drinks, timestamp: Date.now() }
+      setQuickItems((prev) => [...prev, item])
+      setQuickVoiceActive(false)
+    }
+    recog.onerror = () => setQuickVoiceActive(false)
+    recog.onend = () => setQuickVoiceActive(false)
+    recog.start()
+  }
+
+  const stopQuickVoice = () => { quickRecogRef.current?.stop(); setQuickVoiceActive(false) }
+
+  const removeQuickItem = (id: string) => setQuickItems((prev) => prev.filter((i) => i.id !== id))
+
+  const clearQuickItems = () => { setQuickItems([]); setSaveOrderName("") }
+
+  const saveQuickOrder = () => {
+    if (!saveOrderName.trim() || quickItems.length === 0) { setToast("Geef een naam en voeg items toe"); return }
+    const order: SavedOrder = { id: randomId(), name: saveOrderName.trim(), items: quickItems, savedAt: Date.now() }
+    const existing = JSON.parse(localStorage.getItem("rondje_saved_orders") || "[]")
+    existing.unshift(order)
+    localStorage.setItem("rondje_saved_orders", JSON.stringify(existing.slice(0, 10)))
+    setSavedOrders(existing.slice(0, 10))
+    setSaveOrderName("")
+    setToast("Bestelling opgeslagen!")
+  }
+
+  const loadSavedOrders = () => {
+    const existing = JSON.parse(localStorage.getItem("rondje_saved_orders") || "[]")
+    setSavedOrders(existing)
+    setShowSavedOrders(true)
+  }
+
+  const deleteSavedOrder = (id: string) => {
+    const updated = savedOrders.filter((o) => o.id !== id)
+    localStorage.setItem("rondje_saved_orders", JSON.stringify(updated))
+    setSavedOrders(updated)
+  }
+
+  const loadOrderIntoQuick = (order: SavedOrder) => {
+    setQuickItems(order.items)
+    setShowSavedOrders(false)
+    setToast(`"${order.name}" geladen`)
+  }
+
+  // Quick order totals
+  const quickDrinkSummary = () => {
+    const map: Record<string, { name: string; qty: number; emoji: string }> = {}
+    quickItems.forEach((item) => {
+      item.drinks.forEach((d) => {
+        if (!map[d.name]) map[d.name] = { name: d.name, qty: 0, emoji: d.emoji }
+        map[d.name].qty += d.qty
+      })
+    })
+    return Object.values(map)
   }
 
   // ── Drink CRUD ─────────────────────────────────────────────────────────────
@@ -893,6 +1071,166 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Quick Order */}
+      <div style={styles.section}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <h3 style={{ ...styles.h3, marginBottom: 0 }}>🎤 Snel bestellen</h3>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={{ ...styles.button, fontSize: 13 }} onClick={loadSavedOrders}>📋 Opgeslagen</button>
+            {quickItems.length > 0 && (
+              <button style={{ ...styles.button, fontSize: 13 }} onClick={() => setQuickFullscreen(true)}>🔍 Volledig scherm</button>
+            )}
+          </div>
+        </div>
+
+        <div style={styles.card}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: quickItems.length > 0 ? 16 : 0 }}>
+            <button
+              onClick={quickVoiceActive ? stopQuickVoice : startQuickVoice}
+              style={{
+                ...styles.button,
+                ...(quickVoiceActive ? {} : styles.primary),
+                fontSize: 15,
+                padding: "10px 20px",
+                background: quickVoiceActive ? "#e74c3c" : undefined,
+                color: quickVoiceActive ? "#fff" : undefined,
+                border: "none",
+                animation: quickVoiceActive ? "pulse 1.2s infinite" : "none",
+                boxShadow: quickVoiceActive ? "0 0 0 4px rgba(231,76,60,0.2)" : undefined,
+                flex: 1,
+              }}
+            >
+              {quickVoiceActive ? "🔴 Luistert... (tik om te stoppen)" : "🎤 Tik om bestellingen in te spreken"}
+            </button>
+          </div>
+
+          {quickItems.length > 0 && (
+            <>
+              {/* Per recording */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+                {quickItems.map((item, idx) => (
+                  <div key={item.id} style={{ background: "rgba(79,126,247,0.05)", borderRadius: 12, padding: "10px 12px", border: "1px solid rgba(79,126,247,0.1)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>Opname {idx + 1}</div>
+                        <div style={{ fontSize: 13, color: "#555", fontStyle: "italic", marginBottom: 6 }}>&ldquo;{item.text}&rdquo;</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {item.drinks.map((d, i) => (
+                            <span key={i} style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 20, padding: "2px 10px", fontSize: 13, fontWeight: 600 }}>
+                              {d.emoji} {d.qty > 1 ? `${d.qty}× ` : ""}{d.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <button style={styles.iconButton} onClick={() => removeQuickItem(item.id)}>🗑️</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Summary */}
+              <div style={{ background: "rgba(0,0,0,0.03)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Totaaloverzicht</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {quickDrinkSummary().map((d) => (
+                    <span key={d.name} style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 20, padding: "4px 12px", fontSize: 14, fontWeight: 700 }}>
+                      {d.emoji} {d.qty}× {d.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Save & clear */}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <input
+                  placeholder="Naam om op te slaan (bv. Ronde 1)..."
+                  value={saveOrderName}
+                  onChange={(e) => setSaveOrderName(e.target.value)}
+                  style={{ ...styles.input, flex: 1, minWidth: 160 }}
+                />
+                <button style={{ ...styles.button, ...styles.primary }} onClick={saveQuickOrder}>💾 Sla op</button>
+                <button style={{ ...styles.button, color: "#e74c3c" }} onClick={clearQuickItems}>🗑️ Wis alles</button>
+              </div>
+            </>
+          )}
+
+          {quickItems.length === 0 && (
+            <div style={{ color: "#bbb", fontSize: 13, textAlign: "center", marginTop: 8 }}>
+              Tik op de knop en spreek je bestelling in — bv. &ldquo;twee pintjes en een gin tonic&rdquo;
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Saved orders modal */}
+      {showSavedOrders && (
+        <div style={styles.overlay}>
+          <div style={{ ...styles.modal, width: 420, maxHeight: "80vh", display: "flex", flexDirection: "column" }}>
+            <h3 style={{ marginBottom: 12, fontSize: 18, fontWeight: 700 }}>📋 Opgeslagen bestellingen</h3>
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {savedOrders.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 24 }}>Geen opgeslagen bestellingen</div>}
+              {savedOrders.map((order) => (
+                <div key={order.id} style={{ ...styles.card, marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <b style={{ fontSize: 14 }}>{order.name}</b>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button style={{ ...styles.button, ...styles.primary, fontSize: 12, padding: "4px 10px" }} onClick={() => loadOrderIntoQuick(order)}>Laden</button>
+                      <button style={styles.iconButton} onClick={() => deleteSavedOrder(order.id)}>🗑️</button>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {order.items.flatMap((i) => i.drinks).reduce((acc: {name:string;qty:number;emoji:string}[], d) => {
+                      const ex = acc.find((x) => x.name === d.name)
+                      if (ex) { ex.qty += d.qty; return acc }
+                      return [...acc, { ...d }]
+                    }, []).map((d) => (
+                      <span key={d.name} style={{ background: "rgba(79,126,247,0.08)", borderRadius: 20, padding: "2px 10px", fontSize: 12 }}>
+                        {d.emoji} {d.qty}× {d.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button style={{ ...styles.button, marginTop: 12, width: "100%" }} onClick={() => setShowSavedOrders(false)}>Sluiten</button>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen quick order */}
+      {quickFullscreen && (
+        <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 2000, overflowY: "auto", padding: 24 }}>
+          <div style={{ maxWidth: 600, margin: "0 auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <h2 style={{ fontSize: 24, fontWeight: 800, margin: 0 }}>🧾 Bestellijst</h2>
+              <button style={styles.button} onClick={() => setQuickFullscreen(false)}>✕ Sluiten</button>
+            </div>
+            {quickItems.map((item, idx) => (
+              <div key={item.id} style={{ marginBottom: 16, padding: "14px 16px", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16 }}>
+                <div style={{ fontSize: 12, color: "#aaa", marginBottom: 6 }}>Persoon / tafel {idx + 1}</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {item.drinks.map((d, i) => (
+                    <span key={i} style={{ fontSize: 18, fontWeight: 700, background: "#f5f7ff", borderRadius: 12, padding: "6px 14px" }}>
+                      {d.emoji} {d.qty > 1 ? `${d.qty}× ` : ""}{d.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <div style={{ marginTop: 24, padding: "16px 20px", background: "linear-gradient(90deg,#4f7ef7,#6ba1ff)", borderRadius: 16, color: "#fff" }}>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>Totaal</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                {quickDrinkSummary().map((d) => (
+                  <span key={d.name} style={{ fontSize: 20, fontWeight: 800, background: "rgba(255,255,255,0.2)", borderRadius: 12, padding: "6px 16px" }}>
+                    {d.emoji} {d.qty}× {d.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Round history */}
       <div style={styles.section}>
