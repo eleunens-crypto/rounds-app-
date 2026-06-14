@@ -1243,7 +1243,7 @@ export default function Home() {
                           {participants.length > 0 && (
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                               {participants.map((p) => {
-                                const pAssignment = d.assignments.find((a) => a.participantId === p.id)
+                                const pAssignment = (d.assignments ?? []).find((a) => a.participantId === p.id)
                                 const pQty = pAssignment?.qty ?? 0
                                 return (
                                   <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 4, background: pQty > 0 ? "rgba(79,126,247,0.08)" : "rgba(0,0,0,0.03)", borderRadius: 20, padding: "3px 8px 3px 10px", border: pQty > 0 ? "1px solid rgba(79,126,247,0.3)" : "1px solid rgba(0,0,0,0.06)" }}>
