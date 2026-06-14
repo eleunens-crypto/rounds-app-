@@ -178,82 +178,101 @@ function cleanDrinkName(text: string): string {
 // Parse spoken text into drink items for quick order
 function parseSpokenDrinks(text: string): { name: string; qty: number; emoji: string }[] {
   const lower = text.toLowerCase()
-  const results: { name: string; qty: number; emoji: string }[] = []
+    .replace(/één/g, "een")
+    .replace(/twee/g, "twee")
+    .replace(/cola's|colas/g, "cola")
+    .replace(/pintjes|pintje/g, "pils")
+    .replace(/biertjes|biertje/g, "pils")
+    .replace(/wijntje/g, "wijn")
 
   const numberWords: Record<string, number> = {
-    een: 1, twee: 2, drie: 3, vier: 4, vijf: 5, zes: 6, zeven: 7,
-    acht: 8, negen: 9, tien: 10, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5,
+    een: 1, twee: 2, drie: 3, vier: 4, vijf: 5,
+    zes: 6, zeven: 7, acht: 8, negen: 9, tien: 10,
+    "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6,
   }
 
-  const drinkPatterns: { pattern: RegExp; name: string; emoji: string }[] = [
-    { pattern: /duvel/i, name: "Duvel", emoji: "🍺" },
-    { pattern: /stella|stella artois/i, name: "Stella Artois", emoji: "🍺" },
-    { pattern: /jupiler/i, name: "Jupiler", emoji: "🍺" },
-    { pattern: /leffe/i, name: "Leffe", emoji: "🍺" },
-    { pattern: /tripel/i, name: "Tripel", emoji: "🍺" },
-    { pattern: /pils|pintje/i, name: "Pils", emoji: "🍺" },
-    { pattern: /gin.?tonic/i, name: "Gin Tonic", emoji: "🍸" },
-    { pattern: /mojito/i, name: "Mojito", emoji: "🍸" },
-    { pattern: /hugo/i, name: "Hugo", emoji: "🍸" },
-    { pattern: /aperol/i, name: "Aperol Spritz", emoji: "🍸" },
-    { pattern: /rosé|rose wijn/i, name: "Rosé", emoji: "🍷" },
-    { pattern: /wijn|wijntje/i, name: "Wijn", emoji: "🍷" },
-    { pattern: /cava|prosecco|champagne/i, name: "Cava", emoji: "🥂" },
-    { pattern: /cola\s*zero/i, name: "Cola Zero", emoji: "🥤" },
-    { pattern: /cola\s*light/i, name: "Cola Light", emoji: "🥤" },
-    { pattern: /cola\s*cherry/i, name: "Cola Cherry", emoji: "🥤" },
-    { pattern: /pepsi/i, name: "Pepsi", emoji: "🥤" },
-    { pattern: /cola/i, name: "Cola", emoji: "🥤" },
-    { pattern: /fanta\s*zero/i, name: "Fanta Zero", emoji: "🥤" },
-    { pattern: /fanta\s*orange|fanta\s*oranje/i, name: "Fanta Orange", emoji: "🥤" },
-    { pattern: /fanta/i, name: "Fanta", emoji: "🥤" },
-    { pattern: /sprite/i, name: "Sprite", emoji: "🥤" },
-    { pattern: /spa\s*rood/i, name: "Spa Rood", emoji: "💧" },
-    { pattern: /spa\s*blauw|plat water/i, name: "Spa Blauw", emoji: "💧" },
-    { pattern: /water|spa/i, name: "Water", emoji: "💧" },
-    { pattern: /ice.?tea|ijsthee/i, name: "Ice Tea", emoji: "🥤" },
-    { pattern: /tonic/i, name: "Tonic", emoji: "🥤" },
-    { pattern: /limonade/i, name: "Limonade", emoji: "🥤" },
-    { pattern: /whisky|whiskey/i, name: "Whisky", emoji: "🥃" },
-    { pattern: /vodka/i, name: "Vodka", emoji: "🍸" },
-    { pattern: /rum/i, name: "Rum", emoji: "🍸" },
+  // Each pattern must be listed most-specific FIRST
+  const drinkPatterns: { words: string[]; name: string; emoji: string }[] = [
+    { words: ["cola zero"],    name: "Cola Zero",      emoji: "🥤" },
+    { words: ["cola light"],   name: "Cola Light",     emoji: "🥤" },
+    { words: ["cola cherry"],  name: "Cola Cherry",    emoji: "🥤" },
+    { words: ["cola"],         name: "Cola",           emoji: "🥤" },
+    { words: ["pepsi"],        name: "Pepsi",          emoji: "🥤" },
+    { words: ["fanta zero"],   name: "Fanta Zero",     emoji: "🥤" },
+    { words: ["fanta"],        name: "Fanta",          emoji: "🥤" },
+    { words: ["sprite"],       name: "Sprite",         emoji: "🥤" },
+    { words: ["spa rood"],     name: "Spa Rood",       emoji: "💧" },
+    { words: ["spa blauw", "plat water"], name: "Spa Blauw", emoji: "💧" },
+    { words: ["water", "spa"], name: "Water",          emoji: "💧" },
+    { words: ["ice tea", "ijsthee"], name: "Ice Tea",  emoji: "🥤" },
+    { words: ["tonic"],        name: "Tonic",          emoji: "🥤" },
+    { words: ["limonade"],     name: "Limonade",       emoji: "🥤" },
+    { words: ["gin tonic", "gin-tonic"], name: "Gin Tonic", emoji: "🍸" },
+    { words: ["mojito"],       name: "Mojito",         emoji: "🍸" },
+    { words: ["hugo"],         name: "Hugo",           emoji: "🍸" },
+    { words: ["aperol"],       name: "Aperol Spritz",  emoji: "🍸" },
+    { words: ["whisky", "whiskey"], name: "Whisky",    emoji: "🥃" },
+    { words: ["vodka"],        name: "Vodka",          emoji: "🍸" },
+    { words: ["rum"],          name: "Rum",            emoji: "🍸" },
+    { words: ["duvel"],        name: "Duvel",          emoji: "🍺" },
+    { words: ["stella artois", "stella"], name: "Stella Artois", emoji: "🍺" },
+    { words: ["jupiler"],      name: "Jupiler",        emoji: "🍺" },
+    { words: ["leffe"],        name: "Leffe",          emoji: "🍺" },
+    { words: ["tripel"],       name: "Tripel",         emoji: "🍺" },
+    { words: ["pils", "pintje", "pintjes", "bier", "biertje"], name: "Pils", emoji: "🍺" },
+    { words: ["rosé", "rose"], name: "Rosé",           emoji: "🍷" },
+    { words: ["wijn"],         name: "Wijn",           emoji: "🍷" },
+    { words: ["cava", "prosecco", "champagne"], name: "Cava", emoji: "🥂" },
   ]
 
-  // Try to find quantity + drink combinations like "twee pintjes", "een gin tonic"
-  const words = lower.split(/\s+/)
-  let i = 0
-  while (i < words.length) {
-    const qty = numberWords[words[i]] ?? 1
-    const hasQtyWord = numberWords[words[i]] !== undefined
-    const remaining = words.slice(hasQtyWord ? i + 1 : i).join(" ")
+  const results: { name: string; qty: number; emoji: string }[] = []
 
-    let matched = false
-    for (const { pattern, name, emoji } of drinkPatterns) {
-      if (pattern.test(remaining)) {
-        const existing = results.find((r) => r.name === name)
-        if (existing) existing.qty += qty
-        else results.push({ name, qty: hasQtyWord ? qty : 1, emoji })
-        matched = true
-        break
-      }
+  // Work through the string, consuming matched segments
+  let remaining = lower
+  let safetyCounter = 0
+
+  while (remaining.trim().length > 0 && safetyCounter < 20) {
+    safetyCounter++
+    remaining = remaining.trim()
+
+    // Try to read a quantity word at the start
+    let qty = 1
+    let consumed = ""
+
+    const qtyMatch = remaining.match(/^(\d+|een|twee|drie|vier|vijf|zes|zeven|acht|negen|tien)\s+/)
+    if (qtyMatch) {
+      qty = numberWords[qtyMatch[1]] ?? parseInt(qtyMatch[1]) ?? 1
+      consumed = qtyMatch[0]
+      remaining = remaining.slice(consumed.length)
     }
 
-    if (!matched && !hasQtyWord) {
-      // Try matching just this word + next as unknown drink
-      const twoWords = words.slice(i, i + 2).join(" ")
-      for (const { pattern, name, emoji } of drinkPatterns) {
-        if (pattern.test(twoWords)) {
-          results.push({ name, qty: 1, emoji })
-          i++
+    // Try to match a drink name
+    let matched = false
+    for (const pattern of drinkPatterns) {
+      for (const word of pattern.words) {
+        if (remaining.startsWith(word)) {
+          const existing = results.find((r) => r.name === pattern.name)
+          if (existing) existing.qty += qty
+          else results.push({ name: pattern.name, qty, emoji: pattern.emoji })
+          remaining = remaining.slice(word.length)
+          // skip connectors
+          remaining = remaining.replace(/^\s*(en|met|ook|plus|,|en een|en twee)\s*/, "")
+          matched = true
           break
         }
       }
+      if (matched) break
     }
 
-    i++
+    if (!matched) {
+      // Skip one word and try again
+      const skip = remaining.match(/^(\S+)\s*/)
+      if (skip) remaining = remaining.slice(skip[0].length)
+      else break
+    }
   }
 
-  // If nothing matched, just return the raw text as one item
+  // Fallback: nothing matched at all
   if (results.length === 0 && text.trim()) {
     const cat = guessCategory(text)
     results.push({ name: cleanDrinkName(text) || text, qty: 1, emoji: EMOJI_MAP[cat] ?? "🍹" })
