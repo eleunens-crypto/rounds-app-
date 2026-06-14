@@ -186,10 +186,7 @@ function cleanDrinkName(text: string): string {
 function parseSpokenDrinks(text: string): { name: string; qty: number; emoji: string }[] {
   const lower = text.toLowerCase()
     .replace(/één/g, "een")
-    .replace(/twee/g, "twee")
     .replace(/cola's|colas/g, "cola")
-    .replace(/pintjes|pintje/g, "pils")
-    .replace(/biertjes|biertje/g, "pils")
     .replace(/wijntje/g, "wijn")
 
   const numberWords: Record<string, number> = {
@@ -226,7 +223,7 @@ function parseSpokenDrinks(text: string): { name: string; qty: number; emoji: st
     { words: ["jupiler"],      name: "Jupiler",        emoji: "🍺" },
     { words: ["leffe"],        name: "Leffe",          emoji: "🍺" },
     { words: ["tripel"],       name: "Tripel",         emoji: "🍺" },
-    { words: ["pils", "pintje", "pintjes", "bier", "biertje"], name: "Pils", emoji: "🍺" },
+    { words: ["pils", "pintjes", "pintje", "biertjes", "biertje", "bier"], name: "Pils", emoji: "🍺" },
     { words: ["rosé", "rose"], name: "Rosé",           emoji: "🍷" },
     { words: ["wijn"],         name: "Wijn",           emoji: "🍷" },
     { words: ["cava", "prosecco", "champagne"], name: "Cava", emoji: "🥂" },
@@ -286,7 +283,7 @@ function parseSpokenDrinks(text: string): { name: string; qty: number; emoji: st
   }
 
   return results
-  return results.map((r) => ({ ...r, assignments: [] }))
+  return results.map((r) => ({ ...r, assignments: [] as { participantId: string; qty: number }[] }))
 }
 
 function groupDrinksByCategory(drinks: Drink[]): [string, Drink[]][] {
@@ -683,11 +680,6 @@ export default function Home() {
 
   const processQuickItem = async (item: QuickOrderItem) => {
     if (!group) return
-    // Check all drinks have at least one assignment
-    const allAssigned = item.drinks.every((d) => d.assignments.length > 0 && d.assignments.reduce((s, a) => s + a.qty, 0) > 0)
-    if (!allAssigned) { setToast("Wijs eerst alle drankjes toe aan een persoon"); return }
-
-    // Start a new round for this quick order
     const newRoundSession = nextSession
     setSession(newRoundSession)
 
@@ -698,10 +690,31 @@ export default function Home() {
         spokenDrink.name.toLowerCase().includes(d.name.toLowerCase())
       )
       if (!matchedDrink) continue
-      for (const assignment of (spokenDrink.assignments ?? [])) {
-        if (assignment.qty <= 0) continue
-        for (let i = 0; i < assignment.qty; i++) {
-          await syncDrinkChange(matchedDrink, 1, assignment.participantId, newRoundSession, group.id)
+
+      const assignments = spokenDrink.assignments ?? []
+      const totalAssigned = assignments.reduce((s, a) => s + a.qty, 0)
+
+      if (assignments.length > 0 && totalAssigned > 0) {
+        // Add per person what was assigned
+        for (const assignment of assignments) {
+          if (assignment.qty <= 0) continue
+          for (let i = 0; i < assignment.qty; i++) {
+            await syncDrinkChange(matchedDrink, 1, assignment.participantId, newRoundSession, group.id)
+          }
+        }
+        // Remaining unassigned qty — add to first participant as fallback or skip
+        const remaining = spokenDrink.qty - totalAssigned
+        if (remaining > 0 && participants.length > 0) {
+          for (let i = 0; i < remaining; i++) {
+            await syncDrinkChange(matchedDrink, 1, participants[0].id, newRoundSession, group.id)
+          }
+        }
+      } else {
+        // No assignments — add total qty to first participant so it shows in totals
+        if (participants.length > 0) {
+          for (let i = 0; i < spokenDrink.qty; i++) {
+            await syncDrinkChange(matchedDrink, 1, participants[0].id, newRoundSession, group.id)
+          }
         }
       }
     }
