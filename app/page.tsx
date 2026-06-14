@@ -62,12 +62,18 @@ type SavedGroup = {
 
 // ─── Quick Order Types ───────────────────────────────────────────────────────
 
+type QuickOrderDrink = {
+  name: string
+  qty: number
+  emoji: string
+  assignments: { participantId: string; qty: number }[]  // per-person assignment
+}
+
 type QuickOrderItem = {
   id: string
-  text: string       // raw transcript
-  drinks: { name: string; qty: number; emoji: string }[]
+  text: string
+  drinks: QuickOrderDrink[]
   timestamp: number
-  assignedTo?: string  // participant id
 }
 
 type SavedOrder = {
@@ -280,6 +286,7 @@ function parseSpokenDrinks(text: string): { name: string; qty: number; emoji: st
   }
 
   return results
+  return results.map((r) => ({ ...r, assignments: [] }))
 }
 
 function groupDrinksByCategory(drinks: Drink[]): [string, Drink[]][] {
@@ -430,7 +437,6 @@ export default function Home() {
 
   // ── Quick Order state ─────────────────────────────────────────────────────
   const [showQuickOrder, setShowQuickOrder] = useState(false)
-  const [editingQuickItem, setEditingQuickItem] = useState<string | null>(null)
   const [quickItems, setQuickItems] = useState<QuickOrderItem[]>([])
   const [quickVoiceActive, setQuickVoiceActive] = useState(false)
   const [quickFullscreen, setQuickFullscreen] = useState(false)
@@ -675,26 +681,57 @@ export default function Home() {
 
   const stopQuickVoice = () => { quickRecogRef.current?.stop(); setQuickVoiceActive(false) }
 
-  const assignQuickItemToPerson = async (item: QuickOrderItem) => {
-    if (!group || !item.assignedTo) return
-    // Find matching drinks from the drinks list
+  const processQuickItem = async (item: QuickOrderItem) => {
+    if (!group) return
+    // Check all drinks have at least one assignment
+    const allAssigned = item.drinks.every((d) => d.assignments.length > 0 && d.assignments.reduce((s, a) => s + a.qty, 0) > 0)
+    if (!allAssigned) { setToast("Wijs eerst alle drankjes toe aan een persoon"); return }
+
+    // Start a new round for this quick order
+    const newRoundSession = nextSession
+    setSession(newRoundSession)
+
     for (const spokenDrink of item.drinks) {
       const matchedDrink = drinks.find((d) =>
+        d.name.toLowerCase() === spokenDrink.name.toLowerCase() ||
         d.name.toLowerCase().includes(spokenDrink.name.toLowerCase()) ||
         spokenDrink.name.toLowerCase().includes(d.name.toLowerCase())
       )
-      if (matchedDrink) {
-        for (let i = 0; i < spokenDrink.qty; i++) {
-          await syncDrinkChange(matchedDrink, 1, item.assignedTo, session, group.id)
+      if (!matchedDrink) continue
+      for (const assignment of spokenDrink.assignments) {
+        if (assignment.qty <= 0) continue
+        for (let i = 0; i < assignment.qty; i++) {
+          await syncDrinkChange(matchedDrink, 1, assignment.participantId, newRoundSession, group.id)
         }
       }
     }
     await loadAll(group.id)
-    // Mark as processed
-    setQuickItems((prev) => prev.map((qi) => qi.id === item.id ? { ...qi, assignedTo: undefined } : qi))
-    const person = participants.find((p) => p.id === item.assignedTo)
-    setToast(`Bestelling verwerkt voor ${person?.name ?? "persoon"}`)
+    removeQuickItem(item.id)
+    setToast(`Bestelling verwerkt in ronde ${newRoundSession}`)
   }
+
+  const updateDrinkAssignment = (itemId: string, drinkIdx: number, participantId: string, qty: number) => {
+    setQuickItems((prev) => prev.map((qi) => {
+      if (qi.id !== itemId) return qi
+      const newDrinks = qi.drinks.map((d, i) => {
+        if (i !== drinkIdx) return d
+        const existing = d.assignments.find((a) => a.participantId === participantId)
+        let newAssignments
+        if (qty <= 0) {
+          newAssignments = d.assignments.filter((a) => a.participantId !== participantId)
+        } else if (existing) {
+          newAssignments = d.assignments.map((a) => a.participantId === participantId ? { ...a, qty } : a)
+        } else {
+          newAssignments = [...d.assignments, { participantId, qty }]
+        }
+        return { ...d, assignments: newAssignments }
+      })
+      return { ...qi, drinks: newDrinks }
+    }))
+  }
+
+  const assignedQty = (item: QuickOrderItem, drinkIdx: number) =>
+    item.drinks[drinkIdx]?.assignments.reduce((s, a) => s + a.qty, 0) ?? 0
 
   const removeQuickItem = (id: string) => setQuickItems((prev) => prev.filter((i) => i.id !== id))
 
@@ -1160,125 +1197,83 @@ export default function Home() {
               {/* Per recording */}
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
                 {quickItems.map((item, idx) => (
-                  <div key={item.id} style={{ background: "rgba(79,126,247,0.05)", borderRadius: 12, padding: "10px 12px", border: "1px solid rgba(79,126,247,0.1)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>Opname {idx + 1}</div>
-                        <div style={{ fontSize: 13, color: "#555", fontStyle: "italic", marginBottom: 6 }}>&ldquo;{item.text}&rdquo;</div>
-                        {editingQuickItem === item.id ? (
-                          /* Edit mode */
-                          <div style={{ marginBottom: 8 }}>
-                            {item.drinks.map((d, i) => (
-                              <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                                {/* Quantity */}
-                                <input
-                                  type="number"
-                                  min={1}
-                                  value={d.qty}
-                                  onChange={(e) => {
-                                    const qty = Math.max(1, parseInt(e.target.value) || 1)
-                                    setQuickItems((prev) => prev.map((qi) => qi.id === item.id
-                                      ? { ...qi, drinks: qi.drinks.map((dr, di) => di === i ? { ...dr, qty } : dr) }
-                                      : qi
-                                    ))
-                                  }}
-                                  style={{ ...styles.input, width: 52 }}
-                                />
-                                {/* Drink picker from existing drinks */}
-                                <select
-                                  value={d.name}
-                                  onChange={(e) => {
-                                    const picked = drinks.find((dr) => dr.name === e.target.value)
-                                    if (!picked) return
-                                    setQuickItems((prev) => prev.map((qi) => qi.id === item.id
-                                      ? { ...qi, drinks: qi.drinks.map((dr, di) => di === i ? { ...dr, name: picked.name, emoji: picked.emoji } : dr) }
-                                      : qi
-                                    ))
-                                  }}
-                                  style={{ ...styles.input, flex: 1 }}
-                                >
-                                  {drinks.map((dr) => <option key={dr.id} value={dr.name}>{dr.emoji} {dr.name}</option>)}
-                                  {!drinks.find((dr) => dr.name === d.name) && (
-                                    <option value={d.name}>{d.emoji} {d.name} (niet in lijst)</option>
-                                  )}
-                                </select>
-                                {/* Remove drink from item */}
-                                <button style={styles.iconButton} onClick={() => {
-                                  setQuickItems((prev) => prev.map((qi) => qi.id === item.id
-                                    ? { ...qi, drinks: qi.drinks.filter((_, di) => di !== i) }
-                                    : qi
-                                  ))
-                                }}>🗑️</button>
-                              </div>
-                            ))}
-                            {/* Add extra drink */}
-                            <button
-                              style={{ ...styles.button, fontSize: 12, marginTop: 4 }}
-                              onClick={() => {
-                                const first = drinks[0]
-                                if (!first) return
+                  <div key={item.id} style={{ background: "rgba(79,126,247,0.05)", borderRadius: 12, padding: "12px 14px", border: "1px solid rgba(79,126,247,0.1)", marginBottom: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <div style={{ fontSize: 11, color: "#aaa" }}>Opname {idx + 1}</div>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <button style={{ ...styles.button, ...styles.primary, fontSize: 11, padding: "3px 12px" }} onClick={() => processQuickItem(item)}>
+                          ✓ Verwerk in nieuwe ronde
+                        </button>
+                        <button style={styles.iconButton} onClick={() => removeQuickItem(item.id)}>🗑️</button>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#777", fontStyle: "italic", marginBottom: 10 }}>&ldquo;{item.text}&rdquo;</div>
+
+                    {/* Per-drink assignment */}
+                    {item.drinks.map((d, drinkIdx) => {
+                      const totalAssigned = assignedQty(item, drinkIdx)
+                      const remaining = d.qty - totalAssigned
+                      return (
+                        <div key={drinkIdx} style={{ background: "#fff", borderRadius: 10, padding: "10px 12px", marginBottom: 8, border: "1px solid rgba(0,0,0,0.06)" }}>
+                          {/* Drink header with edit */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                            <select
+                              value={d.name}
+                              onChange={(e) => {
+                                const picked = drinks.find((dr) => dr.name === e.target.value)
+                                if (!picked) return
                                 setQuickItems((prev) => prev.map((qi) => qi.id === item.id
-                                  ? { ...qi, drinks: [...qi.drinks, { name: first.name, qty: 1, emoji: first.emoji }] }
+                                  ? { ...qi, drinks: qi.drinks.map((dr, di) => di === drinkIdx ? { ...dr, name: picked.name, emoji: picked.emoji, assignments: [] } : dr) }
                                   : qi
                                 ))
                               }}
+                              style={{ ...styles.input, flex: 1, fontWeight: 600 }}
                             >
-                              + Drank toevoegen
-                            </button>
-                            <button
-                              style={{ ...styles.button, ...styles.primary, fontSize: 12, marginTop: 4, marginLeft: 8 }}
-                              onClick={() => setEditingQuickItem(null)}
-                            >
-                              ✓ Klaar
-                            </button>
+                              {drinks.map((dr) => <option key={dr.id} value={dr.name}>{dr.emoji} {dr.name}</option>)}
+                              {!drinks.find((dr) => dr.name === d.name) && (
+                                <option value={d.name}>{d.emoji} {d.name} (niet in lijst)</option>
+                              )}
+                            </select>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: remaining > 0 ? "#e74c3c" : "#27ae60", minWidth: 80, textAlign: "right" }}>
+                              {totalAssigned}/{d.qty} toegewezen
+                            </div>
                           </div>
-                        ) : (
-                          /* View mode */
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8, alignItems: "center" }}>
-                            {item.drinks.map((d, i) => (
-                              <span key={i} style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 20, padding: "2px 10px", fontSize: 13, fontWeight: 600 }}>
-                                {d.emoji} {d.qty > 1 ? `${d.qty}× ` : ""}{d.name}
-                              </span>
-                            ))}
-                            <button
-                              style={{ ...styles.iconButton, fontSize: 12, width: "auto", borderRadius: 20, padding: "2px 10px" }}
-                              onClick={() => setEditingQuickItem(item.id)}
-                              title="Aanpassen"
-                            >
-                              ✏️ Aanpassen
-                            </button>
-                          </div>
-                        )}
-                        {/* Assign to person */}
-                        {participants.length > 0 && (
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                            <span style={{ fontSize: 11, color: "#aaa" }}>👤 Toewijzen aan:</span>
-                            {participants.map((p) => (
-                              <button
-                                key={p.id}
-                                style={{ ...styles.button, fontSize: 11, padding: "3px 10px", background: item.assignedTo === p.id ? "linear-gradient(90deg,#4f7ef7,#6ba1ff)" : "#fff", color: item.assignedTo === p.id ? "#fff" : "#333", border: item.assignedTo === p.id ? "none" : "1px solid rgba(0,0,0,0.09)" }}
-                                onClick={() => {
-                                  setQuickItems((prev) => prev.map((qi) =>
-                                    qi.id === item.id ? { ...qi, assignedTo: qi.assignedTo === p.id ? undefined : p.id } : qi
-                                  ))
-                                }}
-                              >
-                                {p.name}
-                              </button>
-                            ))}
-                            {item.assignedTo && (
-                              <button
-                                style={{ ...styles.button, ...styles.primary, fontSize: 11, padding: "3px 10px" }}
-                                onClick={() => assignQuickItemToPerson(item)}
-                              >
-                                ✓ Verwerk in app
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <button style={styles.iconButton} onClick={() => removeQuickItem(item.id)}>🗑️</button>
-                    </div>
+
+                          {/* Person assignment buttons */}
+                          {participants.length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                              {participants.map((p) => {
+                                const pAssignment = d.assignments.find((a) => a.participantId === p.id)
+                                const pQty = pAssignment?.qty ?? 0
+                                return (
+                                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 4, background: pQty > 0 ? "rgba(79,126,247,0.08)" : "rgba(0,0,0,0.03)", borderRadius: 20, padding: "3px 8px 3px 10px", border: pQty > 0 ? "1px solid rgba(79,126,247,0.3)" : "1px solid rgba(0,0,0,0.06)" }}>
+                                    <span style={{ fontSize: 12, fontWeight: pQty > 0 ? 700 : 400, color: pQty > 0 ? "#4f7ef7" : "#666" }}>{p.name}</span>
+                                    <button style={{ ...styles.iconButton, width: 20, height: 20, fontSize: 11, marginLeft: 0 }} onClick={() => updateDrinkAssignment(item.id, drinkIdx, p.id, Math.max(0, pQty - 1))}>−</button>
+                                    <span style={{ fontSize: 12, fontWeight: 700, minWidth: 14, textAlign: "center", color: pQty > 0 ? "#4f7ef7" : "#aaa" }}>{pQty}</span>
+                                    <button style={{ ...styles.iconButton, width: 20, height: 20, fontSize: 11, marginLeft: 0 }} onClick={() => updateDrinkAssignment(item.id, drinkIdx, p.id, Math.min(d.qty, pQty + 1))}>+</button>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+
+                    {/* Add extra drink */}
+                    <button
+                      style={{ ...styles.button, fontSize: 12, marginTop: 4 }}
+                      onClick={() => {
+                        const first = drinks[0]
+                        if (!first) return
+                        setQuickItems((prev) => prev.map((qi) => qi.id === item.id
+                          ? { ...qi, drinks: [...qi.drinks, { name: first.name, qty: 1, emoji: first.emoji, assignments: [] }] }
+                          : qi
+                        ))
+                      }}
+                    >
+                      + Drank toevoegen
+                    </button>
                   </div>
                 ))}
               </div>
