@@ -297,6 +297,8 @@ export default function Home() {
   const [session, setSession] = useState(1)
   const [selected, setSelected] = useState<string[]>([])
   const [openPersonHistory, setOpenPersonHistory] = useState<string | null>(null)
+  const [multiSelectMode, setMultiSelectMode] = useState(false)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [editingPerson, setEditingPerson] = useState<string | null>(null)
   const [editingPersonName, setEditingPersonName] = useState("")
 
@@ -446,12 +448,25 @@ export default function Home() {
 
   // ── Person select ──────────────────────────────────────────────────────────
   const togglePerson = (id: string, e: React.MouseEvent<HTMLDivElement>) => {
-    const multi = e.shiftKey || e.ctrlKey || e.metaKey
+    const multi = e.shiftKey || e.ctrlKey || e.metaKey || multiSelectMode
     setSelected((prev) => {
       if (!multi) return prev.includes(id) && prev.length === 1 ? [] : [id]
       return prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     })
   }
+
+  const handlePersonTouchStart = (id: string) => {
+    longPressTimer.current = setTimeout(() => {
+      setMultiSelectMode(true)
+      setSelected((prev) => prev.includes(id) ? prev : [...prev, id])
+    }, 500)
+  }
+
+  const handlePersonTouchEnd = () => {
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null }
+  }
+
+  const exitMultiSelect = () => { setMultiSelectMode(false); setSelected([]) }
 
   // ── Order helpers ──────────────────────────────────────────────────────────
   const applyDrinkChange = (prev: Order[], pid: string, drink: Drink, delta: number, sess: number, groupId: string): Order[] => {
@@ -715,6 +730,29 @@ export default function Home() {
         </button>
       </div>
 
+      {/* Multi-select banner */}
+      {multiSelectMode && (
+        <div style={{ background: "linear-gradient(90deg,#4f7ef7,#6ba1ff)", borderRadius: 14, padding: "10px 16px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", color: "#fff" }}>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>
+            ✓ {selected.length} geselecteerd — tik een drank om te bestellen
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => setSelected(participants.map((p) => p.id))}
+              style={{ background: "rgba(255,255,255,0.25)", border: "none", borderRadius: 8, padding: "4px 10px", color: "#fff", fontSize: 12, cursor: "pointer" }}
+            >
+              Iedereen
+            </button>
+            <button
+              onClick={exitMultiSelect}
+              style={{ background: "rgba(255,255,255,0.25)", border: "none", borderRadius: 8, padding: "4px 10px", color: "#fff", fontSize: 12, cursor: "pointer" }}
+            >
+              ✕ Stop
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Persons */}
       <div style={styles.section}>
         <h3 style={styles.h3}>
@@ -742,7 +780,13 @@ export default function Home() {
                 </div>
               )}
 
-              <div onClick={(e) => togglePerson(p.id, e)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", background: isSelected ? "rgba(79,126,247,0.07)" : "transparent", borderRadius: 10, padding: "6px 8px", userSelect: "none" }}>
+              <div
+                onClick={(e) => togglePerson(p.id, e)}
+                onTouchStart={() => handlePersonTouchStart(p.id)}
+                onTouchEnd={handlePersonTouchEnd}
+                onTouchMove={handlePersonTouchEnd}
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", background: isSelected ? "rgba(79,126,247,0.07)" : "transparent", borderRadius: 10, padding: "6px 8px", userSelect: "none" }}
+              >
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   {isSelected && <span style={{ fontSize: 12, color: "#4f7ef7" }}>✓</span>}
                   <b style={{ fontSize: 15 }}>{p.name}</b>
