@@ -67,6 +67,7 @@ type QuickOrderItem = {
   text: string       // raw transcript
   drinks: { name: string; qty: number; emoji: string }[]
   timestamp: number
+  assignedTo?: string  // participant id
 }
 
 type SavedOrder = {
@@ -673,6 +674,27 @@ export default function Home() {
 
   const stopQuickVoice = () => { quickRecogRef.current?.stop(); setQuickVoiceActive(false) }
 
+  const assignQuickItemToPerson = async (item: QuickOrderItem) => {
+    if (!group || !item.assignedTo) return
+    // Find matching drinks from the drinks list
+    for (const spokenDrink of item.drinks) {
+      const matchedDrink = drinks.find((d) =>
+        d.name.toLowerCase().includes(spokenDrink.name.toLowerCase()) ||
+        spokenDrink.name.toLowerCase().includes(d.name.toLowerCase())
+      )
+      if (matchedDrink) {
+        for (let i = 0; i < spokenDrink.qty; i++) {
+          await syncDrinkChange(matchedDrink, 1, item.assignedTo, session, group.id)
+        }
+      }
+    }
+    await loadAll(group.id)
+    // Mark as processed
+    setQuickItems((prev) => prev.map((qi) => qi.id === item.id ? { ...qi, assignedTo: undefined } : qi))
+    const person = participants.find((p) => p.id === item.assignedTo)
+    setToast(`Bestelling verwerkt voor ${person?.name ?? "persoon"}`)
+  }
+
   const removeQuickItem = (id: string) => setQuickItems((prev) => prev.filter((i) => i.id !== id))
 
   const clearQuickItems = () => { setQuickItems([]); setSaveOrderName("") }
@@ -1142,13 +1164,40 @@ export default function Home() {
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>Opname {idx + 1}</div>
                         <div style={{ fontSize: 13, color: "#555", fontStyle: "italic", marginBottom: 6 }}>&ldquo;{item.text}&rdquo;</div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                           {item.drinks.map((d, i) => (
                             <span key={i} style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 20, padding: "2px 10px", fontSize: 13, fontWeight: 600 }}>
                               {d.emoji} {d.qty > 1 ? `${d.qty}× ` : ""}{d.name}
                             </span>
                           ))}
                         </div>
+                        {/* Assign to person */}
+                        {participants.length > 0 && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                            <span style={{ fontSize: 11, color: "#aaa" }}>👤 Toewijzen aan:</span>
+                            {participants.map((p) => (
+                              <button
+                                key={p.id}
+                                style={{ ...styles.button, fontSize: 11, padding: "3px 10px", background: item.assignedTo === p.id ? "linear-gradient(90deg,#4f7ef7,#6ba1ff)" : "#fff", color: item.assignedTo === p.id ? "#fff" : "#333", border: item.assignedTo === p.id ? "none" : "1px solid rgba(0,0,0,0.09)" }}
+                                onClick={() => {
+                                  setQuickItems((prev) => prev.map((qi) =>
+                                    qi.id === item.id ? { ...qi, assignedTo: qi.assignedTo === p.id ? undefined : p.id } : qi
+                                  ))
+                                }}
+                              >
+                                {p.name}
+                              </button>
+                            ))}
+                            {item.assignedTo && (
+                              <button
+                                style={{ ...styles.button, ...styles.primary, fontSize: 11, padding: "3px 10px" }}
+                                onClick={() => assignQuickItemToPerson(item)}
+                              >
+                                ✓ Verwerk in app
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <button style={styles.iconButton} onClick={() => removeQuickItem(item.id)}>🗑️</button>
                     </div>
