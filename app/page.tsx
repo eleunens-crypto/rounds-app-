@@ -1194,110 +1194,85 @@ export default function Home() {
 
           {quickItems.length > 0 && (
             <>
-              {/* Per recording */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-                {quickItems.map((item, idx) => (
-                  <div key={item.id} style={{ background: "rgba(79,126,247,0.05)", borderRadius: 12, padding: "12px 14px", border: "1px solid rgba(79,126,247,0.1)", marginBottom: 8 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <div style={{ fontSize: 11, color: "#aaa" }}>Opname {idx + 1}</div>
-                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <button style={{ ...styles.button, ...styles.primary, fontSize: 11, padding: "3px 12px" }} onClick={() => processQuickItem(item)}>
-                          ✓ Verwerk in nieuwe ronde
-                        </button>
-                        <button style={styles.iconButton} onClick={() => removeQuickItem(item.id)}>🗑️</button>
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 12, color: "#777", fontStyle: "italic", marginBottom: 10 }}>&ldquo;{item.text}&rdquo;</div>
-
-                    {/* Per-drink assignment */}
-                    {item.drinks.map((d, drinkIdx) => {
-                      const totalAssigned = assignedQty(item, drinkIdx)
-                      const remaining = d.qty - totalAssigned
-                      return (
-                        <div key={drinkIdx} style={{ background: "#fff", borderRadius: 10, padding: "10px 12px", marginBottom: 8, border: "1px solid rgba(0,0,0,0.06)" }}>
-                          {/* Drink header with edit */}
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                            <select
-                              value={d.name}
-                              onChange={(e) => {
-                                const picked = drinks.find((dr) => dr.name === e.target.value)
-                                if (!picked) return
-                                setQuickItems((prev) => prev.map((qi) => qi.id === item.id
-                                  ? { ...qi, drinks: qi.drinks.map((dr, di) => di === drinkIdx ? { ...dr, name: picked.name, emoji: picked.emoji, assignments: [] } : dr) }
-                                  : qi
-                                ))
-                              }}
-                              style={{ ...styles.input, flex: 1, fontWeight: 600 }}
-                            >
-                              {drinks.map((dr) => <option key={dr.id} value={dr.name}>{dr.emoji} {dr.name}</option>)}
-                              {!drinks.find((dr) => dr.name === d.name) && (
-                                <option value={d.name}>{d.emoji} {d.name} (niet in lijst)</option>
-                              )}
-                            </select>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: remaining > 0 ? "#e74c3c" : "#27ae60", minWidth: 80, textAlign: "right" }}>
-                              {totalAssigned}/{d.qty} toegewezen
-                            </div>
-                          </div>
-
-                          {/* Person assignment buttons */}
-                          {participants.length > 0 && (
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                              {participants.map((p) => {
-                                const pAssignment = (d.assignments ?? []).find((a) => a.participantId === p.id)
-                                const pQty = pAssignment?.qty ?? 0
-                                return (
-                                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 4, background: pQty > 0 ? "rgba(79,126,247,0.08)" : "rgba(0,0,0,0.03)", borderRadius: 20, padding: "3px 8px 3px 10px", border: pQty > 0 ? "1px solid rgba(79,126,247,0.3)" : "1px solid rgba(0,0,0,0.06)" }}>
-                                    <span style={{ fontSize: 12, fontWeight: pQty > 0 ? 700 : 400, color: pQty > 0 ? "#4f7ef7" : "#666" }}>{p.name}</span>
-                                    <button style={{ ...styles.iconButton, width: 20, height: 20, fontSize: 11, marginLeft: 0 }} onClick={() => updateDrinkAssignment(item.id, drinkIdx, p.id, Math.max(0, pQty - 1))}>−</button>
-                                    <span style={{ fontSize: 12, fontWeight: 700, minWidth: 14, textAlign: "center", color: pQty > 0 ? "#4f7ef7" : "#aaa" }}>{pQty}</span>
-                                    <button style={{ ...styles.iconButton, width: 20, height: 20, fontSize: 11, marginLeft: 0 }} onClick={() => updateDrinkAssignment(item.id, drinkIdx, p.id, Math.min(d.qty, pQty + 1))}>+</button>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-
-                    {/* Add extra drink */}
-                    <button
-                      style={{ ...styles.button, fontSize: 12, marginTop: 4 }}
-                      onClick={() => {
-                        const first = drinks[0]
-                        if (!first) return
-                        setQuickItems((prev) => prev.map((qi) => qi.id === item.id
-                          ? { ...qi, drinks: [...qi.drinks, { name: first.name, qty: 1, emoji: first.emoji, assignments: [] }] }
-                          : qi
-                        ))
-                      }}
-                    >
-                      + Drank toevoegen
-                    </button>
+              {/* Per opname */}
+              {quickItems.map((item, idx) => (
+                <div key={item.id} style={{ background: "rgba(79,126,247,0.04)", borderRadius: 12, padding: "12px 14px", border: "1px solid rgba(79,126,247,0.12)", marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, color: "#aaa" }}>Opname {idx + 1} — <i>&ldquo;{item.text}&rdquo;</i></span>
+                    <button style={styles.iconButton} onClick={() => removeQuickItem(item.id)}>🗑️</button>
                   </div>
-                ))}
-              </div>
 
-              {/* Summary */}
-              <div style={{ background: "rgba(0,0,0,0.03)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Totaaloverzicht</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {item.drinks.map((d, drinkIdx) => {
+                    const totalAssigned = assignedQty(item, drinkIdx)
+                    return (
+                      <div key={drinkIdx} style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", marginBottom: 6, border: "1px solid rgba(0,0,0,0.06)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: participants.length > 0 ? 8 : 0 }}>
+                          <button style={{ ...styles.iconButton, width: 26, height: 26, fontSize: 14 }}
+                            onClick={() => setQuickItems((prev) => prev.map((qi) => qi.id !== item.id ? qi : { ...qi, drinks: qi.drinks.map((dr, di) => di !== drinkIdx ? dr : { ...dr, qty: Math.max(1, dr.qty - 1), assignments: [] }) }))}>−</button>
+                          <span style={{ fontSize: 20, fontWeight: 800, minWidth: 28, textAlign: "center", color: "#333" }}>{d.qty}</span>
+                          <button style={{ ...styles.iconButton, width: 26, height: 26, fontSize: 14 }}
+                            onClick={() => setQuickItems((prev) => prev.map((qi) => qi.id !== item.id ? qi : { ...qi, drinks: qi.drinks.map((dr, di) => di !== drinkIdx ? dr : { ...dr, qty: dr.qty + 1, assignments: [] }) }))}>+</button>
+                          <select
+                            value={drinks.find((dr) => dr.name === d.name) ? d.name : ""}
+                            onChange={(e) => {
+                              const picked = drinks.find((dr) => dr.name === e.target.value)
+                              if (!picked) return
+                              setQuickItems((prev) => prev.map((qi) => qi.id !== item.id ? qi : { ...qi, drinks: qi.drinks.map((dr, di) => di !== drinkIdx ? dr : { ...dr, name: picked.name, emoji: picked.emoji, assignments: [] }) }))
+                            }}
+                            style={{ ...styles.input, flex: 1, fontWeight: 700, fontSize: 14 }}
+                          >
+                            {!drinks.find((dr) => dr.name === d.name) && <option value="">{d.emoji} {d.name} ⚠️ niet in lijst</option>}
+                            {drinks.map((dr) => <option key={dr.id} value={dr.name}>{dr.emoji} {dr.name}</option>)}
+                          </select>
+                        </div>
+
+                        {participants.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
+                            <span style={{ fontSize: 11, color: "#bbb" }}>→ wie:</span>
+                            {participants.map((p) => {
+                              const pQty = (d.assignments ?? []).find((a) => a.participantId === p.id)?.qty ?? 0
+                              return (
+                                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 3, background: pQty > 0 ? "rgba(79,126,247,0.1)" : "rgba(0,0,0,0.03)", borderRadius: 20, padding: "2px 6px 2px 8px", border: pQty > 0 ? "1px solid rgba(79,126,247,0.3)" : "1px solid rgba(0,0,0,0.06)" }}>
+                                  <span style={{ fontSize: 11, fontWeight: pQty > 0 ? 700 : 400, color: pQty > 0 ? "#4f7ef7" : "#888" }}>{p.name}</span>
+                                  <button style={{ ...styles.iconButton, width: 18, height: 18, fontSize: 10, marginLeft: 2 }} onClick={() => updateDrinkAssignment(item.id, drinkIdx, p.id, Math.max(0, pQty - 1))}>−</button>
+                                  <span style={{ fontSize: 11, fontWeight: 700, minWidth: 12, textAlign: "center", color: pQty > 0 ? "#4f7ef7" : "#ccc" }}>{pQty}</span>
+                                  <button style={{ ...styles.iconButton, width: 18, height: 18, fontSize: 10, marginLeft: 0 }} onClick={() => updateDrinkAssignment(item.id, drinkIdx, p.id, Math.min(d.qty, pQty + 1))}>+</button>
+                                </div>
+                              )
+                            })}
+                            {totalAssigned > 0 && <span style={{ fontSize: 11, color: totalAssigned === d.qty ? "#27ae60" : "#e67e22", fontWeight: 600 }}>{totalAssigned}/{d.qty}</span>}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                    <button style={{ ...styles.button, fontSize: 12 }} onClick={() => {
+                      const first = drinks[0]; if (!first) return
+                      setQuickItems((prev) => prev.map((qi) => qi.id !== item.id ? qi : { ...qi, drinks: [...qi.drinks, { name: first.name, qty: 1, emoji: first.emoji, assignments: [] as { participantId: string; qty: number }[] }] }))
+                    }}>+ Drank</button>
+                    <button style={{ ...styles.button, ...styles.primary, fontSize: 12 }} onClick={() => processQuickItem(item)}>✓ Voeg toe aan nieuwe ronde</button>
+                  </div>
+                </div>
+              ))}
+
+              {/* Totaaloverzicht */}
+              <div style={{ background: "linear-gradient(90deg,rgba(79,126,247,0.07),rgba(107,161,255,0.07))", borderRadius: 12, padding: "12px 16px", marginBottom: 14, border: "1px solid rgba(79,126,247,0.15)" }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#7090cc", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>📋 Totaal bestellijst</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
                   {quickDrinkSummary().map((d) => (
-                    <span key={d.name} style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 20, padding: "4px 12px", fontSize: 14, fontWeight: 700 }}>
-                      {d.emoji} {d.qty}× {d.name}
-                    </span>
+                    <div key={d.name} style={{ background: "#fff", border: "1px solid rgba(79,126,247,0.2)", borderRadius: 12, padding: "6px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 22 }}>{d.emoji}</span>
+                      <div><div style={{ fontSize: 18, fontWeight: 800, color: "#333" }}>{d.qty}×</div><div style={{ fontSize: 11, color: "#666" }}>{d.name}</div></div>
+                    </div>
                   ))}
                 </div>
+                <button style={{ ...styles.button, fontSize: 13, width: "100%" }} onClick={() => setQuickFullscreen(true)}>🔍 Volledig scherm voor barman</button>
               </div>
 
-              {/* Save & clear */}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <input
-                  placeholder="Naam om op te slaan (bv. Ronde 1)..."
-                  value={saveOrderName}
-                  onChange={(e) => setSaveOrderName(e.target.value)}
-                  style={{ ...styles.input, flex: 1, minWidth: 160 }}
-                />
+                <input placeholder="Naam om op te slaan..." value={saveOrderName} onChange={(e) => setSaveOrderName(e.target.value)} style={{ ...styles.input, flex: 1, minWidth: 160 }} />
                 <button style={{ ...styles.button, ...styles.primary }} onClick={saveQuickOrder}>💾 Sla op</button>
                 <button style={{ ...styles.button, color: "#e74c3c" }} onClick={clearQuickItems}>🗑️ Wis alles</button>
               </div>
