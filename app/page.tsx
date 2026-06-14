@@ -430,6 +430,7 @@ export default function Home() {
 
   // ── Quick Order state ─────────────────────────────────────────────────────
   const [showQuickOrder, setShowQuickOrder] = useState(false)
+  const [editingQuickItem, setEditingQuickItem] = useState<string | null>(null)
   const [quickItems, setQuickItems] = useState<QuickOrderItem[]>([])
   const [quickVoiceActive, setQuickVoiceActive] = useState(false)
   const [quickFullscreen, setQuickFullscreen] = useState(false)
@@ -1164,13 +1165,90 @@ export default function Home() {
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>Opname {idx + 1}</div>
                         <div style={{ fontSize: 13, color: "#555", fontStyle: "italic", marginBottom: 6 }}>&ldquo;{item.text}&rdquo;</div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-                          {item.drinks.map((d, i) => (
-                            <span key={i} style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 20, padding: "2px 10px", fontSize: 13, fontWeight: 600 }}>
-                              {d.emoji} {d.qty > 1 ? `${d.qty}× ` : ""}{d.name}
-                            </span>
-                          ))}
-                        </div>
+                        {editingQuickItem === item.id ? (
+                          /* Edit mode */
+                          <div style={{ marginBottom: 8 }}>
+                            {item.drinks.map((d, i) => (
+                              <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                                {/* Quantity */}
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={d.qty}
+                                  onChange={(e) => {
+                                    const qty = Math.max(1, parseInt(e.target.value) || 1)
+                                    setQuickItems((prev) => prev.map((qi) => qi.id === item.id
+                                      ? { ...qi, drinks: qi.drinks.map((dr, di) => di === i ? { ...dr, qty } : dr) }
+                                      : qi
+                                    ))
+                                  }}
+                                  style={{ ...styles.input, width: 52 }}
+                                />
+                                {/* Drink picker from existing drinks */}
+                                <select
+                                  value={d.name}
+                                  onChange={(e) => {
+                                    const picked = drinks.find((dr) => dr.name === e.target.value)
+                                    if (!picked) return
+                                    setQuickItems((prev) => prev.map((qi) => qi.id === item.id
+                                      ? { ...qi, drinks: qi.drinks.map((dr, di) => di === i ? { ...dr, name: picked.name, emoji: picked.emoji } : dr) }
+                                      : qi
+                                    ))
+                                  }}
+                                  style={{ ...styles.input, flex: 1 }}
+                                >
+                                  {drinks.map((dr) => <option key={dr.id} value={dr.name}>{dr.emoji} {dr.name}</option>)}
+                                  {!drinks.find((dr) => dr.name === d.name) && (
+                                    <option value={d.name}>{d.emoji} {d.name} (niet in lijst)</option>
+                                  )}
+                                </select>
+                                {/* Remove drink from item */}
+                                <button style={styles.iconButton} onClick={() => {
+                                  setQuickItems((prev) => prev.map((qi) => qi.id === item.id
+                                    ? { ...qi, drinks: qi.drinks.filter((_, di) => di !== i) }
+                                    : qi
+                                  ))
+                                }}>🗑️</button>
+                              </div>
+                            ))}
+                            {/* Add extra drink */}
+                            <button
+                              style={{ ...styles.button, fontSize: 12, marginTop: 4 }}
+                              onClick={() => {
+                                const first = drinks[0]
+                                if (!first) return
+                                setQuickItems((prev) => prev.map((qi) => qi.id === item.id
+                                  ? { ...qi, drinks: [...qi.drinks, { name: first.name, qty: 1, emoji: first.emoji }] }
+                                  : qi
+                                ))
+                              }}
+                            >
+                              + Drank toevoegen
+                            </button>
+                            <button
+                              style={{ ...styles.button, ...styles.primary, fontSize: 12, marginTop: 4, marginLeft: 8 }}
+                              onClick={() => setEditingQuickItem(null)}
+                            >
+                              ✓ Klaar
+                            </button>
+                          </div>
+                        ) : (
+                          /* View mode */
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8, alignItems: "center" }}>
+                            {item.drinks.map((d, i) => (
+                              <span key={i} style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 20, padding: "2px 10px", fontSize: 13, fontWeight: 600 }}>
+                                {d.emoji} {d.qty > 1 ? `${d.qty}× ` : ""}{d.name}
+                              </span>
+                            ))}
+                            <button
+                              style={{ ...styles.iconButton, fontSize: 12, width: "auto", borderRadius: 20, padding: "2px 10px" }}
+                              onClick={() => setEditingQuickItem(item.id)}
+                              title="Aanpassen"
+                            >
+                              ✏️ Aanpassen
+                            </button>
+                          </div>
+                        )}
                         {/* Assign to person */}
                         {participants.length > 0 && (
                           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
