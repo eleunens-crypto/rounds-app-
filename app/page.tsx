@@ -37,7 +37,7 @@ type Participant = {
 
 type Order = {
   id: string
-  participant_id: string
+  participant_id: string | null
   drink_id: string
   quantity: number
   group_id: string
@@ -434,6 +434,7 @@ export default function Home() {
 
   // ── Quick Order state ─────────────────────────────────────────────────────
   const [showQuickOrder, setShowQuickOrder] = useState(false)
+  const [roundFullscreen, setRoundFullscreen] = useState<number | null>(null)
   const [quickItems, setQuickItems] = useState<QuickOrderItem[]>([])
   const [quickVoiceActive, setQuickVoiceActive] = useState(false)
   const [quickFullscreen, setQuickFullscreen] = useState(false)
@@ -700,8 +701,9 @@ export default function Home() {
             if (assignment.qty <= 0) continue
             await syncDrinkChange(matchedDrink, assignment.qty, assignment.participantId, newRoundSession, group.id)
           }
-        } else if (participants.length > 0) {
-          await syncDrinkChange(matchedDrink, spokenDrink.qty, participants[0].id, newRoundSession, group.id)
+        } else {
+          // No assignment — add anonymously (null participant)
+          await supabase.from("orders").insert([{ participant_id: null, drink_id: matchedDrink.id, quantity: spokenDrink.qty, group_id: group.id, session: newRoundSession }])
         }
       }
     }
@@ -828,13 +830,15 @@ export default function Home() {
     }, [])
 
   const getRoundGrouped = (r: number) => {
-    const map: Record<string, { drink: Drink; totalQty: number; people: Record<string, { name: string; qty: number }> }> = {}
+    const map: Record<string, { drink: Drink; totalQty: number; anonymous: number; people: Record<string, { name: string; qty: number }> }> = {}
     orders.filter((o) => o.session === r).forEach((o) => {
       const d = drinks.find((dr) => dr.id === o.drink_id)
-      const p = participants.find((pa) => pa.id === o.participant_id)
-      if (!d || !p) return
-      if (!map[d.id]) map[d.id] = { drink: d, totalQty: 0, people: {} }
+      if (!d) return
+      if (!map[d.id]) map[d.id] = { drink: d, totalQty: 0, anonymous: 0, people: {} }
       map[d.id].totalQty += o.quantity
+      if (!o.participant_id) { map[d.id].anonymous += o.quantity; return }
+      const p = participants.find((pa) => pa.id === o.participant_id)
+      if (!p) return
       if (!map[d.id].people[p.id]) map[d.id].people[p.id] = { name: p.name, qty: 0 }
       map[d.id].people[p.id].qty += o.quantity
     })
@@ -1161,40 +1165,25 @@ export default function Home() {
 
       {/* Quick Order */}
       <div style={styles.section}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <h3 style={{ ...styles.h3, marginBottom: 0 }}>🎤 Snel bestellen</h3>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button style={{ ...styles.button, fontSize: 13 }} onClick={loadSavedOrders}>📋 Opgeslagen</button>
-            {quickItems.length > 0 && (
-              <button style={{ ...styles.button, fontSize: 13 }} onClick={() => setQuickFullscreen(true)}>🔍 Volledig scherm</button>
-            )}
-          </div>
-        </div>
-
+        <h3 style={styles.h3}>🎤 Snel bestellen</h3>
         <div style={styles.card}>
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: quickItems.length > 0 ? 16 : 0 }}>
             <button
               onClick={quickVoiceActive ? stopQuickVoice : startQuickVoice}
-              style={{
-                ...styles.button,
-                ...(quickVoiceActive ? {} : styles.primary),
-                fontSize: 15,
-                padding: "10px 20px",
-                background: quickVoiceActive ? "#e74c3c" : undefined,
-                color: quickVoiceActive ? "#fff" : undefined,
-                border: "none",
-                animation: quickVoiceActive ? "pulse 1.2s infinite" : "none",
-                boxShadow: quickVoiceActive ? "0 0 0 4px rgba(231,76,60,0.2)" : undefined,
-                flex: 1,
-              }}
+              style={{ ...styles.button, ...(quickVoiceActive ? {} : styles.primary), fontSize: 15, padding: "10px 20px", background: quickVoiceActive ? "#e74c3c" : undefined, color: quickVoiceActive ? "#fff" : undefined, border: "none", animation: quickVoiceActive ? "pulse 1.2s infinite" : "none", boxShadow: quickVoiceActive ? "0 0 0 4px rgba(231,76,60,0.2)" : undefined, flex: 1 }}
             >
               {quickVoiceActive ? "🔴 Luistert... (tik om te stoppen)" : "🎤 Tik om bestellingen in te spreken"}
             </button>
           </div>
 
+          {quickItems.length === 0 && (
+            <div style={{ color: "#bbb", fontSize: 13, textAlign: "center", marginTop: 8 }}>
+              Tik op de knop en spreek je bestelling in — bv. &ldquo;twee pintjes en een gin tonic&rdquo;
+            </div>
+          )}
+
           {quickItems.length > 0 && (
             <>
-              {/* Per opname */}
               {quickItems.map((item, idx) => (
                 <div key={item.id} style={{ background: "rgba(79,126,247,0.04)", borderRadius: 12, padding: "12px 14px", border: "1px solid rgba(79,126,247,0.12)", marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -1228,7 +1217,7 @@ export default function Home() {
 
                         {participants.length > 0 && (
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
-                            <span style={{ fontSize: 11, color: "#bbb" }}>→ wie:</span>
+                            <span style={{ fontSize: 11, color: "#bbb" }}>→ wie (optioneel):</span>
                             {participants.map((p) => {
                               const pQty = (d.assignments ?? []).find((a) => a.participantId === p.id)?.qty ?? 0
                               return (
@@ -1247,19 +1236,17 @@ export default function Home() {
                     )
                   })}
 
-                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                    <button style={{ ...styles.button, fontSize: 12 }} onClick={() => {
-                      const first = drinks[0]; if (!first) return
-                      setQuickItems((prev) => prev.map((qi) => qi.id !== item.id ? qi : { ...qi, drinks: [...qi.drinks, { name: first.name, qty: 1, emoji: first.emoji, assignments: [] as { participantId: string; qty: number }[] }] }))
-                    }}>+ Drank</button>
-                  </div>
+                  <button style={{ ...styles.button, fontSize: 12, marginTop: 6 }} onClick={() => {
+                    const first = drinks[0]; if (!first) return
+                    setQuickItems((prev) => prev.map((qi) => qi.id !== item.id ? qi : { ...qi, drinks: [...qi.drinks, { name: first.name, qty: 1, emoji: first.emoji, assignments: [] as { participantId: string; qty: number }[] }] }))
+                  }}>+ Drank</button>
                 </div>
               ))}
 
               {/* Totaaloverzicht */}
-              <div style={{ background: "linear-gradient(90deg,rgba(79,126,247,0.07),rgba(107,161,255,0.07))", borderRadius: 12, padding: "12px 16px", marginBottom: 14, border: "1px solid rgba(79,126,247,0.15)" }}>
+              <div style={{ background: "linear-gradient(90deg,rgba(79,126,247,0.07),rgba(107,161,255,0.07))", borderRadius: 12, padding: "12px 16px", marginBottom: 12, border: "1px solid rgba(79,126,247,0.15)" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#7090cc", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>📋 Totaal bestellijst</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {quickDrinkSummary().map((d) => (
                     <div key={d.name} style={{ background: "#fff", border: "1px solid rgba(79,126,247,0.2)", borderRadius: 12, padding: "6px 14px", display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 22 }}>{d.emoji}</span>
@@ -1267,67 +1254,15 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-                <button style={{ ...styles.button, fontSize: 13, width: "100%" }} onClick={() => setQuickFullscreen(true)}>🔍 Volledig scherm voor barman</button>
               </div>
 
-              {/* COMPLEET knop */}
-              <button
-                onClick={processAllQuickItems}
-                style={{ ...styles.button, ...styles.primary, width: "100%", padding: "14px 0", fontSize: 17, fontWeight: 700, marginBottom: 10, boxShadow: "0 6px 20px rgba(79,126,247,0.35)" }}
-              >
+              <button onClick={processAllQuickItems} style={{ ...styles.button, ...styles.primary, width: "100%", padding: "14px 0", fontSize: 17, fontWeight: 700, boxShadow: "0 6px 20px rgba(79,126,247,0.35)" }}>
                 ✅ Compleet — voeg alles toe aan nieuwe ronde
               </button>
-
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <input placeholder="Naam om op te slaan..." value={saveOrderName} onChange={(e) => setSaveOrderName(e.target.value)} style={{ ...styles.input, flex: 1, minWidth: 160 }} />
-                <button style={{ ...styles.button, ...styles.primary }} onClick={saveQuickOrder}>💾 Sla op</button>
-                <button style={{ ...styles.button, color: "#e74c3c" }} onClick={clearQuickItems}>🗑️ Wis alles</button>
-              </div>
             </>
-          )}
-
-          {quickItems.length === 0 && (
-            <div style={{ color: "#bbb", fontSize: 13, textAlign: "center", marginTop: 8 }}>
-              Tik op de knop en spreek je bestelling in — bv. &ldquo;twee pintjes en een gin tonic&rdquo;
-            </div>
           )}
         </div>
       </div>
-
-      {/* Saved orders modal */}
-      {showSavedOrders && (
-        <div style={styles.overlay}>
-          <div style={{ ...styles.modal, width: 420, maxHeight: "80vh", display: "flex", flexDirection: "column" }}>
-            <h3 style={{ marginBottom: 12, fontSize: 18, fontWeight: 700 }}>📋 Opgeslagen bestellingen</h3>
-            <div style={{ overflowY: "auto", flex: 1 }}>
-              {savedOrders.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 24 }}>Geen opgeslagen bestellingen</div>}
-              {savedOrders.map((order) => (
-                <div key={order.id} style={{ ...styles.card, marginBottom: 8 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <b style={{ fontSize: 14 }}>{order.name}</b>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button style={{ ...styles.button, ...styles.primary, fontSize: 12, padding: "4px 10px" }} onClick={() => loadOrderIntoQuick(order)}>Laden</button>
-                      <button style={styles.iconButton} onClick={() => deleteSavedOrder(order.id)}>🗑️</button>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {order.items.flatMap((i) => i.drinks).reduce((acc: {name:string;qty:number;emoji:string}[], d) => {
-                      const ex = acc.find((x) => x.name === d.name)
-                      if (ex) { ex.qty += d.qty; return acc }
-                      return [...acc, { ...d }]
-                    }, []).map((d) => (
-                      <span key={d.name} style={{ background: "rgba(79,126,247,0.08)", borderRadius: 20, padding: "2px 10px", fontSize: 12 }}>
-                        {d.emoji} {d.qty}× {d.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button style={{ ...styles.button, marginTop: 12, width: "100%" }} onClick={() => setShowSavedOrders(false)}>Sluiten</button>
-          </div>
-        </div>
-      )}
 
       {/* Fullscreen quick order */}
       {quickFullscreen && (
@@ -1339,7 +1274,7 @@ export default function Home() {
             </div>
             {quickItems.map((item, idx) => (
               <div key={item.id} style={{ marginBottom: 16, padding: "14px 16px", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16 }}>
-                <div style={{ fontSize: 12, color: "#aaa", marginBottom: 6 }}>Persoon / tafel {idx + 1}</div>
+                <div style={{ fontSize: 12, color: "#aaa", marginBottom: 6 }}>Opname {idx + 1}</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {item.drinks.map((d, i) => (
                     <span key={i} style={{ fontSize: 18, fontWeight: 700, background: "#f5f7ff", borderRadius: 12, padding: "6px 14px" }}>
@@ -1368,32 +1303,65 @@ export default function Home() {
         <h3 style={styles.h3}>📦 Ronde historiek</h3>
         {sessions.length === 0 && <div style={{ ...styles.card, color: "#999", textAlign: "center", padding: 24 }}>Nog geen bestellingen geplaatst.</div>}
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 }}>
-          {sessions.map((s) => (
-            <div key={s} style={{ ...styles.card, minWidth: 280, flexShrink: 0 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <b style={{ fontSize: 15 }}>Ronde {s}</b>
-                <span style={{ fontWeight: 700, color: "#4f7ef7" }}>€{getRoundTotal(s).toFixed(2)}</span>
-              </div>
-              {Object.values(getRoundGrouped(s)).map((it) => (
-                <div key={it.drink.id} style={{ marginTop: 10 }}>
-                  <b style={{ fontSize: 13 }}>{it.drink.emoji} {it.drink.name} × {it.totalQty}</b>
-                  <div style={{ marginLeft: 10, marginTop: 4 }}>
-                    {Object.entries(it.people).map(([pid, info]) => (
-                      <div key={pid} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, marginTop: 2 }}>
-                        <span style={{ color: "#555" }}>{info.name} × {info.qty}</span>
-                        <div>
-                          <button style={styles.iconButton} onClick={() => changeDrinkHistory(it.drink, -1, pid, s)}>➖</button>
-                          <button style={styles.iconButton} onClick={() => changeDrinkHistory(it.drink, 1, pid, s)}>➕</button>
-                        </div>
-                      </div>
-                    ))}
+          {sessions.map((s) => {
+            const grouped = getRoundGrouped(s)
+            return (
+              <div key={s} style={{ ...styles.card, minWidth: 280, flexShrink: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <b style={{ fontSize: 15 }}>Ronde {s}</b>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontWeight: 700, color: "#4f7ef7" }}>€{getRoundTotal(s).toFixed(2)}</span>
+                    <button style={styles.iconButton} title="Volledig scherm" onClick={() => setRoundFullscreen(s)}>🔍</button>
                   </div>
                 </div>
-              ))}
-            </div>
-          ))}
+                {Object.values(grouped).map((it) => (
+                  <div key={it.drink.id} style={{ marginTop: 10 }}>
+                    <b style={{ fontSize: 13 }}>{it.drink.emoji} {it.drink.name} × {it.totalQty}</b>
+                    <div style={{ marginLeft: 10, marginTop: 4 }}>
+                      {Object.entries(it.people).map(([pid, info]) => (
+                        <div key={pid} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, marginTop: 2 }}>
+                          <span style={{ color: "#555" }}>{info.name} × {info.qty}</span>
+                          <div>
+                            <button style={styles.iconButton} onClick={() => changeDrinkHistory(it.drink, -1, pid, s)}>➖</button>
+                            <button style={styles.iconButton} onClick={() => changeDrinkHistory(it.drink, 1, pid, s)}>➕</button>
+                          </div>
+                        </div>
+                      ))}
+                      {it.anonymous > 0 && (
+                        <div style={{ fontSize: 12, color: "#aaa", marginTop: 2 }}>× {it.anonymous} (niet toegewezen)</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          })}
         </div>
       </div>
+
+      {/* Round fullscreen */}
+      {roundFullscreen !== null && (
+        <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 2000, overflowY: "auto", padding: 32 }}>
+          <div style={{ maxWidth: 600, margin: "0 auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+              <h2 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>🧾 Ronde {roundFullscreen}</h2>
+              <button style={styles.button} onClick={() => setRoundFullscreen(null)}>✕ Sluiten</button>
+            </div>
+            {Object.values(getRoundGrouped(roundFullscreen)).map((it) => (
+              <div key={it.drink.id} style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20, padding: "16px 20px", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16 }}>
+                <span style={{ fontSize: 40 }}>{it.drink.emoji}</span>
+                <div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: "#333" }}>{it.totalQty}× {it.drink.name}</div>
+                  <div style={{ fontSize: 13, color: "#aaa", marginTop: 2 }}>
+                    {Object.values(it.people).map((p) => `${p.name} (${p.qty})`).join(", ")}
+                    {it.anonymous > 0 && ` + ${it.anonymous} niet toegewezen`}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div style={{ textAlign: "right", marginTop: 32, paddingBottom: 40 }}>
