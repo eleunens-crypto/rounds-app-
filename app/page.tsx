@@ -60,22 +60,6 @@ type SavedGroup = {
   savedAt: number
 }
 
-function getSavedGroups(): SavedGroup[] {
-  if (typeof window === "undefined") return []
-  try { return JSON.parse(localStorage.getItem("rondje_saved_groups") || "[]") } catch { return [] }
-}
-
-function saveGroupToStorage(group: Group) {
-  const groups = getSavedGroups().filter((g) => g.id !== group.id)
-  groups.unshift({ id: group.id, name: group.name, invite_code: group.invite_code, savedAt: Date.now() })
-  localStorage.setItem("rondje_saved_groups", JSON.stringify(groups.slice(0, 20)))
-}
-
-function removeGroupFromStorage(id: string) {
-  const groups = getSavedGroups().filter((g) => g.id !== id)
-  localStorage.setItem("rondje_saved_groups", JSON.stringify(groups))
-}
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -85,17 +69,17 @@ const CATEGORY_LABELS: Record<string, string> = {
   Cocktail:  "🍸 Cocktails",
 }
 const FALLBACK_CATEGORY = "Cocktail"
-
 const EMOJI_MAP: Record<string, string> = {
   Bier: "🍺", Wijn: "🍷", Frisdrank: "🥤", Cocktail: "🍸",
 }
-
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   Bier:      ["bier", "pils", "tripel", "dubbel", "blonde", "bruin", "lager", "ale", "ipa", "stout", "weizen", "geuze", "lambic", "kriek"],
   Wijn:      ["wijn", "cava", "prosecco", "champagne", "rosé", "rose", "bordeaux", "chardonnay", "pinot", "sauvignon"],
   Frisdrank: ["cola", "fanta", "sprite", "water", "ice tea", "icetea", "limonade", "tonic", "soda", "juice", "sap", "frisdrank", "appelsap", "sinaas", "spa"],
   Cocktail:  ["cocktail", "mojito", "hugo", "gin", "vodka", "rum", "whisky", "whiskey", "aperol", "spritz", "martini", "margarita", "daiquiri", "cosmopolitan"],
 }
+
+// ─── Local storage helpers ────────────────────────────────────────────────────
 
 function randomId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 10)
@@ -113,22 +97,23 @@ function generateInviteCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase()
 }
 
-function groupDrinksByCategory(drinks: Drink[]): [string, Drink[]][] {
-  const map: Record<string, Drink[]> = {}
-  drinks.forEach((d) => {
-    const key = d.category ?? FALLBACK_CATEGORY
-    if (!map[key]) map[key] = []
-    map[key].push(d)
-  })
-  const knownOrder = Object.keys(CATEGORY_LABELS)
-  const allKeys = [
-    ...knownOrder.filter((k) => map[k]?.length),
-    ...Object.keys(map).filter((k) => !knownOrder.includes(k) && map[k]?.length),
-  ]
-  return allKeys.map((k) => [CATEGORY_LABELS[k] ?? k, map[k]])
+function getSavedGroups(): SavedGroup[] {
+  if (typeof window === "undefined") return []
+  try { return JSON.parse(localStorage.getItem("rondje_saved_groups") || "[]") } catch { return [] }
 }
 
-// ─── Voice helpers (100% local, no API) ──────────────────────────────────────
+function saveGroupToStorage(group: Group) {
+  const groups = getSavedGroups().filter((g) => g.id !== group.id)
+  groups.unshift({ id: group.id, name: group.name, invite_code: group.invite_code, savedAt: Date.now() })
+  localStorage.setItem("rondje_saved_groups", JSON.stringify(groups.slice(0, 20)))
+}
+
+function removeGroupFromStorage(id: string) {
+  const groups = getSavedGroups().filter((g) => g.id !== id)
+  localStorage.setItem("rondje_saved_groups", JSON.stringify(groups))
+}
+
+// ─── Voice helpers ────────────────────────────────────────────────────────────
 
 function guessCategory(text: string): string {
   const lower = text.toLowerCase()
@@ -174,6 +159,21 @@ function cleanDrinkName(text: string): string {
     .replace(/^./, (c) => c.toUpperCase())
 }
 
+function groupDrinksByCategory(drinks: Drink[]): [string, Drink[]][] {
+  const map: Record<string, Drink[]> = {}
+  drinks.forEach((d) => {
+    const key = d.category ?? FALLBACK_CATEGORY
+    if (!map[key]) map[key] = []
+    map[key].push(d)
+  })
+  const knownOrder = Object.keys(CATEGORY_LABELS)
+  const allKeys = [
+    ...knownOrder.filter((k) => map[k]?.length),
+    ...Object.keys(map).filter((k) => !knownOrder.includes(k) && map[k]?.length),
+  ]
+  return allKeys.map((k) => [CATEGORY_LABELS[k] ?? k, map[k]])
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function AddPersonModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name: string) => void }) {
@@ -185,14 +185,7 @@ function AddPersonModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name:
     <div style={styles.overlay}>
       <div style={styles.modal}>
         <h3 style={{ marginBottom: 16, fontSize: 18, fontWeight: 700 }}>Persoon toevoegen</h3>
-        <input
-          ref={inputRef}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-          placeholder="Naam..."
-          style={{ ...styles.input, width: "100%", boxSizing: "border-box" }}
-        />
+        <input ref={inputRef} value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder="Naam..." style={{ ...styles.input, width: "100%", boxSizing: "border-box" }} />
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
           <button style={{ ...styles.button, ...styles.primary, flex: 1 }} onClick={handleSubmit}>Toevoegen</button>
           <button style={{ ...styles.button, flex: 1 }} onClick={onClose}>Annuleer</button>
@@ -202,35 +195,21 @@ function AddPersonModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name:
   )
 }
 
-function LibraryPickerModal({
-  library, existing, onClose, onAdd,
-}: {
-  library: DrinkLibraryItem[]
-  existing: Drink[]
-  onClose: () => void
-  onAdd: (item: DrinkLibraryItem, price: number) => void
+function LibraryPickerModal({ library, existing, onClose, onAdd }: {
+  library: DrinkLibraryItem[]; existing: Drink[]; onClose: () => void; onAdd: (item: DrinkLibraryItem, price: number) => void
 }) {
   const [search, setSearch] = useState("")
   const [prices, setPrices] = useState<Record<string, string>>({})
-
   const filtered = library.filter((d) => {
     const q = search.toLowerCase()
     return d.name.toLowerCase().includes(q) || (d.search_tags ?? "").toLowerCase().includes(q) || (d.category ?? "").toLowerCase().includes(q)
   })
-
   const alreadyAdded = (item: DrinkLibraryItem) => existing.some((e) => e.name === item.name)
-
   return (
     <div style={styles.overlay}>
       <div style={{ ...styles.modal, width: 420, maxHeight: "80vh", display: "flex", flexDirection: "column" }}>
         <h3 style={{ marginBottom: 12, fontSize: 18, fontWeight: 700 }}>📚 Uit bibliotheek</h3>
-        <input
-          autoFocus
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Zoek op naam, categorie..."
-          style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginBottom: 12 }}
-        />
+        <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Zoek op naam, categorie..." style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginBottom: 12 }} />
         <div style={{ overflowY: "auto", flex: 1 }}>
           {filtered.map((item) => {
             const added = alreadyAdded(item)
@@ -241,19 +220,8 @@ function LibraryPickerModal({
                   <div style={{ fontSize: 14, fontWeight: 600 }}>{item.name}</div>
                   <div style={{ fontSize: 11, color: "#999" }}>{item.category}</div>
                 </div>
-                <input
-                  type="number"
-                  placeholder={`€${item.default_price.toFixed(2)}`}
-                  value={prices[item.id] ?? ""}
-                  onChange={(e) => setPrices((p) => ({ ...p, [item.id]: e.target.value }))}
-                  style={{ ...styles.input, width: 72 }}
-                  disabled={added}
-                />
-                <button
-                  style={{ ...styles.button, ...(added ? {} : styles.primary), fontSize: 12, padding: "5px 10px" }}
-                  disabled={added}
-                  onClick={() => { const price = parseFloat(prices[item.id] ?? "") || item.default_price; onAdd(item, price) }}
-                >
+                <input type="number" placeholder={`€${item.default_price.toFixed(2)}`} value={prices[item.id] ?? ""} onChange={(e) => setPrices((p) => ({ ...p, [item.id]: e.target.value }))} style={{ ...styles.input, width: 72 }} disabled={added} />
+                <button style={{ ...styles.button, ...(added ? {} : styles.primary), fontSize: 12, padding: "5px 10px" }} disabled={added} onClick={() => { const price = parseFloat(prices[item.id] ?? "") || item.default_price; onAdd(item, price) }}>
                   {added ? "✓" : "+ Voeg toe"}
                 </button>
               </div>
@@ -269,7 +237,6 @@ function LibraryPickerModal({
 
 function QRModal({ inviteCode, onClose }: { inviteCode: string; onClose: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     const script = document.createElement("script")
     script.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
@@ -277,37 +244,20 @@ function QRModal({ inviteCode, onClose }: { inviteCode: string; onClose: () => v
       if (!containerRef.current) return
       containerRef.current.innerHTML = ""
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      new (window as any).QRCode(containerRef.current, {
-        text: inviteCode,
-        width: 200,
-        height: 200,
-        colorDark: "#1a2e6e",
-        colorLight: "#ffffff",
-        correctLevel: 2,
-      })
+      new (window as any).QRCode(containerRef.current, { text: inviteCode, width: 200, height: 200, colorDark: "#1a2e6e", colorLight: "#ffffff", correctLevel: 2 })
     }
     document.head.appendChild(script)
-    return () => { try { document.head.removeChild(script) } catch { /* already removed */ } }
+    return () => { try { document.head.removeChild(script) } catch { /* ignore */ } }
   }, [inviteCode])
-
   return (
     <div style={styles.overlay}>
       <div style={{ ...styles.modal, textAlign: "center" }}>
         <h3 style={{ marginBottom: 6, fontSize: 18, fontWeight: 700 }}>📱 QR-code delen</h3>
-        <p style={{ color: "#888", fontSize: 13, marginBottom: 20 }}>
-          Scan om direct deel te nemen aan groep <b>{inviteCode}</b>
-        </p>
-        <div
-          ref={containerRef}
-          style={{ display: "inline-block", padding: 16, background: "#fff", borderRadius: 16, border: "1px solid rgba(0,0,0,0.08)", marginBottom: 16 }}
-        />
-        <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 8, color: "#2255cc", marginBottom: 20 }}>
-          {inviteCode}
-        </div>
+        <p style={{ color: "#888", fontSize: 13, marginBottom: 20 }}>Scan om direct deel te nemen aan groep <b>{inviteCode}</b></p>
+        <div ref={containerRef} style={{ display: "inline-block", padding: 16, background: "#fff", borderRadius: 16, border: "1px solid rgba(0,0,0,0.08)", marginBottom: 16 }} />
+        <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 8, color: "#2255cc", marginBottom: 20 }}>{inviteCode}</div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button style={{ ...styles.button, flex: 1 }} onClick={() => navigator.clipboard?.writeText(inviteCode)}>
-            📋 Kopieer code
-          </button>
+          <button style={{ ...styles.button, flex: 1 }} onClick={() => navigator.clipboard?.writeText(inviteCode)}>📋 Kopieer code</button>
           <button style={{ ...styles.button, flex: 1 }} onClick={onClose}>Sluiten</button>
         </div>
       </div>
@@ -326,9 +276,12 @@ export default function Home() {
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
 
+  // ── State ──────────────────────────────────────────────────────────────────
   const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
+  const [savedOpen, setSavedOpen] = useState(false)
   const [savedSearch, setSavedSearch] = useState("")
   const [isSaved, setIsSaved] = useState(false)
+
   const [group, setGroup] = useState<Group | null>(null)
   const [groupName, setGroupName] = useState("")
   const [joinCode, setJoinCode] = useState("")
@@ -344,6 +297,8 @@ export default function Home() {
   const [session, setSession] = useState(1)
   const [selected, setSelected] = useState<string[]>([])
   const [openPersonHistory, setOpenPersonHistory] = useState<string | null>(null)
+  const [editingPerson, setEditingPerson] = useState<string | null>(null)
+  const [editingPersonName, setEditingPersonName] = useState("")
 
   const [newDrink, setNewDrink] = useState<DrinkForm>({ name: "", price: "", emoji: "", category: "Bier" })
   const [editingDrink, setEditingDrink] = useState<Drink | null>(null)
@@ -356,7 +311,7 @@ export default function Home() {
   const [loadingDrink, setLoadingDrink] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // ── Voice state ────────────────────────────────────────────────────────────
+  // ── Voice ──────────────────────────────────────────────────────────────────
   const [voiceState, setVoiceState] = useState<VoiceState>("idle")
   const [voiceTranscript, setVoiceTranscript] = useState("")
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -367,15 +322,14 @@ export default function Home() {
     const w = window as any
     const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition
     if (!SR) { setVoiceState("error"); setToast("Spraak niet ondersteund in deze browser"); return }
-
     const recog = new SR()
     recog.lang = "nl-BE"
     recog.interimResults = false
     recog.maxAlternatives = 1
     recogRef.current = recog
-
     recog.onstart = () => setVoiceState("listening")
-    recog.onresult = (e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recog.onresult = (e: any) => {
       const text = e.results[0][0].transcript
       setVoiceTranscript(text)
       const category = guessCategory(text)
@@ -394,17 +348,14 @@ export default function Home() {
   const stopListening = () => { recogRef.current?.stop(); setVoiceState("idle") }
 
   // ── Loaders ────────────────────────────────────────────────────────────────
-
-  // NOTE: drinks table has no group_id column per schema — it's shared/global
   const loadDrinks = useCallback(async () => {
     const { data, error } = await supabase.from("drinks").select("*")
-    if (error) { console.error("DRINKS FOUT:", error); setError("Drankjes laden mislukt"); return }
+    if (error) { setError("Drankjes laden mislukt"); return }
     if (mounted.current) setDrinks(data || [])
   }, [])
 
   const loadLibrary = useCallback(async () => {
-    const { data, error } = await supabase.from("drink_library").select("*").order("name")
-    if (error) { console.error("LIBRARY FOUT:", error); return }
+    const { data } = await supabase.from("drink_library").select("*").order("name")
     if (mounted.current) setLibrary(data || [])
   }, [])
 
@@ -413,45 +364,32 @@ export default function Home() {
       supabase.from("participants").select("*").eq("group_id", groupId),
       supabase.from("orders").select("*").eq("group_id", groupId),
     ])
-    if (pe || oe) { console.error("LOADALL FOUT:", pe, oe); setError("Data laden mislukt"); return }
-    if (mounted.current) {
-      setParticipants(p || [])
-      setOrders(o || [])
-    }
+    if (pe || oe) { setError("Data laden mislukt"); return }
+    if (mounted.current) { setParticipants(p || []); setOrders(o || []) }
   }, [])
 
   useEffect(() => { loadDrinks(); loadLibrary() }, [loadDrinks, loadLibrary])
-
   useEffect(() => { setSavedGroups(getSavedGroups()) }, [])
 
   // ── Realtime ───────────────────────────────────────────────────────────────
-
   useEffect(() => {
     if (!group) return
-    const channel = supabase
-      .channel(`group-${group.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `group_id=eq.${group.id}` },
-        () => { if (mounted.current) loadAll(group.id) })
-      .on("postgres_changes", { event: "*", schema: "public", table: "participants", filter: `group_id=eq.${group.id}` },
-        () => { if (mounted.current) loadAll(group.id) })
-      .on("postgres_changes", { event: "*", schema: "public", table: "drinks" },
-        () => { if (mounted.current) loadDrinks() })
+    const channel = supabase.channel(`group-${group.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `group_id=eq.${group.id}` }, () => { if (mounted.current) loadAll(group.id) })
+      .on("postgres_changes", { event: "*", schema: "public", table: "participants", filter: `group_id=eq.${group.id}` }, () => { if (mounted.current) loadAll(group.id) })
+      .on("postgres_changes", { event: "*", schema: "public", table: "drinks" }, () => { if (mounted.current) loadDrinks() })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [group, loadAll, loadDrinks])
 
-  // ── Group create / join ────────────────────────────────────────────────────
-
+  // ── Group ──────────────────────────────────────────────────────────────────
   const startGroup = async () => {
     if (!groupName.trim() || isStarting) return
     setIsStarting(true)
     try {
       const owner_id = getOrCreateOwnerId()
       const invite_code = generateInviteCode()
-      const { data, error } = await supabase
-        .from("groups")
-        .insert([{ name: groupName.trim(), invite_code, owner_id }])
-        .select().single()
+      const { data, error } = await supabase.from("groups").insert([{ name: groupName.trim(), invite_code, owner_id }]).select().single()
       if (error || !data) { setError("Groep aanmaken mislukt: " + error?.message); return }
       setGroup(data)
       setStarted(true)
@@ -468,13 +406,11 @@ export default function Home() {
     if (!code.trim() || isStarting) return
     setIsStarting(true)
     try {
-      const { data, error } = await supabase
-        .from("groups").select("*").eq("invite_code", code.trim().toUpperCase()).single()
+      const { data, error } = await supabase.from("groups").select("*").eq("invite_code", code.trim().toUpperCase()).single()
       if (error || !data) { setError("Groep niet gevonden. Controleer de code."); return }
       setGroup(data)
       setStarted(true)
       await loadAll(data.id)
-      setSavedGroups(getSavedGroups())
       setIsSaved(getSavedGroups().some((g) => g.id === data.id))
     } finally { setIsStarting(false) }
   }
@@ -487,8 +423,28 @@ export default function Home() {
     await loadAll(group.id)
   }
 
-  // ── Person select ──────────────────────────────────────────────────────────
+  // ── Person CRUD ────────────────────────────────────────────────────────────
+  const deletePerson = async (id: string, name: string) => {
+    if (!group || !confirm(`${name} verwijderen? Hun bestellingen blijven bewaard.`)) return
+    const { error } = await supabase.from("participants").delete().eq("id", id)
+    if (error) { setError("Persoon verwijderen mislukt"); return }
+    setSelected((prev) => prev.filter((x) => x !== id))
+    if (openPersonHistory === id) setOpenPersonHistory(null)
+    if (editingPerson === id) setEditingPerson(null)
+    setToast(`${name} verwijderd`)
+    await loadAll(group.id)
+  }
 
+  const renamePerson = async () => {
+    if (!group || !editingPerson || !editingPersonName.trim()) return
+    const { error } = await supabase.from("participants").update({ name: editingPersonName.trim() }).eq("id", editingPerson)
+    if (error) { setError("Naam wijzigen mislukt"); return }
+    setEditingPerson(null)
+    setEditingPersonName("")
+    await loadAll(group.id)
+  }
+
+  // ── Person select ──────────────────────────────────────────────────────────
   const togglePerson = (id: string, e: React.MouseEvent<HTMLDivElement>) => {
     const multi = e.shiftKey || e.ctrlKey || e.metaKey
     setSelected((prev) => {
@@ -498,19 +454,18 @@ export default function Home() {
   }
 
   // ── Order helpers ──────────────────────────────────────────────────────────
-
-  const applyDrinkChange = (prevOrders: Order[], pid: string, drink: Drink, delta: number, sess: number, groupId: string): Order[] => {
-    const idx = prevOrders.findIndex((o) => o.participant_id === pid && o.drink_id === drink.id && o.session === sess)
+  const applyDrinkChange = (prev: Order[], pid: string, drink: Drink, delta: number, sess: number, groupId: string): Order[] => {
+    const idx = prev.findIndex((o) => o.participant_id === pid && o.drink_id === drink.id && o.session === sess)
     if (delta > 0) {
-      if (idx === -1) return [...prevOrders, { id: `temp-${Date.now()}-${pid}`, participant_id: pid, drink_id: drink.id, quantity: 1, group_id: groupId, session: sess }]
-      const updated = [...prevOrders]; updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + 1 }; return updated
+      if (idx === -1) return [...prev, { id: `temp-${Date.now()}-${pid}`, participant_id: pid, drink_id: drink.id, quantity: 1, group_id: groupId, session: sess }]
+      const u = [...prev]; u[idx] = { ...u[idx], quantity: u[idx].quantity + 1 }; return u
     }
     if (delta < 0 && idx !== -1) {
-      const newQty = prevOrders[idx].quantity - 1
-      if (newQty <= 0) return prevOrders.filter((_, i) => i !== idx)
-      const updated = [...prevOrders]; updated[idx] = { ...updated[idx], quantity: newQty }; return updated
+      const newQty = prev[idx].quantity - 1
+      if (newQty <= 0) return prev.filter((_, i) => i !== idx)
+      const u = [...prev]; u[idx] = { ...u[idx], quantity: newQty }; return u
     }
-    return prevOrders
+    return prev
   }
 
   const syncDrinkChange = async (drink: Drink, delta: number, pid: string, sess: number, groupId: string) => {
@@ -531,10 +486,8 @@ export default function Home() {
     if (!targets.length) { setToast("Selecteer eerst een persoon"); return }
     setLoadingDrink(`${drink.id}-${delta}`)
     setOrders((prev) => { let next = prev; for (const pid of targets) next = applyDrinkChange(next, pid, drink, delta, session, group.id); return next })
-    try {
-      await Promise.all(targets.map((pid) => syncDrinkChange(drink, delta, pid, session, group.id)))
-      await loadAll(group.id)
-    } catch { setError("Order bijwerken mislukt"); await loadAll(group.id) }
+    try { await Promise.all(targets.map((pid) => syncDrinkChange(drink, delta, pid, session, group.id))); await loadAll(group.id) }
+    catch { setError("Order bijwerken mislukt"); await loadAll(group.id) }
     finally { setLoadingDrink(null) }
   }
 
@@ -546,13 +499,10 @@ export default function Home() {
   }
 
   // ── Drink CRUD ─────────────────────────────────────────────────────────────
-
   const addDrink = async () => {
     const { name, price, emoji, category } = newDrink
     if (!name.trim() || !price) { setToast("Vul naam en prijs in"); return }
-    const { error } = await supabase.from("drinks").insert([{
-      name: name.trim(), price: parseFloat(price), emoji: emoji || "🍹", category: category || FALLBACK_CATEGORY,
-    }])
+    const { error } = await supabase.from("drinks").insert([{ name: name.trim(), price: parseFloat(price), emoji: emoji || "🍹", category: category || FALLBACK_CATEGORY }])
     if (error) { setError("Drank toevoegen mislukt: " + error.message); return }
     setNewDrink({ name: "", price: "", emoji: "", category: newDrink.category })
     setVoiceTranscript("")
@@ -561,9 +511,7 @@ export default function Home() {
   }
 
   const addDrinkFromLibrary = async (item: DrinkLibraryItem, price: number) => {
-    const { error } = await supabase.from("drinks").insert([{
-      name: item.name, price, emoji: item.emoji, category: item.category || FALLBACK_CATEGORY,
-    }])
+    const { error } = await supabase.from("drinks").insert([{ name: item.name, price, emoji: item.emoji, category: item.category || FALLBACK_CATEGORY }])
     if (error) { setError("Drank toevoegen mislukt"); return }
     setToast(`${item.name} toegevoegd`)
     await loadDrinks()
@@ -571,9 +519,7 @@ export default function Home() {
 
   const saveEditedDrink = async () => {
     if (!editingDrink) return
-    const { error } = await supabase.from("drinks")
-      .update({ name: editingDrink.name, price: editingDrink.price, emoji: editingDrink.emoji, category: editingDrink.category })
-      .eq("id", editingDrink.id)
+    const { error } = await supabase.from("drinks").update({ name: editingDrink.name, price: editingDrink.price, emoji: editingDrink.emoji, category: editingDrink.category }).eq("id", editingDrink.id)
     if (error) { setError("Drank opslaan mislukt"); return }
     setEditingDrink(null)
     await loadDrinks()
@@ -587,18 +533,10 @@ export default function Home() {
   }
 
   // ── Computed ───────────────────────────────────────────────────────────────
-
-  const getPersonTotal = (pid: string) =>
-    orders.filter((o) => o.participant_id === pid).reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
-
-  const getPersonSessionTotal = (pid: string, sess: number) =>
-    orders.filter((o) => o.participant_id === pid && o.session === sess).reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
-
-  const getRoundTotal = (r: number) =>
-    orders.filter((o) => o.session === r).reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
-
-  const getGlobalTotal = () =>
-    orders.reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
+  const getPersonTotal = (pid: string) => orders.filter((o) => o.participant_id === pid).reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
+  const getPersonSessionTotal = (pid: string, sess: number) => orders.filter((o) => o.participant_id === pid && o.session === sess).reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
+  const getRoundTotal = (r: number) => orders.filter((o) => o.session === r).reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
+  const getGlobalTotal = () => orders.reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
 
   const getActivePersonDrinks = (pid: string) =>
     orders.filter((o) => o.participant_id === pid && o.session === session).reduce((acc: (Drink & { qty: number })[], o) => {
@@ -641,108 +579,66 @@ export default function Home() {
   const groupedDrinks = groupDrinksByCategory(drinks)
 
   // ─── Start screen ──────────────────────────────────────────────────────────
-
   if (!started) {
-    const filteredSaved = savedGroups.filter((g) =>
-      g.name.toLowerCase().includes(savedSearch.toLowerCase())
-    )
+    const filteredSaved = savedGroups.filter((g) => g.name.toLowerCase().includes(savedSearch.toLowerCase()))
     return (
       <div style={styles.container}>
         <div style={{ maxWidth: 420, margin: "40px auto" }}>
-          {/* Header */}
           <div style={{ textAlign: "center", marginBottom: 28 }}>
             <div style={{ fontSize: 56, marginBottom: 12 }}>🍺</div>
             <h2 style={{ ...styles.title, marginBottom: 6 }}>Rondje Bijhouden</h2>
             <p style={{ color: "#888", fontSize: 14 }}>Maak een groep aan of sluit je aan met een code</p>
           </div>
 
-          {/* Saved groups */}
+          {/* Saved groups - collapsible */}
           {savedGroups.length > 0 && (
             <div style={{ ...styles.card, marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <button onClick={() => setSavedOpen((o) => !o)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", padding: 0 }}>
                 <b style={{ fontSize: 14, color: "#555" }}>📌 Opgeslagen groepen</b>
-                <span style={{ fontSize: 11, color: "#aaa" }}>{savedGroups.length} groep{savedGroups.length !== 1 ? "en" : ""}</span>
-              </div>
-              <input
-                value={savedSearch}
-                onChange={(e) => setSavedSearch(e.target.value)}
-                placeholder="🔍 Zoek groep..."
-                style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginBottom: 10, fontSize: 13 }}
-              />
-              {filteredSaved.length === 0 && (
-                <div style={{ color: "#aaa", fontSize: 13, textAlign: "center", padding: 8 }}>Geen resultaten</div>
-              )}
-              {filteredSaved.map((g) => (
-                <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 6px", borderRadius: 10, borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{g.name}</div>
-                    <div style={{ fontSize: 11, color: "#aaa", letterSpacing: 1 }}>{g.invite_code}</div>
-                  </div>
-                  <button
-                    style={{ ...styles.button, ...styles.primary, fontSize: 12, padding: "5px 12px" }}
-                    onClick={() => joinGroup(g.invite_code)}
-                    disabled={isStarting}
-                  >
-                    Openen
-                  </button>
-                  <button
-                    style={{ ...styles.iconButton }}
-                    title="Verwijderen uit lijst"
-                    onClick={() => { removeGroupFromStorage(g.id); setSavedGroups(getSavedGroups()) }}
-                  >
-                    🗑️
-                  </button>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 11, color: "#aaa" }}>{savedGroups.length} groep{savedGroups.length !== 1 ? "en" : ""}</span>
+                  <span style={{ fontSize: 12, color: "#aaa", display: "inline-block", transform: savedOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
                 </div>
-              ))}
+              </button>
+              {savedOpen && (
+                <div style={{ marginTop: 12 }}>
+                  <input value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} placeholder="🔍 Zoek groep..." style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginBottom: 10, fontSize: 13 }} />
+                  {filteredSaved.length === 0 && <div style={{ color: "#aaa", fontSize: 13, textAlign: "center", padding: 8 }}>Geen resultaten</div>}
+                  {filteredSaved.map((g) => (
+                    <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 6px", borderRadius: 10, borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{g.name}</div>
+                        <div style={{ fontSize: 11, color: "#aaa", letterSpacing: 1 }}>{g.invite_code}</div>
+                      </div>
+                      <button style={{ ...styles.button, ...styles.primary, fontSize: 12, padding: "5px 12px" }} onClick={() => joinGroup(g.invite_code)} disabled={isStarting}>Openen</button>
+                      <button style={styles.iconButton} title="Verwijderen uit lijst" onClick={() => { removeGroupFromStorage(g.id); setSavedGroups(getSavedGroups()) }}>🗑️</button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Create / Join tabs */}
+          {/* Create / Join */}
           <div style={styles.card}>
             <div style={{ display: "flex", background: "#f0f2f5", borderRadius: 12, padding: 4, marginBottom: 20 }}>
               {(["create", "join"] as const).map((m) => (
-                <button key={m} onClick={() => setMode(m)} style={{
-                  flex: 1, border: "none", borderRadius: 10, padding: "9px 0", fontSize: 14, cursor: "pointer",
-                  fontWeight: mode === m ? 700 : 400,
-                  background: mode === m ? "#fff" : "transparent",
-                  color: mode === m ? "#333" : "#888",
-                  boxShadow: mode === m ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
-                  transition: "all 0.15s",
-                }}>
+                <button key={m} onClick={() => setMode(m)} style={{ flex: 1, border: "none", borderRadius: 10, padding: "9px 0", fontSize: 14, cursor: "pointer", fontWeight: mode === m ? 700 : 400, background: mode === m ? "#fff" : "transparent", color: mode === m ? "#333" : "#888", boxShadow: mode === m ? "0 2px 8px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s" }}>
                   {m === "create" ? "✨ Nieuwe groep" : "🔗 Deelnemen"}
                 </button>
               ))}
             </div>
-
             {mode === "create" ? (
               <>
-                <input
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && startGroup()}
-                  placeholder="Groepsnaam (bv. Vrijdagavond)"
-                  style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginBottom: 12 }}
-                />
-                <button style={{ ...styles.button, ...styles.primary, width: "100%", padding: "12px 0", fontSize: 16 }} onClick={startGroup} disabled={isStarting}>
-                  {isStarting ? "Laden..." : "Start groep"}
-                </button>
+                <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && startGroup()} placeholder="Groepsnaam (bv. Vrijdagavond)" style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginBottom: 12 }} />
+                <button style={{ ...styles.button, ...styles.primary, width: "100%", padding: "12px 0", fontSize: 16 }} onClick={startGroup} disabled={isStarting}>{isStarting ? "Laden..." : "Start groep"}</button>
               </>
             ) : (
               <>
-                <input
-                  value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => e.key === "Enter" && joinGroup()}
-                  placeholder="Uitnodigingscode (bv. AB12CD)"
-                  maxLength={6}
-                  style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginBottom: 12, letterSpacing: 3, textAlign: "center", fontSize: 18, fontWeight: 700 }}
-                />
-                <button style={{ ...styles.button, ...styles.primary, width: "100%", padding: "12px 0", fontSize: 16 }} onClick={joinGroup} disabled={isStarting}>
-                  {isStarting ? "Zoeken..." : "Deelnemen"}
-                </button>
+                <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === "Enter" && joinGroup()} placeholder="Uitnodigingscode (bv. AB12CD)" maxLength={6} style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginBottom: 12, letterSpacing: 3, textAlign: "center", fontSize: 18, fontWeight: 700 }} />
+                <button style={{ ...styles.button, ...styles.primary, width: "100%", padding: "12px 0", fontSize: 16 }} onClick={() => joinGroup()} disabled={isStarting}>{isStarting ? "Zoeken..." : "Deelnemen"}</button>
               </>
             )}
-
             {error && (
               <div style={{ marginTop: 12, color: "#c0392b", fontSize: 13, background: "#fff0f0", borderRadius: 10, padding: "8px 12px" }}>
                 ⚠️ {error}
@@ -756,26 +652,18 @@ export default function Home() {
   }
 
   // ─── Main app ──────────────────────────────────────────────────────────────
-
   return (
     <div style={styles.container}>
       <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.55} }`}</style>
-
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
-
       {error && (
         <div style={styles.errorBanner}>
           ⚠️ {error}
           <button onClick={() => setError(null)} style={{ marginLeft: 12, background: "none", border: "none", cursor: "pointer", color: "#c0392b", fontWeight: 700 }}>✕</button>
         </div>
       )}
-
       {showAddPerson && <AddPersonModal onClose={() => setShowAddPerson(false)} onAdd={addPerson} />}
-
-      {showLibraryPicker && (
-        <LibraryPickerModal library={library} existing={drinks} onClose={() => setShowLibraryPicker(false)} onAdd={addDrinkFromLibrary} />
-      )}
-
+      {showLibraryPicker && <LibraryPickerModal library={library} existing={drinks} onClose={() => setShowLibraryPicker(false)} onAdd={addDrinkFromLibrary} />}
       {showQR && group && <QRModal inviteCode={group.invite_code} onClose={() => setShowQR(false)} />}
 
       {/* Invite code banner */}
@@ -800,12 +688,8 @@ export default function Home() {
           <h2 style={styles.title}>🍻 {group?.name}</h2>
           {!showInviteCode && (
             <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-              <button onClick={() => setShowInviteCode(true)} style={{ ...styles.button, fontSize: 12, padding: "3px 10px" }}>
-                🔗 {group?.invite_code}
-              </button>
-              <button onClick={() => setShowQR(true)} style={{ ...styles.button, fontSize: 12, padding: "3px 10px" }}>
-                📱 QR
-              </button>
+              <button onClick={() => setShowInviteCode(true)} style={{ ...styles.button, fontSize: 12, padding: "3px 10px" }}>🔗 {group?.invite_code}</button>
+              <button onClick={() => setShowQR(true)} style={{ ...styles.button, fontSize: 12, padding: "3px 10px" }}>📱 QR</button>
             </div>
           )}
         </div>
@@ -835,40 +719,45 @@ export default function Home() {
       <div style={styles.section}>
         <h3 style={styles.h3}>
           👤 Personen
-          {selected.length > 0 && (
-            <span style={{ fontSize: 13, fontWeight: 400, color: "#4f7ef7", marginLeft: 10 }}>
-              {selected.length} geselecteerd — klik op een drank om te bestellen
-            </span>
-          )}
+          {selected.length > 0 && <span style={{ fontSize: 13, fontWeight: 400, color: "#4f7ef7", marginLeft: 10 }}>{selected.length} geselecteerd — klik op een drank om te bestellen</span>}
         </h3>
-
-        {participants.length === 0 && (
-          <div style={{ ...styles.card, color: "#999", textAlign: "center", padding: 32 }}>Nog geen personen. Voeg er een toe!</div>
-        )}
-
+        {participants.length === 0 && <div style={{ ...styles.card, color: "#999", textAlign: "center", padding: 32 }}>Nog geen personen. Voeg er een toe!</div>}
         {participants.map((p) => {
           const isSelected = selected.includes(p.id)
           return (
             <div key={p.id} style={{ ...styles.card, border: isSelected ? "2px solid #4f7ef7" : "1px solid rgba(0,0,0,0.06)", padding: isSelected ? 15 : 16, transition: "border 0.15s" }}>
-              <div
-                onClick={(e) => togglePerson(p.id, e)}
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", background: isSelected ? "rgba(79,126,247,0.07)" : "transparent", borderRadius: 10, padding: "6px 8px", userSelect: "none" }}
-              >
+
+              {/* Inline rename form */}
+              {editingPerson === p.id && (
+                <div style={{ display: "flex", gap: 8, marginBottom: 10, padding: "4px 8px" }}>
+                  <input
+                    autoFocus
+                    value={editingPersonName}
+                    onChange={(e) => setEditingPersonName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") renamePerson(); if (e.key === "Escape") setEditingPerson(null) }}
+                    style={{ ...styles.input, flex: 1 }}
+                  />
+                  <button style={{ ...styles.button, ...styles.primary }} onClick={renamePerson}>💾</button>
+                  <button style={styles.button} onClick={() => setEditingPerson(null)}>✖</button>
+                </div>
+              )}
+
+              <div onClick={(e) => togglePerson(p.id, e)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", background: isSelected ? "rgba(79,126,247,0.07)" : "transparent", borderRadius: 10, padding: "6px 8px", userSelect: "none" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   {isSelected && <span style={{ fontSize: 12, color: "#4f7ef7" }}>✓</span>}
                   <b style={{ fontSize: 15 }}>{p.name}</b>
                 </div>
                 <div style={{ flex: 1, marginLeft: 12, fontSize: 13, color: "#555" }}>
-                  {getActivePersonDrinks(p.id).map((d) => (
-                    <span key={d.id} style={{ marginRight: 10 }}>{d.emoji} {d.name} × {d.qty}</span>
-                  ))}
+                  {getActivePersonDrinks(p.id).map((d) => <span key={d.id} style={{ marginRight: 10 }}>{d.emoji} {d.name} × {d.qty}</span>)}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ textAlign: "right" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <div style={{ textAlign: "right", marginRight: 4 }}>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>€{getPersonTotal(p.id).toFixed(2)}</div>
                     <div style={{ fontSize: 11, color: "#aaa" }}>ronde: €{getPersonSessionTotal(p.id, session).toFixed(2)}</div>
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); setOpenPersonHistory((h) => h === p.id ? null : p.id) }} style={styles.iconButton} title="Historiek">📋</button>
+                  <button onClick={(e) => { e.stopPropagation(); setEditingPerson(p.id); setEditingPersonName(p.name) }} style={styles.iconButton} title="Naam wijzigen">✏️</button>
+                  <button onClick={(e) => { e.stopPropagation(); deletePerson(p.id, p.name) }} style={styles.iconButton} title="Verwijderen">🗑️</button>
                 </div>
               </div>
 
@@ -879,11 +768,7 @@ export default function Home() {
                   {getPersonRoundsHistory(p.id).map((r) => (
                     <div key={r.roundId} style={{ marginTop: 10 }}>
                       <div style={{ fontWeight: 600, fontSize: 13, color: "#444" }}>Ronde {r.roundId} — €{r.roundTotal.toFixed(2)}</div>
-                      {r.items.map((it, i) => (
-                        <div key={i} style={{ fontSize: 12, marginLeft: 12, marginTop: 2, color: "#666" }}>
-                          {it.drink.emoji} {it.drink.name} × {it.quantity} = €{it.subtotal.toFixed(2)}
-                        </div>
-                      ))}
+                      {r.items.map((it, i) => <div key={i} style={{ fontSize: 12, marginLeft: 12, marginTop: 2, color: "#666" }}>{it.drink.emoji} {it.drink.name} × {it.quantity} = €{it.subtotal.toFixed(2)}</div>)}
                     </div>
                   ))}
                 </div>
@@ -899,13 +784,7 @@ export default function Home() {
           <h3 style={{ ...styles.h3, marginBottom: 0 }}>🍹 Drankjes</h3>
           <button style={{ ...styles.button, fontSize: 13 }} onClick={() => setShowLibraryPicker(true)}>📚 Uit bibliotheek</button>
         </div>
-
-        {drinks.length === 0 && (
-          <div style={{ ...styles.card, color: "#999", textAlign: "center", padding: 24 }}>
-            Nog geen drankjes. Voeg ze toe of gebruik de bibliotheek.
-          </div>
-        )}
-
+        {drinks.length === 0 && <div style={{ ...styles.card, color: "#999", textAlign: "center", padding: 24 }}>Nog geen drankjes. Voeg ze toe of gebruik de bibliotheek.</div>}
         {groupedDrinks.map(([cat, list]) => (
           <div key={cat} style={styles.card}>
             <b style={{ display: "block", marginBottom: 10, fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5, color: "#888" }}>{cat}</b>
@@ -946,16 +825,7 @@ export default function Home() {
             <button
               onClick={voiceState === "listening" ? stopListening : startListening}
               title={voiceState === "listening" ? "Stop opname" : "Spreek een dranknaam in"}
-              style={{
-                ...styles.button,
-                fontSize: 13,
-                background: voiceState === "listening" ? "#e74c3c" : voiceState === "done" ? "#27ae60" : voiceState === "error" ? "#e74c3c" : "#fff",
-                color: voiceState !== "idle" ? "#fff" : "#333",
-                border: "none",
-                boxShadow: voiceState === "listening" ? "0 0 0 3px rgba(231,76,60,0.25)" : "none",
-                animation: voiceState === "listening" ? "pulse 1.2s infinite" : "none",
-                transition: "background 0.2s",
-              }}
+              style={{ ...styles.button, fontSize: 13, background: voiceState === "listening" ? "#e74c3c" : voiceState === "done" ? "#27ae60" : voiceState === "error" ? "#e74c3c" : "#fff", color: voiceState !== "idle" ? "#fff" : "#333", border: "none", boxShadow: voiceState === "listening" ? "0 0 0 3px rgba(231,76,60,0.25)" : "none", animation: voiceState === "listening" ? "pulse 1.2s infinite" : "none", transition: "background 0.2s" }}
             >
               {voiceState === "listening" && "🔴 Luistert..."}
               {voiceState === "done" && "✅ Herkend!"}
@@ -963,13 +833,11 @@ export default function Home() {
               {voiceState === "idle" && "🎤 Inspreken"}
             </button>
           </div>
-
           {voiceTranscript && voiceState !== "idle" && (
             <div style={{ fontSize: 12, color: "#888", fontStyle: "italic", marginBottom: 8, padding: "4px 8px", background: "rgba(0,0,0,0.03)", borderRadius: 8 }}>
               Gehoord: &ldquo;{voiceTranscript}&rdquo;
             </div>
           )}
-
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <input placeholder="Naam" value={newDrink.name} onChange={(e) => setNewDrink({ ...newDrink, name: e.target.value })} style={{ ...styles.input, width: 140 }} />
             <input type="number" placeholder="Prijs €" value={newDrink.price} onChange={(e) => setNewDrink({ ...newDrink, price: e.target.value })} style={{ ...styles.input, width: 90 }} />
@@ -985,9 +853,7 @@ export default function Home() {
       {/* Round history */}
       <div style={styles.section}>
         <h3 style={styles.h3}>📦 Ronde historiek</h3>
-        {sessions.length === 0 && (
-          <div style={{ ...styles.card, color: "#999", textAlign: "center", padding: 24 }}>Nog geen bestellingen geplaatst.</div>
-        )}
+        {sessions.length === 0 && <div style={{ ...styles.card, color: "#999", textAlign: "center", padding: 24 }}>Nog geen bestellingen geplaatst.</div>}
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 }}>
           {sessions.map((s) => (
             <div key={s} style={{ ...styles.card, minWidth: 280, flexShrink: 0 }}>
