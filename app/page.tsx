@@ -623,10 +623,10 @@ export default function Home() {
   const syncDrinkChange = async (drink: Drink, delta: number, pid: string, sess: number, groupId: string) => {
     const existing = orders.find((o) => o.participant_id === pid && o.drink_id === drink.id && o.session === sess)
     if (delta > 0) {
-      if (!existing) await supabase.from("orders").insert([{ participant_id: pid, drink_id: drink.id, quantity: 1, group_id: groupId, session: sess }])
-      else await supabase.from("orders").update({ quantity: existing.quantity + 1 }).eq("id", existing.id)
+      if (!existing) await supabase.from("orders").insert([{ participant_id: pid, drink_id: drink.id, quantity: delta, group_id: groupId, session: sess }])
+      else await supabase.from("orders").update({ quantity: existing.quantity + delta }).eq("id", existing.id)
     } else if (delta < 0 && existing) {
-      const newQty = existing.quantity - 1
+      const newQty = existing.quantity + delta
       if (newQty <= 0) await supabase.from("orders").delete().eq("id", existing.id)
       else await supabase.from("orders").update({ quantity: newQty }).eq("id", existing.id)
     }
@@ -698,24 +698,11 @@ export default function Home() {
         // Add per person what was assigned
         for (const assignment of assignments) {
           if (assignment.qty <= 0) continue
-          for (let i = 0; i < assignment.qty; i++) {
-            await syncDrinkChange(matchedDrink, 1, assignment.participantId, newRoundSession, group.id)
-          }
+          await syncDrinkChange(matchedDrink, assignment.qty, assignment.participantId, newRoundSession, group.id)
         }
-        // Remaining unassigned qty — add to first participant as fallback or skip
-        const remaining = spokenDrink.qty - totalAssigned
-        if (remaining > 0 && participants.length > 0) {
-          for (let i = 0; i < remaining; i++) {
-            await syncDrinkChange(matchedDrink, 1, participants[0].id, newRoundSession, group.id)
-          }
-        }
-      } else {
-        // No assignments — add total qty to first participant so it shows in totals
-        if (participants.length > 0) {
-          for (let i = 0; i < spokenDrink.qty; i++) {
-            await syncDrinkChange(matchedDrink, 1, participants[0].id, newRoundSession, group.id)
-          }
-        }
+      } else if (participants.length > 0) {
+        // No assignments — add full qty to first participant
+        await syncDrinkChange(matchedDrink, spokenDrink.qty, participants[0].id, newRoundSession, group.id)
       }
     }
     await loadAll(group.id)
@@ -1374,7 +1361,7 @@ export default function Home() {
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {item.drinks.map((d, i) => (
                     <span key={i} style={{ fontSize: 18, fontWeight: 700, background: "#f5f7ff", borderRadius: 12, padding: "6px 14px" }}>
-                      {d.emoji} {d.qty > 1 ? `${d.qty}× ` : ""}{d.name}
+                      {d.emoji} {d.qty}× {d.name}
                     </span>
                   ))}
                 </div>
