@@ -286,6 +286,49 @@ function parseSpokenDrinks(text: string): { name: string; qty: number; emoji: st
   return results.map((r) => ({ ...r, assignments: [] as { participantId: string; qty: number }[] }))
 }
 
+function normalizeDrinkName(s: string): string {
+  return s.toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9 ]/g, "")
+    .replace(/  +/g, " ")
+    .trim()
+}
+
+function fuzzyMatchDrink(spokenName: string, drinkList: Drink[]): Drink | null {
+  const spoken = normalizeDrinkName(spokenName)
+  const spokenWords = spoken.split(" ").filter((w) => w.length > 1)
+  if (!spoken) return null
+
+  // 1. Exact match
+  let m = drinkList.find((d) => normalizeDrinkName(d.name) === spoken)
+  if (m) return m
+
+  // 2. One contains the other
+  m = drinkList.find((d) => {
+    const dn = normalizeDrinkName(d.name)
+    return spoken.includes(dn) || dn.includes(spoken)
+  })
+  if (m) return m
+
+  // 3. All spoken words appear in the drink name
+  m = drinkList.find((d) => {
+    const dn = normalizeDrinkName(d.name)
+    return spokenWords.length > 0 && spokenWords.every((w) => dn.includes(w))
+  })
+  if (m) return m
+
+  // 4. Majority of words match (>= 50%)
+  let bestScore = 0
+  let bestDrink: Drink | null = null
+  for (const d of drinkList) {
+    const dn = normalizeDrinkName(d.name).split(" ")
+    const matches = spokenWords.filter((w) => dn.some((dw) => dw.includes(w) || w.includes(dw))).length
+    const score = spokenWords.length > 0 ? matches / spokenWords.length : 0
+    if (score > bestScore) { bestScore = score; bestDrink = d }
+  }
+  return bestScore >= 0.5 ? bestDrink : null
+}
+
 function groupDrinksByCategory(drinks: Drink[]): [string, Drink[]][] {
   const map: Record<string, Drink[]> = {}
   drinks.forEach((d) => {
@@ -435,6 +478,7 @@ export default function Home() {
   // ── Quick Order state ─────────────────────────────────────────────────────
   const [showQuickOrder, setShowQuickOrder] = useState(false)
   const [roundFullscreen, setRoundFullscreen] = useState<number | null>(null)
+  const [addToRoundDrink, setAddToRoundDrink] = useState<Record<number, string>>({})
   const [quickItems, setQuickItems] = useState<QuickOrderItem[]>([])
   const [quickVoiceActive, setQuickVoiceActive] = useState(false)
   const [quickFullscreen, setQuickFullscreen] = useState(false)
@@ -651,6 +695,31 @@ export default function Home() {
     catch { setError("Historiek bijwerken mislukt"); await loadAll(group.id) }
   }
 
+  // Decrease/remove an anonymous (unassigned) order in a given round
+  const changeAnonymousHistory = async (drink: Drink, delta: number, round: number) => {
+    if (!group) return
+    const existing = orders.find((o) => !o.participant_id && o.drink_id === drink.id && o.session === round)
+    if (!existing) return
+    const newQty = existing.quantity + delta
+    try {
+      if (newQty <= 0) await supabase.from("orders").delete().eq("id", existing.id)
+      else await supabase.from("orders").update({ quantity: newQty }).eq("id", existing.id)
+      await loadAll(group.id)
+    } catch { setError("Historiek bijwerken mislukt") }
+  }
+
+  // Add a drink anonymously to an existing round (e.g. extra round, no person yet)
+  const addAnonymousToRound = async (drink: Drink, round: number) => {
+    if (!group) return
+    const existing = orders.find((o) => !o.participant_id && o.drink_id === drink.id && o.session === round)
+    try {
+      if (existing) await supabase.from("orders").update({ quantity: existing.quantity + 1 }).eq("id", existing.id)
+      else await supabase.from("orders").insert([{ participant_id: null, drink_id: drink.id, quantity: 1, group_id: group.id, session: round }])
+      await loadAll(group.id)
+      setToast(`${drink.name} toegevoegd aan ronde ${round}`)
+    } catch { setError("Toevoegen mislukt") }
+  }
+
   // ── Quick Order ───────────────────────────────────────────────────────────────
 
   const startQuickVoice = () => {
@@ -667,8 +736,13 @@ export default function Home() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recog.onresult = (e: any) => {
       const text = e.results[0][0].transcript
-      const drinks = parseSpokenDrinks(text)
-      const item: QuickOrderItem = { id: randomId(), text, drinks, timestamp: Date.now() }
+      const parsedDrinks = parseSpokenDrinks(text)
+      // Immediately snap each parsed drink to the closest match in the real drinks list, if any
+      const resolvedDrinks = parsedDrinks.map((d) => {
+        const match = fuzzyMatchDrink(d.name, drinks)
+        return match ? { ...d, name: match.name, emoji: match.emoji } : d
+      })
+      const item: QuickOrderItem = { id: randomId(), text, drinks: resolvedDrinks, timestamp: Date.now() }
       setQuickItems((prev) => [...prev, item])
       setQuickVoiceActive(false)
     }
@@ -686,11 +760,7 @@ export default function Home() {
 
     for (const item of quickItems) {
       for (const spokenDrink of item.drinks) {
-        const matchedDrink = drinks.find((d) =>
-          d.name.toLowerCase() === spokenDrink.name.toLowerCase() ||
-          d.name.toLowerCase().includes(spokenDrink.name.toLowerCase()) ||
-          spokenDrink.name.toLowerCase().includes(d.name.toLowerCase())
-        )
+        const matchedDrink = fuzzyMatchDrink(spokenDrink.name, drinks)
         if (!matchedDrink) continue
 
         const assignments = spokenDrink.assignments ?? []
@@ -1328,11 +1398,35 @@ export default function Home() {
                         </div>
                       ))}
                       {it.anonymous > 0 && (
-                        <div style={{ fontSize: 12, color: "#aaa", marginTop: 2 }}>× {it.anonymous} (niet toegewezen)</div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, marginTop: 2, color: "#aaa" }}>
+                          <span>× {it.anonymous} (niet toegewezen)</span>
+                          <button style={styles.iconButton} onClick={() => changeAnonymousHistory(it.drink, -1, s)}>➖</button>
+                        </div>
                       )}
                     </div>
                   </div>
                 ))}
+
+                {/* Add a drink to this existing round */}
+                <div style={{ marginTop: 12, display: "flex", gap: 6 }}>
+                  <select
+                    value={addToRoundDrink[s] ?? drinks[0]?.id ?? ""}
+                    onChange={(e) => setAddToRoundDrink((prev) => ({ ...prev, [s]: e.target.value }))}
+                    style={{ ...styles.input, flex: 1, fontSize: 12, padding: "5px 8px" }}
+                  >
+                    {drinks.map((d) => <option key={d.id} value={d.id}>{d.emoji} {d.name}</option>)}
+                  </select>
+                  <button
+                    style={{ ...styles.button, fontSize: 12, padding: "5px 10px" }}
+                    onClick={() => {
+                      const drinkId = addToRoundDrink[s] ?? drinks[0]?.id
+                      const drink = drinks.find((d) => d.id === drinkId)
+                      if (drink) addAnonymousToRound(drink, s)
+                    }}
+                  >
+                    + Toevoegen
+                  </button>
+                </div>
               </div>
             )
           })}
