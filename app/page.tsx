@@ -426,7 +426,8 @@ export default function Home() {
   const [editingPersonName, setEditingPersonName] = useState("")
 
   const [session, setSession] = useState(1)
-  const [cart, setCart] = useState<Record<string, number>>({}) // drinkId -> qty, for current round being built
+  type CartLine = { total: number; assignments: Record<string, number> } // assignments: participantId -> qty
+  const [cart, setCart] = useState<Record<string, CartLine>>({}) // drinkId -> CartLine
   const [showPrices, setShowPrices] = useState(false)
 
   const [showAddPerson, setShowAddPerson] = useState(false)
@@ -440,12 +441,15 @@ export default function Home() {
   const [editingDrink, setEditingDrink] = useState<Drink | null>(null)
 
   const [roundFullscreen, setRoundFullscreen] = useState<number | null>(null)
+  const [expandedRound, setExpandedRound] = useState<number | null>(null) // null = use default (latest open)
+  const [manuallyCollapsedLatest, setManuallyCollapsedLatest] = useState(false)
   const [editingRound, setEditingRound] = useState<number | null>(null)
   const [paymentEditRound, setPaymentEditRound] = useState<number | null>(null)
   const [paymentDraft, setPaymentDraft] = useState<Record<string, string>>({}) // participantId -> amount string
 
   const [showBillPrices, setShowBillPrices] = useState(false)
   const [showFairSplit, setShowFairSplit] = useState(false)
+  const [showFairSplitDetails, setShowFairSplitDetails] = useState(false)
 
   // ── Voice (quick order) state ────────────────────────────────────────────
   const [quickItems, setQuickItems] = useState<QuickOrderItem[]>([])
@@ -576,42 +580,79 @@ export default function Home() {
     await loadAll(group.id)
   }
 
-  // ── Cart (huidige open ronde) ────────────────────────────────────────────
+  // ── Cart (huidige open ronde, met per-persoon toewijzing) ────────────────
   const addToCart = (drinkId: string, delta: number) => {
     setCart((prev) => {
       const next = { ...prev }
-      const newQty = (next[drinkId] ?? 0) + delta
-      if (newQty <= 0) delete next[drinkId]
-      else next[drinkId] = newQty
+      const line = next[drinkId] ?? { total: 0, assignments: {} }
+      const newTotal = Math.max(0, line.total + delta)
+      if (newTotal === 0) { delete next[drinkId]; return next }
+      // If decreasing, also trim assignments proportionally (remove from least-specific first: reduce from any assigned person if total drops below assigned sum)
+      const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
+      let newAssignments = { ...line.assignments }
+      if (newTotal < assignedSum) {
+        // Remove from the last-touched assignment(s) until it fits — simplest: clear all if it no longer fits
+        let toRemove = assignedSum - newTotal
+        const keys = Object.keys(newAssignments)
+        for (let i = keys.length - 1; i >= 0 && toRemove > 0; i--) {
+          const k = keys[i]
+          const reduceBy = Math.min(newAssignments[k], toRemove)
+          newAssignments[k] -= reduceBy
+          if (newAssignments[k] <= 0) delete newAssignments[k]
+          toRemove -= reduceBy
+        }
+      }
+      next[drinkId] = { total: newTotal, assignments: newAssignments }
       return next
     })
   }
 
-  const cartTotalItems = Object.values(cart).reduce((s: number, q: number) => s + q, 0)
-  const cartTotalValue = Object.entries(cart).reduce((s: number, [drinkId, qty]: [string, number]) => {
+  const assignCartItem = (drinkId: string, participantId: string, delta: number) => {
+    setCart((prev) => {
+      const line = prev[drinkId]
+      if (!line) return prev
+      const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
+      const currentForPerson = line.assignments[participantId] ?? 0
+      if (delta > 0 && assignedSum >= line.total) return prev // can't assign more than total
+      const newQty = Math.max(0, currentForPerson + delta)
+      const newAssignments = { ...line.assignments }
+      if (newQty === 0) delete newAssignments[participantId]
+      else newAssignments[participantId] = newQty
+      return { ...prev, [drinkId]: { ...line, assignments: newAssignments } }
+    })
+  }
+
+  const cartTotalItems = Object.values(cart).reduce((s: number, line) => s + line.total, 0)
+  const cartTotalValue = Object.entries(cart).reduce((s: number, [drinkId, line]) => {
     const d = drinks.find((dr) => dr.id === drinkId)
-    return s + (d?.price ?? 0) * qty
+    return s + (d?.price ?? 0) * line.total
   }, 0)
 
   const clearCart = () => setCart({})
 
-  // Finalize the cart into an actual round — distribute evenly is too complex here,
-  // so: cart items go in WITHOUT a specific person (anonymous) by default; user assigns after,
-  // OR if exactly relevant flow used quick-order with assignment, that's handled separately.
   const sessions = Array.from(new Set(orders.map((o) => o.session))).sort((a, b) => a - b)
   const nextSession = Math.max(session, ...sessions, 0) + 1
 
   const finishRound = async () => {
     if (!group || cartTotalItems === 0) { setToast("Voeg eerst drankjes toe"); return }
     const newRoundSession = nextSession
-    for (const [drinkId, qty] of Object.entries(cart) as [string, number][]) {
-      if (qty <= 0) continue
-      await supabase.from("orders").insert([{ participant_id: null, drink_id: drinkId, quantity: qty, group_id: group.id, session: newRoundSession }])
+    for (const [drinkId, line] of Object.entries(cart)) {
+      const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
+      // Insert per assigned person
+      for (const [participantId, qty] of Object.entries(line.assignments)) {
+        if (qty <= 0) continue
+        await supabase.from("orders").insert([{ participant_id: participantId, drink_id: drinkId, quantity: qty, group_id: group.id, session: newRoundSession }])
+      }
+      // Remaining unassigned goes in anonymously
+      const remaining = line.total - assignedSum
+      if (remaining > 0) {
+        await supabase.from("orders").insert([{ participant_id: null, drink_id: drinkId, quantity: remaining, group_id: group.id, session: newRoundSession }])
+      }
     }
     await loadAll(group.id)
     setCart({})
     setSession(newRoundSession)
-    setToast(`Ronde ${newRoundSession} afgerond — wijs personen toe in 'Rondes'`)
+    setToast(`Ronde ${newRoundSession} afgerond!`)
     setView("rounds")
   }
 
@@ -929,7 +970,7 @@ export default function Home() {
           { id: "setup", label: "👥 Groep" },
           { id: "ordering", label: "🛒 Bestellen" },
           { id: "rounds", label: "📦 Rondes" },
-          { id: "bill", label: "🧾 Rekening" },
+          { id: "bill", label: "🧾 Totaal" },
         ] as { id: AppView; label: string }[]).map((t) => (
           <button
             key={t.id}
@@ -1028,6 +1069,26 @@ export default function Home() {
             </button>
           </div>
 
+          {/* Bestellijst voor de barman */}
+          {cartTotalItems > 0 && (
+            <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(79,126,247,0.06),rgba(107,161,255,0.06))", border: "1px solid rgba(79,126,247,0.15)" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#7090cc", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>🧾 Bestellijst voor de barman</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {Object.entries(cart).map(([drinkId, line]) => {
+                  const d = drinks.find((dr) => dr.id === drinkId)
+                  if (!d || line.total === 0) return null
+                  return (
+                    <div key={drinkId} style={{ background: "#fff", border: "1px solid rgba(79,126,247,0.2)", borderRadius: 12, padding: "6px 12px", display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 18 }}>{d.emoji}</span>
+                      <span style={{ fontSize: 15, fontWeight: 800 }}>{line.total}×</span>
+                      <span style={{ fontSize: 13, color: "#555" }}>{d.name}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Subtle price toggle */}
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
             <button
@@ -1044,19 +1105,55 @@ export default function Home() {
               <b style={{ display: "block", marginBottom: 10, fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5, color: "#999" }}>{cat}</b>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 {list.map((d) => {
-                  const qty = cart[d.id] ?? 0
+                  const line = cart[d.id]
+                  const qty = line?.total ?? 0
+                  const assignedSum = line ? Object.values(line.assignments).reduce((s, q) => s + q, 0) : 0
+                  const unassigned = qty - assignedSum
                   return (
-                    <div key={d.id} style={{ background: qty > 0 ? "rgba(79,126,247,0.08)" : "#fafbff", border: qty > 0 ? "1.5px solid rgba(79,126,247,0.35)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div key={d.id} style={{ background: qty > 0 ? "rgba(79,126,247,0.08)" : "#fafbff", border: qty > 0 ? "1.5px solid rgba(79,126,247,0.35)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6, gridColumn: qty > 0 && participants.length > 0 ? "1 / -1" : "auto" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{ fontSize: 20 }}>{d.emoji}</span>
                         <span style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{d.name}</span>
+                        {showPrices && <span style={{ fontSize: 10, color: "#bbb" }}>≈ €{d.price.toFixed(2)}</span>}
                       </div>
-                      {showPrices && <span style={{ fontSize: 10, color: "#bbb" }}>≈ €{d.price.toFixed(2)}</span>}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15 }} onClick={() => addToCart(d.id, -1)}>−</button>
                         <span style={{ fontSize: 18, fontWeight: 800, minWidth: 24, textAlign: "center" }}>{qty}</span>
                         <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15, background: "rgba(79,126,247,0.12)" }} onClick={() => addToCart(d.id, 1)}>+</button>
                       </div>
+
+                      {/* Horizontal scroll person assignment, subtle */}
+                      {qty > 0 && participants.length > 0 && (
+                        <div style={{ marginTop: 4, paddingTop: 6, borderTop: "1px solid rgba(0,0,0,0.05)" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                            <span style={{ fontSize: 10, color: "#aaa" }}>wie?</span>
+                            <span style={{ fontSize: 10, color: unassigned > 0 ? "#e67e22" : "#27ae60", fontWeight: 600 }}>
+                              {assignedSum}/{qty} toegewezen
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2, scrollSnapType: "x proximate" }}>
+                            {participants.map((p) => {
+                              const pQty = line?.assignments[p.id] ?? 0
+                              return (
+                                <div
+                                  key={p.id}
+                                  style={{
+                                    flexShrink: 0, scrollSnapAlign: "start", display: "flex", alignItems: "center", gap: 4,
+                                    background: pQty > 0 ? "rgba(79,126,247,0.12)" : "rgba(0,0,0,0.035)",
+                                    border: pQty > 0 ? "1px solid rgba(79,126,247,0.35)" : "1px solid rgba(0,0,0,0.06)",
+                                    borderRadius: 20, padding: "3px 4px 3px 10px",
+                                  }}
+                                >
+                                  <span style={{ fontSize: 11, fontWeight: pQty > 0 ? 700 : 500, color: pQty > 0 ? "#4f7ef7" : "#888", whiteSpace: "nowrap" }}>{p.name}</span>
+                                  <button style={{ ...S.iconBtn, width: 18, height: 18, fontSize: 10 }} onClick={() => assignCartItem(d.id, p.id, -1)}>−</button>
+                                  <span style={{ fontSize: 11, fontWeight: 800, minWidth: 12, textAlign: "center", color: pQty > 0 ? "#4f7ef7" : "#ccc" }}>{pQty}</span>
+                                  <button style={{ ...S.iconBtn, width: 18, height: 18, fontSize: 10 }} onClick={() => assignCartItem(d.id, p.id, 1)}>+</button>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -1064,7 +1161,7 @@ export default function Home() {
             </div>
           ))}
 
-          {/* Manage drinks list (collapsed by default feel via small button) */}
+          {/* Manage drinks list */}
           <div style={S.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <b style={{ fontSize: 13, color: "#999" }}>Drankjes beheren</b>
@@ -1135,101 +1232,126 @@ export default function Home() {
             const roundPayments = getRoundPayments(s)
             const paymentTotal = getRoundPaymentTotal(s)
             const isEditing = editingRound === s
+            const latestSession = sessions[sessions.length - 1]
+            const isLatest = s === latestSession
+            // Determine open/closed: explicit expandedRound wins; otherwise latest is open by default (unless manually collapsed)
+            const isOpen = expandedRound === s || (expandedRound === null && isLatest && !manuallyCollapsedLatest)
+
+            const toggleOpen = () => {
+              if (isOpen) {
+                setExpandedRound(null)
+                if (isLatest) setManuallyCollapsedLatest(true)
+              } else {
+                setExpandedRound(s)
+                if (isLatest) setManuallyCollapsedLatest(false)
+              }
+            }
 
             return (
               <div key={s} style={S.card}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <b style={{ fontSize: 16 }}>Ronde {s}</b>
+                <div
+                  onClick={toggleOpen}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", userSelect: "none" }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 12, color: "#bbb", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", display: "inline-block" }}>▶</span>
+                    <b style={{ fontSize: 16 }}>Ronde {s}</b>
+                    {isLatest && <span style={{ fontSize: 10, color: "#4f7ef7", background: "rgba(79,126,247,0.1)", borderRadius: 8, padding: "1px 8px", fontWeight: 700 }}>laatste</span>}
+                  </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ fontWeight: 700, color: "#4f7ef7" }}>€{roundTotal.toFixed(2)}</span>
-                    <button style={S.iconBtn} title="Volledig scherm" onClick={() => setRoundFullscreen(s)}>🔍</button>
-                    <button style={S.iconBtn} title="Bewerken" onClick={() => setEditingRound(isEditing ? null : s)}>{isEditing ? "✓" : "✏️"}</button>
-                    <button style={S.iconBtn} title="Verwijderen" onClick={() => deleteRound(s)}>🗑️</button>
+                    <button style={S.iconBtn} title="Volledig scherm" onClick={(e) => { e.stopPropagation(); setRoundFullscreen(s) }}>🔍</button>
+                    <button style={S.iconBtn} title="Bewerken" onClick={(e) => { e.stopPropagation(); setEditingRound(isEditing ? null : s); if (!isOpen) toggleOpen() }}>{isEditing ? "✓" : "✏️"}</button>
+                    <button style={S.iconBtn} title="Verwijderen" onClick={(e) => { e.stopPropagation(); deleteRound(s) }}>🗑️</button>
                   </div>
                 </div>
 
-                {Object.values(grouped).map((it) => (
-                  <div key={it.drink.id} style={{ marginTop: 8, padding: "6px 0", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <b style={{ fontSize: 13 }}>{it.drink.emoji} {it.drink.name} × {it.totalQty}</b>
-                      {isEditing && (
-                        <div style={{ display: "flex", gap: 4 }}>
-                          <button style={{ ...S.iconBtn, width: 22, height: 22, fontSize: 12 }} onClick={() => changeOrderQty(it.drink.id, null, s, -1)}>−</button>
-                          <button style={{ ...S.iconBtn, width: 22, height: 22, fontSize: 12 }} onClick={() => addDrinkToRound(it.drink.id, s)}>+</button>
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ marginLeft: 8, marginTop: 4 }}>
-                      {Object.entries(it.people).map(([pid, info]) => (
-                        <div key={pid} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, marginTop: 2 }}>
-                          <span style={{ color: "#666" }}>{info.name} × {info.qty}</span>
+                {isOpen && (
+                  <>
+                    {Object.values(grouped).map((it) => (
+                      <div key={it.drink.id} style={{ marginTop: 8, padding: "6px 0", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <b style={{ fontSize: 13 }}>{it.drink.emoji} {it.drink.name} × {it.totalQty}</b>
                           {isEditing && (
                             <div style={{ display: "flex", gap: 4 }}>
-                              <button style={{ ...S.iconBtn, width: 20, height: 20, fontSize: 11 }} onClick={() => changeOrderQty(it.drink.id, pid, s, -1)}>−</button>
-                              <button style={{ ...S.iconBtn, width: 20, height: 20, fontSize: 11 }} onClick={() => changeOrderQty(it.drink.id, pid, s, 1)}>+</button>
+                              <button style={{ ...S.iconBtn, width: 22, height: 22, fontSize: 12 }} onClick={() => changeOrderQty(it.drink.id, null, s, -1)}>−</button>
+                              <button style={{ ...S.iconBtn, width: 22, height: 22, fontSize: 12 }} onClick={() => addDrinkToRound(it.drink.id, s)}>+</button>
                             </div>
                           )}
                         </div>
-                      ))}
-                      {it.anonymous > 0 && (
-                        <div style={{ fontSize: 12, color: "#e67e22", marginTop: 4 }}>
-                          ⚠️ {it.anonymous}× niet toegewezen
-                          {isEditing && (
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
-                              {participants.map((p) => (
-                                <button key={p.id} style={{ ...S.btn, fontSize: 11, padding: "2px 8px" }} onClick={() => assignAnonymousQty(it.drink.id, s, p.id, 1)}>
-                                  → {p.name}
-                                </button>
-                              ))}
+                        <div style={{ marginLeft: 8, marginTop: 4 }}>
+                          {Object.entries(it.people).map(([pid, info]) => (
+                            <div key={pid} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, marginTop: 2 }}>
+                              <span style={{ color: "#666" }}>{info.name} × {info.qty}</span>
+                              {isEditing && (
+                                <div style={{ display: "flex", gap: 4 }}>
+                                  <button style={{ ...S.iconBtn, width: 20, height: 20, fontSize: 11 }} onClick={() => changeOrderQty(it.drink.id, pid, s, -1)}>−</button>
+                                  <button style={{ ...S.iconBtn, width: 20, height: 20, fontSize: 11 }} onClick={() => changeOrderQty(it.drink.id, pid, s, 1)}>+</button>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          {it.anonymous > 0 && (
+                            <div style={{ fontSize: 12, color: "#e67e22", marginTop: 4 }}>
+                              ⚠️ {it.anonymous}× niet toegewezen
+                              {isEditing && (
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                                  {participants.map((p) => (
+                                    <button key={p.id} style={{ ...S.btn, fontSize: 11, padding: "2px 8px" }} onClick={() => assignAnonymousQty(it.drink.id, s, p.id, 1)}>
+                                      → {p.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {isEditing && (
+                      <div style={{ marginTop: 10, display: "flex", gap: 6 }}>
+                        <select id={`add-drink-${s}`} style={{ ...S.input, flex: 1, fontSize: 12, padding: "5px 8px" }} defaultValue={drinks[0]?.id ?? ""}>
+                          {drinks.map((d) => <option key={d.id} value={d.id}>{d.emoji} {d.name}</option>)}
+                        </select>
+                        <button
+                          style={{ ...S.btn, fontSize: 12 }}
+                          onClick={() => {
+                            const sel = document.getElementById(`add-drink-${s}`) as HTMLSelectElement
+                            if (sel?.value) addDrinkToRound(sel.value, s)
+                          }}
+                        >+ Drank toevoegen</button>
+                      </div>
+                    )}
+
+                    {/* Payment section */}
+                    <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,0.06)" }}>
+                      {roundPayments.length === 0 ? (
+                        <button style={{ ...S.btn, fontSize: 12, width: "100%" }} onClick={() => openPaymentEditor(s)}>
+                          💳 Wie betaalde?
+                        </button>
+                      ) : (
+                        <div>
+                          <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>Betaald door:</div>
+                          {roundPayments.map((p) => {
+                            const person = participants.find((pa) => pa.id === p.participant_id)
+                            return (
+                              <div key={p.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 2 }}>
+                                <span>{person?.name ?? "?"}</span>
+                                <span style={{ fontWeight: 700 }}>€{p.amount.toFixed(2)}</span>
+                              </div>
+                            )
+                          })}
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: paymentTotal === roundTotal ? "#27ae60" : "#e67e22", marginTop: 4 }}>
+                            <span>Totaal betaald</span>
+                            <span>€{paymentTotal.toFixed(2)} / €{roundTotal.toFixed(2)}</span>
+                          </div>
+                          <button style={{ ...S.btn, fontSize: 11, marginTop: 6, width: "100%" }} onClick={() => openPaymentEditor(s)}>Wijzigen</button>
                         </div>
                       )}
                     </div>
-                  </div>
-                ))}
-
-                {isEditing && (
-                  <div style={{ marginTop: 10, display: "flex", gap: 6 }}>
-                    <select id={`add-drink-${s}`} style={{ ...S.input, flex: 1, fontSize: 12, padding: "5px 8px" }} defaultValue={drinks[0]?.id ?? ""}>
-                      {drinks.map((d) => <option key={d.id} value={d.id}>{d.emoji} {d.name}</option>)}
-                    </select>
-                    <button
-                      style={{ ...S.btn, fontSize: 12 }}
-                      onClick={() => {
-                        const sel = document.getElementById(`add-drink-${s}`) as HTMLSelectElement
-                        if (sel?.value) addDrinkToRound(sel.value, s)
-                      }}
-                    >+ Drank toevoegen</button>
-                  </div>
+                  </>
                 )}
-
-                {/* Payment section */}
-                <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,0.06)" }}>
-                  {roundPayments.length === 0 ? (
-                    <button style={{ ...S.btn, fontSize: 12, width: "100%" }} onClick={() => openPaymentEditor(s)}>
-                      💳 Wie betaalde?
-                    </button>
-                  ) : (
-                    <div>
-                      <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>Betaald door:</div>
-                      {roundPayments.map((p) => {
-                        const person = participants.find((pa) => pa.id === p.participant_id)
-                        return (
-                          <div key={p.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 2 }}>
-                            <span>{person?.name ?? "?"}</span>
-                            <span style={{ fontWeight: 700 }}>€{p.amount.toFixed(2)}</span>
-                          </div>
-                        )
-                      })}
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: paymentTotal === roundTotal ? "#27ae60" : "#e67e22", marginTop: 4 }}>
-                        <span>Totaal betaald</span>
-                        <span>€{paymentTotal.toFixed(2)} / €{roundTotal.toFixed(2)}</span>
-                      </div>
-                      <button style={{ ...S.btn, fontSize: 11, marginTop: 6, width: "100%" }} onClick={() => openPaymentEditor(s)}>Wijzigen</button>
-                    </div>
-                  )}
-                </div>
               </div>
             )
           })}
@@ -1291,75 +1413,112 @@ export default function Home() {
         </div>
       )}
 
-      {/* ═══ VIEW: Bill ═══ */}
+      {/* ═══ VIEW: Totaal (wie dronk wat) ═══ */}
       {view === "bill" && (
         <div>
           <div style={S.card}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ ...S.h3, marginBottom: 0 }}>🧾 Rekening overzicht</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <h3 style={{ ...S.h3, marginBottom: 0 }}>🧾 Wie dronk wat</h3>
               <button onClick={() => setShowBillPrices((v) => !v)} style={{ ...S.btn, fontSize: 12 }}>
                 {showBillPrices ? "👁️ Verberg richtprijzen" : "👁️ Geef richtprijzen"}
               </button>
             </div>
 
-            <div style={{ marginTop: 14 }}>
-              {bill.lines.map((l) => (
-                <div key={l.participantId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                  <span style={{ fontWeight: 700, fontSize: 14 }}>{l.name}</span>
-                  <div style={{ textAlign: "right" }}>
-                    {showBillPrices && <div style={{ fontSize: 13, color: "#666" }}>dronk: €{l.drinkValue.toFixed(2)}</div>}
-                    <div style={{ fontSize: 12, color: l.paid > 0 ? "#27ae60" : "#bbb" }}>betaald: €{l.paid.toFixed(2)}</div>
+            <div style={{ marginTop: 10 }}>
+              {participants.map((p) => {
+                const personOrders = orders.filter((o) => o.participant_id === p.id)
+                const drinkSummary: Record<string, { drink: Drink; qty: number }> = {}
+                personOrders.forEach((o) => {
+                  const d = drinks.find((dr) => dr.id === o.drink_id)
+                  if (!d) return
+                  if (!drinkSummary[d.id]) drinkSummary[d.id] = { drink: d, qty: 0 }
+                  drinkSummary[d.id].qty += o.quantity
+                })
+                const line = bill.lines.find((l) => l.participantId === p.id)
+                const paid = line?.paid ?? 0
+                const drinkValue = line?.drinkValue ?? 0
+
+                return (
+                  <div key={p.id} style={{ padding: "12px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontWeight: 800, fontSize: 15 }}>{p.name}</span>
+                      <div style={{ textAlign: "right" }}>
+                        {showBillPrices && <div style={{ fontSize: 13, fontWeight: 700, color: "#4f7ef7" }}>≈ €{drinkValue.toFixed(2)}</div>}
+                        {paid > 0 && <div style={{ fontSize: 11, color: "#27ae60" }}>betaald: €{paid.toFixed(2)}</div>}
+                      </div>
+                    </div>
+                    {Object.values(drinkSummary).length === 0 ? (
+                      <div style={{ fontSize: 12, color: "#bbb" }}>nog niets gedronken</div>
+                    ) : (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {Object.values(drinkSummary).map((ds) => (
+                          <span key={ds.drink.id} style={{ background: "rgba(0,0,0,0.03)", borderRadius: 10, padding: "3px 10px", fontSize: 12 }}>
+                            {ds.drink.emoji} {ds.qty}× {ds.drink.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
+              {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20 }}>Nog geen personen</div>}
             </div>
-
-            {showBillPrices && (
-              <div style={{ marginTop: 14, padding: "12px 14px", background: "rgba(0,0,0,0.03)", borderRadius: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                  <span style={{ color: "#888" }}>Totaal richtprijzen</span>
-                  <span style={{ fontWeight: 700 }}>€{bill.totalDrinkValue.toFixed(2)}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 4 }}>
-                  <span style={{ color: "#888" }}>Totaal echt betaald</span>
-                  <span style={{ fontWeight: 700 }}>€{bill.totalPaid.toFixed(2)}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 4, paddingTop: 6, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
-                  <span style={{ color: bill.difference >= 0 ? "#27ae60" : "#e74c3c", fontWeight: 700 }}>
-                    {bill.difference >= 0 ? "Meer betaald dan richtprijs" : "Minder betaald dan richtprijs"}
-                  </span>
-                  <span style={{ fontWeight: 800, color: bill.difference >= 0 ? "#27ae60" : "#e74c3c" }}>
-                    {bill.difference >= 0 ? "+" : ""}€{bill.difference.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {showBillPrices && Math.abs(bill.difference) > 0.01 && (
-              <button
-                onClick={() => setShowFairSplit((v) => !v)}
-                style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 14, padding: "12px 0", fontSize: 14 }}
-              >
-                ⚖️ {showFairSplit ? "Verberg" : "Toon"} Fair Split
-              </button>
-            )}
           </div>
+
+          {showBillPrices && (
+            <div style={S.card}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <span style={{ color: "#888" }}>Totaal richtprijzen</span>
+                <span style={{ fontWeight: 700 }}>€{bill.totalDrinkValue.toFixed(2)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 4 }}>
+                <span style={{ color: "#888" }}>Totaal echt betaald</span>
+                <span style={{ fontWeight: 700 }}>€{bill.totalPaid.toFixed(2)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 4, paddingTop: 6, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+                <span style={{ color: bill.difference >= 0 ? "#27ae60" : "#e74c3c", fontWeight: 700 }}>
+                  {bill.difference >= 0 ? "Meer betaald dan richtprijs" : "Minder betaald dan richtprijs"}
+                </span>
+                <span style={{ fontWeight: 800, color: bill.difference >= 0 ? "#27ae60" : "#e74c3c" }}>
+                  {bill.difference >= 0 ? "+" : ""}€{bill.difference.toFixed(2)}
+                </span>
+              </div>
+
+              {Math.abs(bill.difference) > 0.01 && (
+                <button
+                  onClick={() => setShowFairSplit((v) => !v)}
+                  style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 14, padding: "12px 0", fontSize: 14 }}
+                >
+                  ⚖️ {showFairSplit ? "Verberg" : "Toon"} Fair Split
+                </button>
+              )}
+            </div>
+          )}
 
           {showFairSplit && showBillPrices && (
             <div style={S.card}>
-              <h3 style={S.h3}>⚖️ Fair Split</h3>
-              <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>
-                Het verschil wordt eerlijk verdeeld: 20% gelijk over iedereen, 80% naar wie meer/minder dronk qua waarde. Dit is een benadering, geen exacte afrekening.
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ ...S.h3, marginBottom: 0 }}>⚖️ Fair Split</h3>
+                <button onClick={() => setShowFairSplitDetails((v) => !v)} style={{ background: "none", border: "none", color: "#bbb", fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>
+                  {showFairSplitDetails ? "verberg details" : "details fair split"}
+                </button>
+              </div>
+              <p style={{ fontSize: 11, color: "#aaa", marginTop: 6, marginBottom: 14 }}>
+                Eerlijk verdeeld over wat iedereen dronk — een benadering, geen exacte afrekening.
               </p>
+
               {fairSplit.map((f) => (
-                <div key={f.participantId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                  <span style={{ fontWeight: 700, fontSize: 14 }}>{f.name}</span>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 12, color: "#999" }}>fair deel: €{f.fairShare.toFixed(2)}</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: f.balance >= 0 ? "#27ae60" : "#e74c3c" }}>
-                      {f.balance >= 0 ? `krijgt €${f.balance.toFixed(2)} terug` : `moet nog €${Math.abs(f.balance).toFixed(2)} bijleggen`}
-                    </div>
+                <div key={f.participantId} style={{ padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontWeight: 700, fontSize: 14 }}>{f.name}</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: "#333" }}>€{f.fairShare.toFixed(2)}</span>
                   </div>
+                  {showFairSplitDetails && (
+                    <div style={{ fontSize: 12, color: f.balance >= 0 ? "#27ae60" : "#e74c3c", marginTop: 2 }}>
+                      {f.balance >= 0 ? `krijgt €${f.balance.toFixed(2)} terug` : `moet nog €${Math.abs(f.balance).toFixed(2)} bijleggen`}
+                      <span style={{ color: "#bbb", marginLeft: 6 }}>(betaald: €{f.paid.toFixed(2)})</span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
