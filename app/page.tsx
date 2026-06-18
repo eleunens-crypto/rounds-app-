@@ -164,35 +164,78 @@ function normalizeDrinkName(s: string): string {
     .trim()
 }
 
+type DrinkMatchResult = {
+  strongMatch: Drink | null     // confident match — safe to auto-add
+  suggestion: Drink | null      // weaker/phonetic match — show as "bedoelde je...?" but don't auto-add
+}
+
 function fuzzyMatchDrink(spokenName: string, drinkList: Drink[]): Drink | null {
+  return matchDrinkWithSuggestion(spokenName, drinkList).strongMatch
+}
+
+// Simple character-level edit distance, used to catch phonetic near-misses like "puntje" vs "pintje"
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length
+  if (m === 0) return n
+  if (n === 0) return m
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
+  for (let i = 0; i <= m; i++) dp[i][0] = i
+  for (let j = 0; j <= n; j++) dp[0][j] = j
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
+    }
+  }
+  return dp[m][n]
+}
+
+function matchDrinkWithSuggestion(spokenName: string, drinkList: Drink[]): DrinkMatchResult {
   const spoken = normalizeDrinkName(spokenName)
   const spokenWords = spoken.split(" ").filter((w) => w.length > 1)
-  if (!spoken) return null
+  if (!spoken || drinkList.length === 0) return { strongMatch: null, suggestion: null }
 
+  // 1. Exact match
   let m = drinkList.find((d) => normalizeDrinkName(d.name) === spoken)
-  if (m) return m
+  if (m) return { strongMatch: m, suggestion: null }
 
+  // 2. One contains the other (substring) — confident enough to auto-add
   m = drinkList.find((d) => {
     const dn = normalizeDrinkName(d.name)
     return spoken.includes(dn) || dn.includes(spoken)
   })
-  if (m) return m
+  if (m) return { strongMatch: m, suggestion: null }
 
+  // 3. All spoken words appear in the drink name — confident
   m = drinkList.find((d) => {
     const dn = normalizeDrinkName(d.name)
     return spokenWords.length > 0 && spokenWords.every((w) => dn.includes(w))
   })
-  if (m) return m
+  if (m) return { strongMatch: m, suggestion: null }
 
+  // 4. Word-overlap scoring + phonetic (edit distance) scoring combined.
+  // High score (>= 0.7) = confident enough to auto-add.
+  // Medium score (0.4–0.7) = only a suggestion, don't auto-add.
   let bestScore = 0
   let bestDrink: Drink | null = null
   for (const d of drinkList) {
-    const dn = normalizeDrinkName(d.name).split(" ")
-    const matches = spokenWords.filter((w) => dn.some((dw) => dw.includes(w) || w.includes(dw))).length
-    const score = spokenWords.length > 0 ? matches / spokenWords.length : 0
+    const dn = normalizeDrinkName(d.name)
+    const dnWords = dn.split(" ")
+    const wordMatches = spokenWords.filter((w) => dnWords.some((dw) => dw.includes(w) || w.includes(dw))).length
+    const wordScore = spokenWords.length > 0 ? wordMatches / spokenWords.length : 0
+
+    // Phonetic similarity on the whole normalized strings (handles "puntje" vs "pintje")
+    const maxLen = Math.max(spoken.length, dn.length)
+    const editScore = maxLen > 0 ? 1 - levenshtein(spoken, dn) / maxLen : 0
+
+    const score = Math.max(wordScore, editScore)
     if (score > bestScore) { bestScore = score; bestDrink = d }
   }
-  return bestScore >= 0.5 ? bestDrink : null
+
+  if (bestScore >= 0.7) return { strongMatch: bestDrink, suggestion: null }
+  if (bestScore >= 0.4) return { strongMatch: null, suggestion: bestDrink }
+  return { strongMatch: null, suggestion: null }
 }
 
 function extractPrice(text: string): string {
@@ -214,7 +257,13 @@ function cleanDrinkName(text: string): string {
 }
 
 // Parse spoken text into one or more drink+qty items
-function parseSpokenDrinks(text: string, drinkList: Drink[]): { name: string; qty: number; emoji: string }[] {
+type ParsedSpeechResult = {
+  recognized: { name: string; qty: number; emoji: string }[]
+  unrecognizedText: string | null         // raw leftover text that didn't match anything
+  suggestion: { drink: Drink; qty: number } | null  // best guess for the unrecognized part, for "bedoelde je...?"
+}
+
+function parseSpokenDrinks(text: string, drinkList: Drink[]): ParsedSpeechResult {
   const lower = text.toLowerCase().replace(/één/g, "een").replace(/cola's|colas/g, "cola").replace(/wijntje/g, "wijn")
 
   const numberWords: Record<string, number> = {
@@ -222,7 +271,8 @@ function parseSpokenDrinks(text: string, drinkList: Drink[]): { name: string; qt
     acht: 8, negen: 9, tien: 10, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6,
   }
 
-  const results: { name: string; qty: number; emoji: string }[] = []
+  const recognized: { name: string; qty: number; emoji: string }[] = []
+  const unmatchedChunks: { text: string; qty: number }[] = []
   let remaining = lower
   let safety = 0
 
@@ -237,17 +287,16 @@ function parseSpokenDrinks(text: string, drinkList: Drink[]): { name: string; qt
       remaining = remaining.slice(qtyMatch[0].length)
     }
 
-    // Try matching against real drink names first (longest match wins)
+    // Try matching against real drink names first (longest match wins) — exact/substring only, very confident
     let matched = false
     const sortedDrinks = [...drinkList].sort((a, b) => b.name.length - a.name.length)
     for (const d of sortedDrinks) {
       const dn = normalizeDrinkName(d.name)
       const remNorm = normalizeDrinkName(remaining)
       if (remNorm.startsWith(dn) && dn.length > 0) {
-        const existing = results.find((r) => r.name === d.name)
+        const existing = recognized.find((r) => r.name === d.name)
         if (existing) existing.qty += qty
-        else results.push({ name: d.name, qty, emoji: d.emoji })
-        // consume roughly that many characters (approx by word count)
+        else recognized.push({ name: d.name, qty, emoji: d.emoji })
         const wordCount = dn.split(" ").length
         const remWords = remaining.trim().split(/\s+/)
         remaining = remWords.slice(wordCount).join(" ")
@@ -258,20 +307,36 @@ function parseSpokenDrinks(text: string, drinkList: Drink[]): { name: string; qt
     }
 
     if (!matched) {
-      const skip = remaining.match(/^(\S+)\s*/)
-      if (skip) remaining = remaining.slice(skip[0].length)
-      else break
+      // Take the next "chunk" (1-3 words) as a candidate for fuzzy matching / suggestion
+      const words = remaining.trim().split(/\s+/)
+      const chunkWords = words.slice(0, Math.min(3, words.length))
+      const chunk = chunkWords.join(" ")
+      if (chunk) unmatchedChunks.push({ text: chunk, qty })
+      remaining = words.slice(chunkWords.length).join(" ")
+      if (!remaining) break
     }
   }
 
-  if (results.length === 0 && text.trim()) {
-    const cat = guessCategory(text)
-    const fuzzy = fuzzyMatchDrink(text, drinkList)
-    if (fuzzy) results.push({ name: fuzzy.name, qty: 1, emoji: fuzzy.emoji })
-    else results.push({ name: cleanDrinkName(text) || text, qty: 1, emoji: EMOJI_MAP[cat] ?? "🍹" })
+  // For unmatched chunks, try the fuzzy+phonetic matcher — only as a SUGGESTION, never auto-added
+  let suggestion: { drink: Drink; qty: number } | null = null
+  let unrecognizedText: string | null = null
+  if (unmatchedChunks.length > 0) {
+    for (const chunk of unmatchedChunks) {
+      const result = matchDrinkWithSuggestion(chunk.text, drinkList)
+      if (result.strongMatch) {
+        const existing = recognized.find((r) => r.name === result.strongMatch!.name)
+        if (existing) existing.qty += chunk.qty
+        else recognized.push({ name: result.strongMatch.name, qty: chunk.qty, emoji: result.strongMatch.emoji })
+      } else if (result.suggestion && !suggestion) {
+        suggestion = { drink: result.suggestion, qty: chunk.qty }
+        unrecognizedText = chunk.text
+      } else if (!suggestion) {
+        unrecognizedText = chunk.text
+      }
+    }
   }
 
-  return results
+  return { recognized, unrecognizedText, suggestion }
 }
 
 function groupDrinksByCategory(drinks: Drink[]): [string, Drink[]][] {
@@ -305,7 +370,7 @@ function calculateBill(
   orders: Order[],
   drinks: Drink[],
   payments: Payment[]
-): { lines: PersonBillLine[]; totalDrinkValue: number; totalPaid: number; difference: number } {
+): { lines: PersonBillLine[]; totalDrinkValue: number; anonymousValue: number; totalPaid: number; difference: number } {
   const lines: PersonBillLine[] = participants.map((p) => {
     const drinkValue = orders
       .filter((o) => o.participant_id === p.id)
@@ -317,11 +382,18 @@ function calculateBill(
     return { participantId: p.id, name: p.name, drinkValue, paid }
   })
 
-  const totalDrinkValue = lines.reduce((s, l) => s + l.drinkValue, 0)
+  const anonymousValue = orders
+    .filter((o) => !o.participant_id)
+    .reduce((sum, o) => {
+      const d = drinks.find((dr) => dr.id === o.drink_id)
+      return sum + (d?.price ?? 0) * o.quantity
+    }, 0)
+
+  const totalDrinkValue = lines.reduce((s, l) => s + l.drinkValue, 0) + anonymousValue
   const totalPaid = lines.reduce((s, l) => s + l.paid, 0)
   const difference = totalPaid - totalDrinkValue // positive = paid more than richtprijs total, negative = paid less
 
-  return { lines, totalDrinkValue, totalPaid, difference }
+  return { lines, totalDrinkValue, anonymousValue, totalPaid, difference }
 }
 
 // Fair split: redistribute the difference (surplus or shortfall) using
@@ -329,30 +401,73 @@ function calculateBill(
 function calculateFairSplit(
   lines: PersonBillLine[],
   difference: number,
+  anonymousValue: number, // total richtprijs-value of orders that were never assigned to anyone
   equalWeight = 0.2
-): { participantId: string; name: string; owes: number; fairShare: number; paid: number; balance: number }[] {
+): { participantId: string; name: string; fairShare: number; paid: number; balance: number; participated: boolean }[] {
   const n = lines.length
   if (n === 0) return []
+
+  // Only split among people who actually participated: they drank something OR they paid something.
+  // Someone with 0 drinks and 0 payments should not get a price tag at all.
+  const participants = lines.filter((l) => l.drinkValue > 0 || l.paid > 0)
+  const nParticipating = participants.length || n // fallback to everyone if truly nobody drank/paid yet
+
   const totalDrinkValue = lines.reduce((s, l) => s + l.drinkValue, 0)
+  // If nothing was ever assigned to anyone (all anonymous), totalDrinkValue across people is 0 —
+  // in that case, split everything equally among current participants (people who paid),
+  // or among everyone if nobody paid either.
+  const allAnonymous = totalDrinkValue === 0 && anonymousValue > 0
 
   return lines.map((l) => {
-    // Each person's "fair share" of the total cost = their drink value adjusted by the difference,
-    // split 20% equally / 80% by consumption weight
-    const equalPart = (totalDrinkValue + difference) * equalWeight / n
-    const weightPart = totalDrinkValue > 0
-      ? (totalDrinkValue + difference) * (1 - equalWeight) * (l.drinkValue / totalDrinkValue)
-      : (totalDrinkValue + difference) * (1 - equalWeight) / n
-    const fairShare = equalPart + weightPart
-    const balance = l.paid - fairShare // positive = should get money back, negative = still owes
-    return {
-      participantId: l.participantId,
-      name: l.name,
-      owes: fairShare,
-      fairShare,
-      paid: l.paid,
-      balance,
+    const participated = l.drinkValue > 0 || l.paid > 0
+    if (!participated) {
+      return { participantId: l.participantId, name: l.name, fairShare: 0, paid: 0, balance: 0, participated: false }
     }
+
+    let fairShare: number
+    if (allAnonymous) {
+      // Nobody was assigned anything — split equally among participating people
+      fairShare = (totalDrinkValue + anonymousValue + difference) / nParticipating
+    } else {
+      const equalPart = (totalDrinkValue + anonymousValue + difference) * equalWeight / nParticipating
+      const weightPart = totalDrinkValue > 0
+        ? (totalDrinkValue + anonymousValue + difference) * (1 - equalWeight) * (l.drinkValue / totalDrinkValue)
+        : 0
+      fairShare = equalPart + weightPart
+    }
+
+    const balance = l.paid - fairShare // positive = should get money back, negative = still owes
+    return { participantId: l.participantId, name: l.name, fairShare, paid: l.paid, balance, participated: true }
   })
+}
+
+// Debt settlement: turn balances into concrete "X pays Y €amount" transactions.
+// People with balance < 0 (owe money) pay people with balance > 0 (should receive), minimizing transaction count.
+function settleDebts(
+  fairSplit: { participantId: string; name: string; balance: number; participated: boolean }[]
+): { from: string; to: string; amount: number }[] {
+  const creditors = fairSplit.filter((f) => f.participated && f.balance > 0.01).map((f) => ({ ...f }))
+  const debtors = fairSplit.filter((f) => f.participated && f.balance < -0.01).map((f) => ({ ...f, balance: -f.balance }))
+
+  const transactions: { from: string; to: string; amount: number }[] = []
+  let ci = 0, di = 0
+  creditors.sort((a, b) => b.balance - a.balance)
+  debtors.sort((a, b) => b.balance - a.balance)
+
+  while (ci < creditors.length && di < debtors.length) {
+    const credit = creditors[ci]
+    const debt = debtors[di]
+    const amount = Math.min(credit.balance, debt.balance)
+    if (amount > 0.01) {
+      transactions.push({ from: debt.name, to: credit.name, amount })
+    }
+    credit.balance -= amount
+    debt.balance -= amount
+    if (credit.balance <= 0.01) ci++
+    if (debt.balance <= 0.01) di++
+  }
+
+  return transactions
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -448,11 +563,13 @@ export default function Home() {
   const [paymentDraft, setPaymentDraft] = useState<Record<string, string>>({}) // participantId -> amount string
 
   const [showBillPrices, setShowBillPrices] = useState(false)
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [showFairSplit, setShowFairSplit] = useState(false)
   const [showFairSplitDetails, setShowFairSplitDetails] = useState(false)
 
   // ── Voice (quick order) state ────────────────────────────────────────────
   const [quickItems, setQuickItems] = useState<QuickOrderItem[]>([])
+  const [voiceSuggestion, setVoiceSuggestion] = useState<{ spokenText: string; qty: number; suggested: Drink } | null>(null)
   const [quickVoiceActive, setQuickVoiceActive] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const quickRecogRef = useRef<any>(null)
@@ -633,27 +750,26 @@ export default function Home() {
   const sessions = Array.from(new Set(orders.map((o) => o.session))).sort((a, b) => a - b)
   const nextSession = Math.max(session, ...sessions, 0) + 1
 
+  const [finishedRoundSnapshot, setFinishedRoundSnapshot] = useState<{ session: number; cart: Record<string, CartLine> } | null>(null)
+
   const finishRound = async () => {
     if (!group || cartTotalItems === 0) { setToast("Voeg eerst drankjes toe"); return }
     const newRoundSession = nextSession
     for (const [drinkId, line] of Object.entries(cart)) {
       const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
-      // Insert per assigned person
       for (const [participantId, qty] of Object.entries(line.assignments)) {
         if (qty <= 0) continue
         await supabase.from("orders").insert([{ participant_id: participantId, drink_id: drinkId, quantity: qty, group_id: group.id, session: newRoundSession }])
       }
-      // Remaining unassigned goes in anonymously
       const remaining = line.total - assignedSum
       if (remaining > 0) {
         await supabase.from("orders").insert([{ participant_id: null, drink_id: drinkId, quantity: remaining, group_id: group.id, session: newRoundSession }])
       }
     }
     await loadAll(group.id)
+    setFinishedRoundSnapshot({ session: newRoundSession, cart })
     setCart({})
     setSession(newRoundSession)
-    setToast(`Ronde ${newRoundSession} afgerond!`)
-    setView("rounds")
   }
 
   // ── Voice quick order ────────────────────────────────────────────────────
@@ -667,27 +783,30 @@ export default function Home() {
     recog.interimResults = false
     recog.maxAlternatives = 1
     quickRecogRef.current = recog
-    recog.onstart = () => setQuickVoiceActive(true)
+    recog.onstart = () => { setQuickVoiceActive(true); setVoiceSuggestion(null) }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recog.onresult = (e: any) => {
       const text = e.results[0][0].transcript
-      const parsed = parseSpokenDrinks(text, drinks)
-      // Snap each to fuzzy match for safety + add directly to cart
-      parsed.forEach((pd) => {
+      const { recognized, suggestion } = parseSpokenDrinks(text, drinks)
+
+      // Only add what was confidently recognized — never guess into the cart
+      recognized.forEach((pd) => {
         const match = fuzzyMatchDrink(pd.name, drinks)
         if (match) addToCart(match.id, pd.qty)
       })
-      const item: QuickOrderItem = {
-        id: randomId(), text,
-        drinks: parsed.map((pd) => {
-          const match = fuzzyMatchDrink(pd.name, drinks)
-          return { name: match?.name ?? pd.name, emoji: match?.emoji ?? pd.emoji, qty: pd.qty, assignments: [] }
-        }),
-        timestamp: Date.now(),
+
+      if (recognized.length > 0) {
+        setToast(`Toegevoegd: ${recognized.map((d) => `${d.qty}× ${d.name}`).join(", ")}`)
       }
-      setQuickItems((prev) => [...prev, item])
+
+      // Show a "bedoelde je...?" banner if part of the speech wasn't confidently recognized
+      if (suggestion) {
+        setVoiceSuggestion({ spokenText: text, qty: suggestion.qty, suggested: suggestion.drink })
+      } else if (recognized.length === 0) {
+        setToast("Niet herkend — probeer opnieuw of typ het drankje handmatig")
+      }
+
       setQuickVoiceActive(false)
-      setToast(`Toegevoegd: ${parsed.map((d) => `${d.qty}× ${d.name}`).join(", ")}`)
     }
     recog.onerror = () => setQuickVoiceActive(false)
     recog.onend = () => setQuickVoiceActive(false)
@@ -695,6 +814,15 @@ export default function Home() {
   }
 
   const stopQuickVoice = () => { quickRecogRef.current?.stop(); setQuickVoiceActive(false) }
+
+  const acceptVoiceSuggestion = () => {
+    if (!voiceSuggestion) return
+    addToCart(voiceSuggestion.suggested.id, voiceSuggestion.qty)
+    setToast(`${voiceSuggestion.qty}× ${voiceSuggestion.suggested.name} toegevoegd`)
+    setVoiceSuggestion(null)
+  }
+
+  const dismissVoiceSuggestion = () => setVoiceSuggestion(null)
 
   // ── Round editing (assign drinks to people after the fact) ─────────────
   const getRoundGrouped = (r: number) => {
@@ -824,7 +952,8 @@ export default function Home() {
 
   const groupedDrinks = groupDrinksByCategory(drinks)
   const bill = calculateBill(participants, orders, drinks, payments)
-  const fairSplit = calculateFairSplit(bill.lines, bill.difference)
+  const fairSplit = calculateFairSplit(bill.lines, bill.difference, bill.anonymousValue)
+  const settledDebts = settleDebts(fairSplit)
 
   // ═══════════════════════════════════════════════════════════════════════
   // RENDER: Start screen (no group yet)
@@ -1069,6 +1198,19 @@ export default function Home() {
             </button>
           </div>
 
+          {/* "Bedoelde je...?" suggestie banner */}
+          {voiceSuggestion && (
+            <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(231,168,38,0.1),rgba(231,168,38,0.05))", border: "1px solid rgba(231,168,38,0.3)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <div style={{ fontSize: 13 }}>
+                Niet helemaal verstaan — bedoelde je <b>{voiceSuggestion.suggested.emoji} {voiceSuggestion.suggested.name}</b>?
+              </div>
+              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                <button style={{ ...S.btn, ...S.btnPrimary, fontSize: 12, padding: "6px 12px" }} onClick={acceptVoiceSuggestion}>Ja</button>
+                <button style={{ ...S.btn, fontSize: 12, padding: "6px 12px" }} onClick={dismissVoiceSuggestion}>Nee</button>
+              </div>
+            </div>
+          )}
+
           {/* Bestellijst voor de barman */}
           {cartTotalItems > 0 && (
             <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(79,126,247,0.06),rgba(107,161,255,0.06))", border: "1px solid rgba(79,126,247,0.15)" }}>
@@ -1099,67 +1241,102 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Category quick-pick */}
-          {groupedDrinks.map(([cat, list]) => (
-            <div key={cat} style={S.card}>
-              <b style={{ display: "block", marginBottom: 10, fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5, color: "#999" }}>{cat}</b>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {list.map((d) => {
-                  const line = cart[d.id]
-                  const qty = line?.total ?? 0
-                  const assignedSum = line ? Object.values(line.assignments).reduce((s, q) => s + q, 0) : 0
-                  const unassigned = qty - assignedSum
-                  return (
-                    <div key={d.id} style={{ background: qty > 0 ? "rgba(79,126,247,0.08)" : "#fafbff", border: qty > 0 ? "1.5px solid rgba(79,126,247,0.35)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6, gridColumn: qty > 0 && participants.length > 0 ? "1 / -1" : "auto" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 20 }}>{d.emoji}</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{d.name}</span>
-                        {showPrices && <span style={{ fontSize: 10, color: "#bbb" }}>≈ €{d.price.toFixed(2)}</span>}
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15 }} onClick={() => addToCart(d.id, -1)}>−</button>
-                        <span style={{ fontSize: 18, fontWeight: 800, minWidth: 24, textAlign: "center" }}>{qty}</span>
-                        <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15, background: "rgba(79,126,247,0.12)" }} onClick={() => addToCart(d.id, 1)}>+</button>
-                      </div>
+          {/* Category tabs — compact navigation */}
+          <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, marginBottom: 4 }}>
+            {groupedDrinks.map(([cat]) => {
+              const isActive = activeCategory === cat || (activeCategory === null && cat === groupedDrinks[0]?.[0])
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  style={{
+                    flexShrink: 0, border: "none", borderRadius: 14, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                    background: isActive ? "linear-gradient(135deg,#4f7ef7,#6ba1ff)" : "#fff",
+                    color: isActive ? "#fff" : "#777",
+                    boxShadow: isActive ? "0 4px 14px rgba(79,126,247,0.3)" : "0 2px 8px rgba(0,0,0,0.04)",
+                  }}
+                >
+                  {cat}
+                </button>
+              )
+            })}
+          </div>
 
-                      {/* Horizontal scroll person assignment, subtle */}
-                      {qty > 0 && participants.length > 0 && (
-                        <div style={{ marginTop: 4, paddingTop: 6, borderTop: "1px solid rgba(0,0,0,0.05)" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                            <span style={{ fontSize: 10, color: "#aaa" }}>wie?</span>
-                            <span style={{ fontSize: 10, color: unassigned > 0 ? "#e67e22" : "#27ae60", fontWeight: 600 }}>
-                              {assignedSum}/{qty} toegewezen
-                            </span>
-                          </div>
-                          <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2, scrollSnapType: "x proximate" }}>
-                            {participants.map((p) => {
-                              const pQty = line?.assignments[p.id] ?? 0
-                              return (
-                                <div
-                                  key={p.id}
-                                  style={{
-                                    flexShrink: 0, scrollSnapAlign: "start", display: "flex", alignItems: "center", gap: 4,
-                                    background: pQty > 0 ? "rgba(79,126,247,0.12)" : "rgba(0,0,0,0.035)",
-                                    border: pQty > 0 ? "1px solid rgba(79,126,247,0.35)" : "1px solid rgba(0,0,0,0.06)",
-                                    borderRadius: 20, padding: "3px 4px 3px 10px",
-                                  }}
-                                >
-                                  <span style={{ fontSize: 11, fontWeight: pQty > 0 ? 700 : 500, color: pQty > 0 ? "#4f7ef7" : "#888", whiteSpace: "nowrap" }}>{p.name}</span>
-                                  <button style={{ ...S.iconBtn, width: 18, height: 18, fontSize: 10 }} onClick={() => assignCartItem(d.id, p.id, -1)}>−</button>
-                                  <span style={{ fontSize: 11, fontWeight: 800, minWidth: 12, textAlign: "center", color: pQty > 0 ? "#4f7ef7" : "#ccc" }}>{pQty}</span>
-                                  <button style={{ ...S.iconBtn, width: 18, height: 18, fontSize: 10 }} onClick={() => assignCartItem(d.id, p.id, 1)}>+</button>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
+          {/* Items in cart, regardless of active category — always visible compact summary */}
+          {Object.entries(cart).some(([, line]) => line.total > 0) && (
+            <div style={{ ...S.card, padding: 10 }}>
+              <div style={{ fontSize: 10, color: "#aaa", marginBottom: 6, textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.5 }}>In je mandje</div>
+              {Object.entries(cart).map(([drinkId, line]) => {
+                const d = drinks.find((dr) => dr.id === drinkId)
+                if (!d || line.total === 0) return null
+                const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
+                const unassigned = line.total - assignedSum
+                return (
+                  <div key={drinkId} style={{ marginBottom: 8, paddingBottom: 8, borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>{d.emoji} {d.name}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={() => addToCart(d.id, -1)}>−</button>
+                        <span style={{ fontSize: 15, fontWeight: 800 }}>{line.total}</span>
+                        <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13, background: "rgba(79,126,247,0.12)" }} onClick={() => addToCart(d.id, 1)}>+</button>
+                      </div>
                     </div>
-                  )
-                })}
-              </div>
+                    {participants.length > 0 && (
+                      <div style={{ marginTop: 6 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span style={{ fontSize: 10, color: "#aaa" }}>wie?</span>
+                          <span style={{ fontSize: 10, color: unassigned > 0 ? "#e67e22" : "#27ae60", fontWeight: 600 }}>{assignedSum}/{line.total} toegewezen</span>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2, scrollSnapType: "x proximate" }}>
+                          {participants.map((p) => {
+                            const pQty = line.assignments[p.id] ?? 0
+                            return (
+                              <div key={p.id} style={{ flexShrink: 0, scrollSnapAlign: "start", display: "flex", alignItems: "center", gap: 4, background: pQty > 0 ? "rgba(79,126,247,0.12)" : "rgba(0,0,0,0.035)", border: pQty > 0 ? "1px solid rgba(79,126,247,0.35)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 20, padding: "3px 4px 3px 10px" }}>
+                                <span style={{ fontSize: 11, fontWeight: pQty > 0 ? 700 : 500, color: pQty > 0 ? "#4f7ef7" : "#888", whiteSpace: "nowrap" }}>{p.name}</span>
+                                <button style={{ ...S.iconBtn, width: 18, height: 18, fontSize: 10 }} onClick={() => assignCartItem(d.id, p.id, -1)}>−</button>
+                                <span style={{ fontSize: 11, fontWeight: 800, minWidth: 12, textAlign: "center", color: pQty > 0 ? "#4f7ef7" : "#ccc" }}>{pQty}</span>
+                                <button style={{ ...S.iconBtn, width: 18, height: 18, fontSize: 10 }} onClick={() => assignCartItem(d.id, p.id, 1)}>+</button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
-          ))}
+          )}
+
+          {/* Active category — compact grid of all drinks, just tap + to add (assignment happens above) */}
+          {groupedDrinks.map(([cat, list]) => {
+            const isActive = activeCategory === cat || (activeCategory === null && cat === groupedDrinks[0]?.[0])
+            if (!isActive) return null
+            return (
+              <div key={cat} style={S.card}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {list.map((d) => {
+                    const line = cart[d.id]
+                    const qty = line?.total ?? 0
+                    return (
+                      <div key={d.id} style={{ background: qty > 0 ? "rgba(79,126,247,0.08)" : "#fafbff", border: qty > 0 ? "1.5px solid rgba(79,126,247,0.35)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 20 }}>{d.emoji}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{d.name}</span>
+                          {showPrices && <span style={{ fontSize: 10, color: "#bbb" }}>≈ €{d.price.toFixed(2)}</span>}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15 }} onClick={() => addToCart(d.id, -1)}>−</button>
+                          <span style={{ fontSize: 18, fontWeight: 800, minWidth: 24, textAlign: "center" }}>{qty}</span>
+                          <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15, background: "rgba(79,126,247,0.12)" }} onClick={() => addToCart(d.id, 1)}>+</button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
 
           {/* Manage drinks list */}
           <div style={S.card}>
@@ -1413,9 +1590,113 @@ export default function Home() {
         </div>
       )}
 
+      {/* Net afgeronde ronde — fullscreen bevestiging voor de barman + betaler kiezen */}
+      {finishedRoundSnapshot && (
+        <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 2100, overflowY: "auto", padding: 28 }}>
+          <div style={{ maxWidth: 560, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 24 }}>
+              <div style={{ fontSize: 13, color: "#27ae60", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>✅ Ronde {finishedRoundSnapshot.session} besteld</div>
+              <h2 style={{ fontSize: 24, fontWeight: 800, margin: "6px 0 0" }}>🧾 Voor de barman</h2>
+            </div>
+
+            {Object.entries(finishedRoundSnapshot.cart).map(([drinkId, line]) => {
+              const d = drinks.find((dr) => dr.id === drinkId)
+              if (!d || line.total === 0) return null
+              const peopleNames = Object.entries(line.assignments)
+                .map(([pid, qty]) => {
+                  const p = participants.find((pp) => pp.id === pid)
+                  return p ? `${p.name} (${qty})` : null
+                })
+                .filter(Boolean)
+              return (
+                <div key={drinkId} style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14, padding: "14px 18px", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16 }}>
+                  <span style={{ fontSize: 32 }}>{d.emoji}</span>
+                  <div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: "#333" }}>{line.total}× {d.name}</div>
+                    {peopleNames.length > 0 && <div style={{ fontSize: 12, color: "#aaa", marginTop: 2 }}>{peopleNames.join(", ")}</div>}
+                  </div>
+                </div>
+              )
+            })}
+
+            <div style={{ marginTop: 24, padding: "16px 18px", background: "rgba(79,126,247,0.05)", borderRadius: 16, border: "1px solid rgba(79,126,247,0.15)" }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>💳 Wie betaalde deze ronde?</div>
+              {participants.map((p) => (
+                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                  <span style={{ flex: 1, fontSize: 14 }}>{p.name}</span>
+                  <span style={{ color: "#999" }}>€</span>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={paymentDraft[p.id] ?? ""}
+                    onChange={(e) => setPaymentDraft((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                    style={{ ...S.input, width: 80 }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+              <button
+                style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "12px 0" }}
+                onClick={async () => {
+                  if (!group) return
+                  const round = finishedRoundSnapshot.session
+                  const inserts = (Object.entries(paymentDraft) as [string, string][])
+                    .filter(([, amt]) => parseFloat(amt) > 0)
+                    .map(([participantId, amt]) => ({ group_id: group.id, session: round, participant_id: participantId, amount: parseFloat(amt) }))
+                  if (inserts.length > 0) await supabase.from("payments").insert(inserts)
+                  await loadAll(group.id)
+                  setPaymentDraft({})
+                  setFinishedRoundSnapshot(null)
+                  setToast(`Ronde ${round} afgerond!`)
+                }}
+              >
+                💾 Opslaan & sluiten
+              </button>
+              <button
+                style={{ ...S.btn, flex: 1, padding: "12px 0" }}
+                onClick={() => { setPaymentDraft({}); setFinishedRoundSnapshot(null) }}
+              >
+                Later invullen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ═══ VIEW: Totaal (wie dronk wat) ═══ */}
       {view === "bill" && (
         <div>
+          {/* Overall drink overview — ALL orders, assigned or not */}
+          <div style={S.card}>
+            <h3 style={S.h3}>📦 Alle bestelde drankjes</h3>
+            {(() => {
+              const overallSummary: Record<string, { drink: Drink; totalQty: number; anonymousQty: number }> = {}
+              orders.forEach((o) => {
+                const d = drinks.find((dr) => dr.id === o.drink_id)
+                if (!d) return
+                if (!overallSummary[d.id]) overallSummary[d.id] = { drink: d, totalQty: 0, anonymousQty: 0 }
+                overallSummary[d.id].totalQty += o.quantity
+                if (!o.participant_id) overallSummary[d.id].anonymousQty += o.quantity
+              })
+              const items = Object.values(overallSummary)
+              if (items.length === 0) return <div style={{ color: "#aaa", textAlign: "center", padding: 12, fontSize: 13 }}>Nog niets besteld</div>
+              return (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {items.map((it) => (
+                    <div key={it.drink.id} style={{ background: "rgba(79,126,247,0.06)", border: "1px solid rgba(79,126,247,0.15)", borderRadius: 12, padding: "6px 12px", display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 18 }}>{it.drink.emoji}</span>
+                      <span style={{ fontSize: 15, fontWeight: 800 }}>{it.totalQty}×</span>
+                      <span style={{ fontSize: 13, color: "#555" }}>{it.drink.name}</span>
+                      {it.anonymousQty > 0 && <span style={{ fontSize: 10, color: "#e67e22" }}>({it.anonymousQty} niet toegewezen)</span>}
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+          </div>
+
           <div style={S.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <h3 style={{ ...S.h3, marginBottom: 0 }}>🧾 Wie dronk wat</h3>
@@ -1507,7 +1788,7 @@ export default function Home() {
                 Eerlijk verdeeld over wat iedereen dronk — een benadering, geen exacte afrekening.
               </p>
 
-              {fairSplit.map((f) => (
+              {fairSplit.filter((f) => f.participated).map((f) => (
                 <div key={f.participantId} style={{ padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontWeight: 700, fontSize: 14 }}>{f.name}</span>
@@ -1521,6 +1802,20 @@ export default function Home() {
                   )}
                 </div>
               ))}
+
+              {showFairSplitDetails && settledDebts.length > 0 && (
+                <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#888", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Wie betaalt wie</div>
+                  {settledDebts.map((t, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 6 }}>
+                      <span style={{ fontWeight: 700 }}>{t.from}</span>
+                      <span style={{ color: "#bbb" }}>→</span>
+                      <span style={{ fontWeight: 700 }}>{t.to}</span>
+                      <span style={{ marginLeft: "auto", fontWeight: 800, color: "#4f7ef7" }}>€{t.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
