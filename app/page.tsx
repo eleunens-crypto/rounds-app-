@@ -35,7 +35,7 @@ type Participant = {
   id: string
   name: string
   group_id: string
-  is_placeholder?: boolean // true if auto-created "Persoon 1" type name without a real name yet
+  is_placeholder?: boolean
 }
 
 type Order = {
@@ -62,8 +62,6 @@ type DrinkForm = {
   category: string
 }
 
-type VoiceState = "idle" | "listening" | "done" | "error"
-
 type SavedGroup = {
   id: string
   name: string
@@ -71,21 +69,20 @@ type SavedGroup = {
   savedAt: number
 }
 
-type QuickOrderDrink = {
-  name: string
-  qty: number
-  emoji: string
-  assignments: { participantId: string; qty: number }[]
-}
-
 type QuickOrderItem = {
   id: string
   text: string
-  drinks: QuickOrderDrink[]
+  drinks: { name: string; qty: number; emoji: string; assignments: { participantId: string; qty: number }[] }[]
   timestamp: number
 }
 
 type AppView = "setup" | "ordering" | "rounds" | "bill"
+
+// ─── New: tracks the last item(s) added to the bar list ───────────────────
+type LastAdded = {
+  items: { name: string; qty: number; emoji: string }[]
+  source: "voice" | "manual"
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -165,15 +162,14 @@ function normalizeDrinkName(s: string): string {
 }
 
 type DrinkMatchResult = {
-  strongMatch: Drink | null     // confident match — safe to auto-add
-  suggestion: Drink | null      // weaker/phonetic match — show as "bedoelde je...?" but don't auto-add
+  strongMatch: Drink | null
+  suggestion: Drink | null
 }
 
 function fuzzyMatchDrink(spokenName: string, drinkList: Drink[]): Drink | null {
   return matchDrinkWithSuggestion(spokenName, drinkList).strongMatch
 }
 
-// Simple character-level edit distance, used to catch phonetic near-misses like "puntje" vs "pintje"
 function levenshtein(a: string, b: string): number {
   const m = a.length, n = b.length
   if (m === 0) return n
@@ -196,27 +192,21 @@ function matchDrinkWithSuggestion(spokenName: string, drinkList: Drink[]): Drink
   const spokenWords = spoken.split(" ").filter((w) => w.length > 1)
   if (!spoken || drinkList.length === 0) return { strongMatch: null, suggestion: null }
 
-  // 1. Exact match
   let m = drinkList.find((d) => normalizeDrinkName(d.name) === spoken)
   if (m) return { strongMatch: m, suggestion: null }
 
-  // 2. One contains the other (substring) — confident enough to auto-add
   m = drinkList.find((d) => {
     const dn = normalizeDrinkName(d.name)
     return spoken.includes(dn) || dn.includes(spoken)
   })
   if (m) return { strongMatch: m, suggestion: null }
 
-  // 3. All spoken words appear in the drink name — confident
   m = drinkList.find((d) => {
     const dn = normalizeDrinkName(d.name)
     return spokenWords.length > 0 && spokenWords.every((w) => dn.includes(w))
   })
   if (m) return { strongMatch: m, suggestion: null }
 
-  // 4. Word-overlap scoring + phonetic (edit distance) scoring combined.
-  // High score (>= 0.7) = confident enough to auto-add.
-  // Medium score (0.4–0.7) = only a suggestion, don't auto-add.
   let bestScore = 0
   let bestDrink: Drink | null = null
   for (const d of drinkList) {
@@ -224,11 +214,8 @@ function matchDrinkWithSuggestion(spokenName: string, drinkList: Drink[]): Drink
     const dnWords = dn.split(" ")
     const wordMatches = spokenWords.filter((w) => dnWords.some((dw) => dw.includes(w) || w.includes(dw))).length
     const wordScore = spokenWords.length > 0 ? wordMatches / spokenWords.length : 0
-
-    // Phonetic similarity on the whole normalized strings (handles "puntje" vs "pintje")
     const maxLen = Math.max(spoken.length, dn.length)
     const editScore = maxLen > 0 ? 1 - levenshtein(spoken, dn) / maxLen : 0
-
     const score = Math.max(wordScore, editScore)
     if (score > bestScore) { bestScore = score; bestDrink = d }
   }
@@ -238,29 +225,10 @@ function matchDrinkWithSuggestion(spokenName: string, drinkList: Drink[]): Drink
   return { strongMatch: null, suggestion: null }
 }
 
-function extractPrice(text: string): string {
-  const lower = text.toLowerCase()
-  const numMatch = lower.match(/€?\s*(\d+)[.,](\d{1,2})/)
-  if (numMatch) return `${numMatch[1]}.${numMatch[2].padEnd(2, "0")}`
-  const euroMatch = lower.match(/€\s*(\d+)\b|(\d+)\s*euro/)
-  if (euroMatch) return euroMatch[1] ?? euroMatch[2]
-  return ""
-}
-
-function cleanDrinkName(text: string): string {
-  return text
-    .replace(/€?\s*\d+[.,]\d{1,2}/g, "")
-    .replace(/€\s*\d+/g, "")
-    .replace(/\d+\s*euro/gi, "")
-    .replace(/\s+/g, " ").trim()
-    .replace(/^./, (c) => c.toUpperCase())
-}
-
-// Parse spoken text into one or more drink+qty items
 type ParsedSpeechResult = {
   recognized: { name: string; qty: number; emoji: string }[]
-  unrecognizedText: string | null         // raw leftover text that didn't match anything
-  suggestion: { drink: Drink; qty: number } | null  // best guess for the unrecognized part, for "bedoelde je...?"
+  unrecognizedText: string | null
+  suggestion: { drink: Drink; qty: number } | null
 }
 
 function parseSpokenDrinks(text: string, drinkList: Drink[]): ParsedSpeechResult {
@@ -287,7 +255,6 @@ function parseSpokenDrinks(text: string, drinkList: Drink[]): ParsedSpeechResult
       remaining = remaining.slice(qtyMatch[0].length)
     }
 
-    // Try matching against real drink names first (longest match wins) — exact/substring only, very confident
     let matched = false
     const sortedDrinks = [...drinkList].sort((a, b) => b.name.length - a.name.length)
     for (const d of sortedDrinks) {
@@ -307,7 +274,6 @@ function parseSpokenDrinks(text: string, drinkList: Drink[]): ParsedSpeechResult
     }
 
     if (!matched) {
-      // Take the next "chunk" (1-3 words) as a candidate for fuzzy matching / suggestion
       const words = remaining.trim().split(/\s+/)
       const chunkWords = words.slice(0, Math.min(3, words.length))
       const chunk = chunkWords.join(" ")
@@ -317,7 +283,6 @@ function parseSpokenDrinks(text: string, drinkList: Drink[]): ParsedSpeechResult
     }
   }
 
-  // For unmatched chunks, try the fuzzy+phonetic matcher — only as a SUGGESTION, never auto-added
   let suggestion: { drink: Drink; qty: number } | null = null
   let unrecognizedText: string | null = null
   if (unmatchedChunks.length > 0) {
@@ -361,8 +326,8 @@ function groupDrinksByCategory(drinks: Drink[]): [string, Drink[]][] {
 type PersonBillLine = {
   participantId: string
   name: string
-  drinkValue: number   // sum of (richtprijs × qty) for everything this person drank
-  paid: number         // sum of payments this person made
+  drinkValue: number
+  paid: number
 }
 
 function calculateBill(
@@ -391,31 +356,24 @@ function calculateBill(
 
   const totalDrinkValue = lines.reduce((s, l) => s + l.drinkValue, 0) + anonymousValue
   const totalPaid = lines.reduce((s, l) => s + l.paid, 0)
-  const difference = totalPaid - totalDrinkValue // positive = paid more than richtprijs total, negative = paid less
+  const difference = totalPaid - totalDrinkValue
 
   return { lines, totalDrinkValue, anonymousValue, totalPaid, difference }
 }
 
-// Fair split: redistribute the difference (surplus or shortfall) using
-// 20% equally among all participants + 80% weighted by how much each person drank (by value)
 function calculateFairSplit(
   lines: PersonBillLine[],
   difference: number,
-  anonymousValue: number, // total richtprijs-value of orders that were never assigned to anyone
+  anonymousValue: number,
   equalWeight = 0.2
 ): { participantId: string; name: string; fairShare: number; paid: number; balance: number; participated: boolean }[] {
   const n = lines.length
   if (n === 0) return []
 
-  // Only split among people who actually participated: they drank something OR they paid something.
-  // Someone with 0 drinks and 0 payments should not get a price tag at all.
   const participants = lines.filter((l) => l.drinkValue > 0 || l.paid > 0)
-  const nParticipating = participants.length || n // fallback to everyone if truly nobody drank/paid yet
+  const nParticipating = participants.length || n
 
   const totalDrinkValue = lines.reduce((s, l) => s + l.drinkValue, 0)
-  // If nothing was ever assigned to anyone (all anonymous), totalDrinkValue across people is 0 —
-  // in that case, split everything equally among current participants (people who paid),
-  // or among everyone if nobody paid either.
   const allAnonymous = totalDrinkValue === 0 && anonymousValue > 0
 
   return lines.map((l) => {
@@ -426,7 +384,6 @@ function calculateFairSplit(
 
     let fairShare: number
     if (allAnonymous) {
-      // Nobody was assigned anything — split equally among participating people
       fairShare = (totalDrinkValue + anonymousValue + difference) / nParticipating
     } else {
       const equalPart = (totalDrinkValue + anonymousValue + difference) * equalWeight / nParticipating
@@ -436,20 +393,19 @@ function calculateFairSplit(
       fairShare = equalPart + weightPart
     }
 
-    const balance = l.paid - fairShare // positive = should get money back, negative = still owes
+    const balance = l.paid - fairShare
     return { participantId: l.participantId, name: l.name, fairShare, paid: l.paid, balance, participated: true }
   })
 }
 
-// Debt settlement: turn balances into concrete "X pays Y €amount" transactions.
-// People with balance < 0 (owe money) pay people with balance > 0 (should receive), minimizing transaction count.
+// Debt settlement — returns concrete "X pays Y €amount" transactions, filtering out self-payments
 function settleDebts(
   fairSplit: { participantId: string; name: string; balance: number; participated: boolean }[]
-): { from: string; to: string; amount: number }[] {
+): { from: string; fromId: string; to: string; toId: string; amount: number }[] {
   const creditors = fairSplit.filter((f) => f.participated && f.balance > 0.01).map((f) => ({ ...f }))
   const debtors = fairSplit.filter((f) => f.participated && f.balance < -0.01).map((f) => ({ ...f, balance: -f.balance }))
 
-  const transactions: { from: string; to: string; amount: number }[] = []
+  const transactions: { from: string; fromId: string; to: string; toId: string; amount: number }[] = []
   let ci = 0, di = 0
   creditors.sort((a, b) => b.balance - a.balance)
   debtors.sort((a, b) => b.balance - a.balance)
@@ -457,9 +413,14 @@ function settleDebts(
   while (ci < creditors.length && di < debtors.length) {
     const credit = creditors[ci]
     const debt = debtors[di]
+    // Never create a self-payment transaction
+    if (credit.participantId === debt.participantId) {
+      ci++
+      continue
+    }
     const amount = Math.min(credit.balance, debt.balance)
     if (amount > 0.01) {
-      transactions.push({ from: debt.name, to: credit.name, amount })
+      transactions.push({ from: debt.name, fromId: debt.participantId, to: credit.name, toId: credit.participantId, amount })
     }
     credit.balance -= amount
     debt.balance -= amount
@@ -478,7 +439,7 @@ function QRModal({ inviteCode, onClose }: { inviteCode: string; onClose: () => v
   const containerRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const script = document.createElement("script")
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+    script.src = "[cdnjs.cloudflare.com](https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js)"
     script.onload = () => {
       if (!containerRef.current) return
       containerRef.current.innerHTML = ""
@@ -509,6 +470,237 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
   return <div style={S.toast}>{message}</div>
 }
 
+// ─── "Zojuist toegevoegd" banner ──────────────────────────────────────────
+function LastAddedBanner({ lastAdded, onDismiss }: { lastAdded: LastAdded; onDismiss: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 5000)
+    return () => clearTimeout(t)
+  }, [lastAdded, onDismiss])
+
+  return (
+    <div style={{
+      background: "linear-gradient(135deg,rgba(39,174,96,0.12),rgba(39,174,96,0.06))",
+      border: "1px solid rgba(39,174,96,0.35)",
+      borderRadius: 14,
+      padding: "10px 14px",
+      marginBottom: 10,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 10,
+    }}>
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 700, color: "#27ae60", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>
+          {lastAdded.source === "voice" ? "🎤 Zojuist via spraak toegevoegd" : "✅ Zojuist toegevoegd aan barlijst"}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {lastAdded.items.map((item, i) => (
+            <span key={i} style={{ background: "rgba(39,174,96,0.15)", borderRadius: 10, padding: "2px 10px", fontSize: 13, fontWeight: 700, color: "#1e8449" }}>
+              {item.emoji} {item.qty}× {item.name}
+            </span>
+          ))}
+        </div>
+      </div>
+      <button onClick={onDismiss} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#aaa", flexShrink: 0 }}>✕</button>
+    </div>
+  )
+}
+
+// ─── Inline "Drankje niet herkend" modal ─────────────────────────────────
+type UnrecognizedDrinkAction = "add-custom" | "pick-from-list" | null
+
+function UnrecognizedDrinkPanel({
+  spokenText,
+  suggestion,
+  drinks,
+  onAcceptSuggestion,
+  onAddCustom,
+  onPickFromList,
+  onDismiss,
+}: {
+  spokenText: string
+  suggestion: Drink | null
+  drinks: Drink[]
+  onAcceptSuggestion: (drink: Drink) => void
+  onAddCustom: (name: string, price: string, emoji: string, category: string) => void
+  onPickFromList: (drink: Drink) => void
+  onDismiss: () => void
+}) {
+  const [action, setAction] = useState<UnrecognizedDrinkAction>(null)
+  const [customName, setCustomName] = useState(spokenText.charAt(0).toUpperCase() + spokenText.slice(1))
+  const [customPrice, setCustomPrice] = useState("")
+  const [customEmoji, setCustomEmoji] = useState("🍹")
+  const [customCategory, setCustomCategory] = useState("Cocktail")
+  const [pickSearch, setPickSearch] = useState("")
+  const [activePickCat, setActivePickCat] = useState<string | null>(null)
+
+  const groupedDrinks = groupDrinksByCategory(drinks)
+
+  return (
+    <div style={{
+      background: "linear-gradient(135deg,rgba(231,76,60,0.06),rgba(231,76,60,0.03))",
+      border: "1px solid rgba(231,76,60,0.25)",
+      borderRadius: 16,
+      padding: "14px 16px",
+      marginBottom: 10,
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#e74c3c", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>
+            🎤 Niet herkend
+          </div>
+          <div style={{ fontSize: 13, color: "#555" }}>
+            &ldquo;<b>{spokenText}</b>&rdquo; staat niet in de barlijst
+          </div>
+        </div>
+        <button onClick={onDismiss} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#aaa" }}>✕</button>
+      </div>
+
+      {/* Step 1: Suggestion if available */}
+      {suggestion && action === null && (
+        <div style={{ background: "rgba(255,255,255,0.8)", borderRadius: 12, padding: "10px 12px", marginBottom: 10, border: "1px solid rgba(0,0,0,0.06)" }}>
+          <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>Bedoelde je misschien:</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>{suggestion.emoji} {suggestion.name}</span>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button style={{ ...S.btn, ...S.btnPrimary, fontSize: 12, padding: "6px 14px" }} onClick={() => onAcceptSuggestion(suggestion)}>
+                Ja, dit is het
+              </button>
+              <button style={{ ...S.btn, fontSize: 12, padding: "6px 10px" }} onClick={() => setAction("add-custom")}>
+                Nee
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: Action choice (if no suggestion or suggestion declined) */}
+      {(action === null && !suggestion) && (
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            style={{ ...S.btn, flex: 1, fontSize: 13, padding: "10px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}
+            onClick={() => setAction("add-custom")}
+          >
+            <span style={{ fontSize: 20 }}>➕</span>
+            <span style={{ fontWeight: 700 }}>Eigen drankje</span>
+            <span style={{ fontSize: 11, color: "#aaa" }}>toevoegen aan lijst</span>
+          </button>
+          <button
+            style={{ ...S.btn, flex: 1, fontSize: 13, padding: "10px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}
+            onClick={() => setAction("pick-from-list")}
+          >
+            <span style={{ fontSize: 20 }}>🍹</span>
+            <span style={{ fontWeight: 700 }}>Kies uit lijst</span>
+            <span style={{ fontSize: 11, color: "#aaa" }}>bestaand drankje</span>
+          </button>
+        </div>
+      )}
+
+      {/* When suggestion was shown but not yet acted on — also show the two options below */}
+      {action === null && suggestion && (
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <button style={{ ...S.btn, flex: 1, fontSize: 12 }} onClick={() => setAction("pick-from-list")}>
+            🍹 Kies een ander drankje
+          </button>
+        </div>
+      )}
+
+      {/* Add custom drink form */}
+      {action === "add-custom" && (
+        <div style={{ background: "rgba(255,255,255,0.9)", borderRadius: 12, padding: "12px", border: "1px solid rgba(0,0,0,0.07)", marginTop: 8 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Nieuw drankje toevoegen</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <input
+              placeholder="Naam"
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              style={{ ...S.input, flex: "1 1 120px", minWidth: 100 }}
+            />
+            <input
+              type="number"
+              placeholder="Prijs €"
+              value={customPrice}
+              onChange={(e) => setCustomPrice(e.target.value)}
+              style={{ ...S.input, width: 72 }}
+            />
+            <input
+              placeholder="🍹"
+              value={customEmoji}
+              onChange={(e) => setCustomEmoji(e.target.value)}
+              style={{ ...S.input, width: 50 }}
+            />
+            <select
+              value={customCategory}
+              onChange={(e) => setCustomCategory(e.target.value)}
+              style={{ ...S.input, flex: "1 1 90px" }}
+            >
+              {Object.keys(CATEGORY_LABELS).map((k) => <option key={k} value={k}>{k}</option>)}
+            </select>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <button
+              style={{ ...S.btn, ...S.btnPrimary, flex: 1 }}
+              onClick={() => { if (customName && customPrice) onAddCustom(customName, customPrice, customEmoji, customCategory) }}
+            >
+              ➕ Toevoegen & bestellen
+            </button>
+            <button style={{ ...S.btn }} onClick={() => setAction(null)}>← Terug</button>
+          </div>
+        </div>
+      )}
+
+      {/* Pick from list */}
+      {action === "pick-from-list" && (
+        <div style={{ background: "rgba(255,255,255,0.9)", borderRadius: 12, padding: "12px", border: "1px solid rgba(0,0,0,0.07)", marginTop: 8 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>Kies een drankje</div>
+          <input
+            autoFocus
+            placeholder="Zoek..."
+            value={pickSearch}
+            onChange={(e) => setPickSearch(e.target.value)}
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 8 }}
+          />
+          {pickSearch.trim() === "" && (
+            <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 8, paddingBottom: 2 }}>
+              {groupedDrinks.map(([cat]) => (
+                <button
+                  key={cat}
+                  onClick={() => setActivePickCat(activePickCat === cat ? null : cat)}
+                  style={{
+                    flexShrink: 0, border: "none", borderRadius: 12, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                    background: activePickCat === cat ? "linear-gradient(135deg,#4f7ef7,#6ba1ff)" : "#f0f2f7",
+                    color: activePickCat === cat ? "#fff" : "#777",
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
+          <div style={{ maxHeight: 180, overflowY: "auto" }}>
+            {groupedDrinks
+              .filter(([cat]) => pickSearch.trim() !== "" || activePickCat === null || activePickCat === cat)
+              .flatMap(([, list]) => list)
+              .filter((d) => pickSearch.trim() === "" || d.name.toLowerCase().includes(pickSearch.toLowerCase()))
+              .map((d) => (
+                <button
+                  key={d.id}
+                  style={{ ...S.btn, width: "100%", textAlign: "left", marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}
+                  onClick={() => onPickFromList(d)}
+                >
+                  <span style={{ fontSize: 18 }}>{d.emoji}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{d.name}</span>
+                  <span style={{ marginLeft: "auto", fontSize: 11, color: "#bbb" }}>€{d.price.toFixed(2)}</span>
+                </button>
+              ))}
+          </div>
+          <button style={{ ...S.btn, marginTop: 8 }} onClick={() => setAction(null)}>← Terug</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
@@ -536,13 +728,12 @@ export default function Home() {
   const [orders, setOrders] = useState<Order[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
 
-  const [personCount, setPersonCount] = useState(4)
   const [editingPerson, setEditingPerson] = useState<string | null>(null)
   const [editingPersonName, setEditingPersonName] = useState("")
 
   const [session, setSession] = useState(1)
-  type CartLine = { total: number; assignments: Record<string, number> } // assignments: participantId -> qty
-  const [cart, setCart] = useState<Record<string, CartLine>>({}) // drinkId -> CartLine
+  type CartLine = { total: number; assignments: Record<string, number> }
+  const [cart, setCart] = useState<Record<string, CartLine>>({})
   const [showPrices, setShowPrices] = useState(false)
 
   const [showAddPerson, setShowAddPerson] = useState(false)
@@ -556,21 +747,33 @@ export default function Home() {
   const [editingDrink, setEditingDrink] = useState<Drink | null>(null)
 
   const [roundFullscreen, setRoundFullscreen] = useState<number | null>(null)
-  const [expandedRound, setExpandedRound] = useState<number | null>(null) // null = use default (latest open)
+  const [expandedRound, setExpandedRound] = useState<number | null>(null)
   const [manuallyCollapsedLatest, setManuallyCollapsedLatest] = useState(false)
   const [editingRound, setEditingRound] = useState<number | null>(null)
   const [paymentEditRound, setPaymentEditRound] = useState<number | null>(null)
-  const [paymentDraft, setPaymentDraft] = useState<Record<string, string>>({}) // participantId -> amount string
+  const [paymentDraft, setPaymentDraft] = useState<Record<string, string>>({})
 
   const [showBillPrices, setShowBillPrices] = useState(false)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [showFairSplit, setShowFairSplit] = useState(false)
-  const [showFairSplitDetails, setShowFairSplitDetails] = useState(false)
+  // NEW: per-person detail expansion in fair split
+  const [fairSplitExpandedPerson, setFairSplitExpandedPerson] = useState<string | null>(null)
 
-  // ── Voice (quick order) state ────────────────────────────────────────────
-  const [quickItems, setQuickItems] = useState<QuickOrderItem[]>([])
-  const [voiceSuggestion, setVoiceSuggestion] = useState<{ spokenText: string; qty: number; suggested: Drink } | null>(null)
+  // ── Ordering UI state ────────────────────────────────────────────────────
+  // "Hoe wil je bestellen?" — null = choice screen, "voice" or "drinks" = active mode
+  type OrderMode = null | "voice" | "drinks"
+  const [orderMode, setOrderMode] = useState<OrderMode>(null)
+  // Show/hide the manage-drinks panel (eigen drankje toevoegen / bewerken)
+  const [showManageDrinks, setShowManageDrinks] = useState(false)
+
+  // ── Last added banner ─────────────────────────────────────────────────────
+  const [lastAdded, setLastAdded] = useState<LastAdded | null>(null)
+
+  // ── Voice state ───────────────────────────────────────────────────────────
   const [quickVoiceActive, setQuickVoiceActive] = useState(false)
+  const [voiceSuggestion, setVoiceSuggestion] = useState<{ spokenText: string; qty: number; suggested: Drink } | null>(null)
+  // NEW: unrecognized (no suggestion at all) voice input
+  const [unrecognizedVoice, setUnrecognizedVoice] = useState<{ spokenText: string } | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const quickRecogRef = useRef<any>(null)
 
@@ -661,8 +864,6 @@ export default function Home() {
       await supabase.from("participants").insert(inserts)
       await loadAll(group.id)
     } else if (count < current) {
-      // Remove the last (count - current) participants — only those with no orders ideally,
-      // but to keep it simple we just remove the extras from the end
       const toRemove = participants.slice(count)
       for (const p of toRemove) {
         await supabase.from("participants").delete().eq("id", p.id)
@@ -697,18 +898,16 @@ export default function Home() {
     await loadAll(group.id)
   }
 
-  // ── Cart (huidige open ronde, met per-persoon toewijzing) ────────────────
-  const addToCart = (drinkId: string, delta: number) => {
+  // ── Cart ─────────────────────────────────────────────────────────────────
+  const addToCart = (drinkId: string, delta: number, source?: "voice" | "manual") => {
     setCart((prev) => {
       const next = { ...prev }
       const line = next[drinkId] ?? { total: 0, assignments: {} }
       const newTotal = Math.max(0, line.total + delta)
       if (newTotal === 0) { delete next[drinkId]; return next }
-      // If decreasing, also trim assignments proportionally (remove from least-specific first: reduce from any assigned person if total drops below assigned sum)
       const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
       let newAssignments = { ...line.assignments }
       if (newTotal < assignedSum) {
-        // Remove from the last-touched assignment(s) until it fits — simplest: clear all if it no longer fits
         let toRemove = assignedSum - newTotal
         const keys = Object.keys(newAssignments)
         for (let i = keys.length - 1; i >= 0 && toRemove > 0; i--) {
@@ -722,6 +921,13 @@ export default function Home() {
       next[drinkId] = { total: newTotal, assignments: newAssignments }
       return next
     })
+    // Update lastAdded banner when adding (delta > 0)
+    if (delta > 0 && source) {
+      const drink = drinks.find((d) => d.id === drinkId)
+      if (drink) {
+        setLastAdded({ items: [{ name: drink.name, qty: delta, emoji: drink.emoji }], source })
+      }
+    }
   }
 
   const assignCartItem = (drinkId: string, participantId: string, delta: number) => {
@@ -730,7 +936,7 @@ export default function Home() {
       if (!line) return prev
       const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
       const currentForPerson = line.assignments[participantId] ?? 0
-      if (delta > 0 && assignedSum >= line.total) return prev // can't assign more than total
+      if (delta > 0 && assignedSum >= line.total) return prev
       const newQty = Math.max(0, currentForPerson + delta)
       const newAssignments = { ...line.assignments }
       if (newQty === 0) delete newAssignments[participantId]
@@ -770,6 +976,7 @@ export default function Home() {
     setFinishedRoundSnapshot({ session: newRoundSession, cart })
     setCart({})
     setSession(newRoundSession)
+    setLastAdded(null)
   }
 
   // ── Voice quick order ────────────────────────────────────────────────────
@@ -783,27 +990,40 @@ export default function Home() {
     recog.interimResults = false
     recog.maxAlternatives = 1
     quickRecogRef.current = recog
-    recog.onstart = () => { setQuickVoiceActive(true); setVoiceSuggestion(null) }
+    recog.onstart = () => { setQuickVoiceActive(true); setVoiceSuggestion(null); setUnrecognizedVoice(null); setLastAdded(null) }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recog.onresult = (e: any) => {
       const text = e.results[0][0].transcript
-      const { recognized, suggestion } = parseSpokenDrinks(text, drinks)
+      const { recognized, unrecognizedText, suggestion } = parseSpokenDrinks(text, drinks)
 
-      // Only add what was confidently recognized — never guess into the cart
+      // Add recognized items to cart
+      const addedItems: { name: string; qty: number; emoji: string }[] = []
       recognized.forEach((pd) => {
         const match = fuzzyMatchDrink(pd.name, drinks)
-        if (match) addToCart(match.id, pd.qty)
+        if (match) {
+          addToCart(match.id, pd.qty)
+          addedItems.push({ name: match.name, qty: pd.qty, emoji: match.emoji })
+        }
       })
 
-      if (recognized.length > 0) {
-        setToast(`Toegevoegd: ${recognized.map((d) => `${d.qty}× ${d.name}`).join(", ")}`)
+      if (addedItems.length > 0) {
+        setLastAdded({ items: addedItems, source: "voice" })
       }
 
-      // Show a "bedoelde je...?" banner if part of the speech wasn't confidently recognized
+      // Handle unrecognized parts
       if (suggestion) {
-        setVoiceSuggestion({ spokenText: text, qty: suggestion.qty, suggested: suggestion.drink })
+        setVoiceSuggestion({ spokenText: unrecognizedText ?? text, qty: suggestion.qty, suggested: suggestion.drink })
+        setUnrecognizedVoice(null)
+      } else if (unrecognizedText && recognized.length === 0) {
+        // Nothing at all recognized — show full unrecognized panel
+        setUnrecognizedVoice({ spokenText: unrecognizedText })
+        setVoiceSuggestion(null)
+      } else if (unrecognizedText) {
+        // Part was recognized, part wasn't — show unrecognized panel for the leftover
+        setUnrecognizedVoice({ spokenText: unrecognizedText })
+        setVoiceSuggestion(null)
       } else if (recognized.length === 0) {
-        setToast("Niet herkend — probeer opnieuw of typ het drankje handmatig")
+        setToast("Niet herkend — probeer opnieuw")
       }
 
       setQuickVoiceActive(false)
@@ -815,16 +1035,7 @@ export default function Home() {
 
   const stopQuickVoice = () => { quickRecogRef.current?.stop(); setQuickVoiceActive(false) }
 
-  const acceptVoiceSuggestion = () => {
-    if (!voiceSuggestion) return
-    addToCart(voiceSuggestion.suggested.id, voiceSuggestion.qty)
-    setToast(`${voiceSuggestion.qty}× ${voiceSuggestion.suggested.name} toegevoegd`)
-    setVoiceSuggestion(null)
-  }
-
-  const dismissVoiceSuggestion = () => setVoiceSuggestion(null)
-
-  // ── Round editing (assign drinks to people after the fact) ─────────────
+  // ── Round editing ─────────────────────────────────────────────────────────
   const getRoundGrouped = (r: number) => {
     const map: Record<string, { drink: Drink; totalQty: number; anonymous: number; people: Record<string, { name: string; qty: number }> }> = {}
     orders.filter((o) => o.session === r).forEach((o) => {
@@ -844,7 +1055,6 @@ export default function Home() {
   const getRoundTotal = (r: number) =>
     orders.filter((o) => o.session === r).reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
 
-  // Move qty from anonymous to a specific person (or between persons) for a drink in a round
   const assignAnonymousQty = async (drinkId: string, round: number, participantId: string, qty: number) => {
     if (!group || qty <= 0) return
     const anon = orders.find((o) => !o.participant_id && o.drink_id === drinkId && o.session === round)
@@ -852,11 +1062,9 @@ export default function Home() {
     const remaining = anon.quantity - qty
     if (remaining <= 0) await supabase.from("orders").delete().eq("id", anon.id)
     else await supabase.from("orders").update({ quantity: remaining }).eq("id", anon.id)
-
     const existing = orders.find((o) => o.participant_id === participantId && o.drink_id === drinkId && o.session === round)
     if (existing) await supabase.from("orders").update({ quantity: existing.quantity + qty }).eq("id", existing.id)
     else await supabase.from("orders").insert([{ participant_id: participantId, drink_id: drinkId, quantity: qty, group_id: group.id, session: round }])
-
     await loadAll(group.id)
   }
 
@@ -899,7 +1107,6 @@ export default function Home() {
   const savePayments = async () => {
     if (!group || paymentEditRound === null) return
     const round = paymentEditRound
-    // Remove old payments for this round, then insert new ones
     await supabase.from("payments").delete().eq("group_id", group.id).eq("session", round)
     const inserts = (Object.entries(paymentDraft) as [string, string][])
       .filter(([, amt]) => parseFloat(amt) > 0)
@@ -956,7 +1163,7 @@ export default function Home() {
   const settledDebts = settleDebts(fairSplit)
 
   // ═══════════════════════════════════════════════════════════════════════
-  // RENDER: Start screen (no group yet)
+  // RENDER: Start screen
   // ═══════════════════════════════════════════════════════════════════════
   if (!group) {
     const filteredSaved = savedGroups.filter((g) => g.name.toLowerCase().includes(savedSearch.toLowerCase()))
@@ -1118,25 +1325,17 @@ export default function Home() {
         ))}
       </div>
 
-      {/* ═══ VIEW: Setup (group + persons) ═══ */}
+      {/* ═══ VIEW: Setup ═══ */}
       {view === "setup" && (
         <div>
           <div style={S.card}>
             <h3 style={S.h3}>👥 Aantal personen</h3>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, padding: "12px 0" }}>
-              <button
-                style={{ ...S.btn, width: 44, height: 44, fontSize: 20, borderRadius: "50%" }}
-                onClick={() => { const n = Math.max(1, participants.length - 1); ensurePersonCount(n) }}
-              >−</button>
+              <button style={{ ...S.btn, width: 44, height: 44, fontSize: 20, borderRadius: "50%" }} onClick={() => ensurePersonCount(Math.max(1, participants.length - 1))}>−</button>
               <div style={{ fontSize: 36, fontWeight: 800, minWidth: 60, textAlign: "center" }}>{participants.length}</div>
-              <button
-                style={{ ...S.btn, ...S.btnPrimary, width: 44, height: 44, fontSize: 20, borderRadius: "50%" }}
-                onClick={() => ensurePersonCount(participants.length + 1)}
-              >+</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, width: 44, height: 44, fontSize: 20, borderRadius: "50%" }} onClick={() => ensurePersonCount(participants.length + 1)}>+</button>
             </div>
-            <p style={{ textAlign: "center", color: "#aaa", fontSize: 12, marginTop: 4 }}>
-              Namen zijn optioneel — pas ze aan wanneer je wil
-            </p>
+            <p style={{ textAlign: "center", color: "#aaa", fontSize: 12, marginTop: 4 }}>Namen zijn optioneel — pas ze aan wanneer je wil</p>
           </div>
 
           <div style={S.card}>
@@ -1144,20 +1343,12 @@ export default function Home() {
               <h3 style={{ ...S.h3, marginBottom: 0 }}>Personen</h3>
               <button style={{ ...S.btn, fontSize: 12 }} onClick={() => setShowAddPerson(true)}>+ Naam toevoegen</button>
             </div>
-
             {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 24 }}>Nog geen personen</div>}
-
             {participants.map((p) => (
               <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
                 {editingPerson === p.id ? (
                   <>
-                    <input
-                      autoFocus
-                      value={editingPersonName}
-                      onChange={(e) => setEditingPersonName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") renamePerson(); if (e.key === "Escape") setEditingPerson(null) }}
-                      style={{ ...S.input, flex: 1 }}
-                    />
+                    <input autoFocus value={editingPersonName} onChange={(e) => setEditingPersonName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") renamePerson(); if (e.key === "Escape") setEditingPerson(null) }} style={{ ...S.input, flex: 1 }} />
                     <button style={{ ...S.btn, ...S.btnPrimary, padding: "6px 10px" }} onClick={renamePerson}>💾</button>
                     <button style={{ ...S.btn, padding: "6px 10px" }} onClick={() => setEditingPerson(null)}>✖</button>
                   </>
@@ -1179,91 +1370,272 @@ export default function Home() {
         </div>
       )}
 
-      {/* ═══ VIEW: Ordering (main focus) ═══ */}
+      {/* ═══ VIEW: Ordering ═══ */}
       {view === "ordering" && (
         <div>
-          {/* Voice button */}
-          <div style={{ ...S.card, padding: 14 }}>
-            <button
-              onClick={quickVoiceActive ? stopQuickVoice : startQuickVoice}
-              style={{
-                ...S.btn, width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 700, border: "none",
-                background: quickVoiceActive ? "#e74c3c" : "linear-gradient(135deg,#4f7ef7,#6ba1ff)",
-                color: "#fff",
-                animation: quickVoiceActive ? "pulse 1.2s infinite" : "none",
-                boxShadow: quickVoiceActive ? "0 0 0 5px rgba(231,76,60,0.18)" : "0 6px 18px rgba(79,126,247,0.3)",
-              }}
-            >
-              {quickVoiceActive ? "🔴 Luistert... (tik om te stoppen)" : "🎤 Spreek je bestelling in"}
-            </button>
-          </div>
+          {/* ── Last added banner ── */}
+          {lastAdded && (
+            <LastAddedBanner lastAdded={lastAdded} onDismiss={() => setLastAdded(null)} />
+          )}
 
-          {/* "Bedoelde je...?" suggestie banner */}
-          {voiceSuggestion && (
-            <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(231,168,38,0.1),rgba(231,168,38,0.05))", border: "1px solid rgba(231,168,38,0.3)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-              <div style={{ fontSize: 13 }}>
-                Niet helemaal verstaan — bedoelde je <b>{voiceSuggestion.suggested.emoji} {voiceSuggestion.suggested.name}</b>?
+          {/* ── Voice: unrecognized panel ── */}
+          {unrecognizedVoice && (
+            <UnrecognizedDrinkPanel
+              spokenText={unrecognizedVoice.spokenText}
+              suggestion={null}
+              drinks={drinks}
+              onAcceptSuggestion={(drink) => {
+                addToCart(drink.id, 1, "voice")
+                setUnrecognizedVoice(null)
+              }}
+              onAddCustom={async (name, price, emoji, category) => {
+                await supabase.from("drinks").insert([{ name, price: parseFloat(price), emoji, category }])
+                await loadDrinks()
+                const updated = await supabase.from("drinks").select("*").eq("name", name).single()
+                if (updated.data) addToCart(updated.data.id, 1, "voice")
+                setUnrecognizedVoice(null)
+                setToast(`${name} toegevoegd en besteld`)
+              }}
+              onPickFromList={(drink) => {
+                addToCart(drink.id, 1, "voice")
+                setUnrecognizedVoice(null)
+              }}
+              onDismiss={() => setUnrecognizedVoice(null)}
+            />
+          )}
+
+          {/* ── Voice: suggestion banner (still-present legacy path for partial recognitions) ── */}
+          {voiceSuggestion && !unrecognizedVoice && (
+            <UnrecognizedDrinkPanel
+              spokenText={voiceSuggestion.spokenText}
+              suggestion={voiceSuggestion.suggested}
+              drinks={drinks}
+              onAcceptSuggestion={(drink) => {
+                addToCart(drink.id, voiceSuggestion.qty, "voice")
+                setLastAdded({ items: [{ name: drink.name, qty: voiceSuggestion.qty, emoji: drink.emoji }], source: "voice" })
+                setVoiceSuggestion(null)
+              }}
+              onAddCustom={async (name, price, emoji, category) => {
+                await supabase.from("drinks").insert([{ name, price: parseFloat(price), emoji, category }])
+                await loadDrinks()
+                const updated = await supabase.from("drinks").select("*").eq("name", name).single()
+                if (updated.data) {
+                  addToCart(updated.data.id, voiceSuggestion.qty, "voice")
+                  setLastAdded({ items: [{ name: updated.data.name, qty: voiceSuggestion.qty, emoji: updated.data.emoji }], source: "voice" })
+                }
+                setVoiceSuggestion(null)
+                setToast(`${name} toegevoegd en besteld`)
+              }}
+              onPickFromList={(drink) => {
+                addToCart(drink.id, voiceSuggestion.qty, "voice")
+                setLastAdded({ items: [{ name: drink.name, qty: voiceSuggestion.qty, emoji: drink.emoji }], source: "voice" })
+                setVoiceSuggestion(null)
+              }}
+              onDismiss={() => setVoiceSuggestion(null)}
+            />
+          )}
+
+          {/* ── "Hoe wil je bestellen?" — choice screen ── */}
+          {orderMode === null && (
+            <div style={S.card}>
+              <div style={{ textAlign: "center", marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: 0.5 }}>Hoe wil je bestellen?</div>
               </div>
-              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                <button style={{ ...S.btn, ...S.btnPrimary, fontSize: 12, padding: "6px 12px" }} onClick={acceptVoiceSuggestion}>Ja</button>
-                <button style={{ ...S.btn, fontSize: 12, padding: "6px 12px" }} onClick={dismissVoiceSuggestion}>Nee</button>
+              <div style={{ display: "flex", gap: 10 }}>
+                {/* Voice button */}
+                <button
+                  onClick={() => { setOrderMode("voice"); startQuickVoice() }}
+                  style={{
+                    flex: 1, border: "none", borderRadius: 16, padding: "18px 12px", cursor: "pointer",
+                    background: "linear-gradient(135deg,#4f7ef7,#6ba1ff)",
+                    color: "#fff",
+                    boxShadow: "0 6px 18px rgba(79,126,247,0.3)",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                  }}
+                >
+                  <span style={{ fontSize: 28 }}>🎤</span>
+                  <span style={{ fontSize: 14, fontWeight: 800 }}>Spreek je bestelling in</span>
+                </button>
+
+                {/* Drinks picker button */}
+                <button
+                  onClick={() => setOrderMode("drinks")}
+                  style={{
+                    flex: 1, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16, padding: "18px 12px", cursor: "pointer",
+                    background: "#fff",
+                    color: "#333",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                  }}
+                >
+                  <span style={{ fontSize: 28 }}>🍹</span>
+                  <span style={{ fontSize: 14, fontWeight: 800 }}>Kies uit dranken</span>
+                  <span style={{ fontSize: 10, color: "#aaa" }}>eigen drankje toevoegen</span>
+                </button>
               </div>
+
+              {/* If cart already has items, show mini summary so they don't lose context */}
+              {cartTotalItems > 0 && (
+                <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 12, color: "#888" }}>In je mandje: {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""}</span>
+                  <button style={{ ...S.btn, ...S.btnPrimary, fontSize: 12, padding: "6px 14px" }} onClick={finishRound}>✅ Bestelling klaar</button>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Bestellijst voor de barman */}
-          {cartTotalItems > 0 && (
-            <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(79,126,247,0.06),rgba(107,161,255,0.06))", border: "1px solid rgba(79,126,247,0.15)" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#7090cc", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>🧾 Bestellijst voor de barman</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {Object.entries(cart).map(([drinkId, line]) => {
-                  const d = drinks.find((dr) => dr.id === drinkId)
-                  if (!d || line.total === 0) return null
+          {/* ── Voice mode active ── */}
+          {orderMode === "voice" && (
+            <div style={{ ...S.card, padding: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#555" }}>🎤 Spraakbestelling</span>
+                <button style={{ ...S.btn, fontSize: 12 }} onClick={() => { stopQuickVoice(); setOrderMode(null) }}>← Terug</button>
+              </div>
+              <button
+                onClick={quickVoiceActive ? stopQuickVoice : startQuickVoice}
+                style={{
+                  ...S.btn, width: "100%", padding: "16px 0", fontSize: 15, fontWeight: 700, border: "none",
+                  background: quickVoiceActive ? "#e74c3c" : "linear-gradient(135deg,#4f7ef7,#6ba1ff)",
+                  color: "#fff",
+                  animation: quickVoiceActive ? "pulse 1.2s infinite" : "none",
+                  boxShadow: quickVoiceActive ? "0 0 0 5px rgba(231,76,60,0.18)" : "0 6px 18px rgba(79,126,247,0.3)",
+                  borderRadius: 14,
+                }}
+              >
+                {quickVoiceActive ? "🔴 Luistert... (tik om te stoppen)" : "🎤 Opnieuw inspreken"}
+              </button>
+              <p style={{ fontSize: 11, color: "#bbb", textAlign: "center", marginTop: 8 }}>
+                Zeg bv. &ldquo;twee pils en een cola&rdquo;
+              </p>
+            </div>
+          )}
+
+          {/* ── Drinks picker mode ── */}
+          {orderMode === "drinks" && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#555" }}>🍹 Kies je drankjes</span>
+                <button style={{ ...S.btn, fontSize: 12 }} onClick={() => setOrderMode(null)}>← Terug</button>
+              </div>
+
+              {/* Subtle price toggle */}
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+                <button onClick={() => setShowPrices((v) => !v)} style={{ background: "none", border: "none", color: "#bbb", fontSize: 11, cursor: "pointer", padding: "2px 6px", textDecoration: "underline" }}>
+                  {showPrices ? "richtprijzen verbergen" : "richtprijzen tonen"}
+                </button>
+              </div>
+
+              {/* Category tabs */}
+              <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, marginBottom: 4 }}>
+                {groupedDrinks.map(([cat]) => {
+                  const isActive = activeCategory === cat || (activeCategory === null && cat === groupedDrinks[0]?.[0])
                   return (
-                    <div key={drinkId} style={{ background: "#fff", border: "1px solid rgba(79,126,247,0.2)", borderRadius: 12, padding: "6px 12px", display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 18 }}>{d.emoji}</span>
-                      <span style={{ fontSize: 15, fontWeight: 800 }}>{line.total}×</span>
-                      <span style={{ fontSize: 13, color: "#555" }}>{d.name}</span>
-                    </div>
+                    <button
+                      key={cat}
+                      onClick={() => setActiveCategory(cat)}
+                      style={{
+                        flexShrink: 0, border: "none", borderRadius: 14, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                        background: isActive ? "linear-gradient(135deg,#4f7ef7,#6ba1ff)" : "#fff",
+                        color: isActive ? "#fff" : "#777",
+                        boxShadow: isActive ? "0 4px 14px rgba(79,126,247,0.3)" : "0 2px 8px rgba(0,0,0,0.04)",
+                      }}
+                    >
+                      {cat}
+                    </button>
                   )
                 })}
               </div>
+
+              {/* Drinks grid for active category */}
+              {groupedDrinks.map(([cat, list]) => {
+                const isActive = activeCategory === cat || (activeCategory === null && cat === groupedDrinks[0]?.[0])
+                if (!isActive) return null
+                return (
+                  <div key={cat} style={S.card}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      {list.map((d) => {
+                        const line = cart[d.id]
+                        const qty = line?.total ?? 0
+                        return (
+                          <div
+                            key={d.id}
+                            style={{
+                              background: qty > 0 ? "rgba(79,126,247,0.08)" : "#fafbff",
+                              border: qty > 0 ? "1.5px solid rgba(79,126,247,0.35)" : "1px solid rgba(0,0,0,0.06)",
+                              borderRadius: 14, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6,
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ fontSize: 20 }}>{d.emoji}</span>
+                              <span style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{d.name}</span>
+                              {showPrices && <span style={{ fontSize: 10, color: "#bbb" }}>≈ €{d.price.toFixed(2)}</span>}
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15 }} onClick={() => addToCart(d.id, -1)}>−</button>
+                              <span style={{ fontSize: 18, fontWeight: 800, minWidth: 24, textAlign: "center" }}>{qty}</span>
+                              <button
+                                style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15, background: "rgba(79,126,247,0.12)" }}
+                                onClick={() => addToCart(d.id, 1, "manual")}
+                              >+</button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+
+              {/* Manage drinks — collapsed by default, opened via subtekst link */}
+              <div style={S.card}>
+                <button
+                  onClick={() => setShowManageDrinks((v) => !v)}
+                  style={{ background: "none", border: "none", cursor: "pointer", width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: 0 }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#888" }}>🍹 Eigen drankje toevoegen / bewerken</span>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <button style={{ ...S.btn, fontSize: 11, padding: "2px 8px" }} onClick={(e) => { e.stopPropagation(); setShowLibraryPicker(true) }}>📚 Bibliotheek</button>
+                    <span style={{ fontSize: 12, color: "#aaa", transform: showManageDrinks ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block", transition: "transform 0.2s" }}>▼</span>
+                  </div>
+                </button>
+
+                {showManageDrinks && (
+                  <div style={{ marginTop: 12 }}>
+                    {drinks.map((d) => (
+                      <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                        {editingDrink?.id === d.id ? (
+                          <>
+                            <input value={editingDrink.emoji} onChange={(e) => setEditingDrink({ ...editingDrink, emoji: e.target.value })} style={{ ...S.input, width: 44 }} />
+                            <input value={editingDrink.name} onChange={(e) => setEditingDrink({ ...editingDrink, name: e.target.value })} style={{ ...S.input, flex: 1 }} />
+                            <input type="number" value={editingDrink.price} onChange={(e) => setEditingDrink({ ...editingDrink, price: parseFloat(e.target.value) || 0 })} style={{ ...S.input, width: 64 }} />
+                            <button style={{ ...S.btn, ...S.btnPrimary, padding: "4px 8px" }} onClick={saveEditedDrink}>💾</button>
+                          </>
+                        ) : (
+                          <>
+                            <span style={{ flex: 1, fontSize: 13 }}>{d.emoji} {d.name} — €{d.price.toFixed(2)}</span>
+                            <button style={S.iconBtn} onClick={() => setEditingDrink(d)}>✏️</button>
+                            <button style={S.iconBtn} onClick={() => deleteDrinkFromList(d.id)}>🗑️</button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                      <input placeholder="Naam" value={newDrink.name} onChange={(e) => setNewDrink({ ...newDrink, name: e.target.value })} style={{ ...S.input, width: 110 }} />
+                      <input type="number" placeholder="€" value={newDrink.price} onChange={(e) => setNewDrink({ ...newDrink, price: e.target.value })} style={{ ...S.input, width: 64 }} />
+                      <input placeholder="🍹" value={newDrink.emoji} onChange={(e) => setNewDrink({ ...newDrink, emoji: e.target.value })} style={{ ...S.input, width: 50 }} />
+                      <select value={newDrink.category} onChange={(e) => setNewDrink({ ...newDrink, category: e.target.value })} style={{ ...S.input, width: 100 }}>
+                        {Object.keys(CATEGORY_LABELS).map((k) => <option key={k} value={k}>{k}</option>)}
+                      </select>
+                      <button style={{ ...S.btn, ...S.btnPrimary }} onClick={addDrink}>+</button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
-          {/* Subtle price toggle */}
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
-            <button
-              onClick={() => setShowPrices((v) => !v)}
-              style={{ background: "none", border: "none", color: "#bbb", fontSize: 11, cursor: "pointer", padding: "2px 6px", textDecoration: "underline" }}
-            >
-              {showPrices ? "richtprijzen verbergen" : "richtprijzen tonen"}
-            </button>
-          </div>
-
-          {/* Category tabs — compact navigation */}
-          <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, marginBottom: 4 }}>
-            {groupedDrinks.map(([cat]) => {
-              const isActive = activeCategory === cat || (activeCategory === null && cat === groupedDrinks[0]?.[0])
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  style={{
-                    flexShrink: 0, border: "none", borderRadius: 14, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer",
-                    background: isActive ? "linear-gradient(135deg,#4f7ef7,#6ba1ff)" : "#fff",
-                    color: isActive ? "#fff" : "#777",
-                    boxShadow: isActive ? "0 4px 14px rgba(79,126,247,0.3)" : "0 2px 8px rgba(0,0,0,0.04)",
-                  }}
-                >
-                  {cat}
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Items in cart, regardless of active category — always visible compact summary */}
-          {Object.entries(cart).some(([, line]) => line.total > 0) && (
+          {/* Cart summary — always visible when items exist */}
+          {cartTotalItems > 0 && orderMode === "drinks" && (
             <div style={{ ...S.card, padding: 10 }}>
               <div style={{ fontSize: 10, color: "#aaa", marginBottom: 6, textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.5 }}>In je mandje</div>
               {Object.entries(cart).map(([drinkId, line]) => {
@@ -1278,7 +1650,7 @@ export default function Home() {
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={() => addToCart(d.id, -1)}>−</button>
                         <span style={{ fontSize: 15, fontWeight: 800 }}>{line.total}</span>
-                        <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13, background: "rgba(79,126,247,0.12)" }} onClick={() => addToCart(d.id, 1)}>+</button>
+                        <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13, background: "rgba(79,126,247,0.12)" }} onClick={() => addToCart(d.id, 1, "manual")}>+</button>
                       </div>
                     </div>
                     {participants.length > 0 && (
@@ -1287,11 +1659,11 @@ export default function Home() {
                           <span style={{ fontSize: 10, color: "#aaa" }}>wie?</span>
                           <span style={{ fontSize: 10, color: unassigned > 0 ? "#e67e22" : "#27ae60", fontWeight: 600 }}>{assignedSum}/{line.total} toegewezen</span>
                         </div>
-                        <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2, scrollSnapType: "x proximate" }}>
+                        <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2 }}>
                           {participants.map((p) => {
                             const pQty = line.assignments[p.id] ?? 0
                             return (
-                              <div key={p.id} style={{ flexShrink: 0, scrollSnapAlign: "start", display: "flex", alignItems: "center", gap: 4, background: pQty > 0 ? "rgba(79,126,247,0.12)" : "rgba(0,0,0,0.035)", border: pQty > 0 ? "1px solid rgba(79,126,247,0.35)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 20, padding: "3px 4px 3px 10px" }}>
+                              <div key={p.id} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 4, background: pQty > 0 ? "rgba(79,126,247,0.12)" : "rgba(0,0,0,0.035)", border: pQty > 0 ? "1px solid rgba(79,126,247,0.35)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 20, padding: "3px 4px 3px 10px" }}>
                                 <span style={{ fontSize: 11, fontWeight: pQty > 0 ? 700 : 500, color: pQty > 0 ? "#4f7ef7" : "#888", whiteSpace: "nowrap" }}>{p.name}</span>
                                 <button style={{ ...S.iconBtn, width: 18, height: 18, fontSize: 10 }} onClick={() => assignCartItem(d.id, p.id, -1)}>−</button>
                                 <span style={{ fontSize: 11, fontWeight: 800, minWidth: 12, textAlign: "center", color: pQty > 0 ? "#4f7ef7" : "#ccc" }}>{pQty}</span>
@@ -1307,76 +1679,6 @@ export default function Home() {
               })}
             </div>
           )}
-
-          {/* Active category — compact grid of all drinks, just tap + to add (assignment happens above) */}
-          {groupedDrinks.map(([cat, list]) => {
-            const isActive = activeCategory === cat || (activeCategory === null && cat === groupedDrinks[0]?.[0])
-            if (!isActive) return null
-            return (
-              <div key={cat} style={S.card}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {list.map((d) => {
-                    const line = cart[d.id]
-                    const qty = line?.total ?? 0
-                    return (
-                      <div key={d.id} style={{ background: qty > 0 ? "rgba(79,126,247,0.08)" : "#fafbff", border: qty > 0 ? "1.5px solid rgba(79,126,247,0.35)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ fontSize: 20 }}>{d.emoji}</span>
-                          <span style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{d.name}</span>
-                          {showPrices && <span style={{ fontSize: 10, color: "#bbb" }}>≈ €{d.price.toFixed(2)}</span>}
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                          <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15 }} onClick={() => addToCart(d.id, -1)}>−</button>
-                          <span style={{ fontSize: 18, fontWeight: 800, minWidth: 24, textAlign: "center" }}>{qty}</span>
-                          <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15, background: "rgba(79,126,247,0.12)" }} onClick={() => addToCart(d.id, 1)}>+</button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
-
-          {/* Manage drinks list */}
-          <div style={S.card}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <b style={{ fontSize: 13, color: "#999" }}>Drankjes beheren</b>
-              <button style={{ ...S.btn, fontSize: 12 }} onClick={() => setShowLibraryPicker(true)}>📚 Bibliotheek</button>
-            </div>
-            <details style={{ marginTop: 10 }}>
-              <summary style={{ cursor: "pointer", fontSize: 12, color: "#aaa" }}>Eigen drankje toevoegen / bewerken</summary>
-              <div style={{ marginTop: 10 }}>
-                {drinks.map((d) => (
-                  <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                    {editingDrink?.id === d.id ? (
-                      <>
-                        <input value={editingDrink.emoji} onChange={(e) => setEditingDrink({ ...editingDrink, emoji: e.target.value })} style={{ ...S.input, width: 44 }} />
-                        <input value={editingDrink.name} onChange={(e) => setEditingDrink({ ...editingDrink, name: e.target.value })} style={{ ...S.input, flex: 1 }} />
-                        <input type="number" value={editingDrink.price} onChange={(e) => setEditingDrink({ ...editingDrink, price: parseFloat(e.target.value) || 0 })} style={{ ...S.input, width: 64 }} />
-                        <button style={{ ...S.btn, ...S.btnPrimary, padding: "4px 8px" }} onClick={saveEditedDrink}>💾</button>
-                      </>
-                    ) : (
-                      <>
-                        <span style={{ flex: 1, fontSize: 13 }}>{d.emoji} {d.name} — €{d.price.toFixed(2)}</span>
-                        <button style={S.iconBtn} onClick={() => setEditingDrink(d)}>✏️</button>
-                        <button style={S.iconBtn} onClick={() => deleteDrinkFromList(d.id)}>🗑️</button>
-                      </>
-                    )}
-                  </div>
-                ))}
-                <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-                  <input placeholder="Naam" value={newDrink.name} onChange={(e) => setNewDrink({ ...newDrink, name: e.target.value })} style={{ ...S.input, width: 110 }} />
-                  <input type="number" placeholder="€" value={newDrink.price} onChange={(e) => setNewDrink({ ...newDrink, price: e.target.value })} style={{ ...S.input, width: 64 }} />
-                  <input placeholder="🍹" value={newDrink.emoji} onChange={(e) => setNewDrink({ ...newDrink, emoji: e.target.value })} style={{ ...S.input, width: 50 }} />
-                  <select value={newDrink.category} onChange={(e) => setNewDrink({ ...newDrink, category: e.target.value })} style={{ ...S.input, width: 100 }}>
-                    {Object.keys(CATEGORY_LABELS).map((k) => <option key={k} value={k}>{k}</option>)}
-                  </select>
-                  <button style={{ ...S.btn, ...S.btnPrimary }} onClick={addDrink}>+</button>
-                </div>
-              </div>
-            </details>
-          </div>
 
           {/* Sticky cart bar */}
           {cartTotalItems > 0 && (
@@ -1394,7 +1696,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ═══ VIEW: Rounds (history, editable, payments) ═══ */}
+      {/* ═══ VIEW: Rounds ═══ */}
       {view === "rounds" && (
         <div>
           {sessions.length === 0 && (
@@ -1411,7 +1713,6 @@ export default function Home() {
             const isEditing = editingRound === s
             const latestSession = sessions[sessions.length - 1]
             const isLatest = s === latestSession
-            // Determine open/closed: explicit expandedRound wins; otherwise latest is open by default (unless manually collapsed)
             const isOpen = expandedRound === s || (expandedRound === null && isLatest && !manuallyCollapsedLatest)
 
             const toggleOpen = () => {
@@ -1426,575 +1727,4 @@ export default function Home() {
 
             return (
               <div key={s} style={S.card}>
-                <div
-                  onClick={toggleOpen}
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", userSelect: "none" }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 12, color: "#bbb", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", display: "inline-block" }}>▶</span>
-                    <b style={{ fontSize: 16 }}>Ronde {s}</b>
-                    {isLatest && <span style={{ fontSize: 10, color: "#4f7ef7", background: "rgba(79,126,247,0.1)", borderRadius: 8, padding: "1px 8px", fontWeight: 700 }}>laatste</span>}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontWeight: 700, color: "#4f7ef7" }}>€{roundTotal.toFixed(2)}</span>
-                    <button style={S.iconBtn} title="Volledig scherm" onClick={(e) => { e.stopPropagation(); setRoundFullscreen(s) }}>🔍</button>
-                    <button style={S.iconBtn} title="Bewerken" onClick={(e) => { e.stopPropagation(); setEditingRound(isEditing ? null : s); if (!isOpen) toggleOpen() }}>{isEditing ? "✓" : "✏️"}</button>
-                    <button style={S.iconBtn} title="Verwijderen" onClick={(e) => { e.stopPropagation(); deleteRound(s) }}>🗑️</button>
-                  </div>
-                </div>
-
-                {isOpen && (
-                  <>
-                    {Object.values(grouped).map((it) => (
-                      <div key={it.drink.id} style={{ marginTop: 8, padding: "6px 0", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <b style={{ fontSize: 13 }}>{it.drink.emoji} {it.drink.name} × {it.totalQty}</b>
-                          {isEditing && (
-                            <div style={{ display: "flex", gap: 4 }}>
-                              <button style={{ ...S.iconBtn, width: 22, height: 22, fontSize: 12 }} onClick={() => changeOrderQty(it.drink.id, null, s, -1)}>−</button>
-                              <button style={{ ...S.iconBtn, width: 22, height: 22, fontSize: 12 }} onClick={() => addDrinkToRound(it.drink.id, s)}>+</button>
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ marginLeft: 8, marginTop: 4 }}>
-                          {Object.entries(it.people).map(([pid, info]) => (
-                            <div key={pid} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, marginTop: 2 }}>
-                              <span style={{ color: "#666" }}>{info.name} × {info.qty}</span>
-                              {isEditing && (
-                                <div style={{ display: "flex", gap: 4 }}>
-                                  <button style={{ ...S.iconBtn, width: 20, height: 20, fontSize: 11 }} onClick={() => changeOrderQty(it.drink.id, pid, s, -1)}>−</button>
-                                  <button style={{ ...S.iconBtn, width: 20, height: 20, fontSize: 11 }} onClick={() => changeOrderQty(it.drink.id, pid, s, 1)}>+</button>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                          {it.anonymous > 0 && (
-                            <div style={{ fontSize: 12, color: "#e67e22", marginTop: 4 }}>
-                              ⚠️ {it.anonymous}× niet toegewezen
-                              {isEditing && (
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
-                                  {participants.map((p) => (
-                                    <button key={p.id} style={{ ...S.btn, fontSize: 11, padding: "2px 8px" }} onClick={() => assignAnonymousQty(it.drink.id, s, p.id, 1)}>
-                                      → {p.name}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    {isEditing && (
-                      <div style={{ marginTop: 10, display: "flex", gap: 6 }}>
-                        <select id={`add-drink-${s}`} style={{ ...S.input, flex: 1, fontSize: 12, padding: "5px 8px" }} defaultValue={drinks[0]?.id ?? ""}>
-                          {drinks.map((d) => <option key={d.id} value={d.id}>{d.emoji} {d.name}</option>)}
-                        </select>
-                        <button
-                          style={{ ...S.btn, fontSize: 12 }}
-                          onClick={() => {
-                            const sel = document.getElementById(`add-drink-${s}`) as HTMLSelectElement
-                            if (sel?.value) addDrinkToRound(sel.value, s)
-                          }}
-                        >+ Drank toevoegen</button>
-                      </div>
-                    )}
-
-                    {/* Payment section */}
-                    <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,0.06)" }}>
-                      {roundPayments.length === 0 ? (
-                        <button style={{ ...S.btn, fontSize: 12, width: "100%" }} onClick={() => openPaymentEditor(s)}>
-                          💳 Wie betaalde?
-                        </button>
-                      ) : (
-                        <div>
-                          <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>Betaald door:</div>
-                          {roundPayments.map((p) => {
-                            const person = participants.find((pa) => pa.id === p.participant_id)
-                            return (
-                              <div key={p.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 2 }}>
-                                <span>{person?.name ?? "?"}</span>
-                                <span style={{ fontWeight: 700 }}>€{p.amount.toFixed(2)}</span>
-                              </div>
-                            )
-                          })}
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: paymentTotal === roundTotal ? "#27ae60" : "#e67e22", marginTop: 4 }}>
-                            <span>Totaal betaald</span>
-                            <span>€{paymentTotal.toFixed(2)} / €{roundTotal.toFixed(2)}</span>
-                          </div>
-                          <button style={{ ...S.btn, fontSize: 11, marginTop: 6, width: "100%" }} onClick={() => openPaymentEditor(s)}>Wijzigen</button>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Payment editor modal */}
-      {paymentEditRound !== null && (
-        <div style={S.overlay}>
-          <div style={{ ...S.modal, width: 380 }}>
-            <h3 style={{ marginBottom: 6, fontSize: 18, fontWeight: 700 }}>💳 Ronde {paymentEditRound} — wie betaalde?</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>Vul in hoeveel elke persoon betaalde (kan er meer dan 1 zijn)</p>
-            {participants.map((p) => (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{p.name}</span>
-                <span style={{ color: "#999" }}>€</span>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={paymentDraft[p.id] ?? ""}
-                  onChange={(e) => setPaymentDraft((prev) => ({ ...prev, [p.id]: e.target.value }))}
-                  style={{ ...S.input, width: 80 }}
-                />
-              </div>
-            ))}
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 12, marginBottom: 16, color: "#888" }}>
-              <span>Som ingevuld</span>
-              <span style={{ fontWeight: 700 }}>€{Object.values(paymentDraft).reduce((s, v) => s + (parseFloat(v) || 0), 0).toFixed(2)}</span>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1 }} onClick={savePayments}>💾 Opslaan</button>
-              <button style={{ ...S.btn, flex: 1 }} onClick={() => setPaymentEditRound(null)}>Annuleer</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Round fullscreen */}
-      {roundFullscreen !== null && (
-        <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 2000, overflowY: "auto", padding: 32 }}>
-          <div style={{ maxWidth: 600, margin: "0 auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-              <h2 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>🧾 Ronde {roundFullscreen}</h2>
-              <button style={S.btn} onClick={() => setRoundFullscreen(null)}>✕ Sluiten</button>
-            </div>
-            {Object.values(getRoundGrouped(roundFullscreen)).map((it) => (
-              <div key={it.drink.id} style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20, padding: "16px 20px", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16 }}>
-                <span style={{ fontSize: 40 }}>{it.drink.emoji}</span>
-                <div>
-                  <div style={{ fontSize: 26, fontWeight: 800, color: "#333" }}>{it.totalQty}× {it.drink.name}</div>
-                  <div style={{ fontSize: 13, color: "#aaa", marginTop: 2 }}>
-                    {Object.values(it.people).map((p) => `${p.name} (${p.qty})`).join(", ")}
-                    {it.anonymous > 0 && ` + ${it.anonymous} niet toegewezen`}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Net afgeronde ronde — fullscreen bevestiging voor de barman + betaler kiezen */}
-      {finishedRoundSnapshot && (
-        <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 2100, overflowY: "auto", padding: 28 }}>
-          <div style={{ maxWidth: 560, margin: "0 auto" }}>
-            <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: 13, color: "#27ae60", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>✅ Ronde {finishedRoundSnapshot.session} besteld</div>
-              <h2 style={{ fontSize: 24, fontWeight: 800, margin: "6px 0 0" }}>🧾 Voor de barman</h2>
-            </div>
-
-            {Object.entries(finishedRoundSnapshot.cart).map(([drinkId, line]) => {
-              const d = drinks.find((dr) => dr.id === drinkId)
-              if (!d || line.total === 0) return null
-              const peopleNames = Object.entries(line.assignments)
-                .map(([pid, qty]) => {
-                  const p = participants.find((pp) => pp.id === pid)
-                  return p ? `${p.name} (${qty})` : null
-                })
-                .filter(Boolean)
-              return (
-                <div key={drinkId} style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14, padding: "14px 18px", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16 }}>
-                  <span style={{ fontSize: 32 }}>{d.emoji}</span>
-                  <div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: "#333" }}>{line.total}× {d.name}</div>
-                    {peopleNames.length > 0 && <div style={{ fontSize: 12, color: "#aaa", marginTop: 2 }}>{peopleNames.join(", ")}</div>}
-                  </div>
-                </div>
-              )
-            })}
-
-            <div style={{ marginTop: 24, padding: "16px 18px", background: "rgba(79,126,247,0.05)", borderRadius: 16, border: "1px solid rgba(79,126,247,0.15)" }}>
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>💳 Wie betaalde deze ronde?</div>
-              {participants.map((p) => (
-                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  <span style={{ flex: 1, fontSize: 14 }}>{p.name}</span>
-                  <span style={{ color: "#999" }}>€</span>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={paymentDraft[p.id] ?? ""}
-                    onChange={(e) => setPaymentDraft((prev) => ({ ...prev, [p.id]: e.target.value }))}
-                    style={{ ...S.input, width: 80 }}
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-              <button
-                style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "12px 0" }}
-                onClick={async () => {
-                  if (!group) return
-                  const round = finishedRoundSnapshot.session
-                  const inserts = (Object.entries(paymentDraft) as [string, string][])
-                    .filter(([, amt]) => parseFloat(amt) > 0)
-                    .map(([participantId, amt]) => ({ group_id: group.id, session: round, participant_id: participantId, amount: parseFloat(amt) }))
-                  if (inserts.length > 0) await supabase.from("payments").insert(inserts)
-                  await loadAll(group.id)
-                  setPaymentDraft({})
-                  setFinishedRoundSnapshot(null)
-                  setToast(`Ronde ${round} afgerond!`)
-                }}
-              >
-                💾 Opslaan & sluiten
-              </button>
-              <button
-                style={{ ...S.btn, flex: 1, padding: "12px 0" }}
-                onClick={() => { setPaymentDraft({}); setFinishedRoundSnapshot(null) }}
-              >
-                Later invullen
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══ VIEW: Totaal (wie dronk wat) ═══ */}
-      {view === "bill" && (
-        <div>
-          {/* Overall drink overview — ALL orders, assigned or not */}
-          <div style={S.card}>
-            <h3 style={S.h3}>📦 Alle bestelde drankjes</h3>
-            {(() => {
-              const overallSummary: Record<string, { drink: Drink; totalQty: number; anonymousQty: number }> = {}
-              orders.forEach((o) => {
-                const d = drinks.find((dr) => dr.id === o.drink_id)
-                if (!d) return
-                if (!overallSummary[d.id]) overallSummary[d.id] = { drink: d, totalQty: 0, anonymousQty: 0 }
-                overallSummary[d.id].totalQty += o.quantity
-                if (!o.participant_id) overallSummary[d.id].anonymousQty += o.quantity
-              })
-              const items = Object.values(overallSummary)
-              if (items.length === 0) return <div style={{ color: "#aaa", textAlign: "center", padding: 12, fontSize: 13 }}>Nog niets besteld</div>
-              return (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {items.map((it) => (
-                    <div key={it.drink.id} style={{ background: "rgba(79,126,247,0.06)", border: "1px solid rgba(79,126,247,0.15)", borderRadius: 12, padding: "6px 12px", display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 18 }}>{it.drink.emoji}</span>
-                      <span style={{ fontSize: 15, fontWeight: 800 }}>{it.totalQty}×</span>
-                      <span style={{ fontSize: 13, color: "#555" }}>{it.drink.name}</span>
-                      {it.anonymousQty > 0 && <span style={{ fontSize: 10, color: "#e67e22" }}>({it.anonymousQty} niet toegewezen)</span>}
-                    </div>
-                  ))}
-                </div>
-              )
-            })()}
-          </div>
-
-          <div style={S.card}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <h3 style={{ ...S.h3, marginBottom: 0 }}>🧾 Wie dronk wat</h3>
-              <button onClick={() => setShowBillPrices((v) => !v)} style={{ ...S.btn, fontSize: 12 }}>
-                {showBillPrices ? "👁️ Verberg richtprijzen" : "👁️ Geef richtprijzen"}
-              </button>
-            </div>
-
-            <div style={{ marginTop: 10 }}>
-              {participants.map((p) => {
-                const personOrders = orders.filter((o) => o.participant_id === p.id)
-                const drinkSummary: Record<string, { drink: Drink; qty: number }> = {}
-                personOrders.forEach((o) => {
-                  const d = drinks.find((dr) => dr.id === o.drink_id)
-                  if (!d) return
-                  if (!drinkSummary[d.id]) drinkSummary[d.id] = { drink: d, qty: 0 }
-                  drinkSummary[d.id].qty += o.quantity
-                })
-                const line = bill.lines.find((l) => l.participantId === p.id)
-                const paid = line?.paid ?? 0
-                const drinkValue = line?.drinkValue ?? 0
-
-                return (
-                  <div key={p.id} style={{ padding: "12px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                      <span style={{ fontWeight: 800, fontSize: 15 }}>{p.name}</span>
-                      <div style={{ textAlign: "right" }}>
-                        {showBillPrices && <div style={{ fontSize: 13, fontWeight: 700, color: "#4f7ef7" }}>≈ €{drinkValue.toFixed(2)}</div>}
-                        {paid > 0 && <div style={{ fontSize: 11, color: "#27ae60" }}>betaald: €{paid.toFixed(2)}</div>}
-                      </div>
-                    </div>
-                    {Object.values(drinkSummary).length === 0 ? (
-                      <div style={{ fontSize: 12, color: "#bbb" }}>nog niets gedronken</div>
-                    ) : (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {Object.values(drinkSummary).map((ds) => (
-                          <span key={ds.drink.id} style={{ background: "rgba(0,0,0,0.03)", borderRadius: 10, padding: "3px 10px", fontSize: 12 }}>
-                            {ds.drink.emoji} {ds.qty}× {ds.drink.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-              {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20 }}>Nog geen personen</div>}
-            </div>
-          </div>
-
-          {showBillPrices && (
-            <div style={S.card}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                <span style={{ color: "#888" }}>Totaal richtprijzen</span>
-                <span style={{ fontWeight: 700 }}>€{bill.totalDrinkValue.toFixed(2)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 4 }}>
-                <span style={{ color: "#888" }}>Totaal echt betaald</span>
-                <span style={{ fontWeight: 700 }}>€{bill.totalPaid.toFixed(2)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 4, paddingTop: 6, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
-                <span style={{ color: bill.difference >= 0 ? "#27ae60" : "#e74c3c", fontWeight: 700 }}>
-                  {bill.difference >= 0 ? "Meer betaald dan richtprijs" : "Minder betaald dan richtprijs"}
-                </span>
-                <span style={{ fontWeight: 800, color: bill.difference >= 0 ? "#27ae60" : "#e74c3c" }}>
-                  {bill.difference >= 0 ? "+" : ""}€{bill.difference.toFixed(2)}
-                </span>
-              </div>
-
-              {Math.abs(bill.difference) > 0.01 && (
-                <button
-                  onClick={() => setShowFairSplit((v) => !v)}
-                  style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 14, padding: "12px 0", fontSize: 14 }}
-                >
-                  ⚖️ {showFairSplit ? "Verberg" : "Toon"} Fair Split
-                </button>
-              )}
-            </div>
-          )}
-
-          {showFairSplit && showBillPrices && (
-            <div style={S.card}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h3 style={{ ...S.h3, marginBottom: 0 }}>⚖️ Fair Split</h3>
-                <button onClick={() => setShowFairSplitDetails((v) => !v)} style={{ background: "none", border: "none", color: "#bbb", fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>
-                  {showFairSplitDetails ? "verberg details" : "details fair split"}
-                </button>
-              </div>
-              <p style={{ fontSize: 11, color: "#aaa", marginTop: 6, marginBottom: 14 }}>
-                Eerlijk verdeeld over wat iedereen dronk — een benadering, geen exacte afrekening.
-              </p>
-
-              {fairSplit.filter((f) => f.participated).map((f) => (
-                <div key={f.participantId} style={{ padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontWeight: 700, fontSize: 14 }}>{f.name}</span>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: "#333" }}>€{f.fairShare.toFixed(2)}</span>
-                  </div>
-                  {showFairSplitDetails && (
-                    <div style={{ fontSize: 12, color: f.balance >= 0 ? "#27ae60" : "#e74c3c", marginTop: 2 }}>
-                      {f.balance >= 0 ? `krijgt €${f.balance.toFixed(2)} terug` : `moet nog €${Math.abs(f.balance).toFixed(2)} bijleggen`}
-                      <span style={{ color: "#bbb", marginLeft: 6 }}>(betaald: €{f.paid.toFixed(2)})</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {showFairSplitDetails && settledDebts.length > 0 && (
-                <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#888", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Wie betaalt wie</div>
-                  {settledDebts.map((t, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 6 }}>
-                      <span style={{ fontWeight: 700 }}>{t.from}</span>
-                      <span style={{ color: "#bbb" }}>→</span>
-                      <span style={{ fontWeight: 700 }}>{t.to}</span>
-                      <span style={{ marginLeft: "auto", fontWeight: 800, color: "#4f7ef7" }}>€{t.amount.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div style={{ textAlign: "center", marginTop: 24, paddingBottom: 40, color: "#aaa", fontSize: 12 }}>
-            {participants.length} personen · {sessions.length} rondes · {orders.reduce((s, o) => s + o.quantity, 0)} drankjes
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// SMALL HELPER COMPONENTS
-// ═══════════════════════════════════════════════════════════════════════════
-
-function AddPersonForm({ onAdd, onClose }: { onAdd: (name: string) => void; onClose: () => void }) {
-  const [name, setName] = useState("")
-  const inputRef = useRef<HTMLInputElement>(null)
-  useEffect(() => { inputRef.current?.focus() }, [])
-  const submit = () => { onAdd(name.trim()); }
-  return (
-    <>
-      <input
-        ref={inputRef}
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && submit()}
-        placeholder="Naam (optioneel)..."
-        style={{ ...S.input, width: "100%", boxSizing: "border-box" }}
-      />
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button style={{ ...S.btn, ...S.btnPrimary, flex: 1 }} onClick={submit}>Toevoegen</button>
-        <button style={{ ...S.btn, flex: 1 }} onClick={onClose}>Annuleer</button>
-      </div>
-    </>
-  )
-}
-
-function LibraryPicker({ library, existing, onAdd }: { library: DrinkLibraryItem[]; existing: Drink[]; onAdd: (item: DrinkLibraryItem, price: number) => void }) {
-  const [search, setSearch] = useState("")
-  const [prices, setPrices] = useState<Record<string, string>>({})
-  const filtered = library.filter((d) => {
-    const q = search.toLowerCase()
-    return d.name.toLowerCase().includes(q) || (d.search_tags ?? "").toLowerCase().includes(q) || (d.category ?? "").toLowerCase().includes(q)
-  })
-  const alreadyAdded = (item: DrinkLibraryItem) => existing.some((e) => e.name === item.name)
-  return (
-    <>
-      <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Zoek..." style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 12 }} />
-      <div style={{ overflowY: "auto", flex: 1, maxHeight: "50vh" }}>
-        {filtered.map((item) => {
-          const added = alreadyAdded(item)
-          return (
-            <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <span style={{ fontSize: 20 }}>{item.emoji}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{item.name}</div>
-                <div style={{ fontSize: 11, color: "#999" }}>{item.category}</div>
-              </div>
-              <input type="number" placeholder={`€${item.default_price.toFixed(2)}`} value={prices[item.id] ?? ""} onChange={(e) => setPrices((p) => ({ ...p, [item.id]: e.target.value }))} style={{ ...S.input, width: 72 }} disabled={added} />
-              <button style={{ ...S.btn, ...(added ? {} : S.btnPrimary), fontSize: 12, padding: "5px 10px" }} disabled={added} onClick={() => { const price = parseFloat(prices[item.id] ?? "") || item.default_price; onAdd(item, price) }}>
-                {added ? "✓" : "+"}
-              </button>
-            </div>
-          )
-        })}
-        {filtered.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20 }}>Niets gevonden</div>}
-      </div>
-    </>
-  )
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// STYLES
-// ═══════════════════════════════════════════════════════════════════════════
-
-const S: Record<string, React.CSSProperties> = {
-  page: {
-    padding: 16,
-    fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
-    background: "linear-gradient(160deg,#f4f6ff,#eef1fb,#fafbff)",
-    minHeight: "100vh",
-    color: "#222",
-    maxWidth: 720,
-    margin: "0 auto",
-  },
-  card: {
-    background: "rgba(255,255,255,0.9)",
-    border: "1px solid rgba(0,0,0,0.05)",
-    borderRadius: 18,
-    padding: 16,
-    boxShadow: "0 4px 18px rgba(20,20,60,0.05)",
-    marginBottom: 12,
-  },
-  btn: {
-    border: "1px solid rgba(0,0,0,0.08)",
-    background: "#fff",
-    borderRadius: 12,
-    padding: "8px 14px",
-    cursor: "pointer",
-    fontSize: 14,
-  },
-  btnPrimary: {
-    background: "linear-gradient(135deg,#4f7ef7,#6ba1ff)",
-    color: "white",
-    border: "none",
-    boxShadow: "0 4px 14px rgba(79,126,247,0.3)",
-  },
-  iconBtn: {
-    border: "none",
-    background: "rgba(0,0,0,0.04)",
-    borderRadius: "50%",
-    width: 30,
-    height: 30,
-    fontSize: 14,
-    cursor: "pointer",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  input: {
-    border: "1px solid rgba(0,0,0,0.12)",
-    borderRadius: 10,
-    padding: "8px 10px",
-    fontSize: 14,
-    outline: "none",
-    background: "#fff",
-  },
-  h1: { fontSize: 28, fontWeight: 800, letterSpacing: -0.5, marginBottom: 4 },
-  h3: { fontSize: 16, fontWeight: 800, marginBottom: 12, letterSpacing: -0.2 },
-  topBar: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 12,
-    padding: "4px 2px",
-  },
-  tabBar: {
-    display: "flex",
-    gap: 6,
-    background: "rgba(255,255,255,0.6)",
-    borderRadius: 16,
-    padding: 5,
-    marginBottom: 16,
-    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
-  },
-  stickyCart: {
-    position: "fixed",
-    bottom: 16,
-    left: 16,
-    right: 16,
-    maxWidth: 720 - 32,
-    margin: "0 auto",
-    background: "#fff",
-    borderRadius: 18,
-    padding: "14px 18px",
-    boxShadow: "0 8px 30px rgba(0,0,0,0.18)",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    zIndex: 500,
-    border: "1px solid rgba(0,0,0,0.06)",
-  },
-  overlay: {
-    position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex",
-    alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(4px)",
-  },
-  modal: {
-    background: "#fff", borderRadius: 20, padding: 24, width: 360,
-    boxShadow: "0 20px 60px rgba(0,0,0,0.15)", maxHeight: "85vh", display: "flex", flexDirection: "column",
-  },
-  toast: {
-    position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)", background: "#222", color: "#fff",
-    padding: "10px 20px", borderRadius: 40, fontSize: 14, fontWeight: 500, zIndex: 2000,
-    boxShadow: "0 8px 24px rgba(0,0,0,0.2)", whiteSpace: "nowrap", maxWidth: "90vw", textAlign: "center",
-  },
-  errorBanner: {
-    background: "#fff0f0", border: "1px solid #fcc", color: "#c0392b", borderRadius: 12, padding: "10px 16px",
-    marginBottom: 12, display: "flex", alignItems: "center", fontSize: 14,
-  },
-}
+                <div onClick={toggleOpen} style={{ display
