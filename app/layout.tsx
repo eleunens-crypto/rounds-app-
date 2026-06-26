@@ -5,7 +5,6 @@ export const metadata: Metadata = {
   description: "Bar tracking app met Supabase",
 }
 
-// ❌ viewport NIET in metadata zetten
 export const viewport = {
   width: "device-width",
   initialScale: 1,
@@ -19,7 +18,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="nl">
-      <body>{children}</body>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   )
 }
