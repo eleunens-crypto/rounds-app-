@@ -42,7 +42,7 @@ type Claim = {
 }
 type Confirmation = { id: string; group_id: string; participant_id: string; confirmed_at?: string }
 
-type ParsedItem = { name: string; unit_price: number; quantity: number; is_shared: boolean; distribute?: string }
+type ParsedItem = { name: string; unit_price: number; quantity: number; is_shared: boolean; distribute?: string; _isNew?: boolean }
 type AdminTab = "scan" | "guests" | "overview"
 
 // ─── LOCAL STORAGE / IDS ─────────────────────────────────────────────────────
@@ -330,6 +330,7 @@ export default function RundoTable() {
 
   // ui
   const [adminTab, setAdminTab] = useState<AdminTab>("scan")
+  const [groupInfoOpen, setGroupInfoOpen] = useState(false) // groepsinfo-balk standaard ingeklapt
   const [showScan, setShowScan] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState(0)
@@ -348,6 +349,9 @@ export default function RundoTable() {
   const [showTaxInfo, setShowTaxInfo] = useState(false)       // uitleg-popup bij BTW-knop
   const [taxConfig, setTaxConfig] = useState<string | null>(null) // welk BTW-item zijn doel-items kiest
   const [editItem, setEditItem] = useState<BillItem | null>(null)
+  // Nieuw item via popup (naam, prijs, gedeeld). target = waar het naartoe gaat.
+  const [newItem, setNewItem] = useState<{ name: string; unit_price: string; quantity: number; is_shared: boolean; target: "bill" | "scan" } | null>(null)
+  const [recentItemId, setRecentItemId] = useState<string | null>(null) // licht een net toegevoegd bon-item op
   const [toast, setToast] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -408,7 +412,7 @@ export default function RundoTable() {
     const name = groupName.trim()
     if (!name) { setStartError("Geef eerst een naam voor de rekening."); return }
     const size = parseInt(partySize)
-    if (!size || size < 1) { setStartError("Vul het aantal personen in om de groep te starten."); return }
+    if (!size || size < 1) { setStartError("Vul het aantal personen in om de groep te starten. Je kan dit later nog wijzigen."); return }
     // Geen dubbele namen (hoofdletter-ongevoelig); de datum die we later tonen telt hier niet mee.
     if (getMyGroups().some((g) => g.name.trim().toLowerCase() === name.toLowerCase())) {
       setStartError("Je hebt al een groep met die naam. Kies een andere naam."); return
@@ -613,6 +617,32 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
+  // Open de nieuw-item-popup. target "bill" = naar de bon (DB), "scan" = naar de scan-preview.
+  const openNewItem = (target: "bill" | "scan") =>
+    setNewItem({ name: "", unit_price: "", quantity: 1, is_shared: false, target })
+
+  // Bevestig het nieuwe item: voeg toe op de juiste plek en licht het even op.
+  const confirmNewItem = async () => {
+    if (!newItem) return
+    const name = newItem.name.trim() || "Nieuw item"
+    const price = parseFloat((newItem.unit_price || "").replace(",", ".")) || 0
+    const qty = Math.max(1, newItem.quantity || 1)
+    if (newItem.target === "scan") {
+      setScanPreview((cur) => [...cur, { name, unit_price: price, quantity: qty, is_shared: newItem.is_shared, _isNew: true }])
+      setNewItem(null)
+      setTimeout(() => setScanPreview((cur) => cur.map((x) => x._isNew ? { ...x, _isNew: false } : x)), 5000)
+      return
+    }
+    if (!group) { setNewItem(null); return }
+    const { data, error } = await supabase.from("table_items")
+      .insert([{ group_id: group.id, name, unit_price: price, quantity: qty, is_shared: newItem.is_shared, category: null }])
+      .select().single()
+    if (error) { setError("Item toevoegen mislukt"); return }
+    setNewItem(null)
+    await loadAll(group.id)
+    if (data?.id) { setRecentItemId(data.id); setTimeout(() => setRecentItemId(null), 6000) }
+  }
+
   // BTW/kost als apart item dat proportioneel over de rekening wordt verdeeld.
   // distribute = "all" (over alles) of een JSON-lijst van item-ids (gekozen items).
   const addTaxItem = async () => {
@@ -716,9 +746,11 @@ export default function RundoTable() {
     } catch { return new Set(baseItems.map((i) => i.id)) }
   }
 
-  // Een gedeeld item toont zijn bedrag/namen pas als de verdeling "definitief" is:
-  // ofwel heeft de admin de deelnemers vastgelegd (share_fixed), ofwel heeft iedereen bevestigd.
-  const sharedRevealed = (it: BillItem) => !!it.share_fixed || allConfirmed
+  // Een gedeeld item deelt zijn bedrag LIVE door wie er meedoet, zodra er minstens
+  // één deelnemer is aangeduid. De som verschijnt dus meteen (wijn door 3 = /3),
+  // ook als nog niet iedereen bevestigd heeft. Of het al "definitief" is (iedereen
+  // bevestigd of door de admin vastgezet) tonen we apart via pendingShared.
+  const sharedRevealed = (it: BillItem) => sharerIds(it.id).length > 0
 
   // Wat draagt 'pid' bij aan één basis-item (gewoon: prijs×aantal · gedeeld: aandeel)?
   const baseAmountForItem = (pid: string, it: BillItem): number => {
@@ -834,6 +866,7 @@ export default function RundoTable() {
     return (
       <div style={S.page}>
         <div style={{ maxWidth: 420, margin: "40px auto" }}>
+          <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#8a93a8", textDecoration: "none", marginBottom: 14, cursor: "pointer" }}>← Andere mode</a>
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginBottom: 4 }}>
             <RundoLogo size={56} />
             <div>
@@ -844,14 +877,13 @@ export default function RundoTable() {
           <p style={{ textAlign: "center", color: "#f0a500", fontSize: 15, fontWeight: 700, margin: "0 0 24px" }}>Scan de rekening, ieder tikt aan, klaar.</p>
 
           <div style={S.card}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: "#3b486a", marginBottom: 8 }}>🧾 Nieuwe rekening (admin)</div>
-            <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && createGroup()} placeholder="Naam (bv. Tafel 12 — De Kroeg)" style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
+            <div style={{ fontSize: 13, color: "#5a6680", fontWeight: 600, marginBottom: 6 }}>Groepsnaam</div>
+            <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && createGroup()} placeholder="Naam" style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <span style={{ fontSize: 13, color: "#5a6680", fontWeight: 600 }}>Aantal personen <span style={{ color: "#c0392b" }}>*</span></span>
               <input type="number" min="1" value={partySize} onChange={(e) => { setStartError(null); setPartySize(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && createGroup()} placeholder="bv. 6" style={{ ...S.input, width: 80, textAlign: "center" }} />
-              <span style={{ fontSize: 11.5, color: "#9aa0ab" }}>(verplicht · later aanpasbaar)</span>
             </div>
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16, fontWeight: 800 }} onClick={createGroup} disabled={busy}>{busy ? "Laden..." : "Groep starten →"}</button>
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16, fontWeight: 800 }} onClick={createGroup} disabled={busy}>{busy ? "Laden..." : "Groep starten → 📸 scan de bon"}</button>
           </div>
 
           {startError && (
@@ -947,22 +979,35 @@ export default function RundoTable() {
         const nietAangemeld = Math.max(0, total - aangemeld)
         const allIn = nietAangemeld === 0 && nietBevestigd.length === 0
         return (
-          <div style={{ background: allIn ? "rgba(39,174,96,0.1)" : "rgba(20,33,58,0.04)", border: "1px solid rgba(16,24,40,0.06)", borderRadius: 14, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, fontWeight: 700, color: allIn ? "#1f8a4c" : "#5a6680" }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px", alignItems: "center" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                🧑‍🤝‍🧑 Groep:
-                <button onClick={() => setPartySizeValue(Math.max(1, total - 1))} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 15 }} title="minder personen">−</button>
-                <b style={{ minWidth: 16, textAlign: "center", display: "inline-block", color: "#14213a" }}>{total}</b>
-                <button onClick={() => setPartySizeValue(total + 1)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 15, background: "rgba(27,42,74,0.12)" }} title="meer personen">+</button>
-                {total === 1 ? "persoon" : "personen"}
-              </span>
-              <span>👤 Aangemeld {aangemeld}/{total} <span style={{ fontWeight: 600, color: "#8a93a3" }}>({viaButton} knop · {viaLink} link)</span></span>
-              <span>✅ Bevestigd {bevestigd}/{total}</span>
-            </div>
-            {(nietAangemeld > 0 || nietBevestigd.length > 0) && (
-              <div style={{ marginTop: 5, fontWeight: 600, color: "#a06b00", fontSize: 12 }}>
-                {nietAangemeld > 0 && <span>⏳ Nog {nietAangemeld} aan te melden{nietBevestigd.length > 0 ? " · " : ""}</span>}
-                {nietBevestigd.length > 0 && <span>Nog niet bevestigd: {nietBevestigd.map((p) => p.name).join(", ")}</span>}
+          <div style={{ marginBottom: 12 }}>
+            <button
+              onClick={() => setGroupInfoOpen((o) => !o)}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: "2px 0", cursor: "pointer", fontWeight: 700, fontSize: 12.5, color: allIn ? "#1f8a4c" : "#5a6680" }}
+            >
+              <span style={{ fontSize: 10, color: "#9aa0ab", transform: groupInfoOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", display: "inline-block" }}>▶</span>
+              <span>👥 Groepsinfo</span>
+              {!groupInfoOpen && !allIn && (nietAangemeld > 0 || nietBevestigd.length > 0) && <span style={{ fontSize: 9, color: "#a06b00", background: "rgba(233,196,95,0.25)", borderRadius: 8, padding: "1px 7px", fontWeight: 800 }}>actie nodig</span>}
+              {!groupInfoOpen && allIn && <span style={{ fontSize: 12 }}>✓</span>}
+            </button>
+            {groupInfoOpen && (
+              <div style={{ marginTop: 6, background: allIn ? "rgba(39,174,96,0.1)" : "rgba(20,33,58,0.04)", border: "1px solid rgba(16,24,40,0.06)", borderRadius: 12, padding: "9px 12px", fontSize: 12.5, fontWeight: 700, color: allIn ? "#1f8a4c" : "#5a6680" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px", alignItems: "center" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    🧑‍🤝‍🧑 Groep:
+                    <button onClick={() => setPartySizeValue(Math.max(1, total - 1))} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 15 }} title="minder personen">−</button>
+                    <b style={{ minWidth: 16, textAlign: "center", display: "inline-block", color: "#14213a" }}>{total}</b>
+                    <button onClick={() => setPartySizeValue(total + 1)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 15, background: "rgba(27,42,74,0.12)" }} title="meer personen">+</button>
+                    {total === 1 ? "persoon" : "personen"}
+                  </span>
+                  <span>👤 Aangemeld {aangemeld}/{total} <span style={{ fontWeight: 600, color: "#8a93a3" }}>({viaButton} knop · {viaLink} link)</span></span>
+                  <span>✅ Bevestigd {bevestigd}/{total}</span>
+                </div>
+                {(nietAangemeld > 0 || nietBevestigd.length > 0) && (
+                  <div style={{ marginTop: 5, fontWeight: 600, color: "#a06b00", fontSize: 12 }}>
+                    {nietAangemeld > 0 && <span>⏳ Nog {nietAangemeld} aan te melden{nietBevestigd.length > 0 ? " · " : ""}</span>}
+                    {nietBevestigd.length > 0 && <span>Nog niet bevestigd: {nietBevestigd.map((p) => p.name).join(", ")}</span>}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -975,7 +1020,7 @@ export default function RundoTable() {
           {([
             { id: "scan", label: "🧾 Bon" },
             { id: "guests", label: "👥 Gasten & delen" },
-            { id: "overview", label: "📊 Overzicht" },
+            { id: "overview", label: "📊 Toewijzen en overzicht" },
           ] as { id: AdminTab; label: string }[]).map((t) => (
             <button key={t.id} onClick={() => setAdminTab(t.id)} style={{
               flex: 1, border: "none", borderRadius: 12, padding: "10px 4px", fontSize: 13, cursor: "pointer",
@@ -1013,7 +1058,8 @@ export default function RundoTable() {
           <ItemList
             items={baseItems} claimedQty={claimedQty} participants={participants} claimsForItem={claimsForItem}
             sharerIds={sharerIds} toggleShareClaim={toggleShareClaim} setShareFixed={setShareFixed}
-            onEdit={setEditItem} onToggleShared={toggleShared} onDelete={deleteItem} onAddManual={addManualItem} bareBill
+            onEdit={setEditItem} onToggleShared={toggleShared} onDelete={deleteItem} onAddManual={() => openNewItem("bill")} bareBill
+            recentItemId={recentItemId} onGoGuests={() => setAdminTab("guests")}
             taxLines={taxItems.map((t) => ({ name: t.name, amount: itemTotal(t) }))}
             taxNode={
               <div style={{ marginTop: 6 }}>
@@ -1175,8 +1221,8 @@ export default function RundoTable() {
 
       {/* ─── ADMIN: Stand van zaken (bovenaan overzicht-tab) ─── */}
       {isAdmin && adminTab === "overview" && (
-        <div style={S.card}>
-          <h3 style={S.h3}>📊 Stand van zaken</h3>
+        <div style={{ ...S.card, padding: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#3b486a", marginBottom: 8 }}>📊 Stand van zaken</div>
           <div style={{ display: "flex", gap: 8 }}>
             <Stat label="rekening" value={`€${billTotal.toFixed(2)}`} tone="navy" />
             <div onClick={() => setShowTodo((v) => !v)} style={{ flex: 1, cursor: "pointer" }}>
@@ -1187,7 +1233,7 @@ export default function RundoTable() {
             </div>
           </div>
           {(openUnits > 0 || undecidedShared.length > 0) && (
-            <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>{showTodo ? "▲ verberg wat nog te regelen valt" : "▼ tik op een rood vakje om te zien wat nog te regelen valt"}</div>
+            <div onClick={() => setShowTodo((v) => !v)} style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6, cursor: "pointer" }}>{showTodo ? "▲ verbergen" : "▼ wat nog te regelen valt"}</div>
           )}
           {showTodo && (openUnits > 0 || undecidedShared.length > 0) && (
             <div style={{ marginTop: 10, border: "1px solid rgba(224,107,94,0.35)", background: "rgba(224,107,94,0.05)", borderRadius: 12, padding: "10px 12px" }}>
@@ -1285,7 +1331,7 @@ export default function RundoTable() {
 
             <label style={{ ...S.btn, ...S.btnPrimary, display: "block", textAlign: "center", marginBottom: 14, cursor: scanning ? "default" : "pointer", fontWeight: 800, padding: "14px 0", opacity: scanning ? 0.6 : 1 }}>
               {scanning ? "⏳ Bezig met scannen..." : scanPreview.length > 0 ? "📷 Andere foto kiezen" : "📷 Foto maken / kiezen"}
-              <input type="file" accept="image/*" capture="environment" disabled={scanning} style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
+              <input type="file" accept="image/*" disabled={scanning} style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
             </label>
 
             {scanning && (
@@ -1353,7 +1399,8 @@ export default function RundoTable() {
                     )
                   }
                   return (
-                    <div key={i} style={{ border: "1px solid rgba(0,0,0,0.07)", borderRadius: 12, padding: 9, marginBottom: 8 }}>
+                    <div key={i} style={{ border: it._isNew ? "1.5px solid #ecc85a" : "1px solid rgba(0,0,0,0.07)", borderRadius: 12, padding: 9, marginBottom: 8, background: it._isNew ? "rgba(233,196,95,0.16)" : "transparent" }}>
+                      {it._isNew && <div style={{ fontSize: 10.5, fontWeight: 800, color: "#a06b00", marginBottom: 6 }}>✨ Net toegevoegd — controleer naam en prijs</div>}
                       {/* Naam over de volle breedte */}
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                         <input value={it.name} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} style={{ ...S.input, flex: 1, minWidth: 0 }} />
@@ -1392,7 +1439,7 @@ export default function RundoTable() {
                   )
                 })}
                 <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
-                  <button onClick={() => setScanPreview((cur) => [...cur, { name: "Nieuw item", unit_price: 0, quantity: 1, is_shared: false }])} style={{ ...S.btn, flex: 1, fontSize: 12.5, fontWeight: 700 }}>+ Item toevoegen</button>
+                  <button onClick={() => openNewItem("scan")} style={{ ...S.btn, flex: 1, fontSize: 12.5, fontWeight: 700 }}>+ Item toevoegen</button>
                   <button onClick={() => setScanPreview((cur) => [...cur, { name: "BTW / tax", unit_price: 0, quantity: 1, is_shared: false, distribute: "all" }])} style={{ ...S.btn, flex: 1, fontSize: 12.5, fontWeight: 700 }}>🧮 BTW / tax</button>
                 </div>
                 <button onClick={() => setShowTaxInfo(true)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#5a6ca6", marginTop: 6, padding: 0 }}>ℹ️ Wanneer BTW apart toevoegen?</button>
@@ -1507,7 +1554,39 @@ export default function RundoTable() {
         </div>
       )}
 
-      {/* ─── Modal: uitleg BTW / kosten ─── */}
+      {/* ─── Modal: nieuw item toevoegen (naam, prijs, gedeeld) ─── */}
+      {newItem && (
+        <div style={S.overlay}>
+          <div style={{ ...S.modal, width: 360 }}>
+            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800 }}>➕ Nieuw item</h3>
+            <p style={{ fontSize: 12, color: "#999", marginTop: 0, marginBottom: 14 }}>Vul naam en prijs in. Daarna verschijnt het bovenaan opvallend in de lijst.</p>
+            <label style={S.lbl}>Naam</label>
+            <input autoFocus value={newItem.name} placeholder="bv. Spaghetti" onChange={(e) => setNewItem({ ...newItem, name: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") confirmNewItem() }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 10, flexWrap: "wrap" }}>
+              <div>
+                <label style={S.lbl}>Aantal</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <button style={{ ...S.iconBtn, width: 32, height: 38, fontSize: 16 }} onClick={() => setNewItem((cur) => cur ? { ...cur, quantity: Math.max(1, cur.quantity - 1) } : cur)}>−</button>
+                  <input type="number" value={newItem.quantity} onChange={(e) => setNewItem({ ...newItem, quantity: Math.max(1, parseInt(e.target.value) || 1) })} style={{ ...S.input, width: 48, textAlign: "center", padding: "9px 4px" }} />
+                  <button style={{ ...S.iconBtn, width: 32, height: 38, fontSize: 16, background: "rgba(27,42,74,0.12)" }} onClick={() => setNewItem((cur) => cur ? { ...cur, quantity: cur.quantity + 1 } : cur)}>+</button>
+                </div>
+              </div>
+              <div style={{ flex: 1, minWidth: 90 }}>
+                <label style={S.lbl}>Prijs/stuk (€)</label>
+                <input type="number" step="0.01" placeholder="0.00" value={newItem.unit_price} onChange={(e) => setNewItem({ ...newItem, unit_price: e.target.value })} style={{ ...S.input, width: "100%", boxSizing: "border-box" }} />
+              </div>
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, marginBottom: 16, cursor: "pointer" }}>
+              <input type="checkbox" checked={newItem.is_shared} onChange={(e) => setNewItem({ ...newItem, is_shared: e.target.checked })} />
+              🍷 Gedeeld item (wijn, water...) — splitsen over wie meedeelt
+            </label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => setNewItem(null)}>Annuleren</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 800 }} onClick={confirmNewItem}>➕ Toevoegen</button>
+            </div>
+          </div>
+        </div>
+      )}
       {showTaxInfo && (
         <div style={S.overlay} onClick={() => setShowTaxInfo(false)}>
           <div style={{ ...S.modal, width: 380 }} onClick={(e) => e.stopPropagation()}>
@@ -1542,9 +1621,9 @@ export default function RundoTable() {
 function TopBar({ group, isAdmin, onHome, me, signedUp }: { group: Group; isAdmin: boolean; onHome: () => void; me?: string; signedUp?: number }) {
   return (
     <div style={S.topBar}>
-      <div onClick={onHome} title="Naar startscherm" style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer" }}>
+      <div onClick={onHome} title="Naar het Table-startscherm" style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", minWidth: 0 }}>
         <RundoLogo size={30} />
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 18, fontWeight: 800, color: "#1b2a4a", lineHeight: 1.1, display: "flex", alignItems: "center", gap: 6 }}>
             Rundo <span style={{ fontSize: 9, fontWeight: 800, color: "#fff", background: "linear-gradient(135deg,#5a6ca6,#7283b6)", borderRadius: 6, padding: "1px 6px" }}>TABLE</span>
           </div>
@@ -1562,7 +1641,7 @@ function TopBar({ group, isAdmin, onHome, me, signedUp }: { group: Group; isAdmi
   )
 }
 
-function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onAddManual, bareBill, taxLines, taxNode }: {
+function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onAddManual, bareBill, taxLines, taxNode, recentItemId, onGoGuests }: {
   items: BillItem[]; claimedQty: (id: string) => number
   participants: Participant[]; claimsForItem: (id: string) => { name: string; qty: number }[]
   sharerIds: (id: string) => string[]; toggleShareClaim: (itemId: string, pid: string) => void
@@ -1571,6 +1650,8 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, t
   bareBill?: boolean
   taxLines?: { name: string; amount: number }[]
   taxNode?: React.ReactNode
+  recentItemId?: string | null
+  onGoGuests?: () => void
 }) {
   return (
     <div style={S.card}>
@@ -1581,8 +1662,10 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, t
       {items.map((it) => {
         const open = it.quantity - claimedQty(it.id)
         const who = claimsForItem(it.id)
+        const isNew = recentItemId === it.id
         return (
-          <div key={it.id} style={{ padding: "9px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+          <div key={it.id} style={{ padding: "9px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", ...(isNew ? { background: "rgba(233,196,95,0.16)", border: "1.5px solid #ecc85a", borderRadius: 12, margin: "4px 0" } : {}) }}>
+            {isNew && <div style={{ fontSize: 10.5, fontWeight: 800, color: "#a06b00", marginBottom: 4 }}>✨ Net toegevoegd — pas de naam aan met ✏️</div>}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 18, flexShrink: 0 }}>{it.is_shared ? "🍷" : "🍽️"}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -1649,7 +1732,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, t
                   <div style={{ fontSize: 10.5, color: "#9aa0ab", marginTop: 5, lineHeight: 1.4 }}>
                     {fixed
                       ? "Verdeling vastgezet: gasten zien meteen hun deel."
-                      : "Niet vastgezet: gasten tikken zelf aan; hun deel verschijnt zodra iedereen bevestigd heeft."}
+                      : "Niet vastgezet: tik gasten aan of laat ze zelf aantikken. Het bedrag deelt live door wie meedoet en kan nog wijzigen tot iedereen bevestigt."}
                   </div>
                 </div>
               )
@@ -1657,6 +1740,10 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, t
           </div>
         )
       })}
+      {/* Kleine, duidelijke knop meteen onder de items */}
+      <div style={{ textAlign: "center", marginTop: 10, marginBottom: 2 }}>
+        <button onClick={onAddManual} style={{ ...S.btn, ...S.btnPrimary, display: "inline-block", width: "auto", padding: "8px 18px", fontSize: 13.5, fontWeight: 800 }}>➕ Item toevoegen</button>
+      </div>
       {taxNode}
       {items.length > 0 && (() => {
         const units = items.reduce((s, it) => s + it.quantity, 0)
@@ -1675,7 +1762,9 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, t
           </div>
         )
       })()}
-      <button onClick={onAddManual} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 800 }}>➕ Item toevoegen</button>
+      {onGoGuests && (
+        <button onClick={onGoGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, padding: "14px 0", fontSize: 15, fontWeight: 800 }}>👥 Naar Gasten &amp; delen →</button>
+      )}
     </div>
   )
 }
@@ -1800,17 +1889,23 @@ function ClaimScreen(props: {
                           <span style={{ fontSize: 11, fontWeight: 800, borderRadius: 10, padding: "2px 9px", color: ok ? "#1f8a4c" : "#c0392b", background: ok ? "rgba(39,174,96,0.12)" : "rgba(224,107,94,0.12)" }}>{ok ? `${sh.length} ${sh.length === 1 ? "deelt" : "delen"}` : "nog niemand"}</span>
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25 }}>
-                          {sh.length === 0
-                            ? <button onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} style={{ fontSize: 11, fontWeight: 800, borderRadius: 10, padding: "3px 10px", cursor: "pointer", border: "none", color: "#c0392b", background: "rgba(224,107,94,0.14)" }}>nog niemand deelt mee — wijs toe ▾</button>
-                            : participants.filter((p) => sh.includes(p.id)).map((p) => (
-                              <span key={p.id} style={{ fontSize: 11, fontWeight: 700, borderRadius: 10, padding: "2px 9px", color: p.id === adminPid ? "#5a4a1a" : "#5a6680", background: p.id === adminPid ? "rgba(233,196,95,0.5)" : "rgba(90,108,166,0.1)" }}>{p.name}</span>
-                            ))}
+                          {participants.length === 0
+                            ? <span style={{ fontSize: 11, color: "#aaa" }}>Voeg eerst gasten toe.</span>
+                            : participants.map((p) => {
+                                const on = sh.includes(p.id)
+                                return (
+                                  <button key={p.id} onClick={() => {
+                                    if (!on && explicitConfirmed(p.id) && !confirm(`${p.name} had dit zelf niet aangeduid. Toch laten meedelen?`)) return
+                                    toggleShareClaim(it.id, p.id)
+                                  }} style={{
+                                    fontSize: 11, fontWeight: 700, borderRadius: 10, padding: "3px 10px", cursor: "pointer",
+                                    border: on ? "none" : "1px solid rgba(16,24,40,0.12)",
+                                    background: on ? (p.id === adminPid ? "rgba(233,196,95,0.5)" : "linear-gradient(135deg,#f3d27c,#ecc564)") : "#fff",
+                                    color: on ? "#5a4a1a" : "#8b93a8",
+                                  }}>{on ? "✓ " : ""}{p.name}</button>
+                                )
+                              })}
                         </div>
-                        {assignItem === it.id && (
-                          <AssignPicker participants={participants} itemId={it.id} isShared confirmedFn={explicitConfirmed}
-                            onAssign={(pid, warn) => { if (warn && !confirm(`${participants.find((x) => x.id === pid)?.name} had dit zelf niet aangeduid. Toch toevoegen?`)) return; toggleShareClaim(it.id, pid); setAssignItem(null) }}
-                            onClose={() => setAssignItem(null)} />
-                        )}
                       </div>
                     )
                   }
@@ -1921,7 +2016,7 @@ function ClaimScreen(props: {
                     <div style={{ marginTop: 8, fontSize: 12, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.4)", borderRadius: 10, padding: "8px 11px", lineHeight: 1.45 }}>
                       {fixed
                         ? <>🍷 Jouw deel: €{perHead.toFixed(2)} (gedeeld door {sh.length} {sh.length === 1 ? "persoon" : "personen"}, vastgelegd door de beheerder).</>
-                        : <>🍷 Jouw deel: €{perHead.toFixed(2)} (gedeeld door {sh.length} {sh.length === 1 ? "persoon" : "personen"}).</>}
+                        : <>🍷 Voorlopig €{perHead.toFixed(2)} (gedeeld door {sh.length} pers.). Daalt als meer mensen meedoen.</>}
                     </div>
                   ) : (
                     <div style={{ marginTop: 8, fontSize: 12, color: "#5a6680", background: "rgba(90,108,166,0.08)", border: "1px solid rgba(90,108,166,0.25)", borderRadius: 10, padding: "8px 11px", lineHeight: 1.45 }}>

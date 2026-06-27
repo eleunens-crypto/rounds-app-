@@ -1512,6 +1512,7 @@ export default function Home() {
     return (
       <div style={S.page}>
         <div style={{ maxWidth: 420, margin: "40px auto" }}>
+          <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#8a93a8", textDecoration: "none", marginBottom: 14, cursor: "pointer" }}>← Andere mode</a>
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginBottom: 6 }}>
               <RundoLogo size={60} />
