@@ -885,7 +885,7 @@ export default function RundoTable() {
       }
     }
     const tax = taxShare(pid)
-    if (tax > 0.005) out.push({ name: "BTW / kosten (verdeeld)", qty: 1, amount: tax, shared: false, revealed: true, sharers: 0 })
+    if (tax > 0.005) out.push({ name: "BTW / kosten (verdeeld)", qty: 1, amount: tax, shared: false, revealed: true, sharers: 0, myHeads: 0 })
     return out
   }
 
