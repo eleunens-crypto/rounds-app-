@@ -18,7 +18,7 @@ import { QRCodeSVG } from "qrcode.react"
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
-type Group = { id: string; name: string; invite_code: string; owner_id: string; receipt_url?: string | null; party_size?: number | null; receipt_total?: number | null; created_at?: string }
+type Group = { id: string; name: string; invite_code: string; owner_id: string; receipt_url?: string | null; party_size?: number | null; receipt_total?: number | null; finalized?: boolean | null; disputed_by?: string | null; created_at?: string }
 type Participant = { id: string; name: string; group_id: string; self_joined?: boolean; seats?: number | null; created_at?: string }
 type BillItem = {
   id: string
@@ -345,7 +345,6 @@ export default function RundoTable() {
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)   // bon groot bekijken
   const [newGuest, setNewGuest] = useState("")
   const [newGuestSeats, setNewGuestSeats] = useState(1) // 'telt voor X personen' bij admin een gast toevoegen
-  const [newGuestSeatsOpen, setNewGuestSeatsOpen] = useState(false)
   const [showAddGuest, setShowAddGuest] = useState(false)
   const [showTodo, setShowTodo] = useState(false)
   const [showTaxInfo, setShowTaxInfo] = useState(false)       // uitleg-popup bij BTW-knop
@@ -359,11 +358,12 @@ export default function RundoTable() {
 
   // ─── loaders ───────────────────────────────────────────────────────────────
   const loadAll = useCallback(async (groupId: string) => {
-    const [{ data: p }, { data: it }, { data: cl }, { data: cf }] = await Promise.all([
+    const [{ data: p }, { data: it }, { data: cl }, { data: cf }, { data: g }] = await Promise.all([
       supabase.from("table_participants").select("*").eq("group_id", groupId),
       supabase.from("table_items").select("*").eq("group_id", groupId),
       supabase.from("table_claims").select("*").eq("group_id", groupId),
       supabase.from("table_confirmations").select("*").eq("group_id", groupId),
+      supabase.from("table_groups").select("*").eq("id", groupId).single(),
     ])
     if (!mounted.current) return
     const order = <T extends { created_at?: string; id: string }>(rows: T[]) =>
@@ -372,6 +372,7 @@ export default function RundoTable() {
     setItems(order(it as BillItem[] || []))
     setClaims((cl as Claim[]) || [])
     setConfirmations((cf as Confirmation[]) || [])
+    if (g) setGroup((cur) => cur ? { ...cur, ...(g as Group) } : (g as Group))
   }, [])
 
   // realtime — luistert op alle table_* tabellen; herverbindt bij verlies van verbinding.
@@ -536,6 +537,7 @@ export default function RundoTable() {
   // Pas de groepsgrootte (seats) van een deelnemer aan
   const setSeats = async (pid: string, n: number) => {
     if (!group) return
+    if (group.finalized && !isAdmin) { setToast("De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     const val = Math.max(1, n)
     const current = Math.max(1, participants.find((p) => p.id === pid)?.seats ?? 1)
     if (val === current) return
@@ -553,9 +555,42 @@ export default function RundoTable() {
   // Hulp: voor hoeveel personen telt deze deelnemer (default 1)
   const seatsOf = (pid: string) => Math.max(1, participants.find((p) => p.id === pid)?.seats ?? 1)
 
+  // Admin: rekening afsluiten (vergrendelt het aantikken) of weer heropenen.
+  const finalizeBill = async (on: boolean) => {
+    if (!group) return
+    setGroup((cur) => cur ? { ...cur, finalized: on, disputed_by: on ? cur.disputed_by : null } : cur)
+    const patch = on ? { finalized: true } : { finalized: false, disputed_by: null }
+    const { error } = await supabase.from("table_groups").update(patch).eq("id", group.id)
+    if (error && /finalized|disputed_by/.test(error.message || "")) {
+      setError("Voeg in Supabase de kolommen finalized (bool) en disputed_by (text) toe aan table_groups.")
+      return
+    }
+    await loadAll(group.id)
+    setToast(on ? "Rekening afgesloten — gasten kunnen niet meer wijzigen" : "Rekening heropend")
+  }
+
+  // Gast: 'klopt iets niet?' — laat een vriendelijk seintje achter bij de admin (naam toevoegen/weghalen).
+  const flagDispute = async (name: string, on: boolean) => {
+    if (!group) return
+    const cur = (group.disputed_by || "").split("|").map((s) => s.trim()).filter(Boolean)
+    const next = on ? Array.from(new Set([...cur, name])) : cur.filter((n) => n !== name)
+    const val = next.join("|")
+    setGroup((g) => g ? { ...g, disputed_by: val } : g)
+    const { error } = await supabase.from("table_groups").update({ disputed_by: val }).eq("id", group.id)
+    if (error) { setError("Seintje versturen mislukt"); return }
+    await loadAll(group.id)
+  }
+
   const pickMe = (participantId: string) => {
     if (!group) return
     setMeIdStored(group.id, participantId); setMeId(participantId)
+  }
+
+  // 'Ik ben iemand anders' — koppelt los van de huidige identiteit (claims blijven onaangeroerd in de db),
+  // brengt je terug naar het naamkeuze-scherm. Handig bij een gedeelde telefoon.
+  const switchPerson = () => {
+    if (!group) return
+    setMeIdStored(group.id, null); setMeId(null)
   }
 
   const joinAsNewPerson = async (name: string, seats = 1) => {
@@ -764,6 +799,7 @@ export default function RundoTable() {
   // Zet het aantal dat 'pid' van een item claimt op een absolute waarde (1 row per persoon/item)
   const setClaim = async (itemId: string, pid: string, qty: number) => {
     if (!group) return
+    if (group.finalized && !isAdmin) { setToast("De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     const existing = claims.find((c) => c.item_id === itemId && c.participant_id === pid)
     if (qty <= 0) {
       if (existing) await supabase.from("table_claims").delete().eq("id", existing.id)
@@ -1039,6 +1075,27 @@ export default function RundoTable() {
 
       <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} me={me?.name} signedUp={participants.length} />
 
+      {/* Rekening afgesloten — opvallende melding voor iedereen */}
+      {group.finalized && (() => {
+        const disputers = (group.disputed_by || "").split("|").map((s) => s.trim()).filter(Boolean)
+        return (
+          <div style={{ background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", borderRadius: 14, padding: "12px 16px", marginBottom: 14, boxShadow: "0 6px 18px -6px rgba(39,174,96,0.6)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 22 }}>✅</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14.5, fontWeight: 800 }}>Alles nagekeken — dit is de definitieve verdeling</div>
+                <div style={{ fontSize: 12, opacity: 0.92 }}>De beheerder heeft de rekening afgerond. {isAdmin ? "Gasten kunnen niets meer wijzigen." : "Bekijk je deel hieronder."}</div>
+              </div>
+            </div>
+            {isAdmin && disputers.length > 0 && (
+              <div style={{ marginTop: 9, background: "rgba(255,255,255,0.16)", borderRadius: 10, padding: "8px 11px", fontSize: 12.5, fontWeight: 700 }}>
+                💬 Twijfelt nog: {disputers.join(", ")} — misschien even checken bij hen.
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
       {/* Vaste statusbalk — op elke tab zichtbaar, vlak onder de groepsnaam */}
       {isAdmin && (() => {
         const total = group.party_size ?? participants.length
@@ -1206,21 +1263,12 @@ export default function RundoTable() {
             {showAddGuest && (
               <div style={{ marginTop: 10, marginBottom: 6, background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: 12 }}>
                 <p style={{ fontSize: 12, color: "#5a6680", marginTop: 0, marginBottom: 10 }}>Voor wie geen gsm heeft — jij tikt voor hen aan.</p>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input value={newGuest} onChange={(e) => setNewGuest(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1); setNewGuestSeatsOpen(false) } }} placeholder="Naam" style={{ ...S.input, flex: 1, minWidth: 0 }} autoFocus />
-                  <button style={{ ...S.btn, ...S.btnPrimary, padding: "0 18px", fontWeight: 800 }} onClick={() => { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1); setNewGuestSeatsOpen(false) }}>+ Toevoegen</button>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <input value={newGuest} onChange={(e) => setNewGuest(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) } }} placeholder="Naam" style={{ ...S.input, flex: 1, minWidth: 110 }} autoFocus />
+                  <SeatsControl n={newGuestSeats} onChange={setNewGuestSeats} />
+                  <button style={{ ...S.btn, ...S.btnPrimary, padding: "0 18px", fontWeight: 800 }} onClick={() => { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) }}>+ Toevoegen</button>
                 </div>
-                {!newGuestSeatsOpen ? (
-                  <button onClick={() => setNewGuestSeatsOpen(true)} style={{ marginTop: 8, background: "none", border: "none", padding: 0, color: "#5a6ca6", fontSize: 12, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2 }}>met meerdere personen? (bv. koppel)</button>
-                ) : (
-                  <div style={{ marginTop: 9, display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#5a6680" }}>
-                    <span style={{ flex: 1 }}>👥 Deze naam telt voor</span>
-                    <button onClick={() => setNewGuestSeats((n) => Math.max(1, n - 1))} style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 16 }} disabled={newGuestSeats <= 1}>−</button>
-                    <b style={{ minWidth: 18, textAlign: "center", fontSize: 15, color: "#14213a" }}>{newGuestSeats}</b>
-                    <button onClick={() => setNewGuestSeats((n) => n + 1)} style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 16, background: "rgba(27,42,74,0.12)" }}>+</button>
-                    <span>{newGuestSeats === 1 ? "persoon" : "personen"}</span>
-                  </div>
-                )}
+                <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6 }}>Met meerdere (bv. koppel)? Zet het aantal personen met de knopjes.</div>
               </div>
             )}
 
@@ -1356,7 +1404,8 @@ export default function RundoTable() {
             sharedRevealed={sharedRevealed} allConfirmed={allConfirmed} isConfirmed={isConfirmed} explicitConfirmed={explicitConfirmed}
             claimMode={claimMode} setClaimMode={setClaimMode} claimPid={claimPid} setClaimPid={setClaimPid}
             iConfirmed={iConfirmed} confirmMe={confirmMe}
-            onPickMe={pickMe}
+            onPickMe={pickMe} onSwitchPerson={switchPerson}
+            finalized={!!group.finalized} iDispute={!!me && (group.disputed_by || "").split("|").map((s) => s.trim()).includes(me.name)} onToggleDispute={(on) => { if (me) flagDispute(me.name, on) }}
           />
         </>
       )}
@@ -1409,6 +1458,20 @@ export default function RundoTable() {
               )
             })}
             {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen gasten</div>}
+          </div>
+
+          {/* Rekening afsluiten / heropenen */}
+          {group.finalized ? (
+            <button onClick={() => finalizeBill(false)} style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 14.5, fontWeight: 800, background: "#fff", border: "1.5px solid rgba(20,33,58,0.2)", color: "#5a6680" }}>
+              🔓 Rekening heropenen (gasten kunnen weer wijzigen)
+            </button>
+          ) : (
+            <button onClick={() => { if (confirm("De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.")) finalizeBill(true) }} style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
+              ✅ Rekening afronden &amp; afsluiten
+            </button>
+          )}
+          <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6, marginBottom: 4 }}>
+            {group.finalized ? "De rekening is afgesloten — iedereen ziet de definitieve verdeling." : "Sluit pas af als alles is aangetikt en nagekeken. Gasten krijgen dan een melding."}
           </div>
         </div>
       )}
@@ -1907,9 +1970,10 @@ function ClaimScreen(props: {
   sharedRevealed: (it: BillItem) => boolean; allConfirmed: boolean; isConfirmed: (pid: string) => boolean; explicitConfirmed: (pid: string) => boolean
   claimMode: "item" | "person"; setClaimMode: (m: "item" | "person") => void
   claimPid: string | null; setClaimPid: (id: string | null) => void
-  iConfirmed: boolean; confirmMe: () => void; onPickMe: (id: string) => void
+  iConfirmed: boolean; confirmMe: () => void; onPickMe: (id: string) => void; onSwitchPerson: () => void
+  finalized: boolean; iDispute: boolean; onToggleDispute: (on: boolean) => void
 }) {
-  const { items, meId, me, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe } = props
+  const { items, meId, me, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, onSwitchPerson, finalized, iDispute, onToggleDispute } = props
   const adminPid = props.claimPid, setAdminPid = props.setClaimPid  // bovenaan geselecteerde (gele) persoon
   const [assignItem, setAssignItem] = useState<string | null>(null) // welk open item we nu toewijzen
 
@@ -2099,6 +2163,7 @@ function ClaimScreen(props: {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#8a93a3" }}>jij</div>
               <div style={{ fontSize: 16, fontWeight: 800, color: "#1b2a4a", overflowWrap: "anywhere" }}>{me ? me.name : "ik"}</div>
+              <button onClick={onSwitchPerson} style={{ marginTop: 2, background: "none", border: "none", padding: 0, color: "#5a6ca6", fontSize: 11.5, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2 }}>ik ben iemand anders</button>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
               <span style={{ fontSize: 12, color: "#5a6680", fontWeight: 600 }}>{ms === 1 ? "alleen" : `samen met ${ms}`}</span>
@@ -2206,9 +2271,28 @@ function ClaimScreen(props: {
             ℹ️ Je deelt mee in gedeelde items (wijn/water). Het exacte deel kan nog wijzigen tot iedereen heeft aangetikt en bevestigd.
           </div>
         )}
-        <button onClick={confirmMe} style={{ ...S.btn, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 15, fontWeight: 800, border: "none", ...(iConfirmed ? { background: "rgba(39,174,96,0.12)", color: "#1f8a4c" } : { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a" }) }}>
-          {iConfirmed ? "✓ Bevestigd — tik om te wijzigen" : "✅ Bevestig mijn bestelling"}
-        </button>
+        {!(finalized && !isAdmin) && (
+          <button onClick={confirmMe} style={{ ...S.btn, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 15, fontWeight: 800, border: "none", ...(iConfirmed ? { background: "rgba(39,174,96,0.12)", color: "#1f8a4c" } : { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a" }) }}>
+            {iConfirmed ? "✓ Bevestigd — tik om te wijzigen" : "✅ Bevestig mijn bestelling"}
+          </button>
+        )}
+        {finalized && !isAdmin && (
+          <div style={{ marginTop: 12, textAlign: "center" }}>
+            {iDispute ? (
+              <div style={{ fontSize: 12.5, color: "#a06b00", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45 }}>
+                💬 Je liet de beheerder weten dat er iets niet klopt. {" "}
+                <button onClick={() => onToggleDispute(false)} style={{ background: "none", border: "none", padding: 0, color: "#5a6ca6", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>toch akkoord</button>
+              </div>
+            ) : (
+              <button onClick={() => onToggleDispute(true)} style={{ ...S.btn, padding: "10px 18px", fontSize: 13, fontWeight: 700, background: "#fff", border: "1px solid rgba(20,33,58,0.18)", color: "#5a6680" }}>
+                🤔 Klopt iets niet? Laat het de beheerder weten
+              </button>
+            )}
+          </div>
+        )}
+        <div style={{ textAlign: "center", marginTop: 12 }}>
+          <button onClick={onSwitchPerson} style={{ background: "none", border: "none", color: "#9aa0ab", fontSize: 12, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2 }}>ik ben iemand anders — wissel van persoon</button>
+        </div>
       </div>
     </div>
   )
@@ -2217,31 +2301,21 @@ function ClaimScreen(props: {
 function IdentityAdder({ onAdd }: { onAdd: (name: string, seats?: number) => void }) {
   const [name, setName] = useState("")
   const [seats, setSeats] = useState(1)
-  const [seatsOpen, setSeatsOpen] = useState(false)
-  const submit = () => { if (name.trim()) { onAdd(name.trim(), seats); setName(""); setSeats(1); setSeatsOpen(false) } }
+  const submit = () => { if (name.trim()) { onAdd(name.trim(), seats); setName(""); setSeats(1) } }
   return (
     <div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submit() }} placeholder="Jouw naam" style={{ ...S.input, flex: 1, minWidth: 0 }} />
-        <button style={{ ...S.btn, ...S.btnPrimary, padding: "0 18px", fontWeight: 800 }} onClick={submit}>Dat ben ik →</button>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submit() }} placeholder="Jouw naam" style={{ ...S.input, flex: 1, minWidth: 120 }} />
+        <SeatsControl n={seats} onChange={setSeats} showLabel />
       </div>
-      {!seatsOpen ? (
-        <button onClick={() => setSeatsOpen(true)} style={{ marginTop: 8, background: "none", border: "none", padding: 0, color: "#5a6ca6", fontSize: 12, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2 }}>met meerdere personen? (bv. koppel)</button>
-      ) : (
-        <div style={{ marginTop: 9, display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#5a6680" }}>
-          <span style={{ flex: 1 }}>👥 Wij betalen samen, met</span>
-          <button onClick={() => setSeats((n) => Math.max(1, n - 1))} style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 16 }} disabled={seats <= 1}>−</button>
-          <b style={{ minWidth: 18, textAlign: "center", fontSize: 15, color: "#14213a" }}>{seats}</b>
-          <button onClick={() => setSeats((n) => n + 1)} style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 16, background: "rgba(27,42,74,0.12)" }}>+</button>
-          <span>{seats === 1 ? "persoon" : "personen"}</span>
-        </div>
-      )}
+      <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6 }}>Met meerdere (bv. koppel)? Zet het aantal personen met de knopjes.</div>
+      <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 16, fontWeight: 800 }} onClick={submit}>Doe mee</button>
     </div>
   )
 }
 
 // Toont 'n' persoon-icoontjes (1 per persoon) met − / + ernaast. Minimum 1.
-function SeatsControl({ n, onChange, size = 15 }: { n: number; onChange: (next: number) => void; size?: number }) {
+function SeatsControl({ n, onChange, size = 15, showLabel = false }: { n: number; onChange: (next: number) => void; size?: number; showLabel?: boolean }) {
   const seats = Math.max(1, n)
   const icons = Math.min(seats, 6) // toon max 6 kopjes, daarboven "+N"
   return (
@@ -2250,6 +2324,7 @@ function SeatsControl({ n, onChange, size = 15 }: { n: number; onChange: (next: 
         {Array.from({ length: icons }).map((_, i) => <span key={i}>👤</span>)}
         {seats > 6 && <span style={{ fontSize: 11, fontWeight: 800, color: "#5a6680", marginLeft: 2 }}>+{seats - 6}</span>}
       </span>
+      {showLabel && <span style={{ fontSize: 11.5, fontWeight: 700, color: "#5a6680", whiteSpace: "nowrap" }}>{seats} pers.</span>}
       <button onClick={(e) => { e.stopPropagation(); onChange(Math.max(1, seats - 1)) }} disabled={seats <= 1} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: 18, height: 18, cursor: seats <= 1 ? "default" : "pointer", fontSize: 12, lineHeight: 1, opacity: seats <= 1 ? 0.4 : 1 }}>−</button>
       <button onClick={(e) => { e.stopPropagation(); onChange(seats + 1) }} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: 18, height: 18, cursor: "pointer", fontSize: 12, lineHeight: 1 }}>+</button>
     </span>
