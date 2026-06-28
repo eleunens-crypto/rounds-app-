@@ -942,11 +942,14 @@ export default function RundoTable() {
   const allConfirmed = participants.length > 0 && participants.every((p) => isConfirmed(p.id))
   const iConfirmed = !!meId && confirmations.some((c) => c.participant_id === meId)
 
-  // Statuslabel voor een gast: groen bevestigd · oranje nog niet bevestigd · rood nog toe te wijzen
+  // Statuslabel voor een gast:
+  //  - groen "bevestigd": heeft écht op de bevestig-knop gedrukt
+  //  - blauw "bezig": heeft al iets aangetikt maar nog niet bevestigd
+  //  - grijs "nog niets": nog niets aangetikt
   const guestStatus = (pid: string): { label: string; color: string; bg: string } => {
-    if (isConfirmed(pid)) return { label: "✓ bevestigd", color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
-    if (!hasAssignment(pid)) return { label: "nog toe te wijzen", color: "#c0392b", bg: "rgba(224,107,94,0.12)" }
-    return { label: "nog niet bevestigd", color: "#a06b00", bg: "rgba(233,196,95,0.18)" }
+    if (explicitConfirmed(pid)) return { label: "✓ bevestigd", color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
+    if (hasAssignment(pid)) return { label: "● bezig", color: "#5a6ca6", bg: "rgba(90,108,166,0.12)" }
+    return { label: "nog niets", color: "#9aa0ab", bg: "rgba(16,24,40,0.05)" }
   }
 
   const billTotal = items.reduce((s, it) => s + itemTotal(it), 0)
