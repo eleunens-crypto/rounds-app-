@@ -12,7 +12,7 @@ function RundoLogo({ size = 64 }: { size?: number }) {
 export default function Home() {
   return (
     <div style={S.page}>
-      <div style={{ maxWidth: 460, margin: "0 auto", padding: "30px 0 40px" }}>
+      <div style={{ maxWidth: 400, margin: "0 auto", padding: "30px 0 40px" }}>
 
         {/* Kop: logo links naast de naam */}
         <div style={{ textAlign: "center", marginTop: 10, marginBottom: 30 }}>
@@ -88,6 +88,7 @@ export default function Home() {
 
       <style>{`
         * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; background: #0e1119; }
         .rundo-card { transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
         .rundo-card-party:hover { transform: translateY(-2px); border-color: rgba(240,193,75,0.55); box-shadow: 0 20px 44px -18px rgba(240,193,75,0.35); }
         .rundo-card-table:hover { transform: translateY(-2px); border-color: rgba(91,159,214,0.55); box-shadow: 0 20px 44px -18px rgba(91,159,214,0.35); }
@@ -102,7 +103,7 @@ const S: Record<string, React.CSSProperties> = {
     background: "radial-gradient(1200px 600px at 50% -10%, #1c2540 0%, #131826 55%, #0e1119 100%)",
     minHeight: "100vh",
     color: "#fff",
-    padding: 18,
+    padding: "18px 22px",
     WebkitFontSmoothing: "antialiased",
     MozOsxFontSmoothing: "grayscale",
   },
