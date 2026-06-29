@@ -2,91 +2,95 @@
 
 import Link from "next/link"
 
-// Rundo-logo: gouden cirkel met witte R en een loop-pijl (rondjes)
+// Rundo-logo (echte afbeelding uit /public). Zet het bestand als public/rundo-logo.png.
+// 'size' = hoogte; breedte schaalt mee zodat de verhouding klopt.
+// eslint-disable-next-line @next/next/no-img-element
 function RundoLogo({ size = 64 }: { size?: number }) {
-  return (
-    <svg viewBox="0 0 120 120" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{ display: "block" }}>
-      <circle cx="60" cy="60" r="56" fill="#F5C518" />
-      <path d="M88 36 A36 36 0 1 0 96 60" fill="none" stroke="#1b2a4a" strokeWidth="9" strokeLinecap="round" />
-      <path d="M88 33 L85 53 L104 49 Z" fill="#1b2a4a" />
-      <text x="60" y="84" textAnchor="middle" fontFamily="'DM Sans', Arial, sans-serif" fontSize="64" fontWeight="800" fill="#ffffff">R</text>
-    </svg>
-  )
+  return <img src="/rundo-logo.png" alt="Rundo" style={{ display: "block", height: size, width: "auto", objectFit: "contain" }} />
 }
 
 export default function Home() {
   return (
     <div style={S.page}>
-      <div style={{ maxWidth: 460, margin: "0 auto", padding: "30px 0 50px" }}>
+      <div style={{ maxWidth: 460, margin: "0 auto", padding: "30px 0 40px" }}>
 
-        {/* Kop: logo + naam + slogan */}
-        <div style={{ textAlign: "center", marginBottom: 26 }}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
-            <RundoLogo size={84} />
+        {/* Kop: logo links naast de naam */}
+        <div style={{ textAlign: "center", marginTop: 10, marginBottom: 30 }}>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginBottom: 6 }}>
+            <RundoLogo size={58} />
+            <h1 style={{ fontSize: 54, fontWeight: 800, letterSpacing: -1.5, margin: 0, color: "#f0a500", lineHeight: 1 }}>Rundo</h1>
           </div>
-          <h1 style={{ fontSize: 52, fontWeight: 800, letterSpacing: -1.5, margin: 0, color: "#ffffff", lineHeight: 1 }}>Rundo</h1>
-          <p style={{ color: "#c9a23a", fontSize: 15, fontWeight: 600, margin: "10px 0 0" }}>
-            Rondjes, rekeningen &amp; eerlijk splitten zonder gedoe!
+          <p style={{ color: "#f2e3a8", fontSize: 15, fontWeight: 600, margin: 0 }}>
+            Rondjes en rekeningen zonder gedoe!
           </p>
         </div>
 
-        <p style={{ textAlign: "center", color: "#b9c0d4", fontSize: 16, fontWeight: 600, marginBottom: 22 }}>
+        <p style={{ textAlign: "right", color: "#7e879c", fontSize: 12.5, fontWeight: 600, margin: "0 4px 8px 0" }}>
           Kies je mode om te starten
         </p>
 
-        {/* PARTY-kaart */}
+        {/* PARTY-kaart — warm geel */}
         <Link href="/party" style={{ textDecoration: "none" }}>
-          <div style={S.modeCard} className="rundo-mode-card">
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-              <span style={{ fontSize: 30 }}>🍻</span>
-              <span style={{ fontSize: 30, fontWeight: 800, color: "#f0c14b", letterSpacing: -0.5 }}>PARTY</span>
+          <div style={{ ...S.modeCard, ...S.partyCard }} className="rundo-card rundo-card-party">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/party-image.jpg" alt="" style={S.cardPhoto} />
+            <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #211c14 0%, #211c14 42%, rgba(33,28,20,0.85) 56%, rgba(33,28,20,0.35) 72%, rgba(33,28,20,0) 100%)" }} />
+            <div style={S.cardBody}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                <span style={{ fontSize: 30 }}>🍻</span>
+                <span style={{ fontSize: 32, fontWeight: 800, color: "#f0c14b", letterSpacing: -0.5 }}>PARTY</span>
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 12, lineHeight: 1.25 }}>
+                Samen bestellen, rondjes &amp; eerlijk splitten
+              </div>
+              <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <span style={S.infoBadge}>i</span>
+                <p style={{ fontSize: 13.5, color: "#d8dced", lineHeight: 1.55, margin: 0 }}>
+                  Ideaal op fuiven, festivals, vrijgezellen, teambuildings enz.
+                </p>
+              </div>
             </div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 10, lineHeight: 1.25 }}>
-              Samen bestellen, rondjes &amp; fair split
-            </div>
-            <div style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-              <span style={{ fontSize: 15, color: "#8a93a8", flexShrink: 0, lineHeight: 1.4 }}>ⓘ</span>
-              <p style={{ fontSize: 13.5, color: "#aeb6cc", lineHeight: 1.55, margin: 0 }}>
-                Voor rondjes, bestellingen of pot leggen op fuiven, festivals, vrijgezellen, teambuildings en meer.
-              </p>
-            </div>
-            <div style={S.goRow}>Openen <span style={{ fontSize: 18 }}>→</span></div>
           </div>
         </Link>
 
-        {/* TABLE-kaart */}
+        {/* TABLE-kaart — koel blauw */}
         <Link href="/table" style={{ textDecoration: "none" }}>
-          <div style={S.modeCard} className="rundo-mode-card">
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-              <span style={{ fontSize: 30 }}>🧾</span>
-              <span style={{ fontSize: 30, fontWeight: 800, color: "#5bb6a0", letterSpacing: -0.5 }}>TABLE</span>
+          <div style={{ ...S.modeCard, ...S.tableCard }} className="rundo-card rundo-card-table">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/table-image.jpg" alt="" style={S.cardPhoto} />
+            <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #131e2b 0%, #131e2b 58%, rgba(19,30,43,0.92) 70%, rgba(19,30,43,0.55) 84%, rgba(19,30,43,0.15) 100%)" }} />
+            <div style={S.cardBody}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                <span style={{ fontSize: 30 }}>🧾</span>
+                <span style={{ fontSize: 32, fontWeight: 800, color: "#5b9fd6", letterSpacing: -0.5 }}>TABLE</span>
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 12, lineHeight: 1.25 }}>
+                Scan de rekening, betaal je deel
+              </div>
+              <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <span style={{ ...S.infoBadge, background: "rgba(91,159,214,0.22)", color: "#9cc6ec" }}>i</span>
+                <p style={{ fontSize: 13.5, color: "#d8dced", lineHeight: 1.55, margin: 0 }}>
+                  Scan een bon (op restaurant, café of na activiteit), kies je items en betaal alleen jouw deel.
+                </p>
+              </div>
             </div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 10, lineHeight: 1.25 }}>
-              Scan de rekening, betaal je deel
-            </div>
-            <div style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-              <span style={{ fontSize: 15, color: "#8a93a8", flexShrink: 0, lineHeight: 1.4 }}>ⓘ</span>
-              <p style={{ fontSize: 13.5, color: "#aeb6cc", lineHeight: 1.55, margin: 0 }}>
-                Scan een bon (op restaurant, café of na activiteit), kies je items en betaal alleen jouw deel.
-              </p>
-            </div>
-            <div style={S.goRow}>Openen <span style={{ fontSize: 18 }}>→</span></div>
           </div>
         </Link>
 
         {/* Voetregel */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 26 }}>
-          <RundoLogo size={30} />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 28 }}>
+          <RundoLogo size={34} />
           <span style={{ fontSize: 13, color: "#9aa2b8", fontWeight: 600, textAlign: "center" }}>
-            Gratis · Geen registratie nodig · Eindelijk eerlijk splitten
+            Gratis · geen registratie · eerlijk splitten
           </span>
         </div>
       </div>
 
       <style>{`
         * { box-sizing: border-box; }
-        .rundo-mode-card { transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
-        .rundo-mode-card:hover { transform: translateY(-2px); border-color: rgba(245,197,24,0.4); box-shadow: 0 18px 40px -16px rgba(0,0,0,0.6); }
+        .rundo-card { transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
+        .rundo-card-party:hover { transform: translateY(-2px); border-color: rgba(240,193,75,0.55); box-shadow: 0 20px 44px -18px rgba(240,193,75,0.35); }
+        .rundo-card-table:hover { transform: translateY(-2px); border-color: rgba(91,159,214,0.55); box-shadow: 0 20px 44px -18px rgba(91,159,214,0.35); }
       `}</style>
     </div>
   )
@@ -103,13 +107,55 @@ const S: Record<string, React.CSSProperties> = {
     MozOsxFontSmoothing: "grayscale",
   },
   modeCard: {
-    background: "linear-gradient(180deg, rgba(30,38,60,0.9), rgba(22,28,44,0.9))",
-    border: "1px solid rgba(255,255,255,0.08)",
+    position: "relative",
     borderRadius: 24,
-    padding: "20px 22px",
     marginBottom: 16,
-    boxShadow: "0 10px 30px -16px rgba(0,0,0,0.7)",
     cursor: "pointer",
+    overflow: "hidden",
+  },
+  cardBody: {
+    position: "relative",
+    zIndex: 2,
+    padding: "20px 22px 20px",
+    maxWidth: "74%",
+  },
+  cardPhoto: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: "62%",
+    objectFit: "cover",
+    display: "block",
+    zIndex: 0,
+  },
+  // Party: warme gele gloed
+  partyCard: {
+    background: "#211c14",
+    border: "1px solid rgba(240,193,75,0.28)",
+    boxShadow: "0 12px 34px -18px rgba(240,193,75,0.25)",
+  },
+  // Table: koele blauwe gloed
+  tableCard: {
+    background: "#131e2b",
+    border: "1px solid rgba(91,159,214,0.28)",
+    boxShadow: "0 12px 34px -18px rgba(91,159,214,0.25)",
+  },
+  infoBadge: {
+    flexShrink: 0,
+    width: 18,
+    height: 18,
+    borderRadius: "50%",
+    background: "rgba(240,193,75,0.22)",
+    color: "#f0c14b",
+    fontSize: 11,
+    fontWeight: 800,
+    fontStyle: "italic",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+    fontFamily: "Georgia, serif",
   },
   goRow: {
     display: "flex",
@@ -119,6 +165,5 @@ const S: Record<string, React.CSSProperties> = {
     marginTop: 14,
     fontSize: 14,
     fontWeight: 800,
-    color: "#f0c14b",
   },
 }
