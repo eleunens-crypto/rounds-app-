@@ -28,10 +28,15 @@ export default function Home() {
             <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #211c14 0%, #211c14 42%, rgba(33,28,20,0.85) 56%, rgba(33,28,20,0.35) 72%, rgba(33,28,20,0) 100%)" }} />
             <div style={S.cardBody}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/rundo-party-logo.png" alt="Rundo Party" style={{ display: "block", height: 46, width: "auto", maxWidth: "100%", objectFit: "contain", marginBottom: 14 }} />
+              <img src="/rundo-party-logo.png" alt="Rundo Party" style={{ display: "block", height: 46, width: "auto", maxWidth: "100%", objectFit: "contain", marginBottom: 6 }} />
+              <div style={{ ...S.logoSub, color: "#f0a500", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/icon-party.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
+                <span>Rondjes en splitten zonder gedoe</span>
+              </div>
               <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                 <span style={S.infoBadge}>i</span>
-                <p style={{ fontSize: 13.5, color: "#d8dced", lineHeight: 1.55, margin: 0 }}>
+                <p style={{ fontSize: 13.5, color: "#d8dced", lineHeight: 1.5, margin: 0 }}>
                   Ideaal op fuiven, festivals, vrijgezellenfeesten, teambuildings enz.
                 </p>
               </div>
@@ -47,11 +52,16 @@ export default function Home() {
             <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #131e2b 0%, #131e2b 42%, rgba(19,30,43,0.85) 56%, rgba(19,30,43,0.35) 72%, rgba(19,30,43,0) 100%)" }} />
             <div style={S.cardBody}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/rundo-table-logo.png" alt="Rundo Table" style={{ display: "block", height: 46, width: "auto", maxWidth: "100%", objectFit: "contain", marginBottom: 14 }} />
+              <img src="/rundo-table-logo.png" alt="Rundo Table" style={{ display: "block", height: 46, width: "auto", maxWidth: "100%", objectFit: "contain", marginBottom: 6 }} />
+              <div style={{ ...S.logoSub, color: "#3bbfc4", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/icon-table.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
+                <span>Scan de rekening en verdeel in groep</span>
+              </div>
               <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                 <span style={{ ...S.infoBadge, background: "rgba(91,159,214,0.22)", color: "#9cc6ec" }}>i</span>
-                <p style={{ fontSize: 13.5, color: "#d8dced", lineHeight: 1.55, margin: 0 }}>
-                  Scan een bon (op restaurant, café of na activiteit), kies je items en betaal alleen jouw deel.
+                <p style={{ fontSize: 13.5, color: "#d8dced", lineHeight: 1.5, margin: 0 }}>
+                  Ideaal als groep op restaurant, café of na activiteit.
                 </p>
               </div>
             </div>
@@ -92,7 +102,7 @@ const S: Record<string, React.CSSProperties> = {
   modeCard: {
     position: "relative",
     borderRadius: 24,
-    marginBottom: 16,
+    marginBottom: 32,
     cursor: "pointer",
     overflow: "hidden",
   },
@@ -125,14 +135,21 @@ const S: Record<string, React.CSSProperties> = {
     border: "1px solid rgba(91,159,214,0.28)",
     boxShadow: "0 12px 34px -18px rgba(91,159,214,0.25)",
   },
+  logoSub: {
+    fontSize: 17,
+    fontWeight: 600,
+    letterSpacing: -0.2,
+    lineHeight: 1.2,
+    fontFamily: "'Nunito', 'Baloo 2', 'DM Sans', -apple-system, 'Segoe UI', sans-serif",
+  },
   infoBadge: {
     flexShrink: 0,
-    width: 18,
-    height: 18,
+    width: 22,
+    height: 22,
     borderRadius: "50%",
     background: "rgba(240,193,75,0.22)",
     color: "#f0c14b",
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: 800,
     fontStyle: "italic",
     display: "inline-flex",
