@@ -1079,7 +1079,7 @@ export default function RundoTable() {
           <div style={S.card}>
             <div style={{ fontSize: 13, color: "#5a6680", fontWeight: 600, marginBottom: 6 }}>Groepsnaam <span style={{ color: "#c0392b" }}>*</span></div>
             <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && createGroup()} placeholder="" style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 14 }} />
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16, fontWeight: 800 }} onClick={createGroup} disabled={busy}>{busy ? "Laden..." : "Groep starten"}</button>
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16, fontWeight: 700 }} onClick={createGroup} disabled={busy}>{busy ? "Laden..." : "Groep starten"}</button>
           </div>
 
           {startError && (
@@ -1233,9 +1233,9 @@ export default function RundoTable() {
       {isAdmin && adminTab === "scan" && (
         <div>
           {group.receipt_url ? (
-            <button onClick={startRescan} style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 14.5, fontWeight: 800, marginBottom: 12, background: "#fff", border: "1px solid rgba(90,108,166,0.35)", color: "#1499b0" }}>🔄 Bon opnieuw scannen</button>
+            <button onClick={startRescan} style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 14.5, fontWeight: 700, marginBottom: 12, background: "#fff", border: "1px solid rgba(90,108,166,0.35)", color: "#1499b0" }}>🔄 Bon opnieuw scannen</button>
           ) : (
-            <button onClick={() => setShowScan(true)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 15, fontWeight: 800, marginBottom: 12 }}>Rekening scannen 📸</button>
+            <button onClick={() => setShowScan(true)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Rekening scannen 📸</button>
           )}
 
           {/* Gescande bon — altijd in beeld naast wat je toevoegde */}
@@ -1346,14 +1346,14 @@ export default function RundoTable() {
           <div style={{ ...S.card, order: 2 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <h3 style={{ ...S.h3, marginBottom: 0 }}>👥 Of voeg zelf gasten toe</h3>
-              <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 800, fontSize: 13 }} onClick={() => setShowAddGuest((v) => !v)}>{showAddGuest ? "✕ Sluiten" : "+ Toevoegen"}</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 700, fontSize: 13 }} onClick={() => setShowAddGuest((v) => !v)}>{showAddGuest ? "✕ Sluiten" : "+ Toevoegen"}</button>
             </div>
             {showAddGuest && (
               <div style={{ marginTop: 10, marginBottom: 6, background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: 12 }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   <input value={newGuest} onChange={(e) => setNewGuest(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) } }} placeholder="Naam" style={{ ...S.input, flex: 1, minWidth: 110 }} autoFocus />
                   <SeatsControl n={newGuestSeats} onChange={setNewGuestSeats} showLabel />
-                  <button style={{ ...S.btn, ...S.btnPrimary, padding: "0 18px", fontWeight: 800 }} onClick={() => { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) }}>+ Toevoegen</button>
+                  <button style={{ ...S.btn, ...S.btnPrimary, padding: "0 18px", fontWeight: 700 }} onClick={() => { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) }}>+ Toevoegen</button>
                 </div>
                 <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6 }}>Met meerdere (bv. koppel)? Zet het aantal personen met de knopjes.</div>
               </div>
@@ -1456,7 +1456,7 @@ export default function RundoTable() {
             })()}
           </div>
 
-          <button onClick={() => setAdminTab("overview")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 800 }}>Naar toewijzen →</button>
+          <button onClick={() => setAdminTab("overview")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 700 }}>📊 Naar toewijzen →</button>
         </div>
       )}
 
@@ -1563,11 +1563,21 @@ export default function RundoTable() {
 
           {/* Rekening afsluiten / heropenen */}
           {group.finalized ? (
-            <button onClick={() => finalizeBill(false)} style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 14.5, fontWeight: 800, background: "#fff", border: "1.5px solid rgba(20,33,58,0.2)", color: "#5a6680" }}>
+            <button onClick={() => finalizeBill(false)} style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 14.5, fontWeight: 700, background: "#fff", border: "1.5px solid rgba(20,33,58,0.2)", color: "#5a6680" }}>
               🔓 Rekening heropenen (gasten kunnen weer wijzigen)
             </button>
           ) : (
-            <button onClick={() => { if (confirm("De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.")) finalizeBill(true) }} style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
+            <button onClick={() => {
+              if (openUnits > 0 || undecidedShared.length > 0) {
+                const delen: string[] = []
+                if (openUnits > 0) delen.push(`${openUnits} ${openUnits === 1 ? "consumptie is" : "consumpties zijn"} nog niet toegewezen`)
+                if (undecidedShared.length > 0) delen.push(`${undecidedShared.length} gedeeld ${undecidedShared.length === 1 ? "item wordt" : "items worden"} door niemand genomen`)
+                alert(`De rekening kan nog niet afgesloten worden:\n\n• ${delen.join("\n• ")}\n\nWijs eerst alles toe. Bekijk via "Nog niet geclaimd" wat er nog openstaat.`)
+                setShowTodo(true)
+                return
+              }
+              if (confirm("De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.")) finalizeBill(true)
+            }} style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
               ✅ Rekening afronden &amp; afsluiten
             </button>
           )}
@@ -1587,7 +1597,7 @@ export default function RundoTable() {
             <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800 }}>🧾 Rekening scannen</h3>
             <p style={{ fontSize: 12.5, color: "#999", marginBottom: 14 }}>Maak of kies een foto van de rekening. Daarna kan je de herkende items nog nakijken en bijsturen.</p>
 
-            <label style={{ ...S.btn, ...S.btnPrimary, display: "block", textAlign: "center", marginBottom: 14, cursor: scanning ? "default" : "pointer", fontWeight: 800, padding: "14px 0", opacity: scanning ? 0.6 : 1 }}>
+            <label style={{ ...S.btn, ...S.btnPrimary, display: "block", textAlign: "center", marginBottom: 14, cursor: scanning ? "default" : "pointer", fontWeight: 700, padding: "14px 0", opacity: scanning ? 0.6 : 1 }}>
               {scanning ? "⏳ Bezig met scannen..." : scanPreview.length > 0 ? "📷 Andere foto kiezen" : "📷 Foto maken / kiezen"}
               <input type="file" accept="image/*" disabled={scanning} style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
             </label>
@@ -1617,7 +1627,7 @@ export default function RundoTable() {
               <div style={{ marginBottom: 12, maxHeight: 320, overflowY: "auto", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: "#c98a00", textTransform: "uppercase" }}>{scanPreview.filter((x) => !x.distribute).length} herkend — controleer en stuur bij</div>
-                  <button onClick={() => openNewItem("scan")} style={{ ...S.btn, ...S.btnPrimary, padding: "5px 12px", fontSize: 12, fontWeight: 800 }}>+ Item toevoegen</button>
+                  <button onClick={() => openNewItem("scan")} style={{ ...S.btn, ...S.btnPrimary, padding: "5px 12px", fontSize: 12, fontWeight: 700 }}>+ Item toevoegen</button>
                 </div>
                 {scanPreview.map((it, i) => ({ it, i })).sort((a, b) => (a.it.distribute ? 1 : 0) - (b.it.distribute ? 1 : 0)).map(({ it, i }) => {
                   const lineTotal = (it.unit_price || 0) * (it.quantity || 0)
@@ -1705,7 +1715,7 @@ export default function RundoTable() {
                   )
                 })}
                 <div style={{ textAlign: "right", marginTop: 4 }}>
-                  <button onClick={() => openNewItem("scan")} style={{ ...S.btn, ...S.btnPrimary, padding: "8px 16px", fontSize: 12.5, fontWeight: 800 }}>+ Item toevoegen</button>
+                  <button onClick={() => openNewItem("scan")} style={{ ...S.btn, ...S.btnPrimary, padding: "8px 16px", fontSize: 12.5, fontWeight: 700 }}>+ Item toevoegen</button>
                 </div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
                   <button onClick={() => setScanPreview((cur) => [...cur, { name: "BTW of andere kosten", unit_price: 0, quantity: 1, is_shared: false, distribute: "all" }])} style={{ ...S.btn, flex: 1, fontSize: 12, fontWeight: 700, padding: "7px 0" }}>🧮 BTW/Kosten toevoegen</button>
@@ -1763,7 +1773,7 @@ export default function RundoTable() {
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1 }} disabled={scanning} onClick={() => { setShowScan(false); setScanPreview([]); setScanTotal(""); setScanError(null); setScanFile(null); if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) } }}>{scanPreview.length > 0 ? "Annuleren" : "Sluiten"}</button>
               {scanPreview.length > 0 && (
-                <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 800 }} onClick={confirmScan} disabled={scanning}>✅ Bevestigen & toevoegen</button>
+                <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={confirmScan} disabled={scanning}>✅ Bevestigen & toevoegen</button>
               )}
             </div>
           </div>
@@ -1816,7 +1826,7 @@ export default function RundoTable() {
             </label>
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setEditItem(null)}>Annuleren</button>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 800 }} onClick={saveItem}>💾 Opslaan</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={saveItem}>💾 Opslaan</button>
             </div>
           </div>
         </div>
@@ -1850,7 +1860,7 @@ export default function RundoTable() {
             </label>
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setNewItem(null)}>Annuleren</button>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 800 }} onClick={confirmNewItem}>+ Toevoegen</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={confirmNewItem}>+ Toevoegen</button>
             </div>
           </div>
         </div>
@@ -1862,7 +1872,7 @@ export default function RundoTable() {
             <div style={{ fontSize: 13.5, color: "#3b486a", lineHeight: 1.6 }}>
               <p style={{ marginTop: 0, marginBottom: 0 }}>Alleen gebruiken als BTW of andere kosten <b>apart op de bon</b> staan. Kan over de <b>hele rekening</b> verdeeld worden of <b>proportioneel per bestelling</b>.</p>
             </div>
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, fontWeight: 800 }} onClick={() => setShowTaxInfo(false)}>Begrepen</button>
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, fontWeight: 700 }} onClick={() => setShowTaxInfo(false)}>Begrepen</button>
           </div>
         </div>
       )}
@@ -1873,7 +1883,7 @@ export default function RundoTable() {
           <div style={{ position: "relative", maxWidth: "92vw", maxHeight: "90vh" }} onClick={(e) => e.stopPropagation()}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={viewReceipt} alt="gescande bon" style={{ maxWidth: "92vw", maxHeight: "82vh", objectFit: "contain", borderRadius: 14, background: "#fff", boxShadow: "0 24px 70px -12px rgba(16,24,40,0.5)" }} />
-            <button onClick={() => setViewReceipt(null)} style={{ ...S.btn, position: "absolute", top: -14, right: -14, width: 40, height: 40, borderRadius: "50%", fontWeight: 800, fontSize: 16, padding: 0 }}>✕</button>
+            <button onClick={() => setViewReceipt(null)} style={{ ...S.btn, position: "absolute", top: -14, right: -14, width: 40, height: 40, borderRadius: "50%", fontWeight: 700, fontSize: 16, padding: 0 }}>✕</button>
           </div>
         </div>
       )}
@@ -1895,7 +1905,7 @@ function TopBar({ group, isAdmin, onHome, me, totalPersons }: { group: Group; is
           <img src="/rundo-table-logo-dark.png" alt="Rundo Table" style={{ height: 19, width: "auto", objectFit: "contain", display: "block" }} />
         </div>
         <div style={{ flex: 1, textAlign: "center", minWidth: 0 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: isAdmin ? "#1499b0" : "#f0a500", letterSpacing: 0.3, whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: isAdmin ? "#1499b0" : "#f0a500", letterSpacing: 0.3, whiteSpace: "nowrap" }}>
             {isAdmin ? "👑 Beheerder" : me ? `👤 ${me}` : "👤 Gast"}
           </span>
         </div>
@@ -1927,7 +1937,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
     <div style={S.card}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <h3 style={{ ...S.h3, marginBottom: 0 }}>🧾 Items op de bon</h3>
-        <button onClick={onAddManual} style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontSize: 13, fontWeight: 800 }}>+ Item toevoegen</button>
+        <button onClick={onAddManual} style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontSize: 13, fontWeight: 700 }}>+ Item toevoegen</button>
       </div>
       {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>Nog geen items — scan de bon</div>}
       {items.map((it) => {
@@ -2019,7 +2029,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
       })}
       {/* Item toevoegen ook rechtsonder, vlak boven de BTW-knop */}
       <div style={{ textAlign: "right", marginTop: 10, marginBottom: 2 }}>
-        <button onClick={onAddManual} style={{ ...S.btn, ...S.btnPrimary, display: "inline-block", width: "auto", padding: "8px 18px", fontSize: 13.5, fontWeight: 800 }}>+ Item toevoegen</button>
+        <button onClick={onAddManual} style={{ ...S.btn, ...S.btnPrimary, display: "inline-block", width: "auto", padding: "8px 18px", fontSize: 13.5, fontWeight: 700 }}>+ Item toevoegen</button>
       </div>
       {taxNode}
       {items.length > 0 && (() => {
@@ -2040,7 +2050,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         )
       })()}
       {onGoGuests && (
-        <button onClick={onGoGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, padding: "14px 0", fontSize: 15, fontWeight: 800 }}>👥 Naar Gasten &amp; delen →</button>
+        <button onClick={onGoGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, padding: "14px 0", fontSize: 15, fontWeight: 700 }}>👥 Naar Gasten &amp; delen →</button>
       )}
     </div>
   )
@@ -2321,7 +2331,7 @@ function ClaimScreen(props: {
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{it.name} <span style={{ fontSize: 11, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 8, padding: "1px 7px" }}>gedeeld</span></div>
                     <div style={{ fontSize: 11, color: "#999" }}>€{itemTotal(it).toFixed(2)} totaal · wordt gedeeld door wie meedrinkt</div>
                   </div>
-                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 800, ...(iShare ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", border: "none" } : {}) }}>{iShare ? "✓ ik deel mee" : "+ meedelen"}</button>
+                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...(iShare ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", border: "none" } : {}) }}>{iShare ? "✓ ik deel mee" : "+ meedelen"}</button>
                 </div>
                 {iShare && mySeats > 1 && !fixed && (
                   <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#5a6680", background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.2)", borderRadius: 10, padding: "7px 11px" }}>
@@ -2394,7 +2404,7 @@ function ClaimScreen(props: {
           </div>
         )}
         {!(finalized && !isAdmin) && (
-          <button onClick={confirmMe} style={{ ...S.btn, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 15, fontWeight: 800, border: "none", ...(iConfirmed ? { background: "rgba(39,174,96,0.12)", color: "#1f8a4c" } : { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a" }) }}>
+          <button onClick={confirmMe} style={{ ...S.btn, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 15, fontWeight: 700, border: "none", ...(iConfirmed ? { background: "rgba(39,174,96,0.12)", color: "#1f8a4c" } : { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a" }) }}>
             {iConfirmed ? "✓ Bevestigd — tik om te wijzigen" : "✅ Bevestig mijn bestelling"}
           </button>
         )}
@@ -2419,7 +2429,7 @@ function ClaimScreen(props: {
                 <textarea value={disputeText} onChange={(e) => setDisputeText(e.target.value)} placeholder="bv. die wijn nam ik niet" rows={2} style={{ ...S.input, width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
                 <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                   <button onClick={() => { setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13 }}>Annuleren</button>
-                  <button onClick={() => { onToggleDispute(true, disputeText); setDisputeOpen(false) }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff" }}>Versturen</button>
+                  <button onClick={() => { onToggleDispute(true, disputeText); setDisputeOpen(false) }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff" }}>Versturen</button>
                 </div>
               </div>
             ) : (
@@ -2447,7 +2457,7 @@ function IdentityAdder({ onAdd }: { onAdd: (name: string, seats?: number) => voi
         <SeatsControl n={seats} onChange={setSeats} showLabel />
       </div>
       <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6 }}>Met meerdere (bv. koppel)? Zet het aantal personen met de knopjes.</div>
-      <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 16, fontWeight: 800 }} onClick={submit}>Doe mee</button>
+      <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 16, fontWeight: 700 }} onClick={submit}>Doe mee</button>
     </div>
   )
 }
