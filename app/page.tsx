@@ -2,24 +2,15 @@
 
 import Link from "next/link"
 
-// Rundo-logo (echte afbeelding uit /public). Zet het bestand als public/rundo-logo.png.
-// 'size' = hoogte; breedte schaalt mee zodat de verhouding klopt.
-// eslint-disable-next-line @next/next/no-img-element
-function RundoLogo({ size = 64 }: { size?: number }) {
-  return <img src="/rundo-logo.png" alt="Rundo" style={{ display: "block", height: size, width: "auto", objectFit: "contain" }} />
-}
-
 export default function Home() {
   return (
     <div style={S.page}>
-      <div style={{ maxWidth: 400, margin: "0 auto", padding: "30px 0 40px" }}>
+      <div style={{ maxWidth: 360, margin: "0 auto", padding: "30px 0 40px" }}>
 
-        {/* Kop: logo links naast de naam */}
+        {/* Kop: algemeen Rundo-logo (symbool + naam in één), ondertitel eronder */}
         <div style={{ textAlign: "center", marginTop: 10, marginBottom: 30 }}>
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginBottom: 6 }}>
-            <RundoLogo size={58} />
-            <h1 style={{ fontSize: 54, fontWeight: 800, letterSpacing: -1.5, margin: 0, color: "#f0a500", lineHeight: 1 }}>Rundo</h1>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/rundo-logo.png" alt="Rundo" style={{ display: "block", height: 64, width: "auto", maxWidth: "90%", objectFit: "contain", margin: "0 auto 8px" }} />
           <p style={{ color: "#f2e3a8", fontSize: 15, fontWeight: 600, margin: 0 }}>
             Rondjes en rekeningen zonder gedoe!
           </p>
@@ -33,20 +24,15 @@ export default function Home() {
         <Link href="/party" style={{ textDecoration: "none" }}>
           <div style={{ ...S.modeCard, ...S.partyCard }} className="rundo-card rundo-card-party">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/party-image.jpg" alt="" style={S.cardPhoto} />
+            <img src="/party-image.png" alt="" style={S.cardPhoto} />
             <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #211c14 0%, #211c14 42%, rgba(33,28,20,0.85) 56%, rgba(33,28,20,0.35) 72%, rgba(33,28,20,0) 100%)" }} />
             <div style={S.cardBody}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                <span style={{ fontSize: 30 }}>🍻</span>
-                <span style={{ fontSize: 32, fontWeight: 800, color: "#f0c14b", letterSpacing: -0.5 }}>PARTY</span>
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 12, lineHeight: 1.25 }}>
-                Samen bestellen, rondjes &amp; eerlijk splitten
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/rundo-party-logo.png" alt="Rundo Party" style={{ display: "block", height: 46, width: "auto", maxWidth: "100%", objectFit: "contain", marginBottom: 14 }} />
               <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                 <span style={S.infoBadge}>i</span>
                 <p style={{ fontSize: 13.5, color: "#d8dced", lineHeight: 1.55, margin: 0 }}>
-                  Ideaal op fuiven, festivals, vrijgezellen, teambuildings enz.
+                  Ideaal op fuiven, festivals, vrijgezellenfeesten, teambuildings enz.
                 </p>
               </div>
             </div>
@@ -57,16 +43,11 @@ export default function Home() {
         <Link href="/table" style={{ textDecoration: "none" }}>
           <div style={{ ...S.modeCard, ...S.tableCard }} className="rundo-card rundo-card-table">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/table-image.jpg" alt="" style={S.cardPhoto} />
-            <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #131e2b 0%, #131e2b 58%, rgba(19,30,43,0.92) 70%, rgba(19,30,43,0.55) 84%, rgba(19,30,43,0.15) 100%)" }} />
+            <img src="/table-image.png" alt="" style={S.cardPhoto} />
+            <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #131e2b 0%, #131e2b 42%, rgba(19,30,43,0.85) 56%, rgba(19,30,43,0.35) 72%, rgba(19,30,43,0) 100%)" }} />
             <div style={S.cardBody}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                <span style={{ fontSize: 30 }}>🧾</span>
-                <span style={{ fontSize: 32, fontWeight: 800, color: "#5b9fd6", letterSpacing: -0.5 }}>TABLE</span>
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 12, lineHeight: 1.25 }}>
-                Scan de rekening, betaal je deel
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/rundo-table-logo.png" alt="Rundo Table" style={{ display: "block", height: 46, width: "auto", maxWidth: "100%", objectFit: "contain", marginBottom: 14 }} />
               <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                 <span style={{ ...S.infoBadge, background: "rgba(91,159,214,0.22)", color: "#9cc6ec" }}>i</span>
                 <p style={{ fontSize: 13.5, color: "#d8dced", lineHeight: 1.55, margin: 0 }}>
@@ -79,7 +60,8 @@ export default function Home() {
 
         {/* Voetregel */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 28 }}>
-          <RundoLogo size={34} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/rundo-symbol.png" alt="" style={{ display: "block", height: 30, width: "auto", objectFit: "contain" }} />
           <span style={{ fontSize: 13, color: "#9aa2b8", fontWeight: 600, textAlign: "center" }}>
             Gratis · geen registratie · eerlijk splitten
           </span>
@@ -129,6 +111,7 @@ const S: Record<string, React.CSSProperties> = {
     objectFit: "cover",
     display: "block",
     zIndex: 0,
+    filter: "brightness(1.18) saturate(0.92)",
   },
   // Party: warme gele gloed
   partyCard: {
