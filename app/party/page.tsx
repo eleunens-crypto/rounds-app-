@@ -646,7 +646,7 @@ export default function Home() {
 
   // ── Loaders ───────────────────────────────────────────────────────────────
   const loadDrinks = useCallback(async () => {
-    const { data, error } = await supabase.from("drinks").select("*")
+    const { data, error } = await supabase.from("drinks").select("id,name,price,emoji,category")
     if (error) { setError("Drankjes laden mislukt"); return }
     if (mounted.current) setDrinks(data || [])
   }, [])
@@ -654,8 +654,8 @@ export default function Home() {
   const loadAll = useCallback(async (groupId: string) => {
     const [{ data: p, error: pe }, { data: o, error: oe }, { data: pay, error: paye }] = await Promise.all([
       supabase.from("participants").select("*").eq("group_id", groupId),
-      supabase.from("orders").select("*").eq("group_id", groupId),
-      supabase.from("payments").select("*").eq("group_id", groupId),
+      supabase.from("orders").select("id,participant_id,drink_id,quantity,group_id,session").eq("group_id", groupId),
+      supabase.from("payments").select("id,group_id,session,participant_id,amount,created_at").eq("group_id", groupId),
     ])
     if (pe || oe) { setError("Data laden mislukt"); return }
     if (mounted.current) {
@@ -686,13 +686,32 @@ export default function Home() {
   // ── Realtime ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!group) return
+    let reloadTimer: ReturnType<typeof setTimeout> | null = null
+    let drinksTimer: ReturnType<typeof setTimeout> | null = null
+
+    // Debounce: een reeks snelle wijzigingen (bv. een rondje afronden dat meerdere
+    // orders na elkaar wegschrijft) leidt tot ÉÉN herlaad i.p.v. tientallen.
+    const scheduleReload = () => {
+      if (reloadTimer) clearTimeout(reloadTimer)
+      reloadTimer = setTimeout(() => { if (mounted.current) loadAll(group.id) }, 400)
+    }
+    const scheduleDrinks = () => {
+      if (drinksTimer) clearTimeout(drinksTimer)
+      drinksTimer = setTimeout(() => { if (mounted.current) loadDrinks() }, 400)
+    }
+
     const channel = supabase.channel(`group-${group.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `group_id=eq.${group.id}` }, () => { if (mounted.current) loadAll(group.id) })
-      .on("postgres_changes", { event: "*", schema: "public", table: "participants", filter: `group_id=eq.${group.id}` }, () => { if (mounted.current) loadAll(group.id) })
-      .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `group_id=eq.${group.id}` }, () => { if (mounted.current) loadAll(group.id) })
-      .on("postgres_changes", { event: "*", schema: "public", table: "drinks" }, () => { if (mounted.current) loadDrinks() })
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `group_id=eq.${group.id}` }, scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "participants", filter: `group_id=eq.${group.id}` }, scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `group_id=eq.${group.id}` }, scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "drinks" }, scheduleDrinks)
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+
+    return () => {
+      if (reloadTimer) clearTimeout(reloadTimer)
+      if (drinksTimer) clearTimeout(drinksTimer)
+      supabase.removeChannel(channel)
+    }
   }, [group, loadAll, loadDrinks])
 
   // ── Group create / join ──────────────────────────────────────────────────
