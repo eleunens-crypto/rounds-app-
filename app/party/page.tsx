@@ -191,6 +191,21 @@ function removeGroupFromStorage(id: string) {
   localStorage.setItem("rondje_saved_groups", JSON.stringify(groups))
 }
 
+// Actieve groep onthouden binnen dezelfde sessie: overleeft een refresh,
+// maar wordt gewist zodra de tab sluit (sessionStorage i.p.v. localStorage).
+function getActiveGroupCode(): string | null {
+  if (typeof window === "undefined") return null
+  try { return sessionStorage.getItem("rondje_active_group") } catch { return null }
+}
+
+function setActiveGroupCode(code: string) {
+  try { sessionStorage.setItem("rondje_active_group", code) } catch { /* sessionStorage niet beschikbaar */ }
+}
+
+function clearActiveGroupCode() {
+  try { sessionStorage.removeItem("rondje_active_group") } catch { /* sessionStorage niet beschikbaar */ }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // VOICE / DRINK NAME HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -646,7 +661,7 @@ export default function Home() {
 
   // ── Loaders ───────────────────────────────────────────────────────────────
   const loadDrinks = useCallback(async () => {
-    const { data, error } = await supabase.from("drinks").select("*")
+    const { data, error } = await supabase.from("drinks").select("id,name,price,emoji,category")
     if (error) { setError("Drankjes laden mislukt"); return }
     if (mounted.current) setDrinks(data || [])
   }, [])
@@ -654,8 +669,8 @@ export default function Home() {
   const loadAll = useCallback(async (groupId: string) => {
     const [{ data: p, error: pe }, { data: o, error: oe }, { data: pay, error: paye }] = await Promise.all([
       supabase.from("participants").select("*").eq("group_id", groupId),
-      supabase.from("orders").select("*").eq("group_id", groupId),
-      supabase.from("payments").select("*").eq("group_id", groupId),
+      supabase.from("orders").select("id,participant_id,drink_id,quantity,group_id,session").eq("group_id", groupId),
+      supabase.from("payments").select("id,group_id,session,participant_id,amount,created_at").eq("group_id", groupId),
     ])
     if (pe || oe) { setError("Data laden mislukt"); return }
     if (mounted.current) {
@@ -686,13 +701,44 @@ export default function Home() {
   // ── Realtime ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!group) return
+    let reloadTimer: ReturnType<typeof setTimeout> | null = null
+    let drinksTimer: ReturnType<typeof setTimeout> | null = null
+
+    // Debounce: een reeks snelle wijzigingen (bv. een rondje afronden dat meerdere
+    // orders na elkaar wegschrijft) leidt tot ÉÉN herlaad i.p.v. tientallen.
+    const scheduleReload = () => {
+      if (reloadTimer) clearTimeout(reloadTimer)
+      reloadTimer = setTimeout(() => { if (mounted.current) loadAll(group.id) }, 400)
+    }
+    const scheduleDrinks = () => {
+      if (drinksTimer) clearTimeout(drinksTimer)
+      drinksTimer = setTimeout(() => { if (mounted.current) loadDrinks() }, 400)
+    }
+
     const channel = supabase.channel(`group-${group.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `group_id=eq.${group.id}` }, () => { if (mounted.current) loadAll(group.id) })
-      .on("postgres_changes", { event: "*", schema: "public", table: "participants", filter: `group_id=eq.${group.id}` }, () => { if (mounted.current) loadAll(group.id) })
-      .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `group_id=eq.${group.id}` }, () => { if (mounted.current) loadAll(group.id) })
-      .on("postgres_changes", { event: "*", schema: "public", table: "drinks" }, () => { if (mounted.current) loadDrinks() })
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `group_id=eq.${group.id}` }, scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "participants", filter: `group_id=eq.${group.id}` }, scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `group_id=eq.${group.id}` }, scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "drinks" }, scheduleDrinks)
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+
+    // Vangnet: als de tab weer zichtbaar wordt of focus krijgt, meteen verversen.
+    // Zo herstelt een tab die een realtime-event miste (achtergrond, netwerk-hik)
+    // zichzelf zodra je er terug naartoe klikt.
+    const refreshOnReturn = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return
+      if (mounted.current) { loadAll(group.id); loadDrinks() }
+    }
+    document.addEventListener("visibilitychange", refreshOnReturn)
+    window.addEventListener("focus", refreshOnReturn)
+
+    return () => {
+      if (reloadTimer) clearTimeout(reloadTimer)
+      if (drinksTimer) clearTimeout(drinksTimer)
+      document.removeEventListener("visibilitychange", refreshOnReturn)
+      window.removeEventListener("focus", refreshOnReturn)
+      supabase.removeChannel(channel)
+    }
   }, [group, loadAll, loadDrinks])
 
   // ── Group create / join ──────────────────────────────────────────────────
@@ -715,6 +761,7 @@ export default function Home() {
       const { data, error } = await supabase.from("groups").insert([{ name, invite_code, owner_id }]).select().single()
       if (error || !data) { setStartError("Groep aanmaken mislukt: " + error?.message); return }
       setGroup(data)
+      setActiveGroupCode(data.invite_code) // onthoud voor deze sessie (herstel na refresh)
       await loadAll(data.id)
       saveGroupToStorage(data)
       setSavedGroups(getSavedGroups())
@@ -731,13 +778,29 @@ export default function Home() {
     setIsStarting(true)
     try {
       const { data, error } = await supabase.from("groups").select("*").eq("invite_code", code.trim().toUpperCase()).single()
-      if (error || !data) { setStartError("Groep niet gevonden. Controleer de code."); return }
+      if (error || !data) {
+        setStartError("Groep niet gevonden. Controleer de code.")
+        clearActiveGroupCode() // eventueel oude/ongeldige sessie-groep opruimen
+        return
+      }
       setGroup(data)
+      setActiveGroupCode(data.invite_code) // onthoud voor deze sessie (herstel na refresh)
       await loadAll(data.id)
       setIsSaved(getSavedGroups().some((g) => g.id === data.id))
       setView("setup")
     } finally { setIsStarting(false) }
   }
+
+  // Herstel de laatst geopende groep na een refresh — enkel binnen dezelfde sessie.
+  // Wordt automatisch vergeten zodra de tab gesloten wordt (sessionStorage).
+  const didRestore = useRef(false)
+  useEffect(() => {
+    if (didRestore.current) return
+    didRestore.current = true
+    const code = getActiveGroupCode()
+    if (code) joinGroup(code)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Person setup ─────────────────────────────────────────────────────────
   const ensurePersonCount = async (count: number) => {
@@ -867,6 +930,7 @@ export default function Home() {
 
   // Terug naar het homescherm (nieuwe groep maken / opgeslagen groep openen)
   const goHome = () => {
+    clearActiveGroupCode() // je koos zelf voor het startscherm → niet meer herstellen
     setGroup(null)
     setView("setup")
     setCart({})

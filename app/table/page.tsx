@@ -378,19 +378,20 @@ export default function RundoTable() {
   // realtime — luistert op alle table_* tabellen; herverbindt bij verlies van verbinding.
   // LET OP: vereist dat Realtime aanstaat voor deze tabellen in Supabase
   // (Database → Publications → supabase_realtime).
-  useEffect(() => {
+ useEffect(() => {
     if (!group) return
+    const groupId = group.id
     let active = true
     let ch: ReturnType<typeof supabase.channel> | null = null
     let retry: ReturnType<typeof setTimeout> | null = null
 
-    const reload = () => { if (mounted.current && active) loadAll(group.id) }
+    const reload = () => { if (mounted.current && active) loadAll(groupId) }
 
     const connect = () => {
       if (!active) return
-      ch = supabase.channel(`table-${group.id}-${Date.now()}`)
+      ch = supabase.channel(`table-${groupId}`)
       ;["table_participants", "table_items", "table_claims", "table_confirmations", "table_groups"].forEach((table) => {
-        const filter = table === "table_groups" ? `id=eq.${group.id}` : `group_id=eq.${group.id}`
+        const filter = table === "table_groups" ? `id=eq.${groupId}` : `group_id=eq.${groupId}`
         ch!.on("postgres_changes", { event: "*", schema: "public", table, filter }, reload)
       })
       ch!.subscribe((status) => {
@@ -404,17 +405,27 @@ export default function RundoTable() {
       })
     }
     connect()
-
+// Kom je terug naar de tab? Meteen verversen zodat je niets mist.
+    const refreshOnReturn = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return
+      reload()
+    }
+    document.addEventListener("visibilitychange", refreshOnReturn)
+    window.addEventListener("focus", refreshOnReturn)
     // Veiligheidsnet: ook periodiek verversen, voor als een realtime-event toch gemist wordt
-    const poll = setInterval(reload, 15000)
+    const poll = setInterval(() => {       if (typeof document === "undefined" || document.visibilityState === "visible") reload()     }, 30000)
 
     return () => {
       active = false
       if (retry) clearTimeout(retry)
       clearInterval(poll)
+      document.removeEventListener("visibilitychange", refreshOnReturn)
+      window.removeEventListener("focus", refreshOnReturn)
       if (ch) supabase.removeChannel(ch)
     }
-  }, [group, loadAll])
+    // Alleen opnieuw verbinden bij een echte groepswissel, niet bij elke data-update
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group?.id, loadAll])
 
   // Actieve tab onthouden zodat een refresh je op dezelfde tab houdt.
   useEffect(() => {
