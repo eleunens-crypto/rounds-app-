@@ -462,6 +462,7 @@ export default function RundoTable() {
       const { data, error } = await supabase.from("table_groups").select("*").eq("invite_code", code).single()
       if (error || !data) { setStartError("Groep niet gevonden. Controleer de code."); return }
       const role = data.owner_id === getOrCreateOwnerId() ? "admin" : "gast"
+      setViaLink(role === "gast")
       saveMyGroup(data, role); setMyGroups(getMyGroups()); rememberLastGroup(data.id)
       setGroup(data); setMeId(getMeId(data.id)); await loadAll(data.id)
     } finally { setBusy(false) }
@@ -850,6 +851,7 @@ export default function RundoTable() {
 
   const deleteItem = async (id: string) => {
     if (!group) return
+    if (!confirm("Dit item van de bon verwijderen? Wat er al aan toegewezen werd, verdwijnt mee.")) return
     await supabase.from("table_claims").delete().eq("item_id", id)
     await supabase.from("table_items").delete().eq("id", id)
     await loadAll(group.id)
@@ -1035,7 +1037,14 @@ export default function RundoTable() {
   //  - grijs "nog niets": nog niets aangetikt
   const guestStatus = (pid: string): { label: string; color: string; bg: string } => {
     if (explicitConfirmed(pid)) return { label: "✓ bevestigd", color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
-    if (hasAssignment(pid)) return { label: "● bezig", color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
+   if (hasAssignment(pid)) {
+      // Admin-toegevoegde gast (geen telefoon om te bevestigen): zodra de HELE bon
+      // toegewezen is, tonen we "bevestigd". Zolang er nog iets openstaat: "bezig".
+      const p = participants.find((x) => x.id === pid)
+      const billFullyAssigned = openUnits === 0 && undecidedShared.length === 0
+      if (p && !p.self_joined && billFullyAssigned) return { label: "✓ bevestigd", color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
+      return { label: "● bezig", color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
+    }
     return { label: "nog niets", color: "#9aa0ab", bg: "rgba(16,24,40,0.05)" }
   }
 
@@ -1345,8 +1354,12 @@ export default function RundoTable() {
           {/* GASTEN eerst */}
           <div style={{ ...S.card, order: 2 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <h3 style={{ ...S.h3, marginBottom: 0 }}>👥 Of voeg zelf gasten toe</h3>
+              <h3 style={{ ...S.h3, marginBottom: 0 }}>👥 Of voeg zelf alvast gasten toe</h3>
               <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 700, fontSize: 13 }} onClick={() => setShowAddGuest((v) => !v)}>{showAddGuest ? "✕ Sluiten" : "+ Toevoegen"}</button>
+            </div>
+            <div style={{ marginTop: 4, marginBottom: 2 }}>
+              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• Ze kunnen dan hun naam selecteren via QR/link hierboven</div>
+              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• ...of jij kan voor hen zelf drankjes/gerechten toewijzen</div>
             </div>
             {showAddGuest && (
               <div style={{ marginTop: 10, marginBottom: 6, background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: 12 }}>
@@ -1431,9 +1444,9 @@ export default function RundoTable() {
 
           {/* DELEN daaronder */}
           <div style={{ ...S.card, order: 1 }}>
-            <div style={{ fontSize: 11.5, color: "#9aa0ab", fontWeight: 600, marginBottom: 2 }}>Bon in orde?</div>
-            <h3 style={S.h3}>🔗 Laat nu je gasten deelnemen via link of QR</h3>
-            <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 12 }}>Deel deze groep met je gasten via QR of deelbare link.</p>
+            <div style={{ fontSize: 11.5, color: "#9aa0ab", fontWeight: 600, marginBottom: 2 }}>Bon gescand en in orde?</div>
+            <h3 style={S.h3}>🔗 Laat dan nu je gasten hun consumpties aantikken</h3>
+            <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 12 }}>Hoe? Deel deze groep met je gasten via QR of deelbare link.</p>
             {(() => {
               const link = typeof window !== "undefined" ? `${window.location.origin}/table?code=${group.invite_code}` : ""
               return (
@@ -1578,7 +1591,7 @@ export default function RundoTable() {
               }
               if (confirm("De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.")) finalizeBill(true)
             }} style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
-              ✅ Rekening afronden &amp; afsluiten
+              ✅ Alles toegewezen?  Rekening afsluiten
             </button>
           )}
           <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6, marginBottom: 4 }}>
@@ -2110,6 +2123,7 @@ function ClaimScreen(props: {
   const [assignItem, setAssignItem] = useState<string | null>(null) // welk open item we nu toewijzen
   const [disputeOpen, setDisputeOpen] = useState(false) // gast: comment-veldje open
   const [disputeText, setDisputeText] = useState("")
+  const [openGuestRows, setOpenGuestRows] = useState<Set<string>>(() => new Set(meId ? [meId] : [])) // eigen naam open, rest dicht
 
   // ── ADMIN-BEHEERWEERGAVE: per item wie claimde + zelf bijsturen, groen/rood status ──
   if (isAdmin) {
@@ -2289,6 +2303,13 @@ function ClaimScreen(props: {
 
   return (
     <div>
+      {finalized && (
+        <button onClick={() => { if (typeof document !== "undefined") document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
+          style={{ width: "100%", marginBottom: 14, padding: "12px 16px", border: "none", borderRadius: 14, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", cursor: "pointer", textAlign: "left", boxShadow: "0 6px 18px -6px rgba(39,174,96,0.6)" }}>
+          <div style={{ fontSize: 14.5, fontWeight: 800 }}>✅ Alles nagekeken! Bekijk hier de definitieve verdeling</div>
+          <div style={{ fontSize: 12, opacity: 0.92, marginTop: 2 }}>De beheerder heeft de rekening afgerond.</div>
+        </button>
+      )}
       {meId && (() => {
         const ms = seatsOf(meId)
         return (
@@ -2403,11 +2424,54 @@ function ClaimScreen(props: {
             ℹ️ Je deelt mee in gedeelde items (wijn/water). Het exacte deel kan nog wijzigen tot iedereen heeft aangetikt en bevestigd.
           </div>
         )}
+{finalized && (
+          <div id="gast-eindverdeling" style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(90,108,166,0.18)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4 }}>
+              <span style={{ fontSize: 15 }}>✅</span>
+              <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f8a4c" }}>Alles afgehandeld — dit is de definitieve verdeling</span>
+            </div>
+            <div style={{ fontSize: 12, color: "#8a93a3", marginBottom: 8 }}>De volledige rekening ter info — tik een naam aan voor het detail:</div>
+            {participants.map((p) => {
+              const pt = personTotal(p.id)
+              const isMe = p.id === meId
+              const rowOpen = openGuestRows.has(p.id)
+              const detail = personItems(p.id)
+              return (
+                <div key={p.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: 8, background: isMe ? "rgba(233,196,95,0.16)" : "transparent" }}>
+                  <div onClick={() => setOpenGuestRows((cur) => { const n = new Set(cur); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n })}
+                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 8px", cursor: "pointer" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                      <span style={{ fontSize: 11, color: "#9aa0ab", width: 12, flexShrink: 0 }}>{rowOpen ? "▼" : "▶"}</span>
+                      <span style={{ fontSize: 13.5, fontWeight: isMe ? 800 : 600, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{isMe ? " (jij)" : ""}</span>
+                    </span>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a", flexShrink: 0, marginLeft: 8 }}>€{pt.settled.toFixed(2)}{pt.pendingShared ? "+" : ""}</span>
+                  </div>
+                  {rowOpen && (
+                    <div style={{ padding: "0 8px 10px 26px" }}>
+                      {detail.length === 0 && <div style={{ fontSize: 12.5, color: "#aaa" }}>Niets aangetikt.</div>}
+                      {detail.map((d, k) => (
+                        <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#5a6680", padding: "2px 0" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{d.name}{d.shared ? (d.revealed ? " (gedeeld deel)" : ` (gedeeld door ${d.sharers})`) : ""}</span>
+                          <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>{d.shared && !d.revealed ? "nog te verdelen" : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2)}`}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(16,24,40,0.1)" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Totaal rekening</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "#14213a" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2)}</span>
+            </div>
+          </div>
+        )}  
         {!(finalized && !isAdmin) && (
           <button onClick={confirmMe} style={{ ...S.btn, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 15, fontWeight: 700, border: "none", ...(iConfirmed ? { background: "rgba(39,174,96,0.12)", color: "#1f8a4c" } : { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a" }) }}>
             {iConfirmed ? "✓ Bevestigd — tik om te wijzigen" : "✅ Bevestig mijn bestelling"}
           </button>
         )}
+        
         {finalized && !isAdmin && (
           <div style={{ marginTop: 12 }}>
             {iResolved ? (
