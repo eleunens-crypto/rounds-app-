@@ -405,14 +405,22 @@ export default function RundoTable() {
       })
     }
     connect()
-
+// Kom je terug naar de tab? Meteen verversen zodat je niets mist.
+    const refreshOnReturn = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return
+      reload()
+    }
+    document.addEventListener("visibilitychange", refreshOnReturn)
+    window.addEventListener("focus", refreshOnReturn)
     // Veiligheidsnet: ook periodiek verversen, voor als een realtime-event toch gemist wordt
-    const poll = setInterval(reload, 15000)
+    const poll = setInterval(() => {       if (typeof document === "undefined" || document.visibilityState === "visible") reload()     }, 30000)
 
     return () => {
       active = false
       if (retry) clearTimeout(retry)
       clearInterval(poll)
+      document.removeEventListener("visibilitychange", refreshOnReturn)
+      window.removeEventListener("focus", refreshOnReturn)
       if (ch) supabase.removeChannel(ch)
     }
     // Alleen opnieuw verbinden bij een echte groepswissel, niet bij elke data-update
