@@ -365,7 +365,11 @@ export default function RundoTable() {
     ])
     if (!mounted.current) return
     const order = <T extends { created_at?: string; id: string }>(rows: T[]) =>
-      [...(rows || [])].sort((a, b) => (a.created_at ?? a.id) < (b.created_at ?? b.id) ? -1 : 1)
+    [...(rows || [])].sort((a, b) => {
+        const ca = a.created_at ?? "", cb = b.created_at ?? ""
+        if (ca !== cb) return ca < cb ? -1 : 1
+        return a.id < b.id ? -1 : a.id > b.id ? 1 : 0  // gelijke tijd → vaste volgorde op id, zodat niets verspringt
+      })  
     setParticipants(order(p as Participant[] || []))
     setItems(order(it as BillItem[] || []))
     setClaims((cl as Claim[]) || [])
