@@ -1264,21 +1264,30 @@ export default function RundoTable() {
       {isAdmin && adminTab === "scan" && (
         <div>
           {group.receipt_url ? (
-            <button onClick={startRescan} style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 14.5, fontWeight: 700, marginBottom: 12, background: "#fff", border: "1px solid rgba(90,108,166,0.35)", color: "#1499b0" }}>🔄 Bon opnieuw scannen</button>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 16, marginBottom: 10, marginTop: -4 }}>
+              <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#1499b0", padding: "2px 4px" }}>🧾 Bon bekijken</button>
+              <button onClick={startRescan} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#9aa0ab", padding: "2px 4px" }}>🔄 Opnieuw scannen</button>
+            </div>
           ) : (
             <button onClick={() => setShowScan(true)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Rekening scannen 📸</button>
           )}
-
-          {/* Gescande bon — altijd in beeld naast wat je toevoegde */}
-          {group.receipt_url && (
-            <div style={{ ...S.card, padding: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 8 }}>📷 Gescande bon — vergelijk met je items</div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={group.receipt_url} alt="gescande bon" onClick={() => setViewReceipt(group.receipt_url!)} style={{ width: "100%", maxHeight: 280, objectFit: "contain", borderRadius: 12, border: "1px solid rgba(0,0,0,0.08)", background: "#faf9f5", cursor: "zoom-in" }} />
-              <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>Tik de foto aan om groot te bekijken.</div>
-            </div>
-          )}
-
+          
+          {items.length > 0 && group?.receipt_total != null && (() => {
+            const entered = group.receipt_total as number
+            const match = Math.abs(entered - billTotal) < 0.005
+            return (
+              <div style={{ ...S.card, padding: "11px 14px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: match ? "rgba(39,174,96,0.10)" : "rgba(233,196,95,0.16)", border: match ? "1.5px solid rgba(39,174,96,0.5)" : "1.5px solid rgba(233,196,95,0.6)" }}>
+                <span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.4, color: match ? "#1f8a4c" : "#a06b00" }}>
+                  {match
+                    ? `✅ Items kloppen met het rekeningtotaal: €${billTotal.toFixed(2)}`
+                    : `⚠️ Verschil van €${Math.abs(entered - billTotal).toFixed(2)} — items €${billTotal.toFixed(2)} vs bon €${entered.toFixed(2)}. Pas aan.`}
+                </span>
+                {!match && (
+                  <button onClick={startRescan} style={{ ...S.btn, flexShrink: 0, fontSize: 12, fontWeight: 700, padding: "7px 12px", background: "#fff", border: "1px solid rgba(224,107,94,0.4)", color: "#c0392b" }}>Bon aanpassen</button>
+                )}
+              </div>
+            )
+          })()}
           {items.length > 0 && (
           <ItemList
             items={baseItems} claimedQty={claimedQty} participants={participants} claimsForItem={claimsForItem}
