@@ -1368,6 +1368,32 @@ export default function RundoTable() {
           />
           
           )}
+          {isAdmin && items.length > 0 && (() => {
+            const itemsTotal = billTotal
+            const entered = group?.receipt_total ?? null
+            const match = entered != null && Math.abs(entered - itemsTotal) < 0.005
+            return (
+              <div style={{ ...S.card, marginTop: 12, background: match ? "rgba(39,174,96,0.10)" : "#fff", border: match ? "1.5px solid rgba(39,174,96,0.55)" : "1px solid rgba(16,24,40,0.08)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Totaal van de items</span>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: match ? "#1f8a4c" : "#14213a" }}>€{itemsTotal.toFixed(2)}</span>
+                </div>
+                <label style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "#5a6680", marginBottom: 5 }}>Vul hier het rekeningtotaal van de bon in</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: "#9aa0ab" }}>€</span>
+                  <input type="text" inputMode="decimal" defaultValue={entered != null ? entered.toFixed(2) : ""} key={entered ?? "leeg"} placeholder="bv. 65.90"
+                    onBlur={(e) => { const raw = e.target.value.trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }}
+                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+                    style={{ ...S.input, flex: 1, fontSize: 16, fontWeight: 700 }} />
+                </div>
+                {entered != null && (
+                  <div style={{ marginTop: 10, fontSize: 12.5, fontWeight: 700, lineHeight: 1.4, color: match ? "#1f8a4c" : "#a06b00", background: match ? "rgba(39,174,96,0.12)" : "rgba(233,196,95,0.16)", border: `1px solid ${match ? "rgba(39,174,96,0.4)" : "rgba(233,196,95,0.5)"}`, borderRadius: 10, padding: "8px 11px" }}>
+                    {match ? "✅ De items tellen exact op tot het rekeningtotaal — alles klopt!" : `⚠️ Verschil van €${Math.abs(entered - itemsTotal).toFixed(2)} — de items en het ingevulde totaal komen (nog) niet overeen.`}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
         </div>
       )}
 
