@@ -833,6 +833,13 @@ export default function RundoTable() {
   }
 
   // Het percentage van een BTW-item wijzigen (of naar vast bedrag zetten met rate=null)
+  // Het door de admin ingevulde bon-totaal opslaan (voor de controle onderaan de bon).
+  const setReceiptTotal = async (val: number | null) => {
+    if (!group) return
+    setGroup((g) => g ? { ...g, receipt_total: val } : g)
+    const { error } = await supabase.from("table_groups").update({ receipt_total: val }).eq("id", group.id)
+    if (error) setError("Rekeningtotaal opslaan mislukt: " + error.message)
+  }
   const setTaxRate = async (it: BillItem, rate: number | null) => {
     if (!group) return
     const patch: Record<string, unknown> = { tax_rate: rate }
@@ -1359,6 +1366,7 @@ export default function RundoTable() {
               </div>
             }
           />
+          
           )}
         </div>
       )}
@@ -1977,15 +1985,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
             {isNew && <div style={{ fontSize: 10.5, fontWeight: 800, color: "#a06b00", marginBottom: 4 }}>✨ Net toegevoegd — pas de naam aan met ✏️</div>}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {it.is_shared && <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={20} /></span>}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}>{it.quantity}× {it.name}</div>
-                {/* Gedeeld: enkel totaalprijs · Niet-gedeeld: prijs per stuk + totaal */}
-                <div style={{ fontSize: 11, color: "#999" }}>
-                  {it.is_shared
-                    ? `€${(it.unit_price * it.quantity).toFixed(2)} totaal · gedeeld`
-                    : `€${it.unit_price.toFixed(2)}/stuk · €${(it.unit_price * it.quantity).toFixed(2)}${open > 0 ? ` · ${open} open` : ""}`}
-                </div>
-              </div>
+
               <button title={it.is_shared ? "gedeeld item — klik om uit te zetten" : "maak hier een gedeeld item van (bv. water, wijn)"} style={{ ...S.iconBtn, display: "flex", alignItems: "center", justifyContent: "center", background: it.is_shared ? "rgba(233,196,95,0.3)" : "rgba(16,24,40,0.05)" }} onClick={() => onToggleShared(it)}><ShareIcon on={it.is_shared} /></button>
               <button style={S.iconBtn} onClick={() => onEdit(it)}>✏️</button>
               <button style={S.iconBtn} onClick={() => onDelete(it.id)}>🗑️</button>
