@@ -579,8 +579,8 @@ function RundoLogo({ size = 64 }: { size?: number }) {
   return (
     <svg viewBox="0 0 120 120" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{ display: "block" }}>
       <circle cx="60" cy="60" r="56" fill="#F5C518" />
-      <path d="M88 36 A36 36 0 1 0 96 60" fill="none" stroke="#1b2a4a" strokeWidth="9" strokeLinecap="round" />
-      <path d="M88 33 L85 53 L104 49 Z" fill="#1b2a4a" />
+      <path d="M88 36 A36 36 0 1 0 96 60" fill="none" stroke="#4a3f1e" strokeWidth="9" strokeLinecap="round" />
+      <path d="M88 33 L85 53 L104 49 Z" fill="#4a3f1e" />
       <text x="60" y="84" textAnchor="middle" fontFamily="'DM Sans', Arial, sans-serif" fontSize="64" fontWeight="800" fill="#ffffff">R</text>
     </svg>
   )
@@ -670,6 +670,7 @@ export default function Home() {
   const [showFairSplitInfo, setShowFairSplitInfo] = useState(false)
   const [splitMode, setSplitMode] = useState<"fair" | "equal">("fair") // fair split of iedereen evenveel
   const [showEqualInfo, setShowEqualInfo] = useState(false)             // info-popup 'iedereen evenveel'
+  const [compareFair, setCompareFair] = useState(false)                 // in 'iedereen evenveel': ook de Fair Split ernaast tonen
   const [showVoiceExample, setShowVoiceExample] = useState(false)       // info-popup met spraak-voorbeeld
   const [noPayWarn, setNoPayWarn] = useState(false)                     // (reserve) melding geen betaling
   // Eigen bevestigings-popup i.p.v. de kale browser-confirm()
@@ -985,7 +986,7 @@ export default function Home() {
     setLastAddedDrinkIds(Array.from(new Set(rows.map((o) => o.drink_id))))
     setLastAddedViaVoice(false)
     setShowReorderPicker(false)
-    setToast(`Rondje ${sess} overgenomen — pas aan en rond af 🔁`)
+    setToast(`Rondje ${roundLabel(sess)} overgenomen — pas aan en rond af 🔁`)
   }
 
   // Een drankje volledig uit de huidige bestelling halen
@@ -1039,9 +1040,9 @@ export default function Home() {
     const assignedChips = assignedEntries.length > 0 ? (
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 7 }}>
         {assignedEntries.map(({ p, q }) => (
-          <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: gold ? "#ecc85a" : "rgba(20,33,58,0.06)", border: gold ? "1px solid #e0ac00" : "1px solid rgba(20,33,58,0.12)", borderRadius: 20, padding: "3px 5px 3px 11px", fontSize: 12, fontWeight: gold ? 800 : 600, color: "#14213a" }}>
+          <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: gold ? "#ecc85a" : "rgba(120,95,20,0.06)", border: gold ? "1px solid #e0ac00" : "1px solid rgba(120,95,20,0.12)", borderRadius: 20, padding: "3px 5px 3px 11px", fontSize: 12, fontWeight: gold ? 800 : 600, color: "#4a3f1e" }}>
             {p.name}
-            <span style={{ background: "#5a6ca6", color: "#fff", borderRadius: 20, minWidth: 18, textAlign: "center", padding: "1px 6px", fontSize: 11, fontWeight: 800 }}>×{q}</span>
+            <span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 18, textAlign: "center", padding: "1px 6px", fontSize: 11, fontWeight: 800 }}>×{q}</span>
             <button style={{ ...S.iconBtn, width: 18, height: 18, fontSize: 11 }} onClick={() => assignCartItem(drinkId, p.id, -1)}>−</button>
           </span>
         ))}
@@ -1049,10 +1050,10 @@ export default function Home() {
     ) : null
 
     const panel = (
-      <div style={{ marginTop: 6, border: "1px solid rgba(20,33,58,0.18)", borderRadius: 12, background: "#fff", overflow: "hidden" }}>
+      <div style={{ marginTop: 6, border: "1px solid rgba(120,95,20,0.18)", borderRadius: 12, background: "#fff", overflow: "hidden" }}>
         {gold && (
           <button onClick={() => { setLastAddedDrinkIds((cur) => cur.filter((x) => x !== drinkId)); setOpenAssignFor(null) }}
-            style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: "1px solid rgba(0,0,0,0.06)", padding: "9px 12px", fontSize: 13, color: "#8a93a8", cursor: "pointer" }}>
+            style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: "1px solid rgba(0,0,0,0.06)", padding: "9px 12px", fontSize: 13, color: "#a89a6a", cursor: "pointer" }}>
             ⏳ later toewijzen
           </button>
         )}
@@ -1061,15 +1062,15 @@ export default function Home() {
           const canAdd = unassigned > 0
           const elsewhere = assignedAnywhere.has(p.id) && q === 0
           return (
-            <div key={p.id} style={{ display: "flex", alignItems: "center", borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+            <div key={p.id} style={{ display: "flex", alignItems: "center", borderTop: "1px solid rgba(150,110,20,0.05)" }}>
               <button onClick={() => { if (canAdd) { assignCartItem(drinkId, p.id, 1); if (unassigned === 1) setOpenAssignFor(null) } }} disabled={!canAdd && q === 0}
-                style={{ flex: 1, textAlign: "left", background: q > 0 ? "rgba(90,108,166,0.06)" : "none", border: "none", padding: "10px 12px", fontSize: 13.5, fontWeight: q > 0 ? 800 : 600, color: canAdd || q > 0 ? "#14213a" : "#bbb", cursor: canAdd ? "pointer" : "default", display: "flex", alignItems: "center", gap: 8 }}>
+                style={{ flex: 1, textAlign: "left", background: q > 0 ? "rgba(214,158,20,0.06)" : "none", border: "none", padding: "10px 12px", fontSize: 13.5, fontWeight: q > 0 ? 800 : 600, color: canAdd || q > 0 ? "#4a3f1e" : "#bbb", cursor: canAdd ? "pointer" : "default", display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ flex: 1, display: "inline-flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
                   <span>{p.name}</span>
-                  {elsewhere && <span style={{ fontSize: 10.5, color: "#9aa0ab", fontWeight: 600, whiteSpace: "nowrap" }}>· heeft al iets</span>}
+                  {elsewhere && <span style={{ fontSize: 10.5, color: "#b3a476", fontWeight: 600, whiteSpace: "nowrap" }}>· heeft al iets</span>}
                 </span>
-                {q > 0 && <span style={{ background: "#5a6ca6", color: "#fff", borderRadius: 20, minWidth: 20, textAlign: "center", padding: "1px 7px", fontSize: 12, fontWeight: 800 }}>{q}</span>}
-                {canAdd && <span style={{ color: "#5a6ca6", fontWeight: 800, fontSize: 17, lineHeight: 1 }}>+</span>}
+                {q > 0 && <span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 20, textAlign: "center", padding: "1px 7px", fontSize: 12, fontWeight: 800 }}>{q}</span>}
+                {canAdd && <span style={{ color: "#c8941a", fontWeight: 800, fontSize: 17, lineHeight: 1 }}>+</span>}
               </button>
               {q > 0 && (
                 <button onClick={() => assignCartItem(drinkId, p.id, -1)} style={{ ...S.iconBtn, width: 30, height: 30, margin: "0 8px", flexShrink: 0 }}>−</button>
@@ -1088,7 +1089,7 @@ export default function Home() {
 
     const trigger = (
       <button onClick={() => setOpenAssignFor(isOpen ? null : drinkId)}
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 13, fontWeight: unassigned > 0 ? 700 : 600, cursor: "pointer", color: unassigned > 0 ? "#e0685c" : "#1f8a4c", background: gold ? "#fffdf6" : "#fff", border: gold ? "1.5px solid #ecc85a" : "1px solid rgba(20,33,58,0.18)", borderRadius: 10, padding: "9px 12px" }}>
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 13, fontWeight: unassigned > 0 ? 700 : 600, cursor: "pointer", color: unassigned > 0 ? "#e0685c" : "#1f8a4c", background: gold ? "#fffdf6" : "#fff", border: gold ? "1.5px solid #ecc85a" : "1px solid rgba(120,95,20,0.18)", borderRadius: 10, padding: "9px 12px" }}>
         <span>{unassigned > 0 ? "voor wie?" : "✓ alles toegewezen"}</span>
         <span style={{ color: "#aaa" }}>{isOpen ? "▴" : "▾"}</span>
       </button>
@@ -1111,10 +1112,10 @@ export default function Home() {
             style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, width: "100%", textAlign: "left", background: "none", border: "none", padding: 0, cursor: "pointer" }}
           >
             {assignedEntries.map(({ p, q }) => (
-              <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#14213a", fontWeight: 600, background: "rgba(20,33,58,0.06)", borderRadius: 20, padding: "2px 8px 2px 10px" }}>{p.name}<span style={{ background: "#5a6ca6", color: "#fff", borderRadius: 20, minWidth: 18, textAlign: "center", padding: "1px 6px", fontSize: 11, fontWeight: 800 }}>×{q}</span></span>
+              <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#4a3f1e", fontWeight: 600, background: "rgba(120,95,20,0.06)", borderRadius: 20, padding: "2px 8px 2px 10px" }}>{p.name}<span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 18, textAlign: "center", padding: "1px 6px", fontSize: 11, fontWeight: 800 }}>×{q}</span></span>
             ))}
             {unassigned > 0 && (
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#e0685c", background: "rgba(16,24,40,0.05)", borderRadius: 20, padding: "3px 12px" }}>{unassigned} niet toegewezen</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#e0685c", background: "rgba(120,95,20,0.05)", borderRadius: 20, padding: "3px 12px" }}>{unassigned} niet toegewezen</span>
             )}
             {unassigned <= 0 && assignedEntries.length > 0 && (
               <span style={{ fontSize: 11, color: "#aaa" }}>✏️ aanpassen</span>
@@ -1125,13 +1126,13 @@ export default function Home() {
     }
     return (
       <div style={{ marginTop: 8 }}>
-        <div style={{ fontSize: 11, color: "#5a6680", fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>
+        <div style={{ fontSize: 11, color: "#8a7d55", fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>
           Toewijzen{unassigned > 0 ? <> · <span style={{ color: "#e0685c" }}>{unassigned} open</span></> : " ✓"}
         </div>
         {panel}
         <button
           onClick={() => setOpenAssignFor(null)}
-          style={{ marginTop: 7, width: "100%", background: "rgba(16,24,40,0.04)", border: "1px solid rgba(16,24,40,0.08)", color: "#5a6680", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 10, padding: "8px 0" }}
+          style={{ marginTop: 7, width: "100%", background: "rgba(120,95,20,0.04)", border: "1px solid rgba(120,95,20,0.08)", color: "#8a7d55", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 10, padding: "8px 0" }}
         >
           Sluiten ▴
         </button>
@@ -1165,22 +1166,22 @@ export default function Home() {
     ) : (
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button onClick={() => setOpenBillAssignFor(isOpen ? null : drink.id)} title="Toewijzing wijzigen"
-          style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 12, background: isOpen ? "rgba(90,108,166,0.16)" : "rgba(16,24,40,0.05)" }}>
+          style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 12, background: isOpen ? "rgba(214,158,20,0.16)" : "rgba(120,95,20,0.05)" }}>
           {isOpen ? "▴" : "✏️"}
         </button>
       </div>
     )
     const panel = isOpen ? (
-      <div style={{ marginTop: 6, border: "1px solid rgba(20,33,58,0.18)", borderRadius: 12, background: "#fff", overflow: "hidden" }}>
+      <div style={{ marginTop: 6, border: "1px solid rgba(120,95,20,0.18)", borderRadius: 12, background: "#fff", overflow: "hidden" }}>
         {participants.map((p) => {
           const q = perPerson[p.id] ?? 0
           return (
-            <div key={p.id} style={{ display: "flex", alignItems: "center", borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+            <div key={p.id} style={{ display: "flex", alignItems: "center", borderTop: "1px solid rgba(150,110,20,0.05)" }}>
               <button onClick={() => { if (canAdd) { assignOneAnonymous(drink.id, p.id); if (anonymousQty === 1) setOpenBillAssignFor(null) } }} disabled={!canAdd && q === 0}
-                style={{ flex: 1, textAlign: "left", background: q > 0 ? "rgba(90,108,166,0.06)" : "none", border: "none", padding: "10px 12px", fontSize: 13.5, fontWeight: q > 0 ? 800 : 600, color: canAdd || q > 0 ? "#14213a" : "#bbb", cursor: canAdd ? "pointer" : "default", display: "flex", alignItems: "center", gap: 8 }}>
+                style={{ flex: 1, textAlign: "left", background: q > 0 ? "rgba(214,158,20,0.06)" : "none", border: "none", padding: "10px 12px", fontSize: 13.5, fontWeight: q > 0 ? 800 : 600, color: canAdd || q > 0 ? "#4a3f1e" : "#bbb", cursor: canAdd ? "pointer" : "default", display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ flex: 1 }}>{p.name}</span>
-                {q > 0 && <span style={{ background: "#5a6ca6", color: "#fff", borderRadius: 20, minWidth: 20, textAlign: "center", padding: "1px 7px", fontSize: 12, fontWeight: 800 }}>{q}</span>}
-                {canAdd && <span style={{ color: "#5a6ca6", fontWeight: 800, fontSize: 17, lineHeight: 1 }}>+</span>}
+                {q > 0 && <span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 20, textAlign: "center", padding: "1px 7px", fontSize: 12, fontWeight: 800 }}>{q}</span>}
+                {canAdd && <span style={{ color: "#c8941a", fontWeight: 800, fontSize: 17, lineHeight: 1 }}>+</span>}
               </button>
               {q > 0 && (
                 <button onClick={() => unassignOneFromPerson(drink.id, p.id)} style={{ ...S.iconBtn, width: 30, height: 30, margin: "0 8px", flexShrink: 0 }}>−</button>
@@ -1207,6 +1208,11 @@ export default function Home() {
 
   const sessions = Array.from(new Set(orders.map((o) => o.session).filter((n) => n >= 1))).sort((a, b) => a - b)
   const nextSession = (sessions.length > 0 ? Math.max(...sessions) : 0) + 1
+  // Toon rondjes altijd doorlopend (1, 2, 3…) op basis van hun VOLGORDE, los van het interne
+  // sessienummer. Zo blijft de nummering netjes ook na het verwijderen van een rondje (geen gaten),
+  // zonder dat we in de database moeten hernummeren.
+  const roundLabel = (s: number) => { const i = sessions.indexOf(s); return i >= 0 ? i + 1 : sessions.length + 1 }
+  const nextRoundLabel = sessions.length + 1 // het rondje dat je nu aan het samenstellen bent
 
   const [finishedRoundSnapshot, setFinishedRoundSnapshot] = useState<{ session: number; cart: Record<string, CartLine> } | null>(null)
   const [barmanStep, setBarmanStep] = useState<"list" | "pay">("list")
@@ -1410,7 +1416,7 @@ export default function Home() {
   const deleteRound = async (round: number) => {
     if (!group) return
     setConfirmDialog({
-      title: `Ronde ${round} verwijderen?`,
+      title: `Ronde ${roundLabel(round)} verwijderen?`,
       message: "Je verliest ook de bestellingen én betalingen van deze ronde. De overige rondes behouden hun nummer.",
       confirmLabel: "Verwijderen",
       danger: true,
@@ -1422,7 +1428,7 @@ export default function Home() {
         await loadAll(group.id)
         setOpenRounds(null)
         setEditingRound(null)
-        setToast(`Ronde ${round} verwijderd`)
+        setToast(`Ronde ${roundLabel(round)} verwijderd`)
       },
     })
   }
@@ -1604,8 +1610,30 @@ export default function Home() {
   // De inleg die niet gebruikt werd, komt terug via de virtuele "de pot".
   const fairSplit = calculateFairSplit(bill.lines, bill.totalActuallySpent, bill.anonymousValue, splitMode)
   const settledDebts = settleDebts(fairSplit, bill.totalActuallySpent - bill.totalPaid)
-  // Kan er wel een verdeling gemaakt worden? Enkel als er echt iets betaald werd voor rondes.
-  const canSplit = bill.totalActuallySpent > 0.01
+  // Zuivere Fair Split (los van de actieve modus) — nodig om in 'iedereen evenveel'
+  // de Fair Split ernaast te kunnen vergelijken.
+  const fairRows = calculateFairSplit(bill.lines, bill.totalActuallySpent, bill.anonymousValue, "fair")
+  const fairSettled = settleDebts(fairRows, bill.totalActuallySpent - bill.totalPaid)
+  // Kan er wel een verdeling gemaakt worden?
+  //  - er moet echt iets betaald zijn voor rondes, EN
+  //  - er mag geen enkel rondje onbetaald zijn (anders klopt het totaal niet — ook niet bij 'iedereen evenveel'), EN
+  //  - voor Fair Split mag er bovendien geen enkel drankje niet-toegewezen zijn.
+  const unpaidRounds = sessions.filter((s) => getRoundPaymentTotal(s) <= 0.01)
+  const hasUnassignedDrinks = orders.some((o) => !o.participant_id && o.quantity > 0)
+  const allRoundsPaid = sessions.length > 0 && unpaidRounds.length === 0
+  const canSplit = bill.totalActuallySpent > 0.01 && allRoundsPaid        // 'iedereen evenveel' mag zodra alles betaald is
+  const canFairSplit = canSplit && !hasUnassignedDrinks                    // Fair Split vereist bovendien: alles toegewezen
+
+  // Zodra de verdeling niet (meer) mag (onbetaald rondje, of Fair Split met niet-toegewezen
+  // drankjes), verbergen we een eventueel al getoonde verdeling automatisch.
+  useEffect(() => {
+    if (!canSplit || (splitMode === "fair" && !canFairSplit)) {
+      setShowBillPrices(false)
+      setShowFairSplit(false)
+      setCompareFair(false)
+    }
+    if (!canFairSplit) setCompareFair(false) // fair-vergelijking kan niet met niet-toegewezen drankjes
+  }, [canSplit, canFairSplit, splitMode])
 
   // ═══════════════════════════════════════════════════════════════════════
   // RENDER: Start screen (no group yet)
@@ -1615,15 +1643,15 @@ export default function Home() {
     return (
       <div style={S.page}>
         <div style={{ maxWidth: 420, margin: "40px auto" }}>
-          <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#8a93a8", textDecoration: "none", marginBottom: 14, cursor: "pointer" }}>← Andere mode</a>
+          <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#a89a6a", textDecoration: "none", marginBottom: 14, cursor: "pointer" }}>← Andere mode</a>
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginBottom: 6 }}>
               <RundoLogo size={60} />
-              <h1 style={{ ...S.h1, color: "#1b2a4a", margin: 0 }}>Rundo</h1>
+              <h1 style={{ ...S.h1, color: "#4a3f1e", margin: 0 }}>Rundo</h1>
               <button
                 onClick={() => setFairInfoMode("what")}
                 title="Wat is Fair Split?"
-                style={{ width: 24, height: 24, borderRadius: "50%", border: "1.5px solid rgba(27,42,74,0.25)", background: "#fff", color: "#5a6ca6", fontSize: 13, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0, flexShrink: 0 }}
+                style={{ width: 24, height: 24, borderRadius: "50%", border: "1.5px solid rgba(150,110,20,0.25)", background: "#fff", color: "#c8941a", fontSize: 13, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0, flexShrink: 0 }}
               >
                 i
               </button>
@@ -1646,7 +1674,7 @@ export default function Home() {
           {savedGroups.length > 0 && (
             <div style={{ ...S.card, marginTop: 4 }}>
               <button onClick={() => setSavedOpen((o) => !o)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", padding: 0 }}>
-                <b style={{ fontSize: 14, color: "#14213a" }}>Opgeslagen groepen</b>
+                <b style={{ fontSize: 14, color: "#4a3f1e" }}>Opgeslagen groepen</b>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#c98a00", background: "rgba(233,196,95,0.18)", borderRadius: 10, padding: "1px 8px" }}>{savedGroups.length}</span>
                   <span style={{ fontSize: 12, color: "#c98a00", display: "inline-block", transform: savedOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
@@ -1676,7 +1704,7 @@ export default function Home() {
         {fairInfoMode && (
           <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setFairInfoMode(null)}>
             <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#14213a", display: "flex", alignItems: "center", gap: 8 }}>Hoe werkt Fair Split?</h3>
+              <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>Hoe werkt Fair Split?</h3>
               <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
                 Met <b style={{ color: "#c98a00" }}>Fair Split</b> delen we het totaalbedrag niet door het aantal personen. Op basis van richtprijzen schatten we wie wat dronk. <b>Niet perfect, wel veel eerlijker!</b>
               </p>
@@ -1801,7 +1829,7 @@ export default function Home() {
           <div onClick={goHome} title="Naar startscherm" style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer" }}>
             <RundoLogo size={30} />
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 19, fontWeight: 800, color: "#1b2a4a", lineHeight: 1.1 }}>Rundo</div>
+              <div style={{ fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.1 }}>Rundo</div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#f0a500", lineHeight: 1.2 }}>Rondjes en splitten zonder gedoe!</div>
             </div>
           </div>
@@ -1819,14 +1847,14 @@ export default function Home() {
           </div>
         </div>
         <div style={{ textAlign: "right", minWidth: 0 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "#1b2a4a", whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.15, marginBottom: 2 }}>{group.name}</div>
-          <div style={{ fontSize: 11.5, color: "#8a93a3", fontWeight: 700 }}>{participants.length} {participants.length === 1 ? "persoon" : "personen"}</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.15, marginBottom: 2 }}>{group.name}</div>
+          <div style={{ fontSize: 11.5, color: "#a89a6a", fontWeight: 700 }}>{participants.length} {participants.length === 1 ? "persoon" : "personen"}</div>
           {potTotal > 0 ? (() => {
             const used = payments.filter((p) => p.session >= 1 && !p.participant_id).reduce((s, p) => s + p.amount, 0)
             const left = Math.max(0, potTotal - used)
             return (
               <button onClick={() => setShowPotOverview(true)} style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 4, fontSize: 11, fontWeight: 700, color: "#a06b00", background: "linear-gradient(135deg,#fffdf6,#fff3cf)", border: "1.5px solid #ecc85a", borderRadius: 20, padding: "2px 10px", cursor: "pointer" }}>
-                💰 €{potTotal.toFixed(2)} ingelegd · <b style={{ color: "#14213a" }}>€{left.toFixed(2)} nog in pot</b>
+                💰 €{potTotal.toFixed(2)} ingelegd · <b style={{ color: "#4a3f1e" }}>€{left.toFixed(2)} nog in pot</b>
               </button>
             )
           })() : (
@@ -1850,7 +1878,7 @@ export default function Home() {
               flex: 1, border: "none", borderRadius: 12, padding: "10px 4px", fontSize: 13, cursor: "pointer",
               fontWeight: view === t.id ? 800 : 600,
               background: view === t.id ? "linear-gradient(135deg,#f6dd95,#eecb6e)" : "transparent",
-              color: view === t.id ? "#5a4a1a" : "#8b93a8",
+              color: view === t.id ? "#5a4a1a" : "#a89a6a",
               boxShadow: view === t.id ? "0 3px 10px -2px rgba(233,196,95,0.5)" : "none",
               transition: "all 0.15s",
             }}
@@ -1929,7 +1957,7 @@ export default function Home() {
 
           <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
             <button
-              style={{ ...S.btn, flex: 1, padding: "14px 8px", fontSize: 14, fontWeight: 700, border: "1.5px solid #ecc85a", background: potTotal > 0 ? "#ecc85a" : "#fffdf6", color: "#14213a" }}
+              style={{ ...S.btn, flex: 1, padding: "14px 8px", fontSize: 14, fontWeight: 700, border: "1.5px solid #ecc85a", background: potTotal > 0 ? "#ecc85a" : "#fffdf6", color: "#4a3f1e" }}
               onClick={() => (potTotal > 0 ? setShowPotOverview(true) : openPotModal())}
             >
               {potTotal > 0 ? `💰 Pot gelegd · €${potTotal.toFixed(2)}` : "💰 Leg eerst een pot"}
@@ -1947,14 +1975,14 @@ export default function Home() {
           {/* Alles op één lijn: rondje-nummer links, titel in het midden, vorig-rondje rechts */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "2px 2px 12px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 10, background: "linear-gradient(135deg,#5a6ca6,#7283b6)", color: "#ecc85a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>{nextSession}</div>
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#5a6680", whiteSpace: "nowrap" }}>Rondje {nextSession}</span>
+              <div style={{ width: 30, height: 30, borderRadius: 10, background: "linear-gradient(135deg,#5a4a1a,#7a6528)", color: "#f7d461", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>{nextRoundLabel}</div>
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", whiteSpace: "nowrap" }}>Rondje {nextRoundLabel}</span>
             </div>
-            <div style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: 14, fontWeight: 800, color: "#14213a", lineHeight: 1.15 }}>Start hieronder je bestelling</div>
+            <div style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.15 }}>Start hieronder je bestelling</div>
             {sessions.length >= 1 && (
               <button
                 onClick={() => { setReorderShowAll(false); setShowReorderPicker(true) }}
-                style={{ flexShrink: 0, background: "rgba(90,108,166,0.1)", border: "1px solid rgba(90,108,166,0.3)", color: "#5a6ca6", borderRadius: 20, padding: "6px 11px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+                style={{ flexShrink: 0, background: "rgba(214,158,20,0.1)", border: "1px solid rgba(214,158,20,0.3)", color: "#c8941a", borderRadius: 20, padding: "6px 11px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
               >
                 🔁 Vorig rondje opnieuw
               </button>
@@ -1966,7 +1994,7 @@ export default function Home() {
             <div style={{ display: "flex", alignItems: "stretch", gap: 8 }}>
               <button
                 onClick={openDrinkSelector}
-                style={{ ...S.btn, flex: 1.15, padding: "14px 8px", fontSize: 13, fontWeight: 700, border: "none", lineHeight: 1.25, background: "linear-gradient(135deg,#5a6ca6,#7283b6)", color: "#fff", boxShadow: "0 6px 18px rgba(27,42,74,0.3)" }}
+                style={{ ...S.btn, flex: 1.15, padding: "14px 8px", fontSize: 13, fontWeight: 700, border: "none", lineHeight: 1.25, background: "linear-gradient(135deg,#f4c430,#f7d461)", color: "#4a3a0a", boxShadow: "0 6px 18px rgba(150,110,20,0.3)" }}
               >
                 🍹 Selecteer drankje(s)
               </button>
@@ -1976,10 +2004,10 @@ export default function Home() {
                   onClick={quickVoiceActive ? stopQuickVoice : startQuickVoice}
                   style={{
                     ...S.btn, width: "100%", padding: "14px 8px", fontSize: 12.5, fontWeight: 700, border: "none", lineHeight: 1.25,
-                    background: quickVoiceActive ? "#e74c3c" : "linear-gradient(135deg,#5a6ca6,#7283b6)",
-                    color: "#fff",
+                    background: quickVoiceActive ? "#e74c3c" : "linear-gradient(135deg,#f4c430,#f7d461)",
+                    color: quickVoiceActive ? "#fff" : "#4a3a0a",
                     animation: quickVoiceActive ? "pulse 1.2s infinite" : "none",
-                    boxShadow: quickVoiceActive ? "0 0 0 5px rgba(231,76,60,0.18)" : "0 6px 18px rgba(27,42,74,0.3)",
+                    boxShadow: quickVoiceActive ? "0 0 0 5px rgba(231,76,60,0.18)" : "0 6px 18px rgba(150,110,20,0.3)",
                   }}
                 >
                   {quickVoiceActive ? "🔴 Luistert..." : "🎤 Spreek je bestelling in"}
@@ -1987,7 +2015,7 @@ export default function Home() {
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowVoiceExample(true) }}
                   title="Hoe werkt dit?"
-                  style={{ position: "absolute", top: 4, right: 4, width: 18, height: 18, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.9)", color: "#5a6ca6", fontSize: 11, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}
+                  style={{ position: "absolute", top: 4, right: 4, width: 18, height: 18, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.9)", color: "#c8941a", fontSize: 11, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}
                 >
                   i
                 </button>
@@ -2018,12 +2046,12 @@ export default function Home() {
             })
             if (shown.length === 0) return null
             return (
-              <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(27,42,74,0.1),rgba(233,196,95,0.06))", border: "1px solid rgba(27,42,74,0.3)" }}>
+              <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(150,110,20,0.1),rgba(233,196,95,0.06))", border: "1px solid rgba(150,110,20,0.3)" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: "#c98a00", textTransform: "uppercase", letterSpacing: 0.6 }}>✨ Laatst toegevoegd</div>
                   <button
                     onClick={() => { setLastAddedDrinkIds([]); setLastAddedViaVoice(false) }}
-                    style={{ background: "none", border: "none", color: "#9aa0ab", fontSize: 11, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2, flexShrink: 0 }}
+                    style={{ background: "none", border: "none", color: "#b3a476", fontSize: 11, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2, flexShrink: 0 }}
                   >
                     ⏳ alles later toewijzen
                   </button>
@@ -2034,7 +2062,7 @@ export default function Home() {
                     const line = cart[id]
                     if (!d || !line) return null
                     return (
-                      <div key={id} style={{ border: "1px solid rgba(27,42,74,0.14)", borderRadius: 12, padding: "8px 10px", background: "rgba(255,255,255,0.55)" }}>
+                      <div key={id} style={{ border: "1px solid rgba(150,110,20,0.14)", borderRadius: 12, padding: "8px 10px", background: "rgba(255,255,255,0.55)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <span style={{ fontSize: 18, flexShrink: 0 }}>{d.emoji}</span>
                           <div style={{ flex: 1, minWidth: 0 }}>
@@ -2043,7 +2071,7 @@ export default function Home() {
                           </div>
                           <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 15 }} onClick={() => addToCart(d.id, -1)}>−</button>
                           <span style={{ fontSize: 15, fontWeight: 800, minWidth: 18, textAlign: "center" }}>{line.total}</span>
-                          <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 15, background: "rgba(27,42,74,0.15)" }} onClick={() => addToCart(d.id, 1)}>+</button>
+                          <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 15, background: "rgba(150,110,20,0.15)" }} onClick={() => addToCart(d.id, 1)}>+</button>
                           <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={() => removeFromCart(d.id)}>🗑️</button>
                         </div>
                         {renderAssignControl(d.id, line, "full")}
@@ -2057,13 +2085,13 @@ export default function Home() {
 
           {/* Alle bestellingen — alles wat er tot nu toe besteld werd */}
           {cartTotalItems > 0 && (
-            <div style={{ ...S.card, padding: 0, overflow: "hidden", border: "1px solid rgba(90,108,166,0.18)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg,#5a6ca6,#7283b6)", padding: "12px 16px" }}>
-                <span style={{ fontSize: 17, fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", gap: 8 }}>
-                  📋 Alle bestellingen in rondje {nextSession}
-                  <span style={{ fontSize: 12, fontWeight: 800, color: "#5a6ca6", background: "#fff", borderRadius: 20, padding: "1px 10px" }}>{cartTotalItems}</span>
+            <div style={{ ...S.card, padding: 0, overflow: "hidden", border: "1px solid rgba(214,158,20,0.18)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg,#f4c430,#f7d461)", padding: "12px 16px" }}>
+                <span style={{ fontSize: 17, fontWeight: 800, color: "#4a3a0a", display: "flex", alignItems: "center", gap: 8 }}>
+                  📋 Alle bestellingen in rondje {nextRoundLabel}
+                  <span style={{ fontSize: 12, fontWeight: 800, color: "#4a3a0a", background: "#fffef2", borderRadius: 20, padding: "1px 10px" }}>{cartTotalItems}</span>
                 </span>
-                <button style={{ background: "none", border: "none", color: "#dfe4f1", fontSize: 12, cursor: "pointer", textDecoration: "underline" }} onClick={clearCart}>wis alles</button>
+                <button style={{ background: "none", border: "none", color: "#7a5f14", fontSize: 12, cursor: "pointer", textDecoration: "underline", fontWeight: 600 }} onClick={clearCart}>wis alles</button>
               </div>
               <div style={{ padding: 16 }}>
               {(() => {
@@ -2084,7 +2112,7 @@ export default function Home() {
                             <span style={{ flex: 1, fontSize: 14, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</span>
                             <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 14 }} onClick={() => addToCart(d.id, -1)}>−</button>
                             <span style={{ fontSize: 15, fontWeight: 800, minWidth: 20, textAlign: "center" }}>{line.total}</span>
-                            <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 14, background: "rgba(27,42,74,0.12)" }} onClick={() => addToCart(d.id, 1)}>+</button>
+                            <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 14, background: "rgba(150,110,20,0.12)" }} onClick={() => addToCart(d.id, 1)}>+</button>
                             <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={() => removeFromCart(d.id)}>🗑️</button>
                           </div>
                           {renderAssignControl(drinkId, line, "summary")}
@@ -2102,24 +2130,24 @@ export default function Home() {
           {cartTotalItems > 0 && (
             <button
               onClick={() => setShowFinishConfirm(true)}
-              style={{ ...S.btn, width: "100%", marginTop: 2, marginBottom: 14, padding: "13px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#1b2a4a", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }}
+              style={{ ...S.btn, width: "100%", marginTop: 2, marginBottom: 14, padding: "13px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }}
             >
-              ✅ Bestelling rondje {nextSession} afronden · {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""}{showPrices ? ` · ≈ €${cartTotalValue.toFixed(2)}` : ""}
+              ✅ Bestelling rondje {nextRoundLabel} afronden · {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""}{showPrices ? ` · ≈ €${cartTotalValue.toFixed(2)}` : ""}
               {" "}<span style={{ fontWeight: 600, fontSize: 12, opacity: 0.85 }}>(voor jouw groep van {participants.length} {participants.length === 1 ? "persoon" : "personen"})</span>
             </button>
           )}
 
           {/* Beheerknoppen — beide even groot, subtiel en rechts uitgelijnd */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, marginBottom: 12 }}>
-            <button style={{ ...S.btn, fontSize: 11.5, padding: "6px 12px", color: "#8a93a8", background: "rgba(16,24,40,0.04)", border: "1px solid rgba(16,24,40,0.08)" }} onClick={() => setShowAddDrink(true)}>➕ Eigen drankje toevoegen</button>
-            <button style={{ ...S.btn, fontSize: 11.5, padding: "6px 12px", color: "#8a93a8", background: "rgba(16,24,40,0.04)", border: "1px solid rgba(16,24,40,0.08)" }} onClick={() => setShowEditDrinks(true)}>✏️ Dranken of Prijzen bewerken</button>
+            <button style={{ ...S.btn, fontSize: 11.5, padding: "6px 12px", color: "#a89a6a", background: "rgba(120,95,20,0.04)", border: "1px solid rgba(120,95,20,0.08)" }} onClick={() => setShowAddDrink(true)}>➕ Eigen drankje toevoegen</button>
+            <button style={{ ...S.btn, fontSize: 11.5, padding: "6px 12px", color: "#a89a6a", background: "rgba(120,95,20,0.04)", border: "1px solid rgba(120,95,20,0.08)" }} onClick={() => setShowEditDrinks(true)}>✏️ Dranken of Prijzen bewerken</button>
           </div>
 
           {/* Kiezer: begin met een vorig rondje */}
           {showReorderPicker && (
             <div style={S.overlay}>
               <div style={{ ...S.modal, width: 420, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
-                <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800, color: "#14213a" }}>🔁 Begin met een vorig rondje</h3>
+                <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800, color: "#4a3f1e" }}>🔁 Begin met een vorig rondje</h3>
                 <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Bestel een vorig rondje <b>exact opnieuw</b>, of neem het over om het <b>licht aan te passen</b>.</p>
                 <div style={{ overflowY: "auto", flex: 1, marginBottom: 12 }}>
                   {(() => {
@@ -2141,22 +2169,22 @@ export default function Home() {
                               style={{ padding: "11px 12px", marginBottom: 8, borderRadius: 14, border: isPrev ? "1.5px solid #ecc85a" : "1px solid rgba(0,0,0,0.1)", background: isPrev ? "#fffdf6" : "#fff" }}
                             >
                               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                                <span style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#5a6ca6,#7283b6)", color: "#ecc85a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, flexShrink: 0 }}>{sess}</span>
+                                <span style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#5a4a1a,#7a6528)", color: "#f7d461", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, flexShrink: 0 }}>{roundLabel(sess)}</span>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>Rondje {sess}{isPrev && <span style={{ fontSize: 10, fontWeight: 800, color: "#a06b00", background: "rgba(233,196,95,0.25)", borderRadius: 10, padding: "1px 7px", marginLeft: 6 }}>vorige</span>}</div>
-                                  <div style={{ fontSize: 11, color: "#8a93a3", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{total} {total === 1 ? "drankje" : "drankjes"}{names ? ` · ${names}` : ""}</div>
+                                  <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>Rondje {roundLabel(sess)}{isPrev && <span style={{ fontSize: 10, fontWeight: 800, color: "#a06b00", background: "rgba(233,196,95,0.25)", borderRadius: 10, padding: "1px 7px", marginLeft: 6 }}>vorige</span>}</div>
+                                  <div style={{ fontSize: 11, color: "#a89a6a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{total} {total === 1 ? "drankje" : "drankjes"}{names ? ` · ${names}` : ""}</div>
                                 </div>
                               </div>
                               <div style={{ display: "flex", gap: 8 }}>
                                 <button
                                   onClick={() => { reorderFromSession(sess); setShowFinishConfirm(true) }}
-                                  style={{ ...S.btn, flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a" }}
+                                  style={{ ...S.btn, flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e" }}
                                 >
                                   ⚡ Exact opnieuw
                                 </button>
                                 <button
                                   onClick={() => reorderFromSession(sess)}
-                                  style={{ ...S.btn, flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 700, background: "#fff", border: "1px solid rgba(20,33,58,0.2)", color: "#5a6680" }}
+                                  style={{ ...S.btn, flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 700, background: "#fff", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55" }}
                                 >
                                   ✏️ Aanpassen
                                 </button>
@@ -2167,7 +2195,7 @@ export default function Home() {
                         {olderCount > 0 && (
                           <button
                             onClick={() => setReorderShowAll((v) => !v)}
-                            style={{ width: "100%", background: "none", border: "none", color: "#5a6ca6", fontSize: 12.5, fontWeight: 700, cursor: "pointer", padding: "8px 0", textDecoration: "underline", textUnderlineOffset: 3 }}
+                            style={{ width: "100%", background: "none", border: "none", color: "#c8941a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", padding: "8px 0", textDecoration: "underline", textUnderlineOffset: 3 }}
                           >
                             {reorderShowAll ? "▴ Toon enkel het vorige rondje" : `▾ Toon ${olderCount} ouder${olderCount === 1 ? "" : "e"} rondje${olderCount === 1 ? "" : "s"}`}
                           </button>
@@ -2185,18 +2213,18 @@ export default function Home() {
             <div style={S.overlay}>
               <div style={{ ...S.modal, width: 360, textAlign: "center" }}>
                 <div style={{ fontSize: 40, marginBottom: 8 }}>🍻</div>
-                <h3 style={{ fontSize: 18, fontWeight: 800, color: "#14213a", margin: "0 0 6px" }}>Bestelling afronden?</h3>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>Bestelling afronden?</h3>
                 <p style={{ fontSize: 13, color: "#777", marginBottom: 12 }}>
-                  Je gaat naar het barman-scherm met {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""}. Overzicht:
+                  In totaal heb je {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""} voor {participants.length} {participants.length === 1 ? "persoon" : "personen"}. Overzicht:
                 </p>
                 <div style={{ textAlign: "left", maxHeight: 200, overflowY: "auto", marginBottom: 16, border: "1px solid rgba(0,0,0,0.07)", borderRadius: 12, padding: "6px 12px" }}>
                   {Object.entries(cart).filter(([, l]) => l.total > 0).map(([id, l]) => {
                     const d = drinks.find((dr) => dr.id === id)
                     if (!d) return null
                     return (
-                      <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, padding: "4px 0", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                      <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, padding: "4px 0", borderBottom: "1px solid rgba(150,110,20,0.05)" }}>
                         <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{d.emoji} {d.name}</span>
-                        <span style={{ fontWeight: 800, color: "#14213a", flexShrink: 0, marginLeft: 8 }}>×{l.total}</span>
+                        <span style={{ fontWeight: 800, color: "#4a3f1e", flexShrink: 0, marginLeft: 8 }}>×{l.total}</span>
                       </div>
                     )
                   })}
@@ -2219,7 +2247,7 @@ export default function Home() {
                 })()}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <button
-                    style={{ ...S.btn, width: "100%", padding: "12px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a" }}
+                    style={{ ...S.btn, width: "100%", padding: "12px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e" }}
                     onClick={() => { setShowFinishConfirm(false); finishRound() }}
                   >
                     ✅ Ja, afronden
@@ -2245,7 +2273,7 @@ export default function Home() {
                   {groupedDrinks.map(([cat]) => {
                     const isActive = activeCategory === cat || (activeCategory === null && cat === groupedDrinks[0]?.[0])
                     return (
-                      <button key={cat} onClick={() => setActiveCategory(cat)} style={{ flexShrink: 0, border: "none", borderRadius: 14, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", background: isActive ? "linear-gradient(135deg,#5a6ca6,#7283b6)" : "#f0f2f7", color: isActive ? "#fff" : "#777" }}>
+                      <button key={cat} onClick={() => setActiveCategory(cat)} style={{ flexShrink: 0, border: "none", borderRadius: 14, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", background: isActive ? "linear-gradient(135deg,#f4c430,#f7d461)" : "#f3ecd6", color: isActive ? "#4a3a0a" : "#a08a4a" }}>
                         {cat}
                       </button>
                     )
@@ -2270,7 +2298,7 @@ export default function Home() {
                         {list.map((d) => {
                           const qty = selectorDraft[d.id] ?? 0
                           return (
-                            <div key={d.id} style={{ background: qty > 0 ? "rgba(27,42,74,0.08)" : "#fafbff", border: qty > 0 ? "1.5px solid rgba(27,42,74,0.35)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+                            <div key={d.id} style={{ background: qty > 0 ? "rgba(150,110,20,0.08)" : "#fffdf3", border: qty > 0 ? "1.5px solid rgba(150,110,20,0.35)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                 <span style={{ fontSize: 20 }}>{d.emoji}</span>
                                 <span style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{d.name}</span>
@@ -2279,7 +2307,7 @@ export default function Home() {
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                 <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15 }} onClick={() => changeSelectorQty(d.id, -1)}>−</button>
                                 <span style={{ fontSize: 18, fontWeight: 800, minWidth: 24, textAlign: "center" }}>{qty}</span>
-                                <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15, background: "rgba(27,42,74,0.12)" }} onClick={() => changeSelectorQty(d.id, 1)}>+</button>
+                                <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15, background: "rgba(150,110,20,0.12)" }} onClick={() => changeSelectorQty(d.id, 1)}>+</button>
                               </div>
                             </div>
                           )
@@ -2297,12 +2325,12 @@ export default function Home() {
                   const newTotal = already + adding
                   const over = groupSize > 0 ? newTotal - groupSize : 0
                   return (
-                    <div style={{ marginTop: 10, padding: "9px 12px", borderRadius: 12, background: over > 0 ? "rgba(224,107,94,0.1)" : "rgba(20,33,58,0.04)", border: over > 0 ? "1px solid rgba(224,107,94,0.3)" : "1px solid transparent" }}>
+                    <div style={{ marginTop: 10, padding: "9px 12px", borderRadius: 12, background: over > 0 ? "rgba(224,107,94,0.1)" : "rgba(120,95,20,0.04)", border: over > 0 ? "1px solid rgba(224,107,94,0.3)" : "1px solid transparent" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "#555", gap: 8, flexWrap: "wrap" }}>
-                        <span>👥 <b style={{ color: "#14213a" }}>{groupSize}</b> {groupSize === 1 ? "persoon" : "personen"}</span>
+                        <span>👥 <b style={{ color: "#4a3f1e" }}>{groupSize}</b> {groupSize === 1 ? "persoon" : "personen"}</span>
                         <span>
-                          🍹 <b style={{ color: "#14213a" }}>{already}</b>
-                          {adding > 0 && <> + <b style={{ color: "#5a6ca6" }}>{adding}</b> = <b style={{ color: "#14213a" }}>{newTotal}</b></>}
+                          🍹 <b style={{ color: "#4a3f1e" }}>{already}</b>
+                          {adding > 0 && <> + <b style={{ color: "#c8941a" }}>{adding}</b> = <b style={{ color: "#4a3f1e" }}>{newTotal}</b></>}
                           {" "}{(adding > 0 ? newTotal : already) === 1 ? "drankje" : "drankjes"}
                         </span>
                       </div>
@@ -2316,8 +2344,8 @@ export default function Home() {
                 })()}
 
                 <div style={{ textAlign: "center", marginTop: 10, fontSize: 12.5 }}>
-                  <span style={{ color: "#8a93a3" }}>Drankje niet gevonden? </span>
-                  <button onClick={() => setShowAddDrink(true)} style={{ background: "none", border: "none", padding: 0, color: "#5a6ca6", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>
+                  <span style={{ color: "#a89a6a" }}>Drankje niet gevonden? </span>
+                  <button onClick={() => setShowAddDrink(true)} style={{ background: "none", border: "none", padding: 0, color: "#c8941a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>
                     Voeg je eigen drankje toe
                   </button>
                 </div>
@@ -2328,7 +2356,7 @@ export default function Home() {
                 <div style={{ textAlign: "center", marginTop: 8 }}>
                   <button
                     onClick={() => { setSelectorDraft({}); setLastAddedCustomDrink(null); setShowDrinkSelector(false) }}
-                    style={{ background: "none", border: "none", color: "#9aa0ab", fontSize: 12.5, fontWeight: 600, cursor: "pointer", padding: "4px 10px" }}
+                    style={{ background: "none", border: "none", color: "#b3a476", fontSize: 12.5, fontWeight: 600, cursor: "pointer", padding: "4px 10px" }}
                   >
                     Annuleren
                   </button>
@@ -2353,9 +2381,9 @@ export default function Home() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
                     <span style={{ fontSize: 12, color: "#a06b00", fontWeight: 800 }}>Nog in de pot</span>
-                    <span style={{ fontSize: 19, fontWeight: 800, color: potLeft > 0.01 ? "#14213a" : "#e67e22" }}>€{potLeft.toFixed(2)}</span>
+                    <span style={{ fontSize: 19, fontWeight: 800, color: potLeft > 0.01 ? "#4a3f1e" : "#e67e22" }}>€{potLeft.toFixed(2)}</span>
                   </div>
-                  <div style={{ height: 6, background: "rgba(20,33,58,0.08)", borderRadius: 4, marginTop: 5, overflow: "hidden" }}>
+                  <div style={{ height: 6, background: "rgba(120,95,20,0.08)", borderRadius: 4, marginTop: 5, overflow: "hidden" }}>
                     <div style={{ width: `${pct}%`, height: "100%", background: "linear-gradient(90deg,#f3d27c,#ecc564)", borderRadius: 4, transition: "width 0.2s" }} />
                   </div>
                   <div style={{ fontSize: 10, color: "#bbb", marginTop: 3 }}>€{potUsed.toFixed(2)} van €{potTotal.toFixed(2)} gebruikt{potLeft <= 0.01 ? " · pot is leeg" : ""}</div>
@@ -2377,7 +2405,7 @@ export default function Home() {
               <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
                 <button
                   onClick={() => setOpenRounds(everyOpen ? [] : sessions.slice())}
-                  style={{ background: "none", border: "none", color: "#8a93a8", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
+                  style={{ background: "none", border: "none", color: "#a89a6a", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
                 >
                   {everyOpen ? "▴ Alles inklappen" : "▾ Alles openklappen"}
                 </button>
@@ -2407,8 +2435,8 @@ export default function Home() {
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 12, color: "#bbb", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", display: "inline-block" }}>▶</span>
-                    <b style={{ fontSize: 16 }}>Ronde {s}</b>
-                    {isLatest && <span style={{ fontSize: 10, color: "#1b2a4a", background: "rgba(27,42,74,0.1)", borderRadius: 8, padding: "1px 8px", fontWeight: 700 }}>laatste</span>}
+                    <b style={{ fontSize: 16 }}>Ronde {roundLabel(s)}</b>
+                    {isLatest && <span style={{ fontSize: 10, color: "#4a3f1e", background: "rgba(150,110,20,0.1)", borderRadius: 8, padding: "1px 8px", fontWeight: 700 }}>laatste</span>}
                     {(() => {
                       const open = orders.filter((o) => o.session === s && !o.participant_id).reduce((sum, o) => sum + o.quantity, 0)
                       if (open <= 0) return null
@@ -2449,7 +2477,7 @@ export default function Home() {
                 {isOpen && (
                   <>
                     {Object.values(grouped).map((it) => (
-                      <div key={it.drink.id} style={{ marginTop: 8, padding: "6px 0", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                      <div key={it.drink.id} style={{ marginTop: 8, padding: "6px 0", borderBottom: "1px solid rgba(150,110,20,0.05)" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <b style={{ fontSize: 13 }}>{it.drink.emoji} {it.drink.name} × {it.totalQty}</b>
                         </div>
@@ -2490,9 +2518,9 @@ export default function Home() {
       {showIndicatiefInfo && (
         <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setShowIndicatiefInfo(false)}>
           <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#14213a", display: "flex", alignItems: "center", gap: 8 }}>💡 Indicatieve richtprijs</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>💡 Indicatieve richtprijs</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              <b style={{ color: "#8a93a3" }}>Indicatieve richtprijs</b> is een pure schatting per drankje. <b style={{ color: "#c98a00" }}>Fair Split</b> verdeelt het verschil met wat er echt betaald werd tijdens de rondjes volgens wie wat dronk, niet zomaar gelijk over iedereen. <b>Veel eerlijker dus!</b>
+              <b style={{ color: "#a89a6a" }}>Indicatieve richtprijs</b> is een pure schatting per drankje. <b style={{ color: "#c98a00" }}>Fair Split</b> verdeelt het verschil met wat er echt betaald werd tijdens de rondjes volgens wie wat dronk, niet zomaar gelijk over iedereen. <b>Veel eerlijker dus!</b>
             </p>
             <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowIndicatiefInfo(false)}>Begrepen</button>
           </div>
@@ -2503,7 +2531,7 @@ export default function Home() {
       {fairInfoMode && (
         <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setFairInfoMode(null)}>
           <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#14213a", display: "flex", alignItems: "center", gap: 8 }}>Hoe werkt Fair Split?</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>Hoe werkt Fair Split?</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
               Met <b style={{ color: "#c98a00" }}>Fair Split</b> delen we het totaalbedrag niet door het aantal personen. Op basis van richtprijzen schatten we wie wat dronk. <b>Niet perfect, wel veel eerlijker!</b>
             </p>
@@ -2516,7 +2544,7 @@ export default function Home() {
       {showVoiceExample && (
         <div style={{ ...S.overlay, zIndex: 2400 }} onClick={() => setShowVoiceExample(false)}>
           <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#14213a", display: "flex", alignItems: "center", gap: 8 }}>🎤 Spreek je bestelling in</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>🎤 Spreek je bestelling in</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
               Zeg bijvoorbeeld <b>&ldquo;2 pintjes&rdquo;</b> — klik daarna opnieuw en zeg <b>&ldquo;1 gin-tonic&rdquo;</b>, enz. Je kan zoveel drankjes na elkaar inspreken als je wil.
             </p>
@@ -2529,7 +2557,7 @@ export default function Home() {
       {showEqualInfo && (
         <div style={{ ...S.overlay, zIndex: 2400 }} onClick={() => setShowEqualInfo(false)}>
           <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#14213a", display: "flex", alignItems: "center", gap: 8 }}>🟰 Iedereen evenveel</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>🟰 Iedereen evenveel</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
               De totale rekening wordt gelijk verdeeld over alle personen.
             </p>
@@ -2543,12 +2571,12 @@ export default function Home() {
         <div style={{ ...S.overlay, zIndex: 2500 }} onClick={() => setConfirmDialog(null)}>
           <div style={{ ...S.modal, width: 360, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 40, marginBottom: 8 }}>{confirmDialog.danger ? "🗑️" : "❓"}</div>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#14213a", margin: "0 0 6px" }}>{confirmDialog.title}</h3>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>{confirmDialog.title}</h3>
             <p style={{ fontSize: 13.5, color: "#777", lineHeight: 1.5, margin: "0 0 18px" }}>{confirmDialog.message}</p>
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 700 }} onClick={() => setConfirmDialog(null)}>Annuleer</button>
               <button
-                style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 800, border: "none", color: "#fff", background: confirmDialog.danger ? "linear-gradient(135deg,#e0685c,#d1483b)" : "linear-gradient(135deg,#5a6ca6,#7283b6)" }}
+                style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 800, border: "none", color: confirmDialog.danger ? "#fff" : "#4a3a0a", background: confirmDialog.danger ? "linear-gradient(135deg,#e0685c,#d1483b)" : "linear-gradient(135deg,#f4c430,#f7d461)" }}
                 onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn() }}
               >
                 {confirmDialog.confirmLabel ?? "Ja"}
@@ -2579,18 +2607,18 @@ export default function Home() {
         return (
           <div style={{ ...S.overlay, zIndex: 2200 }}>
             <div style={{ ...S.modal, width: 440, maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
-              <h3 style={{ marginBottom: 4, fontSize: 19, fontWeight: 800, color: "#14213a" }}>💰 De pot</h3>
+              <h3 style={{ marginBottom: 4, fontSize: 19, fontWeight: 800, color: "#4a3f1e" }}>💰 De pot</h3>
               <p style={{ fontSize: 12, color: "#999", marginTop: 0, marginBottom: 14 }}>Overzicht per pot en wie wat bijlegde.</p>
 
               {/* Stats */}
               <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                 <div style={{ flex: 1, textAlign: "center", background: "rgba(233,196,95,0.10)", borderRadius: 12, padding: "9px 4px" }}>
                   <div style={{ fontSize: 10, color: "#a06b00", fontWeight: 700 }}>ingelegd</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#14213a" }}>€{potTotal.toFixed(2)}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>€{potTotal.toFixed(2)}</div>
                 </div>
-                <div style={{ flex: 1, textAlign: "center", background: "rgba(20,33,58,0.05)", borderRadius: 12, padding: "9px 4px" }}>
+                <div style={{ flex: 1, textAlign: "center", background: "rgba(120,95,20,0.05)", borderRadius: 12, padding: "9px 4px" }}>
                   <div style={{ fontSize: 10, color: "#888", fontWeight: 700 }}>gebruikt</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#8a93a3" }}>€{potUsed.toFixed(2)}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#a89a6a" }}>€{potUsed.toFixed(2)}</div>
                 </div>
                 <div style={{ flex: 1, textAlign: "center", background: "rgba(39,174,96,0.10)", borderRadius: 12, padding: "9px 4px" }}>
                   <div style={{ fontSize: 10, color: "#1f8a4c", fontWeight: 700 }}>nog beschikbaar</div>
@@ -2607,14 +2635,14 @@ export default function Home() {
                     <div key={i} style={{ border: "1px solid rgba(233,196,95,0.4)", borderRadius: 14, padding: "10px 12px", marginBottom: 10, background: "rgba(233,196,95,0.05)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
                         <span style={{ fontSize: 13, fontWeight: 800, color: "#a06b00" }}>{potName(i)}</span>
-                        <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>€{bt.toFixed(2)}</span>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>€{bt.toFixed(2)}</span>
                       </div>
                       {rows.map((r) => {
                         const who = r.participant_id ? (participants.find((p) => p.id === r.participant_id)?.name ?? "?") : "Algemeen"
                         return (
                           <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderTop: "1px solid rgba(0,0,0,0.05)" }}>
                             <span style={{ fontSize: 14 }}>{r.participant_id ? "🙋" : "💰"}</span>
-                            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#14213a" }}>{who}</span>
+                            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#4a3f1e" }}>{who}</span>
                             <span style={{ fontSize: 13, fontWeight: 700, color: "#a06b00" }}>+€{r.amount.toFixed(2)}</span>
                             <button style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 11 }} onClick={() => deletePotContribution(r.id)}>🗑️</button>
                           </div>
@@ -2637,14 +2665,14 @@ export default function Home() {
                         <button
                           key={v}
                           onClick={() => { setPotAddWarn(false); setPotAddBulk(v) }}
-                          style={{ flex: 1, borderRadius: 10, padding: "8px 0", fontSize: 13.5, fontWeight: 800, cursor: "pointer", border: potAddBulk === v ? "1.5px solid #ecc85a" : "1px solid rgba(20,33,58,0.15)", background: potAddBulk === v ? "rgba(233,196,95,0.18)" : "#fff", color: potAddBulk === v ? "#a06b00" : "#5a6680" }}
+                          style={{ flex: 1, borderRadius: 10, padding: "8px 0", fontSize: 13.5, fontWeight: 800, cursor: "pointer", border: potAddBulk === v ? "1.5px solid #ecc85a" : "1px solid rgba(120,95,20,0.15)", background: potAddBulk === v ? "rgba(233,196,95,0.18)" : "#fff", color: potAddBulk === v ? "#a06b00" : "#8a7d55" }}
                         >
                           €{v}
                         </button>
                       ))}
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, padding: "8px 10px", background: "#fff", border: "1px solid #ecc85a", borderRadius: 12 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#14213a" }}>€</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#4a3f1e" }}>€</span>
                       <input type="number" placeholder="bedrag" value={potAddBulk} onChange={(e) => { setPotAddWarn(false); setPotAddBulk(e.target.value) }} style={{ ...S.input, flex: 1, minWidth: 0 }} />
                       <span style={{ fontSize: 13, color: "#777" }}>p.p.</span>
                     </div>
@@ -2671,7 +2699,7 @@ export default function Home() {
                       const bulk = parseFloat((potAddBulk || "").replace(",", ".")) || 0
                       const willAdd = draftSum > 0 ? draftSum : bulk * participants.length
                       return (
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8, color: "#14213a", fontWeight: 700 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8, color: "#4a3f1e", fontWeight: 700 }}>
                           <span>Totaal toevoegen</span>
                           <span>€{willAdd.toFixed(2)}</span>
                         </div>
@@ -2699,11 +2727,11 @@ export default function Home() {
       {showPotModal && (
         <div style={{ ...S.overlay, zIndex: 2200 }}>
           <div style={{ ...S.modal, width: 400, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700, color: "#14213a" }}>💰 Leg een pot</h3>
+            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700, color: "#4a3f1e" }}>💰 Leg een pot</h3>
             <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Iedereen legt vooraf wat in de pot. Je kan het per persoon corrigeren als iemand niet meelegt.</p>
 
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14, padding: "10px 12px", background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 12 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#14213a" }}>€</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#4a3f1e" }}>€</span>
               <input type="number" value={potBulk} onChange={(e) => setPotBulk(e.target.value)} style={{ ...S.input, width: 70 }} />
               <span style={{ fontSize: 13, color: "#777" }}>p.p.</span>
               <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontSize: 13, padding: "8px 0" }} onClick={setPotForEveryone}>Toevoegen</button>
@@ -2726,7 +2754,7 @@ export default function Home() {
               ))}
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 14, color: "#14213a", fontWeight: 700 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 14, color: "#4a3f1e", fontWeight: 700 }}>
               <span>Totaal in pot</span>
               <span>€{Object.values(potDraft).reduce((s, v) => s + (parseFloat(v) || 0), 0).toFixed(2)}</span>
             </div>
@@ -2748,7 +2776,7 @@ export default function Home() {
       {paymentEditRound !== null && (
         <div style={S.overlay}>
           <div style={{ ...S.modal, width: 380 }}>
-            <h3 style={{ marginBottom: 6, fontSize: 18, fontWeight: 700 }}>💳 Ronde {paymentEditRound} — wie betaalde?</h3>
+            <h3 style={{ marginBottom: 6, fontSize: 18, fontWeight: 700 }}>💳 Ronde {roundLabel(paymentEditRound)} — wie betaalde?</h3>
             <p style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>Vul in hoeveel elke persoon betaalde, of zet het op &ldquo;De pot&rdquo;.</p>
 
             {/* De pot als betaler — enkel als er een pot is */}
@@ -2757,7 +2785,7 @@ export default function Home() {
               const potAvailable = Math.max(0, potTotal - potUsedOther)
               if (potTotal <= 0) {
                 return (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "rgba(0,0,0,0.03)", border: "1px dashed rgba(20,33,58,0.2)", borderRadius: 12, marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "rgba(150,110,20,0.05)", border: "1px dashed rgba(120,95,20,0.2)", borderRadius: 12, marginBottom: 12 }}>
                     <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#aaa" }}>💰 De pot</span>
                     <span style={{ fontSize: 12, color: "#bbb" }}>geen pot gelegd</span>
                     <button onClick={openPotModal} style={{ background: "none", border: "none", color: "#c98a00", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>+ leg een pot</button>
@@ -2767,7 +2795,7 @@ export default function Home() {
               return (
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 12 }}>
-                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#14213a" }}>💰 De pot</span>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#4a3f1e" }}>💰 De pot</span>
                     <span style={{ color: "#999" }}>€</span>
                     <input
                       type="number"
@@ -2820,7 +2848,7 @@ export default function Home() {
         <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 2000, overflowY: "auto", padding: 32 }}>
           <div style={{ maxWidth: 600, margin: "0 auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-              <h2 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>🧾 Ronde {roundFullscreen}</h2>
+              <h2 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>🧾 Ronde {roundLabel(roundFullscreen)}</h2>
               <button style={S.btn} onClick={() => setRoundFullscreen(null)}>✕ Sluiten</button>
             </div>
             {Object.values(getRoundGrouped(roundFullscreen)).map((it) => (
@@ -2844,7 +2872,7 @@ export default function Home() {
         <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 2100, overflowY: "auto", padding: 28 }}>
           <div style={{ maxWidth: 560, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: 13, color: "#27ae60", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>✅ Ronde {finishedRoundSnapshot.session} besteld</div>
+              <div style={{ fontSize: 13, color: "#27ae60", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>✅ Ronde {roundLabel(finishedRoundSnapshot.session)} besteld</div>
               <h2 style={{ fontSize: 24, fontWeight: 800, margin: "6px 0 0" }}>🧾 Voor de barman</h2>
             </div>
 
@@ -2888,33 +2916,13 @@ export default function Home() {
               const totalEntered = [POT_PAYER, ...participants.map((p) => p.id)].reduce((s, k) => s + (parseFloat(paymentDraft[k] || "") || 0), 0)
 
               return (
-                <div style={{ marginTop: 22, padding: "16px 18px", background: "rgba(27,42,74,0.05)", borderRadius: 16, border: "1px solid rgba(27,42,74,0.15)" }}>
-                  <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 4, color: "#14213a" }}>💳 Exact betaald bedrag voor dit rondje?</div>
-                  <p style={{ fontSize: 12, color: "#8a93a3", margin: "0 0 12px" }}>Vul het bedrag in en tik wie betaalde. Meestal 1 persoon — meerdere mag ook.</p>
+                <div style={{ marginTop: 22, padding: "16px 18px", background: "rgba(150,110,20,0.05)", borderRadius: 16, border: "1px solid rgba(150,110,20,0.15)" }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 4, color: "#4a3f1e" }}>💳 Wie betaalde dit rondje?</div>
+                  <p style={{ fontSize: 12, color: "#a89a6a", margin: "0 0 12px" }}>Tik wie betaalde — daarna vul je het exacte bedrag in. Meestal 1 persoon, meerdere mag ook.</p>
 
-                  {/* Wie betaalde? — chips (personen + pot). Tik aan om een bedragveld te openen. */}
+                  {/* Wie betaalde? — chips: eerst de pot, dan de personen. Tik aan → bedragveld verschijnt. */}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-                    {participants.map((p) => {
-                      const active = (paymentDraft[p.id] ?? "") !== ""
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() => {
-                            setPayWarn(false)
-                            setPaymentDraft((prev) => {
-                              const n = { ...prev }
-                              if (n[p.id] !== undefined) delete n[p.id]
-                              else n[p.id] = ""
-                              return n
-                            })
-                          }}
-                          style={{ border: active ? "1.5px solid #5a6ca6" : "1px solid rgba(20,33,58,0.2)", background: active ? "rgba(90,108,166,0.12)" : "#fff", color: active ? "#3b486a" : "#5a6680", borderRadius: 20, padding: "7px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
-                        >
-                          {active ? "✓ " : ""}{p.name}
-                        </button>
-                      )
-                    })}
-                    {/* De pot als betaler */}
+                    {/* De pot als betaler — als eerste getoond */}
                     {potTotal > 0 ? (() => {
                       const active = (paymentDraft[POT_PAYER] ?? "") !== ""
                       return (
@@ -2934,10 +2942,30 @@ export default function Home() {
                         </button>
                       )
                     })() : (
-                      <button onClick={openPotModal} style={{ border: "1px dashed rgba(20,33,58,0.25)", background: "rgba(0,0,0,0.02)", color: "#c98a00", borderRadius: 20, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+                      <button onClick={openPotModal} style={{ border: "1px dashed rgba(120,95,20,0.25)", background: "rgba(150,110,20,0.04)", color: "#c98a00", borderRadius: 20, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
                         💰 geen pot gelegd · + leg een pot
                       </button>
                     )}
+                    {participants.map((p) => {
+                      const active = (paymentDraft[p.id] ?? "") !== ""
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => {
+                            setPayWarn(false)
+                            setPaymentDraft((prev) => {
+                              const n = { ...prev }
+                              if (n[p.id] !== undefined) delete n[p.id]
+                              else n[p.id] = ""
+                              return n
+                            })
+                          }}
+                          style={{ border: active ? "1.5px solid #c8941a" : "1px solid rgba(120,95,20,0.2)", background: active ? "rgba(214,158,20,0.12)" : "#fff", color: active ? "#6b5a24" : "#8a7d55", borderRadius: 20, padding: "7px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                        >
+                          {active ? "✓ " : ""}{p.name}
+                        </button>
+                      )
+                    })}
                   </div>
 
                   {/* Bedragvelden voor wie aangetikt is */}
@@ -2963,8 +2991,8 @@ export default function Home() {
                         </div>
                       )}
                       {participants.filter((p) => paymentDraft[p.id] !== undefined).map((p) => (
-                        <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#fff", border: "1px solid rgba(90,108,166,0.3)", borderRadius: 12 }}>
-                          <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#3b486a", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name} betaalde</span>
+                        <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#fff", border: "1px solid rgba(214,158,20,0.3)", borderRadius: 12 }}>
+                          <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#6b5a24", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name} betaalde</span>
                           <span style={{ color: "#999" }}>€</span>
                           <input
                             type="number"
@@ -2977,7 +3005,7 @@ export default function Home() {
                         </div>
                       ))}
                       {!singlePayer && (
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#8a93a3", fontWeight: 700, padding: "2px 4px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#a89a6a", fontWeight: 700, padding: "2px 4px" }}>
                           <span>Samen betaald</span>
                           <span>€{totalEntered.toFixed(2)}</span>
                         </div>
@@ -2986,7 +3014,7 @@ export default function Home() {
                   )}
 
                   {potTotal > 0 && paymentDraft[POT_PAYER] !== undefined && (
-                    <div style={{ fontSize: 10, color: "#a06b00", marginTop: 2, marginLeft: 4 }}>nog €{potAvailable.toFixed(2)} beschikbaar in de pot</div>
+                    <div style={{ marginTop: 8, padding: "8px 12px", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 10, textAlign: "center", fontSize: 15, fontWeight: 800, color: "#a06b00" }}>💰 nog €{potAvailable.toFixed(2)} beschikbaar in de pot</div>
                   )}
                 </div>
               )
@@ -3000,7 +3028,7 @@ export default function Home() {
                 </div>
               )}
               <button
-                style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }}
+                style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }}
                 onClick={async () => {
                   if (!group) return
                   const round = finishedRoundSnapshot.session
@@ -3015,20 +3043,20 @@ export default function Home() {
                   setFinishedRoundSnapshot(null)
                   setBarmanStep("list")
                   setView("ordering")
-                  setToast(`Ronde ${round} afgerond!`)
+                  setToast(`Ronde ${roundLabel(round)} afgerond!`)
                 }}
               >
                 💾 Opslaan &amp; sluiten
               </button>
               <div style={{ display: "flex", gap: 8 }}>
                 <button
-                  style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, background: "transparent", border: "1px solid rgba(20,33,58,0.2)", color: "#6a7384" }}
+                  style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, background: "transparent", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55" }}
                   onClick={adjustFinishedRound}
                 >
                   ✏️ Bestelling aanpassen
                 </button>
                 <button
-                  style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, background: "transparent", border: "1px solid rgba(20,33,58,0.2)", color: "#6a7384" }}
+                  style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, background: "transparent", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55" }}
                   onClick={() => { setPayWarn(false); setPaymentDraft({}); setFinishedRoundSnapshot(null); setView("ordering"); setBarmanStep("list") }}
                 >
                   ⏳ Later invullen
@@ -3046,7 +3074,7 @@ export default function Home() {
           <div style={S.card}>
             <h3 style={{ ...S.h3, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
               📦 Alle bestelde drankjes
-              {(() => { const tot = orders.reduce((s, o) => s + o.quantity, 0); return tot > 0 ? <span style={{ fontSize: 12, fontWeight: 800, color: "#14213a", background: "#ecc85a", borderRadius: 20, padding: "1px 11px" }}>{tot} {tot === 1 ? "drankje" : "drankjes"}</span> : null })()}
+              {(() => { const tot = orders.reduce((s, o) => s + o.quantity, 0); return tot > 0 ? <span style={{ fontSize: 12, fontWeight: 800, color: "#4a3f1e", background: "#ecc85a", borderRadius: 20, padding: "1px 11px" }}>{tot} {tot === 1 ? "drankje" : "drankjes"}</span> : null })()}
             </h3>
             {(() => {
               const overallSummary: Record<string, { drink: Drink; totalQty: number; anonymousQty: number }> = {}
@@ -3088,7 +3116,7 @@ export default function Home() {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, fontSize: 11.5, fontWeight: 700 }}>
                     <span style={{ background: "rgba(39,174,96,0.1)", color: "#1f8a4c", borderRadius: 20, padding: "3px 11px" }}>💳 betaald €{bill.totalActuallySpent.toFixed(2)}</span>
                     {potTotal > 0 && <span style={{ background: "rgba(233,196,95,0.16)", color: "#a06b00", borderRadius: 20, padding: "3px 11px" }}>💰 uit pot €{potUsed.toFixed(2)}</span>}
-                    {potTotal > 0 && <span style={{ background: "rgba(20,33,58,0.05)", color: "#5a6680", borderRadius: 20, padding: "3px 11px" }}>🪙 nog in pot €{potLeft.toFixed(2)}</span>}
+                    {potTotal > 0 && <span style={{ background: "rgba(120,95,20,0.05)", color: "#8a7d55", borderRadius: 20, padding: "3px 11px" }}>🪙 nog in pot €{potLeft.toFixed(2)}</span>}
                   </div>
                 )
               })()}
@@ -3096,10 +3124,10 @@ export default function Home() {
 
             <div style={{ marginTop: 4 }}>
               {/* Kolomtitels boven de twee prijskolommen (enkel bij kleine groep — bij 4+ staan labels in elke kaart) */}
-              {showBillPrices && participants.length > 0 && participants.length < 4 && (
-                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: 12, padding: "0 4px 6px" }}>
-                  <div style={{ width: 74, textAlign: "right", fontSize: 10, color: "#aaa", fontWeight: 700 }}>indicatief</div>
-                  <button onClick={() => setShowFairSplit((v) => !v)} title="Fair split tonen of verbergen" style={{ width: 162, textAlign: "center", fontSize: 11, fontWeight: 800, color: showFairSplit ? "#14213a" : "#a06b00", background: showFairSplit ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "rgba(233,196,95,0.16)", border: showFairSplit ? "none" : "1px solid rgba(233,196,95,0.55)", borderRadius: 8, padding: "4px 0", letterSpacing: 0.5, boxShadow: showFairSplit ? "0 2px 8px rgba(233,196,95,0.4)" : "none", cursor: "pointer" }}>{showFairSplit ? (splitMode === "equal" ? "EVENVEEL ✕" : "FAIR SPLIT ✕") : "+ FAIR SPLIT"}</button>
+              {showBillPrices && participants.length > 0 && participants.length < 4 && !compareFair && (
+                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: 10, padding: "0 4px 6px" }}>
+                  <div style={{ width: 66, textAlign: "right", fontSize: 10, color: "#aaa", fontWeight: 700 }}>indicatief</div>
+                  <button onClick={() => setShowFairSplit((v) => !v)} title="Fair split tonen of verbergen" style={{ width: 158, textAlign: "center", fontSize: 11, fontWeight: 800, color: showFairSplit ? "#4a3f1e" : "#a06b00", background: showFairSplit ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "rgba(233,196,95,0.16)", border: showFairSplit ? "none" : "1px solid rgba(233,196,95,0.55)", borderRadius: 8, padding: "4px 0", letterSpacing: 0.5, boxShadow: showFairSplit ? "0 2px 8px rgba(233,196,95,0.4)" : "none", cursor: "pointer" }}>{showFairSplit ? (splitMode === "equal" ? "EVENVEEL ✕" : "FAIR SPLIT ✕") : "+ FAIR SPLIT"}</button>
                 </div>
               )}
               {orders.some((o) => o.participant_id) && (
@@ -3145,7 +3173,7 @@ export default function Home() {
                         ) : (
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                             {Object.values(drinkSummary).map((ds) => (
-                              <span key={ds.drink.id} style={{ background: "rgba(0,0,0,0.03)", borderRadius: 10, padding: "3px 10px", fontSize: 12 }}>
+                              <span key={ds.drink.id} style={{ background: "rgba(150,110,20,0.05)", borderRadius: 10, padding: "3px 10px", fontSize: 12 }}>
                                 {ds.drink.emoji} {ds.qty}× {ds.drink.name}
                               </span>
                             ))}
@@ -3154,46 +3182,70 @@ export default function Home() {
                       </div>
 
                       {pricesVisible && (() => {
-                        const fairOk = showFairSplit && fair?.participated
-                        const net = fairOk ? fair!.fairShare - paid : 0
-                        const back = net < -0.01
-                        const owes = net > 0.01
-                        const settle = () => {
-                          if (!fairOk) return null
-                          // Toon ALLE verrekeningen (niet enkel de eerste), zodat ook teruggave uit de pot zichtbaar is en de pot op €0 uitkomt
-                          if (owes && myDebts.length > 0) {
-                            return <>{myDebts.map((t, i) => (
+                        const compareOn = splitMode === "equal" && compareFair
+                        const fairComp = fairRows.find((f) => f.participantId === p.id)
+                        const fairCompDebts = fairSettled.filter((t) => t.from === p.name)
+                        const fairCompCredits = fairSettled.filter((t) => t.to === p.name)
+
+                        // Verrekening ("verdeling") voor een gegeven verdeel-rij + bijhorende schulden
+                        const renderSettle = (row: typeof fair, debts: typeof myDebts, credits: typeof myCredits) => {
+                          if (!row || !row.participated) return null
+                          const net = row.fairShare - paid
+                          if (net > 0.01 && debts.length > 0) {
+                            return <>{debts.map((t, i) => (
                               <div key={i} style={{ color: "#e67e22", fontWeight: 700 }}>→ betaalt €{t.amount.toFixed(2)} {t.to === "de pot" ? "in de pot" : `aan ${t.to}`}</div>
                             ))}</>
                           }
-                          if (back && myCredits.length > 0) {
-                            return <>{myCredits.map((t, i) => (
+                          if (net < -0.01 && credits.length > 0) {
+                            return <>{credits.map((t, i) => (
                               <div key={i} style={{ color: "#1f8a4c", fontWeight: 700 }}>↩ Ontvangt €{t.amount.toFixed(2)} {t.from === "de pot" ? "uit de pot" : `van ${t.from}`}</div>
                             ))}</>
                           }
                           return <span style={{ color: "#999", fontWeight: 700 }}>✓ staat gelijk</span>
                         }
-                        const fairLabel = <span style={{ fontSize: 9.5, color: "#caa54e", fontWeight: 600, letterSpacing: 0.3 }}>{splitMode === "equal" ? "evenveel" : "fair split"}</span>
+
+                        const activeOk = showFairSplit && fair?.participated
+                        const activeLabel = splitMode === "equal" ? "evenveel" : "fair split"
+
                         if (multiCol) {
                           return (
                             <div style={{ width: "100%", borderTop: "1px solid rgba(0,0,0,0.07)", marginTop: 8, paddingTop: 7 }}>
                               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "#aaa" }}>indicatief <b style={{ color: "#8a93a3", fontWeight: 700 }}>€{drinkValue.toFixed(2)}</b></span>
-                                {fairOk && <span style={{ display: "inline-flex", alignItems: "baseline", gap: 5 }}>{fairLabel}<span style={{ fontSize: 17, fontWeight: 800, color: "#14213a" }}>€{fair!.fairShare.toFixed(2)}</span></span>}
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "#aaa" }}>indicatief <b style={{ color: "#a89a6a", fontWeight: 700 }}>€{drinkValue.toFixed(2)}</b></span>
+                                {activeOk && <span style={{ display: "inline-flex", alignItems: "baseline", gap: 5 }}><span style={{ fontSize: 9.5, color: "#caa54e", fontWeight: 600, letterSpacing: 0.3 }}>{activeLabel}</span><span style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e" }}>€{fair!.fairShare.toFixed(2)}</span></span>}
                               </div>
-                              {fairOk && <div style={{ fontSize: 11, marginTop: 3, textAlign: "right", lineHeight: 1.35 }}>{settle()}</div>}
+                              {activeOk && <div style={{ fontSize: 11, marginTop: 3, textAlign: "right", lineHeight: 1.35 }}>{renderSettle(fair, myDebts, myCredits)}</div>}
+                              {compareOn && fairComp?.participated && (
+                                <div style={{ borderTop: "1px dashed rgba(233,196,95,0.55)", marginTop: 6, paddingTop: 6 }}>
+                                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "baseline", gap: 5 }}>
+                                    <span style={{ fontSize: 9.5, color: "#caa54e", fontWeight: 600, letterSpacing: 0.3 }}>fair split</span>
+                                    <span style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e" }}>€{fairComp.fairShare.toFixed(2)}</span>
+                                  </div>
+                                  <div style={{ fontSize: 11, marginTop: 3, textAlign: "right", lineHeight: 1.35 }}>{renderSettle(fairComp, fairCompDebts, fairCompCredits)}</div>
+                                </div>
+                              )}
                             </div>
                           )
                         }
                         return (
-                          <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexShrink: 0 }}>
-                            <div style={{ width: 74, textAlign: "right", paddingTop: 4 }}>
-                              <div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 15, fontWeight: 700, color: "#8a93a3" }}>€{drinkValue.toFixed(2)}</div>
+                          <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexShrink: 0 }}>
+                            <div style={{ width: 66, textAlign: "right", paddingTop: 4 }}>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: "#a89a6a" }}>€{drinkValue.toFixed(2)}</div>
                             </div>
-                            {fairOk && (
-                              <div style={{ width: 162, boxSizing: "border-box", textAlign: "center", background: "linear-gradient(135deg,rgba(233,196,95,0.16),rgba(240,165,0,0.10))", border: "1px solid rgba(233,196,95,0.4)", borderRadius: 12, padding: "6px 8px" }}>
-                                <div style={{ fontSize: 19, fontWeight: 800, color: "#14213a" }}>€{fair!.fairShare.toFixed(2)}</div>
-                                <div style={{ fontSize: 10.5, marginTop: 2, lineHeight: 1.35 }}>{settle()}</div>
+                            {activeOk && (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                <div style={{ width: 158, boxSizing: "border-box", textAlign: "center", background: "linear-gradient(135deg,rgba(233,196,95,0.16),rgba(240,165,0,0.10))", border: "1px solid rgba(233,196,95,0.4)", borderRadius: 12, padding: "6px 8px" }}>
+                                  <div style={{ fontSize: 9, color: "#caa54e", fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4 }}>{activeLabel}</div>
+                                  <div style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e" }}>€{fair!.fairShare.toFixed(2)}</div>
+                                  <div style={{ fontSize: 10.5, marginTop: 2, lineHeight: 1.3 }}>{renderSettle(fair, myDebts, myCredits)}</div>
+                                </div>
+                                {compareOn && fairComp?.participated && (
+                                  <div style={{ width: 158, boxSizing: "border-box", textAlign: "center", background: "rgba(120,95,20,0.05)", border: "1px dashed rgba(233,196,95,0.6)", borderRadius: 12, padding: "6px 8px" }}>
+                                    <div style={{ fontSize: 9, color: "#caa54e", fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4 }}>fair split</div>
+                                    <div style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e" }}>€{fairComp.fairShare.toFixed(2)}</div>
+                                    <div style={{ fontSize: 10.5, marginTop: 2, lineHeight: 1.3 }}>{renderSettle(fairComp, fairCompDebts, fairCompCredits)}</div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -3211,64 +3263,81 @@ export default function Home() {
               {!showBillPrices && participants.length > 0 && (
                 <div style={{ marginTop: 14 }}>
                   {!canSplit ? (
-                    /* Punt 9: geen betaling ingevuld → geen split mogelijk */
-                    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "rgba(224,107,94,0.08)", border: "1px solid rgba(224,107,94,0.35)", borderRadius: 14, padding: "13px 15px" }}>
-                      <span style={{ fontSize: 20, lineHeight: 1 }}>ℹ️</span>
-                      <div style={{ fontSize: 13, color: "#8a4b42", lineHeight: 1.5 }}>
-                        <b>Nog geen verdeling mogelijk.</b> Er is nog niet ingevuld wie wat betaalde (een persoon of de pot). Vul dat eerst in bij <b>&ldquo;Overzicht Rondjes&rdquo;</b> — daarna kan je hier de rekening eerlijk verdelen.
-                        <div style={{ marginTop: 10 }}>
-                          <button onClick={() => { setOpenRounds(null); setView("rounds") }} style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "8px 14px", background: "linear-gradient(135deg,#5a6ca6,#7283b6)", border: "none", color: "#fff" }}>→ Naar Overzicht Rondjes</button>
+                    /* Geen verdeling mogelijk: niets betaald, of nog een onbetaald rondje */
+                    (() => {
+                      const unpaidLabels = unpaidRounds.map((s) => roundLabel(s)).sort((a, b) => a - b)
+                      const heeftRondes = sessions.length > 0
+                      return (
+                        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "rgba(224,107,94,0.08)", border: "1px solid rgba(224,107,94,0.35)", borderRadius: 14, padding: "13px 15px" }}>
+                          <span style={{ fontSize: 20, lineHeight: 1 }}>ℹ️</span>
+                          <div style={{ fontSize: 13, color: "#8a4b42", lineHeight: 1.5 }}>
+                            {heeftRondes && unpaidLabels.length > 0 ? (
+                              <>
+                                <b>Nog geen verdeling mogelijk.</b> {unpaidLabels.length === 1 ? <>Rondje <b>{unpaidLabels[0]}</b> is</> : <>De rondjes <b>{unpaidLabels.join(", ")}</b> zijn</>} nog niet betaald. Zolang een rondje niet betaald is, klopt de verdeling niet — ook niet bij &ldquo;iedereen evenveel&rdquo;. Vul eerst in wie elk rondje betaalde bij <b>&ldquo;Overzicht Rondjes&rdquo;</b>.
+                              </>
+                            ) : (
+                              <>
+                                <b>Nog geen verdeling mogelijk.</b> Er is nog niet ingevuld wie wat betaalde (een persoon of de pot). Vul dat eerst in bij <b>&ldquo;Overzicht Rondjes&rdquo;</b> — daarna kan je hier de rekening verdelen.
+                              </>
+                            )}
+                            <div style={{ marginTop: 10 }}>
+                              <button onClick={() => { setOpenRounds(null); setView("rounds") }} style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "8px 14px", background: "linear-gradient(135deg,#f4c430,#f7d461)", border: "none", color: "#4a3a0a" }}>→ Naar Overzicht Rondjes</button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      )
+                    })()
                   ) : (
                     <>
-                      <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
-                        {/* Eerlijke rekening met Fair split (groot, links) */}
-                        <button
-                          onClick={() => {
-                            setSplitMode("fair")
-                            const anon = orders.filter((o) => !o.participant_id && o.quantity > 0)
-                            const unassigned = anon.reduce((s, o) => s + o.quantity, 0)
-                            if (unassigned > 0) {
-                              setAssignPopupDrinkIds(Array.from(new Set(anon.map((o) => o.drink_id))))
-                              setShowAssignPopup(true)
-                            } else { setShowBillPrices(true); setShowFairSplit(true) }
-                          }}
-                          style={{ flex: 1.4, border: "none", borderRadius: 14, padding: "14px 14px", cursor: "pointer", background: "linear-gradient(135deg,#5a6ca6,#7283b6)", boxShadow: "0 6px 16px -6px rgba(90,108,166,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: 9 }}
-                        >
-                          <span style={{ width: 26, height: 26, borderRadius: "50%", background: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}>
-                            <RundoLogo size={18} />
-                          </span>
-                          <span style={{ fontSize: 14.5, fontWeight: 800, color: "#fff", lineHeight: 1.15 }}>Eerlijke rekening met Fair split</span>
-                        </button>
+                      <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                        {/* Eerlijke rekening met Fair split (groot, links) + info eronder */}
+                        <div style={{ flex: 1.5, display: "flex", flexDirection: "column", gap: 7 }}>
+                          <button
+                            onClick={() => {
+                              setSplitMode("fair")
+                              setCompareFair(false)
+                              const anon = orders.filter((o) => !o.participant_id && o.quantity > 0)
+                              const unassigned = anon.reduce((s, o) => s + o.quantity, 0)
+                              if (unassigned > 0) {
+                                setAssignPopupDrinkIds(Array.from(new Set(anon.map((o) => o.drink_id))))
+                                setShowAssignPopup(true)
+                              } else { setShowBillPrices(true); setShowFairSplit(true) }
+                            }}
+                            style={{ width: "100%", border: "none", borderRadius: 14, padding: "14px 14px", cursor: "pointer", background: "linear-gradient(135deg,#f4c430,#f7d461)", boxShadow: "0 6px 16px -6px rgba(214,158,20,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: 9 }}
+                          >
+                            <span style={{ width: 26, height: 26, borderRadius: "50%", background: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}>
+                              <RundoLogo size={18} />
+                            </span>
+                            <span style={{ fontSize: 14.5, fontWeight: 800, color: "#4a3a0a", lineHeight: 1.15 }}>Eerlijke rekening met Fair split</span>
+                          </button>
+                          <button
+                            onClick={() => setFairInfoMode("what")}
+                            style={{ background: "none", border: "none", color: "#a08a4a", fontSize: 12, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, width: "100%", textAlign: "center", padding: 0 }}
+                          >
+                            Hoe werkt Fair Split?
+                          </button>
+                        </div>
 
-                        {/* Iedereen evenveel (kleiner, rechts) */}
-                        <button
-                          onClick={() => {
-                            setSplitMode("equal")
-                            setShowBillPrices(true)
-                            setShowFairSplit(true)
-                          }}
-                          style={{ flex: 0.9, border: "1.5px solid rgba(90,108,166,0.4)", borderRadius: 14, padding: "14px 10px", cursor: "pointer", background: "#fff", color: "#5a6ca6", fontSize: 13, fontWeight: 800, lineHeight: 1.2 }}
-                        >
-                          🟰 Iedereen<br />evenveel
-                        </button>
-                      </div>
-
-                      <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 9 }}>
-                        <button
-                          onClick={() => setFairInfoMode("what")}
-                          style={{ background: "none", border: "none", color: "#7a8296", fontSize: 12, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}
-                        >
-                          Hoe werkt Fair Split?
-                        </button>
-                        <button
-                          onClick={() => setShowEqualInfo(true)}
-                          style={{ background: "none", border: "none", color: "#7a8296", fontSize: 12, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}
-                        >
-                          Wat is &ldquo;iedereen evenveel&rdquo;?
-                        </button>
+                        {/* Iedereen betaalt evenveel (smaller, rechts) + info eronder */}
+                        <div style={{ flex: 0.8, display: "flex", flexDirection: "column", gap: 7 }}>
+                          <button
+                            onClick={() => {
+                              setSplitMode("equal")
+                              setCompareFair(false)
+                              setShowBillPrices(true)
+                              setShowFairSplit(true)
+                            }}
+                            style={{ width: "100%", border: "1.5px solid rgba(214,158,20,0.4)", borderRadius: 14, padding: "14px 8px", cursor: "pointer", background: "#fff", color: "#c8941a", fontSize: 12.5, fontWeight: 800, lineHeight: 1.25, minHeight: 54 }}
+                          >
+                            Iedereen betaalt evenveel
+                          </button>
+                          <button
+                            onClick={() => setShowEqualInfo(true)}
+                            style={{ background: "none", border: "none", color: "#a08a4a", fontSize: 12, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, width: "100%", textAlign: "center", padding: 0 }}
+                          >
+                            Wat is &ldquo;iedereen evenveel&rdquo;?
+                          </button>
+                        </div>
                       </div>
                     </>
                   )}
@@ -3276,14 +3345,14 @@ export default function Home() {
               )}
 
               {/* Klein kolomtotaal, uitgelijnd onder de kolommen (enkel bij kleine groep) */}
-              {showBillPrices && participants.length > 0 && participants.length < 4 && (
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, padding: "8px 4px 2px", marginTop: 2 }}>
-                  <div style={{ width: 74, textAlign: "right" }}>
+              {showBillPrices && participants.length > 0 && participants.length < 4 && !compareFair && (
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "8px 4px 2px", marginTop: 2 }}>
+                  <div style={{ width: 66, textAlign: "right" }}>
                     <div style={{ fontSize: 9, color: "#aaa" }}>totaal</div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#8a93a3" }}>€{bill.totalDrinkValue.toFixed(2)}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#a89a6a" }}>€{bill.totalDrinkValue.toFixed(2)}</div>
                   </div>
                   {showFairSplit && (
-                    <div style={{ width: 162, textAlign: "center" }}>
+                    <div style={{ width: 158, textAlign: "center" }}>
                       <div style={{ fontSize: 9, color: "#1f8a4c" }}>totaal</div>
                       <div style={{ fontSize: 13, fontWeight: 800, color: "#27ae60" }}>€{bill.totalActuallySpent.toFixed(2)}</div>
                     </div>
@@ -3302,17 +3371,17 @@ export default function Home() {
               return (
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
                   {splitMode === "equal" && (
-                    <div style={{ textAlign: "center", fontSize: 12, color: "#5a6680", fontWeight: 700, marginBottom: 10, background: "rgba(90,108,166,0.08)", borderRadius: 10, padding: "7px 10px" }}>
+                    <div style={{ textAlign: "center", fontSize: 12, color: "#8a7d55", fontWeight: 700, marginBottom: 10, background: "rgba(214,158,20,0.08)", borderRadius: 10, padding: "7px 10px" }}>
                       🟰 De totale rekening wordt gelijk verdeeld: €{echtBetaald.toFixed(2)} ÷ {participants.length} = <b>€{(participants.length > 0 ? echtBetaald / participants.length : 0).toFixed(2)}</b> per persoon
                     </div>
                   )}
                   <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                    <div style={{ flex: 1, background: "rgba(20,33,58,0.04)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
+                    <div style={{ flex: 1, background: "rgba(120,95,20,0.04)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
                       <div style={{ fontSize: 11, color: "#888", marginBottom: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
                         <span>Indicatieve prijs <span style={{ fontSize: 9, color: "#bbb" }}>(totaal)</span></span>
                         <button onClick={() => setShowIndicatiefInfo(true)} title="Wat betekent dit?" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#b9c0cc", fontSize: 13, lineHeight: 1 }}>ⓘ</button>
                       </div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: "#8a93a3" }}>€{indicatief.toFixed(2)}</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: "#a89a6a" }}>€{indicatief.toFixed(2)}</div>
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ background: "rgba(39,174,96,0.08)", borderRadius: 12, padding: "10px 12px", textAlign: "center", border: "1px solid rgba(39,174,96,0.25)" }}>
@@ -3334,10 +3403,20 @@ export default function Home() {
               )
             })()}
 
-            {/* Fair split weer verbergen */}
+            {/* Verdeling weer verbergen + (in evenveel-modus) vergelijken met Fair Split */}
             {showBillPrices && (
-              <div style={{ textAlign: "center", marginTop: 14 }}>
-                <button onClick={() => { setShowBillPrices(false); setShowFairSplit(false); setSplitMode("fair") }} style={{ background: "linear-gradient(135deg,#5a6ca6,#7283b6)", border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", borderRadius: 20, padding: "8px 16px", boxShadow: "0 6px 16px -6px rgba(90,108,166,0.55)" }}>Verberg verdeling</button>
+              <div style={{ display: "flex", justifyContent: "center", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+                <button onClick={() => { setShowBillPrices(false); setShowFairSplit(false); setCompareFair(false); setSplitMode("fair") }} style={{ background: "linear-gradient(135deg,#f4c430,#f7d461)", border: "none", color: "#4a3a0a", fontSize: 13, fontWeight: 800, cursor: "pointer", borderRadius: 20, padding: "8px 16px", boxShadow: "0 6px 16px -6px rgba(214,158,20,0.55)" }}>
+                  {splitMode === "equal" ? "Verberg iedereen evenveel" : "Verberg Fair split"}
+                </button>
+                {splitMode === "equal" && canFairSplit && (
+                  <button
+                    onClick={() => setCompareFair((v) => !v)}
+                    style={{ background: compareFair ? "#fff" : "rgba(214,158,20,0.12)", border: "1.5px solid rgba(214,158,20,0.5)", color: "#a06b00", fontSize: 13, fontWeight: 800, cursor: "pointer", borderRadius: 20, padding: "8px 16px" }}
+                  >
+                    {compareFair ? "Verberg Fair split-vergelijking" : "Vergelijk met Fair split"}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -3354,7 +3433,7 @@ export default function Home() {
                 <div style={{ ...S.modal, width: 420, maxHeight: "85vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
                   {few ? (
                     <>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#14213a", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>🍹 Toewijzen</h3>
+                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>🍹 Toewijzen</h3>
                       <p style={{ fontSize: 13, color: "#777", marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
                         {liveUnassignedTotal > 0
                           ? <><b style={{ color: "#e0685c" }}>{liveUnassignedTotal} {liveUnassignedTotal === 1 ? "drankje" : "drankjes"} nog niet toegewezen.</b> Tik personen aan — meerdere mag.</>
@@ -3384,7 +3463,7 @@ export default function Home() {
                   ) : liveUnassignedTotal === 0 ? (
                     <div style={{ textAlign: "center" }}>
                       <div style={{ fontSize: 42, marginBottom: 8 }}>✅</div>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#14213a", margin: "0 0 6px" }}>Alles toegewezen!</h3>
+                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>Alles toegewezen!</h3>
                       <p style={{ fontSize: 13, color: "#777", marginBottom: 18 }}>Je kan nu de eerlijke verdeling bekijken.</p>
                       <button
                         style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800 }}
@@ -3395,7 +3474,7 @@ export default function Home() {
                     </div>
                   ) : (
                     <>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#14213a", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>🍹 Nog niet toegewezen</h3>
+                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>🍹 Nog niet toegewezen</h3>
                       <p style={{ fontSize: 13, color: "#777", marginTop: 0, marginBottom: 16, lineHeight: 1.55 }}>
                         Er zijn nog <b style={{ color: "#e0685c" }}>{liveUnassignedTotal} {liveUnassignedTotal === 1 ? "drankje" : "drankjes"}</b> niet toegewezen. Wijs ze toe in <b>&ldquo;Alle bestelde drankjes&rdquo;</b> of in <b>&ldquo;Overzicht Rondjes&rdquo;</b>.
                       </p>
@@ -3406,7 +3485,7 @@ export default function Home() {
                         >
                           Naar &ldquo;Alle bestelde drankjes&rdquo;
                         </button>
-                        <button style={{ ...S.btn, width: "100%", padding: "10px 0", fontSize: 13, fontWeight: 700, background: "rgba(90,108,166,0.1)", border: "1px solid rgba(90,108,166,0.3)", color: "#5a6ca6" }} onClick={() => { setOpenRounds(null); setShowAssignPopup(false); setView("rounds") }}>Naar &ldquo;Overzicht Rondjes&rdquo;</button>
+                        <button style={{ ...S.btn, width: "100%", padding: "10px 0", fontSize: 13, fontWeight: 700, background: "rgba(214,158,20,0.1)", border: "1px solid rgba(214,158,20,0.3)", color: "#c8941a" }} onClick={() => { setOpenRounds(null); setShowAssignPopup(false); setView("rounds") }}>Naar &ldquo;Overzicht Rondjes&rdquo;</button>
                       </div>
                     </>
                   )}
@@ -3459,43 +3538,43 @@ const S: Record<string, React.CSSProperties> = {
   page: {
     padding: 18,
     fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    background: "linear-gradient(180deg,#fbfaff 0%,#f1f2fb 55%,#eef3f7 100%)",
+    background: "linear-gradient(180deg,#fffdf4 0%,#fdf3d4 55%,#fbedc2 100%)",
     minHeight: "100vh",
-    color: "#1d2433",
+    color: "#4a3f1e",
     maxWidth: 720,
     margin: "0 auto",
     WebkitFontSmoothing: "antialiased",
     MozOsxFontSmoothing: "grayscale",
   },
   card: {
-    background: "#ffffff",
-    border: "1px solid rgba(16,24,40,0.04)",
+    background: "#fffef9",
+    border: "1px solid rgba(180,140,20,0.10)",
     borderRadius: 22,
     padding: 18,
-    boxShadow: "0 1px 2px rgba(16,24,40,0.03), 0 14px 30px -16px rgba(80,90,140,0.18)",
+    boxShadow: "0 1px 2px rgba(150,110,20,0.04), 0 14px 30px -16px rgba(180,140,20,0.28)",
     marginBottom: 14,
   },
   btn: {
-    border: "1px solid rgba(16,24,40,0.10)",
-    background: "#ffffff",
+    border: "1px solid rgba(120,95,20,0.14)",
+    background: "#fffef9",
     borderRadius: 12,
     padding: "9px 16px",
     cursor: "pointer",
     fontSize: 14,
     fontWeight: 600,
-    color: "#1d2433",
-    boxShadow: "0 1px 2px rgba(16,24,40,0.05)",
+    color: "#4a3f1e",
+    boxShadow: "0 1px 2px rgba(150,110,20,0.06)",
     transition: "transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease",
   },
   btnPrimary: {
-    background: "linear-gradient(135deg,#5a6ca6,#7283b6)",
-    color: "white",
+    background: "linear-gradient(135deg,#f4c430,#f7d461)",
+    color: "#4a3a0a",
     border: "none",
-    boxShadow: "0 6px 16px -6px rgba(90,108,166,0.55)",
+    boxShadow: "0 6px 16px -6px rgba(214,158,20,0.6)",
   },
   iconBtn: {
     border: "none",
-    background: "rgba(16,24,40,0.05)",
+    background: "rgba(150,110,20,0.08)",
     borderRadius: 11,
     width: 32,
     height: 32,
@@ -3507,17 +3586,17 @@ const S: Record<string, React.CSSProperties> = {
     transition: "background .12s ease, transform .12s ease",
   },
   input: {
-    border: "1.5px solid rgba(16,24,40,0.12)",
+    border: "1.5px solid rgba(120,95,20,0.16)",
     borderRadius: 12,
     padding: "10px 13px",
     fontSize: 14,
     outline: "none",
-    background: "#fff",
-    color: "#1d2433",
+    background: "#fffef9",
+    color: "#4a3f1e",
     transition: "border-color .12s ease, box-shadow .12s ease",
   },
-  h1: { fontSize: 29, fontWeight: 800, letterSpacing: -0.7, marginBottom: 4, color: "#2f3c5e" },
-  h3: { fontSize: 16, fontWeight: 800, marginBottom: 14, letterSpacing: -0.3, color: "#3b486a", display: "flex", alignItems: "center", gap: 9 },
+  h1: { fontSize: 29, fontWeight: 800, letterSpacing: -0.7, marginBottom: 4, color: "#5a4a1a" },
+  h3: { fontSize: 16, fontWeight: 800, marginBottom: 14, letterSpacing: -0.3, color: "#6b5a24", display: "flex", alignItems: "center", gap: 9 },
   topBar: {
     display: "flex",
     justifyContent: "space-between",
@@ -3528,11 +3607,11 @@ const S: Record<string, React.CSSProperties> = {
   tabBar: {
     display: "flex",
     gap: 4,
-    background: "#edeef6",
+    background: "#f5eccf",
     borderRadius: 16,
     padding: 5,
     marginBottom: 18,
-    boxShadow: "inset 0 1px 2px rgba(16,24,40,0.04)",
+    boxShadow: "inset 0 1px 2px rgba(150,110,20,0.06)",
   },
   stickyCart: {
     position: "fixed",
@@ -3541,32 +3620,32 @@ const S: Record<string, React.CSSProperties> = {
     right: 16,
     maxWidth: 720 - 32,
     margin: "0 auto",
-    background: "rgba(255,255,255,0.85)",
+    background: "rgba(255,253,244,0.9)",
     backdropFilter: "blur(12px)",
     WebkitBackdropFilter: "blur(12px)",
     borderRadius: 20,
     padding: "14px 18px",
-    boxShadow: "0 10px 40px -6px rgba(16,24,40,0.25)",
+    boxShadow: "0 10px 40px -6px rgba(150,110,20,0.3)",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     zIndex: 500,
-    border: "1px solid rgba(16,24,40,0.06)",
+    border: "1px solid rgba(180,140,20,0.12)",
   },
   overlay: {
-    position: "fixed", inset: 0, background: "rgba(16,24,40,0.45)", display: "flex",
+    position: "fixed", inset: 0, background: "rgba(60,45,10,0.4)", display: "flex",
     alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(6px)",
     WebkitBackdropFilter: "blur(6px)", padding: 16,
   },
   modal: {
-    background: "#fff", borderRadius: 24, padding: 24, width: 360,
-    boxShadow: "0 24px 70px -12px rgba(16,24,40,0.35)", maxHeight: "85vh", display: "flex", flexDirection: "column",
-    border: "1px solid rgba(16,24,40,0.06)",
+    background: "#fffef9", borderRadius: 24, padding: 24, width: 360,
+    boxShadow: "0 24px 70px -12px rgba(120,90,20,0.35)", maxHeight: "85vh", display: "flex", flexDirection: "column",
+    border: "1px solid rgba(180,140,20,0.12)",
   },
   toast: {
-    position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)", background: "#1d2433", color: "#fff",
+    position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)", background: "#4a3f1e", color: "#fff",
     padding: "11px 22px", borderRadius: 40, fontSize: 14, fontWeight: 600, zIndex: 2000,
-    boxShadow: "0 10px 30px rgba(16,24,40,0.3)", whiteSpace: "nowrap", maxWidth: "90vw", textAlign: "center",
+    boxShadow: "0 10px 30px rgba(120,90,20,0.35)", whiteSpace: "nowrap", maxWidth: "90vw", textAlign: "center",
   },
   errorBanner: {
     background: "#fef2f2", border: "1px solid #fecaca", color: "#c0392b", borderRadius: 14, padding: "11px 16px",
