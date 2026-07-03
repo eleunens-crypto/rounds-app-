@@ -6,15 +6,6 @@ import { QRCodeSVG } from "qrcode.react"
 
 // ═══════════════════════════════════════════════════════════════════════════
 // RUNDO TABLE  —  losstaande mode (route: /table)
-// Zelfde Supabase-client + huisstijl als party mode. Raakt /  (party) niet aan.
-//
-// Flow:
-//  1. Admin maakt groep + scant de kassabon  → items (naam, prijs/stuk, aantal)
-//  2. Admin kan gasten vooraf toevoegen + deelt de invite-code
-//  3. Iedereen tikt aan wat hij at/dronk (per stuk: 1 van 2 cola's kan)
-//  4. Gedeelde items (wijn/water) → delen of overlaten aan admin
-//  5. Bevestigen → eigen totaal zichtbaar (+ melding als gedeeld nog open is)
-//  6. Admin-overzicht: wat is verrekend / nog open / nog onbeslist
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
@@ -27,9 +18,9 @@ type BillItem = {
   unit_price: number
   quantity: number
   is_shared: boolean
-  share_fixed?: boolean       // admin heeft de deelnemers van dit gedeelde item vastgelegd
-  distribute?: string | null  // BTW/kost: null=gewoon item · "all"=proportioneel over alles · JSON-lijst item-ids
-  tax_rate?: number | null    // BTW-item met percentage (6/12/21): bedrag = pct% van de doel-items. null = vast bedrag.
+  share_fixed?: boolean
+  distribute?: string | null
+  tax_rate?: number | null
   category: string | null
   created_at?: string
 }
@@ -52,7 +43,7 @@ function randomId(): string {
 }
 function getOrCreateOwnerId(): string {
   if (typeof window === "undefined") return randomId()
-  const key = "rundo_owner_id" // zelfde sleutel als party mode → zelfde toestel = zelfde eigenaar
+  const key = "rundo_owner_id"
   let id = localStorage.getItem(key)
   if (!id) { id = randomId(); localStorage.setItem(key, id) }
   return id
@@ -60,7 +51,6 @@ function getOrCreateOwnerId(): string {
 function generateInviteCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase()
 }
-// Welke deelnemer "ben ik" in deze groep (per groep onthouden)
 function getMeId(groupId: string): string | null {
   if (typeof window === "undefined") return null
   return localStorage.getItem(`rundo_table_me_${groupId}`)
@@ -70,7 +60,6 @@ function setMeIdStored(groupId: string, participantId: string | null) {
   else localStorage.removeItem(`rundo_table_me_${groupId}`)
 }
 
-// Laatst geopende groep onthouden, zodat je na een refresh niet naar het startscherm vliegt.
 const LAST_GROUP_KEY = "rundo_table_last_group"
 function rememberLastGroup(id: string | null) {
   if (typeof window === "undefined") return
@@ -82,8 +71,6 @@ function getLastGroup(): string | null {
   return localStorage.getItem(LAST_GROUP_KEY)
 }
 
-// ─── JOUW GROEPEN (lokaal bewaard, gekoppeld aan owner_id → future-proof) ─────
-// Later vervang je owner_id door een echt account-id; deze lijst migreert dan mee.
 type SavedGroup = { id: string; name: string; invite_code: string; role: "admin" | "gast"; savedAt: number; created_at?: string }
 function getMyGroups(): SavedGroup[] {
   if (typeof window === "undefined") return []
@@ -104,8 +91,6 @@ function removeMyGroup(id: string) {
   localStorage.setItem(`rundo_table_groups_${getOrCreateOwnerId()}`, JSON.stringify(list))
 }
 
-// Datum netjes tonen (bv. "26 jun 2026"). Wordt enkel bij de WEERGAVE van de naam gebruikt,
-// niet bij het opslaan of vergelijken van de naam zelf.
 function fmtDate(iso?: string | number): string {
   if (!iso) return ""
   const d = new Date(iso)
@@ -113,7 +98,6 @@ function fmtDate(iso?: string | number): string {
   return d.toLocaleDateString("nl-BE", { day: "numeric", month: "short", year: "numeric" })
 }
 
-// Dispute-opslag in table_groups.disputed_by: regels "naam::opmerking::status" (status leeg of "resolved").
 type Dispute = { name: string; comment: string; resolved: boolean }
 function parseDisputes(raw: string): Dispute[] {
   return (raw || "").split("\n").map((s) => s.trim()).filter(Boolean).map((row) => {
@@ -125,8 +109,6 @@ function serializeDisputes(list: Dispute[]): string {
   return list.map((d) => `${d.name}::${d.comment}::${d.resolved ? "resolved" : ""}`).join("\n")
 }
 
-// ─── BON HERKENNEN (geïsoleerde, vervangbare stap) ───────────────────────────
-// Regels die GEEN item zijn (totalen, belasting, betaalinfo, voettekst...) — die negeren we
 const SKIP_LINE_KEYWORDS = [
   "totaal", "total", "subtotaal", "subtotal", "btw", "tva", "vat", "tax", "incl", "excl",
   "te betalen", "betaald", "betaling", "paid", "cash", "contant", "kaart", "card", "bancontact",
@@ -141,9 +123,6 @@ function isSkippableLine(line: string): boolean {
   return SKIP_LINE_KEYWORDS.some((k) => l.includes(k))
 }
 
-// Haalt een bedrag uit een tekst: ofwel met komma/punt ("13.00" / "24,90"),
-// ofwel een blok cijfers waarvan de laatste 2 de centen zijn ("2490" → 24,90, "5 00" → 5,00).
-// Geeft de waarde + de startpositie terug (zodat we de naam ervóór kunnen knippen).
 function extractAmount(line: string): { value: number; startIdx: number } | null {
   const decimal = [...line.matchAll(/(\d{1,4})[.,](\d{2})(?!\d)/g)]
   if (decimal.length > 0) {
@@ -163,18 +142,12 @@ function extractAmount(line: string): { value: number; startIdx: number } | null
   return null
 }
 
-// Heuristische parser, afgestemd op echte kassabonnen (bv. Lightspeed):
-//  - regels beginnen vaak met een BTW-code zoals "1B", "2A" → die knippen we weg
-//  - prijzen staan vaak ZONDER komma: "Konijnenbouten 2490" = €24,90, "Coca cola 5 00" = €5,00
-//  - btw-detailregels onderaan ("12% 39.20 470 43.90") en totalen negeren we als item,
-//    maar het BON-TOTAAL ("Totaal € 65,90") vangen we apart op voor de controle.
 function parseReceiptText(raw: string): { items: ParsedItem[]; total: number | null } {
   const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
   const items: ParsedItem[] = []
   let total: number | null = null
 
   for (const rawLine of lines) {
-    // Bon-totaal opvangen: regel met "totaal" maar niet subtotaal/netto/btw-detail (%)
     const low = rawLine.toLowerCase()
     if (/\btotaal\b|\btotal\b/.test(low) && !low.includes("subtotaal") && !low.includes("netto") && !low.includes("%")) {
       const amt = extractAmount(rawLine)
@@ -185,10 +158,8 @@ function parseReceiptText(raw: string): { items: ParsedItem[]; total: number | n
     if (isSkippableLine(rawLine)) continue
     let line = rawLine
 
-    // BTW-code vooraan weg: "1B Konijnenbouten ..." / "2A Coca cola ..."
     line = line.replace(/^\s*\d{1,2}\s*[A-Da-d]\b\s*/, "").trim()
 
-    // Een regel met 3+ losse getallen achteraan + een % is meestal een btw-detailregel → overslaan
     const trailingNums = line.match(/(\d+[.,]?\d*)(?:\s+\d+[.,]?\d*){2,}\s*$/)
     if (trailingNums && /%/.test(line)) continue
 
@@ -197,44 +168,27 @@ function parseReceiptText(raw: string): { items: ParsedItem[]; total: number | n
     const lineTotal = amt.value
     const priceStartIdx = amt.startIdx
 
-    // Naam = alles vóór de prijs
     let rest = line.slice(0, priceStartIdx).trim()
 
-    // Aantal vooraan? ("2", "2x", "2 x")
     let qty = 1
     const qtyMatch = rest.match(/^(\d{1,2})\s*[xX×]?\s+/)
     if (qtyMatch) { qty = Math.max(1, parseInt(qtyMatch[1], 10)); rest = rest.slice(qtyMatch[0].length).trim() }
 
-    // Opkuisen: losse leestekens/streepjes vooraan en dubbele spaties weg
     const name = rest.replace(/^[-•*.\s]+/, "").replace(/\s{2,}/g, " ").trim()
 
-    // Onbruikbaar als naam: leeg, te kort, of bijna alleen cijfers/tekens
     const letters = (name.match(/[a-zA-ZÀ-ÿ]/g) || []).length
     if (!name || name.length < 2 || letters < 2) continue
 
-    // We bewaren de prijs PER STUK; bij aantal>1 delen we het lijntotaal.
     const unit = qty > 1 ? +(lineTotal / qty).toFixed(2) : lineTotal
     items.push({ name, unit_price: unit, quantity: qty, is_shared: false })
   }
   return { items, total }
 }
 
-// FUTURE — goedkope opkuis: stuur ruwe OCR-tekst naar je API-route met een klein tekstmodel
-// dat er nette {name, unit_price, quantity} van maakt. Nu: lokale parser.
-//
-//   const res = await fetch("/api/parse-receipt", {
-//     method: "POST",
-//     headers: { "Content-Type": "application/json" },
-//     body: JSON.stringify({ text: rawText }),
-//   })
-//   const { items } = await res.json()
-//   return items
 async function cleanReceiptToItems(rawText: string): Promise<{ items: ParsedItem[]; total: number | null }> {
   return parseReceiptText(rawText)
 }
 
-// Foto opkuisen vóór de OCR: vergroten (kleine itemtekst wordt leesbaar), grijswaarden
-// en wat extra contrast. Dit is veruit de grootste winst voor herkenning van kleine regels.
 async function preprocessReceipt(file: File): Promise<string> {
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const im = new Image()
@@ -255,19 +209,15 @@ async function preprocessReceipt(file: File): Promise<string> {
     const d = id.data
     for (let i = 0; i < d.length; i += 4) {
       const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]
-      // contrast rond het midden optrekken zodat tekst donkerder en papier witter wordt
       const v = Math.max(0, Math.min(255, (gray - 128) * 1.5 + 128))
       d[i] = d[i + 1] = d[i + 2] = v
     }
     ctx.putImageData(id, 0, 0)
-  } catch { /* getImageData kan falen bij rare bestanden — dan gewoon de geschaalde foto gebruiken */ }
+  } catch { /* getImageData kan falen — dan gewoon de geschaalde foto gebruiken */ }
   URL.revokeObjectURL(img.src)
   return canvas.toDataURL("image/png")
 }
 
-// Tesseract.js leest de tekst uit de (opgekuiste) foto. createWorker + vaste taaldata-bron
-// is betrouwbaarder onder Next.js/Turbopack. PSM 6 leest de bon als één tekstblok regel per
-// regel, wat doorgaans méér itemregels oplevert dan de automatische modus.
 async function scanReceipt(file: File, onProgress?: (p: number) => void): Promise<{ items: ParsedItem[]; total: number | null }> {
   const image = await preprocessReceipt(file)
   const { createWorker } = await import("tesseract.js")
@@ -293,7 +243,7 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
   useEffect(() => {
     const t = setTimeout(() => doneRef.current(), 2400)
     return () => clearTimeout(t)
-  }, [message])  // alleen (her)starten bij een nieuw bericht, niet bij elke render
+  }, [message])
   return <div style={S.toast}>{message}</div>
 }
 
@@ -307,54 +257,49 @@ export default function RundoTable() {
 
   const [group, setGroup] = useState<Group | null>(null)
   const [meId, setMeId] = useState<string | null>(null)
-  const [viaLink, setViaLink] = useState(false) // binnengekomen via gedeelde link/QR → altijd als gast behandelen
+  const [viaLink, setViaLink] = useState(false)
   const isOwnerDevice = !!group && group.owner_id === getOrCreateOwnerId()
   const isAdmin = isOwnerDevice && !viaLink
 
-  // start-scherm
   const [groupName, setGroupName] = useState("")
-  const [partySize, setPartySize] = useState("")        // verwacht aantal personen in de groep
+  const [partySize, setPartySize] = useState("")
   const [busy, setBusy] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
   const [myGroups, setMyGroups] = useState<SavedGroup[]>([])
   const [showSaved, setShowSaved] = useState(false)
   useEffect(() => { setMyGroups(getMyGroups()) }, [])
 
-  // data
   const [participants, setParticipants] = useState<Participant[]>([])
   const [items, setItems] = useState<BillItem[]>([])
   const [claims, setClaims] = useState<Claim[]>([])
   const [confirmations, setConfirmations] = useState<Confirmation[]>([])
 
-  // ui
   const [adminTab, setAdminTab] = useState<AdminTab>("scan")
   const [showScan, setShowScan] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState(0)
   const [scanError, setScanError] = useState<string | null>(null)
   const [scanPreview, setScanPreview] = useState<ParsedItem[]>([])
-  const [scanTotal, setScanTotal] = useState<string>("")          // bon-totaal (uit scan, bewerkbaar)
-  const [expandedPeople, setExpandedPeople] = useState<Set<string>>(new Set()) // wie is uitgeklapt in overzicht
-  const [claimMode, setClaimMode] = useState<"item" | "person">("item")        // aantikken: per item of per persoon
-  const [claimPid, setClaimPid] = useState<string | null>(null)                // gekozen persoon in 'per persoon'-modus
-  const [scanFile, setScanFile] = useState<File | null>(null)        // de gekozen foto, om te bewaren
-  const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null) // tijdelijke preview-url
-  const [viewReceipt, setViewReceipt] = useState<string | null>(null)   // bon groot bekijken
+  const [scanTotal, setScanTotal] = useState<string>("")
+  const [expandedPeople, setExpandedPeople] = useState<Set<string>>(new Set())
+  const [claimMode, setClaimMode] = useState<"item" | "person">("item")
+  const [claimPid, setClaimPid] = useState<string | null>(null)
+  const [scanFile, setScanFile] = useState<File | null>(null)
+  const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
+  const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [newGuest, setNewGuest] = useState("")
-  const [newGuestSeats, setNewGuestSeats] = useState(1) // 'telt voor X personen' bij admin een gast toevoegen
-  const [editGuestId, setEditGuestId] = useState<string | null>(null) // welke gast-naam we nu bewerken
+  const [newGuestSeats, setNewGuestSeats] = useState(1)
+  const [editGuestId, setEditGuestId] = useState<string | null>(null)
   const [showAddGuest, setShowAddGuest] = useState(false)
   const [showTodo, setShowTodo] = useState(false)
-  const [showTaxInfo, setShowTaxInfo] = useState(false)       // uitleg-popup bij BTW-knop
-  const [taxConfig, setTaxConfig] = useState<string | null>(null) // welk BTW-item zijn doel-items kiest
+  const [showTaxInfo, setShowTaxInfo] = useState(false)
+  const [taxConfig, setTaxConfig] = useState<string | null>(null)
   const [editItem, setEditItem] = useState<BillItem | null>(null)
-  // Nieuw item via popup (naam, prijs, gedeeld). target = waar het naartoe gaat.
   const [newItem, setNewItem] = useState<{ name: string; unit_price: string; quantity: number; is_shared: boolean; target: "bill" | "scan" } | null>(null)
-  const [recentItemId, setRecentItemId] = useState<string | null>(null) // licht een net toegevoegd bon-item op
+  const [recentItemId, setRecentItemId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // ─── loaders ───────────────────────────────────────────────────────────────
   const loadAll = useCallback(async (groupId: string) => {
     const [{ data: p }, { data: it }, { data: cl }, { data: cf }, { data: g }] = await Promise.all([
       supabase.from("table_participants").select("*").eq("group_id", groupId),
@@ -368,20 +313,15 @@ export default function RundoTable() {
     [...(rows || [])].sort((a, b) => {
         const ca = a.created_at ?? "", cb = b.created_at ?? ""
         if (ca !== cb) return ca < cb ? -1 : 1
-        return a.id < b.id ? -1 : a.id > b.id ? 1 : 0  // gelijke tijd → vaste volgorde op id, zodat niets verspringt
-      })  
+        return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+      })
     setParticipants(order(p as Participant[] || []))
     setItems(order(it as BillItem[] || []))
     setClaims((cl as Claim[]) || [])
     setConfirmations((cf as Confirmation[]) || [])
-    // Groep enkel BIJWERKEN als hij nog open is; niet opnieuw aanmaken (anders trek je
-    // jezelf terug naar binnen na het verlaten via het logo).
     if (g) setGroup((cur) => cur ? { ...cur, ...(g as Group) } : cur)
   }, [])
 
-  // realtime — luistert op alle table_* tabellen; herverbindt bij verlies van verbinding.
-  // LET OP: vereist dat Realtime aanstaat voor deze tabellen in Supabase
-  // (Database → Publications → supabase_realtime).
  useEffect(() => {
     if (!group) return
     const groupId = group.id
@@ -399,25 +339,21 @@ export default function RundoTable() {
         ch!.on("postgres_changes", { event: "*", schema: "public", table, filter }, reload)
       })
       ch!.subscribe((status) => {
-        // Bij verbroken/gefaalde verbinding: na korte pauze opnieuw verbinden
         if ((status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") && active) {
           if (retry) clearTimeout(retry)
           retry = setTimeout(() => { if (ch) supabase.removeChannel(ch); connect() }, 2000)
         }
-        // Bij (her)verbinding: meteen verse data ophalen zodat je niets mist
         if (status === "SUBSCRIBED") reload()
       })
     }
     connect()
-// Kom je terug naar de tab? Meteen verversen zodat je niets mist.
     const refreshOnReturn = () => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return
       reload()
     }
     document.addEventListener("visibilitychange", refreshOnReturn)
     window.addEventListener("focus", refreshOnReturn)
-    // Veiligheidsnet: ook periodiek verversen, voor als een realtime-event toch gemist wordt
-    const poll = setInterval(() => {       if (typeof document === "undefined" || document.visibilityState === "visible") reload()     }, 30000)
+    const poll = setInterval(() => { if (typeof document === "undefined" || document.visibilityState === "visible") reload() }, 30000)
 
     return () => {
       active = false
@@ -427,18 +363,13 @@ export default function RundoTable() {
       window.removeEventListener("focus", refreshOnReturn)
       if (ch) supabase.removeChannel(ch)
     }
-    // Alleen opnieuw verbinden bij een echte groepswissel, niet bij elke data-update
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [group?.id, loadAll])
 
-  // Actieve tab onthouden zodat een refresh je op dezelfde tab houdt.
   useEffect(() => {
     if (group && typeof window !== "undefined") localStorage.setItem("rundo_table_last_tab", adminTab)
   }, [adminTab, group])
 
-  // Bij opstarten: enkel een gedeelde link (?code=) opent automatisch die groep (nodig voor gasten).
-  // We heropenen NIET automatisch de laatste groep — klikken op 'Table' toont altijd het startscherm.
-  // Terugkeren naar een lopende groep kan via 'Opgeslagen groepen' op dat startscherm.
   useEffect(() => {
     if (autoJoined.current || group) return
     if (typeof window === "undefined") return
@@ -447,13 +378,11 @@ export default function RundoTable() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ─── groep maken / joinen ────────────────────────────────────────────────────
   const createGroup = async () => {
     if (busy) return
     const name = groupName.trim()
     if (!name) { setStartError("Geef eerst een naam voor de rekening."); return }
-    const size = Math.max(2, parseInt(partySize) || 2)  // tellertje-minimum = 2
-    // Geen dubbele namen (hoofdletter-ongevoelig); de datum die we later tonen telt hier niet mee.
+    const size = Math.max(2, parseInt(partySize) || 2)
     if (getMyGroups().some((g) => g.name.trim().toLowerCase() === name.toLowerCase())) {
       setStartError("Je hebt al een groep met die naam. Kies een andere naam."); return
     }
@@ -483,7 +412,6 @@ export default function RundoTable() {
     } finally { setBusy(false) }
   }
 
-  // Een eerder bewaarde groep heropenen vanuit "jouw groepen"
   const openSavedGroup = async (id: string, tab: AdminTab = "scan") => {
     if (busy) return
     setBusy(true); setStartError(null)
@@ -497,7 +425,6 @@ export default function RundoTable() {
 
   const forgetSavedGroup = async (id: string) => {
     if (!confirm("Deze groep definitief verwijderen? Alles (items, gasten en aanduidingen) wordt gewist en de groep is daarna niet meer terug te halen, ook niet via een code.")) return
-    // Alles wat aan de groep hangt eerst wissen, dan de groep zelf.
     await supabase.from("table_claims").delete().eq("group_id", id)
     await supabase.from("table_confirmations").delete().eq("group_id", id)
     await supabase.from("table_items").delete().eq("group_id", id)
@@ -508,13 +435,10 @@ export default function RundoTable() {
     removeMyGroup(id); setMyGroups(getMyGroups())
   }
 
-  // Naar het keuzescherm (Rundo Table / Party). Probeert meerdere navigatie-methodes
-  // zodat het in elke omgeving werkt (lokaal, Vercel, en desnoods binnen een iframe via top).
   const goToChooser = () => {
     if (typeof window === "undefined") return
     try {
       const target = window.location.origin + "/"
-      // Binnen een iframe? Navigeer dan het bovenste venster.
       if (window.top && window.top !== window.self) { window.top.location.href = target; return }
       window.location.href = target
     } catch {
@@ -526,34 +450,28 @@ export default function RundoTable() {
     setGroup(null); setMeId(null); setItems([]); setClaims([]); setParticipants([]); setConfirmations([])
     setGroupName(""); setPartySize(""); setError(null)
     setViaLink(false); setShowSaved(false)
-    // Scan-state opschonen zodat een halve scan niet meereist naar de volgende groep
     setScanPreview([]); setScanFile(null); setScanPhotoUrl(null); setScanTotal(""); setScanError(null); setShowScan(false)
-    // Aantik-/weergavestaat resetten
     setAdminTab("scan"); setExpandedPeople(new Set()); setClaimMode("item"); setClaimPid(null)
     setEditGuestId(null); setShowTodo(false); setShowAddGuest(false); setViewReceipt(null)
-    autoJoined.current = true  // niet automatisch de laatste groep / ?code heropenen
+    autoJoined.current = true
     rememberLastGroup(null)
-    // ?code uit de URL halen zodat een join-link je niet terug naar binnen trekt
     if (typeof window !== "undefined" && window.location.search) {
       window.history.replaceState({}, "", window.location.pathname)
     }
   }
 
-  // ─── gasten / identiteit ─────────────────────────────────────────────────────
   const addGuest = async (name?: string, selfJoined = false, seats = 1) => {
     if (!group) return
     const finalName = (name ?? newGuest).trim() || `Gast ${participants.length + 1}`
     const seatsVal = Math.max(1, seats)
     let { data, error } = await supabase.from("table_participants")
       .insert([{ name: finalName, group_id: group.id, self_joined: selfJoined, seats: seatsVal }]).select().single()
-    // Bestaat de kolom seats nog niet? Probeer dan zonder seats (en val terug op self_joined-fallback indien nodig).
     if (error && /seats/.test(error.message || "")) {
       const retry = await supabase.from("table_participants")
         .insert([{ name: finalName, group_id: group.id, self_joined: selfJoined }]).select().single()
       data = retry.data; error = retry.error
       if (!error && seatsVal > 1) setError("Let op: 'telt voor meerdere personen' werkt nog niet. Voeg in Supabase de kolom seats toe aan table_participants.")
     }
-    // Bestaat de kolom self_joined nog niet in de database? Probeer dan zonder, maar waarschuw.
     if (error && /self_joined/.test(error.message || "")) {
       const retry = await supabase.from("table_participants")
         .insert([{ name: finalName, group_id: group.id }]).select().single()
@@ -566,32 +484,24 @@ export default function RundoTable() {
     return data as Participant
   }
 
-  // Pas de groepsgrootte (seats) van een deelnemer aan
   const setSeats = async (pid: string, n: number) => {
     if (!group) return
     if (group.finalized && !isAdmin) { setToast("De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     const val = Math.max(1, n)
     const current = Math.max(1, participants.find((p) => p.id === pid)?.seats ?? 1)
     if (val === current) return
-    // Heeft deze persoon al iets aangetikt? Dan wist het wijzigen van het aantal die claims.
     const hasClaims = claims.some((c) => c.participant_id === pid && c.quantity > 0)
     if (hasClaims && !confirm("Het aantal personen wijzigen wist wat deze persoon al aantikte (gewone én gedeelde items). Wil je doorgaan?")) return
-    // Optimistisch: seats bijwerken én de claims van deze persoon meteen lokaal wegnemen,
-    // zodat je direct opnieuw kan aantikken zonder handmatig te verversen.
     setParticipants((cur) => cur.map((p) => p.id === pid ? { ...p, seats: val } : p))
     if (hasClaims) setClaims((cur) => cur.filter((c) => c.participant_id !== pid))
     if (hasClaims) await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", pid)
     const { error } = await supabase.from("table_participants").update({ seats: val }).eq("id", pid)
     if (error && /seats/.test(error.message || "")) { setError("Voeg in Supabase de kolom seats toe aan table_participants om dit te bewaren."); return }
-    // Bewust GEEN directe loadAll hier: de optimistische waarde blijft staan en de
-    // realtime-sync werkt alles vanzelf bij. Zo springt het aantal niet terug naar 1.
     if (hasClaims) setToast("Aantal personen aangepast — eerdere keuzes gewist, tik opnieuw aan")
   }
 
-  // Hulp: voor hoeveel personen telt deze deelnemer (default 1)
   const seatsOf = (pid: string) => Math.max(1, participants.find((p) => p.id === pid)?.seats ?? 1)
 
-  // Admin: rekening afsluiten (vergrendelt het aantikken) of weer heropenen.
   const finalizeBill = async (on: boolean) => {
     if (!group) return
     setGroup((cur) => cur ? { ...cur, finalized: on, disputed_by: on ? cur.disputed_by : null } : cur)
@@ -605,8 +515,6 @@ export default function RundoTable() {
     setToast(on ? "Rekening afgesloten — gasten kunnen niet meer wijzigen" : "Rekening heropend")
   }
 
-  // Gast: 'klopt iets niet?' — laat een vriendelijk seintje (met optionele opmerking) achter bij de admin.
-  // Formaat per gast in disputed_by: "naam::opmerking::status" (status leeg of "resolved"), regels via newline.
   const flagDispute = async (name: string, on: boolean, comment = "") => {
     if (!group) return
     const cur = parseDisputes(group.disputed_by || "").filter((d) => d.name !== name)
@@ -618,7 +526,6 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
-  // Admin: een melding afvinken als gecheckt (of terug op open zetten).
   const resolveDispute = async (name: string, resolved: boolean) => {
     if (!group) return
     const next = parseDisputes(group.disputed_by || "").map((d) => d.name === name ? { ...d, resolved } : d)
@@ -634,15 +541,13 @@ export default function RundoTable() {
     setMeIdStored(group.id, participantId); setMeId(participantId)
   }
 
-  // 'Ik ben iemand anders' — koppelt los van de huidige identiteit (claims blijven onaangeroerd in de db),
-  // brengt je terug naar het naamkeuze-scherm. Handig bij een gedeelde telefoon.
   const switchPerson = () => {
     if (!group) return
     setMeIdStored(group.id, null); setMeId(null)
   }
 
   const joinAsNewPerson = async (name: string, seats = 1) => {
-    const p = await addGuest(name, true, seats)  // gast meldt zichzelf aan via de link
+    const p = await addGuest(name, true, seats)
     if (p) pickMe(p.id)
   }
 
@@ -665,9 +570,6 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
-  // ─── bon scannen / items ─────────────────────────────────────────────────────
-  // Opnieuw scannen: de vorige bon (foto + herkende items) verdwijnt. Zijn er al
-  // toewijzingen, dan eerst waarschuwen want die gaan mee verloren.
   const startRescan = async () => {
     if (!group) return
     const hasItems = items.length > 0
@@ -680,7 +582,6 @@ export default function RundoTable() {
       await supabase.from("table_claims").delete().eq("group_id", group.id)
       await supabase.from("table_items").delete().eq("group_id", group.id)
     }
-    // Bon-foto wissen
     if (group.receipt_url) {
       await supabase.from("table_groups").update({ receipt_url: null }).eq("id", group.id)
       setGroup((g) => g ? { ...g, receipt_url: null } : g)
@@ -694,7 +595,7 @@ export default function RundoTable() {
     setScanError(null); setScanPreview([]); setScanProgress(0); setScanning(true)
     setScanFile(file)
     if (scanPhotoUrl) URL.revokeObjectURL(scanPhotoUrl)
-    setScanPhotoUrl(URL.createObjectURL(file)) // tonen zodat je kan checken of alles erop staat
+    setScanPhotoUrl(URL.createObjectURL(file))
     try {
       const parsed = await scanReceipt(file, (p) => setScanProgress(p))
       setScanPreview(parsed.items)
@@ -713,7 +614,6 @@ export default function RundoTable() {
 
   const confirmScan = async () => {
     if (!group || scanPreview.length === 0) return
-    // 1. Foto bewaren in Supabase Storage (bucket "receipts") zodat jij + de gasten ze kunnen bekijken
     let receiptUrl = group.receipt_url ?? null
     if (scanFile) {
       const ext = (scanFile.name.split(".").pop() || "jpg").toLowerCase()
@@ -727,7 +627,6 @@ export default function RundoTable() {
         else setGroup({ ...group, receipt_url: receiptUrl })
       }
     }
-    // 2. Items opslaan: eerst de gewone items, dan de BTW-regels met opgeloste verdeling.
     const baseList = scanPreview.map((it, idx) => ({ it, idx })).filter((o) => !o.it.distribute)
     const taxList = scanPreview.map((it, idx) => ({ it, idx })).filter((o) => !!o.it.distribute)
     const baseRows = baseList.map(({ it }) => ({
@@ -735,15 +634,12 @@ export default function RundoTable() {
       quantity: it.quantity, is_shared: it.is_shared, category: null,
     }))
     let columnMissing = false
-    // Gewone items invoegen en hun nieuwe ids ophalen (in volgorde)
     const baseRes = await supabase.from("table_items").insert(baseRows).select()
     if (baseRes.error) { setError("Items opslaan mislukt: " + baseRes.error.message); return }
     const inserted = baseRes.data || []
-    // scanPreview-index → nieuw item-id (voor de "bepaalde items"-verdeling)
     const idByScanIdx: Record<number, string> = {}
     baseList.forEach((o, k) => { if (inserted[k]) idByScanIdx[o.idx] = inserted[k].id })
 
-    // BTW-regels invoegen, met "all" of een ids-lijst
     if (taxList.length > 0) {
       const taxRows = taxList.map(({ it }) => {
         let dist: string = "all"
@@ -761,21 +657,22 @@ export default function RundoTable() {
       if (taxRes.error) { setError("BTW opslaan mislukt: " + taxRes.error.message); return }
     }
     if (columnMissing) setError("Let op: voeg in Supabase de kolom 'distribute' toe, anders wordt de BTW-verdeling niet bewaard.")
-    const rows = scanPreview  // voor de teller in de toast hieronder
-    // 3. Bon-totaal onthouden zodat de vergelijking ook later op de Bon-tab beschikbaar blijft
+    const rows = scanPreview
     const billNum = parseFloat((scanTotal || "").replace(",", "."))
     if (!isNaN(billNum) && billNum > 0) {
       const { error: tErr } = await supabase.from("table_groups").update({ receipt_total: billNum }).eq("id", group.id)
       if (!tErr) setGroup((g) => g ? { ...g, receipt_total: billNum } : g)
     }
+    // Klopt het ingevulde totaal met items + BTW? Dan enkel een korte bevestiging.
+    const computedNow = scanPreview.filter((x) => !x.distribute).reduce((s, it) => s + (it.unit_price || 0) * (it.quantity || 0), 0) + scanPreview.filter((x) => x.distribute).reduce((s, it) => s + (it.unit_price || 0), 0)
+    const totalOk = !isNaN(billNum) && billNum > 0 && Math.abs(billNum - computedNow) < 0.01
     setScanPreview([]); setScanTotal(""); setScanError(null); setScanFile(null)
     if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) }
     setShowScan(false)
     await loadAll(group.id)
-    setToast(`${rows.length} item${rows.length !== 1 ? "s" : ""} toegevoegd`)
+    setToast(totalOk ? "✅ Rekeningtotaal klopt" : `${rows.length} item${rows.length !== 1 ? "s" : ""} toegevoegd`)
   }
 
-  // Verwacht aantal personen (de teller) achteraf wijzigen
   const addManualItem = async () => {
     if (!group) return
     const { error } = await supabase.from("table_items")
@@ -784,11 +681,9 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
-  // Open de nieuw-item-popup. target "bill" = naar de bon (DB), "scan" = naar de scan-preview.
   const openNewItem = (target: "bill" | "scan") =>
     setNewItem({ name: "", unit_price: "", quantity: 1, is_shared: false, target })
 
-  // Bevestig het nieuwe item: voeg toe op de juiste plek en licht het even op.
   const confirmNewItem = async () => {
     if (!newItem) return
     const name = newItem.name.trim() || "Nieuw item"
@@ -810,15 +705,12 @@ export default function RundoTable() {
     if (data?.id) { setRecentItemId(data.id); setTimeout(() => setRecentItemId(null), 6000) }
   }
 
-  // BTW/kost als apart item dat proportioneel over de rekening wordt verdeeld.
-  // BTW/kost toevoegen. rate = 6/12/21 voor een percentage-BTW, of undefined voor een vast bedrag.
   const addTaxItem = async (rate?: number) => {
     if (!group) return
     const name = rate ? `BTW ${rate}%` : "BTW of andere kosten"
     const row: Record<string, unknown> = { group_id: group.id, name, unit_price: 0, quantity: 1, is_shared: false, category: null, distribute: "all" }
     if (rate) row.tax_rate = rate
     let { error } = await supabase.from("table_items").insert([row])
-    // tax_rate-kolom ontbreekt? Voeg dan toe zonder, met waarschuwing.
     if (error && /tax_rate/.test(error.message || "")) {
       const retry = await supabase.from("table_items").insert([{ group_id: group.id, name, unit_price: 0, quantity: 1, is_shared: false, category: null, distribute: "all" }])
       error = retry.error
@@ -832,8 +724,6 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
-  // Het percentage van een BTW-item wijzigen (of naar vast bedrag zetten met rate=null)
-  // Het door de admin ingevulde bon-totaal opslaan (voor de controle onderaan de bon).
   const setReceiptTotal = async (val: number | null) => {
     if (!group) return
     setGroup((g) => g ? { ...g, receipt_total: val } : g)
@@ -879,7 +769,6 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
-  // ─── claims (per stuk aantikken) ────────────────────────────────────────────
   const claimedQty = (itemId: string) =>
     claims.filter((c) => c.item_id === itemId).reduce((s, c) => s + c.quantity, 0)
   const myQty = (itemId: string, pid: string | null) =>
@@ -889,13 +778,11 @@ export default function RundoTable() {
     claims.filter((c) => c.item_id === itemId && c.quantity > 0).forEach((c) => ids.add(c.participant_id))
     return [...ids]
   }
-  // Per item: lijst van {naam, aantal} per persoon die iets claimde
   const claimsForItem = (itemId: string) =>
     claims
       .filter((c) => c.item_id === itemId && c.quantity > 0)
       .map((c) => ({ name: participants.find((p) => p.id === c.participant_id)?.name ?? "?", qty: c.quantity }))
 
-  // Zet het aantal dat 'pid' van een item claimt op een absolute waarde (1 row per persoon/item)
   const setClaim = async (itemId: string, pid: string, qty: number) => {
     if (!group) return
     if (group.finalized && !isAdmin) { setToast("De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
@@ -910,37 +797,29 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
-  // Gedeeld item: in/uit het delen stappen. De quantity van een gedeelde claim
-  // = voor hoeveel personen die deelnemer meedoet (default = zijn seats, bv. koppel = 2).
   const toggleShareClaim = async (itemId: string, pid: string) => {
     const mine = myQty(itemId, pid)
     await setClaim(itemId, pid, mine > 0 ? 0 : seatsOf(pid))
   }
 
-  // Som van "monden" die een gedeeld item delen (= som van de claim-quantities)
   const shareHeads = (itemId: string) =>
     claims.filter((c) => c.item_id === itemId && c.quantity > 0).reduce((s, c) => s + c.quantity, 0)
 
-  // Hoeveel monden doet 'pid' mee bij dit gedeelde item (de quantity van zijn claim)
   const myShareHeads = (itemId: string, pid: string) =>
     claims.filter((c) => c.item_id === itemId && c.participant_id === pid).reduce((s, c) => s + c.quantity, 0)
 
-  // Admin legt de deelnemers van een gedeeld item vast (of maakt het weer open)
   const setShareFixed = async (it: BillItem, val: boolean) => {
     if (!group) return
     await supabase.from("table_items").update({ share_fixed: val }).eq("id", it.id)
     await loadAll(group.id)
   }
 
-  // ─── totalen ─────────────────────────────────────────────────────────────────
   const itemTotal = (it: BillItem) => it.unit_price * it.quantity
 
-  // Een BTW/kost-item heeft een 'distribute'-waarde; het wordt niet geclaimd maar verdeeld.
   const isTax = (it: BillItem) => it.distribute != null && it.distribute !== ""
-  const baseItems = items.filter((it) => !isTax(it))   // de echte, claimbare items
-  const taxItems = items.filter((it) => isTax(it))     // BTW/kosten
+  const baseItems = items.filter((it) => !isTax(it))
+  const taxItems = items.filter((it) => isTax(it))
 
-  // Op welke basis-items slaat een BTW-item? "all" = alle, anders een JSON-lijst van ids.
   const taxTargetIds = (t: BillItem): Set<string> => {
     if (t.distribute === "all") return new Set(baseItems.map((i) => i.id))
     try {
@@ -949,9 +828,6 @@ export default function RundoTable() {
     } catch { return new Set(baseItems.map((i) => i.id)) }
   }
 
-  // Het bedrag van een BTW/kost-item:
-  //  - met tax_rate (6/12/21): percentage van het totaal van de doel-items
-  //  - zonder tax_rate: het vaste bedrag dat de admin invulde (unit_price)
   const taxAmount = (t: BillItem): number => {
     if (t.tax_rate && t.tax_rate > 0) {
       const ids = taxTargetIds(t)
@@ -961,13 +837,8 @@ export default function RundoTable() {
     return itemTotal(t)
   }
 
-  // Een gedeeld item deelt zijn bedrag LIVE door wie er meedoet, zodra er minstens
-  // één deelnemer is aangeduid. De som verschijnt dus meteen (wijn door 3 = /3),
-  // ook als nog niet iedereen bevestigd heeft. Of het al "definitief" is (iedereen
-  // bevestigd of door de admin vastgezet) tonen we apart via pendingShared.
   const sharedRevealed = (it: BillItem) => sharerIds(it.id).length > 0
 
-  // Wat draagt 'pid' bij aan één basis-item (gewoon: prijs×aantal · gedeeld: aandeel)?
   const baseAmountForItem = (pid: string, it: BillItem): number => {
     if (it.is_shared) {
       const heads = shareHeads(it.id)
@@ -975,12 +846,9 @@ export default function RundoTable() {
     }
     return it.unit_price * myQty(it.id, pid)
   }
-  // Som van iemands bijdrage binnen een set basis-items (voor proportionele BTW-verdeling)
   const baseWithin = (pid: string, ids: Set<string>): number =>
     baseItems.filter((i) => ids.has(i.id)).reduce((s, i) => s + baseAmountForItem(pid, i), 0)
 
-  // Iemands aandeel in alle BTW-items: per BTW-item proportioneel t.o.v. wat ieder in de
-  // doel-items bestelde. Verdeelt het BTW-bedrag exact over wie die items nam.
   const taxShare = (pid: string): number => {
     let total = 0
     for (const t of taxItems) {
@@ -1001,20 +869,19 @@ export default function RundoTable() {
           if (sharedRevealed(it)) {
             const heads = shareHeads(it.id)
             settled += heads > 0 ? itemTotal(it) * (myShareHeads(it.id, pid) / heads) : 0
-            if (!allConfirmed) pendingShared = true // kan nog licht wijzigen tot iedereen bevestigt
+            if (!allConfirmed) pendingShared = true
           } else {
-            pendingShared = true // bedrag nog niet bepaald (geen deelnemers vastgelegd)
+            pendingShared = true
           }
         }
       } else {
         settled += it.unit_price * myQty(it.id, pid)
       }
     }
-    settled += taxShare(pid)  // proportioneel aandeel in BTW/kosten
+    settled += taxShare(pid)
     return { settled, pendingShared }
   }
 
-  // Detail: welke items nam deze persoon, en voor welk bedrag (incl. aandeel in gedeelde items + BTW)
   const personItems = (pid: string): { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number }[] => {
     const out: { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number }[] = []
     for (const it of baseItems) {
@@ -1036,32 +903,21 @@ export default function RundoTable() {
     return out
   }
 
-  // Heeft deze persoon al iets toegewezen gekregen (een stuk geclaimd of meedelen in een gedeeld item)?
   const hasAssignment = (pid: string): boolean =>
     baseItems.some((it) => it.is_shared ? sharerIds(it.id).includes(pid) : myQty(it.id, pid) > 0)
 
-  // Wat telt als "bevestigd":
-  //  - link/QR-gast (self_joined): pas wanneer die zélf bevestigt
-  //  - door admin toegevoegde gast: zodra die iets toegewezen kreeg
   const isConfirmed = (pid: string): boolean => {
     const p = participants.find((x) => x.id === pid)
     if (p && !p.self_joined) return hasAssignment(pid)
     return confirmations.some((c) => c.participant_id === pid)
   }
-  // Heeft deze persoon écht zelf op 'bevestigen' gedrukt? (Gebruikt in het aantikscherm.)
   const explicitConfirmed = (pid: string): boolean => confirmations.some((c) => c.participant_id === pid)
   const allConfirmed = participants.length > 0 && participants.every((p) => isConfirmed(p.id))
   const iConfirmed = !!meId && confirmations.some((c) => c.participant_id === meId)
 
-  // Statuslabel voor een gast:
-  //  - groen "bevestigd": heeft écht op de bevestig-knop gedrukt
-  //  - blauw "bezig": heeft al iets aangetikt maar nog niet bevestigd
-  //  - grijs "nog niets": nog niets aangetikt
   const guestStatus = (pid: string): { label: string; color: string; bg: string } => {
     if (explicitConfirmed(pid)) return { label: "✓ bevestigd", color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
    if (hasAssignment(pid)) {
-      // Admin-toegevoegde gast (geen telefoon om te bevestigen): zodra de HELE bon
-      // toegewezen is, tonen we "bevestigd". Zolang er nog iets openstaat: "bezig".
       const p = participants.find((x) => x.id === pid)
       const billFullyAssigned = openUnits === 0 && undecidedShared.length === 0
       if (p && !p.self_joined && billFullyAssigned) return { label: "✓ bevestigd", color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
@@ -1075,7 +931,6 @@ export default function RundoTable() {
     .reduce((s, it) => s + Math.max(0, it.quantity - claimedQty(it.id)), 0)
   const undecidedShared = baseItems.filter((it) => it.is_shared && sharerIds(it.id).length === 0)
 
-  // ─── bevestigen ──────────────────────────────────────────────────────────────
   const confirmMe = async () => {
     if (!group || !meId) return
     if (iConfirmed) {
@@ -1156,10 +1011,8 @@ export default function RundoTable() {
             <h3 style={S.h3}>👋 Wie ben jij?</h3>
             <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 14 }}>Vul je naam in om mee te doen.</p>
 
-            {/* Eigen naam invullen — primaire actie */}
             <IdentityAdder onAdd={joinAsNewPerson} />
 
-            {/* Vooraf toegevoegde namen — optioneel aanklikken */}
             {participants.length > 0 && (
               <div style={{ marginTop: 18 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
@@ -1195,9 +1048,6 @@ export default function RundoTable() {
 
       <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} me={me?.name} signedUp={participants.length} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
 
-      {/* Groepsinfo-balk verwijderd — info staat al in de gasten-tab en het overzicht */}
-
-      {/* Rekening afgesloten — opvallende melding voor iedereen */}
       {group.finalized && (() => {
         const disputers = parseDisputes(group.disputed_by || "")
         const openCount = disputers.filter((d) => !d.resolved).length
@@ -1235,7 +1085,6 @@ export default function RundoTable() {
         )
       })()}
 
-      {/* Admin tabs */}
       {isAdmin && (
         <div style={S.tabBar}>
           {([
@@ -1253,8 +1102,8 @@ export default function RundoTable() {
         </div>
       )}
 
-      {/* Subtiele bon-preview, in elke tab beschikbaar */}
-      {group.receipt_url && (
+      {/* Subtiele bon-preview, in elke tab beschikbaar (behalve op de Bon-tab, die heeft z'n eigen knop) */}
+      {group.receipt_url && adminTab !== "scan" && (
         <div style={{ textAlign: "right", marginTop: -6, marginBottom: 10 }}>
           <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#1499b0", padding: "2px 4px" }}>🧾 Bon bekijken</button>
         </div>
@@ -1266,28 +1115,42 @@ export default function RundoTable() {
           {group.receipt_url ? (
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 16, marginBottom: 10, marginTop: -4 }}>
               <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#1499b0", padding: "2px 4px" }}>🧾 Bon bekijken</button>
-              <button onClick={startRescan} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#9aa0ab", padding: "2px 4px" }}>🔄 Opnieuw scannen</button>
+              <button onClick={startRescan} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#9aa0ab", padding: "2px 4px" }}>🔄 Bon opnieuw scannen</button>
             </div>
           ) : (
             <button onClick={() => setShowScan(true)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Rekening scannen 📸</button>
           )}
-          
-          {items.length > 0 && group?.receipt_total != null && (() => {
-            const entered = group.receipt_total as number
-            const match = Math.abs(entered - billTotal) < 0.005
+
+          {/* Compacte totaal-controle boven de items: groen als het klopt, rood met instructie bij verschil, altijd bijstelbaar */}
+          {items.length > 0 && (() => {
+            const entered = group?.receipt_total ?? null
+            const match = entered != null && Math.abs(entered - billTotal) < 0.005
+            const mismatch = entered != null && !match
             return (
-              <div style={{ ...S.card, padding: "11px 14px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: match ? "rgba(39,174,96,0.10)" : "rgba(233,196,95,0.16)", border: match ? "1.5px solid rgba(39,174,96,0.5)" : "1.5px solid rgba(233,196,95,0.6)" }}>
-                <span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.4, color: match ? "#1f8a4c" : "#a06b00" }}>
-                  {match
+              <div style={{ ...S.card, padding: "11px 14px", marginBottom: 12, background: match ? "rgba(39,174,96,0.10)" : mismatch ? "rgba(224,107,94,0.08)" : "#fff", border: match ? "1.5px solid rgba(39,174,96,0.5)" : mismatch ? "1.5px solid rgba(224,107,94,0.55)" : "1px solid rgba(16,24,40,0.08)" }}>
+                <span style={{ display: "block", fontSize: 13, fontWeight: 700, lineHeight: 1.45, color: match ? "#1f8a4c" : mismatch ? "#c0392b" : "#5a6680" }}>
+                  {entered == null
+                    ? `Totaal van de items: €${billTotal.toFixed(2)}`
+                    : match
                     ? `✅ Items kloppen met het rekeningtotaal: €${billTotal.toFixed(2)}`
-                    : `⚠️ Verschil van €${Math.abs(entered - billTotal).toFixed(2)} — items €${billTotal.toFixed(2)} vs bon €${entered.toFixed(2)}. Pas aan.`}
+                    : `⚠️ De items (€${billTotal.toFixed(2)}) en het rekeningtotaal op de bon (€${entered.toFixed(2)}) komen niet overeen — verschil €${Math.abs(entered - billTotal).toFixed(2)}.`}
                 </span>
-                {!match && (
-                  <button onClick={startRescan} style={{ ...S.btn, flexShrink: 0, fontSize: 12, fontWeight: 700, padding: "7px 12px", background: "#fff", border: "1px solid rgba(224,107,94,0.4)", color: "#c0392b" }}>Bon aanpassen</button>
+                {mismatch && (
+                  <span style={{ display: "block", fontSize: 12, fontWeight: 600, lineHeight: 1.45, color: "#c0392b", marginTop: 4 }}>
+                    Controleer en corrigeer eerst de items (voeg ontbrekende toe, pas prijzen/aantallen aan of gebruik &ldquo;BTW of andere kosten&rdquo;) zodat alles klopt, vóór je deelt met je gasten.
+                  </span>
                 )}
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#9aa0ab" }}>Rekeningtotaal op de bon: €</span>
+                  <input type="text" inputMode="decimal" defaultValue={entered != null ? entered.toFixed(2) : ""} key={entered ?? "leeg"} placeholder="bv. 65.90"
+                    onBlur={(e) => { const raw = e.target.value.trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }}
+                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+                    style={{ ...S.input, width: 100, padding: "6px 9px", fontSize: 13, fontWeight: 700 }} />
+                </div>
               </div>
             )
           })()}
+
           {items.length > 0 && (
           <ItemList
             items={baseItems} claimedQty={claimedQty} participants={participants} claimsForItem={claimsForItem}
@@ -1321,7 +1184,6 @@ export default function RundoTable() {
                         <button style={{ ...S.iconBtn, background: open ? "rgba(90,108,166,0.18)" : "rgba(16,24,40,0.05)" }} onClick={() => setTaxConfig(open ? null : t.id)} title="verdeling">⚙️</button>
                         <button style={S.iconBtn} onClick={() => deleteItem(t.id)} title="verwijderen">🗑️</button>
                       </div>
-                      {/* Percentage-keuze: 6 / 12 / 21 / vast bedrag */}
                       <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6, marginLeft: 25, flexWrap: "wrap" }}>
                         {[6, 12, 21].map((r) => (
                           <button key={r} onClick={() => setTaxRate(t, r)} style={{ fontSize: 11.5, fontWeight: 800, borderRadius: 9, padding: "4px 11px", cursor: "pointer", border: t.tax_rate === r ? "none" : "1px solid rgba(16,24,40,0.14)", background: t.tax_rate === r ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff", color: t.tax_rate === r ? "#fff" : "#5a6680" }}>{r}%</button>
@@ -1375,41 +1237,13 @@ export default function RundoTable() {
               </div>
             }
           />
-          
           )}
-          {isAdmin && items.length > 0 && (() => {
-            const itemsTotal = billTotal
-            const entered = group?.receipt_total ?? null
-            const match = entered != null && Math.abs(entered - itemsTotal) < 0.005
-            return (
-              <div style={{ ...S.card, marginTop: 12, background: match ? "rgba(39,174,96,0.10)" : "#fff", border: match ? "1.5px solid rgba(39,174,96,0.55)" : "1px solid rgba(16,24,40,0.08)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Totaal van de items</span>
-                  <span style={{ fontSize: 20, fontWeight: 800, color: match ? "#1f8a4c" : "#14213a" }}>€{itemsTotal.toFixed(2)}</span>
-                </div>
-                <label style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "#5a6680", marginBottom: 5 }}>Vul hier het rekeningtotaal van de bon in</label>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: "#9aa0ab" }}>€</span>
-                  <input type="text" inputMode="decimal" defaultValue={entered != null ? entered.toFixed(2) : ""} key={entered ?? "leeg"} placeholder="bv. 65.90"
-                    onBlur={(e) => { const raw = e.target.value.trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }}
-                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
-                    style={{ ...S.input, flex: 1, fontSize: 16, fontWeight: 700 }} />
-                </div>
-                {entered != null && (
-                  <div style={{ marginTop: 10, fontSize: 12.5, fontWeight: 700, lineHeight: 1.4, color: match ? "#1f8a4c" : "#a06b00", background: match ? "rgba(39,174,96,0.12)" : "rgba(233,196,95,0.16)", border: `1px solid ${match ? "rgba(39,174,96,0.4)" : "rgba(233,196,95,0.5)"}`, borderRadius: 10, padding: "8px 11px" }}>
-                    {match ? "✅ De items tellen exact op tot het rekeningtotaal — alles klopt!" : `⚠️ Verschil van €${Math.abs(entered - itemsTotal).toFixed(2)} — de items en het ingevulde totaal komen (nog) niet overeen.`}
-                  </div>
-                )}
-              </div>
-            )
-          })()}
         </div>
       )}
 
       {/* ─── ADMIN: Gasten & delen ─── */}
       {isAdmin && adminTab === "guests" && (
         <div style={{ display: "flex", flexDirection: "column" }}>
-          {/* GASTEN eerst */}
           <div style={{ ...S.card, order: 2 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <h3 style={{ ...S.h3, marginBottom: 0 }}>👥 Of voeg zelf alvast gasten toe</h3>
@@ -1500,7 +1334,6 @@ export default function RundoTable() {
             })()}
           </div>
 
-          {/* DELEN daaronder */}
           <div style={{ ...S.card, order: 1 }}>
             <div style={{ fontSize: 11.5, color: "#9aa0ab", fontWeight: 600, marginBottom: 2 }}>Bon gescand en in orde?</div>
             <h3 style={S.h3}>🔗 Laat dan nu je gasten hun consumpties aantikken</h3>
@@ -1547,15 +1380,33 @@ export default function RundoTable() {
           </div>
           {showTodo && (openUnits > 0 || undecidedShared.length > 0) && (
             <div style={{ marginTop: 10, border: "1px solid rgba(224,107,94,0.35)", background: "rgba(224,107,94,0.05)", borderRadius: 12, padding: "10px 12px" }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#c0392b", marginBottom: 6 }}>⚠️ Nog te regelen</div>
-              {items.filter((it) => !it.is_shared && it.quantity - claimedQty(it.id) > 0).map((it) => (
-                <div key={it.id} style={{ fontSize: 13, padding: "4px 0", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                  <b>{it.quantity - claimedQty(it.id)}× {it.name}</b> niet geclaimd
-                </div>
-              ))}
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#c0392b", marginBottom: 6 }}>⚠️ Nog te regelen — wijs snel toe</div>
+              {participants.length === 0 && <div style={{ fontSize: 12, color: "#a06b00", marginBottom: 6 }}>Voeg eerst gasten toe om te kunnen toewijzen.</div>}
+              {items.filter((it) => !it.is_shared && it.quantity - claimedQty(it.id) > 0).map((it) => {
+                const openN = it.quantity - claimedQty(it.id)
+                return (
+                  <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "5px 0", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{openN}× {it.name}</b> niet geclaimd</span>
+                    {participants.length > 0 && (
+                      <select value="" onChange={(e) => { const pid = e.target.value; if (pid) setClaim(it.id, pid, myQty(it.id, pid) + 1) }}
+                        style={{ ...S.input, flexShrink: 0, maxWidth: 150, padding: "5px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                        <option value="">+ wijs toe…</option>
+                        {participants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                    )}
+                  </div>
+                )
+              })}
               {undecidedShared.map((it) => (
-                <div key={it.id} style={{ fontSize: 13, padding: "4px 0", borderBottom: "1px solid rgba(0,0,0,0.05)", color: "#a06b00", display: "flex", alignItems: "center", gap: 5 }}>
-                  <ShareIcon on size={14} /> <b>{it.name}</b> — gedeeld, nog niemand neemt deel
+                <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "5px 0", borderBottom: "1px solid rgba(0,0,0,0.05)", color: "#a06b00" }}>
+                  <span style={{ flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5 }}><ShareIcon on size={14} /> <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{it.name}</b> — gedeeld, nog niemand</span></span>
+                  {participants.length > 0 && (
+                    <select value="" onChange={(e) => { const pid = e.target.value; if (pid) toggleShareClaim(it.id, pid) }}
+                      style={{ ...S.input, flexShrink: 0, maxWidth: 150, padding: "5px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      <option value="">+ laat meedelen…</option>
+                      {participants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  )}
                 </div>
               ))}
             </div>
@@ -1632,7 +1483,6 @@ export default function RundoTable() {
             {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen gasten</div>}
           </div>
 
-          {/* Rekening afsluiten / heropenen */}
           {group.finalized ? (
             <button onClick={() => finalizeBill(false)} style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 14.5, fontWeight: 700, background: "#fff", border: "1.5px solid rgba(20,33,58,0.2)", color: "#5a6680" }}>
               🔓 Rekening heropenen (gasten kunnen weer wijzigen)
@@ -1694,7 +1544,12 @@ export default function RundoTable() {
               </div>
             )}
 
-            {scanPreview.length > 0 && (
+            {scanPreview.length > 0 && (() => {
+              const _iSum = scanPreview.filter((x) => !x.distribute).reduce((s, it) => s + (it.unit_price || 0) * (it.quantity || 0), 0)
+              const _tSum = scanPreview.filter((x) => x.distribute).reduce((s, it) => s + (it.unit_price || 0), 0)
+              const _bill = parseFloat((scanTotal || "").replace(",", "."))
+              const scanMatch = !isNaN(_bill) && _bill > 0 && Math.abs((_iSum + _tSum) - _bill) < 0.01
+              return (
               <div style={{ marginBottom: 12, maxHeight: 320, overflowY: "auto", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: "#c98a00", textTransform: "uppercase" }}>{scanPreview.filter((x) => !x.distribute).length} herkend — controleer en stuur bij</div>
@@ -1702,7 +1557,6 @@ export default function RundoTable() {
                 </div>
                 {scanPreview.map((it, i) => ({ it, i })).sort((a, b) => (a.it.distribute ? 1 : 0) - (b.it.distribute ? 1 : 0)).map(({ it, i }) => {
                   const lineTotal = (it.unit_price || 0) * (it.quantity || 0)
-                  // BTW/kost-regel: eenvoudige weergave, geen aantal/gedeeld
                   if (it.distribute) {
                     const overAll = it.distribute === "all"
                     let selIdx: number[] = []
@@ -1741,15 +1595,13 @@ export default function RundoTable() {
                     )
                   }
                   return (
-                    <div key={i} style={{ border: it._isNew ? "1.5px solid #ecc85a" : "1px solid rgba(0,0,0,0.07)", borderRadius: 12, padding: 9, marginBottom: 8, background: it._isNew ? "rgba(233,196,95,0.16)" : "transparent" }}>
+                    <div key={i} style={{ border: it._isNew ? "1.5px solid #ecc85a" : scanMatch ? "1.5px solid rgba(39,174,96,0.6)" : "1px solid rgba(0,0,0,0.07)", borderRadius: 12, padding: 9, marginBottom: 8, background: it._isNew ? "rgba(233,196,95,0.16)" : scanMatch ? "rgba(39,174,96,0.07)" : "transparent" }}>
                       {it._isNew && <div style={{ fontSize: 10.5, fontWeight: 800, color: "#a06b00", marginBottom: 6 }}>✨ Net toegevoegd — controleer naam en prijs</div>}
-                      {/* Naam over de volle breedte */}
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                         <input value={it.name} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} style={{ ...S.input, flex: 1, minWidth: 0 }} />
                         <button title={it.is_shared ? "gedeeld item — klik om uit te zetten" : "maak hier een gedeeld item van (bv. water, wijn)"} onClick={() => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, is_shared: !x.is_shared } : x))} style={{ ...S.iconBtn, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: it.is_shared ? "rgba(233,196,95,0.3)" : "rgba(16,24,40,0.05)" }}><ShareIcon on={it.is_shared} /></button>
                         <button onClick={() => setScanPreview((cur) => cur.filter((_, j) => j !== i))} style={{ ...S.iconBtn, flexShrink: 0 }}>✕</button>
                       </div>
-                      {/* Aantal-stepper (houdt regeltotaal vast) + prijs/stuk + regeltotaal */}
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                           <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 16 }} onClick={() => setScanPreview((cur) => cur.map((x, j) => {
@@ -1775,7 +1627,7 @@ export default function RundoTable() {
                           <span style={{ fontSize: 12, color: "#888" }}>€/stuk</span>
                           <input type="number" step="0.01" value={it.unit_price} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, unit_price: parseFloat(e.target.value) || 0 } : x))} style={{ ...S.input, width: 84, padding: "8px 8px" }} />
                         </div>
-                        <span style={{ marginLeft: "auto", fontSize: 13, fontWeight: 800, color: "#14213a", whiteSpace: "nowrap" }}>= €{lineTotal.toFixed(2)}</span>
+                        <span style={{ marginLeft: "auto", fontSize: 13, fontWeight: 800, color: scanMatch ? "#1f8a4c" : "#14213a", whiteSpace: "nowrap" }}>= €{lineTotal.toFixed(2)}</span>
                       </div>
                       {it.is_shared && (
                         <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 7, fontSize: 11.5, color: "#a06b00", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.45)", borderRadius: 9, padding: "6px 10px", lineHeight: 1.4 }}>
@@ -1793,16 +1645,17 @@ export default function RundoTable() {
                   <button onClick={() => setShowTaxInfo(true)} style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "0 13px" }} title="uitleg">ℹ️</button>
                 </div>
               </div>
-            )}
+              )
+            })()}
 
             {/* Totaalcontrole: berekend (items + BTW) vs bon-totaal — beweegt live mee */}
             {scanPreview.length > 0 && (() => {
               const itemsSum = scanPreview.filter((x) => !x.distribute).reduce((s, it) => s + (it.unit_price || 0) * (it.quantity || 0), 0)
               const taxSum = scanPreview.filter((x) => x.distribute).reduce((s, it) => s + (it.unit_price || 0), 0)
               const computed = itemsSum + taxSum
-              const billTotal = parseFloat((scanTotal || "").replace(",", "."))
-              const hasBill = !isNaN(billTotal) && billTotal > 0
-              const diff = hasBill ? +(computed - billTotal).toFixed(2) : 0
+              const billTotalScan = parseFloat((scanTotal || "").replace(",", "."))
+              const hasBill = !isNaN(billTotalScan) && billTotalScan > 0
+              const diff = hasBill ? +(computed - billTotalScan).toFixed(2) : 0
               const ok = hasBill && Math.abs(diff) < 0.01
               return (
                 <div style={{ marginBottom: 14, border: `1.5px solid ${ok ? "rgba(39,174,96,0.4)" : hasBill ? "rgba(224,107,94,0.4)" : "rgba(16,24,40,0.1)"}`, borderRadius: 12, padding: "11px 13px", background: ok ? "rgba(39,174,96,0.06)" : hasBill ? "rgba(224,107,94,0.05)" : "#fafbff" }}>
@@ -1903,7 +1756,7 @@ export default function RundoTable() {
         </div>
       )}
 
-      {/* ─── Modal: nieuw item toevoegen (naam, prijs, gedeeld) ─── */}
+      {/* ─── Modal: nieuw item toevoegen ─── */}
       {newItem && (
         <div style={S.overlay}>
           <div style={{ ...S.modal, width: 360 }}>
@@ -1963,7 +1816,7 @@ export default function RundoTable() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SUB-COMPONENTS
+// SUB-COMPONENTEN
 // ═══════════════════════════════════════════════════════════════════════════
 function TopBar({ group, isAdmin, onHome, me, totalPersons }: { group: Group; isAdmin: boolean; onHome: () => void; me?: string; signedUp?: number; totalPersons?: number }) {
   return (
@@ -2016,11 +1869,11 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         const who = claimsForItem(it.id)
         const isNew = recentItemId === it.id
         return (
-          <div key={it.id} style={{ padding: "9px 8px", borderRadius: isNew ? 12 : 0, margin: isNew ? "4px 0" : 0, background: isNew ? "rgba(233,196,95,0.16)" : "transparent", borderTop: isNew ? "1.5px solid #ecc85a" : "1px solid transparent", borderLeft: isNew ? "1.5px solid #ecc85a" : "1px solid transparent", borderRight: isNew ? "1.5px solid #ecc85a" : "1px solid transparent", borderBottom: isNew ? "1.5px solid #ecc85a" : "1px solid rgba(0,0,0,0.05)" }}>
+          <div key={it.id} style={{ padding: "9px 8px", borderRadius: isNew ? 12 : 0, marginTop: isNew ? 4 : 0, marginBottom: isNew ? 4 : 0, background: isNew ? "rgba(233,196,95,0.16)" : "transparent", borderTop: isNew ? "1.5px solid #ecc85a" : "1px solid transparent", borderLeft: isNew ? "1.5px solid #ecc85a" : "1px solid transparent", borderRight: isNew ? "1.5px solid #ecc85a" : "1px solid transparent", borderBottom: isNew ? "1.5px solid #ecc85a" : "1px solid rgba(0,0,0,0.05)" }}>
             {isNew && <div style={{ fontSize: 10.5, fontWeight: 800, color: "#a06b00", marginBottom: 4 }}>✨ Net toegevoegd — pas de naam aan met ✏️</div>}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {it.is_shared && <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={20} /></span>}
-<div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+              <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.quantity}× {it.name}</div>
                 <div style={{ flexShrink: 0, textAlign: "right", lineHeight: 1.2 }}>
                   <div style={{ fontSize: 15, fontWeight: 800, color: "#1499b0" }}>€{(it.unit_price * it.quantity).toFixed(2)}</div>
@@ -2033,7 +1886,6 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
               <button style={S.iconBtn} onClick={() => onEdit(it)}>✏️</button>
               <button style={S.iconBtn} onClick={() => onDelete(it.id)}>🗑️</button>
             </div>
-            {/* Niet-gedeeld: wie heeft welk stuk genomen (alleen tonen) */}
             {!bareBill && !it.is_shared && participants.length > 0 && (who.length > 0 || open > 0) && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 26 }}>
                 {who.map((w, i) => (
@@ -2049,7 +1901,6 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                 <ShareIcon on size={15} /> Gedeeld item — de prijs wordt verdeeld over wie meedeelt.
               </div>
             )}
-            {/* Gedeeld: admin tikt aan wie meedronk + kan de verdeling vastzetten */}
             {!bareBill && it.is_shared && (() => {
               const sh = sharerIds(it.id)
               const heads = shareHeads(it.id)
@@ -2098,7 +1949,6 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
           </div>
         )
       })}
-      {/* Item toevoegen ook rechtsonder, vlak boven de BTW-knop */}
       <div style={{ textAlign: "right", marginTop: 10, marginBottom: 2 }}>
         <button onClick={onAddManual} style={{ ...S.btn, ...S.btnPrimary, display: "inline-block", width: "auto", padding: "8px 18px", fontSize: 13.5, fontWeight: 700 }}>+ Item toevoegen</button>
       </div>
@@ -2121,15 +1971,12 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         )
       })()}
       {onGoGuests && (
-        <button onClick={onGoGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, padding: "14px 0", fontSize: 15, fontWeight: 700 }}>👥 Naar Gasten &amp; delen →</button>
+        <button onClick={onGoGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, padding: "14px 0", fontSize: 15, fontWeight: 700 }}>👥 Ga nu naar gasten en delen →</button>
       )}
     </div>
   )
 }
 
-// Kleine kiezer om een open item aan iemand toe te wijzen. Toont eerst wie het item
-// (waarschijnlijk) nam; via "andere persoon" kan je iemand kiezen die al bevestigde —
-// dan geeft onAssign het tweede argument 'warn'=true zodat de admin een waarschuwing krijgt.
 function AssignPicker({ participants, itemId, isShared, confirmedFn, onAssign, onClose }: {
   participants: Participant[]; itemId: string; isShared?: boolean
   confirmedFn: (pid: string) => boolean
@@ -2177,13 +2024,12 @@ function ClaimScreen(props: {
   finalized: boolean; iDispute: boolean; iResolved: boolean; iComment: string; onToggleDispute: (on: boolean, comment?: string) => void
 }) {
   const { items, meId, me, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, onSwitchPerson, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
-  const adminPid = props.claimPid, setAdminPid = props.setClaimPid  // bovenaan geselecteerde (gele) persoon
-  const [assignItem, setAssignItem] = useState<string | null>(null) // welk open item we nu toewijzen
-  const [disputeOpen, setDisputeOpen] = useState(false) // gast: comment-veldje open
+  const adminPid = props.claimPid, setAdminPid = props.setClaimPid
+  const [assignItem, setAssignItem] = useState<string | null>(null)
+  const [disputeOpen, setDisputeOpen] = useState(false)
   const [disputeText, setDisputeText] = useState("")
-  const [openGuestRows, setOpenGuestRows] = useState<Set<string>>(() => new Set(meId ? [meId] : [])) // eigen naam open, rest dicht
+  const [openGuestRows, setOpenGuestRows] = useState<Set<string>>(() => new Set(meId ? [meId] : []))
 
-  // ── ADMIN-BEHEERWEERGAVE: per item wie claimde + zelf bijsturen, groen/rood status ──
   if (isAdmin) {
     const normalItems = items.filter((i) => !i.is_shared)
     const sharedItems = items.filter((i) => i.is_shared)
@@ -2201,7 +2047,6 @@ function ClaimScreen(props: {
             ? <div style={{ fontSize: 12.5, color: "#aaa", padding: 10 }}>Voeg eerst gasten toe in de tab &ldquo;Gasten &amp; delen&rdquo;.</div>
             : (
               <>
-                {/* Persoonsknoppen — alle personen. Aanklikken = geel bekijken. Bij >6: horizontaal scrollen. */}
                 {(() => {
                   const list = participants
                   const scroll = list.length > 6
@@ -2221,7 +2066,7 @@ function ClaimScreen(props: {
                               border: on ? "1px solid #1499b0" : "1px solid rgba(16,24,40,0.12)",
                               background: on ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff",
                               color: on ? "#fff" : "#5a6680",
-                            }}>{conf ? "✓ " : ""}{p.name} <span style={{ fontWeight: 600, opacity: 0.85 }}>€{pt.settled.toFixed(2)}{pt.pendingShared ? "+" : ""}</span></button>
+                            }}>{conf ? "✓ " : ""}{p.name} <span style={{ fontWeight: 700, opacity: pt.settled < 0.005 ? 1 : 0.85, color: pt.settled < 0.005 ? (on ? "#ffd7d1" : "#e0685c") : "inherit" }}>€{pt.settled.toFixed(2)}{pt.pendingShared ? "+" : ""}</span></button>
                           )
                         })}
                       </div>
@@ -2233,7 +2078,6 @@ function ClaimScreen(props: {
                   )
                 })()}
 
-                {/* Itemlijst: gele persoon licht op; open items zijn aanklikbaar om toe te wijzen */}
                 {items.map((it) => {
                   const claimed = claimedQty(it.id)
                   const open = it.quantity - claimed
@@ -2343,7 +2187,6 @@ function ClaimScreen(props: {
     )
   }
 
-  // Admin kan zonder eigen identiteit afrekenen, maar om aan te tikken moet hij "ik ben" kiezen
   if (!meId) {
     return (
       <div style={S.card}>
@@ -2454,7 +2297,6 @@ function ClaimScreen(props: {
         })}
       </div>
 
-      {/* Eigen totaal + overzicht + bevestigen */}
       <div style={{ ...S.card, background: "linear-gradient(135deg,#fbfaff,#f1f2fb)", border: "1.5px solid rgba(90,108,166,0.25)" }}>
         {(() => {
           const mine = personItems(meId)
@@ -2482,7 +2324,7 @@ function ClaimScreen(props: {
             ℹ️ Je deelt mee in gedeelde items (wijn/water). Het exacte deel kan nog wijzigen tot iedereen heeft aangetikt en bevestigd.
           </div>
         )}
-{finalized && (
+        {finalized && (
           <div id="gast-eindverdeling" style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(90,108,166,0.18)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4 }}>
               <span style={{ fontSize: 15 }}>✅</span>
@@ -2523,13 +2365,12 @@ function ClaimScreen(props: {
               <span style={{ fontSize: 15, fontWeight: 800, color: "#14213a" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2)}</span>
             </div>
           </div>
-        )}  
+        )}
         {!(finalized && !isAdmin) && (
           <button onClick={confirmMe} style={{ ...S.btn, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 15, fontWeight: 700, border: "none", ...(iConfirmed ? { background: "rgba(39,174,96,0.12)", color: "#1f8a4c" } : { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a" }) }}>
             {iConfirmed ? "✓ Bevestigd — tik om te wijzigen" : "✅ Bevestig mijn bestelling"}
           </button>
         )}
-        
         {finalized && !isAdmin && (
           <div style={{ marginTop: 12 }}>
             {iResolved ? (
@@ -2584,11 +2425,7 @@ function IdentityAdder({ onAdd }: { onAdd: (name: string, seats?: number) => voi
   )
 }
 
-// Deel-icoon: drie overlappende cirkeltjes. Grijs = niet gedeeld, goudkleurig = gedeeld.
-function ShareIcon({ on, size = 20 }: { on: boolean; size?: number }) {
-  // Drie overlappende cirkels = 'gedeeld item'. Actief: blauw · teal · groen (B3),
-  // met witte randjes zodat ze als bubbels overlappen i.p.v. op munten te lijken.
-  // Niet actief: rustige grijze open omtrek.
+function ShareIcon({ on, size = 20 }: { on?: boolean; size?: number }) {
   if (!on) {
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: "block" }}>
@@ -2600,7 +2437,6 @@ function ShareIcon({ on, size = 20 }: { on: boolean; size?: number }) {
   }
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: "block" }}>
-      {/* tekenvolgorde: groen (achter) → teal → blauw (voor) */}
       <circle cx="16" cy="13" r="5" fill="#62c75a" stroke="#fff" strokeWidth="1.4" />
       <circle cx="12" cy="9" r="5" fill="#2bb0a3" stroke="#fff" strokeWidth="1.4" />
       <circle cx="8" cy="13" r="5" fill="#4a7fd6" stroke="#fff" strokeWidth="1.4" />
@@ -2608,10 +2444,10 @@ function ShareIcon({ on, size = 20 }: { on: boolean; size?: number }) {
   )
 }
 
-// Toont 'n' persoon-icoontjes (1 per persoon) met − / + ernaast. Minimum 1.
-function SeatsControl({ n, onChange, size = 15, showLabel = false }: { n: number; onChange: (next: number) => void; size?: number; showLabel?: boolean }) {
+function SeatsControl({ n, onChange, max, size = 15, showLabel = false }: { n: number; onChange: (next: number) => void; max?: number; size?: number; showLabel?: boolean }) {
   const seats = Math.max(1, n)
-  const icons = Math.min(seats, 6) // toon max 6 kopjes, daarboven "+N"
+  const icons = Math.min(seats, 6)
+  const atMax = max != null && seats >= max
   return (
     <span onClick={(e) => e.stopPropagation()} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(90,108,166,0.1)", borderRadius: 9, padding: "2px 5px 2px 8px" }} title="Voor hoeveel personen telt deze naam (bij gedeelde items)">
       <span style={{ display: "inline-flex", alignItems: "center", gap: 1, fontSize: size, lineHeight: 1 }}>
@@ -2620,7 +2456,7 @@ function SeatsControl({ n, onChange, size = 15, showLabel = false }: { n: number
       </span>
       {showLabel && <span style={{ fontSize: 11.5, fontWeight: 700, color: "#5a6680", whiteSpace: "nowrap" }}>{seats} pers.</span>}
       <button onClick={(e) => { e.stopPropagation(); onChange(Math.max(1, seats - 1)) }} disabled={seats <= 1} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: 18, height: 18, cursor: seats <= 1 ? "default" : "pointer", fontSize: 12, lineHeight: 1, opacity: seats <= 1 ? 0.4 : 1 }}>−</button>
-      <button onClick={(e) => { e.stopPropagation(); onChange(seats + 1) }} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: 18, height: 18, cursor: "pointer", fontSize: 12, lineHeight: 1 }}>+</button>
+      <button onClick={(e) => { e.stopPropagation(); if (!atMax) onChange(seats + 1) }} disabled={atMax} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: 18, height: 18, cursor: atMax ? "default" : "pointer", fontSize: 12, lineHeight: 1, opacity: atMax ? 0.4 : 1 }}>+</button>
     </span>
   )
 }
@@ -2640,9 +2476,6 @@ function Stat({ label, value, tone }: { label: string; value: string; tone: "nav
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// STYLES (overgenomen uit party mode — zelfde look & feel)
-// ═══════════════════════════════════════════════════════════════════════════
 const S: Record<string, React.CSSProperties> = {
   page: { padding: 18, fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", background: "linear-gradient(180deg,#e4f5f8 0%,#cfecf3 55%,#bfe4ee 100%)", minHeight: "100vh", color: "#1d2433", maxWidth: 720, margin: "0 auto", WebkitFontSmoothing: "antialiased", MozOsxFontSmoothing: "grayscale" },
   card: { background: "#ffffff", border: "1px solid rgba(16,24,40,0.04)", borderRadius: 22, padding: 18, boxShadow: "0 1px 2px rgba(16,24,40,0.03), 0 14px 30px -16px rgba(80,90,140,0.18)", marginBottom: 14 },
