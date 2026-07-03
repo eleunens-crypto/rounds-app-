@@ -20,6 +20,7 @@ type Drink = {
   price: number
   emoji: string
   category: string | null
+  group_id?: string | null // null = standaard basisdrank (voor iedereen); gezet = eigen drank/aanpassing van die groep
 }
 
 type DrinkLibraryItem = {
@@ -424,7 +425,7 @@ type PersonBillLine = {
   participantId: string
   name: string
   drinkValue: number   // sum of (richtprijs × qty) for everything this person drank
-  paid: number         // sum of payments this person made
+  paid: number         // sum of payments this person made (pot-inleg + eigen rondes)
 }
 
 function calculateBill(
@@ -461,54 +462,67 @@ function calculateBill(
   return { lines, totalDrinkValue, anonymousValue, totalPaid, totalActuallySpent, difference }
 }
 
-// Fair split: verdeel het bedrag dat ÉCHT aan rondes uitgegeven werd (splitBase)
-// over de deelnemers: 20% gelijk + 80% naar hoeveel elk dronk (op richtprijs).
-// De pot-inleg blijft buiten beschouwing als "uitgave"; het overschot/tekort van
-// de pot wordt nadien via settleDebts met de virtuele "de pot" verrekend.
-// Verdeling van de fair split. 0 = volledig volgens de waarde van wat elk dronk
-// (zuiver proportioneel → ieders deel blijft zo dicht mogelijk bij de richtprijs, ook bij 1 drankje).
-// Verhoog dit (bv. 0.2) als je wil dat een deel sowieso gelijk over iedereen verdeeld wordt.
-const FAIR_EQUAL_WEIGHT = 0 // volledig proportioneel volgens drankwaarde
+// Verdeling van de fair split. 0 = volledig volgens de waarde van wat elk dronk (zuiver proportioneel).
+const FAIR_EQUAL_WEIGHT = 0
+
+// Geldhelpers: intern rekenen in hele centen zodat er geen cent-afwijkingen ontstaan
+// door floating point (bv. 0.1 + 0.2). We ronden pas op het laatste moment af.
+const toCents = (euro: number): number => Math.round((euro + Number.EPSILON) * 100)
+const round2 = (euro: number): number => toCents(euro) / 100
+
+// Verdeelt de ÉCHT betaalde drankkost (splitBase = totalActuallySpent) over de mensen.
+//  - mode "fair"  : proportioneel volgens wat elk dronk. Wie niets dronk draagt €0.
+//  - mode "equal" : het totaalbedrag gelijk over ALLE personen.
+// De pot blijft hier volledig buiten: die is voorschot en wordt apart verrekend
+// (het onbenutte deel komt terug via settleDebts met de virtuele "de pot").
+type FairSplitRow = { participantId: string; name: string; fairShare: number; paid: number; balance: number; participated: boolean }
 
 function calculateFairSplit(
   lines: PersonBillLine[],
   splitBase: number, // = totalActuallySpent (echt betaalde rondes)
   anonymousValue: number, // total richtprijs-value of orders that were never assigned to anyone
+  mode: "fair" | "equal" = "fair",
   equalWeight = FAIR_EQUAL_WEIGHT
-): { participantId: string; name: string; fairShare: number; paid: number; balance: number; participated: boolean }[] {
+): FairSplitRow[] {
   void anonymousValue
   const n = lines.length
   if (n === 0) return []
 
-  const participants = lines.filter((l) => l.drinkValue > 0 || l.paid > 0)
-  const nParticipating = participants.length || n
-
   const assignedTotal = lines.reduce((s, l) => s + l.drinkValue, 0) // som van toegewezen richtprijzen
-  const drinkers = lines.filter((l) => l.drinkValue > 0)
-  const nDrinkers = drinkers.length
+  const nDrinkers = lines.filter((l) => l.drinkValue > 0).length
+  const participatingCount = lines.filter((l) => l.drinkValue > 0 || l.paid > 0).length || n
 
   return lines.map((l) => {
+    // MODE "EQUAL": iedereen (elke persoon in de groep) draagt een gelijk deel van de drankkost.
+    if (mode === "equal") {
+      const fairShare = splitBase > 0 ? round2(splitBase / n) : 0
+      return { participantId: l.participantId, name: l.name, fairShare, paid: l.paid, balance: round2(l.paid - fairShare), participated: true }
+    }
+
+    // MODE "FAIR"
     const participated = l.drinkValue > 0 || l.paid > 0
     if (!participated) {
-      return { participantId: l.participantId, name: l.name, fairShare: 0, paid: 0, balance: 0, participated: false }
+      return { participantId: l.participantId, name: l.name, fairShare: 0, paid: l.paid, balance: l.paid, participated: false }
     }
 
-    let fairShare: number
-    if (nDrinkers === 0 || assignedTotal <= 0) {
-      // Niemand kreeg iets toegewezen — verdeel het uitgegeven bedrag gelijk
-      fairShare = splitBase / nParticipating
-    } else if (l.drinkValue > 0) {
-      // Deel gelijk over de drinkers + deel volgens de waarde van wat deze persoon dronk
-      const gelijkDeel = (splitBase * equalWeight) / nDrinkers
-      const waardeDeel = splitBase * (1 - equalWeight) * (l.drinkValue / assignedTotal)
-      fairShare = gelijkDeel + waardeDeel
-    } else {
-      // Wel betaald maar niets gedronken → krijgt inleg terug
-      fairShare = 0
+    let fairShare = 0
+    if (splitBase > 0) {
+      if (nDrinkers === 0 || assignedTotal <= 0) {
+        // Niemand kreeg iets toegewezen → gelijk over wie meedeed
+        fairShare = splitBase / participatingCount
+      } else if (l.drinkValue > 0) {
+        const gelijkDeel = (splitBase * equalWeight) / nDrinkers
+        const waardeDeel = splitBase * (1 - equalWeight) * (l.drinkValue / assignedTotal)
+        fairShare = gelijkDeel + waardeDeel
+      } else {
+        // Wel betaald / ingelegd maar niets gedronken → geen drankkost (inleg komt volledig terug)
+        fairShare = 0
+      }
     }
     if (fairShare < 0) fairShare = 0
+    fairShare = round2(fairShare)
 
-    const balance = l.paid - fairShare // positive = should get money back, negative = still owes
+    const balance = round2(l.paid - fairShare) // positive = should get money back, negative = still owes
     return { participantId: l.participantId, name: l.name, fairShare, paid: l.paid, balance, participated: true }
   })
 }
@@ -521,29 +535,31 @@ function settleDebts(
   fairSplit: { participantId: string; name: string; balance: number; participated: boolean }[],
   potBalance = 0
 ): { from: string; to: string; amount: number }[] {
-  const all = [...fairSplit]
-  if (Math.abs(potBalance) > 0.01) {
-    all.push({ participantId: "__POT__", name: "de pot", balance: potBalance, participated: true })
+  // Alles in hele centen zodat er geen cent-restjes overblijven.
+  const all = fairSplit.map((f) => ({ name: f.name, participated: f.participated, cents: toCents(f.balance) }))
+  const potCents = toCents(potBalance)
+  if (Math.abs(potCents) > 0) {
+    all.push({ name: "de pot", participated: true, cents: potCents })
   }
-  const creditors = all.filter((f) => f.participated && f.balance > 0.01).map((f) => ({ ...f }))
-  const debtors = all.filter((f) => f.participated && f.balance < -0.01).map((f) => ({ ...f, balance: -f.balance }))
+  const creditors = all.filter((f) => f.participated && f.cents > 0).map((f) => ({ ...f }))
+  const debtors = all.filter((f) => f.participated && f.cents < 0).map((f) => ({ ...f, cents: -f.cents }))
 
   const transactions: { from: string; to: string; amount: number }[] = []
   let ci = 0, di = 0
-  creditors.sort((a, b) => b.balance - a.balance)
-  debtors.sort((a, b) => b.balance - a.balance)
+  creditors.sort((a, b) => b.cents - a.cents)
+  debtors.sort((a, b) => b.cents - a.cents)
 
   while (ci < creditors.length && di < debtors.length) {
     const credit = creditors[ci]
     const debt = debtors[di]
-    const amount = Math.min(credit.balance, debt.balance)
-    if (amount > 0.01) {
-      transactions.push({ from: debt.name, to: credit.name, amount })
+    const amountCents = Math.min(credit.cents, debt.cents)
+    if (amountCents > 0) {
+      transactions.push({ from: debt.name, to: credit.name, amount: amountCents / 100 })
     }
-    credit.balance -= amount
-    debt.balance -= amount
-    if (credit.balance <= 0.01) ci++
-    if (debt.balance <= 0.01) di++
+    credit.cents -= amountCents
+    debt.cents -= amountCents
+    if (credit.cents <= 0) ci++
+    if (debt.cents <= 0) di++
   }
 
   return transactions
@@ -603,6 +619,7 @@ export default function Home() {
   type CartLine = { total: number; assignments: Record<string, number> } // assignments: participantId -> qty
   const [cart, setCart] = useState<Record<string, CartLine>>({}) // drinkId -> CartLine
   const [lastAddedDrinkIds, setLastAddedDrinkIds] = useState<string[]>([]) // laatst toegevoegde drankjes (hele laatste selectie)
+  const [lastAddedViaVoice, setLastAddedViaVoice] = useState(false) // "Laatst toegevoegd"-kaart enkel tonen na spraak
   const [openAssignFor, setOpenAssignFor] = useState<string | null>(null) // welk drankje in "Alle bestellingen" zijn toewijs-dropdown open heeft
   const [openBillAssignFor, setOpenBillAssignFor] = useState<string | null>(null) // welk drankje in het afrekenscherm zijn toewijs-dropdown open heeft
   const [billOriginallyUnassigned, setBillOriginallyUnassigned] = useState<Set<string>>(new Set()) // drankjes die bij het openen van 'afrekenen' nog niet toegewezen waren (krijgen nadien een potloodje)
@@ -651,6 +668,12 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [showFairSplit, setShowFairSplit] = useState(false)
   const [showFairSplitInfo, setShowFairSplitInfo] = useState(false)
+  const [splitMode, setSplitMode] = useState<"fair" | "equal">("fair") // fair split of iedereen evenveel
+  const [showEqualInfo, setShowEqualInfo] = useState(false)             // info-popup 'iedereen evenveel'
+  const [showVoiceExample, setShowVoiceExample] = useState(false)       // info-popup met spraak-voorbeeld
+  const [noPayWarn, setNoPayWarn] = useState(false)                     // (reserve) melding geen betaling
+  // Eigen bevestigings-popup i.p.v. de kale browser-confirm()
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; confirmLabel?: string; danger?: boolean; onConfirm: () => void } | null>(null)
 
   // ── Voice (quick order) state ────────────────────────────────────────────
   const [quickItems, setQuickItems] = useState<QuickOrderItem[]>([])
@@ -660,8 +683,13 @@ export default function Home() {
   const quickRecogRef = useRef<any>(null)
 
   // ── Loaders ───────────────────────────────────────────────────────────────
-  const loadDrinks = useCallback(async () => {
-    const { data, error } = await supabase.from("drinks").select("id,name,price,emoji,category")
+  // Laadt de standaard basisdranken (group_id = null, voor iedereen) PLUS de eigen
+  // dranken/aanpassingen van deze groep. Zonder groep: enkel de basisdranken.
+  const loadDrinks = useCallback(async (groupId?: string | null) => {
+    const base = supabase.from("drinks").select("id,name,price,emoji,category,group_id")
+    const { data, error } = groupId
+      ? await base.or(`group_id.is.null,group_id.eq.${groupId}`)
+      : await base.is("group_id", null)
     if (error) { setError("Drankjes laden mislukt"); return }
     if (mounted.current) setDrinks(data || [])
   }, [])
@@ -680,7 +708,8 @@ export default function Home() {
     }
   }, [])
 
-  useEffect(() => { loadDrinks() }, [loadDrinks])
+  useEffect(() => { loadDrinks() }, [loadDrinks]) // start: enkel basisdranken
+  useEffect(() => { if (group) loadDrinks(group.id) }, [group, loadDrinks]) // groep geopend → ook eigen dranken
   useEffect(() => { setSavedGroups(getSavedGroups()) }, [])
 
   // Bij het openen van het pot-overzicht: schone lei voor het aanvul-formulier
@@ -704,15 +733,13 @@ export default function Home() {
     let reloadTimer: ReturnType<typeof setTimeout> | null = null
     let drinksTimer: ReturnType<typeof setTimeout> | null = null
 
-    // Debounce: een reeks snelle wijzigingen (bv. een rondje afronden dat meerdere
-    // orders na elkaar wegschrijft) leidt tot ÉÉN herlaad i.p.v. tientallen.
     const scheduleReload = () => {
       if (reloadTimer) clearTimeout(reloadTimer)
       reloadTimer = setTimeout(() => { if (mounted.current) loadAll(group.id) }, 400)
     }
     const scheduleDrinks = () => {
       if (drinksTimer) clearTimeout(drinksTimer)
-      drinksTimer = setTimeout(() => { if (mounted.current) loadDrinks() }, 400)
+      drinksTimer = setTimeout(() => { if (mounted.current) loadDrinks(group.id) }, 400)
     }
 
     const channel = supabase.channel(`group-${group.id}`)
@@ -722,12 +749,9 @@ export default function Home() {
       .on("postgres_changes", { event: "*", schema: "public", table: "drinks" }, scheduleDrinks)
       .subscribe()
 
-    // Vangnet: als de tab weer zichtbaar wordt of focus krijgt, meteen verversen.
-    // Zo herstelt een tab die een realtime-event miste (achtergrond, netwerk-hik)
-    // zichzelf zodra je er terug naartoe klikt.
     const refreshOnReturn = () => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return
-      if (mounted.current) { loadAll(group.id); loadDrinks() }
+      if (mounted.current) { loadAll(group.id); loadDrinks(group.id) }
     }
     document.addEventListener("visibilitychange", refreshOnReturn)
     window.addEventListener("focus", refreshOnReturn)
@@ -751,7 +775,6 @@ export default function Home() {
       const owner_id = getOrCreateOwnerId()
       const base = stripDateSuffix(groupName.trim())
       const name = `${base} (${shortDateLabel()})`
-      // Dezelfde naam mag op een andere datum — enkel blokkeren als exact dezelfde naam + datum al opgeslagen is
       const clash = getSavedGroups().some((g) => g.name.trim().toLowerCase() === name.toLowerCase())
       if (clash) {
         setStartError("Je hebt vandaag al een opgeslagen groep met die naam. Kies een andere naam of open ze bij \u201copgeslagen groepen\u201d.")
@@ -761,7 +784,7 @@ export default function Home() {
       const { data, error } = await supabase.from("groups").insert([{ name, invite_code, owner_id }]).select().single()
       if (error || !data) { setStartError("Groep aanmaken mislukt: " + error?.message); return }
       setGroup(data)
-      setActiveGroupCode(data.invite_code) // onthoud voor deze sessie (herstel na refresh)
+      setActiveGroupCode(data.invite_code)
       await loadAll(data.id)
       saveGroupToStorage(data)
       setSavedGroups(getSavedGroups())
@@ -774,25 +797,23 @@ export default function Home() {
     const code = codeOverride ?? joinCode
     if (!code.trim() || isStarting) return
     setStartError(null)
-    setError(null) // openen lukt → kan geen dubbele zijn, dus eventuele foutmelding weg
+    setError(null)
     setIsStarting(true)
     try {
       const { data, error } = await supabase.from("groups").select("*").eq("invite_code", code.trim().toUpperCase()).single()
       if (error || !data) {
         setStartError("Groep niet gevonden. Controleer de code.")
-        clearActiveGroupCode() // eventueel oude/ongeldige sessie-groep opruimen
+        clearActiveGroupCode()
         return
       }
       setGroup(data)
-      setActiveGroupCode(data.invite_code) // onthoud voor deze sessie (herstel na refresh)
+      setActiveGroupCode(data.invite_code)
       await loadAll(data.id)
       setIsSaved(getSavedGroups().some((g) => g.id === data.id))
       setView("setup")
     } finally { setIsStarting(false) }
   }
 
-  // Herstel de laatst geopende groep na een refresh — enkel binnen dezelfde sessie.
-  // Wordt automatisch vergeten zodra de tab gesloten wordt (sessionStorage).
   const didRestore = useRef(false)
   useEffect(() => {
     if (didRestore.current) return
@@ -803,13 +824,21 @@ export default function Home() {
   }, [])
 
   // ── Person setup ─────────────────────────────────────────────────────────
+  // Haal de HUIDIGE placeholdernummers rechtstreeks uit de DB, zodat we nooit
+  // twee keer dezelfde "Persoon N" aanmaken (ook niet na verwijderen/toevoegen).
+  const usedNumbersFromDb = async (groupId: string): Promise<Set<number>> => {
+    const { data } = await supabase.from("participants").select("name").eq("group_id", groupId)
+    const used = new Set<number>()
+    ;(data || []).forEach((r: { name: string }) => { const num = nameNumberSuffix(r.name); if (num != null) used.add(num) })
+    return used
+  }
+
   const ensurePersonCount = async (count: number) => {
     if (!group) return
     const current = participants.length
     if (count > current) {
       const toAdd = count - current
-      // Eén voor één invoegen met een uniek, vrij nummer (geen dubbele "Persoon N")
-      const used = new Set(participants.map((p) => nameNumberSuffix(p.name)).filter((n): n is number => n != null))
+      const used = await usedNumbersFromDb(group.id) // vers uit DB → geen dubbels
       for (let i = 0; i < toAdd; i++) {
         const num = smallestFreeNumber(used)
         used.add(num)
@@ -817,9 +846,6 @@ export default function Home() {
       }
       await loadAll(group.id)
     } else if (count < current) {
-      // Remove the last (count - current) participants — only those with no orders ideally,
-      // but to keep it simple we just remove the extras from the end
-      // Verwijder de extra's van achteraan, maar nooit iemand met een toegewezen bestelling
       const toRemove = participants.slice(count).filter((p) => !orders.some((o) => o.participant_id === p.id))
       for (const p of toRemove) {
         await supabase.from("participants").delete().eq("id", p.id)
@@ -831,7 +857,7 @@ export default function Home() {
 
   const addPerson = async (name?: string) => {
     if (!group) return
-    const used = new Set(participants.map((p) => nameNumberSuffix(p.name)).filter((n): n is number => n != null))
+    const used = await usedNumbersFromDb(group.id) // vers uit DB → geen dubbele "Persoon N"
     const finalName = name?.trim() || `Persoon ${smallestFreeNumber(used)}`
     const { error } = await supabase.from("participants").insert([{ name: finalName, group_id: group.id }])
     if (error) { setError("Persoon toevoegen mislukt"); return }
@@ -840,21 +866,26 @@ export default function Home() {
 
   const deletePerson = async (id: string, name: string) => {
     if (!group) return
-    // Persoon met een toegewezen bestelling (in een afgerond rondje) kan niet verwijderd worden
     if (orders.some((o) => o.participant_id === id)) {
       setError(`${name} kan niet verwijderd worden: er staat al een bestelling op deze naam in een afgerond rondje.`)
       return
     }
-    if (!confirm(`${name} verwijderen?`)) return
-    const { error } = await supabase.from("participants").delete().eq("id", id)
-    if (error) { setError("Persoon verwijderen mislukt"); return }
-    // Hun betalingen/pot-inleg opruimen zodat ze nergens nog (onzichtbaar) meetellen
-    await supabase.from("payments").delete().eq("group_id", group.id).eq("participant_id", id)
-    setPaymentDraft((prev) => { const n = { ...prev }; delete n[id]; return n })
-    setPotDraft((prev) => { const n = { ...prev }; delete n[id]; return n })
-    if (editingPerson === id) setEditingPerson(null)
-    setToast(`${name} verwijderd`)
-    await loadAll(group.id)
+    setConfirmDialog({
+      title: "Persoon verwijderen?",
+      message: `${name} wordt verwijderd uit deze groep.`,
+      confirmLabel: "Verwijderen",
+      danger: true,
+      onConfirm: async () => {
+        const { error } = await supabase.from("participants").delete().eq("id", id)
+        if (error) { setError("Persoon verwijderen mislukt"); return }
+        await supabase.from("payments").delete().eq("group_id", group.id).eq("participant_id", id)
+        setPaymentDraft((prev) => { const n = { ...prev }; delete n[id]; return n })
+        setPotDraft((prev) => { const n = { ...prev }; delete n[id]; return n })
+        if (editingPerson === id) setEditingPerson(null)
+        setToast(`${name} verwijderd`)
+        await loadAll(group.id)
+      },
+    })
   }
 
   const renamePerson = async () => {
@@ -868,17 +899,15 @@ export default function Home() {
 
   // ── Cart (huidige open ronde, met per-persoon toewijzing) ────────────────
   const addToCart = (drinkId: string, delta: number, markLast = true) => {
-    if (delta > 0 && markLast) setLastAddedDrinkIds([drinkId]) // onthoud laatst toegevoegd voor bovenaan in barlijst
+    if (delta > 0 && markLast) setLastAddedDrinkIds([drinkId])
     setCart((prev) => {
       const next = { ...prev }
       const line = next[drinkId] ?? { total: 0, assignments: {} }
       const newTotal = Math.max(0, line.total + delta)
       if (newTotal === 0) { delete next[drinkId]; return next }
-      // If decreasing, also trim assignments proportionally (remove from least-specific first: reduce from any assigned person if total drops below assigned sum)
       const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
       let newAssignments = { ...line.assignments }
       if (newTotal < assignedSum) {
-        // Remove from the last-touched assignment(s) until it fits — simplest: clear all if it no longer fits
         let toRemove = assignedSum - newTotal
         const keys = Object.keys(newAssignments)
         for (let i = keys.length - 1; i >= 0 && toRemove > 0; i--) {
@@ -900,7 +929,7 @@ export default function Home() {
       if (!line) return prev
       const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
       const currentForPerson = line.assignments[participantId] ?? 0
-      if (delta > 0 && assignedSum >= line.total) return prev // can't assign more than total
+      if (delta > 0 && assignedSum >= line.total) return prev
       const newQty = Math.max(0, currentForPerson + delta)
       const newAssignments = { ...line.assignments }
       if (newQty === 0) delete newAssignments[participantId]
@@ -930,7 +959,7 @@ export default function Home() {
 
   // Terug naar het homescherm (nieuwe groep maken / opgeslagen groep openen)
   const goHome = () => {
-    clearActiveGroupCode() // je koos zelf voor het startscherm → niet meer herstellen
+    clearActiveGroupCode()
     setGroup(null)
     setView("setup")
     setCart({})
@@ -954,6 +983,7 @@ export default function Home() {
       return next
     })
     setLastAddedDrinkIds(Array.from(new Set(rows.map((o) => o.drink_id))))
+    setLastAddedViaVoice(false)
     setShowReorderPicker(false)
     setToast(`Rondje ${sess} overgenomen — pas aan en rond af 🔁`)
   }
@@ -977,8 +1007,9 @@ export default function Home() {
   const selectorTotal = Object.values(selectorDraft).reduce((s, q) => s + q, 0)
   const confirmDrinkSelector = () => {
     const addedIds = Object.entries(selectorDraft).filter(([, q]) => q > 0).map(([id]) => id)
-    addedIds.forEach((id) => addToCart(id, selectorDraft[id], false)) // niet per stuk markeren
-    setLastAddedDrinkIds(addedIds) // hele selectie als "laatst toegevoegd"
+    addedIds.forEach((id) => addToCart(id, selectorDraft[id], false))
+    setLastAddedDrinkIds(addedIds)
+    setLastAddedViaVoice(false) // via selector → geen aparte "Laatst toegevoegd"-kaart, wel highlight in de lijst
     setSelectorDraft({})
     setLastAddedCustomDrink(null)
     setShowDrinkSelector(false)
@@ -991,8 +1022,6 @@ export default function Home() {
   })
 
   // Toewijzen via één dropdown-vakje (i.p.v. een rij chips).
-  // variant "full" = volledige picker (laatst toegevoegd). variant "summary" = enkel tonen
-  // aan wie/niet toegewezen; klikken opent dezelfde dropdown (alle bestellingen).
   const renderAssignControl = (drinkId: string, line: CartLine, variant: "full" | "summary") => {
     if (participants.length === 0) return null
     const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
@@ -1001,9 +1030,8 @@ export default function Home() {
       .map((p) => ({ p, q: line.assignments[p.id] ?? 0 }))
       .filter((x) => x.q > 0)
 
-    // Personen in vaste volgorde laten staan (niet herschikken na toewijzing)
     const sortedPeople = participants
-    const gold = variant === "full" // alleen 'laatst toegevoegd' mag opvallend geel zijn
+    const gold = variant === "full"
 
     const isOpen = openAssignFor === drinkId
     const showEveryone = line.total === participants.length && participants.length > 0
@@ -1020,7 +1048,6 @@ export default function Home() {
       </div>
     ) : null
 
-    // Custom dropdown: je kan er meerdere personen na elkaar in aantikken (paneel blijft open)
     const panel = (
       <div style={{ marginTop: 6, border: "1px solid rgba(20,33,58,0.18)", borderRadius: 12, background: "#fff", overflow: "hidden" }}>
         {gold && (
@@ -1032,7 +1059,7 @@ export default function Home() {
         {sortedPeople.map((p) => {
           const q = line.assignments[p.id] ?? 0
           const canAdd = unassigned > 0
-          const elsewhere = assignedAnywhere.has(p.id) && q === 0 // heeft al een ander drankje in dit rondje
+          const elsewhere = assignedAnywhere.has(p.id) && q === 0
           return (
             <div key={p.id} style={{ display: "flex", alignItems: "center", borderTop: "1px solid rgba(0,0,0,0.04)" }}>
               <button onClick={() => { if (canAdd) { assignCartItem(drinkId, p.id, 1); if (unassigned === 1) setOpenAssignFor(null) } }} disabled={!canAdd && q === 0}
@@ -1076,7 +1103,6 @@ export default function Home() {
       )
     }
 
-    // summary: gesloten = aan wie / niet toegewezen tonen; open = paneel om aan te tikken
     if (!isOpen) {
       return (
         <div style={{ marginTop: 8 }}>
@@ -1113,7 +1139,7 @@ export default function Home() {
     )
   }
 
-  // Toewijs-control voor het afrekenscherm — zelfde stijl als bij het bestellen, werkt op de definitieve orders.
+  // Toewijs-control voor het afrekenscherm
   const renderBillAssign = (drink: Drink) => {
     if (participants.length === 0) return null
     const perPerson: Record<string, number> = {}
@@ -1128,7 +1154,6 @@ export default function Home() {
     const showEveryone = anonymousQty === participants.length && participants.length > 0
     const wasOriginallyUnassigned = billOriginallyUnassigned.has(drink.id)
 
-    // Toon enkel iets als er nu nog iets open staat, OF als dit drankje bij het openen van 'afrekenen' niet toegewezen was
     if (anonymousQty === 0 && !wasOriginallyUnassigned) return null
 
     const trigger = anonymousQty > 0 ? (
@@ -1138,7 +1163,6 @@ export default function Home() {
         <span style={{ color: "#aaa" }}>{isOpen ? "▴" : "▾"}</span>
       </button>
     ) : (
-      // Volledig toegewezen → enkel een mini potloodje om te corrigeren
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button onClick={() => setOpenBillAssignFor(isOpen ? null : drink.id)} title="Toewijzing wijzigen"
           style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 12, background: isOpen ? "rgba(90,108,166,0.16)" : "rgba(16,24,40,0.05)" }}>
@@ -1182,25 +1206,32 @@ export default function Home() {
   }
 
   const sessions = Array.from(new Set(orders.map((o) => o.session).filter((n) => n >= 1))).sort((a, b) => a - b)
-  const nextSession = (sessions.length > 0 ? Math.max(...sessions) : 0) + 1  // eerste ronde = 1
+  const nextSession = (sessions.length > 0 ? Math.max(...sessions) : 0) + 1
 
   const [finishedRoundSnapshot, setFinishedRoundSnapshot] = useState<{ session: number; cart: Record<string, CartLine> } | null>(null)
-  const [barmanStep, setBarmanStep] = useState<"list" | "pay">("list") // barman-scherm: eerst lijst, dan betaling
-  const [payWarn, setPayWarn] = useState(false) // waarschuwing als er nog niets betaald-bedrag ingevuld is
+  const [barmanStep, setBarmanStep] = useState<"list" | "pay">("list")
+  const [payWarn, setPayWarn] = useState(false)
 
   const finishRound = async () => {
     if (!group || cartTotalItems === 0) { setToast("Voeg eerst drankjes toe"); return }
     const newRoundSession = nextSession
+    // Alle rijen in één keer opbouwen en met ÉÉN insert wegschrijven → alles-of-niets,
+    // geen half rondje meer als de tab sluit of het netwerk hapert.
+    const rows: { participant_id: string | null; drink_id: string; quantity: number; group_id: string; session: number }[] = []
     for (const [drinkId, line] of Object.entries(cart)) {
       const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
       for (const [participantId, qty] of Object.entries(line.assignments)) {
         if (qty <= 0) continue
-        await supabase.from("orders").insert([{ participant_id: participantId, drink_id: drinkId, quantity: qty, group_id: group.id, session: newRoundSession }])
+        rows.push({ participant_id: participantId, drink_id: drinkId, quantity: qty, group_id: group.id, session: newRoundSession })
       }
       const remaining = line.total - assignedSum
       if (remaining > 0) {
-        await supabase.from("orders").insert([{ participant_id: null, drink_id: drinkId, quantity: remaining, group_id: group.id, session: newRoundSession }])
+        rows.push({ participant_id: null, drink_id: drinkId, quantity: remaining, group_id: group.id, session: newRoundSession })
       }
+    }
+    if (rows.length > 0) {
+      const { error } = await supabase.from("orders").insert(rows)
+      if (error) { setError("Rondje opslaan mislukt — probeer opnieuw"); return }
     }
     await loadAll(group.id)
     setBarmanStep("list")
@@ -1210,8 +1241,6 @@ export default function Home() {
     setSession(newRoundSession)
   }
 
-  // Bestelling aanpassen: zet de net afgeronde ronde terug in de bestelling om te wijzigen
-  // (verwijdert de opgeslagen orders/betalingen van die ronde zodat ze niet dubbel tellen)
   const adjustFinishedRound = async () => {
     if (!group || !finishedRoundSnapshot) return
     const round = finishedRoundSnapshot.session
@@ -1243,19 +1272,17 @@ export default function Home() {
       const text = e.results[0][0].transcript
       const { recognized, suggestion } = parseSpokenDrinks(text, drinks)
 
-      // Only add what was confidently recognized — never guess into the cart
       const addedIds: string[] = []
       recognized.forEach((pd) => {
         const match = fuzzyMatchDrink(pd.name, drinks)
         if (match) { addToCart(match.id, pd.qty, false); addedIds.push(match.id) }
       })
-      if (addedIds.length > 0) setLastAddedDrinkIds(addedIds)
+      if (addedIds.length > 0) { setLastAddedDrinkIds(addedIds); setLastAddedViaVoice(true) }
 
       if (recognized.length > 0) {
         setToast(`Toegevoegd: ${recognized.map((d) => `${d.qty}× ${d.name}`).join(", ")}`)
       }
 
-      // Show a "bedoelde je...?" banner if part of the speech wasn't confidently recognized
       if (suggestion) {
         setVoiceSuggestion({ spokenText: text, qty: suggestion.qty, suggested: suggestion.drink })
       } else if (recognized.length === 0) {
@@ -1274,6 +1301,8 @@ export default function Home() {
   const acceptVoiceSuggestion = () => {
     if (!voiceSuggestion) return
     addToCart(voiceSuggestion.suggested.id, voiceSuggestion.qty)
+    setLastAddedDrinkIds([voiceSuggestion.suggested.id])
+    setLastAddedViaVoice(true)
     setToast(`${voiceSuggestion.qty}× ${voiceSuggestion.suggested.name} toegevoegd`)
     setVoiceSuggestion(null)
   }
@@ -1300,7 +1329,6 @@ export default function Home() {
   const getRoundTotal = (r: number) =>
     orders.filter((o) => o.session === r).reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
 
-  // Move qty from anonymous to a specific person (or between persons) for a drink in a round
   const assignAnonymousQty = async (drinkId: string, round: number, participantId: string, qty: number) => {
     if (!group || qty <= 0) return
     const anon = orders.find((o) => !o.participant_id && o.drink_id === drinkId && o.session === round)
@@ -1316,17 +1344,14 @@ export default function Home() {
     await loadAll(group.id)
   }
 
-  // Wijs één niet-toegewezen eenheid van een drank toe (eerste ronde waar er nog eentje open staat) — voor het afrekenscherm
   const assignOneAnonymous = async (drinkId: string, participantId: string) => {
     const anon = orders.find((o) => !o.participant_id && o.drink_id === drinkId && o.quantity > 0)
     if (!anon) return
     await assignAnonymousQty(drinkId, anon.session, participantId, 1)
   }
 
-  // Wijs meerdere personen elk één niet-toegewezen eenheid toe in één DB-bewerking (voor 'meerdere'/'iedereen' in het afrekenscherm)
   const assignAnonymousToMany = async (drinkId: string, participantIds: string[]) => {
     if (!group || participantIds.length === 0) return
-    // bouw een lijst van beschikbare anonieme eenheden (met hun sessie)
     const units: number[] = []
     orders.filter((o) => !o.participant_id && o.drink_id === drinkId && o.quantity > 0).forEach((o) => { for (let i = 0; i < o.quantity; i++) units.push(o.session) })
     const take = Math.min(participantIds.length, units.length)
@@ -1342,7 +1367,6 @@ export default function Home() {
       if (addIndex[k] === undefined) { addIndex[k] = adds.length; adds.push({ session, pid, qty: 0 }) }
       adds[addIndex[k]].qty += 1
     }
-    // 1) trek af van de anonieme orders per sessie
     for (const [sessStr, removeQty] of Object.entries(removeBySession)) {
       let toRemove = removeQty
       const sess = Number(sessStr)
@@ -1355,7 +1379,6 @@ export default function Home() {
         toRemove -= dec
       }
     }
-    // 2) tel op bij de personen
     for (const { session, pid, qty } of adds) {
       const existing = orders.find((o) => o.participant_id === pid && o.drink_id === drinkId && o.session === session)
       if (existing) await supabase.from("orders").update({ quantity: existing.quantity + qty }).eq("id", existing.id)
@@ -1364,14 +1387,12 @@ export default function Home() {
     await loadAll(group.id)
   }
 
-  // Haal één eenheid weg bij een persoon (eerste sessie waar die het drankje heeft) → terug 'niet toegewezen'
   const unassignOneFromPerson = async (drinkId: string, participantId: string) => {
     const ord = orders.find((o) => o.participant_id === participantId && o.drink_id === drinkId && o.quantity > 0)
     if (!ord) return
     await unassignOrderQty(drinkId, participantId, ord.session, 1)
   }
 
-  // Haal een toewijzing weg bij een persoon → de drankjes blijven bestaan maar worden weer "niet toegewezen" (totaal blijft gelijk)
   const unassignOrderQty = async (drinkId: string, participantId: string, round: number, qty: number) => {
     if (!group || qty <= 0) return
     const personOrder = orders.find((o) => o.participant_id === participantId && o.drink_id === drinkId && o.session === round)
@@ -1388,33 +1409,28 @@ export default function Home() {
 
   const deleteRound = async (round: number) => {
     if (!group) return
-    if (!confirm(`Ronde ${round} verwijderen?\n\nLet op: je verliest ook de historiek (bestellingen én betalingen) van deze ronde. De overige rondes worden hernummerd zodat ze netjes op volgorde blijven.`)) return
-    // 1. Verwijder bestellingen + betalingen van deze ronde
-    await supabase.from("orders").delete().eq("group_id", group.id).eq("session", round)
-    await supabase.from("payments").delete().eq("group_id", group.id).eq("session", round)
-    // 2. Hernummer de overige rondes (alleen ronde 1+, de pot = sessie 0 blijft) zodat ze 1,2,3,... blijven
-    const remaining = Array.from(new Set(
-      orders.filter((o) => o.session !== round && o.session >= 1).map((o) => o.session)
-    )).sort((a, b) => a - b)
-    let newNum = 1
-    for (const oldSession of remaining) {
-      if (oldSession !== newNum) {
-        await supabase.from("orders").update({ session: newNum }).eq("group_id", group.id).eq("session", oldSession)
-        await supabase.from("payments").update({ session: newNum }).eq("group_id", group.id).eq("session", oldSession)
-      }
-      newNum++
-    }
-    await loadAll(group.id)
+    setConfirmDialog({
+      title: `Ronde ${round} verwijderen?`,
+      message: "Je verliest ook de bestellingen én betalingen van deze ronde. De overige rondes behouden hun nummer.",
+      confirmLabel: "Verwijderen",
+      danger: true,
+      onConfirm: async () => {
+        // Enkel deze ronde verwijderen; NIET hernummeren (zo blijft "Ronde 3" ook op een
+        // tweede toestel "Ronde 3" — er ontstaat gewoon een gaatje in de nummering).
+        await supabase.from("orders").delete().eq("group_id", group.id).eq("session", round)
+        await supabase.from("payments").delete().eq("group_id", group.id).eq("session", round)
+        await loadAll(group.id)
         setOpenRounds(null)
-    setEditingRound(null)
-    setToast(`Ronde ${round} verwijderd`)
+        setEditingRound(null)
+        setToast(`Ronde ${round} verwijderd`)
+      },
+    })
   }
 
   // ── Payments ──────────────────────────────────────────────────────────────
   const openPaymentEditor = (round: number) => {
     const existing = payments.filter((p) => p.session === round)
     const draft: Record<string, string> = {}
-    // Enkel de pot en bestaande personen overnemen — wees-betalingen van verwijderde personen negeren
     existing.forEach((p) => {
       const key = p.participant_id ?? POT_PAYER
       if (key === POT_PAYER || participants.some((pp) => pp.id === key)) draft[key] = String(p.amount)
@@ -1426,7 +1442,6 @@ export default function Home() {
   const savePayments = async () => {
     if (!group || paymentEditRound === null) return
     const round = paymentEditRound
-    // Remove old payments for this round, then insert new ones
     await supabase.from("payments").delete().eq("group_id", group.id).eq("session", round)
     const inserts = (Object.entries(paymentDraft) as [string, string][])
       .filter(([key, amt]) => (key === POT_PAYER || participants.some((p) => p.id === key)) && parseFloat(amt) > 0)
@@ -1442,7 +1457,7 @@ export default function Home() {
 
   // ── Pot (gezamenlijke inleg vooraf, sessie 0) ──────────────────────────────
   const POT_SESSION = 0
-  const POT_PAYER = "__POT__"  // sleutel in paymentDraft = betaald uit de pot (participant_id null)
+  const POT_PAYER = "__POT__"
   const potTotal = payments.filter((p) => p.session === POT_SESSION).reduce((s, p) => s + p.amount, 0)
 
   const openPotModal = () => {
@@ -1475,19 +1490,16 @@ export default function Home() {
     setToast("Pot opgeslagen 💰")
   }
 
-  // Pot achteraf aanvullen — voegt een extra inleg toe (verwijdert niets)
   const addToPot = async () => {
     if (!group) return
     let rows = (Object.entries(potAddDraft) as [string, string][])
       .map(([pid, v]) => ({ participant_id: pid, amount: parseFloat((v || "").replace(",", ".")) }))
       .filter((r) => participants.some((p) => p.id === r.participant_id) && !isNaN(r.amount) && r.amount > 0)
-    // Niets per persoon ingevuld → gebruik het p.p.-bedrag voor iedereen
     if (rows.length === 0) {
       const amt = parseFloat((potAddBulk || "").replace(",", "."))
       if (isNaN(amt) || amt <= 0 || participants.length === 0) { setPotAddWarn(true); setToast("Vul eerst een bedrag in om de pot aan te vullen ⚠️"); return }
       rows = participants.map((p) => ({ participant_id: p.id, amount: amt }))
     }
-    // Alles in één insert → zelfde tijdstip → telt als één 'pot'
     const inserts = rows.map((r) => ({ group_id: group.id, session: POT_SESSION, participant_id: r.participant_id, amount: r.amount }))
     const { error } = await supabase.from("payments").insert(inserts)
     if (error) { setError("Pot aanvullen mislukt"); return }
@@ -1519,54 +1531,81 @@ export default function Home() {
     if (!category) { setAddDrinkWarn("Kies nog een categorie."); return }
     setAddDrinkWarn(null)
     const cat = category || FALLBACK_CATEGORY
-    // Eigen toegevoegde drank krijgt enkel een ✨ als "nieuw/zelf toegevoegd"-merkteken (geen vast drank-icoon)
     const autoEmoji = "✨"
-    const { data, error } = await supabase.from("drinks").insert([{ name: name.trim(), price: priceNum, emoji: autoEmoji, category: cat }]).select().single()
+    // Eigen drank hoort enkel bij DEZE groep (group_id), niet bij andere groepen.
+    const { data, error } = await supabase.from("drinks").insert([{ name: name.trim(), price: priceNum, emoji: autoEmoji, category: cat, group_id: group?.id ?? null }]).select().single()
     if (error) { setError("Drank toevoegen mislukt: " + error.message); return }
     setNewDrink({ name: "", price: "", emoji: "", category: newDrink.category })
     setToast(`${name} toegevoegd`)
-    await loadDrinks()
-    // Vanuit de drank-selector: spring naar de juiste categorie + toon een melding waar het staat.
-    // Anders (bv. via de knop in 'Nieuwe bestelling'): meteen in de bestelling / "Laatst toegevoegd" zetten.
+    await loadDrinks(group?.id)
     if (showDrinkSelector) {
       setActiveCategory(cat)
       setLastAddedCustomDrink({ name: name.trim(), category: cat })
     } else if (data?.id) {
       addToCart(data.id, 1)
+      setLastAddedDrinkIds([data.id])
+      setLastAddedViaVoice(true) // enkel drankje → 'Laatst toegevoegd'-kaart mag
     }
     setShowAddDrink(false)
   }
 
   const saveEditedDrink = async () => {
     if (!editingDrink) return
-    const { error } = await supabase.from("drinks").update({ name: editingDrink.name, price: editingDrink.price, emoji: editingDrink.emoji, category: editingDrink.category }).eq("id", editingDrink.id)
-    if (error) { setError("Drank opslaan mislukt"); return }
+    if (editingDrink.group_id) {
+      // Eigen drank/aanpassing van deze groep → gewoon bijwerken.
+      const { error } = await supabase.from("drinks").update({ name: editingDrink.name, price: editingDrink.price, emoji: editingDrink.emoji, category: editingDrink.category }).eq("id", editingDrink.id)
+      if (error) { setError("Drank opslaan mislukt"); return }
+    } else {
+      // Basisdrank aanpassen → NIET de globale drank wijzigen (dat zou andere groepen raken),
+      // maar een eigen versie voor deze groep aanmaken die de basisdrank hier vervangt.
+      const { error } = await supabase.from("drinks").insert([{ name: editingDrink.name, price: editingDrink.price, emoji: editingDrink.emoji, category: editingDrink.category, group_id: group?.id ?? null }])
+      if (error) { setError("Drank opslaan mislukt"); return }
+    }
     setEditingDrink(null)
-    await loadDrinks()
+    await loadDrinks(group?.id)
   }
 
-  // Enkel zelf toegevoegde dranken (met ✨-merkteken) mogen verwijderd worden; de basis blijft staan
+  // ✨ = zelf toegevoegde drank. group_id gezet = hoort bij deze groep (eigen drank of aanpassing).
   const isCustomDrink = (d: Drink) => d.emoji.startsWith("✨")
+  const isGroupDrink = (d: Drink) => !!d.group_id
 
   const deleteDrinkFromList = async (id: string) => {
     const d = drinks.find((dr) => dr.id === id)
-    if (d && !isCustomDrink(d)) { setToast("Basisdranken kunnen niet verwijderd worden"); return }
-    if (!confirm("Verwijderen?")) return
-    const { error } = await supabase.from("drinks").delete().eq("id", id)
-    if (error) { setError("Drank verwijderen mislukt"); return }
-    await loadDrinks()
+    if (d && !isGroupDrink(d)) { setToast("Basisdranken kunnen niet verwijderd worden"); return }
+    setConfirmDialog({
+      title: "Drankje verwijderen?",
+      message: d ? `${d.name} verdwijnt uit de lijst van deze groep.` : "Dit drankje wordt verwijderd.",
+      confirmLabel: "Verwijderen",
+      danger: true,
+      onConfirm: async () => {
+        const { error } = await supabase.from("drinks").delete().eq("id", id)
+        if (error) { setError("Drank verwijderen mislukt"); return }
+        await loadDrinks(group?.id)
+      },
+    })
   }
 
   // ── Computed totals ──────────────────────────────────────────────────────
   const getGlobalTotal = () => orders.reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
   const getPersonTotal = (pid: string) => orders.filter((o) => o.participant_id === pid).reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
 
-  const groupedDrinks = groupDrinksByCategory(drinks)
+  // Voor de keuzelijsten/bewerken: als deze groep een eigen versie van een drank heeft
+  // (zelfde naam), toon dan die i.p.v. de basisdrank. De volledige `drinks` blijft wél
+  // bestaan zodat oude bestellingen (die naar de basisdrank verwijzen) herkend blijven.
+  const visibleDrinks = (() => {
+    const groupRows = drinks.filter((d) => d.group_id)
+    const shadowed = new Set(groupRows.map((d) => normalizeDrinkName(d.name)))
+    const baseRows = drinks.filter((d) => !d.group_id && !shadowed.has(normalizeDrinkName(d.name)))
+    return [...baseRows, ...groupRows]
+  })()
+  const groupedDrinks = groupDrinksByCategory(visibleDrinks)
   const bill = calculateBill(participants, orders, drinks, payments)
-  // Fair split = de ÉCHT betaalde rondebedragen (wat in "wie betaalde" ingegeven werd), verdeeld naar wat elk dronk.
-  // De inleg die niet gebruikt werd, komt terug.
-  const fairSplit = calculateFairSplit(bill.lines, bill.totalActuallySpent, bill.anonymousValue)
+  // Fair split = de ÉCHT betaalde rondebedragen, verdeeld naar wat elk dronk (of gelijk bij 'iedereen evenveel').
+  // De inleg die niet gebruikt werd, komt terug via de virtuele "de pot".
+  const fairSplit = calculateFairSplit(bill.lines, bill.totalActuallySpent, bill.anonymousValue, splitMode)
   const settledDebts = settleDebts(fairSplit, bill.totalActuallySpent - bill.totalPaid)
+  // Kan er wel een verdeling gemaakt worden? Enkel als er echt iets betaald werd voor rondes.
+  const canSplit = bill.totalActuallySpent > 0.01
 
   // ═══════════════════════════════════════════════════════════════════════
   // RENDER: Start screen (no group yet)
@@ -1637,9 +1676,9 @@ export default function Home() {
         {fairInfoMode && (
           <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setFairInfoMode(null)}>
             <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#14213a", display: "flex", alignItems: "center", gap: 8 }}>Wat is Rundo?</h3>
+              <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#14213a", display: "flex", alignItems: "center", gap: 8 }}>Hoe werkt Fair Split?</h3>
               <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-                Met <b>Rundo Party</b> neem je makkelijk bestellingen op voor een groep. De rekening wordt niet zomaar gelijk verdeeld maar via <b style={{ color: "#c98a00" }}>Fair Split</b>. Op basis van richtprijzen schatten we wie wat dronk. <b>Niet perfect, wel veel eerlijker!</b>
+                Met <b style={{ color: "#c98a00" }}>Fair Split</b> delen we het totaalbedrag niet door het aantal personen. Op basis van richtprijzen schatten we wie wat dronk. <b>Niet perfect, wel veel eerlijker!</b>
               </p>
               <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setFairInfoMode(null)}>Begrepen</button>
             </div>
@@ -1673,7 +1712,7 @@ export default function Home() {
               {drinks.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>Nog geen dranken</div>}
               {(() => {
                 const groups: Record<string, Drink[]> = {}
-                drinks.forEach((d) => { const k = d.category ?? FALLBACK_CATEGORY; (groups[k] ||= []).push(d) })
+                visibleDrinks.forEach((d) => { const k = d.category ?? FALLBACK_CATEGORY; (groups[k] ||= []).push(d) })
                 const order = [...Object.keys(CATEGORY_LABELS), ...Object.keys(groups).filter((k) => !CATEGORY_LABELS[k])]
                 return order.filter((k) => groups[k]?.length).map((cat) => (
                   <div key={cat} style={{ marginBottom: 14 }}>
@@ -1693,8 +1732,8 @@ export default function Home() {
                           <>
                             <span style={{ flex: 1, fontSize: 14 }}>{d.emoji} {d.name} <span style={{ color: "#999" }}>— €{d.price.toFixed(2)}</span></span>
                             <button style={S.iconBtn} onClick={() => setEditingDrink(d)}>✏️</button>
-                            {isCustomDrink(d)
-                              ? <button style={S.iconBtn} onClick={() => deleteDrinkFromList(d.id)}>🗑️</button>
+                            {isGroupDrink(d)
+                              ? <button style={S.iconBtn} title={isCustomDrink(d) ? "Eigen drankje verwijderen" : "Aanpassing ongedaan maken (terug naar basisprijs)"} onClick={() => deleteDrinkFromList(d.id)}>🗑️</button>
                               : <span title="Basisdrank — blijft altijd staan" style={{ fontSize: 12, color: "#bbb", width: 30, textAlign: "center" }}>🔒</span>}
                           </>
                         )}
@@ -1801,7 +1840,7 @@ export default function Home() {
         {([
           { id: "setup", label: potTotal > 0 ? "👥 Groep + Pot" : "👥 Groep" },
           { id: "ordering", label: "🛒 Nieuwe bestelling" },
-          { id: "rounds", label: "📦 Rondjes" },
+          { id: "rounds", label: "📦 Overzicht Rondjes" },
           { id: "bill", label: "💰 Afrekenen" },
         ] as { id: AppView; label: string }[]).map((t) => (
           <button
@@ -1922,30 +1961,38 @@ export default function Home() {
             )}
           </div>
 
-          {/* Bovenaan: 2 knoppen — opname EN/OF drankje selecteren + Bestelling afronden */}
+          {/* Bovenaan: 2 knoppen — links selecteren, rechts (smaller) spraak met info-i */}
           <div style={{ ...S.card, padding: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button
-                onClick={quickVoiceActive ? stopQuickVoice : startQuickVoice}
-                style={{
-                  ...S.btn, flex: 1, padding: "14px 8px", fontSize: 13, fontWeight: 700, border: "none", lineHeight: 1.25,
-                  background: quickVoiceActive ? "#e74c3c" : "linear-gradient(135deg,#5a6ca6,#7283b6)",
-                  color: "#fff",
-                  animation: quickVoiceActive ? "pulse 1.2s infinite" : "none",
-                  boxShadow: quickVoiceActive ? "0 0 0 5px rgba(231,76,60,0.18)" : "0 6px 18px rgba(27,42,74,0.3)",
-                }}
-              >
-                {quickVoiceActive ? "🔴 Luistert..." : "🎤 Spreek je bestelling in"}
-              </button>
-              <span style={{ fontSize: 11, fontWeight: 800, color: "#aaa", flexShrink: 0 }}>EN/OF</span>
+            <div style={{ display: "flex", alignItems: "stretch", gap: 8 }}>
               <button
                 onClick={openDrinkSelector}
-                style={{ ...S.btn, flex: 1, padding: "14px 8px", fontSize: 13, fontWeight: 700, border: "none", lineHeight: 1.25, background: "linear-gradient(135deg,#5a6ca6,#7283b6)", color: "#fff", boxShadow: "0 6px 18px rgba(27,42,74,0.3)" }}
+                style={{ ...S.btn, flex: 1.15, padding: "14px 8px", fontSize: 13, fontWeight: 700, border: "none", lineHeight: 1.25, background: "linear-gradient(135deg,#5a6ca6,#7283b6)", color: "#fff", boxShadow: "0 6px 18px rgba(27,42,74,0.3)" }}
               >
                 🍹 Selecteer drankje(s)
               </button>
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#aaa", flexShrink: 0, alignSelf: "center" }}>EN/OF</span>
+              <div style={{ flex: 0.85, position: "relative", display: "flex" }}>
+                <button
+                  onClick={quickVoiceActive ? stopQuickVoice : startQuickVoice}
+                  style={{
+                    ...S.btn, width: "100%", padding: "14px 8px", fontSize: 12.5, fontWeight: 700, border: "none", lineHeight: 1.25,
+                    background: quickVoiceActive ? "#e74c3c" : "linear-gradient(135deg,#5a6ca6,#7283b6)",
+                    color: "#fff",
+                    animation: quickVoiceActive ? "pulse 1.2s infinite" : "none",
+                    boxShadow: quickVoiceActive ? "0 0 0 5px rgba(231,76,60,0.18)" : "0 6px 18px rgba(27,42,74,0.3)",
+                  }}
+                >
+                  {quickVoiceActive ? "🔴 Luistert..." : "🎤 Spreek je bestelling in"}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowVoiceExample(true) }}
+                  title="Hoe werkt dit?"
+                  style={{ position: "absolute", top: 4, right: 4, width: 18, height: 18, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.9)", color: "#5a6ca6", fontSize: 11, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}
+                >
+                  i
+                </button>
+              </div>
             </div>
-
           </div>
 
           {/* "Bedoelde je...?" suggestie banner */}
@@ -1961,9 +2008,8 @@ export default function Home() {
             </div>
           )}
 
-          {/* Laatst toegevoegd — meteen aanpassen, verwijderen én toewijzen */}
-          {(() => {
-            // Blijft staan zolang het niet volledig toegewezen is; pas als de laatste eenheid is toegewezen verdwijnt het hier en blijft het in "Alle bestellingen"
+          {/* Laatst toegevoegd — ENKEL na spraak (via selector gaat het meteen naar de lijst) */}
+          {lastAddedViaVoice && (() => {
             const shown = lastAddedDrinkIds.filter((id) => {
               const l = cart[id]
               if (!l || l.total <= 0) return false
@@ -1976,7 +2022,7 @@ export default function Home() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: "#c98a00", textTransform: "uppercase", letterSpacing: 0.6 }}>✨ Laatst toegevoegd</div>
                   <button
-                    onClick={() => setLastAddedDrinkIds([])}
+                    onClick={() => { setLastAddedDrinkIds([]); setLastAddedViaVoice(false) }}
                     style={{ background: "none", border: "none", color: "#9aa0ab", fontSize: 11, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2, flexShrink: 0 }}
                   >
                     ⏳ alles later toewijzen
@@ -2000,7 +2046,6 @@ export default function Home() {
                           <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 15, background: "rgba(27,42,74,0.15)" }} onClick={() => addToCart(d.id, 1)}>+</button>
                           <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={() => removeFromCart(d.id)}>🗑️</button>
                         </div>
-                        {/* Toewijzen via dropdown-vakje */}
                         {renderAssignControl(d.id, line, "full")}
                       </div>
                     )
@@ -2024,14 +2069,16 @@ export default function Home() {
               {(() => {
                 const entries = Object.entries(cart).filter(([, line]) => line.total > 0)
                 const lastSet = new Set(lastAddedDrinkIds)
+                const othersPresent = entries.some(([id]) => !lastSet.has(id))
                 const ordered = [...entries.filter(([id]) => lastSet.has(id)), ...entries.filter(([id]) => !lastSet.has(id))]
                 return (
                   <div style={{ display: "grid", gridTemplateColumns: ordered.length > 1 ? "repeat(auto-fill, minmax(230px, 1fr))" : "1fr", gap: 10 }}>
                     {ordered.map(([drinkId, line]) => {
                       const d = drinks.find((dr) => dr.id === drinkId)
                       if (!d) return null
+                      const justAdded = lastSet.has(drinkId) && othersPresent // markeer nieuw toegevoegde tussen bestaande
                       return (
-                        <div key={drinkId} style={{ border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 10 }}>
+                        <div key={drinkId} style={{ border: justAdded ? "1.5px solid #ecc85a" : "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 10, background: justAdded ? "rgba(233,196,95,0.12)" : "transparent" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                             <span style={{ fontSize: 19, flexShrink: 0 }}>{d.emoji}</span>
                             <span style={{ flex: 1, fontSize: 14, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</span>
@@ -2040,7 +2087,6 @@ export default function Home() {
                             <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 14, background: "rgba(27,42,74,0.12)" }} onClick={() => addToCart(d.id, 1)}>+</button>
                             <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={() => removeFromCart(d.id)}>🗑️</button>
                           </div>
-                          {/* Enkel tonen aan wie / niet toegewezen; klikken opent dropdown */}
                           {renderAssignControl(drinkId, line, "summary")}
                         </div>
                       )
@@ -2069,7 +2115,6 @@ export default function Home() {
             <button style={{ ...S.btn, fontSize: 11.5, padding: "6px 12px", color: "#8a93a8", background: "rgba(16,24,40,0.04)", border: "1px solid rgba(16,24,40,0.08)" }} onClick={() => setShowEditDrinks(true)}>✏️ Dranken of Prijzen bewerken</button>
           </div>
 
-          {/* Bevestiging vóór afronden */}
           {/* Kiezer: begin met een vorig rondje */}
           {showReorderPicker && (
             <div style={S.overlay}>
@@ -2454,15 +2499,61 @@ export default function Home() {
         </div>
       )}
 
-      {/* Fair split — uitleg popup */}
+      {/* Fair split — uitleg popup (ingekort) */}
       {fairInfoMode && (
         <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setFairInfoMode(null)}>
           <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#14213a", display: "flex", alignItems: "center", gap: 8 }}>Wat is Rundo?</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#14213a", display: "flex", alignItems: "center", gap: 8 }}>Hoe werkt Fair Split?</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              Met <b>Rundo Party</b> neem je makkelijk bestellingen op voor een groep. De rekening wordt niet zomaar gelijk verdeeld maar via <b style={{ color: "#c98a00" }}>Fair Split</b>. Op basis van richtprijzen schatten we wie wat dronk. <b>Niet perfect, wel veel eerlijker!</b>
+              Met <b style={{ color: "#c98a00" }}>Fair Split</b> delen we het totaalbedrag niet door het aantal personen. Op basis van richtprijzen schatten we wie wat dronk. <b>Niet perfect, wel veel eerlijker!</b>
             </p>
             <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setFairInfoMode(null)}>Begrepen</button>
+          </div>
+        </div>
+      )}
+
+      {/* Info-popup: spraakvoorbeeld */}
+      {showVoiceExample && (
+        <div style={{ ...S.overlay, zIndex: 2400 }} onClick={() => setShowVoiceExample(false)}>
+          <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#14213a", display: "flex", alignItems: "center", gap: 8 }}>🎤 Spreek je bestelling in</h3>
+            <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
+              Zeg bijvoorbeeld <b>&ldquo;2 pintjes&rdquo;</b> — klik daarna opnieuw en zeg <b>&ldquo;1 gin-tonic&rdquo;</b>, enz. Je kan zoveel drankjes na elkaar inspreken als je wil.
+            </p>
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowVoiceExample(false)}>Begrepen</button>
+          </div>
+        </div>
+      )}
+
+      {/* Info-popup: iedereen evenveel */}
+      {showEqualInfo && (
+        <div style={{ ...S.overlay, zIndex: 2400 }} onClick={() => setShowEqualInfo(false)}>
+          <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#14213a", display: "flex", alignItems: "center", gap: 8 }}>🟰 Iedereen evenveel</h3>
+            <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
+              De totale rekening wordt gelijk verdeeld over alle personen.
+            </p>
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowEqualInfo(false)}>Begrepen</button>
+          </div>
+        </div>
+      )}
+
+      {/* Eigen bevestigings-popup (i.p.v. de kale browser-confirm) */}
+      {confirmDialog && (
+        <div style={{ ...S.overlay, zIndex: 2500 }} onClick={() => setConfirmDialog(null)}>
+          <div style={{ ...S.modal, width: 360, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>{confirmDialog.danger ? "🗑️" : "❓"}</div>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#14213a", margin: "0 0 6px" }}>{confirmDialog.title}</h3>
+            <p style={{ fontSize: 13.5, color: "#777", lineHeight: 1.5, margin: "0 0 18px" }}>{confirmDialog.message}</p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 700 }} onClick={() => setConfirmDialog(null)}>Annuleer</button>
+              <button
+                style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 800, border: "none", color: "#fff", background: confirmDialog.danger ? "linear-gradient(135deg,#e0685c,#d1483b)" : "linear-gradient(135deg,#5a6ca6,#7283b6)" }}
+                onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn() }}
+              >
+                {confirmDialog.confirmLabel ?? "Ja"}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2748,7 +2839,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* Net afgeronde ronde — fullscreen bevestiging voor de barman + betaler kiezen */}
+      {/* Net afgeronde ronde — fullscreen bevestiging voor de barman + snel betalen */}
       {finishedRoundSnapshot && (
         <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 2100, overflowY: "auto", padding: 28 }}>
           <div style={{ maxWidth: 560, margin: "0 auto" }}>
@@ -2757,11 +2848,10 @@ export default function Home() {
               <h2 style={{ fontSize: 24, fontWeight: 800, margin: "6px 0 0" }}>🧾 Voor de barman</h2>
             </div>
 
-            {barmanStep === "list" ? (
-            <>
+            {/* Lijst van wat besteld is */}
             {(() => {
               const visible = Object.entries(finishedRoundSnapshot.cart).filter(([, line]) => line.total > 0)
-              const multi = visible.length > 4 // bij 5+ in kolommen, max ±4 onder elkaar
+              const multi = visible.length > 4
               return (
                 <div style={multi ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(185px, 1fr))", gap: 10 } : undefined}>
                   {visible.map(([drinkId, line]) => {
@@ -2787,13 +2877,148 @@ export default function Home() {
               )
             })()}
 
-            {/* Stap 1-acties: aanpassen (klein) of door naar wie-betaalde (groot) */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
+            {/* Snel betalen: bedrag + wie betaalde (chips, meerdere mag, incl. pot) */}
+            {(() => {
+              const round = finishedRoundSnapshot.session
+              const potUsedOther = payments.filter((p) => p.session >= 1 && !p.participant_id && p.session !== round).reduce((s, p) => s + p.amount, 0)
+              const potAvailable = Math.max(0, potTotal - potUsedOther)
+              // Wie is er al aangeduid als betaler (een bedrag ingevuld)?
+              const payerKeys = Object.entries(paymentDraft).filter(([, v]) => parseFloat(v || "") > 0).map(([k]) => k)
+              const singlePayer = payerKeys.length <= 1
+              const totalEntered = [POT_PAYER, ...participants.map((p) => p.id)].reduce((s, k) => s + (parseFloat(paymentDraft[k] || "") || 0), 0)
+
+              return (
+                <div style={{ marginTop: 22, padding: "16px 18px", background: "rgba(27,42,74,0.05)", borderRadius: 16, border: "1px solid rgba(27,42,74,0.15)" }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 4, color: "#14213a" }}>💳 Exact betaald bedrag voor dit rondje?</div>
+                  <p style={{ fontSize: 12, color: "#8a93a3", margin: "0 0 12px" }}>Vul het bedrag in en tik wie betaalde. Meestal 1 persoon — meerdere mag ook.</p>
+
+                  {/* Wie betaalde? — chips (personen + pot). Tik aan om een bedragveld te openen. */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                    {participants.map((p) => {
+                      const active = (paymentDraft[p.id] ?? "") !== ""
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => {
+                            setPayWarn(false)
+                            setPaymentDraft((prev) => {
+                              const n = { ...prev }
+                              if (n[p.id] !== undefined) delete n[p.id]
+                              else n[p.id] = ""
+                              return n
+                            })
+                          }}
+                          style={{ border: active ? "1.5px solid #5a6ca6" : "1px solid rgba(20,33,58,0.2)", background: active ? "rgba(90,108,166,0.12)" : "#fff", color: active ? "#3b486a" : "#5a6680", borderRadius: 20, padding: "7px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                        >
+                          {active ? "✓ " : ""}{p.name}
+                        </button>
+                      )
+                    })}
+                    {/* De pot als betaler */}
+                    {potTotal > 0 ? (() => {
+                      const active = (paymentDraft[POT_PAYER] ?? "") !== ""
+                      return (
+                        <button
+                          onClick={() => {
+                            setPayWarn(false)
+                            setPaymentDraft((prev) => {
+                              const n = { ...prev }
+                              if (n[POT_PAYER] !== undefined) delete n[POT_PAYER]
+                              else n[POT_PAYER] = ""
+                              return n
+                            })
+                          }}
+                          style={{ border: active ? "1.5px solid #ecc85a" : "1px solid rgba(233,196,95,0.6)", background: active ? "rgba(233,196,95,0.2)" : "#fffdf6", color: "#a06b00", borderRadius: 20, padding: "7px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}
+                        >
+                          {active ? "✓ " : ""}💰 De pot
+                        </button>
+                      )
+                    })() : (
+                      <button onClick={openPotModal} style={{ border: "1px dashed rgba(20,33,58,0.25)", background: "rgba(0,0,0,0.02)", color: "#c98a00", borderRadius: 20, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+                        💰 geen pot gelegd · + leg een pot
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Bedragvelden voor wie aangetikt is */}
+                  {(paymentDraft[POT_PAYER] !== undefined || participants.some((p) => paymentDraft[p.id] !== undefined)) && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 4 }}>
+                      {paymentDraft[POT_PAYER] !== undefined && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 12 }}>
+                          <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#a06b00" }}>💰 De pot betaalde</span>
+                          <span style={{ color: "#999" }}>€</span>
+                          <input
+                            type="number"
+                            autoFocus={singlePayer}
+                            placeholder="0"
+                            value={paymentDraft[POT_PAYER] ?? ""}
+                            onChange={(e) => {
+                              setPayWarn(false)
+                              const v = parseFloat(e.target.value)
+                              const clamped = isNaN(v) ? e.target.value : String(Math.min(v, potAvailable))
+                              setPaymentDraft((prev) => ({ ...prev, [POT_PAYER]: clamped }))
+                            }}
+                            style={{ ...S.input, width: 90 }}
+                          />
+                        </div>
+                      )}
+                      {participants.filter((p) => paymentDraft[p.id] !== undefined).map((p) => (
+                        <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#fff", border: "1px solid rgba(90,108,166,0.3)", borderRadius: 12 }}>
+                          <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#3b486a", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name} betaalde</span>
+                          <span style={{ color: "#999" }}>€</span>
+                          <input
+                            type="number"
+                            autoFocus={singlePayer}
+                            placeholder="0"
+                            value={paymentDraft[p.id] ?? ""}
+                            onChange={(e) => { setPayWarn(false); setPaymentDraft((prev) => ({ ...prev, [p.id]: e.target.value })) }}
+                            style={{ ...S.input, width: 90 }}
+                          />
+                        </div>
+                      ))}
+                      {!singlePayer && (
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#8a93a3", fontWeight: 700, padding: "2px 4px" }}>
+                          <span>Samen betaald</span>
+                          <span>€{totalEntered.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {potTotal > 0 && paymentDraft[POT_PAYER] !== undefined && (
+                    <div style={{ fontSize: 10, color: "#a06b00", marginTop: 2, marginLeft: 4 }}>nog €{potAvailable.toFixed(2)} beschikbaar in de pot</div>
+                  )}
+                </div>
+              )
+            })()}
+
+            {/* Acties */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 18 }}>
+              {payWarn && (
+                <div style={{ fontSize: 13, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45 }}>
+                  ⚠️ Geef eerst het betaalde bedrag in — via <b>de pot</b> of een <b>persoon</b>. Of kies <b>Later invullen</b>.
+                </div>
+              )}
               <button
-                style={{ ...S.btn, width: "100%", padding: "15px 0", fontSize: 16, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }}
-                onClick={() => setBarmanStep("pay")}
+                style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }}
+                onClick={async () => {
+                  if (!group) return
+                  const round = finishedRoundSnapshot.session
+                  const inserts = (Object.entries(paymentDraft) as [string, string][])
+                    .filter(([key, amt]) => (key === POT_PAYER || participants.some((p) => p.id === key)) && parseFloat(amt) > 0)
+                    .map(([key, amt]) => ({ group_id: group.id, session: round, participant_id: key === POT_PAYER ? null : key, amount: parseFloat(amt) }))
+                  if (inserts.length === 0) { setPayWarn(true); return }
+                  await supabase.from("payments").insert(inserts)
+                  await loadAll(group.id)
+                  setPayWarn(false)
+                  setPaymentDraft({})
+                  setFinishedRoundSnapshot(null)
+                  setBarmanStep("list")
+                  setView("ordering")
+                  setToast(`Ronde ${round} afgerond!`)
+                }}
               >
-                💳 Wie betaalde dit rondje? →
+                💾 Opslaan &amp; sluiten
               </button>
               <div style={{ display: "flex", gap: 8 }}>
                 <button
@@ -2804,117 +3029,12 @@ export default function Home() {
                 </button>
                 <button
                   style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, background: "transparent", border: "1px solid rgba(20,33,58,0.2)", color: "#6a7384" }}
-                  onClick={() => { setPaymentDraft({}); setFinishedRoundSnapshot(null); setView("ordering"); setBarmanStep("list") }}
-                >
-                  ⏳ Later invullen
-                </button>
-              </div>
-            </div>
-            </>
-            ) : (
-            <>
-            <div style={{ marginTop: 8, padding: "16px 18px", background: "rgba(27,42,74,0.05)", borderRadius: 16, border: "1px solid rgba(27,42,74,0.15)" }}>
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>💳 Wie betaalde deze ronde?</div>
-
-              {/* De pot als betaler — enkel als er een pot is */}
-              {(() => {
-                const potUsedOther = payments.filter((p) => p.session >= 1 && !p.participant_id && p.session !== finishedRoundSnapshot.session).reduce((s, p) => s + p.amount, 0)
-                const potAvailable = Math.max(0, potTotal - potUsedOther)
-                if (potTotal <= 0) {
-                  return (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "rgba(0,0,0,0.03)", border: "1px dashed rgba(20,33,58,0.2)", borderRadius: 12, marginBottom: 12 }}>
-                      <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#aaa" }}>💰 De pot</span>
-                      <span style={{ fontSize: 12, color: "#bbb" }}>geen pot gelegd</span>
-                      <button onClick={openPotModal} style={{ background: "none", border: "none", color: "#c98a00", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>+ leg een pot</button>
-                    </div>
-                  )
-                }
-                return (
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 12 }}>
-                      <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#14213a" }}>💰 De pot</span>
-                      <span style={{ color: "#999" }}>€</span>
-                      <input
-                        type="number"
-                        placeholder="0"
-                        value={paymentDraft[POT_PAYER] ?? ""}
-                        onChange={(e) => {
-                          setPayWarn(false)
-                          const v = parseFloat(e.target.value)
-                          const clamped = isNaN(v) ? e.target.value : String(Math.min(v, potAvailable))
-                          setPaymentDraft((prev) => ({ ...prev, [POT_PAYER]: clamped }))
-                        }}
-                        style={{ ...S.input, width: 80 }}
-                      />
-                    </div>
-                    <div style={{ fontSize: 10, color: "#a06b00", marginTop: 3, marginLeft: 4 }}>
-                      nog €{potAvailable.toFixed(2)} beschikbaar in de pot
-                    </div>
-                  </div>
-                )
-              })()}
-
-              <div style={participants.length > 4 ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", columnGap: 16, rowGap: 8 } : undefined}>
-              {participants.map((p) => (
-                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: participants.length > 4 ? 0 : 8 }}>
-                  <span style={{ flex: 1, fontSize: 14, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                  <span style={{ color: "#999" }}>€</span>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={paymentDraft[p.id] ?? ""}
-                    onChange={(e) => { setPayWarn(false); setPaymentDraft((prev) => ({ ...prev, [p.id]: e.target.value })) }}
-                    style={{ ...S.input, width: 80 }}
-                  />
-                </div>
-              ))}
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 20 }}>
-              {payWarn && (
-                <div style={{ fontSize: 13, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45 }}>
-                  ⚠️ Geef eerst het betaalde bedrag van dit rondje in — via <b>de pot</b> of een <b>persoon</b>. Of kies <b>Later invullen</b> om het later te doen.
-                </div>
-              )}
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  style={{ ...S.btn, flexShrink: 0, padding: "13px 16px", fontSize: 13, fontWeight: 700, background: "transparent", border: "1px solid rgba(20,33,58,0.2)", color: "#6a7384" }}
                   onClick={() => { setPayWarn(false); setPaymentDraft({}); setFinishedRoundSnapshot(null); setView("ordering"); setBarmanStep("list") }}
                 >
                   ⏳ Later invullen
                 </button>
-                <button
-                  style={{ ...S.btn, flex: 1, padding: "13px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }}
-                  onClick={async () => {
-                    if (!group) return
-                    const round = finishedRoundSnapshot.session
-                    const inserts = (Object.entries(paymentDraft) as [string, string][])
-                      .filter(([key, amt]) => (key === POT_PAYER || participants.some((p) => p.id === key)) && parseFloat(amt) > 0)
-                      .map(([key, amt]) => ({ group_id: group.id, session: round, participant_id: key === POT_PAYER ? null : key, amount: parseFloat(amt) }))
-                    if (inserts.length === 0) { setPayWarn(true); return }
-                    await supabase.from("payments").insert(inserts)
-                    await loadAll(group.id)
-                    setPayWarn(false)
-                    setPaymentDraft({})
-                    setFinishedRoundSnapshot(null)
-                    setBarmanStep("list")
-                    setView("ordering")
-                    setToast(`Ronde ${round} afgerond!`)
-                  }}
-                >
-                  💾 Opslaan &amp; sluiten
-                </button>
               </div>
-              <button
-                style={{ ...S.btn, width: "100%", padding: "11px 0", fontSize: 13, background: "transparent", border: "1px solid rgba(20,33,58,0.2)", color: "#6a7384" }}
-                onClick={() => { setPayWarn(false); setBarmanStep("list") }}
-              >
-                ← Terug naar het lijstje
-              </button>
             </div>
-            </>
-            )}
           </div>
         </div>
       )}
@@ -2960,7 +3080,7 @@ export default function Home() {
 
           <div style={S.card}>
             <div style={{ marginBottom: 8 }}>
-              <h3 style={{ ...S.h3, marginBottom: 6 }}>🧾 Wie dronk wat + hoeveel betaald?</h3>
+              <h3 style={{ ...S.h3, marginBottom: 6 }}>🧾 Wie dronk en betaalde wat?</h3>
               {(bill.totalActuallySpent > 0.01 || potTotal > 0) && (() => {
                 const potUsed = payments.filter((p) => p.session >= 1 && !p.participant_id).reduce((s, p) => s + p.amount, 0)
                 const potLeft = Math.max(0, potTotal - potUsed)
@@ -2979,7 +3099,7 @@ export default function Home() {
               {showBillPrices && participants.length > 0 && participants.length < 4 && (
                 <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: 12, padding: "0 4px 6px" }}>
                   <div style={{ width: 74, textAlign: "right", fontSize: 10, color: "#aaa", fontWeight: 700 }}>indicatief</div>
-                  <button onClick={() => setShowFairSplit((v) => !v)} title="Fair split tonen of verbergen" style={{ width: 162, textAlign: "center", fontSize: 11, fontWeight: 800, color: showFairSplit ? "#14213a" : "#a06b00", background: showFairSplit ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "rgba(233,196,95,0.16)", border: showFairSplit ? "none" : "1px solid rgba(233,196,95,0.55)", borderRadius: 8, padding: "4px 0", letterSpacing: 0.5, boxShadow: showFairSplit ? "0 2px 8px rgba(233,196,95,0.4)" : "none", cursor: "pointer" }}>{showFairSplit ? "FAIR SPLIT ✕" : "+ FAIR SPLIT"}</button>
+                  <button onClick={() => setShowFairSplit((v) => !v)} title="Fair split tonen of verbergen" style={{ width: 162, textAlign: "center", fontSize: 11, fontWeight: 800, color: showFairSplit ? "#14213a" : "#a06b00", background: showFairSplit ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "rgba(233,196,95,0.16)", border: showFairSplit ? "none" : "1px solid rgba(233,196,95,0.55)", borderRadius: 8, padding: "4px 0", letterSpacing: 0.5, boxShadow: showFairSplit ? "0 2px 8px rgba(233,196,95,0.4)" : "none", cursor: "pointer" }}>{showFairSplit ? (splitMode === "equal" ? "EVENVEEL ✕" : "FAIR SPLIT ✕") : "+ FAIR SPLIT"}</button>
                 </div>
               )}
               {orders.some((o) => o.participant_id) && (
@@ -3053,7 +3173,7 @@ export default function Home() {
                           }
                           return <span style={{ color: "#999", fontWeight: 700 }}>✓ staat gelijk</span>
                         }
-                        const fairLabel = <span style={{ fontSize: 9.5, color: "#caa54e", fontWeight: 600, letterSpacing: 0.3 }}>fair split</span>
+                        const fairLabel = <span style={{ fontSize: 9.5, color: "#caa54e", fontWeight: 600, letterSpacing: 0.3 }}>{splitMode === "equal" ? "evenveel" : "fair split"}</span>
                         if (multiCol) {
                           return (
                             <div style={{ width: "100%", borderTop: "1px solid rgba(0,0,0,0.07)", marginTop: 8, paddingTop: 7 }}>
@@ -3087,34 +3207,71 @@ export default function Home() {
               )}
               {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20 }}>Nog geen personen</div>}
 
-              {/* Knop onder de drankjes: simpel — verdeel eerlijk via fair split */}
+              {/* Knoppen onder de drankjes: Eerlijke rekening + Iedereen evenveel */}
               {!showBillPrices && participants.length > 0 && (
-                <div style={{ marginTop: 14, textAlign: "center" }}>
-                  <button
-                    onClick={() => {
-                      const anon = orders.filter((o) => !o.participant_id && o.quantity > 0)
-                      const unassigned = anon.reduce((s, o) => s + o.quantity, 0)
-                      if (unassigned > 0) {
-                        setAssignPopupDrinkIds(Array.from(new Set(anon.map((o) => o.drink_id))))
-                        setShowAssignPopup(true)
-                      }
-                      else { setShowBillPrices(true); setShowFairSplit(true) }
-                    }}
-                    style={{ width: "100%", border: "none", borderRadius: 14, padding: "14px 18px", cursor: "pointer", background: "linear-gradient(135deg,#5a6ca6,#7283b6)", boxShadow: "0 6px 16px -6px rgba(90,108,166,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
-                  >
-                    <span style={{ width: 28, height: 28, borderRadius: "50%", background: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}>
-                      <RundoLogo size={20} />
-                    </span>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>Verdeel eerlijk via Fair split</span>
-                  </button>
-                  <div style={{ display: "flex", justifyContent: "center", marginTop: 9 }}>
-                    <button
-                      onClick={() => setFairInfoMode("what")}
-                      style={{ background: "none", border: "none", color: "#7a8296", fontSize: 12, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}
-                    >
-                      Hoe werkt Fair Split?
-                    </button>
-                  </div>
+                <div style={{ marginTop: 14 }}>
+                  {!canSplit ? (
+                    /* Punt 9: geen betaling ingevuld → geen split mogelijk */
+                    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "rgba(224,107,94,0.08)", border: "1px solid rgba(224,107,94,0.35)", borderRadius: 14, padding: "13px 15px" }}>
+                      <span style={{ fontSize: 20, lineHeight: 1 }}>ℹ️</span>
+                      <div style={{ fontSize: 13, color: "#8a4b42", lineHeight: 1.5 }}>
+                        <b>Nog geen verdeling mogelijk.</b> Er is nog niet ingevuld wie wat betaalde (een persoon of de pot). Vul dat eerst in bij <b>&ldquo;Overzicht Rondjes&rdquo;</b> — daarna kan je hier de rekening eerlijk verdelen.
+                        <div style={{ marginTop: 10 }}>
+                          <button onClick={() => { setOpenRounds(null); setView("rounds") }} style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "8px 14px", background: "linear-gradient(135deg,#5a6ca6,#7283b6)", border: "none", color: "#fff" }}>→ Naar Overzicht Rondjes</button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+                        {/* Eerlijke rekening met Fair split (groot, links) */}
+                        <button
+                          onClick={() => {
+                            setSplitMode("fair")
+                            const anon = orders.filter((o) => !o.participant_id && o.quantity > 0)
+                            const unassigned = anon.reduce((s, o) => s + o.quantity, 0)
+                            if (unassigned > 0) {
+                              setAssignPopupDrinkIds(Array.from(new Set(anon.map((o) => o.drink_id))))
+                              setShowAssignPopup(true)
+                            } else { setShowBillPrices(true); setShowFairSplit(true) }
+                          }}
+                          style={{ flex: 1.4, border: "none", borderRadius: 14, padding: "14px 14px", cursor: "pointer", background: "linear-gradient(135deg,#5a6ca6,#7283b6)", boxShadow: "0 6px 16px -6px rgba(90,108,166,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: 9 }}
+                        >
+                          <span style={{ width: 26, height: 26, borderRadius: "50%", background: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}>
+                            <RundoLogo size={18} />
+                          </span>
+                          <span style={{ fontSize: 14.5, fontWeight: 800, color: "#fff", lineHeight: 1.15 }}>Eerlijke rekening met Fair split</span>
+                        </button>
+
+                        {/* Iedereen evenveel (kleiner, rechts) */}
+                        <button
+                          onClick={() => {
+                            setSplitMode("equal")
+                            setShowBillPrices(true)
+                            setShowFairSplit(true)
+                          }}
+                          style={{ flex: 0.9, border: "1.5px solid rgba(90,108,166,0.4)", borderRadius: 14, padding: "14px 10px", cursor: "pointer", background: "#fff", color: "#5a6ca6", fontSize: 13, fontWeight: 800, lineHeight: 1.2 }}
+                        >
+                          🟰 Iedereen<br />evenveel
+                        </button>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 9 }}>
+                        <button
+                          onClick={() => setFairInfoMode("what")}
+                          style={{ background: "none", border: "none", color: "#7a8296", fontSize: 12, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}
+                        >
+                          Hoe werkt Fair Split?
+                        </button>
+                        <button
+                          onClick={() => setShowEqualInfo(true)}
+                          style={{ background: "none", border: "none", color: "#7a8296", fontSize: 12, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}
+                        >
+                          Wat is &ldquo;iedereen evenveel&rdquo;?
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -3142,10 +3299,13 @@ export default function Home() {
               const potOver = Math.max(0, potTotal - potUsed)
               const indicatief = bill.totalDrinkValue
               const echtBetaald = bill.totalActuallySpent
-              const verschil = echtBetaald - indicatief // > 0: indicatief te laag (iedereen meer), < 0: te hoog (minder)
-              const heeftVerschil = Math.abs(verschil) > 0.01 && indicatief > 0.01
               return (
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+                  {splitMode === "equal" && (
+                    <div style={{ textAlign: "center", fontSize: 12, color: "#5a6680", fontWeight: 700, marginBottom: 10, background: "rgba(90,108,166,0.08)", borderRadius: 10, padding: "7px 10px" }}>
+                      🟰 De totale rekening wordt gelijk verdeeld: €{echtBetaald.toFixed(2)} ÷ {participants.length} = <b>€{(participants.length > 0 ? echtBetaald / participants.length : 0).toFixed(2)}</b> per persoon
+                    </div>
+                  )}
                   <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                     <div style={{ flex: 1, background: "rgba(20,33,58,0.04)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
                       <div style={{ fontSize: 11, color: "#888", marginBottom: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
@@ -3177,7 +3337,7 @@ export default function Home() {
             {/* Fair split weer verbergen */}
             {showBillPrices && (
               <div style={{ textAlign: "center", marginTop: 14 }}>
-                <button onClick={() => { setShowBillPrices(false); setShowFairSplit(false) }} style={{ background: "linear-gradient(135deg,#5a6ca6,#7283b6)", border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", borderRadius: 20, padding: "8px 16px", boxShadow: "0 6px 16px -6px rgba(90,108,166,0.55)" }}>Verberg Fair split</button>
+                <button onClick={() => { setShowBillPrices(false); setShowFairSplit(false); setSplitMode("fair") }} style={{ background: "linear-gradient(135deg,#5a6ca6,#7283b6)", border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", borderRadius: 20, padding: "8px 16px", boxShadow: "0 6px 16px -6px rgba(90,108,166,0.55)" }}>Verberg verdeling</button>
               </div>
             )}
           </div>
@@ -3237,7 +3397,7 @@ export default function Home() {
                     <>
                       <h3 style={{ fontSize: 18, fontWeight: 800, color: "#14213a", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>🍹 Nog niet toegewezen</h3>
                       <p style={{ fontSize: 13, color: "#777", marginTop: 0, marginBottom: 16, lineHeight: 1.55 }}>
-                        Er zijn nog <b style={{ color: "#e0685c" }}>{liveUnassignedTotal} {liveUnassignedTotal === 1 ? "drankje" : "drankjes"}</b> niet toegewezen. Wijs ze toe in <b>&ldquo;Alle bestelde drankjes&rdquo;</b> of in <b>&ldquo;Rondjesoverzicht&rdquo;</b>.
+                        Er zijn nog <b style={{ color: "#e0685c" }}>{liveUnassignedTotal} {liveUnassignedTotal === 1 ? "drankje" : "drankjes"}</b> niet toegewezen. Wijs ze toe in <b>&ldquo;Alle bestelde drankjes&rdquo;</b> of in <b>&ldquo;Overzicht Rondjes&rdquo;</b>.
                       </p>
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         <button
@@ -3246,7 +3406,7 @@ export default function Home() {
                         >
                           Naar &ldquo;Alle bestelde drankjes&rdquo;
                         </button>
-                        <button style={{ ...S.btn, width: "100%", padding: "10px 0", fontSize: 13, fontWeight: 700, background: "rgba(90,108,166,0.1)", border: "1px solid rgba(90,108,166,0.3)", color: "#5a6ca6" }} onClick={() => { setOpenRounds(null); setShowAssignPopup(false); setView("rounds") }}>Naar &ldquo;Rondjesoverzicht&rdquo;</button>
+                        <button style={{ ...S.btn, width: "100%", padding: "10px 0", fontSize: 13, fontWeight: 700, background: "rgba(90,108,166,0.1)", border: "1px solid rgba(90,108,166,0.3)", color: "#5a6ca6" }} onClick={() => { setOpenRounds(null); setShowAssignPopup(false); setView("rounds") }}>Naar &ldquo;Overzicht Rondjes&rdquo;</button>
                       </div>
                     </>
                   )}
