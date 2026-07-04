@@ -1681,7 +1681,7 @@ export default function Home() {
     return (
       <div style={S.page}>
         <div style={{ maxWidth: 420, margin: "40px auto" }}>
-          <a href="/table" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#a89a6a", textDecoration: "none", marginBottom: 14, cursor: "pointer" }}>← naar Rundo Table</a>
+          <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#a89a6a", textDecoration: "none", marginBottom: 14, cursor: "pointer" }}>← naar Rundo startscherm</a>
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginBottom: 8 }}>
               <RundoLogo size={60} />
@@ -1749,7 +1749,7 @@ export default function Home() {
             <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>Hoe werkt Fair Split?</h3>
               <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-                Met <b style={{ color: "#c98a00" }}>Fair Split</b> delen we het totaalbedrag niet door het aantal personen. Op basis van richtprijzen schatten we wie wat dronk. <b>Niet perfect, wel veel eerlijker!</b>
+                Met <b style={{ color: "#c98a00" }}>Fair Split</b> delen we het totaalbedrag <b>NIET</b> door het aantal personen. Op basis van richtprijzen per drankje verdelen we de totaalprijs volgens wie wat dronk. <b>Niet perfect, wel veel eerlijker!</b>
               </p>
               <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setFairInfoMode(null)}>Begrepen</button>
             </div>
@@ -1910,7 +1910,7 @@ export default function Home() {
         {([
           { id: "setup", label: potTotal > 0 ? "👥 Groep + Pot" : "👥 Groep" },
           { id: "ordering", label: "🛒 Nieuwe bestelling" },
-          { id: "rounds", label: "📦 Overzicht Rondjes" },
+          { id: "rounds", label: `📦 Overzicht Rondjes${sessions.length > 0 ? ` (${sessions.length})` : ""}` },
           { id: "bill", label: "💰 Afrekenen" },
         ] as { id: AppView; label: string }[]).map((t) => (
           <button
@@ -2187,7 +2187,7 @@ export default function Home() {
             <div style={{ display: "flex", gap: 8, alignItems: "stretch", marginTop: 2, marginBottom: 14 }}>
               {!orderEditing && (
                 <button
-                  onClick={() => setOrderEditing(true)}
+                  onClick={openDrinkSelector}
                   style={{ ...S.btn, flex: 0.6, padding: "13px 8px", fontSize: 13, fontWeight: 700, background: "#fffef9", border: "1.5px solid rgba(120,95,20,0.22)", color: "#8a7d55" }}
                 >
                   ✏️ Bestelling wijzigen
@@ -2601,7 +2601,7 @@ export default function Home() {
           <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>Hoe werkt Fair Split?</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              Met <b style={{ color: "#c98a00" }}>Fair Split</b> delen we het totaalbedrag niet door het aantal personen. Op basis van richtprijzen schatten we wie wat dronk. <b>Niet perfect, wel veel eerlijker!</b>
+              Met <b style={{ color: "#c98a00" }}>Fair Split</b> delen we het totaalbedrag <b>NIET</b> door het aantal personen. Op basis van richtprijzen per drankje verdelen we de totaalprijs volgens wie wat dronk. <b>Niet perfect, wel veel eerlijker!</b>
             </p>
             <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setFairInfoMode(null)}>Begrepen</button>
           </div>
@@ -3243,25 +3243,24 @@ export default function Home() {
                           <div style={{ fontSize: 12, color: "#bbb" }}>nog niets gedronken</div>
                         ) : (() => {
                           const all = Object.values(drinkSummary)
-                          const LIMIT = 6
+                          const totalQty = all.reduce((s, ds) => s + ds.qty, 0)
                           const expanded = expandedBillPersons.has(p.id)
-                          const shown = expanded ? all : all.slice(0, LIMIT)
-                          const hidden = all.length - shown.length
+                          const toggle = () => setExpandedBillPersons((prev) => { const n = new Set(prev); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n })
+                          if (!expanded) {
+                            return (
+                              <button onClick={toggle} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(150,110,20,0.05)", border: "1px solid rgba(120,95,20,0.16)", borderRadius: 10, padding: "5px 12px", fontSize: 12.5, fontWeight: 700, color: "#8a7d55", cursor: "pointer" }}>
+                                🍹 {totalQty} {totalQty === 1 ? "drankje" : "drankjes"} <span style={{ fontSize: 10, opacity: 0.8 }}>▾ toon</span>
+                              </button>
+                            )
+                          }
                           return (
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                              {shown.map((ds) => (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                              {all.map((ds) => (
                                 <span key={ds.drink.id} style={{ background: "rgba(150,110,20,0.05)", borderRadius: 10, padding: "3px 10px", fontSize: 12 }}>
                                   {ds.drink.emoji} {ds.qty}× {ds.drink.name}
                                 </span>
                               ))}
-                              {(hidden > 0 || expanded) && all.length > LIMIT && (
-                                <button
-                                  onClick={() => setExpandedBillPersons((prev) => { const n = new Set(prev); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n })}
-                                  style={{ background: "rgba(214,158,20,0.14)", border: "1px solid rgba(214,158,20,0.4)", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontWeight: 700, color: "#a06b00", cursor: "pointer" }}
-                                >
-                                  {expanded ? "− minder" : `+${hidden} meer`}
-                                </button>
-                              )}
+                              <button onClick={toggle} style={{ background: "rgba(150,110,20,0.09)", border: "1px solid rgba(120,95,20,0.16)", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontWeight: 700, color: "#8a7d55", cursor: "pointer" }}>▴ verberg</button>
                             </div>
                           )
                         })()}
@@ -3300,8 +3299,8 @@ export default function Home() {
                           if (!row || !row.participated) return null
                           const isFair = kind === "fair"
                           return (
-                            <div style={{ width: compact ? "auto" : 158, minWidth: compact ? 100 : undefined, boxSizing: "border-box", textAlign: "center", background: isFair ? "linear-gradient(135deg,#f4c430,#f7d461)" : "rgba(233,196,95,0.14)", border: isFair ? "2px solid #3d6fd0" : "1.5px solid rgba(214,158,20,0.55)", borderRadius: 12, padding: compact ? "5px 9px" : "7px 8px" }}>
-                              <div style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, color: isFair ? "#2f5bb0" : "#a06b00" }}>{isFair ? "fair split" : "evenveel"}</div>
+                            <div style={{ width: compact ? "auto" : 158, minWidth: compact ? 100 : undefined, boxSizing: "border-box", textAlign: "center", background: isFair ? "linear-gradient(135deg,#f4c430,#f7d461)" : "rgba(232,126,20,0.12)", border: isFair ? "2px solid #3d6fd0" : "2px solid #e0842e", borderRadius: 12, padding: compact ? "5px 9px" : "7px 8px" }}>
+                              <div style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, color: isFair ? "#2f5bb0" : "#b5591a" }}>{isFair ? "fair split" : "evenveel"}</div>
                               <div style={{ fontSize: compact ? 16 : 19, fontWeight: 800, color: "#4a3f1e" }}>€{row.fairShare.toFixed(2)}</div>
                               <div style={{ fontSize: 10.5, marginTop: 2, lineHeight: 1.3 }}>{renderSettle(row, debts, credits)}</div>
                             </div>
@@ -3415,7 +3414,7 @@ export default function Home() {
                               setShowBillPrices(true)
                               setShowFairSplit(true)
                             }}
-                            style={{ width: "100%", border: "2.5px solid #d99a1f", borderRadius: 14, padding: "12px 8px", cursor: "pointer", background: "linear-gradient(135deg,#f7e0a0,#f1cd72)", color: "#6b4e12", fontSize: 12.5, fontWeight: 800, lineHeight: 1.25, minHeight: 54, boxShadow: "0 4px 12px -6px rgba(214,158,20,0.6)" }}
+                            style={{ width: "100%", border: "2.5px solid #e0842e", borderRadius: 14, padding: "12px 8px", cursor: "pointer", background: "linear-gradient(135deg,#fbcf98,#f6b25e)", color: "#8a4514", fontSize: 12.5, fontWeight: 800, lineHeight: 1.25, minHeight: 54, boxShadow: "0 4px 12px -6px rgba(224,132,46,0.6)" }}
                           >
                             Iedereen betaalt evenveel
                           </button>
@@ -3493,22 +3492,22 @@ export default function Home() {
 
             {/* Verdeling weer verbergen + de andere methode ernaast vergelijken (in beide modi) */}
             {showBillPrices && (
-              <div style={{ display: "flex", justifyContent: "center", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
-                <button onClick={() => { setShowBillPrices(false); setShowFairSplit(false); setCompareOther(false); setSplitMode("fair") }} style={{ background: "#fff", border: "1.5px solid rgba(120,95,20,0.25)", color: "#8a7d55", fontSize: 13, fontWeight: 800, cursor: "pointer", borderRadius: 20, padding: "8px 16px" }}>
+              <div style={{ display: "flex", gap: 8, marginTop: 14, alignItems: "stretch" }}>
+                <button onClick={() => { setShowBillPrices(false); setShowFairSplit(false); setCompareOther(false); setSplitMode("fair") }} style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(120,95,20,0.25)", color: "#8a7d55", fontSize: 13.5, fontWeight: 800, cursor: "pointer", borderRadius: 16, padding: "13px 10px", lineHeight: 1.2 }}>
                   {splitMode === "equal" ? "Verberg iedereen evenveel" : "Verberg Fair split"}
                 </button>
                 {(() => {
                   // In 'evenveel' vergelijk je met Fair Split (enkel als geldig); in Fair Split vergelijk je met 'evenveel'.
                   const canCompare = splitMode === "equal" ? canFairSplit : true
                   if (!canCompare) return null
-                  const showsFair = splitMode === "equal" // de vergelijking toont de Fair Split (blauw) of 'evenveel' (amber)
+                  const showsFair = splitMode === "equal" // de vergelijking toont de Fair Split (blauw) of 'evenveel' (oranje)
                   const label = compareOther
                     ? "Verberg vergelijking"
                     : (splitMode === "equal" ? "Vergelijk met Fair split" : "Vergelijk met iedereen evenveel")
                   return (
                     <button
                       onClick={() => setCompareOther((v) => !v)}
-                      style={{ background: compareOther ? "#fff" : (showsFair ? "rgba(61,111,208,0.1)" : "rgba(233,196,95,0.16)"), border: showsFair ? "2px solid #3d6fd0" : "2px solid rgba(214,158,20,0.75)", color: showsFair ? "#2f5bb0" : "#a06b00", fontSize: 13, fontWeight: 800, cursor: "pointer", borderRadius: 20, padding: "8px 16px" }}
+                      style={{ flex: 1, background: compareOther ? "#fff" : (showsFair ? "rgba(61,111,208,0.1)" : "rgba(232,126,20,0.12)"), border: showsFair ? "2px solid #3d6fd0" : "2px solid #e0842e", color: showsFair ? "#2f5bb0" : "#b5591a", fontSize: 13.5, fontWeight: 800, cursor: "pointer", borderRadius: 16, padding: "13px 10px", lineHeight: 1.2 }}
                     >
                       {label}
                     </button>

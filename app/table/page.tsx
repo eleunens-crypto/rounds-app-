@@ -965,7 +965,7 @@ export default function RundoTable() {
     return (
       <div style={S.page}>
         <div style={{ maxWidth: 420, margin: "40px auto" }}>
-          <button onClick={goToChooser} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#8a93a8", background: "none", border: "none", padding: 0, marginBottom: 14, cursor: "pointer" }}>← Andere mode</button>
+          <button onClick={goToChooser} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#8a93a8", background: "none", border: "none", padding: 0, marginBottom: 14, cursor: "pointer" }}>← naar Rundo startscherm</button>
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginBottom: 8 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/rundo-symbol.png" alt="" style={{ height: 52, width: "auto", objectFit: "contain", display: "block" }} />
@@ -1062,7 +1062,7 @@ export default function RundoTable() {
         </div>
       )}
 
-      <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} me={me?.name} signedUp={participants.length} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
+      <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} me={me?.name} signedUp={participants.length} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} guestSeats={meId ? seatsOf(meId) : undefined} onGuestSeatsChange={meId ? (n) => setSeats(meId, n) : undefined} onSwitchPerson={meId ? switchPerson : undefined} />
 
       {group.finalized && (() => {
         const disputers = parseDisputes(group.disputed_by || "")
@@ -1188,7 +1188,7 @@ export default function RundoTable() {
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{ fontSize: 17, flexShrink: 0 }}>🧮</span>
                         <input value={t.name} onChange={(e) => setItems((cur) => cur.map((x) => x.id === t.id ? { ...x, name: e.target.value } : x))}
-                          onBlur={(e) => supabase.from("table_items").update({ name: e.target.value }).eq("id", t.id).then(() => loadAll(group.id))}
+                          onBlur={(e) => { if (group?.finalized) { setToast("Heropen de rekening eerst om iets te wijzigen."); loadAll(group.id); return } supabase.from("table_items").update({ name: e.target.value }).eq("id", t.id).then(() => loadAll(group.id)) }}
                           style={{ ...S.input, flex: 1, minWidth: 0, fontWeight: 700, padding: "8px 10px" }} />
                         {t.tax_rate ? (
                           <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a", whiteSpace: "nowrap" }}>€{taxAmount(t).toFixed(2)}</span>
@@ -1196,7 +1196,7 @@ export default function RundoTable() {
                           <>
                             <span style={{ color: "#999", fontSize: 13 }}>€</span>
                             <input type="number" step="0.01" defaultValue={t.unit_price ? t.unit_price.toFixed(2) : ""} placeholder="0.00"
-                              onBlur={(e) => { const v = parseFloat(e.target.value.replace(",", ".")) || 0; supabase.from("table_items").update({ unit_price: v, quantity: 1 }).eq("id", t.id).then(() => loadAll(group.id)) }}
+                              onBlur={(e) => { if (group?.finalized) { setToast("Heropen de rekening eerst om iets te wijzigen."); loadAll(group.id); return } const v = parseFloat(e.target.value.replace(",", ".")) || 0; supabase.from("table_items").update({ unit_price: v, quantity: 1 }).eq("id", t.id).then(() => loadAll(group.id)) }}
                               style={{ ...S.input, width: 78, textAlign: "right", padding: "8px 8px" }} />
                           </>
                         )}
@@ -1401,12 +1401,18 @@ export default function RundoTable() {
           <div style={{ display: "flex", gap: 8 }}>
             <Stat label="Totaalbedrag" value={`€${billTotal.toFixed(2)}`} tone="navy" />
             <div onClick={() => { if (typeof document !== "undefined") document.getElementById("rekening-per-persoon")?.scrollIntoView({ behavior: "smooth", block: "start" }) }} style={{ flex: 1, cursor: "pointer", textAlign: "center", background: "rgba(233,196,95,0.16)", borderRadius: 12, padding: "8px 6px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 2 }} title="naar de rekening per persoon">
-              <span style={{ fontSize: 12, fontWeight: 800, color: "#a06b00", lineHeight: 1.15 }}>Rekening<br />per persoon</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#a06b00", opacity: 0.85 }}>bekijken ↓</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: "#a06b00", lineHeight: 1.25 }}>Rekening per persoon bekijken</span>
             </div>
-            <div onClick={() => setShowTodo((v) => !v)} style={{ flex: 1, cursor: "pointer" }}>
-              <Stat label="Nog niet geclaimd" value={`${openUnits}`} tone={openUnits > 0 ? "red" : "green"} />
-            </div>
+            {openUnits > 0 ? (
+              <div onClick={() => setShowTodo((v) => !v)} style={{ flex: 1, cursor: "pointer" }}>
+                <Stat label="Nog niet geclaimd" value={`${openUnits}`} tone="red" />
+              </div>
+            ) : (
+              <div style={{ flex: 1, textAlign: "center", background: "rgba(39,174,96,0.12)", borderRadius: 12, padding: "8px 4px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 1 }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: "#27ae60", lineHeight: 1 }}>✓</div>
+                <div style={{ fontSize: 11.5, fontWeight: 800, color: "#27ae60", lineHeight: 1.15 }}>Alles geclaimd</div>
+              </div>
+            )}
           </div>
           {showTodo && (openUnits > 0 || undecidedShared.length > 0) && (
             <div style={{ marginTop: 10, border: "1px solid rgba(224,107,94,0.35)", background: "rgba(224,107,94,0.05)", borderRadius: 12, padding: "10px 12px" }}>
@@ -1457,7 +1463,7 @@ export default function RundoTable() {
             sharedRevealed={sharedRevealed} allConfirmed={allConfirmed} isConfirmed={isConfirmed} explicitConfirmed={explicitConfirmed}
             claimMode={claimMode} setClaimMode={setClaimMode} claimPid={claimPid} setClaimPid={setClaimPid}
             iConfirmed={iConfirmed} confirmMe={confirmMe}
-            onPickMe={pickMe} onSwitchPerson={switchPerson}
+            onPickMe={pickMe}
             finalized={!!group.finalized} iDispute={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name)} iResolved={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name && d.resolved)} iComment={(me && parseDisputes(group.disputed_by || "").find((d) => d.name === me.name)?.comment) || ""} onToggleDispute={(on, comment) => { if (me) flagDispute(me.name, on, comment) }}
           />
         </>
@@ -1848,9 +1854,25 @@ export default function RundoTable() {
 // ═══════════════════════════════════════════════════════════════════════════
 // SUB-COMPONENTEN
 // ═══════════════════════════════════════════════════════════════════════════
-function TopBar({ group, isAdmin, onHome, me, totalPersons }: { group: Group; isAdmin: boolean; onHome: () => void; me?: string; signedUp?: number; totalPersons?: number }) {
+function TopBar({ group, isAdmin, onHome, me, totalPersons, guestSeats, onGuestSeatsChange, onSwitchPerson }: { group: Group; isAdmin: boolean; onHome: () => void; me?: string; signedUp?: number; totalPersons?: number; guestSeats?: number; onGuestSeatsChange?: (n: number) => void; onSwitchPerson?: () => void }) {
   return (
     <div style={{ marginBottom: 14, padding: "4px 2px" }}>
+      {/* Rol/naam (en voor de gast: tellertje + wisselen) centraal bovenaan */}
+      <div style={{ textAlign: "center", marginBottom: 8 }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+          <span style={{ fontSize: 15, fontWeight: 800, color: isAdmin ? "#1499b0" : "#f0a500", letterSpacing: 0.3 }}>
+            {isAdmin ? "👑 Beheerder" : me ? `👤 ${me}` : "👤 Gast"}
+          </span>
+          {!isAdmin && guestSeats != null && onGuestSeatsChange && (
+            <SeatsControl n={guestSeats} onChange={onGuestSeatsChange} showLabel size={13} />
+          )}
+        </div>
+        {!isAdmin && onSwitchPerson && (
+          <div>
+            <button onClick={onSwitchPerson} style={{ marginTop: 2, background: "none", border: "none", padding: 0, color: "#9aa0ab", fontSize: 12, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2 }}>ik ben iemand anders — wissel van persoon</button>
+          </div>
+        )}
+      </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <div onClick={isAdmin ? onHome : undefined} title={isAdmin ? "Naar het Table-startscherm" : undefined} style={{ display: "flex", alignItems: "center", gap: 7, cursor: isAdmin ? "pointer" : "default", minWidth: 0, flexShrink: 0 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1858,17 +1880,9 @@ function TopBar({ group, isAdmin, onHome, me, totalPersons }: { group: Group; is
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/rundo-table-logo-dark.png" alt="Rundo Table" style={{ height: 19, width: "auto", objectFit: "contain", display: "block" }} />
         </div>
-        <div style={{ flex: 1, textAlign: "center", minWidth: 0 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: isAdmin ? "#1499b0" : "#f0a500", letterSpacing: 0.3, whiteSpace: "nowrap" }}>
-            {isAdmin ? "👑 Beheerder" : me ? `👤 ${me}` : "👤 Gast"}
-          </span>
-        </div>
         <div style={{ textAlign: "right", minWidth: 0, flexShrink: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: "#1b2a4a", overflowWrap: "anywhere", lineHeight: 1.15 }}>{group.name}</div>
-          <div style={{ fontSize: 11.5, color: "#8a93a3", fontWeight: 700 }}>
-            {fmtDate(group.created_at) && <span>{fmtDate(group.created_at)}</span>}
-            {totalPersons != null && totalPersons > 0 && <span style={{ marginLeft: fmtDate(group.created_at) ? 6 : 0 }}>{fmtDate(group.created_at) ? "· " : ""}👤 {totalPersons} {totalPersons === 1 ? "persoon" : "personen"}</span>}
-          </div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#1b2a4a", overflowWrap: "anywhere", lineHeight: 1.15 }}>{group.name}{fmtDate(group.created_at) ? ` (${fmtDate(group.created_at)})` : ""}</div>
+          {totalPersons != null && totalPersons > 0 && <div style={{ fontSize: 11.5, color: "#8a93a3", fontWeight: 700 }}>👤 {totalPersons} {totalPersons === 1 ? "persoon" : "personen"}</div>}
         </div>
       </div>
     </div>
@@ -1900,7 +1914,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         const who = claimsForItem(it.id)
         const isNew = recentItemId === it.id
         return (
-          <div key={it.id} style={{ padding: "9px 8px", borderRadius: isNew ? 12 : 0, marginTop: isNew ? 4 : 0, marginBottom: isNew ? 4 : 0, background: isNew ? "rgba(233,196,95,0.16)" : "transparent", borderTop: isNew ? "1.5px solid #ecc85a" : "1px solid transparent", borderLeft: isNew ? "1.5px solid #ecc85a" : "1px solid transparent", borderRight: isNew ? "1.5px solid #ecc85a" : "1px solid transparent", borderBottom: isNew ? "1.5px solid #ecc85a" : "1px solid rgba(0,0,0,0.05)" }}>
+          <div key={it.id} style={{ padding: "9px 8px", borderRadius: (isNew || billOk) ? 12 : 0, marginTop: (isNew || billOk) ? 4 : 0, marginBottom: (isNew || billOk) ? 6 : 0, background: isNew ? "rgba(233,196,95,0.16)" : billOk ? "rgba(39,174,96,0.06)" : "transparent", border: isNew ? "1.5px solid #ecc85a" : billOk ? "1.5px solid rgba(39,174,96,0.55)" : "1px solid transparent", borderBottom: isNew ? "1.5px solid #ecc85a" : billOk ? "1.5px solid rgba(39,174,96,0.55)" : "1px solid rgba(0,0,0,0.05)" }}>
             {isNew && <div style={{ fontSize: 10.5, fontWeight: 800, color: "#a06b00", marginBottom: 4 }}>✨ Net toegevoegd — pas de naam aan met ✏️</div>}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {it.is_shared && <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={20} /></span>}
@@ -2056,10 +2070,10 @@ function ClaimScreen(props: {
   sharedRevealed: (it: BillItem) => boolean; allConfirmed: boolean; isConfirmed: (pid: string) => boolean; explicitConfirmed: (pid: string) => boolean
   claimMode: "item" | "person"; setClaimMode: (m: "item" | "person") => void
   claimPid: string | null; setClaimPid: (id: string | null) => void
-  iConfirmed: boolean; confirmMe: () => void; onPickMe: (id: string) => void; onSwitchPerson: () => void
+  iConfirmed: boolean; confirmMe: () => void; onPickMe: (id: string) => void
   finalized: boolean; iDispute: boolean; iResolved: boolean; iComment: string; onToggleDispute: (on: boolean, comment?: string) => void
 }) {
-  const { items, meId, me, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, onSwitchPerson, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
+  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
   const adminPid = props.claimPid, setAdminPid = props.setClaimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   const [disputeOpen, setDisputeOpen] = useState(false)
@@ -2259,21 +2273,6 @@ function ClaimScreen(props: {
           <div style={{ fontSize: 12, opacity: 0.92, marginTop: 2 }}>Even geduld — je krijgt straks opnieuw de definitieve verdeling te zien.</div>
         </div>
       ) : null}
-      {meId && (() => {
-        const ms = seatsOf(meId)
-        return (
-          <div style={{ ...S.card, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#8a93a3" }}>jij</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: "#1b2a4a", overflowWrap: "anywhere" }}>{me ? me.name : "ik"}</div>
-              <button onClick={onSwitchPerson} style={{ marginTop: 3, background: "none", border: "none", padding: 0, color: "#9aa0ab", fontSize: 12, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2 }}>ik ben iemand anders — wissel van persoon</button>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-              <SeatsControl n={ms} onChange={(next) => setSeats(meId, next)} showLabel />
-            </div>
-          </div>
-        )
-      })()}
       <div style={S.card}>
         <h3 style={S.h3}>✅ {meId && seatsOf(meId) > 1 ? "Selecteer jullie consumpties" : "Selecteer jouw consumpties"}</h3>
         {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen items — wacht tot de bon gescand is.</div>}
@@ -2334,8 +2333,11 @@ function ClaimScreen(props: {
           return (
             <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}>{it.name}</div>
-                <div style={{ fontSize: 11, color: open > 0 ? "#e0685c" : "#1f8a4c", fontWeight: 600 }}>€{it.unit_price.toFixed(2)} · {total}× besteld · {open > 0 ? `${open} nog vrij` : "alles geclaimd"}</div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.name}</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: "#1499b0", flexShrink: 0 }}>€{it.unit_price.toFixed(2)}</span>
+                </div>
+                <div style={{ fontSize: 11, color: open > 0 ? "#e0685c" : "#1f8a4c", fontWeight: 600 }}>{total}× besteld · {open > 0 ? `${open} nog vrij` : "alles geclaimd"}</div>
               </div>
               <button style={{ ...S.iconBtn, width: 32, height: 32, fontSize: 16 }} onClick={() => setClaim(it.id, meId, Math.max(0, mine - 1))} disabled={mine <= 0}>−</button>
               <span style={{ fontSize: 16, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{mine}</span>
