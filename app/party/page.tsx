@@ -2411,16 +2411,16 @@ export default function Home() {
                   )
                 })()}
 
+                <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 10, padding: "12px 0", fontWeight: 700 }} onClick={confirmDrinkSelector}>
+                  {selectorTotal > 0 ? `Klaar? ${selectorTotal} item${selectorTotal !== 1 ? "s" : ""}` : "Klaar"}
+                </button>
+
                 <div style={{ textAlign: "center", marginTop: 10, fontSize: 12.5 }}>
                   <span style={{ color: "#a89a6a" }}>Drankje niet gevonden? </span>
                   <button onClick={() => setShowAddDrink(true)} style={{ background: "none", border: "none", padding: 0, color: "#c8941a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>
                     Voeg je eigen drankje toe
                   </button>
                 </div>
-
-                <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 10, padding: "12px 0", fontWeight: 700 }} onClick={confirmDrinkSelector}>
-                  {selectorTotal > 0 ? `Klaar + ${selectorTotal} item${selectorTotal !== 1 ? "s" : ""}` : "Klaar"}
-                </button>
                 <div style={{ textAlign: "center", marginTop: 8 }}>
                   <button
                     onClick={() => { setSelectorDraft({}); setLastAddedCustomDrink(null); setShowDrinkSelector(false) }}

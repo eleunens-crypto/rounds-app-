@@ -1727,7 +1727,7 @@ export default function RundoTable() {
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1 }} disabled={scanning} onClick={() => { setShowScan(false); setScanPreview([]); setScanTotal(""); setScanError(null); setScanFile(null); if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) } }}>{scanPreview.length > 0 ? "Annuleren" : "Sluiten"}</button>
               {scanPreview.length > 0 && (
-                <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={confirmScan} disabled={scanning}>✅ Bevestigen & toevoegen</button>
+                <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={() => confirmScan()} disabled={scanning}>✅ Bevestigen & toevoegen</button>
               )}
             </div>
           </div>
