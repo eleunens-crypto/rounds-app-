@@ -276,6 +276,7 @@ export default function RundoTable() {
 
   const [adminTab, setAdminTab] = useState<AdminTab>("scan")
   const [showScan, setShowScan] = useState(false)
+  const receiptInputRef = useRef<HTMLInputElement>(null)
   const [scanning, setScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState(0)
   const [scanError, setScanError] = useState<string | null>(null)
@@ -486,7 +487,7 @@ export default function RundoTable() {
 
   const setSeats = async (pid: string, n: number) => {
     if (!group) return
-    if (group.finalized && !isAdmin) { setToast("De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
+    if (group.finalized) { setToast(isAdmin ? "De rekening is afgesloten — heropen ze eerst om te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     const val = Math.max(1, n)
     const current = Math.max(1, participants.find((p) => p.id === pid)?.seats ?? 1)
     if (val === current) return
@@ -571,6 +572,7 @@ export default function RundoTable() {
   }
 
   const startRescan = async () => {
+    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     if (!group) return
     const hasItems = items.length > 0
     const hasClaims = claims.length > 0
@@ -598,27 +600,33 @@ export default function RundoTable() {
     setScanPhotoUrl(URL.createObjectURL(file))
     try {
       const parsed = await scanReceipt(file, (p) => setScanProgress(p))
-      setScanPreview(parsed.items)
-      setScanTotal(parsed.total != null ? parsed.total.toFixed(2) : "")
       if (parsed.items.length === 0) {
+        setScanPreview([])
         setScanError("Niets herkend op de foto. Maak een scherpere foto, recht van boven en goed belicht, en probeer opnieuw.")
+        setScanning(false)
+        return
       }
+      // Meteen bevestigen en naar de Bon-tab: daar kan je alles nog checken en corrigeren.
+      setScanning(false)
+      await confirmScan(parsed.items, parsed.total != null ? parsed.total.toFixed(2) : "", file)
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       console.error("Tesseract scan-fout:", e)
       setScanError("Scannen kon niet starten (technische fout): " + msg)
-    } finally {
       setScanning(false)
     }
   }
 
-  const confirmScan = async () => {
-    if (!group || scanPreview.length === 0) return
+  const confirmScan = async (previewArg?: ParsedItem[], totalArg?: string, fileArg?: File | null) => {
+    const preview = previewArg ?? scanPreview
+    const totalStr = totalArg ?? scanTotal
+    const file = fileArg !== undefined ? fileArg : scanFile
+    if (!group || preview.length === 0) return
     let receiptUrl = group.receipt_url ?? null
-    if (scanFile) {
-      const ext = (scanFile.name.split(".").pop() || "jpg").toLowerCase()
+    if (file) {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase()
       const path = `${group.id}/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from("receipts").upload(path, scanFile, { upsert: true })
+      const { error: upErr } = await supabase.storage.from("receipts").upload(path, file, { upsert: true })
       if (upErr) { setToast("Foto bewaren mislukt — items worden wel toegevoegd") }
       else {
         receiptUrl = supabase.storage.from("receipts").getPublicUrl(path).data.publicUrl
@@ -627,8 +635,8 @@ export default function RundoTable() {
         else setGroup({ ...group, receipt_url: receiptUrl })
       }
     }
-    const baseList = scanPreview.map((it, idx) => ({ it, idx })).filter((o) => !o.it.distribute)
-    const taxList = scanPreview.map((it, idx) => ({ it, idx })).filter((o) => !!o.it.distribute)
+    const baseList = preview.map((it, idx) => ({ it, idx })).filter((o) => !o.it.distribute)
+    const taxList = preview.map((it, idx) => ({ it, idx })).filter((o) => !!o.it.distribute)
     const baseRows = baseList.map(({ it }) => ({
       group_id: group.id, name: it.name, unit_price: it.unit_price,
       quantity: it.quantity, is_shared: it.is_shared, category: null,
@@ -657,23 +665,24 @@ export default function RundoTable() {
       if (taxRes.error) { setError("BTW opslaan mislukt: " + taxRes.error.message); return }
     }
     if (columnMissing) setError("Let op: voeg in Supabase de kolom 'distribute' toe, anders wordt de BTW-verdeling niet bewaard.")
-    const rows = scanPreview
-    const billNum = parseFloat((scanTotal || "").replace(",", "."))
+    const rows = preview
+    const billNum = parseFloat((totalStr || "").replace(",", "."))
     if (!isNaN(billNum) && billNum > 0) {
       const { error: tErr } = await supabase.from("table_groups").update({ receipt_total: billNum }).eq("id", group.id)
       if (!tErr) setGroup((g) => g ? { ...g, receipt_total: billNum } : g)
     }
     // Klopt het ingevulde totaal met items + BTW? Dan enkel een korte bevestiging.
-    const computedNow = scanPreview.filter((x) => !x.distribute).reduce((s, it) => s + (it.unit_price || 0) * (it.quantity || 0), 0) + scanPreview.filter((x) => x.distribute).reduce((s, it) => s + (it.unit_price || 0), 0)
+    const computedNow = preview.filter((x) => !x.distribute).reduce((s, it) => s + (it.unit_price || 0) * (it.quantity || 0), 0) + preview.filter((x) => x.distribute).reduce((s, it) => s + (it.unit_price || 0), 0)
     const totalOk = !isNaN(billNum) && billNum > 0 && Math.abs(billNum - computedNow) < 0.01
     setScanPreview([]); setScanTotal(""); setScanError(null); setScanFile(null)
     if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) }
     setShowScan(false)
     await loadAll(group.id)
-    setToast(totalOk ? "✅ Rekeningtotaal klopt" : `${rows.length} item${rows.length !== 1 ? "s" : ""} toegevoegd`)
+    setToast(totalOk ? "✅ Bon gescand — totaal klopt. Controleer de items." : `${rows.length} item${rows.length !== 1 ? "s" : ""} toegevoegd — controleer ze op de Bon-tab.`)
   }
 
   const addManualItem = async () => {
+    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     if (!group) return
     const { error } = await supabase.from("table_items")
       .insert([{ group_id: group.id, name: "Nieuw item", unit_price: 0, quantity: 1, is_shared: false, category: null }])
@@ -706,6 +715,7 @@ export default function RundoTable() {
   }
 
   const addTaxItem = async (rate?: number) => {
+    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     if (!group) return
     const name = rate ? `BTW ${rate}%` : "BTW of andere kosten"
     const row: Record<string, unknown> = { group_id: group.id, name, unit_price: 0, quantity: 1, is_shared: false, category: null, distribute: "all" }
@@ -725,6 +735,7 @@ export default function RundoTable() {
   }
 
   const setReceiptTotal = async (val: number | null) => {
+    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     if (!group) return
     setGroup((g) => g ? { ...g, receipt_total: val } : g)
     const { error } = await supabase.from("table_groups").update({ receipt_total: val }).eq("id", group.id)
@@ -747,6 +758,7 @@ export default function RundoTable() {
 
   const saveItem = async () => {
     if (!group || !editItem) return
+    if (group.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     const { error } = await supabase.from("table_items").update({
       name: editItem.name, unit_price: editItem.unit_price,
       quantity: editItem.quantity, is_shared: editItem.is_shared,
@@ -756,12 +768,14 @@ export default function RundoTable() {
   }
 
   const toggleShared = async (it: BillItem) => {
+    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     if (!group) return
     await supabase.from("table_items").update({ is_shared: !it.is_shared }).eq("id", it.id)
     await loadAll(group.id)
   }
 
   const deleteItem = async (id: string) => {
+    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     if (!group) return
     if (!confirm("Dit item van de bon verwijderen? Wat er al aan toegewezen werd, verdwijnt mee.")) return
     await supabase.from("table_claims").delete().eq("item_id", id)
@@ -785,7 +799,7 @@ export default function RundoTable() {
 
   const setClaim = async (itemId: string, pid: string, qty: number) => {
     if (!group) return
-    if (group.finalized && !isAdmin) { setToast("De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
+    if (group.finalized) { setToast(isAdmin ? "De rekening is afgesloten — heropen ze eerst om te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     const existing = claims.find((c) => c.item_id === itemId && c.participant_id === pid)
     if (qty <= 0) {
       if (existing) await supabase.from("table_claims").delete().eq("id", existing.id)
@@ -798,6 +812,7 @@ export default function RundoTable() {
   }
 
   const toggleShareClaim = async (itemId: string, pid: string) => {
+    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     const mine = myQty(itemId, pid)
     await setClaim(itemId, pid, mine > 0 ? 0 : seatsOf(pid))
   }
@@ -809,6 +824,7 @@ export default function RundoTable() {
     claims.filter((c) => c.item_id === itemId && c.participant_id === pid).reduce((s, c) => s + c.quantity, 0)
 
   const setShareFixed = async (it: BillItem, val: boolean) => {
+    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     if (!group) return
     await supabase.from("table_items").update({ share_fixed: val }).eq("id", it.id)
     await loadAll(group.id)
@@ -1132,20 +1148,22 @@ export default function RundoTable() {
                   {entered == null
                     ? `Totaal van de items: €${billTotal.toFixed(2)}`
                     : match
-                    ? `✅ Items kloppen met het rekeningtotaal: €${billTotal.toFixed(2)}`
-                    : `⚠️ De items (€${billTotal.toFixed(2)}) en het rekeningtotaal op de bon (€${entered.toFixed(2)}) komen niet overeen — verschil €${Math.abs(entered - billTotal).toFixed(2)}.`}
+                    ? `✅ Bon-totaal en items kloppen: €${billTotal.toFixed(2)}`
+                    : `⚠️ Items €${billTotal.toFixed(2)} ≠ bon-totaal €${entered.toFixed(2)} (verschil €${Math.abs(entered - billTotal).toFixed(2)}). Check het ingevulde bon-totaal en corrigeer de items (prijzen/aantallen).`}
                 </span>
-                {mismatch && (
-                  <span style={{ display: "block", fontSize: 12, fontWeight: 600, lineHeight: 1.45, color: "#c0392b", marginTop: 4 }}>
-                    Controleer en corrigeer eerst de items (voeg ontbrekende toe, pas prijzen/aantallen aan of gebruik &ldquo;BTW of andere kosten&rdquo;) zodat alles klopt, vóór je deelt met je gasten.
-                  </span>
-                )}
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "#9aa0ab" }}>Rekeningtotaal op de bon: €</span>
-                  <input type="text" inputMode="decimal" defaultValue={entered != null ? entered.toFixed(2) : ""} key={entered ?? "leeg"} placeholder="bv. 65.90"
+                  <input ref={receiptInputRef} type="text" inputMode="decimal" defaultValue={entered != null ? entered.toFixed(2) : ""} key={entered ?? "leeg"} placeholder="bv. 65.90"
                     onBlur={(e) => { const raw = e.target.value.trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }}
                     onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
                     style={{ ...S.input, width: 100, padding: "6px 9px", fontSize: 13, fontWeight: 700 }} />
+                  <button
+                    onClick={() => { const raw = (receiptInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }}
+                    title="Bevestig het ingevulde bon-totaal"
+                    style={{ border: "none", background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff", borderRadius: 9, padding: "7px 12px", fontSize: 13, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}
+                  >
+                    ✓ Bevestig
+                  </button>
                 </div>
               </div>
             )
@@ -1157,6 +1175,7 @@ export default function RundoTable() {
             sharerIds={sharerIds} shareHeads={shareHeads} toggleShareClaim={toggleShareClaim} setShareFixed={setShareFixed}
             onEdit={setEditItem} onToggleShared={toggleShared} onDelete={deleteItem} onAddManual={() => openNewItem("bill")} bareBill
             recentItemId={recentItemId} onGoGuests={() => setAdminTab("guests")}
+            billOk={group?.receipt_total != null && Math.abs((group.receipt_total ?? 0) - billTotal) < 0.005}
             taxLines={taxItems.map((t) => ({ name: t.name, amount: taxAmount(t) }))}
             taxNode={
               <div style={{ marginTop: 6 }}>
@@ -1335,7 +1354,18 @@ export default function RundoTable() {
           </div>
 
           <div style={{ ...S.card, order: 1 }}>
-            <div style={{ fontSize: 11.5, color: "#9aa0ab", fontWeight: 600, marginBottom: 2 }}>Bon gescand en in orde?</div>
+            <div style={{ fontSize: 11.5, color: "#9aa0ab", fontWeight: 600, marginBottom: 6 }}>Bon gescand en nagekeken?</div>
+            {(() => {
+              const entered = group?.receipt_total ?? null
+              const match = entered != null && Math.abs(entered - billTotal) < 0.005
+              return match ? (
+                <div style={{ background: "rgba(39,174,96,0.10)", border: "1px solid rgba(39,174,96,0.5)", borderRadius: 10, padding: "7px 11px", marginBottom: 10, fontSize: 12.5, fontWeight: 700, color: "#1f8a4c" }}>✅ Bon-totaal en items kloppen — je kan delen.</div>
+              ) : (
+                <div style={{ background: "rgba(224,107,94,0.1)", border: "1px solid rgba(224,107,94,0.55)", borderRadius: 10, padding: "8px 11px", marginBottom: 10, fontSize: 12.5, fontWeight: 700, color: "#c0392b", lineHeight: 1.45 }}>
+                  ⚠️ Het bon-totaal klopt nog niet met de items. Zet dit eerst recht op de <b>Bon</b>-tab vóór je met je gasten deelt.
+                </div>
+              )
+            })()}
             <h3 style={S.h3}>🔗 Laat dan nu je gasten hun consumpties aantikken</h3>
             <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 12 }}>Hoe? Deel deze groep met je gasten via QR of deelbare link.</p>
             {(() => {
@@ -1845,7 +1875,7 @@ function TopBar({ group, isAdmin, onHome, me, totalPersons }: { group: Group; is
   )
 }
 
-function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, shareHeads, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onAddManual, bareBill, taxLines, taxNode, recentItemId, onGoGuests }: {
+function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, shareHeads, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onAddManual, bareBill, taxLines, taxNode, recentItemId, onGoGuests, billOk }: {
   items: BillItem[]; claimedQty: (id: string) => number
   participants: Participant[]; claimsForItem: (id: string) => { name: string; qty: number }[]
   sharerIds: (id: string) => string[]; shareHeads: (id: string) => number; toggleShareClaim: (itemId: string, pid: string) => void
@@ -1856,6 +1886,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   taxNode?: React.ReactNode
   recentItemId?: string | null
   onGoGuests?: () => void
+  billOk?: boolean
 }) {
   return (
     <div style={S.card}>
@@ -1971,7 +2002,12 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         )
       })()}
       {onGoGuests && (
-        <button onClick={onGoGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, padding: "14px 0", fontSize: 15, fontWeight: 700 }}>👥 Ga nu naar gasten en delen →</button>
+        <>
+          {billOk && (
+            <div style={{ marginTop: 16, marginBottom: -4, background: "rgba(39,174,96,0.10)", border: "1px solid rgba(39,174,96,0.5)", borderRadius: 10, padding: "8px 12px", fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", textAlign: "center" }}>✅ Bon-totaal en items kloppen</div>
+          )}
+          <button onClick={onGoGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, padding: "14px 0", fontSize: 15, fontWeight: 700 }}>👥 Ga nu naar gasten en delen →</button>
+        </>
       )}
     </div>
   )
@@ -2029,6 +2065,13 @@ function ClaimScreen(props: {
   const [disputeOpen, setDisputeOpen] = useState(false)
   const [disputeText, setDisputeText] = useState("")
   const [openGuestRows, setOpenGuestRows] = useState<Set<string>>(() => new Set(meId ? [meId] : []))
+  // Detecteer of de beheerder heropende na een eerdere afsluiting → toon dan één 'bekijkt opnieuw'-melding.
+  const wasFinalizedRef = useRef(false)
+  const [reviewing, setReviewing] = useState(false)
+  useEffect(() => {
+    if (finalized) { wasFinalizedRef.current = true; setReviewing(false) }
+    else if (wasFinalizedRef.current) { setReviewing(true) }
+  }, [finalized])
 
   if (isAdmin) {
     const normalItems = items.filter((i) => !i.is_shared)
@@ -2204,13 +2247,18 @@ function ClaimScreen(props: {
 
   return (
     <div>
-      {finalized && (
+      {finalized ? (
         <button onClick={() => { if (typeof document !== "undefined") document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
           style={{ width: "100%", marginBottom: 14, padding: "12px 16px", border: "none", borderRadius: 14, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", cursor: "pointer", textAlign: "left", boxShadow: "0 6px 18px -6px rgba(39,174,96,0.6)" }}>
           <div style={{ fontSize: 14.5, fontWeight: 800 }}>✅ Alles nagekeken! Bekijk hier de definitieve verdeling</div>
           <div style={{ fontSize: 12, opacity: 0.92, marginTop: 2 }}>De beheerder heeft de rekening afgerond.</div>
         </button>
-      )}
+      ) : reviewing ? (
+        <div style={{ width: "100%", marginBottom: 14, padding: "12px 16px", borderRadius: 14, background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff", boxShadow: "0 6px 18px -6px rgba(20,153,176,0.55)" }}>
+          <div style={{ fontSize: 14.5, fontWeight: 800 }}>🔎 De beheerder bekijkt de rekening opnieuw</div>
+          <div style={{ fontSize: 12, opacity: 0.92, marginTop: 2 }}>Even geduld — je krijgt straks opnieuw de definitieve verdeling te zien.</div>
+        </div>
+      ) : null}
       {meId && (() => {
         const ms = seatsOf(meId)
         return (
@@ -2373,10 +2421,22 @@ function ClaimScreen(props: {
         )}
         {finalized && !isAdmin && (
           <div style={{ marginTop: 12 }}>
-            {iResolved ? (
+            {disputeOpen ? (
+              <div style={{ background: "rgba(90,108,166,0.06)", border: "1px solid rgba(90,108,166,0.2)", borderRadius: 12, padding: 12 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: "#5a6680", marginBottom: 7 }}>🤔 Wat klopt er niet? (optioneel)</div>
+                <textarea value={disputeText} onChange={(e) => setDisputeText(e.target.value)} placeholder="bv. die wijn nam ik niet" rows={2} style={{ ...S.input, width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <button onClick={() => { setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13 }}>Annuleren</button>
+                  <button onClick={() => { onToggleDispute(true, disputeText); setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff" }}>Versturen</button>
+                </div>
+              </div>
+            ) : iResolved ? (
               <div style={{ fontSize: 12.5, color: "#1f8a4c", background: "rgba(39,174,96,0.12)", border: "1px solid rgba(39,174,96,0.4)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45, textAlign: "center", fontWeight: 700 }}>
                 ✓ De beheerder heeft je opmerking opgelost.
                 {iComment && <div style={{ marginTop: 6, fontWeight: 600, fontStyle: "italic", color: "#1f8a4c", opacity: 0.85 }}>jouw opmerking: “{iComment}”</div>}
+                <div style={{ marginTop: 8 }}>
+                  <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "8px 16px", fontSize: 12.5, fontWeight: 700, background: "#fff", border: "1px solid rgba(20,33,58,0.18)", color: "#5a6680" }}>➕ Nog een opmerking toevoegen</button>
+                </div>
               </div>
             ) : iDispute ? (
               <div style={{ fontSize: 12.5, color: "#a06b00", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45, textAlign: "center" }}>
@@ -2386,18 +2446,9 @@ function ClaimScreen(props: {
                   <button onClick={() => { onToggleDispute(false); setDisputeOpen(false); setDisputeText("") }} style={{ background: "none", border: "none", padding: 0, color: "#1499b0", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>toch intrekken</button>
                 </div>
               </div>
-            ) : disputeOpen ? (
-              <div style={{ background: "rgba(90,108,166,0.06)", border: "1px solid rgba(90,108,166,0.2)", borderRadius: 12, padding: 12 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: "#5a6680", marginBottom: 7 }}>🤔 Wat klopt er niet? (optioneel)</div>
-                <textarea value={disputeText} onChange={(e) => setDisputeText(e.target.value)} placeholder="bv. die wijn nam ik niet" rows={2} style={{ ...S.input, width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
-                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                  <button onClick={() => { setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13 }}>Annuleren</button>
-                  <button onClick={() => { onToggleDispute(true, disputeText); setDisputeOpen(false) }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff" }}>Versturen</button>
-                </div>
-              </div>
             ) : (
               <div style={{ textAlign: "center" }}>
-                <button onClick={() => setDisputeOpen(true)} style={{ ...S.btn, padding: "10px 18px", fontSize: 13, fontWeight: 700, background: "#fff", border: "1px solid rgba(20,33,58,0.18)", color: "#5a6680" }}>
+                <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "10px 18px", fontSize: 13, fontWeight: 700, background: "#fff", border: "1px solid rgba(20,33,58,0.18)", color: "#5a6680" }}>
                   🤔 Klopt iets niet? Laat het de beheerder weten
                 </button>
               </div>

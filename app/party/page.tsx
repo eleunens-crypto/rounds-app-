@@ -619,7 +619,6 @@ export default function Home() {
   const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
   const [savedOpen, setSavedOpen] = useState(false)
   const [savedSearch, setSavedSearch] = useState("")
-  const [isSaved, setIsSaved] = useState(false)
 
   const [group, setGroup] = useState<Group | null>(null)
   const [groupName, setGroupName] = useState("")
@@ -692,6 +691,8 @@ export default function Home() {
   const [showEqualInfo, setShowEqualInfo] = useState(false)             // info-popup 'iedereen evenveel'
   const [compareOther, setCompareOther] = useState(false)                 // in 'iedereen evenveel': ook de Fair Split ernaast tonen
   const [showAboutParty, setShowAboutParty] = useState(false)             // korte uitleg over Rundo Party (de 'i' naast de titel)
+  const [orderEditing, setOrderEditing] = useState(false)                 // toont de toevoeg-knoppen opnieuw terwijl er al een bestelling loopt
+  const [expandedBillPersons, setExpandedBillPersons] = useState<Set<string>>(new Set()) // afrekenen: wiens (lange) drankjeslijst is uitgeklapt
   const [showVoiceExample, setShowVoiceExample] = useState(false)       // info-popup met spraak-voorbeeld
   const [noPayWarn, setNoPayWarn] = useState(false)                     // (reserve) melding geen betaling
   // Eigen bevestigings-popup i.p.v. de kale browser-confirm()
@@ -810,7 +811,6 @@ export default function Home() {
       await loadAll(data.id)
       saveGroupToStorage(data)
       setSavedGroups(getSavedGroups())
-      setIsSaved(true)
       setView("setup")
     } finally { setIsStarting(false) }
   }
@@ -831,7 +831,8 @@ export default function Home() {
       setGroup(data)
       setActiveGroupCode(data.invite_code)
       await loadAll(data.id)
-      setIsSaved(getSavedGroups().some((g) => g.id === data.id))
+      saveGroupToStorage(data) // geopende groep automatisch onthouden (geen 'bewaar'-knop meer nodig)
+      setSavedGroups(getSavedGroups())
       setView("setup")
     } finally { setIsStarting(false) }
   }
@@ -972,12 +973,24 @@ export default function Home() {
   }
 
   const cartTotalItems = Object.values(cart).reduce((s: number, line) => s + line.total, 0)
-  const cartTotalValue = Object.entries(cart).reduce((s: number, [drinkId, line]) => {
-    const d = drinks.find((dr) => dr.id === drinkId)
-    return s + (d?.price ?? 0) * line.total
-  }, 0)
 
-  const clearCart = () => { setCart({}); setLastAddedDrinkIds([]) }
+  const clearCart = () => { setCart({}); setLastAddedDrinkIds([]); setOrderEditing(false) }
+
+  // Voer een actie uit die de huidige (niet-afgeronde) bestelling zou weggooien.
+  // Is er nog een lopende bestelling, dan eerst bevestiging vragen.
+  const requestDiscardPending = (action: () => void) => {
+    if (cartTotalItems > 0) {
+      setConfirmDialog({
+        title: "Huidige bestelling wissen?",
+        message: "Je hebt een niet-afgeronde bestelling. Als je verdergaat wordt je huidige bestellijst gewist en begin je opnieuw.",
+        confirmLabel: "Wissen & opnieuw",
+        danger: true,
+        onConfirm: () => { clearCart(); action() },
+      })
+    } else {
+      action()
+    }
+  }
 
   // Terug naar het homescherm (nieuwe groep maken / opgeslagen groep openen)
   const goHome = () => {
@@ -1032,6 +1045,7 @@ export default function Home() {
     addedIds.forEach((id) => addToCart(id, selectorDraft[id], false))
     setLastAddedDrinkIds(addedIds)
     setLastAddedViaVoice(false) // via selector → geen aparte "Laatst toegevoegd"-kaart, wel highlight in de lijst
+    setOrderEditing(false)      // toevoeg-knoppen weer verbergen; onderaan komt afronden/wijzigen
     setSelectorDraft({})
     setLastAddedCustomDrink(null)
     setShowDrinkSelector(false)
@@ -1265,6 +1279,7 @@ export default function Home() {
     setFinishedRoundSnapshot({ session: newRoundSession, cart })
     setCart({})
     setLastAddedDrinkIds([])
+    setOrderEditing(false)
     setSession(newRoundSession)
   }
 
@@ -1745,7 +1760,7 @@ export default function Home() {
             <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}><RundoLogo size={22} /> Wat is Rundo Party?</h3>
               <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-                Met <b style={{ color: "#f0a500" }}>Rundo Party</b> hou je vlot bij wie welke rondjes bestelt en betaalt — per persoon of via een gezamenlijke pot. Op het einde verdeel je de rekening <b>eerlijk met Fair Split</b> (op basis van wie wat dronk) of gewoon gelijk over iedereen. Rondjes en splitten zonder gedoe!
+                Met <b style={{ color: "#f0a500" }}>Rundo Party</b> hou je vlot bij wie welke rondjes bestelt en betaalt — per persoon of via een gezamenlijke pot. Op het einde verdeel je de rekening <b>eerlijk met Fair Split</b> (op basis van wie wat dronk) of gewoon gelijk over iedereen.
               </p>
               <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowAboutParty(false)}>Begrepen</button>
             </div>
@@ -1864,41 +1879,29 @@ export default function Home() {
 
       {/* Top bar */}
       <div style={S.topBar}>
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div onClick={goHome} title="Naar startscherm" style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer" }}>
-            <RundoLogo size={30} />
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.1 }}><span style={{ color: "#4a3f1e" }}>Rundo</span> <span style={{ color: "#f0a500" }}>Party</span></div>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: "#f0a500", lineHeight: 1.2 }}><CheersIcon size={14} /> Rondjes en splitten zonder gedoe!</div>
-            </div>
+            <RundoLogo size={34} />
+            <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}><span style={{ color: "#4a3f1e" }}>Rundo</span> <span style={{ color: "#f0a500" }}>Party</span></div>
           </div>
-          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-            <button
-              style={{ ...S.btn, fontSize: 11, padding: "2px 8px", background: isSaved ? "#eafff1" : "#fff", color: isSaved ? "#27ae60" : "#888" }}
-              onClick={() => {
-                if (isSaved) { removeGroupFromStorage(group.id); setIsSaved(false) }
-                else { saveGroupToStorage(group); setIsSaved(true) }
-                setSavedGroups(getSavedGroups())
-              }}
-            >
-              {isSaved ? "✅ Opgeslagen" : "📌 Bewaar groep"}
-            </button>
+          {/* Pot-info linksboven (met de vrijgekomen ruimte) */}
+          <div style={{ marginTop: 9 }}>
+            {potTotal > 0 ? (() => {
+              const used = payments.filter((p) => p.session >= 1 && !p.participant_id).reduce((s, p) => s + p.amount, 0)
+              const left = Math.max(0, potTotal - used)
+              return (
+                <button onClick={() => setShowPotOverview(true)} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: "#a06b00", background: "linear-gradient(135deg,#fffdf6,#fff3cf)", border: "1.5px solid #ecc85a", borderRadius: 20, padding: "3px 11px", cursor: "pointer" }}>
+                  💰 €{potTotal.toFixed(2)} ingelegd · <b style={{ color: "#4a3f1e" }}>€{left.toFixed(2)} nog in pot</b>
+                </button>
+              )
+            })() : (
+              <button onClick={openPotModal} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 20, padding: "3px 11px", cursor: "pointer" }}>💰 Leg een pot</button>
+            )}
           </div>
         </div>
         <div style={{ textAlign: "right", minWidth: 0 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.15, marginBottom: 2 }}>{group.name}</div>
           <div style={{ fontSize: 11.5, color: "#a89a6a", fontWeight: 700 }}>{participants.length} {participants.length === 1 ? "persoon" : "personen"}</div>
-          {potTotal > 0 ? (() => {
-            const used = payments.filter((p) => p.session >= 1 && !p.participant_id).reduce((s, p) => s + p.amount, 0)
-            const left = Math.max(0, potTotal - used)
-            return (
-              <button onClick={() => setShowPotOverview(true)} style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 4, fontSize: 11, fontWeight: 700, color: "#a06b00", background: "linear-gradient(135deg,#fffdf6,#fff3cf)", border: "1.5px solid #ecc85a", borderRadius: 20, padding: "2px 10px", cursor: "pointer" }}>
-                💰 €{potTotal.toFixed(2)} ingelegd · <b style={{ color: "#4a3f1e" }}>€{left.toFixed(2)} nog in pot</b>
-              </button>
-            )
-          })() : (
-            <button onClick={openPotModal} style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 4, fontSize: 11, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 20, padding: "2px 10px", cursor: "pointer" }}>💰 Leg een pot</button>
-          )}
         </div>
       </div>
 
@@ -1912,7 +1915,15 @@ export default function Home() {
         ] as { id: AppView; label: string }[]).map((t) => (
           <button
             key={t.id}
-            onClick={() => setView(t.id)}
+            onClick={() => {
+              // 'Nieuwe bestelling' aanklikken terwijl je er al bent met een lopende bestelling:
+              // eerst waarschuwen dat opnieuw beginnen je huidige lijst wist.
+              if (t.id === "ordering" && view === "ordering" && cartTotalItems > 0) {
+                requestDiscardPending(() => {})
+              } else {
+                setView(t.id)
+              }
+            }}
             style={{
               flex: 1, border: "none", borderRadius: 12, padding: "10px 4px", fontSize: 13, cursor: "pointer",
               fontWeight: view === t.id ? 800 : 600,
@@ -2017,10 +2028,10 @@ export default function Home() {
               <div style={{ width: 30, height: 30, borderRadius: 10, background: "linear-gradient(135deg,#5a4a1a,#7a6528)", color: "#f7d461", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>{nextRoundLabel}</div>
               <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", whiteSpace: "nowrap" }}>Rondje {nextRoundLabel}</span>
             </div>
-            <div style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.15 }}>Start hieronder je bestelling</div>
+            <div style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.15 }}>{cartTotalItems > 0 ? "Je huidige bestelling" : "Start hieronder je bestelling"}</div>
             {sessions.length >= 1 && (
               <button
-                onClick={() => { setReorderShowAll(false); setShowReorderPicker(true) }}
+                onClick={() => requestDiscardPending(() => { setReorderShowAll(false); setShowReorderPicker(true) })}
                 style={{ flexShrink: 0, background: "rgba(214,158,20,0.1)", border: "1px solid rgba(214,158,20,0.3)", color: "#c8941a", borderRadius: 20, padding: "6px 11px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
               >
                 🔁 Vorig rondje opnieuw
@@ -2028,6 +2039,9 @@ export default function Home() {
             )}
           </div>
 
+          {/* Toevoeg-knoppen: enkel bij een lege bestelling, of wanneer je op 'Bestelling wijzigen' klikte */}
+          {(cartTotalItems === 0 || orderEditing) && (
+          <>
           {/* Bovenaan: 2 knoppen — links selecteren, rechts (smaller) spraak met info-i */}
           <div style={{ ...S.card, padding: 14 }}>
             <div style={{ display: "flex", alignItems: "stretch", gap: 8 }}>
@@ -2061,6 +2075,8 @@ export default function Home() {
               </div>
             </div>
           </div>
+          </>
+          )}
 
           {/* "Bedoelde je...?" suggestie banner */}
           {voiceSuggestion && (
@@ -2165,15 +2181,25 @@ export default function Home() {
             </div>
           )}
 
-          {/* Bestelling afronden — onderaan, onder de volledige lijst (vraagt bevestiging) */}
+          {/* Onderaan: afronden (primair) + wijzigen (subtiel). Afronden staat rechts — daar
+              verwacht de gebruiker de 'volgende/bevestig'-actie. */}
           {cartTotalItems > 0 && (
-            <button
-              onClick={() => setShowFinishConfirm(true)}
-              style={{ ...S.btn, width: "100%", marginTop: 2, marginBottom: 14, padding: "13px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }}
-            >
-              ✅ Bestelling rondje {nextRoundLabel} afronden · {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""}{showPrices ? ` · ≈ €${cartTotalValue.toFixed(2)}` : ""}
-              {" "}<span style={{ fontWeight: 600, fontSize: 12, opacity: 0.85 }}>(voor jouw groep van {participants.length} {participants.length === 1 ? "persoon" : "personen"})</span>
-            </button>
+            <div style={{ display: "flex", gap: 8, alignItems: "stretch", marginTop: 2, marginBottom: 14 }}>
+              {!orderEditing && (
+                <button
+                  onClick={() => setOrderEditing(true)}
+                  style={{ ...S.btn, flex: 0.6, padding: "13px 8px", fontSize: 13, fontWeight: 700, background: "#fffef9", border: "1.5px solid rgba(120,95,20,0.22)", color: "#8a7d55" }}
+                >
+                  ✏️ Bestelling wijzigen
+                </button>
+              )}
+              <button
+                onClick={() => setShowFinishConfirm(true)}
+                style={{ ...S.btn, flex: 1.4, padding: "13px 8px", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }}
+              >
+                ✅ Bestelling afronden · {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""}
+              </button>
+            </div>
           )}
 
           {/* Beheerknoppen — beide even groot, subtiel en rechts uitgelijnd */}
@@ -2303,8 +2329,11 @@ export default function Home() {
           {showDrinkSelector && (
             <div style={S.overlay}>
               <div style={{ ...S.modal, width: 460, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
-                <div style={{ marginBottom: 10 }}>
+                <div style={{ marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                   <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>🍹 Selecteer drankje(s)</h3>
+                  {selectorTotal > 0 && (
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "#4a3a0a", background: "linear-gradient(135deg,#f4c430,#f7d461)", borderRadius: 20, padding: "3px 12px", whiteSpace: "nowrap" }}>{selectorTotal} item{selectorTotal !== 1 ? "s" : ""}</span>
+                  )}
                 </div>
 
                 {/* category tabs */}
@@ -2390,7 +2419,7 @@ export default function Home() {
                 </div>
 
                 <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 10, padding: "12px 0", fontWeight: 700 }} onClick={confirmDrinkSelector}>
-                  {selectorTotal > 0 ? `➕ Toevoegen · ${selectorTotal} item${selectorTotal !== 1 ? "s" : ""}` : "Klaar"}
+                  {selectorTotal > 0 ? `Klaar + ${selectorTotal} item${selectorTotal !== 1 ? "s" : ""}` : "Klaar"}
                 </button>
                 <div style={{ textAlign: "center", marginTop: 8 }}>
                   <button
@@ -3165,7 +3194,10 @@ export default function Home() {
               {/* Kolomtitels boven de twee prijskolommen (enkel bij kleine groep — bij 4+ staan labels in elke kaart) */}
               {showBillPrices && participants.length > 0 && participants.length < 4 && !compareOther && (
                 <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: 10, padding: "0 4px 6px" }}>
-                  <div style={{ width: 66, textAlign: "right", fontSize: 10, color: "#aaa", fontWeight: 700 }}>indicatief</div>
+                  <div style={{ width: 66, textAlign: "right", fontSize: 10, color: "#aaa", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 3, lineHeight: 1.15 }}>
+                    indicatieve prijs
+                    <button onClick={() => setShowIndicatiefInfo(true)} title="Wat betekent dit?" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#b9b088", fontSize: 12, lineHeight: 1, flexShrink: 0 }}>ⓘ</button>
+                  </div>
                   <button onClick={() => setShowFairSplit((v) => !v)} title="Fair split tonen of verbergen" style={{ width: 158, textAlign: "center", fontSize: 11, fontWeight: 800, color: showFairSplit ? "#4a3f1e" : "#a06b00", background: showFairSplit ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "rgba(233,196,95,0.16)", border: showFairSplit ? "none" : "1px solid rgba(233,196,95,0.55)", borderRadius: 8, padding: "4px 0", letterSpacing: 0.5, boxShadow: showFairSplit ? "0 2px 8px rgba(233,196,95,0.4)" : "none", cursor: "pointer" }}>{showFairSplit ? (splitMode === "equal" ? "EVENVEEL ✕" : "FAIR SPLIT ✕") : "+ FAIR SPLIT"}</button>
                 </div>
               )}
@@ -3209,15 +3241,30 @@ export default function Home() {
                       <div style={{ flex: multiCol ? "1 1 100%" : "1 1 0", minWidth: 0 }}>
                         {Object.values(drinkSummary).length === 0 ? (
                           <div style={{ fontSize: 12, color: "#bbb" }}>nog niets gedronken</div>
-                        ) : (
-                          <div style={{ display: "flex", flexWrap: "nowrap", gap: 6, overflowX: "auto", paddingBottom: 2 }}>
-                            {Object.values(drinkSummary).map((ds) => (
-                              <span key={ds.drink.id} style={{ background: "rgba(150,110,20,0.05)", borderRadius: 10, padding: "3px 10px", fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}>
-                                {ds.drink.emoji} {ds.qty}× {ds.drink.name}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                        ) : (() => {
+                          const all = Object.values(drinkSummary)
+                          const LIMIT = 6
+                          const expanded = expandedBillPersons.has(p.id)
+                          const shown = expanded ? all : all.slice(0, LIMIT)
+                          const hidden = all.length - shown.length
+                          return (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                              {shown.map((ds) => (
+                                <span key={ds.drink.id} style={{ background: "rgba(150,110,20,0.05)", borderRadius: 10, padding: "3px 10px", fontSize: 12 }}>
+                                  {ds.drink.emoji} {ds.qty}× {ds.drink.name}
+                                </span>
+                              ))}
+                              {(hidden > 0 || expanded) && all.length > LIMIT && (
+                                <button
+                                  onClick={() => setExpandedBillPersons((prev) => { const n = new Set(prev); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n })}
+                                  style={{ background: "rgba(214,158,20,0.14)", border: "1px solid rgba(214,158,20,0.4)", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontWeight: 700, color: "#a06b00", cursor: "pointer" }}
+                                >
+                                  {expanded ? "− minder" : `+${hidden} meer`}
+                                </button>
+                              )}
+                            </div>
+                          )
+                        })()}
                       </div>
 
                       {pricesVisible && (() => {
@@ -3368,7 +3415,7 @@ export default function Home() {
                               setShowBillPrices(true)
                               setShowFairSplit(true)
                             }}
-                            style={{ width: "100%", border: "2.5px solid rgba(214,158,20,0.75)", borderRadius: 14, padding: "12px 8px", cursor: "pointer", background: "rgba(233,196,95,0.14)", color: "#a06b00", fontSize: 12.5, fontWeight: 800, lineHeight: 1.25, minHeight: 54 }}
+                            style={{ width: "100%", border: "2.5px solid #d99a1f", borderRadius: 14, padding: "12px 8px", cursor: "pointer", background: "linear-gradient(135deg,#f7e0a0,#f1cd72)", color: "#6b4e12", fontSize: 12.5, fontWeight: 800, lineHeight: 1.25, minHeight: 54, boxShadow: "0 4px 12px -6px rgba(214,158,20,0.6)" }}
                           >
                             Iedereen betaalt evenveel
                           </button>
