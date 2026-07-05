@@ -863,8 +863,8 @@ export default function Home() {
   useEffect(() => {
     if (didRestore.current) return
     didRestore.current = true
-    const code = getActiveGroupCode()
-    if (code) joinGroup(code)
+    // Bewust GEEN automatische heropening van de laatste groep: vanaf het keuzescherm kom je
+    // altijd op dit startscherm. Een opgeslagen groep open je zelf via 'Opgeslagen groepen'.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -1207,7 +1207,7 @@ export default function Home() {
               <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#4a3f1e", fontWeight: 600, background: "rgba(120,95,20,0.06)", borderRadius: 20, padding: "2px 8px 2px 10px" }}>{p.name}<span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 18, textAlign: "center", padding: "1px 6px", fontSize: 11, fontWeight: 800 }}>×{q}</span></span>
             ))}
             {unassigned > 0 && (
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#e0685c", background: "rgba(120,95,20,0.05)", borderRadius: 20, padding: "3px 12px" }}>{unassigned} nog toe te wijzen</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#e0685c", background: "rgba(120,95,20,0.05)", borderRadius: 20, padding: "3px 12px" }}>{unassigned} nog toe te wijzen!</span>
             )}
             {unassigned <= 0 && assignedEntries.length > 0 && (
               <span style={{ fontSize: 11, color: "#aaa" }}>✏️ aanpassen</span>
@@ -2587,7 +2587,7 @@ export default function Home() {
                     {(() => {
                       const open = orders.filter((o) => o.session === s && !o.participant_id).reduce((sum, o) => sum + o.quantity, 0)
                       if (open <= 0) return null
-                      return <span style={{ fontSize: 10, color: "#e0685c", background: "rgba(224,107,94,0.12)", border: "1px solid rgba(224,107,94,0.35)", borderRadius: 8, padding: "1px 8px", fontWeight: 800 }}>{open} nog toe te wijzen</span>
+                      return <span style={{ fontSize: 10, color: "#e0685c", background: "rgba(224,107,94,0.12)", border: "1px solid rgba(224,107,94,0.35)", borderRadius: 8, padding: "1px 8px", fontWeight: 800 }}>{open} nog toe te wijzen!</span>
                     })()}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -2639,7 +2639,7 @@ export default function Home() {
                           ))}
                           {it.anonymous > 0 && (
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }} onClick={(e) => e.stopPropagation()}>
-                              <span style={{ fontSize: 11, color: "#e0685c", fontWeight: 600, flexShrink: 0 }}>{it.anonymous}× nog toe te wijzen</span>
+                              <span style={{ fontSize: 11, color: "#e0685c", fontWeight: 600, flexShrink: 0 }}>{it.anonymous}× nog toe te wijzen!</span>
                               <select
                                 value=""
                                 onChange={(e) => { if (e.target.value) assignAnonymousQty(it.drink.id, s, e.target.value, 1) }}
@@ -3078,20 +3078,25 @@ export default function Home() {
                     {potTotal > 0 ? (() => {
                       const active = (paymentDraft[POT_PAYER] ?? "") !== ""
                       return (
-                        <button
-                          onClick={() => {
-                            setPayWarn(false)
-                            setPaymentDraft((prev) => {
-                              const n = { ...prev }
-                              if (n[POT_PAYER] !== undefined) delete n[POT_PAYER]
-                              else n[POT_PAYER] = ""
-                              return n
-                            })
-                          }}
-                          style={{ border: active ? "1.5px solid #ecc85a" : "1px solid rgba(120,95,20,0.2)", background: active ? "rgba(233,196,95,0.25)" : "#fff", color: active ? "#a06b00" : "#8a7d55", borderRadius: 20, padding: "7px 14px", fontSize: 13, fontWeight: active ? 800 : 700, cursor: "pointer" }}
-                        >
-                          {active ? "✓ " : ""}💰 De pot
-                        </button>
+                        <>
+                          <button
+                            onClick={() => {
+                              setPayWarn(false)
+                              setPaymentDraft((prev) => {
+                                const n = { ...prev }
+                                if (n[POT_PAYER] !== undefined) delete n[POT_PAYER]
+                                else n[POT_PAYER] = ""
+                                return n
+                              })
+                            }}
+                            style={{ border: active ? "1.5px solid #ecc85a" : "1px solid rgba(120,95,20,0.2)", background: active ? "rgba(233,196,95,0.25)" : "#fff", color: active ? "#a06b00" : "#8a7d55", borderRadius: 20, padding: "7px 14px", fontSize: 13, fontWeight: active ? 800 : 700, cursor: "pointer" }}
+                          >
+                            {active ? "✓ " : ""}💰 De pot
+                          </button>
+                          <button onClick={() => setShowPotOverview(true)} title="Pot bekijken of aanvullen" style={{ border: "1px dashed rgba(120,95,20,0.3)", background: "rgba(150,110,20,0.04)", color: "#c98a00", borderRadius: 20, padding: "7px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+                            + pot aanvullen
+                          </button>
+                        </>
                       )
                     })() : (
                       <button onClick={openPotModal} style={{ border: "1px dashed rgba(120,95,20,0.25)", background: "rgba(150,110,20,0.04)", color: "#c98a00", borderRadius: 20, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
@@ -3251,7 +3256,7 @@ export default function Home() {
                       </div>
                       {participants.length > 0
                         ? renderBillAssign(it.drink)
-                        : it.anonymousQty > 0 && <span style={{ fontSize: 10, color: "#e0685c", fontWeight: 600 }}>({it.anonymousQty} nog toe te wijzen)</span>}
+                        : it.anonymousQty > 0 && <span style={{ fontSize: 10, color: "#e0685c", fontWeight: 600 }}>({it.anonymousQty} nog toe te wijzen!)</span>}
                     </div>
                   ))}
                 </div>
@@ -3622,7 +3627,7 @@ export default function Home() {
                     </div>
                   ) : (
                     <>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>🍹 Nog nog toe te wijzen</h3>
+                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>🍹 Nog toe te wijzen</h3>
                       <p style={{ fontSize: 13, color: "#777", marginTop: 0, marginBottom: 16, lineHeight: 1.55 }}>
                         Er zijn nog <b style={{ color: "#e0685c" }}>{liveUnassignedTotal} {liveUnassignedTotal === 1 ? "drankje" : "drankjes"}</b> nog toe te wijzen. Wijs ze toe in <b>&ldquo;Alle bestelde drankjes&rdquo;</b> of in <b>&ldquo;Overzicht Rondjes&rdquo;</b>.
                       </p>
