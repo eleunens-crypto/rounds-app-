@@ -2053,9 +2053,12 @@ export default function Home() {
           </div>
 
           <div style={S.card}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <h3 style={{ ...S.h3, marginBottom: 0 }}>Personen</h3>
-              <button style={{ ...S.btn, fontSize: 12 }} onClick={() => setShowAddPerson(true)}>+ Naam toevoegen</button>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0, flexWrap: "wrap" }}>
+                <h3 style={{ ...S.h3, marginBottom: 0 }}>Personen</h3>
+                <span style={{ fontSize: 11, fontStyle: "italic", color: "#b3a988", fontWeight: 600 }}>tik op een naam om te hernoemen</span>
+              </div>
+              <button style={{ ...S.btn, fontSize: 12, flexShrink: 0 }} onClick={() => setShowAddPerson(true)}>+ Naam toevoegen</button>
             </div>
 
             {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 24 }}>Nog geen personen</div>}
@@ -2082,21 +2085,13 @@ export default function Home() {
                   />
                 ) : (() => {
                   const isPlaceholder = /^Persoon \d+$/.test(p.name)
+                  const shown = isPlaceholder ? p.name.replace(/^Persoon /, "Pers. ") : p.name
                   return (
                     <>
                       <span
                         onClick={() => { setEditingPerson(p.id); setEditingPersonName("") }}
-                        style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 6, cursor: "text", padding: "2px 0", overflow: "hidden" }}
-                      >
-                        {isPlaceholder ? (
-                          <>
-                            <span style={{ fontStyle: "italic", fontWeight: 600, fontSize: 15, color: "#b3a988", borderBottom: "1px dashed #cdbd8e", whiteSpace: "nowrap" }}>{p.name}</span>
-                            <span style={{ fontSize: 10.5, fontWeight: 600, color: "#c8b98a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>tik om te hernoemen</span>
-                          </>
-                        ) : (
-                          <span style={{ fontWeight: 600, fontSize: 15 }}>{p.name}</span>
-                        )}
-                      </span>
+                        style={{ flex: 1, minWidth: 0, cursor: "text", padding: "2px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600, fontSize: 15, ...(isPlaceholder ? { fontStyle: "italic", color: "#b3a988", borderBottom: "1px dashed #cdbd8e" } : {}) }}
+                      >{shown}</span>
                       <button style={S.iconBtn} onClick={() => { setEditingPerson(p.id); setEditingPersonName("") }}>✏️</button>
                       <button style={S.iconBtn} onClick={() => deletePerson(p.id, p.name)}>🗑️</button>
                     </>
@@ -2499,18 +2494,26 @@ export default function Home() {
                 {/* Live overzicht: groep, wat al in de bestelling zit, en wat je nu toevoegt */}
                 {(() => {
                   const groupSize = participants.length
-                  const already = cartTotalItems
+                  // In wijzig-modus toont de selector de VOLLEDIGE bestelling (die vervangt hij);
+                  // anders telt wat je nu toevoegt op bij wat al in de bestelling zit.
+                  const already = selectorEditMode ? 0 : cartTotalItems
                   const adding = selectorTotal
-                  const newTotal = already + adding
+                  const newTotal = selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal
                   const over = groupSize > 0 ? newTotal - groupSize : 0
                   return (
                     <div style={{ marginTop: 10, padding: "9px 12px", borderRadius: 12, background: over > 0 ? "rgba(224,107,94,0.1)" : "rgba(120,95,20,0.04)", border: over > 0 ? "1px solid rgba(224,107,94,0.3)" : "1px solid transparent" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "#555", gap: 8, flexWrap: "wrap" }}>
                         <span>👥 <b style={{ color: "#4a3f1e" }}>{groupSize}</b> {groupSize === 1 ? "persoon" : "personen"}</span>
                         <span>
-                          🍹 <b style={{ color: "#4a3f1e" }}>{already}</b>
-                          {adding > 0 && <> + <b style={{ color: "#c8941a" }}>{adding}</b> = <b style={{ color: "#4a3f1e" }}>{newTotal}</b></>}
-                          {" "}{(adding > 0 ? newTotal : already) === 1 ? "drankje" : "drankjes"}
+                          🍹 {selectorEditMode ? (
+                            <b style={{ color: "#4a3f1e" }}>{newTotal}</b>
+                          ) : (
+                            <>
+                              <b style={{ color: "#4a3f1e" }}>{already}</b>
+                              {adding > 0 && <> + <b style={{ color: "#c8941a" }}>{adding}</b> = <b style={{ color: "#4a3f1e" }}>{newTotal}</b></>}
+                            </>
+                          )}
+                          {" "}{newTotal === 1 ? "drankje" : "drankjes"}
                         </span>
                       </div>
                       {over > 0 && (
