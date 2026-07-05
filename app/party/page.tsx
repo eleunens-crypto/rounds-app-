@@ -641,7 +641,7 @@ export default function Home() {
   const [lastAddedViaVoice, setLastAddedViaVoice] = useState(false) // "Laatst toegevoegd"-kaart enkel tonen na spraak
   const [openAssignFor, setOpenAssignFor] = useState<string | null>(null) // welk drankje in "Alle bestellingen" zijn toewijs-dropdown open heeft
   const [openBillAssignFor, setOpenBillAssignFor] = useState<string | null>(null) // welk drankje in het afrekenscherm zijn toewijs-dropdown open heeft
-  const [billOriginallyUnassigned, setBillOriginallyUnassigned] = useState<Set<string>>(new Set()) // drankjes die bij het openen van 'afrekenen' nog niet toegewezen waren (krijgen nadien een potloodje)
+  const [billOriginallyUnassigned, setBillOriginallyUnassigned] = useState<Set<string>>(new Set()) // drankjes die bij het openen van 'afrekenen' nog toe te wijzen waren (krijgen nadien een potloodje)
   const [showPrices, setShowPrices] = useState(false)
 
   const [showAddPerson, setShowAddPerson] = useState(false)
@@ -741,7 +741,7 @@ export default function Home() {
     if (showPotOverview) { setPotAddedThisSession(0); setPotAddDraft({}); setPotAddBulk(""); setPotAddWarn(false); setPotAddPerPersonOpen(false) }
   }, [showPotOverview])
 
-  // Bij het openen van 'afrekenen': onthoud welke drankjes toen nog niet toegewezen waren (die krijgen nadien een potloodje)
+  // Bij het openen van 'afrekenen': onthoud welke drankjes toen nog toe te wijzen waren (die krijgen nadien een potloodje)
   useEffect(() => {
     if (view === "bill") {
       const ids = new Set<string>()
@@ -1186,7 +1186,7 @@ export default function Home() {
               <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#4a3f1e", fontWeight: 600, background: "rgba(120,95,20,0.06)", borderRadius: 20, padding: "2px 8px 2px 10px" }}>{p.name}<span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 18, textAlign: "center", padding: "1px 6px", fontSize: 11, fontWeight: 800 }}>×{q}</span></span>
             ))}
             {unassigned > 0 && (
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#e0685c", background: "rgba(120,95,20,0.05)", borderRadius: 20, padding: "3px 12px" }}>{unassigned} niet toegewezen</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#e0685c", background: "rgba(120,95,20,0.05)", borderRadius: 20, padding: "3px 12px" }}>{unassigned} nog toe te wijzen</span>
             )}
             {unassigned <= 0 && assignedEntries.length > 0 && (
               <span style={{ fontSize: 11, color: "#aaa" }}>✏️ aanpassen</span>
@@ -1231,7 +1231,7 @@ export default function Home() {
     const trigger = anonymousQty > 0 ? (
       <button onClick={() => setOpenBillAssignFor(isOpen ? null : drink.id)}
         style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#e0685c", background: "rgba(224,107,94,0.06)", border: "1px solid rgba(224,107,94,0.4)", borderRadius: 10, padding: "7px 10px" }}>
-        <span>⚠️ {anonymousQty} niet toegewezen — voor wie?</span>
+        <span>⚠️ {anonymousQty} nog toe te wijzen — voor wie?</span>
         <span style={{ color: "#aaa" }}>{isOpen ? "▴" : "▾"}</span>
       </button>
     ) : (
@@ -2353,7 +2353,7 @@ export default function Home() {
                         <div style={{ display: "flex", gap: 8, alignItems: "flex-start", textAlign: "left", background: "rgba(224,107,94,0.1)", border: "1px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
                           <span style={{ fontSize: 16, lineHeight: 1 }}>⚠️</span>
                           <span style={{ fontSize: 12.5, color: "#c0392b", lineHeight: 1.45, fontWeight: 600 }}>
-                            <b>{unassigned} {unassigned === 1 ? "drankje" : "drankjes"}</b> nog niet toegewezen. Voeg ze nu toe voor een eerlijke <b>&ldquo;Fair Split&rdquo;</b>. Hoe? Via de knop <b>&ldquo;Bestelling aanpassen&rdquo;</b> hieronder.
+                            <b>{unassigned} {unassigned === 1 ? "drankje" : "drankjes"}</b> nog toe te wijzen. Voeg ze nu toe voor een eerlijke <b>&ldquo;Fair Split&rdquo;</b>. Hoe? Via de knop <b>&ldquo;Bestelling aanpassen&rdquo;</b> hieronder.
                           </span>
                         </div>
                       )}
@@ -2566,7 +2566,7 @@ export default function Home() {
                     {(() => {
                       const open = orders.filter((o) => o.session === s && !o.participant_id).reduce((sum, o) => sum + o.quantity, 0)
                       if (open <= 0) return null
-                      return <span style={{ fontSize: 10, color: "#e0685c", background: "rgba(224,107,94,0.12)", border: "1px solid rgba(224,107,94,0.35)", borderRadius: 8, padding: "1px 8px", fontWeight: 800 }}>{open} niet toegewezen</span>
+                      return <span style={{ fontSize: 10, color: "#e0685c", background: "rgba(224,107,94,0.12)", border: "1px solid rgba(224,107,94,0.35)", borderRadius: 8, padding: "1px 8px", fontWeight: 800 }}>{open} nog toe te wijzen</span>
                     })()}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -2612,13 +2612,13 @@ export default function Home() {
                             <div key={pid} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, marginTop: 2 }}>
                               <span style={{ color: "#666" }}>{info.name} × {info.qty}</span>
                               {isEditing && (
-                                <button title="terug naar niet toegewezen" style={{ ...S.iconBtn, width: 20, height: 20, fontSize: 11 }} onClick={() => unassignOrderQty(it.drink.id, pid, s, 1)}>−</button>
+                                <button title="terug naar nog toe te wijzen" style={{ ...S.iconBtn, width: 20, height: 20, fontSize: 11 }} onClick={() => unassignOrderQty(it.drink.id, pid, s, 1)}>−</button>
                               )}
                             </div>
                           ))}
                           {it.anonymous > 0 && (
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }} onClick={(e) => e.stopPropagation()}>
-                              <span style={{ fontSize: 11, color: "#e0685c", fontWeight: 600, flexShrink: 0 }}>{it.anonymous}× niet toegewezen</span>
+                              <span style={{ fontSize: 11, color: "#e0685c", fontWeight: 600, flexShrink: 0 }}>{it.anonymous}× nog toe te wijzen</span>
                               <select
                                 value=""
                                 onChange={(e) => { if (e.target.value) assignAnonymousQty(it.drink.id, s, e.target.value, 1) }}
@@ -2990,7 +2990,7 @@ export default function Home() {
                   <div style={{ fontSize: 26, fontWeight: 800, color: "#333" }}>{it.totalQty}× {it.drink.name}</div>
                   <div style={{ fontSize: 13, color: "#aaa", marginTop: 2 }}>
                     {Object.values(it.people).map((p) => `${p.name} (${p.qty})`).join(", ")}
-                    {it.anonymous > 0 && ` + ${it.anonymous} niet toegewezen`}
+                    {it.anonymous > 0 && ` + ${it.anonymous} nog toe te wijzen`}
                   </div>
                 </div>
               </div>
@@ -3067,7 +3067,7 @@ export default function Home() {
                               return n
                             })
                           }}
-                          style={{ border: active ? "1.5px solid #ecc85a" : "1px solid rgba(233,196,95,0.6)", background: active ? "rgba(233,196,95,0.2)" : "#fffdf6", color: "#a06b00", borderRadius: 20, padding: "7px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}
+                          style={{ border: active ? "1.5px solid #ecc85a" : "1px solid rgba(120,95,20,0.2)", background: active ? "rgba(233,196,95,0.25)" : "#fff", color: active ? "#a06b00" : "#8a7d55", borderRadius: 20, padding: "7px 14px", fontSize: 13, fontWeight: active ? 800 : 700, cursor: "pointer" }}
                         >
                           {active ? "✓ " : ""}💰 De pot
                         </button>
@@ -3230,7 +3230,7 @@ export default function Home() {
                       </div>
                       {participants.length > 0
                         ? renderBillAssign(it.drink)
-                        : it.anonymousQty > 0 && <span style={{ fontSize: 10, color: "#e0685c", fontWeight: 600 }}>({it.anonymousQty} niet toegewezen)</span>}
+                        : it.anonymousQty > 0 && <span style={{ fontSize: 10, color: "#e0685c", fontWeight: 600 }}>({it.anonymousQty} nog toe te wijzen)</span>}
                     </div>
                   ))}
                 </div>
@@ -3266,7 +3266,7 @@ export default function Home() {
                 </div>
               )}
               {orders.some((o) => o.participant_id) && (
-              <div style={participants.length >= 4 ? { display: "grid", gridTemplateColumns: `repeat(auto-fill, minmax(${participants.length >= 6 ? 188 : 250}px, 1fr))`, gap: 10, marginTop: 2 } : undefined}>
+              <div style={participants.length >= 4 ? { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginTop: 2 } : undefined}>
               {participants.map((p) => {
                 const personOrders = orders.filter((o) => o.participant_id === p.id)
                 const drinkSummary: Record<string, { drink: Drink; qty: number }> = {}
@@ -3565,7 +3565,7 @@ export default function Home() {
                       <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>🍹 Toewijzen</h3>
                       <p style={{ fontSize: 13, color: "#777", marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
                         {liveUnassignedTotal > 0
-                          ? <><b style={{ color: "#e0685c" }}>{liveUnassignedTotal} {liveUnassignedTotal === 1 ? "drankje" : "drankjes"} nog niet toegewezen.</b> Tik personen aan — meerdere mag.</>
+                          ? <><b style={{ color: "#e0685c" }}>{liveUnassignedTotal} {liveUnassignedTotal === 1 ? "drankje" : "drankjes"} nog toe te wijzen.</b> Tik personen aan — meerdere mag.</>
                           : <>Alles toegewezen 🎉 Je kan nog <b>wijzigen</b> of doorgaan naar Fair Split.</>}
                       </p>
                       <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
@@ -3603,9 +3603,9 @@ export default function Home() {
                     </div>
                   ) : (
                     <>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>🍹 Nog niet toegewezen</h3>
+                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>🍹 Nog nog toe te wijzen</h3>
                       <p style={{ fontSize: 13, color: "#777", marginTop: 0, marginBottom: 16, lineHeight: 1.55 }}>
-                        Er zijn nog <b style={{ color: "#e0685c" }}>{liveUnassignedTotal} {liveUnassignedTotal === 1 ? "drankje" : "drankjes"}</b> niet toegewezen. Wijs ze toe in <b>&ldquo;Alle bestelde drankjes&rdquo;</b> of in <b>&ldquo;Overzicht Rondjes&rdquo;</b>.
+                        Er zijn nog <b style={{ color: "#e0685c" }}>{liveUnassignedTotal} {liveUnassignedTotal === 1 ? "drankje" : "drankjes"}</b> nog toe te wijzen. Wijs ze toe in <b>&ldquo;Alle bestelde drankjes&rdquo;</b> of in <b>&ldquo;Overzicht Rondjes&rdquo;</b>.
                       </p>
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         <button
