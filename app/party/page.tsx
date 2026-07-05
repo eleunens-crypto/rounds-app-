@@ -635,6 +635,24 @@ export default function Home() {
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
 
+  // Sluit het mobiele toetsenbord zodra je buiten een invoerveld tikt (op een knop of lege ruimte),
+  // zodat het niet overbodig open blijft staan en je de app beter ziet.
+  useEffect(() => {
+    const isField = (el: EventTarget | null) => {
+      const n = el as HTMLElement | null
+      return !!n && (n.tagName === "INPUT" || n.tagName === "TEXTAREA" || n.tagName === "SELECT" || n.isContentEditable)
+    }
+    const onPointerDown = (e: PointerEvent) => {
+      const active = document.activeElement as HTMLElement | null
+      if (!isField(active)) return
+      const target = e.target as HTMLElement | null
+      if (isField(target) || (target && target.closest && target.closest("input,textarea,select,[contenteditable=true]"))) return
+      active?.blur()
+    }
+    document.addEventListener("pointerdown", onPointerDown)
+    return () => document.removeEventListener("pointerdown", onPointerDown)
+  }, [])
+
   // ── App flow state ────────────────────────────────────────────────────────
   const [view, setView] = useState<AppView>("setup")
   const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
@@ -837,7 +855,7 @@ export default function Home() {
     } finally { setIsStarting(false) }
   }
 
-  const joinGroup = async (codeOverride?: string) => {
+  const joinGroup = async (codeOverride?: string, initialView?: AppView) => {
     const code = codeOverride ?? joinCode
     if (!code.trim() || isStarting) return
     setStartError(null)
@@ -855,7 +873,7 @@ export default function Home() {
       await loadAll(data.id)
       saveGroupToStorage(data) // geopende groep automatisch onthouden (geen 'bewaar'-knop meer nodig)
       setSavedGroups(getSavedGroups())
-      setView("setup")
+      setView(initialView ?? "setup")
     } finally { setIsStarting(false) }
   }
 
@@ -863,10 +881,27 @@ export default function Home() {
   useEffect(() => {
     if (didRestore.current) return
     didRestore.current = true
-    // Bewust GEEN automatische heropening van de laatste groep: vanaf het keuzescherm kom je
-    // altijd op dit startscherm. Een opgeslagen groep open je zelf via 'Opgeslagen groepen'.
+    // Herstel enkel bij een refresh in dezelfde tab (sessionStorage). Vanaf het keuzescherm
+    // wordt deze sessie gewist, zodat je daar altijd op het startscherm binnenkomt.
+    try {
+      const raw = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("rundo_party_session") : null
+      if (raw) {
+        const s = JSON.parse(raw) as { code?: string; view?: AppView }
+        if (s.code) joinGroup(s.code, s.view)
+      }
+    } catch { /* geen sessie om te herstellen */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Bewaar de actieve sessie (groep + tab) in sessionStorage, zodat een refresh je in
+  // dezelfde groep en tab houdt. Wordt gewist bij het verlaten van de groep.
+  useEffect(() => {
+    try {
+      if (group && typeof sessionStorage !== "undefined") {
+        sessionStorage.setItem("rundo_party_session", JSON.stringify({ code: group.invite_code, view }))
+      }
+    } catch { /* sessionStorage niet beschikbaar */ }
+  }, [group, view])
 
   // ── Person setup ─────────────────────────────────────────────────────────
   // Haal de HUIDIGE placeholdernummers rechtstreeks uit de DB, zodat we nooit
@@ -1017,6 +1052,7 @@ export default function Home() {
   // Terug naar het homescherm (nieuwe groep maken / opgeslagen groep openen)
   const goHome = () => {
     clearActiveGroupCode()
+    try { if (typeof sessionStorage !== "undefined") sessionStorage.removeItem("rundo_party_session") } catch { /* ignore */ }
     setGroup(null)
     setView("setup")
     setCart({})

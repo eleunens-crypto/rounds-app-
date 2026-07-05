@@ -1,8 +1,17 @@
 "use client"
 
 import Link from "next/link"
+import { useEffect } from "react"
 
 export default function Home() {
+  // Op het keuzescherm: wis de actieve mode-sessies, zodat je vanaf hier altijd op het
+  // startscherm van een modus binnenkomt (nooit meteen in een opgeslagen groep).
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem("rundo_party_session")
+      sessionStorage.removeItem("rundo_table_session")
+    } catch { /* sessionStorage niet beschikbaar */ }
+  }, [])
   return (
     <div style={S.page}>
       <div style={{ maxWidth: 360, margin: "0 auto", padding: "30px 0 40px" }}>

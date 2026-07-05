@@ -253,6 +253,23 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
 export default function RundoTable() {
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+
+  // Sluit het mobiele toetsenbord zodra je buiten een invoerveld tikt (op een knop of lege ruimte).
+  useEffect(() => {
+    const isField = (el: EventTarget | null) => {
+      const n = el as HTMLElement | null
+      return !!n && (n.tagName === "INPUT" || n.tagName === "TEXTAREA" || n.tagName === "SELECT" || n.isContentEditable)
+    }
+    const onPointerDown = (e: PointerEvent) => {
+      const active = document.activeElement as HTMLElement | null
+      if (!isField(active)) return
+      const target = e.target as HTMLElement | null
+      if (isField(target) || (target && target.closest && target.closest("input,textarea,select,[contenteditable=true]"))) return
+      active?.blur()
+    }
+    document.addEventListener("pointerdown", onPointerDown)
+    return () => document.removeEventListener("pointerdown", onPointerDown)
+  }, [])
   const autoJoined = useRef(false)
 
   const [group, setGroup] = useState<Group | null>(null)
@@ -376,8 +393,26 @@ export default function RundoTable() {
     if (typeof window === "undefined") return
     const code = new URLSearchParams(window.location.search).get("code")
     if (code) { autoJoined.current = true; setViaLink(true); joinGroup(code); return }
+    // Geen link-code → herstel een eventuele eigen sessie (refresh in dezelfde tab, bv. de beheerder).
+    // Vanaf het keuzescherm is deze sessie gewist, dus daar kom je altijd op het startscherm.
+    try {
+      const raw = sessionStorage.getItem("rundo_table_session")
+      if (raw) {
+        const s = JSON.parse(raw) as { code?: string; tab?: AdminTab }
+        if (s.code) { autoJoined.current = true; joinGroup(s.code, s.tab); return }
+      }
+    } catch { /* geen sessie om te herstellen */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Bewaar de actieve sessie (groep + tab) zodat een refresh je in dezelfde groep en tab houdt.
+  useEffect(() => {
+    try {
+      if (group && typeof sessionStorage !== "undefined") {
+        sessionStorage.setItem("rundo_table_session", JSON.stringify({ code: group.invite_code, tab: adminTab }))
+      }
+    } catch { /* sessionStorage niet beschikbaar */ }
+  }, [group, adminTab])
 
   const createGroup = async () => {
     if (busy) return
@@ -399,7 +434,7 @@ export default function RundoTable() {
     } finally { setBusy(false) }
   }
 
-  const joinGroup = async (codeOverride?: string) => {
+  const joinGroup = async (codeOverride?: string, initialTab?: AdminTab) => {
     const code = (codeOverride ?? "").trim().toUpperCase()
     if (!code || busy) return
     setBusy(true); setStartError(null)
@@ -410,6 +445,7 @@ export default function RundoTable() {
       setViaLink(role === "gast")
       saveMyGroup(data, role); setMyGroups(getMyGroups()); rememberLastGroup(data.id)
       setGroup(data); setMeId(getMeId(data.id)); await loadAll(data.id)
+      if (initialTab) setAdminTab(initialTab)
     } finally { setBusy(false) }
   }
 
@@ -438,6 +474,7 @@ export default function RundoTable() {
 
   const goToChooser = () => {
     if (typeof window === "undefined") return
+    try { sessionStorage.removeItem("rundo_table_session") } catch { /* ignore */ }
     try {
       const target = window.location.origin + "/"
       if (window.top && window.top !== window.self) { window.top.location.href = target; return }
@@ -456,6 +493,7 @@ export default function RundoTable() {
     setEditGuestId(null); setShowTodo(false); setShowAddGuest(false); setViewReceipt(null)
     autoJoined.current = true
     rememberLastGroup(null)
+    try { if (typeof sessionStorage !== "undefined") sessionStorage.removeItem("rundo_table_session") } catch { /* ignore */ }
     if (typeof window !== "undefined" && window.location.search) {
       window.history.replaceState({}, "", window.location.pathname)
     }
