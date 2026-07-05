@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 
 export const runtime = "nodejs"
 
-// Het model. gemini-2.0-flash is breed beschikbaar, goedkoop en met beeldherkenning.
-// Werkt dit model (nog) niet op jouw sleutel, probeer dan "gemini-2.5-flash".
-const MODEL = "gemini-2.0-flash"
+// Het model. gemini-2.5-flash-lite heeft de ruimste GRATIS dagquota + beeldherkenning.
+// Blijft het 429 geven, probeer dan "gemini-2.5-flash" of "gemini-flash-latest".
+const MODEL = "gemini-2.5-flash-lite"
 
 const PROMPT = [
   "Je krijgt een foto van een restaurant- of caferekening (Belgisch, meestal Nederlands of Frans).",
