@@ -34,7 +34,7 @@ type Claim = {
 }
 type Confirmation = { id: string; group_id: string; participant_id: string; confirmed_at?: string }
 
-type ParsedItem = { name: string; unit_price: number; quantity: number; is_shared: boolean; distribute?: string; tax_rate?: number; _isNew?: boolean }
+type ParsedItem = { name: string; unit_price: number; quantity: number; is_shared: boolean; distribute?: string; tax_rate?: number; _isNew?: boolean; uncertain?: boolean; note?: string }
 type AdminTab = "scan" | "guests" | "overview"
 
 // ─── LOCAL STORAGE / IDS ─────────────────────────────────────────────────────
@@ -233,7 +233,7 @@ function fileToBase64(file: File): Promise<string> {
 
 // Hoofd-scan: probeer eerst de AI-route (Gemini). Lukt dat niet (geen sleutel, fout, niets herkend),
 // dan valt hij automatisch terug op de lokale Tesseract-scan.
-async function scanReceipt(file: File, onProgress?: (p: number) => void): Promise<{ items: ParsedItem[]; total: number | null }> {
+async function scanReceipt(file: File, onProgress?: (p: number) => void): Promise<{ items: ParsedItem[]; total: number | null; source: "ai" | "local" }> {
   try {
     onProgress?.(0.15)
     const imageBase64 = await fileToBase64(file)
@@ -247,17 +247,21 @@ async function scanReceipt(file: File, onProgress?: (p: number) => void): Promis
       const data = await resp.json()
       if (Array.isArray(data?.items)) {
         const items: ParsedItem[] = data.items
-          .map((it: { name?: string; quantity?: number; unit_price?: number }) => ({
+          .map((it: { name?: string; quantity?: number; unit_price?: number; uncertain?: boolean; note?: string; is_extra_cost?: boolean }) => ({
             name: String(it.name ?? "").trim(),
-            quantity: Math.max(1, Math.round(Number(it.quantity) || 1)),
+            quantity: it.is_extra_cost ? 1 : Math.max(1, Math.round(Number(it.quantity) || 1)),
             unit_price: Math.max(0, Math.round((Number(it.unit_price) || 0) * 100) / 100),
             is_shared: false,
+            uncertain: !!it.uncertain,
+            note: String(it.note ?? "").trim(),
+            // Aparte extra kost (bediening, couvert, leveringskosten…) -> als gedeelde kost over iedereen verdelen.
+            ...(it.is_extra_cost ? { distribute: "all" } : {}),
           }))
           .filter((it: ParsedItem) => it.name.length > 0)
         if (items.length > 0) {
           onProgress?.(1)
           const total = data.total != null && !isNaN(Number(data.total)) ? Math.round(Number(data.total) * 100) / 100 : null
-          return { items, total }
+          return { items, total, source: "ai" }
         }
       }
     } else {
@@ -267,7 +271,7 @@ async function scanReceipt(file: File, onProgress?: (p: number) => void): Promis
     console.warn("AI-scan mislukt, terugval op lokale scan:", e)
   }
   // Terugval: lokale OCR
-  return scanReceiptOCR(file, onProgress)
+  return { ...(await scanReceiptOCR(file, onProgress)), source: "local" }
 }
 
 async function scanReceiptOCR(file: File, onProgress?: (p: number) => void): Promise<{ items: ParsedItem[]; total: number | null }> {
@@ -346,10 +350,14 @@ export default function RundoTable() {
   const [adminTab, setAdminTab] = useState<AdminTab>("scan")
   const [showScan, setShowScan] = useState(false)
   const receiptInputRef = useRef<HTMLInputElement>(null)
+  // Twijfel-vlaggen uit de AI-scan, per item-id (lokaal, om meteen na de scan na te kijken).
+  const [scanFlags, setScanFlags] = useState<Record<string, { note: string }>>({})
   const [scanning, setScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState(0)
   const [scanError, setScanError] = useState<string | null>(null)
   const [scanPreview, setScanPreview] = useState<ParsedItem[]>([])
+  // Toont of de laatste scan via de AI ging of via de lokale terugval (voor de beheerder).
+  const [scanSource, setScanSource] = useState<"ai" | "local" | null>(null)
   const [scanTotal, setScanTotal] = useState<string>("")
   const [expandedPeople, setExpandedPeople] = useState<Set<string>>(new Set())
   const [claimMode, setClaimMode] = useState<"item" | "person">("item")
@@ -690,6 +698,7 @@ export default function RundoTable() {
     setScanPhotoUrl(URL.createObjectURL(file))
     try {
       const parsed = await scanReceipt(file, (p) => setScanProgress(p))
+      setScanSource(parsed.source)
       if (parsed.items.length === 0) {
         setScanPreview([])
         setScanError("Niets herkend op de foto. Maak een scherpere foto, recht van boven en goed belicht, en probeer opnieuw.")
@@ -736,7 +745,14 @@ export default function RundoTable() {
     if (baseRes.error) { setError("Items opslaan mislukt: " + baseRes.error.message); return }
     const inserted = baseRes.data || []
     const idByScanIdx: Record<number, string> = {}
-    baseList.forEach((o, k) => { if (inserted[k]) idByScanIdx[o.idx] = inserted[k].id })
+    const flags: Record<string, { note: string }> = {}
+    baseList.forEach((o, k) => {
+      if (inserted[k]) {
+        idByScanIdx[o.idx] = inserted[k].id
+        if (o.it.uncertain) flags[inserted[k].id] = { note: o.it.note || "" }
+      }
+    })
+    setScanFlags((prev) => ({ ...prev, ...flags }))
 
     if (taxList.length > 0) {
       const taxRows = taxList.map(({ it }) => {
@@ -1259,12 +1275,21 @@ export default function RundoTable() {
             )
           })()}
 
+          {items.length > 0 && scanSource && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "2px 0 10px", padding: "8px 12px", borderRadius: 10, fontSize: 12.5, fontWeight: 700, background: scanSource === "ai" ? "rgba(39,174,96,0.1)" : "rgba(243,156,18,0.12)", border: scanSource === "ai" ? "1px solid rgba(39,174,96,0.4)" : "1px solid rgba(243,156,18,0.5)", color: scanSource === "ai" ? "#1f8a4c" : "#b5591a" }}>
+            {scanSource === "ai"
+              ? "✨ AI-scan gelukt — items en volgorde komen van de AI."
+              : "📷 Lokale scan gebruikt (AI was niet beschikbaar). Volgorde en herkenning kunnen minder nauwkeurig zijn."}
+            </div>
+          )}
+
           {items.length > 0 && (
           <ItemList
             items={baseItems} claimedQty={claimedQty} participants={participants} claimsForItem={claimsForItem}
             sharerIds={sharerIds} shareHeads={shareHeads} toggleShareClaim={toggleShareClaim} setShareFixed={setShareFixed}
             onEdit={setEditItem} onToggleShared={toggleShared} onDelete={deleteItem} onAddManual={() => openNewItem("bill")} bareBill
             recentItemId={recentItemId} onGoGuests={() => setAdminTab("guests")}
+            scanFlags={scanFlags}
             billOk={group?.receipt_total != null && Math.abs((group.receipt_total ?? 0) - billTotal) < 0.005}
             taxLines={taxItems.map((t) => ({ name: t.name, amount: taxAmount(t) }))}
             taxNode={
@@ -1978,7 +2003,7 @@ function TopBar({ group, isAdmin, onHome, me, totalPersons, guestSeats, onGuestS
   )
 }
 
-function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, shareHeads, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onAddManual, bareBill, taxLines, taxNode, recentItemId, onGoGuests, billOk }: {
+function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, shareHeads, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onAddManual, bareBill, taxLines, taxNode, recentItemId, onGoGuests, billOk, scanFlags }: {
   items: BillItem[]; claimedQty: (id: string) => number
   participants: Participant[]; claimsForItem: (id: string) => { name: string; qty: number }[]
   sharerIds: (id: string) => string[]; shareHeads: (id: string) => number; toggleShareClaim: (itemId: string, pid: string) => void
@@ -1990,7 +2015,9 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   recentItemId?: string | null
   onGoGuests?: () => void
   billOk?: boolean
+  scanFlags?: Record<string, { note: string }>
 }) {
+  const [openFlag, setOpenFlag] = useState<string | null>(null)
   return (
     <div style={S.card}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -2008,7 +2035,12 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {it.is_shared && <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={20} /></span>}
               <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.quantity}× {it.name}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0, display: "flex", alignItems: "baseline", gap: 6 }}>
+                  <span>{it.quantity}× {it.name}</span>
+                  {scanFlags?.[it.id] && (
+                    <button onClick={() => setOpenFlag(openFlag === it.id ? null : it.id)} title="De scan twijfelde hier — tik voor details" style={{ flexShrink: 0, width: 18, height: 18, borderRadius: "50%", border: "none", background: "#f39c12", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>?</button>
+                  )}
+                </div>
                 <div style={{ flexShrink: 0, textAlign: "right", lineHeight: 1.2 }}>
                   <div style={{ fontSize: 15, fontWeight: 800, color: "#1499b0" }}>€{(it.unit_price * it.quantity).toFixed(2)}</div>
                   <div style={{ fontSize: 11, fontWeight: 600, color: "#9aa0ab" }}>
@@ -2020,6 +2052,11 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
               <button style={S.iconBtn} onClick={() => onEdit(it)}>✏️</button>
               <button style={S.iconBtn} onClick={() => onDelete(it.id)}>🗑️</button>
             </div>
+            {scanFlags?.[it.id] && openFlag === it.id && (
+              <div style={{ marginTop: 6, marginLeft: 26, fontSize: 12, color: "#b5591a", background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 8, padding: "6px 10px", lineHeight: 1.4 }}>
+                ⚠️ De scan twijfelde hier{scanFlags[it.id].note ? ": " + scanFlags[it.id].note : ""}. Controleer even de naam, het aantal en de prijs.
+              </div>
+            )}
             {!bareBill && !it.is_shared && participants.length > 0 && (who.length > 0 || open > 0) && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 26 }}>
                 {who.map((w, i) => (

@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from "next/server"
 
 export const runtime = "nodejs"
+// Wat extra tijd, zodat een retry + terugval-model binnen de functie past.
+export const maxDuration = 30
 
-// Het model. gemini-2.5-flash-lite heeft de ruimste GRATIS dagquota + beeldherkenning.
-// Blijft het 429 geven, probeer dan "gemini-2.5-flash" of "gemini-flash-latest".
-const MODEL = "gemini-2.5-flash-lite"
+// Modellen. Eerst het goedkoopste met de ruimste gratis quota, dan een terugval bij drukte.
+const PRIMARY = "gemini-2.5-flash-lite"
+const FALLBACK = "gemini-2.5-flash"
+
+// Pogingen: [model, wachttijd-in-ms-voor-deze-poging]. Bij 429/5xx wordt de volgende geprobeerd.
+const TRIES: [string, number][] = [
+  [PRIMARY, 0],
+  [PRIMARY, 900],
+  [FALLBACK, 900],
+]
+
+const RETRYABLE = new Set([429, 500, 502, 503, 504])
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 const PROMPT = [
   "Je krijgt een foto van een restaurant- of caferekening (Belgisch: Nederlands, Frans of Engels, soms door elkaar).",
@@ -40,25 +52,8 @@ const PROMPT = [
   "Antwoord uitsluitend in het gevraagde JSON-formaat, zonder extra tekst.",
 ].join("\n")
 
-export async function POST(req: NextRequest) {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) {
-    // Geen sleutel ingesteld -> de app valt automatisch terug op de lokale scan.
-    return NextResponse.json({ error: "no_key" }, { status: 501 })
-  }
-
-  let imageBase64 = ""
-  let mimeType = "image/jpeg"
-  try {
-    const body = await req.json()
-    imageBase64 = body.imageBase64 || ""
-    if (body.mimeType) mimeType = body.mimeType
-  } catch {
-    return NextResponse.json({ error: "bad_request" }, { status: 400 })
-  }
-  if (!imageBase64) return NextResponse.json({ error: "no_image" }, { status: 400 })
-
-  const geminiBody = {
+function buildBody(imageBase64: string, mimeType: string) {
+  return {
     contents: [
       {
         parts: [
@@ -94,45 +89,75 @@ export async function POST(req: NextRequest) {
       },
     },
   }
+}
 
-  try {
-    const url =
-      "https://generativelanguage.googleapis.com/v1beta/models/" +
-      MODEL +
-      ":generateContent?key=" +
-      apiKey
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(geminiBody),
-    })
-    if (!resp.ok) {
-      const detail = await resp.text()
-      console.error("Gemini-fout:", resp.status, detail)
-      return NextResponse.json({ error: "gemini_error", status: resp.status }, { status: 502 })
-    }
-    const data = await resp.json()
-    let text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ""
-    // Verwijder eventuele markdown-codefences rond de JSON (backtick via char-code, geen letterlijke backtick).
-    const BT = String.fromCharCode(96)
-    text = text
-      .trim()
-      .replace(new RegExp("^" + BT + "+json\\s*", "i"), "")
-      .replace(new RegExp("^" + BT + "+"), "")
-      .replace(new RegExp(BT + "+$"), "")
-      .trim()
-    let parsed: { items?: unknown; total?: unknown }
-    try {
-      parsed = JSON.parse(text)
-    } catch {
-      console.error("Kon Gemini-JSON niet parsen:", text.slice(0, 500))
-      return NextResponse.json({ error: "parse_error" }, { status: 502 })
-    }
-    const items = Array.isArray(parsed.items) ? parsed.items : []
-    const total = typeof parsed.total === "number" ? parsed.total : null
-    return NextResponse.json({ items, total })
-  } catch (e) {
-    console.error("scan-receipt route-fout:", e)
-    return NextResponse.json({ error: "exception" }, { status: 500 })
+export async function POST(req: NextRequest) {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) {
+    // Geen sleutel ingesteld -> de app valt automatisch terug op de lokale scan.
+    return NextResponse.json({ error: "no_key" }, { status: 501 })
   }
+
+  let imageBase64 = ""
+  let mimeType = "image/jpeg"
+  try {
+    const body = await req.json()
+    imageBase64 = body.imageBase64 || ""
+    if (body.mimeType) mimeType = body.mimeType
+  } catch {
+    return NextResponse.json({ error: "bad_request" }, { status: 400 })
+  }
+  if (!imageBase64) return NextResponse.json({ error: "no_image" }, { status: 400 })
+
+  const geminiBody = buildBody(imageBase64, mimeType)
+  const BT = String.fromCharCode(96)
+  let lastStatus = 0
+
+  for (const [model, wait] of TRIES) {
+    if (wait) await sleep(wait)
+    try {
+      const url =
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+        model +
+        ":generateContent?key=" +
+        apiKey
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(geminiBody),
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        let text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ""
+        // Verwijder eventuele markdown-codefences rond de JSON (backtick via char-code).
+        text = text
+          .trim()
+          .replace(new RegExp("^" + BT + "+json\\s*", "i"), "")
+          .replace(new RegExp("^" + BT + "+"), "")
+          .replace(new RegExp(BT + "+$"), "")
+          .trim()
+        let parsed: { items?: unknown; total?: unknown }
+        try {
+          parsed = JSON.parse(text)
+        } catch {
+          console.error("Kon Gemini-JSON niet parsen:", text.slice(0, 500))
+          return NextResponse.json({ error: "parse_error" }, { status: 502 })
+        }
+        const items = Array.isArray(parsed.items) ? parsed.items : []
+        const total = typeof parsed.total === "number" ? parsed.total : null
+        return NextResponse.json({ items, total })
+      }
+      lastStatus = resp.status
+      const detail = await resp.text()
+      console.error("Gemini-fout:", model, resp.status, detail)
+      // Niet-herhaalbare fout (bv. 400/403): volgende poging heeft geen zin met dit type -> stop.
+      if (!RETRYABLE.has(resp.status)) break
+    } catch (e) {
+      console.error("scan-receipt netwerkfout:", e)
+      lastStatus = 500
+    }
+  }
+
+  // Alles mislukt -> de app valt terug op de lokale scan.
+  return NextResponse.json({ error: "gemini_error", status: lastStatus }, { status: 502 })
 }
