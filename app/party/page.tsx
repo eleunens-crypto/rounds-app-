@@ -1723,7 +1723,6 @@ export default function Home() {
 
   // ── Computed totals ──────────────────────────────────────────────────────
   const getGlobalTotal = () => orders.reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
-  const getPersonTotal = (pid: string) => orders.filter((o) => o.participant_id === pid).reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
 
   // Voor de keuzelijsten/bewerken: als deze groep een eigen versie van een drank heeft
   // (zelfde naam), toon dan die i.p.v. de basisdrank. De volledige `drinks` blijft wél
@@ -2081,17 +2080,28 @@ export default function Home() {
                     onBlur={() => { if (editingPersonName.trim()) renamePerson(); else { setEditingPersonName(""); setEditingPerson(null) } }}
                     style={{ ...S.input, flex: 1 }}
                   />
-                ) : (
-                  <>
-                    <span
-                      onClick={() => { setEditingPerson(p.id); setEditingPersonName("") }}
-                      style={{ flex: 1, fontWeight: 600, fontSize: 15, cursor: "text", padding: "2px 0" }}
-                    >{p.name}</span>
-                    <span style={{ fontSize: 12, color: "#aaa" }}>€{getPersonTotal(p.id).toFixed(2)}</span>
-                    <button style={S.iconBtn} onClick={() => { setEditingPerson(p.id); setEditingPersonName("") }}>✏️</button>
-                    <button style={S.iconBtn} onClick={() => deletePerson(p.id, p.name)}>🗑️</button>
-                  </>
-                )}
+                ) : (() => {
+                  const isPlaceholder = /^Persoon \d+$/.test(p.name)
+                  return (
+                    <>
+                      <span
+                        onClick={() => { setEditingPerson(p.id); setEditingPersonName("") }}
+                        style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 6, cursor: "text", padding: "2px 0", overflow: "hidden" }}
+                      >
+                        {isPlaceholder ? (
+                          <>
+                            <span style={{ fontStyle: "italic", fontWeight: 600, fontSize: 15, color: "#b3a988", borderBottom: "1px dashed #cdbd8e", whiteSpace: "nowrap" }}>{p.name}</span>
+                            <span style={{ fontSize: 10.5, fontWeight: 600, color: "#c8b98a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>tik om te hernoemen</span>
+                          </>
+                        ) : (
+                          <span style={{ fontWeight: 600, fontSize: 15 }}>{p.name}</span>
+                        )}
+                      </span>
+                      <button style={S.iconBtn} onClick={() => { setEditingPerson(p.id); setEditingPersonName("") }}>✏️</button>
+                      <button style={S.iconBtn} onClick={() => deletePerson(p.id, p.name)}>🗑️</button>
+                    </>
+                  )
+                })()}
               </div>
             ))}
                 </div>
@@ -2394,14 +2404,16 @@ export default function Home() {
                     const assigned = Object.values(l.assignments).reduce((a, q) => a + q, 0)
                     return s + Math.max(0, l.total - assigned)
                   }, 0)
+                  const primaryStyle = { ...S.btn, width: "100%", padding: "13px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }
+                  const subtleStyle = { ...S.btn, width: "100%", padding: "11px 0", fontSize: 14, fontWeight: 700 }
                   const adjustBtn = (
-                    <button style={{ ...S.btn, width: "100%", padding: "11px 0", fontSize: 14, fontWeight: 700 }} onClick={() => setShowFinishConfirm(false)}>
-                      ← Bestelling aanpassen
+                    <button style={unassigned > 0 ? primaryStyle : subtleStyle} onClick={() => setShowFinishConfirm(false)}>
+                      {unassigned > 0 ? "✏️ Bestelling aanpassen" : "← Bestelling aanpassen"}
                     </button>
                   )
                   const finishBtn = (
-                    <button style={{ ...S.btn, width: "100%", padding: "12px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e" }} onClick={() => { setShowFinishConfirm(false); finishRound() }}>
-                      ✅ Ja, afronden
+                    <button style={unassigned > 0 ? subtleStyle : primaryStyle} onClick={() => { setShowFinishConfirm(false); finishRound() }}>
+                      {unassigned > 0 ? "Toch afronden" : "✅ Ja, afronden"}
                     </button>
                   )
                   return (
