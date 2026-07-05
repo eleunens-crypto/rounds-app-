@@ -54,4 +54,50 @@ export async function POST(req: NextRequest) {
           items: {
             type: "array",
             items: {
-              type:
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                quantity: { type: "integer" },
+                unit_price: { type: "number" },
+              },
+              required: ["name", "quantity", "unit_price"],
+            },
+          },
+          total: { type: "number", nullable: true },
+        },
+        required: ["items"],
+      },
+    },
+  }
+
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(geminiBody),
+    })
+    if (!resp.ok) {
+      const detail = await resp.text()
+      console.error("Gemini-fout:", resp.status, detail)
+      return NextResponse.json({ error: "gemini_error", status: resp.status }, { status: 502 })
+    }
+    const data = await resp.json()
+    let text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ""
+    // Verwijder eventuele markdown-codefences rond de JSON (zonder losse backticks in de broncode).
+    text = text.trim().replace(/^`+json\s*/i, "").replace(/^`+/, "").replace(/`+$/, "").trim()
+    let parsed: { items?: unknown; total?: unknown }
+    try {
+      parsed = JSON.parse(text)
+    } catch {
+      console.error("Kon Gemini-JSON niet parsen:", text.slice(0, 500))
+      return NextResponse.json({ error: "parse_error" }, { status: 502 })
+    }
+    const items = Array.isArray(parsed.items) ? parsed.items : []
+    const total = typeof parsed.total === "number" ? parsed.total : null
+    return NextResponse.json({ items, total })
+  } catch (e) {
+    console.error("scan-receipt route-fout:", e)
+    return NextResponse.json({ error: "exception" }, { status: 500 })
+  }
+}
