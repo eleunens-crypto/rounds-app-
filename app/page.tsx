@@ -6,7 +6,6 @@ export default function Home() {
   return (
     <div style={S.page}>
       <div style={{ maxWidth: 360, margin: "0 auto", padding: "30px 0 40px" }}>
-
         {/* Kop: algemeen Rundo-logo (symbool + naam in één), ondertitel eronder */}
         <div style={{ textAlign: "center", marginTop: 10, marginBottom: 30 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -25,6 +24,8 @@ export default function Home() {
           <div style={{ ...S.modeCard, ...S.partyCard }} className="rundo-card rundo-card-party">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/party-image.png" alt="" style={S.cardPhoto} />
+            {/* Warme gloed die de foto iets verlicht */}
+            <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "62%", zIndex: 1, background: "radial-gradient(120% 90% at 88% 32%, rgba(255,214,130,0.42) 0%, rgba(255,190,90,0.16) 42%, rgba(255,190,90,0) 72%)", mixBlendMode: "screen", pointerEvents: "none" }} />
             <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #211c14 0%, #211c14 42%, rgba(33,28,20,0.85) 56%, rgba(33,28,20,0.35) 72%, rgba(33,28,20,0) 100%)" }} />
             <div style={S.cardBody}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -70,8 +71,6 @@ export default function Home() {
 
         {/* Voetregel */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 28 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/rundo-symbol.png" alt="" style={{ display: "block", height: 30, width: "auto", objectFit: "contain" }} />
           <span style={{ fontSize: 13, color: "#9aa2b8", fontWeight: 600, textAlign: "center" }}>
             Gratis · geen registratie · eerlijk splitten
           </span>

@@ -649,6 +649,7 @@ export default function Home() {
   const [showAddDrink, setShowAddDrink] = useState(false)       // modal: eigen drank toevoegen
   const [showDrinkSelector, setShowDrinkSelector] = useState(false) // modal: drankje selecteren (categorie + grid)
   const [selectorDraft, setSelectorDraft] = useState<Record<string, number>>({}) // selector start telkens op 0; wordt bij "Klaar" toegevoegd
+  const [selectorEditMode, setSelectorEditMode] = useState(false) // true = 'Bestelling wijzigen': selector toont de huidige bestelling en vervangt ze bij Klaar
   const [lastAddedCustomDrink, setLastAddedCustomDrink] = useState<{ name: string; category: string } | null>(null) // melding in de selector na een eigen drankje
   const [showFinishConfirm, setShowFinishConfirm] = useState(false)  // bevestiging vóór afronden
   const [showReorderPicker, setShowReorderPicker] = useState(false)  // kiezer om een vorig rondje opnieuw te bestellen
@@ -692,7 +693,7 @@ export default function Home() {
   const [compareOther, setCompareOther] = useState(false)                 // in 'iedereen evenveel': ook de Fair Split ernaast tonen
   const [showAboutParty, setShowAboutParty] = useState(false)             // korte uitleg over Rundo Party (de 'i' naast de titel)
   const [orderEditing, setOrderEditing] = useState(false)                 // toont de toevoeg-knoppen opnieuw terwijl er al een bestelling loopt
-  const [expandedBillPersons, setExpandedBillPersons] = useState<Set<string>>(new Set()) // afrekenen: wiens (lange) drankjeslijst is uitgeklapt
+  const [showAllOrderedDrinks, setShowAllOrderedDrinks] = useState(false) // afrekenen: 'alle bestelde drankjes'-sectie open/dicht (standaard dicht)
   const [showVoiceExample, setShowVoiceExample] = useState(false)       // info-popup met spraak-voorbeeld
   const [noPayWarn, setNoPayWarn] = useState(false)                     // (reserve) melding geen betaling
   // Eigen bevestigings-popup i.p.v. de kale browser-confirm()
@@ -1030,7 +1031,13 @@ export default function Home() {
   }
 
   // ── Drank-selector: lokale selectie die telkens op 0 start ────────────────
-  const openDrinkSelector = () => { setSelectorDraft({}); setLastAddedCustomDrink(null); setShowDrinkSelector(true) }
+  const openDrinkSelector = () => { setSelectorDraft({}); setSelectorEditMode(false); setLastAddedCustomDrink(null); setShowDrinkSelector(true) }
+  // 'Bestelling wijzigen': open de selector voorgevuld met de huidige bestelling (tellers tonen de huidige drankjes).
+  const openDrinkSelectorEdit = () => {
+    const q: Record<string, number> = {}
+    Object.entries(cart).forEach(([id, line]) => { if (line.total > 0) q[id] = line.total })
+    setSelectorDraft(q); setSelectorEditMode(true); setLastAddedCustomDrink(null); setShowDrinkSelector(true)
+  }
   const changeSelectorQty = (drinkId: string, delta: number) => {
     setSelectorDraft((prev) => {
       const n = { ...prev }
@@ -1042,11 +1049,40 @@ export default function Home() {
   const selectorTotal = Object.values(selectorDraft).reduce((s, q) => s + q, 0)
   const confirmDrinkSelector = () => {
     const addedIds = Object.entries(selectorDraft).filter(([, q]) => q > 0).map(([id]) => id)
-    addedIds.forEach((id) => addToCart(id, selectorDraft[id], false))
+    if (selectorEditMode) {
+      // Vervang de bestelling door wat nu in de selector staat; behoud toewijzingen (trim als een aantal daalt).
+      setCart((prev) => {
+        const next: typeof prev = {}
+        Object.entries(selectorDraft).forEach(([id, qty]) => {
+          if (qty <= 0) return
+          const old = prev[id]
+          if (old) {
+            const assignments = { ...old.assignments }
+            let assignedSum = Object.values(assignments).reduce((a, b) => a + b, 0)
+            let over = assignedSum - qty
+            if (over > 0) {
+              for (const pid of Object.keys(assignments)) {
+                if (over <= 0) break
+                const take = Math.min(assignments[pid], over)
+                assignments[pid] -= take; over -= take
+                if (assignments[pid] <= 0) delete assignments[pid]
+              }
+            }
+            next[id] = { total: qty, assignments }
+          } else {
+            next[id] = { total: qty, assignments: {} }
+          }
+        })
+        return next
+      })
+    } else {
+      addedIds.forEach((id) => addToCart(id, selectorDraft[id], false))
+    }
     setLastAddedDrinkIds(addedIds)
     setLastAddedViaVoice(false) // via selector → geen aparte "Laatst toegevoegd"-kaart, wel highlight in de lijst
     setOrderEditing(false)      // toevoeg-knoppen weer verbergen; onderaan komt afronden/wijzigen
     setSelectorDraft({})
+    setSelectorEditMode(false)
     setLastAddedCustomDrink(null)
     setShowDrinkSelector(false)
   }
@@ -1521,8 +1557,9 @@ export default function Home() {
   const savePot = async () => {
     if (!group) return
     const inserts = (Object.entries(potDraft) as [string, string][])
-      .filter(([participantId, amt]) => participants.some((p) => p.id === participantId) && parseFloat(amt) > 0)
-      .map(([participantId, amt]) => ({ group_id: group.id, session: POT_SESSION, participant_id: participantId, amount: parseFloat(amt) }))
+      .map(([participantId, amt]) => ({ participantId, euro: Math.round(parseFloat(String(amt).replace(",", ".")) || 0) }))
+      .filter(({ participantId, euro }) => participants.some((p) => p.id === participantId) && euro > 0)
+      .map(({ participantId, euro }) => ({ group_id: group.id, session: POT_SESSION, participant_id: participantId, amount: euro }))
     if (inserts.length === 0) { setPotWarn(true); return }
     await supabase.from("payments").delete().eq("group_id", group.id).eq("session", POT_SESSION)
     await supabase.from("payments").insert(inserts)
@@ -1535,10 +1572,10 @@ export default function Home() {
   const addToPot = async () => {
     if (!group) return
     let rows = (Object.entries(potAddDraft) as [string, string][])
-      .map(([pid, v]) => ({ participant_id: pid, amount: parseFloat((v || "").replace(",", ".")) }))
+      .map(([pid, v]) => ({ participant_id: pid, amount: Math.round(parseFloat((v || "").replace(",", ".")) || 0) }))
       .filter((r) => participants.some((p) => p.id === r.participant_id) && !isNaN(r.amount) && r.amount > 0)
     if (rows.length === 0) {
-      const amt = parseFloat((potAddBulk || "").replace(",", "."))
+      const amt = Math.round(parseFloat((potAddBulk || "").replace(",", ".")) || 0)
       if (isNaN(amt) || amt <= 0 || participants.length === 0) { setPotAddWarn(true); setToast("Vul eerst een bedrag in om de pot aan te vullen ⚠️"); return }
       rows = participants.map((p) => ({ participant_id: p.id, amount: amt }))
     }
@@ -1703,7 +1740,7 @@ export default function Home() {
           </div>
 
           <div style={S.card}>
-            <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && startGroup()} placeholder="Groepsnaam (bv. Vrijdagavond)" style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 12 }} />
+            <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && startGroup()} placeholder="Groepsnaam" style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 12 }} />
             <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16, fontWeight: 800 }} onClick={startGroup} disabled={isStarting}>{isStarting ? "Laden..." : "Starten"}</button>
             {startError && (
               <div style={{ marginTop: 12, color: "#c0392b", fontSize: 13, background: "#fff0f0", borderRadius: 10, padding: "8px 12px" }}>
@@ -2187,7 +2224,7 @@ export default function Home() {
             <div style={{ display: "flex", gap: 8, alignItems: "stretch", marginTop: 2, marginBottom: 14 }}>
               {!orderEditing && (
                 <button
-                  onClick={openDrinkSelector}
+                  onClick={openDrinkSelectorEdit}
                   style={{ ...S.btn, flex: 0.6, padding: "13px 8px", fontSize: 13, fontWeight: 700, background: "#fffef9", border: "1.5px solid rgba(120,95,20,0.22)", color: "#8a7d55" }}
                 >
                   ✏️ Bestelling wijzigen
@@ -2300,27 +2337,32 @@ export default function Home() {
                     const assigned = Object.values(l.assignments).reduce((a, q) => a + q, 0)
                     return s + Math.max(0, l.total - assigned)
                   }, 0)
-                  if (unassigned === 0) return null
+                  const adjustBtn = (
+                    <button style={{ ...S.btn, width: "100%", padding: "11px 0", fontSize: 14, fontWeight: 700 }} onClick={() => setShowFinishConfirm(false)}>
+                      ← Bestelling aanpassen
+                    </button>
+                  )
+                  const finishBtn = (
+                    <button style={{ ...S.btn, width: "100%", padding: "12px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e" }} onClick={() => { setShowFinishConfirm(false); finishRound() }}>
+                      ✅ Ja, afronden
+                    </button>
+                  )
                   return (
-                    <div style={{ display: "flex", gap: 8, alignItems: "flex-start", textAlign: "left", background: "rgba(245,197,24,0.12)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
-                      <span style={{ fontSize: 16, lineHeight: 1 }}>💡</span>
-                      <span style={{ fontSize: 12, color: "#7a6a2a", lineHeight: 1.45 }}>
-                        <b>{unassigned} {unassigned === 1 ? "drankje" : "drankjes"}</b> nog niet toegewezen. Handig voor een eerlijke <b>Fair Split</b> — je kan ze nu (via &ldquo;verder bestellen&rdquo;) of later op het afrekenscherm toewijzen.
-                      </span>
-                    </div>
+                    <>
+                      {unassigned > 0 && (
+                        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", textAlign: "left", background: "rgba(224,107,94,0.1)", border: "1px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
+                          <span style={{ fontSize: 16, lineHeight: 1 }}>⚠️</span>
+                          <span style={{ fontSize: 12.5, color: "#c0392b", lineHeight: 1.45, fontWeight: 600 }}>
+                            <b>{unassigned} {unassigned === 1 ? "drankje" : "drankjes"}</b> nog niet toegewezen. Voeg ze nu toe voor een eerlijke <b>&ldquo;Fair Split&rdquo;</b>. Hoe? Via de knop <b>&ldquo;Bestelling aanpassen&rdquo;</b> hieronder.
+                          </span>
+                        </div>
+                      )}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {unassigned > 0 ? <>{adjustBtn}{finishBtn}</> : <>{finishBtn}{adjustBtn}</>}
+                      </div>
+                    </>
                   )
                 })()}
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <button
-                    style={{ ...S.btn, width: "100%", padding: "12px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e" }}
-                    onClick={() => { setShowFinishConfirm(false); finishRound() }}
-                  >
-                    ✅ Ja, afronden
-                  </button>
-                  <button style={{ ...S.btn, width: "100%", padding: "11px 0" }} onClick={() => setShowFinishConfirm(false)}>
-                    ← Verder bestellen
-                  </button>
-                </div>
               </div>
             </div>
           )}
@@ -2423,7 +2465,7 @@ export default function Home() {
                 </div>
                 <div style={{ textAlign: "center", marginTop: 8 }}>
                   <button
-                    onClick={() => { setSelectorDraft({}); setLastAddedCustomDrink(null); setShowDrinkSelector(false) }}
+                    onClick={() => { setSelectorDraft({}); setSelectorEditMode(false); setLastAddedCustomDrink(null); setShowDrinkSelector(false) }}
                     style={{ background: "none", border: "none", color: "#b3a476", fontSize: 12.5, fontWeight: 600, cursor: "pointer", padding: "4px 10px" }}
                   >
                     Annuleren
@@ -2462,8 +2504,24 @@ export default function Home() {
           })()}
 
           {sessions.length === 0 && (
-            <div style={{ ...S.card, textAlign: "center", padding: 32, color: "#aaa" }}>
-              Nog geen rondjes. Ga naar &ldquo;Nieuwe bestelling&rdquo; om te beginnen.
+            cartTotalItems === 0 ? (
+              <div style={{ ...S.card, textAlign: "center", padding: 32, color: "#aaa" }}>
+                Nog geen bestellingen. Ga naar &ldquo;Nieuwe bestelling&rdquo; om te starten.
+              </div>
+            ) : (
+              <div style={{ ...S.card, textAlign: "center", padding: "24px 20px" }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>Jouw bestelling werd nog niet afgerond</div>
+                <div style={{ fontSize: 13, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>Bekijk ze hier, pas eventueel nog aan en klik op &ldquo;Bestelling afronden&rdquo;.</div>
+                <button onClick={() => setView("ordering")} style={{ ...S.btn, ...S.btnPrimary, padding: "10px 20px", fontWeight: 800 }}>→ Naar je bestelling</button>
+              </div>
+            )
+          )}
+
+          {sessions.length > 0 && cartTotalItems > 0 && (
+            <div style={{ ...S.card, marginBottom: 12, display: "flex", alignItems: "center", gap: 10, background: "rgba(224,107,94,0.07)", border: "1px solid rgba(224,107,94,0.4)" }}>
+              <span style={{ fontSize: 18 }}>⏳</span>
+              <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#c0392b", fontWeight: 600, lineHeight: 1.4 }}>Je hebt nog een niet-afgeronde bestelling ({cartTotalItems} {cartTotalItems === 1 ? "item" : "items"}).</div>
+              <button onClick={() => setView("ordering")} style={{ ...S.btn, flexShrink: 0, fontSize: 12.5, fontWeight: 800, padding: "8px 12px" }}>Bekijk →</button>
             </div>
           )}
 
@@ -2579,6 +2637,9 @@ export default function Home() {
               </div>
             )
           })}
+          {sessions.length > 0 && (
+            <button onClick={() => setView("bill")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 6, padding: "14px 0", fontSize: 15, fontWeight: 800 }}>💰 Ga naar afrekenen →</button>
+          )}
         </div>
       )}
 
@@ -2741,7 +2802,7 @@ export default function Home() {
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, padding: "8px 10px", background: "#fff", border: "1px solid #ecc85a", borderRadius: 12 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: "#4a3f1e" }}>€</span>
-                      <input type="number" placeholder="bedrag" value={potAddBulk} onChange={(e) => { setPotAddWarn(false); setPotAddBulk(e.target.value) }} style={{ ...S.input, flex: 1, minWidth: 0 }} />
+                      <input type="number" step="1" min="0" inputMode="numeric" placeholder="bedrag" value={potAddBulk} onChange={(e) => { setPotAddWarn(false); setPotAddBulk(e.target.value.replace(/[^\d]/g, "")) }} style={{ ...S.input, flex: 1, minWidth: 0 }} />
                       <span style={{ fontSize: 13, color: "#777" }}>p.p.</span>
                     </div>
                     <button
@@ -2757,7 +2818,7 @@ export default function Home() {
                           <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                             <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p.name}</span>
                             <span style={{ color: "#999" }}>€</span>
-                            <input type="number" placeholder="0" value={potAddDraft[p.id] ?? ""} onChange={(e) => { setPotAddWarn(false); setPotAddDraft({ ...potAddDraft, [p.id]: e.target.value }) }} style={{ ...S.input, width: 72 }} />
+                            <input type="number" step="1" min="0" inputMode="numeric" placeholder="0" value={potAddDraft[p.id] ?? ""} onChange={(e) => { setPotAddWarn(false); setPotAddDraft({ ...potAddDraft, [p.id]: e.target.value.replace(/[^\d]/g, "") }) }} style={{ ...S.input, width: 72 }} />
                           </div>
                         ))}
                       </div>
@@ -2813,9 +2874,12 @@ export default function Home() {
                   <span style={{ color: "#999" }}>€</span>
                   <input
                     type="number"
+                    step="1"
+                    min="0"
+                    inputMode="numeric"
                     placeholder="0"
                     value={potDraft[p.id] ?? ""}
-                    onChange={(e) => { setPotWarn(false); setPotDraft((prev) => ({ ...prev, [p.id]: e.target.value })) }}
+                    onChange={(e) => { setPotWarn(false); const v = e.target.value.replace(/[^\d]/g, ""); setPotDraft((prev) => ({ ...prev, [p.id]: v })) }}
                     style={{ ...S.input, width: 80 }}
                   />
                 </div>
@@ -2940,8 +3004,7 @@ export default function Home() {
         <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 2100, overflowY: "auto", padding: 28 }}>
           <div style={{ maxWidth: 560, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: 13, color: "#27ae60", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>✅ Ronde {roundLabel(finishedRoundSnapshot.session)} besteld</div>
-              <h2 style={{ fontSize: 24, fontWeight: 800, margin: "6px 0 0" }}>🧾 Voor de barman</h2>
+              <h2 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>Rondje {roundLabel(finishedRoundSnapshot.session)}: overzicht</h2>
             </div>
 
             {/* Lijst van wat besteld is */}
@@ -2985,7 +3048,7 @@ export default function Home() {
 
               return (
                 <div style={{ marginTop: 22, padding: "16px 18px", background: "rgba(150,110,20,0.05)", borderRadius: 16, border: "1px solid rgba(150,110,20,0.15)" }}>
-                  <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 4, color: "#4a3f1e" }}>💳 Wie betaalde dit rondje?</div>
+                  <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 6, color: "#4a3f1e" }}>💳 Wie betaalde dit rondje?</div>
                   <p style={{ fontSize: 12, color: "#a89a6a", margin: "0 0 12px" }}>Tik wie betaalde — daarna vul je het exacte bedrag in. Meestal 1 persoon, meerdere mag ook.</p>
 
                   {/* Wie betaalde? — chips: eerst de pot, dan de personen. Tik aan → bedragveld verschijnt. */}
@@ -3138,13 +3201,14 @@ export default function Home() {
       {/* ═══ VIEW: Totaal (wie dronk wat) ═══ */}
       {view === "bill" && (
         <div>
-          {/* Overall drink overview — ALL orders, assigned or not */}
+          {/* Overall drink overview — ALL orders, assigned or not (standaard ingeklapt) */}
           <div style={S.card}>
-            <h3 style={{ ...S.h3, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+            <h3 onClick={() => setShowAllOrderedDrinks((v) => !v)} style={{ ...S.h3, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, marginBottom: showAllOrderedDrinks ? 14 : 0, cursor: "pointer" }}>
               📦 Alle bestelde drankjes
               {(() => { const tot = orders.reduce((s, o) => s + o.quantity, 0); return tot > 0 ? <span style={{ fontSize: 12, fontWeight: 800, color: "#4a3f1e", background: "#ecc85a", borderRadius: 20, padding: "1px 11px" }}>{tot} {tot === 1 ? "drankje" : "drankjes"}</span> : null })()}
+              <span style={{ marginLeft: "auto", fontSize: 13, color: "#a89a6a" }}>{showAllOrderedDrinks ? "▴" : "▾"}</span>
             </h3>
-            {(() => {
+            {showAllOrderedDrinks && (() => {
               const overallSummary: Record<string, { drink: Drink; totalQty: number; anonymousQty: number }> = {}
               orders.forEach((o) => {
                 const d = drinks.find((dr) => dr.id === o.drink_id)
@@ -3241,29 +3305,15 @@ export default function Home() {
                       <div style={{ flex: multiCol ? "1 1 100%" : "1 1 0", minWidth: 0 }}>
                         {Object.values(drinkSummary).length === 0 ? (
                           <div style={{ fontSize: 12, color: "#bbb" }}>nog niets gedronken</div>
-                        ) : (() => {
-                          const all = Object.values(drinkSummary)
-                          const totalQty = all.reduce((s, ds) => s + ds.qty, 0)
-                          const expanded = expandedBillPersons.has(p.id)
-                          const toggle = () => setExpandedBillPersons((prev) => { const n = new Set(prev); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n })
-                          if (!expanded) {
-                            return (
-                              <button onClick={toggle} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(150,110,20,0.05)", border: "1px solid rgba(120,95,20,0.16)", borderRadius: 10, padding: "5px 12px", fontSize: 12.5, fontWeight: 700, color: "#8a7d55", cursor: "pointer" }}>
-                                🍹 {totalQty} {totalQty === 1 ? "drankje" : "drankjes"} <span style={{ fontSize: 10, opacity: 0.8 }}>▾ toon</span>
-                              </button>
-                            )
-                          }
-                          return (
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-                              {all.map((ds) => (
-                                <span key={ds.drink.id} style={{ background: "rgba(150,110,20,0.05)", borderRadius: 10, padding: "3px 10px", fontSize: 12 }}>
-                                  {ds.drink.emoji} {ds.qty}× {ds.drink.name}
-                                </span>
-                              ))}
-                              <button onClick={toggle} style={{ background: "rgba(150,110,20,0.09)", border: "1px solid rgba(120,95,20,0.16)", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontWeight: 700, color: "#8a7d55", cursor: "pointer" }}>▴ verberg</button>
-                            </div>
-                          )
-                        })()}
+                        ) : (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                            {Object.values(drinkSummary).map((ds) => (
+                              <span key={ds.drink.id} style={{ background: "rgba(150,110,20,0.05)", borderRadius: 10, padding: "3px 10px", fontSize: 12 }}>
+                                {ds.drink.emoji} {ds.qty}× {ds.drink.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {pricesVisible && (() => {
@@ -3450,18 +3500,10 @@ export default function Home() {
 
             {/* Totalen + fair split-correctie */}
             {showBillPrices && participants.length > 0 && (() => {
-              const personalRoundPaid = payments.filter((p) => p.session >= 1 && p.participant_id).reduce((s, p) => s + p.amount, 0)
-              const potUsed = payments.filter((p) => p.session >= 1 && !p.participant_id).reduce((s, p) => s + p.amount, 0)
-              const potOver = Math.max(0, potTotal - potUsed)
               const indicatief = bill.totalDrinkValue
               const echtBetaald = bill.totalActuallySpent
               return (
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
-                  {splitMode === "equal" && (
-                    <div style={{ textAlign: "center", fontSize: 12, color: "#8a7d55", fontWeight: 700, marginBottom: 10, background: "rgba(214,158,20,0.08)", borderRadius: 10, padding: "7px 10px" }}>
-                      De totale rekening wordt gelijk verdeeld: €{echtBetaald.toFixed(2)} ÷ {participants.length} = <b>€{(participants.length > 0 ? echtBetaald / participants.length : 0).toFixed(2)}</b> per persoon
-                    </div>
-                  )}
                   <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                     <div style={{ flex: 1, background: "rgba(120,95,20,0.04)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
                       <div style={{ fontSize: 11, color: "#888", marginBottom: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
@@ -3472,18 +3514,9 @@ export default function Home() {
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ background: "rgba(39,174,96,0.08)", borderRadius: 12, padding: "10px 12px", textAlign: "center", border: "1px solid rgba(39,174,96,0.25)" }}>
-                        <div style={{ fontSize: 11, color: "#1f8a4c", marginBottom: 2 }}>Echt betaald <span style={{ fontSize: 9, color: "#9ccfb0" }}>(totaal)</span></div>
+                        <div style={{ fontSize: 11, color: "#1f8a4c", marginBottom: 2 }}>Totaal betaald</div>
                         <div style={{ fontSize: 18, fontWeight: 800, color: "#27ae60" }}>€{echtBetaald.toFixed(2)}</div>
                       </div>
-                      {/* Opsplitsing van wat er écht betaald werd — hoort bij dit totaal */}
-                      {(potTotal > 0 || personalRoundPaid > 0.01) && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 6, fontSize: 10.5, color: "#999", textAlign: "center", lineHeight: 1.35 }}>
-                          {potTotal > 0 && (
-                            <span>💰 pot: <b style={{ color: "#c98a00" }}>€{potTotal.toFixed(2)}</b> ingelegd · <b style={{ color: "#a06b00" }}>€{potUsed.toFixed(2)}</b> gebruikt{potOver > 0.01 ? <> · <b style={{ color: "#27ae60" }}>€{potOver.toFixed(2)}</b> terug</> : ""}</span>
-                          )}
-                          {personalRoundPaid > 0.01 && <span>💳 door personen betaald: <b style={{ color: "#27ae60" }}>€{personalRoundPaid.toFixed(2)}</b></span>}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -3494,7 +3527,7 @@ export default function Home() {
             {showBillPrices && (
               <div style={{ display: "flex", gap: 8, marginTop: 14, alignItems: "stretch" }}>
                 <button onClick={() => { setShowBillPrices(false); setShowFairSplit(false); setCompareOther(false); setSplitMode("fair") }} style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(120,95,20,0.25)", color: "#8a7d55", fontSize: 13.5, fontWeight: 800, cursor: "pointer", borderRadius: 16, padding: "13px 10px", lineHeight: 1.2 }}>
-                  {splitMode === "equal" ? "Verberg iedereen evenveel" : "Verberg Fair split"}
+                  Terug
                 </button>
                 {(() => {
                   // In 'evenveel' vergelijk je met Fair Split (enkel als geldig); in Fair Split vergelijk je met 'evenveel'.

@@ -1354,7 +1354,6 @@ export default function RundoTable() {
           </div>
 
           <div style={{ ...S.card, order: 1 }}>
-            <div style={{ fontSize: 11.5, color: "#9aa0ab", fontWeight: 600, marginBottom: 6 }}>Bon gescand en nagekeken?</div>
             {(() => {
               const entered = group?.receipt_total ?? null
               const match = entered != null && Math.abs(entered - billTotal) < 0.005
@@ -1366,7 +1365,7 @@ export default function RundoTable() {
                 </div>
               )
             })()}
-            <h3 style={S.h3}>🔗 Laat dan nu je gasten hun consumpties aantikken</h3>
+            <h3 style={S.h3}>🔗 Laat nu je gasten hun consumpties aantikken</h3>
             <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 12 }}>Hoe? Deel deze groep met je gasten via QR of deelbare link.</p>
             {(() => {
               const link = typeof window !== "undefined" ? `${window.location.origin}/table?code=${group.invite_code}` : ""
@@ -1520,7 +1519,7 @@ export default function RundoTable() {
           </div>
 
           {group.finalized ? (
-            <button onClick={() => finalizeBill(false)} style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 14.5, fontWeight: 700, background: "#fff", border: "1.5px solid rgba(20,33,58,0.2)", color: "#5a6680" }}>
+            <button onClick={() => finalizeBill(false)} style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 14.5, fontWeight: 800, background: "linear-gradient(135deg,#f39c12,#e67e22)", border: "none", color: "#fff", boxShadow: "0 6px 16px -6px rgba(230,126,34,0.6)" }}>
               🔓 Rekening heropenen (gasten kunnen weer wijzigen)
             </button>
           ) : (
@@ -2081,10 +2080,20 @@ function ClaimScreen(props: {
   const [openGuestRows, setOpenGuestRows] = useState<Set<string>>(() => new Set(meId ? [meId] : []))
   // Detecteer of de beheerder heropende na een eerdere afsluiting → toon dan één 'bekijkt opnieuw'-melding.
   const wasFinalizedRef = useRef(false)
+  const prevFinalizedRef = useRef<boolean | null>(null)
   const [reviewing, setReviewing] = useState(false)
+  const [showFinalizedPopup, setShowFinalizedPopup] = useState(false)
   useEffect(() => {
-    if (finalized) { wasFinalizedRef.current = true; setReviewing(false) }
-    else if (wasFinalizedRef.current) { setReviewing(true) }
+    const prev = prevFinalizedRef.current
+    if (finalized) {
+      if (prev !== true) setShowFinalizedPopup(true) // net afgesloten (of net geladen als afgesloten) → één pop-up
+      wasFinalizedRef.current = true
+      setReviewing(false)
+    } else {
+      setShowFinalizedPopup(false)
+      if (prev === true && wasFinalizedRef.current) setReviewing(true) // heropend na afsluiten
+    }
+    prevFinalizedRef.current = finalized
   }, [finalized])
 
   if (isAdmin) {
@@ -2261,18 +2270,24 @@ function ClaimScreen(props: {
 
   return (
     <div>
-      {finalized ? (
-        <button onClick={() => { if (typeof document !== "undefined") document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
-          style={{ width: "100%", marginBottom: 14, padding: "12px 16px", border: "none", borderRadius: 14, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", cursor: "pointer", textAlign: "left", boxShadow: "0 6px 18px -6px rgba(39,174,96,0.6)" }}>
-          <div style={{ fontSize: 14.5, fontWeight: 800 }}>✅ Alles nagekeken! Bekijk hier de definitieve verdeling</div>
-          <div style={{ fontSize: 12, opacity: 0.92, marginTop: 2 }}>De beheerder heeft de rekening afgerond.</div>
-        </button>
-      ) : reviewing ? (
+      {!finalized && reviewing && (
         <div style={{ width: "100%", marginBottom: 14, padding: "12px 16px", borderRadius: 14, background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff", boxShadow: "0 6px 18px -6px rgba(20,153,176,0.55)" }}>
           <div style={{ fontSize: 14.5, fontWeight: 800 }}>🔎 De beheerder bekijkt de rekening opnieuw</div>
           <div style={{ fontSize: 12, opacity: 0.92, marginTop: 2 }}>Even geduld — je krijgt straks opnieuw de definitieve verdeling te zien.</div>
         </div>
-      ) : null}
+      )}
+      {/* Pop-up zodra de beheerder afsluit: één duidelijke melding + meteen je verdeling zien */}
+      {finalized && showFinalizedPopup && (
+        <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowFinalizedPopup(false)}>
+          <div style={{ ...S.modal, width: 340, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 40, marginBottom: 6 }}>✅</div>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c", margin: "0 0 6px" }}>De rekening is afgesloten</h3>
+            <p style={{ fontSize: 13.5, color: "#5a6680", lineHeight: 1.5, margin: "0 0 12px" }}>De beheerder rondde de rekening af. Dit is jouw definitieve deel:</p>
+            <div style={{ fontSize: 34, fontWeight: 800, color: "#14213a", marginBottom: 16 }}>€{t.settled.toFixed(2)}{t.pendingShared ? "+" : ""}</div>
+            <button onClick={() => { setShowFinalizedPopup(false); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>Bekijk mijn verdeling</button>
+          </div>
+        </div>
+      )}
       <div style={S.card}>
         <h3 style={S.h3}>✅ {meId && seatsOf(meId) > 1 ? "Selecteer jullie consumpties" : "Selecteer jouw consumpties"}</h3>
         {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen items — wacht tot de bon gescand is.</div>}
