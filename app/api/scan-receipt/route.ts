@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 
 export const runtime = "nodejs"
 
-// Het model. Gemini 2.5 Flash-Lite is de goedkoopste actieve optie met beeldherkenning.
-// Werkt dit model (nog) niet op jouw sleutel, verander dan enkel deze regel, bv. naar
-// "gemini-2.0-flash" of "gemini-2.5-flash".
-const MODEL = "gemini-2.5-flash-lite"
+// Het model. gemini-2.0-flash is breed beschikbaar, goedkoop en met beeldherkenning.
+// Werkt dit model (nog) niet op jouw sleutel, probeer dan "gemini-2.5-flash" of "gemini-2.5-flash-lite".
+const MODEL = "gemini-2.0-flash"
 
 const PROMPT = `Je krijgt een foto van een restaurant- of caférekening (Belgisch, meestal Nederlands of Frans).
 Haal ALLEEN de bestelde consumpties eruit: eten en drank (ook afkortingen daarvan).
@@ -93,11 +92,4 @@ export async function POST(req: NextRequest) {
       console.error("Kon Gemini-JSON niet parsen:", text.slice(0, 500))
       return NextResponse.json({ error: "parse_error" }, { status: 502 })
     }
-    const items = Array.isArray(parsed.items) ? parsed.items : []
-    const total = typeof parsed.total === "number" ? parsed.total : null
-    return NextResponse.json({ items, total })
-  } catch (e) {
-    console.error("scan-receipt route-fout:", e)
-    return NextResponse.json({ error: "exception" }, { status: 500 })
-  }
-}
+    const items = Array.isArray(parsed.items) ?
