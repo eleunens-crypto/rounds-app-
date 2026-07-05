@@ -541,14 +541,35 @@ function settleDebts(
   if (Math.abs(potCents) > 0) {
     all.push({ name: "de pot", participated: true, cents: potCents })
   }
-  const creditors = all.filter((f) => f.participated && f.cents > 0).map((f) => ({ ...f }))
-  const debtors = all.filter((f) => f.participated && f.cents < 0).map((f) => ({ ...f, cents: -f.cents }))
+  let creditors = all.filter((f) => f.participated && f.cents > 0).map((f) => ({ ...f }))
+  let debtors = all.filter((f) => f.participated && f.cents < 0).map((f) => ({ ...f, cents: -f.cents }))
 
   const transactions: { from: string; to: string; amount: number }[] = []
-  let ci = 0, di = 0
+
+  // 1) Exacte matches eerst: wie precies evenveel te geven heeft als iemand te krijgen heeft,
+  //    wordt in één rechtstreekse betaling gekoppeld. Zo zo weinig mogelijk betalingen.
+  let matched = true
+  while (matched) {
+    matched = false
+    for (const d of debtors) {
+      if (d.cents <= 0) continue
+      const c = creditors.find((c) => c.cents === d.cents)
+      if (c) {
+        transactions.push({ from: d.name, to: c.name, amount: d.cents / 100 })
+        c.cents = 0
+        d.cents = 0
+        matched = true
+      }
+    }
+    creditors = creditors.filter((c) => c.cents > 0)
+    debtors = debtors.filter((d) => d.cents > 0)
+  }
+
+  // 2) De rest: grootste schuldenaar betaalt telkens de grootste schuldeiser (rechtstreeks,
+  //    nooit via een omweg), tot alles vereffend is.
   creditors.sort((a, b) => b.cents - a.cents)
   debtors.sort((a, b) => b.cents - a.cents)
-
+  let ci = 0, di = 0
   while (ci < creditors.length && di < debtors.length) {
     const credit = creditors[ci]
     const debt = debtors[di]
@@ -3345,11 +3366,11 @@ export default function Home() {
 
                         // Bedrag-kader met kleuridentiteit: Fair Split = blauwe rand + gouden vulling (zoals de knop),
                         // iedereen evenveel = amber. Zo zie je meteen welk bedrag bij welke methode hoort.
-                        const splitBox = (kind: "fair" | "equal", row: typeof fair, debts: typeof myDebts, credits: typeof myCredits, compact: boolean) => {
+                        const splitBox = (kind: "fair" | "equal", row: typeof fair, debts: typeof myDebts, credits: typeof myCredits, compact: boolean, fullWidth = false) => {
                           if (!row || !row.participated) return null
                           const isFair = kind === "fair"
                           return (
-                            <div style={{ width: compact ? "auto" : 158, minWidth: compact ? 100 : undefined, boxSizing: "border-box", textAlign: "center", background: isFair ? "linear-gradient(135deg,#f4c430,#f7d461)" : "rgba(232,126,20,0.12)", border: isFair ? "2px solid #3d6fd0" : "2px solid #e0842e", borderRadius: 12, padding: compact ? "5px 9px" : "7px 8px" }}>
+                            <div style={{ width: fullWidth ? "100%" : (compact ? "auto" : 158), minWidth: (compact && !fullWidth) ? 100 : undefined, boxSizing: "border-box", textAlign: "center", background: isFair ? "linear-gradient(135deg,#f4c430,#f7d461)" : "rgba(232,126,20,0.12)", border: isFair ? "2px solid #3d6fd0" : "2px solid #e0842e", borderRadius: 12, padding: compact ? "5px 9px" : "7px 8px" }}>
                               <div style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, color: isFair ? "#2f5bb0" : "#b5591a" }}>{isFair ? "fair split" : "evenveel"}</div>
                               <div style={{ fontSize: compact ? 16 : 19, fontWeight: 800, color: "#4a3f1e" }}>€{row.fairShare.toFixed(2)}</div>
                               <div style={{ fontSize: 10.5, marginTop: 2, lineHeight: 1.3 }}>{renderSettle(row, debts, credits)}</div>
@@ -3362,15 +3383,13 @@ export default function Home() {
                         if (multiCol) {
                           return (
                             <div style={{ width: "100%", borderTop: "1px solid rgba(0,0,0,0.07)", marginTop: 8, paddingTop: 7 }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "#aaa", paddingTop: 6 }}>indicatief <b style={{ color: "#a89a6a", fontWeight: 700 }}>€{drinkValue.toFixed(2)}</b></span>
-                                {activeOk && (
-                                  <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: 6 }}>
-                                    {splitBox(activeKind, fair, myDebts, myCredits, true)}
-                                    {compareOn && splitBox(otherKind, otherComp, otherDebts, otherCredits, true)}
-                                  </div>
-                                )}
-                              </div>
+                              <div style={{ fontSize: 11, color: "#aaa", marginBottom: activeOk ? 6 : 0 }}>indicatief <b style={{ color: "#a89a6a", fontWeight: 700 }}>€{drinkValue.toFixed(2)}</b></div>
+                              {activeOk && (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                  {splitBox(activeKind, fair, myDebts, myCredits, true, true)}
+                                  {compareOn && splitBox(otherKind, otherComp, otherDebts, otherCredits, true, true)}
+                                </div>
+                              )}
                             </div>
                           )
                         }
