@@ -3,19 +3,21 @@ import { NextRequest, NextResponse } from "next/server"
 export const runtime = "nodejs"
 
 // Het model. gemini-2.0-flash is breed beschikbaar, goedkoop en met beeldherkenning.
-// Werkt dit model (nog) niet op jouw sleutel, probeer dan "gemini-2.5-flash" of "gemini-2.5-flash-lite".
+// Werkt dit model (nog) niet op jouw sleutel, probeer dan "gemini-2.5-flash".
 const MODEL = "gemini-2.0-flash"
 
-const PROMPT = `Je krijgt een foto van een restaurant- of caférekening (Belgisch, meestal Nederlands of Frans).
-Haal ALLEEN de bestelde consumpties eruit: eten en drank (ook afkortingen daarvan).
-Geef per lijn:
-- "name": de naam van het item. Schrijf een duidelijke afkorting voluit (bv. "Spag. Bol." -> "Spaghetti Bolognese"); is het niet duidelijk, laat dan de tekst zoals ze staat.
-- "quantity": het aantal (geheel getal, minstens 1).
-- "unit_price": de prijs PER STUK in euro (getal). Staat op de bon enkel de lijntotaal en is het aantal groter dan 1, deel dan de lijntotaal door het aantal.
-
-Negeer volledig: datum, tijd, adres, tafelnummer, BTW/TVA-lijnen, subtotaal, kortingen, fooi/tip, afronding, betaalinfo, kaartgegevens en bedankjes.
-Geef ook "total" terug: het eindtotaal van de rekening in euro (of null als je het niet zeker kan bepalen).
-Antwoord uitsluitend in het gevraagde JSON-formaat, zonder extra tekst.`
+const PROMPT = [
+  "Je krijgt een foto van een restaurant- of caferekening (Belgisch, meestal Nederlands of Frans).",
+  "Haal ALLEEN de bestelde consumpties eruit: eten en drank (ook afkortingen daarvan).",
+  "Geef per lijn:",
+  '- "name": de naam van het item. Schrijf een duidelijke afkorting voluit (bv. "Spag. Bol." -> "Spaghetti Bolognese"); is het niet duidelijk, laat dan de tekst zoals ze staat.',
+  '- "quantity": het aantal (geheel getal, minstens 1).',
+  '- "unit_price": de prijs PER STUK in euro (getal). Staat op de bon enkel de lijntotaal en is het aantal groter dan 1, deel dan de lijntotaal door het aantal.',
+  "",
+  "Negeer volledig: datum, tijd, adres, tafelnummer, BTW/TVA-lijnen, subtotaal, kortingen, fooi/tip, afronding, betaalinfo, kaartgegevens en bedankjes.",
+  'Geef ook "total" terug: het eindtotaal van de rekening in euro (of null als je het niet zeker kan bepalen).',
+  "Antwoord uitsluitend in het gevraagde JSON-formaat, zonder extra tekst.",
+].join("\n")
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY
@@ -70,7 +72,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`
+    const url =
+      "https://generativelanguage.googleapis.com/v1beta/models/" +
+      MODEL +
+      ":generateContent?key=" +
+      apiKey
     const resp = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -83,8 +89,14 @@ export async function POST(req: NextRequest) {
     }
     const data = await resp.json()
     let text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ""
-    // Verwijder eventuele markdown-codefences rond de JSON (zonder losse backticks in de broncode).
-    text = text.trim().replace(/^`+json\s*/i, "").replace(/^`+/, "").replace(/`+$/, "").trim()
+    // Verwijder eventuele markdown-codefences rond de JSON (backtick via char-code, geen letterlijke backtick).
+    const BT = String.fromCharCode(96)
+    text = text
+      .trim()
+      .replace(new RegExp("^" + BT + "+json\\s*", "i"), "")
+      .replace(new RegExp("^" + BT + "+"), "")
+      .replace(new RegExp(BT + "+$"), "")
+      .trim()
     let parsed: { items?: unknown; total?: unknown }
     try {
       parsed = JSON.parse(text)
@@ -92,4 +104,11 @@ export async function POST(req: NextRequest) {
       console.error("Kon Gemini-JSON niet parsen:", text.slice(0, 500))
       return NextResponse.json({ error: "parse_error" }, { status: 502 })
     }
-    const items = Array.isArray(parsed.items) ?
+    const items = Array.isArray(parsed.items) ? parsed.items : []
+    const total = typeof parsed.total === "number" ? parsed.total : null
+    return NextResponse.json({ items, total })
+  } catch (e) {
+    console.error("scan-receipt route-fout:", e)
+    return NextResponse.json({ error: "exception" }, { status: 500 })
+  }
+}
