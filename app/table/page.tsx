@@ -218,7 +218,59 @@ async function preprocessReceipt(file: File): Promise<string> {
   return canvas.toDataURL("image/png")
 }
 
+// Zet een File om naar pure base64 (zonder de "data:...;base64,"-prefix).
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const res = reader.result as string
+      resolve(res.includes(",") ? res.split(",")[1] : res)
+    }
+    reader.onerror = () => reject(new Error("Kon de foto niet lezen"))
+    reader.readAsDataURL(file)
+  })
+}
+
+// Hoofd-scan: probeer eerst de AI-route (Gemini). Lukt dat niet (geen sleutel, fout, niets herkend),
+// dan valt hij automatisch terug op de lokale Tesseract-scan.
 async function scanReceipt(file: File, onProgress?: (p: number) => void): Promise<{ items: ParsedItem[]; total: number | null }> {
+  try {
+    onProgress?.(0.15)
+    const imageBase64 = await fileToBase64(file)
+    const resp = await fetch("/api/scan-receipt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageBase64, mimeType: file.type || "image/jpeg" }),
+    })
+    onProgress?.(0.85)
+    if (resp.ok) {
+      const data = await resp.json()
+      if (Array.isArray(data?.items)) {
+        const items: ParsedItem[] = data.items
+          .map((it: { name?: string; quantity?: number; unit_price?: number }) => ({
+            name: String(it.name ?? "").trim(),
+            quantity: Math.max(1, Math.round(Number(it.quantity) || 1)),
+            unit_price: Math.max(0, Math.round((Number(it.unit_price) || 0) * 100) / 100),
+            is_shared: false,
+          }))
+          .filter((it: ParsedItem) => it.name.length > 0)
+        if (items.length > 0) {
+          onProgress?.(1)
+          const total = data.total != null && !isNaN(Number(data.total)) ? Math.round(Number(data.total) * 100) / 100 : null
+          return { items, total }
+        }
+      }
+    } else {
+      console.warn("AI-scan niet beschikbaar (status " + resp.status + ") — terugval op lokale scan.")
+    }
+  } catch (e) {
+    console.warn("AI-scan mislukt, terugval op lokale scan:", e)
+  }
+  // Terugval: lokale OCR
+  return scanReceiptOCR(file, onProgress)
+}
+
+async function scanReceiptOCR(file: File, onProgress?: (p: number) => void): Promise<{ items: ParsedItem[]; total: number | null }> {
   const image = await preprocessReceipt(file)
   const { createWorker } = await import("tesseract.js")
   const worker = await createWorker("nld", 1, {
