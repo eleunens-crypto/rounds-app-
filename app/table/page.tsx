@@ -736,12 +736,24 @@ export default function RundoTable() {
     }
     const baseList = preview.map((it, idx) => ({ it, idx })).filter((o) => !o.it.distribute)
     const taxList = preview.map((it, idx) => ({ it, idx })).filter((o) => !!o.it.distribute)
-    const baseRows = baseList.map(({ it }) => ({
+    // Oplopende tijdstempel per scan-item, zodat ze bij het herladen in de bon-volgorde blijven staan.
+    const scanBaseTime = Date.now()
+    const stamp = (idx: number) => new Date(scanBaseTime + idx * 100).toISOString()
+    const baseRows = baseList.map(({ it, idx }) => ({
       group_id: group.id, name: it.name, unit_price: it.unit_price,
       quantity: it.quantity, is_shared: it.is_shared, category: null,
+      created_at: stamp(idx),
     }))
     let columnMissing = false
-    const baseRes = await supabase.from("table_items").insert(baseRows).select()
+    let canStamp = true
+    let baseRes = await supabase.from("table_items").insert(baseRows).select()
+    if (baseRes.error && /created_at/i.test(baseRes.error.message || "")) {
+      // Databank laat een handmatige tijdstempel niet toe -> zonder (volgorde kan dan afwijken).
+      canStamp = false
+      baseRes = await supabase.from("table_items").insert(
+        baseList.map(({ it }) => ({ group_id: group.id, name: it.name, unit_price: it.unit_price, quantity: it.quantity, is_shared: it.is_shared, category: null }))
+      ).select()
+    }
     if (baseRes.error) { setError("Items opslaan mislukt: " + baseRes.error.message); return }
     const inserted = baseRes.data || []
     const idByScanIdx: Record<number, string> = {}
@@ -755,17 +767,17 @@ export default function RundoTable() {
     setScanFlags((prev) => ({ ...prev, ...flags }))
 
     if (taxList.length > 0) {
-      const taxRows = taxList.map(({ it }) => {
+      const taxRows = taxList.map(({ it, idx }) => {
         let dist: string = "all"
         if (it.distribute && it.distribute !== "all") {
           try { const sel = (JSON.parse(it.distribute).idx) as number[]; dist = JSON.stringify(sel.map((ix) => idByScanIdx[ix]).filter(Boolean)) } catch { dist = "all" }
         }
-        return { group_id: group.id, name: it.name, unit_price: it.unit_price, quantity: 1, is_shared: false, category: null, distribute: dist }
+        return { group_id: group.id, name: it.name, unit_price: it.unit_price, quantity: 1, is_shared: false, category: null, distribute: dist, ...(canStamp ? { created_at: stamp(idx) } : {}) }
       })
       let taxRes = await supabase.from("table_items").insert(taxRows)
       if (taxRes.error && /distribute/.test(taxRes.error.message || "")) {
         columnMissing = true
-        const stripped = taxList.map(({ it }) => ({ group_id: group.id, name: it.name, unit_price: it.unit_price, quantity: 1, is_shared: false, category: null }))
+        const stripped = taxList.map(({ it, idx }) => ({ group_id: group.id, name: it.name, unit_price: it.unit_price, quantity: 1, is_shared: false, category: null, ...(canStamp ? { created_at: stamp(idx) } : {}) }))
         taxRes = await supabase.from("table_items").insert(stripped)
       }
       if (taxRes.error) { setError("BTW opslaan mislukt: " + taxRes.error.message); return }
