@@ -231,16 +231,47 @@ function fileToBase64(file: File): Promise<string> {
   })
 }
 
+// Verklein en comprimeer de foto vóór ze naar de AI gaat. Zo blijven we ruim onder de
+// request-limiet van de server (grote telefoonfoto's veroorzaakten anders 502's en terugval),
+// en antwoordt de AI sneller en betrouwbaarder. Mislukt de compressie, dan sturen we de originele foto.
+async function compressImageForAI(file: File): Promise<{ base64: string; mimeType: string }> {
+  const fallback = async () => ({ base64: await fileToBase64(file), mimeType: file.type || "image/jpeg" })
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const im = new Image()
+      im.onload = () => resolve(im)
+      im.onerror = reject
+      im.src = URL.createObjectURL(file)
+    })
+    const maxSide = 2000
+    const longest = Math.max(img.naturalWidth, img.naturalHeight) || maxSide
+    const scale = longest > maxSide ? maxSide / longest : 1
+    const canvas = document.createElement("canvas")
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale))
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale))
+    const ctx = canvas.getContext("2d")
+    if (!ctx) { URL.revokeObjectURL(img.src); return fallback() }
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    URL.revokeObjectURL(img.src)
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.8)
+    const base64 = dataUrl.includes(",") ? dataUrl.split(",")[1] : dataUrl
+    if (!base64 || base64.length < 50) return fallback()
+    return { base64, mimeType: "image/jpeg" }
+  } catch {
+    return fallback()
+  }
+}
+
 // Hoofd-scan: probeer eerst de AI-route (Gemini). Lukt dat niet (geen sleutel, fout, niets herkend),
 // dan valt hij automatisch terug op de lokale Tesseract-scan.
 async function scanReceipt(file: File, onProgress?: (p: number) => void): Promise<{ items: ParsedItem[]; total: number | null; source: "ai" | "local" }> {
   try {
     onProgress?.(0.15)
-    const imageBase64 = await fileToBase64(file)
+    const { base64, mimeType } = await compressImageForAI(file)
     const resp = await fetch("/api/scan-receipt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageBase64, mimeType: file.type || "image/jpeg" }),
+      body: JSON.stringify({ imageBase64: base64, mimeType }),
     })
     onProgress?.(0.85)
     if (resp.ok) {
@@ -364,6 +395,8 @@ export default function RundoTable() {
   const [claimMode, setClaimMode] = useState<"item" | "person">("item")
   const [claimPid, setClaimPid] = useState<string | null>(null)
   const [scanFile, setScanFile] = useState<File | null>(null)
+  // Laatste gescande foto onthouden, zodat een 'opnieuw met AI'-poging dezelfde foto kan hergebruiken.
+  const [lastScanFile, setLastScanFile] = useState<File | null>(null)
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [newGuest, setNewGuest] = useState("")
@@ -549,7 +582,7 @@ export default function RundoTable() {
     setGroup(null); setMeId(null); setItems([]); setClaims([]); setParticipants([]); setConfirmations([])
     setGroupName(""); setPartySize(""); setError(null)
     setViaLink(false); setShowSaved(false)
-    setScanPreview([]); setScanFile(null); setScanPhotoUrl(null); setScanTotal(""); setScanError(null); setShowScan(false)
+    setScanPreview([]); setScanFile(null); setLastScanFile(null); setScanPhotoUrl(null); setScanTotal(""); setScanError(null); setShowScan(false)
     setAdminTab("scan"); setExpandedPeople(new Set()); setClaimMode("item"); setClaimPid(null)
     setEditGuestId(null); setShowTodo(false); setShowAddGuest(false); setViewReceipt(null)
     autoJoined.current = true
@@ -708,6 +741,7 @@ export default function RundoTable() {
     if (!file) return
     setScanError(null); setScanPreview([]); setScanProgress(0); setScanning(true)
     setScanFile(file)
+    setLastScanFile(file)
     if (scanPhotoUrl) URL.revokeObjectURL(scanPhotoUrl)
     setScanPhotoUrl(URL.createObjectURL(file))
     try {
@@ -728,6 +762,18 @@ export default function RundoTable() {
       setScanError("Scannen kon niet starten (technische fout): " + msg)
       setScanning(false)
     }
+  }
+
+  // Opnieuw proberen met de AI, met dezelfde foto (bij een ruwe/lokale scan). Vervangt de huidige items.
+  const retryScanWithAI = async () => {
+    if (!group || !lastScanFile) return
+    if (group.finalized) { setToast("Heropen de rekening eerst om opnieuw te scannen."); return }
+    if (!confirm("Opnieuw proberen met de slimme AI-scan? De huidige items worden vervangen.")) return
+    await supabase.from("table_claims").delete().eq("group_id", group.id)
+    await supabase.from("table_items").delete().eq("group_id", group.id)
+    setItems([]); setClaims([])
+    setShowScan(true)
+    await onPhotoPicked(lastScanFile)
   }
 
   const confirmScan = async (previewArg?: ParsedItem[], totalArg?: string, fileArg?: File | null) => {
@@ -1321,20 +1367,28 @@ export default function RundoTable() {
             )
           })()}
 
-          {items.length > 0 && scanSource && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "2px 0 10px", padding: "8px 12px", borderRadius: 10, fontSize: 12.5, fontWeight: 700, background: scanSource === "ai" ? "rgba(39,174,96,0.1)" : "rgba(243,156,18,0.12)", border: scanSource === "ai" ? "1px solid rgba(39,174,96,0.4)" : "1px solid rgba(243,156,18,0.5)", color: scanSource === "ai" ? "#1f8a4c" : "#b5591a" }}>
-            {scanSource === "ai"
-              ? "✨ AI-scan gelukt — items en volgorde komen van de AI."
-              : "📷 Lokale scan gebruikt (AI was niet beschikbaar). Volgorde en herkenning kunnen minder nauwkeurig zijn."}
+          {items.length > 0 && scanSource === "ai" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "2px 0 10px", padding: "8px 12px", borderRadius: 10, fontSize: 12.5, fontWeight: 700, background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.4)", color: "#1f8a4c" }}>
+              ✨ AI-scan gelukt — items en volgorde komen van de AI.
             </div>
           )}
 
-          {items.length > 0 && (
+          {items.length > 0 && scanSource === "local" ? (
+            <div style={{ margin: "2px 0 12px", padding: "11px 13px", borderRadius: 12, fontSize: 12.5, background: "rgba(224,107,94,0.1)", border: "1.5px solid rgba(224,107,94,0.55)", color: "#c0392b", lineHeight: 1.5 }}>
+              <div style={{ fontWeight: 800, marginBottom: 4 }}>⚠️ Ruwe scan — herkenning kan onbetrouwbaar zijn</div>
+              <div style={{ fontWeight: 600 }}>De slimme AI-herkenning was even niet beschikbaar, dus dit is een basisscan. Er kunnen items ontbreken of fout staan — controleer élke naam, aantal en prijs goed.</div>
+              {lastScanFile ? (
+                <button onClick={retryScanWithAI} style={{ ...S.btn, ...S.btnPrimary, marginTop: 9, padding: "9px 16px", fontSize: 13, fontWeight: 800 }}>🔄 Opnieuw proberen met AI</button>
+              ) : (
+                <div style={{ marginTop: 6, fontWeight: 600, opacity: 0.85 }}>Tip: scan de bon straks opnieuw voor een betere herkenning (knop &ldquo;🔄 Bon opnieuw scannen&rdquo; hierboven).</div>
+              )}
+            </div>
+          ) : items.length > 0 ? (
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8, margin: "2px 0 12px", padding: "9px 12px", borderRadius: 10, fontSize: 12.5, fontWeight: 700, background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", color: "#b5591a", lineHeight: 1.45 }}>
               <span style={{ flexShrink: 0 }}>⚠️</span>
               <span>Controleer alles goed — een scan kan fouten bevatten, zeker bij een onduidelijke bon. Kijk namen, aantallen en prijzen na.</span>
             </div>
-          )}
+          ) : null}
 
           {items.length > 0 && (
           <ItemList
