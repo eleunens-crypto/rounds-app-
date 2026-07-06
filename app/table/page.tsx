@@ -1330,6 +1330,13 @@ export default function RundoTable() {
           )}
 
           {items.length > 0 && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, margin: "2px 0 12px", padding: "9px 12px", borderRadius: 10, fontSize: 12.5, fontWeight: 700, background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", color: "#b5591a", lineHeight: 1.45 }}>
+              <span style={{ flexShrink: 0 }}>⚠️</span>
+              <span>Controleer alles goed — een scan kan fouten bevatten, zeker bij een onduidelijke bon. Kijk namen, aantallen en prijzen na.</span>
+            </div>
+          )}
+
+          {items.length > 0 && (
           <ItemList
             items={baseItems} claimedQty={claimedQty} participants={participants} claimsForItem={claimsForItem}
             sharerIds={sharerIds} shareHeads={shareHeads} toggleShareClaim={toggleShareClaim} setShareFixed={setShareFixed}
@@ -1751,10 +1758,25 @@ export default function RundoTable() {
             <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800 }}>🧾 Rekening scannen</h3>
             <p style={{ fontSize: 12.5, color: "#999", marginBottom: 14 }}>Maak of kies een foto van de rekening. Daarna kan je de herkende items nog nakijken en bijsturen.</p>
 
-            <label style={{ ...S.btn, ...S.btnPrimary, display: "block", textAlign: "center", marginBottom: 14, cursor: scanning ? "default" : "pointer", fontWeight: 700, padding: "14px 0", opacity: scanning ? 0.6 : 1 }}>
-              {scanning ? "⏳ Bezig met scannen..." : scanPreview.length > 0 ? "📷 Andere foto kiezen" : "📷 Foto maken / kiezen"}
-              <input type="file" accept="image/*" disabled={scanning} style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
-            </label>
+            {scanning ? (
+              <div style={{ ...S.btn, ...S.btnPrimary, display: "block", textAlign: "center", marginBottom: 14, fontWeight: 700, padding: "14px 0", opacity: 0.6 }}>⏳ Bezig met scannen...</div>
+            ) : (
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <label style={{ ...S.btn, ...S.btnPrimary, flex: 1, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", cursor: "pointer", fontWeight: 700, padding: "14px 0" }}>
+                  📷 Foto maken
+                  <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
+                </label>
+                <label style={{ ...S.btn, flex: 1, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", cursor: "pointer", fontWeight: 700, padding: "14px 0" }}>
+                  🖼️ Uit galerij
+                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
+                </label>
+              </div>
+            )}
+            {!scanning && scanPreview.length === 0 && (
+              <div style={{ fontSize: 11.5, color: "#8a93a3", lineHeight: 1.45, marginBottom: 14, textAlign: "center" }}>
+                📸 Tip: maak een scherpe foto, recht van boven en goed belicht. Bij een onduidelijke foto worden items minder goed herkend.
+              </div>
+            )}
 
             {scanning && (
               <div style={{ marginBottom: 14 }}>
