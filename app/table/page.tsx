@@ -9,7 +9,7 @@ import { QRCodeSVG } from "qrcode.react"
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
-type Group = { id: string; name: string; invite_code: string; owner_id: string; receipt_url?: string | null; party_size?: number | null; receipt_total?: number | null; finalized?: boolean | null; disputed_by?: string | null; created_at?: string }
+type Group = { id: string; name: string; invite_code: string; owner_id: string; receipt_url?: string | null; party_size?: number | null; receipt_total?: number | null; finalized?: boolean | null; disputed_by?: string | null; tip_total?: number | null; tip_updated_at?: string | null; scan_source?: string | null; created_at?: string }
 type Participant = { id: string; name: string; group_id: string; self_joined?: boolean; seats?: number | null; created_at?: string }
 type BillItem = {
   id: string
@@ -231,16 +231,47 @@ function fileToBase64(file: File): Promise<string> {
   })
 }
 
+// Verklein en comprimeer de foto vóór ze naar de AI gaat. Zo blijven we ruim onder de
+// request-limiet van de server (grote telefoonfoto's veroorzaakten anders 502's en terugval),
+// en antwoordt de AI sneller en betrouwbaarder. Mislukt de compressie, dan sturen we de originele foto.
+async function compressImageForAI(file: File): Promise<{ base64: string; mimeType: string }> {
+  const fallback = async () => ({ base64: await fileToBase64(file), mimeType: file.type || "image/jpeg" })
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const im = new Image()
+      im.onload = () => resolve(im)
+      im.onerror = reject
+      im.src = URL.createObjectURL(file)
+    })
+    const maxSide = 2000
+    const longest = Math.max(img.naturalWidth, img.naturalHeight) || maxSide
+    const scale = longest > maxSide ? maxSide / longest : 1
+    const canvas = document.createElement("canvas")
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale))
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale))
+    const ctx = canvas.getContext("2d")
+    if (!ctx) { URL.revokeObjectURL(img.src); return fallback() }
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    URL.revokeObjectURL(img.src)
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.8)
+    const base64 = dataUrl.includes(",") ? dataUrl.split(",")[1] : dataUrl
+    if (!base64 || base64.length < 50) return fallback()
+    return { base64, mimeType: "image/jpeg" }
+  } catch {
+    return fallback()
+  }
+}
+
 // Hoofd-scan: probeer eerst de AI-route (Gemini). Lukt dat niet (geen sleutel, fout, niets herkend),
 // dan valt hij automatisch terug op de lokale Tesseract-scan.
 async function scanReceipt(file: File, onProgress?: (p: number) => void): Promise<{ items: ParsedItem[]; total: number | null; source: "ai" | "local" }> {
   try {
     onProgress?.(0.15)
-    const imageBase64 = await fileToBase64(file)
+    const { base64, mimeType } = await compressImageForAI(file)
     const resp = await fetch("/api/scan-receipt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageBase64, mimeType: file.type || "image/jpeg" }),
+      body: JSON.stringify({ imageBase64: base64, mimeType }),
     })
     onProgress?.(0.85)
     if (resp.ok) {
@@ -309,6 +340,7 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
 export default function RundoTable() {
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+  const lastActive = useRef(Date.now())
 
   // Zorg dat het scherm op iPhone/Android altijd volledig toont en niet inzoomt bij het tikken
   // in een invoerveld (iOS zoomt anders in en toont niet alles). We forceren de juiste viewport.
@@ -360,6 +392,7 @@ export default function RundoTable() {
   const [showScan, setShowScan] = useState(false)
   const [adminFinalPopup, setAdminFinalPopup] = useState(false)
   const receiptInputRef = useRef<HTMLInputElement>(null)
+  const tipInputRef = useRef<HTMLInputElement>(null)
   // Twijfel-vlaggen uit de AI-scan, per item-id (lokaal, om meteen na de scan na te kijken).
   const [scanFlags, setScanFlags] = useState<Record<string, { note: string }>>({})
   const [scanning, setScanning] = useState(false)
@@ -373,12 +406,11 @@ export default function RundoTable() {
   const [claimMode, setClaimMode] = useState<"item" | "person">("item")
   const [claimPid, setClaimPid] = useState<string | null>(null)
   const [scanFile, setScanFile] = useState<File | null>(null)
+  // Laatste gescande foto onthouden, zodat een 'opnieuw met AI'-poging dezelfde foto kan hergebruiken.
+  const [lastScanFile, setLastScanFile] = useState<File | null>(null)
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [newGuest, setNewGuest] = useState("")
-  const [newGuestSeats, setNewGuestSeats] = useState(1)
-  const [editGuestId, setEditGuestId] = useState<string | null>(null)
-  const [showAddGuest, setShowAddGuest] = useState(false)
   const [showTodo, setShowTodo] = useState(false)
   const [showTaxInfo, setShowTaxInfo] = useState(false)
   const [taxConfig, setTaxConfig] = useState<string | null>(null)
@@ -387,6 +419,8 @@ export default function RundoTable() {
   const [recentItemId, setRecentItemId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Slaapstand: na 3 min zonder activiteit verbreken we realtime + poll (spaart egress). Ontwaakt bij tik/terugkeer.
+  const [asleep, setAsleep] = useState(false)
 
   const loadAll = useCallback(async (groupId: string) => {
     const [{ data: p }, { data: it }, { data: cl }, { data: cf }, { data: g }] = await Promise.all([
@@ -410,8 +444,30 @@ export default function RundoTable() {
     if (g) setGroup((cur) => cur ? { ...cur, ...(g as Group) } : cur)
   }, [])
 
+  // Zuinig voor het dataverkeer: bij een realtime-wijziging enkel de betrokken tabel opnieuw ophalen
+  // in plaats van telkens alle vijf. Scheelt fors in egress bij een actieve groep.
+  const reloadTable = useCallback(async (groupId: string, table: string) => {
+    const order = <T extends { created_at?: string; id: string }>(rows: T[]) =>
+      [...(rows || [])].sort((a, b) => {
+        const ca = a.created_at ?? "", cb = b.created_at ?? ""
+        if (ca !== cb) return ca < cb ? -1 : 1
+        return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+      })
+    if (table === "table_groups") {
+      const { data: g } = await supabase.from("table_groups").select("*").eq("id", groupId).single()
+      if (g && mounted.current) setGroup((cur) => cur ? { ...cur, ...(g as Group) } : cur)
+      return
+    }
+    const { data } = await supabase.from(table).select("*").eq("group_id", groupId)
+    if (!mounted.current) return
+    if (table === "table_participants") setParticipants(order((data as Participant[]) || []))
+    else if (table === "table_items") setItems(order((data as BillItem[]) || []))
+    else if (table === "table_claims") setClaims((data as Claim[]) || [])
+    else if (table === "table_confirmations") setConfirmations((data as Confirmation[]) || [])
+  }, [])
+
  useEffect(() => {
-    if (!group) return
+    if (!group || asleep) return
     const groupId = group.id
     let active = true
     let ch: ReturnType<typeof supabase.channel> | null = null
@@ -419,12 +475,27 @@ export default function RundoTable() {
 
     const reload = () => { if (mounted.current && active) loadAll(groupId) }
 
+    // Bundel snelle opeenvolgende wijzigingen en ververs enkel de veranderde tabel(len).
+    const dirty = new Set<string>()
+    let flushTimer: ReturnType<typeof setTimeout> | null = null
+    const flush = () => {
+      flushTimer = null
+      if (!mounted.current || !active) return
+      const tables = [...dirty]; dirty.clear()
+      tables.forEach((t) => reloadTable(groupId, t))
+    }
+    const onChange = (table: string) => {
+      if (!mounted.current || !active) return
+      dirty.add(table)
+      if (!flushTimer) flushTimer = setTimeout(flush, 700)
+    }
+
     const connect = () => {
       if (!active) return
       ch = supabase.channel(`table-${groupId}`)
       ;["table_participants", "table_items", "table_claims", "table_confirmations", "table_groups"].forEach((table) => {
         const filter = table === "table_groups" ? `id=eq.${groupId}` : `group_id=eq.${groupId}`
-        ch!.on("postgres_changes", { event: "*", schema: "public", table, filter }, reload)
+        ch!.on("postgres_changes", { event: "*", schema: "public", table, filter }, () => onChange(table))
       })
       ch!.subscribe((status) => {
         if ((status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") && active) {
@@ -441,18 +512,47 @@ export default function RundoTable() {
     }
     document.addEventListener("visibilitychange", refreshOnReturn)
     window.addEventListener("focus", refreshOnReturn)
-    const poll = setInterval(() => { if (typeof document === "undefined" || document.visibilityState === "visible") reload() }, 30000)
+    const poll = setInterval(() => { if (typeof document === "undefined" || document.visibilityState === "visible") reload() }, 60000)
 
     return () => {
       active = false
       if (retry) clearTimeout(retry)
+      if (flushTimer) clearTimeout(flushTimer)
       clearInterval(poll)
       document.removeEventListener("visibilitychange", refreshOnReturn)
       window.removeEventListener("focus", refreshOnReturn)
       if (ch) supabase.removeChannel(ch)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [group?.id, loadAll])
+  }, [group?.id, loadAll, reloadTable, asleep])
+
+  // Inactiviteits-slaapstand: na 3 min zonder tik/scroll/toets 'slaapt' het scherm
+  // (realtime stopt via de guard hierboven -> spaart data). We meten inactiviteit met een
+  // tijdstempel + interval i.p.v. één lange setTimeout, want die wordt door de browser
+  // gepauzeerd zodra het tabblad verborgen is (scherm op slot) en vuurt dan niet betrouwbaar.
+  // Belangrijk: enkel een échte tik/toets/scroll of een tik op de banner hervat het.
+  // Terugkeren naar het tabblad hervat NIET vanzelf, zodat de "gepauzeerd"-melding
+  // zichtbaar blijft en de gebruiker bewust op "tik om te hervatten" tikt.
+  useEffect(() => {
+    if (!group) return
+    const SLEEP_MS = 3 * 60 * 1000
+    lastActive.current = Date.now()
+    setAsleep(false)
+    const check = () => {
+      if (mounted.current && Date.now() - lastActive.current >= SLEEP_MS) setAsleep(true)
+    }
+    const markActive = () => { lastActive.current = Date.now(); setAsleep((a) => (a ? false : a)) }
+    const onVis = () => { if (typeof document !== "undefined" && document.visibilityState === "visible") check() }
+    const evts: (keyof WindowEventMap)[] = ["pointerdown", "keydown", "scroll", "touchstart"]
+    evts.forEach((e) => window.addEventListener(e, markActive, { passive: true }))
+    document.addEventListener("visibilitychange", onVis)
+    const iv = setInterval(check, 20 * 1000)
+    return () => {
+      clearInterval(iv)
+      evts.forEach((e) => window.removeEventListener(e, markActive))
+      document.removeEventListener("visibilitychange", onVis)
+    }
+  }, [group?.id])
 
   useEffect(() => {
     if (group && typeof window !== "undefined") localStorage.setItem("rundo_table_last_tab", adminTab)
@@ -558,9 +658,9 @@ export default function RundoTable() {
     setGroup(null); setMeId(null); setItems([]); setClaims([]); setParticipants([]); setConfirmations([])
     setGroupName(""); setPartySize(""); setError(null)
     setViaLink(false); setShowSaved(false)
-    setScanPreview([]); setScanFile(null); setScanPhotoUrl(null); setScanTotal(""); setScanError(null); setShowScan(false)
+    setScanPreview([]); setScanFile(null); setLastScanFile(null); setScanPhotoUrl(null); setScanTotal(""); setScanError(null); setShowScan(false)
     setAdminTab("scan"); setExpandedPeople(new Set()); setClaimMode("item"); setClaimPid(null)
-    setEditGuestId(null); setShowTodo(false); setShowAddGuest(false); setViewReceipt(null)
+    setShowTodo(false); setViewReceipt(null)
     autoJoined.current = true
     rememberLastGroup(null)
     try { if (typeof sessionStorage !== "undefined") sessionStorage.removeItem("rundo_table_session") } catch { /* ignore */ }
@@ -571,7 +671,8 @@ export default function RundoTable() {
 
   const addGuest = async (name?: string, selfJoined = false, seats = 1) => {
     if (!group) return
-    const finalName = (name ?? newGuest).trim() || `Gast ${participants.length + 1}`
+    const placeholderCount = participants.filter((p) => /^pers\.\s*\d+$/i.test(p.name.trim())).length
+    const finalName = (name ?? newGuest).trim() || `pers. ${placeholderCount + 1}`
     const seatsVal = Math.max(1, seats)
     let { data, error } = await supabase.from("table_participants")
       .insert([{ name: finalName, group_id: group.id, self_joined: selfJoined, seats: seatsVal }]).select().single()
@@ -589,7 +690,7 @@ export default function RundoTable() {
     }
     if (error) { setError("Gast toevoegen mislukt: " + error.message); return }
     setNewGuest("")
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_participants")
     return data as Participant
   }
 
@@ -620,9 +721,22 @@ export default function RundoTable() {
       setError("Voeg in Supabase de kolommen finalized (bool) en disputed_by (text) toe aan table_groups.")
       return
     }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_groups")
     setToast(on ? "Rekening afgesloten — gasten kunnen niet meer wijzigen" : "Rekening heropend")
     if (on) setAdminFinalPopup(true)
+  }
+
+  const setTip = async (val: number) => {
+    if (!group) return
+    const amount = Math.max(0, +(val || 0).toFixed(2))
+    const nowIso = new Date().toISOString()
+    setGroup((g) => g ? { ...g, tip_total: amount, tip_updated_at: nowIso } : g)
+    const { error } = await supabase.from("table_groups").update({ tip_total: amount, tip_updated_at: nowIso }).eq("id", group.id)
+    if (error && /tip_total|tip_updated_at/.test(error.message || "")) {
+      setError("Voeg in Supabase de kolommen tip_total (numeric) en tip_updated_at (timestamptz) toe aan table_groups.")
+      return
+    }
+    setToast(amount > 0 ? `Fooi ingesteld: €${amount.toFixed(2)}` : "Fooi verwijderd")
   }
 
   const flagDispute = async (name: string, on: boolean, comment = "") => {
@@ -633,7 +747,7 @@ export default function RundoTable() {
     setGroup((g) => g ? { ...g, disputed_by: val } : g)
     const { error } = await supabase.from("table_groups").update({ disputed_by: val }).eq("id", group.id)
     if (error) { setError("Seintje versturen mislukt"); return }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_groups")
   }
 
   const resolveDispute = async (name: string, resolved: boolean) => {
@@ -643,7 +757,7 @@ export default function RundoTable() {
     setGroup((g) => g ? { ...g, disputed_by: val } : g)
     const { error } = await supabase.from("table_groups").update({ disputed_by: val }).eq("id", group.id)
     if (error) { setError("Bijwerken mislukt"); return }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_groups")
   }
 
   const pickMe = (participantId: string) => {
@@ -668,6 +782,19 @@ export default function RundoTable() {
     await supabase.from("table_confirmations").delete().eq("group_id", group.id).eq("participant_id", id)
     await supabase.from("table_participants").delete().eq("id", id)
     if (meId === id) { setMeIdStored(group.id, null); setMeId(null) }
+    // Optie A: hernummer de resterende 'pers. N'-placeholders naar 1..K (geen gaten, geen dubbels).
+    // Zelfgekozen namen (bv. "Jan") blijven ongemoeid en krijgen geen nummer.
+    const remaining = participants.filter((p) => p.id !== id)
+    let counter = 0
+    for (const p of remaining) {
+      if (/^pers\.\s*\d+$/i.test(p.name.trim())) {
+        counter++
+        const want = `pers. ${counter}`
+        if (p.name.trim() !== want) {
+          await supabase.from("table_participants").update({ name: want }).eq("id", p.id)
+        }
+      }
+    }
     await loadAll(group.id)
   }
 
@@ -677,7 +804,7 @@ export default function RundoTable() {
     if (!finalName) return
     setParticipants((cur) => cur.map((p) => p.id === id ? { ...p, name: finalName } : p))
     await supabase.from("table_participants").update({ name: finalName }).eq("id", id)
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_participants")
   }
 
   const startRescan = async () => {
@@ -705,6 +832,7 @@ export default function RundoTable() {
     if (!file) return
     setScanError(null); setScanPreview([]); setScanProgress(0); setScanning(true)
     setScanFile(file)
+    setLastScanFile(file)
     if (scanPhotoUrl) URL.revokeObjectURL(scanPhotoUrl)
     setScanPhotoUrl(URL.createObjectURL(file))
     try {
@@ -718,7 +846,7 @@ export default function RundoTable() {
       }
       // Meteen bevestigen en naar de Bon-tab: daar kan je alles nog checken en corrigeren.
       setScanning(false)
-      await confirmScan(parsed.items, parsed.total != null ? parsed.total.toFixed(2) : "", file)
+      await confirmScan(parsed.items, parsed.total != null ? parsed.total.toFixed(2) : "", file, parsed.source)
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       console.error("Tesseract scan-fout:", e)
@@ -727,7 +855,29 @@ export default function RundoTable() {
     }
   }
 
-  const confirmScan = async (previewArg?: ParsedItem[], totalArg?: string, fileArg?: File | null) => {
+  // Opnieuw proberen met de AI, met dezelfde foto (bij een ruwe/lokale scan). Vervangt de huidige items.
+  // Na een refresh is de foto niet meer in het geheugen — dan halen we de bewaarde bonfoto op.
+  const retryScanWithAI = async () => {
+    if (!group) return
+    if (group.finalized) { setToast("Heropen de rekening eerst om opnieuw te scannen."); return }
+    let file = lastScanFile
+    if (!file && group.receipt_url) {
+      try {
+        const resp = await fetch(group.receipt_url)
+        const blob = await resp.blob()
+        file = new File([blob], "bon.jpg", { type: blob.type || "image/jpeg" })
+      } catch { /* ophalen mislukt -> hieronder afhandelen */ }
+    }
+    if (!file) { setToast("Kon de vorige foto niet ophalen — scan de bon opnieuw."); setShowScan(true); return }
+    if (!confirm("Opnieuw proberen met de slimme AI-scan? De huidige items worden vervangen.")) return
+    await supabase.from("table_claims").delete().eq("group_id", group.id)
+    await supabase.from("table_items").delete().eq("group_id", group.id)
+    setItems([]); setClaims([])
+    setShowScan(true)
+    await onPhotoPicked(file)
+  }
+
+  const confirmScan = async (previewArg?: ParsedItem[], totalArg?: string, fileArg?: File | null, sourceArg?: "ai" | "local") => {
     const preview = previewArg ?? scanPreview
     const totalStr = totalArg ?? scanTotal
     const file = fileArg !== undefined ? fileArg : scanFile
@@ -800,6 +950,13 @@ export default function RundoTable() {
       const { error: tErr } = await supabase.from("table_groups").update({ receipt_total: billNum }).eq("id", group.id)
       if (!tErr) setGroup((g) => g ? { ...g, receipt_total: billNum } : g)
     }
+    // Onthoud of dit een AI- of lokale (ruwe) scan was, zodat de melding + retry ook na een refresh klopt.
+    const effSrc = sourceArg ?? scanSource
+    if (effSrc) {
+      const { error: sErr } = await supabase.from("table_groups").update({ scan_source: effSrc }).eq("id", group.id)
+      if (!sErr) setGroup((g) => g ? { ...g, scan_source: effSrc } : g)
+      // Ontbreekt de kolom scan_source nog in Supabase, dan blijft de melding gewoon sessie-gebaseerd werken.
+    }
     // Klopt het ingevulde totaal met items + BTW? Dan enkel een korte bevestiging.
     const computedNow = preview.filter((x) => !x.distribute).reduce((s, it) => s + (it.unit_price || 0) * (it.quantity || 0), 0) + preview.filter((x) => x.distribute).reduce((s, it) => s + (it.unit_price || 0), 0)
     const totalOk = !isNaN(billNum) && billNum > 0 && Math.abs(billNum - computedNow) < 0.01
@@ -816,7 +973,7 @@ export default function RundoTable() {
     const { error } = await supabase.from("table_items")
       .insert([{ group_id: group.id, name: "Nieuw item", unit_price: 0, quantity: 1, is_shared: false, category: null }])
     if (error) { setError("Item toevoegen mislukt"); return }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_items")
   }
 
   const openNewItem = (target: "bill" | "scan") =>
@@ -839,7 +996,7 @@ export default function RundoTable() {
       .select().single()
     if (error) { setError("Item toevoegen mislukt"); return }
     setNewItem(null)
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_items")
     if (data?.id) { setRecentItemId(data.id); setTimeout(() => setRecentItemId(null), 6000) }
   }
 
@@ -860,7 +1017,7 @@ export default function RundoTable() {
       else setError("BTW toevoegen mislukt: " + error.message)
       return
     }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_items")
   }
 
   const setReceiptTotal = async (val: number | null) => {
@@ -876,13 +1033,13 @@ export default function RundoTable() {
     if (rate) patch.name = `BTW ${rate}%`
     const { error } = await supabase.from("table_items").update(patch).eq("id", it.id)
     if (error && /tax_rate/.test(error.message || "")) { setError("Voeg in Supabase de kolom tax_rate toe aan table_items."); return }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_items")
   }
 
   const setDistribute = async (it: BillItem, val: string) => {
     if (!group) return
     await supabase.from("table_items").update({ distribute: val }).eq("id", it.id)
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_items")
   }
 
   const saveItem = async () => {
@@ -893,14 +1050,14 @@ export default function RundoTable() {
       quantity: editItem.quantity, is_shared: editItem.is_shared,
     }).eq("id", editItem.id)
     if (error) { setError("Opslaan mislukt"); return }
-    setEditItem(null); await loadAll(group.id)
+    setEditItem(null); await reloadTable(group.id, "table_items")
   }
 
   const toggleShared = async (it: BillItem) => {
     if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     if (!group) return
     await supabase.from("table_items").update({ is_shared: !it.is_shared }).eq("id", it.id)
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_items")
   }
 
   const deleteItem = async (id: string) => {
@@ -937,7 +1094,7 @@ export default function RundoTable() {
     } else {
       await supabase.from("table_claims").insert([{ group_id: group.id, item_id: itemId, participant_id: pid, quantity: qty }])
     }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_claims")
   }
 
   const toggleShareClaim = async (itemId: string, pid: string) => {
@@ -956,7 +1113,7 @@ export default function RundoTable() {
     if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     if (!group) return
     await supabase.from("table_items").update({ share_fixed: val }).eq("id", it.id)
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_items")
   }
 
   const itemTotal = (it: BillItem) => it.unit_price * it.quantity
@@ -1004,6 +1161,19 @@ export default function RundoTable() {
     return total
   }
 
+  // Fooi: exact gelijk per persoon (per seat), afgerond op de cent — iedereen evenveel, koppels dubbel.
+  // Alleen wie iets nam betaalt mee; wie niets nam krijgt geen fooi.
+  const tipTotal = Math.max(0, group?.tip_total ?? 0)
+  const tipHasOrder = (pid: string) => baseItems.some((it) => it.is_shared ? sharerIds(it.id).includes(pid) : myQty(it.id, pid) > 0)
+  const tipSeats = participants.reduce((s, p) => s + (tipHasOrder(p.id) ? Math.max(1, p.seats ?? 1) : 0), 0)
+  const tipPerSeat = tipSeats > 0 ? Math.round((tipTotal * 100) / tipSeats) / 100 : 0
+  const tipForPid = (pid: string) => {
+    if (tipPerSeat <= 0 || !tipHasOrder(pid)) return 0
+    const p = participants.find((x) => x.id === pid)
+    return +(tipPerSeat * Math.max(1, p?.seats ?? 1)).toFixed(2)
+  }
+  const tipDistributed = participants.reduce((s, p) => s + tipForPid(p.id), 0)
+
   const personTotal = (pid: string): { settled: number; pendingShared: boolean } => {
     let settled = 0
     let pendingShared = false
@@ -1024,6 +1194,7 @@ export default function RundoTable() {
       }
     }
     settled += taxShare(pid)
+    settled += tipForPid(pid)
     return { settled, pendingShared }
   }
 
@@ -1045,6 +1216,8 @@ export default function RundoTable() {
     }
     const tax = taxShare(pid)
     if (tax > 0.005) out.push({ name: "BTW / kosten (verdeeld)", qty: 1, amount: tax, shared: false, revealed: true, sharers: 0, myHeads: 0 })
+    const tip = tipForPid(pid)
+    if (tip > 0.005) out.push({ name: "💛 Fooi (per persoon)", qty: 1, amount: tip, shared: false, revealed: true, sharers: 0, myHeads: 0 })
     return out
   }
 
@@ -1084,7 +1257,7 @@ export default function RundoTable() {
     } else {
       await supabase.from("table_confirmations").insert([{ group_id: group.id, participant_id: meId }])
     }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_confirmations")
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1185,6 +1358,11 @@ export default function RundoTable() {
     <div style={S.page}>
       <style>{`* { box-sizing: border-box; }`}</style>
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      {asleep && (
+        <div onClick={() => { lastActive.current = Date.now(); setAsleep(false) }} style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 3000, background: "rgba(20,33,58,0.92)", color: "#fff", padding: "9px 16px", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,24,40,0.3)", whiteSpace: "nowrap" }}>
+          ⏸ Live-updates gepauzeerd — tik om te hervatten
+        </div>
+      )}
       {error && (
         <div style={S.errorBanner}>⚠️ {error}
           <button onClick={() => setError(null)} style={{ marginLeft: 12, background: "none", border: "none", cursor: "pointer", color: "#c0392b", fontWeight: 700 }}>✕</button>
@@ -1295,13 +1473,28 @@ export default function RundoTable() {
             )
           })()}
 
-          {items.length > 0 && scanSource && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "2px 0 10px", padding: "8px 12px", borderRadius: 10, fontSize: 12.5, fontWeight: 700, background: scanSource === "ai" ? "rgba(39,174,96,0.1)" : "rgba(243,156,18,0.12)", border: scanSource === "ai" ? "1px solid rgba(39,174,96,0.4)" : "1px solid rgba(243,156,18,0.5)", color: scanSource === "ai" ? "#1f8a4c" : "#b5591a" }}>
-            {scanSource === "ai"
-              ? "✨ AI-scan gelukt — items en volgorde komen van de AI."
-              : "📷 Lokale scan gebruikt (AI was niet beschikbaar). Volgorde en herkenning kunnen minder nauwkeurig zijn."}
+          {items.length > 0 && scanSource === "ai" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "2px 0 10px", padding: "8px 12px", borderRadius: 10, fontSize: 12.5, fontWeight: 700, background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.4)", color: "#1f8a4c" }}>
+              ✨ AI-scan gelukt — items en volgorde komen van de AI.
             </div>
           )}
+
+          {items.length > 0 && (scanSource ?? group.scan_source) === "local" ? (
+            <div style={{ margin: "2px 0 12px", padding: "11px 13px", borderRadius: 12, fontSize: 12.5, background: "rgba(224,107,94,0.1)", border: "1.5px solid rgba(224,107,94,0.55)", color: "#c0392b", lineHeight: 1.5 }}>
+              <div style={{ fontWeight: 800, marginBottom: 4 }}>⚠️ Ruwe scan — herkenning kan onbetrouwbaar zijn</div>
+              <div style={{ fontWeight: 600 }}>De slimme AI-herkenning was even niet beschikbaar, dus dit is een basisscan. Er kunnen items ontbreken of fout staan — controleer élke naam, aantal en prijs goed.</div>
+              {(lastScanFile || group.receipt_url) ? (
+                <button onClick={retryScanWithAI} style={{ ...S.btn, ...S.btnPrimary, marginTop: 9, padding: "9px 16px", fontSize: 13, fontWeight: 800 }}>🔄 Opnieuw proberen met AI</button>
+              ) : (
+                <div style={{ marginTop: 6, fontWeight: 600, opacity: 0.85 }}>Tip: scan de bon straks opnieuw voor een betere herkenning (knop &ldquo;🔄 Bon opnieuw scannen&rdquo; hierboven).</div>
+              )}
+            </div>
+          ) : items.length > 0 ? (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, margin: "2px 0 12px", padding: "9px 12px", borderRadius: 10, fontSize: 12.5, fontWeight: 700, background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", color: "#b5591a", lineHeight: 1.45 }}>
+              <span style={{ flexShrink: 0 }}>⚠️</span>
+              <span>Controleer alles goed — een scan kan fouten bevatten, zeker bij een onduidelijke bon. Kijk namen, aantallen en prijzen na, markeer gedeelde items indien nodig enz..</span>
+            </div>
+          ) : null}
 
           {items.length > 0 && (
           <ItemList
@@ -1400,86 +1593,59 @@ export default function RundoTable() {
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ ...S.card, order: 2 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <h3 style={{ ...S.h3, marginBottom: 0 }}>👥 Of voeg zelf alvast gasten toe</h3>
-              <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 700, fontSize: 13 }} onClick={() => setShowAddGuest((v) => !v)}>{showAddGuest ? "✕ Sluiten" : "+ Toevoegen"}</button>
+              <h3 style={{ ...S.h3, marginBottom: 0 }}>👥 OF... voeg hier zelf alvast gasten toe</h3>
+              <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap" }} onClick={() => addGuest(undefined, false, 1)}>+ Persoon toevoegen</button>
             </div>
             <div style={{ marginTop: 4, marginBottom: 2 }}>
-              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• Ze kunnen dan hun naam selecteren via QR/link hierboven</div>
-              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• ...of jij kan voor hen zelf drankjes/gerechten toewijzen</div>
+              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• je kan zelf consumpties toewijzen voor je gasten</div>
+              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• of deel de QR/link na aanmaken, zodat gasten meteen zelf hun naam kunnen aantikken</div>
             </div>
-            {showAddGuest && (
-              <div style={{ marginTop: 10, marginBottom: 6, background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: 12 }}>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <input value={newGuest} onChange={(e) => setNewGuest(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) } }} placeholder="Naam" style={{ ...S.input, flex: 1, minWidth: 110 }} autoFocus />
-                  <SeatsControl n={newGuestSeats} onChange={setNewGuestSeats} showLabel />
-                  <button style={{ ...S.btn, ...S.btnPrimary, padding: "0 18px", fontWeight: 700 }} onClick={() => { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) }}>+ Toevoegen</button>
-                </div>
-                <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6 }}>Met meerdere (bv. koppel)? Zet het aantal personen met de knopjes.</div>
-              </div>
-            )}
 
             {(() => {
-              const twoCol = participants.length > 5
+              const twoCol = participants.length > 3
               const Row = (p: Participant) => {
-                const st = guestStatus(p.id)
                 const origin = p.self_joined
                   ? { label: "zelf aangemeld", color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
                   : { label: "door admin", color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
                 if (twoCol) {
-                  const editing = editGuestId === p.id
                   return (
-                    <div key={p.id} onClick={() => { if (!editing) { setClaimMode("person"); setClaimPid(p.id); setAdminTab("overview") } }}
-                      style={{ border: "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "8px 10px", cursor: editing ? "default" : "pointer", background: "#fff" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        {editing ? (
-                          <input autoFocus defaultValue={p.name} onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => { if (e.key === "Enter") { renameGuest(p.id, (e.target as HTMLInputElement).value); setEditGuestId(null) } if (e.key === "Escape") setEditGuestId(null) }}
-                            onBlur={(e) => { renameGuest(p.id, e.target.value); setEditGuestId(null) }}
-                            style={{ ...S.input, flex: 1, minWidth: 0, padding: "5px 8px", fontWeight: 700, fontSize: 14 }} />
-                        ) : (
-                          <span style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                        )}
-                        <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} size={13} showLabel />
-                        <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 12 }} onClick={(e) => { e.stopPropagation(); setEditGuestId(editing ? null : p.id) }} title="naam wijzigen">✏️</button>
-                        <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={(e) => { e.stopPropagation(); removeGuest(p.id) }}>🗑️</button>
+                    <div key={p.id} style={{ border: "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "7px 8px", background: "#fff", minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
+                        <button style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 12, flexShrink: 0 }} onClick={(e) => { e.stopPropagation(); (e.currentTarget.nextElementSibling as HTMLElement | null)?.focus() }} title="naam wijzigen">✏️</button>
+                        <input key={p.id + "|" + p.name} defaultValue={p.name} onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+                          onBlur={(e) => renameGuest(p.id, e.target.value)}
+                          style={{ ...S.input, flex: 1, minWidth: 0, padding: "4px 6px", fontWeight: 700, fontSize: 13 }} />
+                        <button style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 12, flexShrink: 0 }} onClick={(e) => { e.stopPropagation(); removeGuest(p.id) }}>🗑️</button>
                       </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5, alignItems: "center" }}>
-                        <span style={{ fontSize: 9.5, fontWeight: 700, color: origin.color, background: origin.bg, borderRadius: 7, padding: "1px 6px" }}>{origin.label}</span>
-                        <span style={{ fontSize: 9.5, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 7, padding: "1px 6px" }}>{st.label}</span>
-                        <span style={{ fontSize: 11, color: "#aaa", marginLeft: "auto", fontWeight: 700 }}>€{personTotal(p.id).settled.toFixed(2)}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 5, minWidth: 0 }}>
+                        <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} size={12} showLabel />
+                        <span style={{ fontSize: 9, fontWeight: 700, color: origin.color, background: origin.bg, borderRadius: 6, padding: "1px 5px", whiteSpace: "nowrap", marginLeft: "auto" }}>{origin.label}</span>
                       </div>
                     </div>
                   )
                 }
-                const editing = editGuestId === p.id
                 return (
-                  <div key={p.id} onClick={() => { if (!editing) { setClaimMode("person"); setClaimPid(p.id); setAdminTab("overview") } }}
-                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)", cursor: editing ? "default" : "pointer" }}>
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-                        {editing ? (
-                          <input autoFocus defaultValue={p.name} onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => { if (e.key === "Enter") { renameGuest(p.id, (e.target as HTMLInputElement).value); setEditGuestId(null) } if (e.key === "Escape") setEditGuestId(null) }}
-                            onBlur={(e) => { renameGuest(p.id, e.target.value); setEditGuestId(null) }}
-                            style={{ ...S.input, padding: "5px 8px", fontWeight: 600, fontSize: 15, minWidth: 100, maxWidth: 160 }} />
-                        ) : (
-                          <span style={{ fontWeight: 600, fontSize: 15 }}>{p.name}</span>
-                        )}
+                        <button style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 13 }} onClick={(e) => { e.stopPropagation(); (e.currentTarget.nextElementSibling as HTMLElement | null)?.focus() }} title="naam wijzigen">✏️</button>
+                        <input key={p.id + "|" + p.name} defaultValue={p.name} onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+                          onBlur={(e) => renameGuest(p.id, e.target.value)}
+                          style={{ ...S.input, padding: "5px 8px", fontWeight: 600, fontSize: 15, minWidth: 100, maxWidth: 160 }} />
                         <span style={{ fontSize: 10.5, fontWeight: 700, color: origin.color, background: origin.bg, borderRadius: 8, padding: "1px 7px", whiteSpace: "nowrap" }}>{origin.label}</span>
                         <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} showLabel />
-                        <button style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 13 }} onClick={(e) => { e.stopPropagation(); setEditGuestId(editing ? null : p.id) }} title="naam wijzigen">✏️</button>
                       </div>
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 10, padding: "2px 9px" }}>{st.label}</span>
-                    <span style={{ fontSize: 12, color: "#aaa" }}>€{personTotal(p.id).settled.toFixed(2)}</span>
                     <button style={S.iconBtn} onClick={(e) => { e.stopPropagation(); removeGuest(p.id) }}>🗑️</button>
                   </div>
                 )
               }
               return (
-                <div style={{ marginTop: showAddGuest ? 6 : 12 }}>
+                <div style={{ marginTop: 12 }}>
                   {participants.length === 0
-                    ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen gasten — voeg er toe of deel de link hierboven <span style={{ fontStyle: "italic" }}>(tip: vergeet jezelf niet!)</span></div>
+                    ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen gasten uitgenodigd (via QR) of zelf toegevoegd</div>
                     : twoCol
                     ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>{participants.map(Row)}</div>
                     : participants.map(Row)}
@@ -1590,6 +1756,7 @@ export default function RundoTable() {
           <ClaimScreen
             items={baseItems} meId={meId} me={me} isAdmin={isAdmin}
             participants={participants}
+            groupId={group.id} tipTotal={tipTotal} tipDistributed={tipDistributed} tipUpdatedAt={group.tip_updated_at ?? null}
             claimedQty={claimedQty} myQty={myQty} sharerIds={sharerIds}
             shareHeads={shareHeads} myShareHeads={myShareHeads} seatsOf={seatsOf} setSeats={setSeats}
             setClaim={setClaim} toggleShareClaim={toggleShareClaim}
@@ -1651,6 +1818,37 @@ export default function RundoTable() {
               )
             })}
             {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen gasten</div>}
+            {participants.length > 0 && (
+              <div style={{ marginTop: 8, paddingTop: 10, borderTop: "1.5px solid rgba(16,24,40,0.1)" }}>
+                {tipDistributed > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 700, color: "#a06b00", marginBottom: 4 }}>
+                    <span>💛 Fooi (verdeeld)</span>
+                    <span>€{tipDistributed.toFixed(2)}</span>
+                  </div>
+                )}
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15.5, fontWeight: 800, color: "#14213a" }}>
+                  <span>{tipDistributed > 0 ? "Totaal rekening incl. fooi" : "Totaal rekening"}</span>
+                  <span>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ─── ADMIN: Fooi (subtiel, onder Per persoon) — ook na afsluiten bewerkbaar ─── */}
+          <div style={{ ...S.card, padding: "12px 14px", background: "#fdfcf8", border: "1px solid rgba(233,196,95,0.45)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>💛 Fooi (optioneel) €</span>
+              <input ref={tipInputRef} type="text" inputMode="decimal" defaultValue={tipTotal ? tipTotal.toFixed(2) : ""} key={group.tip_updated_at || "leeg"} placeholder=""
+                onBlur={(e) => { const raw = e.target.value.trim().replace(",", "."); if (raw === "") { setTip(0); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setTip(+n.toFixed(2)) }}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+                style={{ ...S.input, width: 90, padding: "6px 9px", fontSize: 13, fontWeight: 700 }} />
+              <button onClick={() => { const raw = (tipInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setTip(0); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setTip(+n.toFixed(2)) }} style={{ border: "none", background: "rgba(20,153,176,0.12)", color: "#1499b0", borderRadius: 9, padding: "7px 13px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>Instellen</button>
+              {tipTotal > 0 && <button onClick={() => setTip(0)} style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 13 }} title="fooi verwijderen">🗑️</button>}
+              {tipSeats > 0 && tipPerSeat > 0 && (
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: "#a06b00", marginLeft: "auto" }}>€{tipPerSeat.toFixed(2)} p.p.</span>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6, lineHeight: 1.4 }}>Gelijk verdeeld over alle personen. {group.finalized ? "Ook na het afsluiten aanpasbaar — gasten krijgen dan een melding." : "Kan ook later, na het afsluiten, nog."}</div>
           </div>
 
           {group.finalized ? (
@@ -1658,23 +1856,35 @@ export default function RundoTable() {
               🔓 Rekening heropenen (gasten kunnen weer wijzigen)
             </button>
           ) : (
-            <button onClick={() => {
-              if (openUnits > 0 || undecidedShared.length > 0) {
-                const delen: string[] = []
-                if (openUnits > 0) delen.push(`${openUnits} ${openUnits === 1 ? "consumptie is" : "consumpties zijn"} nog niet toegewezen`)
-                if (undecidedShared.length > 0) delen.push(`${undecidedShared.length} gedeeld ${undecidedShared.length === 1 ? "item wordt" : "items worden"} door niemand genomen`)
-                alert(`De rekening kan nog niet afgesloten worden:\n\n• ${delen.join("\n• ")}\n\nWijs eerst alles toe. Bekijk via "Nog niet geclaimd" wat er nog openstaat.`)
-                setShowTodo(true)
-                return
-              }
-              if (confirm("De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.")) finalizeBill(true)
-            }} style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
-              ✅ Alles toegewezen?  Rekening afsluiten
-            </button>
+            <>
+              <div style={{ background: "rgba(20,153,176,0.06)", border: "1px solid rgba(20,153,176,0.25)", borderRadius: 12, padding: "10px 14px", marginBottom: 10 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>Klaar met verdelen?</div>
+                <div style={{ fontSize: 12.5, color: "#5a6680", lineHeight: 1.45 }}>Sluit de rekening af zodra alles is aangetikt en nagekeken. Daarna kunnen gasten niets meer wijzigen en krijgen ze allemaal meteen een melding met hun definitieve deel.</div>
+              </div>
+              <button onClick={() => {
+                if (openUnits > 0 || undecidedShared.length > 0) {
+                  const delen: string[] = []
+                  if (openUnits > 0) delen.push(`${openUnits} ${openUnits === 1 ? "consumptie is" : "consumpties zijn"} nog niet toegewezen`)
+                  if (undecidedShared.length > 0) delen.push(`${undecidedShared.length} gedeeld ${undecidedShared.length === 1 ? "item wordt" : "items worden"} door niemand genomen`)
+                  alert(`De rekening kan nog niet afgesloten worden:\n\n• ${delen.join("\n• ")}\n\nWijs eerst alles toe. Bekijk via "Nog niet geclaimd" wat er nog openstaat.`)
+                  setShowTodo(true)
+                  return
+                }
+                if (confirm("De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.")) finalizeBill(true)
+              }} style={{ ...S.btn, width: "100%", padding: "16px 0", fontSize: 16, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 8px 20px -6px rgba(39,174,96,0.65)" }}>
+                🔒 Rekening definitief afsluiten
+              </button>
+            </>
           )}
-          <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6, marginBottom: 4 }}>
-            {group.finalized ? "De rekening is afgesloten — iedereen ziet de definitieve verdeling." : "Sluit pas af als alles is aangetikt en nagekeken. Gasten krijgen dan een melding."}
-          </div>
+          {group.finalized ? (
+            <div style={{ marginTop: 10, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", borderRadius: 12, padding: "11px 14px", textAlign: "center", fontSize: 13, fontWeight: 800, boxShadow: "0 6px 16px -8px rgba(39,174,96,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <span style={{ fontSize: 18 }}>✅</span> Rekening afgesloten — iedereen ziet de definitieve verdeling
+            </div>
+          ) : (
+            <div style={{ fontSize: 11.5, color: "#9aa0ab", textAlign: "center", marginTop: 8, marginBottom: 4, lineHeight: 1.4 }}>
+              Nog niet afgesloten — gasten kunnen nog aantikken en wijzigen.
+            </div>
+          )}
           <div style={{ textAlign: "center", marginTop: 10 }}>
             <button onClick={() => { if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }) }} style={{ ...S.btn, fontSize: 12.5, fontWeight: 700, padding: "8px 16px" }}>↑ Terug naar boven</button>
           </div>
@@ -1714,10 +1924,25 @@ export default function RundoTable() {
             <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800 }}>🧾 Rekening scannen</h3>
             <p style={{ fontSize: 12.5, color: "#999", marginBottom: 14 }}>Maak of kies een foto van de rekening. Daarna kan je de herkende items nog nakijken en bijsturen.</p>
 
-            <label style={{ ...S.btn, ...S.btnPrimary, display: "block", textAlign: "center", marginBottom: 14, cursor: scanning ? "default" : "pointer", fontWeight: 700, padding: "14px 0", opacity: scanning ? 0.6 : 1 }}>
-              {scanning ? "⏳ Bezig met scannen..." : scanPreview.length > 0 ? "📷 Andere foto kiezen" : "📷 Foto maken / kiezen"}
-              <input type="file" accept="image/*" disabled={scanning} style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
-            </label>
+            {scanning ? (
+              <div style={{ ...S.btn, ...S.btnPrimary, display: "block", textAlign: "center", marginBottom: 14, fontWeight: 700, padding: "14px 0", opacity: 0.6 }}>⏳ Bezig met scannen...</div>
+            ) : (
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <label style={{ ...S.btn, ...S.btnPrimary, flex: 1, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", cursor: "pointer", fontWeight: 700, padding: "14px 0" }}>
+                  📷 Foto maken
+                  <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
+                </label>
+                <label style={{ ...S.btn, flex: 1, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", cursor: "pointer", fontWeight: 700, padding: "14px 0" }}>
+                  🖼️ Uit galerij
+                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
+                </label>
+              </div>
+            )}
+            {!scanning && scanPreview.length === 0 && (
+              <div style={{ fontSize: 11.5, color: "#8a93a3", lineHeight: 1.45, marginBottom: 14, textAlign: "center" }}>
+                📸 Tip: maak een scherpe foto, recht van boven en goed belicht. Bij een onduidelijke foto worden items minder goed herkend.
+              </div>
+            )}
 
             {scanning && (
               <div style={{ marginBottom: 14 }}>
@@ -2224,6 +2449,7 @@ function AssignPicker({ participants, itemId, isShared, confirmedFn, onAssign, o
 function ClaimScreen(props: {
   items: BillItem[]; meId: string | null; me: Participant | null; isAdmin: boolean
   participants: Participant[]
+  groupId: string; tipTotal: number; tipDistributed: number; tipUpdatedAt: string | null
   claimedQty: (id: string) => number; myQty: (id: string, pid: string | null) => number; sharerIds: (id: string) => string[]
   shareHeads: (id: string) => number; myShareHeads: (id: string, pid: string) => number; seatsOf: (pid: string) => number
   setSeats: (pid: string, n: number) => void
@@ -2236,7 +2462,7 @@ function ClaimScreen(props: {
   iConfirmed: boolean; confirmMe: () => void; onPickMe: (id: string) => void
   finalized: boolean; iDispute: boolean; iResolved: boolean; iComment: string; onToggleDispute: (on: boolean, comment?: string) => void
 }) {
-  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
+  const { items, meId, isAdmin, participants, groupId, tipTotal, tipDistributed, tipUpdatedAt, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
   const adminPid = props.claimPid, setAdminPid = props.setClaimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   const [disputeOpen, setDisputeOpen] = useState(false)
@@ -2247,10 +2473,12 @@ function ClaimScreen(props: {
   const prevFinalizedRef = useRef<boolean | null>(null)
   const [reviewing, setReviewing] = useState(false)
   const [showFinalizedPopup, setShowFinalizedPopup] = useState(false)
+  const [showTipPopup, setShowTipPopup] = useState(false)
+  const markTipSeen = () => { try { if (tipUpdatedAt) localStorage.setItem(`rundo_table_tipseen_${groupId}`, tipUpdatedAt) } catch {} }
   useEffect(() => {
     const prev = prevFinalizedRef.current
     if (finalized) {
-      if (prev !== true) setShowFinalizedPopup(true) // net afgesloten (of net geladen als afgesloten) → één pop-up
+      if (prev !== true) { setShowFinalizedPopup(true); markTipSeen() } // net afgesloten (of net geladen als afgesloten) → één pop-up
       wasFinalizedRef.current = true
       setReviewing(false)
     } else {
@@ -2258,7 +2486,17 @@ function ClaimScreen(props: {
       if (prev === true && wasFinalizedRef.current) setReviewing(true) // heropend na afsluiten
     }
     prevFinalizedRef.current = finalized
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [finalized])
+
+  // Fooi ná het afsluiten toegevoegd/gewijzigd → gast krijgt één melding met het nieuwe totaal.
+  useEffect(() => {
+    if (isAdmin || !finalized || !tipUpdatedAt || tipTotal <= 0) return
+    let seen: string | null = null
+    try { seen = localStorage.getItem(`rundo_table_tipseen_${groupId}`) } catch {}
+    if ((!seen || tipUpdatedAt > seen) && !showFinalizedPopup) setShowTipPopup(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipUpdatedAt, tipTotal, finalized])
 
   if (isAdmin) {
     const normalItems = items.filter((i) => !i.is_shared)
@@ -2410,6 +2648,18 @@ function ClaimScreen(props: {
                 <span>Totaal rekening</span>
                 <span>€{billSum.toFixed(2)}</span>
               </div>
+              {tipDistributed > 0 && (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 700, color: "#a06b00", marginTop: 4 }}>
+                    <span>💛 Fooi (verdeeld per persoon)</span>
+                    <span>€{tipDistributed.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800, color: "#14213a", marginTop: 6, paddingTop: 6, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
+                    <span>Totaal incl. fooi</span>
+                    <span>€{(billSum + tipDistributed).toFixed(2)}</span>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -2431,6 +2681,7 @@ function ClaimScreen(props: {
   }
 
   const t = personTotal(meId)
+  const myTip = (personItems(meId).find((d) => d.name.startsWith("💛 Fooi"))?.amount) || 0
 
   return (
     <div>
@@ -2449,6 +2700,19 @@ function ClaimScreen(props: {
             <p style={{ fontSize: 13.5, color: "#5a6680", lineHeight: 1.5, margin: "0 0 12px" }}>De beheerder rondde de rekening af. Dit is jouw definitieve deel:</p>
             <div style={{ fontSize: 34, fontWeight: 800, color: "#14213a", marginBottom: 16 }}>€{t.settled.toFixed(2)}{t.pendingShared ? "+" : ""}</div>
             <button onClick={() => { setShowFinalizedPopup(false); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>Bekijk mijn verdeling</button>
+          </div>
+        </div>
+      )}
+      {/* Pop-up wanneer de beheerder ná het afsluiten fooi toevoegt/wijzigt */}
+      {finalized && showTipPopup && !showFinalizedPopup && (
+        <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => { markTipSeen(); setShowTipPopup(false) }}>
+          <div style={{ ...S.modal, width: 340, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 40, marginBottom: 6 }}>💛</div>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#a06b00", margin: "0 0 6px" }}>De beheerder heeft fooi toegevoegd</h3>
+            <p style={{ fontSize: 13.5, color: "#5a6680", lineHeight: 1.5, margin: "0 0 12px" }}>Er is €{tipTotal.toFixed(2)} fooi bijgekomen, eerlijk verdeeld. Dit is jouw nieuwe totaal:</p>
+            <div style={{ fontSize: 34, fontWeight: 800, color: "#14213a", marginBottom: 2 }}>€{t.settled.toFixed(2)}{t.pendingShared ? "+" : ""}</div>
+            <div style={{ fontSize: 12.5, color: "#a06b00", fontWeight: 700, marginBottom: 16 }}>waarvan €{myTip.toFixed(2)} fooi</div>
+            <button onClick={() => { markTipSeen(); setShowTipPopup(false); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>Bekijk mijn afrekening</button>
           </div>
         </div>
       )}
@@ -2589,8 +2853,14 @@ function ClaimScreen(props: {
                 </div>
               )
             })}
+            {tipDistributed > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, fontSize: 12.5, fontWeight: 700, color: "#a06b00" }}>
+                <span>💛 Fooi (verdeeld)</span>
+                <span>€{tipDistributed.toFixed(2)}</span>
+              </div>
+            )}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(16,24,40,0.1)" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Totaal rekening</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>{tipDistributed > 0 ? "Totaal rekening incl. fooi" : "Totaal rekening"}</span>
               <span style={{ fontSize: 15, fontWeight: 800, color: "#14213a" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2)}</span>
             </div>
           </div>
