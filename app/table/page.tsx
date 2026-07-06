@@ -9,7 +9,7 @@ import { QRCodeSVG } from "qrcode.react"
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
-type Group = { id: string; name: string; invite_code: string; owner_id: string; receipt_url?: string | null; party_size?: number | null; receipt_total?: number | null; finalized?: boolean | null; disputed_by?: string | null; tip_total?: number | null; tip_updated_at?: string | null; created_at?: string }
+type Group = { id: string; name: string; invite_code: string; owner_id: string; receipt_url?: string | null; party_size?: number | null; receipt_total?: number | null; finalized?: boolean | null; disputed_by?: string | null; tip_total?: number | null; tip_updated_at?: string | null; scan_source?: string | null; created_at?: string }
 type Participant = { id: string; name: string; group_id: string; self_joined?: boolean; seats?: number | null; created_at?: string }
 type BillItem = {
   id: string
@@ -755,7 +755,7 @@ export default function RundoTable() {
       }
       // Meteen bevestigen en naar de Bon-tab: daar kan je alles nog checken en corrigeren.
       setScanning(false)
-      await confirmScan(parsed.items, parsed.total != null ? parsed.total.toFixed(2) : "", file)
+      await confirmScan(parsed.items, parsed.total != null ? parsed.total.toFixed(2) : "", file, parsed.source)
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       console.error("Tesseract scan-fout:", e)
@@ -765,18 +765,28 @@ export default function RundoTable() {
   }
 
   // Opnieuw proberen met de AI, met dezelfde foto (bij een ruwe/lokale scan). Vervangt de huidige items.
+  // Na een refresh is de foto niet meer in het geheugen — dan halen we de bewaarde bonfoto op.
   const retryScanWithAI = async () => {
-    if (!group || !lastScanFile) return
+    if (!group) return
     if (group.finalized) { setToast("Heropen de rekening eerst om opnieuw te scannen."); return }
+    let file = lastScanFile
+    if (!file && group.receipt_url) {
+      try {
+        const resp = await fetch(group.receipt_url)
+        const blob = await resp.blob()
+        file = new File([blob], "bon.jpg", { type: blob.type || "image/jpeg" })
+      } catch { /* ophalen mislukt -> hieronder afhandelen */ }
+    }
+    if (!file) { setToast("Kon de vorige foto niet ophalen — scan de bon opnieuw."); setShowScan(true); return }
     if (!confirm("Opnieuw proberen met de slimme AI-scan? De huidige items worden vervangen.")) return
     await supabase.from("table_claims").delete().eq("group_id", group.id)
     await supabase.from("table_items").delete().eq("group_id", group.id)
     setItems([]); setClaims([])
     setShowScan(true)
-    await onPhotoPicked(lastScanFile)
+    await onPhotoPicked(file)
   }
 
-  const confirmScan = async (previewArg?: ParsedItem[], totalArg?: string, fileArg?: File | null) => {
+  const confirmScan = async (previewArg?: ParsedItem[], totalArg?: string, fileArg?: File | null, sourceArg?: "ai" | "local") => {
     const preview = previewArg ?? scanPreview
     const totalStr = totalArg ?? scanTotal
     const file = fileArg !== undefined ? fileArg : scanFile
@@ -848,6 +858,13 @@ export default function RundoTable() {
     if (!isNaN(billNum) && billNum > 0) {
       const { error: tErr } = await supabase.from("table_groups").update({ receipt_total: billNum }).eq("id", group.id)
       if (!tErr) setGroup((g) => g ? { ...g, receipt_total: billNum } : g)
+    }
+    // Onthoud of dit een AI- of lokale (ruwe) scan was, zodat de melding + retry ook na een refresh klopt.
+    const effSrc = sourceArg ?? scanSource
+    if (effSrc) {
+      const { error: sErr } = await supabase.from("table_groups").update({ scan_source: effSrc }).eq("id", group.id)
+      if (!sErr) setGroup((g) => g ? { ...g, scan_source: effSrc } : g)
+      // Ontbreekt de kolom scan_source nog in Supabase, dan blijft de melding gewoon sessie-gebaseerd werken.
     }
     // Klopt het ingevulde totaal met items + BTW? Dan enkel een korte bevestiging.
     const computedNow = preview.filter((x) => !x.distribute).reduce((s, it) => s + (it.unit_price || 0) * (it.quantity || 0), 0) + preview.filter((x) => x.distribute).reduce((s, it) => s + (it.unit_price || 0), 0)
@@ -1373,11 +1390,11 @@ export default function RundoTable() {
             </div>
           )}
 
-          {items.length > 0 && scanSource === "local" ? (
+          {items.length > 0 && (scanSource ?? group.scan_source) === "local" ? (
             <div style={{ margin: "2px 0 12px", padding: "11px 13px", borderRadius: 12, fontSize: 12.5, background: "rgba(224,107,94,0.1)", border: "1.5px solid rgba(224,107,94,0.55)", color: "#c0392b", lineHeight: 1.5 }}>
               <div style={{ fontWeight: 800, marginBottom: 4 }}>⚠️ Ruwe scan — herkenning kan onbetrouwbaar zijn</div>
               <div style={{ fontWeight: 600 }}>De slimme AI-herkenning was even niet beschikbaar, dus dit is een basisscan. Er kunnen items ontbreken of fout staan — controleer élke naam, aantal en prijs goed.</div>
-              {lastScanFile ? (
+              {(lastScanFile || group.receipt_url) ? (
                 <button onClick={retryScanWithAI} style={{ ...S.btn, ...S.btnPrimary, marginTop: 9, padding: "9px 16px", fontSize: 13, fontWeight: 800 }}>🔄 Opnieuw proberen met AI</button>
               ) : (
                 <div style={{ marginTop: 6, fontWeight: 600, opacity: 0.85 }}>Tip: scan de bon straks opnieuw voor een betere herkenning (knop &ldquo;🔄 Bon opnieuw scannen&rdquo; hierboven).</div>
