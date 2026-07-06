@@ -1414,7 +1414,7 @@ export default function RundoTable() {
           ) : items.length > 0 ? (
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8, margin: "2px 0 12px", padding: "9px 12px", borderRadius: 10, fontSize: 12.5, fontWeight: 700, background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", color: "#b5591a", lineHeight: 1.45 }}>
               <span style={{ flexShrink: 0 }}>⚠️</span>
-              <span>Controleer alles goed — een scan kan fouten bevatten, zeker bij een onduidelijke bon. Kijk namen, aantallen en prijzen na.</span>
+              <span>Controleer alles goed — een scan kan fouten bevatten, zeker bij een onduidelijke bon. Kijk namen, aantallen en prijzen na, markeer gedeelde items indien nodig enz..</span>
             </div>
           ) : null}
 
@@ -1526,34 +1526,29 @@ export default function RundoTable() {
             {(() => {
               const twoCol = participants.length > 3
               const Row = (p: Participant) => {
-                const st = guestStatus(p.id)
                 const origin = p.self_joined
                   ? { label: "zelf aangemeld", color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
                   : { label: "door admin", color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
                 if (twoCol) {
                   return (
-                    <div key={p.id}
-                      style={{ border: "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "8px 10px", background: "#fff" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 12 }} onClick={(e) => { e.stopPropagation(); (e.currentTarget.nextElementSibling as HTMLElement | null)?.focus() }} title="naam wijzigen">✏️</button>
+                    <div key={p.id} style={{ border: "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "7px 8px", background: "#fff", minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
+                        <button style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 12, flexShrink: 0 }} onClick={(e) => { e.stopPropagation(); (e.currentTarget.nextElementSibling as HTMLElement | null)?.focus() }} title="naam wijzigen">✏️</button>
                         <input key={p.id + "|" + p.name} defaultValue={p.name} onClick={(e) => e.stopPropagation()}
                           onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
                           onBlur={(e) => renameGuest(p.id, e.target.value)}
-                          style={{ ...S.input, flex: 1, minWidth: 0, padding: "5px 8px", fontWeight: 700, fontSize: 14 }} />
-                        <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} size={13} showLabel />
-                        <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={(e) => { e.stopPropagation(); removeGuest(p.id) }}>🗑️</button>
+                          style={{ ...S.input, flex: 1, minWidth: 0, padding: "4px 6px", fontWeight: 700, fontSize: 13 }} />
+                        <button style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 12, flexShrink: 0 }} onClick={(e) => { e.stopPropagation(); removeGuest(p.id) }}>🗑️</button>
                       </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5, alignItems: "center" }}>
-                        <span style={{ fontSize: 9.5, fontWeight: 700, color: origin.color, background: origin.bg, borderRadius: 7, padding: "1px 6px" }}>{origin.label}</span>
-                        <span style={{ fontSize: 9.5, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 7, padding: "1px 6px" }}>{st.label}</span>
-                        <span style={{ fontSize: 11, color: "#aaa", marginLeft: "auto", fontWeight: 700 }}>€{personTotal(p.id).settled.toFixed(2)}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 5, minWidth: 0 }}>
+                        <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} size={12} showLabel />
+                        <span style={{ fontSize: 9, fontWeight: 700, color: origin.color, background: origin.bg, borderRadius: 6, padding: "1px 5px", whiteSpace: "nowrap", marginLeft: "auto" }}>{origin.label}</span>
                       </div>
                     </div>
                   )
                 }
                 return (
-                  <div key={p.id}
-                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
                         <button style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 13 }} onClick={(e) => { e.stopPropagation(); (e.currentTarget.nextElementSibling as HTMLElement | null)?.focus() }} title="naam wijzigen">✏️</button>
@@ -1565,8 +1560,6 @@ export default function RundoTable() {
                         <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} showLabel />
                       </div>
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 10, padding: "2px 9px" }}>{st.label}</span>
-                    <span style={{ fontSize: 12, color: "#aaa" }}>€{personTotal(p.id).settled.toFixed(2)}</span>
                     <button style={S.iconBtn} onClick={(e) => { e.stopPropagation(); removeGuest(p.id) }}>🗑️</button>
                   </div>
                 )
@@ -1699,30 +1692,6 @@ export default function RundoTable() {
         </>
       )}
 
-      {/* ─── ADMIN: Fooi (overzicht-tab) — ook na afsluiten bewerkbaar ─── */}
-      {isAdmin && adminTab === "overview" && (
-        <div style={S.card}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <h3 style={{ ...S.h3, marginBottom: 0 }}>💛 Fooi</h3>
-            {totalSeatsAll > 0 && tipTotal > 0 && (
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 10, padding: "3px 10px", whiteSpace: "nowrap" }}>€{(tipTotal / totalSeatsAll).toFixed(2)} p.p. × {totalSeatsAll}</span>
-            )}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Totaal fooi €</span>
-            <input ref={tipInputRef} type="text" inputMode="decimal" defaultValue={tipTotal ? tipTotal.toFixed(2) : ""} key={group.tip_updated_at || "leeg"} placeholder="bv. 20.00"
-              onBlur={(e) => { const raw = e.target.value.trim().replace(",", "."); if (raw === "") { setTip(0); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setTip(+n.toFixed(2)) }}
-              onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
-              style={{ ...S.input, width: 110, padding: "8px 10px", fontWeight: 700 }} />
-            <button onClick={() => { const raw = (tipInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setTip(0); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setTip(+n.toFixed(2)) }} style={{ border: "none", background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff", borderRadius: 9, padding: "9px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>✓ Instellen</button>
-            {tipTotal > 0 && <button onClick={() => setTip(0)} style={{ ...S.iconBtn }} title="fooi verwijderen">🗑️</button>}
-          </div>
-          <div style={{ fontSize: 11.5, color: "#9aa0ab", marginTop: 8, lineHeight: 1.4 }}>
-            Gelijk verdeeld over alle personen{totalSeatsAll > 0 ? ` (${totalSeatsAll} ${totalSeatsAll === 1 ? "persoon" : "personen"}, koppels tellen dubbel)` : ""}. {group.finalized ? "Je kan dit ook na het afsluiten nog toevoegen of wijzigen — gasten krijgen dan een melding met hun nieuwe totaal." : "Je kan dit ook later, na het afsluiten, nog toevoegen."}
-          </div>
-        </div>
-      )}
-
       {/* ─── ADMIN: Per persoon (overzicht-tab) ─── */}
       {isAdmin && adminTab === "overview" && (
         <div id="rekening-per-persoon">
@@ -1771,6 +1740,37 @@ export default function RundoTable() {
               )
             })}
             {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen gasten</div>}
+            {participants.length > 0 && (
+              <div style={{ marginTop: 8, paddingTop: 10, borderTop: "1.5px solid rgba(16,24,40,0.1)" }}>
+                {tipTotal > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 700, color: "#a06b00", marginBottom: 4 }}>
+                    <span>💛 Fooi (verdeeld)</span>
+                    <span>€{tipTotal.toFixed(2)}</span>
+                  </div>
+                )}
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15.5, fontWeight: 800, color: "#14213a" }}>
+                  <span>{tipTotal > 0 ? "Totaal rekening incl. fooi" : "Totaal rekening"}</span>
+                  <span>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ─── ADMIN: Fooi (subtiel, onder Per persoon) — ook na afsluiten bewerkbaar ─── */}
+          <div style={{ ...S.card, padding: "12px 14px", background: "#fdfcf8", border: "1px solid rgba(233,196,95,0.45)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>💛 Fooi (optioneel) €</span>
+              <input ref={tipInputRef} type="text" inputMode="decimal" defaultValue={tipTotal ? tipTotal.toFixed(2) : ""} key={group.tip_updated_at || "leeg"} placeholder=""
+                onBlur={(e) => { const raw = e.target.value.trim().replace(",", "."); if (raw === "") { setTip(0); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setTip(+n.toFixed(2)) }}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+                style={{ ...S.input, width: 90, padding: "6px 9px", fontSize: 13, fontWeight: 700 }} />
+              <button onClick={() => { const raw = (tipInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setTip(0); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setTip(+n.toFixed(2)) }} style={{ border: "none", background: "rgba(20,153,176,0.12)", color: "#1499b0", borderRadius: 9, padding: "7px 13px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>Instellen</button>
+              {tipTotal > 0 && <button onClick={() => setTip(0)} style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 13 }} title="fooi verwijderen">🗑️</button>}
+              {totalSeatsAll > 0 && tipTotal > 0 && (
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: "#a06b00", marginLeft: "auto" }}>€{(tipTotal / totalSeatsAll).toFixed(2)} p.p.</span>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6, lineHeight: 1.4 }}>Gelijk verdeeld over alle personen. {group.finalized ? "Ook na het afsluiten aanpasbaar — gasten krijgen dan een melding." : "Kan ook later, na het afsluiten, nog."}</div>
           </div>
 
           {group.finalized ? (
