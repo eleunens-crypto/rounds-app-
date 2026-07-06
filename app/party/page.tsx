@@ -692,6 +692,8 @@ export default function Home() {
   const [reorderShowAll, setReorderShowAll] = useState(false) // toon ook oudere rondjes (standaard enkel het vorige)
   const [toast, setToast] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Slaapstand: na 3 min zonder activiteit verbreken we realtime + poll (spaart egress). Ontwaakt bij tik/terugkeer.
+  const [asleep, setAsleep] = useState(false)
   const [startError, setStartError] = useState<string | null>(null) // foutmeldingen enkel op het startscherm (bv. dubbele groep)
 
   const [newDrink, setNewDrink] = useState<DrinkForm>({ name: "", price: "", emoji: "", category: "Bier" })
@@ -802,7 +804,7 @@ export default function Home() {
 
   // ?? Realtime ??????????????????????????????????????????????????????????????
   useEffect(() => {
-    if (!group) return
+    if (!group || asleep) return
     let reloadTimer: ReturnType<typeof setTimeout> | null = null
 
     const dirty = new Set<"participants" | "orders" | "payments">()
@@ -820,7 +822,7 @@ export default function Home() {
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `group_id=eq.${group.id}` }, () => scheduleReload("orders"))
       .on("postgres_changes", { event: "*", schema: "public", table: "participants", filter: `group_id=eq.${group.id}` }, () => scheduleReload("participants"))
       .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `group_id=eq.${group.id}` }, () => scheduleReload("payments"))
-      .subscribe()
+      .subscribe((status) => { if (status === "SUBSCRIBED" && mounted.current) { loadAll(group.id); loadDrinks() } })
 
     const refreshOnReturn = () => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return
@@ -835,7 +837,31 @@ export default function Home() {
       window.removeEventListener("focus", refreshOnReturn)
       supabase.removeChannel(channel)
     }
-  }, [group, loadAll, loadDrinks, reloadTable])
+  }, [group, loadAll, loadDrinks, reloadTable, asleep])
+
+  // Inactiviteits-slaapstand: na 3 min zonder tik/scroll/toets gaat het scherm 'slapen'
+  // (realtime + poll stoppen via de guard hierboven). Elke activiteit of terugkeer ontwaakt het.
+  useEffect(() => {
+    if (!group) return
+    setAsleep(false)
+    const SLEEP_MS = 3 * 60 * 1000
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const sleep = () => { if (mounted.current) setAsleep(true) }
+    const reset = () => { if (timer) clearTimeout(timer); timer = setTimeout(sleep, SLEEP_MS) }
+    const wake = () => { setAsleep((a) => (a ? false : a)); reset() }
+    const onVis = () => { if (typeof document !== "undefined" && document.visibilityState === "visible") wake() }
+    const evts: (keyof WindowEventMap)[] = ["pointerdown", "keydown", "scroll", "touchstart"]
+    evts.forEach((e) => window.addEventListener(e, wake, { passive: true }))
+    document.addEventListener("visibilitychange", onVis)
+    window.addEventListener("focus", wake)
+    reset()
+    return () => {
+      if (timer) clearTimeout(timer)
+      evts.forEach((e) => window.removeEventListener(e, wake))
+      document.removeEventListener("visibilitychange", onVis)
+      window.removeEventListener("focus", wake)
+    }
+  }, [group])
 
   // ?? Group create / join ??????????????????????????????????????????????????
   const startGroup = async () => {
@@ -1879,6 +1905,11 @@ export default function Home() {
     <div style={S.page}>
       <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.55} } * { box-sizing: border-box; }`}</style>
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      {asleep && (
+        <div onClick={() => setAsleep(false)} style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 3000, background: "rgba(20,33,58,0.92)", color: "#fff", padding: "9px 16px", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,24,40,0.3)", whiteSpace: "nowrap" }}>
+          ⏸ Live-updates gepauzeerd — tik om te hervatten
+        </div>
+      )}
       {error && (
         <div style={S.errorBanner}>
           ?? {error}
