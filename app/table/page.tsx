@@ -388,6 +388,8 @@ export default function RundoTable() {
   const [claimMode, setClaimMode] = useState<"item" | "person">("item")
   const [claimPid, setClaimPid] = useState<string | null>(null)
   const [scanFile, setScanFile] = useState<File | null>(null)
+  // Bewaarde foto van de laatste scan, zodat je een mislukte AI-scan opnieuw kan proberen.
+  const [retryFile, setRetryFile] = useState<File | null>(null)
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [newGuest, setNewGuest] = useState("")
@@ -718,10 +720,16 @@ export default function RundoTable() {
     setShowScan(true)
   }
 
+  const retryAiScan = () => {
+    if (!retryFile) { setToast("Geen foto beschikbaar om opnieuw te scannen."); return }
+    setShowScan(true)
+    onPhotoPicked(retryFile)
+  }
+
   const onPhotoPicked = async (file: File | undefined) => {
     if (!file) return
     setScanError(null); setScanPreview([]); setScanProgress(0); setScanning(true)
-    setScanFile(file)
+    setScanFile(file); setRetryFile(file)
     if (scanPhotoUrl) URL.revokeObjectURL(scanPhotoUrl)
     setScanPhotoUrl(URL.createObjectURL(file))
     try {
@@ -1299,40 +1307,45 @@ export default function RundoTable() {
             <button onClick={() => setShowScan(true)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Start hier — Rekening scannen 📸</button>
           )}
 
-          {/* Scan-label helemaal bovenaan: enkel een vinkje dat de scan lukte en items herkend werden */}
-          {items.length > 0 && scanSource && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 10px", padding: "8px 12px", borderRadius: 10, fontSize: 12.5, fontWeight: 700, background: scanSource === "ai" ? "rgba(16,24,40,0.04)" : "rgba(243,156,18,0.12)", border: scanSource === "ai" ? "1px solid rgba(16,24,40,0.1)" : "1px solid rgba(243,156,18,0.5)", color: scanSource === "ai" ? "#5a6680" : "#b5591a" }}>
-              {scanSource === "ai"
-                ? <span>Scan gelukt en items herkend <span style={{ color: "#1f8a4c", fontWeight: 800 }}>✓</span></span>
-                : "📷 Lokale scan gebruikt (AI was niet beschikbaar). Volgorde en herkenning kunnen minder nauwkeurig zijn."}
+          {/* Scan-label bovenaan: vinkje bij AI-succes; duidelijke waarschuwing + retry bij lokale terugval */}
+          {items.length > 0 && scanSource === "ai" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 10px", padding: "8px 12px", borderRadius: 10, fontSize: 12.5, fontWeight: 700, background: "rgba(16,24,40,0.04)", border: "1px solid rgba(16,24,40,0.1)", color: "#5a6680" }}>
+              <span>Scan gelukt en items herkend <span style={{ color: "#1f8a4c", fontWeight: 800 }}>✓</span></span>
+            </div>
+          )}
+          {items.length > 0 && scanSource === "local" && (
+            <div style={{ margin: "0 0 10px", padding: "10px 12px", borderRadius: 10, background: "rgba(243,156,18,0.12)", border: "1px solid rgba(243,156,18,0.5)" }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: "#b5591a", lineHeight: 1.5 }}>📷 Lokale scan gebruikt (AI was tijdelijk niet beschikbaar). Volgorde en herkenning zijn waarschijnlijk fout of niet nauwkeurig!</div>
+              <div style={{ fontSize: 12, color: "#8a4514", lineHeight: 1.5, margin: "6px 0 8px" }}>Wacht ±1 minuut tot de AI weer beschikbaar is en probeer opnieuw:</div>
+              <button onClick={retryAiScan} disabled={!retryFile} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontSize: 13.5, fontWeight: 800, opacity: retryFile ? 1 : 0.5 }}>🔄 Probeer nieuwe AI-scan (veel nauwkeuriger!)</button>
             </div>
           )}
 
-          {/* Bon-totaal: ja/neen bij verschil. Ja = totaal klopt (items nakijken). Neen = totaal aanpassen + bevestigen. */}
+          {/* Bon-totaal: ja/neen blijft altijd beschikbaar. Ja = totaal klopt (items nakijken). Neen = aanpassen + bevestigen. */}
           {items.length > 0 && (() => {
             const entered = group?.receipt_total ?? null
             const match = entered != null && Math.abs(entered - billTotal) < 0.005
             const mismatch = entered != null && !match
-            const totalGreen = match || (mismatch && receiptConfirmed)
             const saveTotal = () => { setReceiptConfirmed(false); const raw = (receiptInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }
+            const greenState = !receiptEditing && (match || (mismatch && receiptConfirmed))
             const jaBtn = { border: "none", background: "#27ae60", color: "#fff", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer" }
             const neenBtn = { border: "1.5px solid rgba(20,33,58,0.2)", background: "#fff", color: "#5a6680", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer" }
             const jaNeen = (
               <span style={{ display: "inline-flex", gap: 6 }}>
-                <button onClick={() => { setReceiptConfirmed(true); setReceiptEditing(false) }} style={{ ...jaBtn, opacity: receiptConfirmed ? 1 : 0.55 }}>Ja</button>
+                <button onClick={() => { setReceiptConfirmed(true); setReceiptEditing(false) }} style={{ ...jaBtn, opacity: (greenState) ? 1 : 0.55 }}>Ja</button>
                 <button onClick={() => { setReceiptEditing(true); setReceiptConfirmed(false); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }} style={{ ...neenBtn, ...(receiptEditing ? { borderColor: "#1499b0", color: "#1499b0" } : {}) }}>Neen</button>
               </span>
             )
             return (
-              <div style={{ ...S.card, padding: "11px 14px", marginBottom: 12, background: totalGreen ? "rgba(39,174,96,0.06)" : mismatch ? "rgba(224,107,94,0.06)" : "#fff", border: totalGreen ? "1.5px solid rgba(39,174,96,0.45)" : mismatch ? "1.5px solid rgba(224,107,94,0.5)" : "1px solid rgba(16,24,40,0.08)" }}>
+              <div style={{ ...S.card, padding: "11px 14px", marginBottom: 12, background: greenState ? "rgba(39,174,96,0.06)" : mismatch ? "rgba(224,107,94,0.06)" : "#fff", border: greenState ? "1.5px solid rgba(39,174,96,0.45)" : mismatch ? "1.5px solid rgba(224,107,94,0.5)" : "1px solid rgba(16,24,40,0.08)" }}>
                 {entered == null ? (
                   <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#5a6680", marginBottom: 8 }}>Vul het totaal van de bon in — items: €{billTotal.toFixed(2)}</span>
+                ) : receiptEditing ? (
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>Vul het correcte rekeningtotaal in zoals op de bon</span>
                 ) : match ? (
                   <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>Totaal van de bon correct?</span>
                 ) : receiptConfirmed ? (
                   <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", marginBottom: 6 }}>Rekeningtotaal op de bon is correct</span>
-                ) : receiptEditing ? (
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>Vul het correcte rekeningtotaal in zoals op de bon</span>
                 ) : (
                   <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#c0392b", marginBottom: 6 }}>⚠️ Totaal van de bon correct?</span>
                 )}
@@ -1343,18 +1356,18 @@ export default function RundoTable() {
                     onBlur={saveTotal}
                     onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
                     style={{ ...S.input, width: 100, padding: "6px 9px", fontSize: 16, fontWeight: 700 }} />
-                  {totalGreen && <span title="Bon-totaal bevestigd" style={{ color: "#1f8a4c", fontSize: 22, fontWeight: 800, lineHeight: 1 }}>✓</span>}
-                  {mismatch && receiptEditing && !receiptConfirmed && (
+                  {greenState && <span title="Bon-totaal bevestigd" style={{ color: "#1f8a4c", fontSize: 22, fontWeight: 800, lineHeight: 1 }}>✓</span>}
+                  {receiptEditing && (
                     <button onClick={() => { saveTotal(); setReceiptConfirmed(true); setReceiptEditing(false) }} title="Bevestig dit bedrag" style={{ ...jaBtn }}>✓ Bevestig</button>
                   )}
-                  {mismatch && jaNeen}
+                  {entered != null && jaNeen}
                 </div>
-                {match && (
+                {match && !receiptEditing && (
                   <div style={{ marginTop: 8, fontSize: 12, color: "#5a6680", lineHeight: 1.5 }}>
                     ⚠️ Controleer alles goed — bedrag correct, maar een scan kan fouten bevatten, zeker bij een onduidelijke bon. Kijk namen, aantallen en prijzen na, en markeer gedeelde items indien nodig.
                   </div>
                 )}
-                {mismatch && receiptConfirmed && (
+                {mismatch && receiptConfirmed && !receiptEditing && (
                   <div style={{ marginTop: 8, fontSize: 12, color: "#8a4514", lineHeight: 1.5 }}>
                     <div style={{ fontWeight: 700, marginBottom: 3 }}>Rekeningtotaal is dus correct, maar het itemtotaal is verschillend. Een scan kan fouten bevatten — controleer hieronder alles goed:</div>
                     <ul style={{ margin: 0, paddingLeft: 18 }}>
@@ -1362,9 +1375,6 @@ export default function RundoTable() {
                       <li>BTW/andere kosten/kortingen?</li>
                     </ul>
                   </div>
-                )}
-                {match && (
-                  <button onClick={() => setAdminTab("guests")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 10, padding: "12px 0", fontSize: 14.5, fontWeight: 800 }}>Bon correct? Ga naar Gasten en delen! →</button>
                 )}
               </div>
             )
@@ -2295,6 +2305,9 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
           </div>
         )
       })()}
+      {onGoGuests && (
+        <button onClick={onGoGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, padding: "14px 0", fontSize: 15, fontWeight: 800, boxShadow: billOk ? "0 0 0 2px rgba(39,174,96,0.55), 0 8px 24px -6px rgba(39,174,96,0.65)" : "0 0 0 2px rgba(224,107,94,0.6), 0 8px 24px -6px rgba(224,107,94,0.65)" }}>Bon correct? Ga naar Gasten en delen! →</button>
+      )}
     </div>
   )
 }
