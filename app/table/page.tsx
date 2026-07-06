@@ -9,7 +9,7 @@ import { QRCodeSVG } from "qrcode.react"
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
-type Group = { id: string; name: string; invite_code: string; owner_id: string; receipt_url?: string | null; party_size?: number | null; receipt_total?: number | null; finalized?: boolean | null; disputed_by?: string | null; created_at?: string }
+type Group = { id: string; name: string; invite_code: string; owner_id: string; receipt_url?: string | null; party_size?: number | null; receipt_total?: number | null; finalized?: boolean | null; disputed_by?: string | null; tip_total?: number | null; tip_updated_at?: string | null; created_at?: string }
 type Participant = { id: string; name: string; group_id: string; self_joined?: boolean; seats?: number | null; created_at?: string }
 type BillItem = {
   id: string
@@ -350,6 +350,7 @@ export default function RundoTable() {
   const [adminTab, setAdminTab] = useState<AdminTab>("scan")
   const [showScan, setShowScan] = useState(false)
   const receiptInputRef = useRef<HTMLInputElement>(null)
+  const tipInputRef = useRef<HTMLInputElement>(null)
   // Twijfel-vlaggen uit de AI-scan, per item-id (lokaal, om meteen na de scan na te kijken).
   const [scanFlags, setScanFlags] = useState<Record<string, { note: string }>>({})
   const [scanning, setScanning] = useState(false)
@@ -612,6 +613,19 @@ export default function RundoTable() {
     }
     await loadAll(group.id)
     setToast(on ? "Rekening afgesloten — gasten kunnen niet meer wijzigen" : "Rekening heropend")
+  }
+
+  const setTip = async (val: number) => {
+    if (!group) return
+    const amount = Math.max(0, +(val || 0).toFixed(2))
+    const nowIso = new Date().toISOString()
+    setGroup((g) => g ? { ...g, tip_total: amount, tip_updated_at: nowIso } : g)
+    const { error } = await supabase.from("table_groups").update({ tip_total: amount, tip_updated_at: nowIso }).eq("id", group.id)
+    if (error && /tip_total|tip_updated_at/.test(error.message || "")) {
+      setError("Voeg in Supabase de kolommen tip_total (numeric) en tip_updated_at (timestamptz) toe aan table_groups.")
+      return
+    }
+    setToast(amount > 0 ? `Fooi ingesteld: €${amount.toFixed(2)}` : "Fooi verwijderd")
   }
 
   const flagDispute = async (name: string, on: boolean, comment = "") => {
@@ -993,6 +1007,23 @@ export default function RundoTable() {
     return total
   }
 
+  // Fooi: gelijk per persoon (per seat). Koppels (seats>1) betalen naar rato.
+  // Centen exact verdeeld (round-robin) zodat de som klopt met wat de admin intypte.
+  const tipTotal = Math.max(0, group?.tip_total ?? 0)
+  const totalSeatsAll = participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)
+  const tipByPid: Record<string, number> = (() => {
+    const map: Record<string, number> = {}
+    const cents = Math.round(tipTotal * 100)
+    if (cents <= 0 || totalSeatsAll <= 0 || participants.length === 0) return map
+    const base = Math.floor(cents / totalSeatsAll)
+    participants.forEach((p) => { map[p.id] = base * Math.max(1, p.seats ?? 1) })
+    let rem = cents - base * totalSeatsAll
+    let i = 0
+    while (rem > 0) { const p = participants[i % participants.length]; map[p.id] = (map[p.id] ?? 0) + 1; rem--; i++ }
+    return map
+  })()
+  const tipForPid = (pid: string) => (tipByPid[pid] ?? 0) / 100
+
   const personTotal = (pid: string): { settled: number; pendingShared: boolean } => {
     let settled = 0
     let pendingShared = false
@@ -1013,6 +1044,7 @@ export default function RundoTable() {
       }
     }
     settled += taxShare(pid)
+    settled += tipForPid(pid)
     return { settled, pendingShared }
   }
 
@@ -1034,6 +1066,8 @@ export default function RundoTable() {
     }
     const tax = taxShare(pid)
     if (tax > 0.005) out.push({ name: "BTW / kosten (verdeeld)", qty: 1, amount: tax, shared: false, revealed: true, sharers: 0, myHeads: 0 })
+    const tip = tipForPid(pid)
+    if (tip > 0.005) out.push({ name: "💛 Fooi (per persoon)", qty: 1, amount: tip, shared: false, revealed: true, sharers: 0, myHeads: 0 })
     return out
   }
 
@@ -1582,6 +1616,7 @@ export default function RundoTable() {
           <ClaimScreen
             items={baseItems} meId={meId} me={me} isAdmin={isAdmin}
             participants={participants}
+            groupId={group.id} tipTotal={tipTotal} tipUpdatedAt={group.tip_updated_at ?? null}
             claimedQty={claimedQty} myQty={myQty} sharerIds={sharerIds}
             shareHeads={shareHeads} myShareHeads={myShareHeads} seatsOf={seatsOf} setSeats={setSeats}
             setClaim={setClaim} toggleShareClaim={toggleShareClaim}
@@ -1593,6 +1628,30 @@ export default function RundoTable() {
             finalized={!!group.finalized} iDispute={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name)} iResolved={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name && d.resolved)} iComment={(me && parseDisputes(group.disputed_by || "").find((d) => d.name === me.name)?.comment) || ""} onToggleDispute={(on, comment) => { if (me) flagDispute(me.name, on, comment) }}
           />
         </>
+      )}
+
+      {/* ─── ADMIN: Fooi (overzicht-tab) — ook na afsluiten bewerkbaar ─── */}
+      {isAdmin && adminTab === "overview" && (
+        <div style={S.card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <h3 style={{ ...S.h3, marginBottom: 0 }}>💛 Fooi</h3>
+            {totalSeatsAll > 0 && tipTotal > 0 && (
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 10, padding: "3px 10px", whiteSpace: "nowrap" }}>€{(tipTotal / totalSeatsAll).toFixed(2)} p.p. × {totalSeatsAll}</span>
+            )}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Totaal fooi €</span>
+            <input ref={tipInputRef} type="text" inputMode="decimal" defaultValue={tipTotal ? tipTotal.toFixed(2) : ""} key={group.tip_updated_at || "leeg"} placeholder="bv. 20.00"
+              onBlur={(e) => { const raw = e.target.value.trim().replace(",", "."); if (raw === "") { setTip(0); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setTip(+n.toFixed(2)) }}
+              onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+              style={{ ...S.input, width: 110, padding: "8px 10px", fontWeight: 700 }} />
+            <button onClick={() => { const raw = (tipInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setTip(0); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setTip(+n.toFixed(2)) }} style={{ border: "none", background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff", borderRadius: 9, padding: "9px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>✓ Instellen</button>
+            {tipTotal > 0 && <button onClick={() => setTip(0)} style={{ ...S.iconBtn }} title="fooi verwijderen">🗑️</button>}
+          </div>
+          <div style={{ fontSize: 11.5, color: "#9aa0ab", marginTop: 8, lineHeight: 1.4 }}>
+            Gelijk verdeeld over alle personen{totalSeatsAll > 0 ? ` (${totalSeatsAll} ${totalSeatsAll === 1 ? "persoon" : "personen"}, koppels tellen dubbel)` : ""}. {group.finalized ? "Je kan dit ook na het afsluiten nog toevoegen of wijzigen — gasten krijgen dan een melding met hun nieuwe totaal." : "Je kan dit ook later, na het afsluiten, nog toevoegen."}
+          </div>
+        </div>
       )}
 
       {/* ─── ADMIN: Per persoon (overzicht-tab) ─── */}
@@ -1650,23 +1709,35 @@ export default function RundoTable() {
               🔓 Rekening heropenen (gasten kunnen weer wijzigen)
             </button>
           ) : (
-            <button onClick={() => {
-              if (openUnits > 0 || undecidedShared.length > 0) {
-                const delen: string[] = []
-                if (openUnits > 0) delen.push(`${openUnits} ${openUnits === 1 ? "consumptie is" : "consumpties zijn"} nog niet toegewezen`)
-                if (undecidedShared.length > 0) delen.push(`${undecidedShared.length} gedeeld ${undecidedShared.length === 1 ? "item wordt" : "items worden"} door niemand genomen`)
-                alert(`De rekening kan nog niet afgesloten worden:\n\n• ${delen.join("\n• ")}\n\nWijs eerst alles toe. Bekijk via "Nog niet geclaimd" wat er nog openstaat.`)
-                setShowTodo(true)
-                return
-              }
-              if (confirm("De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.")) finalizeBill(true)
-            }} style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
-              ✅ Alles toegewezen?  Rekening afsluiten
-            </button>
+            <>
+              <div style={{ background: "rgba(20,153,176,0.06)", border: "1px solid rgba(20,153,176,0.25)", borderRadius: 12, padding: "10px 14px", marginBottom: 10 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>Klaar met verdelen?</div>
+                <div style={{ fontSize: 12.5, color: "#5a6680", lineHeight: 1.45 }}>Sluit de rekening af zodra alles is aangetikt en nagekeken. Daarna kunnen gasten niets meer wijzigen en krijgen ze allemaal meteen een melding met hun definitieve deel.</div>
+              </div>
+              <button onClick={() => {
+                if (openUnits > 0 || undecidedShared.length > 0) {
+                  const delen: string[] = []
+                  if (openUnits > 0) delen.push(`${openUnits} ${openUnits === 1 ? "consumptie is" : "consumpties zijn"} nog niet toegewezen`)
+                  if (undecidedShared.length > 0) delen.push(`${undecidedShared.length} gedeeld ${undecidedShared.length === 1 ? "item wordt" : "items worden"} door niemand genomen`)
+                  alert(`De rekening kan nog niet afgesloten worden:\n\n• ${delen.join("\n• ")}\n\nWijs eerst alles toe. Bekijk via "Nog niet geclaimd" wat er nog openstaat.`)
+                  setShowTodo(true)
+                  return
+                }
+                if (confirm("De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.")) finalizeBill(true)
+              }} style={{ ...S.btn, width: "100%", padding: "16px 0", fontSize: 16, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 8px 20px -6px rgba(39,174,96,0.65)" }}>
+                🔒 Rekening definitief afsluiten
+              </button>
+            </>
           )}
-          <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6, marginBottom: 4 }}>
-            {group.finalized ? "De rekening is afgesloten — iedereen ziet de definitieve verdeling." : "Sluit pas af als alles is aangetikt en nagekeken. Gasten krijgen dan een melding."}
-          </div>
+          {group.finalized ? (
+            <div style={{ marginTop: 10, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", borderRadius: 12, padding: "11px 14px", textAlign: "center", fontSize: 13, fontWeight: 800, boxShadow: "0 6px 16px -8px rgba(39,174,96,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <span style={{ fontSize: 18 }}>✅</span> Rekening afgesloten — iedereen ziet de definitieve verdeling
+            </div>
+          ) : (
+            <div style={{ fontSize: 11.5, color: "#9aa0ab", textAlign: "center", marginTop: 8, marginBottom: 4, lineHeight: 1.4 }}>
+              Nog niet afgesloten — gasten kunnen nog aantikken en wijzigen.
+            </div>
+          )}
           <div style={{ textAlign: "center", marginTop: 10 }}>
             <button onClick={() => { if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }) }} style={{ ...S.btn, fontSize: 12.5, fontWeight: 700, padding: "8px 16px" }}>↑ Terug naar boven</button>
           </div>
@@ -2199,6 +2270,7 @@ function AssignPicker({ participants, itemId, isShared, confirmedFn, onAssign, o
 function ClaimScreen(props: {
   items: BillItem[]; meId: string | null; me: Participant | null; isAdmin: boolean
   participants: Participant[]
+  groupId: string; tipTotal: number; tipUpdatedAt: string | null
   claimedQty: (id: string) => number; myQty: (id: string, pid: string | null) => number; sharerIds: (id: string) => string[]
   shareHeads: (id: string) => number; myShareHeads: (id: string, pid: string) => number; seatsOf: (pid: string) => number
   setSeats: (pid: string, n: number) => void
@@ -2211,7 +2283,7 @@ function ClaimScreen(props: {
   iConfirmed: boolean; confirmMe: () => void; onPickMe: (id: string) => void
   finalized: boolean; iDispute: boolean; iResolved: boolean; iComment: string; onToggleDispute: (on: boolean, comment?: string) => void
 }) {
-  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
+  const { items, meId, isAdmin, participants, groupId, tipTotal, tipUpdatedAt, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
   const adminPid = props.claimPid, setAdminPid = props.setClaimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   const [disputeOpen, setDisputeOpen] = useState(false)
@@ -2222,10 +2294,12 @@ function ClaimScreen(props: {
   const prevFinalizedRef = useRef<boolean | null>(null)
   const [reviewing, setReviewing] = useState(false)
   const [showFinalizedPopup, setShowFinalizedPopup] = useState(false)
+  const [showTipPopup, setShowTipPopup] = useState(false)
+  const markTipSeen = () => { try { if (tipUpdatedAt) localStorage.setItem(`rundo_table_tipseen_${groupId}`, tipUpdatedAt) } catch {} }
   useEffect(() => {
     const prev = prevFinalizedRef.current
     if (finalized) {
-      if (prev !== true) setShowFinalizedPopup(true) // net afgesloten (of net geladen als afgesloten) → één pop-up
+      if (prev !== true) { setShowFinalizedPopup(true); markTipSeen() } // net afgesloten (of net geladen als afgesloten) → één pop-up
       wasFinalizedRef.current = true
       setReviewing(false)
     } else {
@@ -2233,7 +2307,17 @@ function ClaimScreen(props: {
       if (prev === true && wasFinalizedRef.current) setReviewing(true) // heropend na afsluiten
     }
     prevFinalizedRef.current = finalized
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [finalized])
+
+  // Fooi ná het afsluiten toegevoegd/gewijzigd → gast krijgt één melding met het nieuwe totaal.
+  useEffect(() => {
+    if (isAdmin || !finalized || !tipUpdatedAt || tipTotal <= 0) return
+    let seen: string | null = null
+    try { seen = localStorage.getItem(`rundo_table_tipseen_${groupId}`) } catch {}
+    if ((!seen || tipUpdatedAt > seen) && !showFinalizedPopup) setShowTipPopup(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipUpdatedAt, tipTotal, finalized])
 
   if (isAdmin) {
     const normalItems = items.filter((i) => !i.is_shared)
@@ -2385,6 +2469,18 @@ function ClaimScreen(props: {
                 <span>Totaal rekening</span>
                 <span>€{billSum.toFixed(2)}</span>
               </div>
+              {tipTotal > 0 && (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 700, color: "#a06b00", marginTop: 4 }}>
+                    <span>💛 Fooi (verdeeld per persoon)</span>
+                    <span>€{tipTotal.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800, color: "#14213a", marginTop: 6, paddingTop: 6, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
+                    <span>Totaal incl. fooi</span>
+                    <span>€{(billSum + tipTotal).toFixed(2)}</span>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -2406,6 +2502,7 @@ function ClaimScreen(props: {
   }
 
   const t = personTotal(meId)
+  const myTip = (personItems(meId).find((d) => d.name.startsWith("💛 Fooi"))?.amount) || 0
 
   return (
     <div>
@@ -2424,6 +2521,19 @@ function ClaimScreen(props: {
             <p style={{ fontSize: 13.5, color: "#5a6680", lineHeight: 1.5, margin: "0 0 12px" }}>De beheerder rondde de rekening af. Dit is jouw definitieve deel:</p>
             <div style={{ fontSize: 34, fontWeight: 800, color: "#14213a", marginBottom: 16 }}>€{t.settled.toFixed(2)}{t.pendingShared ? "+" : ""}</div>
             <button onClick={() => { setShowFinalizedPopup(false); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>Bekijk mijn verdeling</button>
+          </div>
+        </div>
+      )}
+      {/* Pop-up wanneer de beheerder ná het afsluiten fooi toevoegt/wijzigt */}
+      {finalized && showTipPopup && !showFinalizedPopup && (
+        <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => { markTipSeen(); setShowTipPopup(false) }}>
+          <div style={{ ...S.modal, width: 340, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 40, marginBottom: 6 }}>💛</div>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#a06b00", margin: "0 0 6px" }}>De beheerder heeft fooi toegevoegd</h3>
+            <p style={{ fontSize: 13.5, color: "#5a6680", lineHeight: 1.5, margin: "0 0 12px" }}>Er is €{tipTotal.toFixed(2)} fooi bijgekomen, eerlijk verdeeld. Dit is jouw nieuwe totaal:</p>
+            <div style={{ fontSize: 34, fontWeight: 800, color: "#14213a", marginBottom: 2 }}>€{t.settled.toFixed(2)}{t.pendingShared ? "+" : ""}</div>
+            <div style={{ fontSize: 12.5, color: "#a06b00", fontWeight: 700, marginBottom: 16 }}>waarvan €{myTip.toFixed(2)} fooi</div>
+            <button onClick={() => { markTipSeen(); setShowTipPopup(false); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>Bekijk mijn afrekening</button>
           </div>
         </div>
       )}
@@ -2564,8 +2674,14 @@ function ClaimScreen(props: {
                 </div>
               )
             })}
+            {tipTotal > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, fontSize: 12.5, fontWeight: 700, color: "#a06b00" }}>
+                <span>💛 Fooi (verdeeld)</span>
+                <span>€{tipTotal.toFixed(2)}</span>
+              </div>
+            )}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(16,24,40,0.1)" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Totaal rekening</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>{tipTotal > 0 ? "Totaal rekening incl. fooi" : "Totaal rekening"}</span>
               <span style={{ fontSize: 15, fontWeight: 800, color: "#14213a" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2)}</span>
             </div>
           </div>
