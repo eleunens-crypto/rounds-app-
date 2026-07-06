@@ -400,7 +400,6 @@ export default function RundoTable() {
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [newGuest, setNewGuest] = useState("")
-  const [editGuestId, setEditGuestId] = useState<string | null>(null)
   const [showTodo, setShowTodo] = useState(false)
   const [showTaxInfo, setShowTaxInfo] = useState(false)
   const [taxConfig, setTaxConfig] = useState<string | null>(null)
@@ -582,7 +581,7 @@ export default function RundoTable() {
     setViaLink(false); setShowSaved(false)
     setScanPreview([]); setScanFile(null); setLastScanFile(null); setScanPhotoUrl(null); setScanTotal(""); setScanError(null); setShowScan(false)
     setAdminTab("scan"); setExpandedPeople(new Set()); setClaimMode("item"); setClaimPid(null)
-    setEditGuestId(null); setShowTodo(false); setViewReceipt(null)
+    setShowTodo(false); setViewReceipt(null)
     autoJoined.current = true
     rememberLastGroup(null)
     try { if (typeof sessionStorage !== "undefined") sessionStorage.removeItem("rundo_table_session") } catch { /* ignore */ }
@@ -1520,8 +1519,8 @@ export default function RundoTable() {
               <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap" }} onClick={() => addGuest(undefined, false, 1)}>+ Persoon toevoegen</button>
             </div>
             <div style={{ marginTop: 4, marginBottom: 2 }}>
-              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• Consumpties kunnen door jou toegewezen worden</div>
-              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• of namen kunnen later nog gekozen worden via QR/link als je deelt na aanmaken</div>
+              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• je kan zelf consumpties toewijzen voor je gasten</div>
+              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• of deel de QR/link na aanmaken, zodat gasten meteen zelf hun naam kunnen aantikken</div>
             </div>
 
             {(() => {
@@ -1532,21 +1531,16 @@ export default function RundoTable() {
                   ? { label: "zelf aangemeld", color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
                   : { label: "door admin", color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
                 if (twoCol) {
-                  const editing = editGuestId === p.id
                   return (
-                    <div key={p.id} onClick={() => { if (!editing) { setClaimMode("person"); setClaimPid(p.id); setAdminTab("overview") } }}
-                      style={{ border: "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "8px 10px", cursor: editing ? "default" : "pointer", background: "#fff" }}>
+                    <div key={p.id}
+                      style={{ border: "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "8px 10px", background: "#fff" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        {editing ? (
-                          <input autoFocus defaultValue={p.name} onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => { if (e.key === "Enter") { renameGuest(p.id, (e.target as HTMLInputElement).value); setEditGuestId(null) } if (e.key === "Escape") setEditGuestId(null) }}
-                            onBlur={(e) => { renameGuest(p.id, e.target.value); setEditGuestId(null) }}
-                            style={{ ...S.input, flex: 1, minWidth: 0, padding: "5px 8px", fontWeight: 700, fontSize: 14 }} />
-                        ) : (
-                          <span style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                        )}
+                        <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 12 }} onClick={(e) => { e.stopPropagation(); (e.currentTarget.nextElementSibling as HTMLElement | null)?.focus() }} title="naam wijzigen">✏️</button>
+                        <input key={p.id + "|" + p.name} defaultValue={p.name} onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+                          onBlur={(e) => renameGuest(p.id, e.target.value)}
+                          style={{ ...S.input, flex: 1, minWidth: 0, padding: "5px 8px", fontWeight: 700, fontSize: 14 }} />
                         <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} size={13} showLabel />
-                        <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 12 }} onClick={(e) => { e.stopPropagation(); setEditGuestId(editing ? null : p.id) }} title="naam wijzigen">✏️</button>
                         <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={(e) => { e.stopPropagation(); removeGuest(p.id) }}>🗑️</button>
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5, alignItems: "center" }}>
@@ -1557,23 +1551,18 @@ export default function RundoTable() {
                     </div>
                   )
                 }
-                const editing = editGuestId === p.id
                 return (
-                  <div key={p.id} onClick={() => { if (!editing) { setClaimMode("person"); setClaimPid(p.id); setAdminTab("overview") } }}
-                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)", cursor: editing ? "default" : "pointer" }}>
+                  <div key={p.id}
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-                        {editing ? (
-                          <input autoFocus defaultValue={p.name} onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => { if (e.key === "Enter") { renameGuest(p.id, (e.target as HTMLInputElement).value); setEditGuestId(null) } if (e.key === "Escape") setEditGuestId(null) }}
-                            onBlur={(e) => { renameGuest(p.id, e.target.value); setEditGuestId(null) }}
-                            style={{ ...S.input, padding: "5px 8px", fontWeight: 600, fontSize: 15, minWidth: 100, maxWidth: 160 }} />
-                        ) : (
-                          <span style={{ fontWeight: 600, fontSize: 15 }}>{p.name}</span>
-                        )}
+                        <button style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 13 }} onClick={(e) => { e.stopPropagation(); (e.currentTarget.nextElementSibling as HTMLElement | null)?.focus() }} title="naam wijzigen">✏️</button>
+                        <input key={p.id + "|" + p.name} defaultValue={p.name} onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+                          onBlur={(e) => renameGuest(p.id, e.target.value)}
+                          style={{ ...S.input, padding: "5px 8px", fontWeight: 600, fontSize: 15, minWidth: 100, maxWidth: 160 }} />
                         <span style={{ fontSize: 10.5, fontWeight: 700, color: origin.color, background: origin.bg, borderRadius: 8, padding: "1px 7px", whiteSpace: "nowrap" }}>{origin.label}</span>
                         <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} showLabel />
-                        <button style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 13 }} onClick={(e) => { e.stopPropagation(); setEditGuestId(editing ? null : p.id) }} title="naam wijzigen">✏️</button>
                       </div>
                     </div>
                     <span style={{ fontSize: 11, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 10, padding: "2px 9px" }}>{st.label}</span>
@@ -1586,14 +1575,9 @@ export default function RundoTable() {
                 <div style={{ marginTop: 12 }}>
                   {participants.length === 0
                     ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen gasten uitgenodigd (via QR) of zelf toegevoegd</div>
-                    : (
-                      <>
-                        <div style={{ fontSize: 11.5, color: "#9aa0ab", marginBottom: 8, fontStyle: "italic" }}>✏️ Tik op het potloodje om een naam aan te passen — dat kan altijd nog.</div>
-                        {twoCol
-                          ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>{participants.map(Row)}</div>
-                          : participants.map(Row)}
-                      </>
-                    )}
+                    : twoCol
+                    ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>{participants.map(Row)}</div>
+                    : participants.map(Row)}
                 </div>
               )
             })()}
