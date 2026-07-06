@@ -179,7 +179,7 @@ function parseReceiptText(raw: string): { items: ParsedItem[]; total: number | n
     const letters = (name.match(/[a-zA-ZÀ-ÿ]/g) || []).length
     if (!name || name.length < 2 || letters < 2) continue
 
-    const unit = qty > 1 ? +(lineTotal / qty).toFixed(2) : lineTotal
+    const unit = qty > 1 ? +(lineTotal / qty).toFixed(2).replace(".", ",") : lineTotal
     items.push({ name, unit_price: unit, quantity: qty, is_shared: false })
   }
   return { items, total }
@@ -219,13 +219,13 @@ async function preprocessReceipt(file: File): Promise<string> {
 }
 
 // Zet een File om naar pure base64 (zonder de "data:...;base64,"-prefix).
-// Laat in prijsvelden enkel cijfers, één decimaalteken en (optioneel) een leidend minteken door.
+// Laat in prijsvelden enkel cijfers, één decimaalteken (. of ,) en (optioneel) een leidend minteken door.
 function numFilter(v: string, allowNeg = false): string {
-  let s = v.replace(",", ".").replace(/[^0-9.\-]/g, "")
+  let s = v.replace(/[^0-9.,\-]/g, "")
+  let sepUsed = false
+  s = s.replace(/[.,]/g, (m) => { if (sepUsed) return ""; sepUsed = true; return m })
   if (allowNeg) { const neg = s.startsWith("-"); s = s.replace(/-/g, ""); if (neg) s = "-" + s }
   else s = s.replace(/-/g, "")
-  const i = s.indexOf(".")
-  if (i !== -1) s = s.slice(0, i + 1) + s.slice(i + 1).replace(/\./g, "")
   s = s.replace(/^(-?)0+(?=\d)/, "$1")
   return s
 }
@@ -743,7 +743,7 @@ export default function RundoTable() {
       }
       // Meteen bevestigen en naar de Bon-tab: daar kan je alles nog checken en corrigeren.
       setScanning(false)
-      await confirmScan(parsed.items, parsed.total != null ? parsed.total.toFixed(2) : "", file)
+      await confirmScan(parsed.items, parsed.total != null ? parsed.total.toFixed(2).replace(".", ",") : "", file)
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       console.error("Tesseract scan-fout:", e)
@@ -1018,7 +1018,7 @@ export default function RundoTable() {
     if (t.tax_rate && t.tax_rate > 0) {
       const ids = taxTargetIds(t)
       const base = baseItems.filter((i) => ids.has(i.id)).reduce((s, i) => s + i.unit_price * i.quantity, 0)
-      return +(base * (t.tax_rate / 100)).toFixed(2)
+      return +(base * (t.tax_rate / 100)).toFixed(2).replace(".", ",")
     }
     return itemTotal(t)
   }
@@ -1339,7 +1339,7 @@ export default function RundoTable() {
             return (
               <div style={{ ...S.card, padding: "11px 14px", marginBottom: 12, background: greenState ? "rgba(39,174,96,0.06)" : mismatch ? "rgba(224,107,94,0.06)" : "#fff", border: greenState ? "1.5px solid rgba(39,174,96,0.45)" : mismatch ? "1.5px solid rgba(224,107,94,0.5)" : "1px solid rgba(16,24,40,0.08)" }}>
                 {entered == null ? (
-                  <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#5a6680", marginBottom: 8 }}>Vul het totaal van de bon in — items: €{billTotal.toFixed(2)}</span>
+                  <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#5a6680", marginBottom: 8 }}>Vul het totaal van de bon in — items: €{billTotal.toFixed(2).replace(".", ",")}</span>
                 ) : receiptEditing ? (
                   <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>Vul het correcte rekeningtotaal in zoals op de bon</span>
                 ) : match ? (
@@ -1351,7 +1351,7 @@ export default function RundoTable() {
                 )}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "#9aa0ab" }}>Rekeningtotaal op de bon: €</span>
-                  <input ref={receiptInputRef} type="text" inputMode="decimal" defaultValue={entered != null ? entered.toFixed(2) : ""} key={entered ?? "leeg"} placeholder="bv. 65.90"
+                  <input ref={receiptInputRef} type="text" inputMode="decimal" defaultValue={entered != null ? entered.toFixed(2).replace(".", ",") : ""} key={entered ?? "leeg"} placeholder="bv. 65.90"
                     onInput={(e) => { e.currentTarget.value = numFilter(e.currentTarget.value) }}
                     onBlur={saveTotal}
                     onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
@@ -1369,7 +1369,7 @@ export default function RundoTable() {
                 )}
                 {mismatch && receiptConfirmed && !receiptEditing && (
                   <div style={{ marginTop: 8, fontSize: 12, color: "#8a4514", lineHeight: 1.5 }}>
-                    <div style={{ fontWeight: 700, marginBottom: 3 }}>Rekeningtotaal is dus correct, maar het itemtotaal is verschillend. Een scan kan fouten bevatten — controleer hieronder alles goed:</div>
+                    <div style={{ fontWeight: 700, marginBottom: 3 }}>Rekeningtotaal is dus correct, maar het itemtotaal (€{billTotal.toFixed(2).replace(".", ",")}) is €{Math.abs(billTotal - (entered ?? 0)).toFixed(2).replace(".", ",")} {billTotal > (entered ?? 0) ? "hoger" : "lager"} dan het rekeningtotaal (€{(entered ?? 0).toFixed(2).replace(".", ",")}). Een scan kan fouten bevatten — controleer hieronder alles goed:</div>
                     <ul style={{ margin: 0, paddingLeft: 18 }}>
                       <li>prijzen/aantallen correct?</li>
                       <li>BTW/andere kosten/kortingen?</li>
@@ -1407,7 +1407,7 @@ export default function RundoTable() {
                           onBlur={(e) => { if (group?.finalized) { setToast("Heropen de rekening eerst om iets te wijzigen."); loadAll(group.id); return } supabase.from("table_items").update({ name: e.target.value }).eq("id", t.id).then(() => loadAll(group.id)) }}
                           style={{ ...S.input, flex: 1, minWidth: 0, fontWeight: 700, padding: "8px 10px" }} />
                         {t.tax_rate ? (
-                          <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a", whiteSpace: "nowrap" }}>€{taxAmount(t).toFixed(2)}</span>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a", whiteSpace: "nowrap" }}>€{taxAmount(t).toFixed(2).replace(".", ",")}</span>
                         ) : (
                           <>
                             <span style={{ color: "#999", fontSize: 13 }}>€</span>
@@ -1527,7 +1527,7 @@ export default function RundoTable() {
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5, alignItems: "center" }}>
                         <span style={{ fontSize: 9.5, fontWeight: 700, color: origin.color, background: origin.bg, borderRadius: 7, padding: "1px 6px" }}>{origin.label}</span>
                         <span style={{ fontSize: 9.5, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 7, padding: "1px 6px" }}>{st.label}</span>
-                        <span style={{ fontSize: 11, color: "#aaa", marginLeft: "auto", fontWeight: 700 }}>€{personTotal(p.id).settled.toFixed(2)}</span>
+                        <span style={{ fontSize: 11, color: "#aaa", marginLeft: "auto", fontWeight: 700 }}>€{personTotal(p.id).settled.toFixed(2).replace(".", ",")}</span>
                       </div>
                     </div>
                   )
@@ -1552,7 +1552,7 @@ export default function RundoTable() {
                       </div>
                     </div>
                     <span style={{ fontSize: 11, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 10, padding: "2px 9px" }}>{st.label}</span>
-                    <span style={{ fontSize: 12, color: "#aaa" }}>€{personTotal(p.id).settled.toFixed(2)}</span>
+                    <span style={{ fontSize: 12, color: "#aaa" }}>€{personTotal(p.id).settled.toFixed(2).replace(".", ",")}</span>
                     <button style={S.iconBtn} onClick={(e) => { e.stopPropagation(); removeGuest(p.id) }}>🗑️</button>
                   </div>
                 )
@@ -1614,7 +1614,7 @@ export default function RundoTable() {
         <div style={{ ...S.card, padding: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: "#3b486a", marginBottom: 8 }}>📊 Overzicht</div>
           <div style={{ display: "flex", gap: 8 }}>
-            <Stat label="Totaalbedrag" value={`€${billTotal.toFixed(2)}`} tone="navy" />
+            <Stat label="Totaalbedrag" value={`€${billTotal.toFixed(2).replace(".", ",")}`} tone="navy" />
             <div onClick={() => { if (typeof document !== "undefined") document.getElementById("rekening-per-persoon")?.scrollIntoView({ behavior: "smooth", block: "start" }) }} style={{ flex: 1, cursor: "pointer", textAlign: "center", background: "rgba(233,196,95,0.16)", borderRadius: 12, padding: "8px 6px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 2 }} title="naar de rekening per persoon">
               <span style={{ fontSize: 12, fontWeight: 800, color: "#a06b00", lineHeight: 1.25 }}>Rekening per persoon bekijken</span>
             </div>
@@ -1713,7 +1713,7 @@ export default function RundoTable() {
                       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
                       <span style={{ fontSize: 10, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 8, padding: "1px 7px", flexShrink: 0 }}>{st.label}</span>
                     </span>
-                    <span style={{ fontWeight: 800, fontSize: 16, color: "#14213a", flexShrink: 0, marginLeft: 8 }}>€{t.settled.toFixed(2)}{t.pendingShared ? "+" : ""}</span>
+                    <span style={{ fontWeight: 800, fontSize: 16, color: "#14213a", flexShrink: 0, marginLeft: 8 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</span>
                   </div>
                   {open && (
                     <div style={{ padding: "2px 4px 12px 23px" }}>
@@ -1722,7 +1722,7 @@ export default function RundoTable() {
                         <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#5a6680", padding: "2px 0" }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{d.name}{d.shared ? (d.revealed ? ((p.seats ?? 1) > 1 ? ` (gedeeld, ${d.myHeads} pers.)` : " (gedeeld deel)") : ` (gedeeld door ${d.sharers})`) : ""}</span>
                           <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>
-                            {d.shared && !d.revealed ? "nog te verdelen" : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2)}`}
+                            {d.shared && !d.revealed ? "nog te verdelen" : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}
                           </span>
                         </div>
                       ))}
@@ -1820,7 +1820,7 @@ export default function RundoTable() {
                 return (
                   <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, background: "rgba(20,153,176,0.06)", border: "1px solid rgba(20,153,176,0.18)" }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: "#1499b0", flexShrink: 0 }}>€{pt.settled.toFixed(2)}{pt.pendingShared ? "+" : ""}</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: "#1499b0", flexShrink: 0 }}>€{pt.settled.toFixed(2).replace(".", ",")}{pt.pendingShared ? "+" : ""}</span>
                   </div>
                 )
               })}
@@ -1925,28 +1925,28 @@ export default function RundoTable() {
                         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                           <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 16 }} onClick={() => setScanPreview((cur) => cur.map((x, j) => {
                             if (j !== i) return x
-                            const total = +((x.unit_price || 0) * (x.quantity || 0)).toFixed(2)
+                            const total = +((x.unit_price || 0) * (x.quantity || 0)).toFixed(2).replace(".", ",")
                             const q = Math.max(1, x.quantity - 1)
-                            return { ...x, quantity: q, unit_price: +(total / q).toFixed(2) }
+                            return { ...x, quantity: q, unit_price: +(total / q).toFixed(2).replace(".", ",") }
                           }))}>−</button>
                           <input type="number" value={it.quantity} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => {
                             if (j !== i) return x
-                            const total = +((x.unit_price || 0) * (x.quantity || 0)).toFixed(2)
+                            const total = +((x.unit_price || 0) * (x.quantity || 0)).toFixed(2).replace(".", ",")
                             const q = Math.max(1, parseInt(e.target.value) || 1)
-                            return { ...x, quantity: q, unit_price: +(total / q).toFixed(2) }
+                            return { ...x, quantity: q, unit_price: +(total / q).toFixed(2).replace(".", ",") }
                           }))} style={{ ...S.input, width: 46, textAlign: "center", padding: "8px 4px" }} />
                           <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 16, background: "rgba(27,42,74,0.12)" }} onClick={() => setScanPreview((cur) => cur.map((x, j) => {
                             if (j !== i) return x
-                            const total = +((x.unit_price || 0) * (x.quantity || 0)).toFixed(2)
+                            const total = +((x.unit_price || 0) * (x.quantity || 0)).toFixed(2).replace(".", ",")
                             const q = x.quantity + 1
-                            return { ...x, quantity: q, unit_price: +(total / q).toFixed(2) }
+                            return { ...x, quantity: q, unit_price: +(total / q).toFixed(2).replace(".", ",") }
                           }))}>+</button>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                           <span style={{ fontSize: 12, color: "#888" }}>€/stuk</span>
                           <input type="number" step="0.01" value={it.unit_price || ""} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, unit_price: parseFloat(e.target.value) || 0 } : x))} style={{ ...S.input, width: 84, padding: "8px 8px" }} />
                         </div>
-                        <span style={{ marginLeft: "auto", fontSize: 13, fontWeight: 800, color: scanMatch ? "#1f8a4c" : "#14213a", whiteSpace: "nowrap" }}>= €{lineTotal.toFixed(2)}</span>
+                        <span style={{ marginLeft: "auto", fontSize: 13, fontWeight: 800, color: scanMatch ? "#1f8a4c" : "#14213a", whiteSpace: "nowrap" }}>= €{lineTotal.toFixed(2).replace(".", ",")}</span>
                       </div>
                       {it.is_shared && (
                         <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 7, fontSize: 11.5, color: "#a06b00", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.45)", borderRadius: 9, padding: "6px 10px", lineHeight: 1.4 }}>
@@ -1974,23 +1974,23 @@ export default function RundoTable() {
               const computed = itemsSum + taxSum
               const billTotalScan = parseFloat((scanTotal || "").replace(",", "."))
               const hasBill = !isNaN(billTotalScan) && billTotalScan > 0
-              const diff = hasBill ? +(computed - billTotalScan).toFixed(2) : 0
+              const diff = hasBill ? +(computed - billTotalScan).toFixed(2).replace(".", ",") : 0
               const ok = hasBill && Math.abs(diff) < 0.01
               return (
                 <div style={{ marginBottom: 14, border: `1.5px solid ${ok ? "rgba(39,174,96,0.4)" : hasBill ? "rgba(224,107,94,0.4)" : "rgba(16,24,40,0.1)"}`, borderRadius: 12, padding: "11px 13px", background: ok ? "rgba(39,174,96,0.06)" : hasBill ? "rgba(224,107,94,0.05)" : "#fafbff" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 12.5, fontWeight: 600, color: "#8a93a3" }}>Items</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>€{itemsSum.toFixed(2)}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>€{itemsSum.toFixed(2).replace(".", ",")}</span>
                   </div>
                   {taxSum > 0 && (
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 3 }}>
                       <span style={{ fontSize: 12.5, fontWeight: 600, color: "#8a93a3" }}>🧮 BTW / kosten</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>€{taxSum.toFixed(2)}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>€{taxSum.toFixed(2).replace(".", ",")}</span>
                     </div>
                   )}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, paddingTop: 6, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
                     <span style={{ fontSize: 13, fontWeight: 800, color: "#14213a" }}>Berekend totaal</span>
-                    <span style={{ fontSize: 17, fontWeight: 800, color: "#14213a" }}>€{computed.toFixed(2)}</span>
+                    <span style={{ fontSize: 17, fontWeight: 800, color: "#14213a" }}>€{computed.toFixed(2).replace(".", ",")}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 8 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Totaal op de bon</span>
@@ -2003,7 +2003,7 @@ export default function RundoTable() {
                     <div style={{ marginTop: 9, fontSize: 12.5, fontWeight: 700, lineHeight: 1.4, color: ok ? "#1f8a4c" : "#c0392b" }}>
                       {ok
                         ? "✅ Klopt met het bon-totaal"
-                        : `⚠️ Verschil van €${Math.abs(diff).toFixed(2)} (${diff > 0 ? "berekend is hoger" : "berekend is lager"}). Controleer aantallen, prijzen en BTW.`}
+                        : `⚠️ Verschil van €${Math.abs(diff).toFixed(2).replace(".", ",")} (${diff > 0 ? "berekend is hoger" : "berekend is lager"}). Controleer aantallen, prijzen en BTW.`}
                     </div>
                   )}
                   {!hasBill && (
@@ -2036,21 +2036,21 @@ export default function RundoTable() {
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <button style={{ ...S.iconBtn, width: 32, height: 38, fontSize: 16 }} onClick={() => setEditItem((cur) => {
                     if (!cur) return cur
-                    const total = +((cur.unit_price || 0) * (cur.quantity || 0)).toFixed(2)
+                    const total = +((cur.unit_price || 0) * (cur.quantity || 0)).toFixed(2).replace(".", ",")
                     const q = Math.max(1, cur.quantity - 1)
-                    return { ...cur, quantity: q, unit_price: +(total / q).toFixed(2) }
+                    return { ...cur, quantity: q, unit_price: +(total / q).toFixed(2).replace(".", ",") }
                   })}>−</button>
                   <input type="number" value={editItem.quantity} onChange={(e) => setEditItem((cur) => {
                     if (!cur) return cur
-                    const total = +((cur.unit_price || 0) * (cur.quantity || 0)).toFixed(2)
+                    const total = +((cur.unit_price || 0) * (cur.quantity || 0)).toFixed(2).replace(".", ",")
                     const q = Math.max(1, parseInt(e.target.value) || 1)
-                    return { ...cur, quantity: q, unit_price: +(total / q).toFixed(2) }
+                    return { ...cur, quantity: q, unit_price: +(total / q).toFixed(2).replace(".", ",") }
                   })} style={{ ...S.input, width: 48, textAlign: "center", padding: "9px 4px" }} />
                   <button style={{ ...S.iconBtn, width: 32, height: 38, fontSize: 16, background: "rgba(27,42,74,0.12)" }} onClick={() => setEditItem((cur) => {
                     if (!cur) return cur
-                    const total = +((cur.unit_price || 0) * (cur.quantity || 0)).toFixed(2)
+                    const total = +((cur.unit_price || 0) * (cur.quantity || 0)).toFixed(2).replace(".", ",")
                     const q = cur.quantity + 1
-                    return { ...cur, quantity: q, unit_price: +(total / q).toFixed(2) }
+                    return { ...cur, quantity: q, unit_price: +(total / q).toFixed(2).replace(".", ",") }
                   })}>+</button>
                 </div>
               </div>
@@ -2060,7 +2060,7 @@ export default function RundoTable() {
               </div>
               <div style={{ paddingBottom: 9 }}>
                 <div style={{ fontSize: 11, color: "#888", fontWeight: 600 }}>Regeltotaal</div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: "#14213a", whiteSpace: "nowrap" }}>€{((editItem.unit_price || 0) * (editItem.quantity || 0)).toFixed(2)}</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: "#14213a", whiteSpace: "nowrap" }}>€{((editItem.unit_price || 0) * (editItem.quantity || 0)).toFixed(2).replace(".", ",")}</div>
               </div>
             </div>
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, marginBottom: 16, cursor: "pointer" }}>
@@ -2210,9 +2210,9 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                   )}
                 </div>
                 <div style={{ flexShrink: 0, textAlign: "right", lineHeight: 1.2 }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: "#1499b0" }}>€{(it.unit_price * it.quantity).toFixed(2)}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: "#1499b0" }}>€{(it.unit_price * it.quantity).toFixed(2).replace(".", ",")}</div>
                   <div style={{ fontSize: 11, fontWeight: 600, color: "#9aa0ab" }}>
-                    {it.is_shared ? "gedeeld" : `€${it.unit_price.toFixed(2)}/stuk${open > 0 ? ` · ${open} open` : ""}`}
+                    {it.is_shared ? "gedeeld" : `€${it.unit_price.toFixed(2).replace(".", ",")}/stuk${open > 0 ? ` · ${open} open` : ""}`}
                   </div>
                 </div>
               </div>
@@ -2249,7 +2249,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                 <div style={{ marginTop: 7, marginLeft: 26 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 5 }}>
                     <span style={{ fontSize: 11, color: "#a06b00", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      <ShareIcon on size={13} /> Wie nam hiervan mee? {heads > 0 ? `${heads} ${heads === 1 ? "persoon" : "personen"} · €${perHead.toFixed(2)} p.p.` : "tik de namen aan"}
+                      <ShareIcon on size={13} /> Wie nam hiervan mee? {heads > 0 ? `${heads} ${heads === 1 ? "persoon" : "personen"} · €${perHead.toFixed(2).replace(".", ",")} p.p.` : "tik de namen aan"}
                     </span>
                     {sh.length > 0 && (
                       <button onClick={() => setShareFixed(it, !fixed)} style={{
@@ -2299,12 +2299,12 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         return (
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1.5px solid rgba(16,24,40,0.08)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Bestelde items: {units}{tax > 0 ? ` · €${sum.toFixed(2)} + BTW €${tax.toFixed(2)}` : ""}</span>
-              {tax === 0 && <span style={{ fontSize: 15, fontWeight: 700, color: "#5a6680" }}>€{sum.toFixed(2)}</span>}
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Bestelde items: {units}{tax > 0 ? ` · €${sum.toFixed(2).replace(".", ",")} + BTW €${tax.toFixed(2).replace(".", ",")}` : ""}</span>
+              {tax === 0 && <span style={{ fontSize: 15, fontWeight: 700, color: "#5a6680" }}>€{sum.toFixed(2).replace(".", ",")}</span>}
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 7, paddingTop: 7, borderTop: tax > 0 ? "1px solid rgba(16,24,40,0.06)" : "none" }}>
               <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>Totaal</span>
-              <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a" }}>€{(sum + tax).toFixed(2)}</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a" }}>€{(sum + tax).toFixed(2).replace(".", ",")}</span>
             </div>
           </div>
         )
@@ -2422,7 +2422,7 @@ function ClaimScreen(props: {
                               border: on ? "1px solid #1499b0" : "1px solid rgba(16,24,40,0.12)",
                               background: on ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff",
                               color: on ? "#fff" : "#5a6680",
-                            }}>{conf ? "✓ " : ""}{p.name} <span style={{ fontWeight: 700, opacity: pt.settled < 0.005 ? 1 : 0.85, color: pt.settled < 0.005 ? (on ? "#ffd7d1" : "#e0685c") : "inherit" }}>€{pt.settled.toFixed(2)}{pt.pendingShared ? "+" : ""}</span></button>
+                            }}>{conf ? "✓ " : ""}{p.name} <span style={{ fontWeight: 700, opacity: pt.settled < 0.005 ? 1 : 0.85, color: pt.settled < 0.005 ? (on ? "#ffd7d1" : "#e0685c") : "inherit" }}>€{pt.settled.toFixed(2).replace(".", ",")}{pt.pendingShared ? "+" : ""}</span></button>
                           )
                         })}
                       </div>
@@ -2450,7 +2450,7 @@ function ClaimScreen(props: {
                           <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={18} /></span>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 14, fontWeight: 700 }}>{it.name} <span style={{ fontSize: 10.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 8, padding: "1px 6px" }}>gedeeld</span></div>
-                            <div style={{ fontSize: 11, color: "#999" }}>€{itemTotal(it).toFixed(2)} totaal{ok ? ` · €${perHead.toFixed(2)} p.p.` : ""}</div>
+                            <div style={{ fontSize: 11, color: "#999" }}>€{itemTotal(it).toFixed(2).replace(".", ",")} totaal{ok ? ` · €${perHead.toFixed(2).replace(".", ",")} p.p.` : ""}</div>
                           </div>
                           <span style={{ fontSize: 11, fontWeight: 800, borderRadius: 10, padding: "2px 9px", color: ok ? "#1f8a4c" : "#c0392b", background: ok ? "rgba(39,174,96,0.12)" : "rgba(224,107,94,0.12)" }}>{ok ? `${heads} ${heads === 1 ? "persoon" : "personen"}` : "nog niemand"}</span>
                         </div>
@@ -2494,7 +2494,7 @@ function ClaimScreen(props: {
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}>{it.quantity}× {it.name}</div>
-                          <div style={{ fontSize: 11, color: "#999" }}>€{it.unit_price.toFixed(2)}/stuk</div>
+                          <div style={{ fontSize: 11, color: "#999" }}>€{it.unit_price.toFixed(2).replace(".", ",")}/stuk</div>
                         </div>
                         {open > 0
                           ? <button onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} style={{ fontSize: 11, fontWeight: 800, borderRadius: 10, padding: "3px 10px", cursor: "pointer", border: "none", color: "#c0392b", background: "rgba(224,107,94,0.14)" }}>{open} open — wijs toe ▾</button>
@@ -2534,7 +2534,7 @@ function ClaimScreen(props: {
               )}
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800, color: "#14213a", marginTop: 6 }}>
                 <span>Totaal rekening</span>
-                <span>€{billSum.toFixed(2)}</span>
+                <span>€{billSum.toFixed(2).replace(".", ",")}</span>
               </div>
             </div>
           )}
@@ -2573,7 +2573,7 @@ function ClaimScreen(props: {
             <div style={{ fontSize: 40, marginBottom: 6 }}>✅</div>
             <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c", margin: "0 0 6px" }}>De rekening is afgesloten</h3>
             <p style={{ fontSize: 13.5, color: "#5a6680", lineHeight: 1.5, margin: "0 0 12px" }}>De beheerder rondde de rekening af. Dit is jouw definitieve deel:</p>
-            <div style={{ fontSize: 34, fontWeight: 800, color: "#14213a", marginBottom: 16 }}>€{t.settled.toFixed(2)}{t.pendingShared ? "+" : ""}</div>
+            <div style={{ fontSize: 34, fontWeight: 800, color: "#14213a", marginBottom: 16 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</div>
             <button onClick={() => { setShowFinalizedPopup(false); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>Bekijk mijn verdeling</button>
           </div>
         </div>
@@ -2603,7 +2603,7 @@ function ClaimScreen(props: {
                   <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={18} /></span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{it.name} <span style={{ fontSize: 11, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 8, padding: "1px 7px" }}>gedeeld</span></div>
-                    <div style={{ fontSize: 11, color: "#999" }}>€{itemTotal(it).toFixed(2)} totaal · wordt gedeeld door wie meedrinkt</div>
+                    <div style={{ fontSize: 11, color: "#999" }}>€{itemTotal(it).toFixed(2).replace(".", ",")} totaal · wordt gedeeld door wie meedrinkt</div>
                   </div>
                   <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...(iShare ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", border: "none" } : {}) }}>{iShare ? "✓ ik deel mee" : "+ meedelen"}</button>
                 </div>
@@ -2620,8 +2620,8 @@ function ClaimScreen(props: {
                     <div style={{ marginTop: 8, fontSize: 12, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.4)", borderRadius: 10, padding: "8px 11px", lineHeight: 1.45, display: "flex", alignItems: "flex-start", gap: 6 }}>
                       <span style={{ flexShrink: 0, marginTop: 1 }}><ShareIcon on size={14} /></span>
                       <span>{fixed
-                        ? <>Jouw deel: €{myShare.toFixed(2)}{myHeads > 1 ? ` (voor ${myHeads} pers.)` : ""} — gedeeld door {heads} {heads === 1 ? "persoon" : "personen"}, vastgelegd door de beheerder.</>
-                        : <>Voorlopig €{myShare.toFixed(2)}{myHeads > 1 ? ` (jullie ${myHeads})` : ""} — gedeeld door {heads} {heads === 1 ? "persoon" : "personen"}. Daalt als meer mensen meedoen.</>}</span>
+                        ? <>Jouw deel: €{myShare.toFixed(2).replace(".", ",")}{myHeads > 1 ? ` (voor ${myHeads} pers.)` : ""} — gedeeld door {heads} {heads === 1 ? "persoon" : "personen"}, vastgelegd door de beheerder.</>
+                        : <>Voorlopig €{myShare.toFixed(2).replace(".", ",")}{myHeads > 1 ? ` (jullie ${myHeads})` : ""} — gedeeld door {heads} {heads === 1 ? "persoon" : "personen"}. Daalt als meer mensen meedoen.</>}</span>
                     </div>
                   ) : (
                     <div style={{ marginTop: 8, fontSize: 12, color: "#5a6680", background: "rgba(90,108,166,0.08)", border: "1px solid rgba(90,108,166,0.25)", borderRadius: 10, padding: "8px 11px", lineHeight: 1.45 }}>
@@ -2640,7 +2640,7 @@ function ClaimScreen(props: {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.name}</span>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: "#1499b0", flexShrink: 0 }}>€{it.unit_price.toFixed(2)}</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: "#1499b0", flexShrink: 0 }}>€{it.unit_price.toFixed(2).replace(".", ",")}</span>
                 </div>
                 <div style={{ fontSize: 11, color: open > 0 ? "#e0685c" : "#1f8a4c", fontWeight: 600 }}>{total}× besteld · {open > 0 ? `${open} nog vrij` : "alles geclaimd"}</div>
               </div>
@@ -2663,7 +2663,7 @@ function ClaimScreen(props: {
                 <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0", color: "#3b486a" }}>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{d.name}{d.shared ? (d.revealed ? (meId && seatsOf(meId) > 1 ? ` (gedeeld, ${d.myHeads} pers.)` : " (gedeeld deel)") : ` (gedeeld door ${d.sharers})`) : ""}</span>
                   <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>
-                    {d.shared && !d.revealed ? "nog te verdelen" : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2)}`}
+                    {d.shared && !d.revealed ? "nog te verdelen" : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}
                   </span>
                 </div>
               ))}
@@ -2672,7 +2672,7 @@ function ClaimScreen(props: {
         })()}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", borderTop: "1px solid rgba(90,108,166,0.18)", paddingTop: 10 }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: "#5a6680" }}>Jouw totaal</span>
-          <span style={{ fontSize: 28, fontWeight: 800, color: "#14213a" }}>€{t.settled.toFixed(2)}{t.pendingShared ? "+" : ""}</span>
+          <span style={{ fontSize: 28, fontWeight: 800, color: "#14213a" }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</span>
         </div>
         {t.pendingShared && (
           <div style={{ marginTop: 8, fontSize: 12.5, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.4)", borderRadius: 10, padding: "8px 11px", lineHeight: 1.4 }}>
@@ -2699,7 +2699,7 @@ function ClaimScreen(props: {
                       <span style={{ fontSize: 11, color: "#9aa0ab", width: 12, flexShrink: 0 }}>{rowOpen ? "▼" : "▶"}</span>
                       <span style={{ fontSize: 13.5, fontWeight: isMe ? 800 : 600, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{isMe ? " (jij)" : ""}</span>
                     </span>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a", flexShrink: 0, marginLeft: 8 }}>€{pt.settled.toFixed(2)}{pt.pendingShared ? "+" : ""}</span>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a", flexShrink: 0, marginLeft: 8 }}>€{pt.settled.toFixed(2).replace(".", ",")}{pt.pendingShared ? "+" : ""}</span>
                   </div>
                   {rowOpen && (
                     <div style={{ padding: "0 8px 10px 26px" }}>
@@ -2707,7 +2707,7 @@ function ClaimScreen(props: {
                       {detail.map((d, k) => (
                         <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#5a6680", padding: "2px 0" }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{d.name}{d.shared ? (d.revealed ? " (gedeeld deel)" : ` (gedeeld door ${d.sharers})`) : ""}</span>
-                          <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>{d.shared && !d.revealed ? "nog te verdelen" : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2)}`}</span>
+                          <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>{d.shared && !d.revealed ? "nog te verdelen" : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}</span>
                         </div>
                       ))}
                     </div>
@@ -2717,7 +2717,7 @@ function ClaimScreen(props: {
             })}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(16,24,40,0.1)" }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Totaal rekening</span>
-              <span style={{ fontSize: 15, fontWeight: 800, color: "#14213a" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2)}</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "#14213a" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2).replace(".", ",")}</span>
             </div>
           </div>
         )}
