@@ -1343,11 +1343,11 @@ export default function RundoTable() {
                 ) : receiptEditing ? (
                   <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>Vul het correcte rekeningtotaal in zoals op de bon</span>
                 ) : match ? (
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>Totaal van de bon correct?</span>
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>Kijk op je bon — klopt dit totaalbedrag?</span>
                 ) : receiptConfirmed ? (
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", marginBottom: 6 }}>Rekeningtotaal op de bon is correct</span>
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", marginBottom: 6 }}>✓ Totaalbedrag klopt met de bon</span>
                 ) : (
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#c0392b", marginBottom: 6 }}>⚠️ Totaal van de bon correct?</span>
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#c0392b", marginBottom: 6 }}>⚠️ Kijk op je bon — klopt dit totaalbedrag?</span>
                 )}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "#9aa0ab" }}>Rekeningtotaal op de bon: €</span>
@@ -1369,7 +1369,7 @@ export default function RundoTable() {
                 )}
                 {mismatch && receiptConfirmed && !receiptEditing && (
                   <div style={{ marginTop: 8, fontSize: 12, color: "#8a4514", lineHeight: 1.5 }}>
-                    <div style={{ fontWeight: 700, marginBottom: 3 }}>Rekeningtotaal is dus correct, maar het itemtotaal (€{billTotal.toFixed(2).replace(".", ",")}) is €{Math.abs(billTotal - (entered ?? 0)).toFixed(2).replace(".", ",")} {billTotal > (entered ?? 0) ? "hoger" : "lager"} dan het rekeningtotaal (€{(entered ?? 0).toFixed(2).replace(".", ",")}). Een scan kan fouten bevatten — controleer hieronder alles goed:</div>
+                    <div style={{ fontWeight: 700, marginBottom: 3 }}>Het totaalbedrag klopt met de bon, maar het itemtotaal (€{billTotal.toFixed(2).replace(".", ",")}) is €{Math.abs(billTotal - (entered ?? 0)).toFixed(2).replace(".", ",")} {billTotal > (entered ?? 0) ? "hoger" : "lager"} dan het rekeningtotaal (€{(entered ?? 0).toFixed(2).replace(".", ",")}). Een scan kan fouten bevatten — controleer hieronder alles goed:</div>
                     <ul style={{ margin: 0, paddingLeft: 18 }}>
                       <li>prijzen/aantallen correct?</li>
                       <li>BTW/andere kosten/kortingen?</li>
