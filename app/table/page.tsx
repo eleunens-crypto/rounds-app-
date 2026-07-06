@@ -1380,6 +1380,10 @@ export default function RundoTable() {
             )
           })()}
 
+          {items.length > 0 && group?.receipt_total != null && Math.abs((group.receipt_total ?? 0) - billTotal) < 0.005 && (
+            <button onClick={() => setAdminTab("guests")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginBottom: 10, padding: "9px 0", fontSize: 13, fontWeight: 800, boxShadow: "0 0 0 2px rgba(39,174,96,0.5), 0 6px 16px -6px rgba(39,174,96,0.6)" }}>Bon correct? Ga naar Gasten en delen! →</button>
+          )}
+
           {items.length > 0 && (
           <ItemList
             items={baseItems} claimedQty={claimedQty} participants={participants} claimsForItem={claimsForItem}
@@ -2186,7 +2190,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   return (
     <div style={S.card}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <h3 style={{ ...S.h3, marginBottom: 0 }}>🧾 Items op de bon</h3>
+        <h3 style={{ ...S.h3, marginBottom: 0, display: "flex", alignItems: "baseline", gap: 8 }}>🧾 Items op de bon{!billOk && <span style={{ fontSize: 13, fontWeight: 800, color: "#c0392b" }}>Checken!</span>}</h3>
       </div>
       {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>Nog geen items — scan de bon</div>}
       {items.map((it) => {
