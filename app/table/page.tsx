@@ -649,7 +649,7 @@ export default function RundoTable() {
     }
     if (error) { setError("Gast toevoegen mislukt: " + error.message); return }
     setNewGuest("")
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_participants")
     return data as Participant
   }
 
@@ -680,7 +680,7 @@ export default function RundoTable() {
       setError("Voeg in Supabase de kolommen finalized (bool) en disputed_by (text) toe aan table_groups.")
       return
     }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_groups")
     setToast(on ? "Rekening afgesloten — gasten kunnen niet meer wijzigen" : "Rekening heropend")
   }
 
@@ -705,7 +705,7 @@ export default function RundoTable() {
     setGroup((g) => g ? { ...g, disputed_by: val } : g)
     const { error } = await supabase.from("table_groups").update({ disputed_by: val }).eq("id", group.id)
     if (error) { setError("Seintje versturen mislukt"); return }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_groups")
   }
 
   const resolveDispute = async (name: string, resolved: boolean) => {
@@ -715,7 +715,7 @@ export default function RundoTable() {
     setGroup((g) => g ? { ...g, disputed_by: val } : g)
     const { error } = await supabase.from("table_groups").update({ disputed_by: val }).eq("id", group.id)
     if (error) { setError("Bijwerken mislukt"); return }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_groups")
   }
 
   const pickMe = (participantId: string) => {
@@ -762,7 +762,7 @@ export default function RundoTable() {
     if (!finalName) return
     setParticipants((cur) => cur.map((p) => p.id === id ? { ...p, name: finalName } : p))
     await supabase.from("table_participants").update({ name: finalName }).eq("id", id)
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_participants")
   }
 
   const startRescan = async () => {
@@ -931,7 +931,7 @@ export default function RundoTable() {
     const { error } = await supabase.from("table_items")
       .insert([{ group_id: group.id, name: "Nieuw item", unit_price: 0, quantity: 1, is_shared: false, category: null }])
     if (error) { setError("Item toevoegen mislukt"); return }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_items")
   }
 
   const openNewItem = (target: "bill" | "scan") =>
@@ -954,7 +954,7 @@ export default function RundoTable() {
       .select().single()
     if (error) { setError("Item toevoegen mislukt"); return }
     setNewItem(null)
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_items")
     if (data?.id) { setRecentItemId(data.id); setTimeout(() => setRecentItemId(null), 6000) }
   }
 
@@ -975,7 +975,7 @@ export default function RundoTable() {
       else setError("BTW toevoegen mislukt: " + error.message)
       return
     }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_items")
   }
 
   const setReceiptTotal = async (val: number | null) => {
@@ -991,13 +991,13 @@ export default function RundoTable() {
     if (rate) patch.name = `BTW ${rate}%`
     const { error } = await supabase.from("table_items").update(patch).eq("id", it.id)
     if (error && /tax_rate/.test(error.message || "")) { setError("Voeg in Supabase de kolom tax_rate toe aan table_items."); return }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_items")
   }
 
   const setDistribute = async (it: BillItem, val: string) => {
     if (!group) return
     await supabase.from("table_items").update({ distribute: val }).eq("id", it.id)
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_items")
   }
 
   const saveItem = async () => {
@@ -1008,14 +1008,14 @@ export default function RundoTable() {
       quantity: editItem.quantity, is_shared: editItem.is_shared,
     }).eq("id", editItem.id)
     if (error) { setError("Opslaan mislukt"); return }
-    setEditItem(null); await loadAll(group.id)
+    setEditItem(null); await reloadTable(group.id, "table_items")
   }
 
   const toggleShared = async (it: BillItem) => {
     if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     if (!group) return
     await supabase.from("table_items").update({ is_shared: !it.is_shared }).eq("id", it.id)
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_items")
   }
 
   const deleteItem = async (id: string) => {
@@ -1052,7 +1052,7 @@ export default function RundoTable() {
     } else {
       await supabase.from("table_claims").insert([{ group_id: group.id, item_id: itemId, participant_id: pid, quantity: qty }])
     }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_claims")
   }
 
   const toggleShareClaim = async (itemId: string, pid: string) => {
@@ -1071,7 +1071,7 @@ export default function RundoTable() {
     if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     if (!group) return
     await supabase.from("table_items").update({ share_fixed: val }).eq("id", it.id)
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_items")
   }
 
   const itemTotal = (it: BillItem) => it.unit_price * it.quantity
@@ -1215,7 +1215,7 @@ export default function RundoTable() {
     } else {
       await supabase.from("table_confirmations").insert([{ group_id: group.id, participant_id: meId }])
     }
-    await loadAll(group.id)
+    await reloadTable(group.id, "table_confirmations")
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
