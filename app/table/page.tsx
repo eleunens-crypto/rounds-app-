@@ -219,6 +219,17 @@ async function preprocessReceipt(file: File): Promise<string> {
 }
 
 // Zet een File om naar pure base64 (zonder de "data:...;base64,"-prefix).
+// Laat in prijsvelden enkel cijfers, één decimaalteken en (optioneel) een leidend minteken door.
+function numFilter(v: string, allowNeg = false): string {
+  let s = v.replace(",", ".").replace(/[^0-9.\-]/g, "")
+  if (allowNeg) { const neg = s.startsWith("-"); s = s.replace(/-/g, ""); if (neg) s = "-" + s }
+  else s = s.replace(/-/g, "")
+  const i = s.indexOf(".")
+  if (i !== -1) s = s.slice(0, i + 1) + s.slice(i + 1).replace(/\./g, "")
+  s = s.replace(/^(-?)0+(?=\d)/, "$1")
+  return s
+}
+
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -361,6 +372,8 @@ export default function RundoTable() {
   const [adminFinalPopup, setAdminFinalPopup] = useState(false)
   // De beheerder bevestigde dat het ingevulde bon-totaal correct is, ook al verschilt het van de items.
   const [receiptConfirmed, setReceiptConfirmed] = useState(false)
+  // De beheerder klikte "Neen" en past het rekeningtotaal aan.
+  const [receiptEditing, setReceiptEditing] = useState(false)
   const receiptInputRef = useRef<HTMLInputElement>(null)
   // Twijfel-vlaggen uit de AI-scan, per item-id (lokaal, om meteen na de scan na te kijken).
   const [scanFlags, setScanFlags] = useState<Record<string, { note: string }>>({})
@@ -387,7 +400,7 @@ export default function RundoTable() {
   const [editItem, setEditItem] = useState<BillItem | null>(null)
   const [newItem, setNewItem] = useState<{ name: string; unit_price: string; quantity: number; is_shared: boolean; target: "bill" | "scan" } | null>(null)
   // Venster om BTW/kosten/korting toe te voegen: stap 1 = naam + bedrag, stap 2 = verdeling kiezen.
-  const [taxModal, setTaxModal] = useState<null | { name: string; amount: string; step: 1 | 2; scope: "all" | "items"; ids: string[] }>(null)
+  const [taxModal, setTaxModal] = useState<null | { name: string; amount: string; scope: "all" | "items"; ids: string[] }>(null)
   const [recentItemId, setRecentItemId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -847,12 +860,12 @@ export default function RundoTable() {
     if (data?.id) { setRecentItemId(data.id); setTimeout(() => setRecentItemId(null), 6000) }
   }
 
-  const confirmTaxModal = async () => {
+  const confirmTaxModal = async (scope: "all" | "items") => {
     if (group?.finalized) { setToast("Heropen de rekening eerst om iets te wijzigen."); return }
     if (!group || !taxModal) return
     const amt = parseFloat((taxModal.amount || "").replace(",", ".")) || 0
     const name = taxModal.name.trim() || "BTW of andere kosten"
-    const dist = taxModal.scope === "items" && taxModal.ids.length > 0 ? JSON.stringify(taxModal.ids) : "all"
+    const dist = scope === "items" && taxModal.ids.length > 0 ? JSON.stringify(taxModal.ids) : "all"
     const { error } = await supabase.from("table_items").insert([{ group_id: group.id, name, unit_price: amt, quantity: 1, is_shared: false, category: null, distribute: dist }])
     if (error) {
       if (/distribute/.test(error.message || "")) setError("Voeg eerst de kolom 'distribute' toe in Supabase (zie instructies).")
@@ -1283,7 +1296,7 @@ export default function RundoTable() {
               <button onClick={startRescan} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#9aa0ab", padding: "2px 4px" }}>🔄 Bon opnieuw scannen</button>
             </div>
           ) : (
-            <button onClick={() => setShowScan(true)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Rekening scannen 📸</button>
+            <button onClick={() => setShowScan(true)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Start hier — Rekening scannen 📸</button>
           )}
 
           {/* Scan-label helemaal bovenaan: enkel een vinkje dat de scan lukte en items herkend werden */}
@@ -1295,44 +1308,55 @@ export default function RundoTable() {
             </div>
           )}
 
-          {/* Bon-totaal: heading altijd; ja/neen bij verschil (ja = totaal klopt, items nakijken); vinkje + deel-knop als het klopt */}
+          {/* Bon-totaal: ja/neen bij verschil. Ja = totaal klopt (items nakijken). Neen = totaal aanpassen + bevestigen. */}
           {items.length > 0 && (() => {
             const entered = group?.receipt_total ?? null
             const match = entered != null && Math.abs(entered - billTotal) < 0.005
             const mismatch = entered != null && !match
             const totalGreen = match || (mismatch && receiptConfirmed)
             const saveTotal = () => { setReceiptConfirmed(false); const raw = (receiptInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }
+            const jaBtn = { border: "none", background: "#27ae60", color: "#fff", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer" }
+            const neenBtn = { border: "1.5px solid rgba(20,33,58,0.2)", background: "#fff", color: "#5a6680", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer" }
+            const jaNeen = (
+              <span style={{ display: "inline-flex", gap: 6 }}>
+                <button onClick={() => { setReceiptConfirmed(true); setReceiptEditing(false) }} style={{ ...jaBtn, opacity: receiptConfirmed ? 1 : 0.55 }}>Ja</button>
+                <button onClick={() => { setReceiptEditing(true); setReceiptConfirmed(false); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }} style={{ ...neenBtn, ...(receiptEditing ? { borderColor: "#1499b0", color: "#1499b0" } : {}) }}>Neen</button>
+              </span>
+            )
             return (
               <div style={{ ...S.card, padding: "11px 14px", marginBottom: 12, background: totalGreen ? "rgba(39,174,96,0.06)" : mismatch ? "rgba(224,107,94,0.06)" : "#fff", border: totalGreen ? "1.5px solid rgba(39,174,96,0.45)" : mismatch ? "1.5px solid rgba(224,107,94,0.5)" : "1px solid rgba(16,24,40,0.08)" }}>
                 {entered == null ? (
                   <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#5a6680", marginBottom: 8 }}>Vul het totaal van de bon in — items: €{billTotal.toFixed(2)}</span>
+                ) : match ? (
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>Totaal van de bon correct?</span>
+                ) : receiptConfirmed ? (
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", marginBottom: 6 }}>Rekeningtotaal op de bon is correct</span>
+                ) : receiptEditing ? (
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>Vul het correcte rekeningtotaal in zoals op de bon</span>
                 ) : (
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: mismatch && !receiptConfirmed ? "#c0392b" : "#14213a", marginBottom: 6 }}>
-                    {mismatch && !receiptConfirmed ? "⚠️ " : ""}Totaal van de bon correct?
-                  </span>
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#c0392b", marginBottom: 6 }}>⚠️ Totaal van de bon correct?</span>
                 )}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "#9aa0ab" }}>Rekeningtotaal op de bon: €</span>
                   <input ref={receiptInputRef} type="text" inputMode="decimal" defaultValue={entered != null ? entered.toFixed(2) : ""} key={entered ?? "leeg"} placeholder="bv. 65.90"
+                    onInput={(e) => { e.currentTarget.value = numFilter(e.currentTarget.value) }}
                     onBlur={saveTotal}
                     onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
                     style={{ ...S.input, width: 100, padding: "6px 9px", fontSize: 16, fontWeight: 700 }} />
                   {totalGreen && <span title="Bon-totaal bevestigd" style={{ color: "#1f8a4c", fontSize: 22, fontWeight: 800, lineHeight: 1 }}>✓</span>}
-                  {mismatch && !receiptConfirmed && (
-                    <span style={{ display: "inline-flex", gap: 6 }}>
-                      <button onClick={() => setReceiptConfirmed(true)} style={{ border: "none", background: "#27ae60", color: "#fff", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Ja</button>
-                      <button onClick={() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }} style={{ border: "1.5px solid rgba(20,33,58,0.2)", background: "#fff", color: "#5a6680", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Neen</button>
-                    </span>
+                  {mismatch && receiptEditing && !receiptConfirmed && (
+                    <button onClick={() => { saveTotal(); setReceiptConfirmed(true); setReceiptEditing(false) }} title="Bevestig dit bedrag" style={{ ...jaBtn }}>✓ Bevestig</button>
                   )}
+                  {mismatch && jaNeen}
                 </div>
                 {match && (
                   <div style={{ marginTop: 8, fontSize: 12, color: "#5a6680", lineHeight: 1.5 }}>
                     ⚠️ Controleer alles goed — bedrag correct, maar een scan kan fouten bevatten, zeker bij een onduidelijke bon. Kijk namen, aantallen en prijzen na, en markeer gedeelde items indien nodig.
                   </div>
                 )}
-                {mismatch && (
+                {mismatch && receiptConfirmed && (
                   <div style={{ marginTop: 8, fontSize: 12, color: "#8a4514", lineHeight: 1.5 }}>
-                    <div style={{ fontWeight: 700, marginBottom: 3 }}>Itemtotaal is verschillend van rekeningtotaal. Een scan kan fouten bevatten — controleer alles goed:</div>
+                    <div style={{ fontWeight: 700, marginBottom: 3 }}>Rekeningtotaal is dus correct, maar het itemtotaal is verschillend. Een scan kan fouten bevatten — controleer hieronder alles goed:</div>
                     <ul style={{ margin: 0, paddingLeft: 18 }}>
                       <li>prijzen/aantallen correct?</li>
                       <li>BTW/andere kosten/kortingen?</li>
@@ -1428,7 +1452,7 @@ export default function RundoTable() {
                   )
                 })}
                 <div style={{ display: "flex", gap: 6, alignItems: "center", justifyContent: "flex-end", marginTop: 8 }}>
-                  <button onClick={() => setTaxModal({ name: "BTW of andere kosten", amount: "", step: 1, scope: "all", ids: [] })} style={{ ...S.btn, fontWeight: 700, fontSize: 12.5, padding: "7px 14px" }}>🧮 BTW / kosten / korting</button>
+                  <button onClick={() => setTaxModal({ name: "BTW of andere kosten", amount: "", scope: "all", ids: [] })} style={{ ...S.btn, fontWeight: 700, fontSize: 12.5, padding: "7px 14px" }}>🧮 BTW / kosten / korting</button>
                   <button onClick={() => setShowTaxInfo(true)} style={{ ...S.btn, fontWeight: 700, fontSize: 12.5, padding: "7px 12px" }} title="uitleg">ℹ️</button>
                 </div>
               </div>
@@ -1725,49 +1749,47 @@ export default function RundoTable() {
       )}
 
       {/* ─── Venster: BTW / kosten / korting toevoegen (stap 1: bedrag, stap 2: verdeling) ─── */}
-      {taxModal && (
+      {taxModal && (() => {
+        const hasAmount = !!taxModal.amount.trim() && (parseFloat(taxModal.amount.replace(",", ".")) || 0) !== 0
+        return (
         <div style={S.overlay} onClick={() => setTaxModal(null)}>
           <div style={{ ...S.modal, width: 360, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0, marginBottom: 12, fontSize: 18, fontWeight: 800 }}>🧮 BTW / kosten / korting</h3>
-            {taxModal.step === 1 ? (
-              <>
-                <label style={{ fontSize: 12, fontWeight: 700, color: "#5a6680" }}>Omschrijving</label>
-                <input value={taxModal.name} onChange={(e) => setTaxModal({ ...taxModal, name: e.target.value })} placeholder="bv. Bediening, Couvert, Korting" style={{ ...S.input, width: "100%", boxSizing: "border-box", margin: "4px 0 12px" }} />
-                <label style={{ fontSize: 12, fontWeight: 700, color: "#5a6680" }}>Bedrag € (gebruik een minteken voor een korting)</label>
-                <input type="text" inputMode="decimal" value={taxModal.amount} onChange={(e) => setTaxModal({ ...taxModal, amount: e.target.value.replace(/^(-?)0+(?=\d)/, "$1") })} placeholder="bv. 5.00" style={{ ...S.input, width: "100%", boxSizing: "border-box", margin: "4px 0 16px", fontSize: 16 }} autoFocus />
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={() => setTaxModal(null)} style={{ ...S.btn, flex: 1, fontWeight: 700 }}>Annuleren</button>
-                  <button onClick={() => setTaxModal({ ...taxModal, step: 2 })} disabled={!taxModal.amount.trim()} style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 800, opacity: taxModal.amount.trim() ? 1 : 0.5 }}>Toevoegen →</button>
-                </div>
-              </>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#5a6680" }}>Omschrijving</label>
+            <input value={taxModal.name} onChange={(e) => setTaxModal({ ...taxModal, name: e.target.value })} placeholder="bv. Bediening, Couvert, Korting" style={{ ...S.input, width: "100%", boxSizing: "border-box", margin: "4px 0 12px" }} />
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#5a6680" }}>Bedrag € (gebruik een minteken voor een korting)</label>
+            <input type="text" inputMode="decimal" value={taxModal.amount} onChange={(e) => setTaxModal({ ...taxModal, amount: numFilter(e.target.value, true) })} placeholder="bv. 5.00" style={{ ...S.input, width: "100%", boxSizing: "border-box", margin: "4px 0 16px", fontSize: 16 }} autoFocus />
+            {!hasAmount ? (
+              <div style={{ fontSize: 12, color: "#9aa0ab", marginBottom: 12 }}>Vul een bedrag in om verder te gaan.</div>
             ) : (
               <>
-                <p style={{ fontSize: 13, color: "#5a6680", margin: "0 0 10px", lineHeight: 1.5 }}>Hoe wil je <b>{taxModal.name.trim() || "deze kost"}</b> (€{(parseFloat((taxModal.amount || "").replace(",", ".")) || 0).toFixed(2)}) verdelen?</p>
-                <button onClick={() => setTaxModal({ ...taxModal, scope: "all" })} style={{ width: "100%", textAlign: "left", padding: "11px 14px", marginBottom: 8, borderRadius: 10, fontSize: 13.5, fontWeight: 700, cursor: "pointer", border: taxModal.scope === "all" ? "2px solid #1499b0" : "1.5px solid rgba(20,33,58,0.15)", background: taxModal.scope === "all" ? "rgba(20,153,176,0.08)" : "#fff", color: "#14213a" }}>📊 Over de hele rekening</button>
-                <button onClick={() => setTaxModal({ ...taxModal, scope: "items" })} style={{ width: "100%", textAlign: "left", padding: "11px 14px", marginBottom: 8, borderRadius: 10, fontSize: 13.5, fontWeight: 700, cursor: "pointer", border: taxModal.scope === "items" ? "2px solid #1499b0" : "1.5px solid rgba(20,33,58,0.15)", background: taxModal.scope === "items" ? "rgba(20,153,176,0.08)" : "#fff", color: "#14213a" }}>🎯 Over bepaalde items</button>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: "#5a6680", marginBottom: 6 }}>Verdelen over:</div>
+                <button onClick={() => confirmTaxModal("all")} style={{ width: "100%", textAlign: "left", padding: "12px 14px", marginBottom: 8, borderRadius: 10, fontSize: 13.5, fontWeight: 800, cursor: "pointer", border: "1.5px solid rgba(20,153,176,0.4)", background: "rgba(20,153,176,0.08)", color: "#14213a" }}>📊 Over de hele rekening</button>
+                <button onClick={() => setTaxModal({ ...taxModal, scope: "items" })} style={{ width: "100%", textAlign: "left", padding: "12px 14px", marginBottom: 8, borderRadius: 10, fontSize: 13.5, fontWeight: 800, cursor: "pointer", border: taxModal.scope === "items" ? "2px solid #1499b0" : "1.5px solid rgba(20,33,58,0.15)", background: taxModal.scope === "items" ? "rgba(20,153,176,0.08)" : "#fff", color: "#14213a" }}>🎯 Over bepaalde items</button>
                 {taxModal.scope === "items" && (
-                  <div style={{ margin: "4px 0 8px", maxHeight: 200, overflowY: "auto", border: "1px solid rgba(20,33,58,0.12)", borderRadius: 10, padding: "6px 4px" }}>
-                    {baseItems.length === 0 && <div style={{ fontSize: 12, color: "#9aa0ab", padding: 8 }}>Nog geen items.</div>}
-                    {baseItems.map((it) => {
-                      const on = taxModal.ids.includes(it.id)
-                      return (
-                        <button key={it.id} onClick={() => setTaxModal({ ...taxModal, ids: on ? taxModal.ids.filter((x) => x !== it.id) : [...taxModal.ids, it.id] })} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", padding: "7px 10px", border: "none", background: on ? "rgba(20,153,176,0.08)" : "transparent", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>
-                          <span style={{ width: 18, height: 18, borderRadius: 5, border: on ? "none" : "1.5px solid #b8c0cf", background: on ? "#1499b0" : "#fff", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{on ? "✓" : ""}</span>
-                          <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{it.quantity}× {it.name}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
+                  <>
+                    <div style={{ margin: "4px 0 8px", maxHeight: 200, overflowY: "auto", border: "1px solid rgba(20,33,58,0.12)", borderRadius: 10, padding: "6px 4px" }}>
+                      {baseItems.length === 0 && <div style={{ fontSize: 12, color: "#9aa0ab", padding: 8 }}>Nog geen items.</div>}
+                      {baseItems.map((it) => {
+                        const on = taxModal.ids.includes(it.id)
+                        return (
+                          <button key={it.id} onClick={() => setTaxModal({ ...taxModal, ids: on ? taxModal.ids.filter((x) => x !== it.id) : [...taxModal.ids, it.id] })} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", padding: "7px 10px", border: "none", background: on ? "rgba(20,153,176,0.08)" : "transparent", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>
+                            <span style={{ width: 18, height: 18, borderRadius: 5, border: on ? "none" : "1.5px solid #b8c0cf", background: on ? "#1499b0" : "#fff", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{on ? "✓" : ""}</span>
+                            <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{it.quantity}× {it.name}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <button onClick={() => confirmTaxModal("items")} disabled={taxModal.ids.length === 0} style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 800, opacity: taxModal.ids.length === 0 ? 0.5 : 1 }}>Bevestigen</button>
+                  </>
                 )}
-                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                  <button onClick={() => setTaxModal({ ...taxModal, step: 1 })} style={{ ...S.btn, flex: 1, fontWeight: 700 }}>← Terug</button>
-                  <button onClick={confirmTaxModal} disabled={taxModal.scope === "items" && taxModal.ids.length === 0} style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 800, opacity: (taxModal.scope === "items" && taxModal.ids.length === 0) ? 0.5 : 1 }}>Bevestigen</button>
-                </div>
               </>
             )}
+            <button onClick={() => setTaxModal(null)} style={{ ...S.btn, width: "100%", fontWeight: 700, marginTop: 10 }}>Annuleren</button>
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* ─── Pop-up: rekening afgesloten (voor de beheerder), met overzicht per persoon ─── */}
       {adminFinalPopup && (
@@ -1960,7 +1982,7 @@ export default function RundoTable() {
                     <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Totaal op de bon</span>
                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <span style={{ color: "#999" }}>€</span>
-                      <input type="number" step="0.01" placeholder="0.00" value={scanTotal} onChange={(e) => setScanTotal(e.target.value.replace(/^0+(?=\d)/, ""))} style={{ ...S.input, width: 90, textAlign: "right", padding: "8px 8px" }} />
+                      <input type="number" step="0.01" placeholder="0.00" value={scanTotal} onChange={(e) => setScanTotal(numFilter(e.target.value))} style={{ ...S.input, width: 90, textAlign: "right", padding: "8px 8px" }} />
                     </div>
                   </div>
                   {hasBill && (
@@ -2058,7 +2080,7 @@ export default function RundoTable() {
               </div>
               <div style={{ flex: 1, minWidth: 90 }}>
                 <label style={S.lbl}>Prijs/stuk (€)</label>
-                <input type="number" step="0.01" placeholder="0.00" value={newItem.unit_price} onChange={(e) => setNewItem({ ...newItem, unit_price: e.target.value.replace(/^0+(?=\d)/, "") })} style={{ ...S.input, width: "100%", boxSizing: "border-box" }} />
+                <input type="number" step="0.01" placeholder="0.00" value={newItem.unit_price} onChange={(e) => setNewItem({ ...newItem, unit_price: numFilter(e.target.value) })} style={{ ...S.input, width: "100%", boxSizing: "border-box" }} />
               </div>
             </div>
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, marginBottom: 16, cursor: "pointer" }}>
