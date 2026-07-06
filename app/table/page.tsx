@@ -310,6 +310,15 @@ export default function RundoTable() {
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
 
+  // Zorg dat het scherm op iPhone/Android altijd volledig toont en niet inzoomt bij het tikken
+  // in een invoerveld (iOS zoomt anders in en toont niet alles). We forceren de juiste viewport.
+  useEffect(() => {
+    if (typeof document === "undefined") return
+    let meta = document.querySelector('meta[name="viewport"]') as HTMLMetaElement | null
+    if (!meta) { meta = document.createElement("meta"); meta.name = "viewport"; document.head.appendChild(meta) }
+    meta.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover")
+  }, [])
+
   // Sluit het mobiele toetsenbord zodra je buiten een invoerveld tikt (op een knop of lege ruimte).
   useEffect(() => {
     const isField = (el: EventTarget | null) => {
@@ -349,6 +358,7 @@ export default function RundoTable() {
 
   const [adminTab, setAdminTab] = useState<AdminTab>("scan")
   const [showScan, setShowScan] = useState(false)
+  const [adminFinalPopup, setAdminFinalPopup] = useState(false)
   const receiptInputRef = useRef<HTMLInputElement>(null)
   // Twijfel-vlaggen uit de AI-scan, per item-id (lokaal, om meteen na de scan na te kijken).
   const [scanFlags, setScanFlags] = useState<Record<string, { note: string }>>({})
@@ -612,6 +622,7 @@ export default function RundoTable() {
     }
     await loadAll(group.id)
     setToast(on ? "Rekening afgesloten — gasten kunnen niet meer wijzigen" : "Rekening heropend")
+    if (on) setAdminFinalPopup(true)
   }
 
   const flagDispute = async (name: string, on: boolean, comment = "") => {
@@ -1260,29 +1271,26 @@ export default function RundoTable() {
             const entered = group?.receipt_total ?? null
             const match = entered != null && Math.abs(entered - billTotal) < 0.005
             const mismatch = entered != null && !match
+            const saveTotal = () => { const raw = (receiptInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }
             return (
               <div style={{ ...S.card, padding: "11px 14px", marginBottom: 12, background: match ? "rgba(39,174,96,0.10)" : mismatch ? "rgba(224,107,94,0.08)" : "#fff", border: match ? "1.5px solid rgba(39,174,96,0.5)" : mismatch ? "1.5px solid rgba(224,107,94,0.55)" : "1px solid rgba(16,24,40,0.08)" }}>
-                <span style={{ display: "block", fontSize: 13, fontWeight: 700, lineHeight: 1.45, color: match ? "#1f8a4c" : mismatch ? "#c0392b" : "#5a6680" }}>
-                  {entered == null
-                    ? `Totaal van de items: €${billTotal.toFixed(2)}`
-                    : match
-                    ? `✅ Bon-totaal en items kloppen: €${billTotal.toFixed(2)}`
-                    : `⚠️ Items €${billTotal.toFixed(2)} ≠ bon-totaal €${entered.toFixed(2)} (verschil €${Math.abs(entered - billTotal).toFixed(2)}). Check het ingevulde bon-totaal en corrigeer de items (prijzen/aantallen).`}
-                </span>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
+                {entered == null && (
+                  <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#5a6680", marginBottom: 8 }}>Totaal van de items: €{billTotal.toFixed(2)}</span>
+                )}
+                {mismatch && (
+                  <span style={{ display: "block", fontSize: 13, fontWeight: 700, lineHeight: 1.45, color: "#c0392b", marginBottom: 8 }}>⚠️ Check het totaal van de bon en/of corrigeer de items /prijzen/aantallen hieronder!</span>
+                )}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "#9aa0ab" }}>Rekeningtotaal op de bon: €</span>
                   <input ref={receiptInputRef} type="text" inputMode="decimal" defaultValue={entered != null ? entered.toFixed(2) : ""} key={entered ?? "leeg"} placeholder="bv. 65.90"
-                    onBlur={(e) => { const raw = e.target.value.trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }}
+                    onBlur={saveTotal}
                     onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
-                    style={{ ...S.input, width: 100, padding: "6px 9px", fontSize: 13, fontWeight: 700 }} />
-                  <button
-                    onClick={() => { const raw = (receiptInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }}
-                    title="Bevestig het ingevulde bon-totaal"
-                    style={{ border: "none", background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff", borderRadius: 9, padding: "7px 12px", fontSize: 13, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}
-                  >
-                    ✓ Bevestig
-                  </button>
+                    style={{ ...S.input, width: 100, padding: "6px 9px", fontSize: 16, fontWeight: 700 }} />
+                  {match && <span title="Bon-totaal en items kloppen" style={{ color: "#1f8a4c", fontSize: 22, fontWeight: 800, lineHeight: 1 }}>✓</span>}
                 </div>
+                {match && (
+                  <button onClick={() => setAdminTab("guests")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 10, padding: "12px 0", fontSize: 14.5, fontWeight: 800 }}>Bon correct? Ga naar Gasten en delen! →</button>
+                )}
               </div>
             )
           })()}
@@ -1673,6 +1681,32 @@ export default function RundoTable() {
         </div>
       )}
 
+      {/* ─── Pop-up: rekening afgesloten (voor de beheerder), met overzicht per persoon ─── */}
+      {adminFinalPopup && (
+        <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setAdminFinalPopup(false)}>
+          <div style={{ ...S.modal, width: 360, maxHeight: "84vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ textAlign: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 40, marginBottom: 4 }}>✅</div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c", margin: "0 0 4px" }}>Rekening afgesloten</h3>
+              <p style={{ fontSize: 13, color: "#5a6680", lineHeight: 1.5, margin: 0 }}>Je gasten kunnen niets meer wijzigen. Dit is de verdeling per persoon:</p>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {participants.map((p) => {
+                const pt = personTotal(p.id)
+                return (
+                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, background: "rgba(20,153,176,0.06)", border: "1px solid rgba(20,153,176,0.18)" }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: "#1499b0", flexShrink: 0 }}>€{pt.settled.toFixed(2)}{pt.pendingShared ? "+" : ""}</span>
+                  </div>
+                )
+              })}
+              {participants.length === 0 && <div style={{ fontSize: 13, color: "#9aa0ab", textAlign: "center" }}>Nog geen gasten toegevoegd.</div>}
+            </div>
+            <button onClick={() => setAdminFinalPopup(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 14, padding: "12px 0", fontWeight: 800 }}>Sluiten</button>
+          </div>
+        </div>
+      )}
+
       {/* ─── Modal: bon scannen ─── */}
       {showScan && (
         <div style={S.overlay}>
@@ -1715,7 +1749,6 @@ export default function RundoTable() {
               <div style={{ marginBottom: 12, maxHeight: 320, overflowY: "auto", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: "#c98a00", textTransform: "uppercase" }}>{scanPreview.filter((x) => !x.distribute).length} herkend — controleer en stuur bij</div>
-                  <button onClick={() => openNewItem("scan")} style={{ ...S.btn, ...S.btnPrimary, padding: "5px 12px", fontSize: 12, fontWeight: 700 }}>+ Item toevoegen</button>
                 </div>
                 {scanPreview.map((it, i) => ({ it, i })).sort((a, b) => (a.it.distribute ? 1 : 0) - (b.it.distribute ? 1 : 0)).map(({ it, i }) => {
                   const lineTotal = (it.unit_price || 0) * (it.quantity || 0)
@@ -1730,7 +1763,7 @@ export default function RundoTable() {
                           <span style={{ fontSize: 16 }}>🧮</span>
                           <input value={it.name} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} style={{ ...S.input, flex: 1, minWidth: 0, fontWeight: 700 }} />
                           <span style={{ fontSize: 12, color: "#888" }}>€</span>
-                          <input type="number" step="0.01" value={it.unit_price} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, unit_price: parseFloat(e.target.value) || 0, quantity: 1 } : x))} style={{ ...S.input, width: 80, textAlign: "right", padding: "8px 8px" }} />
+                          <input type="number" step="0.01" value={it.unit_price || ""} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, unit_price: parseFloat(e.target.value) || 0, quantity: 1 } : x))} style={{ ...S.input, width: 80, textAlign: "right", padding: "8px 8px" }} />
                           <button onClick={() => setScanPreview((cur) => cur.filter((_, j) => j !== i))} style={{ ...S.iconBtn, flexShrink: 0 }}>✕</button>
                         </div>
                         <div style={{ fontSize: 10.5, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 4 }}>Hoe verdelen?</div>
@@ -1787,7 +1820,7 @@ export default function RundoTable() {
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                           <span style={{ fontSize: 12, color: "#888" }}>€/stuk</span>
-                          <input type="number" step="0.01" value={it.unit_price} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, unit_price: parseFloat(e.target.value) || 0 } : x))} style={{ ...S.input, width: 84, padding: "8px 8px" }} />
+                          <input type="number" step="0.01" value={it.unit_price || ""} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, unit_price: parseFloat(e.target.value) || 0 } : x))} style={{ ...S.input, width: 84, padding: "8px 8px" }} />
                         </div>
                         <span style={{ marginLeft: "auto", fontSize: 13, fontWeight: 800, color: scanMatch ? "#1f8a4c" : "#14213a", whiteSpace: "nowrap" }}>= €{lineTotal.toFixed(2)}</span>
                       </div>
@@ -1839,7 +1872,7 @@ export default function RundoTable() {
                     <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Totaal op de bon</span>
                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <span style={{ color: "#999" }}>€</span>
-                      <input type="number" step="0.01" placeholder="0.00" value={scanTotal} onChange={(e) => setScanTotal(e.target.value)} style={{ ...S.input, width: 90, textAlign: "right", padding: "8px 8px" }} />
+                      <input type="number" step="0.01" placeholder="0.00" value={scanTotal} onChange={(e) => setScanTotal(e.target.value.replace(/^0+(?=\d)/, ""))} style={{ ...S.input, width: 90, textAlign: "right", padding: "8px 8px" }} />
                     </div>
                   </div>
                   {hasBill && (
@@ -1899,7 +1932,7 @@ export default function RundoTable() {
               </div>
               <div style={{ flex: 1, minWidth: 90 }}>
                 <label style={S.lbl}>Prijs/stuk (€)</label>
-                <input type="number" step="0.01" value={editItem.unit_price} onChange={(e) => setEditItem({ ...editItem, unit_price: parseFloat(e.target.value) || 0 })} style={{ ...S.input, width: "100%", boxSizing: "border-box" }} />
+                <input type="number" step="0.01" value={editItem.unit_price || ""} onChange={(e) => setEditItem({ ...editItem, unit_price: parseFloat(e.target.value) || 0 })} style={{ ...S.input, width: "100%", boxSizing: "border-box" }} />
               </div>
               <div style={{ paddingBottom: 9 }}>
                 <div style={{ fontSize: 11, color: "#888", fontWeight: 600 }}>Regeltotaal</div>
@@ -1937,7 +1970,7 @@ export default function RundoTable() {
               </div>
               <div style={{ flex: 1, minWidth: 90 }}>
                 <label style={S.lbl}>Prijs/stuk (€)</label>
-                <input type="number" step="0.01" placeholder="0.00" value={newItem.unit_price} onChange={(e) => setNewItem({ ...newItem, unit_price: e.target.value })} style={{ ...S.input, width: "100%", boxSizing: "border-box" }} />
+                <input type="number" step="0.01" placeholder="0.00" value={newItem.unit_price} onChange={(e) => setNewItem({ ...newItem, unit_price: e.target.value.replace(/^0+(?=\d)/, "") })} style={{ ...S.input, width: "100%", boxSizing: "border-box" }} />
               </div>
             </div>
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, marginBottom: 16, cursor: "pointer" }}>
@@ -2153,14 +2186,6 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
           </div>
         )
       })()}
-      {onGoGuests && (
-        <>
-          {billOk && (
-            <div style={{ marginTop: 16, marginBottom: -4, background: "rgba(39,174,96,0.10)", border: "1px solid rgba(39,174,96,0.5)", borderRadius: 10, padding: "8px 12px", fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", textAlign: "center" }}>✅ Bon-totaal en items kloppen</div>
-          )}
-          <button onClick={onGoGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, padding: "14px 0", fontSize: 15, fontWeight: 700 }}>👥 Ga nu naar gasten en delen →</button>
-        </>
-      )}
     </div>
   )
 }
@@ -2353,7 +2378,7 @@ function ClaimScreen(props: {
                         {who.map(({ p, q: pq }) => (
                           <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, borderRadius: 10, padding: "2px 4px 2px 9px", color: p.id === adminPid ? "#5a4a1a" : "#5a6680", background: p.id === adminPid ? "rgba(233,196,95,0.5)" : "rgba(90,108,166,0.1)" }}>
                             {p.name} ×{pq}
-                            <button onClick={() => setClaim(it.id, p.id, Math.max(0, pq - 1))} title="−1" style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: 18, height: 18, cursor: "pointer", fontSize: 12, lineHeight: 1 }}>−</button>
+                            <button onClick={() => setClaim(it.id, p.id, Math.max(0, pq - 1))} title="verwijder er één" style={{ border: "2px solid #2b2f38", background: "#fff", color: "#c0392b", borderRadius: 6, width: 26, height: 22, cursor: "pointer", fontSize: 15, fontWeight: 800, lineHeight: 1 }}>−</button>
                           </span>
                         ))}
                         {who.length === 0 && open === 0 && <span style={{ fontSize: 11, color: "#aaa" }}>—</span>}
@@ -2493,7 +2518,7 @@ function ClaimScreen(props: {
                 </div>
                 <div style={{ fontSize: 11, color: open > 0 ? "#e0685c" : "#1f8a4c", fontWeight: 600 }}>{total}× besteld · {open > 0 ? `${open} nog vrij` : "alles geclaimd"}</div>
               </div>
-              <button style={{ ...S.iconBtn, width: 32, height: 32, fontSize: 16 }} onClick={() => setClaim(it.id, meId, Math.max(0, mine - 1))} disabled={mine <= 0}>−</button>
+              <button style={{ width: 42, height: 34, fontSize: 20, fontWeight: 800, lineHeight: 1, borderRadius: 8, cursor: mine > 0 ? "pointer" : "default", color: mine > 0 ? "#c0392b" : "#c9ced8", background: "#fff", border: "2px solid " + (mine > 0 ? "#2b2f38" : "#e2e6ee") }} onClick={() => setClaim(it.id, meId, Math.max(0, mine - 1))} disabled={mine <= 0} title="verwijder er één">−</button>
               <span style={{ fontSize: 16, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{mine}</span>
               <button style={{ ...S.iconBtn, width: 32, height: 32, fontSize: 16, background: "rgba(27,42,74,0.12)" }} onClick={() => setClaim(it.id, meId, mine + 1)} disabled={open <= 0}>+</button>
             </div>
