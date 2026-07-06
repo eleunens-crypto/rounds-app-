@@ -370,6 +370,8 @@ export default function RundoTable() {
   const [adminTab, setAdminTab] = useState<AdminTab>("scan")
   const [showScan, setShowScan] = useState(false)
   const [adminFinalPopup, setAdminFinalPopup] = useState(false)
+  const [showShareWarn, setShowShareWarn] = useState(false)   // waarschuwing bij delen terwijl totalen niet kloppen
+  const [showFinalizeWarn, setShowFinalizeWarn] = useState(false) // waarschuwing bij afsluiten terwijl totalen niet kloppen
   // De beheerder bevestigde dat het ingevulde bon-totaal correct is, ook al verschilt het van de items.
   const [receiptConfirmed, setReceiptConfirmed] = useState(false)
   // De beheerder klikte "Neen" en past het rekeningtotaal aan.
@@ -1113,6 +1115,8 @@ export default function RundoTable() {
   }
 
   const billTotal = items.reduce((s, it) => s + itemTotal(it), 0)
+  const billOk = (group?.receipt_total ?? null) != null && Math.abs((group?.receipt_total ?? 0) - billTotal) < 0.005
+  const goGuests = () => { if (billOk) setAdminTab("guests"); else setShowShareWarn(true) }
   const openUnits = baseItems.filter((it) => !it.is_shared)
     .reduce((s, it) => s + Math.max(0, it.quantity - claimedQty(it.id)), 0)
   const undecidedShared = baseItems.filter((it) => it.is_shared && sharerIds(it.id).length === 0)
@@ -1381,7 +1385,7 @@ export default function RundoTable() {
           })()}
 
           {items.length > 0 && group?.receipt_total != null && Math.abs((group.receipt_total ?? 0) - billTotal) < 0.005 && (
-            <button onClick={() => setAdminTab("guests")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginBottom: 10, padding: "9px 0", fontSize: 13, fontWeight: 800, boxShadow: "0 0 0 2px rgba(39,174,96,0.5), 0 6px 16px -6px rgba(39,174,96,0.6)" }}>Bon correct? Ga naar Gasten en delen! →</button>
+            <button onClick={goGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginBottom: 10, padding: "9px 0", fontSize: 13, fontWeight: 800, boxShadow: "0 0 0 2px rgba(39,174,96,0.5), 0 6px 16px -6px rgba(39,174,96,0.6)" }}>Bon correct? Ga naar Gasten en delen! →</button>
           )}
 
           {items.length > 0 && (
@@ -1389,7 +1393,7 @@ export default function RundoTable() {
             items={baseItems} claimedQty={claimedQty} participants={participants} claimsForItem={claimsForItem}
             sharerIds={sharerIds} shareHeads={shareHeads} toggleShareClaim={toggleShareClaim} setShareFixed={setShareFixed}
             onEdit={setEditItem} onToggleShared={toggleShared} onDelete={deleteItem} onAddManual={() => openNewItem("bill")} bareBill
-            recentItemId={recentItemId} onGoGuests={() => setAdminTab("guests")}
+            recentItemId={recentItemId} onGoGuests={goGuests}
             scanFlags={scanFlags}
             billOk={group?.receipt_total != null && Math.abs((group.receipt_total ?? 0) - billTotal) < 0.005}
             taxLines={taxItems.map((t) => ({ name: t.name, amount: taxAmount(t) }))}
@@ -1748,6 +1752,7 @@ export default function RundoTable() {
                 setShowTodo(true)
                 return
               }
+              if (!billOk) { setShowFinalizeWarn(true); return }
               if (confirm("De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.")) finalizeBill(true)
             }} style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
               ✅ Alles toegewezen?  Rekening afsluiten
@@ -1802,6 +1807,43 @@ export default function RundoTable() {
             <button onClick={() => setTaxModal(null)} style={{ ...S.btn, width: "100%", fontWeight: 700, marginTop: 10 }}>Annuleren</button>
           </div>
         </div>
+        )
+      })()}
+
+      {/* ─── Waarschuwing: delen terwijl item- en bontotaal niet overeenkomen ─── */}
+      {showShareWarn && (() => {
+        const entered = group?.receipt_total ?? null
+        const diff = entered != null ? Math.abs(billTotal - entered) : null
+        return (
+          <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowShareWarn(false)}>
+            <div style={{ ...S.modal, width: 350 }} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ marginTop: 0, marginBottom: 8, fontSize: 17, fontWeight: 800, color: "#c0392b" }}>⚠️ De totalen kloppen nog niet{diff != null ? ` (verschil €${diff.toFixed(2).replace(".", ",")})` : ""}</h3>
+              <p style={{ fontSize: 13, color: "#5a6680", lineHeight: 1.5, margin: "0 0 8px" }}>{entered == null ? "Vul eerst het totaal van de bon in, of kijk de items na:" : "Kijk dit even na, of vul het juiste bontotaal in zoals op je rekening:"}</p>
+              <ul style={{ margin: "0 0 14px", paddingLeft: 20, fontSize: 13, color: "#5a6680", lineHeight: 1.6 }}>
+                <li>prijzen en aantallen correct?</li>
+                <li>BTW / kosten / kortingen toegevoegd?</li>
+                <li>gedeelde items aangeduid?</li>
+              </ul>
+              <button onClick={() => setShowShareWarn(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>Terug naar de bon</button>
+              <button onClick={() => { setShowShareWarn(false); setAdminTab("guests") }} style={{ ...S.btn, width: "100%", padding: "9px 0", marginTop: 8, fontSize: 12.5, fontWeight: 700, color: "#9aa0ab", background: "transparent", border: "none" }}>Toch doorgaan →</button>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ─── Waarschuwing: afsluiten terwijl item- en bontotaal niet overeenkomen (onomkeerbaar) ─── */}
+      {showFinalizeWarn && (() => {
+        const entered = group?.receipt_total ?? null
+        const diff = entered != null ? Math.abs(billTotal - entered) : null
+        return (
+          <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowFinalizeWarn(false)}>
+            <div style={{ ...S.modal, width: 350 }} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ marginTop: 0, marginBottom: 8, fontSize: 17, fontWeight: 800, color: "#c0392b" }}>Weet je het zeker?{diff != null ? ` De totalen kloppen nog niet (verschil €${diff.toFixed(2).replace(".", ",")})` : " Het bontotaal is nog niet ingevuld"}</h3>
+              <p style={{ fontSize: 13, color: "#5a6680", lineHeight: 1.5, margin: "0 0 14px" }}>Na het afsluiten kan niemand nog iets wijzigen. Controleer eerst de items of het bontotaal.</p>
+              <button onClick={() => setShowFinalizeWarn(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>Terug naar de bon</button>
+              <button onClick={() => { setShowFinalizeWarn(false); finalizeBill(true) }} style={{ ...S.btn, width: "100%", padding: "9px 0", marginTop: 8, fontSize: 12.5, fontWeight: 700, color: "#9aa0ab", background: "transparent", border: "none" }}>Toch afsluiten</button>
+            </div>
+          </div>
         )
       })()}
 
