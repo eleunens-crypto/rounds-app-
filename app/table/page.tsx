@@ -400,9 +400,7 @@ export default function RundoTable() {
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [newGuest, setNewGuest] = useState("")
-  const [newGuestSeats, setNewGuestSeats] = useState(1)
   const [editGuestId, setEditGuestId] = useState<string | null>(null)
-  const [showAddGuest, setShowAddGuest] = useState(false)
   const [showTodo, setShowTodo] = useState(false)
   const [showTaxInfo, setShowTaxInfo] = useState(false)
   const [taxConfig, setTaxConfig] = useState<string | null>(null)
@@ -584,7 +582,7 @@ export default function RundoTable() {
     setViaLink(false); setShowSaved(false)
     setScanPreview([]); setScanFile(null); setLastScanFile(null); setScanPhotoUrl(null); setScanTotal(""); setScanError(null); setShowScan(false)
     setAdminTab("scan"); setExpandedPeople(new Set()); setClaimMode("item"); setClaimPid(null)
-    setEditGuestId(null); setShowTodo(false); setShowAddGuest(false); setViewReceipt(null)
+    setEditGuestId(null); setShowTodo(false); setViewReceipt(null)
     autoJoined.current = true
     rememberLastGroup(null)
     try { if (typeof sessionStorage !== "undefined") sessionStorage.removeItem("rundo_table_session") } catch { /* ignore */ }
@@ -595,7 +593,8 @@ export default function RundoTable() {
 
   const addGuest = async (name?: string, selfJoined = false, seats = 1) => {
     if (!group) return
-    const finalName = (name ?? newGuest).trim() || `Gast ${participants.length + 1}`
+    const placeholderCount = participants.filter((p) => /^pers\.\s*\d+$/i.test(p.name.trim())).length
+    const finalName = (name ?? newGuest).trim() || `pers. ${placeholderCount + 1}`
     const seatsVal = Math.max(1, seats)
     let { data, error } = await supabase.from("table_participants")
       .insert([{ name: finalName, group_id: group.id, self_joined: selfJoined, seats: seatsVal }]).select().single()
@@ -704,6 +703,19 @@ export default function RundoTable() {
     await supabase.from("table_confirmations").delete().eq("group_id", group.id).eq("participant_id", id)
     await supabase.from("table_participants").delete().eq("id", id)
     if (meId === id) { setMeIdStored(group.id, null); setMeId(null) }
+    // Optie A: hernummer de resterende 'pers. N'-placeholders naar 1..K (geen gaten, geen dubbels).
+    // Zelfgekozen namen (bv. "Jan") blijven ongemoeid en krijgen geen nummer.
+    const remaining = participants.filter((p) => p.id !== id)
+    let counter = 0
+    for (const p of remaining) {
+      if (/^pers\.\s*\d+$/i.test(p.name.trim())) {
+        counter++
+        const want = `pers. ${counter}`
+        if (p.name.trim() !== want) {
+          await supabase.from("table_participants").update({ name: want }).eq("id", p.id)
+        }
+      }
+    }
     await loadAll(group.id)
   }
 
@@ -1504,26 +1516,16 @@ export default function RundoTable() {
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ ...S.card, order: 2 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <h3 style={{ ...S.h3, marginBottom: 0 }}>👥 Of voeg zelf alvast gasten toe</h3>
-              <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 700, fontSize: 13 }} onClick={() => setShowAddGuest((v) => !v)}>{showAddGuest ? "✕ Sluiten" : "+ Toevoegen"}</button>
+              <h3 style={{ ...S.h3, marginBottom: 0 }}>👥 OF... voeg hier zelf alvast gasten toe</h3>
+              <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap" }} onClick={() => addGuest(undefined, false, 1)}>+ Persoon toevoegen</button>
             </div>
             <div style={{ marginTop: 4, marginBottom: 2 }}>
-              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• Ze kunnen dan hun naam selecteren via QR/link hierboven</div>
-              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• ...of jij kan voor hen zelf drankjes/gerechten toewijzen</div>
+              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• Consumpties kunnen door jou toegewezen worden</div>
+              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• of namen kunnen later nog gekozen worden via QR/link als je deelt na aanmaken</div>
             </div>
-            {showAddGuest && (
-              <div style={{ marginTop: 10, marginBottom: 6, background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: 12 }}>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <input value={newGuest} onChange={(e) => setNewGuest(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) } }} placeholder="Naam" style={{ ...S.input, flex: 1, minWidth: 110 }} autoFocus />
-                  <SeatsControl n={newGuestSeats} onChange={setNewGuestSeats} showLabel />
-                  <button style={{ ...S.btn, ...S.btnPrimary, padding: "0 18px", fontWeight: 700 }} onClick={() => { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) }}>+ Toevoegen</button>
-                </div>
-                <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6 }}>Met meerdere (bv. koppel)? Zet het aantal personen met de knopjes.</div>
-              </div>
-            )}
 
             {(() => {
-              const twoCol = participants.length > 5
+              const twoCol = participants.length > 3
               const Row = (p: Participant) => {
                 const st = guestStatus(p.id)
                 const origin = p.self_joined
@@ -1581,12 +1583,17 @@ export default function RundoTable() {
                 )
               }
               return (
-                <div style={{ marginTop: showAddGuest ? 6 : 12 }}>
+                <div style={{ marginTop: 12 }}>
                   {participants.length === 0
-                    ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen gasten — voeg er toe of deel de link hierboven <span style={{ fontStyle: "italic" }}>(tip: vergeet jezelf niet!)</span></div>
-                    : twoCol
-                    ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>{participants.map(Row)}</div>
-                    : participants.map(Row)}
+                    ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen gasten uitgenodigd (via QR) of zelf toegevoegd</div>
+                    : (
+                      <>
+                        <div style={{ fontSize: 11.5, color: "#9aa0ab", marginBottom: 8, fontStyle: "italic" }}>✏️ Tik op het potloodje om een naam aan te passen — dat kan altijd nog.</div>
+                        {twoCol
+                          ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>{participants.map(Row)}</div>
+                          : participants.map(Row)}
+                      </>
+                    )}
                 </div>
               )
             })()}
