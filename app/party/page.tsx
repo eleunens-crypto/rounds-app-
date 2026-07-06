@@ -767,6 +767,20 @@ export default function Home() {
     }
   }, [])
 
+  // Zuinig (minder PostgREST-egress): ververs enkel de betrokken tabel i.p.v. telkens alle drie.
+  const reloadTable = useCallback(async (groupId: string, table: "participants" | "orders" | "payments") => {
+    if (table === "participants") {
+      const { data, error } = await supabase.from("participants").select("*").eq("group_id", groupId)
+      if (!error && mounted.current) setParticipants(orderStable(data || []))
+    } else if (table === "orders") {
+      const { data, error } = await supabase.from("orders").select("id,participant_id,drink_id,quantity,group_id,session").eq("group_id", groupId)
+      if (!error && mounted.current) setOrders(data || [])
+    } else if (table === "payments") {
+      const { data, error } = await supabase.from("payments").select("id,group_id,session,participant_id,amount,created_at").eq("group_id", groupId)
+      if (!error && mounted.current) setPayments(data || [])
+    }
+  }, [])
+
   useEffect(() => { loadDrinks() }, [loadDrinks]) // start: enkel basisdranken
   useEffect(() => { if (group) loadDrinks() }, [group, loadDrinks]) // groep geopend ? ook eigen dranken
   useEffect(() => { setSavedGroups(getSavedGroups()) }, [])
@@ -792,9 +806,15 @@ export default function Home() {
     let reloadTimer: ReturnType<typeof setTimeout> | null = null
     let drinksTimer: ReturnType<typeof setTimeout> | null = null
 
-    const scheduleReload = () => {
+    const dirty = new Set<"participants" | "orders" | "payments">()
+    const scheduleReload = (table: "participants" | "orders" | "payments") => {
+      dirty.add(table)
       if (reloadTimer) clearTimeout(reloadTimer)
-      reloadTimer = setTimeout(() => { if (mounted.current) loadAll(group.id) }, 400)
+      reloadTimer = setTimeout(() => {
+        if (!mounted.current) return
+        const tables = [...dirty]; dirty.clear()
+        tables.forEach((t) => reloadTable(group.id, t))
+      }, 400)
     }
     const scheduleDrinks = () => {
       if (drinksTimer) clearTimeout(drinksTimer)
@@ -802,9 +822,9 @@ export default function Home() {
     }
 
     const channel = supabase.channel(`group-${group.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `group_id=eq.${group.id}` }, scheduleReload)
-      .on("postgres_changes", { event: "*", schema: "public", table: "participants", filter: `group_id=eq.${group.id}` }, scheduleReload)
-      .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `group_id=eq.${group.id}` }, scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `group_id=eq.${group.id}` }, () => scheduleReload("orders"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "participants", filter: `group_id=eq.${group.id}` }, () => scheduleReload("participants"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `group_id=eq.${group.id}` }, () => scheduleReload("payments"))
       .on("postgres_changes", { event: "*", schema: "public", table: "drinks" }, scheduleDrinks)
       .subscribe()
 
@@ -822,7 +842,7 @@ export default function Home() {
       window.removeEventListener("focus", refreshOnReturn)
       supabase.removeChannel(channel)
     }
-  }, [group, loadAll, loadDrinks])
+  }, [group, loadAll, loadDrinks, reloadTable])
 
   // ?? Group create / join ??????????????????????????????????????????????????
   const startGroup = async () => {
@@ -920,7 +940,7 @@ export default function Home() {
         used.add(num)
         await supabase.from("participants").insert([{ name: `Persoon ${num}`, group_id: group.id }])
       }
-      await loadAll(group.id)
+      await reloadTable(group.id, "participants")
     } else if (count < current) {
       const toRemove = participants.slice(count).filter((p) => !orders.some((o) => o.participant_id === p.id))
       for (const p of toRemove) {
@@ -937,7 +957,7 @@ export default function Home() {
     const finalName = name?.trim() || `Persoon ${smallestFreeNumber(used)}`
     const { error } = await supabase.from("participants").insert([{ name: finalName, group_id: group.id }])
     if (error) { setError("Persoon toevoegen mislukt"); return }
-    await loadAll(group.id)
+    await reloadTable(group.id, "participants")
   }
 
   const deletePerson = async (id: string, name: string) => {
@@ -970,7 +990,7 @@ export default function Home() {
     if (error) { setError("Naam wijzigen mislukt"); return }
     setEditingPerson(null)
     setEditingPersonName("")
-    await loadAll(group.id)
+    await reloadTable(group.id, "participants")
   }
 
   // ?? Cart (huidige open ronde, met per-persoon toewijzing) ????????????????
@@ -1363,7 +1383,7 @@ export default function Home() {
       const { error } = await supabase.from("orders").insert(rows)
       if (error) { setError("Rondje opslaan mislukt � probeer opnieuw"); return }
     }
-    await loadAll(group.id)
+    await reloadTable(group.id, "orders")
     setBarmanStep("list")
     setFinishedRoundSnapshot({ session: newRoundSession, cart })
     setCart({})
@@ -1472,7 +1492,7 @@ export default function Home() {
     if (existing) await supabase.from("orders").update({ quantity: existing.quantity + qty }).eq("id", existing.id)
     else await supabase.from("orders").insert([{ participant_id: participantId, drink_id: drinkId, quantity: qty, group_id: group.id, session: round }])
 
-    await loadAll(group.id)
+    await reloadTable(group.id, "orders")
   }
 
   const assignOneAnonymous = async (drinkId: string, participantId: string) => {
@@ -1515,7 +1535,7 @@ export default function Home() {
       if (existing) await supabase.from("orders").update({ quantity: existing.quantity + qty }).eq("id", existing.id)
       else await supabase.from("orders").insert([{ participant_id: pid, drink_id: drinkId, quantity: qty, group_id: group.id, session }])
     }
-    await loadAll(group.id)
+    await reloadTable(group.id, "orders")
   }
 
   const unassignOneFromPerson = async (drinkId: string, participantId: string) => {
@@ -1535,7 +1555,7 @@ export default function Home() {
     const anon = orders.find((o) => !o.participant_id && o.drink_id === drinkId && o.session === round)
     if (anon) await supabase.from("orders").update({ quantity: anon.quantity + move }).eq("id", anon.id)
     else await supabase.from("orders").insert([{ participant_id: null, drink_id: drinkId, quantity: move, group_id: group.id, session: round }])
-    await loadAll(group.id)
+    await reloadTable(group.id, "orders")
   }
 
   const deleteRound = async (round: number) => {
@@ -1578,7 +1598,7 @@ export default function Home() {
       .filter(([key, amt]) => (key === POT_PAYER || participants.some((p) => p.id === key)) && parseFloat(amt) > 0)
       .map(([key, amt]) => ({ group_id: group.id, session: round, participant_id: key === POT_PAYER ? null : key, amount: parseFloat(amt) }))
     if (inserts.length > 0) await supabase.from("payments").insert(inserts)
-    await loadAll(group.id)
+    await reloadTable(group.id, "payments")
     setPaymentEditRound(null)
     setToast("Betaling opgeslagen")
   }
@@ -1616,7 +1636,7 @@ export default function Home() {
     if (inserts.length === 0) { setPotWarn(true); return }
     await supabase.from("payments").delete().eq("group_id", group.id).eq("session", POT_SESSION)
     await supabase.from("payments").insert(inserts)
-    await loadAll(group.id)
+    await reloadTable(group.id, "payments")
     setPotWarn(false)
     setShowPotModal(false)
     setToast("Pot opgeslagen ??")
@@ -1638,7 +1658,7 @@ export default function Home() {
     setPotAddDraft({})
     setPotAddBulk("")
     setPotAddWarn(false)
-    await loadAll(group.id)
+    await reloadTable(group.id, "payments")
     const tot = inserts.reduce((s, r) => s + r.amount, 0)
     const usedNow = payments.filter((p) => p.session >= 1 && !p.participant_id).reduce((s, p) => s + p.amount, 0)
     const newTotal = potTotal + tot
@@ -1651,7 +1671,7 @@ export default function Home() {
     if (!group) return
     const { error } = await supabase.from("payments").delete().eq("id", id)
     if (error) { setError("Verwijderen mislukt"); return }
-    await loadAll(group.id)
+    await reloadTable(group.id, "payments")
   }
 
   // ?? Drink CRUD ???????????????????????????????????????????????????????????
@@ -3241,7 +3261,7 @@ export default function Home() {
                     .map(([key, amt]) => ({ group_id: group.id, session: round, participant_id: key === POT_PAYER ? null : key, amount: parseFloat(amt) }))
                   if (inserts.length === 0) { setPayWarn(true); return }
                   await supabase.from("payments").insert(inserts)
-                  await loadAll(group.id)
+                  await reloadTable(group.id, "payments")
                   setPayWarn(false)
                   setPaymentDraft({})
                   setFinishedRoundSnapshot(null)
