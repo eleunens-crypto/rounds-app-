@@ -408,6 +408,8 @@ export default function RundoTable() {
   const [recentItemId, setRecentItemId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Slaapstand: na 3 min zonder activiteit verbreken we realtime + poll (spaart egress). Ontwaakt bij tik/terugkeer.
+  const [asleep, setAsleep] = useState(false)
 
   const loadAll = useCallback(async (groupId: string) => {
     const [{ data: p }, { data: it }, { data: cl }, { data: cf }, { data: g }] = await Promise.all([
@@ -454,7 +456,7 @@ export default function RundoTable() {
   }, [])
 
  useEffect(() => {
-    if (!group) return
+    if (!group || asleep) return
     const groupId = group.id
     let active = true
     let ch: ReturnType<typeof supabase.channel> | null = null
@@ -511,7 +513,31 @@ export default function RundoTable() {
       if (ch) supabase.removeChannel(ch)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [group?.id, loadAll, reloadTable])
+  }, [group?.id, loadAll, reloadTable, asleep])
+
+  // Inactiviteits-slaapstand: na 3 min zonder tik/scroll/toets gaat het scherm 'slapen'
+  // (realtime + poll stoppen via de guard hierboven). Elke activiteit of terugkeer ontwaakt het.
+  useEffect(() => {
+    if (!group) return
+    setAsleep(false)
+    const SLEEP_MS = 3 * 60 * 1000
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const sleep = () => { if (mounted.current) setAsleep(true) }
+    const reset = () => { if (timer) clearTimeout(timer); timer = setTimeout(sleep, SLEEP_MS) }
+    const wake = () => { setAsleep((a) => (a ? false : a)); reset() }
+    const onVis = () => { if (typeof document !== "undefined" && document.visibilityState === "visible") wake() }
+    const evts: (keyof WindowEventMap)[] = ["pointerdown", "keydown", "scroll", "touchstart"]
+    evts.forEach((e) => window.addEventListener(e, wake, { passive: true }))
+    document.addEventListener("visibilitychange", onVis)
+    window.addEventListener("focus", wake)
+    reset()
+    return () => {
+      if (timer) clearTimeout(timer)
+      evts.forEach((e) => window.removeEventListener(e, wake))
+      document.removeEventListener("visibilitychange", onVis)
+      window.removeEventListener("focus", wake)
+    }
+  }, [group?.id])
 
   useEffect(() => {
     if (group && typeof window !== "undefined") localStorage.setItem("rundo_table_last_tab", adminTab)
@@ -1316,6 +1342,11 @@ export default function RundoTable() {
     <div style={S.page}>
       <style>{`* { box-sizing: border-box; }`}</style>
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      {asleep && (
+        <div onClick={() => setAsleep(false)} style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 3000, background: "rgba(20,33,58,0.92)", color: "#fff", padding: "9px 16px", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,24,40,0.3)", whiteSpace: "nowrap" }}>
+          ⏸ Live-updates gepauzeerd — tik om te hervatten
+        </div>
+      )}
       {error && (
         <div style={S.errorBanner}>⚠️ {error}
           <button onClick={() => setError(null)} style={{ marginLeft: 12, background: "none", border: "none", cursor: "pointer", color: "#c0392b", fontWeight: 700 }}>✕</button>
