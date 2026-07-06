@@ -1081,22 +1081,18 @@ export default function RundoTable() {
     return total
   }
 
-  // Fooi: gelijk per persoon (per seat). Koppels (seats>1) betalen naar rato.
-  // Centen exact verdeeld (round-robin) zodat de som klopt met wat de admin intypte.
+  // Fooi: exact gelijk per persoon (per seat), afgerond op de cent — iedereen evenveel, koppels dubbel.
+  // Alleen wie iets nam betaalt mee; wie niets nam krijgt geen fooi.
   const tipTotal = Math.max(0, group?.tip_total ?? 0)
-  const totalSeatsAll = participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)
-  const tipByPid: Record<string, number> = (() => {
-    const map: Record<string, number> = {}
-    const cents = Math.round(tipTotal * 100)
-    if (cents <= 0 || totalSeatsAll <= 0 || participants.length === 0) return map
-    const base = Math.floor(cents / totalSeatsAll)
-    participants.forEach((p) => { map[p.id] = base * Math.max(1, p.seats ?? 1) })
-    let rem = cents - base * totalSeatsAll
-    let i = 0
-    while (rem > 0) { const p = participants[i % participants.length]; map[p.id] = (map[p.id] ?? 0) + 1; rem--; i++ }
-    return map
-  })()
-  const tipForPid = (pid: string) => (tipByPid[pid] ?? 0) / 100
+  const tipHasOrder = (pid: string) => baseItems.some((it) => it.is_shared ? sharerIds(it.id).includes(pid) : myQty(it.id, pid) > 0)
+  const tipSeats = participants.reduce((s, p) => s + (tipHasOrder(p.id) ? Math.max(1, p.seats ?? 1) : 0), 0)
+  const tipPerSeat = tipSeats > 0 ? Math.round((tipTotal * 100) / tipSeats) / 100 : 0
+  const tipForPid = (pid: string) => {
+    if (tipPerSeat <= 0 || !tipHasOrder(pid)) return 0
+    const p = participants.find((x) => x.id === pid)
+    return +(tipPerSeat * Math.max(1, p?.seats ?? 1)).toFixed(2)
+  }
+  const tipDistributed = participants.reduce((s, p) => s + tipForPid(p.id), 0)
 
   const personTotal = (pid: string): { settled: number; pendingShared: boolean } => {
     let settled = 0
@@ -1678,7 +1674,7 @@ export default function RundoTable() {
           <ClaimScreen
             items={baseItems} meId={meId} me={me} isAdmin={isAdmin}
             participants={participants}
-            groupId={group.id} tipTotal={tipTotal} tipUpdatedAt={group.tip_updated_at ?? null}
+            groupId={group.id} tipTotal={tipTotal} tipDistributed={tipDistributed} tipUpdatedAt={group.tip_updated_at ?? null}
             claimedQty={claimedQty} myQty={myQty} sharerIds={sharerIds}
             shareHeads={shareHeads} myShareHeads={myShareHeads} seatsOf={seatsOf} setSeats={setSeats}
             setClaim={setClaim} toggleShareClaim={toggleShareClaim}
@@ -1742,14 +1738,14 @@ export default function RundoTable() {
             {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen gasten</div>}
             {participants.length > 0 && (
               <div style={{ marginTop: 8, paddingTop: 10, borderTop: "1.5px solid rgba(16,24,40,0.1)" }}>
-                {tipTotal > 0 && (
+                {tipDistributed > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 700, color: "#a06b00", marginBottom: 4 }}>
                     <span>💛 Fooi (verdeeld)</span>
-                    <span>€{tipTotal.toFixed(2)}</span>
+                    <span>€{tipDistributed.toFixed(2)}</span>
                   </div>
                 )}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15.5, fontWeight: 800, color: "#14213a" }}>
-                  <span>{tipTotal > 0 ? "Totaal rekening incl. fooi" : "Totaal rekening"}</span>
+                  <span>{tipDistributed > 0 ? "Totaal rekening incl. fooi" : "Totaal rekening"}</span>
                   <span>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2)}</span>
                 </div>
               </div>
@@ -1766,8 +1762,8 @@ export default function RundoTable() {
                 style={{ ...S.input, width: 90, padding: "6px 9px", fontSize: 13, fontWeight: 700 }} />
               <button onClick={() => { const raw = (tipInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setTip(0); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setTip(+n.toFixed(2)) }} style={{ border: "none", background: "rgba(20,153,176,0.12)", color: "#1499b0", borderRadius: 9, padding: "7px 13px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>Instellen</button>
               {tipTotal > 0 && <button onClick={() => setTip(0)} style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 13 }} title="fooi verwijderen">🗑️</button>}
-              {totalSeatsAll > 0 && tipTotal > 0 && (
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: "#a06b00", marginLeft: "auto" }}>€{(tipTotal / totalSeatsAll).toFixed(2)} p.p.</span>
+              {tipSeats > 0 && tipPerSeat > 0 && (
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: "#a06b00", marginLeft: "auto" }}>€{tipPerSeat.toFixed(2)} p.p.</span>
               )}
             </div>
             <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6, lineHeight: 1.4 }}>Gelijk verdeeld over alle personen. {group.finalized ? "Ook na het afsluiten aanpasbaar — gasten krijgen dan een melding." : "Kan ook later, na het afsluiten, nog."}</div>
@@ -2354,7 +2350,7 @@ function AssignPicker({ participants, itemId, isShared, confirmedFn, onAssign, o
 function ClaimScreen(props: {
   items: BillItem[]; meId: string | null; me: Participant | null; isAdmin: boolean
   participants: Participant[]
-  groupId: string; tipTotal: number; tipUpdatedAt: string | null
+  groupId: string; tipTotal: number; tipDistributed: number; tipUpdatedAt: string | null
   claimedQty: (id: string) => number; myQty: (id: string, pid: string | null) => number; sharerIds: (id: string) => string[]
   shareHeads: (id: string) => number; myShareHeads: (id: string, pid: string) => number; seatsOf: (pid: string) => number
   setSeats: (pid: string, n: number) => void
@@ -2367,7 +2363,7 @@ function ClaimScreen(props: {
   iConfirmed: boolean; confirmMe: () => void; onPickMe: (id: string) => void
   finalized: boolean; iDispute: boolean; iResolved: boolean; iComment: string; onToggleDispute: (on: boolean, comment?: string) => void
 }) {
-  const { items, meId, isAdmin, participants, groupId, tipTotal, tipUpdatedAt, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
+  const { items, meId, isAdmin, participants, groupId, tipTotal, tipDistributed, tipUpdatedAt, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
   const adminPid = props.claimPid, setAdminPid = props.setClaimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   const [disputeOpen, setDisputeOpen] = useState(false)
@@ -2553,15 +2549,15 @@ function ClaimScreen(props: {
                 <span>Totaal rekening</span>
                 <span>€{billSum.toFixed(2)}</span>
               </div>
-              {tipTotal > 0 && (
+              {tipDistributed > 0 && (
                 <>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 700, color: "#a06b00", marginTop: 4 }}>
                     <span>💛 Fooi (verdeeld per persoon)</span>
-                    <span>€{tipTotal.toFixed(2)}</span>
+                    <span>€{tipDistributed.toFixed(2)}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800, color: "#14213a", marginTop: 6, paddingTop: 6, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
                     <span>Totaal incl. fooi</span>
-                    <span>€{(billSum + tipTotal).toFixed(2)}</span>
+                    <span>€{(billSum + tipDistributed).toFixed(2)}</span>
                   </div>
                 </>
               )}
@@ -2758,14 +2754,14 @@ function ClaimScreen(props: {
                 </div>
               )
             })}
-            {tipTotal > 0 && (
+            {tipDistributed > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, fontSize: 12.5, fontWeight: 700, color: "#a06b00" }}>
                 <span>💛 Fooi (verdeeld)</span>
-                <span>€{tipTotal.toFixed(2)}</span>
+                <span>€{tipDistributed.toFixed(2)}</span>
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(16,24,40,0.1)" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>{tipTotal > 0 ? "Totaal rekening incl. fooi" : "Totaal rekening"}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>{tipDistributed > 0 ? "Totaal rekening incl. fooi" : "Totaal rekening"}</span>
               <span style={{ fontSize: 15, fontWeight: 800, color: "#14213a" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2)}</span>
             </div>
           </div>
