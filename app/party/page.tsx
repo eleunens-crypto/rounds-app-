@@ -804,7 +804,6 @@ export default function Home() {
   useEffect(() => {
     if (!group) return
     let reloadTimer: ReturnType<typeof setTimeout> | null = null
-    let drinksTimer: ReturnType<typeof setTimeout> | null = null
 
     const dirty = new Set<"participants" | "orders" | "payments">()
     const scheduleReload = (table: "participants" | "orders" | "payments") => {
@@ -816,16 +815,11 @@ export default function Home() {
         tables.forEach((t) => reloadTable(group.id, t))
       }, 400)
     }
-    const scheduleDrinks = () => {
-      if (drinksTimer) clearTimeout(drinksTimer)
-      drinksTimer = setTimeout(() => { if (mounted.current) loadDrinks() }, 400)
-    }
 
     const channel = supabase.channel(`group-${group.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `group_id=eq.${group.id}` }, () => scheduleReload("orders"))
       .on("postgres_changes", { event: "*", schema: "public", table: "participants", filter: `group_id=eq.${group.id}` }, () => scheduleReload("participants"))
       .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `group_id=eq.${group.id}` }, () => scheduleReload("payments"))
-      .on("postgres_changes", { event: "*", schema: "public", table: "drinks" }, scheduleDrinks)
       .subscribe()
 
     const refreshOnReturn = () => {
@@ -837,7 +831,6 @@ export default function Home() {
 
     return () => {
       if (reloadTimer) clearTimeout(reloadTimer)
-      if (drinksTimer) clearTimeout(drinksTimer)
       document.removeEventListener("visibilitychange", refreshOnReturn)
       window.removeEventListener("focus", refreshOnReturn)
       supabase.removeChannel(channel)
