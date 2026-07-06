@@ -431,6 +431,28 @@ export default function RundoTable() {
     if (g) setGroup((cur) => cur ? { ...cur, ...(g as Group) } : cur)
   }, [])
 
+  // Zuinig voor het dataverkeer: bij een realtime-wijziging enkel de betrokken tabel opnieuw ophalen
+  // in plaats van telkens alle vijf. Scheelt fors in egress bij een actieve groep.
+  const reloadTable = useCallback(async (groupId: string, table: string) => {
+    const order = <T extends { created_at?: string; id: string }>(rows: T[]) =>
+      [...(rows || [])].sort((a, b) => {
+        const ca = a.created_at ?? "", cb = b.created_at ?? ""
+        if (ca !== cb) return ca < cb ? -1 : 1
+        return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+      })
+    if (table === "table_groups") {
+      const { data: g } = await supabase.from("table_groups").select("*").eq("id", groupId).single()
+      if (g && mounted.current) setGroup((cur) => cur ? { ...cur, ...(g as Group) } : cur)
+      return
+    }
+    const { data } = await supabase.from(table).select("*").eq("group_id", groupId)
+    if (!mounted.current) return
+    if (table === "table_participants") setParticipants(order((data as Participant[]) || []))
+    else if (table === "table_items") setItems(order((data as BillItem[]) || []))
+    else if (table === "table_claims") setClaims((data as Claim[]) || [])
+    else if (table === "table_confirmations") setConfirmations((data as Confirmation[]) || [])
+  }, [])
+
  useEffect(() => {
     if (!group) return
     const groupId = group.id
@@ -440,12 +462,27 @@ export default function RundoTable() {
 
     const reload = () => { if (mounted.current && active) loadAll(groupId) }
 
+    // Bundel snelle opeenvolgende wijzigingen en ververs enkel de veranderde tabel(len).
+    const dirty = new Set<string>()
+    let flushTimer: ReturnType<typeof setTimeout> | null = null
+    const flush = () => {
+      flushTimer = null
+      if (!mounted.current || !active) return
+      const tables = [...dirty]; dirty.clear()
+      tables.forEach((t) => reloadTable(groupId, t))
+    }
+    const onChange = (table: string) => {
+      if (!mounted.current || !active) return
+      dirty.add(table)
+      if (!flushTimer) flushTimer = setTimeout(flush, 700)
+    }
+
     const connect = () => {
       if (!active) return
       ch = supabase.channel(`table-${groupId}`)
       ;["table_participants", "table_items", "table_claims", "table_confirmations", "table_groups"].forEach((table) => {
         const filter = table === "table_groups" ? `id=eq.${groupId}` : `group_id=eq.${groupId}`
-        ch!.on("postgres_changes", { event: "*", schema: "public", table, filter }, reload)
+        ch!.on("postgres_changes", { event: "*", schema: "public", table, filter }, () => onChange(table))
       })
       ch!.subscribe((status) => {
         if ((status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") && active) {
@@ -462,18 +499,19 @@ export default function RundoTable() {
     }
     document.addEventListener("visibilitychange", refreshOnReturn)
     window.addEventListener("focus", refreshOnReturn)
-    const poll = setInterval(() => { if (typeof document === "undefined" || document.visibilityState === "visible") reload() }, 30000)
+    const poll = setInterval(() => { if (typeof document === "undefined" || document.visibilityState === "visible") reload() }, 60000)
 
     return () => {
       active = false
       if (retry) clearTimeout(retry)
+      if (flushTimer) clearTimeout(flushTimer)
       clearInterval(poll)
       document.removeEventListener("visibilitychange", refreshOnReturn)
       window.removeEventListener("focus", refreshOnReturn)
       if (ch) supabase.removeChannel(ch)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [group?.id, loadAll])
+  }, [group?.id, loadAll, reloadTable])
 
   useEffect(() => {
     if (group && typeof window !== "undefined") localStorage.setItem("rundo_table_last_tab", adminTab)
