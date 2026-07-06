@@ -2155,7 +2155,6 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
     <div style={S.card}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <h3 style={{ ...S.h3, marginBottom: 0 }}>🧾 Items op de bon</h3>
-        <button onClick={onAddManual} style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontSize: 13, fontWeight: 700 }}>+ Item toevoegen</button>
       </div>
       {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>Nog geen items — scan de bon</div>}
       {items.map((it) => {
