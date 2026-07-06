@@ -624,6 +624,7 @@ function CheersIcon({ size = 20 }: { size?: number }) {
 export default function Home() {
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+  const lastActive = useRef(Date.now())
 
   // Sluit het mobiele toetsenbord zodra je buiten een invoerveld tikt (op een knop of lege ruimte),
   // zodat het niet overbodig open blijft staan en je de app beter ziet.
@@ -832,27 +833,31 @@ export default function Home() {
     }
   }, [group, loadAll, loadDrinks, reloadTable, asleep])
 
-  // Inactiviteits-slaapstand: na 3 min zonder tik/scroll/toets gaat het scherm 'slapen'
-  // (realtime + poll stoppen via de guard hierboven). Elke activiteit of terugkeer ontwaakt het.
+  // Inactiviteits-slaapstand: na 3 min zonder tik/scroll/toets 'slaapt' het scherm
+  // (realtime stopt via de guard hierboven -> spaart data). We meten inactiviteit met een
+  // tijdstempel + interval i.p.v. één lange setTimeout, want die wordt door de browser
+  // gepauzeerd zodra het tabblad verborgen is (scherm op slot) en vuurt dan niet betrouwbaar.
+  // Belangrijk: enkel een échte tik/toets/scroll of een tik op de banner hervat het.
+  // Terugkeren naar het tabblad hervat NIET vanzelf, zodat de "gepauzeerd"-melding
+  // zichtbaar blijft en de gebruiker bewust op "tik om te hervatten" tikt.
   useEffect(() => {
     if (!group) return
-    setAsleep(false)
     const SLEEP_MS = 3 * 60 * 1000
-    let timer: ReturnType<typeof setTimeout> | null = null
-    const sleep = () => { if (mounted.current) setAsleep(true) }
-    const reset = () => { if (timer) clearTimeout(timer); timer = setTimeout(sleep, SLEEP_MS) }
-    const wake = () => { setAsleep((a) => (a ? false : a)); reset() }
-    const onVis = () => { if (typeof document !== "undefined" && document.visibilityState === "visible") wake() }
+    lastActive.current = Date.now()
+    setAsleep(false)
+    const check = () => {
+      if (mounted.current && Date.now() - lastActive.current >= SLEEP_MS) setAsleep(true)
+    }
+    const markActive = () => { lastActive.current = Date.now(); setAsleep((a) => (a ? false : a)) }
+    const onVis = () => { if (typeof document !== "undefined" && document.visibilityState === "visible") check() }
     const evts: (keyof WindowEventMap)[] = ["pointerdown", "keydown", "scroll", "touchstart"]
-    evts.forEach((e) => window.addEventListener(e, wake, { passive: true }))
+    evts.forEach((e) => window.addEventListener(e, markActive, { passive: true }))
     document.addEventListener("visibilitychange", onVis)
-    window.addEventListener("focus", wake)
-    reset()
+    const iv = setInterval(check, 20 * 1000)
     return () => {
-      if (timer) clearTimeout(timer)
-      evts.forEach((e) => window.removeEventListener(e, wake))
+      clearInterval(iv)
+      evts.forEach((e) => window.removeEventListener(e, markActive))
       document.removeEventListener("visibilitychange", onVis)
-      window.removeEventListener("focus", wake)
     }
   }, [group])
 
@@ -1899,7 +1904,7 @@ export default function Home() {
       <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.55} } * { box-sizing: border-box; }`}</style>
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       {asleep && (
-        <div onClick={() => setAsleep(false)} style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 3000, background: "rgba(20,33,58,0.92)", color: "#fff", padding: "9px 16px", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,24,40,0.3)", whiteSpace: "nowrap" }}>
+        <div onClick={() => { lastActive.current = Date.now(); setAsleep(false) }} style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 3000, background: "rgba(20,33,58,0.92)", color: "#fff", padding: "9px 16px", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,24,40,0.3)", whiteSpace: "nowrap" }}>
           ⏸ Live-updates gepauzeerd — tik om te hervatten
         </div>
       )}
