@@ -1,11 +1,12 @@
+
 "use client"
 
 import { useEffect, useState, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 // TYPES
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 
 type Group = {
   id: string
@@ -21,6 +22,7 @@ type Drink = {
   emoji: string
   category: string | null
   group_id?: string | null // null = standaard basisdrank (voor iedereen); gezet = eigen drank/aanpassing van die groep
+  owner_id?: string | null // gezet = eigen drank van die gebruiker (privé, zichtbaar in al zijn groepen)
 }
 
 type DrinkLibraryItem = {
@@ -50,7 +52,7 @@ function orderStable<T extends { id: string }>(rows: T[]): T[] {
   })
 }
 
-// Verwijdert een datum-achtervoegsel "(… )" achteraan een groepsnaam, voor naam-vergelijking
+// Verwijdert een datum-achtervoegsel "(� )" achteraan een groepsnaam, voor naam-vergelijking
 function stripDateSuffix(name: string): string {
   return name.replace(/\s*\([^)]*\)\s*$/, "").trim()
 }
@@ -74,19 +76,7 @@ function smallestFreeNumber(used: Set<number>): number {
   return i
 }
 
-// Personen in logische volgorde: created_at (indien aanwezig & verschillend) → nummer in naam → id
-function orderParticipants<T extends { id: string; name: string }>(rows: T[]): T[] {
-  return [...rows].sort((a, b) => {
-    const ca = (a as unknown as { created_at?: string }).created_at
-    const cb = (b as unknown as { created_at?: string }).created_at
-    if (ca && cb && ca !== cb) return ca < cb ? -1 : 1
-    const na = nameNumberSuffix(a.name)
-    const nb = nameNumberSuffix(b.name)
-    if (na != null && nb != null && na !== nb) return na - nb
-    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
-  })
-}
-
+// Personen in logische volgorde: created_at (indien aanwezig & verschillend) ? nummer in naam ? id
 type Order = {
   id: string
   participant_id: string | null
@@ -102,7 +92,7 @@ type Payment = {
   session: number
   participant_id: string | null  // null = betaald uit de pot
   amount: number
-  created_at?: string  // gebruikt om pot-inleg te groeperen per "pot" (eerste, tweede, …)
+  created_at?: string  // gebruikt om pot-inleg te groeperen per "pot" (eerste, tweede, �)
 }
 
 type DrinkForm = {
@@ -137,28 +127,28 @@ type QuickOrderItem = {
 
 type AppView = "setup" | "ordering" | "rounds" | "bill"
 
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 // CONSTANTS
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 
 const CATEGORY_LABELS: Record<string, string> = {
-  Bier:      "🍺 Bier",
-  Frisdrank: "🥤 Water & Frisdrank",
-  Wijn:      "🍷 Wijn & Cava",
-  Cocktail:  "🍸 Cocktails",
+  Bier:      "?? Bier",
+  Frisdrank: "?? Water & Frisdrank",
+  Wijn:      "?? Wijn & Cava",
+  Cocktail:  "?? Cocktails",
   Andere:    "Andere",
 }
 const FALLBACK_CATEGORY = "Cocktail"
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   Bier:      ["bier", "pils", "tripel", "dubbel", "blonde", "bruin", "lager", "ale", "ipa", "stout", "weizen", "geuze", "lambic", "kriek"],
-  Wijn:      ["wijn", "cava", "prosecco", "champagne", "rosé", "rose", "bordeaux", "chardonnay", "pinot", "sauvignon"],
+  Wijn:      ["wijn", "cava", "prosecco", "champagne", "ros�", "rose", "bordeaux", "chardonnay", "pinot", "sauvignon"],
   Frisdrank: ["cola", "fanta", "sprite", "water", "ice tea", "icetea", "limonade", "tonic", "soda", "juice", "sap", "frisdrank", "appelsap", "sinaas", "spa"],
   Cocktail:  ["cocktail", "mojito", "hugo", "gin", "vodka", "rum", "whisky", "whiskey", "aperol", "spritz", "martini", "margarita", "daiquiri", "cosmopolitan"],
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 // LOCAL STORAGE HELPERS
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 
 function randomId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 10)
@@ -207,9 +197,9 @@ function clearActiveGroupCode() {
   try { sessionStorage.removeItem("rondje_active_group") } catch { /* sessionStorage niet beschikbaar */ }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 // VOICE / DRINK NAME HELPERS
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 
 function guessCategory(text: string): string {
   const lower = text.toLowerCase()
@@ -228,8 +218,8 @@ function normalizeDrinkName(s: string): string {
 }
 
 type DrinkMatchResult = {
-  strongMatch: Drink | null     // confident match — safe to auto-add
-  suggestion: Drink | null      // weaker/phonetic match — show as "bedoelde je...?" but don't auto-add
+  strongMatch: Drink | null     // confident match � safe to auto-add
+  suggestion: Drink | null      // weaker/phonetic match � show as "bedoelde je...?" but don't auto-add
 }
 
 function fuzzyMatchDrink(spokenName: string, drinkList: Drink[]): Drink | null {
@@ -263,14 +253,14 @@ function matchDrinkWithSuggestion(spokenName: string, drinkList: Drink[]): Drink
   let m = drinkList.find((d) => normalizeDrinkName(d.name) === spoken)
   if (m) return { strongMatch: m, suggestion: null }
 
-  // 2. One contains the other (substring) — confident enough to auto-add
+  // 2. One contains the other (substring) � confident enough to auto-add
   m = drinkList.find((d) => {
     const dn = normalizeDrinkName(d.name)
     return spoken.includes(dn) || dn.includes(spoken)
   })
   if (m) return { strongMatch: m, suggestion: null }
 
-  // 3. All spoken words appear in the drink name — confident
+  // 3. All spoken words appear in the drink name � confident
   m = drinkList.find((d) => {
     const dn = normalizeDrinkName(d.name)
     return spokenWords.length > 0 && spokenWords.every((w) => dn.includes(w))
@@ -279,7 +269,7 @@ function matchDrinkWithSuggestion(spokenName: string, drinkList: Drink[]): Drink
 
   // 4. Word-overlap scoring + phonetic (edit distance) scoring combined.
   // High score (>= 0.7) = confident enough to auto-add.
-  // Medium score (0.4–0.7) = only a suggestion, don't auto-add.
+  // Medium score (0.4�0.7) = only a suggestion, don't auto-add.
   let bestScore = 0
   let bestDrink: Drink | null = null
   for (const d of drinkList) {
@@ -303,17 +293,17 @@ function matchDrinkWithSuggestion(spokenName: string, drinkList: Drink[]): Drink
 
 function extractPrice(text: string): string {
   const lower = text.toLowerCase()
-  const numMatch = lower.match(/€?\s*(\d+)[.,](\d{1,2})/)
+  const numMatch = lower.match(/�?\s*(\d+)[.,](\d{1,2})/)
   if (numMatch) return `${numMatch[1]}.${numMatch[2].padEnd(2, "0")}`
-  const euroMatch = lower.match(/€\s*(\d+)\b|(\d+)\s*euro/)
+  const euroMatch = lower.match(/�\s*(\d+)\b|(\d+)\s*euro/)
   if (euroMatch) return euroMatch[1] ?? euroMatch[2]
   return ""
 }
 
 function cleanDrinkName(text: string): string {
   return text
-    .replace(/€?\s*\d+[.,]\d{1,2}/g, "")
-    .replace(/€\s*\d+/g, "")
+    .replace(/�?\s*\d+[.,]\d{1,2}/g, "")
+    .replace(/�\s*\d+/g, "")
     .replace(/\d+\s*euro/gi, "")
     .replace(/\s+/g, " ").trim()
     .replace(/^./, (c) => c.toUpperCase())
@@ -327,7 +317,7 @@ type ParsedSpeechResult = {
 }
 
 function parseSpokenDrinks(text: string, drinkList: Drink[]): ParsedSpeechResult {
-  const lower = text.toLowerCase().replace(/één/g, "een").replace(/cola's|colas/g, "cola").replace(/wijntje/g, "wijn")
+  const lower = text.toLowerCase().replace(/��n/g, "een").replace(/cola's|colas/g, "cola").replace(/wijntje/g, "wijn")
 
   const numberWords: Record<string, number> = {
     een: 1, twee: 2, drie: 3, vier: 4, vijf: 5, zes: 6, zeven: 7,
@@ -350,7 +340,7 @@ function parseSpokenDrinks(text: string, drinkList: Drink[]): ParsedSpeechResult
       remaining = remaining.slice(qtyMatch[0].length)
     }
 
-    // Try matching against real drink names first (longest match wins) — exact/substring only, very confident
+    // Try matching against real drink names first (longest match wins) � exact/substring only, very confident
     let matched = false
     const sortedDrinks = [...drinkList].sort((a, b) => b.name.length - a.name.length)
     for (const d of sortedDrinks) {
@@ -380,7 +370,7 @@ function parseSpokenDrinks(text: string, drinkList: Drink[]): ParsedSpeechResult
     }
   }
 
-  // For unmatched chunks, try the fuzzy+phonetic matcher — only as a SUGGESTION, never auto-added
+  // For unmatched chunks, try the fuzzy+phonetic matcher � only as a SUGGESTION, never auto-added
   let suggestion: { drink: Drink; qty: number } | null = null
   let unrecognizedText: string | null = null
   if (unmatchedChunks.length > 0) {
@@ -417,14 +407,14 @@ function groupDrinksByCategory(drinks: Drink[]): [string, Drink[]][] {
   return allKeys.map((k) => [CATEGORY_LABELS[k] ?? k, map[k]])
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 // BILL / FAIR SPLIT CALCULATIONS
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 
 type PersonBillLine = {
   participantId: string
   name: string
-  drinkValue: number   // sum of (richtprijs × qty) for everything this person drank
+  drinkValue: number   // sum of (richtprijs � qty) for everything this person drank
   paid: number         // sum of payments this person made (pot-inleg + eigen rondes)
 }
 
@@ -454,8 +444,8 @@ function calculateBill(
 
   const totalDrinkValue = lines.reduce((s, l) => s + l.drinkValue, 0) + anonymousValue
   const totalPaid = lines.reduce((s, l) => s + l.paid, 0) // alle inleg (pot vooraf + door personen betaalde rondes)
-  // Wat er écht aan de toog betaald werd voor rondes (sessie >= 1), zowel door personen als uit de pot.
-  // De pot-inleg (sessie 0) telt NIET als uitgave — dat is geld dat nog (deels) terug moet.
+  // Wat er �cht aan de toog betaald werd voor rondes (sessie >= 1), zowel door personen als uit de pot.
+  // De pot-inleg (sessie 0) telt NIET als uitgave � dat is geld dat nog (deels) terug moet.
   const totalActuallySpent = payments.filter((pay) => pay.session >= 1).reduce((s, pay) => s + pay.amount, 0)
   const difference = totalPaid - totalDrinkValue // positive = paid more than richtprijs total, negative = paid less
 
@@ -470,8 +460,8 @@ const FAIR_EQUAL_WEIGHT = 0
 const toCents = (euro: number): number => Math.round((euro + Number.EPSILON) * 100)
 const round2 = (euro: number): number => toCents(euro) / 100
 
-// Verdeelt de ÉCHT betaalde drankkost (splitBase = totalActuallySpent) over de mensen.
-//  - mode "fair"  : proportioneel volgens wat elk dronk. Wie niets dronk draagt €0.
+// Verdeelt de �CHT betaalde drankkost (splitBase = totalActuallySpent) over de mensen.
+//  - mode "fair"  : proportioneel volgens wat elk dronk. Wie niets dronk draagt �0.
 //  - mode "equal" : het totaalbedrag gelijk over ALLE personen.
 // De pot blijft hier volledig buiten: die is voorschot en wordt apart verrekend
 // (het onbenutte deel komt terug via settleDebts met de virtuele "de pot").
@@ -508,14 +498,14 @@ function calculateFairSplit(
     let fairShare = 0
     if (splitBase > 0) {
       if (nDrinkers === 0 || assignedTotal <= 0) {
-        // Niemand kreeg iets toegewezen → gelijk over wie meedeed
+        // Niemand kreeg iets toegewezen ? gelijk over wie meedeed
         fairShare = splitBase / participatingCount
       } else if (l.drinkValue > 0) {
         const gelijkDeel = (splitBase * equalWeight) / nDrinkers
         const waardeDeel = splitBase * (1 - equalWeight) * (l.drinkValue / assignedTotal)
         fairShare = gelijkDeel + waardeDeel
       } else {
-        // Wel betaald / ingelegd maar niets gedronken → geen drankkost (inleg komt volledig terug)
+        // Wel betaald / ingelegd maar niets gedronken ? geen drankkost (inleg komt volledig terug)
         fairShare = 0
       }
     }
@@ -527,10 +517,10 @@ function calculateFairSplit(
   })
 }
 
-// Debt settlement: turn balances into concrete "X pays Y €amount" transactions.
+// Debt settlement: turn balances into concrete "X pays Y �amount" transactions.
 // People with balance < 0 (owe money) pay people with balance > 0 (should receive), minimizing transaction count.
 // potBalance = totalActuallySpent - totalPaid: een virtuele "de pot" die het overschot
-// teruggeeft (potBalance < 0 → pot is schuldenaar) of het tekort int (potBalance > 0 → pot is schuldeiser).
+// teruggeeft (potBalance < 0 ? pot is schuldenaar) of het tekort int (potBalance > 0 ? pot is schuldeiser).
 function settleDebts(
   fairSplit: { participantId: string; name: string; balance: number; participated: boolean }[],
   potBalance = 0
@@ -547,7 +537,7 @@ function settleDebts(
   const transactions: { from: string; to: string; amount: number }[] = []
 
   // 1) Exacte matches eerst: wie precies evenveel te geven heeft als iemand te krijgen heeft,
-  //    wordt in één rechtstreekse betaling gekoppeld. Zo zo weinig mogelijk betalingen.
+  //    wordt in ��n rechtstreekse betaling gekoppeld. Zo zo weinig mogelijk betalingen.
   let matched = true
   while (matched) {
     matched = false
@@ -565,44 +555,51 @@ function settleDebts(
     debtors = debtors.filter((d) => d.cents > 0)
   }
 
-  // 2) De rest: grootste schuldenaar betaalt telkens de grootste schuldeiser (rechtstreeks,
-  //    nooit via een omweg), tot alles vereffend is.
-  creditors.sort((a, b) => b.cents - a.cents)
-  debtors.sort((a, b) => b.cents - a.cents)
-  let ci = 0, di = 0
-  while (ci < creditors.length && di < debtors.length) {
-    const credit = creditors[ci]
-    const debt = debtors[di]
-    const amountCents = Math.min(credit.cents, debt.cents)
-    if (amountCents > 0) {
-      transactions.push({ from: debt.name, to: credit.name, amount: amountCents / 100 })
+  // 2) De rest: elke schuldenaar in zo weinig mogelijk betalingen afhandelen (liefst 1).
+  //    We zoeken eerst de kleinste schuldeiser die zijn HELE schuld kan opvangen -> 1 betaling.
+  //    Lukt dat niet, dan betaalt hij de grootste schuldeiser en splitst pas als het echt
+  //    niet anders kan. Van meerdere ontvangen mag; niemand betaalt liefst meer dan 1-2 keer.
+  while (debtors.length > 0 && creditors.length > 0) {
+    debtors.sort((a, b) => b.cents - a.cents)
+    const d = debtors[0]
+    const fits = creditors.filter((c) => c.cents >= d.cents).sort((a, b) => a.cents - b.cents)
+    if (fits.length > 0) {
+      const c = fits[0]
+      transactions.push({ from: d.name, to: c.name, amount: d.cents / 100 })
+      c.cents -= d.cents
+      d.cents = 0
+    } else {
+      creditors.sort((a, b) => b.cents - a.cents)
+      const c = creditors[0]
+      const amountCents = c.cents
+      transactions.push({ from: d.name, to: c.name, amount: amountCents / 100 })
+      d.cents -= amountCents
+      c.cents = 0
     }
-    credit.cents -= amountCents
-    debt.cents -= amountCents
-    if (credit.cents <= 0) ci++
-    if (debt.cents <= 0) di++
+    creditors = creditors.filter((c) => c.cents > 0)
+    debtors = debtors.filter((d) => d.cents > 0)
   }
 
   return transactions
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 // SUB-COMPONENTS
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 
 function Toast({ message, onDone }: { message: string; onDone: () => void }) {
   useEffect(() => { const t = setTimeout(onDone, 2400); return () => clearTimeout(t) }, [onDone])
   return <div style={S.toast}>{message}</div>
 }
 
-// Rundo-logo — exact hetzelfde symbool als bij Rundo Table (ingebed als afbeelding)
+// Rundo-logo � exact hetzelfde symbool als bij Rundo Table (ingebed als afbeelding)
 const RUNDO_LOGO_SRC = "data:image/png;base64,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"
 function RundoLogo({ size = 64 }: { size?: number }) {
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={RUNDO_LOGO_SRC} alt="Rundo" width={size} height={size} style={{ display: "block", objectFit: "contain", flexShrink: 0 }} />
 }
 
-// Klinkende glazen ("cheers") — getekend icoontje voor de Party-ondertitel
+// Klinkende glazen ("cheers") � getekend icoontje voor de Party-ondertitel
 function CheersIcon({ size = 20 }: { size?: number }) {
   return (
     <svg viewBox="0 0 64 64" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{ display: "block", flexShrink: 0 }}>
@@ -627,9 +624,9 @@ function CheersIcon({ size = 20 }: { size?: number }) {
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 // MAIN COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 
 export default function Home() {
   const mounted = useRef(true)
@@ -653,7 +650,7 @@ export default function Home() {
     return () => document.removeEventListener("pointerdown", onPointerDown)
   }, [])
 
-  // ── App flow state ────────────────────────────────────────────────────────
+  // ?? App flow state ????????????????????????????????????????????????????????
   const [view, setView] = useState<AppView>("setup")
   const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
   const [savedOpen, setSavedOpen] = useState(false)
@@ -690,7 +687,7 @@ export default function Home() {
   const [selectorDraft, setSelectorDraft] = useState<Record<string, number>>({}) // selector start telkens op 0; wordt bij "Klaar" toegevoegd
   const [selectorEditMode, setSelectorEditMode] = useState(false) // true = 'Bestelling wijzigen': selector toont de huidige bestelling en vervangt ze bij Klaar
   const [lastAddedCustomDrink, setLastAddedCustomDrink] = useState<{ name: string; category: string } | null>(null) // melding in de selector na een eigen drankje
-  const [showFinishConfirm, setShowFinishConfirm] = useState(false)  // bevestiging vóór afronden
+  const [showFinishConfirm, setShowFinishConfirm] = useState(false)  // bevestiging v��r afronden
   const [showReorderPicker, setShowReorderPicker] = useState(false)  // kiezer om een vorig rondje opnieuw te bestellen
   const [reorderShowAll, setReorderShowAll] = useState(false) // toon ook oudere rondjes (standaard enkel het vorige)
   const [toast, setToast] = useState<string | null>(null)
@@ -713,16 +710,16 @@ export default function Home() {
   const [potAddAmount, setPotAddAmount] = useState("") // bedrag voor 'over iedereen' aanvulling (totaal)
   const [potAddMode, setPotAddMode] = useState<"all" | "each">("all") // verdeel over iedereen of per persoon
   const [potAddDraft, setPotAddDraft] = useState<Record<string, string>>({}) // bedrag per persoon (modus 'each')
-  const [potBulk, setPotBulk] = useState("5") // bedrag om in één keer voor iedereen te zetten
+  const [potBulk, setPotBulk] = useState("5") // bedrag om in ��n keer voor iedereen te zetten
   const [potAddBulk, setPotAddBulk] = useState("") // aanvullen: bedrag p.p. (leeg = suggesties tonen)
   const [potAddWarn, setPotAddWarn] = useState(false) // aanvullen: melding bij leeg
   const [potAddedThisSession, setPotAddedThisSession] = useState(0) // som van wat in dit pot-overzicht al toegevoegd werd
   const [potAddPerPersonOpen, setPotAddPerPersonOpen] = useState(false) // per-persoon invoer bij aanvullen in-/uitgeklapt
 
   const [showBillPrices, setShowBillPrices] = useState(false)
-  const [showAssignPopup, setShowAssignPopup] = useState(false) // popup: drankjes toewijzen vóór Fair Split
+  const [showAssignPopup, setShowAssignPopup] = useState(false) // popup: drankjes toewijzen v��r Fair Split
   const [assignPopupDrinkIds, setAssignPopupDrinkIds] = useState<string[]>([]) // drankjes die bij openen van de popup nog open stonden (blijven zichtbaar om te wijzigen)
-  const [showIndicatiefInfo, setShowIndicatiefInfo] = useState(false) // info-popup achter de ⓘ bij richtprijzen
+  const [showIndicatiefInfo, setShowIndicatiefInfo] = useState(false) // info-popup achter de ? bij richtprijzen
   const [fairInfoMode, setFairInfoMode] = useState<null | "what" | "how">(null) // popup: wat is / hoe werkt fair split
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [showFairSplit, setShowFairSplit] = useState(false)
@@ -738,21 +735,20 @@ export default function Home() {
   // Eigen bevestigings-popup i.p.v. de kale browser-confirm()
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; confirmLabel?: string; danger?: boolean; onConfirm: () => void } | null>(null)
 
-  // ── Voice (quick order) state ────────────────────────────────────────────
+  // ?? Voice (quick order) state ????????????????????????????????????????????
   const [quickItems, setQuickItems] = useState<QuickOrderItem[]>([])
   const [voiceSuggestion, setVoiceSuggestion] = useState<{ spokenText: string; qty: number; suggested: Drink } | null>(null)
   const [quickVoiceActive, setQuickVoiceActive] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const quickRecogRef = useRef<any>(null)
 
-  // ── Loaders ───────────────────────────────────────────────────────────────
-  // Laadt de standaard basisdranken (group_id = null, voor iedereen) PLUS de eigen
-  // dranken/aanpassingen van deze groep. Zonder groep: enkel de basisdranken.
-  const loadDrinks = useCallback(async (groupId?: string | null) => {
-    const base = supabase.from("drinks").select("id,name,price,emoji,category,group_id")
-    const { data, error } = groupId
-      ? await base.or(`group_id.is.null,group_id.eq.${groupId}`)
-      : await base.is("group_id", null)
+  // ?? Loaders ???????????????????????????????????????????????????????????????
+  // Laadt de standaard basisdranken (owner_id = null, voor iedereen) PLUS je eigen dranken
+  // (owner_id = jij). Je eigen dranken zijn privé en volgen je naar elke groep die je maakt.
+  const loadDrinks = useCallback(async () => {
+    const ownerId = getOrCreateOwnerId()
+    const { data, error } = await supabase.from("drinks").select("id,name,price,emoji,category,group_id,owner_id")
+      .or(`owner_id.is.null,owner_id.eq.${ownerId}`)
     if (error) { setError("Drankjes laden mislukt"); return }
     if (mounted.current) setDrinks(data || [])
   }, [])
@@ -765,14 +761,14 @@ export default function Home() {
     ])
     if (pe || oe) { setError("Data laden mislukt"); return }
     if (mounted.current) {
-      setParticipants(orderParticipants(p || []))
+      setParticipants(orderStable(p || []))
       setOrders(o || [])
       if (!paye) setPayments(pay || [])
     }
   }, [])
 
   useEffect(() => { loadDrinks() }, [loadDrinks]) // start: enkel basisdranken
-  useEffect(() => { if (group) loadDrinks(group.id) }, [group, loadDrinks]) // groep geopend → ook eigen dranken
+  useEffect(() => { if (group) loadDrinks() }, [group, loadDrinks]) // groep geopend ? ook eigen dranken
   useEffect(() => { setSavedGroups(getSavedGroups()) }, [])
 
   // Bij het openen van het pot-overzicht: schone lei voor het aanvul-formulier
@@ -790,7 +786,7 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view])
 
-  // ── Realtime ──────────────────────────────────────────────────────────────
+  // ?? Realtime ??????????????????????????????????????????????????????????????
   useEffect(() => {
     if (!group) return
     let reloadTimer: ReturnType<typeof setTimeout> | null = null
@@ -802,7 +798,7 @@ export default function Home() {
     }
     const scheduleDrinks = () => {
       if (drinksTimer) clearTimeout(drinksTimer)
-      drinksTimer = setTimeout(() => { if (mounted.current) loadDrinks(group.id) }, 400)
+      drinksTimer = setTimeout(() => { if (mounted.current) loadDrinks() }, 400)
     }
 
     const channel = supabase.channel(`group-${group.id}`)
@@ -814,7 +810,7 @@ export default function Home() {
 
     const refreshOnReturn = () => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return
-      if (mounted.current) { loadAll(group.id); loadDrinks(group.id) }
+      if (mounted.current) { loadAll(group.id); loadDrinks() }
     }
     document.addEventListener("visibilitychange", refreshOnReturn)
     window.addEventListener("focus", refreshOnReturn)
@@ -828,7 +824,7 @@ export default function Home() {
     }
   }, [group, loadAll, loadDrinks])
 
-  // ── Group create / join ──────────────────────────────────────────────────
+  // ?? Group create / join ??????????????????????????????????????????????????
   const startGroup = async () => {
     if (!groupName.trim() || isStarting) return
     setStartError(null)
@@ -903,7 +899,7 @@ export default function Home() {
     } catch { /* sessionStorage niet beschikbaar */ }
   }, [group, view])
 
-  // ── Person setup ─────────────────────────────────────────────────────────
+  // ?? Person setup ?????????????????????????????????????????????????????????
   // Haal de HUIDIGE placeholdernummers rechtstreeks uit de DB, zodat we nooit
   // twee keer dezelfde "Persoon N" aanmaken (ook niet na verwijderen/toevoegen).
   const usedNumbersFromDb = async (groupId: string): Promise<Set<number>> => {
@@ -918,7 +914,7 @@ export default function Home() {
     const current = participants.length
     if (count > current) {
       const toAdd = count - current
-      const used = await usedNumbersFromDb(group.id) // vers uit DB → geen dubbels
+      const used = await usedNumbersFromDb(group.id) // vers uit DB ? geen dubbels
       for (let i = 0; i < toAdd; i++) {
         const num = smallestFreeNumber(used)
         used.add(num)
@@ -937,7 +933,7 @@ export default function Home() {
 
   const addPerson = async (name?: string) => {
     if (!group) return
-    const used = await usedNumbersFromDb(group.id) // vers uit DB → geen dubbele "Persoon N"
+    const used = await usedNumbersFromDb(group.id) // vers uit DB ? geen dubbele "Persoon N"
     const finalName = name?.trim() || `Persoon ${smallestFreeNumber(used)}`
     const { error } = await supabase.from("participants").insert([{ name: finalName, group_id: group.id }])
     if (error) { setError("Persoon toevoegen mislukt"); return }
@@ -977,7 +973,7 @@ export default function Home() {
     await loadAll(group.id)
   }
 
-  // ── Cart (huidige open ronde, met per-persoon toewijzing) ────────────────
+  // ?? Cart (huidige open ronde, met per-persoon toewijzing) ????????????????
   const addToCart = (drinkId: string, delta: number, markLast = true) => {
     if (delta > 0 && markLast) setLastAddedDrinkIds([drinkId])
     setCart((prev) => {
@@ -1078,7 +1074,7 @@ export default function Home() {
     setLastAddedDrinkIds(Array.from(new Set(rows.map((o) => o.drink_id))))
     setLastAddedViaVoice(false)
     setShowReorderPicker(false)
-    setToast(`Rondje ${roundLabel(sess)} overgenomen — pas aan en rond af 🔁`)
+    setToast(`Rondje ${roundLabel(sess)} overgenomen � pas aan en rond af ??`)
   }
 
   // Een drankje volledig uit de huidige bestelling halen
@@ -1087,7 +1083,7 @@ export default function Home() {
     setLastAddedDrinkIds((cur) => cur.filter((id) => id !== drinkId))
   }
 
-  // ── Drank-selector: lokale selectie die telkens op 0 start ────────────────
+  // ?? Drank-selector: lokale selectie die telkens op 0 start ????????????????
   const openDrinkSelector = () => { setSelectorDraft({}); setSelectorEditMode(false); setLastAddedCustomDrink(null); setShowDrinkSelector(true) }
   // 'Bestelling wijzigen': open de selector voorgevuld met de huidige bestelling (tellers tonen de huidige drankjes).
   const openDrinkSelectorEdit = () => {
@@ -1136,7 +1132,7 @@ export default function Home() {
       addedIds.forEach((id) => addToCart(id, selectorDraft[id], false))
     }
     setLastAddedDrinkIds(addedIds)
-    setLastAddedViaVoice(false) // via selector → geen aparte "Laatst toegevoegd"-kaart, wel highlight in de lijst
+    setLastAddedViaVoice(false) // via selector ? geen aparte "Laatst toegevoegd"-kaart, wel highlight in de lijst
     setOrderEditing(false)      // toevoeg-knoppen weer verbergen; onderaan komt afronden/wijzigen
     setSelectorDraft({})
     setSelectorEditMode(false)
@@ -1150,7 +1146,7 @@ export default function Home() {
     Object.entries(line.assignments).forEach(([pid, q]) => { if (q > 0) assignedAnywhere.add(pid) })
   })
 
-  // Toewijzen via één dropdown-vakje (i.p.v. een rij chips).
+  // Toewijzen via ��n dropdown-vakje (i.p.v. een rij chips).
   const renderAssignControl = (drinkId: string, line: CartLine, variant: "full" | "summary") => {
     if (participants.length === 0) return null
     const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
@@ -1170,8 +1166,8 @@ export default function Home() {
         {assignedEntries.map(({ p, q }) => (
           <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: gold ? "#ecc85a" : "rgba(120,95,20,0.06)", border: gold ? "1px solid #e0ac00" : "1px solid rgba(120,95,20,0.12)", borderRadius: 20, padding: "3px 5px 3px 11px", fontSize: 12, fontWeight: gold ? 800 : 600, color: "#4a3f1e" }}>
             {p.name}
-            <span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 18, textAlign: "center", padding: "1px 6px", fontSize: 11, fontWeight: 800 }}>×{q}</span>
-            <button style={{ ...S.iconBtn, width: 18, height: 18, fontSize: 11 }} onClick={() => assignCartItem(drinkId, p.id, -1)}>−</button>
+            <span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 18, textAlign: "center", padding: "1px 6px", fontSize: 11, fontWeight: 800 }}>�{q}</span>
+            <button style={{ ...S.iconBtn, width: 18, height: 18, fontSize: 11 }} onClick={() => assignCartItem(drinkId, p.id, -1)}>?</button>
           </span>
         ))}
       </div>
@@ -1182,7 +1178,7 @@ export default function Home() {
         {gold && (
           <button onClick={() => { setLastAddedDrinkIds((cur) => cur.filter((x) => x !== drinkId)); setOpenAssignFor(null) }}
             style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: "1px solid rgba(0,0,0,0.06)", padding: "9px 12px", fontSize: 13, color: "#a89a6a", cursor: "pointer" }}>
-            ⏳ later toewijzen
+            ? later toewijzen
           </button>
         )}
         {sortedPeople.map((p) => {
@@ -1195,13 +1191,13 @@ export default function Home() {
                 style={{ flex: 1, textAlign: "left", background: q > 0 ? "rgba(214,158,20,0.06)" : "none", border: "none", padding: "10px 12px", fontSize: 13.5, fontWeight: q > 0 ? 800 : 600, color: canAdd || q > 0 ? "#4a3f1e" : "#bbb", cursor: canAdd ? "pointer" : "default", display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ flex: 1, display: "inline-flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
                   <span>{p.name}</span>
-                  {elsewhere && <span style={{ fontSize: 10.5, color: "#b3a476", fontWeight: 600, whiteSpace: "nowrap" }}>· heeft al iets</span>}
+                  {elsewhere && <span style={{ fontSize: 10.5, color: "#b3a476", fontWeight: 600, whiteSpace: "nowrap" }}>� heeft al iets</span>}
                 </span>
                 {q > 0 && <span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 20, textAlign: "center", padding: "1px 7px", fontSize: 12, fontWeight: 800 }}>{q}</span>}
                 {canAdd && <span style={{ color: "#c8941a", fontWeight: 800, fontSize: 17, lineHeight: 1 }}>+</span>}
               </button>
               {q > 0 && (
-                <button onClick={() => assignCartItem(drinkId, p.id, -1)} style={{ ...S.iconBtn, width: 30, height: 30, margin: "0 8px", flexShrink: 0 }}>−</button>
+                <button onClick={() => assignCartItem(drinkId, p.id, -1)} style={{ ...S.iconBtn, width: 30, height: 30, margin: "0 8px", flexShrink: 0 }}>?</button>
               )}
             </div>
           )
@@ -1209,7 +1205,7 @@ export default function Home() {
         {showEveryone && (
           <button onClick={() => { assignToEveryone(drinkId); setOpenAssignFor(null) }}
             style={{ display: "block", width: "100%", textAlign: "left", background: "rgba(233,196,95,0.12)", border: "none", borderTop: "1px solid rgba(0,0,0,0.06)", padding: "10px 12px", fontSize: 13, fontWeight: 700, color: "#a06b00", cursor: "pointer" }}>
-            👥 iedereen (elk 1)
+            ?? iedereen (elk 1)
           </button>
         )}
       </div>
@@ -1218,8 +1214,8 @@ export default function Home() {
     const trigger = (
       <button onClick={() => setOpenAssignFor(isOpen ? null : drinkId)}
         style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 13, fontWeight: unassigned > 0 ? 700 : 600, cursor: "pointer", color: unassigned > 0 ? "#e0685c" : "#1f8a4c", background: gold ? "#fffdf6" : "#fff", border: gold ? "1.5px solid #ecc85a" : "1px solid rgba(120,95,20,0.18)", borderRadius: 10, padding: "9px 12px" }}>
-        <span>{unassigned > 0 ? "voor wie?" : "✓ alles toegewezen"}</span>
-        <span style={{ color: "#aaa" }}>{isOpen ? "▴" : "▾"}</span>
+        <span>{unassigned > 0 ? "voor wie?" : "? alles toegewezen"}</span>
+        <span style={{ color: "#aaa" }}>{isOpen ? "?" : "?"}</span>
       </button>
     )
 
@@ -1240,13 +1236,13 @@ export default function Home() {
             style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, width: "100%", textAlign: "left", background: "none", border: "none", padding: 0, cursor: "pointer" }}
           >
             {assignedEntries.map(({ p, q }) => (
-              <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#4a3f1e", fontWeight: 600, background: "rgba(120,95,20,0.06)", borderRadius: 20, padding: "2px 8px 2px 10px" }}>{p.name}<span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 18, textAlign: "center", padding: "1px 6px", fontSize: 11, fontWeight: 800 }}>×{q}</span></span>
+              <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#4a3f1e", fontWeight: 600, background: "rgba(120,95,20,0.06)", borderRadius: 20, padding: "2px 8px 2px 10px" }}>{p.name}<span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 18, textAlign: "center", padding: "1px 6px", fontSize: 11, fontWeight: 800 }}>�{q}</span></span>
             ))}
             {unassigned > 0 && (
               <span style={{ fontSize: 12, fontWeight: 700, color: "#e0685c", background: "rgba(120,95,20,0.05)", borderRadius: 20, padding: "3px 12px" }}>{unassigned} nog toe te wijzen!</span>
             )}
             {unassigned <= 0 && assignedEntries.length > 0 && (
-              <span style={{ fontSize: 11, color: "#aaa" }}>✏️ aanpassen</span>
+              <span style={{ fontSize: 11, color: "#aaa" }}>?? aanpassen</span>
             )}
           </button>
         </div>
@@ -1255,14 +1251,14 @@ export default function Home() {
     return (
       <div style={{ marginTop: 8 }}>
         <div style={{ fontSize: 11, color: "#8a7d55", fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>
-          Toewijzen{unassigned > 0 ? <> · <span style={{ color: "#e0685c" }}>{unassigned} open</span></> : " ✓"}
+          Toewijzen{unassigned > 0 ? <> � <span style={{ color: "#e0685c" }}>{unassigned} open</span></> : " ?"}
         </div>
         {panel}
         <button
           onClick={() => setOpenAssignFor(null)}
           style={{ marginTop: 7, width: "100%", background: "rgba(120,95,20,0.04)", border: "1px solid rgba(120,95,20,0.08)", color: "#8a7d55", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 10, padding: "8px 0" }}
         >
-          Sluiten ▴
+          Sluiten ?
         </button>
       </div>
     )
@@ -1288,14 +1284,14 @@ export default function Home() {
     const trigger = anonymousQty > 0 ? (
       <button onClick={() => setOpenBillAssignFor(isOpen ? null : drink.id)}
         style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#e0685c", background: "rgba(224,107,94,0.06)", border: "1px solid rgba(224,107,94,0.4)", borderRadius: 10, padding: "7px 10px" }}>
-        <span>⚠️ {anonymousQty} nog toe te wijzen — voor wie?</span>
-        <span style={{ color: "#aaa" }}>{isOpen ? "▴" : "▾"}</span>
+        <span>?? {anonymousQty} nog toe te wijzen � voor wie?</span>
+        <span style={{ color: "#aaa" }}>{isOpen ? "?" : "?"}</span>
       </button>
     ) : (
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button onClick={() => setOpenBillAssignFor(isOpen ? null : drink.id)} title="Toewijzing wijzigen"
           style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 12, background: isOpen ? "rgba(214,158,20,0.16)" : "rgba(120,95,20,0.05)" }}>
-          {isOpen ? "▴" : "✏️"}
+          {isOpen ? "?" : "??"}
         </button>
       </div>
     )
@@ -1312,7 +1308,7 @@ export default function Home() {
                 {canAdd && <span style={{ color: "#c8941a", fontWeight: 800, fontSize: 17, lineHeight: 1 }}>+</span>}
               </button>
               {q > 0 && (
-                <button onClick={() => unassignOneFromPerson(drink.id, p.id)} style={{ ...S.iconBtn, width: 30, height: 30, margin: "0 8px", flexShrink: 0 }}>−</button>
+                <button onClick={() => unassignOneFromPerson(drink.id, p.id)} style={{ ...S.iconBtn, width: 30, height: 30, margin: "0 8px", flexShrink: 0 }}>?</button>
               )}
             </div>
           )
@@ -1320,7 +1316,7 @@ export default function Home() {
         {showEveryone && (
           <button onClick={() => { assignAnonymousToMany(drink.id, participants.map((p) => p.id)); setOpenBillAssignFor(null) }}
             style={{ display: "block", width: "100%", textAlign: "left", background: "rgba(233,196,95,0.12)", border: "none", borderTop: "1px solid rgba(0,0,0,0.06)", padding: "10px 12px", fontSize: 13, fontWeight: 700, color: "#a06b00", cursor: "pointer" }}>
-            👥 iedereen (elk 1)
+            ?? iedereen (elk 1)
           </button>
         )}
       </div>
@@ -1336,7 +1332,7 @@ export default function Home() {
 
   const sessions = Array.from(new Set(orders.map((o) => o.session).filter((n) => n >= 1))).sort((a, b) => a - b)
   const nextSession = (sessions.length > 0 ? Math.max(...sessions) : 0) + 1
-  // Toon rondjes altijd doorlopend (1, 2, 3…) op basis van hun VOLGORDE, los van het interne
+  // Toon rondjes altijd doorlopend (1, 2, 3�) op basis van hun VOLGORDE, los van het interne
   // sessienummer. Zo blijft de nummering netjes ook na het verwijderen van een rondje (geen gaten),
   // zonder dat we in de database moeten hernummeren.
   const roundLabel = (s: number) => { const i = sessions.indexOf(s); return i >= 0 ? i + 1 : sessions.length + 1 }
@@ -1349,7 +1345,7 @@ export default function Home() {
   const finishRound = async () => {
     if (!group || cartTotalItems === 0) { setToast("Voeg eerst drankjes toe"); return }
     const newRoundSession = nextSession
-    // Alle rijen in één keer opbouwen en met ÉÉN insert wegschrijven → alles-of-niets,
+    // Alle rijen in ��n keer opbouwen en met ��N insert wegschrijven ? alles-of-niets,
     // geen half rondje meer als de tab sluit of het netwerk hapert.
     const rows: { participant_id: string | null; drink_id: string; quantity: number; group_id: string; session: number }[] = []
     for (const [drinkId, line] of Object.entries(cart)) {
@@ -1365,7 +1361,7 @@ export default function Home() {
     }
     if (rows.length > 0) {
       const { error } = await supabase.from("orders").insert(rows)
-      if (error) { setError("Rondje opslaan mislukt — probeer opnieuw"); return }
+      if (error) { setError("Rondje opslaan mislukt � probeer opnieuw"); return }
     }
     await loadAll(group.id)
     setBarmanStep("list")
@@ -1390,7 +1386,7 @@ export default function Home() {
     setView("ordering")
   }
 
-  // ── Voice quick order ────────────────────────────────────────────────────
+  // ?? Voice quick order ????????????????????????????????????????????????????
   const startQuickVoice = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const w = window as any
@@ -1415,13 +1411,13 @@ export default function Home() {
       if (addedIds.length > 0) { setLastAddedDrinkIds(addedIds); setLastAddedViaVoice(true) }
 
       if (recognized.length > 0) {
-        setToast(`Toegevoegd: ${recognized.map((d) => `${d.qty}× ${d.name}`).join(", ")}`)
+        setToast(`Toegevoegd: ${recognized.map((d) => `${d.qty}� ${d.name}`).join(", ")}`)
       }
 
       if (suggestion) {
         setVoiceSuggestion({ spokenText: text, qty: suggestion.qty, suggested: suggestion.drink })
       } else if (recognized.length === 0) {
-        setToast("Niet herkend — probeer opnieuw of typ het drankje handmatig")
+        setToast("Niet herkend � probeer opnieuw of typ het drankje handmatig")
       }
 
       setQuickVoiceActive(false)
@@ -1438,13 +1434,13 @@ export default function Home() {
     addToCart(voiceSuggestion.suggested.id, voiceSuggestion.qty)
     setLastAddedDrinkIds([voiceSuggestion.suggested.id])
     setLastAddedViaVoice(true)
-    setToast(`${voiceSuggestion.qty}× ${voiceSuggestion.suggested.name} toegevoegd`)
+    setToast(`${voiceSuggestion.qty}� ${voiceSuggestion.suggested.name} toegevoegd`)
     setVoiceSuggestion(null)
   }
 
   const dismissVoiceSuggestion = () => setVoiceSuggestion(null)
 
-  // ── Round editing (assign drinks to people after the fact) ─────────────
+  // ?? Round editing (assign drinks to people after the fact) ?????????????
   const getRoundGrouped = (r: number) => {
     const map: Record<string, { drink: Drink; totalQty: number; anonymous: number; people: Record<string, { name: string; qty: number }> }> = {}
     orders.filter((o) => o.session === r).forEach((o) => {
@@ -1546,12 +1542,12 @@ export default function Home() {
     if (!group) return
     setConfirmDialog({
       title: `Ronde ${roundLabel(round)} verwijderen?`,
-      message: "Je verliest ook de bestellingen én betalingen van deze ronde. De overige rondes behouden hun nummer.",
+      message: "Je verliest ook de bestellingen �n betalingen van deze ronde. De overige rondes behouden hun nummer.",
       confirmLabel: "Verwijderen",
       danger: true,
       onConfirm: async () => {
         // Enkel deze ronde verwijderen; NIET hernummeren (zo blijft "Ronde 3" ook op een
-        // tweede toestel "Ronde 3" — er ontstaat gewoon een gaatje in de nummering).
+        // tweede toestel "Ronde 3" � er ontstaat gewoon een gaatje in de nummering).
         await supabase.from("orders").delete().eq("group_id", group.id).eq("session", round)
         await supabase.from("payments").delete().eq("group_id", group.id).eq("session", round)
         await loadAll(group.id)
@@ -1562,7 +1558,7 @@ export default function Home() {
     })
   }
 
-  // ── Payments ──────────────────────────────────────────────────────────────
+  // ?? Payments ??????????????????????????????????????????????????????????????
   const openPaymentEditor = (round: number) => {
     const existing = payments.filter((p) => p.session === round)
     const draft: Record<string, string> = {}
@@ -1590,7 +1586,7 @@ export default function Home() {
   const getRoundPayments = (round: number) => payments.filter((p) => p.session === round)
   const getRoundPaymentTotal = (round: number) => getRoundPayments(round).reduce((s, p) => s + p.amount, 0)
 
-  // ── Pot (gezamenlijke inleg vooraf, sessie 0) ──────────────────────────────
+  // ?? Pot (gezamenlijke inleg vooraf, sessie 0) ??????????????????????????????
   const POT_SESSION = 0
   const POT_PAYER = "__POT__"
   const potTotal = payments.filter((p) => p.session === POT_SESSION).reduce((s, p) => s + p.amount, 0)
@@ -1623,7 +1619,7 @@ export default function Home() {
     await loadAll(group.id)
     setPotWarn(false)
     setShowPotModal(false)
-    setToast("Pot opgeslagen 💰")
+    setToast("Pot opgeslagen ??")
   }
 
   const addToPot = async () => {
@@ -1633,7 +1629,7 @@ export default function Home() {
       .filter((r) => participants.some((p) => p.id === r.participant_id) && !isNaN(r.amount) && r.amount > 0)
     if (rows.length === 0) {
       const amt = Math.round(parseFloat((potAddBulk || "").replace(",", ".")) || 0)
-      if (isNaN(amt) || amt <= 0 || participants.length === 0) { setPotAddWarn(true); setToast("Vul eerst een bedrag in om de pot aan te vullen ⚠️"); return }
+      if (isNaN(amt) || amt <= 0 || participants.length === 0) { setPotAddWarn(true); setToast("Vul eerst een bedrag in om de pot aan te vullen ??"); return }
       rows = participants.map((p) => ({ participant_id: p.id, amount: amt }))
     }
     const inserts = rows.map((r) => ({ group_id: group.id, session: POT_SESSION, participant_id: r.participant_id, amount: r.amount }))
@@ -1647,7 +1643,7 @@ export default function Home() {
     const usedNow = payments.filter((p) => p.session >= 1 && !p.participant_id).reduce((s, p) => s + p.amount, 0)
     const newTotal = potTotal + tot
     const leftNow = Math.max(0, newTotal - usedNow)
-    setToast(`✅ €${tot.toFixed(2)} toegevoegd · €${leftNow.toFixed(2)} nog in pot · €${usedNow.toFixed(2)} gebruikt`)
+    setToast(`? �${tot.toFixed(2)} toegevoegd � �${leftNow.toFixed(2)} nog in pot � �${usedNow.toFixed(2)} gebruikt`)
     setShowPotOverview(false)
   }
 
@@ -1658,29 +1654,29 @@ export default function Home() {
     await loadAll(group.id)
   }
 
-  // ── Drink CRUD ───────────────────────────────────────────────────────────
+  // ?? Drink CRUD ???????????????????????????????????????????????????????????
   const addDrink = async () => {
     const { name, price, category } = newDrink
     const priceNum = parseFloat((price || "").replace(",", "."))
     if (!name.trim()) { setAddDrinkWarn("Vul eerst een naam in voor je drankje."); return }
-    if (!price || isNaN(priceNum) || priceNum <= 0) { setAddDrinkWarn("Een richtprijs is verplicht — die hebben we nodig om de rekening achteraf eerlijk te verdelen met Fair Split."); return }
+    if (!price || isNaN(priceNum) || priceNum <= 0) { setAddDrinkWarn("Een richtprijs is verplicht � die hebben we nodig om de rekening achteraf eerlijk te verdelen met Fair Split."); return }
     if (!category) { setAddDrinkWarn("Kies nog een categorie."); return }
     setAddDrinkWarn(null)
     const cat = category || FALLBACK_CATEGORY
-    const autoEmoji = "✨"
+    const autoEmoji = "?"
     // Eigen drank hoort enkel bij DEZE groep (group_id), niet bij andere groepen.
-    const { data, error } = await supabase.from("drinks").insert([{ name: name.trim(), price: priceNum, emoji: autoEmoji, category: cat, group_id: group?.id ?? null }]).select().single()
+    const { data, error } = await supabase.from("drinks").insert([{ name: name.trim(), price: priceNum, emoji: autoEmoji, category: cat, group_id: group?.id ?? null, owner_id: getOrCreateOwnerId() }]).select().single()
     if (error) { setError("Drank toevoegen mislukt: " + error.message); return }
     setNewDrink({ name: "", price: "", emoji: "", category: newDrink.category })
     setToast(`${name} toegevoegd`)
-    await loadDrinks(group?.id)
+    await loadDrinks()
     if (showDrinkSelector) {
       setActiveCategory(cat)
       setLastAddedCustomDrink({ name: name.trim(), category: cat })
     } else if (data?.id) {
       addToCart(data.id, 1)
       setLastAddedDrinkIds([data.id])
-      setLastAddedViaVoice(true) // enkel drankje → 'Laatst toegevoegd'-kaart mag
+      setLastAddedViaVoice(true) // enkel drankje ? 'Laatst toegevoegd'-kaart mag
     }
     setShowAddDrink(false)
   }
@@ -1688,21 +1684,21 @@ export default function Home() {
   const saveEditedDrink = async () => {
     if (!editingDrink) return
     if (editingDrink.group_id) {
-      // Eigen drank/aanpassing van deze groep → gewoon bijwerken.
+      // Eigen drank/aanpassing van deze groep ? gewoon bijwerken.
       const { error } = await supabase.from("drinks").update({ name: editingDrink.name, price: editingDrink.price, emoji: editingDrink.emoji, category: editingDrink.category }).eq("id", editingDrink.id)
       if (error) { setError("Drank opslaan mislukt"); return }
     } else {
-      // Basisdrank aanpassen → NIET de globale drank wijzigen (dat zou andere groepen raken),
+      // Basisdrank aanpassen ? NIET de globale drank wijzigen (dat zou andere groepen raken),
       // maar een eigen versie voor deze groep aanmaken die de basisdrank hier vervangt.
-      const { error } = await supabase.from("drinks").insert([{ name: editingDrink.name, price: editingDrink.price, emoji: editingDrink.emoji, category: editingDrink.category, group_id: group?.id ?? null }])
+      const { error } = await supabase.from("drinks").insert([{ name: editingDrink.name, price: editingDrink.price, emoji: editingDrink.emoji, category: editingDrink.category, group_id: group?.id ?? null, owner_id: getOrCreateOwnerId() }])
       if (error) { setError("Drank opslaan mislukt"); return }
     }
     setEditingDrink(null)
-    await loadDrinks(group?.id)
+    await loadDrinks()
   }
 
-  // ✨ = zelf toegevoegde drank. group_id gezet = hoort bij deze groep (eigen drank of aanpassing).
-  const isCustomDrink = (d: Drink) => d.emoji.startsWith("✨")
+  // ? = zelf toegevoegde drank. group_id gezet = hoort bij deze groep (eigen drank of aanpassing).
+  const isCustomDrink = (d: Drink) => d.emoji.startsWith("?")
   const isGroupDrink = (d: Drink) => !!d.group_id
 
   const deleteDrinkFromList = async (id: string) => {
@@ -1716,16 +1712,16 @@ export default function Home() {
       onConfirm: async () => {
         const { error } = await supabase.from("drinks").delete().eq("id", id)
         if (error) { setError("Drank verwijderen mislukt"); return }
-        await loadDrinks(group?.id)
+        await loadDrinks()
       },
     })
   }
 
-  // ── Computed totals ──────────────────────────────────────────────────────
+  // ?? Computed totals ??????????????????????????????????????????????????????
   const getGlobalTotal = () => orders.reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
 
   // Voor de keuzelijsten/bewerken: als deze groep een eigen versie van een drank heeft
-  // (zelfde naam), toon dan die i.p.v. de basisdrank. De volledige `drinks` blijft wél
+  // (zelfde naam), toon dan die i.p.v. de basisdrank. De volledige `drinks` blijft w�l
   // bestaan zodat oude bestellingen (die naar de basisdrank verwijzen) herkend blijven.
   const visibleDrinks = (() => {
     const groupRows = drinks.filter((d) => d.group_id)
@@ -1735,11 +1731,11 @@ export default function Home() {
   })()
   const groupedDrinks = groupDrinksByCategory(visibleDrinks)
   const bill = calculateBill(participants, orders, drinks, payments)
-  // Fair split = de ÉCHT betaalde rondebedragen, verdeeld naar wat elk dronk (of gelijk bij 'iedereen evenveel').
+  // Fair split = de �CHT betaalde rondebedragen, verdeeld naar wat elk dronk (of gelijk bij 'iedereen evenveel').
   // De inleg die niet gebruikt werd, komt terug via de virtuele "de pot".
   const fairSplit = calculateFairSplit(bill.lines, bill.totalActuallySpent, bill.anonymousValue, splitMode)
   const settledDebts = settleDebts(fairSplit, bill.totalActuallySpent - bill.totalPaid)
-  // Zuivere Fair Split én zuivere gelijke verdeling (los van de actieve modus),
+  // Zuivere Fair Split �n zuivere gelijke verdeling (los van de actieve modus),
   // zodat we altijd de andere optie ernaast kunnen vergelijken.
   const fairRows = calculateFairSplit(bill.lines, bill.totalActuallySpent, bill.anonymousValue, "fair")
   const fairSettled = settleDebts(fairRows, bill.totalActuallySpent - bill.totalPaid)
@@ -1747,7 +1743,7 @@ export default function Home() {
   const equalSettled = settleDebts(equalRows, bill.totalActuallySpent - bill.totalPaid)
   // Kan er wel een verdeling gemaakt worden?
   //  - er moet echt iets betaald zijn voor rondes, EN
-  //  - er mag geen enkel rondje onbetaald zijn (anders klopt het totaal niet — ook niet bij 'iedereen evenveel'), EN
+  //  - er mag geen enkel rondje onbetaald zijn (anders klopt het totaal niet � ook niet bij 'iedereen evenveel'), EN
   //  - voor Fair Split mag er bovendien geen enkel drankje niet-toegewezen zijn.
   const unpaidRounds = sessions.filter((s) => getRoundPaymentTotal(s) <= 0.01)
   const hasUnassignedDrinks = orders.some((o) => !o.participant_id && o.quantity > 0)
@@ -1766,15 +1762,15 @@ export default function Home() {
     if (!canFairSplit) setCompareOther(false) // fair-vergelijking kan niet met niet-toegewezen drankjes
   }, [canSplit, canFairSplit, splitMode])
 
-  // ═══════════════════════════════════════════════════════════════════════
+  // ???????????????????????????????????????????????????????????????????????
   // RENDER: Start screen (no group yet)
-  // ═══════════════════════════════════════════════════════════════════════
+  // ???????????????????????????????????????????????????????????????????????
   if (!group) {
     const filteredSaved = savedGroups.filter((g) => g.name.toLowerCase().includes(savedSearch.toLowerCase()))
     return (
       <div style={S.page}>
         <div style={{ maxWidth: 420, margin: "40px auto" }}>
-          <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#a89a6a", textDecoration: "none", marginBottom: 14, cursor: "pointer" }}>← naar Rundo startscherm</a>
+          <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#a89a6a", textDecoration: "none", marginBottom: 14, cursor: "pointer" }}>? naar Rundo startscherm</a>
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginBottom: 8 }}>
               <RundoLogo size={60} />
@@ -1800,25 +1796,25 @@ export default function Home() {
             <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16, fontWeight: 800 }} onClick={startGroup} disabled={isStarting}>{isStarting ? "Laden..." : "Starten"}</button>
             {startError && (
               <div style={{ marginTop: 12, color: "#c0392b", fontSize: 13, background: "#fff0f0", borderRadius: 10, padding: "8px 12px" }}>
-                ⚠️ {startError}
-                <button onClick={() => setStartError(null)} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", color: "#c0392b" }}>✕</button>
+                ?? {startError}
+                <button onClick={() => setStartError(null)} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", color: "#c0392b" }}>?</button>
               </div>
             )}
           </div>
 
-          {/* Opgeslagen groepen — onderaan, uitklapbaar */}
+          {/* Opgeslagen groepen � onderaan, uitklapbaar */}
           {savedGroups.length > 0 && (
             <div style={{ ...S.card, marginTop: 4 }}>
               <button onClick={() => setSavedOpen((o) => !o)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", padding: 0 }}>
                 <b style={{ fontSize: 14, color: "#4a3f1e" }}>Opgeslagen groepen</b>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#c98a00", background: "rgba(233,196,95,0.18)", borderRadius: 10, padding: "1px 8px" }}>{savedGroups.length}</span>
-                  <span style={{ fontSize: 12, color: "#c98a00", display: "inline-block", transform: savedOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
+                  <span style={{ fontSize: 12, color: "#c98a00", display: "inline-block", transform: savedOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>?</span>
                 </div>
               </button>
               {savedOpen && (
                 <div style={{ marginTop: 12 }}>
-                  <input value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} placeholder="🔍 Zoek groep..." style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 10, fontSize: 13 }} />
+                  <input value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} placeholder="?? Zoek groep..." style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 10, fontSize: 13 }} />
                   {filteredSaved.map((g) => (
                     <div
                       key={g.id}
@@ -1828,8 +1824,8 @@ export default function Home() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 600, fontSize: 15 }}>{g.name}</div>
                       </div>
-                      <span style={{ fontSize: 13, color: "#c98a00", fontWeight: 700 }}>openen →</span>
-                      <button style={S.iconBtn} onClick={(e) => { e.stopPropagation(); removeGroupFromStorage(g.id); setSavedGroups(getSavedGroups()) }}>🗑️</button>
+                      <span style={{ fontSize: 13, color: "#c98a00", fontWeight: 700 }}>openen ?</span>
+                      <button style={S.iconBtn} onClick={(e) => { e.stopPropagation(); removeGroupFromStorage(g.id); setSavedGroups(getSavedGroups()) }}>???</button>
                     </div>
                   ))}
                 </div>
@@ -1853,7 +1849,7 @@ export default function Home() {
             <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}><RundoLogo size={22} /> Wat is Rundo Party?</h3>
               <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-                Met <b style={{ color: "#f0a500" }}>Rundo Party</b> hou je vlot bij wie welke rondjes bestelt en betaalt — per persoon of via een gezamenlijke pot. Op het einde verdeel je de rekening <b>eerlijk met Fair Split</b> (op basis van wie wat dronk) of gewoon gelijk over iedereen.
+                Met <b style={{ color: "#f0a500" }}>Rundo Party</b> hou je vlot bij wie welke rondjes bestelt en betaalt � per persoon of via een gezamenlijke pot. Op het einde verdeel je de rekening <b>eerlijk met Fair Split</b> (op basis van wie wat dronk) of gewoon gelijk over iedereen.
               </p>
               <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowAboutParty(false)}>Begrepen</button>
             </div>
@@ -1863,26 +1859,26 @@ export default function Home() {
     )
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
+  // ???????????????????????????????????????????????????????????????????????
   // RENDER: Main app
-  // ═══════════════════════════════════════════════════════════════════════
+  // ???????????????????????????????????????????????????????????????????????
   return (
     <div style={S.page}>
       <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.55} } * { box-sizing: border-box; }`}</style>
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       {error && (
         <div style={S.errorBanner}>
-          ⚠️ {error}
-          <button onClick={() => setError(null)} style={{ marginLeft: 12, background: "none", border: "none", cursor: "pointer", color: "#c0392b", fontWeight: 700 }}>✕</button>
+          ?? {error}
+          <button onClick={() => setError(null)} style={{ marginLeft: 12, background: "none", border: "none", cursor: "pointer", color: "#c0392b", fontWeight: 700 }}>?</button>
         </div>
       )}
 
-      {/* Modal: Dranken/prijzen bewerken — per categorie, geldt overal */}
+      {/* Modal: Dranken/prijzen bewerken � per categorie, geldt overal */}
       {showEditDrinks && (
         <div style={S.overlay}>
           <div style={{ ...S.modal, width: 440, maxHeight: "82vh", display: "flex", flexDirection: "column" }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>✏️ Dranken/prijzen bewerken</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Pas naam en prijs aan, per categorie — dit geldt overal in de app.</p>
+            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>?? Dranken/prijzen bewerken</h3>
+            <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Pas naam en prijs aan, per categorie � dit geldt overal in de app.</p>
             <div style={{ overflowY: "auto", flex: 1, marginBottom: 12 }}>
               {drinks.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>Nog geen dranken</div>}
               {(() => {
@@ -1898,18 +1894,18 @@ export default function Home() {
                           <>
                             <span style={{ fontSize: 18, width: 28, textAlign: "center" }}>{d.emoji}</span>
                             <input value={editingDrink.name} onChange={(e) => setEditingDrink({ ...editingDrink, name: e.target.value })} style={{ ...S.input, flex: 1 }} />
-                            <span style={{ color: "#999" }}>€</span>
+                            <span style={{ color: "#999" }}>�</span>
                             <input type="number" value={editingDrink.price} onChange={(e) => setEditingDrink({ ...editingDrink, price: parseFloat(e.target.value) || 0 })} style={{ ...S.input, width: 70 }} />
-                            <button style={{ ...S.btn, ...S.btnPrimary, padding: "6px 10px" }} onClick={saveEditedDrink}>💾</button>
-                            <button style={{ ...S.btn, padding: "6px 10px" }} onClick={() => setEditingDrink(null)}>✖</button>
+                            <button style={{ ...S.btn, ...S.btnPrimary, padding: "6px 10px" }} onClick={saveEditedDrink}>??</button>
+                            <button style={{ ...S.btn, padding: "6px 10px" }} onClick={() => setEditingDrink(null)}>?</button>
                           </>
                         ) : (
                           <>
-                            <span style={{ flex: 1, fontSize: 14 }}>{d.emoji} {d.name} <span style={{ color: "#999" }}>— €{d.price.toFixed(2)}</span></span>
-                            <button style={S.iconBtn} onClick={() => setEditingDrink(d)}>✏️</button>
+                            <span style={{ flex: 1, fontSize: 14 }}>{d.emoji} {d.name} <span style={{ color: "#999" }}>� �{d.price.toFixed(2)}</span></span>
+                            <button style={S.iconBtn} onClick={() => setEditingDrink(d)}>??</button>
                             {isGroupDrink(d)
-                              ? <button style={S.iconBtn} title={isCustomDrink(d) ? "Eigen drankje verwijderen" : "Aanpassing ongedaan maken (terug naar basisprijs)"} onClick={() => deleteDrinkFromList(d.id)}>🗑️</button>
-                              : <span title="Basisdrank — blijft altijd staan" style={{ fontSize: 12, color: "#bbb", width: 30, textAlign: "center" }}>🔒</span>}
+                              ? <button style={S.iconBtn} title={isCustomDrink(d) ? "Eigen drankje verwijderen" : "Aanpassing ongedaan maken (terug naar basisprijs)"} onClick={() => deleteDrinkFromList(d.id)}>???</button>
+                              : <span title="Basisdrank � blijft altijd staan" style={{ fontSize: 12, color: "#bbb", width: 30, textAlign: "center" }}>??</span>}
                           </>
                         )}
                       </div>
@@ -1923,17 +1919,17 @@ export default function Home() {
         </div>
       )}
 
-      {/* Modal: Eigen drank toevoegen — naam + richtprijs + categorie */}
+      {/* Modal: Eigen drank toevoegen � naam + richtprijs + categorie */}
       {showAddDrink && (
         <div style={{ ...S.overlay, zIndex: 2300 }}>
           <div style={{ ...S.modal, width: 400 }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>➕ Eigen drank toevoegen</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>Naam, richtprijs en categorie volstaan. Je drank krijgt automatisch een ✨-logo zodat je ziet dat je hem zelf toevoegde.</p>
+            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>? Eigen drank toevoegen</h3>
+            <p style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>Naam, richtprijs en categorie volstaan. Je drank krijgt automatisch een ?-logo zodat je ziet dat je hem zelf toevoegde.</p>
 
             <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>Naam</label>
             <input placeholder="bv. Westmalle Tripel" value={newDrink.name} onChange={(e) => { setAddDrinkWarn(null); setNewDrink({ ...newDrink, name: e.target.value }) }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginTop: 4, marginBottom: 12 }} />
 
-            <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>Richtprijs (€)</label>
+            <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>Richtprijs (�)</label>
             <input type="number" placeholder="0.00" value={newDrink.price} onChange={(e) => { setAddDrinkWarn(null); setNewDrink({ ...newDrink, price: e.target.value }) }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginTop: 4, marginBottom: 12 }} />
 
             <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>Categorie</label>
@@ -1949,12 +1945,12 @@ export default function Home() {
 
             {addDrinkWarn && (
               <div style={{ fontSize: 12.5, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 10, padding: "9px 11px", marginBottom: 14, lineHeight: 1.45 }}>
-                ⚠️ {addDrinkWarn}
+                ?? {addDrinkWarn}
               </div>
             )}
 
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "11px 0", fontWeight: 800 }} onClick={addDrink}>➕ Toevoegen</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "11px 0", fontWeight: 800 }} onClick={addDrink}>? Toevoegen</button>
               <button style={{ ...S.btn, flex: 1, padding: "11px 0" }} onClick={() => { setAddDrinkWarn(null); setShowAddDrink(false) }}>Sluiten</button>
             </div>
           </div>
@@ -1984,11 +1980,11 @@ export default function Home() {
               const left = Math.max(0, potTotal - used)
               return (
                 <button onClick={() => setShowPotOverview(true)} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: "#a06b00", background: "linear-gradient(135deg,#fffdf6,#fff3cf)", border: "1.5px solid #ecc85a", borderRadius: 20, padding: "3px 11px", cursor: "pointer" }}>
-                  💰 €{potTotal.toFixed(2)} ingelegd · <b style={{ color: "#4a3f1e" }}>€{left.toFixed(2)} nog in pot</b>
+                  ?? �{potTotal.toFixed(2)} ingelegd � <b style={{ color: "#4a3f1e" }}>�{left.toFixed(2)} nog in pot</b>
                 </button>
               )
             })() : (
-              <button onClick={openPotModal} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 20, padding: "3px 11px", cursor: "pointer" }}>💰 Leg een pot</button>
+              <button onClick={openPotModal} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 20, padding: "3px 11px", cursor: "pointer" }}>?? Leg een pot</button>
             )}
           </div>
         </div>
@@ -2001,10 +1997,10 @@ export default function Home() {
       {/* Tab navigation */}
       <div style={S.tabBar}>
         {([
-          { id: "setup", label: potTotal > 0 ? "👥 Groep + Pot" : "👥 Groep" },
-          { id: "ordering", label: "🛒 Nieuwe bestelling" },
-          { id: "rounds", label: `📦 Overzicht Rondjes${sessions.length > 0 ? ` (${sessions.length})` : ""}` },
-          { id: "bill", label: "💰 Afrekenen" },
+          { id: "setup", label: potTotal > 0 ? "?? Groep + Pot" : "?? Groep" },
+          { id: "ordering", label: "?? Nieuwe bestelling" },
+          { id: "rounds", label: `?? Overzicht Rondjes${sessions.length > 0 ? ` (${sessions.length})` : ""}` },
+          { id: "bill", label: "?? Afrekenen" },
         ] as { id: AppView; label: string }[]).map((t) => (
           <button
             key={t.id}
@@ -2031,16 +2027,16 @@ export default function Home() {
         ))}
       </div>
 
-      {/* ═══ VIEW: Setup (group + persons) ═══ */}
+      {/* ??? VIEW: Setup (group + persons) ??? */}
       {view === "setup" && (
         <div>
           <div style={S.card}>
-            <h3 style={S.h3}>👥 Aantal personen</h3>
+            <h3 style={S.h3}>?? Aantal personen</h3>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, padding: "12px 0" }}>
               <button
                 style={{ ...S.btn, width: 44, height: 44, fontSize: 20, borderRadius: "50%" }}
                 onClick={() => { const n = Math.max(1, participants.length - 1); ensurePersonCount(n) }}
-              >−</button>
+              >?</button>
               <div style={{ fontSize: 36, fontWeight: 800, minWidth: 60, textAlign: "center" }}>{participants.length}</div>
               <button
                 style={{ ...S.btn, ...S.btnPrimary, width: 44, height: 44, fontSize: 20, borderRadius: "50%" }}
@@ -2048,7 +2044,7 @@ export default function Home() {
               >+</button>
             </div>
             <p style={{ textAlign: "center", color: "#aaa", fontSize: 12, marginTop: 4 }}>
-              Namen zijn optioneel — pas ze aan wanneer je wil
+              Namen zijn optioneel � pas ze aan wanneer je wil
             </p>
           </div>
 
@@ -2092,8 +2088,8 @@ export default function Home() {
                         onClick={() => { setEditingPerson(p.id); setEditingPersonName("") }}
                         style={{ flex: 1, minWidth: 0, cursor: "text", padding: "2px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600, fontSize: 15, ...(isPlaceholder ? { fontStyle: "italic", color: "#b3a988", borderBottom: "1px dashed #cdbd8e" } : {}) }}
                       >{shown}</span>
-                      <button style={S.iconBtn} onClick={() => { setEditingPerson(p.id); setEditingPersonName("") }}>✏️</button>
-                      <button style={S.iconBtn} onClick={() => deletePerson(p.id, p.name)}>🗑️</button>
+                      <button style={S.iconBtn} onClick={() => { setEditingPerson(p.id); setEditingPersonName("") }}>??</button>
+                      <button style={S.iconBtn} onClick={() => deletePerson(p.id, p.name)}>???</button>
                     </>
                   )
                 })()}
@@ -2109,19 +2105,19 @@ export default function Home() {
               style={{ ...S.btn, flex: 1, padding: "14px 8px", fontSize: 14, fontWeight: 700, border: "1.5px solid #ecc85a", background: potTotal > 0 ? "#ecc85a" : "#fffdf6", color: "#4a3f1e" }}
               onClick={() => (potTotal > 0 ? setShowPotOverview(true) : openPotModal())}
             >
-              {potTotal > 0 ? `💰 Pot gelegd · €${potTotal.toFixed(2)}` : "💰 Leg eerst een pot"}
+              {potTotal > 0 ? `?? Pot gelegd � �${potTotal.toFixed(2)}` : "?? Leg eerst een pot"}
             </button>
             <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "14px 8px", fontSize: 15, fontWeight: 800 }} onClick={() => setView("ordering")}>
-              🛒 Start bestellen →
+              ?? Start bestellen ?
             </button>
           </div>
         </div>
       )}
 
-      {/* ═══ VIEW: Ordering (main focus) ═══ */}
+      {/* ??? VIEW: Ordering (main focus) ??? */}
       {view === "ordering" && (
         <div>
-          {/* Alles op één lijn: rondje-nummer links, titel in het midden, vorig-rondje rechts */}
+          {/* Alles op ��n lijn: rondje-nummer links, titel in het midden, vorig-rondje rechts */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "2px 2px 12px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
               <div style={{ width: 30, height: 30, borderRadius: 10, background: "linear-gradient(135deg,#5a4a1a,#7a6528)", color: "#f7d461", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>{nextRoundLabel}</div>
@@ -2133,7 +2129,7 @@ export default function Home() {
                 onClick={() => requestDiscardPending(() => { setReorderShowAll(false); setShowReorderPicker(true) })}
                 style={{ flexShrink: 0, background: "rgba(214,158,20,0.1)", border: "1px solid rgba(214,158,20,0.3)", color: "#c8941a", borderRadius: 20, padding: "6px 11px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
               >
-                🔁 Vorig rondje opnieuw
+                ?? Vorig rondje opnieuw
               </button>
             )}
           </div>
@@ -2141,14 +2137,14 @@ export default function Home() {
           {/* Toevoeg-knoppen: enkel bij een lege bestelling, of wanneer je op 'Bestelling wijzigen' klikte */}
           {(cartTotalItems === 0 || orderEditing) && (
           <>
-          {/* Bovenaan: 2 knoppen — links selecteren, rechts (smaller) spraak met info-i */}
+          {/* Bovenaan: 2 knoppen � links selecteren, rechts (smaller) spraak met info-i */}
           <div style={{ ...S.card, padding: 14 }}>
             <div style={{ display: "flex", alignItems: "stretch", gap: 8 }}>
               <button
                 onClick={openDrinkSelector}
                 style={{ ...S.btn, flex: 1.15, padding: "14px 8px", fontSize: 13, fontWeight: 700, border: "none", lineHeight: 1.25, background: "linear-gradient(135deg,#f4c430,#f7d461)", color: "#4a3a0a", boxShadow: "0 6px 18px rgba(150,110,20,0.3)" }}
               >
-                🍹 Selecteer drankje(s)
+                ?? Selecteer drankje(s)
               </button>
               <span style={{ fontSize: 11, fontWeight: 800, color: "#aaa", flexShrink: 0, alignSelf: "center" }}>EN/OF</span>
               <div style={{ flex: 0.85, position: "relative", display: "flex" }}>
@@ -2162,7 +2158,7 @@ export default function Home() {
                     boxShadow: quickVoiceActive ? "0 0 0 5px rgba(231,76,60,0.18)" : "0 6px 18px rgba(150,110,20,0.3)",
                   }}
                 >
-                  {quickVoiceActive ? "🔴 Luistert..." : "🎤 Spreek je bestelling in"}
+                  {quickVoiceActive ? "?? Luistert..." : "?? Spreek je bestelling in"}
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowVoiceExample(true) }}
@@ -2181,7 +2177,7 @@ export default function Home() {
           {voiceSuggestion && (
             <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(231,168,38,0.1),rgba(231,168,38,0.05))", border: "1px solid rgba(231,168,38,0.3)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
               <div style={{ fontSize: 13 }}>
-                Niet helemaal verstaan — bedoelde je <b>{voiceSuggestion.suggested.emoji} {voiceSuggestion.suggested.name}</b>?
+                Niet helemaal verstaan � bedoelde je <b>{voiceSuggestion.suggested.emoji} {voiceSuggestion.suggested.name}</b>?
               </div>
               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                 <button style={{ ...S.btn, ...S.btnPrimary, fontSize: 12, padding: "6px 12px" }} onClick={acceptVoiceSuggestion}>Ja</button>
@@ -2190,7 +2186,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* Laatst toegevoegd — ENKEL na spraak (via selector gaat het meteen naar de lijst) */}
+          {/* Laatst toegevoegd � ENKEL na spraak (via selector gaat het meteen naar de lijst) */}
           {lastAddedViaVoice && (() => {
             const shown = lastAddedDrinkIds.filter((id) => {
               const l = cart[id]
@@ -2202,12 +2198,12 @@ export default function Home() {
             return (
               <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(150,110,20,0.1),rgba(233,196,95,0.06))", border: "1px solid rgba(150,110,20,0.3)" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: "#c98a00", textTransform: "uppercase", letterSpacing: 0.6 }}>✨ Laatst toegevoegd</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "#c98a00", textTransform: "uppercase", letterSpacing: 0.6 }}>? Laatst toegevoegd</div>
                   <button
                     onClick={() => { setLastAddedDrinkIds([]); setLastAddedViaVoice(false) }}
                     style={{ background: "none", border: "none", color: "#b3a476", fontSize: 11, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2, flexShrink: 0 }}
                   >
-                    ⏳ alles later toewijzen
+                    ? alles later toewijzen
                   </button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: shown.length > 3 ? "repeat(auto-fill, minmax(205px, 1fr))" : "1fr", gap: 8 }}>
@@ -2221,12 +2217,12 @@ export default function Home() {
                           <span style={{ fontSize: 18, flexShrink: 0 }}>{d.emoji}</span>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</div>
-                            {showPrices && <div style={{ fontSize: 10, color: "#999" }}>≈ €{(d.price * line.total).toFixed(2)}</div>}
+                            {showPrices && <div style={{ fontSize: 10, color: "#999" }}>? �{(d.price * line.total).toFixed(2)}</div>}
                           </div>
-                          <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 15 }} onClick={() => addToCart(d.id, -1)}>−</button>
+                          <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 15 }} onClick={() => addToCart(d.id, -1)}>?</button>
                           <span style={{ fontSize: 15, fontWeight: 800, minWidth: 18, textAlign: "center" }}>{line.total}</span>
                           <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 15, background: "rgba(150,110,20,0.15)" }} onClick={() => addToCart(d.id, 1)}>+</button>
-                          <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={() => removeFromCart(d.id)}>🗑️</button>
+                          <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={() => removeFromCart(d.id)}>???</button>
                         </div>
                         {renderAssignControl(d.id, line, "full")}
                       </div>
@@ -2237,12 +2233,12 @@ export default function Home() {
             )
           })()}
 
-          {/* Alle bestellingen — alles wat er tot nu toe besteld werd */}
+          {/* Alle bestellingen � alles wat er tot nu toe besteld werd */}
           {cartTotalItems > 0 && (
             <div style={{ ...S.card, padding: 0, overflow: "hidden", border: "1px solid rgba(214,158,20,0.18)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg,#f4c430,#f7d461)", padding: "12px 16px" }}>
                 <span style={{ fontSize: 17, fontWeight: 800, color: "#4a3a0a", display: "flex", alignItems: "center", gap: 8 }}>
-                  📋 Alle bestellingen in rondje {nextRoundLabel}
+                  ?? Alle bestellingen in rondje {nextRoundLabel}
                   <span style={{ fontSize: 12, fontWeight: 800, color: "#4a3a0a", background: "#fffef2", borderRadius: 20, padding: "1px 10px" }}>{cartTotalItems}</span>
                 </span>
                 <button style={{ background: "none", border: "none", color: "#7a5f14", fontSize: 12, cursor: "pointer", textDecoration: "underline", fontWeight: 600 }} onClick={clearCart}>wis alles</button>
@@ -2264,10 +2260,10 @@ export default function Home() {
                           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                             <span style={{ fontSize: 19, flexShrink: 0 }}>{d.emoji}</span>
                             <span style={{ flex: 1, fontSize: 14, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</span>
-                            <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 14 }} onClick={() => addToCart(d.id, -1)}>−</button>
+                            <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 14 }} onClick={() => addToCart(d.id, -1)}>?</button>
                             <span style={{ fontSize: 15, fontWeight: 800, minWidth: 20, textAlign: "center" }}>{line.total}</span>
                             <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 14, background: "rgba(150,110,20,0.12)" }} onClick={() => addToCart(d.id, 1)}>+</button>
-                            <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={() => removeFromCart(d.id)}>🗑️</button>
+                            <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={() => removeFromCart(d.id)}>???</button>
                           </div>
                           {renderAssignControl(drinkId, line, "summary")}
                         </div>
@@ -2280,7 +2276,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* Onderaan: afronden (primair) + wijzigen (subtiel). Afronden staat rechts — daar
+          {/* Onderaan: afronden (primair) + wijzigen (subtiel). Afronden staat rechts � daar
               verwacht de gebruiker de 'volgende/bevestig'-actie. */}
           {cartTotalItems > 0 && (
             <div style={{ display: "flex", gap: 8, alignItems: "stretch", marginTop: 2, marginBottom: 14 }}>
@@ -2289,29 +2285,29 @@ export default function Home() {
                   onClick={openDrinkSelectorEdit}
                   style={{ ...S.btn, flex: 0.6, padding: "13px 8px", fontSize: 13, fontWeight: 700, background: "#fffef9", border: "1.5px solid rgba(120,95,20,0.22)", color: "#8a7d55" }}
                 >
-                  ✏️ Bestelling wijzigen
+                  ?? Bestelling wijzigen
                 </button>
               )}
               <button
                 onClick={() => setShowFinishConfirm(true)}
                 style={{ ...S.btn, flex: 1.4, padding: "13px 8px", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }}
               >
-                ✅ Bestelling afronden · {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""}
+                ? Bestelling afronden � {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""}
               </button>
             </div>
           )}
 
-          {/* Beheerknoppen — beide even groot, subtiel en rechts uitgelijnd */}
+          {/* Beheerknoppen � beide even groot, subtiel en rechts uitgelijnd */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, marginBottom: 12 }}>
-            <button style={{ ...S.btn, fontSize: 11.5, padding: "6px 12px", color: "#a89a6a", background: "rgba(120,95,20,0.04)", border: "1px solid rgba(120,95,20,0.08)" }} onClick={() => setShowAddDrink(true)}>➕ Eigen drankje toevoegen</button>
-            <button style={{ ...S.btn, fontSize: 11.5, padding: "6px 12px", color: "#a89a6a", background: "rgba(120,95,20,0.04)", border: "1px solid rgba(120,95,20,0.08)" }} onClick={() => setShowEditDrinks(true)}>✏️ Dranken of Prijzen bewerken</button>
+            <button style={{ ...S.btn, fontSize: 11.5, padding: "6px 12px", color: "#a89a6a", background: "rgba(120,95,20,0.04)", border: "1px solid rgba(120,95,20,0.08)" }} onClick={() => setShowAddDrink(true)}>? Eigen drankje toevoegen</button>
+            <button style={{ ...S.btn, fontSize: 11.5, padding: "6px 12px", color: "#a89a6a", background: "rgba(120,95,20,0.04)", border: "1px solid rgba(120,95,20,0.08)" }} onClick={() => setShowEditDrinks(true)}>?? Dranken of Prijzen bewerken</button>
           </div>
 
           {/* Kiezer: begin met een vorig rondje */}
           {showReorderPicker && (
             <div style={S.overlay}>
               <div style={{ ...S.modal, width: 420, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
-                <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800, color: "#4a3f1e" }}>🔁 Begin met een vorig rondje</h3>
+                <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800, color: "#4a3f1e" }}>?? Begin met een vorig rondje</h3>
                 <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Bestel een vorig rondje <b>exact opnieuw</b>, of neem het over om het <b>licht aan te passen</b>.</p>
                 <div style={{ overflowY: "auto", flex: 1, marginBottom: 12 }}>
                   {(() => {
@@ -2325,7 +2321,7 @@ export default function Home() {
                           const byDrink: Record<string, number> = {}
                           rows.forEach((o) => { byDrink[o.drink_id] = (byDrink[o.drink_id] ?? 0) + o.quantity })
                           const total = rows.reduce((s, o) => s + o.quantity, 0)
-                          const names = Object.entries(byDrink).map(([id, q]) => { const d = drinks.find((dr) => dr.id === id); return d ? `${q}× ${d.name}` : null }).filter(Boolean).join(", ")
+                          const names = Object.entries(byDrink).map(([id, q]) => { const d = drinks.find((dr) => dr.id === id); return d ? `${q}� ${d.name}` : null }).filter(Boolean).join(", ")
                           const isPrev = sess === reversed[0]
                           return (
                             <div
@@ -2336,7 +2332,7 @@ export default function Home() {
                                 <span style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#5a4a1a,#7a6528)", color: "#f7d461", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, flexShrink: 0 }}>{roundLabel(sess)}</span>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>Rondje {roundLabel(sess)}{isPrev && <span style={{ fontSize: 10, fontWeight: 800, color: "#a06b00", background: "rgba(233,196,95,0.25)", borderRadius: 10, padding: "1px 7px", marginLeft: 6 }}>vorige</span>}</div>
-                                  <div style={{ fontSize: 11, color: "#a89a6a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{total} {total === 1 ? "drankje" : "drankjes"}{names ? ` · ${names}` : ""}</div>
+                                  <div style={{ fontSize: 11, color: "#a89a6a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{total} {total === 1 ? "drankje" : "drankjes"}{names ? ` � ${names}` : ""}</div>
                                 </div>
                               </div>
                               <div style={{ display: "flex", gap: 8 }}>
@@ -2344,13 +2340,13 @@ export default function Home() {
                                   onClick={() => { reorderFromSession(sess); setShowFinishConfirm(true) }}
                                   style={{ ...S.btn, flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e" }}
                                 >
-                                  ⚡ Exact opnieuw
+                                  ? Exact opnieuw
                                 </button>
                                 <button
                                   onClick={() => reorderFromSession(sess)}
                                   style={{ ...S.btn, flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 700, background: "#fff", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55" }}
                                 >
-                                  ✏️ Aanpassen
+                                  ?? Aanpassen
                                 </button>
                               </div>
                             </div>
@@ -2361,7 +2357,7 @@ export default function Home() {
                             onClick={() => setReorderShowAll((v) => !v)}
                             style={{ width: "100%", background: "none", border: "none", color: "#c8941a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", padding: "8px 0", textDecoration: "underline", textUnderlineOffset: 3 }}
                           >
-                            {reorderShowAll ? "▴ Toon enkel het vorige rondje" : `▾ Toon ${olderCount} ouder${olderCount === 1 ? "" : "e"} rondje${olderCount === 1 ? "" : "s"}`}
+                            {reorderShowAll ? "? Toon enkel het vorige rondje" : `? Toon ${olderCount} ouder${olderCount === 1 ? "" : "e"} rondje${olderCount === 1 ? "" : "s"}`}
                           </button>
                         )}
                       </>
@@ -2376,7 +2372,7 @@ export default function Home() {
           {showFinishConfirm && (
             <div style={S.overlay}>
               <div style={{ ...S.modal, width: 360, textAlign: "center" }}>
-                <div style={{ fontSize: 40, marginBottom: 8 }}>🍻</div>
+                <div style={{ fontSize: 40, marginBottom: 8 }}>??</div>
                 <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>Bestelling afronden?</h3>
                 <p style={{ fontSize: 13, color: "#777", marginBottom: 12 }}>
                   In totaal heb je {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""} voor {participants.length} {participants.length === 1 ? "persoon" : "personen"}. Overzicht:
@@ -2388,7 +2384,7 @@ export default function Home() {
                     return (
                       <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, padding: "4px 0", borderBottom: "1px solid rgba(150,110,20,0.05)" }}>
                         <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{d.emoji} {d.name}</span>
-                        <span style={{ fontWeight: 800, color: "#4a3f1e", flexShrink: 0, marginLeft: 8 }}>×{l.total}</span>
+                        <span style={{ fontWeight: 800, color: "#4a3f1e", flexShrink: 0, marginLeft: 8 }}>�{l.total}</span>
                       </div>
                     )
                   })}
@@ -2403,19 +2399,19 @@ export default function Home() {
                   const subtleStyle = { ...S.btn, width: "100%", padding: "11px 0", fontSize: 14, fontWeight: 700 }
                   const adjustBtn = (
                     <button style={unassigned > 0 ? primaryStyle : subtleStyle} onClick={() => setShowFinishConfirm(false)}>
-                      {unassigned > 0 ? "✏️ Bestelling aanpassen" : "← Bestelling aanpassen"}
+                      {unassigned > 0 ? "?? Bestelling aanpassen" : "? Bestelling aanpassen"}
                     </button>
                   )
                   const finishBtn = (
                     <button style={unassigned > 0 ? subtleStyle : primaryStyle} onClick={() => { setShowFinishConfirm(false); finishRound() }}>
-                      {unassigned > 0 ? "Toch afronden" : "✅ Ja, afronden"}
+                      {unassigned > 0 ? "Toch afronden" : "? Ja, afronden"}
                     </button>
                   )
                   return (
                     <>
                       {unassigned > 0 && (
                         <div style={{ display: "flex", gap: 8, alignItems: "flex-start", textAlign: "left", background: "rgba(224,107,94,0.1)", border: "1px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
-                          <span style={{ fontSize: 16, lineHeight: 1 }}>⚠️</span>
+                          <span style={{ fontSize: 16, lineHeight: 1 }}>??</span>
                           <span style={{ fontSize: 12.5, color: "#c0392b", lineHeight: 1.45, fontWeight: 600 }}>
                             <b>{unassigned} {unassigned === 1 ? "drankje" : "drankjes"}</b> nog toe te wijzen. Voeg ze nu toe voor een eerlijke <b>&ldquo;Fair Split&rdquo;</b>. Hoe? Via de knop <b>&ldquo;Bestelling aanpassen&rdquo;</b> hieronder.
                           </span>
@@ -2436,7 +2432,7 @@ export default function Home() {
             <div style={S.overlay}>
               <div style={{ ...S.modal, width: 460, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
                 <div style={{ marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>🍹 Selecteer drankje(s)</h3>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>?? Selecteer drankje(s)</h3>
                   {selectorTotal > 0 && (
                     <span style={{ fontSize: 13, fontWeight: 800, color: "#4a3a0a", background: "linear-gradient(135deg,#f4c430,#f7d461)", borderRadius: 20, padding: "3px 12px", whiteSpace: "nowrap" }}>{selectorTotal} item{selectorTotal !== 1 ? "s" : ""}</span>
                   )}
@@ -2457,8 +2453,8 @@ export default function Home() {
                 {/* Melding na een zelf toegevoegd drankje: waar staat het nu */}
                 {lastAddedCustomDrink && (
                   <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.35)", borderRadius: 12, padding: "8px 11px", marginBottom: 8, fontSize: 12.5, color: "#1f8a4c", lineHeight: 1.4 }}>
-                    <span style={{ flex: 1 }}>✅ <b>{lastAddedCustomDrink.name}</b> staat nu onder <b>{CATEGORY_LABELS[lastAddedCustomDrink.category] ?? lastAddedCustomDrink.category}</b> — selecteer het hieronder.</span>
-                    <button onClick={() => setLastAddedCustomDrink(null)} style={{ background: "none", border: "none", color: "#1f8a4c", fontSize: 14, cursor: "pointer", flexShrink: 0, lineHeight: 1 }}>✕</button>
+                    <span style={{ flex: 1 }}>? <b>{lastAddedCustomDrink.name}</b> staat nu onder <b>{CATEGORY_LABELS[lastAddedCustomDrink.category] ?? lastAddedCustomDrink.category}</b> � selecteer het hieronder.</span>
+                    <button onClick={() => setLastAddedCustomDrink(null)} style={{ background: "none", border: "none", color: "#1f8a4c", fontSize: 14, cursor: "pointer", flexShrink: 0, lineHeight: 1 }}>?</button>
                   </div>
                 )}
 
@@ -2476,10 +2472,10 @@ export default function Home() {
                               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                 <span style={{ fontSize: 20 }}>{d.emoji}</span>
                                 <span style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{d.name}</span>
-                                {showPrices && <span style={{ fontSize: 10, color: "#bbb" }}>≈ €{d.price.toFixed(2)}</span>}
+                                {showPrices && <span style={{ fontSize: 10, color: "#bbb" }}>? �{d.price.toFixed(2)}</span>}
                               </div>
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15 }} onClick={() => changeSelectorQty(d.id, -1)}>−</button>
+                                <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15 }} onClick={() => changeSelectorQty(d.id, -1)}>?</button>
                                 <span style={{ fontSize: 18, fontWeight: 800, minWidth: 24, textAlign: "center" }}>{qty}</span>
                                 <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15, background: "rgba(150,110,20,0.12)" }} onClick={() => changeSelectorQty(d.id, 1)}>+</button>
                               </div>
@@ -2503,9 +2499,9 @@ export default function Home() {
                   return (
                     <div style={{ marginTop: 10, padding: "9px 12px", borderRadius: 12, background: over > 0 ? "rgba(224,107,94,0.1)" : "rgba(120,95,20,0.04)", border: over > 0 ? "1px solid rgba(224,107,94,0.3)" : "1px solid transparent" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "#555", gap: 8, flexWrap: "wrap" }}>
-                        <span>👥 <b style={{ color: "#4a3f1e" }}>{groupSize}</b> {groupSize === 1 ? "persoon" : "personen"}</span>
+                        <span>?? <b style={{ color: "#4a3f1e" }}>{groupSize}</b> {groupSize === 1 ? "persoon" : "personen"}</span>
                         <span>
-                          🍹 {selectorEditMode ? (
+                          ?? {selectorEditMode ? (
                             <b style={{ color: "#4a3f1e" }}>{newTotal}</b>
                           ) : (
                             <>
@@ -2518,7 +2514,7 @@ export default function Home() {
                       </div>
                       {over > 0 && (
                         <div style={{ marginTop: 6, fontSize: 12.5, fontWeight: 700, color: "#c0392b", lineHeight: 1.4 }}>
-                          ⚠️ {over} drankje{over !== 1 ? "s" : ""} meer dan de groep ({groupSize} {groupSize === 1 ? "persoon" : "personen"})
+                          ?? {over} drankje{over !== 1 ? "s" : ""} meer dan de groep ({groupSize} {groupSize === 1 ? "persoon" : "personen"})
                         </div>
                       )}
                     </div>
@@ -2549,7 +2545,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ═══ VIEW: Rounds (history, editable, payments) ═══ */}
+      {/* ??? VIEW: Rounds (history, editable, payments) ??? */}
       {view === "rounds" && (
         <div>
           {/* Handige pot-stand: hoeveel zit er nog in de pot */}
@@ -2559,18 +2555,18 @@ export default function Home() {
             const pct = potTotal > 0 ? Math.max(0, Math.min(100, (potLeft / potTotal) * 100)) : 0
             return (
               <div style={{ ...S.card, padding: "12px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 13, background: "linear-gradient(135deg,#fffdf6,#fff7e3)", border: "1.5px solid #ecc85a" }}>
-                <span style={{ fontSize: 24, flexShrink: 0 }}>💰</span>
+                <span style={{ fontSize: 24, flexShrink: 0 }}>??</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
                     <span style={{ fontSize: 12, color: "#a06b00", fontWeight: 800 }}>Nog in de pot</span>
-                    <span style={{ fontSize: 19, fontWeight: 800, color: potLeft > 0.01 ? "#4a3f1e" : "#e67e22" }}>€{potLeft.toFixed(2)}</span>
+                    <span style={{ fontSize: 19, fontWeight: 800, color: potLeft > 0.01 ? "#4a3f1e" : "#e67e22" }}>�{potLeft.toFixed(2)}</span>
                   </div>
                   <div style={{ height: 6, background: "rgba(120,95,20,0.08)", borderRadius: 4, marginTop: 5, overflow: "hidden" }}>
                     <div style={{ width: `${pct}%`, height: "100%", background: "linear-gradient(90deg,#f3d27c,#ecc564)", borderRadius: 4, transition: "width 0.2s" }} />
                   </div>
-                  <div style={{ fontSize: 10, color: "#bbb", marginTop: 3 }}>€{potUsed.toFixed(2)} van €{potTotal.toFixed(2)} gebruikt{potLeft <= 0.01 ? " · pot is leeg" : ""}</div>
+                  <div style={{ fontSize: 10, color: "#bbb", marginTop: 3 }}>�{potUsed.toFixed(2)} van �{potTotal.toFixed(2)} gebruikt{potLeft <= 0.01 ? " � pot is leeg" : ""}</div>
                 </div>
-                <button onClick={() => setShowPotOverview(true)} style={{ ...S.btn, flexShrink: 0, fontSize: 12, fontWeight: 800, padding: "8px 12px", border: "1.5px solid #ecc85a", background: "#fff", color: "#a06b00" }}>＋ aanvullen</button>
+                <button onClick={() => setShowPotOverview(true)} style={{ ...S.btn, flexShrink: 0, fontSize: 12, fontWeight: 800, padding: "8px 12px", border: "1.5px solid #ecc85a", background: "#fff", color: "#a06b00" }}>? aanvullen</button>
               </div>
             )
           })()}
@@ -2584,16 +2580,16 @@ export default function Home() {
               <div style={{ ...S.card, textAlign: "center", padding: "24px 20px" }}>
                 <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>Jouw bestelling werd nog niet afgerond</div>
                 <div style={{ fontSize: 13, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>Bekijk ze hier, pas eventueel nog aan en klik op &ldquo;Bestelling afronden&rdquo;.</div>
-                <button onClick={() => setView("ordering")} style={{ ...S.btn, ...S.btnPrimary, padding: "10px 20px", fontWeight: 800 }}>→ Naar je bestelling</button>
+                <button onClick={() => setView("ordering")} style={{ ...S.btn, ...S.btnPrimary, padding: "10px 20px", fontWeight: 800 }}>? Naar je bestelling</button>
               </div>
             )
           )}
 
           {sessions.length > 0 && cartTotalItems > 0 && (
             <div style={{ ...S.card, marginBottom: 12, display: "flex", alignItems: "center", gap: 10, background: "rgba(224,107,94,0.07)", border: "1px solid rgba(224,107,94,0.4)" }}>
-              <span style={{ fontSize: 18 }}>⏳</span>
+              <span style={{ fontSize: 18 }}>?</span>
               <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#c0392b", fontWeight: 600, lineHeight: 1.4 }}>Je hebt nog een niet-afgeronde bestelling ({cartTotalItems} {cartTotalItems === 1 ? "item" : "items"}).</div>
-              <button onClick={() => setView("ordering")} style={{ ...S.btn, flexShrink: 0, fontSize: 12.5, fontWeight: 800, padding: "8px 12px" }}>Bekijk →</button>
+              <button onClick={() => setView("ordering")} style={{ ...S.btn, flexShrink: 0, fontSize: 12.5, fontWeight: 800, padding: "8px 12px" }}>Bekijk ?</button>
             </div>
           )}
 
@@ -2605,7 +2601,7 @@ export default function Home() {
                   onClick={() => setOpenRounds(everyOpen ? [] : sessions.slice())}
                   style={{ background: "none", border: "none", color: "#a89a6a", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
                 >
-                  {everyOpen ? "▴ Alles inklappen" : "▾ Alles openklappen"}
+                  {everyOpen ? "? Alles inklappen" : "? Alles openklappen"}
                 </button>
               </div>
             )
@@ -2632,7 +2628,7 @@ export default function Home() {
                   style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", userSelect: "none" }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 12, color: "#bbb", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", display: "inline-block" }}>▶</span>
+                    <span style={{ fontSize: 12, color: "#bbb", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", display: "inline-block" }}>?</span>
                     <b style={{ fontSize: 16 }}>Ronde {roundLabel(s)}</b>
                     {isLatest && <span style={{ fontSize: 10, color: "#4a3f1e", background: "rgba(150,110,20,0.1)", borderRadius: 8, padding: "1px 8px", fontWeight: 700 }}>laatste</span>}
                     {(() => {
@@ -2642,28 +2638,28 @@ export default function Home() {
                     })()}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <button style={S.iconBtn} title="Volledig scherm" onClick={(e) => { e.stopPropagation(); setRoundFullscreen(s) }}>🔍</button>
-                    <button style={S.iconBtn} title="Bewerken" onClick={(e) => { e.stopPropagation(); setEditingRound(isEditing ? null : s); if (!isOpen) toggleOpen() }}>{isEditing ? "✓" : "✏️"}</button>
-                    <button style={S.iconBtn} title="Verwijderen" onClick={(e) => { e.stopPropagation(); deleteRound(s) }}>🗑️</button>
+                    <button style={S.iconBtn} title="Volledig scherm" onClick={(e) => { e.stopPropagation(); setRoundFullscreen(s) }}>??</button>
+                    <button style={S.iconBtn} title="Bewerken" onClick={(e) => { e.stopPropagation(); setEditingRound(isEditing ? null : s); if (!isOpen) toggleOpen() }}>{isEditing ? "?" : "??"}</button>
+                    <button style={S.iconBtn} title="Verwijderen" onClick={(e) => { e.stopPropagation(); deleteRound(s) }}>???</button>
                   </div>
                 </div>
 
-                {/* Betaald door + bedrag — meteen na de rondenaam */}
+                {/* Betaald door + bedrag � meteen na de rondenaam */}
                 <div style={{ marginTop: 6 }}>
                   {roundPayments.length === 0 ? (
-                    <button style={{ ...S.btn, fontSize: 12, padding: "4px 12px" }} onClick={(e) => { e.stopPropagation(); openPaymentEditor(s) }}>💳 Wie betaalde?</button>
+                    <button style={{ ...S.btn, fontSize: 12, padding: "4px 12px" }} onClick={(e) => { e.stopPropagation(); openPaymentEditor(s) }}>?? Wie betaalde?</button>
                   ) : (
                     <div
                       onClick={(e) => { e.stopPropagation(); openPaymentEditor(s) }}
                       style={{ cursor: "pointer", fontSize: 13, color: "#444", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}
                     >
-                      <span style={{ color: "#888" }}>💳 Betaald</span>
+                      <span style={{ color: "#888" }}>?? Betaald</span>
                       {roundPayments.map((p) => {
                         const isPot = !p.participant_id
                         const person = participants.find((pa) => pa.id === p.participant_id)
                         return (
                           <span key={p.id} style={{ background: isPot ? "rgba(233,196,95,0.2)" : "rgba(39,174,96,0.1)", color: isPot ? "#a06b00" : "#1f8a4c", borderRadius: 10, padding: "2px 10px", fontWeight: 700 }}>
-                            {isPot ? "💰 via de pot" : (person?.name ?? "?")} · €{p.amount.toFixed(2)}
+                            {isPot ? "?? via de pot" : (person?.name ?? "?")} � �{p.amount.toFixed(2)}
                           </span>
                         )
                       })}
@@ -2677,20 +2673,20 @@ export default function Home() {
                     {Object.values(grouped).map((it) => (
                       <div key={it.drink.id} style={{ marginTop: 8, padding: "6px 0", borderBottom: "1px solid rgba(150,110,20,0.05)" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <b style={{ fontSize: 13 }}>{it.drink.emoji} {it.drink.name} × {it.totalQty}</b>
+                          <b style={{ fontSize: 13 }}>{it.drink.emoji} {it.drink.name} � {it.totalQty}</b>
                         </div>
                         <div style={{ marginLeft: 8, marginTop: 4 }}>
                           {Object.entries(it.people).map(([pid, info]) => (
                             <div key={pid} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, marginTop: 2 }}>
-                              <span style={{ color: "#666" }}>{info.name} × {info.qty}</span>
+                              <span style={{ color: "#666" }}>{info.name} � {info.qty}</span>
                               {isEditing && (
-                                <button title="terug naar nog toe te wijzen" style={{ ...S.iconBtn, width: 20, height: 20, fontSize: 11 }} onClick={() => unassignOrderQty(it.drink.id, pid, s, 1)}>−</button>
+                                <button title="terug naar nog toe te wijzen" style={{ ...S.iconBtn, width: 20, height: 20, fontSize: 11 }} onClick={() => unassignOrderQty(it.drink.id, pid, s, 1)}>?</button>
                               )}
                             </div>
                           ))}
                           {it.anonymous > 0 && (
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }} onClick={(e) => e.stopPropagation()}>
-                              <span style={{ fontSize: 11, color: "#e0685c", fontWeight: 600, flexShrink: 0 }}>{it.anonymous}× nog toe te wijzen!</span>
+                              <span style={{ fontSize: 11, color: "#e0685c", fontWeight: 600, flexShrink: 0 }}>{it.anonymous}� nog toe te wijzen!</span>
                               <select
                                 value=""
                                 onChange={(e) => { if (e.target.value) assignAnonymousQty(it.drink.id, s, e.target.value, 1) }}
@@ -2710,16 +2706,16 @@ export default function Home() {
             )
           })}
           {sessions.length > 0 && (
-            <button onClick={() => setView("bill")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 6, padding: "14px 0", fontSize: 15, fontWeight: 800 }}>💰 Ga naar afrekenen →</button>
+            <button onClick={() => setView("bill")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 6, padding: "14px 0", fontSize: 15, fontWeight: 800 }}>?? Ga naar afrekenen ?</button>
           )}
         </div>
       )}
 
-      {/* Info-popup achter de ⓘ bij de richtprijzen */}
+      {/* Info-popup achter de ? bij de richtprijzen */}
       {showIndicatiefInfo && (
         <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setShowIndicatiefInfo(false)}>
           <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>💡 Indicatieve richtprijs</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>?? Indicatieve richtprijs</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
               <b style={{ color: "#a89a6a" }}>Indicatieve richtprijs</b> is een pure schatting per drankje. <b style={{ color: "#c98a00" }}>Fair Split</b> verdeelt het verschil met wat er echt betaald werd tijdens de rondjes volgens wie wat dronk, niet zomaar gelijk over iedereen. <b>Veel eerlijker dus!</b>
             </p>
@@ -2728,7 +2724,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* Fair split — uitleg popup (ingekort) */}
+      {/* Fair split � uitleg popup (ingekort) */}
       {fairInfoMode && (
         <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setFairInfoMode(null)}>
           <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
@@ -2745,9 +2741,9 @@ export default function Home() {
       {showVoiceExample && (
         <div style={{ ...S.overlay, zIndex: 2400 }} onClick={() => setShowVoiceExample(false)}>
           <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>🎤 Spreek je bestelling in</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>?? Spreek je bestelling in</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              Zeg bijvoorbeeld <b>&ldquo;2 pintjes&rdquo;</b> — klik daarna opnieuw en zeg <b>&ldquo;1 gin-tonic&rdquo;</b>, enz. Je kan zoveel drankjes na elkaar inspreken als je wil.
+              Zeg bijvoorbeeld <b>&ldquo;2 pintjes&rdquo;</b> � klik daarna opnieuw en zeg <b>&ldquo;1 gin-tonic&rdquo;</b>, enz. Je kan zoveel drankjes na elkaar inspreken als je wil.
             </p>
             <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowVoiceExample(false)}>Begrepen</button>
           </div>
@@ -2771,7 +2767,7 @@ export default function Home() {
       {confirmDialog && (
         <div style={{ ...S.overlay, zIndex: 2500 }} onClick={() => setConfirmDialog(null)}>
           <div style={{ ...S.modal, width: 360, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 40, marginBottom: 8 }}>{confirmDialog.danger ? "🗑️" : "❓"}</div>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>{confirmDialog.danger ? "???" : "?"}</div>
             <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>{confirmDialog.title}</h3>
             <p style={{ fontSize: 13.5, color: "#777", lineHeight: 1.5, margin: "0 0 18px" }}>{confirmDialog.message}</p>
             <div style={{ display: "flex", gap: 8 }}>
@@ -2808,22 +2804,22 @@ export default function Home() {
         return (
           <div style={{ ...S.overlay, zIndex: 2200 }}>
             <div style={{ ...S.modal, width: 440, maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
-              <h3 style={{ marginBottom: 4, fontSize: 19, fontWeight: 800, color: "#4a3f1e" }}>💰 De pot</h3>
+              <h3 style={{ marginBottom: 4, fontSize: 19, fontWeight: 800, color: "#4a3f1e" }}>?? De pot</h3>
               <p style={{ fontSize: 12, color: "#999", marginTop: 0, marginBottom: 14 }}>Overzicht per pot en wie wat bijlegde.</p>
 
               {/* Stats */}
               <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                 <div style={{ flex: 1, textAlign: "center", background: "rgba(233,196,95,0.10)", borderRadius: 12, padding: "9px 4px" }}>
                   <div style={{ fontSize: 10, color: "#a06b00", fontWeight: 700 }}>ingelegd</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>€{potTotal.toFixed(2)}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>�{potTotal.toFixed(2)}</div>
                 </div>
                 <div style={{ flex: 1, textAlign: "center", background: "rgba(120,95,20,0.05)", borderRadius: 12, padding: "9px 4px" }}>
                   <div style={{ fontSize: 10, color: "#888", fontWeight: 700 }}>gebruikt</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#a89a6a" }}>€{potUsed.toFixed(2)}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#a89a6a" }}>�{potUsed.toFixed(2)}</div>
                 </div>
                 <div style={{ flex: 1, textAlign: "center", background: "rgba(39,174,96,0.10)", borderRadius: 12, padding: "9px 4px" }}>
                   <div style={{ fontSize: 10, color: "#1f8a4c", fontWeight: 700 }}>nog beschikbaar</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#27ae60" }}>€{potLeft.toFixed(2)}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#27ae60" }}>�{potLeft.toFixed(2)}</div>
                 </div>
               </div>
 
@@ -2836,16 +2832,16 @@ export default function Home() {
                     <div key={i} style={{ border: "1px solid rgba(233,196,95,0.4)", borderRadius: 14, padding: "10px 12px", marginBottom: 10, background: "rgba(233,196,95,0.05)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
                         <span style={{ fontSize: 13, fontWeight: 800, color: "#a06b00" }}>{potName(i)}</span>
-                        <span style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>€{bt.toFixed(2)}</span>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>�{bt.toFixed(2)}</span>
                       </div>
                       {rows.map((r) => {
                         const who = r.participant_id ? (participants.find((p) => p.id === r.participant_id)?.name ?? "?") : "Algemeen"
                         return (
                           <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderTop: "1px solid rgba(0,0,0,0.05)" }}>
-                            <span style={{ fontSize: 14 }}>{r.participant_id ? "🙋" : "💰"}</span>
+                            <span style={{ fontSize: 14 }}>{r.participant_id ? "??" : "??"}</span>
                             <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#4a3f1e" }}>{who}</span>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: "#a06b00" }}>+€{r.amount.toFixed(2)}</span>
-                            <button style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 11 }} onClick={() => deletePotContribution(r.id)}>🗑️</button>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: "#a06b00" }}>+�{r.amount.toFixed(2)}</span>
+                            <button style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 11 }} onClick={() => deletePotContribution(r.id)}>???</button>
                           </div>
                         )
                       })}
@@ -2854,9 +2850,9 @@ export default function Home() {
                 })}
               </div>
 
-              {/* Aanvullen — zelfde manier als de eerste pot-inleg */}
+              {/* Aanvullen � zelfde manier als de eerste pot-inleg */}
               <div style={{ background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 14, padding: 12, marginBottom: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#a06b00", marginBottom: 8 }}>➕ Pot aanvullen</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#a06b00", marginBottom: 8 }}>? Pot aanvullen</div>
                 {participants.length === 0 ? (
                   <div style={{ fontSize: 12, color: "#aaa" }}>Voeg eerst personen toe</div>
                 ) : (
@@ -2868,12 +2864,12 @@ export default function Home() {
                           onClick={() => { setPotAddWarn(false); setPotAddBulk(v) }}
                           style={{ flex: 1, borderRadius: 10, padding: "8px 0", fontSize: 13.5, fontWeight: 800, cursor: "pointer", border: potAddBulk === v ? "1.5px solid #ecc85a" : "1px solid rgba(120,95,20,0.15)", background: potAddBulk === v ? "rgba(233,196,95,0.18)" : "#fff", color: potAddBulk === v ? "#a06b00" : "#8a7d55" }}
                         >
-                          €{v}
+                          �{v}
                         </button>
                       ))}
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, padding: "8px 10px", background: "#fff", border: "1px solid #ecc85a", borderRadius: 12 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#4a3f1e" }}>€</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#4a3f1e" }}>�</span>
                       <input type="number" step="1" min="0" inputMode="numeric" placeholder="bedrag" value={potAddBulk} onChange={(e) => { setPotAddWarn(false); setPotAddBulk(e.target.value.replace(/[^\d]/g, "")) }} style={{ ...S.input, flex: 1, minWidth: 0 }} />
                       <span style={{ fontSize: 13, color: "#777" }}>p.p.</span>
                     </div>
@@ -2881,7 +2877,7 @@ export default function Home() {
                       onClick={() => setPotAddPerPersonOpen((o) => !o)}
                       style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", textAlign: "left", background: "none", border: "none", padding: "2px 0", marginBottom: 8, cursor: "pointer" }}
                     >
-                      <span style={{ fontSize: 11, color: "#bbb", transform: potAddPerPersonOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>▶</span>
+                      <span style={{ fontSize: 11, color: "#bbb", transform: potAddPerPersonOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>?</span>
                       <span style={{ fontSize: 11, color: "#a06b00", fontWeight: 600 }}>Of vul per persoon een eigen bedrag in</span>
                     </button>
                     {potAddPerPersonOpen && (
@@ -2889,7 +2885,7 @@ export default function Home() {
                         {participants.map((p) => (
                           <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                             <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p.name}</span>
-                            <span style={{ color: "#999" }}>€</span>
+                            <span style={{ color: "#999" }}>�</span>
                             <input type="number" step="1" min="0" inputMode="numeric" placeholder="0" value={potAddDraft[p.id] ?? ""} onChange={(e) => { setPotAddWarn(false); setPotAddDraft({ ...potAddDraft, [p.id]: e.target.value.replace(/[^\d]/g, "") }) }} style={{ ...S.input, width: 72 }} />
                           </div>
                         ))}
@@ -2902,13 +2898,13 @@ export default function Home() {
                       return (
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8, color: "#4a3f1e", fontWeight: 700 }}>
                           <span>Totaal toevoegen</span>
-                          <span>€{willAdd.toFixed(2)}</span>
+                          <span>�{willAdd.toFixed(2)}</span>
                         </div>
                       )
                     })()}
                     {potAddWarn && (
                       <div style={{ fontSize: 12.5, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 10, padding: "8px 10px" }}>
-                        ⚠️ Vul eerst een bedrag in — als p.p. of per persoon.
+                        ?? Vul eerst een bedrag in � als p.p. of per persoon.
                       </div>
                     )}
                   </>
@@ -2924,15 +2920,15 @@ export default function Home() {
         )
       })()}
 
-      {/* Pot modal — gezamenlijke inleg vooraf */}
+      {/* Pot modal � gezamenlijke inleg vooraf */}
       {showPotModal && (
         <div style={{ ...S.overlay, zIndex: 2200 }}>
           <div style={{ ...S.modal, width: 400, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700, color: "#4a3f1e" }}>💰 Leg een pot</h3>
+            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700, color: "#4a3f1e" }}>?? Leg een pot</h3>
             <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Iedereen legt vooraf wat in de pot. Je kan het per persoon corrigeren als iemand niet meelegt.</p>
 
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14, padding: "10px 12px", background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 12 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#4a3f1e" }}>€</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#4a3f1e" }}>�</span>
               <input type="number" value={potBulk} onChange={(e) => setPotBulk(e.target.value)} style={{ ...S.input, width: 70 }} />
               <span style={{ fontSize: 13, color: "#777" }}>p.p.</span>
               <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontSize: 13, padding: "8px 0" }} onClick={setPotForEveryone}>Toevoegen</button>
@@ -2943,7 +2939,7 @@ export default function Home() {
               {participants.map((p) => (
                 <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                   <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{p.name}</span>
-                  <span style={{ color: "#999" }}>€</span>
+                  <span style={{ color: "#999" }}>�</span>
                   <input
                     type="number"
                     step="1"
@@ -2960,16 +2956,16 @@ export default function Home() {
 
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 14, color: "#4a3f1e", fontWeight: 700 }}>
               <span>Totaal in pot</span>
-              <span>€{Object.values(potDraft).reduce((s, v) => s + (parseFloat(v) || 0), 0).toFixed(2)}</span>
+              <span>�{Object.values(potDraft).reduce((s, v) => s + (parseFloat(v) || 0), 0).toFixed(2)}</span>
             </div>
 
             {potWarn && (
               <div style={{ fontSize: 13, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 12, padding: "10px 12px", marginBottom: 12, lineHeight: 1.45 }}>
-                ⚠️ Vul eerst een bedrag in voor minstens één persoon, of kies <b>Annuleer</b>.
+                ?? Vul eerst een bedrag in voor minstens ��n persoon, of kies <b>Annuleer</b>.
               </div>
             )}
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "10px 0" }} onClick={savePot}>💾 Opslaan</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "10px 0" }} onClick={savePot}>?? Opslaan</button>
               <button style={{ ...S.btn, flex: 1, padding: "10px 0" }} onClick={() => { setPotWarn(false); setShowPotModal(false) }}>Annuleer</button>
             </div>
           </div>
@@ -2980,17 +2976,17 @@ export default function Home() {
       {paymentEditRound !== null && (
         <div style={S.overlay}>
           <div style={{ ...S.modal, width: 380 }}>
-            <h3 style={{ marginBottom: 6, fontSize: 18, fontWeight: 700 }}>💳 Ronde {roundLabel(paymentEditRound)} — wie betaalde?</h3>
+            <h3 style={{ marginBottom: 6, fontSize: 18, fontWeight: 700 }}>?? Ronde {roundLabel(paymentEditRound)} � wie betaalde?</h3>
             <p style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>Vul in hoeveel elke persoon betaalde, of zet het op &ldquo;De pot&rdquo;.</p>
 
-            {/* De pot als betaler — enkel als er een pot is */}
+            {/* De pot als betaler � enkel als er een pot is */}
             {(() => {
               const potUsedOther = payments.filter((p) => p.session >= 1 && !p.participant_id && p.session !== paymentEditRound).reduce((s, p) => s + p.amount, 0)
               const potAvailable = Math.max(0, potTotal - potUsedOther)
               if (potTotal <= 0) {
                 return (
                   <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "rgba(150,110,20,0.05)", border: "1px dashed rgba(120,95,20,0.2)", borderRadius: 12, marginBottom: 12 }}>
-                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#aaa" }}>💰 De pot</span>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#aaa" }}>?? De pot</span>
                     <span style={{ fontSize: 12, color: "#bbb" }}>geen pot gelegd</span>
                     <button onClick={openPotModal} style={{ background: "none", border: "none", color: "#c98a00", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>+ leg een pot</button>
                   </div>
@@ -2999,8 +2995,8 @@ export default function Home() {
               return (
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 12 }}>
-                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#4a3f1e" }}>💰 De pot</span>
-                    <span style={{ color: "#999" }}>€</span>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#4a3f1e" }}>?? De pot</span>
+                    <span style={{ color: "#999" }}>�</span>
                     <input
                       type="number"
                       placeholder="0"
@@ -3014,7 +3010,7 @@ export default function Home() {
                     />
                   </div>
                   <div style={{ fontSize: 10, color: "#a06b00", marginTop: 3, marginLeft: 4 }}>
-                    nog €{potAvailable.toFixed(2)} beschikbaar in de pot
+                    nog �{potAvailable.toFixed(2)} beschikbaar in de pot
                   </div>
                 </div>
               )
@@ -3024,7 +3020,7 @@ export default function Home() {
             {participants.map((p) => (
               <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: participants.length > 4 ? 0 : 10 }}>
                 <span style={{ flex: 1, fontSize: 14, fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                <span style={{ color: "#999" }}>€</span>
+                <span style={{ color: "#999" }}>�</span>
                 <input
                   type="number"
                   placeholder="0"
@@ -3037,10 +3033,10 @@ export default function Home() {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 12, marginBottom: 16, color: "#888" }}>
               <span>Som ingevuld</span>
-              <span style={{ fontWeight: 700 }}>€{[POT_PAYER, ...participants.map((p) => p.id)].reduce((s, k) => s + (parseFloat(paymentDraft[k] || "") || 0), 0).toFixed(2)}</span>
+              <span style={{ fontWeight: 700 }}>�{[POT_PAYER, ...participants.map((p) => p.id)].reduce((s, k) => s + (parseFloat(paymentDraft[k] || "") || 0), 0).toFixed(2)}</span>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1 }} onClick={savePayments}>💾 Opslaan</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1 }} onClick={savePayments}>?? Opslaan</button>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setPaymentEditRound(null)}>Annuleer</button>
             </div>
           </div>
@@ -3052,14 +3048,14 @@ export default function Home() {
         <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 2000, overflowY: "auto", padding: 32 }}>
           <div style={{ maxWidth: 600, margin: "0 auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-              <h2 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>🧾 Ronde {roundLabel(roundFullscreen)}</h2>
-              <button style={S.btn} onClick={() => setRoundFullscreen(null)}>✕ Sluiten</button>
+              <h2 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>?? Ronde {roundLabel(roundFullscreen)}</h2>
+              <button style={S.btn} onClick={() => setRoundFullscreen(null)}>? Sluiten</button>
             </div>
             {Object.values(getRoundGrouped(roundFullscreen)).map((it) => (
               <div key={it.drink.id} style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20, padding: "16px 20px", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16 }}>
                 <span style={{ fontSize: 40 }}>{it.drink.emoji}</span>
                 <div>
-                  <div style={{ fontSize: 26, fontWeight: 800, color: "#333" }}>{it.totalQty}× {it.drink.name}</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: "#333" }}>{it.totalQty}� {it.drink.name}</div>
                   <div style={{ fontSize: 13, color: "#aaa", marginTop: 2 }}>
                     {Object.values(it.people).map((p) => `${p.name} (${p.qty})`).join(", ")}
                     {it.anonymous > 0 && ` + ${it.anonymous} nog toe te wijzen`}
@@ -3071,7 +3067,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* Net afgeronde ronde — fullscreen bevestiging voor de barman + snel betalen */}
+      {/* Net afgeronde ronde � fullscreen bevestiging voor de barman + snel betalen */}
       {finishedRoundSnapshot && (
         <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 2100, overflowY: "auto", padding: 28 }}>
           <div style={{ maxWidth: 560, margin: "0 auto" }}>
@@ -3098,7 +3094,7 @@ export default function Home() {
                       <div key={drinkId} style={{ display: "flex", alignItems: "center", gap: multi ? 10 : 14, marginBottom: multi ? 0 : 14, padding: multi ? "10px 12px" : "14px 18px", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16 }}>
                         <span style={{ fontSize: multi ? 24 : 32, flexShrink: 0 }}>{d.emoji}</span>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: multi ? 16 : 20, fontWeight: 800, color: "#333" }}>{line.total}× {d.name}</div>
+                          <div style={{ fontSize: multi ? 16 : 20, fontWeight: 800, color: "#333" }}>{line.total}� {d.name}</div>
                           {peopleNames.length > 0 && <div style={{ fontSize: multi ? 11 : 12, color: "#aaa", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: multi ? "nowrap" : "normal" }}>{peopleNames.join(", ")}</div>}
                         </div>
                       </div>
@@ -3120,12 +3116,12 @@ export default function Home() {
 
               return (
                 <div style={{ marginTop: 22, padding: "16px 18px", background: "rgba(150,110,20,0.05)", borderRadius: 16, border: "1px solid rgba(150,110,20,0.15)" }}>
-                  <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 6, color: "#4a3f1e" }}>💳 Wie betaalde dit rondje?</div>
-                  <p style={{ fontSize: 12, color: "#a89a6a", margin: "0 0 12px" }}>Tik wie betaalde — daarna vul je het exacte bedrag in. Meestal 1 persoon, meerdere mag ook.</p>
+                  <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 6, color: "#4a3f1e" }}>?? Wie betaalde dit rondje?</div>
+                  <p style={{ fontSize: 12, color: "#a89a6a", margin: "0 0 12px" }}>Tik wie betaalde � daarna vul je het exacte bedrag in. Meestal 1 persoon, meerdere mag ook.</p>
 
-                  {/* Wie betaalde? — chips: eerst de pot, dan de personen. Tik aan → bedragveld verschijnt. */}
+                  {/* Wie betaalde? � chips: eerst de pot, dan de personen. Tik aan ? bedragveld verschijnt. */}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-                    {/* De pot als betaler — als eerste getoond */}
+                    {/* De pot als betaler � als eerste getoond */}
                     {potTotal > 0 ? (() => {
                       const active = (paymentDraft[POT_PAYER] ?? "") !== ""
                       return (
@@ -3142,7 +3138,7 @@ export default function Home() {
                             }}
                             style={{ border: active ? "1.5px solid #ecc85a" : "1px solid rgba(120,95,20,0.2)", background: active ? "rgba(233,196,95,0.25)" : "#fff", color: active ? "#a06b00" : "#8a7d55", borderRadius: 20, padding: "7px 14px", fontSize: 13, fontWeight: active ? 800 : 700, cursor: "pointer" }}
                           >
-                            {active ? "✓ " : ""}💰 De pot
+                            {active ? "? " : ""}?? De pot
                           </button>
                           <button onClick={() => setShowPotOverview(true)} title="Pot bekijken of aanvullen" style={{ border: "1px dashed rgba(120,95,20,0.3)", background: "rgba(150,110,20,0.04)", color: "#c98a00", borderRadius: 20, padding: "7px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
                             + pot aanvullen
@@ -3151,7 +3147,7 @@ export default function Home() {
                       )
                     })() : (
                       <button onClick={openPotModal} style={{ border: "1px dashed rgba(120,95,20,0.25)", background: "rgba(150,110,20,0.04)", color: "#c98a00", borderRadius: 20, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
-                        💰 geen pot gelegd · + leg een pot
+                        ?? geen pot gelegd � + leg een pot
                       </button>
                     )}
                     {participants.map((p) => {
@@ -3170,7 +3166,7 @@ export default function Home() {
                           }}
                           style={{ border: active ? "1.5px solid #c8941a" : "1px solid rgba(120,95,20,0.2)", background: active ? "rgba(214,158,20,0.12)" : "#fff", color: active ? "#6b5a24" : "#8a7d55", borderRadius: 20, padding: "7px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
                         >
-                          {active ? "✓ " : ""}{p.name}
+                          {active ? "? " : ""}{p.name}
                         </button>
                       )
                     })}
@@ -3181,8 +3177,8 @@ export default function Home() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 4 }}>
                       {paymentDraft[POT_PAYER] !== undefined && (
                         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 12 }}>
-                          <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#a06b00" }}>💰 De pot betaalde</span>
-                          <span style={{ color: "#999" }}>€</span>
+                          <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#a06b00" }}>?? De pot betaalde</span>
+                          <span style={{ color: "#999" }}>�</span>
                           <input
                             type="number"
                             autoFocus={singlePayer}
@@ -3201,7 +3197,7 @@ export default function Home() {
                       {participants.filter((p) => paymentDraft[p.id] !== undefined).map((p) => (
                         <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#fff", border: "1px solid rgba(214,158,20,0.3)", borderRadius: 12 }}>
                           <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#6b5a24", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name} betaalde</span>
-                          <span style={{ color: "#999" }}>€</span>
+                          <span style={{ color: "#999" }}>�</span>
                           <input
                             type="number"
                             autoFocus={singlePayer}
@@ -3215,14 +3211,14 @@ export default function Home() {
                       {!singlePayer && (
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#a89a6a", fontWeight: 700, padding: "2px 4px" }}>
                           <span>Samen betaald</span>
-                          <span>€{totalEntered.toFixed(2)}</span>
+                          <span>�{totalEntered.toFixed(2)}</span>
                         </div>
                       )}
                     </div>
                   )}
 
                   {potTotal > 0 && paymentDraft[POT_PAYER] !== undefined && (
-                    <div style={{ marginTop: 8, padding: "8px 12px", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 10, textAlign: "center", fontSize: 15, fontWeight: 800, color: "#a06b00" }}>💰 nog €{potAvailable.toFixed(2)} beschikbaar in de pot</div>
+                    <div style={{ marginTop: 8, padding: "8px 12px", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 10, textAlign: "center", fontSize: 15, fontWeight: 800, color: "#a06b00" }}>?? nog �{potAvailable.toFixed(2)} beschikbaar in de pot</div>
                   )}
                 </div>
               )
@@ -3232,7 +3228,7 @@ export default function Home() {
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 18 }}>
               {payWarn && (
                 <div style={{ fontSize: 13, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45 }}>
-                  ⚠️ Geef eerst het betaalde bedrag in — via <b>de pot</b> of een <b>persoon</b>. Of kies <b>Later invullen</b>.
+                  ?? Geef eerst het betaalde bedrag in � via <b>de pot</b> of een <b>persoon</b>. Of kies <b>Later invullen</b>.
                 </div>
               )}
               <button
@@ -3254,20 +3250,20 @@ export default function Home() {
                   setToast(`Ronde ${roundLabel(round)} afgerond!`)
                 }}
               >
-                💾 Opslaan &amp; sluiten
+                ?? Opslaan &amp; sluiten
               </button>
               <div style={{ display: "flex", gap: 8 }}>
                 <button
                   style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, background: "transparent", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55" }}
                   onClick={adjustFinishedRound}
                 >
-                  ✏️ Bestelling aanpassen
+                  ?? Bestelling aanpassen
                 </button>
                 <button
                   style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, background: "transparent", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55" }}
                   onClick={() => { setPayWarn(false); setPaymentDraft({}); setFinishedRoundSnapshot(null); setView("ordering"); setBarmanStep("list") }}
                 >
-                  ⏳ Later invullen
+                  ? Later invullen
                 </button>
               </div>
             </div>
@@ -3275,15 +3271,15 @@ export default function Home() {
         </div>
       )}
 
-      {/* ═══ VIEW: Totaal (wie dronk wat) ═══ */}
+      {/* ??? VIEW: Totaal (wie dronk wat) ??? */}
       {view === "bill" && (
         <div>
-          {/* Overall drink overview — ALL orders, assigned or not (standaard ingeklapt) */}
+          {/* Overall drink overview � ALL orders, assigned or not (standaard ingeklapt) */}
           <div style={S.card}>
             <h3 onClick={() => setShowAllOrderedDrinks((v) => !v)} style={{ ...S.h3, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, marginBottom: showAllOrderedDrinks ? 14 : 0, cursor: "pointer" }}>
-              📦 Alle bestelde drankjes
+              ?? Alle bestelde drankjes
               {(() => { const tot = orders.reduce((s, o) => s + o.quantity, 0); return tot > 0 ? <span style={{ fontSize: 12, fontWeight: 800, color: "#4a3f1e", background: "#ecc85a", borderRadius: 20, padding: "1px 11px" }}>{tot} {tot === 1 ? "drankje" : "drankjes"}</span> : null })()}
-              <span style={{ marginLeft: "auto", fontSize: 13, color: "#a89a6a" }}>{showAllOrderedDrinks ? "▴" : "▾"}</span>
+              <span style={{ marginLeft: "auto", fontSize: 13, color: "#a89a6a" }}>{showAllOrderedDrinks ? "?" : "?"}</span>
             </h3>
             {showAllOrderedDrinks && (() => {
               const overallSummary: Record<string, { drink: Drink; totalQty: number; anonymousQty: number }> = {}
@@ -3302,7 +3298,7 @@ export default function Home() {
                     <div key={it.drink.id} style={{ background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.4)", borderRadius: 12, padding: "8px 10px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{ fontSize: 17 }}>{it.drink.emoji}</span>
-                        <span style={{ fontSize: 14, fontWeight: 800 }}>{it.totalQty}×</span>
+                        <span style={{ fontSize: 14, fontWeight: 800 }}>{it.totalQty}�</span>
                         <span style={{ fontSize: 12.5, color: "#555", flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>{it.drink.name}</span>
                       </div>
                       {participants.length > 0
@@ -3317,29 +3313,29 @@ export default function Home() {
 
           <div style={S.card}>
             <div style={{ marginBottom: 8 }}>
-              <h3 style={{ ...S.h3, marginBottom: 6 }}>🧾 Wie dronk en betaalde wat?</h3>
+              <h3 style={{ ...S.h3, marginBottom: 6 }}>?? Wie dronk en betaalde wat?</h3>
               {(bill.totalActuallySpent > 0.01 || potTotal > 0) && (() => {
                 const potUsed = payments.filter((p) => p.session >= 1 && !p.participant_id).reduce((s, p) => s + p.amount, 0)
                 const potLeft = Math.max(0, potTotal - potUsed)
                 return (
                   <div style={{ display: "flex", flexWrap: "nowrap", gap: 5, fontSize: 11, fontWeight: 700, overflowX: "auto", paddingBottom: 2 }}>
-                    <span style={{ background: "rgba(39,174,96,0.1)", color: "#1f8a4c", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>💳 betaald €{bill.totalActuallySpent.toFixed(2)}</span>
-                    {potTotal > 0 && <span style={{ background: "rgba(233,196,95,0.16)", color: "#a06b00", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>💰 uit pot €{potUsed.toFixed(2)}</span>}
-                    {potTotal > 0 && <span style={{ background: "rgba(120,95,20,0.05)", color: "#8a7d55", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>🪙 nog in pot €{potLeft.toFixed(2)}</span>}
+                    <span style={{ background: "rgba(39,174,96,0.1)", color: "#1f8a4c", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>?? betaald �{bill.totalActuallySpent.toFixed(2)}</span>
+                    {potTotal > 0 && <span style={{ background: "rgba(233,196,95,0.16)", color: "#a06b00", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>?? uit pot �{potUsed.toFixed(2)}</span>}
+                    {potTotal > 0 && <span style={{ background: "rgba(120,95,20,0.05)", color: "#8a7d55", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>?? nog in pot �{potLeft.toFixed(2)}</span>}
                   </div>
                 )
               })()}
             </div>
 
             <div style={{ marginTop: 4 }}>
-              {/* Kolomtitels boven de twee prijskolommen (enkel bij kleine groep — bij 4+ staan labels in elke kaart) */}
+              {/* Kolomtitels boven de twee prijskolommen (enkel bij kleine groep � bij 4+ staan labels in elke kaart) */}
               {showBillPrices && participants.length > 0 && participants.length < 4 && !compareOther && (
                 <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: 10, padding: "0 4px 6px" }}>
                   <div style={{ width: 66, textAlign: "right", fontSize: 10, color: "#aaa", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 3, lineHeight: 1.15 }}>
                     indicatieve prijs
-                    <button onClick={() => setShowIndicatiefInfo(true)} title="Wat betekent dit?" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#b9b088", fontSize: 12, lineHeight: 1, flexShrink: 0 }}>ⓘ</button>
+                    <button onClick={() => setShowIndicatiefInfo(true)} title="Wat betekent dit?" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#b9b088", fontSize: 12, lineHeight: 1, flexShrink: 0 }}>?</button>
                   </div>
-                  <button onClick={() => setShowFairSplit((v) => !v)} title="Fair split tonen of verbergen" style={{ width: 158, textAlign: "center", fontSize: 11, fontWeight: 800, color: showFairSplit ? "#4a3f1e" : "#a06b00", background: showFairSplit ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "rgba(233,196,95,0.16)", border: showFairSplit ? "none" : "1px solid rgba(233,196,95,0.55)", borderRadius: 8, padding: "4px 0", letterSpacing: 0.5, boxShadow: showFairSplit ? "0 2px 8px rgba(233,196,95,0.4)" : "none", cursor: "pointer" }}>{showFairSplit ? (splitMode === "equal" ? "EVENVEEL ✕" : "FAIR SPLIT ✕") : "+ FAIR SPLIT"}</button>
+                  <button onClick={() => setShowFairSplit((v) => !v)} title="Fair split tonen of verbergen" style={{ width: 158, textAlign: "center", fontSize: 11, fontWeight: 800, color: showFairSplit ? "#4a3f1e" : "#a06b00", background: showFairSplit ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "rgba(233,196,95,0.16)", border: showFairSplit ? "none" : "1px solid rgba(233,196,95,0.55)", borderRadius: 8, padding: "4px 0", letterSpacing: 0.5, boxShadow: showFairSplit ? "0 2px 8px rgba(233,196,95,0.4)" : "none", cursor: "pointer" }}>{showFairSplit ? (splitMode === "equal" ? "EVENVEEL ?" : "FAIR SPLIT ?") : "+ FAIR SPLIT"}</button>
                 </div>
               )}
               {orders.some((o) => o.participant_id) && (
@@ -3372,8 +3368,8 @@ export default function Home() {
                     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                         <span style={{ fontWeight: 800, fontSize: 15 }}>{p.name}</span>
-                        {potInlegPerson > 0 && <span style={{ fontSize: 11, color: "#c98a00", fontWeight: 600 }}>· €{potInlegPerson.toFixed(2)} in de pot</span>}
-                        {personalPaidPerson > 0.01 && <span style={{ fontSize: 11, color: "#27ae60", fontWeight: 600 }}>· €{personalPaidPerson.toFixed(2)} zelf betaald</span>}
+                        {potInlegPerson > 0 && <span style={{ fontSize: 11, color: "#c98a00", fontWeight: 600 }}>� �{potInlegPerson.toFixed(2)} in de pot</span>}
+                        {personalPaidPerson > 0.01 && <span style={{ fontSize: 11, color: "#27ae60", fontWeight: 600 }}>� �{personalPaidPerson.toFixed(2)} zelf betaald</span>}
                       </div>
                     </div>
 
@@ -3386,7 +3382,7 @@ export default function Home() {
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
                             {Object.values(drinkSummary).map((ds) => (
                               <span key={ds.drink.id} style={{ background: "rgba(150,110,20,0.05)", borderRadius: 10, padding: "3px 10px", fontSize: 12 }}>
-                                {ds.drink.emoji} {ds.qty}× {ds.drink.name}
+                                {ds.drink.emoji} {ds.qty}� {ds.drink.name}
                               </span>
                             ))}
                           </div>
@@ -3409,15 +3405,15 @@ export default function Home() {
                           const net = row.fairShare - paid
                           if (net > 0.01 && debts.length > 0) {
                             return <>{debts.map((t, i) => (
-                              <div key={i} style={{ color: "#b35309", fontWeight: 800 }}>→ betaalt €{t.amount.toFixed(2)} {t.to === "de pot" ? "in de pot" : `aan ${t.to}`}</div>
+                              <div key={i} style={{ color: "#b35309", fontWeight: 800 }}>? betaalt �{t.amount.toFixed(2)} {t.to === "de pot" ? "in de pot" : `aan ${t.to}`}</div>
                             ))}</>
                           }
                           if (net < -0.01 && credits.length > 0) {
                             return <>{credits.map((t, i) => (
-                              <div key={i} style={{ color: "#146c43", fontWeight: 800 }}>↩ Ontvangt €{t.amount.toFixed(2)} {t.from === "de pot" ? "uit de pot" : `van ${t.from}`}</div>
+                              <div key={i} style={{ color: "#146c43", fontWeight: 800 }}>? Ontvangt �{t.amount.toFixed(2)} {t.from === "de pot" ? "uit de pot" : `van ${t.from}`}</div>
                             ))}</>
                           }
-                          return <span style={{ color: "#6b5a24", fontWeight: 700 }}>✓ staat gelijk</span>
+                          return <span style={{ color: "#6b5a24", fontWeight: 700 }}>? staat gelijk</span>
                         }
 
                         // Bedrag-kader met kleuridentiteit: Fair Split = blauwe rand + gouden vulling (zoals de knop),
@@ -3428,7 +3424,7 @@ export default function Home() {
                           return (
                             <div style={{ width: fullWidth ? "100%" : (compact ? "auto" : 158), minWidth: (compact && !fullWidth) ? 100 : undefined, boxSizing: "border-box", textAlign: "center", background: isFair ? "linear-gradient(135deg,#f4c430,#f7d461)" : "rgba(232,126,20,0.12)", border: isFair ? "2px solid #3d6fd0" : "2px solid #e0842e", borderRadius: 12, padding: compact ? "5px 9px" : "7px 8px" }}>
                               <div style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, color: isFair ? "#2f5bb0" : "#b5591a" }}>{isFair ? "fair split" : "evenveel"}</div>
-                              <div style={{ fontSize: compact ? 16 : 19, fontWeight: 800, color: "#4a3f1e" }}>€{row.fairShare.toFixed(2)}</div>
+                              <div style={{ fontSize: compact ? 16 : 19, fontWeight: 800, color: "#4a3f1e" }}>�{row.fairShare.toFixed(2)}</div>
                               <div style={{ fontSize: 10.5, marginTop: 2, lineHeight: 1.3 }}>{renderSettle(row, debts, credits)}</div>
                             </div>
                           )
@@ -3439,7 +3435,7 @@ export default function Home() {
                         if (multiCol) {
                           return (
                             <div style={{ width: "100%", borderTop: "1px solid rgba(0,0,0,0.07)", marginTop: 8, paddingTop: 7 }}>
-                              <div style={{ fontSize: 11, color: "#aaa", marginBottom: activeOk ? 6 : 0 }}>indicatief <b style={{ color: "#a89a6a", fontWeight: 700 }}>€{drinkValue.toFixed(2)}</b></div>
+                              <div style={{ fontSize: 11, color: "#aaa", marginBottom: activeOk ? 6 : 0 }}>indicatief <b style={{ color: "#a89a6a", fontWeight: 700 }}>�{drinkValue.toFixed(2)}</b></div>
                               {activeOk && (
                                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                   {splitBox(activeKind, fair, myDebts, myCredits, true, true)}
@@ -3452,7 +3448,7 @@ export default function Home() {
                         return (
                           <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexShrink: 0 }}>
                             <div style={{ width: 66, textAlign: "right", paddingTop: 4 }}>
-                              <div style={{ fontSize: 14, fontWeight: 700, color: "#a89a6a" }}>€{drinkValue.toFixed(2)}</div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: "#a89a6a" }}>�{drinkValue.toFixed(2)}</div>
                             </div>
                             {activeOk && (
                               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -3481,19 +3477,19 @@ export default function Home() {
                       const heeftRondes = sessions.length > 0
                       return (
                         <div style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "rgba(224,107,94,0.08)", border: "1px solid rgba(224,107,94,0.35)", borderRadius: 14, padding: "13px 15px" }}>
-                          <span style={{ fontSize: 20, lineHeight: 1 }}>ℹ️</span>
+                          <span style={{ fontSize: 20, lineHeight: 1 }}>??</span>
                           <div style={{ fontSize: 13, color: "#8a4b42", lineHeight: 1.5 }}>
                             {heeftRondes && unpaidLabels.length > 0 ? (
                               <>
-                                <b>Nog geen verdeling mogelijk.</b> {unpaidLabels.length === 1 ? <>Rondje <b>{unpaidLabels[0]}</b> is</> : <>De rondjes <b>{unpaidLabels.join(", ")}</b> zijn</>} nog niet betaald. Zolang een rondje niet betaald is, klopt de verdeling niet — ook niet bij &ldquo;iedereen evenveel&rdquo;. Vul eerst in wie elk rondje betaalde bij <b>&ldquo;Overzicht Rondjes&rdquo;</b>.
+                                <b>Nog geen verdeling mogelijk.</b> {unpaidLabels.length === 1 ? <>Rondje <b>{unpaidLabels[0]}</b> is</> : <>De rondjes <b>{unpaidLabels.join(", ")}</b> zijn</>} nog niet betaald. Zolang een rondje niet betaald is, klopt de verdeling niet � ook niet bij &ldquo;iedereen evenveel&rdquo;. Vul eerst in wie elk rondje betaalde bij <b>&ldquo;Overzicht Rondjes&rdquo;</b>.
                               </>
                             ) : (
                               <>
-                                <b>Nog geen verdeling mogelijk.</b> Er is nog niet ingevuld wie wat betaalde (een persoon of de pot). Vul dat eerst in bij <b>&ldquo;Overzicht Rondjes&rdquo;</b> — daarna kan je hier de rekening verdelen.
+                                <b>Nog geen verdeling mogelijk.</b> Er is nog niet ingevuld wie wat betaalde (een persoon of de pot). Vul dat eerst in bij <b>&ldquo;Overzicht Rondjes&rdquo;</b> � daarna kan je hier de rekening verdelen.
                               </>
                             )}
                             <div style={{ marginTop: 10 }}>
-                              <button onClick={() => { setOpenRounds(null); setView("rounds") }} style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "8px 14px", background: "linear-gradient(135deg,#f4c430,#f7d461)", border: "none", color: "#4a3a0a" }}>→ Naar Overzicht Rondjes</button>
+                              <button onClick={() => { setOpenRounds(null); setView("rounds") }} style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "8px 14px", background: "linear-gradient(135deg,#f4c430,#f7d461)", border: "none", color: "#4a3a0a" }}>? Naar Overzicht Rondjes</button>
                             </div>
                           </div>
                         </div>
@@ -3561,12 +3557,12 @@ export default function Home() {
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "8px 4px 2px", marginTop: 2 }}>
                   <div style={{ width: 66, textAlign: "right" }}>
                     <div style={{ fontSize: 9, color: "#aaa" }}>totaal</div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#a89a6a" }}>€{bill.totalDrinkValue.toFixed(2)}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#a89a6a" }}>�{bill.totalDrinkValue.toFixed(2)}</div>
                   </div>
                   {showFairSplit && (
                     <div style={{ width: 158, textAlign: "center" }}>
                       <div style={{ fontSize: 9, color: "#1f8a4c" }}>totaal</div>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: "#27ae60" }}>€{bill.totalActuallySpent.toFixed(2)}</div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "#27ae60" }}>�{bill.totalActuallySpent.toFixed(2)}</div>
                     </div>
                   )}
                 </div>
@@ -3583,14 +3579,14 @@ export default function Home() {
                     <div style={{ flex: 1, background: "rgba(120,95,20,0.04)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
                       <div style={{ fontSize: 11, color: "#888", marginBottom: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
                         <span>Indicatieve prijs <span style={{ fontSize: 9, color: "#bbb" }}>(totaal)</span></span>
-                        <button onClick={() => setShowIndicatiefInfo(true)} title="Wat betekent dit?" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#b9c0cc", fontSize: 13, lineHeight: 1 }}>ⓘ</button>
+                        <button onClick={() => setShowIndicatiefInfo(true)} title="Wat betekent dit?" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#b9c0cc", fontSize: 13, lineHeight: 1 }}>?</button>
                       </div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: "#a89a6a" }}>€{indicatief.toFixed(2)}</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: "#a89a6a" }}>�{indicatief.toFixed(2)}</div>
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ background: "rgba(39,174,96,0.08)", borderRadius: 12, padding: "10px 12px", textAlign: "center", border: "1px solid rgba(39,174,96,0.25)" }}>
                         <div style={{ fontSize: 11, color: "#1f8a4c", marginBottom: 2 }}>Totaal betaald</div>
-                        <div style={{ fontSize: 18, fontWeight: 800, color: "#27ae60" }}>€{echtBetaald.toFixed(2)}</div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: "#27ae60" }}>�{echtBetaald.toFixed(2)}</div>
                       </div>
                     </div>
                   </div>
@@ -3625,11 +3621,11 @@ export default function Home() {
             )}
           </div>
 
-          {/* Popup: drankjes toewijzen vóór Fair Split (per rondje, compact) */}
+          {/* Popup: drankjes toewijzen v��r Fair Split (per rondje, compact) */}
           {showAssignPopup && (() => {
             // live: hoeveel staat er nu nog open (over alle drankjes)
             const liveUnassignedTotal = orders.filter((o) => !o.participant_id).reduce((s, o) => s + o.quantity, 0)
-            // few-modus op basis van de snapshot bij openen → drankjes blijven zichtbaar, ook na toewijzen
+            // few-modus op basis van de snapshot bij openen ? drankjes blijven zichtbaar, ook na toewijzen
             const snapshotDrinks = assignPopupDrinkIds.map((id) => drinks.find((d) => d.id === id)).filter((d): d is Drink => !!d)
             const few = assignPopupDrinkIds.length > 0 && assignPopupDrinkIds.length <= 2
             return (
@@ -3637,11 +3633,11 @@ export default function Home() {
                 <div style={{ ...S.modal, width: 420, maxHeight: "85vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
                   {few ? (
                     <>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>🍹 Toewijzen</h3>
+                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>?? Toewijzen</h3>
                       <p style={{ fontSize: 13, color: "#777", marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
                         {liveUnassignedTotal > 0
-                          ? <><b style={{ color: "#e0685c" }}>{liveUnassignedTotal} {liveUnassignedTotal === 1 ? "drankje" : "drankjes"} nog toe te wijzen.</b> Tik personen aan — meerdere mag.</>
-                          : <>Alles toegewezen 🎉 Je kan nog <b>wijzigen</b> of doorgaan naar Fair Split.</>}
+                          ? <><b style={{ color: "#e0685c" }}>{liveUnassignedTotal} {liveUnassignedTotal === 1 ? "drankje" : "drankjes"} nog toe te wijzen.</b> Tik personen aan � meerdere mag.</>
+                          : <>Alles toegewezen ?? Je kan nog <b>wijzigen</b> of doorgaan naar Fair Split.</>}
                       </p>
                       <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
                         {snapshotDrinks.map((d) => {
@@ -3650,7 +3646,7 @@ export default function Home() {
                             <div key={d.id} style={{ border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "8px 10px" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                 <span style={{ fontSize: 18, flexShrink: 0 }}>{d.emoji}</span>
-                                <span style={{ fontSize: 14, fontWeight: 800 }}>{tot}×</span>
+                                <span style={{ fontSize: 14, fontWeight: 800 }}>{tot}�</span>
                                 <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, overflowWrap: "anywhere" }}>{d.name}</span>
                               </div>
                               {renderBillAssign(d)}
@@ -3659,26 +3655,26 @@ export default function Home() {
                         })}
                       </div>
                       {liveUnassignedTotal === 0 ? (
-                        <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800 }} onClick={() => { setShowAssignPopup(false); setShowBillPrices(true); setShowFairSplit(true) }}>Toon Fair Split →</button>
+                        <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800 }} onClick={() => { setShowAssignPopup(false); setShowBillPrices(true); setShowFairSplit(true) }}>Toon Fair Split ?</button>
                       ) : (
                         <button style={{ ...S.btn, width: "100%", padding: "11px 0", fontSize: 13 }} onClick={() => setShowAssignPopup(false)}>Sluiten</button>
                       )}
                     </>
                   ) : liveUnassignedTotal === 0 ? (
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 42, marginBottom: 8 }}>✅</div>
+                      <div style={{ fontSize: 42, marginBottom: 8 }}>?</div>
                       <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>Alles toegewezen!</h3>
                       <p style={{ fontSize: 13, color: "#777", marginBottom: 18 }}>Je kan nu de eerlijke verdeling bekijken.</p>
                       <button
                         style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800 }}
                         onClick={() => { setShowAssignPopup(false); setShowBillPrices(true); setShowFairSplit(true) }}
                       >
-                        Toon Fair Split →
+                        Toon Fair Split ?
                       </button>
                     </div>
                   ) : (
                     <>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>🍹 Nog toe te wijzen</h3>
+                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>?? Nog toe te wijzen</h3>
                       <p style={{ fontSize: 13, color: "#777", marginTop: 0, marginBottom: 16, lineHeight: 1.55 }}>
                         Er zijn nog <b style={{ color: "#e0685c" }}>{liveUnassignedTotal} {liveUnassignedTotal === 1 ? "drankje" : "drankjes"}</b> nog toe te wijzen. Wijs ze toe in <b>&ldquo;Alle bestelde drankjes&rdquo;</b> of in <b>&ldquo;Overzicht Rondjes&rdquo;</b>.
                       </p>
@@ -3699,7 +3695,7 @@ export default function Home() {
           })()}
 
           <div style={{ textAlign: "center", marginTop: 24, paddingBottom: 40, color: "#aaa", fontSize: 12 }}>
-            {participants.length} personen · {sessions.length} rondes · {orders.reduce((s, o) => s + o.quantity, 0)} drankjes
+            {participants.length} personen � {sessions.length} rondes � {orders.reduce((s, o) => s + o.quantity, 0)} drankjes
           </div>
         </div>
       )}
@@ -3707,9 +3703,9 @@ export default function Home() {
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 // SMALL HELPER COMPONENTS
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 
 function AddPersonForm({ onAdd, onClose }: { onAdd: (name: string) => void; onClose: () => void }) {
   const [name, setName] = useState("")
@@ -3734,9 +3730,9 @@ function AddPersonForm({ onAdd, onClose }: { onAdd: (name: string) => void; onCl
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 // STYLES
-// ═══════════════════════════════════════════════════════════════════════════
+// ???????????????????????????????????????????????????????????????????????????
 
 const S: Record<string, React.CSSProperties> = {
   page: {
