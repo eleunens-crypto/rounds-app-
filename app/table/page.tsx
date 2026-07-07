@@ -1132,8 +1132,10 @@ export default function RundoTable() {
   const itemTotal = (it: BillItem) => it.unit_price * it.quantity
 
   const isTax = (it: BillItem) => it.distribute != null && it.distribute !== ""
+  const isTip = (it: BillItem) => it.name.trim().toLowerCase() === "fooi"
   const baseItems = items.filter((it) => !isTax(it))
-  const taxItems = items.filter((it) => isTax(it))
+  const taxItems = items.filter((it) => isTax(it) && !isTip(it))
+  const tipTotal = items.filter((it) => isTip(it)).reduce((s, it) => s + itemTotal(it), 0)
 
   const taxTargetIds = (t: BillItem): Set<string> => {
     if (t.distribute === "all") return new Set(baseItems.map((i) => i.id))
@@ -1174,7 +1176,7 @@ export default function RundoTable() {
     return total
   }
 
-  const personTotal = (pid: string): { settled: number; pendingShared: boolean } => {
+  const personTotalNoTip = (pid: string): { settled: number; pendingShared: boolean } => {
     let settled = 0
     let pendingShared = false
     for (const it of baseItems) {
@@ -1197,6 +1199,18 @@ export default function RundoTable() {
     return { settled, pendingShared }
   }
 
+  const tipShare = (pid: string): number => {
+    if (tipTotal <= 0) return 0
+    const denom = participants.reduce((a, q) => a + personTotalNoTip(q.id).settled, 0)
+    if (denom > 0) return tipTotal * personTotalNoTip(pid).settled / denom
+    return participants.length > 0 ? tipTotal / participants.length : 0
+  }
+
+  const personTotal = (pid: string): { settled: number; pendingShared: boolean } => {
+    const b = personTotalNoTip(pid)
+    return { settled: b.settled + tipShare(pid), pendingShared: b.pendingShared }
+  }
+
   const personItems = (pid: string): { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number }[] => {
     const out: { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number }[] = []
     for (const it of baseItems) {
@@ -1215,6 +1229,8 @@ export default function RundoTable() {
     }
     const tax = taxShare(pid)
     if (tax > 0.005) out.push({ name: "BTW / kosten (verdeeld)", qty: 1, amount: tax, shared: false, revealed: true, sharers: 0, myHeads: 0 })
+    const tip = tipShare(pid)
+    if (tip > 0.005) out.push({ name: "💛 fooi", qty: 1, amount: tip, shared: false, revealed: true, sharers: 0, myHeads: 0 })
     return out
   }
 
@@ -1242,7 +1258,7 @@ export default function RundoTable() {
   }
 
   const cooldownLeft = Math.max(0, Math.ceil((cooldownUntil - nowTs) / 1000))
-  const billTotal = items.reduce((s, it) => s + itemTotal(it), 0)
+  const billTotal = items.filter((it) => !isTip(it)).reduce((s, it) => s + itemTotal(it), 0)
   const billOk = (group?.receipt_total ?? null) != null && Math.abs((group?.receipt_total ?? 0) - billTotal) < 0.005
   const goGuests = () => { if (billOk) setAdminTab("guests"); else setShowShareWarn(true) }
   const openUnits = baseItems.filter((it) => !it.is_shared)
@@ -1748,7 +1764,7 @@ export default function RundoTable() {
         <div style={{ ...S.card, padding: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: "#3b486a", marginBottom: 8 }}>📊 Overzicht</div>
           <div style={{ display: "flex", gap: 8 }}>
-            <Stat label="Totaalbedrag" value={`€${billTotal.toFixed(2).replace(".", ",")}`} tone="navy" />
+            <Stat label="Totaalbedrag" value={`€${(billTotal + tipTotal).toFixed(2).replace(".", ",")}`} tone="navy" />
             <div onClick={() => { if (typeof document !== "undefined") document.getElementById("rekening-per-persoon")?.scrollIntoView({ behavior: "smooth", block: "start" }) }} style={{ flex: 1, cursor: "pointer", textAlign: "center", background: allAssignedNow ? "rgba(39,174,96,0.14)" : "rgba(233,196,95,0.16)", border: allAssignedNow ? "2px solid rgba(39,174,96,0.75)" : "2px solid transparent", boxShadow: allAssignedNow ? "0 0 0 3px rgba(39,174,96,0.15), 0 4px 14px -4px rgba(39,174,96,0.55)" : "none", borderRadius: 12, padding: "8px 6px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 2 }} title="naar de rekening per persoon">
               <span style={{ fontSize: 12, fontWeight: 800, color: allAssignedNow ? "#1f8a4c" : "#a06b00", lineHeight: 1.25 }}>Rekening per persoon bekijken{allAssignedNow ? " →" : ""}</span>
             </div>
@@ -1880,7 +1896,7 @@ export default function RundoTable() {
                   ) : (
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Toegewezen <span style={{ color: "#c0392b", fontWeight: 700 }}>· nog {todo} te doen</span></span>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: "#14213a" }}>€{assignedSum.toFixed(2).replace(".", ",")} <span style={{ fontSize: 12, color: "#9aa0ab", fontWeight: 700 }}>/ €{billTotal.toFixed(2).replace(".", ",")}</span></span>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: "#14213a" }}>€{assignedSum.toFixed(2).replace(".", ",")} <span style={{ fontSize: 12, color: "#9aa0ab", fontWeight: 700 }}>/ €{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</span></span>
                     </div>
                   )}
                 </div>
@@ -1898,9 +1914,12 @@ export default function RundoTable() {
               ) : (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 13, fontWeight: 800, color: "#3b486a", flexShrink: 0 }}>💶 Fooi</span>
-                  <input type="text" inputMode="decimal" value={tipInput} onChange={(e) => setTipInput(numFilter(e.target.value, true))} placeholder="bv. 5,00" style={{ ...S.input, width: 88, flexShrink: 0, textAlign: "right", padding: "8px 10px", fontSize: 14 }} />
+                  <div style={{ display: "inline-flex", alignItems: "center", flexShrink: 0, border: "1px solid rgba(20,33,58,0.15)", borderRadius: 10, background: "#fff", overflow: "hidden" }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#5a6680", padding: "0 1px 0 10px" }}>€</span>
+                    <input type="text" inputMode="decimal" value={tipInput} onChange={(e) => setTipInput(numFilter(e.target.value, true))} placeholder="5,00" style={{ width: 62, border: "none", outline: "none", background: "transparent", textAlign: "right", padding: "8px 10px 8px 2px", fontSize: 14 }} />
+                  </div>
                   <button onClick={addTip} style={{ ...S.btn, ...S.btnPrimary, fontSize: 12.5, fontWeight: 700, padding: "8px 14px", flexShrink: 0 }}>Toevoegen</button>
-                  <span style={{ fontSize: 10.5, color: "#9aa0ab", width: "100%", marginTop: 2 }}>Wordt proportioneel over de hele rekening verdeeld.</span>
+                  <span style={{ fontSize: 10.5, color: "#9aa0ab", width: "100%", marginTop: 2 }}>Optioneel — wordt proportioneel over de hele rekening verdeeld.</span>
                 </div>
               )}
             </div>
@@ -2432,7 +2451,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         <h3 style={{ ...S.h3, marginBottom: 0, display: "flex", alignItems: "baseline", gap: 8 }}>🧾 Items op de bon{!billOk && <span style={{ fontSize: 13, fontWeight: 800, color: "#c0392b" }}>Checken!</span>}</h3>
       </div>
       {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>Nog geen items — scan de bon</div>}
-      {items.map((it) => {
+      {items.filter((it) => !isTip(it)).map((it) => {
         const open = it.quantity - claimedQty(it.id)
         const who = claimsForItem(it.id)
         const isNew = recentItemId === it.id
