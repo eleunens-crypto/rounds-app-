@@ -560,7 +560,16 @@ export default function RundoTable() {
         .insert([{ name, invite_code, owner_id, party_size: size }]).select().single()
       if (error || !data) { setStartError("Groep aanmaken mislukt: " + error?.message); return }
       saveMyGroup(data, "admin"); setMyGroups(getMyGroups()); rememberLastGroup(data.id)
-      setGroup(data); setMeId(getMeId(data.id)); await loadAll(data.id); setAdminTab("scan")
+      setGroup(data)
+      // Zet de beheerder meteen als eerste deelnemer ("Ik") zodat je jezelf niet vergeet (overschrijf- en verwijderbaar).
+      let myId = getMeId(data.id)
+      if (!myId) {
+        let ins = await supabase.from("table_participants").insert([{ name: "Ik", group_id: data.id, self_joined: false, seats: 1 }]).select().single()
+        if (ins.error) ins = await supabase.from("table_participants").insert([{ name: "Ik", group_id: data.id }]).select().single()
+        if (ins.data) myId = ins.data.id
+      }
+      if (myId) { setMeIdStored(data.id, myId); setMeId(myId) } else setMeId(getMeId(data.id))
+      await loadAll(data.id); setAdminTab("scan")
     } finally { setBusy(false) }
   }
 
@@ -1534,13 +1543,10 @@ export default function RundoTable() {
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ ...S.card, order: 2 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 4 }}>
-              <h3 style={{ ...S.h3, marginBottom: 0, minWidth: 0 }}>👥 Of voeg zelf alvast gasten toe</h3>
+              <h3 style={{ ...S.h3, marginBottom: 0, minWidth: 0 }}>👥 Of zet zelf namen klaar</h3>
               <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 700, fontSize: 13, flexShrink: 0 }} onClick={() => setShowAddGuest((v) => !v)}>{showAddGuest ? "✕ Sluiten" : "+ Toevoegen"}</button>
             </div>
-            <div style={{ marginTop: 4, marginBottom: 2 }}>
-              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• Ze kunnen dan hun naam selecteren via QR/link hierboven</div>
-              <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• ...of jij kan voor hen zelf drankjes/gerechten toewijzen</div>
-            </div>
+            <div style={{ marginTop: 4, marginBottom: 2, fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>{"Ze kunnen daarna nog steeds zelf aantikken via de link, óf jij tikt voor hen aan bij 'Toewijzen'."}</div>
             {showAddGuest && (
               <div style={{ marginTop: 10, marginBottom: 6, background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: 12 }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -1554,7 +1560,7 @@ export default function RundoTable() {
 
             {participants.length > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 12, marginBottom: 2 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: "#9aa0ab" }}>{participants.length} {participants.length === 1 ? "gast" : "gasten"} · tik een naam om te wijzigen</span>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: "#9aa0ab" }}>{participants.length} {participants.length === 1 ? "persoon" : "personen"} · tik een naam om te wijzigen</span>
                 <button onClick={() => setManageGuests((v) => !v)} style={{ ...S.smallBtn, flexShrink: 0, ...(manageGuests ? { borderColor: "rgba(224,107,94,0.6)", color: "#c0392b", background: "rgba(224,107,94,0.06)" } : {}) }}>{manageGuests ? "✓ Klaar" : "🗑️ Verwijderen"}</button>
               </div>
             )}
@@ -1571,30 +1577,32 @@ export default function RundoTable() {
                 <button onClick={() => removeGuest(p.id)} title="verwijderen" style={{ flexShrink: 0, width: 24, height: 24, borderRadius: 7, border: "none", background: "rgba(224,107,94,0.14)", color: "#c0392b", fontSize: 15, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>×</button>
               )
               const Row = (p: Participant) => {
+                const isMe = p.id === meId
                 const origin = p.self_joined
                   ? { label: "zelf aangemeld", color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
                   : { label: "via admin", color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
+                const badge = isMe ? { label: "jij", color: "#0f7d90", bg: "rgba(20,153,176,0.18)" } : origin
                 if (twoCol) {
                   return (
-                    <div key={p.id} style={{ border: manageGuests ? "1px solid rgba(224,107,94,0.4)" : "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "7px 8px", background: manageGuests ? "rgba(224,107,94,0.04)" : "#fff" }}>
+                    <div key={p.id} style={{ border: manageGuests ? "1px solid rgba(224,107,94,0.4)" : isMe ? "1px solid rgba(20,153,176,0.4)" : "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "7px 8px", background: manageGuests ? "rgba(224,107,94,0.04)" : isMe ? "rgba(20,153,176,0.07)" : "#fff" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                         <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
                         {nameInput(p, 13.5)}
                         {manageGuests && delBtn(p)}
                       </div>
                       <div style={{ marginTop: 5 }}>
-                        <span style={{ fontSize: 9.5, fontWeight: 700, color: origin.color, background: origin.bg, borderRadius: 7, padding: "1px 6px" }}>{origin.label}</span>
+                        <span style={{ fontSize: 9.5, fontWeight: 700, color: badge.color, background: badge.bg, borderRadius: 7, padding: "1px 6px" }}>{badge.label}</span>
                       </div>
                     </div>
                   )
                 }
                 return (
-                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 6px", borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: isMe ? 10 : 0, background: isMe ? "rgba(20,153,176,0.06)" : "transparent" }}>
                     <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       {nameInput(p, 15)}
                       <div style={{ marginTop: 3 }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: origin.color, background: origin.bg, borderRadius: 7, padding: "1px 7px" }}>{origin.label}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: badge.color, background: badge.bg, borderRadius: 7, padding: "1px 7px" }}>{badge.label}</span>
                       </div>
                     </div>
                     {manageGuests && delBtn(p)}
@@ -1604,7 +1612,7 @@ export default function RundoTable() {
               return (
                 <div style={{ marginTop: participants.length > 0 ? 8 : (showAddGuest ? 6 : 12) }}>
                   {participants.length === 0
-                    ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen gasten — voeg er toe of deel de link hierboven <span style={{ fontStyle: "italic" }}>(tip: vergeet jezelf niet!)</span></div>
+                    ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog niemand in de lijst.</div>
                     : twoCol
                     ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>{participants.map(Row)}</div>
                     : participants.map(Row)}
@@ -1625,8 +1633,8 @@ export default function RundoTable() {
                 </div>
               )
             })()}
-            <h3 style={S.h3}>🔗 Laat je gasten meedoen</h3>
-            <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 12 }}>Deel deze groep via de QR-code of de link.</p>
+            <h3 style={S.h3}>🔗 Laat je gasten zelf meedoen</h3>
+            <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 12 }}>{"Deel de QR of link. Iedereen kiest z'n naam en tikt z'n eigen bestelling aan."}</p>
             {(() => {
               const link = typeof window !== "undefined" ? `${window.location.origin}/table?code=${group.invite_code}` : ""
               const invite = `Je bent uitgenodigd voor "${group.name}" — verdeel mee de rekening via Rundo Table 👉 ${link}`
@@ -1636,10 +1644,11 @@ export default function RundoTable() {
                     <QRCodeSVG value={link} size={120} bgColor="#ffffff" fgColor="#1b2a4a" />
                   </div>
                   <div style={{ flex: 1, minWidth: 180 }}>
-                    <div style={{ fontSize: 12.5, color: "#3b486a", lineHeight: 1.5, marginBottom: 8 }}>Je gasten komen zo in <b>{group.name}</b> om mee de rekening te verdelen.</div>
+                    <div style={{ fontSize: 12.5, color: "#3b486a", lineHeight: 1.5, marginBottom: 8 }}>Je gasten komen zo in je groepje <b>{group.name}</b> om mee de rekening te verdelen.</div>
                     <div style={{ fontSize: 11, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 6 }}>Deelbare link</div>
                     <div style={{ fontSize: 12, color: "#5a6680", wordBreak: "break-all", background: "rgba(20,33,58,0.04)", borderRadius: 10, padding: "8px 10px", marginBottom: 8 }}>{link}</div>
-                    <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 700 }} onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(invite); setToast("Uitnodiging gekopieerd") } }}>📋 Uitnodiging kopiëren</button>
+                    <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 700 }} onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(invite); setToast("Uitnodiging gekopieerd") } }}>💬 Kopieer uitnodiging met link</button>
+                    <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>Klaar om te plakken in WhatsApp, Messenger of sms.</div>
                   </div>
                 </div>
               )
