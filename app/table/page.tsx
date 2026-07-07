@@ -554,6 +554,122 @@ const STRINGS = {
     unitsNotAssigned: (n: number) => `${n} ${n === 1 ? "consumptie is" : "consumpties zijn"} nog niet toegewezen`,
     sharedNobodyTakes: (n: number) => `${n} gedeeld ${n === 1 ? "item wordt" : "items worden"} door niemand genomen`,
     assignFirstHint: `Wijs eerst alles toe. Bekijk via "Nog niet geclaimd" wat er nog openstaat.`,
+    reopenFirst: "Heropen de rekening eerst om iets te wijzigen.",
+    finalizedAskAdmin: "De rekening is afgesloten — vraag de beheerder om ze te heropenen.",
+    rescanConfirmClaims: "Opnieuw scannen wist de huidige bon én alles wat al toegewezen werd (items en aanduidingen). Wil je doorgaan?",
+    rescanConfirmItems: "Opnieuw scannen wist de huidige items van de vorige bon. Wil je doorgaan?",
+    errNoPhotoRescan: "Geen foto beschikbaar om opnieuw te scannen.",
+    taxConfigTitle: "verdeling",
+    fixedAmount: "vast bedrag",
+    distributedWord: "verdeeld",
+    overWholeBillShort: "over de hele rekening",
+    overNItems: (n: number) => `over ${n} gekozen item${n === 1 ? "" : "s"}`,
+    tapGearToChange: " · tik ⚙️ om te wijzigen",
+    removeCosts: "✕ Toch geen extra kosten? Weghalen",
+    taxDefaultName: "BTW of andere kosten",
+    taxRateName: (r: number) => `BTW ${r}%`,
+    seatsColMsg: "Let op: 'telt voor meerdere personen' werkt nog niet. Voeg in Supabase de kolom seats toe aan table_participants.",
+    selfJoinedColMsg: "Let op: het onderscheid 'via link / vooraf toegevoegd' werkt nog niet. Voeg in Supabase de kolom self_joined toe (zie instructies).",
+    errGuestAdd: "Gast toevoegen mislukt: ",
+    confirmSeatsChange: "Het aantal personen wijzigen wist wat deze persoon al aantikte (gewone én gedeelde items). Wil je doorgaan?",
+    seatsSaveMsg: "Voeg in Supabase de kolom seats toe aan table_participants om dit te bewaren.",
+    seatsChanged: "Aantal personen aangepast — eerdere keuzes gewist, tik opnieuw aan",
+    finalizeColsMsg: "Voeg in Supabase de kolommen finalized (bool) en disputed_by (text) toe aan table_groups.",
+    errPing: "Seintje versturen mislukt",
+    errUpdate: "Bijwerken mislukt",
+    confirmDeleteGuest: "Deze gast verwijderen? Zijn/haar claims verdwijnen ook.",
+    errNoPhoto: "Geen foto beschikbaar.",
+    errPhotoSave: "Foto bewaren mislukt — items worden wel toegevoegd",
+    errPhotoSaveGroup: "De bonfoto kon niet bij de groep bewaard worden: ",
+    errItemsSave: "Items opslaan mislukt: ",
+    errTaxSave: "BTW opslaan mislukt: ",
+    distributeColTaxMsg: "Let op: voeg in Supabase de kolom 'distribute' toe, anders wordt de BTW-verdeling niet bewaard.",
+    errItemAdd: "Item toevoegen mislukt",
+    distributeColMsg: "Voeg eerst de kolom 'distribute' toe in Supabase (zie instructies).",
+    errAdd: "Toevoegen mislukt: ",
+    taxRateColMsg2: "Let op: percentage-BTW werkt nog niet. Voeg in Supabase de kolom tax_rate toe aan table_items.",
+    errTaxAdd: "BTW toevoegen mislukt: ",
+    errTotalSave: "Rekeningtotaal opslaan mislukt: ",
+    taxRateColMsg: "Voeg in Supabase de kolom tax_rate toe aan table_items.",
+    errSave: "Opslaan mislukt",
+    enterTipFirst: "Vul eerst een fooibedrag in.",
+    confirmDeleteItem: "Dit item van de bon verwijderen? Wat er al aan toegewezen werd, verdwijnt mee.",
+    claimTitle: "✅ Wie heeft wat genomen?",
+    collapseOpen: "▶ openen",
+    collapseClose: "▼ inklappen",
+    allAssignedTapReview: "✅ Alles toegewezen — tik om opnieuw te bekijken",
+    noItemsScanFirst: "Nog geen items — scan eerst de bon.",
+    addGuestsInTab1: 'Voeg eerst gasten toe in de tab "Gasten & delen".',
+    yellowIs: "👀 Geel = wat ",
+    orderedSuffix: " bestelde.",
+    totalLower: "totaal",
+    nobodyYet: "nog niemand",
+    notSelectedShare: (name: string | undefined) => `${name} had dit zelf niet aangeduid. Toch laten meedelen?`,
+    fewerPersons: "minder personen",
+    morePersons: "meer personen",
+    openAssign: "open — wijs toe ▾",
+    fullyClaimed: "volledig",
+    removeOne: "verwijder er één",
+    notSelectedAdd: (name: string | undefined) => `${name} had dit zelf niet aangeduid. Toch toevoegen?`,
+    unitsClaimed: "Stuks geclaimd",
+    sharedItemsHandled: "Gedeelde items geregeld",
+    billTotalLabel: "Totaal rekening",
+    forWhomTap: "Voor wie tik je aan?",
+    pickPersonHint: "Kies een persoon om voor te claimen (handig als jij voor iemand zonder gsm aantikt).",
+    addGuestsInTab2: 'Voeg eerst gasten toe in de tab "Gasten".',
+    adminReviewing: "🔎 De beheerder bekijkt de rekening opnieuw",
+    adminReviewingBody: "Even geduld — je krijgt straks opnieuw de definitieve verdeling te zien.",
+    billClosedTitle2: "De rekening is afgesloten",
+    billClosedBody2: "De beheerder rondde de rekening af. Dit is jouw definitieve deel:",
+    viewMyShare: "Bekijk mijn verdeling",
+    selectItemsPlural: "Selecteer jullie consumpties",
+    selectItemsSingular: "Selecteer jouw consumpties",
+    noItemsWaitScan: "Nog geen items — wacht tot de bon gescand is.",
+    totalSharedByDrinkers: " totaal · wordt gedeeld door wie meedrinkt",
+    iShareYes: "✓ ik deel mee",
+    iShareNo: "+ meedelen",
+    withHowMany: (seats: number) => `🍴 Met hoeveel van jullie ${seats} deelden jullie dit?`,
+    yourShareLabel: "Jouw deel: €",
+    forNPers: (n: number) => ` (voor ${n} pers.)`,
+    sharedByMid: " — gedeeld door ",
+    fixedByAdmin: ", vastgelegd door de beheerder.",
+    provisionally: "Voorlopig €",
+    youN: (n: number) => ` (jullie ${n})`,
+    dropsIfMore: ". Daalt als meer mensen meedoen.",
+    sharingWaitReveal: "⏳ Je deelt mee. Het bedrag wordt verdeeld over iedereen die meedrinkt — je deel en de namen verschijnen zodra iedereen klaar is met aantikken en bevestigen.",
+    tapShareHint: 'Tik "meedelen" als je hiervan dronk. De prijs wordt gedeeld door iedereen die meedrinkt — je betaalt dus niet de hele prijs.',
+    orderedMid: "× besteld · ",
+    stillFree: (n: number) => `${n} nog vrij`,
+    allClaimedWord: "alles geclaimd",
+    aboutToConfirm: "Dit ga je bevestigen",
+    nothingTappedYet: "Je hebt nog niets aangetikt.",
+    yourTotal: "Jouw totaal",
+    sharingPendingNote: "ℹ️ Je deelt mee in gedeelde items (wijn/water). Het exacte deel kan nog wijzigen tot iedereen heeft aangetikt en bevestigd.",
+    allHandledFinal: "Alles afgehandeld — dit is de definitieve verdeling",
+    fullBillInfo: "De volledige rekening ter info — tik een naam aan voor het detail:",
+    nothingTapped2: "Niets aangetikt.",
+    youSuffix: " (jij)",
+    confirmedTapEdit: "✓ Bevestigd — tik om te wijzigen",
+    confirmMyOrder: "✅ Bevestig mijn bestelling",
+    whatWrong: "🤔 Wat klopt er niet? (optioneel)",
+    disputePlaceholder: "bv. die wijn nam ik niet",
+    send: "Versturen",
+    remarkResolved: "✓ De beheerder heeft je opmerking opgelost.",
+    yourRemark: "jouw opmerking: ",
+    addAnotherRemark: "➕ Nog een opmerking toevoegen",
+    remarkReceived: "💬 De beheerder heeft je opmerking ontvangen en bekijkt ze.",
+    withdraw: "toch intrekken",
+    somethingWrong: "🤔 Klopt iets niet? Laat het de beheerder weten",
+    assignToWhom: "Aan wie toewijzen?",
+    everyoneConfirmed: 'Iedereen heeft al bevestigd — kies "andere persoon".',
+    otherPerson: "andere persoon ▾",
+    yourNamePlaceholder: "Jouw naam",
+    joinIn: "Doe mee",
+    seatsControlTitle: "Voor hoeveel personen telt deze naam (bij gedeelde items)",
+    whoAreYou: "👋 Wie ben jij?",
+    enterYourName: "Vul je naam in om mee te doen.",
+    orPickYourself: "of kies jezelf uit de lijst",
+    errTipAdd: "Fooi toevoegen mislukt: ",
   },
   fr: {
     backToRundo: "← retour à l'accueil Rundo",
@@ -790,6 +906,122 @@ const STRINGS = {
     unitsNotAssigned: (n: number) => `${n} ${n === 1 ? "consommation non attribuée" : "consommations non attribuées"}`,
     sharedNobodyTakes: (n: number) => `${n} ${n === 1 ? "article partagé que personne ne prend" : "articles partagés que personne ne prend"}`,
     assignFirstHint: `Attribue d'abord tout. Regarde via « Pas encore attribué » ce qui reste.`,
+    reopenFirst: "Rouvre d'abord l'addition pour modifier quelque chose.",
+    finalizedAskAdmin: "L'addition est clôturée — demande à l'hôte de la rouvrir.",
+    rescanConfirmClaims: "Rescanner efface l'addition actuelle et tout ce qui a déjà été attribué (articles et sélections). Continuer ?",
+    rescanConfirmItems: "Rescanner efface les articles actuels de l'addition précédente. Continuer ?",
+    errNoPhotoRescan: "Aucune photo disponible pour rescanner.",
+    taxConfigTitle: "répartition",
+    fixedAmount: "montant fixe",
+    distributedWord: "réparti",
+    overWholeBillShort: "sur toute l'addition",
+    overNItems: (n: number) => `sur ${n} article${n === 1 ? "" : "s"} choisi${n === 1 ? "" : "s"}`,
+    tapGearToChange: " · touche ⚙️ pour modifier",
+    removeCosts: "✕ Pas de frais en plus finalement ? Retirer",
+    taxDefaultName: "TVA ou autres frais",
+    taxRateName: (r: number) => `TVA ${r}%`,
+    seatsColMsg: "Attention : « compte pour plusieurs personnes » ne fonctionne pas encore. Ajoute la colonne seats à table_participants dans Supabase.",
+    selfJoinedColMsg: "Attention : la distinction « via le lien / ajouté à l'avance » ne fonctionne pas encore. Ajoute la colonne self_joined dans Supabase (voir instructions).",
+    errGuestAdd: "Échec de l'ajout de l'invité : ",
+    confirmSeatsChange: "Modifier le nombre de personnes efface ce que cette personne a déjà coché (articles simples et partagés). Continuer ?",
+    seatsSaveMsg: "Ajoute la colonne seats à table_participants dans Supabase pour l'enregistrer.",
+    seatsChanged: "Nombre de personnes modifié — choix précédents effacés, coche à nouveau",
+    finalizeColsMsg: "Ajoute les colonnes finalized (bool) et disputed_by (text) à table_groups dans Supabase.",
+    errPing: "Échec de l'envoi du signal",
+    errUpdate: "Échec de la mise à jour",
+    confirmDeleteGuest: "Supprimer cet invité ? Ses sélections disparaissent aussi.",
+    errNoPhoto: "Aucune photo disponible.",
+    errPhotoSave: "Échec de l'enregistrement de la photo — les articles sont quand même ajoutés",
+    errPhotoSaveGroup: "La photo de l'addition n'a pas pu être enregistrée avec le groupe : ",
+    errItemsSave: "Échec de l'enregistrement des articles : ",
+    errTaxSave: "Échec de l'enregistrement de la TVA : ",
+    distributeColTaxMsg: "Attention : ajoute la colonne « distribute » dans Supabase, sinon la répartition de la TVA n'est pas enregistrée.",
+    errItemAdd: "Échec de l'ajout de l'article",
+    distributeColMsg: "Ajoute d'abord la colonne « distribute » dans Supabase (voir instructions).",
+    errAdd: "Échec de l'ajout : ",
+    taxRateColMsg2: "Attention : la TVA en pourcentage ne fonctionne pas encore. Ajoute la colonne tax_rate à table_items dans Supabase.",
+    errTaxAdd: "Échec de l'ajout de la TVA : ",
+    errTotalSave: "Échec de l'enregistrement du total : ",
+    taxRateColMsg: "Ajoute la colonne tax_rate à table_items dans Supabase.",
+    errSave: "Échec de l'enregistrement",
+    enterTipFirst: "Indique d'abord un montant de pourboire.",
+    confirmDeleteItem: "Supprimer cet article de l'addition ? Ce qui y était attribué disparaît aussi.",
+    claimTitle: "✅ Qui a pris quoi ?",
+    collapseOpen: "▶ ouvrir",
+    collapseClose: "▼ réduire",
+    allAssignedTapReview: "✅ Tout attribué — touche pour revoir",
+    noItemsScanFirst: "Aucun article — scanne d'abord l'addition.",
+    addGuestsInTab1: "Ajoute d'abord des invités dans l'onglet « Invités et partage ».",
+    yellowIs: "👀 Jaune = ce que ",
+    orderedSuffix: " a commandé.",
+    totalLower: "total",
+    nobodyYet: "personne encore",
+    notSelectedShare: (name: string | undefined) => `${name} ne l'avait pas coché soi-même. Le faire participer quand même ?`,
+    fewerPersons: "moins de personnes",
+    morePersons: "plus de personnes",
+    openAssign: "à prendre — attribuer ▾",
+    fullyClaimed: "complet",
+    removeOne: "en retirer un",
+    notSelectedAdd: (name: string | undefined) => `${name} ne l'avait pas coché soi-même. L'ajouter quand même ?`,
+    unitsClaimed: "Unités attribuées",
+    sharedItemsHandled: "Articles partagés réglés",
+    billTotalLabel: "Total de l'addition",
+    forWhomTap: "Pour qui coches-tu ?",
+    pickPersonHint: "Choisis une personne pour cocher à sa place (pratique si tu coches pour quelqu'un sans téléphone).",
+    addGuestsInTab2: "Ajoute d'abord des invités dans l'onglet « Invités ».",
+    adminReviewing: "🔎 L'hôte revoit l'addition",
+    adminReviewingBody: "Un instant — tu reverras bientôt la répartition définitive.",
+    billClosedTitle2: "L'addition est clôturée",
+    billClosedBody2: "L'hôte a clôturé l'addition. Voici ta part définitive :",
+    viewMyShare: "Voir ma part",
+    selectItemsPlural: "Sélectionnez vos consommations",
+    selectItemsSingular: "Sélectionne tes consommations",
+    noItemsWaitScan: "Aucun article — attends que l'addition soit scannée.",
+    totalSharedByDrinkers: " au total · réparti entre ceux qui en boivent",
+    iShareYes: "✓ je participe",
+    iShareNo: "+ participer",
+    withHowMany: (seats: number) => `🍴 Vous étiez combien à partager ceci (sur ${seats}) ?`,
+    yourShareLabel: "Ta part : €",
+    forNPers: (n: number) => ` (pour ${n} pers.)`,
+    sharedByMid: " — partagé par ",
+    fixedByAdmin: ", fixé par l'hôte.",
+    provisionally: "Provisoirement €",
+    youN: (n: number) => ` (vous ${n})`,
+    dropsIfMore: ". Diminue si plus de personnes participent.",
+    sharingWaitReveal: "⏳ Tu participes. Le montant est réparti entre tous ceux qui en boivent — ta part et les noms apparaissent dès que tout le monde a coché et confirmé.",
+    tapShareHint: "Coche « participer » si tu en as bu. Le prix est réparti entre tous ceux qui en boivent — tu ne paies donc pas le prix entier.",
+    orderedMid: "× commandé · ",
+    stillFree: (n: number) => `${n} encore libre${n === 1 ? "" : "s"}`,
+    allClaimedWord: "tout attribué",
+    aboutToConfirm: "Voici ce que tu confirmes",
+    nothingTappedYet: "Tu n'as encore rien coché.",
+    yourTotal: "Ton total",
+    sharingPendingNote: "ℹ️ Tu participes à des articles partagés (vin/eau). La part exacte peut encore changer jusqu'à ce que tout le monde ait coché et confirmé.",
+    allHandledFinal: "Tout est réglé — voici la répartition définitive",
+    fullBillInfo: "L'addition complète pour info — touche un nom pour le détail :",
+    nothingTapped2: "Rien coché.",
+    youSuffix: " (toi)",
+    confirmedTapEdit: "✓ Confirmé — touche pour modifier",
+    confirmMyOrder: "✅ Confirme ma commande",
+    whatWrong: "🤔 Qu'est-ce qui ne va pas ? (optionnel)",
+    disputePlaceholder: "ex. je n'ai pas pris ce vin",
+    send: "Envoyer",
+    remarkResolved: "✓ L'hôte a réglé ta remarque.",
+    yourRemark: "ta remarque : ",
+    addAnotherRemark: "➕ Ajouter une autre remarque",
+    remarkReceived: "💬 L'hôte a reçu ta remarque et l'examine.",
+    withdraw: "retirer finalement",
+    somethingWrong: "🤔 Quelque chose ne va pas ? Préviens l'hôte",
+    assignToWhom: "À qui attribuer ?",
+    everyoneConfirmed: "Tout le monde a déjà confirmé — choisis « autre personne ».",
+    otherPerson: "autre personne ▾",
+    yourNamePlaceholder: "Ton nom",
+    joinIn: "Participer",
+    seatsControlTitle: "Pour combien de personnes compte ce nom (pour les articles partagés)",
+    whoAreYou: "👋 Qui es-tu ?",
+    enterYourName: "Indique ton nom pour participer.",
+    orPickYourself: "ou choisis-toi dans la liste",
+    errTipAdd: "Échec de l'ajout du pourboire : ",
   },
 }
 
@@ -1129,15 +1361,15 @@ export default function RundoTable() {
       const retry = await supabase.from("table_participants")
         .insert([{ name: finalName, group_id: group.id, self_joined: selfJoined }]).select().single()
       data = retry.data; error = retry.error
-      if (!error && seatsVal > 1) setError("Let op: 'telt voor meerdere personen' werkt nog niet. Voeg in Supabase de kolom seats toe aan table_participants.")
+      if (!error && seatsVal > 1) setError(L.seatsColMsg)
     }
     if (error && /self_joined/.test(error.message || "")) {
       const retry = await supabase.from("table_participants")
         .insert([{ name: finalName, group_id: group.id }]).select().single()
       data = retry.data; error = retry.error
-      if (!error) setError("Let op: het onderscheid 'via link / vooraf toegevoegd' werkt nog niet. Voeg in Supabase de kolom self_joined toe (zie instructies).")
+      if (!error) setError(L.selfJoinedColMsg)
     }
-    if (error) { setError("Gast toevoegen mislukt: " + error.message); return }
+    if (error) { setError(L.errGuestAdd + error.message); return }
     setNewGuest("")
     await loadAll(group.id)
     return data as Participant
@@ -1145,18 +1377,18 @@ export default function RundoTable() {
 
   const setSeats = async (pid: string, n: number) => {
     if (!group) return
-    if (group.finalized) { setToast(isAdmin ? "De rekening is afgesloten — heropen ze eerst om te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
+    if (group.finalized) { setToast(isAdmin ? "De rekening is afgesloten — heropen ze eerst om te wijzigen." : L.finalizedAskAdmin); return }
     const val = Math.max(1, n)
     const current = Math.max(1, participants.find((p) => p.id === pid)?.seats ?? 1)
     if (val === current) return
     const hasClaims = claims.some((c) => c.participant_id === pid && c.quantity > 0)
-    if (hasClaims && !confirm("Het aantal personen wijzigen wist wat deze persoon al aantikte (gewone én gedeelde items). Wil je doorgaan?")) return
+    if (hasClaims && !confirm(L.confirmSeatsChange)) return
     setParticipants((cur) => cur.map((p) => p.id === pid ? { ...p, seats: val } : p))
     if (hasClaims) setClaims((cur) => cur.filter((c) => c.participant_id !== pid))
     if (hasClaims) await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", pid)
     const { error } = await supabase.from("table_participants").update({ seats: val }).eq("id", pid)
-    if (error && /seats/.test(error.message || "")) { setError("Voeg in Supabase de kolom seats toe aan table_participants om dit te bewaren."); return }
-    if (hasClaims) setToast("Aantal personen aangepast — eerdere keuzes gewist, tik opnieuw aan")
+    if (error && /seats/.test(error.message || "")) { setError(L.seatsSaveMsg); return }
+    if (hasClaims) setToast(L.seatsChanged)
   }
 
   const seatsOf = (pid: string) => Math.max(1, participants.find((p) => p.id === pid)?.seats ?? 1)
@@ -1167,7 +1399,7 @@ export default function RundoTable() {
     const patch = on ? { finalized: true } : { finalized: false, disputed_by: null }
     const { error } = await supabase.from("table_groups").update(patch).eq("id", group.id)
     if (error && /finalized|disputed_by/.test(error.message || "")) {
-      setError("Voeg in Supabase de kolommen finalized (bool) en disputed_by (text) toe aan table_groups.")
+      setError(L.finalizeColsMsg)
       return
     }
     await loadAll(group.id)
@@ -1182,7 +1414,7 @@ export default function RundoTable() {
     const val = serializeDisputes(next)
     setGroup((g) => g ? { ...g, disputed_by: val } : g)
     const { error } = await supabase.from("table_groups").update({ disputed_by: val }).eq("id", group.id)
-    if (error) { setError("Seintje versturen mislukt"); return }
+    if (error) { setError(L.errPing); return }
     await loadAll(group.id)
   }
 
@@ -1192,7 +1424,7 @@ export default function RundoTable() {
     const val = serializeDisputes(next)
     setGroup((g) => g ? { ...g, disputed_by: val } : g)
     const { error } = await supabase.from("table_groups").update({ disputed_by: val }).eq("id", group.id)
-    if (error) { setError("Bijwerken mislukt"); return }
+    if (error) { setError(L.errUpdate); return }
     await loadAll(group.id)
   }
 
@@ -1243,7 +1475,7 @@ export default function RundoTable() {
 
   const removeGuest = async (id: string) => {
     if (!group) return
-    if (!confirm("Deze gast verwijderen? Zijn/haar claims verdwijnen ook.")) return
+    if (!confirm(L.confirmDeleteGuest)) return
     await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", id)
     await supabase.from("table_confirmations").delete().eq("group_id", group.id).eq("participant_id", id)
     await supabase.from("table_participants").delete().eq("id", id)
@@ -1263,14 +1495,14 @@ export default function RundoTable() {
   }
 
   const startRescan = async () => {
-    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
+    if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     if (!group) return
     const hasItems = items.length > 0
     const hasClaims = claims.length > 0
     if (hasItems || hasClaims) {
       const msg = hasClaims
-        ? "Opnieuw scannen wist de huidige bon én alles wat al toegewezen werd (items en aanduidingen). Wil je doorgaan?"
-        : "Opnieuw scannen wist de huidige items van de vorige bon. Wil je doorgaan?"
+        ? L.rescanConfirmClaims
+        : L.rescanConfirmItems
       if (!confirm(msg)) return
       await supabase.from("table_claims").delete().eq("group_id", group.id)
       await supabase.from("table_items").delete().eq("group_id", group.id)
@@ -1284,7 +1516,7 @@ export default function RundoTable() {
   }
 
   const retryAiScan = () => {
-    if (!retryFile) { setToast("Geen foto beschikbaar om opnieuw te scannen."); return }
+    if (!retryFile) { setToast(L.errNoPhotoRescan); return }
     setShowScan(true)
     onPhotoPicked(retryFile)
   }
@@ -1310,7 +1542,7 @@ export default function RundoTable() {
   // Alleen als de gebruiker er zelf voor kiest: de snelle, minder nauwkeurige lokale scan.
   const runLocalScan = async () => {
     const file = retryFile ?? scanFile
-    if (!file) { setToast("Geen foto beschikbaar."); return }
+    if (!file) { setToast(L.errNoPhoto); return }
     setScanFail(null); setScanProgress(0); setScanning(true)
     try {
       const { items, total } = await scanReceiptOCR(file, (pr) => setScanProgress(pr))
@@ -1327,7 +1559,7 @@ export default function RundoTable() {
   // Vanuit de rode "onnauwkeurige scan"-melding: opnieuw met AI en, als dat lukt, alles vervangen.
   const improveWithAi = async () => {
     const file = retryFile ?? scanFile
-    if (!file || !group) { setToast("Geen foto beschikbaar om opnieuw te scannen."); return }
+    if (!file || !group) { setToast(L.errNoPhotoRescan); return }
     setShowScan(true); setScanFail(null); setScanPreview([]); setScanProgress(0); setScanning(true)
     const res = await scanReceipt(file, (pr) => setScanProgress(pr))
     setScanning(false)
@@ -1355,11 +1587,11 @@ export default function RundoTable() {
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase()
       const path = `${group.id}/${Date.now()}.${ext}`
       const { error: upErr } = await supabase.storage.from("receipts").upload(path, file, { upsert: true })
-      if (upErr) { setToast("Foto bewaren mislukt — items worden wel toegevoegd") }
+      if (upErr) { setToast(L.errPhotoSave) }
       else {
         receiptUrl = supabase.storage.from("receipts").getPublicUrl(path).data.publicUrl
         const { error: urlErr } = await supabase.from("table_groups").update({ receipt_url: receiptUrl }).eq("id", group.id)
-        if (urlErr) setError("De bonfoto kon niet bij de groep bewaard worden: " + urlErr.message)
+        if (urlErr) setError(L.errPhotoSaveGroup + urlErr.message)
         else setGroup({ ...group, receipt_url: receiptUrl })
       }
     }
@@ -1383,7 +1615,7 @@ export default function RundoTable() {
         baseList.map(({ it }) => ({ group_id: group.id, name: it.name, unit_price: it.unit_price, quantity: it.quantity, is_shared: it.is_shared, category: null }))
       ).select()
     }
-    if (baseRes.error) { setError("Items opslaan mislukt: " + baseRes.error.message); return }
+    if (baseRes.error) { setError(L.errItemsSave + baseRes.error.message); return }
     const inserted = baseRes.data || []
     const idByScanIdx: Record<number, string> = {}
     const flags: Record<string, { note: string }> = {}
@@ -1409,9 +1641,9 @@ export default function RundoTable() {
         const stripped = taxList.map(({ it, idx }) => ({ group_id: group.id, name: it.name, unit_price: it.unit_price, quantity: 1, is_shared: false, category: null, ...(canStamp ? { created_at: stamp(idx) } : {}) }))
         taxRes = await supabase.from("table_items").insert(stripped)
       }
-      if (taxRes.error) { setError("BTW opslaan mislukt: " + taxRes.error.message); return }
+      if (taxRes.error) { setError(L.errTaxSave + taxRes.error.message); return }
     }
-    if (columnMissing) setError("Let op: voeg in Supabase de kolom 'distribute' toe, anders wordt de BTW-verdeling niet bewaard.")
+    if (columnMissing) setError(L.distributeColTaxMsg)
     const rows = preview
     const billNum = parseFloat((totalStr || "").replace(",", "."))
     if (!isNaN(billNum) && billNum > 0) {
@@ -1429,11 +1661,11 @@ export default function RundoTable() {
   }
 
   const addManualItem = async () => {
-    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
+    if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     if (!group) return
     const { error } = await supabase.from("table_items")
       .insert([{ group_id: group.id, name: "Nieuw item", unit_price: 0, quantity: 1, is_shared: false, category: null }])
-    if (error) { setError("Item toevoegen mislukt"); return }
+    if (error) { setError(L.errItemAdd); return }
     await loadAll(group.id)
   }
 
@@ -1455,22 +1687,22 @@ export default function RundoTable() {
     const { data, error } = await supabase.from("table_items")
       .insert([{ group_id: group.id, name, unit_price: price, quantity: qty, is_shared: newItem.is_shared, category: null }])
       .select().single()
-    if (error) { setError("Item toevoegen mislukt"); return }
+    if (error) { setError(L.errItemAdd); return }
     setNewItem(null)
     await loadAll(group.id)
     if (data?.id) { setRecentItemId(data.id); setTimeout(() => setRecentItemId(null), 6000) }
   }
 
   const confirmTaxModal = async (scope: "all" | "items") => {
-    if (group?.finalized) { setToast("Heropen de rekening eerst om iets te wijzigen."); return }
+    if (group?.finalized) { setToast(L.reopenFirst); return }
     if (!group || !taxModal) return
     const amt = parseFloat((taxModal.amount || "").replace(",", ".")) || 0
-    const name = taxModal.name.trim() || "BTW of andere kosten"
+    const name = taxModal.name.trim() || L.taxDefaultName
     const dist = scope === "items" && taxModal.ids.length > 0 ? JSON.stringify(taxModal.ids) : "all"
     const { error } = await supabase.from("table_items").insert([{ group_id: group.id, name, unit_price: amt, quantity: 1, is_shared: false, category: null, distribute: dist }])
     if (error) {
-      if (/distribute/.test(error.message || "")) setError("Voeg eerst de kolom 'distribute' toe in Supabase (zie instructies).")
-      else setError("Toevoegen mislukt: " + error.message)
+      if (/distribute/.test(error.message || "")) setError(L.distributeColMsg)
+      else setError(L.errAdd + error.message)
       return
     }
     setTaxModal(null)
@@ -1478,38 +1710,38 @@ export default function RundoTable() {
   }
 
   const addTaxItem = async (rate?: number) => {
-    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
+    if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     if (!group) return
-    const name = rate ? `BTW ${rate}%` : "BTW of andere kosten"
+    const name = rate ? L.taxRateName(rate) : L.taxDefaultName
     const row: Record<string, unknown> = { group_id: group.id, name, unit_price: 0, quantity: 1, is_shared: false, category: null, distribute: "all" }
     if (rate) row.tax_rate = rate
     let { error } = await supabase.from("table_items").insert([row])
     if (error && /tax_rate/.test(error.message || "")) {
       const retry = await supabase.from("table_items").insert([{ group_id: group.id, name, unit_price: 0, quantity: 1, is_shared: false, category: null, distribute: "all" }])
       error = retry.error
-      if (!error) setError("Let op: percentage-BTW werkt nog niet. Voeg in Supabase de kolom tax_rate toe aan table_items.")
+      if (!error) setError(L.taxRateColMsg2)
     }
     if (error) {
-      if (/distribute/.test(error.message || "")) setError("Voeg eerst de kolom 'distribute' toe in Supabase (zie instructies).")
-      else setError("BTW toevoegen mislukt: " + error.message)
+      if (/distribute/.test(error.message || "")) setError(L.distributeColMsg)
+      else setError(L.errTaxAdd + error.message)
       return
     }
     await loadAll(group.id)
   }
 
   const setReceiptTotal = async (val: number | null) => {
-    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
+    if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     if (!group) return
     setGroup((g) => g ? { ...g, receipt_total: val } : g)
     const { error } = await supabase.from("table_groups").update({ receipt_total: val }).eq("id", group.id)
-    if (error) setError("Rekeningtotaal opslaan mislukt: " + error.message)
+    if (error) setError(L.errTotalSave + error.message)
   }
   const setTaxRate = async (it: BillItem, rate: number | null) => {
     if (!group) return
     const patch: Record<string, unknown> = { tax_rate: rate }
-    if (rate) patch.name = `BTW ${rate}%`
+    if (rate) patch.name = L.taxRateName(rate)
     const { error } = await supabase.from("table_items").update(patch).eq("id", it.id)
-    if (error && /tax_rate/.test(error.message || "")) { setError("Voeg in Supabase de kolom tax_rate toe aan table_items."); return }
+    if (error && /tax_rate/.test(error.message || "")) { setError(L.taxRateColMsg); return }
     await loadAll(group.id)
   }
 
@@ -1521,31 +1753,31 @@ export default function RundoTable() {
 
   const saveItem = async () => {
     if (!group || !editItem) return
-    if (group.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
+    if (group.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     const { error } = await supabase.from("table_items").update({
       name: editItem.name, unit_price: editItem.unit_price,
       quantity: editItem.quantity, is_shared: editItem.is_shared,
     }).eq("id", editItem.id)
-    if (error) { setError("Opslaan mislukt"); return }
+    if (error) { setError(L.errSave); return }
     setEditItem(null); await loadAll(group.id)
   }
 
   const toggleShared = async (it: BillItem) => {
-    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
+    if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     if (!group) return
     await supabase.from("table_items").update({ is_shared: !it.is_shared }).eq("id", it.id)
     await loadAll(group.id)
   }
 
   const addTip = async () => {
-    if (group?.finalized) { setToast("Heropen de rekening eerst om iets te wijzigen."); return }
+    if (group?.finalized) { setToast(L.reopenFirst); return }
     if (!group) return
     const amt = parseFloat((tipInput || "").replace(",", ".")) || 0
-    if (amt <= 0) { setToast("Vul eerst een fooibedrag in."); return }
+    if (amt <= 0) { setToast(L.enterTipFirst); return }
     const { error } = await supabase.from("table_items").insert([{ group_id: group.id, name: "Fooi", unit_price: amt, quantity: 1, is_shared: false, category: null, distribute: "all" }])
     if (error) {
-      if (/distribute/.test(error.message || "")) setError("Voeg eerst de kolom 'distribute' toe in Supabase (zie instructies).")
-      else setError("Fooi toevoegen mislukt: " + error.message)
+      if (/distribute/.test(error.message || "")) setError(L.distributeColMsg)
+      else setError(L.errTipAdd + error.message)
       return
     }
     setTipInput("")
@@ -1553,9 +1785,9 @@ export default function RundoTable() {
   }
 
   const deleteItem = async (id: string) => {
-    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
+    if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     if (!group) return
-    if (!confirm("Dit item van de bon verwijderen? Wat er al aan toegewezen werd, verdwijnt mee.")) return
+    if (!confirm(L.confirmDeleteItem)) return
     await supabase.from("table_claims").delete().eq("item_id", id)
     await supabase.from("table_items").delete().eq("id", id)
     await loadAll(group.id)
@@ -1577,7 +1809,7 @@ export default function RundoTable() {
 
   const setClaim = async (itemId: string, pid: string, qty: number) => {
     if (!group) return
-    if (group.finalized) { setToast(isAdmin ? "De rekening is afgesloten — heropen ze eerst om te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
+    if (group.finalized) { setToast(isAdmin ? "De rekening is afgesloten — heropen ze eerst om te wijzigen." : L.finalizedAskAdmin); return }
     const existing = claims.find((c) => c.item_id === itemId && c.participant_id === pid)
     if (qty <= 0) {
       if (existing) await supabase.from("table_claims").delete().eq("id", existing.id)
@@ -1590,7 +1822,7 @@ export default function RundoTable() {
   }
 
   const toggleShareClaim = async (itemId: string, pid: string) => {
-    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
+    if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     const mine = myQty(itemId, pid)
     await setClaim(itemId, pid, mine > 0 ? 0 : seatsOf(pid))
   }
@@ -1602,7 +1834,7 @@ export default function RundoTable() {
     claims.filter((c) => c.item_id === itemId && c.participant_id === pid).reduce((s, c) => s + c.quantity, 0)
 
   const setShareFixed = async (it: BillItem, val: boolean) => {
-    if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
+    if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     if (!group) return
     await supabase.from("table_items").update({ share_fixed: val }).eq("id", it.id)
     await loadAll(group.id)
@@ -1828,8 +2060,8 @@ export default function RundoTable() {
         <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} signedUp={participants.length} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
         <div style={{ maxWidth: 440, margin: "0 auto" }}>
           <div style={S.card}>
-            <h3 style={S.h3}>👋 Wie ben jij?</h3>
-            <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 14 }}>Vul je naam in om mee te doen.</p>
+            <h3 style={S.h3}>{L.whoAreYou}</h3>
+            <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 14 }}>{L.enterYourName}</p>
 
             <IdentityAdder onAdd={joinAsNewPerson} />
 
@@ -1837,7 +2069,7 @@ export default function RundoTable() {
               <div style={{ marginTop: 18 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                   <div style={{ flex: 1, height: 1, background: "rgba(16,24,40,0.1)" }} />
-                  <span style={{ fontSize: 11.5, fontWeight: 700, color: "#9aa0ab" }}>of kies jezelf uit de lijst</span>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: "#9aa0ab" }}>{L.orPickYourself}</span>
                   <div style={{ flex: 1, height: 1, background: "rgba(16,24,40,0.1)" }} />
                 </div>
                 {participants.map((p) => (
@@ -2042,7 +2274,7 @@ export default function RundoTable() {
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{ fontSize: 17, flexShrink: 0 }}>🧮</span>
                         <input value={t.name} onChange={(e) => setItems((cur) => cur.map((x) => x.id === t.id ? { ...x, name: e.target.value } : x))}
-                          onBlur={(e) => { if (group?.finalized) { setToast("Heropen de rekening eerst om iets te wijzigen."); loadAll(group.id); return } supabase.from("table_items").update({ name: e.target.value }).eq("id", t.id).then(() => loadAll(group.id)) }}
+                          onBlur={(e) => { if (group?.finalized) { setToast(L.reopenFirst); loadAll(group.id); return } supabase.from("table_items").update({ name: e.target.value }).eq("id", t.id).then(() => loadAll(group.id)) }}
                           style={{ ...S.input, flex: 1, minWidth: 0, fontWeight: 700, padding: "8px 10px" }} />
                         {t.tax_rate ? (
                           <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a", whiteSpace: "nowrap" }}>€{taxAmount(t).toFixed(2).replace(".", ",")}</span>
@@ -2050,24 +2282,24 @@ export default function RundoTable() {
                           <>
                             <span style={{ color: "#999", fontSize: 13 }}>€</span>
                             <input type="number" step="0.01" defaultValue={t.unit_price ? t.unit_price.toFixed(2) : ""} placeholder="0.00"
-                              onBlur={(e) => { if (group?.finalized) { setToast("Heropen de rekening eerst om iets te wijzigen."); loadAll(group.id); return } const v = parseFloat(e.target.value.replace(",", ".")) || 0; supabase.from("table_items").update({ unit_price: v, quantity: 1 }).eq("id", t.id).then(() => loadAll(group.id)) }}
+                              onBlur={(e) => { if (group?.finalized) { setToast(L.reopenFirst); loadAll(group.id); return } const v = parseFloat(e.target.value.replace(",", ".")) || 0; supabase.from("table_items").update({ unit_price: v, quantity: 1 }).eq("id", t.id).then(() => loadAll(group.id)) }}
                               style={{ ...S.input, width: 78, textAlign: "right", padding: "8px 8px" }} />
                           </>
                         )}
-                        <button style={{ ...S.iconBtn, background: open ? "rgba(90,108,166,0.18)" : "rgba(16,24,40,0.05)" }} onClick={() => setTaxConfig(open ? null : t.id)} title="verdeling">⚙️</button>
-                        <button style={S.iconBtn} onClick={() => deleteItem(t.id)} title="verwijderen">🗑️</button>
+                        <button style={{ ...S.iconBtn, background: open ? "rgba(90,108,166,0.18)" : "rgba(16,24,40,0.05)" }} onClick={() => setTaxConfig(open ? null : t.id)} title={L.taxConfigTitle}>⚙️</button>
+                        <button style={S.iconBtn} onClick={() => deleteItem(t.id)} title={L.deleteTitle}>🗑️</button>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6, marginLeft: 25, flexWrap: "wrap" }}>
                         {[6, 12, 21].map((r) => (
                           <button key={r} onClick={() => setTaxRate(t, r)} style={{ fontSize: 11.5, fontWeight: 800, borderRadius: 9, padding: "4px 11px", cursor: "pointer", border: t.tax_rate === r ? "none" : "1px solid rgba(16,24,40,0.14)", background: t.tax_rate === r ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff", color: t.tax_rate === r ? "#fff" : "#5a6680" }}>{r}%</button>
                         ))}
-                        <button onClick={() => setTaxRate(t, null)} style={{ fontSize: 11.5, fontWeight: 800, borderRadius: 9, padding: "4px 11px", cursor: "pointer", border: !t.tax_rate ? "none" : "1px solid rgba(16,24,40,0.14)", background: !t.tax_rate ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff", color: !t.tax_rate ? "#fff" : "#5a6680" }}>vast bedrag</button>
+                        <button onClick={() => setTaxRate(t, null)} style={{ fontSize: 11.5, fontWeight: 800, borderRadius: 9, padding: "4px 11px", cursor: "pointer", border: !t.tax_rate ? "none" : "1px solid rgba(16,24,40,0.14)", background: !t.tax_rate ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff", color: !t.tax_rate ? "#fff" : "#5a6680" }}>{L.fixedAmount}</button>
                       </div>
                       <div style={{ fontSize: 10.5, color: "#9aa0ab", marginTop: 4, marginLeft: 25 }}>
-                        {t.tax_rate ? `${t.tax_rate}% ` : ""}verdeeld {overAll ? "over de hele rekening" : `over ${targetCount} gekozen item${targetCount === 1 ? "" : "s"}`} · tik ⚙️ om te wijzigen
+                        {t.tax_rate ? `${t.tax_rate}% ` : ""}{L.distributedWord} {overAll ? L.overWholeBillShort : L.overNItems(targetCount)}{L.tapGearToChange}
                       </div>
                       <div style={{ marginLeft: 25, marginTop: 4 }}>
-                        <button onClick={() => deleteItem(t.id)} style={{ border: "none", background: "none", padding: 0, cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#c0685c" }}>✕ Toch geen extra kosten? Weghalen</button>
+                        <button onClick={() => deleteItem(t.id)} style={{ border: "none", background: "none", padding: 0, cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#c0685c" }}>{L.removeCosts}</button>
                       </div>
                       {open && (
                         <div style={{ marginLeft: 25, marginTop: 8, padding: 10, borderRadius: 12, background: "#fbfaff", border: "1px solid rgba(90,108,166,0.2)" }}>
@@ -2104,7 +2336,7 @@ export default function RundoTable() {
                   )
                 })}
                 <div style={{ display: "flex", gap: 6, alignItems: "center", justifyContent: "flex-end", marginTop: 8 }}>
-                  <button onClick={() => setTaxModal({ name: "BTW of andere kosten", amount: "", scope: "all", ids: [] })} style={{ ...S.btn, fontWeight: 700, fontSize: 12.5, padding: "7px 14px" }}>{L.taxModalTitle}</button>
+                  <button onClick={() => setTaxModal({ name: L.taxDefaultName, amount: "", scope: "all", ids: [] })} style={{ ...S.btn, fontWeight: 700, fontSize: 12.5, padding: "7px 14px" }}>{L.taxModalTitle}</button>
                   <button onClick={() => setShowTaxInfo(true)} style={{ ...S.btn, fontWeight: 700, fontSize: 12.5, padding: "7px 12px" }} title="uitleg">ℹ️</button>
                 </div>
               </div>
@@ -2700,7 +2932,7 @@ export default function RundoTable() {
                   <button onClick={() => openNewItem("scan")} style={{ ...S.btn, ...S.btnPrimary, padding: "8px 16px", fontSize: 12.5, fontWeight: 700 }}>{L.addItem}</button>
                 </div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
-                  <button onClick={() => setScanPreview((cur) => [...cur, { name: "BTW of andere kosten", unit_price: 0, quantity: 1, is_shared: false, distribute: "all" }])} style={{ ...S.btn, flex: 1, fontSize: 12, fontWeight: 700, padding: "7px 0" }}>{L.addTaxBtn}</button>
+                  <button onClick={() => setScanPreview((cur) => [...cur, { name: L.taxDefaultName, unit_price: 0, quantity: 1, is_shared: false, distribute: "all" }])} style={{ ...S.btn, flex: 1, fontSize: 12, fontWeight: 700, padding: "7px 0" }}>{L.addTaxBtn}</button>
                   <button onClick={() => setShowTaxInfo(true)} style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "0 13px" }} title="uitleg">ℹ️</button>
                 </div>
               </div>
@@ -3066,21 +3298,23 @@ function AssignPicker({ participants, itemId, isShared, confirmedFn, onAssign, o
   onAssign: (pid: string, warn: boolean) => void; onClose: () => void
 }) {
   const [showOthers, setShowOthers] = useState(false)
+  const [lang] = useLang()
+  const L = STRINGS[lang]
   const open = participants.filter((p) => !confirmedFn(p.id))
   const others = participants.filter((p) => confirmedFn(p.id))
   return (
     <div style={{ marginTop: 8, marginLeft: 25, padding: 10, borderRadius: 12, background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.2)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ fontSize: 11, fontWeight: 800, color: "#5a6680" }}>Aan wie toewijzen?</span>
+        <span style={{ fontSize: 11, fontWeight: 800, color: "#5a6680" }}>{L.assignToWhom}</span>
         <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 13, color: "#9aa0ab", fontWeight: 800 }}>✕</button>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-        {open.length === 0 && !showOthers && <span style={{ fontSize: 11.5, color: "#9aa0ab" }}>Iedereen heeft al bevestigd — kies “andere persoon”.</span>}
+        {open.length === 0 && !showOthers && <span style={{ fontSize: 11.5, color: "#9aa0ab" }}>{L.everyoneConfirmed}</span>}
         {open.map((p) => (
           <button key={p.id} onClick={() => onAssign(p.id, false)} style={{ fontSize: 12, fontWeight: 700, borderRadius: 10, padding: "5px 11px", cursor: "pointer", border: "1px solid rgba(16,24,40,0.12)", background: "#fff", color: "#5a6680" }}>{p.name}</button>
         ))}
         {!showOthers && others.length > 0 && (
-          <button onClick={() => setShowOthers(true)} style={{ fontSize: 12, fontWeight: 700, borderRadius: 10, padding: "5px 11px", cursor: "pointer", border: "1px dashed rgba(16,24,40,0.25)", background: "transparent", color: "#8b93a8" }}>andere persoon ▾</button>
+          <button onClick={() => setShowOthers(true)} style={{ fontSize: 12, fontWeight: 700, borderRadius: 10, padding: "5px 11px", cursor: "pointer", border: "1px dashed rgba(16,24,40,0.25)", background: "transparent", color: "#8b93a8" }}>{L.otherPerson}</button>
         )}
         {showOthers && others.map((p) => (
           <button key={p.id} onClick={() => onAssign(p.id, true)} style={{ fontSize: 12, fontWeight: 700, borderRadius: 10, padding: "5px 11px", cursor: "pointer", border: "1px solid rgba(224,107,94,0.4)", background: "rgba(224,107,94,0.06)", color: "#c0392b" }}>{p.name} ⚠️</button>
@@ -3156,15 +3390,15 @@ function ClaimScreen(props: {
       <div>
         <div style={S.card}>
           <div onClick={isAdmin ? () => setClaimCollapsed((v) => !v) : undefined} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, cursor: isAdmin ? "pointer" : "default", marginBottom: (isAdmin && claimCollapsed) ? 0 : 10 }}>
-            <h3 style={{ ...S.h3, marginBottom: 0 }}>✅ Wie heeft wat genomen?</h3>
-            {isAdmin && <span style={{ fontSize: 12.5, color: "#9aa0ab", fontWeight: 700, flexShrink: 0 }}>{claimCollapsed ? "▶ openen" : "▼ inklappen"}</span>}
+            <h3 style={{ ...S.h3, marginBottom: 0 }}>{L.claimTitle}</h3>
+            {isAdmin && <span style={{ fontSize: 12.5, color: "#9aa0ab", fontWeight: 700, flexShrink: 0 }}>{claimCollapsed ? L.collapseOpen : L.collapseClose}</span>}
           </div>
           {isAdmin && claimCollapsed
-            ? <div onClick={() => setClaimCollapsed(false)} style={{ cursor: "pointer", fontSize: 12.5, color: "#1f8a4c", fontWeight: 700, padding: "2px 2px" }}>✅ Alles toegewezen — tik om opnieuw te bekijken</div>
+            ? <div onClick={() => setClaimCollapsed(false)} style={{ cursor: "pointer", fontSize: 12.5, color: "#1f8a4c", fontWeight: 700, padding: "2px 2px" }}>{L.allAssignedTapReview}</div>
             : items.length === 0
-            ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen items — scan eerst de bon.</div>
+            ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>{L.noItemsScanFirst}</div>
             : participants.length === 0
-            ? <div style={{ fontSize: 12.5, color: "#aaa", padding: 10 }}>Voeg eerst gasten toe in de tab &ldquo;Gasten &amp; delen&rdquo;.</div>
+            ? <div style={{ fontSize: 12.5, color: "#aaa", padding: 10 }}>{L.addGuestsInTab1}</div>
             : (
               <>
                 {(() => {
@@ -3192,7 +3426,7 @@ function ClaimScreen(props: {
                       </div>
                       {adminPid && (() => {
                         const sel = participants.find((p) => p.id === adminPid)
-                        return <div style={{ fontSize: 12, fontWeight: 700, color: "#5a4a1a", background: "rgba(233,196,95,0.25)", borderRadius: 10, padding: "7px 11px", marginBottom: 12 }}>👀 Geel = wat <b>{sel?.name}</b> bestelde.</div>
+                        return <div style={{ fontSize: 12, fontWeight: 700, color: "#5a4a1a", background: "rgba(233,196,95,0.25)", borderRadius: 10, padding: "7px 11px", marginBottom: 12 }}>{L.yellowIs}<b>{sel?.name}</b>{L.orderedSuffix}</div>
                       })()}
                     </>
                   )
@@ -3213,14 +3447,14 @@ function ClaimScreen(props: {
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={18} /></span>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 14, fontWeight: 700 }}>{it.name} <span style={{ fontSize: 10.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 8, padding: "1px 6px" }}>gedeeld</span></div>
-                            <div style={{ fontSize: 11, color: "#999" }}>€{itemTotal(it).toFixed(2).replace(".", ",")} totaal{ok ? ` · €${perHead.toFixed(2).replace(".", ",")} p.p.` : ""}</div>
+                            <div style={{ fontSize: 14, fontWeight: 700 }}>{it.name} <span style={{ fontSize: 10.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 8, padding: "1px 6px" }}>{L.sharedWord}</span></div>
+                            <div style={{ fontSize: 11, color: "#999" }}>€{itemTotal(it).toFixed(2).replace(".", ",")} {L.totalLower}{ok ? ` · €${perHead.toFixed(2).replace(".", ",")} p.p.` : ""}</div>
                           </div>
-                          <span style={{ fontSize: 11, fontWeight: 800, borderRadius: 10, padding: "2px 9px", color: ok ? "#1f8a4c" : "#c0392b", background: ok ? "rgba(39,174,96,0.12)" : "rgba(224,107,94,0.12)" }}>{ok ? `${heads} ${heads === 1 ? "persoon" : "personen"}` : "nog niemand"}</span>
+                          <span style={{ fontSize: 11, fontWeight: 800, borderRadius: 10, padding: "2px 9px", color: ok ? "#1f8a4c" : "#c0392b", background: ok ? "rgba(39,174,96,0.12)" : "rgba(224,107,94,0.12)" }}>{ok ? `${heads} ${heads === 1 ? L.person : L.persons}` : L.nobodyYet}</span>
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25 }}>
                           {participants.length === 0
-                            ? <span style={{ fontSize: 11, color: "#aaa" }}>Voeg eerst gasten toe.</span>
+                            ? <span style={{ fontSize: 11, color: "#aaa" }}>{L.addGuestsFirst}</span>
                             : participants.map((p) => {
                                 const on = sh.includes(p.id)
                                 const pSeats = Math.max(1, p.seats ?? 1)
@@ -3228,7 +3462,7 @@ function ClaimScreen(props: {
                                 return (
                                   <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                                     <button onClick={() => {
-                                      if (!on && explicitConfirmed(p.id) && !confirm(`${p.name} had dit zelf niet aangeduid. Toch laten meedelen?`)) return
+                                      if (!on && explicitConfirmed(p.id) && !confirm(L.notSelectedShare(p.name))) return
                                       toggleShareClaim(it.id, p.id)
                                     }} style={{
                                       fontSize: 11, fontWeight: 700, borderRadius: 10, padding: "3px 10px", cursor: "pointer",
@@ -3238,8 +3472,8 @@ function ClaimScreen(props: {
                                     }}>{on ? "✓ " : ""}{p.name}{on && pSeats > 1 ? ` ×${pHeads}` : ""}</button>
                                     {on && pSeats > 1 && !fixed && (
                                       <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
-                                        <button onClick={() => setClaim(it.id, p.id, pHeads - 1)} title="minder personen" style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: 18, height: 18, cursor: "pointer", fontSize: 12, lineHeight: 1 }}>−</button>
-                                        <button onClick={() => setClaim(it.id, p.id, Math.min(pSeats, pHeads + 1))} title="meer personen" style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: 18, height: 18, cursor: "pointer", fontSize: 12, lineHeight: 1 }} disabled={pHeads >= pSeats}>+</button>
+                                        <button onClick={() => setClaim(it.id, p.id, pHeads - 1)} title={L.fewerPersons} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: 18, height: 18, cursor: "pointer", fontSize: 12, lineHeight: 1 }}>−</button>
+                                        <button onClick={() => setClaim(it.id, p.id, Math.min(pSeats, pHeads + 1))} title={L.morePersons} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: 18, height: 18, cursor: "pointer", fontSize: 12, lineHeight: 1 }} disabled={pHeads >= pSeats}>+</button>
                                       </span>
                                     )}
                                   </span>
@@ -3261,21 +3495,21 @@ function ClaimScreen(props: {
                           <div style={{ fontSize: 11, color: "#999" }}>€{it.unit_price.toFixed(2).replace(".", ",")}/stuk</div>
                         </div>
                         {open > 0
-                          ? <button onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} style={{ fontSize: 11, fontWeight: 800, borderRadius: 10, padding: "3px 10px", cursor: "pointer", border: "none", color: "#c0392b", background: "rgba(224,107,94,0.14)" }}>{open} open — wijs toe ▾</button>
-                          : <span style={{ fontSize: 11, fontWeight: 800, borderRadius: 10, padding: "2px 9px", color: "#1f8a4c", background: "rgba(39,174,96,0.12)" }}>volledig</span>}
+                          ? <button onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} style={{ fontSize: 11, fontWeight: 800, borderRadius: 10, padding: "3px 10px", cursor: "pointer", border: "none", color: "#c0392b", background: "rgba(224,107,94,0.14)" }}>{open} {L.openAssign}</button>
+                          : <span style={{ fontSize: 11, fontWeight: 800, borderRadius: 10, padding: "2px 9px", color: "#1f8a4c", background: "rgba(39,174,96,0.12)" }}>{L.fullyClaimed}</span>}
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25, alignItems: "center" }}>
                         {who.map(({ p, q: pq }) => (
                           <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, borderRadius: 10, padding: "2px 4px 2px 9px", color: p.id === adminPid ? "#5a4a1a" : "#5a6680", background: p.id === adminPid ? "rgba(233,196,95,0.5)" : "rgba(90,108,166,0.1)" }}>
                             {p.name} ×{pq}
-                            <button onClick={() => setClaim(it.id, p.id, Math.max(0, pq - 1))} title="verwijder er één" style={{ border: "2px solid #2b2f38", background: "#fff", color: "#c0392b", borderRadius: 6, width: 26, height: 22, cursor: "pointer", fontSize: 15, fontWeight: 800, lineHeight: 1 }}>−</button>
+                            <button onClick={() => setClaim(it.id, p.id, Math.max(0, pq - 1))} title={L.removeOne} style={{ border: "2px solid #2b2f38", background: "#fff", color: "#c0392b", borderRadius: 6, width: 26, height: 22, cursor: "pointer", fontSize: 15, fontWeight: 800, lineHeight: 1 }}>−</button>
                           </span>
                         ))}
                         {who.length === 0 && open === 0 && <span style={{ fontSize: 11, color: "#aaa" }}>—</span>}
                       </div>
                       {assignItem === it.id && (
                         <AssignPicker participants={participants} itemId={it.id} confirmedFn={explicitConfirmed}
-                          onAssign={(pid, warn) => { if (warn && !confirm(`${participants.find((x) => x.id === pid)?.name} had dit zelf niet aangeduid. Toch toevoegen?`)) return; setClaim(it.id, pid, myQty(it.id, pid) + 1); setAssignItem(null) }}
+                          onAssign={(pid, warn) => { if (warn && !confirm(L.notSelectedAdd(participants.find((x) => x.id === pid)?.name))) return; setClaim(it.id, pid, myQty(it.id, pid) + 1); setAssignItem(null) }}
                           onClose={() => setAssignItem(null)} />
                       )}
                     </div>
@@ -3287,17 +3521,17 @@ function ClaimScreen(props: {
           {items.length > 0 && (
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1.5px solid rgba(16,24,40,0.08)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, color: "#5a6680" }}>
-                <span>Stuks geclaimd</span>
+                <span>{L.unitsClaimed}</span>
                 <span style={{ color: claimedUnits >= totalUnits ? "#1f8a4c" : "#c0392b" }}>{claimedUnits}/{totalUnits}{totalUnits > 0 && claimedUnits >= totalUnits ? " ✓" : ""}</span>
               </div>
               {sharedItems.length > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, color: "#5a6680", marginTop: 4 }}>
-                  <span>Gedeelde items geregeld</span>
+                  <span>{L.sharedItemsHandled}</span>
                   <span style={{ color: sharedDecided >= sharedItems.length ? "#1f8a4c" : "#c0392b" }}>{sharedDecided}/{sharedItems.length}{sharedDecided >= sharedItems.length ? " ✓" : ""}</span>
                 </div>
               )}
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800, color: "#14213a", marginTop: 6 }}>
-                <span>Totaal rekening</span>
+                <span>{L.billTotalLabel}</span>
                 <span>€{billSum.toFixed(2).replace(".", ",")}</span>
               </div>
             </div>
@@ -3310,12 +3544,12 @@ function ClaimScreen(props: {
   if (!meId) {
     return (
       <div style={S.card}>
-        <h3 style={S.h3}>Voor wie tik je aan?</h3>
-        <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 12 }}>Kies een persoon om voor te claimen (handig als jij voor iemand zonder gsm aantikt).</p>
+        <h3 style={S.h3}>{L.forWhomTap}</h3>
+        <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 12 }}>{L.pickPersonHint}</p>
         {participants.map((p) => (
           <button key={p.id} onClick={() => onPickMe(p.id)} style={{ ...S.btn, width: "100%", textAlign: "left", marginBottom: 6, padding: "12px 14px", fontWeight: 700 }}>{p.name}</button>
         ))}
-        {participants.length === 0 && <div style={{ color: "#aaa", fontSize: 13 }}>Voeg eerst gasten toe in de tab &ldquo;Gasten&rdquo;.</div>}
+        {participants.length === 0 && <div style={{ color: "#aaa", fontSize: 13 }}>{L.addGuestsInTab2}</div>}
       </div>
     )
   }
@@ -3326,8 +3560,8 @@ function ClaimScreen(props: {
     <div>
       {!finalized && reviewing && (
         <div style={{ width: "100%", marginBottom: 14, padding: "12px 16px", borderRadius: 14, background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff", boxShadow: "0 6px 18px -6px rgba(20,153,176,0.55)" }}>
-          <div style={{ fontSize: 14.5, fontWeight: 800 }}>🔎 De beheerder bekijkt de rekening opnieuw</div>
-          <div style={{ fontSize: 12, opacity: 0.92, marginTop: 2 }}>Even geduld — je krijgt straks opnieuw de definitieve verdeling te zien.</div>
+          <div style={{ fontSize: 14.5, fontWeight: 800 }}>{L.adminReviewing}</div>
+          <div style={{ fontSize: 12, opacity: 0.92, marginTop: 2 }}>{L.adminReviewingBody}</div>
         </div>
       )}
       {/* Pop-up zodra de beheerder afsluit: één duidelijke melding + meteen je verdeling zien */}
@@ -3335,16 +3569,16 @@ function ClaimScreen(props: {
         <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowFinalizedPopup(false)}>
           <div style={{ ...S.modal, width: 340, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 40, marginBottom: 6 }}>✅</div>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c", margin: "0 0 6px" }}>De rekening is afgesloten</h3>
-            <p style={{ fontSize: 13.5, color: "#5a6680", lineHeight: 1.5, margin: "0 0 12px" }}>De beheerder rondde de rekening af. Dit is jouw definitieve deel:</p>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c", margin: "0 0 6px" }}>{L.billClosedTitle2}</h3>
+            <p style={{ fontSize: 13.5, color: "#5a6680", lineHeight: 1.5, margin: "0 0 12px" }}>{L.billClosedBody2}</p>
             <div style={{ fontSize: 34, fontWeight: 800, color: "#14213a", marginBottom: 16 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</div>
-            <button onClick={() => { setShowFinalizedPopup(false); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>Bekijk mijn verdeling</button>
+            <button onClick={() => { setShowFinalizedPopup(false); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>{L.viewMyShare}</button>
           </div>
         </div>
       )}
       <div style={S.card}>
-        <h3 style={S.h3}>✅ {meId && seatsOf(meId) > 1 ? "Selecteer jullie consumpties" : "Selecteer jouw consumpties"}</h3>
-        {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen items — wacht tot de bon gescand is.</div>}
+        <h3 style={S.h3}>✅ {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</h3>
+        {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>{L.noItemsWaitScan}</div>}
 
         {items.map((it) => {
           const total = it.quantity
@@ -3366,15 +3600,15 @@ function ClaimScreen(props: {
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={18} /></span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>{it.name} <span style={{ fontSize: 11, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 8, padding: "1px 7px" }}>gedeeld</span></div>
-                    <div style={{ fontSize: 11, color: "#999" }}>€{itemTotal(it).toFixed(2).replace(".", ",")} totaal · wordt gedeeld door wie meedrinkt</div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{it.name} <span style={{ fontSize: 11, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 8, padding: "1px 7px" }}>{L.sharedWord}</span></div>
+                    <div style={{ fontSize: 11, color: "#999" }}>€{itemTotal(it).toFixed(2).replace(".", ",")}{L.totalSharedByDrinkers}</div>
                   </div>
-                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...(iShare ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", border: "none" } : {}) }}>{iShare ? "✓ ik deel mee" : "+ meedelen"}</button>
+                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...(iShare ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", border: "none" } : {}) }}>{iShare ? L.iShareYes : L.iShareNo}</button>
                 </div>
                 {iShare && mySeats > 1 && !fixed && (
                   <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#5a6680", background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.2)", borderRadius: 10, padding: "7px 11px" }}>
-                    <span style={{ flex: 1 }}>🍴 Met hoeveel van jullie {mySeats} deelden jullie dit?</span>
-                    <button onClick={() => setClaim(it.id, meId, Math.max(1, myHeads - 1))} style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 16 }} title="minder personen" disabled={myHeads <= 1}>−</button>
+                    <span style={{ flex: 1 }}>{L.withHowMany(mySeats)}</span>
+                    <button onClick={() => setClaim(it.id, meId, Math.max(1, myHeads - 1))} style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 16 }} title={L.fewerPersons} disabled={myHeads <= 1}>−</button>
                     <b style={{ minWidth: 18, textAlign: "center", fontSize: 15, color: "#14213a" }}>{myHeads}</b>
                     <button onClick={() => setClaim(it.id, meId, Math.min(mySeats, myHeads + 1))} style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 16, background: "rgba(27,42,74,0.12)" }} disabled={myHeads >= mySeats}>+</button>
                   </div>
@@ -3384,17 +3618,17 @@ function ClaimScreen(props: {
                     <div style={{ marginTop: 8, fontSize: 12, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.4)", borderRadius: 10, padding: "8px 11px", lineHeight: 1.45, display: "flex", alignItems: "flex-start", gap: 6 }}>
                       <span style={{ flexShrink: 0, marginTop: 1 }}><ShareIcon on size={14} /></span>
                       <span>{fixed
-                        ? <>Jouw deel: €{myShare.toFixed(2).replace(".", ",")}{myHeads > 1 ? ` (voor ${myHeads} pers.)` : ""} — gedeeld door {heads} {heads === 1 ? "persoon" : "personen"}, vastgelegd door de beheerder.</>
-                        : <>Voorlopig €{myShare.toFixed(2).replace(".", ",")}{myHeads > 1 ? ` (jullie ${myHeads})` : ""} — gedeeld door {heads} {heads === 1 ? "persoon" : "personen"}. Daalt als meer mensen meedoen.</>}</span>
+                        ? <>{L.yourShareLabel}{myShare.toFixed(2).replace(".", ",")}{myHeads > 1 ? L.forNPers(myHeads) : ""}{L.sharedByMid}{heads} {heads === 1 ? L.person : L.persons}{L.fixedByAdmin}</>
+                        : <>{L.provisionally}{myShare.toFixed(2).replace(".", ",")}{myHeads > 1 ? L.youN(myHeads) : ""}{L.sharedByMid}{heads} {heads === 1 ? L.person : L.persons}{L.dropsIfMore}</>}</span>
                     </div>
                   ) : (
                     <div style={{ marginTop: 8, fontSize: 12, color: "#5a6680", background: "rgba(90,108,166,0.08)", border: "1px solid rgba(90,108,166,0.25)", borderRadius: 10, padding: "8px 11px", lineHeight: 1.45 }}>
-                      ⏳ Je deelt mee. Het bedrag wordt verdeeld over iedereen die meedrinkt — je deel en de namen verschijnen zodra iedereen klaar is met aantikken en bevestigen.
+                      {L.sharingWaitReveal}
                     </div>
                   )
                 )}
                 {!iShare && (
-                  <div style={{ marginTop: 6, fontSize: 11.5, color: "#9aa0ab", lineHeight: 1.4 }}>Tik &ldquo;meedelen&rdquo; als je hiervan dronk. De prijs wordt gedeeld door iedereen die meedrinkt — je betaalt dus niet de hele prijs.</div>
+                  <div style={{ marginTop: 6, fontSize: 11.5, color: "#9aa0ab", lineHeight: 1.4 }}>{L.tapShareHint}</div>
                 )}
               </div>
             )
@@ -3406,9 +3640,9 @@ function ClaimScreen(props: {
                   <span style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.name}</span>
                   <span style={{ fontSize: 14, fontWeight: 800, color: "#1499b0", flexShrink: 0 }}>€{it.unit_price.toFixed(2).replace(".", ",")}</span>
                 </div>
-                <div style={{ fontSize: 11, color: open > 0 ? "#e0685c" : "#1f8a4c", fontWeight: 600 }}>{total}× besteld · {open > 0 ? `${open} nog vrij` : "alles geclaimd"}</div>
+                <div style={{ fontSize: 11, color: open > 0 ? "#e0685c" : "#1f8a4c", fontWeight: 600 }}>{total}{L.orderedMid}{open > 0 ? L.stillFree(open) : L.allClaimedWord}</div>
               </div>
-              <button style={{ width: 42, height: 34, fontSize: 20, fontWeight: 800, lineHeight: 1, borderRadius: 8, cursor: mine > 0 ? "pointer" : "default", color: mine > 0 ? "#c0392b" : "#c9ced8", background: "#fff", border: "2px solid " + (mine > 0 ? "#2b2f38" : "#e2e6ee") }} onClick={() => setClaim(it.id, meId, Math.max(0, mine - 1))} disabled={mine <= 0} title="verwijder er één">−</button>
+              <button style={{ width: 42, height: 34, fontSize: 20, fontWeight: 800, lineHeight: 1, borderRadius: 8, cursor: mine > 0 ? "pointer" : "default", color: mine > 0 ? "#c0392b" : "#c9ced8", background: "#fff", border: "2px solid " + (mine > 0 ? "#2b2f38" : "#e2e6ee") }} onClick={() => setClaim(it.id, meId, Math.max(0, mine - 1))} disabled={mine <= 0} title={L.removeOne}>−</button>
               <span style={{ fontSize: 16, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{mine}</span>
               <button style={{ ...S.iconBtn, width: 32, height: 32, fontSize: 16, background: "rgba(27,42,74,0.12)" }} onClick={() => setClaim(it.id, meId, mine + 1)} disabled={open <= 0}>+</button>
             </div>
@@ -3421,8 +3655,8 @@ function ClaimScreen(props: {
           const mine = personItems(meId)
           return (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 8 }}>Dit ga je bevestigen</div>
-              {mine.length === 0 && <div style={{ fontSize: 13, color: "#aaa" }}>Je hebt nog niets aangetikt.</div>}
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 8 }}>{L.aboutToConfirm}</div>
+              {mine.length === 0 && <div style={{ fontSize: 13, color: "#aaa" }}>{L.nothingTappedYet}</div>}
               {mine.map((d, k) => (
                 <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0", color: "#3b486a" }}>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{d.name}{d.shared ? (d.revealed ? (meId && seatsOf(meId) > 1 ? L.sharedNPers(d.myHeads) : L.sharedPart) : L.sharedByN(d.sharers)) : ""}</span>
@@ -3435,21 +3669,21 @@ function ClaimScreen(props: {
           )
         })()}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", borderTop: "1px solid rgba(90,108,166,0.18)", paddingTop: 10 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "#5a6680" }}>Jouw totaal</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "#5a6680" }}>{L.yourTotal}</span>
           <span style={{ fontSize: 28, fontWeight: 800, color: "#14213a" }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</span>
         </div>
         {t.pendingShared && (
           <div style={{ marginTop: 8, fontSize: 12.5, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.4)", borderRadius: 10, padding: "8px 11px", lineHeight: 1.4 }}>
-            ℹ️ Je deelt mee in gedeelde items (wijn/water). Het exacte deel kan nog wijzigen tot iedereen heeft aangetikt en bevestigd.
+            {L.sharingPendingNote}
           </div>
         )}
         {finalized && (
           <div id="gast-eindverdeling" style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(90,108,166,0.18)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4 }}>
               <span style={{ fontSize: 15 }}>✅</span>
-              <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f8a4c" }}>Alles afgehandeld — dit is de definitieve verdeling</span>
+              <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f8a4c" }}>{L.allHandledFinal}</span>
             </div>
-            <div style={{ fontSize: 12, color: "#8a93a3", marginBottom: 8 }}>De volledige rekening ter info — tik een naam aan voor het detail:</div>
+            <div style={{ fontSize: 12, color: "#8a93a3", marginBottom: 8 }}>{L.fullBillInfo}</div>
             {participants.map((p) => {
               const pt = personTotal(p.id)
               const isMe = p.id === meId
@@ -3461,13 +3695,13 @@ function ClaimScreen(props: {
                     style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 8px", cursor: "pointer" }}>
                     <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                       <span style={{ fontSize: 11, color: "#9aa0ab", width: 12, flexShrink: 0 }}>{rowOpen ? "▼" : "▶"}</span>
-                      <span style={{ fontSize: 13.5, fontWeight: isMe ? 800 : 600, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{isMe ? " (jij)" : ""}</span>
+                      <span style={{ fontSize: 13.5, fontWeight: isMe ? 800 : 600, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{isMe ? L.youSuffix : ""}</span>
                     </span>
                     <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a", flexShrink: 0, marginLeft: 8 }}>€{pt.settled.toFixed(2).replace(".", ",")}{pt.pendingShared ? "+" : ""}</span>
                   </div>
                   {rowOpen && (
                     <div style={{ padding: "0 8px 10px 26px" }}>
-                      {detail.length === 0 && <div style={{ fontSize: 12.5, color: "#aaa" }}>Niets aangetikt.</div>}
+                      {detail.length === 0 && <div style={{ fontSize: 12.5, color: "#aaa" }}>{L.nothingTapped2}</div>}
                       {detail.map((d, k) => (
                         <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#5a6680", padding: "2px 0" }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{d.name}{d.shared ? (d.revealed ? L.sharedPart : L.sharedByN(d.sharers)) : ""}</span>
@@ -3480,47 +3714,47 @@ function ClaimScreen(props: {
               )
             })}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(16,24,40,0.1)" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Totaal rekening</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>{L.billTotalLabel}</span>
               <span style={{ fontSize: 15, fontWeight: 800, color: "#14213a" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2).replace(".", ",")}</span>
             </div>
           </div>
         )}
         {!(finalized && !isAdmin) && (
           <button onClick={confirmMe} style={{ ...S.btn, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 15, fontWeight: 700, border: "none", ...(iConfirmed ? { background: "rgba(39,174,96,0.12)", color: "#1f8a4c" } : { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a" }) }}>
-            {iConfirmed ? "✓ Bevestigd — tik om te wijzigen" : "✅ Bevestig mijn bestelling"}
+            {iConfirmed ? L.confirmedTapEdit : L.confirmMyOrder}
           </button>
         )}
         {finalized && !isAdmin && (
           <div style={{ marginTop: 12 }}>
             {disputeOpen ? (
               <div style={{ background: "rgba(90,108,166,0.06)", border: "1px solid rgba(90,108,166,0.2)", borderRadius: 12, padding: 12 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: "#5a6680", marginBottom: 7 }}>🤔 Wat klopt er niet? (optioneel)</div>
-                <textarea value={disputeText} onChange={(e) => setDisputeText(e.target.value)} placeholder="bv. die wijn nam ik niet" rows={2} style={{ ...S.input, width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: "#5a6680", marginBottom: 7 }}>{L.whatWrong}</div>
+                <textarea value={disputeText} onChange={(e) => setDisputeText(e.target.value)} placeholder={L.disputePlaceholder} rows={2} style={{ ...S.input, width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
                 <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                   <button onClick={() => { setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13 }}>{L.cancel}</button>
-                  <button onClick={() => { onToggleDispute(true, disputeText); setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff" }}>Versturen</button>
+                  <button onClick={() => { onToggleDispute(true, disputeText); setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff" }}>{L.send}</button>
                 </div>
               </div>
             ) : iResolved ? (
               <div style={{ fontSize: 12.5, color: "#1f8a4c", background: "rgba(39,174,96,0.12)", border: "1px solid rgba(39,174,96,0.4)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45, textAlign: "center", fontWeight: 700 }}>
-                ✓ De beheerder heeft je opmerking opgelost.
-                {iComment && <div style={{ marginTop: 6, fontWeight: 600, fontStyle: "italic", color: "#1f8a4c", opacity: 0.85 }}>jouw opmerking: “{iComment}”</div>}
+                {L.remarkResolved}
+                {iComment && <div style={{ marginTop: 6, fontWeight: 600, fontStyle: "italic", color: "#1f8a4c", opacity: 0.85 }}>{L.yourRemark}“{iComment}”</div>}
                 <div style={{ marginTop: 8 }}>
-                  <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "8px 16px", fontSize: 12.5, fontWeight: 700, background: "#fff", border: "1px solid rgba(20,33,58,0.18)", color: "#5a6680" }}>➕ Nog een opmerking toevoegen</button>
+                  <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "8px 16px", fontSize: 12.5, fontWeight: 700, background: "#fff", border: "1px solid rgba(20,33,58,0.18)", color: "#5a6680" }}>{L.addAnotherRemark}</button>
                 </div>
               </div>
             ) : iDispute ? (
               <div style={{ fontSize: 12.5, color: "#a06b00", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45, textAlign: "center" }}>
-                💬 De beheerder heeft je opmerking ontvangen en bekijkt ze.
-                {iComment && <div style={{ marginTop: 6, fontWeight: 600, fontStyle: "italic", color: "#a06b00", opacity: 0.9 }}>jouw opmerking: “{iComment}”</div>}
+                {L.remarkReceived}
+                {iComment && <div style={{ marginTop: 6, fontWeight: 600, fontStyle: "italic", color: "#a06b00", opacity: 0.9 }}>{L.yourRemark}“{iComment}”</div>}
                 <div style={{ marginTop: 6 }}>
-                  <button onClick={() => { onToggleDispute(false); setDisputeOpen(false); setDisputeText("") }} style={{ background: "none", border: "none", padding: 0, color: "#1499b0", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>toch intrekken</button>
+                  <button onClick={() => { onToggleDispute(false); setDisputeOpen(false); setDisputeText("") }} style={{ background: "none", border: "none", padding: 0, color: "#1499b0", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>{L.withdraw}</button>
                 </div>
               </div>
             ) : (
               <div style={{ textAlign: "center" }}>
                 <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "10px 18px", fontSize: 13, fontWeight: 700, background: "#fff", border: "1px solid rgba(20,33,58,0.18)", color: "#5a6680" }}>
-                  🤔 Klopt iets niet? Laat het de beheerder weten
+                  {L.somethingWrong}
                 </button>
               </div>
             )}
@@ -3534,15 +3768,17 @@ function ClaimScreen(props: {
 function IdentityAdder({ onAdd }: { onAdd: (name: string, seats?: number) => void }) {
   const [name, setName] = useState("")
   const [seats, setSeats] = useState(1)
+  const [lang] = useLang()
+  const L = STRINGS[lang]
   const submit = () => { if (name.trim()) { onAdd(name.trim(), seats); setName(""); setSeats(1) } }
   return (
     <div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submit() }} placeholder="Jouw naam" style={{ ...S.input, flex: 1, minWidth: 120 }} />
+        <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submit() }} placeholder={L.yourNamePlaceholder} style={{ ...S.input, flex: 1, minWidth: 120 }} />
         <SeatsControl n={seats} onChange={setSeats} showLabel />
       </div>
-      <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6 }}>Met meerdere (bv. koppel)? Zet het aantal personen met de knopjes.</div>
-      <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 16, fontWeight: 700 }} onClick={submit}>Doe mee</button>
+      <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6 }}>{L.multipleHint}</div>
+      <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 16, fontWeight: 700 }} onClick={submit}>{L.joinIn}</button>
     </div>
   )
 }
@@ -3567,13 +3803,15 @@ function ShareIcon({ on, size = 20 }: { on?: boolean; size?: number }) {
 }
 
 function SeatsControl({ n, onChange, max, size = 15, showLabel = false, compact = false }: { n: number; onChange: (next: number) => void; max?: number; size?: number; showLabel?: boolean; compact?: boolean }) {
+  const [lang] = useLang()
+  const L = STRINGS[lang]
   const seats = Math.max(1, n)
   const capIcons = compact ? 2 : 6
   const icons = Math.min(seats, capIcons)
   const atMax = max != null && seats >= max
   const bw = compact ? 16 : 18
   return (
-    <span onClick={(e) => e.stopPropagation()} style={{ display: "inline-flex", alignItems: "center", gap: compact ? 3 : 5, background: "rgba(90,108,166,0.1)", borderRadius: 9, padding: compact ? "2px 4px" : "2px 5px 2px 8px", flexShrink: 0 }} title="Voor hoeveel personen telt deze naam (bij gedeelde items)">
+    <span onClick={(e) => e.stopPropagation()} style={{ display: "inline-flex", alignItems: "center", gap: compact ? 3 : 5, background: "rgba(90,108,166,0.1)", borderRadius: 9, padding: compact ? "2px 4px" : "2px 5px 2px 8px", flexShrink: 0 }} title={L.seatsControlTitle}>
       <span style={{ display: "inline-flex", alignItems: "center", gap: 1, fontSize: compact ? 12 : size, lineHeight: 1 }}>
         {Array.from({ length: icons }).map((_, i) => <span key={i}>👤</span>)}
         {seats > capIcons && <span style={{ fontSize: compact ? 9.5 : 11, fontWeight: 800, color: "#5a6680", marginLeft: 1 }}>+{seats - capIcons}</span>}
