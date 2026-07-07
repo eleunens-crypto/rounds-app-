@@ -408,6 +408,35 @@ const STRINGS = {
     checkPrices: "prijzen/aantallen correct?",
     checkTax: "BTW/andere kosten/kortingen?",
     allOkGoGuests: "✓ Alles klopt — ga naar Gasten en delen →",
+    scanModalTitle: "🧾 Rekening scannen",
+    scanModalIntro: "Maak of kies een foto van de rekening. Daarna kan je de herkende items nog nakijken en bijsturen.",
+    scanProgress: "De tekst van je bon wordt herkend — even geduld.",
+    scanningBusy: "⏳ Bezig met scannen — even geduld",
+    otherPhoto: "📷 Andere foto kiezen",
+    pickPhoto: "📷 Foto maken / kiezen",
+    scanFailUnavailTitle: "😕 De slimme scan is even niet beschikbaar",
+    scanFailUnavailBody: "De AI-herkenning is momenteel overbelast of tijdelijk offline. Wacht heel even en probeer opnieuw — meestal is ze na een halve minuut terug. Je foto blijft bewaard.",
+    retryIn: (s: number) => `🔄 Opnieuw proberen over ${s}s`,
+    retryNow: "🔄 Opnieuw proberen",
+    scanFailEmptyTitle: "📷 Niets herkend op de foto",
+    scanFailEmptyBody: "De scan kon geen items lezen. Maak een scherpere foto — recht van boven, goed belicht en zonder plooien of schaduw — en probeer opnieuw.",
+    useQuickScan: "Toch de snelle scan gebruiken (minder nauwkeurig)",
+    yourPhoto: "Jouw foto — vergelijk met de lijst",
+    scannedReceiptAlt: "gescande bon",
+    recognizedSuffix: "herkend — controleer en stuur bij",
+    perPiece: "€/stuk",
+    sharedItemNote: "Gedeeld item (bv. water of wijn) — de prijs wordt straks verdeeld over wie meedeelt.",
+    addTaxBtn: "🧮 BTW/Kosten toevoegen",
+    itemsWord: "Items",
+    taxWord: "🧮 BTW / kosten",
+    calcTotal: "Berekend totaal",
+    totalOnBill: "Totaal op de bon",
+    matchesBillTotal: "✅ Klopt met het bon-totaal",
+    diffNote: (amt: string, higher: boolean) => `⚠️ Verschil van €${amt} (${higher ? "berekend is hoger" : "berekend is lager"}). Controleer aantallen, prijzen en BTW.`,
+    enterBillLive: "Vul het totaal van de bon in om live te zien of alles (incl. BTW) klopt.",
+    cancel: "Annuleren",
+    closeWord: "Sluiten",
+    confirmAdd: "✅ Bevestigen & toevoegen",
   },
   fr: {
     backToRundo: "← retour à l'accueil Rundo",
@@ -498,6 +527,35 @@ const STRINGS = {
     checkPrices: "prix/quantités corrects ?",
     checkTax: "TVA/autres frais/réductions ?",
     allOkGoGuests: "✓ Tout est correct — vers Invités et partage →",
+    scanModalTitle: "🧾 Scanner l'addition",
+    scanModalIntro: "Prends ou choisis une photo de l'addition. Tu pourras ensuite vérifier et corriger les articles reconnus.",
+    scanProgress: "Le texte de ton addition est en cours de reconnaissance — un instant.",
+    scanningBusy: "⏳ Scan en cours — un instant",
+    otherPhoto: "📷 Choisir une autre photo",
+    pickPhoto: "📷 Prendre / choisir une photo",
+    scanFailUnavailTitle: "😕 Le scan intelligent est momentanément indisponible",
+    scanFailUnavailBody: "La reconnaissance IA est surchargée ou temporairement hors ligne. Attends un instant et réessaie — elle revient généralement après une demi-minute. Ta photo est conservée.",
+    retryIn: (s: number) => `🔄 Réessayer dans ${s}s`,
+    retryNow: "🔄 Réessayer",
+    scanFailEmptyTitle: "📷 Rien reconnu sur la photo",
+    scanFailEmptyBody: "Le scan n'a lu aucun article. Prends une photo plus nette — de face, bien éclairée et sans plis ni ombres — puis réessaie.",
+    useQuickScan: "Utiliser quand même le scan rapide (moins précis)",
+    yourPhoto: "Ta photo — compare avec la liste",
+    scannedReceiptAlt: "addition scannée",
+    recognizedSuffix: "reconnus — vérifie et corrige",
+    perPiece: "€/pièce",
+    sharedItemNote: "Article partagé (ex. eau ou vin) — le prix sera réparti entre ceux qui le partagent.",
+    addTaxBtn: "🧮 Ajouter TVA/frais",
+    itemsWord: "Articles",
+    taxWord: "🧮 TVA / frais",
+    calcTotal: "Total calculé",
+    totalOnBill: "Total sur l'addition",
+    matchesBillTotal: "✅ Correspond au total de l'addition",
+    diffNote: (amt: string, higher: boolean) => `⚠️ Écart de €${amt} (${higher ? "le calcul est plus élevé" : "le calcul est plus bas"}). Vérifie les quantités, les prix et la TVA.`,
+    enterBillLive: "Indique le total de l'addition pour voir en direct si tout (TVA comprise) correspond.",
+    cancel: "Annuler",
+    closeWord: "Fermer",
+    confirmAdd: "✅ Confirmer et ajouter",
   },
 }
 
@@ -2265,11 +2323,11 @@ export default function RundoTable() {
       {showScan && (
         <div style={S.overlay}>
           <div style={{ ...S.modal, width: 460, maxHeight: "88vh" }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800 }}>🧾 Rekening scannen</h3>
-            <p style={{ fontSize: 12.5, color: "#999", marginBottom: 14 }}>Maak of kies een foto van de rekening. Daarna kan je de herkende items nog nakijken en bijsturen.</p>
+            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800 }}>{L.scanModalTitle}</h3>
+            <p style={{ fontSize: 12.5, color: "#999", marginBottom: 14 }}>{L.scanModalIntro}</p>
 
             <label style={{ ...S.btn, ...S.btnPrimary, display: "block", textAlign: "center", marginBottom: 14, cursor: scanning ? "default" : "pointer", fontWeight: 700, padding: "14px 0", opacity: scanning ? 0.6 : 1 }}>
-              {scanning ? "⏳ Bezig met scannen — even geduld" : scanPreview.length > 0 ? "📷 Andere foto kiezen" : "📷 Foto maken / kiezen"}
+              {scanning ? L.scanningBusy : scanPreview.length > 0 ? L.otherPhoto : L.pickPhoto}
               <input type="file" accept="image/*" disabled={scanning} style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
             </label>
 
@@ -2278,7 +2336,7 @@ export default function RundoTable() {
                 <div style={{ height: 8, background: "rgba(20,33,58,0.08)", borderRadius: 4, overflow: "hidden" }}>
                   <div style={{ width: `${Math.round(scanProgress * 100)}%`, height: "100%", background: "linear-gradient(90deg,#1499b0,#22b8cf)", borderRadius: 4, transition: "width 0.2s" }} />
                 </div>
-                <div style={{ fontSize: 11, color: "#8a93a3", textAlign: "center", marginTop: 6 }}>De tekst van je bon wordt herkend — even geduld.</div>
+                <div style={{ fontSize: 11, color: "#8a93a3", textAlign: "center", marginTop: 6 }}>{L.scanProgress}</div>
               </div>
             )}
 
@@ -2286,29 +2344,29 @@ export default function RundoTable() {
               <div style={{ marginBottom: 14, border: "1px solid rgba(224,107,94,0.45)", background: "rgba(224,107,94,0.06)", borderRadius: 12, padding: "13px 14px" }}>
                 {scanFail.reason === "unavailable" ? (
                   <>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>😕 De slimme scan is even niet beschikbaar</div>
-                    <div style={{ fontSize: 12.5, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>De AI-herkenning is momenteel overbelast of tijdelijk offline. Wacht heel even en probeer opnieuw — meestal is ze na een halve minuut terug. Je foto blijft bewaard.</div>
-                    <button onClick={retryAiScan} disabled={cooldownLeft > 0} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 14, fontWeight: 800, opacity: cooldownLeft > 0 ? 0.55 : 1, cursor: cooldownLeft > 0 ? "default" : "pointer" }}>{cooldownLeft > 0 ? `🔄 Opnieuw proberen over ${cooldownLeft}s` : "🔄 Opnieuw proberen"}</button>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>{L.scanFailUnavailTitle}</div>
+                    <div style={{ fontSize: 12.5, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.scanFailUnavailBody}</div>
+                    <button onClick={retryAiScan} disabled={cooldownLeft > 0} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 14, fontWeight: 800, opacity: cooldownLeft > 0 ? 0.55 : 1, cursor: cooldownLeft > 0 ? "default" : "pointer" }}>{cooldownLeft > 0 ? L.retryIn(cooldownLeft) : L.retryNow}</button>
                   </>
                 ) : (
                   <>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>📷 Niets herkend op de foto</div>
-                    <div style={{ fontSize: 12.5, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>De scan kon geen items lezen. Maak een scherpere foto — recht van boven, goed belicht en zonder plooien of schaduw — en probeer opnieuw.</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>{L.scanFailEmptyTitle}</div>
+                    <div style={{ fontSize: 12.5, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.scanFailEmptyBody}</div>
                     <label style={{ ...S.btn, ...S.btnPrimary, display: "block", textAlign: "center", padding: "12px 0", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
-                      📷 Andere foto kiezen
+                      {L.otherPhoto}
                       <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
                     </label>
                   </>
                 )}
-                <button onClick={runLocalScan} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 11.5, fontWeight: 700, color: "#9aa0ab", textDecoration: "underline", textUnderlineOffset: 2 }}>Toch de snelle scan gebruiken (minder nauwkeurig)</button>
+                <button onClick={runLocalScan} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 11.5, fontWeight: 700, color: "#9aa0ab", textDecoration: "underline", textUnderlineOffset: 2 }}>{L.useQuickScan}</button>
               </div>
             )}
 
             {scanPhotoUrl && (
               <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 6 }}>Jouw foto — vergelijk met de lijst</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 6 }}>{L.yourPhoto}</div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={scanPhotoUrl} alt="gescande bon" onClick={() => setViewReceipt(scanPhotoUrl)} style={{ width: "100%", maxHeight: 220, objectFit: "contain", borderRadius: 12, border: "1px solid rgba(0,0,0,0.1)", background: "#faf9f5", cursor: "zoom-in" }} />
+                <img src={scanPhotoUrl} alt={L.scannedReceiptAlt} onClick={() => setViewReceipt(scanPhotoUrl)} style={{ width: "100%", maxHeight: 220, objectFit: "contain", borderRadius: 12, border: "1px solid rgba(0,0,0,0.1)", background: "#faf9f5", cursor: "zoom-in" }} />
               </div>
             )}
 
@@ -2320,7 +2378,7 @@ export default function RundoTable() {
               return (
               <div style={{ marginBottom: 12, maxHeight: 320, overflowY: "auto", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: "#c98a00", textTransform: "uppercase" }}>{scanPreview.filter((x) => !x.distribute).length} herkend — controleer en stuur bij</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "#c98a00", textTransform: "uppercase" }}>{scanPreview.filter((x) => !x.distribute).length} {L.recognizedSuffix}</div>
                 </div>
                 {scanPreview.map((it, i) => ({ it, i })).sort((a, b) => (a.it.distribute ? 1 : 0) - (b.it.distribute ? 1 : 0)).map(({ it, i }) => {
                   const lineTotal = (it.unit_price || 0) * (it.quantity || 0)
@@ -2391,14 +2449,14 @@ export default function RundoTable() {
                           }))}>+</button>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <span style={{ fontSize: 12, color: "#888" }}>€/stuk</span>
+                          <span style={{ fontSize: 12, color: "#888" }}>{L.perPiece}</span>
                           <input type="number" step="0.01" value={it.unit_price || ""} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, unit_price: parseFloat(e.target.value) || 0 } : x))} style={{ ...S.input, width: 84, padding: "8px 8px" }} />
                         </div>
                         <span style={{ marginLeft: "auto", fontSize: 13, fontWeight: 800, color: scanMatch ? "#1f8a4c" : "#14213a", whiteSpace: "nowrap" }}>= €{lineTotal.toFixed(2).replace(".", ",")}</span>
                       </div>
                       {it.is_shared && (
                         <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 7, fontSize: 11.5, color: "#a06b00", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.45)", borderRadius: 9, padding: "6px 10px", lineHeight: 1.4 }}>
-                          <ShareIcon on size={16} /> Gedeeld item (bv. water of wijn) — de prijs wordt straks verdeeld over wie meedeelt.
+                          <ShareIcon on size={16} /> {L.sharedItemNote}
                         </div>
                       )}
                     </div>
@@ -2408,7 +2466,7 @@ export default function RundoTable() {
                   <button onClick={() => openNewItem("scan")} style={{ ...S.btn, ...S.btnPrimary, padding: "8px 16px", fontSize: 12.5, fontWeight: 700 }}>+ Item toevoegen</button>
                 </div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
-                  <button onClick={() => setScanPreview((cur) => [...cur, { name: "BTW of andere kosten", unit_price: 0, quantity: 1, is_shared: false, distribute: "all" }])} style={{ ...S.btn, flex: 1, fontSize: 12, fontWeight: 700, padding: "7px 0" }}>🧮 BTW/Kosten toevoegen</button>
+                  <button onClick={() => setScanPreview((cur) => [...cur, { name: "BTW of andere kosten", unit_price: 0, quantity: 1, is_shared: false, distribute: "all" }])} style={{ ...S.btn, flex: 1, fontSize: 12, fontWeight: 700, padding: "7px 0" }}>{L.addTaxBtn}</button>
                   <button onClick={() => setShowTaxInfo(true)} style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "0 13px" }} title="uitleg">ℹ️</button>
                 </div>
               </div>
@@ -2427,21 +2485,21 @@ export default function RundoTable() {
               return (
                 <div style={{ marginBottom: 14, border: `1.5px solid ${ok ? "rgba(39,174,96,0.4)" : hasBill ? "rgba(224,107,94,0.4)" : "rgba(16,24,40,0.1)"}`, borderRadius: 12, padding: "11px 13px", background: ok ? "rgba(39,174,96,0.06)" : hasBill ? "rgba(224,107,94,0.05)" : "#fafbff" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 600, color: "#8a93a3" }}>Items</span>
+                    <span style={{ fontSize: 12.5, fontWeight: 600, color: "#8a93a3" }}>{L.itemsWord}</span>
                     <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>€{itemsSum.toFixed(2).replace(".", ",")}</span>
                   </div>
                   {taxSum > 0 && (
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 3 }}>
-                      <span style={{ fontSize: 12.5, fontWeight: 600, color: "#8a93a3" }}>🧮 BTW / kosten</span>
+                      <span style={{ fontSize: 12.5, fontWeight: 600, color: "#8a93a3" }}>{L.taxWord}</span>
                       <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>€{taxSum.toFixed(2).replace(".", ",")}</span>
                     </div>
                   )}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, paddingTop: 6, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: "#14213a" }}>Berekend totaal</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "#14213a" }}>{L.calcTotal}</span>
                     <span style={{ fontSize: 17, fontWeight: 800, color: "#14213a" }}>€{computed.toFixed(2).replace(".", ",")}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 8 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Totaal op de bon</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>{L.totalOnBill}</span>
                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <span style={{ color: "#999" }}>€</span>
                       <input type="number" step="0.01" placeholder="0.00" value={scanTotal} onChange={(e) => setScanTotal(numFilter(e.target.value))} style={{ ...S.input, width: 90, textAlign: "right", padding: "8px 8px" }} />
@@ -2450,21 +2508,21 @@ export default function RundoTable() {
                   {hasBill && (
                     <div style={{ marginTop: 9, fontSize: 12.5, fontWeight: 700, lineHeight: 1.4, color: ok ? "#1f8a4c" : "#c0392b" }}>
                       {ok
-                        ? "✅ Klopt met het bon-totaal"
-                        : `⚠️ Verschil van €${Math.abs(diff).toFixed(2).replace(".", ",")} (${diff > 0 ? "berekend is hoger" : "berekend is lager"}). Controleer aantallen, prijzen en BTW.`}
+                        ? L.matchesBillTotal
+                        : L.diffNote(Math.abs(diff).toFixed(2).replace(".", ","), diff > 0)}
                     </div>
                   )}
                   {!hasBill && (
-                    <div style={{ marginTop: 8, fontSize: 11.5, color: "#9aa0ab" }}>Vul het totaal van de bon in om live te zien of alles (incl. BTW) klopt.</div>
+                    <div style={{ marginTop: 8, fontSize: 11.5, color: "#9aa0ab" }}>{L.enterBillLive}</div>
                   )}
                 </div>
               )
             })()}
 
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, flex: 1 }} disabled={scanning} onClick={() => { setShowScan(false); setScanPreview([]); setScanTotal(""); setScanFail(null); setScanFile(null); if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) } }}>{scanPreview.length > 0 ? "Annuleren" : "Sluiten"}</button>
+              <button style={{ ...S.btn, flex: 1 }} disabled={scanning} onClick={() => { setShowScan(false); setScanPreview([]); setScanTotal(""); setScanFail(null); setScanFile(null); if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) } }}>{scanPreview.length > 0 ? L.cancel : L.closeWord}</button>
               {scanPreview.length > 0 && (
-                <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={() => confirmScan()} disabled={scanning}>✅ Bevestigen & toevoegen</button>
+                <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={() => confirmScan()} disabled={scanning}>{L.confirmAdd}</button>
               )}
             </div>
           </div>
@@ -2573,7 +2631,7 @@ export default function RundoTable() {
         <div style={S.overlay} onClick={() => setViewReceipt(null)}>
           <div style={{ position: "relative", maxWidth: "92vw", maxHeight: "90vh" }} onClick={(e) => e.stopPropagation()}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={viewReceipt} alt="gescande bon" style={{ maxWidth: "92vw", maxHeight: "82vh", objectFit: "contain", borderRadius: 14, background: "#fff", boxShadow: "0 24px 70px -12px rgba(16,24,40,0.5)" }} />
+            <img src={viewReceipt} alt={L.scannedReceiptAlt} style={{ maxWidth: "92vw", maxHeight: "82vh", objectFit: "contain", borderRadius: 14, background: "#fff", boxShadow: "0 24px 70px -12px rgba(16,24,40,0.5)" }} />
             <button onClick={() => setViewReceipt(null)} style={{ ...S.btn, position: "absolute", top: -14, right: -14, width: 40, height: 40, borderRadius: "50%", fontWeight: 700, fontSize: 16, padding: 0 }}>✕</button>
           </div>
         </div>
