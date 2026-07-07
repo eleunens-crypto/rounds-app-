@@ -569,26 +569,29 @@ function settleDebts(
   while (debtors.length > 0 && creditors.length > 0) {
     debtors.sort((a, b) => b.cents - a.cents)
     const d = debtors[0]
-    // Beperk het aantal betalers per ontvanger (liefst max 2). Kies eerst uit ontvangers die
-    // nog onder die grens zitten; enkel als het echt niet anders kan, val terug op de rest.
-    const underCap = creditors.filter((c) => c.inDeg < 2)
-    const pool = underCap.length > 0 ? underCap : creditors
-    const fits = pool.filter((c) => c.cents >= d.cents).sort((a, b) => a.cents - b.cents)
-    if (fits.length > 0) {
-      const c = fits[0]
-      transactions.push({ from: d.name, to: c.name, amount: d.cents / 100 })
-      c.inDeg++
-      c.cents -= d.cents
-      d.cents = 0
-    } else {
-      pool.sort((a, b) => b.cents - a.cents)
-      const c = pool[0]
-      const amountCents = Math.min(d.cents, c.cents)
-      transactions.push({ from: d.name, to: c.name, amount: amountCents / 100 })
-      c.inDeg++
-      d.cents -= amountCents
-      c.cents -= amountCents
+    // Voorkeur bij het kiezen van een ontvanger:
+    //  1) iemand die nog van NIEMAND geld krijgt (inDeg 0) en de hele schuld in één keer kan opvangen,
+    //  2) idem maar iemand die al van 1 iemand krijgt (inDeg 1),
+    //  3) anders de grootste ontvanger met inDeg 0, dan met inDeg 1 (deels betalen),
+    //  4) en enkel als het echt niet anders kan, een ontvanger die al 2+ betalers heeft.
+    // Zo betaalt iedereen liefst aan 1 iemand en ontvangt iedereen liefst van 1, hoogstens 2.
+    const pick = () => {
+      for (const deg of [0, 1]) {
+        const full = creditors.filter((x) => x.inDeg === deg && x.cents >= d.cents).sort((a, b) => a.cents - b.cents)
+        if (full.length > 0) return full[0]
+      }
+      for (const deg of [0, 1]) {
+        const part = creditors.filter((x) => x.inDeg === deg).sort((a, b) => b.cents - a.cents)
+        if (part.length > 0) return part[0]
+      }
+      return [...creditors].sort((a, b) => b.cents - a.cents)[0]
     }
+    const c = pick()
+    const amountCents = Math.min(d.cents, c.cents)
+    transactions.push({ from: d.name, to: c.name, amount: amountCents / 100 })
+    c.inDeg++
+    d.cents -= amountCents
+    c.cents -= amountCents
     creditors = creditors.filter((c) => c.cents > 0)
     debtors = debtors.filter((d) => d.cents > 0)
   }
@@ -2112,17 +2115,24 @@ export default function Home() {
             {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 24 }}>Nog geen personen</div>}
 
             {(() => {
-              const cols = participants.length <= 5 ? 1 : participants.length <= 12 ? 2 : 3
-              const rows = Math.max(1, Math.ceil(participants.length / cols))
+              const isPh = (pp: (typeof participants)[number]) => /^Persoon \d+$/.test(pp.name)
+              const named = participants.filter((pp) => !isPh(pp))
+              const placeholders = participants.filter(isPh)
+              const ordered = [...named, ...placeholders]   // namen eerst, placeholders erna
+              const cols = ordered.length <= 5 ? 1 : ordered.length <= 12 ? 2 : 3
+              const rows = Math.max(1, Math.ceil(ordered.length / cols))
               return (
                 <div style={cols > 1 ? { display: "grid", gridAutoFlow: "column", gridTemplateRows: `repeat(${rows}, auto)`, columnGap: 16 } : undefined}>
-            {participants.map((p) => (
+            {ordered.map((p, idx) => {
+              const isPlaceholder = isPh(p)
+              const posLabel = `Persoon ${idx + 1}`   // hernummerd op positie (namen eerst), zonder gaten
+              return (
               <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
                 {editingPerson === p.id ? (
                   <input
                     autoFocus
                     value={editingPersonName}
-                    placeholder={p.name}
+                    placeholder={isPlaceholder ? posLabel : p.name}
                     onChange={(e) => setEditingPersonName(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") (e.target as HTMLInputElement).blur()
@@ -2132,8 +2142,7 @@ export default function Home() {
                     style={{ ...S.input, flex: 1 }}
                   />
                 ) : (() => {
-                  const isPlaceholder = /^Persoon \d+$/.test(p.name)
-                  const shown = isPlaceholder ? p.name.replace(/^Persoon /, "Pers. ") : p.name
+                  const shown = isPlaceholder ? `Pers. ${idx + 1}` : p.name
                   return (
                     <>
                       <span
@@ -2141,12 +2150,13 @@ export default function Home() {
                         style={{ flex: 1, minWidth: 0, cursor: "text", padding: "2px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600, fontSize: 15, ...(isPlaceholder ? { fontStyle: "italic", color: "#b3a988", borderBottom: "1px dashed #cdbd8e" } : {}) }}
                       >{shown}</span>
                       <button style={S.iconBtn} onClick={() => { setEditingPerson(p.id); setEditingPersonName("") }}>✏️</button>
-                      <button style={S.iconBtn} onClick={() => deletePerson(p.id, p.name)}>🗑️</button>
+                      <button style={S.iconBtn} onClick={() => deletePerson(p.id, isPlaceholder ? posLabel : p.name)}>🗑️</button>
                     </>
                   )
                 })()}
               </div>
-            ))}
+              )
+            })}
                 </div>
               )
             })()}
