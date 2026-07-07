@@ -814,6 +814,7 @@ export default function Home() {
       const ids = new Set<string>()
       orders.forEach((o) => { if (!o.participant_id && o.quantity > 0) ids.add(o.drink_id) })
       setBillOriginallyUnassigned(ids)
+      setShowAllOrderedDrinks(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view])
@@ -2230,10 +2231,18 @@ export default function Home() {
           )}
 
           {cartTotalItems === 0 && !orderEditing && (
-            <div style={{ textAlign: "center", fontSize: 13, fontWeight: 700, color: "#a89a6a", margin: "16px 6px 4px" }}>
-              {sessions.length === 0
-                ? "Nog geen drankjes gekozen — selecteer ze hierboven 👆"
-                : "Nog geen drankjes in dit rondje — selecteer ze hierboven 👆"}
+            <div style={{ textAlign: "center", margin: "16px 6px 4px" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#a89a6a" }}>
+                {sessions.length === 0
+                  ? "Nog geen drankjes gekozen — selecteer ze hierboven 👆"
+                  : "Nog geen drankjes in dit rondje — selecteer ze hierboven 👆"}
+              </div>
+              {sessions.length > 0 && (
+                <div style={{ marginTop: 10, display: "flex", justifyContent: "center", gap: 16 }}>
+                  <button onClick={() => setView("rounds")} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 4px" }}>Overzicht Rondjes →</button>
+                  <button onClick={() => setView("bill")} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 4px" }}>Afrekenen →</button>
+                </div>
+              )}
             </div>
           )}
 
@@ -3307,7 +3316,7 @@ export default function Home() {
                   style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, background: "transparent", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55" }}
                   onClick={() => { setPayWarn(false); setPaymentDraft({}); setFinishedRoundSnapshot(null); setView("ordering"); setBarmanStep("list") }}
                 >
-                  ? Later invullen
+                  Later invullen
                 </button>
               </div>
             </div>
@@ -3323,7 +3332,7 @@ export default function Home() {
             <h3 onClick={() => setShowAllOrderedDrinks((v) => !v)} style={{ ...S.h3, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, marginBottom: showAllOrderedDrinks ? 14 : 0, cursor: "pointer" }}>
               📋 Alle bestelde drankjes
               {(() => { const tot = orders.reduce((s, o) => s + o.quantity, 0); return tot > 0 ? <span style={{ fontSize: 12, fontWeight: 800, color: "#4a3f1e", background: "#ecc85a", borderRadius: 20, padding: "1px 11px" }}>{tot} {tot === 1 ? "drankje" : "drankjes"}</span> : null })()}
-              <span style={{ marginLeft: "auto", fontSize: 13, color: "#a89a6a" }}>{showAllOrderedDrinks ? "▾" : "▸"}</span>
+              <span style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 700, color: "#b3854a", textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap" }}>{showAllOrderedDrinks ? "verberg ▴" : "toon drankjes ▾"}</span>
             </h3>
             {showAllOrderedDrinks && (() => {
               const overallSummary: Record<string, { drink: Drink; totalQty: number; anonymousQty: number }> = {}
