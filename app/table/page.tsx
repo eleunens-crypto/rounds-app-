@@ -374,6 +374,40 @@ const STRINGS = {
     guestWord: "Gast",
     adminName: "Ik",
     close: "✕ Sluiten",
+    sleepBanner: "⏸ Live-updates gepauzeerd — tik om te hervatten",
+    finalizedTitle: "Alles nagekeken — dit is de definitieve verdeling",
+    finalizedBy: "De beheerder heeft de rekening afgerond. ",
+    finalizedAdminNote: "Gasten kunnen niets meer wijzigen.",
+    finalizedGuestNote: "Bekijk je deel hieronder.",
+    remarksOpen: "⚠️ Opmerkingen — vink af wat je gecheckt hebt:",
+    remarksDone: "✓ Alle opmerkingen afgehandeld",
+    resolved: "opgelost",
+    reopenRemark: "↩ Terug openen",
+    markResolved: "Markeer als opgelost",
+    reopenBill: "🔓 Rekening heropenen — gasten kunnen weer wijzigen",
+    viewReceipt: "🧾 Bon bekijken",
+    rescan: "🔄 Bon opnieuw scannen",
+    startScan: "Start hier — Rekening scannen 📸",
+    scanOk: "Scan gelukt en items herkend",
+    localScanTitle: "⚠️ Onnauwkeurige scan gebruikt — bevat bijna altijd fouten",
+    localScanBody: "Controleer volgorde, namen en prijzen goed na, of doe een nieuwe AI-scan.",
+    improveAi: "🔄 Verbeter met een nieuwe AI-scan (vervangt alles)",
+    enterTotalPrefix: "Vul het totaal van de bon in — items: ",
+    enterCorrectTotal: "Vul het correcte rekeningtotaal in zoals op de bon",
+    totalMatches: "✓ Totaalbedrag klopt met de bon",
+    checkTotalPrompt: "Kijk op je bon — klopt dit totaalbedrag? Tik dan op Ja.",
+    receiptTotalLabel: "Rekeningtotaal op de bon: €",
+    amountPlaceholder: "bv. 65.90",
+    totalConfirmedTitle: "Bon-totaal bevestigd",
+    confirmAmount: "✓ Bevestig",
+    confirmAmountTitle: "Bevestig dit bedrag",
+    yes: "Ja",
+    no: "Neen",
+    checkAllNote: "⚠️ Controleer alles goed — bedrag correct, maar een scan kan fouten bevatten, zeker bij een onduidelijke bon. Kijk namen, aantallen en prijzen na, en markeer gedeelde items indien nodig.",
+    mismatchExplain: (itemTot: string, diff: string, higher: boolean, receiptTot: string) => `Het totaalbedrag klopt met de bon, maar het itemtotaal (€${itemTot}) is €${diff} ${higher ? "hoger" : "lager"} dan het rekeningtotaal (€${receiptTot}). Een scan kan fouten bevatten — controleer hieronder alles goed:`,
+    checkPrices: "prijzen/aantallen correct?",
+    checkTax: "BTW/andere kosten/kortingen?",
+    allOkGoGuests: "✓ Alles klopt — ga naar Gasten en delen →",
   },
   fr: {
     backToRundo: "← retour à l'accueil Rundo",
@@ -430,6 +464,40 @@ const STRINGS = {
     guestWord: "Invité",
     adminName: "Moi",
     close: "✕ Fermer",
+    sleepBanner: "⏸ Mises à jour en direct en pause — touche pour reprendre",
+    finalizedTitle: "Tout est vérifié — voici la répartition définitive",
+    finalizedBy: "L'hôte a clôturé l'addition. ",
+    finalizedAdminNote: "Les invités ne peuvent plus rien modifier.",
+    finalizedGuestNote: "Vois ta part ci-dessous.",
+    remarksOpen: "⚠️ Remarques — coche ce que tu as vérifié :",
+    remarksDone: "✓ Toutes les remarques traitées",
+    resolved: "réglé",
+    reopenRemark: "↩ Rouvrir",
+    markResolved: "Marquer comme réglé",
+    reopenBill: "🔓 Rouvrir l'addition — les invités peuvent à nouveau modifier",
+    viewReceipt: "🧾 Voir l'addition",
+    rescan: "🔄 Rescanner l'addition",
+    startScan: "Commence ici — scanne l'addition 📸",
+    scanOk: "Scan réussi, articles reconnus",
+    localScanTitle: "⚠️ Scan approximatif utilisé — contient presque toujours des erreurs",
+    localScanBody: "Vérifie bien l'ordre, les noms et les prix, ou refais un scan IA.",
+    improveAi: "🔄 Améliore avec un nouveau scan IA (remplace tout)",
+    enterTotalPrefix: "Indique le total de l'addition — articles : ",
+    enterCorrectTotal: "Indique le total exact tel qu'il figure sur l'addition",
+    totalMatches: "✓ Le total correspond à l'addition",
+    checkTotalPrompt: "Regarde ton addition — ce total est-il correct ? Touche alors Oui.",
+    receiptTotalLabel: "Total sur l'addition : €",
+    amountPlaceholder: "ex. 65,90",
+    totalConfirmedTitle: "Total de l'addition confirmé",
+    confirmAmount: "✓ Confirme",
+    confirmAmountTitle: "Confirme ce montant",
+    yes: "Oui",
+    no: "Non",
+    checkAllNote: "⚠️ Vérifie bien tout — le montant est correct, mais un scan peut contenir des erreurs, surtout sur une addition peu lisible. Vérifie les noms, les quantités et les prix, et marque les articles partagés si besoin.",
+    mismatchExplain: (itemTot: string, diff: string, higher: boolean, receiptTot: string) => `Le total correspond à l'addition, mais le total des articles (€${itemTot}) est €${diff} ${higher ? "plus élevé" : "plus bas"} que le total de l'addition (€${receiptTot}). Un scan peut contenir des erreurs — vérifie bien tout ci-dessous :`,
+    checkPrices: "prix/quantités corrects ?",
+    checkTax: "TVA/autres frais/réductions ?",
+    allOkGoGuests: "✓ Tout est correct — vers Invités et partage →",
   },
 }
 
@@ -1508,7 +1576,7 @@ export default function RundoTable() {
 
       {asleep && (
         <div onClick={() => { lastActive.current = Date.now(); setAsleep(false) }} style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 3000, background: "rgba(20,33,58,0.92)", color: "#fff", padding: "9px 16px", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,24,40,0.3)", whiteSpace: "nowrap" }}>
-          ⏸ Live-updates gepauzeerd — tik om te hervatten
+          {L.sleepBanner}
         </div>
       )}
 
@@ -1522,21 +1590,21 @@ export default function RundoTable() {
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 22 }}>✅</span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14.5, fontWeight: 800 }}>Alles nagekeken — dit is de definitieve verdeling</div>
-                <div style={{ fontSize: 12, opacity: 0.92 }}>De beheerder heeft de rekening afgerond. {isAdmin ? "Gasten kunnen niets meer wijzigen." : "Bekijk je deel hieronder."}</div>
+                <div style={{ fontSize: 14.5, fontWeight: 800 }}>{L.finalizedTitle}</div>
+                <div style={{ fontSize: 12, opacity: 0.92 }}>{L.finalizedBy}{isAdmin ? L.finalizedAdminNote : L.finalizedGuestNote}</div>
               </div>
             </div>
             {isAdmin && disputers.length > 0 && (
               <div style={{ marginTop: 10, background: "#fff7e6", border: "1.5px solid #f0b840", borderRadius: 10, padding: "9px 12px", fontSize: 12.5, color: "#8a5a00" }}>
-                <div style={{ fontWeight: 800, marginBottom: 6, color: "#a06b00" }}>{openCount > 0 ? "⚠️ Opmerkingen — vink af wat je gecheckt hebt:" : "✓ Alle opmerkingen afgehandeld"}</div>
+                <div style={{ fontWeight: 800, marginBottom: 6, color: "#a06b00" }}>{openCount > 0 ? L.remarksOpen : L.remarksDone}</div>
                 {disputers.map((d, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 7, opacity: d.resolved ? 0.7 : 1 }}>
                     <div style={{ flex: 1, minWidth: 0, textDecoration: d.resolved ? "line-through" : "none" }}>
                       <b>{d.name}</b>{d.comment ? <span>: “{d.comment}”</span> : ""}
-                      {d.resolved && <span style={{ marginLeft: 6, fontSize: 10.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 6, padding: "1px 6px", textDecoration: "none", display: "inline-block" }}>opgelost</span>}
+                      {d.resolved && <span style={{ marginLeft: 6, fontSize: 10.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 6, padding: "1px 6px", textDecoration: "none", display: "inline-block" }}>{L.resolved}</span>}
                     </div>
                     <button onClick={() => resolveDispute(d.name, !d.resolved)} style={{ flexShrink: 0, border: d.resolved ? "1px solid rgba(16,24,40,0.2)" : "none", background: d.resolved ? "#fff" : "linear-gradient(135deg,#1f8a4c,#27ae60)", color: d.resolved ? "#5a6680" : "#fff", borderRadius: 9, padding: "5px 12px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
-                      {d.resolved ? "↩ Terug openen" : "Markeer als opgelost"}
+                      {d.resolved ? L.reopenRemark : L.markResolved}
                     </button>
                   </div>
                 ))}
@@ -1544,7 +1612,7 @@ export default function RundoTable() {
             )}
             {isAdmin && (
               <button onClick={() => finalizeBill(false)} style={{ marginTop: 10, width: "100%", padding: "10px 0", fontSize: 13.5, fontWeight: 800, borderRadius: 10, border: "none", background: "rgba(255,255,255,0.92)", color: "#1f8a4c", cursor: "pointer" }}>
-                🔓 Rekening heropenen — gasten kunnen weer wijzigen
+                {L.reopenBill}
               </button>
             )}
           </div>
@@ -1571,7 +1639,7 @@ export default function RundoTable() {
       {/* Subtiele bon-preview, in elke tab beschikbaar (behalve op de Bon-tab, die heeft z'n eigen knop) */}
       {group.receipt_url && adminTab !== "scan" && (
         <div style={{ textAlign: "right", marginTop: -6, marginBottom: 10 }}>
-          <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#1499b0", padding: "2px 4px" }}>🧾 Bon bekijken</button>
+          <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#1499b0", padding: "2px 4px" }}>{L.viewReceipt}</button>
         </div>
       )}
 
@@ -1580,24 +1648,24 @@ export default function RundoTable() {
         <div>
           {group.receipt_url ? (
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 16, marginBottom: 10, marginTop: -4 }}>
-              <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#1499b0", padding: "2px 4px" }}>🧾 Bon bekijken</button>
-              <button onClick={startRescan} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#9aa0ab", padding: "2px 4px" }}>🔄 Bon opnieuw scannen</button>
+              <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#1499b0", padding: "2px 4px" }}>{L.viewReceipt}</button>
+              <button onClick={startRescan} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#9aa0ab", padding: "2px 4px" }}>{L.rescan}</button>
             </div>
           ) : (
-            <button onClick={() => setShowScan(true)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Start hier — Rekening scannen 📸</button>
+            <button onClick={() => setShowScan(true)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 15, fontWeight: 700, marginBottom: 12 }}>{L.startScan}</button>
           )}
 
           {/* Scan-label bovenaan: vinkje bij AI-succes; duidelijke waarschuwing + retry bij lokale terugval */}
           {items.length > 0 && scanSource === "ai" && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 10px", padding: "8px 12px", borderRadius: 10, fontSize: 12.5, fontWeight: 700, background: "rgba(16,24,40,0.04)", border: "1px solid rgba(16,24,40,0.1)", color: "#5a6680" }}>
-              <span>Scan gelukt en items herkend <span style={{ color: "#1f8a4c", fontWeight: 800 }}>✓</span></span>
+              <span>{L.scanOk} <span style={{ color: "#1f8a4c", fontWeight: 800 }}>✓</span></span>
             </div>
           )}
           {items.length > 0 && scanSource === "local" && (
             <div style={{ margin: "0 0 10px", padding: "11px 13px", borderRadius: 10, background: "rgba(224,107,94,0.08)", border: "1.5px solid rgba(224,107,94,0.55)" }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#c0392b", marginBottom: 3 }}>⚠️ Onnauwkeurige scan gebruikt — bevat bijna altijd fouten</div>
-              <div style={{ fontSize: 12, color: "#8a4514", lineHeight: 1.5, marginBottom: 9 }}>Controleer volgorde, namen en prijzen goed na, of doe een nieuwe AI-scan.</div>
-              <button onClick={improveWithAi} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontSize: 13.5, fontWeight: 800 }}>🔄 Verbeter met een nieuwe AI-scan (vervangt alles)</button>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#c0392b", marginBottom: 3 }}>{L.localScanTitle}</div>
+              <div style={{ fontSize: 12, color: "#8a4514", lineHeight: 1.5, marginBottom: 9 }}>{L.localScanBody}</div>
+              <button onClick={improveWithAi} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontSize: 13.5, fontWeight: 800 }}>{L.improveAi}</button>
             </div>
           )}
 
@@ -1612,45 +1680,45 @@ export default function RundoTable() {
             const neenBtn = { border: "1.5px solid rgba(20,33,58,0.2)", background: "#fff", color: "#5a6680", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer" }
             const jaNeen = (
               <span style={{ display: "inline-flex", gap: 6 }}>
-                <button onClick={() => { setReceiptConfirmed(true); setReceiptEditing(false) }} style={{ ...jaBtn }}>Ja</button>
-                <button onClick={() => { setReceiptEditing(true); setReceiptConfirmed(false); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }} style={{ ...neenBtn, ...(receiptEditing ? { borderColor: "#1499b0", color: "#1499b0" } : {}) }}>Neen</button>
+                <button onClick={() => { setReceiptConfirmed(true); setReceiptEditing(false) }} style={{ ...jaBtn }}>{L.yes}</button>
+                <button onClick={() => { setReceiptEditing(true); setReceiptConfirmed(false); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }} style={{ ...neenBtn, ...(receiptEditing ? { borderColor: "#1499b0", color: "#1499b0" } : {}) }}>{L.no}</button>
               </span>
             )
             return (
               <div style={{ ...S.card, padding: "11px 14px", marginBottom: 12, background: greenState ? "rgba(39,174,96,0.06)" : mismatch ? "rgba(224,107,94,0.06)" : "#fff", border: greenState ? "1.5px solid rgba(39,174,96,0.45)" : mismatch ? "1.5px solid rgba(224,107,94,0.5)" : "1px solid rgba(16,24,40,0.08)" }}>
                 {entered == null ? (
-                  <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#5a6680", marginBottom: 8 }}>Vul het totaal van de bon in — items: €{billTotal.toFixed(2).replace(".", ",")}</span>
+                  <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#5a6680", marginBottom: 8 }}>{L.enterTotalPrefix}€{billTotal.toFixed(2).replace(".", ",")}</span>
                 ) : receiptEditing ? (
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>Vul het correcte rekeningtotaal in zoals op de bon</span>
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>{L.enterCorrectTotal}</span>
                 ) : receiptConfirmed ? (
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", marginBottom: 6 }}>✓ Totaalbedrag klopt met de bon</span>
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", marginBottom: 6 }}>{L.totalMatches}</span>
                 ) : (
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>Kijk op je bon — klopt dit totaalbedrag? Tik dan op Ja.</span>
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>{L.checkTotalPrompt}</span>
                 )}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "#9aa0ab" }}>Rekeningtotaal op de bon: €</span>
-                  <input ref={receiptInputRef} type="text" inputMode="decimal" defaultValue={entered != null ? entered.toFixed(2).replace(".", ",") : ""} key={entered ?? "leeg"} placeholder="bv. 65.90"
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#9aa0ab" }}>{L.receiptTotalLabel}</span>
+                  <input ref={receiptInputRef} type="text" inputMode="decimal" defaultValue={entered != null ? entered.toFixed(2).replace(".", ",") : ""} key={entered ?? "leeg"} placeholder={L.amountPlaceholder}
                     onInput={(e) => { e.currentTarget.value = numFilter(e.currentTarget.value) }}
                     onBlur={saveTotal}
                     onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
                     style={{ ...S.input, width: 100, padding: "6px 9px", fontSize: 16, fontWeight: 700 }} />
-                  {greenState && <span title="Bon-totaal bevestigd" style={{ color: "#1f8a4c", fontSize: 22, fontWeight: 800, lineHeight: 1 }}>✓</span>}
+                  {greenState && <span title={L.totalConfirmedTitle} style={{ color: "#1f8a4c", fontSize: 22, fontWeight: 800, lineHeight: 1 }}>✓</span>}
                   {receiptEditing && (
-                    <button onClick={() => { saveTotal(); setReceiptConfirmed(true); setReceiptEditing(false) }} title="Bevestig dit bedrag" style={{ ...jaBtn }}>✓ Bevestig</button>
+                    <button onClick={() => { saveTotal(); setReceiptConfirmed(true); setReceiptEditing(false) }} title={L.confirmAmountTitle} style={{ ...jaBtn }}>{L.confirmAmount}</button>
                   )}
                   {entered != null && jaNeen}
                 </div>
                 {match && receiptConfirmed && !receiptEditing && (
                   <div style={{ marginTop: 8, fontSize: 12, color: "#5a6680", lineHeight: 1.5 }}>
-                    ⚠️ Controleer alles goed — bedrag correct, maar een scan kan fouten bevatten, zeker bij een onduidelijke bon. Kijk namen, aantallen en prijzen na, en markeer gedeelde items indien nodig.
+                    {L.checkAllNote}
                   </div>
                 )}
                 {mismatch && receiptConfirmed && !receiptEditing && (
                   <div style={{ marginTop: 8, fontSize: 12, color: "#8a4514", lineHeight: 1.5 }}>
-                    <div style={{ fontWeight: 700, marginBottom: 3 }}>Het totaalbedrag klopt met de bon, maar het itemtotaal (€{billTotal.toFixed(2).replace(".", ",")}) is €{Math.abs(billTotal - (entered ?? 0)).toFixed(2).replace(".", ",")} {billTotal > (entered ?? 0) ? "hoger" : "lager"} dan het rekeningtotaal (€{(entered ?? 0).toFixed(2).replace(".", ",")}). Een scan kan fouten bevatten — controleer hieronder alles goed:</div>
+                    <div style={{ fontWeight: 700, marginBottom: 3 }}>{L.mismatchExplain(billTotal.toFixed(2).replace(".", ","), Math.abs(billTotal - (entered ?? 0)).toFixed(2).replace(".", ","), billTotal > (entered ?? 0), (entered ?? 0).toFixed(2).replace(".", ","))}</div>
                     <ul style={{ margin: 0, paddingLeft: 18 }}>
-                      <li>prijzen/aantallen correct?</li>
-                      <li>BTW/andere kosten/kortingen?</li>
+                      <li>{L.checkPrices}</li>
+                      <li>{L.checkTax}</li>
                     </ul>
                   </div>
                 )}
@@ -1659,7 +1727,7 @@ export default function RundoTable() {
           })()}
 
           {items.length > 0 && receiptConfirmed && !receiptEditing && group?.receipt_total != null && Math.abs((group.receipt_total ?? 0) - billTotal) < 0.005 && (
-            <button onClick={goGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginBottom: 10, padding: "9px 0", fontSize: 13, fontWeight: 800, boxShadow: "0 0 0 2px rgba(39,174,96,0.5), 0 6px 16px -6px rgba(39,174,96,0.6)" }}>✓ Alles klopt — ga naar Gasten en delen →</button>
+            <button onClick={goGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginBottom: 10, padding: "9px 0", fontSize: 13, fontWeight: 800, boxShadow: "0 0 0 2px rgba(39,174,96,0.5), 0 6px 16px -6px rgba(39,174,96,0.6)" }}>{L.allOkGoGuests}</button>
           )}
 
           {items.length > 0 && (
