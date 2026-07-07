@@ -511,6 +511,49 @@ const STRINGS = {
     taxSplitOver: "Verdelen over:",
     noItemsShort: "Nog geen items.",
     confirmBtn: "Bevestigen",
+    statusConfirmed: "✓ bevestigd",
+    statusBusy: "● bezig",
+    statusNothing: "nog niets",
+    overviewTitle: "📊 Overzicht",
+    statTotal: "Totaalbedrag",
+    viewPerPerson: "Rekening per persoon bekijken",
+    viewPerPersonAttr: "naar de rekening per persoon",
+    statNotClaimed: "Nog niet geclaimd",
+    allClaimed: "Alles geclaimd",
+    todoTitle: "⚠️ Nog te regelen — wijs snel toe",
+    addGuestsToAssign: "Voeg eerst gasten toe om te kunnen toewijzen.",
+    notClaimedSuffix: "niet geclaimd",
+    assignDots: "+ wijs toe…",
+    sharedNobody: "— gedeeld, nog niemand",
+    letShareDots: "+ laat meedelen…",
+    perPersonTitle: "🧾 Per persoon",
+    detailsHide: "▲ Details verbergen",
+    detailsShow: "▼ Details tonen",
+    nothingTapped: "Nog niets aangetikt.",
+    sharedNPers: (n: number) => ` (gedeeld, ${n} pers.)`,
+    sharedPart: " (gedeeld deel)",
+    sharedByN: (n: number) => ` (gedeeld door ${n})`,
+    toBeDivided: "nog te verdelen",
+    noGuests: "Nog geen gasten",
+    allAssigned: "✅ Alles toegewezen",
+    assignedLabel: "Toegewezen",
+    todoLeft: (n: number) => ` · nog ${n} te doen`,
+    tipLabelPre: "💶 Fooi: ",
+    tipEqualNote: "· gelijk over wie bestelde",
+    clearTip: "Wissen",
+    tipHeader: "💶 Fooi",
+    addTipShort: "Toevoegen",
+    tipOptional: "Optioneel — wordt gelijk verdeeld over iedereen die iets bestelde.",
+    reopenBillTip: "🔓 Rekening heropenen (gasten kunnen weer wijzigen)",
+    finalizeBtn: "✅ Alles toegewezen?  Rekening afsluiten",
+    finalizeConfirm: "De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.",
+    finalizedNote: "De rekening is afgesloten — iedereen ziet de definitieve verdeling.",
+    notFinalizedNote: "Sluit pas af als alles is aangetikt en nagekeken. Gasten krijgen dan een melding.",
+    backToTop: "↑ Terug naar boven",
+    cantFinalizeTitle: "De rekening kan nog niet afgesloten worden:",
+    unitsNotAssigned: (n: number) => `${n} ${n === 1 ? "consumptie is" : "consumpties zijn"} nog niet toegewezen`,
+    sharedNobodyTakes: (n: number) => `${n} gedeeld ${n === 1 ? "item wordt" : "items worden"} door niemand genomen`,
+    assignFirstHint: `Wijs eerst alles toe. Bekijk via "Nog niet geclaimd" wat er nog openstaat.`,
   },
   fr: {
     backToRundo: "← retour à l'accueil Rundo",
@@ -704,6 +747,49 @@ const STRINGS = {
     taxSplitOver: "Répartir sur :",
     noItemsShort: "Aucun article.",
     confirmBtn: "Confirmer",
+    statusConfirmed: "✓ confirmé",
+    statusBusy: "● en cours",
+    statusNothing: "rien encore",
+    overviewTitle: "📊 Aperçu",
+    statTotal: "Montant total",
+    viewPerPerson: "Voir l'addition par personne",
+    viewPerPersonAttr: "vers l'addition par personne",
+    statNotClaimed: "Pas encore attribué",
+    allClaimed: "Tout est attribué",
+    todoTitle: "⚠️ Encore à régler — attribue vite",
+    addGuestsToAssign: "Ajoute d'abord des invités pour pouvoir attribuer.",
+    notClaimedSuffix: "non attribué(s)",
+    assignDots: "+ attribuer…",
+    sharedNobody: "— partagé, personne encore",
+    letShareDots: "+ faire participer…",
+    perPersonTitle: "🧾 Par personne",
+    detailsHide: "▲ Masquer les détails",
+    detailsShow: "▼ Afficher les détails",
+    nothingTapped: "Rien coché pour l'instant.",
+    sharedNPers: (n: number) => ` (partagé, ${n} pers.)`,
+    sharedPart: " (part partagée)",
+    sharedByN: (n: number) => ` (partagé par ${n})`,
+    toBeDivided: "à répartir",
+    noGuests: "Aucun invité pour l'instant",
+    allAssigned: "✅ Tout attribué",
+    assignedLabel: "Attribué",
+    todoLeft: (n: number) => ` · encore ${n} à faire`,
+    tipLabelPre: "💶 Pourboire : ",
+    tipEqualNote: "· également entre ceux qui ont commandé",
+    clearTip: "Effacer",
+    tipHeader: "💶 Pourboire",
+    addTipShort: "Ajouter",
+    tipOptional: "Optionnel — réparti également entre tous ceux qui ont commandé quelque chose.",
+    reopenBillTip: "🔓 Rouvrir l'addition (les invités peuvent à nouveau modifier)",
+    finalizeBtn: "✅ Tout attribué ?  Clôturer l'addition",
+    finalizeConfirm: "Clôturer l'addition ? Les invités ne pourront plus rien cocher ni modifier jusqu'à ce que tu la rouvres.",
+    finalizedNote: "L'addition est clôturée — tout le monde voit la répartition définitive.",
+    notFinalizedNote: "Ne clôture que lorsque tout est coché et vérifié. Les invités reçoivent alors une notification.",
+    backToTop: "↑ Retour en haut",
+    cantFinalizeTitle: "L'addition ne peut pas encore être clôturée :",
+    unitsNotAssigned: (n: number) => `${n} ${n === 1 ? "consommation non attribuée" : "consommations non attribuées"}`,
+    sharedNobodyTakes: (n: number) => `${n} ${n === 1 ? "article partagé que personne ne prend" : "articles partagés que personne ne prend"}`,
+    assignFirstHint: `Attribue d'abord tout. Regarde via « Pas encore attribué » ce qui reste.`,
   },
 }
 
@@ -1641,14 +1727,14 @@ export default function RundoTable() {
   const iConfirmed = !!meId && confirmations.some((c) => c.participant_id === meId)
 
   const guestStatus = (pid: string): { label: string; color: string; bg: string } => {
-    if (explicitConfirmed(pid)) return { label: "✓ bevestigd", color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
+    if (explicitConfirmed(pid)) return { label: L.statusConfirmed, color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
    if (hasAssignment(pid)) {
       const p = participants.find((x) => x.id === pid)
       const billFullyAssigned = openUnits === 0 && undecidedShared.length === 0
-      if (p && !p.self_joined && billFullyAssigned) return { label: "✓ bevestigd", color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
-      return { label: "● bezig", color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
+      if (p && !p.self_joined && billFullyAssigned) return { label: L.statusConfirmed, color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
+      return { label: L.statusBusy, color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
     }
-    return { label: "nog niets", color: "#9aa0ab", bg: "rgba(16,24,40,0.05)" }
+    return { label: L.statusNothing, color: "#9aa0ab", bg: "rgba(16,24,40,0.05)" }
   }
 
   const cooldownLeft = Math.max(0, Math.ceil((cooldownUntil - nowTs) / 1000))
@@ -2158,36 +2244,36 @@ export default function RundoTable() {
       {/* ─── ADMIN: Stand van zaken (bovenaan overzicht-tab) ─── */}
       {isAdmin && adminTab === "overview" && (
         <div style={{ ...S.card, padding: 12 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: "#3b486a", marginBottom: 8 }}>📊 Overzicht</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#3b486a", marginBottom: 8 }}>{L.overviewTitle}</div>
           <div style={{ display: "flex", gap: 8 }}>
-            <Stat label="Totaalbedrag" value={`€${(billTotal + tipTotal).toFixed(2).replace(".", ",")}`} tone="navy" />
-            <div onClick={() => { if (typeof document !== "undefined") document.getElementById("rekening-per-persoon")?.scrollIntoView({ behavior: "smooth", block: "start" }) }} style={{ flex: 1, cursor: "pointer", textAlign: "center", background: allAssignedNow ? "rgba(39,174,96,0.14)" : "rgba(233,196,95,0.16)", border: allAssignedNow ? "2px solid rgba(39,174,96,0.75)" : "2px solid transparent", boxShadow: allAssignedNow ? "0 0 0 3px rgba(39,174,96,0.15), 0 4px 14px -4px rgba(39,174,96,0.55)" : "none", borderRadius: 12, padding: "8px 6px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 2 }} title="naar de rekening per persoon">
-              <span style={{ fontSize: 12, fontWeight: 800, color: allAssignedNow ? "#1f8a4c" : "#a06b00", lineHeight: 1.25 }}>Rekening per persoon bekijken{allAssignedNow ? " →" : ""}</span>
+            <Stat label={L.statTotal} value={`€${(billTotal + tipTotal).toFixed(2).replace(".", ",")}`} tone="navy" />
+            <div onClick={() => { if (typeof document !== "undefined") document.getElementById("rekening-per-persoon")?.scrollIntoView({ behavior: "smooth", block: "start" }) }} style={{ flex: 1, cursor: "pointer", textAlign: "center", background: allAssignedNow ? "rgba(39,174,96,0.14)" : "rgba(233,196,95,0.16)", border: allAssignedNow ? "2px solid rgba(39,174,96,0.75)" : "2px solid transparent", boxShadow: allAssignedNow ? "0 0 0 3px rgba(39,174,96,0.15), 0 4px 14px -4px rgba(39,174,96,0.55)" : "none", borderRadius: 12, padding: "8px 6px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 2 }} title={L.viewPerPersonAttr}>
+              <span style={{ fontSize: 12, fontWeight: 800, color: allAssignedNow ? "#1f8a4c" : "#a06b00", lineHeight: 1.25 }}>{L.viewPerPerson}{allAssignedNow ? " →" : ""}</span>
             </div>
             {openUnits > 0 ? (
               <div onClick={() => setShowTodo((v) => !v)} style={{ flex: 1, cursor: "pointer" }}>
-                <Stat label="Nog niet geclaimd" value={`${openUnits}`} tone="red" />
+                <Stat label={L.statNotClaimed} value={`${openUnits}`} tone="red" />
               </div>
             ) : (
               <div style={{ flex: 1, textAlign: "center", background: "rgba(39,174,96,0.12)", borderRadius: 12, padding: "8px 4px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 1 }}>
                 <div style={{ fontSize: 20, fontWeight: 800, color: "#27ae60", lineHeight: 1 }}>✓</div>
-                <div style={{ fontSize: 11.5, fontWeight: 800, color: "#27ae60", lineHeight: 1.15 }}>Alles geclaimd</div>
+                <div style={{ fontSize: 11.5, fontWeight: 800, color: "#27ae60", lineHeight: 1.15 }}>{L.allClaimed}</div>
               </div>
             )}
           </div>
           {showTodo && (openUnits > 0 || undecidedShared.length > 0) && (
             <div style={{ marginTop: 10, border: "1px solid rgba(224,107,94,0.35)", background: "rgba(224,107,94,0.05)", borderRadius: 12, padding: "10px 12px" }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#c0392b", marginBottom: 6 }}>⚠️ Nog te regelen — wijs snel toe</div>
-              {participants.length === 0 && <div style={{ fontSize: 12, color: "#a06b00", marginBottom: 6 }}>Voeg eerst gasten toe om te kunnen toewijzen.</div>}
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#c0392b", marginBottom: 6 }}>{L.todoTitle}</div>
+              {participants.length === 0 && <div style={{ fontSize: 12, color: "#a06b00", marginBottom: 6 }}>{L.addGuestsToAssign}</div>}
               {items.filter((it) => !it.is_shared && it.quantity - claimedQty(it.id) > 0).map((it) => {
                 const openN = it.quantity - claimedQty(it.id)
                 return (
                   <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "5px 0", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{openN}× {it.name}</b> niet geclaimd</span>
+                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{openN}× {it.name}</b> {L.notClaimedSuffix}</span>
                     {participants.length > 0 && (
                       <select value="" onChange={(e) => { const pid = e.target.value; if (pid) setClaim(it.id, pid, myQty(it.id, pid) + 1) }}
                         style={{ ...S.input, flexShrink: 0, maxWidth: 150, padding: "5px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                        <option value="">+ wijs toe…</option>
+                        <option value="">{L.assignDots}</option>
                         {participants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
                     )}
@@ -2196,11 +2282,11 @@ export default function RundoTable() {
               })}
               {undecidedShared.map((it) => (
                 <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "5px 0", borderBottom: "1px solid rgba(0,0,0,0.05)", color: "#a06b00" }}>
-                  <span style={{ flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5 }}><ShareIcon on size={14} /> <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{it.name}</b> — gedeeld, nog niemand</span></span>
+                  <span style={{ flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5 }}><ShareIcon on size={14} /> <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{it.name}</b> {L.sharedNobody}</span></span>
                   {participants.length > 0 && (
                     <select value="" onChange={(e) => { const pid = e.target.value; if (pid) toggleShareClaim(it.id, pid) }}
                       style={{ ...S.input, flexShrink: 0, maxWidth: 150, padding: "5px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                      <option value="">+ laat meedelen…</option>
+                      <option value="">{L.letShareDots}</option>
                       {participants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   )}
@@ -2235,12 +2321,12 @@ export default function RundoTable() {
         <div id="rekening-per-persoon">
           <div style={S.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <h3 style={{ ...S.h3, marginBottom: 0 }}>🧾 Per persoon</h3>
+              <h3 style={{ ...S.h3, marginBottom: 0 }}>{L.perPersonTitle}</h3>
               {participants.length > 0 && (() => {
                 const allOpen = participants.every((p) => expandedPeople.has(p.id))
                 return (
                   <button style={S.smallBtn} onClick={() => setExpandedPeople(allOpen ? new Set() : new Set(participants.map((p) => p.id)))}>
-                    {allOpen ? "▲ Details verbergen" : "▼ Details tonen"}
+                    {allOpen ? L.detailsHide : L.detailsShow}
                   </button>
                 )
               })()}
@@ -2263,12 +2349,12 @@ export default function RundoTable() {
                   </div>
                   {open && (
                     <div style={{ padding: "2px 4px 12px 23px" }}>
-                      {detail.length === 0 && <div style={{ fontSize: 12.5, color: "#aaa" }}>Nog niets aangetikt.</div>}
+                      {detail.length === 0 && <div style={{ fontSize: 12.5, color: "#aaa" }}>{L.nothingTapped}</div>}
                       {detail.map((d, k) => (
                         <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#5a6680", padding: "2px 0" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{d.name}{d.shared ? (d.revealed ? ((p.seats ?? 1) > 1 ? ` (gedeeld, ${d.myHeads} pers.)` : " (gedeeld deel)") : ` (gedeeld door ${d.sharers})`) : ""}</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{d.name}{d.shared ? (d.revealed ? ((p.seats ?? 1) > 1 ? L.sharedNPers(d.myHeads) : L.sharedPart) : L.sharedByN(d.sharers)) : ""}</span>
                           <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>
-                            {d.shared && !d.revealed ? "nog te verdelen" : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}
+                            {d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}
                           </span>
                         </div>
                       ))}
@@ -2277,7 +2363,7 @@ export default function RundoTable() {
                 </div>
               )
             })}
-            {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen gasten</div>}
+            {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>{L.noGuests}</div>}
             {items.length > 0 && participants.length > 0 && (() => {
               const assignedSum = participants.reduce((s, p) => s + personTotal(p.id).settled, 0)
               const allAssigned = openUnits === 0 && undecidedShared.length === 0
@@ -2286,12 +2372,12 @@ export default function RundoTable() {
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1.5px solid rgba(16,24,40,0.08)" }}>
                   {allAssigned ? (
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.55)", borderRadius: 12, padding: "10px 14px" }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13.5, fontWeight: 800, color: "#1f8a4c" }}>✅ Alles toegewezen</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13.5, fontWeight: 800, color: "#1f8a4c" }}>{L.allAssigned}</span>
                       <span style={{ fontSize: 17, fontWeight: 800, color: "#1f8a4c" }}>€{assignedSum.toFixed(2).replace(".", ",")}</span>
                     </div>
                   ) : (
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Toegewezen <span style={{ color: "#c0392b", fontWeight: 700 }}>· nog {todo} te doen</span></span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>{L.assignedLabel} <span style={{ color: "#c0392b", fontWeight: 700 }}>{L.todoLeft(todo)}</span></span>
                       <span style={{ fontSize: 16, fontWeight: 800, color: "#14213a" }}>€{assignedSum.toFixed(2).replace(".", ",")} <span style={{ fontSize: 12, color: "#9aa0ab", fontWeight: 700 }}>/ €{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</span></span>
                     </div>
                   )}
@@ -2304,18 +2390,18 @@ export default function RundoTable() {
             <div id="fooi-sectie" style={{ ...S.card, padding: "11px 14px", marginTop: 10 }}>
               {tipItem ? (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#3b486a" }}>💶 Fooi: <b>€{(tipItem.unit_price ?? 0).toFixed(2).replace(".", ",")}</b> <span style={{ fontSize: 11, color: "#9aa0ab", fontWeight: 600 }}>· gelijk over wie bestelde</span></span>
-                  <button onClick={() => deleteItem(tipItem.id)} style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "6px 12px", flexShrink: 0 }}>Wissen</button>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#3b486a" }}>{L.tipLabelPre}<b>€{(tipItem.unit_price ?? 0).toFixed(2).replace(".", ",")}</b> <span style={{ fontSize: 11, color: "#9aa0ab", fontWeight: 600 }}>{L.tipEqualNote}</span></span>
+                  <button onClick={() => deleteItem(tipItem.id)} style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "6px 12px", flexShrink: 0 }}>{L.clearTip}</button>
                 </div>
               ) : (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: "#3b486a", flexShrink: 0 }}>💶 Fooi</span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: "#3b486a", flexShrink: 0 }}>{L.tipHeader}</span>
                   <div style={{ display: "inline-flex", alignItems: "center", flexShrink: 0, border: "1px solid rgba(20,33,58,0.15)", borderRadius: 10, background: "#fff", overflow: "hidden" }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: "#5a6680", padding: "0 1px 0 10px" }}>€</span>
                     <input type="text" inputMode="decimal" value={tipInput} onChange={(e) => setTipInput(numFilter(e.target.value, true))} placeholder="5,00" style={{ width: 62, border: "none", outline: "none", background: "transparent", textAlign: "right", padding: "8px 10px 8px 2px", fontSize: 14 }} />
                   </div>
-                  <button onClick={addTip} style={{ ...S.btn, ...S.btnPrimary, fontSize: 12.5, fontWeight: 700, padding: "8px 14px", flexShrink: 0 }}>Toevoegen</button>
-                  <span style={{ fontSize: 10.5, color: "#9aa0ab", width: "100%", marginTop: 2 }}>Optioneel — wordt gelijk verdeeld over iedereen die iets bestelde.</span>
+                  <button onClick={addTip} style={{ ...S.btn, ...S.btnPrimary, fontSize: 12.5, fontWeight: 700, padding: "8px 14px", flexShrink: 0 }}>{L.addTipShort}</button>
+                  <span style={{ fontSize: 10.5, color: "#9aa0ab", width: "100%", marginTop: 2 }}>{L.tipOptional}</span>
                 </div>
               )}
             </div>
@@ -2323,30 +2409,30 @@ export default function RundoTable() {
 
           {group.finalized ? (
             <button onClick={() => finalizeBill(false)} style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 14.5, fontWeight: 800, background: "linear-gradient(135deg,#f39c12,#e67e22)", border: "none", color: "#fff", boxShadow: "0 6px 16px -6px rgba(230,126,34,0.6)" }}>
-              🔓 Rekening heropenen (gasten kunnen weer wijzigen)
+              {L.reopenBillTip}
             </button>
           ) : (
             <button onClick={() => {
               if (openUnits > 0 || undecidedShared.length > 0) {
                 const delen: string[] = []
-                if (openUnits > 0) delen.push(`${openUnits} ${openUnits === 1 ? "consumptie is" : "consumpties zijn"} nog niet toegewezen`)
-                if (undecidedShared.length > 0) delen.push(`${undecidedShared.length} gedeeld ${undecidedShared.length === 1 ? "item wordt" : "items worden"} door niemand genomen`)
-                alert(`De rekening kan nog niet afgesloten worden:\n\n• ${delen.join("\n• ")}\n\nWijs eerst alles toe. Bekijk via "Nog niet geclaimd" wat er nog openstaat.`)
+                if (openUnits > 0) delen.push(L.unitsNotAssigned(openUnits))
+                if (undecidedShared.length > 0) delen.push(L.sharedNobodyTakes(undecidedShared.length))
+                alert(`${L.cantFinalizeTitle}\n\n• ${delen.join("\n• ")}\n\n${L.assignFirstHint}`)
                 setShowTodo(true)
                 return
               }
               if (!billOk) { setShowFinalizeWarn(true); return }
               if (!hasTip) { setShowTipReminder(true); return }
-              if (confirm("De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.")) finalizeBill(true)
+              if (confirm(L.finalizeConfirm)) finalizeBill(true)
             }} style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
-              ✅ Alles toegewezen?  Rekening afsluiten
+              {L.finalizeBtn}
             </button>
           )}
           <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6, marginBottom: 4 }}>
-            {group.finalized ? "De rekening is afgesloten — iedereen ziet de definitieve verdeling." : "Sluit pas af als alles is aangetikt en nagekeken. Gasten krijgen dan een melding."}
+            {group.finalized ? L.finalizedNote : L.notFinalizedNote}
           </div>
           <div style={{ textAlign: "center", marginTop: 10 }}>
-            <button onClick={() => { if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }) }} style={{ ...S.btn, fontSize: 12.5, fontWeight: 700, padding: "8px 16px" }}>↑ Terug naar boven</button>
+            <button onClick={() => { if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }) }} style={{ ...S.btn, fontSize: 12.5, fontWeight: 700, padding: "8px 16px" }}>{L.backToTop}</button>
           </div>
         </div>
       )}
@@ -3339,9 +3425,9 @@ function ClaimScreen(props: {
               {mine.length === 0 && <div style={{ fontSize: 13, color: "#aaa" }}>Je hebt nog niets aangetikt.</div>}
               {mine.map((d, k) => (
                 <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0", color: "#3b486a" }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{d.name}{d.shared ? (d.revealed ? (meId && seatsOf(meId) > 1 ? ` (gedeeld, ${d.myHeads} pers.)` : " (gedeeld deel)") : ` (gedeeld door ${d.sharers})`) : ""}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{d.name}{d.shared ? (d.revealed ? (meId && seatsOf(meId) > 1 ? L.sharedNPers(d.myHeads) : L.sharedPart) : L.sharedByN(d.sharers)) : ""}</span>
                   <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>
-                    {d.shared && !d.revealed ? "nog te verdelen" : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}
+                    {d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}
                   </span>
                 </div>
               ))}
@@ -3384,8 +3470,8 @@ function ClaimScreen(props: {
                       {detail.length === 0 && <div style={{ fontSize: 12.5, color: "#aaa" }}>Niets aangetikt.</div>}
                       {detail.map((d, k) => (
                         <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#5a6680", padding: "2px 0" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{d.name}{d.shared ? (d.revealed ? " (gedeeld deel)" : ` (gedeeld door ${d.sharers})`) : ""}</span>
-                          <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>{d.shared && !d.revealed ? "nog te verdelen" : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{d.name}{d.shared ? (d.revealed ? L.sharedPart : L.sharedByN(d.sharers)) : ""}</span>
+                          <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>{d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}</span>
                         </div>
                       ))}
                     </div>
