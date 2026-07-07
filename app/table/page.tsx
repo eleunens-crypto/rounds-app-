@@ -774,21 +774,15 @@ export default function RundoTable() {
     setScanFile(file); setRetryFile(file)
     if (scanPhotoUrl) URL.revokeObjectURL(scanPhotoUrl)
     setScanPhotoUrl(URL.createObjectURL(file))
-    let res: { ok: true; items: ParsedItem[]; total: number | null } | { ok: false; reason: "unavailable" | "empty" }
-    try {
-      res = await scanReceipt(file, (pr) => setScanProgress(pr))
-    } catch (e) {
-      console.error("Scan-fout:", e)
-      res = { ok: false, reason: "unavailable" }
-    }
+    const res = await scanReceipt(file, (pr) => setScanProgress(pr))
     setScanning(false)
-    if (res.ok) {
-      setScanSource("ai")
-      await confirmScan(res.items, res.total != null ? res.total.toFixed(2).replace(".", ",") : "", file)
+    if (!res.ok) {
+      if (res.reason === "unavailable") setCooldownUntil(Date.now() + 45 * 1000)
+      setScanFail({ reason: res.reason })
       return
     }
-    if (res.reason === "unavailable") setCooldownUntil(Date.now() + 45 * 1000)
-    setScanFail({ reason: res.reason })
+    setScanSource("ai")
+    await confirmScan(res.items, res.total != null ? res.total.toFixed(2).replace(".", ",") : "", file)
   }
 
   // Alleen als de gebruiker er zelf voor kiest: de snelle, minder nauwkeurige lokale scan.
