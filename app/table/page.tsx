@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import { QRCodeSVG } from "qrcode.react"
+import { useLang, LanguageToggle } from "@/lib/i18n"
 
 // ═══════════════════════════════════════════════════════════════════════════
 // RUNDO TABLE  —  losstaande mode (route: /table)
@@ -317,7 +318,56 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN
 // ═══════════════════════════════════════════════════════════════════════════
+const STRINGS = {
+  nl: {
+    backToRundo: "← naar Rundo startscherm",
+    tableTagline: "Scan de rekening en verdeel in groep",
+    groupName: "Groepsnaam",
+    loading: "Laden...",
+    startGroup: "Groep starten",
+    savedGroups: "Opgeslagen groepen",
+    hide: "▲ verbergen",
+    show: "▼ tonen",
+    roleAdmin: "beheerder",
+    roleGuest: "gast",
+    deletePermanently: "definitief verwijderen",
+    tabBon: "🧾 Bon",
+    tabGuests: "👥 Gasten & delen",
+    tabAssign: "📊 Toewijzen",
+    errNameTaken: "Je hebt al een groep met die naam. Kies een andere naam.",
+    errCreateFailed: "Groep aanmaken mislukt: ",
+    errNotFound: "Groep niet gevonden. Controleer de code.",
+    errGroupGone: "Deze groep bestaat niet meer.",
+    errDeleteFailed: "Verwijderen mislukt: ",
+    confirmDeleteGroup: "Deze groep definitief verwijderen? Alles (items, gasten en aanduidingen) wordt gewist en de groep is daarna niet meer terug te halen, ook niet via een code.",
+  },
+  fr: {
+    backToRundo: "← retour à l'accueil Rundo",
+    tableTagline: "Scanne l'addition et partage en groupe",
+    groupName: "Nom du groupe",
+    loading: "Chargement…",
+    startGroup: "Démarrer le groupe",
+    savedGroups: "Groupes enregistrés",
+    hide: "▲ masquer",
+    show: "▼ afficher",
+    roleAdmin: "hôte",
+    roleGuest: "invité",
+    deletePermanently: "supprimer définitivement",
+    tabBon: "🧾 Addition",
+    tabGuests: "👥 Invités et partage",
+    tabAssign: "📊 Répartir",
+    errNameTaken: "Tu as déjà un groupe portant ce nom. Choisis-en un autre.",
+    errCreateFailed: "Échec de la création du groupe : ",
+    errNotFound: "Groupe introuvable. Vérifie le code.",
+    errGroupGone: "Ce groupe n'existe plus.",
+    errDeleteFailed: "Échec de la suppression : ",
+    confirmDeleteGroup: "Supprimer définitivement ce groupe ? Tout (articles, invités et attributions) sera effacé et le groupe ne pourra plus être récupéré, même avec un code.",
+  },
+}
+
 export default function RundoTable() {
+  const [lang] = useLang()
+  const L = STRINGS[lang]
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const lastActive = useRef(Date.now())
@@ -552,7 +602,7 @@ export default function RundoTable() {
     if (!name) { setStartError("Geef eerst een naam voor de rekening."); return }
     const size = Math.max(2, parseInt(partySize) || 2)
     if (getMyGroups().some((g) => g.name.trim().toLowerCase() === name.toLowerCase())) {
-      setStartError("Je hebt al een groep met die naam. Kies een andere naam."); return
+      setStartError(L.errNameTaken); return
     }
     setBusy(true); setStartError(null)
     try {
@@ -560,7 +610,7 @@ export default function RundoTable() {
       const invite_code = generateInviteCode()
       const { data, error } = await supabase.from("table_groups")
         .insert([{ name, invite_code, owner_id, party_size: size }]).select().single()
-      if (error || !data) { setStartError("Groep aanmaken mislukt: " + error?.message); return }
+      if (error || !data) { setStartError(L.errCreateFailed + error?.message); return }
       saveMyGroup(data, "admin"); setMyGroups(getMyGroups()); rememberLastGroup(data.id)
       setGroup(data)
       // Zet de beheerder meteen als eerste deelnemer ("Ik") zodat je jezelf niet vergeet (overschrijf- en verwijderbaar).
@@ -581,7 +631,7 @@ export default function RundoTable() {
     setBusy(true); setStartError(null)
     try {
       const { data, error } = await supabase.from("table_groups").select("*").eq("invite_code", code).single()
-      if (error || !data) { setStartError("Groep niet gevonden. Controleer de code."); return }
+      if (error || !data) { setStartError(L.errNotFound); return }
       const role = data.owner_id === getOrCreateOwnerId() ? "admin" : "gast"
       setViaLink(role === "gast")
       saveMyGroup(data, role); setMyGroups(getMyGroups()); rememberLastGroup(data.id)
@@ -595,20 +645,20 @@ export default function RundoTable() {
     setBusy(true); setStartError(null)
     try {
       const { data, error } = await supabase.from("table_groups").select("*").eq("id", id).single()
-      if (error || !data) { setStartError("Deze groep bestaat niet meer."); removeMyGroup(id); setMyGroups(getMyGroups()); rememberLastGroup(null); return }
+      if (error || !data) { setStartError(L.errGroupGone); removeMyGroup(id); setMyGroups(getMyGroups()); rememberLastGroup(null); return }
       saveMyGroup(data, data.owner_id === getOrCreateOwnerId() ? "admin" : "gast"); setMyGroups(getMyGroups()); rememberLastGroup(data.id)
       setGroup(data); setMeId(getMeId(data.id)); await loadAll(data.id); setAdminTab(tab)
     } finally { setBusy(false) }
   }
 
   const forgetSavedGroup = async (id: string) => {
-    if (!confirm("Deze groep definitief verwijderen? Alles (items, gasten en aanduidingen) wordt gewist en de groep is daarna niet meer terug te halen, ook niet via een code.")) return
+    if (!confirm(L.confirmDeleteGroup)) return
     await supabase.from("table_claims").delete().eq("group_id", id)
     await supabase.from("table_confirmations").delete().eq("group_id", id)
     await supabase.from("table_items").delete().eq("group_id", id)
     await supabase.from("table_participants").delete().eq("group_id", id)
     const { error } = await supabase.from("table_groups").delete().eq("id", id)
-    if (error) { setStartError("Verwijderen mislukt: " + error.message); return }
+    if (error) { setStartError(L.errDeleteFailed + error.message); return }
     if (getLastGroup() === id) rememberLastGroup(null)
     removeMyGroup(id); setMyGroups(getMyGroups())
   }
@@ -1288,7 +1338,10 @@ export default function RundoTable() {
     return (
       <div style={S.page}>
         <div style={{ maxWidth: 420, margin: "40px auto" }}>
-          <button onClick={goToChooser} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#8a93a8", background: "none", border: "none", padding: 0, marginBottom: 14, cursor: "pointer" }}>← naar Rundo startscherm</button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <button onClick={goToChooser} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#8a93a8", background: "none", border: "none", padding: 0, cursor: "pointer" }}>{L.backToRundo}</button>
+            <LanguageToggle compact />
+          </div>
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginBottom: 8 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/rundo-symbol.png" alt="" style={{ height: 52, width: "auto", objectFit: "contain", display: "block" }} />
@@ -1298,13 +1351,13 @@ export default function RundoTable() {
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 7, margin: "0 0 24px" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icon-table.png" alt="" style={{ height: 20, width: "auto", objectFit: "contain", display: "block" }} />
-            <span style={{ color: "#1499b0", fontSize: 14.5, fontWeight: 700 }}>Scan de rekening en verdeel in groep</span>
+            <span style={{ color: "#1499b0", fontSize: 14.5, fontWeight: 700 }}>{L.tableTagline}</span>
           </div>
 
           <div style={S.card}>
-            <div style={{ fontSize: 13, color: "#5a6680", fontWeight: 600, marginBottom: 6 }}>Groepsnaam <span style={{ color: "#c0392b" }}>*</span></div>
+            <div style={{ fontSize: 13, color: "#5a6680", fontWeight: 600, marginBottom: 6 }}>{L.groupName} <span style={{ color: "#c0392b" }}>*</span></div>
             <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && createGroup()} placeholder="" style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 14 }} />
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16, fontWeight: 700 }} onClick={createGroup} disabled={busy}>{busy ? "Laden..." : "Groep starten"}</button>
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16, fontWeight: 700 }} onClick={createGroup} disabled={busy}>{busy ? L.loading : L.startGroup}</button>
           </div>
 
           {startError && (
@@ -1314,8 +1367,8 @@ export default function RundoTable() {
           {myGroups.length > 0 && (
             <div style={{ ...S.card, marginTop: 14 }}>
               <div onClick={() => setShowSaved((v) => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: "#3b486a" }}>Opgeslagen groepen <span style={{ color: "#9aa0ab", fontWeight: 700 }}>({myGroups.length})</span></span>
-                <span style={{ fontSize: 12, color: "#9aa0ab", fontWeight: 700 }}>{showSaved ? "▲ verbergen" : "▼ tonen"}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: "#3b486a" }}>{L.savedGroups} <span style={{ color: "#9aa0ab", fontWeight: 700 }}>({myGroups.length})</span></span>
+                <span style={{ fontSize: 12, color: "#9aa0ab", fontWeight: 700 }}>{showSaved ? L.hide : L.show}</span>
               </div>
               {showSaved && (
                 <div style={{ marginTop: 10 }}>
@@ -1323,9 +1376,9 @@ export default function RundoTable() {
                     <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                       <button onClick={() => openSavedGroup(g.id)} disabled={busy} style={{ ...S.btn, flex: 1, minWidth: 0, textAlign: "left", padding: "11px 13px", fontWeight: 700 }}>
                         <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: g.role === "admin" ? "#1499b0" : "#9aa0ab" }}>{g.role === "admin" ? "beheerder" : "gast"}{fmtDate(g.created_at ?? g.savedAt) ? ` · ${fmtDate(g.created_at ?? g.savedAt)}` : ""}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: g.role === "admin" ? "#1499b0" : "#9aa0ab" }}>{g.role === "admin" ? L.roleAdmin : L.roleGuest}{fmtDate(g.created_at ?? g.savedAt) ? ` · ${fmtDate(g.created_at ?? g.savedAt)}` : ""}</span>
                       </button>
-                      <button onClick={() => forgetSavedGroup(g.id)} style={{ ...S.iconBtn, flexShrink: 0 }} title="definitief verwijderen">🗑️</button>
+                      <button onClick={() => forgetSavedGroup(g.id)} style={{ ...S.iconBtn, flexShrink: 0 }} title={L.deletePermanently}>🗑️</button>
                     </div>
                   ))}
                 </div>
@@ -1433,9 +1486,9 @@ export default function RundoTable() {
       {isAdmin && (
         <div style={S.tabBar}>
           {([
-            { id: "scan", label: "🧾 Bon" },
-            { id: "guests", label: "👥 Gasten & delen" },
-            { id: "overview", label: "📊 Toewijzen" },
+            { id: "scan", label: L.tabBon },
+            { id: "guests", label: L.tabGuests },
+            { id: "overview", label: L.tabAssign },
           ] as { id: AdminTab; label: string }[]).map((t) => (
             <button key={t.id} onClick={() => setAdminTab(t.id)} style={{
               flex: 1, border: "none", borderRadius: 12, padding: "10px 4px", fontSize: 13, cursor: "pointer",
