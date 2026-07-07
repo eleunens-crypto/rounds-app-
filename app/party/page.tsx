@@ -538,7 +538,7 @@ function settleDebts(
   if (Math.abs(potCents) > 0) {
     all.push({ name: "de pot", participated: true, cents: potCents })
   }
-  let creditors = all.filter((f) => f.participated && f.cents > 0).map((f) => ({ ...f }))
+  let creditors = all.filter((f) => f.participated && f.cents > 0).map((f) => ({ ...f, inDeg: 0 }))
   let debtors = all.filter((f) => f.participated && f.cents < 0).map((f) => ({ ...f, cents: -f.cents }))
 
   const transactions: { from: string; to: string; amount: number }[] = []
@@ -569,19 +569,25 @@ function settleDebts(
   while (debtors.length > 0 && creditors.length > 0) {
     debtors.sort((a, b) => b.cents - a.cents)
     const d = debtors[0]
-    const fits = creditors.filter((c) => c.cents >= d.cents).sort((a, b) => a.cents - b.cents)
+    // Beperk het aantal betalers per ontvanger (liefst max 2). Kies eerst uit ontvangers die
+    // nog onder die grens zitten; enkel als het echt niet anders kan, val terug op de rest.
+    const underCap = creditors.filter((c) => c.inDeg < 2)
+    const pool = underCap.length > 0 ? underCap : creditors
+    const fits = pool.filter((c) => c.cents >= d.cents).sort((a, b) => a.cents - b.cents)
     if (fits.length > 0) {
       const c = fits[0]
       transactions.push({ from: d.name, to: c.name, amount: d.cents / 100 })
+      c.inDeg++
       c.cents -= d.cents
       d.cents = 0
     } else {
-      creditors.sort((a, b) => b.cents - a.cents)
-      const c = creditors[0]
-      const amountCents = c.cents
+      pool.sort((a, b) => b.cents - a.cents)
+      const c = pool[0]
+      const amountCents = Math.min(d.cents, c.cents)
       transactions.push({ from: d.name, to: c.name, amount: amountCents / 100 })
+      c.inDeg++
       d.cents -= amountCents
-      c.cents = 0
+      c.cents -= amountCents
     }
     creditors = creditors.filter((c) => c.cents > 0)
     debtors = debtors.filter((d) => d.cents > 0)
