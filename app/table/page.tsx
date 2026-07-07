@@ -92,11 +92,11 @@ function removeMyGroup(id: string) {
   localStorage.setItem(`rundo_table_groups_${getOrCreateOwnerId()}`, JSON.stringify(list))
 }
 
-function fmtDate(iso?: string | number): string {
+function fmtDate(iso: string | number | undefined, lang: "nl" | "fr" = "nl"): string {
   if (!iso) return ""
   const d = new Date(iso)
   if (isNaN(d.getTime())) return ""
-  return d.toLocaleDateString("nl-BE", { day: "numeric", month: "short", year: "numeric" })
+  return d.toLocaleDateString(lang === "fr" ? "fr-BE" : "nl-BE", { day: "numeric", month: "short", year: "numeric" })
 }
 
 type Dispute = { name: string; comment: string; resolved: boolean }
@@ -371,6 +371,9 @@ const STRINGS = {
     deleteTitle: "verwijderen",
     emptyList: "Nog niemand in de lijst.",
     toAssignBtn: "📊 Naar toewijzen →",
+    guestWord: "Gast",
+    adminName: "Ik",
+    close: "✕ Sluiten",
   },
   fr: {
     backToRundo: "← retour à l'accueil Rundo",
@@ -424,6 +427,9 @@ const STRINGS = {
     deleteTitle: "supprimer",
     emptyList: "Personne dans la liste pour l'instant.",
     toAssignBtn: "📊 Vers « Répartir » →",
+    guestWord: "Invité",
+    adminName: "Moi",
+    close: "✕ Fermer",
   },
 }
 
@@ -678,8 +684,8 @@ export default function RundoTable() {
       // Zet de beheerder meteen als eerste deelnemer ("Ik") zodat je jezelf niet vergeet (overschrijf- en verwijderbaar).
       let myId = getMeId(data.id)
       if (!myId) {
-        let ins = await supabase.from("table_participants").insert([{ name: "Ik", group_id: data.id, self_joined: false, seats: 1 }]).select().single()
-        if (ins.error) ins = await supabase.from("table_participants").insert([{ name: "Ik", group_id: data.id }]).select().single()
+        let ins = await supabase.from("table_participants").insert([{ name: L.adminName, group_id: data.id, self_joined: false, seats: 1 }]).select().single()
+        if (ins.error) ins = await supabase.from("table_participants").insert([{ name: L.adminName, group_id: data.id }]).select().single()
         if (ins.data) myId = ins.data.id
       }
       if (myId) { setMeIdStored(data.id, myId); setMeId(myId) } else setMeId(getMeId(data.id))
@@ -755,7 +761,7 @@ export default function RundoTable() {
 
   const addGuest = async (name?: string, selfJoined = false, seats = 1) => {
     if (!group) return
-    const finalName = (name ?? newGuest).trim() || `Gast ${participants.length + 1}`
+    const finalName = (name ?? newGuest).trim() || `${L.guestWord} ${participants.length + 1}`
     const seatsVal = Math.max(1, seats)
     let { data, error } = await supabase.from("table_participants")
       .insert([{ name: finalName, group_id: group.id, self_joined: selfJoined, seats: seatsVal }]).select().single()
@@ -849,7 +855,7 @@ export default function RundoTable() {
   const renumberGuests = async (): Promise<boolean> => {
     if (!group) return
     const { data } = await supabase.from("table_participants").select("*").eq("group_id", group.id)
-    const isPh = (nm?: string) => /^Gast \d+$/.test(nm || "")
+    const isPh = (nm?: string) => /^(Gast|Invité) \d+$/.test(nm || "")
     const ordered = [...((data as Participant[]) || [])].sort((a, b) => {
       const pa = isPh(a.name) ? 1 : 0, pb = isPh(b.name) ? 1 : 0
       if (pa !== pb) return pa - pb
@@ -861,7 +867,7 @@ export default function RundoTable() {
     for (let i = 0; i < ordered.length; i++) {
       const g = ordered[i]
       if (isPh(g.name)) {
-        const expected = `Gast ${i + 1}`
+        const expected = `${L.guestWord} ${i + 1}`
         if (g.name !== expected) { changed = true; await supabase.from("table_participants").update({ name: expected }).eq("id", g.id) }
       }
     }
@@ -1438,7 +1444,7 @@ export default function RundoTable() {
                     <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                       <button onClick={() => openSavedGroup(g.id)} disabled={busy} style={{ ...S.btn, flex: 1, minWidth: 0, textAlign: "left", padding: "11px 13px", fontWeight: 700 }}>
                         <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: g.role === "admin" ? "#1499b0" : "#9aa0ab" }}>{g.role === "admin" ? L.roleAdmin : L.roleGuest}{fmtDate(g.created_at ?? g.savedAt) ? ` · ${fmtDate(g.created_at ?? g.savedAt)}` : ""}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: g.role === "admin" ? "#1499b0" : "#9aa0ab" }}>{g.role === "admin" ? L.roleAdmin : L.roleGuest}{fmtDate(g.created_at ?? g.savedAt, lang) ? ` · ${fmtDate(g.created_at ?? g.savedAt, lang)}` : ""}</span>
                       </button>
                       <button onClick={() => forgetSavedGroup(g.id)} style={{ ...S.iconBtn, flexShrink: 0 }} title={L.deletePermanently}>🗑️</button>
                     </div>
@@ -1754,7 +1760,7 @@ export default function RundoTable() {
           <div style={{ ...S.card, order: 2 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 4 }}>
               <h3 style={{ ...S.h3, marginBottom: 0, minWidth: 0 }}>{L.guestsTitle2}</h3>
-              <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 700, fontSize: 13, flexShrink: 0 }} onClick={() => setShowAddGuest((v) => !v)}>{showAddGuest ? "✕ Sluiten" : "+ Toevoegen"}</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 700, fontSize: 13, flexShrink: 0 }} onClick={() => setShowAddGuest((v) => !v)}>{showAddGuest ? L.close : L.addBtn}</button>
             </div>
             <div style={{ marginTop: 4, marginBottom: 2, fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>{L.guestsSub2}</div>
             {showAddGuest && (
@@ -1819,7 +1825,7 @@ export default function RundoTable() {
                   </div>
                 )
               }
-              const isPh = (nm?: string) => /^Gast \d+$/.test(nm || "")
+              const isPh = (nm?: string) => /^(Gast|Invité) \d+$/.test(nm || "")
               const displayList = [...participants].sort((a, b) => (isPh(a.name) ? 1 : 0) - (isPh(b.name) ? 1 : 0))
               const gridRows = Math.ceil(displayList.length / 2)
               return (
@@ -2540,7 +2546,7 @@ function TopBar({ group, isAdmin, onHome, me, totalPersons, guestSeats, onGuestS
           <img src="/rundo-table-logo-dark.png" alt="Rundo Table" style={{ height: 19, width: "auto", objectFit: "contain", display: "block" }} />
         </div>
         <div style={{ textAlign: "right", minWidth: 0, flexShrink: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: "#1b2a4a", overflowWrap: "anywhere", lineHeight: 1.15 }}>{group.name}{fmtDate(group.created_at) ? ` (${fmtDate(group.created_at)})` : ""}</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#1b2a4a", overflowWrap: "anywhere", lineHeight: 1.15 }}>{group.name}{fmtDate(group.created_at, lang) ? ` (${fmtDate(group.created_at, lang)})` : ""}</div>
           {totalPersons != null && totalPersons > 0 && <div style={{ fontSize: 11.5, color: "#8a93a3", fontWeight: 700 }}>👤 {totalPersons} {totalPersons === 1 ? L.person : L.persons}</div>}
         </div>
       </div>
