@@ -131,17 +131,27 @@ type AppView = "setup" | "ordering" | "rounds" | "bill"
 // ═══════════════════════════════════════════════════════════════════════════
 const CATEGORY_LABELS: Record<string, string> = {
   Bier:      "🍺 Bier",
-  Frisdrank: "🥤 Water & Frisdrank",
-  Wijn:      "🍷 Wijn & Cava",
-  Cocktail:  "🍹 Cocktails",
-  Andere:    "Andere",
+  BierAV:    "🌿 Alcoholvrij bier",
+  Frisdrank: "🥤 Frisdrank & Water",
+  Wijn:      "🍷 Wijn & Bubbels",
+  Warm:      "☕ Warme dranken",
+  Cocktail:  "🍸 Cocktails",
+  Longdrink: "🥃 Longdrinks & Mixen",
+  Shot:      "🔥 Shots",
+  Mocktail:  "🍹 Mocktails",
+  Eigen:     "⭐ Eigen drankjes",
 }
-const FALLBACK_CATEGORY = "Cocktail"
+const FALLBACK_CATEGORY = "Eigen"
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  Bier:      ["bier", "pils", "tripel", "dubbel", "blonde", "bruin", "lager", "ale", "ipa", "stout", "weizen", "geuze", "lambic", "kriek"],
-  Wijn:      ["wijn", "cava", "prosecco", "champagne", "rosé", "rose", "bordeaux", "chardonnay", "pinot", "sauvignon"],
-  Frisdrank: ["cola", "fanta", "sprite", "water", "ice tea", "icetea", "limonade", "tonic", "soda", "juice", "sap", "frisdrank", "appelsap", "sinaas", "spa"],
-  Cocktail:  ["cocktail", "mojito", "hugo", "gin", "vodka", "rum", "whisky", "whiskey", "aperol", "spritz", "martini", "margarita", "daiquiri", "cosmopolitan"],
+  BierAV:    ["0.0", "0%", "alcoholvrij", "sportzot", "cero"],
+  Mocktail:  ["mocktail", "virgin", "gimber"],
+  Wijn:      ["wijn", "cava", "prosecco", "champagne", "bubbels", "rosé", "rose", "chardonnay", "pinot", "sauvignon", "merlot", "cabernet", "huiswijn"],
+  Warm:      ["koffie", "cappuccino", "espresso", "latte", "thee", "chocomelk", "chocolademelk", "chai", "flat white", "decafé", "decafe"],
+  Frisdrank: ["cola", "fanta", "sprite", "water", "ice tea", "icetea", "limonade", "tonic", "soda", "juice", "sap", "frisdrank", "appelsap", "sinaas", "spa", "red bull", "schweppes"],
+  Cocktail:  ["cocktail", "mojito", "aperol", "spritz", "martini", "margarita", "daiquiri", "cosmopolitan", "negroni", "colada", "moscow mule", "pornstar", "sex on the beach", "hugo", "gin tonic"],
+  Longdrink: ["vodka", "rum cola", "whisky cola", "jäger", "jager", "orange", "malibu", "bacardi", "safari", "pisang", "cuba libre", "longdrink"],
+  Shot:      ["shot", "shotje", "tequila", "limoncello", "sourz", "fireball", "sambuca"],
+  Bier:      ["bier", "pils", "pintje", "tripel", "dubbel", "blond", "bruin", "lager", "ale", "ipa", "stout", "weizen", "geuze", "lambic", "kriek", "duvel", "leffe", "chouffe", "cornet", "westmalle", "chimay", "karmeliet", "hoegaarden", "vedett"],
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1693,14 +1703,13 @@ export default function Home() {
 
   // ─── Drink CRUD ────────────
   const addDrink = async () => {
-    const { name, price, category } = newDrink
+    const { name, price } = newDrink
     const priceNum = parseFloat((price || "").replace(",", "."))
     if (!name.trim()) { setAddDrinkWarn("Vul eerst een naam in voor je drankje."); return }
     if (!price || isNaN(priceNum) || priceNum <= 0) { setAddDrinkWarn("Een richtprijs is verplicht — die hebben we nodig om de rekening achteraf eerlijk te verdelen met Fair Split."); return }
-    if (!category) { setAddDrinkWarn("Kies nog een categorie."); return }
     setAddDrinkWarn(null)
-    const cat = category || FALLBACK_CATEGORY
-    const autoEmoji = "🍸"
+    const cat = "Eigen"
+    const autoEmoji = "⭐"
     // Eigen drank hoort enkel bij DEZE groep (group_id), niet bij andere groepen.
     const { data, error } = await supabase.from("drinks").insert([{ name: name.trim(), price: priceNum, emoji: autoEmoji, category: cat, group_id: group?.id ?? null, owner_id: getOrCreateOwnerId() }]).select().single()
     if (error) { setError("Drank toevoegen mislukt: " + error.message); return }
@@ -1735,7 +1744,6 @@ export default function Home() {
   }
 
   // ? = zelf toegevoegde drank. group_id gezet = hoort bij deze groep (eigen drank of aanpassing).
-  const isCustomDrink = (d: Drink) => d.emoji.startsWith("🍸")
   const isGroupDrink = (d: Drink) => !!d.group_id
 
   const deleteDrinkFromList = async (id: string) => {
@@ -1919,13 +1927,13 @@ export default function Home() {
       {showEditDrinks && (
         <div style={S.overlay}>
           <div style={{ ...S.modal, width: 440, maxHeight: "82vh", display: "flex", flexDirection: "column" }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>✏️ Dranken/prijzen bewerken</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Pas naam en prijs aan, per categorie — dit geldt overal in de app.</p>
+            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>⭐ Je eigen drankjes</h3>
+            <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Hier beheer je enkel je eigen toegevoegde drankjes. De standaardlijst met richtprijzen staat vast.</p>
             <div style={{ overflowY: "auto", flex: 1, marginBottom: 12 }}>
-              {drinks.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>Nog geen dranken</div>}
+              {!visibleDrinks.some(isGroupDrink) && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>Je hebt nog geen eigen drankjes toegevoegd.</div>}
               {(() => {
                 const groups: Record<string, Drink[]> = {}
-                visibleDrinks.forEach((d) => { const k = d.category ?? FALLBACK_CATEGORY; (groups[k] ||= []).push(d) })
+                visibleDrinks.filter(isGroupDrink).forEach((d) => { const k = d.category ?? FALLBACK_CATEGORY; (groups[k] ||= []).push(d) })
                 const order = [...Object.keys(CATEGORY_LABELS), ...Object.keys(groups).filter((k) => !CATEGORY_LABELS[k])]
                 return order.filter((k) => groups[k]?.length).map((cat) => (
                   <div key={cat} style={{ marginBottom: 14 }}>
@@ -1945,9 +1953,7 @@ export default function Home() {
                           <>
                             <span style={{ flex: 1, fontSize: 14 }}>{d.emoji} {d.name} <span style={{ color: "#999" }}>— €{d.price.toFixed(2)}</span></span>
                             <button style={S.iconBtn} onClick={() => setEditingDrink(d)}>✏️</button>
-                            {isGroupDrink(d)
-                              ? <button style={S.iconBtn} title={isCustomDrink(d) ? "Eigen drankje verwijderen" : "Aanpassing ongedaan maken (terug naar basisprijs)"} onClick={() => deleteDrinkFromList(d.id)}>🗑️</button>
-                              : <span title="Basisdrank — blijft altijd staan" style={{ fontSize: 12, color: "#bbb", width: 30, textAlign: "center" }}>🔒</span>}
+                            <button style={S.iconBtn} title="Eigen drankje verwijderen" onClick={() => deleteDrinkFromList(d.id)}>🗑️</button>
                           </>
                         )}
                       </div>
@@ -1966,24 +1972,13 @@ export default function Home() {
         <div style={{ ...S.overlay, zIndex: 2300 }}>
           <div style={{ ...S.modal, width: 400 }}>
             <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>➕ Eigen drank toevoegen</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>Naam, richtprijs en categorie volstaan. Je drank krijgt automatisch een 🍸-logo zodat je ziet dat je hem zelf toevoegde.</p>
+            <p style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>Naam en richtprijs volstaan. Je drankje komt onder ⭐ Eigen drankjes zodat je ziet dat je het zelf toevoegde.</p>
 
             <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>Naam</label>
-            <input placeholder="bv. Westmalle Tripel" value={newDrink.name} onChange={(e) => { setAddDrinkWarn(null); setNewDrink({ ...newDrink, name: e.target.value }) }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginTop: 4, marginBottom: 12 }} />
+            <input placeholder="bv. een speciaalbiertje" value={newDrink.name} onChange={(e) => { setAddDrinkWarn(null); setNewDrink({ ...newDrink, name: e.target.value }) }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginTop: 4, marginBottom: 12 }} />
 
             <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>Richtprijs (€)</label>
-            <input type="number" placeholder="0.00" value={newDrink.price} onChange={(e) => { setAddDrinkWarn(null); setNewDrink({ ...newDrink, price: e.target.value }) }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginTop: 4, marginBottom: 12 }} />
-
-            <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>Categorie</label>
-            <select value={newDrink.category} onChange={(e) => { setAddDrinkWarn(null); setNewDrink({ ...newDrink, category: e.target.value }) }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginTop: 4, marginBottom: 18 }}>
-              {(() => {
-                const cats = Array.from(new Set([
-                  ...Object.keys(CATEGORY_LABELS),
-                  ...drinks.map((d) => d.category).filter((c): c is string => !!c),
-                ]))
-                return cats.map((k) => <option key={k} value={k}>{CATEGORY_LABELS[k] ?? k}</option>)
-              })()}
-            </select>
+            <input type="number" placeholder="0.00" value={newDrink.price} onChange={(e) => { setAddDrinkWarn(null); setNewDrink({ ...newDrink, price: e.target.value }) }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginTop: 4, marginBottom: 18 }} />
 
             {addDrinkWarn && (
               <div style={{ fontSize: 12.5, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 10, padding: "9px 11px", marginBottom: 14, lineHeight: 1.45 }}>
@@ -2341,11 +2336,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Beheerknoppen — beide even groot, subtiel en rechts uitgelijnd */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, marginBottom: 12 }}>
-            <button style={{ ...S.btn, fontSize: 11.5, padding: "6px 12px", color: "#a89a6a", background: "rgba(120,95,20,0.04)", border: "1px solid rgba(120,95,20,0.08)" }} onClick={() => setShowAddDrink(true)}>➕ Eigen drankje toevoegen</button>
-            <button style={{ ...S.btn, fontSize: 11.5, padding: "6px 12px", color: "#a89a6a", background: "rgba(120,95,20,0.04)", border: "1px solid rgba(120,95,20,0.08)" }} onClick={() => setShowEditDrinks(true)}>⚙️ Dranken of Prijzen bewerken</button>
-          </div>
 
           {/* Kiezer: begin met een vorig rondje */}
           {showReorderPicker && (
@@ -2483,11 +2473,11 @@ export default function Home() {
                 </div>
 
                 {/* category tabs */}
-                <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 6, marginBottom: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 7, marginBottom: 10 }}>
                   {groupedDrinks.map(([cat]) => {
                     const isActive = activeCategory === cat || (activeCategory === null && cat === groupedDrinks[0]?.[0])
                     return (
-                      <button key={cat} onClick={() => setActiveCategory(cat)} style={{ flexShrink: 0, border: "none", borderRadius: 14, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", background: isActive ? "linear-gradient(135deg,#f4c430,#f7d461)" : "#f3ecd6", color: isActive ? "#4a3a0a" : "#a08a4a" }}>
+                      <button key={cat} onClick={() => setActiveCategory(cat)} style={{ border: "none", borderRadius: 13, padding: "11px 6px", fontSize: 12.5, fontWeight: 700, lineHeight: 1.2, cursor: "pointer", minHeight: 46, background: isActive ? "linear-gradient(135deg,#f4c430,#f7d461)" : "#f3ecd6", color: isActive ? "#4a3a0a" : "#a08a4a", boxShadow: isActive ? "0 3px 10px -2px rgba(233,196,95,0.55)" : "none" }}>
                         {cat}
                       </button>
                     )
@@ -2569,12 +2559,16 @@ export default function Home() {
                   {selectorTotal > 0 ? `Klaar? ${selectorTotal} item${selectorTotal !== 1 ? "s" : ""}` : "Klaar"}
                 </button>
 
-                <div style={{ textAlign: "center", marginTop: 10, fontSize: 12.5 }}>
-                  <span style={{ color: "#a89a6a" }}>Drankje niet gevonden? </span>
-                  <button onClick={() => setShowAddDrink(true)} style={{ background: "none", border: "none", padding: 0, color: "#c8941a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>
-                    Voeg je eigen drankje toe
+                <div style={{ marginTop: 12 }}>
+                  <button onClick={() => setShowAddDrink(true)} style={{ width: "100%", padding: "12px 0", fontSize: 13.5, fontWeight: 800, cursor: "pointer", color: "#8a6a12", background: "rgba(244,196,48,0.12)", border: "2px dashed rgba(214,158,20,0.6)", borderRadius: 14 }}>
+                    ⭐ Eigen drankje toevoegen
                   </button>
                 </div>
+                {drinks.some(isGroupDrink) && (
+                  <div style={{ textAlign: "center", marginTop: 8 }}>
+                    <button onClick={() => setShowEditDrinks(true)} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 8px" }}>✏️ Mijn eigen drankjes beheren</button>
+                  </div>
+                )}
                 <div style={{ textAlign: "center", marginTop: 8 }}>
                   <button
                     onClick={() => { setSelectorDraft({}); setSelectorEditMode(false); setLastAddedCustomDrink(null); setShowDrinkSelector(false) }}
