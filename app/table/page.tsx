@@ -437,6 +437,32 @@ const STRINGS = {
     cancel: "Annuleren",
     closeWord: "Sluiten",
     confirmAdd: "✅ Bevestigen & toevoegen",
+    itemsOnBill: "🧾 Items op de bon",
+    checkExcl: "Checken!",
+    noItemsScan: "Nog geen items — scan de bon",
+    justAddedEdit: "✨ Net toegevoegd — pas de naam aan met ✏️",
+    scanDoubtTitle: "De scan twijfelde hier — tik voor details",
+    sharedWord: "gedeeld",
+    perPieceSuffix: "/stuk",
+    openWord: "open",
+    shareToggleOn: "gedeeld item — klik om uit te zetten",
+    shareToggleOff: "maak hier een gedeeld item van (bv. water, wijn)",
+    scanDoubtPre: "⚠️ De scan twijfelde hier",
+    scanDoubtPost: ". Controleer even de naam, het aantal en de prijs.",
+    notAssignedYet: "nog niet toegewezen",
+    sharedItemNoteShort: "Gedeeld item — de prijs wordt verdeeld over wie meedeelt.",
+    whoTookThis: "Wie nam hiervan mee?",
+    tapNames: "tik de namen aan",
+    shareFixedBtn: "🔒 vastgezet",
+    shareFixBtn: "🔓 vastzetten",
+    addGuestsFirst: "Voeg eerst gasten toe.",
+    shareFixedNote: "Verdeling vastgezet: gasten zien meteen hun deel.",
+    shareLiveNote: "Niet vastgezet: tik gasten aan of laat ze zelf aantikken. Het bedrag deelt live door wie meedoet en kan nog wijzigen tot iedereen bevestigt.",
+    addItem: "+ Item toevoegen",
+    orderedItems: "Bestelde items: ",
+    taxShort: "BTW",
+    totalWord: "Totaal",
+    billCorrectGoGuests: "Bon correct? Ga naar Gasten en delen! →",
   },
   fr: {
     backToRundo: "← retour à l'accueil Rundo",
@@ -556,6 +582,32 @@ const STRINGS = {
     cancel: "Annuler",
     closeWord: "Fermer",
     confirmAdd: "✅ Confirmer et ajouter",
+    itemsOnBill: "🧾 Articles sur l'addition",
+    checkExcl: "À vérifier !",
+    noItemsScan: "Aucun article — scanne l'addition",
+    justAddedEdit: "✨ Vient d'être ajouté — modifie le nom avec ✏️",
+    scanDoubtTitle: "Le scan a hésité ici — touche pour les détails",
+    sharedWord: "partagé",
+    perPieceSuffix: "/pièce",
+    openWord: "à prendre",
+    shareToggleOn: "article partagé — clique pour désactiver",
+    shareToggleOff: "en faire un article partagé (ex. eau, vin)",
+    scanDoubtPre: "⚠️ Le scan a hésité ici",
+    scanDoubtPost: ". Vérifie le nom, la quantité et le prix.",
+    notAssignedYet: "pas encore attribué(s)",
+    sharedItemNoteShort: "Article partagé — le prix est réparti entre ceux qui le partagent.",
+    whoTookThis: "Qui en a pris ?",
+    tapNames: "touche les noms",
+    shareFixedBtn: "🔒 fixé",
+    shareFixBtn: "🔓 fixer",
+    addGuestsFirst: "Ajoute d'abord des invités.",
+    shareFixedNote: "Répartition fixée : les invités voient tout de suite leur part.",
+    shareLiveNote: "Non fixée : touche les invités ou laisse-les cocher eux-mêmes. Le montant se répartit en direct selon les participants et peut encore changer jusqu'à ce que tout le monde confirme.",
+    addItem: "+ Ajouter un article",
+    orderedItems: "Articles commandés : ",
+    taxShort: "TVA",
+    totalWord: "Total",
+    billCorrectGoGuests: "Addition correcte ? Vers Invités et partage ! →",
   },
 }
 
@@ -2424,7 +2476,7 @@ export default function RundoTable() {
                       {it._isNew && <div style={{ fontSize: 10.5, fontWeight: 800, color: "#a06b00", marginBottom: 6 }}>✨ Net toegevoegd — controleer naam en prijs</div>}
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                         <input value={it.name} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} style={{ ...S.input, flex: 1, minWidth: 0 }} />
-                        <button title={it.is_shared ? "gedeeld item — klik om uit te zetten" : "maak hier een gedeeld item van (bv. water, wijn)"} onClick={() => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, is_shared: !x.is_shared } : x))} style={{ ...S.iconBtn, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: it.is_shared ? "rgba(233,196,95,0.3)" : "rgba(16,24,40,0.05)" }}><ShareIcon on={it.is_shared} /></button>
+                        <button title={it.is_shared ? L.shareToggleOn : L.shareToggleOff} onClick={() => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, is_shared: !x.is_shared } : x))} style={{ ...S.iconBtn, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: it.is_shared ? "rgba(233,196,95,0.3)" : "rgba(16,24,40,0.05)" }}><ShareIcon on={it.is_shared} /></button>
                         <button onClick={() => setScanPreview((cur) => cur.filter((_, j) => j !== i))} style={{ ...S.iconBtn, flexShrink: 0 }}>✕</button>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -2463,7 +2515,7 @@ export default function RundoTable() {
                   )
                 })}
                 <div style={{ textAlign: "right", marginTop: 4 }}>
-                  <button onClick={() => openNewItem("scan")} style={{ ...S.btn, ...S.btnPrimary, padding: "8px 16px", fontSize: 12.5, fontWeight: 700 }}>+ Item toevoegen</button>
+                  <button onClick={() => openNewItem("scan")} style={{ ...S.btn, ...S.btnPrimary, padding: "8px 16px", fontSize: 12.5, fontWeight: 700 }}>{L.addItem}</button>
                 </div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
                   <button onClick={() => setScanPreview((cur) => [...cur, { name: "BTW of andere kosten", unit_price: 0, quantity: 1, is_shared: false, distribute: "all" }])} style={{ ...S.btn, flex: 1, fontSize: 12, fontWeight: 700, padding: "7px 0" }}>{L.addTaxBtn}</button>
@@ -2695,42 +2747,44 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   scanFlags?: Record<string, { note: string }>
 }) {
   const [openFlag, setOpenFlag] = useState<string | null>(null)
+  const [lang] = useLang()
+  const L = STRINGS[lang]
   return (
     <div style={S.card}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <h3 style={{ ...S.h3, marginBottom: 0, display: "flex", alignItems: "baseline", gap: 8 }}>🧾 Items op de bon{!billOk && <span style={{ fontSize: 13, fontWeight: 800, color: "#c0392b" }}>Checken!</span>}</h3>
+        <h3 style={{ ...S.h3, marginBottom: 0, display: "flex", alignItems: "baseline", gap: 8 }}>{L.itemsOnBill}{!billOk && <span style={{ fontSize: 13, fontWeight: 800, color: "#c0392b" }}>{L.checkExcl}</span>}</h3>
       </div>
-      {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>Nog geen items — scan de bon</div>}
+      {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>{L.noItemsScan}</div>}
       {items.map((it) => {
         const open = it.quantity - claimedQty(it.id)
         const who = claimsForItem(it.id)
         const isNew = recentItemId === it.id
         return (
           <div key={it.id} style={{ padding: "9px 8px", borderRadius: (isNew || billOk) ? 12 : 0, marginTop: (isNew || billOk) ? 4 : 0, marginBottom: (isNew || billOk) ? 6 : 0, background: isNew ? "rgba(233,196,95,0.16)" : billOk ? "rgba(39,174,96,0.06)" : "transparent", border: isNew ? "1.5px solid #ecc85a" : billOk ? "1.5px solid rgba(39,174,96,0.55)" : "1px solid transparent", borderBottom: isNew ? "1.5px solid #ecc85a" : billOk ? "1.5px solid rgba(39,174,96,0.55)" : "1px solid rgba(0,0,0,0.05)" }}>
-            {isNew && <div style={{ fontSize: 10.5, fontWeight: 800, color: "#a06b00", marginBottom: 4 }}>✨ Net toegevoegd — pas de naam aan met ✏️</div>}
+            {isNew && <div style={{ fontSize: 10.5, fontWeight: 800, color: "#a06b00", marginBottom: 4 }}>{L.justAddedEdit}</div>}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {it.is_shared && <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={20} /></span>}
               <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0, display: "flex", alignItems: "baseline", gap: 6 }}>
                   <span>{it.quantity}× {it.name}</span>
                   {scanFlags?.[it.id] && (
-                    <button onClick={() => setOpenFlag(openFlag === it.id ? null : it.id)} title="De scan twijfelde hier — tik voor details" style={{ flexShrink: 0, width: 18, height: 18, borderRadius: "50%", border: "none", background: "#f39c12", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>?</button>
+                    <button onClick={() => setOpenFlag(openFlag === it.id ? null : it.id)} title={L.scanDoubtTitle} style={{ flexShrink: 0, width: 18, height: 18, borderRadius: "50%", border: "none", background: "#f39c12", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>?</button>
                   )}
                 </div>
                 <div style={{ flexShrink: 0, textAlign: "right", lineHeight: 1.2 }}>
                   <div style={{ fontSize: 15, fontWeight: 800, color: "#1499b0" }}>€{(it.unit_price * it.quantity).toFixed(2).replace(".", ",")}</div>
                   <div style={{ fontSize: 11, fontWeight: 600, color: "#9aa0ab" }}>
-                    {it.is_shared ? "gedeeld" : `€${it.unit_price.toFixed(2).replace(".", ",")}/stuk${open > 0 ? ` · ${open} open` : ""}`}
+                    {it.is_shared ? L.sharedWord : `€${it.unit_price.toFixed(2).replace(".", ",")}${L.perPieceSuffix}${open > 0 ? ` · ${open} ${L.openWord}` : ""}`}
                   </div>
                 </div>
               </div>
-              <button title={it.is_shared ? "gedeeld item — klik om uit te zetten" : "maak hier een gedeeld item van (bv. water, wijn)"} style={{ ...S.iconBtn, display: "flex", alignItems: "center", justifyContent: "center", background: it.is_shared ? "rgba(233,196,95,0.3)" : "rgba(16,24,40,0.05)" }} onClick={() => onToggleShared(it)}><ShareIcon on={it.is_shared} /></button>
+              <button title={it.is_shared ? L.shareToggleOn : L.shareToggleOff} style={{ ...S.iconBtn, display: "flex", alignItems: "center", justifyContent: "center", background: it.is_shared ? "rgba(233,196,95,0.3)" : "rgba(16,24,40,0.05)" }} onClick={() => onToggleShared(it)}><ShareIcon on={it.is_shared} /></button>
               <button style={S.iconBtn} onClick={() => onEdit(it)}>✏️</button>
               <button style={S.iconBtn} onClick={() => onDelete(it.id)}>🗑️</button>
             </div>
             {scanFlags?.[it.id] && openFlag === it.id && (
               <div style={{ marginTop: 6, marginLeft: 26, fontSize: 12, color: "#b5591a", background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 8, padding: "6px 10px", lineHeight: 1.4 }}>
-                ⚠️ De scan twijfelde hier{scanFlags[it.id].note ? ": " + scanFlags[it.id].note : ""}. Controleer even de naam, het aantal en de prijs.
+                {L.scanDoubtPre}{scanFlags[it.id].note ? ": " + scanFlags[it.id].note : ""}{L.scanDoubtPost}
               </div>
             )}
             {!bareBill && !it.is_shared && participants.length > 0 && (who.length > 0 || open > 0) && (
@@ -2739,13 +2793,13 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                   <span key={i} style={{ fontSize: 11, fontWeight: 600, color: "#14213a", background: "rgba(90,108,166,0.1)", borderRadius: 10, padding: "2px 9px" }}>{w.name} ×{w.qty}</span>
                 ))}
                 {open > 0 && (
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#e0685c", background: "rgba(224,107,94,0.1)", borderRadius: 10, padding: "2px 9px" }}>{open} nog niet toegewezen</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#e0685c", background: "rgba(224,107,94,0.1)", borderRadius: 10, padding: "2px 9px" }}>{open} {L.notAssignedYet}</span>
                 )}
               </div>
             )}
             {bareBill && it.is_shared && (
               <div style={{ marginTop: 7, marginLeft: 26, display: "flex", alignItems: "center", gap: 7, fontSize: 11, color: "#a06b00", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.4)", borderRadius: 9, padding: "5px 9px", lineHeight: 1.4 }}>
-                <ShareIcon on size={15} /> Gedeeld item — de prijs wordt verdeeld over wie meedeelt.
+                <ShareIcon on size={15} /> {L.sharedItemNoteShort}
               </div>
             )}
             {!bareBill && it.is_shared && (() => {
@@ -2757,7 +2811,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                 <div style={{ marginTop: 7, marginLeft: 26 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 5 }}>
                     <span style={{ fontSize: 11, color: "#a06b00", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      <ShareIcon on size={13} /> Wie nam hiervan mee? {heads > 0 ? `${heads} ${heads === 1 ? "persoon" : "personen"} · €${perHead.toFixed(2).replace(".", ",")} p.p.` : "tik de namen aan"}
+                      <ShareIcon on size={13} /> {L.whoTookThis} {heads > 0 ? `${heads} ${heads === 1 ? L.person : L.persons} · €${perHead.toFixed(2).replace(".", ",")} p.p.` : L.tapNames}
                     </span>
                     {sh.length > 0 && (
                       <button onClick={() => setShareFixed(it, !fixed)} style={{
@@ -2765,11 +2819,11 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                         border: fixed ? "none" : "1px solid rgba(16,24,40,0.12)",
                         background: fixed ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff",
                         color: fixed ? "#fff" : "#5a6680",
-                      }}>{fixed ? "🔒 vastgezet" : "🔓 vastzetten"}</button>
+                      }}>{fixed ? L.shareFixedBtn : L.shareFixBtn}</button>
                     )}
                   </div>
                   {participants.length === 0
-                    ? <div style={{ fontSize: 11, color: "#aaa" }}>Voeg eerst gasten toe.</div>
+                    ? <div style={{ fontSize: 11, color: "#aaa" }}>{L.addGuestsFirst}</div>
                     : (
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                         {participants.map((p) => {
@@ -2787,8 +2841,8 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                     )}
                   <div style={{ fontSize: 10.5, color: "#9aa0ab", marginTop: 5, lineHeight: 1.4 }}>
                     {fixed
-                      ? "Verdeling vastgezet: gasten zien meteen hun deel."
-                      : "Niet vastgezet: tik gasten aan of laat ze zelf aantikken. Het bedrag deelt live door wie meedoet en kan nog wijzigen tot iedereen bevestigt."}
+                      ? L.shareFixedNote
+                      : L.shareLiveNote}
                   </div>
                 </div>
               )
@@ -2797,7 +2851,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         )
       })}
       <div style={{ textAlign: "right", marginTop: 10, marginBottom: 2 }}>
-        <button onClick={onAddManual} style={{ ...S.btn, ...S.btnPrimary, display: "inline-block", width: "auto", padding: "8px 18px", fontSize: 13.5, fontWeight: 700 }}>+ Item toevoegen</button>
+        <button onClick={onAddManual} style={{ ...S.btn, ...S.btnPrimary, display: "inline-block", width: "auto", padding: "8px 18px", fontSize: 13.5, fontWeight: 700 }}>{L.addItem}</button>
       </div>
       {taxNode}
       {items.length > 0 && (() => {
@@ -2807,18 +2861,18 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         return (
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1.5px solid rgba(16,24,40,0.08)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Bestelde items: {units}{tax > 0 ? ` · €${sum.toFixed(2).replace(".", ",")} + BTW €${tax.toFixed(2).replace(".", ",")}` : ""}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>{L.orderedItems}{units}{tax > 0 ? ` · €${sum.toFixed(2).replace(".", ",")} + ${L.taxShort} €${tax.toFixed(2).replace(".", ",")}` : ""}</span>
               {tax === 0 && <span style={{ fontSize: 15, fontWeight: 700, color: "#5a6680" }}>€{sum.toFixed(2).replace(".", ",")}</span>}
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 7, paddingTop: 7, borderTop: tax > 0 ? "1px solid rgba(16,24,40,0.06)" : "none" }}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>Totaal</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>{L.totalWord}</span>
               <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a" }}>€{(sum + tax).toFixed(2).replace(".", ",")}</span>
             </div>
           </div>
         )
       })()}
       {onGoGuests && (
-        <button onClick={onGoGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, padding: "14px 0", fontSize: 15, fontWeight: 800, boxShadow: billOk ? "0 0 0 2px rgba(39,174,96,0.55), 0 8px 24px -6px rgba(39,174,96,0.65)" : "0 0 0 2px rgba(224,107,94,0.6), 0 8px 24px -6px rgba(224,107,94,0.65)" }}>{billOk ? "✓ Alles klopt — ga naar Gasten en delen →" : "Bon correct? Ga naar Gasten en delen! →"}</button>
+        <button onClick={onGoGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, padding: "14px 0", fontSize: 15, fontWeight: 800, boxShadow: billOk ? "0 0 0 2px rgba(39,174,96,0.55), 0 8px 24px -6px rgba(39,174,96,0.65)" : "0 0 0 2px rgba(224,107,94,0.6), 0 8px 24px -6px rgba(224,107,94,0.65)" }}>{billOk ? L.allOkGoGuests : L.billCorrectGoGuests}</button>
       )}
     </div>
   )
