@@ -1717,7 +1717,7 @@ export default function Home() {
     setToast(`${name} toegevoegd`)
     await loadDrinks()
     if (showDrinkSelector) {
-      setActiveCategory(cat)
+      setActiveCategory(CATEGORY_LABELS[cat] ?? cat)
       setLastAddedCustomDrink({ name: name.trim(), category: cat })
     } else if (data?.id) {
       addToCart(data.id, 1)
@@ -1925,7 +1925,7 @@ export default function Home() {
 
       {/* Modal: Dranken/prijzen bewerken — per categorie, geldt overal */}
       {showEditDrinks && (
-        <div style={S.overlay}>
+        <div style={{ ...S.overlay, zIndex: 2600 }}>
           <div style={{ ...S.modal, width: 440, maxHeight: "82vh", display: "flex", flexDirection: "column" }}>
             <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>⭐ Je eigen drankjes</h3>
             <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Hier beheer je enkel je eigen toegevoegde drankjes. De standaardlijst met richtprijzen staat vast.</p>
@@ -2487,7 +2487,7 @@ export default function Home() {
                 {/* Melding na een zelf toegevoegd drankje: waar staat het nu */}
                 {lastAddedCustomDrink && (
                   <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.35)", borderRadius: 12, padding: "8px 11px", marginBottom: 8, fontSize: 12.5, color: "#1f8a4c", lineHeight: 1.4 }}>
-                    <span style={{ flex: 1 }}>✅ <b>{lastAddedCustomDrink.name}</b> staat nu onder <b>{CATEGORY_LABELS[lastAddedCustomDrink.category] ?? lastAddedCustomDrink.category}</b> — selecteer het hieronder.</span>
+                    <span style={{ flex: 1 }}>✅ <b>{lastAddedCustomDrink.name}</b> staat nu klaar onder <b>{CATEGORY_LABELS[lastAddedCustomDrink.category] ?? lastAddedCustomDrink.category}</b> — tik het aan om toe te voegen.</span>
                     <button onClick={() => setLastAddedCustomDrink(null)} style={{ background: "none", border: "none", color: "#1f8a4c", fontSize: 14, cursor: "pointer", flexShrink: 0, lineHeight: 1 }}>✕</button>
                   </div>
                 )}
