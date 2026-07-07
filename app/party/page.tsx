@@ -2039,10 +2039,10 @@ export default function Home() {
       {/* Tab navigation */}
       <div style={S.tabBar}>
         {([
-          { id: "setup", label: potTotal > 0 ? "👥 Groep + Pot" : "👥 Groep" },
-          { id: "ordering", label: "🍻 Nieuwe bestelling" },
-          { id: "rounds", label: `📋 Overzicht Rondjes${sessions.length > 0 ? ` (${sessions.length})` : ""}` },
-          { id: "bill", label: "🧾 Afrekenen" },
+          { id: "setup", label: potTotal > 0 ? "Groep + Pot" : "Groep" },
+          { id: "ordering", label: "Nieuwe bestelling" },
+          { id: "rounds", label: `Overzicht Rondjes${sessions.length > 0 ? ` (${sessions.length})` : ""}` },
+          { id: "bill", label: "Afrekenen" },
         ] as { id: AppView; label: string }[]).map((t) => (
           <button
             key={t.id}
@@ -2056,8 +2056,8 @@ export default function Home() {
               }
             }}
             style={{
-              flex: 1, border: "none", borderRadius: 12, padding: "10px 4px", fontSize: 13, cursor: "pointer",
-              fontWeight: view === t.id ? 800 : 600,
+              flex: 1, border: "none", borderRadius: 12, padding: "11px 3px", fontSize: 13.5, cursor: "pointer", lineHeight: 1.15,
+              fontWeight: view === t.id ? 800 : 700,
               background: view === t.id ? "linear-gradient(135deg,#f6dd95,#eecb6e)" : "transparent",
               color: view === t.id ? "#5a4a1a" : "#a89a6a",
               boxShadow: view === t.id ? "0 3px 10px -2px rgba(233,196,95,0.5)" : "none",
@@ -2165,7 +2165,7 @@ export default function Home() {
               <div style={{ width: 30, height: 30, borderRadius: 10, background: "linear-gradient(135deg,#5a4a1a,#7a6528)", color: "#f7d461", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>{nextRoundLabel}</div>
               <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", whiteSpace: "nowrap" }}>Rondje {nextRoundLabel}</span>
             </div>
-            <div style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.15 }}>{cartTotalItems > 0 ? "Je huidige bestelling" : "Start hieronder je bestelling"}</div>
+            <div style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.15 }}>{cartTotalItems > 0 ? "Je huidige bestelling" : ""}</div>
             {sessions.length >= 1 && (
               <button
                 onClick={() => requestDiscardPending(() => { setReorderShowAll(false); setShowReorderPicker(true) })}
@@ -2200,19 +2200,21 @@ export default function Home() {
                     boxShadow: quickVoiceActive ? "0 0 0 5px rgba(231,76,60,0.18)" : "0 6px 18px rgba(150,110,20,0.3)",
                   }}
                 >
-                  {quickVoiceActive ? "🎤 Luistert..." : "🎙️ Spreek je bestelling in"}
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowVoiceExample(true) }}
-                  title="Hoe werkt dit?"
-                  style={{ position: "absolute", top: 4, right: 4, width: 18, height: 18, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.9)", color: "#c8941a", fontSize: 11, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}
-                >
-                  i
+                  {quickVoiceActive ? "🎤 Luistert..." : <>🎙️ Spreek je bestelling in <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.5, opacity: 0.72, border: "1px solid currentColor", borderRadius: 4, padding: "0 3px", verticalAlign: "middle", whiteSpace: "nowrap" }}>BÈTA</span></>}
                 </button>
               </div>
             </div>
+            <button onClick={() => setShowVoiceExample(true)} style={{ width: "100%", marginTop: 10, background: "none", border: "none", color: "#c8941a", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "5px 0" }}>ⓘ Hoe werkt inspreken? (nog in bèta)</button>
           </div>
           </>
+          )}
+
+          {cartTotalItems === 0 && !orderEditing && (
+            <div style={{ textAlign: "center", fontSize: 13, fontWeight: 700, color: "#a89a6a", margin: "16px 6px 4px" }}>
+              {sessions.length === 0
+                ? "Nog geen drankjes gekozen — selecteer ze hierboven 👆"
+                : "Nog geen drankjes in dit rondje — selecteer ze hierboven 👆"}
+            </div>
           )}
 
           {/* "Bedoelde je...?" suggestie banner */}
@@ -2787,6 +2789,7 @@ export default function Home() {
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
               Zeg bijvoorbeeld <b>&ldquo;2 pintjes&rdquo;</b> — klik daarna opnieuw en zeg <b>&ldquo;1 gin-tonic&rdquo;</b>, enz. Je kan zoveel drankjes na elkaar inspreken als je wil.
             </p>
+            <div style={{ fontSize: 12, color: "#c8941a", fontWeight: 700, background: "rgba(214,158,20,0.1)", borderRadius: 8, padding: "9px 11px", margin: "12px 0 0", lineHeight: 1.5 }}>⚠️ Bèta — deze functie is nog in test en werkt nog niet altijd vlot. Kijk je bestelling na het inspreken zeker even na.</div>
             <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowVoiceExample(false)}>Begrepen</button>
           </div>
         </div>
@@ -3848,10 +3851,11 @@ const S: Record<string, React.CSSProperties> = {
     display: "flex",
     gap: 4,
     background: "#f5eccf",
+    border: "1px solid rgba(214,158,20,0.28)",
     borderRadius: 16,
-    padding: 5,
+    padding: 6,
     marginBottom: 18,
-    boxShadow: "inset 0 1px 2px rgba(150,110,20,0.06)",
+    boxShadow: "0 4px 14px -6px rgba(150,110,20,0.25), inset 0 1px 2px rgba(150,110,20,0.06)",
   },
   stickyCart: {
     position: "fixed",
