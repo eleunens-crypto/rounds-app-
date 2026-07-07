@@ -2471,9 +2471,10 @@ export default function Home() {
               <div style={{ ...S.modal, width: 460, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
                 <div style={{ marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                   <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>🍹 Selecteer drankje(s)</h3>
-                  {selectorTotal > 0 && (
-                    <span style={{ fontSize: 13, fontWeight: 800, color: "#4a3a0a", background: "linear-gradient(135deg,#f4c430,#f7d461)", borderRadius: 20, padding: "3px 12px", whiteSpace: "nowrap" }}>{selectorTotal} item{selectorTotal !== 1 ? "s" : ""}</span>
-                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: "#a89a6a", whiteSpace: "nowrap" }}>{participants.length} pers.</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "#4a3a0a", background: "linear-gradient(135deg,#f4c430,#f7d461)", borderRadius: 20, padding: "3px 12px", whiteSpace: "nowrap" }}>{(selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal)} {(selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal) === 1 ? "drankje" : "drankjes"}</span>
+                  </div>
                 </div>
 
                 {/* category tabs */}
@@ -2481,7 +2482,7 @@ export default function Home() {
                   {groupedDrinks.map(([cat]) => {
                     const isActive = activeCategory === cat || (activeCategory === null && cat === groupedDrinks[0]?.[0])
                     return (
-                      <button key={cat} onClick={() => setActiveCategory(cat)} style={{ border: "none", borderRadius: 13, padding: "11px 6px", fontSize: 12.5, fontWeight: 700, lineHeight: 1.2, cursor: "pointer", minHeight: 46, background: isActive ? "linear-gradient(135deg,#f4c430,#f7d461)" : "#f3ecd6", color: isActive ? "#4a3a0a" : "#a08a4a", boxShadow: isActive ? "0 3px 10px -2px rgba(233,196,95,0.55)" : "none" }}>
+                      <button key={cat} onClick={() => { setActiveCategory(cat); setSelectorSearch("") }} style={{ border: "none", borderRadius: 13, padding: "11px 6px", fontSize: 12.5, fontWeight: 700, lineHeight: 1.2, cursor: "pointer", minHeight: 46, background: isActive ? "linear-gradient(135deg,#f4c430,#f7d461)" : "#f3ecd6", color: isActive ? "#4a3a0a" : "#a08a4a", boxShadow: isActive ? "0 3px 10px -2px rgba(233,196,95,0.55)" : "none" }}>
                         {cat}
                       </button>
                     )
@@ -2540,50 +2541,26 @@ export default function Home() {
                   )}
                 </div>
 
-                {/* Live overzicht: groep, wat al in de bestelling zit, en wat je nu toevoegt */}
-                {(() => {
-                  const groupSize = participants.length
-                  // In wijzig-modus toont de selector de VOLLEDIGE bestelling (die vervangt hij);
-                  // anders telt wat je nu toevoegt op bij wat al in de bestelling zit.
-                  const newTotal = selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal
-                  const over = groupSize > 0 ? newTotal - groupSize : 0
-                  return (
-                    <div style={{ marginTop: 10, padding: "9px 12px", borderRadius: 12, background: over > 0 ? "rgba(224,107,94,0.1)" : "rgba(120,95,20,0.04)", border: over > 0 ? "1px solid rgba(224,107,94,0.3)" : "1px solid transparent" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "#555", gap: 8, flexWrap: "wrap" }}>
-                        <span>👥 <b style={{ color: "#4a3f1e" }}>{groupSize}</b> {groupSize === 1 ? "persoon" : "personen"}</span>
-                        <span>🍻 <b style={{ color: "#4a3f1e" }}>{newTotal}</b> {newTotal === 1 ? "drankje" : "drankjes"}</span>
-                      </div>
-                      {over > 0 && (
-                        <div style={{ marginTop: 6, fontSize: 12.5, fontWeight: 700, color: "#c0392b", lineHeight: 1.4 }}>
-                          ⚠️ {over} drankje{over !== 1 ? "s" : ""} meer dan de groep ({groupSize} {groupSize === 1 ? "persoon" : "personen"})
-                        </div>
-                      )}
-                    </div>
-                  )
-                })()}
-
                 <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 10, padding: "12px 0", fontWeight: 700 }} onClick={confirmDrinkSelector}>
-                  {selectorTotal > 0 ? `Klaar? ${selectorTotal} item${selectorTotal !== 1 ? "s" : ""}` : "Klaar"}
+                  {selectorTotal > 0 ? `Klaar? ${selectorTotal} ${selectorTotal !== 1 ? "drankjes" : "drankje"}${Math.max(0, (selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal) - participants.length) > 0 ? ` (${Math.max(0, (selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal) - participants.length)} meer dan groep)` : ""}` : "Klaar"}
                 </button>
 
-                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
-                  <button onClick={() => setShowAddDrink(true)} style={{ width: "50%", padding: "11px 0", fontSize: 12.5, fontWeight: 700, cursor: "pointer", color: "#a89a6a", background: "rgba(244,196,48,0.09)", border: "2px dashed rgba(214,158,20,0.4)", borderRadius: 14 }}>
-                    ⭐ Eigen drankje
-                  </button>
-                </div>
-                {drinks.some(isGroupDrink) && (
-                  <div style={{ textAlign: "center", marginTop: 8 }}>
-                    <button onClick={() => setShowEditDrinks(true)} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 8px" }}>✏️ Mijn eigen drankjes beheren</button>
-                  </div>
-                )}
-                <div style={{ textAlign: "center", marginTop: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 12 }}>
                   <button
                     onClick={() => { setSelectorDraft({}); setSelectorEditMode(false); setLastAddedCustomDrink(null); setSelectorSearch(""); setShowDrinkSelector(false) }}
-                    style={{ background: "none", border: "none", color: "#a89a6a", fontSize: 14, fontWeight: 700, cursor: "pointer", padding: "8px 22px" }}
+                    style={{ background: "none", border: "none", color: "#a89a6a", fontSize: 14, fontWeight: 700, cursor: "pointer", padding: "8px 6px", flexShrink: 0 }}
                   >
                     Annuleren
                   </button>
+                  <button onClick={() => setShowAddDrink(true)} style={{ width: "62%", padding: "11px 0", fontSize: 12.5, fontWeight: 700, cursor: "pointer", color: "#a89a6a", background: "rgba(244,196,48,0.09)", border: "2px dashed rgba(214,158,20,0.4)", borderRadius: 14 }}>
+                    ⭐ Eigen drankje toevoegen
+                  </button>
                 </div>
+                {drinks.some(isGroupDrink) && (
+                  <div style={{ textAlign: "right", marginTop: 8 }}>
+                    <button onClick={() => setShowEditDrinks(true)} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 8px" }}>✏️ Mijn eigen drankjes beheren</button>
+                  </div>
+                )}
               </div>
             </div>
           )}
