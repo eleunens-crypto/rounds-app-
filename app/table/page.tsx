@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import { QRCodeSVG } from "qrcode.react"
-import { useLang, LanguageToggle } from "@/lib/i18n"
+import { useLang, LanguageToggle, getLang } from "@/lib/i18n"
 
 // ═══════════════════════════════════════════════════════════════════════════
 // RUNDO TABLE  —  losstaande mode (route: /table)
@@ -238,7 +238,7 @@ function fileToBase64(file: File): Promise<string> {
       const res = reader.result as string
       resolve(res.includes(",") ? res.split(",")[1] : res)
     }
-    reader.onerror = () => reject(new Error("Kon de foto niet lezen"))
+    reader.onerror = () => reject(new Error(STRINGS[getLang()].errCantReadPhoto))
     reader.readAsDataURL(file)
   })
 }
@@ -670,6 +670,14 @@ const STRINGS = {
     enterYourName: "Vul je naam in om mee te doen.",
     orPickYourself: "of kies jezelf uit de lijst",
     errTipAdd: "Fooi toevoegen mislukt: ",
+    assignConfirmedWarn: "⚠️ Deze personen bevestigden al; je krijgt een controlevraag voor je toewijst.",
+    errCantReadPhoto: "Kon de foto niet lezen",
+    errNameRequired: "Geef eerst een naam voor de rekening.",
+    finalizedReopenFirst: "De rekening is afgesloten — heropen ze eerst om te wijzigen.",
+    billClosedToast: "Rekening afgesloten — gasten kunnen niet meer wijzigen",
+    billReopenedToast: "Rekening heropend",
+    scanTotalOk: "✅ Bon gescand — totaal klopt. Controleer de items.",
+    itemsAddedCheck: (n: number) => `${n} item${n !== 1 ? "s" : ""} toegevoegd — controleer ze op de Bon-tab.`,
   },
   fr: {
     backToRundo: "← retour à l'accueil Rundo",
@@ -1022,6 +1030,14 @@ const STRINGS = {
     enterYourName: "Indique ton nom pour participer.",
     orPickYourself: "ou choisis-toi dans la liste",
     errTipAdd: "Échec de l'ajout du pourboire : ",
+    assignConfirmedWarn: "⚠️ Ces personnes ont déjà confirmé ; tu recevras une question de contrôle avant d'attribuer.",
+    errCantReadPhoto: "Impossible de lire la photo",
+    errNameRequired: "Donne d'abord un nom à l'addition.",
+    finalizedReopenFirst: "L'addition est clôturée — rouvre-la d'abord pour modifier.",
+    billClosedToast: "Addition clôturée — les invités ne peuvent plus modifier",
+    billReopenedToast: "Addition rouverte",
+    scanTotalOk: "✅ Addition scannée — le total correspond. Vérifie les articles.",
+    itemsAddedCheck: (n: number) => `${n} article${n !== 1 ? "s" : ""} ajouté${n !== 1 ? "s" : ""} — vérifie-les dans l'onglet Addition.`,
   },
 }
 
@@ -1259,7 +1275,7 @@ export default function RundoTable() {
   const createGroup = async () => {
     if (busy) return
     const name = groupName.trim()
-    if (!name) { setStartError("Geef eerst een naam voor de rekening."); return }
+    if (!name) { setStartError(L.errNameRequired); return }
     const size = Math.max(2, parseInt(partySize) || 2)
     if (getMyGroups().some((g) => g.name.trim().toLowerCase() === name.toLowerCase())) {
       setStartError(L.errNameTaken); return
@@ -1377,7 +1393,7 @@ export default function RundoTable() {
 
   const setSeats = async (pid: string, n: number) => {
     if (!group) return
-    if (group.finalized) { setToast(isAdmin ? "De rekening is afgesloten — heropen ze eerst om te wijzigen." : L.finalizedAskAdmin); return }
+    if (group.finalized) { setToast(isAdmin ? L.finalizedReopenFirst : L.finalizedAskAdmin); return }
     const val = Math.max(1, n)
     const current = Math.max(1, participants.find((p) => p.id === pid)?.seats ?? 1)
     if (val === current) return
@@ -1403,7 +1419,7 @@ export default function RundoTable() {
       return
     }
     await loadAll(group.id)
-    setToast(on ? "Rekening afgesloten — gasten kunnen niet meer wijzigen" : "Rekening heropend")
+    setToast(on ? L.billClosedToast : L.billReopenedToast)
     if (on) setAdminFinalPopup(true)
   }
 
@@ -1657,7 +1673,7 @@ export default function RundoTable() {
     if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) }
     setShowScan(false)
     await loadAll(group.id)
-    setToast(totalOk ? "✅ Bon gescand — totaal klopt. Controleer de items." : `${rows.length} item${rows.length !== 1 ? "s" : ""} toegevoegd — controleer ze op de Bon-tab.`)
+    setToast(totalOk ? L.scanTotalOk : L.itemsAddedCheck(rows.length))
   }
 
   const addManualItem = async () => {
@@ -1809,7 +1825,7 @@ export default function RundoTable() {
 
   const setClaim = async (itemId: string, pid: string, qty: number) => {
     if (!group) return
-    if (group.finalized) { setToast(isAdmin ? "De rekening is afgesloten — heropen ze eerst om te wijzigen." : L.finalizedAskAdmin); return }
+    if (group.finalized) { setToast(isAdmin ? L.finalizedReopenFirst : L.finalizedAskAdmin); return }
     const existing = claims.find((c) => c.item_id === itemId && c.participant_id === pid)
     if (qty <= 0) {
       if (existing) await supabase.from("table_claims").delete().eq("id", existing.id)
@@ -3320,7 +3336,7 @@ function AssignPicker({ participants, itemId, isShared, confirmedFn, onAssign, o
           <button key={p.id} onClick={() => onAssign(p.id, true)} style={{ fontSize: 12, fontWeight: 700, borderRadius: 10, padding: "5px 11px", cursor: "pointer", border: "1px solid rgba(224,107,94,0.4)", background: "rgba(224,107,94,0.06)", color: "#c0392b" }}>{p.name} ⚠️</button>
         ))}
       </div>
-      {showOthers && <div style={{ fontSize: 10.5, color: "#a06b00", marginTop: 6 }}>⚠️ Deze personen bevestigden al; je krijgt een controlevraag voor je toewijst.</div>}
+      {showOthers && <div style={{ fontSize: 10.5, color: "#a06b00", marginTop: 6 }}>{L.assignConfirmedWarn}</div>}
     </div>
   )
 }
