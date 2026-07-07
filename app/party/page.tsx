@@ -207,6 +207,8 @@ function clearActiveGroupCode() {
 // ═══════════════════════════════════════════════════════════════════════════
 // VOICE / DRINK NAME HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
+function normText(s: string): string { return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") }
+
 function guessCategory(text: string): string {
   const lower = text.toLowerCase()
   for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
@@ -2487,7 +2489,8 @@ export default function Home() {
 
                 {/* Zoekvak — over alle categorieën heen */}
                 <div style={{ position: "relative", marginBottom: 8 }}>
-                  <input value={selectorSearch} onChange={(e) => setSelectorSearch(e.target.value)} placeholder="🔍 Zoek in alle categorieën…" style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingRight: 34 }} />
+                  <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, opacity: 0.55, pointerEvents: "none" }}>🔍</span>
+                  <input value={selectorSearch} onChange={(e) => setSelectorSearch(e.target.value)} placeholder="Zoek… bv. cola, jäger, virgin" style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 38, paddingRight: 34 }} />
                   {selectorSearch && <button onClick={() => setSelectorSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#b3a476", fontSize: 16, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>}
                 </div>
 
@@ -2502,8 +2505,8 @@ export default function Home() {
                 {/* grid */}
                 <div style={{ overflowY: "auto", flex: 1 }}>
                   {groupedDrinks.map(([cat, list]) => {
-                    const words = selectorSearch.trim().toLowerCase().split(/\s+/).filter(Boolean)
-                    const shown = words.length ? list.filter((d) => words.every((w) => d.name.toLowerCase().includes(w))) : list
+                    const words = normText(selectorSearch.trim()).split(/\s+/).filter(Boolean)
+                    const shown = words.length ? list.filter((d) => words.every((w) => normText(d.name).includes(w))) : list
                     const isActive = words.length ? shown.length > 0 : (activeCategory === cat || (activeCategory === null && cat === groupedDrinks[0]?.[0]))
                     if (!isActive) return null
                     return (
@@ -2531,7 +2534,7 @@ export default function Home() {
                       </div>
                     )
                   })}
-                  {selectorSearch.trim() && !groupedDrinks.some(([, list]) => list.some((d) => selectorSearch.trim().toLowerCase().split(/\s+/).filter(Boolean).every((w) => d.name.toLowerCase().includes(w)))) && (
+                  {selectorSearch.trim() && !groupedDrinks.some(([, list]) => list.some((d) => normText(selectorSearch.trim()).split(/\s+/).filter(Boolean).every((w) => normText(d.name).includes(w)))) && (
                     <div style={{ textAlign: "center", color: "#a89a6a", fontSize: 13, padding: "24px 12px", lineHeight: 1.5 }}>Geen drankje gevonden — voeg het onderaan toe als eigen drankje.</div>
                   )}
                 </div>
