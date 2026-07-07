@@ -1734,7 +1734,8 @@ export default function RundoTable() {
             <h3 style={S.h3}>🔗 Laat je gasten zelf meedoen</h3>
             <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 12 }}>{"Deel de QR of link. Iedereen kiest z'n naam en tikt z'n eigen bestelling aan."}</p>
             {(() => {
-              const link = typeof window !== "undefined" ? `${window.location.origin}/table?code=${group.invite_code}` : ""
+              const _base = (process.env.NEXT_PUBLIC_SITE_URL || (process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}` : "") || (typeof window !== "undefined" ? window.location.origin : "")).replace(/\/+$/, "")
+              const link = _base ? `${_base}/table?code=${group.invite_code}` : ""
               const invite = `Je bent uitgenodigd voor "${group.name}" — verdeel mee de rekening via Rundo Table 👉 ${link}`
               return (
                 <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
