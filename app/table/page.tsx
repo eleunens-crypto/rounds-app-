@@ -373,6 +373,8 @@ export default function RundoTable() {
   const [adminFinalPopup, setAdminFinalPopup] = useState(false)
   const [showShareWarn, setShowShareWarn] = useState(false)   // waarschuwing bij delen terwijl totalen niet kloppen
   const [showFinalizeWarn, setShowFinalizeWarn] = useState(false) // waarschuwing bij afsluiten terwijl totalen niet kloppen
+  const [tipInput, setTipInput] = useState("")
+  const [showTipReminder, setShowTipReminder] = useState(false)
   // De beheerder bevestigde dat het ingevulde bon-totaal correct is, ook al verschilt het van de items.
   const [receiptConfirmed, setReceiptConfirmed] = useState(false)
   // De beheerder klikte "Neen" en past het rekeningtotaal aan.
@@ -732,22 +734,34 @@ export default function RundoTable() {
   }
 
   // Hernummer naamloze gasten ("Gast N") naar hun positie, zodat er geen gaten ontstaan na verwijderen.
-  const renumberGuests = async () => {
+  const renumberGuests = async (): Promise<boolean> => {
     if (!group) return
     const { data } = await supabase.from("table_participants").select("*").eq("group_id", group.id)
+    const isPh = (nm?: string) => /^Gast \d+$/.test(nm || "")
     const ordered = [...((data as Participant[]) || [])].sort((a, b) => {
+      const pa = isPh(a.name) ? 1 : 0, pb = isPh(b.name) ? 1 : 0
+      if (pa !== pb) return pa - pb
       const ca = a.created_at ?? "", cb = b.created_at ?? ""
       if (ca !== cb) return ca < cb ? -1 : 1
       return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
     })
+    let changed = false
     for (let i = 0; i < ordered.length; i++) {
       const g = ordered[i]
-      if (/^Gast \d+$/.test(g.name || "")) {
+      if (isPh(g.name)) {
         const expected = `Gast ${i + 1}`
-        if (g.name !== expected) await supabase.from("table_participants").update({ name: expected }).eq("id", g.id)
+        if (g.name !== expected) { changed = true; await supabase.from("table_participants").update({ name: expected }).eq("id", g.id) }
       }
     }
+    return changed
   }
+
+  // Bij het openen van de Gasten-tab: naamloze gasten netjes hernummeren (repareert ook bestaande groepen).
+  useEffect(() => {
+    if (!isAdmin || adminTab !== "guests" || !group) return
+    ;(async () => { if (await renumberGuests()) await loadAll(group.id) })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminTab, group?.id])
 
   const removeGuest = async (id: string) => {
     if (!group) return
@@ -766,6 +780,7 @@ export default function RundoTable() {
     if (!finalName) return
     setParticipants((cur) => cur.map((p) => p.id === id ? { ...p, name: finalName } : p))
     await supabase.from("table_participants").update({ name: finalName }).eq("id", id)
+    await renumberGuests()
     await loadAll(group.id)
   }
 
@@ -1043,6 +1058,21 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
+  const addTip = async () => {
+    if (group?.finalized) { setToast("Heropen de rekening eerst om iets te wijzigen."); return }
+    if (!group) return
+    const amt = parseFloat((tipInput || "").replace(",", ".")) || 0
+    if (amt <= 0) { setToast("Vul eerst een fooibedrag in."); return }
+    const { error } = await supabase.from("table_items").insert([{ group_id: group.id, name: "Fooi", unit_price: amt, quantity: 1, is_shared: false, category: null, distribute: "all" }])
+    if (error) {
+      if (/distribute/.test(error.message || "")) setError("Voeg eerst de kolom 'distribute' toe in Supabase (zie instructies).")
+      else setError("Fooi toevoegen mislukt: " + error.message)
+      return
+    }
+    setTipInput("")
+    await loadAll(group.id)
+  }
+
   const deleteItem = async (id: string) => {
     if (group?.finalized) { setToast(isAdmin ? "Heropen de rekening eerst om iets te wijzigen." : "De rekening is afgesloten — vraag de beheerder om ze te heropenen."); return }
     if (!group) return
@@ -1218,6 +1248,9 @@ export default function RundoTable() {
   const openUnits = baseItems.filter((it) => !it.is_shared)
     .reduce((s, it) => s + Math.max(0, it.quantity - claimedQty(it.id)), 0)
   const undecidedShared = baseItems.filter((it) => it.is_shared && sharerIds(it.id).length === 0)
+  const allAssignedNow = openUnits === 0 && undecidedShared.length === 0
+  const tipItem = items.find((i) => i.name.trim().toLowerCase() === "fooi") || null
+  const hasTip = !!tipItem
 
   const confirmMe = async () => {
     if (!group || !meId) return
@@ -1655,13 +1688,16 @@ export default function RundoTable() {
                   </div>
                 )
               }
+              const isPh = (nm?: string) => /^Gast \d+$/.test(nm || "")
+              const displayList = [...participants].sort((a, b) => (isPh(a.name) ? 1 : 0) - (isPh(b.name) ? 1 : 0))
+              const gridRows = Math.ceil(displayList.length / 2)
               return (
                 <div style={{ marginTop: participants.length > 0 ? 8 : (showAddGuest ? 6 : 12) }}>
                   {participants.length === 0
                     ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog niemand in de lijst.</div>
                     : twoCol
-                    ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>{participants.map(Row)}</div>
-                    : participants.map(Row)}
+                    ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: `repeat(${gridRows}, auto)`, gridAutoFlow: "column", gap: 6 }}>{displayList.map(Row)}</div>
+                    : displayList.map(Row)}
                 </div>
               )
             })()}
@@ -1690,11 +1726,13 @@ export default function RundoTable() {
                     <QRCodeSVG value={link} size={120} bgColor="#ffffff" fgColor="#1b2a4a" />
                   </div>
                   <div style={{ flex: 1, minWidth: 180 }}>
-                    <div style={{ fontSize: 12.5, color: "#3b486a", lineHeight: 1.5, marginBottom: 8 }}>Je gasten komen zo in je groepje <b>{group.name}</b> om mee de rekening te verdelen.</div>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 6 }}>Deelbare link</div>
-                    <div style={{ fontSize: 12, color: "#5a6680", wordBreak: "break-all", background: "rgba(20,33,58,0.04)", borderRadius: 10, padding: "8px 10px", marginBottom: 8 }}>{link}</div>
+                    <div style={{ fontSize: 12.5, color: "#3b486a", lineHeight: 1.5, marginBottom: 10 }}>Je gasten komen zo in je groepje <b>{group.name}</b> om mee de rekening te verdelen.</div>
                     <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 700 }} onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(invite); setToast("Uitnodiging gekopieerd") } }}>💬 Kopieer uitnodiging met link</button>
                     <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>Klaar om te plakken in WhatsApp, Messenger of sms.</div>
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ fontSize: 9.5, fontWeight: 700, color: "#b3b9c4", textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 2 }}>of deel de link</div>
+                      <div style={{ fontSize: 10.5, color: "#aab0bc", wordBreak: "break-all", lineHeight: 1.4 }}>{link}</div>
+                    </div>
                   </div>
                 </div>
               )
@@ -1711,8 +1749,8 @@ export default function RundoTable() {
           <div style={{ fontSize: 12, fontWeight: 800, color: "#3b486a", marginBottom: 8 }}>📊 Overzicht</div>
           <div style={{ display: "flex", gap: 8 }}>
             <Stat label="Totaalbedrag" value={`€${billTotal.toFixed(2).replace(".", ",")}`} tone="navy" />
-            <div onClick={() => { if (typeof document !== "undefined") document.getElementById("rekening-per-persoon")?.scrollIntoView({ behavior: "smooth", block: "start" }) }} style={{ flex: 1, cursor: "pointer", textAlign: "center", background: "rgba(233,196,95,0.16)", borderRadius: 12, padding: "8px 6px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 2 }} title="naar de rekening per persoon">
-              <span style={{ fontSize: 12, fontWeight: 800, color: "#a06b00", lineHeight: 1.25 }}>Rekening per persoon bekijken</span>
+            <div onClick={() => { if (typeof document !== "undefined") document.getElementById("rekening-per-persoon")?.scrollIntoView({ behavior: "smooth", block: "start" }) }} style={{ flex: 1, cursor: "pointer", textAlign: "center", background: allAssignedNow ? "rgba(39,174,96,0.14)" : "rgba(233,196,95,0.16)", border: allAssignedNow ? "2px solid rgba(39,174,96,0.75)" : "2px solid transparent", boxShadow: allAssignedNow ? "0 0 0 3px rgba(39,174,96,0.15), 0 4px 14px -4px rgba(39,174,96,0.55)" : "none", borderRadius: 12, padding: "8px 6px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 2 }} title="naar de rekening per persoon">
+              <span style={{ fontSize: 12, fontWeight: 800, color: allAssignedNow ? "#1f8a4c" : "#a06b00", lineHeight: 1.25 }}>Rekening per persoon bekijken{allAssignedNow ? " →" : ""}</span>
             </div>
             {openUnits > 0 ? (
               <div onClick={() => setShowTodo((v) => !v)} style={{ flex: 1, cursor: "pointer" }}>
@@ -1850,6 +1888,24 @@ export default function RundoTable() {
             })()}
           </div>
 
+          {!group.finalized && (
+            <div id="fooi-sectie" style={{ ...S.card, padding: "11px 14px", marginTop: 10 }}>
+              {tipItem ? (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#3b486a" }}>💶 Fooi: <b>€{(tipItem.unit_price ?? 0).toFixed(2).replace(".", ",")}</b> <span style={{ fontSize: 11, color: "#9aa0ab", fontWeight: 600 }}>· proportioneel verdeeld</span></span>
+                  <button onClick={() => deleteItem(tipItem.id)} style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "6px 12px", flexShrink: 0 }}>Wissen</button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: "#3b486a", flexShrink: 0 }}>💶 Fooi</span>
+                  <input type="text" inputMode="decimal" value={tipInput} onChange={(e) => setTipInput(numFilter(e.target.value, true))} placeholder="bv. 5,00" style={{ ...S.input, width: 88, flexShrink: 0, textAlign: "right", padding: "8px 10px", fontSize: 14 }} />
+                  <button onClick={addTip} style={{ ...S.btn, ...S.btnPrimary, fontSize: 12.5, fontWeight: 700, padding: "8px 14px", flexShrink: 0 }}>Toevoegen</button>
+                  <span style={{ fontSize: 10.5, color: "#9aa0ab", width: "100%", marginTop: 2 }}>Wordt proportioneel over de hele rekening verdeeld.</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {group.finalized ? (
             <button onClick={() => finalizeBill(false)} style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 14.5, fontWeight: 800, background: "linear-gradient(135deg,#f39c12,#e67e22)", border: "none", color: "#fff", boxShadow: "0 6px 16px -6px rgba(230,126,34,0.6)" }}>
               🔓 Rekening heropenen (gasten kunnen weer wijzigen)
@@ -1865,6 +1921,7 @@ export default function RundoTable() {
                 return
               }
               if (!billOk) { setShowFinalizeWarn(true); return }
+              if (!hasTip) { setShowTipReminder(true); return }
               if (confirm("De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.")) finalizeBill(true)
             }} style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
               ✅ Alles toegewezen?  Rekening afsluiten
@@ -1944,6 +2001,16 @@ export default function RundoTable() {
       })()}
 
       {/* ─── Waarschuwing: afsluiten terwijl item- en bontotaal niet overeenkomen (onomkeerbaar) ─── */}
+      {showTipReminder && (
+        <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowTipReminder(false)}>
+          <div style={{ ...S.modal, width: 350 }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, marginBottom: 8, fontSize: 17, fontWeight: 800, color: "#14213a" }}>💶 Nog geen fooi toegevoegd</h3>
+            <div style={{ fontSize: 13, color: "#5a6680", lineHeight: 1.5, marginBottom: 16 }}>Wil je nog een fooi toevoegen voor je de rekening afsluit? Ze wordt proportioneel over iedereen verdeeld. Je kan ook gewoon zonder fooi doorgaan.</div>
+            <button onClick={() => { setShowTipReminder(false); if (typeof document !== "undefined") document.getElementById("fooi-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }) }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 14, fontWeight: 800, marginBottom: 8 }}>💶 Fooi toevoegen</button>
+            <button onClick={() => { setShowTipReminder(false); finalizeBill(true) }} style={{ ...S.btn, width: "100%", padding: "10px 0", fontSize: 13, fontWeight: 700, color: "#9aa0ab", background: "transparent", border: "none" }}>Toch afsluiten zonder fooi</button>
+          </div>
+        </div>
+      )}
       {showFinalizeWarn && (() => {
         const entered = group?.receipt_total ?? null
         const diff = entered != null ? Math.abs(billTotal - entered) : null
@@ -2558,6 +2625,19 @@ function ClaimScreen(props: {
     prevFinalizedRef.current = finalized
   }, [finalized])
 
+  const _normal = items.filter((i) => !i.is_shared)
+  const _shared = items.filter((i) => i.is_shared)
+  const _totalU = _normal.reduce((s, i) => s + i.quantity, 0)
+  const _claimedU = _normal.reduce((s, i) => s + Math.min(i.quantity, claimedQty(i.id)), 0)
+  const _sharedDone = _shared.filter((i) => sharerIds(i.id).length > 0).length
+  const allDone = (_totalU > 0 || _shared.length > 0) && _claimedU >= _totalU && _sharedDone === _shared.length
+  const [claimCollapsed, setClaimCollapsed] = useState(false)
+  const prevDoneRef = useRef(false)
+  useEffect(() => {
+    if (isAdmin && allDone && !prevDoneRef.current) setClaimCollapsed(true)
+    prevDoneRef.current = allDone
+  }, [allDone, isAdmin])
+
   if (isAdmin) {
     const normalItems = items.filter((i) => !i.is_shared)
     const sharedItems = items.filter((i) => i.is_shared)
@@ -2568,8 +2648,13 @@ function ClaimScreen(props: {
     return (
       <div>
         <div style={S.card}>
-          <h3 style={{ ...S.h3, marginBottom: 10 }}>✅ Wie heeft wat genomen?</h3>
-          {items.length === 0
+          <div onClick={isAdmin ? () => setClaimCollapsed((v) => !v) : undefined} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, cursor: isAdmin ? "pointer" : "default", marginBottom: (isAdmin && claimCollapsed) ? 0 : 10 }}>
+            <h3 style={{ ...S.h3, marginBottom: 0 }}>✅ Wie heeft wat genomen?</h3>
+            {isAdmin && <span style={{ fontSize: 12.5, color: "#9aa0ab", fontWeight: 700, flexShrink: 0 }}>{claimCollapsed ? "▶ openen" : "▼ inklappen"}</span>}
+          </div>
+          {isAdmin && claimCollapsed
+            ? <div onClick={() => setClaimCollapsed(false)} style={{ cursor: "pointer", fontSize: 12.5, color: "#1f8a4c", fontWeight: 700, padding: "2px 2px" }}>✅ Alles toegewezen — tik om opnieuw te bekijken</div>
+            : items.length === 0
             ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen items — scan eerst de bon.</div>
             : participants.length === 0
             ? <div style={{ fontSize: 12.5, color: "#aaa", padding: 10 }}>Voeg eerst gasten toe in de tab &ldquo;Gasten &amp; delen&rdquo;.</div>
