@@ -1845,7 +1845,7 @@ export default function RundoTable() {
                 const allOpen = participants.every((p) => expandedPeople.has(p.id))
                 return (
                   <button style={S.smallBtn} onClick={() => setExpandedPeople(allOpen ? new Set() : new Set(participants.map((p) => p.id)))}>
-                    {allOpen ? "▲ Alles dicht" : "▼ Alles open"}
+                    {allOpen ? "▲ Details verbergen" : "▼ Details tonen"}
                   </button>
                 )
               })()}
