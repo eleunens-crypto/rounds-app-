@@ -2043,10 +2043,13 @@ export default function Home() {
           { id: "ordering", label: "Nieuwe bestelling" },
           { id: "rounds", label: `Overzicht Rondjes${sessions.length > 0 ? ` (${sessions.length})` : ""}` },
           { id: "bill", label: "Afrekenen" },
-        ] as { id: AppView; label: string }[]).map((t) => (
+        ] as { id: AppView; label: string }[]).map((t) => {
+          const locked = participants.length === 0 && t.id !== "setup"
+          return (
           <button
             key={t.id}
             onClick={() => {
+              if (locked) { setToast("Voeg eerst minstens één persoon toe bij Groep."); return }
               // 'Nieuwe bestelling' aanklikken terwijl je er al bent met een lopende bestelling:
               // eerst waarschuwen dat opnieuw beginnen je huidige lijst wist.
               if (t.id === "ordering" && view === "ordering" && cartTotalItems > 0) {
@@ -2056,7 +2059,7 @@ export default function Home() {
               }
             }}
             style={{
-              flex: 1, border: "none", borderRadius: 12, padding: "11px 3px", fontSize: 13.5, cursor: "pointer", lineHeight: 1.15,
+              flex: 1, border: "none", borderRadius: 12, padding: "11px 3px", fontSize: 13.5, cursor: locked ? "default" : "pointer", opacity: locked ? 0.4 : 1, lineHeight: 1.15,
               fontWeight: view === t.id ? 800 : 700,
               background: view === t.id ? "linear-gradient(135deg,#f6dd95,#eecb6e)" : "transparent",
               color: view === t.id ? "#5a4a1a" : "#a89a6a",
@@ -2066,7 +2069,8 @@ export default function Home() {
           >
             {t.label}
           </button>
-        ))}
+          )
+        })}
       </div>
 
       {/* ═══ VIEW: Setup (group + persons) ═══ */}
