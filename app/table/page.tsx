@@ -3020,6 +3020,8 @@ function ClaimScreen(props: {
   iConfirmed: boolean; confirmMe: () => void; onPickMe: (id: string) => void
   finalized: boolean; iDispute: boolean; iResolved: boolean; iComment: string; onToggleDispute: (on: boolean, comment?: string) => void
 }) {
+  const [lang] = useLang()
+  const L = STRINGS[lang]
   const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
   const adminPid = props.claimPid, setAdminPid = props.setClaimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
