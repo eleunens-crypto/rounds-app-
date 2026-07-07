@@ -2204,7 +2204,7 @@ export default function Home() {
                 </button>
               </div>
             </div>
-            <button onClick={() => setShowVoiceExample(true)} style={{ width: "100%", marginTop: 10, background: "none", border: "none", color: "#c8941a", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "5px 0" }}>ⓘ Hoe werkt inspreken? (nog in bèta)</button>
+            <div style={{ textAlign: "right", marginTop: 8 }}><button onClick={() => setShowVoiceExample(true)} style={{ background: "none", border: "none", color: "#c8941a", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 2px" }}>ⓘ Hoe werkt inspreken?</button></div>
           </div>
           </>
           )}
