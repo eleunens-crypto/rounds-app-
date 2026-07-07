@@ -812,6 +812,26 @@ export default function RundoTable() {
       setScanFail({ reason: "empty" })
     }
   }
+  // Vanuit de rode "onnauwkeurige scan"-melding: opnieuw met AI en, als dat lukt, alles vervangen.
+  const improveWithAi = async () => {
+    const file = retryFile ?? scanFile
+    if (!file || !group) { setToast("Geen foto beschikbaar om opnieuw te scannen."); return }
+    setShowScan(true); setScanFail(null); setScanPreview([]); setScanProgress(0); setScanning(true)
+    const res = await scanReceipt(file, (pr) => setScanProgress(pr))
+    setScanning(false)
+    if (!res.items || res.items.length === 0) {
+      const reason = res.reason ?? "empty"
+      if (reason === "unavailable") setCooldownUntil(Date.now() + 45 * 1000)
+      setScanFail({ reason })
+      return // AI mislukt -> de huidige (lokale) items blijven gewoon staan
+    }
+    // AI gelukt -> vervang alles: oude items + toewijzingen wissen, dan de AI-items toevoegen
+    await supabase.from("table_claims").delete().eq("group_id", group.id)
+    await supabase.from("table_items").delete().eq("group_id", group.id)
+    setScanSource("ai")
+    await confirmScan(res.items, res.total != null ? res.total.toFixed(2).replace(".", ",") : "", null)
+  }
+
   const confirmScan = async (previewArg?: ParsedItem[], totalArg?: string, fileArg?: File | null) => {
     const preview = previewArg ?? scanPreview
     const totalStr = totalArg ?? scanTotal
@@ -1382,6 +1402,13 @@ export default function RundoTable() {
               <span>Scan gelukt en items herkend <span style={{ color: "#1f8a4c", fontWeight: 800 }}>✓</span></span>
             </div>
           )}
+          {items.length > 0 && scanSource === "local" && (
+            <div style={{ margin: "0 0 10px", padding: "11px 13px", borderRadius: 10, background: "rgba(224,107,94,0.08)", border: "1.5px solid rgba(224,107,94,0.55)" }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#c0392b", marginBottom: 3 }}>⚠️ Onnauwkeurige scan gebruikt — bevat bijna altijd fouten</div>
+              <div style={{ fontSize: 12, color: "#8a4514", lineHeight: 1.5, marginBottom: 9 }}>Controleer volgorde, namen en prijzen goed na, of doe een nieuwe AI-scan.</div>
+              <button onClick={improveWithAi} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontSize: 13.5, fontWeight: 800 }}>🔄 Verbeter met een nieuwe AI-scan (vervangt alles)</button>
+            </div>
+          )}
 
           {/* Bon-totaal: ja/neen blijft altijd beschikbaar. Ja = totaal klopt (items nakijken). Neen = aanpassen + bevestigen. */}
           {items.length > 0 && (() => {
@@ -1586,8 +1613,8 @@ export default function RundoTable() {
                   return (
                     <div key={p.id} style={{ border: manageGuests ? "1px solid rgba(224,107,94,0.4)" : isMe ? "1px solid rgba(20,153,176,0.4)" : "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "7px 8px", background: manageGuests ? "rgba(224,107,94,0.04)" : isMe ? "rgba(20,153,176,0.07)" : "#fff" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                        <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
                         {nameInput(p, 13.5)}
+                        <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
                         {manageGuests && delBtn(p)}
                       </div>
                       <div style={{ marginTop: 5 }}>
@@ -1598,13 +1625,13 @@ export default function RundoTable() {
                 }
                 return (
                   <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 6px", borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: isMe ? 10 : 0, background: isMe ? "rgba(20,153,176,0.06)" : "transparent" }}>
-                    <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       {nameInput(p, 15)}
                       <div style={{ marginTop: 3 }}>
                         <span style={{ fontSize: 10, fontWeight: 700, color: badge.color, background: badge.bg, borderRadius: 7, padding: "1px 7px" }}>{badge.label}</span>
                       </div>
                     </div>
+                    <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
                     {manageGuests && delBtn(p)}
                   </div>
                 )
@@ -1958,7 +1985,6 @@ export default function RundoTable() {
                     </label>
                   </>
                 )}
-                <button onClick={() => { setScanFail(null); setShowScan(false); if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) } openNewItem("bill") }} style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 12.5, fontWeight: 700 }}>✏️ Zelf items invoeren</button>
                 <button onClick={runLocalScan} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 11.5, fontWeight: 700, color: "#9aa0ab", textDecoration: "underline", textUnderlineOffset: 2 }}>Toch de snelle scan gebruiken (minder nauwkeurig)</button>
               </div>
             )}
