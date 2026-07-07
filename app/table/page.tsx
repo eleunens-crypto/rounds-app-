@@ -731,6 +731,24 @@ export default function RundoTable() {
     if (p) pickMe(p.id)
   }
 
+  // Hernummer naamloze gasten ("Gast N") naar hun positie, zodat er geen gaten ontstaan na verwijderen.
+  const renumberGuests = async () => {
+    if (!group) return
+    const { data } = await supabase.from("table_participants").select("*").eq("group_id", group.id)
+    const ordered = [...((data as Participant[]) || [])].sort((a, b) => {
+      const ca = a.created_at ?? "", cb = b.created_at ?? ""
+      if (ca !== cb) return ca < cb ? -1 : 1
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+    })
+    for (let i = 0; i < ordered.length; i++) {
+      const g = ordered[i]
+      if (/^Gast \d+$/.test(g.name || "")) {
+        const expected = `Gast ${i + 1}`
+        if (g.name !== expected) await supabase.from("table_participants").update({ name: expected }).eq("id", g.id)
+      }
+    }
+  }
+
   const removeGuest = async (id: string) => {
     if (!group) return
     if (!confirm("Deze gast verwijderen? Zijn/haar claims verdwijnen ook.")) return
@@ -738,6 +756,7 @@ export default function RundoTable() {
     await supabase.from("table_confirmations").delete().eq("group_id", group.id).eq("participant_id", id)
     await supabase.from("table_participants").delete().eq("id", id)
     if (meId === id) { setMeIdStored(group.id, null); setMeId(null) }
+    await renumberGuests()
     await loadAll(group.id)
   }
 
@@ -1809,6 +1828,26 @@ export default function RundoTable() {
               )
             })}
             {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen gasten</div>}
+            {items.length > 0 && participants.length > 0 && (() => {
+              const assignedSum = participants.reduce((s, p) => s + personTotal(p.id).settled, 0)
+              const allAssigned = openUnits === 0 && undecidedShared.length === 0
+              const todo = openUnits + undecidedShared.length
+              return (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1.5px solid rgba(16,24,40,0.08)" }}>
+                  {allAssigned ? (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.55)", borderRadius: 12, padding: "10px 14px" }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13.5, fontWeight: 800, color: "#1f8a4c" }}>✅ Alles toegewezen</span>
+                      <span style={{ fontSize: 17, fontWeight: 800, color: "#1f8a4c" }}>€{assignedSum.toFixed(2).replace(".", ",")}</span>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>Toegewezen <span style={{ color: "#c0392b", fontWeight: 700 }}>· nog {todo} te doen</span></span>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: "#14213a" }}>€{assignedSum.toFixed(2).replace(".", ",")} <span style={{ fontSize: 12, color: "#9aa0ab", fontWeight: 700 }}>/ €{billTotal.toFixed(2).replace(".", ",")}</span></span>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </div>
 
           {group.finalized ? (
