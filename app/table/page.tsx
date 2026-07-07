@@ -244,7 +244,7 @@ function fileToBase64(file: File): Promise<string> {
 
 // Hoofd-scan: probeer eerst de AI-route (Gemini). Lukt dat niet (geen sleutel, fout, niets herkend),
 // dan valt hij automatisch terug op de lokale Tesseract-scan.
-async function scanReceipt(file: File, onProgress?: (p: number) => void): Promise<{ items: ParsedItem[]; total: number | null; source: "ai" | "local" }> {
+async function scanReceipt(file: File, onProgress?: (p: number) => void): Promise<{ ok: true; items: ParsedItem[]; total: number | null } | { ok: false; reason: "unavailable" | "empty" }> {
   try {
     onProgress?.(0.15)
     const imageBase64 = await fileToBase64(file)
@@ -254,35 +254,35 @@ async function scanReceipt(file: File, onProgress?: (p: number) => void): Promis
       body: JSON.stringify({ imageBase64, mimeType: file.type || "image/jpeg" }),
     })
     onProgress?.(0.85)
-    if (resp.ok) {
-      const data = await resp.json()
-      if (Array.isArray(data?.items)) {
-        const items: ParsedItem[] = data.items
-          .map((it: { name?: string; quantity?: number; unit_price?: number; uncertain?: boolean; note?: string; is_extra_cost?: boolean }) => ({
-            name: String(it.name ?? "").trim(),
-            quantity: it.is_extra_cost ? 1 : Math.max(1, Math.round(Number(it.quantity) || 1)),
-            unit_price: Math.max(0, Math.round((Number(it.unit_price) || 0) * 100) / 100),
-            is_shared: false,
-            uncertain: !!it.uncertain,
-            note: String(it.note ?? "").trim(),
-            // Aparte extra kost (bediening, couvert, leveringskosten…) -> als gedeelde kost over iedereen verdelen.
-            ...(it.is_extra_cost ? { distribute: "all" } : {}),
-          }))
-          .filter((it: ParsedItem) => it.name.length > 0)
-        if (items.length > 0) {
-          onProgress?.(1)
-          const total = data.total != null && !isNaN(Number(data.total)) ? Math.round(Number(data.total) * 100) / 100 : null
-          return { items, total, source: "ai" }
-        }
-      }
-    } else {
-      console.warn("AI-scan niet beschikbaar (status " + resp.status + ") — terugval op lokale scan.")
+    if (!resp.ok) {
+      console.warn("AI-scan niet beschikbaar (status " + resp.status + ")")
+      return { ok: false, reason: "unavailable" }
     }
+    const data = await resp.json()
+    if (Array.isArray(data?.items)) {
+      const items: ParsedItem[] = data.items
+        .map((it: { name?: string; quantity?: number; unit_price?: number; uncertain?: boolean; note?: string; is_extra_cost?: boolean }) => ({
+          name: String(it.name ?? "").trim(),
+          quantity: it.is_extra_cost ? 1 : Math.max(1, Math.round(Number(it.quantity) || 1)),
+          unit_price: Math.max(0, Math.round((Number(it.unit_price) || 0) * 100) / 100),
+          is_shared: false,
+          uncertain: !!it.uncertain,
+          note: String(it.note ?? "").trim(),
+          ...(it.is_extra_cost ? { distribute: "all" } : {}),
+        }))
+        .filter((it: ParsedItem) => it.name.length > 0)
+      if (items.length > 0) {
+        onProgress?.(1)
+        const total = data.total != null && !isNaN(Number(data.total)) ? Math.round(Number(data.total) * 100) / 100 : null
+        return { ok: true, items, total }
+      }
+    }
+    // AI antwoordde, maar niets bruikbaars herkend -> waarschijnlijk fotokwaliteit
+    return { ok: false, reason: "empty" }
   } catch (e) {
-    console.warn("AI-scan mislukt, terugval op lokale scan:", e)
+    console.warn("AI-scan mislukt:", e)
+    return { ok: false, reason: "unavailable" }
   }
-  // Terugval: lokale OCR
-  return { ...(await scanReceiptOCR(file, onProgress)), source: "local" }
 }
 
 async function scanReceiptOCR(file: File, onProgress?: (p: number) => void): Promise<{ items: ParsedItem[]; total: number | null }> {
@@ -320,6 +320,7 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
 export default function RundoTable() {
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+  const lastActive = useRef(Date.now())
 
   // Zorg dat het scherm op iPhone/Android altijd volledig toont en niet inzoomt bij het tikken
   // in een invoerveld (iOS zoomt anders in en toont niet alles). We forceren de juiste viewport.
@@ -381,7 +382,9 @@ export default function RundoTable() {
   const [scanFlags, setScanFlags] = useState<Record<string, { note: string }>>({})
   const [scanning, setScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState(0)
-  const [scanError, setScanError] = useState<string | null>(null)
+  const [scanFail, setScanFail] = useState<null | { reason: "unavailable" | "empty" }>(null)
+  const [cooldownUntil, setCooldownUntil] = useState(0)
+  const [nowTs, setNowTs] = useState<number>(() => Date.now())
   const [scanPreview, setScanPreview] = useState<ParsedItem[]>([])
   // Toont of de laatste scan via de AI ging of via de lokale terugval (voor de beheerder).
   const [scanSource, setScanSource] = useState<"ai" | "local" | null>(null)
@@ -396,7 +399,6 @@ export default function RundoTable() {
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [newGuest, setNewGuest] = useState("")
   const [newGuestSeats, setNewGuestSeats] = useState(1)
-  const [editGuestId, setEditGuestId] = useState<string | null>(null)
   const [showAddGuest, setShowAddGuest] = useState(false)
   const [showTodo, setShowTodo] = useState(false)
   const [showTaxInfo, setShowTaxInfo] = useState(false)
@@ -408,6 +410,8 @@ export default function RundoTable() {
   const [recentItemId, setRecentItemId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [asleep, setAsleep] = useState(false)
+  const [manageGuests, setManageGuests] = useState(false)
 
   const loadAll = useCallback(async (groupId: string) => {
     const [{ data: p }, { data: it }, { data: cl }, { data: cf }, { data: g }] = await Promise.all([
@@ -432,7 +436,7 @@ export default function RundoTable() {
   }, [])
 
  useEffect(() => {
-    if (!group) return
+    if (!group || asleep) return
     const groupId = group.id
     let active = true
     let ch: ReturnType<typeof supabase.channel> | null = null
@@ -473,7 +477,42 @@ export default function RundoTable() {
       if (ch) supabase.removeChannel(ch)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [group?.id, loadAll])
+  }, [group?.id, loadAll, asleep])
+
+  // Inactiviteits-slaapstand: na 3 min zonder tik/scroll/toets 'slaapt' het scherm
+  // (realtime stopt via de guard hierboven -> spaart data). We meten inactiviteit met een
+  // tijdstempel + interval i.p.v. één lange setTimeout, want die wordt door de browser
+  // gepauzeerd zodra het tabblad verborgen is (scherm op slot) en vuurt dan niet betrouwbaar.
+  // Enkel een échte tik/toets/scroll of een tik op de banner hervat; terugkeren naar het
+  // tabblad hervat NIET vanzelf, zodat de "gepauzeerd"-melding zichtbaar blijft.
+  useEffect(() => {
+    if (!group) return
+    const SLEEP_MS = 3 * 60 * 1000
+    lastActive.current = Date.now()
+    setAsleep(false)
+    const check = () => {
+      if (mounted.current && Date.now() - lastActive.current >= SLEEP_MS) setAsleep(true)
+    }
+    const markActive = () => { lastActive.current = Date.now(); setAsleep((a) => (a ? false : a)) }
+    const onVis = () => { if (typeof document !== "undefined" && document.visibilityState === "visible") check() }
+    const evts: (keyof WindowEventMap)[] = ["pointerdown", "keydown", "scroll", "touchstart"]
+    evts.forEach((e) => window.addEventListener(e, markActive, { passive: true }))
+    document.addEventListener("visibilitychange", onVis)
+    const iv = setInterval(check, 20 * 1000)
+    return () => {
+      clearInterval(iv)
+      evts.forEach((e) => window.removeEventListener(e, markActive))
+      document.removeEventListener("visibilitychange", onVis)
+    }
+  }, [group?.id])
+
+  // Live afteller voor de "opnieuw proberen"-knop na een tijdelijk mislukte scan.
+  useEffect(() => {
+    if (!scanFail || scanFail.reason !== "unavailable") return
+    setNowTs(Date.now())
+    const iv = setInterval(() => setNowTs(Date.now()), 500)
+    return () => clearInterval(iv)
+  }, [scanFail, cooldownUntil])
 
   useEffect(() => {
     if (group && typeof window !== "undefined") localStorage.setItem("rundo_table_last_tab", adminTab)
@@ -579,9 +618,10 @@ export default function RundoTable() {
     setGroup(null); setMeId(null); setItems([]); setClaims([]); setParticipants([]); setConfirmations([])
     setGroupName(""); setPartySize(""); setError(null)
     setViaLink(false); setShowSaved(false)
-    setScanPreview([]); setScanFile(null); setScanPhotoUrl(null); setScanTotal(""); setScanError(null); setShowScan(false)
+    setScanPreview([]); setScanFile(null); setScanPhotoUrl(null); setScanTotal(""); setScanFail(null); setShowScan(false)
     setAdminTab("scan"); setExpandedPeople(new Set()); setClaimMode("item"); setClaimPid(null)
-    setEditGuestId(null); setShowTodo(false); setShowAddGuest(false); setViewReceipt(null)
+    setShowTodo(false); setShowAddGuest(false); setViewReceipt(null)
+    setManageGuests(false); setAsleep(false)
     autoJoined.current = true
     rememberLastGroup(null)
     try { if (typeof sessionStorage !== "undefined") sessionStorage.removeItem("rundo_table_session") } catch { /* ignore */ }
@@ -730,30 +770,44 @@ export default function RundoTable() {
 
   const onPhotoPicked = async (file: File | undefined) => {
     if (!file) return
-    setScanError(null); setScanPreview([]); setScanProgress(0); setScanning(true)
+    setScanFail(null); setScanPreview([]); setScanProgress(0); setScanning(true)
     setScanFile(file); setRetryFile(file)
     if (scanPhotoUrl) URL.revokeObjectURL(scanPhotoUrl)
     setScanPhotoUrl(URL.createObjectURL(file))
+    let res: { ok: true; items: ParsedItem[]; total: number | null } | { ok: false; reason: "unavailable" | "empty" }
     try {
-      const parsed = await scanReceipt(file, (p) => setScanProgress(p))
-      setScanSource(parsed.source)
-      if (parsed.items.length === 0) {
-        setScanPreview([])
-        setScanError("Niets herkend op de foto. Maak een scherpere foto, recht van boven en goed belicht, en probeer opnieuw.")
-        setScanning(false)
-        return
-      }
-      // Meteen bevestigen en naar de Bon-tab: daar kan je alles nog checken en corrigeren.
-      setScanning(false)
-      await confirmScan(parsed.items, parsed.total != null ? parsed.total.toFixed(2).replace(".", ",") : "", file)
+      res = await scanReceipt(file, (pr) => setScanProgress(pr))
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e)
-      console.error("Tesseract scan-fout:", e)
-      setScanError("Scannen kon niet starten (technische fout): " + msg)
-      setScanning(false)
+      console.error("Scan-fout:", e)
+      res = { ok: false, reason: "unavailable" }
     }
+    setScanning(false)
+    if (res.ok) {
+      setScanSource("ai")
+      await confirmScan(res.items, res.total != null ? res.total.toFixed(2).replace(".", ",") : "", file)
+      return
+    }
+    if (res.reason === "unavailable") setCooldownUntil(Date.now() + 45 * 1000)
+    setScanFail({ reason: res.reason })
   }
 
+  // Alleen als de gebruiker er zelf voor kiest: de snelle, minder nauwkeurige lokale scan.
+  const runLocalScan = async () => {
+    const file = retryFile ?? scanFile
+    if (!file) { setToast("Geen foto beschikbaar."); return }
+    setScanFail(null); setScanProgress(0); setScanning(true)
+    try {
+      const { items, total } = await scanReceiptOCR(file, (pr) => setScanProgress(pr))
+      setScanning(false)
+      if (items.length === 0) { setScanFail({ reason: "empty" }); return }
+      setScanSource("local")
+      await confirmScan(items, total != null ? total.toFixed(2).replace(".", ",") : "", file)
+    } catch (e) {
+      console.error("Lokale scan-fout:", e)
+      setScanning(false)
+      setScanFail({ reason: "empty" })
+    }
+  }
   const confirmScan = async (previewArg?: ParsedItem[], totalArg?: string, fileArg?: File | null) => {
     const preview = previewArg ?? scanPreview
     const totalStr = totalArg ?? scanTotal
@@ -830,7 +884,7 @@ export default function RundoTable() {
     // Klopt het ingevulde totaal met items + BTW? Dan enkel een korte bevestiging.
     const computedNow = preview.filter((x) => !x.distribute).reduce((s, it) => s + (it.unit_price || 0) * (it.quantity || 0), 0) + preview.filter((x) => x.distribute).reduce((s, it) => s + (it.unit_price || 0), 0)
     const totalOk = !isNaN(billNum) && billNum > 0 && Math.abs(billNum - computedNow) < 0.01
-    setScanPreview([]); setScanTotal(""); setScanError(null); setScanFile(null)
+    setScanPreview([]); setScanTotal(""); setScanFail(null); setScanFile(null)
     if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) }
     setShowScan(false)
     await loadAll(group.id)
@@ -1114,6 +1168,7 @@ export default function RundoTable() {
     return { label: "nog niets", color: "#9aa0ab", bg: "rgba(16,24,40,0.05)" }
   }
 
+  const cooldownLeft = Math.max(0, Math.ceil((cooldownUntil - nowTs) / 1000))
   const billTotal = items.reduce((s, it) => s + itemTotal(it), 0)
   const billOk = (group?.receipt_total ?? null) != null && Math.abs((group?.receipt_total ?? 0) - billTotal) < 0.005
   const goGuests = () => { if (billOk) setAdminTab("guests"); else setShowShareWarn(true) }
@@ -1236,6 +1291,12 @@ export default function RundoTable() {
         </div>
       )}
 
+      {asleep && (
+        <div onClick={() => { lastActive.current = Date.now(); setAsleep(false) }} style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 3000, background: "rgba(20,33,58,0.92)", color: "#fff", padding: "9px 16px", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,24,40,0.3)", whiteSpace: "nowrap" }}>
+          ⏸ Live-updates gepauzeerd — tik om te hervatten
+        </div>
+      )}
+
       <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} me={me?.name} signedUp={participants.length} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} guestSeats={meId ? seatsOf(meId) : undefined} onGuestSeatsChange={meId ? (n) => setSeats(meId, n) : undefined} onSwitchPerson={meId ? switchPerson : undefined} />
 
       {group.finalized && (() => {
@@ -1315,13 +1376,6 @@ export default function RundoTable() {
           {items.length > 0 && scanSource === "ai" && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 10px", padding: "8px 12px", borderRadius: 10, fontSize: 12.5, fontWeight: 700, background: "rgba(16,24,40,0.04)", border: "1px solid rgba(16,24,40,0.1)", color: "#5a6680" }}>
               <span>Scan gelukt en items herkend <span style={{ color: "#1f8a4c", fontWeight: 800 }}>✓</span></span>
-            </div>
-          )}
-          {items.length > 0 && scanSource === "local" && (
-            <div style={{ margin: "0 0 10px", padding: "10px 12px", borderRadius: 10, background: "rgba(243,156,18,0.12)", border: "1px solid rgba(243,156,18,0.5)" }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: "#b5591a", lineHeight: 1.5 }}>📷 Lokale scan gebruikt (AI was tijdelijk niet beschikbaar). Volgorde en herkenning zijn waarschijnlijk fout of niet nauwkeurig!</div>
-              <div style={{ fontSize: 12, color: "#8a4514", lineHeight: 1.5, margin: "6px 0 8px" }}>Wacht ±1 minuut tot de AI weer beschikbaar is en probeer opnieuw:</div>
-              <button onClick={retryAiScan} disabled={!retryFile} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontSize: 13.5, fontWeight: 800, opacity: retryFile ? 1 : 0.5 }}>🔄 Probeer nieuwe AI-scan (veel nauwkeuriger!)</button>
             </div>
           )}
 
@@ -1484,9 +1538,9 @@ export default function RundoTable() {
       {isAdmin && adminTab === "guests" && (
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ ...S.card, order: 2 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <h3 style={{ ...S.h3, marginBottom: 0 }}>👥 Of voeg zelf alvast gasten toe</h3>
-              <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 700, fontSize: 13 }} onClick={() => setShowAddGuest((v) => !v)}>{showAddGuest ? "✕ Sluiten" : "+ Toevoegen"}</button>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <h3 style={{ ...S.h3, marginBottom: 0, minWidth: 0 }}>👥 Of voeg zelf alvast gasten toe</h3>
+              <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 700, fontSize: 13, flexShrink: 0 }} onClick={() => setShowAddGuest((v) => !v)}>{showAddGuest ? "✕ Sluiten" : "+ Toevoegen"}</button>
             </div>
             <div style={{ marginTop: 4, marginBottom: 2 }}>
               <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>• Ze kunnen dan hun naam selecteren via QR/link hierboven</div>
@@ -1503,66 +1557,57 @@ export default function RundoTable() {
               </div>
             )}
 
+            {participants.length > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 12, marginBottom: 2 }}>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: "#9aa0ab" }}>{participants.length} {participants.length === 1 ? "gast" : "gasten"} · tik een naam om te wijzigen</span>
+                <button onClick={() => setManageGuests((v) => !v)} style={{ ...S.smallBtn, flexShrink: 0, ...(manageGuests ? { borderColor: "rgba(224,107,94,0.6)", color: "#c0392b", background: "rgba(224,107,94,0.06)" } : {}) }}>{manageGuests ? "✓ Klaar" : "🗑️ Verwijderen"}</button>
+              </div>
+            )}
+
             {(() => {
               const twoCol = participants.length > 5
+              const nameInput = (p: Participant, fontSize: number) => (
+                <input defaultValue={p.name} key={p.name}
+                  onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== p.name) renameGuest(p.id, v); else e.target.value = p.name }}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+                  style={{ flex: 1, minWidth: 0, width: "100%", border: "none", borderBottom: "1px dashed rgba(16,24,40,0.22)", background: "transparent", fontWeight: 700, fontSize, color: "#14213a", padding: "3px 2px", outline: "none" }} />
+              )
+              const delBtn = (p: Participant) => (
+                <button onClick={() => removeGuest(p.id)} title="verwijderen" style={{ flexShrink: 0, width: 24, height: 24, borderRadius: 7, border: "none", background: "rgba(224,107,94,0.14)", color: "#c0392b", fontSize: 15, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>×</button>
+              )
               const Row = (p: Participant) => {
-                const st = guestStatus(p.id)
                 const origin = p.self_joined
                   ? { label: "zelf aangemeld", color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
-                  : { label: "door admin", color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
+                  : { label: "via admin", color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
                 if (twoCol) {
-                  const editing = editGuestId === p.id
                   return (
-                    <div key={p.id} onClick={() => { if (!editing) { setClaimMode("person"); setClaimPid(p.id); setAdminTab("overview") } }}
-                      style={{ border: "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "8px 10px", cursor: editing ? "default" : "pointer", background: "#fff" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        {editing ? (
-                          <input autoFocus defaultValue={p.name} onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => { if (e.key === "Enter") { renameGuest(p.id, (e.target as HTMLInputElement).value); setEditGuestId(null) } if (e.key === "Escape") setEditGuestId(null) }}
-                            onBlur={(e) => { renameGuest(p.id, e.target.value); setEditGuestId(null) }}
-                            style={{ ...S.input, flex: 1, minWidth: 0, padding: "5px 8px", fontWeight: 700, fontSize: 14 }} />
-                        ) : (
-                          <span style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                        )}
-                        <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} size={13} showLabel />
-                        <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 12 }} onClick={(e) => { e.stopPropagation(); setEditGuestId(editing ? null : p.id) }} title="naam wijzigen">✏️</button>
-                        <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={(e) => { e.stopPropagation(); removeGuest(p.id) }}>🗑️</button>
+                    <div key={p.id} style={{ border: manageGuests ? "1px solid rgba(224,107,94,0.4)" : "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "7px 8px", background: manageGuests ? "rgba(224,107,94,0.04)" : "#fff" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
+                        {nameInput(p, 13.5)}
+                        {manageGuests && delBtn(p)}
                       </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5, alignItems: "center" }}>
+                      <div style={{ marginTop: 5 }}>
                         <span style={{ fontSize: 9.5, fontWeight: 700, color: origin.color, background: origin.bg, borderRadius: 7, padding: "1px 6px" }}>{origin.label}</span>
-                        <span style={{ fontSize: 9.5, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 7, padding: "1px 6px" }}>{st.label}</span>
-                        <span style={{ fontSize: 11, color: "#aaa", marginLeft: "auto", fontWeight: 700 }}>€{personTotal(p.id).settled.toFixed(2).replace(".", ",")}</span>
                       </div>
                     </div>
                   )
                 }
-                const editing = editGuestId === p.id
                 return (
-                  <div key={p.id} onClick={() => { if (!editing) { setClaimMode("person"); setClaimPid(p.id); setAdminTab("overview") } }}
-                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)", cursor: editing ? "default" : "pointer" }}>
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                    <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-                        {editing ? (
-                          <input autoFocus defaultValue={p.name} onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => { if (e.key === "Enter") { renameGuest(p.id, (e.target as HTMLInputElement).value); setEditGuestId(null) } if (e.key === "Escape") setEditGuestId(null) }}
-                            onBlur={(e) => { renameGuest(p.id, e.target.value); setEditGuestId(null) }}
-                            style={{ ...S.input, padding: "5px 8px", fontWeight: 600, fontSize: 15, minWidth: 100, maxWidth: 160 }} />
-                        ) : (
-                          <span style={{ fontWeight: 600, fontSize: 15 }}>{p.name}</span>
-                        )}
-                        <span style={{ fontSize: 10.5, fontWeight: 700, color: origin.color, background: origin.bg, borderRadius: 8, padding: "1px 7px", whiteSpace: "nowrap" }}>{origin.label}</span>
-                        <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} showLabel />
-                        <button style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 13 }} onClick={(e) => { e.stopPropagation(); setEditGuestId(editing ? null : p.id) }} title="naam wijzigen">✏️</button>
+                      {nameInput(p, 15)}
+                      <div style={{ marginTop: 3 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: origin.color, background: origin.bg, borderRadius: 7, padding: "1px 7px" }}>{origin.label}</span>
                       </div>
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 10, padding: "2px 9px" }}>{st.label}</span>
-                    <span style={{ fontSize: 12, color: "#aaa" }}>€{personTotal(p.id).settled.toFixed(2).replace(".", ",")}</span>
-                    <button style={S.iconBtn} onClick={(e) => { e.stopPropagation(); removeGuest(p.id) }}>🗑️</button>
+                    {manageGuests && delBtn(p)}
                   </div>
                 )
               }
               return (
-                <div style={{ marginTop: showAddGuest ? 6 : 12 }}>
+                <div style={{ marginTop: participants.length > 0 ? 8 : (showAddGuest ? 6 : 12) }}>
                   {participants.length === 0
                     ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog geen gasten — voeg er toe of deel de link hierboven <span style={{ fontStyle: "italic" }}>(tip: vergeet jezelf niet!)</span></div>
                     : twoCol
@@ -1585,24 +1630,21 @@ export default function RundoTable() {
                 </div>
               )
             })()}
-            <h3 style={S.h3}>🔗 Laat nu je gasten hun consumpties aantikken</h3>
-            <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 12 }}>Hoe? Deel deze groep met je gasten via QR of deelbare link.</p>
+            <h3 style={S.h3}>🔗 Laat je gasten meedoen</h3>
+            <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 12 }}>Deel deze groep via de QR-code of de link.</p>
             {(() => {
               const link = typeof window !== "undefined" ? `${window.location.origin}/table?code=${group.invite_code}` : ""
+              const invite = `Je bent uitgenodigd voor "${group.name}" — verdeel mee de rekening via Rundo Table 👉 ${link}`
               return (
                 <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
                   <div style={{ background: "#fff", padding: 10, borderRadius: 14, border: "1px solid rgba(0,0,0,0.08)", flexShrink: 0 }}>
                     <QRCodeSVG value={link} size={120} bgColor="#ffffff" fgColor="#1b2a4a" />
                   </div>
                   <div style={{ flex: 1, minWidth: 180 }}>
+                    <div style={{ fontSize: 12.5, color: "#3b486a", lineHeight: 1.5, marginBottom: 8 }}>Je gasten komen zo in <b>{group.name}</b> om mee de rekening te verdelen.</div>
                     <div style={{ fontSize: 11, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 6 }}>Deelbare link</div>
                     <div style={{ fontSize: 12, color: "#5a6680", wordBreak: "break-all", background: "rgba(20,33,58,0.04)", borderRadius: 10, padding: "8px 10px", marginBottom: 8 }}>{link}</div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button style={{ ...S.btn, flex: 1, fontWeight: 700 }} onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(link); setToast("Link gekopieerd") } }}>📋 Link kopiëren</button>
-                      {typeof navigator !== "undefined" && "share" in navigator && (
-                        <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={() => navigator.share({ title: "Rundo Table", text: "Doe mee met de rekening", url: link }).catch(() => {})}>📤 Delen</button>
-                      )}
-                    </div>
+                    <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 700 }} onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(invite); setToast("Uitnodiging gekopieerd") } }}>📋 Uitnodiging kopiëren</button>
                   </div>
                 </div>
               )
@@ -1894,8 +1936,27 @@ export default function RundoTable() {
               </div>
             )}
 
-            {scanError && !scanning && (
-              <div style={{ fontSize: 12.5, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 10, padding: "9px 11px", marginBottom: 14, lineHeight: 1.45 }}>⚠️ {scanError}</div>
+            {scanFail && !scanning && (
+              <div style={{ marginBottom: 14, border: "1px solid rgba(224,107,94,0.45)", background: "rgba(224,107,94,0.06)", borderRadius: 12, padding: "13px 14px" }}>
+                {scanFail.reason === "unavailable" ? (
+                  <>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>😕 De slimme scan is even niet beschikbaar</div>
+                    <div style={{ fontSize: 12.5, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>De AI-herkenning is momenteel overbelast of tijdelijk offline. Wacht heel even en probeer opnieuw — meestal is ze na een halve minuut terug. Je foto blijft bewaard.</div>
+                    <button onClick={retryAiScan} disabled={cooldownLeft > 0} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 14, fontWeight: 800, opacity: cooldownLeft > 0 ? 0.55 : 1, cursor: cooldownLeft > 0 ? "default" : "pointer" }}>{cooldownLeft > 0 ? `🔄 Opnieuw proberen over ${cooldownLeft}s` : "🔄 Opnieuw proberen"}</button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>📷 Niets herkend op de foto</div>
+                    <div style={{ fontSize: 12.5, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>De scan kon geen items lezen. Maak een scherpere foto — recht van boven, goed belicht en zonder plooien of schaduw — en probeer opnieuw.</div>
+                    <label style={{ ...S.btn, ...S.btnPrimary, display: "block", textAlign: "center", padding: "12px 0", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+                      📷 Andere foto kiezen
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
+                    </label>
+                  </>
+                )}
+                <button onClick={() => { setScanFail(null); setShowScan(false); if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) } openNewItem("bill") }} style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 12.5, fontWeight: 700 }}>✏️ Zelf items invoeren</button>
+                <button onClick={runLocalScan} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 11.5, fontWeight: 700, color: "#9aa0ab", textDecoration: "underline", textUnderlineOffset: 2 }}>Toch de snelle scan gebruiken (minder nauwkeurig)</button>
+              </div>
             )}
 
             {scanPhotoUrl && (
@@ -2056,7 +2117,7 @@ export default function RundoTable() {
             })()}
 
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, flex: 1 }} disabled={scanning} onClick={() => { setShowScan(false); setScanPreview([]); setScanTotal(""); setScanError(null); setScanFile(null); if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) } }}>{scanPreview.length > 0 ? "Annuleren" : "Sluiten"}</button>
+              <button style={{ ...S.btn, flex: 1 }} disabled={scanning} onClick={() => { setShowScan(false); setScanPreview([]); setScanTotal(""); setScanFail(null); setScanFile(null); if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) } }}>{scanPreview.length > 0 ? "Annuleren" : "Sluiten"}</button>
               {scanPreview.length > 0 && (
                 <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={() => confirmScan()} disabled={scanning}>✅ Bevestigen & toevoegen</button>
               )}
@@ -2844,19 +2905,21 @@ function ShareIcon({ on, size = 20 }: { on?: boolean; size?: number }) {
   )
 }
 
-function SeatsControl({ n, onChange, max, size = 15, showLabel = false }: { n: number; onChange: (next: number) => void; max?: number; size?: number; showLabel?: boolean }) {
+function SeatsControl({ n, onChange, max, size = 15, showLabel = false, compact = false }: { n: number; onChange: (next: number) => void; max?: number; size?: number; showLabel?: boolean; compact?: boolean }) {
   const seats = Math.max(1, n)
-  const icons = Math.min(seats, 6)
+  const capIcons = compact ? 2 : 6
+  const icons = Math.min(seats, capIcons)
   const atMax = max != null && seats >= max
+  const bw = compact ? 16 : 18
   return (
-    <span onClick={(e) => e.stopPropagation()} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(90,108,166,0.1)", borderRadius: 9, padding: "2px 5px 2px 8px" }} title="Voor hoeveel personen telt deze naam (bij gedeelde items)">
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 1, fontSize: size, lineHeight: 1 }}>
+    <span onClick={(e) => e.stopPropagation()} style={{ display: "inline-flex", alignItems: "center", gap: compact ? 3 : 5, background: "rgba(90,108,166,0.1)", borderRadius: 9, padding: compact ? "2px 4px" : "2px 5px 2px 8px", flexShrink: 0 }} title="Voor hoeveel personen telt deze naam (bij gedeelde items)">
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 1, fontSize: compact ? 12 : size, lineHeight: 1 }}>
         {Array.from({ length: icons }).map((_, i) => <span key={i}>👤</span>)}
-        {seats > 6 && <span style={{ fontSize: 11, fontWeight: 800, color: "#5a6680", marginLeft: 2 }}>+{seats - 6}</span>}
+        {seats > capIcons && <span style={{ fontSize: compact ? 9.5 : 11, fontWeight: 800, color: "#5a6680", marginLeft: 1 }}>+{seats - capIcons}</span>}
       </span>
-      {showLabel && <span style={{ fontSize: 11.5, fontWeight: 700, color: "#5a6680", whiteSpace: "nowrap" }}>{seats} pers.</span>}
-      <button onClick={(e) => { e.stopPropagation(); onChange(Math.max(1, seats - 1)) }} disabled={seats <= 1} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: 18, height: 18, cursor: seats <= 1 ? "default" : "pointer", fontSize: 12, lineHeight: 1, opacity: seats <= 1 ? 0.4 : 1 }}>−</button>
-      <button onClick={(e) => { e.stopPropagation(); if (!atMax) onChange(seats + 1) }} disabled={atMax} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: 18, height: 18, cursor: atMax ? "default" : "pointer", fontSize: 12, lineHeight: 1, opacity: atMax ? 0.4 : 1 }}>+</button>
+      {(showLabel || compact) && <span style={{ fontSize: compact ? 10.5 : 11.5, fontWeight: 700, color: "#5a6680", whiteSpace: "nowrap" }}>{seats} p.</span>}
+      <button onClick={(e) => { e.stopPropagation(); onChange(Math.max(1, seats - 1)) }} disabled={seats <= 1} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: bw, height: bw, cursor: seats <= 1 ? "default" : "pointer", fontSize: compact ? 11 : 12, lineHeight: 1, opacity: seats <= 1 ? 0.4 : 1 }}>−</button>
+      <button onClick={(e) => { e.stopPropagation(); if (!atMax) onChange(seats + 1) }} disabled={atMax} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: bw, height: bw, cursor: atMax ? "default" : "pointer", fontSize: compact ? 11 : 12, lineHeight: 1, opacity: atMax ? 0.4 : 1 }}>+</button>
     </span>
   )
 }
