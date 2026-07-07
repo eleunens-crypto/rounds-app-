@@ -871,6 +871,7 @@ export default function RundoTable() {
     const totalStr = totalArg ?? scanTotal
     const file = fileArg !== undefined ? fileArg : scanFile
     if (!group || preview.length === 0) return
+    setReceiptConfirmed(false); setReceiptEditing(false)
     let receiptUrl = group.receipt_url ?? null
     if (file) {
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase()
@@ -1201,9 +1202,10 @@ export default function RundoTable() {
 
   const tipShare = (pid: string): number => {
     if (tipTotal <= 0) return 0
-    const denom = participants.reduce((a, q) => a + personTotalNoTip(q.id).settled, 0)
-    if (denom > 0) return tipTotal * personTotalNoTip(pid).settled / denom
-    return participants.length > 0 ? tipTotal / participants.length : 0
+    const has = (q: string) => baseItems.some((it) => it.is_shared ? sharerIds(it.id).includes(q) : myQty(it.id, q) > 0)
+    if (!has(pid)) return 0
+    const n = participants.filter((q) => has(q.id)).length
+    return n > 0 ? tipTotal / n : 0
   }
 
   const personTotal = (pid: string): { settled: number; pendingShared: boolean } => {
@@ -1484,12 +1486,12 @@ export default function RundoTable() {
             const match = entered != null && Math.abs(entered - billTotal) < 0.005
             const mismatch = entered != null && !match
             const saveTotal = () => { setReceiptConfirmed(false); const raw = (receiptInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }
-            const greenState = !receiptEditing && (match || (mismatch && receiptConfirmed))
+            const greenState = !receiptEditing && receiptConfirmed
             const jaBtn = { border: "none", background: "#27ae60", color: "#fff", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer" }
             const neenBtn = { border: "1.5px solid rgba(20,33,58,0.2)", background: "#fff", color: "#5a6680", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer" }
             const jaNeen = (
               <span style={{ display: "inline-flex", gap: 6 }}>
-                <button onClick={() => { setReceiptConfirmed(true); setReceiptEditing(false) }} style={{ ...jaBtn, opacity: (greenState) ? 1 : 0.55 }}>Ja</button>
+                <button onClick={() => { setReceiptConfirmed(true); setReceiptEditing(false) }} style={{ ...jaBtn }}>Ja</button>
                 <button onClick={() => { setReceiptEditing(true); setReceiptConfirmed(false); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }} style={{ ...neenBtn, ...(receiptEditing ? { borderColor: "#1499b0", color: "#1499b0" } : {}) }}>Neen</button>
               </span>
             )
@@ -1499,12 +1501,10 @@ export default function RundoTable() {
                   <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#5a6680", marginBottom: 8 }}>Vul het totaal van de bon in — items: €{billTotal.toFixed(2).replace(".", ",")}</span>
                 ) : receiptEditing ? (
                   <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>Vul het correcte rekeningtotaal in zoals op de bon</span>
-                ) : match ? (
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>Kijk op je bon — klopt dit totaalbedrag?</span>
                 ) : receiptConfirmed ? (
                   <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", marginBottom: 6 }}>✓ Totaalbedrag klopt met de bon</span>
                 ) : (
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#c0392b", marginBottom: 6 }}>⚠️ Kijk op je bon — klopt dit totaalbedrag?</span>
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>Kijk op je bon — klopt dit totaalbedrag? Tik dan op Ja.</span>
                 )}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "#9aa0ab" }}>Rekeningtotaal op de bon: €</span>
@@ -1519,7 +1519,7 @@ export default function RundoTable() {
                   )}
                   {entered != null && jaNeen}
                 </div>
-                {match && !receiptEditing && (
+                {match && receiptConfirmed && !receiptEditing && (
                   <div style={{ marginTop: 8, fontSize: 12, color: "#5a6680", lineHeight: 1.5 }}>
                     ⚠️ Controleer alles goed — bedrag correct, maar een scan kan fouten bevatten, zeker bij een onduidelijke bon. Kijk namen, aantallen en prijzen na, en markeer gedeelde items indien nodig.
                   </div>
@@ -1537,7 +1537,7 @@ export default function RundoTable() {
             )
           })()}
 
-          {items.length > 0 && group?.receipt_total != null && Math.abs((group.receipt_total ?? 0) - billTotal) < 0.005 && (
+          {items.length > 0 && receiptConfirmed && !receiptEditing && group?.receipt_total != null && Math.abs((group.receipt_total ?? 0) - billTotal) < 0.005 && (
             <button onClick={goGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginBottom: 10, padding: "9px 0", fontSize: 13, fontWeight: 800, boxShadow: "0 0 0 2px rgba(39,174,96,0.5), 0 6px 16px -6px rgba(39,174,96,0.6)" }}>✓ Alles klopt — ga naar Gasten en delen →</button>
           )}
 
@@ -1908,7 +1908,7 @@ export default function RundoTable() {
             <div id="fooi-sectie" style={{ ...S.card, padding: "11px 14px", marginTop: 10 }}>
               {tipItem ? (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#3b486a" }}>💶 Fooi: <b>€{(tipItem.unit_price ?? 0).toFixed(2).replace(".", ",")}</b> <span style={{ fontSize: 11, color: "#9aa0ab", fontWeight: 600 }}>· proportioneel verdeeld</span></span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#3b486a" }}>💶 Fooi: <b>€{(tipItem.unit_price ?? 0).toFixed(2).replace(".", ",")}</b> <span style={{ fontSize: 11, color: "#9aa0ab", fontWeight: 600 }}>· gelijk over wie bestelde</span></span>
                   <button onClick={() => deleteItem(tipItem.id)} style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "6px 12px", flexShrink: 0 }}>Wissen</button>
                 </div>
               ) : (
@@ -1919,7 +1919,7 @@ export default function RundoTable() {
                     <input type="text" inputMode="decimal" value={tipInput} onChange={(e) => setTipInput(numFilter(e.target.value, true))} placeholder="5,00" style={{ width: 62, border: "none", outline: "none", background: "transparent", textAlign: "right", padding: "8px 10px 8px 2px", fontSize: 14 }} />
                   </div>
                   <button onClick={addTip} style={{ ...S.btn, ...S.btnPrimary, fontSize: 12.5, fontWeight: 700, padding: "8px 14px", flexShrink: 0 }}>Toevoegen</button>
-                  <span style={{ fontSize: 10.5, color: "#9aa0ab", width: "100%", marginTop: 2 }}>Optioneel — wordt proportioneel over de hele rekening verdeeld.</span>
+                  <span style={{ fontSize: 10.5, color: "#9aa0ab", width: "100%", marginTop: 2 }}>Optioneel — wordt gelijk verdeeld over iedereen die iets bestelde.</span>
                 </div>
               )}
             </div>
@@ -2024,7 +2024,7 @@ export default function RundoTable() {
         <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowTipReminder(false)}>
           <div style={{ ...S.modal, width: 350 }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0, marginBottom: 8, fontSize: 17, fontWeight: 800, color: "#14213a" }}>💶 Nog geen fooi toegevoegd</h3>
-            <div style={{ fontSize: 13, color: "#5a6680", lineHeight: 1.5, marginBottom: 16 }}>Wil je nog een fooi toevoegen voor je de rekening afsluit? Ze wordt proportioneel over iedereen verdeeld. Je kan ook gewoon zonder fooi doorgaan.</div>
+            <div style={{ fontSize: 13, color: "#5a6680", lineHeight: 1.5, marginBottom: 16 }}>Wil je nog een fooi toevoegen voor je de rekening afsluit? Ze wordt gelijk verdeeld over iedereen die iets bestelde. Je kan ook gewoon zonder fooi doorgaan.</div>
             <button onClick={() => { setShowTipReminder(false); if (typeof document !== "undefined") document.getElementById("fooi-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }) }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 14, fontWeight: 800, marginBottom: 8 }}>💶 Fooi toevoegen</button>
             <button onClick={() => { setShowTipReminder(false); finalizeBill(true) }} style={{ ...S.btn, width: "100%", padding: "10px 0", fontSize: 13, fontWeight: 700, color: "#9aa0ab", background: "transparent", border: "none" }}>Toch afsluiten zonder fooi</button>
           </div>
