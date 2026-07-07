@@ -244,7 +244,7 @@ function fileToBase64(file: File): Promise<string> {
 
 // Hoofd-scan: probeer eerst de AI-route (Gemini). Lukt dat niet (geen sleutel, fout, niets herkend),
 // dan valt hij automatisch terug op de lokale Tesseract-scan.
-async function scanReceipt(file: File, onProgress?: (p: number) => void): Promise<{ ok: true; items: ParsedItem[]; total: number | null } | { ok: false; reason: "unavailable" | "empty" }> {
+async function scanReceipt(file: File, onProgress?: (p: number) => void): Promise<{ items: ParsedItem[] | null; total: number | null; reason: "unavailable" | "empty" | null }> {
   try {
     onProgress?.(0.15)
     const imageBase64 = await fileToBase64(file)
@@ -256,7 +256,7 @@ async function scanReceipt(file: File, onProgress?: (p: number) => void): Promis
     onProgress?.(0.85)
     if (!resp.ok) {
       console.warn("AI-scan niet beschikbaar (status " + resp.status + ")")
-      return { ok: false, reason: "unavailable" }
+      return { items: null, total: null, reason: "unavailable" }
     }
     const data = await resp.json()
     if (Array.isArray(data?.items)) {
@@ -274,14 +274,14 @@ async function scanReceipt(file: File, onProgress?: (p: number) => void): Promis
       if (items.length > 0) {
         onProgress?.(1)
         const total = data.total != null && !isNaN(Number(data.total)) ? Math.round(Number(data.total) * 100) / 100 : null
-        return { ok: true, items, total }
+        return { items, total, reason: null }
       }
     }
     // AI antwoordde, maar niets bruikbaars herkend -> waarschijnlijk fotokwaliteit
-    return { ok: false, reason: "empty" }
+    return { items: null, total: null, reason: "empty" }
   } catch (e) {
     console.warn("AI-scan mislukt:", e)
-    return { ok: false, reason: "unavailable" }
+    return { items: null, total: null, reason: "unavailable" }
   }
 }
 
@@ -776,9 +776,10 @@ export default function RundoTable() {
     setScanPhotoUrl(URL.createObjectURL(file))
     const res = await scanReceipt(file, (pr) => setScanProgress(pr))
     setScanning(false)
-    if (!res.ok) {
-      if (res.reason === "unavailable") setCooldownUntil(Date.now() + 45 * 1000)
-      setScanFail({ reason: res.reason })
+    if (!res.items || res.items.length === 0) {
+      const reason = res.reason ?? "empty"
+      if (reason === "unavailable") setCooldownUntil(Date.now() + 45 * 1000)
+      setScanFail({ reason })
       return
     }
     setScanSource("ai")
