@@ -1152,6 +1152,7 @@ export default function Home() {
   const selectorTotal = Object.values(selectorDraft).reduce((s, q) => s + q, 0)
   const confirmDrinkSelector = () => {
     const addedIds = Object.entries(selectorDraft).filter(([, q]) => q > 0).map(([id]) => id)
+    if (addedIds.length === 0) { setToast("Nog geen drankje geselecteerd — tik er eentje aan 👆"); return }
     if (selectorEditMode) {
       // Vervang de bestelling door wat nu in de selector staat; behoud toewijzingen (trim als een aantal daalt).
       setCart((prev) => {
@@ -2544,25 +2545,13 @@ export default function Home() {
                   const groupSize = participants.length
                   // In wijzig-modus toont de selector de VOLLEDIGE bestelling (die vervangt hij);
                   // anders telt wat je nu toevoegt op bij wat al in de bestelling zit.
-                  const already = selectorEditMode ? 0 : cartTotalItems
-                  const adding = selectorTotal
                   const newTotal = selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal
                   const over = groupSize > 0 ? newTotal - groupSize : 0
                   return (
                     <div style={{ marginTop: 10, padding: "9px 12px", borderRadius: 12, background: over > 0 ? "rgba(224,107,94,0.1)" : "rgba(120,95,20,0.04)", border: over > 0 ? "1px solid rgba(224,107,94,0.3)" : "1px solid transparent" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "#555", gap: 8, flexWrap: "wrap" }}>
                         <span>👥 <b style={{ color: "#4a3f1e" }}>{groupSize}</b> {groupSize === 1 ? "persoon" : "personen"}</span>
-                        <span>
-                          ✏️ {selectorEditMode ? (
-                            <b style={{ color: "#4a3f1e" }}>{newTotal}</b>
-                          ) : (
-                            <>
-                              <b style={{ color: "#4a3f1e" }}>{already}</b>
-                              {adding > 0 && <> + <b style={{ color: "#c8941a" }}>{adding}</b> = <b style={{ color: "#4a3f1e" }}>{newTotal}</b></>}
-                            </>
-                          )}
-                          {" "}{newTotal === 1 ? "drankje" : "drankjes"}
-                        </span>
+                        <span>🍻 <b style={{ color: "#4a3f1e" }}>{newTotal}</b> {newTotal === 1 ? "drankje" : "drankjes"}</span>
                       </div>
                       {over > 0 && (
                         <div style={{ marginTop: 6, fontSize: 12.5, fontWeight: 700, color: "#c0392b", lineHeight: 1.4 }}>
