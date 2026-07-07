@@ -1142,6 +1142,7 @@ export default function Home() {
     setSelectorDraft(q); setSelectorEditMode(true); setLastAddedCustomDrink(null); setShowDrinkSelector(true)
   }
   const changeSelectorQty = (drinkId: string, delta: number) => {
+    setLastAddedCustomDrink(null)
     setSelectorDraft((prev) => {
       const n = { ...prev }
       const v = Math.max(0, (n[drinkId] ?? 0) + delta)
@@ -2482,7 +2483,7 @@ export default function Home() {
                   {groupedDrinks.map(([cat]) => {
                     const isActive = activeCategory === cat || (activeCategory === null && cat === groupedDrinks[0]?.[0])
                     return (
-                      <button key={cat} onClick={() => { setActiveCategory(cat); setSelectorSearch("") }} style={{ border: "none", borderRadius: 13, padding: "11px 6px", fontSize: 12.5, fontWeight: 700, lineHeight: 1.2, cursor: "pointer", minHeight: 46, background: isActive ? "linear-gradient(135deg,#f4c430,#f7d461)" : "#f3ecd6", color: isActive ? "#4a3a0a" : "#a08a4a", boxShadow: isActive ? "0 3px 10px -2px rgba(233,196,95,0.55)" : "none" }}>
+                      <button key={cat} onClick={() => { setActiveCategory(cat); setSelectorSearch(""); setLastAddedCustomDrink(null) }} style={{ border: "none", borderRadius: 13, padding: "11px 6px", fontSize: 12.5, fontWeight: 700, lineHeight: 1.2, cursor: "pointer", minHeight: 46, background: isActive ? "linear-gradient(135deg,#f4c430,#f7d461)" : "#f3ecd6", color: isActive ? "#4a3a0a" : "#a08a4a", boxShadow: isActive ? "0 3px 10px -2px rgba(233,196,95,0.55)" : "none" }}>
                         {cat}
                       </button>
                     )
