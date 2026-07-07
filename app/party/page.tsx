@@ -728,6 +728,7 @@ export default function Home() {
   const [showIndicatiefInfo, setShowIndicatiefInfo] = useState(false) // info-popup achter de ? bij richtprijzen
   const [fairInfoMode, setFairInfoMode] = useState<null | "what" | "how">(null) // popup: wat is / hoe werkt fair split
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [selectorSearch, setSelectorSearch] = useState("")
   const [showFairSplit, setShowFairSplit] = useState(false)
   const [showFairSplitInfo, setShowFairSplitInfo] = useState(false)
   const [splitMode, setSplitMode] = useState<"fair" | "equal">("fair") // fair split of iedereen evenveel
@@ -1131,7 +1132,7 @@ export default function Home() {
   }
 
   // ─── Drank-selector: lokale selectie die telkens op 0 start ────────────
-  const openDrinkSelector = () => { setSelectorDraft({}); setSelectorEditMode(false); setLastAddedCustomDrink(null); setShowDrinkSelector(true) }
+  const openDrinkSelector = () => { setSelectorDraft({}); setSelectorEditMode(false); setLastAddedCustomDrink(null); setSelectorSearch(""); setShowDrinkSelector(true) }
   // 'Bestelling wijzigen': open de selector voorgevuld met de huidige bestelling (tellers tonen de huidige drankjes).
   const openDrinkSelectorEdit = () => {
     const q: Record<string, number> = {}
@@ -2484,6 +2485,12 @@ export default function Home() {
                   })}
                 </div>
 
+                {/* Zoekvak — over alle categorieën heen */}
+                <div style={{ position: "relative", marginBottom: 8 }}>
+                  <input value={selectorSearch} onChange={(e) => setSelectorSearch(e.target.value)} placeholder="🔍 Zoek in alle categorieën…" style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingRight: 34 }} />
+                  {selectorSearch && <button onClick={() => setSelectorSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#b3a476", fontSize: 16, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>}
+                </div>
+
                 {/* Melding na een zelf toegevoegd drankje: waar staat het nu */}
                 {lastAddedCustomDrink && (
                   <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.35)", borderRadius: 12, padding: "8px 11px", marginBottom: 8, fontSize: 12.5, color: "#1f8a4c", lineHeight: 1.4 }}>
@@ -2495,11 +2502,15 @@ export default function Home() {
                 {/* grid */}
                 <div style={{ overflowY: "auto", flex: 1 }}>
                   {groupedDrinks.map(([cat, list]) => {
-                    const isActive = activeCategory === cat || (activeCategory === null && cat === groupedDrinks[0]?.[0])
+                    const words = selectorSearch.trim().toLowerCase().split(/\s+/).filter(Boolean)
+                    const shown = words.length ? list.filter((d) => words.every((w) => d.name.toLowerCase().includes(w))) : list
+                    const isActive = words.length ? shown.length > 0 : (activeCategory === cat || (activeCategory === null && cat === groupedDrinks[0]?.[0]))
                     if (!isActive) return null
                     return (
-                      <div key={cat} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                        {list.map((d) => {
+                      <div key={cat} style={{ marginBottom: words.length ? 14 : 0 }}>
+                        {words.length > 0 && <div style={{ fontSize: 11.5, fontWeight: 800, color: "#c98a00", marginBottom: 6, paddingBottom: 3, borderBottom: "1px solid rgba(233,196,95,0.3)" }}>{cat}</div>}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        {shown.map((d) => {
                           const qty = selectorDraft[d.id] ?? 0
                           return (
                             <div key={d.id} style={{ background: qty > 0 ? "rgba(150,110,20,0.08)" : "#fffdf3", border: qty > 0 ? "1.5px solid rgba(150,110,20,0.35)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
@@ -2516,9 +2527,13 @@ export default function Home() {
                             </div>
                           )
                         })}
+                        </div>
                       </div>
                     )
                   })}
+                  {selectorSearch.trim() && !groupedDrinks.some(([, list]) => list.some((d) => selectorSearch.trim().toLowerCase().split(/\s+/).filter(Boolean).every((w) => d.name.toLowerCase().includes(w)))) && (
+                    <div style={{ textAlign: "center", color: "#a89a6a", fontSize: 13, padding: "24px 12px", lineHeight: 1.5 }}>Geen drankje gevonden — voeg het onderaan toe als eigen drankje.</div>
+                  )}
                 </div>
 
                 {/* Live overzicht: groep, wat al in de bestelling zit, en wat je nu toevoegt */}
@@ -2559,9 +2574,9 @@ export default function Home() {
                   {selectorTotal > 0 ? `Klaar? ${selectorTotal} item${selectorTotal !== 1 ? "s" : ""}` : "Klaar"}
                 </button>
 
-                <div style={{ marginTop: 12 }}>
-                  <button onClick={() => setShowAddDrink(true)} style={{ width: "100%", padding: "12px 0", fontSize: 13.5, fontWeight: 800, cursor: "pointer", color: "#8a6a12", background: "rgba(244,196,48,0.12)", border: "2px dashed rgba(214,158,20,0.6)", borderRadius: 14 }}>
-                    ⭐ Eigen drankje toevoegen
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+                  <button onClick={() => setShowAddDrink(true)} style={{ width: "50%", padding: "11px 0", fontSize: 12.5, fontWeight: 700, cursor: "pointer", color: "#a89a6a", background: "rgba(244,196,48,0.09)", border: "2px dashed rgba(214,158,20,0.4)", borderRadius: 14 }}>
+                    ⭐ Eigen drankje
                   </button>
                 </div>
                 {drinks.some(isGroupDrink) && (
@@ -2571,8 +2586,8 @@ export default function Home() {
                 )}
                 <div style={{ textAlign: "center", marginTop: 8 }}>
                   <button
-                    onClick={() => { setSelectorDraft({}); setSelectorEditMode(false); setLastAddedCustomDrink(null); setShowDrinkSelector(false) }}
-                    style={{ background: "none", border: "none", color: "#b3a476", fontSize: 12.5, fontWeight: 600, cursor: "pointer", padding: "4px 10px" }}
+                    onClick={() => { setSelectorDraft({}); setSelectorEditMode(false); setLastAddedCustomDrink(null); setSelectorSearch(""); setShowDrinkSelector(false) }}
+                    style={{ background: "none", border: "none", color: "#a89a6a", fontSize: 14, fontWeight: 700, cursor: "pointer", padding: "8px 22px" }}
                   >
                     Annuleren
                   </button>
