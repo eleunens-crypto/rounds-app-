@@ -2451,7 +2451,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         <h3 style={{ ...S.h3, marginBottom: 0, display: "flex", alignItems: "baseline", gap: 8 }}>🧾 Items op de bon{!billOk && <span style={{ fontSize: 13, fontWeight: 800, color: "#c0392b" }}>Checken!</span>}</h3>
       </div>
       {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>Nog geen items — scan de bon</div>}
-      {items.filter((it) => !isTip(it)).map((it) => {
+      {items.map((it) => {
         const open = it.quantity - claimedQty(it.id)
         const who = claimsForItem(it.id)
         const isNew = recentItemId === it.id
