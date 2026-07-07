@@ -340,6 +340,37 @@ const STRINGS = {
     errGroupGone: "Deze groep bestaat niet meer.",
     errDeleteFailed: "Verwijderen mislukt: ",
     confirmDeleteGroup: "Deze groep definitief verwijderen? Alles (items, gasten en aanduidingen) wordt gewist en de groep is daarna niet meer terug te halen, ook niet via een code.",
+    roleAdminBadge: "👑 Beheerder",
+    roleGuestBadge: "👤 Gast",
+    switchPerson: "ik ben iemand anders — wissel van persoon",
+    toTableHome: "Naar het Table-startscherm",
+    person: "persoon",
+    persons: "personen",
+    shareReady: "✅ Bon-totaal en items kloppen — je kan delen.",
+    shareBlocked: "⚠️ Het bon-totaal klopt nog niet met de items. Zet dit eerst recht op de Bon-tab vóór je met je gasten deelt.",
+    guestsTitle1: "🔗 Laat je gasten zelf meedoen",
+    guestsSub1: "Deel de QR of link. Iedereen kiest z'n naam en tikt z'n eigen bestelling aan.",
+    inviteLine1: "Je gasten komen zo in je groepje ",
+    inviteLine2: " om mee de rekening te verdelen.",
+    copyInviteBtn: "💬 Kopieer uitnodiging met link",
+    copyInviteHelp: "Klaar om te plakken in WhatsApp, Messenger of sms.",
+    shareLinkLabel: "of deel de link",
+    toastInviteCopied: "Uitnodiging gekopieerd",
+    inviteMessage: (name: string, link: string) => `Je bent uitgenodigd voor "${name}" — verdeel mee de rekening via Rundo Table 👉 ${link}`,
+    guestsTitle2: "👥 Of zet zelf namen klaar",
+    guestsSub2: "Ze kunnen daarna nog steeds zelf aantikken via de link, óf jij tikt voor hen aan bij 'Toewijzen'.",
+    namePlaceholder: "Naam",
+    addBtn: "+ Toevoegen",
+    multipleHint: "Met meerdere (bv. koppel)? Zet het aantal personen met de knopjes.",
+    editNameHint: "· tik een naam om te wijzigen",
+    manageDone: "✓ Klaar",
+    manageDelete: "🗑️ Verwijderen",
+    badgeSelf: "zelf aangemeld",
+    badgeAdmin: "via admin",
+    badgeMe: "jij",
+    deleteTitle: "verwijderen",
+    emptyList: "Nog niemand in de lijst.",
+    toAssignBtn: "📊 Naar toewijzen →",
   },
   fr: {
     backToRundo: "← retour à l'accueil Rundo",
@@ -362,6 +393,37 @@ const STRINGS = {
     errGroupGone: "Ce groupe n'existe plus.",
     errDeleteFailed: "Échec de la suppression : ",
     confirmDeleteGroup: "Supprimer définitivement ce groupe ? Tout (articles, invités et attributions) sera effacé et le groupe ne pourra plus être récupéré, même avec un code.",
+    roleAdminBadge: "👑 Hôte",
+    roleGuestBadge: "👤 Invité",
+    switchPerson: "je suis quelqu'un d'autre — changer de personne",
+    toTableHome: "Vers l'accueil Table",
+    person: "personne",
+    persons: "personnes",
+    shareReady: "✅ Total de l'addition et articles corrects — tu peux partager.",
+    shareBlocked: "⚠️ Le total de l'addition ne correspond pas encore aux articles. Corrige-le d'abord dans l'onglet Addition avant de partager avec tes invités.",
+    guestsTitle1: "🔗 Laisse tes invités participer",
+    guestsSub1: "Partage le QR ou le lien. Chacun choisit son nom et coche ce qu'il a pris.",
+    inviteLine1: "Tes invités rejoignent ainsi ton groupe ",
+    inviteLine2: " pour partager l'addition.",
+    copyInviteBtn: "💬 Copier l'invitation avec le lien",
+    copyInviteHelp: "Prêt à coller dans WhatsApp, Messenger ou SMS.",
+    shareLinkLabel: "ou partage le lien",
+    toastInviteCopied: "Invitation copiée",
+    inviteMessage: (name: string, link: string) => `Tu es invité·e dans "${name}" — partage l'addition via Rundo Table 👉 ${link}`,
+    guestsTitle2: "👥 Ou ajoute les noms toi-même",
+    guestsSub2: "Ils peuvent toujours cocher eux-mêmes via le lien, ou tu le fais pour eux dans « Répartir ».",
+    namePlaceholder: "Nom",
+    addBtn: "+ Ajouter",
+    multipleHint: "Plusieurs (ex. un couple) ? Règle le nombre de personnes avec les boutons.",
+    editNameHint: "· touche un nom pour le modifier",
+    manageDone: "✓ Terminé",
+    manageDelete: "🗑️ Supprimer",
+    badgeSelf: "inscrit via le lien",
+    badgeAdmin: "par l'hôte",
+    badgeMe: "toi",
+    deleteTitle: "supprimer",
+    emptyList: "Personne dans la liste pour l'instant.",
+    toAssignBtn: "📊 Vers « Répartir » →",
   },
 }
 
@@ -1691,25 +1753,25 @@ export default function RundoTable() {
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ ...S.card, order: 2 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 4 }}>
-              <h3 style={{ ...S.h3, marginBottom: 0, minWidth: 0 }}>👥 Of zet zelf namen klaar</h3>
+              <h3 style={{ ...S.h3, marginBottom: 0, minWidth: 0 }}>{L.guestsTitle2}</h3>
               <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 700, fontSize: 13, flexShrink: 0 }} onClick={() => setShowAddGuest((v) => !v)}>{showAddGuest ? "✕ Sluiten" : "+ Toevoegen"}</button>
             </div>
-            <div style={{ marginTop: 4, marginBottom: 2, fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>{"Ze kunnen daarna nog steeds zelf aantikken via de link, óf jij tikt voor hen aan bij 'Toewijzen'."}</div>
+            <div style={{ marginTop: 4, marginBottom: 2, fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>{L.guestsSub2}</div>
             {showAddGuest && (
               <div style={{ marginTop: 10, marginBottom: 6, background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: 12 }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <input value={newGuest} onChange={(e) => setNewGuest(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) } }} placeholder="Naam" style={{ ...S.input, flex: 1, minWidth: 110 }} autoFocus />
+                  <input value={newGuest} onChange={(e) => setNewGuest(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) } }} placeholder={L.namePlaceholder} style={{ ...S.input, flex: 1, minWidth: 110 }} autoFocus />
                   <SeatsControl n={newGuestSeats} onChange={setNewGuestSeats} showLabel />
-                  <button style={{ ...S.btn, ...S.btnPrimary, padding: "0 18px", fontWeight: 700 }} onClick={() => { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) }}>+ Toevoegen</button>
+                  <button style={{ ...S.btn, ...S.btnPrimary, padding: "0 18px", fontWeight: 700 }} onClick={() => { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) }}>{L.addBtn}</button>
                 </div>
-                <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6 }}>Met meerdere (bv. koppel)? Zet het aantal personen met de knopjes.</div>
+                <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6 }}>{L.multipleHint}</div>
               </div>
             )}
 
             {participants.length > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 12, marginBottom: 2 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: "#9aa0ab" }}>{participants.length} {participants.length === 1 ? "persoon" : "personen"} · tik een naam om te wijzigen</span>
-                <button onClick={() => setManageGuests((v) => !v)} style={{ ...S.smallBtn, flexShrink: 0, ...(manageGuests ? { borderColor: "rgba(224,107,94,0.6)", color: "#c0392b", background: "rgba(224,107,94,0.06)" } : {}) }}>{manageGuests ? "✓ Klaar" : "🗑️ Verwijderen"}</button>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: "#9aa0ab" }}>{participants.length} {participants.length === 1 ? L.person : L.persons} {L.editNameHint}</span>
+                <button onClick={() => setManageGuests((v) => !v)} style={{ ...S.smallBtn, flexShrink: 0, ...(manageGuests ? { borderColor: "rgba(224,107,94,0.6)", color: "#c0392b", background: "rgba(224,107,94,0.06)" } : {}) }}>{manageGuests ? L.manageDone : L.manageDelete}</button>
               </div>
             )}
 
@@ -1722,14 +1784,14 @@ export default function RundoTable() {
                   style={{ flex: 1, minWidth: 0, width: "100%", border: "none", borderBottom: "1px dashed rgba(16,24,40,0.22)", background: "transparent", fontWeight: 700, fontSize, color: "#14213a", padding: "3px 2px", outline: "none" }} />
               )
               const delBtn = (p: Participant) => (
-                <button onClick={() => removeGuest(p.id)} title="verwijderen" style={{ flexShrink: 0, width: 24, height: 24, borderRadius: 7, border: "none", background: "rgba(224,107,94,0.14)", color: "#c0392b", fontSize: 15, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>×</button>
+                <button onClick={() => removeGuest(p.id)} title={L.deleteTitle} style={{ flexShrink: 0, width: 24, height: 24, borderRadius: 7, border: "none", background: "rgba(224,107,94,0.14)", color: "#c0392b", fontSize: 15, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>×</button>
               )
               const Row = (p: Participant) => {
                 const isMe = p.id === meId
                 const origin = p.self_joined
-                  ? { label: "zelf aangemeld", color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
-                  : { label: "via admin", color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
-                const badge = isMe ? { label: "jij", color: "#0f7d90", bg: "rgba(20,153,176,0.18)" } : origin
+                  ? { label: L.badgeSelf, color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
+                  : { label: L.badgeAdmin, color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
+                const badge = isMe ? { label: L.badgeMe, color: "#0f7d90", bg: "rgba(20,153,176,0.18)" } : origin
                 if (twoCol) {
                   return (
                     <div key={p.id} style={{ border: manageGuests ? "1px solid rgba(224,107,94,0.4)" : isMe ? "1px solid rgba(20,153,176,0.4)" : "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "7px 8px", background: manageGuests ? "rgba(224,107,94,0.04)" : isMe ? "rgba(20,153,176,0.07)" : "#fff" }}>
@@ -1763,7 +1825,7 @@ export default function RundoTable() {
               return (
                 <div style={{ marginTop: participants.length > 0 ? 8 : (showAddGuest ? 6 : 12) }}>
                   {participants.length === 0
-                    ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Nog niemand in de lijst.</div>
+                    ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>{L.emptyList}</div>
                     : twoCol
                     ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: `repeat(${gridRows}, auto)`, gridAutoFlow: "column", gap: 6 }}>{displayList.map(Row)}</div>
                     : displayList.map(Row)}
@@ -1777,30 +1839,30 @@ export default function RundoTable() {
               const entered = group?.receipt_total ?? null
               const match = entered != null && Math.abs(entered - billTotal) < 0.005
               return match ? (
-                <div style={{ background: "rgba(39,174,96,0.10)", border: "1px solid rgba(39,174,96,0.5)", borderRadius: 10, padding: "7px 11px", marginBottom: 10, fontSize: 12.5, fontWeight: 700, color: "#1f8a4c" }}>✅ Bon-totaal en items kloppen — je kan delen.</div>
+                <div style={{ background: "rgba(39,174,96,0.10)", border: "1px solid rgba(39,174,96,0.5)", borderRadius: 10, padding: "7px 11px", marginBottom: 10, fontSize: 12.5, fontWeight: 700, color: "#1f8a4c" }}>{L.shareReady}</div>
               ) : (
                 <div style={{ background: "rgba(224,107,94,0.1)", border: "1px solid rgba(224,107,94,0.55)", borderRadius: 10, padding: "8px 11px", marginBottom: 10, fontSize: 12.5, fontWeight: 700, color: "#c0392b", lineHeight: 1.45 }}>
-                  ⚠️ Het bon-totaal klopt nog niet met de items. Zet dit eerst recht op de <b>Bon</b>-tab vóór je met je gasten deelt.
+                  {L.shareBlocked}
                 </div>
               )
             })()}
-            <h3 style={S.h3}>🔗 Laat je gasten zelf meedoen</h3>
-            <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 12 }}>{"Deel de QR of link. Iedereen kiest z'n naam en tikt z'n eigen bestelling aan."}</p>
+            <h3 style={S.h3}>{L.guestsTitle1}</h3>
+            <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 12 }}>{L.guestsSub1}</p>
             {(() => {
               const _base = (process.env.NEXT_PUBLIC_SITE_URL || (process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}` : "") || (typeof window !== "undefined" ? window.location.origin : "")).replace(/\/+$/, "")
               const link = _base ? `${_base}/table?code=${group.invite_code}` : ""
-              const invite = `Je bent uitgenodigd voor "${group.name}" — verdeel mee de rekening via Rundo Table 👉 ${link}`
+              const invite = L.inviteMessage(group.name, link)
               return (
                 <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
                   <div style={{ background: "#fff", padding: 10, borderRadius: 14, border: "1px solid rgba(0,0,0,0.08)", flexShrink: 0 }}>
                     <QRCodeSVG value={link} size={120} bgColor="#ffffff" fgColor="#1b2a4a" />
                   </div>
                   <div style={{ flex: 1, minWidth: 180 }}>
-                    <div style={{ fontSize: 12.5, color: "#3b486a", lineHeight: 1.5, marginBottom: 10 }}>Je gasten komen zo in je groepje <b>{group.name}</b> om mee de rekening te verdelen.</div>
-                    <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 700 }} onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(invite); setToast("Uitnodiging gekopieerd") } }}>💬 Kopieer uitnodiging met link</button>
-                    <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>Klaar om te plakken in WhatsApp, Messenger of sms.</div>
+                    <div style={{ fontSize: 12.5, color: "#3b486a", lineHeight: 1.5, marginBottom: 10 }}>{L.inviteLine1}<b>{group.name}</b>{L.inviteLine2}</div>
+                    <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 700 }} onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(invite); setToast(L.toastInviteCopied) } }}>{L.copyInviteBtn}</button>
+                    <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>{L.copyInviteHelp}</div>
                     <div style={{ marginTop: 12 }}>
-                      <div style={{ fontSize: 9.5, fontWeight: 700, color: "#b3b9c4", textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 2 }}>of deel de link</div>
+                      <div style={{ fontSize: 9.5, fontWeight: 700, color: "#b3b9c4", textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 2 }}>{L.shareLinkLabel}</div>
                       <div style={{ fontSize: 10.5, color: "#aab0bc", wordBreak: "break-all", lineHeight: 1.4 }}>{link}</div>
                     </div>
                   </div>
@@ -1809,7 +1871,7 @@ export default function RundoTable() {
             })()}
           </div>
 
-          <button onClick={() => setAdminTab("overview")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 700 }}>📊 Naar toewijzen →</button>
+          <button onClick={() => setAdminTab("overview")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 700 }}>{L.toAssignBtn}</button>
         </div>
       )}
 
@@ -2450,13 +2512,15 @@ export default function RundoTable() {
 // SUB-COMPONENTEN
 // ═══════════════════════════════════════════════════════════════════════════
 function TopBar({ group, isAdmin, onHome, me, totalPersons, guestSeats, onGuestSeatsChange, onSwitchPerson }: { group: Group; isAdmin: boolean; onHome: () => void; me?: string; signedUp?: number; totalPersons?: number; guestSeats?: number; onGuestSeatsChange?: (n: number) => void; onSwitchPerson?: () => void }) {
+  const [lang] = useLang()
+  const L = STRINGS[lang]
   return (
     <div style={{ marginBottom: 14, padding: "4px 2px" }}>
       {/* Rol/naam (en voor de gast: tellertje + wisselen) centraal bovenaan */}
       <div style={{ textAlign: "center", marginBottom: 8 }}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
           <span style={{ fontSize: 15, fontWeight: 800, color: isAdmin ? "#1499b0" : "#f0a500", letterSpacing: 0.3 }}>
-            {isAdmin ? "👑 Beheerder" : me ? `👤 ${me}` : "👤 Gast"}
+            {isAdmin ? L.roleAdminBadge : me ? `👤 ${me}` : L.roleGuestBadge}
           </span>
           {!isAdmin && guestSeats != null && onGuestSeatsChange && (
             <SeatsControl n={guestSeats} onChange={onGuestSeatsChange} showLabel size={13} />
@@ -2464,12 +2528,12 @@ function TopBar({ group, isAdmin, onHome, me, totalPersons, guestSeats, onGuestS
         </div>
         {!isAdmin && onSwitchPerson && (
           <div>
-            <button onClick={onSwitchPerson} style={{ marginTop: 2, background: "none", border: "none", padding: 0, color: "#9aa0ab", fontSize: 12, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2 }}>ik ben iemand anders — wissel van persoon</button>
+            <button onClick={onSwitchPerson} style={{ marginTop: 2, background: "none", border: "none", padding: 0, color: "#9aa0ab", fontSize: 12, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2 }}>{L.switchPerson}</button>
           </div>
         )}
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <div onClick={isAdmin ? onHome : undefined} title={isAdmin ? "Naar het Table-startscherm" : undefined} style={{ display: "flex", alignItems: "center", gap: 7, cursor: isAdmin ? "pointer" : "default", minWidth: 0, flexShrink: 0 }}>
+        <div onClick={isAdmin ? onHome : undefined} title={isAdmin ? L.toTableHome : undefined} style={{ display: "flex", alignItems: "center", gap: 7, cursor: isAdmin ? "pointer" : "default", minWidth: 0, flexShrink: 0 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/rundo-symbol.png" alt="" style={{ height: 30, width: "auto", objectFit: "contain", display: "block" }} />
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2477,7 +2541,7 @@ function TopBar({ group, isAdmin, onHome, me, totalPersons, guestSeats, onGuestS
         </div>
         <div style={{ textAlign: "right", minWidth: 0, flexShrink: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: "#1b2a4a", overflowWrap: "anywhere", lineHeight: 1.15 }}>{group.name}{fmtDate(group.created_at) ? ` (${fmtDate(group.created_at)})` : ""}</div>
-          {totalPersons != null && totalPersons > 0 && <div style={{ fontSize: 11.5, color: "#8a93a3", fontWeight: 700 }}>👤 {totalPersons} {totalPersons === 1 ? "persoon" : "personen"}</div>}
+          {totalPersons != null && totalPersons > 0 && <div style={{ fontSize: 11.5, color: "#8a93a3", fontWeight: 700 }}>👤 {totalPersons} {totalPersons === 1 ? L.person : L.persons}</div>}
         </div>
       </div>
     </div>
