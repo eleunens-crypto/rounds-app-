@@ -2,8 +2,32 @@
 
 import Link from "next/link"
 import { useEffect } from "react"
+import { useLang, LanguageToggle } from "@/lib/i18n"
+
+const T = {
+  nl: {
+    tagline: "Rondjes en rekeningen zonder gedoe!",
+    chooseMode: "Kies je mode om te starten",
+    partySub: "Rondjes en splitten zonder gedoe",
+    partyDesc: "Ideaal op fuiven, festivals, vrijgezellenfeesten, teambuildings enz.",
+    tableSub: "Scan de rekening en verdeel in groep",
+    tableDesc: "Ideaal als groep op restaurant, café of na activiteit.",
+    footer: "Gratis · geen registratie · eerlijk splitten",
+  },
+  fr: {
+    tagline: "Tournées et additions, sans prise de tête !",
+    chooseMode: "Choisis ton mode pour démarrer",
+    partySub: "Tournées et partage, sans prise de tête",
+    partyDesc: "Idéal en soirée, au festival, à un EVG/EVJF, un team building, etc.",
+    tableSub: "Scanne l'addition et partage en groupe",
+    tableDesc: "Idéal en groupe au resto, au café ou après une activité.",
+    footer: "Gratuit · sans inscription · partage équitable",
+  },
+}
 
 export default function Home() {
+  const [lang] = useLang()
+  const t = T[lang]
   // Op het keuzescherm: wis de actieve mode-sessies, zodat je vanaf hier altijd op het
   // startscherm van een modus binnenkomt (nooit meteen in een opgeslagen groep).
   useEffect(() => {
@@ -15,17 +39,22 @@ export default function Home() {
   return (
     <div style={S.page}>
       <div style={{ maxWidth: 360, margin: "0 auto", padding: "30px 0 40px" }}>
+        {/* Taalkeuze rechtsboven */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+          <LanguageToggle />
+        </div>
+
         {/* Kop: algemeen Rundo-logo (symbool + naam in één), ondertitel eronder */}
-        <div style={{ textAlign: "center", marginTop: 10, marginBottom: 30 }}>
+        <div style={{ textAlign: "center", marginTop: 4, marginBottom: 30 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/rundo-logo.png" alt="Rundo" style={{ display: "block", height: 64, width: "auto", maxWidth: "90%", objectFit: "contain", margin: "0 auto 8px" }} />
           <p style={{ color: "#f2e3a8", fontSize: 15, fontWeight: 600, margin: 0 }}>
-            Rondjes en rekeningen zonder gedoe!
+            {t.tagline}
           </p>
         </div>
 
         <p style={{ textAlign: "right", color: "#7e879c", fontSize: 12.5, fontWeight: 600, margin: "0 4px 8px 0" }}>
-          Kies je mode om te starten
+          {t.chooseMode}
         </p>
 
         {/* PARTY-kaart — warm geel */}
@@ -42,12 +71,12 @@ export default function Home() {
               <div style={{ ...S.logoSub, color: "#f0a500", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/icon-party.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
-                <span>Rondjes en splitten zonder gedoe</span>
+                <span>{t.partySub}</span>
               </div>
               <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                 <span style={S.infoBadge}>i</span>
                 <p style={{ fontSize: 13.5, color: "#d8dced", lineHeight: 1.5, margin: 0 }}>
-                  Ideaal op fuiven, festivals, vrijgezellenfeesten, teambuildings enz.
+                  {t.partyDesc}
                 </p>
               </div>
             </div>
@@ -66,12 +95,12 @@ export default function Home() {
               <div style={{ ...S.logoSub, color: "#3bbfc4", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/icon-table.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
-                <span>Scan de rekening en verdeel in groep</span>
+                <span>{t.tableSub}</span>
               </div>
               <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                 <span style={{ ...S.infoBadge, background: "rgba(91,159,214,0.22)", color: "#9cc6ec" }}>i</span>
                 <p style={{ fontSize: 13.5, color: "#d8dced", lineHeight: 1.5, margin: 0 }}>
-                  Ideaal als groep op restaurant, café of na activiteit.
+                  {t.tableDesc}
                 </p>
               </div>
             </div>
@@ -81,7 +110,7 @@ export default function Home() {
         {/* Voetregel */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 28 }}>
           <span style={{ fontSize: 13, color: "#9aa2b8", fontWeight: 600, textAlign: "center" }}>
-            Gratis · geen registratie · eerlijk splitten
+            {t.footer}
           </span>
         </div>
       </div>
