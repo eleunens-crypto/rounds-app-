@@ -331,9 +331,9 @@ const STRINGS = {
     roleAdmin: "beheerder",
     roleGuest: "gast",
     deletePermanently: "definitief verwijderen",
-    tabBon: "🧾 Bon",
-    tabGuests: "👥 Gasten & delen",
-    tabAssign: "📊 Toewijzen",
+    tabBon: "Bon",
+    tabGuests: "Gasten & delen",
+    tabAssign: "Toewijzen",
     errNameTaken: "Je hebt al een groep met die naam. Kies een andere naam.",
     errCreateFailed: "Groep aanmaken mislukt: ",
     errNotFound: "Groep niet gevonden. Controleer de code.",
@@ -348,12 +348,17 @@ const STRINGS = {
     persons: "personen",
     shareReady: "✅ Bon-totaal en items kloppen — je kan delen.",
     shareBlocked: "⚠️ Het bon-totaal klopt nog niet met de items. Zet dit eerst recht op de Bon-tab vóór je met je gasten deelt.",
-    guestsTitle1: "🔗 Laat je gasten zelf meedoen",
+    guestsTitle1: "🔗 Laat je gasten zelf meedoen met je groep",
     guestsSub1: "Deel de QR of link. Iedereen kiest z'n naam en tikt z'n eigen bestelling aan.",
     inviteLine1: "Je gasten komen zo in je groepje ",
     inviteLine2: " om mee de rekening te verdelen.",
-    copyInviteBtn: "💬 Kopieer uitnodiging met link",
-    copyInviteHelp: "Klaar om te plakken in WhatsApp, Messenger of sms.",
+    copyInviteBtn: "🔗 Deel de link",
+    copyInviteHelp: "Klaar om te plakken in WhatsApp, sms, Messenger enz.",
+    inviteModalTitle: "Deel je uitnodiging",
+    inviteModalMsg: "Plak deze uitnodiging in WhatsApp, Messenger, sms of een andere berichtenservice en stuur ze naar je groep.",
+    inviteModalCopy: "📋 Kopieer opnieuw",
+    inviteModalClose: "Sluiten",
+    guestsSteps: ["Laat hen de QR-code scannen of deel de link", "Iedereen tikt z'n eigen bestelling aan", "Resultaat: een eerlijk verdeelde rekening"],
     shareLinkLabel: "of deel de link",
     toastInviteCopied: "Uitnodiging gekopieerd",
     inviteMessage: (name: string, link: string) => `Je bent uitgenodigd voor "${name}" — verdeel mee de rekening via Rundo Table 👉 ${link}`,
@@ -541,6 +546,8 @@ const STRINGS = {
     tipLabelPre: "💶 Fooi: ",
     tipEqualNote: "· gelijk over wie bestelde",
     clearTip: "Wissen",
+    tipItemName: "Fooi",
+    explainTooltip: "uitleg",
     tipHeader: "💶 Fooi",
     addTipShort: "Toevoegen",
     tipOptional: "Optioneel — wordt gelijk verdeeld over iedereen die iets bestelde.",
@@ -691,9 +698,9 @@ const STRINGS = {
     roleAdmin: "hôte",
     roleGuest: "invité",
     deletePermanently: "supprimer définitivement",
-    tabBon: "🧾 Addition",
-    tabGuests: "👥 Invités et partage",
-    tabAssign: "📊 Répartir",
+    tabBon: "Addition",
+    tabGuests: "Invités et partage",
+    tabAssign: "Répartir",
     errNameTaken: "Tu as déjà un groupe portant ce nom. Choisis-en un autre.",
     errCreateFailed: "Échec de la création du groupe : ",
     errNotFound: "Groupe introuvable. Vérifie le code.",
@@ -708,12 +715,17 @@ const STRINGS = {
     persons: "personnes",
     shareReady: "✅ Total de l'addition et articles corrects — tu peux partager.",
     shareBlocked: "⚠️ Le total de l'addition ne correspond pas encore aux articles. Corrige-le d'abord dans l'onglet Addition avant de partager avec tes invités.",
-    guestsTitle1: "🔗 Laisse tes invités participer",
+    guestsTitle1: "🔗 Laisse tes invités participer à ton groupe",
     guestsSub1: "Partage le QR ou le lien. Chacun choisit son nom et coche ce qu'il a pris.",
     inviteLine1: "Tes invités rejoignent ainsi ton groupe ",
     inviteLine2: " pour partager l'addition.",
-    copyInviteBtn: "💬 Copier l'invitation avec le lien",
-    copyInviteHelp: "Prêt à coller dans WhatsApp, Messenger ou SMS.",
+    copyInviteBtn: "🔗 Partage le lien",
+    copyInviteHelp: "Prêt à coller dans WhatsApp, SMS, Messenger, etc.",
+    inviteModalTitle: "Partage ton invitation",
+    inviteModalMsg: "Colle cette invitation dans WhatsApp, Messenger, SMS ou un autre service de messagerie et envoie-la à ton groupe.",
+    inviteModalCopy: "📋 Copier à nouveau",
+    inviteModalClose: "Fermer",
+    guestsSteps: ["Fais-leur scanner le QR-code ou partage le lien", "Chacun coche ce qu'il a pris", "Résultat : une addition partagée équitablement"],
     shareLinkLabel: "ou partage le lien",
     toastInviteCopied: "Invitation copiée",
     inviteMessage: (name: string, link: string) => `Tu es invité·e dans "${name}" — partage l'addition via Rundo Table 👉 ${link}`,
@@ -901,6 +913,8 @@ const STRINGS = {
     tipLabelPre: "💶 Pourboire : ",
     tipEqualNote: "· également entre ceux qui ont commandé",
     clearTip: "Effacer",
+    tipItemName: "Pourboire",
+    explainTooltip: "explication",
     tipHeader: "💶 Pourboire",
     addTipShort: "Ajouter",
     tipOptional: "Optionnel — réparti également entre tous ceux qui ont commandé quelque chose.",
@@ -1041,6 +1055,8 @@ const STRINGS = {
   },
 }
 
+const showTip = (nm: string, L: { tipItemName: string }) => (nm || "").trim().toLowerCase() === "fooi" ? L.tipItemName : nm
+
 export default function RundoTable() {
   const [lang] = useLang()
   const L = STRINGS[lang]
@@ -1100,6 +1116,8 @@ export default function RundoTable() {
   const [showShareWarn, setShowShareWarn] = useState(false)   // waarschuwing bij delen terwijl totalen niet kloppen
   const [showFinalizeWarn, setShowFinalizeWarn] = useState(false) // waarschuwing bij afsluiten terwijl totalen niet kloppen
   const [tipInput, setTipInput] = useState("")
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [inviteModalText, setInviteModalText] = useState("")
   const [showTipReminder, setShowTipReminder] = useState(false)
   // De beheerder bevestigde dat het ingevulde bon-totaal correct is, ook al verschilt het van de items.
   const [receiptConfirmed, setReceiptConfirmed] = useState(false)
@@ -1958,7 +1976,7 @@ export default function RundoTable() {
     const tax = taxShare(pid)
     if (tax > 0.005) out.push({ name: "BTW / kosten (verdeeld)", qty: 1, amount: tax, shared: false, revealed: true, sharers: 0, myHeads: 0 })
     const tip = tipShare(pid)
-    if (tip > 0.005) out.push({ name: "💛 fooi", qty: 1, amount: tip, shared: false, revealed: true, sharers: 0, myHeads: 0 })
+    if (tip > 0.005) out.push({ name: `💛 ${L.tipItemName}`, qty: 1, amount: tip, shared: false, revealed: true, sharers: 0, myHeads: 0 })
     return out
   }
 
@@ -2160,17 +2178,19 @@ export default function RundoTable() {
       })()}
 
       {isAdmin && (
-        <div style={S.tabBar}>
+        <div style={{ ...S.tabBar, gap: 7, padding: 6, border: "1px solid rgba(20,153,176,0.18)", borderRadius: 16, boxShadow: "0 3px 12px -5px rgba(20,153,176,0.35)" }}>
           {([
             { id: "scan", label: L.tabBon },
             { id: "guests", label: L.tabGuests },
             { id: "overview", label: L.tabAssign },
           ] as { id: AdminTab; label: string }[]).map((t) => (
             <button key={t.id} onClick={() => setAdminTab(t.id)} style={{
-              flex: 1, border: "none", borderRadius: 12, padding: "10px 4px", fontSize: 13, cursor: "pointer",
-              fontWeight: adminTab === t.id ? 800 : 600,
-              background: adminTab === t.id ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "transparent",
+              flex: 1, border: "none", borderRadius: 12, padding: "13px 4px", fontSize: 14.5, cursor: "pointer", lineHeight: 1.15,
+              fontWeight: adminTab === t.id ? 800 : 700,
+              background: adminTab === t.id ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#eaf6f9",
               color: adminTab === t.id ? "#fff" : "#1499b0",
+              boxShadow: adminTab === t.id ? "0 3px 10px -3px rgba(20,153,176,0.5)" : "none",
+              transition: "all 0.15s",
             }}>{t.label}</button>
           ))}
         </div>
@@ -2339,7 +2359,7 @@ export default function RundoTable() {
                                   const on = ids.includes(bi.id)
                                   return (
                                     <button key={bi.id} onClick={() => { const next = on ? ids.filter((x) => x !== bi.id) : [...ids, bi.id]; setDistribute(t, JSON.stringify(next)) }}
-                                      style={{ fontSize: 11.5, fontWeight: 700, borderRadius: 10, padding: "5px 11px", cursor: "pointer", border: on ? "none" : "1px solid rgba(16,24,40,0.12)", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", color: on ? "#5a4a1a" : "#8b93a8" }}>{on ? "✓ " : "+ "}{bi.name}</button>
+                                      style={{ fontSize: 11.5, fontWeight: 700, borderRadius: 10, padding: "5px 11px", cursor: "pointer", border: on ? "none" : "1px solid rgba(16,24,40,0.12)", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", color: on ? "#5a4a1a" : "#8b93a8" }}>{on ? "✓ " : "+ "}{showTip(bi.name, L)}</button>
                                   )
                                 })}
                               </div>
@@ -2353,7 +2373,7 @@ export default function RundoTable() {
                 })}
                 <div style={{ display: "flex", gap: 6, alignItems: "center", justifyContent: "flex-end", marginTop: 8 }}>
                   <button onClick={() => setTaxModal({ name: L.taxDefaultName, amount: "", scope: "all", ids: [] })} style={{ ...S.btn, fontWeight: 700, fontSize: 12.5, padding: "7px 14px" }}>{L.taxModalTitle}</button>
-                  <button onClick={() => setShowTaxInfo(true)} style={{ ...S.btn, fontWeight: 700, fontSize: 12.5, padding: "7px 12px" }} title="uitleg">ℹ️</button>
+                  <button onClick={() => setShowTaxInfo(true)} style={{ ...S.btn, fontWeight: 700, fontSize: 12.5, padding: "7px 12px" }} title={L.explainTooltip}>ℹ️</button>
                 </div>
               </div>
             }
@@ -2376,7 +2396,7 @@ export default function RundoTable() {
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   <input value={newGuest} onChange={(e) => setNewGuest(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) } }} placeholder={L.namePlaceholder} style={{ ...S.input, flex: 1, minWidth: 110 }} autoFocus />
                   <SeatsControl n={newGuestSeats} onChange={setNewGuestSeats} showLabel />
-                  <button style={{ ...S.btn, ...S.btnPrimary, padding: "0 18px", fontWeight: 700 }} onClick={() => { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) }}>{L.addBtn}</button>
+                  <button onMouseDown={(e) => e.preventDefault()} style={{ ...S.btn, ...S.btnPrimary, padding: "0 18px", fontWeight: 700 }} onClick={() => { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) }}>{L.addBtn}</button>
                 </div>
                 <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6 }}>{L.multipleHint}</div>
               </div>
@@ -2461,7 +2481,14 @@ export default function RundoTable() {
               )
             })()}
             <h3 style={S.h3}>{L.guestsTitle1}</h3>
-            <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 12 }}>{L.guestsSub1}</p>
+            <div style={{ marginTop: -2, marginBottom: 14 }}>
+              {L.guestsSteps.map((s, i) => (
+                <div key={i} style={{ display: "flex", gap: 8, fontSize: 13, color: "#3b486a", marginBottom: 5, lineHeight: 1.4 }}>
+                  <span style={{ fontWeight: 800, color: "#5a6cff", flexShrink: 0 }}>{i + 1}.</span>
+                  <span>{s}</span>
+                </div>
+              ))}
+            </div>
             {(() => {
               const _base = (process.env.NEXT_PUBLIC_SITE_URL || (process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}` : "") || (typeof window !== "undefined" ? window.location.origin : "")).replace(/\/+$/, "")
               const link = _base ? `${_base}/table?code=${group.invite_code}` : ""
@@ -2472,13 +2499,8 @@ export default function RundoTable() {
                     <QRCodeSVG value={link} size={120} bgColor="#ffffff" fgColor="#1b2a4a" />
                   </div>
                   <div style={{ flex: 1, minWidth: 180 }}>
-                    <div style={{ fontSize: 12.5, color: "#3b486a", lineHeight: 1.5, marginBottom: 10 }}>{L.inviteLine1}<b>{group.name}</b>{L.inviteLine2}</div>
-                    <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 700 }} onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(invite); setToast(L.toastInviteCopied) } }}>{L.copyInviteBtn}</button>
+                    <button onMouseDown={(e) => e.preventDefault()} style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 700 }} onClick={() => { if (navigator.clipboard) navigator.clipboard.writeText(invite); setInviteModalText(invite); setShowInviteModal(true) }}>{L.copyInviteBtn}</button>
                     <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>{L.copyInviteHelp}</div>
-                    <div style={{ marginTop: 12 }}>
-                      <div style={{ fontSize: 9.5, fontWeight: 700, color: "#b3b9c4", textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 2 }}>{L.shareLinkLabel}</div>
-                      <div style={{ fontSize: 10.5, color: "#aab0bc", wordBreak: "break-all", lineHeight: 1.4 }}>{link}</div>
-                    </div>
                   </div>
                 </div>
               )
@@ -2517,7 +2539,7 @@ export default function RundoTable() {
                 const openN = it.quantity - claimedQty(it.id)
                 return (
                   <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "5px 0", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{openN}× {it.name}</b> {L.notClaimedSuffix}</span>
+                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{openN}× {showTip(it.name, L)}</b> {L.notClaimedSuffix}</span>
                     {participants.length > 0 && (
                       <select value="" onChange={(e) => { const pid = e.target.value; if (pid) setClaim(it.id, pid, myQty(it.id, pid) + 1) }}
                         style={{ ...S.input, flexShrink: 0, maxWidth: 150, padding: "5px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
@@ -2530,7 +2552,7 @@ export default function RundoTable() {
               })}
               {undecidedShared.map((it) => (
                 <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "5px 0", borderBottom: "1px solid rgba(0,0,0,0.05)", color: "#a06b00" }}>
-                  <span style={{ flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5 }}><ShareIcon on size={14} /> <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{it.name}</b> {L.sharedNobody}</span></span>
+                  <span style={{ flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5 }}><ShareIcon on size={14} /> <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{showTip(it.name, L)}</b> {L.sharedNobody}</span></span>
                   {participants.length > 0 && (
                     <select value="" onChange={(e) => { const pid = e.target.value; if (pid) toggleShareClaim(it.id, pid) }}
                       style={{ ...S.input, flexShrink: 0, maxWidth: 150, padding: "5px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
@@ -2600,7 +2622,7 @@ export default function RundoTable() {
                       {detail.length === 0 && <div style={{ fontSize: 12.5, color: "#aaa" }}>{L.nothingTapped}</div>}
                       {detail.map((d, k) => (
                         <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#5a6680", padding: "2px 0" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{d.name}{d.shared ? (d.revealed ? ((p.seats ?? 1) > 1 ? L.sharedNPers(d.myHeads) : L.sharedPart) : L.sharedByN(d.sharers)) : ""}</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{showTip(d.name, L)}{d.shared ? (d.revealed ? ((p.seats ?? 1) > 1 ? L.sharedNPers(d.myHeads) : L.sharedPart) : L.sharedByN(d.sharers)) : ""}</span>
                           <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>
                             {d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}
                           </span>
@@ -2646,9 +2668,9 @@ export default function RundoTable() {
                   <span style={{ fontSize: 13, fontWeight: 800, color: "#3b486a", flexShrink: 0 }}>{L.tipHeader}</span>
                   <div style={{ display: "inline-flex", alignItems: "center", flexShrink: 0, border: "1px solid rgba(20,33,58,0.15)", borderRadius: 10, background: "#fff", overflow: "hidden" }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: "#5a6680", padding: "0 1px 0 10px" }}>€</span>
-                    <input type="text" inputMode="decimal" value={tipInput} onChange={(e) => setTipInput(numFilter(e.target.value, true))} placeholder="5,00" style={{ width: 62, border: "none", outline: "none", background: "transparent", textAlign: "right", padding: "8px 10px 8px 2px", fontSize: 14 }} />
+                    <input type="text" inputMode="decimal" value={tipInput} onChange={(e) => setTipInput(numFilter(e.target.value, true))} placeholder="0,00" style={{ width: 62, border: "none", outline: "none", background: "transparent", textAlign: "right", padding: "8px 10px 8px 2px", fontSize: 14 }} />
                   </div>
-                  <button onClick={addTip} style={{ ...S.btn, ...S.btnPrimary, fontSize: 12.5, fontWeight: 700, padding: "8px 14px", flexShrink: 0 }}>{L.addTipShort}</button>
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={addTip} style={{ ...S.btn, ...S.btnPrimary, fontSize: 12.5, fontWeight: 700, padding: "8px 14px", flexShrink: 0 }}>{L.addTipShort}</button>
                   <span style={{ fontSize: 10.5, color: "#9aa0ab", width: "100%", marginTop: 2 }}>{L.tipOptional}</span>
                 </div>
               )}
@@ -2712,7 +2734,7 @@ export default function RundoTable() {
                         return (
                           <button key={it.id} onClick={() => setTaxModal({ ...taxModal, ids: on ? taxModal.ids.filter((x) => x !== it.id) : [...taxModal.ids, it.id] })} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", padding: "7px 10px", border: "none", background: on ? "rgba(20,153,176,0.08)" : "transparent", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>
                             <span style={{ width: 18, height: 18, borderRadius: 5, border: on ? "none" : "1.5px solid #b8c0cf", background: on ? "#1499b0" : "#fff", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{on ? "✓" : ""}</span>
-                            <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{it.quantity}× {it.name}</span>
+                            <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{it.quantity}× {showTip(it.name, L)}</span>
                           </button>
                         )
                       })}
@@ -2748,6 +2770,18 @@ export default function RundoTable() {
           </div>
         )
       })()}
+
+      {showInviteModal && (
+        <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowInviteModal(false)}>
+          <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, marginBottom: 8, fontSize: 17, fontWeight: 800, color: "#14213a" }}>{L.inviteModalTitle}</h3>
+            <div style={{ fontSize: 13, color: "#5a6680", lineHeight: 1.5, marginBottom: 12 }}>{L.inviteModalMsg}</div>
+            <div style={{ background: "#f4f6fb", border: "1px solid rgba(20,33,58,0.12)", borderRadius: 12, padding: "11px 13px", fontSize: 13, color: "#14213a", lineHeight: 1.5, wordBreak: "break-word", whiteSpace: "pre-wrap", marginBottom: 14, userSelect: "text" }}>{inviteModalText}</div>
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(inviteModalText); setToast(L.toastInviteCopied) } }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 14, fontWeight: 800, marginBottom: 8 }}>{L.inviteModalCopy}</button>
+            <button onClick={() => setShowInviteModal(false)} style={{ ...S.btn, width: "100%", padding: "10px 0", fontSize: 13, fontWeight: 700, color: "#9aa0ab", background: "transparent", border: "none" }}>{L.inviteModalClose}</button>
+          </div>
+        </div>
+      )}
 
       {/* ─── Waarschuwing: afsluiten terwijl item- en bontotaal niet overeenkomen (onomkeerbaar) ─── */}
       {showTipReminder && (
@@ -2949,7 +2983,7 @@ export default function RundoTable() {
                 </div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
                   <button onClick={() => setScanPreview((cur) => [...cur, { name: L.taxDefaultName, unit_price: 0, quantity: 1, is_shared: false, distribute: "all" }])} style={{ ...S.btn, flex: 1, fontSize: 12, fontWeight: 700, padding: "7px 0" }}>{L.addTaxBtn}</button>
-                  <button onClick={() => setShowTaxInfo(true)} style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "0 13px" }} title="uitleg">ℹ️</button>
+                  <button onClick={() => setShowTaxInfo(true)} style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "0 13px" }} title={L.explainTooltip}>ℹ️</button>
                 </div>
               </div>
               )
@@ -3196,7 +3230,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
               {it.is_shared && <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={20} /></span>}
               <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0, display: "flex", alignItems: "baseline", gap: 6 }}>
-                  <span>{it.quantity}× {it.name}</span>
+                  <span>{it.quantity}× {showTip(it.name, L)}</span>
                   {scanFlags?.[it.id] && (
                     <button onClick={() => setOpenFlag(openFlag === it.id ? null : it.id)} title={L.scanDoubtTitle} style={{ flexShrink: 0, width: 18, height: 18, borderRadius: "50%", border: "none", background: "#f39c12", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>?</button>
                   )}
@@ -3675,7 +3709,7 @@ function ClaimScreen(props: {
               {mine.length === 0 && <div style={{ fontSize: 13, color: "#aaa" }}>{L.nothingTappedYet}</div>}
               {mine.map((d, k) => (
                 <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0", color: "#3b486a" }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{d.name}{d.shared ? (d.revealed ? (meId && seatsOf(meId) > 1 ? L.sharedNPers(d.myHeads) : L.sharedPart) : L.sharedByN(d.sharers)) : ""}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{showTip(d.name, L)}{d.shared ? (d.revealed ? (meId && seatsOf(meId) > 1 ? L.sharedNPers(d.myHeads) : L.sharedPart) : L.sharedByN(d.sharers)) : ""}</span>
                   <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>
                     {d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}
                   </span>
@@ -3720,7 +3754,7 @@ function ClaimScreen(props: {
                       {detail.length === 0 && <div style={{ fontSize: 12.5, color: "#aaa" }}>{L.nothingTapped2}</div>}
                       {detail.map((d, k) => (
                         <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#5a6680", padding: "2px 0" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{d.name}{d.shared ? (d.revealed ? L.sharedPart : L.sharedByN(d.sharers)) : ""}</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{showTip(d.name, L)}{d.shared ? (d.revealed ? L.sharedPart : L.sharedByN(d.sharers)) : ""}</span>
                           <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>{d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}</span>
                         </div>
                       ))}
