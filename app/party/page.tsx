@@ -739,6 +739,15 @@ const STRINGS = {
     unassignedWarnB: " nog toe te wijzen. Voeg ze nu toe voor een eerlijke ",
     unassignedWarnC: ". Hoe? Via de knop ",
     unassignedWarnD: " hieronder.",
+    persAbbr: "pers.",
+    searchPlaceholder: "Zoek… bv. cola, jäger, virgin",
+    customReady1: " staat nu klaar onder ",
+    customReady2: " — tik het aan om toe te voegen.",
+    noDrinkFound: "Geen drankje gevonden — voeg het onderaan toe als eigen drankje.",
+    readyBtn: (n: number, over: number) => n === 0 ? "Klaar" : `Klaar? ${n} ${n !== 1 ? "drankjes" : "drankje"}${over > 0 ? ` (${over} meer dan groep)` : ""}`,
+    addOwnDrinkBtn: "⭐ Eigen drankje toevoegen",
+    manageOwnDrinks: "✏️ Mijn eigen drankjes beheren",
+    selectorEmptyToast: "Nog geen drankje geselecteerd — tik er eentje aan 👆",
   },
   fr: {
     appTagline: "Des tournées et un partage sans prise de tête !",
@@ -835,6 +844,15 @@ const STRINGS = {
     unassignedWarnB: " encore à attribuer. Ajoute-les maintenant pour un juste ",
     unassignedWarnC: ". Comment ? Via le bouton ",
     unassignedWarnD: " ci-dessous.",
+    persAbbr: "pers.",
+    searchPlaceholder: "Cherche… ex. cola, jäger, virgin",
+    customReady1: " est maintenant prêt dans ",
+    customReady2: " — touche-le pour l'ajouter.",
+    noDrinkFound: "Aucune boisson trouvée — ajoute-la ci-dessous comme boisson perso.",
+    readyBtn: (n: number, over: number) => n === 0 ? "Prêt" : `Prêt ? ${n} ${n !== 1 ? "boissons" : "boisson"}${over > 0 ? ` (${over} de plus que le groupe)` : ""}`,
+    addOwnDrinkBtn: "⭐ Ajouter une boisson perso",
+    manageOwnDrinks: "✏️ Gérer mes boissons perso",
+    selectorEmptyToast: "Aucune boisson sélectionnée — touches-en une 👆",
   },
 }
 
@@ -1361,7 +1379,7 @@ export default function Home() {
   const selectorTotal = Object.values(selectorDraft).reduce((s, q) => s + q, 0)
   const confirmDrinkSelector = () => {
     const addedIds = Object.entries(selectorDraft).filter(([, q]) => q > 0).map(([id]) => id)
-    if (addedIds.length === 0) { setToast("Nog geen drankje geselecteerd — tik er eentje aan 👆"); return }
+    if (addedIds.length === 0) { setToast(L.selectorEmptyToast); return }
     if (selectorEditMode) {
       // Vervang de bestelling door wat nu in de selector staat; behoud toewijzingen (trim als een aantal daalt).
       setCart((prev) => {
@@ -2700,10 +2718,10 @@ export default function Home() {
             <div style={S.overlay}>
               <div style={{ ...S.modal, width: 460, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
                 <div style={{ marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>🍹 Selecteer drankje(s)</h3>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{L.selectDrinksBtn}</h3>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 700, color: "#a89a6a", whiteSpace: "nowrap" }}>{participants.length} pers.</span>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: "#4a3a0a", background: "linear-gradient(135deg,#f4c430,#f7d461)", borderRadius: 20, padding: "3px 12px", whiteSpace: "nowrap" }}>{(selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal)} {(selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal) === 1 ? "drankje" : "drankjes"}</span>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: "#a89a6a", whiteSpace: "nowrap" }}>{participants.length} {L.persAbbr}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "#4a3a0a", background: "linear-gradient(135deg,#f4c430,#f7d461)", borderRadius: 20, padding: "3px 12px", whiteSpace: "nowrap" }}>{(selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal)} {(selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal) === 1 ? L.drink : L.drinks}</span>
                   </div>
                 </div>
 
@@ -2722,14 +2740,14 @@ export default function Home() {
                 {/* Zoekvak — over alle categorieën heen */}
                 <div style={{ position: "relative", marginBottom: 8 }}>
                   <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, opacity: 0.55, pointerEvents: "none" }}>🔍</span>
-                  <input value={selectorSearch} onChange={(e) => setSelectorSearch(e.target.value)} placeholder="Zoek… bv. cola, jäger, virgin" style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 38, paddingRight: 34 }} />
+                  <input value={selectorSearch} onChange={(e) => setSelectorSearch(e.target.value)} placeholder={L.searchPlaceholder} style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 38, paddingRight: 34 }} />
                   {selectorSearch && <button onClick={() => setSelectorSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#b3a476", fontSize: 16, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>}
                 </div>
 
                 {/* Melding na een zelf toegevoegd drankje: waar staat het nu */}
                 {lastAddedCustomDrink && (
                   <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.35)", borderRadius: 12, padding: "8px 11px", marginBottom: 8, fontSize: 12.5, color: "#1f8a4c", lineHeight: 1.4 }}>
-                    <span style={{ flex: 1 }}>✅ <b>{lastAddedCustomDrink.name}</b> staat nu klaar onder <b>{CATEGORY_LABELS[lastAddedCustomDrink.category] ?? lastAddedCustomDrink.category}</b> — tik het aan om toe te voegen.</span>
+                    <span style={{ flex: 1 }}>✅ <b>{lastAddedCustomDrink.name}</b> {L.customReady1}<b>{CATEGORY_LABELS[lastAddedCustomDrink.category] ?? lastAddedCustomDrink.category}</b>{L.customReady2}</span>
                     <button onClick={() => setLastAddedCustomDrink(null)} style={{ background: "none", border: "none", color: "#1f8a4c", fontSize: 14, cursor: "pointer", flexShrink: 0, lineHeight: 1 }}>✕</button>
                   </div>
                 )}
@@ -2767,12 +2785,12 @@ export default function Home() {
                     )
                   })}
                   {selectorSearch.trim() && !groupedDrinks.some(([, list]) => list.some((d) => normText(selectorSearch.trim()).split(/\s+/).filter(Boolean).every((w) => normText(d.name).includes(w)))) && (
-                    <div style={{ textAlign: "center", color: "#a89a6a", fontSize: 13, padding: "24px 12px", lineHeight: 1.5 }}>Geen drankje gevonden — voeg het onderaan toe als eigen drankje.</div>
+                    <div style={{ textAlign: "center", color: "#a89a6a", fontSize: 13, padding: "24px 12px", lineHeight: 1.5 }}>{L.noDrinkFound}</div>
                   )}
                 </div>
 
                 <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 10, padding: "12px 0", fontWeight: 700 }} onClick={confirmDrinkSelector}>
-                  {selectorTotal > 0 ? `Klaar? ${selectorTotal} ${selectorTotal !== 1 ? "drankjes" : "drankje"}${Math.max(0, (selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal) - participants.length) > 0 ? ` (${Math.max(0, (selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal) - participants.length)} meer dan groep)` : ""}` : "Klaar"}
+                  {L.readyBtn(selectorTotal, Math.max(0, (selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal) - participants.length))}
                 </button>
 
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 12 }}>
@@ -2783,12 +2801,12 @@ export default function Home() {
                     Annuleren
                   </button>
                   <button onClick={() => setShowAddDrink(true)} style={{ width: "62%", padding: "11px 0", fontSize: 12.5, fontWeight: 700, cursor: "pointer", color: "#a89a6a", background: "rgba(244,196,48,0.09)", border: "2px dashed rgba(214,158,20,0.4)", borderRadius: 14 }}>
-                    ⭐ Eigen drankje toevoegen
+                    {L.addOwnDrinkBtn}
                   </button>
                 </div>
                 {drinks.some(isGroupDrink) && (
                   <div style={{ textAlign: "right", marginTop: 8 }}>
-                    <button onClick={() => setShowEditDrinks(true)} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 8px" }}>✏️ Mijn eigen drankjes beheren</button>
+                    <button onClick={() => setShowEditDrinks(true)} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 8px" }}>{L.manageOwnDrinks}</button>
                   </div>
                 )}
               </div>
