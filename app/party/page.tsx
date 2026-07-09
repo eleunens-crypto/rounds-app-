@@ -748,6 +748,21 @@ const STRINGS = {
     addOwnDrinkBtn: "⭐ Eigen drankje toevoegen",
     manageOwnDrinks: "✏️ Mijn eigen drankjes beheren",
     selectorEmptyToast: "Nog geen drankje geselecteerd — tik er eentje aan 👆",
+    asleepBanner: "⏸ Live-updates gepauzeerd — tik om te hervatten",
+    toHomeTitle: "Naar startscherm",
+    editDrinksTitle: "⭐ Je eigen drankjes",
+    editDrinksSub: "Hier beheer je enkel je eigen toegevoegde drankjes. De standaardlijst met richtprijzen staat vast.",
+    noOwnDrinks: "Je hebt nog geen eigen drankjes toegevoegd.",
+    deleteOwnDrinkTitle: "Eigen drankje verwijderen",
+    closeBtn: "Sluiten",
+    addDrinkTitle: "➕ Eigen drank toevoegen",
+    addDrinkSub: "Naam en richtprijs volstaan. Je drankje komt onder ⭐ Eigen drankjes zodat je ziet dat je het zelf toevoegde.",
+    nameLabel: "Naam",
+    drinkNamePlaceholder: "bv. een speciaalbiertje",
+    priceLabel: "Richtprijs (€)",
+    addPersonTitle: "Persoon toevoegen",
+    warnNameFirst: "Vul eerst een naam in voor je drankje.",
+    warnPriceRequired: "Een richtprijs is verplicht — die hebben we nodig om de rekening achteraf eerlijk te verdelen met Fair Split.",
   },
   fr: {
     appTagline: "Des tournées et un partage sans prise de tête !",
@@ -853,6 +868,21 @@ const STRINGS = {
     addOwnDrinkBtn: "⭐ Ajouter une boisson perso",
     manageOwnDrinks: "✏️ Gérer mes boissons perso",
     selectorEmptyToast: "Aucune boisson sélectionnée — touches-en une 👆",
+    asleepBanner: "⏸ Mises à jour en direct en pause — touche pour reprendre",
+    toHomeTitle: "Vers l'écran d'accueil",
+    editDrinksTitle: "⭐ Tes boissons perso",
+    editDrinksSub: "Ici tu gères uniquement les boissons que tu as ajoutées. La liste standard avec les prix indicatifs est fixe.",
+    noOwnDrinks: "Tu n'as encore ajouté aucune boisson perso.",
+    deleteOwnDrinkTitle: "Supprimer la boisson perso",
+    closeBtn: "Fermer",
+    addDrinkTitle: "➕ Ajouter une boisson perso",
+    addDrinkSub: "Le nom et le prix indicatif suffisent. Ta boisson apparaît sous ⭐ Boissons perso pour que tu voies que tu l'as ajoutée toi-même.",
+    nameLabel: "Nom",
+    drinkNamePlaceholder: "ex. une bière spéciale",
+    priceLabel: "Prix indicatif (€)",
+    addPersonTitle: "Ajouter une personne",
+    warnNameFirst: "Saisis d'abord un nom pour ta boisson.",
+    warnPriceRequired: "Un prix indicatif est obligatoire — on en a besoin pour partager l'addition équitablement avec Fair Split.",
   },
 }
 
@@ -1936,8 +1966,8 @@ export default function Home() {
   const addDrink = async () => {
     const { name, price } = newDrink
     const priceNum = parseFloat((price || "").replace(",", "."))
-    if (!name.trim()) { setAddDrinkWarn("Vul eerst een naam in voor je drankje."); return }
-    if (!price || isNaN(priceNum) || priceNum <= 0) { setAddDrinkWarn("Een richtprijs is verplicht — die hebben we nodig om de rekening achteraf eerlijk te verdelen met Fair Split."); return }
+    if (!name.trim()) { setAddDrinkWarn(L.warnNameFirst); return }
+    if (!price || isNaN(priceNum) || priceNum <= 0) { setAddDrinkWarn(L.warnPriceRequired); return }
     setAddDrinkWarn(null)
     const cat = "Eigen"
     const autoEmoji = "⭐"
@@ -2145,7 +2175,7 @@ export default function Home() {
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       {asleep && (
         <div onClick={() => { lastActive.current = Date.now(); setAsleep(false) }} style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 3000, background: "rgba(20,33,58,0.92)", color: "#fff", padding: "9px 16px", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,24,40,0.3)", whiteSpace: "nowrap" }}>
-          ⏸ Live-updates gepauzeerd — tik om te hervatten
+          {L.asleepBanner}
         </div>
       )}
       {error && (
@@ -2159,10 +2189,10 @@ export default function Home() {
       {showEditDrinks && (
         <div style={{ ...S.overlay, zIndex: 2600 }}>
           <div style={{ ...S.modal, width: 440, maxHeight: "82vh", display: "flex", flexDirection: "column" }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>⭐ Je eigen drankjes</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Hier beheer je enkel je eigen toegevoegde drankjes. De standaardlijst met richtprijzen staat vast.</p>
+            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>{L.editDrinksTitle}</h3>
+            <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>{L.editDrinksSub}</p>
             <div style={{ overflowY: "auto", flex: 1, marginBottom: 12 }}>
-              {!visibleDrinks.some(isGroupDrink) && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>Je hebt nog geen eigen drankjes toegevoegd.</div>}
+              {!visibleDrinks.some(isGroupDrink) && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>{L.noOwnDrinks}</div>}
               {(() => {
                 const groups: Record<string, Drink[]> = {}
                 visibleDrinks.filter(isGroupDrink).forEach((d) => { const k = d.category ?? FALLBACK_CATEGORY; (groups[k] ||= []).push(d) })
@@ -2185,7 +2215,7 @@ export default function Home() {
                           <>
                             <span style={{ flex: 1, fontSize: 14 }}>{d.emoji} {d.name} <span style={{ color: "#999" }}>— €{d.price.toFixed(2)}</span></span>
                             <button style={S.iconBtn} onClick={() => setEditingDrink(d)}>✏️</button>
-                            <button style={S.iconBtn} title="Eigen drankje verwijderen" onClick={() => deleteDrinkFromList(d.id)}>🗑️</button>
+                            <button style={S.iconBtn} title={L.deleteOwnDrinkTitle} onClick={() => deleteDrinkFromList(d.id)}>🗑️</button>
                           </>
                         )}
                       </div>
@@ -2194,7 +2224,7 @@ export default function Home() {
                 ))
               })()}
             </div>
-            <button style={{ ...S.btn, width: "100%" }} onClick={() => { setEditingDrink(null); setShowEditDrinks(false) }}>Sluiten</button>
+            <button style={{ ...S.btn, width: "100%" }} onClick={() => { setEditingDrink(null); setShowEditDrinks(false) }}>{L.closeBtn}</button>
           </div>
         </div>
       )}
@@ -2203,13 +2233,13 @@ export default function Home() {
       {showAddDrink && (
         <div style={{ ...S.overlay, zIndex: 2300 }}>
           <div style={{ ...S.modal, width: 400 }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>➕ Eigen drank toevoegen</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>Naam en richtprijs volstaan. Je drankje komt onder ⭐ Eigen drankjes zodat je ziet dat je het zelf toevoegde.</p>
+            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>{L.addDrinkTitle}</h3>
+            <p style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>{L.addDrinkSub}</p>
 
-            <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>Naam</label>
-            <input placeholder="bv. een speciaalbiertje" value={newDrink.name} onChange={(e) => { setAddDrinkWarn(null); setNewDrink({ ...newDrink, name: e.target.value }) }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginTop: 4, marginBottom: 12 }} />
+            <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>{L.nameLabel}</label>
+            <input placeholder={L.drinkNamePlaceholder} value={newDrink.name} onChange={(e) => { setAddDrinkWarn(null); setNewDrink({ ...newDrink, name: e.target.value }) }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginTop: 4, marginBottom: 12 }} />
 
-            <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>Richtprijs (€)</label>
+            <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>{L.priceLabel}</label>
             <input type="number" placeholder="0.00" value={newDrink.price} onChange={(e) => { setAddDrinkWarn(null); setNewDrink({ ...newDrink, price: e.target.value }) }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginTop: 4, marginBottom: 18 }} />
 
             {addDrinkWarn && (
@@ -2219,8 +2249,8 @@ export default function Home() {
             )}
 
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "11px 0", fontWeight: 800 }} onClick={addDrink}>➕ Toevoegen</button>
-              <button style={{ ...S.btn, flex: 1, padding: "11px 0" }} onClick={() => { setAddDrinkWarn(null); setShowAddDrink(false) }}>Sluiten</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "11px 0", fontWeight: 800 }} onClick={addDrink}>➕ {L.add}</button>
+              <button style={{ ...S.btn, flex: 1, padding: "11px 0" }} onClick={() => { setAddDrinkWarn(null); setShowAddDrink(false) }}>{L.closeBtn}</button>
             </div>
           </div>
         </div>
@@ -2229,7 +2259,7 @@ export default function Home() {
       {showAddPerson && (
         <div style={S.overlay}>
           <div style={S.modal}>
-            <h3 style={{ marginBottom: 16, fontSize: 18, fontWeight: 700 }}>Persoon toevoegen</h3>
+            <h3 style={{ marginBottom: 16, fontSize: 18, fontWeight: 700 }}>{L.addPersonTitle}</h3>
             <AddPersonForm onAdd={(name) => { addPerson(name); setShowAddPerson(false) }} onClose={() => setShowAddPerson(false)} />
           </div>
         </div>
@@ -2238,7 +2268,7 @@ export default function Home() {
       {/* Top bar */}
       <div style={S.topBar}>
         <div style={{ minWidth: 0 }}>
-          <div onClick={goHome} title="Naar startscherm" style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer" }}>
+          <div onClick={goHome} title={L.toHomeTitle} style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer" }}>
             <RundoLogo size={34} />
             <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}><span style={{ color: "#4a3f1e" }}>Rundo</span> <span style={{ color: "#f0a500" }}>Party</span></div>
           </div>
