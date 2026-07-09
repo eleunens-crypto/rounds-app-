@@ -142,6 +142,19 @@ const CATEGORY_LABELS: Record<string, string> = {
   Mocktail:  "🍹 Mocktails",
   Eigen:     "⭐ Eigen drankjes",
 }
+const CATEGORY_LABELS_FR: Record<string, string> = {
+  Bier:      "🍺 Bière",
+  BierAV:    "🌿 Bière sans alcool",
+  Frisdrank: "🥤 Sodas & Eau",
+  Wijn:      "🍷 Vin & Bulles",
+  Warm:      "☕ Boissons chaudes",
+  Cocktail:  "🍸 Cocktails",
+  Longdrink: "🥃 Longs drinks & Mix",
+  Shot:      "🔥 Shots",
+  Mocktail:  "🍹 Mocktails",
+  Eigen:     "⭐ Boissons perso",
+}
+const catLabel = (key: string, lang: string): string => ((lang === "fr" ? CATEGORY_LABELS_FR : CATEGORY_LABELS)[key] ?? key)
 const FALLBACK_CATEGORY = "Eigen"
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   BierAV:    ["0.0", "0%", "alcoholvrij", "sportzot", "cero"],
@@ -401,7 +414,7 @@ function parseSpokenDrinks(text: string, drinkList: Drink[]): ParsedSpeechResult
   return { recognized, unrecognizedText, suggestion }
 }
 
-function groupDrinksByCategory(drinks: Drink[]): [string, Drink[]][] {
+function groupDrinksByCategory(drinks: Drink[], lang: string): [string, Drink[]][] {
   const map: Record<string, Drink[]> = {}
   drinks.forEach((d) => {
     const key = d.category ?? FALLBACK_CATEGORY
@@ -413,7 +426,7 @@ function groupDrinksByCategory(drinks: Drink[]): [string, Drink[]][] {
     ...knownOrder.filter((k) => map[k]?.length),
     ...Object.keys(map).filter((k) => !knownOrder.includes(k) && map[k]?.length),
   ]
-  return allKeys.map((k) => [CATEGORY_LABELS[k] ?? k, map[k]])
+  return allKeys.map((k) => [catLabel(k, lang), map[k]])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1978,7 +1991,7 @@ export default function Home() {
     setToast(`${name} toegevoegd`)
     await loadDrinks()
     if (showDrinkSelector) {
-      setActiveCategory(CATEGORY_LABELS[cat] ?? cat)
+      setActiveCategory(catLabel(cat, lang))
       setLastAddedCustomDrink({ name: name.trim(), category: cat })
     } else if (data?.id) {
       addToCart(data.id, 1)
@@ -2035,7 +2048,7 @@ export default function Home() {
     const baseRows = drinks.filter((d) => !d.group_id && !shadowed.has(normalizeDrinkName(d.name)))
     return [...baseRows, ...groupRows]
   })()
-  const groupedDrinks = groupDrinksByCategory(visibleDrinks)
+  const groupedDrinks = groupDrinksByCategory(visibleDrinks, lang)
   const bill = calculateBill(participants, orders, drinks, payments)
   // Fair split = de ÉCHT betaalde rondebedragen, verdeeld naar wat elk dronk (of gelijk bij 'iedereen evenveel').
   // De inleg die niet gebruikt werd, komt terug via de virtuele "de pot".
@@ -2199,7 +2212,7 @@ export default function Home() {
                 const order = [...Object.keys(CATEGORY_LABELS), ...Object.keys(groups).filter((k) => !CATEGORY_LABELS[k])]
                 return order.filter((k) => groups[k]?.length).map((cat) => (
                   <div key={cat} style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: "#c98a00", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6, paddingBottom: 4, borderBottom: "1px solid rgba(233,196,95,0.3)" }}>{CATEGORY_LABELS[cat] ?? cat}</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: "#c98a00", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6, paddingBottom: 4, borderBottom: "1px solid rgba(233,196,95,0.3)" }}>{catLabel(cat, lang)}</div>
                     {groups[cat].map((d) => (
                       <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                         {editingDrink?.id === d.id ? (
@@ -2777,7 +2790,7 @@ export default function Home() {
                 {/* Melding na een zelf toegevoegd drankje: waar staat het nu */}
                 {lastAddedCustomDrink && (
                   <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.35)", borderRadius: 12, padding: "8px 11px", marginBottom: 8, fontSize: 12.5, color: "#1f8a4c", lineHeight: 1.4 }}>
-                    <span style={{ flex: 1 }}>✅ <b>{lastAddedCustomDrink.name}</b> {L.customReady1}<b>{CATEGORY_LABELS[lastAddedCustomDrink.category] ?? lastAddedCustomDrink.category}</b>{L.customReady2}</span>
+                    <span style={{ flex: 1 }}>✅ <b>{lastAddedCustomDrink.name}</b> {L.customReady1}<b>{catLabel(lastAddedCustomDrink.category, lang)}</b>{L.customReady2}</span>
                     <button onClick={() => setLastAddedCustomDrink(null)} style={{ background: "none", border: "none", color: "#1f8a4c", fontSize: 14, cursor: "pointer", flexShrink: 0, lineHeight: 1 }}>✕</button>
                   </div>
                 )}
