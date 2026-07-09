@@ -788,6 +788,31 @@ const STRINGS = {
     equalBody: "De totale rekening wordt gelijk verdeeld over alle personen. Simpel &amp; snel maar minder eerlijk. Vergelijk zeker even met Fair split!",
     voiceNotSupported: "Spraak niet ondersteund in deze browser",
     voiceNotRecognized: "Niet herkend — probeer opnieuw of typ het drankje handmatig",
+    toastRoundEmpty: "Dat rondje is leeg",
+    toastAddDrinksFirst: "Voeg eerst drankjes toe",
+    toastPotSaved: "Pot opgeslagen ✅",
+    toastPotAmountFirst: "Vul eerst een bedrag in om de pot aan te vullen ⚠️",
+    toastBaseDrinkNoDelete: "Basisdranken kunnen niet verwijderd worden",
+    errAddPerson: "Persoon toevoegen mislukt",
+    errDeletePerson: "Persoon verwijderen mislukt",
+    errRename: "Naam wijzigen mislukt",
+    errSaveRound: "Rondje opslaan mislukt — probeer opnieuw",
+    errTopUpPot: "Pot aanvullen mislukt",
+    errDuplicateGroup: "Je hebt vandaag al een opgeslagen groep met die naam. Kies een andere naam of open ze bij \u201copgeslagen groepen\u201d.",
+    searchGroupPlaceholder: "🔍 Zoek groep...",
+    titleBackToUnassigned: "terug naar nog toe te wijzen",
+    titlePotView: "Pot bekijken of aanvullen",
+    confirmDeletePersonTitle: "Persoon verwijderen?",
+    confirmDeletePersonMsg: (name: string) => `${name} wordt verwijderd uit deze groep.`,
+    confirmClearOrderTitle: "Huidige bestelling wissen?",
+    confirmClearOrderMsg: "Je hebt een niet-afgeronde bestelling. Als je verdergaat wordt je huidige bestellijst gewist en begin je opnieuw.",
+    confirmClearOrderLabel: "Wissen & opnieuw",
+    confirmDeleteRoundTitle: (label: string) => `Ronde ${label} verwijderen?`,
+    confirmDeleteRoundMsg: "Je verliest ook de bestellingen én betalingen van deze ronde. De overige rondes behouden hun nummer.",
+    confirmDeleteDrinkTitle: "Drankje verwijderen?",
+    confirmDeleteDrinkMsg: (name: string) => `${name} verdwijnt uit de lijst van deze groep.`,
+    confirmDeleteDrinkMsgFallback: "Dit drankje wordt verwijderd.",
+    deleteLabel: "Verwijderen",
   },
   fr: {
     appTagline: "Des tournées et un partage sans prise de tête !",
@@ -920,6 +945,31 @@ const STRINGS = {
     equalBody: "L'addition totale est répartie également entre toutes les personnes. Simple et rapide, mais moins juste. Compare avec Fair Split !",
     voiceNotSupported: "La dictée n'est pas prise en charge dans ce navigateur",
     voiceNotRecognized: "Pas reconnu — réessaie ou tape la boisson à la main",
+    toastRoundEmpty: "Cette tournée est vide",
+    toastAddDrinksFirst: "Ajoute d'abord des boissons",
+    toastPotSaved: "Cagnotte enregistrée ✅",
+    toastPotAmountFirst: "Saisis d'abord un montant pour compléter la cagnotte ⚠️",
+    toastBaseDrinkNoDelete: "Les boissons de base ne peuvent pas être supprimées",
+    errAddPerson: "Échec de l'ajout de la personne",
+    errDeletePerson: "Échec de la suppression de la personne",
+    errRename: "Échec du changement de nom",
+    errSaveRound: "Échec de l'enregistrement de la tournée — réessaie",
+    errTopUpPot: "Échec du complément de la cagnotte",
+    errDuplicateGroup: "Tu as déjà aujourd'hui un groupe sauvegardé portant ce nom. Choisis un autre nom ou ouvre-le dans « groupes sauvegardés ».",
+    searchGroupPlaceholder: "🔍 Cherche un groupe...",
+    titleBackToUnassigned: "remettre à attribuer",
+    titlePotView: "Voir ou compléter la cagnotte",
+    confirmDeletePersonTitle: "Supprimer la personne ?",
+    confirmDeletePersonMsg: (name: string) => `${name} sera retiré de ce groupe.`,
+    confirmClearOrderTitle: "Effacer la commande en cours ?",
+    confirmClearOrderMsg: "Tu as une commande non finalisée. Si tu continues, ta liste actuelle est effacée et tu recommences.",
+    confirmClearOrderLabel: "Effacer & recommencer",
+    confirmDeleteRoundTitle: (label: string) => `Supprimer la tournée ${label} ?`,
+    confirmDeleteRoundMsg: "Tu perds aussi les commandes et les paiements de cette tournée. Les autres tournées gardent leur numéro.",
+    confirmDeleteDrinkTitle: "Supprimer la boisson ?",
+    confirmDeleteDrinkMsg: (name: string) => `${name} disparaît de la liste de ce groupe.`,
+    confirmDeleteDrinkMsgFallback: "Cette boisson sera supprimée.",
+    deleteLabel: "Supprimer",
   },
 }
 
@@ -1179,7 +1229,7 @@ export default function Home() {
       const name = `${base} (${shortDateLabel()})`
       const clash = getSavedGroups().some((g) => g.name.trim().toLowerCase() === name.toLowerCase())
       if (clash) {
-        setStartError("Je hebt vandaag al een opgeslagen groep met die naam. Kies een andere naam of open ze bij \u201copgeslagen groepen\u201d.")
+        setStartError(L.errDuplicateGroup)
         return
       }
       const invite_code = generateInviteCode()
@@ -1279,7 +1329,7 @@ export default function Home() {
     const used = await usedNumbersFromDb(group.id) // vers uit DB ? geen dubbele "Persoon N"
     const finalName = name?.trim() || `Persoon ${smallestFreeNumber(used)}`
     const { error } = await supabase.from("participants").insert([{ name: finalName, group_id: group.id }])
-    if (error) { setError("Persoon toevoegen mislukt"); return }
+    if (error) { setError(L.errAddPerson); return }
     await reloadTable(group.id, "participants")
   }
 
@@ -1290,13 +1340,13 @@ export default function Home() {
       return
     }
     setConfirmDialog({
-      title: "Persoon verwijderen?",
-      message: `${name} wordt verwijderd uit deze groep.`,
-      confirmLabel: "Verwijderen",
+      title: L.confirmDeletePersonTitle,
+      message: L.confirmDeletePersonMsg(name),
+      confirmLabel: L.deleteLabel,
       danger: true,
       onConfirm: async () => {
         const { error } = await supabase.from("participants").delete().eq("id", id)
-        if (error) { setError("Persoon verwijderen mislukt"); return }
+        if (error) { setError(L.errDeletePerson); return }
         await supabase.from("payments").delete().eq("group_id", group.id).eq("participant_id", id)
         setPaymentDraft((prev) => { const n = { ...prev }; delete n[id]; return n })
         setPotDraft((prev) => { const n = { ...prev }; delete n[id]; return n })
@@ -1310,7 +1360,7 @@ export default function Home() {
   const renamePerson = async () => {
     if (!group || !editingPerson || !editingPersonName.trim()) return
     const { error } = await supabase.from("participants").update({ name: editingPersonName.trim() }).eq("id", editingPerson)
-    if (error) { setError("Naam wijzigen mislukt"); return }
+    if (error) { setError(L.errRename); return }
     setEditingPerson(null)
     setEditingPersonName("")
     await reloadTable(group.id, "participants")
@@ -1377,9 +1427,9 @@ export default function Home() {
   const requestDiscardPending = (action: () => void) => {
     if (cartTotalItems > 0) {
       setConfirmDialog({
-        title: "Huidige bestelling wissen?",
-        message: "Je hebt een niet-afgeronde bestelling. Als je verdergaat wordt je huidige bestellijst gewist en begin je opnieuw.",
-        confirmLabel: "Wissen & opnieuw",
+        title: L.confirmClearOrderTitle,
+        message: L.confirmClearOrderMsg,
+        confirmLabel: L.confirmClearOrderLabel,
         danger: true,
         onConfirm: () => { clearCart(); action() },
       })
@@ -1403,7 +1453,7 @@ export default function Home() {
   // Een vorig rondje overnemen in de huidige bestelling (om snel opnieuw te bestellen of aan te passen)
   const reorderFromSession = (sess: number) => {
     const rows = orders.filter((o) => o.session === sess)
-    if (rows.length === 0) { setToast("Dat rondje is leeg"); return }
+    if (rows.length === 0) { setToast(L.toastRoundEmpty); return }
     setCart((prev) => {
       const next: Record<string, CartLine> = { ...prev }
       rows.forEach((o) => {
@@ -1688,7 +1738,7 @@ export default function Home() {
   const [payWarn, setPayWarn] = useState(false)
 
   const finishRound = async () => {
-    if (!group || cartTotalItems === 0) { setToast("Voeg eerst drankjes toe"); return }
+    if (!group || cartTotalItems === 0) { setToast(L.toastAddDrinksFirst); return }
     const newRoundSession = nextSession
     // Alle rijen in één keer opbouwen en met ÉÉN insert wegschrijven ? alles-of-niets,
     // geen half rondje meer als de tab sluit of het netwerk hapert.
@@ -1706,7 +1756,7 @@ export default function Home() {
     }
     if (rows.length > 0) {
       const { error } = await supabase.from("orders").insert(rows)
-      if (error) { setError("Rondje opslaan mislukt — probeer opnieuw"); return }
+      if (error) { setError(L.errSaveRound); return }
     }
     await reloadTable(group.id, "orders")
     setBarmanStep("list")
@@ -1886,9 +1936,9 @@ export default function Home() {
   const deleteRound = async (round: number) => {
     if (!group) return
     setConfirmDialog({
-      title: `Ronde ${roundLabel(round)} verwijderen?`,
-      message: "Je verliest ook de bestellingen én betalingen van deze ronde. De overige rondes behouden hun nummer.",
-      confirmLabel: "Verwijderen",
+      title: L.confirmDeleteRoundTitle(roundLabel(round)),
+      message: L.confirmDeleteRoundMsg,
+      confirmLabel: L.deleteLabel,
       danger: true,
       onConfirm: async () => {
         // Enkel deze ronde verwijderen; NIET hernummeren (zo blijft "Ronde 3" ook op een
@@ -1964,7 +2014,7 @@ export default function Home() {
     await reloadTable(group.id, "payments")
     setPotWarn(false)
     setShowPotModal(false)
-    setToast("Pot opgeslagen ✅")
+    setToast(L.toastPotSaved)
   }
 
   const addToPot = async () => {
@@ -1974,12 +2024,12 @@ export default function Home() {
       .filter((r) => participants.some((p) => p.id === r.participant_id) && !isNaN(r.amount) && r.amount > 0)
     if (rows.length === 0) {
       const amt = Math.round(parseFloat((potAddBulk || "").replace(",", ".")) || 0)
-      if (isNaN(amt) || amt <= 0 || participants.length === 0) { setPotAddWarn(true); setToast("Vul eerst een bedrag in om de pot aan te vullen ⚠️"); return }
+      if (isNaN(amt) || amt <= 0 || participants.length === 0) { setPotAddWarn(true); setToast(L.toastPotAmountFirst); return }
       rows = participants.map((p) => ({ participant_id: p.id, amount: amt }))
     }
     const inserts = rows.map((r) => ({ group_id: group.id, session: POT_SESSION, participant_id: r.participant_id, amount: r.amount }))
     const { error } = await supabase.from("payments").insert(inserts)
-    if (error) { setError("Pot aanvullen mislukt"); return }
+    if (error) { setError(L.errTopUpPot); return }
     setPotAddDraft({})
     setPotAddBulk("")
     setPotAddWarn(false)
@@ -2046,11 +2096,11 @@ export default function Home() {
 
   const deleteDrinkFromList = async (id: string) => {
     const d = drinks.find((dr) => dr.id === id)
-    if (d && !isGroupDrink(d)) { setToast("Basisdranken kunnen niet verwijderd worden"); return }
+    if (d && !isGroupDrink(d)) { setToast(L.toastBaseDrinkNoDelete); return }
     setConfirmDialog({
-      title: "Drankje verwijderen?",
-      message: d ? `${d.name} verdwijnt uit de lijst van deze groep.` : "Dit drankje wordt verwijderd.",
-      confirmLabel: "Verwijderen",
+      title: L.confirmDeleteDrinkTitle,
+      message: d ? L.confirmDeleteDrinkMsg(d.name) : L.confirmDeleteDrinkMsgFallback,
+      confirmLabel: L.deleteLabel,
       danger: true,
       onConfirm: async () => {
         const { error } = await supabase.from("drinks").delete().eq("id", id)
@@ -2158,7 +2208,7 @@ export default function Home() {
               </button>
               {savedOpen && (
                 <div style={{ marginTop: 12 }}>
-                  <input value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} placeholder="🔍 Zoek groep..." style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 10, fontSize: 13 }} />
+                  <input value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} placeholder={L.searchGroupPlaceholder} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 10, fontSize: 13 }} />
                   {filteredSaved.map((g) => (
                     <div
                       key={g.id}
@@ -3017,7 +3067,7 @@ export default function Home() {
                             <div key={pid} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, marginTop: 2 }}>
                               <span style={{ color: "#666" }}>{info.name} — {info.qty}</span>
                               {isEditing && (
-                                <button title="terug naar nog toe te wijzen" style={{ ...S.iconBtn, width: 20, height: 20, fontSize: 11 }} onClick={() => unassignOrderQty(it.drink.id, pid, s, 1)}>↩</button>
+                                <button title={L.titleBackToUnassigned} style={{ ...S.iconBtn, width: 20, height: 20, fontSize: 11 }} onClick={() => unassignOrderQty(it.drink.id, pid, s, 1)}>↩</button>
                               )}
                             </div>
                           ))}
@@ -3478,7 +3528,7 @@ export default function Home() {
                           >
                             {active ? "✓ " : ""}🫙 De pot
                           </button>
-                          <button onClick={() => setShowPotOverview(true)} title="Pot bekijken of aanvullen" style={{ border: "1px dashed rgba(120,95,20,0.3)", background: "rgba(150,110,20,0.04)", color: "#c98a00", borderRadius: 20, padding: "7px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+                          <button onClick={() => setShowPotOverview(true)} title={L.titlePotView} style={{ border: "1px dashed rgba(120,95,20,0.3)", background: "rgba(150,110,20,0.04)", color: "#c98a00", borderRadius: 20, padding: "7px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
                             + pot aanvullen
                           </button>
                         </>
