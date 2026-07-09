@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase"
+import { useLang, LanguageToggle } from "@/lib/i18n"
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -642,7 +643,54 @@ function CheersIcon({ size = 20 }: { size?: number }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
+const STRINGS = {
+  nl: {
+    appTagline: "Rondjes en splitten zonder gedoe!",
+    aboutBtnTitle: "Wat is Rundo Party?",
+    groupNamePlaceholder: "Groepsnaam",
+    loading: "Laden...",
+    startBtn: "Starten",
+    savedGroups: "Opgeslagen groepen",
+    person: "persoon",
+    people: "personen",
+    potLay: "Leg een pot",
+    potContributed: (v: string) => `€${v} ingelegd — `,
+    potRemaining: (v: string) => `€${v} nog in pot`,
+    tabGroup: "Groep",
+    tabGroupPot: "Groep + Pot",
+    tabOrder: "Nieuwe bestelling",
+    tabRounds: (n: number) => `Overzicht Rondjes${n > 0 ? ` (${n})` : ""}`,
+    tabBill: "Afrekenen",
+    tabLockToast: "Voeg eerst minstens één persoon toe bij Groep.",
+    errCreateGroup: (m: string) => "Groep aanmaken mislukt: " + m,
+    errGroupNotFound: "Groep niet gevonden. Controleer de code.",
+  },
+  fr: {
+    appTagline: "Des tournées et un partage sans prise de tête !",
+    aboutBtnTitle: "Qu'est-ce que Rundo Party ?",
+    groupNamePlaceholder: "Nom du groupe",
+    loading: "Chargement...",
+    startBtn: "Démarrer",
+    savedGroups: "Groupes sauvegardés",
+    person: "personne",
+    people: "personnes",
+    potLay: "Créer une cagnotte",
+    potContributed: (v: string) => `€${v} déposés — `,
+    potRemaining: (v: string) => `€${v} encore en cagnotte`,
+    tabGroup: "Groupe",
+    tabGroupPot: "Groupe + Cagnotte",
+    tabOrder: "Nouvelle commande",
+    tabRounds: (n: number) => `Aperçu des tournées${n > 0 ? ` (${n})` : ""}`,
+    tabBill: "Régler",
+    tabLockToast: "Ajoute d'abord au moins une personne dans Groupe.",
+    errCreateGroup: (m: string) => "Échec de la création du groupe : " + m,
+    errGroupNotFound: "Groupe introuvable. Vérifie le code.",
+  },
+}
+
 export default function Home() {
+  const [lang] = useLang()
+  const L = STRINGS[lang]
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const lastActive = useRef(Date.now())
@@ -901,7 +949,7 @@ export default function Home() {
       }
       const invite_code = generateInviteCode()
       const { data, error } = await supabase.from("groups").insert([{ name, invite_code, owner_id }]).select().single()
-      if (error || !data) { setStartError("Groep aanmaken mislukt: " + error?.message); return }
+      if (error || !data) { setStartError(L.errCreateGroup(error?.message ?? "")); return }
       setGroup(data)
       setActiveGroupCode(data.invite_code)
       await loadAll(data.id)
@@ -920,7 +968,7 @@ export default function Home() {
     try {
       const { data, error } = await supabase.from("groups").select("*").eq("invite_code", code.trim().toUpperCase()).single()
       if (error || !data) {
-        setStartError("Groep niet gevonden. Controleer de code.")
+        setStartError(L.errGroupNotFound)
         clearActiveGroupCode()
         return
       }
@@ -1832,6 +1880,7 @@ export default function Home() {
         <div style={{ maxWidth: 420, margin: "40px auto" }}>
           <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#a89a6a", textDecoration: "none", marginBottom: 14, cursor: "pointer" }}>← naar Rundo startscherm</a>
           <div style={{ marginBottom: 28 }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}><LanguageToggle compact /></div>
             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginBottom: 8 }}>
               <RundoLogo size={60} />
               <h1 style={{ ...S.h1, margin: 0, display: "inline-flex", alignItems: "baseline", gap: 8 }}>
@@ -1840,20 +1889,20 @@ export default function Home() {
               </h1>
               <button
                 onClick={() => setShowAboutParty(true)}
-                title="Wat is Rundo Party?"
+                title={L.aboutBtnTitle}
                 style={{ width: 24, height: 24, borderRadius: "50%", border: "1.5px solid rgba(150,110,20,0.25)", background: "#fff", color: "#c8941a", fontSize: 13, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0, flexShrink: 0 }}
               >
                 i
               </button>
             </div>
             <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: "#f0a500", fontSize: 15, fontWeight: 700, margin: 0 }}>
-              <CheersIcon size={20} /> Rondjes en splitten zonder gedoe!
+              <CheersIcon size={20} /> {L.appTagline}
             </p>
           </div>
 
           <div style={S.card}>
-            <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && startGroup()} placeholder="Groepsnaam" style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 12 }} />
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16, fontWeight: 800 }} onClick={startGroup} disabled={isStarting}>{isStarting ? "Laden..." : "Starten"}</button>
+            <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && startGroup()} placeholder={L.groupNamePlaceholder} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 12 }} />
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16, fontWeight: 800 }} onClick={startGroup} disabled={isStarting}>{isStarting ? L.loading : L.startBtn}</button>
             {startError && (
               <div style={{ marginTop: 12, color: "#c0392b", fontSize: 13, background: "#fff0f0", borderRadius: 10, padding: "8px 12px" }}>
                 ⚠️ {startError}
@@ -1866,7 +1915,7 @@ export default function Home() {
           {savedGroups.length > 0 && (
             <div style={{ ...S.card, marginTop: 4 }}>
               <button onClick={() => setSavedOpen((o) => !o)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", padding: 0 }}>
-                <b style={{ fontSize: 14, color: "#4a3f1e" }}>Opgeslagen groepen</b>
+                <b style={{ fontSize: 14, color: "#4a3f1e" }}>{L.savedGroups}</b>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#c98a00", background: "rgba(233,196,95,0.18)", borderRadius: 10, padding: "1px 8px" }}>{savedGroups.length}</span>
                   <span style={{ fontSize: 12, color: "#c98a00", display: "inline-block", transform: savedOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▾</span>
@@ -2032,34 +2081,35 @@ export default function Home() {
               const left = Math.max(0, potTotal - used)
               return (
                 <button onClick={() => setShowPotOverview(true)} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: "#a06b00", background: "linear-gradient(135deg,#fffdf6,#fff3cf)", border: "1.5px solid #ecc85a", borderRadius: 20, padding: "3px 11px", cursor: "pointer" }}>
-                  🫙 €{potTotal.toFixed(2)} ingelegd — <b style={{ color: "#4a3f1e" }}>€{left.toFixed(2)} nog in pot</b>
+                  🫙 {L.potContributed(potTotal.toFixed(2))}<b style={{ color: "#4a3f1e" }}>{L.potRemaining(left.toFixed(2))}</b>
                 </button>
               )
             })() : (
-              <button onClick={openPotModal} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 20, padding: "3px 11px", cursor: "pointer" }}>🫙 Leg een pot</button>
+              <button onClick={openPotModal} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 20, padding: "3px 11px", cursor: "pointer" }}>🫙 {L.potLay}</button>
             )}
           </div>
         </div>
         <div style={{ textAlign: "right", minWidth: 0 }}>
+          <div style={{ marginBottom: 5, display: "flex", justifyContent: "flex-end" }}><LanguageToggle compact /></div>
           <div style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.15, marginBottom: 2 }}>{group.name}</div>
-          <div style={{ fontSize: 11.5, color: "#a89a6a", fontWeight: 700 }}>{participants.length} {participants.length === 1 ? "persoon" : "personen"}</div>
+          <div style={{ fontSize: 11.5, color: "#a89a6a", fontWeight: 700 }}>{participants.length} {participants.length === 1 ? L.person : L.people}</div>
         </div>
       </div>
 
       {/* Tab navigation */}
       <div style={S.tabBar}>
         {([
-          { id: "setup", label: potTotal > 0 ? "Groep + Pot" : "Groep" },
-          { id: "ordering", label: "Nieuwe bestelling" },
-          { id: "rounds", label: `Overzicht Rondjes${sessions.length > 0 ? ` (${sessions.length})` : ""}` },
-          { id: "bill", label: "Afrekenen" },
+          { id: "setup", label: potTotal > 0 ? L.tabGroupPot : L.tabGroup },
+          { id: "ordering", label: L.tabOrder },
+          { id: "rounds", label: L.tabRounds(sessions.length) },
+          { id: "bill", label: L.tabBill },
         ] as { id: AppView; label: string }[]).map((t) => {
           const locked = participants.length === 0 && t.id !== "setup"
           return (
           <button
             key={t.id}
             onClick={() => {
-              if (locked) { setToast("Voeg eerst minstens één persoon toe bij Groep."); return }
+              if (locked) { setToast(L.tabLockToast); return }
               // 'Nieuwe bestelling' aanklikken terwijl je er al bent met een lopende bestelling:
               // eerst waarschuwen dat opnieuw beginnen je huidige lijst wist.
               if (t.id === "ordering" && view === "ordering" && cartTotalItems > 0) {
@@ -2443,7 +2493,7 @@ export default function Home() {
                 <div style={{ fontSize: 40, marginBottom: 8 }}>🧾</div>
                 <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>Bestelling afronden?</h3>
                 <p style={{ fontSize: 13, color: "#777", marginBottom: 12 }}>
-                  In totaal heb je {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""} voor {participants.length} {participants.length === 1 ? "persoon" : "personen"}. Overzicht:
+                  In totaal heb je {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""} voor {participants.length} {participants.length === 1 ? L.person : L.people}. Overzicht:
                 </p>
                 <div style={{ textAlign: "left", maxHeight: 200, overflowY: "auto", marginBottom: 16, border: "1px solid rgba(0,0,0,0.07)", borderRadius: 12, padding: "6px 12px" }}>
                   {Object.entries(cart).filter(([, l]) => l.total > 0).map(([id, l]) => {
@@ -2977,7 +3027,7 @@ export default function Home() {
       {showPotModal && (
         <div style={{ ...S.overlay, zIndex: 2200 }}>
           <div style={{ ...S.modal, width: 400, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700, color: "#4a3f1e" }}>🫙 Leg een pot</h3>
+            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700, color: "#4a3f1e" }}>🫙 {L.potLay}</h3>
             <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Iedereen legt vooraf wat in de pot. Je kan het per persoon corrigeren als iemand niet meelegt.</p>
 
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14, padding: "10px 12px", background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 12 }}>
@@ -3760,6 +3810,8 @@ export default function Home() {
 // SMALL HELPER COMPONENTS
 // ═══════════════════════════════════════════════════════════════════════════
 function AddPersonForm({ onAdd, onClose }: { onAdd: (name: string) => void; onClose: () => void }) {
+  const [lang] = useLang()
+  const L = STRINGS[lang]
   const [name, setName] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
   useEffect(() => { inputRef.current?.focus() }, [])
