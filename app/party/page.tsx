@@ -699,6 +699,46 @@ const STRINGS = {
     potModalSub: "Iedereen legt vooraf wat in de pot. Je kan het per persoon corrigeren als iemand niet meelegt.",
     potTotalInPot: "Totaal in pot",
     potWarnPre: "Vul eerst een bedrag in voor minstens één persoon, of kies ",
+    roundLabelPre: "Rondje",
+    currentOrderTitle: "Je huidige bestelling",
+    repeatPrevRoundBtn: "🔄 Vorig rondje opnieuw",
+    selectDrinksBtn: "🍹 Selecteer drankje(s)",
+    andOr: "EN/OF",
+    voiceListening: "🎤 Luistert...",
+    voiceSpeakOrder: "🎙️ Spreek je bestelling in",
+    voiceHowLink: "ⓘ Hoe werkt inspreken?",
+    emptyOrder1: "Nog geen drankjes gekozen — selecteer ze hierboven 👆",
+    emptyOrderN: "Nog geen drankjes in dit rondje — selecteer ze hierboven 👆",
+    toRoundsLink: "Overzicht Rondjes →",
+    toBillLink: "Afrekenen →",
+    voiceSuggestPre: "Niet helemaal verstaan — bedoelde je ",
+    confirmNo: "Nee",
+    lastAddedTitle: "🆕 Laatst toegevoegd",
+    assignAllLater: "alles later toewijzen",
+    allOrdersInRound: "📋 Alle bestellingen in rondje ",
+    clearAll: "wis alles",
+    editOrderBtn: "✏️ Bestelling wijzigen",
+    finishOrderBtn: (n: number) => `✅ Bestelling afronden — ${n} item${n !== 1 ? "s" : ""}`,
+    reorderTitle: "🔄 Begin met een vorig rondje",
+    reorderExact: "exact opnieuw",
+    reorderAdjust: "licht aan te passen",
+    reorderSubA: "Bestel een vorig rondje ",
+    reorderSubB: ", of neem het over om het ",
+    prevBadge: "vorige",
+    drink: "drankje",
+    drinks: "drankjes",
+    reorderExactBtn: "Exact opnieuw",
+    adjustBtn: "✏️ Aanpassen",
+    reorderShowPrev: "▴ Toon enkel het vorige rondje",
+    reorderShowOlder: (n: number) => `▾ Toon ${n} ouder${n === 1 ? "" : "e"} rondje${n === 1 ? "" : "s"}`,
+    finishConfirmTitle: "Bestelling afronden?",
+    finishConfirmSub: (items: number, persons: string) => `In totaal heb je ${items} item${items !== 1 ? "s" : ""} voor ${persons}. Overzicht:`,
+    orderAdjustBtn: "Bestelling aanpassen",
+    finishAnyway: "Toch afronden",
+    finishYes: "✅ Ja, afronden",
+    unassignedWarnB: " nog toe te wijzen. Voeg ze nu toe voor een eerlijke ",
+    unassignedWarnC: ". Hoe? Via de knop ",
+    unassignedWarnD: " hieronder.",
   },
   fr: {
     appTagline: "Des tournées et un partage sans prise de tête !",
@@ -755,6 +795,46 @@ const STRINGS = {
     potModalSub: "Chacun met un peu dans la cagnotte à l'avance. Tu peux corriger par personne si quelqu'un ne participe pas.",
     potTotalInPot: "Total en cagnotte",
     potWarnPre: "Saisis d'abord un montant pour au moins une personne, ou choisis ",
+    roundLabelPre: "Tournée",
+    currentOrderTitle: "Ta commande en cours",
+    repeatPrevRoundBtn: "🔄 Refaire la tournée précédente",
+    selectDrinksBtn: "🍹 Sélectionne des boissons",
+    andOr: "ET/OU",
+    voiceListening: "🎤 J'écoute...",
+    voiceSpeakOrder: "🎙️ Dicte ta commande",
+    voiceHowLink: "ⓘ Comment fonctionne la dictée ?",
+    emptyOrder1: "Encore aucune boisson choisie — sélectionne-les ci-dessus 👆",
+    emptyOrderN: "Encore aucune boisson dans cette tournée — sélectionne-les ci-dessus 👆",
+    toRoundsLink: "Aperçu des tournées →",
+    toBillLink: "Régler →",
+    voiceSuggestPre: "Pas tout compris — voulais-tu dire ",
+    confirmNo: "Non",
+    lastAddedTitle: "🆕 Ajouté en dernier",
+    assignAllLater: "tout attribuer plus tard",
+    allOrdersInRound: "📋 Toutes les commandes de la tournée ",
+    clearAll: "tout effacer",
+    editOrderBtn: "✏️ Modifier la commande",
+    finishOrderBtn: (n: number) => `✅ Finaliser la commande — ${n} article${n !== 1 ? "s" : ""}`,
+    reorderTitle: "🔄 Repars d'une tournée précédente",
+    reorderExact: "à l'identique",
+    reorderAdjust: "l'ajuster légèrement",
+    reorderSubA: "Recommande une tournée précédente ",
+    reorderSubB: ", ou reprends-la pour ",
+    prevBadge: "précédente",
+    drink: "boisson",
+    drinks: "boissons",
+    reorderExactBtn: "À l'identique",
+    adjustBtn: "✏️ Ajuster",
+    reorderShowPrev: "▴ Afficher seulement la tournée précédente",
+    reorderShowOlder: (n: number) => `▾ Afficher ${n} tournée${n === 1 ? "" : "s"} plus ancienne${n === 1 ? "" : "s"}`,
+    finishConfirmTitle: "Finaliser la commande ?",
+    finishConfirmSub: (items: number, persons: string) => `Au total tu as ${items} article${items !== 1 ? "s" : ""} pour ${persons}. Aperçu :`,
+    orderAdjustBtn: "Ajuster la commande",
+    finishAnyway: "Finaliser quand même",
+    finishYes: "✅ Oui, finaliser",
+    unassignedWarnB: " encore à attribuer. Ajoute-les maintenant pour un juste ",
+    unassignedWarnC: ". Comment ? Via le bouton ",
+    unassignedWarnD: " ci-dessous.",
   },
 }
 
@@ -2304,15 +2384,15 @@ export default function Home() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "2px 2px 12px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
               <div style={{ width: 30, height: 30, borderRadius: 10, background: "linear-gradient(135deg,#5a4a1a,#7a6528)", color: "#f7d461", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>{nextRoundLabel}</div>
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", whiteSpace: "nowrap" }}>Rondje {nextRoundLabel}</span>
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", whiteSpace: "nowrap" }}>{L.roundLabelPre} {nextRoundLabel}</span>
             </div>
-            <div style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.15 }}>{cartTotalItems > 0 ? "Je huidige bestelling" : ""}</div>
+            <div style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.15 }}>{cartTotalItems > 0 ? L.currentOrderTitle : ""}</div>
             {sessions.length >= 1 && (
               <button
                 onClick={() => requestDiscardPending(() => { setReorderShowAll(false); setShowReorderPicker(true) })}
                 style={{ flexShrink: 0, background: "rgba(214,158,20,0.1)", border: "1px solid rgba(214,158,20,0.3)", color: "#c8941a", borderRadius: 20, padding: "6px 11px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
               >
-                🔄 Vorig rondje opnieuw
+                {L.repeatPrevRoundBtn}
               </button>
             )}
           </div>
@@ -2327,9 +2407,9 @@ export default function Home() {
                 onClick={openDrinkSelector}
                 style={{ ...S.btn, flex: 1.15, padding: "14px 8px", fontSize: 13, fontWeight: 700, border: "none", lineHeight: 1.25, background: "linear-gradient(135deg,#f4c430,#f7d461)", color: "#4a3a0a", boxShadow: "0 6px 18px rgba(150,110,20,0.3)" }}
               >
-                🍹 Selecteer drankje(s)
+                {L.selectDrinksBtn}
               </button>
-              <span style={{ fontSize: 11, fontWeight: 800, color: "#aaa", flexShrink: 0, alignSelf: "center" }}>EN/OF</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#aaa", flexShrink: 0, alignSelf: "center" }}>{L.andOr}</span>
               <div style={{ flex: 0.85, position: "relative", display: "flex" }}>
                 <button
                   onClick={quickVoiceActive ? stopQuickVoice : startQuickVoice}
@@ -2341,11 +2421,11 @@ export default function Home() {
                     boxShadow: quickVoiceActive ? "0 0 0 5px rgba(231,76,60,0.18)" : "0 6px 18px rgba(150,110,20,0.3)",
                   }}
                 >
-                  {quickVoiceActive ? "🎤 Luistert..." : <>🎙️ Spreek je bestelling in <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.5, opacity: 0.72, border: "1px solid currentColor", borderRadius: 4, padding: "0 3px", verticalAlign: "middle", whiteSpace: "nowrap" }}>BÈTA</span></>}
+                  {quickVoiceActive ? L.voiceListening : <>{L.voiceSpeakOrder} <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.5, opacity: 0.72, border: "1px solid currentColor", borderRadius: 4, padding: "0 3px", verticalAlign: "middle", whiteSpace: "nowrap" }}>BÈTA</span></>}
                 </button>
               </div>
             </div>
-            <div style={{ textAlign: "right", marginTop: 8 }}><button onClick={() => setShowVoiceExample(true)} style={{ background: "none", border: "none", color: "#c8941a", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 2px" }}>ⓘ Hoe werkt inspreken?</button></div>
+            <div style={{ textAlign: "right", marginTop: 8 }}><button onClick={() => setShowVoiceExample(true)} style={{ background: "none", border: "none", color: "#c8941a", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 2px" }}>{L.voiceHowLink}</button></div>
           </div>
           </>
           )}
@@ -2354,13 +2434,13 @@ export default function Home() {
             <div style={{ textAlign: "center", margin: "16px 6px 4px" }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: "#a89a6a" }}>
                 {sessions.length === 0
-                  ? "Nog geen drankjes gekozen — selecteer ze hierboven 👆"
-                  : "Nog geen drankjes in dit rondje — selecteer ze hierboven 👆"}
+                  ? L.emptyOrder1
+                  : L.emptyOrderN}
               </div>
               {sessions.length > 0 && (
                 <div style={{ marginTop: 10, display: "flex", justifyContent: "center", gap: 16 }}>
-                  <button onClick={() => setView("rounds")} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 4px" }}>Overzicht Rondjes →</button>
-                  <button onClick={() => setView("bill")} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 4px" }}>Afrekenen →</button>
+                  <button onClick={() => setView("rounds")} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 4px" }}>{L.toRoundsLink}</button>
+                  <button onClick={() => setView("bill")} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 4px" }}>{L.toBillLink}</button>
                 </div>
               )}
             </div>
@@ -2370,11 +2450,11 @@ export default function Home() {
           {voiceSuggestion && (
             <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(231,168,38,0.1),rgba(231,168,38,0.05))", border: "1px solid rgba(231,168,38,0.3)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
               <div style={{ fontSize: 13 }}>
-                Niet helemaal verstaan — bedoelde je <b>{voiceSuggestion.suggested.emoji} {voiceSuggestion.suggested.name}</b>?
+                {L.voiceSuggestPre}<b>{voiceSuggestion.suggested.emoji} {voiceSuggestion.suggested.name}</b>?
               </div>
               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                <button style={{ ...S.btn, ...S.btnPrimary, fontSize: 12, padding: "6px 12px" }} onClick={acceptVoiceSuggestion}>Ja</button>
-                <button style={{ ...S.btn, fontSize: 12, padding: "6px 12px" }} onClick={dismissVoiceSuggestion}>Nee</button>
+                <button style={{ ...S.btn, ...S.btnPrimary, fontSize: 12, padding: "6px 12px" }} onClick={acceptVoiceSuggestion}>{L.confirmYes}</button>
+                <button style={{ ...S.btn, fontSize: 12, padding: "6px 12px" }} onClick={dismissVoiceSuggestion}>{L.confirmNo}</button>
               </div>
             </div>
           )}
@@ -2391,12 +2471,12 @@ export default function Home() {
             return (
               <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(150,110,20,0.1),rgba(233,196,95,0.06))", border: "1px solid rgba(150,110,20,0.3)" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: "#c98a00", textTransform: "uppercase", letterSpacing: 0.6 }}>🆕 Laatst toegevoegd</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "#c98a00", textTransform: "uppercase", letterSpacing: 0.6 }}>{L.lastAddedTitle}</div>
                   <button
                     onClick={() => { setLastAddedDrinkIds([]); setLastAddedViaVoice(false) }}
                     style={{ background: "none", border: "none", color: "#b3a476", fontSize: 11, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2, flexShrink: 0 }}
                   >
-                    ? alles later toewijzen
+                    {L.assignAllLater}
                   </button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: shown.length > 3 ? "repeat(auto-fill, minmax(205px, 1fr))" : "1fr", gap: 8 }}>
@@ -2431,10 +2511,10 @@ export default function Home() {
             <div style={{ ...S.card, padding: 0, overflow: "hidden", border: "1px solid rgba(214,158,20,0.18)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg,#f4c430,#f7d461)", padding: "12px 16px" }}>
                 <span style={{ fontSize: 17, fontWeight: 800, color: "#4a3a0a", display: "flex", alignItems: "center", gap: 8 }}>
-                  📋 Alle bestellingen in rondje {nextRoundLabel}
+                  {L.allOrdersInRound}{nextRoundLabel}
                   <span style={{ fontSize: 12, fontWeight: 800, color: "#4a3a0a", background: "#fffef2", borderRadius: 20, padding: "1px 10px" }}>{cartTotalItems}</span>
                 </span>
-                <button style={{ background: "none", border: "none", color: "#7a5f14", fontSize: 12, cursor: "pointer", textDecoration: "underline", fontWeight: 600 }} onClick={clearCart}>wis alles</button>
+                <button style={{ background: "none", border: "none", color: "#7a5f14", fontSize: 12, cursor: "pointer", textDecoration: "underline", fontWeight: 600 }} onClick={clearCart}>{L.clearAll}</button>
               </div>
               <div style={{ padding: 16 }}>
               {(() => {
@@ -2478,14 +2558,14 @@ export default function Home() {
                   onClick={openDrinkSelectorEdit}
                   style={{ ...S.btn, flex: 0.6, padding: "13px 8px", fontSize: 13, fontWeight: 700, background: "#fffef9", border: "1.5px solid rgba(120,95,20,0.22)", color: "#8a7d55" }}
                 >
-                  ✏️ Bestelling wijzigen
+                  {L.editOrderBtn}
                 </button>
               )}
               <button
                 onClick={() => setShowFinishConfirm(true)}
                 style={{ ...S.btn, flex: 1.4, padding: "13px 8px", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }}
               >
-                ✅ Bestelling afronden — {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""}
+                {L.finishOrderBtn(cartTotalItems)}
               </button>
             </div>
           )}
@@ -2495,8 +2575,8 @@ export default function Home() {
           {showReorderPicker && (
             <div style={S.overlay}>
               <div style={{ ...S.modal, width: 420, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
-                <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800, color: "#4a3f1e" }}>🔄 Begin met een vorig rondje</h3>
-                <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Bestel een vorig rondje <b>exact opnieuw</b>, of neem het over om het <b>licht aan te passen</b>.</p>
+                <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800, color: "#4a3f1e" }}>{L.reorderTitle}</h3>
+                <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>{L.reorderSubA}<b>{L.reorderExact}</b>{L.reorderSubB}<b>{L.reorderAdjust}</b>.</p>
                 <div style={{ overflowY: "auto", flex: 1, marginBottom: 12 }}>
                   {(() => {
                     const reversed = [...sessions].reverse()
@@ -2519,8 +2599,8 @@ export default function Home() {
                               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                                 <span style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#5a4a1a,#7a6528)", color: "#f7d461", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, flexShrink: 0 }}>{roundLabel(sess)}</span>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>Rondje {roundLabel(sess)}{isPrev && <span style={{ fontSize: 10, fontWeight: 800, color: "#a06b00", background: "rgba(233,196,95,0.25)", borderRadius: 10, padding: "1px 7px", marginLeft: 6 }}>vorige</span>}</div>
-                                  <div style={{ fontSize: 11, color: "#a89a6a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{total} {total === 1 ? "drankje" : "drankjes"}{names ? ` — ${names}` : ""}</div>
+                                  <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>{L.roundLabelPre} {roundLabel(sess)}{isPrev && <span style={{ fontSize: 10, fontWeight: 800, color: "#a06b00", background: "rgba(233,196,95,0.25)", borderRadius: 10, padding: "1px 7px", marginLeft: 6 }}>{L.prevBadge}</span>}</div>
+                                  <div style={{ fontSize: 11, color: "#a89a6a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{total} {total === 1 ? L.drink : L.drinks}{names ? ` — ${names}` : ""}</div>
                                 </div>
                               </div>
                               <div style={{ display: "flex", gap: 8 }}>
@@ -2528,13 +2608,13 @@ export default function Home() {
                                   onClick={() => { reorderFromSession(sess); setShowFinishConfirm(true) }}
                                   style={{ ...S.btn, flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e" }}
                                 >
-                                  ? Exact opnieuw
+                                  {L.reorderExactBtn}
                                 </button>
                                 <button
                                   onClick={() => reorderFromSession(sess)}
                                   style={{ ...S.btn, flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 700, background: "#fff", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55" }}
                                 >
-                                  ✏️ Aanpassen
+                                  {L.adjustBtn}
                                 </button>
                               </div>
                             </div>
@@ -2545,14 +2625,14 @@ export default function Home() {
                             onClick={() => setReorderShowAll((v) => !v)}
                             style={{ width: "100%", background: "none", border: "none", color: "#c8941a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", padding: "8px 0", textDecoration: "underline", textUnderlineOffset: 3 }}
                           >
-                            {reorderShowAll ? "▴ Toon enkel het vorige rondje" : `▾ Toon ${olderCount} ouder${olderCount === 1 ? "" : "e"} rondje${olderCount === 1 ? "" : "s"}`}
+                            {reorderShowAll ? L.reorderShowPrev : L.reorderShowOlder(olderCount)}
                           </button>
                         )}
                       </>
                     )
                   })()}
                 </div>
-                <button style={{ ...S.btn, width: "100%", padding: "11px 0" }} onClick={() => setShowReorderPicker(false)}>Annuleren</button>
+                <button style={{ ...S.btn, width: "100%", padding: "11px 0" }} onClick={() => setShowReorderPicker(false)}>{L.cancelN}</button>
               </div>
             </div>
           )}
@@ -2561,9 +2641,9 @@ export default function Home() {
             <div style={S.overlay}>
               <div style={{ ...S.modal, width: 360, textAlign: "center" }}>
                 <div style={{ fontSize: 40, marginBottom: 8 }}>🧾</div>
-                <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>Bestelling afronden?</h3>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>{L.finishConfirmTitle}</h3>
                 <p style={{ fontSize: 13, color: "#777", marginBottom: 12 }}>
-                  In totaal heb je {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""} voor {participants.length} {participants.length === 1 ? L.person : L.people}. Overzicht:
+                  {L.finishConfirmSub(cartTotalItems, `${participants.length} ${participants.length === 1 ? L.person : L.people}`)}
                 </p>
                 <div style={{ textAlign: "left", maxHeight: 200, overflowY: "auto", marginBottom: 16, border: "1px solid rgba(0,0,0,0.07)", borderRadius: 12, padding: "6px 12px" }}>
                   {Object.entries(cart).filter(([, l]) => l.total > 0).map(([id, l]) => {
@@ -2587,12 +2667,12 @@ export default function Home() {
                   const subtleStyle = { ...S.btn, width: "100%", padding: "11px 0", fontSize: 14, fontWeight: 700 }
                   const adjustBtn = (
                     <button style={unassigned > 0 ? primaryStyle : subtleStyle} onClick={() => setShowFinishConfirm(false)}>
-                      {unassigned > 0 ? "✏️ Bestelling aanpassen" : "✅ Bestelling aanpassen"}
+                      {(unassigned > 0 ? "✏️ " : "✅ ") + L.orderAdjustBtn}
                     </button>
                   )
                   const finishBtn = (
                     <button style={unassigned > 0 ? subtleStyle : primaryStyle} onClick={() => { setShowFinishConfirm(false); finishRound() }}>
-                      {unassigned > 0 ? "Toch afronden" : "✅ Ja, afronden"}
+                      {unassigned > 0 ? L.finishAnyway : L.finishYes}
                     </button>
                   )
                   return (
@@ -2601,7 +2681,7 @@ export default function Home() {
                         <div style={{ display: "flex", gap: 8, alignItems: "flex-start", textAlign: "left", background: "rgba(224,107,94,0.1)", border: "1px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
                           <span style={{ fontSize: 16, lineHeight: 1 }}>⚠️</span>
                           <span style={{ fontSize: 12.5, color: "#c0392b", lineHeight: 1.45, fontWeight: 600 }}>
-                            <b>{unassigned} {unassigned === 1 ? "drankje" : "drankjes"}</b> nog toe te wijzen. Voeg ze nu toe voor een eerlijke <b>&ldquo;Fair Split&rdquo;</b>. Hoe? Via de knop <b>&ldquo;Bestelling aanpassen&rdquo;</b> hieronder.
+                            <b>{unassigned} {unassigned === 1 ? L.drink : L.drinks}</b>{L.unassignedWarnB}<b>&ldquo;Fair Split&rdquo;</b>{L.unassignedWarnC}<b>&ldquo;{L.orderAdjustBtn}&rdquo;</b>{L.unassignedWarnD}
                           </span>
                         </div>
                       )}
