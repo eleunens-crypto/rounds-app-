@@ -1976,7 +1976,7 @@ export default function RundoTable() {
     const tax = taxShare(pid)
     if (tax > 0.005) out.push({ name: "BTW / kosten (verdeeld)", qty: 1, amount: tax, shared: false, revealed: true, sharers: 0, myHeads: 0 })
     const tip = tipShare(pid)
-    if (tip > 0.005) out.push({ name: "💛 fooi", qty: 1, amount: tip, shared: false, revealed: true, sharers: 0, myHeads: 0 })
+    if (tip > 0.005) out.push({ name: `💛 ${L.tipItemName}`, qty: 1, amount: tip, shared: false, revealed: true, sharers: 0, myHeads: 0 })
     return out
   }
 
