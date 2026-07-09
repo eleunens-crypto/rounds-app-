@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase"
+import { useLang, LanguageToggle } from "@/lib/i18n"
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -141,6 +142,53 @@ const CATEGORY_LABELS: Record<string, string> = {
   Mocktail:  "🍹 Mocktails",
   Eigen:     "⭐ Eigen drankjes",
 }
+const CATEGORY_LABELS_FR: Record<string, string> = {
+  Bier:      "🍺 Bière",
+  BierAV:    "🌿 Bière sans alcool",
+  Frisdrank: "🥤 Sodas & Eau",
+  Wijn:      "🍷 Vin & Bulles",
+  Warm:      "☕ Boissons chaudes",
+  Cocktail:  "🍸 Cocktails",
+  Longdrink: "🥃 Longs drinks & Mix",
+  Shot:      "🔥 Shots",
+  Mocktail:  "🍹 Mocktails",
+  Eigen:     "⭐ Boissons perso",
+}
+const catLabel = (key: string, lang: string): string => ((lang === "fr" ? CATEGORY_LABELS_FR : CATEGORY_LABELS)[key] ?? key)
+
+// Franse namen voor de STANDAARD-drankjes (merk-/internationale namen blijven ongewijzigd).
+// Enkel de generieke Nederlandse woorden krijgen een Franse naam. Zelf toegevoegde drankjes
+// staan niet in deze lijst en behouden dus altijd hun eigen naam. De database blijft ongewijzigd.
+const DRINK_NAMES_FR: Record<string, string> = {
+  "Chimay Blauw": "Chimay Bleue",
+  "Hoegaarden Wit": "Hoegaarden Blanche",
+  "Leffe Blond": "Leffe Blonde",
+  "Vedett Extra Blond": "Vedett Extra Blonde",
+  "Leffe 0.0 Blond": "Leffe 0.0 Blonde",
+  "Vedett Extra Blond 0.0": "Vedett Extra Blonde 0.0",
+  "Appelsap": "Jus de pomme",
+  "Sinaasappelsap": "Jus d'orange",
+  "Water bruis": "Eau pétillante",
+  "Water plat": "Eau plate",
+  "Decafé koffie": "Café déca",
+  "Hasseltse koffie": "Café hasseltois",
+  "Koffie": "Café",
+  "Thee": "Thé",
+  "Koffie verkeerd": "Lait russe",
+  "Warme chocolademelk": "Chocolat chaud",
+  "Huiswijn rood": "Vin maison rouge",
+  "Huiswijn rosé": "Vin maison rosé",
+  "Huiswijn wit": "Vin maison blanc",
+  "Malibu Pineapple": "Malibu Ananas",
+  "Bacardi Lemon": "Bacardi Citron",
+  "Rum Cola": "Rhum Coca",
+  "Whisky Cola": "Whisky Coca",
+  "Malibu Cola": "Malibu Coca",
+  "Strawberry Daiquiri 0.0": "Daiquiri Fraise 0.0",
+}
+const drinkName = (name: string, lang: string): string => (lang === "fr" ? (DRINK_NAMES_FR[name] ?? name) : name)
+// Placeholder-namen "Persoon N" tonen als "Personne N" in het Frans; echte namen blijven ongewijzigd.
+const pName = (name: string, lang: string): string => { const m = /^Persoon (\d+)$/.exec(name || ""); return (lang === "fr" && m) ? `Personne ${m[1]}` : name }
 const FALLBACK_CATEGORY = "Eigen"
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   BierAV:    ["0.0", "0%", "alcoholvrij", "sportzot", "cero"],
@@ -400,7 +448,7 @@ function parseSpokenDrinks(text: string, drinkList: Drink[]): ParsedSpeechResult
   return { recognized, unrecognizedText, suggestion }
 }
 
-function groupDrinksByCategory(drinks: Drink[]): [string, Drink[]][] {
+function groupDrinksByCategory(drinks: Drink[], lang: string): [string, Drink[]][] {
   const map: Record<string, Drink[]> = {}
   drinks.forEach((d) => {
     const key = d.category ?? FALLBACK_CATEGORY
@@ -412,7 +460,7 @@ function groupDrinksByCategory(drinks: Drink[]): [string, Drink[]][] {
     ...knownOrder.filter((k) => map[k]?.length),
     ...Object.keys(map).filter((k) => !knownOrder.includes(k) && map[k]?.length),
   ]
-  return allKeys.map((k) => [CATEGORY_LABELS[k] ?? k, map[k]])
+  return allKeys.map((k) => [catLabel(k, lang), map[k]])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -642,7 +690,596 @@ function CheersIcon({ size = 20 }: { size?: number }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
+const STRINGS = {
+  nl: {
+    appTagline: "Rondjes en splitten zonder gedoe!",
+    aboutBtnTitle: "Wat is Rundo Party?",
+    groupNamePlaceholder: "Groepsnaam",
+    loading: "Laden...",
+    startBtn: "Starten",
+    savedGroups: "Opgeslagen groepen",
+    person: "persoon",
+    people: "personen",
+    potLay: "Leg een pot",
+    potContributed: (v: string) => `€${v} ingelegd — `,
+    potRemaining: (v: string) => `€${v} nog in pot`,
+    tabGroup: "Groep",
+    tabGroupPot: "Groep + Pot",
+    tabOrder: "Nieuwe bestelling",
+    tabRounds: (n: number) => `Overzicht Rondjes${n > 0 ? ` (${n})` : ""}`,
+    tabBill: "Afrekenen",
+    tabLockToast: "Voeg eerst minstens één persoon toe bij Groep.",
+    errCreateGroup: (m: string) => "Groep aanmaken mislukt: " + m,
+    errGroupNotFound: "Groep niet gevonden. Controleer de code.",
+    errLoadDrinks: "Drankjes laden mislukt",
+    errLoadData: "Data laden mislukt",
+    toastAddedPre: "Toegevoegd: ",
+    setupCountTitle: "👥 Aantal personen",
+    setupNamesOptional: "Namen zijn optioneel — pas ze aan wanneer je wil",
+    setupPersonsTitle: "Personen",
+    setupTapToRename: "tik op een naam om te hernoemen",
+    setupAddName: "+ Naam toevoegen",
+    setupNoPersons: "Nog geen personen",
+    personLabel: (n: number) => `Persoon ${n}`,
+    personShort: (n: number) => `Pers. ${n}`,
+    potPlacedBtn: (v: string) => `🫙 Pot gelegd — €${v}`,
+    potLayFirst: "🫙 Leg eerst een pot",
+    startOrderingBtn: "🍻 Start bestellen →",
+    addPersonNamePlaceholder: "Naam (optioneel)...",
+    add: "Toevoegen",
+    cancel: "Annuleer",
+    cancelN: "Annuleren",
+    confirmYes: "Ja",
+    saveBtn: "💾 Opslaan",
+    perPersonAbbr: "p.p.",
+    potAddPersonsFirst: "Voeg eerst personen toe",
+    potAmountPlaceholder: "bedrag",
+    potName: (i: number) => (["Eerste pot", "Tweede pot", "Derde pot", "Vierde pot", "Vijfde pot", "Zesde pot"][i] ?? `Pot ${i + 1}`),
+    potOverviewTitle: "🫙 De pot",
+    potOverviewSub: "Overzicht per pot en wie wat bijlegde.",
+    potStatContributed: "ingelegd",
+    potStatUsed: "gebruikt",
+    potStatAvailable: "nog beschikbaar",
+    potNoContributions: "Nog geen inleg.",
+    potGeneral: "Algemeen",
+    potTopUp: "🫙 Pot aanvullen",
+    potPerPersonToggle: "Of vul per persoon een eigen bedrag in",
+    potTotalAdd: "Totaal toevoegen",
+    potAddWarnMsg: "Vul eerst een bedrag in — als p.p. of per persoon.",
+    potModalSub: "Iedereen legt vooraf wat in de pot. Je kan het per persoon corrigeren als iemand niet meelegt.",
+    potTotalInPot: "Totaal in pot",
+    potWarnPre: "Vul eerst een bedrag in voor minstens één persoon, of kies ",
+    roundLabelPre: "Rondje",
+    currentOrderTitle: "Je huidige bestelling",
+    repeatPrevRoundBtn: "🔄 Vorig rondje opnieuw",
+    selectDrinksBtn: "🍹 Selecteer drankje(s)",
+    andOr: "EN/OF",
+    voiceListening: "🎤 Luistert...",
+    voiceSpeakOrder: "🎙️ Spreek je bestelling in",
+    voiceHowLink: "ⓘ Hoe werkt inspreken?",
+    emptyOrder1: "Nog geen drankjes gekozen — selecteer ze hierboven 👆",
+    emptyOrderN: "Nog geen drankjes in dit rondje — selecteer ze hierboven 👆",
+    toRoundsLink: "Overzicht Rondjes →",
+    toBillLink: "Afrekenen →",
+    voiceSuggestPre: "Niet helemaal verstaan — bedoelde je ",
+    confirmNo: "Nee",
+    lastAddedTitle: "🆕 Laatst toegevoegd",
+    assignAllLater: "alles later toewijzen",
+    allOrdersInRound: "📋 Alle bestellingen in rondje ",
+    clearAll: "wis alles",
+    editOrderBtn: "✏️ Bestelling wijzigen",
+    finishOrderBtn: (n: number) => `✅ Bestelling afronden — ${n} item${n !== 1 ? "s" : ""}`,
+    reorderTitle: "🔄 Begin met een vorig rondje",
+    reorderExact: "exact opnieuw",
+    reorderAdjust: "licht aan te passen",
+    reorderSubA: "Bestel een vorig rondje ",
+    reorderSubB: ", of neem het over om het ",
+    prevBadge: "vorige",
+    drink: "drankje",
+    drinks: "drankjes",
+    reorderExactBtn: "Exact opnieuw",
+    adjustBtn: "✏️ Aanpassen",
+    reorderShowPrev: "▴ Toon enkel het vorige rondje",
+    reorderShowOlder: (n: number) => `▾ Toon ${n} ouder${n === 1 ? "" : "e"} rondje${n === 1 ? "" : "s"}`,
+    finishConfirmTitle: "Bestelling afronden?",
+    finishConfirmSub: (items: number, persons: string) => `In totaal heb je ${items} item${items !== 1 ? "s" : ""} voor ${persons}. Overzicht:`,
+    orderAdjustBtn: "Bestelling aanpassen",
+    finishAnyway: "Toch afronden",
+    finishYes: "✅ Ja, afronden",
+    unassignedWarnB: " nog toe te wijzen. Voeg ze nu toe voor een eerlijke ",
+    unassignedWarnC: ". Hoe? Via de knop ",
+    unassignedWarnD: " hieronder.",
+    persAbbr: "pers.",
+    searchPlaceholder: "Zoek… bv. cola, jäger, virgin",
+    customReady1: " staat nu klaar onder ",
+    customReady2: " — tik het aan om toe te voegen.",
+    noDrinkFound: "Geen drankje gevonden — voeg het onderaan toe als eigen drankje.",
+    readyBtn: (n: number, over: number) => n === 0 ? "Klaar" : `Klaar? ${n} ${n !== 1 ? "drankjes" : "drankje"}${over > 0 ? ` (${over} meer dan groep)` : ""}`,
+    addOwnDrinkBtn: "⭐ Eigen drankje toevoegen",
+    manageOwnDrinks: "✏️ Mijn eigen drankjes beheren",
+    selectorEmptyToast: "Nog geen drankje geselecteerd — tik er eentje aan 👆",
+    asleepBanner: "⏸ Live-updates gepauzeerd — tik om te hervatten",
+    toHomeTitle: "Naar startscherm",
+    editDrinksTitle: "⭐ Je eigen drankjes",
+    editDrinksSub: "Hier beheer je enkel je eigen toegevoegde drankjes. De standaardlijst met richtprijzen staat vast.",
+    noOwnDrinks: "Je hebt nog geen eigen drankjes toegevoegd.",
+    deleteOwnDrinkTitle: "Eigen drankje verwijderen",
+    closeBtn: "Sluiten",
+    addDrinkTitle: "➕ Eigen drank toevoegen",
+    addDrinkSub: "Naam en richtprijs volstaan. Je drankje komt onder ⭐ Eigen drankjes zodat je ziet dat je het zelf toevoegde.",
+    nameLabel: "Naam",
+    drinkNamePlaceholder: "bv. een speciaalbiertje",
+    priceLabel: "Richtprijs (€)",
+    addPersonTitle: "Persoon toevoegen",
+    warnNameFirst: "Vul eerst een naam in voor je drankje.",
+    warnPriceRequired: "Een richtprijs is verplicht — die hebben we nodig om de rekening achteraf eerlijk te verdelen met Fair Split.",
+    voiceExampleTitle: "🎤 Spreek je bestelling in",
+    voiceExampleA: "Zeg bijvoorbeeld ",
+    voiceEx1: "2 pintjes",
+    voiceExampleB: " — klik daarna opnieuw en zeg ",
+    voiceEx2: "1 gin-tonic",
+    voiceExampleC: ", enz. Je kan zoveel drankjes na elkaar inspreken als je wil.",
+    voiceBetaNote: "⚠️ Bèta — deze functie is nog in test en werkt nog niet altijd vlot. Kijk je bestelling na het inspreken zeker even na.",
+    understood: "Begrepen",
+    equalTitle: "Iedereen evenveel",
+    equalBody: "De totale rekening wordt gelijk verdeeld over alle personen. Simpel &amp; snel maar minder eerlijk. Vergelijk zeker even met Fair split!",
+    voiceNotSupported: "Spraak niet ondersteund in deze browser",
+    voiceNotRecognized: "Niet herkend — probeer opnieuw of typ het drankje handmatig",
+    toastRoundEmpty: "Dat rondje is leeg",
+    toastAddDrinksFirst: "Voeg eerst drankjes toe",
+    toastPotSaved: "Pot opgeslagen ✅",
+    toastPotAmountFirst: "Vul eerst een bedrag in om de pot aan te vullen ⚠️",
+    toastBaseDrinkNoDelete: "Basisdranken kunnen niet verwijderd worden",
+    errAddPerson: "Persoon toevoegen mislukt",
+    errDeletePerson: "Persoon verwijderen mislukt",
+    errRename: "Naam wijzigen mislukt",
+    errSaveRound: "Rondje opslaan mislukt — probeer opnieuw",
+    errTopUpPot: "Pot aanvullen mislukt",
+    errDuplicateGroup: "Je hebt vandaag al een opgeslagen groep met die naam. Kies een andere naam of open ze bij \u201copgeslagen groepen\u201d.",
+    searchGroupPlaceholder: "🔍 Zoek groep...",
+    titleBackToUnassigned: "terug naar nog toe te wijzen",
+    titlePotView: "Pot bekijken of aanvullen",
+    confirmDeletePersonTitle: "Persoon verwijderen?",
+    confirmDeletePersonMsg: (name: string) => `${name} wordt verwijderd uit deze groep.`,
+    confirmClearOrderTitle: "Huidige bestelling wissen?",
+    confirmClearOrderMsg: "Je hebt een niet-afgeronde bestelling. Als je verdergaat wordt je huidige bestellijst gewist en begin je opnieuw.",
+    confirmClearOrderLabel: "Wissen & opnieuw",
+    confirmDeleteRoundTitle: (label: string | number) => `Ronde ${label} verwijderen?`,
+    confirmDeleteRoundMsg: "Je verliest ook de bestellingen én betalingen van deze ronde. De overige rondes behouden hun nummer.",
+    confirmDeleteDrinkTitle: "Drankje verwijderen?",
+    confirmDeleteDrinkMsg: (name: string) => `${name} verdwijnt uit de lijst van deze groep.`,
+    confirmDeleteDrinkMsgFallback: "Dit drankje wordt verwijderd.",
+    deleteLabel: "Verwijderen",
+    roundsEmptyNoOrders: "Nog geen bestellingen. Ga naar \u201cNieuwe bestelling\u201d om te starten.",
+    orderNotFinishedTitle: "Jouw bestelling werd nog niet afgerond",
+    orderNotFinishedSub: "Bekijk ze hier, pas eventueel nog aan en klik op \u201cBestelling afronden\u201d.",
+    toYourOrderBtn: "🍻 Naar je bestelling",
+    unfinishedOrderBanner: (n: number) => `Je hebt nog een niet-afgeronde bestelling (${n} ${n === 1 ? "item" : "items"}).`,
+    viewLink: "Bekijk →",
+    collapseAll: "▴ Alles inklappen",
+    expandAll: "▾ Alles openklappen",
+    roundWordAlt: "Ronde",
+    lastBadge: "laatste",
+    nToAssignBadge: (n: number) => `${n} nog toe te wijzen!`,
+    titleFullscreen: "Volledig scherm",
+    titleEdit: "Bewerken",
+    whoPaidBtn: "💶 Wie betaalde?",
+    paidLabel: "💶 Betaald",
+    viaPot: "🫙 via de pot",
+    nToAssignInline: (n: number) => `${n}× nog toe te wijzen!`,
+    forWhom: "voor wie?",
+    toBillBtn: "🧾 Ga naar afrekenen →",
+    indicatiefTitle: "🏷️ Indicatieve richtprijs",
+    indicatiefWord: "Indicatieve richtprijs",
+    indicatiefBody1: " is een pure schatting per drankje. ",
+    indicatiefBody2: " verdeelt het verschil met wat er echt betaald werd tijdens de rondjes volgens wie wat dronk, niet zomaar gelijk over iedereen. ",
+    muchFairer: "Veel eerlijker dus!",
+    fairTitle: "Hoe werkt Fair Split?",
+    fairBody1a: "Met ",
+    fairBody1b: " delen we het totaalbedrag ",
+    fairNot: "NIET",
+    fairBody1c: " door het aantal personen. Op basis van richtprijzen per drankje verdelen we de totaalprijs volgens wie wat dronk.",
+    fairBody1d: "Niet perfect, wel veel eerlijker!",
+    fairBody2b: " verdeelt het verschil met wat er echt betaald werd tijdens de rondjes volgens wie wat dronk, niet zomaar gelijk over iedereen. ",
+    fairBody2c: "Veel eerlijker dus!",
+    payEditorTitle: (label: string | number) => `🍻 Ronde ${label} — wie betaalde?`,
+    payEditorSub: "Vul in hoeveel elke persoon betaalde, of zet het op \u201cDe pot\u201d.",
+    potNodeLabel: "🫙 De pot",
+    noPotYet: "geen pot gelegd",
+    addPotLink: "+ leg een pot",
+    potAvailableNote: (v: string) => `nog €${v} beschikbaar in de pot`,
+    sumEntered: "Som ingevuld",
+    closeX: "✕ Sluiten",
+    nToAssignSuffix: (n: number) => ` + ${n} nog toe te wijzen`,
+    finishedRoundTitle: (label: string | number) => `Rondje ${label}: overzicht`,
+    whoPaidThisRound: "💶 Wie betaalde dit rondje?",
+    tapWhoPaid: "Tik wie betaalde — daarna vul je het exacte bedrag in. Meestal 1 persoon, meerdere mag ook.",
+    topUpPotLink: "+ pot aanvullen",
+    noPotChip: "🫙 geen pot gelegd — + leg een pot",
+    paidTogether: "Samen betaald",
+    potAvailableChip: (v: string) => `🫙 nog €${v} beschikbaar in de pot`,
+    payWarnA: "Geef eerst het betaalde bedrag in — via ",
+    potWordInline: "de pot",
+    payWarnB: " of een ",
+    personWordInline: "persoon",
+    payWarnC: ". Of kies ",
+    laterFill: "Later invullen",
+    saveCloseBtn: "💾 Opslaan & sluiten",
+    toastRoundDone: (label: string | number) => `Ronde ${label} afgerond!`,
+    allOrderedDrinks: "📋 Alle bestelde drankjes",
+    hideDrinks: "verberg ▴",
+    showDrinksBtn: "toon drankjes ▾",
+    nothingOrdered: "Nog niets besteld",
+    nToAssignParen: (n: number) => `(${n} nog toe te wijzen!)`,
+    billTitle: "🧾 Wie dronk en betaalde wat?",
+    paidBadge: (v: string) => `✅ betaald €${v}`,
+    fromPotBadge: (v: string) => `🫙 uit pot €${v}`,
+    stillInPotBadge: (v: string) => `🫙 nog in pot €${v}`,
+    indicatievePriceLabel: "indicatieve prijs",
+    whatMeans: "Wat betekent dit?",
+    fairToggleTitle: "Fair split tonen of verbergen",
+    equalToggle: "EVENVEEL ⇄",
+    fairToggleBtn: "FAIR SPLIT ⇄",
+    addFairToggle: "+ FAIR SPLIT",
+    potInlegSuffix: (v: string) => `— €${v} in de pot`,
+    selfPaidSuffix: (v: string) => `— €${v} zelf betaald`,
+    nothingDrunk: "nog niets gedronken",
+    payAmount: (v: string) => `💸 betaalt €${v} `,
+    inThePot: "in de pot",
+    toPrefix: "aan ",
+    receiveAmount: (v: string) => `💰 Ontvangt €${v} `,
+    fromThePot: "uit de pot",
+    fromPrefix: "van ",
+    balanced: "⚖️ staat gelijk",
+    fairSplitWord: "fair split",
+    evenveelWord: "evenveel",
+    indicatiefPrefix: "indicatief ",
+    fairBillBtn: "Eerlijke rekening met Fair split",
+    equalBillBtn: "Iedereen betaalt evenveel",
+    equalInfoLink: "Iedereen evenveel?",
+    totalSmall: "totaal",
+    indicatievePriceTotal: "Indicatieve prijs",
+    totalParen: "(totaal)",
+    totalPaid: "Totaal betaald",
+    backBtn: "Terug",
+    hideCompare: "Verberg vergelijking",
+    compareFair: "Vergelijk met Fair split",
+    compareEqual: "Vergelijk met iedereen evenveel",
+    toRoundsBtn2: "📋 Naar Overzicht Rondjes",
+    noSplitBody1: (labels: number[]) => `Nog geen verdeling mogelijk. ${labels.length === 1 ? `Rondje ${labels[0]} is` : `De rondjes ${labels.join(", ")} zijn`} nog niet betaald. Zolang een rondje niet betaald is, klopt de verdeling niet — ook niet bij "iedereen evenveel". Vul eerst in wie elk rondje betaalde bij "Overzicht Rondjes".`,
+    noSplitBody2: "Nog geen verdeling mogelijk. Er is nog niet ingevuld wie wat betaalde (een persoon of de pot). Vul dat eerst in bij \u201cOverzicht Rondjes\u201d — daarna kan je hier de rekening verdelen.",
+    homeLink: "← naar Rundo startscherm",
+    assignPopupTitle: "🎯 Toewijzen",
+    assignHeader: "Toewijzen",
+    openWord: "open",
+    assignBodyN: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} nog toe te wijzen.`,
+    assignBodyPost: " Tik personen aan — meerdere mag.",
+    allAssignedInlineA: "Alles toegewezen ✅ Je kan nog ",
+    changeWord: "wijzigen",
+    allAssignedInlineB: " of doorgaan naar Fair Split.",
+    showFairSplitBtn: "Toon Fair Split →",
+    allAssignedTitle: "Alles toegewezen!",
+    allAssignedSub: "Je kan nu de eerlijke verdeling bekijken.",
+    toAssignTitle: "👉 Nog toe te wijzen",
+    assignRemainA: "Er zijn nog ",
+    assignRemainN: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"}`,
+    assignRemainB: " nog toe te wijzen. Wijs ze toe in ",
+    allBestOrderedPlain: "Alle bestelde drankjes",
+    assignRemainC: " of in ",
+    roundsPlain: "Overzicht Rondjes",
+    aboutBodyA: "Met ",
+    aboutBodyB: " hou je vlot bij wie welke rondjes bestelt en betaalt — per persoon of via een gezamenlijke pot. Op het einde verdeel je de rekening ",
+    aboutFairPart: "eerlijk met Fair Split",
+    aboutBodyC: " (op basis van wie wat dronk) of gewoon gelijk over iedereen.",
+    stillInPotLabel: "Nog in de pot",
+    toAllOrderedBtn: "Naar \u201cAlle bestelde drankjes\u201d",
+    toRoundsQuotedBtn: "Naar \u201cOverzicht Rondjes\u201d",
+    assignTriggerText: (n: number) => `👉 ${n} nog toe te wijzen — voor wie?`,
+    titleChangeAssign: "Toewijzing wijzigen",
+    everyoneEach1: "👥 iedereen (elk 1)",
+    hasSomething: "— heeft al iets",
+    allAssignedChip: "✅ alles toegewezen",
+    editChip: "✏️ aanpassen",
+    potPaidLabel: "🫙 De pot betaalde",
+    paidSuffix: "betaalde",
+  },
+  fr: {
+    appTagline: "Des tournées et un partage sans prise de tête !",
+    aboutBtnTitle: "Qu'est-ce que Rundo Party ?",
+    groupNamePlaceholder: "Nom du groupe",
+    loading: "Chargement...",
+    startBtn: "Démarrer",
+    savedGroups: "Groupes sauvegardés",
+    person: "personne",
+    people: "personnes",
+    potLay: "Créer une cagnotte",
+    potContributed: (v: string) => `€${v} déposés — `,
+    potRemaining: (v: string) => `€${v} encore en cagnotte`,
+    tabGroup: "Groupe",
+    tabGroupPot: "Groupe + Cagnotte",
+    tabOrder: "Nouvelle commande",
+    tabRounds: (n: number) => `Aperçu des tournées${n > 0 ? ` (${n})` : ""}`,
+    tabBill: "Régler",
+    tabLockToast: "Ajoute d'abord au moins une personne dans Groupe.",
+    errCreateGroup: (m: string) => "Échec de la création du groupe : " + m,
+    errGroupNotFound: "Groupe introuvable. Vérifie le code.",
+    errLoadDrinks: "Échec du chargement des boissons",
+    errLoadData: "Échec du chargement des données",
+    toastAddedPre: "Ajouté : ",
+    setupCountTitle: "👥 Nombre de personnes",
+    setupNamesOptional: "Les noms sont facultatifs — modifie-les quand tu veux",
+    setupPersonsTitle: "Personnes",
+    setupTapToRename: "touche un nom pour le renommer",
+    setupAddName: "+ Ajouter un nom",
+    setupNoPersons: "Encore aucune personne",
+    personLabel: (n: number) => `Personne ${n}`,
+    personShort: (n: number) => `Pers. ${n}`,
+    potPlacedBtn: (v: string) => `🫙 Cagnotte créée — €${v}`,
+    potLayFirst: "🫙 Crée d'abord une cagnotte",
+    startOrderingBtn: "🍻 Commencer à commander →",
+    addPersonNamePlaceholder: "Nom (facultatif)...",
+    add: "Ajouter",
+    cancel: "Annuler",
+    cancelN: "Annuler",
+    confirmYes: "Oui",
+    saveBtn: "💾 Enregistrer",
+    perPersonAbbr: "p.p.",
+    potAddPersonsFirst: "Ajoute d'abord des personnes",
+    potAmountPlaceholder: "montant",
+    potName: (i: number) => (["Première cagnotte", "Deuxième cagnotte", "Troisième cagnotte", "Quatrième cagnotte", "Cinquième cagnotte", "Sixième cagnotte"][i] ?? `Cagnotte ${i + 1}`),
+    potOverviewTitle: "🫙 La cagnotte",
+    potOverviewSub: "Aperçu par cagnotte et qui a mis quoi.",
+    potStatContributed: "déposé",
+    potStatUsed: "utilisé",
+    potStatAvailable: "encore dispo",
+    potNoContributions: "Encore aucun dépôt.",
+    potGeneral: "Général",
+    potTopUp: "🫙 Compléter la cagnotte",
+    potPerPersonToggle: "Ou saisis un montant par personne",
+    potTotalAdd: "Total à ajouter",
+    potAddWarnMsg: "Saisis d'abord un montant — en p.p. ou par personne.",
+    potModalSub: "Chacun met un peu dans la cagnotte à l'avance. Tu peux corriger par personne si quelqu'un ne participe pas.",
+    potTotalInPot: "Total en cagnotte",
+    potWarnPre: "Saisis d'abord un montant pour au moins une personne, ou choisis ",
+    roundLabelPre: "Tournée",
+    currentOrderTitle: "Ta commande en cours",
+    repeatPrevRoundBtn: "🔄 Refaire la tournée précédente",
+    selectDrinksBtn: "🍹 Sélectionne des boissons",
+    andOr: "ET/OU",
+    voiceListening: "🎤 J'écoute...",
+    voiceSpeakOrder: "🎙️ Dicte ta commande",
+    voiceHowLink: "ⓘ Comment fonctionne la dictée ?",
+    emptyOrder1: "Encore aucune boisson choisie — sélectionne-les ci-dessus 👆",
+    emptyOrderN: "Encore aucune boisson dans cette tournée — sélectionne-les ci-dessus 👆",
+    toRoundsLink: "Aperçu des tournées →",
+    toBillLink: "Régler →",
+    voiceSuggestPre: "Pas tout compris — voulais-tu dire ",
+    confirmNo: "Non",
+    lastAddedTitle: "🆕 Ajouté en dernier",
+    assignAllLater: "tout attribuer plus tard",
+    allOrdersInRound: "📋 Toutes les commandes de la tournée ",
+    clearAll: "tout effacer",
+    editOrderBtn: "✏️ Modifier la commande",
+    finishOrderBtn: (n: number) => `✅ Finaliser la commande — ${n} article${n !== 1 ? "s" : ""}`,
+    reorderTitle: "🔄 Repars d'une tournée précédente",
+    reorderExact: "à l'identique",
+    reorderAdjust: "l'ajuster légèrement",
+    reorderSubA: "Recommande une tournée précédente ",
+    reorderSubB: ", ou reprends-la pour ",
+    prevBadge: "précédente",
+    drink: "boisson",
+    drinks: "boissons",
+    reorderExactBtn: "À l'identique",
+    adjustBtn: "✏️ Ajuster",
+    reorderShowPrev: "▴ Afficher seulement la tournée précédente",
+    reorderShowOlder: (n: number) => `▾ Afficher ${n} tournée${n === 1 ? "" : "s"} plus ancienne${n === 1 ? "" : "s"}`,
+    finishConfirmTitle: "Finaliser la commande ?",
+    finishConfirmSub: (items: number, persons: string) => `Au total tu as ${items} article${items !== 1 ? "s" : ""} pour ${persons}. Aperçu :`,
+    orderAdjustBtn: "Ajuster la commande",
+    finishAnyway: "Finaliser quand même",
+    finishYes: "✅ Oui, finaliser",
+    unassignedWarnB: " encore à attribuer. Ajoute-les maintenant pour un juste ",
+    unassignedWarnC: ". Comment ? Via le bouton ",
+    unassignedWarnD: " ci-dessous.",
+    persAbbr: "pers.",
+    searchPlaceholder: "Cherche… ex. cola, jäger, virgin",
+    customReady1: " est maintenant prêt dans ",
+    customReady2: " — touche-le pour l'ajouter.",
+    noDrinkFound: "Aucune boisson trouvée — ajoute-la ci-dessous comme boisson perso.",
+    readyBtn: (n: number, over: number) => n === 0 ? "Prêt" : `Prêt ? ${n} ${n !== 1 ? "boissons" : "boisson"}${over > 0 ? ` (${over} de plus que le groupe)` : ""}`,
+    addOwnDrinkBtn: "⭐ Ajouter une boisson perso",
+    manageOwnDrinks: "✏️ Gérer mes boissons perso",
+    selectorEmptyToast: "Aucune boisson sélectionnée — touches-en une 👆",
+    asleepBanner: "⏸ Mises à jour en direct en pause — touche pour reprendre",
+    toHomeTitle: "Vers l'écran d'accueil",
+    editDrinksTitle: "⭐ Tes boissons perso",
+    editDrinksSub: "Ici tu gères uniquement les boissons que tu as ajoutées. La liste standard avec les prix indicatifs est fixe.",
+    noOwnDrinks: "Tu n'as encore ajouté aucune boisson perso.",
+    deleteOwnDrinkTitle: "Supprimer la boisson perso",
+    closeBtn: "Fermer",
+    addDrinkTitle: "➕ Ajouter une boisson perso",
+    addDrinkSub: "Le nom et le prix indicatif suffisent. Ta boisson apparaît sous ⭐ Boissons perso pour que tu voies que tu l'as ajoutée toi-même.",
+    nameLabel: "Nom",
+    drinkNamePlaceholder: "ex. une bière spéciale",
+    priceLabel: "Prix indicatif (€)",
+    addPersonTitle: "Ajouter une personne",
+    warnNameFirst: "Saisis d'abord un nom pour ta boisson.",
+    warnPriceRequired: "Un prix indicatif est obligatoire — on en a besoin pour partager l'addition équitablement avec Fair Split.",
+    voiceExampleTitle: "🎤 Dicte ta commande",
+    voiceExampleA: "Dis par exemple ",
+    voiceEx1: "2 bières",
+    voiceExampleB: " — clique à nouveau et dis ",
+    voiceEx2: "1 gin-tonic",
+    voiceExampleC: ", etc. Tu peux dicter autant de boissons que tu veux, l'une après l'autre.",
+    voiceBetaNote: "⚠️ Bêta — cette fonction est encore en test et ne marche pas toujours parfaitement. Vérifie bien ta commande après la dictée.",
+    understood: "Compris",
+    equalTitle: "Tout le monde pareil",
+    equalBody: "L'addition totale est répartie également entre toutes les personnes. Simple et rapide, mais moins juste. Compare avec Fair Split !",
+    voiceNotSupported: "La dictée n'est pas prise en charge dans ce navigateur",
+    voiceNotRecognized: "Pas reconnu — réessaie ou tape la boisson à la main",
+    toastRoundEmpty: "Cette tournée est vide",
+    toastAddDrinksFirst: "Ajoute d'abord des boissons",
+    toastPotSaved: "Cagnotte enregistrée ✅",
+    toastPotAmountFirst: "Saisis d'abord un montant pour compléter la cagnotte ⚠️",
+    toastBaseDrinkNoDelete: "Les boissons de base ne peuvent pas être supprimées",
+    errAddPerson: "Échec de l'ajout de la personne",
+    errDeletePerson: "Échec de la suppression de la personne",
+    errRename: "Échec du changement de nom",
+    errSaveRound: "Échec de l'enregistrement de la tournée — réessaie",
+    errTopUpPot: "Échec du complément de la cagnotte",
+    errDuplicateGroup: "Tu as déjà aujourd'hui un groupe sauvegardé portant ce nom. Choisis un autre nom ou ouvre-le dans « groupes sauvegardés ».",
+    searchGroupPlaceholder: "🔍 Cherche un groupe...",
+    titleBackToUnassigned: "remettre à attribuer",
+    titlePotView: "Voir ou compléter la cagnotte",
+    confirmDeletePersonTitle: "Supprimer la personne ?",
+    confirmDeletePersonMsg: (name: string) => `${name} sera retiré de ce groupe.`,
+    confirmClearOrderTitle: "Effacer la commande en cours ?",
+    confirmClearOrderMsg: "Tu as une commande non finalisée. Si tu continues, ta liste actuelle est effacée et tu recommences.",
+    confirmClearOrderLabel: "Effacer & recommencer",
+    confirmDeleteRoundTitle: (label: string | number) => `Supprimer la tournée ${label} ?`,
+    confirmDeleteRoundMsg: "Tu perds aussi les commandes et les paiements de cette tournée. Les autres tournées gardent leur numéro.",
+    confirmDeleteDrinkTitle: "Supprimer la boisson ?",
+    confirmDeleteDrinkMsg: (name: string) => `${name} disparaît de la liste de ce groupe.`,
+    confirmDeleteDrinkMsgFallback: "Cette boisson sera supprimée.",
+    deleteLabel: "Supprimer",
+    roundsEmptyNoOrders: "Encore aucune commande. Va dans « Nouvelle commande » pour commencer.",
+    orderNotFinishedTitle: "Ta commande n'a pas encore été finalisée",
+    orderNotFinishedSub: "Consulte-la ici, ajuste si besoin et clique sur « Finaliser la commande ».",
+    toYourOrderBtn: "🍻 Vers ta commande",
+    unfinishedOrderBanner: (n: number) => `Tu as encore une commande non finalisée (${n} article${n === 1 ? "" : "s"}).`,
+    viewLink: "Voir →",
+    collapseAll: "▴ Tout replier",
+    expandAll: "▾ Tout déplier",
+    roundWordAlt: "Tournée",
+    lastBadge: "dernière",
+    nToAssignBadge: (n: number) => `${n} à attribuer !`,
+    titleFullscreen: "Plein écran",
+    titleEdit: "Modifier",
+    whoPaidBtn: "💶 Qui a payé ?",
+    paidLabel: "💶 Payé",
+    viaPot: "🫙 via la cagnotte",
+    nToAssignInline: (n: number) => `${n}× à attribuer !`,
+    forWhom: "pour qui ?",
+    toBillBtn: "🧾 Aller au règlement →",
+    indicatiefTitle: "🏷️ Prix indicatif",
+    indicatiefWord: "Le prix indicatif",
+    indicatiefBody1: " est une simple estimation par boisson. ",
+    indicatiefBody2: " répartit la différence avec ce qui a réellement été payé pendant les tournées selon qui a bu quoi, pas simplement à parts égales. ",
+    muchFairer: "Bien plus juste, donc !",
+    fairTitle: "Comment fonctionne Fair Split ?",
+    fairBody1a: "Avec ",
+    fairBody1b: ", on ne divise ",
+    fairNot: "PAS",
+    fairBody1c: " le montant total par le nombre de personnes. Sur base des prix indicatifs par boisson, on répartit le prix total selon qui a bu quoi.",
+    fairBody1d: "Pas parfait, mais bien plus juste !",
+    fairBody2b: " répartit la différence avec ce qui a réellement été payé pendant les tournées selon qui a bu quoi, pas simplement à parts égales. ",
+    fairBody2c: "Bien plus juste, donc !",
+    payEditorTitle: (label: string | number) => `🍻 Tournée ${label} — qui a payé ?`,
+    payEditorSub: "Indique combien chaque personne a payé, ou mets-le sur « La cagnotte ».",
+    potNodeLabel: "🫙 La cagnotte",
+    noPotYet: "aucune cagnotte",
+    addPotLink: "+ créer une cagnotte",
+    potAvailableNote: (v: string) => `encore €${v} disponibles dans la cagnotte`,
+    sumEntered: "Somme saisie",
+    closeX: "✕ Fermer",
+    nToAssignSuffix: (n: number) => ` + ${n} à attribuer`,
+    finishedRoundTitle: (label: string | number) => `Tournée ${label} : aperçu`,
+    whoPaidThisRound: "💶 Qui a payé cette tournée ?",
+    tapWhoPaid: "Touche qui a payé — puis saisis le montant exact. Souvent 1 personne, plusieurs c'est possible aussi.",
+    topUpPotLink: "+ compléter la cagnotte",
+    noPotChip: "🫙 aucune cagnotte — + créer une cagnotte",
+    paidTogether: "Payé ensemble",
+    potAvailableChip: (v: string) => `🫙 encore €${v} disponibles dans la cagnotte`,
+    payWarnA: "Saisis d'abord le montant payé — via ",
+    potWordInline: "la cagnotte",
+    payWarnB: " ou une ",
+    personWordInline: "personne",
+    payWarnC: ". Ou choisis ",
+    laterFill: "Compléter plus tard",
+    saveCloseBtn: "💾 Enregistrer & fermer",
+    toastRoundDone: (label: string | number) => `Tournée ${label} finalisée !`,
+    allOrderedDrinks: "📋 Toutes les boissons commandées",
+    hideDrinks: "masquer ▴",
+    showDrinksBtn: "voir les boissons ▾",
+    nothingOrdered: "Rien commandé pour l'instant",
+    nToAssignParen: (n: number) => `(${n} à attribuer !)`,
+    billTitle: "🧾 Qui a bu et payé quoi ?",
+    paidBadge: (v: string) => `✅ payé €${v}`,
+    fromPotBadge: (v: string) => `🫙 de la cagnotte €${v}`,
+    stillInPotBadge: (v: string) => `🫙 encore en cagnotte €${v}`,
+    indicatievePriceLabel: "prix indicatif",
+    whatMeans: "Qu'est-ce que ça veut dire ?",
+    fairToggleTitle: "Afficher ou masquer Fair Split",
+    equalToggle: "PARTS ÉGALES ⇄",
+    fairToggleBtn: "FAIR SPLIT ⇄",
+    addFairToggle: "+ FAIR SPLIT",
+    potInlegSuffix: (v: string) => `— €${v} dans la cagnotte`,
+    selfPaidSuffix: (v: string) => `— €${v} payé soi-même`,
+    nothingDrunk: "rien bu pour l'instant",
+    payAmount: (v: string) => `💸 paie €${v} `,
+    inThePot: "dans la cagnotte",
+    toPrefix: "à ",
+    receiveAmount: (v: string) => `💰 Reçoit €${v} `,
+    fromThePot: "de la cagnotte",
+    fromPrefix: "de ",
+    balanced: "⚖️ à l'équilibre",
+    fairSplitWord: "fair split",
+    evenveelWord: "parts égales",
+    indicatiefPrefix: "indicatif ",
+    fairBillBtn: "Addition équitable avec Fair Split",
+    equalBillBtn: "Tout le monde paie pareil",
+    equalInfoLink: "Tout le monde pareil ?",
+    totalSmall: "total",
+    indicatievePriceTotal: "Prix indicatif",
+    totalParen: "(total)",
+    totalPaid: "Total payé",
+    backBtn: "Retour",
+    hideCompare: "Masquer la comparaison",
+    compareFair: "Comparer avec Fair Split",
+    compareEqual: "Comparer avec parts égales",
+    toRoundsBtn2: "📋 Vers l'aperçu des tournées",
+    noSplitBody1: (labels: number[]) => `Répartition pas encore possible. ${labels.length === 1 ? `La tournée ${labels[0]} n'est pas encore payée` : `Les tournées ${labels.join(", ")} ne sont pas encore payées`}. Tant qu'une tournée n'est pas payée, la répartition est fausse — même en « parts égales ». Indique d'abord qui a payé chaque tournée dans « Aperçu des tournées ».`,
+    noSplitBody2: "Répartition pas encore possible. On n'a pas encore indiqué qui a payé quoi (une personne ou la cagnotte). Indique-le d'abord dans « Aperçu des tournées » — ensuite tu pourras répartir l'addition ici.",
+    homeLink: "← vers l'accueil Rundo",
+    assignPopupTitle: "🎯 Attribuer",
+    assignHeader: "Attribuer",
+    openWord: "à faire",
+    assignBodyN: (n: number) => `${n} ${n === 1 ? "boisson" : "boissons"} à attribuer.`,
+    assignBodyPost: " Touche les personnes — plusieurs c'est possible.",
+    allAssignedInlineA: "Tout attribué ✅ Tu peux encore ",
+    changeWord: "modifier",
+    allAssignedInlineB: " ou passer à Fair Split.",
+    showFairSplitBtn: "Afficher Fair Split →",
+    allAssignedTitle: "Tout est attribué !",
+    allAssignedSub: "Tu peux maintenant voir la répartition équitable.",
+    toAssignTitle: "👉 Encore à attribuer",
+    assignRemainA: "Il reste ",
+    assignRemainN: (n: number) => `${n} ${n === 1 ? "boisson" : "boissons"}`,
+    assignRemainB: " à attribuer. Attribue-les dans ",
+    allBestOrderedPlain: "Toutes les boissons commandées",
+    assignRemainC: " ou dans ",
+    roundsPlain: "Aperçu des tournées",
+    aboutBodyA: "Avec ",
+    aboutBodyB: " tu suis facilement qui commande et paie quelles tournées — par personne ou via une cagnotte commune. À la fin, tu répartis l'addition ",
+    aboutFairPart: "équitablement avec Fair Split",
+    aboutBodyC: " (selon qui a bu quoi) ou simplement à parts égales.",
+    stillInPotLabel: "Encore en cagnotte",
+    toAllOrderedBtn: "Vers « Toutes les boissons commandées »",
+    toRoundsQuotedBtn: "Vers « Aperçu des tournées »",
+    assignTriggerText: (n: number) => `👉 ${n} à attribuer — pour qui ?`,
+    titleChangeAssign: "Modifier l'attribution",
+    everyoneEach1: "👥 tout le monde (1 chacun)",
+    hasSomething: "— a déjà quelque chose",
+    allAssignedChip: "✅ tout attribué",
+    editChip: "✏️ ajuster",
+    potPaidLabel: "🫙 La cagnotte a payé",
+    paidSuffix: "a payé",
+  },
+}
+
 export default function Home() {
+  const [lang] = useLang()
+  const L = STRINGS[lang]
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const lastActive = useRef(Date.now())
@@ -767,7 +1404,7 @@ export default function Home() {
     const ownerId = getOrCreateOwnerId()
     const { data, error } = await supabase.from("drinks").select("id,name,price,emoji,category,group_id,owner_id")
       .or(`owner_id.is.null,owner_id.eq.${ownerId}`)
-    if (error) { setError("Drankjes laden mislukt"); return }
+    if (error) { setError(L.errLoadDrinks); return }
     if (mounted.current) setDrinks(data || [])
   }, [])
 
@@ -777,7 +1414,7 @@ export default function Home() {
       supabase.from("orders").select("id,participant_id,drink_id,quantity,group_id,session").eq("group_id", groupId),
       supabase.from("payments").select("id,group_id,session,participant_id,amount,created_at").eq("group_id", groupId),
     ])
-    if (pe || oe) { setError("Data laden mislukt"); return }
+    if (pe || oe) { setError(L.errLoadData); return }
     if (mounted.current) {
       setParticipants(orderStable(p || []))
       setOrders(o || [])
@@ -896,12 +1533,12 @@ export default function Home() {
       const name = `${base} (${shortDateLabel()})`
       const clash = getSavedGroups().some((g) => g.name.trim().toLowerCase() === name.toLowerCase())
       if (clash) {
-        setStartError("Je hebt vandaag al een opgeslagen groep met die naam. Kies een andere naam of open ze bij \u201copgeslagen groepen\u201d.")
+        setStartError(L.errDuplicateGroup)
         return
       }
       const invite_code = generateInviteCode()
       const { data, error } = await supabase.from("groups").insert([{ name, invite_code, owner_id }]).select().single()
-      if (error || !data) { setStartError("Groep aanmaken mislukt: " + error?.message); return }
+      if (error || !data) { setStartError(L.errCreateGroup(error?.message ?? "")); return }
       setGroup(data)
       setActiveGroupCode(data.invite_code)
       await loadAll(data.id)
@@ -920,7 +1557,7 @@ export default function Home() {
     try {
       const { data, error } = await supabase.from("groups").select("*").eq("invite_code", code.trim().toUpperCase()).single()
       if (error || !data) {
-        setStartError("Groep niet gevonden. Controleer de code.")
+        setStartError(L.errGroupNotFound)
         clearActiveGroupCode()
         return
       }
@@ -996,7 +1633,7 @@ export default function Home() {
     const used = await usedNumbersFromDb(group.id) // vers uit DB ? geen dubbele "Persoon N"
     const finalName = name?.trim() || `Persoon ${smallestFreeNumber(used)}`
     const { error } = await supabase.from("participants").insert([{ name: finalName, group_id: group.id }])
-    if (error) { setError("Persoon toevoegen mislukt"); return }
+    if (error) { setError(L.errAddPerson); return }
     await reloadTable(group.id, "participants")
   }
 
@@ -1007,13 +1644,13 @@ export default function Home() {
       return
     }
     setConfirmDialog({
-      title: "Persoon verwijderen?",
-      message: `${name} wordt verwijderd uit deze groep.`,
-      confirmLabel: "Verwijderen",
+      title: L.confirmDeletePersonTitle,
+      message: L.confirmDeletePersonMsg(name),
+      confirmLabel: L.deleteLabel,
       danger: true,
       onConfirm: async () => {
         const { error } = await supabase.from("participants").delete().eq("id", id)
-        if (error) { setError("Persoon verwijderen mislukt"); return }
+        if (error) { setError(L.errDeletePerson); return }
         await supabase.from("payments").delete().eq("group_id", group.id).eq("participant_id", id)
         setPaymentDraft((prev) => { const n = { ...prev }; delete n[id]; return n })
         setPotDraft((prev) => { const n = { ...prev }; delete n[id]; return n })
@@ -1027,7 +1664,7 @@ export default function Home() {
   const renamePerson = async () => {
     if (!group || !editingPerson || !editingPersonName.trim()) return
     const { error } = await supabase.from("participants").update({ name: editingPersonName.trim() }).eq("id", editingPerson)
-    if (error) { setError("Naam wijzigen mislukt"); return }
+    if (error) { setError(L.errRename); return }
     setEditingPerson(null)
     setEditingPersonName("")
     await reloadTable(group.id, "participants")
@@ -1094,9 +1731,9 @@ export default function Home() {
   const requestDiscardPending = (action: () => void) => {
     if (cartTotalItems > 0) {
       setConfirmDialog({
-        title: "Huidige bestelling wissen?",
-        message: "Je hebt een niet-afgeronde bestelling. Als je verdergaat wordt je huidige bestellijst gewist en begin je opnieuw.",
-        confirmLabel: "Wissen & opnieuw",
+        title: L.confirmClearOrderTitle,
+        message: L.confirmClearOrderMsg,
+        confirmLabel: L.confirmClearOrderLabel,
         danger: true,
         onConfirm: () => { clearCart(); action() },
       })
@@ -1120,7 +1757,7 @@ export default function Home() {
   // Een vorig rondje overnemen in de huidige bestelling (om snel opnieuw te bestellen of aan te passen)
   const reorderFromSession = (sess: number) => {
     const rows = orders.filter((o) => o.session === sess)
-    if (rows.length === 0) { setToast("Dat rondje is leeg"); return }
+    if (rows.length === 0) { setToast(L.toastRoundEmpty); return }
     setCart((prev) => {
       const next: Record<string, CartLine> = { ...prev }
       rows.forEach((o) => {
@@ -1163,7 +1800,7 @@ export default function Home() {
   const selectorTotal = Object.values(selectorDraft).reduce((s, q) => s + q, 0)
   const confirmDrinkSelector = () => {
     const addedIds = Object.entries(selectorDraft).filter(([, q]) => q > 0).map(([id]) => id)
-    if (addedIds.length === 0) { setToast("Nog geen drankje geselecteerd — tik er eentje aan 👆"); return }
+    if (addedIds.length === 0) { setToast(L.selectorEmptyToast); return }
     if (selectorEditMode) {
       // Vervang de bestelling door wat nu in de selector staat; behoud toewijzingen (trim als een aantal daalt).
       setCart((prev) => {
@@ -1227,7 +1864,7 @@ export default function Home() {
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 7 }}>
         {assignedEntries.map(({ p, q }) => (
           <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: gold ? "#ecc85a" : "rgba(120,95,20,0.06)", border: gold ? "1px solid #e0ac00" : "1px solid rgba(120,95,20,0.12)", borderRadius: 20, padding: "3px 5px 3px 11px", fontSize: 12, fontWeight: gold ? 800 : 600, color: "#4a3f1e" }}>
-            {p.name}
+            {pName(p.name, lang)}
             <span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 18, textAlign: "center", padding: "1px 6px", fontSize: 11, fontWeight: 800 }}>×{q}</span>
             <button style={{ ...S.iconBtn, width: 18, height: 18, fontSize: 11 }} onClick={() => assignCartItem(drinkId, p.id, -1)}>−</button>
           </span>
@@ -1252,8 +1889,8 @@ export default function Home() {
               <button onClick={() => { if (canAdd) { assignCartItem(drinkId, p.id, 1); if (unassigned === 1) setOpenAssignFor(null) } }} disabled={!canAdd && q === 0}
                 style={{ flex: 1, textAlign: "left", background: q > 0 ? "rgba(214,158,20,0.06)" : "none", border: "none", padding: "10px 12px", fontSize: 13.5, fontWeight: q > 0 ? 800 : 600, color: canAdd || q > 0 ? "#4a3f1e" : "#bbb", cursor: canAdd ? "pointer" : "default", display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ flex: 1, display: "inline-flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
-                  <span>{p.name}</span>
-                  {elsewhere && <span style={{ fontSize: 10.5, color: "#b3a476", fontWeight: 600, whiteSpace: "nowrap" }}>— heeft al iets</span>}
+                  <span>{pName(p.name, lang)}</span>
+                  {elsewhere && <span style={{ fontSize: 10.5, color: "#b3a476", fontWeight: 600, whiteSpace: "nowrap" }}>{L.hasSomething}</span>}
                 </span>
                 {q > 0 && <span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 20, textAlign: "center", padding: "1px 7px", fontSize: 12, fontWeight: 800 }}>{q}</span>}
                 {canAdd && <span style={{ color: "#c8941a", fontWeight: 800, fontSize: 17, lineHeight: 1 }}>+</span>}
@@ -1267,7 +1904,7 @@ export default function Home() {
         {showEveryone && (
           <button onClick={() => { assignToEveryone(drinkId); setOpenAssignFor(null) }}
             style={{ display: "block", width: "100%", textAlign: "left", background: "rgba(233,196,95,0.12)", border: "none", borderTop: "1px solid rgba(0,0,0,0.06)", padding: "10px 12px", fontSize: 13, fontWeight: 700, color: "#a06b00", cursor: "pointer" }}>
-            👥 iedereen (elk 1)
+            {L.everyoneEach1}
           </button>
         )}
       </div>
@@ -1276,7 +1913,7 @@ export default function Home() {
     const trigger = (
       <button onClick={() => setOpenAssignFor(isOpen ? null : drinkId)}
         style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 13, fontWeight: unassigned > 0 ? 700 : 600, cursor: "pointer", color: unassigned > 0 ? "#e0685c" : "#1f8a4c", background: gold ? "#fffdf6" : "#fff", border: gold ? "1.5px solid #ecc85a" : "1px solid rgba(120,95,20,0.18)", borderRadius: 10, padding: "9px 12px" }}>
-        <span>{unassigned > 0 ? "voor wie?" : "✅ alles toegewezen"}</span>
+        <span>{unassigned > 0 ? L.forWhom : L.allAssignedChip}</span>
         <span style={{ color: "#aaa" }}>{isOpen ? "▾" : "▸"}</span>
       </button>
     )
@@ -1298,13 +1935,13 @@ export default function Home() {
             style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, width: "100%", textAlign: "left", background: "none", border: "none", padding: 0, cursor: "pointer" }}
           >
             {assignedEntries.map(({ p, q }) => (
-              <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#4a3f1e", fontWeight: 600, background: "rgba(120,95,20,0.06)", borderRadius: 20, padding: "2px 8px 2px 10px" }}>{p.name}<span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 18, textAlign: "center", padding: "1px 6px", fontSize: 11, fontWeight: 800 }}>×{q}</span></span>
+              <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#4a3f1e", fontWeight: 600, background: "rgba(120,95,20,0.06)", borderRadius: 20, padding: "2px 8px 2px 10px" }}>{pName(p.name, lang)}<span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 18, textAlign: "center", padding: "1px 6px", fontSize: 11, fontWeight: 800 }}>×{q}</span></span>
             ))}
             {unassigned > 0 && (
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#e0685c", background: "rgba(120,95,20,0.05)", borderRadius: 20, padding: "3px 12px" }}>{unassigned} nog toe te wijzen!</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#e0685c", background: "rgba(120,95,20,0.05)", borderRadius: 20, padding: "3px 12px" }}>{L.nToAssignBadge(unassigned)}</span>
             )}
             {unassigned <= 0 && assignedEntries.length > 0 && (
-              <span style={{ fontSize: 11, color: "#aaa" }}>✏️ aanpassen</span>
+              <span style={{ fontSize: 11, color: "#aaa" }}>{L.editChip}</span>
             )}
           </button>
         </div>
@@ -1313,14 +1950,14 @@ export default function Home() {
     return (
       <div style={{ marginTop: 8 }}>
         <div style={{ fontSize: 11, color: "#8a7d55", fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>
-          Toewijzen{unassigned > 0 ? <> — <span style={{ color: "#e0685c" }}>{unassigned} open</span></> : " ✓"}
+          {L.assignHeader}{unassigned > 0 ? <> — <span style={{ color: "#e0685c" }}>{unassigned} {L.openWord}</span></> : " ✓"}
         </div>
         {panel}
         <button
           onClick={() => setOpenAssignFor(null)}
           style={{ marginTop: 7, width: "100%", background: "rgba(120,95,20,0.04)", border: "1px solid rgba(120,95,20,0.08)", color: "#8a7d55", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 10, padding: "8px 0" }}
         >
-          Sluiten ?
+          {L.closeBtn}
         </button>
       </div>
     )
@@ -1346,12 +1983,12 @@ export default function Home() {
     const trigger = anonymousQty > 0 ? (
       <button onClick={() => setOpenBillAssignFor(isOpen ? null : drink.id)}
         style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#e0685c", background: "rgba(224,107,94,0.06)", border: "1px solid rgba(224,107,94,0.4)", borderRadius: 10, padding: "7px 10px" }}>
-        <span>👉 {anonymousQty} nog toe te wijzen — voor wie?</span>
+        <span>{L.assignTriggerText(anonymousQty)}</span>
         <span style={{ color: "#aaa" }}>{isOpen ? "▾" : "▸"}</span>
       </button>
     ) : (
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button onClick={() => setOpenBillAssignFor(isOpen ? null : drink.id)} title="Toewijzing wijzigen"
+        <button onClick={() => setOpenBillAssignFor(isOpen ? null : drink.id)} title={L.titleChangeAssign}
           style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 12, background: isOpen ? "rgba(214,158,20,0.16)" : "rgba(120,95,20,0.05)" }}>
           {isOpen ? "▲" : "▼"}
         </button>
@@ -1365,7 +2002,7 @@ export default function Home() {
             <div key={p.id} style={{ display: "flex", alignItems: "center", borderTop: "1px solid rgba(150,110,20,0.05)" }}>
               <button onClick={() => { if (canAdd) { assignOneAnonymous(drink.id, p.id); if (anonymousQty === 1) setOpenBillAssignFor(null) } }} disabled={!canAdd && q === 0}
                 style={{ flex: 1, textAlign: "left", background: q > 0 ? "rgba(214,158,20,0.06)" : "none", border: "none", padding: "10px 12px", fontSize: 13.5, fontWeight: q > 0 ? 800 : 600, color: canAdd || q > 0 ? "#4a3f1e" : "#bbb", cursor: canAdd ? "pointer" : "default", display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ flex: 1 }}>{p.name}</span>
+                <span style={{ flex: 1 }}>{pName(p.name, lang)}</span>
                 {q > 0 && <span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 20, textAlign: "center", padding: "1px 7px", fontSize: 12, fontWeight: 800 }}>{q}</span>}
                 {canAdd && <span style={{ color: "#c8941a", fontWeight: 800, fontSize: 17, lineHeight: 1 }}>+</span>}
               </button>
@@ -1378,7 +2015,7 @@ export default function Home() {
         {showEveryone && (
           <button onClick={() => { assignAnonymousToMany(drink.id, participants.map((p) => p.id)); setOpenBillAssignFor(null) }}
             style={{ display: "block", width: "100%", textAlign: "left", background: "rgba(233,196,95,0.12)", border: "none", borderTop: "1px solid rgba(0,0,0,0.06)", padding: "10px 12px", fontSize: 13, fontWeight: 700, color: "#a06b00", cursor: "pointer" }}>
-            👥 iedereen (elk 1)
+            {L.everyoneEach1}
           </button>
         )}
       </div>
@@ -1405,7 +2042,7 @@ export default function Home() {
   const [payWarn, setPayWarn] = useState(false)
 
   const finishRound = async () => {
-    if (!group || cartTotalItems === 0) { setToast("Voeg eerst drankjes toe"); return }
+    if (!group || cartTotalItems === 0) { setToast(L.toastAddDrinksFirst); return }
     const newRoundSession = nextSession
     // Alle rijen in één keer opbouwen en met ÉÉN insert wegschrijven ? alles-of-niets,
     // geen half rondje meer als de tab sluit of het netwerk hapert.
@@ -1423,7 +2060,7 @@ export default function Home() {
     }
     if (rows.length > 0) {
       const { error } = await supabase.from("orders").insert(rows)
-      if (error) { setError("Rondje opslaan mislukt — probeer opnieuw"); return }
+      if (error) { setError(L.errSaveRound); return }
     }
     await reloadTable(group.id, "orders")
     setBarmanStep("list")
@@ -1453,7 +2090,7 @@ export default function Home() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const w = window as any
     const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition
-    if (!SR) { setToast("Spraak niet ondersteund in deze browser"); return }
+    if (!SR) { setToast(L.voiceNotSupported); return }
     const recog = new SR()
     recog.lang = "nl-BE"
     recog.interimResults = false
@@ -1473,13 +2110,13 @@ export default function Home() {
       if (addedIds.length > 0) { setLastAddedDrinkIds(addedIds); setLastAddedViaVoice(true) }
 
       if (recognized.length > 0) {
-        setToast(`Toegevoegd: ${recognized.map((d) => `${d.qty}× ${d.name}`).join(", ")}`)
+        setToast(`${L.toastAddedPre}${recognized.map((d) => `${d.qty}× ${drinkName(d.name, lang)}`).join(", ")}`)
       }
 
       if (suggestion) {
         setVoiceSuggestion({ spokenText: text, qty: suggestion.qty, suggested: suggestion.drink })
       } else if (recognized.length === 0) {
-        setToast("Niet herkend — probeer opnieuw of typ het drankje handmatig")
+        setToast(L.voiceNotRecognized)
       }
 
       setQuickVoiceActive(false)
@@ -1603,9 +2240,9 @@ export default function Home() {
   const deleteRound = async (round: number) => {
     if (!group) return
     setConfirmDialog({
-      title: `Ronde ${roundLabel(round)} verwijderen?`,
-      message: "Je verliest ook de bestellingen én betalingen van deze ronde. De overige rondes behouden hun nummer.",
-      confirmLabel: "Verwijderen",
+      title: L.confirmDeleteRoundTitle(roundLabel(round)),
+      message: L.confirmDeleteRoundMsg,
+      confirmLabel: L.deleteLabel,
       danger: true,
       onConfirm: async () => {
         // Enkel deze ronde verwijderen; NIET hernummeren (zo blijft "Ronde 3" ook op een
@@ -1681,7 +2318,7 @@ export default function Home() {
     await reloadTable(group.id, "payments")
     setPotWarn(false)
     setShowPotModal(false)
-    setToast("Pot opgeslagen ✅")
+    setToast(L.toastPotSaved)
   }
 
   const addToPot = async () => {
@@ -1691,12 +2328,12 @@ export default function Home() {
       .filter((r) => participants.some((p) => p.id === r.participant_id) && !isNaN(r.amount) && r.amount > 0)
     if (rows.length === 0) {
       const amt = Math.round(parseFloat((potAddBulk || "").replace(",", ".")) || 0)
-      if (isNaN(amt) || amt <= 0 || participants.length === 0) { setPotAddWarn(true); setToast("Vul eerst een bedrag in om de pot aan te vullen ⚠️"); return }
+      if (isNaN(amt) || amt <= 0 || participants.length === 0) { setPotAddWarn(true); setToast(L.toastPotAmountFirst); return }
       rows = participants.map((p) => ({ participant_id: p.id, amount: amt }))
     }
     const inserts = rows.map((r) => ({ group_id: group.id, session: POT_SESSION, participant_id: r.participant_id, amount: r.amount }))
     const { error } = await supabase.from("payments").insert(inserts)
-    if (error) { setError("Pot aanvullen mislukt"); return }
+    if (error) { setError(L.errTopUpPot); return }
     setPotAddDraft({})
     setPotAddBulk("")
     setPotAddWarn(false)
@@ -1720,8 +2357,8 @@ export default function Home() {
   const addDrink = async () => {
     const { name, price } = newDrink
     const priceNum = parseFloat((price || "").replace(",", "."))
-    if (!name.trim()) { setAddDrinkWarn("Vul eerst een naam in voor je drankje."); return }
-    if (!price || isNaN(priceNum) || priceNum <= 0) { setAddDrinkWarn("Een richtprijs is verplicht — die hebben we nodig om de rekening achteraf eerlijk te verdelen met Fair Split."); return }
+    if (!name.trim()) { setAddDrinkWarn(L.warnNameFirst); return }
+    if (!price || isNaN(priceNum) || priceNum <= 0) { setAddDrinkWarn(L.warnPriceRequired); return }
     setAddDrinkWarn(null)
     const cat = "Eigen"
     const autoEmoji = "⭐"
@@ -1732,7 +2369,7 @@ export default function Home() {
     setToast(`${name} toegevoegd`)
     await loadDrinks()
     if (showDrinkSelector) {
-      setActiveCategory(CATEGORY_LABELS[cat] ?? cat)
+      setActiveCategory(catLabel(cat, lang))
       setLastAddedCustomDrink({ name: name.trim(), category: cat })
     } else if (data?.id) {
       addToCart(data.id, 1)
@@ -1763,11 +2400,11 @@ export default function Home() {
 
   const deleteDrinkFromList = async (id: string) => {
     const d = drinks.find((dr) => dr.id === id)
-    if (d && !isGroupDrink(d)) { setToast("Basisdranken kunnen niet verwijderd worden"); return }
+    if (d && !isGroupDrink(d)) { setToast(L.toastBaseDrinkNoDelete); return }
     setConfirmDialog({
-      title: "Drankje verwijderen?",
-      message: d ? `${d.name} verdwijnt uit de lijst van deze groep.` : "Dit drankje wordt verwijderd.",
-      confirmLabel: "Verwijderen",
+      title: L.confirmDeleteDrinkTitle,
+      message: d ? L.confirmDeleteDrinkMsg(d.name) : L.confirmDeleteDrinkMsgFallback,
+      confirmLabel: L.deleteLabel,
       danger: true,
       onConfirm: async () => {
         const { error } = await supabase.from("drinks").delete().eq("id", id)
@@ -1789,7 +2426,7 @@ export default function Home() {
     const baseRows = drinks.filter((d) => !d.group_id && !shadowed.has(normalizeDrinkName(d.name)))
     return [...baseRows, ...groupRows]
   })()
-  const groupedDrinks = groupDrinksByCategory(visibleDrinks)
+  const groupedDrinks = groupDrinksByCategory(visibleDrinks, lang)
   const bill = calculateBill(participants, orders, drinks, payments)
   // Fair split = de ÉCHT betaalde rondebedragen, verdeeld naar wat elk dronk (of gelijk bij 'iedereen evenveel').
   // De inleg die niet gebruikt werd, komt terug via de virtuele "de pot".
@@ -1830,8 +2467,9 @@ export default function Home() {
     return (
       <div style={S.page}>
         <div style={{ maxWidth: 420, margin: "40px auto" }}>
-          <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#a89a6a", textDecoration: "none", marginBottom: 14, cursor: "pointer" }}>← naar Rundo startscherm</a>
+          <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#a89a6a", textDecoration: "none", marginBottom: 14, cursor: "pointer" }}>{L.homeLink}</a>
           <div style={{ marginBottom: 28 }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}><LanguageToggle compact /></div>
             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginBottom: 8 }}>
               <RundoLogo size={60} />
               <h1 style={{ ...S.h1, margin: 0, display: "inline-flex", alignItems: "baseline", gap: 8 }}>
@@ -1840,20 +2478,20 @@ export default function Home() {
               </h1>
               <button
                 onClick={() => setShowAboutParty(true)}
-                title="Wat is Rundo Party?"
+                title={L.aboutBtnTitle}
                 style={{ width: 24, height: 24, borderRadius: "50%", border: "1.5px solid rgba(150,110,20,0.25)", background: "#fff", color: "#c8941a", fontSize: 13, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0, flexShrink: 0 }}
               >
                 i
               </button>
             </div>
             <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: "#f0a500", fontSize: 15, fontWeight: 700, margin: 0 }}>
-              <CheersIcon size={20} /> Rondjes en splitten zonder gedoe!
+              <CheersIcon size={20} /> {L.appTagline}
             </p>
           </div>
 
           <div style={S.card}>
-            <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && startGroup()} placeholder="Groepsnaam" style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 12 }} />
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16, fontWeight: 800 }} onClick={startGroup} disabled={isStarting}>{isStarting ? "Laden..." : "Starten"}</button>
+            <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && startGroup()} placeholder={L.groupNamePlaceholder} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 12 }} />
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16, fontWeight: 800 }} onClick={startGroup} disabled={isStarting}>{isStarting ? L.loading : L.startBtn}</button>
             {startError && (
               <div style={{ marginTop: 12, color: "#c0392b", fontSize: 13, background: "#fff0f0", borderRadius: 10, padding: "8px 12px" }}>
                 ⚠️ {startError}
@@ -1866,7 +2504,7 @@ export default function Home() {
           {savedGroups.length > 0 && (
             <div style={{ ...S.card, marginTop: 4 }}>
               <button onClick={() => setSavedOpen((o) => !o)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", padding: 0 }}>
-                <b style={{ fontSize: 14, color: "#4a3f1e" }}>Opgeslagen groepen</b>
+                <b style={{ fontSize: 14, color: "#4a3f1e" }}>{L.savedGroups}</b>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#c98a00", background: "rgba(233,196,95,0.18)", borderRadius: 10, padding: "1px 8px" }}>{savedGroups.length}</span>
                   <span style={{ fontSize: 12, color: "#c98a00", display: "inline-block", transform: savedOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▾</span>
@@ -1874,7 +2512,7 @@ export default function Home() {
               </button>
               {savedOpen && (
                 <div style={{ marginTop: 12 }}>
-                  <input value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} placeholder="🔍 Zoek groep..." style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 10, fontSize: 13 }} />
+                  <input value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} placeholder={L.searchGroupPlaceholder} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 10, fontSize: 13 }} />
                   {filteredSaved.map((g) => (
                     <div
                       key={g.id}
@@ -1896,22 +2534,22 @@ export default function Home() {
         {fairInfoMode && (
           <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setFairInfoMode(null)}>
             <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>Hoe werkt Fair Split?</h3>
+              <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>{L.fairTitle}</h3>
               <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-                Met <b style={{ color: "#c98a00" }}>Fair Split</b> delen we het totaalbedrag <b>NIET</b> door het aantal personen. Op basis van richtprijzen per drankje verdelen we de totaalprijs volgens wie wat dronk. <b>Niet perfect, wel veel eerlijker!</b>
+                {L.fairBody1a}<b style={{ color: "#c98a00" }}>Fair Split</b>{L.fairBody1b}<b>{L.fairNot}</b>{L.fairBody1c} <b>{L.fairBody1d}</b>
               </p>
-              <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setFairInfoMode(null)}>Begrepen</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setFairInfoMode(null)}>{L.understood}</button>
             </div>
           </div>
         )}
         {showAboutParty && (
           <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setShowAboutParty(false)}>
             <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}><RundoLogo size={22} /> Wat is Rundo Party?</h3>
+              <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}><RundoLogo size={22} /> {L.aboutBtnTitle}</h3>
               <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-                Met <b style={{ color: "#f0a500" }}>Rundo Party</b> hou je vlot bij wie welke rondjes bestelt en betaalt — per persoon of via een gezamenlijke pot. Op het einde verdeel je de rekening <b>eerlijk met Fair Split</b> (op basis van wie wat dronk) of gewoon gelijk over iedereen.
+                {L.aboutBodyA}<b style={{ color: "#f0a500" }}>Rundo Party</b>{L.aboutBodyB}<b>{L.aboutFairPart}</b>{L.aboutBodyC}
               </p>
-              <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowAboutParty(false)}>Begrepen</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowAboutParty(false)}>{L.understood}</button>
             </div>
           </div>
         )}
@@ -1928,7 +2566,7 @@ export default function Home() {
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       {asleep && (
         <div onClick={() => { lastActive.current = Date.now(); setAsleep(false) }} style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 3000, background: "rgba(20,33,58,0.92)", color: "#fff", padding: "9px 16px", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,24,40,0.3)", whiteSpace: "nowrap" }}>
-          ⏸ Live-updates gepauzeerd — tik om te hervatten
+          {L.asleepBanner}
         </div>
       )}
       {error && (
@@ -1942,17 +2580,17 @@ export default function Home() {
       {showEditDrinks && (
         <div style={{ ...S.overlay, zIndex: 2600 }}>
           <div style={{ ...S.modal, width: 440, maxHeight: "82vh", display: "flex", flexDirection: "column" }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>⭐ Je eigen drankjes</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Hier beheer je enkel je eigen toegevoegde drankjes. De standaardlijst met richtprijzen staat vast.</p>
+            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>{L.editDrinksTitle}</h3>
+            <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>{L.editDrinksSub}</p>
             <div style={{ overflowY: "auto", flex: 1, marginBottom: 12 }}>
-              {!visibleDrinks.some(isGroupDrink) && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>Je hebt nog geen eigen drankjes toegevoegd.</div>}
+              {!visibleDrinks.some(isGroupDrink) && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>{L.noOwnDrinks}</div>}
               {(() => {
                 const groups: Record<string, Drink[]> = {}
                 visibleDrinks.filter(isGroupDrink).forEach((d) => { const k = d.category ?? FALLBACK_CATEGORY; (groups[k] ||= []).push(d) })
                 const order = [...Object.keys(CATEGORY_LABELS), ...Object.keys(groups).filter((k) => !CATEGORY_LABELS[k])]
                 return order.filter((k) => groups[k]?.length).map((cat) => (
                   <div key={cat} style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: "#c98a00", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6, paddingBottom: 4, borderBottom: "1px solid rgba(233,196,95,0.3)" }}>{CATEGORY_LABELS[cat] ?? cat}</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: "#c98a00", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6, paddingBottom: 4, borderBottom: "1px solid rgba(233,196,95,0.3)" }}>{catLabel(cat, lang)}</div>
                     {groups[cat].map((d) => (
                       <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                         {editingDrink?.id === d.id ? (
@@ -1966,9 +2604,9 @@ export default function Home() {
                           </>
                         ) : (
                           <>
-                            <span style={{ flex: 1, fontSize: 14 }}>{d.emoji} {d.name} <span style={{ color: "#999" }}>— €{d.price.toFixed(2)}</span></span>
+                            <span style={{ flex: 1, fontSize: 14 }}>{d.emoji} {drinkName(d.name, lang)} <span style={{ color: "#999" }}>— €{d.price.toFixed(2)}</span></span>
                             <button style={S.iconBtn} onClick={() => setEditingDrink(d)}>✏️</button>
-                            <button style={S.iconBtn} title="Eigen drankje verwijderen" onClick={() => deleteDrinkFromList(d.id)}>🗑️</button>
+                            <button style={S.iconBtn} title={L.deleteOwnDrinkTitle} onClick={() => deleteDrinkFromList(d.id)}>🗑️</button>
                           </>
                         )}
                       </div>
@@ -1977,7 +2615,7 @@ export default function Home() {
                 ))
               })()}
             </div>
-            <button style={{ ...S.btn, width: "100%" }} onClick={() => { setEditingDrink(null); setShowEditDrinks(false) }}>Sluiten</button>
+            <button style={{ ...S.btn, width: "100%" }} onClick={() => { setEditingDrink(null); setShowEditDrinks(false) }}>{L.closeBtn}</button>
           </div>
         </div>
       )}
@@ -1986,13 +2624,13 @@ export default function Home() {
       {showAddDrink && (
         <div style={{ ...S.overlay, zIndex: 2300 }}>
           <div style={{ ...S.modal, width: 400 }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>➕ Eigen drank toevoegen</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>Naam en richtprijs volstaan. Je drankje komt onder ⭐ Eigen drankjes zodat je ziet dat je het zelf toevoegde.</p>
+            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>{L.addDrinkTitle}</h3>
+            <p style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>{L.addDrinkSub}</p>
 
-            <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>Naam</label>
-            <input placeholder="bv. een speciaalbiertje" value={newDrink.name} onChange={(e) => { setAddDrinkWarn(null); setNewDrink({ ...newDrink, name: e.target.value }) }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginTop: 4, marginBottom: 12 }} />
+            <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>{L.nameLabel}</label>
+            <input placeholder={L.drinkNamePlaceholder} value={newDrink.name} onChange={(e) => { setAddDrinkWarn(null); setNewDrink({ ...newDrink, name: e.target.value }) }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginTop: 4, marginBottom: 12 }} />
 
-            <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>Richtprijs (€)</label>
+            <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>{L.priceLabel}</label>
             <input type="number" placeholder="0.00" value={newDrink.price} onChange={(e) => { setAddDrinkWarn(null); setNewDrink({ ...newDrink, price: e.target.value }) }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginTop: 4, marginBottom: 18 }} />
 
             {addDrinkWarn && (
@@ -2002,8 +2640,8 @@ export default function Home() {
             )}
 
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "11px 0", fontWeight: 800 }} onClick={addDrink}>➕ Toevoegen</button>
-              <button style={{ ...S.btn, flex: 1, padding: "11px 0" }} onClick={() => { setAddDrinkWarn(null); setShowAddDrink(false) }}>Sluiten</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "11px 0", fontWeight: 800 }} onClick={addDrink}>➕ {L.add}</button>
+              <button style={{ ...S.btn, flex: 1, padding: "11px 0" }} onClick={() => { setAddDrinkWarn(null); setShowAddDrink(false) }}>{L.closeBtn}</button>
             </div>
           </div>
         </div>
@@ -2012,7 +2650,7 @@ export default function Home() {
       {showAddPerson && (
         <div style={S.overlay}>
           <div style={S.modal}>
-            <h3 style={{ marginBottom: 16, fontSize: 18, fontWeight: 700 }}>Persoon toevoegen</h3>
+            <h3 style={{ marginBottom: 16, fontSize: 18, fontWeight: 700 }}>{L.addPersonTitle}</h3>
             <AddPersonForm onAdd={(name) => { addPerson(name); setShowAddPerson(false) }} onClose={() => setShowAddPerson(false)} />
           </div>
         </div>
@@ -2021,7 +2659,7 @@ export default function Home() {
       {/* Top bar */}
       <div style={S.topBar}>
         <div style={{ minWidth: 0 }}>
-          <div onClick={goHome} title="Naar startscherm" style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer" }}>
+          <div onClick={goHome} title={L.toHomeTitle} style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer" }}>
             <RundoLogo size={34} />
             <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}><span style={{ color: "#4a3f1e" }}>Rundo</span> <span style={{ color: "#f0a500" }}>Party</span></div>
           </div>
@@ -2032,34 +2670,35 @@ export default function Home() {
               const left = Math.max(0, potTotal - used)
               return (
                 <button onClick={() => setShowPotOverview(true)} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: "#a06b00", background: "linear-gradient(135deg,#fffdf6,#fff3cf)", border: "1.5px solid #ecc85a", borderRadius: 20, padding: "3px 11px", cursor: "pointer" }}>
-                  🫙 €{potTotal.toFixed(2)} ingelegd — <b style={{ color: "#4a3f1e" }}>€{left.toFixed(2)} nog in pot</b>
+                  🫙 {L.potContributed(potTotal.toFixed(2))}<b style={{ color: "#4a3f1e" }}>{L.potRemaining(left.toFixed(2))}</b>
                 </button>
               )
             })() : (
-              <button onClick={openPotModal} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 20, padding: "3px 11px", cursor: "pointer" }}>🫙 Leg een pot</button>
+              <button onClick={openPotModal} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 20, padding: "3px 11px", cursor: "pointer" }}>🫙 {L.potLay}</button>
             )}
           </div>
         </div>
         <div style={{ textAlign: "right", minWidth: 0 }}>
+          <div style={{ marginBottom: 5, display: "flex", justifyContent: "flex-end" }}><LanguageToggle compact /></div>
           <div style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.15, marginBottom: 2 }}>{group.name}</div>
-          <div style={{ fontSize: 11.5, color: "#a89a6a", fontWeight: 700 }}>{participants.length} {participants.length === 1 ? "persoon" : "personen"}</div>
+          <div style={{ fontSize: 11.5, color: "#a89a6a", fontWeight: 700 }}>{participants.length} {participants.length === 1 ? L.person : L.people}</div>
         </div>
       </div>
 
       {/* Tab navigation */}
       <div style={S.tabBar}>
         {([
-          { id: "setup", label: potTotal > 0 ? "Groep + Pot" : "Groep" },
-          { id: "ordering", label: "Nieuwe bestelling" },
-          { id: "rounds", label: `Overzicht Rondjes${sessions.length > 0 ? ` (${sessions.length})` : ""}` },
-          { id: "bill", label: "Afrekenen" },
+          { id: "setup", label: potTotal > 0 ? L.tabGroupPot : L.tabGroup },
+          { id: "ordering", label: L.tabOrder },
+          { id: "rounds", label: L.tabRounds(sessions.length) },
+          { id: "bill", label: L.tabBill },
         ] as { id: AppView; label: string }[]).map((t) => {
           const locked = participants.length === 0 && t.id !== "setup"
           return (
           <button
             key={t.id}
             onClick={() => {
-              if (locked) { setToast("Voeg eerst minstens één persoon toe bij Groep."); return }
+              if (locked) { setToast(L.tabLockToast); return }
               // 'Nieuwe bestelling' aanklikken terwijl je er al bent met een lopende bestelling:
               // eerst waarschuwen dat opnieuw beginnen je huidige lijst wist.
               if (t.id === "ordering" && view === "ordering" && cartTotalItems > 0) {
@@ -2087,7 +2726,7 @@ export default function Home() {
       {view === "setup" && (
         <div>
           <div style={S.card}>
-            <h3 style={S.h3}>👥 Aantal personen</h3>
+            <h3 style={S.h3}>{L.setupCountTitle}</h3>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, padding: "12px 0" }}>
               <button
                 style={{ ...S.btn, width: 44, height: 44, fontSize: 20, borderRadius: "50%" }}
@@ -2100,20 +2739,20 @@ export default function Home() {
               >+</button>
             </div>
             <p style={{ textAlign: "center", color: "#aaa", fontSize: 12, marginTop: 4 }}>
-              Namen zijn optioneel — pas ze aan wanneer je wil
+              {L.setupNamesOptional}
             </p>
           </div>
 
           <div style={S.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 8 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0, flexWrap: "wrap" }}>
-                <h3 style={{ ...S.h3, marginBottom: 0 }}>Personen</h3>
-                <span style={{ fontSize: 11, fontStyle: "italic", color: "#b3a988", fontWeight: 600 }}>tik op een naam om te hernoemen</span>
+                <h3 style={{ ...S.h3, marginBottom: 0 }}>{L.setupPersonsTitle}</h3>
+                <span style={{ fontSize: 11, fontStyle: "italic", color: "#b3a988", fontWeight: 600 }}>{L.setupTapToRename}</span>
               </div>
-              <button style={{ ...S.btn, fontSize: 12, flexShrink: 0 }} onClick={() => setShowAddPerson(true)}>+ Naam toevoegen</button>
+              <button style={{ ...S.btn, fontSize: 12, flexShrink: 0 }} onClick={() => setShowAddPerson(true)}>{L.setupAddName}</button>
             </div>
 
-            {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 24 }}>Nog geen personen</div>}
+            {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 24 }}>{L.setupNoPersons}</div>}
 
             {(() => {
               const isPh = (pp: (typeof participants)[number]) => /^Persoon \d+$/.test(pp.name)
@@ -2126,7 +2765,7 @@ export default function Home() {
                 <div style={cols > 1 ? { display: "grid", gridAutoFlow: "column", gridTemplateRows: `repeat(${rows}, auto)`, columnGap: 16 } : undefined}>
             {ordered.map((p, idx) => {
               const isPlaceholder = isPh(p)
-              const posLabel = `Persoon ${idx + 1}`   // hernummerd op positie (namen eerst), zonder gaten
+              const posLabel = L.personLabel(idx + 1)   // hernummerd op positie (namen eerst), zonder gaten
               return (
               <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
                 {editingPerson === p.id ? (
@@ -2143,7 +2782,7 @@ export default function Home() {
                     style={{ ...S.input, flex: 1 }}
                   />
                 ) : (() => {
-                  const shown = isPlaceholder ? `Pers. ${idx + 1}` : p.name
+                  const shown = isPlaceholder ? L.personShort(idx + 1) : p.name
                   return (
                     <>
                       <span
@@ -2168,10 +2807,10 @@ export default function Home() {
               style={{ ...S.btn, flex: 1, padding: "14px 8px", fontSize: 14, fontWeight: 700, border: "1.5px solid #ecc85a", background: potTotal > 0 ? "#ecc85a" : "#fffdf6", color: "#4a3f1e" }}
               onClick={() => (potTotal > 0 ? setShowPotOverview(true) : openPotModal())}
             >
-              {potTotal > 0 ? `🫙 Pot gelegd — €${potTotal.toFixed(2)}` : "🫙 Leg eerst een pot"}
+              {potTotal > 0 ? L.potPlacedBtn(potTotal.toFixed(2)) : L.potLayFirst}
             </button>
             <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "14px 8px", fontSize: 15, fontWeight: 800 }} onClick={() => setView("ordering")}>
-              🍻 Start bestellen →
+              {L.startOrderingBtn}
             </button>
           </div>
         </div>
@@ -2184,15 +2823,15 @@ export default function Home() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "2px 2px 12px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
               <div style={{ width: 30, height: 30, borderRadius: 10, background: "linear-gradient(135deg,#5a4a1a,#7a6528)", color: "#f7d461", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>{nextRoundLabel}</div>
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", whiteSpace: "nowrap" }}>Rondje {nextRoundLabel}</span>
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", whiteSpace: "nowrap" }}>{L.roundLabelPre} {nextRoundLabel}</span>
             </div>
-            <div style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.15 }}>{cartTotalItems > 0 ? "Je huidige bestelling" : ""}</div>
+            <div style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.15 }}>{cartTotalItems > 0 ? L.currentOrderTitle : ""}</div>
             {sessions.length >= 1 && (
               <button
                 onClick={() => requestDiscardPending(() => { setReorderShowAll(false); setShowReorderPicker(true) })}
                 style={{ flexShrink: 0, background: "rgba(214,158,20,0.1)", border: "1px solid rgba(214,158,20,0.3)", color: "#c8941a", borderRadius: 20, padding: "6px 11px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
               >
-                🔄 Vorig rondje opnieuw
+                {L.repeatPrevRoundBtn}
               </button>
             )}
           </div>
@@ -2207,9 +2846,9 @@ export default function Home() {
                 onClick={openDrinkSelector}
                 style={{ ...S.btn, flex: 1.15, padding: "14px 8px", fontSize: 13, fontWeight: 700, border: "none", lineHeight: 1.25, background: "linear-gradient(135deg,#f4c430,#f7d461)", color: "#4a3a0a", boxShadow: "0 6px 18px rgba(150,110,20,0.3)" }}
               >
-                🍹 Selecteer drankje(s)
+                {L.selectDrinksBtn}
               </button>
-              <span style={{ fontSize: 11, fontWeight: 800, color: "#aaa", flexShrink: 0, alignSelf: "center" }}>EN/OF</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#aaa", flexShrink: 0, alignSelf: "center" }}>{L.andOr}</span>
               <div style={{ flex: 0.85, position: "relative", display: "flex" }}>
                 <button
                   onClick={quickVoiceActive ? stopQuickVoice : startQuickVoice}
@@ -2221,11 +2860,11 @@ export default function Home() {
                     boxShadow: quickVoiceActive ? "0 0 0 5px rgba(231,76,60,0.18)" : "0 6px 18px rgba(150,110,20,0.3)",
                   }}
                 >
-                  {quickVoiceActive ? "🎤 Luistert..." : <>🎙️ Spreek je bestelling in <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.5, opacity: 0.72, border: "1px solid currentColor", borderRadius: 4, padding: "0 3px", verticalAlign: "middle", whiteSpace: "nowrap" }}>BÈTA</span></>}
+                  {quickVoiceActive ? L.voiceListening : <>{L.voiceSpeakOrder} <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.5, opacity: 0.72, border: "1px solid currentColor", borderRadius: 4, padding: "0 3px", verticalAlign: "middle", whiteSpace: "nowrap" }}>BÈTA</span></>}
                 </button>
               </div>
             </div>
-            <div style={{ textAlign: "right", marginTop: 8 }}><button onClick={() => setShowVoiceExample(true)} style={{ background: "none", border: "none", color: "#c8941a", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 2px" }}>ⓘ Hoe werkt inspreken?</button></div>
+            <div style={{ textAlign: "right", marginTop: 8 }}><button onClick={() => setShowVoiceExample(true)} style={{ background: "none", border: "none", color: "#c8941a", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 2px" }}>{L.voiceHowLink}</button></div>
           </div>
           </>
           )}
@@ -2234,13 +2873,13 @@ export default function Home() {
             <div style={{ textAlign: "center", margin: "16px 6px 4px" }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: "#a89a6a" }}>
                 {sessions.length === 0
-                  ? "Nog geen drankjes gekozen — selecteer ze hierboven 👆"
-                  : "Nog geen drankjes in dit rondje — selecteer ze hierboven 👆"}
+                  ? L.emptyOrder1
+                  : L.emptyOrderN}
               </div>
               {sessions.length > 0 && (
                 <div style={{ marginTop: 10, display: "flex", justifyContent: "center", gap: 16 }}>
-                  <button onClick={() => setView("rounds")} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 4px" }}>Overzicht Rondjes →</button>
-                  <button onClick={() => setView("bill")} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 4px" }}>Afrekenen →</button>
+                  <button onClick={() => setView("rounds")} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 4px" }}>{L.toRoundsLink}</button>
+                  <button onClick={() => setView("bill")} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 4px" }}>{L.toBillLink}</button>
                 </div>
               )}
             </div>
@@ -2250,11 +2889,11 @@ export default function Home() {
           {voiceSuggestion && (
             <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(231,168,38,0.1),rgba(231,168,38,0.05))", border: "1px solid rgba(231,168,38,0.3)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
               <div style={{ fontSize: 13 }}>
-                Niet helemaal verstaan — bedoelde je <b>{voiceSuggestion.suggested.emoji} {voiceSuggestion.suggested.name}</b>?
+                {L.voiceSuggestPre}<b>{voiceSuggestion.suggested.emoji} {voiceSuggestion.suggested.name}</b>?
               </div>
               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                <button style={{ ...S.btn, ...S.btnPrimary, fontSize: 12, padding: "6px 12px" }} onClick={acceptVoiceSuggestion}>Ja</button>
-                <button style={{ ...S.btn, fontSize: 12, padding: "6px 12px" }} onClick={dismissVoiceSuggestion}>Nee</button>
+                <button style={{ ...S.btn, ...S.btnPrimary, fontSize: 12, padding: "6px 12px" }} onClick={acceptVoiceSuggestion}>{L.confirmYes}</button>
+                <button style={{ ...S.btn, fontSize: 12, padding: "6px 12px" }} onClick={dismissVoiceSuggestion}>{L.confirmNo}</button>
               </div>
             </div>
           )}
@@ -2271,12 +2910,12 @@ export default function Home() {
             return (
               <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(150,110,20,0.1),rgba(233,196,95,0.06))", border: "1px solid rgba(150,110,20,0.3)" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: "#c98a00", textTransform: "uppercase", letterSpacing: 0.6 }}>🆕 Laatst toegevoegd</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "#c98a00", textTransform: "uppercase", letterSpacing: 0.6 }}>{L.lastAddedTitle}</div>
                   <button
                     onClick={() => { setLastAddedDrinkIds([]); setLastAddedViaVoice(false) }}
                     style={{ background: "none", border: "none", color: "#b3a476", fontSize: 11, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2, flexShrink: 0 }}
                   >
-                    ? alles later toewijzen
+                    {L.assignAllLater}
                   </button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: shown.length > 3 ? "repeat(auto-fill, minmax(205px, 1fr))" : "1fr", gap: 8 }}>
@@ -2289,7 +2928,7 @@ export default function Home() {
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <span style={{ fontSize: 18, flexShrink: 0 }}>{d.emoji}</span>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</div>
+                            <div style={{ fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{drinkName(d.name, lang)}</div>
                             {showPrices && <div style={{ fontSize: 10, color: "#999" }}>≈ €{(d.price * line.total).toFixed(2)}</div>}
                           </div>
                           <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 15 }} onClick={() => addToCart(d.id, -1)}>−</button>
@@ -2311,10 +2950,10 @@ export default function Home() {
             <div style={{ ...S.card, padding: 0, overflow: "hidden", border: "1px solid rgba(214,158,20,0.18)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg,#f4c430,#f7d461)", padding: "12px 16px" }}>
                 <span style={{ fontSize: 17, fontWeight: 800, color: "#4a3a0a", display: "flex", alignItems: "center", gap: 8 }}>
-                  📋 Alle bestellingen in rondje {nextRoundLabel}
+                  {L.allOrdersInRound}{nextRoundLabel}
                   <span style={{ fontSize: 12, fontWeight: 800, color: "#4a3a0a", background: "#fffef2", borderRadius: 20, padding: "1px 10px" }}>{cartTotalItems}</span>
                 </span>
-                <button style={{ background: "none", border: "none", color: "#7a5f14", fontSize: 12, cursor: "pointer", textDecoration: "underline", fontWeight: 600 }} onClick={clearCart}>wis alles</button>
+                <button style={{ background: "none", border: "none", color: "#7a5f14", fontSize: 12, cursor: "pointer", textDecoration: "underline", fontWeight: 600 }} onClick={clearCart}>{L.clearAll}</button>
               </div>
               <div style={{ padding: 16 }}>
               {(() => {
@@ -2332,7 +2971,7 @@ export default function Home() {
                         <div key={drinkId} style={{ border: justAdded ? "1.5px solid #ecc85a" : "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 10, background: justAdded ? "rgba(233,196,95,0.12)" : "transparent" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                             <span style={{ fontSize: 19, flexShrink: 0 }}>{d.emoji}</span>
-                            <span style={{ flex: 1, fontSize: 14, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</span>
+                            <span style={{ flex: 1, fontSize: 14, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{drinkName(d.name, lang)}</span>
                             <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 14 }} onClick={() => addToCart(d.id, -1)}>−</button>
                             <span style={{ fontSize: 15, fontWeight: 800, minWidth: 20, textAlign: "center" }}>{line.total}</span>
                             <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 14, background: "rgba(150,110,20,0.12)" }} onClick={() => addToCart(d.id, 1)}>+</button>
@@ -2358,14 +2997,14 @@ export default function Home() {
                   onClick={openDrinkSelectorEdit}
                   style={{ ...S.btn, flex: 0.6, padding: "13px 8px", fontSize: 13, fontWeight: 700, background: "#fffef9", border: "1.5px solid rgba(120,95,20,0.22)", color: "#8a7d55" }}
                 >
-                  ✏️ Bestelling wijzigen
+                  {L.editOrderBtn}
                 </button>
               )}
               <button
                 onClick={() => setShowFinishConfirm(true)}
                 style={{ ...S.btn, flex: 1.4, padding: "13px 8px", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }}
               >
-                ✅ Bestelling afronden — {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""}
+                {L.finishOrderBtn(cartTotalItems)}
               </button>
             </div>
           )}
@@ -2375,8 +3014,8 @@ export default function Home() {
           {showReorderPicker && (
             <div style={S.overlay}>
               <div style={{ ...S.modal, width: 420, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
-                <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800, color: "#4a3f1e" }}>🔄 Begin met een vorig rondje</h3>
-                <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Bestel een vorig rondje <b>exact opnieuw</b>, of neem het over om het <b>licht aan te passen</b>.</p>
+                <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800, color: "#4a3f1e" }}>{L.reorderTitle}</h3>
+                <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>{L.reorderSubA}<b>{L.reorderExact}</b>{L.reorderSubB}<b>{L.reorderAdjust}</b>.</p>
                 <div style={{ overflowY: "auto", flex: 1, marginBottom: 12 }}>
                   {(() => {
                     const reversed = [...sessions].reverse()
@@ -2389,7 +3028,7 @@ export default function Home() {
                           const byDrink: Record<string, number> = {}
                           rows.forEach((o) => { byDrink[o.drink_id] = (byDrink[o.drink_id] ?? 0) + o.quantity })
                           const total = rows.reduce((s, o) => s + o.quantity, 0)
-                          const names = Object.entries(byDrink).map(([id, q]) => { const d = drinks.find((dr) => dr.id === id); return d ? `${q}× ${d.name}` : null }).filter(Boolean).join(", ")
+                          const names = Object.entries(byDrink).map(([id, q]) => { const d = drinks.find((dr) => dr.id === id); return d ? `${q}× ${drinkName(d.name, lang)}` : null }).filter(Boolean).join(", ")
                           const isPrev = sess === reversed[0]
                           return (
                             <div
@@ -2399,8 +3038,8 @@ export default function Home() {
                               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                                 <span style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#5a4a1a,#7a6528)", color: "#f7d461", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, flexShrink: 0 }}>{roundLabel(sess)}</span>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>Rondje {roundLabel(sess)}{isPrev && <span style={{ fontSize: 10, fontWeight: 800, color: "#a06b00", background: "rgba(233,196,95,0.25)", borderRadius: 10, padding: "1px 7px", marginLeft: 6 }}>vorige</span>}</div>
-                                  <div style={{ fontSize: 11, color: "#a89a6a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{total} {total === 1 ? "drankje" : "drankjes"}{names ? ` — ${names}` : ""}</div>
+                                  <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>{L.roundLabelPre} {roundLabel(sess)}{isPrev && <span style={{ fontSize: 10, fontWeight: 800, color: "#a06b00", background: "rgba(233,196,95,0.25)", borderRadius: 10, padding: "1px 7px", marginLeft: 6 }}>{L.prevBadge}</span>}</div>
+                                  <div style={{ fontSize: 11, color: "#a89a6a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{total} {total === 1 ? L.drink : L.drinks}{names ? ` — ${names}` : ""}</div>
                                 </div>
                               </div>
                               <div style={{ display: "flex", gap: 8 }}>
@@ -2408,13 +3047,13 @@ export default function Home() {
                                   onClick={() => { reorderFromSession(sess); setShowFinishConfirm(true) }}
                                   style={{ ...S.btn, flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e" }}
                                 >
-                                  ? Exact opnieuw
+                                  {L.reorderExactBtn}
                                 </button>
                                 <button
                                   onClick={() => reorderFromSession(sess)}
                                   style={{ ...S.btn, flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 700, background: "#fff", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55" }}
                                 >
-                                  ✏️ Aanpassen
+                                  {L.adjustBtn}
                                 </button>
                               </div>
                             </div>
@@ -2425,14 +3064,14 @@ export default function Home() {
                             onClick={() => setReorderShowAll((v) => !v)}
                             style={{ width: "100%", background: "none", border: "none", color: "#c8941a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", padding: "8px 0", textDecoration: "underline", textUnderlineOffset: 3 }}
                           >
-                            {reorderShowAll ? "▴ Toon enkel het vorige rondje" : `▾ Toon ${olderCount} ouder${olderCount === 1 ? "" : "e"} rondje${olderCount === 1 ? "" : "s"}`}
+                            {reorderShowAll ? L.reorderShowPrev : L.reorderShowOlder(olderCount)}
                           </button>
                         )}
                       </>
                     )
                   })()}
                 </div>
-                <button style={{ ...S.btn, width: "100%", padding: "11px 0" }} onClick={() => setShowReorderPicker(false)}>Annuleren</button>
+                <button style={{ ...S.btn, width: "100%", padding: "11px 0" }} onClick={() => setShowReorderPicker(false)}>{L.cancelN}</button>
               </div>
             </div>
           )}
@@ -2441,9 +3080,9 @@ export default function Home() {
             <div style={S.overlay}>
               <div style={{ ...S.modal, width: 360, textAlign: "center" }}>
                 <div style={{ fontSize: 40, marginBottom: 8 }}>🧾</div>
-                <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>Bestelling afronden?</h3>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>{L.finishConfirmTitle}</h3>
                 <p style={{ fontSize: 13, color: "#777", marginBottom: 12 }}>
-                  In totaal heb je {cartTotalItems} item{cartTotalItems !== 1 ? "s" : ""} voor {participants.length} {participants.length === 1 ? "persoon" : "personen"}. Overzicht:
+                  {L.finishConfirmSub(cartTotalItems, `${participants.length} ${participants.length === 1 ? L.person : L.people}`)}
                 </p>
                 <div style={{ textAlign: "left", maxHeight: 200, overflowY: "auto", marginBottom: 16, border: "1px solid rgba(0,0,0,0.07)", borderRadius: 12, padding: "6px 12px" }}>
                   {Object.entries(cart).filter(([, l]) => l.total > 0).map(([id, l]) => {
@@ -2451,7 +3090,7 @@ export default function Home() {
                     if (!d) return null
                     return (
                       <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, padding: "4px 0", borderBottom: "1px solid rgba(150,110,20,0.05)" }}>
-                        <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{d.emoji} {d.name}</span>
+                        <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{d.emoji} {drinkName(d.name, lang)}</span>
                         <span style={{ fontWeight: 800, color: "#4a3f1e", flexShrink: 0, marginLeft: 8 }}>€{l.total}</span>
                       </div>
                     )
@@ -2467,12 +3106,12 @@ export default function Home() {
                   const subtleStyle = { ...S.btn, width: "100%", padding: "11px 0", fontSize: 14, fontWeight: 700 }
                   const adjustBtn = (
                     <button style={unassigned > 0 ? primaryStyle : subtleStyle} onClick={() => setShowFinishConfirm(false)}>
-                      {unassigned > 0 ? "✏️ Bestelling aanpassen" : "✅ Bestelling aanpassen"}
+                      {(unassigned > 0 ? "✏️ " : "✅ ") + L.orderAdjustBtn}
                     </button>
                   )
                   const finishBtn = (
                     <button style={unassigned > 0 ? subtleStyle : primaryStyle} onClick={() => { setShowFinishConfirm(false); finishRound() }}>
-                      {unassigned > 0 ? "Toch afronden" : "✅ Ja, afronden"}
+                      {unassigned > 0 ? L.finishAnyway : L.finishYes}
                     </button>
                   )
                   return (
@@ -2481,7 +3120,7 @@ export default function Home() {
                         <div style={{ display: "flex", gap: 8, alignItems: "flex-start", textAlign: "left", background: "rgba(224,107,94,0.1)", border: "1px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
                           <span style={{ fontSize: 16, lineHeight: 1 }}>⚠️</span>
                           <span style={{ fontSize: 12.5, color: "#c0392b", lineHeight: 1.45, fontWeight: 600 }}>
-                            <b>{unassigned} {unassigned === 1 ? "drankje" : "drankjes"}</b> nog toe te wijzen. Voeg ze nu toe voor een eerlijke <b>&ldquo;Fair Split&rdquo;</b>. Hoe? Via de knop <b>&ldquo;Bestelling aanpassen&rdquo;</b> hieronder.
+                            <b>{unassigned} {unassigned === 1 ? L.drink : L.drinks}</b>{L.unassignedWarnB}<b>&ldquo;Fair Split&rdquo;</b>{L.unassignedWarnC}<b>&ldquo;{L.orderAdjustBtn}&rdquo;</b>{L.unassignedWarnD}
                           </span>
                         </div>
                       )}
@@ -2500,10 +3139,10 @@ export default function Home() {
             <div style={S.overlay}>
               <div style={{ ...S.modal, width: 460, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
                 <div style={{ marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>🍹 Selecteer drankje(s)</h3>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{L.selectDrinksBtn}</h3>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 700, color: "#a89a6a", whiteSpace: "nowrap" }}>{participants.length} pers.</span>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: "#4a3a0a", background: "linear-gradient(135deg,#f4c430,#f7d461)", borderRadius: 20, padding: "3px 12px", whiteSpace: "nowrap" }}>{(selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal)} {(selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal) === 1 ? "drankje" : "drankjes"}</span>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: "#a89a6a", whiteSpace: "nowrap" }}>{participants.length} {L.persAbbr}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "#4a3a0a", background: "linear-gradient(135deg,#f4c430,#f7d461)", borderRadius: 20, padding: "3px 12px", whiteSpace: "nowrap" }}>{(selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal)} {(selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal) === 1 ? L.drink : L.drinks}</span>
                   </div>
                 </div>
 
@@ -2522,14 +3161,14 @@ export default function Home() {
                 {/* Zoekvak — over alle categorieën heen */}
                 <div style={{ position: "relative", marginBottom: 8 }}>
                   <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, opacity: 0.55, pointerEvents: "none" }}>🔍</span>
-                  <input value={selectorSearch} onChange={(e) => setSelectorSearch(e.target.value)} placeholder="Zoek… bv. cola, jäger, virgin" style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 38, paddingRight: 34 }} />
+                  <input value={selectorSearch} onChange={(e) => setSelectorSearch(e.target.value)} placeholder={L.searchPlaceholder} style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 38, paddingRight: 34 }} />
                   {selectorSearch && <button onClick={() => setSelectorSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#b3a476", fontSize: 16, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>}
                 </div>
 
                 {/* Melding na een zelf toegevoegd drankje: waar staat het nu */}
                 {lastAddedCustomDrink && (
                   <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.35)", borderRadius: 12, padding: "8px 11px", marginBottom: 8, fontSize: 12.5, color: "#1f8a4c", lineHeight: 1.4 }}>
-                    <span style={{ flex: 1 }}>✅ <b>{lastAddedCustomDrink.name}</b> staat nu klaar onder <b>{CATEGORY_LABELS[lastAddedCustomDrink.category] ?? lastAddedCustomDrink.category}</b> — tik het aan om toe te voegen.</span>
+                    <span style={{ flex: 1 }}>✅ <b>{lastAddedCustomDrink.name}</b> {L.customReady1}<b>{catLabel(lastAddedCustomDrink.category, lang)}</b>{L.customReady2}</span>
                     <button onClick={() => setLastAddedCustomDrink(null)} style={{ background: "none", border: "none", color: "#1f8a4c", fontSize: 14, cursor: "pointer", flexShrink: 0, lineHeight: 1 }}>✕</button>
                   </div>
                 )}
@@ -2551,7 +3190,7 @@ export default function Home() {
                             <div key={d.id} style={{ background: qty > 0 ? "rgba(150,110,20,0.08)" : "#fffdf3", border: qty > 0 ? "1.5px solid rgba(150,110,20,0.35)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                 <span style={{ fontSize: 20 }}>{d.emoji}</span>
-                                <span style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{d.name}</span>
+                                <span style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{drinkName(d.name, lang)}</span>
                                 {showPrices && <span style={{ fontSize: 10, color: "#bbb" }}>≈ €{d.price.toFixed(2)}</span>}
                               </div>
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -2567,12 +3206,12 @@ export default function Home() {
                     )
                   })}
                   {selectorSearch.trim() && !groupedDrinks.some(([, list]) => list.some((d) => normText(selectorSearch.trim()).split(/\s+/).filter(Boolean).every((w) => normText(d.name).includes(w)))) && (
-                    <div style={{ textAlign: "center", color: "#a89a6a", fontSize: 13, padding: "24px 12px", lineHeight: 1.5 }}>Geen drankje gevonden — voeg het onderaan toe als eigen drankje.</div>
+                    <div style={{ textAlign: "center", color: "#a89a6a", fontSize: 13, padding: "24px 12px", lineHeight: 1.5 }}>{L.noDrinkFound}</div>
                   )}
                 </div>
 
                 <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 10, padding: "12px 0", fontWeight: 700 }} onClick={confirmDrinkSelector}>
-                  {selectorTotal > 0 ? `Klaar? ${selectorTotal} ${selectorTotal !== 1 ? "drankjes" : "drankje"}${Math.max(0, (selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal) - participants.length) > 0 ? ` (${Math.max(0, (selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal) - participants.length)} meer dan groep)` : ""}` : "Klaar"}
+                  {L.readyBtn(selectorTotal, Math.max(0, (selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal) - participants.length))}
                 </button>
 
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 12 }}>
@@ -2583,12 +3222,12 @@ export default function Home() {
                     Annuleren
                   </button>
                   <button onClick={() => setShowAddDrink(true)} style={{ width: "62%", padding: "11px 0", fontSize: 12.5, fontWeight: 700, cursor: "pointer", color: "#a89a6a", background: "rgba(244,196,48,0.09)", border: "2px dashed rgba(214,158,20,0.4)", borderRadius: 14 }}>
-                    ⭐ Eigen drankje toevoegen
+                    {L.addOwnDrinkBtn}
                   </button>
                 </div>
                 {drinks.some(isGroupDrink) && (
                   <div style={{ textAlign: "right", marginTop: 8 }}>
-                    <button onClick={() => setShowEditDrinks(true)} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 8px" }}>✏️ Mijn eigen drankjes beheren</button>
+                    <button onClick={() => setShowEditDrinks(true)} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 8px" }}>{L.manageOwnDrinks}</button>
                   </div>
                 )}
               </div>
@@ -2610,7 +3249,7 @@ export default function Home() {
                 <span style={{ fontSize: 24, flexShrink: 0 }}>🍻</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ fontSize: 12, color: "#a06b00", fontWeight: 800 }}>Nog in de pot</span>
+                    <span style={{ fontSize: 12, color: "#a06b00", fontWeight: 800 }}>{L.stillInPotLabel}</span>
                     <span style={{ fontSize: 19, fontWeight: 800, color: potLeft > 0.01 ? "#4a3f1e" : "#e67e22" }}>€{potLeft.toFixed(2)}</span>
                   </div>
                   <div style={{ height: 6, background: "rgba(120,95,20,0.08)", borderRadius: 4, marginTop: 5, overflow: "hidden" }}>
@@ -2626,13 +3265,13 @@ export default function Home() {
           {sessions.length === 0 && (
             cartTotalItems === 0 ? (
               <div style={{ ...S.card, textAlign: "center", padding: 32, color: "#aaa" }}>
-                Nog geen bestellingen. Ga naar &ldquo;Nieuwe bestelling&rdquo; om te starten.
+                {L.roundsEmptyNoOrders}
               </div>
             ) : (
               <div style={{ ...S.card, textAlign: "center", padding: "24px 20px" }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>Jouw bestelling werd nog niet afgerond</div>
-                <div style={{ fontSize: 13, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>Bekijk ze hier, pas eventueel nog aan en klik op &ldquo;Bestelling afronden&rdquo;.</div>
-                <button onClick={() => setView("ordering")} style={{ ...S.btn, ...S.btnPrimary, padding: "10px 20px", fontWeight: 800 }}>🍻 Naar je bestelling</button>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>{L.orderNotFinishedTitle}</div>
+                <div style={{ fontSize: 13, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>{L.orderNotFinishedSub}</div>
+                <button onClick={() => setView("ordering")} style={{ ...S.btn, ...S.btnPrimary, padding: "10px 20px", fontWeight: 800 }}>{L.toYourOrderBtn}</button>
               </div>
             )
           )}
@@ -2640,8 +3279,8 @@ export default function Home() {
           {sessions.length > 0 && cartTotalItems > 0 && (
             <div style={{ ...S.card, marginBottom: 12, display: "flex", alignItems: "center", gap: 10, background: "rgba(224,107,94,0.07)", border: "1px solid rgba(224,107,94,0.4)" }}>
               <span style={{ fontSize: 18 }}>⚠️</span>
-              <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#c0392b", fontWeight: 600, lineHeight: 1.4 }}>Je hebt nog een niet-afgeronde bestelling ({cartTotalItems} {cartTotalItems === 1 ? "item" : "items"}).</div>
-              <button onClick={() => setView("ordering")} style={{ ...S.btn, flexShrink: 0, fontSize: 12.5, fontWeight: 800, padding: "8px 12px" }}>Bekijk →</button>
+              <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#c0392b", fontWeight: 600, lineHeight: 1.4 }}>{L.unfinishedOrderBanner(cartTotalItems)}</div>
+              <button onClick={() => setView("ordering")} style={{ ...S.btn, flexShrink: 0, fontSize: 12.5, fontWeight: 800, padding: "8px 12px" }}>{L.viewLink}</button>
             </div>
           )}
 
@@ -2653,7 +3292,7 @@ export default function Home() {
                   onClick={() => setOpenRounds(everyOpen ? [] : sessions.slice())}
                   style={{ background: "none", border: "none", color: "#a89a6a", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
                 >
-                  {everyOpen ? "▴ Alles inklappen" : "▾ Alles openklappen"}
+                  {everyOpen ? L.collapseAll : L.expandAll}
                 </button>
               </div>
             )
@@ -2681,37 +3320,37 @@ export default function Home() {
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 12, color: "#bbb", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", display: "inline-block" }}>▸</span>
-                    <b style={{ fontSize: 16 }}>Ronde {roundLabel(s)}</b>
-                    {isLatest && <span style={{ fontSize: 10, color: "#4a3f1e", background: "rgba(150,110,20,0.1)", borderRadius: 8, padding: "1px 8px", fontWeight: 700 }}>laatste</span>}
+                    <b style={{ fontSize: 16 }}>{L.roundWordAlt} {roundLabel(s)}</b>
+                    {isLatest && <span style={{ fontSize: 10, color: "#4a3f1e", background: "rgba(150,110,20,0.1)", borderRadius: 8, padding: "1px 8px", fontWeight: 700 }}>{L.lastBadge}</span>}
                     {(() => {
                       const open = orders.filter((o) => o.session === s && !o.participant_id).reduce((sum, o) => sum + o.quantity, 0)
                       if (open <= 0) return null
-                      return <span style={{ fontSize: 10, color: "#e0685c", background: "rgba(224,107,94,0.12)", border: "1px solid rgba(224,107,94,0.35)", borderRadius: 8, padding: "1px 8px", fontWeight: 800 }}>{open} nog toe te wijzen!</span>
+                      return <span style={{ fontSize: 10, color: "#e0685c", background: "rgba(224,107,94,0.12)", border: "1px solid rgba(224,107,94,0.35)", borderRadius: 8, padding: "1px 8px", fontWeight: 800 }}>{L.nToAssignBadge(open)}</span>
                     })()}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <button style={S.iconBtn} title="Volledig scherm" onClick={(e) => { e.stopPropagation(); setRoundFullscreen(s) }}>🔍</button>
-                    <button style={S.iconBtn} title="Bewerken" onClick={(e) => { e.stopPropagation(); setEditingRound(isEditing ? null : s); if (!isOpen) toggleOpen() }}>{isEditing ? "✓" : "✏️"}</button>
-                    <button style={S.iconBtn} title="Verwijderen" onClick={(e) => { e.stopPropagation(); deleteRound(s) }}>🗑️</button>
+                    <button style={S.iconBtn} title={L.titleFullscreen} onClick={(e) => { e.stopPropagation(); setRoundFullscreen(s) }}>🔍</button>
+                    <button style={S.iconBtn} title={L.titleEdit} onClick={(e) => { e.stopPropagation(); setEditingRound(isEditing ? null : s); if (!isOpen) toggleOpen() }}>{isEditing ? "✓" : "✏️"}</button>
+                    <button style={S.iconBtn} title={L.deleteLabel} onClick={(e) => { e.stopPropagation(); deleteRound(s) }}>🗑️</button>
                   </div>
                 </div>
 
                 {/* Betaald door + bedrag — meteen na de rondenaam */}
                 <div style={{ marginTop: 6 }}>
                   {roundPayments.length === 0 ? (
-                    <button style={{ ...S.btn, fontSize: 12, padding: "4px 12px" }} onClick={(e) => { e.stopPropagation(); openPaymentEditor(s) }}>💶 Wie betaalde?</button>
+                    <button style={{ ...S.btn, fontSize: 12, padding: "4px 12px" }} onClick={(e) => { e.stopPropagation(); openPaymentEditor(s) }}>{L.whoPaidBtn}</button>
                   ) : (
                     <div
                       onClick={(e) => { e.stopPropagation(); openPaymentEditor(s) }}
                       style={{ cursor: "pointer", fontSize: 13, color: "#444", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}
                     >
-                      <span style={{ color: "#888" }}>💶 Betaald</span>
+                      <span style={{ color: "#888" }}>{L.paidLabel}</span>
                       {roundPayments.map((p) => {
                         const isPot = !p.participant_id
                         const person = participants.find((pa) => pa.id === p.participant_id)
                         return (
                           <span key={p.id} style={{ background: isPot ? "rgba(233,196,95,0.2)" : "rgba(39,174,96,0.1)", color: isPot ? "#a06b00" : "#1f8a4c", borderRadius: 10, padding: "2px 10px", fontWeight: 700 }}>
-                            {isPot ? "🫙 via de pot" : (person?.name ?? "?")} — €{p.amount.toFixed(2)}
+                            {isPot ? L.viaPot : pName(person?.name ?? "?", lang)} — €{p.amount.toFixed(2)}
                           </span>
                         )
                       })}
@@ -2725,27 +3364,27 @@ export default function Home() {
                     {Object.values(grouped).map((it) => (
                       <div key={it.drink.id} style={{ marginTop: 8, padding: "6px 0", borderBottom: "1px solid rgba(150,110,20,0.05)" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <b style={{ fontSize: 13 }}>{it.drink.emoji} {it.drink.name} — {it.totalQty}</b>
+                          <b style={{ fontSize: 13 }}>{it.drink.emoji} {drinkName(it.drink.name, lang)} — {it.totalQty}</b>
                         </div>
                         <div style={{ marginLeft: 8, marginTop: 4 }}>
                           {Object.entries(it.people).map(([pid, info]) => (
                             <div key={pid} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, marginTop: 2 }}>
-                              <span style={{ color: "#666" }}>{info.name} — {info.qty}</span>
+                              <span style={{ color: "#666" }}>{pName(info.name, lang)} — {info.qty}</span>
                               {isEditing && (
-                                <button title="terug naar nog toe te wijzen" style={{ ...S.iconBtn, width: 20, height: 20, fontSize: 11 }} onClick={() => unassignOrderQty(it.drink.id, pid, s, 1)}>↩</button>
+                                <button title={L.titleBackToUnassigned} style={{ ...S.iconBtn, width: 20, height: 20, fontSize: 11 }} onClick={() => unassignOrderQty(it.drink.id, pid, s, 1)}>↩</button>
                               )}
                             </div>
                           ))}
                           {it.anonymous > 0 && (
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }} onClick={(e) => e.stopPropagation()}>
-                              <span style={{ fontSize: 11, color: "#e0685c", fontWeight: 600, flexShrink: 0 }}>{it.anonymous}× nog toe te wijzen!</span>
+                              <span style={{ fontSize: 11, color: "#e0685c", fontWeight: 600, flexShrink: 0 }}>{L.nToAssignInline(it.anonymous)}</span>
                               <select
                                 value=""
                                 onChange={(e) => { if (e.target.value) assignAnonymousQty(it.drink.id, s, e.target.value, 1) }}
                                 style={{ ...S.input, flex: 1, fontSize: 12, padding: "5px 8px", fontWeight: 600, cursor: "pointer" }}
                               >
-                                <option value="">voor wie?</option>
-                                {participants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                <option value="">{L.forWhom}</option>
+                                {participants.map((p) => <option key={p.id} value={p.id}>{pName(p.name, lang)}</option>)}
                               </select>
                             </div>
                           )}
@@ -2758,7 +3397,7 @@ export default function Home() {
             )
           })}
           {sessions.length > 0 && (
-            <button onClick={() => setView("bill")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 6, padding: "14px 0", fontSize: 15, fontWeight: 800 }}>🧾 Ga naar afrekenen →</button>
+            <button onClick={() => setView("bill")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 6, padding: "14px 0", fontSize: 15, fontWeight: 800 }}>{L.toBillBtn}</button>
           )}
         </div>
       )}
@@ -2767,11 +3406,11 @@ export default function Home() {
       {showIndicatiefInfo && (
         <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setShowIndicatiefInfo(false)}>
           <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>🏷️ Indicatieve richtprijs</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>{L.indicatiefTitle}</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              <b style={{ color: "#a89a6a" }}>Indicatieve richtprijs</b> is een pure schatting per drankje. <b style={{ color: "#c98a00" }}>Fair Split</b> verdeelt het verschil met wat er echt betaald werd tijdens de rondjes volgens wie wat dronk, niet zomaar gelijk over iedereen. <b>Veel eerlijker dus!</b>
+              <b style={{ color: "#a89a6a" }}>{L.indicatiefWord}</b>{L.indicatiefBody1}<b style={{ color: "#c98a00" }}>Fair Split</b>{L.indicatiefBody2}<b>{L.muchFairer}</b>
             </p>
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowIndicatiefInfo(false)}>Begrepen</button>
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowIndicatiefInfo(false)}>{L.understood}</button>
           </div>
         </div>
       )}
@@ -2780,11 +3419,11 @@ export default function Home() {
       {fairInfoMode && (
         <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setFairInfoMode(null)}>
           <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>Hoe werkt Fair Split?</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>{L.fairTitle}</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              Met <b style={{ color: "#c98a00" }}>Fair Split</b> delen we het totaalbedrag <b>NIET</b> door het aantal personen. Op basis van richtprijzen per drankje verdelen we de totaalprijs volgens wie wat dronk. <b>Niet perfect, wel veel eerlijker!</b>
+              {L.fairBody1a}<b style={{ color: "#c98a00" }}>Fair Split</b>{L.fairBody1b}<b>{L.fairNot}</b>{L.fairBody1c} <b>{L.fairBody1d}</b>
             </p>
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setFairInfoMode(null)}>Begrepen</button>
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setFairInfoMode(null)}>{L.understood}</button>
           </div>
         </div>
       )}
@@ -2793,12 +3432,12 @@ export default function Home() {
       {showVoiceExample && (
         <div style={{ ...S.overlay, zIndex: 2400 }} onClick={() => setShowVoiceExample(false)}>
           <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>🎤 Spreek je bestelling in</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>{L.voiceExampleTitle}</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              Zeg bijvoorbeeld <b>&ldquo;2 pintjes&rdquo;</b> — klik daarna opnieuw en zeg <b>&ldquo;1 gin-tonic&rdquo;</b>, enz. Je kan zoveel drankjes na elkaar inspreken als je wil.
+              {L.voiceExampleA}<b>&ldquo;{L.voiceEx1}&rdquo;</b>{L.voiceExampleB}<b>&ldquo;{L.voiceEx2}&rdquo;</b>{L.voiceExampleC}
             </p>
-            <div style={{ fontSize: 12, color: "#c8941a", fontWeight: 700, background: "rgba(214,158,20,0.1)", borderRadius: 8, padding: "9px 11px", margin: "12px 0 0", lineHeight: 1.5 }}>⚠️ Bèta — deze functie is nog in test en werkt nog niet altijd vlot. Kijk je bestelling na het inspreken zeker even na.</div>
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowVoiceExample(false)}>Begrepen</button>
+            <div style={{ fontSize: 12, color: "#c8941a", fontWeight: 700, background: "rgba(214,158,20,0.1)", borderRadius: 8, padding: "9px 11px", margin: "12px 0 0", lineHeight: 1.5 }}>{L.voiceBetaNote}</div>
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowVoiceExample(false)}>{L.understood}</button>
           </div>
         </div>
       )}
@@ -2807,11 +3446,11 @@ export default function Home() {
       {showEqualInfo && (
         <div style={{ ...S.overlay, zIndex: 2400 }} onClick={() => setShowEqualInfo(false)}>
           <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>Iedereen evenveel</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>{L.equalTitle}</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              De totale rekening wordt gelijk verdeeld over alle personen. Simpel &amp; snel maar minder eerlijk. Vergelijk zeker even met Fair split!
+              {L.equalBody}
             </p>
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowEqualInfo(false)}>Begrepen</button>
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowEqualInfo(false)}>{L.understood}</button>
           </div>
         </div>
       )}
@@ -2824,12 +3463,12 @@ export default function Home() {
             <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>{confirmDialog.title}</h3>
             <p style={{ fontSize: 13.5, color: "#777", lineHeight: 1.5, margin: "0 0 18px" }}>{confirmDialog.message}</p>
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 700 }} onClick={() => setConfirmDialog(null)}>Annuleer</button>
+              <button style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 700 }} onClick={() => setConfirmDialog(null)}>{L.cancel}</button>
               <button
                 style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 800, border: "none", color: confirmDialog.danger ? "#fff" : "#4a3a0a", background: confirmDialog.danger ? "linear-gradient(135deg,#e0685c,#d1483b)" : "linear-gradient(135deg,#f4c430,#f7d461)" }}
                 onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn() }}
               >
-                {confirmDialog.confirmLabel ?? "Ja"}
+                {confirmDialog.confirmLabel ?? L.confirmYes}
               </button>
             </div>
           </div>
@@ -2850,35 +3489,35 @@ export default function Home() {
           batchMap.get(key)!.push(p)
         })
         const batches = order.map((k) => batchMap.get(k)!)
-        const potName = (i: number) => ["Eerste pot", "Tweede pot", "Derde pot", "Vierde pot", "Vijfde pot", "Zesde pot"][i] ?? `Pot ${i + 1}`
+        const potName = L.potName
         const n = participants.length
         const allTotal = parseFloat((potAddAmount || "").replace(",", "."))
         const allPer = (!isNaN(allTotal) && allTotal > 0 && n > 0) ? allTotal / n : 0
         return (
           <div style={{ ...S.overlay, zIndex: 2200 }}>
             <div style={{ ...S.modal, width: 440, maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
-              <h3 style={{ marginBottom: 4, fontSize: 19, fontWeight: 800, color: "#4a3f1e" }}>🫙 De pot</h3>
-              <p style={{ fontSize: 12, color: "#999", marginTop: 0, marginBottom: 14 }}>Overzicht per pot en wie wat bijlegde.</p>
+              <h3 style={{ marginBottom: 4, fontSize: 19, fontWeight: 800, color: "#4a3f1e" }}>{L.potOverviewTitle}</h3>
+              <p style={{ fontSize: 12, color: "#999", marginTop: 0, marginBottom: 14 }}>{L.potOverviewSub}</p>
 
               {/* Stats */}
               <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                 <div style={{ flex: 1, textAlign: "center", background: "rgba(233,196,95,0.10)", borderRadius: 12, padding: "9px 4px" }}>
-                  <div style={{ fontSize: 10, color: "#a06b00", fontWeight: 700 }}>ingelegd</div>
+                  <div style={{ fontSize: 10, color: "#a06b00", fontWeight: 700 }}>{L.potStatContributed}</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>€{potTotal.toFixed(2)}</div>
                 </div>
                 <div style={{ flex: 1, textAlign: "center", background: "rgba(120,95,20,0.05)", borderRadius: 12, padding: "9px 4px" }}>
-                  <div style={{ fontSize: 10, color: "#888", fontWeight: 700 }}>gebruikt</div>
+                  <div style={{ fontSize: 10, color: "#888", fontWeight: 700 }}>{L.potStatUsed}</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: "#a89a6a" }}>€{potUsed.toFixed(2)}</div>
                 </div>
                 <div style={{ flex: 1, textAlign: "center", background: "rgba(39,174,96,0.10)", borderRadius: 12, padding: "9px 4px" }}>
-                  <div style={{ fontSize: 10, color: "#1f8a4c", fontWeight: 700 }}>nog beschikbaar</div>
+                  <div style={{ fontSize: 10, color: "#1f8a4c", fontWeight: 700 }}>{L.potStatAvailable}</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: "#27ae60" }}>€{potLeft.toFixed(2)}</div>
                 </div>
               </div>
 
               {/* Potten (per inleg-moment) */}
               <div style={{ flex: 1, overflowY: "auto", marginBottom: 14 }}>
-                {batches.length === 0 && <div style={{ fontSize: 13, color: "#bbb", padding: "8px 0" }}>Nog geen inleg.</div>}
+                {batches.length === 0 && <div style={{ fontSize: 13, color: "#bbb", padding: "8px 0" }}>{L.potNoContributions}</div>}
                 {batches.map((rows, i) => {
                   const bt = rows.reduce((s, r) => s + r.amount, 0)
                   return (
@@ -2888,7 +3527,7 @@ export default function Home() {
                         <span style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>€{bt.toFixed(2)}</span>
                       </div>
                       {rows.map((r) => {
-                        const who = r.participant_id ? (participants.find((p) => p.id === r.participant_id)?.name ?? "?") : "Algemeen"
+                        const who = r.participant_id ? pName(participants.find((p) => p.id === r.participant_id)?.name ?? "?", lang) : L.potGeneral
                         return (
                           <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderTop: "1px solid rgba(0,0,0,0.05)" }}>
                             <span style={{ fontSize: 14 }}>{r.participant_id ? "👤" : "🫙"}</span>
@@ -2905,9 +3544,9 @@ export default function Home() {
 
               {/* Aanvullen — zelfde manier als de eerste pot-inleg */}
               <div style={{ background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 14, padding: 12, marginBottom: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#a06b00", marginBottom: 8 }}>🫙 Pot aanvullen</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#a06b00", marginBottom: 8 }}>{L.potTopUp}</div>
                 {participants.length === 0 ? (
-                  <div style={{ fontSize: 12, color: "#aaa" }}>Voeg eerst personen toe</div>
+                  <div style={{ fontSize: 12, color: "#aaa" }}>{L.potAddPersonsFirst}</div>
                 ) : (
                   <>
                     <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
@@ -2923,21 +3562,21 @@ export default function Home() {
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, padding: "8px 10px", background: "#fff", border: "1px solid #ecc85a", borderRadius: 12 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: "#4a3f1e" }}>€</span>
-                      <input type="number" step="1" min="0" inputMode="numeric" placeholder="bedrag" value={potAddBulk} onChange={(e) => { setPotAddWarn(false); setPotAddBulk(e.target.value.replace(/[^\d]/g, "")) }} style={{ ...S.input, flex: 1, minWidth: 0 }} />
-                      <span style={{ fontSize: 13, color: "#777" }}>p.p.</span>
+                      <input type="number" step="1" min="0" inputMode="numeric" placeholder={L.potAmountPlaceholder} value={potAddBulk} onChange={(e) => { setPotAddWarn(false); setPotAddBulk(e.target.value.replace(/[^\d]/g, "")) }} style={{ ...S.input, flex: 1, minWidth: 0 }} />
+                      <span style={{ fontSize: 13, color: "#777" }}>{L.perPersonAbbr}</span>
                     </div>
                     <button
                       onClick={() => setPotAddPerPersonOpen((o) => !o)}
                       style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", textAlign: "left", background: "none", border: "none", padding: "2px 0", marginBottom: 8, cursor: "pointer" }}
                     >
                       <span style={{ fontSize: 11, color: "#bbb", transform: potAddPerPersonOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>▸</span>
-                      <span style={{ fontSize: 11, color: "#a06b00", fontWeight: 600 }}>Of vul per persoon een eigen bedrag in</span>
+                      <span style={{ fontSize: 11, color: "#a06b00", fontWeight: 600 }}>{L.potPerPersonToggle}</span>
                     </button>
                     {potAddPerPersonOpen && (
                       <div style={{ maxHeight: 150, overflowY: "auto", marginBottom: 8 }}>
                         {participants.map((p) => (
                           <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                            <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p.name}</span>
+                            <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{pName(p.name, lang)}</span>
                             <span style={{ color: "#999" }}>€</span>
                             <input type="number" step="1" min="0" inputMode="numeric" placeholder="0" value={potAddDraft[p.id] ?? ""} onChange={(e) => { setPotAddWarn(false); setPotAddDraft({ ...potAddDraft, [p.id]: e.target.value.replace(/[^\d]/g, "") }) }} style={{ ...S.input, width: 72 }} />
                           </div>
@@ -2950,14 +3589,14 @@ export default function Home() {
                       const willAdd = draftSum > 0 ? draftSum : bulk * participants.length
                       return (
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8, color: "#4a3f1e", fontWeight: 700 }}>
-                          <span>Totaal toevoegen</span>
+                          <span>{L.potTotalAdd}</span>
                           <span>€{willAdd.toFixed(2)}</span>
                         </div>
                       )
                     })()}
                     {potAddWarn && (
                       <div style={{ fontSize: 12.5, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 10, padding: "8px 10px" }}>
-                        ⚠️ Vul eerst een bedrag in — als p.p. of per persoon.
+                        ⚠️ {L.potAddWarnMsg}
                       </div>
                     )}
                   </>
@@ -2965,8 +3604,8 @@ export default function Home() {
               </div>
 
               <div style={{ display: "flex", gap: 8 }}>
-                <button style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 700 }} onClick={() => setShowPotOverview(false)}>Annuleren</button>
-                <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "12px 0", fontWeight: 800 }} onClick={addToPot}>Toevoegen</button>
+                <button style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 700 }} onClick={() => setShowPotOverview(false)}>{L.cancelN}</button>
+                <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "12px 0", fontWeight: 800 }} onClick={addToPot}>{L.add}</button>
               </div>
             </div>
           </div>
@@ -2977,21 +3616,21 @@ export default function Home() {
       {showPotModal && (
         <div style={{ ...S.overlay, zIndex: 2200 }}>
           <div style={{ ...S.modal, width: 400, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700, color: "#4a3f1e" }}>🫙 Leg een pot</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Iedereen legt vooraf wat in de pot. Je kan het per persoon corrigeren als iemand niet meelegt.</p>
+            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700, color: "#4a3f1e" }}>🫙 {L.potLay}</h3>
+            <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>{L.potModalSub}</p>
 
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14, padding: "10px 12px", background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 12 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: "#4a3f1e" }}>€</span>
               <input type="number" value={potBulk} onChange={(e) => setPotBulk(e.target.value)} style={{ ...S.input, width: 70 }} />
-              <span style={{ fontSize: 13, color: "#777" }}>p.p.</span>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontSize: 13, padding: "8px 0" }} onClick={setPotForEveryone}>Toevoegen</button>
+              <span style={{ fontSize: 13, color: "#777" }}>{L.perPersonAbbr}</span>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontSize: 13, padding: "8px 0" }} onClick={setPotForEveryone}>{L.add}</button>
             </div>
 
             <div style={{ overflowY: "auto", flex: 1, marginBottom: 12 }}>
-              {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Voeg eerst personen toe</div>}
+              {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>{L.potAddPersonsFirst}</div>}
               {participants.map((p) => (
                 <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{p.name}</span>
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{pName(p.name, lang)}</span>
                   <span style={{ color: "#999" }}>€</span>
                   <input
                     type="number"
@@ -3008,18 +3647,18 @@ export default function Home() {
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 14, color: "#4a3f1e", fontWeight: 700 }}>
-              <span>Totaal in pot</span>
+              <span>{L.potTotalInPot}</span>
               <span>€{Object.values(potDraft).reduce((s, v) => s + (parseFloat(v) || 0), 0).toFixed(2)}</span>
             </div>
 
             {potWarn && (
               <div style={{ fontSize: 13, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 12, padding: "10px 12px", marginBottom: 12, lineHeight: 1.45 }}>
-                ⚠️ Vul eerst een bedrag in voor minstens één persoon, of kies <b>Annuleer</b>.
+                ⚠️ {L.potWarnPre}<b>{L.cancel}</b>.
               </div>
             )}
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "10px 0" }} onClick={savePot}>💾 Opslaan</button>
-              <button style={{ ...S.btn, flex: 1, padding: "10px 0" }} onClick={() => { setPotWarn(false); setShowPotModal(false) }}>Annuleer</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "10px 0" }} onClick={savePot}>{L.saveBtn}</button>
+              <button style={{ ...S.btn, flex: 1, padding: "10px 0" }} onClick={() => { setPotWarn(false); setShowPotModal(false) }}>{L.cancel}</button>
             </div>
           </div>
         </div>
@@ -3029,8 +3668,8 @@ export default function Home() {
       {paymentEditRound !== null && (
         <div style={S.overlay}>
           <div style={{ ...S.modal, width: 380 }}>
-            <h3 style={{ marginBottom: 6, fontSize: 18, fontWeight: 700 }}>🍻 Ronde {roundLabel(paymentEditRound)} — wie betaalde?</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>Vul in hoeveel elke persoon betaalde, of zet het op &ldquo;De pot&rdquo;.</p>
+            <h3 style={{ marginBottom: 6, fontSize: 18, fontWeight: 700 }}>{L.payEditorTitle(roundLabel(paymentEditRound))}</h3>
+            <p style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>{L.payEditorSub}</p>
 
             {/* De pot als betaler — enkel als er een pot is */}
             {(() => {
@@ -3039,16 +3678,16 @@ export default function Home() {
               if (potTotal <= 0) {
                 return (
                   <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "rgba(150,110,20,0.05)", border: "1px dashed rgba(120,95,20,0.2)", borderRadius: 12, marginBottom: 12 }}>
-                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#aaa" }}>🫙 De pot</span>
-                    <span style={{ fontSize: 12, color: "#bbb" }}>geen pot gelegd</span>
-                    <button onClick={openPotModal} style={{ background: "none", border: "none", color: "#c98a00", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>+ leg een pot</button>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#aaa" }}>{L.potNodeLabel}</span>
+                    <span style={{ fontSize: 12, color: "#bbb" }}>{L.noPotYet}</span>
+                    <button onClick={openPotModal} style={{ background: "none", border: "none", color: "#c98a00", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>{L.addPotLink}</button>
                   </div>
                 )
               }
               return (
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 12 }}>
-                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#4a3f1e" }}>🫙 De pot</span>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#4a3f1e" }}>{L.potNodeLabel}</span>
                     <span style={{ color: "#999" }}>€</span>
                     <input
                       type="number"
@@ -3063,7 +3702,7 @@ export default function Home() {
                     />
                   </div>
                   <div style={{ fontSize: 10, color: "#a06b00", marginTop: 3, marginLeft: 4 }}>
-                    nog €{potAvailable.toFixed(2)} beschikbaar in de pot
+                    {L.potAvailableNote(potAvailable.toFixed(2))}
                   </div>
                 </div>
               )
@@ -3072,7 +3711,7 @@ export default function Home() {
             <div style={participants.length > 4 ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", columnGap: 16, rowGap: 10 } : undefined}>
             {participants.map((p) => (
               <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: participants.length > 4 ? 0 : 10 }}>
-                <span style={{ flex: 1, fontSize: 14, fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pName(p.name, lang)}</span>
                 <span style={{ color: "#999" }}>€</span>
                 <input
                   type="number"
@@ -3085,12 +3724,12 @@ export default function Home() {
             ))}
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 12, marginBottom: 16, color: "#888" }}>
-              <span>Som ingevuld</span>
+              <span>{L.sumEntered}</span>
               <span style={{ fontWeight: 700 }}>€{[POT_PAYER, ...participants.map((p) => p.id)].reduce((s, k) => s + (parseFloat(paymentDraft[k] || "") || 0), 0).toFixed(2)}</span>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1 }} onClick={savePayments}>💾 Opslaan</button>
-              <button style={{ ...S.btn, flex: 1 }} onClick={() => setPaymentEditRound(null)}>Annuleer</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1 }} onClick={savePayments}>{L.saveBtn}</button>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => setPaymentEditRound(null)}>{L.cancel}</button>
             </div>
           </div>
         </div>
@@ -3101,17 +3740,17 @@ export default function Home() {
         <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 2000, overflowY: "auto", padding: 32 }}>
           <div style={{ maxWidth: 600, margin: "0 auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-              <h2 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>🍻 Ronde {roundLabel(roundFullscreen)}</h2>
-              <button style={S.btn} onClick={() => setRoundFullscreen(null)}>✕ Sluiten</button>
+              <h2 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>🍻 {L.roundWordAlt} {roundLabel(roundFullscreen)}</h2>
+              <button style={S.btn} onClick={() => setRoundFullscreen(null)}>{L.closeX}</button>
             </div>
             {Object.values(getRoundGrouped(roundFullscreen)).map((it) => (
               <div key={it.drink.id} style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20, padding: "16px 20px", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16 }}>
                 <span style={{ fontSize: 40 }}>{it.drink.emoji}</span>
                 <div>
-                  <div style={{ fontSize: 26, fontWeight: 800, color: "#333" }}>{it.totalQty}× {it.drink.name}</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: "#333" }}>{it.totalQty}× {drinkName(it.drink.name, lang)}</div>
                   <div style={{ fontSize: 13, color: "#aaa", marginTop: 2 }}>
-                    {Object.values(it.people).map((p) => `${p.name} (${p.qty})`).join(", ")}
-                    {it.anonymous > 0 && ` + ${it.anonymous} nog toe te wijzen`}
+                    {Object.values(it.people).map((p) => `${pName(p.name, lang)} (${p.qty})`).join(", ")}
+                    {it.anonymous > 0 && L.nToAssignSuffix(it.anonymous)}
                   </div>
                 </div>
               </div>
@@ -3125,7 +3764,7 @@ export default function Home() {
         <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 2100, overflowY: "auto", padding: 28 }}>
           <div style={{ maxWidth: 560, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <h2 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>Rondje {roundLabel(finishedRoundSnapshot.session)}: overzicht</h2>
+              <h2 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>{L.finishedRoundTitle(roundLabel(finishedRoundSnapshot.session))}</h2>
             </div>
 
             {/* Lijst van wat besteld is */}
@@ -3140,14 +3779,14 @@ export default function Home() {
                     const peopleNames = Object.entries(line.assignments)
                       .map(([pid, qty]) => {
                         const p = participants.find((pp) => pp.id === pid)
-                        return p ? `${p.name} (${qty})` : null
+                        return p ? `${pName(p.name, lang)} (${qty})` : null
                       })
                       .filter(Boolean)
                     return (
                       <div key={drinkId} style={{ display: "flex", alignItems: "center", gap: multi ? 10 : 14, marginBottom: multi ? 0 : 14, padding: multi ? "10px 12px" : "14px 18px", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16 }}>
                         <span style={{ fontSize: multi ? 24 : 32, flexShrink: 0 }}>{d.emoji}</span>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: multi ? 16 : 20, fontWeight: 800, color: "#333" }}>{line.total}× {d.name}</div>
+                          <div style={{ fontSize: multi ? 16 : 20, fontWeight: 800, color: "#333" }}>{line.total}× {drinkName(d.name, lang)}</div>
                           {peopleNames.length > 0 && <div style={{ fontSize: multi ? 11 : 12, color: "#aaa", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: multi ? "nowrap" : "normal" }}>{peopleNames.join(", ")}</div>}
                         </div>
                       </div>
@@ -3169,8 +3808,8 @@ export default function Home() {
 
               return (
                 <div style={{ marginTop: 22, padding: "16px 18px", background: "rgba(150,110,20,0.05)", borderRadius: 16, border: "1px solid rgba(150,110,20,0.15)" }}>
-                  <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 6, color: "#4a3f1e" }}>💶 Wie betaalde dit rondje?</div>
-                  <p style={{ fontSize: 12, color: "#a89a6a", margin: "0 0 12px" }}>Tik wie betaalde — daarna vul je het exacte bedrag in. Meestal 1 persoon, meerdere mag ook.</p>
+                  <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 6, color: "#4a3f1e" }}>{L.whoPaidThisRound}</div>
+                  <p style={{ fontSize: 12, color: "#a89a6a", margin: "0 0 12px" }}>{L.tapWhoPaid}</p>
 
                   {/* Wie betaalde? — chips: eerst de pot, dan de personen. Tik aan ? bedragveld verschijnt. */}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
@@ -3191,16 +3830,16 @@ export default function Home() {
                             }}
                             style={{ border: active ? "1.5px solid #ecc85a" : "1px solid rgba(120,95,20,0.2)", background: active ? "rgba(233,196,95,0.25)" : "#fff", color: active ? "#a06b00" : "#8a7d55", borderRadius: 20, padding: "7px 14px", fontSize: 13, fontWeight: active ? 800 : 700, cursor: "pointer" }}
                           >
-                            {active ? "✓ " : ""}🫙 De pot
+                            {active ? "✓ " : ""}{L.potNodeLabel}
                           </button>
-                          <button onClick={() => setShowPotOverview(true)} title="Pot bekijken of aanvullen" style={{ border: "1px dashed rgba(120,95,20,0.3)", background: "rgba(150,110,20,0.04)", color: "#c98a00", borderRadius: 20, padding: "7px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
-                            + pot aanvullen
+                          <button onClick={() => setShowPotOverview(true)} title={L.titlePotView} style={{ border: "1px dashed rgba(120,95,20,0.3)", background: "rgba(150,110,20,0.04)", color: "#c98a00", borderRadius: 20, padding: "7px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+                            {L.topUpPotLink}
                           </button>
                         </>
                       )
                     })() : (
                       <button onClick={openPotModal} style={{ border: "1px dashed rgba(120,95,20,0.25)", background: "rgba(150,110,20,0.04)", color: "#c98a00", borderRadius: 20, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
-                        🫙 geen pot gelegd — + leg een pot
+                        {L.noPotChip}
                       </button>
                     )}
                     {participants.map((p) => {
@@ -3219,7 +3858,7 @@ export default function Home() {
                           }}
                           style={{ border: active ? "1.5px solid #c8941a" : "1px solid rgba(120,95,20,0.2)", background: active ? "rgba(214,158,20,0.12)" : "#fff", color: active ? "#6b5a24" : "#8a7d55", borderRadius: 20, padding: "7px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
                         >
-                          {active ? "✓ " : ""}{p.name}
+                          {active ? "✓ " : ""}{pName(p.name, lang)}
                         </button>
                       )
                     })}
@@ -3230,7 +3869,7 @@ export default function Home() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 4 }}>
                       {paymentDraft[POT_PAYER] !== undefined && (
                         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 12 }}>
-                          <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#a06b00" }}>🫙 De pot betaalde</span>
+                          <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#a06b00" }}>{L.potPaidLabel}</span>
                           <span style={{ color: "#999" }}>€</span>
                           <input
                             type="number"
@@ -3249,7 +3888,7 @@ export default function Home() {
                       )}
                       {participants.filter((p) => paymentDraft[p.id] !== undefined).map((p) => (
                         <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#fff", border: "1px solid rgba(214,158,20,0.3)", borderRadius: 12 }}>
-                          <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#6b5a24", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name} betaalde</span>
+                          <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#6b5a24", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pName(p.name, lang)} {L.paidSuffix}</span>
                           <span style={{ color: "#999" }}>€</span>
                           <input
                             type="number"
@@ -3263,7 +3902,7 @@ export default function Home() {
                       ))}
                       {!singlePayer && (
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#a89a6a", fontWeight: 700, padding: "2px 4px" }}>
-                          <span>Samen betaald</span>
+                          <span>{L.paidTogether}</span>
                           <span>€{totalEntered.toFixed(2)}</span>
                         </div>
                       )}
@@ -3271,7 +3910,7 @@ export default function Home() {
                   )}
 
                   {potTotal > 0 && paymentDraft[POT_PAYER] !== undefined && (
-                    <div style={{ marginTop: 8, padding: "8px 12px", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 10, textAlign: "center", fontSize: 15, fontWeight: 800, color: "#a06b00" }}>🫙 nog €{potAvailable.toFixed(2)} beschikbaar in de pot</div>
+                    <div style={{ marginTop: 8, padding: "8px 12px", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 10, textAlign: "center", fontSize: 15, fontWeight: 800, color: "#a06b00" }}>{L.potAvailableChip(potAvailable.toFixed(2))}</div>
                   )}
                 </div>
               )
@@ -3281,7 +3920,7 @@ export default function Home() {
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 18 }}>
               {payWarn && (
                 <div style={{ fontSize: 13, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45 }}>
-                  ⚠️ Geef eerst het betaalde bedrag in — via <b>de pot</b> of een <b>persoon</b>. Of kies <b>Later invullen</b>.
+                  ⚠️ {L.payWarnA}<b>{L.potWordInline}</b>{L.payWarnB}<b>{L.personWordInline}</b>{L.payWarnC}<b>{L.laterFill}</b>.
                 </div>
               )}
               <button
@@ -3300,23 +3939,23 @@ export default function Home() {
                   setFinishedRoundSnapshot(null)
                   setBarmanStep("list")
                   setView("ordering")
-                  setToast(`Ronde ${roundLabel(round)} afgerond!`)
+                  setToast(L.toastRoundDone(roundLabel(round)))
                 }}
               >
-                💾 Opslaan &amp; sluiten
+                {L.saveCloseBtn}
               </button>
               <div style={{ display: "flex", gap: 8 }}>
                 <button
                   style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, background: "transparent", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55" }}
                   onClick={adjustFinishedRound}
                 >
-                  ✏️ Bestelling aanpassen
+                  ✏️ {L.orderAdjustBtn}
                 </button>
                 <button
                   style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, background: "transparent", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55" }}
                   onClick={() => { setPayWarn(false); setPaymentDraft({}); setFinishedRoundSnapshot(null); setView("ordering"); setBarmanStep("list") }}
                 >
-                  Later invullen
+                  {L.laterFill}
                 </button>
               </div>
             </div>
@@ -3330,9 +3969,9 @@ export default function Home() {
           {/* Overall drink overview — ALL orders, assigned or not (standaard ingeklapt) */}
           <div style={S.card}>
             <h3 onClick={() => setShowAllOrderedDrinks((v) => !v)} style={{ ...S.h3, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, marginBottom: showAllOrderedDrinks ? 14 : 0, cursor: "pointer" }}>
-              📋 Alle bestelde drankjes
-              {(() => { const tot = orders.reduce((s, o) => s + o.quantity, 0); return tot > 0 ? <span style={{ fontSize: 12, fontWeight: 800, color: "#4a3f1e", background: "#ecc85a", borderRadius: 20, padding: "1px 11px" }}>{tot} {tot === 1 ? "drankje" : "drankjes"}</span> : null })()}
-              <span style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 700, color: "#b3854a", textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap" }}>{showAllOrderedDrinks ? "verberg ▴" : "toon drankjes ▾"}</span>
+              {L.allOrderedDrinks}
+              {(() => { const tot = orders.reduce((s, o) => s + o.quantity, 0); return tot > 0 ? <span style={{ fontSize: 12, fontWeight: 800, color: "#4a3f1e", background: "#ecc85a", borderRadius: 20, padding: "1px 11px" }}>{tot} {tot === 1 ? L.drink : L.drinks}</span> : null })()}
+              <span style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 700, color: "#b3854a", textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap" }}>{showAllOrderedDrinks ? L.hideDrinks : L.showDrinksBtn}</span>
             </h3>
             {showAllOrderedDrinks && (() => {
               const overallSummary: Record<string, { drink: Drink; totalQty: number; anonymousQty: number }> = {}
@@ -3344,7 +3983,7 @@ export default function Home() {
                 if (!o.participant_id) overallSummary[d.id].anonymousQty += o.quantity
               })
               const items = Object.values(overallSummary)
-              if (items.length === 0) return <div style={{ color: "#aaa", textAlign: "center", padding: 12, fontSize: 13 }}>Nog niets besteld</div>
+              if (items.length === 0) return <div style={{ color: "#aaa", textAlign: "center", padding: 12, fontSize: 13 }}>{L.nothingOrdered}</div>
               return (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 8, alignItems: "start" }}>
                   {items.map((it) => (
@@ -3352,11 +3991,11 @@ export default function Home() {
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{ fontSize: 17 }}>{it.drink.emoji}</span>
                         <span style={{ fontSize: 14, fontWeight: 800 }}>{it.totalQty}×</span>
-                        <span style={{ fontSize: 12.5, color: "#555", flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>{it.drink.name}</span>
+                        <span style={{ fontSize: 12.5, color: "#555", flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>{drinkName(it.drink.name, lang)}</span>
                       </div>
                       {participants.length > 0
                         ? renderBillAssign(it.drink)
-                        : it.anonymousQty > 0 && <span style={{ fontSize: 10, color: "#e0685c", fontWeight: 600 }}>({it.anonymousQty} nog toe te wijzen!)</span>}
+                        : it.anonymousQty > 0 && <span style={{ fontSize: 10, color: "#e0685c", fontWeight: 600 }}>{L.nToAssignParen(it.anonymousQty)}</span>}
                     </div>
                   ))}
                 </div>
@@ -3366,15 +4005,15 @@ export default function Home() {
 
           <div style={S.card}>
             <div style={{ marginBottom: 8 }}>
-              <h3 style={{ ...S.h3, marginBottom: 6 }}>🧾 Wie dronk en betaalde wat?</h3>
+              <h3 style={{ ...S.h3, marginBottom: 6 }}>{L.billTitle}</h3>
               {(bill.totalActuallySpent > 0.01 || potTotal > 0) && (() => {
                 const potUsed = payments.filter((p) => p.session >= 1 && !p.participant_id).reduce((s, p) => s + p.amount, 0)
                 const potLeft = Math.max(0, potTotal - potUsed)
                 return (
                   <div style={{ display: "flex", flexWrap: "nowrap", gap: 5, fontSize: 11, fontWeight: 700, overflowX: "auto", paddingBottom: 2 }}>
-                    <span style={{ background: "rgba(39,174,96,0.1)", color: "#1f8a4c", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>✅ betaald €{bill.totalActuallySpent.toFixed(2)}</span>
-                    {potTotal > 0 && <span style={{ background: "rgba(233,196,95,0.16)", color: "#a06b00", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>🫙 uit pot €{potUsed.toFixed(2)}</span>}
-                    {potTotal > 0 && <span style={{ background: "rgba(120,95,20,0.05)", color: "#8a7d55", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>🫙 nog in pot €{potLeft.toFixed(2)}</span>}
+                    <span style={{ background: "rgba(39,174,96,0.1)", color: "#1f8a4c", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>{L.paidBadge(bill.totalActuallySpent.toFixed(2))}</span>
+                    {potTotal > 0 && <span style={{ background: "rgba(233,196,95,0.16)", color: "#a06b00", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>{L.fromPotBadge(potUsed.toFixed(2))}</span>}
+                    {potTotal > 0 && <span style={{ background: "rgba(120,95,20,0.05)", color: "#8a7d55", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>{L.stillInPotBadge(potLeft.toFixed(2))}</span>}
                   </div>
                 )
               })()}
@@ -3385,10 +4024,10 @@ export default function Home() {
               {showBillPrices && participants.length > 0 && participants.length < 4 && !compareOther && (
                 <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: 10, padding: "0 4px 6px" }}>
                   <div style={{ width: 66, textAlign: "right", fontSize: 10, color: "#aaa", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 3, lineHeight: 1.15 }}>
-                    indicatieve prijs
-                    <button onClick={() => setShowIndicatiefInfo(true)} title="Wat betekent dit?" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#b9b088", fontSize: 12, lineHeight: 1, flexShrink: 0 }}>ℹ️</button>
+                    {L.indicatievePriceLabel}
+                    <button onClick={() => setShowIndicatiefInfo(true)} title={L.whatMeans} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#b9b088", fontSize: 12, lineHeight: 1, flexShrink: 0 }}>ℹ️</button>
                   </div>
-                  <button onClick={() => setShowFairSplit((v) => !v)} title="Fair split tonen of verbergen" style={{ width: 158, textAlign: "center", fontSize: 11, fontWeight: 800, color: showFairSplit ? "#4a3f1e" : "#a06b00", background: showFairSplit ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "rgba(233,196,95,0.16)", border: showFairSplit ? "none" : "1px solid rgba(233,196,95,0.55)", borderRadius: 8, padding: "4px 0", letterSpacing: 0.5, boxShadow: showFairSplit ? "0 2px 8px rgba(233,196,95,0.4)" : "none", cursor: "pointer" }}>{showFairSplit ? (splitMode === "equal" ? "EVENVEEL ⇄" : "FAIR SPLIT ⇄") : "+ FAIR SPLIT"}</button>
+                  <button onClick={() => setShowFairSplit((v) => !v)} title={L.fairToggleTitle} style={{ width: 158, textAlign: "center", fontSize: 11, fontWeight: 800, color: showFairSplit ? "#4a3f1e" : "#a06b00", background: showFairSplit ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "rgba(233,196,95,0.16)", border: showFairSplit ? "none" : "1px solid rgba(233,196,95,0.55)", borderRadius: 8, padding: "4px 0", letterSpacing: 0.5, boxShadow: showFairSplit ? "0 2px 8px rgba(233,196,95,0.4)" : "none", cursor: "pointer" }}>{showFairSplit ? (splitMode === "equal" ? L.equalToggle : L.fairToggleBtn) : L.addFairToggle}</button>
                 </div>
               )}
               {orders.some((o) => o.participant_id) && (
@@ -3420,9 +4059,9 @@ export default function Home() {
                     {/* Naam + al ingelegd/betaald meteen erachter */}
                     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                        <span style={{ fontWeight: 800, fontSize: 15 }}>{p.name}</span>
-                        {potInlegPerson > 0 && <span style={{ fontSize: 11, color: "#c98a00", fontWeight: 600 }}>— €{potInlegPerson.toFixed(2)} in de pot</span>}
-                        {personalPaidPerson > 0.01 && <span style={{ fontSize: 11, color: "#27ae60", fontWeight: 600 }}>— €{personalPaidPerson.toFixed(2)} zelf betaald</span>}
+                        <span style={{ fontWeight: 800, fontSize: 15 }}>{pName(p.name, lang)}</span>
+                        {potInlegPerson > 0 && <span style={{ fontSize: 11, color: "#c98a00", fontWeight: 600 }}>{L.potInlegSuffix(potInlegPerson.toFixed(2))}</span>}
+                        {personalPaidPerson > 0.01 && <span style={{ fontSize: 11, color: "#27ae60", fontWeight: 600 }}>{L.selfPaidSuffix(personalPaidPerson.toFixed(2))}</span>}
                       </div>
                     </div>
 
@@ -3430,12 +4069,12 @@ export default function Home() {
                     <div style={{ display: "flex", flexWrap: multiCol ? "wrap" : "nowrap", justifyContent: "space-between", alignItems: "flex-start", gap: multiCol ? 8 : 12 }}>
                       <div style={{ flex: multiCol ? "1 1 100%" : "1 1 0", minWidth: 0 }}>
                         {Object.values(drinkSummary).length === 0 ? (
-                          <div style={{ fontSize: 12, color: "#bbb" }}>nog niets gedronken</div>
+                          <div style={{ fontSize: 12, color: "#bbb" }}>{L.nothingDrunk}</div>
                         ) : (
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
                             {Object.values(drinkSummary).map((ds) => (
                               <span key={ds.drink.id} style={{ background: "rgba(150,110,20,0.05)", borderRadius: 10, padding: "3px 10px", fontSize: 12 }}>
-                                {ds.drink.emoji} {ds.qty}× {ds.drink.name}
+                                {ds.drink.emoji} {ds.qty}× {drinkName(ds.drink.name, lang)}
                               </span>
                             ))}
                           </div>
@@ -3458,15 +4097,15 @@ export default function Home() {
                           const net = row.fairShare - paid
                           if (net > 0.01 && debts.length > 0) {
                             return <>{debts.map((t, i) => (
-                              <div key={i} style={{ color: "#b35309", fontWeight: 800 }}>💸 betaalt €{t.amount.toFixed(2)} {t.to === "de pot" ? "in de pot" : `aan ${t.to}`}</div>
+                              <div key={i} style={{ color: "#b35309", fontWeight: 800 }}>{L.payAmount(t.amount.toFixed(2))}{t.to === "de pot" ? L.inThePot : `${L.toPrefix}${pName(t.to, lang)}`}</div>
                             ))}</>
                           }
                           if (net < -0.01 && credits.length > 0) {
                             return <>{credits.map((t, i) => (
-                              <div key={i} style={{ color: "#146c43", fontWeight: 800 }}>💰 Ontvangt €{t.amount.toFixed(2)} {t.from === "de pot" ? "uit de pot" : `van ${t.from}`}</div>
+                              <div key={i} style={{ color: "#146c43", fontWeight: 800 }}>{L.receiveAmount(t.amount.toFixed(2))}{t.from === "de pot" ? L.fromThePot : `${L.fromPrefix}${pName(t.from, lang)}`}</div>
                             ))}</>
                           }
-                          return <span style={{ color: "#6b5a24", fontWeight: 700 }}>⚖️ staat gelijk</span>
+                          return <span style={{ color: "#6b5a24", fontWeight: 700 }}>{L.balanced}</span>
                         }
 
                         // Bedrag-kader met kleuridentiteit: Fair Split = blauwe rand + gouden vulling (zoals de knop),
@@ -3476,7 +4115,7 @@ export default function Home() {
                           const isFair = kind === "fair"
                           return (
                             <div style={{ width: fullWidth ? "100%" : (compact ? "auto" : 158), minWidth: (compact && !fullWidth) ? 100 : undefined, boxSizing: "border-box", textAlign: "center", background: isFair ? "linear-gradient(135deg,#f4c430,#f7d461)" : "rgba(232,126,20,0.12)", border: isFair ? "2px solid #3d6fd0" : "2px solid #e0842e", borderRadius: 12, padding: compact ? "5px 9px" : "7px 8px" }}>
-                              <div style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, color: isFair ? "#2f5bb0" : "#b5591a" }}>{isFair ? "fair split" : "evenveel"}</div>
+                              <div style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, color: isFair ? "#2f5bb0" : "#b5591a" }}>{isFair ? L.fairSplitWord : L.evenveelWord}</div>
                               <div style={{ fontSize: compact ? 16 : 19, fontWeight: 800, color: "#4a3f1e" }}>€{row.fairShare.toFixed(2)}</div>
                               <div style={{ fontSize: 10.5, marginTop: 2, lineHeight: 1.3 }}>{renderSettle(row, debts, credits)}</div>
                             </div>
@@ -3488,7 +4127,7 @@ export default function Home() {
                         if (multiCol) {
                           return (
                             <div style={{ width: "100%", borderTop: "1px solid rgba(0,0,0,0.07)", marginTop: 8, paddingTop: 7 }}>
-                              <div style={{ fontSize: 11, color: "#aaa", marginBottom: activeOk ? 6 : 0 }}>indicatief <b style={{ color: "#a89a6a", fontWeight: 700 }}>€{drinkValue.toFixed(2)}</b></div>
+                              <div style={{ fontSize: 11, color: "#aaa", marginBottom: activeOk ? 6 : 0 }}>{L.indicatiefPrefix}<b style={{ color: "#a89a6a", fontWeight: 700 }}>€{drinkValue.toFixed(2)}</b></div>
                               {activeOk && (
                                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                   {splitBox(activeKind, fair, myDebts, myCredits, true, true)}
@@ -3518,7 +4157,7 @@ export default function Home() {
               })}
               </div>
               )}
-              {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20 }}>Nog geen personen</div>}
+              {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20 }}>{L.setupNoPersons}</div>}
 
               {/* Knoppen onder de drankjes: Eerlijke rekening + Iedereen evenveel */}
               {!showBillPrices && participants.length > 0 && (
@@ -3532,17 +4171,9 @@ export default function Home() {
                         <div style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "rgba(224,107,94,0.08)", border: "1px solid rgba(224,107,94,0.35)", borderRadius: 14, padding: "13px 15px" }}>
                           <span style={{ fontSize: 20, lineHeight: 1 }}>⚠️</span>
                           <div style={{ fontSize: 13, color: "#8a4b42", lineHeight: 1.5 }}>
-                            {heeftRondes && unpaidLabels.length > 0 ? (
-                              <>
-                                <b>Nog geen verdeling mogelijk.</b> {unpaidLabels.length === 1 ? <>Rondje <b>{unpaidLabels[0]}</b> is</> : <>De rondjes <b>{unpaidLabels.join(", ")}</b> zijn</>} nog niet betaald. Zolang een rondje niet betaald is, klopt de verdeling niet — ook niet bij &ldquo;iedereen evenveel&rdquo;. Vul eerst in wie elk rondje betaalde bij <b>&ldquo;Overzicht Rondjes&rdquo;</b>.
-                              </>
-                            ) : (
-                              <>
-                                <b>Nog geen verdeling mogelijk.</b> Er is nog niet ingevuld wie wat betaalde (een persoon of de pot). Vul dat eerst in bij <b>&ldquo;Overzicht Rondjes&rdquo;</b> — daarna kan je hier de rekening verdelen.
-                              </>
-                            )}
+{heeftRondes && unpaidLabels.length > 0 ? L.noSplitBody1(unpaidLabels) : L.noSplitBody2}
                             <div style={{ marginTop: 10 }}>
-                              <button onClick={() => { setOpenRounds(null); setView("rounds") }} style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "8px 14px", background: "linear-gradient(135deg,#f4c430,#f7d461)", border: "none", color: "#4a3a0a" }}>📋 Naar Overzicht Rondjes</button>
+                              <button onClick={() => { setOpenRounds(null); setView("rounds") }} style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "8px 14px", background: "linear-gradient(135deg,#f4c430,#f7d461)", border: "none", color: "#4a3a0a" }}>{L.toRoundsBtn2}</button>
                             </div>
                           </div>
                         </div>
@@ -3569,13 +4200,13 @@ export default function Home() {
                             <span style={{ width: 26, height: 26, borderRadius: "50%", background: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}>
                               <RundoLogo size={18} />
                             </span>
-                            <span style={{ fontSize: 14.5, fontWeight: 800, color: "#4a3a0a", lineHeight: 1.15 }}>Eerlijke rekening met Fair split</span>
+                            <span style={{ fontSize: 14.5, fontWeight: 800, color: "#4a3a0a", lineHeight: 1.15 }}>{L.fairBillBtn}</span>
                           </button>
                           <button
                             onClick={() => setFairInfoMode("what")}
                             style={{ background: "none", border: "none", color: "#2f5bb0", fontSize: 12, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, width: "100%", textAlign: "center", padding: 0 }}
                           >
-                            Hoe werkt Fair Split?
+                            {L.fairTitle}
                           </button>
                         </div>
 
@@ -3590,13 +4221,13 @@ export default function Home() {
                             }}
                             style={{ width: "100%", border: "2.5px solid #e0842e", borderRadius: 14, padding: "12px 8px", cursor: "pointer", background: "linear-gradient(135deg,#fbcf98,#f6b25e)", color: "#8a4514", fontSize: 12.5, fontWeight: 800, lineHeight: 1.25, minHeight: 54, boxShadow: "0 4px 12px -6px rgba(224,132,46,0.6)" }}
                           >
-                            Iedereen betaalt evenveel
+                            {L.equalBillBtn}
                           </button>
                           <button
                             onClick={() => setShowEqualInfo(true)}
                             style={{ background: "none", border: "none", color: "#a08a4a", fontSize: 12, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, width: "100%", textAlign: "center", padding: 0 }}
                           >
-                            Iedereen evenveel?
+                            {L.equalInfoLink}
                           </button>
                         </div>
                       </div>
@@ -3609,12 +4240,12 @@ export default function Home() {
               {showBillPrices && participants.length > 0 && participants.length < 4 && !compareOther && (
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "8px 4px 2px", marginTop: 2 }}>
                   <div style={{ width: 66, textAlign: "right" }}>
-                    <div style={{ fontSize: 9, color: "#aaa" }}>totaal</div>
+                    <div style={{ fontSize: 9, color: "#aaa" }}>{L.totalSmall}</div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: "#a89a6a" }}>€{bill.totalDrinkValue.toFixed(2)}</div>
                   </div>
                   {showFairSplit && (
                     <div style={{ width: 158, textAlign: "center" }}>
-                      <div style={{ fontSize: 9, color: "#1f8a4c" }}>totaal</div>
+                      <div style={{ fontSize: 9, color: "#1f8a4c" }}>{L.totalSmall}</div>
                       <div style={{ fontSize: 13, fontWeight: 800, color: "#27ae60" }}>€{bill.totalActuallySpent.toFixed(2)}</div>
                     </div>
                   )}
@@ -3631,14 +4262,14 @@ export default function Home() {
                   <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                     <div style={{ flex: 1, background: "rgba(120,95,20,0.04)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
                       <div style={{ fontSize: 11, color: "#888", marginBottom: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                        <span>Indicatieve prijs <span style={{ fontSize: 9, color: "#bbb" }}>(totaal)</span></span>
-                        <button onClick={() => setShowIndicatiefInfo(true)} title="Wat betekent dit?" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#b9c0cc", fontSize: 13, lineHeight: 1 }}>ℹ️</button>
+                        <span>{L.indicatievePriceTotal} <span style={{ fontSize: 9, color: "#bbb" }}>{L.totalParen}</span></span>
+                        <button onClick={() => setShowIndicatiefInfo(true)} title={L.whatMeans} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#b9c0cc", fontSize: 13, lineHeight: 1 }}>ℹ️</button>
                       </div>
                       <div style={{ fontSize: 18, fontWeight: 800, color: "#a89a6a" }}>€{indicatief.toFixed(2)}</div>
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ background: "rgba(39,174,96,0.08)", borderRadius: 12, padding: "10px 12px", textAlign: "center", border: "1px solid rgba(39,174,96,0.25)" }}>
-                        <div style={{ fontSize: 11, color: "#1f8a4c", marginBottom: 2 }}>Totaal betaald</div>
+                        <div style={{ fontSize: 11, color: "#1f8a4c", marginBottom: 2 }}>{L.totalPaid}</div>
                         <div style={{ fontSize: 18, fontWeight: 800, color: "#27ae60" }}>€{echtBetaald.toFixed(2)}</div>
                       </div>
                     </div>
@@ -3651,16 +4282,14 @@ export default function Home() {
             {showBillPrices && (
               <div style={{ display: "flex", gap: 8, marginTop: 14, alignItems: "stretch" }}>
                 <button onClick={() => { setShowBillPrices(false); setShowFairSplit(false); setCompareOther(false); setSplitMode("fair") }} style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(120,95,20,0.25)", color: "#8a7d55", fontSize: 13.5, fontWeight: 800, cursor: "pointer", borderRadius: 16, padding: "13px 10px", lineHeight: 1.2 }}>
-                  Terug
+                  {L.backBtn}
                 </button>
                 {(() => {
                   // In 'evenveel' vergelijk je met Fair Split (enkel als geldig); in Fair Split vergelijk je met 'evenveel'.
                   const canCompare = splitMode === "equal" ? canFairSplit : true
                   if (!canCompare) return null
                   const showsFair = splitMode === "equal" // de vergelijking toont de Fair Split (blauw) of 'evenveel' (oranje)
-                  const label = compareOther
-                    ? "Verberg vergelijking"
-                    : (splitMode === "equal" ? "Vergelijk met Fair split" : "Vergelijk met iedereen evenveel")
+                  const label = compareOther ? L.hideCompare : (splitMode === "equal" ? L.compareFair : L.compareEqual)
                   return (
                     <button
                       onClick={() => setCompareOther((v) => !v)}
@@ -3686,11 +4315,11 @@ export default function Home() {
                 <div style={{ ...S.modal, width: 420, maxHeight: "85vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
                   {few ? (
                     <>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>🎯 Toewijzen</h3>
+                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>{L.assignPopupTitle}</h3>
                       <p style={{ fontSize: 13, color: "#777", marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
                         {liveUnassignedTotal > 0
-                          ? <><b style={{ color: "#e0685c" }}>{liveUnassignedTotal} {liveUnassignedTotal === 1 ? "drankje" : "drankjes"} nog toe te wijzen.</b> Tik personen aan — meerdere mag.</>
-                          : <>Alles toegewezen ✅ Je kan nog <b>wijzigen</b> of doorgaan naar Fair Split.</>}
+                          ? <><b style={{ color: "#e0685c" }}>{L.assignBodyN(liveUnassignedTotal)}</b>{L.assignBodyPost}</>
+                          : <>{L.allAssignedInlineA}<b>{L.changeWord}</b>{L.allAssignedInlineB}</>}
                       </p>
                       <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
                         {snapshotDrinks.map((d) => {
@@ -3700,7 +4329,7 @@ export default function Home() {
                               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                 <span style={{ fontSize: 18, flexShrink: 0 }}>{d.emoji}</span>
                                 <span style={{ fontSize: 14, fontWeight: 800 }}>{tot}×</span>
-                                <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, overflowWrap: "anywhere" }}>{d.name}</span>
+                                <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, overflowWrap: "anywhere" }}>{drinkName(d.name, lang)}</span>
                               </div>
                               {renderBillAssign(d)}
                             </div>
@@ -3708,37 +4337,37 @@ export default function Home() {
                         })}
                       </div>
                       {liveUnassignedTotal === 0 ? (
-                        <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800 }} onClick={() => { setShowAssignPopup(false); setShowBillPrices(true); setShowFairSplit(true) }}>Toon Fair Split →</button>
+                        <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800 }} onClick={() => { setShowAssignPopup(false); setShowBillPrices(true); setShowFairSplit(true) }}>{L.showFairSplitBtn}</button>
                       ) : (
-                        <button style={{ ...S.btn, width: "100%", padding: "11px 0", fontSize: 13 }} onClick={() => setShowAssignPopup(false)}>Sluiten</button>
+                        <button style={{ ...S.btn, width: "100%", padding: "11px 0", fontSize: 13 }} onClick={() => setShowAssignPopup(false)}>{L.closeBtn}</button>
                       )}
                     </>
                   ) : liveUnassignedTotal === 0 ? (
                     <div style={{ textAlign: "center" }}>
                       <div style={{ fontSize: 42, marginBottom: 8 }}>✅</div>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>Alles toegewezen!</h3>
-                      <p style={{ fontSize: 13, color: "#777", marginBottom: 18 }}>Je kan nu de eerlijke verdeling bekijken.</p>
+                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>{L.allAssignedTitle}</h3>
+                      <p style={{ fontSize: 13, color: "#777", marginBottom: 18 }}>{L.allAssignedSub}</p>
                       <button
                         style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800 }}
                         onClick={() => { setShowAssignPopup(false); setShowBillPrices(true); setShowFairSplit(true) }}
                       >
-                        Toon Fair Split ?
+                        {L.showFairSplitBtn}
                       </button>
                     </div>
                   ) : (
                     <>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>👉 Nog toe te wijzen</h3>
+                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>{L.toAssignTitle}</h3>
                       <p style={{ fontSize: 13, color: "#777", marginTop: 0, marginBottom: 16, lineHeight: 1.55 }}>
-                        Er zijn nog <b style={{ color: "#e0685c" }}>{liveUnassignedTotal} {liveUnassignedTotal === 1 ? "drankje" : "drankjes"}</b> nog toe te wijzen. Wijs ze toe in <b>&ldquo;Alle bestelde drankjes&rdquo;</b> of in <b>&ldquo;Overzicht Rondjes&rdquo;</b>.
+                        {L.assignRemainA}<b style={{ color: "#e0685c" }}>{L.assignRemainN(liveUnassignedTotal)}</b>{L.assignRemainB}<b>&ldquo;{L.allBestOrderedPlain}&rdquo;</b>{L.assignRemainC}<b>&ldquo;{L.roundsPlain}&rdquo;</b>.
                       </p>
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         <button
                           style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}
                           onClick={() => { setShowAssignPopup(false); if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }) }}
                         >
-                          Naar &ldquo;Alle bestelde drankjes&rdquo;
+                          {L.toAllOrderedBtn}
                         </button>
-                        <button style={{ ...S.btn, width: "100%", padding: "10px 0", fontSize: 13, fontWeight: 700, background: "rgba(214,158,20,0.1)", border: "1px solid rgba(214,158,20,0.3)", color: "#c8941a" }} onClick={() => { setOpenRounds(null); setShowAssignPopup(false); setView("rounds") }}>Naar &ldquo;Overzicht Rondjes&rdquo;</button>
+                        <button style={{ ...S.btn, width: "100%", padding: "10px 0", fontSize: 13, fontWeight: 700, background: "rgba(214,158,20,0.1)", border: "1px solid rgba(214,158,20,0.3)", color: "#c8941a" }} onClick={() => { setOpenRounds(null); setShowAssignPopup(false); setView("rounds") }}>{L.toRoundsQuotedBtn}</button>
                       </div>
                     </>
                   )}
@@ -3760,6 +4389,8 @@ export default function Home() {
 // SMALL HELPER COMPONENTS
 // ═══════════════════════════════════════════════════════════════════════════
 function AddPersonForm({ onAdd, onClose }: { onAdd: (name: string) => void; onClose: () => void }) {
+  const [lang] = useLang()
+  const L = STRINGS[lang]
   const [name, setName] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
   useEffect(() => { inputRef.current?.focus() }, [])
@@ -3771,12 +4402,12 @@ function AddPersonForm({ onAdd, onClose }: { onAdd: (name: string) => void; onCl
         value={name}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && submit()}
-        placeholder="Naam (optioneel)..."
+        placeholder={L.addPersonNamePlaceholder}
         style={{ ...S.input, width: "100%", boxSizing: "border-box" }}
       />
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button style={{ ...S.btn, ...S.btnPrimary, flex: 1 }} onClick={submit}>Toevoegen</button>
-        <button style={{ ...S.btn, flex: 1 }} onClick={onClose}>Annuleer</button>
+        <button style={{ ...S.btn, ...S.btnPrimary, flex: 1 }} onClick={submit}>{L.add}</button>
+        <button style={{ ...S.btn, flex: 1 }} onClick={onClose}>{L.cancel}</button>
       </div>
     </>
   )
