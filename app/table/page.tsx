@@ -1055,6 +1055,8 @@ const STRINGS = {
   },
 }
 
+const showTip = (nm: string, L: { tipItemName: string }) => (nm || "").trim().toLowerCase() === "fooi" ? L.tipItemName : nm
+
 export default function RundoTable() {
   const [lang] = useLang()
   const L = STRINGS[lang]
@@ -1876,7 +1878,6 @@ export default function RundoTable() {
 
   const isTax = (it: BillItem) => it.distribute != null && it.distribute !== ""
   const isTip = (it: BillItem) => it.name.trim().toLowerCase() === "fooi"
-  const showName = (nm: string) => (nm || "").trim().toLowerCase() === "fooi" ? L.tipItemName : nm
   const baseItems = items.filter((it) => !isTax(it))
   const taxItems = items.filter((it) => isTax(it) && !isTip(it))
   const tipTotal = items.filter((it) => isTip(it)).reduce((s, it) => s + itemTotal(it), 0)
@@ -2358,7 +2359,7 @@ export default function RundoTable() {
                                   const on = ids.includes(bi.id)
                                   return (
                                     <button key={bi.id} onClick={() => { const next = on ? ids.filter((x) => x !== bi.id) : [...ids, bi.id]; setDistribute(t, JSON.stringify(next)) }}
-                                      style={{ fontSize: 11.5, fontWeight: 700, borderRadius: 10, padding: "5px 11px", cursor: "pointer", border: on ? "none" : "1px solid rgba(16,24,40,0.12)", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", color: on ? "#5a4a1a" : "#8b93a8" }}>{on ? "✓ " : "+ "}{showName(bi.name)}</button>
+                                      style={{ fontSize: 11.5, fontWeight: 700, borderRadius: 10, padding: "5px 11px", cursor: "pointer", border: on ? "none" : "1px solid rgba(16,24,40,0.12)", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", color: on ? "#5a4a1a" : "#8b93a8" }}>{on ? "✓ " : "+ "}{showTip(bi.name, L)}</button>
                                   )
                                 })}
                               </div>
@@ -2538,7 +2539,7 @@ export default function RundoTable() {
                 const openN = it.quantity - claimedQty(it.id)
                 return (
                   <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "5px 0", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{openN}× {showName(it.name)}</b> {L.notClaimedSuffix}</span>
+                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{openN}× {showTip(it.name, L)}</b> {L.notClaimedSuffix}</span>
                     {participants.length > 0 && (
                       <select value="" onChange={(e) => { const pid = e.target.value; if (pid) setClaim(it.id, pid, myQty(it.id, pid) + 1) }}
                         style={{ ...S.input, flexShrink: 0, maxWidth: 150, padding: "5px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
@@ -2551,7 +2552,7 @@ export default function RundoTable() {
               })}
               {undecidedShared.map((it) => (
                 <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "5px 0", borderBottom: "1px solid rgba(0,0,0,0.05)", color: "#a06b00" }}>
-                  <span style={{ flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5 }}><ShareIcon on size={14} /> <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{showName(it.name)}</b> {L.sharedNobody}</span></span>
+                  <span style={{ flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5 }}><ShareIcon on size={14} /> <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{showTip(it.name, L)}</b> {L.sharedNobody}</span></span>
                   {participants.length > 0 && (
                     <select value="" onChange={(e) => { const pid = e.target.value; if (pid) toggleShareClaim(it.id, pid) }}
                       style={{ ...S.input, flexShrink: 0, maxWidth: 150, padding: "5px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
@@ -2621,7 +2622,7 @@ export default function RundoTable() {
                       {detail.length === 0 && <div style={{ fontSize: 12.5, color: "#aaa" }}>{L.nothingTapped}</div>}
                       {detail.map((d, k) => (
                         <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#5a6680", padding: "2px 0" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{showName(d.name)}{d.shared ? (d.revealed ? ((p.seats ?? 1) > 1 ? L.sharedNPers(d.myHeads) : L.sharedPart) : L.sharedByN(d.sharers)) : ""}</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{showTip(d.name, L)}{d.shared ? (d.revealed ? ((p.seats ?? 1) > 1 ? L.sharedNPers(d.myHeads) : L.sharedPart) : L.sharedByN(d.sharers)) : ""}</span>
                           <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>
                             {d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}
                           </span>
@@ -2733,7 +2734,7 @@ export default function RundoTable() {
                         return (
                           <button key={it.id} onClick={() => setTaxModal({ ...taxModal, ids: on ? taxModal.ids.filter((x) => x !== it.id) : [...taxModal.ids, it.id] })} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", padding: "7px 10px", border: "none", background: on ? "rgba(20,153,176,0.08)" : "transparent", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>
                             <span style={{ width: 18, height: 18, borderRadius: 5, border: on ? "none" : "1.5px solid #b8c0cf", background: on ? "#1499b0" : "#fff", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{on ? "✓" : ""}</span>
-                            <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{it.quantity}× {showName(it.name)}</span>
+                            <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{it.quantity}× {showTip(it.name, L)}</span>
                           </button>
                         )
                       })}
@@ -3229,7 +3230,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
               {it.is_shared && <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={20} /></span>}
               <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0, display: "flex", alignItems: "baseline", gap: 6 }}>
-                  <span>{it.quantity}× {showName(it.name)}</span>
+                  <span>{it.quantity}× {showTip(it.name, L)}</span>
                   {scanFlags?.[it.id] && (
                     <button onClick={() => setOpenFlag(openFlag === it.id ? null : it.id)} title={L.scanDoubtTitle} style={{ flexShrink: 0, width: 18, height: 18, borderRadius: "50%", border: "none", background: "#f39c12", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>?</button>
                   )}
@@ -3708,7 +3709,7 @@ function ClaimScreen(props: {
               {mine.length === 0 && <div style={{ fontSize: 13, color: "#aaa" }}>{L.nothingTappedYet}</div>}
               {mine.map((d, k) => (
                 <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0", color: "#3b486a" }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{showName(d.name)}{d.shared ? (d.revealed ? (meId && seatsOf(meId) > 1 ? L.sharedNPers(d.myHeads) : L.sharedPart) : L.sharedByN(d.sharers)) : ""}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{showTip(d.name, L)}{d.shared ? (d.revealed ? (meId && seatsOf(meId) > 1 ? L.sharedNPers(d.myHeads) : L.sharedPart) : L.sharedByN(d.sharers)) : ""}</span>
                   <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>
                     {d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}
                   </span>
@@ -3753,7 +3754,7 @@ function ClaimScreen(props: {
                       {detail.length === 0 && <div style={{ fontSize: 12.5, color: "#aaa" }}>{L.nothingTapped2}</div>}
                       {detail.map((d, k) => (
                         <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#5a6680", padding: "2px 0" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{showName(d.name)}{d.shared ? (d.revealed ? L.sharedPart : L.sharedByN(d.sharers)) : ""}</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{showTip(d.name, L)}{d.shared ? (d.revealed ? L.sharedPart : L.sharedByN(d.sharers)) : ""}</span>
                           <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>{d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}</span>
                         </div>
                       ))}
