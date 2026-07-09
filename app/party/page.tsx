@@ -155,6 +155,34 @@ const CATEGORY_LABELS_FR: Record<string, string> = {
   Eigen:     "⭐ Boissons perso",
 }
 const catLabel = (key: string, lang: string): string => ((lang === "fr" ? CATEGORY_LABELS_FR : CATEGORY_LABELS)[key] ?? key)
+
+// Franse namen voor de STANDAARD-drankjes (merk-/internationale namen blijven ongewijzigd).
+// Enkel de generieke Nederlandse woorden krijgen een Franse naam. Zelf toegevoegde drankjes
+// staan niet in deze lijst en behouden dus altijd hun eigen naam. De database blijft ongewijzigd.
+const DRINK_NAMES_FR: Record<string, string> = {
+  "Chimay Blauw": "Chimay Bleue",
+  "Hoegaarden Wit": "Hoegaarden Blanche",
+  "Leffe Blond": "Leffe Blonde",
+  "Vedett Extra Blond": "Vedett Extra Blonde",
+  "Leffe 0.0 Blond": "Leffe 0.0 Blonde",
+  "Vedett Extra Blond 0.0": "Vedett Extra Blonde 0.0",
+  "Appelsap": "Jus de pomme",
+  "Sinaasappelsap": "Jus d'orange",
+  "Water bruis": "Eau pétillante",
+  "Water plat": "Eau plate",
+  "Decafé koffie": "Café déca",
+  "Hasseltse koffie": "Café hasseltois",
+  "Koffie": "Café",
+  "Koffie verkeerd": "Lait russe",
+  "Warme chocolademelk": "Chocolat chaud",
+  "Huiswijn rood": "Vin maison rouge",
+  "Huiswijn rosé": "Vin maison rosé",
+  "Huiswijn wit": "Vin maison blanc",
+  "Malibu Pineapple": "Malibu Ananas",
+  "Bacardi Lemon": "Bacardi Citron",
+  "Strawberry Daiquiri 0.0": "Daiquiri Fraise 0.0",
+}
+const drinkName = (name: string, lang: string): string => (lang === "fr" ? (DRINK_NAMES_FR[name] ?? name) : name)
 const FALLBACK_CATEGORY = "Eigen"
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   BierAV:    ["0.0", "0%", "alcoholvrij", "sportzot", "cero"],
@@ -677,6 +705,9 @@ const STRINGS = {
     tabLockToast: "Voeg eerst minstens één persoon toe bij Groep.",
     errCreateGroup: (m: string) => "Groep aanmaken mislukt: " + m,
     errGroupNotFound: "Groep niet gevonden. Controleer de code.",
+    errLoadDrinks: "Drankjes laden mislukt",
+    errLoadData: "Data laden mislukt",
+    toastAddedPre: "Toegevoegd: ",
     setupCountTitle: "👥 Aantal personen",
     setupNamesOptional: "Namen zijn optioneel — pas ze aan wanneer je wil",
     setupPersonsTitle: "Personen",
@@ -964,6 +995,9 @@ const STRINGS = {
     tabLockToast: "Ajoute d'abord au moins une personne dans Groupe.",
     errCreateGroup: (m: string) => "Échec de la création du groupe : " + m,
     errGroupNotFound: "Groupe introuvable. Vérifie le code.",
+    errLoadDrinks: "Échec du chargement des boissons",
+    errLoadData: "Échec du chargement des données",
+    toastAddedPre: "Ajouté : ",
     setupCountTitle: "👥 Nombre de personnes",
     setupNamesOptional: "Les noms sont facultatifs — modifie-les quand tu veux",
     setupPersonsTitle: "Personnes",
@@ -1360,7 +1394,7 @@ export default function Home() {
     const ownerId = getOrCreateOwnerId()
     const { data, error } = await supabase.from("drinks").select("id,name,price,emoji,category,group_id,owner_id")
       .or(`owner_id.is.null,owner_id.eq.${ownerId}`)
-    if (error) { setError("Drankjes laden mislukt"); return }
+    if (error) { setError(L.errLoadDrinks); return }
     if (mounted.current) setDrinks(data || [])
   }, [])
 
@@ -1370,7 +1404,7 @@ export default function Home() {
       supabase.from("orders").select("id,participant_id,drink_id,quantity,group_id,session").eq("group_id", groupId),
       supabase.from("payments").select("id,group_id,session,participant_id,amount,created_at").eq("group_id", groupId),
     ])
-    if (pe || oe) { setError("Data laden mislukt"); return }
+    if (pe || oe) { setError(L.errLoadData); return }
     if (mounted.current) {
       setParticipants(orderStable(p || []))
       setOrders(o || [])
@@ -2066,7 +2100,7 @@ export default function Home() {
       if (addedIds.length > 0) { setLastAddedDrinkIds(addedIds); setLastAddedViaVoice(true) }
 
       if (recognized.length > 0) {
-        setToast(`Toegevoegd: ${recognized.map((d) => `${d.qty}× ${d.name}`).join(", ")}`)
+        setToast(`${L.toastAddedPre}${recognized.map((d) => `${d.qty}× ${drinkName(d.name, lang)}`).join(", ")}`)
       }
 
       if (suggestion) {
@@ -2560,7 +2594,7 @@ export default function Home() {
                           </>
                         ) : (
                           <>
-                            <span style={{ flex: 1, fontSize: 14 }}>{d.emoji} {d.name} <span style={{ color: "#999" }}>— €{d.price.toFixed(2)}</span></span>
+                            <span style={{ flex: 1, fontSize: 14 }}>{d.emoji} {drinkName(d.name, lang)} <span style={{ color: "#999" }}>— €{d.price.toFixed(2)}</span></span>
                             <button style={S.iconBtn} onClick={() => setEditingDrink(d)}>✏️</button>
                             <button style={S.iconBtn} title={L.deleteOwnDrinkTitle} onClick={() => deleteDrinkFromList(d.id)}>🗑️</button>
                           </>
@@ -2884,7 +2918,7 @@ export default function Home() {
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <span style={{ fontSize: 18, flexShrink: 0 }}>{d.emoji}</span>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</div>
+                            <div style={{ fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{drinkName(d.name, lang)}</div>
                             {showPrices && <div style={{ fontSize: 10, color: "#999" }}>≈ €{(d.price * line.total).toFixed(2)}</div>}
                           </div>
                           <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 15 }} onClick={() => addToCart(d.id, -1)}>−</button>
@@ -2927,7 +2961,7 @@ export default function Home() {
                         <div key={drinkId} style={{ border: justAdded ? "1.5px solid #ecc85a" : "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 10, background: justAdded ? "rgba(233,196,95,0.12)" : "transparent" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                             <span style={{ fontSize: 19, flexShrink: 0 }}>{d.emoji}</span>
-                            <span style={{ flex: 1, fontSize: 14, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</span>
+                            <span style={{ flex: 1, fontSize: 14, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{drinkName(d.name, lang)}</span>
                             <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 14 }} onClick={() => addToCart(d.id, -1)}>−</button>
                             <span style={{ fontSize: 15, fontWeight: 800, minWidth: 20, textAlign: "center" }}>{line.total}</span>
                             <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 14, background: "rgba(150,110,20,0.12)" }} onClick={() => addToCart(d.id, 1)}>+</button>
@@ -2984,7 +3018,7 @@ export default function Home() {
                           const byDrink: Record<string, number> = {}
                           rows.forEach((o) => { byDrink[o.drink_id] = (byDrink[o.drink_id] ?? 0) + o.quantity })
                           const total = rows.reduce((s, o) => s + o.quantity, 0)
-                          const names = Object.entries(byDrink).map(([id, q]) => { const d = drinks.find((dr) => dr.id === id); return d ? `${q}× ${d.name}` : null }).filter(Boolean).join(", ")
+                          const names = Object.entries(byDrink).map(([id, q]) => { const d = drinks.find((dr) => dr.id === id); return d ? `${q}× ${drinkName(d.name, lang)}` : null }).filter(Boolean).join(", ")
                           const isPrev = sess === reversed[0]
                           return (
                             <div
@@ -3046,7 +3080,7 @@ export default function Home() {
                     if (!d) return null
                     return (
                       <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, padding: "4px 0", borderBottom: "1px solid rgba(150,110,20,0.05)" }}>
-                        <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{d.emoji} {d.name}</span>
+                        <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{d.emoji} {drinkName(d.name, lang)}</span>
                         <span style={{ fontWeight: 800, color: "#4a3f1e", flexShrink: 0, marginLeft: 8 }}>€{l.total}</span>
                       </div>
                     )
@@ -3146,7 +3180,7 @@ export default function Home() {
                             <div key={d.id} style={{ background: qty > 0 ? "rgba(150,110,20,0.08)" : "#fffdf3", border: qty > 0 ? "1.5px solid rgba(150,110,20,0.35)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                 <span style={{ fontSize: 20 }}>{d.emoji}</span>
-                                <span style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{d.name}</span>
+                                <span style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{drinkName(d.name, lang)}</span>
                                 {showPrices && <span style={{ fontSize: 10, color: "#bbb" }}>≈ €{d.price.toFixed(2)}</span>}
                               </div>
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -3320,7 +3354,7 @@ export default function Home() {
                     {Object.values(grouped).map((it) => (
                       <div key={it.drink.id} style={{ marginTop: 8, padding: "6px 0", borderBottom: "1px solid rgba(150,110,20,0.05)" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <b style={{ fontSize: 13 }}>{it.drink.emoji} {it.drink.name} — {it.totalQty}</b>
+                          <b style={{ fontSize: 13 }}>{it.drink.emoji} {drinkName(it.drink.name, lang)} — {it.totalQty}</b>
                         </div>
                         <div style={{ marginLeft: 8, marginTop: 4 }}>
                           {Object.entries(it.people).map(([pid, info]) => (
@@ -3703,7 +3737,7 @@ export default function Home() {
               <div key={it.drink.id} style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20, padding: "16px 20px", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16 }}>
                 <span style={{ fontSize: 40 }}>{it.drink.emoji}</span>
                 <div>
-                  <div style={{ fontSize: 26, fontWeight: 800, color: "#333" }}>{it.totalQty}× {it.drink.name}</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: "#333" }}>{it.totalQty}× {drinkName(it.drink.name, lang)}</div>
                   <div style={{ fontSize: 13, color: "#aaa", marginTop: 2 }}>
                     {Object.values(it.people).map((p) => `${p.name} (${p.qty})`).join(", ")}
                     {it.anonymous > 0 && L.nToAssignSuffix(it.anonymous)}
@@ -3742,7 +3776,7 @@ export default function Home() {
                       <div key={drinkId} style={{ display: "flex", alignItems: "center", gap: multi ? 10 : 14, marginBottom: multi ? 0 : 14, padding: multi ? "10px 12px" : "14px 18px", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16 }}>
                         <span style={{ fontSize: multi ? 24 : 32, flexShrink: 0 }}>{d.emoji}</span>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: multi ? 16 : 20, fontWeight: 800, color: "#333" }}>{line.total}× {d.name}</div>
+                          <div style={{ fontSize: multi ? 16 : 20, fontWeight: 800, color: "#333" }}>{line.total}× {drinkName(d.name, lang)}</div>
                           {peopleNames.length > 0 && <div style={{ fontSize: multi ? 11 : 12, color: "#aaa", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: multi ? "nowrap" : "normal" }}>{peopleNames.join(", ")}</div>}
                         </div>
                       </div>
@@ -3947,7 +3981,7 @@ export default function Home() {
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{ fontSize: 17 }}>{it.drink.emoji}</span>
                         <span style={{ fontSize: 14, fontWeight: 800 }}>{it.totalQty}×</span>
-                        <span style={{ fontSize: 12.5, color: "#555", flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>{it.drink.name}</span>
+                        <span style={{ fontSize: 12.5, color: "#555", flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>{drinkName(it.drink.name, lang)}</span>
                       </div>
                       {participants.length > 0
                         ? renderBillAssign(it.drink)
@@ -4030,7 +4064,7 @@ export default function Home() {
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
                             {Object.values(drinkSummary).map((ds) => (
                               <span key={ds.drink.id} style={{ background: "rgba(150,110,20,0.05)", borderRadius: 10, padding: "3px 10px", fontSize: 12 }}>
-                                {ds.drink.emoji} {ds.qty}× {ds.drink.name}
+                                {ds.drink.emoji} {ds.qty}× {drinkName(ds.drink.name, lang)}
                               </span>
                             ))}
                           </div>
@@ -4285,7 +4319,7 @@ export default function Home() {
                               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                 <span style={{ fontSize: 18, flexShrink: 0 }}>{d.emoji}</span>
                                 <span style={{ fontSize: 14, fontWeight: 800 }}>{tot}×</span>
-                                <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, overflowWrap: "anywhere" }}>{d.name}</span>
+                                <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, overflowWrap: "anywhere" }}>{drinkName(d.name, lang)}</span>
                               </div>
                               {renderBillAssign(d)}
                             </div>
