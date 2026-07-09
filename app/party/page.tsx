@@ -776,6 +776,18 @@ const STRINGS = {
     addPersonTitle: "Persoon toevoegen",
     warnNameFirst: "Vul eerst een naam in voor je drankje.",
     warnPriceRequired: "Een richtprijs is verplicht — die hebben we nodig om de rekening achteraf eerlijk te verdelen met Fair Split.",
+    voiceExampleTitle: "🎤 Spreek je bestelling in",
+    voiceExampleA: "Zeg bijvoorbeeld ",
+    voiceEx1: "2 pintjes",
+    voiceExampleB: " — klik daarna opnieuw en zeg ",
+    voiceEx2: "1 gin-tonic",
+    voiceExampleC: ", enz. Je kan zoveel drankjes na elkaar inspreken als je wil.",
+    voiceBetaNote: "⚠️ Bèta — deze functie is nog in test en werkt nog niet altijd vlot. Kijk je bestelling na het inspreken zeker even na.",
+    understood: "Begrepen",
+    equalTitle: "Iedereen evenveel",
+    equalBody: "De totale rekening wordt gelijk verdeeld over alle personen. Simpel &amp; snel maar minder eerlijk. Vergelijk zeker even met Fair split!",
+    voiceNotSupported: "Spraak niet ondersteund in deze browser",
+    voiceNotRecognized: "Niet herkend — probeer opnieuw of typ het drankje handmatig",
   },
   fr: {
     appTagline: "Des tournées et un partage sans prise de tête !",
@@ -896,6 +908,18 @@ const STRINGS = {
     addPersonTitle: "Ajouter une personne",
     warnNameFirst: "Saisis d'abord un nom pour ta boisson.",
     warnPriceRequired: "Un prix indicatif est obligatoire — on en a besoin pour partager l'addition équitablement avec Fair Split.",
+    voiceExampleTitle: "🎤 Dicte ta commande",
+    voiceExampleA: "Dis par exemple ",
+    voiceEx1: "2 bières",
+    voiceExampleB: " — clique à nouveau et dis ",
+    voiceEx2: "1 gin-tonic",
+    voiceExampleC: ", etc. Tu peux dicter autant de boissons que tu veux, l'une après l'autre.",
+    voiceBetaNote: "⚠️ Bêta — cette fonction est encore en test et ne marche pas toujours parfaitement. Vérifie bien ta commande après la dictée.",
+    understood: "Compris",
+    equalTitle: "Tout le monde pareil",
+    equalBody: "L'addition totale est répartie également entre toutes les personnes. Simple et rapide, mais moins juste. Compare avec Fair Split !",
+    voiceNotSupported: "La dictée n'est pas prise en charge dans ce navigateur",
+    voiceNotRecognized: "Pas reconnu — réessaie ou tape la boisson à la main",
   },
 }
 
@@ -1712,7 +1736,7 @@ export default function Home() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const w = window as any
     const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition
-    if (!SR) { setToast("Spraak niet ondersteund in deze browser"); return }
+    if (!SR) { setToast(L.voiceNotSupported); return }
     const recog = new SR()
     recog.lang = "nl-BE"
     recog.interimResults = false
@@ -1738,7 +1762,7 @@ export default function Home() {
       if (suggestion) {
         setVoiceSuggestion({ spokenText: text, qty: suggestion.qty, suggested: suggestion.drink })
       } else if (recognized.length === 0) {
-        setToast("Niet herkend — probeer opnieuw of typ het drankje handmatig")
+        setToast(L.voiceNotRecognized)
       }
 
       setQuickVoiceActive(false)
@@ -3054,12 +3078,12 @@ export default function Home() {
       {showVoiceExample && (
         <div style={{ ...S.overlay, zIndex: 2400 }} onClick={() => setShowVoiceExample(false)}>
           <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>🎤 Spreek je bestelling in</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>{L.voiceExampleTitle}</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              Zeg bijvoorbeeld <b>&ldquo;2 pintjes&rdquo;</b> — klik daarna opnieuw en zeg <b>&ldquo;1 gin-tonic&rdquo;</b>, enz. Je kan zoveel drankjes na elkaar inspreken als je wil.
+              {L.voiceExampleA}<b>&ldquo;{L.voiceEx1}&rdquo;</b>{L.voiceExampleB}<b>&ldquo;{L.voiceEx2}&rdquo;</b>{L.voiceExampleC}
             </p>
-            <div style={{ fontSize: 12, color: "#c8941a", fontWeight: 700, background: "rgba(214,158,20,0.1)", borderRadius: 8, padding: "9px 11px", margin: "12px 0 0", lineHeight: 1.5 }}>⚠️ Bèta — deze functie is nog in test en werkt nog niet altijd vlot. Kijk je bestelling na het inspreken zeker even na.</div>
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowVoiceExample(false)}>Begrepen</button>
+            <div style={{ fontSize: 12, color: "#c8941a", fontWeight: 700, background: "rgba(214,158,20,0.1)", borderRadius: 8, padding: "9px 11px", margin: "12px 0 0", lineHeight: 1.5 }}>{L.voiceBetaNote}</div>
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowVoiceExample(false)}>{L.understood}</button>
           </div>
         </div>
       )}
@@ -3068,11 +3092,11 @@ export default function Home() {
       {showEqualInfo && (
         <div style={{ ...S.overlay, zIndex: 2400 }} onClick={() => setShowEqualInfo(false)}>
           <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>Iedereen evenveel</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>{L.equalTitle}</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              De totale rekening wordt gelijk verdeeld over alle personen. Simpel &amp; snel maar minder eerlijk. Vergelijk zeker even met Fair split!
+              {L.equalBody}
             </p>
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowEqualInfo(false)}>Begrepen</button>
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowEqualInfo(false)}>{L.understood}</button>
           </div>
         </div>
       )}
