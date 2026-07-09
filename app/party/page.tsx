@@ -664,6 +664,41 @@ const STRINGS = {
     tabLockToast: "Voeg eerst minstens één persoon toe bij Groep.",
     errCreateGroup: (m: string) => "Groep aanmaken mislukt: " + m,
     errGroupNotFound: "Groep niet gevonden. Controleer de code.",
+    setupCountTitle: "👥 Aantal personen",
+    setupNamesOptional: "Namen zijn optioneel — pas ze aan wanneer je wil",
+    setupPersonsTitle: "Personen",
+    setupTapToRename: "tik op een naam om te hernoemen",
+    setupAddName: "+ Naam toevoegen",
+    setupNoPersons: "Nog geen personen",
+    personLabel: (n: number) => `Persoon ${n}`,
+    personShort: (n: number) => `Pers. ${n}`,
+    potPlacedBtn: (v: string) => `🫙 Pot gelegd — €${v}`,
+    potLayFirst: "🫙 Leg eerst een pot",
+    startOrderingBtn: "🍻 Start bestellen →",
+    addPersonNamePlaceholder: "Naam (optioneel)...",
+    add: "Toevoegen",
+    cancel: "Annuleer",
+    cancelN: "Annuleren",
+    confirmYes: "Ja",
+    saveBtn: "💾 Opslaan",
+    perPersonAbbr: "p.p.",
+    potAddPersonsFirst: "Voeg eerst personen toe",
+    potAmountPlaceholder: "bedrag",
+    potName: (i: number) => (["Eerste pot", "Tweede pot", "Derde pot", "Vierde pot", "Vijfde pot", "Zesde pot"][i] ?? `Pot ${i + 1}`),
+    potOverviewTitle: "🫙 De pot",
+    potOverviewSub: "Overzicht per pot en wie wat bijlegde.",
+    potStatContributed: "ingelegd",
+    potStatUsed: "gebruikt",
+    potStatAvailable: "nog beschikbaar",
+    potNoContributions: "Nog geen inleg.",
+    potGeneral: "Algemeen",
+    potTopUp: "🫙 Pot aanvullen",
+    potPerPersonToggle: "Of vul per persoon een eigen bedrag in",
+    potTotalAdd: "Totaal toevoegen",
+    potAddWarnMsg: "Vul eerst een bedrag in — als p.p. of per persoon.",
+    potModalSub: "Iedereen legt vooraf wat in de pot. Je kan het per persoon corrigeren als iemand niet meelegt.",
+    potTotalInPot: "Totaal in pot",
+    potWarnPre: "Vul eerst een bedrag in voor minstens één persoon, of kies ",
   },
   fr: {
     appTagline: "Des tournées et un partage sans prise de tête !",
@@ -685,6 +720,41 @@ const STRINGS = {
     tabLockToast: "Ajoute d'abord au moins une personne dans Groupe.",
     errCreateGroup: (m: string) => "Échec de la création du groupe : " + m,
     errGroupNotFound: "Groupe introuvable. Vérifie le code.",
+    setupCountTitle: "👥 Nombre de personnes",
+    setupNamesOptional: "Les noms sont facultatifs — modifie-les quand tu veux",
+    setupPersonsTitle: "Personnes",
+    setupTapToRename: "touche un nom pour le renommer",
+    setupAddName: "+ Ajouter un nom",
+    setupNoPersons: "Encore aucune personne",
+    personLabel: (n: number) => `Personne ${n}`,
+    personShort: (n: number) => `Pers. ${n}`,
+    potPlacedBtn: (v: string) => `🫙 Cagnotte créée — €${v}`,
+    potLayFirst: "🫙 Crée d'abord une cagnotte",
+    startOrderingBtn: "🍻 Commencer à commander →",
+    addPersonNamePlaceholder: "Nom (facultatif)...",
+    add: "Ajouter",
+    cancel: "Annuler",
+    cancelN: "Annuler",
+    confirmYes: "Oui",
+    saveBtn: "💾 Enregistrer",
+    perPersonAbbr: "p.p.",
+    potAddPersonsFirst: "Ajoute d'abord des personnes",
+    potAmountPlaceholder: "montant",
+    potName: (i: number) => (["Première cagnotte", "Deuxième cagnotte", "Troisième cagnotte", "Quatrième cagnotte", "Cinquième cagnotte", "Sixième cagnotte"][i] ?? `Cagnotte ${i + 1}`),
+    potOverviewTitle: "🫙 La cagnotte",
+    potOverviewSub: "Aperçu par cagnotte et qui a mis quoi.",
+    potStatContributed: "déposé",
+    potStatUsed: "utilisé",
+    potStatAvailable: "encore dispo",
+    potNoContributions: "Encore aucun dépôt.",
+    potGeneral: "Général",
+    potTopUp: "🫙 Compléter la cagnotte",
+    potPerPersonToggle: "Ou saisis un montant par personne",
+    potTotalAdd: "Total à ajouter",
+    potAddWarnMsg: "Saisis d'abord un montant — en p.p. ou par personne.",
+    potModalSub: "Chacun met un peu dans la cagnotte à l'avance. Tu peux corriger par personne si quelqu'un ne participe pas.",
+    potTotalInPot: "Total en cagnotte",
+    potWarnPre: "Saisis d'abord un montant pour au moins une personne, ou choisis ",
   },
 }
 
@@ -2137,7 +2207,7 @@ export default function Home() {
       {view === "setup" && (
         <div>
           <div style={S.card}>
-            <h3 style={S.h3}>👥 Aantal personen</h3>
+            <h3 style={S.h3}>{L.setupCountTitle}</h3>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, padding: "12px 0" }}>
               <button
                 style={{ ...S.btn, width: 44, height: 44, fontSize: 20, borderRadius: "50%" }}
@@ -2150,20 +2220,20 @@ export default function Home() {
               >+</button>
             </div>
             <p style={{ textAlign: "center", color: "#aaa", fontSize: 12, marginTop: 4 }}>
-              Namen zijn optioneel — pas ze aan wanneer je wil
+              {L.setupNamesOptional}
             </p>
           </div>
 
           <div style={S.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 8 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0, flexWrap: "wrap" }}>
-                <h3 style={{ ...S.h3, marginBottom: 0 }}>Personen</h3>
-                <span style={{ fontSize: 11, fontStyle: "italic", color: "#b3a988", fontWeight: 600 }}>tik op een naam om te hernoemen</span>
+                <h3 style={{ ...S.h3, marginBottom: 0 }}>{L.setupPersonsTitle}</h3>
+                <span style={{ fontSize: 11, fontStyle: "italic", color: "#b3a988", fontWeight: 600 }}>{L.setupTapToRename}</span>
               </div>
-              <button style={{ ...S.btn, fontSize: 12, flexShrink: 0 }} onClick={() => setShowAddPerson(true)}>+ Naam toevoegen</button>
+              <button style={{ ...S.btn, fontSize: 12, flexShrink: 0 }} onClick={() => setShowAddPerson(true)}>{L.setupAddName}</button>
             </div>
 
-            {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 24 }}>Nog geen personen</div>}
+            {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 24 }}>{L.setupNoPersons}</div>}
 
             {(() => {
               const isPh = (pp: (typeof participants)[number]) => /^Persoon \d+$/.test(pp.name)
@@ -2176,7 +2246,7 @@ export default function Home() {
                 <div style={cols > 1 ? { display: "grid", gridAutoFlow: "column", gridTemplateRows: `repeat(${rows}, auto)`, columnGap: 16 } : undefined}>
             {ordered.map((p, idx) => {
               const isPlaceholder = isPh(p)
-              const posLabel = `Persoon ${idx + 1}`   // hernummerd op positie (namen eerst), zonder gaten
+              const posLabel = L.personLabel(idx + 1)   // hernummerd op positie (namen eerst), zonder gaten
               return (
               <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
                 {editingPerson === p.id ? (
@@ -2193,7 +2263,7 @@ export default function Home() {
                     style={{ ...S.input, flex: 1 }}
                   />
                 ) : (() => {
-                  const shown = isPlaceholder ? `Pers. ${idx + 1}` : p.name
+                  const shown = isPlaceholder ? L.personShort(idx + 1) : p.name
                   return (
                     <>
                       <span
@@ -2218,10 +2288,10 @@ export default function Home() {
               style={{ ...S.btn, flex: 1, padding: "14px 8px", fontSize: 14, fontWeight: 700, border: "1.5px solid #ecc85a", background: potTotal > 0 ? "#ecc85a" : "#fffdf6", color: "#4a3f1e" }}
               onClick={() => (potTotal > 0 ? setShowPotOverview(true) : openPotModal())}
             >
-              {potTotal > 0 ? `🫙 Pot gelegd — €${potTotal.toFixed(2)}` : "🫙 Leg eerst een pot"}
+              {potTotal > 0 ? L.potPlacedBtn(potTotal.toFixed(2)) : L.potLayFirst}
             </button>
             <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "14px 8px", fontSize: 15, fontWeight: 800 }} onClick={() => setView("ordering")}>
-              🍻 Start bestellen →
+              {L.startOrderingBtn}
             </button>
           </div>
         </div>
@@ -2874,12 +2944,12 @@ export default function Home() {
             <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>{confirmDialog.title}</h3>
             <p style={{ fontSize: 13.5, color: "#777", lineHeight: 1.5, margin: "0 0 18px" }}>{confirmDialog.message}</p>
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 700 }} onClick={() => setConfirmDialog(null)}>Annuleer</button>
+              <button style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 700 }} onClick={() => setConfirmDialog(null)}>{L.cancel}</button>
               <button
                 style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 800, border: "none", color: confirmDialog.danger ? "#fff" : "#4a3a0a", background: confirmDialog.danger ? "linear-gradient(135deg,#e0685c,#d1483b)" : "linear-gradient(135deg,#f4c430,#f7d461)" }}
                 onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn() }}
               >
-                {confirmDialog.confirmLabel ?? "Ja"}
+                {confirmDialog.confirmLabel ?? L.confirmYes}
               </button>
             </div>
           </div>
@@ -2900,35 +2970,35 @@ export default function Home() {
           batchMap.get(key)!.push(p)
         })
         const batches = order.map((k) => batchMap.get(k)!)
-        const potName = (i: number) => ["Eerste pot", "Tweede pot", "Derde pot", "Vierde pot", "Vijfde pot", "Zesde pot"][i] ?? `Pot ${i + 1}`
+        const potName = L.potName
         const n = participants.length
         const allTotal = parseFloat((potAddAmount || "").replace(",", "."))
         const allPer = (!isNaN(allTotal) && allTotal > 0 && n > 0) ? allTotal / n : 0
         return (
           <div style={{ ...S.overlay, zIndex: 2200 }}>
             <div style={{ ...S.modal, width: 440, maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
-              <h3 style={{ marginBottom: 4, fontSize: 19, fontWeight: 800, color: "#4a3f1e" }}>🫙 De pot</h3>
-              <p style={{ fontSize: 12, color: "#999", marginTop: 0, marginBottom: 14 }}>Overzicht per pot en wie wat bijlegde.</p>
+              <h3 style={{ marginBottom: 4, fontSize: 19, fontWeight: 800, color: "#4a3f1e" }}>{L.potOverviewTitle}</h3>
+              <p style={{ fontSize: 12, color: "#999", marginTop: 0, marginBottom: 14 }}>{L.potOverviewSub}</p>
 
               {/* Stats */}
               <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                 <div style={{ flex: 1, textAlign: "center", background: "rgba(233,196,95,0.10)", borderRadius: 12, padding: "9px 4px" }}>
-                  <div style={{ fontSize: 10, color: "#a06b00", fontWeight: 700 }}>ingelegd</div>
+                  <div style={{ fontSize: 10, color: "#a06b00", fontWeight: 700 }}>{L.potStatContributed}</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>€{potTotal.toFixed(2)}</div>
                 </div>
                 <div style={{ flex: 1, textAlign: "center", background: "rgba(120,95,20,0.05)", borderRadius: 12, padding: "9px 4px" }}>
-                  <div style={{ fontSize: 10, color: "#888", fontWeight: 700 }}>gebruikt</div>
+                  <div style={{ fontSize: 10, color: "#888", fontWeight: 700 }}>{L.potStatUsed}</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: "#a89a6a" }}>€{potUsed.toFixed(2)}</div>
                 </div>
                 <div style={{ flex: 1, textAlign: "center", background: "rgba(39,174,96,0.10)", borderRadius: 12, padding: "9px 4px" }}>
-                  <div style={{ fontSize: 10, color: "#1f8a4c", fontWeight: 700 }}>nog beschikbaar</div>
+                  <div style={{ fontSize: 10, color: "#1f8a4c", fontWeight: 700 }}>{L.potStatAvailable}</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: "#27ae60" }}>€{potLeft.toFixed(2)}</div>
                 </div>
               </div>
 
               {/* Potten (per inleg-moment) */}
               <div style={{ flex: 1, overflowY: "auto", marginBottom: 14 }}>
-                {batches.length === 0 && <div style={{ fontSize: 13, color: "#bbb", padding: "8px 0" }}>Nog geen inleg.</div>}
+                {batches.length === 0 && <div style={{ fontSize: 13, color: "#bbb", padding: "8px 0" }}>{L.potNoContributions}</div>}
                 {batches.map((rows, i) => {
                   const bt = rows.reduce((s, r) => s + r.amount, 0)
                   return (
@@ -2938,7 +3008,7 @@ export default function Home() {
                         <span style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>€{bt.toFixed(2)}</span>
                       </div>
                       {rows.map((r) => {
-                        const who = r.participant_id ? (participants.find((p) => p.id === r.participant_id)?.name ?? "?") : "Algemeen"
+                        const who = r.participant_id ? (participants.find((p) => p.id === r.participant_id)?.name ?? "?") : L.potGeneral
                         return (
                           <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderTop: "1px solid rgba(0,0,0,0.05)" }}>
                             <span style={{ fontSize: 14 }}>{r.participant_id ? "👤" : "🫙"}</span>
@@ -2955,9 +3025,9 @@ export default function Home() {
 
               {/* Aanvullen — zelfde manier als de eerste pot-inleg */}
               <div style={{ background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 14, padding: 12, marginBottom: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#a06b00", marginBottom: 8 }}>🫙 Pot aanvullen</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#a06b00", marginBottom: 8 }}>{L.potTopUp}</div>
                 {participants.length === 0 ? (
-                  <div style={{ fontSize: 12, color: "#aaa" }}>Voeg eerst personen toe</div>
+                  <div style={{ fontSize: 12, color: "#aaa" }}>{L.potAddPersonsFirst}</div>
                 ) : (
                   <>
                     <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
@@ -2973,15 +3043,15 @@ export default function Home() {
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, padding: "8px 10px", background: "#fff", border: "1px solid #ecc85a", borderRadius: 12 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: "#4a3f1e" }}>€</span>
-                      <input type="number" step="1" min="0" inputMode="numeric" placeholder="bedrag" value={potAddBulk} onChange={(e) => { setPotAddWarn(false); setPotAddBulk(e.target.value.replace(/[^\d]/g, "")) }} style={{ ...S.input, flex: 1, minWidth: 0 }} />
-                      <span style={{ fontSize: 13, color: "#777" }}>p.p.</span>
+                      <input type="number" step="1" min="0" inputMode="numeric" placeholder={L.potAmountPlaceholder} value={potAddBulk} onChange={(e) => { setPotAddWarn(false); setPotAddBulk(e.target.value.replace(/[^\d]/g, "")) }} style={{ ...S.input, flex: 1, minWidth: 0 }} />
+                      <span style={{ fontSize: 13, color: "#777" }}>{L.perPersonAbbr}</span>
                     </div>
                     <button
                       onClick={() => setPotAddPerPersonOpen((o) => !o)}
                       style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", textAlign: "left", background: "none", border: "none", padding: "2px 0", marginBottom: 8, cursor: "pointer" }}
                     >
                       <span style={{ fontSize: 11, color: "#bbb", transform: potAddPerPersonOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>▸</span>
-                      <span style={{ fontSize: 11, color: "#a06b00", fontWeight: 600 }}>Of vul per persoon een eigen bedrag in</span>
+                      <span style={{ fontSize: 11, color: "#a06b00", fontWeight: 600 }}>{L.potPerPersonToggle}</span>
                     </button>
                     {potAddPerPersonOpen && (
                       <div style={{ maxHeight: 150, overflowY: "auto", marginBottom: 8 }}>
@@ -3000,14 +3070,14 @@ export default function Home() {
                       const willAdd = draftSum > 0 ? draftSum : bulk * participants.length
                       return (
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8, color: "#4a3f1e", fontWeight: 700 }}>
-                          <span>Totaal toevoegen</span>
+                          <span>{L.potTotalAdd}</span>
                           <span>€{willAdd.toFixed(2)}</span>
                         </div>
                       )
                     })()}
                     {potAddWarn && (
                       <div style={{ fontSize: 12.5, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 10, padding: "8px 10px" }}>
-                        ⚠️ Vul eerst een bedrag in — als p.p. of per persoon.
+                        ⚠️ {L.potAddWarnMsg}
                       </div>
                     )}
                   </>
@@ -3015,8 +3085,8 @@ export default function Home() {
               </div>
 
               <div style={{ display: "flex", gap: 8 }}>
-                <button style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 700 }} onClick={() => setShowPotOverview(false)}>Annuleren</button>
-                <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "12px 0", fontWeight: 800 }} onClick={addToPot}>Toevoegen</button>
+                <button style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 700 }} onClick={() => setShowPotOverview(false)}>{L.cancelN}</button>
+                <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "12px 0", fontWeight: 800 }} onClick={addToPot}>{L.add}</button>
               </div>
             </div>
           </div>
@@ -3028,17 +3098,17 @@ export default function Home() {
         <div style={{ ...S.overlay, zIndex: 2200 }}>
           <div style={{ ...S.modal, width: 400, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
             <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700, color: "#4a3f1e" }}>🫙 {L.potLay}</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>Iedereen legt vooraf wat in de pot. Je kan het per persoon corrigeren als iemand niet meelegt.</p>
+            <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>{L.potModalSub}</p>
 
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14, padding: "10px 12px", background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 12 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: "#4a3f1e" }}>€</span>
               <input type="number" value={potBulk} onChange={(e) => setPotBulk(e.target.value)} style={{ ...S.input, width: 70 }} />
-              <span style={{ fontSize: 13, color: "#777" }}>p.p.</span>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontSize: 13, padding: "8px 0" }} onClick={setPotForEveryone}>Toevoegen</button>
+              <span style={{ fontSize: 13, color: "#777" }}>{L.perPersonAbbr}</span>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontSize: 13, padding: "8px 0" }} onClick={setPotForEveryone}>{L.add}</button>
             </div>
 
             <div style={{ overflowY: "auto", flex: 1, marginBottom: 12 }}>
-              {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>Voeg eerst personen toe</div>}
+              {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>{L.potAddPersonsFirst}</div>}
               {participants.map((p) => (
                 <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                   <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{p.name}</span>
@@ -3058,18 +3128,18 @@ export default function Home() {
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 14, color: "#4a3f1e", fontWeight: 700 }}>
-              <span>Totaal in pot</span>
+              <span>{L.potTotalInPot}</span>
               <span>€{Object.values(potDraft).reduce((s, v) => s + (parseFloat(v) || 0), 0).toFixed(2)}</span>
             </div>
 
             {potWarn && (
               <div style={{ fontSize: 13, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 12, padding: "10px 12px", marginBottom: 12, lineHeight: 1.45 }}>
-                ⚠️ Vul eerst een bedrag in voor minstens één persoon, of kies <b>Annuleer</b>.
+                ⚠️ {L.potWarnPre}<b>{L.cancel}</b>.
               </div>
             )}
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "10px 0" }} onClick={savePot}>💾 Opslaan</button>
-              <button style={{ ...S.btn, flex: 1, padding: "10px 0" }} onClick={() => { setPotWarn(false); setShowPotModal(false) }}>Annuleer</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "10px 0" }} onClick={savePot}>{L.saveBtn}</button>
+              <button style={{ ...S.btn, flex: 1, padding: "10px 0" }} onClick={() => { setPotWarn(false); setShowPotModal(false) }}>{L.cancel}</button>
             </div>
           </div>
         </div>
@@ -3823,12 +3893,12 @@ function AddPersonForm({ onAdd, onClose }: { onAdd: (name: string) => void; onCl
         value={name}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && submit()}
-        placeholder="Naam (optioneel)..."
+        placeholder={L.addPersonNamePlaceholder}
         style={{ ...S.input, width: "100%", boxSizing: "border-box" }}
       />
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button style={{ ...S.btn, ...S.btnPrimary, flex: 1 }} onClick={submit}>Toevoegen</button>
-        <button style={{ ...S.btn, flex: 1 }} onClick={onClose}>Annuleer</button>
+        <button style={{ ...S.btn, ...S.btnPrimary, flex: 1 }} onClick={submit}>{L.add}</button>
+        <button style={{ ...S.btn, flex: 1 }} onClick={onClose}>{L.cancel}</button>
       </div>
     </>
   )
