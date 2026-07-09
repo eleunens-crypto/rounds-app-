@@ -813,6 +813,38 @@ const STRINGS = {
     confirmDeleteDrinkMsg: (name: string) => `${name} verdwijnt uit de lijst van deze groep.`,
     confirmDeleteDrinkMsgFallback: "Dit drankje wordt verwijderd.",
     deleteLabel: "Verwijderen",
+    roundsEmptyNoOrders: "Nog geen bestellingen. Ga naar \u201cNieuwe bestelling\u201d om te starten.",
+    orderNotFinishedTitle: "Jouw bestelling werd nog niet afgerond",
+    orderNotFinishedSub: "Bekijk ze hier, pas eventueel nog aan en klik op \u201cBestelling afronden\u201d.",
+    toYourOrderBtn: "🍻 Naar je bestelling",
+    unfinishedOrderBanner: (n: number) => `Je hebt nog een niet-afgeronde bestelling (${n} ${n === 1 ? "item" : "items"}).`,
+    viewLink: "Bekijk →",
+    collapseAll: "▴ Alles inklappen",
+    expandAll: "▾ Alles openklappen",
+    roundWordAlt: "Ronde",
+    lastBadge: "laatste",
+    nToAssignBadge: (n: number) => `${n} nog toe te wijzen!`,
+    titleFullscreen: "Volledig scherm",
+    titleEdit: "Bewerken",
+    whoPaidBtn: "💶 Wie betaalde?",
+    paidLabel: "💶 Betaald",
+    viaPot: "🫙 via de pot",
+    nToAssignInline: (n: number) => `${n}× nog toe te wijzen!`,
+    forWhom: "voor wie?",
+    toBillBtn: "🧾 Ga naar afrekenen →",
+    indicatiefTitle: "🏷️ Indicatieve richtprijs",
+    indicatiefWord: "Indicatieve richtprijs",
+    indicatiefBody1: " is een pure schatting per drankje. ",
+    indicatiefBody2: " verdeelt het verschil met wat er echt betaald werd tijdens de rondjes volgens wie wat dronk, niet zomaar gelijk over iedereen. ",
+    muchFairer: "Veel eerlijker dus!",
+    fairTitle: "Hoe werkt Fair Split?",
+    fairBody1a: "Met ",
+    fairBody1b: " delen we het totaalbedrag ",
+    fairNot: "NIET",
+    fairBody1c: " door het aantal personen. Op basis van richtprijzen per drankje verdelen we de totaalprijs volgens wie wat dronk.",
+    fairBody1d: "Niet perfect, wel veel eerlijker!",
+    fairBody2b: " verdeelt het verschil met wat er echt betaald werd tijdens de rondjes volgens wie wat dronk, niet zomaar gelijk over iedereen. ",
+    fairBody2c: "Veel eerlijker dus!",
   },
   fr: {
     appTagline: "Des tournées et un partage sans prise de tête !",
@@ -970,6 +1002,38 @@ const STRINGS = {
     confirmDeleteDrinkMsg: (name: string) => `${name} disparaît de la liste de ce groupe.`,
     confirmDeleteDrinkMsgFallback: "Cette boisson sera supprimée.",
     deleteLabel: "Supprimer",
+    roundsEmptyNoOrders: "Encore aucune commande. Va dans « Nouvelle commande » pour commencer.",
+    orderNotFinishedTitle: "Ta commande n'a pas encore été finalisée",
+    orderNotFinishedSub: "Consulte-la ici, ajuste si besoin et clique sur « Finaliser la commande ».",
+    toYourOrderBtn: "🍻 Vers ta commande",
+    unfinishedOrderBanner: (n: number) => `Tu as encore une commande non finalisée (${n} article${n === 1 ? "" : "s"}).`,
+    viewLink: "Voir →",
+    collapseAll: "▴ Tout replier",
+    expandAll: "▾ Tout déplier",
+    roundWordAlt: "Tournée",
+    lastBadge: "dernière",
+    nToAssignBadge: (n: number) => `${n} à attribuer !`,
+    titleFullscreen: "Plein écran",
+    titleEdit: "Modifier",
+    whoPaidBtn: "💶 Qui a payé ?",
+    paidLabel: "💶 Payé",
+    viaPot: "🫙 via la cagnotte",
+    nToAssignInline: (n: number) => `${n}× à attribuer !`,
+    forWhom: "pour qui ?",
+    toBillBtn: "🧾 Aller au règlement →",
+    indicatiefTitle: "🏷️ Prix indicatif",
+    indicatiefWord: "Le prix indicatif",
+    indicatiefBody1: " est une simple estimation par boisson. ",
+    indicatiefBody2: " répartit la différence avec ce qui a réellement été payé pendant les tournées selon qui a bu quoi, pas simplement à parts égales. ",
+    muchFairer: "Bien plus juste, donc !",
+    fairTitle: "Comment fonctionne Fair Split ?",
+    fairBody1a: "Avec ",
+    fairBody1b: ", on ne divise ",
+    fairNot: "PAS",
+    fairBody1c: " le montant total par le nombre de personnes. Sur base des prix indicatifs par boisson, on répartit le prix total selon qui a bu quoi.",
+    fairBody1d: "Pas parfait, mais bien plus juste !",
+    fairBody2b: " répartit la différence avec ce qui a réellement été payé pendant les tournées selon qui a bu quoi, pas simplement à parts égales. ",
+    fairBody2c: "Bien plus juste, donc !",
   },
 }
 
@@ -2230,11 +2294,11 @@ export default function Home() {
         {fairInfoMode && (
           <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setFairInfoMode(null)}>
             <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>Hoe werkt Fair Split?</h3>
+              <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>{L.fairTitle}</h3>
               <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-                Met <b style={{ color: "#c98a00" }}>Fair Split</b> delen we het totaalbedrag <b>NIET</b> door het aantal personen. Op basis van richtprijzen per drankje verdelen we de totaalprijs volgens wie wat dronk. <b>Niet perfect, wel veel eerlijker!</b>
+                {L.fairBody1a}<b style={{ color: "#c98a00" }}>Fair Split</b>{L.fairBody1b}<b>{L.fairNot}</b>{L.fairBody1c} <b>{L.fairBody1d}</b>
               </p>
-              <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setFairInfoMode(null)}>Begrepen</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setFairInfoMode(null)}>{L.understood}</button>
             </div>
           </div>
         )}
@@ -2961,13 +3025,13 @@ export default function Home() {
           {sessions.length === 0 && (
             cartTotalItems === 0 ? (
               <div style={{ ...S.card, textAlign: "center", padding: 32, color: "#aaa" }}>
-                Nog geen bestellingen. Ga naar &ldquo;Nieuwe bestelling&rdquo; om te starten.
+                {L.roundsEmptyNoOrders}
               </div>
             ) : (
               <div style={{ ...S.card, textAlign: "center", padding: "24px 20px" }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>Jouw bestelling werd nog niet afgerond</div>
-                <div style={{ fontSize: 13, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>Bekijk ze hier, pas eventueel nog aan en klik op &ldquo;Bestelling afronden&rdquo;.</div>
-                <button onClick={() => setView("ordering")} style={{ ...S.btn, ...S.btnPrimary, padding: "10px 20px", fontWeight: 800 }}>🍻 Naar je bestelling</button>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>{L.orderNotFinishedTitle}</div>
+                <div style={{ fontSize: 13, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>{L.orderNotFinishedSub}</div>
+                <button onClick={() => setView("ordering")} style={{ ...S.btn, ...S.btnPrimary, padding: "10px 20px", fontWeight: 800 }}>{L.toYourOrderBtn}</button>
               </div>
             )
           )}
@@ -2975,8 +3039,8 @@ export default function Home() {
           {sessions.length > 0 && cartTotalItems > 0 && (
             <div style={{ ...S.card, marginBottom: 12, display: "flex", alignItems: "center", gap: 10, background: "rgba(224,107,94,0.07)", border: "1px solid rgba(224,107,94,0.4)" }}>
               <span style={{ fontSize: 18 }}>⚠️</span>
-              <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#c0392b", fontWeight: 600, lineHeight: 1.4 }}>Je hebt nog een niet-afgeronde bestelling ({cartTotalItems} {cartTotalItems === 1 ? "item" : "items"}).</div>
-              <button onClick={() => setView("ordering")} style={{ ...S.btn, flexShrink: 0, fontSize: 12.5, fontWeight: 800, padding: "8px 12px" }}>Bekijk →</button>
+              <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#c0392b", fontWeight: 600, lineHeight: 1.4 }}>{L.unfinishedOrderBanner(cartTotalItems)}</div>
+              <button onClick={() => setView("ordering")} style={{ ...S.btn, flexShrink: 0, fontSize: 12.5, fontWeight: 800, padding: "8px 12px" }}>{L.viewLink}</button>
             </div>
           )}
 
@@ -2988,7 +3052,7 @@ export default function Home() {
                   onClick={() => setOpenRounds(everyOpen ? [] : sessions.slice())}
                   style={{ background: "none", border: "none", color: "#a89a6a", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
                 >
-                  {everyOpen ? "▴ Alles inklappen" : "▾ Alles openklappen"}
+                  {everyOpen ? L.collapseAll : L.expandAll}
                 </button>
               </div>
             )
@@ -3016,37 +3080,37 @@ export default function Home() {
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 12, color: "#bbb", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", display: "inline-block" }}>▸</span>
-                    <b style={{ fontSize: 16 }}>Ronde {roundLabel(s)}</b>
-                    {isLatest && <span style={{ fontSize: 10, color: "#4a3f1e", background: "rgba(150,110,20,0.1)", borderRadius: 8, padding: "1px 8px", fontWeight: 700 }}>laatste</span>}
+                    <b style={{ fontSize: 16 }}>{L.roundWordAlt} {roundLabel(s)}</b>
+                    {isLatest && <span style={{ fontSize: 10, color: "#4a3f1e", background: "rgba(150,110,20,0.1)", borderRadius: 8, padding: "1px 8px", fontWeight: 700 }}>{L.lastBadge}</span>}
                     {(() => {
                       const open = orders.filter((o) => o.session === s && !o.participant_id).reduce((sum, o) => sum + o.quantity, 0)
                       if (open <= 0) return null
-                      return <span style={{ fontSize: 10, color: "#e0685c", background: "rgba(224,107,94,0.12)", border: "1px solid rgba(224,107,94,0.35)", borderRadius: 8, padding: "1px 8px", fontWeight: 800 }}>{open} nog toe te wijzen!</span>
+                      return <span style={{ fontSize: 10, color: "#e0685c", background: "rgba(224,107,94,0.12)", border: "1px solid rgba(224,107,94,0.35)", borderRadius: 8, padding: "1px 8px", fontWeight: 800 }}>{L.nToAssignBadge(open)}</span>
                     })()}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <button style={S.iconBtn} title="Volledig scherm" onClick={(e) => { e.stopPropagation(); setRoundFullscreen(s) }}>🔍</button>
-                    <button style={S.iconBtn} title="Bewerken" onClick={(e) => { e.stopPropagation(); setEditingRound(isEditing ? null : s); if (!isOpen) toggleOpen() }}>{isEditing ? "✓" : "✏️"}</button>
-                    <button style={S.iconBtn} title="Verwijderen" onClick={(e) => { e.stopPropagation(); deleteRound(s) }}>🗑️</button>
+                    <button style={S.iconBtn} title={L.titleFullscreen} onClick={(e) => { e.stopPropagation(); setRoundFullscreen(s) }}>🔍</button>
+                    <button style={S.iconBtn} title={L.titleEdit} onClick={(e) => { e.stopPropagation(); setEditingRound(isEditing ? null : s); if (!isOpen) toggleOpen() }}>{isEditing ? "✓" : "✏️"}</button>
+                    <button style={S.iconBtn} title={L.deleteLabel} onClick={(e) => { e.stopPropagation(); deleteRound(s) }}>🗑️</button>
                   </div>
                 </div>
 
                 {/* Betaald door + bedrag — meteen na de rondenaam */}
                 <div style={{ marginTop: 6 }}>
                   {roundPayments.length === 0 ? (
-                    <button style={{ ...S.btn, fontSize: 12, padding: "4px 12px" }} onClick={(e) => { e.stopPropagation(); openPaymentEditor(s) }}>💶 Wie betaalde?</button>
+                    <button style={{ ...S.btn, fontSize: 12, padding: "4px 12px" }} onClick={(e) => { e.stopPropagation(); openPaymentEditor(s) }}>{L.whoPaidBtn}</button>
                   ) : (
                     <div
                       onClick={(e) => { e.stopPropagation(); openPaymentEditor(s) }}
                       style={{ cursor: "pointer", fontSize: 13, color: "#444", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}
                     >
-                      <span style={{ color: "#888" }}>💶 Betaald</span>
+                      <span style={{ color: "#888" }}>{L.paidLabel}</span>
                       {roundPayments.map((p) => {
                         const isPot = !p.participant_id
                         const person = participants.find((pa) => pa.id === p.participant_id)
                         return (
                           <span key={p.id} style={{ background: isPot ? "rgba(233,196,95,0.2)" : "rgba(39,174,96,0.1)", color: isPot ? "#a06b00" : "#1f8a4c", borderRadius: 10, padding: "2px 10px", fontWeight: 700 }}>
-                            {isPot ? "🫙 via de pot" : (person?.name ?? "?")} — €{p.amount.toFixed(2)}
+                            {isPot ? L.viaPot : (person?.name ?? "?")} — €{p.amount.toFixed(2)}
                           </span>
                         )
                       })}
@@ -3073,13 +3137,13 @@ export default function Home() {
                           ))}
                           {it.anonymous > 0 && (
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }} onClick={(e) => e.stopPropagation()}>
-                              <span style={{ fontSize: 11, color: "#e0685c", fontWeight: 600, flexShrink: 0 }}>{it.anonymous}× nog toe te wijzen!</span>
+                              <span style={{ fontSize: 11, color: "#e0685c", fontWeight: 600, flexShrink: 0 }}>{L.nToAssignInline(it.anonymous)}</span>
                               <select
                                 value=""
                                 onChange={(e) => { if (e.target.value) assignAnonymousQty(it.drink.id, s, e.target.value, 1) }}
                                 style={{ ...S.input, flex: 1, fontSize: 12, padding: "5px 8px", fontWeight: 600, cursor: "pointer" }}
                               >
-                                <option value="">voor wie?</option>
+                                <option value="">{L.forWhom}</option>
                                 {participants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                               </select>
                             </div>
@@ -3093,7 +3157,7 @@ export default function Home() {
             )
           })}
           {sessions.length > 0 && (
-            <button onClick={() => setView("bill")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 6, padding: "14px 0", fontSize: 15, fontWeight: 800 }}>🧾 Ga naar afrekenen →</button>
+            <button onClick={() => setView("bill")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 6, padding: "14px 0", fontSize: 15, fontWeight: 800 }}>{L.toBillBtn}</button>
           )}
         </div>
       )}
@@ -3102,11 +3166,11 @@ export default function Home() {
       {showIndicatiefInfo && (
         <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setShowIndicatiefInfo(false)}>
           <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>🏷️ Indicatieve richtprijs</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>{L.indicatiefTitle}</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              <b style={{ color: "#a89a6a" }}>Indicatieve richtprijs</b> is een pure schatting per drankje. <b style={{ color: "#c98a00" }}>Fair Split</b> verdeelt het verschil met wat er echt betaald werd tijdens de rondjes volgens wie wat dronk, niet zomaar gelijk over iedereen. <b>Veel eerlijker dus!</b>
+              <b style={{ color: "#a89a6a" }}>{L.indicatiefWord}</b>{L.indicatiefBody1}<b style={{ color: "#c98a00" }}>Fair Split</b>{L.indicatiefBody2}<b>{L.muchFairer}</b>
             </p>
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowIndicatiefInfo(false)}>Begrepen</button>
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowIndicatiefInfo(false)}>{L.understood}</button>
           </div>
         </div>
       )}
@@ -3115,11 +3179,11 @@ export default function Home() {
       {fairInfoMode && (
         <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setFairInfoMode(null)}>
           <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>Hoe werkt Fair Split?</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>{L.fairTitle}</h3>
             <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              Met <b style={{ color: "#c98a00" }}>Fair Split</b> delen we het totaalbedrag <b>NIET</b> door het aantal personen. Op basis van richtprijzen per drankje verdelen we de totaalprijs volgens wie wat dronk. <b>Niet perfect, wel veel eerlijker!</b>
+              {L.fairBody1a}<b style={{ color: "#c98a00" }}>Fair Split</b>{L.fairBody1b}<b>{L.fairNot}</b>{L.fairBody1c} <b>{L.fairBody1d}</b>
             </p>
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setFairInfoMode(null)}>Begrepen</button>
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setFairInfoMode(null)}>{L.understood}</button>
           </div>
         </div>
       )}
@@ -3910,7 +3974,7 @@ export default function Home() {
                             onClick={() => setFairInfoMode("what")}
                             style={{ background: "none", border: "none", color: "#2f5bb0", fontSize: 12, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, width: "100%", textAlign: "center", padding: 0 }}
                           >
-                            Hoe werkt Fair Split?
+                            {L.fairTitle}
                           </button>
                         </div>
 
