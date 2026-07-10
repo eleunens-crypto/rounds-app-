@@ -132,7 +132,7 @@ export default function PartyTest() {
     const valid = total > 0 && (payPot || !!payPerson) && !potOver && (!split || (potAmt > 0 && potAmt < total + 0.0001))
     return { total, potAmt, split, potOnly, potContribToRound, potOver, valid }
   }
-  const openClose = () => { setPayerDraft(""); setAmountDraft(""); setShowClose(true) }
+  const openClose = () => { setAmountDraft(""); setShowClose(true) }
   const goAssignFromWarning = () => { const d = firstUnassigned(); setShowClose(false); if (d) { setActiveCat(d.cat); setAssignDrink(d.id) } }
   const commitRound = () => {
     const effGb: Record<string, number> = {}
