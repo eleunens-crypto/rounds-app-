@@ -395,14 +395,21 @@ export default function PartyTest() {
     </>
   )
   const Header = () => (
-    <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10, gap: 8 }}>
-      <div style={{ ...S.row, gap: 8, minWidth: 0 }}>
-        <button style={{ ...S.btn, padding: "7px 11px", fontSize: 14 }} onClick={goHome}>🏠</button>
-        <div style={{ ...S.h1, fontSize: 17, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim() || "Rundo Party"} <span style={{ fontSize: 11, fontWeight: 800, color: "#e08a00", border: "1px solid #e08a00", borderRadius: 6, padding: "1px 5px", verticalAlign: "middle" }}>TEST</span></div>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, gap: 10, flexWrap: "wrap" }}>
+      <div style={{ ...S.row, gap: 10, minWidth: 0 }}>
+        <img src="/logo_party_rundo.png" alt="Rundo" style={{ width: 40, height: 40, flexShrink: 0 }} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ ...S.h1, fontSize: 20, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span> <span style={{ fontSize: 10.5, fontWeight: 800, color: "#e08a00", border: "1px solid #e08a00", borderRadius: 6, padding: "1px 5px", verticalAlign: "middle" }}>TEST</span></div>
+          <div style={{ fontSize: 11.5, color: "#e08a00", marginTop: 2, fontWeight: 700 }}>🥂 Rondjes en splitten zonder gedoe!</div>
+        </div>
       </div>
-      <div style={{ ...S.row, gap: 6, flexShrink: 0 }}>
-        {rounds.length > 0 && view !== "hub" && <button style={{ ...S.btn, padding: "6px 10px", fontSize: 12 }} onClick={goHub}>📋</button>}
-        {potTag}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, minWidth: 0 }}>
+        {groupName.trim() && <div style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()}</div>}
+        <div style={{ ...S.row, gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          {view !== "hub" && <button style={{ ...S.btn, padding: "6px 10px", fontSize: 12, fontWeight: 700 }} onClick={goHub}>📋 Rondjesoverzicht</button>}
+          {potTag}
+          {view !== "setup" && <button style={{ ...S.btn, padding: "6px 10px", fontSize: 12, fontWeight: 700 }} onClick={goHome}>⚙️ Groep</button>}
+        </div>
       </div>
     </div>
   )
@@ -416,7 +423,7 @@ export default function PartyTest() {
         {renderDialogs()}
         <div style={S.card}>
           <label style={{ fontSize: 11.5, fontWeight: 800, color: "#8a7d55", display: "block", marginBottom: 6 }}>Naam van de groep</label>
-          <input style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 17, fontWeight: 800 }} type="text" placeholder="bv. De Bende van Ellende" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+          <input style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 17, fontWeight: 800 }} type="text" placeholder="bv. De Aperitiefgangers" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
           <div style={{ ...S.row, justifyContent: "space-between", marginTop: 16, marginBottom: 8 }}>
             <h3 style={{ ...S.h3, margin: 0 }}>👥 {people.length} personen</h3>
             {removeMode && <span onClick={() => setRemoveMode(false)} style={{ fontSize: 12, fontWeight: 800, color: "#8a5e0f", cursor: "pointer" }}>✓ klaar</span>}
@@ -786,7 +793,17 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
-        <h3 style={{ ...S.h3, marginBottom: 6 }}>📋 Rondes-overzicht</h3>
+        <h3 style={{ ...S.h3, marginBottom: 6 }}>📋 Rondjesoverzicht</h3>
+        {rounds.length === 0 ? (
+          <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
+            <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Nog geen rondjes</div>
+            <div style={{ ...S.sub, marginBottom: 16 }}>Er zijn nog geen bestellingen. Start een eerste rondje om te beginnen.</div>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <button style={{ ...S.btnP, width: "80%" }} onClick={() => { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>Start 1e rondje →</button>
+            </div>
+          </div>
+        ) : (<>
         <p style={{ ...S.sub }}>Tik een ronde open om drankjes/namen of bekers nog aan te passen — de app herberekent automatisch.</p>
 
         {rounds.map((r, idx) => {
@@ -877,10 +894,11 @@ export default function PartyTest() {
           )
         })}
 
-        <div style={{ display: "flex", gap: 10 }}>
+        </>)}
+        {rounds.length > 0 && <div style={{ display: "flex", gap: 10 }}>
           <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (anyUnassignedRounds) { const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0); setNotice(`Er ${tot === 1 ? "is 1 drankje" : `zijn ${tot} drankjes`} nog zonder naam. Wijs ze eerst toe (rood aangeduid in het overzicht) voor je afrekent.`); const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0)); if (fr >= 0) { setOpenRound(fr); setEditAssign(true); setEditCups(false); setEditPay(false) } } else setView("final") }}>🧾 Afrekenen</button>
           <button style={{ ...S.btnP, flex: 2 }} onClick={nextRound}>➕ Nieuw rondje</button>
-        </div>
+        </div>}
       </div></div>
     )
   }
