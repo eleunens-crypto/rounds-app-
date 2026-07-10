@@ -1,12 +1,11 @@
 "use client"
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RUNDO PARTY — TESTPAGINA v6
-// - Volledige drankenlijst met alle categorie-tabs
-// - Bekers ALTIJD teruggeven (ook ronde 1); wie er binnenbrengt gaat negatief = krijgt waarborg
-// - Pot-saldo overal compact zichtbaar; pot kan niet meer betalen dan er in zit
-// - Waarschuwing "niet toegewezen" is aanklikbaar -> direct naar toewijzen
-// Richtprijzen blijven ONZICHTBAAR. Volledig lokaal. app/party-test/page.tsx
+// RUNDO PARTY — TESTPAGINA v7
+// - Betaling bevestigen -> rondjes-hub (overzicht) -> nieuw rondje / afrekenen
+// - Bewerken (toewijzen + bekers) in het overzicht; app herberekent automatisch
+// - Home-knop op elk scherm (geen reset); coin-prijzen zichtbaar/aanpasbaar
+// Richtprijzen blijven ONZICHTBAAR bij bestellen. Volledig lokaal. app/party-test/page.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useMemo, useState } from "react"
@@ -37,21 +36,22 @@ const DEMO_PEOPLE: Person[] = ["Jan", "Sarah", "Tom", "Lisa", "Ben"].map((n, i) 
 
 type Assign = Record<string, Record<string, number>>
 type Anon = Record<string, number>
-type Round = { orders: Assign; anon: Anon; payer: string; amount: number; pickedUp: Record<string, number>; gaveBack: Record<string, number> }
+type Round = { orders: Assign; anon: Anon; payer: string; amount: number; gaveBack: Record<string, number> }
 
 const euro = (v: number) => "€" + v.toFixed(2).replace(".", ",")
 
 export default function PartyTest() {
-  const [view, setView] = useState<"setup" | "order" | "confirmed" | "final">("setup")
+  const [view, setView] = useState<"setup" | "order" | "confirmed" | "hub" | "final">("setup")
   const [pay, setPay] = useState<"eur" | "coin">("eur")
   const [coinValue, setCoinValue] = useState(3.9)
   const [depositOn, setDepositOn] = useState(true)
   const [depositValue, setDepositValue] = useState(1)
   const [depositUnit, setDepositUnit] = useState<"eur" | "coin">("eur")
   const [showPot, setShowPot] = useState(false)
+  const [showCoins, setShowCoins] = useState(false)
 
   const [people, setPeople] = useState<Person[]>(DEMO_PEOPLE)
-  const drinks = DEMO_DRINKS
+  const [drinks, setDrinks] = useState<Drink[]>(DEMO_DRINKS)
   const [contrib, setContrib] = useState<Record<string, number>>({})
 
   const [roundNr, setRoundNr] = useState(1)
@@ -60,7 +60,6 @@ export default function PartyTest() {
   const [cart, setCart] = useState<Assign>({})
   const [cartAnon, setCartAnon] = useState<Anon>({})
   const [rounds, setRounds] = useState<Round[]>([])
-  const [cups, setCups] = useState<Record<string, number>>({})
   const [gaveBackDraft, setGaveBackDraft] = useState<Record<string, number>>({})
   const [displayUnit, setDisplayUnit] = useState<"eur" | "coin">("eur")
   const [showCompare, setShowCompare] = useState(false)
@@ -74,6 +73,10 @@ export default function PartyTest() {
   const [payerDraft, setPayerDraft] = useState<string>("")
   const [amountDraft, setAmountDraft] = useState<string>("")
 
+  // edit-in-hub
+  const [editAssign, setEditAssign] = useState(false)
+  const [editCups, setEditCups] = useState(false)
+
   const priceOf = (d: Drink) => d.price
   const depositPerCupEur = depositUnit === "eur" ? depositValue : depositValue * coinValue
   const show = (eur: number) => (pay === "coin" && displayUnit === "coin" ? (eur / coinValue).toFixed(2).replace(".", ",") + " coins" : euro(eur))
@@ -82,16 +85,25 @@ export default function PartyTest() {
   const potSpent = rounds.reduce((s, r) => s + (r.payer === "pot" ? r.amount : 0), 0)
   const potRemaining = potContribTotal - potSpent
 
+  // ── live cart helpers ───────────────────────────────────────────────────────
   const aQty = (did: string, pid: string) => cart[did]?.[pid] ?? 0
   const bump = (did: string, pid: string, delta: number) => setCart((c) => ({ ...c, [did]: { ...(c[did] ?? {}), [pid]: Math.max(0, (c[did]?.[pid] ?? 0) + delta) } }))
   const bumpAnon = (did: string, delta: number) => setCartAnon((a) => ({ ...a, [did]: Math.max(0, (a[did] ?? 0) + delta) }))
-  // toewijs-modus: is er nog een naamloze -> die toewijzen (open -1, naam +1); anders nieuw +1
   const assignTap = (did: string, pid: string) => { if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); bump(did, pid, 1) } else bump(did, pid, 1) }
-  const drinkAssigned = (did: string) => Object.values(cart[did] ?? {}).reduce((a, b) => a + b, 0)
-  const drinkTotal = (did: string) => drinkAssigned(did) + (cartAnon[did] ?? 0)
-  const roundItems = useMemo(() => drinks.reduce((s, d) => s + drinkTotal(d.id), 0), [cart, cartAnon]) // eslint-disable-line
-  const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon]) // eslint-disable-line
+  const drinkTotal = (did: string) => Object.values(cart[did] ?? {}).reduce((a, b) => a + b, 0) + (cartAnon[did] ?? 0)
+  const roundItems = useMemo(() => drinks.reduce((s, d) => s + drinkTotal(d.id), 0), [cart, cartAnon, drinks]) // eslint-disable-line
+  const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon, drinks]) // eslint-disable-line
   const pickedUpOf = (pid: string) => drinks.reduce((a, d) => a + (d.cup ? aQty(d.id, pid) : 0), 0)
+
+  // ── per-rondje bewerk-helpers (hub) ─────────────────────────────────────────
+  const rBump = (idx: number, did: string, pid: string, delta: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, orders: { ...r.orders, [did]: { ...(r.orders[did] ?? {}), [pid]: Math.max(0, (r.orders[did]?.[pid] ?? 0) + delta) } } } : r))
+  const rBumpAnon = (idx: number, did: string, delta: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, anon: { ...r.anon, [did]: Math.max(0, (r.anon[did] ?? 0) + delta) } } : r))
+  const rAssignTap = (idx: number, did: string, pid: string) => { if ((rounds[idx]?.anon[did] ?? 0) > 0) { rBumpAnon(idx, did, -1); rBump(idx, did, pid, 1) } else rBump(idx, did, pid, 1) }
+  const rSetGaveBack = (idx: number, pid: string, v: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, gaveBack: { ...r.gaveBack, [pid]: Math.max(0, v) } } : r))
+
+  // ── afgeleide bekers (uit rounds) ───────────────────────────────────────────
+  const roundPicked = (r: Round, pid: string) => drinks.reduce((a, d) => a + (d.cup ? (r.orders[d.id]?.[pid] ?? 0) : 0), 0)
+  const cupsBal = (pid: string) => rounds.reduce((s, r) => s + (roundPicked(r, pid) - (r.gaveBack[pid] || 0)), 0)
 
   const addPerson = () => { const name = (typeof window !== "undefined" && window.prompt("Naam van de nieuwe persoon?")) || ""; if (name.trim()) setPeople((ps) => [...ps, { id: "p" + Date.now(), name: name.trim() }]) }
   const addContrib = (pid: string, v: number) => setContrib((c) => ({ ...c, [pid]: (c[pid] || 0) + v }))
@@ -99,18 +111,21 @@ export default function PartyTest() {
   const catsPresent = CATS.filter((c) => drinks.some((d) => d.cat === c))
   const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
 
+  const goHome = () => setView("setup")
   const openClose = () => { setPayerDraft(""); setAmountDraft(""); setShowClose(true) }
   const goAssignFromWarning = () => { const d = firstUnassigned(); setShowClose(false); if (d) { setActiveCat(d.cat); setAssignDrink(d.id) } }
   const commitRound = () => {
-    const pickedUp: Record<string, number> = {}, effGb: Record<string, number> = {}
-    people.forEach((p) => { const pu = pickedUpOf(p.id); pickedUp[p.id] = pu; effGb[p.id] = gaveBackDraft[p.id] ?? Math.min(cups[p.id] ?? 0, pu) })
-    if (depositOn) setCups((prev) => { const next = { ...prev }; people.forEach((p) => { next[p.id] = (next[p.id] ?? 0) + (pickedUp[p.id] || 0) - (effGb[p.id] || 0) }); return next })
-    setRounds((r) => [...r, { orders: cart, anon: cartAnon, payer: "", amount: 0, pickedUp, gaveBack: effGb }])
+    const effGb: Record<string, number> = {}
+    people.forEach((p) => { effGb[p.id] = gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id)) })
+    setRounds((r) => [...r, { orders: cart, anon: cartAnon, payer: "", amount: 0, gaveBack: effGb }])
     setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setPayerDraft(""); setAmountDraft(""); setView("confirmed")
   }
-  const nextRound = () => { setRoundNr((n) => n + 1); setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }
-  const goFinal = () => setView("final")
-  const resetAll = () => { setRoundNr(1); setCart({}); setCartAnon({}); setRounds([]); setCups({}); setGaveBackDraft({}); setContrib({}); setCupsChecked(false); setCupsTouched(false); setView("setup") }
+  const confirmPayment = () => {
+    const amt = parseFloat(amountDraft.replace(",", ".")) || 0
+    setRounds((rs) => rs.map((r, i) => i === rs.length - 1 ? { ...r, payer: payerDraft, amount: amt } : r))
+    setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setView("hub")
+  }
+  const nextRound = () => { setRoundNr((n) => n + 1); setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setView("order") }
 
   const roundKeyTotal = (r: Round) => drinks.reduce((s, d) => s + (Object.values(r.orders[d.id] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[d.id] ?? 0)) * priceOf(d), 0)
   const personRoundShare = (r: Round, pid: string) => {
@@ -123,14 +138,13 @@ export default function PartyTest() {
   const grandTotal = useMemo(() => rounds.reduce((s, r) => s + r.amount, 0), [rounds])
   const equalShare = people.length ? grandTotal / people.length : 0
 
-  // netto waarborg-mutatie per persoon per rondje (in euro), voorgeschoten door de betaler
-  const roundCupEur = (r: Round, pid: string) => ((r.pickedUp[pid] || 0) - (r.gaveBack[pid] || 0)) * depositPerCupEur
+  const roundCupEur = (r: Round, pid: string) => (roundPicked(r, pid) - (r.gaveBack[pid] || 0)) * depositPerCupEur
   const cupOwn = (pid: string) => (depositOn ? rounds.reduce((s, r) => s + roundCupEur(r, pid), 0) : 0)
   const settlement = useMemo(() => {
     const paid: Record<string, number> = {}; people.forEach((p) => (paid[p.id] = 0)); let potPaid = 0
     rounds.forEach((r) => {
       const cupSum = depositOn ? people.reduce((a, p) => a + roundCupEur(r, p.id), 0) : 0
-      const total = r.amount + cupSum // drank + voorgeschoten waarborg
+      const total = r.amount + cupSum
       if (r.payer === "pot") potPaid += total
       else if (r.payer) paid[r.payer] = (paid[r.payer] ?? 0) + total
     })
@@ -141,8 +155,9 @@ export default function PartyTest() {
     const tx: { from: string; to: string; amount: number }[] = []; let i = 0, j = 0
     while (i < debtors.length && j < creditors.length) { const amt = Math.min(debtors[i].net, creditors[j].net); tx.push({ from: debtors[i].label, to: creditors[j].label, amount: amt }); debtors[i].net -= amt; creditors[j].net -= amt; if (debtors[i].net < 0.005) i++; if (creditors[j].net < 0.005) j++ }
     return { tx }
-  }, [rounds, people, contrib, potContribTotal, potSpent, depositOn, depositValue, depositUnit, coinValue]) // eslint-disable-line
+  }, [rounds, people, contrib, potContribTotal, potSpent, depositOn, depositValue, depositUnit, coinValue, drinks]) // eslint-disable-line
   const anyUnassignedRounds = rounds.some((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0))
+  const drinkTotalRound = (r: Round, did: string) => Object.values(r.orders[did] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[did] ?? 0)
 
   const S = {
     page: { minHeight: "100vh", background: "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
@@ -177,7 +192,7 @@ export default function PartyTest() {
           <h3 style={{ ...S.h3, fontSize: 18, margin: 0 }}>🫙 Pot</h3>
           <span style={{ fontSize: 13, color: "#8a7d55" }}>in pot {euro(potContribTotal)} · nog {euro(potRemaining)}</span>
         </div>
-        <p style={{ ...S.sub }}>Leg in of voeg toe — ook later tijdens de avond. Snelbedragen tellen op.</p>
+        <p style={{ ...S.sub }}>Leg in of voeg toe — ook later. Snelbedragen tellen op.</p>
         <div style={{ ...S.row, gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
           <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>iedereen +</span>
           {[10, 15, 20].map((v) => <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 13 }} onClick={() => addEveryone(v)}>€{v}</button>)}
@@ -207,7 +222,7 @@ export default function PartyTest() {
       </div>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
         {potTag}
-        <button style={{ ...S.btn, padding: "6px 10px", fontSize: 12 }} onClick={resetAll}>↺ reset</button>
+        <button style={{ ...S.btn, padding: "6px 10px", fontSize: 12 }} onClick={goHome}>🏠 home</button>
       </div>
     </div>
   )
@@ -225,12 +240,33 @@ export default function PartyTest() {
             <div style={S.seg(pay === "coin")} onClick={() => setPay("coin")}>🎟️ Coins</div>
           </div>
           {pay === "coin" && (
-            <div style={{ ...S.row, justifyContent: "space-between" }}>
-              <span style={{ fontSize: 14, fontWeight: 700 }}>1 coin =</span>
-              <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={S.input} type="number" step="0.01" value={coinValue} onChange={(e) => setCoinValue(parseFloat(e.target.value) || 0)} /></div>
-            </div>
+            <>
+              <div style={{ ...S.row, justifyContent: "space-between" }}>
+                <span style={{ fontSize: 14, fontWeight: 700 }}>1 coin =</span>
+                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={S.input} type="number" step="0.01" value={coinValue} onChange={(e) => setCoinValue(parseFloat(e.target.value) || 0)} /></div>
+              </div>
+              <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 12.5 }} onClick={() => setShowCoins((v) => !v)}>{showCoins ? "▴ verberg coin-prijzen" : "🎟️ coin-prijzen per drankje"}</button>
+              {showCoins && (
+                <div style={{ marginTop: 10, maxHeight: 260, overflowY: "auto" }}>
+                  <p style={{ ...S.sub, marginBottom: 8 }}>Pas aan naar de coin-prijs op de festival-prijslijst (bv. Aperol 2,4). Verborgen tijdens bestellen.</p>
+                  {drinks.map((d) => {
+                    const c = coinValue > 0 ? d.price / coinValue : 0
+                    return (
+                      <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid rgba(120,95,20,0.06)" }}>
+                        <span style={{ fontSize: 13 }}>{d.emoji} {d.name}</span>
+                        <div style={{ ...S.row, gap: 5 }}>
+                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => setDrinks((ds) => ds.map((x) => x.id === d.id ? { ...x, price: Math.max(0, +((c - 0.1) * coinValue).toFixed(2)) } : x))}>−</button>
+                          <span style={{ minWidth: 40, textAlign: "center", fontSize: 12.5, fontWeight: 800 }}>{c.toFixed(1)} c</span>
+                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => setDrinks((ds) => ds.map((x) => x.id === d.id ? { ...x, price: +((c + 0.1) * coinValue).toFixed(2) } : x))}>+</button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </>
           )}
-          <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 10 }}>Per rondje geef je het <b>echte bedrag</b> in. De app verdeelt eerlijk (Fair Split) op wie wat had — zonder prijzen te tonen.</div>
+          <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 10 }}>Per rondje geef je het <b>echte bedrag</b> in. De app verdeelt eerlijk (Fair Split) — zonder prijzen te tonen.</div>
         </div>
 
         <div style={S.card}>
@@ -260,7 +296,7 @@ export default function PartyTest() {
             <span style={{ fontSize: 14, fontWeight: 700 }}>🫙 Gezamenlijke pot</span>
             <button style={{ ...S.btn, padding: "6px 12px", fontSize: 13 }} onClick={() => setShowPot(true)}>{potContribTotal > 0 ? `beheren · ${euro(potContribTotal)}` : "+ inleggen"}</button>
           </div>
-          <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 8 }}>Optioneel. Je kan ook later tijdens de avond bijleggen — de pot staat altijd bovenaan.</div>
+          <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 8 }}>Optioneel. Je kan ook later bijleggen — de pot staat altijd bovenaan.</div>
         </div>
 
         <div style={S.card}>
@@ -271,7 +307,9 @@ export default function PartyTest() {
           <div style={{ ...S.row, flexWrap: "wrap", gap: 7 }}>{people.map((p) => <span key={p.id} style={{ ...S.pill, fontSize: 12.5, padding: "5px 11px", background: "rgba(240,165,0,0.12)", color: "#8a5e0f" }}>{p.name}</span>)}</div>
         </div>
 
-        <button style={S.btnP} onClick={() => { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>🍻 Start ronde 1 →</button>
+        {rounds.length > 0
+          ? <button style={S.btnP} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>📋 Terug naar overzicht →</button>
+          : <button style={S.btnP} onClick={() => { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>🍻 Start ronde 1 →</button>}
       </div></div>
     )
   }
@@ -282,8 +320,8 @@ export default function PartyTest() {
     const catVisible = catDrinks.filter((d) => fullList || d.fav || drinkTotal(d.id) > 0)
     const ad = assignDrink ? drinks.find((d) => d.id === assignDrink)! : null
     const adAnon = ad ? (cartAnon[ad.id] ?? 0) : 0
-    const needCups = depositOn && (people.some((p) => pickedUpOf(p.id) > 0) || people.some((p) => (cups[p.id] ?? 0) !== 0))
-    const gaveBackTotal = people.reduce((a, p) => a + (gaveBackDraft[p.id] ?? Math.min(cups[p.id] ?? 0, pickedUpOf(p.id))), 0)
+    const needCups = depositOn && (people.some((p) => pickedUpOf(p.id) > 0) || people.some((p) => cupsBal(p.id) !== 0))
+    const gaveBackTotal = people.reduce((a, p) => a + (gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id))), 0)
     const cupsBlock = needCups && !cupsChecked
     return (
       <div style={S.page}><div style={S.wrap}>
@@ -308,26 +346,26 @@ export default function PartyTest() {
             Geen favorieten in {CAT_LABEL[activeCat]}. <span style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }} onClick={() => setFullList(true)}>📖 toon alles</span>
           </div>
         ) : (
-        <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12 }}>
-          {catVisible.map((d) => {
-            const tot = drinkTotal(d.id), un = cartAnon[d.id] ?? 0
-            return (
-              <div key={d.id} style={{ padding: "10px 10px", borderRadius: 12, cursor: "pointer", background: un > 0 ? "rgba(224,104,92,0.12)" : tot > 0 ? "rgba(240,165,0,0.12)" : "#faf4e4", border: un > 0 ? "1.5px solid rgba(224,104,92,0.6)" : tot > 0 ? "1px solid rgba(240,165,0,0.45)" : "1px solid rgba(120,95,20,0.1)" }} onClick={() => setAssignDrink(d.id)}>
-                <div style={{ fontSize: 13.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#4a3f1e" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
-                {(tot > 0 || un > 0) && (
-                  <div style={{ ...S.row, gap: 5, marginTop: 5 }}>
-                    {tot > 0 && <span style={{ ...S.pill, background: "rgba(240,165,0,0.22)", color: "#c98a00" }}>{tot}×</span>}
-                    {un > 0 && <span style={{ ...S.pill, background: "rgba(224,104,92,0.15)", color: "#c0554a" }}>{un} open</span>}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+          <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12 }}>
+            {catVisible.map((d) => {
+              const tot = drinkTotal(d.id), un = cartAnon[d.id] ?? 0
+              return (
+                <div key={d.id} style={{ padding: "10px 10px", borderRadius: 12, cursor: "pointer", background: un > 0 ? "rgba(224,104,92,0.12)" : tot > 0 ? "rgba(240,165,0,0.12)" : "#faf4e4", border: un > 0 ? "1.5px solid rgba(224,104,92,0.6)" : tot > 0 ? "1px solid rgba(240,165,0,0.45)" : "1px solid rgba(120,95,20,0.1)" }} onClick={() => setAssignDrink(d.id)}>
+                  <div style={{ fontSize: 13.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#4a3f1e" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
+                  {(tot > 0 || un > 0) && (
+                    <div style={{ ...S.row, gap: 5, marginTop: 5 }}>
+                      {tot > 0 && <span style={{ ...S.pill, background: "rgba(240,165,0,0.22)", color: "#c98a00" }}>{tot}×</span>}
+                      {un > 0 && <span style={{ ...S.pill, background: "rgba(224,104,92,0.15)", color: "#c0554a" }}>{un} open</span>}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         )}
         <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
           {depositOn && <button style={{ ...S.btn, flex: 1 }} onClick={() => setShowCups(true)}>🫙 Bekers</button>}
-          {rounds.length > 0 && <button style={{ ...S.btn, flex: 1 }} onClick={goFinal}>🧾 Balans</button>}
+          {rounds.length > 0 && <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>📋 Overzicht</button>}
         </div>
         <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => roundItems > 0 && openClose()}>✅ Rondje {roundNr} bevestigen</button>
 
@@ -339,9 +377,7 @@ export default function PartyTest() {
                 <span style={{ fontSize: 13, color: "#8a7d55" }}>{drinkTotal(ad.id)}× totaal</span>
               </div>
               {adAnon > 0 ? (
-                <div style={{ background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 13, color: "#b0402f", fontWeight: 700 }}>
-                  🔴 {adAnon} nog toe te wijzen — tik een naam om er telkens één aan toe te wijzen.
-                </div>
+                <div style={{ background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 13, color: "#b0402f", fontWeight: 700 }}>🔴 {adAnon} nog toe te wijzen — tik een naam om er telkens één aan toe te wijzen.</div>
               ) : (
                 <p style={{ ...S.sub, marginBottom: 12 }}>Tik wie dit had (nog eens tikken = meer). Of voeg toe zonder naam om later toe te wijzen.</p>
               )}
@@ -367,7 +403,7 @@ export default function PartyTest() {
               <p style={{ ...S.sub }}>Hoeveel gaf elk <b>terug</b>? Standaard = ruil. Iedereen kan teruggeven — ook wie niks bestelde of een beker van elders binnenbrengt (gaat dan negatief = krijgt waarborg).</p>
               <button style={{ ...S.btn, width: "100%", marginBottom: 12, fontSize: 13 }} onClick={() => { setGaveBackDraft(Object.fromEntries(people.map((p) => [p.id, 0]))); setCupsChecked(true); setShowCups(false) }}>🚫 niemand gaf een beker terug</button>
               {people.map((p) => {
-                const bal = cups[p.id] ?? 0, pu = pickedUpOf(p.id)
+                const bal = cupsBal(p.id), pu = pickedUpOf(p.id)
                 const gb = gaveBackDraft[p.id] ?? Math.min(bal, pu)
                 const newBal = bal + pu - gb
                 return (
@@ -419,15 +455,14 @@ export default function PartyTest() {
     )
   }
 
-  // ── CONFIRMED ───────────────────────────────────────────────────────────────
+  // ── CONFIRMED (overzicht + betaling) ────────────────────────────────────────
   if (view === "confirmed") {
-    const totalInUse = people.reduce((s, p) => s + Math.max(0, cups[p.id] ?? 0), 0)
+    const totalInUse = people.reduce((s, p) => s + Math.max(0, cupsBal(p.id)), 0)
     const last = rounds[rounds.length - 1]
     const items = last ? drinks.reduce((s, d) => s + drinkTotalRound(last, d.id), 0) : 0
     const amtNum = parseFloat(amountDraft.replace(",", ".")) || 0
     const potOver = payerDraft === "pot" && amtNum > potRemaining + 0.001
-    const canProceed = !!payerDraft && amtNum > 0 && !potOver
-    const proceed = (fn: () => void) => { setRounds((rs) => rs.map((r, i) => (i === rs.length - 1 ? { ...r, payer: payerDraft, amount: amtNum } : r))); fn() }
+    const canPay = !!payerDraft && amtNum > 0 && !potOver
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header />
@@ -445,13 +480,9 @@ export default function PartyTest() {
             const n = drinkTotalRound(last, d.id)
             const who = people.filter((p) => (last.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = last.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
             const un = last.anon[d.id] ?? 0
-            return (
-              <div key={d.id} style={{ fontSize: 14, marginBottom: 5 }}>
-                <b>{d.emoji} {n}× {d.name}</b> <span style={{ color: "#8a7d55" }}>→ {who.join(", ")}{un > 0 ? `${who.length ? ", " : ""}${un}× onbekend` : ""}</span>
-              </div>
-            )
+            return <div key={d.id} style={{ fontSize: 14, marginBottom: 5 }}><b>{d.emoji} {n}× {d.name}</b> <span style={{ color: "#8a7d55" }}>→ {who.join(", ")}{un > 0 ? `${who.length ? ", " : ""}${un}× onbekend` : ""}</span></div>
           })}
-          <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", marginTop: 8, paddingTop: 8, fontSize: 14, fontWeight: 800, color: "#4a3f1e", textAlign: "right" }}>Totaal: {items} drankje{items === 1 ? "" : "s"}</div>
+          <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", marginTop: 8, paddingTop: 8, fontSize: 14, fontWeight: 800, textAlign: "right" }}>Totaal: {items} drankje{items === 1 ? "" : "s"}</div>
         </div>
 
         <div style={S.card}>
@@ -465,15 +496,96 @@ export default function PartyTest() {
           </div>
           <div style={{ ...S.row, gap: 8 }}>
             <span style={{ fontSize: 20, fontWeight: 800 }}>€</span>
-            <input style={{ ...S.input, width: 120, fontSize: 18, borderColor: potOver ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="number" step="0.01" placeholder="0,00" value={amountDraft} onChange={(e) => setAmountDraft(e.target.value)} />
-            {payerDraft === "pot" && <span style={{ fontSize: 12, color: potOver ? "#c0554a" : "#8a7d55", fontWeight: 700 }}>pot: {euro(potRemaining)}</span>}
+            <input style={{ ...S.input, width: 110, fontSize: 18, borderColor: potOver ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="number" step="0.01" placeholder="0,00" value={amountDraft} onChange={(e) => setAmountDraft(e.target.value)} />
+            <button style={{ ...S.btnP, width: "auto", padding: "10px 16px", fontSize: 14, opacity: canPay ? 1 : 0.5 }} onClick={() => canPay && confirmPayment()}>✓ bevestig</button>
           </div>
-          {potOver && <div style={{ fontSize: 12, color: "#c0554a", fontWeight: 700, marginTop: 8 }}>De pot heeft maar {euro(potRemaining)} — leg bij (tik pot) of kies een andere betaler.</div>}
+          {payerDraft === "pot" && <div style={{ fontSize: 12, color: potOver ? "#c0554a" : "#8a7d55", fontWeight: 700, marginTop: 8 }}>pot: {euro(potRemaining)}{potOver ? " — te weinig, leg bij of kies andere betaler" : ""}</div>}
         </div>
 
+        <button style={{ ...S.btnP, opacity: canPay ? 1 : 0.5 }} onClick={() => canPay && confirmPayment()}>✓ Bevestig betaling → naar overzicht</button>
+      </div></div>
+    )
+  }
+
+  // ── HUB (rondjes-overzicht, bewerkbaar) ─────────────────────────────────────
+  if (view === "hub") {
+    return (
+      <div style={S.page}><div style={S.wrap}>
+        <Header />
+        {showPot && renderPotModal()}
+        <h3 style={{ ...S.h3, marginBottom: 6 }}>📋 Rondes-overzicht</h3>
+        <p style={{ ...S.sub }}>Tik een ronde open om drankjes/namen of bekers nog aan te passen — de app herberekent automatisch.</p>
+
+        {rounds.map((r, idx) => {
+          const items = drinks.reduce((s, d) => s + drinkTotalRound(r, d.id), 0)
+          const payerLabel = r.payer === "pot" ? "de pot" : (people.find((p) => p.id === r.payer)?.name ?? "?")
+          const open = openRound === idx
+          const roundDrinks = drinks.filter((d) => drinkTotalRound(r, d.id) > 0)
+          return (
+            <div key={idx} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+              <div style={{ ...S.row, justifyContent: "space-between", cursor: "pointer", padding: 14 }} onClick={() => { setOpenRound(open ? null : idx); setEditAssign(false); setEditCups(false) }}>
+                <span style={{ fontSize: 15, fontWeight: 800 }}>Ronde {idx + 1} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>· {items} drankjes · {euro(r.amount)} · 💶 {payerLabel}</span></span>
+                <span style={{ fontSize: 14, color: "#8a7d55" }}>{open ? "▴" : "▾"}</span>
+              </div>
+              {open && (
+                <div style={{ padding: "0 14px 14px" }}>
+                  {roundDrinks.map((d) => {
+                    const who = people.filter((p) => (r.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = r.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
+                    const un = r.anon[d.id] ?? 0
+                    return <div key={d.id} style={{ fontSize: 13.5, marginBottom: 3 }}><b>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}</b> <span style={{ color: un > 0 ? "#c0554a" : "#8a7d55" }}>→ {who.join(", ")}{un > 0 ? `${who.length ? ", " : ""}${un}× onbekend` : ""}</span></div>
+                  })}
+
+                  <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                    <button style={{ ...S.btn, flex: 1, fontSize: 12.5, padding: "8px 0" }} onClick={() => { setEditAssign((v) => !v); setEditCups(false) }}>{editAssign ? "▴ toewijzen" : "✏️ toewijzen"}</button>
+                    {depositOn && <button style={{ ...S.btn, flex: 1, fontSize: 12.5, padding: "8px 0" }} onClick={() => { setEditCups((v) => !v); setEditAssign(false) }}>{editCups ? "▴ bekers" : "🫙 bekers"}</button>}
+                  </div>
+
+                  {editAssign && (
+                    <div style={{ marginTop: 10, background: "#faf4e4", borderRadius: 12, padding: 10 }}>
+                      {roundDrinks.map((d) => {
+                        const un = r.anon[d.id] ?? 0
+                        return (
+                          <div key={d.id} style={{ marginBottom: 10 }}>
+                            <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 5 }}>{d.emoji} {d.name}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 700 }}> · {un} nog toe te wijzen</span>}</div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                              {people.map((p) => { const n = r.orders[d.id]?.[p.id] ?? 0; return (
+                                <span key={p.id} style={{ ...S.chip(n), padding: "6px 11px", fontSize: 13 }} onClick={() => rAssignTap(idx, d.id, p.id)}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); rBump(idx, d.id, p.id, -1) }} style={{ marginLeft: 4, opacity: 0.85 }}>✕</span>}</span>
+                              )})}
+                            </div>
+                          </div>
+                        )
+                      })}
+                      <div style={{ fontSize: 11, color: "#8a7d55" }}>Tip: staat er "nog toe te wijzen", dan wijst een naam-tik die toe.</div>
+                    </div>
+                  )}
+
+                  {editCups && depositOn && (
+                    <div style={{ marginTop: 10, background: "#faf4e4", borderRadius: 12, padding: 10 }}>
+                      {people.map((p) => {
+                        const nam = roundPicked(r, p.id), gb = r.gaveBack[p.id] || 0
+                        return (
+                          <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0" }}>
+                            <span style={{ fontSize: 13.5, fontWeight: 700 }}>{p.name} <span style={{ fontSize: 11, color: "#8a7d55" }}>· nam {nam}</span></span>
+                            <div style={{ ...S.row, gap: 6 }}>
+                              <span style={{ fontSize: 11, color: "#8a7d55" }}>gaf terug</span>
+                              <button style={{ ...S.step, width: 26, height: 26, fontSize: 16, opacity: gb === 0 ? 0.4 : 1 }} onClick={() => rSetGaveBack(idx, p.id, gb - 1)}>−</button>
+                              <span style={{ minWidth: 14, textAlign: "center", fontSize: 14, fontWeight: 800 }}>{gb}</span>
+                              <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => rSetGaveBack(idx, p.id, gb + 1)}>+</button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+
         <div style={{ display: "flex", gap: 10 }}>
-          <button style={{ ...S.btn, flex: 1, opacity: canProceed ? 1 : 0.5 }} onClick={() => canProceed && proceed(goFinal)}>🧾 Eindbalans</button>
-          <button style={{ ...S.btnP, flex: 2, opacity: canProceed ? 1 : 0.5 }} onClick={() => canProceed && proceed(nextRound)}>➕ Nieuwe ronde</button>
+          <button style={{ ...S.btn, flex: 1 }} onClick={() => setView("final")}>🧾 Afrekenen</button>
+          <button style={{ ...S.btnP, flex: 2 }} onClick={nextRound}>➕ Nieuw rondje</button>
         </div>
       </div></div>
     )
@@ -483,7 +595,7 @@ export default function PartyTest() {
   return (
     <div style={S.page}><div style={S.wrap}>
       <Header />
-        {showPot && renderPotModal()}
+      {showPot && renderPotModal()}
       <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
         <h3 style={{ ...S.h3, margin: 0 }}>🧾 Eindbalans</h3>
         {pay === "coin" && (
@@ -529,10 +641,10 @@ export default function PartyTest() {
                 <span style={{ width: 74, textAlign: "right", color: "#8a7d55" }}>{show(equalShare)}</span>
               </div>
             )})}
-            <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>Fair Split = wat je écht dronk. Gelijk = totaal ÷ {people.length}. Zo zie je dat gelijk delen minder eerlijk is.</div>
+            <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>Fair Split = wat je écht dronk. Gelijk = totaal ÷ {people.length}.</div>
           </div>
         )}
-        {depositOn && <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>Bedragen incl. voorgeschoten waarborg; die krijg je terug bij het inleveren van je beker (zie onder).</div>}
+        {depositOn && <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>Incl. voorgeschoten waarborg; die krijg je terug bij het inleveren van je beker (zie onder).</div>}
         <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 12.5, padding: "8px 0" }} onClick={() => setShowCompare((v) => !v)}>{showCompare ? "▴ verberg vergelijking" : "⇄ vergelijk met iedereen evenveel"}</button>
       </div>
 
@@ -546,49 +658,16 @@ export default function PartyTest() {
         ))}
       </div>
 
-      <div style={S.card}>
-        <h3 style={{ ...S.h3, marginBottom: 8 }}>📋 Rondes ({rounds.length})</h3>
-        {rounds.map((r, idx) => {
-          const items = drinks.reduce((s, d) => s + Object.values(r.orders[d.id] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[d.id] ?? 0), 0)
-          const payerLabel = r.payer === "pot" ? "de pot" : (people.find((p) => p.id === r.payer)?.name ?? "?")
-          const open = openRound === idx
-          return (
-            <div key={idx} style={{ borderBottom: "1px solid rgba(120,95,20,0.08)", padding: "8px 0" }}>
-              <div style={{ ...S.row, justifyContent: "space-between", cursor: "pointer" }} onClick={() => setOpenRound(open ? null : idx)}>
-                <span style={{ fontSize: 14, fontWeight: 800 }}>Ronde {idx + 1} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>· {items} drankjes · {euro(r.amount)} · 💶 {payerLabel}</span></span>
-                <span style={{ fontSize: 13, color: "#8a7d55" }}>{open ? "▴" : "▾"}</span>
-              </div>
-              {open && (
-                <div style={{ marginTop: 8, paddingLeft: 4 }}>
-                  {drinks.filter((d) => drinkTotalRound(r, d.id) > 0).map((d) => {
-                    const who = people.filter((p) => (r.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = r.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
-                    const un = r.anon[d.id] ?? 0
-                    return <div key={d.id} style={{ fontSize: 13, marginBottom: 3 }}><span style={{ color: "#8a7d55" }}>{d.emoji} {d.name}</span> → {who.join(", ")}{un > 0 ? `${who.length ? ", " : ""}${un}× onbekend` : ""}</div>
-                  })}
-                  {depositOn && people.some((p) => (r.pickedUp[p.id] || 0) > 0 || (r.gaveBack[p.id] || 0) > 0) && (
-                    <div style={{ marginTop: 6, fontSize: 12, color: "#8a5e0f", background: "rgba(240,165,0,0.08)", borderRadius: 10, padding: "6px 9px" }}>
-                      🫙 {people.map((p) => { const pu = r.pickedUp[p.id] || 0, gb = r.gaveBack[p.id] || 0; if (!pu && !gb) return null; const parts = []; if (pu) parts.push(`nam ${pu}`); if (gb) parts.push(`gaf ${gb} terug`); return `${p.name}: ${parts.join(", ")}` }).filter(Boolean).join(" · ")}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
       {depositOn && (
         <div style={S.card}>
           <h3 style={{ ...S.h3, marginBottom: 4 }}>🫙 Bekers per persoon</h3>
-          <p style={{ ...S.sub, marginBottom: 10 }}>De waarborg zit al in de verrekening hierboven (via wie elk rondje betaalde). Dit toont enkel wie nog een beker vasthoudt om aan de bar in te leveren.</p>
+          <p style={{ ...S.sub, marginBottom: 10 }}>De waarborg zit al in de verrekening (via wie elk rondje betaalde). Dit toont wie nog een beker vasthoudt om aan de bar in te leveren.</p>
           {people.map((p) => {
-            const b = cups[p.id] ?? 0
+            const b = cupsBal(p.id)
             return (
               <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
                 <span style={{ fontSize: 14.5, fontWeight: 700 }}>{p.name} <span style={{ fontSize: 12.5, fontWeight: 800, color: b > 0 ? "#c98a00" : b < 0 ? "#1f8a4c" : "#b3a988" }}>· saldo {b}</span></span>
-                <span style={{ fontSize: 12.5, color: b > 0 ? "#8a7d55" : b < 0 ? "#1f8a4c" : "#b3a988", fontWeight: b === 0 ? 400 : 700 }}>
-                  {b > 0 ? `lever ${b} beker${b === 1 ? "" : "s"} in → ${show(b * depositPerCupEur)}` : b < 0 ? `bracht ${-b} binnen → krijgt ${show(-b * depositPerCupEur)}` : "in orde ✓"}
-                </span>
+                <span style={{ fontSize: 12.5, color: b > 0 ? "#8a7d55" : b < 0 ? "#1f8a4c" : "#b3a988", fontWeight: b === 0 ? 400 : 700 }}>{b > 0 ? `lever ${b} in → ${show(b * depositPerCupEur)}` : b < 0 ? `bracht ${-b} binnen → krijgt ${show(-b * depositPerCupEur)}` : "in orde ✓"}</span>
               </div>
             )
           })}
@@ -596,11 +675,9 @@ export default function PartyTest() {
       )}
 
       <div style={{ display: "flex", gap: 10 }}>
-        <button style={{ ...S.btn, flex: 1 }} onClick={() => setView("order")}>← terug</button>
-        <button style={{ ...S.btn, flex: 1 }} onClick={resetAll}>↺ opnieuw</button>
+        <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>← overzicht</button>
+        <button style={{ ...S.btn, flex: 1 }} onClick={goHome}>🏠 home</button>
       </div>
     </div></div>
   )
-
-  function drinkTotalRound(r: Round, did: string) { return Object.values(r.orders[did] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[did] ?? 0) }
 }
