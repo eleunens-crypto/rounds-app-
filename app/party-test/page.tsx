@@ -12,7 +12,7 @@ import { useMemo, useState } from "react"
 
 type Person = { id: string; name: string }
 type Cat = "Bier" | "BierAV" | "Frisdrank" | "Wijn" | "Cocktail" | "Mocktail" | "Longdrink" | "Shot" | "Warm"
-type Drink = { id: string; name: string; emoji: string; cat: Cat; price: number; cup: boolean; fav: boolean }
+type Drink = { id: string; name: string; emoji: string; cat: Cat; price: number; cup: boolean; fav: boolean; coins: number }
 
 const CATS: Cat[] = ["Bier", "BierAV", "Frisdrank", "Wijn", "Cocktail", "Mocktail", "Longdrink", "Shot", "Warm"]
 const CAT_LABEL: Record<Cat, string> = { Bier: "🍺 Bier", BierAV: "🌿 AV-bier", Frisdrank: "🥤 Fris", Wijn: "🍷 Wijn", Cocktail: "🍸 Cocktail", Mocktail: "🍹 Mocktail", Longdrink: "🥃 Longdrink", Shot: "🔥 Shot", Warm: "☕ Warm" }
@@ -31,7 +31,26 @@ const DATA: [Cat, string, number][] = [
   ["Warm", "Koffie", 3.2], ["Warm", "Espresso", 3], ["Warm", "Cappuccino", 3.8], ["Warm", "Latte Macchiato", 4.5], ["Warm", "Flat White", 4.5], ["Warm", "Koffie verkeerd", 4], ["Warm", "Decafé koffie", 3.2], ["Warm", "Thee", 3.2], ["Warm", "Chai Latte", 4.8], ["Warm", "Warme chocolademelk", 4.5], ["Warm", "Irish Coffee", 9.5], ["Warm", "Hasseltse koffie", 9.5],
 ]
 const FAVS = new Set(["Pils", "Duvel", "Cola", "Water plat", "Cava", "Huiswijn rood", "Gin Tonic", "Aperol Spritz", "Koffie", "Jupiler 0.0"])
-const DEMO_DRINKS: Drink[] = DATA.map(([cat, name, price], i) => ({ id: "d" + i, name, emoji: CAT_EMOJI[cat], cat, price, cup: CUPCAT[cat], fav: FAVS.has(name) }))
+// Vaste festival-coinprijzen (standaard) — bijstelbaar per 0,1 in de app.
+const PILS = new Set(["Pils", "Jupiler 0.0", "Stella Artois 0.0", "Carlsberg 0.0", "Corona Cero", "Hoegaarden 0.0", "Leffe 0.0 Blond", "Sportzot", "Vedett Extra Blond 0.0"])
+const COIN3 = new Set(["Champagne", "Irish Coffee", "Hasseltse koffie"])
+const coinDefault = (cat: Cat, name: string): number => {
+  if (name === "Red Bull") return 1.5
+  if (COIN3.has(name)) return 3
+  switch (cat) {
+    case "Bier": return PILS.has(name) ? 1 : 2
+    case "BierAV": return PILS.has(name) ? 1 : 2
+    case "Frisdrank": return 1
+    case "Wijn": return 2
+    case "Cocktail": return 3
+    case "Longdrink": return 3
+    case "Mocktail": return 2
+    case "Shot": return 1
+    case "Warm": return 1
+    default: return 1
+  }
+}
+const DEMO_DRINKS: Drink[] = DATA.map(([cat, name, price], i) => ({ id: "d" + i, name, emoji: CAT_EMOJI[cat], cat, price, cup: CUPCAT[cat], fav: FAVS.has(name), coins: coinDefault(cat, name) }))
 const DEMO_PEOPLE: Person[] = ["Jan", "Sarah", "Tom", "Lisa", "Ben"].map((n, i) => ({ id: "p" + (i + 1), name: n }))
 
 type Assign = Record<string, Record<string, number>>
@@ -57,6 +76,8 @@ export default function PartyTest() {
 
   const [roundNr, setRoundNr] = useState(1)
   const [activeCat, setActiveCat] = useState<Cat>("Bier")
+  const [coinCat, setCoinCat] = useState<Cat>("Bier")
+  const [coinFull, setCoinFull] = useState(false)
   const [fullList, setFullList] = useState(false)
   const [cart, setCart] = useState<Assign>({})
   const [cartAnon, setCartAnon] = useState<Anon>({})
@@ -84,7 +105,7 @@ export default function PartyTest() {
   const [editCups, setEditCups] = useState(false)
   const [editPay, setEditPay] = useState(false)
 
-  const priceOf = (d: Drink) => d.price
+  const priceOf = (d: Drink) => (pay === "coin" ? d.coins : d.price)
   const effDepositUnit: "eur" | "coin" = pay === "eur" ? "eur" : depositUnit
   const depositPerCupEur = effDepositUnit === "eur" ? depositValue : depositValue * coinValue
   const show = (eur: number) => (pay === "coin" && displayUnit === "coin" ? (eur / coinValue).toFixed(2).replace(".", ",") + " coins" : euro(eur))
@@ -186,7 +207,7 @@ export default function PartyTest() {
     const tx: { from: string; to: string; amount: number }[] = []; let i = 0, j = 0
     while (i < debtors.length && j < creditors.length) { const amt = Math.min(debtors[i].net, creditors[j].net); tx.push({ from: debtors[i].label, to: creditors[j].label, amount: amt }); debtors[i].net -= amt; creditors[j].net -= amt; if (debtors[i].net < 0.005) i++; if (creditors[j].net < 0.005) j++ }
     return { tx }
-  }, [rounds, people, potRounds, potContribTotal, potSpent, depositOn, depositValue, depositUnit, coinValue, drinks]) // eslint-disable-line
+  }, [rounds, people, potRounds, potContribTotal, potSpent, depositOn, depositValue, depositUnit, coinValue, drinks, pay]) // eslint-disable-line
   const anyUnassignedRounds = rounds.some((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0))
   const drinkTotalRound = (r: Round, did: string) => Object.values(r.orders[did] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[did] ?? 0)
   const paidLabel = (r: Round) => {
@@ -307,24 +328,34 @@ export default function PartyTest() {
                 <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={S.input} type="text" inputMode="decimal" value={coinValue} onChange={(e) => setCoinValue(parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
               </div>
               <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 12.5 }} onClick={() => setShowCoins((v) => !v)}>{showCoins ? "▴ verberg coin-prijzen" : "🎟️ coin-prijzen per drankje"}</button>
-              {showCoins && (
-                <div style={{ marginTop: 10, maxHeight: 260, overflowY: "auto" }}>
-                  <p style={{ ...S.sub, marginBottom: 8 }}>Pas aan naar de coin-prijs op de festival-prijslijst (bv. Aperol 2,4). Verborgen tijdens bestellen.</p>
-                  {drinks.map((d) => {
-                    const c = coinValue > 0 ? d.price / coinValue : 0
-                    return (
+              {showCoins && (() => {
+                const cd = drinks.filter((d) => d.cat === coinCat)
+                const vis = cd.filter((d) => coinFull || d.fav)
+                return (
+                  <div style={{ marginTop: 10 }}>
+                    <p style={{ ...S.sub, marginBottom: 8 }}>Standaard festival-coins per drankje. Pas aan met − / + (stapjes van 0,1, bv. 1,4). Verborgen tijdens bestellen.</p>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                      {catsPresent.map((cc) => <span key={cc} style={{ ...S.tab(coinCat === cc), padding: "6px 10px", fontSize: 12 }} onClick={() => setCoinCat(cc)}>{CAT_LABEL[cc]}</span>)}
+                    </div>
+                    <div style={{ ...S.row, gap: 8, marginBottom: 8 }}>
+                      <div style={{ ...S.seg(!coinFull), padding: "7px 6px", fontSize: 12.5 }} onClick={() => setCoinFull(false)}>⚡ Korte lijst</div>
+                      <div style={{ ...S.seg(coinFull), padding: "7px 6px", fontSize: 12.5 }} onClick={() => setCoinFull(true)}>📖 Volledige lijst</div>
+                    </div>
+                    {vis.length === 0 ? (
+                      <div style={{ fontSize: 12.5, color: "#8a7d55", textAlign: "center", padding: "10px 0" }}>Geen favorieten hier. <span style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }} onClick={() => setCoinFull(true)}>📖 toon alles</span></div>
+                    ) : vis.map((d) => (
                       <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid rgba(120,95,20,0.06)" }}>
                         <span style={{ fontSize: 13 }}>{d.emoji} {d.name}</span>
                         <div style={{ ...S.row, gap: 5 }}>
-                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => setDrinks((ds) => ds.map((x) => x.id === d.id ? { ...x, price: Math.max(0, +((c - 0.1) * coinValue).toFixed(2)) } : x))}>−</button>
-                          <span style={{ minWidth: 40, textAlign: "center", fontSize: 12.5, fontWeight: 800 }}>{c.toFixed(1)} c</span>
-                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => setDrinks((ds) => ds.map((x) => x.id === d.id ? { ...x, price: +((c + 0.1) * coinValue).toFixed(2) } : x))}>+</button>
+                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => setDrinks((ds) => ds.map((x) => x.id === d.id ? { ...x, coins: Math.max(0, +(x.coins - 0.1).toFixed(1)) } : x))}>−</button>
+                          <span style={{ minWidth: 46, textAlign: "center", fontSize: 12.5, fontWeight: 800 }}>{d.coins.toFixed(1)} c</span>
+                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => setDrinks((ds) => ds.map((x) => x.id === d.id ? { ...x, coins: +(x.coins + 0.1).toFixed(1) } : x))}>+</button>
                         </div>
                       </div>
-                    )
-                  })}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )
+              })()}
             </>
           )}
           <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 10 }}>Per rondje geef je het <b>echte bedrag</b> in. De app verdeelt eerlijk (Fair Split) — zonder prijzen te tonen.</div>
