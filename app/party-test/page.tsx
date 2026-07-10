@@ -173,7 +173,7 @@ export default function PartyTest() {
     const potOver = potContribToRound > potRemaining + 0.001
     const personRest = split ? total - potAmt : personOnly ? total : 0
     let valid = true, reason = ""
-    if (total <= 0) { valid = false; reason = "Vul eerst het totaalbedrag in." }
+    if (total <= 0) { valid = false; reason = "Vul eerst exact betaald bedrag in." }
     else if (!payPot && !payPerson) { valid = false; reason = "Kies wie betaalde." }
     else if (potOnly && potOver) { valid = false; reason = `De pot heeft maar ${euro(potRemaining)} — leg bij of kies een andere betaler.` }
     else if (split && !potFilled) { valid = false; reason = "Vul eerst het pot-bedrag in." }
@@ -193,6 +193,7 @@ export default function PartyTest() {
     setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setAmountDraft(""); setPayPot(false); setPayPerson(""); setPotAmtDraft(""); setPaidConfirmed(false); setView("confirmed")
   }
   const applyPayment = (payer: string, potPart: number, total: number) => setRounds((rs) => rs.map((r, i) => i === rs.length - 1 ? { ...r, payer, amount: total, potPart } : r))
+  const editOrder = () => { const last = rounds[rounds.length - 1]; if (!last) { setView("order"); return } setCart(last.orders); setCartAnon(last.anon); setGaveBackDraft(last.gaveBack); setRounds((rs) => rs.slice(0, -1)); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setPaidConfirmed(false); setActiveCat(catsPresent[0]); setView("order") }
   const confirmPayment = () => {
     const st = paymentState()
     if (!st.valid) { setNotice(st.reason); return }
@@ -592,20 +593,20 @@ export default function PartyTest() {
               ) : (
                 <p style={{ ...S.sub, marginBottom: 12 }}>Tik wie dit had (nog eens tikken = meer). Of voeg toe zonder naam om later toe te wijzen.</p>
               )}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
                 {people.map((p) => {
                   const n = aQty(ad.id, p.id)
                   return <span key={p.id} style={S.chip(n)} onClick={() => assignTap(ad.id, p.id)} onContextMenu={(e) => { e.preventDefault(); bump(ad.id, p.id, -1) }}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); bump(ad.id, p.id, -1) }} style={{ marginLeft: 7, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 16, fontWeight: 800, lineHeight: 1 }}>−</span>}</span>
                 })}
+                <span onClick={() => eachOne(ad.id)} style={{ ...S.chip(0), border: "1.5px dashed #c98a00", background: "rgba(240,165,0,0.1)", color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>👥 elk 1</span>
               </div>
-              <button style={{ ...S.btn, width: "100%", marginBottom: 14, fontSize: 13, fontWeight: 800, color: "#8a5e0f" }} onClick={() => eachOne(ad.id)}>👥 elk 1 <span style={{ fontWeight: 400, color: "#8a7d55" }}>— iedereen precies één</span></button>
               {adAnon > 0 ? (
                 <div style={{ ...S.row, justifyContent: "space-between", background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.3)", borderRadius: 12, padding: "8px 12px", marginBottom: 14 }}>
                   <span style={{ fontSize: 13, color: "#b0402f", fontWeight: 700 }}>🔴 {adAnon} zonder naam <span style={{ fontWeight: 400, color: "#8a7d55" }}>(tik een naam om toe te wijzen)</span></span>
                   <div style={{ ...S.row, gap: 8 }}><button style={S.step} onClick={() => bumpAnon(ad.id, -1)}>−</button><button style={S.step} onClick={() => bumpAnon(ad.id, 1)}>+</button></div>
                 </div>
               ) : (
-                <button style={{ ...S.btn, width: "100%", marginBottom: 14, fontSize: 13, color: "#8a5e0f" }} onClick={() => bumpAnon(ad.id, 1)}>+ zonder naam toevoegen <span style={{ color: "#8a7d55", fontWeight: 400 }}>(later toewijzen)</span></button>
+                <button style={{ background: "none", border: "none", width: "100%", marginBottom: 14, fontSize: 12, color: "#8a7d55", cursor: "pointer", textDecoration: "underline" }} onClick={() => bumpAnon(ad.id, 1)}>zonder naam toevoegen</button>
               )}
               <button style={S.btnP} onClick={() => setAssignDrink(null)}>Klaar</button>
             </div>
@@ -746,7 +747,10 @@ export default function PartyTest() {
         </div>
 
         <button style={{ ...S.btnP, opacity: (paidConfirmed && st.valid) ? 1 : 0.5 }} onClick={closeRound}>✓ Rondje afsluiten</button>
-        <button style={{ ...S.btn, width: "100%", marginTop: 8, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelRound}>✕ Rondje annuleren</button>
+        <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+          <button style={{ ...S.btn, flex: 1, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelRound}>✕ Rondje annuleren</button>
+          <button style={{ ...S.btn, flex: 1 }} onClick={editOrder}>✏️ Bestelling wijzigen</button>
+        </div>
       </div></div>
     )
   }
