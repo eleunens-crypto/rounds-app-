@@ -102,7 +102,7 @@ export default function PartyTest() {
   const [payPerson, setPayPerson] = useState<string>("")
   const [potAmtDraft, setPotAmtDraft] = useState<string>("")
   const [paidConfirmed, setPaidConfirmed] = useState(false)
-  const [confirmDlg, setConfirmDlg] = useState<{ msg: string; yes: string; onYes: () => void } | null>(null)
+  const [confirmDlg, setConfirmDlg] = useState<{ msg: string; yes: string; onYes: () => void; variant?: "danger" } | null>(null)
   const [notice, setNotice] = useState<string>("")
 
   // edit-in-hub
@@ -157,7 +157,7 @@ export default function PartyTest() {
   const catsPresent = CATS.filter((c) => drinks.some((d) => d.cat === c))
   const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
 
-  const goHome = () => { if (view === "confirmed") setConfirmDlg({ msg: "Dit rondje is nog niet afgesloten. Toch verlaten? Je betaling gaat verloren.", yes: "Toch verlaten", onYes: () => { setConfirmDlg(null); setView("setup") } }); else setView("setup") }
+  const goHome = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); setView("setup") } }); else setView("setup") }
   const paymentState = () => {
     const total = parseFloat(amountDraft.replace(",", ".")) || 0
     const potFilled = potAmtDraft.trim() !== ""
@@ -179,7 +179,7 @@ export default function PartyTest() {
     const zeroPerson = valid && split && Math.abs(personRest) <= 0.0001
     return { total, potFilled, potAmt, split, potOnly, personOnly, potContribToRound, potOver, personRest, valid, reason, zeroPot, zeroPerson }
   }
-  const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ msg: "Dit rondje is nog niet afgesloten. Toch naar het overzicht? Je betaling gaat verloren.", yes: "Toch verlaten", onYes: () => { setConfirmDlg(null); to() } }); else to() }
+  const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); to() } }); else to() }
   const openClose = () => { setAmountDraft(""); setShowClose(true) }
   const goAssignFromWarning = () => { const d = firstUnassigned(); setShowClose(false); if (d) { setActiveCat(d.cat); setAssignDrink(d.id) } }
   const commitRound = () => {
@@ -356,8 +356,17 @@ export default function PartyTest() {
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ ...S.h3, fontSize: 17 }}>Even bevestigen</h3>
             <p style={{ fontSize: 13.5, color: "#4a3f1e", lineHeight: 1.5, marginBottom: 16 }}>{confirmDlg.msg}</p>
-            <button style={{ ...S.btnP, background: "linear-gradient(135deg,#e0685c,#c0554a)", boxShadow: "none" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
-            <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={() => setConfirmDlg(null)}>← terug</button>
+            {confirmDlg.variant === "danger" ? (
+              <>
+                <button style={{ ...S.btnP, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", boxShadow: "none" }} onClick={() => setConfirmDlg(null)}>← Terug, rondje afmaken</button>
+                <button style={{ background: "none", border: "none", width: "100%", marginTop: 10, fontSize: 12.5, color: "#c0554a", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
+              </>
+            ) : (
+              <>
+                <button style={{ ...S.btnP, background: "linear-gradient(135deg,#e0685c,#c0554a)", boxShadow: "none" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
+                <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={() => setConfirmDlg(null)}>← terug</button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -395,13 +404,20 @@ export default function PartyTest() {
         {showPot && renderPotModal()}
         {renderDialogs()}
         <div style={S.card}>
-          <h3 style={S.h3}>Hoe reken je af?</h3>
-          <div style={{ ...S.row, gap: 8, marginBottom: pay === "coin" ? 12 : 0 }}>
-            <div style={S.seg(pay === "eur")} onClick={() => { setPay("eur"); setDepositUnit("eur") }}>💶 Euro</div>
-            <div style={S.seg(pay === "coin")} onClick={() => { setPay("coin"); setDepositUnit("coin") }}>🎟️ Coins</div>
+          <div style={{ ...S.row, justifyContent: "space-between" }}>
+            <div>
+              <h3 style={{ ...S.h3, margin: 0 }}>{pay === "coin" ? "🎟️ Afrekenen met coins" : "💶 Afrekenen in euro"}</h3>
+              <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 3 }}>{pay === "coin" ? "Festival-tokens. Zet uit voor gewone euro's." : "Werk je op een festival met tokens?"}</div>
+            </div>
+            <div style={{ ...S.row, gap: 6 }}>
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: pay === "coin" ? "#c98a00" : "#8a7d55" }}>🎟️ coins</span>
+              <div onClick={() => { const on = pay !== "coin"; setPay(on ? "coin" : "eur"); setDepositUnit(on ? "coin" : "eur") }} style={{ width: 44, height: 26, borderRadius: 20, background: pay === "coin" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#d9cdb0", position: "relative", cursor: "pointer", transition: "background .15s" }}>
+                <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: pay === "coin" ? 21 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+              </div>
+            </div>
           </div>
           {pay === "coin" && (
-            <>
+            <div style={{ marginTop: 12 }}>
               <div style={{ ...S.row, justifyContent: "space-between" }}>
                 <span style={{ fontSize: 14, fontWeight: 700 }}>1 coin =</span>
                 <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={S.input} type="text" inputMode="decimal" value={coinValue} onChange={(e) => setCoinValue(parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
@@ -435,7 +451,7 @@ export default function PartyTest() {
                   </div>
                 )
               })()}
-            </>
+            </div>
           )}
           <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 10 }}>Per rondje geef je het <b>echte bedrag</b> in. De app verdeelt eerlijk (Fair Split) — zonder prijzen te tonen.</div>
         </div>
