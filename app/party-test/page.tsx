@@ -221,11 +221,13 @@ export default function PartyTest() {
   const renderPotModal = () => (
     <div style={{ ...S.overlay, zIndex: 60 }} onClick={() => setShowPot(false)}>
       <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
-          <h3 style={{ ...S.h3, fontSize: 18, margin: 0 }}>🫙 Pot</h3>
-          <span style={{ fontSize: 13, color: "#8a7d55" }}>in pot {euro(potContribTotal)} · nog {euro(potRemaining)}</span>
+        <h3 style={{ ...S.h3, fontSize: 18, margin: "0 0 8px" }}>🫙 Pot</h3>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+          <span style={{ ...S.pill, background: "rgba(120,95,20,0.08)", color: "#8a5e0f", fontSize: 12, padding: "4px 10px" }}>ingelegd {euro(potContribTotal)}</span>
+          {potSpent > 0 && <span style={{ ...S.pill, background: "rgba(224,138,0,0.12)", color: "#c98a00", fontSize: 12, padding: "4px 10px" }}>besteed {euro(potSpent)}</span>}
+          <span style={{ ...S.pill, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(224,104,92,0.14)", color: potRemaining > 0 ? "#1f8a4c" : "#c0554a", fontSize: 12, padding: "4px 10px", fontWeight: 800 }}>nog {euro(potRemaining)}</span>
         </div>
-        <p style={{ ...S.sub }}>Leg in of voeg toe — ook later. Snelbedragen tellen op.</p>
+        <p style={{ ...S.sub }}>Leg in of voeg toe — ook later. Snelbedragen tellen op; het overzicht hierboven past mee aan.</p>
         <div style={{ ...S.row, gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
           <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>iedereen +</span>
           {[10, 15, 20].map((v) => <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 13 }} onClick={() => addEveryone(v)}>€{v}</button>)}
@@ -238,7 +240,7 @@ export default function PartyTest() {
             </div>
             <div style={{ ...S.row, gap: 6, flexWrap: "wrap" }}>
               {[10, 15, 20].map((v) => <button key={v} style={{ ...S.btn, padding: "4px 11px", fontSize: 12 }} onClick={() => addContrib(p.id, v)}>+{v}</button>)}
-              <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 12 }} type="number" placeholder="exact" value={contrib[p.id] ?? ""} onChange={(e) => setContrib((c) => ({ ...c, [p.id]: parseFloat(e.target.value) || 0 }))} />
+              <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 12 }} type="text" inputMode="decimal" placeholder="exact" value={contrib[p.id] ?? ""} onChange={(e) => setContrib((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 }))} />
               <button style={{ ...S.btn, padding: "4px 10px", fontSize: 12, color: "#c0554a" }} onClick={() => setContrib((c) => ({ ...c, [p.id]: 0 }))}>↺</button>
             </div>
           </div>
@@ -276,7 +278,7 @@ export default function PartyTest() {
             <>
               <div style={{ ...S.row, justifyContent: "space-between" }}>
                 <span style={{ fontSize: 14, fontWeight: 700 }}>1 coin =</span>
-                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={S.input} type="number" step="0.01" value={coinValue} onChange={(e) => setCoinValue(parseFloat(e.target.value) || 0)} /></div>
+                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={S.input} type="text" inputMode="decimal" value={coinValue} onChange={(e) => setCoinValue(parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
               </div>
               <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 12.5 }} onClick={() => setShowCoins((v) => !v)}>{showCoins ? "▴ verberg coin-prijzen" : "🎟️ coin-prijzen per drankje"}</button>
               {showCoins && (
@@ -314,7 +316,7 @@ export default function PartyTest() {
             <>
               <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
                 <span style={{ fontSize: 14, fontWeight: 700 }}>Waarborg per beker</span>
-                <input style={{ ...S.input, width: 70 }} type="number" step="0.1" value={depositValue} onChange={(e) => setDepositValue(parseFloat(e.target.value) || 0)} />
+                <input style={{ ...S.input, width: 70 }} type="text" inputMode="decimal" value={depositValue} onChange={(e) => setDepositValue(parseFloat(e.target.value.replace(",", ".")) || 0)} />
               </div>
               <div style={{ ...S.row, gap: 8 }}>
                 <div style={S.seg(depositUnit === "eur")} onClick={() => setDepositUnit("eur")}>in €</div>
@@ -542,7 +544,7 @@ export default function PartyTest() {
           </div>
           <div style={{ ...S.row, gap: 8, justifyContent: "center", margin: "6px 0 2px" }}>
             <span style={{ fontSize: 24, fontWeight: 800 }}>€</span>
-            <input style={{ ...S.input, width: 150, fontSize: 26, textAlign: "center", fontWeight: 800 }} type="number" step="0.01" placeholder="0,00" value={amountDraft} onChange={(e) => { setAmountDraft(e.target.value); setPaidConfirmed(false) }} />
+            <input style={{ ...S.input, width: 150, fontSize: 26, textAlign: "center", fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00" value={amountDraft} onChange={(e) => { setAmountDraft(e.target.value.replace(/[^0-9.,]/g, "")); setPaidConfirmed(false) }} />
           </div>
           <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", marginBottom: 14 }}>ⓘ exact bedrag — hierop verdeelt de app eerlijk (Fair Split)</div>
 
@@ -556,7 +558,7 @@ export default function PartyTest() {
             <div style={{ background: "#faf4e4", borderRadius: 12, padding: "10px 12px", marginTop: 10 }}>
               <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: 700 }}>🫙 pot betaalt</span>
-                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 80, borderColor: st.potOver ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="number" step="0.01" placeholder="0,00" value={potAmtDraft} onChange={(e) => { setPotAmtDraft(e.target.value); setPaidConfirmed(false) }} /></div>
+                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 80, borderColor: st.potOver ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="0,00" value={potAmtDraft} onChange={(e) => { setPotAmtDraft(e.target.value.replace(/[^0-9.,]/g, "")); setPaidConfirmed(false) }} /></div>
               </div>
               <div style={{ ...S.row, justifyContent: "space-between" }}>
                 <span style={{ fontSize: 13, fontWeight: 700 }}>👤 {people.find((p) => p.id === payPerson)?.name} <span style={{ fontSize: 11, color: "#8a7d55" }}>(de rest)</span></span>
@@ -654,7 +656,7 @@ export default function PartyTest() {
                     <div style={{ marginTop: 10, background: "#faf4e4", borderRadius: 12, padding: 10 }}>
                       <div style={{ ...S.row, gap: 8, marginBottom: 8 }}>
                         <span style={{ fontSize: 18, fontWeight: 800 }}>€</span>
-                        <input style={{ ...S.input, width: 110, fontSize: 16 }} type="number" step="0.01" value={r.amount || ""} onChange={(e) => rSetAmount(idx, parseFloat(e.target.value) || 0)} />
+                        <input style={{ ...S.input, width: 110, fontSize: 16 }} type="text" inputMode="decimal" value={r.amount || ""} onChange={(e) => rSetAmount(idx, parseFloat(e.target.value.replace(",", ".")) || 0)} />
                         <span style={{ fontSize: 11, color: "#8a7d55" }}>totaal — Fair-Split basis</span>
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
