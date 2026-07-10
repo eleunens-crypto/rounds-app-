@@ -165,6 +165,7 @@ export default function PartyTest() {
   const removePotRound = (id: number, label: string) => setConfirmDlg({ msg: `De ${label} verwijderen uit de pot? Dit kan niet ongedaan gemaakt worden.`, yes: "Ja, verwijderen", onYes: () => { setPotRounds((rs) => rs.filter((r) => r.id !== id)); setConfirmDlg(null) } })
   const catsPresent = CATS.filter((c) => drinks.some((d) => d.cat === c))
   const bump1 = (did: string) => bumpAnon(did, 1)
+  const bumpDown = (did: string) => { if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); return } const entry = cart[did]; if (!entry) return; const pid = Object.keys(entry).find((k) => (entry[k] ?? 0) > 0); if (pid) bump(did, pid, -1) }
   const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
 
   const goHome = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); setView("setup") } }); else setView("setup") }
@@ -435,8 +436,8 @@ export default function PartyTest() {
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ ...S.card, marginBottom: 0 }}>
-          <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.3 }}>♻️ Herbruikbare bekers <span onClick={(e) => { e.stopPropagation(); setDepositInfo((v) => !v); setCoinInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 10.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
-          <div style={{ ...S.row, gap: 6, marginTop: 8 }}>
+          <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.3, textAlign: "center" }}>♻️ Herbruikbare bekers <span onClick={(e) => { e.stopPropagation(); setDepositInfo((v) => !v); setCoinInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 10.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
+          <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "center" }}>
             <div style={{ ...S.seg(!depositOn), padding: "6px 8px" }} onClick={() => setDepositOn(false)}>uit</div>
             <div style={{ ...S.seg(depositOn), padding: "6px 8px" }} onClick={() => setDepositOn(true)}>aan</div>
           </div>
@@ -462,9 +463,8 @@ export default function PartyTest() {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ ...S.card, marginBottom: 0 }}>
-          <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.3 }}>{pay === "coin" ? "🎟️ Coins" : "💶 Euro"} <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 10.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
-          <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "space-between" }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: pay === "coin" ? "#c98a00" : "#8a7d55" }}>🎟️ coins</span>
+          <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.3, textAlign: "center" }}>🎟️ Coins <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 10.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
+          <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "center" }}>
             <div onClick={() => { const on = pay !== "coin"; setPay(on ? "coin" : "eur"); setDepositUnit(on ? "coin" : "eur") }} style={{ width: 44, height: 26, borderRadius: 20, background: pay === "coin" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#d9cdb0", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
               <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: pay === "coin" ? 21 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
             </div>
@@ -533,20 +533,18 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, gap: 8, flexWrap: "wrap" }}>
-          <h3 style={{ ...S.h3, margin: 0 }}>Ronde {roundNr} <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}>— {roundItems} drankje{roundItems === 1 ? "" : "s"}{unassignedTotal > 0 ? ` · ${unassignedTotal} open` : ""}</span></h3>
-          <div style={{ ...S.row, gap: 7, fontSize: 12 }}>
-            <span onClick={() => setFullList(false)} style={{ cursor: "pointer", fontWeight: !fullList ? 800 : 600, color: !fullList ? "#8a5e0f" : "#a89a72" }}>favoriete drankjes</span>
-            <span style={{ color: "#d9cdb0" }}>·</span>
-            <span onClick={() => setFullList(true)} style={{ cursor: "pointer", fontWeight: fullList ? 800 : 600, color: fullList ? "#8a5e0f" : "#a89a72" }}>volledige lijst</span>
-          </div>
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
+          <h3 style={{ ...S.h3, margin: 0 }}>Ronde {roundNr} <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}>— {roundItems} drankje{roundItems === 1 ? "" : "s"}</span></h3>
         </div>
-        <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 8 }}>Tik een drankje = +1 toevoegen. Tik daarna op het aantal om <b>namen toe te wijzen</b>.</div>
         <div style={{ display: "flex", gap: 7, flexWrap: "wrap", paddingBottom: 8, marginBottom: 8 }}>
           {catsPresent.map((c) => {
             const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
             return <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: "#e0685c", fontSize: 15 }}>●</span>}</span>
           })}
+        </div>
+        <div style={{ display: "inline-flex", marginBottom: 8, border: "1px solid rgba(120,95,20,0.2)", borderRadius: 10, overflow: "hidden" }}>
+          <span onClick={() => setFullList(false)} style={{ padding: "6px 13px", fontSize: 12, fontWeight: 800, cursor: "pointer", background: !fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: !fullList ? "#fff" : "#8a7d55" }}>⭐ favorieten</span>
+          <span onClick={() => setFullList(true)} style={{ padding: "6px 13px", fontSize: 12, fontWeight: 800, cursor: "pointer", background: fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: fullList ? "#fff" : "#8a7d55" }}>📖 volledige lijst</span>
         </div>
         {catVisible.length === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "18px 12px", fontSize: 13, color: "#8a7d55" }}>
@@ -557,15 +555,13 @@ export default function PartyTest() {
             {catVisible.map((d) => {
               const tot = drinkTotal(d.id), un = cartAnon[d.id] ?? 0
               return (
-                <div key={d.id} style={{ padding: "10px 10px", borderRadius: 12, cursor: "pointer", background: un > 0 ? "rgba(224,104,92,0.12)" : tot > 0 ? "rgba(240,165,0,0.12)" : "#faf4e4", border: un > 0 ? "1.5px solid rgba(224,104,92,0.6)" : tot > 0 ? "1px solid rgba(240,165,0,0.45)" : "1px solid rgba(120,95,20,0.1)" }} onClick={() => bump1(d.id)}>
-                  <div style={{ fontSize: 13.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#4a3f1e" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
-                  {tot > 0 && (
-                    <div style={{ ...S.row, gap: 5, marginTop: 5, flexWrap: "wrap" }} onClick={(e) => { e.stopPropagation(); setAssignDrink(d.id) }}>
-                      <span style={{ ...S.pill, background: "rgba(240,165,0,0.22)", color: "#c98a00" }}>{tot}×</span>
-                      {un > 0 && <span style={{ ...S.pill, background: "rgba(224,104,92,0.15)", color: "#c0554a" }}>{un} open</span>}
-                      <span style={{ fontSize: 10.5, color: "#8a5e0f", fontWeight: 800 }}>👤 toewijzen ›</span>
-                    </div>
-                  )}
+                <div key={d.id} style={{ padding: "10px 10px", borderRadius: 12, background: tot > 0 ? "rgba(31,138,76,0.08)" : "#faf4e4", border: tot > 0 ? "1.5px solid rgba(31,138,76,0.5)" : "1px solid rgba(120,95,20,0.1)", boxShadow: tot > 0 ? "0 0 0 3px rgba(31,138,76,0.1)" : "none" }}>
+                  <div style={{ fontSize: 13.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
+                  <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
+                    <button style={{ ...S.step, opacity: tot > 0 ? 1 : 0.4 }} onClick={() => bumpDown(d.id)}>−</button>
+                    <span style={{ fontSize: 17, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}</span>
+                    <button style={S.step} onClick={() => bump1(d.id)}>+</button>
+                  </div>
                 </div>
               )
             })}
@@ -575,26 +571,25 @@ export default function PartyTest() {
           <div style={{ ...S.card, padding: "10px 12px", background: "#fffdf6" }}>
             <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
               <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>🛒 In dit rondje</span>
-              <span style={{ ...S.pill, background: "rgba(240,165,0,0.18)", color: "#c98a00" }}>{roundItems} drankje{roundItems === 1 ? "" : "s"}{unassignedTotal > 0 ? ` · ${unassignedTotal} open` : ""}</span>
+              <span style={{ ...S.pill, background: "rgba(240,165,0,0.18)", color: "#c98a00" }}>{roundItems} drankje{roundItems === 1 ? "" : "s"}</span>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => {
                 const un = cartAnon[d.id] ?? 0
                 return (
-                  <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 9px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, background: un > 0 ? "rgba(224,104,92,0.12)" : "rgba(240,165,0,0.12)", border: un > 0 ? "1px solid rgba(224,104,92,0.4)" : "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e", cursor: "pointer" }} onClick={() => setAssignDrink(d.id)}>
-                    {d.emoji} {drinkTotal(d.id)}× {d.name}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 800 }}> ·{un} open</span>}
+                  <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e", cursor: "pointer" }} onClick={() => setAssignDrink(d.id)}>
+                    {d.emoji} {drinkTotal(d.id)}× {d.name}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 800, textDecoration: "underline" }}>toewijzen</span>}
                   </span>
                 )
               })}
             </div>
           </div>
         )}
-        {unassignedTotal > 0 && <button style={{ ...S.btn, width: "100%", marginBottom: 12, background: "rgba(224,104,92,0.1)", border: "1.5px solid rgba(224,104,92,0.5)", color: "#b0402f", fontWeight: 800 }} onClick={() => { const d = firstUnassigned(); if (d) { setActiveCat(d.cat); setAssignDrink(d.id) } }}>👥 Namen toewijzen ({unassignedTotal} open)</button>}
         <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
           {depositOn && <button style={{ ...S.btn, flex: 1 }} onClick={() => setShowCups(true)}>🫙 Bekers</button>}
           {rounds.length > 0 && <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>📋 Overzicht</button>}
         </div>
-        <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => roundItems > 0 && openClose()}>✅ Rondje {roundNr} bevestigen</button>
+        <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => roundItems > 0 && openClose()}>✅ Rondje {roundNr} bevestigen{roundItems > 0 && <span style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.85 }}> — {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>}</button>
 
         {ad && (
           <div style={S.overlay} onClick={() => setAssignDrink(null)}>
