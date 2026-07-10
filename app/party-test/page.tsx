@@ -70,6 +70,7 @@ export default function PartyTest() {
   const [showCoins, setShowCoins] = useState(false)
   const [coinInfo, setCoinInfo] = useState(false)
 
+  const [groupName, setGroupName] = useState("")
   const [people, setPeople] = useState<Person[]>(DEMO_PEOPLE)
   const [drinks, setDrinks] = useState<Drink[]>(DEMO_DRINKS)
   const [potRounds, setPotRounds] = useState<{ id: number; amounts: Record<string, number> }[]>([])
@@ -128,7 +129,7 @@ export default function PartyTest() {
   const bumpAnon = (did: string, delta: number) => setCartAnon((a) => ({ ...a, [did]: Math.max(0, (a[did] ?? 0) + delta) }))
   const assignTap = (did: string, pid: string) => { if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); bump(did, pid, 1) } else bump(did, pid, 1) }
   const setEachOne = (did: string) => setCart((c) => ({ ...c, [did]: Object.fromEntries(people.map((p) => [p.id, 1])) }))
-  const eachOne = (did: string) => { const hi = people.filter((p) => (cart[did]?.[p.id] ?? 0) >= 2).map((p) => p.name); if (hi.length > 0) { setConfirmDlg({ msg: `${hi.join(" en ")} ${hi.length === 1 ? "heeft" : "hebben"} er al 2 of meer. "Elk 1" zet iedereen op precies 1 — ${hi.length === 1 ? "die wordt" : "die worden"} dus verlaagd naar 1. Doorgaan?`, yes: "Ja, iedereen op 1", onYes: () => { setEachOne(did); setConfirmDlg(null) } }) } else setEachOne(did) }
+  const eachOne = (did: string) => { const hi = people.filter((p) => (cart[did]?.[p.id] ?? 0) >= 2).map((p) => p.name); if (hi.length > 0) { setConfirmDlg({ msg: `${hi.join(" en ")} ${hi.length === 1 ? "heeft" : "hebben"} er nu al 2 of meer. Met "elk 1" krijgt iedereen er precies één — ${hi.join(" en ")} ${hi.length === 1 ? "gaat" : "gaan"} dus terug naar 1.`, yes: "Ja, iedereen op 1", onYes: () => { setEachOne(did); setConfirmDlg(null) } }) } else setEachOne(did) }
   const drinkTotal = (did: string) => Object.values(cart[did] ?? {}).reduce((a, b) => a + b, 0) + (cartAnon[did] ?? 0)
   const roundItems = useMemo(() => drinks.reduce((s, d) => s + drinkTotal(d.id), 0), [cart, cartAnon, drinks]) // eslint-disable-line
   const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon, drinks]) // eslint-disable-line
@@ -269,10 +270,7 @@ export default function PartyTest() {
     sheet: { background: "#fff", borderRadius: 20, padding: 18, width: "100%", maxWidth: 460, maxHeight: "82vh", overflowY: "auto", boxShadow: "0 -8px 30px rgba(0,0,0,0.2)" } as React.CSSProperties,
   }
   const potTag = (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
-      <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "4px 11px", fontSize: 12, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potRemaining > 0 ? "#1f8a4c" : "#8a7d55" }}>🫙 pot {euro(potRemaining)}</span>
-      {potContribTotal === 0 && <span onClick={() => setShowPot(true)} style={{ fontSize: 10.5, color: "#c98a00", cursor: "pointer", fontWeight: 800 }}>+ pot toevoegen</span>}
-    </div>
+    <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potRemaining > 0 ? "#1f8a4c" : "#8a7d55" }}>🫙 pot {euro(potRemaining)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+ toevoegen</span></span>
   )
   const renderPotModal = () => (
     <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
@@ -384,17 +382,14 @@ export default function PartyTest() {
     </>
   )
   const Header = () => (
-    <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
-      <div>
-        <div style={S.h1}>🍻 Rundo Party <span style={{ fontSize: 12, fontWeight: 800, color: "#e08a00", border: "1px solid #e08a00", borderRadius: 6, padding: "1px 6px", verticalAlign: "middle" }}>TEST</span></div>
-        <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 2 }}>{pay === "coin" ? `coins (1=${euro(coinValue)})` : "euro"}{depositOn ? ` · waarborg ${effDepositUnit === "eur" ? euro(depositValue) : depositValue + " coin"}` : ""}</div>
+    <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10, gap: 8 }}>
+      <div style={{ ...S.row, gap: 8, minWidth: 0 }}>
+        <button style={{ ...S.btn, padding: "7px 11px", fontSize: 14 }} onClick={goHome}>🏠</button>
+        <div style={{ ...S.h1, fontSize: 17, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim() || "Rundo Party"} <span style={{ fontSize: 11, fontWeight: 800, color: "#e08a00", border: "1px solid #e08a00", borderRadius: 6, padding: "1px 5px", verticalAlign: "middle" }}>TEST</span></div>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+      <div style={{ ...S.row, gap: 6, flexShrink: 0 }}>
+        {rounds.length > 0 && view !== "hub" && <button style={{ ...S.btn, padding: "6px 10px", fontSize: 12 }} onClick={goHub}>📋</button>}
         {potTag}
-        <div style={{ ...S.row, gap: 6 }}>
-          {rounds.length > 0 && view !== "hub" && <button style={{ ...S.btn, padding: "6px 10px", fontSize: 12 }} onClick={goHub}>📋 overzicht</button>}
-          <button style={{ ...S.btn, padding: "6px 10px", fontSize: 12 }} onClick={goHome}>🏠 home</button>
-        </div>
       </div>
     </div>
   )
@@ -406,6 +401,50 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
+        <div style={S.card}>
+          <input style={{ ...S.input, width: "100%", textAlign: "left", fontSize: 16, fontWeight: 700, marginBottom: 12 }} type="text" placeholder="Naam van de groep (bv. Verjaardag Tom)" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
+            <h3 style={{ ...S.h3, margin: 0 }}>👥 {people.length} personen</h3>
+            <button style={{ ...S.btn, padding: "5px 10px", fontSize: 12 }} onClick={addPerson}>+ persoon</button>
+          </div>
+          <div style={{ ...S.row, flexWrap: "wrap", gap: 7 }}>{people.map((p) => <span key={p.id} style={{ ...S.pill, fontSize: 12.5, padding: "5px 11px", background: "rgba(240,165,0,0.12)", color: "#8a5e0f" }}>{p.name}</span>)}</div>
+        </div>
+
+        <div style={S.card}>
+          <div style={{ ...S.row, justifyContent: "space-between" }}>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>🫙 Gezamenlijke pot</span>
+            <button style={{ ...S.btn, padding: "6px 12px", fontSize: 13 }} onClick={() => setShowPot(true)}>{potContribTotal > 0 ? `beheren · ${euro(potContribTotal)}` : "+ inleggen"}</button>
+          </div>
+          <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 8 }}>Optioneel. Je kan ook later bijleggen — de pot staat altijd bovenaan.</div>
+        </div>
+
+        <div style={S.card}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: depositOn ? 12 : 0 }}>
+            <h3 style={{ ...S.h3, margin: 0 }}>♻️ Herbruikbare bekers</h3>
+            <div style={{ ...S.row, gap: 6 }}>
+              <div style={{ ...S.seg(!depositOn), flex: "none", padding: "6px 12px" }} onClick={() => setDepositOn(false)}>uit</div>
+              <div style={{ ...S.seg(depositOn), flex: "none", padding: "6px 12px" }} onClick={() => setDepositOn(true)}>aan</div>
+            </div>
+          </div>
+          {depositOn && (
+            <>
+              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: pay === "coin" ? 10 : 0 }}>
+                <span style={{ fontSize: 14, fontWeight: 700 }}>Waarborg per beker</span>
+                <div style={S.row}>
+                  <input style={{ ...S.input, width: 70 }} type="text" inputMode="decimal" value={depositValue} onChange={(e) => setDepositValue(parseFloat(e.target.value.replace(",", ".")) || 0)} />
+                  {pay === "eur" && <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}>€</span>}
+                </div>
+              </div>
+              {pay === "coin" && (
+                <div style={{ ...S.row, gap: 8 }}>
+                  <div style={S.seg(depositUnit === "coin")} onClick={() => setDepositUnit("coin")}>in coins</div>
+                  <div style={S.seg(depositUnit === "eur")} onClick={() => setDepositUnit("eur")}>in €</div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
         <div style={S.card}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
             <div>
@@ -462,52 +501,9 @@ export default function PartyTest() {
           <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 10 }}>Per rondje geef je het <b>echte bedrag</b> in. De app verdeelt eerlijk (Fair Split) — zonder prijzen te tonen.</div>
         </div>
 
-        <div style={S.card}>
-          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: depositOn ? 12 : 0 }}>
-            <h3 style={{ ...S.h3, margin: 0 }}>♻️ Herbruikbare bekers</h3>
-            <div style={{ ...S.row, gap: 6 }}>
-              <div style={{ ...S.seg(!depositOn), flex: "none", padding: "6px 12px" }} onClick={() => setDepositOn(false)}>uit</div>
-              <div style={{ ...S.seg(depositOn), flex: "none", padding: "6px 12px" }} onClick={() => setDepositOn(true)}>aan</div>
-            </div>
-          </div>
-          {depositOn && (
-            <>
-              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: pay === "coin" ? 10 : 0 }}>
-                <span style={{ fontSize: 14, fontWeight: 700 }}>Waarborg per beker</span>
-                <div style={S.row}>
-                  <input style={{ ...S.input, width: 70 }} type="text" inputMode="decimal" value={depositValue} onChange={(e) => setDepositValue(parseFloat(e.target.value.replace(",", ".")) || 0)} />
-                  {pay === "eur" && <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}>€</span>}
-                </div>
-              </div>
-              {pay === "coin" && (
-                <div style={{ ...S.row, gap: 8 }}>
-                  <div style={S.seg(depositUnit === "coin")} onClick={() => setDepositUnit("coin")}>in coins</div>
-                  <div style={S.seg(depositUnit === "eur")} onClick={() => setDepositUnit("eur")}>in €</div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        <div style={S.card}>
-          <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <span style={{ fontSize: 14, fontWeight: 700 }}>🫙 Gezamenlijke pot</span>
-            <button style={{ ...S.btn, padding: "6px 12px", fontSize: 13 }} onClick={() => setShowPot(true)}>{potContribTotal > 0 ? `beheren · ${euro(potContribTotal)}` : "+ inleggen"}</button>
-          </div>
-          <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 8 }}>Optioneel. Je kan ook later bijleggen — de pot staat altijd bovenaan.</div>
-        </div>
-
-        <div style={S.card}>
-          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
-            <h3 style={{ ...S.h3, margin: 0 }}>👥 {people.length} personen</h3>
-            <button style={{ ...S.btn, padding: "5px 10px", fontSize: 12 }} onClick={addPerson}>+ persoon</button>
-          </div>
-          <div style={{ ...S.row, flexWrap: "wrap", gap: 7 }}>{people.map((p) => <span key={p.id} style={{ ...S.pill, fontSize: 12.5, padding: "5px 11px", background: "rgba(240,165,0,0.12)", color: "#8a5e0f" }}>{p.name}</span>)}</div>
-        </div>
-
         {rounds.length > 0
           ? <button style={S.btnP} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>📋 Terug naar overzicht →</button>
-          : <button style={S.btnP} onClick={() => { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>🍻 Start ronde 1 →</button>}
+          : <button style={S.btnP} onClick={() => { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>🍻 Start {roundNr === 1 ? "1e rondje" : `rondje ${roundNr}`} →</button>}
       </div></div>
     )
   }
@@ -601,7 +597,7 @@ export default function PartyTest() {
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                 {people.map((p) => {
                   const n = aQty(ad.id, p.id)
-                  return <span key={p.id} style={S.chip(n)} onClick={() => assignTap(ad.id, p.id)} onContextMenu={(e) => { e.preventDefault(); bump(ad.id, p.id, -1) }}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); bump(ad.id, p.id, -1) }} style={{ marginLeft: 4, opacity: 0.85 }}>✕</span>}</span>
+                  return <span key={p.id} style={S.chip(n)} onClick={() => assignTap(ad.id, p.id)} onContextMenu={(e) => { e.preventDefault(); bump(ad.id, p.id, -1) }}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); bump(ad.id, p.id, -1) }} style={{ marginLeft: 7, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 16, fontWeight: 800, lineHeight: 1 }}>−</span>}</span>
                 })}
               </div>
               <button style={{ ...S.btn, width: "100%", marginBottom: 14, fontSize: 13, fontWeight: 800, color: "#8a5e0f" }} onClick={() => eachOne(ad.id)}>👥 elk 1 <span style={{ fontWeight: 400, color: "#8a7d55" }}>— iedereen precies één</span></button>
@@ -658,8 +654,9 @@ export default function PartyTest() {
                 </div>
               )}
               {depositOn && (cupsBlock ? (
-                <div onClick={() => setShowCups(true)} style={{ background: "rgba(224,104,92,0.12)", border: "1.5px solid rgba(224,104,92,0.6)", borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 12.5, color: "#b0402f", cursor: "pointer", fontWeight: 700 }}>
-                  🫙 <b>Bekers nog niet aangeduid.</b> <u>Tik hier om nu te regelen →</u>
+                <div style={{ background: "rgba(224,104,92,0.12)", border: "1.5px solid rgba(224,104,92,0.6)", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+                  <div onClick={() => setShowCups(true)} style={{ fontSize: 12.5, color: "#b0402f", cursor: "pointer", fontWeight: 700 }}>🫙 <b>Bekers nog niet aangeduid.</b> <u>Tik hier om te regelen →</u></div>
+                  <div onClick={() => setDepositOn(false)} style={{ fontSize: 11.5, color: "#8a7d55", cursor: "pointer", marginTop: 6 }}>… of <u>ga verder zonder bekers/waarborg</u> (uitschakelen).</div>
                 </div>
               ) : (
                 <div style={{ ...S.row, justifyContent: "space-between", background: "rgba(31,138,76,0.1)", borderRadius: 12, padding: "9px 12px", marginBottom: 12 }}>
@@ -802,7 +799,7 @@ export default function PartyTest() {
                             <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 5 }}>{d.emoji} {d.name}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 700 }}> · {un} nog toe te wijzen</span>}</div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                               {people.map((p) => { const n = r.orders[d.id]?.[p.id] ?? 0; return (
-                                <span key={p.id} style={{ ...S.chip(n), padding: "6px 11px", fontSize: 13 }} onClick={() => rAssignFromAnon(idx, d.id, p.id)}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 4, opacity: 0.85 }}>✕</span>}</span>
+                                <span key={p.id} style={{ ...S.chip(n), padding: "6px 11px", fontSize: 13 }} onClick={() => rAssignFromAnon(idx, d.id, p.id)}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 7, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 16, fontWeight: 800, lineHeight: 1 }}>−</span>}</span>
                               )})}
                             </div>
                           </div>
