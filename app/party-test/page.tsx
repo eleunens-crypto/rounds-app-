@@ -164,6 +164,7 @@ export default function PartyTest() {
   const cancelEditPot = () => { setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft("") }
   const removePotRound = (id: number, label: string) => setConfirmDlg({ msg: `De ${label} verwijderen uit de pot? Dit kan niet ongedaan gemaakt worden.`, yes: "Ja, verwijderen", onYes: () => { setPotRounds((rs) => rs.filter((r) => r.id !== id)); setConfirmDlg(null) } })
   const catsPresent = CATS.filter((c) => drinks.some((d) => d.cat === c))
+  const bump1 = (did: string) => bumpAnon(did, 1)
   const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
 
   const goHome = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); setView("setup") } }); else setView("setup") }
@@ -540,6 +541,7 @@ export default function PartyTest() {
             <span onClick={() => setFullList(true)} style={{ cursor: "pointer", fontWeight: fullList ? 800 : 600, color: fullList ? "#8a5e0f" : "#a89a72" }}>volledige lijst</span>
           </div>
         </div>
+        <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 8 }}>Tik een drankje = +1 toevoegen. Tik daarna op het aantal om <b>namen toe te wijzen</b>.</div>
         <div style={{ display: "flex", gap: 7, flexWrap: "wrap", paddingBottom: 8, marginBottom: 8 }}>
           {catsPresent.map((c) => {
             const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
@@ -555,12 +557,13 @@ export default function PartyTest() {
             {catVisible.map((d) => {
               const tot = drinkTotal(d.id), un = cartAnon[d.id] ?? 0
               return (
-                <div key={d.id} style={{ padding: "10px 10px", borderRadius: 12, cursor: "pointer", background: un > 0 ? "rgba(224,104,92,0.12)" : tot > 0 ? "rgba(240,165,0,0.12)" : "#faf4e4", border: un > 0 ? "1.5px solid rgba(224,104,92,0.6)" : tot > 0 ? "1px solid rgba(240,165,0,0.45)" : "1px solid rgba(120,95,20,0.1)" }} onClick={() => setAssignDrink(d.id)}>
+                <div key={d.id} style={{ padding: "10px 10px", borderRadius: 12, cursor: "pointer", background: un > 0 ? "rgba(224,104,92,0.12)" : tot > 0 ? "rgba(240,165,0,0.12)" : "#faf4e4", border: un > 0 ? "1.5px solid rgba(224,104,92,0.6)" : tot > 0 ? "1px solid rgba(240,165,0,0.45)" : "1px solid rgba(120,95,20,0.1)" }} onClick={() => bump1(d.id)}>
                   <div style={{ fontSize: 13.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#4a3f1e" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
-                  {(tot > 0 || un > 0) && (
-                    <div style={{ ...S.row, gap: 5, marginTop: 5 }}>
-                      {tot > 0 && <span style={{ ...S.pill, background: "rgba(240,165,0,0.22)", color: "#c98a00" }}>{tot}×</span>}
+                  {tot > 0 && (
+                    <div style={{ ...S.row, gap: 5, marginTop: 5, flexWrap: "wrap" }} onClick={(e) => { e.stopPropagation(); setAssignDrink(d.id) }}>
+                      <span style={{ ...S.pill, background: "rgba(240,165,0,0.22)", color: "#c98a00" }}>{tot}×</span>
                       {un > 0 && <span style={{ ...S.pill, background: "rgba(224,104,92,0.15)", color: "#c0554a" }}>{un} open</span>}
+                      <span style={{ fontSize: 10.5, color: "#8a5e0f", fontWeight: 800 }}>👤 toewijzen ›</span>
                     </div>
                   )}
                 </div>
@@ -586,6 +589,7 @@ export default function PartyTest() {
             </div>
           </div>
         )}
+        {unassignedTotal > 0 && <button style={{ ...S.btn, width: "100%", marginBottom: 12, background: "rgba(224,104,92,0.1)", border: "1.5px solid rgba(224,104,92,0.5)", color: "#b0402f", fontWeight: 800 }} onClick={() => { const d = firstUnassigned(); if (d) { setActiveCat(d.cat); setAssignDrink(d.id) } }}>👥 Namen toewijzen ({unassignedTotal} open)</button>}
         <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
           {depositOn && <button style={{ ...S.btn, flex: 1 }} onClick={() => setShowCups(true)}>🫙 Bekers</button>}
           {rounds.length > 0 && <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>📋 Overzicht</button>}
@@ -794,7 +798,10 @@ export default function PartyTest() {
                   {roundDrinks.map((d) => {
                     const who = people.filter((p) => (r.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = r.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
                     const un = r.anon[d.id] ?? 0
-                    return <div key={d.id} style={{ fontSize: 13.5, marginBottom: 3 }}><b>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}</b> <span style={{ color: un > 0 ? "#c0554a" : "#8a7d55" }}>→ {who.join(", ")}{un > 0 ? `${who.length ? ", " : ""}${un}× onbekend` : ""}</span></div>
+                    if (un > 0) return (
+                      <div key={d.id} onClick={() => { setEditAssign(true); setEditCups(false); setEditPay(false) }} style={{ fontSize: 13, fontWeight: 700, marginBottom: 5, background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "7px 10px", color: "#b0402f", cursor: "pointer" }}>🔴 {d.emoji} {drinkTotalRound(r, d.id)}× {d.name} — <u>{un}× zonder naam, hier toewijzen →</u>{who.length > 0 && <span style={{ fontWeight: 400, color: "#8a7d55" }}> (al: {who.join(", ")})</span>}</div>
+                    )
+                    return <div key={d.id} style={{ fontSize: 13.5, marginBottom: 3 }}><b>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}</b> <span style={{ color: "#8a7d55" }}>→ {who.join(", ")}</span></div>
                   })}
 
                   <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
@@ -862,7 +869,7 @@ export default function PartyTest() {
         })}
 
         <div style={{ display: "flex", gap: 10 }}>
-          <button style={{ ...S.btn, flex: 1 }} onClick={() => setView("final")}>🧾 Afrekenen</button>
+          <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (anyUnassignedRounds) { const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0); setNotice(`Er ${tot === 1 ? "is 1 drankje" : `zijn ${tot} drankjes`} nog zonder naam. Wijs ze eerst toe (rood aangeduid in het overzicht) voor je afrekent.`); const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0)); if (fr >= 0) { setOpenRound(fr); setEditAssign(true); setEditCups(false); setEditPay(false) } } else setView("final") }}>🧾 Afrekenen</button>
           <button style={{ ...S.btnP, flex: 2 }} onClick={nextRound}>➕ Nieuw rondje</button>
         </div>
       </div></div>
