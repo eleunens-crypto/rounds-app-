@@ -85,7 +85,8 @@ export default function PartyTest() {
   const [editPay, setEditPay] = useState(false)
 
   const priceOf = (d: Drink) => d.price
-  const depositPerCupEur = depositUnit === "eur" ? depositValue : depositValue * coinValue
+  const effDepositUnit: "eur" | "coin" = pay === "eur" ? "eur" : depositUnit
+  const depositPerCupEur = effDepositUnit === "eur" ? depositValue : depositValue * coinValue
   const show = (eur: number) => (pay === "coin" && displayUnit === "coin" ? (eur / coinValue).toFixed(2).replace(".", ",") + " coins" : euro(eur))
 
   const contribOf = (pid: string) => potRounds.reduce((s, r) => s + (r.amounts[pid] || 0), 0)
@@ -278,7 +279,7 @@ export default function PartyTest() {
     <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
       <div>
         <div style={S.h1}>🍻 Rundo Party <span style={{ fontSize: 12, fontWeight: 800, color: "#e08a00", border: "1px solid #e08a00", borderRadius: 6, padding: "1px 6px", verticalAlign: "middle" }}>TEST</span></div>
-        <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 2 }}>{pay === "coin" ? `coins (1=${euro(coinValue)})` : "euro"}{depositOn ? ` · waarborg ${depositUnit === "eur" ? euro(depositValue) : depositValue + " coin"}` : ""}</div>
+        <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 2 }}>{pay === "coin" ? `coins (1=${euro(coinValue)})` : "euro"}{depositOn ? ` · waarborg ${effDepositUnit === "eur" ? euro(depositValue) : depositValue + " coin"}` : ""}</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
         {potTag}
@@ -296,8 +297,8 @@ export default function PartyTest() {
         <div style={S.card}>
           <h3 style={S.h3}>Hoe reken je af?</h3>
           <div style={{ ...S.row, gap: 8, marginBottom: pay === "coin" ? 12 : 0 }}>
-            <div style={S.seg(pay === "eur")} onClick={() => setPay("eur")}>💶 Euro</div>
-            <div style={S.seg(pay === "coin")} onClick={() => setPay("coin")}>🎟️ Coins</div>
+            <div style={S.seg(pay === "eur")} onClick={() => { setPay("eur"); setDepositUnit("eur") }}>💶 Euro</div>
+            <div style={S.seg(pay === "coin")} onClick={() => { setPay("coin"); setDepositUnit("coin") }}>🎟️ Coins</div>
           </div>
           {pay === "coin" && (
             <>
@@ -339,14 +340,19 @@ export default function PartyTest() {
           </div>
           {depositOn && (
             <>
-              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: pay === "coin" ? 10 : 0 }}>
                 <span style={{ fontSize: 14, fontWeight: 700 }}>Waarborg per beker</span>
-                <input style={{ ...S.input, width: 70 }} type="text" inputMode="decimal" value={depositValue} onChange={(e) => setDepositValue(parseFloat(e.target.value.replace(",", ".")) || 0)} />
+                <div style={S.row}>
+                  <input style={{ ...S.input, width: 70 }} type="text" inputMode="decimal" value={depositValue} onChange={(e) => setDepositValue(parseFloat(e.target.value.replace(",", ".")) || 0)} />
+                  {pay === "eur" && <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}>€</span>}
+                </div>
               </div>
-              <div style={{ ...S.row, gap: 8 }}>
-                <div style={S.seg(depositUnit === "eur")} onClick={() => setDepositUnit("eur")}>in €</div>
-                <div style={S.seg(depositUnit === "coin")} onClick={() => setDepositUnit("coin")}>in coins</div>
-              </div>
+              {pay === "coin" && (
+                <div style={{ ...S.row, gap: 8 }}>
+                  <div style={S.seg(depositUnit === "coin")} onClick={() => setDepositUnit("coin")}>in coins</div>
+                  <div style={S.seg(depositUnit === "eur")} onClick={() => setDepositUnit("eur")}>in €</div>
+                </div>
+              )}
             </>
           )}
         </div>
