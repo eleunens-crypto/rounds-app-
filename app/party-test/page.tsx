@@ -73,6 +73,7 @@ export default function PartyTest() {
 
   const [groupName, setGroupName] = useState("")
   const [people, setPeople] = useState<Person[]>(DEMO_PEOPLE)
+  const [removeMode, setRemoveMode] = useState(false)
   const [drinks, setDrinks] = useState<Drink[]>(DEMO_DRINKS)
   const [potRounds, setPotRounds] = useState<{ id: number; amounts: Record<string, number> }[]>([])
   const [potDraft, setPotDraft] = useState<Record<string, number>>({})
@@ -150,7 +151,11 @@ export default function PartyTest() {
   const roundPicked = (r: Round, pid: string) => drinks.reduce((a, d) => a + (d.cup ? (r.orders[d.id]?.[pid] ?? 0) : 0), 0)
   const cupsBal = (pid: string) => rounds.reduce((s, r) => s + (roundPicked(r, pid) - (r.gaveBack[pid] || 0)), 0)
 
-  const addPerson = () => { const name = (typeof window !== "undefined" && window.prompt("Naam van de nieuwe persoon?")) || ""; if (name.trim()) setPeople((ps) => [...ps, { id: "p" + Date.now(), name: name.trim() }]) }
+  const isGuestDefault = (name: string) => /^Gast \d+$/.test(name.trim())
+  const addPerson = () => { const g = people.filter((x) => isGuestDefault(x.name)).length + 1; setPeople((ps) => [...ps, { id: "p" + Date.now(), name: "Gast " + g }]) }
+  const renamePerson = (id: string, name: string) => setPeople((ps) => ps.map((x) => x.id === id ? { ...x, name } : x))
+  const personHasDrinks = (pid: string) => rounds.some((r) => Object.values(r.orders).some((o) => (o?.[pid] ?? 0) > 0)) || Object.values(cart).some((o) => (o?.[pid] ?? 0) > 0)
+  const removePerson = (id: string) => { const pp = people.find((x) => x.id === id); if (personHasDrinks(id)) { setNotice(`${pp?.name || "Deze persoon"} heeft al drankjes in een rondje en kan niet verwijderd worden. Verwijder eerst die drankjes.`); return } setPeople((ps) => ps.filter((x) => x.id !== id)) }
   const setEveryoneAmt = (v: number) => setPotDraft(Object.fromEntries(people.map((p) => [p.id, v])))
   const resetPotDraft = () => { setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft("") }
   const closePot = () => { if (editPotId === null && potDraftTotal > 0.001) setPotRounds((rs) => [...rs, { id: Date.now(), amounts: potDraft }]); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setEditPotId(null); setShowPot(false) }
@@ -399,15 +404,23 @@ export default function PartyTest() {
         {renderDialogs()}
         <div style={S.card}>
           <label style={{ fontSize: 11.5, fontWeight: 800, color: "#8a7d55", display: "block", marginBottom: 6 }}>Naam van de groep</label>
-          <input style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 17, fontWeight: 800 }} type="text" placeholder="bv. Verjaardag Tom" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
-        </div>
-
-        <div style={S.card}>
-          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
+          <input style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 17, fontWeight: 800 }} type="text" placeholder="bv. De Bende van Ellende" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+          <div style={{ ...S.row, justifyContent: "space-between", marginTop: 16, marginBottom: 8 }}>
             <h3 style={{ ...S.h3, margin: 0 }}>👥 {people.length} personen</h3>
-            <button style={{ ...S.btn, padding: "5px 10px", fontSize: 12 }} onClick={addPerson}>+ persoon</button>
+            {removeMode && <span onClick={() => setRemoveMode(false)} style={{ fontSize: 12, fontWeight: 800, color: "#8a5e0f", cursor: "pointer" }}>✓ klaar</span>}
           </div>
-          <div style={{ ...S.row, flexWrap: "wrap", gap: 7 }}>{people.map((p) => <span key={p.id} style={{ ...S.pill, fontSize: 12.5, padding: "5px 11px", background: "rgba(240,165,0,0.12)", color: "#8a5e0f" }}>{p.name}</span>)}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(118px, 1fr))", gap: 8 }}>
+            {people.map((p, idx) => (
+              <div key={p.id} style={{ position: "relative" }}>
+                <input value={p.name} onChange={(e) => renamePerson(p.id, e.target.value)} placeholder={`Gast ${idx + 1}`} style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "7px 9px", paddingRight: removeMode ? 30 : 9, fontSize: 13, textAlign: "left", color: isGuestDefault(p.name) ? "#a89a72" : "#4a3f1e" }} />
+                {removeMode && <span onClick={() => removePerson(p.id)} style={{ position: "absolute", top: "50%", right: 6, transform: "translateY(-50%)", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", background: "rgba(200,110,95,0.92)", color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>✕</span>}
+              </div>
+            ))}
+          </div>
+          <div style={{ ...S.row, gap: 8, marginTop: 10 }}>
+            <button style={{ ...S.btn, flex: 1, fontSize: 12.5 }} onClick={addPerson}>+ persoon toevoegen</button>
+            <button style={{ ...S.btn, flex: 1, fontSize: 12.5, color: removeMode ? "#c0554a" : "#4a3f1e", borderColor: removeMode ? "rgba(224,104,92,0.5)" : undefined }} onClick={() => setRemoveMode((v) => !v)}>{removeMode ? "✓ klaar met verwijderen" : "− persoon verwijderen"}</button>
+          </div>
         </div>
 
         <div style={S.card}>
@@ -418,9 +431,9 @@ export default function PartyTest() {
           <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 8 }}>Je kan ook later nog bijleggen — de pot staat altijd bovenaan.</div>
         </div>
 
-        <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ ...S.card, height: "100%", marginBottom: 0 }}>
+        <div style={{ ...S.card, marginBottom: 0 }}>
           <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.3 }}>♻️ Herbruikbare bekers <span onClick={(e) => { e.stopPropagation(); setDepositInfo((v) => !v); setCoinInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 10.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
           <div style={{ ...S.row, gap: 6, marginTop: 8 }}>
             <div style={{ ...S.seg(!depositOn), padding: "6px 8px" }} onClick={() => setDepositOn(false)}>uit</div>
@@ -447,7 +460,7 @@ export default function PartyTest() {
         </div>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ ...S.card, height: "100%", marginBottom: 0 }}>
+        <div style={{ ...S.card, marginBottom: 0 }}>
           <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.3 }}>{pay === "coin" ? "🎟️ Coins" : "💶 Euro"} <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 10.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
           <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "space-between" }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: pay === "coin" ? "#c98a00" : "#8a7d55" }}>🎟️ coins</span>
@@ -496,7 +509,7 @@ export default function PartyTest() {
         </div>
           </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 24 }}>
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 28, marginBottom: 4 }}>
           {rounds.length > 0
             ? <button style={{ ...S.btnP, width: "80%" }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>Terug naar overzicht →</button>
             : <button style={{ ...S.btnP, width: "80%" }} onClick={() => { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>Start {roundNr === 1 ? "1e rondje" : `rondje ${roundNr}`} →</button>}
@@ -519,14 +532,12 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
-          <div style={{ ...S.row, gap: 8, minWidth: 0 }}>
-            <h3 style={{ ...S.h3, margin: 0 }}>Ronde {roundNr}</h3>
-            <span style={S.pill}>{roundItems}{unassignedTotal > 0 ? ` · ${unassignedTotal} open` : ""}</span>
-          </div>
-          <div style={{ display: "inline-flex", background: "#efe6cf", borderRadius: 20, padding: 2, flexShrink: 0 }}>
-            <span onClick={() => setFullList(false)} style={{ padding: "4px 11px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: !fullList ? "#fff" : "transparent", color: !fullList ? "#8a5e0f" : "#a89a72", boxShadow: !fullList ? "0 1px 3px rgba(120,95,20,0.2)" : "none" }}>⚡ kort</span>
-            <span onClick={() => setFullList(true)} style={{ padding: "4px 11px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: fullList ? "#fff" : "transparent", color: fullList ? "#8a5e0f" : "#a89a72", boxShadow: fullList ? "0 1px 3px rgba(120,95,20,0.2)" : "none" }}>📖 alles</span>
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, gap: 8, flexWrap: "wrap" }}>
+          <h3 style={{ ...S.h3, margin: 0 }}>Ronde {roundNr} <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}>— {roundItems} drankje{roundItems === 1 ? "" : "s"}{unassignedTotal > 0 ? ` · ${unassignedTotal} open` : ""}</span></h3>
+          <div style={{ ...S.row, gap: 7, fontSize: 12 }}>
+            <span onClick={() => setFullList(false)} style={{ cursor: "pointer", fontWeight: !fullList ? 800 : 600, color: !fullList ? "#8a5e0f" : "#a89a72" }}>favoriete drankjes</span>
+            <span style={{ color: "#d9cdb0" }}>·</span>
+            <span onClick={() => setFullList(true)} style={{ cursor: "pointer", fontWeight: fullList ? 800 : 600, color: fullList ? "#8a5e0f" : "#a89a72" }}>volledige lijst</span>
           </div>
         </div>
         <div style={{ display: "flex", gap: 7, flexWrap: "wrap", paddingBottom: 8, marginBottom: 8 }}>
