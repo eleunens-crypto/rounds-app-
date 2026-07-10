@@ -36,7 +36,7 @@ const DEMO_PEOPLE: Person[] = ["Jan", "Sarah", "Tom", "Lisa", "Ben"].map((n, i) 
 
 type Assign = Record<string, Record<string, number>>
 type Anon = Record<string, number>
-type Round = { orders: Assign; anon: Anon; payer: string; amount: number; gaveBack: Record<string, number> }
+type Round = { orders: Assign; anon: Anon; payer: string; amount: number; potPart: number; gaveBack: Record<string, number> }
 
 const euro = (v: number) => "€" + v.toFixed(2).replace(".", ",")
 
@@ -70,19 +70,25 @@ export default function PartyTest() {
   const [showClose, setShowClose] = useState(false)
   const [cupsChecked, setCupsChecked] = useState(false)
   const [cupsTouched, setCupsTouched] = useState(false)
-  const [payerDraft, setPayerDraft] = useState<string>("")
   const [amountDraft, setAmountDraft] = useState<string>("")
+  const [payPot, setPayPot] = useState(false)
+  const [payPerson, setPayPerson] = useState<string>("")
+  const [potAmtDraft, setPotAmtDraft] = useState<string>("")
+  const [paidConfirmed, setPaidConfirmed] = useState(false)
+  const [confirmDlg, setConfirmDlg] = useState<{ msg: string; yes: string; onYes: () => void } | null>(null)
+  const [notice, setNotice] = useState<string>("")
 
   // edit-in-hub
   const [editAssign, setEditAssign] = useState(false)
   const [editCups, setEditCups] = useState(false)
+  const [editPay, setEditPay] = useState(false)
 
   const priceOf = (d: Drink) => d.price
   const depositPerCupEur = depositUnit === "eur" ? depositValue : depositValue * coinValue
   const show = (eur: number) => (pay === "coin" && displayUnit === "coin" ? (eur / coinValue).toFixed(2).replace(".", ",") + " coins" : euro(eur))
 
   const potContribTotal = Object.values(contrib).reduce((a, b) => a + (b || 0), 0)
-  const potSpent = rounds.reduce((s, r) => s + (r.payer === "pot" ? r.amount : 0), 0)
+  const potSpent = rounds.reduce((s, r) => s + (r.potPart || 0), 0)
   const potRemaining = potContribTotal - potSpent
 
   // ── live cart helpers ───────────────────────────────────────────────────────
@@ -98,8 +104,12 @@ export default function PartyTest() {
   // ── per-rondje bewerk-helpers (hub) ─────────────────────────────────────────
   const rBump = (idx: number, did: string, pid: string, delta: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, orders: { ...r.orders, [did]: { ...(r.orders[did] ?? {}), [pid]: Math.max(0, (r.orders[did]?.[pid] ?? 0) + delta) } } } : r))
   const rBumpAnon = (idx: number, did: string, delta: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, anon: { ...r.anon, [did]: Math.max(0, (r.anon[did] ?? 0) + delta) } } : r))
-  const rAssignTap = (idx: number, did: string, pid: string) => { if ((rounds[idx]?.anon[did] ?? 0) > 0) { rBumpAnon(idx, did, -1); rBump(idx, did, pid, 1) } else rBump(idx, did, pid, 1) }
   const rSetGaveBack = (idx: number, pid: string, v: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, gaveBack: { ...r.gaveBack, [pid]: Math.max(0, v) } } : r))
+  const rUnassign = (idx: number, did: string, pid: string) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, orders: { ...r.orders, [did]: { ...(r.orders[did] ?? {}), [pid]: Math.max(0, (r.orders[did]?.[pid] ?? 0) - 1) } }, anon: { ...r.anon, [did]: (r.anon[did] ?? 0) + 1 } } : r))
+  const rAssignFromAnon = (idx: number, did: string, pid: string) => { if ((rounds[idx]?.anon[did] ?? 0) > 0) { rBumpAnon(idx, did, -1); rBump(idx, did, pid, 1) } }
+  const rSetAmount = (idx: number, v: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, amount: v, potPart: (r.payer === "" && (r.potPart || 0) > 0) ? v : (r.potPart || 0) } : r))
+  const rPickPot = (idx: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, payer: "", potPart: r.amount } : r))
+  const rPickPerson = (idx: number, pid: string) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, payer: pid, potPart: 0 } : r))
 
   // ── afgeleide bekers (uit rounds) ───────────────────────────────────────────
   const roundPicked = (r: Round, pid: string) => drinks.reduce((a, d) => a + (d.cup ? (r.orders[d.id]?.[pid] ?? 0) : 0), 0)
@@ -111,20 +121,34 @@ export default function PartyTest() {
   const catsPresent = CATS.filter((c) => drinks.some((d) => d.cat === c))
   const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
 
-  const goHome = () => setView("setup")
+  const goHome = () => { if (view === "confirmed") setConfirmDlg({ msg: "Dit rondje is nog niet afgesloten. Toch verlaten? Je betaling gaat verloren.", yes: "Toch verlaten", onYes: () => { setConfirmDlg(null); setView("setup") } }); else setView("setup") }
+  const paymentState = () => {
+    const total = parseFloat(amountDraft.replace(",", ".")) || 0
+    const potAmt = parseFloat(potAmtDraft.replace(",", ".")) || 0
+    const split = payPot && !!payPerson
+    const potOnly = payPot && !payPerson
+    const potContribToRound = potOnly ? total : split ? potAmt : 0
+    const potOver = potContribToRound > potRemaining + 0.001
+    const valid = total > 0 && (payPot || !!payPerson) && !potOver && (!split || (potAmt > 0 && potAmt < total + 0.0001))
+    return { total, potAmt, split, potOnly, potContribToRound, potOver, valid }
+  }
   const openClose = () => { setPayerDraft(""); setAmountDraft(""); setShowClose(true) }
   const goAssignFromWarning = () => { const d = firstUnassigned(); setShowClose(false); if (d) { setActiveCat(d.cat); setAssignDrink(d.id) } }
   const commitRound = () => {
     const effGb: Record<string, number> = {}
     people.forEach((p) => { effGb[p.id] = gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id)) })
-    setRounds((r) => [...r, { orders: cart, anon: cartAnon, payer: "", amount: 0, gaveBack: effGb }])
-    setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setPayerDraft(""); setAmountDraft(""); setView("confirmed")
+    setRounds((r) => [...r, { orders: cart, anon: cartAnon, payer: "", amount: 0, potPart: 0, gaveBack: effGb }])
+    setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setAmountDraft(""); setPayPot(false); setPayPerson(""); setPotAmtDraft(""); setPaidConfirmed(false); setView("confirmed")
   }
   const confirmPayment = () => {
-    const amt = parseFloat(amountDraft.replace(",", ".")) || 0
-    setRounds((rs) => rs.map((r, i) => i === rs.length - 1 ? { ...r, payer: payerDraft, amount: amt } : r))
-    setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setView("hub")
+    const st = paymentState()
+    if (!st.valid) { setNotice(!st.total ? "Vul eerst het totaalbedrag in." : (!payPot && !payPerson) ? "Kies wie betaalde." : st.potOver ? `De pot heeft maar ${euro(potRemaining)} — leg bij of kies een andere betaler.` : "Vul het pot-bedrag in (kleiner dan het totaal)."); return }
+    const potPart = st.potOnly ? st.total : st.split ? st.potAmt : 0
+    setRounds((rs) => rs.map((r, i) => i === rs.length - 1 ? { ...r, payer: payPerson || "", amount: st.total, potPart } : r))
+    setPaidConfirmed(true)
   }
+  const closeRound = () => { if (!paidConfirmed) { setNotice("Bevestig eerst de betaling."); return } setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }
+  const cancelRound = () => setConfirmDlg({ msg: `Het volledige rondje ${roundNr} annuleren? Alle drankjes en bekers van dit rondje worden verwijderd. Dit kan niet ongedaan gemaakt worden.`, yes: "Ja, annuleren", onYes: () => { const remaining = rounds.length - 1; setRounds((rs) => rs.slice(0, -1)); setPaidConfirmed(false); setConfirmDlg(null); if (remaining > 0) { setOpenRound(remaining - 1); setView("hub") } else setView("order") } })
   const nextRound = () => { setRoundNr((n) => n + 1); setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setView("order") }
 
   const roundKeyTotal = (r: Round) => drinks.reduce((s, d) => s + (Object.values(r.orders[d.id] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[d.id] ?? 0)) * priceOf(d), 0)
@@ -144,9 +168,10 @@ export default function PartyTest() {
     const paid: Record<string, number> = {}; people.forEach((p) => (paid[p.id] = 0)); let potPaid = 0
     rounds.forEach((r) => {
       const cupSum = depositOn ? people.reduce((a, p) => a + roundCupEur(r, p.id), 0) : 0
-      const total = r.amount + cupSum
-      if (r.payer === "pot") potPaid += total
-      else if (r.payer) paid[r.payer] = (paid[r.payer] ?? 0) + total
+      const potPart = r.potPart || 0
+      const personPart = r.amount - potPart
+      if (r.payer) { paid[r.payer] = (paid[r.payer] ?? 0) + personPart + cupSum; potPaid += potPart }
+      else if (potPart > 0) { potPaid += potPart + cupSum }
     })
     const nets: { id: string; label: string; net: number }[] = people.map((p) => ({ id: p.id, label: p.name, net: (paid[p.id] ?? 0) + (contrib[p.id] || 0) - consumption(p.id) - cupOwn(p.id) }))
     if (potContribTotal > 0 || potSpent > 0) nets.push({ id: "pot", label: "de pot", net: potPaid - potContribTotal })
@@ -158,6 +183,14 @@ export default function PartyTest() {
   }, [rounds, people, contrib, potContribTotal, potSpent, depositOn, depositValue, depositUnit, coinValue, drinks]) // eslint-disable-line
   const anyUnassignedRounds = rounds.some((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0))
   const drinkTotalRound = (r: Round, did: string) => Object.values(r.orders[did] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[did] ?? 0)
+  const paidLabel = (r: Round) => {
+    const potP = r.potPart || 0
+    const person = r.payer ? (people.find((p) => p.id === r.payer)?.name ?? "?") : null
+    if (potP > 0 && person) return `pot ${euro(potP)} + ${person} ${euro(r.amount - potP)}`
+    if (potP > 0) return "uit de pot"
+    if (person) return `door ${person}`
+    return "nog niet betaald"
+  }
 
   const S = {
     page: { minHeight: "100vh", background: "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
@@ -478,9 +511,8 @@ export default function PartyTest() {
     const totalInUse = people.reduce((s, p) => s + Math.max(0, cupsBal(p.id)), 0)
     const last = rounds[rounds.length - 1]
     const items = last ? drinks.reduce((s, d) => s + drinkTotalRound(last, d.id), 0) : 0
-    const amtNum = parseFloat(amountDraft.replace(",", ".")) || 0
-    const potOver = payerDraft === "pot" && amtNum > potRemaining + 0.001
-    const canPay = !!payerDraft && amtNum > 0 && !potOver
+    const st = paymentState()
+    const personRest = st.split ? st.total - st.potAmt : 0
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header />
@@ -504,23 +536,61 @@ export default function PartyTest() {
         </div>
 
         <div style={S.card}>
-          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
-            <h3 style={{ ...S.h3, margin: 0 }}>💰 Wie betaalde & hoeveel?</h3>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
+            <h3 style={{ ...S.h3, margin: 0 }}>💰 Totaal betaald voor dit rondje</h3>
             {potTag}
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 12 }}>
-            <span style={S.chip(payerDraft === "pot" ? 1 : 0)} onClick={() => setPayerDraft("pot")}>🫙 de pot</span>
-            {people.map((p) => <span key={p.id} style={S.chip(payerDraft === p.id ? 1 : 0)} onClick={() => setPayerDraft(p.id)}>{p.name}</span>)}
+          <div style={{ ...S.row, gap: 8, justifyContent: "center", margin: "6px 0 2px" }}>
+            <span style={{ fontSize: 24, fontWeight: 800 }}>€</span>
+            <input style={{ ...S.input, width: 150, fontSize: 26, textAlign: "center", fontWeight: 800 }} type="number" step="0.01" placeholder="0,00" value={amountDraft} onChange={(e) => { setAmountDraft(e.target.value); setPaidConfirmed(false) }} />
           </div>
-          <div style={{ ...S.row, gap: 8 }}>
-            <span style={{ fontSize: 20, fontWeight: 800 }}>€</span>
-            <input style={{ ...S.input, width: 110, fontSize: 18, borderColor: potOver ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="number" step="0.01" placeholder="0,00" value={amountDraft} onChange={(e) => setAmountDraft(e.target.value)} />
-            <button style={{ ...S.btnP, width: "auto", padding: "10px 16px", fontSize: 14, opacity: canPay ? 1 : 0.5 }} onClick={() => canPay && confirmPayment()}>✓ bevestig</button>
+          <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", marginBottom: 14 }}>ⓘ exact bedrag — hierop verdeelt de app eerlijk (Fair Split)</div>
+
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", marginBottom: 7 }}>Betaald door</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+            <span style={S.chip(payPot ? 1 : 0)} onClick={() => { setPayPot((v) => !v); setPaidConfirmed(false) }}>🫙 de pot</span>
+            {people.map((p) => <span key={p.id} style={S.chip(payPerson === p.id ? 1 : 0)} onClick={() => { setPayPerson((v) => (v === p.id ? "" : p.id)); setPaidConfirmed(false) }}>{p.name}</span>)}
           </div>
-          {payerDraft === "pot" && <div style={{ fontSize: 12, color: potOver ? "#c0554a" : "#8a7d55", fontWeight: 700, marginTop: 8 }}>pot: {euro(potRemaining)}{potOver ? " — te weinig, leg bij of kies andere betaler" : ""}</div>}
+
+          {st.split && (
+            <div style={{ background: "#faf4e4", borderRadius: 12, padding: "10px 12px", marginTop: 10 }}>
+              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>🫙 pot betaalt</span>
+                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 80, borderColor: st.potOver ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="number" step="0.01" placeholder="0,00" value={potAmtDraft} onChange={(e) => { setPotAmtDraft(e.target.value); setPaidConfirmed(false) }} /></div>
+              </div>
+              <div style={{ ...S.row, justifyContent: "space-between" }}>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>👤 {people.find((p) => p.id === payPerson)?.name} <span style={{ fontSize: 11, color: "#8a7d55" }}>(de rest)</span></span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: personRest >= 0 ? "#4a3f1e" : "#c0554a" }}>{euro(Math.max(0, personRest))}</span>
+              </div>
+              <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>Vul enkel het pot-bedrag in — de rest rekent de app.{st.potOver ? ` Pot heeft maar ${euro(potRemaining)}.` : ""}</div>
+            </div>
+          )}
+          {payPot && !payPerson && <div style={{ fontSize: 12, color: st.potOver ? "#c0554a" : "#8a7d55", fontWeight: 700, marginTop: 8 }}>pot: {euro(potRemaining)}{st.potOver ? " — te weinig, leg bij of kies andere betaler" : ""}</div>}
+
+          <button style={{ ...(paidConfirmed ? { ...S.btn, width: "100%", background: "rgba(31,138,76,0.12)", color: "#1f8a4c", border: "1px solid rgba(31,138,76,0.4)" } : S.btnP), marginTop: 14, opacity: (st.valid || paidConfirmed) ? 1 : 0.55 }} onClick={confirmPayment}>{paidConfirmed ? "✓ betaling bevestigd — pas gerust nog aan" : "✓ Bevestig betaling"}</button>
         </div>
 
-        <button style={{ ...S.btnP, opacity: canPay ? 1 : 0.5 }} onClick={() => canPay && confirmPayment()}>✓ Bevestig betaling → naar overzicht</button>
+        <button style={{ ...S.btnP, opacity: paidConfirmed ? 1 : 0.5 }} onClick={closeRound}>✓ Rondje afsluiten</button>
+        <button style={{ ...S.btn, width: "100%", marginTop: 8, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelRound}>✕ Rondje annuleren</button>
+
+        {confirmDlg && (
+          <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setConfirmDlg(null)}>
+            <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ ...S.h3, fontSize: 17 }}>Even bevestigen</h3>
+              <p style={{ fontSize: 13.5, color: "#4a3f1e", lineHeight: 1.5, marginBottom: 16 }}>{confirmDlg.msg}</p>
+              <button style={{ ...S.btnP, background: "linear-gradient(135deg,#e0685c,#c0554a)", boxShadow: "none" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
+              <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={() => setConfirmDlg(null)}>← terug</button>
+            </div>
+          </div>
+        )}
+        {notice && (
+          <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setNotice("")}>
+            <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+              <p style={{ fontSize: 14, color: "#4a3f1e", lineHeight: 1.5, marginBottom: 16, fontWeight: 600 }}>{notice}</p>
+              <button style={S.btnP} onClick={() => setNotice("")}>OK</button>
+            </div>
+          </div>
+        )}
       </div></div>
     )
   }
@@ -536,14 +606,16 @@ export default function PartyTest() {
 
         {rounds.map((r, idx) => {
           const items = drinks.reduce((s, d) => s + drinkTotalRound(r, d.id), 0)
-          const payerLabel = r.payer === "pot" ? "de pot" : (people.find((p) => p.id === r.payer)?.name ?? "?")
           const open = openRound === idx
           const roundDrinks = drinks.filter((d) => drinkTotalRound(r, d.id) > 0)
           return (
             <div key={idx} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-              <div style={{ ...S.row, justifyContent: "space-between", cursor: "pointer", padding: 14 }} onClick={() => { setOpenRound(open ? null : idx); setEditAssign(false); setEditCups(false) }}>
-                <span style={{ fontSize: 15, fontWeight: 800 }}>Ronde {idx + 1} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>· {items} drankjes · {euro(r.amount)} · 💶 {payerLabel}</span></span>
-                <span style={{ fontSize: 14, color: "#8a7d55" }}>{open ? "▴" : "▾"}</span>
+              <div style={{ cursor: "pointer", padding: 14 }} onClick={() => { setOpenRound(open ? null : idx); setEditAssign(false); setEditCups(false); setEditPay(false) }}>
+                <div style={{ ...S.row, justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 15, fontWeight: 800 }}>Ronde {idx + 1} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>· {items} drankjes · {euro(r.amount)}</span></span>
+                  <span style={{ fontSize: 14, color: "#8a7d55" }}>{open ? "▴" : "▾"}</span>
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#1f8a4c", marginTop: 3 }}>✓ betaald: {paidLabel(r)}</div>
               </div>
               {open && (
                 <div style={{ padding: "0 14px 14px" }}>
@@ -553,9 +625,10 @@ export default function PartyTest() {
                     return <div key={d.id} style={{ fontSize: 13.5, marginBottom: 3 }}><b>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}</b> <span style={{ color: un > 0 ? "#c0554a" : "#8a7d55" }}>→ {who.join(", ")}{un > 0 ? `${who.length ? ", " : ""}${un}× onbekend` : ""}</span></div>
                   })}
 
-                  <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                    <button style={{ ...S.btn, flex: 1, fontSize: 12.5, padding: "8px 0" }} onClick={() => { setEditAssign((v) => !v); setEditCups(false) }}>{editAssign ? "▴ toewijzen" : "✏️ toewijzen"}</button>
-                    {depositOn && <button style={{ ...S.btn, flex: 1, fontSize: 12.5, padding: "8px 0" }} onClick={() => { setEditCups((v) => !v); setEditAssign(false) }}>{editCups ? "▴ bekers" : "🫙 bekers"}</button>}
+                  <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                    <button style={{ ...S.btn, flex: 1, fontSize: 12.5, padding: "8px 0" }} onClick={() => { setEditAssign((v) => !v); setEditCups(false); setEditPay(false) }}>{editAssign ? "▴ toewijzen" : "✏️ toewijzen"}</button>
+                    {depositOn && <button style={{ ...S.btn, flex: 1, fontSize: 12.5, padding: "8px 0" }} onClick={() => { setEditCups((v) => !v); setEditAssign(false); setEditPay(false) }}>{editCups ? "▴ bekers" : "🫙 bekers"}</button>}
+                    <button style={{ ...S.btn, flex: 1, fontSize: 12.5, padding: "8px 0" }} onClick={() => { setEditPay((v) => !v); setEditAssign(false); setEditCups(false) }}>{editPay ? "▴ bedrag" : "💶 bedrag"}</button>
                   </div>
 
                   {editAssign && (
@@ -567,13 +640,28 @@ export default function PartyTest() {
                             <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 5 }}>{d.emoji} {d.name}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 700 }}> · {un} nog toe te wijzen</span>}</div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                               {people.map((p) => { const n = r.orders[d.id]?.[p.id] ?? 0; return (
-                                <span key={p.id} style={{ ...S.chip(n), padding: "6px 11px", fontSize: 13 }} onClick={() => rAssignTap(idx, d.id, p.id)}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); rBump(idx, d.id, p.id, -1) }} style={{ marginLeft: 4, opacity: 0.85 }}>✕</span>}</span>
+                                <span key={p.id} style={{ ...S.chip(n), padding: "6px 11px", fontSize: 13 }} onClick={() => rAssignFromAnon(idx, d.id, p.id)}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 4, opacity: 0.85 }}>✕</span>}</span>
                               )})}
                             </div>
                           </div>
                         )
                       })}
-                      <div style={{ fontSize: 11, color: "#8a7d55" }}>Tip: staat er "nog toe te wijzen", dan wijst een naam-tik die toe.</div>
+                      <div style={{ fontSize: 11, color: "#8a7d55" }}>Herverdelen: ✕ zet een drankje terug op "onbekend", tik dan een andere naam. Het aantal blijft gelijk (er is al betaald).</div>
+                    </div>
+                  )}
+
+                  {editPay && (
+                    <div style={{ marginTop: 10, background: "#faf4e4", borderRadius: 12, padding: 10 }}>
+                      <div style={{ ...S.row, gap: 8, marginBottom: 8 }}>
+                        <span style={{ fontSize: 18, fontWeight: 800 }}>€</span>
+                        <input style={{ ...S.input, width: 110, fontSize: 16 }} type="number" step="0.01" value={r.amount || ""} onChange={(e) => rSetAmount(idx, parseFloat(e.target.value) || 0)} />
+                        <span style={{ fontSize: 11, color: "#8a7d55" }}>totaal — Fair-Split basis</span>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        <span style={S.chip(r.payer === "" && (r.potPart || 0) > 0 ? 1 : 0)} onClick={() => rPickPot(idx)}>🫙 de pot</span>
+                        {people.map((p) => <span key={p.id} style={{ ...S.chip(r.payer === p.id ? 1 : 0), padding: "6px 11px", fontSize: 13 }} onClick={() => rPickPerson(idx, p.id)}>{p.name}</span>)}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>Eén betaler kiezen. Voor pot + persoon samen: doe het rondje opnieuw via het betaalscherm.</div>
                     </div>
                   )}
 
