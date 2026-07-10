@@ -151,7 +151,6 @@ export default function PartyTest() {
   const cupsBal = (pid: string) => rounds.reduce((s, r) => s + (roundPicked(r, pid) - (r.gaveBack[pid] || 0)), 0)
 
   const addPerson = () => { const name = (typeof window !== "undefined" && window.prompt("Naam van de nieuwe persoon?")) || ""; if (name.trim()) setPeople((ps) => [...ps, { id: "p" + Date.now(), name: name.trim() }]) }
-  const addContrib = (pid: string, v: number) => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [pid]: (c[pid] || 0) + v })) }
   const setEveryoneAmt = (v: number) => setPotDraft(Object.fromEntries(people.map((p) => [p.id, v])))
   const resetPotDraft = () => { setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft("") }
   const closePot = () => { if (editPotId === null && potDraftTotal > 0.001) setPotRounds((rs) => [...rs, { id: Date.now(), amounts: potDraft }]); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setEditPotId(null); setShowPot(false) }
@@ -327,15 +326,12 @@ export default function PartyTest() {
             <button style={{ ...S.btn, padding: "5px 11px", fontSize: 12, opacity: (parseFloat(everyoneDraft.replace(",", ".")) || 0) > 0 ? 1 : 0.5 }} onClick={() => { const v = parseFloat(everyoneDraft.replace(",", ".")) || 0; if (v > 0) { setEveryoneChoice("custom"); setEveryoneAmt(v) } }}>toepassen</button>
           </div>
           {people.map((p) => (
-            <div key={p.id} style={{ padding: "6px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
-              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 5 }}>
-                <span style={{ fontSize: 14, fontWeight: 800 }}>{p.name}{contribOf(p.id) > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: "#8a7d55" }}> · totaal {euro(contribOf(p.id))}</span>}</span>
-                <span style={{ fontSize: 13.5, fontWeight: 800, color: (potDraft[p.id] || 0) > 0 ? "#1f8a4c" : "#b3a988" }}>{(potDraft[p.id] || 0) > 0 ? "+" + euro(potDraft[p.id] || 0) : "+€0"}</span>
-              </div>
-              <div style={{ ...S.row, gap: 6, flexWrap: "wrap" }}>
-                {[10, 15, 20].map((v) => <button key={v} style={{ ...S.btn, padding: "4px 11px", fontSize: 12 }} onClick={() => addContrib(p.id, v)}>+{v}</button>)}
-                <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 12 }} type="text" inputMode="decimal" placeholder="exact" value={potDraft[p.id] ?? ""} onChange={(e) => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 })) }} />
-                <button style={{ ...S.btn, padding: "4px 10px", fontSize: 12, color: "#c0554a" }} onClick={() => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: 0 })) }}>↺</button>
+            <div key={p.id} style={{ ...S.row, justifyContent: "space-between", gap: 8, padding: "7px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
+              <span style={{ fontSize: 14, fontWeight: 800, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{contribOf(p.id) > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: "#8a7d55" }}> · {euro(contribOf(p.id))}</span>}</span>
+              <div style={{ ...S.row, gap: 6, flexShrink: 0 }}>
+                <input style={{ ...S.input, width: 60, padding: "5px 8px", fontSize: 12.5 }} type="text" inputMode="decimal" placeholder="€" value={potDraft[p.id] ?? ""} onChange={(e) => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 })) }} />
+                <button style={{ ...S.btn, padding: "5px 9px", fontSize: 12, color: "#c0554a" }} onClick={() => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: 0 })) }}>↺</button>
+                <span style={{ fontSize: 13, fontWeight: 800, width: 52, textAlign: "right", color: (potDraft[p.id] || 0) > 0 ? "#1f8a4c" : "#b3a988" }}>{(potDraft[p.id] || 0) > 0 ? "+" + euro(potDraft[p.id] || 0) : "+€0"}</span>
               </div>
             </div>
           ))}
@@ -403,7 +399,7 @@ export default function PartyTest() {
         {showPot && renderPotModal()}
         {renderDialogs()}
         <div style={S.card}>
-          <input style={{ ...S.input, width: "100%", textAlign: "left", fontSize: 16, fontWeight: 700, marginBottom: 12 }} type="text" placeholder="Naam van de groep (bv. Verjaardag Tom)" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+          <input style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, marginBottom: 12 }} type="text" placeholder="Naam van de groep (bv. Verjaardag Tom)" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
             <h3 style={{ ...S.h3, margin: 0 }}>👥 {people.length} personen</h3>
             <button style={{ ...S.btn, padding: "5px 10px", fontSize: 12 }} onClick={addPerson}>+ persoon</button>
@@ -413,59 +409,47 @@ export default function PartyTest() {
 
         <div style={S.card}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <span style={{ fontSize: 14, fontWeight: 700 }}>🫙 Gezamenlijke pot</span>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>🫙 Gezamenlijke pot <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>— optioneel</span></span>
             <button style={{ ...S.btn, padding: "6px 12px", fontSize: 13 }} onClick={() => setShowPot(true)}>{potContribTotal > 0 ? `beheren · ${euro(potContribTotal)}` : "+ inleggen"}</button>
           </div>
-          <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 8 }}>Optioneel. Je kan ook later bijleggen — de pot staat altijd bovenaan.</div>
+          <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 8 }}>Je kan ook later nog bijleggen — de pot staat altijd bovenaan.</div>
         </div>
 
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={S.card}>
-          <div style={{ ...S.row, justifyContent: "space-between", alignItems: "flex-start", marginBottom: (depositOn || depositInfo) ? 10 : 0, gap: 8 }}>
-            <div style={{ ...S.row, gap: 5, alignItems: "flex-start", minWidth: 0 }}>
-              <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.25 }}>♻️ Herbruikbare bekers</h3>
-              <span onClick={(e) => { e.stopPropagation(); setDepositInfo((v) => !v); setCoinInfo(false) }} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 11, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
-            </div>
-            <div style={{ ...S.row, gap: 6, flexShrink: 0 }}>
-              <div style={{ ...S.seg(!depositOn), flex: "none", padding: "6px 12px" }} onClick={() => setDepositOn(false)}>uit</div>
-              <div style={{ ...S.seg(depositOn), flex: "none", padding: "6px 12px" }} onClick={() => setDepositOn(true)}>aan</div>
-            </div>
+        <div style={{ ...S.card, height: "100%", marginBottom: 0 }}>
+          <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.3 }}>♻️ Herbruikbare bekers <span onClick={(e) => { e.stopPropagation(); setDepositInfo((v) => !v); setCoinInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 10.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
+          <div style={{ ...S.row, gap: 6, marginTop: 8 }}>
+            <div style={{ ...S.seg(!depositOn), padding: "6px 8px" }} onClick={() => setDepositOn(false)}>uit</div>
+            <div style={{ ...S.seg(depositOn), padding: "6px 8px" }} onClick={() => setDepositOn(true)}>aan</div>
           </div>
-          {depositInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginBottom: depositOn ? 10 : 0, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>♻️ <b>Herbruikbare bekers?</b> Voor events met waarborg per beker die je terugkrijgt bij inleveren. Zet aan om de borg mee te verrekenen.</div>}
+          {depositInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>♻️ <b>Herbruikbare bekers?</b> Voor events met waarborg per beker die je terugkrijgt bij inleveren. Zet aan om de borg mee te verrekenen.</div>}
           {depositOn && (
-            <>
-              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: pay === "coin" ? 10 : 0 }}>
-                <span style={{ fontSize: 14, fontWeight: 700 }}>Waarborg per beker</span>
+            <div style={{ marginTop: 10 }}>
+              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: pay === "coin" ? 8 : 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>Waarborg/beker</span>
                 <div style={S.row}>
-                  <input style={{ ...S.input, width: 70 }} type="text" inputMode="decimal" value={depositValue} onChange={(e) => setDepositValue(parseFloat(e.target.value.replace(",", ".")) || 0)} />
+                  <input style={{ ...S.input, width: 56 }} type="text" inputMode="decimal" value={depositValue} onChange={(e) => setDepositValue(parseFloat(e.target.value.replace(",", ".")) || 0)} />
                   {pay === "eur" && <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}>€</span>}
                 </div>
               </div>
               {pay === "coin" && (
-                <div style={{ ...S.row, gap: 8 }}>
-                  <div style={S.seg(depositUnit === "coin")} onClick={() => setDepositUnit("coin")}>in coins</div>
-                  <div style={S.seg(depositUnit === "eur")} onClick={() => setDepositUnit("eur")}>in €</div>
+                <div style={{ ...S.row, gap: 6 }}>
+                  <div style={{ ...S.seg(depositUnit === "coin"), padding: "6px 6px", fontSize: 12 }} onClick={() => setDepositUnit("coin")}>coins</div>
+                  <div style={{ ...S.seg(depositUnit === "eur"), padding: "6px 6px", fontSize: 12 }} onClick={() => setDepositUnit("eur")}>€</div>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={S.card}>
-          <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <div>
-              <div style={{ ...S.row, gap: 6 }}>
-                <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5 }}>{pay === "coin" ? "🎟️ Coins" : "💶 Euro"}</h3>
-                <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 11, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
-              </div>
-            </div>
-            <div style={{ ...S.row, gap: 6 }}>
-              <span style={{ fontSize: 11.5, fontWeight: 700, color: pay === "coin" ? "#c98a00" : "#8a7d55" }}>🎟️ coins</span>
-              <div onClick={() => { const on = pay !== "coin"; setPay(on ? "coin" : "eur"); setDepositUnit(on ? "coin" : "eur") }} style={{ width: 44, height: 26, borderRadius: 20, background: pay === "coin" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#d9cdb0", position: "relative", cursor: "pointer", transition: "background .15s" }}>
-                <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: pay === "coin" ? 21 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
-              </div>
+        <div style={{ ...S.card, height: "100%", marginBottom: 0 }}>
+          <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.3 }}>{pay === "coin" ? "🎟️ Coins" : "💶 Euro"} <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 10.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
+          <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "space-between" }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: pay === "coin" ? "#c98a00" : "#8a7d55" }}>🎟️ coins</span>
+            <div onClick={() => { const on = pay !== "coin"; setPay(on ? "coin" : "eur"); setDepositUnit(on ? "coin" : "eur") }} style={{ width: 44, height: 26, borderRadius: 20, background: pay === "coin" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#d9cdb0", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
+              <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: pay === "coin" ? 21 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
             </div>
           </div>
           {coinInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>🎟️ <b>Coins?</b> Betaal je met coins i.p.v. euro's? Stel de coin-waarde en prijzen in; de app verdeelt eerlijk. Handig voor festivals, afterwork e.d.</div>}
@@ -509,9 +493,11 @@ export default function PartyTest() {
         </div>
           </div>
         </div>
-        {rounds.length > 0
-          ? <button style={S.btnP} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>📋 Terug naar overzicht →</button>
-          : <button style={S.btnP} onClick={() => { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>🍻 Start {roundNr === 1 ? "1e rondje" : `rondje ${roundNr}`} →</button>}
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 24 }}>
+          {rounds.length > 0
+            ? <button style={{ ...S.btnP, width: "80%" }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>Terug naar overzicht →</button>
+            : <button style={{ ...S.btnP, width: "80%" }} onClick={() => { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>Start {roundNr === 1 ? "1e rondje" : `rondje ${roundNr}`} →</button>}
+        </div>
       </div></div>
     )
   }
@@ -530,19 +516,21 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
-          <h3 style={{ ...S.h3, margin: 0 }}>Ronde {roundNr}</h3>
-          <span style={S.pill}>{roundItems} drankje{roundItems === 1 ? "" : "s"}{unassignedTotal > 0 ? ` · ${unassignedTotal} open` : ""}</span>
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
+          <div style={{ ...S.row, gap: 8, minWidth: 0 }}>
+            <h3 style={{ ...S.h3, margin: 0 }}>Ronde {roundNr}</h3>
+            <span style={S.pill}>{roundItems}{unassignedTotal > 0 ? ` · ${unassignedTotal} open` : ""}</span>
+          </div>
+          <div style={{ display: "inline-flex", background: "#efe6cf", borderRadius: 20, padding: 2, flexShrink: 0 }}>
+            <span onClick={() => setFullList(false)} style={{ padding: "4px 11px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: !fullList ? "#fff" : "transparent", color: !fullList ? "#8a5e0f" : "#a89a72", boxShadow: !fullList ? "0 1px 3px rgba(120,95,20,0.2)" : "none" }}>⚡ kort</span>
+            <span onClick={() => setFullList(true)} style={{ padding: "4px 11px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: fullList ? "#fff" : "transparent", color: fullList ? "#8a5e0f" : "#a89a72", boxShadow: fullList ? "0 1px 3px rgba(120,95,20,0.2)" : "none" }}>📖 alles</span>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", paddingBottom: 8, marginBottom: 4 }}>
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", paddingBottom: 8, marginBottom: 8 }}>
           {catsPresent.map((c) => {
             const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
             return <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: "#e0685c", fontSize: 15 }}>●</span>}</span>
           })}
-        </div>
-        <div style={{ ...S.row, gap: 8, marginBottom: 8 }}>
-          <div style={{ ...S.seg(!fullList), padding: "8px 6px" }} onClick={() => setFullList(false)}>⚡ Korte lijst</div>
-          <div style={{ ...S.seg(fullList), padding: "8px 6px" }} onClick={() => setFullList(true)}>📖 Volledige lijst</div>
         </div>
         {catVisible.length === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "18px 12px", fontSize: 13, color: "#8a7d55" }}>
