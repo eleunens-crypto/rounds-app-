@@ -68,6 +68,7 @@ export default function PartyTest() {
   const [depositUnit, setDepositUnit] = useState<"eur" | "coin">("eur")
   const [showPot, setShowPot] = useState(false)
   const [showCoins, setShowCoins] = useState(false)
+  const [coinInfo, setCoinInfo] = useState(false)
 
   const [people, setPeople] = useState<Person[]>(DEMO_PEOPLE)
   const [drinks, setDrinks] = useState<Drink[]>(DEMO_DRINKS)
@@ -126,6 +127,8 @@ export default function PartyTest() {
   const bump = (did: string, pid: string, delta: number) => setCart((c) => ({ ...c, [did]: { ...(c[did] ?? {}), [pid]: Math.max(0, (c[did]?.[pid] ?? 0) + delta) } }))
   const bumpAnon = (did: string, delta: number) => setCartAnon((a) => ({ ...a, [did]: Math.max(0, (a[did] ?? 0) + delta) }))
   const assignTap = (did: string, pid: string) => { if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); bump(did, pid, 1) } else bump(did, pid, 1) }
+  const setEachOne = (did: string) => setCart((c) => ({ ...c, [did]: Object.fromEntries(people.map((p) => [p.id, 1])) }))
+  const eachOne = (did: string) => { const hi = people.filter((p) => (cart[did]?.[p.id] ?? 0) >= 2).map((p) => p.name); if (hi.length > 0) { setConfirmDlg({ msg: `${hi.join(" en ")} ${hi.length === 1 ? "heeft" : "hebben"} er al 2 of meer. "Elk 1" zet iedereen op precies 1 — ${hi.length === 1 ? "die wordt" : "die worden"} dus verlaagd naar 1. Doorgaan?`, yes: "Ja, iedereen op 1", onYes: () => { setEachOne(did); setConfirmDlg(null) } }) } else setEachOne(did) }
   const drinkTotal = (did: string) => Object.values(cart[did] ?? {}).reduce((a, b) => a + b, 0) + (cartAnon[did] ?? 0)
   const roundItems = useMemo(() => drinks.reduce((s, d) => s + drinkTotal(d.id), 0), [cart, cartAnon, drinks]) // eslint-disable-line
   const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon, drinks]) // eslint-disable-line
@@ -406,8 +409,10 @@ export default function PartyTest() {
         <div style={S.card}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
             <div>
-              <h3 style={{ ...S.h3, margin: 0 }}>{pay === "coin" ? "🎟️ Afrekenen met coins" : "💶 Afrekenen in euro"}</h3>
-              <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 3 }}>{pay === "coin" ? "Festival-tokens. Zet uit voor gewone euro's." : "Werk je op een festival met tokens?"}</div>
+              <div style={{ ...S.row, gap: 6 }}>
+                <h3 style={{ ...S.h3, margin: 0 }}>{pay === "coin" ? "🎟️ Afrekenen met coins" : "💶 Afrekenen in euro"}</h3>
+                <span onClick={() => setCoinInfo((v) => !v)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 11, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
+              </div>
             </div>
             <div style={{ ...S.row, gap: 6 }}>
               <span style={{ fontSize: 11.5, fontWeight: 700, color: pay === "coin" ? "#c98a00" : "#8a7d55" }}>🎟️ coins</span>
@@ -416,6 +421,7 @@ export default function PartyTest() {
               </div>
             </div>
           </div>
+          {coinInfo && <div style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>🎟️ <b>Coins?</b> Betaal je met coins i.p.v. euro's? Stel de coin-waarde en prijzen in; de app verdeelt eerlijk. Handig voor festivals, afterwork e.d.</div>}
           {pay === "coin" && (
             <div style={{ marginTop: 12 }}>
               <div style={{ ...S.row, justifyContent: "space-between" }}>
@@ -592,12 +598,13 @@ export default function PartyTest() {
               ) : (
                 <p style={{ ...S.sub, marginBottom: 12 }}>Tik wie dit had (nog eens tikken = meer). Of voeg toe zonder naam om later toe te wijzen.</p>
               )}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                 {people.map((p) => {
                   const n = aQty(ad.id, p.id)
                   return <span key={p.id} style={S.chip(n)} onClick={() => assignTap(ad.id, p.id)} onContextMenu={(e) => { e.preventDefault(); bump(ad.id, p.id, -1) }}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); bump(ad.id, p.id, -1) }} style={{ marginLeft: 4, opacity: 0.85 }}>✕</span>}</span>
                 })}
               </div>
+              <button style={{ ...S.btn, width: "100%", marginBottom: 14, fontSize: 13, fontWeight: 800, color: "#8a5e0f" }} onClick={() => eachOne(ad.id)}>👥 elk 1 <span style={{ fontWeight: 400, color: "#8a7d55" }}>— iedereen precies één</span></button>
               {adAnon > 0 ? (
                 <div style={{ ...S.row, justifyContent: "space-between", background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.3)", borderRadius: 12, padding: "8px 12px", marginBottom: 14 }}>
                   <span style={{ fontSize: 13, color: "#b0402f", fontWeight: 700 }}>🔴 {adAnon} zonder naam <span style={{ fontWeight: 400, color: "#8a7d55" }}>(tik een naam om toe te wijzen)</span></span>
