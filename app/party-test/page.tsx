@@ -80,6 +80,7 @@ export default function PartyTest() {
   const [everyoneDraft, setEveryoneDraft] = useState<string>("")
   const [everyoneChoice, setEveryoneChoice] = useState<number | "custom" | null>(null)
   const [editPotId, setEditPotId] = useState<number | null>(null)
+  const [potBuilderOpen, setPotBuilderOpen] = useState(false)
 
   const [roundNr, setRoundNr] = useState(1)
   const [activeCat, setActiveCat] = useState<Cat>("Bier")
@@ -158,10 +159,10 @@ export default function PartyTest() {
   const removePerson = (id: string) => { const pp = people.find((x) => x.id === id); if (personHasDrinks(id)) { setNotice(`${pp?.name || "Deze persoon"} heeft al drankjes in een rondje en kan niet verwijderd worden. Verwijder eerst die drankjes.`); return } setPeople((ps) => ps.filter((x) => x.id !== id)) }
   const setEveryoneAmt = (v: number) => setPotDraft(Object.fromEntries(people.map((p) => [p.id, v])))
   const resetPotDraft = () => { setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft("") }
-  const closePot = () => { if (editPotId === null && potDraftTotal > 0.001) setPotRounds((rs) => [...rs, { id: Date.now(), amounts: potDraft }]); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setEditPotId(null); setShowPot(false) }
+  const closePot = () => { if (editPotId === null && potDraftTotal > 0.001) setPotRounds((rs) => [...rs, { id: Date.now(), amounts: potDraft }]); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setEditPotId(null); setPotBuilderOpen(false); setShowPot(false) }
   const editPotRound = (id: number) => { const r = potRounds.find((x) => x.id === id); if (!r) return; setEditPotId(id); setPotDraft({ ...r.amounts }); setEveryoneChoice(null); setEveryoneDraft("") }
-  const saveEditPot = () => { if (editPotId === null) return; if (potDraftTotal > 0.001) setPotRounds((rs) => rs.map((r) => r.id === editPotId ? { ...r, amounts: potDraft } : r)); else setPotRounds((rs) => rs.filter((r) => r.id !== editPotId)); setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft("") }
-  const cancelEditPot = () => { setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft("") }
+  const saveEditPot = () => { if (editPotId === null) return; if (potDraftTotal > 0.001) setPotRounds((rs) => rs.map((r) => r.id === editPotId ? { ...r, amounts: potDraft } : r)); else setPotRounds((rs) => rs.filter((r) => r.id !== editPotId)); setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setPotBuilderOpen(false) }
+  const cancelEditPot = () => { setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setPotBuilderOpen(false) }
   const removePotRound = (id: number, label: string) => setConfirmDlg({ msg: `De ${label} verwijderen uit de pot? Dit kan niet ongedaan gemaakt worden.`, yes: "Ja, verwijderen", onYes: () => { setPotRounds((rs) => rs.filter((r) => r.id !== id)); setConfirmDlg(null) } })
   const catsPresent = CATS.filter((c) => drinks.some((d) => d.cat === c))
   const bump1 = (did: string) => bumpAnon(did, 1)
@@ -313,6 +314,8 @@ export default function PartyTest() {
           )
         })}
 
+        {(potRounds.length === 0 || potBuilderOpen || editPotId !== null) ? (
+        <>
         <div style={{ background: "rgba(240,165,0,0.08)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 12, padding: 11, marginTop: 4 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f" }}>{editPotId !== null ? "✏️ inleg wijzigen" : `➕ ${potRounds.length === 0 ? "1e inleg" : `${potRounds.length + 1}e inleg`}`}</span>
@@ -349,6 +352,13 @@ export default function PartyTest() {
           </div>
         ) : (
           <button style={{ ...S.btnP, marginTop: 14 }} onClick={closePot}>{potDraftTotal > 0 ? `✓ Inleg toevoegen (${euro(potDraftTotal)})` : "Klaar"}</button>
+        )}
+        </>
+        ) : (
+          <div>
+            <button style={{ ...S.btnP, marginTop: 4 }} onClick={() => setPotBuilderOpen(true)}>➕ Inleg pot toevoegen</button>
+            <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={closePot}>Klaar</button>
+          </div>
         )}
       </div>
     </div>
@@ -444,19 +454,23 @@ export default function PartyTest() {
           {depositInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>♻️ <b>Herbruikbare bekers?</b> Voor events met waarborg per beker die je terugkrijgt bij inleveren. Zet aan om de borg mee te verrekenen.</div>}
           {depositOn && (
             <div style={{ marginTop: 10 }}>
-              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: pay === "coin" ? 8 : 0 }}>
+              {pay === "coin" && (
+                <>
+                  <div style={{ ...S.row, gap: 6, marginBottom: 6 }}>
+                    <div style={{ ...S.seg(depositUnit === "coin"), padding: "6px 6px", fontSize: 12 }} onClick={() => setDepositUnit("coin")}>in coins</div>
+                    <div style={{ ...S.seg(depositUnit === "eur"), padding: "6px 6px", fontSize: 12 }} onClick={() => setDepositUnit("eur")}>in €</div>
+                  </div>
+                  <div style={{ fontSize: 11, color: "#c98a00", marginBottom: 8, lineHeight: 1.4 }}>💡 Coins staat aan — kies of de waarborg in <b>coins</b> of <b>€</b> is.</div>
+                </>
+              )}
+              <div style={{ ...S.row, justifyContent: "space-between" }}>
                 <span style={{ fontSize: 13, fontWeight: 700 }}>Waarborg/beker</span>
-                <div style={S.row}>
+                <div style={{ ...S.row, gap: 4 }}>
+                  {effDepositUnit === "eur" && <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}>€</span>}
                   <input style={{ ...S.input, width: 56 }} type="text" inputMode="decimal" value={depositValue} onChange={(e) => setDepositValue(parseFloat(e.target.value.replace(",", ".")) || 0)} />
-                  {pay === "eur" && <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}>€</span>}
+                  {effDepositUnit === "coin" && <span style={{ fontSize: 12.5, fontWeight: 700, color: "#c98a00" }}>coins</span>}
                 </div>
               </div>
-              {pay === "coin" && (
-                <div style={{ ...S.row, gap: 6 }}>
-                  <div style={{ ...S.seg(depositUnit === "coin"), padding: "6px 6px", fontSize: 12 }} onClick={() => setDepositUnit("coin")}>coins</div>
-                  <div style={{ ...S.seg(depositUnit === "eur"), padding: "6px 6px", fontSize: 12 }} onClick={() => setDepositUnit("eur")}>€</div>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -901,17 +915,20 @@ export default function PartyTest() {
       </div>
 
       <div style={S.card}>
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
-          <h3 style={{ ...S.h3, margin: 0 }}>⚖️ Fair Split</h3>
-          <div style={{ ...S.row, gap: 12 }}>
-            <span onClick={() => { setOpenFairAll((v) => !v); setOpenFair({}) }} style={{ fontSize: 11.5, fontWeight: 800, color: "#8a5e0f", cursor: "pointer" }}>{openFairAll ? "▴ alles dicht" : "⇅ alles open"}</span>
-            <span onClick={() => setShowEqual((v) => !v)} style={{ fontSize: 11.5, fontWeight: 700, color: "#8a7d55", cursor: "pointer" }}>{showEqual ? "gelijk-kolom ✓" : "gelijk-kolom ✕"}</span>
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
+          <div style={{ ...S.row, gap: 6 }}>
+            <h3 style={{ ...S.h3, margin: 0 }}>⚖️ Fair Split</h3>
+            <span onClick={() => setNotice("⚖️ Fair Split — Eerlijker dan gelijke verdeling. Wie weinig of goedkopere drankjes nam, betaalt niet mee voor wie meer of duurdere drankjes nam.")} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 11, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
           </div>
+          <span onClick={() => { setOpenFairAll((v) => !v); setOpenFair({}) }} style={{ fontSize: 11.5, fontWeight: 800, color: "#8a5e0f", cursor: "pointer" }}>{openFairAll ? "▴ sluit details" : "bekijk details"}</span>
         </div>
         {anyUnassignedRounds && <div style={{ fontSize: 11.5, color: "#b0402f", marginBottom: 8 }}>⚠️ Sommige drankjes waren niet toegewezen — gelijk verdeeld (minder eerlijk).</div>}
-        <div style={{ ...S.row, fontSize: 10.5, color: "#8a7d55", fontWeight: 800, paddingBottom: 4, borderBottom: "1px solid rgba(120,95,20,0.12)" }}>
-          <span style={{ flex: 1 }}>naam · aandeel</span>{showEqual && <span style={{ width: 66, textAlign: "right" }}>gelijk</span>}
-        </div>
+        {showEqual && (
+          <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, fontSize: 10.5, color: "#8a7d55", fontWeight: 800, paddingBottom: 4, borderBottom: "1px solid rgba(120,95,20,0.12)" }}>
+            <span>gelijke verdeling</span>
+            <span onClick={() => setNotice("Gelijke verdeling = totaal ÷ aantal personen. Fair Split is eerlijker: wie weinig of niks dronk, betaalt niet mee voor wie veel dronk.")} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 15, height: 15, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 9.5, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
+          </div>
+        )}
         {people.map((p) => {
           const dronk = consumption(p.id), waarborg = cupOwn(p.id), zelf = paidByPerson(p.id), inpot = contribOf(p.id)
           const owed = dronk + waarborg - zelf - inpot
@@ -922,7 +939,7 @@ export default function PartyTest() {
             <div key={p.id} style={{ borderBottom: "1px solid rgba(120,95,20,0.06)" }}>
               <div style={{ ...S.row, justifyContent: "space-between", padding: "7px 0", cursor: "pointer" }} onClick={() => setOpenFair((o) => ({ ...o, [p.id]: !open }))}>
                 <span style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>{open ? "▾" : "▸"} {p.name} <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f8a4c" }}>· {show(dronk)}</span></span>
-                {showEqual && <span style={{ width: 66, textAlign: "right", fontSize: 12.5, color: "#8a7d55" }}>{show(equalShare)}</span>}
+                {showEqual && <span style={{ width: 96, textAlign: "right", fontSize: 12.5, color: "#8a7d55" }}>{show(equalShare)}</span>}
               </div>
               {open && (
                 <div style={{ background: "#faf4e4", borderRadius: 10, padding: "8px 11px", margin: "0 0 8px", fontSize: 12.5 }}>
@@ -936,7 +953,7 @@ export default function PartyTest() {
             </div>
           )
         })}
-        <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 8 }}>Tik een naam open voor de opbouw. <b>Aandeel</b> = wat je verteerde (telt op tot {show(grandTotal)}). <b>Netto</b> houdt rekening met wat je zelf betaalde en in de pot legde.{showEqual ? ` Gelijk = totaal ÷ ${people.length}.` : ""}</div>
+        <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 8 }}>Tik een naam (of "bekijk details") voor de opbouw. <b>Aandeel</b> = wat je verteerde (telt op tot {show(grandTotal)}). <b>Netto</b> houdt rekening met wat je zelf betaalde en in de pot legde. <span onClick={() => setShowEqual((v) => !v)} style={{ color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{showEqual ? "verberg gelijke verdeling" : "toon gelijke verdeling"}</span></div>
       </div>
 
       <div style={S.card}>
