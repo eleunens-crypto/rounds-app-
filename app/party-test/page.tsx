@@ -63,7 +63,7 @@ export default function PartyTest() {
   const [view, setView] = useState<"setup" | "order" | "confirmed" | "hub" | "final">("setup")
   const [pay, setPay] = useState<"eur" | "coin">("eur")
   const [coinValue, setCoinValue] = useState(3.9)
-  const [depositOn, setDepositOn] = useState(true)
+  const [depositOn, setDepositOn] = useState(false)
   const [depositValue, setDepositValue] = useState(1)
   const [depositUnit, setDepositUnit] = useState<"eur" | "coin">("eur")
   const [showPot, setShowPot] = useState(false)
@@ -418,9 +418,11 @@ export default function PartyTest() {
           <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 8 }}>Optioneel. Je kan ook later bijleggen — de pot staat altijd bovenaan.</div>
         </div>
 
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
         <div style={S.card}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: depositOn ? 12 : 0 }}>
-            <h3 style={{ ...S.h3, margin: 0 }}>♻️ Herbruikbare bekers</h3>
+            <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5 }}>♻️ Bekers</h3>
             <div style={{ ...S.row, gap: 6 }}>
               <div style={{ ...S.seg(!depositOn), flex: "none", padding: "6px 12px" }} onClick={() => setDepositOn(false)}>uit</div>
               <div style={{ ...S.seg(depositOn), flex: "none", padding: "6px 12px" }} onClick={() => setDepositOn(true)}>aan</div>
@@ -444,12 +446,13 @@ export default function PartyTest() {
             </>
           )}
         </div>
-
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
         <div style={S.card}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
             <div>
               <div style={{ ...S.row, gap: 6 }}>
-                <h3 style={{ ...S.h3, margin: 0 }}>{pay === "coin" ? "🎟️ Afrekenen met coins" : "💶 Afrekenen in euro"}</h3>
+                <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5 }}>{pay === "coin" ? "🎟️ Coins" : "💶 Euro"}</h3>
                 <span onClick={() => setCoinInfo((v) => !v)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 11, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
               </div>
             </div>
@@ -500,7 +503,8 @@ export default function PartyTest() {
           )}
           <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 10 }}>Per rondje geef je het <b>echte bedrag</b> in. De app verdeelt eerlijk (Fair Split) — zonder prijzen te tonen.</div>
         </div>
-
+          </div>
+        </div>
         {rounds.length > 0
           ? <button style={S.btnP} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>📋 Terug naar overzicht →</button>
           : <button style={S.btnP} onClick={() => { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>🍻 Start {roundNr === 1 ? "1e rondje" : `rondje ${roundNr}`} →</button>}
