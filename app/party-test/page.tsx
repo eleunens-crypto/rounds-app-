@@ -337,9 +337,9 @@ export default function PartyTest() {
             return <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: "#e0685c", fontSize: 15 }}>●</span>}</span>
           })}
         </div>
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
-          <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>{fullList ? "📖 volledige lijst" : "⚡ favorieten"}</span>
-          <button style={{ ...S.btn, padding: "5px 12px", fontSize: 12.5 }} onClick={() => setFullList((v) => !v)}>{fullList ? "⚡ toon favorieten" : "📖 toon alles"}</button>
+        <div style={{ ...S.row, gap: 8, marginBottom: 8 }}>
+          <div style={{ ...S.seg(!fullList), padding: "8px 6px" }} onClick={() => setFullList(false)}>⚡ Korte lijst</div>
+          <div style={{ ...S.seg(fullList), padding: "8px 6px" }} onClick={() => setFullList(true)}>📖 Volledige lijst</div>
         </div>
         {catVisible.length === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "18px 12px", fontSize: 13, color: "#8a7d55" }}>
@@ -361,6 +361,24 @@ export default function PartyTest() {
                 </div>
               )
             })}
+          </div>
+        )}
+        {roundItems > 0 && (
+          <div style={{ ...S.card, padding: "10px 12px", background: "#fffdf6" }}>
+            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>🛒 In dit rondje</span>
+              <span style={{ ...S.pill, background: "rgba(240,165,0,0.18)", color: "#c98a00" }}>{roundItems} drankje{roundItems === 1 ? "" : "s"}{unassignedTotal > 0 ? ` · ${unassignedTotal} open` : ""}</span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => {
+                const un = cartAnon[d.id] ?? 0
+                return (
+                  <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 9px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, background: un > 0 ? "rgba(224,104,92,0.12)" : "rgba(240,165,0,0.12)", border: un > 0 ? "1px solid rgba(224,104,92,0.4)" : "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e", cursor: "pointer" }} onClick={() => setAssignDrink(d.id)}>
+                    {d.emoji} {drinkTotal(d.id)}× {d.name}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 800 }}> ·{un} open</span>}
+                  </span>
+                )
+              })}
+            </div>
           </div>
         )}
         <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
