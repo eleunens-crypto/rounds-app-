@@ -586,12 +586,12 @@ export default function PartyTest() {
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
               <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
                 <h3 style={{ ...S.h3, margin: 0, fontSize: 18 }}>{ad.emoji} {ad.name}</h3>
-                <span style={{ fontSize: 13, color: "#8a7d55" }}>{drinkTotal(ad.id)}× totaal</span>
+                {drinkTotal(ad.id) > 0 && <span style={{ fontSize: 13, color: "#8a7d55" }}>{drinkTotal(ad.id)}×</span>}
               </div>
               {adAnon > 0 ? (
                 <div style={{ background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 13, color: "#b0402f", fontWeight: 700 }}>🔴 {adAnon} nog toe te wijzen — tik een naam om er telkens één aan toe te wijzen.</div>
               ) : (
-                <p style={{ ...S.sub, marginBottom: 12 }}>Tik wie dit had (nog eens tikken = meer). Of voeg toe zonder naam om later toe te wijzen.</p>
+                <p style={{ ...S.sub, marginBottom: 12 }}>Tik aan voor wie dit is (nog eens tikken = +1).</p>
               )}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
                 {people.map((p) => {
