@@ -73,6 +73,7 @@ export default function PartyTest() {
   const [drinks, setDrinks] = useState<Drink[]>(DEMO_DRINKS)
   const [potRounds, setPotRounds] = useState<{ id: number; amounts: Record<string, number> }[]>([])
   const [potDraft, setPotDraft] = useState<Record<string, number>>({})
+  const [everyoneDraft, setEveryoneDraft] = useState<string>("")
 
   const [roundNr, setRoundNr] = useState(1)
   const [activeCat, setActiveCat] = useState<Cat>("Bier")
@@ -144,7 +145,7 @@ export default function PartyTest() {
   const addContrib = (pid: string, v: number) => setPotDraft((c) => ({ ...c, [pid]: (c[pid] || 0) + v }))
   const addEveryone = (v: number) => setPotDraft((c) => Object.fromEntries(people.map((p) => [p.id, (c[p.id] || 0) + v])))
   const closePot = () => { if (potDraftTotal > 0.001) setPotRounds((rs) => [...rs, { id: Date.now(), amounts: potDraft }]); setPotDraft({}); setShowPot(false) }
-  const removePotRound = (id: number) => setPotRounds((rs) => rs.filter((r) => r.id !== id))
+  const removePotRound = (id: number, label: string) => setConfirmDlg({ msg: `De ${label} verwijderen uit de pot? Dit kan niet ongedaan gemaakt worden.`, yes: "Ja, verwijderen", onYes: () => { setPotRounds((rs) => rs.filter((r) => r.id !== id)); setConfirmDlg(null) } })
   const catsPresent = CATS.filter((c) => drinks.some((d) => d.cat === c))
   const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
 
@@ -262,7 +263,7 @@ export default function PartyTest() {
             <div key={r.id} style={{ background: "#faf4e4", borderRadius: 12, padding: "9px 11px", marginBottom: 8 }}>
               <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
                 <span style={{ fontSize: 13, fontWeight: 800 }}>{i + 1}e inleg <span style={{ fontSize: 12, fontWeight: 700, color: "#1f8a4c" }}>· {euro(tot)}</span></span>
-                <span style={{ fontSize: 12, color: "#c0554a", cursor: "pointer", fontWeight: 700 }} onClick={() => removePotRound(r.id)}>✕ verwijder</span>
+                <span style={{ fontSize: 12, color: "#c0554a", cursor: "pointer", fontWeight: 700 }} onClick={() => removePotRound(r.id, `${i + 1}e inleg`)}>✕ verwijder</span>
               </div>
               <div style={{ fontSize: 12.5, color: "#6b5f3a" }}>{who.map((pp) => `${pp.name} ${euro(r.amounts[pp.id] || 0)}`).join(" · ")}</div>
             </div>
@@ -274,9 +275,14 @@ export default function PartyTest() {
             <span style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f" }}>➕ {potRounds.length === 0 ? "1e inleg" : `${potRounds.length + 1}e inleg`}</span>
             {potDraftTotal > 0 && <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f8a4c" }}>+{euro(potDraftTotal)}</span>}
           </div>
-          <div style={{ ...S.row, gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+          <div style={{ ...S.row, gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
             <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>iedereen +</span>
-            {[10, 15, 20].map((v) => <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 13 }} onClick={() => addEveryone(v)}>€{v}</button>)}
+            {[5, 10, 20, 30].map((v) => <button key={v} style={{ ...S.btn, padding: "5px 11px", fontSize: 13 }} onClick={() => addEveryone(v)}>€{v}</button>)}
+          </div>
+          <div style={{ ...S.row, gap: 6, marginBottom: 10 }}>
+            <span style={{ fontSize: 12, color: "#8a7d55" }}>of eigen bedrag voor iedereen:</span>
+            <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 12 }} type="text" inputMode="decimal" placeholder="€" value={everyoneDraft} onChange={(e) => setEveryoneDraft(e.target.value.replace(/[^0-9.,]/g, ""))} />
+            <button style={{ ...S.btn, padding: "5px 11px", fontSize: 12, opacity: (parseFloat(everyoneDraft.replace(",", ".")) || 0) > 0 ? 1 : 0.5 }} onClick={() => { const v = parseFloat(everyoneDraft.replace(",", ".")) || 0; if (v > 0) { addEveryone(v); setEveryoneDraft("") } }}>+ iedereen</button>
           </div>
           {people.map((p) => (
             <div key={p.id} style={{ padding: "6px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
@@ -295,6 +301,28 @@ export default function PartyTest() {
         <button style={{ ...S.btnP, marginTop: 14 }} onClick={closePot}>{potDraftTotal > 0 ? `✓ Inleg toevoegen (${euro(potDraftTotal)})` : "Klaar"}</button>
       </div>
     </div>
+  )
+  const renderDialogs = () => (
+    <>
+      {confirmDlg && (
+        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setConfirmDlg(null)}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ ...S.h3, fontSize: 17 }}>Even bevestigen</h3>
+            <p style={{ fontSize: 13.5, color: "#4a3f1e", lineHeight: 1.5, marginBottom: 16 }}>{confirmDlg.msg}</p>
+            <button style={{ ...S.btnP, background: "linear-gradient(135deg,#e0685c,#c0554a)", boxShadow: "none" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
+            <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={() => setConfirmDlg(null)}>← terug</button>
+          </div>
+        </div>
+      )}
+      {notice && (
+        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setNotice("")}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <p style={{ fontSize: 14, color: "#4a3f1e", lineHeight: 1.5, marginBottom: 16, fontWeight: 600 }}>{notice}</p>
+            <button style={S.btnP} onClick={() => setNotice("")}>OK</button>
+          </div>
+        </div>
+      )}
+    </>
   )
   const Header = () => (
     <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
@@ -315,6 +343,7 @@ export default function PartyTest() {
       <div style={S.page}><div style={S.wrap}>
         <Header />
         {showPot && renderPotModal()}
+        {renderDialogs()}
         <div style={S.card}>
           <h3 style={S.h3}>Hoe reken je af?</h3>
           <div style={{ ...S.row, gap: 8, marginBottom: pay === "coin" ? 12 : 0 }}>
@@ -424,6 +453,7 @@ export default function PartyTest() {
       <div style={S.page}><div style={S.wrap}>
         <Header />
         {showPot && renderPotModal()}
+        {renderDialogs()}
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>Ronde {roundNr}</h3>
           <span style={S.pill}>{roundItems} drankje{roundItems === 1 ? "" : "s"}{unassignedTotal > 0 ? ` · ${unassignedTotal} open` : ""}</span>
@@ -581,6 +611,7 @@ export default function PartyTest() {
       <div style={S.page}><div style={S.wrap}>
         <Header />
         {showPot && renderPotModal()}
+        {renderDialogs()}
         <div style={{ ...S.card, textAlign: "center", padding: "20px 16px" }}>
           <div style={{ fontSize: 34, marginBottom: 4 }}>🍻</div>
           <div style={{ fontSize: 18, fontWeight: 800 }}>Ronde {roundNr} bevestigd — {items} drankjes</div>
@@ -636,25 +667,6 @@ export default function PartyTest() {
 
         <button style={{ ...S.btnP, opacity: paidConfirmed ? 1 : 0.5 }} onClick={closeRound}>✓ Rondje afsluiten</button>
         <button style={{ ...S.btn, width: "100%", marginTop: 8, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelRound}>✕ Rondje annuleren</button>
-
-        {confirmDlg && (
-          <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setConfirmDlg(null)}>
-            <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ ...S.h3, fontSize: 17 }}>Even bevestigen</h3>
-              <p style={{ fontSize: 13.5, color: "#4a3f1e", lineHeight: 1.5, marginBottom: 16 }}>{confirmDlg.msg}</p>
-              <button style={{ ...S.btnP, background: "linear-gradient(135deg,#e0685c,#c0554a)", boxShadow: "none" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
-              <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={() => setConfirmDlg(null)}>← terug</button>
-            </div>
-          </div>
-        )}
-        {notice && (
-          <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setNotice("")}>
-            <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-              <p style={{ fontSize: 14, color: "#4a3f1e", lineHeight: 1.5, marginBottom: 16, fontWeight: 600 }}>{notice}</p>
-              <button style={S.btnP} onClick={() => setNotice("")}>OK</button>
-            </div>
-          </div>
-        )}
       </div></div>
     )
   }
@@ -665,6 +677,7 @@ export default function PartyTest() {
       <div style={S.page}><div style={S.wrap}>
         <Header />
         {showPot && renderPotModal()}
+        {renderDialogs()}
         <h3 style={{ ...S.h3, marginBottom: 6 }}>📋 Rondes-overzicht</h3>
         <p style={{ ...S.sub }}>Tik een ronde open om drankjes/namen of bekers nog aan te passen — de app herberekent automatisch.</p>
 
@@ -766,6 +779,7 @@ export default function PartyTest() {
     <div style={S.page}><div style={S.wrap}>
       <Header />
       {showPot && renderPotModal()}
+        {renderDialogs()}
       <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
         <h3 style={{ ...S.h3, margin: 0 }}>🧾 Eindbalans</h3>
         {pay === "coin" && (
