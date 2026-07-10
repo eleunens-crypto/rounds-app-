@@ -52,7 +52,8 @@ export default function PartyTest() {
 
   const [people, setPeople] = useState<Person[]>(DEMO_PEOPLE)
   const [drinks, setDrinks] = useState<Drink[]>(DEMO_DRINKS)
-  const [contrib, setContrib] = useState<Record<string, number>>({})
+  const [potRounds, setPotRounds] = useState<{ id: number; amounts: Record<string, number> }[]>([])
+  const [potDraft, setPotDraft] = useState<Record<string, number>>({})
 
   const [roundNr, setRoundNr] = useState(1)
   const [activeCat, setActiveCat] = useState<Cat>("Bier")
@@ -87,7 +88,9 @@ export default function PartyTest() {
   const depositPerCupEur = depositUnit === "eur" ? depositValue : depositValue * coinValue
   const show = (eur: number) => (pay === "coin" && displayUnit === "coin" ? (eur / coinValue).toFixed(2).replace(".", ",") + " coins" : euro(eur))
 
-  const potContribTotal = Object.values(contrib).reduce((a, b) => a + (b || 0), 0)
+  const contribOf = (pid: string) => potRounds.reduce((s, r) => s + (r.amounts[pid] || 0), 0)
+  const potContribTotal = potRounds.reduce((s, r) => s + Object.values(r.amounts).reduce((a, b) => a + (b || 0), 0), 0)
+  const potDraftTotal = Object.values(potDraft).reduce((a, b) => a + (b || 0), 0)
   const potSpent = rounds.reduce((s, r) => s + (r.potPart || 0), 0)
   const potRemaining = potContribTotal - potSpent
 
@@ -116,8 +119,10 @@ export default function PartyTest() {
   const cupsBal = (pid: string) => rounds.reduce((s, r) => s + (roundPicked(r, pid) - (r.gaveBack[pid] || 0)), 0)
 
   const addPerson = () => { const name = (typeof window !== "undefined" && window.prompt("Naam van de nieuwe persoon?")) || ""; if (name.trim()) setPeople((ps) => [...ps, { id: "p" + Date.now(), name: name.trim() }]) }
-  const addContrib = (pid: string, v: number) => setContrib((c) => ({ ...c, [pid]: (c[pid] || 0) + v }))
-  const addEveryone = (v: number) => setContrib((c) => Object.fromEntries(people.map((p) => [p.id, (c[p.id] || 0) + v])))
+  const addContrib = (pid: string, v: number) => setPotDraft((c) => ({ ...c, [pid]: (c[pid] || 0) + v }))
+  const addEveryone = (v: number) => setPotDraft((c) => Object.fromEntries(people.map((p) => [p.id, (c[p.id] || 0) + v])))
+  const closePot = () => { if (potDraftTotal > 0.001) setPotRounds((rs) => [...rs, { id: Date.now(), amounts: potDraft }]); setPotDraft({}); setShowPot(false) }
+  const removePotRound = (id: number) => setPotRounds((rs) => rs.filter((r) => r.id !== id))
   const catsPresent = CATS.filter((c) => drinks.some((d) => d.cat === c))
   const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
 
@@ -173,14 +178,14 @@ export default function PartyTest() {
       if (r.payer) { paid[r.payer] = (paid[r.payer] ?? 0) + personPart + cupSum; potPaid += potPart }
       else if (potPart > 0) { potPaid += potPart + cupSum }
     })
-    const nets: { id: string; label: string; net: number }[] = people.map((p) => ({ id: p.id, label: p.name, net: (paid[p.id] ?? 0) + (contrib[p.id] || 0) - consumption(p.id) - cupOwn(p.id) }))
+    const nets: { id: string; label: string; net: number }[] = people.map((p) => ({ id: p.id, label: p.name, net: (paid[p.id] ?? 0) + contribOf(p.id) - consumption(p.id) - cupOwn(p.id) }))
     if (potContribTotal > 0 || potSpent > 0) nets.push({ id: "pot", label: "de pot", net: potPaid - potContribTotal })
     const creditors = nets.filter((n) => n.net > 0.005).map((n) => ({ ...n })).sort((a, b) => b.net - a.net)
     const debtors = nets.filter((n) => n.net < -0.005).map((n) => ({ ...n, net: -n.net })).sort((a, b) => b.net - a.net)
     const tx: { from: string; to: string; amount: number }[] = []; let i = 0, j = 0
     while (i < debtors.length && j < creditors.length) { const amt = Math.min(debtors[i].net, creditors[j].net); tx.push({ from: debtors[i].label, to: creditors[j].label, amount: amt }); debtors[i].net -= amt; creditors[j].net -= amt; if (debtors[i].net < 0.005) i++; if (creditors[j].net < 0.005) j++ }
     return { tx }
-  }, [rounds, people, contrib, potContribTotal, potSpent, depositOn, depositValue, depositUnit, coinValue, drinks]) // eslint-disable-line
+  }, [rounds, people, potRounds, potContribTotal, potSpent, depositOn, depositValue, depositUnit, coinValue, drinks]) // eslint-disable-line
   const anyUnassignedRounds = rounds.some((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0))
   const drinkTotalRound = (r: Round, did: string) => Object.values(r.orders[did] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[did] ?? 0)
   const paidLabel = (r: Round) => {
@@ -219,33 +224,53 @@ export default function PartyTest() {
     </div>
   )
   const renderPotModal = () => (
-    <div style={{ ...S.overlay, zIndex: 60 }} onClick={() => setShowPot(false)}>
+    <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
       <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
         <h3 style={{ ...S.h3, fontSize: 18, margin: "0 0 8px" }}>🫙 Pot</h3>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
           <span style={{ ...S.pill, background: "rgba(120,95,20,0.08)", color: "#8a5e0f", fontSize: 12, padding: "4px 10px" }}>ingelegd {euro(potContribTotal)}</span>
           {potSpent > 0 && <span style={{ ...S.pill, background: "rgba(224,138,0,0.12)", color: "#c98a00", fontSize: 12, padding: "4px 10px" }}>besteed {euro(potSpent)}</span>}
           <span style={{ ...S.pill, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(224,104,92,0.14)", color: potRemaining > 0 ? "#1f8a4c" : "#c0554a", fontSize: 12, padding: "4px 10px", fontWeight: 800 }}>nog {euro(potRemaining)}</span>
         </div>
-        <p style={{ ...S.sub }}>Leg in of voeg toe — ook later. Snelbedragen tellen op; het overzicht hierboven past mee aan.</p>
-        <div style={{ ...S.row, gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>iedereen +</span>
-          {[10, 15, 20].map((v) => <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 13 }} onClick={() => addEveryone(v)}>€{v}</button>)}
-        </div>
-        {people.map((p) => (
-          <div key={p.id} style={{ padding: "8px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
-            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-              <span style={{ fontSize: 14.5, fontWeight: 800 }}>{p.name}</span>
-              <span style={{ fontSize: 14, fontWeight: 800, color: (contrib[p.id] || 0) > 0 ? "#1f8a4c" : "#b3a988" }}>{euro(contrib[p.id] || 0)}</span>
+
+        {potRounds.map((r, i) => {
+          const tot = Object.values(r.amounts).reduce((a, b) => a + (b || 0), 0)
+          const who = people.filter((pp) => (r.amounts[pp.id] || 0) > 0)
+          return (
+            <div key={r.id} style={{ background: "#faf4e4", borderRadius: 12, padding: "9px 11px", marginBottom: 8 }}>
+              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontSize: 13, fontWeight: 800 }}>{i + 1}e inleg <span style={{ fontSize: 12, fontWeight: 700, color: "#1f8a4c" }}>· {euro(tot)}</span></span>
+                <span style={{ fontSize: 12, color: "#c0554a", cursor: "pointer", fontWeight: 700 }} onClick={() => removePotRound(r.id)}>✕ verwijder</span>
+              </div>
+              <div style={{ fontSize: 12.5, color: "#6b5f3a" }}>{who.map((pp) => `${pp.name} ${euro(r.amounts[pp.id] || 0)}`).join(" · ")}</div>
             </div>
-            <div style={{ ...S.row, gap: 6, flexWrap: "wrap" }}>
-              {[10, 15, 20].map((v) => <button key={v} style={{ ...S.btn, padding: "4px 11px", fontSize: 12 }} onClick={() => addContrib(p.id, v)}>+{v}</button>)}
-              <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 12 }} type="text" inputMode="decimal" placeholder="exact" value={contrib[p.id] ?? ""} onChange={(e) => setContrib((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 }))} />
-              <button style={{ ...S.btn, padding: "4px 10px", fontSize: 12, color: "#c0554a" }} onClick={() => setContrib((c) => ({ ...c, [p.id]: 0 }))}>↺</button>
-            </div>
+          )
+        })}
+
+        <div style={{ background: "rgba(240,165,0,0.08)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 12, padding: 11, marginTop: 4 }}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f" }}>➕ {potRounds.length === 0 ? "1e inleg" : `${potRounds.length + 1}e inleg`}</span>
+            {potDraftTotal > 0 && <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f8a4c" }}>+{euro(potDraftTotal)}</span>}
           </div>
-        ))}
-        <button style={{ ...S.btnP, marginTop: 14 }} onClick={() => setShowPot(false)}>Klaar</button>
+          <div style={{ ...S.row, gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>iedereen +</span>
+            {[10, 15, 20].map((v) => <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 13 }} onClick={() => addEveryone(v)}>€{v}</button>)}
+          </div>
+          {people.map((p) => (
+            <div key={p.id} style={{ padding: "6px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
+              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 5 }}>
+                <span style={{ fontSize: 14, fontWeight: 800 }}>{p.name}{contribOf(p.id) > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: "#8a7d55" }}> · totaal {euro(contribOf(p.id))}</span>}</span>
+                <span style={{ fontSize: 13.5, fontWeight: 800, color: (potDraft[p.id] || 0) > 0 ? "#1f8a4c" : "#b3a988" }}>{(potDraft[p.id] || 0) > 0 ? "+" + euro(potDraft[p.id] || 0) : "+€0"}</span>
+              </div>
+              <div style={{ ...S.row, gap: 6, flexWrap: "wrap" }}>
+                {[10, 15, 20].map((v) => <button key={v} style={{ ...S.btn, padding: "4px 11px", fontSize: 12 }} onClick={() => addContrib(p.id, v)}>+{v}</button>)}
+                <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 12 }} type="text" inputMode="decimal" placeholder="exact" value={potDraft[p.id] ?? ""} onChange={(e) => setPotDraft((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 }))} />
+                <button style={{ ...S.btn, padding: "4px 10px", fontSize: 12, color: "#c0554a" }} onClick={() => setPotDraft((c) => ({ ...c, [p.id]: 0 }))}>↺</button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button style={{ ...S.btnP, marginTop: 14 }} onClick={closePot}>{potDraftTotal > 0 ? `✓ Inleg toevoegen (${euro(potDraftTotal)})` : "Klaar"}</button>
       </div>
     </div>
   )
