@@ -283,6 +283,7 @@ export default function PartyTest() {
     const ad = assignDrink ? drinks.find((d) => d.id === assignDrink)! : null
     const adAnon = ad ? (cartAnon[ad.id] ?? 0) : 0
     const needCups = depositOn && (people.some((p) => pickedUpOf(p.id) > 0) || people.some((p) => (cups[p.id] ?? 0) !== 0))
+    const gaveBackTotal = people.reduce((a, p) => a + (gaveBackDraft[p.id] ?? Math.min(cups[p.id] ?? 0, pickedUpOf(p.id))), 0)
     const cupsBlock = needCups && !cupsChecked
     return (
       <div style={S.page}><div style={S.wrap}>
@@ -399,11 +400,14 @@ export default function PartyTest() {
                 </div>
               )}
               {depositOn && (cupsBlock ? (
-                <div onClick={() => setShowCups(true)} style={{ background: "rgba(240,165,0,0.13)", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 12.5, color: "#a6790f", cursor: "pointer" }}>
-                  🫙 <b>Bekers nog niet aangeduid.</b> <u>Tik hier om in te vullen →</u>
+                <div onClick={() => setShowCups(true)} style={{ background: "rgba(224,104,92,0.12)", border: "1.5px solid rgba(224,104,92,0.6)", borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 12.5, color: "#b0402f", cursor: "pointer", fontWeight: 700 }}>
+                  🫙 <b>Bekers nog niet aangeduid.</b> <u>Tik hier om nu te regelen →</u>
                 </div>
               ) : (
-                <div style={{ background: "rgba(31,138,76,0.1)", borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: "#1f8a4c", fontWeight: 700 }}>🫙 Bekers aangeduid ✓</div>
+                <div style={{ ...S.row, justifyContent: "space-between", background: "rgba(31,138,76,0.1)", borderRadius: 12, padding: "9px 12px", marginBottom: 12 }}>
+                  <span style={{ fontSize: 12.5, color: "#1f8a4c", fontWeight: 700 }}>🫙 {gaveBackTotal > 0 ? `${gaveBackTotal} beker${gaveBackTotal === 1 ? "" : "s"} teruggegeven ✓` : "0 bekers meegegeven ✓"}</span>
+                  <button style={{ ...S.btn, padding: "4px 10px", fontSize: 11.5 }} onClick={() => setShowCups(true)}>aanpassen</button>
+                </div>
               ))}
               <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 14 }}>Na bevestigen mag iemand gaan halen. Het betaalde bedrag vul je <b>daarna</b> in.</div>
               <button style={{ ...S.btnP, opacity: cupsBlock ? 0.5 : 1 }} onClick={() => !cupsBlock && commitRound()}>✅ Bevestig rondje ({roundItems} drankje{roundItems === 1 ? "" : "s"})</button>
