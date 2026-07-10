@@ -69,6 +69,7 @@ export default function PartyTest() {
   const [showPot, setShowPot] = useState(false)
   const [showCoins, setShowCoins] = useState(false)
   const [coinInfo, setCoinInfo] = useState(false)
+  const [depositInfo, setDepositInfo] = useState(false)
 
   const [groupName, setGroupName] = useState("")
   const [people, setPeople] = useState<Person[]>(DEMO_PEOPLE)
@@ -397,7 +398,7 @@ export default function PartyTest() {
   // ── SETUP ───────────────────────────────────────────────────────────────────
   if (view === "setup") {
     return (
-      <div style={S.page}><div style={S.wrap}>
+      <div style={S.page} onClick={() => { setCoinInfo(false); setDepositInfo(false) }}><div style={S.wrap}>
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
@@ -421,13 +422,17 @@ export default function PartyTest() {
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
         <div style={S.card}>
-          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: depositOn ? 12 : 0 }}>
-            <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5 }}>♻️ Bekers</h3>
-            <div style={{ ...S.row, gap: 6 }}>
+          <div style={{ ...S.row, justifyContent: "space-between", alignItems: "flex-start", marginBottom: (depositOn || depositInfo) ? 10 : 0, gap: 8 }}>
+            <div style={{ ...S.row, gap: 5, alignItems: "flex-start", minWidth: 0 }}>
+              <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.25 }}>♻️ Herbruikbare bekers</h3>
+              <span onClick={(e) => { e.stopPropagation(); setDepositInfo((v) => !v); setCoinInfo(false) }} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 11, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
+            </div>
+            <div style={{ ...S.row, gap: 6, flexShrink: 0 }}>
               <div style={{ ...S.seg(!depositOn), flex: "none", padding: "6px 12px" }} onClick={() => setDepositOn(false)}>uit</div>
               <div style={{ ...S.seg(depositOn), flex: "none", padding: "6px 12px" }} onClick={() => setDepositOn(true)}>aan</div>
             </div>
           </div>
+          {depositInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginBottom: depositOn ? 10 : 0, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>♻️ <b>Herbruikbare bekers?</b> Voor events met waarborg per beker die je terugkrijgt bij inleveren. Zet aan om de borg mee te verrekenen.</div>}
           {depositOn && (
             <>
               <div style={{ ...S.row, justifyContent: "space-between", marginBottom: pay === "coin" ? 10 : 0 }}>
@@ -453,7 +458,7 @@ export default function PartyTest() {
             <div>
               <div style={{ ...S.row, gap: 6 }}>
                 <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5 }}>{pay === "coin" ? "🎟️ Coins" : "💶 Euro"}</h3>
-                <span onClick={() => setCoinInfo((v) => !v)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 11, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
+                <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 11, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
               </div>
             </div>
             <div style={{ ...S.row, gap: 6 }}>
@@ -463,7 +468,7 @@ export default function PartyTest() {
               </div>
             </div>
           </div>
-          {coinInfo && <div style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>🎟️ <b>Coins?</b> Betaal je met coins i.p.v. euro's? Stel de coin-waarde en prijzen in; de app verdeelt eerlijk. Handig voor festivals, afterwork e.d.</div>}
+          {coinInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>🎟️ <b>Coins?</b> Betaal je met coins i.p.v. euro's? Stel de coin-waarde en prijzen in; de app verdeelt eerlijk. Handig voor festivals, afterwork e.d.</div>}
           {pay === "coin" && (
             <div style={{ marginTop: 12 }}>
               <div style={{ ...S.row, justifyContent: "space-between" }}>
@@ -501,7 +506,6 @@ export default function PartyTest() {
               })()}
             </div>
           )}
-          <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 10 }}>Per rondje geef je het <b>echte bedrag</b> in. De app verdeelt eerlijk (Fair Split) — zonder prijzen te tonen.</div>
         </div>
           </div>
         </div>
