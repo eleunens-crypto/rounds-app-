@@ -74,6 +74,7 @@ export default function PartyTest() {
   const [potRounds, setPotRounds] = useState<{ id: number; amounts: Record<string, number> }[]>([])
   const [potDraft, setPotDraft] = useState<Record<string, number>>({})
   const [everyoneDraft, setEveryoneDraft] = useState<string>("")
+  const [everyoneChoice, setEveryoneChoice] = useState<number | "custom" | null>(null)
 
   const [roundNr, setRoundNr] = useState(1)
   const [activeCat, setActiveCat] = useState<Cat>("Bier")
@@ -142,9 +143,10 @@ export default function PartyTest() {
   const cupsBal = (pid: string) => rounds.reduce((s, r) => s + (roundPicked(r, pid) - (r.gaveBack[pid] || 0)), 0)
 
   const addPerson = () => { const name = (typeof window !== "undefined" && window.prompt("Naam van de nieuwe persoon?")) || ""; if (name.trim()) setPeople((ps) => [...ps, { id: "p" + Date.now(), name: name.trim() }]) }
-  const addContrib = (pid: string, v: number) => setPotDraft((c) => ({ ...c, [pid]: (c[pid] || 0) + v }))
-  const addEveryone = (v: number) => setPotDraft((c) => Object.fromEntries(people.map((p) => [p.id, (c[p.id] || 0) + v])))
-  const closePot = () => { if (potDraftTotal > 0.001) setPotRounds((rs) => [...rs, { id: Date.now(), amounts: potDraft }]); setPotDraft({}); setShowPot(false) }
+  const addContrib = (pid: string, v: number) => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [pid]: (c[pid] || 0) + v })) }
+  const setEveryoneAmt = (v: number) => setPotDraft(Object.fromEntries(people.map((p) => [p.id, v])))
+  const resetPotDraft = () => { setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft("") }
+  const closePot = () => { if (potDraftTotal > 0.001) setPotRounds((rs) => [...rs, { id: Date.now(), amounts: potDraft }]); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setShowPot(false) }
   const removePotRound = (id: number, label: string) => setConfirmDlg({ msg: `De ${label} verwijderen uit de pot? Dit kan niet ongedaan gemaakt worden.`, yes: "Ja, verwijderen", onYes: () => { setPotRounds((rs) => rs.filter((r) => r.id !== id)); setConfirmDlg(null) } })
   const catsPresent = CATS.filter((c) => drinks.some((d) => d.cat === c))
   const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
@@ -275,14 +277,20 @@ export default function PartyTest() {
             <span style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f" }}>➕ {potRounds.length === 0 ? "1e inleg" : `${potRounds.length + 1}e inleg`}</span>
             {potDraftTotal > 0 && <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f8a4c" }}>+{euro(potDraftTotal)}</span>}
           </div>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+            <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>iedereen evenveel</span>
+            <span style={{ fontSize: 11.5, color: "#c0554a", fontWeight: 700, cursor: "pointer" }} onClick={resetPotDraft}>↺ reset inleg</span>
+          </div>
           <div style={{ ...S.row, gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>iedereen +</span>
-            {[5, 10, 20, 30].map((v) => <button key={v} style={{ ...S.btn, padding: "5px 11px", fontSize: 13 }} onClick={() => addEveryone(v)}>€{v}</button>)}
+            {[5, 10, 20, 30].map((v) => {
+              const on = everyoneChoice === v
+              return <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 13, background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: on ? "#fff" : "#4a3f1e", border: on ? "none" : "1px solid rgba(120,95,20,0.18)" }} onClick={() => { setEveryoneChoice(v); setEveryoneDraft(""); setEveryoneAmt(v) }}>€{v}</button>
+            })}
           </div>
           <div style={{ ...S.row, gap: 6, marginBottom: 10 }}>
-            <span style={{ fontSize: 12, color: "#8a7d55" }}>of eigen bedrag voor iedereen:</span>
-            <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 12 }} type="text" inputMode="decimal" placeholder="€" value={everyoneDraft} onChange={(e) => setEveryoneDraft(e.target.value.replace(/[^0-9.,]/g, ""))} />
-            <button style={{ ...S.btn, padding: "5px 11px", fontSize: 12, opacity: (parseFloat(everyoneDraft.replace(",", ".")) || 0) > 0 ? 1 : 0.5 }} onClick={() => { const v = parseFloat(everyoneDraft.replace(",", ".")) || 0; if (v > 0) { addEveryone(v); setEveryoneDraft("") } }}>+ iedereen</button>
+            <span style={{ fontSize: 12, color: "#8a7d55" }}>of eigen bedrag:</span>
+            <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 12, borderColor: everyoneChoice === "custom" ? "#e08a00" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="€" value={everyoneDraft} onChange={(e) => setEveryoneDraft(e.target.value.replace(/[^0-9.,]/g, ""))} />
+            <button style={{ ...S.btn, padding: "5px 11px", fontSize: 12, opacity: (parseFloat(everyoneDraft.replace(",", ".")) || 0) > 0 ? 1 : 0.5 }} onClick={() => { const v = parseFloat(everyoneDraft.replace(",", ".")) || 0; if (v > 0) { setEveryoneChoice("custom"); setEveryoneAmt(v) } }}>toepassen</button>
           </div>
           {people.map((p) => (
             <div key={p.id} style={{ padding: "6px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
@@ -292,8 +300,8 @@ export default function PartyTest() {
               </div>
               <div style={{ ...S.row, gap: 6, flexWrap: "wrap" }}>
                 {[10, 15, 20].map((v) => <button key={v} style={{ ...S.btn, padding: "4px 11px", fontSize: 12 }} onClick={() => addContrib(p.id, v)}>+{v}</button>)}
-                <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 12 }} type="text" inputMode="decimal" placeholder="exact" value={potDraft[p.id] ?? ""} onChange={(e) => setPotDraft((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 }))} />
-                <button style={{ ...S.btn, padding: "4px 10px", fontSize: 12, color: "#c0554a" }} onClick={() => setPotDraft((c) => ({ ...c, [p.id]: 0 }))}>↺</button>
+                <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 12 }} type="text" inputMode="decimal" placeholder="exact" value={potDraft[p.id] ?? ""} onChange={(e) => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 })) }} />
+                <button style={{ ...S.btn, padding: "4px 10px", fontSize: 12, color: "#c0554a" }} onClick={() => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: 0 })) }}>↺</button>
               </div>
             </div>
           ))}
