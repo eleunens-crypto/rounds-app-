@@ -154,14 +154,26 @@ export default function PartyTest() {
   const goHome = () => { if (view === "confirmed") setConfirmDlg({ msg: "Dit rondje is nog niet afgesloten. Toch verlaten? Je betaling gaat verloren.", yes: "Toch verlaten", onYes: () => { setConfirmDlg(null); setView("setup") } }); else setView("setup") }
   const paymentState = () => {
     const total = parseFloat(amountDraft.replace(",", ".")) || 0
+    const potFilled = potAmtDraft.trim() !== ""
     const potAmt = parseFloat(potAmtDraft.replace(",", ".")) || 0
     const split = payPot && !!payPerson
     const potOnly = payPot && !payPerson
+    const personOnly = !payPot && !!payPerson
     const potContribToRound = potOnly ? total : split ? potAmt : 0
     const potOver = potContribToRound > potRemaining + 0.001
-    const valid = total > 0 && (payPot || !!payPerson) && !potOver && (!split || (potAmt > 0 && potAmt < total + 0.0001))
-    return { total, potAmt, split, potOnly, potContribToRound, potOver, valid }
+    const personRest = split ? total - potAmt : personOnly ? total : 0
+    let valid = true, reason = ""
+    if (total <= 0) { valid = false; reason = "Vul eerst het totaalbedrag in." }
+    else if (!payPot && !payPerson) { valid = false; reason = "Kies wie betaalde." }
+    else if (potOnly && potOver) { valid = false; reason = `De pot heeft maar ${euro(potRemaining)} — leg bij of kies een andere betaler.` }
+    else if (split && !potFilled) { valid = false; reason = "Vul eerst het pot-bedrag in." }
+    else if (split && potOver) { valid = false; reason = `De pot heeft maar ${euro(potRemaining)} — verlaag het pot-bedrag of leg bij.` }
+    else if (split && potAmt > total + 0.0001) { valid = false; reason = "Het pot-bedrag is hoger dan het totaal." }
+    const zeroPot = valid && split && potAmt <= 0.0001
+    const zeroPerson = valid && split && Math.abs(personRest) <= 0.0001
+    return { total, potFilled, potAmt, split, potOnly, personOnly, potContribToRound, potOver, personRest, valid, reason, zeroPot, zeroPerson }
   }
+  const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ msg: "Dit rondje is nog niet afgesloten. Toch naar het overzicht? Je betaling gaat verloren.", yes: "Toch verlaten", onYes: () => { setConfirmDlg(null); to() } }); else to() }
   const openClose = () => { setAmountDraft(""); setShowClose(true) }
   const goAssignFromWarning = () => { const d = firstUnassigned(); setShowClose(false); if (d) { setActiveCat(d.cat); setAssignDrink(d.id) } }
   const commitRound = () => {
@@ -170,14 +182,18 @@ export default function PartyTest() {
     setRounds((r) => [...r, { orders: cart, anon: cartAnon, payer: "", amount: 0, potPart: 0, gaveBack: effGb }])
     setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setAmountDraft(""); setPayPot(false); setPayPerson(""); setPotAmtDraft(""); setPaidConfirmed(false); setView("confirmed")
   }
+  const applyPayment = (payer: string, potPart: number, total: number) => setRounds((rs) => rs.map((r, i) => i === rs.length - 1 ? { ...r, payer, amount: total, potPart } : r))
   const confirmPayment = () => {
     const st = paymentState()
-    if (!st.valid) { setNotice(!st.total ? "Vul eerst het totaalbedrag in." : (!payPot && !payPerson) ? "Kies wie betaalde." : st.potOver ? `De pot heeft maar ${euro(potRemaining)} — leg bij of kies een andere betaler.` : "Vul het pot-bedrag in (kleiner dan het totaal)."); return }
+    if (!st.valid) { setNotice(st.reason); return }
+    const personName = people.find((p) => p.id === payPerson)?.name ?? "die persoon"
+    if (st.zeroPot) { setConfirmDlg({ msg: `De pot betaalt €0 — dan betaalt ${personName} het volledige bedrag (${euro(st.total)}). Zo bevestigen?`, yes: "Ja, bevestigen", onYes: () => { applyPayment(payPerson, 0, st.total); setPayPot(false); setPotAmtDraft(""); setPaidConfirmed(true); setConfirmDlg(null) } }); return }
+    if (st.zeroPerson) { setConfirmDlg({ msg: `${personName} betaalt €0 — dan betaalt de pot alles (${euro(st.total)}). Zo bevestigen?`, yes: "Ja, bevestigen", onYes: () => { applyPayment("", st.total, st.total); setPayPerson(""); setPaidConfirmed(true); setConfirmDlg(null) } }); return }
     const potPart = st.potOnly ? st.total : st.split ? st.potAmt : 0
-    setRounds((rs) => rs.map((r, i) => i === rs.length - 1 ? { ...r, payer: payPerson || "", amount: st.total, potPart } : r))
+    applyPayment(payPerson || "", potPart, st.total)
     setPaidConfirmed(true)
   }
-  const closeRound = () => { if (!paidConfirmed) { setNotice("Bevestig eerst de betaling."); return } setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }
+  const closeRound = () => { if (!paidConfirmed || !paymentState().valid) { setNotice("Bevestig eerst de betaling."); return } setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }
   const cancelRound = () => setConfirmDlg({ msg: `Het volledige rondje ${roundNr} annuleren? Alle drankjes en bekers van dit rondje worden verwijderd. Dit kan niet ongedaan gemaakt worden.`, yes: "Ja, annuleren", onYes: () => { const remaining = rounds.length - 1; setRounds((rs) => rs.slice(0, -1)); setPaidConfirmed(false); setConfirmDlg(null); if (remaining > 0) { setOpenRound(remaining - 1); setView("hub") } else setView("order") } })
   const nextRound = () => { setRoundNr((n) => n + 1); setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setView("order") }
 
@@ -340,7 +356,10 @@ export default function PartyTest() {
       </div>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
         {potTag}
-        <button style={{ ...S.btn, padding: "6px 10px", fontSize: 12 }} onClick={goHome}>🏠 home</button>
+        <div style={{ ...S.row, gap: 6 }}>
+          {rounds.length > 0 && view !== "hub" && <button style={{ ...S.btn, padding: "6px 10px", fontSize: 12 }} onClick={goHub}>📋 overzicht</button>}
+          <button style={{ ...S.btn, padding: "6px 10px", fontSize: 12 }} onClick={goHome}>🏠 home</button>
+        </div>
       </div>
     </div>
   )
@@ -540,10 +559,14 @@ export default function PartyTest() {
                   return <span key={p.id} style={S.chip(n)} onClick={() => assignTap(ad.id, p.id)} onContextMenu={(e) => { e.preventDefault(); bump(ad.id, p.id, -1) }}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); bump(ad.id, p.id, -1) }} style={{ marginLeft: 4, opacity: 0.85 }}>✕</span>}</span>
                 })}
               </div>
-              <div style={{ ...S.row, justifyContent: "space-between", background: "#faf4e4", borderRadius: 12, padding: "8px 12px", marginBottom: 14 }}>
-                <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>nog zonder naam: {cartAnon[ad.id] ?? 0}</span>
-                <div style={{ ...S.row, gap: 8 }}><button style={S.step} onClick={() => bumpAnon(ad.id, -1)}>−</button><button style={S.step} onClick={() => bumpAnon(ad.id, 1)}>+</button></div>
-              </div>
+              {adAnon > 0 ? (
+                <div style={{ ...S.row, justifyContent: "space-between", background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.3)", borderRadius: 12, padding: "8px 12px", marginBottom: 14 }}>
+                  <span style={{ fontSize: 13, color: "#b0402f", fontWeight: 700 }}>🔴 {adAnon} zonder naam <span style={{ fontWeight: 400, color: "#8a7d55" }}>(tik een naam om toe te wijzen)</span></span>
+                  <div style={{ ...S.row, gap: 8 }}><button style={S.step} onClick={() => bumpAnon(ad.id, -1)}>−</button><button style={S.step} onClick={() => bumpAnon(ad.id, 1)}>+</button></div>
+                </div>
+              ) : (
+                <button style={{ ...S.btn, width: "100%", marginBottom: 14, fontSize: 13, color: "#8a5e0f" }} onClick={() => bumpAnon(ad.id, 1)}>+ zonder naam toevoegen <span style={{ color: "#8a7d55", fontWeight: 400 }}>(later toewijzen)</span></button>
+              )}
               <button style={S.btnP} onClick={() => setAssignDrink(null)}>Klaar</button>
             </div>
           </div>
@@ -658,22 +681,30 @@ export default function PartyTest() {
           {st.split && (
             <div style={{ background: "#faf4e4", borderRadius: 12, padding: "10px 12px", marginTop: 10 }}>
               <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 700 }}>🫙 pot betaalt</span>
-                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 80, borderColor: st.potOver ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="0,00" value={potAmtDraft} onChange={(e) => { setPotAmtDraft(e.target.value.replace(/[^0-9.,]/g, "")); setPaidConfirmed(false) }} /></div>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>🫙 pot betaalt <span style={{ fontSize: 11, color: "#c0554a" }}>(eerst invullen)</span></span>
+                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input autoFocus style={{ ...S.input, width: 80, borderColor: (st.potOver || !st.potFilled) ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="?" value={potAmtDraft} onChange={(e) => { setPotAmtDraft(e.target.value.replace(/[^0-9.,]/g, "")); setPaidConfirmed(false) }} /></div>
               </div>
               <div style={{ ...S.row, justifyContent: "space-between" }}>
                 <span style={{ fontSize: 13, fontWeight: 700 }}>👤 {people.find((p) => p.id === payPerson)?.name} <span style={{ fontSize: 11, color: "#8a7d55" }}>(de rest)</span></span>
-                <span style={{ fontSize: 15, fontWeight: 800, color: personRest >= 0 ? "#4a3f1e" : "#c0554a" }}>{euro(Math.max(0, personRest))}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{st.potFilled ? euro(Math.max(0, personRest)) : "—"}</span>
               </div>
-              <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>Vul enkel het pot-bedrag in — de rest rekent de app.{st.potOver ? ` Pot heeft maar ${euro(potRemaining)}.` : ""}</div>
+              <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>{st.potFilled ? "De rest rekent de app automatisch." : "Vul eerst het pot-bedrag in — dan verschijnt de rest."}{st.potOver ? ` Pot heeft maar ${euro(potRemaining)}.` : ""}</div>
             </div>
           )}
           {payPot && !payPerson && <div style={{ fontSize: 12, color: st.potOver ? "#c0554a" : "#8a7d55", fontWeight: 700, marginTop: 8 }}>pot: {euro(potRemaining)}{st.potOver ? " — te weinig, leg bij of kies andere betaler" : ""}</div>}
 
-          <button style={{ ...(paidConfirmed ? { ...S.btn, width: "100%", background: "rgba(31,138,76,0.12)", color: "#1f8a4c", border: "1px solid rgba(31,138,76,0.4)" } : S.btnP), marginTop: 14, opacity: (st.valid || paidConfirmed) ? 1 : 0.55 }} onClick={confirmPayment}>{paidConfirmed ? "✓ betaling bevestigd — pas gerust nog aan" : "✓ Bevestig betaling"}</button>
+          {(() => {
+            const okGreen = paidConfirmed && st.valid
+            const style = okGreen
+              ? { ...S.btn, width: "100%", background: "rgba(31,138,76,0.12)", color: "#1f8a4c", border: "1px solid rgba(31,138,76,0.5)", fontWeight: 800 }
+              : !st.valid
+              ? { ...S.btn, width: "100%", background: "rgba(224,104,92,0.12)", color: "#b0402f", border: "1px solid rgba(224,104,92,0.5)", fontWeight: 800 }
+              : S.btnP
+            return <button style={{ ...style, marginTop: 14 }} onClick={confirmPayment}>{okGreen ? "✓ betaling bevestigd — pas gerust nog aan" : !st.valid ? `⚠️ ${st.reason}` : "✓ Bevestig betaling"}</button>
+          })()}
         </div>
 
-        <button style={{ ...S.btnP, opacity: paidConfirmed ? 1 : 0.5 }} onClick={closeRound}>✓ Rondje afsluiten</button>
+        <button style={{ ...S.btnP, opacity: (paidConfirmed && st.valid) ? 1 : 0.5 }} onClick={closeRound}>✓ Rondje afsluiten</button>
         <button style={{ ...S.btn, width: "100%", marginTop: 8, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelRound}>✕ Rondje annuleren</button>
       </div></div>
     )
