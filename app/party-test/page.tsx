@@ -196,8 +196,9 @@ export default function PartyTest() {
   const setEveryoneAmt = (v: number) => setPotDraft(Object.fromEntries(people.map((p) => [p.id, v])))
   const resetPotDraft = () => { setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft("") }
   const closePot = () => { if (editPotId === null && potDraftTotal > 0.001) setPotRounds((rs) => [...rs, { id: Date.now(), amounts: potDraft }]); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setEditPotId(null); setPotBuilderOpen(false); setShowPot(false) }
-  const toggleCardPayer = (id: string) => setCardPayers((ps) => ps.includes(id) ? ps.filter((x) => x !== id) : [...ps, id])
-  const cardDistribute = (ids: string[]) => { const val = parseFloat(cardValue.replace(",", ".")) || 0; if (val <= 0 || ids.length === 0) return; const per = val / ids.length; const d: Record<string, number> = {}; ids.forEach((id) => (d[id] = per)); setPotDraft(d); setEveryoneChoice(null) }
+  const applyCard = (ids: string[], valStr: string) => { const val = parseFloat((valStr || "").replace(",", ".")) || 0; const d: Record<string, number> = {}; if (val > 0 && ids.length > 0) { const per = val / ids.length; ids.forEach((id) => (d[id] = per)) } setPotDraft(d); setEveryoneChoice(null) }
+  const toggleCardPayer = (id: string) => { const next = cardPayers.includes(id) ? cardPayers.filter((x) => x !== id) : [...cardPayers, id]; setCardPayers(next); applyCard(next, cardValue) }
+  const cardSelectAll = () => { const all = people.map((p) => p.id); setCardPayers(all); applyCard(all, cardValue) }
   const editPotRound = (id: number) => { const r = potRounds.find((x) => x.id === id); if (!r) return; setEditPotId(id); setPotDraft({ ...r.amounts }); setEveryoneChoice(null); setEveryoneDraft("") }
   const saveEditPot = () => { if (editPotId === null) return; if (potDraftTotal > 0.001) setPotRounds((rs) => rs.map((r) => r.id === editPotId ? { ...r, amounts: potDraft } : r)); else setPotRounds((rs) => rs.filter((r) => r.id !== editPotId)); setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setPotBuilderOpen(false) }
   const cancelEditPot = () => { setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setPotBuilderOpen(false) }
@@ -342,8 +343,10 @@ export default function PartyTest() {
           <span style={{ ...S.pill, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(224,104,92,0.14)", color: potRemaining > 0 ? "#1f8a4c" : "#c0554a", fontSize: 12, padding: "4px 10px", fontWeight: 800 }}>nog {euro(potRemaining)}</span>
         </div>
         <div style={{ ...S.row, gap: 6, marginBottom: 8 }}>
-          <div style={{ ...S.seg(!potIsCard), padding: "7px 6px", fontSize: 12.5 }} onClick={() => setPotIsCard(false)}>🫙 Pot (geld)</div>
-          <div style={{ ...S.seg(potIsCard), padding: "7px 6px", fontSize: 12.5 }} onClick={() => setPotIsCard(true)}>💳 Drankkaart</div>
+          {(potIsCard ? [["card", "💳 Drankkaart"], ["pot", "🫙 Pot (geld)"]] : [["pot", "🫙 Pot (geld)"], ["card", "💳 Drankkaart"]]).map(([k, l]: any) => {
+            const active = (k === "card") === potIsCard
+            return <div key={k} onClick={() => setPotIsCard(k === "card")} style={{ ...S.seg(active), padding: "7px 6px", fontSize: 12.5, flex: active ? 1.35 : 1, opacity: active ? 1 : 0.5 }}>{l}</div>
+          })}
         </div>
         <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>{potIsCard ? "💳 Drankkaart van de groep — leg de kaartwaarde (bv. €15) in. Wat niet opgedronken wordt, is verloren en wordt gelijk over iedereen verdeeld." : "🫙 Echt geld — wat niet opgaat, krijgen de inleggers terug bij de afrekening."}</div>
 
@@ -380,17 +383,18 @@ export default function PartyTest() {
           </div>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
             <span style={{ fontSize: 13, fontWeight: 700 }}>Kaartwaarde</span>
-            <div style={{ ...S.row, gap: 4 }}><span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>€</span><input style={{ ...S.input, width: 70 }} type="text" inputMode="decimal" placeholder="15" value={cardValue} onChange={(e) => setCardValue(e.target.value.replace(/[^0-9.,]/g, ""))} /></div>
+            <div style={{ ...S.row, gap: 4 }}><span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>€</span><input style={{ ...S.input, width: 70 }} type="text" inputMode="decimal" placeholder="15" value={cardValue} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setCardValue(v); applyCard(cardPayers, v) }} /></div>
           </div>
-          <div style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700, marginBottom: 6 }}>Betaald door:</div>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+            <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>Wie kocht de kaart? (tik aan)</span>
+            <span onClick={cardSelectAll} style={{ fontSize: 12, color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>iedereen</span>
+          </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 10 }}>
             {people.map((p) => { const on = cardPayers.includes(p.id); return <span key={p.id} onClick={() => toggleCardPayer(p.id)} style={{ ...S.pill, cursor: "pointer", fontSize: 12.5, padding: "6px 12px", background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "rgba(240,165,0,0.1)", color: on ? "#fff" : "#8a5e0f", fontWeight: 700 }}>{p.name}</span> })}
           </div>
-          <div style={{ ...S.row, gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
-            <button style={{ ...S.btnP, flex: 1, padding: "8px 6px", fontSize: 12.5, opacity: cardPayers.length > 0 ? 1 : 0.5 }} onClick={() => cardDistribute(cardPayers)}>Gelijk verdelen ({cardPayers.length})</button>
-            <button style={{ ...S.btn, flex: 1, padding: "8px 6px", fontSize: 12.5 }} onClick={() => { setCardPayers(people.map((p) => p.id)); cardDistribute(people.map((p) => p.id)) }}>Over iedereen</button>
-          </div>
-          {potDraftTotal > 0 && <div style={{ fontSize: 12, color: "#6b5f3a", background: "#fff", borderRadius: 8, padding: "8px 10px" }}>{people.filter((p) => (potDraft[p.id] || 0) > 0).map((p) => `${p.name} ${euro(potDraft[p.id] || 0)}`).join(" · ")}</div>}
+          {potDraftTotal > 0
+            ? <div style={{ fontSize: 12.5, color: "#6b5f3a", background: "#fff", borderRadius: 8, padding: "9px 11px", lineHeight: 1.6 }}>{people.filter((p) => (potDraft[p.id] || 0) > 0).map((p) => `${p.name} ${euro(potDraft[p.id] || 0)}`).join(" · ")}</div>
+            : <div style={{ fontSize: 11.5, color: "#b3a988", textAlign: "center", padding: "6px 0" }}>Vul de kaartwaarde in en tik aan wie ze kocht — de verdeling gebeurt automatisch.</div>}
         </div>
         ) : (
         <div style={{ background: "rgba(240,165,0,0.08)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 12, padding: 11, marginTop: 4 }}>
