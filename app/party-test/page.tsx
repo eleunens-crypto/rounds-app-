@@ -197,6 +197,7 @@ export default function PartyTest() {
   const bumpDown = (did: string) => { if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); return } const entry = cart[did]; if (!entry) return; const pid = Object.keys(entry).find((k) => (entry[k] ?? 0) > 0); if (pid) bump(did, pid, -1) }
   const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
 
+  const goStart = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); setView("start") } }); else setView("start") }
   const goHome = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); setView("setup") } }); else setView("setup") }
   const paymentState = () => {
     const total = parseFloat(amountDraft.replace(",", ".")) || 0
@@ -427,7 +428,7 @@ export default function PartyTest() {
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
         <div style={{ ...S.row, gap: 10, minWidth: 0 }}>
-          <RundoLogo size={40} />
+          <div onClick={goStart} style={{ cursor: "pointer" }}><RundoLogo size={40} /></div>
           <div style={{ minWidth: 0 }}>
             <div style={{ ...S.h1, fontSize: 20, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
             <div style={{ ...S.row, gap: 5, marginTop: 2 }}><CheersIcon size={16} /><span style={{ fontSize: 11.5, color: "#e08a00", fontWeight: 700 }}>Rondjes en splitten zonder gedoe!</span></div>
