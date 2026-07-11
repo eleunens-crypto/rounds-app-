@@ -138,7 +138,7 @@ export default function PartyTest() {
   const [hasSettled, setHasSettled] = useState(false)
 
   const [showAssignAll, setShowAssignAll] = useState(false)
-  const [assignMode, setAssignMode] = useState<"drink" | "person">("drink")
+  const [assignMode, setAssignMode] = useState<"drink" | "person">("person")
   const [showCups, setShowCups] = useState(false)
   const [showClose, setShowClose] = useState(false)
   const [cupsChecked, setCupsChecked] = useState(false)
@@ -153,7 +153,7 @@ export default function PartyTest() {
 
   // edit-in-hub
   const [editAssign, setEditAssign] = useState(false)
-  const [editAssignMode, setEditAssignMode] = useState<"drink" | "person">("drink")
+  const [editAssignMode, setEditAssignMode] = useState<"drink" | "person">("person")
   const [editCups, setEditCups] = useState(false)
   const [editPay, setEditPay] = useState(false)
 
@@ -867,7 +867,8 @@ export default function PartyTest() {
                   )
                 })
               ) : (
-                people.map((p) => {
+                <div style={{ display: people.length > 4 ? "grid" : "block", gridTemplateColumns: people.length > 4 ? "1fr 1fr" : undefined, columnGap: 12 }}>
+                {people.map((p) => {
                   const took = drinks.filter((d) => (cart[d.id]?.[p.id] ?? 0) > 0)
                   return (
                     <div key={p.id} style={{ borderTop: "1px solid rgba(120,95,20,0.1)", paddingTop: 9, marginBottom: 9 }}>
@@ -877,7 +878,8 @@ export default function PartyTest() {
                       </div>
                     </div>
                   )
-                })
+                })}
+                </div>
               )}
               <button style={{ ...S.btnP, marginTop: 6 }} onClick={() => setShowAssignAll(false)}>Klaar</button>
             </div>
@@ -1107,7 +1109,7 @@ export default function PartyTest() {
                             </div>
                           </div>
                         )
-                      }) : people.map((p) => {
+                      }) : (<div style={{ display: people.length > 4 ? "grid" : "block", gridTemplateColumns: people.length > 4 ? "1fr 1fr" : undefined, columnGap: 12 }}>{people.map((p) => {
                         const took = roundDrinks.filter((d) => (r.orders[d.id]?.[p.id] ?? 0) > 0)
                         return (
                           <div key={p.id} style={{ marginBottom: 9 }}>
@@ -1119,7 +1121,7 @@ export default function PartyTest() {
                             </div>
                           </div>
                         )
-                      })}
+                      })}</div>)}
                       <div style={{ fontSize: 11, color: "#8a7d55" }}>Herverdelen: − zet een drankje terug op "onbekend", tik dan een andere naam. Het aantal blijft gelijk (er is al betaald).</div>
                     </div>
                   )}
