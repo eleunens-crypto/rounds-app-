@@ -114,6 +114,9 @@ export default function PartyTest() {
   const [beginPrompt, setBeginPrompt] = useState(false)
   const [bpPotType, setBpPotType] = useState<"none" | "yes" | "pot" | "card">("none")
   const [potChosen, setPotChosen] = useState(false)
+  const [bpBekers, setBpBekers] = useState(false)
+  const [bpCoins, setBpCoins] = useState(false)
+  const [fromOnboarding, setFromOnboarding] = useState(false)
   const [onbPotActive, setOnbPotActive] = useState(false)
 
   const [roundNr, setRoundNr] = useState(1)
@@ -222,7 +225,7 @@ export default function PartyTest() {
   const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
 
   const goStart = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); setView("start") } }); else setView("start") }
-  const goHome = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); setView("settings") } }); else setView("settings") }
+  const goHome = () => { setFromOnboarding(false); if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); setView("settings") } }); else setView("settings") }
   const paymentState = () => {
     const total = parseFloat(amountDraft.replace(",", ".")) || 0
     const potFilled = potAmtDraft.trim() !== ""
@@ -250,7 +253,12 @@ export default function PartyTest() {
     const potOn = bpPotType === "pot" || bpPotType === "card"
     setPotIsCard(bpPotType === "card")
     setPotChosen(potOn)
+    setDepositOn(bpBekers)
+    setPay(bpCoins ? "coin" : "eur")
+    setDepositUnit(bpCoins ? "coin" : "eur")
     setBeginPrompt(false)
+    if (!potOn && !bpBekers && !bpCoins) { startOrdering(); return }
+    setFromOnboarding(true)
     if (potOn) { setShowPot(true); setOnbPotActive(true) }
     else setView("settings")
   }
@@ -561,8 +569,11 @@ export default function PartyTest() {
               <div style={{ padding: "10px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
                 <div style={{ ...S.row, justifyContent: "space-between" }}>
                   <span style={{ fontSize: 14.5, fontWeight: 700 }}>een gezamenlijke pot of drankkaart?</span>
-                  <div onClick={() => setBpPotType((t) => t === "none" ? "yes" : "none")} style={{ width: 46, height: 27, borderRadius: 20, background: bpPotType !== "none" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#d9cdb0", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
-                    <div style={{ width: 21, height: 21, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: bpPotType !== "none" ? 22 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+                  <div style={{ ...S.row, gap: 8, flexShrink: 0 }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 800, color: bpPotType !== "none" ? "#1f8a4c" : "#b3a988" }}>{bpPotType !== "none" ? "ja" : "nee"}</span>
+                    <div onClick={() => setBpPotType((t) => t === "none" ? "yes" : "none")} style={{ width: 46, height: 27, borderRadius: 20, background: bpPotType !== "none" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#d9cdb0", position: "relative", cursor: "pointer", transition: "background .15s" }}>
+                      <div style={{ width: 21, height: 21, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: bpPotType !== "none" ? 22 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+                    </div>
                   </div>
                 </div>
                 {bpPotType !== "none" && (
@@ -572,8 +583,19 @@ export default function PartyTest() {
                   </div>
                 )}
               </div>
-              <div style={{ fontSize: 11.5, color: "#8a7d55", margin: "12px 0 14px", lineHeight: 1.5 }}>💡 Daarna kom je op de instellingen — daar zet je ook bekers of coins aan als je die gebruikt, en start je het 1e rondje.</div>
-              <button style={{ ...S.btnP, width: "100%" }} onClick={applyBeginChoices}>Beginnen →</button>
+              {[["♻️ herbruikbare bekers (met waarborg)", bpBekers, setBpBekers], ["🎟️ coins in plaats van euro's", bpCoins, setBpCoins]].map(([label, val, set]: any, i) => (
+                <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
+                  <span style={{ fontSize: 14.5, fontWeight: 700, minWidth: 0 }}>{label}</span>
+                  <div style={{ ...S.row, gap: 8, flexShrink: 0 }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 800, color: val ? "#1f8a4c" : "#b3a988" }}>{val ? "ja" : "nee"}</span>
+                    <div onClick={() => set((v: boolean) => !v)} style={{ width: 46, height: 27, borderRadius: 20, background: val ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#d9cdb0", position: "relative", cursor: "pointer", transition: "background .15s" }}>
+                      <div style={{ width: 21, height: 21, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: val ? 22 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div style={{ fontSize: 11.5, color: "#8a7d55", margin: "12px 0 14px", lineHeight: 1.5 }}>💡 Later aanpasbaar via ⚙️ Groep. Zet je iets op ‘ja’, dan vul je de details zo meteen in.</div>
+              <button style={{ ...S.btnP, width: "100%" }} onClick={applyBeginChoices}>{(bpPotType !== "none" || bpBekers || bpCoins) ? "Verdergaan →" : "Snel starten →"}</button>
             </div>
           </div>
         )}
@@ -617,6 +639,7 @@ export default function PartyTest() {
         {showPot && renderPotModal()}
         {renderDialogs()}
         <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10 }}>⚙️ Groepsinstellingen</h3>
+        {!fromOnboarding && (
         <div style={{ ...S.card, marginBottom: 10 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: people.length > 0 ? 10 : 0 }}>
             <span style={{ fontSize: 14, fontWeight: 800 }}>👥 Personen</span>
@@ -634,6 +657,7 @@ export default function PartyTest() {
             </div>
           )}
         </div>
+        )}
         <div style={{ ...S.card, marginBottom: 10 }}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
             <span style={{ fontSize: 14, fontWeight: 700 }}>{potIsCard ? "💳 Drankkaart" : "🫙 Pot"} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>— optioneel</span></span>
