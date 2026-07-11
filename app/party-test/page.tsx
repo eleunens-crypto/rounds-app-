@@ -420,8 +420,8 @@ export default function PartyTest() {
               <span style={{ fontSize: 13, fontWeight: 800, marginLeft: "auto", textAlign: "right", color: (potDraft[p.id] || 0) > 0 ? "#1f8a4c" : "#b3a988" }}>{(potDraft[p.id] || 0) > 0 ? "+" + euro(potDraft[p.id] || 0) : "+€0"}</span>
             </div>
           ))}
-        )}
         </div>
+        )}
         {editPotId !== null ? (
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
             <button style={{ ...S.btn, flex: 1 }} onClick={cancelEditPot}>✕ annuleer</button>
