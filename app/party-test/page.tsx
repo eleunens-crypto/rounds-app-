@@ -190,8 +190,9 @@ export default function PartyTest() {
   const rSetGaveBack = (idx: number, pid: string, v: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, gaveBack: { ...r.gaveBack, [pid]: Math.max(0, v) } } : r))
   const rUnassign = (idx: number, did: string, pid: string) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, orders: { ...r.orders, [did]: { ...(r.orders[did] ?? {}), [pid]: Math.max(0, (r.orders[did]?.[pid] ?? 0) - 1) } }, anon: { ...r.anon, [did]: (r.anon[did] ?? 0) + 1 } } : r))
   const rAssignFromAnon = (idx: number, did: string, pid: string) => { if ((rounds[idx]?.anon[did] ?? 0) > 0) { rBumpAnon(idx, did, -1); rBump(idx, did, pid, 1) } }
-  const rSetAmount = (idx: number, v: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, amount: v, potPart: (r.payer === "" && (r.potPart || 0) > 0) ? v : (r.potPart || 0) } : r))
-  const rPickPot = (idx: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, payer: "", potPart: r.amount } : r))
+  const potAvailFor = (idx: number) => potContribTotal - (potSpent - (rounds[idx]?.potPart || 0))
+  const rSetAmount = (idx: number, v: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, amount: v, potPart: (r.payer === "" && (r.potPart || 0) > 0) ? Math.min(v, potAvailFor(idx)) : (r.potPart || 0) } : r))
+  const rPickPot = (idx: number) => { const avail = potAvailFor(idx); const amt = rounds[idx]?.amount || 0; if (avail + 0.001 < amt) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} heeft maar ${euro(Math.max(0, avail))} — te weinig voor dit rondje (${euro(amt)}). Leg eerst bij of kies een persoon.`); return } setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, payer: "", potPart: r.amount } : r)) }
   const rPickPerson = (idx: number, pid: string) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, payer: pid, potPart: 0 } : r))
 
   // ── afgeleide bekers (uit rounds) ───────────────────────────────────────────
@@ -249,7 +250,11 @@ export default function PartyTest() {
     let valid = true, reason = ""
     if (total <= 0) { valid = false; reason = "Vul eerst exact betaald bedrag in." }
     else if (!payPot && !payPerson) { valid = false; reason = "Kies wie betaalde." }
+    else if (potOnly && potAvail <= 0.005) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} is leeg — kies een persoon als betaler.` }
+    else if (potOnly && potOver) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} heeft maar ${euro(potAvail)} — kies er een persoon bij of leg bij.` }
     else if (split && !potFilled) { valid = false; reason = "Vul eerst het pot-bedrag in." }
+    else if (split && potAvail <= 0.005) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} is leeg — zet het pot-bedrag op 0 of leg eerst bij.` }
+    else if (split && potOver) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} heeft maar ${euro(potAvail)} — verlaag het pot-bedrag of leg bij.` }
     else if (split && potAmt > total + 0.0001) { valid = false; reason = "Het pot-bedrag is hoger dan het totaal." }
     const zeroPot = valid && split && potAmt <= 0.0001
     const zeroPerson = valid && split && Math.abs(personRest) <= 0.0001
@@ -1013,7 +1018,7 @@ export default function PartyTest() {
                 <span style={{ fontSize: 13, fontWeight: 700 }}>👤 {people.find((p) => p.id === payPerson)?.name} <span style={{ fontSize: 11, color: "#8a7d55" }}>(de rest)</span></span>
                 <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{st.potFilled ? euro(Math.max(0, personRest)) : "—"}</span>
               </div>
-              <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>{st.potFilled ? "De rest rekent de app automatisch." : "Vul eerst het pot-bedrag in — dan verschijnt de rest."}{st.potAvail <= 0.005 ? " De pot is leeg." : ""}</div>
+              <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>{st.potFilled ? "De rest rekent de app automatisch." : "Vul eerst het pot-bedrag in — dan verschijnt de rest."}{st.potAvail <= 0.005 ? ` De ${potIsCard ? "drankkaart" : "pot"} is leeg (€0) — laat het pot-bedrag op 0.` : st.potOver ? ` Te veel: er is maar ${euro(st.potAvail)} beschikbaar.` : ` Beschikbaar: ${euro(st.potAvail)}.`}</div>
             </div>
           )}
           {payPot && !payPerson && <div style={{ fontSize: 12, color: st.potAvail <= 0.005 ? "#c0554a" : "#8a7d55", fontWeight: 700, marginTop: 8 }}>pot: {euro(st.potAvail)}{st.potAvail <= 0.005 ? " — te weinig, leg bij of kies andere/extra betaler" : ""}</div>}
