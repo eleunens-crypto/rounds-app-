@@ -179,6 +179,8 @@ export default function PartyTest() {
   const eachOne = (did: string) => { const hi = people.filter((p) => (cart[did]?.[p.id] ?? 0) >= 2).map((p) => p.name); if (hi.length > 0) { setConfirmDlg({ msg: `${hi.join(" en ")} ${hi.length === 1 ? "heeft" : "hebben"} er nu al 2 of meer. Met "elk 1" krijgt iedereen er precies één — ${hi.join(" en ")} ${hi.length === 1 ? "gaat" : "gaan"} dus terug naar 1.`, yes: "Ja, iedereen op 1", onYes: () => { setEachOne(did); setConfirmDlg(null) } }) } else setEachOne(did) }
   const drinkTotal = (did: string) => Object.values(cart[did] ?? {}).reduce((a, b) => a + b, 0) + (cartAnon[did] ?? 0)
   const roundItems = useMemo(() => drinks.reduce((s, d) => s + drinkTotal(d.id), 0), [cart, cartAnon, drinks]) // eslint-disable-line
+  const resumeRound = () => { setActiveCat(catsPresent[0]); setView("order") }
+  const unfinishedRound = roundItems > 0 && rounds.length < roundNr
   const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon, drinks]) // eslint-disable-line
   const pickedUpOf = (pid: string) => drinks.reduce((a, d) => a + (d.cup ? aQty(d.id, pid) : 0), 0)
 
@@ -631,7 +633,7 @@ export default function PartyTest() {
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", marginTop: 24, marginBottom: 4 }}>
-          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice("Voeg eerst minstens één persoon toe."); return } if (onboardedOnce) { setOpenRound(rounds.length - 1); setView("hub") } else setBeginPrompt(true) }}>Volgende</button>
+          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice("Voeg eerst minstens één persoon toe."); return } if (unfinishedRound) { resumeRound(); return } if (onboardedOnce) { setOpenRound(rounds.length - 1); setView("hub") } else setBeginPrompt(true) }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "Volgende"}</button>
         </div>
       </div></div>
     )
@@ -763,7 +765,7 @@ export default function PartyTest() {
         <div style={{ marginTop: 24 }}>
           {rounds.length > 0
             ? <button style={{ ...S.btnP, width: "100%" }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>Terug naar overzicht</button>
-            : <button style={{ ...S.btnP, width: "100%" }} onClick={tryBegin}>Starten</button>}
+            : <button style={{ ...S.btnP, width: "100%" }} onClick={() => { if (unfinishedRound) resumeRound(); else tryBegin() }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "Starten"}</button>}
         </div>
       </div></div>
     )
@@ -1053,7 +1055,7 @@ export default function PartyTest() {
             <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Nog geen rondjes</div>
             <div style={{ ...S.sub, marginBottom: 16 }}>Er zijn nog geen bestellingen. Start een eerste rondje om te beginnen.</div>
             <div style={{ display: "flex", justifyContent: "center" }}>
-              <button style={{ ...S.btnP, width: "80%" }} onClick={() => { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>Start 1e rondje</button>
+              <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (unfinishedRound) { resumeRound(); return } setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "Start 1e rondje"}</button>
             </div>
           </div>
         ) : (<>
@@ -1170,7 +1172,7 @@ export default function PartyTest() {
         </>)}
         {rounds.length > 0 && <div style={{ display: "flex", gap: 10 }}>
           <button style={{ ...S.btn, flex: 1 }} onClick={goFinal}>🧾 Afrekenen</button>
-          <button style={{ ...S.btnP, flex: 2 }} onClick={nextRound}>➕ Nieuw rondje</button>
+          <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (unfinishedRound) resumeRound(); else nextRound() }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "➕ Nieuw rondje"}</button>
         </div>}
       </div></div>
     )
