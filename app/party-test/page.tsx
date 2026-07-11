@@ -471,7 +471,9 @@ export default function PartyTest() {
       )}
     </>
   )
-  const Header = () => (
+  const Header = () => {
+    const onboarding = view === "setup" || view === "settings"
+    return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
         <div style={{ ...S.row, gap: 10, minWidth: 0 }}>
@@ -481,18 +483,23 @@ export default function PartyTest() {
             <div style={{ ...S.row, gap: 5, marginTop: 2 }}><CheersIcon size={16} color="#4a3f1e" /><span style={{ fontSize: 11.5, color: "#4a3f1e", fontWeight: 700 }}>Rondjes en splitten zonder gedoe!</span></div>
           </div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, minWidth: 0, flexShrink: 0 }}>
-          {groupName.trim() && <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()}</div>}
-          {potTag}
+        {!onboarding && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, minWidth: 0, flexShrink: 0 }}>
+            {groupName.trim() && <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()}</div>}
+            {potTag}
+          </div>
+        )}
+      </div>
+      {!onboarding && (
+        <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+          <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700 }} onClick={goHome}>⚙️ Groep</button>
+          <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "hub" ? 0.55 : 1 }} onClick={goHub}>📋 Overzicht</button>
+          <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "final" ? 0.55 : 1 }} onClick={goFinal}>🧾 Afrekenen</button>
         </div>
-      </div>
-      <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-        <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "setup" ? 0.55 : 1 }} onClick={goHome}>⚙️ Groep</button>
-        <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "hub" ? 0.55 : 1 }} onClick={goHub}>📋 Overzicht</button>
-        <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "final" ? 0.55 : 1 }} onClick={goFinal}>🧾 Afrekenen</button>
-      </div>
+      )}
     </div>
-  )
+    )
+  }
 
   // ── START ───────────────────────────────────────────────────────────────────
   if (view === "start") {
@@ -600,17 +607,32 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
-        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>⚙️ Groepsinstellingen</h3>
-        <p style={{ ...S.sub, marginBottom: 12 }}>Pas aan wat je nodig hebt — pot, bekers/waarborg en coins.</p>
-        <div style={S.card}>
+        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10 }}>⚙️ Groepsinstellingen</h3>
+        <div style={{ ...S.card, marginBottom: 10 }}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: people.length > 0 ? 10 : 0 }}>
+            <span style={{ fontSize: 14, fontWeight: 800 }}>👥 Personen</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <button style={{ ...S.step, opacity: people.length > 0 ? 1 : 0.4 }} onClick={removeLastPerson}>−</button>
+              <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{people.length}</span>
+              <button style={{ ...S.step, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={addPerson}>+</button>
+            </div>
+          </div>
+          {people.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(108px, 1fr))", gap: 6 }}>
+              {people.map((p, idx) => (
+                <input key={p.id} value={isGuestDefault(p.name) ? "" : p.name} placeholder={isGuestDefault(p.name) ? p.name : `Gast ${idx + 1}`} onChange={(e) => renamePerson(p.id, e.target.value === "" ? `Gast ${idx + 1}` : e.target.value)} style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "6px 8px", fontSize: 12.5, textAlign: "left" }} />
+              ))}
+            </div>
+          )}
+        </div>
+        <div style={{ ...S.card, marginBottom: 10 }}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <span style={{ fontSize: 14, fontWeight: 700 }}>🫙 Gezamenlijke pot <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>— optioneel</span></span>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>{potIsCard ? "💳 Drankkaart" : "🫙 Pot"} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>— optioneel</span></span>
             <button style={{ ...S.btn, padding: "6px 12px", fontSize: 13 }} onClick={() => setShowPot(true)}>{potContribTotal > 0 ? `inleg ${euro(potContribTotal)}` : "+ inleggen"}</button>
           </div>
-          <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 8 }}>Je kan ook later nog bijleggen — de pot staat altijd bovenaan.</div>
         </div>
 
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 0 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ ...S.card, marginBottom: 0 }}>
           <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.3, textAlign: "center" }}>♻️ Herbruikbare bekers <span onClick={(e) => { e.stopPropagation(); setDepositInfo((v) => !v); setCoinInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 10.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
