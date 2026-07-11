@@ -182,6 +182,8 @@ export default function PartyTest() {
   const roundItems = useMemo(() => drinks.reduce((s, d) => s + drinkTotal(d.id), 0), [cart, cartAnon, drinks]) // eslint-disable-line
   const resumeRound = () => { if (blockIfUnpaid()) return; setActiveCat(catsPresent[0]); setView("order") }
   const unfinishedRound = roundItems > 0 && rounds.length < roundNr
+  const pendingPayIdx = () => rounds.findIndex((r) => !((r.amount || 0) > 0.005 && (((r.potPart || 0) > 0.005) || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))))
+  const goPayPending = () => { const i = pendingPayIdx(); if (i < 0) return; setOpenRound(i); setEditAssign(false); setEditCups(false); setEditPay(true); setView("hub") }
   const roundIsPaid = (r: Round) => (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))
   const unpaidIdx = () => rounds.findIndex((r) => !roundIsPaid(r))
   const blockIfUnpaid = () => { const i = unpaidIdx(); if (i < 0) return false; setNotice(`Ronde ${i + 1} is nog niet betaald. Vul eerst de betaling in voor je verder gaat.`); setOpenRound(i); setEditAssign(false); setEditCups(false); setEditPay(true); setView("hub"); return true }
@@ -806,7 +808,9 @@ export default function PartyTest() {
           {rounds.length > 0
             ? <div style={{ display: "flex", gap: 10 }}>
                 <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>📋 Rondjesoverzicht</button>
-                {unfinishedRound
+                {pendingPayIdx() >= 0
+                  ? <button style={{ ...S.btnP, flex: 1 }} onClick={goPayPending}>Betaling rondje {pendingPayIdx() + 1} afronden</button>
+                  : unfinishedRound
                   ? <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>Ga verder met rondje {roundNr}</button>
                   : <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>➕ Nieuw rondje</button>}
               </div>
@@ -1134,7 +1138,7 @@ export default function PartyTest() {
             <div key={idx} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
               <div style={{ cursor: "pointer", padding: 14 }} onClick={() => { if (allRoundsOpen) { setAllRoundsOpen(false); setOpenRound(idx) } else { setOpenRound(open ? null : idx) } setEditAssign(false); setEditCups(false); setEditPay(false) }}>
                 <div style={{ ...S.row, justifyContent: "space-between" }}>
-                  <span style={{ fontSize: 15, fontWeight: 800 }}>Ronde {idx + 1} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>· {items} drankjes · {euro(r.amount)}</span></span>
+                  <span style={{ fontSize: 15, fontWeight: 800 }}>Ronde {idx + 1} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>· {items} drankjes · {euro(r.amount)}</span>{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ fontSize: 11.5, fontWeight: 800, color: "#1f8a4c", marginLeft: 6 }}>✓ toegewezen</span>}</span>
                   <span style={{ fontSize: 14, color: "#8a7d55" }}>{open ? "▴" : "▾"}</span>
                 </div>
                 {roundIsPaid(r)
@@ -1153,7 +1157,7 @@ export default function PartyTest() {
                   })}
 
                   <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-                    <button style={{ ...S.btn, flex: 1, fontSize: 12.5, padding: "8px 0" }} onClick={() => { setEditAssign((v) => !v); setEditCups(false); setEditPay(false) }}>{editAssign ? "▴ toewijzen" : "✏️ toewijzen"}</button>
+                    <button style={{ ...S.btn, flex: 1, fontSize: 12.5, padding: "8px 0", ...(!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) ? { background: "rgba(31,138,76,0.12)", color: "#1f8a4c", borderColor: "rgba(31,138,76,0.5)", fontWeight: 800 } : {}) }} onClick={() => { setEditAssign((v) => !v); setEditCups(false); setEditPay(false) }}>{editAssign ? "▴ toewijzen" : !drinks.some((d) => (r.anon[d.id] ?? 0) > 0) ? "✓ toegewezen" : "✏️ toewijzen"}</button>
                     {depositOn && <button style={{ ...S.btn, flex: 1, fontSize: 12.5, padding: "8px 0" }} onClick={() => { setEditCups((v) => !v); setEditAssign(false); setEditPay(false) }}>{editCups ? "▴ bekers" : "🫙 bekers"}</button>}
                     <button style={{ ...S.btn, flex: 1, fontSize: 12.5, padding: "8px 0" }} onClick={() => { setEditPay((v) => !v); setEditAssign(false); setEditCups(false) }}>{editPay ? "▴ bedrag" : "💶 bedrag"}</button>
                   </div>
@@ -1239,7 +1243,7 @@ export default function PartyTest() {
         </>)}
         {rounds.length > 0 && <div style={{ display: "flex", gap: 10 }}>
           <button style={{ ...S.btn, flex: 1 }} onClick={goFinal}>🧾 Afrekenen</button>
-          <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (unfinishedRound) resumeRound(); else nextRound() }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "➕ Nieuw rondje"}</button>
+          <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (pendingPayIdx() >= 0) { goPayPending(); return } if (unfinishedRound) resumeRound(); else nextRound() }}>{pendingPayIdx() >= 0 ? `Betaling rondje ${pendingPayIdx() + 1} afronden` : unfinishedRound ? `Ga verder met rondje ${roundNr}` : "➕ Nieuw rondje"}</button>
         </div>}
       </div></div>
     )
