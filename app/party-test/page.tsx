@@ -182,11 +182,10 @@ export default function PartyTest() {
   const roundItems = useMemo(() => drinks.reduce((s, d) => s + drinkTotal(d.id), 0), [cart, cartAnon, drinks]) // eslint-disable-line
   const resumeRound = () => { if (blockIfUnpaid()) return; setActiveCat(catsPresent[0]); setView("order") }
   const unfinishedRound = roundItems > 0 && rounds.length < roundNr
-  const pendingPayIdx = () => rounds.findIndex((r) => !((r.amount || 0) > 0.005 && (((r.potPart || 0) > 0.005) || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))))
-  const goPayPending = () => { const i = pendingPayIdx(); if (i < 0) return; setOpenRound(i); setEditAssign(false); setEditCups(false); setEditPay(true); setView("hub") }
   const roundIsPaid = (r: Round) => (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))
   const unpaidIdx = () => rounds.findIndex((r) => !roundIsPaid(r))
-  const blockIfUnpaid = () => { const i = unpaidIdx(); if (i < 0) return false; setNotice(`Ronde ${i + 1} is nog niet betaald. Vul eerst de betaling in voor je verder gaat.`); setOpenRound(i); setEditAssign(false); setEditCups(false); setEditPay(true); setView("hub"); return true }
+  const paidCount = rounds.filter(roundIsPaid).length
+  const blockIfUnpaid = () => { const i = unpaidIdx(); if (i < 0) return false; setNotice(`Ronde ${i + 1} is nog niet betaald. Rond die betaling eerst af.`); setView("confirmed"); return true }
   const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon, drinks]) // eslint-disable-line
   const pickedUpOf = (pid: string) => drinks.reduce((a, d) => a + (d.cup ? aQty(d.id, pid) : 0), 0)
 
@@ -808,9 +807,7 @@ export default function PartyTest() {
           {rounds.length > 0
             ? <div style={{ display: "flex", gap: 10 }}>
                 <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>📋 Rondjesoverzicht</button>
-                {pendingPayIdx() >= 0
-                  ? <button style={{ ...S.btnP, flex: 1 }} onClick={goPayPending}>Betaling rondje {pendingPayIdx() + 1} afronden</button>
-                  : unfinishedRound
+                {unfinishedRound
                   ? <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>Ga verder met rondje {roundNr}</button>
                   : <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>➕ Nieuw rondje</button>}
               </div>
@@ -1115,22 +1112,23 @@ export default function PartyTest() {
           <h3 style={{ ...S.h3, margin: 0 }}>📋 Rondjesoverzicht</h3>
           {potTag}
         </div>
-        {rounds.length === 0 ? (
+        {paidCount === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
             <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
-            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Nog geen rondjes</div>
-            <div style={{ ...S.sub, marginBottom: 16 }}>Er zijn nog geen bestellingen. Start een eerste rondje om te beginnen.</div>
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Nog geen afgeronde rondjes</div>
+            <div style={{ ...S.sub, marginBottom: 16 }}>Zodra een rondje bevestigd én betaald is, verschijnt het hier — dan kan je het nog aanpassen.</div>
             <div style={{ display: "flex", justifyContent: "center" }}>
-              <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (blockIfUnpaid()) return; if (unfinishedRound) { resumeRound(); return } setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "Start 1e rondje"}</button>
+              <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (unfinishedRound) { resumeRound(); return } setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "Start 1e rondje"}</button>
             </div>
           </div>
         ) : (<>
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
           <p style={{ ...S.sub, margin: 0 }}>Tik een ronde open om aan te passen.</p>
-          {rounds.length > 1 && <span onClick={() => setAllRoundsOpen((v) => !v)} style={{ fontSize: 12, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", flexShrink: 0 }}>{allRoundsOpen ? "alles dichtklappen" : "alles openklappen"}</span>}
+          {paidCount > 1 && <span onClick={() => setAllRoundsOpen((v) => !v)} style={{ fontSize: 12, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", flexShrink: 0 }}>{allRoundsOpen ? "alles dichtklappen" : "alles openklappen"}</span>}
         </div>
 
         {rounds.map((r, idx) => {
+          if (!roundIsPaid(r)) return null
           const items = drinks.reduce((s, d) => s + drinkTotalRound(r, d.id), 0)
           const open = allRoundsOpen || openRound === idx
           const roundDrinks = drinks.filter((d) => drinkTotalRound(r, d.id) > 0)
@@ -1141,9 +1139,7 @@ export default function PartyTest() {
                   <span style={{ fontSize: 15, fontWeight: 800 }}>Ronde {idx + 1} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>· {items} drankjes · {euro(r.amount)}</span>{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ fontSize: 11.5, fontWeight: 800, color: "#1f8a4c", marginLeft: 6 }}>✓ toegewezen</span>}</span>
                   <span style={{ fontSize: 14, color: "#8a7d55" }}>{open ? "▴" : "▾"}</span>
                 </div>
-                {roundIsPaid(r)
-                  ? <div style={{ fontSize: 12, fontWeight: 700, color: "#1f8a4c", marginTop: 3 }}>✓ betaald: {paidLabel(r)}</div>
-                  : <div style={{ fontSize: 12, fontWeight: 800, color: "#c0554a", marginTop: 3 }}>🔴 nog niet betaald — tik “bedrag” om af te ronden</div>}
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#1f8a4c", marginTop: 3 }}>✓ betaald: {paidLabel(r)}</div>
               </div>
               {open && (
                 <div style={{ padding: "0 14px 14px" }}>
@@ -1205,7 +1201,7 @@ export default function PartyTest() {
                     <div style={{ marginTop: 10, background: "#faf4e4", borderRadius: 12, padding: 10 }}>
                       <div style={{ ...S.row, gap: 8, marginBottom: 8 }}>
                         <span style={{ fontSize: 18, fontWeight: 800 }}>€</span>
-                        <input style={{ ...S.input, width: 110, fontSize: 16 }} type="text" inputMode="decimal" value={r.amount || ""} onChange={(e) => rSetAmount(idx, parseFloat(e.target.value.replace(",", ".")) || 0)} />
+                        <input style={{ ...S.input, width: 110, fontSize: 16, borderColor: (r.amount || 0) <= 0 ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" value={r.amount || ""} onChange={(e) => rSetAmount(idx, parseFloat(e.target.value.replace(",", ".")) || 0)} />
                         <span style={{ fontSize: 11, color: "#8a7d55" }}>totaal — Fair-Split basis</span>
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -1243,7 +1239,7 @@ export default function PartyTest() {
         </>)}
         {rounds.length > 0 && <div style={{ display: "flex", gap: 10 }}>
           <button style={{ ...S.btn, flex: 1 }} onClick={goFinal}>🧾 Afrekenen</button>
-          <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (pendingPayIdx() >= 0) { goPayPending(); return } if (unfinishedRound) resumeRound(); else nextRound() }}>{pendingPayIdx() >= 0 ? `Betaling rondje ${pendingPayIdx() + 1} afronden` : unfinishedRound ? `Ga verder met rondje ${roundNr}` : "➕ Nieuw rondje"}</button>
+          <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (unfinishedRound) resumeRound(); else nextRound() }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "➕ Nieuw rondje"}</button>
         </div>}
       </div></div>
     )
