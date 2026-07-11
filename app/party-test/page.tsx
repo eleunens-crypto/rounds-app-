@@ -117,6 +117,7 @@ export default function PartyTest() {
   const [bpBekers, setBpBekers] = useState(false)
   const [bpCoins, setBpCoins] = useState(false)
   const [fromOnboarding, setFromOnboarding] = useState(false)
+  const [onboardedOnce, setOnboardedOnce] = useState(false)
   const [onbPotActive, setOnbPotActive] = useState(false)
 
   const [roundNr, setRoundNr] = useState(1)
@@ -136,7 +137,8 @@ export default function PartyTest() {
   const [allRoundsOpen, setAllRoundsOpen] = useState(false)
   const [hasSettled, setHasSettled] = useState(false)
 
-  const [assignDrink, setAssignDrink] = useState<string | null>(null)
+  const [showAssignAll, setShowAssignAll] = useState(false)
+  const [assignMode, setAssignMode] = useState<"drink" | "person">("drink")
   const [showCups, setShowCups] = useState(false)
   const [showClose, setShowClose] = useState(false)
   const [cupsChecked, setCupsChecked] = useState(false)
@@ -243,9 +245,7 @@ export default function PartyTest() {
     let valid = true, reason = ""
     if (total <= 0) { valid = false; reason = "Vul eerst exact betaald bedrag in." }
     else if (!payPot && !payPerson) { valid = false; reason = "Kies wie betaalde." }
-    else if (potOnly && potOver) { valid = false; reason = `De pot heeft maar ${euro(potAvail)} — leg bij of kies een andere betaler.` }
     else if (split && !potFilled) { valid = false; reason = "Vul eerst het pot-bedrag in." }
-    else if (split && potOver) { valid = false; reason = `De pot heeft maar ${euro(potAvail)} — verlaag het pot-bedrag of leg bij.` }
     else if (split && potAmt > total + 0.0001) { valid = false; reason = "Het pot-bedrag is hoger dan het totaal." }
     const zeroPot = valid && split && potAmt <= 0.0001
     const zeroPerson = valid && split && Math.abs(personRest) <= 0.0001
@@ -254,6 +254,7 @@ export default function PartyTest() {
   const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); to() } }); else to() }
   const applyBeginChoices = () => {
     if (bpPotType === "yes") { setNotice("Kies pot of drankkaart — of zet de pot op nee."); return }
+    setOnboardedOnce(true)
     const potOn = bpPotType === "pot" || bpPotType === "card"
     setPotIsCard(bpPotType === "card")
     setPotChosen(potOn)
@@ -275,7 +276,7 @@ export default function PartyTest() {
   }
   const goFinal = () => { if (rounds.length === 0) { setNotice("Er zijn nog geen rondjes om af te rekenen. Start eerst een rondje."); return } if (anyUnassignedRounds) { const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0); setNotice(`Er ${tot === 1 ? "is 1 drankje" : `zijn ${tot} drankjes`} nog zonder naam. Wijs ze eerst toe (rood aangeduid in het overzicht) voor je afrekent.`); const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0)); if (fr >= 0) { setOpenRound(fr); setEditAssign(true); setEditCups(false); setEditPay(false); setView("hub") } return } setHasSettled(true); setView("final") }
   const openClose = () => { setAmountDraft(""); setShowClose(true) }
-  const goAssignFromWarning = () => { const d = firstUnassigned(); setShowClose(false); if (d) { setActiveCat(d.cat); setAssignDrink(d.id) } }
+  const goAssignFromWarning = () => { setShowClose(false); setAssignMode("drink"); setShowAssignAll(true) }
   const commitRound = () => {
     const effGb: Record<string, number> = {}
     people.forEach((p) => { effGb[p.id] = gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id)) })
@@ -544,7 +545,7 @@ export default function PartyTest() {
         </div>
         <div style={S.card}>
           <input style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, marginBottom: 12, background: "#fdfaf2", padding: "13px 14px" }} type="text" placeholder="Typ je groepsnaam" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
-          <button style={{ ...S.btnP, width: "100%", opacity: groupName.trim() ? 1 : 0.5 }} onClick={() => { if (!groupName.trim()) { setNotice("Geef je groep eerst een naam."); return } setView("setup") }}>Starten →</button>
+          <button style={{ ...S.btnP, width: "100%", opacity: groupName.trim() ? 1 : 0.5 }} onClick={() => { if (!groupName.trim()) { setNotice("Geef je groep eerst een naam."); return } setView("setup") }}>Starten</button>
         </div>
         <div style={{ ...S.card, opacity: 0.6 }}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
@@ -598,7 +599,7 @@ export default function PartyTest() {
                 </div>
               ))}
               <div style={{ fontSize: 11.5, color: "#8a7d55", margin: "12px 0 14px", lineHeight: 1.5 }}>💡 Later aanpasbaar via ⚙️ Groep. Zet je iets op ‘ja’, dan vul je de details zo meteen in.</div>
-              <button style={{ ...S.btnP, width: "100%" }} onClick={applyBeginChoices}>{(bpPotType !== "none" || bpBekers || bpCoins) ? "Verdergaan →" : "Snel starten →"}</button>
+              <button style={{ ...S.btnP, width: "100%" }} onClick={applyBeginChoices}>{(bpPotType !== "none" || bpBekers || bpCoins) ? "Verdergaan" : "Snel starten"}</button>
             </div>
           </div>
         )}
@@ -628,7 +629,7 @@ export default function PartyTest() {
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", marginTop: 24, marginBottom: 4 }}>
-          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice("Voeg eerst minstens één persoon toe."); return } setBeginPrompt(true) }}>Volgende →</button>
+          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice("Voeg eerst minstens één persoon toe."); return } if (onboardedOnce) { setOpenRound(rounds.length - 1); setView("hub") } else setBeginPrompt(true) }}>Volgende</button>
         </div>
       </div></div>
     )
@@ -757,11 +758,10 @@ export default function PartyTest() {
         </div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-          <button style={{ ...S.btn, flex: 1 }} onClick={() => setView("setup")}>← Personen</button>
+        <div style={{ marginTop: 24 }}>
           {rounds.length > 0
-            ? <button style={{ ...S.btnP, flex: 2 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>Terug naar overzicht →</button>
-            : <button style={{ ...S.btnP, flex: 2 }} onClick={tryBegin}>Beginnen →</button>}
+            ? <button style={{ ...S.btnP, width: "100%" }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>Terug naar overzicht</button>
+            : <button style={{ ...S.btnP, width: "100%" }} onClick={tryBegin}>Starten</button>}
         </div>
       </div></div>
     )
@@ -771,8 +771,6 @@ export default function PartyTest() {
   if (view === "order") {
     const catDrinks = drinks.filter((d) => d.cat === activeCat)
     const catVisible = catDrinks.filter((d) => fullList || d.fav || drinkTotal(d.id) > 0)
-    const ad = assignDrink ? drinks.find((d) => d.id === assignDrink)! : null
-    const adAnon = ad ? (cartAnon[ad.id] ?? 0) : 0
     const needCups = depositOn && (people.some((p) => pickedUpOf(p.id) > 0) || people.some((p) => cupsBal(p.id) !== 0))
     const gaveBackTotal = people.reduce((a, p) => a + (gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id))), 0)
     const cupsBlock = needCups && !cupsChecked
@@ -825,7 +823,7 @@ export default function PartyTest() {
               {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => {
                 const un = cartAnon[d.id] ?? 0
                 return (
-                  <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e", cursor: "pointer" }} onClick={() => setAssignDrink(d.id)}>
+                  <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e", cursor: "pointer" }} onClick={() => { setAssignMode("drink"); setShowAssignAll(true) }}>
                     {d.emoji} {drinkTotal(d.id)}× {d.name}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 800, textDecoration: "underline" }}>toewijzen</span>}
                   </span>
                 )
@@ -839,34 +837,48 @@ export default function PartyTest() {
         </div>
         <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => roundItems > 0 && openClose()}>✅ Rondje {roundNr} bevestigen{roundItems > 0 && <span style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.85 }}> — {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>}</button>
 
-        {ad && (
-          <div style={S.overlay} onClick={() => setAssignDrink(null)}>
-            <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
-                <h3 style={{ ...S.h3, margin: 0, fontSize: 18 }}>{ad.emoji} {ad.name}</h3>
-                {drinkTotal(ad.id) > 0 && <span style={{ fontSize: 13, color: "#8a7d55" }}>{drinkTotal(ad.id)}×</span>}
-              </div>
-              {adAnon > 0 ? (
-                <div style={{ background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 13, color: "#b0402f", fontWeight: 700 }}>🔴 {adAnon} nog toe te wijzen — tik een naam om er telkens één aan toe te wijzen.</div>
-              ) : (
-                <p style={{ ...S.sub, marginBottom: 12 }}>Tik aan voor wie dit is (nog eens tikken = +1).</p>
-              )}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-                {people.map((p) => {
-                  const n = aQty(ad.id, p.id)
-                  return <span key={p.id} style={S.chip(n)} onClick={() => assignTap(ad.id, p.id)} onContextMenu={(e) => { e.preventDefault(); bump(ad.id, p.id, -1) }}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); bump(ad.id, p.id, -1) }} style={{ marginLeft: 7, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 16, fontWeight: 800, lineHeight: 1 }}>−</span>}</span>
-                })}
-                <span onClick={() => eachOne(ad.id)} style={{ ...S.chip(0), border: "1.5px dashed #c98a00", background: "rgba(240,165,0,0.1)", color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>👥 elk 1</span>
-              </div>
-              {adAnon > 0 ? (
-                <div style={{ ...S.row, justifyContent: "space-between", background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.3)", borderRadius: 12, padding: "8px 12px", marginBottom: 14 }}>
-                  <span style={{ fontSize: 13, color: "#b0402f", fontWeight: 700 }}>🔴 {adAnon} zonder naam <span style={{ fontWeight: 400, color: "#8a7d55" }}>(tik een naam om toe te wijzen)</span></span>
-                  <div style={{ ...S.row, gap: 8 }}><button style={S.step} onClick={() => bumpAnon(ad.id, -1)}>−</button><button style={S.step} onClick={() => bumpAnon(ad.id, 1)}>+</button></div>
+        {showAssignAll && (
+          <div style={S.overlay} onClick={() => setShowAssignAll(false)}>
+            <div style={{ ...S.sheet, maxHeight: "82vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
+                <h3 style={{ ...S.h3, margin: 0, fontSize: 18 }}>Toewijzen</h3>
+                <div style={{ ...S.row, gap: 4 }}>
+                  <div style={{ ...S.seg(assignMode === "drink"), padding: "6px 10px", fontSize: 12 }} onClick={() => setAssignMode("drink")}>per drank</div>
+                  <div style={{ ...S.seg(assignMode === "person"), padding: "6px 10px", fontSize: 12 }} onClick={() => setAssignMode("person")}>per persoon</div>
                 </div>
+              </div>
+
+              {assignMode === "drink" ? (
+                drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => {
+                  const un = cartAnon[d.id] ?? 0
+                  return (
+                    <div key={d.id} style={{ borderTop: "1px solid rgba(120,95,20,0.1)", paddingTop: 9, marginBottom: 9 }}>
+                      <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 14, fontWeight: 800 }}>{d.emoji} {drinkTotal(d.id)}× {d.name}</span>
+                        {un > 0 && <span style={{ fontSize: 11.5, color: "#c0554a", fontWeight: 800 }}>🔴 {un} zonder naam</span>}
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {people.map((p) => { const n = aQty(d.id, p.id); return <span key={p.id} style={{ ...S.chip(n), fontSize: 12.5, padding: "5px 10px" }} onClick={() => assignTap(d.id, p.id)}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); bump(d.id, p.id, -1) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1 }}>−</span>}</span> })}
+                        <span onClick={() => eachOne(d.id)} style={{ ...S.chip(0), fontSize: 12.5, padding: "5px 10px", border: "1.5px dashed #c98a00", background: "rgba(240,165,0,0.1)", color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>👥 elk 1</span>
+                        {un > 0 && <span onClick={() => bumpAnon(d.id, -1)} style={{ ...S.chip(0), fontSize: 12.5, padding: "5px 10px", cursor: "pointer" }}>− zonder naam</span>}
+                      </div>
+                    </div>
+                  )
+                })
               ) : (
-                <button style={{ background: "none", border: "none", width: "100%", marginBottom: 14, fontSize: 12, color: "#8a7d55", cursor: "pointer", textDecoration: "underline" }} onClick={() => bumpAnon(ad.id, 1)}>zonder naam toevoegen</button>
+                people.map((p) => {
+                  const took = drinks.filter((d) => (cart[d.id]?.[p.id] ?? 0) > 0)
+                  return (
+                    <div key={p.id} style={{ borderTop: "1px solid rgba(120,95,20,0.1)", paddingTop: 9, marginBottom: 9 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 6 }}>{p.name}{took.length > 0 && <span style={{ fontSize: 11.5, fontWeight: 600, color: "#8a7d55" }}> · {took.reduce((a, d) => a + (cart[d.id]?.[p.id] ?? 0), 0)} drankje(s)</span>}</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => { const n = aQty(d.id, p.id); return <span key={d.id} style={{ ...S.chip(n), fontSize: 12.5, padding: "5px 10px" }} onClick={() => assignTap(d.id, p.id)}>{d.emoji} {d.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); bump(d.id, p.id, -1) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1 }}>−</span>}</span> })}
+                      </div>
+                    </div>
+                  )
+                })
               )}
-              <button style={S.btnP} onClick={() => setAssignDrink(null)}>Klaar</button>
+              <button style={{ ...S.btnP, marginTop: 6 }} onClick={() => setShowAssignAll(false)}>Klaar</button>
             </div>
           </div>
         )}
@@ -943,34 +955,38 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
-        <div style={{ ...S.card, textAlign: "center", padding: "20px 16px" }}>
-          <div style={{ fontSize: 34, marginBottom: 4 }}>🍻</div>
-          <div style={{ fontSize: 18, fontWeight: 800 }}>Ronde {roundNr} bevestigd — {items} drankjes</div>
-          <div style={{ fontSize: 15, color: "#e08a00", fontWeight: 800, marginTop: 6 }}>👉 Iemand mag gaan halen!</div>
-          {depositOn && <div style={{ marginTop: 8, fontSize: 12.5, fontWeight: 700, color: "#8a5e0f" }}>🫙 {totalInUse} beker{totalInUse === 1 ? "" : "s"} in omloop · {euro(totalInUse * depositPerCupEur)}</div>}
-        </div>
-
         <div style={S.card}>
-          <h3 style={{ ...S.h3, marginBottom: 8 }}>📋 Deze ronde</h3>
-          {last && drinks.filter((d) => drinkTotalRound(last, d.id) > 0).map((d) => {
-            const n = drinkTotalRound(last, d.id)
-            const who = people.filter((p) => (last.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = last.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
-            const un = last.anon[d.id] ?? 0
-            return <div key={d.id} style={{ fontSize: 14, marginBottom: 5 }}><b>{d.emoji} {n}× {d.name}</b> <span style={{ color: "#8a7d55" }}>→ {who.join(", ")}{un > 0 ? `${who.length ? ", " : ""}${un}× onbekend` : ""}</span></div>
-          })}
+          <div style={{ ...S.row, gap: 9, marginBottom: 4 }}>
+            <span style={{ fontSize: 24, flexShrink: 0 }}>🍻</span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>Ronde {roundNr} bevestigd — {items} drankjes</div>
+              <div style={{ fontSize: 13, color: "#e08a00", fontWeight: 800 }}>👉 Iemand mag gaan halen!</div>
+            </div>
+          </div>
+          {depositOn && <div style={{ fontSize: 12.5, fontWeight: 700, color: "#8a5e0f", marginBottom: 6 }}>🫙 {totalInUse} beker{totalInUse === 1 ? "" : "s"} in omloop · {euro(totalInUse * depositPerCupEur)}</div>}
+          {(() => {
+            const rl = last ? drinks.filter((d) => drinkTotalRound(last, d.id) > 0) : []
+            return (
+              <div style={{ borderTop: "1px dashed rgba(120,95,20,0.2)", paddingTop: 8, display: "grid", gridTemplateColumns: rl.length > 4 ? "1fr 1fr" : "1fr", gap: rl.length > 4 ? "4px 14px" : 4 }}>
+                {rl.map((d) => {
+                  const n = drinkTotalRound(last!, d.id)
+                  const who = people.filter((p) => (last!.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = last!.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
+                  const un = last!.anon[d.id] ?? 0
+                  return <div key={d.id} style={{ fontSize: 13.5 }}><b>{d.emoji} {n}× {d.name}</b> <span style={{ color: "#8a7d55" }}>→ {who.join(", ")}{un > 0 ? `${who.length ? ", " : ""}${un}× onbekend` : ""}</span></div>
+                })}
+              </div>
+            )
+          })()}
           <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", marginTop: 8, paddingTop: 8, fontSize: 14, fontWeight: 800, textAlign: "right" }}>Totaal: {items} drankje{items === 1 ? "" : "s"}</div>
         </div>
 
         <div style={S.card}>
-          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
-            <h3 style={{ ...S.h3, margin: 0 }}>💰 Totaal betaald voor dit rondje</h3>
-            {potTag}
+          <div style={{ fontSize: 15, fontWeight: 800, textAlign: "center", marginBottom: 8 }}>💰 Exact bedrag betaald voor dit rondje?</div>
+          <div style={{ ...S.row, gap: 8, justifyContent: "center", margin: "2px 0" }}>
+            <span style={{ fontSize: 20, fontWeight: 800 }}>€</span>
+            <input style={{ ...S.input, width: 120, fontSize: 22, textAlign: "center", fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00" value={amountDraft} onChange={(e) => { setAmountDraft(e.target.value.replace(/[^0-9.,]/g, "")); setPaidConfirmed(false) }} />
           </div>
-          <div style={{ ...S.row, gap: 8, justifyContent: "center", margin: "6px 0 2px" }}>
-            <span style={{ fontSize: 24, fontWeight: 800 }}>€</span>
-            <input style={{ ...S.input, width: 150, fontSize: 26, textAlign: "center", fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00" value={amountDraft} onChange={(e) => { setAmountDraft(e.target.value.replace(/[^0-9.,]/g, "")); setPaidConfirmed(false) }} />
-          </div>
-          <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", marginBottom: 14 }}>ⓘ exact bedrag — hierop verdeelt de app eerlijk (Fair Split)</div>
+          <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", marginBottom: 14 }}>ⓘ hierop verdeelt de app eerlijk (Fair Split)</div>
 
           {(parseFloat(amountDraft.replace(",", ".")) || 0) > 0 ? (
           <>
@@ -979,7 +995,6 @@ export default function PartyTest() {
             <span style={S.chip(payPot ? 1 : 0)} onClick={() => { setPayPot((v) => !v); setPaidConfirmed(false) }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
             {people.map((p) => <span key={p.id} style={S.chip(payPerson === p.id ? 1 : 0)} onClick={() => { setPayPerson((v) => (v === p.id ? "" : p.id)); setPaidConfirmed(false) }}>{p.name}</span>)}
           </div>
-          {(potContribTotal > 0 || potSpent > 0) && <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 7 }}>{potIsCard ? "💳 drankkaart" : "🫙 pot"}-saldo: ingelegd {euro(potContribTotal)} · <b style={{ color: st.potAvail > 0.005 ? "#1f8a4c" : "#c0554a" }}>nog {euro(st.potAvail)}</b></div>}
 
           {st.split && (
             <div style={{ background: "#faf4e4", borderRadius: 12, padding: "10px 12px", marginTop: 10 }}>
@@ -991,10 +1006,10 @@ export default function PartyTest() {
                 <span style={{ fontSize: 13, fontWeight: 700 }}>👤 {people.find((p) => p.id === payPerson)?.name} <span style={{ fontSize: 11, color: "#8a7d55" }}>(de rest)</span></span>
                 <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{st.potFilled ? euro(Math.max(0, personRest)) : "—"}</span>
               </div>
-              <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>{st.potFilled ? "De rest rekent de app automatisch." : "Vul eerst het pot-bedrag in — dan verschijnt de rest."}{st.potOver ? ` Pot heeft maar ${euro(st.potAvail)}.` : ""}</div>
+              <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>{st.potFilled ? "De rest rekent de app automatisch." : "Vul eerst het pot-bedrag in — dan verschijnt de rest."}{st.potAvail <= 0.005 ? " De pot is leeg." : ""}</div>
             </div>
           )}
-          {payPot && !payPerson && <div style={{ fontSize: 12, color: st.potOver ? "#c0554a" : "#8a7d55", fontWeight: 700, marginTop: 8 }}>pot: {euro(st.potAvail)}{st.potOver ? " — te weinig, leg bij of kies andere betaler" : ""}</div>}
+          {payPot && !payPerson && <div style={{ fontSize: 12, color: st.potAvail <= 0.005 ? "#c0554a" : "#8a7d55", fontWeight: 700, marginTop: 8 }}>pot: {euro(st.potAvail)}{st.potAvail <= 0.005 ? " — te weinig, leg bij of kies andere/extra betaler" : ""}</div>}
 
           {(() => {
             const okGreen = paidConfirmed && st.valid
@@ -1003,7 +1018,7 @@ export default function PartyTest() {
               : !st.valid
               ? { ...S.btn, width: "100%", background: "rgba(224,104,92,0.12)", color: "#b0402f", border: "1px solid rgba(224,104,92,0.5)", fontWeight: 800 }
               : S.btnP
-            return <button style={{ ...style, marginTop: 14 }} onClick={confirmPayment}>{okGreen ? "✓ betaling bevestigd — pas gerust nog aan" : !st.valid ? `⚠️ ${st.reason}` : "✓ Bevestig betaling"}</button>
+            return <button style={{ ...style, marginTop: 14 }} onClick={confirmPayment}>{okGreen ? "✓ betaling bevestigd — pas gerust nog aan" : !st.valid ? st.reason : "✓ Bevestig betaling"}</button>
           })()}
           </>
           ) : (
@@ -1034,7 +1049,7 @@ export default function PartyTest() {
             <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Nog geen rondjes</div>
             <div style={{ ...S.sub, marginBottom: 16 }}>Er zijn nog geen bestellingen. Start een eerste rondje om te beginnen.</div>
             <div style={{ display: "flex", justifyContent: "center" }}>
-              <button style={{ ...S.btnP, width: "80%" }} onClick={() => { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>Start 1e rondje →</button>
+              <button style={{ ...S.btnP, width: "80%" }} onClick={() => { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>Start 1e rondje</button>
             </div>
           </div>
         ) : (<>
