@@ -221,6 +221,7 @@ export default function PartyTest() {
     return { total, potFilled, potAmt, split, potOnly, personOnly, potContribToRound, potOver, personRest, valid, reason, zeroPot, zeroPerson }
   }
   const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); to() } }); else to() }
+  const goFinal = () => { if (rounds.length === 0) { setNotice("Er zijn nog geen rondjes om af te rekenen. Start eerst een rondje."); return } if (anyUnassignedRounds) { const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0); setNotice(`Er ${tot === 1 ? "is 1 drankje" : `zijn ${tot} drankjes`} nog zonder naam. Wijs ze eerst toe (rood aangeduid in het overzicht) voor je afrekent.`); const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0)); if (fr >= 0) { setOpenRound(fr); setEditAssign(true); setEditCups(false); setEditPay(false); setView("hub") } return } setView("final") }
   const openClose = () => { setAmountDraft(""); setShowClose(true) }
   const goAssignFromWarning = () => { const d = firstUnassigned(); setShowClose(false); if (d) { setActiveCat(d.cat); setAssignDrink(d.id) } }
   const commitRound = () => {
@@ -424,21 +425,24 @@ export default function PartyTest() {
     </>
   )
   const Header = () => (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, gap: 10, flexWrap: "wrap" }}>
-      <div style={{ ...S.row, gap: 10, minWidth: 0 }}>
-        <RundoLogo size={40} />
-        <div style={{ minWidth: 0 }}>
-          <div style={{ ...S.h1, fontSize: 20, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span> <span style={{ fontSize: 10.5, fontWeight: 800, color: "#e08a00", border: "1px solid #e08a00", borderRadius: 6, padding: "1px 5px", verticalAlign: "middle" }}>TEST</span></div>
-          <div style={{ ...S.row, gap: 5, marginTop: 2 }}><CheersIcon size={16} /><span style={{ fontSize: 11.5, color: "#e08a00", fontWeight: 700 }}>Rondjes en splitten zonder gedoe!</span></div>
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+        <div style={{ ...S.row, gap: 10, minWidth: 0 }}>
+          <RundoLogo size={40} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ ...S.h1, fontSize: 20, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
+            <div style={{ ...S.row, gap: 5, marginTop: 2 }}><CheersIcon size={16} /><span style={{ fontSize: 11.5, color: "#e08a00", fontWeight: 700 }}>Rondjes en splitten zonder gedoe!</span></div>
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, minWidth: 0, flexShrink: 0 }}>
+          {groupName.trim() && <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()}</div>}
+          {potTag}
         </div>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, minWidth: 0 }}>
-        {groupName.trim() && <div style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()}</div>}
-        <div style={{ ...S.row, gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-          {view !== "hub" && <button style={{ ...S.btn, padding: "6px 10px", fontSize: 12, fontWeight: 700 }} onClick={goHub}>📋 Rondjesoverzicht</button>}
-          {potTag}
-          {view !== "setup" && <button style={{ ...S.btn, padding: "6px 10px", fontSize: 12, fontWeight: 700 }} onClick={goHome}>⚙️ Groep</button>}
-        </div>
+      <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+        <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "setup" ? 0.55 : 1 }} onClick={goHome}>⚙️ Groep</button>
+        <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "hub" ? 0.55 : 1 }} onClick={goHub}>📋 Overzicht</button>
+        <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "final" ? 0.55 : 1 }} onClick={goFinal}>🧾 Afrekenen</button>
       </div>
     </div>
   )
@@ -925,7 +929,7 @@ export default function PartyTest() {
 
         </>)}
         {rounds.length > 0 && <div style={{ display: "flex", gap: 10 }}>
-          <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (anyUnassignedRounds) { const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0); setNotice(`Er ${tot === 1 ? "is 1 drankje" : `zijn ${tot} drankjes`} nog zonder naam. Wijs ze eerst toe (rood aangeduid in het overzicht) voor je afrekent.`); const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0)); if (fr >= 0) { setOpenRound(fr); setEditAssign(true); setEditCups(false); setEditPay(false) } } else setView("final") }}>🧾 Afrekenen</button>
+          <button style={{ ...S.btn, flex: 1 }} onClick={goFinal}>🧾 Afrekenen</button>
           <button style={{ ...S.btnP, flex: 2 }} onClick={nextRound}>➕ Nieuw rondje</button>
         </div>}
       </div></div>
