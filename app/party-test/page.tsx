@@ -849,6 +849,7 @@ export default function PartyTest() {
                   <div style={{ ...S.seg(assignMode === "person"), padding: "6px 10px", fontSize: 12 }} onClick={() => setAssignMode("person")}>per persoon</div>
                 </div>
               </div>
+              {assignMode === "person" && unassignedTotal > 0 && <div style={{ fontSize: 12.5, fontWeight: 800, color: "#c0554a", marginBottom: 8 }}>🔴 {unassignedTotal} drankje{unassignedTotal === 1 ? "" : "s"} nog niet toegewezen</div>}
 
               {assignMode === "drink" ? (
                 drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => {
@@ -1097,6 +1098,7 @@ export default function PartyTest() {
                         <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 11.5 }} onClick={() => setEditAssignMode("drink")}>per drank</div>
                         <div style={{ ...S.seg(editAssignMode === "person"), padding: "5px 9px", fontSize: 11.5 }} onClick={() => setEditAssignMode("person")}>per persoon</div>
                       </div>
+                      {editAssignMode === "person" && (() => { const u = roundDrinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0); return u > 0 ? <div style={{ fontSize: 12, fontWeight: 800, color: "#c0554a", marginBottom: 8 }}>🔴 {u} drankje{u === 1 ? "" : "s"} nog niet toegewezen</div> : null })()}
                       {editAssignMode === "drink" ? roundDrinks.map((d) => {
                         const un = r.anon[d.id] ?? 0
                         return (
