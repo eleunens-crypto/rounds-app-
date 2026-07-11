@@ -88,7 +88,7 @@ type Round = { orders: Assign; anon: Anon; payer: string; amount: number; potPar
 const euro = (v: number) => "€" + v.toFixed(2).replace(".", ",")
 
 export default function PartyTest() {
-  const [view, setView] = useState<"start" | "setup" | "order" | "confirmed" | "hub" | "final">("start")
+  const [view, setView] = useState<"start" | "setup" | "settings" | "order" | "confirmed" | "hub" | "final">("start")
   const [pay, setPay] = useState<"eur" | "coin">("eur")
   const [coinValue, setCoinValue] = useState(3.9)
   const [depositOn, setDepositOn] = useState(false)
@@ -180,7 +180,7 @@ export default function PartyTest() {
   const cupsBal = (pid: string) => rounds.reduce((s, r) => s + (roundPicked(r, pid) - (r.gaveBack[pid] || 0)), 0)
 
   const isGuestDefault = (name: string) => /^Gast \d+$/.test(name.trim())
-  const addPerson = () => { const g = people.filter((x) => isGuestDefault(x.name)).length + 1; setPeople((ps) => [...ps, { id: "p" + Date.now(), name: "Gast " + g }]) }
+  const addPerson = () => setPeople((ps) => [...ps, { id: "p" + Date.now() + Math.floor(Math.random() * 1000), name: "Gast " + (ps.length + 1) }])
   const renamePerson = (id: string, name: string) => setPeople((ps) => ps.map((x) => x.id === id ? { ...x, name } : x))
   const personHasDrinks = (pid: string) => rounds.some((r) => Object.values(r.orders).some((o) => (o?.[pid] ?? 0) > 0)) || Object.values(cart).some((o) => (o?.[pid] ?? 0) > 0)
   const removePerson = (id: string) => { const pp = people.find((x) => x.id === id); if (personHasDrinks(id)) { setNotice(`${pp?.name || "Deze persoon"} heeft al drankjes in een rondje en kan niet verwijderd worden. Verwijder eerst die drankjes.`); return } setPeople((ps) => ps.filter((x) => x.id !== id)) }
@@ -457,7 +457,7 @@ export default function PartyTest() {
           <div style={{ ...S.row, gap: 6, marginTop: 4 }}><CheersIcon size={18} /><span style={{ fontSize: 13, color: "#e08a00", fontWeight: 700 }}>Rondjes en splitten zonder gedoe!</span></div>
         </div>
         <div style={S.card}>
-          <input style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, marginBottom: 12 }} type="text" placeholder="Groepsnaam (bv. De Aperitiefgangers)" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+          <input style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, marginBottom: 12 }} type="text" placeholder="Typ je groepsnaam" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
           <button style={{ ...S.btnP, width: "100%" }} onClick={() => setView("setup")}>Starten →</button>
         </div>
         <div style={{ ...S.card, opacity: 0.6 }}>
@@ -489,21 +489,36 @@ export default function PartyTest() {
         </div>
 
         <div style={S.card}>
-          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
-            <div><span style={{ fontSize: 14, fontWeight: 800 }}>Personen</span> <span style={{ fontSize: 11.5, color: "#8a7d55", fontStyle: "italic" }}>tik op een naam om te hernoemen</span></div>
-            <button style={{ ...S.btn, padding: "5px 10px", fontSize: 12 }} onClick={addPerson}>+ Naam toevoegen</button>
+          <div style={{ marginBottom: 10 }}>
+            <span style={{ fontSize: 14, fontWeight: 800 }}>Personen</span> <span style={{ fontSize: 11.5, color: "#8a7d55", fontStyle: "italic" }}>tik op een naam om te hernoemen</span>
           </div>
           {people.length === 0 ? (
             <div style={{ textAlign: "center", color: "#b3a988", fontSize: 13, padding: "14px 0" }}>Nog geen personen</div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(118px, 1fr))", gap: 8 }}>
               {people.map((p, idx) => (
-                <input key={p.id} value={p.name} onChange={(e) => renamePerson(p.id, e.target.value)} placeholder={`Gast ${idx + 1}`} style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "7px 9px", fontSize: 13, textAlign: "left", color: isGuestDefault(p.name) ? "#a89a72" : "#4a3f1e" }} />
+                <input key={p.id} value={isGuestDefault(p.name) ? "" : p.name} placeholder={isGuestDefault(p.name) ? p.name : `Gast ${idx + 1}`} onChange={(e) => renamePerson(p.id, e.target.value === "" ? `Gast ${idx + 1}` : e.target.value)} style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "7px 9px", fontSize: 13, textAlign: "left" }} />
               ))}
             </div>
           )}
         </div>
 
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 24, marginBottom: 4 }}>
+          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice("Voeg eerst minstens één persoon toe."); return } setView("settings") }}>Volgende: drank & bekers →</button>
+        </div>
+      </div></div>
+    )
+  }
+
+  // ── SETTINGS (drank, bekers, pot) ────────────────────────────────────────────
+  if (view === "settings") {
+    return (
+      <div style={S.page} onClick={() => { setCoinInfo(false); setDepositInfo(false) }}><div style={S.wrap}>
+        <Header />
+        {showPot && renderPotModal()}
+        {renderDialogs()}
+        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>Instellingen</h3>
+        <p style={{ ...S.sub, marginBottom: 12 }}>Staat alles goed? Tik gewoon op “Beginnen”. Pas enkel aan wat je nodig hebt.</p>
         <div style={S.card}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
             <span style={{ fontSize: 14, fontWeight: 700 }}>🫙 Gezamenlijke pot <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>— optioneel</span></span>
@@ -593,10 +608,11 @@ export default function PartyTest() {
         </div>
           </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 28, marginBottom: 4 }}>
+        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+          <button style={{ ...S.btn, flex: 1 }} onClick={() => setView("setup")}>← Personen</button>
           {rounds.length > 0
-            ? <button style={{ ...S.btnP, width: "80%" }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>Terug naar overzicht →</button>
-            : <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice("Voeg eerst minstens één persoon toe."); return } setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>Start {roundNr === 1 ? "1e rondje" : `rondje ${roundNr}`} →</button>}
+            ? <button style={{ ...S.btnP, flex: 2 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>Terug naar overzicht →</button>
+            : <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (people.length === 0) { setNotice("Voeg eerst minstens één persoon toe."); return } setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>Beginnen →</button>}
         </div>
       </div></div>
     )
