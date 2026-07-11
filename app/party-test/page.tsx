@@ -280,7 +280,7 @@ export default function PartyTest() {
   }
   const goFinal = () => { if (rounds.length === 0) { setNotice("Er zijn nog geen rondjes om af te rekenen. Start eerst een rondje."); return } if (anyUnassignedRounds) { const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0); setNotice(`Er ${tot === 1 ? "is 1 drankje" : `zijn ${tot} drankjes`} nog zonder naam. Wijs ze eerst toe (rood aangeduid in het overzicht) voor je afrekent.`); const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0)); if (fr >= 0) { setOpenRound(fr); setEditAssign(true); setEditCups(false); setEditPay(false); setView("hub") } return } setHasSettled(true); setView("final") }
   const openClose = () => { setAmountDraft(""); setShowClose(true) }
-  const goAssignFromWarning = () => { setShowClose(false); setAssignMode("drink"); setShowAssignAll(true) }
+  const goAssignFromWarning = () => { setShowClose(false); setShowAssignAll(true) }
   const commitRound = () => {
     const effGb: Record<string, number> = {}
     people.forEach((p) => { effGb[p.id] = gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id)) })
@@ -827,7 +827,7 @@ export default function PartyTest() {
               {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => {
                 const un = cartAnon[d.id] ?? 0
                 return (
-                  <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e", cursor: "pointer" }} onClick={() => { setAssignMode("drink"); setShowAssignAll(true) }}>
+                  <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e", cursor: "pointer" }} onClick={() => setShowAssignAll(true)}>
                     {d.emoji} {drinkTotal(d.id)}× {d.name}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 800, textDecoration: "underline" }}>toewijzen</span>}
                   </span>
                 )
