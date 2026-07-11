@@ -17,26 +17,11 @@ function RundoLogo({ size = 40 }: { size?: number }) {
   return <img src={RUNDO_LOGO_SRC} alt="Rundo" width={size} height={size} style={{ display: "block", objectFit: "contain", flexShrink: 0 }} />
 }
 
-// Klinkende glazen ("cheers") — getekend icoontje voor de Party-ondertitel
+// Klinkende glazen ("cheers") — ingebed icoon (zelfde als Rundo Party)
+const CHEERS_ICON_SRC = "data:image/png;base64,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"
 function CheersIcon({ size = 18 }: { size?: number }) {
-  return (
-    <svg viewBox="0 0 64 64" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{ display: "block", flexShrink: 0 }}>
-      <g stroke="#f0a500" strokeWidth="3" strokeLinecap="round">
-        <line x1="32" y1="3" x2="32" y2="11" />
-        <line x1="27.5" y1="6.5" x2="36.5" y2="6.5" />
-      </g>
-      <g transform="rotate(16 22 42)">
-        <path d="M13 16 H31 L27 30 Q22 34 17 30 Z" fill="#f4c430" stroke="#4a3f1e" strokeWidth="3" strokeLinejoin="round" />
-        <line x1="22" y1="31" x2="22" y2="52" stroke="#4a3f1e" strokeWidth="3" strokeLinecap="round" />
-        <line x1="14" y1="53" x2="30" y2="53" stroke="#4a3f1e" strokeWidth="3" strokeLinecap="round" />
-      </g>
-      <g transform="rotate(-16 42 42)">
-        <path d="M33 16 H51 L47 30 Q42 34 37 30 Z" fill="#f4c430" stroke="#4a3f1e" strokeWidth="3" strokeLinejoin="round" />
-        <line x1="42" y1="31" x2="42" y2="52" stroke="#4a3f1e" strokeWidth="3" strokeLinecap="round" />
-        <line x1="34" y1="53" x2="50" y2="53" stroke="#4a3f1e" strokeWidth="3" strokeLinecap="round" />
-      </g>
-    </svg>
-  )
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={CHEERS_ICON_SRC} alt="" width={size} height={size} style={{ display: "block", objectFit: "contain", flexShrink: 0 }} />
 }
 
 type Person = { id: string; name: string }
@@ -113,7 +98,7 @@ export default function PartyTest() {
   const [activeCat, setActiveCat] = useState<Cat>("Bier")
   const [coinCat, setCoinCat] = useState<Cat>("Bier")
   const [coinFull, setCoinFull] = useState(false)
-  const [fullList, setFullList] = useState(false)
+  const [fullList, setFullList] = useState(true)
   const [cart, setCart] = useState<Assign>({})
   const [cartAnon, setCartAnon] = useState<Anon>({})
   const [rounds, setRounds] = useState<Round[]>([])
@@ -452,10 +437,12 @@ export default function PartyTest() {
     return (
       <div style={S.page}><div style={{ ...S.wrap, paddingTop: 40 }}>
         {renderDialogs()}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", marginBottom: 24 }}>
-          <RundoLogo size={64} />
-          <div style={{ ...S.h1, fontSize: 26, marginTop: 10, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
-          <div style={{ ...S.row, gap: 6, marginTop: 4 }}><CheersIcon size={18} /><span style={{ fontSize: 13, color: "#e08a00", fontWeight: 700 }}>Rondjes en splitten zonder gedoe!</span></div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24 }}>
+          <div style={{ ...S.row, gap: 12 }}>
+            <RundoLogo size={56} />
+            <div style={{ ...S.h1, fontSize: 30, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
+          </div>
+          <div style={{ ...S.row, gap: 7, marginTop: 8 }}><CheersIcon size={20} /><span style={{ fontSize: 14, color: "#e08a00", fontWeight: 700 }}>Rondjes en splitten zonder gedoe!</span></div>
         </div>
         <div style={S.card}>
           <input style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, marginBottom: 12 }} type="text" placeholder="Typ je groepsnaam" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
@@ -505,7 +492,7 @@ export default function PartyTest() {
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", marginTop: 24, marginBottom: 4 }}>
-          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice("Voeg eerst minstens één persoon toe."); return } setView("settings") }}>Volgende: drank & bekers →</button>
+          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice("Voeg eerst minstens één persoon toe."); return } setView("settings") }}>Volgende →</button>
         </div>
       </div></div>
     )
@@ -643,8 +630,8 @@ export default function PartyTest() {
           })}
         </div>
         <div style={{ display: "inline-flex", marginBottom: 8, border: "1px solid rgba(120,95,20,0.2)", borderRadius: 10, overflow: "hidden" }}>
-          <span onClick={() => setFullList(false)} style={{ padding: "6px 13px", fontSize: 12, fontWeight: 800, cursor: "pointer", background: !fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: !fullList ? "#fff" : "#8a7d55" }}>⭐ favorieten</span>
-          <span onClick={() => setFullList(true)} style={{ padding: "6px 13px", fontSize: 12, fontWeight: 800, cursor: "pointer", background: fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: fullList ? "#fff" : "#8a7d55" }}>📖 volledige lijst</span>
+          <span onClick={() => setFullList(false)} style={{ padding: "6px 13px", fontSize: 12, fontWeight: 800, cursor: "pointer", background: !fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: !fullList ? "#fff" : "#8a7d55" }}>compacte lijst</span>
+          <span onClick={() => setFullList(true)} style={{ padding: "6px 13px", fontSize: 12, fontWeight: 800, cursor: "pointer", background: fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: fullList ? "#fff" : "#8a7d55" }}>volledige lijst</span>
         </div>
         {catVisible.length === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "18px 12px", fontSize: 13, color: "#8a7d55" }}>
