@@ -764,7 +764,7 @@ export default function PartyTest() {
         </div>
         <div style={{ marginTop: 24 }}>
           {rounds.length > 0
-            ? <button style={{ ...S.btnP, width: "100%" }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>Terug naar overzicht</button>
+            ? <button style={{ ...S.btnP, width: "100%" }} onClick={() => { if (unfinishedRound) { resumeRound(); return } setOpenRound(rounds.length - 1); setView("hub") }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "Terug naar overzicht"}</button>
             : <button style={{ ...S.btnP, width: "100%" }} onClick={() => { if (unfinishedRound) resumeRound(); else tryBegin() }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "Starten"}</button>}
         </div>
       </div></div>
@@ -847,8 +847,8 @@ export default function PartyTest() {
               <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
                 <h3 style={{ ...S.h3, margin: 0, fontSize: 18 }}>Toewijzen</h3>
                 <div style={{ ...S.row, gap: 4 }}>
-                  <div style={{ ...S.seg(assignMode === "drink"), padding: "6px 10px", fontSize: 12 }} onClick={() => setAssignMode("drink")}>per drank</div>
-                  <div style={{ ...S.seg(assignMode === "person"), padding: "6px 10px", fontSize: 12 }} onClick={() => setAssignMode("person")}>per persoon</div>
+                  <div style={{ ...S.seg(assignMode === "person"), padding: "6px 10px", fontSize: 12, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("person")}>per persoon</div>
+                  <div style={{ ...S.seg(assignMode === "drink"), padding: "6px 10px", fontSize: 12, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("drink")}>per drank</div>
                 </div>
               </div>
               {assignMode === "person" && unassignedTotal > 0 && <div style={{ fontSize: 12.5, fontWeight: 800, color: "#c0554a", marginBottom: 8 }}>🔴 {unassignedTotal} drankje{unassignedTotal === 1 ? "" : "s"} nog niet toegewezen</div>}
@@ -885,7 +885,7 @@ export default function PartyTest() {
                 })}
                 </div>
               )}
-              <button style={{ ...S.btnP, marginTop: 6 }} onClick={() => setShowAssignAll(false)}>Klaar</button>
+              <button style={unassignedTotal === 0 ? { ...S.btnP, marginTop: 6, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 6 }} onClick={() => setShowAssignAll(false)}>{unassignedTotal === 0 ? "Klaar — alles toegewezen" : "Klaar"}</button>
             </div>
           </div>
         )}
@@ -1098,8 +1098,8 @@ export default function PartyTest() {
                   {editAssign && (
                     <div style={{ marginTop: 10, background: "#faf4e4", borderRadius: 12, padding: 10 }}>
                       <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, marginBottom: 8 }}>
-                        <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 11.5 }} onClick={() => setEditAssignMode("drink")}>per drank</div>
-                        <div style={{ ...S.seg(editAssignMode === "person"), padding: "5px 9px", fontSize: 11.5 }} onClick={() => setEditAssignMode("person")}>per persoon</div>
+                        <div style={{ ...S.seg(editAssignMode === "person"), padding: "5px 9px", fontSize: 11.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>per persoon</div>
+                        <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 11.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>per drank</div>
                       </div>
                       {editAssignMode === "person" && (() => { const u = roundDrinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0); return u > 0 ? <div style={{ fontSize: 12, fontWeight: 800, color: "#c0554a", marginBottom: 8 }}>🔴 {u} drankje{u === 1 ? "" : "s"} nog niet toegewezen</div> : null })()}
                       {editAssignMode === "drink" ? roundDrinks.map((d) => {
