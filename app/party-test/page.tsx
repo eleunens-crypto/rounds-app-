@@ -180,8 +180,11 @@ export default function PartyTest() {
   const eachOne = (did: string) => { const hi = people.filter((p) => (cart[did]?.[p.id] ?? 0) >= 2).map((p) => p.name); if (hi.length > 0) { setConfirmDlg({ msg: `${hi.join(" en ")} ${hi.length === 1 ? "heeft" : "hebben"} er nu al 2 of meer. Met "elk 1" krijgt iedereen er precies één — ${hi.join(" en ")} ${hi.length === 1 ? "gaat" : "gaan"} dus terug naar 1.`, yes: "Ja, iedereen op 1", onYes: () => { setEachOne(did); setConfirmDlg(null) } }) } else setEachOne(did) }
   const drinkTotal = (did: string) => Object.values(cart[did] ?? {}).reduce((a, b) => a + b, 0) + (cartAnon[did] ?? 0)
   const roundItems = useMemo(() => drinks.reduce((s, d) => s + drinkTotal(d.id), 0), [cart, cartAnon, drinks]) // eslint-disable-line
-  const resumeRound = () => { setActiveCat(catsPresent[0]); setView("order") }
+  const resumeRound = () => { if (blockIfUnpaid()) return; setActiveCat(catsPresent[0]); setView("order") }
   const unfinishedRound = roundItems > 0 && rounds.length < roundNr
+  const roundIsPaid = (r: Round) => (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))
+  const unpaidIdx = () => rounds.findIndex((r) => !roundIsPaid(r))
+  const blockIfUnpaid = () => { const i = unpaidIdx(); if (i < 0) return false; setNotice(`Ronde ${i + 1} is nog niet betaald. Vul eerst de betaling in voor je verder gaat.`); setOpenRound(i); setEditAssign(false); setEditCups(false); setEditPay(true); setView("hub"); return true }
   const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon, drinks]) // eslint-disable-line
   const pickedUpOf = (pid: string) => drinks.reduce((a, d) => a + (d.cup ? aQty(d.id, pid) : 0), 0)
 
@@ -245,8 +248,9 @@ export default function PartyTest() {
   const bumpDown = (did: string) => { if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); return } const entry = cart[did]; if (!entry) return; const pid = Object.keys(entry).find((k) => (entry[k] ?? 0) > 0); if (pid) bump(did, pid, -1) }
   const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
 
-  const goStart = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); setView("start") } }); else setView("start") }
-  const goHome = () => { setFromOnboarding(false); if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); setView("settings") } }); else setView("settings") }
+  const dropUnpaidRound = () => { setRounds((rs) => (rs.length && !roundIsPaid(rs[rs.length - 1]) ? rs.slice(0, -1) : rs)); setCart({}); setCartAnon({}); setAmountDraft(""); setPayPot(false); setPayPersons([]); setPayAmts({}); setPotAmtDraft(""); setPaidConfirmed(false) }
+  const goStart = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("start") } }); else setView("start") }
+  const goHome = () => { setFromOnboarding(false); if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("settings") } }); else setView("settings") }
   const potAvailNow = () => { const curPotPart = rounds.length ? (rounds[rounds.length - 1].potPart || 0) : 0; return potContribTotal - (potSpent - curPotPart) }
   const paymentState = () => {
     const total = parseFloat(amountDraft.replace(",", ".")) || 0
@@ -291,7 +295,7 @@ export default function PartyTest() {
     setPaidConfirmed(false)
   }
   const togglePayPerson = (pid: string) => { setPayPersons((ps) => ps.includes(pid) ? ps.filter((x) => x !== pid) : [...ps, pid]); setPaidConfirmed(false) }
-  const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); to() } }); else to() }
+  const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); dropUnpaidRound(); to() } }); else to() }
   const applyBeginChoices = () => {
     if (bpPotType === "yes") { setNotice("Kies pot of drankkaart — of zet de pot op nee."); return }
     setOnboardedOnce(true)
@@ -314,7 +318,7 @@ export default function PartyTest() {
     if (potChosen && potContribTotal <= 0.005) { setConfirmDlg({ msg: `Je koos voor een ${potIsCard ? "drankkaart" : "pot"}, maar er is nog niks ingelegd. Toch zonder verder gaan? Je kan later nog toevoegen via de knop bovenaan.`, yes: `Toch verder zonder ${potIsCard ? "drankkaart" : "pot"}`, onYes: () => { setConfirmDlg(null); setPotChosen(false); setView("hub") } }); return }
     setView("hub")
   }
-  const goFinal = () => { if (rounds.length === 0) { setNotice("Er zijn nog geen rondjes om af te rekenen. Start eerst een rondje."); return } if (anyUnassignedRounds) { const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0); setNotice(`Er ${tot === 1 ? "is 1 drankje" : `zijn ${tot} drankjes`} nog zonder naam. Wijs ze eerst toe (rood aangeduid in het overzicht) voor je afrekent.`); const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0)); if (fr >= 0) { setOpenRound(fr); setEditAssign(true); setEditCups(false); setEditPay(false); setView("hub") } return } setHasSettled(true); setView("final") }
+  const goFinal = () => { if (rounds.length === 0) { setNotice("Er zijn nog geen rondjes om af te rekenen. Start eerst een rondje."); return } if (blockIfUnpaid()) return; if (anyUnassignedRounds) { const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0); setNotice(`Er ${tot === 1 ? "is 1 drankje" : `zijn ${tot} drankjes`} nog zonder naam. Wijs ze eerst toe (rood aangeduid in het overzicht) voor je afrekent.`); const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0)); if (fr >= 0) { setOpenRound(fr); setEditAssign(true); setEditCups(false); setEditPay(false); setView("hub") } return } setHasSettled(true); setView("final") }
   const openClose = () => { setAmountDraft(""); setShowClose(true) }
   const goAssignFromWarning = () => { setShowClose(false); setShowAssignAll(true) }
   const commitRound = () => {
@@ -335,7 +339,7 @@ export default function PartyTest() {
   }
   const closeRound = () => { if (!paidConfirmed || !paymentState().valid) { setNotice("Bevestig eerst de betaling."); return } setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }
   const cancelRound = () => setConfirmDlg({ msg: `Het volledige rondje ${roundNr} annuleren? Alle drankjes en bekers van dit rondje worden verwijderd. Dit kan niet ongedaan gemaakt worden.`, yes: "Ja, annuleren", onYes: () => { const remaining = rounds.length - 1; setRounds((rs) => rs.slice(0, -1)); setPaidConfirmed(false); setConfirmDlg(null); if (remaining > 0) { setOpenRound(remaining - 1); setView("hub") } else setView("order") } })
-  const nextRound = () => { setRoundNr((n) => n + 1); setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setView("order") }
+  const nextRound = () => { if (blockIfUnpaid()) return; setRoundNr((n) => n + 1); setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setView("order") }
 
   const roundKeyTotal = (r: Round) => drinks.reduce((s, d) => s + (Object.values(r.orders[d.id] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[d.id] ?? 0)) * priceOf(d), 0)
   const personRoundShare = (r: Round, pid: string) => {
@@ -1113,7 +1117,7 @@ export default function PartyTest() {
             <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Nog geen rondjes</div>
             <div style={{ ...S.sub, marginBottom: 16 }}>Er zijn nog geen bestellingen. Start een eerste rondje om te beginnen.</div>
             <div style={{ display: "flex", justifyContent: "center" }}>
-              <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (unfinishedRound) { resumeRound(); return } setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "Start 1e rondje"}</button>
+              <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (blockIfUnpaid()) return; if (unfinishedRound) { resumeRound(); return } setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "Start 1e rondje"}</button>
             </div>
           </div>
         ) : (<>
@@ -1133,7 +1137,9 @@ export default function PartyTest() {
                   <span style={{ fontSize: 15, fontWeight: 800 }}>Ronde {idx + 1} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>· {items} drankjes · {euro(r.amount)}</span></span>
                   <span style={{ fontSize: 14, color: "#8a7d55" }}>{open ? "▴" : "▾"}</span>
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#1f8a4c", marginTop: 3 }}>✓ betaald: {paidLabel(r)}</div>
+                {roundIsPaid(r)
+                  ? <div style={{ fontSize: 12, fontWeight: 700, color: "#1f8a4c", marginTop: 3 }}>✓ betaald: {paidLabel(r)}</div>
+                  : <div style={{ fontSize: 12, fontWeight: 800, color: "#c0554a", marginTop: 3 }}>🔴 nog niet betaald — tik “bedrag” om af te ronden</div>}
               </div>
               {open && (
                 <div style={{ padding: "0 14px 14px" }}>
