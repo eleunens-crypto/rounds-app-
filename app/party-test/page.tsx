@@ -83,7 +83,7 @@ const DEMO_DRINKS: Drink[] = DATA.map(([cat, name, price], i) => ({ id: "d" + i,
 
 type Assign = Record<string, Record<string, number>>
 type Anon = Record<string, number>
-type Round = { orders: Assign; anon: Anon; payer: string; amount: number; potPart: number; gaveBack: Record<string, number> }
+type Round = { orders: Assign; anon: Anon; payers: Record<string, number>; amount: number; potPart: number; gaveBack: Record<string, number> }
 
 const euro = (v: number) => "€" + v.toFixed(2).replace(".", ",")
 
@@ -145,7 +145,8 @@ export default function PartyTest() {
   const [cupsTouched, setCupsTouched] = useState(false)
   const [amountDraft, setAmountDraft] = useState<string>("")
   const [payPot, setPayPot] = useState(false)
-  const [payPerson, setPayPerson] = useState<string>("")
+  const [payPersons, setPayPersons] = useState<string[]>([])
+  const [payAmts, setPayAmts] = useState<Record<string, string>>({})
   const [potAmtDraft, setPotAmtDraft] = useState<string>("")
   const [paidConfirmed, setPaidConfirmed] = useState(false)
   const [confirmDlg, setConfirmDlg] = useState<{ msg: string; yes: string; onYes: () => void; onNo?: () => void; variant?: "danger" } | null>(null)
@@ -191,9 +192,20 @@ export default function PartyTest() {
   const rUnassign = (idx: number, did: string, pid: string) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, orders: { ...r.orders, [did]: { ...(r.orders[did] ?? {}), [pid]: Math.max(0, (r.orders[did]?.[pid] ?? 0) - 1) } }, anon: { ...r.anon, [did]: (r.anon[did] ?? 0) + 1 } } : r))
   const rAssignFromAnon = (idx: number, did: string, pid: string) => { if ((rounds[idx]?.anon[did] ?? 0) > 0) { rBumpAnon(idx, did, -1); rBump(idx, did, pid, 1) } }
   const potAvailFor = (idx: number) => potContribTotal - (potSpent - (rounds[idx]?.potPart || 0))
-  const rSetAmount = (idx: number, v: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, amount: v, potPart: (r.payer === "" && (r.potPart || 0) > 0) ? Math.min(v, potAvailFor(idx)) : (r.potPart || 0) } : r))
-  const rPickPot = (idx: number) => { const avail = potAvailFor(idx); const amt = rounds[idx]?.amount || 0; if (avail + 0.001 < amt) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} heeft maar ${euro(Math.max(0, avail))} — te weinig voor dit rondje (${euro(amt)}). Leg eerst bij of kies een persoon.`); return } setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, payer: "", potPart: r.amount } : r)) }
-  const rPickPerson = (idx: number, pid: string) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, payer: pid, potPart: 0 } : r))
+  const rRedistribute = (r: Round, idx: number, usePot: boolean, persons: string[], amount: number): Round => {
+    const n = persons.length + (usePot ? 1 : 0)
+    if (n === 0 || amount <= 0) return { ...r, amount, payers: {}, potPart: 0 }
+    const avail = Math.max(0, potAvailFor(idx))
+    let potPart = 0, rest = amount
+    if (usePot) { potPart = Math.min(amount / n, avail); rest = amount - potPart }
+    const per = persons.length ? rest / persons.length : 0
+    const payers: Record<string, number> = {}
+    persons.forEach((pid) => (payers[pid] = per))
+    return { ...r, amount, payers, potPart }
+  }
+  const rSetAmount = (idx: number, v: number) => setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, v) }))
+  const rTogglePot = (idx: number) => setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = !((r.potPart || 0) > 0); if (usePot && potAvailFor(idx) <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg — leg eerst bij.`); return r } return rRedistribute(r, idx, usePot, persons, r.amount) }))
+  const rTogglePayer = (idx: number, pid: string) => setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const cur = Object.keys(r.payers || {}); const persons = cur.includes(pid) ? cur.filter((x) => x !== pid) : [...cur, pid]; const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, r.amount) }))
 
   // ── afgeleide bekers (uit rounds) ───────────────────────────────────────────
   const roundPicked = (r: Round, pid: string) => drinks.reduce((a, d) => a + (d.cup ? (r.orders[d.id]?.[pid] ?? 0) : 0), 0)
@@ -235,31 +247,50 @@ export default function PartyTest() {
 
   const goStart = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); setView("start") } }); else setView("start") }
   const goHome = () => { setFromOnboarding(false); if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); setView("settings") } }); else setView("settings") }
+  const potAvailNow = () => { const curPotPart = rounds.length ? (rounds[rounds.length - 1].potPart || 0) : 0; return potContribTotal - (potSpent - curPotPart) }
   const paymentState = () => {
     const total = parseFloat(amountDraft.replace(",", ".")) || 0
-    const potFilled = potAmtDraft.trim() !== ""
+    const potAvail = potAvailNow()
     const potAmt = parseFloat(potAmtDraft.replace(",", ".")) || 0
-    const split = payPot && !!payPerson
-    const potOnly = payPot && !payPerson
-    const personOnly = !payPot && !!payPerson
-    const potContribToRound = potOnly ? total : split ? potAmt : 0
-    const curPotPart = rounds.length ? (rounds[rounds.length - 1].potPart || 0) : 0
-    const potAvail = potContribTotal - (potSpent - curPotPart)
-    const potOver = potContribToRound > potAvail + 0.001
-    const personRest = split ? total - potAmt : personOnly ? total : 0
+    const persons = payPersons
+    const nPayers = persons.length + (payPot ? 1 : 0)
+    const multi = nPayers > 1
+    const amtOf = (pid: string) => parseFloat((payAmts[pid] || "").replace(",", ".")) || 0
+    const personAmts: Record<string, number> = {}
+    if (!multi && persons.length === 1) personAmts[persons[0]] = total
+    else persons.forEach((pid) => (personAmts[pid] = amtOf(pid)))
+    const potPart = payPot ? (multi ? potAmt : total) : 0
+    const personSum = Object.values(personAmts).reduce((a, b) => a + b, 0)
+    const sum = personSum + potPart
+    const missing = total - sum
+    const allFilled = !multi || (persons.every((pid) => (payAmts[pid] || "").trim() !== "") && (!payPot || potAmtDraft.trim() !== ""))
+    const potOver = potPart > potAvail + 0.001
     let valid = true, reason = ""
     if (total <= 0) { valid = false; reason = "Vul eerst exact betaald bedrag in." }
-    else if (!payPot && !payPerson) { valid = false; reason = "Kies wie betaalde." }
-    else if (potOnly && potAvail <= 0.005) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} is leeg — kies een persoon als betaler.` }
-    else if (potOnly && potOver) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} heeft maar ${euro(potAvail)} — kies er een persoon bij of leg bij.` }
-    else if (split && !potFilled) { valid = false; reason = "Vul eerst het pot-bedrag in." }
-    else if (split && potAvail <= 0.005) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} is leeg — zet het pot-bedrag op 0 of leg eerst bij.` }
-    else if (split && potOver) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} heeft maar ${euro(potAvail)} — verlaag het pot-bedrag of leg bij.` }
-    else if (split && potAmt > total + 0.0001) { valid = false; reason = "Het pot-bedrag is hoger dan het totaal." }
-    const zeroPot = valid && split && potAmt <= 0.0001
-    const zeroPerson = valid && split && Math.abs(personRest) <= 0.0001
-    return { total, potFilled, potAmt, split, potOnly, personOnly, potContribToRound, potAvail, potOver, personRest, valid, reason, zeroPot, zeroPerson }
+    else if (nPayers === 0) { valid = false; reason = "Kies wie betaalde." }
+    else if (payPot && potAvail <= 0.005) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} is leeg — kies een persoon als betaler.` }
+    else if (potOver) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} heeft maar ${euro(Math.max(0, potAvail))} — verlaag het bedrag of leg bij.` }
+    else if (multi && !allFilled) { valid = false; reason = "Vul een bedrag in per betaler — of tik ‘verdeel gelijk’." }
+    else if (multi && Math.abs(missing) > 0.005) { valid = false; reason = missing > 0 ? `Samen ${euro(sum)} van ${euro(total)} — er ontbreekt ${euro(missing)}.` : `Samen ${euro(sum)} van ${euro(total)} — ${euro(-missing)} te veel.` }
+    return { total, potAmt, potPart, personAmts, personSum, sum, missing, multi, nPayers, potAvail, potOver, valid, reason }
   }
+  const splitEqually = () => {
+    const total = parseFloat(amountDraft.replace(",", ".")) || 0
+    const n = payPersons.length + (payPot ? 1 : 0)
+    if (total <= 0 || n === 0) return
+    const potAvail = potAvailNow()
+    let potShare = 0
+    let rest = total
+    let persons = [...payPersons]
+    if (payPot) { potShare = Math.min(total / n, Math.max(0, potAvail)); rest = total - potShare }
+    const per = persons.length ? rest / persons.length : 0
+    const next: Record<string, string> = {}
+    persons.forEach((pid) => (next[pid] = per.toFixed(2)))
+    setPayAmts(next)
+    setPotAmtDraft(payPot ? potShare.toFixed(2) : "")
+    setPaidConfirmed(false)
+  }
+  const togglePayPerson = (pid: string) => { setPayPersons((ps) => ps.includes(pid) ? ps.filter((x) => x !== pid) : [...ps, pid]); setPaidConfirmed(false) }
   const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); to() } }); else to() }
   const applyBeginChoices = () => {
     if (bpPotType === "yes") { setNotice("Kies pot of drankkaart — of zet de pot op nee."); return }
@@ -289,19 +320,17 @@ export default function PartyTest() {
   const commitRound = () => {
     const effGb: Record<string, number> = {}
     people.forEach((p) => { effGb[p.id] = gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id)) })
-    setRounds((r) => [...r, { orders: cart, anon: cartAnon, payer: "", amount: 0, potPart: 0, gaveBack: effGb }])
-    setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setAmountDraft(""); setPayPot(false); setPayPerson(""); setPotAmtDraft(""); setPaidConfirmed(false); setView("confirmed")
+    setRounds((r) => [...r, { orders: cart, anon: cartAnon, payers: {}, amount: 0, potPart: 0, gaveBack: effGb }])
+    setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setAmountDraft(""); setPayPot(false); setPayPersons([]); setPayAmts({}); setPotAmtDraft(""); setPaidConfirmed(false); setView("confirmed")
   }
-  const applyPayment = (payer: string, potPart: number, total: number) => setRounds((rs) => rs.map((r, i) => i === rs.length - 1 ? { ...r, payer, amount: total, potPart } : r))
+  const applyPayment = (payers: Record<string, number>, potPart: number, total: number) => setRounds((rs) => rs.map((r, i) => i === rs.length - 1 ? { ...r, payers, amount: total, potPart } : r))
   const editOrder = () => { const last = rounds[rounds.length - 1]; if (!last) { setView("order"); return } setCart(last.orders); setCartAnon(last.anon); setGaveBackDraft(last.gaveBack); setRounds((rs) => rs.slice(0, -1)); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setPaidConfirmed(false); setActiveCat(catsPresent[0]); setView("order") }
   const confirmPayment = () => {
     const st = paymentState()
     if (!st.valid) { setNotice(st.reason); return }
-    const personName = people.find((p) => p.id === payPerson)?.name ?? "die persoon"
-    if (st.zeroPot) { setConfirmDlg({ msg: `De pot betaalt €0 — dan betaalt ${personName} het volledige bedrag (${euro(st.total)}). Zo bevestigen?`, yes: "Ja, bevestigen", onYes: () => { applyPayment(payPerson, 0, st.total); setPayPot(false); setPotAmtDraft(""); setPaidConfirmed(true); setConfirmDlg(null) } }); return }
-    if (st.zeroPerson) { setConfirmDlg({ msg: `${personName} betaalt €0 — dan betaalt de pot alles (${euro(st.total)}). Zo bevestigen?`, yes: "Ja, bevestigen", onYes: () => { applyPayment("", st.total, st.total); setPayPerson(""); setPaidConfirmed(true); setConfirmDlg(null) } }); return }
-    const potPart = st.potOnly ? st.total : st.split ? st.potAmt : 0
-    applyPayment(payPerson || "", potPart, st.total)
+    const payers: Record<string, number> = {}
+    Object.entries(st.personAmts).forEach(([pid, a]) => { if (a > 0.0001) payers[pid] = a })
+    applyPayment(payers, st.potPart, st.total)
     setPaidConfirmed(true)
   }
   const closeRound = () => { if (!paidConfirmed || !paymentState().valid) { setNotice("Bevestig eerst de betaling."); return } setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }
@@ -321,15 +350,15 @@ export default function PartyTest() {
 
   const roundCupEur = (r: Round, pid: string) => (roundPicked(r, pid) - (r.gaveBack[pid] || 0)) * depositPerCupEur
   const cupOwn = (pid: string) => (depositOn ? rounds.reduce((s, r) => s + roundCupEur(r, pid), 0) : 0)
-  const paidByPerson = (pid: string) => rounds.reduce((s, r) => { if (r.payer !== pid) return s; const cupSum = depositOn ? people.reduce((a, pp) => a + roundCupEur(r, pp.id), 0) : 0; return s + (r.amount - (r.potPart || 0)) + cupSum }, 0)
+  const roundParts = (r: Round) => { const potPart = r.potPart || 0; const persons = r.payers || {}; const personSum = Object.values(persons).reduce((a, b) => a + (b || 0), 0); const base = potPart + personSum; const cupSum = depositOn ? people.reduce((a, pp) => a + roundCupEur(r, pp.id), 0) : 0; return { potPart, persons, personSum, base, cupSum } }
+  const paidByPerson = (pid: string) => rounds.reduce((s, r) => { const { persons, base, cupSum } = roundParts(r); const own = persons[pid] || 0; if (own <= 0) return s; return s + own + (base > 0 ? cupSum * (own / base) : 0) }, 0)
   const settlement = useMemo(() => {
     const paid: Record<string, number> = {}; people.forEach((p) => (paid[p.id] = 0)); let potPaid = 0
     rounds.forEach((r) => {
-      const cupSum = depositOn ? people.reduce((a, p) => a + roundCupEur(r, p.id), 0) : 0
-      const potPart = r.potPart || 0
-      const personPart = r.amount - potPart
-      if (r.payer) { paid[r.payer] = (paid[r.payer] ?? 0) + personPart + cupSum; potPaid += potPart }
-      else if (potPart > 0) { potPaid += potPart + cupSum }
+      const { potPart, persons, base, cupSum } = roundParts(r)
+      if (base <= 0) { if (potPart > 0) potPaid += potPart + cupSum; return }
+      Object.entries(persons).forEach(([pid, amt]) => { const a = amt || 0; if (a > 0) paid[pid] = (paid[pid] ?? 0) + a + cupSum * (a / base) })
+      if (potPart > 0) potPaid += potPart + cupSum * (potPart / base)
     })
     const nets: { id: string; label: string; net: number }[] = people.map((p) => ({ id: p.id, label: p.name, net: (paid[p.id] ?? 0) + contribOf(p.id) - consumption(p.id) - cupOwn(p.id) - cardLossPer }))
     if (potContribTotal > 0 || potSpent > 0) nets.push({ id: "pot", label: "de pot", net: potPaid - potContribTotal + (potIsCard ? Math.max(0, potRemaining) : 0) })
@@ -343,11 +372,14 @@ export default function PartyTest() {
   const drinkTotalRound = (r: Round, did: string) => Object.values(r.orders[did] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[did] ?? 0)
   const paidLabel = (r: Round) => {
     const potP = r.potPart || 0
-    const person = r.payer ? (people.find((p) => p.id === r.payer)?.name ?? "?") : null
-    if (potP > 0 && person) return `pot ${euro(potP)} + ${person} ${euro(r.amount - potP)}`
-    if (potP > 0) return "uit de pot"
-    if (person) return `door ${person}`
-    return "nog niet betaald"
+    const entries = Object.entries(r.payers || {}).filter(([, a]) => (a || 0) > 0)
+    const parts: string[] = []
+    if (potP > 0) parts.push(`${potIsCard ? "kaart" : "pot"} ${euro(potP)}`)
+    entries.forEach(([pid, a]) => parts.push(`${people.find((p) => p.id === pid)?.name ?? "?"} ${euro(a)}`))
+    if (parts.length === 0) return "nog niet betaald"
+    if (parts.length === 1 && entries.length === 1) return `door ${people.find((p) => p.id === entries[0][0])?.name ?? "?"}`
+    if (parts.length === 1 && potP > 0) return potIsCard ? "van de drankkaart" : "uit de pot"
+    return parts.join(" + ")
   }
 
   const S = {
@@ -523,8 +555,7 @@ export default function PartyTest() {
         </div>
         {!onboarding && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, minWidth: 0, flexShrink: 0 }}>
-            {groupName.trim() && <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()}</div>}
-            {potTag}
+            {groupName.trim() && <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()} <span style={{ color: "#8a7d55", fontWeight: 700 }}>· 👥 {people.length}</span></div>}
           </div>
         )}
       </div>
@@ -769,7 +800,12 @@ export default function PartyTest() {
         </div>
         <div style={{ marginTop: 24 }}>
           {rounds.length > 0
-            ? <button style={{ ...S.btnP, width: "100%" }} onClick={() => { if (unfinishedRound) { resumeRound(); return } setOpenRound(rounds.length - 1); setView("hub") }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "Terug naar overzicht"}</button>
+            ? <div style={{ display: "flex", gap: 10 }}>
+                <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>📋 Rondjesoverzicht</button>
+                {unfinishedRound
+                  ? <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>Ga verder met rondje {roundNr}</button>
+                  : <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>➕ Nieuw rondje</button>}
+              </div>
             : <button style={{ ...S.btnP, width: "100%" }} onClick={() => { if (unfinishedRound) resumeRound(); else tryBegin() }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "Starten"}</button>}
         </div>
       </div></div>
@@ -797,9 +833,12 @@ export default function PartyTest() {
             return <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: "#e0685c", fontSize: 15 }}>●</span>}</span>
           })}
         </div>
-        <div style={{ display: "inline-flex", marginBottom: 8, border: "1px solid rgba(120,95,20,0.2)", borderRadius: 10, overflow: "hidden" }}>
-          <span onClick={() => setFullList(false)} style={{ padding: "6px 13px", fontSize: 12, fontWeight: 800, cursor: "pointer", background: !fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: !fullList ? "#fff" : "#8a7d55" }}>compacte lijst</span>
-          <span onClick={() => setFullList(true)} style={{ padding: "6px 13px", fontSize: 12, fontWeight: 800, cursor: "pointer", background: fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: fullList ? "#fff" : "#8a7d55" }}>volledige lijst</span>
+        <div style={{ ...S.row, justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+          <div style={{ display: "inline-flex", border: "1px solid rgba(120,95,20,0.2)", borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
+            <span onClick={() => setFullList(false)} style={{ padding: "6px 11px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: !fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: !fullList ? "#fff" : "#8a7d55" }}>compacte lijst</span>
+            <span onClick={() => setFullList(true)} style={{ padding: "6px 11px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: fullList ? "#fff" : "#8a7d55" }}>volledige lijst</span>
+          </div>
+          {potTag}
         </div>
         {catVisible.length === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "18px 12px", fontSize: 13, color: "#8a7d55" }}>
@@ -961,12 +1000,12 @@ export default function PartyTest() {
     const last = rounds[rounds.length - 1]
     const items = last ? drinks.reduce((s, d) => s + drinkTotalRound(last, d.id), 0) : 0
     const st = paymentState()
-    const personRest = st.split ? st.total - st.potAmt : 0
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
+        {potChosen && <div style={{ ...S.row, justifyContent: "flex-end", marginBottom: 8 }}>{potTag}</div>}
         <div style={S.card}>
           <div style={{ ...S.row, gap: 9, marginBottom: 4 }}>
             <span style={{ fontSize: 24, flexShrink: 0 }}>🍻</span>
@@ -1002,26 +1041,36 @@ export default function PartyTest() {
 
           {(parseFloat(amountDraft.replace(",", ".")) || 0) > 0 ? (
           <>
-          <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", marginBottom: 7 }}>Betaald door</div>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", marginBottom: 7 }}>Betaald door <span style={{ fontWeight: 600, color: "#b3a988" }}>(tik meerdere aan)</span></div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-            <span style={S.chip(payPot ? 1 : 0)} onClick={() => { setPayPot((v) => !v); setPaidConfirmed(false) }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
-            {people.map((p) => <span key={p.id} style={S.chip(payPerson === p.id ? 1 : 0)} onClick={() => { setPayPerson((v) => (v === p.id ? "" : p.id)); setPaidConfirmed(false) }}>{p.name}</span>)}
+            <span style={{ ...S.chip(payPot ? 1 : 0), opacity: st.potAvail <= 0.005 ? 0.45 : 1 }} onClick={() => { if (!payPot && st.potAvail <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg — leg eerst bij via de knop bovenaan.`); return } setPayPot((v) => !v); setPaidConfirmed(false) }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
+            {people.map((p) => <span key={p.id} style={S.chip(payPersons.includes(p.id) ? 1 : 0)} onClick={() => togglePayPerson(p.id)}>{p.name}</span>)}
           </div>
 
-          {st.split && (
+          {st.multi && (
             <div style={{ background: "#faf4e4", borderRadius: 12, padding: "10px 12px", marginTop: 10 }}>
-              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 700 }}>🫙 pot betaalt <span style={{ fontSize: 11, color: "#c0554a" }}>(eerst invullen)</span></span>
-                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input autoFocus style={{ ...S.input, width: 80, borderColor: (st.potOver || !st.potFilled) ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="?" value={potAmtDraft} onChange={(e) => { setPotAmtDraft(e.target.value.replace(/[^0-9.,]/g, "")); setPaidConfirmed(false) }} /></div>
+              <div style={{ ...S.row, justifyContent: "flex-end", marginBottom: 8 }}>
+                <span onClick={splitEqually} style={{ ...S.pill, cursor: "pointer", fontSize: 11.5, padding: "5px 10px", background: "rgba(31,138,76,0.14)", color: "#1f8a4c", fontWeight: 800 }}>👥 verdeel gelijk</span>
               </div>
-              <div style={{ ...S.row, justifyContent: "space-between" }}>
-                <span style={{ fontSize: 13, fontWeight: 700 }}>👤 {people.find((p) => p.id === payPerson)?.name} <span style={{ fontSize: 11, color: "#8a7d55" }}>(de rest)</span></span>
-                <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{st.potFilled ? euro(Math.max(0, personRest)) : "—"}</span>
+              {payPot && (
+                <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 7 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
+                  <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 84, borderColor: st.potOver ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="0,00" value={potAmtDraft} onChange={(e) => { setPotAmtDraft(e.target.value.replace(/[^0-9.,]/g, "")); setPaidConfirmed(false) }} /></div>
+                </div>
+              )}
+              {payPersons.map((pid) => (
+                <div key={pid} style={{ ...S.row, justifyContent: "space-between", marginBottom: 7 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>👤 {people.find((p) => p.id === pid)?.name}</span>
+                  <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 84 }} type="text" inputMode="decimal" placeholder="0,00" value={payAmts[pid] ?? ""} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setPayAmts((m) => ({ ...m, [pid]: v })); setPaidConfirmed(false) }} /></div>
+                </div>
+              ))}
+              <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", paddingTop: 8, fontSize: 12, fontWeight: 800, color: Math.abs(st.missing) <= 0.005 ? "#1f8a4c" : "#c0554a" }}>
+                Samen {euro(st.sum)} van {euro(st.total)}{Math.abs(st.missing) <= 0.005 ? " ✓ klopt" : st.missing > 0 ? ` — er ontbreekt ${euro(st.missing)}` : ` — ${euro(-st.missing)} te veel`}
               </div>
-              <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>{st.potFilled ? "De rest rekent de app automatisch." : "Vul eerst het pot-bedrag in — dan verschijnt de rest."}{st.potAvail <= 0.005 ? ` De ${potIsCard ? "drankkaart" : "pot"} is leeg (€0) — laat het pot-bedrag op 0.` : st.potOver ? ` Te veel: er is maar ${euro(st.potAvail)} beschikbaar.` : ` Beschikbaar: ${euro(st.potAvail)}.`}</div>
+              {payPot && <div style={{ fontSize: 11, color: st.potOver ? "#c0554a" : "#8a7d55", marginTop: 5 }}>{potIsCard ? "Drankkaart" : "Pot"} beschikbaar: {euro(Math.max(0, st.potAvail))}</div>}
             </div>
           )}
-          {payPot && !payPerson && <div style={{ fontSize: 12, color: st.potAvail <= 0.005 ? "#c0554a" : "#8a7d55", fontWeight: 700, marginTop: 8 }}>pot: {euro(st.potAvail)}{st.potAvail <= 0.005 ? " — te weinig, leg bij of kies andere/extra betaler" : ""}</div>}
+          {payPot && !st.multi && <div style={{ fontSize: 12, color: st.potOver ? "#c0554a" : "#8a7d55", fontWeight: 700, marginTop: 8 }}>{potIsCard ? "drankkaart" : "pot"}: {euro(Math.max(0, st.potAvail))} beschikbaar{st.potOver ? " — te weinig, kies een extra betaler of leg bij" : ""}</div>}
 
           {(() => {
             const okGreen = paidConfirmed && st.valid
@@ -1054,7 +1103,10 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
-        <h3 style={{ ...S.h3, marginBottom: 6 }}>📋 Rondjesoverzicht</h3>
+        <div style={{ ...S.row, justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
+          <h3 style={{ ...S.h3, margin: 0 }}>📋 Rondjesoverzicht</h3>
+          {potTag}
+        </div>
         {rounds.length === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
             <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
@@ -1147,8 +1199,8 @@ export default function PartyTest() {
                         <span style={{ fontSize: 11, color: "#8a7d55" }}>totaal — Fair-Split basis</span>
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        <span style={S.chip(r.payer === "" && (r.potPart || 0) > 0 ? 1 : 0)} onClick={() => rPickPot(idx)}>🫙 de pot</span>
-                        {people.map((p) => <span key={p.id} style={{ ...S.chip(r.payer === p.id ? 1 : 0), padding: "6px 11px", fontSize: 13 }} onClick={() => rPickPerson(idx, p.id)}>{p.name}</span>)}
+                        <span style={S.chip((r.potPart || 0) > 0 ? 1 : 0)} onClick={() => rTogglePot(idx)}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
+                        {people.map((p) => <span key={p.id} style={{ ...S.chip((r.payers?.[p.id] || 0) > 0 ? 1 : 0), padding: "6px 11px", fontSize: 13 }} onClick={() => rTogglePayer(idx, p.id)}>{p.name}{(r.payers?.[p.id] || 0) > 0 && <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 5 }}>{euro(r.payers[p.id])}</span>}</span>)}
                       </div>
                       <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>Eén betaler kiezen. Voor pot + persoon samen: doe het rondje opnieuw via het betaalscherm.</div>
                     </div>
