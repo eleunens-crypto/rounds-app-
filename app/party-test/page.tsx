@@ -108,6 +108,10 @@ export default function PartyTest() {
   const [everyoneChoice, setEveryoneChoice] = useState<number | "custom" | null>(null)
   const [editPotId, setEditPotId] = useState<number | null>(null)
   const [potBuilderOpen, setPotBuilderOpen] = useState(false)
+  const [beginPrompt, setBeginPrompt] = useState(false)
+  const [bpPot, setBpPot] = useState(false)
+  const [bpBekers, setBpBekers] = useState(false)
+  const [bpCoins, setBpCoins] = useState(false)
 
   const [roundNr, setRoundNr] = useState(1)
   const [activeCat, setActiveCat] = useState<Cat>("Bier")
@@ -198,7 +202,7 @@ export default function PartyTest() {
   const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
 
   const goStart = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); setView("start") } }); else setView("start") }
-  const goHome = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); setView("setup") } }); else setView("setup") }
+  const goHome = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); setView("settings") } }); else setView("settings") }
   const paymentState = () => {
     const total = parseFloat(amountDraft.replace(",", ".")) || 0
     const potFilled = potAmtDraft.trim() !== ""
@@ -221,6 +225,14 @@ export default function PartyTest() {
     return { total, potFilled, potAmt, split, potOnly, personOnly, potContribToRound, potOver, personRest, valid, reason, zeroPot, zeroPerson }
   }
   const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); to() } }); else to() }
+  const applyBeginChoices = () => {
+    setDepositOn(bpBekers)
+    setPay(bpCoins ? "coin" : "eur")
+    setDepositUnit(bpCoins ? "coin" : "eur")
+    setBeginPrompt(false)
+    if (bpPot || bpBekers || bpCoins) { if (bpPot) setShowPot(true); setView("settings") }
+    else { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }
+  }
   const goFinal = () => { if (rounds.length === 0) { setNotice("Er zijn nog geen rondjes om af te rekenen. Start eerst een rondje."); return } if (anyUnassignedRounds) { const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0); setNotice(`Er ${tot === 1 ? "is 1 drankje" : `zijn ${tot} drankjes`} nog zonder naam. Wijs ze eerst toe (rood aangeduid in het overzicht) voor je afrekent.`); const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0)); if (fr >= 0) { setOpenRound(fr); setEditAssign(true); setEditCups(false); setEditPay(false); setView("hub") } return } setView("final") }
   const openClose = () => { setAmountDraft(""); setShowClose(true) }
   const goAssignFromWarning = () => { const d = firstUnassigned(); setShowClose(false); if (d) { setActiveCat(d.cat); setAssignDrink(d.id) } }
@@ -452,6 +464,7 @@ export default function PartyTest() {
     return (
       <div style={S.page}><div style={{ ...S.wrap, paddingTop: 40 }}>
         {renderDialogs()}
+        <style>{`input::placeholder,textarea::placeholder{color:#c4b896;opacity:1;}`}</style>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24 }}>
           <div style={{ ...S.row, gap: 12 }}>
             <RundoLogo size={56} />
@@ -460,8 +473,8 @@ export default function PartyTest() {
           <div style={{ ...S.row, gap: 7, marginTop: 8 }}><CheersIcon size={20} color="#4a3f1e" /><span style={{ fontSize: 14, color: "#4a3f1e", fontWeight: 700 }}>Rondjes en splitten zonder gedoe!</span></div>
         </div>
         <div style={S.card}>
-          <input style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, marginBottom: 12 }} type="text" placeholder="Typ je groepsnaam" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
-          <button style={{ ...S.btnP, width: "100%" }} onClick={() => setView("setup")}>Starten →</button>
+          <input style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, marginBottom: 12, background: "#fdfaf2", padding: "13px 14px" }} type="text" placeholder="Typ je groepsnaam" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+          <button style={{ ...S.btnP, width: "100%", opacity: groupName.trim() ? 1 : 0.5 }} onClick={() => { if (!groupName.trim()) { setNotice("Geef je groep eerst een naam."); return } setView("setup") }}>Starten →</button>
         </div>
         <div style={{ ...S.card, opacity: 0.6 }}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
@@ -481,6 +494,24 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
+        {beginPrompt && (
+          <div style={{ ...S.overlay, zIndex: 65 }} onClick={() => setBeginPrompt(false)}>
+            <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ ...S.h3, fontSize: 18, marginTop: 0 }}>Voor we beginnen</h3>
+              <p style={{ ...S.sub, marginBottom: 14 }}>Werk je met…</p>
+              {[["🫙 een gezamenlijke pot", bpPot, setBpPot], ["♻️ herbruikbare bekers", bpBekers, setBpBekers], ["🎟️ coins", bpCoins, setBpCoins]].map(([label, val, set]: any, i) => (
+                <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
+                  <span style={{ fontSize: 14.5, fontWeight: 700 }}>{label}</span>
+                  <div onClick={() => set((v: boolean) => !v)} style={{ width: 46, height: 27, borderRadius: 20, background: val ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#d9cdb0", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
+                    <div style={{ width: 21, height: 21, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: val ? 22 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+                  </div>
+                </div>
+              ))}
+              <div style={{ fontSize: 11.5, color: "#8a7d55", margin: "12px 0 14px", lineHeight: 1.5 }}>💡 Je kan dit later altijd aanpassen via ⚙️ Groep (bovenaan). Details (waarborg, coin-prijzen) stel je op de volgende stap in.</div>
+              <button style={{ ...S.btnP, width: "100%" }} onClick={applyBeginChoices}>Beginnen →</button>
+            </div>
+          </div>
+        )}
         <div style={S.card}>
           <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10 }}>👥 Aantal personen</h3>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
@@ -507,7 +538,7 @@ export default function PartyTest() {
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", marginTop: 24, marginBottom: 4 }}>
-          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice("Voeg eerst minstens één persoon toe."); return } setView("settings") }}>Volgende →</button>
+          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice("Voeg eerst minstens één persoon toe."); return } setBeginPrompt(true) }}>Volgende →</button>
         </div>
       </div></div>
     )
@@ -520,8 +551,8 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
-        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>Instellingen</h3>
-        <p style={{ ...S.sub, marginBottom: 12 }}>Staat alles goed? Tik gewoon op “Beginnen”. Pas enkel aan wat je nodig hebt.</p>
+        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>⚙️ Groepsinstellingen</h3>
+        <p style={{ ...S.sub, marginBottom: 12 }}>Pas aan wat je nodig hebt — pot, bekers/waarborg en coins.</p>
         <div style={S.card}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
             <span style={{ fontSize: 14, fontWeight: 700 }}>🫙 Gezamenlijke pot <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>— optioneel</span></span>
