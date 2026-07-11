@@ -873,7 +873,7 @@ export default function PartyTest() {
                     <div key={p.id} style={{ borderTop: "1px solid rgba(120,95,20,0.1)", paddingTop: 9, marginBottom: 9 }}>
                       <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 6 }}>{p.name}{took.length > 0 && <span style={{ fontSize: 11.5, fontWeight: 600, color: "#8a7d55" }}> · {took.reduce((a, d) => a + (cart[d.id]?.[p.id] ?? 0), 0)} drankje(s)</span>}</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => { const n = aQty(d.id, p.id); return <span key={d.id} style={{ ...S.chip(n), fontSize: 12.5, padding: "5px 10px" }} onClick={() => assignFromAnon(d.id, p.id)}>{d.emoji} {d.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); unassignCart(d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1 }}>−</span>}</span> })}
+                        {drinks.filter((d) => drinkTotal(d.id) > 0 && ((cartAnon[d.id] ?? 0) > 0 || (cart[d.id]?.[p.id] ?? 0) > 0)).map((d) => { const n = aQty(d.id, p.id); return <span key={d.id} style={{ ...S.chip(n), fontSize: 12.5, padding: "5px 10px" }} onClick={() => assignFromAnon(d.id, p.id)}>{d.emoji} {d.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); unassignCart(d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1 }}>−</span>}</span> })}
                       </div>
                     </div>
                   )
@@ -1113,7 +1113,7 @@ export default function PartyTest() {
                           <div key={p.id} style={{ marginBottom: 9 }}>
                             <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 5 }}>{p.name}{took.length > 0 && <span style={{ fontSize: 11, fontWeight: 600, color: "#8a7d55" }}> · {took.reduce((a, d) => a + (r.orders[d.id]?.[p.id] ?? 0), 0)} drankje(s)</span>}</div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                              {roundDrinks.map((d) => { const n = r.orders[d.id]?.[p.id] ?? 0; return (
+                              {roundDrinks.filter((d) => ((r.anon[d.id] ?? 0) > 0 || (r.orders[d.id]?.[p.id] ?? 0) > 0)).map((d) => { const n = r.orders[d.id]?.[p.id] ?? 0; return (
                                 <span key={d.id} style={{ ...S.chip(n), padding: "5px 10px", fontSize: 12.5 }} onClick={() => rAssignFromAnon(idx, d.id, p.id)}>{d.emoji} {d.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1 }}>−</span>}</span>
                               )})}
                             </div>
