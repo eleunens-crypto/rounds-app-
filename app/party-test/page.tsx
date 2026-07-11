@@ -109,6 +109,8 @@ export default function PartyTest() {
   const [editPotId, setEditPotId] = useState<number | null>(null)
   const [potBuilderOpen, setPotBuilderOpen] = useState(false)
   const [potIsCard, setPotIsCard] = useState(false)
+  const [cardValue, setCardValue] = useState("")
+  const [cardPayers, setCardPayers] = useState<string[]>([])
   const [beginPrompt, setBeginPrompt] = useState(false)
   const [bpPotType, setBpPotType] = useState<"none" | "pot" | "card">("none")
   const [bpBekers, setBpBekers] = useState(false)
@@ -194,6 +196,8 @@ export default function PartyTest() {
   const setEveryoneAmt = (v: number) => setPotDraft(Object.fromEntries(people.map((p) => [p.id, v])))
   const resetPotDraft = () => { setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft("") }
   const closePot = () => { if (editPotId === null && potDraftTotal > 0.001) setPotRounds((rs) => [...rs, { id: Date.now(), amounts: potDraft }]); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setEditPotId(null); setPotBuilderOpen(false); setShowPot(false) }
+  const toggleCardPayer = (id: string) => setCardPayers((ps) => ps.includes(id) ? ps.filter((x) => x !== id) : [...ps, id])
+  const cardDistribute = (ids: string[]) => { const val = parseFloat(cardValue.replace(",", ".")) || 0; if (val <= 0 || ids.length === 0) return; const per = val / ids.length; const d: Record<string, number> = {}; ids.forEach((id) => (d[id] = per)); setPotDraft(d); setEveryoneChoice(null) }
   const editPotRound = (id: number) => { const r = potRounds.find((x) => x.id === id); if (!r) return; setEditPotId(id); setPotDraft({ ...r.amounts }); setEveryoneChoice(null); setEveryoneDraft("") }
   const saveEditPot = () => { if (editPotId === null) return; if (potDraftTotal > 0.001) setPotRounds((rs) => rs.map((r) => r.id === editPotId ? { ...r, amounts: potDraft } : r)); else setPotRounds((rs) => rs.filter((r) => r.id !== editPotId)); setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setPotBuilderOpen(false) }
   const cancelEditPot = () => { setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setPotBuilderOpen(false) }
@@ -367,6 +371,27 @@ export default function PartyTest() {
 
         {(potRounds.length === 0 || potBuilderOpen || editPotId !== null) ? (
         <>
+        {potIsCard ? (
+        <div style={{ background: "rgba(240,165,0,0.08)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 12, padding: 11, marginTop: 4 }}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f" }}>{editPotId !== null ? "✏️ kaart wijzigen" : "➕ Drankkaart inleggen"}</span>
+            {potDraftTotal > 0 && <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f8a4c" }}>+{euro(potDraftTotal)}</span>}
+          </div>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>Kaartwaarde</span>
+            <div style={{ ...S.row, gap: 4 }}><span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>€</span><input style={{ ...S.input, width: 70 }} type="text" inputMode="decimal" placeholder="15" value={cardValue} onChange={(e) => setCardValue(e.target.value.replace(/[^0-9.,]/g, ""))} /></div>
+          </div>
+          <div style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700, marginBottom: 6 }}>Betaald door:</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 10 }}>
+            {people.map((p) => { const on = cardPayers.includes(p.id); return <span key={p.id} onClick={() => toggleCardPayer(p.id)} style={{ ...S.pill, cursor: "pointer", fontSize: 12.5, padding: "6px 12px", background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "rgba(240,165,0,0.1)", color: on ? "#fff" : "#8a5e0f", fontWeight: 700 }}>{p.name}</span> })}
+          </div>
+          <div style={{ ...S.row, gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+            <button style={{ ...S.btnP, flex: 1, padding: "8px 6px", fontSize: 12.5, opacity: cardPayers.length > 0 ? 1 : 0.5 }} onClick={() => cardDistribute(cardPayers)}>Gelijk verdelen ({cardPayers.length})</button>
+            <button style={{ ...S.btn, flex: 1, padding: "8px 6px", fontSize: 12.5 }} onClick={() => { setCardPayers(people.map((p) => p.id)); cardDistribute(people.map((p) => p.id)) }}>Over iedereen</button>
+          </div>
+          {potDraftTotal > 0 && <div style={{ fontSize: 12, color: "#6b5f3a", background: "#fff", borderRadius: 8, padding: "8px 10px" }}>{people.filter((p) => (potDraft[p.id] || 0) > 0).map((p) => `${p.name} ${euro(potDraft[p.id] || 0)}`).join(" · ")}</div>}
+        </div>
+        ) : (
         <div style={{ background: "rgba(240,165,0,0.08)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 12, padding: 11, marginTop: 4 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f" }}>{editPotId !== null ? "✏️ inleg wijzigen" : `➕ ${potRounds.length === 0 ? "1e inleg" : `${potRounds.length + 1}e inleg`}`}</span>
@@ -395,6 +420,7 @@ export default function PartyTest() {
               <span style={{ fontSize: 13, fontWeight: 800, marginLeft: "auto", textAlign: "right", color: (potDraft[p.id] || 0) > 0 ? "#1f8a4c" : "#b3a988" }}>{(potDraft[p.id] || 0) > 0 ? "+" + euro(potDraft[p.id] || 0) : "+€0"}</span>
             </div>
           ))}
+        )}
         </div>
         {editPotId !== null ? (
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
@@ -509,12 +535,18 @@ export default function PartyTest() {
               <h3 style={{ ...S.h3, fontSize: 18, marginTop: 0 }}>Voor we beginnen</h3>
               <p style={{ ...S.sub, marginBottom: 14 }}>Werk je met…</p>
               <div style={{ padding: "10px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
-                <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 8 }}>een gezamenlijke pot of drankkaart?</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {[["none", "nee"], ["pot", "🫙 pot"], ["card", "💳 drankkaart"]].map(([v, l]: any) => (
-                    <div key={v} onClick={() => setBpPotType(v)} style={{ ...S.seg(bpPotType === v), padding: "8px 4px", fontSize: 12 }}>{l}</div>
-                  ))}
+                <div style={{ ...S.row, justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 14.5, fontWeight: 700 }}>een gezamenlijke pot of drankkaart?</span>
+                  <div onClick={() => setBpPotType((t) => t === "none" ? "pot" : "none")} style={{ width: 46, height: 27, borderRadius: 20, background: bpPotType !== "none" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#d9cdb0", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
+                    <div style={{ width: 21, height: 21, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: bpPotType !== "none" ? 22 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+                  </div>
                 </div>
+                {bpPotType !== "none" && (
+                  <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                    <div onClick={() => setBpPotType("pot")} style={{ ...S.seg(bpPotType === "pot"), padding: "8px 4px", fontSize: 12.5 }}>🫙 pot</div>
+                    <div onClick={() => setBpPotType("card")} style={{ ...S.seg(bpPotType === "card"), padding: "8px 4px", fontSize: 12.5 }}>💳 drankkaart</div>
+                  </div>
+                )}
               </div>
               {[["♻️ herbruikbare bekers", bpBekers, setBpBekers], ["🎟️ coins", bpCoins, setBpCoins]].map(([label, val, set]: any, i) => (
                 <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
