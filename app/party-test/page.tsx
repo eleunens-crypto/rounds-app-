@@ -108,8 +108,9 @@ export default function PartyTest() {
   const [everyoneChoice, setEveryoneChoice] = useState<number | "custom" | null>(null)
   const [editPotId, setEditPotId] = useState<number | null>(null)
   const [potBuilderOpen, setPotBuilderOpen] = useState(false)
+  const [potIsCard, setPotIsCard] = useState(false)
   const [beginPrompt, setBeginPrompt] = useState(false)
-  const [bpPot, setBpPot] = useState(false)
+  const [bpPotType, setBpPotType] = useState<"none" | "pot" | "card">("none")
   const [bpBekers, setBpBekers] = useState(false)
   const [bpCoins, setBpCoins] = useState(false)
 
@@ -156,6 +157,7 @@ export default function PartyTest() {
   const potDraftTotal = Object.values(potDraft).reduce((a, b) => a + (b || 0), 0)
   const potSpent = rounds.reduce((s, r) => s + (r.potPart || 0), 0)
   const potRemaining = potContribTotal - potSpent
+  const cardLossPer = potIsCard && potRemaining > 0.005 && people.length > 0 ? potRemaining / people.length : 0
 
   // ── live cart helpers ───────────────────────────────────────────────────────
   const aQty = (did: string, pid: string) => cart[did]?.[pid] ?? 0
@@ -226,11 +228,13 @@ export default function PartyTest() {
   }
   const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); to() } }); else to() }
   const applyBeginChoices = () => {
+    const potOn = bpPotType !== "none"
     setDepositOn(bpBekers)
     setPay(bpCoins ? "coin" : "eur")
     setDepositUnit(bpCoins ? "coin" : "eur")
+    setPotIsCard(bpPotType === "card")
     setBeginPrompt(false)
-    if (bpPot || bpBekers || bpCoins) { if (bpPot) setShowPot(true); setView("settings") }
+    if (potOn || bpBekers || bpCoins) { if (potOn) setShowPot(true); setView("settings") }
     else { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }
   }
   const goFinal = () => { if (rounds.length === 0) { setNotice("Er zijn nog geen rondjes om af te rekenen. Start eerst een rondje."); return } if (anyUnassignedRounds) { const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0); setNotice(`Er ${tot === 1 ? "is 1 drankje" : `zijn ${tot} drankjes`} nog zonder naam. Wijs ze eerst toe (rood aangeduid in het overzicht) voor je afrekent.`); const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0)); if (fr >= 0) { setOpenRound(fr); setEditAssign(true); setEditCups(false); setEditPay(false); setView("hub") } return } setView("final") }
@@ -281,14 +285,14 @@ export default function PartyTest() {
       if (r.payer) { paid[r.payer] = (paid[r.payer] ?? 0) + personPart + cupSum; potPaid += potPart }
       else if (potPart > 0) { potPaid += potPart + cupSum }
     })
-    const nets: { id: string; label: string; net: number }[] = people.map((p) => ({ id: p.id, label: p.name, net: (paid[p.id] ?? 0) + contribOf(p.id) - consumption(p.id) - cupOwn(p.id) }))
-    if (potContribTotal > 0 || potSpent > 0) nets.push({ id: "pot", label: "de pot", net: potPaid - potContribTotal })
+    const nets: { id: string; label: string; net: number }[] = people.map((p) => ({ id: p.id, label: p.name, net: (paid[p.id] ?? 0) + contribOf(p.id) - consumption(p.id) - cupOwn(p.id) - cardLossPer }))
+    if (potContribTotal > 0 || potSpent > 0) nets.push({ id: "pot", label: "de pot", net: potPaid - potContribTotal + (potIsCard ? Math.max(0, potRemaining) : 0) })
     const creditors = nets.filter((n) => n.net > 0.005).map((n) => ({ ...n })).sort((a, b) => b.net - a.net)
     const debtors = nets.filter((n) => n.net < -0.005).map((n) => ({ ...n, net: -n.net })).sort((a, b) => b.net - a.net)
     const tx: { from: string; to: string; amount: number }[] = []; let i = 0, j = 0
     while (i < debtors.length && j < creditors.length) { const amt = Math.min(debtors[i].net, creditors[j].net); tx.push({ from: debtors[i].label, to: creditors[j].label, amount: amt }); debtors[i].net -= amt; creditors[j].net -= amt; if (debtors[i].net < 0.005) i++; if (creditors[j].net < 0.005) j++ }
     return { tx }
-  }, [rounds, people, potRounds, potContribTotal, potSpent, depositOn, depositValue, depositUnit, coinValue, drinks, pay]) // eslint-disable-line
+  }, [rounds, people, potRounds, potContribTotal, potSpent, potIsCard, potRemaining, depositOn, depositValue, depositUnit, coinValue, drinks, pay]) // eslint-disable-line
   const anyUnassignedRounds = rounds.some((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0))
   const drinkTotalRound = (r: Round, did: string) => Object.values(r.orders[did] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[did] ?? 0)
   const paidLabel = (r: Round) => {
@@ -321,17 +325,22 @@ export default function PartyTest() {
     sheet: { background: "#fff", borderRadius: 20, padding: 18, width: "100%", maxWidth: 460, maxHeight: "82vh", overflowY: "auto", boxShadow: "0 -8px 30px rgba(0,0,0,0.2)" } as React.CSSProperties,
   }
   const potTag = (
-    <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potRemaining > 0 ? "#1f8a4c" : "#8a7d55" }}>🫙 pot {euro(potRemaining)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+ toevoegen</span></span>
+    <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potRemaining > 0 ? "#1f8a4c" : "#8a7d55" }}>{potIsCard ? "💳 drankkaart " : "🫙 pot "}{euro(potRemaining)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+ toevoegen</span></span>
   )
   const renderPotModal = () => (
     <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
       <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ ...S.h3, fontSize: 18, margin: "0 0 8px" }}>🫙 Pot</h3>
+        <h3 style={{ ...S.h3, fontSize: 18, margin: "0 0 8px" }}>{potIsCard ? "💳 Drankkaart" : "🫙 Pot"}</h3>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
           <span style={{ ...S.pill, background: "rgba(120,95,20,0.08)", color: "#8a5e0f", fontSize: 12, padding: "4px 10px" }}>ingelegd {euro(potContribTotal)}</span>
           {potSpent > 0 && <span style={{ ...S.pill, background: "rgba(224,138,0,0.12)", color: "#c98a00", fontSize: 12, padding: "4px 10px" }}>besteed {euro(potSpent)}</span>}
           <span style={{ ...S.pill, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(224,104,92,0.14)", color: potRemaining > 0 ? "#1f8a4c" : "#c0554a", fontSize: 12, padding: "4px 10px", fontWeight: 800 }}>nog {euro(potRemaining)}</span>
         </div>
+        <div style={{ ...S.row, gap: 6, marginBottom: 8 }}>
+          <div style={{ ...S.seg(!potIsCard), padding: "7px 6px", fontSize: 12.5 }} onClick={() => setPotIsCard(false)}>🫙 Pot (geld)</div>
+          <div style={{ ...S.seg(potIsCard), padding: "7px 6px", fontSize: 12.5 }} onClick={() => setPotIsCard(true)}>💳 Drankkaart</div>
+        </div>
+        <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>{potIsCard ? "💳 Drankkaart van de groep — leg de kaartwaarde (bv. €15) in. Wat niet opgedronken wordt, is verloren en wordt gelijk over iedereen verdeeld." : "🫙 Echt geld — wat niet opgaat, krijgen de inleggers terug bij de afrekening."}</div>
 
         {potRounds.map((r, i) => {
           const tot = Object.values(r.amounts).reduce((a, b) => a + (b || 0), 0)
@@ -499,9 +508,17 @@ export default function PartyTest() {
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ ...S.h3, fontSize: 18, marginTop: 0 }}>Voor we beginnen</h3>
               <p style={{ ...S.sub, marginBottom: 14 }}>Werk je met…</p>
-              {[["🫙 een gezamenlijke pot", bpPot, setBpPot], ["♻️ herbruikbare bekers", bpBekers, setBpBekers], ["🎟️ coins", bpCoins, setBpCoins]].map(([label, val, set]: any, i) => (
+              <div style={{ padding: "10px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
+                <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 8 }}>een gezamenlijke pot of drankkaart?</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[["none", "nee"], ["pot", "🫙 pot"], ["card", "💳 drankkaart"]].map(([v, l]: any) => (
+                    <div key={v} onClick={() => setBpPotType(v)} style={{ ...S.seg(bpPotType === v), padding: "8px 4px", fontSize: 12 }}>{l}</div>
+                  ))}
+                </div>
+              </div>
+              {[["♻️ herbruikbare bekers", bpBekers, setBpBekers], ["🎟️ coins", bpCoins, setBpCoins]].map(([label, val, set]: any, i) => (
                 <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
-                  <span style={{ fontSize: 14.5, fontWeight: 700 }}>{label}</span>
+                  <span style={{ fontSize: 14.5, fontWeight: 700, minWidth: 0 }}>{label}</span>
                   <div onClick={() => set((v: boolean) => !v)} style={{ width: 46, height: 27, borderRadius: 20, background: val ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#d9cdb0", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
                     <div style={{ width: 21, height: 21, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: val ? 22 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
                   </div>
@@ -1061,7 +1078,7 @@ export default function PartyTest() {
         )}
         {people.map((p) => {
           const dronk = consumption(p.id), waarborg = cupOwn(p.id), zelf = paidByPerson(p.id), inpot = contribOf(p.id)
-          const owed = dronk + waarborg - zelf - inpot
+          const owed = dronk + waarborg - zelf - inpot + cardLossPer
           const open = openFairAll || openFair[p.id]
           const nettoLabel = Math.abs(owed) < 0.005 ? "staat gelijk" : owed > 0 ? `moet ${show(owed)} betalen` : `krijgt ${show(-owed)} terug`
           const nettoColor = Math.abs(owed) < 0.005 ? "#8a7d55" : owed > 0 ? "#b35309" : "#1f8a4c"
@@ -1077,6 +1094,7 @@ export default function PartyTest() {
                   {depositOn && Math.abs(waarborg) > 0.005 && <div style={{ ...S.row, justifyContent: "space-between", padding: "2px 0" }}><span style={{ color: "#6b5f3a" }}>waarborg (voorgeschoten)</span><span style={{ fontWeight: 700 }}>{show(waarborg)}</span></div>}
                   {zelf > 0.005 && <div style={{ ...S.row, justifyContent: "space-between", padding: "2px 0" }}><span style={{ color: "#6b5f3a" }}>zelf betaald (rondjes)</span><span style={{ fontWeight: 700, color: "#1f8a4c" }}>−{show(zelf)}</span></div>}
                   {inpot > 0.005 && <div style={{ ...S.row, justifyContent: "space-between", padding: "2px 0" }}><span style={{ color: "#6b5f3a" }}>in pot gelegd</span><span style={{ fontWeight: 700, color: "#1f8a4c" }}>−{show(inpot)}</span></div>}
+                  {cardLossPer > 0.005 && <div style={{ ...S.row, justifyContent: "space-between", padding: "2px 0" }}><span style={{ color: "#6b5f3a" }}>verlies drankkaart (gedeeld)</span><span style={{ fontWeight: 700 }}>{show(cardLossPer)}</span></div>}
                   <div style={{ ...S.row, justifyContent: "space-between", padding: "5px 0 0", marginTop: 3, borderTop: "1px dashed rgba(120,95,20,0.25)" }}><span style={{ fontWeight: 800 }}>netto</span><span style={{ fontWeight: 800, color: nettoColor }}>{nettoLabel}</span></div>
                 </div>
               )}
