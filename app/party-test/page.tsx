@@ -112,7 +112,7 @@ export default function PartyTest() {
   const [cardValue, setCardValue] = useState("")
   const [cardPayers, setCardPayers] = useState<string[]>([])
   const [beginPrompt, setBeginPrompt] = useState(false)
-  const [bpPotType, setBpPotType] = useState<"none" | "pot" | "card">("none")
+  const [bpPotType, setBpPotType] = useState<"none" | "yes" | "pot" | "card">("none")
   const [bpBekers, setBpBekers] = useState(false)
   const [bpCoins, setBpCoins] = useState(false)
 
@@ -232,7 +232,8 @@ export default function PartyTest() {
   }
   const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); to() } }); else to() }
   const applyBeginChoices = () => {
-    const potOn = bpPotType !== "none"
+    if (bpPotType === "yes") { setNotice("Kies pot of drankkaart — of zet de pot op nee."); return }
+    const potOn = bpPotType === "pot" || bpPotType === "card"
     setDepositOn(bpBekers)
     setPay(bpCoins ? "coin" : "eur")
     setDepositUnit(bpCoins ? "coin" : "eur")
@@ -544,7 +545,7 @@ export default function PartyTest() {
               <div style={{ padding: "10px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
                 <div style={{ ...S.row, justifyContent: "space-between" }}>
                   <span style={{ fontSize: 14.5, fontWeight: 700 }}>een gezamenlijke pot of drankkaart?</span>
-                  <div onClick={() => setBpPotType((t) => t === "none" ? "pot" : "none")} style={{ width: 46, height: 27, borderRadius: 20, background: bpPotType !== "none" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#d9cdb0", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
+                  <div onClick={() => setBpPotType((t) => t === "none" ? "yes" : "none")} style={{ width: 46, height: 27, borderRadius: 20, background: bpPotType !== "none" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#d9cdb0", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
                     <div style={{ width: 21, height: 21, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: bpPotType !== "none" ? 22 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
                   </div>
                 </div>
