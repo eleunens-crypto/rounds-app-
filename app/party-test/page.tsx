@@ -153,6 +153,7 @@ export default function PartyTest() {
 
   // edit-in-hub
   const [editAssign, setEditAssign] = useState(false)
+  const [editAssignMode, setEditAssignMode] = useState<"drink" | "person">("drink")
   const [editCups, setEditCups] = useState(false)
   const [editPay, setEditPay] = useState(false)
 
@@ -1090,20 +1091,36 @@ export default function PartyTest() {
 
                   {editAssign && (
                     <div style={{ marginTop: 10, background: "#faf4e4", borderRadius: 12, padding: 10 }}>
-                      {roundDrinks.map((d) => {
+                      <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, marginBottom: 8 }}>
+                        <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 11.5 }} onClick={() => setEditAssignMode("drink")}>per drank</div>
+                        <div style={{ ...S.seg(editAssignMode === "person"), padding: "5px 9px", fontSize: 11.5 }} onClick={() => setEditAssignMode("person")}>per persoon</div>
+                      </div>
+                      {editAssignMode === "drink" ? roundDrinks.map((d) => {
                         const un = r.anon[d.id] ?? 0
                         return (
-                          <div key={d.id} style={{ marginBottom: 10 }}>
-                            <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 5 }}>{d.emoji} {d.name}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 700 }}> · {un} nog toe te wijzen</span>}</div>
+                          <div key={d.id} style={{ marginBottom: 9 }}>
+                            <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 5 }}>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 700 }}> · 🔴 {un} onbekend</span>}</div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                               {people.map((p) => { const n = r.orders[d.id]?.[p.id] ?? 0; return (
-                                <span key={p.id} style={{ ...S.chip(n), padding: "6px 11px", fontSize: 13 }} onClick={() => rAssignFromAnon(idx, d.id, p.id)}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 7, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 16, fontWeight: 800, lineHeight: 1 }}>−</span>}</span>
+                                <span key={p.id} style={{ ...S.chip(n), padding: "5px 10px", fontSize: 12.5 }} onClick={() => rAssignFromAnon(idx, d.id, p.id)}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1 }}>−</span>}</span>
+                              )})}
+                            </div>
+                          </div>
+                        )
+                      }) : people.map((p) => {
+                        const took = roundDrinks.filter((d) => (r.orders[d.id]?.[p.id] ?? 0) > 0)
+                        return (
+                          <div key={p.id} style={{ marginBottom: 9 }}>
+                            <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 5 }}>{p.name}{took.length > 0 && <span style={{ fontSize: 11, fontWeight: 600, color: "#8a7d55" }}> · {took.reduce((a, d) => a + (r.orders[d.id]?.[p.id] ?? 0), 0)} drankje(s)</span>}</div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                              {roundDrinks.map((d) => { const n = r.orders[d.id]?.[p.id] ?? 0; return (
+                                <span key={d.id} style={{ ...S.chip(n), padding: "5px 10px", fontSize: 12.5 }} onClick={() => rAssignFromAnon(idx, d.id, p.id)}>{d.emoji} {d.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1 }}>−</span>}</span>
                               )})}
                             </div>
                           </div>
                         )
                       })}
-                      <div style={{ fontSize: 11, color: "#8a7d55" }}>Herverdelen: ✕ zet een drankje terug op "onbekend", tik dan een andere naam. Het aantal blijft gelijk (er is al betaald).</div>
+                      <div style={{ fontSize: 11, color: "#8a7d55" }}>Herverdelen: − zet een drankje terug op "onbekend", tik dan een andere naam. Het aantal blijft gelijk (er is al betaald).</div>
                     </div>
                   )}
 
