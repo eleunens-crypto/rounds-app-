@@ -133,6 +133,8 @@ export default function PartyTest() {
   const [openFairAll, setOpenFairAll] = useState(false)
   const [openFair, setOpenFair] = useState<Record<string, boolean>>({})
   const [openRound, setOpenRound] = useState<number | null>(null)
+  const [allRoundsOpen, setAllRoundsOpen] = useState(false)
+  const [hasSettled, setHasSettled] = useState(false)
 
   const [assignDrink, setAssignDrink] = useState<string | null>(null)
   const [showCups, setShowCups] = useState(false)
@@ -234,18 +236,20 @@ export default function PartyTest() {
     const potOnly = payPot && !payPerson
     const personOnly = !payPot && !!payPerson
     const potContribToRound = potOnly ? total : split ? potAmt : 0
-    const potOver = potContribToRound > potRemaining + 0.001
+    const curPotPart = rounds.length ? (rounds[rounds.length - 1].potPart || 0) : 0
+    const potAvail = potContribTotal - (potSpent - curPotPart)
+    const potOver = potContribToRound > potAvail + 0.001
     const personRest = split ? total - potAmt : personOnly ? total : 0
     let valid = true, reason = ""
     if (total <= 0) { valid = false; reason = "Vul eerst exact betaald bedrag in." }
     else if (!payPot && !payPerson) { valid = false; reason = "Kies wie betaalde." }
-    else if (potOnly && potOver) { valid = false; reason = `De pot heeft maar ${euro(potRemaining)} — leg bij of kies een andere betaler.` }
+    else if (potOnly && potOver) { valid = false; reason = `De pot heeft maar ${euro(potAvail)} — leg bij of kies een andere betaler.` }
     else if (split && !potFilled) { valid = false; reason = "Vul eerst het pot-bedrag in." }
-    else if (split && potOver) { valid = false; reason = `De pot heeft maar ${euro(potRemaining)} — verlaag het pot-bedrag of leg bij.` }
+    else if (split && potOver) { valid = false; reason = `De pot heeft maar ${euro(potAvail)} — verlaag het pot-bedrag of leg bij.` }
     else if (split && potAmt > total + 0.0001) { valid = false; reason = "Het pot-bedrag is hoger dan het totaal." }
     const zeroPot = valid && split && potAmt <= 0.0001
     const zeroPerson = valid && split && Math.abs(personRest) <= 0.0001
-    return { total, potFilled, potAmt, split, potOnly, personOnly, potContribToRound, potOver, personRest, valid, reason, zeroPot, zeroPerson }
+    return { total, potFilled, potAmt, split, potOnly, personOnly, potContribToRound, potAvail, potOver, personRest, valid, reason, zeroPot, zeroPerson }
   }
   const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); to() } }); else to() }
   const applyBeginChoices = () => {
@@ -257,20 +261,19 @@ export default function PartyTest() {
     setPay(bpCoins ? "coin" : "eur")
     setDepositUnit(bpCoins ? "coin" : "eur")
     setBeginPrompt(false)
-    if (!potOn && !bpBekers && !bpCoins) { startOrdering(); return }
+    if (!potOn && !bpBekers && !bpCoins) { setView("hub"); return }
     setFromOnboarding(true)
     if (potOn) { setShowPot(true); setOnbPotActive(true) }
     else setView("settings")
   }
-  const startOrdering = () => { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }
   const tryBegin = () => {
     if (people.length === 0) { setNotice("Voeg eerst minstens één persoon toe."); return }
     if (depositOn && (depositValue || 0) <= 0) { setNotice("Vul het waarborgbedrag per beker in — of zet bekers op ‘uit’."); return }
     if (pay === "coin" && (coinValue || 0) <= 0) { setNotice("Vul de coin-waarde in (1 coin = €…) — of zet coins op ‘uit’."); return }
-    if (potChosen && potContribTotal <= 0.005) { setConfirmDlg({ msg: `Je koos voor een ${potIsCard ? "drankkaart" : "pot"}, maar er is nog niks ingelegd. Toch zonder verder gaan? Je kan later nog toevoegen via de knop bovenaan.`, yes: `Toch verder zonder ${potIsCard ? "drankkaart" : "pot"}`, onYes: () => { setConfirmDlg(null); setPotChosen(false); startOrdering() } }); return }
-    startOrdering()
+    if (potChosen && potContribTotal <= 0.005) { setConfirmDlg({ msg: `Je koos voor een ${potIsCard ? "drankkaart" : "pot"}, maar er is nog niks ingelegd. Toch zonder verder gaan? Je kan later nog toevoegen via de knop bovenaan.`, yes: `Toch verder zonder ${potIsCard ? "drankkaart" : "pot"}`, onYes: () => { setConfirmDlg(null); setPotChosen(false); setView("hub") } }); return }
+    setView("hub")
   }
-  const goFinal = () => { if (rounds.length === 0) { setNotice("Er zijn nog geen rondjes om af te rekenen. Start eerst een rondje."); return } if (anyUnassignedRounds) { const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0); setNotice(`Er ${tot === 1 ? "is 1 drankje" : `zijn ${tot} drankjes`} nog zonder naam. Wijs ze eerst toe (rood aangeduid in het overzicht) voor je afrekent.`); const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0)); if (fr >= 0) { setOpenRound(fr); setEditAssign(true); setEditCups(false); setEditPay(false); setView("hub") } return } setView("final") }
+  const goFinal = () => { if (rounds.length === 0) { setNotice("Er zijn nog geen rondjes om af te rekenen. Start eerst een rondje."); return } if (anyUnassignedRounds) { const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0); setNotice(`Er ${tot === 1 ? "is 1 drankje" : `zijn ${tot} drankjes`} nog zonder naam. Wijs ze eerst toe (rood aangeduid in het overzicht) voor je afrekent.`); const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0)); if (fr >= 0) { setOpenRound(fr); setEditAssign(true); setEditCups(false); setEditPay(false); setView("hub") } return } setHasSettled(true); setView("final") }
   const openClose = () => { setAmountDraft(""); setShowClose(true) }
   const goAssignFromWarning = () => { const d = firstUnassigned(); setShowClose(false); if (d) { setActiveCat(d.cat); setAssignDrink(d.id) } }
   const commitRound = () => {
@@ -358,7 +361,7 @@ export default function PartyTest() {
     sheet: { background: "#fff", borderRadius: 20, padding: 18, width: "100%", maxWidth: 460, maxHeight: "82vh", overflowY: "auto", boxShadow: "0 -8px 30px rgba(0,0,0,0.2)" } as React.CSSProperties,
   }
   const potTag = (
-    <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potRemaining > 0 ? "#1f8a4c" : "#8a7d55" }}>{potIsCard ? "💳 drankkaart " : "🫙 pot "}{euro(potRemaining)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+ toevoegen</span></span>
+    <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potRemaining > 0 ? "#1f8a4c" : "#8a7d55" }}>{potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️ </span>}{potIsCard ? "💳 drankkaart " : "🫙 pot "}{euro(potRemaining)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+ toevoegen</span></span>
   )
   const renderPotModal = () => (
     <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
@@ -548,7 +551,7 @@ export default function PartyTest() {
             <span style={{ fontSize: 14, fontWeight: 700 }}>📁 Opgeslagen groepen</span>
             <span style={{ fontSize: 11.5, color: "#8a7d55" }}>later beschikbaar</span>
           </div>
-          <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 8 }}>Groepen bewaren tussen sessies komt in de volledige app (met database).</div>
+          <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 8, lineHeight: 1.5 }}>Groepen bewaren tussen sessies komt in de volledige app (met database).<br /><span style={{ fontSize: 10.5, color: "#b3a988" }}>📌 Live-reminder: groepen automatisch opruimen na inactiviteit, tenzij vastgezet (📌) om te bewaren.</span></div>
         </div>
       </div></div>
     )
@@ -639,6 +642,13 @@ export default function PartyTest() {
         {showPot && renderPotModal()}
         {renderDialogs()}
         <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10 }}>⚙️ Groepsinstellingen</h3>
+        <div style={{ ...S.card, marginBottom: 10 }}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 800 }}>Groepsnaam</span>
+            {hasSettled && <span style={{ fontSize: 11, color: "#8a7d55", fontWeight: 700 }}>🔒 vast na afrekenen</span>}
+          </div>
+          <input disabled={hasSettled} value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Typ je groepsnaam" style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : "#fdfaf2", color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
+        </div>
         {!fromOnboarding && (
         <div style={{ ...S.card, marginBottom: 10 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: people.length > 0 ? 10 : 0 }}>
@@ -969,7 +979,7 @@ export default function PartyTest() {
             <span style={S.chip(payPot ? 1 : 0)} onClick={() => { setPayPot((v) => !v); setPaidConfirmed(false) }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
             {people.map((p) => <span key={p.id} style={S.chip(payPerson === p.id ? 1 : 0)} onClick={() => { setPayPerson((v) => (v === p.id ? "" : p.id)); setPaidConfirmed(false) }}>{p.name}</span>)}
           </div>
-          {(potContribTotal > 0 || potSpent > 0) && <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 7 }}>{potIsCard ? "💳 drankkaart" : "🫙 pot"}-saldo: ingelegd {euro(potContribTotal)} · besteed {euro(potSpent)} · <b style={{ color: potRemaining > 0 ? "#1f8a4c" : "#c0554a" }}>nog {euro(potRemaining)}</b></div>}
+          {(potContribTotal > 0 || potSpent > 0) && <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 7 }}>{potIsCard ? "💳 drankkaart" : "🫙 pot"}-saldo: ingelegd {euro(potContribTotal)} · <b style={{ color: st.potAvail > 0.005 ? "#1f8a4c" : "#c0554a" }}>nog {euro(st.potAvail)}</b></div>}
 
           {st.split && (
             <div style={{ background: "#faf4e4", borderRadius: 12, padding: "10px 12px", marginTop: 10 }}>
@@ -981,10 +991,10 @@ export default function PartyTest() {
                 <span style={{ fontSize: 13, fontWeight: 700 }}>👤 {people.find((p) => p.id === payPerson)?.name} <span style={{ fontSize: 11, color: "#8a7d55" }}>(de rest)</span></span>
                 <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{st.potFilled ? euro(Math.max(0, personRest)) : "—"}</span>
               </div>
-              <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>{st.potFilled ? "De rest rekent de app automatisch." : "Vul eerst het pot-bedrag in — dan verschijnt de rest."}{st.potOver ? ` Pot heeft maar ${euro(potRemaining)}.` : ""}</div>
+              <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>{st.potFilled ? "De rest rekent de app automatisch." : "Vul eerst het pot-bedrag in — dan verschijnt de rest."}{st.potOver ? ` Pot heeft maar ${euro(st.potAvail)}.` : ""}</div>
             </div>
           )}
-          {payPot && !payPerson && <div style={{ fontSize: 12, color: st.potOver ? "#c0554a" : "#8a7d55", fontWeight: 700, marginTop: 8 }}>pot: {euro(potRemaining)}{st.potOver ? " — te weinig, leg bij of kies andere betaler" : ""}</div>}
+          {payPot && !payPerson && <div style={{ fontSize: 12, color: st.potOver ? "#c0554a" : "#8a7d55", fontWeight: 700, marginTop: 8 }}>pot: {euro(st.potAvail)}{st.potOver ? " — te weinig, leg bij of kies andere betaler" : ""}</div>}
 
           {(() => {
             const okGreen = paidConfirmed && st.valid
@@ -1028,15 +1038,18 @@ export default function PartyTest() {
             </div>
           </div>
         ) : (<>
-        <p style={{ ...S.sub }}>Tik een ronde open om drankjes/namen of bekers nog aan te passen — de app herberekent automatisch.</p>
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
+          <p style={{ ...S.sub, margin: 0 }}>Tik een ronde open om aan te passen.</p>
+          {rounds.length > 1 && <span onClick={() => setAllRoundsOpen((v) => !v)} style={{ fontSize: 12, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", flexShrink: 0 }}>{allRoundsOpen ? "alles dichtklappen" : "alles openklappen"}</span>}
+        </div>
 
         {rounds.map((r, idx) => {
           const items = drinks.reduce((s, d) => s + drinkTotalRound(r, d.id), 0)
-          const open = openRound === idx
+          const open = allRoundsOpen || openRound === idx
           const roundDrinks = drinks.filter((d) => drinkTotalRound(r, d.id) > 0)
           return (
             <div key={idx} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-              <div style={{ cursor: "pointer", padding: 14 }} onClick={() => { setOpenRound(open ? null : idx); setEditAssign(false); setEditCups(false); setEditPay(false) }}>
+              <div style={{ cursor: "pointer", padding: 14 }} onClick={() => { if (allRoundsOpen) { setAllRoundsOpen(false); setOpenRound(idx) } else { setOpenRound(open ? null : idx) } setEditAssign(false); setEditCups(false); setEditPay(false) }}>
                 <div style={{ ...S.row, justifyContent: "space-between" }}>
                   <span style={{ fontSize: 15, fontWeight: 800 }}>Ronde {idx + 1} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>· {items} drankjes · {euro(r.amount)}</span></span>
                   <span style={{ fontSize: 14, color: "#8a7d55" }}>{open ? "▴" : "▾"}</span>
