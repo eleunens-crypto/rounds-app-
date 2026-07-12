@@ -280,8 +280,10 @@ export default function PartyTest() {
     else if (payPot && potAvail <= 0.005) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} is leeg — kies een persoon als betaler.` }
     else if (potOver) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} heeft maar ${euro(Math.max(0, potAvail))} — verlaag het bedrag of leg bij.` }
     else if (multi && !allFilled) { valid = false; reason = "Vul een bedrag in per betaler." }
-    else if (multi && Math.abs(missing) > 0.005) { valid = false; reason = missing > 0 ? `Samen ${euro(sum)} van ${euro(total)} — er ontbreekt ${euro(missing)}.` : `Samen ${euro(sum)} van ${euro(total)} — ${euro(-missing)} te veel.` }
-    return { total, potAmt, potPart, personAmts, personSum, sum, missing, multi, nPayers, potAvail, potOver, valid, reason }
+    const tol = 0.005 + 0.01 * Math.max(0, nPayers - 1)
+    const rounding = multi && Math.abs(missing) > 0.005 && Math.abs(missing) <= tol
+    if (valid && multi && Math.abs(missing) > tol) { valid = false; reason = missing > 0 ? `Samen ${euro(sum)} van ${euro(total)} — er ontbreekt ${euro(missing)}.` : `Samen ${euro(sum)} van ${euro(total)} — ${euro(-missing)} te veel.` }
+    return { total, potAmt, potPart, personAmts, personSum, sum, missing, multi, nPayers, potAvail, potOver, valid, reason, rounding }
   }
   // Verdeelt het rondjebedrag automatisch en exact (tot op de cent) over de gekozen betalers.
   // De laatste betaler krijgt de restcent, zodat de som altijd precies klopt.
@@ -292,14 +294,10 @@ export default function PartyTest() {
     const availC = Math.max(0, Math.round(potAvailNow() * 100))
     let potC = 0
     if (usePot) potC = Math.min(Math.floor(total / n), availC)
-    let restC = total - potC
+    const restC = total - potC
+    const perC = persons.length ? Math.floor(restC / persons.length) : 0
     const next: Record<string, string> = {}
-    persons.forEach((pid, i) => {
-      const left = persons.length - i
-      const share = i === persons.length - 1 ? restC : Math.floor(restC / left)
-      next[pid] = (share / 100).toFixed(2)
-      restC -= share
-    })
+    persons.forEach((pid) => (next[pid] = (perC / 100).toFixed(2)))
     setPayAmts(next)
     setPotAmtDraft(usePot ? (potC / 100).toFixed(2) : "")
     setPaidConfirmed(false)
@@ -369,7 +367,16 @@ export default function PartyTest() {
     if (!st.valid) { setNotice(st.reason); return }
     const payers: Record<string, number> = {}
     Object.entries(st.personAmts).forEach(([pid, a]) => { if (a > 0.0001) payers[pid] = a })
-    applyPayment(payers, st.potPart, st.total)
+    // De afrondingscent(en) intern bij één betaler leggen zodat de boekhouding exact klopt.
+    // Zichtbaar blijft iedereen even veel betalen; het verschil verrekent de Fair Split.
+    let potPart = st.potPart
+    const ids = Object.keys(payers)
+    const diff = Math.round((st.total - (potPart + ids.reduce((a, k) => a + payers[k], 0))) * 100) / 100
+    if (Math.abs(diff) > 0.0001) {
+      if (ids.length > 0) payers[ids[ids.length - 1]] = Math.round((payers[ids[ids.length - 1]] + diff) * 100) / 100
+      else potPart = Math.round((potPart + diff) * 100) / 100
+    }
+    applyPayment(payers, potPart, st.total)
     setPaidConfirmed(true)
   }
   const closeRound = () => { if (!paidConfirmed || !paymentState().valid) { setNotice("Bevestig eerst de betaling."); return } setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }
@@ -1114,9 +1121,10 @@ export default function PartyTest() {
                   <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 84 }} type="text" inputMode="decimal" placeholder="0,00" value={payAmts[pid] ?? ""} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setPayAmts((m) => ({ ...m, [pid]: v })); setPaidConfirmed(false) }} /></div>
                 </div>
               ))}
-              <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", paddingTop: 8, fontSize: 12, fontWeight: 800, color: Math.abs(st.missing) <= 0.005 ? "#1f8a4c" : "#c0554a" }}>
-                Samen {euro(st.sum)} van {euro(st.total)}{Math.abs(st.missing) <= 0.005 ? " ✓ klopt" : st.missing > 0 ? ` — er ontbreekt ${euro(st.missing)}` : ` — ${euro(-st.missing)} te veel`}
+              <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", paddingTop: 8, fontSize: 12, fontWeight: 800, color: st.valid ? "#1f8a4c" : "#c0554a" }}>
+                Samen {euro(st.sum)} van {euro(st.total)}{st.valid ? " ✓ klopt" : st.missing > 0 ? ` — er ontbreekt ${euro(st.missing)}` : ` — ${euro(-st.missing)} te veel`}
               </div>
+              {st.rounding && <div style={{ fontSize: 10.5, color: "#b3a988", marginTop: 3 }}>afrondingscent wordt in de Fair Split verrekend</div>}
               {payPot && <div style={{ fontSize: 11, color: st.potOver ? "#c0554a" : "#8a7d55", marginTop: 5 }}>{potIsCard ? "Drankkaart" : "Pot"} beschikbaar: {euro(Math.max(0, st.potAvail))}</div>}
             </div>
           )}
