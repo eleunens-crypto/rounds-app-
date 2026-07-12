@@ -962,10 +962,11 @@ export default function PartyTest() {
             </div>
           </div>
         )}
-        <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-          {depositOn && <button style={{ ...S.btn, flex: 1 }} onClick={() => setShowCups(true)}>🫙 Bekers</button>}
-          {rounds.length > 0 && <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>📋 Overzicht</button>}
-        </div>
+        {depositOn && (
+          <div style={{ marginBottom: 12 }}>
+            <button style={{ ...S.btn, width: "100%" }} onClick={() => setShowCups(true)}>🫙 Bekers</button>
+          </div>
+        )}
         <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => roundItems > 0 && openClose()}>✅ Rondje {roundNr} bevestigen{roundItems > 0 && <span style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.85 }}> — {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>}</button>
         {roundItems > 0 && (
           <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>✕ Rondje annuleren</button>
