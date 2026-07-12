@@ -438,6 +438,7 @@ const STRINGS = {
     freeSpotLabel: "👤 Vrije plaats",
     tapToPick: "tik om te kiezen →",
     takenLabel: "bezet",
+    imThisOne: "dit ben ik →",
     addExtraSpot: "+ Extra plaats toevoegen",
     yourNameQ: "Hoe heet je?",
     yourNamesQ: "Hoe heten jullie?",
@@ -868,6 +869,7 @@ const STRINGS = {
     freeSpotLabel: "👤 Place libre",
     tapToPick: "touche pour choisir →",
     takenLabel: "occupée",
+    imThisOne: "c'est moi →",
     addExtraSpot: "+ Ajouter une place",
     yourNameQ: "Comment t'appelles-tu ?",
     yourNamesQ: "Comment vous appelez-vous ?",
@@ -1323,6 +1325,9 @@ export default function RundoTable() {
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [newGuest, setNewGuest] = useState("")
+  const [claimSpot, setClaimSpot] = useState<string | null>(null)
+  const [claimSeats, setClaimSeats] = useState(1)
+  const [claimNames, setClaimNames] = useState<string[]>([""])
   const [showTodo, setShowTodo] = useState(false)
   const [showTaxInfo, setShowTaxInfo] = useState(false)
   const [taxConfig, setTaxConfig] = useState<string | null>(null)
@@ -1553,7 +1558,7 @@ export default function RundoTable() {
     setViaLink(false); setShowSaved(false)
     setScanPreview([]); setScanFile(null); setScanPhotoUrl(null); setScanTotal(""); setScanFail(null); setShowScan(false)
     setAdminTab("scan"); setExpandedPeople(new Set()); setClaimMode("item"); setClaimPid(null)
-    setShowTodo(false); setShowAddGuest(false); setViewReceipt(null)
+    setShowTodo(false); setViewReceipt(null)
     setManageGuests(false); setAsleep(false)
     autoJoined.current = true
     rememberLastGroup(null)
@@ -1642,6 +1647,21 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
+  // Een plaats is "vrij" zolang niemand er zijn naam op zette (naam is nog "Gast N" of "Ik").
+  const isFreeSpot = (p: Participant) => new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName
+
+  // Neemt de gekozen plaats over: zet de naam (of namen, bij een koppel) en het aantal personen.
+  const confirmClaimSpot = async () => {
+    if (!group || !claimSpot) return
+    const names = claimNames.slice(0, claimSeats).map((n) => n.trim()).filter(Boolean)
+    if (names.length === 0) { setToast(L.enterYourName); return }
+    const finalName = names.join(" & ")
+    await supabase.from("table_participants").update({ name: finalName, seats: claimSeats, self_joined: true }).eq("id", claimSpot)
+    pickMe(claimSpot)
+    setClaimSpot(null); setClaimSeats(1); setClaimNames([""])
+    await loadAll(group.id)
+  }
+
   const pickMe = (participantId: string) => {
     if (!group) return
     setMeIdStored(group.id, participantId); setMeId(participantId)
@@ -1652,10 +1672,6 @@ export default function RundoTable() {
     setMeIdStored(group.id, null); setMeId(null)
   }
 
-  const joinAsNewPerson = async (name: string, seats = 1) => {
-    const p = await addGuest(name, true, seats)
-    if (p) pickMe(p.id)
-  }
 
   // Hernummer naamloze gasten ("Gast N") naar hun positie, zodat er geen gaten ontstaan na verwijderen.
   const renumberGuests = async (): Promise<boolean> => {
@@ -2310,22 +2326,63 @@ export default function RundoTable() {
         <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} signedUp={participants.length} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
         <div style={{ maxWidth: 440, margin: "0 auto" }}>
           <div style={S.card}>
-            <h3 style={S.h3}>{L.whoAreYou}</h3>
-            <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 14 }}>{L.enterYourName}</p>
+            {claimSpot === null ? (
+              <>
+                <h3 style={S.h3}>{L.whoAreYou}</h3>
+                <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 14 }}>{L.pickFreeSpot}</p>
 
-            <IdentityAdder onAdd={joinAsNewPerson} />
+                {participants.map((p) => {
+                  const free = isFreeSpot(p)
+                  return (
+                    <button key={p.id} onClick={() => { if (free) { setClaimSpot(p.id); setClaimSeats(Math.max(1, p.seats ?? 1)); setClaimNames([""]) } else pickMe(p.id) }}
+                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, textAlign: "left", marginBottom: 7, cursor: "pointer", borderRadius: 11, padding: "11px 12px",
+                        border: free ? "1.5px dashed rgba(20,153,176,0.6)" : "1px solid rgba(16,24,40,0.12)",
+                        background: free ? "rgba(20,153,176,0.05)" : "rgba(16,24,40,0.02)" }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: free ? "#1499b0" : "#14213a" }}>{free ? L.freeSpotLabel : p.name}{!free && (p.seats ?? 1) > 1 ? <span style={{ fontSize: 11, fontWeight: 700, color: "#9aa0ab" }}> · {p.seats}p.</span> : null}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: free ? "#1499b0" : "#9aa0ab", flexShrink: 0 }}>{free ? L.tapToPick : L.imThisOne}</span>
+                    </button>
+                  )
+                })}
 
-            {participants.length > 0 && (
-              <div style={{ marginTop: 18 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <div style={{ flex: 1, height: 1, background: "rgba(16,24,40,0.1)" }} />
-                  <span style={{ fontSize: 11.5, fontWeight: 700, color: "#9aa0ab" }}>{L.orPickYourself}</span>
-                  <div style={{ flex: 1, height: 1, background: "rgba(16,24,40,0.1)" }} />
+                <button onClick={async () => { const p = await addGuest(undefined, true, 1); if (p) { setClaimSpot(p.id); setClaimSeats(1); setClaimNames([""]) } }}
+                  style={{ width: "100%", marginTop: 6, background: "none", border: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 800, color: "#5a6680", textDecoration: "underline", padding: "6px 0" }}>{L.addExtraSpot}</button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.howManyPersons}</div>
+                <div style={{ fontSize: 11.5, color: "#9aa0ab", lineHeight: 1.5, marginBottom: 9 }}>{L.payTogetherHint}</div>
+                <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                  {[1, 2, 3].map((n) => {
+                    const on = n === 3 ? claimSeats >= 3 : claimSeats === n
+                    const label = n === 1 ? L.onePerson : n === 2 ? L.twoPersons : L.threePlus
+                    return (
+                      <button key={n} onClick={() => { const v = n === 3 ? Math.max(3, claimSeats) : n; setClaimSeats(v); setClaimNames((cur) => Array.from({ length: v }, (_, i) => cur[i] ?? "")) }}
+                        style={{ flex: 1, fontSize: 12.5, fontWeight: 800, padding: "10px 4px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
+                    )
+                  })}
                 </div>
-                {participants.map((p) => (
-                  <button key={p.id} onClick={() => pickMe(p.id)} style={{ ...S.btn, width: "100%", textAlign: "left", marginBottom: 6, padding: "12px 14px", fontWeight: 700 }}>{p.name}</button>
+                {claimSeats >= 3 && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginBottom: 12 }}>
+                    <button onClick={() => { const v = Math.max(3, claimSeats - 1); setClaimSeats(v); setClaimNames((c) => c.slice(0, v)) }} style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 17 }}>−</button>
+                    <b style={{ fontSize: 16, color: "#14213a" }}>{claimSeats}</b>
+                    <button onClick={() => { const v = Math.min(8, claimSeats + 1); setClaimSeats(v); setClaimNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? "")) }} style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 17, background: "rgba(27,42,74,0.12)" }}>+</button>
+                  </div>
+                )}
+
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#14213a", marginBottom: 8 }}>{claimSeats > 1 ? L.yourNamesQ : L.yourNameQ}</div>
+                {Array.from({ length: claimSeats }, (_, i) => i).map((i) => (
+                  <input key={i} value={claimNames[i] ?? ""} onChange={(e) => setClaimNames((c) => { const n = [...c]; n[i] = e.target.value; return n })}
+                    onKeyDown={(e) => { if (e.key === "Enter") confirmClaimSpot() }}
+                    placeholder={claimSeats === 1 ? L.namePlaceholder : i === 0 ? L.firstName : i === 1 ? L.secondName : L.extraName(i + 1)}
+                    style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 7 }} autoFocus={i === 0} />
                 ))}
-              </div>
+                {claimSeats > 1 && claimNames.filter((n) => n.trim()).length > 0 && (
+                  <div style={{ fontSize: 11, color: "#9aa0ab", marginBottom: 10 }}>{L.showsAsOne} <b style={{ color: "#14213a" }}>{claimNames.filter((n) => n.trim()).join(" & ")}</b></div>
+                )}
+
+                <button onClick={confirmClaimSpot} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 15, fontWeight: 800, marginTop: 4 }}>{claimSeats > 1 ? L.thatsUs : L.thatsMe}</button>
+                <button onClick={() => setClaimSpot(null)} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#9aa0ab" }}>{L.backToSpots}</button>
+              </>
             )}
           </div>
         </div>
@@ -4158,24 +4215,6 @@ function ClaimScreen(props: {
           </div>
         )}
       </div>
-    </div>
-  )
-}
-
-function IdentityAdder({ onAdd }: { onAdd: (name: string, seats?: number) => void }) {
-  const [name, setName] = useState("")
-  const [seats, setSeats] = useState(1)
-  const [lang] = useLang()
-  const L = STRINGS[lang]
-  const submit = () => { if (name.trim()) { onAdd(name.trim(), seats); setName(""); setSeats(1) } }
-  return (
-    <div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submit() }} placeholder={L.yourNamePlaceholder} style={{ ...S.input, flex: 1, minWidth: 120 }} />
-        <SeatsControl n={seats} onChange={setSeats} showLabel />
-      </div>
-      <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6 }}>{L.multipleHint}</div>
-      <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 16, fontWeight: 700 }} onClick={submit}>{L.joinIn}</button>
     </div>
   )
 }
