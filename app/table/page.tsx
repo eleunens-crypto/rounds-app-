@@ -430,7 +430,7 @@ const STRINGS = {
     optShareSub: "deel de link of QR",
     optSelf: "✍️ Ik doe het",
     optSelfSub: "voor wie geen gsm heeft",
-    mixHint: "Gebruik gerust allebei — het een sluit het ander niet uit.",
+    mixHint: "Gebruik gerust allebei — het één sluit het ander niet uit.",
     meLabel: "jij",
     ownNamePlaceholder: "Zet hier je eigen naam",
     freeSpot: "vrije plaats",
@@ -2693,25 +2693,6 @@ export default function RundoTable() {
               </div>
             )}
 
-            {participants.length > 0 && (
-              <div style={{ marginTop: 12, paddingBottom: 12, borderBottom: "1px solid rgba(16,24,40,0.08)" }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: "#14213a", lineHeight: 1.4, marginBottom: 10 }}>{L.personsCount(participants.length)} · {L.howFillIn}</div>
-                <div style={{ display: "flex", alignItems: "stretch", gap: 8 }}>
-                  <button onClick={() => setAdminTab("overview")} style={{ flex: 1, border: "1.5px solid rgba(27,42,74,0.22)", background: "#fff", borderRadius: 12, padding: "12px 8px", cursor: "pointer", textAlign: "center" }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.optSelf}</div>
-                    <div style={{ fontSize: 11, color: "#9aa0ab", lineHeight: 1.4 }}>{L.optSelfSub}</div>
-                  </button>
-                  <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: "#1499b0", background: "rgba(20,153,176,0.12)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 20, padding: "3px 8px" }}>&amp;</span>
-                  </div>
-                  <button onClick={() => document.getElementById("share-card")?.scrollIntoView({ behavior: "smooth", block: "start" })} style={{ flex: 1, border: "1.5px solid rgba(20,153,176,0.45)", background: "rgba(20,153,176,0.05)", borderRadius: 12, padding: "12px 8px", cursor: "pointer", textAlign: "center" }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.optShare}</div>
-                    <div style={{ fontSize: 11, color: "#9aa0ab", lineHeight: 1.4 }}>{L.optShareSub}</div>
-                  </button>
-                </div>
-                <div style={{ fontSize: 13.5, fontWeight: 800, color: "#14213a", background: "rgba(20,153,176,0.09)", border: "1px solid rgba(20,153,176,0.3)", borderRadius: 11, padding: "11px 12px", marginTop: 10, lineHeight: 1.5, textAlign: "center" }}>{L.mixHint}</div>
-              </div>
-            )}
 
             {participants.length > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 12, marginBottom: 2 }}>
