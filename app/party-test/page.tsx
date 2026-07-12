@@ -628,7 +628,7 @@ export default function PartyTest() {
   // ── START ───────────────────────────────────────────────────────────────────
   if (view === "start") {
     return (
-      <div style={{ ...S.page, display: "flex", flexDirection: "column", justifyContent: "center", padding: "24px 0 40px" }}><div style={{ ...S.wrap, paddingBottom: 78 }}>
+      <div style={{ ...S.page, display: "flex", flexDirection: "column", justifyContent: "center", padding: "24px 0 40px" }}><div style={{ ...S.wrap, paddingBottom: 150 }}>
         {renderDialogs()}
         <style>{`input::placeholder,textarea::placeholder{color:#c4b896;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 34 }}>
