@@ -628,18 +628,19 @@ export default function PartyTest() {
   // ── START ───────────────────────────────────────────────────────────────────
   if (view === "start") {
     return (
-      <div style={S.page}><div style={{ ...S.wrap, paddingTop: 20 }}>
+      <div style={{ ...S.page, display: "flex", flexDirection: "column", justifyContent: "center", padding: "24px 0 40px" }}><div style={S.wrap}>
         {renderDialogs()}
         <style>{`input::placeholder,textarea::placeholder{color:#c4b896;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24 }}>
-          <div style={{ ...S.row, gap: 12 }}>
-            <RundoLogo size={56} />
-            <div style={{ ...S.h1, fontSize: 30, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 34 }}>
+          <div style={{ ...S.row, gap: 13 }}>
+            <RundoLogo size={64} />
+            <div style={{ ...S.h1, fontSize: 34, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
           </div>
-          <div style={{ ...S.row, gap: 7, marginTop: 8 }}><CheersIcon size={20} color="#4a3f1e" /><span style={{ fontSize: 14, color: "#4a3f1e", fontWeight: 700 }}>Rondjes en splitten zonder gedoe!</span></div>
+          <div style={{ ...S.row, gap: 8, marginTop: 12 }}><CheersIcon size={22} color="#4a3f1e" /><span style={{ fontSize: 15, color: "#4a3f1e", fontWeight: 700 }}>Rondjes en splitten zonder gedoe!</span></div>
         </div>
-        <div style={S.card}>
-          <input style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, marginBottom: 12, background: "#fdfaf2", padding: "13px 14px" }} type="text" placeholder="Typ je groepsnaam" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+        <div style={{ ...S.card, padding: "20px 16px" }}>
+          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 11 }}>Groepsnaam</div>
+          <input style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, marginBottom: 18, background: "#fdfaf2", padding: "15px 14px", borderRadius: 12 }} type="text" placeholder="Typ je groepsnaam" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
           <button style={{ ...S.btnP, width: "100%", opacity: groupName.trim() ? 1 : 0.5 }} onClick={() => { if (!groupName.trim()) { setNotice("Geef je groep eerst een naam."); return } setView("setup") }}>Starten</button>
         </div>
         <div style={{ ...S.card, opacity: 0.6 }}>
@@ -699,7 +700,7 @@ export default function PartyTest() {
           </div>
         )}
         <div style={S.card}>
-          <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10 }}>👥 Aantal personen</h3>
+          <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 14 }}>👥 Aantal personen</h3>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
             <button style={{ ...S.step, width: 42, height: 42, fontSize: 22, opacity: people.length > 0 ? 1 : 0.4 }} onClick={removeLastPerson}>−</button>
             <span style={{ fontSize: 26, fontWeight: 800, minWidth: 34, textAlign: "center" }}>{people.length}</span>
