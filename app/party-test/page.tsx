@@ -1097,8 +1097,7 @@ export default function PartyTest() {
                 {rl.map((d) => {
                   const n = drinkTotalRound(last!, d.id)
                   const who = people.filter((p) => (last!.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = last!.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
-                  const un = last!.anon[d.id] ?? 0
-                  return <div key={d.id} style={{ fontSize: 13.5 }}><b>{d.emoji} {n}× {d.name}</b> <span style={{ color: "#8a7d55" }}>→ {who.join(", ")}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 800 }}>{who.length ? ", " : ""}🔴 {un}× onbekend</span>}</span></div>
+                  return <div key={d.id} style={{ fontSize: 13.5 }}><b>{d.emoji} {n}× {d.name}</b>{who.length > 0 && <span style={{ color: "#8a7d55" }}> → {who.join(", ")}</span>}</div>
                 })}
               </div>
             )
