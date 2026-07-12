@@ -212,7 +212,6 @@ export default function PartyTest() {
   const rTogglePot = (idx: number) => setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = !((r.potPart || 0) > 0); if (usePot && potAvailFor(idx) <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg — leg eerst bij.`); return r } return rRedistribute(r, idx, usePot, persons, r.amount) }))
   const rSetPayerAmt = (idx: number, pid: string, v: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, payers: { ...(r.payers || {}), [pid]: Math.max(0, v) } } : r))
   const rSetPotAmt = (idx: number, v: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, potPart: Math.max(0, Math.min(v, Math.max(0, potAvailFor(idx)))) } : r))
-  const rSplitEqually = (idx: number) => setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, r.amount) }))
   const rPaidSum = (r: Round) => (r.potPart || 0) + Object.values(r.payers || {}).reduce((a, b) => a + (b || 0), 0)
   const rTogglePayer = (idx: number, pid: string) => setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const cur = Object.keys(r.payers || {}); const persons = cur.includes(pid) ? cur.filter((x) => x !== pid) : [...cur, pid]; const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, r.amount) }))
 
@@ -280,27 +279,32 @@ export default function PartyTest() {
     else if (nPayers === 0) { valid = false; reason = "Kies wie betaalde." }
     else if (payPot && potAvail <= 0.005) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} is leeg — kies een persoon als betaler.` }
     else if (potOver) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} heeft maar ${euro(Math.max(0, potAvail))} — verlaag het bedrag of leg bij.` }
-    else if (multi && !allFilled) { valid = false; reason = "Vul een bedrag in per betaler — of tik ‘verdeel gelijk’." }
+    else if (multi && !allFilled) { valid = false; reason = "Vul een bedrag in per betaler." }
     else if (multi && Math.abs(missing) > 0.005) { valid = false; reason = missing > 0 ? `Samen ${euro(sum)} van ${euro(total)} — er ontbreekt ${euro(missing)}.` : `Samen ${euro(sum)} van ${euro(total)} — ${euro(-missing)} te veel.` }
     return { total, potAmt, potPart, personAmts, personSum, sum, missing, multi, nPayers, potAvail, potOver, valid, reason }
   }
-  const splitEqually = () => {
-    const total = parseFloat(amountDraft.replace(",", ".")) || 0
-    const n = payPersons.length + (payPot ? 1 : 0)
-    if (total <= 0 || n === 0) return
-    const potAvail = potAvailNow()
-    let potShare = 0
-    let rest = total
-    let persons = [...payPersons]
-    if (payPot) { potShare = Math.min(total / n, Math.max(0, potAvail)); rest = total - potShare }
-    const per = persons.length ? rest / persons.length : 0
+  // Verdeelt het rondjebedrag automatisch en exact (tot op de cent) over de gekozen betalers.
+  // De laatste betaler krijgt de restcent, zodat de som altijd precies klopt.
+  const autoSplit = (persons: string[], usePot: boolean, totalStr?: string) => {
+    const total = Math.round(((parseFloat((totalStr ?? amountDraft).replace(",", ".")) || 0)) * 100)
+    const n = persons.length + (usePot ? 1 : 0)
+    if (total <= 0 || n === 0) { setPayAmts({}); setPotAmtDraft(usePot ? "" : ""); return }
+    const availC = Math.max(0, Math.round(potAvailNow() * 100))
+    let potC = 0
+    if (usePot) potC = Math.min(Math.floor(total / n), availC)
+    let restC = total - potC
     const next: Record<string, string> = {}
-    persons.forEach((pid) => (next[pid] = per.toFixed(2)))
+    persons.forEach((pid, i) => {
+      const left = persons.length - i
+      const share = i === persons.length - 1 ? restC : Math.floor(restC / left)
+      next[pid] = (share / 100).toFixed(2)
+      restC -= share
+    })
     setPayAmts(next)
-    setPotAmtDraft(payPot ? potShare.toFixed(2) : "")
+    setPotAmtDraft(usePot ? (potC / 100).toFixed(2) : "")
     setPaidConfirmed(false)
   }
-  const togglePayPerson = (pid: string) => { setPayPersons((ps) => ps.includes(pid) ? ps.filter((x) => x !== pid) : [...ps, pid]); setPaidConfirmed(false) }
+  const togglePayPerson = (pid: string) => { const next = payPersons.includes(pid) ? payPersons.filter((x) => x !== pid) : [...payPersons, pid]; setPayPersons(next); autoSplit(next, payPot); setPaidConfirmed(false) }
   const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); dropUnpaidRound(); to() } }); else to() }
   const applyBeginChoices = () => {
     if (bpPotType === "yes") { setNotice("Kies pot of drankkaart — of zet de pot op nee."); return }
@@ -1028,7 +1032,6 @@ export default function PartyTest() {
                   <button style={{ ...S.btn, padding: "4px 10px", fontSize: 11.5 }} onClick={() => setShowCups(true)}>aanpassen</button>
                 </div>
               ))}
-              <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 14 }}>Na bevestigen mag iemand gaan halen. Het betaalde bedrag vul je <b>daarna</b> in.</div>
               <button style={{ ...S.btnP, opacity: cupsBlock ? 0.5 : 1 }} onClick={() => !cupsBlock && commitRound()}>✅ Bevestig rondje ({roundItems} drankje{roundItems === 1 ? "" : "s"})</button>
               <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={() => setShowClose(false)}>← terug</button>
             </div>
@@ -1055,7 +1058,6 @@ export default function PartyTest() {
             <span style={{ fontSize: 24, flexShrink: 0 }}>🍻</span>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 15, fontWeight: 800 }}>Ronde {roundNr} bevestigd — {items} drankjes</div>
-              <div style={{ fontSize: 13, color: "#e08a00", fontWeight: 800 }}>👉 Iemand mag gaan halen!</div>
             </div>
           </div>
           {depositOn && <div style={{ fontSize: 12.5, fontWeight: 700, color: "#8a5e0f", marginBottom: 6 }}>🫙 {totalInUse} beker{totalInUse === 1 ? "" : "s"} in omloop · {euro(totalInUse * depositPerCupEur)}</div>}
@@ -1072,7 +1074,10 @@ export default function PartyTest() {
               </div>
             )
           })()}
-          <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", marginTop: 8, paddingTop: 8, fontSize: 14, fontWeight: 800, textAlign: "right" }}>Totaal: {items} drankje{items === 1 ? "" : "s"}</div>
+          <div style={{ ...S.row, justifyContent: "space-between", gap: 8, borderTop: "1px dashed rgba(120,95,20,0.25)", marginTop: 8, paddingTop: 8 }}>
+            <span style={{ fontSize: 13, color: "#e08a00", fontWeight: 800 }}>👉 Iemand mag gaan halen!</span>
+            <span style={{ fontSize: 14, fontWeight: 800, flexShrink: 0 }}>Totaal: {items} drankje{items === 1 ? "" : "s"}</span>
+          </div>
           {last && (() => { const un = drinks.reduce((a, d) => a + (last.anon[d.id] ?? 0), 0); return un > 0 ? (
             <div onClick={() => { editOrder(); setShowAssignAll(true) }} style={{ marginTop: 8, background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "8px 11px", fontSize: 12.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>🔴 {un} drankje{un === 1 ? "" : "s"} nog niet toegewezen. <u>Tik hier om toe te wijzen</u></div>
           ) : null })()}
@@ -1082,7 +1087,7 @@ export default function PartyTest() {
           <div style={{ fontSize: 15, fontWeight: 800, textAlign: "center", marginBottom: 8 }}>💰 Exact bedrag betaald voor dit rondje?</div>
           <div style={{ ...S.row, gap: 8, justifyContent: "center", margin: "2px 0" }}>
             <span style={{ fontSize: 20, fontWeight: 800 }}>€</span>
-            <input style={{ ...S.input, width: 120, fontSize: 22, textAlign: "center", fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00" value={amountDraft} onChange={(e) => { setAmountDraft(e.target.value.replace(/[^0-9.,]/g, "")); setPaidConfirmed(false) }} />
+            <input style={{ ...S.input, width: 120, fontSize: 22, textAlign: "center", fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00" value={amountDraft} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setAmountDraft(v); autoSplit(payPersons, payPot, v); setPaidConfirmed(false) }} />
           </div>
           <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", marginBottom: 14 }}>ⓘ hierop verdeelt de app eerlijk (Fair Split)</div>
 
@@ -1090,15 +1095,13 @@ export default function PartyTest() {
           <>
           <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", marginBottom: 7 }}>Betaald door <span style={{ fontWeight: 600, color: "#b3a988" }}>(meerdere mogelijk)</span></div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-            <span style={{ ...S.chip(payPot ? 1 : 0), opacity: st.potAvail <= 0.005 ? 0.45 : 1 }} onClick={() => { if (!payPot && st.potAvail <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg (€0). Tik rechtsboven op “${potIsCard ? "drankkaart" : "pot"} + toevoegen” om eerst in te leggen.`); return } setPayPot((v) => !v); setPaidConfirmed(false) }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
+            <span style={{ ...S.chip(payPot ? 1 : 0), opacity: st.potAvail <= 0.005 ? 0.45 : 1 }} onClick={() => { if (!payPot && st.potAvail <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg (€0). Tik rechtsboven op “${potIsCard ? "drankkaart" : "pot"} + toevoegen” om eerst in te leggen.`); return } const nextPot = !payPot; setPayPot(nextPot); autoSplit(payPersons, nextPot); setPaidConfirmed(false) }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
             {people.map((p) => <span key={p.id} style={S.chip(payPersons.includes(p.id) ? 1 : 0)} onClick={() => togglePayPerson(p.id)}>{p.name}</span>)}
           </div>
 
           {st.multi && (
             <div style={{ background: "#faf4e4", borderRadius: 12, padding: "10px 12px", marginTop: 10 }}>
-              <div style={{ ...S.row, justifyContent: "flex-end", marginBottom: 8 }}>
-                <span onClick={splitEqually} style={{ ...S.pill, cursor: "pointer", fontSize: 11.5, padding: "5px 10px", background: "rgba(31,138,76,0.14)", color: "#1f8a4c", fontWeight: 800 }}>👥 verdeel gelijk</span>
-              </div>
+              <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a7d55", marginBottom: 8 }}>Gelijk verdeeld <span style={{ fontWeight: 600, color: "#b3a988" }}>— pas aan per persoon indien nodig</span></div>
               {payPot && (
                 <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 7 }}>
                   <span style={{ fontSize: 13, fontWeight: 700 }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
@@ -1263,7 +1266,7 @@ export default function PartyTest() {
                         const sum = rPaidSum(r), diff = (r.amount || 0) - sum
                         return (
                           <div style={{ marginTop: 8, background: "#fff", borderRadius: 10, padding: "9px 10px" }}>
-                            {nPay > 1 && <div style={{ ...S.row, justifyContent: "flex-end", marginBottom: 7 }}><span onClick={() => rSplitEqually(idx)} style={{ ...S.pill, cursor: "pointer", fontSize: 11, padding: "4px 9px", background: "rgba(31,138,76,0.14)", color: "#1f8a4c", fontWeight: 800 }}>👥 verdeel gelijk</span></div>}
+                            {nPay > 1 && <div style={{ fontSize: 11, fontWeight: 800, color: "#8a7d55", marginBottom: 7 }}>Gelijk verdeeld <span style={{ fontWeight: 600, color: "#b3a988" }}>— pas aan per persoon indien nodig</span></div>}
                             {(r.potPart || 0) > 0 && (
                               <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
                                 <span style={{ fontSize: 12.5, fontWeight: 700 }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
