@@ -149,7 +149,7 @@ export default function PartyTest() {
   const [payAmts, setPayAmts] = useState<Record<string, string>>({})
   const [potAmtDraft, setPotAmtDraft] = useState<string>("")
   const [paidConfirmed, setPaidConfirmed] = useState(false)
-  const [confirmDlg, setConfirmDlg] = useState<{ msg: string; yes: string; onYes: () => void; onNo?: () => void; variant?: "danger" } | null>(null)
+  const [confirmDlg, setConfirmDlg] = useState<{ msg: string; yes: string; onYes: () => void; onNo?: () => void; no?: string; variant?: "danger" } | null>(null)
   const [notice, setNotice] = useState<string>("")
 
   // edit-in-hub
@@ -328,7 +328,28 @@ export default function PartyTest() {
     if (unfinishedRound) { setNotice(`Rondje ${roundNr} is nog bezig — bevestig en betaal het eerst voor je afrekent.`); setActiveCat(catsPresent[0]); setView("order"); return }
     if (view === "confirmed") { setNotice(`Rondje ${roundNr} is nog niet betaald. Rond die betaling eerst af.`); return }
     if (paidCount === 0) { setNotice("Er zijn nog geen afgeronde rondjes om af te rekenen."); return }
-    if (blockIfUnpaid()) return; if (anyUnassignedRounds) { const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0); setNotice(`Er ${tot === 1 ? "is 1 drankje" : `zijn ${tot} drankjes`} nog zonder naam. Wijs ze eerst toe (rood aangeduid in het overzicht) voor je afrekent.`); const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0)); if (fr >= 0) { setOpenRound(fr); setEditOpen(true); setEditAssign(true); setEditCups(false); setEditPay(false); setView("hub") } return } setHasSettled(true); setView("final") }
+    if (blockIfUnpaid()) return
+    if (anyUnassignedRounds) {
+      const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0)
+      const goAssign = () => { const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0)); if (fr >= 0) { setOpenRound(fr); setEditOpen(true); setEditAssign(true); setEditCups(false); setEditPay(false); setView("hub") } }
+      setConfirmDlg({
+        msg: `🔴 ${tot === 1 ? "1 drankje heeft" : `${tot} drankjes hebben`} nog geen naam.\n\nZonder naam weet de app niet wie wat dronk en verdeelt ze alles gelijk.\n\nWijs toe voor een eerlijke verdeling (Fair Split).`,
+        yes: "Toch gelijk verdelen",
+        no: "Toewijzen",
+        onYes: () => {
+          setConfirmDlg({
+            msg: "Weet je het zeker?\n\nBij gelijke verdeling betaalt iedereen evenveel, ongeacht wat hij dronk.\n\nVoorbeeld: Jan dronk 1 cola (€4), Tom 4 speciaalbieren (€20). Bij gelijk verdelen betaalt elk €12 — Jan betaalt €8 te veel, Tom €8 te weinig.",
+            yes: "Toch gelijk verdelen",
+            no: "← Terug, toewijzen",
+            onYes: () => { setConfirmDlg(null); setHasSettled(true); setView("final") },
+            onNo: () => { setConfirmDlg(null); goAssign() },
+          })
+        },
+        onNo: () => { setConfirmDlg(null); goAssign() },
+      })
+      return
+    }
+    setHasSettled(true); setView("final") }
   const openClose = () => { setAmountDraft(""); setShowClose(true) }
   const goAssignFromWarning = () => { setShowClose(false); setShowAssignAll(true) }
   const commitRound = () => {
@@ -530,7 +551,7 @@ export default function PartyTest() {
         <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setConfirmDlg(null)}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ ...S.h3, fontSize: 17 }}>Even bevestigen</h3>
-            <p style={{ fontSize: 13.5, color: "#4a3f1e", lineHeight: 1.5, marginBottom: 16 }}>{confirmDlg.msg}</p>
+            <p style={{ fontSize: 13.5, color: "#4a3f1e", lineHeight: 1.55, marginBottom: 16, whiteSpace: "pre-line" }}>{confirmDlg.msg}</p>
             {confirmDlg.variant === "danger" ? (
               <>
                 <button style={{ ...S.btnP, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", boxShadow: "none" }} onClick={() => setConfirmDlg(null)}>← Terug, rondje afmaken</button>
@@ -538,8 +559,17 @@ export default function PartyTest() {
               </>
             ) : (
               <>
-                <button style={{ ...S.btnP, background: "linear-gradient(135deg,#e0685c,#c0554a)", boxShadow: "none" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
-                <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={() => { const f = confirmDlg?.onNo; setConfirmDlg(null); f && f() }}>← terug</button>
+                {confirmDlg.no ? (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button style={{ ...S.btn, flex: 1, fontSize: 12.5, padding: "11px 4px" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
+                    <button style={{ ...S.btnP, flex: 1, fontSize: 13, padding: "11px 4px" }} onClick={() => { const f = confirmDlg?.onNo; setConfirmDlg(null); f && f() }}>{confirmDlg.no}</button>
+                  </div>
+                ) : (
+                  <>
+                    <button style={{ ...S.btnP, background: "linear-gradient(135deg,#e0685c,#c0554a)", boxShadow: "none" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
+                    <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={() => { const f = confirmDlg?.onNo; setConfirmDlg(null); f && f() }}>← terug</button>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -984,7 +1014,7 @@ export default function PartyTest() {
               <h3 style={{ ...S.h3, fontSize: 18 }}>✅ Ronde {roundNr} bevestigen</h3>
               {unassignedTotal > 0 && (
                 <div onClick={goAssignFromWarning} style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.35)", borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 12.5, color: "#b0402f", cursor: "pointer" }}>
-                  ⚠️ <b>{unassignedTotal} drankje{unassignedTotal === 1 ? "" : "s"} nog niet toegewezen.</b> Worden anders gelijk gedeeld. <u>Tik hier om toe te wijzen →</u>
+                  🔴 <b>{unassignedTotal} drankje{unassignedTotal === 1 ? "" : "s"} nog niet toegewezen.</b> <u>Tik hier om toe te wijzen</u>
                 </div>
               )}
               {depositOn && (cupsBlock ? (
@@ -1044,7 +1074,7 @@ export default function PartyTest() {
           })()}
           <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", marginTop: 8, paddingTop: 8, fontSize: 14, fontWeight: 800, textAlign: "right" }}>Totaal: {items} drankje{items === 1 ? "" : "s"}</div>
           {last && (() => { const un = drinks.reduce((a, d) => a + (last.anon[d.id] ?? 0), 0); return un > 0 ? (
-            <div onClick={() => { editOrder(); setShowAssignAll(true) }} style={{ marginTop: 8, background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "8px 11px", fontSize: 12.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>🔴 {un} drankje{un === 1 ? "" : "s"} nog niet toegewezen — <u>tik om toe te wijzen</u></div>
+            <div onClick={() => { editOrder(); setShowAssignAll(true) }} style={{ marginTop: 8, background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "8px 11px", fontSize: 12.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>🔴 {un} drankje{un === 1 ? "" : "s"} nog niet toegewezen. <u>Tik hier om toe te wijzen</u></div>
           ) : null })()}
         </div>
 
