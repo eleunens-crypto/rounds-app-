@@ -1415,9 +1415,16 @@ export default function PartyTest() {
               </div>
               {open && (
                 <div style={{ background: "#faf4e4", borderRadius: 10, padding: "8px 11px", margin: "0 0 8px", fontSize: 12.5 }}>
-                  <div style={{ ...S.row, justifyContent: "space-between", padding: "2px 0" }}><span style={{ color: "#6b5f3a" }}>dronk (aandeel)</span><span style={{ fontWeight: 700 }}>{show(dronk)}</span></div>
+                  <div style={{ ...S.row, justifyContent: "space-between", padding: "2px 0" }}><span style={{ color: "#6b5f3a" }}>dronk</span><span style={{ fontWeight: 700 }}>{show(dronk)}</span></div>
+                  {(() => {
+                    const cnt: Record<string, number> = {}
+                    rounds.forEach((r) => Object.entries(r.orders).forEach(([did, per]) => { const q = per?.[p.id] ?? 0; if (q > 0) cnt[did] = (cnt[did] ?? 0) + q }))
+                    const list = drinks.filter((d) => (cnt[d.id] ?? 0) > 0)
+                    if (list.length === 0) return null
+                    return <div style={{ fontSize: 11.5, color: "#8a7d55", padding: "1px 0 4px", lineHeight: 1.5 }}>{list.map((d) => `${cnt[d.id]}× ${d.name}`).join(" · ")}</div>
+                  })()}
                   {depositOn && Math.abs(waarborg) > 0.005 && <div style={{ ...S.row, justifyContent: "space-between", padding: "2px 0" }}><span style={{ color: "#6b5f3a" }}>waarborg (voorgeschoten)</span><span style={{ fontWeight: 700 }}>{show(waarborg)}</span></div>}
-                  {zelf > 0.005 && <div style={{ ...S.row, justifyContent: "space-between", padding: "2px 0" }}><span style={{ color: "#6b5f3a" }}>zelf betaald (rondjes)</span><span style={{ fontWeight: 700, color: "#1f8a4c" }}>−{show(zelf)}</span></div>}
+                  {zelf > 0.005 && <div style={{ ...S.row, justifyContent: "space-between", padding: "2px 0" }}><span style={{ color: "#6b5f3a" }}>zelf betaald</span><span style={{ fontWeight: 700, color: "#1f8a4c" }}>−{show(zelf)}</span></div>}
                   {inpot > 0.005 && <div style={{ ...S.row, justifyContent: "space-between", padding: "2px 0" }}><span style={{ color: "#6b5f3a" }}>in pot gelegd</span><span style={{ fontWeight: 700, color: "#1f8a4c" }}>−{show(inpot)}</span></div>}
                   {cardLossPer > 0.005 && <div style={{ ...S.row, justifyContent: "space-between", padding: "2px 0" }}><span style={{ color: "#6b5f3a" }}>verlies drankkaart (gedeeld)</span><span style={{ fontWeight: 700 }}>{show(cardLossPer)}</span></div>}
                   <div style={{ ...S.row, justifyContent: "space-between", padding: "5px 0 0", marginTop: 3, borderTop: "1px dashed rgba(120,95,20,0.25)" }}><span style={{ fontWeight: 800 }}>netto</span><span style={{ fontWeight: 800, color: nettoColor }}>{nettoLabel}</span></div>
@@ -1427,10 +1434,10 @@ export default function PartyTest() {
           )
         })}
         <div style={{ ...S.row, justifyContent: "space-between", padding: "9px 0 2px", borderTop: "2px solid rgba(120,95,20,0.25)", marginTop: 2 }}>
-          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 800 }}>Totaal <span style={{ fontSize: 11.5, fontWeight: 600, color: "#8a7d55" }}>({people.length} personen)</span> <span style={{ fontSize: 13, fontWeight: 800, color: "#1f8a4c" }}>· {show(grandTotal)}</span></span>
+          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 800 }}>Totaal <span style={{ fontSize: 13, fontWeight: 800, color: "#1f8a4c" }}>· {show(grandTotal)}</span></span>
           {showEqual && <span style={{ width: 96, textAlign: "right", fontSize: 12.5, fontWeight: 800, color: "#8a7d55" }}>{show(equalShare * people.length)}</span>}
         </div>
-        <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 8 }}>Tik een naam (of "bekijk details") voor de opbouw. <b>Aandeel</b> = wat je verteerde (telt op tot {show(grandTotal)}). <b>Netto</b> houdt rekening met wat je zelf betaalde en in de pot legde. <span onClick={() => setShowEqual((v) => !v)} style={{ color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{showEqual ? "verberg gelijke verdeling" : "toon gelijke verdeling"}</span></div>
+        <div style={{ fontSize: 11.5, marginTop: 10, textAlign: "right" }}><span onClick={() => setShowEqual((v) => !v)} style={{ color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{showEqual ? "verberg gelijke verdeling" : "toon gelijke verdeling"}</span></div>
       </div>
 
       <div style={S.card}>
