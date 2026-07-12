@@ -231,6 +231,57 @@ function numFilter(v: string, allowNeg = false): string {
   return s
 }
 
+// Verkleint een foto vóór verzending naar de AI. Een gsm-camerafoto is al snel 3-12 MB;
+// als base64 wordt dat nog ~33% groter en weigert de server het verzoek (te grote body).
+// Max ~1600px breed + JPEG-kwaliteit 0.82 brengt dat terug naar ~200-400 kB: ruim genoeg om te lezen.
+async function fileToScaledBase64(file: File, maxW = 1600, quality = 0.82): Promise<string> {
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const im = new Image()
+      im.onload = () => resolve(im)
+      im.onerror = () => reject(new Error("image decode failed"))
+      im.src = URL.createObjectURL(file)
+    })
+    const scale = img.naturalWidth > maxW ? maxW / img.naturalWidth : 1
+    const canvas = document.createElement("canvas")
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale))
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale))
+    const ctx = canvas.getContext("2d")
+    if (!ctx) { URL.revokeObjectURL(img.src); return fileToBase64(file) }
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    URL.revokeObjectURL(img.src)
+    const dataUrl = canvas.toDataURL("image/jpeg", quality)
+    return dataUrl.split(",")[1]
+  } catch {
+    return fileToBase64(file)
+  }
+}
+
+// Verkleinde JPEG-versie van de bon voor opslag (Supabase). Scheelt fors in opslagruimte:
+// een gsm-foto van 3-12 MB wordt zo ~200-400 kB, nog steeds prima leesbaar bij het nakijken.
+async function fileToScaledBlob(file: File, maxW = 1600, quality = 0.82): Promise<Blob> {
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const im = new Image()
+      im.onload = () => resolve(im)
+      im.onerror = () => reject(new Error("image decode failed"))
+      im.src = URL.createObjectURL(file)
+    })
+    const scale = img.naturalWidth > maxW ? maxW / img.naturalWidth : 1
+    const canvas = document.createElement("canvas")
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale))
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale))
+    const ctx = canvas.getContext("2d")
+    if (!ctx) { URL.revokeObjectURL(img.src); return file }
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    URL.revokeObjectURL(img.src)
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob((b) => res(b), "image/jpeg", quality))
+    return blob && blob.size < file.size ? blob : file
+  } catch {
+    return file
+  }
+}
+
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -245,19 +296,21 @@ function fileToBase64(file: File): Promise<string> {
 
 // Hoofd-scan: probeer eerst de AI-route (Gemini). Lukt dat niet (geen sleutel, fout, niets herkend),
 // dan valt hij automatisch terug op de lokale Tesseract-scan.
-async function scanReceipt(file: File, onProgress?: (p: number) => void): Promise<{ items: ParsedItem[] | null; total: number | null; reason: "unavailable" | "empty" | null }> {
+async function scanReceipt(file: File, onProgress?: (p: number) => void): Promise<{ items: ParsedItem[] | null; total: number | null; reason: "unavailable" | "empty" | null; status?: number; detail?: string }> {
   try {
     onProgress?.(0.15)
-    const imageBase64 = await fileToBase64(file)
+    const imageBase64 = await fileToScaledBase64(file)
     const resp = await fetch("/api/scan-receipt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageBase64, mimeType: file.type || "image/jpeg" }),
+      body: JSON.stringify({ imageBase64, mimeType: "image/jpeg" }),
     })
     onProgress?.(0.85)
     if (!resp.ok) {
-      console.warn("AI-scan niet beschikbaar (status " + resp.status + ")")
-      return { items: null, total: null, reason: "unavailable" }
+      let detail = ""
+      try { detail = (await resp.text()).slice(0, 200) } catch { /* negeer */ }
+      console.warn("AI-scan mislukt — status " + resp.status + " " + detail)
+      return { items: null, total: null, reason: "unavailable", status: resp.status, detail }
     }
     const data = await resp.json()
     if (Array.isArray(data?.items)) {
@@ -419,6 +472,8 @@ const STRINGS = {
     scanningBusy: "⏳ Bezig met scannen — even geduld",
     otherPhoto: "📷 Andere foto kiezen",
     pickPhoto: "📷 Foto maken / kiezen",
+    takePhoto: "Foto maken",
+    fromGallery: "Uit galerij",
     scanFailUnavailTitle: "😕 De slimme scan is even niet beschikbaar",
     scanFailUnavailBody: "De AI-herkenning is momenteel overbelast of tijdelijk offline. Wacht heel even en probeer opnieuw — meestal is ze na een halve minuut terug. Je foto blijft bewaard.",
     retryIn: (s: number) => `🔄 Opnieuw proberen over ${s}s`,
@@ -786,6 +841,8 @@ const STRINGS = {
     scanningBusy: "⏳ Scan en cours — un instant",
     otherPhoto: "📷 Choisir une autre photo",
     pickPhoto: "📷 Prendre / choisir une photo",
+    takePhoto: "Prendre une photo",
+    fromGallery: "Depuis la galerie",
     scanFailUnavailTitle: "😕 Le scan intelligent est momentanément indisponible",
     scanFailUnavailBody: "La reconnaissance IA est surchargée ou temporairement hors ligne. Attends un instant et réessaie — elle revient généralement après une demi-minute. Ta photo est conservée.",
     retryIn: (s: number) => `🔄 Réessayer dans ${s}s`,
@@ -1128,7 +1185,7 @@ export default function RundoTable() {
   const [scanFlags, setScanFlags] = useState<Record<string, { note: string }>>({})
   const [scanning, setScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState(0)
-  const [scanFail, setScanFail] = useState<null | { reason: "unavailable" | "empty" }>(null)
+  const [scanFail, setScanFail] = useState<null | { reason: "unavailable" | "empty"; status?: number; detail?: string }>(null)
   const [cooldownUntil, setCooldownUntil] = useState(0)
   const [nowTs, setNowTs] = useState<number>(() => Date.now())
   const [scanPreview, setScanPreview] = useState<ParsedItem[]>([])
@@ -1566,7 +1623,7 @@ export default function RundoTable() {
     if (!res.items || res.items.length === 0) {
       const reason = res.reason ?? "empty"
       if (reason === "unavailable") setCooldownUntil(Date.now() + 45 * 1000)
-      setScanFail({ reason })
+      setScanFail({ reason, status: res.status, detail: res.detail })
       return
     }
     setScanSource("ai")
@@ -1600,7 +1657,7 @@ export default function RundoTable() {
     if (!res.items || res.items.length === 0) {
       const reason = res.reason ?? "empty"
       if (reason === "unavailable") setCooldownUntil(Date.now() + 45 * 1000)
-      setScanFail({ reason })
+      setScanFail({ reason, status: res.status, detail: res.detail })
       return // AI mislukt -> de huidige (lokale) items blijven gewoon staan
     }
     // AI gelukt -> vervang alles: oude items + toewijzingen wissen, dan de AI-items toevoegen
@@ -1618,9 +1675,10 @@ export default function RundoTable() {
     setReceiptConfirmed(false); setReceiptEditing(false)
     let receiptUrl = group.receipt_url ?? null
     if (file) {
-      const ext = (file.name.split(".").pop() || "jpg").toLowerCase()
+      const uploadBlob = await fileToScaledBlob(file)
+      const ext = uploadBlob === (file as Blob) ? ((file.name.split(".").pop() || "jpg").toLowerCase()) : "jpg"
       const path = `${group.id}/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from("receipts").upload(path, file, { upsert: true })
+      const { error: upErr } = await supabase.storage.from("receipts").upload(path, uploadBlob, { upsert: true, contentType: uploadBlob.type || "image/jpeg" })
       if (upErr) { setToast(L.errPhotoSave) }
       else {
         receiptUrl = supabase.storage.from("receipts").getPublicUrl(path).data.publicUrl
@@ -2842,10 +2900,20 @@ export default function RundoTable() {
             <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800 }}>{L.scanModalTitle}</h3>
             <p style={{ fontSize: 12.5, color: "#999", marginBottom: 14 }}>{L.scanModalIntro}</p>
 
-            <label style={{ ...S.btn, ...S.btnPrimary, display: "block", textAlign: "center", marginBottom: 14, cursor: scanning ? "default" : "pointer", fontWeight: 700, padding: "14px 0", opacity: scanning ? 0.6 : 1 }}>
-              {scanning ? L.scanningBusy : scanPreview.length > 0 ? L.otherPhoto : L.pickPhoto}
-              <input type="file" accept="image/*" disabled={scanning} style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
-            </label>
+            {scanning ? (
+              <div style={{ ...S.btn, ...S.btnPrimary, textAlign: "center", marginBottom: 14, fontWeight: 700, padding: "14px 0", opacity: 0.6 }}>{L.scanningBusy}</div>
+            ) : (
+              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                <label style={{ ...S.btn, ...S.btnPrimary, flex: 1, display: "block", textAlign: "center", cursor: "pointer", fontWeight: 700, padding: "13px 0" }}>
+                  📷 {L.takePhoto}
+                  <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
+                </label>
+                <label style={{ ...S.btn, flex: 1, display: "block", textAlign: "center", cursor: "pointer", fontWeight: 700, padding: "13px 0" }}>
+                  🖼️ {L.fromGallery}
+                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
+                </label>
+              </div>
+            )}
 
             {scanning && (
               <div style={{ marginBottom: 14 }}>
@@ -2863,6 +2931,7 @@ export default function RundoTable() {
                     <div style={{ fontSize: 14, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>{L.scanFailUnavailTitle}</div>
                     <div style={{ fontSize: 12.5, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.scanFailUnavailBody}</div>
                     <button onClick={retryAiScan} disabled={cooldownLeft > 0} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 14, fontWeight: 800, opacity: cooldownLeft > 0 ? 0.55 : 1, cursor: cooldownLeft > 0 ? "default" : "pointer" }}>{cooldownLeft > 0 ? L.retryIn(cooldownLeft) : L.retryNow}</button>
+                    {scanFail.status ? <div style={{ fontSize: 10.5, color: "#9aa0ab", marginTop: 8, wordBreak: "break-word" }}>technisch: {scanFail.status}{scanFail.detail ? " — " + scanFail.detail : ""}</div> : null}
                   </>
                 ) : (
                   <>
