@@ -511,6 +511,10 @@ const STRINGS = {
     scanDoubtPost: ". Controleer even de naam, het aantal en de prijs.",
     notAssignedYet: "nog niet toegewezen",
     sharedItemNoteShort: "Gedeeld item — de prijs wordt verdeeld over wie meedeelt.",
+    zeroPriceWarn: "Geen prijs (€0,00) — vul de prijs in of verwijder dit item.",
+    zeroPriceShort: "€0,00 — geen prijs",
+    zeroPriceDelete: "Verwijderen",
+    zeroPriceFix: "Prijs invullen",
     whoTookThis: "Wie nam hiervan mee?",
     tapNames: "tik de namen aan",
     shareFixedBtn: "🔒 vastgezet",
@@ -690,7 +694,20 @@ const STRINGS = {
     totalSharedByDrinkers: " totaal · wordt gedeeld door wie meedrinkt",
     iShareYes: "✓ ik deel mee",
     iShareNo: "+ meedelen",
-    withHowMany: (seats: number) => `🍴 Met hoeveel van jullie ${seats} deelden jullie dit?`,
+    withHowMany: (seats: number) => `🍴 Wie van jullie ${seats} deelde hiervan mee?`,
+    onlyMe: "Alleen ik",
+    bothOfUs: "Wij allebei",
+    nOfUs: (n: number) => `Wij met ${n}`,
+    makeSharedTitle: "Dit item delen?",
+    makeSharedBody: "De prijs wordt dan verdeeld over iedereen die meedeelt.",
+    makeSharedWipe: "De huidige toewijzingen van dit item worden gewist — iedereen duidt opnieuw aan of hij meedeelt.",
+    makeSharedYes: "Omzetten naar gedeeld",
+    makeUnsharedTitle: "Delen stopzetten?",
+    makeUnsharedBody: "Dit item wordt dan weer per stuk toegewezen.",
+    makeSharedCancel: "Annuleren",
+    sharedBadge: "GEDEELD",
+    makeSharedShort: "delen",
+    shareLocked: "Vastgezet door de beheerder",
     yourShareLabel: "Jouw deel: €",
     forNPers: (n: number) => ` (voor ${n} pers.)`,
     sharedByMid: " — gedeeld door ",
@@ -880,6 +897,10 @@ const STRINGS = {
     scanDoubtPost: ". Vérifie le nom, la quantité et le prix.",
     notAssignedYet: "pas encore attribué(s)",
     sharedItemNoteShort: "Article partagé — le prix est réparti entre ceux qui le partagent.",
+    zeroPriceWarn: "Pas de prix (0,00 €) — indiquez le prix ou supprimez cet article.",
+    zeroPriceShort: "0,00 € — pas de prix",
+    zeroPriceDelete: "Supprimer",
+    zeroPriceFix: "Indiquer le prix",
     whoTookThis: "Qui en a pris ?",
     tapNames: "touche les noms",
     shareFixedBtn: "🔒 fixé",
@@ -1059,7 +1080,20 @@ const STRINGS = {
     totalSharedByDrinkers: " au total · réparti entre ceux qui en boivent",
     iShareYes: "✓ je participe",
     iShareNo: "+ participer",
-    withHowMany: (seats: number) => `🍴 Vous étiez combien à partager ceci (sur ${seats}) ?`,
+    withHowMany: (seats: number) => `🍴 Qui de vous ${seats} a partagé ceci ?`,
+    onlyMe: "Moi seulement",
+    bothOfUs: "Nous deux",
+    nOfUs: (n: number) => `Nous ${n}`,
+    makeSharedTitle: "Partager cet article ?",
+    makeSharedBody: "Le prix sera réparti entre tous ceux qui partagent.",
+    makeSharedWipe: "Les attributions actuelles de cet article seront effacées — chacun réindique s'il partage.",
+    makeSharedYes: "Convertir en partagé",
+    makeUnsharedTitle: "Arrêter le partage ?",
+    makeUnsharedBody: "Cet article sera de nouveau attribué à l'unité.",
+    makeSharedCancel: "Annuler",
+    sharedBadge: "PARTAGÉ",
+    makeSharedShort: "partager",
+    shareLocked: "Verrouillé par l'administrateur",
     yourShareLabel: "Ta part : €",
     forNPers: (n: number) => ` (pour ${n} pers.)`,
     sharedByMid: " — partagé par ",
@@ -1212,6 +1246,7 @@ export default function RundoTable() {
   const [taxModal, setTaxModal] = useState<null | { name: string; amount: string; scope: "all" | "items"; ids: string[] }>(null)
   const [recentItemId, setRecentItemId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [shareConfirm, setShareConfirm] = useState<BillItem | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [asleep, setAsleep] = useState(false)
   const [manageGuests, setManageGuests] = useState(false)
@@ -1857,7 +1892,17 @@ export default function RundoTable() {
   const toggleShared = async (it: BillItem) => {
     if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     if (!group) return
-    await supabase.from("table_items").update({ is_shared: !it.is_shared }).eq("id", it.id)
+    if (it.share_fixed && !isAdmin) { setToast(L.shareLocked); return }
+    // Omzetten verandert de betekenis van bestaande toewijzingen; daarom eerst bevestigen.
+    const hasClaims = claims.some((c) => c.item_id === it.id && c.quantity > 0)
+    if (hasClaims) { setShareConfirm(it); return }
+    await applyToggleShared(it)
+  }
+  const applyToggleShared = async (it: BillItem) => {
+    if (!group) return
+    // Toewijzingen van dit item wissen: "2 stuks" betekent iets anders dan "deelt mee met 2".
+    await supabase.from("table_claims").delete().eq("group_id", group.id).eq("item_id", it.id)
+    await supabase.from("table_items").update({ is_shared: !it.is_shared, share_fixed: false }).eq("id", it.id)
     await loadAll(group.id)
   }
 
@@ -1916,7 +1961,9 @@ export default function RundoTable() {
   const toggleShareClaim = async (itemId: string, pid: string) => {
     if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     const mine = myQty(itemId, pid)
-    await setClaim(itemId, pid, mine > 0 ? 0 : seatsOf(pid))
+    // Start altijd op 1 persoon. Vertegenwoordig je er meer, dan vraagt de app expliciet
+    // hoeveel van jullie meedeelden — zo betaal je nooit ongemerkt voor twee.
+    await setClaim(itemId, pid, mine > 0 ? 0 : 1)
   }
 
   const shareHeads = (itemId: string) =>
@@ -2633,7 +2680,7 @@ export default function RundoTable() {
             participants={participants}
             claimedQty={claimedQty} myQty={myQty} sharerIds={sharerIds}
             shareHeads={shareHeads} myShareHeads={myShareHeads} seatsOf={seatsOf} setSeats={setSeats}
-            setClaim={setClaim} toggleShareClaim={toggleShareClaim}
+            setClaim={setClaim} toggleShareClaim={toggleShareClaim} onToggleShared={toggleShared}
             itemTotal={itemTotal} personTotal={personTotal} personItems={personItems}
             sharedRevealed={sharedRevealed} allConfirmed={allConfirmed} isConfirmed={isConfirmed} explicitConfirmed={explicitConfirmed}
             claimMode={claimMode} setClaimMode={setClaimMode} claimPid={claimPid} setClaimPid={setClaimPid}
@@ -3212,6 +3259,20 @@ export default function RundoTable() {
       )}
 
       {/* ─── Modal: bon groot bekijken ─── */}
+      {shareConfirm && (
+        <div style={S.overlay} onClick={() => setShareConfirm(null)}>
+          <div style={{ ...S.card, maxWidth: 380, width: "100%", margin: 0 }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ ...S.h3, marginBottom: 6 }}>{shareConfirm.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}</h3>
+            <div style={{ fontSize: 13.5, color: "#14213a", fontWeight: 700, marginBottom: 6 }}>{shareConfirm.quantity}× {shareConfirm.name}</div>
+            <div style={{ fontSize: 13, color: "#5a6680", lineHeight: 1.5, marginBottom: 8 }}>{shareConfirm.is_shared ? L.makeUnsharedBody : L.makeSharedBody}</div>
+            <div style={{ fontSize: 12.5, color: "#b5591a", background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 10, padding: "8px 11px", lineHeight: 1.45, marginBottom: 14 }}>⚠️ {L.makeSharedWipe}</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => setShareConfirm(null)}>{L.makeSharedCancel}</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 800 }} onClick={async () => { const it = shareConfirm; setShareConfirm(null); await applyToggleShared(it) }}>{shareConfirm.is_shared ? L.makeUnsharedTitle : L.makeSharedYes}</button>
+            </div>
+          </div>
+        </div>
+      )}
       {viewReceipt && (
         <div style={S.overlay} onClick={() => setViewReceipt(null)}>
           <div style={{ position: "relative", maxWidth: "92vw", maxHeight: "90vh" }} onClick={(e) => e.stopPropagation()}>
@@ -3292,22 +3353,24 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         const open = it.quantity - claimedQty(it.id)
         const who = claimsForItem(it.id)
         const isNew = recentItemId === it.id
+        const zeroPrice = it.unit_price <= 0.0001
         return (
-          <div key={it.id} style={{ padding: "9px 8px", borderRadius: (isNew || billOk) ? 12 : 0, marginTop: (isNew || billOk) ? 4 : 0, marginBottom: (isNew || billOk) ? 6 : 0, background: isNew ? "rgba(233,196,95,0.16)" : billOk ? "rgba(39,174,96,0.06)" : "transparent", border: isNew ? "1.5px solid #ecc85a" : billOk ? "1.5px solid rgba(39,174,96,0.55)" : "1px solid transparent", borderBottom: isNew ? "1.5px solid #ecc85a" : billOk ? "1.5px solid rgba(39,174,96,0.55)" : "1px solid rgba(0,0,0,0.05)" }}>
+          <div key={it.id} style={{ padding: "9px 8px", borderRadius: (isNew || billOk || zeroPrice || it.is_shared) ? 12 : 0, marginTop: (isNew || billOk || zeroPrice || it.is_shared) ? 4 : 0, marginBottom: (isNew || billOk || zeroPrice || it.is_shared) ? 6 : 0, background: zeroPrice ? "rgba(192,57,43,0.06)" : isNew ? "rgba(233,196,95,0.16)" : it.is_shared ? "rgba(233,196,95,0.1)" : billOk ? "rgba(39,174,96,0.06)" : "transparent", border: zeroPrice ? "1.5px solid rgba(192,57,43,0.5)" : isNew ? "1.5px solid #ecc85a" : it.is_shared ? "1.5px solid rgba(196,152,32,0.45)" : billOk ? "1.5px solid rgba(39,174,96,0.55)" : "1px solid transparent", borderBottom: zeroPrice ? "1.5px solid rgba(192,57,43,0.5)" : isNew ? "1.5px solid #ecc85a" : it.is_shared ? "1.5px solid rgba(196,152,32,0.45)" : billOk ? "1.5px solid rgba(39,174,96,0.55)" : "1px solid rgba(0,0,0,0.05)" }}>
             {isNew && <div style={{ fontSize: 10.5, fontWeight: 800, color: "#a06b00", marginBottom: 4 }}>{L.justAddedEdit}</div>}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {it.is_shared && <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={20} /></span>}
               <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0, display: "flex", alignItems: "baseline", gap: 6 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0, display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
                   <span>{it.quantity}× {showTip(it.name, L)}</span>
+                  {it.is_shared && <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.04em", color: "#7a5300", background: "rgba(233,196,95,0.45)", border: "1px solid rgba(196,152,32,0.5)", borderRadius: 7, padding: "1px 7px" }}>{L.sharedBadge}</span>}
                   {scanFlags?.[it.id] && (
                     <button onClick={() => setOpenFlag(openFlag === it.id ? null : it.id)} title={L.scanDoubtTitle} style={{ flexShrink: 0, width: 18, height: 18, borderRadius: "50%", border: "none", background: "#f39c12", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>?</button>
                   )}
                 </div>
                 <div style={{ flexShrink: 0, textAlign: "right", lineHeight: 1.2 }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: "#1499b0" }}>€{(it.unit_price * it.quantity).toFixed(2).replace(".", ",")}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#9aa0ab" }}>
-                    {it.is_shared ? L.sharedWord : `€${it.unit_price.toFixed(2).replace(".", ",")}${L.perPieceSuffix}${open > 0 ? ` · ${open} ${L.openWord}` : ""}`}
+                  <div style={{ fontSize: 15, fontWeight: 800, color: zeroPrice ? "#c0392b" : "#1499b0" }}>€{(it.unit_price * it.quantity).toFixed(2).replace(".", ",")}</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: zeroPrice ? "#c0392b" : "#9aa0ab" }}>
+                    {zeroPrice ? L.zeroPriceShort : it.is_shared ? L.sharedWord : `€${it.unit_price.toFixed(2).replace(".", ",")}${L.perPieceSuffix}${open > 0 ? ` · ${open} ${L.openWord}` : ""}`}
                   </div>
                 </div>
               </div>
@@ -3315,6 +3378,15 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
               <button style={S.iconBtn} onClick={() => onEdit(it)}>✏️</button>
               <button style={S.iconBtn} onClick={() => onDelete(it.id)}>🗑️</button>
             </div>
+            {zeroPrice && (
+              <div style={{ marginTop: 6, marginLeft: 26, fontSize: 12, color: "#c0392b", background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.4)", borderRadius: 8, padding: "7px 10px", lineHeight: 1.45 }}>
+                ⚠️ {L.zeroPriceWarn}
+                <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
+                  <button onClick={() => onEdit(it)} style={{ ...S.btn, padding: "6px 11px", fontSize: 12, fontWeight: 700 }}>{L.zeroPriceFix}</button>
+                  <button onClick={() => onDelete(it.id)} style={{ ...S.btn, padding: "6px 11px", fontSize: 12, fontWeight: 700, color: "#c0392b", borderColor: "rgba(192,57,43,0.4)" }}>🗑️ {L.zeroPriceDelete}</button>
+                </div>
+              </div>
+            )}
             {scanFlags?.[it.id] && openFlag === it.id && (
               <div style={{ marginTop: 6, marginLeft: 26, fontSize: 12, color: "#b5591a", background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 8, padding: "6px 10px", lineHeight: 1.4 }}>
                 {L.scanDoubtPre}{scanFlags[it.id].note ? ": " + scanFlags[it.id].note : ""}{L.scanDoubtPost}
@@ -3451,6 +3523,7 @@ function ClaimScreen(props: {
   shareHeads: (id: string) => number; myShareHeads: (id: string, pid: string) => number; seatsOf: (pid: string) => number
   setSeats: (pid: string, n: number) => void
   setClaim: (itemId: string, pid: string, qty: number) => void; toggleShareClaim: (itemId: string, pid: string) => void
+  onToggleShared: (it: BillItem) => void
   itemTotal: (it: BillItem) => number; personTotal: (pid: string) => { settled: number; pendingShared: boolean }
   personItems: (pid: string) => { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number }[]
   sharedRevealed: (it: BillItem) => boolean; allConfirmed: boolean; isConfirmed: (pid: string) => boolean; explicitConfirmed: (pid: string) => boolean
@@ -3461,7 +3534,7 @@ function ClaimScreen(props: {
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
+  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, onToggleShared, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
   const adminPid = props.claimPid, setAdminPid = props.setClaimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   const [disputeOpen, setDisputeOpen] = useState(false)
@@ -3719,17 +3792,27 @@ function ClaimScreen(props: {
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={18} /></span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>{it.name} <span style={{ fontSize: 11, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 8, padding: "1px 7px" }}>{L.sharedWord}</span></div>
-                    <div style={{ fontSize: 11, color: "#999" }}>€{itemTotal(it).toFixed(2).replace(".", ",")}{L.totalSharedByDrinkers}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <span>{it.name}</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.04em", color: "#7a5300", background: "rgba(233,196,95,0.45)", border: "1px solid rgba(196,152,32,0.5)", borderRadius: 7, padding: "1px 7px" }}>{L.sharedBadge}</span>
+                      {!fixed && <button onClick={() => onToggleShared(it)} title={L.makeUnsharedTitle} style={{ border: "none", background: "none", color: "#8a93a3", fontSize: 11, fontWeight: 700, cursor: "pointer", textDecoration: "underline", padding: 0 }}>✕</button>}
+                    </div>
+                    <div style={{ fontSize: 11, color: it.unit_price <= 0.0001 ? "#c0392b" : "#999", fontWeight: it.unit_price <= 0.0001 ? 700 : 400 }}>{it.unit_price <= 0.0001 ? `⚠️ ${L.zeroPriceShort}` : `€${itemTotal(it).toFixed(2).replace(".", ",")}${L.totalSharedByDrinkers}`}</div>
                   </div>
                   <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...(iShare ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", border: "none" } : {}) }}>{iShare ? L.iShareYes : L.iShareNo}</button>
                 </div>
                 {iShare && mySeats > 1 && !fixed && (
-                  <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#5a6680", background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.2)", borderRadius: 10, padding: "7px 11px" }}>
-                    <span style={{ flex: 1 }}>{L.withHowMany(mySeats)}</span>
-                    <button onClick={() => setClaim(it.id, meId, Math.max(1, myHeads - 1))} style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 16 }} title={L.fewerPersons} disabled={myHeads <= 1}>−</button>
-                    <b style={{ minWidth: 18, textAlign: "center", fontSize: 15, color: "#14213a" }}>{myHeads}</b>
-                    <button onClick={() => setClaim(it.id, meId, Math.min(mySeats, myHeads + 1))} style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 16, background: "rgba(27,42,74,0.12)" }} disabled={myHeads >= mySeats}>+</button>
+                  <div style={{ marginTop: 9, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.35)", borderRadius: 12, padding: "10px 11px" }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#14213a", marginBottom: 8 }}>{L.withHowMany(mySeats)}</div>
+                    <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                      {Array.from({ length: mySeats }, (_, i) => i + 1).map((n) => {
+                        const on = myHeads === n
+                        const label = mySeats === 2 ? (n === 1 ? L.onlyMe : L.bothOfUs) : (n === 1 ? L.onlyMe : L.nOfUs(n))
+                        return (
+                          <button key={n} onClick={() => setClaim(it.id, meId, n)} style={{ flex: 1, minWidth: 96, fontSize: 13, fontWeight: 800, padding: "10px 6px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
+                        )
+                      })}
+                    </div>
                   </div>
                 )}
                 {iShare && (
@@ -3757,9 +3840,12 @@ function ClaimScreen(props: {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.name}</span>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: "#1499b0", flexShrink: 0 }}>€{it.unit_price.toFixed(2).replace(".", ",")}</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: it.unit_price <= 0.0001 ? "#c0392b" : "#1499b0", flexShrink: 0 }}>€{it.unit_price.toFixed(2).replace(".", ",")}</span>
+                  <button onClick={() => onToggleShared(it)} title={L.makeSharedTitle} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 3, border: "1px solid rgba(16,24,40,0.15)", background: "#fff", borderRadius: 8, padding: "2px 7px", fontSize: 10.5, fontWeight: 800, color: "#5a6680", cursor: "pointer" }}><ShareIcon on={false} size={12} /> {L.makeSharedShort}</button>
                 </div>
-                <div style={{ fontSize: 11, color: open > 0 ? "#e0685c" : "#1f8a4c", fontWeight: 600 }}>{total}{L.orderedMid}{open > 0 ? L.stillFree(open) : L.allClaimedWord}</div>
+                {it.unit_price <= 0.0001
+                  ? <div style={{ fontSize: 11, color: "#c0392b", fontWeight: 700 }}>⚠️ {L.zeroPriceShort}</div>
+                  : <div style={{ fontSize: 11, color: open > 0 ? "#e0685c" : "#1f8a4c", fontWeight: 600 }}>{total}{L.orderedMid}{open > 0 ? L.stillFree(open) : L.allClaimedWord}</div>}
               </div>
               <button style={{ width: 42, height: 34, fontSize: 20, fontWeight: 800, lineHeight: 1, borderRadius: 8, cursor: mine > 0 ? "pointer" : "default", color: mine > 0 ? "#c0392b" : "#c9ced8", background: "#fff", border: "2px solid " + (mine > 0 ? "#2b2f38" : "#e2e6ee") }} onClick={() => setClaim(it.id, meId, Math.max(0, mine - 1))} disabled={mine <= 0} title={L.removeOne}>−</button>
               <span style={{ fontSize: 16, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{mine}</span>
