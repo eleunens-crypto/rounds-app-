@@ -58,7 +58,7 @@ export default function Home() {
         </p>
 
         {/* PARTY-kaart — warm geel */}
-        <Link href="/party" style={{ textDecoration: "none" }}>
+        <Link href="/party-test" style={{ textDecoration: "none" }}>
           <div style={{ ...S.modeCard, ...S.partyCard }} className="rundo-card rundo-card-party">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/party-image.png" alt="" style={S.cardPhoto} />
