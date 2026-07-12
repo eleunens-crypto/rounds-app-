@@ -426,10 +426,11 @@ const STRINGS = {
     howManySub: "Zet het aantal en pas de namen aan — of deel de groep en laat iedereen zichzelf invullen.",
     personsCount: (n: number) => `${n} ${n === 1 ? "persoon" : "personen"}`,
     howFillIn: "Hoe aanduiden wat iedereen at/dronk?",
-    optShare: "📱 Zij doen het",
-    optShareSub: "deel de link of QR",
-    optSelf: "✍️ Ik doe het",
-    optSelfSub: "voor wie geen gsm heeft",
+    optShare: "📱 Laat hen meedoen",
+    optShareSub: "stuur de link of toon de QR",
+    optSelf: "✍️ Ik doe het voor hen",
+    optSelfSub: "namen invullen & zelf aanduiden",
+    sharePopupSub: "Ze kiezen zelf een vrije plaats, zetten hun naam erop en tikken aan wat ze aten.",
     mixHint: "Gebruik gerust allebei — het één sluit het ander niet uit.",
     meLabel: "jij",
     ownNamePlaceholder: "Zet hier je eigen naam",
@@ -857,10 +858,11 @@ const STRINGS = {
     howManySub: "Règle le nombre et adapte les noms — ou partage le groupe et laisse chacun se compléter.",
     personsCount: (n: number) => `${n} ${n === 1 ? "personne" : "personnes"}`,
     howFillIn: "Comment indiquer ce que chacun a pris ?",
-    optShare: "📱 Ils le font",
-    optShareSub: "partage le lien ou le QR",
-    optSelf: "✍️ Je le fais",
-    optSelfSub: "pour ceux sans smartphone",
+    optShare: "📱 Fais-les participer",
+    optShareSub: "envoie le lien ou montre le QR",
+    optSelf: "✍️ Je le fais pour eux",
+    optSelfSub: "remplir les noms & cocher soi-même",
+    sharePopupSub: "Ils choisissent une place libre, y mettent leur nom et cochent ce qu'ils ont pris.",
     mixHint: "Utilisez les deux — l'un n'exclut pas l'autre.",
     meLabel: "toi",
     ownNamePlaceholder: "Mets ton propre nom ici",
@@ -1325,6 +1327,8 @@ export default function RundoTable() {
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [newGuest, setNewGuest] = useState("")
+  const [showNames, setShowNames] = useState(false)
+  const [sharePopup, setSharePopup] = useState(false)
   const [claimSpot, setClaimSpot] = useState<string | null>(null)
   const [claimSeats, setClaimSeats] = useState(1)
   const [claimNames, setClaimNames] = useState<string[]>([""])
@@ -2677,14 +2681,14 @@ export default function RundoTable() {
               <div style={{ marginTop: 12, paddingBottom: 12, borderBottom: "1px solid rgba(16,24,40,0.08)" }}>
                 <div style={{ fontSize: 15, fontWeight: 800, color: "#14213a", lineHeight: 1.4, marginBottom: 10 }}>{L.personsCount(participants.length)} · {L.howFillIn}</div>
                 <div style={{ display: "flex", alignItems: "stretch", gap: 8 }}>
-                  <button onClick={() => setAdminTab("overview")} style={{ flex: 1, border: "1.5px solid rgba(27,42,74,0.22)", background: "#fff", borderRadius: 12, padding: "12px 8px", cursor: "pointer", textAlign: "center" }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.optSelf}</div>
-                    <div style={{ fontSize: 11, color: "#9aa0ab", lineHeight: 1.4 }}>{L.optSelfSub}</div>
+                  <button onClick={() => setShowNames((v) => !v)} style={{ flex: 1, border: showNames ? "1.5px solid transparent" : "1.5px solid rgba(27,42,74,0.22)", background: showNames ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", borderRadius: 12, padding: "12px 8px", cursor: "pointer", textAlign: "center" }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.optSelf} {showNames ? "▾" : ""}</div>
+                    <div style={{ fontSize: 11, color: showNames ? "#7a5300" : "#9aa0ab", lineHeight: 1.4 }}>{L.optSelfSub}</div>
                   </button>
                   <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
                     <span style={{ fontSize: 11, fontWeight: 800, color: "#1499b0", background: "rgba(20,153,176,0.12)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 20, padding: "3px 8px" }}>&amp;</span>
                   </div>
-                  <button onClick={() => document.getElementById("share-card")?.scrollIntoView({ behavior: "smooth", block: "start" })} style={{ flex: 1, border: "1.5px solid rgba(20,153,176,0.45)", background: "rgba(20,153,176,0.05)", borderRadius: 12, padding: "12px 8px", cursor: "pointer", textAlign: "center" }}>
+                  <button onClick={() => setSharePopup(true)} style={{ flex: 1, border: "1.5px solid rgba(20,153,176,0.45)", background: "rgba(20,153,176,0.05)", borderRadius: 12, padding: "12px 8px", cursor: "pointer", textAlign: "center" }}>
                     <div style={{ fontSize: 13, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.optShare}</div>
                     <div style={{ fontSize: 11, color: "#9aa0ab", lineHeight: 1.4 }}>{L.optShareSub}</div>
                   </button>
@@ -2694,14 +2698,14 @@ export default function RundoTable() {
             )}
 
 
-            {participants.length > 0 && (
+            {showNames && participants.length > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 12, marginBottom: 2 }}>
                 <span style={{ fontSize: 11.5, fontWeight: 700, color: "#9aa0ab" }}>{participants.length} {participants.length === 1 ? L.person : L.persons} {L.editNameHint}</span>
                 <button onClick={() => setManageGuests((v) => !v)} style={{ ...S.smallBtn, flexShrink: 0, ...(manageGuests ? { borderColor: "rgba(224,107,94,0.6)", color: "#c0392b", background: "rgba(224,107,94,0.06)" } : {}) }}>{manageGuests ? L.manageDone : L.manageDelete}</button>
               </div>
             )}
 
-            {(() => {
+            {showNames && (() => {
               const twoCol = participants.length > 5
               const isPlaceholderName = (p: Participant) => new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName
               const splitNames = (p: Participant) => {
@@ -2781,7 +2785,14 @@ export default function RundoTable() {
             })()}
           </div>
 
-          <div id="share-card" style={{ ...S.card, order: 2 }}>
+          {sharePopup && (
+            <div style={S.overlay} onClick={() => setSharePopup(false)}>
+              <div style={{ ...S.card, maxWidth: 420, width: "100%", margin: 0, maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
+                  <h3 style={{ ...S.h3, marginBottom: 0 }}>{L.optShare}</h3>
+                  <button onClick={() => setSharePopup(false)} style={{ ...S.iconBtn, flexShrink: 0 }}>✕</button>
+                </div>
+                <div style={{ fontSize: 12.5, color: "#5a6680", lineHeight: 1.5, marginBottom: 13 }}>{L.sharePopupSub}</div>
             {(() => {
               const entered = group?.receipt_total ?? null
               const match = entered != null && Math.abs(entered - billTotal) < 0.005
@@ -2793,7 +2804,6 @@ export default function RundoTable() {
                 </div>
               )
             })()}
-            <h3 style={S.h3}>{L.guestsTitle1}</h3>
             <div style={{ marginTop: -2, marginBottom: 14 }}>
               {L.guestsSteps.map((s, i) => (
                 <div key={i} style={{ display: "flex", gap: 8, fontSize: 13, color: "#3b486a", marginBottom: 5, lineHeight: 1.4 }}>
@@ -2818,7 +2828,9 @@ export default function RundoTable() {
                 </div>
               )
             })()}
-          </div>
+              </div>
+            </div>
+          )}
 
           <button onClick={() => setAdminTab("overview")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 700 }}>{L.toAssignBtn}</button>
         </div>
