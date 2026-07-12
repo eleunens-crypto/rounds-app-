@@ -1040,7 +1040,7 @@ export default function PartyTest() {
                 </div>
               ))}
               <button style={{ ...S.btnP, opacity: cupsBlock ? 0.5 : 1 }} onClick={() => !cupsBlock && commitRound()}>✅ Bevestig rondje ({roundItems} drankje{roundItems === 1 ? "" : "s"})</button>
-              <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={() => setShowClose(false)}>← terug</button>
+              <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={() => setShowClose(false)}>Bestelling aanpassen</button>
             </div>
           </div>
         )}
@@ -1145,7 +1145,7 @@ export default function PartyTest() {
           )}
         </div>
 
-        <button style={{ ...S.btnP, opacity: (paidConfirmed && st.valid) ? 1 : 0.5 }} onClick={closeRound}>✓ Rondje afsluiten</button>
+        {paidConfirmed && st.valid && <button style={S.btnP} onClick={closeRound}>✓ Rondje afsluiten</button>}
         <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
           <button style={{ ...S.btn, flex: 1, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelRound}>✕ Rondje annuleren</button>
           <button style={{ ...S.btn, flex: 1 }} onClick={editOrder}>✏️ Bestelling wijzigen</button>
