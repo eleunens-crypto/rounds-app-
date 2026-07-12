@@ -377,6 +377,16 @@ export default function PartyTest() {
     setPaidConfirmed(true)
   }
   const closeRound = () => { if (!paidConfirmed || !paymentState().valid) { setNotice("Bevestig eerst de betaling."); return } setOpenRound(rounds.length - 1); setEditAssign(false); setEditCups(false); setEditPay(false); setView("hub") }
+  const cancelOrder = () => setConfirmDlg({
+    msg: `Rondje ${roundNr} annuleren? Alle gekozen drankjes van dit rondje gaan verloren. Dit kan niet ongedaan gemaakt worden.`,
+    yes: "Ja, annuleren",
+    onYes: () => {
+      setConfirmDlg(null)
+      setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setRepeated(false)
+      if (rounds.length > 0) { setRoundNr(rounds.length); setOpenRound(rounds.length - 1); setView("hub") }
+      else { setRoundNr(1); setView("hub") }
+    },
+  })
   const cancelRound = () => setConfirmDlg({ msg: `Het volledige rondje ${roundNr} annuleren? Alle drankjes en bekers van dit rondje worden verwijderd. Dit kan niet ongedaan gemaakt worden.`, yes: "Ja, annuleren", onYes: () => { const remaining = rounds.length - 1; setRounds((rs) => rs.slice(0, -1)); setPaidConfirmed(false); setConfirmDlg(null); if (remaining > 0) { setOpenRound(remaining - 1); setView("hub") } else setView("order") } })
   const nextRound = () => { if (blockIfUnpaid()) return; setRoundNr((n) => n + 1); setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setRepeated(false); setView("order") }
   // Neemt de drankjes én de toewijzing van het laatste rondje over. Daarna nog gewoon aanpasbaar.
@@ -937,7 +947,7 @@ export default function PartyTest() {
         {roundItems > 0 && (
           <div style={{ ...S.card, padding: "10px 12px", background: "#fffdf6" }}>
             <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>🛒 In dit rondje</span>
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>🛒 In dit rondje <span style={{ fontWeight: 600, color: "#b3a988" }}>— tik om toe te wijzen</span></span>
               <span style={{ ...S.pill, background: "rgba(240,165,0,0.18)", color: "#c98a00" }}>{roundItems} drankje{roundItems === 1 ? "" : "s"}</span>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -957,6 +967,9 @@ export default function PartyTest() {
           {rounds.length > 0 && <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>📋 Overzicht</button>}
         </div>
         <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => roundItems > 0 && openClose()}>✅ Rondje {roundNr} bevestigen{roundItems > 0 && <span style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.85 }}> — {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>}</button>
+        {roundItems > 0 && (
+          <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>✕ Rondje annuleren</button>
+        )}
 
         {showAssignAll && (
           <div style={S.overlay} onClick={() => setShowAssignAll(false)}>
@@ -1197,7 +1210,7 @@ export default function PartyTest() {
           {paidCount > 1 && <span onClick={() => setAllRoundsOpen((v) => !v)} style={{ fontSize: 12, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", flexShrink: 0 }}>{allRoundsOpen ? "alles dichtklappen" : "alles openklappen"}</span>}
         </div>
 
-        {rounds.map((r, idx) => {
+        {rounds.map((r, idx) => ({ r, idx })).reverse().map(({ r, idx }) => {
           if (!roundIsPaid(r)) return null
           const items = drinks.reduce((s, d) => s + drinkTotalRound(r, d.id), 0)
           const open = allRoundsOpen || openRound === idx
