@@ -420,6 +420,9 @@ const STRINGS = {
     namePlaceholder: "Naam",
     addBtn: "+ Toevoegen",
     multipleHint: "Met meerdere (bv. koppel)? Zet het aantal personen met de knopjes.",
+    guestCount: "Aantal gasten",
+    guestCountHint: "Zet het aantal en pas de namen aan. Tik op het personen-knopje als iemand voor twee bestelt.",
+    confirmRemoveLast: (name: string, n: number) => `${name} heeft al ${n} ${n === 1 ? "item" : "items"} aangetikt. Die toewijzingen gaan verloren. Toch verwijderen?`,
     editNameHint: "· tik een naam om te wijzigen",
     manageDone: "✓ Klaar",
     manageDelete: "🗑️ Verwijderen",
@@ -806,6 +809,9 @@ const STRINGS = {
     namePlaceholder: "Nom",
     addBtn: "+ Ajouter",
     multipleHint: "Plusieurs (ex. un couple) ? Règle le nombre de personnes avec les boutons.",
+    guestCount: "Nombre d'invités",
+    guestCountHint: "Règle le nombre et adapte les noms. Touche le bouton personnes si quelqu'un commande pour deux.",
+    confirmRemoveLast: (name: string, n: number) => `${name} a déjà sélectionné ${n} ${n === 1 ? "article" : "articles"}. Ces attributions seront perdues. Supprimer quand même ?`,
     editNameHint: "· touche un nom pour le modifier",
     manageDone: "✓ Terminé",
     manageDelete: "🗑️ Supprimer",
@@ -1607,6 +1613,29 @@ export default function RundoTable() {
     await supabase.from("table_participants").delete().eq("id", id)
     if (meId === id) { setMeIdStored(group.id, null); setMeId(null) }
     await renumberGuests()
+    await loadAll(group.id)
+  }
+
+  // Zet het aantal gasten in één beweging. Omhoog = extra gasten aanmaken.
+  // Omlaag = de laatste gast verwijderen, met waarschuwing als die al items aantikte.
+  const setGuestCount = async (target: number) => {
+    if (!group) return
+    if (group.finalized) { setToast(isAdmin ? L.finalizedReopenFirst : L.finalizedAskAdmin); return }
+    const n = Math.max(0, Math.min(30, target))
+    const cur = participants.length
+    if (n === cur) return
+    if (n > cur) {
+      for (let i = cur; i < n; i++) await addGuest(`${L.guestWord} ${i + 1}`, false, 1)
+      return
+    }
+    const last = participants[cur - 1]
+    if (!last) return
+    const used = claims.filter((c) => c.participant_id === last.id && c.quantity > 0).length
+    if (used > 0 && !confirm(L.confirmRemoveLast(last.name, used))) return
+    await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", last.id)
+    await supabase.from("table_confirmations").delete().eq("group_id", group.id).eq("participant_id", last.id)
+    await supabase.from("table_participants").delete().eq("id", last.id)
+    if (meId === last.id) { setMeIdStored(group.id, null); setMeId(null) }
     await loadAll(group.id)
   }
 
@@ -2496,6 +2525,17 @@ export default function RundoTable() {
               <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 700, fontSize: 13, flexShrink: 0 }} onClick={() => setShowAddGuest((v) => !v)}>{showAddGuest ? L.close : L.addBtn}</button>
             </div>
             <div style={{ marginTop: 4, marginBottom: 2, fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>{L.guestsSub2}</div>
+
+            <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: "11px 12px" }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>{L.guestCount}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button onClick={() => setGuestCount(participants.length - 1)} disabled={participants.length <= 0} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(16,24,40,0.05)", color: "#5a6680", fontSize: 20, fontWeight: 800, cursor: participants.length > 0 ? "pointer" : "default", opacity: participants.length > 0 ? 1 : 0.4 }}>−</button>
+                <b style={{ minWidth: 20, textAlign: "center", fontSize: 19, color: "#14213a" }}>{participants.length}</b>
+                <button onClick={() => setGuestCount(participants.length + 1)} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(27,42,74,0.12)", color: "#14213a", fontSize: 20, fontWeight: 800, cursor: "pointer" }}>+</button>
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6, lineHeight: 1.5 }}>{L.guestCountHint}</div>
+
             {showAddGuest && (
               <div style={{ marginTop: 10, marginBottom: 6, background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: 12 }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
