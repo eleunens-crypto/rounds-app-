@@ -710,6 +710,10 @@ const STRINGS = {
     makeSharedCancel: "Annuleren",
     sharedBadge: "GEDEELD",
     makeSharedShort: "delen",
+    legendTitle: "Wat betekenen de knopjes?",
+    legendShare: "maak er een gedeeld item van (bv. een fles wijn of water). De prijs wordt dan verdeeld over iedereen die meedeelt — niet per stuk toegewezen.",
+    legendEdit: "naam, aantal of prijs aanpassen",
+    legendDelete: "item verwijderen",
     shareLocked: "Vastgezet door de beheerder",
     yourShareLabel: "Jouw deel: €",
     forNPers: (n: number) => ` (voor ${n} pers.)`,
@@ -1099,6 +1103,10 @@ const STRINGS = {
     makeSharedCancel: "Annuler",
     sharedBadge: "PARTAGÉ",
     makeSharedShort: "partager",
+    legendTitle: "Que font les boutons ?",
+    legendShare: "transformer en article partagé (p.ex. une bouteille de vin ou d'eau). Le prix est alors réparti entre tous ceux qui partagent — pas attribué à l'unité.",
+    legendEdit: "modifier le nom, la quantité ou le prix",
+    legendDelete: "supprimer l'article",
     shareLocked: "Verrouillé par l'administrateur",
     yourShareLabel: "Ta part : €",
     forNPers: (n: number) => ` (pour ${n} pers.)`,
@@ -3388,6 +3396,19 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <h3 style={{ ...S.h3, marginBottom: 0, display: "flex", alignItems: "baseline", gap: 8 }}>{L.itemsOnBill}{!billOk && <span style={{ fontSize: 13, fontWeight: 800, color: "#c0392b" }}>{L.checkExcl}</span>}</h3>
       </div>
+      {items.length > 0 && (
+        <details style={{ marginBottom: 10 }}>
+          <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#5a6680", listStyle: "none", display: "inline-flex", alignItems: "center", gap: 5 }}>ⓘ {L.legendTitle}</summary>
+          <div style={{ marginTop: 8, background: "rgba(90,108,166,0.06)", borderRadius: 10, padding: "10px 11px", fontSize: 12, color: "#5a6680", lineHeight: 1.55 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 7 }}>
+              <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 8, background: "rgba(233,196,95,0.3)" }}><ShareIcon on size={14} /></span>
+              <span>{L.legendShare}</span>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 5 }}><span style={{ flexShrink: 0, width: 26, textAlign: "center" }}>✏️</span><span>{L.legendEdit}</span></div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ flexShrink: 0, width: 26, textAlign: "center" }}>🗑️</span><span>{L.legendDelete}</span></div>
+          </div>
+        </details>
+      )}
       {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>{L.noItemsScan}</div>}
       {items.map((it) => {
         const open = it.quantity - claimedQty(it.id)
