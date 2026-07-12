@@ -430,23 +430,23 @@ export default function PartyTest() {
 
   const S = {
     page: { minHeight: "100vh", background: "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
-    wrap: { maxWidth: 480, margin: "0 auto", padding: "16px 14px" } as React.CSSProperties,
-    card: { background: "#fff", border: "1px solid rgba(120,95,20,0.14)", borderRadius: 18, padding: 14, marginBottom: 12, boxShadow: "0 4px 16px -8px rgba(120,95,20,0.25)" } as React.CSSProperties,
+    wrap: { maxWidth: 560, margin: "0 auto", padding: "16px 16px" } as React.CSSProperties,
+    card: { background: "#fff", border: "1px solid rgba(120,95,20,0.14)", borderRadius: 18, padding: 16, marginBottom: 13, boxShadow: "0 4px 16px -8px rgba(120,95,20,0.25)" } as React.CSSProperties,
     h1: { fontSize: 22, fontWeight: 800, margin: "0 0 2px" } as React.CSSProperties,
-    h3: { fontSize: 15, fontWeight: 800, margin: "0 0 10px" } as React.CSSProperties,
-    sub: { fontSize: 12.5, color: "#8a7d55", margin: "0 0 12px", lineHeight: 1.5 } as React.CSSProperties,
-    btn: { border: "1px solid rgba(120,95,20,0.18)", background: "#fff", color: "#4a3f1e", borderRadius: 12, padding: "10px 14px", fontSize: 14, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
-    btnP: { border: "none", background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 14, padding: "14px 18px", fontSize: 16, fontWeight: 800, cursor: "pointer", width: "100%", boxShadow: "0 4px 12px -4px rgba(224,138,0,0.6)" } as React.CSSProperties,
-    input: { border: "1px solid rgba(120,95,20,0.22)", borderRadius: 10, padding: "9px 11px", fontSize: 15, color: "#4a3f1e", outline: "none", width: 80, textAlign: "right" } as React.CSSProperties,
-    seg: (on: boolean) => ({ flex: 1, textAlign: "center", padding: "9px 6px", borderRadius: 10, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f3ead2", color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
-    step: { width: 32, height: 32, borderRadius: 9, border: "1px solid rgba(120,95,20,0.18)", background: "#f3ead2", color: "#8a5e0f", fontSize: 19, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
-    chip: (n: number) => ({ position: "relative", padding: "8px 13px", borderRadius: 20, fontSize: 14, fontWeight: 700, cursor: "pointer", userSelect: "none", border: n > 0 ? "1px solid rgba(240,165,0,0.5)" : "1px solid rgba(120,95,20,0.15)", background: n > 0 ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#faf4e4", color: n > 0 ? "#fff" : "#8a7d55" } as React.CSSProperties),
+    h3: { fontSize: 16.5, fontWeight: 800, margin: "0 0 10px" } as React.CSSProperties,
+    sub: { fontSize: 13.5, color: "#8a7d55", margin: "0 0 12px", lineHeight: 1.55 } as React.CSSProperties,
+    btn: { border: "1px solid rgba(120,95,20,0.18)", background: "#fff", color: "#4a3f1e", borderRadius: 12, padding: "12px 16px", fontSize: 15, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
+    btnP: { border: "none", background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 14, padding: "16px 18px", fontSize: 17, fontWeight: 800, cursor: "pointer", width: "100%", boxShadow: "0 4px 12px -4px rgba(224,138,0,0.6)" } as React.CSSProperties,
+    input: { border: "1px solid rgba(120,95,20,0.22)", borderRadius: 10, padding: "11px 12px", fontSize: 16, color: "#4a3f1e", outline: "none", width: 84, textAlign: "right" } as React.CSSProperties,
+    seg: (on: boolean) => ({ flex: 1, textAlign: "center", padding: "11px 6px", borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: "pointer", background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f3ead2", color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
+    step: { width: 38, height: 38, borderRadius: 10, border: "1px solid rgba(120,95,20,0.18)", background: "#f3ead2", color: "#8a5e0f", fontSize: 21, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
+    chip: (n: number) => ({ position: "relative", padding: "10px 14px", borderRadius: 20, fontSize: 14.5, fontWeight: 700, cursor: "pointer", userSelect: "none", border: n > 0 ? "1px solid rgba(240,165,0,0.5)" : "1px solid rgba(120,95,20,0.15)", background: n > 0 ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#faf4e4", color: n > 0 ? "#fff" : "#8a7d55" } as React.CSSProperties),
     badge: { marginLeft: 5, background: "rgba(0,0,0,0.22)", borderRadius: 20, padding: "0 6px", fontSize: 11, fontWeight: 800 } as React.CSSProperties,
-    pill: { fontSize: 10.5, fontWeight: 800, padding: "2px 8px", borderRadius: 20, background: "rgba(120,95,20,0.08)", color: "#8a7d55" } as React.CSSProperties,
+    pill: { fontSize: 11.5, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: "rgba(120,95,20,0.08)", color: "#8a7d55" } as React.CSSProperties,
     row: { display: "flex", alignItems: "center", gap: 10 } as React.CSSProperties,
-    tab: (on: boolean) => ({ padding: "8px 13px", borderRadius: 20, fontSize: 13, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", background: on ? "#4a3f1e" : "#f3ead2", color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
-    overlay: { position: "fixed", inset: 0, background: "rgba(40,30,5,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 50, padding: 12 } as React.CSSProperties,
-    sheet: { background: "#fff", borderRadius: 20, padding: 18, width: "100%", maxWidth: 460, maxHeight: "82vh", overflowY: "auto", boxShadow: "0 -8px 30px rgba(0,0,0,0.2)" } as React.CSSProperties,
+    tab: (on: boolean) => ({ padding: "9px 14px", borderRadius: 20, fontSize: 13.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", background: on ? "#4a3f1e" : "#f3ead2", color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
+    overlay: { position: "fixed", inset: 0, background: "rgba(40,30,5,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 14 } as React.CSSProperties,
+    sheet: { background: "#fff", borderRadius: 20, padding: 20, width: "100%", maxWidth: 460, maxHeight: "86vh", overflowY: "auto", boxShadow: "0 10px 40px rgba(0,0,0,0.25)" } as React.CSSProperties,
   }
   const potTag = (
     <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potRemaining > 0 ? "#1f8a4c" : "#8a7d55" }}>{potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️ </span>}{potIsCard ? "💳 drankkaart " : "🫙 pot "}{euro(potRemaining)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+ toevoegen</span></span>
@@ -589,7 +589,7 @@ export default function PartyTest() {
       {notice && (
         <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setNotice("")}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-            <p style={{ fontSize: 14, color: "#4a3f1e", lineHeight: 1.5, marginBottom: 16, fontWeight: 600 }}>{notice}</p>
+            <p style={{ fontSize: 15, color: "#4a3f1e", lineHeight: 1.55, marginBottom: 18, fontWeight: 600 }}>{notice}</p>
             <button style={S.btnP} onClick={() => setNotice("")}>OK</button>
           </div>
         </div>
@@ -628,9 +628,9 @@ export default function PartyTest() {
   // ── START ───────────────────────────────────────────────────────────────────
   if (view === "start") {
     return (
-      <div style={S.page}><div style={{ ...S.wrap, paddingTop: 40 }}>
+      <div style={S.page}><div style={{ ...S.wrap, paddingTop: 20 }}>
         {renderDialogs()}
-        <style>{`input::placeholder,textarea::placeholder{color:#c4b896;opacity:1;}`}</style>
+        <style>{`input::placeholder,textarea::placeholder{color:#c4b896;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24 }}>
           <div style={{ ...S.row, gap: 12 }}>
             <RundoLogo size={56} />
