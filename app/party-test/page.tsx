@@ -1488,8 +1488,8 @@ export default function PartyTest() {
       </div>
 
       <div style={{ display: "flex", gap: 10 }}>
-        <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>← overzicht</button>
-        <button style={{ ...S.btn, flex: 1 }} onClick={goHome}>🏠 home</button>
+        <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>📋 Rondjesoverzicht</button>
+        <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>➕ Nieuw rondje</button>
       </div>
     </div></div>
   )
