@@ -210,6 +210,10 @@ export default function PartyTest() {
   }
   const rSetAmount = (idx: number, v: number) => setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, v) }))
   const rTogglePot = (idx: number) => setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = !((r.potPart || 0) > 0); if (usePot && potAvailFor(idx) <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg — leg eerst bij.`); return r } return rRedistribute(r, idx, usePot, persons, r.amount) }))
+  const rSetPayerAmt = (idx: number, pid: string, v: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, payers: { ...(r.payers || {}), [pid]: Math.max(0, v) } } : r))
+  const rSetPotAmt = (idx: number, v: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, potPart: Math.max(0, Math.min(v, Math.max(0, potAvailFor(idx)))) } : r))
+  const rSplitEqually = (idx: number) => setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, r.amount) }))
+  const rPaidSum = (r: Round) => (r.potPart || 0) + Object.values(r.payers || {}).reduce((a, b) => a + (b || 0), 0)
   const rTogglePayer = (idx: number, pid: string) => setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const cur = Object.keys(r.payers || {}); const persons = cur.includes(pid) ? cur.filter((x) => x !== pid) : [...cur, pid]; const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, r.amount) }))
 
   // ── afgeleide bekers (uit rounds) ───────────────────────────────────────────
@@ -1217,11 +1221,35 @@ export default function PartyTest() {
                         <input style={{ ...S.input, width: 110, fontSize: 16, borderColor: (r.amount || 0) <= 0 ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" value={r.amount || ""} onChange={(e) => rSetAmount(idx, parseFloat(e.target.value.replace(",", ".")) || 0)} />
                         <span style={{ fontSize: 11, color: "#8a7d55" }}>totaal — Fair-Split basis</span>
                       </div>
+                      <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>Betaald door <span style={{ fontWeight: 600, color: "#b3a988" }}>(meerdere mogelijk)</span></div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         <span style={S.chip((r.potPart || 0) > 0 ? 1 : 0)} onClick={() => rTogglePot(idx)}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
-                        {people.map((p) => <span key={p.id} style={{ ...S.chip((r.payers?.[p.id] || 0) > 0 ? 1 : 0), padding: "6px 11px", fontSize: 13 }} onClick={() => rTogglePayer(idx, p.id)}>{p.name}{(r.payers?.[p.id] || 0) > 0 && <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 5 }}>{euro(r.payers[p.id])}</span>}</span>)}
+                        {people.map((p) => <span key={p.id} style={{ ...S.chip((r.payers?.[p.id] || 0) > 0 ? 1 : 0), padding: "6px 11px", fontSize: 13 }} onClick={() => rTogglePayer(idx, p.id)}>{p.name}</span>)}
                       </div>
-                      <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 6 }}>Eén betaler kiezen. Voor pot + persoon samen: doe het rondje opnieuw via het betaalscherm.</div>
+                      {(() => {
+                        const sel = Object.keys(r.payers || {}).filter((pid) => people.some((p) => p.id === pid))
+                        const nPay = sel.length + ((r.potPart || 0) > 0 ? 1 : 0)
+                        if (nPay === 0) return <div style={{ fontSize: 11.5, color: "#c0554a", fontWeight: 700, marginTop: 6 }}>Kies wie betaalde.</div>
+                        const sum = rPaidSum(r), diff = (r.amount || 0) - sum
+                        return (
+                          <div style={{ marginTop: 8, background: "#fff", borderRadius: 10, padding: "9px 10px" }}>
+                            {nPay > 1 && <div style={{ ...S.row, justifyContent: "flex-end", marginBottom: 7 }}><span onClick={() => rSplitEqually(idx)} style={{ ...S.pill, cursor: "pointer", fontSize: 11, padding: "4px 9px", background: "rgba(31,138,76,0.14)", color: "#1f8a4c", fontWeight: 800 }}>👥 verdeel gelijk</span></div>}
+                            {(r.potPart || 0) > 0 && (
+                              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+                                <span style={{ fontSize: 12.5, fontWeight: 700 }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
+                                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 78, fontSize: 13 }} type="text" inputMode="decimal" value={r.potPart || ""} onChange={(e) => rSetPotAmt(idx, parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
+                              </div>
+                            )}
+                            {sel.map((pid) => (
+                              <div key={pid} style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+                                <span style={{ fontSize: 12.5, fontWeight: 700 }}>👤 {people.find((p) => p.id === pid)?.name}</span>
+                                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 78, fontSize: 13 }} type="text" inputMode="decimal" value={r.payers[pid] || ""} onChange={(e) => rSetPayerAmt(idx, pid, parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
+                              </div>
+                            ))}
+                            <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", paddingTop: 7, fontSize: 11.5, fontWeight: 800, color: Math.abs(diff) <= 0.005 ? "#1f8a4c" : "#c0554a" }}>Samen {euro(sum)} van {euro(r.amount || 0)}{Math.abs(diff) <= 0.005 ? " ✓ klopt" : diff > 0 ? ` — er ontbreekt ${euro(diff)}` : ` — ${euro(-diff)} te veel`}</div>
+                          </div>
+                        )
+                      })()}
                     </div>
                   )}
 
