@@ -401,7 +401,7 @@ const STRINGS = {
     persons: "personen",
     shareReady: "✅ Bon-totaal en items kloppen — je kan delen.",
     shareBlocked: "⚠️ Het bon-totaal klopt nog niet met de items. Zet dit eerst recht op de Bon-tab vóór je met je gasten deelt.",
-    guestsTitle1: "🔗 Laat je gasten zelf meedoen met je groep",
+    guestsTitle1: "🔗 Of laat je gasten zelf meedoen",
     guestsSub1: "Deel de QR of link. Iedereen kiest z'n naam en tikt z'n eigen bestelling aan.",
     inviteLine1: "Je gasten komen zo in je groepje ",
     inviteLine2: " om mee de rekening te verdelen.",
@@ -422,6 +422,33 @@ const STRINGS = {
     multipleHint: "Met meerdere (bv. koppel)? Zet het aantal personen met de knopjes.",
     guestCount: "Aantal gasten",
     guestCountHint: "Zet het aantal en pas de namen aan. Tik op het personen-knopje als iemand voor twee bestelt.",
+    howManyTitle: "👥 Hoeveel zijn jullie?",
+    howManySub: "Zet het aantal en pas de namen aan — of deel de groep en laat iedereen zichzelf invullen.",
+    personsCount: (n: number) => `${n} ${n === 1 ? "persoon" : "personen"}`,
+    howFillIn: "Hoe aanduiden wat iedereen at/dronk?",
+    optShare: "📱 Zij doen het",
+    optShareSub: "deel de link of QR",
+    optSelf: "✍️ Ik doe het",
+    optSelfSub: "voor wie geen gsm heeft",
+    mixHint: "Gebruik gerust allebei — het een sluit het ander niet uit.",
+    meLabel: "jij",
+    ownNamePlaceholder: "Zet hier je eigen naam",
+    freeSpot: "vrije plaats",
+    howManyPersons: "Voor hoeveel personen bestel je?",
+    onePerson: "👤 1 persoon",
+    twoPersons: "👫 Met 2",
+    threePlus: "👥 Met 3+",
+    payTogetherHint: "Wie samen op één plaats staat, betaalt ook samen: alles wat je aantikt telt voor jullie samen.",
+    firstName: "Eerste naam…",
+    secondName: "Tweede naam…",
+    extraName: (n: number) => `Naam ${n}…`,
+    showsAsOne: "Verschijnt als één plaats:",
+    whoOfYouShared: (names: string) => `🍴 Wie van jullie dronk/at hiervan mee?`,
+    onlyFirst: (name: string) => `Alleen ${name}`,
+    allOfUs: "Allebei",
+    sharePaysOne: "Jullie betalen 1 aandeel in plaats van 2.",
+    assignShareHint: "Was iets om te delen (fles wijn, water)? Tik ‘delen’ bij dat item.",
+    unshareLink: "niet meer delen",
     confirmRemoveLast: (name: string, n: number) => `${name} heeft al ${n} ${n === 1 ? "item" : "items"} aangetikt. Die toewijzingen gaan verloren. Toch verwijderen?`,
     editNameHint: "· tik een naam om te wijzigen",
     manageDone: "✓ Klaar",
@@ -794,7 +821,7 @@ const STRINGS = {
     persons: "personnes",
     shareReady: "✅ Total de l'addition et articles corrects — tu peux partager.",
     shareBlocked: "⚠️ Le total de l'addition ne correspond pas encore aux articles. Corrige-le d'abord dans l'onglet Addition avant de partager avec tes invités.",
-    guestsTitle1: "🔗 Laisse tes invités participer à ton groupe",
+    guestsTitle1: "🔗 Ou laisse tes invités participer eux-mêmes",
     guestsSub1: "Partage le QR ou le lien. Chacun choisit son nom et coche ce qu'il a pris.",
     inviteLine1: "Tes invités rejoignent ainsi ton groupe ",
     inviteLine2: " pour partager l'addition.",
@@ -815,6 +842,33 @@ const STRINGS = {
     multipleHint: "Plusieurs (ex. un couple) ? Règle le nombre de personnes avec les boutons.",
     guestCount: "Nombre d'invités",
     guestCountHint: "Règle le nombre et adapte les noms. Touche le bouton personnes si quelqu'un commande pour deux.",
+    howManyTitle: "👥 Vous êtes combien ?",
+    howManySub: "Règle le nombre et adapte les noms — ou partage le groupe et laisse chacun se compléter.",
+    personsCount: (n: number) => `${n} ${n === 1 ? "personne" : "personnes"}`,
+    howFillIn: "Comment indiquer ce que chacun a pris ?",
+    optShare: "📱 Ils le font",
+    optShareSub: "partage le lien ou le QR",
+    optSelf: "✍️ Je le fais",
+    optSelfSub: "pour ceux sans smartphone",
+    mixHint: "Utilisez les deux — l'un n'exclut pas l'autre.",
+    meLabel: "toi",
+    ownNamePlaceholder: "Mets ton propre nom ici",
+    freeSpot: "place libre",
+    howManyPersons: "Pour combien de personnes commandes-tu ?",
+    onePerson: "👤 1 personne",
+    twoPersons: "👫 À 2",
+    threePlus: "👥 À 3+",
+    payTogetherHint: "Ceux qui partagent une place paient ensemble : tout ce que tu coches compte pour vous deux.",
+    firstName: "Premier prénom…",
+    secondName: "Deuxième prénom…",
+    extraName: (n: number) => `Prénom ${n}…`,
+    showsAsOne: "Apparaît comme une seule place :",
+    whoOfYouShared: (names: string) => `🍴 Qui de vous a partagé ceci ?`,
+    onlyFirst: (name: string) => `Seulement ${name}`,
+    allOfUs: "Tous les deux",
+    sharePaysOne: "Vous payez 1 part au lieu de 2.",
+    assignShareHint: "Quelque chose à partager (bouteille de vin, eau) ? Touchez « partager » sur cet article.",
+    unshareLink: "ne plus partager",
     confirmRemoveLast: (name: string, n: number) => `${name} a déjà sélectionné ${n} ${n === 1 ? "article" : "articles"}. Ces attributions seront perdues. Supprimer quand même ?`,
     editNameHint: "· touche un nom pour le modifier",
     manageDone: "✓ Terminé",
@@ -1250,6 +1304,7 @@ export default function RundoTable() {
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [newGuest, setNewGuest] = useState("")
   const [newGuestSeats, setNewGuestSeats] = useState(1)
+  const [newGuestNames, setNewGuestNames] = useState<string[]>([""])
   const [showAddGuest, setShowAddGuest] = useState(false)
   const [showTodo, setShowTodo] = useState(false)
   const [showTaxInfo, setShowTaxInfo] = useState(false)
@@ -1513,6 +1568,15 @@ export default function RundoTable() {
     setNewGuest("")
     await loadAll(group.id)
     return data as Participant
+  }
+
+  // Voegt een gast toe via de nieuwe flow: aantal personen + naam per persoon.
+  // Een koppel wordt één plaats met beide namen ("Els & Tom") en seats = 2 — zij betalen samen.
+  const addGuestFlow = async () => {
+    const names = newGuestNames.slice(0, newGuestSeats).map((n) => n.trim()).filter(Boolean)
+    const finalName = names.length > 0 ? names.join(" & ") : `${L.guestWord} ${participants.length + 1}`
+    await addGuest(finalName, false, newGuestSeats)
+    setNewGuestSeats(1); setNewGuestNames([""])
   }
 
   const setSeats = async (pid: string, n: number) => {
@@ -2527,12 +2591,12 @@ export default function RundoTable() {
       {/* ─── ADMIN: Gasten & delen ─── */}
       {isAdmin && adminTab === "guests" && (
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ ...S.card, order: 2 }}>
+          <div style={{ ...S.card, order: 1 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 4 }}>
-              <h3 style={{ ...S.h3, marginBottom: 0, minWidth: 0 }}>{L.guestsTitle2}</h3>
+              <h3 style={{ ...S.h3, marginBottom: 0, minWidth: 0 }}>{L.howManyTitle}</h3>
               <button style={{ ...S.btn, ...S.btnPrimary, padding: "7px 14px", fontWeight: 700, fontSize: 13, flexShrink: 0 }} onClick={() => setShowAddGuest((v) => !v)}>{showAddGuest ? L.close : L.addBtn}</button>
             </div>
-            <div style={{ marginTop: 4, marginBottom: 2, fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>{L.guestsSub2}</div>
+            <div style={{ marginTop: 4, marginBottom: 2, fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>{L.howManySub}</div>
 
             <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: "11px 12px" }}>
               <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>{L.guestCount}</span>
@@ -2542,16 +2606,57 @@ export default function RundoTable() {
                 <button onClick={() => setGuestCount(participants.length + 1)} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(27,42,74,0.12)", color: "#14213a", fontSize: 20, fontWeight: 800, cursor: "pointer" }}>+</button>
               </div>
             </div>
-            <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6, lineHeight: 1.5 }}>{L.guestCountHint}</div>
+            {participants.length > 0 && (
+              <div style={{ marginTop: 12, paddingBottom: 12, borderBottom: "1px solid rgba(16,24,40,0.08)" }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#14213a", lineHeight: 1.4, marginBottom: 10 }}>{L.personsCount(participants.length)} · {L.howFillIn}</div>
+                <div style={{ display: "flex", alignItems: "stretch", gap: 8 }}>
+                  <button onClick={() => setAdminTab("overview")} style={{ flex: 1, border: "1.5px solid rgba(27,42,74,0.22)", background: "#fff", borderRadius: 12, padding: "12px 8px", cursor: "pointer", textAlign: "center" }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.optSelf}</div>
+                    <div style={{ fontSize: 11, color: "#9aa0ab", lineHeight: 1.4 }}>{L.optSelfSub}</div>
+                  </button>
+                  <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "#1499b0", background: "rgba(20,153,176,0.12)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 20, padding: "3px 8px" }}>&amp;</span>
+                  </div>
+                  <button onClick={() => document.getElementById("share-card")?.scrollIntoView({ behavior: "smooth", block: "start" })} style={{ flex: 1, border: "1.5px solid rgba(20,153,176,0.45)", background: "rgba(20,153,176,0.05)", borderRadius: 12, padding: "12px 8px", cursor: "pointer", textAlign: "center" }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.optShare}</div>
+                    <div style={{ fontSize: 11, color: "#9aa0ab", lineHeight: 1.4 }}>{L.optShareSub}</div>
+                  </button>
+                </div>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: "#14213a", background: "rgba(20,153,176,0.09)", border: "1px solid rgba(20,153,176,0.3)", borderRadius: 11, padding: "11px 12px", marginTop: 10, lineHeight: 1.5, textAlign: "center" }}>{L.mixHint}</div>
+              </div>
+            )}
 
             {showAddGuest && (
               <div style={{ marginTop: 10, marginBottom: 6, background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: 12 }}>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <input value={newGuest} onChange={(e) => setNewGuest(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) } }} placeholder={L.namePlaceholder} style={{ ...S.input, flex: 1, minWidth: 110 }} autoFocus />
-                  <SeatsControl n={newGuestSeats} onChange={setNewGuestSeats} showLabel />
-                  <button onMouseDown={(e) => e.preventDefault()} style={{ ...S.btn, ...S.btnPrimary, padding: "0 18px", fontWeight: 700 }} onClick={() => { addGuest(undefined, false, newGuestSeats); setNewGuestSeats(1) }}>{L.addBtn}</button>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.howManyPersons}</div>
+                <div style={{ fontSize: 11.5, color: "#9aa0ab", lineHeight: 1.5, marginBottom: 9 }}>{L.payTogetherHint}</div>
+                <div style={{ display: "flex", gap: 6, marginBottom: 11 }}>
+                  {[1, 2, 3].map((n) => {
+                    const on = n === 3 ? newGuestSeats >= 3 : newGuestSeats === n
+                    const label = n === 1 ? L.onePerson : n === 2 ? L.twoPersons : L.threePlus
+                    return (
+                      <button key={n} onClick={() => { const v = n === 3 ? Math.max(3, newGuestSeats) : n; setNewGuestSeats(v); setNewGuestNames((cur) => Array.from({ length: v }, (_, i) => cur[i] ?? "")) }}
+                        style={{ flex: 1, fontSize: 12.5, fontWeight: 800, padding: "9px 4px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
+                    )
+                  })}
                 </div>
-                <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 6 }}>{L.multipleHint}</div>
+                {newGuestSeats >= 3 && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginBottom: 9 }}>
+                    <button onClick={() => { const v = Math.max(3, newGuestSeats - 1); setNewGuestSeats(v); setNewGuestNames((cur) => cur.slice(0, v)) }} style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 16 }}>−</button>
+                    <b style={{ fontSize: 15, color: "#14213a" }}>{newGuestSeats}</b>
+                    <button onClick={() => { const v = Math.min(8, newGuestSeats + 1); setNewGuestSeats(v); setNewGuestNames((cur) => Array.from({ length: v }, (_, i) => cur[i] ?? "")) }} style={{ ...S.iconBtn, width: 28, height: 28, fontSize: 16, background: "rgba(27,42,74,0.12)" }}>+</button>
+                  </div>
+                )}
+                {Array.from({ length: newGuestSeats }, (_, i) => i).map((i) => (
+                  <input key={i} value={newGuestNames[i] ?? ""} onChange={(e) => setNewGuestNames((cur) => { const c = [...cur]; c[i] = e.target.value; return c })}
+                    onKeyDown={(e) => { if (e.key === "Enter") addGuestFlow() }}
+                    placeholder={newGuestSeats === 1 ? L.namePlaceholder : i === 0 ? L.firstName : i === 1 ? L.secondName : L.extraName(i + 1)}
+                    style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 6 }} autoFocus={i === 0} />
+                ))}
+                {newGuestSeats > 1 && newGuestNames.filter((n) => n.trim()).length > 0 && (
+                  <div style={{ fontSize: 11, color: "#9aa0ab", marginBottom: 9 }}>{L.showsAsOne} <b style={{ color: "#14213a" }}>{newGuestNames.filter((n) => n.trim()).join(" & ")}</b></div>
+                )}
+                <button onMouseDown={(e) => e.preventDefault()} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800 }} onClick={addGuestFlow}>{L.addBtn}</button>
               </div>
             )}
 
@@ -2564,8 +2669,13 @@ export default function RundoTable() {
 
             {(() => {
               const twoCol = participants.length > 5
+              const meTag = (p: Participant) => (
+                p.id === meId ? <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#1499b0", background: "rgba(20,153,176,0.12)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 7, padding: "1px 6px" }}>{L.meLabel}</span> : null
+              )
+              const isPlaceholderName = (p: Participant) => new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(p.name.trim())
               const nameInput = (p: Participant, fontSize: number) => (
-                <input defaultValue={p.name} key={p.name}
+                <input defaultValue={isPlaceholderName(p) ? "" : p.name} key={p.name}
+                  placeholder={p.id === meId ? L.ownNamePlaceholder : (isPlaceholderName(p) ? p.name : "")}
                   onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== p.name) renameGuest(p.id, v); else e.target.value = p.name }}
                   onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
                   style={{ flex: 1, minWidth: 0, width: "100%", border: "none", borderBottom: "1px dashed rgba(16,24,40,0.22)", background: "transparent", fontWeight: 700, fontSize, color: "#14213a", padding: "3px 2px", outline: "none" }} />
@@ -2584,6 +2694,7 @@ export default function RundoTable() {
                     <div key={p.id} style={{ border: manageGuests ? "1px solid rgba(224,107,94,0.4)" : isMe ? "1px solid rgba(20,153,176,0.4)" : "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "7px 8px", background: manageGuests ? "rgba(224,107,94,0.04)" : isMe ? "rgba(20,153,176,0.07)" : "#fff" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                         {nameInput(p, 13.5)}
+                        {meTag(p)}
                         <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
                         {manageGuests && delBtn(p)}
                       </div>
@@ -2597,6 +2708,7 @@ export default function RundoTable() {
                   <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 6px", borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: isMe ? 10 : 0, background: isMe ? "rgba(20,153,176,0.06)" : "transparent" }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       {nameInput(p, 15)}
+                      {meTag(p)}
                       <div style={{ marginTop: 3 }}>
                         <span style={{ fontSize: 10, fontWeight: 700, color: badge.color, background: badge.bg, borderRadius: 7, padding: "1px 7px" }}>{badge.label}</span>
                       </div>
@@ -2621,7 +2733,7 @@ export default function RundoTable() {
             })()}
           </div>
 
-          <div style={{ ...S.card, order: 1 }}>
+          <div id="share-card" style={{ ...S.card, order: 2 }}>
             {(() => {
               const entered = group?.receipt_total ?? null
               const match = entered != null && Math.abs(entered - billTotal) < 0.005
@@ -3400,12 +3512,10 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         <details style={{ marginBottom: 10 }}>
           <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#5a6680", listStyle: "none", display: "inline-flex", alignItems: "center", gap: 5 }}>ⓘ {L.legendTitle}</summary>
           <div style={{ marginTop: 8, background: "rgba(90,108,166,0.06)", borderRadius: 10, padding: "10px 11px", fontSize: 12, color: "#5a6680", lineHeight: 1.55 }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 7 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
               <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 8, background: "rgba(233,196,95,0.3)" }}><ShareIcon on size={14} /></span>
               <span>{L.legendShare}</span>
             </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 5 }}><span style={{ flexShrink: 0, width: 26, textAlign: "center" }}>✏️</span><span>{L.legendEdit}</span></div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ flexShrink: 0, width: 26, textAlign: "center" }}>🗑️</span><span>{L.legendDelete}</span></div>
           </div>
         </details>
       )}
@@ -3831,6 +3941,9 @@ function ClaimScreen(props: {
       )}
       <div style={S.card}>
         <h3 style={S.h3}>✅ {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</h3>
+        {items.length > 0 && (
+          <div style={{ fontSize: 11.5, color: "#5a6680", background: "rgba(90,108,166,0.06)", borderRadius: 9, padding: "8px 10px", marginBottom: 11, lineHeight: 1.45 }}>💡 {L.assignShareHint}</div>
+        )}
         {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>{L.noItemsWaitScan}</div>}
 
         {items.map((it) => {
@@ -3866,13 +3979,21 @@ function ClaimScreen(props: {
                   <div style={{ marginTop: 9, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.35)", borderRadius: 12, padding: "10px 11px" }}>
                     <div style={{ fontSize: 13, fontWeight: 800, color: "#14213a", marginBottom: 8 }}>{L.withHowMany(mySeats)}</div>
                     <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-                      {Array.from({ length: mySeats }, (_, i) => i + 1).map((n) => {
-                        const on = myHeads === n
-                        const label = mySeats === 2 ? (n === 1 ? L.onlyMe : L.bothOfUs) : (n === 1 ? L.onlyMe : L.nOfUs(n))
-                        return (
-                          <button key={n} onClick={() => setClaim(it.id, meId, n)} style={{ flex: 1, minWidth: 96, fontSize: 13, fontWeight: 800, padding: "10px 6px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
-                        )
-                      })}
+                      {(() => {
+                        // Toon de echte namen ("Alleen Els" / "Els & Tom") i.p.v. "ik"/"wij" — veel duidelijker.
+                        const raw = participants.find((p) => p.id === meId)?.name ?? ""
+                        const parts = raw.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
+                        return Array.from({ length: mySeats }, (_, i) => i + 1).map((n) => {
+                          const on = myHeads === n
+                          let label: string
+                          if (n === mySeats) label = parts.length > 1 ? parts.join(" & ") : (mySeats === 2 ? L.allOfUs : L.nOfUs(n))
+                          else if (n === 1) label = parts[0] ? L.onlyFirst(parts[0]) : L.onlyMe
+                          else label = L.nOfUs(n)
+                          return (
+                            <button key={n} onClick={() => setClaim(it.id, meId, n)} style={{ flex: 1, minWidth: 96, fontSize: 13, fontWeight: 800, padding: "10px 6px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
+                          )
+                        })
+                      })()}
                     </div>
                   </div>
                 )}
