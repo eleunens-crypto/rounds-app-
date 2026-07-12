@@ -327,6 +327,11 @@ export default function PartyTest() {
     if (potChosen && potContribTotal <= 0.005) { setConfirmDlg({ msg: `Je koos voor een ${potIsCard ? "drankkaart" : "pot"}, maar er is nog niks ingelegd. Toch zonder verder gaan? Je kan later nog toevoegen via de knop bovenaan.`, yes: `Toch verder zonder ${potIsCard ? "drankkaart" : "pot"}`, onYes: () => { setConfirmDlg(null); setPotChosen(false); setView("hub") } }); return }
     setView("hub")
   }
+  const goAssignUnassigned = () => {
+    const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0))
+    if (fr < 0) return
+    setOpenRound(fr); setAllRoundsOpen(false); setEditOpen(true); setEditAssign(true); setEditCups(false); setEditPay(false); setView("hub")
+  }
   const goFinal = () => {
     if (unfinishedRound) { setNotice(`Rondje ${roundNr} is nog bezig — bevestig en betaal het eerst voor je afrekent.`); setActiveCat(catsPresent[0]); setView("order"); return }
     if (view === "confirmed") { setNotice(`Rondje ${roundNr} is nog niet betaald. Rond die betaling eerst af.`); return }
@@ -334,21 +339,12 @@ export default function PartyTest() {
     if (blockIfUnpaid()) return
     if (anyUnassignedRounds) {
       const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0)
-      const goAssign = () => { const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0)); if (fr >= 0) { setOpenRound(fr); setEditOpen(true); setEditAssign(true); setEditCups(false); setEditPay(false); setView("hub") } }
       setConfirmDlg({
-        msg: `🔴 ${tot === 1 ? "1 drankje heeft" : `${tot} drankjes hebben`} nog geen naam.\n\nZonder naam weet de app niet wie wat dronk en verdeelt ze alles gelijk.\n\nWijs toe voor een eerlijke verdeling (Fair Split).`,
+        msg: `🔴 ${tot === 1 ? "1 drankje heeft" : `${tot} drankjes hebben`} nog geen naam.\n\nWijs toe → Fair Split: elk betaalt wat hij écht dronk.\nDoe je dat niet → gelijk verdeeld: iedereen evenveel.\n\nVoorbeeld: Jan 1 cola (€4), Tom 4 speciaalbieren (€20). Gelijk verdeeld betaalt elk €12 — Jan €8 te veel.`,
         yes: "Toch gelijk verdelen",
         no: "Toewijzen",
-        onYes: () => {
-          setConfirmDlg({
-            msg: "Weet je het zeker?\n\nBij gelijke verdeling betaalt iedereen evenveel, ongeacht wat hij dronk.\n\nVoorbeeld: Jan dronk 1 cola (€4), Tom 4 speciaalbieren (€20). Bij gelijk verdelen betaalt elk €12 — Jan betaalt €8 te veel, Tom €8 te weinig.",
-            yes: "Toch gelijk verdelen",
-            no: "← Terug, toewijzen",
-            onYes: () => { setConfirmDlg(null); setHasSettled(true); setView("final") },
-            onNo: () => { setConfirmDlg(null); goAssign() },
-          })
-        },
-        onNo: () => { setConfirmDlg(null); goAssign() },
+        onYes: () => { setConfirmDlg(null); setHasSettled(true); setView("final") },
+        onNo: () => { setConfirmDlg(null); goAssignUnassigned() },
       })
       return
     }
@@ -1215,15 +1211,20 @@ export default function PartyTest() {
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#1f8a4c", marginTop: 3 }}>✓ betaald: {paidLabel(r)}</div>
               </div>
+              {(() => {
+                const un = drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0)
+                if (un === 0) return null
+                return (
+                  <div onClick={() => { setOpenRound(idx); setAllRoundsOpen(false); setEditOpen(true); setEditAssign(true); setEditCups(false); setEditPay(false) }} style={{ margin: "0 14px 14px", background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "9px 11px", fontSize: 12.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>
+                    🔴 {un} drankje{un === 1 ? "" : "s"} nog niet toegewezen. <u>Tik hier om toe te wijzen</u>
+                  </div>
+                )
+              })()}
               {open && (
                 <div style={{ padding: "0 14px 14px" }}>
                   {roundDrinks.map((d) => {
                     const who = people.filter((p) => (r.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = r.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
-                    const un = r.anon[d.id] ?? 0
-                    if (un > 0) return (
-                      <div key={d.id} onClick={() => { setEditOpen(true); setEditAssign(true); setEditCups(false); setEditPay(false) }} style={{ fontSize: 13, fontWeight: 700, marginBottom: 5, background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "7px 10px", color: "#b0402f", cursor: "pointer" }}>🔴 {d.emoji} {drinkTotalRound(r, d.id)}× {d.name} — <u>{un}× zonder naam, hier toewijzen →</u>{who.length > 0 && <span style={{ fontWeight: 400, color: "#8a7d55" }}> (al: {who.join(", ")})</span>}</div>
-                    )
-                    return <div key={d.id} style={{ fontSize: 13.5, marginBottom: 3 }}><b>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}</b> <span style={{ color: "#8a7d55" }}>→ {who.join(", ")}</span></div>
+                    return <div key={d.id} style={{ fontSize: 13.5, marginBottom: 3 }}><b>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}</b>{who.length > 0 && <span style={{ color: "#8a7d55" }}> → {who.join(", ")}</span>}</div>
                   })}
 
                   <div style={{ ...S.row, justifyContent: "flex-end", marginTop: 10 }}>
@@ -1393,7 +1394,13 @@ export default function PartyTest() {
         <div style={{ marginBottom: 10 }}>
           <button onClick={() => { setOpenFairAll((v) => !v); setOpenFair({}) }} style={{ ...S.btn, padding: "7px 14px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{openFairAll ? "▴ Sluit details" : "▾ Bekijk details"}</button>
         </div>
-        {anyUnassignedRounds && <div style={{ fontSize: 11.5, color: "#b0402f", marginBottom: 8 }}>⚠️ Sommige drankjes waren niet toegewezen — gelijk verdeeld (minder eerlijk).</div>}
+        {anyUnassignedRounds && (
+          <div style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "11px 12px", marginBottom: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#b0402f", marginBottom: 3 }}>⚠️ Dit is een gelijke verdeling, geen Fair Split.</div>
+            <div style={{ fontSize: 11.5, color: "#8a5e0f", lineHeight: 1.5, marginBottom: 9 }}>Wijs de resterende drankjes toe, dan verdeelt de app eerlijk op wat elk verteerde.</div>
+            <button style={{ ...S.btnP, width: "100%", padding: "11px 0", fontSize: 13.5 }} onClick={goAssignUnassigned}>Toewijzen en Fair Split gebruiken</button>
+          </div>
+        )}
         {showEqual && (
           <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, fontSize: 10.5, color: "#8a7d55", fontWeight: 800, paddingBottom: 4, borderBottom: "1px solid rgba(120,95,20,0.12)" }}>
             <span>gelijke verdeling</span>
