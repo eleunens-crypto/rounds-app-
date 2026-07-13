@@ -731,10 +731,10 @@ const STRINGS = {
     missingLabel: "ontbreekt",
     extraLabel: "te veel",
     itemsAddUpPre: "items tellen op tot ",
-    compareFix: "Vergelijk met de bon en corrigeer!",
-    roundingTitle: (d: string) => `€${d} afrondingsverschil`,
-    roundingSub: "Negeren en verdergaan",
-    roundingDone: (d: string) => `Klopt — €${d} afronding aanvaard. Je kan verder.`,
+    compareFix: "Vergelijk met de bon en corrigeer hieronder!",
+    roundingTitle: "Niets gevonden? Mogelijk afrondingsverschil",
+    roundingSub: "Aanvaarden en verdergaan",
+    roundingDone: (d: string) => `€${d} afronding aanvaard. Je kan verder naar Gasten & delen.`,
     shareOfN: (have: number, want: number, now: number, then: number) => `${have} van ${want} delers · nu €${now.toFixed(2).replace(".", ",")} elk → €${then.toFixed(2).replace(".", ",")} zodra allen aanduiden`,
     shareOpen: (have: number, now: number) => `Momenteel ${have} ${have === 1 ? "deler" : "delers"} · nu €${now.toFixed(2).replace(".", ",")} → daalt als er meer meedelen`,
     shareDone: (n: number, each: number) => `Gedeeld door ${n} ${n === 1 ? "persoon" : "personen"} · €${each.toFixed(2).replace(".", ",")} elk`,
@@ -1312,10 +1312,10 @@ const STRINGS = {
     missingLabel: "manque",
     extraLabel: "en trop",
     itemsAddUpPre: "les articles totalisent ",
-    compareFix: "Compare avec l'addition et corrige !",
-    roundingTitle: (d: string) => `€${d} d'écart d'arrondi`,
-    roundingSub: "Ignorer et continuer",
-    roundingDone: (d: string) => `Correct — écart d'arrondi de €${d} accepté. Tu peux continuer.`,
+    compareFix: "Compare avec l'addition et corrige ci-dessous !",
+    roundingTitle: "Rien trouvé ? Peut-être un écart d'arrondi",
+    roundingSub: "Accepter et continuer",
+    roundingDone: (d: string) => `Écart d'arrondi de €${d} accepté. Tu peux continuer.`,
     shareOfN: (have: number, want: number, now: number, then: number) => `${have} sur ${want} participants · maintenant €${now.toFixed(2).replace(".", ",")} chacun → €${then.toFixed(2).replace(".", ",")} quand tous auront coché`,
     shareOpen: (have: number, now: number) => `Actuellement ${have} participant${have === 1 ? "" : "s"} · maintenant €${now.toFixed(2).replace(".", ",")} → baisse si d'autres partagent`,
     shareDone: (n: number, each: number) => `Partagé par ${n} personne${n === 1 ? "" : "s"} · €${each.toFixed(2).replace(".", ",")} chacun`,
@@ -2759,7 +2759,11 @@ export default function RundoTable() {
 
   const cooldownLeft = Math.max(0, Math.ceil((cooldownUntil - nowTs) / 1000))
   const billTotal = items.filter((it) => !isTip(it)).reduce((s, it) => s + itemTotal(it), 0)
-  const billOk = (group?.receipt_total ?? null) != null && Math.abs((group?.receipt_total ?? 0) - billTotal) < 0.005
+  // De rekening is in orde als de items exact optellen, óf als jij een centenverschil
+  // (afronding, tot 5 cent) bewust aanvaardde. Beide gevallen gedragen zich verder identiek.
+  const billDiffAbs = Math.abs((group?.receipt_total ?? 0) - billTotal)
+  const billOk = (group?.receipt_total ?? null) != null
+    && (billDiffAbs < 0.005 || (roundingOk && billDiffAbs <= 0.05))
   // Bij elke tabwissel bovenaan beginnen, anders behoud je de scrollpositie van de vorige tab.
   const scrollTop = () => { if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "auto" }) }
   // Detail per persoon: welke items, welk bedrag, en bij gedeelde items met hoeveel gedeeld.
@@ -3085,7 +3089,7 @@ export default function RundoTable() {
               </span>
             )
             return (
-              <div style={{ ...S.card, padding: "11px 14px", marginBottom: 12, background: greenState ? "rgba(39,174,96,0.06)" : mismatch ? "rgba(224,107,94,0.06)" : "#fff", border: greenState ? "1.5px solid rgba(39,174,96,0.45)" : mismatch ? "1.5px solid rgba(224,107,94,0.5)" : "1px solid rgba(16,24,40,0.08)" }}>
+              <div style={{ ...S.card, padding: "11px 14px", marginBottom: 12, background: greenState ? "rgba(39,174,96,0.06)" : mismatch ? "rgba(224,107,94,0.06)" : "#fff", border: greenState ? "1.5px solid #27ae60" : mismatch ? "1.5px solid rgba(224,107,94,0.5)" : "1px solid rgba(16,24,40,0.08)" }}>
                 {entered == null ? (
                   <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#5a6680", marginBottom: 8 }}>{L.enterTotalPrefix}€{billTotal.toFixed(2).replace(".", ",")}</span>
                 ) : receiptEditing ? (
@@ -3126,23 +3130,8 @@ export default function RundoTable() {
                       </div>
                     )
                   }
-                  // Centenverschil: geen alarm, maar een rustige melding met een schakelaar.
-                  if (rounding) {
-                    return (
-                      <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 9, background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.28)", borderRadius: 10, padding: "10px 11px" }}>
-                        <span style={{ flexShrink: 0, fontSize: 15 }}>🧮</span>
-                        <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: "#3b486a", lineHeight: 1.45 }}>
-                          <b>{L.roundingTitle(diffTxt)}</b><br />
-                          <span style={{ color: "#8a93a3" }}>{L.roundingSub}</span>
-                        </span>
-                        <button onClick={() => setRoundingOk(true)} title={L.roundingSub}
-                          style={{ flexShrink: 0, width: 40, height: 23, background: "#c3c8d2", borderRadius: 20, border: "none", position: "relative", cursor: "pointer", padding: 0 }}>
-                          <span style={{ position: "absolute", top: 2.5, left: 2.5, width: 18, height: 18, background: "#fff", borderRadius: "50%" }} />
-                        </button>
-                      </div>
-                    )
-                  }
-                  // Een echt verschil: dat verdient wél aandacht.
+                  // Elk verschil verdient dezelfde melding. Enkel bij een klein bedrag krijg je
+                  // er een schakelaar bij: vind je niets, dan is het wellicht gewoon afronding.
                   return (
                     <div style={{ marginTop: 8, background: "rgba(243,156,18,0.11)", border: "1px solid rgba(243,156,18,0.55)", borderRadius: 10, padding: "10px 11px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 8 }}>
@@ -3158,6 +3147,19 @@ export default function RundoTable() {
                         <li>{L.checkPrices}</li>
                         <li>{L.checkShared}</li>
                       </ul>
+                      {rounding && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 9, background: "rgba(255,255,255,0.75)", border: "1px solid rgba(90,108,166,0.28)", borderRadius: 9, padding: "9px 10px" }}>
+                          <span style={{ flexShrink: 0, fontSize: 14 }}>🧮</span>
+                          <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: "#3b486a", lineHeight: 1.4 }}>
+                            <b>{L.roundingTitle}</b><br />
+                            <span style={{ color: "#8a93a3" }}>{L.roundingSub}</span>
+                          </span>
+                          <button onClick={() => setRoundingOk(true)} title={L.roundingSub}
+                            style={{ flexShrink: 0, width: 40, height: 23, background: "#c3c8d2", borderRadius: 20, border: "none", position: "relative", cursor: "pointer", padding: 0 }}>
+                            <span style={{ position: "absolute", top: 2.5, left: 2.5, width: 18, height: 18, background: "#fff", borderRadius: "50%" }} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )
                 })()}
@@ -3176,7 +3178,7 @@ export default function RundoTable() {
             onEdit={setEditItem} onToggleShared={toggleShared} onDelete={deleteItem} onSetExpected={isAdmin ? setShareExpected : undefined} onAddManual={() => openNewItem("bill")} bareBill
             recentItemId={recentItemId} onGoGuests={goGuests}
             scanFlags={scanFlags}
-            billOk={group?.receipt_total != null && Math.abs((group.receipt_total ?? 0) - billTotal) < 0.005}
+            billOk={billOk}
             taxLines={taxItems.map((t) => ({ name: t.name, amount: taxAmount(t) }))}
             taxNode={
               <div style={{ marginTop: 6 }}>
