@@ -304,9 +304,13 @@ async function scanReceipt(files: File | File[], onProgress?: (p: number) => voi
     // Meerdere foto's = stukken van dezelfde bon. Ze gaan samen in één AI-oproep,
     // zodat het model de overlap tussen de stukken zelf herkent en niets dubbel telt.
     const list = Array.isArray(files) ? files : [files]
+    // Twee foto's samen zijn zwaar: kleiner en sterker gecomprimeerd, anders loopt de
+    // AI-oproep over de tijdslimiet van de server (504). Eén foto blijft op volle kwaliteit.
+    const maxW = list.length > 1 ? 1150 : 1600
+    const quality = list.length > 1 ? 0.72 : 0.82
     const images = [] as { imageBase64: string; mimeType: string }[]
     for (const f of list) {
-      images.push({ imageBase64: await fileToScaledBase64(f), mimeType: "image/jpeg" })
+      images.push({ imageBase64: await fileToScaledBase64(f, maxW, quality), mimeType: "image/jpeg" })
     }
     onProgress?.(0.35)
     const resp = await fetch("/api/scan-receipt", {
@@ -680,7 +684,7 @@ const STRINGS = {
     saveHint: "⬇️ Klik daarna onderaan op \"Bevestigen & toevoegen\" om het op te slaan.",
     justAddedScan: "✨ Net toegevoegd — controleer naam en prijs",
     taxModalTitle: "🧮 BTW / kosten / korting",
-    taxDesc: "Omschrijving",
+    taxDesc: "Aparte BTW, Kosten of Kortingen?",
     taxDescPlaceholder: "bv. Bediening, Couvert, Korting",
     taxAmountLabel: "Bedrag € (gebruik een minteken voor een korting)",
     taxAmountPlaceholder: "bv. 5.00",
@@ -824,7 +828,7 @@ const STRINGS = {
     addItemBtn: "+ Item toevoegen",
     whatIsThis: "Wat is dit?",
     photoOfN: (i: number, n: number) => `Foto ${i} van ${n}`,
-    taxAddBtn: "% BTW / kosten / korting",
+    taxAddBtn: "+ BTW / kosten / korting",
     legendTitle: "Wat betekenen de knopjes?",
     legendShare: "Gedeelde items (fles wijn, water, dessert)? Tik dit icoon aan. De prijs verdeelt zich over wie meedeelt.",
     legendEdit: "naam, aantal of prijs aanpassen",
@@ -1179,7 +1183,7 @@ const STRINGS = {
     saveHint: "⬇️ Clique ensuite en bas sur « Confirmer et ajouter » pour l'enregistrer.",
     justAddedScan: "✨ Vient d'être ajouté — vérifie le nom et le prix",
     taxModalTitle: "🧮 TVA / frais / réduction",
-    taxDesc: "Description",
+    taxDesc: "TVA, frais ou réductions séparés ?",
     taxDescPlaceholder: "ex. Service, Couvert, Réduction",
     taxAmountLabel: "Montant € (utilise un signe moins pour une réduction)",
     taxAmountPlaceholder: "ex. 5,00",
@@ -1323,7 +1327,7 @@ const STRINGS = {
     addItemBtn: "+ Ajouter un article",
     whatIsThis: "Qu'est-ce que c'est ?",
     photoOfN: (i: number, n: number) => `Photo ${i} sur ${n}`,
-    taxAddBtn: "% TVA / frais / remise",
+    taxAddBtn: "+ TVA / frais / remise",
     legendTitle: "Que font les boutons ?",
     legendShare: "Articles partagés (bouteille de vin, eau, dessert) ? Touche cette icône. Le prix se répartit entre ceux qui partagent.",
     legendEdit: "modifier le nom, la quantité ou le prix",
@@ -2781,7 +2785,7 @@ export default function RundoTable() {
       {/* Subtiele bon-preview, in elke tab beschikbaar (behalve op de Bon-tab, die heeft z'n eigen knop) */}
       {group.receipt_url && adminTab !== "scan" && (
         <div style={{ textAlign: "right", marginTop: -6, marginBottom: 10 }}>
-          <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#1499b0", padding: "2px 4px" }}>{L.viewReceipt}</button>
+          <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#1499b0", padding: "2px 4px" }}>{L.viewReceipt}{(group.receipt_url!.split(/\s+/).filter(Boolean).length > 1) ? ` (${group.receipt_url!.split(/\s+/).filter(Boolean).length})` : ""}</button>
         </div>
       )}
 
@@ -2790,7 +2794,7 @@ export default function RundoTable() {
         <div>
           {group.receipt_url ? (
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 16, marginBottom: 10, marginTop: -4 }}>
-              <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#1499b0", padding: "2px 4px" }}>{L.viewReceipt}</button>
+              <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#1499b0", padding: "2px 4px" }}>{L.viewReceipt}{(group.receipt_url!.split(/\s+/).filter(Boolean).length > 1) ? ` (${group.receipt_url!.split(/\s+/).filter(Boolean).length})` : ""}</button>
               <button onClick={startRescan} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#9aa0ab", padding: "2px 4px" }}>{L.rescan}</button>
             </div>
           ) : (
@@ -2955,7 +2959,7 @@ export default function RundoTable() {
                 })}
                 <div style={{ display: "flex", flexDirection: "column", gap: 7, alignItems: "flex-end", marginTop: 8, width: "100%" }}>
                   <button onClick={() => setTaxModal({ name: L.taxDefaultName, amount: "", scope: "all", ids: [] })}
-                    style={{ width: "50%", minWidth: 170, background: "rgba(20,153,176,0.12)", color: "#0f7d90", border: "1px solid rgba(20,153,176,0.4)", borderRadius: 12, padding: "11px 10px", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>{L.taxAddBtn}</button>
+                    style={{ width: "62%", minWidth: 190, background: "rgba(20,153,176,0.12)", color: "#0f7d90", border: "1px solid rgba(20,153,176,0.4)", borderRadius: 12, padding: "11px 10px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{L.taxAddBtn}</button>
                   <button onClick={() => setShowTaxInfo(true)} title={L.explainTooltip}
                     style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#5a6680", textDecoration: "underline", padding: 0 }}>ⓘ {L.whatIsThis}</button>
                 </div>
@@ -4139,7 +4143,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         )
       })}
       <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end", marginTop: 12, marginBottom: 2 }}>
-        <button onClick={onAddManual} style={{ ...S.btn, ...S.btnPrimary, width: "50%", minWidth: 170, padding: "11px 10px", fontSize: 13, fontWeight: 800 }}>{L.addItemBtn}</button>
+        <button onClick={onAddManual} style={{ ...S.btn, ...S.btnPrimary, width: "62%", minWidth: 190, padding: "11px 10px", fontSize: 13, fontWeight: 800, whiteSpace: "nowrap" }}>{L.addItemBtn}</button>
         {taxNode}
       </div>
       {items.length > 0 && (() => {
