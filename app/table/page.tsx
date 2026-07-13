@@ -1910,7 +1910,7 @@ export default function RundoTable() {
 
     const allItems: ParsedItem[] = []
     let total: number | null = null
-    let lastFail: { reason: string; status?: number; detail?: string } | null = null
+    let lastFail: { reason: "unavailable" | "empty"; status?: number; detail?: string } | null = null
 
     for (let i = 0; i < photos.length; i++) {
       setScanStep({ i: i + 1, n: photos.length })
@@ -1926,9 +1926,9 @@ export default function RundoTable() {
 
     setScanStep(null); setScanning(false)
     if (allItems.length === 0) {
-      const f = lastFail ?? { reason: "empty" }
+      const f: { reason: "unavailable" | "empty"; status?: number; detail?: string } = lastFail ?? { reason: "empty" }
       if (f.reason === "unavailable") setCooldownUntil(Date.now() + 45 * 1000)
-      setScanFail(f as { reason: string; status?: number; detail?: string })
+      setScanFail(f)
       return
     }
     setScanSource("ai")
