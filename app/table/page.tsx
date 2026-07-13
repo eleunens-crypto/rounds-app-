@@ -546,6 +546,18 @@ const STRINGS = {
     scanModalIntro: "Maak of kies een foto van de rekening. Daarna kan je de herkende items nog nakijken en bijsturen.",
     scanProgress: "De tekst van je bon wordt herkend — even geduld.",
     scanningBusy: "⏳ Bezig met scannen — even geduld",
+    longBillTitle: "📑 Te lange rekening? Neem 2 foto's!",
+    longBillSub: "bovenste helft & onderste helft",
+    addSecondHalf: "2e helft",
+    photoAdded: "foto toegevoegd",
+    retakePhoto: "opnieuw nemen",
+    readBillBtn: "✨ Lees de rekening uit",
+    readBillBtn2: "✨ Scan 2 foto's samen",
+    countsAsOne: "telt als één scan",
+    photoHintOne: "Staat alles erop? Lees uit. Zo niet: voeg de 2e helft toe.",
+    photoHintTwo: "Beide helften klaar. De items komen in één lijst.",
+    scanningPhotoN: (i: number, n: number) => `✨ Foto ${i} van ${n} wordt gelezen…`,
+    itemsSoFar: (n: number) => `${n} items gevonden tot nu toe`,
     otherPhoto: "📷 Andere foto kiezen",
     pickPhoto: "📷 Foto maken / kiezen",
     takePhoto: "Foto maken",
@@ -1010,6 +1022,18 @@ const STRINGS = {
     scanModalIntro: "Prends ou choisis une photo de l'addition. Tu pourras ensuite vérifier et corriger les articles reconnus.",
     scanProgress: "Le texte de ton addition est en cours de reconnaissance — un instant.",
     scanningBusy: "⏳ Scan en cours — un instant",
+    longBillTitle: "📑 Addition trop longue ? Prends 2 photos !",
+    longBillSub: "moitié du haut & moitié du bas",
+    addSecondHalf: "2e moitié",
+    photoAdded: "photo ajoutée",
+    retakePhoto: "reprendre",
+    readBillBtn: "✨ Lire l'addition",
+    readBillBtn2: "✨ Scanner les 2 photos",
+    countsAsOne: "compte pour un seul scan",
+    photoHintOne: "Tout y est ? Lance la lecture. Sinon : ajoute la 2e moitié.",
+    photoHintTwo: "Les deux moitiés sont prêtes. Les articles arrivent dans une seule liste.",
+    scanningPhotoN: (i: number, n: number) => `✨ Lecture de la photo ${i} sur ${n}…`,
+    itemsSoFar: (n: number) => `${n} articles trouvés jusqu'ici`,
     otherPhoto: "📷 Choisir une autre photo",
     pickPhoto: "📷 Prendre / choisir une photo",
     takePhoto: "Prendre une photo",
@@ -1388,6 +1412,8 @@ export default function RundoTable() {
   const [claimMode, setClaimMode] = useState<"item" | "person">("item")
   const [claimPid, setClaimPid] = useState<string | null>(null)
   const [scanFile, setScanFile] = useState<File | null>(null)
+  const [photos, setPhotos] = useState<{ file: File; url: string }[]>([])
+  const [scanStep, setScanStep] = useState<{ i: number; n: number } | null>(null)
   // Bewaarde foto van de laatste scan, zodat je een mislukte AI-scan opnieuw kan proberen.
   const [retryFile, setRetryFile] = useState<File | null>(null)
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
@@ -1857,6 +1883,58 @@ export default function RundoTable() {
     if (!retryFile) { setToast(L.errNoPhotoRescan); return }
     setShowScan(true)
     onPhotoPicked(retryFile)
+  }
+
+  // Voegt een foto toe aan de lijst (max 2: bovenste + onderste helft van een lange rekening).
+  const addPhoto = (file: File | undefined) => {
+    if (!file) return
+    setScanFail(null)
+    setPhotos((cur) => (cur.length >= 2 ? cur : [...cur, { file, url: URL.createObjectURL(file) }]))
+  }
+  const removePhoto = (idx: number) => {
+    setPhotos((cur) => {
+      const p = cur[idx]
+      if (p) URL.revokeObjectURL(p.url)
+      return cur.filter((_, i) => i !== idx)
+    })
+  }
+
+  // Leest alle verzamelde foto's uit en plakt de items aan elkaar.
+  // Eén druk op de knop = één scan, ook al zijn het twee foto's (het blijft één rekening).
+  const scanPhotos = async () => {
+    if (photos.length === 0 || !group) return
+    setScanFail(null); setScanPreview([]); setScanProgress(0); setScanning(true)
+    setScanFile(photos[0].file); setRetryFile(photos[0].file)
+    if (scanPhotoUrl) URL.revokeObjectURL(scanPhotoUrl)
+    setScanPhotoUrl(photos[0].url)
+
+    const allItems: ParsedItem[] = []
+    let total: number | null = null
+    let lastFail: { reason: string; status?: number; detail?: string } | null = null
+
+    for (let i = 0; i < photos.length; i++) {
+      setScanStep({ i: i + 1, n: photos.length })
+      const res = await scanReceipt(photos[i].file, (pr) => setScanProgress((i + pr) / photos.length))
+      if (res.items && res.items.length > 0) {
+        allItems.push(...res.items)
+        // Het totaal staat meestal onderaan: de laatste foto met een totaal wint.
+        if (res.total != null) total = res.total
+      } else {
+        lastFail = { reason: res.reason ?? "empty", status: res.status, detail: res.detail }
+      }
+    }
+
+    setScanStep(null); setScanning(false)
+    if (allItems.length === 0) {
+      const f = lastFail ?? { reason: "empty" }
+      if (f.reason === "unavailable") setCooldownUntil(Date.now() + 45 * 1000)
+      setScanFail(f as { reason: string; status?: number; detail?: string })
+      return
+    }
+    setScanSource("ai")
+    await confirmScan(allItems, total != null ? total.toFixed(2).replace(".", ",") : "", photos[0].file)
+    for (const ph of photos) URL.revokeObjectURL(ph.url)
+    setPhotos([])
   }
 
   const onPhotoPicked = async (file: File | undefined) => {
@@ -3315,18 +3393,50 @@ export default function RundoTable() {
             <p style={{ fontSize: 12.5, color: "#999", marginBottom: 14 }}>{L.scanModalIntro}</p>
 
             {scanning ? (
-              <div style={{ ...S.btn, ...S.btnPrimary, textAlign: "center", marginBottom: 14, fontWeight: 700, padding: "14px 0", opacity: 0.6 }}>{L.scanningBusy}</div>
+              <div style={{ ...S.btn, ...S.btnPrimary, textAlign: "center", marginBottom: 14, fontWeight: 700, padding: "14px 0", opacity: 0.6 }}>{scanStep && scanStep.n > 1 ? L.scanningPhotoN(scanStep.i, scanStep.n) : L.scanningBusy}</div>
             ) : (
-              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                <label style={{ ...S.btn, ...S.btnPrimary, flex: 1, display: "block", textAlign: "center", cursor: "pointer", fontWeight: 700, padding: "13px 0" }}>
-                  📷 {L.takePhoto}
-                  <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
-                </label>
-                <label style={{ ...S.btn, flex: 1, display: "block", textAlign: "center", cursor: "pointer", fontWeight: 700, padding: "13px 0" }}>
-                  🖼️ {L.fromGallery}
-                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
-                </label>
-              </div>
+              <>
+                {photos.length === 0 ? (
+                  <>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 9 }}>
+                      <label style={{ ...S.btn, ...S.btnPrimary, flex: 1, display: "block", textAlign: "center", cursor: "pointer", fontWeight: 700, padding: "13px 0" }}>
+                        📷 {L.takePhoto}
+                        <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => addPhoto(e.target.files?.[0])} />
+                      </label>
+                      <label style={{ ...S.btn, flex: 1, display: "block", textAlign: "center", cursor: "pointer", fontWeight: 700, padding: "13px 0" }}>
+                        🖼️ {L.fromGallery}
+                        <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => addPhoto(e.target.files?.[0])} />
+                      </label>
+                    </div>
+                    <div style={{ border: "1px dashed rgba(20,153,176,0.45)", background: "rgba(20,153,176,0.04)", borderRadius: 10, padding: "9px 11px", textAlign: "center", marginBottom: 14 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 800, color: "#1499b0" }}>{L.longBillTitle}</div>
+                      <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 2 }}>{L.longBillSub}</div>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 11 }}>
+                      {photos.map((ph, i) => (
+                        <div key={i} style={{ position: "relative", width: 58, height: 74, borderRadius: 10, overflow: "hidden", flexShrink: 0, border: "1.5px solid rgba(39,174,96,0.5)" }}>
+                          <img src={ph.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          <span style={{ position: "absolute", bottom: 3, left: "50%", transform: "translateX(-50%)", fontSize: 9, fontWeight: 800, color: "#1f8a4c", background: "rgba(255,255,255,0.9)", borderRadius: 5, padding: "1px 5px", whiteSpace: "nowrap" }}>✓ {i + 1}</span>
+                          <button onClick={() => removePhoto(i)} title={L.retakePhoto} style={{ position: "absolute", top: 2, right: 2, width: 19, height: 19, borderRadius: "50%", background: "#fff", border: "1px solid rgba(16,24,40,0.2)", color: "#6b7385", fontSize: 11, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, lineHeight: 1 }}>✕</button>
+                        </div>
+                      ))}
+                      {photos.length < 2 && (
+                        <label style={{ width: 58, height: 74, borderRadius: 10, border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.04)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                          <span style={{ fontSize: 18, color: "#1499b0", lineHeight: 1 }}>+</span>
+                          <span style={{ fontSize: 9, color: "#1499b0", fontWeight: 800, textAlign: "center", lineHeight: 1.2 }}>{L.addSecondHalf}</span>
+                          <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => addPhoto(e.target.files?.[0])} />
+                        </label>
+                      )}
+                      <div style={{ flex: 1, fontSize: 11, color: "#9aa0ab", lineHeight: 1.5, minWidth: 120 }}>{photos.length === 1 ? L.photoHintOne : L.photoHintTwo}</div>
+                    </div>
+                    <button onClick={scanPhotos} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 14.5, fontWeight: 800 }}>{photos.length > 1 ? L.readBillBtn2 : L.readBillBtn}</button>
+                    {photos.length > 1 && <div style={{ fontSize: 10.5, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>{L.countsAsOne}</div>}
+                  </div>
+                )}
+              </>
             )}
 
             {scanning && (
