@@ -492,7 +492,9 @@ const STRINGS = {
     thatsMe: "Dat ben ik →",
     thatsUs: "Dat zijn wij →",
     backToSpots: "← terug",
-    howManyPersons: "Voor hoeveel personen bestel je?",
+    howManyPersons: "Voor hoeveel personen tik je aan?",
+    payTogetherShort: "Meer dan 1 persoon? Jullie betalen dan samen.",
+    adminSpotLabel: "admin",
     onePerson: "👤 1 persoon",
     twoPersons: "👫 Met 2",
     threePlus: "👥 Met 3+",
@@ -980,7 +982,9 @@ const STRINGS = {
     thatsMe: "C'est moi →",
     thatsUs: "C'est nous →",
     backToSpots: "← retour",
-    howManyPersons: "Pour combien de personnes commandes-tu ?",
+    howManyPersons: "Pour combien de personnes coches-tu ?",
+    payTogetherShort: "Plus d'une personne ? Vous payez alors ensemble.",
+    adminSpotLabel: "admin",
     onePerson: "👤 1 personne",
     twoPersons: "👫 À 2",
     threePlus: "👥 À 3+",
@@ -1779,6 +1783,8 @@ export default function RundoTable() {
   }
 
   // Een plaats is "vrij" zolang niemand er zijn naam op zette (naam is nog "Gast N" of "Ik").
+  // De organisator is de eerste deelnemer: die plaats mag niemand overnemen via de link.
+  const ownerPid = participants[0]?.id ?? null
   const isFreeSpot = (p: Participant) => new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName
 
   // Neemt de gekozen plaats over: zet de naam (of namen, bij een koppel) en het aantal personen.
@@ -1861,7 +1867,15 @@ export default function RundoTable() {
   const requireName = (): boolean => {
     if (adminNamed) return true
     setToast(L.nameRequired)
-    if (typeof document !== "undefined") document.getElementById("own-name")?.scrollIntoView({ behavior: "smooth", block: "center" })
+    // Het naamveld staat op de gasten-tab: kom je van elders, stuur er dan eerst naartoe.
+    setAdminTab("guests")
+    if (typeof window !== "undefined") {
+      window.setTimeout(() => {
+        const el = document.getElementById("own-name")
+        el?.scrollIntoView({ behavior: "smooth", block: "center" })
+        ;(el as HTMLInputElement | null)?.focus()
+      }, 120)
+    }
     return false
   }
 
@@ -2595,14 +2609,23 @@ export default function RundoTable() {
                 <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 14 }}>{L.pickFreeSpot}</p>
 
                 {participants.map((p) => {
-                  const free = isFreeSpot(p)
+                  // De admin-plaats is van de organisator: die mag niemand overnemen.
+                  const isAdminSpot = p.id === ownerPid
+                  const free = !isAdminSpot && isFreeSpot(p)
+                  const clickable = !isAdminSpot
                   return (
-                    <button key={p.id} onClick={() => { if (free) { setClaimSpot(p.id); setClaimSeats(Math.max(1, p.seats ?? 1)); setClaimNames([""]) } else pickMe(p.id) }}
-                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, textAlign: "left", marginBottom: 7, cursor: "pointer", borderRadius: 11, padding: "11px 12px",
+                    <button key={p.id} disabled={!clickable}
+                      onClick={() => { if (!clickable) return; if (free) { setClaimSpot(p.id); setClaimSeats(Math.max(1, p.seats ?? 1)); setClaimNames([""]) } else pickMe(p.id) }}
+                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, textAlign: "left", marginBottom: 7, cursor: clickable ? "pointer" : "default", borderRadius: 11, padding: "11px 12px",
                         border: free ? "1.5px dashed rgba(20,153,176,0.6)" : "1px solid rgba(16,24,40,0.12)",
+                        opacity: clickable ? 1 : 0.75,
                         background: free ? "rgba(20,153,176,0.05)" : "rgba(16,24,40,0.02)" }}>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: free ? "#1499b0" : "#14213a" }}>{free ? L.freeSpotLabel : p.name}{!free && (p.seats ?? 1) > 1 ? <span style={{ fontSize: 11, fontWeight: 700, color: "#9aa0ab" }}> · {p.seats}p.</span> : null}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: free ? "#1499b0" : "#9aa0ab", flexShrink: 0 }}>{free ? L.tapToPick : L.imThisOne}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: free ? "#1499b0" : "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{free ? L.freeSpotLabel : p.name}</span>
+                        {isAdminSpot && <span style={{ flexShrink: 0, color: "#c0392b", fontWeight: 800, fontSize: 13 }}>*</span>}
+                        {!free && !isAdminSpot && (p.seats ?? 1) > 1 && <span style={{ fontSize: 11, fontWeight: 700, color: "#9aa0ab" }}>· {p.seats}p.</span>}
+                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: isAdminSpot ? "#9aa0ab" : free ? "#1499b0" : "#9aa0ab", flexShrink: 0 }}>{isAdminSpot ? L.adminSpotLabel : free ? L.tapToPick : L.imThisOne}</span>
                     </button>
                   )
                 })}
@@ -2612,8 +2635,8 @@ export default function RundoTable() {
               </>
             ) : (
               <>
-                <div style={{ fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.howManyPersons}</div>
-                <div style={{ fontSize: 11.5, color: "#9aa0ab", lineHeight: 1.5, marginBottom: 9 }}>{L.payTogetherHint}</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: "#14213a", marginBottom: 4, lineHeight: 1.35 }}>{L.howManyPersons}</div>
+                <div style={{ fontSize: 12, color: "#9aa0ab", lineHeight: 1.5, marginBottom: 10 }}>{L.payTogetherShort}</div>
                 <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
                   {[1, 2, 3].map((n) => {
                     const on = n === 3 ? claimSeats >= 3 : claimSeats === n
@@ -2720,7 +2743,7 @@ export default function RundoTable() {
             { id: "guests", label: L.tabGuests },
             { id: "overview", label: L.tabAssign },
           ] as { id: AdminTab; label: string }[]).map((t) => (
-            <button key={t.id} onClick={() => { if (t.id === "overview" && adminTab === "guests" && !requireName()) return; setAdminTab(t.id) }} style={{
+            <button key={t.id} onClick={() => { if (t.id === "overview" && !requireName()) return; setAdminTab(t.id) }} style={{
               flex: 1, border: "none", borderRadius: 12, padding: "13px 4px", fontSize: 14.5, cursor: "pointer", lineHeight: 1.15,
               fontWeight: adminTab === t.id ? 800 : 700,
               background: adminTab === t.id ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#eaf6f9",
