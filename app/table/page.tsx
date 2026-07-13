@@ -570,9 +570,10 @@ const STRINGS = {
     yes: "Ja",
     no: "Neen",
     checkAllNote: "⚠️ Controleer alles goed — bedrag correct, maar een scan kan fouten bevatten, zeker bij een onduidelijke bon. Kijk namen, aantallen en prijzen na, en markeer gedeelde items indien nodig.",
-    mismatchExplain: (itemTot: string, diff: string, higher: boolean, receiptTot: string) => `Het totaalbedrag klopt met de bon, maar het itemtotaal (€${itemTot}) is €${diff} ${higher ? "hoger" : "lager"} dan het rekeningtotaal (€${receiptTot}). Een scan kan fouten bevatten — controleer hieronder alles goed:`,
-    checkPrices: "prijzen/aantallen correct?",
-    checkTax: "BTW/andere kosten/kortingen?",
+    mismatchExplain: (itemTot: string, diff: string, higher: boolean, receiptTot: string) => `Het totaalbedrag klopt met de bon, maar het itemtotaal (€${itemTot}) is €${diff} ${higher ? "hoger" : "lager"} dan het rekeningtotaal (€${receiptTot}). Scan is niet altijd 100% correct. Check dus even met de bon en corrigeer waar nodig:`,
+    checkPrices: "prijzen/aantallen van items correct?",
+    checkTax: "BTW / andere kosten / kortingen apart toegevoegd?",
+    checkShared: "gedeelde items?",
     allOkGoGuests: "✓ Alles klopt — ga naar Gasten en delen →",
     scanModalTitle: "🧾 Rekening scannen",
     scanModalIntro: "Maak of kies een foto van de rekening. Daarna kan je de herkende items nog nakijken en bijsturen.",
@@ -1141,9 +1142,10 @@ const STRINGS = {
     yes: "Oui",
     no: "Non",
     checkAllNote: "⚠️ Vérifie bien tout — le montant est correct, mais un scan peut contenir des erreurs, surtout sur une addition peu lisible. Vérifie les noms, les quantités et les prix, et marque les articles partagés si besoin.",
-    mismatchExplain: (itemTot: string, diff: string, higher: boolean, receiptTot: string) => `Le total correspond à l'addition, mais le total des articles (€${itemTot}) est €${diff} ${higher ? "plus élevé" : "plus bas"} que le total de l'addition (€${receiptTot}). Un scan peut contenir des erreurs — vérifie bien tout ci-dessous :`,
-    checkPrices: "prix/quantités corrects ?",
-    checkTax: "TVA/autres frais/réductions ?",
+    mismatchExplain: (itemTot: string, diff: string, higher: boolean, receiptTot: string) => `Le total correspond à l'addition, mais le total des articles (€${itemTot}) est €${diff} ${higher ? "plus élevé" : "plus bas"} que le total de l'addition (€${receiptTot}). Le scan n'est pas toujours 100% correct. Vérifie avec l'addition et corrige si nécessaire :`,
+    checkPrices: "prix/quantités des articles corrects ?",
+    checkTax: "TVA / autres frais / réductions ajoutés séparément ?",
+    checkShared: "articles partagés ?",
     allOkGoGuests: "✓ Tout est correct — vers Invités et partage →",
     scanModalTitle: "🧾 Scanner l'addition",
     scanModalIntro: "Prends ou choisis une photo de l'addition. Tu pourras ensuite vérifier et corriger les articles reconnus.",
@@ -3093,8 +3095,9 @@ export default function RundoTable() {
                   <div style={{ marginTop: 8, fontSize: 12, color: "#8a4514", lineHeight: 1.5 }}>
                     <div style={{ fontWeight: 700, marginBottom: 3 }}>{L.mismatchExplain(billTotal.toFixed(2).replace(".", ","), Math.abs(billTotal - (entered ?? 0)).toFixed(2).replace(".", ","), billTotal > (entered ?? 0), (entered ?? 0).toFixed(2).replace(".", ","))}</div>
                     <ul style={{ margin: 0, paddingLeft: 18 }}>
-                      <li>{L.checkPrices}</li>
                       <li>{L.checkTax}</li>
+                      <li>{L.checkPrices}</li>
+                      <li>{L.checkShared}</li>
                     </ul>
                   </div>
                 )}
