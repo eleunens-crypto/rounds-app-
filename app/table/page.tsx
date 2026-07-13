@@ -298,14 +298,21 @@ function fileToBase64(file: File): Promise<string> {
 
 // Hoofd-scan: probeer eerst de AI-route (Gemini). Lukt dat niet (geen sleutel, fout, niets herkend),
 // dan valt hij automatisch terug op de lokale Tesseract-scan.
-async function scanReceipt(file: File, onProgress?: (p: number) => void): Promise<{ items: ParsedItem[] | null; total: number | null; reason: "unavailable" | "empty" | null; status?: number; detail?: string }> {
+async function scanReceipt(files: File | File[], onProgress?: (p: number) => void): Promise<{ items: ParsedItem[] | null; total: number | null; reason: "unavailable" | "empty" | null; status?: number; detail?: string }> {
   try {
     onProgress?.(0.15)
-    const imageBase64 = await fileToScaledBase64(file)
+    // Meerdere foto's = stukken van dezelfde bon. Ze gaan samen in één AI-oproep,
+    // zodat het model de overlap tussen de stukken zelf herkent en niets dubbel telt.
+    const list = Array.isArray(files) ? files : [files]
+    const images = [] as { imageBase64: string; mimeType: string }[]
+    for (const f of list) {
+      images.push({ imageBase64: await fileToScaledBase64(f), mimeType: "image/jpeg" })
+    }
+    onProgress?.(0.35)
     const resp = await fetch("/api/scan-receipt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageBase64, mimeType: "image/jpeg" }),
+      body: JSON.stringify({ images, imageBase64: images[0]?.imageBase64, mimeType: "image/jpeg" }),
     })
     onProgress?.(0.85)
     if (!resp.ok) {
@@ -471,7 +478,7 @@ const STRINGS = {
     personWord: "Persoon",
     onlyOneShares: "⚠️ Maar 1 persoon deelt mee",
     expectedSharers: "Met hoeveel gedeeld?",
-    expectedHint: "Weet je het zeker? Vul in met hoeveel personen dit gedeeld werd — dan waarschuwt de app als er te weinig aanduidden.",
+    expectedHint: "Enkel invullen als je het zeker weet. De app waarschuwt dan als er te weinig personen toewijzen.",
     expectedShort: (n: number) => `verwacht: ${n}`,
     tooFewShared: (have: number, want: number) => `⚠️ Pas ${have} van de ${want} personen duidden dit aan.`,
     sharedOverviewTitle: "Gedeelde items — wie deelde mee?",
@@ -816,6 +823,7 @@ const STRINGS = {
     sharedOnShort: "gedeeld",
     addItemBtn: "+ Item toevoegen",
     whatIsThis: "Wat is dit?",
+    photoOfN: (i: number, n: number) => `Foto ${i} van ${n}`,
     taxAddBtn: "% BTW / kosten / korting",
     legendTitle: "Wat betekenen de knopjes?",
     legendShare: "Gedeelde items (fles wijn, water, dessert)? Tik dit icoon aan. De prijs verdeelt zich over wie meedeelt.",
@@ -969,7 +977,7 @@ const STRINGS = {
     personWord: "Personne",
     onlyOneShares: "⚠️ Une seule personne partage",
     expectedSharers: "Partagé à combien ?",
-    expectedHint: "Tu en es sûr ? Indique entre combien de personnes cet article a été partagé — l'app préviendra s'il en manque.",
+    expectedHint: "À remplir uniquement si tu en es sûr. L'app prévient alors si trop peu de personnes l'indiquent.",
     expectedShort: (n: number) => `attendu : ${n}`,
     tooFewShared: (have: number, want: number) => `⚠️ Seulement ${have} sur ${want} personnes l'ont indiqué.`,
     sharedOverviewTitle: "Articles partagés — qui a partagé ?",
@@ -1314,6 +1322,7 @@ const STRINGS = {
     sharedOnShort: "partagé",
     addItemBtn: "+ Ajouter un article",
     whatIsThis: "Qu'est-ce que c'est ?",
+    photoOfN: (i: number, n: number) => `Photo ${i} sur ${n}`,
     taxAddBtn: "% TVA / frais / remise",
     legendTitle: "Que font les boutons ?",
     legendShare: "Articles partagés (bouteille de vin, eau, dessert) ? Touche cette icône. Le prix se répartit entre ceux qui partagent.",
@@ -2012,32 +2021,21 @@ export default function RundoTable() {
     setScanFile(photos[0].file); setRetryFile(photos[0].file)
     if (scanPhotoUrl) URL.revokeObjectURL(scanPhotoUrl)
     setScanPhotoUrl(photos[0].url)
+    setScanStep(photos.length > 1 ? { i: 1, n: photos.length } : null)
 
-    const allItems: ParsedItem[] = []
-    let total: number | null = null
-    let lastFail: { reason: "unavailable" | "empty"; status?: number; detail?: string } | null = null
-
-    for (let i = 0; i < photos.length; i++) {
-      setScanStep({ i: i + 1, n: photos.length })
-      const res = await scanReceipt(photos[i].file, (pr) => setScanProgress((i + pr) / photos.length))
-      if (res.items && res.items.length > 0) {
-        allItems.push(...res.items)
-        // Het totaal staat meestal onderaan: de laatste foto met een totaal wint.
-        if (res.total != null) total = res.total
-      } else {
-        lastFail = { reason: res.reason ?? "empty", status: res.status, detail: res.detail }
-      }
-    }
+    // Alle foto's gaan in ÉÉN AI-oproep: zo ziet het model de hele bon en herkent het
+    // de overlap tussen de stukken zelf (geen dubbele items, juiste volgorde, één totaal).
+    const res = await scanReceipt(photos.map((p) => p.file), (pr) => setScanProgress(pr))
 
     setScanStep(null); setScanning(false)
-    if (allItems.length === 0) {
-      const f: { reason: "unavailable" | "empty"; status?: number; detail?: string } = lastFail ?? { reason: "empty" }
-      if (f.reason === "unavailable") setCooldownUntil(Date.now() + 30 * 1000)
-      setScanFail(f)
+    if (!res.items || res.items.length === 0) {
+      const reason = res.reason ?? "empty"
+      if (reason === "unavailable") setCooldownUntil(Date.now() + 30 * 1000)
+      setScanFail({ reason, status: res.status, detail: res.detail })
       return
     }
     setScanSource("ai")
-    await confirmScan(allItems, total != null ? total.toFixed(2).replace(".", ",") : "", photos[0].file)
+    await confirmScan(res.items, res.total != null ? res.total.toFixed(2).replace(".", ",") : "", photos.map((p) => p.file))
     for (const ph of photos) URL.revokeObjectURL(ph.url)
     setPhotos([])
   }
@@ -2097,21 +2095,28 @@ export default function RundoTable() {
     await confirmScan(res.items, res.total != null ? res.total.toFixed(2).replace(".", ",") : "", null)
   }
 
-  const confirmScan = async (previewArg?: ParsedItem[], totalArg?: string, fileArg?: File | null) => {
+  const confirmScan = async (previewArg?: ParsedItem[], totalArg?: string, fileArg?: File | File[] | null) => {
     const preview = previewArg ?? scanPreview
     const totalStr = totalArg ?? scanTotal
     const file = fileArg !== undefined ? fileArg : scanFile
     if (!group || preview.length === 0) return
     setReceiptConfirmed(false); setReceiptEditing(false)
     let receiptUrl = group.receipt_url ?? null
-    if (file) {
-      const uploadBlob = await fileToScaledBlob(file)
-      const ext = uploadBlob === (file as Blob) ? ((file.name.split(".").pop() || "jpg").toLowerCase()) : "jpg"
-      const path = `${group.id}/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from("receipts").upload(path, uploadBlob, { upsert: true, contentType: uploadBlob.type || "image/jpeg" })
-      if (upErr) { setToast(L.errPhotoSave) }
-      else {
-        receiptUrl = supabase.storage.from("receipts").getPublicUrl(path).data.publicUrl
+    // Meerdere foto's (stukken van dezelfde bon): elk apart bewaren en de URL's samen
+    // opslaan, gescheiden door een spatie. Zo kan je ze later allemaal bekijken.
+    const fileList: File[] = file ? (Array.isArray(file) ? file : [file]) : []
+    if (fileList.length > 0) {
+      const urls: string[] = []
+      for (const f of fileList) {
+        const uploadBlob = await fileToScaledBlob(f)
+        const ext = uploadBlob === (f as Blob) ? ((f.name.split(".").pop() || "jpg").toLowerCase()) : "jpg"
+        const path = `${group.id}/${Date.now()}-${urls.length}.${ext}`
+        const { error: upErr } = await supabase.storage.from("receipts").upload(path, uploadBlob, { upsert: true })
+        if (upErr) { setToast(L.errPhotoSave) }
+        else urls.push(supabase.storage.from("receipts").getPublicUrl(path).data.publicUrl)
+      }
+      if (urls.length > 0) {
+        receiptUrl = urls.join(" ")
         const { error: urlErr } = await supabase.from("table_groups").update({ receipt_url: receiptUrl }).eq("id", group.id)
         if (urlErr) setError(L.errPhotoSaveGroup + urlErr.message)
         else setGroup({ ...group, receipt_url: receiptUrl })
@@ -3922,10 +3927,18 @@ export default function RundoTable() {
       )}
       {viewReceipt && (
         <div style={S.overlay} onClick={() => setViewReceipt(null)}>
-          <div style={{ position: "relative", maxWidth: "92vw", maxHeight: "90vh" }} onClick={(e) => e.stopPropagation()}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={viewReceipt} alt={L.scannedReceiptAlt} style={{ maxWidth: "92vw", maxHeight: "82vh", objectFit: "contain", borderRadius: 14, background: "#fff", boxShadow: "0 24px 70px -12px rgba(16,24,40,0.5)" }} />
-            <button onClick={() => setViewReceipt(null)} style={{ ...S.btn, position: "absolute", top: -14, right: -14, width: 40, height: 40, borderRadius: "50%", fontWeight: 700, fontSize: 16, padding: 0 }}>✕</button>
+          <div style={{ position: "relative", maxWidth: "92vw", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            {/* Meerdere foto's van dezelfde bon staan als spatie-gescheiden URL's opgeslagen. */}
+            {viewReceipt.split(/\s+/).filter(Boolean).map((url, i, arr) => (
+              <div key={i} style={{ marginBottom: i < arr.length - 1 ? 10 : 0 }}>
+                {arr.length > 1 && (
+                  <div style={{ fontSize: 11.5, fontWeight: 800, color: "#fff", background: "rgba(0,0,0,0.55)", borderRadius: 7, padding: "3px 9px", display: "inline-block", marginBottom: 5 }}>{L.photoOfN(i + 1, arr.length)}</div>
+                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt={L.scannedReceiptAlt} style={{ display: "block", maxWidth: "92vw", maxHeight: arr.length > 1 ? "70vh" : "82vh", borderRadius: 12, objectFit: "contain" }} />
+              </div>
+            ))}
+            <button onClick={() => setViewReceipt(null)} style={{ ...S.btn, position: "sticky", bottom: 0, width: "100%", marginTop: 10, fontWeight: 800 }}>{L.close}</button>
           </div>
         </div>
       )}
