@@ -459,7 +459,6 @@ const STRINGS = {
     stAssignNow: "aanduiden →",
     whoJoinedHint: "💡 Hier zie je wie de link opende. Aanduiden doe je bij Toewijzen.",
     whoAssignTitle: "📝 Jij duidt aan voor:",
-    youAlreadyIn: "Jij staat er al bij",
     shareLinkWarn: "Deel je de link? Voeg hier dan niemand toe, tenzij je zelf voor deze gast(en) gaat toewijzen.",
     addNamedGuest: "+ Iemand toevoegen voor wie ik aanduid",
     personsFirst: "⚠️ Vul eerst in met hoeveel jullie zijn.",
@@ -1019,7 +1018,6 @@ const STRINGS = {
     stAssignNow: "cocher →",
     whoJoinedHint: "💡 Ici tu vois qui a ouvert le lien. Le cochage se fait dans Répartir.",
     whoAssignTitle: "📝 Tu coches pour :",
-    youAlreadyIn: "Tu y es déjà",
     shareLinkWarn: "Tu partages le lien ? N'ajoute alors personne ici, sauf si tu coches toi-même pour ces invités.",
     addNamedGuest: "+ Ajouter quelqu'un pour qui je coche",
     personsFirst: "⚠️ Indique d'abord combien vous êtes.",
@@ -3269,12 +3267,6 @@ export default function RundoTable() {
           <div style={{ ...S.card, order: 3 }}>
             <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>{L.whoAssignTitle}</div>
-              {adminNamed && (
-                <div style={{ display: "flex", alignItems: "center", gap: 7, background: "rgba(39,174,96,0.07)", border: "1px solid rgba(39,174,96,0.35)", borderRadius: 9, padding: "8px 10px", marginBottom: 9 }}>
-                  <span style={{ fontSize: 13 }}>✅</span>
-                  <span style={{ fontSize: 12.5, color: "#14213a" }}><b>{(participants.find((x) => x.id === meId) || participants[0])?.name}</b> — {L.youAlreadyIn}</span>
-                </div>
-              )}
             </div>
 
             {participants.length > 0 && (
@@ -3349,7 +3341,7 @@ export default function RundoTable() {
                   </div>
                 )
               }
-              const isPh = (nm?: string) => /^(Gast|Invité) \d+$/.test(nm || "")
+              const isPh = (nm?: string) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test((nm || "").trim())
               // Deze lijst toont enkel wie JIJ regelt: jezelf, de gasten die je een naam gaf,
               // en de vrije plaats die je op dit moment aan het invullen bent.
               const mine = participants.filter((p) =>
