@@ -4717,6 +4717,9 @@ function ClaimScreen(props: {
   const [claimCollapsed, setClaimCollapsed] = useState(false)
   // De knop "Wie nam wat" in het overzicht klapt deze lijst open (en scrollt ernaartoe).
   useEffect(() => { if (jumpToAssign) setClaimCollapsed(false) }, [jumpToAssign])
+  // Vrije plaatsen (nog niemand) horen niet in de toewijslijst: enkel wie een naam heeft.
+  const isFreeName = (nm: string) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test((nm || "").trim())
+  const named = participants.filter((p) => !isFreeName(p.name))
   const prevDoneRef = useRef(false)
   useEffect(() => {
     if (isAdmin && allDone && !prevDoneRef.current) setClaimCollapsed(true)
@@ -4724,10 +4727,7 @@ function ClaimScreen(props: {
   }, [allDone, isAdmin])
 
   if (isAdmin) {
-    // Vrije plaatsen (nog niemand) horen niet in de toewijslijst: enkel wie een naam heeft.
-  const isFreeName = (nm: string) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test((nm || "").trim())
-  const named = participants.filter((p) => !isFreeName(p.name))
-  const normalItems = items.filter((i) => !i.is_shared)
+    const normalItems = items.filter((i) => !i.is_shared)
     const sharedItems = items.filter((i) => i.is_shared)
     const totalUnits = normalItems.reduce((s, i) => s + i.quantity, 0)
     const claimedUnits = normalItems.reduce((s, i) => s + Math.min(i.quantity, claimedQty(i.id)), 0)
