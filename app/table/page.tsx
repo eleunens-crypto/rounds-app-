@@ -464,7 +464,6 @@ const STRINGS = {
     personsFirst: "⚠️ Vul eerst in met hoeveel jullie zijn.",
     lockedPersons: "🔒 Eerst het aantal personen invullen",
     lockedName: "🔒 Vul eerst je eigen naam in",
-    whoAssignFoot: "💡 Straks tik je bij Toewijzen aan wat jij at — en wat zij aten.",
     shareLinkBtn: "🔗 Deel de link",
     shareLinkHint: "Kies daarna je berichtenapp — WhatsApp, Messenger, sms…",
     copyLinkPre: "Liever zelf plakken?",
@@ -1033,7 +1032,6 @@ const STRINGS = {
     personsFirst: "⚠️ Indique d'abord combien vous êtes.",
     lockedPersons: "🔒 Indique d'abord le nombre de personnes",
     lockedName: "🔒 Indique d'abord ton propre nom",
-    whoAssignFoot: "💡 Ensuite, dans Répartir, tu coches ce que tu as pris — et ce qu'ils ont pris.",
     shareLinkBtn: "🔗 Partager le lien",
     shareLinkHint: "Choisis ensuite ton app de messagerie — WhatsApp, Messenger, SMS…",
     copyLinkPre: "Tu préfères coller toi-même ?",
@@ -1618,7 +1616,6 @@ export default function RundoTable() {
   const [jumpToAssign, setJumpToAssign] = useState(0)
   const [personsTouched, setPersonsTouched] = useState(false)
   const [fillingSpots, setFillingSpots] = useState<string[]>([])  // vrije plaatsen die je nu een naam geeft
-  const [askSeats, setAskSeats] = useState(false)  // "voor hoeveel personen?" bij het toevoegen
   const [askSeats, setAskSeats] = useState(false)  // "voor hoeveel personen?" bij het toevoegen
   const [billMismatchAck, setBillMismatchAck] = useState(false)  // bewust doorgegaan ondanks verschil
   const [showJoined, setShowJoined] = useState(false)
@@ -3465,7 +3462,6 @@ export default function RundoTable() {
                       </div>
                     )
                   })()}
-                  <div style={{ fontSize: 11.5, color: "#5a6680", background: "rgba(90,108,166,0.06)", borderRadius: 8, padding: "8px 9px", marginTop: 9, lineHeight: 1.45 }}>{L.whoAssignFoot}</div>
                 </>
               )}
           </div>
