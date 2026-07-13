@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 export const runtime = "nodejs"
 // Wat extra tijd, zodat een retry + terugval-model binnen de functie past.
 // Twee foto's in één oproep vraagt iets meer tijd dan één.
-export const maxDuration = 45
+export const maxDuration = 60
 
 // Modellen. Eerst het goedkoopste met de ruimste gratis quota, dan een terugval bij drukte.
 const PRIMARY = "gemini-2.5-flash-lite"
@@ -14,6 +14,12 @@ const TRIES: [string, number][] = [
   [PRIMARY, 0],
   [PRIMARY, 900],
   [FALLBACK, 900],
+]
+// Bij meerdere foto's duurt elke poging langer. Minder pogingen, zodat we binnen de
+// tijdslimiet van de server blijven (anders krijgt de gebruiker een 504-timeout).
+const TRIES_MULTI: [string, number][] = [
+  [PRIMARY, 0],
+  [FALLBACK, 400],
 ]
 
 const RETRYABLE = new Set([429, 500, 502, 503, 504])
@@ -137,8 +143,9 @@ export async function POST(req: NextRequest) {
   const geminiBody = buildBody(images)
   const BT = String.fromCharCode(96)
   let lastStatus = 0
+  const tries = images.length > 1 ? TRIES_MULTI : TRIES
 
-  for (const [model, wait] of TRIES) {
+  for (const [model, wait] of tries) {
     if (wait) await sleep(wait)
     try {
       const url =
