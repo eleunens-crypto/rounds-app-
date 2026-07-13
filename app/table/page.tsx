@@ -460,7 +460,11 @@ const STRINGS = {
     whoJoinedHint: "💡 Hier zie je wie de link opende. Aanduiden doe je bij Toewijzen.",
     whoAssignTitle: "📝 Jij duidt aan voor:",
     youAlreadyIn: "Jij staat er al bij",
-    whoAssignSub: "Jezelf — én voor wie geen smartphone of geen zin heeft. De rest claimt hun plaats via de link.",
+    shareLinkWarn: "Deel je de link? Voeg hier dan niemand toe, tenzij je zelf voor deze gast(en) gaat toewijzen.",
+    addNamedGuest: "+ Iemand toevoegen voor wie ik aanduid",
+    personsFirst: "⚠️ Vul eerst in met hoeveel jullie zijn.",
+    lockedPersons: "🔒 Eerst het aantal personen invullen",
+    lockedName: "🔒 Vul eerst je eigen naam in",
     whoAssignFoot: "💡 Straks tik je bij Toewijzen aan wat jij at — en wat zij aten.",
     shareLinkBtn: "🔗 Deel de link",
     shareLinkHint: "Kies daarna je berichtenapp — WhatsApp, Messenger, sms…",
@@ -479,7 +483,7 @@ const STRINGS = {
     yourselfSub: "Zet je naam erop, dan weet iedereen wie wat had.",
     othersTitle: "📝 Iemand zonder smartphone?",
     othersSub: "Geen gsm of geen zin om zelf aan te tikken? Zet hun naam hieronder — jij duidt dan voor hen aan.",
-    othersAdd: "+ Naam toevoegen die ik zelf regel",
+    othersAdd: "+ Iemand toevoegen voor wie ik aanduid",
     othersRest: "💡 De rest laat je gewoon vrij — zij claimen hun plaats zelf via de link.",
     personWord: "Persoon",
     onlyOneShares: "⚠️ Maar 1 persoon deelt mee",
@@ -622,6 +626,7 @@ const STRINGS = {
     justAddedEdit: "✨ Net toegevoegd — pas de naam aan met ✏️",
     scanDoubtTitle: "De scan twijfelde hier — tik voor details",
     sharedWord: "gedeeld",
+    sharedMultiQty: (q: number, tot: number) => `${q} stuks · €${tot.toFixed(2).replace(".", ",")} totaal — samen gedeeld`,
     perPieceSuffix: "/stuk",
     openWord: "open",
     shareToggleOn: "gedeeld item — klik om uit te zetten",
@@ -826,6 +831,7 @@ const STRINGS = {
     bothOfUs: "Wij allebei",
     nOfUs: (n: number) => `Wij met ${n}`,
     makeSharedTitle: "Dit item delen?",
+    multiQtyShareHint: (q: number, tot: number) => `Let op: dit zijn ${q} stuks. Als gedeeld item wordt de volle €${tot.toFixed(2).replace(".", ",")} verdeeld over wie meedeelt — het aantal telt dan niet meer apart mee. Wil je liever per stuk toewijzen? Zet het dan niet op gedeeld.`,
     makeSharedBody: "De prijs wordt dan verdeeld over iedereen die meedeelt.",
     makeSharedWipe: "De huidige toewijzingen van dit item worden gewist — iedereen duidt opnieuw aan of hij meedeelt.",
     makeSharedYes: "Omzetten naar gedeeld",
@@ -972,7 +978,11 @@ const STRINGS = {
     whoJoinedHint: "💡 Ici tu vois qui a ouvert le lien. Le cochage se fait dans Répartir.",
     whoAssignTitle: "📝 Tu coches pour :",
     youAlreadyIn: "Tu y es déjà",
-    whoAssignSub: "Toi-même — et pour qui n'a pas de smartphone ou pas envie. Les autres réservent leur place via le lien.",
+    shareLinkWarn: "Tu partages le lien ? N'ajoute alors personne ici, sauf si tu coches toi-même pour ces invités.",
+    addNamedGuest: "+ Ajouter quelqu'un pour qui je coche",
+    personsFirst: "⚠️ Indique d'abord combien vous êtes.",
+    lockedPersons: "🔒 Indique d'abord le nombre de personnes",
+    lockedName: "🔒 Indique d'abord ton propre nom",
     whoAssignFoot: "💡 Ensuite, dans Répartir, tu coches ce que tu as pris — et ce qu'ils ont pris.",
     shareLinkBtn: "🔗 Partager le lien",
     shareLinkHint: "Choisis ensuite ton app de messagerie — WhatsApp, Messenger, SMS…",
@@ -991,7 +1001,7 @@ const STRINGS = {
     yourselfSub: "Mets ton nom, ainsi chacun sait qui a pris quoi.",
     othersTitle: "📝 Quelqu'un sans smartphone ?",
     othersSub: "Pas de smartphone ou pas envie ? Mets son nom ci-dessous — tu coches alors pour lui.",
-    othersAdd: "+ Ajouter un nom que je gère moi-même",
+    othersAdd: "+ Ajouter quelqu'un pour qui je coche",
     othersRest: "💡 Laisse les autres libres — ils choisiront leur place via le lien.",
     personWord: "Personne",
     onlyOneShares: "⚠️ Une seule personne partage",
@@ -1134,6 +1144,7 @@ const STRINGS = {
     justAddedEdit: "✨ Vient d'être ajouté — modifie le nom avec ✏️",
     scanDoubtTitle: "Le scan a hésité ici — touche pour les détails",
     sharedWord: "partagé",
+    sharedMultiQty: (q: number, tot: number) => `${q} pièces · €${tot.toFixed(2).replace(".", ",")} au total — partagé ensemble`,
     perPieceSuffix: "/pièce",
     openWord: "à prendre",
     shareToggleOn: "article partagé — clique pour désactiver",
@@ -1338,6 +1349,7 @@ const STRINGS = {
     bothOfUs: "Nous deux",
     nOfUs: (n: number) => `Nous ${n}`,
     makeSharedTitle: "Partager cet article ?",
+    multiQtyShareHint: (q: number, tot: number) => `Attention : il s'agit de ${q} pièces. En article partagé, les €${tot.toFixed(2).replace(".", ",")} entiers sont répartis entre ceux qui partagent — le nombre ne compte plus séparément. Tu préfères attribuer à l'unité ? Ne le mets pas en partagé.`,
     makeSharedBody: "Le prix sera réparti entre tous ceux qui partagent.",
     makeSharedWipe: "Les attributions actuelles de cet article seront effacées — chacun réindique s'il partage.",
     makeSharedYes: "Convertir en partagé",
@@ -1502,6 +1514,7 @@ export default function RundoTable() {
   const [multiFails, setMultiFails] = useState(0)
   const [sharePicking, setSharePicking] = useState<Set<string>>(new Set())
   const [jumpToAssign, setJumpToAssign] = useState(0)
+  const [personsTouched, setPersonsTouched] = useState(false)
   const [showJoined, setShowJoined] = useState(false)
   // Bewaarde foto van de laatste scan, zodat je een mislukte AI-scan opnieuw kan proberen.
   const [retryFile, setRetryFile] = useState<File | null>(null)
@@ -1924,7 +1937,18 @@ export default function RundoTable() {
     const nm = me.name.trim()
     return !(new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(nm) || nm === L.adminName || nm === "")
   })()
+  // Het aantal personen is pas "ingevuld" als de organisator de teller bewust zette
+  // (of als er al meer dan één persoon aan tafel zit, bv. bij een herladen groep).
+  const personsSet = personsTouched || totalPersons > 1
+  const requirePersons = (): boolean => {
+    if (personsSet) return true
+    setToast(L.personsFirst)
+    setAdminTab("guests")
+    if (typeof window !== "undefined") window.setTimeout(() => document.getElementById("persons-counter")?.scrollIntoView({ behavior: "smooth", block: "center" }), 120)
+    return false
+  }
   const requireName = (): boolean => {
+    if (!requirePersons()) return false
     if (adminNamed) return true
     setToast(L.nameRequired)
     // Het naamveld staat op de gasten-tab: kom je van elders, stuur er dan eerst naartoe.
@@ -1979,6 +2003,7 @@ export default function RundoTable() {
   }
 
   const setGuestCount = async (target: number) => {
+    setPersonsTouched(true)
     if (!group) return
     if (group.finalized) { setToast(isAdmin ? L.finalizedReopenFirst : L.finalizedAskAdmin); return }
     const n = Math.max(0, Math.min(30, target))
@@ -2335,7 +2360,9 @@ export default function RundoTable() {
     if (it.share_fixed && !isAdmin) { setToast(L.shareLocked); return }
     // Omzetten verandert de betekenis van bestaande toewijzingen; daarom eerst bevestigen.
     const hasClaims = claims.some((c) => c.item_id === it.id && c.quantity > 0)
-    if (hasClaims) { setShareConfirm(it); return }
+    // Meer dan 1 stuk? Dan is "delen" iets anders dan "per stuk toewijzen" — leg dat uit.
+    const multi = !it.is_shared && it.quantity > 1
+    if (hasClaims || multi) { setShareConfirm(it); return }
     await applyToggleShared(it)
   }
   const applyToggleShared = async (it: BillItem) => {
@@ -3024,14 +3051,18 @@ export default function RundoTable() {
             </div>
             <div style={{ marginTop: 4, marginBottom: 2, fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>{L.howManyGroupSub}</div>
 
-            <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: "11px 12px" }}>
+            <div id="persons-counter" style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, ...(personsSet ? {} : { border: "1.5px dashed rgba(192,57,43,0.5)" }), background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: "11px 12px" }}>
               <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>{L.personsWord}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <button onClick={() => setGuestCount(totalPersons - 1)} disabled={totalPersons <= 0} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(16,24,40,0.05)", color: "#5a6680", fontSize: 20, fontWeight: 800, cursor: totalPersons > 0 ? "pointer" : "default", opacity: totalPersons > 0 ? 1 : 0.4 }}>−</button>
-                <b style={{ minWidth: 20, textAlign: "center", fontSize: 19, color: "#14213a" }}>{totalPersons}</b>
+                <button onClick={() => setGuestCount(totalPersons - 1)} disabled={!personsSet || totalPersons <= 0} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(16,24,40,0.05)", color: "#5a6680", fontSize: 20, fontWeight: 800, cursor: totalPersons > 0 ? "pointer" : "default", opacity: totalPersons > 0 ? 1 : 0.4 }}>−</button>
+                <b style={{ minWidth: 20, textAlign: "center", fontSize: 19, color: personsSet ? "#14213a" : "#c3c8d2" }}>{personsSet ? totalPersons : "—"}</b>
                 <button onClick={() => setGuestCount(totalPersons + 1)} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(27,42,74,0.12)", color: "#14213a", fontSize: 20, fontWeight: 800, cursor: "pointer" }}>+</button>
               </div>
             </div>
+            {!personsSet && (
+              <div style={{ fontSize: 11.5, color: "#c0392b", fontWeight: 700, marginTop: 8 }}>{L.personsFirst}</div>
+            )}
+            {personsSet && (
             <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.yourselfFirstTitle} <span style={{ color: "#c0392b" }}>*</span></div>
               <div style={{ fontSize: 12, color: "#5a6680", lineHeight: 1.5, marginBottom: 10 }}>{L.yourselfSub}</div>
@@ -3047,11 +3078,16 @@ export default function RundoTable() {
                 )
               })()}
             </div>
+            )}
 
           </div>
 
-          <div style={{ ...S.card, order: 2, border: "1.5px solid rgba(20,153,176,0.4)" }}>
-            {(() => {
+          <div style={{ ...S.card, order: 2, border: "1.5px solid rgba(20,153,176,0.4)", ...((!personsSet || !adminNamed) ? { opacity: 0.5 } : {}) }}>
+            {(!personsSet || !adminNamed) ? (
+              <div style={{ background: "rgba(16,24,40,0.05)", borderRadius: 10, padding: "12px 10px", textAlign: "center", fontSize: 12.5, fontWeight: 700, color: "#9aa0ab" }}>
+                {!personsSet ? L.lockedPersons : L.lockedName}
+              </div>
+            ) : (() => {
               const entered = group?.receipt_total ?? null
               const match = entered != null && Math.abs(entered - billTotal) < 0.005
               return (
@@ -3110,11 +3146,13 @@ export default function RundoTable() {
                   <span style={{ fontSize: 12.5, color: "#14213a" }}><b>{(participants.find((x) => x.id === meId) || participants[0])?.name}</b> — {L.youAlreadyIn}</span>
                 </div>
               )}
-              <div style={{ fontSize: 13, color: "#5a6680", lineHeight: 1.55, marginBottom: 11 }}>{L.whoAssignSub}</div>
               {!showNames && (
                 <>
-                  <button onClick={() => { if (requireName()) setShowNames(true) }} style={{ width: "100%", border: "1.5px dashed rgba(27,42,74,0.25)", background: "#fff", borderRadius: 11, padding: "12px 10px", cursor: "pointer", fontSize: 13, fontWeight: 800, color: "#5a6680" }}>{L.othersAdd}</button>
-                  <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 9, lineHeight: 1.5 }}>{L.othersRest}</div>
+                  <button onClick={() => { if (requireName()) setShowNames(true) }} style={{ width: "100%", border: "1.5px dashed rgba(27,42,74,0.25)", background: "#fff", borderRadius: 11, padding: "12px 10px", cursor: "pointer", fontSize: 13, fontWeight: 800, color: "#5a6680" }}>{L.addNamedGuest}</button>
+                  <div style={{ display: "flex", gap: 7, background: "rgba(243,156,18,0.09)", border: "1px solid rgba(243,156,18,0.4)", borderRadius: 10, padding: "9px 10px", marginTop: 9 }}>
+                    <span style={{ flexShrink: 0 }}>⚠️</span>
+                    <span style={{ fontSize: 12, color: "#8a4514", lineHeight: 1.5 }}>{L.shareLinkWarn}</span>
+                  </div>
                   <div style={{ fontSize: 11.5, color: "#5a6680", background: "rgba(90,108,166,0.06)", borderRadius: 8, padding: "8px 9px", marginTop: 9, lineHeight: 1.45 }}>{L.whoAssignFoot}</div>
                   {participants.length > 0 && (
                     <div style={{ marginTop: 13, paddingTop: 12, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
@@ -3994,6 +4032,11 @@ export default function RundoTable() {
             <h3 style={{ ...S.h3, marginBottom: 6 }}>{shareConfirm.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}</h3>
             <div style={{ fontSize: 13.5, color: "#14213a", fontWeight: 700, marginBottom: 6 }}>{shareConfirm.quantity}× {shareConfirm.name}</div>
             <div style={{ fontSize: 13, color: "#5a6680", lineHeight: 1.5, marginBottom: 8 }}>{shareConfirm.is_shared ? L.makeUnsharedBody : L.makeSharedBody}</div>
+            {!shareConfirm.is_shared && shareConfirm.quantity > 1 && (
+              <div style={{ fontSize: 12.5, color: "#14213a", background: "rgba(20,153,176,0.08)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 10, padding: "9px 11px", marginBottom: 8, lineHeight: 1.5 }}>
+                {L.multiQtyShareHint(shareConfirm.quantity, shareConfirm.unit_price * shareConfirm.quantity)}
+              </div>
+            )}
             <div style={{ fontSize: 12.5, color: "#b5591a", background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 10, padding: "8px 11px", lineHeight: 1.45, marginBottom: 14 }}>⚠️ {L.makeSharedWipe}</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setShareConfirm(null)}>{L.makeSharedCancel}</button>
@@ -4113,7 +4156,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                 <div style={{ flexShrink: 0, textAlign: "right", lineHeight: 1.2 }}>
                   <div style={{ fontSize: 15, fontWeight: 800, color: zeroPrice ? "#c0392b" : "#1499b0" }}>€{(it.unit_price * it.quantity).toFixed(2).replace(".", ",")}</div>
                   <div style={{ fontSize: 11, fontWeight: 600, color: zeroPrice ? "#c0392b" : "#9aa0ab" }}>
-                    {zeroPrice ? L.zeroPriceShort : it.is_shared ? L.sharedWord : `€${it.unit_price.toFixed(2).replace(".", ",")}${L.perPieceSuffix}`}
+                    {zeroPrice ? L.zeroPriceShort : it.is_shared ? (it.quantity > 1 ? L.sharedMultiQty(it.quantity, it.unit_price * it.quantity) : L.sharedWord) : `€${it.unit_price.toFixed(2).replace(".", ",")}${L.perPieceSuffix}`}
                   </div>
                 </div>
               </div>
