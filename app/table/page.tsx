@@ -722,9 +722,19 @@ const STRINGS = {
     nothingAssigned: "Niets aangeduid.",
     andWord: "en",
     addSelfAssign: "+ Persoon voor wie ik zelf aanduid",
+    askSeatsTitle: "Voor hoeveel personen?",
+    confirmReleaseSpot: (nm: string) => `"${nm}" hier weghalen? De plaats komt weer vrij — het aantal personen blijft gelijk.`,
+    spotReleased: "Plaats is weer vrij.",
+    releaseTitle: "Plaats vrijgeven",
+    askSeatsSub: "Meer dan 1? Zij betalen dan samen, op één plaats.",
+    notEnoughFree: (n: number) => `Er ${n === 1 ? "is" : "zijn"} nog maar ${n} vrije plaats${n === 1 ? "" : "en"}. Verhoog eerst het aantal personen bovenaan.`,
     addSelfAssignHint: (n: number) => `Neemt een vrije plaats in — het aantal personen blijft ${n}.`,
     noFreeSpots: "Alle plaatsen zijn bezet. Verhoog eerst het aantal personen bovenaan.",
     nobodyJoinedYet: "Nog niemand — deel de link met je gasten.",
+    howManyAdmin: "Voor hoeveel personen duid jij aan?",
+    howManyAdminSub: "Een koppel dat samen betaalt? Kies 2.",
+    freeLeft: (n: number) => `Nog ${n} ${n === 1 ? "vrije plaats" : "vrije plaatsen"}`,
+    cancelWord: "Annuleren",
     selfJoinedTitle: "Hebben zich al aangemeld",
     selfJoinedAll: "Iedereen heeft zich aangemeld",
     selfJoinedCount: (a: number, b: number) => `${a} van ${b}`,
@@ -1281,9 +1291,19 @@ const STRINGS = {
     nothingAssigned: "Rien de coché.",
     andWord: "et",
     addSelfAssign: "+ Personne pour qui je coche moi-même",
+    askSeatsTitle: "Pour combien de personnes ?",
+    confirmReleaseSpot: (nm: string) => `Retirer « ${nm} » ici ? La place redevient libre — le nombre de personnes reste identique.`,
+    spotReleased: "La place est de nouveau libre.",
+    releaseTitle: "Libérer la place",
+    askSeatsSub: "Plus d'une ? Elles paient alors ensemble, sur une place.",
+    notEnoughFree: (n: number) => `Il ne reste que ${n} place${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"}. Augmente d'abord le nombre de personnes en haut.`,
     addSelfAssignHint: (n: number) => `Occupe une place libre — le nombre de personnes reste ${n}.`,
     noFreeSpots: "Toutes les places sont prises. Augmente d'abord le nombre de personnes en haut.",
     nobodyJoinedYet: "Personne encore — partage le lien avec tes invités.",
+    howManyAdmin: "Pour combien de personnes coches-tu ?",
+    howManyAdminSub: "Un couple qui paie ensemble ? Choisis 2.",
+    freeLeft: (n: number) => `Encore ${n} ${n === 1 ? "place libre" : "places libres"}`,
+    cancelWord: "Annuler",
     selfJoinedTitle: "Se sont déjà inscrits",
     selfJoinedAll: "Tout le monde s'est inscrit",
     selfJoinedCount: (a: number, b: number) => `${a} sur ${b}`,
@@ -1598,6 +1618,8 @@ export default function RundoTable() {
   const [jumpToAssign, setJumpToAssign] = useState(0)
   const [personsTouched, setPersonsTouched] = useState(false)
   const [fillingSpots, setFillingSpots] = useState<string[]>([])  // vrije plaatsen die je nu een naam geeft
+  const [askSeats, setAskSeats] = useState(false)  // "voor hoeveel personen?" bij het toevoegen
+  const [askSeats, setAskSeats] = useState(false)  // "voor hoeveel personen?" bij het toevoegen
   const [billMismatchAck, setBillMismatchAck] = useState(false)  // bewust doorgegaan ondanks verschil
   const [showJoined, setShowJoined] = useState(false)
   // Bewaarde foto van de laatste scan, zodat je een mislukte AI-scan opnieuw kan proberen.
@@ -1620,7 +1642,6 @@ export default function RundoTable() {
   const [shareConfirm, setShareConfirm] = useState<BillItem | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [asleep, setAsleep] = useState(false)
-  const [manageGuests, setManageGuests] = useState(false)
 
   const loadAll = useCallback(async (groupId: string) => {
     const [{ data: p }, { data: it }, { data: cl }, { data: cf }, { data: g }] = await Promise.all([
@@ -1839,7 +1860,7 @@ export default function RundoTable() {
     setScanPreview([]); setScanFile(null); setScanPhotoUrl(null); setScanTotal(""); setScanFail(null); setShowScan(false)
     setAdminTab("scan"); setExpandedPeople(new Set()); setClaimMode("item"); setClaimPid(null)
     setShowTodo(false); setViewReceipt(null)
-    setManageGuests(false); setAsleep(false)
+    setAsleep(false)
     autoJoined.current = true
     rememberLastGroup(null)
     try { if (typeof sessionStorage !== "undefined") sessionStorage.removeItem("rundo_table_session") } catch { /* ignore */ }
@@ -1990,15 +2011,23 @@ export default function RundoTable() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adminTab, group?.id])
 
-  const removeGuest = async (id: string) => {
+  // Een gast die JIJ toevoegde weer loslaten: de plaats wordt weer vrij, zodat het
+  // aantal personen niet verandert. Iemand kan die plaats dan alsnog via de link claimen.
+  const releaseSpot = async (id: string) => {
     if (!group) return
-    if (!confirm(L.confirmDeleteGuest)) return
+    const p = participants.find((x) => x.id === id)
+    if (!p) return
+    if (!confirm(L.confirmReleaseSpot(p.name))) return
+    const seats = Math.max(1, p.seats ?? 1)
     await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", id)
     await supabase.from("table_confirmations").delete().eq("group_id", group.id).eq("participant_id", id)
-    await supabase.from("table_participants").delete().eq("id", id)
-    if (meId === id) { setMeIdStored(group.id, null); setMeId(null) }
-    await renumberGuests()
+    // De plaats zelf blijft bestaan, maar wordt weer naamloos en voor één persoon.
+    await supabase.from("table_participants").update({ name: L.guestWord, seats: 1, self_joined: false }).eq("id", id)
+    // Zat er een koppel op? Dan komen de extra personen als losse vrije plaatsen terug.
+    for (let i = 1; i < seats; i++) await addGuest(L.guestWord, false, 1)
+    setFillingSpots((cur) => cur.filter((x) => x !== id))
     await loadAll(group.id)
+    setToast(L.spotReleased)
   }
 
   // Zet het aantal gasten in één beweging. Omhoog = extra gasten aanmaken.
@@ -3272,7 +3301,6 @@ export default function RundoTable() {
             {participants.length > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 12, marginBottom: 2 }}>
                 <span style={{ fontSize: 11.5, fontWeight: 700, color: "#9aa0ab" }}>{totalPersons} {totalPersons === 1 ? L.person : L.persons} {L.editNameHint}</span>
-                <button onClick={() => setManageGuests((v) => !v)} style={{ ...S.smallBtn, flexShrink: 0, ...(manageGuests ? { borderColor: "rgba(224,107,94,0.6)", color: "#c0392b", background: "rgba(224,107,94,0.06)" } : {}) }}>{manageGuests ? L.manageDone : L.manageDelete}</button>
               </div>
             )}
 
@@ -3305,8 +3333,13 @@ export default function RundoTable() {
                   </div>
                 )
               }
+              // De admin zelf kan niet weg. Een gast die jij toevoegde geef je vrij:
+              // de plaats blijft bestaan, zodat het aantal personen niet verandert.
               const delBtn = (p: Participant) => (
-                <button onClick={() => removeGuest(p.id)} title={L.deleteTitle} style={{ flexShrink: 0, width: 24, height: 24, borderRadius: 7, border: "none", background: "rgba(224,107,94,0.14)", color: "#c0392b", fontSize: 15, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>×</button>
+                p.id === meId ? null : (
+                  <button onClick={() => releaseSpot(p.id)} title={L.releaseTitle}
+                    style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(224,107,94,0.4)", background: "rgba(224,107,94,0.08)", color: "#c0392b", fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                )
               )
               const Row = (p: Participant) => {
                 const isMe = p.id === meId
@@ -3316,11 +3349,11 @@ export default function RundoTable() {
                 const badge = isMe ? { label: `${L.badgeMe} · ${L.adminBadge}`, color: "#1f8a4c", bg: "rgba(39,174,96,0.15)" } : origin
                 if (twoCol) {
                   return (
-                    <div key={p.id} style={{ border: manageGuests ? "1px solid rgba(224,107,94,0.4)" : isMe ? "1.5px solid rgba(39,174,96,0.45)" : "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "7px 8px", background: manageGuests ? "rgba(224,107,94,0.04)" : isMe ? "rgba(20,153,176,0.07)" : "#fff" }}>
+                    <div key={p.id} style={{ border: isMe ? "1.5px solid rgba(39,174,96,0.45)" : "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "7px 8px", background: isMe ? "rgba(39,174,96,0.07)" : "#fff" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                         {namesBlock(p, 13.5)}
                         <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
-                        {manageGuests && delBtn(p)}
+                        {delBtn(p)}
                       </div>
                       <div style={{ marginTop: 5 }}>
                         <span style={{ fontSize: 9.5, fontWeight: 700, color: badge.color, background: badge.bg, borderRadius: 7, padding: "1px 6px" }}>{badge.label}</span>
@@ -3337,7 +3370,7 @@ export default function RundoTable() {
                       </div>
                     </div>
                     <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
-                    {manageGuests && delBtn(p)}
+                    {delBtn(p)}
                   </div>
                 )
               }
@@ -3362,15 +3395,42 @@ export default function RundoTable() {
             })()}
               {(
                 <>
-                  <button onClick={() => {
-                    if (!requireName()) return
-                    // Neemt een BESTAANDE vrije plaats in — het totaal aantal personen blijft gelijk.
-                    const free = participants.find((p) => p.id !== meId && !p.self_joined && isFreeSpot(p) && !fillingSpots.includes(p.id))
-                    if (!free) { setToast(L.noFreeSpots); return }
-                    setFillingSpots((cur) => [...cur, free.id])
-                  }}
-                    style={{ width: "100%", border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.04)", borderRadius: 11, padding: "11px", textAlign: "center", fontSize: 13, fontWeight: 800, color: "#0f7d90", cursor: "pointer" }}>{L.addSelfAssign}</button>
-                  <div style={{ fontSize: 10.5, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>{L.addSelfAssignHint(totalPersons)}</div>
+                  {!askSeats ? (
+                    <>
+                      <button onClick={() => { if (requireName()) setAskSeats(true) }}
+                        style={{ width: "100%", border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.04)", borderRadius: 11, padding: "11px", textAlign: "center", fontSize: 13, fontWeight: 800, color: "#0f7d90", cursor: "pointer" }}>{L.addSelfAssign}</button>
+                      <div style={{ fontSize: 10.5, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>{L.addSelfAssignHint(totalPersons)}</div>
+                    </>
+                  ) : (() => {
+                    // Vraag meteen om hoeveel personen het gaat — zo vergeet je een partner niet.
+                    const freeSpots = participants.filter((p) => p.id !== meId && !p.self_joined && isFreeSpot(p) && !fillingSpots.includes(p.id))
+                    const maxSeats = Math.min(4, freeSpots.length)
+                    const pick = async (n: number) => {
+                      if (freeSpots.length < n) { setToast(L.notEnoughFree(freeSpots.length)); return }
+                      const spot = freeSpots[0]
+                      setFillingSpots((cur) => [...cur, spot.id])
+                      setAskSeats(false)
+                      if (n > 1) await setSeats(spot.id, n)
+                    }
+                    return (
+                      <div style={{ border: "1.5px solid rgba(20,153,176,0.45)", background: "rgba(20,153,176,0.05)", borderRadius: 12, padding: "12px 13px" }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.askSeatsTitle}</div>
+                        <div style={{ fontSize: 11.5, color: "#5a6680", lineHeight: 1.45, marginBottom: 10 }}>{L.askSeatsSub}</div>
+                        {maxSeats === 0 ? (
+                          <div style={{ fontSize: 12, color: "#c0392b", fontWeight: 700 }}>{L.noFreeSpots}</div>
+                        ) : (
+                          <div style={{ display: "flex", gap: 7 }}>
+                            {Array.from({ length: maxSeats }, (_, k) => k + 1).map((n) => (
+                              <button key={n} onClick={() => pick(n)}
+                                style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(16,24,40,0.15)", borderRadius: 10, padding: "11px 4px", fontSize: 14, fontWeight: 800, color: "#14213a", cursor: "pointer" }}>{n}</button>
+                            ))}
+                          </div>
+                        )}
+                        <button onClick={() => setAskSeats(false)}
+                          style={{ width: "100%", marginTop: 9, background: "none", border: "none", cursor: "pointer", fontSize: 11.5, fontWeight: 700, color: "#9aa0ab" }}>{L.cancel}</button>
+                      </div>
+                    )
+                  })()}
                   <div style={{ display: "flex", gap: 7, background: "rgba(243,156,18,0.09)", border: "1px solid rgba(243,156,18,0.4)", borderRadius: 10, padding: "9px 10px", marginTop: 9 }}>
                     <span style={{ flexShrink: 0 }}>⚠️</span>
                     <span style={{ fontSize: 12, color: "#8a4514", lineHeight: 1.5 }}>{L.shareLinkWarn}</span>
@@ -3379,7 +3439,13 @@ export default function RundoTable() {
                     // Wie zich via de link aanmeldde: één rustige regel, niet aanklikbaar.
                     const joined = participants.filter((p) => p.self_joined && p.id !== meId)
                     const heads = joined.reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
-                    const all = participants.length > 0 && participants.every((x) => !isFreeSpot(x))  // geen vrije plaatsen meer
+                    // Wie jij zelf regelt: jezelf + de gasten die jij een naam gaf (geen vrije plaatsen).
+                    const byAdmin = participants
+                      .filter((x) => !x.self_joined && !isFreeSpot(x))
+                      .reduce((a, x) => a + Math.max(1, x.seats ?? 1), 0)
+                    // De rest moet via de link binnenkomen.
+                    const expected = Math.max(0, totalPersons - byAdmin)
+                    const all = expected > 0 && heads >= expected
                     const names = joined.map((p) => p.name).join(", ").replace(/, ([^,]*)$/, ` ${L.andWord} $1`)
                     return (
                       <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 9, borderRadius: 12, padding: "11px 12px",
@@ -3392,7 +3458,7 @@ export default function RundoTable() {
                             <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, borderRadius: 20, padding: "2px 9px", whiteSpace: "nowrap",
                               color: all ? "#fff" : "#b5591a",
                               background: all ? "#27ae60" : "rgba(243,156,18,0.14)",
-                              border: all ? "1px solid #27ae60" : "1px solid rgba(243,156,18,0.5)" }}>{L.selfJoinedCount(heads, totalPersons)}</span>
+                              border: all ? "1px solid #27ae60" : "1px solid rgba(243,156,18,0.5)" }}>{L.selfJoinedCount(heads, expected)}</span>
                           </div>
                           <div style={{ fontSize: 13, color: joined.length > 0 ? "#14213a" : "#9aa0ab", lineHeight: 1.5 }}>{joined.length > 0 ? names : L.nobodyJoinedYet}</div>
                         </div>
@@ -3412,7 +3478,7 @@ export default function RundoTable() {
         <div style={{ ...S.card, padding: 12 }}>
           <button onClick={() => setShowJoined((v) => !v)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: 0 }}>
             <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>{L.whoJoinedTitle} {showJoined ? "▾" : "▸"}</span>
-            <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, color: "#1499b0", background: "rgba(20,153,176,0.12)", borderRadius: 20, padding: "3px 9px" }}>{L.joinedOf(joinedCount, totalPersons)}</span>
+            <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, borderRadius: 20, padding: "3px 9px", color: joinedCount >= totalPersons ? "#fff" : "#1499b0", background: joinedCount >= totalPersons ? "#27ae60" : "rgba(20,153,176,0.12)" }}>{L.joinedOf(joinedCount, totalPersons)}</span>
           </button>
           {showJoined && <div style={{ marginTop: 8 }}>{joinedList({ clickable: true })}</div>}
         </div>
