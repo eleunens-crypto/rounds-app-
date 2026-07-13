@@ -589,7 +589,7 @@ const STRINGS = {
     readBillBtn: "✨ Lees de rekening uit",
     readBillBtn2: "✨ Scan 2 foto's samen",
     countsAsOne: "telt als één scan",
-    photoHintOne: "Staat alles erop? Lees uit. Zo niet: voeg de 2e helft toe.",
+    photoHintOne: "Rekening te lang? Voeg een 2e helft toe.",
     photoHintTwo: "Beide helften klaar. De items komen in één lijst.",
     scanningPhotoN: (i: number, n: number) => `✨ Foto ${i} van ${n} wordt gelezen…`,
     itemsSoFar: (n: number) => `${n} items gevonden tot nu toe`,
@@ -692,6 +692,28 @@ const STRINGS = {
     justAddedScan: "✨ Net toegevoegd — controleer naam en prijs",
     taxModalTitle: "🧮 BTW / kosten / korting",
     taxDesc: "Aparte BTW, Kosten of Kortingen?",
+    kindCost: "💰 Kosten",
+    kindVat: "🧮 BTW",
+    kindDiscount: "🏷️ Korting",
+    phCost: "Omschrijving (bv. Couvert, Bediening)",
+    phVat: "Omschrijving (bv. BTW 21%)",
+    phDiscount: "Omschrijving (bv. Menukorting)",
+    modePct: "% Percentage",
+    modeAmount: "€ Bedrag",
+    pctOther: "Anders",
+    appliesTo: "Geldt voor",
+    scopeAll: "Hele rekening",
+    scopeItems: "Bepaalde items",
+    scopeItemsN: (n: number) => `${n} items gekozen`,
+    pctOfSum: (pct: string, sum: number) => `${pct}% van €${sum.toFixed(2).replace(".", ",")}`,
+    addsUp: "↑ Wordt bijgeteld bij de rekening.",
+    subtracts: "↓ Wordt afgetrokken van de rekening.",
+    vatOnlyIfNotIncluded: "💡 Enkel toevoegen als de BTW nog niet in de prijzen zit.",
+    addBtn: "Toevoegen",
+    noItemsYet: "Nog geen items op de bon.",
+    kindCostName: "Kosten",
+    kindVatName: "BTW",
+    kindDiscountName: "Korting",
     taxDescPlaceholder: "bv. Bediening, Couvert, Korting",
     taxAmountLabel: "Bedrag € (gebruik een minteken voor een korting)",
     taxAmountPlaceholder: "bv. 5.00",
@@ -1107,7 +1129,7 @@ const STRINGS = {
     readBillBtn: "✨ Lire l'addition",
     readBillBtn2: "✨ Scanner les 2 photos",
     countsAsOne: "compte pour un seul scan",
-    photoHintOne: "Tout y est ? Lance la lecture. Sinon : ajoute la 2e moitié.",
+    photoHintOne: "Addition trop longue ? Ajoute une 2e moitié.",
     photoHintTwo: "Les deux moitiés sont prêtes. Les articles arrivent dans une seule liste.",
     scanningPhotoN: (i: number, n: number) => `✨ Lecture de la photo ${i} sur ${n}…`,
     itemsSoFar: (n: number) => `${n} articles trouvés jusqu'ici`,
@@ -1210,6 +1232,28 @@ const STRINGS = {
     justAddedScan: "✨ Vient d'être ajouté — vérifie le nom et le prix",
     taxModalTitle: "🧮 TVA / frais / réduction",
     taxDesc: "TVA, frais ou réductions séparés ?",
+    kindCost: "💰 Frais",
+    kindVat: "🧮 TVA",
+    kindDiscount: "🏷️ Réduction",
+    phCost: "Description (p.ex. Couvert, Service)",
+    phVat: "Description (p.ex. TVA 21%)",
+    phDiscount: "Description (p.ex. Réduction menu)",
+    modePct: "% Pourcentage",
+    modeAmount: "€ Montant",
+    pctOther: "Autre",
+    appliesTo: "S'applique à",
+    scopeAll: "Toute l'addition",
+    scopeItems: "Certains articles",
+    scopeItemsN: (n: number) => `${n} articles choisis`,
+    pctOfSum: (pct: string, sum: number) => `${pct}% de €${sum.toFixed(2).replace(".", ",")}`,
+    addsUp: "↑ Sera ajouté à l'addition.",
+    subtracts: "↓ Sera déduit de l'addition.",
+    vatOnlyIfNotIncluded: "💡 À ajouter uniquement si la TVA n'est pas déjà comprise.",
+    addBtn: "Ajouter",
+    noItemsYet: "Aucun article sur l'addition.",
+    kindCostName: "Frais",
+    kindVatName: "TVA",
+    kindDiscountName: "Réduction",
     taxDescPlaceholder: "ex. Service, Couvert, Réduction",
     taxAmountLabel: "Montant € (utilise un signe moins pour une réduction)",
     taxAmountPlaceholder: "ex. 5,00",
@@ -1531,7 +1575,7 @@ export default function RundoTable() {
   const [editItem, setEditItem] = useState<BillItem | null>(null)
   const [newItem, setNewItem] = useState<{ name: string; unit_price: string; quantity: number; is_shared: boolean; target: "bill" | "scan" } | null>(null)
   // Venster om BTW/kosten/korting toe te voegen: stap 1 = naam + bedrag, stap 2 = verdeling kiezen.
-  const [taxModal, setTaxModal] = useState<null | { name: string; amount: string; scope: "all" | "items"; ids: string[] }>(null)
+  const [taxModal, setTaxModal] = useState<null | { kind: "cost" | "vat" | "discount"; mode: "amount" | "pct"; pct: string; name: string; amount: string; scope: "all" | "items"; ids: string[] }>(null)
   const [recentItemId, setRecentItemId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [shareConfirm, setShareConfirm] = useState<BillItem | null>(null)
@@ -2288,9 +2332,21 @@ export default function RundoTable() {
   const confirmTaxModal = async (scope: "all" | "items") => {
     if (group?.finalized) { setToast(L.reopenFirst); return }
     if (!group || !taxModal) return
-    const amt = parseFloat((taxModal.amount || "").replace(",", ".")) || 0
-    const name = taxModal.name.trim() || L.taxDefaultName
-    const dist = scope === "items" && taxModal.ids.length > 0 ? JSON.stringify(taxModal.ids) : "all"
+    const tm = taxModal
+    // Percentage (enkel bij BTW): reken het bedrag uit op de bon of op de gekozen items.
+    const base = scope === "items"
+      ? baseItems.filter((it) => tm.ids.includes(it.id)).reduce((a, it) => a + it.unit_price * it.quantity, 0)
+      : baseItems.reduce((a, it) => a + it.unit_price * it.quantity, 0)
+    const raw = tm.kind === "vat" && tm.mode === "pct"
+      ? (base * (parseFloat((tm.pct || "").replace(",", ".")) || 0)) / 100
+      : (parseFloat((tm.amount || "").replace(",", ".")) || 0)
+    // Het teken volgt uit het soort: een korting trekt af, kosten en BTW tellen bij.
+    const amt = tm.kind === "discount" ? -Math.abs(raw) : Math.abs(raw)
+    const fallback = tm.kind === "cost" ? L.kindCostName : tm.kind === "vat" ? L.kindVatName : L.kindDiscountName
+    const name = (tm.kind === "vat" && tm.mode === "pct" && !tm.name.trim())
+      ? L.taxRateName(parseFloat((tm.pct || "").replace(",", ".")) || 0)
+      : (tm.name.trim() || fallback)
+    const dist = scope === "items" && tm.ids.length > 0 ? JSON.stringify(tm.ids) : "all"
     const { error } = await supabase.from("table_items").insert([{ group_id: group.id, name, unit_price: amt, quantity: 1, is_shared: false, category: null, distribute: dist }])
     if (error) {
       if (/distribute/.test(error.message || "")) setError(L.distributeColMsg)
@@ -2842,7 +2898,12 @@ export default function RundoTable() {
             { id: "guests", label: L.tabGuests },
             { id: "overview", label: L.tabAssign },
           ] as { id: AdminTab; label: string }[]).map((t) => (
-            <button key={t.id} onClick={() => { if (t.id === "overview" && !requireName()) return; setAdminTab(t.id); scrollTop() }} style={{
+            <button key={t.id} onClick={() => {
+              // Klopt de bon niet met de items? Dan eerst die melding — voor gasten én toewijzen.
+              if ((t.id === "guests" || t.id === "overview") && !billOk) { setShowShareWarn(true); return }
+              if (t.id === "overview" && !requireName()) return
+              setAdminTab(t.id); scrollTop()
+            }} style={{
               flex: 1, border: "none", borderRadius: 12, padding: "13px 4px", fontSize: 14.5, cursor: "pointer", lineHeight: 1.15,
               fontWeight: adminTab === t.id ? 800 : 700,
               background: adminTab === t.id ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#eaf6f9",
@@ -3030,7 +3091,7 @@ export default function RundoTable() {
                   )
                 })}
                 <div style={{ display: "flex", flexDirection: "column", gap: 7, alignItems: "flex-end", marginTop: 8, width: "100%" }}>
-                  <button onClick={() => setTaxModal({ name: L.taxDefaultName, amount: "", scope: "all", ids: [] })}
+                  <button onClick={() => setTaxModal({ kind: "cost", mode: "amount", pct: "21", name: "", amount: "", scope: "all", ids: [] })}
                     style={{ width: "62%", minWidth: 190, background: "rgba(20,153,176,0.12)", color: "#0f7d90", border: "1px solid rgba(20,153,176,0.4)", borderRadius: 12, padding: "11px 10px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{L.taxAddBtn}</button>
                   <button onClick={() => setShowTaxInfo(true)} title={L.explainTooltip}
                     style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#5a6680", textDecoration: "underline", padding: 0 }}>ⓘ {L.whatIsThis}</button>
@@ -3258,7 +3319,7 @@ export default function RundoTable() {
               )
             })()}
           </div>
-          <button onClick={() => { if (requireName()) { setAdminTab("overview"); scrollTop() } }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 700 }}>{L.toAssignBtn}</button>
+          <button onClick={() => { if (!billOk) { setShowShareWarn(true); return } if (requireName()) { setAdminTab("overview"); scrollTop() } }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 700 }}>{L.toAssignBtn}</button>
         </div>
       )}
 
@@ -3532,42 +3593,139 @@ export default function RundoTable() {
 
       {/* ─── Venster: BTW / kosten / korting toevoegen (stap 1: bedrag, stap 2: verdeling) ─── */}
       {taxModal && (() => {
-        const hasAmount = !!taxModal.amount.trim() && (parseFloat(taxModal.amount.replace(",", ".")) || 0) !== 0
+        const tm = taxModal
+        const isDisc = tm.kind === "discount"
+        const isVat = tm.kind === "vat"
+        // Basis waarop een percentage rekent: de hele bon, of enkel de gekozen items.
+        const base = tm.scope === "items"
+          ? baseItems.filter((it) => tm.ids.includes(it.id)).reduce((a, it) => a + it.unit_price * it.quantity, 0)
+          : baseItems.reduce((a, it) => a + it.unit_price * it.quantity, 0)
+        const pctNum = parseFloat((tm.pct || "").replace(",", ".")) || 0
+        const amtNum = parseFloat((tm.amount || "").replace(",", ".")) || 0
+        const computed = tm.mode === "pct" ? (base * pctNum) / 100 : amtNum
+        const ready = computed > 0 && (tm.scope === "all" || tm.ids.length > 0)
+        const ph = tm.kind === "cost" ? L.phCost : isVat ? L.phVat : L.phDiscount
+        const kindBtn = (k: "cost" | "vat" | "discount", label: string) => {
+          const on = tm.kind === k
+          const danger = k === "discount"
+          return (
+            <button key={k} onClick={() => setTaxModal({ ...tm, kind: k, mode: k === "vat" ? tm.mode : "amount" })}
+              style={{ flex: 1, textAlign: "center", borderRadius: 10, padding: "9px 4px", fontSize: 12.5, fontWeight: 800, cursor: "pointer",
+                color: on ? "#fff" : "#5a6680",
+                background: on ? (danger ? "linear-gradient(135deg,#e07a5f,#c0392b)" : "linear-gradient(135deg,#1499b0,#22b8cf)") : "#fff",
+                border: on ? "1px solid transparent" : "1px solid rgba(16,24,40,0.15)" }}>{label}</button>
+          )
+        }
         return (
         <div style={S.overlay} onClick={() => setTaxModal(null)}>
           <div style={{ ...S.modal, width: 360, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0, marginBottom: 12, fontSize: 18, fontWeight: 800 }}>{L.taxModalTitle}</h3>
-            <label style={{ fontSize: 12, fontWeight: 700, color: "#5a6680" }}>{L.taxDesc}</label>
-            <input value={taxModal.name} onChange={(e) => setTaxModal({ ...taxModal, name: e.target.value })} placeholder={L.taxDescPlaceholder} style={{ ...S.input, width: "100%", boxSizing: "border-box", margin: "4px 0 12px" }} />
-            <label style={{ fontSize: 12, fontWeight: 700, color: "#5a6680" }}>{L.taxAmountLabel}</label>
-            <input type="text" inputMode="decimal" value={taxModal.amount} onChange={(e) => setTaxModal({ ...taxModal, amount: numFilter(e.target.value, true) })} placeholder={L.taxAmountPlaceholder} style={{ ...S.input, width: "100%", boxSizing: "border-box", margin: "4px 0 16px", fontSize: 16 }} autoFocus />
-            {!hasAmount ? (
-              <div style={{ fontSize: 12, color: "#9aa0ab", marginBottom: 12 }}>{L.taxEnterAmount}</div>
-            ) : (
+
+            <div style={{ display: "flex", gap: 6, marginBottom: 13 }}>
+              {kindBtn("cost", L.kindCost)}
+              {kindBtn("vat", L.kindVat)}
+              {kindBtn("discount", L.kindDiscount)}
+            </div>
+
+            {isVat && (
+              <div style={{ display: "flex", gap: 5, background: "rgba(16,24,40,0.05)", borderRadius: 11, padding: 3, marginBottom: 13 }}>
+                {(["pct", "amount"] as const).map((m) => (
+                  <button key={m} onClick={() => setTaxModal({ ...tm, mode: m })}
+                    style={{ flex: 1, textAlign: "center", borderRadius: 9, padding: "8px 4px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", border: "none",
+                      color: tm.mode === m ? "#14213a" : "#8a93a3",
+                      background: tm.mode === m ? "#fff" : "transparent",
+                      boxShadow: tm.mode === m ? "0 1px 3px rgba(16,24,40,0.08)" : "none" }}>{m === "pct" ? L.modePct : L.modeAmount}</button>
+                ))}
+              </div>
+            )}
+
+            {isVat && tm.mode === "pct" ? (
               <>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: "#5a6680", marginBottom: 6 }}>{L.taxSplitOver}</div>
-                <button onClick={() => confirmTaxModal("all")} style={{ width: "100%", textAlign: "left", padding: "12px 14px", marginBottom: 8, borderRadius: 10, fontSize: 13.5, fontWeight: 800, cursor: "pointer", border: "1.5px solid rgba(20,153,176,0.4)", background: "rgba(20,153,176,0.08)", color: "#14213a" }}>{L.overWholeBill}</button>
-                <button onClick={() => setTaxModal({ ...taxModal, scope: "items" })} style={{ width: "100%", textAlign: "left", padding: "12px 14px", marginBottom: 8, borderRadius: 10, fontSize: 13.5, fontWeight: 800, cursor: "pointer", border: taxModal.scope === "items" ? "2px solid #1499b0" : "1.5px solid rgba(20,33,58,0.15)", background: taxModal.scope === "items" ? "rgba(20,153,176,0.08)" : "#fff", color: "#14213a" }}>{L.overCertainItems}</button>
-                {taxModal.scope === "items" && (
-                  <>
-                    <div style={{ margin: "4px 0 8px", maxHeight: 200, overflowY: "auto", border: "1px solid rgba(20,33,58,0.12)", borderRadius: 10, padding: "6px 4px" }}>
-                      {baseItems.length === 0 && <div style={{ fontSize: 12, color: "#9aa0ab", padding: 8 }}>{L.noItemsShort}</div>}
-                      {baseItems.map((it) => {
-                        const on = taxModal.ids.includes(it.id)
-                        return (
-                          <button key={it.id} onClick={() => setTaxModal({ ...taxModal, ids: on ? taxModal.ids.filter((x) => x !== it.id) : [...taxModal.ids, it.id] })} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", padding: "7px 10px", border: "none", background: on ? "rgba(20,153,176,0.08)" : "transparent", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>
-                            <span style={{ width: 18, height: 18, borderRadius: 5, border: on ? "none" : "1.5px solid #b8c0cf", background: on ? "#1499b0" : "#fff", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{on ? "✓" : ""}</span>
-                            <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{it.quantity}× {showTip(it.name, L)}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                    <button onClick={() => confirmTaxModal("items")} disabled={taxModal.ids.length === 0} style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 800, opacity: taxModal.ids.length === 0 ? 0.5 : 1 }}>{L.confirmBtn}</button>
-                  </>
+                <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                  {["6", "12", "21"].map((r) => {
+                    const on = tm.pct === r
+                    return (
+                      <button key={r} onClick={() => setTaxModal({ ...tm, pct: r })}
+                        style={{ flex: 1, textAlign: "center", borderRadius: 10, padding: "9px 3px", fontSize: 13, fontWeight: 800, cursor: "pointer",
+                          color: on ? "#fff" : "#5a6680", background: on ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff",
+                          border: on ? "1px solid transparent" : "1px solid rgba(16,24,40,0.15)" }}>{r}%</button>
+                    )
+                  })}
+                  <button onClick={() => setTaxModal({ ...tm, pct: "" })}
+                    style={{ flex: 1, textAlign: "center", borderRadius: 10, padding: "9px 3px", fontSize: 12, fontWeight: 800, cursor: "pointer",
+                      color: !["6", "12", "21"].includes(tm.pct) ? "#fff" : "#8a93a3",
+                      background: !["6", "12", "21"].includes(tm.pct) ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff",
+                      border: !["6", "12", "21"].includes(tm.pct) ? "1px solid transparent" : "1.5px dashed rgba(16,24,40,0.2)" }}>{L.pctOther}</button>
+                </div>
+                {!["6", "12", "21"].includes(tm.pct) && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, border: "1.5px solid rgba(20,153,176,0.5)", borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
+                    <input type="text" inputMode="decimal" autoFocus value={tm.pct} onChange={(e) => setTaxModal({ ...tm, pct: e.target.value })}
+                      placeholder="9,5" style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: 14, fontWeight: 700, color: "#14213a", background: "transparent" }} />
+                    <span style={{ fontSize: 15, fontWeight: 800, color: "#0f7d90" }}>%</span>
+                  </div>
                 )}
               </>
+            ) : (
+              <>
+                <input value={tm.name} onChange={(e) => setTaxModal({ ...tm, name: e.target.value })} placeholder={ph}
+                  style={{ width: "100%", boxSizing: "border-box", border: "1px solid rgba(16,24,40,0.15)", borderRadius: 12, padding: "10px 12px", fontSize: 13.5, color: "#14213a", marginBottom: 9 }} />
+                <div style={{ display: "flex", alignItems: "center", gap: 5, border: `1px solid ${isDisc ? "rgba(192,57,43,0.4)" : "rgba(16,24,40,0.15)"}`, background: isDisc ? "rgba(192,57,43,0.04)" : "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: isDisc ? "#c0392b" : "#5a6680" }}>{isDisc ? "−€" : "€"}</span>
+                  <input type="text" inputMode="decimal" value={tm.amount} onChange={(e) => setTaxModal({ ...tm, amount: e.target.value })} placeholder="5,00"
+                    style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 13.5, fontWeight: 700, color: "#14213a" }} />
+                </div>
+              </>
             )}
-            <button onClick={() => setTaxModal(null)} style={{ ...S.btn, width: "100%", fontWeight: 700, marginTop: 10 }}>{L.cancel}</button>
+
+            <div style={{ fontSize: 11.5, fontWeight: 800, color: "#3b486a", marginBottom: 5 }}>{L.appliesTo}</div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+              {(["all", "items"] as const).map((sc) => {
+                const on = tm.scope === sc
+                return (
+                  <button key={sc} onClick={() => setTaxModal({ ...tm, scope: sc })}
+                    style={{ flex: 1, textAlign: "center", borderRadius: 10, padding: "8px 4px", fontSize: 11.5, fontWeight: 800, cursor: "pointer",
+                      color: on ? "#0f7d90" : "#5a6680", background: on ? "rgba(20,153,176,0.1)" : "#fff",
+                      border: on ? "1px solid rgba(20,153,176,0.45)" : "1px solid rgba(16,24,40,0.15)" }}>
+                    {sc === "all" ? L.scopeAll : (tm.ids.length > 0 ? L.scopeItemsN(tm.ids.length) : L.scopeItems)}
+                  </button>
+                )
+              })}
+            </div>
+
+            {tm.scope === "items" && (
+              <div style={{ margin: "0 0 12px", maxHeight: 190, overflowY: "auto", border: "1px solid rgba(16,24,40,0.12)", borderRadius: 10 }}>
+                {baseItems.length === 0 && <div style={{ fontSize: 12, color: "#9aa0ab", padding: 10 }}>{L.noItemsYet}</div>}
+                {baseItems.map((it) => {
+                  const on = tm.ids.includes(it.id)
+                  return (
+                    <button key={it.id} onClick={() => setTaxModal({ ...tm, ids: on ? tm.ids.filter((x) => x !== it.id) : [...tm.ids, it.id] })}
+                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, textAlign: "left", padding: "9px 10px", background: "none", border: "none", borderBottom: "1px solid rgba(16,24,40,0.06)", cursor: "pointer" }}>
+                      <span style={{ width: 18, height: 18, borderRadius: 5, flexShrink: 0, border: on ? "none" : "1.5px solid rgba(16,24,40,0.25)", background: on ? "#1499b0" : "transparent", color: "#fff", fontSize: 12, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{on ? "✓" : ""}</span>
+                      <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 13, color: "#14213a" }}>{it.name}</span>
+                      <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#5a6680" }}>€{(it.unit_price * it.quantity).toFixed(2).replace(".", ",")}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {isVat && tm.mode === "pct" && pctNum > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(90,108,166,0.07)", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+                <span style={{ fontSize: 12, color: "#5a6680", fontWeight: 700 }}>{L.pctOfSum(tm.pct, base)}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: "#14213a" }}>€{computed.toFixed(2).replace(".", ",")}</span>
+              </div>
+            )}
+
+            {computed > 0 && (
+              <div style={{ fontSize: 11, fontWeight: 700, color: isDisc ? "#c0392b" : "#5a6680", marginBottom: 10 }}>{isDisc ? L.subtracts : L.addsUp}</div>
+            )}
+            {isVat && <div style={{ fontSize: 11, color: "#8a93a3", lineHeight: 1.45, marginBottom: 10 }}>{L.vatOnlyIfNotIncluded}</div>}
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => setTaxModal(null)}>{L.cancel}</button>
+              <button disabled={!ready} onClick={() => confirmTaxModal(tm.scope)}
+                style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 800, opacity: ready ? 1 : 0.45, cursor: ready ? "pointer" : "default" }}>{L.addBtn}</button>
+            </div>
           </div>
         </div>
         )
@@ -3587,8 +3745,8 @@ export default function RundoTable() {
                 <li>{L.checkTaxAdded}</li>
                 <li>{L.checkSharedMarked}</li>
               </ul>
-              <button onClick={() => setShowShareWarn(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>{L.backToBill}</button>
-              <button onClick={() => { setShowShareWarn(false); setAdminTab("guests") }} style={{ ...S.btn, width: "100%", padding: "9px 0", marginTop: 8, fontSize: 12.5, fontWeight: 700, color: "#9aa0ab", background: "transparent", border: "none" }}>{L.continueAnyway}</button>
+              <button onClick={() => { setShowShareWarn(false); setAdminTab("scan"); scrollTop() }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>{L.backToBill}</button>
+              <button onClick={() => { setShowShareWarn(false); setAdminTab("guests"); scrollTop() }} style={{ ...S.btn, width: "100%", padding: "9px 0", marginTop: 8, fontSize: 12.5, fontWeight: 700, color: "#9aa0ab", background: "transparent", border: "none" }}>{L.continueAnyway}</button>
             </div>
           </div>
         )
