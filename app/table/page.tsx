@@ -539,7 +539,7 @@ const STRINGS = {
     badgeMe: "jij",
     deleteTitle: "verwijderen",
     emptyList: "Nog niemand in de lijst.",
-    toAssignBtn: "📊 Naar toewijzen →",
+    toAssignBtn: "Link gedeeld? Naar toewijzen →",
     guestWord: "Gast",
     adminName: "Ik",
     close: "✕ Sluiten",
@@ -1096,7 +1096,7 @@ const STRINGS = {
     badgeMe: "toi",
     deleteTitle: "supprimer",
     emptyList: "Personne dans la liste pour l'instant.",
-    toAssignBtn: "📊 Vers « Répartir » →",
+    toAssignBtn: "Lien partagé ? Vers « Répartir » →",
     guestWord: "Invité",
     adminName: "Moi",
     close: "✕ Fermer",
@@ -1846,7 +1846,8 @@ export default function RundoTable() {
 
   const addGuest = async (name?: string, selfJoined = false, seats = 1) => {
     if (!group) return
-    const finalName = (name ?? newGuest).trim() || `${L.guestWord} ${participants.length + 1}`
+    // Geen nummer meer: vrije plaatsen zijn onderling inwisselbaar, nummeren geeft enkel scheve tellingen.
+    const finalName = (name ?? newGuest).trim() || L.guestWord
     const seatsVal = Math.max(1, seats)
     let { data, error } = await supabase.from("table_participants")
       .insert([{ name: finalName, group_id: group.id, self_joined: selfJoined, seats: seatsVal }]).select().single()
@@ -1887,7 +1888,7 @@ export default function RundoTable() {
     // Zo blijft de som van alle personen gelijk aan het getal in de teller.
     const delta = val - current
     if (delta > 0) {
-      const isFree = (p: Participant) => (new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName)
+      const isFree = (p: Participant) => (new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName)
         && p.id !== pid && p.id !== meId && !claims.some((c) => c.participant_id === p.id && c.quantity > 0)
       const spare = participants.filter(isFree).slice(-delta)
       for (const sp of spare) await supabase.from("table_participants").delete().eq("id", sp.id)
@@ -1937,7 +1938,7 @@ export default function RundoTable() {
   // Een plaats is "vrij" zolang niemand er zijn naam op zette (naam is nog "Gast N" of "Ik").
   // De organisator is de eerste deelnemer: die plaats mag niemand overnemen via de link.
   const ownerPid = participants[0]?.id ?? null
-  const isFreeSpot = (p: Participant) => new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName
+  const isFreeSpot = (p: Participant) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName
 
   // Neemt de gekozen plaats over: zet de naam (of namen, bij een koppel) en het aantal personen.
   const confirmClaimSpot = async () => {
@@ -1962,30 +1963,23 @@ export default function RundoTable() {
   }
 
 
-  // Hernummer naamloze gasten ("Gast N") naar hun positie, zodat er geen gaten ontstaan na verwijderen.
+  // Oude groepen kunnen nog genummerde plaatsen bevatten ("Gast 3"). Die nummers klopten niet
+  // meer zodra er koppels of verwijderde gasten in het spel waren, dus halen we ze weg.
   const renumberGuests = async (): Promise<boolean> => {
-    if (!group) return
+    if (!group) return false
     const { data } = await supabase.from("table_participants").select("*").eq("group_id", group.id)
-    const isPh = (nm?: string) => /^(Gast|Invité) \d+$/.test(nm || "")
-    const ordered = [...((data as Participant[]) || [])].sort((a, b) => {
-      const pa = isPh(a.name) ? 1 : 0, pb = isPh(b.name) ? 1 : 0
-      if (pa !== pb) return pa - pb
-      const ca = a.created_at ?? "", cb = b.created_at ?? ""
-      if (ca !== cb) return ca < cb ? -1 : 1
-      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
-    })
+    const numbered = /^(Gast|Invité)\s+\d+$/i
     let changed = false
-    for (let i = 0; i < ordered.length; i++) {
-      const g = ordered[i]
-      if (isPh(g.name)) {
-        const expected = `${L.guestWord} ${i + 1}`
-        if (g.name !== expected) { changed = true; await supabase.from("table_participants").update({ name: expected }).eq("id", g.id) }
+    for (const g of ((data as Participant[]) || [])) {
+      if (numbered.test(g.name || "")) {
+        changed = true
+        await supabase.from("table_participants").update({ name: L.guestWord }).eq("id", g.id)
       }
     }
     return changed
   }
 
-  // Bij het openen van de Gasten-tab: naamloze gasten netjes hernummeren (repareert ook bestaande groepen).
+  // Bij het openen van de Gasten-tab: oude nummers opruimen.
   useEffect(() => {
     if (!isAdmin || adminTab !== "guests" || !group) return
     ;(async () => { if (await renumberGuests()) await loadAll(group.id) })()
@@ -2014,7 +2008,7 @@ export default function RundoTable() {
     const me = participants.find((x) => x.id === meId) || participants[0]
     if (!me) return false
     const nm = me.name.trim()
-    return !(new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(nm) || nm === L.adminName || nm === "")
+    return !(new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(nm) || nm === L.adminName || nm === "")
   })()
   // Het aantal personen is pas "ingevuld" als de organisator de teller bewust zette
   // (of als er al meer dan één persoon aan tafel zit, bv. bij een herladen groep).
@@ -2046,7 +2040,7 @@ export default function RundoTable() {
   const spotStatus = (p: Participant): { kind: "done" | "idle" | "free" | "mine"; count: number } => {
     const count = claims.filter((c) => c.participant_id === p.id && c.quantity > 0).length
     const nm = p.name.trim()
-    const isFree = new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(nm) || nm === L.adminName
+    const isFree = new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(nm) || nm === L.adminName
     if (isFree) return { kind: "free", count }
     if (count > 0) return { kind: "done", count }
     if (p.self_joined) return { kind: "idle", count }
@@ -3195,7 +3189,7 @@ export default function RundoTable() {
               {(() => {
                 const me = participants.find((x) => x.id === meId) || participants[0]
                 if (!me) return null
-                const isPh = new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(me.name.trim()) || me.name.trim() === L.adminName
+                const isPh = new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(me.name.trim()) || me.name.trim() === L.adminName
                 return (
                   <input id="own-name" key={`self-${me.id}-${me.name}`} defaultValue={isPh ? "" : me.name} placeholder={L.ownNamePlaceholder}
                     onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== me.name) renameGuest(me.id, v) }}
@@ -3332,7 +3326,7 @@ export default function RundoTable() {
 
             {showNames && (() => {
               const twoCol = participants.length > 5
-              const isPlaceholderName = (p: Participant) => new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName
+              const isPlaceholderName = (p: Participant) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName
               const splitNames = (p: Participant) => {
                 if (isPlaceholderName(p)) return []
                 return p.name.split(/\s*&\s*/).map((x) => x.trim()).filter(Boolean)
