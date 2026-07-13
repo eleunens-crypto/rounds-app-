@@ -709,7 +709,15 @@ const STRINGS = {
     addsUp: "↑ Wordt bijgeteld bij de rekening.",
     subtracts: "↓ Wordt afgetrokken van de rekening.",
     vatOnlyIfNotIncluded: "💡 Enkel toevoegen als de BTW nog niet in de prijzen zit.",
-    addBtn: "Toevoegen",
+    taxAddConfirm: "Toevoegen",
+    mismatchBanner: (d: number) => `⚠️ De bon klopt niet: €${d.toFixed(2).replace(".", ",")} verschil tussen de items en het bontotaal.`,
+    mismatchFix: "Naar de bon →",
+    tipTitleNew: "💰 Nog geen fooi toegevoegd",
+    tipBodyNew: "Wil je een fooi verdelen over iedereen? Anders sluit je af met de bedragen zoals ze nu staan.",
+    tipTotalLabel: "Totaal te verdelen",
+    tipAddBtn: "💰 Fooi toevoegen",
+    tipSkipBtn: "Afsluiten zonder fooi",
+    mismatchFinalize: (d: number) => `De bon klopt niet: €${d.toFixed(2).replace(".", ",")} verschil tussen de items en het bontotaal. Iemand betaalt dus te veel of te weinig.\n\nToch afsluiten?`,
     noItemsYet: "Nog geen items op de bon.",
     kindCostName: "Kosten",
     kindVatName: "BTW",
@@ -1249,7 +1257,15 @@ const STRINGS = {
     addsUp: "↑ Sera ajouté à l'addition.",
     subtracts: "↓ Sera déduit de l'addition.",
     vatOnlyIfNotIncluded: "💡 À ajouter uniquement si la TVA n'est pas déjà comprise.",
-    addBtn: "Ajouter",
+    taxAddConfirm: "Ajouter",
+    mismatchBanner: (d: number) => `⚠️ L'addition ne correspond pas : €${d.toFixed(2).replace(".", ",")} d'écart entre les articles et le total.`,
+    mismatchFix: "Vers l'addition →",
+    tipTitleNew: "💰 Aucun pourboire ajouté",
+    tipBodyNew: "Veux-tu répartir un pourboire ? Sinon, tu clôtures avec les montants actuels.",
+    tipTotalLabel: "Total à répartir",
+    tipAddBtn: "💰 Ajouter un pourboire",
+    tipSkipBtn: "Clôturer sans pourboire",
+    mismatchFinalize: (d: number) => `L'addition ne correspond pas : €${d.toFixed(2).replace(".", ",")} d'écart. Quelqu'un paiera donc trop ou trop peu.\n\nClôturer quand même ?`,
     noItemsYet: "Aucun article sur l'addition.",
     kindCostName: "Frais",
     kindVatName: "TVA",
@@ -1559,6 +1575,7 @@ export default function RundoTable() {
   const [sharePicking, setSharePicking] = useState<Set<string>>(new Set())
   const [jumpToAssign, setJumpToAssign] = useState(0)
   const [personsTouched, setPersonsTouched] = useState(false)
+  const [billMismatchAck, setBillMismatchAck] = useState(false)  // bewust doorgegaan ondanks verschil
   const [showJoined, setShowJoined] = useState(false)
   // Bewaarde foto van de laatste scan, zodat je een mislukte AI-scan opnieuw kan proberen.
   const [retryFile, setRetryFile] = useState<File | null>(null)
@@ -2668,7 +2685,13 @@ export default function RundoTable() {
   const billOk = (group?.receipt_total ?? null) != null && Math.abs((group?.receipt_total ?? 0) - billTotal) < 0.005
   // Bij elke tabwissel bovenaan beginnen, anders behoud je de scrollpositie van de vorige tab.
   const scrollTop = () => { if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "auto" }) }
-  const goGuests = () => { if (billOk) { setAdminTab("guests"); scrollTop() } else setShowShareWarn(true) }
+  const billDiff = Math.abs((group?.receipt_total ?? 0) - billTotal)
+  // Waarschuw zolang de bon niet klopt én de gebruiker het verschil niet bewust aanvaardde.
+  const warnMismatch = !billOk && !billMismatchAck
+  const goGuests = () => {
+    if (warnMismatch) { setShowShareWarn(true); return }
+    setAdminTab("guests"); scrollTop()
+  }
   const openUnits = baseItems.filter((it) => !it.is_shared)
     .reduce((s, it) => s + Math.max(0, it.quantity - claimedQty(it.id)), 0)
   const undecidedShared = baseItems.filter((it) => it.is_shared && sharerIds(it.id).length === 0)
@@ -2899,8 +2922,9 @@ export default function RundoTable() {
             { id: "overview", label: L.tabAssign },
           ] as { id: AdminTab; label: string }[]).map((t) => (
             <button key={t.id} onClick={() => {
-              // Klopt de bon niet met de items? Dan eerst die melding — voor gasten én toewijzen.
-              if ((t.id === "guests" || t.id === "overview") && !billOk) { setShowShareWarn(true); return }
+              // Weg van de bon terwijl die niet klopt? Eerst waarschuwen — één keer, dan mag je door.
+              if ((t.id === "guests" || t.id === "overview") && warnMismatch) { setShowShareWarn(true); return }
+              // Naar toewijzen kan pas als gasten in orde is: aantal personen én je eigen naam.
               if (t.id === "overview" && !requireName()) return
               setAdminTab(t.id); scrollTop()
             }} style={{
@@ -3104,6 +3128,12 @@ export default function RundoTable() {
       )}
 
       {/* ─── ADMIN: Gasten & delen ─── */}
+      {isAdmin && !billOk && (adminTab === "guests" || adminTab === "overview") && (
+        <div style={{ display: "flex", alignItems: "center", gap: 9, background: "rgba(243,156,18,0.12)", border: "1.5px solid rgba(243,156,18,0.55)", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 700, color: "#8a4514", lineHeight: 1.45 }}>{L.mismatchBanner(billDiff)}</span>
+          <button onClick={() => { setAdminTab("scan"); scrollTop() }} style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, color: "#fff", background: "linear-gradient(135deg,#e8a33d,#d98324)", border: "none", borderRadius: 8, padding: "7px 10px", cursor: "pointer", whiteSpace: "nowrap" }}>{L.mismatchFix}</button>
+        </div>
+      )}
       {isAdmin && adminTab === "guests" && (
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ ...S.card, order: 1 }}>
@@ -3319,7 +3349,7 @@ export default function RundoTable() {
               )
             })()}
           </div>
-          <button onClick={() => { if (!billOk) { setShowShareWarn(true); return } if (requireName()) { setAdminTab("overview"); scrollTop() } }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 700 }}>{L.toAssignBtn}</button>
+          <button onClick={() => { if (warnMismatch) { setShowShareWarn(true); return } if (requireName()) { setAdminTab("overview"); scrollTop() } }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 700 }}>{L.toAssignBtn}</button>
         </div>
       )}
 
@@ -3567,7 +3597,8 @@ export default function RundoTable() {
                 setShowTodo(true)
                 return
               }
-              if (!billOk) { setShowFinalizeWarn(true); return }
+              // De bon klopt niet: benoem het verschil en laat bewust bevestigen.
+              if (!billOk && !confirm(L.mismatchFinalize(billDiff))) { setShowFinalizeWarn(true); return }
               // Gedeelde items: waarschuw als er te weinig mensen aanduidden dat ze meededen.
               const shareProblems = baseItems.filter((it) => it.is_shared).map((it) => {
                 const st = sharedStatus(it)
@@ -3724,7 +3755,7 @@ export default function RundoTable() {
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setTaxModal(null)}>{L.cancel}</button>
               <button disabled={!ready} onClick={() => confirmTaxModal(tm.scope)}
-                style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 800, opacity: ready ? 1 : 0.45, cursor: ready ? "pointer" : "default" }}>{L.addBtn}</button>
+                style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 800, opacity: ready ? 1 : 0.45, cursor: ready ? "pointer" : "default" }}>{L.taxAddConfirm}</button>
             </div>
           </div>
         </div>
@@ -3746,7 +3777,7 @@ export default function RundoTable() {
                 <li>{L.checkSharedMarked}</li>
               </ul>
               <button onClick={() => { setShowShareWarn(false); setAdminTab("scan"); scrollTop() }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>{L.backToBill}</button>
-              <button onClick={() => { setShowShareWarn(false); setAdminTab("guests"); scrollTop() }} style={{ ...S.btn, width: "100%", padding: "9px 0", marginTop: 8, fontSize: 12.5, fontWeight: 700, color: "#9aa0ab", background: "transparent", border: "none" }}>{L.continueAnyway}</button>
+              <button onClick={() => { setBillMismatchAck(true); setShowShareWarn(false); setAdminTab("guests"); scrollTop() }} style={{ ...S.btn, width: "100%", padding: "9px 0", marginTop: 8, fontSize: 12.5, fontWeight: 700, color: "#9aa0ab", background: "transparent", border: "none" }}>{L.continueAnyway}</button>
             </div>
           </div>
         )
@@ -3768,10 +3799,20 @@ export default function RundoTable() {
       {showTipReminder && (
         <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowTipReminder(false)}>
           <div style={{ ...S.modal, width: 350 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, marginBottom: 8, fontSize: 17, fontWeight: 800, color: "#14213a" }}>{L.tipReminderTitle}</h3>
-            <div style={{ fontSize: 13, color: "#5a6680", lineHeight: 1.5, marginBottom: 16 }}>{L.tipReminderBody}</div>
-            <button onClick={() => { setShowTipReminder(false); if (typeof document !== "undefined") document.getElementById("fooi-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }) }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 14, fontWeight: 800, marginBottom: 8 }}>{L.addTipBtn}</button>
-            <button onClick={() => { setShowTipReminder(false); finalizeBill(true) }} style={{ ...S.btn, width: "100%", padding: "10px 0", fontSize: 13, fontWeight: 700, color: "#9aa0ab", background: "transparent", border: "none" }}>{L.finalizeNoTip}</button>
+            <h3 style={{ marginTop: 0, marginBottom: 7, fontSize: 17, fontWeight: 800, color: "#14213a" }}>{L.tipTitleNew}</h3>
+            <div style={{ fontSize: 13, color: "#5a6680", lineHeight: 1.55, marginBottom: 15 }}>{L.tipBodyNew}</div>
+            <div style={{ background: "rgba(90,108,166,0.07)", borderRadius: 11, padding: "11px 13px", marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12.5, color: "#5a6680", fontWeight: 700 }}>{L.tipTotalLabel}</span>
+                <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a" }}>€{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</span>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => { setShowTipReminder(false); if (typeof document !== "undefined") document.getElementById("fooi-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }) }}
+                style={{ ...S.btn, flex: 1, padding: "12px 8px", fontSize: 13, fontWeight: 800 }}>{L.tipAddBtn}</button>
+              <button onClick={() => { setShowTipReminder(false); finalizeBill(true) }}
+                style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "12px 8px", fontSize: 13, fontWeight: 800 }}>{L.tipSkipBtn}</button>
+            </div>
           </div>
         </div>
       )}
