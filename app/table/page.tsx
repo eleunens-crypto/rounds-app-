@@ -306,8 +306,10 @@ async function scanReceipt(files: File | File[], onProgress?: (p: number) => voi
     const list = Array.isArray(files) ? files : [files]
     // Twee foto's samen zijn zwaar: kleiner en sterker gecomprimeerd, anders loopt de
     // AI-oproep over de tijdslimiet van de server (504). Eén foto blijft op volle kwaliteit.
-    const maxW = list.length > 1 ? 1150 : 1600
-    const quality = list.length > 1 ? 0.72 : 0.82
+    // Eén foto mag scherper: dan is er tijd genoeg en blijven kleine letters leesbaar
+    // (belangrijk als iemand de hele bon in één beeld probeert te vatten).
+    const maxW = list.length > 1 ? 1150 : 2000
+    const quality = list.length > 1 ? 0.72 : 0.85
     const images = [] as { imageBase64: string; mimeType: string }[]
     for (const f of list) {
       images.push({ imageBase64: await fileToScaledBase64(f, maxW, quality), mimeType: "image/jpeg" })
@@ -828,6 +830,11 @@ const STRINGS = {
     addItemBtn: "+ Item toevoegen",
     whatIsThis: "Wat is dit?",
     photoOfN: (i: number, n: number) => `Foto ${i} van ${n}`,
+    tooSlowTitle: "⚠️ Lezen duurde te lang",
+    tooSlowBody: "Twee foto's zijn zwaarder om te lezen — probeer toch één foto van heel de bon.",
+    tooSlowTip: "Recht erboven, goed licht, beeld vullen.",
+    tooSlowOne: "📷 Eén foto maken",
+    tooSlowRetry: "🔄 Toch met twee",
     taxAddBtn: "+ BTW / kosten / korting",
     legendTitle: "Wat betekenen de knopjes?",
     legendShare: "Gedeelde items (fles wijn, water, dessert)? Tik dit icoon aan. De prijs verdeelt zich over wie meedeelt.",
@@ -1327,6 +1334,11 @@ const STRINGS = {
     addItemBtn: "+ Ajouter un article",
     whatIsThis: "Qu'est-ce que c'est ?",
     photoOfN: (i: number, n: number) => `Photo ${i} sur ${n}`,
+    tooSlowTitle: "⚠️ La lecture a pris trop de temps",
+    tooSlowBody: "Deux photos sont plus lourdes à lire — essaie plutôt une seule photo de toute l'addition.",
+    tooSlowTip: "Bien au-dessus, bonne lumière, remplis l'image.",
+    tooSlowOne: "📷 Prendre une photo",
+    tooSlowRetry: "🔄 Réessayer à deux",
     taxAddBtn: "+ TVA / frais / remise",
     legendTitle: "Que font les boutons ?",
     legendShare: "Articles partagés (bouteille de vin, eau, dessert) ? Touche cette icône. Le prix se répartit entre ceux qui partagent.",
@@ -1471,6 +1483,7 @@ export default function RundoTable() {
   const [scanFile, setScanFile] = useState<File | null>(null)
   const [photos, setPhotos] = useState<{ file: File; url: string }[]>([])
   const [scanStep, setScanStep] = useState<{ i: number; n: number } | null>(null)
+  const [multiFails, setMultiFails] = useState(0)
   const [showJoined, setShowJoined] = useState(false)
   // Bewaarde foto van de laatste scan, zodat je een mislukte AI-scan opnieuw kan proberen.
   const [retryFile, setRetryFile] = useState<File | null>(null)
@@ -2035,9 +2048,11 @@ export default function RundoTable() {
     if (!res.items || res.items.length === 0) {
       const reason = res.reason ?? "empty"
       if (reason === "unavailable") setCooldownUntil(Date.now() + 30 * 1000)
+      if (photos.length > 1) setMultiFails((n) => n + 1)
       setScanFail({ reason, status: res.status, detail: res.detail })
       return
     }
+    setMultiFails(0)
     setScanSource("ai")
     await confirmScan(res.items, res.total != null ? res.total.toFixed(2).replace(".", ",") : "", photos.map((p) => p.file))
     for (const ph of photos) URL.revokeObjectURL(ph.url)
@@ -3627,6 +3642,23 @@ export default function RundoTable() {
               </div>
             )}
 
+            {/* Na 2 mislukte pogingen met twee foto's: raad één foto van de hele bon aan. */}
+            {scanFail && !scanning && multiFails >= 2 && (
+              <div style={{ background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.5)", borderRadius: 12, padding: "12px 13px", marginBottom: 12 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#b5591a", marginBottom: 4 }}>{L.tooSlowTitle}</div>
+                <div style={{ fontSize: 12.5, color: "#8a4514", lineHeight: 1.5, marginBottom: 4 }}>{L.tooSlowBody}</div>
+                <div style={{ fontSize: 11.5, color: "#9a6a30", lineHeight: 1.45, marginBottom: 10 }}>💡 {L.tooSlowTip}</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <label style={{ ...S.btn, ...S.btnPrimary, flex: 1, minWidth: 150, display: "block", textAlign: "center", cursor: "pointer", fontWeight: 800, fontSize: 13, padding: "11px 0" }}>
+                    {L.tooSlowOne}
+                    <input type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+                      onChange={(e) => { for (const ph of photos) URL.revokeObjectURL(ph.url); setPhotos([]); setScanFail(null); setMultiFails(0); addPhoto(e.target.files?.[0]) }} />
+                  </label>
+                  <button onClick={() => { setScanFail(null); scanPhotos() }} disabled={cooldownLeft > 0}
+                    style={{ ...S.btn, flex: 1, minWidth: 130, fontWeight: 800, fontSize: 13, padding: "11px 0", opacity: cooldownLeft > 0 ? 0.5 : 1 }}>{cooldownLeft > 0 ? `${cooldownLeft}s` : L.tooSlowRetry}</button>
+                </div>
+              </div>
+            )}
             {scanFail && !scanning && (
               <div style={{ marginBottom: 14, border: "1px solid rgba(224,107,94,0.45)", background: "rgba(224,107,94,0.06)", borderRadius: 12, padding: "13px 14px" }}>
                 {scanFail.reason === "unavailable" ? (
