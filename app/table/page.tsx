@@ -20,6 +20,7 @@ type BillItem = {
   quantity: number
   is_shared: boolean
   share_fixed?: boolean
+  share_expected?: number | null
   distribute?: string | null
   tax_rate?: number | null
   category: string | null
@@ -31,6 +32,7 @@ type Claim = {
   item_id: string
   participant_id: string
   quantity: number
+  members?: string | null
   created_at?: string
 }
 type Confirmation = { id: string; group_id: string; participant_id: string; confirmed_at?: string }
@@ -431,6 +433,28 @@ const STRINGS = {
     optSelf: "✍️ Ik doe het voor hen",
     optSelfSub: "namen invullen & zelf aanduiden",
     sharePopupSub: "Ze kiezen zelf een vrije plaats, zetten hun naam erop en tikken aan wat ze aten.",
+    howManyGroupTitle: "👥 Met hoeveel zijn jullie?",
+    howManyGroupSub: "Iedereen aan tafel — jezelf inbegrepen.",
+    personsWord: "Aantal personen",
+    shareStepTitle: "📱 Deel met je gasten",
+    shareStepSub: "Zij kiezen een vrije plaats, zetten hun naam erop en tikken zelf aan wat ze aten.",
+    sendViaApp: "💬 Versturen via WhatsApp, Messenger…",
+    scanThis: "Laat hen dit scannen",
+    yourselfTitle: "✍️ Vergeet jezelf niet",
+    yourselfSub: "Zet je naam erop, dan weet iedereen wie wat had.",
+    othersTitle: "📝 Iemand zonder smartphone?",
+    othersSub: "Geen gsm of geen zin om zelf aan te tikken? Zet hun naam hieronder — jij duidt dan voor hen aan.",
+    othersAdd: "+ Naam toevoegen die ik zelf regel",
+    othersRest: "💡 De rest laat je gewoon vrij — zij claimen hun plaats zelf via de link.",
+    personWord: "Persoon",
+    onlyOneShares: "⚠️ Maar 1 persoon deelt mee",
+    expectedSharers: "Met hoeveel gedeeld?",
+    expectedHint: "Weet je het zeker? Vul in met hoeveel personen dit gedeeld werd — dan waarschuwt de app als er te weinig aanduidden.",
+    expectedShort: (n: number) => `verwacht: ${n}`,
+    tooFewShared: (have: number, want: number) => `⚠️ Pas ${have} van de ${want} personen duidden dit aan.`,
+    sharedOverviewTitle: "Gedeelde items — wie deelde mee?",
+    sharedByLabel: "gedeeld door",
+    nobodyShared: "⚠️ Niemand duidde dit gedeelde item aan",
     mixHint: "Gebruik gerust allebei — het één sluit het ander niet uit.",
     meLabel: "jij",
     ownNamePlaceholder: "Zet hier je eigen naam",
@@ -863,6 +887,28 @@ const STRINGS = {
     optSelf: "✍️ Je le fais pour eux",
     optSelfSub: "remplir les noms & cocher soi-même",
     sharePopupSub: "Ils choisissent une place libre, y mettent leur nom et cochent ce qu'ils ont pris.",
+    howManyGroupTitle: "👥 Vous êtes combien ?",
+    howManyGroupSub: "Tout le monde à table — toi compris.",
+    personsWord: "Nombre de personnes",
+    shareStepTitle: "📱 Partage avec tes invités",
+    shareStepSub: "Ils choisissent une place libre, y mettent leur nom et cochent ce qu'ils ont pris.",
+    sendViaApp: "💬 Envoyer via WhatsApp, Messenger…",
+    scanThis: "Fais-leur scanner ceci",
+    yourselfTitle: "✍️ Ne t'oublie pas",
+    yourselfSub: "Mets ton nom, ainsi chacun sait qui a pris quoi.",
+    othersTitle: "📝 Quelqu'un sans smartphone ?",
+    othersSub: "Pas de smartphone ou pas envie ? Mets son nom ci-dessous — tu coches alors pour lui.",
+    othersAdd: "+ Ajouter un nom que je gère moi-même",
+    othersRest: "💡 Laisse les autres libres — ils choisiront leur place via le lien.",
+    personWord: "Personne",
+    onlyOneShares: "⚠️ Une seule personne partage",
+    expectedSharers: "Partagé à combien ?",
+    expectedHint: "Tu en es sûr ? Indique entre combien de personnes cet article a été partagé — l'app préviendra s'il en manque.",
+    expectedShort: (n: number) => `attendu : ${n}`,
+    tooFewShared: (have: number, want: number) => `⚠️ Seulement ${have} sur ${want} personnes l'ont indiqué.`,
+    sharedOverviewTitle: "Articles partagés — qui a partagé ?",
+    sharedByLabel: "partagé par",
+    nobodyShared: "⚠️ Personne n'a indiqué cet article partagé",
     mixHint: "Utilisez les deux — l'un n'exclut pas l'autre.",
     meLabel: "toi",
     ownNamePlaceholder: "Mets ton propre nom ici",
@@ -1328,7 +1374,6 @@ export default function RundoTable() {
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [newGuest, setNewGuest] = useState("")
   const [showNames, setShowNames] = useState(false)
-  const [sharePopup, setSharePopup] = useState(false)
   const [claimSpot, setClaimSpot] = useState<string | null>(null)
   const [claimSeats, setClaimSeats] = useState(1)
   const [claimNames, setClaimNames] = useState<string[]>([""])
@@ -2075,16 +2120,18 @@ export default function RundoTable() {
       .filter((c) => c.item_id === itemId && c.quantity > 0)
       .map((c) => ({ name: participants.find((p) => p.id === c.participant_id)?.name ?? "?", qty: c.quantity }))
 
-  const setClaim = async (itemId: string, pid: string, qty: number) => {
+  // members = welke leden van een meerpersoonsplaats meedelen, bv. "1" (enkel de tweede naam)
+  const setClaim = async (itemId: string, pid: string, qty: number, members?: number[] | null) => {
     if (!group) return
     if (group.finalized) { setToast(isAdmin ? L.finalizedReopenFirst : L.finalizedAskAdmin); return }
     const existing = claims.find((c) => c.item_id === itemId && c.participant_id === pid)
+    const mem = members && members.length > 0 ? members.slice().sort((a, b) => a - b).join(",") : null
     if (qty <= 0) {
       if (existing) await supabase.from("table_claims").delete().eq("id", existing.id)
     } else if (existing) {
-      await supabase.from("table_claims").update({ quantity: qty }).eq("id", existing.id)
+      await supabase.from("table_claims").update({ quantity: qty, members: mem }).eq("id", existing.id)
     } else {
-      await supabase.from("table_claims").insert([{ group_id: group.id, item_id: itemId, participant_id: pid, quantity: qty }])
+      await supabase.from("table_claims").insert([{ group_id: group.id, item_id: itemId, participant_id: pid, quantity: qty, members: mem }])
     }
     await loadAll(group.id)
   }
@@ -2136,6 +2183,21 @@ export default function RundoTable() {
   }
 
   const sharedRevealed = (it: BillItem) => sharerIds(it.id).length > 0
+  // Controleert of een gedeeld item genoeg delers heeft.
+  // "warn" = niemand duidde aan, of minder dan het verwachte aantal, of slechts één persoon.
+  const sharedStatus = (it: BillItem): { heads: number; expected: number | null; warn: null | "none" | "few" | "one" } => {
+    const heads = shareHeads(it.id)
+    const expected = it.share_expected ?? null
+    if (heads === 0) return { heads, expected, warn: "none" }
+    if (expected != null && expected > 0 && heads < expected) return { heads, expected, warn: "few" }
+    if (heads === 1) return { heads, expected, warn: "one" }
+    return { heads, expected, warn: null }
+  }
+  const setShareExpected = async (itemId: string, n: number | null) => {
+    if (!group) return
+    await supabase.from("table_items").update({ share_expected: n }).eq("id", itemId)
+    await loadAll(group.id)
+  }
 
   const baseAmountForItem = (pid: string, it: BillItem): number => {
     if (it.is_shared) {
@@ -2571,7 +2633,7 @@ export default function RundoTable() {
           <ItemList
             items={baseItems} claimedQty={claimedQty} participants={participants} claimsForItem={claimsForItem}
             sharerIds={sharerIds} shareHeads={shareHeads} toggleShareClaim={toggleShareClaim} setShareFixed={setShareFixed}
-            onEdit={setEditItem} onToggleShared={toggleShared} onDelete={deleteItem} onAddManual={() => openNewItem("bill")} bareBill
+            onEdit={setEditItem} onToggleShared={toggleShared} onDelete={deleteItem} onSetExpected={isAdmin ? setShareExpected : undefined} onAddManual={() => openNewItem("bill")} bareBill
             recentItemId={recentItemId} onGoGuests={goGuests}
             scanFlags={scanFlags}
             billOk={group?.receipt_total != null && Math.abs((group.receipt_total ?? 0) - billTotal) < 0.005}
@@ -2664,12 +2726,12 @@ export default function RundoTable() {
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ ...S.card, order: 1 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 4 }}>
-              <h3 style={{ ...S.h3, marginBottom: 0, minWidth: 0 }}>{L.howManyTitle}</h3>
+              <h3 style={{ ...S.h3, marginBottom: 0, minWidth: 0 }}>{L.howManyGroupTitle}</h3>
             </div>
-            <div style={{ marginTop: 4, marginBottom: 2, fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>{L.howManySub}</div>
+            <div style={{ marginTop: 4, marginBottom: 2, fontSize: 12, color: "#9aa0ab", lineHeight: 1.5 }}>{L.howManyGroupSub}</div>
 
             <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: "11px 12px" }}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>{L.guestCount}</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>{L.personsWord}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <button onClick={() => setGuestCount(participants.length - 1)} disabled={participants.length <= 0} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(16,24,40,0.05)", color: "#5a6680", fontSize: 20, fontWeight: 800, cursor: participants.length > 0 ? "pointer" : "default", opacity: participants.length > 0 ? 1 : 0.4 }}>−</button>
                 <b style={{ minWidth: 20, textAlign: "center", fontSize: 19, color: "#14213a" }}>{participants.length}</b>
@@ -2677,26 +2739,32 @@ export default function RundoTable() {
               </div>
             </div>
             <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 7, lineHeight: 1.5 }}>👤 {L.payTogetherHint}</div>
-            {participants.length > 0 && (
-              <div style={{ marginTop: 12, paddingBottom: 12, borderBottom: "1px solid rgba(16,24,40,0.08)" }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: "#14213a", lineHeight: 1.4, marginBottom: 10 }}>{L.personsCount(participants.length)} · {L.howFillIn}</div>
-                <div style={{ display: "flex", alignItems: "stretch", gap: 8 }}>
-                  <button onClick={() => setShowNames((v) => !v)} style={{ flex: 1, border: showNames ? "1.5px solid transparent" : "1.5px solid rgba(27,42,74,0.22)", background: showNames ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", borderRadius: 12, padding: "12px 8px", cursor: "pointer", textAlign: "center" }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.optSelf} {showNames ? "▾" : ""}</div>
-                    <div style={{ fontSize: 11, color: showNames ? "#7a5300" : "#9aa0ab", lineHeight: 1.4 }}>{L.optSelfSub}</div>
-                  </button>
-                  <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: "#1499b0", background: "rgba(20,153,176,0.12)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 20, padding: "3px 8px" }}>&amp;</span>
-                  </div>
-                  <button onClick={() => setSharePopup(true)} style={{ flex: 1, border: "1.5px solid rgba(20,153,176,0.45)", background: "rgba(20,153,176,0.05)", borderRadius: 12, padding: "12px 8px", cursor: "pointer", textAlign: "center" }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.optShare}</div>
-                    <div style={{ fontSize: 11, color: "#9aa0ab", lineHeight: 1.4 }}>{L.optShareSub}</div>
-                  </button>
-                </div>
-                <div style={{ fontSize: 13.5, fontWeight: 800, color: "#14213a", background: "rgba(20,153,176,0.09)", border: "1px solid rgba(20,153,176,0.3)", borderRadius: 11, padding: "11px 12px", marginTop: 10, lineHeight: 1.5, textAlign: "center" }}>{L.mixHint}</div>
-              </div>
-            )}
+            <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.yourselfTitle}</div>
+              <div style={{ fontSize: 12, color: "#5a6680", lineHeight: 1.5, marginBottom: 10 }}>{L.yourselfSub}</div>
+              {(() => {
+                const me = participants.find((x) => x.id === meId) || participants[0]
+                if (!me) return null
+                const isPh = new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(me.name.trim()) || me.name.trim() === L.adminName
+                return (
+                  <input key={`self-${me.id}-${me.name}`} defaultValue={isPh ? "" : me.name} placeholder={L.ownNamePlaceholder}
+                    onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== me.name) renameGuest(me.id, v) }}
+                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+                    style={{ ...S.input, width: "100%", boxSizing: "border-box", border: "1.5px solid rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.04)" }} />
+                )
+              })()}
+            </div>
 
+            <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.othersTitle}</div>
+              <div style={{ fontSize: 12, color: "#5a6680", lineHeight: 1.5, marginBottom: 10 }}>{L.othersSub}</div>
+              {!showNames && (
+                <>
+                  <button onClick={() => setShowNames(true)} style={{ width: "100%", border: "1.5px dashed rgba(27,42,74,0.25)", background: "#fff", borderRadius: 11, padding: "12px 10px", cursor: "pointer", fontSize: 13, fontWeight: 800, color: "#5a6680" }}>{L.othersAdd}</button>
+                  <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 9, lineHeight: 1.5 }}>{L.othersRest}</div>
+                </>
+              )}
+            </div>
 
             {showNames && participants.length > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 12, marginBottom: 2 }}>
@@ -2785,14 +2853,9 @@ export default function RundoTable() {
             })()}
           </div>
 
-          {sharePopup && (
-            <div style={S.overlay} onClick={() => setSharePopup(false)}>
-              <div style={{ ...S.card, maxWidth: 420, width: "100%", margin: 0, maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
-                  <h3 style={{ ...S.h3, marginBottom: 0 }}>{L.optShare}</h3>
-                  <button onClick={() => setSharePopup(false)} style={{ ...S.iconBtn, flexShrink: 0 }}>✕</button>
-                </div>
-                <div style={{ fontSize: 12.5, color: "#5a6680", lineHeight: 1.5, marginBottom: 13 }}>{L.sharePopupSub}</div>
+          <div style={{ ...S.card, order: 2, border: "1.5px solid rgba(20,153,176,0.4)" }}>
+                <h3 style={{ ...S.h3, marginBottom: 4 }}>{L.shareStepTitle}</h3>
+                <div style={{ fontSize: 12.5, color: "#5a6680", lineHeight: 1.5, marginBottom: 13 }}>{L.shareStepSub}</div>
             {(() => {
               const entered = group?.receipt_total ?? null
               const match = entered != null && Math.abs(entered - billTotal) < 0.005
@@ -2828,15 +2891,43 @@ export default function RundoTable() {
                 </div>
               )
             })()}
-              </div>
-            </div>
-          )}
+          </div>
 
           <button onClick={() => setAdminTab("overview")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 700 }}>{L.toAssignBtn}</button>
         </div>
       )}
 
       {/* ─── ADMIN: Stand van zaken (bovenaan overzicht-tab) ─── */}
+      {adminTab === "overview" && baseItems.some((it) => it.is_shared) && (
+        <div style={{ ...S.card, padding: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#3b486a", marginBottom: 9, display: "flex", alignItems: "center", gap: 6 }}><ShareIcon on size={14} /> {L.sharedOverviewTitle}</div>
+          {baseItems.filter((it) => it.is_shared).map((it) => {
+            const st = sharedStatus(it)
+            const names = claims.filter((c) => c.item_id === it.id && c.quantity > 0).map((c) => {
+              const p = participants.find((x) => x.id === c.participant_id)
+              if (!p) return null
+              const parts = p.name.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
+              const mem = c.members ? c.members.split(",").map((x) => parseInt(x, 10)).filter((x) => !isNaN(x)) : null
+              if (mem && parts.length > 1) return mem.map((i) => parts[i] || p.name).join(", ")
+              if (parts.length > 1 && c.quantity < parts.length) return parts.slice(0, c.quantity).join(", ")
+              return p.name
+            }).filter(Boolean).join(", ")
+            return (
+              <div key={it.id} style={{ marginBottom: 8, padding: "8px 10px", borderRadius: 10, background: st.warn ? "rgba(243,156,18,0.08)" : "rgba(39,174,96,0.06)", border: st.warn ? "1px solid rgba(243,156,18,0.45)" : "1px solid rgba(39,174,96,0.35)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: "#14213a" }}>{it.name}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#5a6680", flexShrink: 0 }}>€{itemTotal(it).toFixed(2).replace(".", ",")}{it.share_expected ? ` · ${L.expectedShort(it.share_expected)}` : ""}</span>
+                </div>
+                <div style={{ fontSize: 11.5, color: "#5a6680", marginTop: 3, lineHeight: 1.45 }}>
+                  {st.heads > 0 ? <>{L.sharedByLabel} <b style={{ color: "#14213a" }}>{st.heads}</b>: {names}</> : L.nobodyShared}
+                </div>
+                {st.warn === "few" && <div style={{ fontSize: 11.5, fontWeight: 700, color: "#b5591a", marginTop: 4 }}>{L.tooFewShared(st.heads, it.share_expected as number)}</div>}
+                {st.warn === "one" && <div style={{ fontSize: 11.5, fontWeight: 700, color: "#b5591a", marginTop: 4 }}>{L.onlyOneShares}</div>}
+              </div>
+            )
+          })}
+        </div>
+      )}
       {isAdmin && adminTab === "overview" && (
         <div style={{ ...S.card, padding: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: "#3b486a", marginBottom: 8 }}>{L.overviewTitle}</div>
@@ -3546,12 +3637,12 @@ function TopBar({ group, isAdmin, onHome, me, totalPersons, guestSeats, onGuestS
   )
 }
 
-function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, shareHeads, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onAddManual, bareBill, taxLines, taxNode, recentItemId, onGoGuests, billOk, scanFlags }: {
+function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, shareHeads, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onSetExpected, onAddManual, bareBill, taxLines, taxNode, recentItemId, onGoGuests, billOk, scanFlags }: {
   items: BillItem[]; claimedQty: (id: string) => number
   participants: Participant[]; claimsForItem: (id: string) => { name: string; qty: number }[]
   sharerIds: (id: string) => string[]; shareHeads: (id: string) => number; toggleShareClaim: (itemId: string, pid: string) => void
   setShareFixed: (it: BillItem, val: boolean) => void
-  onEdit: (it: BillItem) => void; onToggleShared: (it: BillItem) => void; onDelete: (id: string) => void; onAddManual: () => void
+  onEdit: (it: BillItem) => void; onToggleShared: (it: BillItem) => void; onDelete: (id: string) => void; onSetExpected?: (id: string, n: number | null) => void; onAddManual: () => void
   bareBill?: boolean
   taxLines?: { name: string; amount: number }[]
   taxNode?: React.ReactNode
@@ -3631,6 +3722,17 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                 {open > 0 && (
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#e0685c", background: "rgba(224,107,94,0.1)", borderRadius: 10, padding: "2px 9px" }}>{open} {L.notAssignedYet}</span>
                 )}
+              </div>
+            )}
+            {it.is_shared && onSetExpected && (
+              <div style={{ marginTop: 7, marginLeft: 26, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: "rgba(90,108,166,0.06)", borderRadius: 9, padding: "7px 10px" }}>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: "#5a6680" }}>{L.expectedSharers}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                  <button onClick={() => onSetExpected(it.id, Math.max(0, (it.share_expected ?? 0) - 1) || null)} style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 14 }}>−</button>
+                  <b style={{ minWidth: 16, textAlign: "center", fontSize: 14, color: it.share_expected ? "#14213a" : "#c3c8d2" }}>{it.share_expected ?? "–"}</b>
+                  <button onClick={() => onSetExpected(it.id, (it.share_expected ?? 0) + 1)} style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 14, background: "rgba(27,42,74,0.12)" }}>+</button>
+                </div>
+                <span style={{ fontSize: 10.5, color: "#9aa0ab", flex: 1, minWidth: 150, lineHeight: 1.4 }}>{L.expectedHint}</span>
               </div>
             )}
             {bareBill && it.is_shared && (
@@ -4038,25 +4140,39 @@ function ClaimScreen(props: {
                 {iShare && mySeats > 1 && !fixed && (
                   <div style={{ marginTop: 9, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.35)", borderRadius: 12, padding: "10px 11px" }}>
                     <div style={{ fontSize: 13, fontWeight: 800, color: "#14213a", marginBottom: 8 }}>{L.withHowMany(mySeats)}</div>
-                    <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-                      {(() => {
-                        // Toon de echte namen ("Alleen Els" / "Els & Tom") i.p.v. "ik"/"wij" — veel duidelijker.
-                        const raw = participants.find((p) => p.id === meId)?.name ?? ""
-                        const parts = raw.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
-                        return Array.from({ length: mySeats }, (_, i) => i + 1).map((n) => {
-                          const on = myHeads === n
-                          let label: string
-                          if (n === mySeats) label = parts.length > 1 ? parts.join(" & ") : (mySeats === 2 ? L.allOfUs : L.nOfUs(n))
-                          else if (n === 1) label = parts[0] ? L.onlyFirst(parts[0]) : L.onlyMe
-                          else label = L.nOfUs(n)
-                          return (
-                            <button key={n} onClick={() => setClaim(it.id, meId, n)} style={{ flex: 1, minWidth: 96, fontSize: 13, fontWeight: 800, padding: "10px 6px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
-                          )
-                        })
-                      })()}
-                    </div>
+                    {(() => {
+                      // Elk lid van de plaats is apart aan/uit te zetten — dus ook "enkel de tweede naam".
+                      const raw = participants.find((p) => p.id === meId)?.name ?? ""
+                      const parts = raw.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
+                      const cur = claims.find((c) => c.item_id === it.id && c.participant_id === meId)
+                      let sel: number[] = cur?.members ? cur.members.split(",").map((x) => parseInt(x, 10)).filter((x) => !isNaN(x)) : []
+                      if (sel.length === 0 && myHeads > 0) sel = Array.from({ length: Math.min(myHeads, mySeats) }, (_, i) => i)
+                      const toggle = (i: number) => {
+                        const next = sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i]
+                        setClaim(it.id, meId, next.length, next)
+                      }
+                      return (
+                        <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                          {Array.from({ length: mySeats }, (_, i) => i).map((i) => {
+                            const on = sel.includes(i)
+                            const label = parts[i] || `${L.personWord} ${i + 1}`
+                            return (
+                              <button key={i} onClick={() => toggle(i)} style={{ flex: 1, minWidth: 96, fontSize: 13, fontWeight: 800, padding: "10px 6px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{on ? "✓ " : ""}{label}</button>
+                            )
+                          })}
+                        </div>
+                      )
+                    })()}
                   </div>
                 )}
+                {(() => {
+                  const st = sharedStatus(it)
+                  if (!st.warn) return null
+                  const msg = st.warn === "none" ? L.nobodyShared : st.warn === "few" ? L.tooFewShared(st.heads, st.expected as number) : L.onlyOneShares
+                  return (
+                    <div style={{ marginTop: 8, fontSize: 11.5, fontWeight: 700, color: "#b5591a", background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 9, padding: "7px 10px", lineHeight: 1.4 }}>{msg}</div>
+                  )
+                })()}
                 {iShare && (
                   revealed ? (
                     <div style={{ marginTop: 8, fontSize: 12, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.4)", borderRadius: 10, padding: "8px 11px", lineHeight: 1.45, display: "flex", alignItems: "flex-start", gap: 6 }}>
