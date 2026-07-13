@@ -1927,7 +1927,7 @@ export default function RundoTable() {
     setScanStep(null); setScanning(false)
     if (allItems.length === 0) {
       const f: { reason: "unavailable" | "empty"; status?: number; detail?: string } = lastFail ?? { reason: "empty" }
-      if (f.reason === "unavailable") setCooldownUntil(Date.now() + 45 * 1000)
+      if (f.reason === "unavailable") setCooldownUntil(Date.now() + 30 * 1000)
       setScanFail(f)
       return
     }
@@ -1947,7 +1947,7 @@ export default function RundoTable() {
     setScanning(false)
     if (!res.items || res.items.length === 0) {
       const reason = res.reason ?? "empty"
-      if (reason === "unavailable") setCooldownUntil(Date.now() + 45 * 1000)
+      if (reason === "unavailable") setCooldownUntil(Date.now() + 30 * 1000)
       setScanFail({ reason, status: res.status, detail: res.detail })
       return
     }
@@ -1981,7 +1981,7 @@ export default function RundoTable() {
     setScanning(false)
     if (!res.items || res.items.length === 0) {
       const reason = res.reason ?? "empty"
-      if (reason === "unavailable") setCooldownUntil(Date.now() + 45 * 1000)
+      if (reason === "unavailable") setCooldownUntil(Date.now() + 30 * 1000)
       setScanFail({ reason, status: res.status, detail: res.detail })
       return // AI mislukt -> de huidige (lokale) items blijven gewoon staan
     }
