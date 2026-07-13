@@ -3863,7 +3863,7 @@ function ClaimScreen(props: {
   claimedQty: (id: string) => number; myQty: (id: string, pid: string | null) => number; sharerIds: (id: string) => string[]
   shareHeads: (id: string) => number; myShareHeads: (id: string, pid: string) => number; seatsOf: (pid: string) => number
   setSeats: (pid: string, n: number) => void
-  setClaim: (itemId: string, pid: string, qty: number) => void; toggleShareClaim: (itemId: string, pid: string) => void
+  setClaim: (itemId: string, pid: string, qty: number, members?: number[] | null) => void; toggleShareClaim: (itemId: string, pid: string) => void
   onToggleShared: (it: BillItem) => void
   claimMembers: (itemId: string, pid: string) => number[]
   sharedStatus: (it: BillItem) => { heads: number; expected: number | null; warn: null | "none" | "few" | "one" }
