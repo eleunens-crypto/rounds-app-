@@ -725,6 +725,9 @@ const STRINGS = {
     confirmReleaseSpot: (nm: string) => `"${nm}" hier weghalen? De plaats komt weer vrij — het aantal personen blijft gelijk.`,
     spotReleased: "Plaats is weer vrij.",
     releaseTitle: "Plaats vrijgeven",
+    shareOfN: (have: number, want: number, now: number, then: number) => `${have} van ${want} delers · nu €${now.toFixed(2).replace(".", ",")} elk → €${then.toFixed(2).replace(".", ",")} zodra allen aanduiden`,
+    shareOpen: (have: number, now: number) => `Momenteel ${have} ${have === 1 ? "deler" : "delers"} · nu €${now.toFixed(2).replace(".", ",")} → daalt als er meer meedelen`,
+    shareDone: (n: number, each: number) => `Gedeeld door ${n} ${n === 1 ? "persoon" : "personen"} · €${each.toFixed(2).replace(".", ",")} elk`,
     askSeatsSub: "Meer dan 1? Zij betalen dan samen, op één plaats.",
     notEnoughFree: (n: number) => `Er ${n === 1 ? "is" : "zijn"} nog maar ${n} vrije plaats${n === 1 ? "" : "en"}. Verhoog eerst het aantal personen bovenaan.`,
     addSelfAssignHint: (n: number) => `Neemt een vrije plaats in — het aantal personen blijft ${n}.`,
@@ -1293,6 +1296,9 @@ const STRINGS = {
     confirmReleaseSpot: (nm: string) => `Retirer « ${nm} » ici ? La place redevient libre — le nombre de personnes reste identique.`,
     spotReleased: "La place est de nouveau libre.",
     releaseTitle: "Libérer la place",
+    shareOfN: (have: number, want: number, now: number, then: number) => `${have} sur ${want} participants · maintenant €${now.toFixed(2).replace(".", ",")} chacun → €${then.toFixed(2).replace(".", ",")} quand tous auront coché`,
+    shareOpen: (have: number, now: number) => `Actuellement ${have} participant${have === 1 ? "" : "s"} · maintenant €${now.toFixed(2).replace(".", ",")} → baisse si d'autres partagent`,
+    shareDone: (n: number, each: number) => `Partagé par ${n} personne${n === 1 ? "" : "s"} · €${each.toFixed(2).replace(".", ",")} chacun`,
     askSeatsSub: "Plus d'une ? Elles paient alors ensemble, sur une place.",
     notEnoughFree: (n: number) => `Il ne reste que ${n} place${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"}. Augmente d'abord le nombre de personnes en haut.`,
     addSelfAssignHint: (n: number) => `Occupe une place libre — le nombre de personnes reste ${n}.`,
@@ -4973,37 +4979,40 @@ function ClaimScreen(props: {
                 })()}
                 {it.is_shared && (() => {
                   const st = sharedStatus(it)
-                  const msg = st.warn === "none" ? L.nobodyShared : st.warn === "few" ? L.tooFewShared(st.heads, st.expected as number) : st.warn === "one" ? L.onlyOneShares : null
-                  if (!msg && !onSetExpected) return null
+                  const heads = st.heads
+                  const total = itemTotal(it)
+                  const want = it.share_expected ?? null
+                  const nowEach = heads > 0 ? total / heads : total
+                  const thenEach = want && want > 0 ? total / want : nowEach
+                  // Niemand duidde aan: dat is een échte fout, want er blijft geld onverdeeld.
+                  const isError = heads === 0
+                  // Klopt het aantal met wat de admin verwachtte? Dan is het rond.
+                  const isDone = heads > 0 && (want == null || heads >= want)
+                  const msg = isError ? L.nobodyShared
+                    : !revealed ? L.sharingWaitReveal
+                    : isDone ? L.shareDone(heads, nowEach)
+                    : want != null ? L.shareOfN(heads, want, nowEach, thenEach)
+                    : L.shareOpen(heads, nowEach)
                   return (
-                    <div style={{ marginTop: 8, background: msg ? "rgba(243,156,18,0.1)" : "rgba(90,108,166,0.06)", border: msg ? "1px solid rgba(243,156,18,0.45)" : "1px solid rgba(90,108,166,0.25)", borderRadius: 9, padding: "7px 10px" }}>
-                      {msg && <div style={{ fontSize: 11.5, fontWeight: 700, color: "#b5591a", lineHeight: 1.4 }}>{msg}</div>}
+                    <div style={{ marginTop: 8, borderRadius: 10, padding: "9px 11px",
+                      background: isError ? "rgba(243,156,18,0.1)" : isDone ? "rgba(39,174,96,0.07)" : "rgba(90,108,166,0.07)",
+                      border: isError ? "1px solid rgba(243,156,18,0.45)" : isDone ? "1px solid rgba(39,174,96,0.4)" : "1px solid rgba(90,108,166,0.25)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ flexShrink: 0, fontSize: 13 }}>{isError ? "⚠️" : isDone ? "✅" : "👥"}</span>
+                        <span style={{ fontSize: 12, lineHeight: 1.45, fontWeight: isError ? 700 : 400,
+                          color: isError ? "#b5591a" : isDone ? "#1f8a4c" : "#3b486a" }}>{msg}</span>
+                      </div>
                       {onSetExpected && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: msg ? 7 : 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 8, paddingTop: 7, borderTop: "1px dashed rgba(16,24,40,0.12)" }}>
                           <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6680" }}>{L.expectedSharers}</span>
                           <button onClick={() => onSetExpected(it.id, Math.max(0, (it.share_expected ?? 0) - 1) || null)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 13 }}>−</button>
                           <b style={{ minWidth: 14, textAlign: "center", fontSize: 13, color: it.share_expected ? "#14213a" : "#c3c8d2" }}>{it.share_expected ?? "–"}</b>
                           <button onClick={() => onSetExpected(it.id, (it.share_expected ?? 0) + 1)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 13, background: "rgba(27,42,74,0.12)" }}>+</button>
-                          <span style={{ fontSize: 10.5, color: "#9aa0ab" }}>{L.sharedByLabel} {st.heads}</span>
                         </div>
                       )}
                     </div>
                   )
                 })()}
-                {iShare && (
-                  revealed ? (
-                    <div style={{ marginTop: 8, fontSize: 12, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.4)", borderRadius: 10, padding: "8px 11px", lineHeight: 1.45, display: "flex", alignItems: "flex-start", gap: 6 }}>
-                      <span style={{ flexShrink: 0, marginTop: 1 }}><ShareIcon on size={14} /></span>
-                      <span>{fixed
-                        ? <>{L.yourShareLabel}{myShare.toFixed(2).replace(".", ",")}{myHeads > 1 ? L.forNPers(myHeads) : ""}{L.sharedByMid}{heads} {heads === 1 ? L.person : L.persons}{L.fixedByAdmin}</>
-                        : <>{L.provisionally}{myShare.toFixed(2).replace(".", ",")}{myHeads > 1 ? L.youN(myHeads) : ""}{L.sharedByMid}{heads} {heads === 1 ? L.person : L.persons}{L.dropsIfMore}</>}</span>
-                    </div>
-                  ) : (
-                    <div style={{ marginTop: 8, fontSize: 12, color: "#5a6680", background: "rgba(90,108,166,0.08)", border: "1px solid rgba(90,108,166,0.25)", borderRadius: 10, padding: "8px 11px", lineHeight: 1.45 }}>
-                      {L.sharingWaitReveal}
-                    </div>
-                  )
-                )}
                 {!iShare && (
                   <div style={{ marginTop: 6, fontSize: 11.5, color: "#9aa0ab", lineHeight: 1.4 }}>{L.tapShareHint}</div>
                 )}
