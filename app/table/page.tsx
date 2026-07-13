@@ -520,7 +520,7 @@ const STRINGS = {
     secondName: "Tweede naam…",
     extraName: (n: number) => `Naam ${n}…`,
     showsAsOne: "Verschijnt als één plaats:",
-    whoOfYouShared: (names: string) => `🍴 Wie van jullie dronk/at hiervan mee?`,
+    whoOfYouShared: (names: string) => `🍴 Wie van jullie deelde hiervan mee?`,
     onlyFirst: (name: string) => `Alleen ${name}`,
     allOfUs: "Allebei",
     sharePaysOne: "Jullie betalen 1 aandeel in plaats van 2.",
@@ -779,7 +779,11 @@ const STRINGS = {
     errSave: "Opslaan mislukt",
     enterTipFirst: "Vul eerst een fooibedrag in.",
     confirmDeleteItem: "Dit item van de bon verwijderen? Wat er al aan toegewezen werd, verdwijnt mee.",
-    claimTitle: "✅ Wie heeft wat genomen?",
+    claimTitle: "✅ Wie heeft wat genomen? Wijs hier toe!",
+    warnBadge: (n: number) => `⚠️ ${n} ${n === 1 ? "melding" : "meldingen"}`,
+    statWhoTook: "Wie nam wat",
+    perPersonShort: "Rekening p.p.",
+    statSharedItems: "Gedeelde items",
     collapseOpen: "▶ openen",
     collapseClose: "▼ inklappen",
     allAssignedTapReview: "✅ Alles toegewezen — tik om opnieuw te bekijken",
@@ -810,10 +814,14 @@ const STRINGS = {
     selectItemsPlural: "Selecteer jullie consumpties",
     selectItemsSingular: "Selecteer jouw consumpties",
     noItemsWaitScan: "Nog geen items — wacht tot de bon gescand is.",
-    totalSharedByDrinkers: " totaal · wordt gedeeld door wie meedrinkt",
+    totalSharedByDrinkers: " totaal · wordt gedeeld door wie meedeelt",
     iShareYes: "✓ ik deel mee",
     iShareNo: "+ meedelen",
     withHowMany: (seats: number) => `🍴 Wie van jullie ${seats} deelde hiervan mee?`,
+    pickWhoShared: "Tik wie meedeelde — of kies iedereen in één keer.",
+    allOfThem: (n: number) => n === 2 ? "👥 Allebei" : `👥 Allemaal (${n})`,
+    clearAll: "✕ Wissen",
+    sharesInstead: (a: number, b: number) => `Jullie betalen ${a} ${a === 1 ? "aandeel" : "aandelen"} in plaats van ${b}.`,
     onlyMe: "Alleen ik",
     bothOfUs: "Wij allebei",
     nOfUs: (n: number) => `Wij met ${n}`,
@@ -848,8 +856,8 @@ const STRINGS = {
     provisionally: "Voorlopig €",
     youN: (n: number) => ` (jullie ${n})`,
     dropsIfMore: ". Daalt als meer mensen meedoen.",
-    sharingWaitReveal: "⏳ Je deelt mee. Het bedrag wordt verdeeld over iedereen die meedrinkt — je deel en de namen verschijnen zodra iedereen klaar is met aantikken en bevestigen.",
-    tapShareHint: 'Tik "meedelen" als je hiervan dronk. De prijs wordt gedeeld door iedereen die meedrinkt — je betaalt dus niet de hele prijs.',
+    sharingWaitReveal: "⏳ Je deelt mee. Het bedrag wordt verdeeld over iedereen die meedeelt — je deel en de namen verschijnen zodra iedereen klaar is met aantikken en bevestigen.",
+    tapShareHint: 'Tik "meedelen" als jij hiervan mee at of dronk. De prijs wordt gedeeld door iedereen die meedeelt — je betaalt dus niet de hele prijs.',
     orderedMid: "× besteld · ",
     stillFree: (n: number) => `${n} nog vrij`,
     allClaimedWord: "alles geclaimd",
@@ -1283,7 +1291,11 @@ const STRINGS = {
     errSave: "Échec de l'enregistrement",
     enterTipFirst: "Indique d'abord un montant de pourboire.",
     confirmDeleteItem: "Supprimer cet article de l'addition ? Ce qui y était attribué disparaît aussi.",
-    claimTitle: "✅ Qui a pris quoi ?",
+    claimTitle: "✅ Qui a pris quoi ? Répartis ici !",
+    warnBadge: (n: number) => `⚠️ ${n} ${n === 1 ? "alerte" : "alertes"}`,
+    statWhoTook: "Qui a pris quoi",
+    perPersonShort: "Addition p.p.",
+    statSharedItems: "Articles partagés",
     collapseOpen: "▶ ouvrir",
     collapseClose: "▼ réduire",
     allAssignedTapReview: "✅ Tout attribué — touche pour revoir",
@@ -1318,6 +1330,10 @@ const STRINGS = {
     iShareYes: "✓ je participe",
     iShareNo: "+ participer",
     withHowMany: (seats: number) => `🍴 Qui de vous ${seats} a partagé ceci ?`,
+    pickWhoShared: "Touche qui a partagé — ou choisis tout le monde d'un coup.",
+    allOfThem: (n: number) => n === 2 ? "👥 Tous les deux" : `👥 Tous (${n})`,
+    clearAll: "✕ Effacer",
+    sharesInstead: (a: number, b: number) => `Vous payez ${a} ${a === 1 ? "part" : "parts"} au lieu de ${b}.`,
     onlyMe: "Moi seulement",
     bothOfUs: "Nous deux",
     nOfUs: (n: number) => `Nous ${n}`,
@@ -1484,6 +1500,8 @@ export default function RundoTable() {
   const [photos, setPhotos] = useState<{ file: File; url: string }[]>([])
   const [scanStep, setScanStep] = useState<{ i: number; n: number } | null>(null)
   const [multiFails, setMultiFails] = useState(0)
+  const [sharePicking, setSharePicking] = useState<Set<string>>(new Set())
+  const [jumpToAssign, setJumpToAssign] = useState(0)
   const [showJoined, setShowJoined] = useState(false)
   // Bewaarde foto van de laatste scan, zodat je een mislukte AI-scan opnieuw kan proberen.
   const [retryFile, setRetryFile] = useState<File | null>(null)
@@ -2385,9 +2403,16 @@ export default function RundoTable() {
   const toggleShareClaim = async (itemId: string, pid: string) => {
     if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     const mine = myQty(itemId, pid)
-    // Start altijd op 1 persoon. Vertegenwoordig je er meer, dan vraagt de app expliciet
-    // hoeveel van jullie meedeelden — zo betaal je nooit ongemerkt voor twee.
-    await setClaim(itemId, pid, mine > 0 ? 0 : 1)
+    const seats = Math.max(1, participants.find((p) => p.id === pid)?.seats ?? 1)
+    if (mine > 0 || sharePicking.has(itemId)) {
+      setSharePicking((cur) => { const n = new Set(cur); n.delete(itemId); return n })
+      await setClaim(itemId, pid, 0, [])
+      return
+    }
+    // Sta je alleen? Dan ben jij het meteen. Vertegenwoordig je meer personen, dan kies je
+    // zelf wie meedeelde — zonder voorselectie, zodat je niets hoeft te corrigeren.
+    if (seats === 1) await setClaim(itemId, pid, 1, [0])
+    else setSharePicking((cur) => new Set(cur).add(itemId))
   }
 
   const shareHeads = (itemId: string) =>
@@ -3209,36 +3234,6 @@ export default function RundoTable() {
           {showJoined && <div style={{ marginTop: 8 }}>{joinedList({ clickable: true })}</div>}
         </div>
       )}
-      {adminTab === "overview" && baseItems.some((it) => it.is_shared) && (
-        <div style={{ ...S.card, padding: 12 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: "#3b486a", marginBottom: 9, display: "flex", alignItems: "center", gap: 6 }}><ShareIcon on size={14} /> {L.sharedOverviewTitle}</div>
-          {baseItems.filter((it) => it.is_shared).map((it) => {
-            const st = sharedStatus(it)
-            const names = claims.filter((c) => c.item_id === it.id && c.quantity > 0).map((c) => {
-              const p = participants.find((x) => x.id === c.participant_id)
-              if (!p) return null
-              const parts = p.name.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
-              const mem = c.members ? c.members.split(",").map((x) => parseInt(x, 10)).filter((x) => !isNaN(x)) : null
-              if (mem && parts.length > 1) return mem.map((i) => parts[i] || p.name).join(", ")
-              if (parts.length > 1 && c.quantity < parts.length) return parts.slice(0, c.quantity).join(", ")
-              return p.name
-            }).filter(Boolean).join(", ")
-            return (
-              <div key={it.id} style={{ marginBottom: 8, padding: "8px 10px", borderRadius: 10, background: st.warn ? "rgba(243,156,18,0.08)" : "rgba(39,174,96,0.06)", border: st.warn ? "1px solid rgba(243,156,18,0.45)" : "1px solid rgba(39,174,96,0.35)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: "#14213a" }}>{it.name}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "#5a6680", flexShrink: 0 }}>€{itemTotal(it).toFixed(2).replace(".", ",")}{it.share_expected ? ` · ${L.expectedShort(it.share_expected)}` : ""}</span>
-                </div>
-                <div style={{ fontSize: 11.5, color: "#5a6680", marginTop: 3, lineHeight: 1.45 }}>
-                  {st.heads > 0 ? <>{L.sharedByLabel} <b style={{ color: "#14213a" }}>{st.heads}</b>: {names}</> : L.nobodyShared}
-                </div>
-                {st.warn === "few" && <div style={{ fontSize: 11.5, fontWeight: 700, color: "#b5591a", marginTop: 4 }}>{L.tooFewShared(st.heads, it.share_expected as number)}</div>}
-                {st.warn === "one" && <div style={{ fontSize: 11.5, fontWeight: 700, color: "#b5591a", marginTop: 4 }}>{L.onlyOneShares}</div>}
-              </div>
-            )
-          })}
-        </div>
-      )}
       {isAdmin && adminTab === "overview" && (
         <div style={{ ...S.card, padding: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: "#3b486a", marginBottom: 8 }}>{L.overviewTitle}</div>
@@ -3256,6 +3251,16 @@ export default function RundoTable() {
                 <div style={{ fontSize: 20, fontWeight: 800, color: "#27ae60", lineHeight: 1 }}>✓</div>
                 <div style={{ fontSize: 11.5, fontWeight: 800, color: "#27ae60", lineHeight: 1.15 }}>{L.allClaimed}</div>
               </div>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 9 }}>
+            <button onClick={() => { setJumpToAssign((n) => n + 1); if (typeof document !== "undefined") document.getElementById("wie-nam-wat")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
+              style={{ flex: 1, textAlign: "center", background: "#fff", border: "1px solid rgba(16,24,40,0.15)", borderRadius: 10, padding: "10px 6px", fontSize: 12, fontWeight: 800, color: "#14213a", cursor: "pointer" }}>👥 {L.statWhoTook}</button>
+            <button onClick={() => { if (typeof document !== "undefined") document.getElementById("rekening-per-persoon")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
+              style={{ flex: 1, textAlign: "center", background: "#fff", border: "1px solid rgba(16,24,40,0.15)", borderRadius: 10, padding: "10px 6px", fontSize: 12, fontWeight: 800, color: "#14213a", cursor: "pointer" }}>🧾 {L.perPersonShort}</button>
+            {baseItems.some((it) => it.is_shared) && (
+              <button onClick={() => { if (typeof document !== "undefined") document.getElementById("gedeelde-items")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
+                style={{ flex: 1, textAlign: "center", background: "#fff", border: "1px solid rgba(16,24,40,0.15)", borderRadius: 10, padding: "10px 6px", fontSize: 12, fontWeight: 800, color: "#14213a", cursor: "pointer" }}>👥 {L.statSharedItems}</button>
             )}
           </div>
           {showTodo && (openUnits > 0 || undecidedShared.length > 0) && (
@@ -3302,7 +3307,7 @@ export default function RundoTable() {
             participants={participants}
             claimedQty={claimedQty} myQty={myQty} sharerIds={sharerIds}
             shareHeads={shareHeads} myShareHeads={myShareHeads} seatsOf={seatsOf} setSeats={setSeats}
-            setClaim={setClaim} toggleShareClaim={toggleShareClaim} onToggleShared={toggleShared} claimMembers={claimMembers} sharedStatus={sharedStatus} onDeleteItem={isAdmin ? deleteItem : undefined} onSetExpected={isAdmin ? setShareExpected : undefined}
+            setClaim={setClaim} toggleShareClaim={toggleShareClaim} onToggleShared={toggleShared} claimMembers={claimMembers} sharePicking={sharePicking} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined} onSetExpected={isAdmin ? setShareExpected : undefined}
             itemTotal={itemTotal} personTotal={personTotal} personItems={personItems}
             sharedRevealed={sharedRevealed} allConfirmed={allConfirmed} isConfirmed={isConfirmed} explicitConfirmed={explicitConfirmed}
             claimMode={claimMode} setClaimMode={setClaimMode} claimPid={claimPid} setClaimPid={setClaimPid}
@@ -3311,6 +3316,37 @@ export default function RundoTable() {
             finalized={!!group.finalized} iDispute={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name)} iResolved={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name && d.resolved)} iComment={(me && parseDisputes(group.disputed_by || "").find((d) => d.name === me.name)?.comment) || ""} onToggleDispute={(on, comment) => { if (me) flagDispute(me.name, on, comment) }}
           />
         </>
+      )}
+
+      {adminTab === "overview" && baseItems.some((it) => it.is_shared) && (
+        <div id="gedeelde-items" style={{ ...S.card, padding: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#3b486a", marginBottom: 9, display: "flex", alignItems: "center", gap: 6 }}><ShareIcon on size={14} /> {L.sharedOverviewTitle}</div>
+          {baseItems.filter((it) => it.is_shared).map((it) => {
+            const st = sharedStatus(it)
+            const names = claims.filter((c) => c.item_id === it.id && c.quantity > 0).map((c) => {
+              const p = participants.find((x) => x.id === c.participant_id)
+              if (!p) return null
+              const parts = p.name.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
+              const mem = c.members ? c.members.split(",").map((x) => parseInt(x, 10)).filter((x) => !isNaN(x)) : null
+              if (mem && parts.length > 1) return mem.map((i) => parts[i] || p.name).join(", ")
+              if (parts.length > 1 && c.quantity < parts.length) return parts.slice(0, c.quantity).join(", ")
+              return p.name
+            }).filter(Boolean).join(", ")
+            return (
+              <div key={it.id} style={{ marginBottom: 8, padding: "8px 10px", borderRadius: 10, background: st.warn ? "rgba(243,156,18,0.08)" : "rgba(39,174,96,0.06)", border: st.warn ? "1px solid rgba(243,156,18,0.45)" : "1px solid rgba(39,174,96,0.35)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: "#14213a" }}>{it.name}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#5a6680", flexShrink: 0 }}>€{itemTotal(it).toFixed(2).replace(".", ",")}{it.share_expected ? ` · ${L.expectedShort(it.share_expected)}` : ""}</span>
+                </div>
+                <div style={{ fontSize: 11.5, color: "#5a6680", marginTop: 3, lineHeight: 1.45 }}>
+                  {st.heads > 0 ? <>{L.sharedByLabel} <b style={{ color: "#14213a" }}>{st.heads}</b>: {names}</> : L.nobodyShared}
+                </div>
+                {st.warn === "few" && <div style={{ fontSize: 11.5, fontWeight: 700, color: "#b5591a", marginTop: 4 }}>{L.tooFewShared(st.heads, it.share_expected as number)}</div>}
+                {st.warn === "one" && <div style={{ fontSize: 11.5, fontWeight: 700, color: "#b5591a", marginTop: 4 }}>{L.onlyOneShares}</div>}
+              </div>
+            )
+          })}
+        </div>
       )}
 
       {/* ─── ADMIN: Per persoon (overzicht-tab) ─── */}
@@ -4248,6 +4284,9 @@ function ClaimScreen(props: {
   setClaim: (itemId: string, pid: string, qty: number, members?: number[] | null) => void; toggleShareClaim: (itemId: string, pid: string) => void
   onToggleShared: (it: BillItem) => void
   claimMembers: (itemId: string, pid: string) => number[]
+  sharePicking: Set<string>
+  warnCount?: number
+  jumpToAssign?: number
   onDeleteItem?: (id: string) => void
   onSetExpected?: (id: string, n: number | null) => void
   sharedStatus: (it: BillItem) => { heads: number; expected: number | null; warn: null | "none" | "few" | "one" }
@@ -4261,7 +4300,7 @@ function ClaimScreen(props: {
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, onToggleShared, claimMembers, sharedStatus, onDeleteItem, onSetExpected, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
+  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, onToggleShared, claimMembers, sharePicking, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onSetExpected, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
   const adminPid = props.claimPid, setAdminPid = props.setClaimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   const [disputeOpen, setDisputeOpen] = useState(false)
@@ -4292,6 +4331,8 @@ function ClaimScreen(props: {
   const _sharedDone = _shared.filter((i) => sharerIds(i.id).length > 0).length
   const allDone = (_totalU > 0 || _shared.length > 0) && _claimedU >= _totalU && _sharedDone === _shared.length
   const [claimCollapsed, setClaimCollapsed] = useState(false)
+  // De knop "Wie nam wat" in het overzicht klapt deze lijst open (en scrollt ernaartoe).
+  useEffect(() => { if (jumpToAssign) setClaimCollapsed(false) }, [jumpToAssign])
   const prevDoneRef = useRef(false)
   useEffect(() => {
     if (isAdmin && allDone && !prevDoneRef.current) setClaimCollapsed(true)
@@ -4306,13 +4347,14 @@ function ClaimScreen(props: {
     const sharedDecided = sharedItems.filter((i) => sharerIds(i.id).length > 0).length
     const billSum = items.reduce((s, i) => s + itemTotal(i), 0)
     return (
-      <div>
+      <div id="wie-nam-wat">
         <div style={S.card}>
-          <div onClick={isAdmin ? () => setClaimCollapsed((v) => !v) : undefined} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, cursor: isAdmin ? "pointer" : "default", marginBottom: (isAdmin && claimCollapsed) ? 0 : 10 }}>
+          <div onClick={isAdmin && !(warnCount && warnCount > 0) ? () => setClaimCollapsed((v) => !v) : undefined} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, cursor: isAdmin ? "pointer" : "default", marginBottom: (isAdmin && claimCollapsed) ? 0 : 10 }}>
             <h3 style={{ ...S.h3, marginBottom: 0 }}>{L.claimTitle}</h3>
-            {isAdmin && <span style={{ fontSize: 12.5, color: "#9aa0ab", fontWeight: 700, flexShrink: 0 }}>{claimCollapsed ? L.collapseOpen : L.collapseClose}</span>}
+            {!!warnCount && warnCount > 0 && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#b5591a", background: "rgba(243,156,18,0.14)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 20, padding: "3px 8px", whiteSpace: "nowrap" }}>{L.warnBadge(warnCount)}</span>}
+            {isAdmin && !(warnCount && warnCount > 0) && <span style={{ fontSize: 12.5, color: "#9aa0ab", fontWeight: 700, flexShrink: 0 }}>{claimCollapsed ? L.collapseOpen : L.collapseClose}</span>}
           </div>
-          {isAdmin && claimCollapsed
+          {isAdmin && claimCollapsed && !(warnCount && warnCount > 0)
             ? <div onClick={() => setClaimCollapsed(false)} style={{ cursor: "pointer", fontSize: 12.5, color: "#1f8a4c", fontWeight: 700, padding: "2px 2px" }}>{L.allAssignedTapReview}</div>
             : items.length === 0
             ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>{L.noItemsScanFirst}</div>
@@ -4528,34 +4570,51 @@ function ClaimScreen(props: {
                     </div>
                     <div style={{ fontSize: 11, color: it.unit_price <= 0.0001 ? "#c0392b" : "#999", fontWeight: it.unit_price <= 0.0001 ? 700 : 400 }}>{it.unit_price <= 0.0001 ? `⚠️ ${L.zeroPriceShort}` : `€${itemTotal(it).toFixed(2).replace(".", ",")}${L.totalSharedByDrinkers}`}</div>
                   </div>
-                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...(iShare ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", border: "none" } : {}) }}>{iShare ? L.iShareYes : L.iShareNo}</button>
+                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...((iShare || sharePicking.has(it.id)) ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", border: "none" } : {}) }}>{(iShare || sharePicking.has(it.id)) ? L.iShareYes : L.iShareNo}</button>
                 </div>
-                {iShare && mySeats > 1 && !fixed && (
-                  <div style={{ marginTop: 9, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.35)", borderRadius: 12, padding: "10px 11px" }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#14213a", marginBottom: 8 }}>{L.withHowMany(mySeats)}</div>
-                    {(() => {
-                      // Elk lid van de plaats is apart aan/uit te zetten — dus ook "enkel de tweede naam".
-                      const raw = participants.find((p) => p.id === meId)?.name ?? ""
-                      const parts = raw.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
-                      const sel: number[] = meId ? claimMembers(it.id, meId) : []
-                      const toggle = (i: number) => {
-                        const next = sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i]
-                        setClaim(it.id, meId, next.length, next)
-                      }
-                      return (
-                        <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-                          {Array.from({ length: mySeats }, (_, i) => i).map((i) => {
-                            const on = sel.includes(i)
-                            const label = parts[i] || `${L.personWord} ${i + 1}`
-                            return (
-                              <button key={i} onClick={() => toggle(i)} style={{ flex: 1, minWidth: 96, fontSize: 13, fontWeight: 800, padding: "10px 6px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{on ? "✓ " : ""}{label}</button>
-                            )
-                          })}
-                        </div>
-                      )
-                    })()}
-                  </div>
-                )}
+                {(iShare || sharePicking.has(it.id)) && mySeats > 1 && !fixed && (() => {
+                  // Geen voorselectie: je tikt gewoon aan wie meedeelde. Eén tik volstaat,
+                  // ook als dat enkel de tweede persoon is. "Allemaal" zet iedereen in één keer aan.
+                  const raw = participants.find((p) => p.id === meId)?.name ?? ""
+                  const parts = raw.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
+                  const sel = meId ? claimMembers(it.id, meId) : []
+                  const allOn = sel.length === mySeats
+                  const toggle = (i: number) => {
+                    const next = sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i]
+                    if (meId) setClaim(it.id, meId, next.length, next)
+                  }
+                  const setAll = () => {
+                    if (!meId) return
+                    if (allOn) setClaim(it.id, meId, 0, [])
+                    else setClaim(it.id, meId, mySeats, Array.from({ length: mySeats }, (_, i) => i))
+                  }
+                  const wide = mySeats > 2
+                  return (
+                    <div style={{ marginTop: 9, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.35)", borderRadius: 12, padding: "10px 11px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: "#14213a" }}>{L.withHowMany(mySeats)}</span>
+                        {wide && (
+                          <button onClick={setAll} style={{ flexShrink: 0, fontSize: 11.5, fontWeight: 800, color: allOn ? "#5a6680" : "#0f7d90", background: allOn ? "#fff" : "rgba(20,153,176,0.1)", border: allOn ? "1px solid rgba(16,24,40,0.2)" : "1px solid rgba(20,153,176,0.45)", borderRadius: 8, padding: "4px 9px", cursor: "pointer" }}>{allOn ? L.clearAll : L.allOfThem(mySeats)}</button>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", gap: wide ? 6 : 7, flexWrap: "wrap" }}>
+                        {Array.from({ length: mySeats }, (_, i) => i).map((i) => {
+                          const on = sel.includes(i)
+                          const label = parts[i] || `${L.personWord} ${i + 1}`
+                          return (
+                            <button key={i} onClick={() => toggle(i)} style={{ flex: 1, minWidth: wide ? 70 : 90, fontSize: wide ? 12.5 : 13, fontWeight: 800, padding: wide ? "9px 5px" : "10px 6px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{on ? "✓ " : ""}{label}</button>
+                          )
+                        })}
+                        {!wide && (
+                          <button onClick={setAll} style={{ flex: 1, minWidth: 90, fontSize: 12.5, fontWeight: 800, padding: "10px 6px", borderRadius: 10, cursor: "pointer", color: allOn ? "#5a6680" : "#0f7d90", background: allOn ? "#fff" : "rgba(20,153,176,0.08)", border: allOn ? "1.5px solid rgba(16,24,40,0.2)" : "1.5px solid rgba(20,153,176,0.45)" }}>{allOn ? L.clearAll : L.allOfThem(mySeats)}</button>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 10.5, color: sel.length > 0 ? "#5a6680" : "#9aa0ab", marginTop: 8, lineHeight: 1.45 }}>
+                        {sel.length > 0 ? L.sharesInstead(sel.length, mySeats) : L.pickWhoShared}
+                      </div>
+                    </div>
+                  )
+                })()}
                 {it.is_shared && (() => {
                   const st = sharedStatus(it)
                   const msg = st.warn === "none" ? L.nobodyShared : st.warn === "few" ? L.tooFewShared(st.heads, st.expected as number) : st.warn === "one" ? L.onlyOneShares : null
