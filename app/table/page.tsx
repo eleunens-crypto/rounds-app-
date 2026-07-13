@@ -2147,6 +2147,14 @@ export default function RundoTable() {
   const shareHeads = (itemId: string) =>
     claims.filter((c) => c.item_id === itemId && c.quantity > 0).reduce((s, c) => s + c.quantity, 0)
 
+  // Welke leden van een meerpersoonsplaats meedelen aan dit item (indexen, bv. [1] = enkel de tweede naam).
+  const claimMembers = (itemId: string, pid: string): number[] => {
+    const c = claims.find((x) => x.item_id === itemId && x.participant_id === pid)
+    if (!c || c.quantity <= 0) return []
+    if (c.members) return c.members.split(",").map((x) => parseInt(x, 10)).filter((x) => !isNaN(x))
+    return Array.from({ length: c.quantity }, (_, i) => i)
+  }
+
   const myShareHeads = (itemId: string, pid: string) =>
     claims.filter((c) => c.item_id === itemId && c.participant_id === pid).reduce((s, c) => s + c.quantity, 0)
 
@@ -2991,7 +2999,7 @@ export default function RundoTable() {
             participants={participants}
             claimedQty={claimedQty} myQty={myQty} sharerIds={sharerIds}
             shareHeads={shareHeads} myShareHeads={myShareHeads} seatsOf={seatsOf} setSeats={setSeats}
-            setClaim={setClaim} toggleShareClaim={toggleShareClaim} onToggleShared={toggleShared}
+            setClaim={setClaim} toggleShareClaim={toggleShareClaim} onToggleShared={toggleShared} claimMembers={claimMembers} sharedStatus={sharedStatus}
             itemTotal={itemTotal} personTotal={personTotal} personItems={personItems}
             sharedRevealed={sharedRevealed} allConfirmed={allConfirmed} isConfirmed={isConfirmed} explicitConfirmed={explicitConfirmed}
             claimMode={claimMode} setClaimMode={setClaimMode} claimPid={claimPid} setClaimPid={setClaimPid}
@@ -3857,6 +3865,8 @@ function ClaimScreen(props: {
   setSeats: (pid: string, n: number) => void
   setClaim: (itemId: string, pid: string, qty: number) => void; toggleShareClaim: (itemId: string, pid: string) => void
   onToggleShared: (it: BillItem) => void
+  claimMembers: (itemId: string, pid: string) => number[]
+  sharedStatus: (it: BillItem) => { heads: number; expected: number | null; warn: null | "none" | "few" | "one" }
   itemTotal: (it: BillItem) => number; personTotal: (pid: string) => { settled: number; pendingShared: boolean }
   personItems: (pid: string) => { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number }[]
   sharedRevealed: (it: BillItem) => boolean; allConfirmed: boolean; isConfirmed: (pid: string) => boolean; explicitConfirmed: (pid: string) => boolean
@@ -3867,7 +3877,7 @@ function ClaimScreen(props: {
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, onToggleShared, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
+  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, onToggleShared, claimMembers, sharedStatus, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
   const adminPid = props.claimPid, setAdminPid = props.setClaimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   const [disputeOpen, setDisputeOpen] = useState(false)
@@ -4144,9 +4154,7 @@ function ClaimScreen(props: {
                       // Elk lid van de plaats is apart aan/uit te zetten — dus ook "enkel de tweede naam".
                       const raw = participants.find((p) => p.id === meId)?.name ?? ""
                       const parts = raw.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
-                      const cur = claims.find((c) => c.item_id === it.id && c.participant_id === meId)
-                      let sel: number[] = cur?.members ? cur.members.split(",").map((x) => parseInt(x, 10)).filter((x) => !isNaN(x)) : []
-                      if (sel.length === 0 && myHeads > 0) sel = Array.from({ length: Math.min(myHeads, mySeats) }, (_, i) => i)
+                      const sel: number[] = meId ? claimMembers(it.id, meId) : []
                       const toggle = (i: number) => {
                         const next = sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i]
                         setClaim(it.id, meId, next.length, next)
