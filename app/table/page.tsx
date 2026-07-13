@@ -436,7 +436,19 @@ const STRINGS = {
     howManyGroupTitle: "👥 Met hoeveel zijn jullie in de groep?",
     yourselfFirstTitle: "✍️ Voeg eerst jezelf (als admin) hier toe",
     adminBadge: "admin",
-    nameRequired: "Vul eerst je eigen naam in.",
+    nameRequired: "Vul eerst je eigen naam in — anders weet niemand wie de rekening deelde.",
+    whoJoinedTitle: "👥 Wie doet al mee?",
+    joinedOf: (a: number, b: number) => `${a} van ${b}`,
+    stAssigned: (n: number) => `${n} items`,
+    stJoinedNothing: "nog niets",
+    stNobody: "niemand",
+    stYouHandle: "jij regelt",
+    stAssignNow: "aanduiden →",
+    whoJoinedHint: "💡 Hier zie je wie de link opende. Aanduiden doe je bij Toewijzen.",
+    whoAssignTitle: "📝 Wie duid jij aan?",
+    youAlreadyIn: "Jij staat er al bij",
+    whoAssignSub: "En eventueel anderen: geen smartphone, geen zin, of je regelt gewoon alles zelf.",
+    whoAssignFoot: "💡 Straks tik je bij Toewijzen aan wat jij at — en wat zij aten.",
     shareLinkBtn: "🔗 Deel de link",
     shareLinkHint: "Kies daarna je berichtenapp — WhatsApp, Messenger, sms…",
     copyLinkPre: "Liever zelf plakken?",
@@ -912,7 +924,19 @@ const STRINGS = {
     howManyGroupTitle: "👥 Vous êtes combien dans le groupe ?",
     yourselfFirstTitle: "✍️ Ajoute-toi d'abord (en tant qu'admin)",
     adminBadge: "admin",
-    nameRequired: "Indique d'abord ton propre nom.",
+    nameRequired: "Indique d'abord ton nom — sinon personne ne sait qui a partagé l'addition.",
+    whoJoinedTitle: "👥 Qui participe déjà ?",
+    joinedOf: (a: number, b: number) => `${a} sur ${b}`,
+    stAssigned: (n: number) => `${n} articles`,
+    stJoinedNothing: "rien encore",
+    stNobody: "personne",
+    stYouHandle: "tu gères",
+    stAssignNow: "cocher →",
+    whoJoinedHint: "💡 Ici tu vois qui a ouvert le lien. Le cochage se fait dans Répartir.",
+    whoAssignTitle: "📝 Pour qui coches-tu ?",
+    youAlreadyIn: "Tu y es déjà",
+    whoAssignSub: "Et éventuellement d'autres : pas de smartphone, pas envie, ou tu gères simplement tout toi-même.",
+    whoAssignFoot: "💡 Ensuite, dans Répartir, tu coches ce que tu as pris — et ce qu'ils ont pris.",
     shareLinkBtn: "🔗 Partager le lien",
     shareLinkHint: "Choisis ensuite ton app de messagerie — WhatsApp, Messenger, SMS…",
     copyLinkPre: "Tu préfères coller toi-même ?",
@@ -1414,6 +1438,7 @@ export default function RundoTable() {
   const [scanFile, setScanFile] = useState<File | null>(null)
   const [photos, setPhotos] = useState<{ file: File; url: string }[]>([])
   const [scanStep, setScanStep] = useState<{ i: number; n: number } | null>(null)
+  const [showJoined, setShowJoined] = useState(false)
   // Bewaarde foto van de laatste scan, zodat je een mislukte AI-scan opnieuw kan proberen.
   const [retryFile, setRetryFile] = useState<File | null>(null)
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
@@ -1825,6 +1850,56 @@ export default function RundoTable() {
   // Aantal PERSONEN in de groep (niet aantal plaatsen): een koppel is één plaats maar telt voor twee.
   // Zo blijft de som van alle personen altijd gelijk aan het getal in de teller.
   const totalPersons = participants.reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
+
+  // Heeft de admin zichzelf al een naam gegeven? Zonder naam mag hij niet delen of toewijzen.
+  const adminNamed = (() => {
+    const me = participants.find((x) => x.id === meId) || participants[0]
+    if (!me) return false
+    const nm = me.name.trim()
+    return !(new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(nm) || nm === L.adminName || nm === "")
+  })()
+  const requireName = (): boolean => {
+    if (adminNamed) return true
+    setToast(L.nameRequired)
+    if (typeof document !== "undefined") document.getElementById("own-name")?.scrollIntoView({ behavior: "smooth", block: "center" })
+    return false
+  }
+
+  // Status per plaats: heeft aangeduid / aangemeld maar niets / nog vrij / door admin geregeld.
+  const spotStatus = (p: Participant): { kind: "done" | "idle" | "free" | "mine"; count: number } => {
+    const count = claims.filter((c) => c.participant_id === p.id && c.quantity > 0).length
+    const nm = p.name.trim()
+    const isFree = new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(nm) || nm === L.adminName
+    if (isFree) return { kind: "free", count }
+    if (count > 0) return { kind: "done", count }
+    if (p.self_joined) return { kind: "idle", count }
+    return { kind: "mine", count }
+  }
+  const joinedCount = participants.filter((p) => spotStatus(p).kind === "done").length
+
+  // Overzicht "Wie doet al mee?" — op de gasten-tab ingeklapt, op de toewijs-tab open.
+  const joinedList = (opts: { clickable?: boolean } = {}) => (
+    <div>
+      {participants.map((p) => {
+        const st = spotStatus(p)
+        const icon = st.kind === "done" ? "✅" : st.kind === "idle" ? "🟡" : st.kind === "free" ? "⚪" : "✍️"
+        const right = st.kind === "done" ? L.stAssigned(st.count)
+          : st.kind === "idle" ? L.stJoinedNothing
+          : st.kind === "free" ? L.stNobody
+          : (opts.clickable ? L.stAssignNow : L.stYouHandle)
+        const bg = st.kind === "idle" ? "rgba(243,156,18,0.07)" : st.kind === "mine" && opts.clickable ? "rgba(20,153,176,0.06)" : "transparent"
+        const clickMine = opts.clickable && st.kind === "mine"
+        return (
+          <div key={p.id} onClick={() => { if (clickMine) { setClaimMode("person"); setClaimPid(p.id) } }}
+            style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 6px", borderRadius: 7, background: bg, cursor: clickMine ? "pointer" : "default" }}>
+            <span style={{ fontSize: 13 }}>{icon}</span>
+            <b style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: st.kind === "free" ? "#9aa0ab" : "#14213a", fontWeight: st.kind === "free" ? 600 : 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{st.kind === "free" ? L.freeSpot : p.name}</b>
+            <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: st.kind === "idle" ? 800 : 600, color: st.kind === "idle" ? "#b5591a" : clickMine ? "#1499b0" : "#9aa0ab", ...(clickMine ? { border: "1px solid rgba(20,153,176,0.4)", borderRadius: 6, padding: "2px 7px" } : {}) }}>{right}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
 
   const setGuestCount = async (target: number) => {
     if (!group) return
@@ -2645,7 +2720,7 @@ export default function RundoTable() {
             { id: "guests", label: L.tabGuests },
             { id: "overview", label: L.tabAssign },
           ] as { id: AdminTab; label: string }[]).map((t) => (
-            <button key={t.id} onClick={() => setAdminTab(t.id)} style={{
+            <button key={t.id} onClick={() => { if (t.id === "overview" && adminTab === "guests" && !requireName()) return; setAdminTab(t.id) }} style={{
               flex: 1, border: "none", borderRadius: 12, padding: "13px 4px", fontSize: 14.5, cursor: "pointer", lineHeight: 1.15,
               fontWeight: adminTab === t.id ? 800 : 700,
               background: adminTab === t.id ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#eaf6f9",
@@ -2868,7 +2943,7 @@ export default function RundoTable() {
                 if (!me) return null
                 const isPh = new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(me.name.trim()) || me.name.trim() === L.adminName
                 return (
-                  <input key={`self-${me.id}-${me.name}`} defaultValue={isPh ? "" : me.name} placeholder={L.ownNamePlaceholder}
+                  <input id="own-name" key={`self-${me.id}-${me.name}`} defaultValue={isPh ? "" : me.name} placeholder={L.ownNamePlaceholder}
                     onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== me.name) renameGuest(me.id, v) }}
                     onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
                     style={{ ...S.input, width: "100%", boxSizing: "border-box", border: isPh ? "1.5px solid rgba(192,57,43,0.5)" : "1.5px solid rgba(20,153,176,0.5)", background: isPh ? "rgba(192,57,43,0.03)" : "rgba(20,153,176,0.04)" }} />
@@ -2916,12 +2991,12 @@ export default function RundoTable() {
                     <div style={{ fontSize: 11.5, color: "#9aa0ab", marginTop: 7 }}>{L.scanThis}</div>
                   </div>
 
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={doShare} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 14, fontWeight: 800 }}>{L.shareLinkBtn}</button>
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (requireName()) doShare() }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 14, fontWeight: 800 }}>{L.shareLinkBtn}</button>
                   <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6, lineHeight: 1.45 }}>{L.shareLinkHint}</div>
 
                   <div style={{ borderTop: "1px solid rgba(16,24,40,0.08)", marginTop: 11, paddingTop: 10, fontSize: 11.5, color: "#5a6680", lineHeight: 1.5 }}>
                     {L.copyLinkPre}{" "}
-                    <span onClick={() => { if (navigator.clipboard) navigator.clipboard.writeText(invite); setToast(L.toastInviteCopied) }} style={{ fontWeight: 800, color: "#1499b0", textDecoration: "underline", cursor: "pointer" }}>{L.copyLinkAction}</span>{" "}
+                    <span onClick={() => { if (!requireName()) return; if (navigator.clipboard) navigator.clipboard.writeText(invite); setToast(L.toastInviteCopied) }} style={{ fontWeight: 800, color: "#1499b0", textDecoration: "underline", cursor: "pointer" }}>{L.copyLinkAction}</span>{" "}
                     {L.copyLinkPost}
                   </div>
                 </>
@@ -2931,12 +3006,33 @@ export default function RundoTable() {
 
           <div style={{ ...S.card, order: 3 }}>
             <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.othersTitle}</div>
-              <div style={{ fontSize: 12, color: "#5a6680", lineHeight: 1.5, marginBottom: 10 }}>{L.othersSub}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>{L.whoAssignTitle}</div>
+              {adminNamed && (
+                <div style={{ display: "flex", alignItems: "center", gap: 7, background: "rgba(39,174,96,0.07)", border: "1px solid rgba(39,174,96,0.35)", borderRadius: 9, padding: "8px 10px", marginBottom: 9 }}>
+                  <span style={{ fontSize: 13 }}>✅</span>
+                  <span style={{ fontSize: 12.5, color: "#14213a" }}><b>{(participants.find((x) => x.id === meId) || participants[0])?.name}</b> — {L.youAlreadyIn}</span>
+                </div>
+              )}
+              <div style={{ fontSize: 12, color: "#5a6680", lineHeight: 1.5, marginBottom: 11 }}>{L.whoAssignSub}</div>
               {!showNames && (
                 <>
-                  <button onClick={() => setShowNames(true)} style={{ width: "100%", border: "1.5px dashed rgba(27,42,74,0.25)", background: "#fff", borderRadius: 11, padding: "12px 10px", cursor: "pointer", fontSize: 13, fontWeight: 800, color: "#5a6680" }}>{L.othersAdd}</button>
+                  <button onClick={() => { if (requireName()) setShowNames(true) }} style={{ width: "100%", border: "1.5px dashed rgba(27,42,74,0.25)", background: "#fff", borderRadius: 11, padding: "12px 10px", cursor: "pointer", fontSize: 13, fontWeight: 800, color: "#5a6680" }}>{L.othersAdd}</button>
                   <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 9, lineHeight: 1.5 }}>{L.othersRest}</div>
+                  <div style={{ fontSize: 11.5, color: "#5a6680", background: "rgba(90,108,166,0.06)", borderRadius: 8, padding: "8px 9px", marginTop: 9, lineHeight: 1.45 }}>{L.whoAssignFoot}</div>
+                  {participants.length > 0 && (
+                    <div style={{ marginTop: 13, paddingTop: 12, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
+                      <button onClick={() => setShowJoined((v) => !v)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: 0 }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 800, color: "#14213a" }}>{L.whoJoinedTitle} {showJoined ? "▾" : "▸"}</span>
+                        <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, color: "#1499b0", background: "rgba(20,153,176,0.12)", borderRadius: 20, padding: "3px 9px" }}>{L.joinedOf(joinedCount, participants.length)}</span>
+                      </button>
+                      {showJoined && (
+                        <div style={{ marginTop: 9 }}>
+                          {joinedList()}
+                          <div style={{ fontSize: 11, color: "#5a6680", background: "rgba(90,108,166,0.06)", borderRadius: 8, padding: "8px 9px", marginTop: 8, lineHeight: 1.45 }}>{L.whoJoinedHint}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -3027,11 +3123,20 @@ export default function RundoTable() {
               )
             })()}
           </div>
-          <button onClick={() => setAdminTab("overview")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 700 }}>{L.toAssignBtn}</button>
+          <button onClick={() => { if (requireName()) setAdminTab("overview") }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 700 }}>{L.toAssignBtn}</button>
         </div>
       )}
 
       {/* ─── ADMIN: Stand van zaken (bovenaan overzicht-tab) ─── */}
+      {isAdmin && adminTab === "overview" && participants.length > 0 && (
+        <div style={{ ...S.card, padding: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>{L.whoJoinedTitle}</span>
+            <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, color: "#1499b0", background: "rgba(20,153,176,0.12)", borderRadius: 20, padding: "3px 9px" }}>{L.joinedOf(joinedCount, participants.length)}</span>
+          </div>
+          {joinedList({ clickable: true })}
+        </div>
+      )}
       {adminTab === "overview" && baseItems.some((it) => it.is_shared) && (
         <div style={{ ...S.card, padding: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: "#3b486a", marginBottom: 9, display: "flex", alignItems: "center", gap: 6 }}><ShareIcon on size={14} /> {L.sharedOverviewTitle}</div>
