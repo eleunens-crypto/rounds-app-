@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 
 export const runtime = "nodejs"
 // Wat extra tijd, zodat een retry + terugval-model binnen de functie past.
-export const maxDuration = 30
+// Twee foto's in één oproep vraagt iets meer tijd dan één.
+export const maxDuration = 45
 
 // Modellen. Eerst het goedkoopste met de ruimste gratis quota, dan een terugval bij drukte.
 const PRIMARY = "gemini-2.5-flash-lite"
@@ -19,8 +20,16 @@ const RETRYABLE = new Set([429, 500, 502, 503, 504])
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 const PROMPT = [
-  "Je krijgt een foto van een restaurant- of caferekening (Belgisch: Nederlands, Frans of Engels, soms door elkaar).",
+  "Je krijgt een of meer foto's van EEN ENKELE restaurant- of caferekening (Belgisch: Nederlands, Frans of Engels, soms door elkaar).",
   "Je taak: haal ALLEEN de bestelde consumpties (eten en drank) en eventuele echte extra kosten eruit, als nette JSON.",
+  "",
+  "MEERDERE FOTO'S — heel belangrijk:",
+  "- Krijg je meerdere foto's, dan zijn dat OPEENVOLGENDE STUKKEN van dezelfde rekening (bv. de bovenste helft en de onderste helft). Het is NOOIT een tweede, aparte rekening.",
+  "- De foto's OVERLAPPEN vaak: de laatste lijnen van foto 1 staan mogelijk ook bovenaan foto 2.",
+  "- Herken die overlap en neem elke bestelde lijn SLECHTS ÉÉN KEER op. Tel niets dubbel.",
+  "- Een lijn is dezelfde lijn als naam, aantal én prijs overeenkomen. Twijfel je of het een dubbel is of twee keer hetzelfde besteld? Kijk naar de context (de lijnen errond): staan de omliggende lijnen ook in beide foto's, dan is het overlap en neem je ze één keer op.",
+  "- Geef ÉÉN doorlopende lijst terug, in de volgorde van de rekening: eerst wat bovenaan staat, dan wat lager staat. Behandel de foto's als één lange bon.",
+  "- Het eindtotaal staat meestal op het LAATSTE stuk. Geef dat totaal terug.",
   "",
   "VOLGORDE: behoud exact de volgorde van de bon, van boven naar onder. Herschik of hersorteer niets.",
   "",
@@ -52,16 +61,21 @@ const PROMPT = [
   "Antwoord uitsluitend in het gevraagde JSON-formaat, zonder extra tekst.",
 ].join("\n")
 
-function buildBody(imageBase64: string, mimeType: string) {
+type Img = { data: string; mimeType: string }
+
+function buildBody(images: Img[]) {
+  // Eén bericht met de opdracht + alle foto's op volgorde. Zo ziet het model de hele
+  // rekening in één keer en kan het overlappende lijnen zelf herkennen.
+  const parts: Array<Record<string, unknown>> = [{ text: PROMPT }]
+  images.forEach((img, i) => {
+    if (images.length > 1) {
+      parts.push({ text: `--- Foto ${i + 1} van ${images.length} (stuk ${i + 1} van dezelfde rekening) ---` })
+    }
+    parts.push({ inline_data: { mime_type: img.mimeType, data: img.data } })
+  })
+
   return {
-    contents: [
-      {
-        parts: [
-          { text: PROMPT },
-          { inline_data: { mime_type: mimeType, data: imageBase64 } },
-        ],
-      },
-    ],
+    contents: [{ parts }],
     generationConfig: {
       temperature: 0,
       responseMimeType: "application/json",
@@ -98,18 +112,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "no_key" }, { status: 501 })
   }
 
-  let imageBase64 = ""
-  let mimeType = "image/jpeg"
+  const images: Img[] = []
   try {
     const body = await req.json()
-    imageBase64 = body.imageBase64 || ""
-    if (body.mimeType) mimeType = body.mimeType
+
+    // Nieuw: een lijst foto's (meerdere stukken van dezelfde rekening).
+    if (Array.isArray(body.images)) {
+      for (const im of body.images) {
+        const data = typeof im?.imageBase64 === "string" ? im.imageBase64 : typeof im?.data === "string" ? im.data : ""
+        if (data) images.push({ data, mimeType: typeof im?.mimeType === "string" ? im.mimeType : "image/jpeg" })
+      }
+    }
+    // Oud: één enkele foto. Blijft werken.
+    if (images.length === 0 && typeof body.imageBase64 === "string" && body.imageBase64) {
+      images.push({ data: body.imageBase64, mimeType: typeof body.mimeType === "string" ? body.mimeType : "image/jpeg" })
+    }
   } catch {
     return NextResponse.json({ error: "bad_request" }, { status: 400 })
   }
-  if (!imageBase64) return NextResponse.json({ error: "no_image" }, { status: 400 })
+  if (images.length === 0) return NextResponse.json({ error: "no_image" }, { status: 400 })
+  // Meer dan een paar foto's is zinloos en maakt de aanvraag te zwaar.
+  if (images.length > 3) images.length = 3
 
-  const geminiBody = buildBody(imageBase64, mimeType)
+  const geminiBody = buildBody(images)
   const BT = String.fromCharCode(96)
   let lastStatus = 0
 
