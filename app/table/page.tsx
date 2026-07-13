@@ -627,6 +627,7 @@ const STRINGS = {
     scanDoubtTitle: "De scan twijfelde hier — tik voor details",
     sharedWord: "gedeeld",
     sharedMultiQty: (q: number, tot: number) => `${q} stuks · €${tot.toFixed(2).replace(".", ",")} totaal — samen gedeeld`,
+    sharedForN: (n: number) => `bestemd voor ${n} ${n === 1 ? "persoon" : "personen"}`,
     perPieceSuffix: "/stuk",
     openWord: "open",
     shareToggleOn: "gedeeld item — klik om uit te zetten",
@@ -717,6 +718,10 @@ const STRINGS = {
     tipTotalLabel: "Totaal te verdelen",
     tipAddBtn: "💰 Fooi toevoegen",
     tipSkipBtn: "Afsluiten zonder fooi",
+    sharedWithN: (n: number) => `gedeeld met ${n} ${n === 1 ? "persoon" : "personen"}`,
+    tapForDetail: "Tik op een naam voor het detail",
+    totalTogether: "Samen",
+    nothingAssigned: "Niets aangeduid.",
     mismatchFinalize: (d: number) => `De bon klopt niet: €${d.toFixed(2).replace(".", ",")} verschil tussen de items en het bontotaal. Iemand betaalt dus te veel of te weinig.\n\nToch afsluiten?`,
     noItemsYet: "Nog geen items op de bon.",
     kindCostName: "Kosten",
@@ -1175,6 +1180,7 @@ const STRINGS = {
     scanDoubtTitle: "Le scan a hésité ici — touche pour les détails",
     sharedWord: "partagé",
     sharedMultiQty: (q: number, tot: number) => `${q} pièces · €${tot.toFixed(2).replace(".", ",")} au total — partagé ensemble`,
+    sharedForN: (n: number) => `destiné à ${n} ${n === 1 ? "personne" : "personnes"}`,
     perPieceSuffix: "/pièce",
     openWord: "à prendre",
     shareToggleOn: "article partagé — clique pour désactiver",
@@ -1265,6 +1271,10 @@ const STRINGS = {
     tipTotalLabel: "Total à répartir",
     tipAddBtn: "💰 Ajouter un pourboire",
     tipSkipBtn: "Clôturer sans pourboire",
+    sharedWithN: (n: number) => `partagé avec ${n} ${n === 1 ? "personne" : "personnes"}`,
+    tapForDetail: "Touche un nom pour le détail",
+    totalTogether: "Ensemble",
+    nothingAssigned: "Rien de coché.",
     mismatchFinalize: (d: number) => `L'addition ne correspond pas : €${d.toFixed(2).replace(".", ",")} d'écart. Quelqu'un paiera donc trop ou trop peu.\n\nClôturer quand même ?`,
     noItemsYet: "Aucun article sur l'addition.",
     kindCostName: "Frais",
@@ -2685,6 +2695,23 @@ export default function RundoTable() {
   const billOk = (group?.receipt_total ?? null) != null && Math.abs((group?.receipt_total ?? 0) - billTotal) < 0.005
   // Bij elke tabwissel bovenaan beginnen, anders behoud je de scrollpositie van de vorige tab.
   const scrollTop = () => { if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "auto" }) }
+  // Detail per persoon: welke items, welk bedrag, en bij gedeelde items met hoeveel gedeeld.
+  const personLines = (pid: string): { label: string; amount: number; sharedWith: number | null }[] => {
+    const out: { label: string; amount: number; sharedWith: number | null }[] = []
+    for (const it of baseItems) {
+      const c = claims.find((x) => x.item_id === it.id && x.participant_id === pid)
+      if (!c || c.quantity <= 0) continue
+      const total = it.unit_price * it.quantity
+      if (it.is_shared) {
+        const heads = claims.filter((x) => x.item_id === it.id && x.quantity > 0).reduce((a, x) => a + x.quantity, 0)
+        if (heads <= 0) continue
+        out.push({ label: it.name, amount: (total / heads) * c.quantity, sharedWith: heads })
+      } else {
+        out.push({ label: `${c.quantity}× ${it.name}`, amount: it.unit_price * c.quantity, sharedWith: null })
+      }
+    }
+    return out
+  }
   const billDiff = Math.abs((group?.receipt_total ?? 0) - billTotal)
   // Waarschuw zolang de bon niet klopt én de gebruiker het verschil niet bewust aanvaardde.
   const warnMismatch = !billOk && !billMismatchAck
@@ -3840,17 +3867,41 @@ export default function RundoTable() {
               <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c", margin: "0 0 4px" }}>{L.billClosedTitle}</h3>
               <p style={{ fontSize: 13, color: "#5a6680", lineHeight: 1.5, margin: 0 }}>{L.billClosedBody}</p>
             </div>
+            <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginBottom: 7 }}>{L.tapForDetail}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {participants.map((p) => {
                 const pt = personTotal(p.id)
+                const open = expandedPeople.has(p.id)
+                const lines = personLines(p.id)
                 return (
-                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, background: "rgba(20,153,176,0.06)", border: "1px solid rgba(20,153,176,0.18)" }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: "#1499b0", flexShrink: 0 }}>€{pt.settled.toFixed(2).replace(".", ",")}{pt.pendingShared ? "+" : ""}</span>
+                  <div key={p.id} style={{ background: "rgba(20,153,176,0.06)", borderRadius: 11, overflow: "hidden" }}>
+                    <div onClick={() => setExpandedPeople((cur) => { const n = new Set(cur); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n })}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "12px 13px", cursor: "pointer" }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name} <span style={{ fontSize: 11, color: "#9aa0ab" }}>{open ? "▾" : "▸"}</span></span>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#1499b0", flexShrink: 0 }}>€{pt.settled.toFixed(2).replace(".", ",")}</span>
+                    </div>
+                    {open && (
+                      <div style={{ padding: "0 13px 11px", borderTop: "1px solid rgba(20,153,176,0.15)" }}>
+                        {lines.length === 0 && <div style={{ fontSize: 12, color: "#9aa0ab", paddingTop: 8 }}>{L.nothingAssigned}</div>}
+                        {lines.map((ln, k) => (
+                          <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 8, paddingTop: 7 }}>
+                            <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: "#5a6680", lineHeight: 1.4 }}>
+                              {ln.label}
+                              {ln.sharedWith != null && <span style={{ fontSize: 10.5, color: "#9aa0ab" }}> · {L.sharedWithN(ln.sharedWith)}</span>}
+                            </span>
+                            <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#5a6680" }}>€{ln.amount.toFixed(2).replace(".", ",")}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )
               })}
-              {participants.length === 0 && <div style={{ fontSize: 13, color: "#9aa0ab", textAlign: "center" }}>{L.noGuestsYet}</div>}
+              {participants.length === 0 && <div style={{ fontSize: 13, color: "#9aa0ab", textAlign: "center", padding: 10 }}>{L.noGuestsYet}</div>}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 11, borderTop: "1.5px solid rgba(16,24,40,0.1)" }}>
+              <span style={{ fontSize: 13.5, fontWeight: 800, color: "#14213a" }}>{L.totalTogether}</span>
+              <span style={{ fontSize: 17, fontWeight: 800, color: "#1f8a4c" }}>€{participants.reduce((a, p) => a + personTotal(p.id).settled, 0).toFixed(2).replace(".", ",")}</span>
             </div>
             <button onClick={() => setAdminFinalPopup(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 14, padding: "12px 0", fontWeight: 800 }}>{L.closeWord}</button>
           </div>
@@ -4810,7 +4861,7 @@ function ClaimScreen(props: {
                       <span>{it.name}</span>
                       <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.04em", color: "#7a5300", background: "rgba(233,196,95,0.45)", border: "1px solid rgba(196,152,32,0.5)", borderRadius: 7, padding: "1px 7px" }}>{L.sharedBadge}</span>
                     </div>
-                    <div style={{ fontSize: 11, color: it.unit_price <= 0.0001 ? "#c0392b" : "#999", fontWeight: it.unit_price <= 0.0001 ? 700 : 400 }}>{it.unit_price <= 0.0001 ? `⚠️ ${L.zeroPriceShort}` : `€${itemTotal(it).toFixed(2).replace(".", ",")}${L.totalSharedByDrinkers}`}</div>
+                    <div style={{ fontSize: 11, color: it.unit_price <= 0.0001 ? "#c0392b" : "#999", fontWeight: it.unit_price <= 0.0001 ? 700 : 400 }}>{it.unit_price <= 0.0001 ? `⚠️ ${L.zeroPriceShort}` : `€${itemTotal(it).toFixed(2).replace(".", ",")}${L.totalSharedByDrinkers}${it.share_expected ? ` · ${L.sharedForN(it.share_expected)}` : ""}`}</div>
                   </div>
                   <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...((iShare || sharePicking.has(it.id)) ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", border: "none" } : {}) }}>{(iShare || sharePicking.has(it.id)) ? L.iShareYes : L.iShareNo}</button>
                 </div>
