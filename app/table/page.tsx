@@ -433,7 +433,17 @@ const STRINGS = {
     optSelf: "✍️ Ik doe het voor hen",
     optSelfSub: "namen invullen & zelf aanduiden",
     sharePopupSub: "Ze kiezen zelf een vrije plaats, zetten hun naam erop en tikken aan wat ze aten.",
-    howManyGroupTitle: "👥 Met hoeveel zijn jullie?",
+    howManyGroupTitle: "👥 Met hoeveel zijn jullie in de groep?",
+    yourselfFirstTitle: "✍️ Voeg eerst jezelf (als admin) hier toe",
+    adminBadge: "admin",
+    nameRequired: "Vul eerst je eigen naam in.",
+    shareLinkBtn: "🔗 Deel de link",
+    shareLinkHint: "Kies daarna je berichtenapp — WhatsApp, Messenger, sms…",
+    copyLinkPre: "Liever zelf plakken?",
+    copyLinkAction: "Kopieer de link",
+    copyLinkPost: "en stuur hem waar je wil.",
+    billOkBadge: "✓ bon klopt — je kan delen",
+    seatFreedUp: "Die plaats telt nu voor 2 — er is één vrije plaats minder.",
     howManyGroupSub: "Iedereen aan tafel — jezelf inbegrepen.",
     personsWord: "Aantal personen",
     shareStepTitle: "📱 Deel met je gasten",
@@ -887,7 +897,17 @@ const STRINGS = {
     optSelf: "✍️ Je le fais pour eux",
     optSelfSub: "remplir les noms & cocher soi-même",
     sharePopupSub: "Ils choisissent une place libre, y mettent leur nom et cochent ce qu'ils ont pris.",
-    howManyGroupTitle: "👥 Vous êtes combien ?",
+    howManyGroupTitle: "👥 Vous êtes combien dans le groupe ?",
+    yourselfFirstTitle: "✍️ Ajoute-toi d'abord (en tant qu'admin)",
+    adminBadge: "admin",
+    nameRequired: "Indique d'abord ton propre nom.",
+    shareLinkBtn: "🔗 Partager le lien",
+    shareLinkHint: "Choisis ensuite ton app de messagerie — WhatsApp, Messenger, SMS…",
+    copyLinkPre: "Tu préfères coller toi-même ?",
+    copyLinkAction: "Copie le lien",
+    copyLinkPost: "et envoie-le où tu veux.",
+    billOkBadge: "✓ l'addition est correcte — tu peux partager",
+    seatFreedUp: "Cette place compte maintenant pour 2 — il y a une place libre en moins.",
     howManyGroupSub: "Tout le monde à table — toi compris.",
     personsWord: "Nombre de personnes",
     shareStepTitle: "📱 Partage avec tes invités",
@@ -1656,6 +1676,17 @@ export default function RundoTable() {
     if (hasClaims) await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", pid)
     const { error } = await supabase.from("table_participants").update({ seats: val }).eq("id", pid)
     if (error && /seats/.test(error.message || "")) { setError(L.seatsSaveMsg); return }
+    // Houd het totaal kloppend: een plaats die voor 2 telt, "eet" een vrije plaats op.
+    // Zo blijft de som van alle personen gelijk aan het getal in de teller.
+    const delta = val - current
+    if (delta > 0) {
+      const isFree = (p: Participant) => (new RegExp(`^${L.guestWord}\\s*\\d+$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName)
+        && p.id !== pid && p.id !== meId && !claims.some((c) => c.participant_id === p.id && c.quantity > 0)
+      const spare = participants.filter(isFree).slice(-delta)
+      for (const sp of spare) await supabase.from("table_participants").delete().eq("id", sp.id)
+      if (spare.length > 0) setToast(L.seatFreedUp)
+    }
+    await loadAll(group.id)
     if (hasClaims) setToast(L.seatsChanged)
   }
 
@@ -1765,17 +1796,22 @@ export default function RundoTable() {
 
   // Zet het aantal gasten in één beweging. Omhoog = extra gasten aanmaken.
   // Omlaag = de laatste gast verwijderen, met waarschuwing als die al items aantikte.
+  // Aantal PERSONEN in de groep (niet aantal plaatsen): een koppel is één plaats maar telt voor twee.
+  // Zo blijft de som van alle personen altijd gelijk aan het getal in de teller.
+  const totalPersons = participants.reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
+
   const setGuestCount = async (target: number) => {
     if (!group) return
     if (group.finalized) { setToast(isAdmin ? L.finalizedReopenFirst : L.finalizedAskAdmin); return }
     const n = Math.max(0, Math.min(30, target))
-    const cur = participants.length
+    const cur = totalPersons
     if (n === cur) return
     if (n > cur) {
-      for (let i = cur; i < n; i++) await addGuest(`${L.guestWord} ${i + 1}`, false, 1)
+      for (let i = 0; i < n - cur; i++) await addGuest(`${L.guestWord} ${participants.length + i + 1}`, false, 1)
       return
     }
-    const last = participants[cur - 1]
+    // Verlagen: verwijder de laatste plaats(en) tot het totaal klopt.
+    const last = participants[participants.length - 1]
     if (!last) return
     const used = claims.filter((c) => c.participant_id === last.id && c.quantity > 0).length
     if (used > 0 && !confirm(L.confirmRemoveLast(last.name, used))) return
@@ -2741,14 +2777,13 @@ export default function RundoTable() {
             <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: "11px 12px" }}>
               <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>{L.personsWord}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <button onClick={() => setGuestCount(participants.length - 1)} disabled={participants.length <= 0} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(16,24,40,0.05)", color: "#5a6680", fontSize: 20, fontWeight: 800, cursor: participants.length > 0 ? "pointer" : "default", opacity: participants.length > 0 ? 1 : 0.4 }}>−</button>
-                <b style={{ minWidth: 20, textAlign: "center", fontSize: 19, color: "#14213a" }}>{participants.length}</b>
-                <button onClick={() => setGuestCount(participants.length + 1)} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(27,42,74,0.12)", color: "#14213a", fontSize: 20, fontWeight: 800, cursor: "pointer" }}>+</button>
+                <button onClick={() => setGuestCount(totalPersons - 1)} disabled={totalPersons <= 0} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(16,24,40,0.05)", color: "#5a6680", fontSize: 20, fontWeight: 800, cursor: totalPersons > 0 ? "pointer" : "default", opacity: totalPersons > 0 ? 1 : 0.4 }}>−</button>
+                <b style={{ minWidth: 20, textAlign: "center", fontSize: 19, color: "#14213a" }}>{totalPersons}</b>
+                <button onClick={() => setGuestCount(totalPersons + 1)} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(27,42,74,0.12)", color: "#14213a", fontSize: 20, fontWeight: 800, cursor: "pointer" }}>+</button>
               </div>
             </div>
-            <div style={{ fontSize: 11, color: "#9aa0ab", marginTop: 7, lineHeight: 1.5 }}>👤 {L.payTogetherHint}</div>
             <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.yourselfTitle}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.yourselfFirstTitle} <span style={{ color: "#c0392b" }}>*</span></div>
               <div style={{ fontSize: 12, color: "#5a6680", lineHeight: 1.5, marginBottom: 10 }}>{L.yourselfSub}</div>
               {(() => {
                 const me = participants.find((x) => x.id === meId) || participants[0]
@@ -2758,11 +2793,65 @@ export default function RundoTable() {
                   <input key={`self-${me.id}-${me.name}`} defaultValue={isPh ? "" : me.name} placeholder={L.ownNamePlaceholder}
                     onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== me.name) renameGuest(me.id, v) }}
                     onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
-                    style={{ ...S.input, width: "100%", boxSizing: "border-box", border: "1.5px solid rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.04)" }} />
+                    style={{ ...S.input, width: "100%", boxSizing: "border-box", border: isPh ? "1.5px solid rgba(192,57,43,0.5)" : "1.5px solid rgba(20,153,176,0.5)", background: isPh ? "rgba(192,57,43,0.03)" : "rgba(20,153,176,0.04)" }} />
                 )
               })()}
             </div>
 
+          </div>
+
+          <div style={{ ...S.card, order: 2, border: "1.5px solid rgba(20,153,176,0.4)" }}>
+            {(() => {
+              const entered = group?.receipt_total ?? null
+              const match = entered != null && Math.abs(entered - billTotal) < 0.005
+              return (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 3 }}>
+                    <h3 style={{ ...S.h3, marginBottom: 0 }}>{L.shareStepTitle}</h3>
+                    {match && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.12)", border: "1px solid rgba(39,174,96,0.4)", borderRadius: 8, padding: "3px 8px", lineHeight: 1.3 }}>{L.billOkBadge}</span>}
+                  </div>
+                  <div style={{ fontSize: 12.5, color: "#5a6680", lineHeight: 1.55, marginBottom: 13 }}>{L.shareStepSub}</div>
+                  {!match && (
+                    <div style={{ background: "rgba(224,107,94,0.1)", border: "1px solid rgba(224,107,94,0.55)", borderRadius: 10, padding: "9px 11px", fontSize: 12.5, color: "#b0402f", fontWeight: 700, marginBottom: 12, lineHeight: 1.45 }}>{L.shareBlocked}</div>
+                  )}
+                </>
+              )
+            })()}
+
+            {(() => {
+              const _base = (process.env.NEXT_PUBLIC_SITE_URL || (process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}` : "") || (typeof window !== "undefined" ? window.location.origin : "")).replace(/\/$/, "")
+              const link = _base && group ? `${_base}/table?code=${group.invite_code}` : ""
+              const invite = group ? L.inviteMessage(group.name, link) : ""
+              const doShare = async () => {
+                if (typeof navigator !== "undefined" && navigator.share) {
+                  try { await navigator.share({ text: invite }); return } catch { /* geannuleerd */ }
+                }
+                if (navigator.clipboard) navigator.clipboard.writeText(invite)
+                setInviteModalText(invite); setShowInviteModal(true)
+              }
+              return (
+                <>
+                  <div style={{ textAlign: "center", marginBottom: 12 }}>
+                    <div style={{ display: "inline-block", background: "#fff", padding: 10, borderRadius: 14, border: "1px solid rgba(16,24,40,0.1)" }}>
+                      <QRCodeSVG value={link} size={130} bgColor="#ffffff" fgColor="#1b2a4a" />
+                    </div>
+                    <div style={{ fontSize: 11.5, color: "#9aa0ab", marginTop: 7 }}>{L.scanThis}</div>
+                  </div>
+
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={doShare} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 14, fontWeight: 800 }}>{L.shareLinkBtn}</button>
+                  <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6, lineHeight: 1.45 }}>{L.shareLinkHint}</div>
+
+                  <div style={{ borderTop: "1px solid rgba(16,24,40,0.08)", marginTop: 11, paddingTop: 10, fontSize: 11.5, color: "#5a6680", lineHeight: 1.5 }}>
+                    {L.copyLinkPre}{" "}
+                    <span onClick={() => { if (navigator.clipboard) navigator.clipboard.writeText(invite); setToast(L.toastInviteCopied) }} style={{ fontWeight: 800, color: "#1499b0", textDecoration: "underline", cursor: "pointer" }}>{L.copyLinkAction}</span>{" "}
+                    {L.copyLinkPost}
+                  </div>
+                </>
+              )
+            })()}
+          </div>
+
+          <div style={{ ...S.card, order: 3 }}>
             <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.othersTitle}</div>
               <div style={{ fontSize: 12, color: "#5a6680", lineHeight: 1.5, marginBottom: 10 }}>{L.othersSub}</div>
@@ -2818,7 +2907,7 @@ export default function RundoTable() {
                 const origin = p.self_joined
                   ? { label: L.badgeSelf, color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
                   : { label: L.badgeAdmin, color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
-                const badge = isMe ? { label: L.badgeMe, color: "#0f7d90", bg: "rgba(20,153,176,0.18)" } : origin
+                const badge = isMe ? { label: `${L.badgeMe} · ${L.adminBadge}`, color: "#0f7d90", bg: "rgba(20,153,176,0.18)" } : origin
                 if (twoCol) {
                   return (
                     <div key={p.id} style={{ border: manageGuests ? "1px solid rgba(224,107,94,0.4)" : isMe ? "1px solid rgba(20,153,176,0.4)" : "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "7px 8px", background: manageGuests ? "rgba(224,107,94,0.04)" : isMe ? "rgba(20,153,176,0.07)" : "#fff" }}>
@@ -2860,47 +2949,6 @@ export default function RundoTable() {
               )
             })()}
           </div>
-
-          <div style={{ ...S.card, order: 2, border: "1.5px solid rgba(20,153,176,0.4)" }}>
-                <h3 style={{ ...S.h3, marginBottom: 4 }}>{L.shareStepTitle}</h3>
-                <div style={{ fontSize: 12.5, color: "#5a6680", lineHeight: 1.5, marginBottom: 13 }}>{L.shareStepSub}</div>
-            {(() => {
-              const entered = group?.receipt_total ?? null
-              const match = entered != null && Math.abs(entered - billTotal) < 0.005
-              return match ? (
-                <div style={{ background: "rgba(39,174,96,0.10)", border: "1px solid rgba(39,174,96,0.5)", borderRadius: 10, padding: "7px 11px", marginBottom: 10, fontSize: 12.5, fontWeight: 700, color: "#1f8a4c" }}>{L.shareReady}</div>
-              ) : (
-                <div style={{ background: "rgba(224,107,94,0.1)", border: "1px solid rgba(224,107,94,0.55)", borderRadius: 10, padding: "8px 11px", marginBottom: 10, fontSize: 12.5, fontWeight: 700, color: "#c0392b", lineHeight: 1.45 }}>
-                  {L.shareBlocked}
-                </div>
-              )
-            })()}
-            <div style={{ marginTop: -2, marginBottom: 14 }}>
-              {L.guestsSteps.map((s, i) => (
-                <div key={i} style={{ display: "flex", gap: 8, fontSize: 13, color: "#3b486a", marginBottom: 5, lineHeight: 1.4 }}>
-                  <span style={{ fontWeight: 800, color: "#5a6cff", flexShrink: 0 }}>{i + 1}.</span>
-                  <span>{s}</span>
-                </div>
-              ))}
-            </div>
-            {(() => {
-              const _base = (process.env.NEXT_PUBLIC_SITE_URL || (process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}` : "") || (typeof window !== "undefined" ? window.location.origin : "")).replace(/\/+$/, "")
-              const link = _base ? `${_base}/table?code=${group.invite_code}` : ""
-              const invite = L.inviteMessage(group.name, link)
-              return (
-                <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
-                  <div style={{ background: "#fff", padding: 10, borderRadius: 14, border: "1px solid rgba(0,0,0,0.08)", flexShrink: 0 }}>
-                    <QRCodeSVG value={link} size={120} bgColor="#ffffff" fgColor="#1b2a4a" />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 180 }}>
-                    <button onMouseDown={(e) => e.preventDefault()} style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 700 }} onClick={() => { if (navigator.clipboard) navigator.clipboard.writeText(invite); setInviteModalText(invite); setShowInviteModal(true) }}>{L.copyInviteBtn}</button>
-                    <div style={{ fontSize: 11, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>{L.copyInviteHelp}</div>
-                  </div>
-                </div>
-              )
-            })()}
-          </div>
-
           <button onClick={() => setAdminTab("overview")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 700 }}>{L.toAssignBtn}</button>
         </div>
       )}
