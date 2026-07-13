@@ -726,6 +726,15 @@ const STRINGS = {
     confirmReleaseSpot: (nm: string) => `"${nm}" hier weghalen? De plaats komt weer vrij — het aantal personen blijft gelijk.`,
     spotReleased: "Plaats is weer vrij.",
     releaseTitle: "Plaats vrijgeven",
+    billOkTitle: "✓ Totaalbedrag klopt met de bon",
+    allPerfect: "Bon en items kloppen perfect. Je kan verder naar Gasten & delen.",
+    missingLabel: "ontbreekt",
+    extraLabel: "te veel",
+    itemsAddUpPre: "items tellen op tot ",
+    compareFix: "Vergelijk met de bon en corrigeer!",
+    roundingTitle: (d: string) => `€${d} afrondingsverschil`,
+    roundingSub: "Negeren en verdergaan",
+    roundingDone: (d: string) => `Klopt — €${d} afronding aanvaard. Je kan verder.`,
     shareOfN: (have: number, want: number, now: number, then: number) => `${have} van ${want} delers · nu €${now.toFixed(2).replace(".", ",")} elk → €${then.toFixed(2).replace(".", ",")} zodra allen aanduiden`,
     shareOpen: (have: number, now: number) => `Momenteel ${have} ${have === 1 ? "deler" : "delers"} · nu €${now.toFixed(2).replace(".", ",")} → daalt als er meer meedelen`,
     shareDone: (n: number, each: number) => `Gedeeld door ${n} ${n === 1 ? "persoon" : "personen"} · €${each.toFixed(2).replace(".", ",")} elk`,
@@ -1298,6 +1307,15 @@ const STRINGS = {
     confirmReleaseSpot: (nm: string) => `Retirer « ${nm} » ici ? La place redevient libre — le nombre de personnes reste identique.`,
     spotReleased: "La place est de nouveau libre.",
     releaseTitle: "Libérer la place",
+    billOkTitle: "✓ Le total correspond à l'addition",
+    allPerfect: "L'addition et les articles correspondent. Tu peux continuer.",
+    missingLabel: "manque",
+    extraLabel: "en trop",
+    itemsAddUpPre: "les articles totalisent ",
+    compareFix: "Compare avec l'addition et corrige !",
+    roundingTitle: (d: string) => `€${d} d'écart d'arrondi`,
+    roundingSub: "Ignorer et continuer",
+    roundingDone: (d: string) => `Correct — écart d'arrondi de €${d} accepté. Tu peux continuer.`,
     shareOfN: (have: number, want: number, now: number, then: number) => `${have} sur ${want} participants · maintenant €${now.toFixed(2).replace(".", ",")} chacun → €${then.toFixed(2).replace(".", ",")} quand tous auront coché`,
     shareOpen: (have: number, now: number) => `Actuellement ${have} participant${have === 1 ? "" : "s"} · maintenant €${now.toFixed(2).replace(".", ",")} → baisse si d'autres partagent`,
     shareDone: (n: number, each: number) => `Partagé par ${n} personne${n === 1 ? "" : "s"} · €${each.toFixed(2).replace(".", ",")} chacun`,
@@ -1625,6 +1643,7 @@ export default function RundoTable() {
   const [personsTouched, setPersonsTouched] = useState(false)
   const [fillingSpots, setFillingSpots] = useState<string[]>([])  // vrije plaatsen die je nu een naam geeft
   const [askSeats, setAskSeats] = useState(false)  // "voor hoeveel personen?" bij het toevoegen
+  const [roundingOk, setRoundingOk] = useState(false)  // centenverschil bewust aanvaard
   const [billMismatchAck, setBillMismatchAck] = useState(false)  // bewust doorgegaan ondanks verschil
   const [showJoined, setShowJoined] = useState(false)
   // Bewaarde foto van de laatste scan, zodat je een mislukte AI-scan opnieuw kan proberen.
@@ -3050,8 +3069,11 @@ export default function RundoTable() {
           {/* Bon-totaal: ja/neen blijft altijd beschikbaar. Ja = totaal klopt (items nakijken). Neen = aanpassen + bevestigen. */}
           {items.length > 0 && (() => {
             const entered = group?.receipt_total ?? null
-            const match = entered != null && Math.abs(entered - billTotal) < 0.005
-            const mismatch = entered != null && !match
+            const diff = entered != null ? Math.abs(entered - billTotal) : 0
+            const match = entered != null && diff < 0.005
+            // Tot 5 cent is het vrijwel zeker afronding, geen fout: dat vraagt geen alarm.
+            const rounding = entered != null && !match && diff <= 0.05
+            const mismatch = entered != null && !match && !rounding
             const saveTotal = () => { setReceiptConfirmed(false); const raw = (receiptInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }
             const greenState = !receiptEditing && receiptConfirmed
             const jaBtn = { border: "none", background: "#27ae60", color: "#fff", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer" }
@@ -3086,21 +3108,59 @@ export default function RundoTable() {
                   )}
                   {entered != null && jaNeen}
                 </div>
-                {match && receiptConfirmed && !receiptEditing && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: "#5a6680", lineHeight: 1.5 }}>
-                    {L.checkAllNote}
-                  </div>
-                )}
-                {mismatch && receiptConfirmed && !receiptEditing && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: "#8a4514", lineHeight: 1.5 }}>
-                    <div style={{ fontWeight: 700, marginBottom: 3 }}>{L.mismatchExplain(billTotal.toFixed(2).replace(".", ","), Math.abs(billTotal - (entered ?? 0)).toFixed(2).replace(".", ","), billTotal > (entered ?? 0), (entered ?? 0).toFixed(2).replace(".", ","))}</div>
-                    <ul style={{ margin: 0, paddingLeft: 18 }}>
-                      <li>{L.checkTax}</li>
-                      <li>{L.checkPrices}</li>
-                      <li>{L.checkShared}</li>
-                    </ul>
-                  </div>
-                )}
+                {receiptConfirmed && !receiptEditing && (() => {
+                  const diffTxt = diff.toFixed(2).replace(".", ",")
+                  const higher = billTotal > (entered ?? 0)
+                  // Alles gelijk, of een centenverschil dat je bewust aanvaardde: groen.
+                  if (match || (rounding && roundingOk)) {
+                    return (
+                      <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 9, background: "rgba(39,174,96,0.13)", border: "1px solid #27ae60", borderRadius: 10, padding: "10px 11px" }}>
+                        <span style={{ flexShrink: 0, fontSize: 15 }}>✅</span>
+                        <span style={{ flex: 1, fontSize: 12, color: "#15703f", fontWeight: 800, lineHeight: 1.45 }}>{match ? L.allPerfect : L.roundingDone(diffTxt)}</span>
+                        {rounding && (
+                          <button onClick={() => setRoundingOk(false)} title={L.roundingSub}
+                            style={{ flexShrink: 0, width: 40, height: 23, background: "#27ae60", borderRadius: 20, border: "none", position: "relative", cursor: "pointer", padding: 0 }}>
+                            <span style={{ position: "absolute", top: 2.5, right: 2.5, width: 18, height: 18, background: "#fff", borderRadius: "50%" }} />
+                          </button>
+                        )}
+                      </div>
+                    )
+                  }
+                  // Centenverschil: geen alarm, maar een rustige melding met een schakelaar.
+                  if (rounding) {
+                    return (
+                      <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 9, background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.28)", borderRadius: 10, padding: "10px 11px" }}>
+                        <span style={{ flexShrink: 0, fontSize: 15 }}>🧮</span>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: "#3b486a", lineHeight: 1.45 }}>
+                          <b>{L.roundingTitle(diffTxt)}</b><br />
+                          <span style={{ color: "#8a93a3" }}>{L.roundingSub}</span>
+                        </span>
+                        <button onClick={() => setRoundingOk(true)} title={L.roundingSub}
+                          style={{ flexShrink: 0, width: 40, height: 23, background: "#c3c8d2", borderRadius: 20, border: "none", position: "relative", cursor: "pointer", padding: 0 }}>
+                          <span style={{ position: "absolute", top: 2.5, left: 2.5, width: 18, height: 18, background: "#fff", borderRadius: "50%" }} />
+                        </button>
+                      </div>
+                    )
+                  }
+                  // Een echt verschil: dat verdient wél aandacht.
+                  return (
+                    <div style={{ marginTop: 8, background: "rgba(243,156,18,0.11)", border: "1px solid rgba(243,156,18,0.55)", borderRadius: 10, padding: "10px 11px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 8 }}>
+                        <span style={{ flexShrink: 0, background: "#e07b28", borderRadius: 8, padding: "5px 9px", fontSize: 15, fontWeight: 800, color: "#fff", lineHeight: 1.15 }}>€{diffTxt}</span>
+                        <span style={{ fontSize: 11.5, color: "#8a4514", lineHeight: 1.4 }}>
+                          <b>{higher ? L.extraLabel : L.missingLabel}</b> — {L.itemsAddUpPre}
+                          <b style={{ fontSize: 13, color: "#7a3d0f" }}>€{billTotal.toFixed(2).replace(".", ",")}</b>
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a4514", marginBottom: 4 }}>{L.compareFix}</div>
+                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 11.5, color: "#8a4514", lineHeight: 1.65 }}>
+                        <li>{L.checkTax}</li>
+                        <li>{L.checkPrices}</li>
+                        <li>{L.checkShared}</li>
+                      </ul>
+                    </div>
+                  )
+                })()}
               </div>
             )
           })()}
