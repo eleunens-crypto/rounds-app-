@@ -480,7 +480,6 @@ const STRINGS = {
     sendViaApp: "💬 Versturen via WhatsApp, Messenger…",
     scanThis: "Laat hen dit scannen",
     yourselfTitle: "✍️ Vergeet jezelf niet",
-    yourselfSub: "Zet je naam erop, dan weet iedereen wie wat had.",
     othersTitle: "📝 Iemand zonder smartphone?",
     othersSub: "Geen gsm of geen zin om zelf aan te tikken? Zet hun naam hieronder — jij duidt dan voor hen aan.",
     othersAdd: "+ Iemand toevoegen voor wie ik aanduid",
@@ -723,6 +722,10 @@ const STRINGS = {
     totalTogether: "Samen",
     nothingAssigned: "Niets aangeduid.",
     andWord: "en",
+    addSelfAssign: "+ Persoon voor wie ik zelf aanduid",
+    addSelfAssignHint: (n: number) => `Neemt een vrije plaats in — het aantal personen blijft ${n}.`,
+    noFreeSpots: "Alle plaatsen zijn bezet. Verhoog eerst het aantal personen bovenaan.",
+    nobodyJoinedYet: "Nog niemand — deel de link met je gasten.",
     selfJoinedTitle: "Hebben zich al aangemeld",
     selfJoinedAll: "Iedereen heeft zich aangemeld",
     selfJoinedCount: (a: number, b: number) => `${a} van ${b}`,
@@ -1037,7 +1040,6 @@ const STRINGS = {
     sendViaApp: "💬 Envoyer via WhatsApp, Messenger…",
     scanThis: "Fais-leur scanner ceci",
     yourselfTitle: "✍️ Ne t'oublie pas",
-    yourselfSub: "Mets ton nom, ainsi chacun sait qui a pris quoi.",
     othersTitle: "📝 Quelqu'un sans smartphone ?",
     othersSub: "Pas de smartphone ou pas envie ? Mets son nom ci-dessous — tu coches alors pour lui.",
     othersAdd: "+ Ajouter quelqu'un pour qui je coche",
@@ -1280,6 +1282,10 @@ const STRINGS = {
     totalTogether: "Ensemble",
     nothingAssigned: "Rien de coché.",
     andWord: "et",
+    addSelfAssign: "+ Personne pour qui je coche moi-même",
+    addSelfAssignHint: (n: number) => `Occupe une place libre — le nombre de personnes reste ${n}.`,
+    noFreeSpots: "Toutes les places sont prises. Augmente d'abord le nombre de personnes en haut.",
+    nobodyJoinedYet: "Personne encore — partage le lien avec tes invités.",
     selfJoinedTitle: "Se sont déjà inscrits",
     selfJoinedAll: "Tout le monde s'est inscrit",
     selfJoinedCount: (a: number, b: number) => `${a} sur ${b}`,
@@ -1593,6 +1599,7 @@ export default function RundoTable() {
   const [sharePicking, setSharePicking] = useState<Set<string>>(new Set())
   const [jumpToAssign, setJumpToAssign] = useState(0)
   const [personsTouched, setPersonsTouched] = useState(false)
+  const [fillingSpots, setFillingSpots] = useState<string[]>([])  // vrije plaatsen die je nu een naam geeft
   const [billMismatchAck, setBillMismatchAck] = useState(false)  // bewust doorgegaan ondanks verschil
   const [showJoined, setShowJoined] = useState(false)
   // Bewaarde foto van de laatste scan, zodat je een mislukte AI-scan opnieuw kan proberen.
@@ -1600,7 +1607,6 @@ export default function RundoTable() {
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [newGuest, setNewGuest] = useState("")
-  const [showNames, setShowNames] = useState(false)
   const [claimSpot, setClaimSpot] = useState<string | null>(null)
   const [claimSeats, setClaimSeats] = useState(1)
   const [claimNames, setClaimNames] = useState<string[]>([""])
@@ -2046,7 +2052,8 @@ export default function RundoTable() {
     if (p.self_joined) return { kind: "idle", count }
     return { kind: "mine", count }
   }
-  const joinedCount = participants.filter((p) => spotStatus(p).kind !== "free").length
+  // Tel personen, niet rijen: een koppel op één plaats telt voor 2.
+  const joinedCount = participants.filter((p) => spotStatus(p).kind !== "free").reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
 
   // Overzicht "Wie doet al mee?" — op de gasten-tab ingeklapt, op de toewijs-tab open.
   const joinedList = (opts: { clickable?: boolean } = {}) => {
@@ -2066,7 +2073,10 @@ export default function RundoTable() {
             <div key={p.id} onClick={() => { if (clickMine) { setClaimMode("person"); setClaimPid(p.id) } }}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 5px", borderRadius: 7, background: bg, cursor: clickMine ? "pointer" : "default", minWidth: 0 }}>
               <span style={{ fontSize: 12, flexShrink: 0 }}>{icon}</span>
-              <b style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: st.kind === "free" ? "#9aa0ab" : "#14213a", fontWeight: st.kind === "free" ? 600 : 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{st.kind === "free" ? L.freeSpot : p.name}</b>
+              <b style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: st.kind === "free" ? "#9aa0ab" : "#14213a", fontWeight: st.kind === "free" ? 600 : 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {st.kind === "free" ? L.freeSpot : p.name}
+                {(p.seats ?? 1) > 1 && <span style={{ fontSize: 10, fontWeight: 700, color: "#9aa0ab" }}> · {p.seats}p.</span>}
+              </b>
               <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: rightRed ? 800 : 600, color: rightRed ? "#c0392b" : st.kind === "free" ? "#c3c8d2" : "#9aa0ab" }}>{right}</span>
             </div>
           )
@@ -2083,7 +2093,7 @@ export default function RundoTable() {
     const cur = totalPersons
     if (n === cur) return
     if (n > cur) {
-      for (let i = 0; i < n - cur; i++) await addGuest(`${L.guestWord} ${participants.length + i + 1}`, false, 1)
+      for (let i = 0; i < n - cur; i++) await addGuest(L.guestWord, false, 1)
       return
     }
     // Verlagen: verwijder de laatste plaats(en) tot het totaal klopt.
@@ -2807,7 +2817,7 @@ export default function RundoTable() {
   if (needIdentity && !isAdmin) {
     return (
       <div style={S.page}>
-        <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} signedUp={participants.length} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
+        <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
         <div style={{ maxWidth: 440, margin: "0 auto" }}>
           <div style={S.card}>
             {claimSpot === null ? (
@@ -2904,7 +2914,7 @@ export default function RundoTable() {
         </div>
       )}
 
-      <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} me={me?.name} signedUp={participants.length} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} guestSeats={meId ? seatsOf(meId) : undefined} onGuestSeatsChange={meId ? (n) => setSeats(meId, n) : undefined} onSwitchPerson={meId ? switchPerson : undefined} />
+      <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} me={me?.name} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} guestSeats={meId ? seatsOf(meId) : undefined} onGuestSeatsChange={meId ? (n) => setSeats(meId, n) : undefined} onSwitchPerson={meId ? switchPerson : undefined} />
 
       {group.finalized && (() => {
         const disputers = parseDisputes(group.disputed_by || "")
@@ -3185,7 +3195,6 @@ export default function RundoTable() {
             {personsSet && (
             <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.yourselfFirstTitle} <span style={{ color: "#c0392b" }}>*</span></div>
-              <div style={{ fontSize: 12, color: "#5a6680", lineHeight: 1.5, marginBottom: 10 }}>{L.yourselfSub}</div>
               {(() => {
                 const me = participants.find((x) => x.id === meId) || participants[0]
                 if (!me) return null
@@ -3266,65 +3275,16 @@ export default function RundoTable() {
                   <span style={{ fontSize: 12.5, color: "#14213a" }}><b>{(participants.find((x) => x.id === meId) || participants[0])?.name}</b> — {L.youAlreadyIn}</span>
                 </div>
               )}
-              {!showNames && (
-                <>
-                  <button onClick={() => { if (requireName()) setShowNames(true) }} style={{ width: "100%", border: "1.5px dashed rgba(27,42,74,0.25)", background: "#fff", borderRadius: 11, padding: "12px 10px", cursor: "pointer", fontSize: 13, fontWeight: 800, color: "#5a6680" }}>{L.addNamedGuest}</button>
-                  <div style={{ display: "flex", gap: 7, background: "rgba(243,156,18,0.09)", border: "1px solid rgba(243,156,18,0.4)", borderRadius: 10, padding: "9px 10px", marginTop: 9 }}>
-                    <span style={{ flexShrink: 0 }}>⚠️</span>
-                    <span style={{ fontSize: 12, color: "#8a4514", lineHeight: 1.5 }}>{L.shareLinkWarn}</span>
-                  </div>
-                  {(() => {
-                    // Wie zich via de link aanmeldde: één rustige regel, niet aanklikbaar.
-                    const joined = participants.filter((p) => p.self_joined && p.id !== meId)
-                    if (joined.length === 0) return null
-                    const heads = joined.reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
-                    const all = heads >= totalPersons - Math.max(1, (participants.find((x) => x.id === meId)?.seats ?? 1))
-                    const names = joined.map((p) => p.name).join(", ").replace(/, ([^,]*)$/, ` ${L.andWord} $1`)
-                    return (
-                      <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 9, borderRadius: 12, padding: "11px 12px",
-                        background: all ? "rgba(39,174,96,0.06)" : "#fff",
-                        border: all ? "1.5px solid rgba(39,174,96,0.45)" : "1px solid rgba(16,24,40,0.12)" }}>
-                        <span style={{ flexShrink: 0, fontSize: 14 }}>✅</span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                            <span style={{ fontSize: 12.5, fontWeight: 800, color: all ? "#1f8a4c" : "#14213a" }}>{all ? L.selfJoinedAll : L.selfJoinedTitle}</span>
-                            <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, borderRadius: 20, padding: "2px 9px", whiteSpace: "nowrap",
-                              color: all ? "#fff" : "#b5591a",
-                              background: all ? "#27ae60" : "rgba(243,156,18,0.14)",
-                              border: all ? "1px solid #27ae60" : "1px solid rgba(243,156,18,0.5)" }}>{L.selfJoinedCount(heads, totalPersons)}</span>
-                          </div>
-                          <div style={{ fontSize: 13, color: "#14213a", lineHeight: 1.5 }}>{names}</div>
-                        </div>
-                      </div>
-                    )
-                  })()}
-                  <div style={{ fontSize: 11.5, color: "#5a6680", background: "rgba(90,108,166,0.06)", borderRadius: 8, padding: "8px 9px", marginTop: 9, lineHeight: 1.45 }}>{L.whoAssignFoot}</div>
-                  {participants.length > 0 && (
-                    <div style={{ marginTop: 13, paddingTop: 12, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
-                      <button onClick={() => setShowJoined((v) => !v)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: 0 }}>
-                        <span style={{ fontSize: 13.5, fontWeight: 800, color: "#14213a" }}>{L.whoJoinedTitle} {showJoined ? "▾" : "▸"}</span>
-                        <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, color: "#1499b0", background: "rgba(20,153,176,0.12)", borderRadius: 20, padding: "3px 9px" }}>{L.joinedOf(joinedCount, participants.length)}</span>
-                      </button>
-                      {showJoined && (
-                        <div style={{ marginTop: 9 }}>
-                          {joinedList()}
-                          <div style={{ fontSize: 11, color: "#5a6680", background: "rgba(90,108,166,0.06)", borderRadius: 8, padding: "8px 9px", marginTop: 8, lineHeight: 1.45 }}>{L.whoJoinedHint}</div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
             </div>
 
-            {showNames && participants.length > 0 && (
+            {participants.length > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 12, marginBottom: 2 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: "#9aa0ab" }}>{participants.length} {participants.length === 1 ? L.person : L.persons} {L.editNameHint}</span>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: "#9aa0ab" }}>{totalPersons} {totalPersons === 1 ? L.person : L.persons} {L.editNameHint}</span>
                 <button onClick={() => setManageGuests((v) => !v)} style={{ ...S.smallBtn, flexShrink: 0, ...(manageGuests ? { borderColor: "rgba(224,107,94,0.6)", color: "#c0392b", background: "rgba(224,107,94,0.06)" } : {}) }}>{manageGuests ? L.manageDone : L.manageDelete}</button>
               </div>
             )}
 
-            {showNames && (() => {
+            {(() => {
               const twoCol = participants.length > 5
               const isPlaceholderName = (p: Participant) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName
               const splitNames = (p: Participant) => {
@@ -3390,8 +3350,12 @@ export default function RundoTable() {
                 )
               }
               const isPh = (nm?: string) => /^(Gast|Invité) \d+$/.test(nm || "")
-              // Wie zichzelf via de link aanmeldde, regelt zichzelf: die hoort niet in deze lijst.
-              const mine = participants.filter((p) => p.id === meId || !p.self_joined)
+              // Deze lijst toont enkel wie JIJ regelt: jezelf, de gasten die je een naam gaf,
+              // en de vrije plaats die je op dit moment aan het invullen bent.
+              const mine = participants.filter((p) =>
+                p.id === meId ||
+                (!p.self_joined && (!isPh(p.name) || fillingSpots.includes(p.id)))
+              )
               const displayList = [...mine].sort((a, b) => (isPh(a.name) ? 1 : 0) - (isPh(b.name) ? 1 : 0))
               const gridRows = Math.ceil(displayList.length / 2)
               return (
@@ -3404,6 +3368,48 @@ export default function RundoTable() {
                 </div>
               )
             })()}
+              {(
+                <>
+                  <button onClick={() => {
+                    if (!requireName()) return
+                    // Neemt een BESTAANDE vrije plaats in — het totaal aantal personen blijft gelijk.
+                    const free = participants.find((p) => p.id !== meId && !p.self_joined && isFreeSpot(p) && !fillingSpots.includes(p.id))
+                    if (!free) { setToast(L.noFreeSpots); return }
+                    setFillingSpots((cur) => [...cur, free.id])
+                  }}
+                    style={{ width: "100%", border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.04)", borderRadius: 11, padding: "11px", textAlign: "center", fontSize: 13, fontWeight: 800, color: "#0f7d90", cursor: "pointer" }}>{L.addSelfAssign}</button>
+                  <div style={{ fontSize: 10.5, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>{L.addSelfAssignHint(totalPersons)}</div>
+                  <div style={{ display: "flex", gap: 7, background: "rgba(243,156,18,0.09)", border: "1px solid rgba(243,156,18,0.4)", borderRadius: 10, padding: "9px 10px", marginTop: 9 }}>
+                    <span style={{ flexShrink: 0 }}>⚠️</span>
+                    <span style={{ fontSize: 12, color: "#8a4514", lineHeight: 1.5 }}>{L.shareLinkWarn}</span>
+                  </div>
+                  {(() => {
+                    // Wie zich via de link aanmeldde: één rustige regel, niet aanklikbaar.
+                    const joined = participants.filter((p) => p.self_joined && p.id !== meId)
+                    const heads = joined.reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
+                    const all = participants.length > 0 && participants.every((x) => !isFreeSpot(x))  // geen vrije plaatsen meer
+                    const names = joined.map((p) => p.name).join(", ").replace(/, ([^,]*)$/, ` ${L.andWord} $1`)
+                    return (
+                      <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 9, borderRadius: 12, padding: "11px 12px",
+                        background: all ? "rgba(39,174,96,0.06)" : "#fff",
+                        border: all ? "1.5px solid rgba(39,174,96,0.45)" : "1px solid rgba(16,24,40,0.12)" }}>
+                        <span style={{ flexShrink: 0, fontSize: 14 }}>✅</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                            <span style={{ fontSize: 12.5, fontWeight: 800, color: all ? "#1f8a4c" : "#14213a" }}>{all ? L.selfJoinedAll : L.selfJoinedTitle}</span>
+                            <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, borderRadius: 20, padding: "2px 9px", whiteSpace: "nowrap",
+                              color: all ? "#fff" : "#b5591a",
+                              background: all ? "#27ae60" : "rgba(243,156,18,0.14)",
+                              border: all ? "1px solid #27ae60" : "1px solid rgba(243,156,18,0.5)" }}>{L.selfJoinedCount(heads, totalPersons)}</span>
+                          </div>
+                          <div style={{ fontSize: 13, color: joined.length > 0 ? "#14213a" : "#9aa0ab", lineHeight: 1.5 }}>{joined.length > 0 ? names : L.nobodyJoinedYet}</div>
+                        </div>
+                      </div>
+                    )
+                  })()}
+                  <div style={{ fontSize: 11.5, color: "#5a6680", background: "rgba(90,108,166,0.06)", borderRadius: 8, padding: "8px 9px", marginTop: 9, lineHeight: 1.45 }}>{L.whoAssignFoot}</div>
+                </>
+              )}
           </div>
           <button onClick={() => { if (warnMismatch) { setShowShareWarn(true); return } if (requireName()) { setAdminTab("overview"); scrollTop() } }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 700 }}>{L.toAssignBtn}</button>
         </div>
@@ -3414,7 +3420,7 @@ export default function RundoTable() {
         <div style={{ ...S.card, padding: 12 }}>
           <button onClick={() => setShowJoined((v) => !v)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: 0 }}>
             <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>{L.whoJoinedTitle} {showJoined ? "▾" : "▸"}</span>
-            <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, color: "#1499b0", background: "rgba(20,153,176,0.12)", borderRadius: 20, padding: "3px 9px" }}>{L.joinedOf(joinedCount, participants.length)}</span>
+            <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, color: "#1499b0", background: "rgba(20,153,176,0.12)", borderRadius: 20, padding: "3px 9px" }}>{L.joinedOf(joinedCount, totalPersons)}</span>
           </button>
           {showJoined && <div style={{ marginTop: 8 }}>{joinedList({ clickable: true })}</div>}
         </div>
@@ -4623,7 +4629,7 @@ function ClaimScreen(props: {
   const [lang] = useLang()
   const L = STRINGS[lang]
   const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, onToggleShared, claimMembers, sharePicking, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onSetExpected, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
-  const adminPid = props.claimPid, setAdminPid = props.setClaimPid
+  const adminPid = props.claimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   const [disputeOpen, setDisputeOpen] = useState(false)
   const [disputeText, setDisputeText] = useState("")
@@ -4684,37 +4690,6 @@ function ClaimScreen(props: {
             ? <div style={{ fontSize: 12.5, color: "#aaa", padding: 10 }}>{L.addGuestsInTab1}</div>
             : (
               <>
-                {(() => {
-                  const list = participants
-                  const scroll = list.length > 6
-                  return (
-                    <>
-                      <div style={scroll
-                        ? { display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch" }
-                        : { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
-                        {list.map((p) => {
-                          const on = adminPid === p.id
-                          const pt = personTotal(p.id)
-                          const conf = explicitConfirmed(p.id)
-                          return (
-                            <button key={p.id} onClick={() => setAdminPid(on ? null : p.id)} style={{
-                              flexShrink: 0, whiteSpace: "nowrap",
-                              fontSize: 13, fontWeight: 700, borderRadius: 11, padding: scroll ? "7px 11px" : "7px 12px", cursor: "pointer",
-                              border: on ? "1px solid #1499b0" : "1px solid rgba(16,24,40,0.12)",
-                              background: on ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff",
-                              color: on ? "#fff" : "#5a6680",
-                            }}>{conf ? "✓ " : ""}{p.name} <span style={{ fontWeight: 700, opacity: pt.settled < 0.005 ? 1 : 0.85, color: pt.settled < 0.005 ? (on ? "#ffd7d1" : "#e0685c") : "inherit" }}>€{pt.settled.toFixed(2).replace(".", ",")}{pt.pendingShared ? "+" : ""}</span></button>
-                          )
-                        })}
-                      </div>
-                      {adminPid && (() => {
-                        const sel = participants.find((p) => p.id === adminPid)
-                        return <div style={{ fontSize: 12, fontWeight: 700, color: "#5a4a1a", background: "rgba(233,196,95,0.25)", borderRadius: 10, padding: "7px 11px", marginBottom: 12 }}>{L.yellowIs}<b>{sel?.name}</b>{L.orderedSuffix}</div>
-                      })()}
-                    </>
-                  )
-                })()}
-
                 {items.map((it) => {
                   const claimed = claimedQty(it.id)
                   const open = it.quantity - claimed
