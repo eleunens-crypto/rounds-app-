@@ -2550,15 +2550,19 @@ export default function RundoTable() {
     if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     const mine = myQty(itemId, pid)
     const seats = Math.max(1, participants.find((p) => p.id === pid)?.seats ?? 1)
-    if (mine > 0 || sharePicking.has(itemId)) {
-      setSharePicking((cur) => { const n = new Set(cur); n.delete(itemId); return n })
+    const isMine = pid === meId
+    if (mine > 0 || (isMine && sharePicking.has(itemId))) {
+      if (isMine) setSharePicking((cur) => { const n = new Set(cur); n.delete(itemId); return n })
       await setClaim(itemId, pid, 0, [])
       return
     }
-    // Sta je alleen? Dan ben jij het meteen. Vertegenwoordig je meer personen, dan kies je
-    // zelf wie meedeelde — zonder voorselectie, zodat je niets hoeft te corrigeren.
-    if (seats === 1) await setClaim(itemId, pid, 1, [0])
-    else setSharePicking((cur) => new Set(cur).add(itemId))
+    // Alleen op je plaats? Dan ben jij het meteen.
+    if (seats === 1) { await setClaim(itemId, pid, 1, [0]); return }
+    // Je eigen plaats met meerdere personen: kies zelf wie meedeelde (geen voorselectie).
+    if (isMine) { setSharePicking((cur) => new Set(cur).add(itemId)); return }
+    // Duid je aan vóór iemand anders (bv. een koppel dat jij regelt)? Start op 1 persoon;
+    // met de ± knopjes zet je het bij naar 2 of meer.
+    await setClaim(itemId, pid, 1, [0])
   }
 
   const shareHeads = (itemId: string) =>
@@ -3435,14 +3439,12 @@ export default function RundoTable() {
                   {(() => {
                     // Wie zich via de link aanmeldde: één rustige regel, niet aanklikbaar.
                     const joined = participants.filter((p) => p.self_joined && p.id !== meId)
-                    const heads = joined.reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
-                    // Wie jij zelf regelt: jezelf + de gasten die jij een naam gaf (geen vrije plaatsen).
-                    const byAdmin = participants
-                      .filter((x) => !x.self_joined && !isFreeSpot(x))
+                    // De teller toont hoeveel personen al een naam hebben: jijzelf, de gasten
+                    // die jij toevoegde, én wie zich via de link aanmeldde.
+                    const knownHeads = participants
+                      .filter((x) => !isFreeSpot(x))
                       .reduce((a, x) => a + Math.max(1, x.seats ?? 1), 0)
-                    // De rest moet via de link binnenkomen.
-                    const expected = Math.max(0, totalPersons - byAdmin)
-                    const all = expected > 0 && heads >= expected
+                    const all = knownHeads >= totalPersons
                     const names = joined.map((p) => p.name).join(", ").replace(/, ([^,]*)$/, ` ${L.andWord} $1`)
                     return (
                       <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 9, borderRadius: 12, padding: "11px 12px",
@@ -3455,7 +3457,7 @@ export default function RundoTable() {
                             <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, borderRadius: 20, padding: "2px 9px", whiteSpace: "nowrap",
                               color: all ? "#fff" : "#b5591a",
                               background: all ? "#27ae60" : "rgba(243,156,18,0.14)",
-                              border: all ? "1px solid #27ae60" : "1px solid rgba(243,156,18,0.5)" }}>{L.selfJoinedCount(heads, expected)}</span>
+                              border: all ? "1px solid #27ae60" : "1px solid rgba(243,156,18,0.5)" }}>{L.selfJoinedCount(knownHeads, totalPersons)}</span>
                           </div>
                           <div style={{ fontSize: 13, color: joined.length > 0 ? "#14213a" : "#9aa0ab", lineHeight: 1.5 }}>{joined.length > 0 ? names : L.nobodyJoinedYet}</div>
                         </div>
@@ -4722,7 +4724,10 @@ function ClaimScreen(props: {
   }, [allDone, isAdmin])
 
   if (isAdmin) {
-    const normalItems = items.filter((i) => !i.is_shared)
+    // Vrije plaatsen (nog niemand) horen niet in de toewijslijst: enkel wie een naam heeft.
+  const isFreeName = (nm: string) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test((nm || "").trim())
+  const named = participants.filter((p) => !isFreeName(p.name))
+  const normalItems = items.filter((i) => !i.is_shared)
     const sharedItems = items.filter((i) => i.is_shared)
     const totalUnits = normalItems.reduce((s, i) => s + i.quantity, 0)
     const claimedUnits = normalItems.reduce((s, i) => s + Math.min(i.quantity, claimedQty(i.id)), 0)
@@ -4740,7 +4745,7 @@ function ClaimScreen(props: {
             ? <div onClick={() => setClaimCollapsed(false)} style={{ cursor: "pointer", fontSize: 12.5, color: "#1f8a4c", fontWeight: 700, padding: "2px 2px" }}>{L.allAssignedTapReview}</div>
             : items.length === 0
             ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>{L.noItemsScanFirst}</div>
-            : participants.length === 0
+            : named.length === 0
             ? <div style={{ fontSize: 12.5, color: "#aaa", padding: 10 }}>{L.addGuestsInTab1}</div>
             : (
               <>
@@ -4765,9 +4770,9 @@ function ClaimScreen(props: {
                           <span style={{ fontSize: 11, fontWeight: 800, borderRadius: 10, padding: "2px 9px", color: ok ? "#1f8a4c" : "#c0392b", background: ok ? "rgba(39,174,96,0.12)" : "rgba(224,107,94,0.12)" }}>{ok ? `${heads} ${heads === 1 ? L.person : L.persons}` : L.nobodyYet}</span>
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25 }}>
-                          {participants.length === 0
+                          {named.length === 0
                             ? <span style={{ fontSize: 11, color: "#aaa" }}>{L.addGuestsFirst}</span>
-                            : participants.map((p) => {
+                            : named.map((p) => {
                                 const on = sh.includes(p.id)
                                 const pSeats = Math.max(1, p.seats ?? 1)
                                 const pHeads = myShareHeads(it.id, p.id)
@@ -4795,7 +4800,7 @@ function ClaimScreen(props: {
                       </div>
                     )
                   }
-                  const who = participants.map((p) => ({ p, q: myQty(it.id, p.id) })).filter((x) => x.q > 0)
+                  const who = named.map((p) => ({ p, q: myQty(it.id, p.id) })).filter((x) => x.q > 0)
                   const mineQ = adminPid ? myQty(it.id, adminPid) : 0
                   const ok = open === 0
                   const highlight = adminPid && mineQ > 0
@@ -4858,10 +4863,10 @@ function ClaimScreen(props: {
       <div style={S.card}>
         <h3 style={S.h3}>{L.forWhomTap}</h3>
         <p style={{ fontSize: 13, color: "#888", marginTop: -6, marginBottom: 12 }}>{L.pickPersonHint}</p>
-        {participants.map((p) => (
+        {named.map((p) => (
           <button key={p.id} onClick={() => onPickMe(p.id)} style={{ ...S.btn, width: "100%", textAlign: "left", marginBottom: 6, padding: "12px 14px", fontWeight: 700 }}>{p.name}</button>
         ))}
-        {participants.length === 0 && <div style={{ color: "#aaa", fontSize: 13 }}>{L.addGuestsInTab2}</div>}
+        {named.length === 0 && <div style={{ color: "#aaa", fontSize: 13 }}>{L.addGuestsInTab2}</div>}
       </div>
     )
   }
