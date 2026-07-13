@@ -814,8 +814,11 @@ const STRINGS = {
     sharedBadge: "GEDEELD",
     makeSharedShort: "delen",
     sharedOnShort: "gedeeld",
+    addItemBtn: "+ Item toevoegen",
+    whatIsThis: "Wat is dit?",
+    taxAddBtn: "% BTW / kosten / korting",
     legendTitle: "Wat betekenen de knopjes?",
-    legendShare: "maak er een gedeeld item van (bv. een fles wijn of water). De prijs wordt dan verdeeld over iedereen die meedeelt — niet per stuk toegewezen.",
+    legendShare: "Gedeelde items (fles wijn, water, dessert)? Tik dit icoon aan. De prijs verdeelt zich over wie meedeelt.",
     legendEdit: "naam, aantal of prijs aanpassen",
     legendDelete: "item verwijderen",
     shareLocked: "Vastgezet door de beheerder",
@@ -1309,8 +1312,11 @@ const STRINGS = {
     sharedBadge: "PARTAGÉ",
     makeSharedShort: "partager",
     sharedOnShort: "partagé",
+    addItemBtn: "+ Ajouter un article",
+    whatIsThis: "Qu'est-ce que c'est ?",
+    taxAddBtn: "% TVA / frais / remise",
     legendTitle: "Que font les boutons ?",
-    legendShare: "transformer en article partagé (p.ex. une bouteille de vin ou d'eau). Le prix est alors réparti entre tous ceux qui partagent — pas attribué à l'unité.",
+    legendShare: "Articles partagés (bouteille de vin, eau, dessert) ? Touche cette icône. Le prix se répartit entre ceux qui partagent.",
     legendEdit: "modifier le nom, la quantité ou le prix",
     legendDelete: "supprimer l'article",
     shareLocked: "Verrouillé par l'administrateur",
@@ -2942,9 +2948,11 @@ export default function RundoTable() {
                     </div>
                   )
                 })}
-                <div style={{ display: "flex", gap: 6, alignItems: "center", justifyContent: "flex-end", marginTop: 8 }}>
-                  <button onClick={() => setTaxModal({ name: L.taxDefaultName, amount: "", scope: "all", ids: [] })} style={{ ...S.btn, fontWeight: 700, fontSize: 12.5, padding: "7px 14px" }}>{L.taxModalTitle}</button>
-                  <button onClick={() => setShowTaxInfo(true)} style={{ ...S.btn, fontWeight: 700, fontSize: 12.5, padding: "7px 12px" }} title={L.explainTooltip}>ℹ️</button>
+                <div style={{ display: "flex", flexDirection: "column", gap: 7, alignItems: "flex-end", marginTop: 8, width: "100%" }}>
+                  <button onClick={() => setTaxModal({ name: L.taxDefaultName, amount: "", scope: "all", ids: [] })}
+                    style={{ width: "50%", minWidth: 170, background: "rgba(20,153,176,0.12)", color: "#0f7d90", border: "1px solid rgba(20,153,176,0.4)", borderRadius: 12, padding: "11px 10px", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>{L.taxAddBtn}</button>
+                  <button onClick={() => setShowTaxInfo(true)} title={L.explainTooltip}
+                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#5a6680", textDecoration: "underline", padding: 0 }}>ⓘ {L.whatIsThis}</button>
                 </div>
               </div>
             }
@@ -3988,15 +3996,10 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         <h3 style={{ ...S.h3, marginBottom: 0, display: "flex", alignItems: "baseline", gap: 8 }}>{L.itemsOnBill}{!billOk && <span style={{ fontSize: 13, fontWeight: 800, color: "#c0392b" }}>{L.checkExcl}</span>}</h3>
       </div>
       {items.length > 0 && (
-        <details style={{ marginBottom: 10 }}>
-          <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#5a6680", listStyle: "none", display: "inline-flex", alignItems: "center", gap: 5 }}>ⓘ {L.legendTitle}</summary>
-          <div style={{ marginTop: 8, background: "rgba(90,108,166,0.06)", borderRadius: 10, padding: "10px 11px", fontSize: 12, color: "#5a6680", lineHeight: 1.55 }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-              <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 8, background: "rgba(233,196,95,0.3)" }}><ShareIcon on size={14} /></span>
-              <span>{L.legendShare}</span>
-            </div>
-          </div>
-        </details>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, background: "rgba(90,108,166,0.06)", borderRadius: 10, padding: "9px 11px" }}>
+          <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 8, background: "#fff", border: "1px solid rgba(16,24,40,0.15)" }}><ShareIcon size={15} /></span>
+          <span style={{ fontSize: 11.5, color: "#5a6680", lineHeight: 1.5 }}>{L.legendShare}</span>
+        </div>
       )}
       {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>{L.noItemsScan}</div>}
       {items.map((it) => {
@@ -4020,11 +4023,17 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                 <div style={{ flexShrink: 0, textAlign: "right", lineHeight: 1.2 }}>
                   <div style={{ fontSize: 15, fontWeight: 800, color: zeroPrice ? "#c0392b" : "#1499b0" }}>€{(it.unit_price * it.quantity).toFixed(2).replace(".", ",")}</div>
                   <div style={{ fontSize: 11, fontWeight: 600, color: zeroPrice ? "#c0392b" : "#9aa0ab" }}>
-                    {zeroPrice ? L.zeroPriceShort : it.is_shared ? L.sharedWord : `€${it.unit_price.toFixed(2).replace(".", ",")}${L.perPieceSuffix}${open > 0 ? ` · ${open} ${L.openWord}` : ""}`}
+                    {zeroPrice ? L.zeroPriceShort : it.is_shared ? L.sharedWord : `€${it.unit_price.toFixed(2).replace(".", ",")}${L.perPieceSuffix}`}
                   </div>
                 </div>
               </div>
-              <button title={it.is_shared ? L.shareToggleOn : L.shareToggleOff} style={{ ...S.iconBtn, display: "flex", alignItems: "center", justifyContent: "center", background: it.is_shared ? "rgba(233,196,95,0.3)" : "rgba(16,24,40,0.05)" }} onClick={() => onToggleShared(it)}><ShareIcon on={it.is_shared} /></button>
+              <button onClick={() => onToggleShared(it)} title={it.is_shared ? L.shareToggleOn : L.shareToggleOff}
+                style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 800, padding: "5px 9px", borderRadius: 8, cursor: "pointer",
+                  color: it.is_shared ? "#7a5300" : "#5a6680",
+                  background: it.is_shared ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
+                  border: it.is_shared ? "1px solid rgba(196,152,32,0.5)" : "1px solid rgba(16,24,40,0.15)" }}>
+                <ShareIcon on={it.is_shared} size={12} />{it.is_shared ? L.sharedOnShort : L.makeSharedShort}
+              </button>
               <button style={S.iconBtn} onClick={() => onEdit(it)}>✏️</button>
               <button style={S.iconBtn} onClick={() => onDelete(it.id)}>🗑️</button>
             </div>
@@ -4116,10 +4125,10 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
           </div>
         )
       })}
-      <div style={{ textAlign: "right", marginTop: 10, marginBottom: 2 }}>
-        <button onClick={onAddManual} style={{ ...S.btn, ...S.btnPrimary, display: "inline-block", width: "auto", padding: "8px 18px", fontSize: 13.5, fontWeight: 700 }}>{L.addItem}</button>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end", marginTop: 12, marginBottom: 2 }}>
+        <button onClick={onAddManual} style={{ ...S.btn, ...S.btnPrimary, width: "50%", minWidth: 170, padding: "11px 10px", fontSize: 13, fontWeight: 800 }}>{L.addItemBtn}</button>
+        {taxNode}
       </div>
-      {taxNode}
       {items.length > 0 && (() => {
         const units = items.reduce((s, it) => s + it.quantity, 0)
         const sum = items.reduce((s, it) => s + it.unit_price * it.quantity, 0)
@@ -4128,7 +4137,6 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1.5px solid rgba(16,24,40,0.08)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>{L.orderedItems}{units}{tax > 0 ? ` · €${sum.toFixed(2).replace(".", ",")} + ${L.taxShort} €${tax.toFixed(2).replace(".", ",")}` : ""}</span>
-              {tax === 0 && <span style={{ fontSize: 15, fontWeight: 700, color: "#5a6680" }}>€{sum.toFixed(2).replace(".", ",")}</span>}
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 7, paddingTop: 7, borderTop: tax > 0 ? "1px solid rgba(16,24,40,0.06)" : "none" }}>
               <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>{L.totalWord}</span>
@@ -4681,9 +4689,9 @@ function ShareIcon({ on, size = 20 }: { on?: boolean; size?: number }) {
   if (!on) {
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: "block" }}>
-        <circle cx="8" cy="13" r="5" fill="none" stroke="#b6bccb" strokeWidth="1.5" />
-        <circle cx="16" cy="13" r="5" fill="none" stroke="#b6bccb" strokeWidth="1.5" />
-        <circle cx="12" cy="9" r="5" fill="none" stroke="#b6bccb" strokeWidth="1.5" />
+        <circle cx="8" cy="13" r="5" fill="none" stroke="#5a6680" strokeWidth="2.2" />
+        <circle cx="16" cy="13" r="5" fill="none" stroke="#5a6680" strokeWidth="2.2" />
+        <circle cx="12" cy="9" r="5" fill="none" stroke="#5a6680" strokeWidth="2.2" />
       </svg>
     )
   }
