@@ -458,9 +458,9 @@ const STRINGS = {
     stYouHandle: "jij regelt",
     stAssignNow: "aanduiden →",
     whoJoinedHint: "💡 Hier zie je wie de link opende. Aanduiden doe je bij Toewijzen.",
-    whoAssignTitle: "📝 Wie duid jij aan?",
+    whoAssignTitle: "📝 Jij duidt aan voor:",
     youAlreadyIn: "Jij staat er al bij",
-    whoAssignSub: "En eventueel anderen: geen smartphone, geen zin, of je regelt gewoon alles zelf.",
+    whoAssignSub: "Jezelf — én voor wie geen smartphone of geen zin heeft. De rest claimt hun plaats via de link.",
     whoAssignFoot: "💡 Straks tik je bij Toewijzen aan wat jij at — en wat zij aten.",
     shareLinkBtn: "🔗 Deel de link",
     shareLinkHint: "Kies daarna je berichtenapp — WhatsApp, Messenger, sms…",
@@ -962,9 +962,9 @@ const STRINGS = {
     stYouHandle: "tu gères",
     stAssignNow: "cocher →",
     whoJoinedHint: "💡 Ici tu vois qui a ouvert le lien. Le cochage se fait dans Répartir.",
-    whoAssignTitle: "📝 Pour qui coches-tu ?",
+    whoAssignTitle: "📝 Tu coches pour :",
     youAlreadyIn: "Tu y es déjà",
-    whoAssignSub: "Et éventuellement d'autres : pas de smartphone, pas envie, ou tu gères simplement tout toi-même.",
+    whoAssignSub: "Toi-même — et pour qui n'a pas de smartphone ou pas envie. Les autres réservent leur place via le lien.",
     whoAssignFoot: "💡 Ensuite, dans Répartir, tu coches ce que tu as pris — et ce qu'ils ont pris.",
     shareLinkBtn: "🔗 Partager le lien",
     shareLinkHint: "Choisis ensuite ton app de messagerie — WhatsApp, Messenger, SMS…",
@@ -1934,28 +1934,31 @@ export default function RundoTable() {
   const joinedCount = participants.filter((p) => spotStatus(p).kind !== "free").length
 
   // Overzicht "Wie doet al mee?" — op de gasten-tab ingeklapt, op de toewijs-tab open.
-  const joinedList = (opts: { clickable?: boolean } = {}) => (
-    <div>
-      {participants.map((p) => {
-        const st = spotStatus(p)
-        const icon = st.kind === "done" ? "✅" : st.kind === "idle" ? "🟡" : st.kind === "free" ? "⚪" : "✍️"
-        const right = st.kind === "done" ? L.stAssigned(st.count)
-          : st.kind === "idle" ? L.stJoinedNothing
-          : st.kind === "free" ? L.stNobody
-          : (opts.clickable ? L.stAssignNow : L.stYouHandle)
-        const bg = st.kind === "idle" ? "rgba(243,156,18,0.07)" : st.kind === "mine" && opts.clickable ? "rgba(20,153,176,0.06)" : "transparent"
-        const clickMine = opts.clickable && st.kind === "mine"
-        return (
-          <div key={p.id} onClick={() => { if (clickMine) { setClaimMode("person"); setClaimPid(p.id) } }}
-            style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 6px", borderRadius: 7, background: bg, cursor: clickMine ? "pointer" : "default" }}>
-            <span style={{ fontSize: 13 }}>{icon}</span>
-            <b style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: st.kind === "free" ? "#9aa0ab" : "#14213a", fontWeight: st.kind === "free" ? 600 : 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{st.kind === "free" ? L.freeSpot : p.name}</b>
-            <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: st.kind === "idle" ? 800 : 600, color: st.kind === "idle" ? "#b5591a" : clickMine ? "#1499b0" : "#9aa0ab", ...(clickMine ? { border: "1px solid rgba(20,153,176,0.4)", borderRadius: 6, padding: "2px 7px" } : {}) }}>{right}</span>
-          </div>
-        )
-      })}
-    </div>
-  )
+  const joinedList = (opts: { clickable?: boolean } = {}) => {
+    // Vanaf 5 personen twee kolommen, anders wordt de lijst onnodig lang.
+    const twoCol = participants.length > 4
+    return (
+      <div style={twoCol ? { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" } : undefined}>
+        {participants.map((p) => {
+          const st = spotStatus(p)
+          const icon = st.kind === "done" ? "✅" : st.kind === "idle" ? "🟡" : st.kind === "free" ? "⚪" : "✍️"
+          // Altijd het aantal items tonen — nul in het rood, zodat je meteen ziet wie nog moet.
+          const right = st.kind === "free" ? L.stNobody : L.stAssigned(st.count)
+          const rightRed = st.kind !== "free" && st.count === 0
+          const bg = st.kind === "idle" ? "rgba(243,156,18,0.07)" : st.kind === "mine" && opts.clickable ? "rgba(20,153,176,0.06)" : "transparent"
+          const clickMine = opts.clickable && st.kind === "mine"
+          return (
+            <div key={p.id} onClick={() => { if (clickMine) { setClaimMode("person"); setClaimPid(p.id) } }}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 5px", borderRadius: 7, background: bg, cursor: clickMine ? "pointer" : "default", minWidth: 0 }}>
+              <span style={{ fontSize: 12, flexShrink: 0 }}>{icon}</span>
+              <b style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: st.kind === "free" ? "#9aa0ab" : "#14213a", fontWeight: st.kind === "free" ? 600 : 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{st.kind === "free" ? L.freeSpot : p.name}</b>
+              <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: rightRed ? 800 : 600, color: rightRed ? "#c0392b" : st.kind === "free" ? "#c3c8d2" : "#9aa0ab" }}>{right}</span>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
 
   const setGuestCount = async (target: number) => {
     if (!group) return
@@ -2555,7 +2558,9 @@ export default function RundoTable() {
   const cooldownLeft = Math.max(0, Math.ceil((cooldownUntil - nowTs) / 1000))
   const billTotal = items.filter((it) => !isTip(it)).reduce((s, it) => s + itemTotal(it), 0)
   const billOk = (group?.receipt_total ?? null) != null && Math.abs((group?.receipt_total ?? 0) - billTotal) < 0.005
-  const goGuests = () => { if (billOk) setAdminTab("guests"); else setShowShareWarn(true) }
+  // Bij elke tabwissel bovenaan beginnen, anders behoud je de scrollpositie van de vorige tab.
+  const scrollTop = () => { if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "auto" }) }
+  const goGuests = () => { if (billOk) { setAdminTab("guests"); scrollTop() } else setShowShareWarn(true) }
   const openUnits = baseItems.filter((it) => !it.is_shared)
     .reduce((s, it) => s + Math.max(0, it.quantity - claimedQty(it.id)), 0)
   const undecidedShared = baseItems.filter((it) => it.is_shared && sharerIds(it.id).length === 0)
@@ -2785,7 +2790,7 @@ export default function RundoTable() {
             { id: "guests", label: L.tabGuests },
             { id: "overview", label: L.tabAssign },
           ] as { id: AdminTab; label: string }[]).map((t) => (
-            <button key={t.id} onClick={() => { if (t.id === "overview" && !requireName()) return; setAdminTab(t.id) }} style={{
+            <button key={t.id} onClick={() => { if (t.id === "overview" && !requireName()) return; setAdminTab(t.id); scrollTop() }} style={{
               flex: 1, border: "none", borderRadius: 12, padding: "13px 4px", fontSize: 14.5, cursor: "pointer", lineHeight: 1.15,
               fontWeight: adminTab === t.id ? 800 : 700,
               background: adminTab === t.id ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#eaf6f9",
@@ -3080,7 +3085,7 @@ export default function RundoTable() {
                   <span style={{ fontSize: 12.5, color: "#14213a" }}><b>{(participants.find((x) => x.id === meId) || participants[0])?.name}</b> — {L.youAlreadyIn}</span>
                 </div>
               )}
-              <div style={{ fontSize: 12, color: "#5a6680", lineHeight: 1.5, marginBottom: 11 }}>{L.whoAssignSub}</div>
+              <div style={{ fontSize: 13, color: "#5a6680", lineHeight: 1.55, marginBottom: 11 }}>{L.whoAssignSub}</div>
               {!showNames && (
                 <>
                   <button onClick={() => { if (requireName()) setShowNames(true) }} style={{ width: "100%", border: "1.5px dashed rgba(27,42,74,0.25)", background: "#fff", borderRadius: 11, padding: "12px 10px", cursor: "pointer", fontSize: 13, fontWeight: 800, color: "#5a6680" }}>{L.othersAdd}</button>
@@ -3190,7 +3195,7 @@ export default function RundoTable() {
               )
             })()}
           </div>
-          <button onClick={() => { if (requireName()) setAdminTab("overview") }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 700 }}>{L.toAssignBtn}</button>
+          <button onClick={() => { if (requireName()) { setAdminTab("overview"); scrollTop() } }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 15, fontWeight: 700 }}>{L.toAssignBtn}</button>
         </div>
       )}
 
