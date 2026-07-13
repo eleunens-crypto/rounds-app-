@@ -535,7 +535,7 @@ const STRINGS = {
     manageDone: "✓ Klaar",
     manageDelete: "🗑️ Verwijderen",
     badgeSelf: "zelf aangemeld",
-    badgeAdmin: "via admin",
+    badgeAdmin: "admin duidt zelf aan",
     badgeMe: "jij",
     deleteTitle: "verwijderen",
     emptyList: "Nog niemand in de lijst.",
@@ -722,6 +722,10 @@ const STRINGS = {
     tapForDetail: "Tik op een naam voor het detail",
     totalTogether: "Samen",
     nothingAssigned: "Niets aangeduid.",
+    andWord: "en",
+    selfJoinedTitle: "Hebben zich al aangemeld",
+    selfJoinedAll: "Iedereen heeft zich aangemeld",
+    selfJoinedCount: (a: number, b: number) => `${a} van ${b}`,
     mismatchFinalize: (d: number) => `De bon klopt niet: €${d.toFixed(2).replace(".", ",")} verschil tussen de items en het bontotaal. Iemand betaalt dus te veel of te weinig.\n\nToch afsluiten?`,
     noItemsYet: "Nog geen items op de bon.",
     kindCostName: "Kosten",
@@ -1088,7 +1092,7 @@ const STRINGS = {
     manageDone: "✓ Terminé",
     manageDelete: "🗑️ Supprimer",
     badgeSelf: "inscrit via le lien",
-    badgeAdmin: "par l'hôte",
+    badgeAdmin: "l'hôte coche lui-même",
     badgeMe: "toi",
     deleteTitle: "supprimer",
     emptyList: "Personne dans la liste pour l'instant.",
@@ -1275,6 +1279,10 @@ const STRINGS = {
     tapForDetail: "Touche un nom pour le détail",
     totalTogether: "Ensemble",
     nothingAssigned: "Rien de coché.",
+    andWord: "et",
+    selfJoinedTitle: "Se sont déjà inscrits",
+    selfJoinedAll: "Tout le monde s'est inscrit",
+    selfJoinedCount: (a: number, b: number) => `${a} sur ${b}`,
     mismatchFinalize: (d: number) => `L'addition ne correspond pas : €${d.toFixed(2).replace(".", ",")} d'écart. Quelqu'un paiera donc trop ou trop peu.\n\nClôturer quand même ?`,
     noItemsYet: "Aucun article sur l'addition.",
     kindCostName: "Frais",
@@ -3271,6 +3279,31 @@ export default function RundoTable() {
                     <span style={{ flexShrink: 0 }}>⚠️</span>
                     <span style={{ fontSize: 12, color: "#8a4514", lineHeight: 1.5 }}>{L.shareLinkWarn}</span>
                   </div>
+                  {(() => {
+                    // Wie zich via de link aanmeldde: één rustige regel, niet aanklikbaar.
+                    const joined = participants.filter((p) => p.self_joined && p.id !== meId)
+                    if (joined.length === 0) return null
+                    const heads = joined.reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
+                    const all = heads >= totalPersons - Math.max(1, (participants.find((x) => x.id === meId)?.seats ?? 1))
+                    const names = joined.map((p) => p.name).join(", ").replace(/, ([^,]*)$/, ` ${L.andWord} $1`)
+                    return (
+                      <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 9, borderRadius: 12, padding: "11px 12px",
+                        background: all ? "rgba(39,174,96,0.06)" : "#fff",
+                        border: all ? "1.5px solid rgba(39,174,96,0.45)" : "1px solid rgba(16,24,40,0.12)" }}>
+                        <span style={{ flexShrink: 0, fontSize: 14 }}>✅</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                            <span style={{ fontSize: 12.5, fontWeight: 800, color: all ? "#1f8a4c" : "#14213a" }}>{all ? L.selfJoinedAll : L.selfJoinedTitle}</span>
+                            <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, borderRadius: 20, padding: "2px 9px", whiteSpace: "nowrap",
+                              color: all ? "#fff" : "#b5591a",
+                              background: all ? "#27ae60" : "rgba(243,156,18,0.14)",
+                              border: all ? "1px solid #27ae60" : "1px solid rgba(243,156,18,0.5)" }}>{L.selfJoinedCount(heads, totalPersons)}</span>
+                          </div>
+                          <div style={{ fontSize: 13, color: "#14213a", lineHeight: 1.5 }}>{names}</div>
+                        </div>
+                      </div>
+                    )
+                  })()}
                   <div style={{ fontSize: 11.5, color: "#5a6680", background: "rgba(90,108,166,0.06)", borderRadius: 8, padding: "8px 9px", marginTop: 9, lineHeight: 1.45 }}>{L.whoAssignFoot}</div>
                   {participants.length > 0 && (
                     <div style={{ marginTop: 13, paddingTop: 12, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
@@ -3334,10 +3367,10 @@ export default function RundoTable() {
                 const origin = p.self_joined
                   ? { label: L.badgeSelf, color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
                   : { label: L.badgeAdmin, color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
-                const badge = isMe ? { label: `${L.badgeMe} · ${L.adminBadge}`, color: "#0f7d90", bg: "rgba(20,153,176,0.18)" } : origin
+                const badge = isMe ? { label: `${L.badgeMe} · ${L.adminBadge}`, color: "#1f8a4c", bg: "rgba(39,174,96,0.15)" } : origin
                 if (twoCol) {
                   return (
-                    <div key={p.id} style={{ border: manageGuests ? "1px solid rgba(224,107,94,0.4)" : isMe ? "1px solid rgba(20,153,176,0.4)" : "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "7px 8px", background: manageGuests ? "rgba(224,107,94,0.04)" : isMe ? "rgba(20,153,176,0.07)" : "#fff" }}>
+                    <div key={p.id} style={{ border: manageGuests ? "1px solid rgba(224,107,94,0.4)" : isMe ? "1.5px solid rgba(39,174,96,0.45)" : "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "7px 8px", background: manageGuests ? "rgba(224,107,94,0.04)" : isMe ? "rgba(20,153,176,0.07)" : "#fff" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                         {namesBlock(p, 13.5)}
                         <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
@@ -3350,7 +3383,7 @@ export default function RundoTable() {
                   )
                 }
                 return (
-                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 6px", borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: isMe ? 10 : 0, background: isMe ? "rgba(20,153,176,0.06)" : "transparent" }}>
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 6px", borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: isMe ? 10 : 0, background: isMe ? "rgba(39,174,96,0.07)" : "transparent" }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       {namesBlock(p, 15)}
                       <div style={{ marginTop: 3 }}>
@@ -3363,7 +3396,9 @@ export default function RundoTable() {
                 )
               }
               const isPh = (nm?: string) => /^(Gast|Invité) \d+$/.test(nm || "")
-              const displayList = [...participants].sort((a, b) => (isPh(a.name) ? 1 : 0) - (isPh(b.name) ? 1 : 0))
+              // Wie zichzelf via de link aanmeldde, regelt zichzelf: die hoort niet in deze lijst.
+              const mine = participants.filter((p) => p.id === meId || !p.self_joined)
+              const displayList = [...mine].sort((a, b) => (isPh(a.name) ? 1 : 0) - (isPh(b.name) ? 1 : 0))
               const gridRows = Math.ceil(displayList.length / 2)
               return (
                 <div style={{ marginTop: participants.length > 0 ? 8 : 12 }}>
