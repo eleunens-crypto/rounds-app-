@@ -914,7 +914,7 @@ const STRINGS = {
     tooSlowRetry: "🔄 Toch met twee",
     taxAddBtn: "+ BTW / kosten / korting",
     legendTitle: "Wat betekenen de knopjes?",
-    legendShare: "Gedeelde items (fles wijn, water, dessert)? Tik dit icoon aan. De prijs verdeelt zich over wie meedeelt.",
+    legendShare: "Tik deze knop aan voor gedeelde items (fles wijn, water, dessert). De prijs verdeelt zich over wie meedeelt.",
     legendEdit: "naam, aantal of prijs aanpassen",
     legendDelete: "item verwijderen",
     shareLocked: "Vastgezet door de beheerder",
@@ -1495,7 +1495,7 @@ const STRINGS = {
     tooSlowRetry: "🔄 Réessayer à deux",
     taxAddBtn: "+ TVA / frais / remise",
     legendTitle: "Que font les boutons ?",
-    legendShare: "Articles partagés (bouteille de vin, eau, dessert) ? Touche cette icône. Le prix se répartit entre ceux qui partagent.",
+    legendShare: "Touche ce bouton pour les articles partagés (bouteille de vin, eau, dessert). Le prix se répartit entre ceux qui partagent.",
     legendEdit: "modifier le nom, la quantité ou le prix",
     legendDelete: "supprimer l'article",
     shareLocked: "Verrouillé par l'administrateur",
@@ -4542,7 +4542,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
       </div>
       {items.length > 0 && (
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, background: "rgba(90,108,166,0.06)", borderRadius: 10, padding: "9px 11px" }}>
-          <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 8, background: "#fff", border: "1px solid rgba(16,24,40,0.15)" }}><ShareIcon size={15} /></span>
+          <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, padding: "6px 9px", background: "linear-gradient(135deg,#f3d27c,#ecc564)", border: "1px solid rgba(196,152,32,0.55)" }}><ShareIcon on size={14} /><span style={{ fontSize: 11.5, fontWeight: 800, color: "#5c4200" }}>{L.makeSharedShort}</span></span>
           <span style={{ fontSize: 11.5, color: "#5a6680", lineHeight: 1.5 }}>{L.legendShare}</span>
         </div>
       )}
