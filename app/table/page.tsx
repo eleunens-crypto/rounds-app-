@@ -889,6 +889,7 @@ const STRINGS = {
     pickWhoShared: "Tik wie meedeelde — of kies iedereen in één keer.",
     allOfThem: (n: number) => n === 2 ? "👥 Allebei" : `👥 Allemaal (${n})`,
     clearAll: "✕ Wissen",
+    whoSharedOf: (nm: string, n: number) => `Wie van ${nm} (${n}) deelde hiervan mee?`,
     sharesInstead: (a: number, b: number) => `Jullie betalen ${a} ${a === 1 ? "aandeel" : "aandelen"} in plaats van ${b}.`,
     onlyMe: "Alleen ik",
     bothOfUs: "Wij allebei",
@@ -1470,6 +1471,7 @@ const STRINGS = {
     pickWhoShared: "Touche qui a partagé — ou choisis tout le monde d'un coup.",
     allOfThem: (n: number) => n === 2 ? "👥 Tous les deux" : `👥 Tous (${n})`,
     clearAll: "✕ Effacer",
+    whoSharedOf: (nm: string, n: number) => `Qui de ${nm} (${n}) a partagé ?`,
     sharesInstead: (a: number, b: number) => `Vous payez ${a} ${a === 1 ? "part" : "parts"} au lieu de ${b}.`,
     onlyMe: "Moi seulement",
     bothOfUs: "Nous deux",
@@ -2577,19 +2579,17 @@ export default function RundoTable() {
     if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     const mine = myQty(itemId, pid)
     const seats = Math.max(1, participants.find((p) => p.id === pid)?.seats ?? 1)
-    const isMine = pid === meId
-    if (mine > 0 || (isMine && sharePicking.has(itemId))) {
-      if (isMine) setSharePicking((cur) => { const n = new Set(cur); n.delete(itemId); return n })
+    const key = `${itemId}:${pid}`
+    if (mine > 0 || sharePicking.has(key)) {
+      setSharePicking((cur) => { const n = new Set(cur); n.delete(key); return n })
       await setClaim(itemId, pid, 0, [])
       return
     }
-    // Alleen op je plaats? Dan ben jij het meteen.
+    // Alleen op die plaats? Dan is het meteen duidelijk wie meedeelde.
     if (seats === 1) { await setClaim(itemId, pid, 1, [0]); return }
-    // Je eigen plaats met meerdere personen: kies zelf wie meedeelde (geen voorselectie).
-    if (isMine) { setSharePicking((cur) => new Set(cur).add(itemId)); return }
-    // Duid je aan vóór iemand anders (bv. een koppel dat jij regelt)? Start op 1 persoon;
-    // met de ± knopjes zet je het bij naar 2 of meer.
-    await setClaim(itemId, pid, 1, [0])
+    // Meerdere personen op één plaats: vraag wie van hen meedeelde. Dat geldt voor je eigen
+    // plaats én voor een koppel dat jij als admin regelt — zo werkt het overal hetzelfde.
+    setSharePicking((cur) => new Set(cur).add(key))
   }
 
   const shareHeads = (itemId: string) =>
@@ -3509,12 +3509,11 @@ export default function RundoTable() {
                   </div>
                   {(() => {
                     // Wie zich via de link aanmeldde: één rustige regel, niet aanklikbaar.
-                    const joined = participants.filter((p) => p.self_joined && p.id !== meId)
-                    // De teller toont hoeveel personen al een naam hebben: jijzelf, de gasten
-                    // die jij toevoegde, én wie zich via de link aanmeldde.
-                    const knownHeads = participants
-                      .filter((x) => !isFreeSpot(x))
-                      .reduce((a, x) => a + Math.max(1, x.seats ?? 1), 0)
+                    // Iedereen met een naam hoort in deze lijst: jijzelf, wie jij toevoegde,
+                    // én wie zich via de link aanmeldde. Enkel vrije plaatsen blijven eruit.
+                    const joined = participants.filter((p) => !isFreeSpot(p))
+                    // Dezelfde groep telt én levert de namen: zo kunnen ze nooit uiteenlopen.
+                    const knownHeads = joined.reduce((a, x) => a + Math.max(1, x.seats ?? 1), 0)
                     const all = knownHeads >= totalPersons
                     const names = joined.map((p) => p.name).join(", ").replace(/, ([^,]*)$/, ` ${L.andWord} $1`)
                     return (
@@ -4868,6 +4867,47 @@ function ClaimScreen(props: {
                                 )
                               })}
                         </div>
+                        {named.map((p) => {
+                          const pSeats = Math.max(1, p.seats ?? 1)
+                          const key = `${it.id}:${p.id}`
+                          if (pSeats <= 1 || fixed || !sharePicking.has(key)) return null
+                          // Zelfde vraag als bij de gasten: wie van dit koppel deelde mee?
+                          const parts = (p.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
+                          const sel = claimMembers(it.id, p.id)
+                          const allOn = sel.length === pSeats
+                          const toggle = (i: number) => {
+                            const next = sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i]
+                            setClaim(it.id, p.id, next.length, next)
+                          }
+                          const setAll = () => {
+                            if (allOn) setClaim(it.id, p.id, 0, [])
+                            else setClaim(it.id, p.id, pSeats, Array.from({ length: pSeats }, (_, i) => i))
+                          }
+                          return (
+                            <div key={key} style={{ marginTop: 9, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.3)", borderRadius: 12, padding: "11px 12px" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 9 }}>
+                                <span style={{ fontSize: 13, fontWeight: 800, color: "#14213a" }}>🍴 {L.whoSharedOf(p.name, pSeats)}</span>
+                                <button onClick={setAll} style={{ flexShrink: 0, fontSize: 11.5, fontWeight: 800, color: "#0f7d90", background: "rgba(20,153,176,0.1)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 9, padding: "5px 9px", cursor: "pointer" }}>
+                                  {allOn ? L.clearAll : L.allOfThem(pSeats)}
+                                </button>
+                              </div>
+                              <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                                {Array.from({ length: pSeats }, (_, i) => i).map((i) => {
+                                  const on = sel.includes(i)
+                                  return (
+                                    <button key={i} onClick={() => toggle(i)} style={{
+                                      flex: 1, minWidth: 80, fontSize: 13, fontWeight: 800, borderRadius: 10, padding: "10px 8px", cursor: "pointer",
+                                      border: on ? "none" : "1px solid rgba(16,24,40,0.15)",
+                                      background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
+                                      color: on ? "#5c4200" : "#14213a",
+                                    }}>{on ? "✓ " : ""}{parts[i] || `${L.personWord} ${i + 1}`}</button>
+                                  )
+                                })}
+                              </div>
+                              <div style={{ fontSize: 11, color: "#5a6680", marginTop: 8, lineHeight: 1.4 }}>{L.pickWhoShared}</div>
+                            </div>
+                          )
+                        })}
                       </div>
                     )
                   }
@@ -4999,7 +5039,7 @@ function ClaimScreen(props: {
                   </div>
                   <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...((iShare || sharePicking.has(it.id)) ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", border: "none" } : {}) }}>{(iShare || sharePicking.has(it.id)) ? L.iShareYes : L.iShareNo}</button>
                 </div>
-                {(iShare || sharePicking.has(it.id)) && mySeats > 1 && !fixed && (() => {
+                {(iShare || sharePicking.has(`${it.id}:${meId}`)) && mySeats > 1 && !fixed && (() => {
                   // Geen voorselectie: je tikt gewoon aan wie meedeelde. Eén tik volstaat,
                   // ook als dat enkel de tweede persoon is. "Allemaal" zet iedereen in één keer aan.
                   const raw = participants.find((p) => p.id === meId)?.name ?? ""
