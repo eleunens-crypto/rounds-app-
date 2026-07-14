@@ -6,10 +6,13 @@ export const runtime = "nodejs"
 export const maxDuration = 60
 
 // Modellen. Eerst het goedkoopste met de ruimste gratis quota, dan een terugval bij drukte.
+// Belangrijk: elk model heeft zijn EIGEN dagemmer. Is de dagquota van het ene op, dan kan
+// het andere nog werken — daarom springen we bij een daglimiet meteen naar het volgende model
+// in plaats van hetzelfde nog eens te proberen (dat is per definitie kansloos).
 const PRIMARY = "gemini-2.5-flash-lite"
 const FALLBACK = "gemini-2.5-flash"
 
-// Pogingen: [model, wachttijd-in-ms-voor-deze-poging]. Bij 429/5xx wordt de volgende geprobeerd.
+// Pogingen: [model, wachttijd-in-ms-voor-deze-poging].
 const TRIES: [string, number][] = [
   [PRIMARY, 0],
   [PRIMARY, 900],
@@ -24,6 +27,45 @@ const TRIES_MULTI: [string, number][] = [
 
 const RETRYABLE = new Set([429, 500, 502, 503, 504])
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+// ── Quota-analyse ────────────────────────────────────────────────────────────
+// Een 429 van Google is niet één ding. Het kan een minuutlimiet zijn (wachten helpt,
+// meestal binnen een minuut) of een DAGlimiet (wachten helpt niet, pas na middernacht
+// Pacific). Google zet dat verschil in de foutbody, samen met een concrete retryDelay.
+// Vroeger gooiden we die body weg en toonden we altijd "probeer over 30s opnieuw" —
+// ook als er die avond niets meer ging lukken.
+type QuotaInfo = { perDay: boolean; retryAfter: number | null }
+
+function readQuota(detail: string): QuotaInfo {
+  let perDay = false
+  let retryAfter: number | null = null
+  try {
+    const body = JSON.parse(detail)
+    const details = body?.error?.details
+    if (Array.isArray(details)) {
+      for (const d of details) {
+        const t = String(d?.["@type"] ?? "")
+        // {"@type":".../RetryInfo","retryDelay":"39s"}
+        if (t.endsWith("RetryInfo") && typeof d?.retryDelay === "string") {
+          const secs = parseFloat(d.retryDelay.replace(/[^0-9.]/g, ""))
+          if (!isNaN(secs) && secs > 0) retryAfter = Math.ceil(secs)
+        }
+        // {"@type":".../QuotaFailure","violations":[{"quotaId":"...PerDay..."}]}
+        if (t.endsWith("QuotaFailure") && Array.isArray(d?.violations)) {
+          for (const v of d.violations) {
+            const id = `${v?.quotaId ?? ""} ${v?.quotaMetric ?? ""}`
+            if (/per.?day|daily|PerDay/i.test(id)) perDay = true
+          }
+        }
+      }
+    }
+    // Vangnet: staat het niet netjes in de details, dan verraadt de tekst het meestal wel.
+    if (!perDay && /per day|daily limit|PerDay/i.test(detail)) perDay = true
+  } catch {
+    if (/per day|daily limit|PerDay/i.test(detail)) perDay = true
+  }
+  return { perDay, retryAfter }
+}
 
 const PROMPT = [
   "Je krijgt een of meer foto's van EEN ENKELE restaurant- of caferekening (Belgisch: Nederlands, Frans of Engels, soms door elkaar).",
@@ -143,9 +185,17 @@ export async function POST(req: NextRequest) {
   const geminiBody = buildBody(images)
   const BT = String.fromCharCode(96)
   let lastStatus = 0
+  // Wat we onthouden over de mislukking, zodat de app de gebruiker iets zinnigs kan zeggen.
+  let quotaDay = false          // dagquota op -> wachten heeft geen zin
+  let retryAfter: number | null = null // wat Google zelf als wachttijd opgeeft
+  const dayExhausted = new Set<string>() // modellen waarvan de dagemmer leeg is
+
   const tries = images.length > 1 ? TRIES_MULTI : TRIES
 
   for (const [model, wait] of tries) {
+    // Is de dagquota van dit model al leeg gebleken, dan is opnieuw proberen zinloos:
+    // sla over en gebruik de poging niet. Scheelt een verzoek én bijna een seconde wachten.
+    if (dayExhausted.has(model)) continue
     if (wait) await sleep(wait)
     try {
       const url =
@@ -181,8 +231,22 @@ export async function POST(req: NextRequest) {
       }
       lastStatus = resp.status
       const detail = await resp.text()
-      console.error("Gemini-fout:", model, resp.status, detail)
-      // Niet-herhaalbare fout (bv. 400/403): volgende poging heeft geen zin met dit type -> stop.
+      console.error("Gemini-fout:", model, resp.status, detail.slice(0, 400))
+
+      if (resp.status === 429) {
+        const q = readQuota(detail)
+        // Google's eigen wachttijd wint van onze gok. We nemen de langste die we zagen.
+        if (q.retryAfter != null) retryAfter = Math.max(retryAfter ?? 0, q.retryAfter)
+        if (q.perDay) {
+          dayExhausted.add(model)
+          quotaDay = true
+        }
+        // Bij een minuutlimiet heeft 900 ms wachten geen enkele zin (het venster is 60s).
+        // Dus ook dan: niet nog eens met hetzelfde model, meteen door naar het volgende.
+        if (!q.perDay) dayExhausted.add(model)
+        continue
+      }
+      // Niet-herhaalbare fout (bv. 400/403): volgende poging heeft geen zin -> stop.
       if (!RETRYABLE.has(resp.status)) break
     } catch (e) {
       console.error("scan-receipt netwerkfout:", e)
@@ -190,6 +254,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Alles mislukt -> de app valt terug op de lokale scan.
-  return NextResponse.json({ error: "gemini_error", status: lastStatus }, { status: 502 })
+  // Is élk model voor vandaag op, dan is dit geen tijdelijke storing maar een muur.
+  // De app toont dan geen aftelklok, maar stuurt de gebruiker naar de snelle scan.
+  const allDay = quotaDay && dayExhausted.size >= new Set(tries.map(([m]) => m)).size
+
+  return NextResponse.json(
+    {
+      error: "gemini_error",
+      status: lastStatus,
+      reason: allDay ? "quota_day" : lastStatus === 429 ? "rate_limit" : "unavailable",
+      retryAfter, // seconden, zoals Google ze zelf opgeeft (of null)
+    },
+    { status: 502 },
+  )
 }
