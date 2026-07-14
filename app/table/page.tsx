@@ -308,17 +308,35 @@ async function scanReceipt(files: File | File[], onProgress?: (p: number) => voi
     // AI-oproep over de tijdslimiet van de server (504). Eén foto blijft op volle kwaliteit.
     // Eén foto mag scherper: dan is er tijd genoeg en blijven kleine letters leesbaar
     // (belangrijk als iemand de hele bon in één beeld probeert te vatten).
-    const maxW = list.length > 1 ? 1150 : 2000
-    const quality = list.length > 1 ? 0.72 : 0.85
-    const images = [] as { imageBase64: string; mimeType: string }[]
-    for (const f of list) {
-      images.push({ imageBase64: await fileToScaledBase64(f, maxW, quality), mimeType: "image/jpeg" })
+    let maxW = list.length > 1 ? 1150 : 2000
+    let quality = list.length > 1 ? 0.72 : 0.85
+    // De server weigert bodies boven ~4,5 MB en doet dat meteen, zonder de AI aan te roepen —
+    // dat kwam bij de gebruiker binnen als "niet beschikbaar", binnen de seconde. Gsm-foto's zijn
+    // veel zwaarder dan testfoto's op desktop, dus verkleinen we tot de payload zeker past.
+    const LIMIT = 3_000_000
+    let images = [] as { imageBase64: string; mimeType: string }[]
+    for (let attempt = 0; attempt < 4; attempt++) {
+      images = []
+      for (const f of list) {
+        images.push({ imageBase64: await fileToScaledBase64(f, maxW, quality), mimeType: "image/jpeg" })
+      }
+      const bytes = images.reduce((n, im) => n + im.imageBase64.length, 0)
+      if (bytes <= LIMIT) break
+      if (attempt === 3) {
+        console.warn("AI-scan: foto blijft te groot (" + Math.round(bytes / 1024) + " kB)")
+        return { items: null, total: null, reason: "unavailable", detail: "foto te groot" }
+      }
+      maxW = Math.round(maxW * 0.75)
+      quality = Math.max(0.6, quality - 0.08)
     }
     onProgress?.(0.35)
+    // Alleen `images` versturen. De server leest dat veld eerst; `imageBase64` was een oud
+    // veld voor één foto en werd nooit meer gelezen — maar verdubbelde wel de payload,
+    // waardoor grote gsm-foto's tegen de bodylimiet aanliepen.
     const resp = await fetch("/api/scan-receipt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ images, imageBase64: images[0]?.imageBase64, mimeType: "image/jpeg" }),
+      body: JSON.stringify({ images, mimeType: "image/jpeg" }),
     })
     onProgress?.(0.85)
     if (!resp.ok) {
@@ -350,7 +368,7 @@ async function scanReceipt(files: File | File[], onProgress?: (p: number) => voi
     return { items: null, total: null, reason: "empty" }
   } catch (e) {
     console.warn("AI-scan mislukt:", e)
-    return { items: null, total: null, reason: "unavailable" }
+    return { items: null, total: null, reason: "unavailable", detail: e instanceof Error ? e.message.slice(0, 120) : "netwerkfout" }
   }
 }
 
@@ -4307,9 +4325,13 @@ export default function RundoTable() {
                         </label>
                       )}
                     </div>
-                    <button onClick={scanPhotos} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 14.5, fontWeight: 800 }}>{photos.length > 1 ? L.readBillBtn2 : L.readBillBtn}</button>
-                    <div style={{ fontSize: 12.5, color: "#8a93a3", textAlign: "center", marginTop: 8, lineHeight: 1.45 }}>{L.scanSubNote}</div>
-                    {photos.length > 1 && <div style={{ fontSize: 10.5, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>{L.countsAsOne}</div>}
+                    {scanFail?.reason !== "unavailable" && (
+                      <>
+                        <button onClick={scanPhotos} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 14.5, fontWeight: 800 }}>{photos.length > 1 ? L.readBillBtn2 : L.readBillBtn}</button>
+                        <div style={{ fontSize: 12.5, color: "#8a93a3", textAlign: "center", marginTop: 8, lineHeight: 1.45 }}>{L.scanSubNote}</div>
+                        {photos.length > 1 && <div style={{ fontSize: 10.5, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>{L.countsAsOne}</div>}
+                      </>
+                    )}
                   </div>
                 )}
               </>
