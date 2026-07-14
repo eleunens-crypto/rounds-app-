@@ -659,6 +659,10 @@ const STRINGS = {
     qtyLabel: "Aantal",
     pricePerLabel: "Prijs/stuk (€)",
     lineTotal: "Regeltotaal",
+    lineTotalLabel: "Regeltotaal (€)",
+    priceHint: "Pas één van beide aan — het andere volgt.",
+    sharedHintOn: "De prijs verdeelt zich over wie meedeelt.",
+    sharedHintOff: "Gedeeld item (wijn, water…)? Tik de knop aan.",
     sharedCheckbox: "Gedeeld item (wijn, water...) — splitsen over wie meedeelt",
     saveBtn: "💾 Opslaan",
     newItemTitle: "➕ Nieuw item",
@@ -1245,6 +1249,10 @@ const STRINGS = {
     qtyLabel: "Quantité",
     pricePerLabel: "Prix/pièce (€)",
     lineTotal: "Total de la ligne",
+    lineTotalLabel: "Total ligne (€)",
+    priceHint: "Modifie l'un des deux — l'autre suit.",
+    sharedHintOn: "Le prix se répartit entre ceux qui partagent.",
+    sharedHintOff: "Article partagé (vin, eau…) ? Touche le bouton.",
     sharedCheckbox: "Article partagé (vin, eau…) — répartir entre ceux qui le partagent",
     saveBtn: "💾 Enregistrer",
     newItemTitle: "➕ Nouvel article",
@@ -4385,15 +4393,36 @@ export default function RundoTable() {
                 <label style={S.lbl}>{L.pricePerLabel}</label>
                 <input type="number" step="0.01" value={editItem.unit_price || ""} onChange={(e) => setEditItem({ ...editItem, unit_price: parseFloat(e.target.value) || 0 })} style={{ ...S.input, width: "100%", boxSizing: "border-box" }} />
               </div>
-              <div style={{ paddingBottom: 9 }}>
-                <div style={{ fontSize: 11, color: "#888", fontWeight: 600 }}>{L.lineTotal}</div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: "#14213a", whiteSpace: "nowrap" }}>€{((editItem.unit_price || 0) * (editItem.quantity || 0)).toFixed(2).replace(".", ",")}</div>
+              <div style={{ flex: 1, minWidth: 90 }}>
+                <label style={{ ...S.lbl, color: "#0f7d90", fontWeight: 800 }}>{L.lineTotalLabel}</label>
+                <input type="number" step="0.01"
+                  value={editItem.quantity > 0 ? +((editItem.unit_price || 0) * editItem.quantity).toFixed(2) : ""}
+                  onChange={(e) => setEditItem((cur) => {
+                    if (!cur) return cur
+                    // Je vult het lijntotaal in zoals het op de bon staat; de stukprijs volgt.
+                    const total = parseFloat(e.target.value)
+                    const q = Math.max(1, cur.quantity || 1)
+                    if (!isFinite(total)) return { ...cur, unit_price: 0 }
+                    return { ...cur, unit_price: +(total / q).toFixed(4) }
+                  })}
+                  style={{ ...S.input, width: "100%", boxSizing: "border-box", fontWeight: 800, border: "1.5px solid rgba(20,153,176,0.55)", background: "rgba(20,153,176,0.05)" }} />
               </div>
             </div>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, marginBottom: 16, cursor: "pointer" }}>
-              <input type="checkbox" checked={editItem.is_shared} onChange={(e) => setEditItem({ ...editItem, is_shared: e.target.checked })} />
-              <ShareIcon on size={18} /> {L.sharedCheckbox}
-            </label>
+            <div style={{ fontSize: 10, color: "#9aa0ab", marginTop: -4, marginBottom: 12 }}>{L.priceHint}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 13 }}>
+              <button onClick={() => setEditItem((cur) => cur ? { ...cur, is_shared: !cur.is_shared } : cur)}
+                style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, padding: "6px 9px", cursor: "pointer",
+                  border: editItem.is_shared ? "1px solid rgba(196,152,32,0.55)" : "1px solid rgba(16,24,40,0.15)",
+                  background: editItem.is_shared ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff" }}>
+                <ShareIcon on={editItem.is_shared} size={14} />
+                <span style={{ fontSize: 11.5, fontWeight: editItem.is_shared ? 800 : 700, color: editItem.is_shared ? "#5c4200" : "#5a6680" }}>
+                  {editItem.is_shared ? L.sharedOnShort : L.makeSharedShort}
+                </span>
+              </button>
+              <span style={{ fontSize: 11.5, color: editItem.is_shared ? "#5a6680" : "#9aa0ab", lineHeight: 1.4 }}>
+                {editItem.is_shared ? L.sharedHintOn : L.sharedHintOff}
+              </span>
+            </div>
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setEditItem(null)}>{L.cancel}</button>
               <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={saveItem}>{L.saveBtn}</button>
