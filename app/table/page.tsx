@@ -705,6 +705,12 @@ const STRINGS = {
     taxModalTitle: "🧮 BTW / kosten / korting",
     taxDesc: "Aparte BTW, Kosten of Kortingen?",
     kindCost: "💰 Kosten",
+    wordCost: "Kosten",
+    wordVat: "BTW",
+    wordDiscount: "Korting",
+    sugCost: ["Couvert", "Bediening", "Servicekost"],
+    sugVat: ["BTW 6%", "BTW 12%", "BTW 21%"],
+    sugDiscount: ["Menukorting", "Kortingsbon", "Aperitief gratis"],
     kindVat: "🧮 BTW",
     kindDiscount: "🏷️ Korting",
     phCost: "Omschrijving (bv. Couvert, Bediening)",
@@ -1300,6 +1306,12 @@ const STRINGS = {
     taxModalTitle: "🧮 TVA / frais / réduction",
     taxDesc: "TVA, frais ou réductions séparés ?",
     kindCost: "💰 Frais",
+    wordCost: "Frais",
+    wordVat: "TVA",
+    wordDiscount: "Réduction",
+    sugCost: ["Couvert", "Service", "Frais de service"],
+    sugVat: ["TVA 6%", "TVA 12%", "TVA 21%"],
+    sugDiscount: ["Réduction menu", "Bon de réduction", "Apéritif offert"],
     kindVat: "🧮 TVA",
     kindDiscount: "🏷️ Réduction",
     phCost: "Description (p.ex. Couvert, Service)",
@@ -1672,6 +1684,7 @@ export default function RundoTable() {
   const [fillingSpots, setFillingSpots] = useState<string[]>([])  // vrije plaatsen die je nu een naam geeft
   const [askSeats, setAskSeats] = useState(false)  // "voor hoeveel personen?" bij het toevoegen
   const [roundingOk, setRoundingOk] = useState(false)  // centenverschil bewust aanvaard
+  const [totalDraft, setTotalDraft] = useState<string | null>(null)  // wat je intikt bij "regeltotaal"
   const [billMismatchAck, setBillMismatchAck] = useState(false)  // bewust doorgegaan ondanks verschil
   const [showJoined, setShowJoined] = useState(false)
   // Bewaarde foto van de laatste scan, zodat je een mislukte AI-scan opnieuw kan proberen.
@@ -2550,7 +2563,7 @@ export default function RundoTable() {
       quantity: editItem.quantity, is_shared: editItem.is_shared,
     }).eq("id", editItem.id)
     if (error) { setError(L.errSave); return }
-    setEditItem(null); await loadAll(group.id)
+    setTotalDraft(null); setEditItem(null); await loadAll(group.id)
   }
 
   const toggleShared = async (it: BillItem) => {
@@ -3240,7 +3253,7 @@ export default function RundoTable() {
           <ItemList
             items={baseItems} claimedQty={claimedQty} participants={participants} claimsForItem={claimsForItem}
             sharerIds={sharerIds} shareHeads={shareHeads} toggleShareClaim={toggleShareClaim} setShareFixed={setShareFixed}
-            onEdit={setEditItem} onToggleShared={toggleShared} onDelete={deleteItem} onSetExpected={isAdmin ? setShareExpected : undefined} onAddManual={() => openNewItem("bill")} bareBill
+            onEdit={(it) => { setTotalDraft(null); setEditItem(it) }} onToggleShared={toggleShared} onDelete={deleteItem} onSetExpected={isAdmin ? setShareExpected : undefined} onAddManual={() => openNewItem("bill")} bareBill
             recentItemId={recentItemId} onGoGuests={goGuests}
             scanFlags={scanFlags}
             billOk={billOk}
@@ -3318,7 +3331,7 @@ export default function RundoTable() {
                   )
                 })}
                 <div style={{ display: "flex", flexDirection: "column", gap: 7, alignItems: "flex-end", marginTop: 8, width: "100%" }}>
-                  <button onClick={() => setTaxModal({ kind: "cost", mode: "amount", pct: "21", name: "", amount: "", scope: "all", ids: [] })}
+                  <button onClick={() => setTaxModal({ kind: "cost", mode: "amount", pct: "21", name: L.wordCost, amount: "", scope: "all", ids: [] })}
                     style={{ width: "62%", minWidth: 190, background: "rgba(20,153,176,0.12)", color: "#0f7d90", border: "1px solid rgba(20,153,176,0.4)", borderRadius: 12, padding: "11px 10px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{L.taxAddBtn}</button>
                   <button onClick={() => setShowTaxInfo(true)} title={L.explainTooltip}
                     style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#5a6680", textDecoration: "underline", padding: 0 }}>ⓘ {L.whatIsThis}</button>
@@ -3886,12 +3899,14 @@ export default function RundoTable() {
         const amtNum = parseFloat((tm.amount || "").replace(",", ".")) || 0
         const computed = tm.mode === "pct" ? (base * pctNum) / 100 : amtNum
         const ready = computed > 0 && (tm.scope === "all" || tm.ids.length > 0)
+        const kindWord = (k: "cost" | "vat" | "discount") => k === "cost" ? L.wordCost : k === "vat" ? L.wordVat : L.wordDiscount
+        const suggestions = tm.kind === "cost" ? L.sugCost : isVat ? L.sugVat : L.sugDiscount
         const ph = tm.kind === "cost" ? L.phCost : isVat ? L.phVat : L.phDiscount
         const kindBtn = (k: "cost" | "vat" | "discount", label: string) => {
           const on = tm.kind === k
           const danger = k === "discount"
           return (
-            <button key={k} onClick={() => setTaxModal({ ...tm, kind: k, mode: k === "vat" ? tm.mode : "amount" })}
+            <button key={k} onClick={() => setTaxModal({ ...tm, kind: k, name: kindWord(k), mode: k === "vat" ? tm.mode : "amount" })}
               style={{ flex: 1, textAlign: "center", borderRadius: 10, padding: "9px 4px", fontSize: 12.5, fontWeight: 800, cursor: "pointer",
                 color: on ? "#fff" : "#5a6680",
                 background: on ? (danger ? "linear-gradient(135deg,#e07a5f,#c0392b)" : "linear-gradient(135deg,#1499b0,#22b8cf)") : "#fff",
@@ -3921,6 +3936,19 @@ export default function RundoTable() {
               </div>
             )}
 
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9aa0ab", marginBottom: 4 }}>{L.taxDesc}</div>
+            <input value={tm.name} onChange={(e) => setTaxModal({ ...tm, name: e.target.value })} placeholder={ph}
+              style={{ width: "100%", boxSizing: "border-box", border: "1px solid rgba(16,24,40,0.15)", borderRadius: 10, padding: "9px 11px", fontSize: 14, color: "#14213a", marginBottom: 6 }} />
+            {/* Eén tik en de omschrijving staat er — en passant zie je dat het veld aanpasbaar is. */}
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
+              {suggestions.map((sug) => (
+                <button key={sug} onClick={() => setTaxModal({ ...tm, name: sug })}
+                  style={{ fontSize: 10.5, fontWeight: 700, borderRadius: 7, padding: "4px 8px", cursor: "pointer", border: "none",
+                    color: tm.name === sug ? "#0f7d90" : "#5a6680",
+                    background: tm.name === sug ? "rgba(20,153,176,0.14)" : "rgba(90,108,166,0.09)" }}>{sug}</button>
+              ))}
+            </div>
+
             {isVat && tm.mode === "pct" ? (
               <>
                 <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
@@ -3949,11 +3977,9 @@ export default function RundoTable() {
               </>
             ) : (
               <>
-                <input value={tm.name} onChange={(e) => setTaxModal({ ...tm, name: e.target.value })} placeholder={ph}
-                  style={{ width: "100%", boxSizing: "border-box", border: "1px solid rgba(16,24,40,0.15)", borderRadius: 12, padding: "10px 12px", fontSize: 13.5, color: "#14213a", marginBottom: 9 }} />
                 <div style={{ display: "flex", alignItems: "center", gap: 5, border: `1px solid ${isDisc ? "rgba(192,57,43,0.4)" : "rgba(16,24,40,0.15)"}`, background: isDisc ? "rgba(192,57,43,0.04)" : "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
                   <span style={{ fontSize: 15, fontWeight: 800, color: isDisc ? "#c0392b" : "#5a6680" }}>{isDisc ? "−€" : "€"}</span>
-                  <input type="text" inputMode="decimal" value={tm.amount} onChange={(e) => setTaxModal({ ...tm, amount: e.target.value })} placeholder="5,00"
+                  <input type="text" inputMode="decimal" value={tm.amount} onChange={(e) => setTaxModal({ ...tm, amount: e.target.value })} placeholder="0,00"
                     style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 13.5, fontWeight: 700, color: "#14213a" }} />
                 </div>
               </>
@@ -4443,15 +4469,16 @@ export default function RundoTable() {
               <div style={{ flex: 1, minWidth: 90 }}>
                 <label style={{ ...S.lbl, color: "#0f7d90", fontWeight: 800 }}>{L.lineTotalLabel}</label>
                 <input type="number" step="0.01"
-                  value={editItem.quantity > 0 ? +((editItem.unit_price || 0) * editItem.quantity).toFixed(2) : ""}
-                  onChange={(e) => setEditItem((cur) => {
-                    if (!cur) return cur
-                    // Je vult het lijntotaal in zoals het op de bon staat; de stukprijs volgt.
-                    const total = parseFloat(e.target.value)
-                    const q = Math.max(1, cur.quantity || 1)
-                    if (!isFinite(total)) return { ...cur, unit_price: 0 }
-                    return { ...cur, unit_price: +(total / q).toFixed(4) }
-                  })}
+                  value={totalDraft ?? (editItem.quantity > 0 ? +((editItem.unit_price || 0) * editItem.quantity).toFixed(2) : "")}
+                  onChange={(e) => {
+                    // Toon precies wat je tikt; de stukprijs volgt meteen, maar stuurt het veld niet terug.
+                    const raw = e.target.value
+                    setTotalDraft(raw)
+                    const total = parseFloat(raw)
+                    const q = Math.max(1, editItem.quantity || 1)
+                    setEditItem((cur) => cur ? { ...cur, unit_price: isFinite(total) ? +(total / q).toFixed(4) : 0 } : cur)
+                  }}
+                  onBlur={() => setTotalDraft(null)}
                   style={{ ...S.input, width: "100%", boxSizing: "border-box", fontWeight: 800, border: "1.5px solid rgba(20,153,176,0.55)", background: "rgba(20,153,176,0.05)" }} />
               </div>
             </div>
@@ -4471,7 +4498,7 @@ export default function RundoTable() {
               </span>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, flex: 1 }} onClick={() => setEditItem(null)}>{L.cancel}</button>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => { setTotalDraft(null); setEditItem(null) }}>{L.cancel}</button>
               <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={saveItem}>{L.saveBtn}</button>
             </div>
           </div>
