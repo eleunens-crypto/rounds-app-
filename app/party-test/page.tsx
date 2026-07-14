@@ -267,7 +267,7 @@ const T = {
     noFavsHere: "Geen favorieten hier.",
     showAll: "📖 toon alles",
     assign: "Toewijzen",
-    assignHint: "— tik om toe te wijzen",
+    assignHint: "{L.assignHint}",
     assigned: "✓ toegewezen",
     eachOne: "👥 elk 1",
     eachOneConfirm: (n: string, meer: boolean) => `${n} ${meer ? "hebben" : "heeft"} er nu al 2 of meer. Met "elk 1" krijgt iedereen er precies 1.`,
@@ -358,7 +358,7 @@ const T = {
     drank: "dronk",
     settleTogether: "👥 Rekent er iemand samen af?",
     settleTogetherInfo: "Voor koppels, huisgenoten, wie samen naar huis rijdt. Iedereen houdt zijn eigen drankjes — enkel het eindbedrag wordt samengeteld.",
-    tapWhoWith: (n: string) => `Tik nu op wie samen met ${n} afrekent.`,
+    {L.tapWhoWith(settleGroups.find((g) => g.key === settlePick)?.label ?? "")}
     separateAgain: "Weer apart zetten:",
     depositAdvanced: "waarborg (voorgeschoten)",
     cardLoss: "verlies drankkaart (gedeeld)",
@@ -372,7 +372,7 @@ const T = {
     priceLabel: "Richtprijs",
     priceHint: "Nodig om de rekening achteraf eerlijk te verdelen. Een schatting volstaat.",
     coinsLabel: "Coins",
-    coinsAuto: "(leeg = automatisch)",
+    coinsAuto: "{L.coinsAuto}",
     addBtn: "Toevoegen",
     remaining: (n: number, max: number) => `Nog ${n} van je ${max} eigen drankjes over`,
     addedByYou: "Door jou toegevoegd",
@@ -834,7 +834,7 @@ export default function PartyTest() {
     }
     loadParty(groupId)
   }
-  const eachOne = (did: string) => { const hi = people.filter((p) => (cart[did]?.[p.id] ?? 0) >= 2).map((p) => p.name); if (hi.length > 0) { setConfirmDlg({ msg: `${hi.join(" en ")} ${hi.length === 1 ? "heeft" : "hebben"} er nu al 2 of meer. Met "elk 1" krijgt iedereen er precies één — ${hi.join(" en ")} ${hi.length === 1 ? "gaat" : "gaan"} dus terug naar 1.`, yes: "Ja, iedereen op 1", onYes: () => { setEachOne(did); setConfirmDlg(null) } }) } else setEachOne(did) }
+  const eachOne = (did: string) => { const hi = people.filter((p) => (cart[did]?.[p.id] ?? 0) >= 2).map((p) => p.name); if (hi.length > 0) { setConfirmDlg({ msg: `${hi.join(" en ")} ${hi.length === 1 ? "heeft" : "hebben"} er nu al 2 of meer. Met "elk 1" krijgt iedereen er precies één — ${hi.join(" en ")} ${hi.length === 1 ? "gaat" : "gaan"} dus terug naar 1.`, yes: L.yesEachOne, onYes: () => { setEachOne(did); setConfirmDlg(null) } }) } else setEachOne(did) }
   const drinkTotal = (did: string) => Object.values(cart[did] ?? {}).reduce((a, b) => a + b, 0) + (cartAnon[did] ?? 0)
   const roundItems = useMemo(() => drinks.reduce((s, d) => s + drinkTotal(d.id), 0), [cart, cartAnon, drinks]) // eslint-disable-line
   const resumeRound = () => { if (blockIfUnpaid()) return; setActiveCat(catsPresent[0]); setView("order") }
@@ -842,7 +842,7 @@ export default function PartyTest() {
   const roundIsPaid = (r: Round) => (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))
   const unpaidIdx = () => rounds.findIndex((r) => !roundIsPaid(r))
   const paidCount = rounds.filter(roundIsPaid).length
-  const blockIfUnpaid = () => { const i = unpaidIdx(); if (i < 0) return false; setNotice(`Ronde ${i + 1} is nog niet betaald. Rond die betaling eerst af.`); setView("confirmed"); return true }
+  const blockIfUnpaid = () => { const i = unpaidIdx(); if (i < 0) return false; setNotice(L.roundUnpaid(i + 1)); setView("confirmed"); return true }
   const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon, drinks]) // eslint-disable-line
   const pickedUpOf = (pid: string) => drinks.reduce((a, d) => a + (d.cup ? aQty(d.id, pid) : 0), 0)
 
@@ -894,7 +894,7 @@ export default function PartyTest() {
     return { ...r, amount, payers, potPart }
   }
   const rSetAmount = (idx: number, v: number) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, v) })); setDirtyRound(idx) }
-  const rTogglePot = (idx: number) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = !((r.potPart || 0) > 0); if (usePot && potAvailFor(idx) <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg — leg eerst bij.`); return r } return rRedistribute(r, idx, usePot, persons, r.amount) })); setDirtyRound(idx) }
+  const rTogglePot = (idx: number) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = !((r.potPart || 0) > 0); if (usePot && potAvailFor(idx) <= 0.005) { setNotice(L.potEmpty(potIsCard)); return r } return rRedistribute(r, idx, usePot, persons, r.amount) })); setDirtyRound(idx) }
   const rSetPayerAmt = (idx: number, pid: string, v: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, payers: { ...(r.payers || {}), [pid]: Math.max(0, v) } } : r)); setDirtyRound(idx) }
   const rSetPotAmt = (idx: number, v: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, potPart: Math.max(0, Math.min(v, Math.max(0, potAvailFor(idx)))) } : r)); setDirtyRound(idx) }
   const rPaidSum = (r: Round) => (r.potPart || 0) + Object.values(r.payers || {}).reduce((a, b) => a + (b || 0), 0)
@@ -921,7 +921,7 @@ export default function PartyTest() {
     if (error) setNotice("Naam opslaan mislukt: " + error.message)
   }
   const personHasDrinks = (pid: string) => rounds.some((r) => Object.values(r.orders).some((o) => (o?.[pid] ?? 0) > 0)) || Object.values(cart).some((o) => (o?.[pid] ?? 0) > 0)
-  const removePerson = (id: string) => { const pp = people.find((x) => x.id === id); if (personHasDrinks(id)) { setNotice(`${pp?.name || "Deze persoon"} heeft al drankjes in een rondje en kan niet verwijderd worden. Verwijder eerst die drankjes.`); return } supabase.from("party_people").delete().eq("id", id).then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message) }) }
+  const removePerson = (id: string) => { const pp = people.find((x) => x.id === id); if (personHasDrinks(id)) { setNotice(L.personHasDrinks(pp?.name || L.thisPerson)); return } supabase.from("party_people").delete().eq("id", id).then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message) }) }
   const removeLastPerson = () => { const last = people[people.length - 1]; if (!last) return; removePerson(last.id) }
 
   // ── Laden & live houden ─────────────────────────────────────────────────────
@@ -1170,7 +1170,7 @@ export default function PartyTest() {
       setOnbPotActive(false)
       const willHave = potContribTotal + added
       if (potChosen && willHave <= 0.005) {
-        setConfirmDlg({ msg: `Je koos voor een ${potIsCard ? "drankkaart" : "pot"}, maar er is nog niks ingelegd. Toch zonder verder gaan? Je kan later nog toevoegen via de knop bovenaan.`, yes: `Toch verder zonder ${potIsCard ? "drankkaart" : "pot"}`, onYes: () => { setConfirmDlg(null); setPotChosen(false); setView("settings") }, onNo: () => { setConfirmDlg(null); setShowPot(true); setOnbPotActive(true) } })
+        setConfirmDlg({ msg: `Je koos voor een ${potIsCard ? "drankkaart" : "pot"}, maar er is nog niks ingelegd. Toch zonder verder gaan? Je kan later nog toevoegen via de knop bovenaan.`, yes: L.anywayWithout(potIsCard), onYes: () => { setConfirmDlg(null); setPotChosen(false); setView("settings") }, onNo: () => { setConfirmDlg(null); setShowPot(true); setOnbPotActive(true) } })
         return
       }
       setView("settings")
@@ -1193,7 +1193,7 @@ export default function PartyTest() {
     setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setPotBuilderOpen(false)
   }
   const cancelEditPot = () => { setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setPotBuilderOpen(false) }
-  const removePotRound = (id: string, label: string) => setConfirmDlg({ msg: `De ${label} verwijderen uit de pot? Dit kan niet ongedaan gemaakt worden.`, yes: "Ja, verwijderen", onYes: () => {
+  const removePotRound = (id: string, label: string) => setConfirmDlg({ msg: L.removeContribConfirm(label), yes: L.yesCancel, onYes: () => {
     supabase.from("party_pot").delete().eq("id", id).then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
     setPotRounds((rs) => rs.filter((r) => r.id !== id)); setConfirmDlg(null)
   } })
@@ -1208,8 +1208,8 @@ export default function PartyTest() {
     if (openRoundId) supabase.from("party_rounds").delete().eq("id", openRoundId).then(() => { if (groupId) loadParty(groupId) })
     setOpenRoundId(null)
     setRounds((rs) => (rs.length && !roundIsPaid(rs[rs.length - 1]) ? rs.slice(0, -1) : rs)); setCart({}); setCartAnon({}); setAmountDraft(""); setPayPot(false); setPayPersons([]); setPayAmts({}); setPotAmtDraft(""); setPaidConfirmed(false) }
-  const goStart = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("start") } }); else setView("start") }
-  const goHome = () => { setFromOnboarding(false); if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("settings") } }); else setView("settings") }
+  const goStart = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("start") } }); else setView("start") }
+  const goHome = () => { setFromOnboarding(false); if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("settings") } }); else setView("settings") }
   const potAvailNow = () => { const curPotPart = rounds.length ? (rounds[rounds.length - 1].potPart || 0) : 0; return potContribTotal - (potSpent - curPotPart) }
   const paymentState = () => {
     const total = parseFloat(amountDraft.replace(",", ".")) || 0
@@ -1231,7 +1231,7 @@ export default function PartyTest() {
     let valid = true, reason = ""
     if (total <= 0) { valid = false; reason = "Vul eerst exact betaald bedrag in." }
     else if (nPayers === 0) { valid = false; reason = L.whoPaid }
-    else if (payPot && potAvail <= 0.005) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} is leeg — kies een persoon als betaler.` }
+    else if (payPot && potAvail <= 0.005) { valid = false; reason = L.potEmpty(potIsCard) }
     else if (potOver) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} heeft maar ${euro(Math.max(0, potAvail))} — verlaag het bedrag of leg bij.` }
     else if (multi && !allFilled) { valid = false; reason = L.fillPerPayer }
     const tol = 0.005 + 0.01 * Math.max(0, nPayers - 1)
@@ -1257,7 +1257,7 @@ export default function PartyTest() {
     setPaidConfirmed(false)
   }
   const togglePayPerson = (pid: string) => { const next = payPersons.includes(pid) ? payPersons.filter((x) => x !== pid) : [...payPersons, pid]; setPayPersons(next); autoSplit(next, payPot); setPaidConfirmed(false) }
-  const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); dropUnpaidRound(); to() } }); else to() }
+  const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); to() } }); else to() }
   // Instellingen van het feest wegschrijven. Zonder dit ziet een gast die scant de
   // verkeerde modus: euro's terwijl de rest met coins werkt, of geen waarborg.
   const persistSettings = (extra?: Record<string, unknown>) => {
@@ -1317,7 +1317,7 @@ export default function PartyTest() {
     // wegen tegen de rest, en dan is de verdeling gewoon fout.
     if (!(prijs > 0)) { setNotice(L.needPrice); return }
     const sleutel = drinkKey(naam)
-    if (drinks.some((d) => d.id === sleutel)) { setNotice(`"${naam}" staat al in de lijst.`); return }
+    if (drinks.some((d) => d.id === sleutel)) { setNotice(L.alreadyExists(naam)); return }
     if (!groupId) return
 
     const coins = pay === "coin"
@@ -1330,14 +1330,14 @@ export default function PartyTest() {
       p_max_person: MAX_EIGEN_PERSOON, p_max_group: MAX_EIGEN_GROEP,
     })
     if (error) {
-      if (/PERSOON_VOL/.test(error.message)) setNotice(`Je kan maximaal ${MAX_EIGEN_PERSOON} eigen drankjes toevoegen.`)
-      else if (/GROEP_VOL/.test(error.message)) setNotice(`De groep zit aan het maximum van ${MAX_EIGEN_GROEP} eigen drankjes.`)
-      else setNotice("Toevoegen mislukt: " + error.message)
+      if (/PERSOON_VOL/.test(error.message)) setNotice(L.maxPerPerson(MAX_EIGEN_PERSOON))
+      else if (/GROEP_VOL/.test(error.message)) setNotice(L.maxPerGroup(MAX_EIGEN_GROEP))
+      {L.addBtn}
       return
     }
     setNdName(""); setNdPrice(""); setNdCoins(""); setShowAddDrink(false)
     setActiveCat(ndCat); setDrinkSearch("")
-    setNotice(`⭐ ${naam} toegevoegd.`)
+    setNotice(L.drinkAdded(naam))
     loadParty(groupId)
   }
 
@@ -1347,7 +1347,7 @@ export default function PartyTest() {
     if (error) {
       // Een drankje dat al besteld is, mag niet weg: dan zouden er bestellingen naar
       // een onbestaand drankje wijzen en klopt de verdeling niet meer.
-      if (/IN_GEBRUIK/.test(error.message)) setNotice(`${naam} is al besteld en kan niet meer verwijderd worden.`)
+      if (/IN_GEBRUIK/.test(error.message)) setNotice(L.drinkInUse(naam))
       else setNotice("Verwijderen mislukt: " + error.message)
       return
     }
@@ -1366,7 +1366,7 @@ export default function PartyTest() {
           </div>
 
           <div style={{ fontSize: 12, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
-            Staat er iets niet in de lijst? Voeg het toe voor dit feest. Iedereen in de groep ziet het meteen.
+            {L.ownDrinkIntro}
           </div>
 
           <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>{L.nameLabel}</div>
@@ -1382,14 +1382,14 @@ export default function PartyTest() {
 
           <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>{L.priceLabel}</div>
           <div style={{ fontSize: 11, color: "#8a7d55", marginBottom: 6, lineHeight: 1.4 }}>
-            Nodig om de rekening achteraf eerlijk te verdelen. Een schatting volstaat.
+            {L.priceHint}
           </div>
           <input value={ndPrice} onChange={(e) => setNdPrice(e.target.value)} inputMode="decimal" placeholder="4,50"
             style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 15, marginBottom: 12 }} />
 
           {pay === "coin" && (
             <>
-              <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>Coins <span style={{ fontWeight: 600, color: "#8a7d55" }}>(leeg = automatisch)</span></div>
+              <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>Coins <span style={{ fontWeight: 600, color: "#8a7d55" }}>{L.coinsAuto}</span></div>
               <input value={ndCoins} onChange={(e) => setNdCoins(e.target.value)} inputMode="decimal" placeholder={String(coinDefault(ndCat, ndName || "x"))}
                 style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 15, marginBottom: 12 }} />
             </>
@@ -1399,7 +1399,7 @@ export default function PartyTest() {
             Toevoegen
           </button>
           <div style={{ fontSize: 11, color: "#8a7d55", textAlign: "center", marginTop: 8 }}>
-            Nog {Math.max(0, MAX_EIGEN_PERSOON - eigenVanMij)} van je {MAX_EIGEN_PERSOON} eigen drankjes over
+            {L.remaining(Math.max(0, MAX_EIGEN_PERSOON - eigenVanMij), MAX_EIGEN_PERSOON)}
           </div>
 
           {mijne.length > 0 && (
@@ -1448,7 +1448,7 @@ export default function PartyTest() {
     if (people.length === 0) { setNotice(L.addPersonFirst); return }
     if (depositOn && (depositValue || 0) <= 0) { setNotice(L.fillDeposit); return }
     if (pay === "coin" && (coinValue || 0) <= 0) { setNotice(L.fillCoinValue); return }
-    if (potChosen && potContribTotal <= 0.005) { setConfirmDlg({ msg: `Je koos voor een ${potIsCard ? "drankkaart" : "pot"}, maar er is nog niks ingelegd. Toch zonder verder gaan? Je kan later nog toevoegen via de knop bovenaan.`, yes: `Toch verder zonder ${potIsCard ? "drankkaart" : "pot"}`, onYes: () => { setConfirmDlg(null); setPotChosen(false); setView("hub") } }); return }
+    if (potChosen && potContribTotal <= 0.005) { setConfirmDlg({ msg: `Je koos voor een ${potIsCard ? "drankkaart" : "pot"}, maar er is nog niks ingelegd. Toch zonder verder gaan? Je kan later nog toevoegen via de knop bovenaan.`, yes: L.anywayWithout(potIsCard), onYes: () => { setConfirmDlg(null); setPotChosen(false); setView("hub") } }); return }
     setView("hub")
   }
   const goAssignUnassigned = () => {
@@ -1457,7 +1457,7 @@ export default function PartyTest() {
     setOpenRound(fr); setAllRoundsOpen(false); setEditCups(false); setEditPay(false); setView("hub"); setAssignIdx(fr)
   }
   const goFinal = () => {
-    if (unfinishedRound) { setNotice(`Rondje ${roundNr} is nog bezig — bevestig en betaal het eerst voor je afrekent.`); setActiveCat(catsPresent[0]); setView("order"); return }
+    if (unfinishedRound) { setNotice(L.roundUnfinished(roundNr)); setActiveCat(catsPresent[0]); setView("order"); return }
     if (view === "confirmed") { setNotice(`Rondje ${roundNr} is nog niet betaald. Rond die betaling eerst af.`); return }
     if (paidCount === 0) { setNotice(L.nothingToSettle); return }
     if (blockIfUnpaid()) return
@@ -1520,8 +1520,8 @@ export default function PartyTest() {
   }
   const closeRound = () => { if (!paidConfirmed || !paymentState().valid) { setNotice(L.confirmPaymentFirst); return } setOpenRound(rounds.length - 1); setEditCups(false); setEditPay(false); setView("hub") }
   const cancelOrder = () => setConfirmDlg({
-    msg: `Rondje ${roundNr} annuleren? Alle gekozen drankjes van dit rondje gaan verloren. Dit kan niet ongedaan gemaakt worden.`,
-    yes: "Ja, annuleren",
+    msg: L.cancelRoundConfirm(roundNr),
+    yes: L.yesCancel,
     onYes: () => {
       setConfirmDlg(null)
       setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setRepeated(false)
@@ -1529,7 +1529,7 @@ export default function PartyTest() {
       else { setRoundNr(1); setView("hub") }
     },
   })
-  const cancelRound = () => setConfirmDlg({ msg: `Het volledige rondje ${roundNr} annuleren? Alle drankjes en bekers van dit rondje worden verwijderd. Dit kan niet ongedaan gemaakt worden.`, yes: "Ja, annuleren", onYes: () => { const remaining = rounds.length - 1; setRounds((rs) => rs.slice(0, -1)); setPaidConfirmed(false); setConfirmDlg(null); if (remaining > 0) { setOpenRound(remaining - 1); setView("hub") } else setView("order") } })
+  const cancelRound = () => setConfirmDlg({ msg: `Het volledige rondje ${roundNr} annuleren? Alle drankjes en bekers van dit rondje worden verwijderd. Dit kan niet ongedaan gemaakt worden.`, yes: L.yesCancel, onYes: () => { const remaining = rounds.length - 1; setRounds((rs) => rs.slice(0, -1)); setPaidConfirmed(false); setConfirmDlg(null); if (remaining > 0) { setOpenRound(remaining - 1); setView("hub") } else setView("order") } })
   const nextRound = () => { if (blockIfUnpaid()) return; setRoundNr((n) => n + 1); setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setRepeated(false); setView("order") }
   // Neemt de drankjes én de toewijzing van het laatste rondje over. Daarna nog gewoon aanpasbaar.
   const repeatRound = () => {
@@ -1612,7 +1612,7 @@ export default function PartyTest() {
       <div style={S.card}>
         <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.settleTogether}</h3>
         <div style={{ fontSize: 12, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
-          Voor koppels, huisgenoten, wie samen naar huis rijdt. Iedereen houdt zijn eigen drankjes —
+          {L.settleTogetherInfo}
           enkel het eindbedrag wordt samengeteld tot één betaling.
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
@@ -1688,9 +1688,9 @@ export default function PartyTest() {
     const parts: string[] = []
     if (potP > 0) parts.push(`${potIsCard ? "kaart" : "pot"} ${euro(potP)}`)
     entries.forEach(([pid, a]) => parts.push(`${people.find((p) => p.id === pid)?.name ?? "?"} ${euro(a)}`))
-    if (parts.length === 0) return "nog niet betaald"
+    if (parts.length === 0) return L.notPaidYet
     if (parts.length === 1 && entries.length === 1) return `door ${people.find((p) => p.id === entries[0][0])?.name ?? "?"}`
-    if (parts.length === 1 && potP > 0) return potIsCard ? "van de drankkaart" : "uit de pot"
+    if (parts.length === 1 && potP > 0) return potIsCard ? L.fromCard : L.fromPot
     return parts.join(" + ")
   }
 
@@ -1810,7 +1810,7 @@ export default function PartyTest() {
             <button style={{ ...S.btnP, flex: 2 }} onClick={saveEditPot}>{potDraftTotal > 0 ? `✓ Wijziging opslaan (${euro(potDraftTotal)})` : "✓ Inleg verwijderen (leeg)"}</button>
           </div>
         ) : (
-          <button style={{ ...S.btnP, marginTop: 14 }} onClick={closePot}>{potDraftTotal > 0 ? `✓ Inleg toevoegen (${euro(potDraftTotal)})` : "Klaar"}</button>
+          <button style={{ ...S.btnP, marginTop: 14 }} onClick={closePot}>{potDraftTotal > 0 ? L.addContrib(euro(potDraftTotal)) : "Klaar"}</button>
         )}
         </>
         ) : (
@@ -2253,7 +2253,7 @@ export default function PartyTest() {
                   </div>
                 )}
               </div>
-              {[["♻️ herbruikbare bekers (met waarborg)", bpBekers, setBpBekers], ["🎟️ coins in plaats van euro's", bpCoins, setBpCoins]].map(([label, val, set]: any, i) => (
+              {[[L.reusableCups, bpBekers, setBpBekers], [L.coinsInstead, bpCoins, setBpCoins]].map(([label, val, set]: any, i) => (
                 <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
                   <span style={{ fontSize: 14.5, fontWeight: 700, minWidth: 0 }}>{label}</span>
                   <div style={{ ...S.row, gap: 8, flexShrink: 0 }}>
@@ -2264,7 +2264,7 @@ export default function PartyTest() {
                   </div>
                 </div>
               ))}
-              <div style={{ fontSize: 11.5, color: "#8a7d55", margin: "12px 0 14px", lineHeight: 1.5 }}>💡 Later aanpasbaar via ⚙️ Groep. Zet je iets op ‘ja’, dan vul je de details zo meteen in.</div>
+              <div style={{ fontSize: 11.5, color: "#8a7d55", margin: "12px 0 14px", lineHeight: 1.5 }}>{L.adjustLater}</div>
               <button style={{ ...S.btnP, width: "100%" }} onClick={applyBeginChoices}>{(bpPotType !== "none" || bpBekers || bpCoins) ? "Verdergaan" : "Snel starten"}</button>
             </div>
           </div>
@@ -2331,7 +2331,7 @@ export default function PartyTest() {
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", marginTop: 24, marginBottom: 4 }}>
-          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice(L.addPersonFirst); return } if (unfinishedRound) { resumeRound(); return } if (onboardedOnce) { setOpenRound(rounds.length - 1); setView("hub") } else setBeginPrompt(true) }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "Volgende"}</button>
+          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice(L.addPersonFirst); return } if (unfinishedRound) { resumeRound(); return } if (onboardedOnce) { setOpenRound(rounds.length - 1); setView("hub") } else setBeginPrompt(true) }}>{unfinishedRound ? L.continueRound(roundNr) : "Volgende"}</button>
         </div>
       </div></div>
     )
@@ -2387,7 +2387,7 @@ export default function PartyTest() {
             <div style={{ ...S.seg(!depositOn), padding: "6px 8px" }} onClick={() => setDepositOn(false)}>uit</div>
             <div style={{ ...S.seg(depositOn), padding: "6px 8px" }} onClick={() => setDepositOn(true)}>aan</div>
           </div>
-          {depositInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>♻️ <b>Herbruikbare bekers?</b> Voor events met waarborg per beker die je terugkrijgt bij inleveren. Zet aan om de borg mee te verrekenen.</div>}
+          {depositInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>♻️ <b>Herbruikbare bekers?</b>{L.cupsInfo}</div>}
           {depositOn && (
             <div style={{ marginTop: 10 }}>
               {pay === "coin" && (
@@ -2419,7 +2419,7 @@ export default function PartyTest() {
               <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: pay === "coin" ? 21 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
             </div>
           </div>
-          {coinInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>🎟️ <b>Coins?</b> Betaal je met coins i.p.v. euro's? Stel de coin-waarde en prijzen in; de app verdeelt eerlijk. Handig voor festivals, afterwork e.d.</div>}
+          {coinInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>🎟️ <b>Coins?</b>{L.coinsInfo}</div>}
           {pay === "coin" && (
             <div style={{ marginTop: 12 }}>
               <div style={{ ...S.row, justifyContent: "space-between" }}>
@@ -2432,7 +2432,7 @@ export default function PartyTest() {
                 const vis = cd.filter((d) => coinFull || d.fav)
                 return (
                   <div style={{ marginTop: 10 }}>
-                    <p style={{ ...S.sub, marginBottom: 8 }}>Standaard festival-coins per drankje. Pas aan met − / + (stapjes van 0,1, bv. 1,4). Verborgen tijdens bestellen.</p>
+                    <p style={{ ...S.sub, marginBottom: 8 }}>{L.coinPricesInfo}</p>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
                       {catsPresent.map((cc) => <span key={cc} style={{ ...S.tab(coinCat === cc), padding: "6px 10px", fontSize: 12 }} onClick={() => setCoinCat(cc)}>{CAT_LABEL[cc]}</span>)}
                     </div>
@@ -2468,7 +2468,7 @@ export default function PartyTest() {
                   ? <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>Ga verder met rondje {roundNr}</button>
                   : <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{L.newRound}</button>}
               </div>
-            : <button style={{ ...S.btnP, width: "100%" }} onClick={() => { if (unfinishedRound) resumeRound(); else tryBegin() }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "Starten"}</button>}
+            : <button style={{ ...S.btnP, width: "100%" }} onClick={() => { if (unfinishedRound) resumeRound(); else tryBegin() }}>{unfinishedRound ? L.continueRound(roundNr) : "Starten"}</button>}
         </div>
       </div></div>
     )
@@ -2556,7 +2556,7 @@ export default function PartyTest() {
         {roundItems > 0 && (
           <div style={{ ...S.card, padding: "10px 12px", background: "#fffdf6" }}>
             <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.inThisRound} <span style={{ fontWeight: 600, color: "#b3a988" }}>— tik om toe te wijzen</span></span>
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.inThisRound} <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.assignHint}</span></span>
               <span style={{ ...S.pill, background: "rgba(240,165,0,0.18)", color: "#c98a00" }}>{roundItems} drankje{roundItems === 1 ? "" : "s"}</span>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -2634,7 +2634,7 @@ export default function PartyTest() {
           <div style={{ ...S.overlay, zIndex: 55 }} onClick={() => setShowCups(false)}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ ...S.h3, fontSize: 18 }}>🫙 Bekers — ronde {roundNr}</h3>
-              <p style={{ ...S.sub }}>Hoeveel gaf elk <b>terug</b>? Standaard = ruil. Iedereen kan teruggeven — ook wie niks bestelde of een beker van elders binnenbrengt (gaat dan negatief = krijgt waarborg).</p>
+              <p style={{ ...S.sub }}>{L.howMuchEach} <b>terug</b>? Standaard = ruil. Iedereen kan teruggeven — ook wie niks bestelde of een beker van elders binnenbrengt (gaat dan negatief = krijgt waarborg).</p>
               <button style={{ ...S.btn, width: "100%", marginBottom: 12, fontSize: 13 }} onClick={() => { setGaveBackDraft(Object.fromEntries(people.map((p) => [p.id, 0]))); setCupsChecked(true); setShowCups(false) }}>{L.nobodyGaveBack}</button>
               {people.map((p) => {
                 const bal = cupsBal(p.id), pu = pickedUpOf(p.id)
@@ -2644,7 +2644,7 @@ export default function PartyTest() {
                   <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 2px", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
                     <div><div style={{ fontSize: 15, fontWeight: 800 }}>{p.name}</div><div style={{ fontSize: 11.5, fontWeight: 700, color: newBal < 0 ? "#1f8a4c" : "#8a7d55" }}>beker-saldo: {newBal}{newBal < 0 ? " (krijgt waarborg)" : ""}</div></div>
                     <div style={{ ...S.row, gap: 7 }}>
-                      <span style={{ fontSize: 11, color: "#8a7d55" }}>gaf terug</span>
+                      <span style={{ fontSize: 11, color: "#8a7d55" }}>{L.gaveBack}</span>
                       <button style={{ ...S.step, width: 28, height: 28, opacity: gb === 0 ? 0.4 : 1 }} onClick={() => { setCupsTouched(true); setGaveBackDraft((g) => ({ ...g, [p.id]: Math.max(0, gb - 1) })) }}>−</button>
                       <span style={{ minWidth: 16, textAlign: "center", fontSize: 15, fontWeight: 800 }}>{gb}</span>
                       <button style={{ ...S.step, width: 28, height: 28 }} onClick={() => { setCupsTouched(true); setGaveBackDraft((g) => ({ ...g, [p.id]: gb + 1 })) }}>+</button>
@@ -2845,7 +2845,7 @@ export default function PartyTest() {
                           </div>
                         )
                       })}</div>)}
-                      <div style={{ fontSize: 11, color: "#8a7d55" }}>Herverdelen: − zet een drankje terug op "onbekend", tik dan een andere naam. Het aantal blijft gelijk (er is al betaald).</div>
+                      <div style={{ fontSize: 11, color: "#8a7d55" }}>{L.redistribute}</div>
                 <button style={done ? { ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 10 }} onClick={() => setAssignIdx(null)}>{done ? "Klaar — alles toegewezen" : "Klaar"}</button>
               </div>
             </div>
@@ -2859,9 +2859,9 @@ export default function PartyTest() {
           <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
             <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
             <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{L.noRoundsDone}</div>
-            <div style={{ ...S.sub, marginBottom: 16 }}>Zodra een rondje bevestigd én betaald is, verschijnt het hier — dan kan je het nog aanpassen.</div>
+            <div style={{ ...S.sub, marginBottom: 16 }}>{L.noRoundsHint}</div>
             <div style={{ display: "flex", justifyContent: "center" }}>
-              <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (unfinishedRound) { resumeRound(); return } setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "Start 1e rondje"}</button>
+              <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (unfinishedRound) { resumeRound(); return } setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>{unfinishedRound ? L.continueRound(roundNr) : "Start 1e rondje"}</button>
             </div>
           </div>
         ) : (<>
@@ -2959,7 +2959,7 @@ export default function PartyTest() {
                           <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0" }}>
                             <span style={{ fontSize: 13.5, fontWeight: 700 }}>{p.name} <span style={{ fontSize: 11, color: "#8a7d55" }}>· nam {nam}</span></span>
                             <div style={{ ...S.row, gap: 6 }}>
-                              <span style={{ fontSize: 11, color: "#8a7d55" }}>gaf terug</span>
+                              <span style={{ fontSize: 11, color: "#8a7d55" }}>{L.gaveBack}</span>
                               <button style={{ ...S.step, width: 26, height: 26, fontSize: 16, opacity: gb === 0 ? 0.4 : 1 }} onClick={() => rSetGaveBack(idx, p.id, gb - 1)}>−</button>
                               <span style={{ minWidth: 14, textAlign: "center", fontSize: 14, fontWeight: 800 }}>{gb}</span>
                               <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => rSetGaveBack(idx, p.id, gb + 1)}>+</button>
@@ -2979,7 +2979,7 @@ export default function PartyTest() {
         {rounds.length > 0 && <>
           <div style={{ display: "flex", gap: 10 }}>
             <button style={{ ...S.btn, flex: 1 }} onClick={goFinal}>{L.settleBtn}</button>
-            <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (unfinishedRound) resumeRound(); else nextRound() }}>{unfinishedRound ? `Ga verder met rondje ${roundNr}` : "➕ Nieuw rondje"}</button>
+            <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (unfinishedRound) resumeRound(); else nextRound() }}>{unfinishedRound ? L.continueRound(roundNr) : "➕ Nieuw rondje"}</button>
           </div>
           {!unfinishedRound && paidCount > 0 && (
             <div style={{ marginTop: 10 }}>
@@ -3032,7 +3032,7 @@ export default function PartyTest() {
         {anyUnassignedRounds && (
           <div style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "11px 12px", marginBottom: 10 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: "#b0402f", marginBottom: 3 }}>{L.equalSplitWarn}</div>
-            <div style={{ fontSize: 11.5, color: "#8a5e0f", lineHeight: 1.5, marginBottom: 9 }}>Wijs de resterende drankjes toe, dan verdeelt de app eerlijk op wat elk verteerde.</div>
+            <div style={{ fontSize: 11.5, color: "#8a5e0f", lineHeight: 1.5, marginBottom: 9 }}>{L.unassignedWarn}</div>
             <button style={{ ...S.btnP, width: "100%", padding: "11px 0", fontSize: 13.5 }} onClick={goAssignUnassigned}>{L.useFairSplit}</button>
           </div>
         )}
@@ -3058,7 +3058,7 @@ export default function PartyTest() {
               </div>
               {open && (
                 <div style={{ background: "#faf4e4", borderRadius: 10, padding: "8px 11px", margin: "0 0 8px", fontSize: 12.5 }}>
-                  <div style={{ color: "#6b5f3a", padding: "2px 0" }}>dronk</div>
+                  <div style={{ color: "#6b5f3a", padding: "2px 0" }}>{L.drank}</div>
                   {(() => {
                     const cnt: Record<string, number> = {}
                     rounds.forEach((r) => Object.entries(r.orders).forEach(([did, per]) => { const q = per?.[p.id] ?? 0; if (q > 0) cnt[did] = (cnt[did] ?? 0) + q }))
