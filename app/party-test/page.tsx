@@ -49,22 +49,43 @@ const CAT_EMOJI: Record<Cat, string> = { Bier: "🍺", BierAV: "🌿", Frisdrank
 const CUPCAT: Record<Cat, boolean> = { Bier: true, BierAV: true, Frisdrank: true, Wijn: true, Cocktail: true, Mocktail: true, Longdrink: false, Shot: false, Warm: false }
 
 const DATA: [Cat, string, number][] = [
-  ["Bier", "Pils", 3.5], ["Bier", "Duvel", 5.5], ["Bier", "Chimay Blauw", 5.5], ["Bier", "Cornet", 5.5], ["Bier", "Geuze", 5.5], ["Bier", "Hoegaarden Wit", 4.5], ["Bier", "Kriek", 4.5], ["Bier", "La Chouffe", 5.5], ["Bier", "Leffe Blond", 5], ["Bier", "Tripel Karmeliet", 5.5], ["Bier", "Vedett Extra Blond", 4.5], ["Bier", "Westmalle Tripel", 5.5],
-  ["BierAV", "Jupiler 0.0", 3.5], ["BierAV", "Stella Artois 0.0", 3.5], ["BierAV", "Carlsberg 0.0", 4.5], ["BierAV", "Corona Cero", 4.5], ["BierAV", "Hoegaarden 0.0", 4.5], ["BierAV", "La Chouffe 0.0", 5], ["BierAV", "Leffe 0.0 Blond", 4.5], ["BierAV", "Sportzot", 4.5], ["BierAV", "Cornet 0.0", 5], ["BierAV", "Vedett Extra Blond 0.0", 4.5],
-  ["Frisdrank", "Cola", 3.2], ["Frisdrank", "Cola Zero", 3.2], ["Frisdrank", "Cola Light", 3.2], ["Frisdrank", "Fanta", 3.2], ["Frisdrank", "Sprite", 3.2], ["Frisdrank", "Ice Tea", 3.2], ["Frisdrank", "Red Bull", 4.5], ["Frisdrank", "Schweppes Tonic", 3.4], ["Frisdrank", "Appelsap", 3.5], ["Frisdrank", "Sinaasappelsap", 3.5], ["Frisdrank", "Water plat", 3], ["Frisdrank", "Water bruis", 3],
-  ["Wijn", "Huiswijn rood", 5.5], ["Wijn", "Huiswijn wit", 5.5], ["Wijn", "Huiswijn rosé", 5.5], ["Wijn", "Cava", 7.5], ["Wijn", "Prosecco", 7.5], ["Wijn", "Champagne", 12.5], ["Wijn", "Cabernet Sauvignon", 6.5], ["Wijn", "Chardonnay", 6.5], ["Wijn", "Merlot", 6.5], ["Wijn", "Pinot Noir", 7], ["Wijn", "Sauvignon Blanc", 6.5],
-  ["Cocktail", "Aperol Spritz", 11.5], ["Cocktail", "Gin Tonic", 12.5], ["Cocktail", "Mojito", 11.5], ["Cocktail", "Margarita", 11.5], ["Cocktail", "Cosmopolitan", 12], ["Cocktail", "Espresso Martini", 12.5], ["Cocktail", "Hugo Spritz", 11], ["Cocktail", "Moscow Mule", 11.5], ["Cocktail", "Negroni", 12.5], ["Cocktail", "Piña Colada", 11.5], ["Cocktail", "Pornstar Martini", 12.5], ["Cocktail", "Sex on the Beach", 11.5],
-  ["Mocktail", "Virgin Mojito", 8.5], ["Mocktail", "Virgin Gin Tonic", 9.5], ["Mocktail", "Hugo 0.0", 9], ["Mocktail", "Berry Mule", 9], ["Mocktail", "Gimber", 8.5], ["Mocktail", "Strawberry Daiquiri 0.0", 9], ["Mocktail", "Tropical Sunrise", 8.5], ["Mocktail", "Virgin Aperol Spritz", 9], ["Mocktail", "Virgin Moscow Mule", 9], ["Mocktail", "Virgin Piña Colada", 9],
-  ["Longdrink", "Vodka Red Bull", 10], ["Longdrink", "Vodka Orange", 9], ["Longdrink", "Cuba Libre", 10], ["Longdrink", "Rum Cola", 9], ["Longdrink", "Whisky Cola", 9], ["Longdrink", "Malibu Cola", 9], ["Longdrink", "Malibu Pineapple", 9], ["Longdrink", "Bacardi Lemon", 9], ["Longdrink", "Passoa Orange", 9], ["Longdrink", "Pisang Orange", 9], ["Longdrink", "Safari Orange", 9], ["Longdrink", "Jägermeister Red Bull", 10],
-  ["Shot", "Tequila", 4], ["Shot", "Jägermeister", 4], ["Shot", "Sambuca", 4], ["Shot", "Fireball", 4], ["Shot", "Limoncello", 4], ["Shot", "Sourz", 4],
-  ["Warm", "Koffie", 3.2], ["Warm", "Espresso", 3], ["Warm", "Cappuccino", 3.8], ["Warm", "Latte Macchiato", 4.5], ["Warm", "Flat White", 4.5], ["Warm", "Koffie verkeerd", 4], ["Warm", "Decafé koffie", 3.2], ["Warm", "Thee", 3.2], ["Warm", "Chai Latte", 4.8], ["Warm", "Warme chocolademelk", 4.5], ["Warm", "Irish Coffee", 9.5], ["Warm", "Hasseltse koffie", 9.5],
+  ["Bier", "Pils", 3.2], ["Bier", "Duvel", 5], ["Bier", "Chimay Blauw", 5.5], ["Bier", "Cornet", 5], ["Bier", "Geuze", 5], ["Bier", "Hoegaarden Wit", 4], ["Bier", "Kriek", 4.5], ["Bier", "La Chouffe", 5], ["Bier", "Leffe Blond", 4.5], ["Bier", "Tripel Karmeliet", 5.5], ["Bier", "Vedett Extra Blond", 4], ["Bier", "Westmalle Tripel", 5],
+  ["BierAV", "Jupiler 0.0", 3], ["BierAV", "Stella Artois 0.0", 3], ["BierAV", "Carlsberg 0.0", 3], ["BierAV", "Corona Cero", 3.5], ["BierAV", "Hoegaarden 0.0", 3.5], ["BierAV", "La Chouffe 0.0", 4], ["BierAV", "Leffe Blond 0.0", 3.5], ["BierAV", "Sportzot", 3.5], ["BierAV", "Cornet 0.0", 4], ["BierAV", "Vedett 0.0", 3.5], ["BierAV", "Cristal 0.0", 3], ["BierAV", "Maes 0.0", 3], ["BierAV", "Palm 0.0", 3.5], ["BierAV", "Kriek 0.0", 3.5], ["BierAV", "Duvel 0.0", 4],
+  ["Frisdrank", "Coca-Cola", 3], ["Frisdrank", "Coca-Cola Zero", 3], ["Frisdrank", "Coca-Cola Light", 3], ["Frisdrank", "Fanta", 3], ["Frisdrank", "Sprite", 3], ["Frisdrank", "Ice Tea", 3], ["Frisdrank", "Red Bull", 4], ["Frisdrank", "Schweppes Tonic", 3.5], ["Frisdrank", "Appelsap", 3], ["Frisdrank", "Sinaasappelsap", 4], ["Frisdrank", "Water plat", 2.8], ["Frisdrank", "Water bruis", 2.8], ["Frisdrank", "Ice Tea Green", 3],
+  ["Wijn", "Huiswijn rood", 5], ["Wijn", "Huiswijn wit", 5], ["Wijn", "Huiswijn rosé", 5], ["Wijn", "Cava", 6.5], ["Wijn", "Prosecco", 6.5], ["Wijn", "Champagne", 11], ["Wijn", "Cabernet Sauvignon", 5.5], ["Wijn", "Chardonnay", 5.5], ["Wijn", "Merlot", 5.5], ["Wijn", "Pinot Noir", 5.5], ["Wijn", "Sauvignon Blanc", 5.5], ["Wijn", "Sangria", 5], ["Wijn", "Porto", 5],
+  ["Cocktail", "Aperol Spritz", 10], ["Cocktail", "Gin Tonic", 11], ["Cocktail", "Mojito", 11.5], ["Cocktail", "Margarita", 11.5], ["Cocktail", "Cosmopolitan", 11.5], ["Cocktail", "Espresso Martini", 12.5], ["Cocktail", "Hugo Spritz", 10], ["Cocktail", "Moscow Mule", 11.5], ["Cocktail", "Negroni", 11.5], ["Cocktail", "Piña Colada", 11.5], ["Cocktail", "Pornstar Martini", 13], ["Cocktail", "Sex on the Beach", 10.5], ["Cocktail", "Caipirinha", 11.5],
+  ["Mocktail", "Virgin Mojito", 7.5], ["Mocktail", "Virgin Gin Tonic", 7.5], ["Mocktail", "Hugo 0.0", 7.5], ["Mocktail", "Berry Mule", 7.5], ["Mocktail", "Gimber", 5.5], ["Mocktail", "Strawberry Daiquiri 0.0", 7.5], ["Mocktail", "Virgin Sunrise", 7], ["Mocktail", "Virgin Aperol Spritz", 7.5], ["Mocktail", "Virgin Moscow Mule", 7.5], ["Mocktail", "Virgin Colada", 7.5], ["Mocktail", "Shirley Temple", 6], ["Mocktail", "Ipanema", 6.5], ["Mocktail", "Crodino", 5.5], ["Mocktail", "Virgin Passion Spritz", 7.5],
+  ["Longdrink", "Vodka Red Bull", 10], ["Longdrink", "Vodka Orange", 9], ["Longdrink", "Cuba Libre", 9], ["Longdrink", "Rum Cola", 9], ["Longdrink", "Whisky Cola", 9.5], ["Longdrink", "Malibu Cola", 9], ["Longdrink", "Malibu Ananas", 9], ["Longdrink", "Bacardi Lemon", 9], ["Longdrink", "Passoã Orange", 9], ["Longdrink", "Pisang Orange", 9], ["Longdrink", "Safari Orange", 9], ["Longdrink", "Jägermeister Red Bull", 10], ["Longdrink", "Bacardi Cola", 9], ["Longdrink", "Vodka Cassis", 9], ["Longdrink", "Vodka Sprite", 9], ["Longdrink", "Gin Cassis", 9.5], ["Longdrink", "Whisky Ginger Ale", 9.5],
+  ["Shot", "Tequila", 3.5], ["Shot", "Jägermeister", 3.5], ["Shot", "Sambuca", 3.5], ["Shot", "Fireball", 3.5], ["Shot", "Limoncello", 3.5], ["Shot", "Sourz", 3.5], ["Shot", "Vodka shot", 3], ["Shot", "Rum shot", 3.5], ["Shot", "Apfelkorn", 3], ["Shot", "Baby Guinness", 4],
+  ["Warm", "Koffie", 3], ["Warm", "Espresso", 2.8], ["Warm", "Cappuccino", 3.5], ["Warm", "Latte Macchiato", 4], ["Warm", "Flat White", 4], ["Warm", "Koffie verkeerd", 3.5], ["Warm", "Decafé koffie", 2.8], ["Warm", "Thee", 2.8], ["Warm", "Chai Latte", 4], ["Warm", "Warme chocolademelk", 4.2], ["Warm", "Irish Coffee", 8], ["Warm", "Hasseltse koffie", 8], ["Warm", "Americano", 3], ["Warm", "Verse muntthee", 4.5], ["Warm", "Glühwein", 4.5],
 ]
-const FAVS = new Set(["Pils", "Duvel", "Cola", "Water plat", "Cava", "Huiswijn rood", "Gin Tonic", "Aperol Spritz", "Koffie", "Jupiler 0.0"])
+// De KORTE lijst: wat je meteen ziet op het bestelscherm, vóór je op "toon alles" tikt.
+// Alles hierbuiten blijft gewoon bestaan in DATA en verschijnt zodra fullList aan staat.
+const FAVS = new Set([
+  // Bier
+  "Pils", "Duvel",
+  // AV-bier
+  "Jupiler 0.0", "Carlsberg 0.0", "Sportzot",
+  // Frisdrank
+  "Coca-Cola", "Coca-Cola Zero", "Coca-Cola Light", "Fanta", "Schweppes Tonic", "Water plat", "Water bruis",
+  // Wijn
+  "Huiswijn wit", "Huiswijn rood", "Huiswijn rosé", "Cava", "Champagne",
+  // Cocktail
+  "Aperol Spritz", "Gin Tonic", "Moscow Mule", "Pornstar Martini",
+  // Mocktail
+  "Virgin Mojito", "Virgin Gin Tonic", "Virgin Aperol Spritz", "Virgin Moscow Mule", "Hugo 0.0", "Gimber",
+  // Longdrink
+  "Rum Cola", "Whisky Cola", "Vodka Orange", "Vodka Red Bull",
+  // Shot
+  "Jägermeister", "Tequila", "Limoncello",
+  // Warm
+  "Koffie", "Espresso", "Decafé koffie", "Latte Macchiato", "Thee", "Warme chocolademelk", "Irish Coffee",
+])
 // Vaste festival-coinprijzen (standaard) — bijstelbaar per 0,1 in de app.
-const PILS = new Set(["Pils", "Jupiler 0.0", "Stella Artois 0.0", "Carlsberg 0.0", "Corona Cero", "Hoegaarden 0.0", "Leffe 0.0 Blond", "Sportzot", "Vedett Extra Blond 0.0"])
+const PILS = new Set(["Pils", "Jupiler 0.0", "Stella Artois 0.0", "Carlsberg 0.0", "Corona Cero", "Hoegaarden 0.0", "Leffe Blond 0.0", "Sportzot", "Vedett 0.0", "Cristal 0.0", "Maes 0.0", "Palm 0.0"])
 const COIN3 = new Set(["Champagne", "Irish Coffee", "Hasseltse koffie"])
 const coinDefault = (cat: Cat, name: string): number => {
-  if (name === "Red Bull") return 1.5
+  if (name === "Red Bull" || name === "Glühwein") return 1.5
   if (COIN3.has(name)) return 3
   switch (cat) {
     case "Bier": return PILS.has(name) ? 1 : 2
