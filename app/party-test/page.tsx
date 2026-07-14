@@ -824,26 +824,19 @@ export default function PartyTest() {
   // Zorg dat er een open rondje bestaat vóór er een drankje in gaat. Lui aangemaakt:
   // pas wanneer iemand écht iets aantikt, niet bij het openen van het scherm.
   const openRoundRef = useRef<Promise<string | null> | null>(null)
+  const addingPerson = useRef(false)
   const ensureRound = async (): Promise<string | null> => {
     if (openRoundId) return openRoundId
     if (!groupId) return null
     if (openRoundRef.current) return openRoundRef.current   // twee snelle tikken = één rondje
     openRoundRef.current = (async () => {
-      const seq = Math.max(0, ...rounds.map((r) => r.seq)) + 1
-      const { data, error } = await supabase.from("party_rounds")
-        .insert([{ group_id: groupId, seq, status: "open" }]).select("id").single()
-      if (error || !data) {
-        // Iemand anders was net iets sneller: pak dan zijn open rondje.
-        const { data: bestaand } = await supabase.from("party_rounds")
-          .select("id").eq("group_id", groupId).eq("status", "open").maybeSingle()
-        openRoundRef.current = null
-        if (!bestaand) { setNotice("Rondje starten mislukt."); return null }
-        setOpenRoundId(bestaand.id)
-        return bestaand.id
-      }
+      // party_open_round geeft het BESTAANDE open rondje terug als er al een is. Twee
+      // gasten die tegelijk hun eerste drankje tikken, delen dus één rondje.
+      const { data, error } = await supabase.rpc("party_open_round", { p_group: groupId })
       openRoundRef.current = null
-      setOpenRoundId(data.id)
-      return data.id
+      if (error || !data) { setNotice("Rondje starten mislukt."); return null }
+      setOpenRoundId(data as string)
+      return data as string
     })()
     return openRoundRef.current
   }
@@ -966,11 +959,16 @@ export default function PartyTest() {
   const isGuestDefault = (name: string) => /^Gast \d+$/.test(name.trim())
   // Een plaats bijzetten = een rij in party_people. Leeg van naam: vrij tot iemand
   // ze claimt (de admin door ze te benoemen, een gast door de link te openen).
+  // Het plaatsnummer wordt in Postgres bepaald, niet hier. Berekende je het in de
+  // browser, dan lezen twee snelle tikken dezelfde lijst, komen ze op hetzelfde nummer
+  // uit, en weigert de unique-index de tweede: "duplicate key value".
   const addPerson = async () => {
-    if (!groupId) return
-    const seat = people.reduce((m, p) => Math.max(m, p.seat), 0) + 1
-    const { error } = await supabase.from("party_people").insert([{ group_id: groupId, seat, name: "" }])
-    if (error) setNotice("Persoon toevoegen mislukt: " + error.message)
+    if (!groupId || addingPerson.current) return
+    addingPerson.current = true
+    const { error } = await supabase.rpc("party_add_person", { p_group: groupId, p_name: "" })
+    addingPerson.current = false
+    if (error) { setNotice("Persoon toevoegen mislukt: " + error.message); return }
+    loadParty(groupId)
   }
   const renamePerson = async (id: string, name: string) => {
     // Optimistisch: het invoerveld moet meteen meebewegen, niet pas na de rondreis.
@@ -1218,10 +1216,7 @@ export default function PartyTest() {
   const closePot = () => {
     const added = (editPotId === null && potDraftTotal > 0.001) ? potDraftTotal : 0
     if (added > 0 && groupId) {
-      const seq = Math.max(0, ...potRounds.map((r) => r.seq)) + 1
-      const bedragen = potDraft
-      supabase.from("party_pot")
-        .insert([{ group_id: groupId, seq, amounts: bedragen, is_card: potIsCard, card_payers: cardPayers }])
+      supabase.rpc("party_add_pot", { p_group: groupId, p_amounts: potDraft, p_is_card: potIsCard, p_payers: cardPayers })
         .then(({ error }) => { if (error) setNotice("Inleg opslaan mislukt: " + error.message); else loadParty(groupId) })
     }
     setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setEditPotId(null); setPotBuilderOpen(false); setShowPot(false)
