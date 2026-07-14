@@ -127,7 +127,10 @@ const DEMO_DRINKS: Drink[] = DATA.map(([cat, name, price]) => ({ id: drinkKey(na
 
 type Assign = Record<string, Record<string, number>>
 type Anon = Record<string, number>
-type Round = { orders: Assign; anon: Anon; payers: Record<string, number>; amount: number; potPart: number; gaveBack: Record<string, number> }
+// Een rondje leeft nu in de databank. id/seq/status komen daarvandaan; de rest is
+// wat de app al kende. status: open = er wordt besteld, pending = besteld maar niet
+// betaald, closed = betaald.
+type Round = { id: string; seq: number; status: "open" | "pending" | "closed"; orders: Assign; anon: Anon; payers: Record<string, number>; amount: number; potPart: number; gaveBack: Record<string, number> }
 
 const euro = (v: number) => "€" + v.toFixed(2).replace(".", ",")
 
@@ -150,6 +153,7 @@ export default function PartyTest() {
   const me = useRef(deviceId())
   const mounted = useRef(true)
   const [groupId, setGroupId] = useState<string | null>(null)
+  const [openRoundId, setOpenRoundId] = useState<string | null>(null)
   const [inviteCode, setInviteCode] = useState<string>("")
   const [ownerDevice, setOwnerDevice] = useState<string>("")
   const [booting, setBooting] = useState(true)   // eerste laadbeurt (code uit de URL)
@@ -233,11 +237,78 @@ export default function PartyTest() {
 
   // ── live cart helpers ───────────────────────────────────────────────────────
   const aQty = (did: string, pid: string) => cart[did]?.[pid] ?? 0
-  const bump = (did: string, pid: string, delta: number) => setCart((c) => ({ ...c, [did]: { ...(c[did] ?? {}), [pid]: Math.max(0, (c[did]?.[pid] ?? 0) + delta) } }))
-  const bumpAnon = (did: string, delta: number) => setCartAnon((a) => ({ ...a, [did]: Math.max(0, (a[did] ?? 0) + delta) }))
-  const assignFromAnon = (did: string, pid: string) => { if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); bump(did, pid, 1) } }
-  const unassignCart = (did: string, pid: string) => { if ((cart[did]?.[pid] ?? 0) > 0) { bump(did, pid, -1); bumpAnon(did, 1) } }
-  const setEachOne = (did: string) => setCart((c) => ({ ...c, [did]: Object.fromEntries(people.map((p) => [p.id, 1])) }))
+  // Zorg dat er een open rondje bestaat vóór er een drankje in gaat. Lui aangemaakt:
+  // pas wanneer iemand écht iets aantikt, niet bij het openen van het scherm.
+  const openRoundRef = useRef<Promise<string | null> | null>(null)
+  const ensureRound = async (): Promise<string | null> => {
+    if (openRoundId) return openRoundId
+    if (!groupId) return null
+    if (openRoundRef.current) return openRoundRef.current   // twee snelle tikken = één rondje
+    openRoundRef.current = (async () => {
+      const seq = Math.max(0, ...rounds.map((r) => r.seq)) + 1
+      const { data, error } = await supabase.from("party_rounds")
+        .insert([{ group_id: groupId, seq, status: "open" }]).select("id").single()
+      if (error || !data) {
+        // Iemand anders was net iets sneller: pak dan zijn open rondje.
+        const { data: bestaand } = await supabase.from("party_rounds")
+          .select("id").eq("group_id", groupId).eq("status", "open").maybeSingle()
+        openRoundRef.current = null
+        if (!bestaand) { setNotice("Rondje starten mislukt."); return null }
+        setOpenRoundId(bestaand.id)
+        return bestaand.id
+      }
+      openRoundRef.current = null
+      setOpenRoundId(data.id)
+      return data.id
+    })()
+    return openRoundRef.current
+  }
+
+  // De optelling gebeurt in Postgres (party_bump), niet hier. Twee gasten die tegelijk
+  // hetzelfde drankje aantikken zouden elkaar anders overschrijven.
+  const bump = async (did: string, pid: string, delta: number) => {
+    setCart((c) => ({ ...c, [did]: { ...(c[did] ?? {}), [pid]: Math.max(0, (c[did]?.[pid] ?? 0) + delta) } }))
+    const rid = await ensureRound()
+    if (!rid || !groupId) return
+    const { error } = await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: pid, p_drink: did, p_delta: delta })
+    if (error) { setNotice("Opslaan mislukt: " + error.message); loadParty(groupId) }
+  }
+  const bumpAnon = async (did: string, delta: number) => {
+    setCartAnon((a) => ({ ...a, [did]: Math.max(0, (a[did] ?? 0) + delta) }))
+    const rid = await ensureRound()
+    if (!rid || !groupId) return
+    const { error } = await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: null, p_drink: did, p_delta: delta })
+    if (error) { setNotice("Opslaan mislukt: " + error.message); loadParty(groupId) }
+  }
+  const assignFromAnon = async (did: string, pid: string) => {
+    if ((cartAnon[did] ?? 0) <= 0) return
+    setCartAnon((a) => ({ ...a, [did]: Math.max(0, (a[did] ?? 0) - 1) }))
+    setCart((c) => ({ ...c, [did]: { ...(c[did] ?? {}), [pid]: (c[did]?.[pid] ?? 0) + 1 } }))
+    const rid = await ensureRound()
+    if (!rid || !groupId) return
+    const { error } = await supabase.rpc("party_assign", { p_group: groupId, p_round: rid, p_drink: did, p_from: null, p_to: pid })
+    if (error) { setNotice("Toewijzen mislukt: " + error.message); loadParty(groupId) }
+  }
+  const unassignCart = async (did: string, pid: string) => {
+    if ((cart[did]?.[pid] ?? 0) <= 0) return
+    setCart((c) => ({ ...c, [did]: { ...(c[did] ?? {}), [pid]: Math.max(0, (c[did]?.[pid] ?? 0) - 1) } }))
+    setCartAnon((a) => ({ ...a, [did]: (a[did] ?? 0) + 1 }))
+    const rid = await ensureRound()
+    if (!rid || !groupId) return
+    const { error } = await supabase.rpc("party_assign", { p_group: groupId, p_round: rid, p_drink: did, p_from: pid, p_to: null })
+    if (error) { setNotice("Losmaken mislukt: " + error.message); loadParty(groupId) }
+  }
+  const setEachOne = async (did: string) => {
+    const huidig = cart[did] ?? {}
+    setCart((c) => ({ ...c, [did]: Object.fromEntries(people.map((p) => [p.id, 1])) }))
+    const rid = await ensureRound()
+    if (!rid || !groupId) return
+    for (const p of people) {
+      const delta = 1 - (huidig[p.id] ?? 0)
+      if (delta !== 0) await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: p.id, p_drink: did, p_delta: delta })
+    }
+    loadParty(groupId)
+  }
   const eachOne = (did: string) => { const hi = people.filter((p) => (cart[did]?.[p.id] ?? 0) >= 2).map((p) => p.name); if (hi.length > 0) { setConfirmDlg({ msg: `${hi.join(" en ")} ${hi.length === 1 ? "heeft" : "hebben"} er nu al 2 of meer. Met "elk 1" krijgt iedereen er precies één — ${hi.join(" en ")} ${hi.length === 1 ? "gaat" : "gaan"} dus terug naar 1.`, yes: "Ja, iedereen op 1", onYes: () => { setEachOne(did); setConfirmDlg(null) } }) } else setEachOne(did) }
   const drinkTotal = (did: string) => Object.values(cart[did] ?? {}).reduce((a, b) => a + b, 0) + (cartAnon[did] ?? 0)
   const roundItems = useMemo(() => drinks.reduce((s, d) => s + drinkTotal(d.id), 0), [cart, cartAnon, drinks]) // eslint-disable-line
@@ -251,10 +322,39 @@ export default function PartyTest() {
   const pickedUpOf = (pid: string) => drinks.reduce((a, d) => a + (d.cup ? aQty(d.id, pid) : 0), 0)
 
   // ── per-rondje bewerk-helpers (hub) ─────────────────────────────────────────
-  const rBump = (idx: number, did: string, pid: string, delta: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, orders: { ...r.orders, [did]: { ...(r.orders[did] ?? {}), [pid]: Math.max(0, (r.orders[did]?.[pid] ?? 0) + delta) } } } : r))
-  const rBumpAnon = (idx: number, did: string, delta: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, anon: { ...r.anon, [did]: Math.max(0, (r.anon[did] ?? 0) + delta) } } : r))
-  const rSetGaveBack = (idx: number, pid: string, v: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, gaveBack: { ...r.gaveBack, [pid]: Math.max(0, v) } } : r))
-  const rUnassign = (idx: number, did: string, pid: string) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, orders: { ...r.orders, [did]: { ...(r.orders[did] ?? {}), [pid]: Math.max(0, (r.orders[did]?.[pid] ?? 0) - 1) } }, anon: { ...r.anon, [did]: (r.anon[did] ?? 0) + 1 } } : r))
+  // Een AFGESLOTEN of onbetaald rondje bijstellen doet enkel de admin. Daar is geen
+  // gelijktijdigheid, dus mag de hele rij in één keer weg. (Het open rondje niet —
+  // dat gaat via party_bump, want daar tikt iedereen tegelijk.)
+  const persistRound = (r: Round) => {
+    supabase.from("party_rounds")
+      .update({ amount: r.amount, pot_part: r.potPart, payers: r.payers, gave_back: r.gaveBack })
+      .eq("id", r.id)
+      .then(({ error }) => { if (error) setNotice("Opslaan mislukt: " + error.message) })
+  }
+  // Drankjes van een afgesloten rondje verplaatsen: wél per rij, want die zitten in
+  // party_round_items en niet in de jsonb.
+  const persistItem = async (r: Round, did: string, pid: string | null, delta: number) => {
+    if (!groupId) return
+    const { error } = await supabase.rpc("party_bump", { p_group: groupId, p_round: r.id, p_person: pid, p_drink: did, p_delta: delta })
+    if (error) setNotice("Opslaan mislukt: " + error.message)
+  }
+
+  // Wie een bestaand rondje bijstelt (bedrag, betaler, bekers) markeert het als vuil;
+  // dit effect schrijft het daarna weg. Zo hoeft geen enkele mutator databank-logica
+  // te kennen, en persisteren we altijd de toestand NA de wijziging.
+  const [dirtyRound, setDirtyRound] = useState<number | null>(null)
+  useEffect(() => {
+    if (dirtyRound == null) return
+    const r = rounds[dirtyRound]
+    if (r) persistRound(r)
+    setDirtyRound(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirtyRound, rounds])
+
+  const rBump = (idx: number, did: string, pid: string, delta: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, orders: { ...r.orders, [did]: { ...(r.orders[did] ?? {}), [pid]: Math.max(0, (r.orders[did]?.[pid] ?? 0) + delta) } } } : r)); persistItem(rounds[idx], did, pid, delta); setDirtyRound(idx) }
+  const rBumpAnon = (idx: number, did: string, delta: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, anon: { ...r.anon, [did]: Math.max(0, (r.anon[did] ?? 0) + delta) } } : r)); persistItem(rounds[idx], did, null, delta); setDirtyRound(idx) }
+  const rSetGaveBack = (idx: number, pid: string, v: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, gaveBack: { ...r.gaveBack, [pid]: Math.max(0, v) } } : r)); setDirtyRound(idx) }
+  const rUnassign = (idx: number, did: string, pid: string) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, orders: { ...r.orders, [did]: { ...(r.orders[did] ?? {}), [pid]: Math.max(0, (r.orders[did]?.[pid] ?? 0) - 1) } }, anon: { ...r.anon, [did]: (r.anon[did] ?? 0) + 1 } } : r)); persistItem(rounds[idx], did, pid, -1); persistItem(rounds[idx], did, null, 1); setDirtyRound(idx) }
   const rAssignFromAnon = (idx: number, did: string, pid: string) => { if ((rounds[idx]?.anon[did] ?? 0) > 0) { rBumpAnon(idx, did, -1); rBump(idx, did, pid, 1) } }
   const potAvailFor = (idx: number) => potContribTotal - (potSpent - (rounds[idx]?.potPart || 0))
   const rRedistribute = (r: Round, idx: number, usePot: boolean, persons: string[], amount: number): Round => {
@@ -268,12 +368,12 @@ export default function PartyTest() {
     persons.forEach((pid) => (payers[pid] = per))
     return { ...r, amount, payers, potPart }
   }
-  const rSetAmount = (idx: number, v: number) => setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, v) }))
-  const rTogglePot = (idx: number) => setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = !((r.potPart || 0) > 0); if (usePot && potAvailFor(idx) <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg — leg eerst bij.`); return r } return rRedistribute(r, idx, usePot, persons, r.amount) }))
-  const rSetPayerAmt = (idx: number, pid: string, v: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, payers: { ...(r.payers || {}), [pid]: Math.max(0, v) } } : r))
-  const rSetPotAmt = (idx: number, v: number) => setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, potPart: Math.max(0, Math.min(v, Math.max(0, potAvailFor(idx)))) } : r))
+  const rSetAmount = (idx: number, v: number) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, v) })); setDirtyRound(idx) }
+  const rTogglePot = (idx: number) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = !((r.potPart || 0) > 0); if (usePot && potAvailFor(idx) <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg — leg eerst bij.`); return r } return rRedistribute(r, idx, usePot, persons, r.amount) })); setDirtyRound(idx) }
+  const rSetPayerAmt = (idx: number, pid: string, v: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, payers: { ...(r.payers || {}), [pid]: Math.max(0, v) } } : r)); setDirtyRound(idx) }
+  const rSetPotAmt = (idx: number, v: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, potPart: Math.max(0, Math.min(v, Math.max(0, potAvailFor(idx)))) } : r)); setDirtyRound(idx) }
   const rPaidSum = (r: Round) => (r.potPart || 0) + Object.values(r.payers || {}).reduce((a, b) => a + (b || 0), 0)
-  const rTogglePayer = (idx: number, pid: string) => setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const cur = Object.keys(r.payers || {}); const persons = cur.includes(pid) ? cur.filter((x) => x !== pid) : [...cur, pid]; const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, r.amount) }))
+  const rTogglePayer = (idx: number, pid: string) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const cur = Object.keys(r.payers || {}); const persons = cur.includes(pid) ? cur.filter((x) => x !== pid) : [...cur, pid]; const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, r.amount) })); setDirtyRound(idx) }
 
   // ── afgeleide bekers (uit rounds) ───────────────────────────────────────────
   const roundPicked = (r: Round, pid: string) => drinks.reduce((a, d) => a + (d.cup ? (r.orders[d.id]?.[pid] ?? 0) : 0), 0)
@@ -304,9 +404,11 @@ export default function PartyTest() {
   // realtime doet het echte werk, met een afkoelperiode zodat een reeks tikken
   // (iedereen bestelt tegelijk) niet tientallen herladingen uitlokt.
   const loadParty = useCallback(async (gid: string) => {
-    const [{ data: g }, { data: pp }] = await Promise.all([
+    const [{ data: g }, { data: pp }, { data: rr }, { data: ii }] = await Promise.all([
       supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized").eq("id", gid).single(),
       supabase.from("party_people").select("id,seat,name,claimed_by,self_joined").eq("group_id", gid).order("seat"),
+      supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back").eq("group_id", gid).order("seq"),
+      supabase.from("party_round_items").select("round_id,person_id,drink_key,qty").eq("group_id", gid),
     ])
     if (!mounted.current) return
     if (g) {
@@ -327,6 +429,34 @@ export default function PartyTest() {
       name: (r.name || "").trim() || `Gast ${r.seat}`,
       claimedBy: r.claimed_by, selfJoined: !!r.self_joined,
     })))
+
+    // Drankjes per rondje uitsorteren: toegewezen in `orders`, de rest in `anon`.
+    const perRound: Record<string, { orders: Assign; anon: Anon }> = {}
+    for (const it of ii || []) {
+      const b = (perRound[it.round_id] ??= { orders: {}, anon: {} })
+      if (it.person_id) {
+        (b.orders[it.drink_key] ??= {})[it.person_id] = it.qty
+      } else {
+        b.anon[it.drink_key] = it.qty
+      }
+    }
+
+    const alle = (rr || []).map((r) => ({
+      id: r.id as string, seq: r.seq as number, status: r.status as "open" | "pending" | "closed",
+      orders: perRound[r.id]?.orders ?? {}, anon: perRound[r.id]?.anon ?? {},
+      payers: (r.payers ?? {}) as Record<string, number>,
+      amount: Number(r.amount ?? 0), potPart: Number(r.pot_part ?? 0),
+      gaveBack: (r.gave_back ?? {}) as Record<string, number>,
+    }))
+
+    // Het OPEN rondje is de mand; de rest is historiek.
+    const open = alle.find((r) => r.status === "open") ?? null
+    setOpenRoundId(open?.id ?? null)
+    setCart(open?.orders ?? {})
+    setCartAnon(open?.anon ?? {})
+    const gedaan = alle.filter((r) => r.status !== "open")
+    setRounds(gedaan)
+    setRoundNr(open ? open.seq : Math.max(1, gedaan.length))
   }, [])
 
   useEffect(() => {
@@ -381,6 +511,8 @@ export default function PartyTest() {
     const ch = supabase.channel(`party-${groupId}`)
     ch.on("postgres_changes", { event: "*", schema: "public", table: "party_groups", filter: `id=eq.${groupId}` }, reload)
     ch.on("postgres_changes", { event: "*", schema: "public", table: "party_people", filter: `group_id=eq.${groupId}` }, reload)
+    ch.on("postgres_changes", { event: "*", schema: "public", table: "party_rounds", filter: `group_id=eq.${groupId}` }, reload)
+    ch.on("postgres_changes", { event: "*", schema: "public", table: "party_round_items", filter: `group_id=eq.${groupId}` }, reload)
     ch.subscribe()
     return () => { active = false; if (cool) clearTimeout(cool); supabase.removeChannel(ch) }
   }, [groupId, loadParty])
@@ -455,7 +587,12 @@ export default function PartyTest() {
   const bumpDown = (did: string) => { if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); return } const entry = cart[did]; if (!entry) return; const pid = Object.keys(entry).find((k) => (entry[k] ?? 0) > 0); if (pid) bump(did, pid, -1) }
   const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
 
-  const dropUnpaidRound = () => { setRounds((rs) => (rs.length && !roundIsPaid(rs[rs.length - 1]) ? rs.slice(0, -1) : rs)); setCart({}); setCartAnon({}); setAmountDraft(""); setPayPot(false); setPayPersons([]); setPayAmts({}); setPotAmtDraft(""); setPaidConfirmed(false) }
+  const dropUnpaidRound = () => {
+    const last = rounds[rounds.length - 1]
+    if (last && !roundIsPaid(last)) supabase.from("party_rounds").delete().eq("id", last.id).then(() => { if (groupId) loadParty(groupId) })
+    if (openRoundId) supabase.from("party_rounds").delete().eq("id", openRoundId).then(() => { if (groupId) loadParty(groupId) })
+    setOpenRoundId(null)
+    setRounds((rs) => (rs.length && !roundIsPaid(rs[rs.length - 1]) ? rs.slice(0, -1) : rs)); setCart({}); setCartAnon({}); setAmountDraft(""); setPayPot(false); setPayPersons([]); setPayAmts({}); setPotAmtDraft(""); setPaidConfirmed(false) }
   const goStart = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("start") } }); else setView("start") }
   const goHome = () => { setFromOnboarding(false); if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("settings") } }); else setView("settings") }
   const potAvailNow = () => { const curPotPart = rounds.length ? (rounds[rounds.length - 1].potPart || 0) : 0; return potContribTotal - (potSpent - curPotPart) }
@@ -555,11 +692,27 @@ export default function PartyTest() {
   const commitRound = () => {
     const effGb: Record<string, number> = {}
     people.forEach((p) => { effGb[p.id] = gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id)) })
-    setRounds((r) => [...r, { orders: cart, anon: cartAnon, payers: {}, amount: 0, potPart: 0, gaveBack: effGb }])
+    if (openRoundId) {
+      supabase.from("party_rounds").update({ status: "pending", gave_back: effGb }).eq("id", openRoundId)
+        .then(({ error }) => { if (error) setNotice("Rondje bevestigen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
+      setOpenRoundId(null)
+    }
     setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setAmountDraft(""); setPayPot(false); setPayPersons([]); setPayAmts({}); setPotAmtDraft(""); setPaidConfirmed(false); setView("confirmed")
   }
+  const persistPayment = (roundId: string, payers: Record<string, number>, potPart: number, total: number) => {
+    supabase.from("party_rounds")
+      .update({ payers, pot_part: potPart, amount: total, status: "closed", closed_at: new Date().toISOString() })
+      .eq("id", roundId)
+      .then(({ error }) => { if (error) setNotice("Betaling opslaan mislukt: " + error.message); else if (groupId) loadParty(groupId) })
+  }
   const applyPayment = (payers: Record<string, number>, potPart: number, total: number) => setRounds((rs) => rs.map((r, i) => i === rs.length - 1 ? { ...r, payers, amount: total, potPart } : r))
-  const editOrder = () => { const last = rounds[rounds.length - 1]; if (!last) { setView("order"); return } setCart(last.orders); setCartAnon(last.anon); setGaveBackDraft(last.gaveBack); setRounds((rs) => rs.slice(0, -1)); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setPaidConfirmed(false); setActiveCat(catsPresent[0]); setView("order") }
+  const editOrder = () => { const last = rounds[rounds.length - 1]; if (!last) { setView("order"); return }
+    // Terug naar bestellen: hetzelfde rondje weer openzetten. De drankjes staan al in
+    // party_round_items, dus er hoeft niets verplaatst te worden.
+    supabase.from("party_rounds").update({ status: "open" }).eq("id", last.id)
+      .then(({ error }) => { if (error) setNotice("Terugkeren mislukt: " + error.message); else if (groupId) loadParty(groupId) })
+    setOpenRoundId(last.id)
+    setCart(last.orders); setCartAnon(last.anon); setGaveBackDraft(last.gaveBack); setRounds((rs) => rs.slice(0, -1)); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setPaidConfirmed(false); setActiveCat(catsPresent[0]); setView("order") }
   const confirmPayment = () => {
     const st = paymentState()
     if (!st.valid) { setNotice(st.reason); return }
@@ -574,6 +727,8 @@ export default function PartyTest() {
       if (ids.length > 0) payers[ids[ids.length - 1]] = Math.round((payers[ids[ids.length - 1]] + diff) * 100) / 100
       else potPart = Math.round((potPart + diff) * 100) / 100
     }
+    const laatste = rounds[rounds.length - 1]
+    if (laatste) persistPayment(laatste.id, payers, potPart, st.total)
     applyPayment(payers, potPart, st.total)
     setPaidConfirmed(true)
   }
