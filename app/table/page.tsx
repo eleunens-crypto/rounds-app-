@@ -3274,6 +3274,7 @@ export default function RundoTable() {
           )}
 
           {items.length > 0 && (
+            <>
           {isAdmin && zeroPriceItems.length > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 9, background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 11, padding: "10px 12px", marginBottom: 10 }}>
               <span style={{ flexShrink: 0, fontSize: 14 }}>⚠️</span>
@@ -3374,6 +3375,7 @@ export default function RundoTable() {
               </div>
             }
           />
+            </>
           )}
         </div>
       )}
