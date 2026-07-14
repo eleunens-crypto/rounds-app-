@@ -149,6 +149,45 @@ type Round = { id: string; seq: number; status: "open" | "pending" | "closed"; o
 
 const euro = (v: number) => "€" + v.toFixed(2).replace(".", ",")
 
+// ── Spraak (beta) ───────────────────────────────────────────────────────────
+// "drie pils en twee cola" -> [{pils,3},{coca-cola,2}]. Bewust simpel: we zoeken
+// getallen en drankennamen, de rest negeren we. Spraakherkenning maakt fouten, dus
+// de gebruiker krijgt ALTIJD te zien wat we verstonden voor er iets in de mand belandt.
+const TELWOORD: Record<string, number> = {
+  een: 1, één: 1, "n": 1, twee: 2, drie: 3, vier: 4, vijf: 5, zes: 6, zeven: 7, acht: 8, negen: 9, tien: 10,
+  un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8, neuf: 9, dix: 10,
+}
+
+function parseSpraak(tekst: string, lijst: { id: string; name: string }[]): { id: string; name: string; qty: number }[] {
+  const woorden = normText(tekst).split(" ").filter(Boolean)
+  const treffers: { id: string; name: string; qty: number }[] = []
+
+  // Langste namen eerst: anders kaapt "cola" de match van "coca cola zero".
+  const namen = [...lijst]
+    .map((d) => ({ ...d, delen: normText(d.name).split(" ").filter(Boolean) }))
+    .sort((a, b) => b.delen.length - a.delen.length)
+
+  let i = 0
+  while (i < woorden.length) {
+    let aantal = 1
+    const w = woorden[i]
+    if (TELWOORD[w] !== undefined) { aantal = TELWOORD[w]; i++ }
+    else if (/^\d+$/.test(w)) { aantal = Math.min(20, parseInt(w, 10)); i++ }
+    if (i >= woorden.length) break
+
+    const kandidaat = namen.find((d) => d.delen.every((deel, k) => woorden[i + k] === deel))
+    if (kandidaat) {
+      const bestaand = treffers.find((t) => t.id === kandidaat.id)
+      if (bestaand) bestaand.qty += aantal
+      else treffers.push({ id: kandidaat.id, name: kandidaat.name, qty: aantal })
+      i += kandidaat.delen.length
+    } else {
+      i++
+    }
+  }
+  return treffers
+}
+
 // ── Woordenlijst ────────────────────────────────────────────────────────────
 // Eerst alles wat een GAST te zien krijgt: hij scant een QR en is misschien
 // Franstalig. De adminschermen (die jij zelf bedient) volgen daarna.
@@ -358,7 +397,7 @@ const T = {
     drank: "dronk",
     settleTogether: "👥 Rekent er iemand samen af?",
     settleTogetherInfo: "Voor koppels, huisgenoten, wie samen naar huis rijdt. Iedereen houdt zijn eigen drankjes — enkel het eindbedrag wordt samengeteld.",
-    {L.tapWhoWith(settleGroups.find((g) => g.key === settlePick)?.label ?? "")}
+    tapWhoWith: (n: string) => `Tik nu op wie samen met ${n} afrekent.`,
     separateAgain: "Weer apart zetten:",
     depositAdvanced: "waarborg (voorgeschoten)",
     cardLoss: "verlies drankkaart (gedeeld)",
@@ -1332,7 +1371,7 @@ export default function PartyTest() {
     if (error) {
       if (/PERSOON_VOL/.test(error.message)) setNotice(L.maxPerPerson(MAX_EIGEN_PERSOON))
       else if (/GROEP_VOL/.test(error.message)) setNotice(L.maxPerGroup(MAX_EIGEN_GROEP))
-      {L.addBtn}
+      else setNotice("Toevoegen mislukt: " + error.message)
       return
     }
     setNdName(""); setNdPrice(""); setNdCoins(""); setShowAddDrink(false)
@@ -1396,7 +1435,7 @@ export default function PartyTest() {
           )}
 
           <button style={{ ...S.btnP, width: "100%", opacity: ndName.trim() && ndPrice ? 1 : 0.5 }} onClick={addCustomDrink}>
-            Toevoegen
+            {L.addBtn}
           </button>
           <div style={{ fontSize: 11, color: "#8a7d55", textAlign: "center", marginTop: 8 }}>
             {L.remaining(Math.max(0, MAX_EIGEN_PERSOON - eigenVanMij), MAX_EIGEN_PERSOON)}
@@ -1637,7 +1676,7 @@ export default function PartyTest() {
         </div>
         {settlePick && (
           <div style={{ fontSize: 12, color: "#c98a00", fontWeight: 700, marginTop: 10 }}>
-            Tik nu op wie samen met {settleGroups.find((g) => g.key === settlePick)?.label} afrekent.
+            {L.tapWhoWith(settleGroups.find((g) => g.key === settlePick)?.label ?? "")}
           </div>
         )}
         {settleGroups.some((g) => g.samen) && (
