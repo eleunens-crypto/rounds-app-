@@ -497,6 +497,7 @@ const STRINGS = {
     sharedProblemTitle: "Let op — gedeelde items kloppen mogelijk niet:",
     sharedProblemAsk: "Toch afsluiten?",
     totalsMatch: "✓ klopt met de bon",
+    tipInclLabel: (a: string) => `💶 incl. €${a} fooi`,
     totalsDiff: (d: number) => `⚠️ €${d.toFixed(2).replace(".", ",")} verschil`,
     mixHint: "Gebruik gerust allebei — het één sluit het ander niet uit.",
     meLabel: "jij",
@@ -1104,6 +1105,7 @@ const STRINGS = {
     sharedProblemTitle: "Attention — les articles partagés semblent incorrects :",
     sharedProblemAsk: "Clôturer quand même ?",
     totalsMatch: "✓ correspond à l'addition",
+    tipInclLabel: (a: string) => `💶 pourboire de €${a} inclus`,
     totalsDiff: (d: number) => `⚠️ €${d.toFixed(2).replace(".", ",")} d'écart`,
     mixHint: "Utilisez les deux — l'un n'exclut pas l'autre.",
     meLabel: "toi",
@@ -3852,7 +3854,12 @@ export default function RundoTable() {
                     const ok = diff < 0.02
                     return (
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8, paddingTop: 8, borderTop: "1px dashed rgba(16,24,40,0.12)" }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#5a6680" }}>{L.billTotalLabel}</span>
+                        <span style={{ minWidth: 0 }}>
+                          <span style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#5a6680" }}>{L.billTotalLabel}</span>
+                          {tipTotal > 0.005 && (
+                            <span style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#a06b00", marginTop: 2 }}>{L.tipInclLabel(tipTotal.toFixed(2).replace(".", ","))}</span>
+                          )}
+                        </span>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
                           <span style={{ fontSize: 14, fontWeight: 800, color: "#14213a" }}>€{billSum.toFixed(2).replace(".", ",")}</span>
                           <span style={{ fontSize: 10.5, fontWeight: 800, color: ok ? "#1f8a4c" : "#b5591a", background: ok ? "rgba(39,174,96,0.12)" : "rgba(243,156,18,0.12)", border: ok ? "1px solid rgba(39,174,96,0.4)" : "1px solid rgba(243,156,18,0.45)", borderRadius: 7, padding: "2px 7px", whiteSpace: "nowrap" }}>{ok ? L.totalsMatch : L.totalsDiff(diff)}</span>
