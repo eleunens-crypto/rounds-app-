@@ -391,6 +391,7 @@ const STRINGS = {
     backToRundo: "← naar Rundo startscherm",
     tableTagline: "Scan de rekening en verdeel in groep",
     groupName: "Groepsnaam",
+    groupNamePh: "bv. De Resto Buddies",
     loading: "Laden...",
     startGroup: "Groep starten",
     savedGroups: "Opgeslagen groepen",
@@ -973,6 +974,7 @@ const STRINGS = {
     backToRundo: "← retour à l'accueil Rundo",
     tableTagline: "Scanne l'addition et partage en groupe",
     groupName: "Nom du groupe",
+    groupNamePh: "p.ex. Les Resto Buddies",
     loading: "Chargement…",
     startGroup: "Démarrer le groupe",
     savedGroups: "Groupes enregistrés",
@@ -2835,7 +2837,7 @@ export default function RundoTable() {
 
           <div style={S.card}>
             <div style={{ fontSize: 13, color: "#5a6680", fontWeight: 600, marginBottom: 6 }}>{L.groupName} <span style={{ color: "#c0392b" }}>*</span></div>
-            <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && createGroup()} placeholder="" style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 14 }} />
+            <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && createGroup()} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 14 }} />
             <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16, fontWeight: 700 }} onClick={createGroup} disabled={busy}>{busy ? L.loading : L.startGroup}</button>
           </div>
 
