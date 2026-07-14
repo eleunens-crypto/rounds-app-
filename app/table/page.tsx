@@ -819,6 +819,7 @@ const STRINGS = {
     tipEqualNote: "· gelijk over wie bestelde",
     clearTip: "Wissen",
     tipItemName: "Fooi",
+    taxLineLabel: "BTW / kosten (verdeeld)",
     explainTooltip: "uitleg",
     tipHeader: "💶 Fooi",
     addTipShort: "Toevoegen",
@@ -1427,6 +1428,7 @@ const STRINGS = {
     tipEqualNote: "· également entre ceux qui ont commandé",
     clearTip: "Effacer",
     tipItemName: "Pourboire",
+    taxLineLabel: "TVA / frais (répartis)",
     explainTooltip: "explication",
     tipHeader: "💶 Pourboire",
     addTipShort: "Ajouter",
@@ -2855,7 +2857,7 @@ export default function RundoTable() {
       }
     }
     const tax = taxShare(pid)
-    if (tax > 0.005) out.push({ name: "BTW / kosten (verdeeld)", qty: 1, amount: tax, shared: false, revealed: true, sharers: 0, myHeads: 0 })
+    if (tax > 0.005) out.push({ name: L.taxLineLabel, qty: 1, amount: tax, shared: false, revealed: true, sharers: 0, myHeads: 0 })
     const tip = tipShare(pid)
     if (tip > 0.005) out.push({ name: `💛 ${L.tipItemName}`, qty: 1, amount: tip, shared: false, revealed: true, sharers: 0, myHeads: 0 })
     return out
@@ -2908,6 +2910,12 @@ export default function RundoTable() {
         out.push({ label: `${c.quantity}× ${it.name}`, amount: it.unit_price * c.quantity, sharedWith: null })
       }
     }
+    // De kop toont personTotal (incl. verdeelde kosten en fooi). Zonder deze twee regels
+    // tellen de detailregels niet op tot dat bedrag — en lijkt de fooi uit het niets te komen.
+    const tax = taxShare(pid)
+    if (tax > 0.005) out.push({ label: L.taxLineLabel, amount: tax, sharedWith: null })
+    const tip = tipShare(pid)
+    if (tip > 0.005) out.push({ label: `💛 ${L.tipItemName}`, amount: tip, sharedWith: null })
     return out
   }
   const billDiff = Math.abs((group?.receipt_total ?? 0) - billTotal)
