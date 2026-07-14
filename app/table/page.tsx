@@ -298,7 +298,16 @@ function fileToBase64(file: File): Promise<string> {
 
 // Hoofd-scan: probeer eerst de AI-route (Gemini). Lukt dat niet (geen sleutel, fout, niets herkend),
 // dan valt hij automatisch terug op de lokale Tesseract-scan.
-async function scanReceipt(files: File | File[], onProgress?: (p: number) => void): Promise<{ items: ParsedItem[] | null; total: number | null; reason: "unavailable" | "empty" | null; status?: number; detail?: string }> {
+// Hoelang wachten voor een nieuwe poging? Google geeft bij een 429 zelf een retryDelay op —
+// die is leidend. Zonder opgave nemen we 60s: het minuutvenster is 60 seconden lang, dus onze
+// oude vaste 30s liet dat venster vaak nog niet leeglopen. Plus 0-5s willekeur, zodat vier
+// gasten aan dezelfde tafel niet allemaal op exact dezelfde seconde opnieuw proberen.
+function cooldownMs(retryAfter?: number | null): number {
+  const base = retryAfter != null && retryAfter > 0 ? retryAfter : 60
+  return Math.round((base + Math.random() * 5) * 1000)
+}
+
+async function scanReceipt(files: File | File[], onProgress?: (p: number) => void): Promise<{ items: ParsedItem[] | null; total: number | null; quotaDay?: boolean; retryAfter?: number | null; reason: "unavailable" | "empty" | null; status?: number; detail?: string }> {
   try {
     onProgress?.(0.15)
     // Meerdere foto's = stukken van dezelfde bon. Ze gaan samen in één AI-oproep,
@@ -341,9 +350,20 @@ async function scanReceipt(files: File | File[], onProgress?: (p: number) => voi
     onProgress?.(0.85)
     if (!resp.ok) {
       let detail = ""
-      try { detail = (await resp.text()).slice(0, 200) } catch { /* negeer */ }
+      let quotaDay = false
+      let retryAfter: number | null = null
+      try {
+        const raw = await resp.text()
+        detail = raw.slice(0, 200)
+        // De server vertelt nu of het om een DAGlimiet gaat en hoelang Google zelf zegt te
+        // wachten. Zonder dat gokten we altijd 30s — te weinig bij een minuutlimiet (venster
+        // van 60s) en zinloos bij een daglimiet (herstelt pas na middernacht Pacific).
+        const body = JSON.parse(raw)
+        if (body?.reason === "quota_day") quotaDay = true
+        if (typeof body?.retryAfter === "number" && body.retryAfter > 0) retryAfter = body.retryAfter
+      } catch { /* geen JSON: dan blijft het bij de ruwe tekst */ }
       console.warn("AI-scan mislukt — status " + resp.status + " " + detail)
-      return { items: null, total: null, reason: "unavailable", status: resp.status, detail }
+      return { items: null, total: null, reason: "unavailable", status: resp.status, detail, quotaDay, retryAfter }
     }
     const data = await resp.json()
     if (Array.isArray(data?.items)) {
@@ -624,6 +644,10 @@ const STRINGS = {
     pickPhoto: "📷 Foto maken / kiezen",
     takePhoto: "Foto maken",
     fromGallery: "Uit galerij",
+    quotaDayTitle: "🔒 Slimme scan is voor vandaag op",
+    quotaDayBody: "De gratis AI-scan heeft een daglimiet en die is bereikt. Opnieuw proberen helpt vandaag niet meer — morgenochtend werkt ze weer.",
+    quotaDayQuickScan: "⚡ Gebruik de snelle scan",
+    quotaDayOrManual: "Of voeg de items handmatig toe via “+ Item toevoegen”.",
     scanFailUnavailTitle: "😕 De slimme scan is even niet beschikbaar",
     scanFailUnavailBody: "De AI-herkenning is momenteel overbelast of tijdelijk offline. Wacht heel even en probeer opnieuw — meestal is ze na een halve minuut terug. Je foto blijft bewaard.",
     retryIn: (s: number) => `🔄 Opnieuw proberen over ${s}s`,
@@ -1237,6 +1261,10 @@ const STRINGS = {
     pickPhoto: "📷 Prendre / choisir une photo",
     takePhoto: "Prendre une photo",
     fromGallery: "Depuis la galerie",
+    quotaDayTitle: "🔒 Le scan intelligent est épuisé pour aujourd'hui",
+    quotaDayBody: "Le scan IA gratuit a une limite journalière, atteinte pour aujourd'hui. Réessayer n'aidera plus — demain matin, ça refonctionne.",
+    quotaDayQuickScan: "⚡ Utiliser le scan rapide",
+    quotaDayOrManual: "Ou ajoute les articles à la main via « + Ajouter un article ».",
     scanFailUnavailTitle: "😕 Le scan intelligent est momentanément indisponible",
     scanFailUnavailBody: "La reconnaissance IA est surchargée ou temporairement hors ligne. Attends un instant et réessaie — elle revient généralement après une demi-minute. Ta photo est conservée.",
     retryIn: (s: number) => `🔄 Réessayer dans ${s}s`,
@@ -1706,7 +1734,7 @@ export default function RundoTable() {
   const [scanFlags, setScanFlags] = useState<Record<string, { note: string }>>({})
   const [scanning, setScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState(0)
-  const [scanFail, setScanFail] = useState<null | { reason: "unavailable" | "empty"; status?: number; detail?: string }>(null)
+  const [scanFail, setScanFail] = useState<null | { reason: "unavailable" | "empty"; status?: number; detail?: string; quotaDay?: boolean }>(null)
   const [cooldownUntil, setCooldownUntil] = useState(0)
   const [nowTs, setNowTs] = useState<number>(() => Date.now())
   const [scanPreview, setScanPreview] = useState<ParsedItem[]>([])
@@ -2355,9 +2383,11 @@ export default function RundoTable() {
     setScanStep(null); setScanning(false)
     if (!res.items || res.items.length === 0) {
       const reason = res.reason ?? "empty"
-      if (reason === "unavailable") setCooldownUntil(Date.now() + 30 * 1000)
+      // Wachttijd van Google zelf, met wat willekeur erbij: zitten er vier gasten aan tafel
+      // te tikken, dan proberen ze anders allemaal op dezelfde seconde opnieuw.
+      if (reason === "unavailable" && !res.quotaDay) setCooldownUntil(Date.now() + cooldownMs(res.retryAfter))
       if (photos.length > 1) setMultiFails((n) => n + 1)
-      setScanFail({ reason, status: res.status, detail: res.detail })
+      setScanFail({ reason, status: res.status, detail: res.detail, quotaDay: res.quotaDay })
       return
     }
     setMultiFails(0)
@@ -2377,8 +2407,8 @@ export default function RundoTable() {
     setScanning(false)
     if (!res.items || res.items.length === 0) {
       const reason = res.reason ?? "empty"
-      if (reason === "unavailable") setCooldownUntil(Date.now() + 30 * 1000)
-      setScanFail({ reason, status: res.status, detail: res.detail })
+      if (reason === "unavailable" && !res.quotaDay) setCooldownUntil(Date.now() + cooldownMs(res.retryAfter))
+      setScanFail({ reason, status: res.status, detail: res.detail, quotaDay: res.quotaDay })
       return
     }
     setScanSource("ai")
@@ -4365,7 +4395,17 @@ export default function RundoTable() {
             )}
             {scanFail && !scanning && (
               <div style={{ marginBottom: 14, border: "1px solid rgba(224,107,94,0.45)", background: "rgba(224,107,94,0.06)", borderRadius: 12, padding: "13px 14px" }}>
-                {scanFail.reason === "unavailable" ? (
+                {scanFail.quotaDay ? (
+                  <>
+                    {/* Dagquota op: opnieuw proberen is kansloos tot na middernacht (Pacific).
+                        Dus geen aftelklok die iets belooft wat niet gaat gebeuren, maar de weg vooruit. */}
+                    <div style={{ fontSize: 14, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>{L.quotaDayTitle}</div>
+                    <div style={{ fontSize: 12.5, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.quotaDayBody}</div>
+                    <button onClick={runLocalScan} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 14, fontWeight: 800 }}>{L.quotaDayQuickScan}</button>
+                    <div style={{ fontSize: 11.5, color: "#9aa0ab", textAlign: "center", marginTop: 8, lineHeight: 1.45 }}>{L.quotaDayOrManual}</div>
+                    {scanFail.status ? <div style={{ fontSize: 10.5, color: "#9aa0ab", marginTop: 8, wordBreak: "break-word" }}>technisch: {scanFail.status}{scanFail.detail ? " — " + scanFail.detail : ""}</div> : null}
+                  </>
+                ) : scanFail.reason === "unavailable" ? (
                   <>
                     <div style={{ fontSize: 14, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>{L.scanFailUnavailTitle}</div>
                     <div style={{ fontSize: 12.5, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.scanFailUnavailBody}</div>
