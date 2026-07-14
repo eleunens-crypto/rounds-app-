@@ -1750,8 +1750,26 @@ export default function RundoTable() {
     let active = true
     let ch: ReturnType<typeof supabase.channel> | null = null
     let retry: ReturnType<typeof setTimeout> | null = null
+    let cool: ReturnType<typeof setTimeout> | null = null
+    let cooling = false
+    let pending = false
 
-    const reload = () => { if (mounted.current && active) loadAll(groupId) }
+    // Elk seintje van Supabase haalt de hele rekening opnieuw op. Bij losse acties (iemand
+    // duidt een item aan) is dat één seintje: dan halen we meteen op, zodat het instant voelt.
+    // Maar een scan voegt in één klap 25 items toe = 25 seintjes. Die bundelen we: tijdens de
+    // afkoelperiode onthouden we enkel dát er nog iets kwam, en halen we daarna één keer op.
+    // Zo blijft het even snel, maar zonder tientallen overbodige queries per telefoon.
+    const COOLDOWN_MS = 600
+    const reload = () => {
+      if (!active) return
+      if (cooling) { pending = true; return }
+      cooling = true
+      if (mounted.current) loadAll(groupId)
+      cool = setTimeout(() => {
+        cooling = false
+        if (pending) { pending = false; reload() }
+      }, COOLDOWN_MS)
+    }
 
     const connect = () => {
       if (!active) return
@@ -1775,11 +1793,13 @@ export default function RundoTable() {
     }
     document.addEventListener("visibilitychange", refreshOnReturn)
     window.addEventListener("focus", refreshOnReturn)
-    const poll = setInterval(() => { if (typeof document === "undefined" || document.visibilityState === "visible") reload() }, 30000)
+    // Vangnet voor als realtime niet doorkomt. Realtime doet nu het echte werk, dus 60s volstaat.
+    const poll = setInterval(() => { if (typeof document === "undefined" || document.visibilityState === "visible") reload() }, 60000)
 
     return () => {
       active = false
       if (retry) clearTimeout(retry)
+      if (cool) clearTimeout(cool)
       clearInterval(poll)
       document.removeEventListener("visibilitychange", refreshOnReturn)
       window.removeEventListener("focus", refreshOnReturn)
