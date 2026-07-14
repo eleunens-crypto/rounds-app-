@@ -474,6 +474,8 @@ export default function PartyTest() {
     setOpenRoundId(open?.id ?? null)
     setCart(open?.orders ?? {})
     setCartAnon(open?.anon ?? {})
+    // Bekerwerk dat al ingevuld was, blijft staan bij een refresh of op een tweede toestel.
+    if (open && Object.keys(open.gaveBack).length > 0) setGaveBackDraft(open.gaveBack)
     const gedaan = alle.filter((r) => r.status !== "open")
     setRounds(gedaan)
     setRoundNr(open ? open.seq : Math.max(1, gedaan.length))
@@ -1308,6 +1310,115 @@ export default function PartyTest() {
             </div>
           </div>
         )}
+      </div></div>
+    )
+  }
+
+  // ── GAST: bestellen ────────────────────────────────────────────────────────
+  // Eén taak, één scherm: tik aan wat JIJ wil. Geen personen kiezen, geen bedragen,
+  // geen pot — dat is werk voor wie naar de toog gaat. De gast ziet enkel zichzelf.
+  if (groupId && !isAdmin && meId) {
+    const ik = people.find((p) => p.id === meId)!
+    const zoekt = normText(drinkSearch).length > 0
+    const lijst = zoekt
+      ? drinks.filter((d) => drinkMatches(d.name, drinkSearch))
+      : drinks.filter((d) => d.cat === activeCat).filter((d) => fullList || d.fav || aQty(d.id, meId) > 0)
+    const mijn = drinks.filter((d) => aQty(d.id, meId) > 0)
+    const mijnAantal = mijn.reduce((a, d) => a + aQty(d.id, meId), 0)
+    const bezig = !!openRoundId
+
+    return (
+      <div style={S.page}><div style={S.wrap}>
+        {renderDialogs()}
+
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 800 }}>🍻 {groupName}</div>
+            <div style={{ fontSize: 12, color: "#8a7d55" }}>
+              Jij bent <b style={{ color: "#4a3f1e" }}>{ik.name}</b>
+              {pay === "coin" ? ` · coins (1 = ${euro(coinValue)})` : ""}
+            </div>
+          </div>
+          <button style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)" }}
+            onClick={() => setConfirmDlg({ msg: `Ben jij niet ${ik.name}? Dan geef je deze plaats vrij en kies je opnieuw.`, yes: "Plaats vrijgeven", onYes: () => { setConfirmDlg(null); releaseSeat(meId) } })}>
+            niet ik
+          </button>
+        </div>
+
+        {/* Wat je al aantikte in dit rondje. Bovenaan, want dat is wat je wil zien. */}
+        <div style={{ ...S.card, background: mijnAantal > 0 ? "rgba(31,138,76,0.06)" : "#fff" }}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: mijnAantal > 0 ? 10 : 0 }}>
+            <span style={{ fontSize: 14, fontWeight: 800 }}>
+              {bezig ? `🛒 Ronde ${roundNr} — wat jij wil` : "🛒 Nog geen rondje bezig"}
+            </span>
+            {mijnAantal > 0 && <span style={{ ...S.pill, background: "#1f8a4c", color: "#fff" }}>{mijnAantal}</span>}
+          </div>
+          {mijnAantal === 0 ? (
+            <div style={{ fontSize: 12.5, color: "#8a7d55", lineHeight: 1.5, marginTop: 6 }}>
+              Tik hieronder aan wat je wil. Wie naar de toog gaat, ziet het meteen op zijn scherm.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {mijn.map((d) => (
+                <button key={d.id} onClick={() => bump(d.id, meId, -1)}
+                  style={{ ...S.pill, cursor: "pointer", background: "#fff", border: "1px solid rgba(31,138,76,0.35)", color: "#1f6b3a", fontSize: 12 }}>
+                  {aQty(d.id, meId)}× {d.name} ✕
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ position: "relative", marginBottom: 9 }}>
+          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none" }}>🔍</span>
+          <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)} placeholder="Zoek een drankje…"
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 36, paddingRight: drinkSearch ? 34 : 12, fontSize: 15, textAlign: "left" }} />
+          {drinkSearch && (
+            <button onClick={() => setDrinkSearch("")}
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 15, color: "#8a7d55", padding: 4 }}>✕</button>
+          )}
+        </div>
+
+        <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", marginBottom: 8 }}>
+          {catsPresent.map((c) => (
+            <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}</span>
+          ))}
+        </div>
+
+        {!zoekt && (
+          <div style={{ fontSize: 11.5, textAlign: "right", marginBottom: 6 }}>
+            <span onClick={() => setFullList((v) => !v)} style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }}>
+              {fullList ? "⚡ Korte lijst" : "📖 Volledige lijst"}
+            </span>
+          </div>
+        )}
+
+        {lijst.length === 0 ? (
+          <div style={{ ...S.card, textAlign: "center", color: "#b3a988", fontSize: 13, padding: "20px 0" }}>
+            Niets gevonden — probeer een ander woord.
+          </div>
+        ) : (
+          <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12 }}>
+            {lijst.map((d) => {
+              const n = aQty(d.id, meId)
+              return (
+                <div key={d.id} style={{ padding: "10px", borderRadius: 12, background: n > 0 ? "rgba(31,138,76,0.08)" : "#faf7ec", border: n > 0 ? "1px solid rgba(31,138,76,0.3)" : "1px solid rgba(120,95,20,0.1)" }}>
+                  <div style={{ fontSize: 13.5, fontWeight: n > 0 ? 800 : 600, color: n > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
+                  <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
+                    <button style={{ ...S.step, opacity: n > 0 ? 1 : 0.4 }} onClick={() => n > 0 && bump(d.id, meId, -1)}>−</button>
+                    <span style={{ fontSize: 17, fontWeight: 800, color: n > 0 ? "#1f8a4c" : "#b3a988" }}>{n}</span>
+                    <button style={S.step} onClick={() => bump(d.id, meId, 1)}>+</button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", padding: "6px 0 20px", lineHeight: 1.5 }}>
+          Wie naar de toog gaat, sluit het rondje af en vult het bedrag in.<br />
+          Jouw deel wordt op het einde eerlijk verrekend.
+        </div>
       </div></div>
     )
   }
