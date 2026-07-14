@@ -706,6 +706,11 @@ const STRINGS = {
     taxDesc: "Aparte BTW, Kosten of Kortingen?",
     kindCost: "💰 Kosten",
     wordCost: "Kosten",
+    zeroPriceCount: (n: number) => `${n} ${n === 1 ? "item" : "items"} zonder prijs`,
+    deleteZeros: "🗑️ Verwijder allemaal",
+    confirmDeleteZeros: (n: number) => `${n} ${n === 1 ? "item" : "items"} zonder prijs verwijderen? Dit kan niet ongedaan gemaakt worden.`,
+    zerosDeleted: (n: number) => `${n} ${n === 1 ? "item" : "items"} verwijderd.`,
+    zeroPriceHint: "De scan las deze lijnen zonder prijs. Zet een prijs, of verwijder ze.",
     wordVat: "BTW",
     wordDiscount: "Korting",
     sugCost: ["Couvert", "Bediening", "Servicekost"],
@@ -1307,6 +1312,11 @@ const STRINGS = {
     taxDesc: "TVA, frais ou réductions séparés ?",
     kindCost: "💰 Frais",
     wordCost: "Frais",
+    zeroPriceCount: (n: number) => `${n} article${n === 1 ? "" : "s"} sans prix`,
+    deleteZeros: "🗑️ Tout supprimer",
+    confirmDeleteZeros: (n: number) => `Supprimer ${n} article${n === 1 ? "" : "s"} sans prix ? Action irréversible.`,
+    zerosDeleted: (n: number) => `${n} article${n === 1 ? "" : "s"} supprimé${n === 1 ? "" : "s"}.`,
+    zeroPriceHint: "Le scan a lu ces lignes sans prix. Ajoute un prix ou supprime-les.",
     wordVat: "TVA",
     wordDiscount: "Réduction",
     sugCost: ["Couvert", "Service", "Frais de service"],
@@ -2613,6 +2623,20 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
+  // Een scan leest soms lijnen zonder prijs in (kopjes, tussentitels). Die kan je in één
+  // beweging opruimen in plaats van ze stuk voor stuk te verwijderen.
+  const deleteZeroPriceItems = async () => {
+    if (!group || !isAdmin) return
+    if (group.finalized) { setToast(L.reopenFirst); return }
+    const zeros = baseItems.filter((it) => it.unit_price <= 0.0001)
+    if (zeros.length === 0) return
+    if (!confirm(L.confirmDeleteZeros(zeros.length))) return
+    const ids = zeros.map((it) => it.id)
+    await supabase.from("table_claims").delete().in("item_id", ids)
+    await supabase.from("table_items").delete().in("id", ids)
+    await loadAll(group.id)
+    setToast(L.zerosDeleted(zeros.length))
+  }
   const deleteItem = async (id: string) => {
     if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     if (!group) return
@@ -3250,6 +3274,17 @@ export default function RundoTable() {
           )}
 
           {items.length > 0 && (
+          {isAdmin && zeroPriceItems.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 9, background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 11, padding: "10px 12px", marginBottom: 10 }}>
+              <span style={{ flexShrink: 0, fontSize: 14 }}>⚠️</span>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: "#8a4514", lineHeight: 1.4 }}>
+                <b>{L.zeroPriceCount(zeroPriceItems.length)}</b><br />
+                <span style={{ color: "#a5713f" }}>{L.zeroPriceHint}</span>
+              </span>
+              <button onClick={deleteZeroPriceItems}
+                style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, color: "#c0392b", background: "#fff", border: "1px solid rgba(224,107,94,0.5)", borderRadius: 9, padding: "7px 10px", cursor: "pointer", whiteSpace: "nowrap" }}>{L.deleteZeros}</button>
+            </div>
+          )}
           <ItemList
             items={baseItems} claimedQty={claimedQty} participants={participants} claimsForItem={claimsForItem}
             sharerIds={sharerIds} shareHeads={shareHeads} toggleShareClaim={toggleShareClaim} setShareFixed={setShareFixed}
