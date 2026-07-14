@@ -578,7 +578,6 @@ const STRINGS = {
     allOkGoGuests: "✓ Alles klopt — ga naar Gasten en delen →",
     scanModalTitle: "🧾 Rekening scannen",
     scanModalIntro: "Maak een duidelijke foto van de rekening of kies er één uit je galerij.",
-    scanModalAfter: "Foto toegevoegd voor AI scan. Rekening te lang? Voeg een 2e toe.",
     scanSubNote: "Daarna kan je herkende items nog nakijken en bijsturen.",
     scanProgress: "De tekst van je bon wordt herkend — even geduld.",
     scanningBusy: "⏳ Bezig met scannen — even geduld",
@@ -661,6 +660,7 @@ const STRINGS = {
     lineTotal: "Regeltotaal",
     lineTotalLabel: "Regeltotaal (€)",
     priceHint: "Pas één van beide aan — het andere volgt.",
+    sharedByOthers: (names: string) => `Dit item is al toegewezen aan ${names}. Vraag de admin om het aan te passen.`,
     sharedHintOn: "De prijs verdeelt zich over wie meedeelt.",
     sharedHintOff: "Gedeeld item (wijn, water…)? Tik de knop aan.",
     sharedCheckbox: "Gedeeld item (wijn, water...) — splitsen over wie meedeelt",
@@ -1176,7 +1176,6 @@ const STRINGS = {
     photoAdded: "photo ajoutée",
     retakePhoto: "reprendre",
     readBillBtn: "✨ Démarrer le scan IA",
-    scanModalAfter: "Photo ajoutée pour le scan IA. Addition trop longue ? Ajoute-en une 2e.",
     scanSubNote: "Tu pourras ensuite vérifier et corriger les articles reconnus.",
     addSecondHalfHint: "facultatif",
     readBillBtn2: "✨ Scanner les 2 photos",
@@ -1251,6 +1250,7 @@ const STRINGS = {
     lineTotal: "Total de la ligne",
     lineTotalLabel: "Total ligne (€)",
     priceHint: "Modifie l'un des deux — l'autre suit.",
+    sharedByOthers: (names: string) => `Cet article est déjà attribué à ${names}. Demande à l'hôte de le modifier.`,
     sharedHintOn: "Le prix se répartit entre ceux qui partagent.",
     sharedHintOff: "Article partagé (vin, eau…) ? Touche le bouton.",
     sharedCheckbox: "Article partagé (vin, eau…) — répartir entre ceux qui le partagent",
@@ -2524,6 +2524,19 @@ export default function RundoTable() {
     if (it.share_fixed && !isAdmin) { setToast(L.shareLocked); return }
     // Omzetten verandert de betekenis van bestaande toewijzingen; daarom eerst bevestigen.
     const hasClaims = claims.some((c) => c.item_id === it.id && c.quantity > 0)
+    // Een gast mag enkel zijn EIGEN werk terugdraaien. Hangt er al iemand anders aan het
+    // item, dan zou omzetten diens toewijzing wissen — dat mag alleen de admin.
+    if (!isAdmin) {
+      const others = claims.filter((c) => c.item_id === it.id && c.quantity > 0 && c.participant_id !== meId)
+      if (others.length > 0) {
+        const names = participants
+          .filter((p) => others.some((c) => c.participant_id === p.id))
+          .map((p) => p.name)
+          .join(", ")
+        setToast(L.sharedByOthers(names))
+        return
+      }
+    }
     // Meer dan 1 stuk? Dan is "delen" iets anders dan "per stuk toewijzen" — leg dat uit.
     const multi = !it.is_shared && it.quantity > 1
     if (hasClaims || multi) { setShareConfirm(it); return }
@@ -4090,7 +4103,7 @@ export default function RundoTable() {
         <div style={S.overlay}>
           <div style={{ ...S.modal, width: 460, maxHeight: "88vh" }}>
             <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800 }}>{L.scanModalTitle}</h3>
-            <p style={{ fontSize: 12.5, color: "#999", marginBottom: 14 }}>{photos.length > 0 ? L.scanModalAfter : L.scanModalIntro}</p>
+            <p style={{ fontSize: 12.5, color: "#999", marginBottom: 14 }}>{L.scanModalIntro}</p>
 
             {scanning ? (
               <div style={{ ...S.btn, ...S.btnPrimary, textAlign: "center", marginBottom: 14, fontWeight: 700, padding: "14px 0", opacity: 0.6 }}>{scanStep && scanStep.n > 1 ? L.scanningPhotoN(scanStep.i, scanStep.n) : L.scanningBusy}</div>
@@ -4830,6 +4843,18 @@ function ClaimScreen(props: {
   // Vrije plaatsen (nog niemand) horen niet in de toewijslijst: enkel wie een naam heeft.
   const isFreeName = (nm: string) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test((nm || "").trim())
   const named = participants.filter((p) => !isFreeName(p.name))
+  // Dezelfde deel-knop als op de bon: hier kan de admin een item alsnog op "gedeeld" zetten.
+  const shareBtn = (it: BillItem) => (
+    <button onClick={() => onToggleShared(it)} title={it.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}
+      style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 9, padding: "5px 8px", cursor: "pointer",
+        border: it.is_shared ? "1px solid rgba(196,152,32,0.5)" : "1px solid rgba(16,24,40,0.15)",
+        background: it.is_shared ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff" }}>
+      <ShareIcon on={it.is_shared} size={13} />
+      <span style={{ fontSize: 10.5, fontWeight: it.is_shared ? 800 : 700, color: it.is_shared ? "#7a5300" : "#5a6680" }}>
+        {it.is_shared ? L.sharedOnShort : L.makeSharedShort}
+      </span>
+    </button>
+  )
   const prevDoneRef = useRef(false)
   useEffect(() => {
     if (isAdmin && allDone && !prevDoneRef.current) setClaimCollapsed(true)
@@ -4878,7 +4903,17 @@ function ClaimScreen(props: {
                             <div style={{ fontSize: 11, color: "#999" }}>€{itemTotal(it).toFixed(2).replace(".", ",")} {L.totalLower}{ok ? ` · €${perHead.toFixed(2).replace(".", ",")} p.p.` : ""}</div>
                           </div>
                           <span style={{ fontSize: 11, fontWeight: 800, borderRadius: 10, padding: "2px 9px", color: ok ? "#1f8a4c" : "#c0392b", background: ok ? "rgba(39,174,96,0.12)" : "rgba(224,107,94,0.12)" }}>{ok ? `${heads} ${heads === 1 ? L.person : L.persons}` : L.nobodyYet}</span>
+                          {isAdmin && shareBtn(it)}
                         </div>
+                        {onSetExpected && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 7, marginLeft: 25, background: "rgba(90,108,166,0.06)", borderRadius: 9, padding: "7px 9px" }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6680" }}>{L.expectedSharers}</span>
+                            <button onClick={() => onSetExpected(it.id, Math.max(0, (it.share_expected ?? 0) - 1) || null)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 13 }}>−</button>
+                            <b style={{ minWidth: 14, textAlign: "center", fontSize: 13, color: it.share_expected ? "#14213a" : "#c3c8d2" }}>{it.share_expected ?? "–"}</b>
+                            <button onClick={() => onSetExpected(it.id, (it.share_expected ?? 0) + 1)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 13, background: "rgba(27,42,74,0.12)" }}>+</button>
+                            <span style={{ flexBasis: "100%", fontSize: 10, color: "#9aa0ab", lineHeight: 1.4 }}>{L.expectedHint}</span>
+                          </div>
+                        )}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25 }}>
                           {named.length === 0
                             ? <span style={{ fontSize: 11, color: "#aaa" }}>{L.addGuestsFirst}</span>
@@ -4959,7 +4994,10 @@ function ClaimScreen(props: {
                     <div key={it.id} style={{ padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: highlight ? "rgba(233,196,95,0.16)" : "transparent", borderRadius: highlight ? 10 : 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}>{it.quantity}× {it.name}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.quantity}× {it.name}</span>
+                            {isAdmin && shareBtn(it)}
+                          </div>
                           <div style={{ fontSize: 11, color: "#999" }}>€{it.unit_price.toFixed(2).replace(".", ",")}/stuk</div>
                         </div>
                         {open > 0
