@@ -45,7 +45,7 @@ function CheersIcon({ size = 18, color = "#4a3f1e" }: { size?: number; color?: s
 // meteen, en gasten claimen er zelf een via de QR/link — net als in Rundo Table.
 // Een vrije plaats heeft in de databank een lege naam; in de UI heet ze "Gast N",
 // waardoor de bestaande isGuestDefault-logica gewoon blijft werken.
-type Person = { id: string; name: string; seat: number; claimedBy?: string | null; selfJoined?: boolean }
+type Person = { id: string; name: string; seat: number; claimedBy?: string | null; selfJoined?: boolean; named?: boolean; settleWith?: string | null }
 
 // Dit toestel. Bepaalt of je de admin bent en welke plaats van jou is.
 function deviceId(): string {
@@ -421,7 +421,7 @@ export default function PartyTest() {
   const loadParty = useCallback(async (gid: string) => {
     const [{ data: g }, { data: pp }, { data: rr }, { data: ii }] = await Promise.all([
       supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized").eq("id", gid).single(),
-      supabase.from("party_people").select("id,seat,name,claimed_by,self_joined").eq("group_id", gid).order("seat"),
+      supabase.from("party_people").select("id,seat,name,claimed_by,self_joined,settle_with").eq("group_id", gid).order("seat"),
       supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back").eq("group_id", gid).order("seq"),
       supabase.from("party_round_items").select("round_id,person_id,drink_key,qty").eq("group_id", gid),
     ])
@@ -441,8 +441,12 @@ export default function PartyTest() {
     // placeholder-logica ongemoeid blijft.
     setPeople((pp || []).map((r) => ({
       id: r.id, seat: r.seat,
+      // named = de admin (of de gast zelf) gaf een echte naam. Een naamloze plaats
+      // heet "Gast N", zodat de bestaande placeholder-logica blijft werken.
+      named: !!(r.name || "").trim(),
       name: (r.name || "").trim() || `Gast ${r.seat}`,
       claimedBy: r.claimed_by, selfJoined: !!r.self_joined,
+      settleWith: r.settle_with,
     })))
 
     // Drankjes per rondje uitsorteren: toegewezen in `orders`, de rest in `anon`.
@@ -558,6 +562,16 @@ export default function PartyTest() {
     }
     setNotice("Groep aanmaken mislukt. Probeer opnieuw.")
     setBusy(false)
+  }
+
+  // Een plaats vrijgeven. Nodig als iemand op de verkeerde naam tikte, of als de
+  // admin een plaats wil doorgeven. De naam blijft staan — enkel de koppeling met
+  // het toestel verdwijnt.
+  const releaseSeat = async (personId: string) => {
+    const { error } = await supabase.from("party_people")
+      .update({ claimed_by: null, self_joined: false }).eq("id", personId)
+    if (error) { setNotice("Vrijgeven mislukt: " + error.message); return }
+    if (groupId) loadParty(groupId)
   }
 
   // Een plaats claimen: de gast (of de admin) zegt "dit ben ik".
@@ -853,6 +867,96 @@ export default function PartyTest() {
   const cupOwn = (pid: string) => (depositOn ? rounds.reduce((s, r) => s + roundCupEur(r, pid), 0) : 0)
   const roundParts = (r: Round) => { const potPart = r.potPart || 0; const persons = r.payers || {}; const personSum = Object.values(persons).reduce((a, b) => a + (b || 0), 0); const base = potPart + personSum; const cupSum = depositOn ? people.reduce((a, pp) => a + roundCupEur(r, pp.id), 0) : 0; return { potPart, persons, personSum, base, cupSum } }
   const paidByPerson = (pid: string) => rounds.reduce((s, r) => { const { persons, base, cupSum } = roundParts(r); const own = persons[pid] || 0; if (own <= 0) return s; return s + own + (base > 0 ? cupSum * (own / base) : 0) }, 0)
+  // ── Samen afrekenen ─────────────────────────────────────────────────────────
+  // Bewust GEEN gedeelde plaats: dan deelt een koppel ook één telefoon en kan de
+  // tweede zijn eigen drankje niet aantikken. Iedereen houdt dus zijn plaats en zijn
+  // drankjes; enkel de eindafrekening wordt samengeteld. Halverwege van gedachten
+  // veranderen kan, zonder dat er iets aan de bestellingen wijzigt.
+  const settleKey = (pid: string) => people.find((p) => p.id === pid)?.settleWith || pid
+  const settleGroups = useMemo(() => {
+    const g: Record<string, Person[]> = {}
+    people.forEach((p) => { (g[p.settleWith || p.id] ??= []).push(p) })
+    return Object.entries(g).map(([key, leden]) => ({
+      key, leden,
+      label: leden.map((p) => p.name).join(" & "),
+      samen: leden.length > 1,
+    })).sort((a, b) => Math.min(...a.leden.map((p) => p.seat)) - Math.min(...b.leden.map((p) => p.seat)))
+  }, [people])
+
+  const linkSettle = async (a: string, b: string) => {
+    // b sluit aan bij de groep van a. Bestond a al in een groep, dan neemt hij die mee.
+    const kop = settleKey(a)
+    const groepVanB = people.filter((p) => (p.settleWith || p.id) === (people.find((x) => x.id === b)?.settleWith || b))
+    const ids = groepVanB.map((p) => p.id)
+    const { error } = await supabase.from("party_people").update({ settle_with: kop }).in("id", ids)
+    if (error) { setNotice("Koppelen mislukt: " + error.message); return }
+    // de kop van a wijst naar zichzelf, zodat de groepering sluit
+    await supabase.from("party_people").update({ settle_with: kop }).eq("id", kop)
+    if (groupId) loadParty(groupId)
+  }
+  const unlinkSettle = async (pid: string) => {
+    const { error } = await supabase.from("party_people").update({ settle_with: null }).eq("id", pid)
+    if (error) { setNotice("Ontkoppelen mislukt: " + error.message); return }
+    // Blijft er nog één iemand alleen over in de groep, dan heeft die groep geen zin meer.
+    const kop = settleKey(pid)
+    const rest = people.filter((p) => p.id !== pid && (p.settleWith || p.id) === kop)
+    if (rest.length === 1) await supabase.from("party_people").update({ settle_with: null }).eq("id", rest[0].id)
+    if (groupId) loadParty(groupId)
+  }
+
+  // Kaart in het afrekenscherm: tik twee namen aan en ze rekenen samen af.
+  const [settlePick, setSettlePick] = useState<string | null>(null)
+  const renderSettleTogether = () => {
+    if (people.length < 2) return null
+    return (
+      <div style={S.card}>
+        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>👥 Rekent er iemand samen af?</h3>
+        <div style={{ fontSize: 12, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
+          Voor koppels, huisgenoten, wie samen naar huis rijdt. Iedereen houdt zijn eigen drankjes —
+          enkel het eindbedrag wordt samengeteld tot één betaling.
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+          {settleGroups.map((g) => {
+            const gekozen = settlePick === g.key
+            return (
+              <button key={g.key}
+                onClick={() => {
+                  if (g.samen) { setSettlePick(null); return }              // groepje: enkel ontkoppelen hieronder
+                  if (!settlePick) { setSettlePick(g.key); return }
+                  if (settlePick === g.key) { setSettlePick(null); return }
+                  linkSettle(settlePick, g.key); setSettlePick(null)
+                }}
+                style={{
+                  ...S.chip(gekozen ? 1 : 0), cursor: "pointer",
+                  ...(g.samen ? { background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "1px solid rgba(240,165,0,0.5)" } : {}),
+                }}>
+                {g.samen ? "🔗 " : ""}{g.label}
+              </button>
+            )
+          })}
+        </div>
+        {settlePick && (
+          <div style={{ fontSize: 12, color: "#c98a00", fontWeight: 700, marginTop: 10 }}>
+            Tik nu op wie samen met {settleGroups.find((g) => g.key === settlePick)?.label} afrekent.
+          </div>
+        )}
+        {settleGroups.some((g) => g.samen) && (
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.1)" }}>
+            <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 7 }}>Weer apart zetten:</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {settleGroups.filter((g) => g.samen).flatMap((g) => g.leden).map((p) => (
+                <button key={p.id} onClick={() => unlinkSettle(p.id)}
+                  style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)" }}>
+                  ✕ {p.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   const settlement = useMemo(() => {
     const paid: Record<string, number> = {}; people.forEach((p) => (paid[p.id] = 0)); let potPaid = 0
     rounds.forEach((r) => {
@@ -861,14 +965,21 @@ export default function PartyTest() {
       Object.entries(persons).forEach(([pid, amt]) => { const a = amt || 0; if (a > 0) paid[pid] = (paid[pid] ?? 0) + a + cupSum * (a / base) })
       if (potPart > 0) potPaid += potPart + cupSum * (potPart / base)
     })
-    const nets: { id: string; label: string; net: number }[] = people.map((p) => ({ id: p.id, label: p.name, net: (paid[p.id] ?? 0) + contribOf(p.id) - consumption(p.id) - cupOwn(p.id) - cardLossPer }))
+    // Per persoon, en daarna opgeteld per afreken-groepje. Wie alleen afrekent, is een
+    // groepje van één — dan verandert er niets aan de uitkomst.
+    const perPerson: Record<string, number> = {}
+    people.forEach((p) => { perPerson[p.id] = (paid[p.id] ?? 0) + contribOf(p.id) - consumption(p.id) - cupOwn(p.id) - cardLossPer })
+    const nets: { id: string; label: string; net: number }[] = settleGroups.map((g) => ({
+      id: g.key, label: g.label,
+      net: g.leden.reduce((a, p) => a + (perPerson[p.id] ?? 0), 0),
+    }))
     if (potContribTotal > 0 || potSpent > 0) nets.push({ id: "pot", label: "de pot", net: potPaid - potContribTotal + (potIsCard ? Math.max(0, potRemaining) : 0) })
     const creditors = nets.filter((n) => n.net > 0.005).map((n) => ({ ...n })).sort((a, b) => b.net - a.net)
     const debtors = nets.filter((n) => n.net < -0.005).map((n) => ({ ...n, net: -n.net })).sort((a, b) => b.net - a.net)
     const tx: { from: string; to: string; amount: number }[] = []; let i = 0, j = 0
     while (i < debtors.length && j < creditors.length) { const amt = Math.min(debtors[i].net, creditors[j].net); tx.push({ from: debtors[i].label, to: creditors[j].label, amount: amt }); debtors[i].net -= amt; creditors[j].net -= amt; if (debtors[i].net < 0.005) i++; if (creditors[j].net < 0.005) j++ }
     return { tx }
-  }, [rounds, people, potRounds, potContribTotal, potSpent, potIsCard, potRemaining, depositOn, depositValue, depositUnit, coinValue, drinks, pay]) // eslint-disable-line
+  }, [rounds, people, settleGroups, potRounds, potContribTotal, potSpent, potIsCard, potRemaining, depositOn, depositValue, depositUnit, coinValue, drinks, pay]) // eslint-disable-line
   const anyUnassignedRounds = rounds.some((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0))
   const drinkTotalRound = (r: Round, did: string) => Object.values(r.orders[did] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[did] ?? 0)
   const paidLabel = (r: Round) => {
@@ -1090,14 +1201,19 @@ export default function PartyTest() {
     )
   }
 
-  // ── GAST: kies je plaats ────────────────────────────────────────────────────
-  // Je zit in een groep (via de link) maar hebt nog geen plaats geclaimd.
+  // ── GAST: wie ben jij? ──────────────────────────────────────────────────────
+  // Twee wegen naar binnen: tik op je naam als de admin ze al invulde, of neem een
+  // lege plaats en typ ze zelf. Een naam is een etiket; claimen is wat jouw telefoon
+  // aan die plaats koppelt. Dat scheiden is wat de app laat werken voor wie NIET
+  // scant — de admin kan voor hem blijven aanduiden.
   if (groupId && !isAdmin && !meId) {
     const vrij = people.filter((p) => !p.claimedBy)
+    const metNaam = vrij.filter((p) => p.named)
+    const leeg = vrij.filter((p) => !p.named)
     return (
       <div style={S.page}><div style={S.wrap}>
         {renderDialogs()}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 26, marginTop: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24, marginTop: 20 }}>
           <div style={{ ...S.row, gap: 13 }}>
             <RundoLogo size={54} />
             <div style={{ ...S.h1, fontSize: 28 }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
@@ -1107,42 +1223,59 @@ export default function PartyTest() {
 
         <div style={S.card}>
           <h3 style={{ ...S.h3, marginTop: 0 }}>Wie ben jij?</h3>
+
           {vrij.length === 0 ? (
             <div style={{ fontSize: 13, color: "#b3a988", textAlign: "center", padding: "16px 0", lineHeight: 1.5 }}>
-              Alle plaatsen zijn bezet. Vraag de organisator om er een bij te zetten.
+              Alle plaatsen zijn ingenomen. Vraag de organisator om er een bij te zetten.
             </div>
           ) : (
             <>
-              <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
-                Kies een vrije plaats en zet je naam erop. Daarna kan je zelf je drankjes aantikken.
-              </div>
-              <input id="guest-name" style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 16, marginBottom: 12 }}
-                placeholder="Je naam" autoComplete="name" />
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
-                {vrij.map((p) => (
-                  <button key={p.id} disabled={busy}
-                    onClick={() => {
-                      const el = document.getElementById("guest-name") as HTMLInputElement | null
-                      const naam = (el?.value || "").trim()
-                      if (!naam) { setNotice("Vul eerst je naam in."); return }
-                      claimSeat(p.id, naam)
-                    }}
-                    style={{ ...S.btn, padding: "12px 8px", fontWeight: 800, opacity: busy ? 0.5 : 1 }}>
-                    Plaats {p.seat}
-                  </button>
-                ))}
-              </div>
+              {metNaam.length > 0 && (
+                <>
+                  <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.5 }}>Tik op je naam.</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8, marginBottom: leeg.length ? 16 : 0 }}>
+                    {metNaam.map((p) => (
+                      <button key={p.id} disabled={busy} onClick={() => claimSeat(p.id, p.name)}
+                        style={{ ...S.btn, padding: "13px 8px", fontWeight: 800, fontSize: 14, opacity: busy ? 0.5 : 1 }}>
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {leeg.length > 0 && (
+                <>
+                  <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 8, lineHeight: 1.5 }}>
+                    {metNaam.length > 0 ? "Sta je er niet bij? Neem een lege plaats." : "Vul je naam in en neem een plaats."}
+                  </div>
+                  <input id="guest-name" style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 16, marginBottom: 10 }}
+                    placeholder="Je naam" autoComplete="name" />
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
+                    {leeg.map((p) => (
+                      <button key={p.id} disabled={busy}
+                        onClick={() => {
+                          const el = document.getElementById("guest-name") as HTMLInputElement | null
+                          const naam = (el?.value || "").trim()
+                          if (!naam) { setNotice("Vul eerst je naam in."); return }
+                          claimSeat(p.id, naam)
+                        }}
+                        style={{ ...S.btn, padding: "13px 8px", fontWeight: 800, opacity: busy ? 0.5 : 1 }}>
+                        Plaats {p.seat}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
 
-        {people.filter((p) => p.claimedBy).length > 0 && (
+        {people.some((p) => p.claimedBy) && (
           <div style={S.card}>
             <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>Al aangemeld</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {people.filter((p) => p.claimedBy).map((p) => (
-                <span key={p.id} style={S.pill}>{p.name}</span>
-              ))}
+              {people.filter((p) => p.claimedBy).map((p) => <span key={p.id} style={S.pill}>📱 {p.name}</span>)}
             </div>
           </div>
         )}
@@ -1240,10 +1373,44 @@ export default function PartyTest() {
           {people.length === 0 ? (
             <div style={{ textAlign: "center", color: "#b3a988", fontSize: 13, padding: "14px 0" }}>Nog geen personen</div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(118px, 1fr))", gap: 8 }}>
-              {people.map((p, idx) => (
-                <input key={p.id} value={isGuestDefault(p.name) ? "" : p.name} placeholder={isGuestDefault(p.name) ? p.name : `Gast ${idx + 1}`} onChange={(e) => renamePerson(p.id, e.target.value === "" ? `Gast ${idx + 1}` : e.target.value)} style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "7px 9px", fontSize: 13, textAlign: "left" }} />
-              ))}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(148px, 1fr))", gap: 8 }}>
+              {people.map((p, idx) => {
+                const ikZelf = p.claimedBy === me.current
+                const bezet = !!p.claimedBy && !ikZelf
+                return (
+                  <div key={p.id} style={{ position: "relative" }}>
+                    {/* De admin kan ALTIJD de naam aanpassen — ook nadat een gast de plaats
+                        claimde. Iemand tikt zich verkeerd in, en dan moet je dat kunnen rechtzetten. */}
+                    <input value={isGuestDefault(p.name) ? "" : p.name}
+                      placeholder={isGuestDefault(p.name) ? p.name : `Gast ${idx + 1}`}
+                      onChange={(e) => renamePerson(p.id, e.target.value === "" ? `Gast ${idx + 1}` : e.target.value)}
+                      style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "7px 9px", paddingRight: p.claimedBy ? 26 : 9, fontSize: 13, textAlign: "left" }} />
+                    {p.claimedBy && (
+                      <span title={ikZelf ? "Dit ben jij" : "Deze persoon meldde zich zelf aan"}
+                        style={{ position: "absolute", right: 7, top: 7, fontSize: 12, pointerEvents: "none" }}>
+                        {ikZelf ? "⭐" : "📱"}
+                      </span>
+                    )}
+                    <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
+                      {!p.claimedBy && !meId && (
+                        <button onClick={() => claimSeat(p.id, isGuestDefault(p.name) ? `Gast ${idx + 1}` : p.name)} disabled={busy}
+                          style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(240,165,0,0.5)", background: "#faf4e4", color: "#8a7d55" }}>
+                          dat ben ik
+                        </button>
+                      )}
+                      {(ikZelf || bezet) && (
+                        <button onClick={() => releaseSeat(p.id)}
+                          style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)" }}>
+                          {ikZelf ? "niet ik" : "vrijgeven"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 10, lineHeight: 1.5 }}>
+              📱 = meldde zich zelf aan via de link · ⭐ = dat ben jij. Wie niet scant, duid je gewoon zelf aan tijdens het bestellen.
             </div>
           )}
         </div>
@@ -1997,6 +2164,8 @@ export default function PartyTest() {
         </div>
         <div style={{ fontSize: 11.5, marginTop: 10, textAlign: "right" }}><span onClick={() => setShowEqual((v) => !v)} style={{ color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{showEqual ? "verberg gelijke verdeling" : "toon gelijke verdeling"}</span></div>
       </div>
+
+      {renderSettleTogether()}
 
       <div style={S.card}>
         <h3 style={{ ...S.h3, marginBottom: 8 }}>🔁 Zo verrekenen jullie</h3>
