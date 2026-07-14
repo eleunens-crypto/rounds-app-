@@ -200,6 +200,7 @@ export default function PartyTest() {
   const [roundNr, setRoundNr] = useState(1)
   const [activeCat, setActiveCat] = useState<Cat>("Bier")
   const [drinkSearch, setDrinkSearch] = useState("")
+  const [guestTab, setGuestTab] = useState<"order" | "me">("order")
   const [coinCat, setCoinCat] = useState<Cat>("Bier")
   const [coinFull, setCoinFull] = useState(false)
   const [fullList, setFullList] = useState(true)
@@ -524,12 +525,23 @@ export default function PartyTest() {
     })()
   }, [loadParty])
 
-  // Realtime. Eerste seintje meteen ophalen (voelt instant), daarna 600 ms bundelen —
-  // anders herlaadt elke telefoon tientallen keren terwijl iedereen zit te tikken.
+  // Realtime, met twee zuinigheidsmaatregelen — een feest van 8 mensen met telefoons
+  // in de broekzak mag geen quota opeten.
+  //
+  //  1. AFKOELEN: het eerste seintje halen we meteen op (voelt instant), daarna
+  //     bundelen we 600 ms. Terwijl iedereen zit te tikken zou elke telefoon anders
+  //     tientallen keren per minuut de hele groep herladen.
+  //
+  //  2. SLAAPSTAND: ligt de telefoon in de zak (tab verborgen), dan sluiten we het
+  //     kanaal na 2 minuten. Bij terugkeer heropenen we en halen we één keer alles op.
+  //     Zonder dit blijven acht slapende telefoons de hele avond meeluisteren.
   useEffect(() => {
     if (!groupId) return
     let active = true, cooling = false, pending = false
     let cool: ReturnType<typeof setTimeout> | null = null
+    let slaap: ReturnType<typeof setTimeout> | null = null
+    let ch: ReturnType<typeof supabase.channel> | null = null
+
     const reload = () => {
       if (!active) return
       if (cooling) { pending = true; return }
@@ -537,14 +549,46 @@ export default function PartyTest() {
       loadParty(groupId)
       cool = setTimeout(() => { cooling = false; if (pending) { pending = false; reload() } }, 600)
     }
-    const ch = supabase.channel(`party-${groupId}`)
-    ch.on("postgres_changes", { event: "*", schema: "public", table: "party_groups", filter: `id=eq.${groupId}` }, reload)
-    ch.on("postgres_changes", { event: "*", schema: "public", table: "party_people", filter: `group_id=eq.${groupId}` }, reload)
-    ch.on("postgres_changes", { event: "*", schema: "public", table: "party_rounds", filter: `group_id=eq.${groupId}` }, reload)
-    ch.on("postgres_changes", { event: "*", schema: "public", table: "party_round_items", filter: `group_id=eq.${groupId}` }, reload)
-    ch.on("postgres_changes", { event: "*", schema: "public", table: "party_pot", filter: `group_id=eq.${groupId}` }, reload)
-    ch.subscribe()
-    return () => { active = false; if (cool) clearTimeout(cool); supabase.removeChannel(ch) }
+
+    const open = () => {
+      if (ch) return
+      ch = maakKanaal()
+    }
+    const sluit = () => {
+      if (!ch) return
+      supabase.removeChannel(ch)
+      ch = null
+    }
+    const zichtbaar = () => {
+      if (slaap) { clearTimeout(slaap); slaap = null }
+      if (document.visibilityState === "visible") {
+        open()
+        reload()            // bijwerken wat we misten terwijl we sliepen
+      } else {
+        slaap = setTimeout(sluit, 120000)
+      }
+    }
+    document.addEventListener("visibilitychange", zichtbaar)
+
+    const maakKanaal = () => {
+      const c = supabase.channel(`party-${groupId}`)
+      c.on("postgres_changes", { event: "*", schema: "public", table: "party_groups", filter: `id=eq.${groupId}` }, reload)
+      c.on("postgres_changes", { event: "*", schema: "public", table: "party_people", filter: `group_id=eq.${groupId}` }, reload)
+      c.on("postgres_changes", { event: "*", schema: "public", table: "party_rounds", filter: `group_id=eq.${groupId}` }, reload)
+      c.on("postgres_changes", { event: "*", schema: "public", table: "party_round_items", filter: `group_id=eq.${groupId}` }, reload)
+      c.on("postgres_changes", { event: "*", schema: "public", table: "party_pot", filter: `group_id=eq.${groupId}` }, reload)
+      c.subscribe()
+      return c
+    }
+
+    open()
+    return () => {
+      active = false
+      if (cool) clearTimeout(cool)
+      if (slaap) clearTimeout(slaap)
+      document.removeEventListener("visibilitychange", zichtbaar)
+      sluit()
+    }
   }, [groupId, loadParty])
 
   // ── Groep aanmaken (admin) ──────────────────────────────────────────────────
@@ -1327,6 +1371,15 @@ export default function PartyTest() {
     const mijnAantal = mijn.reduce((a, d) => a + aQty(d.id, meId), 0)
     const bezig = !!openRoundId
 
+    // Wat de gast op dit moment staat. Zelfde helpers als de admin gebruikt, dus de
+    // cijfers kunnen niet uit elkaar lopen.
+    const mijnVerbruik = consumption(meId) + cupOwn(meId)
+    const mijnBetaald = paidByPerson(meId) + contribOf(meId)
+    const mijnSaldo = mijnBetaald - mijnVerbruik
+    // Ben ik gekoppeld aan iemand? Dan is de vereffening op het groepje, niet op mij.
+    const mijnGroep = settleGroups.find((g) => g.leden.some((p) => p.id === meId))
+    const mijnTx = settlement.tx.filter((t) => t.from === (mijnGroep?.label ?? "") || t.to === (mijnGroep?.label ?? ""))
+
     return (
       <div style={S.page}><div style={S.wrap}>
         {renderDialogs()}
@@ -1345,6 +1398,89 @@ export default function PartyTest() {
           </button>
         </div>
 
+        <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+          <button onClick={() => setGuestTab("order")}
+            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 12.5, fontWeight: 800, opacity: guestTab === "order" ? 1 : 0.55 }}>🍺 Bestellen</button>
+          <button onClick={() => setGuestTab("me")}
+            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 12.5, fontWeight: 800, opacity: guestTab === "me" ? 1 : 0.55 }}>🧾 Mijn stand</button>
+        </div>
+
+        {guestTab === "me" && (
+          <>
+            <div style={S.card}>
+              <h3 style={{ ...S.h3, marginTop: 0 }}>🧾 Mijn stand</h3>
+              {rounds.length === 0 ? (
+                <div style={{ fontSize: 13, color: "#b3a988", textAlign: "center", padding: "14px 0" }}>
+                  Er is nog geen rondje afgesloten.
+                </div>
+              ) : (
+                <>
+                  <div style={{ ...S.row, justifyContent: "space-between", padding: "6px 0" }}>
+                    <span style={{ fontSize: 13.5 }}>Wat jij dronk <span style={{ fontSize: 11, color: "#8a7d55" }}>(jouw deel)</span></span>
+                    <b style={{ fontSize: 14.5 }}>{euro(mijnVerbruik)}</b>
+                  </div>
+                  <div style={{ ...S.row, justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid rgba(120,95,20,0.1)" }}>
+                    <span style={{ fontSize: 13.5 }}>Wat jij betaalde {contribOf(meId) > 0 ? <span style={{ fontSize: 11, color: "#8a7d55" }}>(incl. inleg pot)</span> : null}</span>
+                    <b style={{ fontSize: 14.5 }}>{euro(mijnBetaald)}</b>
+                  </div>
+                  <div style={{ ...S.row, justifyContent: "space-between", padding: "11px 0 2px" }}>
+                    <span style={{ fontSize: 14, fontWeight: 800 }}>
+                      {Math.abs(mijnSaldo) < 0.005 ? "Je staat gelijk" : mijnSaldo > 0 ? "Je krijgt terug" : "Je betaalt nog"}
+                    </span>
+                    <b style={{ fontSize: 19, color: Math.abs(mijnSaldo) < 0.005 ? "#1f8a4c" : mijnSaldo > 0 ? "#1f8a4c" : "#c0392b" }}>
+                      {euro(Math.abs(mijnSaldo))}
+                    </b>
+                  </div>
+                  {mijnGroep?.samen && (
+                    <div style={{ fontSize: 11.5, color: "#c98a00", fontWeight: 700, marginTop: 8 }}>
+                      🔗 Jij rekent samen af met {mijnGroep.leden.filter((p) => p.id !== meId).map((p) => p.name).join(" & ")} — hierboven staat enkel jouw eigen deel.
+                    </div>
+                  )}
+                  <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 10, lineHeight: 1.5 }}>
+                    Dit is een richting, geen eindafrekening. Zolang er nog rondjes bijkomen, verandert het.
+                  </div>
+                </>
+              )}
+            </div>
+
+            {mijnTx.length > 0 && (
+              <div style={S.card}>
+                <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 8 }}>🔁 Zo verreken jij</h3>
+                {mijnTx.map((t, i) => (
+                  <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "7px 0", borderBottom: i < mijnTx.length - 1 ? "1px solid rgba(120,95,20,0.08)" : "none" }}>
+                    <span style={{ fontSize: 14 }}><b>{t.from}</b> → {t.to}</span>
+                    <b style={{ fontSize: 15 }}>{euro(t.amount)}</b>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {rounds.length > 0 && (
+              <div style={S.card}>
+                <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 8 }}>📜 Rondjes</h3>
+                {rounds.map((r) => {
+                  const mijne = drinks.filter((d) => (r.orders[d.id]?.[meId] ?? 0) > 0)
+                  return (
+                    <div key={r.id} style={{ padding: "8px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
+                      <div style={{ ...S.row, justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 13, fontWeight: 800 }}>Ronde {r.seq}</span>
+                        <span style={{ fontSize: 11.5, color: "#8a7d55" }}>{paidLabel(r)}</span>
+                      </div>
+                      <div style={{ fontSize: 12, color: mijne.length ? "#6b5f3a" : "#b3a988", marginTop: 3 }}>
+                        {mijne.length
+                          ? mijne.map((d) => `${r.orders[d.id][meId]}× ${d.name}`).join(" · ")
+                          : "jij had niets in dit rondje"}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
+        )}
+
+        {guestTab === "order" && (
+        <>
         {/* Wat je al aantikte in dit rondje. Bovenaan, want dat is wat je wil zien. */}
         <div style={{ ...S.card, background: mijnAantal > 0 ? "rgba(31,138,76,0.06)" : "#fff" }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: mijnAantal > 0 ? 10 : 0 }}>
@@ -1419,6 +1555,8 @@ export default function PartyTest() {
           Wie naar de toog gaat, sluit het rondje af en vult het bedrag in.<br />
           Jouw deel wordt op het einde eerlijk verrekend.
         </div>
+        </>
+        )}
       </div></div>
     )
   }
