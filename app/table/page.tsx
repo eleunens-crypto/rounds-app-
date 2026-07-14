@@ -491,7 +491,9 @@ const STRINGS = {
     tooFewShared: (have: number, want: number) => `⚠️ Pas ${have} van de ${want} personen duidden dit aan.`,
     sharedOverviewTitle: "Gedeelde items — wie deelde mee?",
     sharedByLabel: "gedeeld door",
-    nobodyShared: "⚠️ Niemand duidde dit gedeelde item aan",
+    nobodyShared: "Nog niemand duidde dit item aan",
+    nobodySharedOf: (n: number) => `0 van ${n} delers`,
+    nobodySharedZero: "0 delers",
     sharedProblemTitle: "Let op — gedeelde items kloppen mogelijk niet:",
     sharedProblemAsk: "Toch afsluiten?",
     totalsMatch: "✓ klopt met de bon",
@@ -1084,7 +1086,9 @@ const STRINGS = {
     tooFewShared: (have: number, want: number) => `⚠️ Seulement ${have} sur ${want} personnes l'ont indiqué.`,
     sharedOverviewTitle: "Articles partagés — qui a partagé ?",
     sharedByLabel: "partagé par",
-    nobodyShared: "⚠️ Personne n'a indiqué cet article partagé",
+    nobodyShared: "Personne n'a encore coché cet article",
+    nobodySharedOf: (n: number) => `0 sur ${n} participants`,
+    nobodySharedZero: "0 participant",
     sharedProblemTitle: "Attention — les articles partagés semblent incorrects :",
     sharedProblemAsk: "Clôturer quand même ?",
     totalsMatch: "✓ correspond à l'addition",
@@ -5220,7 +5224,7 @@ function ClaimScreen(props: {
                   const isError = heads === 0
                   // Klopt het aantal met wat de admin verwachtte? Dan is het rond.
                   const isDone = heads > 0 && (want == null || heads >= want)
-                  const msg = isError ? L.nobodyShared
+                  const msg = isError ? `${want != null ? L.nobodySharedOf(want) : L.nobodySharedZero} · ${L.nobodyShared}`
                     : !revealed ? L.sharingWaitReveal
                     : isDone ? L.shareDone(heads, nowEach)
                     : want != null ? L.shareOfN(heads, want, nowEach, thenEach)
@@ -5230,7 +5234,7 @@ function ClaimScreen(props: {
                       background: isError ? "rgba(243,156,18,0.1)" : isDone ? "rgba(39,174,96,0.07)" : "rgba(90,108,166,0.07)",
                       border: isError ? "1px solid rgba(243,156,18,0.45)" : isDone ? "1px solid rgba(39,174,96,0.4)" : "1px solid rgba(90,108,166,0.25)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ flexShrink: 0, fontSize: 13 }}>{isError ? "⚠️" : isDone ? "✅" : "👥"}</span>
+                        <span style={{ flexShrink: 0, fontSize: 13 }}>{isDone ? "✅" : "👥"}</span>
                         <span style={{ fontSize: 12, lineHeight: 1.45, fontWeight: isError ? 700 : 400,
                           color: isError ? "#b5591a" : isDone ? "#1f8a4c" : "#3b486a" }}>{msg}</span>
                       </div>
