@@ -123,6 +123,20 @@ const drinkKey = (name: string) =>
   name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
       .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
 
+// Zoeken zonder gedoe: "jagermeister" vindt Jägermeister, "pina" vindt Piña Colada,
+// "coca cola" vindt Coca-Cola. Accenten, koppeltekens en hoofdletters doen er niet toe.
+const normText = (t: string) =>
+  (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+
+// Elk getikt woord moet érgens in de naam voorkomen. Zo vindt "gin to" ook Gin Tonic,
+// en "virgin mule" de Virgin Moscow Mule — zonder dat de volgorde moet kloppen.
+const drinkMatches = (naam: string, zoek: string) => {
+  const woorden = normText(zoek).split(" ").filter(Boolean)
+  if (woorden.length === 0) return true
+  const n = normText(naam)
+  return woorden.every((w) => n.includes(w))
+}
+
 const DEMO_DRINKS: Drink[] = DATA.map(([cat, name, price]) => ({ id: drinkKey(name), name, emoji: CAT_EMOJI[cat], cat, price, cup: CUPCAT[cat], fav: FAVS.has(name), coins: coinDefault(cat, name) }))
 
 type Assign = Record<string, Record<string, number>>
@@ -185,6 +199,7 @@ export default function PartyTest() {
 
   const [roundNr, setRoundNr] = useState(1)
   const [activeCat, setActiveCat] = useState<Cat>("Bier")
+  const [drinkSearch, setDrinkSearch] = useState("")
   const [coinCat, setCoinCat] = useState<Cat>("Bier")
   const [coinFull, setCoinFull] = useState(false)
   const [fullList, setFullList] = useState(true)
@@ -643,10 +658,67 @@ export default function PartyTest() {
   }
   const togglePayPerson = (pid: string) => { const next = payPersons.includes(pid) ? payPersons.filter((x) => x !== pid) : [...payPersons, pid]; setPayPersons(next); autoSplit(next, payPot); setPaidConfirmed(false) }
   const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.", yes: "Toch verlaten — bestelling kwijt", onYes: () => { setConfirmDlg(null); dropUnpaidRound(); to() } }); else to() }
+  // Instellingen van het feest wegschrijven. Zonder dit ziet een gast die scant de
+  // verkeerde modus: euro's terwijl de rest met coins werkt, of geen waarborg.
+  const persistSettings = (extra?: Record<string, unknown>) => {
+    if (!groupId) return
+    supabase.from("party_groups").update({
+      name: groupName.trim(), pay, coin_value: coinValue,
+      deposit_on: depositOn, deposit_value: depositValue, deposit_unit: depositUnit,
+      pot_on: potChosen, pot_is_card: potIsCard, ...(extra ?? {}),
+    }).eq("id", groupId).then(({ error }) => { if (error) setNotice("Instellingen opslaan mislukt: " + error.message) })
+  }
+
+  // Delen kan pas als de groep vaststaat: naam, aantal personen én de startvragen.
+  // Zo kan er niemand ongevraagd bijkomen en blijft de groep even groot als de admin
+  // aangaf — gasten claimen enkel een vrije plaats, ze maken er geen bij.
+  const canShare = isAdmin && !!inviteCode && people.length > 0 && onboardedOnce
+  const renderShare = () => {
+    if (!canShare) return null
+    const vrij = people.filter((p) => !p.claimedBy).length
+    return (
+      <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.45)" }}>
+        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>📲 Laat je gasten scannen</h3>
+        <div style={{ fontSize: 12, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
+          {vrij > 0
+            ? `Nog ${vrij} vrije ${vrij === 1 ? "plaats" : "plaatsen"}. Wie scant, kiest er een en tikt zelf zijn drankjes aan.`
+            : "Alle plaatsen zijn ingenomen. Zet er een bij als er nog iemand aansluit."}
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ display: "inline-block", background: "#fff", padding: 10, borderRadius: 14, border: "1px solid rgba(120,95,20,0.15)" }}>
+            <QRCodeSVG value={inviteLink} size={132} bgColor="#ffffff" fgColor="#4a3f1e" />
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "0.18em", color: "#4a3f1e", marginTop: 10 }}>{inviteCode}</div>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <button style={{ ...S.btn, flex: 1, fontWeight: 800 }}
+            onClick={async () => {
+              const txt = `Doe mee met ${groupName} op Rundo Party: ${inviteLink}`
+              if (typeof navigator !== "undefined" && navigator.share) {
+                try { await navigator.share({ text: txt }); return } catch { /* geannuleerd */ }
+              }
+              if (navigator.clipboard) { navigator.clipboard.writeText(txt); setNotice("Link gekopieerd.") }
+            }}>Link delen</button>
+          <button style={{ ...S.btn, flex: 1, fontWeight: 800 }}
+            onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(inviteLink); setNotice("Link gekopieerd.") } }}>Kopieer link</button>
+        </div>
+      </div>
+    )
+  }
+
   const applyBeginChoices = () => {
     if (bpPotType === "yes") { setNotice("Kies pot of drankkaart — of zet de pot op nee."); return }
     setOnboardedOnce(true)
     const potOn = bpPotType === "pot" || bpPotType === "card"
+    // Meteen wegschrijven met de zopas gekozen waarden (de state hieronder is nog niet
+    // doorgekomen, dus we geven ze expliciet mee).
+    persistSettings({
+      pay: bpCoins ? "coin" : "eur",
+      deposit_on: bpBekers,
+      deposit_unit: bpCoins ? "coin" : "eur",
+      pot_on: potOn,
+      pot_is_card: bpPotType === "card",
+    })
     setPotIsCard(bpPotType === "card")
     setPotChosen(potOn)
     setDepositOn(bpBekers)
@@ -1151,35 +1223,6 @@ export default function PartyTest() {
             </div>
           </div>
         )}
-        {/* Deel de groep. Gasten die scannen claimen zelf een vrije plaats. */}
-        {inviteCode && (
-          <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.45)" }}>
-            <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>📲 Laat je gasten scannen</h3>
-            <div style={{ fontSize: 12, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
-              Zet eerst het aantal personen hieronder. Wie scant, kiest een vrije plaats en tikt zelf zijn drankjes aan.
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ display: "inline-block", background: "#fff", padding: 10, borderRadius: 14, border: "1px solid rgba(120,95,20,0.15)" }}>
-                <QRCodeSVG value={inviteLink} size={132} bgColor="#ffffff" fgColor="#4a3f1e" />
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "0.18em", color: "#4a3f1e", marginTop: 10 }}>{inviteCode}</div>
-              <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 2 }}>of tik de code in op rundo</div>
-            </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              <button style={{ ...S.btn, flex: 1, fontWeight: 800 }}
-                onClick={async () => {
-                  const txt = `Doe mee met ${groupName} op Rundo Party: ${inviteLink}`
-                  if (typeof navigator !== "undefined" && navigator.share) {
-                    try { await navigator.share({ text: txt }); return } catch { /* geannuleerd */ }
-                  }
-                  if (navigator.clipboard) { navigator.clipboard.writeText(txt); setNotice("Link gekopieerd.") }
-                }}>Link delen</button>
-              <button style={{ ...S.btn, flex: 1, fontWeight: 800 }}
-                onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(inviteLink); setNotice("Link gekopieerd.") } }}>Kopieer link</button>
-            </div>
-          </div>
-        )}
-
         <div style={S.card}>
           <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 14 }}>👥 Aantal personen</h3>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
@@ -1351,8 +1394,12 @@ export default function PartyTest() {
 
   // ── ORDER ───────────────────────────────────────────────────────────────────
   if (view === "order") {
-    const catDrinks = drinks.filter((d) => d.cat === activeCat)
-    const catVisible = catDrinks.filter((d) => fullList || d.fav || drinkTotal(d.id) > 0)
+    // Zoeken gaat OVER de categorieën heen en negeert de korte lijst — anders zoek je
+    // naar iets wat bestaat en krijg je "niets gevonden" omdat het toevallig niet in de
+    // favorieten zit.
+    const zoekt = normText(drinkSearch).length > 0
+    const catDrinks = zoekt ? drinks.filter((d) => drinkMatches(d.name, drinkSearch)) : drinks.filter((d) => d.cat === activeCat)
+    const catVisible = zoekt ? catDrinks : catDrinks.filter((d) => fullList || d.fav || drinkTotal(d.id) > 0)
     const needCups = depositOn && (people.some((p) => pickedUpOf(p.id) > 0) || people.some((p) => cupsBal(p.id) !== 0))
     const gaveBackTotal = people.reduce((a, p) => a + (gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id))), 0)
     const cupsBlock = needCups && !cupsChecked
@@ -1364,7 +1411,26 @@ export default function PartyTest() {
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>Ronde {roundNr} <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}>— {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>{repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}</h3>
         </div>
-        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", paddingBottom: 8, marginBottom: 8 }}>
+        <div style={{ position: "relative", marginBottom: 9 }}>
+          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none" }}>🔍</span>
+          <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)}
+            placeholder="Zoek een drankje…"
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 36, paddingRight: drinkSearch ? 34 : 12, fontSize: 15, textAlign: "left" }} />
+          {drinkSearch && (
+            <button onClick={() => setDrinkSearch("")}
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 15, color: "#8a7d55", padding: 4 }}>✕</button>
+          )}
+        </div>
+
+        {zoekt && (
+          <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 8 }}>
+            {catVisible.length === 0
+              ? "Niets gevonden — probeer een ander woord."
+              : `${catVisible.length} ${catVisible.length === 1 ? "drankje" : "drankjes"} gevonden (alle categorieën)`}
+          </div>
+        )}
+
+        <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", paddingBottom: 8, marginBottom: 8 }}>
           {catsPresent.map((c) => {
             const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
             return <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: "#e0685c", fontSize: 15 }}>●</span>}</span>
@@ -1646,6 +1712,7 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
+        {rounds.length === 0 && renderShare()}
         {assignIdx !== null && rounds[assignIdx] && (() => {
           const idx = assignIdx
           const r = rounds[idx]
