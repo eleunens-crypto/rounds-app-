@@ -2827,8 +2827,10 @@ export default function RundoTable() {
     if (tipTotal <= 0) return 0
     const has = (q: string) => baseItems.some((it) => it.is_shared ? sharerIds(it.id).includes(q) : myQty(it.id, q) > 0)
     if (!has(pid)) return 0
-    const n = participants.filter((q) => has(q.id)).length
-    return n > 0 ? tipTotal / n : 0
+    // Een koppel is één rij met seats: 2. De fooi verdelen we per persoon, niet per rij —
+    // anders betaalt een koppel samen evenveel fooi als iemand die alleen kwam.
+    const heads = participants.reduce((s, q) => s + (has(q.id) ? seatsOf(q.id) : 0), 0)
+    return heads > 0 ? tipTotal * (seatsOf(pid) / heads) : 0
   }
 
   const personTotal = (pid: string): { settled: number; pendingShared: boolean } => {
