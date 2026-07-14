@@ -179,11 +179,11 @@ export default function PartyTest() {
   const inviteLink = typeof window !== "undefined" && inviteCode
     ? `${window.location.origin}${window.location.pathname}?code=${inviteCode}` : ""
   const [drinks, setDrinks] = useState<Drink[]>(DEMO_DRINKS)
-  const [potRounds, setPotRounds] = useState<{ id: number; amounts: Record<string, number> }[]>([])
+  const [potRounds, setPotRounds] = useState<{ id: string; seq: number; amounts: Record<string, number> }[]>([])
   const [potDraft, setPotDraft] = useState<Record<string, number>>({})
   const [everyoneDraft, setEveryoneDraft] = useState<string>("")
   const [everyoneChoice, setEveryoneChoice] = useState<number | "custom" | null>(null)
-  const [editPotId, setEditPotId] = useState<number | null>(null)
+  const [editPotId, setEditPotId] = useState<string | null>(null)
   const [potBuilderOpen, setPotBuilderOpen] = useState(false)
   const [potIsCard, setPotIsCard] = useState(false)
   const [cardValue, setCardValue] = useState("")
@@ -419,11 +419,12 @@ export default function PartyTest() {
   // realtime doet het echte werk, met een afkoelperiode zodat een reeks tikken
   // (iedereen bestelt tegelijk) niet tientallen herladingen uitlokt.
   const loadParty = useCallback(async (gid: string) => {
-    const [{ data: g }, { data: pp }, { data: rr }, { data: ii }] = await Promise.all([
+    const [{ data: g }, { data: pp }, { data: rr }, { data: ii }, { data: pt }] = await Promise.all([
       supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized").eq("id", gid).single(),
       supabase.from("party_people").select("id,seat,name,claimed_by,self_joined,settle_with").eq("group_id", gid).order("seat"),
       supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back").eq("group_id", gid).order("seq"),
       supabase.from("party_round_items").select("round_id,person_id,drink_key,qty").eq("group_id", gid),
+      supabase.from("party_pot").select("id,seq,amounts,is_card,card_payers").eq("group_id", gid).order("seq"),
     ])
     if (!mounted.current) return
     if (g) {
@@ -476,6 +477,13 @@ export default function PartyTest() {
     const gedaan = alle.filter((r) => r.status !== "open")
     setRounds(gedaan)
     setRoundNr(open ? open.seq : Math.max(1, gedaan.length))
+
+    setPotRounds((pt || []).map((r) => ({
+      id: r.id as string, seq: r.seq as number,
+      amounts: (r.amounts ?? {}) as Record<string, number>,
+    })))
+    const kaart = (pt || []).find((r) => r.is_card)
+    if (kaart) setCardPayers(((kaart.card_payers ?? []) as string[]))
   }, [])
 
   useEffect(() => {
@@ -532,6 +540,7 @@ export default function PartyTest() {
     ch.on("postgres_changes", { event: "*", schema: "public", table: "party_people", filter: `group_id=eq.${groupId}` }, reload)
     ch.on("postgres_changes", { event: "*", schema: "public", table: "party_rounds", filter: `group_id=eq.${groupId}` }, reload)
     ch.on("postgres_changes", { event: "*", schema: "public", table: "party_round_items", filter: `group_id=eq.${groupId}` }, reload)
+    ch.on("postgres_changes", { event: "*", schema: "public", table: "party_pot", filter: `group_id=eq.${groupId}` }, reload)
     ch.subscribe()
     return () => { active = false; if (cool) clearTimeout(cool); supabase.removeChannel(ch) }
   }, [groupId, loadParty])
@@ -592,7 +601,13 @@ export default function PartyTest() {
   const resetPotDraft = () => { setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft("") }
   const closePot = () => {
     const added = (editPotId === null && potDraftTotal > 0.001) ? potDraftTotal : 0
-    if (added > 0) setPotRounds((rs) => [...rs, { id: Date.now(), amounts: potDraft }])
+    if (added > 0 && groupId) {
+      const seq = Math.max(0, ...potRounds.map((r) => r.seq)) + 1
+      const bedragen = potDraft
+      supabase.from("party_pot")
+        .insert([{ group_id: groupId, seq, amounts: bedragen, is_card: potIsCard, card_payers: cardPayers }])
+        .then(({ error }) => { if (error) setNotice("Inleg opslaan mislukt: " + error.message); else loadParty(groupId) })
+    }
     setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setEditPotId(null); setPotBuilderOpen(false); setShowPot(false)
     if (onbPotActive) {
       setOnbPotActive(false)
@@ -608,9 +623,23 @@ export default function PartyTest() {
   const toggleCardPayer = (id: string) => { const next = cardPayers.includes(id) ? cardPayers.filter((x) => x !== id) : [...cardPayers, id]; setCardPayers(next); applyCard(next, cardValue) }
   const cardSelectAll = () => { const all = people.map((p) => p.id); setCardPayers(all); applyCard(all, cardValue) }
   const editPotRound = (id: number) => { const r = potRounds.find((x) => x.id === id); if (!r) return; setEditPotId(id); setPotDraft({ ...r.amounts }); setEveryoneChoice(null); setEveryoneDraft("") }
-  const saveEditPot = () => { if (editPotId === null) return; if (potDraftTotal > 0.001) setPotRounds((rs) => rs.map((r) => r.id === editPotId ? { ...r, amounts: potDraft } : r)); else setPotRounds((rs) => rs.filter((r) => r.id !== editPotId)); setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setPotBuilderOpen(false) }
+  const saveEditPot = () => {
+    if (editPotId === null) return
+    if (potDraftTotal > 0.001) {
+      supabase.from("party_pot").update({ amounts: potDraft }).eq("id", editPotId)
+        .then(({ error }) => { if (error) setNotice("Opslaan mislukt: " + error.message); else if (groupId) loadParty(groupId) })
+    } else {
+      // Alles op nul gezet = de inleg-ronde bestaat niet meer.
+      supabase.from("party_pot").delete().eq("id", editPotId)
+        .then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
+    }
+    setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setPotBuilderOpen(false)
+  }
   const cancelEditPot = () => { setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setPotBuilderOpen(false) }
-  const removePotRound = (id: number, label: string) => setConfirmDlg({ msg: `De ${label} verwijderen uit de pot? Dit kan niet ongedaan gemaakt worden.`, yes: "Ja, verwijderen", onYes: () => { setPotRounds((rs) => rs.filter((r) => r.id !== id)); setConfirmDlg(null) } })
+  const removePotRound = (id: string, label: string) => setConfirmDlg({ msg: `De ${label} verwijderen uit de pot? Dit kan niet ongedaan gemaakt worden.`, yes: "Ja, verwijderen", onYes: () => {
+    supabase.from("party_pot").delete().eq("id", id).then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
+    setPotRounds((rs) => rs.filter((r) => r.id !== id)); setConfirmDlg(null)
+  } })
   const catsPresent = CATS.filter((c) => drinks.some((d) => d.cat === c))
   const bump1 = (did: string) => bumpAnon(did, 1)
   const bumpDown = (did: string) => { if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); return } const entry = cart[did]; if (!entry) return; const pid = Object.keys(entry).find((k) => (entry[k] ?? 0) > 0); if (pid) bump(did, pid, -1) }
@@ -1373,6 +1402,7 @@ export default function PartyTest() {
           {people.length === 0 ? (
             <div style={{ textAlign: "center", color: "#b3a988", fontSize: 13, padding: "14px 0" }}>Nog geen personen</div>
           ) : (
+            <>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(148px, 1fr))", gap: 8 }}>
               {people.map((p, idx) => {
                 const ikZelf = p.claimedBy === me.current
@@ -1412,6 +1442,7 @@ export default function PartyTest() {
             <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 10, lineHeight: 1.5 }}>
               📱 = meldde zich zelf aan via de link · ⭐ = dat ben jij. Wie niet scant, duid je gewoon zelf aan tijdens het bestellen.
             </div>
+            </>
           )}
         </div>
 
