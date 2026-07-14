@@ -425,6 +425,16 @@ const T = {
 
     confirmTitle: "Even bevestigen",
     reset: "↺ reset",
+    voiceBtn: "🎤 Inspreken",
+    voiceBeta: "beta",
+    voiceListening: "🎤 Luisteren…",
+    voiceSay: "Zeg bijvoorbeeld: \"drie pils en twee cola\"",
+    voiceHeard: "Verstaan",
+    voiceNothing: "Niets herkend. Probeer opnieuw, of tik het gewoon aan.",
+    voiceAdd: "Toevoegen aan rondje",
+    voiceRetry: "🎤 Opnieuw",
+    voiceUnsupported: "Spraak werkt niet in deze browser. Probeer Chrome.",
+    voiceDenied: "Geen toegang tot de microfoon.",
   },
   fr: {
     invitedFor: "Tu es invité pour",
@@ -659,6 +669,16 @@ const T = {
 
     confirmTitle: "Confirmation",
     reset: "↺ reset",
+    voiceBtn: "🎤 Dicter",
+    voiceBeta: "bêta",
+    voiceListening: "🎤 J'écoute…",
+    voiceSay: "Dis par exemple : « trois pils et deux cola »",
+    voiceHeard: "Compris",
+    voiceNothing: "Rien reconnu. Réessaie, ou touche simplement les boissons.",
+    voiceAdd: "Ajouter à la tournée",
+    voiceRetry: "🎤 Réessayer",
+    voiceUnsupported: "La dictée ne fonctionne pas dans ce navigateur. Essaie Chrome.",
+    voiceDenied: "Pas d'accès au micro.",
   },
 } as const
 
@@ -749,6 +769,10 @@ export default function PartyTest() {
   const [activeCat, setActiveCat] = useState<Cat>("Bier")
   const [drinkSearch, setDrinkSearch] = useState("")
   const [guestTab, setGuestTab] = useState<"order" | "me">("order")
+  const [voiceOpen, setVoiceOpen] = useState(false)
+  const [voiceOn, setVoiceOn] = useState(false)
+  const [voiceText, setVoiceText] = useState("")
+  const [voiceHits, setVoiceHits] = useState<{ id: string; name: string; qty: number }[]>([])
   const [coinCat, setCoinCat] = useState<Cat>("Bier")
   const [coinFull, setCoinFull] = useState(false)
   const [fullList, setFullList] = useState(true)
@@ -1459,6 +1483,100 @@ export default function PartyTest() {
     )
   }
 
+  // ── Spraak (beta) ───────────────────────────────────────────────────────────
+  // Bewust met een bevestigingsstap: spraakherkenning zit er geregeld naast, en niets
+  // is vervelender dan drie tequila's in je rondje die je nooit besteld hebt.
+  const startVoice = () => {
+    type SR = { lang: string; interimResults: boolean; continuous: boolean; start: () => void;
+                onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+                onerror: ((e: { error?: string }) => void) | null; onend: (() => void) | null }
+    const w = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR }
+    const Herkenner = w.SpeechRecognition ?? w.webkitSpeechRecognition
+    if (!Herkenner) { setNotice(L.voiceUnsupported); return }
+
+    const r = new Herkenner()
+    r.lang = lang === "fr" ? "fr-BE" : "nl-BE"
+    r.interimResults = false
+    r.continuous = false
+    setVoiceText(""); setVoiceHits([]); setVoiceOn(true); setVoiceOpen(true)
+
+    r.onresult = (e) => {
+      const tekst = e.results[0]?.[0]?.transcript ?? ""
+      setVoiceText(tekst)
+      setVoiceHits(parseSpraak(tekst, drinks))
+    }
+    r.onerror = (e) => {
+      setVoiceOn(false)
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") setNotice(L.voiceDenied)
+    }
+    r.onend = () => setVoiceOn(false)
+    r.start()
+  }
+
+  // De verstane drankjes in de mand zetten. Een gast zet ze op zichzelf; de admin laat
+  // ze onbekend, want hij spreekt voor de hele groep en wijst daarna toe.
+  const applyVoice = async () => {
+    for (const h of voiceHits) {
+      if (!isAdmin && meId) await bump(h.id, meId, h.qty)
+      else await bumpAnon(h.id, h.qty)
+    }
+    setVoiceOpen(false); setVoiceHits([]); setVoiceText("")
+  }
+
+  const renderVoice = () => {
+    if (!voiceOpen) return null
+    return (
+      <div style={S.overlay} onClick={() => { if (!voiceOn) setVoiceOpen(false) }}>
+        <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
+            <h3 style={{ ...S.h3, margin: 0 }}>
+              {L.voiceBtn} <span style={{ fontSize: 10, fontWeight: 800, color: "#c98a00", border: "1px solid #e08a00", borderRadius: 5, padding: "1px 5px", verticalAlign: "middle" }}>{L.voiceBeta}</span>
+            </h3>
+            {!voiceOn && <button onClick={() => setVoiceOpen(false)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer", color: "#8a7d55" }}>✕</button>}
+          </div>
+
+          {voiceOn ? (
+            <div style={{ textAlign: "center", padding: "24px 0" }}>
+              <div style={{ fontSize: 40, marginBottom: 10 }}>🎤</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#c98a00" }}>{L.voiceListening}</div>
+              <div style={{ fontSize: 12, color: "#8a7d55", marginTop: 8 }}>{L.voiceSay}</div>
+            </div>
+          ) : (
+            <>
+              {voiceText && (
+                <div style={{ background: "#faf7ec", border: "1px solid rgba(120,95,20,0.12)", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, color: "#8a7d55", marginBottom: 3 }}>{L.voiceHeard}</div>
+                  <div style={{ fontSize: 14, fontStyle: "italic", color: "#6b5f3a" }}>&ldquo;{voiceText}&rdquo;</div>
+                </div>
+              )}
+
+              {voiceHits.length === 0 ? (
+                <div style={{ fontSize: 13, color: "#b3a988", textAlign: "center", padding: "10px 0 16px", lineHeight: 1.5 }}>
+                  {L.voiceNothing}
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+                  {voiceHits.map((h) => (
+                    <span key={h.id} style={{ ...S.pill, background: "rgba(31,138,76,0.1)", border: "1px solid rgba(31,138,76,0.3)", color: "#1f6b3a", fontSize: 13, padding: "5px 10px" }}>
+                      {h.qty}× {h.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <button style={{ ...S.btn, flex: 1, fontWeight: 800 }} onClick={startVoice}>{L.voiceRetry}</button>
+                {voiceHits.length > 0 && (
+                  <button style={{ ...S.btnP, flex: 2 }} onClick={applyVoice}>{L.voiceAdd}</button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   const applyBeginChoices = () => {
     if (bpPotType === "yes") { setNotice("Kies pot of drankkaart — of zet de pot op nee."); return }
     setOnboardedOnce(true)
@@ -2049,6 +2167,7 @@ export default function PartyTest() {
       <div style={S.page}><div style={S.wrap}>
         {renderDialogs()}
         {renderAddDrink()}
+        {renderVoice()}
 
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}><LanguageToggle compact /></div>
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
@@ -2218,9 +2337,13 @@ export default function PartyTest() {
           </div>
         )}
 
-        <div style={{ textAlign: "center", padding: "2px 0 14px" }}>
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", padding: "2px 0 14px" }}>
+          <button onClick={startVoice}
+            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
+            {L.voiceBtn} <span style={{ fontSize: 9, opacity: 0.75 }}>{L.voiceBeta}</span>
+          </button>
           <button onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }}
-            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 16px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
+            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
             {L.addOwnDrink}
           </button>
         </div>
@@ -2530,6 +2653,7 @@ export default function PartyTest() {
         {showPot && renderPotModal()}
         {renderDialogs()}
         {renderAddDrink()}
+        {renderVoice()}
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>Ronde {roundNr} <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}>— {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>{repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}</h3>
         </div>
@@ -2586,9 +2710,13 @@ export default function PartyTest() {
             })}
           </div>
         )}
-        <div style={{ textAlign: "center", padding: "2px 0 14px" }}>
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", padding: "2px 0 14px" }}>
+          <button onClick={startVoice}
+            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
+            {L.voiceBtn} <span style={{ fontSize: 9, opacity: 0.75 }}>{L.voiceBeta}</span>
+          </button>
           <button onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }}
-            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 16px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
+            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
             {L.addOwnDrink}
           </button>
         </div>
