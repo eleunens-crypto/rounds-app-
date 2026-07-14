@@ -309,7 +309,7 @@ const T = {
     assignHint: "{L.assignHint}",
     assigned: "✓ toegewezen",
     eachOne: "👥 elk 1",
-    eachOneConfirm: (n: string, meer: boolean) => `${n} ${meer ? "hebben" : "heeft"} er nu al 2 of meer. Met "elk 1" krijgt iedereen er precies 1.`,
+    eachOneConfirm: (n: string, meer: boolean) => `${n} ${meer ? "hebben" : "heeft"} er nu al 2 of meer. Met "elk 1" krijgt iedereen er precies één — ${n} ${meer ? "gaan" : "gaat"} dus terug naar 1.`,
     yesEachOne: "Ja, iedereen op 1",
     redistribute: 'Herverdelen: − zet een drankje terug op "onbekend", tik dan een andere naam.',
     closeRound: "✓ Rondje afsluiten",
@@ -358,7 +358,7 @@ const T = {
     inPot: "in pot gelegd",
     removeContribConfirm: (l: string) => `De ${l} verwijderen uit de pot? Dit kan niet ongedaan gemaakt worden.`,
     potEmpty: (kaart: boolean) => `De ${kaart ? "drankkaart" : "pot"} is leeg — leg eerst bij.`,
-    potTooLow: (kaart: boolean, max: string) => `De ${kaart ? "drankkaart" : "pot"} heeft maar ${max} — verlaag het bedrag.`,
+    potTooLow: (kaart: boolean, max: string) => `De ${kaart ? "drankkaart" : "pot"} heeft maar ${max} — verlaag het bedrag of leg bij.`,
     potNothingIn: (kaart: boolean) => `Je koos voor een ${kaart ? "drankkaart" : "pot"}, maar er is nog niks ingelegd. Toch verder gaan?`,
     anywayWithout: (kaart: boolean) => `Toch verder zonder ${kaart ? "drankkaart" : "pot"}`,
 
@@ -385,7 +385,7 @@ const T = {
     fairSplit: "⚖️ Fair Split",
     equalSplit: "iedereen evenveel",
     equalSplitWarn: "⚠️ Dit is een gelijke verdeling, geen Fair Split.",
-    fairSplitInfo: "Gelijke verdeling = totaal ÷ aantal personen. Fair Split is eerlijker: wie weinig of niks dronk, betaalt minder.",
+    fairSplitInfo: "Gelijke verdeling = totaal ÷ aantal personen. Fair Split is eerlijker: wie weinig of niks dronk, betaalt niet mee voor wie veel dronk.",
     unassignedWarn: "Wijs de resterende drankjes toe, dan verdeelt de app eerlijk op wat elk verteerde.",
     useFairSplit: "Toewijzen en Fair Split gebruiken",
     equalAnyway: "Toch gelijk verdelen",
@@ -410,7 +410,6 @@ const T = {
     categoryLabel: "Categorie",
     priceLabel: "Richtprijs",
     priceHint: "Nodig om de rekening achteraf eerlijk te verdelen. Een schatting volstaat.",
-    coinsLabel: "Coins",
     coinsAuto: "{L.coinsAuto}",
     addBtn: "Toevoegen",
     remaining: (n: number, max: number) => `Nog ${n} van je ${max} eigen drankjes over`,
@@ -424,7 +423,6 @@ const T = {
     drinkInUse: (n: string) => `${n} is al besteld en kan niet meer verwijderd worden.`,
 
     confirmTitle: "Even bevestigen",
-    reset: "↺ reset",
     voiceBtn: "🎤 Inspreken",
     voiceBeta: "beta",
     voiceListening: "🎤 Luisteren…",
@@ -553,7 +551,7 @@ const T = {
     assignHint: "— touche pour attribuer",
     assigned: "✓ attribué",
     eachOne: "👥 1 chacun",
-    eachOneConfirm: (n: string, meer: boolean) => `${n} ${meer ? "en ont" : "en a"} déjà 2 ou plus. Avec « 1 chacun », tout le monde en reçoit exactement 1.`,
+    eachOneConfirm: (n: string, meer: boolean) => `${n} ${meer ? "en ont" : "en a"} déjà 2 ou plus. Avec « 1 chacun », tout le monde en reçoit exactement un — ${n} ${meer ? "redescendent" : "redescend"} donc à 1.`,
     yesEachOne: "Oui, 1 pour tous",
     redistribute: 'Redistribuer : − remet une boisson sur « inconnu », puis touche un autre nom.',
     closeRound: "✓ Clôturer la tournée",
@@ -602,7 +600,7 @@ const T = {
     inPot: "mis au pot",
     removeContribConfirm: (l: string) => `Supprimer la ${l} du pot ? C'est irréversible.`,
     potEmpty: (kaart: boolean) => `${kaart ? "La carte boissons" : "Le pot"} est vide — ajoute d'abord.`,
-    potTooLow: (kaart: boolean, max: string) => `${kaart ? "La carte" : "Le pot"} n'a que ${max} — baisse le montant.`,
+    potTooLow: (kaart: boolean, max: string) => `${kaart ? "La carte" : "Le pot"} n'a que ${max} — baisse le montant ou remets-en.`,
     potNothingIn: (kaart: boolean) => `Tu as choisi ${kaart ? "une carte boissons" : "un pot"}, mais rien n'a encore été mis. Continuer quand même ?`,
     anywayWithout: (kaart: boolean) => `Continuer sans ${kaart ? "carte" : "pot"}`,
 
@@ -629,7 +627,7 @@ const T = {
     fairSplit: "⚖️ Fair Split",
     equalSplit: "part égale",
     equalSplitWarn: "⚠️ Ceci est une répartition égale, pas un Fair Split.",
-    fairSplitInfo: "Répartition égale = total ÷ nombre de personnes. Le Fair Split est plus juste : qui a peu ou rien bu paie moins.",
+    fairSplitInfo: "Répartition égale = total ÷ nombre de personnes. Le Fair Split est plus juste : qui a peu ou rien bu ne paie pas pour ceux qui ont beaucoup bu.",
     unassignedWarn: "Attribue les boissons restantes, puis l'app répartit selon ce que chacun a consommé.",
     useFairSplit: "Attribuer et utiliser le Fair Split",
     equalAnyway: "Répartir également quand même",
@@ -654,7 +652,6 @@ const T = {
     categoryLabel: "Catégorie",
     priceLabel: "Prix indicatif",
     priceHint: "Nécessaire pour répartir la note équitablement. Une estimation suffit.",
-    coinsLabel: "Jetons",
     coinsAuto: "(vide = automatique)",
     addBtn: "Ajouter",
     remaining: (n: number, max: number) => `Encore ${n} de tes ${max} boissons personnalisées`,
@@ -668,7 +665,6 @@ const T = {
     drinkInUse: (n: string) => `${n} a déjà été commandé et ne peut plus être supprimé.`,
 
     confirmTitle: "Confirmation",
-    reset: "↺ reset",
     voiceBtn: "🎤 Dicter",
     voiceBeta: "bêta",
     voiceListening: "🎤 J'écoute…",
@@ -897,7 +893,7 @@ export default function PartyTest() {
     }
     loadParty(groupId)
   }
-  const eachOne = (did: string) => { const hi = people.filter((p) => (cart[did]?.[p.id] ?? 0) >= 2).map((p) => p.name); if (hi.length > 0) { setConfirmDlg({ msg: `${hi.join(" en ")} ${hi.length === 1 ? "heeft" : "hebben"} er nu al 2 of meer. Met "elk 1" krijgt iedereen er precies één — ${hi.join(" en ")} ${hi.length === 1 ? "gaat" : "gaan"} dus terug naar 1.`, yes: L.yesEachOne, onYes: () => { setEachOne(did); setConfirmDlg(null) } }) } else setEachOne(did) }
+  const eachOne = (did: string) => { const hi = people.filter((p) => (cart[did]?.[p.id] ?? 0) >= 2).map((p) => p.name); if (hi.length > 0) { setConfirmDlg({ msg: L.eachOneConfirm(hi.join(" en "), hi.length > 1), yes: L.yesEachOne, onYes: () => { setEachOne(did); setConfirmDlg(null) } }) } else setEachOne(did) }
   const drinkTotal = (did: string) => Object.values(cart[did] ?? {}).reduce((a, b) => a + b, 0) + (cartAnon[did] ?? 0)
   const roundItems = useMemo(() => drinks.reduce((s, d) => s + drinkTotal(d.id), 0), [cart, cartAnon, drinks]) // eslint-disable-line
   const resumeRound = () => { if (blockIfUnpaid()) return; setActiveCat(catsPresent[0]); setView("order") }
@@ -1233,7 +1229,7 @@ export default function PartyTest() {
       setOnbPotActive(false)
       const willHave = potContribTotal + added
       if (potChosen && willHave <= 0.005) {
-        setConfirmDlg({ msg: `Je koos voor een ${potIsCard ? "drankkaart" : "pot"}, maar er is nog niks ingelegd. Toch zonder verder gaan? Je kan later nog toevoegen via de knop bovenaan.`, yes: L.anywayWithout(potIsCard), onYes: () => { setConfirmDlg(null); setPotChosen(false); setView("settings") }, onNo: () => { setConfirmDlg(null); setShowPot(true); setOnbPotActive(true) } })
+        setConfirmDlg({ msg: L.potNothingIn(potIsCard), yes: L.anywayWithout(potIsCard), onYes: () => { setConfirmDlg(null); setPotChosen(false); setView("settings") }, onNo: () => { setConfirmDlg(null); setShowPot(true); setOnbPotActive(true) } })
         return
       }
       setView("settings")
@@ -1295,7 +1291,7 @@ export default function PartyTest() {
     if (total <= 0) { valid = false; reason = "Vul eerst exact betaald bedrag in." }
     else if (nPayers === 0) { valid = false; reason = L.whoPaid }
     else if (payPot && potAvail <= 0.005) { valid = false; reason = L.potEmpty(potIsCard) }
-    else if (potOver) { valid = false; reason = `De ${potIsCard ? "drankkaart" : "pot"} heeft maar ${euro(Math.max(0, potAvail))} — verlaag het bedrag of leg bij.` }
+    else if (potOver) { valid = false; reason = L.potTooLow(potIsCard, euro(Math.max(0, potAvail))) }
     else if (multi && !allFilled) { valid = false; reason = L.fillPerPayer }
     const tol = 0.005 + 0.01 * Math.max(0, nPayers - 1)
     const rounding = multi && Math.abs(missing) > 0.005 && Math.abs(missing) <= tol
@@ -1605,7 +1601,7 @@ export default function PartyTest() {
     if (people.length === 0) { setNotice(L.addPersonFirst); return }
     if (depositOn && (depositValue || 0) <= 0) { setNotice(L.fillDeposit); return }
     if (pay === "coin" && (coinValue || 0) <= 0) { setNotice(L.fillCoinValue); return }
-    if (potChosen && potContribTotal <= 0.005) { setConfirmDlg({ msg: `Je koos voor een ${potIsCard ? "drankkaart" : "pot"}, maar er is nog niks ingelegd. Toch zonder verder gaan? Je kan later nog toevoegen via de knop bovenaan.`, yes: L.anywayWithout(potIsCard), onYes: () => { setConfirmDlg(null); setPotChosen(false); setView("hub") } }); return }
+    if (potChosen && potContribTotal <= 0.005) { setConfirmDlg({ msg: L.potNothingIn(potIsCard), yes: L.anywayWithout(potIsCard), onYes: () => { setConfirmDlg(null); setPotChosen(false); setView("hub") } }); return }
     setView("hub")
   }
   const goAssignUnassigned = () => {
@@ -1877,7 +1873,7 @@ export default function PartyTest() {
   const renderPotModal = () => (
     <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
       <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ ...S.h3, fontSize: 18, margin: "0 0 8px" }}>{potIsCard ? "💳 Drankkaart" : "🫙 Pot"}</h3>
+        <h3 style={{ ...S.h3, fontSize: 18, margin: "0 0 8px" }}>{potIsCard ? L.drinkCard : L.potTitle}</h3>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
           <span style={{ ...S.pill, background: "rgba(120,95,20,0.08)", color: "#8a5e0f", fontSize: 12, padding: "4px 10px" }}>ingelegd {euro(potContribTotal)}</span>
           {potSpent > 0 && <span style={{ ...S.pill, background: "rgba(224,138,0,0.12)", color: "#c98a00", fontSize: 12, padding: "4px 10px" }}>besteed {euro(potSpent)}</span>}
@@ -1964,7 +1960,7 @@ export default function PartyTest() {
         {editPotId !== null ? (
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
             <button style={{ ...S.btn, flex: 1 }} onClick={cancelEditPot}>✕ annuleer</button>
-            <button style={{ ...S.btnP, flex: 2 }} onClick={saveEditPot}>{potDraftTotal > 0 ? `✓ Wijziging opslaan (${euro(potDraftTotal)})` : "✓ Inleg verwijderen (leeg)"}</button>
+            <button style={{ ...S.btnP, flex: 2 }} onClick={saveEditPot}>{potDraftTotal > 0 ? L.addContrib(euro(potDraftTotal)) : L.removeContrib}</button>
           </div>
         ) : (
           <button style={{ ...S.btnP, marginTop: 14 }} onClick={closePot}>{potDraftTotal > 0 ? L.addContrib(euro(potDraftTotal)) : "Klaar"}</button>
@@ -2427,7 +2423,7 @@ export default function PartyTest() {
                 </div>
               ))}
               <div style={{ fontSize: 11.5, color: "#8a7d55", margin: "12px 0 14px", lineHeight: 1.5 }}>{L.adjustLater}</div>
-              <button style={{ ...S.btnP, width: "100%" }} onClick={applyBeginChoices}>{(bpPotType !== "none" || bpBekers || bpCoins) ? "Verdergaan" : "Snel starten"}</button>
+              <button style={{ ...S.btnP, width: "100%" }} onClick={applyBeginChoices}>{(bpPotType !== "none" || bpBekers || bpCoins) ? "Verdergaan" : L.quickStart}</button>
             </div>
           </div>
         )}
@@ -2535,7 +2531,7 @@ export default function PartyTest() {
         )}
         <div style={{ ...S.card, marginBottom: 10 }}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <span style={{ fontSize: 14, fontWeight: 700 }}>{potIsCard ? "💳 Drankkaart" : "🫙 Pot"} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>— optioneel</span></span>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>{potIsCard ? L.drinkCard : L.potTitle} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>— optioneel</span></span>
             <button style={{ ...S.btn, padding: "6px 12px", fontSize: 13 }} onClick={() => setShowPot(true)}>{potContribTotal > 0 ? `inleg ${euro(potContribTotal)}` : "+ inleggen"}</button>
           </div>
           {potChosen && potContribTotal <= 0.005 && <div style={{ marginTop: 8, textAlign: "right" }}><span onClick={() => setPotChosen(false)} style={{ fontSize: 12, color: "#c0554a", fontWeight: 700, cursor: "pointer" }}>✕ toch niet</span></div>}
@@ -2575,7 +2571,7 @@ export default function PartyTest() {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ ...S.card, marginBottom: 0 }}>
-          <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.3, textAlign: "center" }}>🎟️ Coins <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 10.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
+          <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.3, textAlign: "center" }}>{L.coinsTitle} <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 10.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
           <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "center" }}>
             <div onClick={() => { const on = pay !== "coin"; setPay(on ? "coin" : "eur"); setDepositUnit(on ? "coin" : "eur") }} style={{ width: 44, height: 26, borderRadius: 20, background: pay === "coin" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#d9cdb0", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
               <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: pay === "coin" ? 21 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
@@ -2588,7 +2584,7 @@ export default function PartyTest() {
                 <span style={{ fontSize: 14, fontWeight: 700 }}>1 coin =</span>
                 <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={S.input} type="text" inputMode="decimal" value={coinValue} onChange={(e) => setCoinValue(parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
               </div>
-              <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 12.5 }} onClick={() => setShowCoins((v) => !v)}>{showCoins ? "▴ verberg coin-prijzen" : "🎟️ coin-prijzen per drankje"}</button>
+              <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 12.5 }} onClick={() => setShowCoins((v) => !v)}>{showCoins ? "▴ verberg coin-prijzen" : L.coinPrices}</button>
               {showCoins && (() => {
                 const cd = drinks.filter((d) => d.cat === coinCat)
                 const vis = cd.filter((d) => coinFull || d.fav)
@@ -2909,7 +2905,7 @@ export default function PartyTest() {
           <>
           <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", marginBottom: 7 }}>{L.paidBy} <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.multiplePossible}</span></div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-            <span style={{ ...S.chip(payPot ? 1 : 0), opacity: st.potAvail <= 0.005 ? 0.45 : 1 }} onClick={() => { if (!payPot && st.potAvail <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg (€0). Tik rechtsboven op “${potIsCard ? "drankkaart" : "pot"} + toevoegen” om eerst in te leggen.`); return } const nextPot = !payPot; setPayPot(nextPot); autoSplit(payPersons, nextPot); setPaidConfirmed(false) }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
+            <span style={{ ...S.chip(payPot ? 1 : 0), opacity: st.potAvail <= 0.005 ? 0.45 : 1 }} onClick={() => { if (!payPot && st.potAvail <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg (€0). Tik rechtsboven op “${potIsCard ? "drankkaart" : "pot"} + toevoegen” om eerst in te leggen.`); return } const nextPot = !payPot; setPayPot(nextPot); autoSplit(payPersons, nextPot); setPaidConfirmed(false) }}>{potIsCard ? "💳 drankkaart" : "{L.thePot}"}</span>
             {people.map((p) => <span key={p.id} style={S.chip(payPersons.includes(p.id) ? 1 : 0)} onClick={() => togglePayPerson(p.id)}>{p.name}</span>)}
           </div>
 
@@ -2948,7 +2944,7 @@ export default function PartyTest() {
           })()}
           </>
           ) : (
-            <div style={{ fontSize: 12.5, color: "#b3a988", textAlign: "center", padding: "6px 0 2px" }}>Vul eerst het betaalde bedrag in — daarna kies je wie betaalde.</div>
+            <div style={{ fontSize: 12.5, color: "#b3a988", textAlign: "center", padding: "6px 0 2px" }}>{L.fillAmountFirst}</div>
           )}
         </div>
 
@@ -3206,7 +3202,7 @@ export default function PartyTest() {
         {showEqual && (
           <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, fontSize: 10.5, color: "#8a7d55", fontWeight: 800, paddingBottom: 4, borderBottom: "1px solid rgba(120,95,20,0.12)" }}>
             <span>gelijke verdeling</span>
-            <span onClick={() => setNotice("Gelijke verdeling = totaal ÷ aantal personen. Fair Split is eerlijker: wie weinig of niks dronk, betaalt niet mee voor wie veel dronk.")} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 15, height: 15, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 9.5, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
+            <span onClick={() => setNotice(L.fairSplitInfo)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 15, height: 15, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 9.5, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
           </div>
         )}
         {people.map((p) => {
