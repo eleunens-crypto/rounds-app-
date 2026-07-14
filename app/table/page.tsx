@@ -579,6 +579,7 @@ const STRINGS = {
     checkShared: "gedeelde items?",
     allOkGoGuests: "✓ Alles klopt — ga naar Gasten en delen →",
     scanModalTitle: "🧾 Rekening scannen",
+    scanModalTitleAdded: "🧾 Rekening toegevoegd",
     scanModalIntro: "Maak een duidelijke foto van de rekening of kies er één uit je galerij.",
     scanSubNote: "Daarna kan je herkende items nog nakijken en bijsturen.",
     scanProgress: "De tekst van je bon wordt herkend — even geduld.",
@@ -937,7 +938,7 @@ const STRINGS = {
     tooSlowTip: "Recht erboven, goed licht, beeld vullen.",
     tooSlowOne: "📷 Eén foto maken",
     tooSlowRetry: "🔄 Toch met twee",
-    taxAddBtn: "+ BTW / kosten / korting",
+    taxAddBtn: "BTW / kosten / korting toevoegen?",
     legendTitle: "Wat betekenen de knopjes?",
     legendShare: "Tik deze knop aan voor gedeelde items (fles wijn, water, dessert). De prijs verdeelt zich over wie meedeelt.",
     legendEdit: "naam, aantal of prijs aanpassen",
@@ -1185,6 +1186,7 @@ const STRINGS = {
     checkShared: "articles partagés ?",
     allOkGoGuests: "✓ Tout est correct — vers Invités et partage →",
     scanModalTitle: "🧾 Scanner l'addition",
+    scanModalTitleAdded: "🧾 Addition ajoutée",
     scanModalIntro: "Prends ou choisis une photo de l'addition. Tu pourras ensuite vérifier et corriger les articles reconnus.",
     scanProgress: "Le texte de ton addition est en cours de reconnaissance — un instant.",
     scanningBusy: "⏳ Scan en cours — un instant",
@@ -1543,7 +1545,7 @@ const STRINGS = {
     tooSlowTip: "Bien au-dessus, bonne lumière, remplis l'image.",
     tooSlowOne: "📷 Prendre une photo",
     tooSlowRetry: "🔄 Réessayer à deux",
-    taxAddBtn: "+ TVA / frais / remise",
+    taxAddBtn: "Ajouter TVA / frais / remise ?",
     legendTitle: "Que font les boutons ?",
     legendShare: "Touche ce bouton pour les articles partagés (bouteille de vin, eau, dessert). Le prix se répartit entre ceux qui partagent.",
     legendEdit: "modifier le nom, la quantité ou le prix",
@@ -4199,8 +4201,10 @@ export default function RundoTable() {
       {showScan && (
         <div style={S.overlay}>
           <div style={{ ...S.modal, width: 460, maxHeight: "88vh" }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800 }}>{L.scanModalTitle}</h3>
-            <p style={{ fontSize: 12.5, color: "#999", marginBottom: 14 }}>{L.scanModalIntro}</p>
+            <h3 style={{ marginBottom: photos.length > 0 ? 14 : 4, fontSize: 18, fontWeight: 800 }}>{photos.length > 0 ? L.scanModalTitleAdded : L.scanModalTitle}</h3>
+            {photos.length === 0 && !scanning && scanPreview.length === 0 && (
+              <p style={{ fontSize: 12.5, color: "#999", marginBottom: 14 }}>{L.scanModalIntro}</p>
+            )}
 
             {scanning ? (
               <div style={{ ...S.btn, ...S.btnPrimary, textAlign: "center", marginBottom: 14, fontWeight: 700, padding: "14px 0", opacity: 0.6 }}>{scanStep && scanStep.n > 1 ? L.scanningPhotoN(scanStep.i, scanStep.n) : L.scanningBusy}</div>
@@ -4245,7 +4249,7 @@ export default function RundoTable() {
                       )}
                     </div>
                     <button onClick={scanPhotos} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 14.5, fontWeight: 800 }}>{photos.length > 1 ? L.readBillBtn2 : L.readBillBtn}</button>
-                    <div style={{ fontSize: 10.5, color: "#9aa0ab", textAlign: "center", marginTop: 6, lineHeight: 1.45 }}>{L.scanSubNote}</div>
+                    <div style={{ fontSize: 12.5, color: "#8a93a3", textAlign: "center", marginTop: 8, lineHeight: 1.45 }}>{L.scanSubNote}</div>
                     {photos.length > 1 && <div style={{ fontSize: 10.5, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>{L.countsAsOne}</div>}
                   </div>
                 )}
@@ -4301,7 +4305,7 @@ export default function RundoTable() {
               </div>
             )}
 
-            {scanPhotoUrl && (
+            {scanPhotoUrl && scanPreview.length > 0 && (
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 6 }}>{L.yourPhoto}</div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
