@@ -100,7 +100,13 @@ const coinDefault = (cat: Cat, name: string): number => {
     default: return 1
   }
 }
-const DEMO_DRINKS: Drink[] = DATA.map(([cat, name, price], i) => ({ id: "d" + i, name, emoji: CAT_EMOJI[cat], cat, price, cup: CUPCAT[cat], fav: FAVS.has(name), coins: coinDefault(cat, name) }))
+// STABIELE sleutel, afgeleid van de naam. Niet de index: die schuift op zodra je een drank
+// tussenvoegt, en dan wijzen opgeslagen rondjes ineens naar het verkeerde drankje.
+const drinkKey = (name: string) =>
+  name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+
+const DEMO_DRINKS: Drink[] = DATA.map(([cat, name, price]) => ({ id: drinkKey(name), name, emoji: CAT_EMOJI[cat], cat, price, cup: CUPCAT[cat], fav: FAVS.has(name), coins: coinDefault(cat, name) }))
 
 type Assign = Record<string, Record<string, number>>
 type Anon = Record<string, number>
