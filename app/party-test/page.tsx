@@ -58,7 +58,7 @@ function deviceId(): string {
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 const makeCode = () => Array.from({ length: 6 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("")
 type Cat = "Bier" | "BierAV" | "Frisdrank" | "Wijn" | "Cocktail" | "Mocktail" | "Longdrink" | "Shot" | "Warm"
-type Drink = { id: string; name: string; emoji: string; cat: Cat; price: number; cup: boolean; fav: boolean; coins: number }
+type Drink = { id: string; name: string; emoji: string; cat: Cat; price: number; cup: boolean; fav: boolean; coins: number; custom?: boolean; by?: string }
 
 const CATS: Cat[] = ["Bier", "BierAV", "Frisdrank", "Wijn", "Cocktail", "Mocktail", "Longdrink", "Shot", "Warm"]
 const CAT_LABEL: Record<Cat, string> = { Bier: "🍺 Bier", BierAV: "🌿 AV-bier", Frisdrank: "🥤 Fris", Wijn: "🍷 Wijn", Cocktail: "🍸 Cocktail", Mocktail: "🍹 Mocktail", Longdrink: "🥃 Longdrink", Shot: "🔥 Shot", Warm: "☕ Warm" }
@@ -168,6 +168,15 @@ export default function PartyTest() {
   const mounted = useRef(true)
   const [groupId, setGroupId] = useState<string | null>(null)
   const [openRoundId, setOpenRoundId] = useState<string | null>(null)
+  type Custom = { key: string; name: string; cat: Cat; price: number; coins: number; cup: boolean; by: string }
+  const [customDrinks, setCustomDrinks] = useState<Custom[]>([])
+  // Afwijkende coin-prijzen voor dit feest. Ook jsonb op de groep-rij, dus gratis mee.
+  const [coinPrices, setCoinPrices] = useState<Record<string, number>>({})
+  const [showAddDrink, setShowAddDrink] = useState(false)
+  const [ndName, setNdName] = useState("")
+  const [ndCat, setNdCat] = useState<Cat>("Bier")
+  const [ndPrice, setNdPrice] = useState("")
+  const [ndCoins, setNdCoins] = useState("")
   const [inviteCode, setInviteCode] = useState<string>("")
   const [ownerDevice, setOwnerDevice] = useState<string>("")
   const [booting, setBooting] = useState(true)   // eerste laadbeurt (code uit de URL)
@@ -178,7 +187,30 @@ export default function PartyTest() {
   const meId = people.find((p) => p.claimedBy === me.current)?.id ?? null
   const inviteLink = typeof window !== "undefined" && inviteCode
     ? `${window.location.origin}${window.location.pathname}?code=${inviteCode}` : ""
-  const [drinks, setDrinks] = useState<Drink[]>(DEMO_DRINKS)
+  // De vaste catalogus staat in de code (nul queries per gast). Eigen drankjes komen
+  // uit de groep-rij, die we toch al ophalen — dus ook nul extra queries.
+  const drinks: Drink[] = useMemo(() => [
+    ...DEMO_DRINKS,
+    ...customDrinks.map((c) => ({
+      id: c.key, name: c.name, emoji: "⭐", cat: c.cat, price: Number(c.price),
+      cup: !!c.cup, fav: true, coins: Number(c.coins), custom: true, by: c.by,
+    })),
+  ].map((d) => (coinPrices[d.id] !== undefined ? { ...d, coins: coinPrices[d.id] } : d)),
+  [customDrinks, coinPrices])
+
+  // Coin-prijs bijstellen. Debounced wegschrijven: de +/- knopjes gaan per 0,1, dus
+  // wie doorklikt zou anders tien updates afvuren.
+  const coinTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const setCoinPrice = (drinkId: string, coins: number) => {
+    const next = { ...coinPrices, [drinkId]: Math.max(0, +coins.toFixed(1)) }
+    setCoinPrices(next)
+    if (coinTimer.current) clearTimeout(coinTimer.current)
+    coinTimer.current = setTimeout(() => {
+      if (!groupId) return
+      supabase.from("party_groups").update({ coin_prices: next }).eq("id", groupId)
+        .then(({ error }) => { if (error) setNotice("Coin-prijs opslaan mislukt: " + error.message) })
+    }, 700)
+  }
   const [potRounds, setPotRounds] = useState<{ id: string; seq: number; amounts: Record<string, number> }[]>([])
   const [potDraft, setPotDraft] = useState<Record<string, number>>({})
   const [everyoneDraft, setEveryoneDraft] = useState<string>("")
@@ -421,7 +453,7 @@ export default function PartyTest() {
   // (iedereen bestelt tegelijk) niet tientallen herladingen uitlokt.
   const loadParty = useCallback(async (gid: string) => {
     const [{ data: g }, { data: pp }, { data: rr }, { data: ii }, { data: pt }] = await Promise.all([
-      supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized").eq("id", gid).single(),
+      supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices").eq("id", gid).single(),
       supabase.from("party_people").select("id,seat,name,claimed_by,self_joined,settle_with").eq("group_id", gid).order("seat"),
       supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back").eq("group_id", gid).order("seq"),
       supabase.from("party_round_items").select("round_id,person_id,drink_key,qty").eq("group_id", gid),
@@ -438,6 +470,8 @@ export default function PartyTest() {
       setDepositValue(Number(g.deposit_value))
       setDepositUnit(g.deposit_unit as "eur" | "coin")
       setPotIsCard(!!g.pot_is_card)
+      setCustomDrinks(((g.custom_drinks ?? []) as Custom[]))
+      setCoinPrices(((g.coin_prices ?? {}) as Record<string, number>))
     }
     // Lege naam = vrije plaats. In de UI heet die "Gast N", zodat de bestaande
     // placeholder-logica ongemoeid blijft.
@@ -790,6 +824,122 @@ export default function PartyTest() {
             }}>Link delen</button>
           <button style={{ ...S.btn, flex: 1, fontWeight: 800 }}
             onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(inviteLink); setNotice("Link gekopieerd.") } }}>Kopieer link</button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Eigen drankje ───────────────────────────────────────────────────────────
+  const MAX_EIGEN_PERSOON = 5
+  const MAX_EIGEN_GROEP = 20
+  const eigenVanMij = customDrinks.filter((c) => c.by === me.current).length
+
+  const addCustomDrink = async () => {
+    const naam = ndName.trim()
+    if (!naam) { setNotice("Geef je drankje een naam."); return }
+    const prijs = parseFloat(ndPrice.replace(",", "."))
+    // De richtprijs is niet optioneel: zonder prijs kan Fair Split dit drankje niet
+    // wegen tegen de rest, en dan is de verdeling gewoon fout.
+    if (!(prijs > 0)) { setNotice("Vul een richtprijs in — anders kan Fair Split dit drankje niet eerlijk verdelen."); return }
+    const sleutel = drinkKey(naam)
+    if (drinks.some((d) => d.id === sleutel)) { setNotice(`"${naam}" staat al in de lijst.`); return }
+    if (!groupId) return
+
+    const coins = pay === "coin"
+      ? (parseFloat((ndCoins || "").replace(",", ".")) || coinDefault(ndCat, naam))
+      : coinDefault(ndCat, naam)
+
+    const { error } = await supabase.rpc("party_add_drink", {
+      p_group: groupId, p_key: sleutel, p_name: naam, p_cat: ndCat,
+      p_price: prijs, p_coins: coins, p_cup: CUPCAT[ndCat], p_by: me.current,
+      p_max_person: MAX_EIGEN_PERSOON, p_max_group: MAX_EIGEN_GROEP,
+    })
+    if (error) {
+      if (/PERSOON_VOL/.test(error.message)) setNotice(`Je kan maximaal ${MAX_EIGEN_PERSOON} eigen drankjes toevoegen.`)
+      else if (/GROEP_VOL/.test(error.message)) setNotice(`De groep zit aan het maximum van ${MAX_EIGEN_GROEP} eigen drankjes.`)
+      else setNotice("Toevoegen mislukt: " + error.message)
+      return
+    }
+    setNdName(""); setNdPrice(""); setNdCoins(""); setShowAddDrink(false)
+    setActiveCat(ndCat); setDrinkSearch("")
+    setNotice(`⭐ ${naam} toegevoegd.`)
+    loadParty(groupId)
+  }
+
+  const removeCustomDrink = async (key: string, naam: string) => {
+    if (!groupId) return
+    const { error } = await supabase.rpc("party_remove_drink", { p_group: groupId, p_key: key })
+    if (error) {
+      // Een drankje dat al besteld is, mag niet weg: dan zouden er bestellingen naar
+      // een onbestaand drankje wijzen en klopt de verdeling niet meer.
+      if (/IN_GEBRUIK/.test(error.message)) setNotice(`${naam} is al besteld en kan niet meer verwijderd worden.`)
+      else setNotice("Verwijderen mislukt: " + error.message)
+      return
+    }
+    loadParty(groupId)
+  }
+
+  const renderAddDrink = () => {
+    if (!showAddDrink) return null
+    const mijne = customDrinks.filter((c) => c.by === me.current)
+    return (
+      <div style={S.overlay} onClick={() => setShowAddDrink(false)}>
+        <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
+            <h3 style={{ ...S.h3, margin: 0 }}>⭐ Eigen drankje</h3>
+            <button onClick={() => setShowAddDrink(false)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer", color: "#8a7d55" }}>✕</button>
+          </div>
+
+          <div style={{ fontSize: 12, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
+            Staat er iets niet in de lijst? Voeg het toe voor dit feest. Iedereen in de groep ziet het meteen.
+          </div>
+
+          <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>Naam</div>
+          <input value={ndName} onChange={(e) => setNdName(e.target.value)} placeholder="bv. Trappist van Jos"
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 15, textAlign: "left", marginBottom: 12 }} />
+
+          <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>Categorie</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+            {CATS.map((c) => (
+              <span key={c} style={S.tab(ndCat === c)} onClick={() => setNdCat(c)}>{CAT_LABEL[c]}</span>
+            ))}
+          </div>
+
+          <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>Richtprijs</div>
+          <div style={{ fontSize: 11, color: "#8a7d55", marginBottom: 6, lineHeight: 1.4 }}>
+            Nodig om de rekening achteraf eerlijk te verdelen. Een schatting volstaat.
+          </div>
+          <input value={ndPrice} onChange={(e) => setNdPrice(e.target.value)} inputMode="decimal" placeholder="4,50"
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 15, marginBottom: 12 }} />
+
+          {pay === "coin" && (
+            <>
+              <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>Coins <span style={{ fontWeight: 600, color: "#8a7d55" }}>(leeg = automatisch)</span></div>
+              <input value={ndCoins} onChange={(e) => setNdCoins(e.target.value)} inputMode="decimal" placeholder={String(coinDefault(ndCat, ndName || "x"))}
+                style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 15, marginBottom: 12 }} />
+            </>
+          )}
+
+          <button style={{ ...S.btnP, width: "100%", opacity: ndName.trim() && ndPrice ? 1 : 0.5 }} onClick={addCustomDrink}>
+            Toevoegen
+          </button>
+          <div style={{ fontSize: 11, color: "#8a7d55", textAlign: "center", marginTop: 8 }}>
+            Nog {Math.max(0, MAX_EIGEN_PERSOON - eigenVanMij)} van je {MAX_EIGEN_PERSOON} eigen drankjes over
+          </div>
+
+          {mijne.length > 0 && (
+            <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
+              <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 8 }}>Door jou toegevoegd</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {mijne.map((c) => (
+                  <button key={c.key} onClick={() => removeCustomDrink(c.key, c.name)}
+                    style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)" }}>
+                    ⭐ {c.name} ✕
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -1383,6 +1533,7 @@ export default function PartyTest() {
     return (
       <div style={S.page}><div style={S.wrap}>
         {renderDialogs()}
+        {renderAddDrink()}
 
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
           <div>
@@ -1550,6 +1701,13 @@ export default function PartyTest() {
             })}
           </div>
         )}
+
+        <div style={{ textAlign: "center", padding: "2px 0 14px" }}>
+          <button onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }}
+            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 16px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
+            ⭐ Eigen drankje toevoegen
+          </button>
+        </div>
 
         <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", padding: "6px 0 20px", lineHeight: 1.5 }}>
           Wie naar de toog gaat, sluit het rondje af en vult het bedrag in.<br />
@@ -1811,9 +1969,9 @@ export default function PartyTest() {
                       <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid rgba(120,95,20,0.06)" }}>
                         <span style={{ fontSize: 13 }}>{d.emoji} {d.name}</span>
                         <div style={{ ...S.row, gap: 5 }}>
-                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => setDrinks((ds) => ds.map((x) => x.id === d.id ? { ...x, coins: Math.max(0, +(x.coins - 0.1).toFixed(1)) } : x))}>−</button>
+                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => setCoinPrice(d.id, d.coins - 0.1)}>−</button>
                           <span style={{ minWidth: 46, textAlign: "center", fontSize: 12.5, fontWeight: 800 }}>{d.coins.toFixed(1)} c</span>
-                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => setDrinks((ds) => ds.map((x) => x.id === d.id ? { ...x, coins: +(x.coins + 0.1).toFixed(1) } : x))}>+</button>
+                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => setCoinPrice(d.id, d.coins + 0.1)}>+</button>
                         </div>
                       </div>
                     ))}
@@ -1855,6 +2013,7 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
+        {renderAddDrink()}
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>Ronde {roundNr} <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}>— {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>{repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}</h3>
         </div>
@@ -1911,6 +2070,12 @@ export default function PartyTest() {
             })}
           </div>
         )}
+        <div style={{ textAlign: "center", padding: "2px 0 14px" }}>
+          <button onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }}
+            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 16px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
+            ⭐ Eigen drankje toevoegen
+          </button>
+        </div>
         {roundItems > 0 && (
           <div style={{ ...S.card, padding: "10px 12px", background: "#fffdf6" }}>
             <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
