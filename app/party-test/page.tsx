@@ -270,11 +270,13 @@ const T = {
     noPeopleYet: "Nog geen personen",
     addPersonFirst: "Voeg eerst minstens één persoon toe.",
     whichAreYou: "Welke ben jij?",
+    statusJoined: "📱 aangemeld",
+    statusYou: "⭐ jij",
+    statusNot: "nog niet aangemeld",
+    assignAnyone: "Je kan aan iedereen toewijzen — ook wie zelf scande.",
     pickYourName: "Tik je naam aan — de rest duid je zelf aan tijdens het bestellen.",
     notMeShort: "niet ik",
     freeUp: "vrijgeven",
-    thisIsYou: "Dit ben jij",
-    selfJoined: "Deze persoon meldde zich zelf aan",
     seatLegend: "📱 = meldde zich zelf aan via de link · ⭐ = dat ben jij. Wie niet scant, duid je gewoon zelf aan tijdens het bestellen.",
     personHasDrinks: (n: string) => `${n} heeft al drankjes in een rondje en kan niet verwijderd worden. Verwijder eerst die drankjes.`,
     thisPerson: "Deze persoon",
@@ -542,11 +544,13 @@ const T = {
     noPeopleYet: "Aucune personne",
     addPersonFirst: "Ajoute d'abord au moins une personne.",
     whichAreYou: "Lequel es-tu ?",
+    statusJoined: "📱 inscrit",
+    statusYou: "⭐ toi",
+    statusNot: "pas encore inscrit",
+    assignAnyone: "Tu peux attribuer à tout le monde — même à ceux qui ont scanné.",
     pickYourName: "Touche ton nom — le reste, tu le coches toi-même en commandant.",
     notMeShort: "pas moi",
     freeUp: "libérer",
-    thisIsYou: "C'est toi",
-    selfJoined: "Cette personne s'est inscrite elle-même",
     seatLegend: "📱 = inscrit via le lien · ⭐ = c'est toi. Ceux qui ne scannent pas, tu les coches toi-même en commandant.",
     personHasDrinks: (n: string) => `${n} a déjà des boissons dans une tournée et ne peut pas être supprimé. Supprime d'abord ces boissons.`,
     thisPerson: "Cette personne",
@@ -2850,21 +2854,19 @@ export default function PartyTest() {
                     <input value={isGuestDefault(p.name) ? "" : p.name}
                       placeholder={isGuestDefault(p.name) ? p.name : `Gast ${idx + 1}`}
                       onChange={(e) => renamePerson(p.id, e.target.value === "" ? `Gast ${idx + 1}` : e.target.value)}
-                      style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "7px 9px", paddingRight: p.claimedBy ? 26 : 9, fontSize: 13, textAlign: "left" }} />
-                    {p.claimedBy && (
-                      <span title={ikZelf ? L.thisIsYou : L.selfJoined}
-                        style={{ position: "absolute", right: 7, top: 7, fontSize: 12, pointerEvents: "none" }}>
-                        {ikZelf ? "⭐" : "📱"}
+                      style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "7px 9px", fontSize: 13, textAlign: "left" }} />
+                    <div style={{ ...S.row, justifyContent: "space-between", marginTop: 4, gap: 4 }}>
+                      <span style={{ fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
+                        color: ikZelf ? "#1f6b3a" : p.claimedBy ? "#8a5e0f" : "#b3a988" }}>
+                        {ikZelf ? L.statusYou : p.claimedBy ? L.statusJoined : L.statusNot}
                       </span>
-                    )}
-                    {(ikZelf || bezet) && (
-                      <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
+                      {(ikZelf || bezet) && (
                         <button onClick={() => releaseSeat(p.id)}
-                          style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)" }}>
+                          style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)", fontSize: 10.5, padding: "3px 8px" }}>
                           {ikZelf ? L.notMeShort : L.freeUp}
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 )
               })}
@@ -3143,7 +3145,8 @@ export default function PartyTest() {
                   <div style={{ ...S.seg(assignMode === "drink"), padding: "6px 10px", fontSize: 12, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("drink")}>per drank</div>
                 </div>
               </div>
-              {assignMode === "person" && unassignedTotal > 0 && <div style={{ fontSize: 12.5, fontWeight: 800, color: "#c0554a", marginBottom: 8 }}>🔴 {unassignedTotal} drankje{unassignedTotal === 1 ? "" : "s"} nog niet toegewezen</div>}
+              {assignMode === "person" && unassignedTotal > 0 && <div style={{ fontSize: 12.5, fontWeight: 800, color: "#c0554a", marginBottom: 4 }}>🔴 {unassignedTotal} drankje{unassignedTotal === 1 ? "" : "s"} nog niet toegewezen</div>}
+              <div style={{ fontSize: 11, color: "#8a7d55", marginBottom: 8, lineHeight: 1.4 }}>{L.assignAnyone}</div>
 
               {assignMode === "drink" ? (
                 drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => {
@@ -3155,7 +3158,7 @@ export default function PartyTest() {
                         {un > 0 && <span style={{ fontSize: 11.5, color: "#c0554a", fontWeight: 800 }}>🔴 {un} zonder naam</span>}
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {people.map((p) => { const n = aQty(d.id, p.id); return <span key={p.id} style={{ ...S.chip(n), fontSize: 12.5, padding: "5px 10px" }} onClick={() => assignFromAnon(d.id, p.id)}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); unassignCart(d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1 }}>−</span>}</span> })}
+                        {people.map((p) => { const n = aQty(d.id, p.id); return <span key={p.id} style={{ ...S.chip(n), fontSize: 12.5, padding: "5px 10px" }} onClick={() => assignFromAnon(d.id, p.id)}>{p.name}{p.claimedBy && <span style={{ fontSize: 10, marginLeft: 3, opacity: 0.7 }}>📱</span>}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); unassignCart(d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1 }}>−</span>}</span> })}
                         {drinkTotal(d.id) === people.length && people.length > 0 && <span onClick={() => eachOne(d.id)} style={{ ...S.chip(0), fontSize: 12.5, padding: "5px 10px", border: "1.5px dashed #c98a00", background: "rgba(240,165,0,0.1)", color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{L.eachOne}</span>}
                       </div>
                     </div>
