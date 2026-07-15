@@ -1,2555 +1,2390 @@
-
 "use client"
 
-import { useEffect, useState, useCallback, useRef } from "react"
+// ─────────────────────────────────────────────────────────────────────────────
+// RUNDO PARTY — TESTPAGINA v7
+// - Betaling bevestigen -> rondjes-hub (overzicht) -> nieuw rondje / afrekenen
+// - Bewerken (toewijzen + bekers) in het overzicht; app herberekent automatisch
+// - Home-knop op elk scherm (geen reset); coin-prijzen zichtbaar/aanpasbaar
+// Richtprijzen blijven ONZICHTBAAR bij bestellen. Volledig lokaal. app/party/page.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { useMemo, useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase"
+import { QRCodeSVG } from "qrcode.react"
 import { useLang, LanguageToggle } from "@/lib/i18n"
 
-// ═══════════════════════════════════════════════════════════════════════════
-// TYPES
-// ═══════════════════════════════════════════════════════════════════════════
-type Group = {
-  id: string
-  name: string
-  invite_code: string
-  owner_id: string
-}
-
-type Drink = {
-  id: string
-  name: string
-  price: number
-  emoji: string
-  category: string | null
-  group_id?: string | null // null = standaard basisdrank (voor iedereen); gezet = eigen drank/aanpassing van die groep
-  owner_id?: string | null // gezet = eigen drank van die gebruiker (privé, zichtbaar in al zijn groepen)
-}
-
-type DrinkLibraryItem = {
-  id: string
-  name: string
-  emoji: string
-  category: string | null
-  default_price: number
-  search_tags: string | null
-}
-
-type Participant = {
-  id: string
-  name: string
-  group_id: string
-  is_placeholder?: boolean // true if auto-created "Persoon 1" type name without a real name yet
-}
-
-// Stabiele volgorde zodat personen niet verspringen na een refetch (rename/insert).
-// Gebruikt created_at indien aanwezig (= volgorde van toevoegen), anders id als stabiele sleutel.
-function orderStable<T extends { id: string }>(rows: T[]): T[] {
-  return [...rows].sort((a, b) => {
-    const ca = (a as unknown as { created_at?: string }).created_at
-    const cb = (b as unknown as { created_at?: string }).created_at
-    if (ca && cb && ca !== cb) return ca < cb ? -1 : 1
-    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
-  })
-}
-
-// Verwijdert een datum-achtervoegsel "(— )" achteraan een groepsnaam, voor naam-vergelijking
-function stripDateSuffix(name: string): string {
-  return name.replace(/\s*\([^)]*\)\s*$/, "").trim()
-}
-
-// Korte datum zoals "01 May 2026"
-function shortDateLabel(d = new Date()): string {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-  return `${String(d.getDate()).padStart(2, "0")} ${months[d.getMonth()]} ${d.getFullYear()}`
-}
-
-// Nummer achteraan een naam ("Persoon 3" -> 3), anders null
-function nameNumberSuffix(name: string): number | null {
-  const m = name.match(/(\d+)\s*$/)
-  return m ? parseInt(m[1], 10) : null
-}
-
-// Kleinste positieve nummer dat nog niet gebruikt is (voor unieke "Persoon N")
-function smallestFreeNumber(used: Set<number>): number {
-  let i = 1
-  while (used.has(i)) i++
-  return i
-}
-
-// Personen in logische volgorde: created_at (indien aanwezig & verschillend) ? nummer in naam ? id
-type Order = {
-  id: string
-  participant_id: string | null
-  drink_id: string
-  quantity: number
-  group_id: string
-  session: number
-}
-
-type Payment = {
-  id: string
-  group_id: string
-  session: number
-  participant_id: string | null  // null = betaald uit de pot
-  amount: number
-  created_at?: string  // gebruikt om pot-inleg te groeperen per "pot" (eerste, tweede, —)
-}
-
-type DrinkForm = {
-  name: string
-  price: string
-  emoji: string
-  category: string
-}
-
-type VoiceState = "idle" | "listening" | "done" | "error"
-
-type SavedGroup = {
-  id: string
-  name: string
-  invite_code: string
-  savedAt: number
-}
-
-type QuickOrderDrink = {
-  name: string
-  qty: number
-  emoji: string
-  assignments: { participantId: string; qty: number }[]
-}
-
-type QuickOrderItem = {
-  id: string
-  text: string
-  drinks: QuickOrderDrink[]
-  timestamp: number
-}
-
-type AppView = "setup" | "ordering" | "rounds" | "bill"
-
-// ═══════════════════════════════════════════════════════════════════════════
-// CONSTANTS
-// ═══════════════════════════════════════════════════════════════════════════
-const CATEGORY_LABELS: Record<string, string> = {
-  Bier:      "🍺 Bier",
-  BierAV:    "🌿 Alcoholvrij bier",
-  Frisdrank: "🥤 Frisdrank & Water",
-  Wijn:      "🍷 Wijn & Bubbels",
-  Warm:      "☕ Warme dranken",
-  Cocktail:  "🍸 Cocktails",
-  Longdrink: "🥃 Longdrinks & Mixen",
-  Shot:      "🔥 Shots",
-  Mocktail:  "🍹 Mocktails",
-  Eigen:     "⭐ Eigen drankjes",
-}
-const CATEGORY_LABELS_FR: Record<string, string> = {
-  Bier:      "🍺 Bière",
-  BierAV:    "🌿 Bière sans alcool",
-  Frisdrank: "🥤 Sodas & Eau",
-  Wijn:      "🍷 Vin & Bulles",
-  Warm:      "☕ Boissons chaudes",
-  Cocktail:  "🍸 Cocktails",
-  Longdrink: "🥃 Longs drinks & Mix",
-  Shot:      "🔥 Shots",
-  Mocktail:  "🍹 Mocktails",
-  Eigen:     "⭐ Boissons perso",
-}
-const catLabel = (key: string, lang: string): string => ((lang === "fr" ? CATEGORY_LABELS_FR : CATEGORY_LABELS)[key] ?? key)
-
-// Franse namen voor de STANDAARD-drankjes (merk-/internationale namen blijven ongewijzigd).
-// Enkel de generieke Nederlandse woorden krijgen een Franse naam. Zelf toegevoegde drankjes
-// staan niet in deze lijst en behouden dus altijd hun eigen naam. De database blijft ongewijzigd.
-const DRINK_NAMES_FR: Record<string, string> = {
-  "Chimay Blauw": "Chimay Bleue",
-  "Hoegaarden Wit": "Hoegaarden Blanche",
-  "Leffe Blond": "Leffe Blonde",
-  "Vedett Extra Blond": "Vedett Extra Blonde",
-  "Leffe 0.0 Blond": "Leffe 0.0 Blonde",
-  "Vedett Extra Blond 0.0": "Vedett Extra Blonde 0.0",
-  "Appelsap": "Jus de pomme",
-  "Sinaasappelsap": "Jus d'orange",
-  "Water bruis": "Eau pétillante",
-  "Water plat": "Eau plate",
-  "Decafé koffie": "Café déca",
-  "Hasseltse koffie": "Café hasseltois",
-  "Koffie": "Café",
-  "Thee": "Thé",
-  "Koffie verkeerd": "Lait russe",
-  "Warme chocolademelk": "Chocolat chaud",
-  "Huiswijn rood": "Vin maison rouge",
-  "Huiswijn rosé": "Vin maison rosé",
-  "Huiswijn wit": "Vin maison blanc",
-  "Malibu Pineapple": "Malibu Ananas",
-  "Bacardi Lemon": "Bacardi Citron",
-  "Rum Cola": "Rhum Coca",
-  "Whisky Cola": "Whisky Coca",
-  "Malibu Cola": "Malibu Coca",
-  "Strawberry Daiquiri 0.0": "Daiquiri Fraise 0.0",
-}
-const drinkName = (name: string, lang: string): string => (lang === "fr" ? (DRINK_NAMES_FR[name] ?? name) : name)
-// Placeholder-namen "Persoon N" tonen als "Personne N" in het Frans; echte namen blijven ongewijzigd.
-const pName = (name: string, lang: string): string => { const m = /^Persoon (\d+)$/.exec(name || ""); return (lang === "fr" && m) ? `Personne ${m[1]}` : name }
-const FALLBACK_CATEGORY = "Eigen"
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  BierAV:    ["0.0", "0%", "alcoholvrij", "sportzot", "cero"],
-  Mocktail:  ["mocktail", "virgin", "gimber"],
-  Wijn:      ["wijn", "cava", "prosecco", "champagne", "bubbels", "rosé", "rose", "chardonnay", "pinot", "sauvignon", "merlot", "cabernet", "huiswijn"],
-  Warm:      ["koffie", "cappuccino", "espresso", "latte", "thee", "chocomelk", "chocolademelk", "chai", "flat white", "decafé", "decafe"],
-  Frisdrank: ["cola", "fanta", "sprite", "water", "ice tea", "icetea", "limonade", "tonic", "soda", "juice", "sap", "frisdrank", "appelsap", "sinaas", "spa", "red bull", "schweppes"],
-  Cocktail:  ["cocktail", "mojito", "aperol", "spritz", "martini", "margarita", "daiquiri", "cosmopolitan", "negroni", "colada", "moscow mule", "pornstar", "sex on the beach", "hugo", "gin tonic"],
-  Longdrink: ["vodka", "rum cola", "whisky cola", "jäger", "jager", "orange", "malibu", "bacardi", "safari", "pisang", "cuba libre", "longdrink"],
-  Shot:      ["shot", "shotje", "tequila", "limoncello", "sourz", "fireball", "sambuca"],
-  Bier:      ["bier", "pils", "pintje", "tripel", "dubbel", "blond", "bruin", "lager", "ale", "ipa", "stout", "weizen", "geuze", "lambic", "kriek", "duvel", "leffe", "chouffe", "cornet", "westmalle", "chimay", "karmeliet", "hoegaarden", "vedett"],
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// LOCAL STORAGE HELPERS
-// ═══════════════════════════════════════════════════════════════════════════
-function randomId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2, 10)
-}
-
-function getOrCreateOwnerId(): string {
-  if (typeof window === "undefined") return randomId()
-  const key = "rondje_owner_id"
-  let id = localStorage.getItem(key)
-  if (!id) { id = randomId(); localStorage.setItem(key, id) }
-  return id
-}
-
-function generateInviteCode(): string {
-  return Math.random().toString(36).substring(2, 8).toUpperCase()
-}
-
-function getSavedGroups(): SavedGroup[] {
-  if (typeof window === "undefined") return []
-  try { return JSON.parse(localStorage.getItem("rondje_saved_groups") || "[]") } catch { return [] }
-}
-
-function saveGroupToStorage(group: Group) {
-  const groups = getSavedGroups().filter((g) => g.id !== group.id)
-  groups.unshift({ id: group.id, name: group.name, invite_code: group.invite_code, savedAt: Date.now() })
-  localStorage.setItem("rondje_saved_groups", JSON.stringify(groups.slice(0, 20)))
-}
-
-function removeGroupFromStorage(id: string) {
-  const groups = getSavedGroups().filter((g) => g.id !== id)
-  localStorage.setItem("rondje_saved_groups", JSON.stringify(groups))
-}
-
-// Actieve groep onthouden binnen dezelfde sessie: overleeft een refresh,
-// maar wordt gewist zodra de tab sluit (sessionStorage i.p.v. localStorage).
-function getActiveGroupCode(): string | null {
-  if (typeof window === "undefined") return null
-  try { return sessionStorage.getItem("rondje_active_group") } catch { return null }
-}
-
-function setActiveGroupCode(code: string) {
-  try { sessionStorage.setItem("rondje_active_group", code) } catch { /* sessionStorage niet beschikbaar */ }
-}
-
-function clearActiveGroupCode() {
-  try { sessionStorage.removeItem("rondje_active_group") } catch { /* sessionStorage niet beschikbaar */ }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// VOICE / DRINK NAME HELPERS
-// ═══════════════════════════════════════════════════════════════════════════
-function normText(s: string): string { return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") }
-
-function guessCategory(text: string): string {
-  const lower = text.toLowerCase()
-  for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (keywords.some((k) => lower.includes(k))) return cat
-  }
-  return FALLBACK_CATEGORY
-}
-
-function normalizeDrinkName(s: string): string {
-  return s.toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9 ]/g, "")
-    .replace(/  +/g, " ")
-    .trim()
-}
-
-type DrinkMatchResult = {
-  strongMatch: Drink | null     // confident match — safe to auto-add
-  suggestion: Drink | null      // weaker/phonetic match — show as "bedoelde je...?" but don't auto-add
-}
-
-function fuzzyMatchDrink(spokenName: string, drinkList: Drink[]): Drink | null {
-  return matchDrinkWithSuggestion(spokenName, drinkList).strongMatch
-}
-
-// Simple character-level edit distance, used to catch phonetic near-misses like "puntje" vs "pintje"
-function levenshtein(a: string, b: string): number {
-  const m = a.length, n = b.length
-  if (m === 0) return n
-  if (n === 0) return m
-  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
-  for (let i = 0; i <= m; i++) dp[i][0] = i
-  for (let j = 0; j <= n; j++) dp[0][j] = j
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
-    }
-  }
-  return dp[m][n]
-}
-
-function matchDrinkWithSuggestion(spokenName: string, drinkList: Drink[]): DrinkMatchResult {
-  const spoken = normalizeDrinkName(spokenName)
-  const spokenWords = spoken.split(" ").filter((w) => w.length > 1)
-  if (!spoken || drinkList.length === 0) return { strongMatch: null, suggestion: null }
-
-  // 1. Exact match
-  let m = drinkList.find((d) => normalizeDrinkName(d.name) === spoken)
-  if (m) return { strongMatch: m, suggestion: null }
-
-  // 2. One contains the other (substring) — confident enough to auto-add
-  m = drinkList.find((d) => {
-    const dn = normalizeDrinkName(d.name)
-    return spoken.includes(dn) || dn.includes(spoken)
-  })
-  if (m) return { strongMatch: m, suggestion: null }
-
-  // 3. All spoken words appear in the drink name — confident
-  m = drinkList.find((d) => {
-    const dn = normalizeDrinkName(d.name)
-    return spokenWords.length > 0 && spokenWords.every((w) => dn.includes(w))
-  })
-  if (m) return { strongMatch: m, suggestion: null }
-
-  // 4. Word-overlap scoring + phonetic (edit distance) scoring combined.
-  // High score (>= 0.7) = confident enough to auto-add.
-  // Medium score (0.4—0.7) = only a suggestion, don't auto-add.
-  let bestScore = 0
-  let bestDrink: Drink | null = null
-  for (const d of drinkList) {
-    const dn = normalizeDrinkName(d.name)
-    const dnWords = dn.split(" ")
-    const wordMatches = spokenWords.filter((w) => dnWords.some((dw) => dw.includes(w) || w.includes(dw))).length
-    const wordScore = spokenWords.length > 0 ? wordMatches / spokenWords.length : 0
-
-    // Phonetic similarity on the whole normalized strings (handles "puntje" vs "pintje")
-    const maxLen = Math.max(spoken.length, dn.length)
-    const editScore = maxLen > 0 ? 1 - levenshtein(spoken, dn) / maxLen : 0
-
-    const score = Math.max(wordScore, editScore)
-    if (score > bestScore) { bestScore = score; bestDrink = d }
-  }
-
-  if (bestScore >= 0.7) return { strongMatch: bestDrink, suggestion: null }
-  if (bestScore >= 0.4) return { strongMatch: null, suggestion: bestDrink }
-  return { strongMatch: null, suggestion: null }
-}
-
-function extractPrice(text: string): string {
-  const lower = text.toLowerCase()
-  const numMatch = lower.match(/€?\s*(\d+)[.,](\d{1,2})/)
-  if (numMatch) return `${numMatch[1]}.${numMatch[2].padEnd(2, "0")}`
-  const euroMatch = lower.match(/€\s*(\d+)\b|(\d+)\s*euro/)
-  if (euroMatch) return euroMatch[1] ?? euroMatch[2]
-  return ""
-}
-
-function cleanDrinkName(text: string): string {
-  return text
-    .replace(/€?\s*\d+[.,]\d{1,2}/g, "")
-    .replace(/€\s*\d+/g, "")
-    .replace(/\d+\s*euro/gi, "")
-    .replace(/\s+/g, " ").trim()
-    .replace(/^./, (c) => c.toUpperCase())
-}
-
-// Parse spoken text into one or more drink+qty items
-type ParsedSpeechResult = {
-  recognized: { name: string; qty: number; emoji: string }[]
-  unrecognizedText: string | null         // raw leftover text that didn't match anything
-  suggestion: { drink: Drink; qty: number } | null  // best guess for the unrecognized part, for "bedoelde je...?"
-}
-
-function parseSpokenDrinks(text: string, drinkList: Drink[]): ParsedSpeechResult {
-  const lower = text.toLowerCase().replace(/één/g, "een").replace(/cola's|colas/g, "cola").replace(/wijntje/g, "wijn")
-
-  const numberWords: Record<string, number> = {
-    een: 1, twee: 2, drie: 3, vier: 4, vijf: 5, zes: 6, zeven: 7,
-    acht: 8, negen: 9, tien: 10, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6,
-  }
-
-  const recognized: { name: string; qty: number; emoji: string }[] = []
-  const unmatchedChunks: { text: string; qty: number }[] = []
-  let remaining = lower
-  let safety = 0
-
-  while (remaining.trim().length > 0 && safety < 20) {
-    safety++
-    remaining = remaining.trim()
-
-    let qty = 1
-    const qtyMatch = remaining.match(/^(\d+|een|twee|drie|vier|vijf|zes|zeven|acht|negen|tien)\s+/)
-    if (qtyMatch) {
-      qty = numberWords[qtyMatch[1]] ?? parseInt(qtyMatch[1]) ?? 1
-      remaining = remaining.slice(qtyMatch[0].length)
-    }
-
-    // Try matching against real drink names first (longest match wins) — exact/substring only, very confident
-    let matched = false
-    const sortedDrinks = [...drinkList].sort((a, b) => b.name.length - a.name.length)
-    for (const d of sortedDrinks) {
-      const dn = normalizeDrinkName(d.name)
-      const remNorm = normalizeDrinkName(remaining)
-      if (remNorm.startsWith(dn) && dn.length > 0) {
-        const existing = recognized.find((r) => r.name === d.name)
-        if (existing) existing.qty += qty
-        else recognized.push({ name: d.name, qty, emoji: d.emoji })
-        const wordCount = dn.split(" ").length
-        const remWords = remaining.trim().split(/\s+/)
-        remaining = remWords.slice(wordCount).join(" ")
-        remaining = remaining.replace(/^\s*(en|met|ook|plus|,)\s*/, "")
-        matched = true
-        break
-      }
-    }
-
-    if (!matched) {
-      // Take the next "chunk" (1-3 words) as a candidate for fuzzy matching / suggestion
-      const words = remaining.trim().split(/\s+/)
-      const chunkWords = words.slice(0, Math.min(3, words.length))
-      const chunk = chunkWords.join(" ")
-      if (chunk) unmatchedChunks.push({ text: chunk, qty })
-      remaining = words.slice(chunkWords.length).join(" ")
-      if (!remaining) break
-    }
-  }
-
-  // For unmatched chunks, try the fuzzy+phonetic matcher — only as a SUGGESTION, never auto-added
-  let suggestion: { drink: Drink; qty: number } | null = null
-  let unrecognizedText: string | null = null
-  if (unmatchedChunks.length > 0) {
-    for (const chunk of unmatchedChunks) {
-      const result = matchDrinkWithSuggestion(chunk.text, drinkList)
-      if (result.strongMatch) {
-        const existing = recognized.find((r) => r.name === result.strongMatch!.name)
-        if (existing) existing.qty += chunk.qty
-        else recognized.push({ name: result.strongMatch.name, qty: chunk.qty, emoji: result.strongMatch.emoji })
-      } else if (result.suggestion && !suggestion) {
-        suggestion = { drink: result.suggestion, qty: chunk.qty }
-        unrecognizedText = chunk.text
-      } else if (!suggestion) {
-        unrecognizedText = chunk.text
-      }
-    }
-  }
-
-  return { recognized, unrecognizedText, suggestion }
-}
-
-function groupDrinksByCategory(drinks: Drink[], lang: string): [string, Drink[]][] {
-  const map: Record<string, Drink[]> = {}
-  drinks.forEach((d) => {
-    const key = d.category ?? FALLBACK_CATEGORY
-    if (!map[key]) map[key] = []
-    map[key].push(d)
-  })
-  const knownOrder = Object.keys(CATEGORY_LABELS)
-  const allKeys = [
-    ...knownOrder.filter((k) => map[k]?.length),
-    ...Object.keys(map).filter((k) => !knownOrder.includes(k) && map[k]?.length),
-  ]
-  return allKeys.map((k) => [catLabel(k, lang), map[k]])
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// BILL / FAIR SPLIT CALCULATIONS
-// ═══════════════════════════════════════════════════════════════════════════
-type PersonBillLine = {
-  participantId: string
-  name: string
-  drinkValue: number   // sum of (richtprijs — qty) for everything this person drank
-  paid: number         // sum of payments this person made (pot-inleg + eigen rondes)
-}
-
-function calculateBill(
-  participants: Participant[],
-  orders: Order[],
-  drinks: Drink[],
-  payments: Payment[]
-): { lines: PersonBillLine[]; totalDrinkValue: number; anonymousValue: number; totalPaid: number; totalActuallySpent: number; difference: number } {
-  const lines: PersonBillLine[] = participants.map((p) => {
-    const drinkValue = orders
-      .filter((o) => o.participant_id === p.id)
-      .reduce((sum, o) => {
-        const d = drinks.find((dr) => dr.id === o.drink_id)
-        return sum + (d?.price ?? 0) * o.quantity
-      }, 0)
-    const paid = payments.filter((pay) => pay.participant_id === p.id).reduce((s, pay) => s + pay.amount, 0)
-    return { participantId: p.id, name: p.name, drinkValue, paid }
-  })
-
-  const anonymousValue = orders
-    .filter((o) => !o.participant_id)
-    .reduce((sum, o) => {
-      const d = drinks.find((dr) => dr.id === o.drink_id)
-      return sum + (d?.price ?? 0) * o.quantity
-    }, 0)
-
-  const totalDrinkValue = lines.reduce((s, l) => s + l.drinkValue, 0) + anonymousValue
-  const totalPaid = lines.reduce((s, l) => s + l.paid, 0) // alle inleg (pot vooraf + door personen betaalde rondes)
-  // Wat er écht aan de toog betaald werd voor rondes (sessie >= 1), zowel door personen als uit de pot.
-  // De pot-inleg (sessie 0) telt NIET als uitgave — dat is geld dat nog (deels) terug moet.
-  const totalActuallySpent = payments.filter((pay) => pay.session >= 1).reduce((s, pay) => s + pay.amount, 0)
-  const difference = totalPaid - totalDrinkValue // positive = paid more than richtprijs total, negative = paid less
-
-  return { lines, totalDrinkValue, anonymousValue, totalPaid, totalActuallySpent, difference }
-}
-
-// Verdeling van de fair split. 0 = volledig volgens de waarde van wat elk dronk (zuiver proportioneel).
-const FAIR_EQUAL_WEIGHT = 0
-
-// Geldhelpers: intern rekenen in hele centen zodat er geen cent-afwijkingen ontstaan
-// door floating point (bv. 0.1 + 0.2). We ronden pas op het laatste moment af.
-const toCents = (euro: number): number => Math.round((euro + Number.EPSILON) * 100)
-const round2 = (euro: number): number => toCents(euro) / 100
-
-// Verdeelt de ÉCHT betaalde drankkost (splitBase = totalActuallySpent) over de mensen.
-//  - mode "fair"  : proportioneel volgens wat elk dronk. Wie niets dronk draagt €0.
-//  - mode "equal" : het totaalbedrag gelijk over ALLE personen.
-// De pot blijft hier volledig buiten: die is voorschot en wordt apart verrekend
-// (het onbenutte deel komt terug via settleDebts met de virtuele "de pot").
-type FairSplitRow = { participantId: string; name: string; fairShare: number; paid: number; balance: number; participated: boolean }
-
-function calculateFairSplit(
-  lines: PersonBillLine[],
-  splitBase: number, // = totalActuallySpent (echt betaalde rondes)
-  anonymousValue: number, // total richtprijs-value of orders that were never assigned to anyone
-  mode: "fair" | "equal" = "fair",
-  equalWeight = FAIR_EQUAL_WEIGHT
-): FairSplitRow[] {
-  void anonymousValue
-  const n = lines.length
-  if (n === 0) return []
-
-  const assignedTotal = lines.reduce((s, l) => s + l.drinkValue, 0) // som van toegewezen richtprijzen
-  const nDrinkers = lines.filter((l) => l.drinkValue > 0).length
-  const participatingCount = lines.filter((l) => l.drinkValue > 0 || l.paid > 0).length || n
-
-  return lines.map((l) => {
-    // MODE "EQUAL": iedereen (elke persoon in de groep) draagt een gelijk deel van de drankkost.
-    if (mode === "equal") {
-      const fairShare = splitBase > 0 ? round2(splitBase / n) : 0
-      return { participantId: l.participantId, name: l.name, fairShare, paid: l.paid, balance: round2(l.paid - fairShare), participated: true }
-    }
-
-    // MODE "FAIR"
-    const participated = l.drinkValue > 0 || l.paid > 0
-    if (!participated) {
-      return { participantId: l.participantId, name: l.name, fairShare: 0, paid: l.paid, balance: l.paid, participated: false }
-    }
-
-    let fairShare = 0
-    if (splitBase > 0) {
-      if (nDrinkers === 0 || assignedTotal <= 0) {
-        // Niemand kreeg iets toegewezen ? gelijk over wie meedeed
-        fairShare = splitBase / participatingCount
-      } else if (l.drinkValue > 0) {
-        const gelijkDeel = (splitBase * equalWeight) / nDrinkers
-        const waardeDeel = splitBase * (1 - equalWeight) * (l.drinkValue / assignedTotal)
-        fairShare = gelijkDeel + waardeDeel
-      } else {
-        // Wel betaald / ingelegd maar niets gedronken ? geen drankkost (inleg komt volledig terug)
-        fairShare = 0
-      }
-    }
-    if (fairShare < 0) fairShare = 0
-    fairShare = round2(fairShare)
-
-    const balance = round2(l.paid - fairShare) // positive = should get money back, negative = still owes
-    return { participantId: l.participantId, name: l.name, fairShare, paid: l.paid, balance, participated: true }
-  })
-}
-
-// Debt settlement: turn balances into concrete "X pays Y €amount" transactions.
-// People with balance < 0 (owe money) pay people with balance > 0 (should receive), minimizing transaction count.
-// potBalance = totalActuallySpent - totalPaid: een virtuele "de pot" die het overschot
-// teruggeeft (potBalance < 0 ? pot is schuldenaar) of het tekort int (potBalance > 0 ? pot is schuldeiser).
-function settleDebts(
-  fairSplit: { participantId: string; name: string; balance: number; participated: boolean }[],
-  potBalance = 0
-): { from: string; to: string; amount: number }[] {
-  // Alles in hele centen zodat er geen cent-restjes overblijven.
-  const all = fairSplit.map((f) => ({ name: f.name, participated: f.participated, cents: toCents(f.balance) }))
-  const potCents = toCents(potBalance)
-  if (Math.abs(potCents) > 0) {
-    all.push({ name: "de pot", participated: true, cents: potCents })
-  }
-  let creditors = all.filter((f) => f.participated && f.cents > 0).map((f) => ({ ...f, inDeg: 0 }))
-  let debtors = all.filter((f) => f.participated && f.cents < 0).map((f) => ({ ...f, cents: -f.cents }))
-
-  const transactions: { from: string; to: string; amount: number }[] = []
-
-  // 1) Exacte matches eerst: wie precies evenveel te geven heeft als iemand te krijgen heeft,
-  //    wordt in één rechtstreekse betaling gekoppeld. Zo zo weinig mogelijk betalingen.
-  let matched = true
-  while (matched) {
-    matched = false
-    for (const d of debtors) {
-      if (d.cents <= 0) continue
-      const c = creditors.find((c) => c.cents === d.cents)
-      if (c) {
-        transactions.push({ from: d.name, to: c.name, amount: d.cents / 100 })
-        c.cents = 0
-        d.cents = 0
-        matched = true
-      }
-    }
-    creditors = creditors.filter((c) => c.cents > 0)
-    debtors = debtors.filter((d) => d.cents > 0)
-  }
-
-  // 2) De rest: elke schuldenaar in zo weinig mogelijk betalingen afhandelen (liefst 1).
-  //    We zoeken eerst de kleinste schuldeiser die zijn HELE schuld kan opvangen -> 1 betaling.
-  //    Lukt dat niet, dan betaalt hij de grootste schuldeiser en splitst pas als het echt
-  //    niet anders kan. Van meerdere ontvangen mag; niemand betaalt liefst meer dan 1-2 keer.
-  while (debtors.length > 0 && creditors.length > 0) {
-    debtors.sort((a, b) => b.cents - a.cents)
-    const d = debtors[0]
-    // Voorkeur bij het kiezen van een ontvanger:
-    //  1) iemand die nog van NIEMAND geld krijgt (inDeg 0) en de hele schuld in één keer kan opvangen,
-    //  2) idem maar iemand die al van 1 iemand krijgt (inDeg 1),
-    //  3) anders de grootste ontvanger met inDeg 0, dan met inDeg 1 (deels betalen),
-    //  4) en enkel als het echt niet anders kan, een ontvanger die al 2+ betalers heeft.
-    // Zo betaalt iedereen liefst aan 1 iemand en ontvangt iedereen liefst van 1, hoogstens 2.
-    const pick = () => {
-      for (const deg of [0, 1]) {
-        const full = creditors.filter((x) => x.inDeg === deg && x.cents >= d.cents).sort((a, b) => a.cents - b.cents)
-        if (full.length > 0) return full[0]
-      }
-      for (const deg of [0, 1]) {
-        const part = creditors.filter((x) => x.inDeg === deg).sort((a, b) => b.cents - a.cents)
-        if (part.length > 0) return part[0]
-      }
-      return [...creditors].sort((a, b) => b.cents - a.cents)[0]
-    }
-    const c = pick()
-    const amountCents = Math.min(d.cents, c.cents)
-    transactions.push({ from: d.name, to: c.name, amount: amountCents / 100 })
-    c.inDeg++
-    d.cents -= amountCents
-    c.cents -= amountCents
-    creditors = creditors.filter((c) => c.cents > 0)
-    debtors = debtors.filter((d) => d.cents > 0)
-  }
-
-  return transactions
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// SUB-COMPONENTS
-// ═══════════════════════════════════════════════════════════════════════════
-function Toast({ message, onDone }: { message: string; onDone: () => void }) {
-  useEffect(() => { const t = setTimeout(onDone, 2400); return () => clearTimeout(t) }, [onDone])
-  return <div style={S.toast}>{message}</div>
-}
-
-// Rundo-logo — exact hetzelfde symbool als bij Rundo Table (ingebed als afbeelding)
+// Rundo-logo — exact hetzelfde symbool als bij Rundo Party (ingebed als afbeelding)
 const RUNDO_LOGO_SRC = "data:image/png;base64,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"
-function RundoLogo({ size = 64 }: { size?: number }) {
+function RundoLogo({ size = 40 }: { size?: number }) {
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={RUNDO_LOGO_SRC} alt="Rundo" width={size} height={size} style={{ display: "block", objectFit: "contain", flexShrink: 0 }} />
 }
 
-// Klinkende glazen ("cheers") — getekend icoontje voor de Party-ondertitel
-function CheersIcon({ size = 20 }: { size?: number }) {
+// Klinkende glazen ("cheers") — getekend, kleurt mee met de ondertitel
+function CheersIcon({ size = 18, color = "#4a3f1e" }: { size?: number; color?: string }) {
   return (
     <svg viewBox="0 0 64 64" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{ display: "block", flexShrink: 0 }}>
-      {/* sprankel bovenaan */}
-      <g stroke="#f0a500" strokeWidth="3" strokeLinecap="round">
+      <g stroke={color} strokeWidth="3" strokeLinecap="round">
         <line x1="32" y1="3" x2="32" y2="11" />
         <line x1="27.5" y1="6.5" x2="36.5" y2="6.5" />
       </g>
-      {/* linkerglas, helt naar rechts (naar het midden) */}
       <g transform="rotate(16 22 42)">
-        <path d="M13 16 H31 L27 30 Q22 34 17 30 Z" fill="#f4c430" stroke="#4a3f1e" strokeWidth="3" strokeLinejoin="round" />
-        <line x1="22" y1="31" x2="22" y2="52" stroke="#4a3f1e" strokeWidth="3" strokeLinecap="round" />
-        <line x1="14" y1="53" x2="30" y2="53" stroke="#4a3f1e" strokeWidth="3" strokeLinecap="round" />
+        <path d="M13 16 H31 L27 30 Q22 34 17 30 Z" fill="none" stroke={color} strokeWidth="3" strokeLinejoin="round" />
+        <line x1="22" y1="31" x2="22" y2="52" stroke={color} strokeWidth="3" strokeLinecap="round" />
+        <line x1="14" y1="53" x2="30" y2="53" stroke={color} strokeWidth="3" strokeLinecap="round" />
       </g>
-      {/* rechterglas, helt naar links (naar het midden) */}
       <g transform="rotate(-16 42 42)">
-        <path d="M33 16 H51 L47 30 Q42 34 37 30 Z" fill="#f4c430" stroke="#4a3f1e" strokeWidth="3" strokeLinejoin="round" />
-        <line x1="42" y1="31" x2="42" y2="52" stroke="#4a3f1e" strokeWidth="3" strokeLinecap="round" />
-        <line x1="34" y1="53" x2="50" y2="53" stroke="#4a3f1e" strokeWidth="3" strokeLinecap="round" />
+        <path d="M33 16 H51 L47 30 Q42 34 37 30 Z" fill="none" stroke={color} strokeWidth="3" strokeLinejoin="round" />
+        <line x1="42" y1="31" x2="42" y2="52" stroke={color} strokeWidth="3" strokeLinecap="round" />
+        <line x1="34" y1="53" x2="50" y2="53" stroke={color} strokeWidth="3" strokeLinecap="round" />
       </g>
     </svg>
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// MAIN COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════
-const STRINGS = {
-  nl: {
-    appTagline: "Rondjes en splitten zonder gedoe!",
-    aboutBtnTitle: "Wat is Rundo Party?",
-    groupNamePlaceholder: "Groepsnaam",
-    loading: "Laden...",
-    startBtn: "Starten",
-    savedGroups: "Opgeslagen groepen",
-    person: "persoon",
-    people: "personen",
-    potLay: "Leg een pot",
-    potContributed: (v: string) => `€${v} ingelegd — `,
-    potRemaining: (v: string) => `€${v} nog in pot`,
-    tabGroup: "Groep",
-    tabGroupPot: "Groep + Pot",
-    tabOrder: "Nieuwe bestelling",
-    tabRounds: (n: number) => `Overzicht Rondjes${n > 0 ? ` (${n})` : ""}`,
-    tabBill: "Afrekenen",
-    tabLockToast: "Voeg eerst minstens één persoon toe bij Groep.",
-    errCreateGroup: (m: string) => "Groep aanmaken mislukt: " + m,
-    errGroupNotFound: "Groep niet gevonden. Controleer de code.",
-    errLoadDrinks: "Drankjes laden mislukt",
-    errLoadData: "Data laden mislukt",
-    toastAddedPre: "Toegevoegd: ",
-    setupCountTitle: "👥 Aantal personen",
-    setupNamesOptional: "Namen zijn optioneel — pas ze aan wanneer je wil",
-    setupPersonsTitle: "Personen",
-    setupTapToRename: "tik op een naam om te hernoemen",
-    setupAddName: "+ Naam toevoegen",
-    setupNoPersons: "Nog geen personen",
-    personLabel: (n: number) => `Persoon ${n}`,
-    personShort: (n: number) => `Pers. ${n}`,
-    potPlacedBtn: (v: string) => `🫙 Pot gelegd — €${v}`,
-    potLayFirst: "🫙 Leg eerst een pot",
-    startOrderingBtn: "🍻 Start bestellen →",
-    addPersonNamePlaceholder: "Naam (optioneel)...",
-    add: "Toevoegen",
-    cancel: "Annuleer",
-    cancelN: "Annuleren",
-    confirmYes: "Ja",
-    saveBtn: "💾 Opslaan",
-    perPersonAbbr: "p.p.",
-    potAddPersonsFirst: "Voeg eerst personen toe",
-    potAmountPlaceholder: "bedrag",
-    potName: (i: number) => (["Eerste pot", "Tweede pot", "Derde pot", "Vierde pot", "Vijfde pot", "Zesde pot"][i] ?? `Pot ${i + 1}`),
-    potOverviewTitle: "🫙 De pot",
-    potOverviewSub: "Overzicht per pot en wie wat bijlegde.",
-    potStatContributed: "ingelegd",
-    potStatUsed: "gebruikt",
-    potStatAvailable: "nog beschikbaar",
-    potNoContributions: "Nog geen inleg.",
-    potGeneral: "Algemeen",
-    potTopUp: "🫙 Pot aanvullen",
-    potPerPersonToggle: "Of vul per persoon een eigen bedrag in",
-    potTotalAdd: "Totaal toevoegen",
-    potAddWarnMsg: "Vul eerst een bedrag in — als p.p. of per persoon.",
-    potModalSub: "Iedereen legt vooraf wat in de pot. Je kan het per persoon corrigeren als iemand niet meelegt.",
-    potTotalInPot: "Totaal in pot",
-    potWarnPre: "Vul eerst een bedrag in voor minstens één persoon, of kies ",
-    roundLabelPre: "Rondje",
-    currentOrderTitle: "Je huidige bestelling",
-    repeatPrevRoundBtn: "🔄 Vorig rondje opnieuw",
-    selectDrinksBtn: "🍹 Selecteer drankje(s)",
-    andOr: "EN/OF",
-    voiceListening: "🎤 Luistert...",
-    voiceSpeakOrder: "🎙️ Spreek je bestelling in",
-    voiceHowLink: "ⓘ Hoe werkt inspreken?",
-    emptyOrder1: "Nog geen drankjes gekozen — selecteer ze hierboven 👆",
-    emptyOrderN: "Nog geen drankjes in dit rondje — selecteer ze hierboven 👆",
-    toRoundsLink: "Overzicht Rondjes →",
-    toBillLink: "Afrekenen →",
-    voiceSuggestPre: "Niet helemaal verstaan — bedoelde je ",
-    confirmNo: "Nee",
-    lastAddedTitle: "🆕 Laatst toegevoegd",
-    assignAllLater: "alles later toewijzen",
-    allOrdersInRound: "📋 Alle bestellingen in rondje ",
-    clearAll: "wis alles",
-    editOrderBtn: "✏️ Bestelling wijzigen",
-    finishOrderBtn: (n: number) => `✅ Bestelling afronden — ${n} item${n !== 1 ? "s" : ""}`,
-    reorderTitle: "🔄 Begin met een vorig rondje",
-    reorderExact: "exact opnieuw",
-    reorderAdjust: "licht aan te passen",
-    reorderSubA: "Bestel een vorig rondje ",
-    reorderSubB: ", of neem het over om het ",
-    prevBadge: "vorige",
-    drink: "drankje",
-    drinks: "drankjes",
-    reorderExactBtn: "Exact opnieuw",
-    adjustBtn: "✏️ Aanpassen",
-    reorderShowPrev: "▴ Toon enkel het vorige rondje",
-    reorderShowOlder: (n: number) => `▾ Toon ${n} ouder${n === 1 ? "" : "e"} rondje${n === 1 ? "" : "s"}`,
-    finishConfirmTitle: "Bestelling afronden?",
-    finishConfirmSub: (items: number, persons: string) => `In totaal heb je ${items} item${items !== 1 ? "s" : ""} voor ${persons}. Overzicht:`,
-    orderAdjustBtn: "Bestelling aanpassen",
-    finishAnyway: "Toch afronden",
-    finishYes: "✅ Ja, afronden",
-    unassignedWarnB: " nog toe te wijzen. Voeg ze nu toe voor een eerlijke ",
-    unassignedWarnC: ". Hoe? Via de knop ",
-    unassignedWarnD: " hieronder.",
-    persAbbr: "pers.",
-    searchPlaceholder: "Zoek… bv. cola, jäger, virgin",
-    customReady1: " staat nu klaar onder ",
-    customReady2: " — tik het aan om toe te voegen.",
-    noDrinkFound: "Geen drankje gevonden — voeg het onderaan toe als eigen drankje.",
-    readyBtn: (n: number, over: number) => n === 0 ? "Klaar" : `Klaar? ${n} ${n !== 1 ? "drankjes" : "drankje"}${over > 0 ? ` (${over} meer dan groep)` : ""}`,
-    addOwnDrinkBtn: "⭐ Eigen drankje toevoegen",
-    manageOwnDrinks: "✏️ Mijn eigen drankjes beheren",
-    selectorEmptyToast: "Nog geen drankje geselecteerd — tik er eentje aan 👆",
-    asleepBanner: "⏸ Live-updates gepauzeerd — tik om te hervatten",
-    toHomeTitle: "Naar startscherm",
-    editDrinksTitle: "⭐ Je eigen drankjes",
-    editDrinksSub: "Hier beheer je enkel je eigen toegevoegde drankjes. De standaardlijst met richtprijzen staat vast.",
-    noOwnDrinks: "Je hebt nog geen eigen drankjes toegevoegd.",
-    deleteOwnDrinkTitle: "Eigen drankje verwijderen",
-    closeBtn: "Sluiten",
-    addDrinkTitle: "➕ Eigen drank toevoegen",
-    addDrinkSub: "Naam en richtprijs volstaan. Je drankje komt onder ⭐ Eigen drankjes zodat je ziet dat je het zelf toevoegde.",
-    nameLabel: "Naam",
-    drinkNamePlaceholder: "bv. een speciaalbiertje",
-    priceLabel: "Richtprijs (€)",
-    addPersonTitle: "Persoon toevoegen",
-    warnNameFirst: "Vul eerst een naam in voor je drankje.",
-    warnPriceRequired: "Een richtprijs is verplicht — die hebben we nodig om de rekening achteraf eerlijk te verdelen met Fair Split.",
-    voiceExampleTitle: "🎤 Spreek je bestelling in",
-    voiceExampleA: "Zeg bijvoorbeeld ",
-    voiceEx1: "2 pintjes",
-    voiceExampleB: " — klik daarna opnieuw en zeg ",
-    voiceEx2: "1 gin-tonic",
-    voiceExampleC: ", enz. Je kan zoveel drankjes na elkaar inspreken als je wil.",
-    voiceBetaNote: "⚠️ Bèta — deze functie is nog in test en werkt nog niet altijd vlot. Kijk je bestelling na het inspreken zeker even na.",
-    understood: "Begrepen",
-    equalTitle: "Iedereen evenveel",
-    equalBody: "De totale rekening wordt gelijk verdeeld over alle personen. Simpel &amp; snel maar minder eerlijk. Vergelijk zeker even met Fair split!",
-    voiceNotSupported: "Spraak niet ondersteund in deze browser",
-    voiceNotRecognized: "Niet herkend — probeer opnieuw of typ het drankje handmatig",
-    toastRoundEmpty: "Dat rondje is leeg",
-    toastAddDrinksFirst: "Voeg eerst drankjes toe",
-    toastPotSaved: "Pot opgeslagen ✅",
-    toastPotAmountFirst: "Vul eerst een bedrag in om de pot aan te vullen ⚠️",
-    toastBaseDrinkNoDelete: "Basisdranken kunnen niet verwijderd worden",
-    errAddPerson: "Persoon toevoegen mislukt",
-    errDeletePerson: "Persoon verwijderen mislukt",
-    errRename: "Naam wijzigen mislukt",
-    errSaveRound: "Rondje opslaan mislukt — probeer opnieuw",
-    errTopUpPot: "Pot aanvullen mislukt",
-    errDuplicateGroup: "Je hebt vandaag al een opgeslagen groep met die naam. Kies een andere naam of open ze bij \u201copgeslagen groepen\u201d.",
-    searchGroupPlaceholder: "🔍 Zoek groep...",
-    titleBackToUnassigned: "terug naar nog toe te wijzen",
-    titlePotView: "Pot bekijken of aanvullen",
-    confirmDeletePersonTitle: "Persoon verwijderen?",
-    confirmDeletePersonMsg: (name: string) => `${name} wordt verwijderd uit deze groep.`,
-    confirmClearOrderTitle: "Huidige bestelling wissen?",
-    confirmClearOrderMsg: "Je hebt een niet-afgeronde bestelling. Als je verdergaat wordt je huidige bestellijst gewist en begin je opnieuw.",
-    confirmClearOrderLabel: "Wissen & opnieuw",
-    confirmDeleteRoundTitle: (label: string | number) => `Ronde ${label} verwijderen?`,
-    confirmDeleteRoundMsg: "Je verliest ook de bestellingen én betalingen van deze ronde. De overige rondes behouden hun nummer.",
-    confirmDeleteDrinkTitle: "Drankje verwijderen?",
-    confirmDeleteDrinkMsg: (name: string) => `${name} verdwijnt uit de lijst van deze groep.`,
-    confirmDeleteDrinkMsgFallback: "Dit drankje wordt verwijderd.",
-    deleteLabel: "Verwijderen",
-    roundsEmptyNoOrders: "Nog geen bestellingen. Ga naar \u201cNieuwe bestelling\u201d om te starten.",
-    orderNotFinishedTitle: "Jouw bestelling werd nog niet afgerond",
-    orderNotFinishedSub: "Bekijk ze hier, pas eventueel nog aan en klik op \u201cBestelling afronden\u201d.",
-    toYourOrderBtn: "🍻 Naar je bestelling",
-    unfinishedOrderBanner: (n: number) => `Je hebt nog een niet-afgeronde bestelling (${n} ${n === 1 ? "item" : "items"}).`,
-    viewLink: "Bekijk →",
-    collapseAll: "▴ Alles inklappen",
-    expandAll: "▾ Alles openklappen",
-    roundWordAlt: "Ronde",
-    lastBadge: "laatste",
-    nToAssignBadge: (n: number) => `${n} nog toe te wijzen!`,
-    titleFullscreen: "Volledig scherm",
-    titleEdit: "Bewerken",
-    whoPaidBtn: "💶 Wie betaalde?",
-    paidLabel: "💶 Betaald",
-    viaPot: "🫙 via de pot",
-    nToAssignInline: (n: number) => `${n}× nog toe te wijzen!`,
-    forWhom: "voor wie?",
-    toBillBtn: "🧾 Ga naar afrekenen →",
-    indicatiefTitle: "🏷️ Indicatieve richtprijs",
-    indicatiefWord: "Indicatieve richtprijs",
-    indicatiefBody1: " is een pure schatting per drankje. ",
-    indicatiefBody2: " verdeelt het verschil met wat er echt betaald werd tijdens de rondjes volgens wie wat dronk, niet zomaar gelijk over iedereen. ",
-    muchFairer: "Veel eerlijker dus!",
-    fairTitle: "Hoe werkt Fair Split?",
-    fairBody1a: "Met ",
-    fairBody1b: " delen we het totaalbedrag ",
-    fairNot: "NIET",
-    fairBody1c: " door het aantal personen. Op basis van richtprijzen per drankje verdelen we de totaalprijs volgens wie wat dronk.",
-    fairBody1d: "Niet perfect, wel veel eerlijker!",
-    fairBody2b: " verdeelt het verschil met wat er echt betaald werd tijdens de rondjes volgens wie wat dronk, niet zomaar gelijk over iedereen. ",
-    fairBody2c: "Veel eerlijker dus!",
-    payEditorTitle: (label: string | number) => `🍻 Ronde ${label} — wie betaalde?`,
-    payEditorSub: "Vul in hoeveel elke persoon betaalde, of zet het op \u201cDe pot\u201d.",
-    potNodeLabel: "🫙 De pot",
-    noPotYet: "geen pot gelegd",
-    addPotLink: "+ leg een pot",
-    potAvailableNote: (v: string) => `nog €${v} beschikbaar in de pot`,
-    sumEntered: "Som ingevuld",
-    closeX: "✕ Sluiten",
-    nToAssignSuffix: (n: number) => ` + ${n} nog toe te wijzen`,
-    finishedRoundTitle: (label: string | number) => `Rondje ${label}: overzicht`,
-    whoPaidThisRound: "💶 Wie betaalde dit rondje?",
-    tapWhoPaid: "Tik wie betaalde — daarna vul je het exacte bedrag in. Meestal 1 persoon, meerdere mag ook.",
-    topUpPotLink: "+ pot aanvullen",
-    noPotChip: "🫙 geen pot gelegd — + leg een pot",
-    paidTogether: "Samen betaald",
-    potAvailableChip: (v: string) => `🫙 nog €${v} beschikbaar in de pot`,
-    payWarnA: "Geef eerst het betaalde bedrag in — via ",
-    potWordInline: "de pot",
-    payWarnB: " of een ",
-    personWordInline: "persoon",
-    payWarnC: ". Of kies ",
-    laterFill: "Later invullen",
-    saveCloseBtn: "💾 Opslaan & sluiten",
-    toastRoundDone: (label: string | number) => `Ronde ${label} afgerond!`,
-    allOrderedDrinks: "📋 Alle bestelde drankjes",
-    hideDrinks: "verberg ▴",
-    showDrinksBtn: "toon drankjes ▾",
-    nothingOrdered: "Nog niets besteld",
-    nToAssignParen: (n: number) => `(${n} nog toe te wijzen!)`,
-    billTitle: "🧾 Wie dronk en betaalde wat?",
-    paidBadge: (v: string) => `✅ betaald €${v}`,
-    fromPotBadge: (v: string) => `🫙 uit pot €${v}`,
-    stillInPotBadge: (v: string) => `🫙 nog in pot €${v}`,
-    indicatievePriceLabel: "indicatieve prijs",
-    whatMeans: "Wat betekent dit?",
-    fairToggleTitle: "Fair split tonen of verbergen",
-    equalToggle: "EVENVEEL ⇄",
-    fairToggleBtn: "FAIR SPLIT ⇄",
-    addFairToggle: "+ FAIR SPLIT",
-    potInlegSuffix: (v: string) => `— €${v} in de pot`,
-    selfPaidSuffix: (v: string) => `— €${v} zelf betaald`,
-    nothingDrunk: "nog niets gedronken",
-    payAmount: (v: string) => `💸 betaalt €${v} `,
-    inThePot: "in de pot",
-    toPrefix: "aan ",
-    receiveAmount: (v: string) => `💰 Ontvangt €${v} `,
-    fromThePot: "uit de pot",
-    fromPrefix: "van ",
-    balanced: "⚖️ staat gelijk",
-    fairSplitWord: "fair split",
-    evenveelWord: "evenveel",
-    indicatiefPrefix: "indicatief ",
-    fairBillBtn: "Eerlijke rekening met Fair split",
-    equalBillBtn: "Iedereen betaalt evenveel",
-    equalInfoLink: "Iedereen evenveel?",
-    totalSmall: "totaal",
-    indicatievePriceTotal: "Indicatieve prijs",
-    totalParen: "(totaal)",
-    totalPaid: "Totaal betaald",
-    backBtn: "Terug",
-    hideCompare: "Verberg vergelijking",
-    compareFair: "Vergelijk met Fair split",
-    compareEqual: "Vergelijk met iedereen evenveel",
-    toRoundsBtn2: "📋 Naar Overzicht Rondjes",
-    noSplitBody1: (labels: number[]) => `Nog geen verdeling mogelijk. ${labels.length === 1 ? `Rondje ${labels[0]} is` : `De rondjes ${labels.join(", ")} zijn`} nog niet betaald. Zolang een rondje niet betaald is, klopt de verdeling niet — ook niet bij "iedereen evenveel". Vul eerst in wie elk rondje betaalde bij "Overzicht Rondjes".`,
-    noSplitBody2: "Nog geen verdeling mogelijk. Er is nog niet ingevuld wie wat betaalde (een persoon of de pot). Vul dat eerst in bij \u201cOverzicht Rondjes\u201d — daarna kan je hier de rekening verdelen.",
-    homeLink: "← naar Rundo startscherm",
-    assignPopupTitle: "🎯 Toewijzen",
-    assignHeader: "Toewijzen",
-    openWord: "open",
-    assignBodyN: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} nog toe te wijzen.`,
-    assignBodyPost: " Tik personen aan — meerdere mag.",
-    allAssignedInlineA: "Alles toegewezen ✅ Je kan nog ",
-    changeWord: "wijzigen",
-    allAssignedInlineB: " of doorgaan naar Fair Split.",
-    showFairSplitBtn: "Toon Fair Split →",
-    allAssignedTitle: "Alles toegewezen!",
-    allAssignedSub: "Je kan nu de eerlijke verdeling bekijken.",
-    toAssignTitle: "👉 Nog toe te wijzen",
-    assignRemainA: "Er zijn nog ",
-    assignRemainN: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"}`,
-    assignRemainB: " nog toe te wijzen. Wijs ze toe in ",
-    allBestOrderedPlain: "Alle bestelde drankjes",
-    assignRemainC: " of in ",
-    roundsPlain: "Overzicht Rondjes",
-    aboutBodyA: "Met ",
-    aboutBodyB: " hou je vlot bij wie welke rondjes bestelt en betaalt — per persoon of via een gezamenlijke pot. Op het einde verdeel je de rekening ",
-    aboutFairPart: "eerlijk met Fair Split",
-    aboutBodyC: " (op basis van wie wat dronk) of gewoon gelijk over iedereen.",
-    stillInPotLabel: "Nog in de pot",
-    toAllOrderedBtn: "Naar \u201cAlle bestelde drankjes\u201d",
-    toRoundsQuotedBtn: "Naar \u201cOverzicht Rondjes\u201d",
-    assignTriggerText: (n: number) => `👉 ${n} nog toe te wijzen — voor wie?`,
-    titleChangeAssign: "Toewijzing wijzigen",
-    everyoneEach1: "👥 iedereen (elk 1)",
-    hasSomething: "— heeft al iets",
-    allAssignedChip: "✅ alles toegewezen",
-    editChip: "✏️ aanpassen",
-    potPaidLabel: "🫙 De pot betaalde",
-    paidSuffix: "betaalde",
-  },
-  fr: {
-    appTagline: "Des tournées et un partage sans prise de tête !",
-    aboutBtnTitle: "Qu'est-ce que Rundo Party ?",
-    groupNamePlaceholder: "Nom du groupe",
-    loading: "Chargement...",
-    startBtn: "Démarrer",
-    savedGroups: "Groupes sauvegardés",
-    person: "personne",
-    people: "personnes",
-    potLay: "Créer une cagnotte",
-    potContributed: (v: string) => `€${v} déposés — `,
-    potRemaining: (v: string) => `€${v} encore en cagnotte`,
-    tabGroup: "Groupe",
-    tabGroupPot: "Groupe + Cagnotte",
-    tabOrder: "Nouvelle commande",
-    tabRounds: (n: number) => `Aperçu des tournées${n > 0 ? ` (${n})` : ""}`,
-    tabBill: "Régler",
-    tabLockToast: "Ajoute d'abord au moins une personne dans Groupe.",
-    errCreateGroup: (m: string) => "Échec de la création du groupe : " + m,
-    errGroupNotFound: "Groupe introuvable. Vérifie le code.",
-    errLoadDrinks: "Échec du chargement des boissons",
-    errLoadData: "Échec du chargement des données",
-    toastAddedPre: "Ajouté : ",
-    setupCountTitle: "👥 Nombre de personnes",
-    setupNamesOptional: "Les noms sont facultatifs — modifie-les quand tu veux",
-    setupPersonsTitle: "Personnes",
-    setupTapToRename: "touche un nom pour le renommer",
-    setupAddName: "+ Ajouter un nom",
-    setupNoPersons: "Encore aucune personne",
-    personLabel: (n: number) => `Personne ${n}`,
-    personShort: (n: number) => `Pers. ${n}`,
-    potPlacedBtn: (v: string) => `🫙 Cagnotte créée — €${v}`,
-    potLayFirst: "🫙 Crée d'abord une cagnotte",
-    startOrderingBtn: "🍻 Commencer à commander →",
-    addPersonNamePlaceholder: "Nom (facultatif)...",
-    add: "Ajouter",
-    cancel: "Annuler",
-    cancelN: "Annuler",
-    confirmYes: "Oui",
-    saveBtn: "💾 Enregistrer",
-    perPersonAbbr: "p.p.",
-    potAddPersonsFirst: "Ajoute d'abord des personnes",
-    potAmountPlaceholder: "montant",
-    potName: (i: number) => (["Première cagnotte", "Deuxième cagnotte", "Troisième cagnotte", "Quatrième cagnotte", "Cinquième cagnotte", "Sixième cagnotte"][i] ?? `Cagnotte ${i + 1}`),
-    potOverviewTitle: "🫙 La cagnotte",
-    potOverviewSub: "Aperçu par cagnotte et qui a mis quoi.",
-    potStatContributed: "déposé",
-    potStatUsed: "utilisé",
-    potStatAvailable: "encore dispo",
-    potNoContributions: "Encore aucun dépôt.",
-    potGeneral: "Général",
-    potTopUp: "🫙 Compléter la cagnotte",
-    potPerPersonToggle: "Ou saisis un montant par personne",
-    potTotalAdd: "Total à ajouter",
-    potAddWarnMsg: "Saisis d'abord un montant — en p.p. ou par personne.",
-    potModalSub: "Chacun met un peu dans la cagnotte à l'avance. Tu peux corriger par personne si quelqu'un ne participe pas.",
-    potTotalInPot: "Total en cagnotte",
-    potWarnPre: "Saisis d'abord un montant pour au moins une personne, ou choisis ",
-    roundLabelPre: "Tournée",
-    currentOrderTitle: "Ta commande en cours",
-    repeatPrevRoundBtn: "🔄 Refaire la tournée précédente",
-    selectDrinksBtn: "🍹 Sélectionne des boissons",
-    andOr: "ET/OU",
-    voiceListening: "🎤 J'écoute...",
-    voiceSpeakOrder: "🎙️ Dicte ta commande",
-    voiceHowLink: "ⓘ Comment fonctionne la dictée ?",
-    emptyOrder1: "Encore aucune boisson choisie — sélectionne-les ci-dessus 👆",
-    emptyOrderN: "Encore aucune boisson dans cette tournée — sélectionne-les ci-dessus 👆",
-    toRoundsLink: "Aperçu des tournées →",
-    toBillLink: "Régler →",
-    voiceSuggestPre: "Pas tout compris — voulais-tu dire ",
-    confirmNo: "Non",
-    lastAddedTitle: "🆕 Ajouté en dernier",
-    assignAllLater: "tout attribuer plus tard",
-    allOrdersInRound: "📋 Toutes les commandes de la tournée ",
-    clearAll: "tout effacer",
-    editOrderBtn: "✏️ Modifier la commande",
-    finishOrderBtn: (n: number) => `✅ Finaliser la commande — ${n} article${n !== 1 ? "s" : ""}`,
-    reorderTitle: "🔄 Repars d'une tournée précédente",
-    reorderExact: "à l'identique",
-    reorderAdjust: "l'ajuster légèrement",
-    reorderSubA: "Recommande une tournée précédente ",
-    reorderSubB: ", ou reprends-la pour ",
-    prevBadge: "précédente",
-    drink: "boisson",
-    drinks: "boissons",
-    reorderExactBtn: "À l'identique",
-    adjustBtn: "✏️ Ajuster",
-    reorderShowPrev: "▴ Afficher seulement la tournée précédente",
-    reorderShowOlder: (n: number) => `▾ Afficher ${n} tournée${n === 1 ? "" : "s"} plus ancienne${n === 1 ? "" : "s"}`,
-    finishConfirmTitle: "Finaliser la commande ?",
-    finishConfirmSub: (items: number, persons: string) => `Au total tu as ${items} article${items !== 1 ? "s" : ""} pour ${persons}. Aperçu :`,
-    orderAdjustBtn: "Ajuster la commande",
-    finishAnyway: "Finaliser quand même",
-    finishYes: "✅ Oui, finaliser",
-    unassignedWarnB: " encore à attribuer. Ajoute-les maintenant pour un juste ",
-    unassignedWarnC: ". Comment ? Via le bouton ",
-    unassignedWarnD: " ci-dessous.",
-    persAbbr: "pers.",
-    searchPlaceholder: "Cherche… ex. cola, jäger, virgin",
-    customReady1: " est maintenant prêt dans ",
-    customReady2: " — touche-le pour l'ajouter.",
-    noDrinkFound: "Aucune boisson trouvée — ajoute-la ci-dessous comme boisson perso.",
-    readyBtn: (n: number, over: number) => n === 0 ? "Prêt" : `Prêt ? ${n} ${n !== 1 ? "boissons" : "boisson"}${over > 0 ? ` (${over} de plus que le groupe)` : ""}`,
-    addOwnDrinkBtn: "⭐ Ajouter une boisson perso",
-    manageOwnDrinks: "✏️ Gérer mes boissons perso",
-    selectorEmptyToast: "Aucune boisson sélectionnée — touches-en une 👆",
-    asleepBanner: "⏸ Mises à jour en direct en pause — touche pour reprendre",
-    toHomeTitle: "Vers l'écran d'accueil",
-    editDrinksTitle: "⭐ Tes boissons perso",
-    editDrinksSub: "Ici tu gères uniquement les boissons que tu as ajoutées. La liste standard avec les prix indicatifs est fixe.",
-    noOwnDrinks: "Tu n'as encore ajouté aucune boisson perso.",
-    deleteOwnDrinkTitle: "Supprimer la boisson perso",
-    closeBtn: "Fermer",
-    addDrinkTitle: "➕ Ajouter une boisson perso",
-    addDrinkSub: "Le nom et le prix indicatif suffisent. Ta boisson apparaît sous ⭐ Boissons perso pour que tu voies que tu l'as ajoutée toi-même.",
-    nameLabel: "Nom",
-    drinkNamePlaceholder: "ex. une bière spéciale",
-    priceLabel: "Prix indicatif (€)",
-    addPersonTitle: "Ajouter une personne",
-    warnNameFirst: "Saisis d'abord un nom pour ta boisson.",
-    warnPriceRequired: "Un prix indicatif est obligatoire — on en a besoin pour partager l'addition équitablement avec Fair Split.",
-    voiceExampleTitle: "🎤 Dicte ta commande",
-    voiceExampleA: "Dis par exemple ",
-    voiceEx1: "2 bières",
-    voiceExampleB: " — clique à nouveau et dis ",
-    voiceEx2: "1 gin-tonic",
-    voiceExampleC: ", etc. Tu peux dicter autant de boissons que tu veux, l'une après l'autre.",
-    voiceBetaNote: "⚠️ Bêta — cette fonction est encore en test et ne marche pas toujours parfaitement. Vérifie bien ta commande après la dictée.",
-    understood: "Compris",
-    equalTitle: "Tout le monde pareil",
-    equalBody: "L'addition totale est répartie également entre toutes les personnes. Simple et rapide, mais moins juste. Compare avec Fair Split !",
-    voiceNotSupported: "La dictée n'est pas prise en charge dans ce navigateur",
-    voiceNotRecognized: "Pas reconnu — réessaie ou tape la boisson à la main",
-    toastRoundEmpty: "Cette tournée est vide",
-    toastAddDrinksFirst: "Ajoute d'abord des boissons",
-    toastPotSaved: "Cagnotte enregistrée ✅",
-    toastPotAmountFirst: "Saisis d'abord un montant pour compléter la cagnotte ⚠️",
-    toastBaseDrinkNoDelete: "Les boissons de base ne peuvent pas être supprimées",
-    errAddPerson: "Échec de l'ajout de la personne",
-    errDeletePerson: "Échec de la suppression de la personne",
-    errRename: "Échec du changement de nom",
-    errSaveRound: "Échec de l'enregistrement de la tournée — réessaie",
-    errTopUpPot: "Échec du complément de la cagnotte",
-    errDuplicateGroup: "Tu as déjà aujourd'hui un groupe sauvegardé portant ce nom. Choisis un autre nom ou ouvre-le dans « groupes sauvegardés ».",
-    searchGroupPlaceholder: "🔍 Cherche un groupe...",
-    titleBackToUnassigned: "remettre à attribuer",
-    titlePotView: "Voir ou compléter la cagnotte",
-    confirmDeletePersonTitle: "Supprimer la personne ?",
-    confirmDeletePersonMsg: (name: string) => `${name} sera retiré de ce groupe.`,
-    confirmClearOrderTitle: "Effacer la commande en cours ?",
-    confirmClearOrderMsg: "Tu as une commande non finalisée. Si tu continues, ta liste actuelle est effacée et tu recommences.",
-    confirmClearOrderLabel: "Effacer & recommencer",
-    confirmDeleteRoundTitle: (label: string | number) => `Supprimer la tournée ${label} ?`,
-    confirmDeleteRoundMsg: "Tu perds aussi les commandes et les paiements de cette tournée. Les autres tournées gardent leur numéro.",
-    confirmDeleteDrinkTitle: "Supprimer la boisson ?",
-    confirmDeleteDrinkMsg: (name: string) => `${name} disparaît de la liste de ce groupe.`,
-    confirmDeleteDrinkMsgFallback: "Cette boisson sera supprimée.",
-    deleteLabel: "Supprimer",
-    roundsEmptyNoOrders: "Encore aucune commande. Va dans « Nouvelle commande » pour commencer.",
-    orderNotFinishedTitle: "Ta commande n'a pas encore été finalisée",
-    orderNotFinishedSub: "Consulte-la ici, ajuste si besoin et clique sur « Finaliser la commande ».",
-    toYourOrderBtn: "🍻 Vers ta commande",
-    unfinishedOrderBanner: (n: number) => `Tu as encore une commande non finalisée (${n} article${n === 1 ? "" : "s"}).`,
-    viewLink: "Voir →",
-    collapseAll: "▴ Tout replier",
-    expandAll: "▾ Tout déplier",
-    roundWordAlt: "Tournée",
-    lastBadge: "dernière",
-    nToAssignBadge: (n: number) => `${n} à attribuer !`,
-    titleFullscreen: "Plein écran",
-    titleEdit: "Modifier",
-    whoPaidBtn: "💶 Qui a payé ?",
-    paidLabel: "💶 Payé",
-    viaPot: "🫙 via la cagnotte",
-    nToAssignInline: (n: number) => `${n}× à attribuer !`,
-    forWhom: "pour qui ?",
-    toBillBtn: "🧾 Aller au règlement →",
-    indicatiefTitle: "🏷️ Prix indicatif",
-    indicatiefWord: "Le prix indicatif",
-    indicatiefBody1: " est une simple estimation par boisson. ",
-    indicatiefBody2: " répartit la différence avec ce qui a réellement été payé pendant les tournées selon qui a bu quoi, pas simplement à parts égales. ",
-    muchFairer: "Bien plus juste, donc !",
-    fairTitle: "Comment fonctionne Fair Split ?",
-    fairBody1a: "Avec ",
-    fairBody1b: ", on ne divise ",
-    fairNot: "PAS",
-    fairBody1c: " le montant total par le nombre de personnes. Sur base des prix indicatifs par boisson, on répartit le prix total selon qui a bu quoi.",
-    fairBody1d: "Pas parfait, mais bien plus juste !",
-    fairBody2b: " répartit la différence avec ce qui a réellement été payé pendant les tournées selon qui a bu quoi, pas simplement à parts égales. ",
-    fairBody2c: "Bien plus juste, donc !",
-    payEditorTitle: (label: string | number) => `🍻 Tournée ${label} — qui a payé ?`,
-    payEditorSub: "Indique combien chaque personne a payé, ou mets-le sur « La cagnotte ».",
-    potNodeLabel: "🫙 La cagnotte",
-    noPotYet: "aucune cagnotte",
-    addPotLink: "+ créer une cagnotte",
-    potAvailableNote: (v: string) => `encore €${v} disponibles dans la cagnotte`,
-    sumEntered: "Somme saisie",
-    closeX: "✕ Fermer",
-    nToAssignSuffix: (n: number) => ` + ${n} à attribuer`,
-    finishedRoundTitle: (label: string | number) => `Tournée ${label} : aperçu`,
-    whoPaidThisRound: "💶 Qui a payé cette tournée ?",
-    tapWhoPaid: "Touche qui a payé — puis saisis le montant exact. Souvent 1 personne, plusieurs c'est possible aussi.",
-    topUpPotLink: "+ compléter la cagnotte",
-    noPotChip: "🫙 aucune cagnotte — + créer une cagnotte",
-    paidTogether: "Payé ensemble",
-    potAvailableChip: (v: string) => `🫙 encore €${v} disponibles dans la cagnotte`,
-    payWarnA: "Saisis d'abord le montant payé — via ",
-    potWordInline: "la cagnotte",
-    payWarnB: " ou une ",
-    personWordInline: "personne",
-    payWarnC: ". Ou choisis ",
-    laterFill: "Compléter plus tard",
-    saveCloseBtn: "💾 Enregistrer & fermer",
-    toastRoundDone: (label: string | number) => `Tournée ${label} finalisée !`,
-    allOrderedDrinks: "📋 Toutes les boissons commandées",
-    hideDrinks: "masquer ▴",
-    showDrinksBtn: "voir les boissons ▾",
-    nothingOrdered: "Rien commandé pour l'instant",
-    nToAssignParen: (n: number) => `(${n} à attribuer !)`,
-    billTitle: "🧾 Qui a bu et payé quoi ?",
-    paidBadge: (v: string) => `✅ payé €${v}`,
-    fromPotBadge: (v: string) => `🫙 de la cagnotte €${v}`,
-    stillInPotBadge: (v: string) => `🫙 encore en cagnotte €${v}`,
-    indicatievePriceLabel: "prix indicatif",
-    whatMeans: "Qu'est-ce que ça veut dire ?",
-    fairToggleTitle: "Afficher ou masquer Fair Split",
-    equalToggle: "PARTS ÉGALES ⇄",
-    fairToggleBtn: "FAIR SPLIT ⇄",
-    addFairToggle: "+ FAIR SPLIT",
-    potInlegSuffix: (v: string) => `— €${v} dans la cagnotte`,
-    selfPaidSuffix: (v: string) => `— €${v} payé soi-même`,
-    nothingDrunk: "rien bu pour l'instant",
-    payAmount: (v: string) => `💸 paie €${v} `,
-    inThePot: "dans la cagnotte",
-    toPrefix: "à ",
-    receiveAmount: (v: string) => `💰 Reçoit €${v} `,
-    fromThePot: "de la cagnotte",
-    fromPrefix: "de ",
-    balanced: "⚖️ à l'équilibre",
-    fairSplitWord: "fair split",
-    evenveelWord: "parts égales",
-    indicatiefPrefix: "indicatif ",
-    fairBillBtn: "Addition équitable avec Fair Split",
-    equalBillBtn: "Tout le monde paie pareil",
-    equalInfoLink: "Tout le monde pareil ?",
-    totalSmall: "total",
-    indicatievePriceTotal: "Prix indicatif",
-    totalParen: "(total)",
-    totalPaid: "Total payé",
-    backBtn: "Retour",
-    hideCompare: "Masquer la comparaison",
-    compareFair: "Comparer avec Fair Split",
-    compareEqual: "Comparer avec parts égales",
-    toRoundsBtn2: "📋 Vers l'aperçu des tournées",
-    noSplitBody1: (labels: number[]) => `Répartition pas encore possible. ${labels.length === 1 ? `La tournée ${labels[0]} n'est pas encore payée` : `Les tournées ${labels.join(", ")} ne sont pas encore payées`}. Tant qu'une tournée n'est pas payée, la répartition est fausse — même en « parts égales ». Indique d'abord qui a payé chaque tournée dans « Aperçu des tournées ».`,
-    noSplitBody2: "Répartition pas encore possible. On n'a pas encore indiqué qui a payé quoi (une personne ou la cagnotte). Indique-le d'abord dans « Aperçu des tournées » — ensuite tu pourras répartir l'addition ici.",
-    homeLink: "← vers l'accueil Rundo",
-    assignPopupTitle: "🎯 Attribuer",
-    assignHeader: "Attribuer",
-    openWord: "à faire",
-    assignBodyN: (n: number) => `${n} ${n === 1 ? "boisson" : "boissons"} à attribuer.`,
-    assignBodyPost: " Touche les personnes — plusieurs c'est possible.",
-    allAssignedInlineA: "Tout attribué ✅ Tu peux encore ",
-    changeWord: "modifier",
-    allAssignedInlineB: " ou passer à Fair Split.",
-    showFairSplitBtn: "Afficher Fair Split →",
-    allAssignedTitle: "Tout est attribué !",
-    allAssignedSub: "Tu peux maintenant voir la répartition équitable.",
-    toAssignTitle: "👉 Encore à attribuer",
-    assignRemainA: "Il reste ",
-    assignRemainN: (n: number) => `${n} ${n === 1 ? "boisson" : "boissons"}`,
-    assignRemainB: " à attribuer. Attribue-les dans ",
-    allBestOrderedPlain: "Toutes les boissons commandées",
-    assignRemainC: " ou dans ",
-    roundsPlain: "Aperçu des tournées",
-    aboutBodyA: "Avec ",
-    aboutBodyB: " tu suis facilement qui commande et paie quelles tournées — par personne ou via une cagnotte commune. À la fin, tu répartis l'addition ",
-    aboutFairPart: "équitablement avec Fair Split",
-    aboutBodyC: " (selon qui a bu quoi) ou simplement à parts égales.",
-    stillInPotLabel: "Encore en cagnotte",
-    toAllOrderedBtn: "Vers « Toutes les boissons commandées »",
-    toRoundsQuotedBtn: "Vers « Aperçu des tournées »",
-    assignTriggerText: (n: number) => `👉 ${n} à attribuer — pour qui ?`,
-    titleChangeAssign: "Modifier l'attribution",
-    everyoneEach1: "👥 tout le monde (1 chacun)",
-    hasSomething: "— a déjà quelque chose",
-    allAssignedChip: "✅ tout attribué",
-    editChip: "✏️ ajuster",
-    potPaidLabel: "🫙 La cagnotte a payé",
-    paidSuffix: "a payé",
-  },
+// Een persoon is een PLAATS in de groep. De admin zet het aantal, de plaatsen bestaan
+// meteen, en gasten claimen er zelf een via de QR/link — net als in Rundo Table.
+// Een vrije plaats heeft in de databank een lege naam; in de UI heet ze "Gast N",
+// waardoor de bestaande isGuestDefault-logica gewoon blijft werken.
+type Person = { id: string; name: string; seat: number; claimedBy?: string | null; selfJoined?: boolean; named?: boolean; settleWith?: string | null }
+
+// Dit toestel. Bepaalt of je de admin bent en welke plaats van jou is.
+function deviceId(): string {
+  if (typeof window === "undefined") return ""
+  let id = localStorage.getItem("rundo_device_id")
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem("rundo_device_id", id) }
+  return id
+}
+// Uitnodigingscode zonder I/O/0/1 — die worden verkeerd overgetikt vanaf een scherm.
+const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+const makeCode = () => Array.from({ length: 6 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("")
+type Cat = "Bier" | "BierAV" | "Frisdrank" | "Wijn" | "Cocktail" | "Mocktail" | "Longdrink" | "Shot" | "Warm"
+type Drink = { id: string; name: string; emoji: string; cat: Cat; price: number; cup: boolean; fav: boolean; coins: number; custom?: boolean; by?: string }
+
+const CATS: Cat[] = ["Bier", "BierAV", "Frisdrank", "Wijn", "Cocktail", "Mocktail", "Longdrink", "Shot", "Warm"]
+const CAT_LABEL: Record<Cat, string> = { Bier: "🍺 Bier", BierAV: "🌿 AV-bier", Frisdrank: "🥤 Fris", Wijn: "🍷 Wijn", Cocktail: "🍸 Cocktail", Mocktail: "🍹 Mocktail", Longdrink: "🥃 Longdrink", Shot: "🔥 Shot", Warm: "☕ Warm" }
+const CAT_EMOJI: Record<Cat, string> = { Bier: "🍺", BierAV: "🌿", Frisdrank: "🥤", Wijn: "🍷", Cocktail: "🍸", Mocktail: "🍹", Longdrink: "🥃", Shot: "🔥", Warm: "☕" }
+const CUPCAT: Record<Cat, boolean> = { Bier: true, BierAV: true, Frisdrank: true, Wijn: true, Cocktail: true, Mocktail: true, Longdrink: false, Shot: false, Warm: false }
+
+const DATA: [Cat, string, number][] = [
+  ["Bier", "Pils", 3.2], ["Bier", "Duvel", 5], ["Bier", "Chimay Blauw", 5.5], ["Bier", "Cornet", 5], ["Bier", "Geuze", 5], ["Bier", "Hoegaarden Wit", 4], ["Bier", "Kriek", 4.5], ["Bier", "La Chouffe", 5], ["Bier", "Leffe Blond", 4.5], ["Bier", "Tripel Karmeliet", 5.5], ["Bier", "Vedett Extra Blond", 4], ["Bier", "Westmalle Tripel", 5],
+  ["BierAV", "Jupiler 0.0", 3], ["BierAV", "Stella Artois 0.0", 3], ["BierAV", "Carlsberg 0.0", 3], ["BierAV", "Corona Cero", 3.5], ["BierAV", "Hoegaarden 0.0", 3.5], ["BierAV", "La Chouffe 0.0", 4], ["BierAV", "Leffe Blond 0.0", 3.5], ["BierAV", "Sportzot", 3.5], ["BierAV", "Cornet 0.0", 4], ["BierAV", "Vedett 0.0", 3.5], ["BierAV", "Cristal 0.0", 3], ["BierAV", "Maes 0.0", 3], ["BierAV", "Palm 0.0", 3.5], ["BierAV", "Kriek 0.0", 3.5], ["BierAV", "Duvel 0.0", 4],
+  ["Frisdrank", "Coca-Cola", 3], ["Frisdrank", "Coca-Cola Zero", 3], ["Frisdrank", "Coca-Cola Light", 3], ["Frisdrank", "Fanta", 3], ["Frisdrank", "Sprite", 3], ["Frisdrank", "Ice Tea", 3], ["Frisdrank", "Red Bull", 4], ["Frisdrank", "Schweppes Tonic", 3.5], ["Frisdrank", "Appelsap", 3], ["Frisdrank", "Sinaasappelsap", 4], ["Frisdrank", "Water plat", 2.8], ["Frisdrank", "Water bruis", 2.8], ["Frisdrank", "Ice Tea Green", 3],
+  ["Wijn", "Huiswijn rood", 5], ["Wijn", "Huiswijn wit", 5], ["Wijn", "Huiswijn rosé", 5], ["Wijn", "Cava", 6.5], ["Wijn", "Prosecco", 6.5], ["Wijn", "Champagne", 11], ["Wijn", "Cabernet Sauvignon", 5.5], ["Wijn", "Chardonnay", 5.5], ["Wijn", "Merlot", 5.5], ["Wijn", "Pinot Noir", 5.5], ["Wijn", "Sauvignon Blanc", 5.5], ["Wijn", "Sangria", 5], ["Wijn", "Porto", 5],
+  ["Cocktail", "Aperol Spritz", 10], ["Cocktail", "Gin Tonic", 11], ["Cocktail", "Mojito", 11.5], ["Cocktail", "Margarita", 11.5], ["Cocktail", "Cosmopolitan", 11.5], ["Cocktail", "Espresso Martini", 12.5], ["Cocktail", "Hugo Spritz", 10], ["Cocktail", "Moscow Mule", 11.5], ["Cocktail", "Negroni", 11.5], ["Cocktail", "Piña Colada", 11.5], ["Cocktail", "Pornstar Martini", 13], ["Cocktail", "Sex on the Beach", 10.5], ["Cocktail", "Caipirinha", 11.5],
+  ["Mocktail", "Virgin Mojito", 7.5], ["Mocktail", "Virgin Gin Tonic", 7.5], ["Mocktail", "Hugo 0.0", 7.5], ["Mocktail", "Berry Mule", 7.5], ["Mocktail", "Gimber", 5.5], ["Mocktail", "Strawberry Daiquiri 0.0", 7.5], ["Mocktail", "Virgin Sunrise", 7], ["Mocktail", "Virgin Aperol Spritz", 7.5], ["Mocktail", "Virgin Moscow Mule", 7.5], ["Mocktail", "Virgin Colada", 7.5], ["Mocktail", "Shirley Temple", 6], ["Mocktail", "Ipanema", 6.5], ["Mocktail", "Crodino", 5.5], ["Mocktail", "Virgin Passion Spritz", 7.5],
+  ["Longdrink", "Vodka Red Bull", 10], ["Longdrink", "Vodka Orange", 9], ["Longdrink", "Cuba Libre", 9], ["Longdrink", "Rum Cola", 9], ["Longdrink", "Whisky Cola", 9.5], ["Longdrink", "Malibu Cola", 9], ["Longdrink", "Malibu Ananas", 9], ["Longdrink", "Bacardi Lemon", 9], ["Longdrink", "Passoã Orange", 9], ["Longdrink", "Pisang Orange", 9], ["Longdrink", "Safari Orange", 9], ["Longdrink", "Jägermeister Red Bull", 10], ["Longdrink", "Bacardi Cola", 9], ["Longdrink", "Vodka Cassis", 9], ["Longdrink", "Vodka Sprite", 9], ["Longdrink", "Gin Cassis", 9.5], ["Longdrink", "Whisky Ginger Ale", 9.5],
+  ["Shot", "Tequila", 3.5], ["Shot", "Jägermeister", 3.5], ["Shot", "Sambuca", 3.5], ["Shot", "Fireball", 3.5], ["Shot", "Limoncello", 3.5], ["Shot", "Sourz", 3.5], ["Shot", "Vodka shot", 3], ["Shot", "Rum shot", 3.5], ["Shot", "Apfelkorn", 3], ["Shot", "Baby Guinness", 4],
+  ["Warm", "Koffie", 3], ["Warm", "Espresso", 2.8], ["Warm", "Cappuccino", 3.5], ["Warm", "Latte Macchiato", 4], ["Warm", "Flat White", 4], ["Warm", "Koffie verkeerd", 3.5], ["Warm", "Decafé koffie", 2.8], ["Warm", "Thee", 2.8], ["Warm", "Chai Latte", 4], ["Warm", "Warme chocolademelk", 4.2], ["Warm", "Irish Coffee", 8], ["Warm", "Hasseltse koffie", 8], ["Warm", "Americano", 3], ["Warm", "Verse muntthee", 4.5], ["Warm", "Glühwein", 4.5],
+]
+// De KORTE lijst: wat je meteen ziet op het bestelscherm, vóór je op "toon alles" tikt.
+// Alles hierbuiten blijft gewoon bestaan in DATA en verschijnt zodra fullList aan staat.
+const FAVS = new Set([
+  // Bier
+  "Pils", "Duvel",
+  // AV-bier
+  "Jupiler 0.0", "Carlsberg 0.0", "Sportzot",
+  // Frisdrank
+  "Coca-Cola", "Coca-Cola Zero", "Coca-Cola Light", "Fanta", "Schweppes Tonic", "Water plat", "Water bruis",
+  // Wijn
+  "Huiswijn wit", "Huiswijn rood", "Huiswijn rosé", "Cava", "Champagne",
+  // Cocktail
+  "Aperol Spritz", "Gin Tonic", "Moscow Mule", "Pornstar Martini",
+  // Mocktail
+  "Virgin Mojito", "Virgin Gin Tonic", "Virgin Aperol Spritz", "Virgin Moscow Mule", "Hugo 0.0", "Gimber",
+  // Longdrink
+  "Rum Cola", "Whisky Cola", "Vodka Orange", "Vodka Red Bull",
+  // Shot
+  "Jägermeister", "Tequila", "Limoncello",
+  // Warm
+  "Koffie", "Espresso", "Decafé koffie", "Latte Macchiato", "Thee", "Warme chocolademelk", "Irish Coffee",
+])
+// Vaste festival-coinprijzen (standaard) — bijstelbaar per 0,1 in de app.
+const PILS = new Set(["Pils", "Jupiler 0.0", "Stella Artois 0.0", "Carlsberg 0.0", "Corona Cero", "Hoegaarden 0.0", "Leffe Blond 0.0", "Sportzot", "Vedett 0.0", "Cristal 0.0", "Maes 0.0", "Palm 0.0"])
+const COIN3 = new Set(["Champagne", "Irish Coffee", "Hasseltse koffie"])
+const coinDefault = (cat: Cat, name: string): number => {
+  if (name === "Red Bull" || name === "Glühwein") return 1.5
+  if (COIN3.has(name)) return 3
+  switch (cat) {
+    case "Bier": return PILS.has(name) ? 1 : 2
+    case "BierAV": return PILS.has(name) ? 1 : 2
+    case "Frisdrank": return 1
+    case "Wijn": return 2
+    case "Cocktail": return 3
+    case "Longdrink": return 3
+    case "Mocktail": return 2
+    case "Shot": return 1
+    case "Warm": return 1
+    default: return 1
+  }
+}
+// STABIELE sleutel, afgeleid van de naam. Niet de index: die schuift op zodra je een drank
+// tussenvoegt, en dan wijzen opgeslagen rondjes ineens naar het verkeerde drankje.
+const drinkKey = (name: string) =>
+  name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+
+// Zoeken zonder gedoe: "jagermeister" vindt Jägermeister, "pina" vindt Piña Colada,
+// "coca cola" vindt Coca-Cola. Accenten, koppeltekens en hoofdletters doen er niet toe.
+const normText = (t: string) =>
+  (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+
+// Elk getikt woord moet érgens in de naam voorkomen. Zo vindt "gin to" ook Gin Tonic,
+// en "virgin mule" de Virgin Moscow Mule — zonder dat de volgorde moet kloppen.
+const drinkMatches = (naam: string, zoek: string) => {
+  const woorden = normText(zoek).split(" ").filter(Boolean)
+  if (woorden.length === 0) return true
+  const n = normText(naam)
+  return woorden.every((w) => n.includes(w))
 }
 
-export default function Home() {
+const DEMO_DRINKS: Drink[] = DATA.map(([cat, name, price]) => ({ id: drinkKey(name), name, emoji: CAT_EMOJI[cat], cat, price, cup: CUPCAT[cat], fav: FAVS.has(name), coins: coinDefault(cat, name) }))
+
+type Assign = Record<string, Record<string, number>>
+type Anon = Record<string, number>
+// Een rondje leeft nu in de databank. id/seq/status komen daarvandaan; de rest is
+// wat de app al kende. status: open = er wordt besteld, pending = besteld maar niet
+// betaald, closed = betaald.
+type Proposal = { active?: boolean; by?: string; answers?: Record<string, "same" | "different" | "skip"> }
+type Round = { id: string; seq: number; status: "open" | "pending" | "closed"; orders: Assign; anon: Anon; payers: Record<string, number>; amount: number; potPart: number; gaveBack: Record<string, number>; members: string[]; startedBy: string | null; proposal: Proposal }
+
+const euro = (v: number) => "€" + v.toFixed(2).replace(".", ",")
+
+// ── Spraak (beta) ───────────────────────────────────────────────────────────
+// "drie pils en twee cola" -> [{pils,3},{coca-cola,2}]. Bewust simpel: we zoeken
+// getallen en drankennamen, de rest negeren we. Spraakherkenning maakt fouten, dus
+// de gebruiker krijgt ALTIJD te zien wat we verstonden voor er iets in de mand belandt.
+const TELWOORD: Record<string, number> = {
+  een: 1, één: 1, "n": 1, twee: 2, drie: 3, vier: 4, vijf: 5, zes: 6, zeven: 7, acht: 8, negen: 9, tien: 10,
+  un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8, neuf: 9, dix: 10,
+}
+
+function parseSpraak(tekst: string, lijst: { id: string; name: string }[]): { id: string; name: string; qty: number }[] {
+  const woorden = normText(tekst).split(" ").filter(Boolean)
+  const treffers: { id: string; name: string; qty: number }[] = []
+
+  // Langste namen eerst: anders kaapt "cola" de match van "coca cola zero".
+  const namen = [...lijst]
+    .map((d) => ({ ...d, delen: normText(d.name).split(" ").filter(Boolean) }))
+    .sort((a, b) => b.delen.length - a.delen.length)
+
+  let i = 0
+  while (i < woorden.length) {
+    let aantal = 1
+    const w = woorden[i]
+    if (TELWOORD[w] !== undefined) { aantal = TELWOORD[w]; i++ }
+    else if (/^\d+$/.test(w)) { aantal = Math.min(20, parseInt(w, 10)); i++ }
+    if (i >= woorden.length) break
+
+    const kandidaat = namen.find((d) => d.delen.every((deel, k) => woorden[i + k] === deel))
+    if (kandidaat) {
+      const bestaand = treffers.find((t) => t.id === kandidaat.id)
+      if (bestaand) bestaand.qty += aantal
+      else treffers.push({ id: kandidaat.id, name: kandidaat.name, qty: aantal })
+      i += kandidaat.delen.length
+    } else {
+      i++
+    }
+  }
+  return treffers
+}
+
+// ── Woordenlijst ────────────────────────────────────────────────────────────
+// Eerst alles wat een GAST te zien krijgt: hij scant een QR en is misschien
+// Franstalig. De adminschermen (die jij zelf bedient) volgen daarna.
+const T = {
+  nl: {
+    invitedFor: "Je bent uitgenodigd voor",
+    whoAreYou: "Wie ben jij?",
+    tapYourName: "Tik op je naam.",
+    notThere: "Sta je er niet bij? Neem een lege plaats.",
+    fillNameSeat: "Vul je naam in en neem een plaats.",
+    yourName: "Je naam",
+    seat: (n: number) => `Plaats ${n}`,
+    allSeatsTaken: "Alle plaatsen zijn ingenomen — maar je kan er zelf een bijzetten.",
+    joinAddSeat: "Erbij komen",
+    someoneJoined: (n: string) => `${n} is erbij gekomen`,
+    notRight: "klopt niet",
+    alreadyJoined: "Al aangemeld",
+    fillNameFirst: "Vul eerst je naam in.",
+    seatTaken: "Die plaats is net door iemand anders genomen. Kies een andere.",
+    badCode: "Deze uitnodigingscode bestaat niet (meer).",
+    loading: "Even laden…",
+
+    youAre: "Jij bent",
+    notMe: "niet ik",
+    notMeConfirm: (n: string) => `Ben jij niet ${n}? Dan geef je deze plaats vrij en kies je opnieuw.`,
+    releaseSeat: "Plaats vrijgeven",
+    tabOrder: "🍺 Bestellen",
+    tabMe: "🧾 Mijn stand",
+    tabGroup: "👥 Groep",
+    groupTitle: "👥 In deze groep",
+    peopleN: (n: number) => `${n} ${n === 1 ? "persoon" : "personen"}`,
+    joinedOfTotal: (a: number, b: number) => `${a} van ${b} aangemeld`,
+    hostMark: "👑 organisator",
+    startNotAll: (n: number, t: number) => `${n} van ${t} nog niet aangemeld. Toch beginnen?`,
+    startWait: "Nog even wachten",
+    startAnyway: "Toch beginnen",
+    scannedSelf: "📱 zelf aangemeld",
+    youMark: "⭐ jij",
+    notScannedYet: "nog niet aangemeld",
+    inviteMore: "Nodig meer mensen uit — laat ze de code scannen.",
+    roundWhatYouWant: (n: number) => `🛒 Ronde ${n} — wat jij wil`,
+    noRoundYet: "🛒 Nog geen rondje bezig",
+    tapBelow: "Tik hieronder aan wat je wil. Wie naar de toog gaat, ziet het meteen op zijn scherm.",
+    searchDrink: "Zoek een drankje…",
+    shortList: "⚡ Korte lijst",
+    fullListBtn: "📖 Volledige lijst",
+    nothingFound: "Niets gevonden — probeer een ander woord.",
+    barFootnote1: "Wie naar de toog gaat, sluit het rondje af en vult het bedrag in.",
+    barFootnote2: "Jouw deel wordt op het einde eerlijk verrekend.",
+
+    myTab: "🧾 Mijn stand",
+    noRoundClosed: "Er is nog geen rondje afgesloten.",
+    whatYouDrank: "Wat jij dronk",
+    yourShare: "(jouw deel)",
+    whatYouPaid: "Wat jij betaalde",
+    inclPot: "(incl. inleg pot)",
+    youAreEven: "Je staat gelijk",
+    youGetBack: "Je krijgt terug",
+    youStillPay: "Je betaalt nog",
+    settlesWith: (n: string) => `🔗 Jij rekent samen af met ${n} — hierboven staat enkel jouw eigen deel.`,
+    directionOnly: "Dit is een richting, geen eindafrekening. Zolang er nog rondjes bijkomen, verandert het.",
+    howYouSettle: "🔁 Zo verreken jij",
+    roundsTitle: "📜 Rondjes",
+    roundN: (n: number) => `Ronde ${n}`,
+    nothingThisRound: "jij had niets in dit rondje",
+
+    addOwnDrink: "⭐ Eigen drankje toevoegen",
+
+    // ── start & setup
+    tagline: "Rondjes en splitten zonder gedoe!",
+    autoName: () => { const d = new Date(); const m = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"]; return `Rondje ${d.getDate()} ${m[d.getMonth()]}` },
+    startNow: "Beginnen",
+    groupNameHint: "NAAM VAN JE GROEP",
+    tapToChange: "tik om te wijzigen",
+    peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "persoon" : "personen"}`,
+    peopleIntro: (n: number) => `Jij bent erbij. De ${n} ${n === 1 ? "andere scant" : "anderen scannen"} de QR en vult zelf zijn naam in.`,
+    waitingSeats: (names: string) => `${names} — wachten op scan…`,
+    noPhoneAdd: "Iemand zonder telefoon?",
+    addSelf: "+ zelf toevoegen",
+    yourSeat: "Jij",
+    groupNameEdit: "Naam van deze groep",
+    groupNamePh: "Typ je groepsnaam",
+    starting: "Bezig…",
+    savedGroups: "📁 Opgeslagen groepen",
+    savedLater: "later beschikbaar",
+    savedNote: "Groepen bewaren tussen sessies komt in de volledige app (met database).",
+    nameGroupFirst: "Geef je groep eerst een naam.",
+    createFailed: "Groep aanmaken mislukt. Probeer opnieuw.",
+
+    peopleCount: "👥 Aantal personen",
+    namesOptional: "Namen zijn optioneel — pas ze aan wanneer je wil.",
+    peopleTitle: "Personen",
+    addPersonFirst: "Voeg eerst minstens één persoon toe.",
+    whichAreYou: "Welke ben jij?",
+    assignAnyone: "Je kan aan iedereen toewijzen — ook wie zelf scande.",
+    pickYourName: "Tik je naam aan — de rest duid je zelf aan tijdens het bestellen.",
+    freeUp: "vrijgeven",
+    personHasDrinks: (n: string) => `${n} heeft al drankjes in een rondje en kan niet verwijderd worden. Verwijder eerst die drankjes.`,
+    thisPerson: "Deze persoon",
+
+    // ── delen
+    letGuestsScan: "📲 Laat je gasten scannen",
+    freeSeats: (n: number) => `Nog ${n} vrije ${n === 1 ? "plaats" : "plaatsen"}. Wie scant, kiest er een en tikt zelf zijn drankjes aan.`,
+    allTakenAdmin: "Alle plaatsen zijn ingenomen. Zet er een bij als er nog iemand aansluit.",
+    shareLink: "Link delen",
+    copyLink: "Kopieer link",
+    linkCopied: "Link gekopieerd.",
+    joinInvite: (g: string, l: string) => `Doe mee met ${g} op Rundo Party: ${l}`,
+
+    // ── startvragen
+    beforeWeStart: "Voor we beginnen",
+    settingsLater: "Pot, bekers of coins nodig? Die zet je aan via ⚙️ Groep — hoeft nu niet.",
+    potStartTitle: "🧪 Samen een pot?",
+    potStartWhy: "Iedereen legt vooraf iets in. Rondjes gaan er dan uit — niemand hoeft telkens te betalen.",
+    potStartIn: (b: string) => `In de pot: ${b}`,
+    potStartAdd: "+ Inleggen",
+    potStartMore: "Bijleggen",
+    unassignedHub: (n: number) => `🔴 ${n} drankje${n === 1 ? "" : "s"} nog niet toegewezen`,
+    unassignedHubWhy: "Zonder naam worden ze gelijk verdeeld — niet eerlijk. Wijs ze toe zodat elk betaalt wat hij dronk.",
+    unassignedHubBtn: "Toewijzen",
+    quickStart: "Snel starten",
+    continueRound: (n: number) => `Ga verder met rondje ${n}`,
+
+    // ── instellingen
+    groupSettings: "⚙️ Groep",
+    cupsTitle: "♻️ Herbruikbare bekers",
+    cupsInfo: "Voor events met waarborg per beker die je terugkrijgt bij inleveren. Zet aan om de borg mee te verrekenen.",
+    depositPerCup: "Waarborg/beker",
+    coinsTitle: "🎟️ Coins",
+    coinsInfo: "Betaal je met coins i.p.v. euro's? Stel de coin-waarde en prijzen in; de app verdeelt eerlijk.",
+    coinPrices: "🎟️ coin-prijzen per drankje",
+    coinPricesInfo: "Standaard festival-coins per drankje. Pas aan met − / + (stapjes van 0,1).",
+    potTitle: "🫙 Pot",
+    fillCoinValue: "Vul de coin-waarde in (1 coin = €…) — of zet coins op 'uit'.",
+    fillDeposit: "Vul het waarborgbedrag per beker in — of zet bekers op 'uit'.",
+
+    // ── bestellen
+    inThisRound: "🛒 In dit rondje",
+    someoneCanGo: "👉 Iemand mag gaan halen!",
+    noFavsHere: "Geen favorieten hier.",
+    showAll: "📖 toon alles",
+    assign: "Toewijzen",
+    assignHint: "{L.assignHint}",
+    assigned: "✓ toegewezen",
+    eachOne: "👥 elk 1",
+    eachOneConfirm: (n: string, meer: boolean) => `${n} ${meer ? "hebben" : "heeft"} er nu al 2 of meer. Met "elk 1" krijgt iedereen er precies één — ${n} ${meer ? "gaan" : "gaat"} dus terug naar 1.`,
+    yesEachOne: "Ja, iedereen op 1",
+    redistribute: 'Herverdelen: − zet een drankje terug op "onbekend", tik dan een andere naam.',
+    closeRound: "✓ Rondje afsluiten",
+    cancelRound: "✕ Rondje annuleren",
+    cancelRoundConfirm: (n: number) => `Rondje ${n} annuleren? Alle gekozen drankjes van dit rondje gaan verloren. Dit kan niet ongedaan gemaakt worden.`,
+    yesCancel: "Ja, annuleren",
+    backFinish: "← Terug, rondje afmaken",
+    cups: "🫙 Bekers",
+    cupsNotSet: "Bekers nog niet aangeduid.",
+    tapToArrange: "Tik hier om te regelen →",
+    tapToAssign: "Tik hier om toe te wijzen",
+    nobodyGaveBack: "🚫 niemand gaf een beker terug",
+    howMuchEach: "Hoeveel gaf elk",
+    gaveBack: "gaf terug",
+    ready: "Klaar",
+
+    // ── betalen
+    exactAmount: "💰 Exact bedrag betaald voor dit rondje?",
+    amountAndPayer: "bedrag & betaler",
+    whoPaid: "Kies wie betaalde.",
+    multiplePossible: "(meerdere mogelijk)",
+    fillAmountFirst: "Vul eerst het betaalde bedrag in — daarna kies je wie betaalde.",
+    fillPerPayer: "Vul een bedrag in per betaler.",
+    confirmPaymentFirst: "Bevestig eerst de betaling.",
+    thePot: "🫙 de pot",
+    fromPot: "uit de pot",
+    fromCard: "van de drankkaart",
+    notPaidYet: "nog niet betaald",
+    paidBy: "Betaald door",
+    roundingNote: "afrondingscent wordt in de Fair Split verrekend",
+
+    // ── pot
+    potMoney: "🫙 Pot (geld)",
+    drinkCard: "💳 Drankkaart",
+    addPotContrib: "➕ Inleg pot toevoegen",
+    resetContrib: "↺ reset inleg",
+    everyone: "👥 verdeel over iedereen",
+    ownAmount: "of eigen bedrag:",
+    cardValue: "Kaartwaarde",
+    whoBoughtCard: "Wie kocht de kaart? (tik aan — bedrag verschijnt vanzelf)",
+    addContrib: (b: string) => `✓ Inleg toevoegen (${b})`,
+    removeContrib: "✓ Inleg verwijderen (leeg)",
+    edit: "✏️ wijzig",
+    remove: "✕ verwijder",
+    beingEdited: "✏️ wordt bewerkt ↓",
+    inPot: "in pot gelegd",
+    removeContribConfirm: (l: string) => `De ${l} verwijderen uit de pot? Dit kan niet ongedaan gemaakt worden.`,
+    potEmpty: (kaart: boolean) => `De ${kaart ? "drankkaart" : "pot"} is leeg — leg eerst bij.`,
+    potTooLow: (kaart: boolean, max: string) => `De ${kaart ? "drankkaart" : "pot"} heeft maar ${max} — verlaag het bedrag of leg bij.`,
+    potNothingIn: (kaart: boolean) => `Je koos voor een ${kaart ? "drankkaart" : "pot"}, maar er is nog niks ingelegd. Toch verder gaan?`,
+    anywayWithout: (kaart: boolean) => `Toch verder zonder ${kaart ? "drankkaart" : "pot"}`,
+
+    // ── overzicht
+    roundsOverview: "📋 Rondjesoverzicht",
+    overview: "📋 Overzicht",
+    newRound: "➕ Nieuw rondje",
+    repeatRound: "🔁 Zelfde rondje opnieuw (aanpasbaar)",
+    askGroupRepeat: "🗳️ Vraag de groep: weer hetzelfde?",
+    proposalTitle: "🗳️ Weer hetzelfde rondje?",
+    proposalWaiting: "Iedereen antwoordt op zijn scherm. Jij sluit af wanneer je wil.",
+    ansSame: "✅ hetzelfde",
+    ansDiff: "🔄 iets anders",
+    ansWaiting: "⏳ nog niet",
+    ansSkip: "✋ slaat over",
+    gProposalTitle: "🗳️ Weer hetzelfde rondje?",
+    gProposalSame: "✅ Ja, hetzelfde voor mij",
+    gProposalDiff: "🔄 Iets anders kiezen",
+    gProposalSkip: "✋ Voor mij niks deze ronde",
+    gProposalDone: "Je keuze staat genoteerd.",
+    gProposalYourLast: "Vorige ronde had je:",
+    closeProposalBtn: (n: number) => `Afsluiten · ${n} ${n === 1 ? "doet" : "doen"} mee`,
+    noOrderFor: (names: string) => `Geen bestellingen voor ${names}`,
+    proposalNobody: "Nog niemand antwoordde. Toch afsluiten?",
+    editOrderBtn: "✏️ Bestelling wijzigen",
+    noRoundsDone: "Nog geen afgeronde rondjes",
+    noRoundsHint: "Zodra een rondje bevestigd én betaald is, verschijnt het hier — dan kan je het nog aanpassen.",
+    tapRoundToEdit: "Tik een ronde open om aan te passen.",
+    settleBtn: "🧾 Afrekenen",
+    nothingToSettle: "Er zijn nog geen afgeronde rondjes om af te rekenen.",
+    roundUnfinished: (n: number) => `Rondje ${n} is nog bezig — bevestig en betaal het eerst voor je afrekent.`,
+    roundUnpaid: (n: number) => `Ronde ${n} is nog niet betaald. Rond die betaling eerst af.`,
+    leaveAnyway: "Toch verlaten — bestelling kwijt",
+    unfinishedWarn: "Dit rondje is nog niet afgesloten. Ga eerst terug om het af te maken — of verlaat, waarbij de bestelling en betaling verloren gaan.",
+    nothingToRepeat: "Er is nog geen rondje om te herhalen.",
+
+    // ── afrekenen
+    finalBalance: "🧾 Eindbalans",
+    totalOrdered: "💰 Totaal besteld",
+    fairSplit: "⚖️ Fair Split",
+    equalSplit: "iedereen evenveel",
+    equalSplitWarn: "⚠️ Dit is een gelijke verdeling, geen Fair Split.",
+    fairSplitInfo: "Gelijke verdeling = totaal ÷ aantal personen. Fair Split is eerlijker: wie weinig of niks dronk, betaalt niet mee voor wie veel dronk.",
+    unassignedWarn: "Wijs de resterende drankjes toe, dan verdeelt de app eerlijk op wat elk verteerde.",
+    useFairSplit: "Toewijzen en Fair Split gebruiken",
+    equalAnyway: "Toch gelijk verdelen",
+    howYouAllSettle: "🔁 Zo verrekenen jullie",
+    fewestTransfers: "Minste overschrijvingen om quitte te staan:",
+    allEven: "✓ Alles staat gelijk.",
+    total: "Totaal",
+    perPerson: "per persoon",
+    drank: "dronk",
+    settleTogether: "👥 Rekent er iemand samen af?",
+    settleTogetherInfo: "Voor koppels, huisgenoten, wie samen naar huis rijdt. Iedereen houdt zijn eigen drankjes — enkel het eindbedrag wordt samengeteld.",
+    tapWhoWith: (n: string) => `Tik nu op wie samen met ${n} afrekent.`,
+    separateAgain: "Weer apart zetten:",
+    depositAdvanced: "waarborg (voorgeschoten)",
+    cardLoss: "verlies drankkaart (gedeeld)",
+
+    // ── eigen drankje
+    ownDrinkTitle: "⭐ Eigen drankje",
+    ownDrinkIntro: "Staat er iets niet in de lijst? Voeg het toe voor dit feest. Iedereen in de groep ziet het meteen.",
+    nameLabel: "Naam",
+    namePh: "bv. Trappist van Jos",
+    categoryLabel: "Categorie",
+    priceLabel: "Richtprijs",
+    priceHint: "Nodig om de rekening achteraf eerlijk te verdelen. Een schatting volstaat.",
+    coinsAuto: "{L.coinsAuto}",
+    addBtn: "Toevoegen",
+    remaining: (n: number, max: number) => `Nog ${n} van je ${max} eigen drankjes over`,
+    addedByYou: "Door jou toegevoegd",
+    nameYourDrink: "Geef je drankje een naam.",
+    needPrice: "Vul een richtprijs in — anders kan Fair Split dit drankje niet eerlijk verdelen.",
+    alreadyExists: (n: string) => `"${n}" staat al in de lijst.`,
+    maxPerPerson: (n: number) => `Je kan maximaal ${n} eigen drankjes toevoegen.`,
+    maxPerGroup: (n: number) => `De groep zit aan het maximum van ${n} eigen drankjes.`,
+    drinkAdded: (n: string) => `⭐ ${n} toegevoegd.`,
+    drinkInUse: (n: string) => `${n} is al besteld en kan niet meer verwijderd worden.`,
+
+    confirmTitle: "Even bevestigen",
+    imGoing: "🍻 Ik ga halen",
+    walkTable: "👥 Rondje opnemen",
+    walkIntro: "Ga de tafel rond. Tik per persoon aan wat die wil.",
+    walkDone: "✓ Klaar",
+    walkFor: (n: string) => `Wat wil ${n}?`,
+    whoGoes: "Wie gaat er halen?",
+    xIsGoing: (n: string) => `${n} gaat halen`,
+    youAreGoing: "Jij gaat halen — tik aan wat je zelf wil",
+    iGoInstead: "Ik haal het toch",
+    notMeRunner: "Toch niet ik",
+    claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
+    modeTitle: "Rondjes & Fair Split",
+    modeQuick: "Gewoon rondjes",
+    modeQuickSub: "Rondjes, aantallen en bestellijst.",
+    modeFairSub: "Rondjes, bestellijst én verdeel eerlijk achteraf.",
+    modeFairLine: "Betaal niet mee voor wat je niet dronk.",
+    modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
+    barList: "🍻 Aan de toog",
+    barHandOut: "Uitdelen",
+    settleNow: "🧾 Toch afrekenen?",
+    settleNowWhy: "We hielden alles bij. Eén tik en je weet wie wat schuldig is.",
+    settleNowBtn: "Ja, verdeel het eerlijk",
+    estimate: "schatting op richtprijzen",
+    estimateWhy: "Niemand vulde bedragen in, dus rekenen we met de richtprijzen uit de lijst. Bij benadering, maar eerlijk.",
+    voiceBtn: "🎤 Inspreken",
+    voiceBeta: "beta",
+    voiceListening: "🎤 Luisteren…",
+    voiceSay: "Zeg bijvoorbeeld: \"drie pils en twee cola\"",
+    voiceHeard: "Verstaan",
+    voiceNothing: "Niets herkend. Probeer opnieuw, of tik het gewoon aan.",
+    voiceAdd: "Toevoegen aan rondje",
+    voiceRetry: "🎤 Opnieuw",
+    voiceUnsupported: "Spraak werkt niet in deze browser. Probeer Chrome.",
+    voiceDenied: "Geen toegang tot de microfoon.",
+  },
+  fr: {
+    invitedFor: "Tu es invité pour",
+    whoAreYou: "Qui es-tu ?",
+    tapYourName: "Touche ton nom.",
+    notThere: "Tu n'es pas dans la liste ? Prends une place libre.",
+    fillNameSeat: "Entre ton nom et prends une place.",
+    yourName: "Ton nom",
+    seat: (n: number) => `Place ${n}`,
+    allSeatsTaken: "Toutes les places sont prises — mais tu peux en ajouter une.",
+    joinAddSeat: "Me joindre",
+    someoneJoined: (n: string) => `${n} a rejoint`,
+    notRight: "pas correct",
+    alreadyJoined: "Déjà inscrits",
+    fillNameFirst: "Entre d'abord ton nom.",
+    seatTaken: "Cette place vient d'être prise. Choisis-en une autre.",
+    badCode: "Ce code d'invitation n'existe pas (plus).",
+    loading: "Chargement…",
+
+    youAre: "Tu es",
+    notMe: "pas moi",
+    notMeConfirm: (n: string) => `Tu n'es pas ${n} ? Tu libères cette place et tu choisis à nouveau.`,
+    releaseSeat: "Libérer la place",
+    tabOrder: "🍺 Commander",
+    tabMe: "🧾 Mon compte",
+    tabGroup: "👥 Groupe",
+    groupTitle: "👥 Dans ce groupe",
+    peopleN: (n: number) => `${n} ${n === 1 ? "personne" : "personnes"}`,
+    joinedOfTotal: (a: number, b: number) => `${a} sur ${b} inscrits`,
+    hostMark: "👑 organisateur",
+    startNotAll: (n: number, t: number) => `${n} sur ${t} pas encore inscrits. Commencer quand même ?`,
+    startWait: "Attendre encore",
+    startAnyway: "Commencer",
+    scannedSelf: "📱 inscrit",
+    youMark: "⭐ toi",
+    notScannedYet: "pas encore inscrit",
+    inviteMore: "Invite plus de monde — fais scanner le code.",
+    roundWhatYouWant: (n: number) => `🛒 Tournée ${n} — ce que tu veux`,
+    noRoundYet: "🛒 Aucune tournée en cours",
+    tapBelow: "Touche ci-dessous ce que tu veux. Celui qui va au bar le voit tout de suite.",
+    searchDrink: "Chercher une boisson…",
+    shortList: "⚡ Liste courte",
+    fullListBtn: "📖 Liste complète",
+    nothingFound: "Rien trouvé — essaie un autre mot.",
+    barFootnote1: "Celui qui va au bar clôture la tournée et entre le montant.",
+    barFootnote2: "Ta part sera répartie équitablement à la fin.",
+
+    myTab: "🧾 Mon compte",
+    noRoundClosed: "Aucune tournée n'est encore clôturée.",
+    whatYouDrank: "Ce que tu as bu",
+    yourShare: "(ta part)",
+    whatYouPaid: "Ce que tu as payé",
+    inclPot: "(mise au pot incluse)",
+    youAreEven: "Tu es à l'équilibre",
+    youGetBack: "Tu récupères",
+    youStillPay: "Tu dois encore",
+    settlesWith: (n: string) => `🔗 Tu règles avec ${n} — ci-dessus, seulement ta propre part.`,
+    directionOnly: "C'est une estimation, pas le décompte final. Tant qu'il y a des tournées, ça change.",
+    howYouSettle: "🔁 Comment tu règles",
+    roundsTitle: "📜 Tournées",
+    roundN: (n: number) => `Tournée ${n}`,
+    nothingThisRound: "tu n'avais rien dans cette tournée",
+
+    addOwnDrink: "⭐ Ajouter une boisson",
+
+    // ── start & setup
+    tagline: "Les tournées et le partage, sans prise de tête !",
+    autoName: () => { const d = new Date(); const m = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"]; return `Tournée ${d.getDate()} ${m[d.getMonth()]}` },
+    startNow: "Commencer",
+    groupNameHint: "NOM DE TON GROUPE",
+    tapToChange: "touche pour changer",
+    peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "personne" : "personnes"}`,
+    peopleIntro: (n: number) => `Tu es là. ${n === 1 ? "L'autre scanne" : `Les ${n} autres scannent`} le QR et met son nom.`,
+    waitingSeats: (names: string) => `${names} — en attente de scan…`,
+    noPhoneAdd: "Quelqu'un sans téléphone ?",
+    addSelf: "+ ajouter moi-même",
+    yourSeat: "Toi",
+    groupNameEdit: "Nom de ce groupe",
+    groupNamePh: "Tape le nom de ton groupe",
+    starting: "En cours…",
+    savedGroups: "📁 Groupes enregistrés",
+    savedLater: "bientôt disponible",
+    savedNote: "La sauvegarde des groupes entre les sessions arrive dans l'app complète.",
+    nameGroupFirst: "Donne d'abord un nom à ton groupe.",
+    createFailed: "Échec de la création du groupe. Réessaie.",
+
+    peopleCount: "👥 Nombre de personnes",
+    namesOptional: "Les noms sont facultatifs — modifie-les quand tu veux.",
+    peopleTitle: "Personnes",
+    addPersonFirst: "Ajoute d'abord au moins une personne.",
+    whichAreYou: "Lequel es-tu ?",
+    assignAnyone: "Tu peux attribuer à tout le monde — même à ceux qui ont scanné.",
+    pickYourName: "Touche ton nom — le reste, tu le coches toi-même en commandant.",
+    freeUp: "libérer",
+    personHasDrinks: (n: string) => `${n} a déjà des boissons dans une tournée et ne peut pas être supprimé. Supprime d'abord ces boissons.`,
+    thisPerson: "Cette personne",
+
+    // ── delen
+    letGuestsScan: "📲 Fais scanner tes invités",
+    freeSeats: (n: number) => `Encore ${n} place${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"}. Qui scanne en choisit une et coche ses boissons.`,
+    allTakenAdmin: "Toutes les places sont prises. Ajoutes-en une si quelqu'un arrive.",
+    shareLink: "Partager le lien",
+    copyLink: "Copier le lien",
+    linkCopied: "Lien copié.",
+    joinInvite: (g: string, l: string) => `Rejoins ${g} sur Rundo Party : ${l}`,
+
+    // ── startvragen
+    beforeWeStart: "Avant de commencer",
+    settingsLater: "Besoin d'un pot, de gobelets ou de jetons ? Ça s'active via ⚙️ Groupe — pas maintenant.",
+    potStartTitle: "🧪 Une cagnotte commune ?",
+    potStartWhy: "Chacun met quelque chose d'avance. Les tournées sortent de là — personne ne paie à chaque fois.",
+    potStartIn: (b: string) => `Dans la cagnotte : ${b}`,
+    potStartAdd: "+ Mettre",
+    potStartMore: "Ajouter",
+    unassignedHub: (n: number) => `🔴 ${n} boisson${n === 1 ? "" : "s"} pas encore attribuée${n === 1 ? "" : "s"}`,
+    unassignedHubWhy: "Sans nom, elles sont partagées également — pas équitable. Attribue-les pour que chacun paie ce qu'il a bu.",
+    unassignedHubBtn: "Attribuer",
+    quickStart: "Démarrage rapide",
+    continueRound: (n: number) => `Continuer la tournée ${n}`,
+
+    // ── instellingen
+    groupSettings: "⚙️ Groupe",
+    cupsTitle: "♻️ Gobelets réutilisables",
+    cupsInfo: "Pour les events avec caution par gobelet, remboursée au retour. Active pour l'inclure dans le décompte.",
+    depositPerCup: "Caution/gobelet",
+    coinsTitle: "🎟️ Jetons",
+    coinsInfo: "Tu paies en jetons plutôt qu'en euros ? Règle la valeur et les prix ; l'app répartit équitablement.",
+    coinPrices: "🎟️ prix en jetons par boisson",
+    coinPricesInfo: "Jetons festival par défaut. Ajuste avec − / + (pas de 0,1).",
+    potTitle: "🫙 Pot",
+    fillCoinValue: "Entre la valeur du jeton (1 jeton = €…) — ou désactive les jetons.",
+    fillDeposit: "Entre le montant de la caution par gobelet — ou désactive les gobelets.",
+
+    // ── bestellen
+    inThisRound: "🛒 Dans cette tournée",
+    someoneCanGo: "👉 Quelqu'un peut aller chercher !",
+    noFavsHere: "Aucun favori ici.",
+    showAll: "📖 tout afficher",
+    assign: "Attribuer",
+    assignHint: "— touche pour attribuer",
+    assigned: "✓ attribué",
+    eachOne: "👥 1 chacun",
+    eachOneConfirm: (n: string, meer: boolean) => `${n} ${meer ? "en ont" : "en a"} déjà 2 ou plus. Avec « 1 chacun », tout le monde en reçoit exactement un — ${n} ${meer ? "redescendent" : "redescend"} donc à 1.`,
+    yesEachOne: "Oui, 1 pour tous",
+    redistribute: 'Redistribuer : − remet une boisson sur « inconnu », puis touche un autre nom.',
+    closeRound: "✓ Clôturer la tournée",
+    cancelRound: "✕ Annuler la tournée",
+    cancelRoundConfirm: (n: number) => `Annuler la tournée ${n} ? Toutes les boissons choisies seront perdues. C'est irréversible.`,
+    yesCancel: "Oui, annuler",
+    backFinish: "← Retour, terminer la tournée",
+    cups: "🫙 Gobelets",
+    cupsNotSet: "Gobelets pas encore indiqués.",
+    tapToArrange: "Touche ici pour régler →",
+    tapToAssign: "Touche ici pour attribuer",
+    nobodyGaveBack: "🚫 personne n'a rendu de gobelet",
+    howMuchEach: "Combien chacun a rendu",
+    gaveBack: "a rendu",
+    ready: "Terminé",
+
+    // ── betalen
+    exactAmount: "💰 Montant exact payé pour cette tournée ?",
+    amountAndPayer: "montant & payeur",
+    whoPaid: "Choisis qui a payé.",
+    multiplePossible: "(plusieurs possibles)",
+    fillAmountFirst: "Entre d'abord le montant payé — ensuite tu choisis qui a payé.",
+    fillPerPayer: "Entre un montant par payeur.",
+    confirmPaymentFirst: "Confirme d'abord le paiement.",
+    thePot: "🫙 le pot",
+    fromPot: "du pot",
+    fromCard: "de la carte boissons",
+    notPaidYet: "pas encore payé",
+    paidBy: "Payé par",
+    roundingNote: "le centime d'arrondi est réglé dans le Fair Split",
+
+    // ── pot
+    potMoney: "🫙 Pot (argent)",
+    drinkCard: "💳 Carte boissons",
+    addPotContrib: "➕ Ajouter une mise au pot",
+    resetContrib: "↺ réinitialiser",
+    everyone: "👥 répartir sur tous",
+    ownAmount: "ou montant libre :",
+    cardValue: "Valeur de la carte",
+    whoBoughtCard: "Qui a acheté la carte ? (touche — le montant apparaît)",
+    addContrib: (b: string) => `✓ Ajouter la mise (${b})`,
+    removeContrib: "✓ Supprimer la mise (vide)",
+    edit: "✏️ modifier",
+    remove: "✕ supprimer",
+    beingEdited: "✏️ en cours de modification ↓",
+    inPot: "mis au pot",
+    removeContribConfirm: (l: string) => `Supprimer la ${l} du pot ? C'est irréversible.`,
+    potEmpty: (kaart: boolean) => `${kaart ? "La carte boissons" : "Le pot"} est vide — ajoute d'abord.`,
+    potTooLow: (kaart: boolean, max: string) => `${kaart ? "La carte" : "Le pot"} n'a que ${max} — baisse le montant ou remets-en.`,
+    potNothingIn: (kaart: boolean) => `Tu as choisi ${kaart ? "une carte boissons" : "un pot"}, mais rien n'a encore été mis. Continuer quand même ?`,
+    anywayWithout: (kaart: boolean) => `Continuer sans ${kaart ? "carte" : "pot"}`,
+
+    // ── overzicht
+    roundsOverview: "📋 Aperçu des tournées",
+    overview: "📋 Aperçu",
+    newRound: "➕ Nouvelle tournée",
+    repeatRound: "🔁 Refaire la même tournée (modifiable)",
+    askGroupRepeat: "🗳️ Demande au groupe : encore pareil ?",
+    proposalTitle: "🗳️ La même tournée ?",
+    proposalWaiting: "Chacun répond sur son écran. Tu clôtures quand tu veux.",
+    ansSame: "✅ pareil",
+    ansDiff: "🔄 autre chose",
+    ansWaiting: "⏳ pas encore",
+    ansSkip: "✋ passe",
+    gProposalTitle: "🗳️ La même tournée ?",
+    gProposalSame: "✅ Oui, pareil pour moi",
+    gProposalDiff: "🔄 Choisir autre chose",
+    gProposalSkip: "✋ Rien pour moi ce tour",
+    gProposalDone: "Ton choix est noté.",
+    gProposalYourLast: "Au tour d'avant tu avais :",
+    closeProposalBtn: (n: number) => `Clôturer · ${n} ${n === 1 ? "participe" : "participent"}`,
+    noOrderFor: (names: string) => `Pas de commande pour ${names}`,
+    proposalNobody: "Personne n'a encore répondu. Clôturer quand même ?",
+    editOrderBtn: "✏️ Modifier la commande",
+    noRoundsDone: "Aucune tournée terminée",
+    noRoundsHint: "Dès qu'une tournée est confirmée et payée, elle apparaît ici — tu peux encore la modifier.",
+    tapRoundToEdit: "Touche une tournée pour la modifier.",
+    settleBtn: "🧾 Régler",
+    nothingToSettle: "Aucune tournée terminée à régler.",
+    roundUnfinished: (n: number) => `La tournée ${n} est en cours — confirme et paie-la avant de régler.`,
+    roundUnpaid: (n: number) => `La tournée ${n} n'est pas payée. Règle d'abord ce paiement.`,
+    leaveAnyway: "Quitter quand même — commande perdue",
+    unfinishedWarn: "Cette tournée n'est pas clôturée. Retourne la terminer — ou quitte, et la commande et le paiement seront perdus.",
+    nothingToRepeat: "Aucune tournée à refaire.",
+
+    // ── afrekenen
+    finalBalance: "🧾 Bilan final",
+    totalOrdered: "💰 Total commandé",
+    fairSplit: "⚖️ Fair Split",
+    equalSplit: "part égale",
+    equalSplitWarn: "⚠️ Ceci est une répartition égale, pas un Fair Split.",
+    fairSplitInfo: "Répartition égale = total ÷ nombre de personnes. Le Fair Split est plus juste : qui a peu ou rien bu ne paie pas pour ceux qui ont beaucoup bu.",
+    unassignedWarn: "Attribue les boissons restantes, puis l'app répartit selon ce que chacun a consommé.",
+    useFairSplit: "Attribuer et utiliser le Fair Split",
+    equalAnyway: "Répartir également quand même",
+    howYouAllSettle: "🔁 Comment vous réglez",
+    fewestTransfers: "Le moins de virements pour être quittes :",
+    allEven: "✓ Tout est à l'équilibre.",
+    total: "Total",
+    perPerson: "par personne",
+    drank: "a bu",
+    settleTogether: "👥 Quelqu'un règle-t-il ensemble ?",
+    settleTogetherInfo: "Pour les couples, colocataires, ceux qui rentrent ensemble. Chacun garde ses boissons — seul le montant final est additionné.",
+    tapWhoWith: (n: string) => `Touche maintenant qui règle avec ${n}.`,
+    separateAgain: "Séparer à nouveau :",
+    depositAdvanced: "caution (avancée)",
+    cardLoss: "perte carte boissons (partagée)",
+
+    // ── eigen drankje
+    ownDrinkTitle: "⭐ Boisson personnalisée",
+    ownDrinkIntro: "Il manque quelque chose ? Ajoute-le pour cette fête. Tout le groupe le voit immédiatement.",
+    nameLabel: "Nom",
+    namePh: "p.ex. Trappiste de Jos",
+    categoryLabel: "Catégorie",
+    priceLabel: "Prix indicatif",
+    priceHint: "Nécessaire pour répartir la note équitablement. Une estimation suffit.",
+    coinsAuto: "(vide = automatique)",
+    addBtn: "Ajouter",
+    remaining: (n: number, max: number) => `Encore ${n} de tes ${max} boissons personnalisées`,
+    addedByYou: "Ajouté par toi",
+    nameYourDrink: "Donne un nom à ta boisson.",
+    needPrice: "Entre un prix indicatif — sinon le Fair Split ne peut pas répartir cette boisson.",
+    alreadyExists: (n: string) => `« ${n} » est déjà dans la liste.`,
+    maxPerPerson: (n: number) => `Tu peux ajouter maximum ${n} boissons personnalisées.`,
+    maxPerGroup: (n: number) => `Le groupe a atteint le maximum de ${n} boissons personnalisées.`,
+    drinkAdded: (n: string) => `⭐ ${n} ajouté.`,
+    drinkInUse: (n: string) => `${n} a déjà été commandé et ne peut plus être supprimé.`,
+
+    confirmTitle: "Confirmation",
+    imGoing: "🍻 J'y vais",
+    walkTable: "👥 Faire le tour",
+    walkIntro: "Fais le tour de la table. Coche pour chacun ce qu'il veut.",
+    walkDone: "✓ Terminé",
+    walkFor: (n: string) => `Que veut ${n} ?`,
+    whoGoes: "Qui va chercher ?",
+    xIsGoing: (n: string) => `${n} va chercher`,
+    youAreGoing: "Tu vas chercher — coche ce que tu veux toi-même",
+    iGoInstead: "J'y vais finalement",
+    notMeRunner: "Pas moi finalement",
+    claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
+    modeTitle: "Tournées & Fair Split",
+    modeQuick: "Juste des tournées",
+    modeQuickSub: "Tournées, nombres et liste de commande.",
+    modeFairSub: "Tournées, liste de commande et partage équitable.",
+    modeFairLine: "Ne paie pas pour ce que tu n'as pas bu.",
+    modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
+    barList: "🍻 Au bar",
+    barHandOut: "Distribuer",
+    settleNow: "🧾 Régler quand même ?",
+    settleNowWhy: "On a tout noté. Un clic et tu sais qui doit quoi.",
+    settleNowBtn: "Oui, répartis équitablement",
+    estimate: "estimation sur prix indicatifs",
+    estimateWhy: "Personne n'a entré de montants, donc on calcule avec les prix indicatifs de la liste. Approximatif, mais équitable.",
+    voiceBtn: "🎤 Dicter",
+    voiceBeta: "bêta",
+    voiceListening: "🎤 J'écoute…",
+    voiceSay: "Dis par exemple : « trois pils et deux cola »",
+    voiceHeard: "Compris",
+    voiceNothing: "Rien reconnu. Réessaie, ou touche simplement les boissons.",
+    voiceAdd: "Ajouter à la tournée",
+    voiceRetry: "🎤 Réessayer",
+    voiceUnsupported: "La dictée ne fonctionne pas dans ce navigateur. Essaie Chrome.",
+    voiceDenied: "Pas d'accès au micro.",
+  },
+} as const
+
+export default function Party() {
   const [lang] = useLang()
-  const L = STRINGS[lang]
-  const mounted = useRef(true)
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
-  const lastActive = useRef(Date.now())
+  const L = T[(lang === "fr" ? "fr" : "nl") as "nl" | "fr"]
+  const [view, setView] = useState<"start" | "setup" | "settings" | "order" | "confirmed" | "hub" | "final">("start")
+  const [pay, setPay] = useState<"eur" | "coin">("eur")
+  const [coinValue, setCoinValue] = useState(3.9)
+  const [depositOn, setDepositOn] = useState(false)
+  const [depositValue, setDepositValue] = useState(1)
+  const [depositUnit, setDepositUnit] = useState<"eur" | "coin">("eur")
+  const [showPot, setShowPot] = useState(false)
+  const [showCoins, setShowCoins] = useState(false)
+  const [coinInfo, setCoinInfo] = useState(false)
+  const [depositInfo, setDepositInfo] = useState(false)
 
-  // Sluit het mobiele toetsenbord zodra je buiten een invoerveld tikt (op een knop of lege ruimte),
-  // zodat het niet overbodig open blijft staan en je de app beter ziet.
-  useEffect(() => {
-    const isField = (el: EventTarget | null) => {
-      const n = el as HTMLElement | null
-      return !!n && (n.tagName === "INPUT" || n.tagName === "TEXTAREA" || n.tagName === "SELECT" || n.isContentEditable)
-    }
-    const onPointerDown = (e: PointerEvent) => {
-      const active = document.activeElement as HTMLElement | null
-      if (!isField(active)) return
-      const target = e.target as HTMLElement | null
-      if (isField(target) || (target && target.closest && target.closest("input,textarea,select,[contenteditable=true]"))) return
-      active?.blur()
-    }
-    document.addEventListener("pointerdown", onPointerDown)
-    return () => document.removeEventListener("pointerdown", onPointerDown)
-  }, [])
-
-  // ─── App flow state ────────────
-  const [view, setView] = useState<AppView>("setup")
-  const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
-  const [savedOpen, setSavedOpen] = useState(false)
-  const [savedSearch, setSavedSearch] = useState("")
-
-  const [group, setGroup] = useState<Group | null>(null)
   const [groupName, setGroupName] = useState("")
-  const [joinCode, setJoinCode] = useState("")
-  const [isStarting, setIsStarting] = useState(false)
+  const [people, setPeople] = useState<Person[]>([])
 
-  const [participants, setParticipants] = useState<Participant[]>([])
-  const [drinks, setDrinks] = useState<Drink[]>([])
-  const [orders, setOrders] = useState<Order[]>([])
-  const [payments, setPayments] = useState<Payment[]>([])
+  // ── Supabase-laag ───────────────────────────────────────────────────────────
+  const me = useRef(deviceId())
+  const mounted = useRef(true)
+  const [groupId, setGroupId] = useState<string | null>(null)
+  const [openRoundId, setOpenRoundId] = useState<string | null>(null)
+  // false = "gewoon rondjes" (geen geld). Eén app, het geld-gedeelte verborgen.
+  const [settle, setSettle] = useState(true)
+  type Custom = { key: string; name: string; cat: Cat; price: number; coins: number; cup: boolean; by: string }
+  const [customDrinks, setCustomDrinks] = useState<Custom[]>([])
+  // Afwijkende coin-prijzen voor dit feest. Ook jsonb op de groep-rij, dus gratis mee.
+  const [coinPrices, setCoinPrices] = useState<Record<string, number>>({})
+  const [showAddDrink, setShowAddDrink] = useState(false)
+  const [ndName, setNdName] = useState("")
+  const [ndCat, setNdCat] = useState<Cat>("Bier")
+  const [ndPrice, setNdPrice] = useState("")
+  const [ndCoins, setNdCoins] = useState("")
+  const [inviteCode, setInviteCode] = useState<string>("")
+  const [ownerDevice, setOwnerDevice] = useState<string>("")
+  const [booting, setBooting] = useState(true)   // eerste laadbeurt (code uit de URL)
+  const [busy, setBusy] = useState(false)        // groep aanmaken / plaats claimen
+  const isAdmin = !!ownerDevice && ownerDevice === me.current
+  // Mijn eigen plaats: die waarop dit toestel zit. Nodig zodra gasten hun eigen
+  // drankjes aantikken (blok 3).
+  const meId = people.find((p) => p.claimedBy === me.current)?.id ?? null
+  const inviteLink = typeof window !== "undefined" && inviteCode
+    ? `${window.location.origin}${window.location.pathname}?code=${inviteCode}` : ""
+  // De vaste catalogus staat in de code (nul queries per gast). Eigen drankjes komen
+  // uit de groep-rij, die we toch al ophalen — dus ook nul extra queries.
+  const drinks: Drink[] = useMemo(() => [
+    ...DEMO_DRINKS,
+    ...customDrinks.map((c) => ({
+      id: c.key, name: c.name, emoji: "⭐", cat: c.cat, price: Number(c.price),
+      cup: !!c.cup, fav: true, coins: Number(c.coins), custom: true, by: c.by,
+    })),
+  ].map((d) => (coinPrices[d.id] !== undefined ? { ...d, coins: coinPrices[d.id] } : d)),
+  [customDrinks, coinPrices])
 
-  const [personCount, setPersonCount] = useState(4)
-  const [editingPerson, setEditingPerson] = useState<string | null>(null)
-  const [editingPersonName, setEditingPersonName] = useState("")
+  // Coin-prijs bijstellen. Debounced wegschrijven: de +/- knopjes gaan per 0,1, dus
+  // wie doorklikt zou anders tien updates afvuren.
+  const coinTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const setCoinPrice = (drinkId: string, coins: number) => {
+    const next = { ...coinPrices, [drinkId]: Math.max(0, +coins.toFixed(1)) }
+    setCoinPrices(next)
+    if (coinTimer.current) clearTimeout(coinTimer.current)
+    coinTimer.current = setTimeout(() => {
+      if (!groupId) return
+      supabase.from("party_groups").update({ coin_prices: next }).eq("id", groupId)
+        .then(({ error }) => { if (error) setNotice("Coin-prijs opslaan mislukt: " + error.message) })
+    }, 700)
+  }
+  const [potRounds, setPotRounds] = useState<{ id: string; seq: number; amounts: Record<string, number> }[]>([])
+  const [potDraft, setPotDraft] = useState<Record<string, number>>({})
+  const [everyoneDraft, setEveryoneDraft] = useState<string>("")
+  const [everyoneChoice, setEveryoneChoice] = useState<number | "custom" | null>(null)
+  const [editPotId, setEditPotId] = useState<string | null>(null)
+  const [potBuilderOpen, setPotBuilderOpen] = useState(false)
+  const [potIsCard, setPotIsCard] = useState(false)
+  const [cardValue, setCardValue] = useState("")
+  const [cardPayers, setCardPayers] = useState<string[]>([])
+  const [beginPrompt, setBeginPrompt] = useState(false)
+  const [potChosen, setPotChosen] = useState(false)
+  const [bpSettle, setBpSettle] = useState<boolean | null>(true)
+  const [fromOnboarding, setFromOnboarding] = useState(false)
+  const [onboardedOnce, setOnboardedOnce] = useState(false)
+  const [onbPotActive, setOnbPotActive] = useState(false)
 
-  const [session, setSession] = useState(1)
-  type CartLine = { total: number; assignments: Record<string, number> } // assignments: participantId -> qty
-  const [cart, setCart] = useState<Record<string, CartLine>>({}) // drinkId -> CartLine
-  const [lastAddedDrinkIds, setLastAddedDrinkIds] = useState<string[]>([]) // laatst toegevoegde drankjes (hele laatste selectie)
-  const [lastAddedViaVoice, setLastAddedViaVoice] = useState(false) // "Laatst toegevoegd"-kaart enkel tonen na spraak
-  const [openAssignFor, setOpenAssignFor] = useState<string | null>(null) // welk drankje in "Alle bestellingen" zijn toewijs-dropdown open heeft
-  const [openBillAssignFor, setOpenBillAssignFor] = useState<string | null>(null) // welk drankje in het afrekenscherm zijn toewijs-dropdown open heeft
-  const [billOriginallyUnassigned, setBillOriginallyUnassigned] = useState<Set<string>>(new Set()) // drankjes die bij het openen van 'afrekenen' nog toe te wijzen waren (krijgen nadien een potloodje)
-  const [showPrices, setShowPrices] = useState(false)
+  const [roundNr, setRoundNr] = useState(1)
+  const [activeCat, setActiveCat] = useState<Cat>("Bier")
+  const [drinkSearch, setDrinkSearch] = useState("")
+  const [guestTab, setGuestTab] = useState<"order" | "me" | "group">("order")
+  // "Rondje opnemen": de tafel rondgaan, persoon per persoon. walkIdx = wie er nu aan
+  // de beurt is (index in people). null = het scherm is niet open.
+  const [walkIdx, setWalkIdx] = useState<number | null>(null)
+  // De haler van het OPEN rondje (person-id). Wie "ik ga halen" tikt, opent het
+  // rondje en wordt dit. null = nog niemand ging halen.
+  const [startedBy, setStartedBy] = useState<string | null>(null)
+  const [voiceOpen, setVoiceOpen] = useState(false)
+  const [voiceOn, setVoiceOn] = useState(false)
+  const [voiceText, setVoiceText] = useState("")
+  const [voiceHits, setVoiceHits] = useState<{ id: string; name: string; qty: number }[]>([])
+  const [coinCat, setCoinCat] = useState<Cat>("Bier")
+  const [coinFull, setCoinFull] = useState(false)
+  const [fullList, setFullList] = useState(false)
+  const [cart, setCart] = useState<Assign>({})
+  const [cartAnon, setCartAnon] = useState<Anon>({})
+  const [rounds, setRounds] = useState<Round[]>([])
+  const [gaveBackDraft, setGaveBackDraft] = useState<Record<string, number>>({})
+  const [displayUnit, setDisplayUnit] = useState<"eur" | "coin">("eur")
+  const [showEqual, setShowEqual] = useState(true)
+  const [openFairAll, setOpenFairAll] = useState(false)
+  const [openFair, setOpenFair] = useState<Record<string, boolean>>({})
+  const [openRound, setOpenRound] = useState<number | null>(null)
+  const [allRoundsOpen, setAllRoundsOpen] = useState(false)
+  const [repeated, setRepeated] = useState(false)
+  const [hasSettled, setHasSettled] = useState(false)
 
-  const [showAddPerson, setShowAddPerson] = useState(false)
-  const [showEditDrinks, setShowEditDrinks] = useState(false)   // modal: namen/prijzen van bestaande dranken bewerken
-  const [showAddDrink, setShowAddDrink] = useState(false)       // modal: eigen drank toevoegen
-  const [showDrinkSelector, setShowDrinkSelector] = useState(false) // modal: drankje selecteren (categorie + grid)
-  const [selectorDraft, setSelectorDraft] = useState<Record<string, number>>({}) // selector start telkens op 0; wordt bij "Klaar" toegevoegd
-  const [selectorEditMode, setSelectorEditMode] = useState(false) // true = 'Bestelling wijzigen': selector toont de huidige bestelling en vervangt ze bij Klaar
-  const [lastAddedCustomDrink, setLastAddedCustomDrink] = useState<{ name: string; category: string } | null>(null) // melding in de selector na een eigen drankje
-  const [showFinishConfirm, setShowFinishConfirm] = useState(false)  // bevestiging vóór afronden
-  const [showReorderPicker, setShowReorderPicker] = useState(false)  // kiezer om een vorig rondje opnieuw te bestellen
-  const [reorderShowAll, setReorderShowAll] = useState(false) // toon ook oudere rondjes (standaard enkel het vorige)
-  const [toast, setToast] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  // Slaapstand: na 3 min zonder activiteit verbreken we realtime + poll (spaart egress). Ontwaakt bij tik/terugkeer.
-  const [asleep, setAsleep] = useState(false)
-  const [startError, setStartError] = useState<string | null>(null) // foutmeldingen enkel op het startscherm (bv. dubbele groep)
+  const [showAssignAll, setShowAssignAll] = useState(false)
+  const [assignMode, setAssignMode] = useState<"drink" | "person">("person")
+  const [showCups, setShowCups] = useState(false)
+  const [showClose, setShowClose] = useState(false)
+  const [cupsChecked, setCupsChecked] = useState(false)
+  const [cupsTouched, setCupsTouched] = useState(false)
+  const [amountDraft, setAmountDraft] = useState<string>("")
+  const [payPot, setPayPot] = useState(false)
+  const [payPersons, setPayPersons] = useState<string[]>([])
+  const [payAmts, setPayAmts] = useState<Record<string, string>>({})
+  const [potAmtDraft, setPotAmtDraft] = useState<string>("")
+  const [paidConfirmed, setPaidConfirmed] = useState(false)
+  const [confirmDlg, setConfirmDlg] = useState<{ msg: string; yes: string; onYes: () => void; onNo?: () => void; no?: string; variant?: "danger" } | null>(null)
+  const [notice, setNotice] = useState<string>("")
+  // Zachte melding wanneer iemand nieuw aansluit. Vervaagt vanzelf; alleen de admin
+  // krijgt een knop om het terug te draaien (voor als een vreemde de link kreeg).
+  const [newcomer, setNewcomer] = useState<{ id: string; name: string } | null>(null)
+  const knownPeople = useRef<Set<string>>(new Set())
 
-  const [newDrink, setNewDrink] = useState<DrinkForm>({ name: "", price: "", emoji: "", category: "Bier" })
-  const [addDrinkWarn, setAddDrinkWarn] = useState<string | null>(null) // inline melding in de eigen-drank-popup
-  const [editingDrink, setEditingDrink] = useState<Drink | null>(null)
+  // edit-in-hub
+  const [editOpen, setEditOpen] = useState(false)
+  const [assignIdx, setAssignIdx] = useState<number | null>(null)
+  const [editAssignMode, setEditAssignMode] = useState<"drink" | "person">("person")
+  const [editCups, setEditCups] = useState(false)
+  const [editPay, setEditPay] = useState(false)
 
-  const [roundFullscreen, setRoundFullscreen] = useState<number | null>(null)
-  const [openRounds, setOpenRounds] = useState<number[] | null>(null) // null = standaard (laatste open); array = expliciete keuze (meerdere mogelijk)
-  const [editingRound, setEditingRound] = useState<number | null>(null)
-  const [paymentEditRound, setPaymentEditRound] = useState<number | null>(null)
-  const [paymentDraft, setPaymentDraft] = useState<Record<string, string>>({}) // participantId -> amount string
-  const [showPotModal, setShowPotModal] = useState(false)
-  const [potWarn, setPotWarn] = useState(false) // melding bij opslaan zonder bedrag
-  const [potDraft, setPotDraft] = useState<Record<string, string>>({}) // pot-inleg per persoon (sessie 0)
-  const [showPotOverview, setShowPotOverview] = useState(false) // overzicht + aanvullen van de pot
-  const [potAddAmount, setPotAddAmount] = useState("") // bedrag voor 'over iedereen' aanvulling (totaal)
-  const [potAddMode, setPotAddMode] = useState<"all" | "each">("all") // verdeel over iedereen of per persoon
-  const [potAddDraft, setPotAddDraft] = useState<Record<string, string>>({}) // bedrag per persoon (modus 'each')
-  const [potBulk, setPotBulk] = useState("5") // bedrag om in één keer voor iedereen te zetten
-  const [potAddBulk, setPotAddBulk] = useState("") // aanvullen: bedrag p.p. (leeg = suggesties tonen)
-  const [potAddWarn, setPotAddWarn] = useState(false) // aanvullen: melding bij leeg
-  const [potAddedThisSession, setPotAddedThisSession] = useState(0) // som van wat in dit pot-overzicht al toegevoegd werd
-  const [potAddPerPersonOpen, setPotAddPerPersonOpen] = useState(false) // per-persoon invoer bij aanvullen in-/uitgeklapt
+  const priceOf = (d: Drink) => (pay === "coin" ? d.coins : d.price)
+  const effDepositUnit: "eur" | "coin" = pay === "eur" ? "eur" : depositUnit
+  const depositPerCupEur = effDepositUnit === "eur" ? depositValue : depositValue * coinValue
+  const show = (eur: number) => (pay === "coin" && displayUnit === "coin" ? (eur / coinValue).toFixed(2).replace(".", ",") + " coins" : euro(eur))
 
-  const [showBillPrices, setShowBillPrices] = useState(false)
-  const [showAssignPopup, setShowAssignPopup] = useState(false) // popup: drankjes toewijzen vóór Fair Split
-  const [assignPopupDrinkIds, setAssignPopupDrinkIds] = useState<string[]>([]) // drankjes die bij openen van de popup nog open stonden (blijven zichtbaar om te wijzigen)
-  const [showIndicatiefInfo, setShowIndicatiefInfo] = useState(false) // info-popup achter de ? bij richtprijzen
-  const [fairInfoMode, setFairInfoMode] = useState<null | "what" | "how">(null) // popup: wat is / hoe werkt fair split
-  const [activeCategory, setActiveCategory] = useState<string | null>(null)
-  const [selectorSearch, setSelectorSearch] = useState("")
-  const [showFairSplit, setShowFairSplit] = useState(false)
-  const [showFairSplitInfo, setShowFairSplitInfo] = useState(false)
-  const [splitMode, setSplitMode] = useState<"fair" | "equal">("fair") // fair split of iedereen evenveel
-  const [showEqualInfo, setShowEqualInfo] = useState(false)             // info-popup 'iedereen evenveel'
-  const [compareOther, setCompareOther] = useState(false)                 // in 'iedereen evenveel': ook de Fair Split ernaast tonen
-  const [showAboutParty, setShowAboutParty] = useState(false)             // korte uitleg over Rundo Party (de 'i' naast de titel)
-  const [orderEditing, setOrderEditing] = useState(false)                 // toont de toevoeg-knoppen opnieuw terwijl er al een bestelling loopt
-  const [showAllOrderedDrinks, setShowAllOrderedDrinks] = useState(false) // afrekenen: 'alle bestelde drankjes'-sectie open/dicht (standaard dicht)
-  const [showVoiceExample, setShowVoiceExample] = useState(false)       // info-popup met spraak-voorbeeld
-  const [noPayWarn, setNoPayWarn] = useState(false)                     // (reserve) melding geen betaling
-  // Eigen bevestigings-popup i.p.v. de kale browser-confirm()
-  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; confirmLabel?: string; danger?: boolean; onConfirm: () => void } | null>(null)
+  const contribOf = (pid: string) => potRounds.reduce((s, r) => s + (r.amounts[pid] || 0), 0)
+  const potContribTotal = potRounds.reduce((s, r) => s + Object.values(r.amounts).reduce((a, b) => a + (b || 0), 0), 0)
+  const potDraftTotal = Object.values(potDraft).reduce((a, b) => a + (b || 0), 0)
+  const potSpent = rounds.reduce((s, r) => s + (r.potPart || 0), 0)
+  const potRemaining = potContribTotal - potSpent
+  const cardLossPer = potIsCard && potRemaining > 0.005 && people.length > 0 ? potRemaining / people.length : 0
 
-  // ─── Voice (quick order) state ────────────
-  const [quickItems, setQuickItems] = useState<QuickOrderItem[]>([])
-  const [voiceSuggestion, setVoiceSuggestion] = useState<{ spokenText: string; qty: number; suggested: Drink } | null>(null)
-  const [quickVoiceActive, setQuickVoiceActive] = useState(false)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const quickRecogRef = useRef<any>(null)
+  // ── live cart helpers ───────────────────────────────────────────────────────
+  const aQty = (did: string, pid: string) => cart[did]?.[pid] ?? 0
+  // Zorg dat er een open rondje bestaat vóór er een drankje in gaat. Lui aangemaakt:
+  // pas wanneer iemand écht iets aantikt, niet bij het openen van het scherm.
+  const openRoundRef = useRef<Promise<string | null> | null>(null)
+  const addingPerson = useRef(false)
+  const ensureRound = async (starter?: string | null): Promise<string | null> => {
+    if (openRoundId) return openRoundId
+    if (!groupId) return null
+    if (openRoundRef.current) return openRoundRef.current   // twee snelle tikken = één rondje
+    openRoundRef.current = (async () => {
+      // party_open_round geeft het BESTAANDE open rondje terug als er al een is. Twee
+      // gasten die tegelijk hun eerste drankje tikken, delen dus één rondje.
+      const { data, error } = await supabase.rpc("party_open_round", { p_group: groupId, p_starter: starter ?? null })
+      openRoundRef.current = null
+      if (error || !data) { setNotice("Rondje starten mislukt."); return null }
+      setOpenRoundId(data as string)
+      if (starter) setStartedBy(starter)
+      return data as string
+    })()
+    return openRoundRef.current
+  }
 
-  // ─── Loaders ────────────
-  // Laadt de standaard basisdranken (owner_id = null, voor iedereen) PLUS je eigen dranken
-  // (owner_id = jij). Je eigen dranken zijn privé en volgen je naar elke groep die je maakt.
-  const loadDrinks = useCallback(async () => {
-    const ownerId = getOrCreateOwnerId()
-    const { data, error } = await supabase.from("drinks").select("id,name,price,emoji,category,group_id,owner_id")
-      .or(`owner_id.is.null,owner_id.eq.${ownerId}`)
-    if (error) { setError(L.errLoadDrinks); return }
-    if (mounted.current) setDrinks(data || [])
-  }, [])
+  // "Ik ga halen": open het rondje met mezelf als haler. Iedereen die gescand heeft
+  // ziet dan "X gaat halen" en kan zijn drankje aantikken.
+  const startAsRunner = async () => {
+    if (!meId) { setNotice(L.claimSeatFirst); return }
+    await ensureRound(meId)
+    setStartedBy(meId)
+  }
 
-  const loadAll = useCallback(async (groupId: string) => {
-    const [{ data: p, error: pe }, { data: o, error: oe }, { data: pay, error: paye }] = await Promise.all([
-      supabase.from("participants").select("*").eq("group_id", groupId),
-      supabase.from("orders").select("id,participant_id,drink_id,quantity,group_id,session").eq("group_id", groupId),
-      supabase.from("payments").select("id,group_id,session,participant_id,amount,created_at").eq("group_id", groupId),
-    ])
-    if (pe || oe) { setError(L.errLoadData); return }
-    if (mounted.current) {
-      setParticipants(orderStable(p || []))
-      setOrders(o || [])
-      if (!paye) setPayments(pay || [])
+  // "Ik haal het toch": neem een lopend rondje over. Het rondje en alle drankjes
+  // blijven staan, alleen de haler wisselt.
+  const takeOverRound = async () => {
+    if (!meId || !openRoundId) return
+    setStartedBy(meId)
+    const { error } = await supabase.rpc("party_take_over_round", { p_round: openRoundId, p_starter: meId })
+    if (error) { setNotice("Overnemen mislukt: " + error.message); if (groupId) loadParty(groupId) }
+  }
+
+  // "Toch niet ik": geef het rondje vrij. Een ander kan het dan oppakken.
+  const releaseRunner = async () => {
+    if (!openRoundId) return
+    setStartedBy(null)
+    const { error } = await supabase.rpc("party_take_over_round", { p_round: openRoundId, p_starter: null })
+    if (error) { setNotice("Vrijgeven mislukt: " + error.message); if (groupId) loadParty(groupId) }
+  }
+
+  const runnerName = () => people.find((p) => p.id === startedBy)?.name ?? ""
+
+  // ── Rondje opnemen: de tafel rondgaan ───────────────────────────────────────
+  // Persoon per persoon. Je tikt drankjes aan die METEEN op die persoon staan (bump),
+  // geen omweg via toewijzen. Zo blijft de toewijzing die al in je hoofd zit ("Tom?
+  // pils") ook in de app staan — en werkt Fair Split achteraf zonder extra werk.
+  const walkStart = () => { setWalkIdx(people[0] ? 0 : null) }
+  const renderWalk = () => {
+    if (walkIdx === null) return null
+    const p = people[walkIdx]
+    if (!p) { setWalkIdx(null); return null }
+    const zijne = drinks.filter((d) => (cart[d.id]?.[p.id] ?? 0) > 0)
+    const lijst = drinks.filter((d) => d.fav)
+    // Hoeveel elke persoon al aantikte in dit rondje (voor de teller op de pill).
+    const aantalVan = (pid: string) => drinks.reduce((a, d) => a + (cart[d.id]?.[pid] ?? 0), 0)
+    return (
+      <div style={S.overlay} onClick={() => setWalkIdx(null)}>
+        <div style={{ ...S.sheet, maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
+            <h3 style={{ ...S.h3, margin: 0, fontSize: 18 }}>{L.walkTable}</h3>
+            <span onClick={() => setWalkIdx(null)} style={{ fontSize: 20, cursor: "pointer", color: "#8a7d55", lineHeight: 1 }}>✕</span>
+          </div>
+
+          {/* Namen als pills. Tik een naam aan om voor die persoon te bestellen. De
+              groene teller toont wat elk al heeft — zo zie je wie je nog moet vragen. */}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+            {people.map((pp, i) => {
+              const geselecteerd = i === walkIdx
+              const n = aantalVan(pp.id)
+              return (
+                <button key={pp.id} onClick={() => setWalkIdx(i)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 13px", borderRadius: 20, cursor: "pointer",
+                    fontSize: 13, fontWeight: 800,
+                    background: geselecteerd ? "#e08a00" : "#faf7ec",
+                    color: geselecteerd ? "#fff" : "#4a3f1e",
+                    border: geselecteerd ? "2px solid #e08a00" : "1.5px solid rgba(120,95,20,0.18)" }}>
+                  {pp.name}
+                  {n > 0 && <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 18, height: 18, borderRadius: 9, fontSize: 11, background: geselecteerd ? "rgba(255,255,255,0.3)" : "#1f8a4c", color: "#fff" }}>{n}</span>}
+                </button>
+              )
+            })}
+          </div>
+
+          <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 10, fontWeight: 700 }}>{L.walkFor(p.name)}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 12 }}>
+            {lijst.map((d) => {
+              const n = cart[d.id]?.[p.id] ?? 0
+              return (
+                <button key={d.id} onClick={() => bump(d.id, p.id, 1)}
+                  style={{ position: "relative", textAlign: "left", padding: "11px 12px", borderRadius: 10, cursor: "pointer",
+                    background: n > 0 ? "rgba(31,138,76,0.1)" : "#faf7ec",
+                    border: n > 0 ? "1.5px solid rgba(31,138,76,0.4)" : "1px solid rgba(120,95,20,0.12)" }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 700, color: "#4a3f1e" }}>{d.emoji} {d.name}</span>
+                  {n > 0 && (
+                    <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ ...S.pill, background: "#1f8a4c", color: "#fff", fontSize: 12, padding: "2px 8px" }}>{n}</span>
+                      <span onClick={(e) => { e.stopPropagation(); bump(d.id, p.id, -1) }}
+                        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 15, fontWeight: 800 }}>−</span>
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+          {zijne.length > 0 && (
+            <div style={{ fontSize: 12, color: "#6b5f3a", marginBottom: 12, lineHeight: 1.5 }}>
+              {zijne.map((d) => `${cart[d.id][p.id]}× ${d.name}`).join(" · ")}
+            </div>
+          )}
+          <button style={{ ...S.btnP, width: "100%" }} onClick={() => setWalkIdx(null)}>{L.walkDone}</button>
+        </div>
+      </div>
+    )
+  }
+
+  // De haler-strook. Drie toestanden: niemand haalt, iemand anders haalt, jij haalt.
+  const renderRunnerBar = () => {
+    const ikHaal = !!meId && startedBy === meId
+    if (!openRoundId && !startedBy) {
+      // Nog geen rondje: nodig iemand uit om te gaan halen.
+      return (
+        <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)", textAlign: "center" }}>
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 10 }}>{L.whoGoes}</div>
+          <button style={{ ...S.btnP, width: "100%" }} onClick={startAsRunner}>{L.imGoing}</button>
+        </div>
+      )
     }
-  }, [])
-
-  // Zuinig (minder PostgREST-egress): ververs enkel de betrokken tabel i.p.v. telkens alle drie.
-  const reloadTable = useCallback(async (groupId: string, table: "participants" | "orders" | "payments") => {
-    if (table === "participants") {
-      const { data, error } = await supabase.from("participants").select("*").eq("group_id", groupId)
-      if (!error && mounted.current) setParticipants(orderStable(data || []))
-    } else if (table === "orders") {
-      const { data, error } = await supabase.from("orders").select("id,participant_id,drink_id,quantity,group_id,session").eq("group_id", groupId)
-      if (!error && mounted.current) setOrders(data || [])
-    } else if (table === "payments") {
-      const { data, error } = await supabase.from("payments").select("id,group_id,session,participant_id,amount,created_at").eq("group_id", groupId)
-      if (!error && mounted.current) setPayments(data || [])
+    if (ikHaal) {
+      return (
+        <div style={{ ...S.card, background: "rgba(31,138,76,0.08)", border: "1.5px solid rgba(31,138,76,0.35)" }}>
+          <div style={{ ...S.row, justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f6b3a" }}>{L.youAreGoing}</span>
+            <button style={{ ...S.btn, fontSize: 11.5, fontWeight: 700, padding: "6px 11px" }} onClick={releaseRunner}>{L.notMeRunner}</button>
+          </div>
+        </div>
+      )
     }
-  }, [])
+    // Iemand anders haalt.
+    return (
+      <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
+        <div style={{ ...S.row, justifyContent: "space-between" }}>
+          <span style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f" }}>🍻 {startedBy ? L.xIsGoing(runnerName()) : L.whoGoes}</span>
+          <button style={{ ...S.btn, fontSize: 11.5, fontWeight: 700, padding: "6px 11px" }} onClick={takeOverRound}>{L.iGoInstead}</button>
+        </div>
+      </div>
+    )
+  }
 
-  useEffect(() => { loadDrinks() }, [loadDrinks]) // start: enkel basisdranken
-  useEffect(() => { if (group) loadDrinks() }, [group, loadDrinks]) // groep geopend ? ook eigen dranken
-  useEffect(() => { setSavedGroups(getSavedGroups()) }, [])
+  // De optelling gebeurt in Postgres (party_bump), niet hier. Twee gasten die tegelijk
+  // hetzelfde drankje aantikken zouden elkaar anders overschrijven.
+  const bump = async (did: string, pid: string, delta: number) => {
+    setCart((c) => ({ ...c, [did]: { ...(c[did] ?? {}), [pid]: Math.max(0, (c[did]?.[pid] ?? 0) + delta) } }))
+    const rid = await ensureRound()
+    if (!rid || !groupId) return
+    const { error } = await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: pid, p_drink: did, p_delta: delta })
+    if (error) { setNotice("Opslaan mislukt: " + error.message); loadParty(groupId) }
+  }
+  const bumpAnon = async (did: string, delta: number) => {
+    setCartAnon((a) => ({ ...a, [did]: Math.max(0, (a[did] ?? 0) + delta) }))
+    const rid = await ensureRound()
+    if (!rid || !groupId) return
+    const { error } = await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: null, p_drink: did, p_delta: delta })
+    if (error) { setNotice("Opslaan mislukt: " + error.message); loadParty(groupId) }
+  }
+  const assignFromAnon = async (did: string, pid: string) => {
+    if ((cartAnon[did] ?? 0) <= 0) return
+    setCartAnon((a) => ({ ...a, [did]: Math.max(0, (a[did] ?? 0) - 1) }))
+    setCart((c) => ({ ...c, [did]: { ...(c[did] ?? {}), [pid]: (c[did]?.[pid] ?? 0) + 1 } }))
+    const rid = await ensureRound()
+    if (!rid || !groupId) return
+    const { error } = await supabase.rpc("party_assign", { p_group: groupId, p_round: rid, p_drink: did, p_from: null, p_to: pid })
+    if (error) { setNotice("Toewijzen mislukt: " + error.message); loadParty(groupId) }
+  }
+  const unassignCart = async (did: string, pid: string) => {
+    if ((cart[did]?.[pid] ?? 0) <= 0) return
+    setCart((c) => ({ ...c, [did]: { ...(c[did] ?? {}), [pid]: Math.max(0, (c[did]?.[pid] ?? 0) - 1) } }))
+    setCartAnon((a) => ({ ...a, [did]: (a[did] ?? 0) + 1 }))
+    const rid = await ensureRound()
+    if (!rid || !groupId) return
+    const { error } = await supabase.rpc("party_assign", { p_group: groupId, p_round: rid, p_drink: did, p_from: pid, p_to: null })
+    if (error) { setNotice("Losmaken mislukt: " + error.message); loadParty(groupId) }
+  }
+  const setEachOne = async (did: string) => {
+    const huidig = cart[did] ?? {}
+    setCart((c) => ({ ...c, [did]: Object.fromEntries(people.map((p) => [p.id, 1])) }))
+    const rid = await ensureRound()
+    if (!rid || !groupId) return
+    for (const p of people) {
+      const delta = 1 - (huidig[p.id] ?? 0)
+      if (delta !== 0) await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: p.id, p_drink: did, p_delta: delta })
+    }
+    loadParty(groupId)
+  }
+  const eachOne = (did: string) => { const hi = people.filter((p) => (cart[did]?.[p.id] ?? 0) >= 2).map((p) => p.name); if (hi.length > 0) { setConfirmDlg({ msg: L.eachOneConfirm(hi.join(" en "), hi.length > 1), yes: L.yesEachOne, onYes: () => { setEachOne(did); setConfirmDlg(null) } }) } else setEachOne(did) }
+  const drinkTotal = (did: string) => Object.values(cart[did] ?? {}).reduce((a, b) => a + b, 0) + (cartAnon[did] ?? 0)
+  const roundItems = useMemo(() => drinks.reduce((s, d) => s + drinkTotal(d.id), 0), [cart, cartAnon, drinks]) // eslint-disable-line
+  const resumeRound = () => { if (blockIfUnpaid()) return; setActiveCat(catsPresent[0]); setView("order") }
+  const unfinishedRound = roundItems > 0 && rounds.length < roundNr
+  const roundIsPaid = (r: Round) => (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))
+  const unpaidIdx = () => rounds.findIndex((r) => !roundIsPaid(r))
+  const paidCount = rounds.filter(roundIsPaid).length
+  const blockIfUnpaid = () => { const i = unpaidIdx(); if (i < 0) return false; setNotice(L.roundUnpaid(i + 1)); setView("confirmed"); return true }
+  const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon, drinks]) // eslint-disable-line
+  const pickedUpOf = (pid: string) => drinks.reduce((a, d) => a + (d.cup ? aQty(d.id, pid) : 0), 0)
 
-  // Bij het openen van het pot-overzicht: schone lei voor het aanvul-formulier
+  // ── per-rondje bewerk-helpers (hub) ─────────────────────────────────────────
+  // Een AFGESLOTEN of onbetaald rondje bijstellen doet enkel de admin. Daar is geen
+  // gelijktijdigheid, dus mag de hele rij in één keer weg. (Het open rondje niet —
+  // dat gaat via party_bump, want daar tikt iedereen tegelijk.)
+  const persistRound = (r: Round) => {
+    supabase.from("party_rounds")
+      .update({ amount: r.amount, pot_part: r.potPart, payers: r.payers, gave_back: r.gaveBack })
+      .eq("id", r.id)
+      .then(({ error }) => { if (error) setNotice("Opslaan mislukt: " + error.message) })
+  }
+  // Drankjes van een afgesloten rondje verplaatsen: wél per rij, want die zitten in
+  // party_round_items en niet in de jsonb.
+  const persistItem = async (r: Round, did: string, pid: string | null, delta: number) => {
+    if (!groupId) return
+    const { error } = await supabase.rpc("party_bump", { p_group: groupId, p_round: r.id, p_person: pid, p_drink: did, p_delta: delta })
+    if (error) setNotice("Opslaan mislukt: " + error.message)
+  }
+
+  // Wie een bestaand rondje bijstelt (bedrag, betaler, bekers) markeert het als vuil;
+  // dit effect schrijft het daarna weg. Zo hoeft geen enkele mutator databank-logica
+  // te kennen, en persisteren we altijd de toestand NA de wijziging.
+  const [dirtyRound, setDirtyRound] = useState<number | null>(null)
   useEffect(() => {
-    if (showPotOverview) { setPotAddedThisSession(0); setPotAddDraft({}); setPotAddBulk(""); setPotAddWarn(false); setPotAddPerPersonOpen(false) }
-  }, [showPotOverview])
-
-  // Bij het openen van 'afrekenen': onthoud welke drankjes toen nog toe te wijzen waren (die krijgen nadien een potloodje)
-  useEffect(() => {
-    if (view === "bill") {
-      const ids = new Set<string>()
-      orders.forEach((o) => { if (!o.participant_id && o.quantity > 0) ids.add(o.drink_id) })
-      setBillOriginallyUnassigned(ids)
-      setShowAllOrderedDrinks(false)
-    }
+    if (dirtyRound == null) return
+    const r = rounds[dirtyRound]
+    if (r) persistRound(r)
+    setDirtyRound(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view])
+  }, [dirtyRound, rounds])
 
-  // ─── Realtime ────────────
+  const rBump = (idx: number, did: string, pid: string, delta: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, orders: { ...r.orders, [did]: { ...(r.orders[did] ?? {}), [pid]: Math.max(0, (r.orders[did]?.[pid] ?? 0) + delta) } } } : r)); persistItem(rounds[idx], did, pid, delta); setDirtyRound(idx) }
+  const rBumpAnon = (idx: number, did: string, delta: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, anon: { ...r.anon, [did]: Math.max(0, (r.anon[did] ?? 0) + delta) } } : r)); persistItem(rounds[idx], did, null, delta); setDirtyRound(idx) }
+  const rSetGaveBack = (idx: number, pid: string, v: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, gaveBack: { ...r.gaveBack, [pid]: Math.max(0, v) } } : r)); setDirtyRound(idx) }
+  const rUnassign = (idx: number, did: string, pid: string) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, orders: { ...r.orders, [did]: { ...(r.orders[did] ?? {}), [pid]: Math.max(0, (r.orders[did]?.[pid] ?? 0) - 1) } }, anon: { ...r.anon, [did]: (r.anon[did] ?? 0) + 1 } } : r)); persistItem(rounds[idx], did, pid, -1); persistItem(rounds[idx], did, null, 1); setDirtyRound(idx) }
+  const rAssignFromAnon = (idx: number, did: string, pid: string) => { if ((rounds[idx]?.anon[did] ?? 0) > 0) { rBumpAnon(idx, did, -1); rBump(idx, did, pid, 1) } }
+  const potAvailFor = (idx: number) => potContribTotal - (potSpent - (rounds[idx]?.potPart || 0))
+  const rRedistribute = (r: Round, idx: number, usePot: boolean, persons: string[], amount: number): Round => {
+    const n = persons.length + (usePot ? 1 : 0)
+    if (n === 0 || amount <= 0) return { ...r, amount, payers: {}, potPart: 0 }
+    const avail = Math.max(0, potAvailFor(idx))
+    let potPart = 0, rest = amount
+    if (usePot) { potPart = Math.min(amount / n, avail); rest = amount - potPart }
+    const per = persons.length ? rest / persons.length : 0
+    const payers: Record<string, number> = {}
+    persons.forEach((pid) => (payers[pid] = per))
+    return { ...r, amount, payers, potPart }
+  }
+  const rSetAmount = (idx: number, v: number) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, v) })); setDirtyRound(idx) }
+  const rTogglePot = (idx: number) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = !((r.potPart || 0) > 0); if (usePot && potAvailFor(idx) <= 0.005) { setNotice(L.potEmpty(potIsCard)); return r } return rRedistribute(r, idx, usePot, persons, r.amount) })); setDirtyRound(idx) }
+  const rSetPayerAmt = (idx: number, pid: string, v: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, payers: { ...(r.payers || {}), [pid]: Math.max(0, v) } } : r)); setDirtyRound(idx) }
+  const rSetPotAmt = (idx: number, v: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, potPart: Math.max(0, Math.min(v, Math.max(0, potAvailFor(idx)))) } : r)); setDirtyRound(idx) }
+  const rPaidSum = (r: Round) => (r.potPart || 0) + Object.values(r.payers || {}).reduce((a, b) => a + (b || 0), 0)
+  const rTogglePayer = (idx: number, pid: string) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const cur = Object.keys(r.payers || {}); const persons = cur.includes(pid) ? cur.filter((x) => x !== pid) : [...cur, pid]; const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, r.amount) })); setDirtyRound(idx) }
+
+  // ── afgeleide bekers (uit rounds) ───────────────────────────────────────────
+  const roundPicked = (r: Round, pid: string) => drinks.reduce((a, d) => a + (d.cup ? (r.orders[d.id]?.[pid] ?? 0) : 0), 0)
+  const cupsBal = (pid: string) => rounds.reduce((s, r) => s + (roundPicked(r, pid) - (r.gaveBack[pid] || 0)), 0)
+
+  const isGuestDefault = (name: string) => /^Gast \d+$/.test(name.trim())
+  // Een plaats bijzetten = een rij in party_people. Leeg van naam: vrij tot iemand
+  // ze claimt (de admin door ze te benoemen, een gast door de link te openen).
+  // Het plaatsnummer wordt in Postgres bepaald, niet hier. Berekende je het in de
+  // browser, dan lezen twee snelle tikken dezelfde lijst, komen ze op hetzelfde nummer
+  // uit, en weigert de unique-index de tweede: "duplicate key value".
+  const addPerson = async () => {
+    if (!groupId || addingPerson.current) return
+    addingPerson.current = true
+    const { error } = await supabase.rpc("party_add_person", { p_group: groupId, p_name: "" })
+    addingPerson.current = false
+    if (error) { setNotice("Persoon toevoegen mislukt: " + error.message); return }
+    loadParty(groupId)
+  }
+  const renamePerson = async (id: string, name: string) => {
+    // Optimistisch: het invoerveld moet meteen meebewegen, niet pas na de rondreis.
+    setPeople((ps) => ps.map((x) => x.id === id ? { ...x, name } : x))
+    const clean = isGuestDefault(name) ? "" : name.trim()
+    const { error } = await supabase.from("party_people").update({ name: clean }).eq("id", id)
+    if (error) setNotice("Naam opslaan mislukt: " + error.message)
+  }
+  const personHasDrinks = (pid: string) => rounds.some((r) => Object.values(r.orders).some((o) => (o?.[pid] ?? 0) > 0)) || Object.values(cart).some((o) => (o?.[pid] ?? 0) > 0)
+  // Merk op wanneer er iemand bijkomt die zichzelf aanmeldde. De eerste lading (bij
+  // het laden van de groep) telt niet als "nieuw" — anders krijg je een melding voor
+  // iedereen die er al was.
+  const seededNewcomer = useRef(false)
+  // Onthoud wie er al geclaimd was, zodat we een NIEUWE aanmelding herkennen — of het
+  // nu een laatkomer is die een plaats bijzette, of iemand die een bestaande vrije
+  // plaats claimde via de QR. Beide zijn "iemand meldt zich aan".
+  const claimedSeats = useRef<Set<string>>(new Set())
   useEffect(() => {
-    if (!group || asleep) return
-    let reloadTimer: ReturnType<typeof setTimeout> | null = null
-
-    const dirty = new Set<"participants" | "orders" | "payments">()
-    const scheduleReload = (table: "participants" | "orders" | "payments") => {
-      dirty.add(table)
-      if (reloadTimer) clearTimeout(reloadTimer)
-      reloadTimer = setTimeout(() => {
-        if (!mounted.current) return
-        const tables = [...dirty]; dirty.clear()
-        tables.forEach((t) => reloadTable(group.id, t))
-      }, 400)
-    }
-
-    const channel = supabase.channel(`group-${group.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `group_id=eq.${group.id}` }, () => scheduleReload("orders"))
-      .on("postgres_changes", { event: "*", schema: "public", table: "participants", filter: `group_id=eq.${group.id}` }, () => scheduleReload("participants"))
-      .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `group_id=eq.${group.id}` }, () => scheduleReload("payments"))
-      .subscribe((status) => { if (status === "SUBSCRIBED" && mounted.current) { loadAll(group.id); loadDrinks() } })
-
-    const refreshOnReturn = () => {
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") return
-      if (mounted.current) { loadAll(group.id); loadDrinks() }
-    }
-    document.addEventListener("visibilitychange", refreshOnReturn)
-    window.addEventListener("focus", refreshOnReturn)
-
-    return () => {
-      if (reloadTimer) clearTimeout(reloadTimer)
-      document.removeEventListener("visibilitychange", refreshOnReturn)
-      window.removeEventListener("focus", refreshOnReturn)
-      supabase.removeChannel(channel)
-    }
-  }, [group, loadAll, loadDrinks, reloadTable, asleep])
-
-  // Inactiviteits-slaapstand: na 3 min zonder tik/scroll/toets 'slaapt' het scherm
-  // (realtime stopt via de guard hierboven -> spaart data). We meten inactiviteit met een
-  // tijdstempel + interval i.p.v. één lange setTimeout, want die wordt door de browser
-  // gepauzeerd zodra het tabblad verborgen is (scherm op slot) en vuurt dan niet betrouwbaar.
-  // Belangrijk: enkel een échte tik/toets/scroll of een tik op de banner hervat het.
-  // Terugkeren naar het tabblad hervat NIET vanzelf, zodat de "gepauzeerd"-melding
-  // zichtbaar blijft en de gebruiker bewust op "tik om te hervatten" tikt.
-  useEffect(() => {
-    if (!group) return
-    const SLEEP_MS = 3 * 60 * 1000
-    lastActive.current = Date.now()
-    setAsleep(false)
-    const check = () => {
-      if (mounted.current && Date.now() - lastActive.current >= SLEEP_MS) setAsleep(true)
-    }
-    const markActive = () => { lastActive.current = Date.now(); setAsleep((a) => (a ? false : a)) }
-    const onVis = () => { if (typeof document !== "undefined" && document.visibilityState === "visible") check() }
-    const evts: (keyof WindowEventMap)[] = ["pointerdown", "keydown", "scroll", "touchstart"]
-    evts.forEach((e) => window.addEventListener(e, markActive, { passive: true }))
-    document.addEventListener("visibilitychange", onVis)
-    const iv = setInterval(check, 20 * 1000)
-    return () => {
-      clearInterval(iv)
-      evts.forEach((e) => window.removeEventListener(e, markActive))
-      document.removeEventListener("visibilitychange", onVis)
-    }
-  }, [group])
-
-  // ─── Group create / join ────────────
-  const startGroup = async () => {
-    if (!groupName.trim() || isStarting) return
-    setStartError(null)
-    setError(null)
-    setIsStarting(true)
-    try {
-      const owner_id = getOrCreateOwnerId()
-      const base = stripDateSuffix(groupName.trim())
-      const name = `${base} (${shortDateLabel()})`
-      const clash = getSavedGroups().some((g) => g.name.trim().toLowerCase() === name.toLowerCase())
-      if (clash) {
-        setStartError(L.errDuplicateGroup)
-        return
-      }
-      const invite_code = generateInviteCode()
-      const { data, error } = await supabase.from("groups").insert([{ name, invite_code, owner_id }]).select().single()
-      if (error || !data) { setStartError(L.errCreateGroup(error?.message ?? "")); return }
-      setGroup(data)
-      setActiveGroupCode(data.invite_code)
-      await loadAll(data.id)
-      saveGroupToStorage(data)
-      setSavedGroups(getSavedGroups())
-      setView("setup")
-    } finally { setIsStarting(false) }
-  }
-
-  const joinGroup = async (codeOverride?: string, initialView?: AppView) => {
-    const code = codeOverride ?? joinCode
-    if (!code.trim() || isStarting) return
-    setStartError(null)
-    setError(null)
-    setIsStarting(true)
-    try {
-      const { data, error } = await supabase.from("groups").select("*").eq("invite_code", code.trim().toUpperCase()).single()
-      if (error || !data) {
-        setStartError(L.errGroupNotFound)
-        clearActiveGroupCode()
-        return
-      }
-      setGroup(data)
-      setActiveGroupCode(data.invite_code)
-      await loadAll(data.id)
-      saveGroupToStorage(data) // geopende groep automatisch onthouden (geen 'bewaar'-knop meer nodig)
-      setSavedGroups(getSavedGroups())
-      setView(initialView ?? "setup")
-    } finally { setIsStarting(false) }
-  }
-
-  const didRestore = useRef(false)
-  useEffect(() => {
-    if (didRestore.current) return
-    didRestore.current = true
-    // Herstel enkel bij een refresh in dezelfde tab (sessionStorage). Vanaf het keuzescherm
-    // wordt deze sessie gewist, zodat je daar altijd op het startscherm binnenkomt.
-    try {
-      const raw = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("rundo_party_session") : null
-      if (raw) {
-        const s = JSON.parse(raw) as { code?: string; view?: AppView }
-        if (s.code) joinGroup(s.code, s.view)
-      }
-    } catch { /* geen sessie om te herstellen */ }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Bewaar de actieve sessie (groep + tab) in sessionStorage, zodat een refresh je in
-  // dezelfde groep en tab houdt. Wordt gewist bij het verlaten van de groep.
-  useEffect(() => {
-    try {
-      if (group && typeof sessionStorage !== "undefined") {
-        sessionStorage.setItem("rundo_party_session", JSON.stringify({ code: group.invite_code, view }))
-      }
-    } catch { /* sessionStorage niet beschikbaar */ }
-  }, [group, view])
-
-  // ─── Person setup ────────────
-  // Haal de HUIDIGE placeholdernummers rechtstreeks uit de DB, zodat we nooit
-  // twee keer dezelfde "Persoon N" aanmaken (ook niet na verwijderen/toevoegen).
-  const usedNumbersFromDb = async (groupId: string): Promise<Set<number>> => {
-    const { data } = await supabase.from("participants").select("name").eq("group_id", groupId)
-    const used = new Set<number>()
-    ;(data || []).forEach((r: { name: string }) => { const num = nameNumberSuffix(r.name); if (num != null) used.add(num) })
-    return used
-  }
-
-  const ensurePersonCount = async (count: number) => {
-    if (!group) return
-    const current = participants.length
-    if (count > current) {
-      const toAdd = count - current
-      const used = await usedNumbersFromDb(group.id) // vers uit DB ? geen dubbels
-      for (let i = 0; i < toAdd; i++) {
-        const num = smallestFreeNumber(used)
-        used.add(num)
-        await supabase.from("participants").insert([{ name: `Persoon ${num}`, group_id: group.id }])
-      }
-      await reloadTable(group.id, "participants")
-    } else if (count < current) {
-      const toRemove = participants.slice(count).filter((p) => !orders.some((o) => o.participant_id === p.id))
-      for (const p of toRemove) {
-        await supabase.from("participants").delete().eq("id", p.id)
-        await supabase.from("payments").delete().eq("group_id", group.id).eq("participant_id", p.id)
-      }
-      await loadAll(group.id)
-    }
-  }
-
-  const addPerson = async (name?: string) => {
-    if (!group) return
-    const used = await usedNumbersFromDb(group.id) // vers uit DB ? geen dubbele "Persoon N"
-    const finalName = name?.trim() || `Persoon ${smallestFreeNumber(used)}`
-    const { error } = await supabase.from("participants").insert([{ name: finalName, group_id: group.id }])
-    if (error) { setError(L.errAddPerson); return }
-    await reloadTable(group.id, "participants")
-  }
-
-  const deletePerson = async (id: string, name: string) => {
-    if (!group) return
-    if (orders.some((o) => o.participant_id === id)) {
-      setError(`${name} kan niet verwijderd worden: er staat al een bestelling op deze naam in een afgerond rondje.`)
+    if (people.length === 0) return
+    if (!seededNewcomer.current) {
+      people.forEach((p) => { knownPeople.current.add(p.id); if (p.claimedBy) claimedSeats.current.add(p.id) })
+      seededNewcomer.current = true
       return
     }
-    setConfirmDialog({
-      title: L.confirmDeletePersonTitle,
-      message: L.confirmDeletePersonMsg(name),
-      confirmLabel: L.deleteLabel,
-      danger: true,
-      onConfirm: async () => {
-        const { error } = await supabase.from("participants").delete().eq("id", id)
-        if (error) { setError(L.errDeletePerson); return }
-        await supabase.from("payments").delete().eq("group_id", group.id).eq("participant_id", id)
-        setPaymentDraft((prev) => { const n = { ...prev }; delete n[id]; return n })
-        setPotDraft((prev) => { const n = { ...prev }; delete n[id]; return n })
-        if (editingPerson === id) setEditingPerson(null)
-        setToast(`${name} verwijderd`)
-        await loadAll(group.id)
-      },
-    })
-  }
-
-  const renamePerson = async () => {
-    if (!group || !editingPerson || !editingPersonName.trim()) return
-    const { error } = await supabase.from("participants").update({ name: editingPersonName.trim() }).eq("id", editingPerson)
-    if (error) { setError(L.errRename); return }
-    setEditingPerson(null)
-    setEditingPersonName("")
-    await reloadTable(group.id, "participants")
-  }
-
-  // ─── Cart (huidige open ronde, met per-persoon toewijzing) ────────────
-  const addToCart = (drinkId: string, delta: number, markLast = true) => {
-    if (delta > 0 && markLast) setLastAddedDrinkIds([drinkId])
-    setCart((prev) => {
-      const next = { ...prev }
-      const line = next[drinkId] ?? { total: 0, assignments: {} }
-      const newTotal = Math.max(0, line.total + delta)
-      if (newTotal === 0) { delete next[drinkId]; return next }
-      const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
-      let newAssignments = { ...line.assignments }
-      if (newTotal < assignedSum) {
-        let toRemove = assignedSum - newTotal
-        const keys = Object.keys(newAssignments)
-        for (let i = keys.length - 1; i >= 0 && toRemove > 0; i--) {
-          const k = keys[i]
-          const reduceBy = Math.min(newAssignments[k], toRemove)
-          newAssignments[k] -= reduceBy
-          if (newAssignments[k] <= 0) delete newAssignments[k]
-          toRemove -= reduceBy
-        }
-      }
-      next[drinkId] = { total: newTotal, assignments: newAssignments }
-      return next
-    })
-  }
-
-  const assignCartItem = (drinkId: string, participantId: string, delta: number) => {
-    setCart((prev) => {
-      const line = prev[drinkId]
-      if (!line) return prev
-      const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
-      const currentForPerson = line.assignments[participantId] ?? 0
-      if (delta > 0 && assignedSum >= line.total) return prev
-      const newQty = Math.max(0, currentForPerson + delta)
-      const newAssignments = { ...line.assignments }
-      if (newQty === 0) delete newAssignments[participantId]
-      else newAssignments[participantId] = newQty
-      return { ...prev, [drinkId]: { ...line, assignments: newAssignments } }
-    })
-  }
-
-  // Snel aan iedereen toewijzen: iedereen krijgt er 1, totaal = aantal personen
-  const assignToEveryone = (drinkId: string) => {
-    setCart((prev) => {
-      if (participants.length === 0) return prev
-      const assignments: Record<string, number> = {}
-      participants.forEach((p) => { assignments[p.id] = 1 })
-      return { ...prev, [drinkId]: { total: participants.length, assignments } }
-    })
-    setLastAddedDrinkIds([drinkId])
-  }
-
-  const cartTotalItems = Object.values(cart).reduce((s: number, line) => s + line.total, 0)
-
-  const clearCart = () => { setCart({}); setLastAddedDrinkIds([]); setOrderEditing(false) }
-
-  // Voer een actie uit die de huidige (niet-afgeronde) bestelling zou weggooien.
-  // Is er nog een lopende bestelling, dan eerst bevestiging vragen.
-  const requestDiscardPending = (action: () => void) => {
-    if (cartTotalItems > 0) {
-      setConfirmDialog({
-        title: L.confirmClearOrderTitle,
-        message: L.confirmClearOrderMsg,
-        confirmLabel: L.confirmClearOrderLabel,
-        danger: true,
-        onConfirm: () => { clearCart(); action() },
-      })
-    } else {
-      action()
-    }
-  }
-
-  // Terug naar het homescherm (nieuwe groep maken / opgeslagen groep openen)
-  const goHome = () => {
-    clearActiveGroupCode()
-    try { if (typeof sessionStorage !== "undefined") sessionStorage.removeItem("rundo_party_session") } catch { /* ignore */ }
-    setGroup(null)
-    setView("setup")
-    setCart({})
-    setLastAddedDrinkIds([])
-    setFinishedRoundSnapshot(null)
-    setError(null)
-  }
-
-  // Een vorig rondje overnemen in de huidige bestelling (om snel opnieuw te bestellen of aan te passen)
-  const reorderFromSession = (sess: number) => {
-    const rows = orders.filter((o) => o.session === sess)
-    if (rows.length === 0) { setToast(L.toastRoundEmpty); return }
-    setCart((prev) => {
-      const next: Record<string, CartLine> = { ...prev }
-      rows.forEach((o) => {
-        const line = next[o.drink_id] ?? { total: 0, assignments: {} }
-        const assignments = { ...line.assignments }
-        if (o.participant_id) assignments[o.participant_id] = (assignments[o.participant_id] ?? 0) + o.quantity
-        next[o.drink_id] = { total: line.total + o.quantity, assignments }
-      })
-      return next
-    })
-    setLastAddedDrinkIds(Array.from(new Set(rows.map((o) => o.drink_id))))
-    setLastAddedViaVoice(false)
-    setShowReorderPicker(false)
-    setToast(`Rondje ${roundLabel(sess)} overgenomen — pas aan en rond af ✏️`)
-  }
-
-  // Een drankje volledig uit de huidige bestelling halen
-  const removeFromCart = (drinkId: string) => {
-    setCart((prev) => { const n = { ...prev }; delete n[drinkId]; return n })
-    setLastAddedDrinkIds((cur) => cur.filter((id) => id !== drinkId))
-  }
-
-  // ─── Drank-selector: lokale selectie die telkens op 0 start ────────────
-  const openDrinkSelector = () => { setSelectorDraft({}); setSelectorEditMode(false); setLastAddedCustomDrink(null); setSelectorSearch(""); setShowDrinkSelector(true) }
-  // 'Bestelling wijzigen': open de selector voorgevuld met de huidige bestelling (tellers tonen de huidige drankjes).
-  const openDrinkSelectorEdit = () => {
-    const q: Record<string, number> = {}
-    Object.entries(cart).forEach(([id, line]) => { if (line.total > 0) q[id] = line.total })
-    setSelectorDraft(q); setSelectorEditMode(true); setLastAddedCustomDrink(null); setShowDrinkSelector(true)
-  }
-  const changeSelectorQty = (drinkId: string, delta: number) => {
-    setLastAddedCustomDrink(null)
-    setSelectorDraft((prev) => {
-      const n = { ...prev }
-      const v = Math.max(0, (n[drinkId] ?? 0) + delta)
-      if (v === 0) delete n[drinkId]; else n[drinkId] = v
-      return n
-    })
-  }
-  const selectorTotal = Object.values(selectorDraft).reduce((s, q) => s + q, 0)
-  const confirmDrinkSelector = () => {
-    const addedIds = Object.entries(selectorDraft).filter(([, q]) => q > 0).map(([id]) => id)
-    if (addedIds.length === 0) { setToast(L.selectorEmptyToast); return }
-    if (selectorEditMode) {
-      // Vervang de bestelling door wat nu in de selector staat; behoud toewijzingen (trim als een aantal daalt).
-      setCart((prev) => {
-        const next: typeof prev = {}
-        Object.entries(selectorDraft).forEach(([id, qty]) => {
-          if (qty <= 0) return
-          const old = prev[id]
-          if (old) {
-            const assignments = { ...old.assignments }
-            let assignedSum = Object.values(assignments).reduce((a, b) => a + b, 0)
-            let over = assignedSum - qty
-            if (over > 0) {
-              for (const pid of Object.keys(assignments)) {
-                if (over <= 0) break
-                const take = Math.min(assignments[pid], over)
-                assignments[pid] -= take; over -= take
-                if (assignments[pid] <= 0) delete assignments[pid]
-              }
-            }
-            next[id] = { total: qty, assignments }
-          } else {
-            next[id] = { total: qty, assignments: {} }
-          }
-        })
-        return next
-      })
-    } else {
-      addedIds.forEach((id) => addToCart(id, selectorDraft[id], false))
-    }
-    setLastAddedDrinkIds(addedIds)
-    setLastAddedViaVoice(false) // via selector ? geen aparte "Laatst toegevoegd"-kaart, wel highlight in de lijst
-    setOrderEditing(false)      // toevoeg-knoppen weer verbergen; onderaan komt afronden/wijzigen
-    setSelectorDraft({})
-    setSelectorEditMode(false)
-    setLastAddedCustomDrink(null)
-    setShowDrinkSelector(false)
-  }
-
-  // Set van personen die ergens in de huidige bestelling al een drankje toegewezen kregen
-  const assignedAnywhere = new Set<string>()
-  Object.values(cart).forEach((line) => {
-    Object.entries(line.assignments).forEach(([pid, q]) => { if (q > 0) assignedAnywhere.add(pid) })
-  })
-
-  // Toewijzen via één dropdown-vakje (i.p.v. een rij chips).
-  const renderAssignControl = (drinkId: string, line: CartLine, variant: "full" | "summary") => {
-    if (participants.length === 0) return null
-    const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
-    const unassigned = line.total - assignedSum
-    const assignedEntries = participants
-      .map((p) => ({ p, q: line.assignments[p.id] ?? 0 }))
-      .filter((x) => x.q > 0)
-
-    const sortedPeople = participants
-    const gold = variant === "full"
-
-    const isOpen = openAssignFor === drinkId
-    const showEveryone = line.total === participants.length && participants.length > 0
-
-    const assignedChips = assignedEntries.length > 0 ? (
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 7 }}>
-        {assignedEntries.map(({ p, q }) => (
-          <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: gold ? "#ecc85a" : "rgba(120,95,20,0.06)", border: gold ? "1px solid #e0ac00" : "1px solid rgba(120,95,20,0.12)", borderRadius: 20, padding: "3px 5px 3px 11px", fontSize: 12, fontWeight: gold ? 800 : 600, color: "#4a3f1e" }}>
-            {pName(p.name, lang)}
-            <span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 18, textAlign: "center", padding: "1px 6px", fontSize: 11, fontWeight: 800 }}>×{q}</span>
-            <button style={{ ...S.iconBtn, width: 18, height: 18, fontSize: 11 }} onClick={() => assignCartItem(drinkId, p.id, -1)}>−</button>
-          </span>
-        ))}
-      </div>
-    ) : null
-
-    const panel = (
-      <div style={{ marginTop: 6, border: "1px solid rgba(120,95,20,0.18)", borderRadius: 12, background: "#fff", overflow: "hidden" }}>
-        {gold && (
-          <button onClick={() => { setLastAddedDrinkIds((cur) => cur.filter((x) => x !== drinkId)); setOpenAssignFor(null) }}
-            style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: "1px solid rgba(0,0,0,0.06)", padding: "9px 12px", fontSize: 13, color: "#a89a6a", cursor: "pointer" }}>
-            ? later toewijzen
-          </button>
-        )}
-        {sortedPeople.map((p) => {
-          const q = line.assignments[p.id] ?? 0
-          const canAdd = unassigned > 0
-          const elsewhere = assignedAnywhere.has(p.id) && q === 0
-          return (
-            <div key={p.id} style={{ display: "flex", alignItems: "center", borderTop: "1px solid rgba(150,110,20,0.05)" }}>
-              <button onClick={() => { if (canAdd) { assignCartItem(drinkId, p.id, 1); if (unassigned === 1) setOpenAssignFor(null) } }} disabled={!canAdd && q === 0}
-                style={{ flex: 1, textAlign: "left", background: q > 0 ? "rgba(214,158,20,0.06)" : "none", border: "none", padding: "10px 12px", fontSize: 13.5, fontWeight: q > 0 ? 800 : 600, color: canAdd || q > 0 ? "#4a3f1e" : "#bbb", cursor: canAdd ? "pointer" : "default", display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ flex: 1, display: "inline-flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
-                  <span>{pName(p.name, lang)}</span>
-                  {elsewhere && <span style={{ fontSize: 10.5, color: "#b3a476", fontWeight: 600, whiteSpace: "nowrap" }}>{L.hasSomething}</span>}
-                </span>
-                {q > 0 && <span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 20, textAlign: "center", padding: "1px 7px", fontSize: 12, fontWeight: 800 }}>{q}</span>}
-                {canAdd && <span style={{ color: "#c8941a", fontWeight: 800, fontSize: 17, lineHeight: 1 }}>+</span>}
-              </button>
-              {q > 0 && (
-                <button onClick={() => assignCartItem(drinkId, p.id, -1)} style={{ ...S.iconBtn, width: 30, height: 30, margin: "0 8px", flexShrink: 0 }}>−</button>
-              )}
-            </div>
-          )
-        })}
-        {showEveryone && (
-          <button onClick={() => { assignToEveryone(drinkId); setOpenAssignFor(null) }}
-            style={{ display: "block", width: "100%", textAlign: "left", background: "rgba(233,196,95,0.12)", border: "none", borderTop: "1px solid rgba(0,0,0,0.06)", padding: "10px 12px", fontSize: 13, fontWeight: 700, color: "#a06b00", cursor: "pointer" }}>
-            {L.everyoneEach1}
-          </button>
-        )}
-      </div>
-    )
-
-    const trigger = (
-      <button onClick={() => setOpenAssignFor(isOpen ? null : drinkId)}
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 13, fontWeight: unassigned > 0 ? 700 : 600, cursor: "pointer", color: unassigned > 0 ? "#e0685c" : "#1f8a4c", background: gold ? "#fffdf6" : "#fff", border: gold ? "1.5px solid #ecc85a" : "1px solid rgba(120,95,20,0.18)", borderRadius: 10, padding: "9px 12px" }}>
-        <span>{unassigned > 0 ? L.forWhom : L.allAssignedChip}</span>
-        <span style={{ color: "#aaa" }}>{isOpen ? "▾" : "▸"}</span>
-      </button>
-    )
-
-    if (variant === "full") {
-      return (
-        <div style={{ marginTop: 10 }}>
-          {trigger}
-          {isOpen ? panel : assignedChips}
-        </div>
-      )
-    }
-
-    if (!isOpen) {
-      return (
-        <div style={{ marginTop: 8 }}>
-          <button
-            onClick={() => setOpenAssignFor(drinkId)}
-            style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, width: "100%", textAlign: "left", background: "none", border: "none", padding: 0, cursor: "pointer" }}
-          >
-            {assignedEntries.map(({ p, q }) => (
-              <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#4a3f1e", fontWeight: 600, background: "rgba(120,95,20,0.06)", borderRadius: 20, padding: "2px 8px 2px 10px" }}>{pName(p.name, lang)}<span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 18, textAlign: "center", padding: "1px 6px", fontSize: 11, fontWeight: 800 }}>×{q}</span></span>
-            ))}
-            {unassigned > 0 && (
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#e0685c", background: "rgba(120,95,20,0.05)", borderRadius: 20, padding: "3px 12px" }}>{L.nToAssignBadge(unassigned)}</span>
-            )}
-            {unassigned <= 0 && assignedEntries.length > 0 && (
-              <span style={{ fontSize: 11, color: "#aaa" }}>{L.editChip}</span>
-            )}
-          </button>
-        </div>
-      )
-    }
-    return (
-      <div style={{ marginTop: 8 }}>
-        <div style={{ fontSize: 11, color: "#8a7d55", fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>
-          {L.assignHeader}{unassigned > 0 ? <> — <span style={{ color: "#e0685c" }}>{unassigned} {L.openWord}</span></> : " ✓"}
-        </div>
-        {panel}
-        <button
-          onClick={() => setOpenAssignFor(null)}
-          style={{ marginTop: 7, width: "100%", background: "rgba(120,95,20,0.04)", border: "1px solid rgba(120,95,20,0.08)", color: "#8a7d55", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 10, padding: "8px 0" }}
-        >
-          {L.closeBtn}
-        </button>
-      </div>
-    )
-  }
-
-  // Toewijs-control voor het afrekenscherm
-  const renderBillAssign = (drink: Drink) => {
-    if (participants.length === 0) return null
-    const perPerson: Record<string, number> = {}
-    let anonymousQty = 0
-    orders.forEach((o) => {
-      if (o.drink_id !== drink.id) return
-      if (o.participant_id) perPerson[o.participant_id] = (perPerson[o.participant_id] ?? 0) + o.quantity
-      else anonymousQty += o.quantity
-    })
-    const isOpen = openBillAssignFor === drink.id
-    const canAdd = anonymousQty > 0
-    const showEveryone = anonymousQty === participants.length && participants.length > 0
-    const wasOriginallyUnassigned = billOriginallyUnassigned.has(drink.id)
-
-    if (anonymousQty === 0 && !wasOriginallyUnassigned) return null
-
-    const trigger = anonymousQty > 0 ? (
-      <button onClick={() => setOpenBillAssignFor(isOpen ? null : drink.id)}
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#e0685c", background: "rgba(224,107,94,0.06)", border: "1px solid rgba(224,107,94,0.4)", borderRadius: 10, padding: "7px 10px" }}>
-        <span>{L.assignTriggerText(anonymousQty)}</span>
-        <span style={{ color: "#aaa" }}>{isOpen ? "▾" : "▸"}</span>
-      </button>
-    ) : (
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button onClick={() => setOpenBillAssignFor(isOpen ? null : drink.id)} title={L.titleChangeAssign}
-          style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 12, background: isOpen ? "rgba(214,158,20,0.16)" : "rgba(120,95,20,0.05)" }}>
-          {isOpen ? "▲" : "▼"}
-        </button>
-      </div>
-    )
-    const panel = isOpen ? (
-      <div style={{ marginTop: 6, border: "1px solid rgba(120,95,20,0.18)", borderRadius: 12, background: "#fff", overflow: "hidden" }}>
-        {participants.map((p) => {
-          const q = perPerson[p.id] ?? 0
-          return (
-            <div key={p.id} style={{ display: "flex", alignItems: "center", borderTop: "1px solid rgba(150,110,20,0.05)" }}>
-              <button onClick={() => { if (canAdd) { assignOneAnonymous(drink.id, p.id); if (anonymousQty === 1) setOpenBillAssignFor(null) } }} disabled={!canAdd && q === 0}
-                style={{ flex: 1, textAlign: "left", background: q > 0 ? "rgba(214,158,20,0.06)" : "none", border: "none", padding: "10px 12px", fontSize: 13.5, fontWeight: q > 0 ? 800 : 600, color: canAdd || q > 0 ? "#4a3f1e" : "#bbb", cursor: canAdd ? "pointer" : "default", display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ flex: 1 }}>{pName(p.name, lang)}</span>
-                {q > 0 && <span style={{ background: "#a6790f", color: "#fff", borderRadius: 20, minWidth: 20, textAlign: "center", padding: "1px 7px", fontSize: 12, fontWeight: 800 }}>{q}</span>}
-                {canAdd && <span style={{ color: "#c8941a", fontWeight: 800, fontSize: 17, lineHeight: 1 }}>+</span>}
-              </button>
-              {q > 0 && (
-                <button onClick={() => unassignOneFromPerson(drink.id, p.id)} style={{ ...S.iconBtn, width: 30, height: 30, margin: "0 8px", flexShrink: 0 }}>−</button>
-              )}
-            </div>
-          )
-        })}
-        {showEveryone && (
-          <button onClick={() => { assignAnonymousToMany(drink.id, participants.map((p) => p.id)); setOpenBillAssignFor(null) }}
-            style={{ display: "block", width: "100%", textAlign: "left", background: "rgba(233,196,95,0.12)", border: "none", borderTop: "1px solid rgba(0,0,0,0.06)", padding: "10px 12px", fontSize: 13, fontWeight: 700, color: "#a06b00", cursor: "pointer" }}>
-            {L.everyoneEach1}
-          </button>
-        )}
-      </div>
-    ) : null
-
-    return (
-      <div style={{ marginTop: 8 }}>
-        {trigger}
-        {panel}
-      </div>
-    )
-  }
-
-  const sessions = Array.from(new Set(orders.map((o) => o.session).filter((n) => n >= 1))).sort((a, b) => a - b)
-  const nextSession = (sessions.length > 0 ? Math.max(...sessions) : 0) + 1
-  // Toon rondjes altijd doorlopend (1, 2, 3—) op basis van hun VOLGORDE, los van het interne
-  // sessienummer. Zo blijft de nummering netjes ook na het verwijderen van een rondje (geen gaten),
-  // zonder dat we in de database moeten hernummeren.
-  const roundLabel = (s: number) => { const i = sessions.indexOf(s); return i >= 0 ? i + 1 : sessions.length + 1 }
-  const nextRoundLabel = sessions.length + 1 // het rondje dat je nu aan het samenstellen bent
-
-  const [finishedRoundSnapshot, setFinishedRoundSnapshot] = useState<{ session: number; cart: Record<string, CartLine> } | null>(null)
-  const [barmanStep, setBarmanStep] = useState<"list" | "pay">("list")
-  const [payWarn, setPayWarn] = useState(false)
-
-  const finishRound = async () => {
-    if (!group || cartTotalItems === 0) { setToast(L.toastAddDrinksFirst); return }
-    const newRoundSession = nextSession
-    // Alle rijen in één keer opbouwen en met ÉÉN insert wegschrijven ? alles-of-niets,
-    // geen half rondje meer als de tab sluit of het netwerk hapert.
-    const rows: { participant_id: string | null; drink_id: string; quantity: number; group_id: string; session: number }[] = []
-    for (const [drinkId, line] of Object.entries(cart)) {
-      const assignedSum = Object.values(line.assignments).reduce((s, q) => s + q, 0)
-      for (const [participantId, qty] of Object.entries(line.assignments)) {
-        if (qty <= 0) continue
-        rows.push({ participant_id: participantId, drink_id: drinkId, quantity: qty, group_id: group.id, session: newRoundSession })
-      }
-      const remaining = line.total - assignedSum
-      if (remaining > 0) {
-        rows.push({ participant_id: null, drink_id: drinkId, quantity: remaining, group_id: group.id, session: newRoundSession })
+    for (const p of people) {
+      const isNieuwePersoon = !knownPeople.current.has(p.id)
+      const netGeclaimd = !!p.claimedBy && !claimedSeats.current.has(p.id)
+      knownPeople.current.add(p.id)
+      if (p.claimedBy) claimedSeats.current.add(p.id)
+      // Meld wie zich aanmeldt: een nieuwe persoon met een claim, óf een bestaande
+      // plaats die net geclaimd werd. Niet mezelf.
+      if (p.id !== meId && p.claimedBy && (isNieuwePersoon || netGeclaimd)) {
+        setNewcomer({ id: p.id, name: p.name })
+        setTimeout(() => setNewcomer((c) => (c && c.id === p.id ? null : c)), 7000)
       }
     }
-    if (rows.length > 0) {
-      const { error } = await supabase.from("orders").insert(rows)
-      if (error) { setError(L.errSaveRound); return }
+  }, [people, meId])
+
+  const removePerson = (id: string) => { const pp = people.find((x) => x.id === id); if (personHasDrinks(id)) { setNotice(L.personHasDrinks(pp?.name || L.thisPerson)); return } supabase.from("party_people").delete().eq("id", id).then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message) }) }
+  const removeLastPerson = () => { const last = people[people.length - 1]; if (!last) return; removePerson(last.id) }
+
+  // ── Laden & live houden ─────────────────────────────────────────────────────
+  // Eén select per tabel, enkel de kolommen die we tonen. Zelfde aanpak als Table:
+  // realtime doet het echte werk, met een afkoelperiode zodat een reeks tikken
+  // (iedereen bestelt tegelijk) niet tientallen herladingen uitlokt.
+  const loadParty = useCallback(async (gid: string) => {
+    const [{ data: g }, { data: pp }, { data: rr }, { data: ii }, { data: pt }] = await Promise.all([
+      supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices,settle").eq("id", gid).single(),
+      supabase.from("party_people").select("id,seat,name,claimed_by,self_joined,settle_with").eq("group_id", gid).order("seat"),
+      supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back,members,started_by,proposal").eq("group_id", gid).order("seq"),
+      supabase.from("party_round_items").select("round_id,person_id,drink_key,qty").eq("group_id", gid),
+      supabase.from("party_pot").select("id,seq,amounts,is_card,card_payers").eq("group_id", gid).order("seq"),
+    ])
+    if (!mounted.current) return
+    if (g) {
+      setGroupName(g.name || "")
+      setInviteCode(g.invite_code)
+      setOwnerDevice(g.owner_id)
+      setPay(g.pay as "eur" | "coin")
+      setCoinValue(Number(g.coin_value))
+      setDepositOn(!!g.deposit_on)
+      setDepositValue(Number(g.deposit_value))
+      setDepositUnit(g.deposit_unit as "eur" | "coin")
+      setPotIsCard(!!g.pot_is_card)
+      setSettle(g.settle !== false)
+      setCustomDrinks(((g.custom_drinks ?? []) as Custom[]))
+      setCoinPrices(((g.coin_prices ?? {}) as Record<string, number>))
     }
-    await reloadTable(group.id, "orders")
-    setBarmanStep("list")
-    setFinishedRoundSnapshot({ session: newRoundSession, cart })
-    setCart({})
-    setLastAddedDrinkIds([])
-    setOrderEditing(false)
-    setSession(newRoundSession)
-  }
+    // Lege naam = vrije plaats. In de UI heet die "Gast N", zodat de bestaande
+    // placeholder-logica ongemoeid blijft.
+    setPeople((pp || []).map((r) => ({
+      id: r.id, seat: r.seat,
+      // named = de admin (of de gast zelf) gaf een echte naam. Een naamloze plaats
+      // heet "Gast N", zodat de bestaande placeholder-logica blijft werken.
+      named: !!(r.name || "").trim(),
+      name: (r.name || "").trim() || `Gast ${r.seat}`,
+      claimedBy: r.claimed_by, selfJoined: !!r.self_joined,
+      settleWith: r.settle_with,
+    })))
 
-  const adjustFinishedRound = async () => {
-    if (!group || !finishedRoundSnapshot) return
-    const round = finishedRoundSnapshot.session
-    const restoreCart = finishedRoundSnapshot.cart
-    await supabase.from("orders").delete().eq("group_id", group.id).eq("session", round)
-    await supabase.from("payments").delete().eq("group_id", group.id).eq("session", round)
-    setCart(restoreCart)
-    setLastAddedDrinkIds(Object.keys(restoreCart))
-    setPaymentDraft({})
-    setFinishedRoundSnapshot(null)
-    await loadAll(group.id)
-    setView("ordering")
-  }
-
-  // ─── Voice quick order ────────────
-  const startQuickVoice = () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const w = window as any
-    const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition
-    if (!SR) { setToast(L.voiceNotSupported); return }
-    const recog = new SR()
-    recog.lang = "nl-BE"
-    recog.interimResults = false
-    recog.maxAlternatives = 1
-    quickRecogRef.current = recog
-    recog.onstart = () => { setQuickVoiceActive(true); setVoiceSuggestion(null) }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    recog.onresult = (e: any) => {
-      const text = e.results[0][0].transcript
-      const { recognized, suggestion } = parseSpokenDrinks(text, drinks)
-
-      const addedIds: string[] = []
-      recognized.forEach((pd) => {
-        const match = fuzzyMatchDrink(pd.name, drinks)
-        if (match) { addToCart(match.id, pd.qty, false); addedIds.push(match.id) }
-      })
-      if (addedIds.length > 0) { setLastAddedDrinkIds(addedIds); setLastAddedViaVoice(true) }
-
-      if (recognized.length > 0) {
-        setToast(`${L.toastAddedPre}${recognized.map((d) => `${d.qty}× ${drinkName(d.name, lang)}`).join(", ")}`)
-      }
-
-      if (suggestion) {
-        setVoiceSuggestion({ spokenText: text, qty: suggestion.qty, suggested: suggestion.drink })
-      } else if (recognized.length === 0) {
-        setToast(L.voiceNotRecognized)
-      }
-
-      setQuickVoiceActive(false)
-    }
-    recog.onerror = () => setQuickVoiceActive(false)
-    recog.onend = () => setQuickVoiceActive(false)
-    recog.start()
-  }
-
-  const stopQuickVoice = () => { quickRecogRef.current?.stop(); setQuickVoiceActive(false) }
-
-  const acceptVoiceSuggestion = () => {
-    if (!voiceSuggestion) return
-    addToCart(voiceSuggestion.suggested.id, voiceSuggestion.qty)
-    setLastAddedDrinkIds([voiceSuggestion.suggested.id])
-    setLastAddedViaVoice(true)
-    setToast(`${voiceSuggestion.qty}× ${voiceSuggestion.suggested.name} toegevoegd`)
-    setVoiceSuggestion(null)
-  }
-
-  const dismissVoiceSuggestion = () => setVoiceSuggestion(null)
-
-  // ─── Round editing (assign drinks to people after the fact) ────────────
-  const getRoundGrouped = (r: number) => {
-    const map: Record<string, { drink: Drink; totalQty: number; anonymous: number; people: Record<string, { name: string; qty: number }> }> = {}
-    orders.filter((o) => o.session === r).forEach((o) => {
-      const d = drinks.find((dr) => dr.id === o.drink_id)
-      if (!d) return
-      if (!map[d.id]) map[d.id] = { drink: d, totalQty: 0, anonymous: 0, people: {} }
-      map[d.id].totalQty += o.quantity
-      if (!o.participant_id) { map[d.id].anonymous += o.quantity; return }
-      const p = participants.find((pa) => pa.id === o.participant_id)
-      if (!p) return
-      if (!map[d.id].people[p.id]) map[d.id].people[p.id] = { name: p.name, qty: 0 }
-      map[d.id].people[p.id].qty += o.quantity
-    })
-    return map
-  }
-
-  const getRoundTotal = (r: number) =>
-    orders.filter((o) => o.session === r).reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
-
-  const assignAnonymousQty = async (drinkId: string, round: number, participantId: string, qty: number) => {
-    if (!group || qty <= 0) return
-    const anon = orders.find((o) => !o.participant_id && o.drink_id === drinkId && o.session === round)
-    if (!anon || anon.quantity < qty) return
-    const remaining = anon.quantity - qty
-    if (remaining <= 0) await supabase.from("orders").delete().eq("id", anon.id)
-    else await supabase.from("orders").update({ quantity: remaining }).eq("id", anon.id)
-
-    const existing = orders.find((o) => o.participant_id === participantId && o.drink_id === drinkId && o.session === round)
-    if (existing) await supabase.from("orders").update({ quantity: existing.quantity + qty }).eq("id", existing.id)
-    else await supabase.from("orders").insert([{ participant_id: participantId, drink_id: drinkId, quantity: qty, group_id: group.id, session: round }])
-
-    await reloadTable(group.id, "orders")
-  }
-
-  const assignOneAnonymous = async (drinkId: string, participantId: string) => {
-    const anon = orders.find((o) => !o.participant_id && o.drink_id === drinkId && o.quantity > 0)
-    if (!anon) return
-    await assignAnonymousQty(drinkId, anon.session, participantId, 1)
-  }
-
-  const assignAnonymousToMany = async (drinkId: string, participantIds: string[]) => {
-    if (!group || participantIds.length === 0) return
-    const units: number[] = []
-    orders.filter((o) => !o.participant_id && o.drink_id === drinkId && o.quantity > 0).forEach((o) => { for (let i = 0; i < o.quantity; i++) units.push(o.session) })
-    const take = Math.min(participantIds.length, units.length)
-    if (take === 0) return
-    const removeBySession: Record<number, number> = {}
-    const adds: { session: number; pid: string; qty: number }[] = []
-    const addIndex: Record<string, number> = {}
-    for (let i = 0; i < take; i++) {
-      const session = units[i]
-      const pid = participantIds[i]
-      removeBySession[session] = (removeBySession[session] ?? 0) + 1
-      const k = `${session}__${pid}`
-      if (addIndex[k] === undefined) { addIndex[k] = adds.length; adds.push({ session, pid, qty: 0 }) }
-      adds[addIndex[k]].qty += 1
-    }
-    for (const [sessStr, removeQty] of Object.entries(removeBySession)) {
-      let toRemove = removeQty
-      const sess = Number(sessStr)
-      for (const anon of orders.filter((o) => !o.participant_id && o.drink_id === drinkId && o.session === sess && o.quantity > 0)) {
-        if (toRemove <= 0) break
-        const dec = Math.min(toRemove, anon.quantity)
-        const remaining = anon.quantity - dec
-        if (remaining <= 0) await supabase.from("orders").delete().eq("id", anon.id)
-        else await supabase.from("orders").update({ quantity: remaining }).eq("id", anon.id)
-        toRemove -= dec
+    // Drankjes per rondje uitsorteren: toegewezen in `orders`, de rest in `anon`.
+    const perRound: Record<string, { orders: Assign; anon: Anon }> = {}
+    for (const it of ii || []) {
+      const b = (perRound[it.round_id] ??= { orders: {}, anon: {} })
+      if (it.person_id) {
+        (b.orders[it.drink_key] ??= {})[it.person_id] = it.qty
+      } else {
+        b.anon[it.drink_key] = it.qty
       }
     }
-    for (const { session, pid, qty } of adds) {
-      const existing = orders.find((o) => o.participant_id === pid && o.drink_id === drinkId && o.session === session)
-      if (existing) await supabase.from("orders").update({ quantity: existing.quantity + qty }).eq("id", existing.id)
-      else await supabase.from("orders").insert([{ participant_id: pid, drink_id: drinkId, quantity: qty, group_id: group.id, session }])
-    }
-    await reloadTable(group.id, "orders")
-  }
 
-  const unassignOneFromPerson = async (drinkId: string, participantId: string) => {
-    const ord = orders.find((o) => o.participant_id === participantId && o.drink_id === drinkId && o.quantity > 0)
-    if (!ord) return
-    await unassignOrderQty(drinkId, participantId, ord.session, 1)
-  }
+    const alle = (rr || []).map((r) => ({
+      id: r.id as string, seq: r.seq as number, status: r.status as "open" | "pending" | "closed",
+      orders: perRound[r.id]?.orders ?? {}, anon: perRound[r.id]?.anon ?? {},
+      payers: (r.payers ?? {}) as Record<string, number>,
+      amount: Number(r.amount ?? 0), potPart: Number(r.pot_part ?? 0),
+      gaveBack: (r.gave_back ?? {}) as Record<string, number>,
+      members: ((r.members ?? []) as string[]),
+      startedBy: (r.started_by ?? null) as string | null,
+      proposal: ((r.proposal ?? {}) as Proposal),
+    }))
 
-  const unassignOrderQty = async (drinkId: string, participantId: string, round: number, qty: number) => {
-    if (!group || qty <= 0) return
-    const personOrder = orders.find((o) => o.participant_id === participantId && o.drink_id === drinkId && o.session === round)
-    if (!personOrder || personOrder.quantity <= 0) return
-    const move = Math.min(qty, personOrder.quantity)
-    const remaining = personOrder.quantity - move
-    if (remaining <= 0) await supabase.from("orders").delete().eq("id", personOrder.id)
-    else await supabase.from("orders").update({ quantity: remaining }).eq("id", personOrder.id)
-    const anon = orders.find((o) => !o.participant_id && o.drink_id === drinkId && o.session === round)
-    if (anon) await supabase.from("orders").update({ quantity: anon.quantity + move }).eq("id", anon.id)
-    else await supabase.from("orders").insert([{ participant_id: null, drink_id: drinkId, quantity: move, group_id: group.id, session: round }])
-    await reloadTable(group.id, "orders")
-  }
+    // Het OPEN rondje is de mand; de rest is historiek.
+    const open = alle.find((r) => r.status === "open") ?? null
+    setOpenRoundId(open?.id ?? null)
+    setStartedBy(open?.startedBy ?? null)
+    setCart(open?.orders ?? {})
+    setCartAnon(open?.anon ?? {})
+    // Bekerwerk dat al ingevuld was, blijft staan bij een refresh of op een tweede toestel.
+    if (open && Object.keys(open.gaveBack).length > 0) setGaveBackDraft(open.gaveBack)
+    const gedaan = alle.filter((r) => r.status !== "open")
+    setRounds(gedaan)
+    setRoundNr(open ? open.seq : Math.max(1, gedaan.length))
 
-  const deleteRound = async (round: number) => {
-    if (!group) return
-    setConfirmDialog({
-      title: L.confirmDeleteRoundTitle(roundLabel(round)),
-      message: L.confirmDeleteRoundMsg,
-      confirmLabel: L.deleteLabel,
-      danger: true,
-      onConfirm: async () => {
-        // Enkel deze ronde verwijderen; NIET hernummeren (zo blijft "Ronde 3" ook op een
-        // tweede toestel "Ronde 3" — er ontstaat gewoon een gaatje in de nummering).
-        await supabase.from("orders").delete().eq("group_id", group.id).eq("session", round)
-        await supabase.from("payments").delete().eq("group_id", group.id).eq("session", round)
-        await loadAll(group.id)
-        setOpenRounds(null)
-        setEditingRound(null)
-        setToast(`Ronde ${roundLabel(round)} verwijderd`)
-      },
-    })
-  }
+    setPotRounds((pt || []).map((r) => ({
+      id: r.id as string, seq: r.seq as number,
+      amounts: (r.amounts ?? {}) as Record<string, number>,
+    })))
+    const kaart = (pt || []).find((r) => r.is_card)
+    if (kaart) setCardPayers(((kaart.card_payers ?? []) as string[]))
+  }, [])
 
-  // ─── Payments ────────────
-  const openPaymentEditor = (round: number) => {
-    const existing = payments.filter((p) => p.session === round)
-    const draft: Record<string, string> = {}
-    existing.forEach((p) => {
-      const key = p.participant_id ?? POT_PAYER
-      if (key === POT_PAYER || participants.some((pp) => pp.id === key)) draft[key] = String(p.amount)
-    })
-    setPaymentDraft(draft)
-    setPaymentEditRound(round)
-  }
-
-  const savePayments = async () => {
-    if (!group || paymentEditRound === null) return
-    const round = paymentEditRound
-    await supabase.from("payments").delete().eq("group_id", group.id).eq("session", round)
-    const inserts = (Object.entries(paymentDraft) as [string, string][])
-      .filter(([key, amt]) => (key === POT_PAYER || participants.some((p) => p.id === key)) && parseFloat(amt) > 0)
-      .map(([key, amt]) => ({ group_id: group.id, session: round, participant_id: key === POT_PAYER ? null : key, amount: parseFloat(amt) }))
-    if (inserts.length > 0) await supabase.from("payments").insert(inserts)
-    await reloadTable(group.id, "payments")
-    setPaymentEditRound(null)
-    setToast("Betaling opgeslagen")
-  }
-
-  const getRoundPayments = (round: number) => payments.filter((p) => p.session === round)
-  const getRoundPaymentTotal = (round: number) => getRoundPayments(round).reduce((s, p) => s + p.amount, 0)
-
-  // ─── Pot (gezamenlijke inleg vooraf, sessie 0) ────────────
-  const POT_SESSION = 0
-  const POT_PAYER = "__POT__"
-  const potTotal = payments.filter((p) => p.session === POT_SESSION).reduce((s, p) => s + p.amount, 0)
-
-  const openPotModal = () => {
-    const draft: Record<string, string> = {}
-    payments.filter((p) => p.session === POT_SESSION).forEach((p) => { if (p.participant_id) draft[p.participant_id] = String(p.amount) })
-    setPotDraft(draft)
-    setPotWarn(false)
-    setShowPotModal(true)
-  }
-
-  const setPotForEveryone = () => {
-    setPotWarn(false)
-    const amt = potBulk.trim()
-    const draft: Record<string, string> = {}
-    participants.forEach((p) => { draft[p.id] = amt })
-    setPotDraft(draft)
-  }
-
-  const savePot = async () => {
-    if (!group) return
-    const inserts = (Object.entries(potDraft) as [string, string][])
-      .map(([participantId, amt]) => ({ participantId, euro: Math.round(parseFloat(String(amt).replace(",", ".")) || 0) }))
-      .filter(({ participantId, euro }) => participants.some((p) => p.id === participantId) && euro > 0)
-      .map(({ participantId, euro }) => ({ group_id: group.id, session: POT_SESSION, participant_id: participantId, amount: euro }))
-    if (inserts.length === 0) { setPotWarn(true); return }
-    await supabase.from("payments").delete().eq("group_id", group.id).eq("session", POT_SESSION)
-    await supabase.from("payments").insert(inserts)
-    await reloadTable(group.id, "payments")
-    setPotWarn(false)
-    setShowPotModal(false)
-    setToast(L.toastPotSaved)
-  }
-
-  const addToPot = async () => {
-    if (!group) return
-    let rows = (Object.entries(potAddDraft) as [string, string][])
-      .map(([pid, v]) => ({ participant_id: pid, amount: Math.round(parseFloat((v || "").replace(",", ".")) || 0) }))
-      .filter((r) => participants.some((p) => p.id === r.participant_id) && !isNaN(r.amount) && r.amount > 0)
-    if (rows.length === 0) {
-      const amt = Math.round(parseFloat((potAddBulk || "").replace(",", ".")) || 0)
-      if (isNaN(amt) || amt <= 0 || participants.length === 0) { setPotAddWarn(true); setToast(L.toastPotAmountFirst); return }
-      rows = participants.map((p) => ({ participant_id: p.id, amount: amt }))
-    }
-    const inserts = rows.map((r) => ({ group_id: group.id, session: POT_SESSION, participant_id: r.participant_id, amount: r.amount }))
-    const { error } = await supabase.from("payments").insert(inserts)
-    if (error) { setError(L.errTopUpPot); return }
-    setPotAddDraft({})
-    setPotAddBulk("")
-    setPotAddWarn(false)
-    await reloadTable(group.id, "payments")
-    const tot = inserts.reduce((s, r) => s + r.amount, 0)
-    const usedNow = payments.filter((p) => p.session >= 1 && !p.participant_id).reduce((s, p) => s + p.amount, 0)
-    const newTotal = potTotal + tot
-    const leftNow = Math.max(0, newTotal - usedNow)
-    setToast(`🫙 €${tot.toFixed(2)} toegevoegd — €${leftNow.toFixed(2)} nog in pot — €${usedNow.toFixed(2)} gebruikt`)
-    setShowPotOverview(false)
-  }
-
-  const deletePotContribution = async (id: string) => {
-    if (!group) return
-    const { error } = await supabase.from("payments").delete().eq("id", id)
-    if (error) { setError("Verwijderen mislukt"); return }
-    await reloadTable(group.id, "payments")
-  }
-
-  // ─── Drink CRUD ────────────
-  const addDrink = async () => {
-    const { name, price } = newDrink
-    const priceNum = parseFloat((price || "").replace(",", "."))
-    if (!name.trim()) { setAddDrinkWarn(L.warnNameFirst); return }
-    if (!price || isNaN(priceNum) || priceNum <= 0) { setAddDrinkWarn(L.warnPriceRequired); return }
-    setAddDrinkWarn(null)
-    const cat = "Eigen"
-    const autoEmoji = "⭐"
-    // Eigen drank hoort enkel bij DEZE groep (group_id), niet bij andere groepen.
-    const { data, error } = await supabase.from("drinks").insert([{ name: name.trim(), price: priceNum, emoji: autoEmoji, category: cat, group_id: group?.id ?? null, owner_id: getOrCreateOwnerId() }]).select().single()
-    if (error) { setError("Drank toevoegen mislukt: " + error.message); return }
-    setNewDrink({ name: "", price: "", emoji: "", category: newDrink.category })
-    setToast(`${name} toegevoegd`)
-    await loadDrinks()
-    if (showDrinkSelector) {
-      setActiveCategory(catLabel(cat, lang))
-      setLastAddedCustomDrink({ name: name.trim(), category: cat })
-    } else if (data?.id) {
-      addToCart(data.id, 1)
-      setLastAddedDrinkIds([data.id])
-      setLastAddedViaVoice(true) // enkel drankje ? 'Laatst toegevoegd'-kaart mag
-    }
-    setShowAddDrink(false)
-  }
-
-  const saveEditedDrink = async () => {
-    if (!editingDrink) return
-    if (editingDrink.group_id) {
-      // Eigen drank/aanpassing van deze groep ? gewoon bijwerken.
-      const { error } = await supabase.from("drinks").update({ name: editingDrink.name, price: editingDrink.price, emoji: editingDrink.emoji, category: editingDrink.category }).eq("id", editingDrink.id)
-      if (error) { setError("Drank opslaan mislukt"); return }
-    } else {
-      // Basisdrank aanpassen ? NIET de globale drank wijzigen (dat zou andere groepen raken),
-      // maar een eigen versie voor deze groep aanmaken die de basisdrank hier vervangt.
-      const { error } = await supabase.from("drinks").insert([{ name: editingDrink.name, price: editingDrink.price, emoji: editingDrink.emoji, category: editingDrink.category, group_id: group?.id ?? null, owner_id: getOrCreateOwnerId() }])
-      if (error) { setError("Drank opslaan mislukt"); return }
-    }
-    setEditingDrink(null)
-    await loadDrinks()
-  }
-
-  // ? = zelf toegevoegde drank. group_id gezet = hoort bij deze groep (eigen drank of aanpassing).
-  const isGroupDrink = (d: Drink) => !!d.group_id
-
-  const deleteDrinkFromList = async (id: string) => {
-    const d = drinks.find((dr) => dr.id === id)
-    if (d && !isGroupDrink(d)) { setToast(L.toastBaseDrinkNoDelete); return }
-    setConfirmDialog({
-      title: L.confirmDeleteDrinkTitle,
-      message: d ? L.confirmDeleteDrinkMsg(d.name) : L.confirmDeleteDrinkMsgFallback,
-      confirmLabel: L.deleteLabel,
-      danger: true,
-      onConfirm: async () => {
-        const { error } = await supabase.from("drinks").delete().eq("id", id)
-        if (error) { setError("Drank verwijderen mislukt"); return }
-        await loadDrinks()
-      },
-    })
-  }
-
-  // ─── Computed totals ────────────
-  const getGlobalTotal = () => orders.reduce((sum, o) => sum + (drinks.find((d) => d.id === o.drink_id)?.price || 0) * o.quantity, 0)
-
-  // Voor de keuzelijsten/bewerken: als deze groep een eigen versie van een drank heeft
-  // (zelfde naam), toon dan die i.p.v. de basisdrank. De volledige `drinks` blijft wél
-  // bestaan zodat oude bestellingen (die naar de basisdrank verwijzen) herkend blijven.
-  const visibleDrinks = (() => {
-    const groupRows = drinks.filter((d) => d.group_id)
-    const shadowed = new Set(groupRows.map((d) => normalizeDrinkName(d.name)))
-    const baseRows = drinks.filter((d) => !d.group_id && !shadowed.has(normalizeDrinkName(d.name)))
-    return [...baseRows, ...groupRows]
-  })()
-  const groupedDrinks = groupDrinksByCategory(visibleDrinks, lang)
-  const bill = calculateBill(participants, orders, drinks, payments)
-  // Fair split = de ÉCHT betaalde rondebedragen, verdeeld naar wat elk dronk (of gelijk bij 'iedereen evenveel').
-  // De inleg die niet gebruikt werd, komt terug via de virtuele "de pot".
-  const fairSplit = calculateFairSplit(bill.lines, bill.totalActuallySpent, bill.anonymousValue, splitMode)
-  const settledDebts = settleDebts(fairSplit, bill.totalActuallySpent - bill.totalPaid)
-  // Zuivere Fair Split én zuivere gelijke verdeling (los van de actieve modus),
-  // zodat we altijd de andere optie ernaast kunnen vergelijken.
-  const fairRows = calculateFairSplit(bill.lines, bill.totalActuallySpent, bill.anonymousValue, "fair")
-  const fairSettled = settleDebts(fairRows, bill.totalActuallySpent - bill.totalPaid)
-  const equalRows = calculateFairSplit(bill.lines, bill.totalActuallySpent, bill.anonymousValue, "equal")
-  const equalSettled = settleDebts(equalRows, bill.totalActuallySpent - bill.totalPaid)
-  // Kan er wel een verdeling gemaakt worden?
-  //  - er moet echt iets betaald zijn voor rondes, EN
-  //  - er mag geen enkel rondje onbetaald zijn (anders klopt het totaal niet — ook niet bij 'iedereen evenveel'), EN
-  //  - voor Fair Split mag er bovendien geen enkel drankje niet-toegewezen zijn.
-  const unpaidRounds = sessions.filter((s) => getRoundPaymentTotal(s) <= 0.01)
-  const hasUnassignedDrinks = orders.some((o) => !o.participant_id && o.quantity > 0)
-  const allRoundsPaid = sessions.length > 0 && unpaidRounds.length === 0
-  const canSplit = bill.totalActuallySpent > 0.01 && allRoundsPaid        // 'iedereen evenveel' mag zodra alles betaald is
-  const canFairSplit = canSplit && !hasUnassignedDrinks                    // Fair Split vereist bovendien: alles toegewezen
-
-  // Zodra de verdeling niet (meer) mag (onbetaald rondje, of Fair Split met niet-toegewezen
-  // drankjes), verbergen we een eventueel al getoonde verdeling automatisch.
   useEffect(() => {
-    if (!canSplit || (splitMode === "fair" && !canFairSplit)) {
-      setShowBillPrices(false)
-      setShowFairSplit(false)
-      setCompareOther(false)
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
+
+  // Binnenkomen. Twee wegen:
+  //   ?code=XXXXXX  -> een gast opent de uitnodiging
+  //   geen code     -> de admin ververste of kwam terug. Zonder dit is hij bij een
+  //                    simpele refresh zijn groep kwijt.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("code")
+    const vorige = typeof window !== "undefined" ? localStorage.getItem("rundo_party_group") : null
+    ;(async () => {
+      if (code) {
+        const { data, error } = await supabase.from("party_groups").select("id").eq("invite_code", code.toUpperCase()).maybeSingle()
+        if (error || !data) { setNotice(L.badCode); setBooting(false); return }
+        setGroupId(data.id)
+        await loadParty(data.id)
+        setBooting(false)
+        return
+      }
+      if (vorige) {
+        const { data } = await supabase.from("party_groups").select("id").eq("id", vorige).maybeSingle()
+        if (data) {
+          setGroupId(data.id)
+          await loadParty(data.id)
+          setView("setup")
+          setBooting(false)
+          return
+        }
+        localStorage.removeItem("rundo_party_group") // groep opgeruimd of gewist
+      }
+      setBooting(false)
+    })()
+  }, [loadParty])
+
+  // Realtime, met twee zuinigheidsmaatregelen — een feest van 8 mensen met telefoons
+  // in de broekzak mag geen quota opeten.
+  //
+  //  1. AFKOELEN: het eerste seintje halen we meteen op (voelt instant), daarna
+  //     bundelen we 600 ms. Terwijl iedereen zit te tikken zou elke telefoon anders
+  //     tientallen keren per minuut de hele groep herladen.
+  //
+  //  2. SLAAPSTAND: ligt de telefoon in de zak (tab verborgen), dan sluiten we het
+  //     kanaal na 2 minuten. Bij terugkeer heropenen we en halen we één keer alles op.
+  //     Zonder dit blijven acht slapende telefoons de hele avond meeluisteren.
+  useEffect(() => {
+    if (!groupId) return
+    let active = true, cooling = false, pending = false
+    let cool: ReturnType<typeof setTimeout> | null = null
+    let slaap: ReturnType<typeof setTimeout> | null = null
+    let ch: ReturnType<typeof supabase.channel> | null = null
+
+    const reload = () => {
+      if (!active) return
+      if (cooling) { pending = true; return }
+      cooling = true
+      loadParty(groupId)
+      cool = setTimeout(() => { cooling = false; if (pending) { pending = false; reload() } }, 600)
     }
-    if (!canFairSplit) setCompareOther(false) // fair-vergelijking kan niet met niet-toegewezen drankjes
-  }, [canSplit, canFairSplit, splitMode])
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // RENDER: Start screen (no group yet)
-  // ═══════════════════════════════════════════════════════════════════════
-  if (!group) {
-    const filteredSaved = savedGroups.filter((g) => g.name.toLowerCase().includes(savedSearch.toLowerCase()))
+    const open = () => {
+      if (ch) return
+      ch = maakKanaal()
+    }
+    const sluit = () => {
+      if (!ch) return
+      supabase.removeChannel(ch)
+      ch = null
+    }
+    const zichtbaar = () => {
+      if (slaap) { clearTimeout(slaap); slaap = null }
+      if (document.visibilityState === "visible") {
+        open()
+        reload()            // bijwerken wat we misten terwijl we sliepen
+      } else {
+        slaap = setTimeout(sluit, 120000)
+      }
+    }
+    document.addEventListener("visibilitychange", zichtbaar)
+
+    const maakKanaal = () => {
+      const c = supabase.channel(`party-${groupId}`)
+      c.on("postgres_changes", { event: "*", schema: "public", table: "party_groups", filter: `id=eq.${groupId}` }, reload)
+      c.on("postgres_changes", { event: "*", schema: "public", table: "party_people", filter: `group_id=eq.${groupId}` }, reload)
+      c.on("postgres_changes", { event: "*", schema: "public", table: "party_rounds", filter: `group_id=eq.${groupId}` }, reload)
+      c.on("postgres_changes", { event: "*", schema: "public", table: "party_round_items", filter: `group_id=eq.${groupId}` }, reload)
+      c.on("postgres_changes", { event: "*", schema: "public", table: "party_pot", filter: `group_id=eq.${groupId}` }, reload)
+      c.subscribe()
+      return c
+    }
+
+    open()
+    return () => {
+      active = false
+      if (cool) clearTimeout(cool)
+      if (slaap) clearTimeout(slaap)
+      document.removeEventListener("visibilitychange", zichtbaar)
+      sluit()
+    }
+  }, [groupId, loadParty])
+
+  // ── Groep aanmaken (admin) ──────────────────────────────────────────────────
+  const createGroup = async (fallbackNaam?: string) => {
+    const naam = (groupName.trim() || fallbackNaam || "").trim()
+    if (!naam) { setNotice(L.nameGroupFirst); return }
+    if (busy) return
+    setBusy(true)
+    // Botsende codes zijn zeldzaam, maar niet onmogelijk (unique index vangt ze).
+    for (let poging = 0; poging < 5; poging++) {
+      const code = makeCode()
+      const { data, error } = await supabase.from("party_groups")
+        .insert([{ name: naam, invite_code: code, owner_id: me.current }])
+        .select("id,invite_code").single()
+      if (!error && data) {
+        localStorage.setItem("rundo_party_group", data.id)
+        setGroupId(data.id)
+        setInviteCode(data.invite_code)
+        setOwnerDevice(me.current)
+        // De admin maakte de groep en zit dus aan tafel: meteen Gast 1, geclaimd door
+        // dit toestel. Zo hoeft de admin zichzelf niet meer aan te duiden ("welke ben
+        // jij?" verdwijnt voor hem), en telt hij gewoon mee als persoon. Drinkt hij
+        // niets, dan staat hij op nul — net als ieder ander die niets nam.
+        const { data: pid } = await supabase.rpc("party_add_person", { p_group: data.id, p_name: "" })
+        if (pid) await supabase.from("party_people").update({ claimed_by: me.current }).eq("id", pid as string)
+        setBusy(false)
+        setView("setup")
+        loadParty(data.id)
+        return
+      }
+      if (error && !/duplicate|unique/i.test(error.message)) {
+        setNotice("Groep aanmaken mislukt: " + error.message); setBusy(false); return
+      }
+    }
+    setNotice(L.createFailed)
+    setBusy(false)
+  }
+
+  // Een plaats vrijgeven. Nodig als iemand op de verkeerde naam tikte, of als de
+  // admin een plaats wil doorgeven. De naam blijft staan — enkel de koppeling met
+  // het toestel verdwijnt.
+  const releaseSeat = async (personId: string) => {
+    const { error } = await supabase.from("party_people")
+      .update({ claimed_by: null, self_joined: false }).eq("id", personId)
+    if (error) { setNotice("Vrijgeven mislukt: " + error.message); return }
+    if (groupId) loadParty(groupId)
+  }
+
+  // Een plaats claimen: de gast (of de admin) zegt "dit ben ik".
+  // Laatkomer: groep is vol, dus we zetten in Postgres een plaats bij en claimen ze
+  // meteen (party_join_new_seat, onder slot). Daarna gedraagt de gast zich als elke
+  // andere aangemelde persoon.
+  const joinAsLatecomer = async (naam: string) => {
+    if (!groupId) return
+    if (!naam.trim()) { setNotice(L.fillNameFirst); return }
+    setBusy(true)
+    const { data, error } = await supabase.rpc("party_join_new_seat", { p_group: groupId, p_device: me.current, p_name: naam.trim() })
+    setBusy(false)
+    if (error || !data) { setNotice("Aansluiten mislukt: " + (error?.message ?? "")); return }
+    loadParty(groupId)
+  }
+
+  const claimSeat = async (personId: string, naam: string) => {
+    if (busy) return
+    setBusy(true)
+    // Voorwaarde op claimed_by: wie een halve seconde te laat is, krijgt netjes
+    // te horen dat de plaats net weg is, in plaats van iemand te overschrijven.
+    const { data, error } = await supabase.from("party_people")
+      .update({ name: naam.trim(), claimed_by: me.current, self_joined: !isAdmin })
+      .eq("id", personId).is("claimed_by", null).select("id")
+    setBusy(false)
+    if (error) { setNotice("Aanmelden mislukt: " + error.message); return }
+    if (!data || data.length === 0) { setNotice(L.seatTaken); return }
+    if (groupId) loadParty(groupId)
+  }
+  const setEveryoneAmt = (v: number) => setPotDraft(Object.fromEntries(people.map((p) => [p.id, v])))
+  const resetPotDraft = () => { setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft("") }
+  const closePot = () => {
+    const added = (editPotId === null && potDraftTotal > 0.001) ? potDraftTotal : 0
+    if (added > 0 && groupId) {
+      supabase.rpc("party_add_pot", { p_group: groupId, p_amounts: potDraft, p_is_card: potIsCard, p_payers: cardPayers })
+        .then(({ error }) => { if (error) setNotice("Inleg opslaan mislukt: " + error.message); else loadParty(groupId) })
+    }
+    setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setEditPotId(null); setPotBuilderOpen(false); setShowPot(false)
+    if (onbPotActive) {
+      setOnbPotActive(false)
+      const willHave = potContribTotal + added
+      if (potChosen && willHave <= 0.005) {
+        setConfirmDlg({ msg: L.potNothingIn(potIsCard), yes: L.anywayWithout(potIsCard), onYes: () => { setConfirmDlg(null); setPotChosen(false); setView("settings") }, onNo: () => { setConfirmDlg(null); setShowPot(true); setOnbPotActive(true) } })
+        return
+      }
+      setView("settings")
+    }
+  }
+  const applyCard = (ids: string[], valStr: string) => { const val = parseFloat((valStr || "").replace(",", ".")) || 0; const d: Record<string, number> = {}; if (val > 0 && ids.length > 0) { const per = val / ids.length; ids.forEach((id) => (d[id] = per)) } setPotDraft(d); setEveryoneChoice(null) }
+  const toggleCardPayer = (id: string) => { const next = cardPayers.includes(id) ? cardPayers.filter((x) => x !== id) : [...cardPayers, id]; setCardPayers(next); applyCard(next, cardValue) }
+  const cardSelectAll = () => { const all = people.map((p) => p.id); setCardPayers(all); applyCard(all, cardValue) }
+  const editPotRound = (id: string) => { const r = potRounds.find((x) => x.id === id); if (!r) return; setEditPotId(id); setPotDraft({ ...r.amounts }); setEveryoneChoice(null); setEveryoneDraft("") }
+  const saveEditPot = () => {
+    if (editPotId === null) return
+    if (potDraftTotal > 0.001) {
+      supabase.from("party_pot").update({ amounts: potDraft }).eq("id", editPotId)
+        .then(({ error }) => { if (error) setNotice("Opslaan mislukt: " + error.message); else if (groupId) loadParty(groupId) })
+    } else {
+      // Alles op nul gezet = de inleg-ronde bestaat niet meer.
+      supabase.from("party_pot").delete().eq("id", editPotId)
+        .then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
+    }
+    setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setPotBuilderOpen(false)
+  }
+  const cancelEditPot = () => { setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setPotBuilderOpen(false) }
+  const removePotRound = (id: string, label: string) => setConfirmDlg({ msg: L.removeContribConfirm(label), yes: L.yesCancel, onYes: () => {
+    supabase.from("party_pot").delete().eq("id", id).then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
+    setPotRounds((rs) => rs.filter((r) => r.id !== id)); setConfirmDlg(null)
+  } })
+  const catsPresent = CATS.filter((c) => drinks.some((d) => d.cat === c))
+  const bump1 = (did: string) => bumpAnon(did, 1)
+  const bumpDown = (did: string) => { if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); return } const entry = cart[did]; if (!entry) return; const pid = Object.keys(entry).find((k) => (entry[k] ?? 0) > 0); if (pid) bump(did, pid, -1) }
+  const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
+
+  const dropUnpaidRound = () => {
+    const last = rounds[rounds.length - 1]
+    if (last && !roundIsPaid(last)) supabase.from("party_rounds").delete().eq("id", last.id).then(() => { if (groupId) loadParty(groupId) })
+    if (openRoundId) supabase.from("party_rounds").delete().eq("id", openRoundId).then(() => { if (groupId) loadParty(groupId) })
+    setOpenRoundId(null)
+    setRounds((rs) => (rs.length && !roundIsPaid(rs[rs.length - 1]) ? rs.slice(0, -1) : rs)); setCart({}); setCartAnon({}); setAmountDraft(""); setPayPot(false); setPayPersons([]); setPayAmts({}); setPotAmtDraft(""); setPaidConfirmed(false) }
+  const goStart = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("start") } }); else setView("start") }
+  const goHome = () => { setFromOnboarding(false); if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("settings") } }); else setView("settings") }
+  const potAvailNow = () => { const curPotPart = rounds.length ? (rounds[rounds.length - 1].potPart || 0) : 0; return potContribTotal - (potSpent - curPotPart) }
+  const paymentState = () => {
+    const total = parseFloat(amountDraft.replace(",", ".")) || 0
+    const potAvail = potAvailNow()
+    const potAmt = parseFloat(potAmtDraft.replace(",", ".")) || 0
+    const persons = payPersons
+    const nPayers = persons.length + (payPot ? 1 : 0)
+    const multi = nPayers > 1
+    const amtOf = (pid: string) => parseFloat((payAmts[pid] || "").replace(",", ".")) || 0
+    const personAmts: Record<string, number> = {}
+    if (!multi && persons.length === 1) personAmts[persons[0]] = total
+    else persons.forEach((pid) => (personAmts[pid] = amtOf(pid)))
+    const potPart = payPot ? (multi ? potAmt : total) : 0
+    const personSum = Object.values(personAmts).reduce((a, b) => a + b, 0)
+    const sum = personSum + potPart
+    const missing = total - sum
+    const allFilled = !multi || (persons.every((pid) => (payAmts[pid] || "").trim() !== "") && (!payPot || potAmtDraft.trim() !== ""))
+    const potOver = potPart > potAvail + 0.001
+    let valid = true, reason = ""
+    if (total <= 0) { valid = false; reason = "Vul eerst exact betaald bedrag in." }
+    else if (nPayers === 0) { valid = false; reason = L.whoPaid }
+    else if (payPot && potAvail <= 0.005) { valid = false; reason = L.potEmpty(potIsCard) }
+    else if (potOver) { valid = false; reason = L.potTooLow(potIsCard, euro(Math.max(0, potAvail))) }
+    else if (multi && !allFilled) { valid = false; reason = L.fillPerPayer }
+    const tol = 0.005 + 0.01 * Math.max(0, nPayers - 1)
+    const rounding = multi && Math.abs(missing) > 0.005 && Math.abs(missing) <= tol
+    if (valid && multi && Math.abs(missing) > tol) { valid = false; reason = missing > 0 ? `Samen ${euro(sum)} van ${euro(total)} — er ontbreekt ${euro(missing)}.` : `Samen ${euro(sum)} van ${euro(total)} — ${euro(-missing)} te veel.` }
+    return { total, potAmt, potPart, personAmts, personSum, sum, missing, multi, nPayers, potAvail, potOver, valid, reason, rounding }
+  }
+  // Verdeelt het rondjebedrag automatisch en exact (tot op de cent) over de gekozen betalers.
+  // De laatste betaler krijgt de restcent, zodat de som altijd precies klopt.
+  const autoSplit = (persons: string[], usePot: boolean, totalStr?: string) => {
+    const total = Math.round(((parseFloat((totalStr ?? amountDraft).replace(",", ".")) || 0)) * 100)
+    const n = persons.length + (usePot ? 1 : 0)
+    if (total <= 0 || n === 0) { setPayAmts({}); setPotAmtDraft(usePot ? "" : ""); return }
+    const availC = Math.max(0, Math.round(potAvailNow() * 100))
+    let potC = 0
+    if (usePot) potC = Math.min(Math.floor(total / n), availC)
+    const restC = total - potC
+    const perC = persons.length ? Math.floor(restC / persons.length) : 0
+    const next: Record<string, string> = {}
+    persons.forEach((pid) => (next[pid] = (perC / 100).toFixed(2)))
+    setPayAmts(next)
+    setPotAmtDraft(usePot ? (potC / 100).toFixed(2) : "")
+    setPaidConfirmed(false)
+  }
+  const togglePayPerson = (pid: string) => { const next = payPersons.includes(pid) ? payPersons.filter((x) => x !== pid) : [...payPersons, pid]; setPayPersons(next); autoSplit(next, payPot); setPaidConfirmed(false) }
+  const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); to() } }); else to() }
+  // Instellingen van het feest wegschrijven. Zonder dit ziet een gast die scant de
+  // verkeerde modus: euro's terwijl de rest met coins werkt, of geen waarborg.
+  const persistSettings = (extra?: Record<string, unknown>) => {
+    if (!groupId) return
+    supabase.from("party_groups").update({
+      name: groupName.trim(), pay, coin_value: coinValue,
+      deposit_on: depositOn, deposit_value: depositValue, deposit_unit: depositUnit,
+      pot_on: potChosen, pot_is_card: potIsCard, ...(extra ?? {}),
+    }).eq("id", groupId).then(({ error }) => { if (error) setNotice("Instellingen opslaan mislukt: " + error.message) })
+  }
+
+  // Delen kan pas als de groep vaststaat: naam, aantal personen én de startvragen.
+  // Zo kan er niemand ongevraagd bijkomen en blijft de groep even groot als de admin
+  // aangaf — gasten claimen enkel een vrije plaats, ze maken er geen bij.
+  const canShare = isAdmin && !!inviteCode && people.length > 0 && onboardedOnce
+  const renderShare = () => {
+    if (!canShare) return null
+    const vrij = people.filter((p) => !p.claimedBy).length
     return (
-      <div style={S.page}>
-        <div style={{ maxWidth: 420, margin: "40px auto" }}>
-          <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "#a89a6a", textDecoration: "none", marginBottom: 14, cursor: "pointer" }}>{L.homeLink}</a>
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}><LanguageToggle compact /></div>
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginBottom: 8 }}>
-              <RundoLogo size={60} />
-              <h1 style={{ ...S.h1, margin: 0, display: "inline-flex", alignItems: "baseline", gap: 8 }}>
-                <span style={{ color: "#4a3f1e" }}>Rundo</span>
-                <span style={{ color: "#f0a500" }}>Party</span>
-              </h1>
-              <button
-                onClick={() => setShowAboutParty(true)}
-                title={L.aboutBtnTitle}
-                style={{ width: 24, height: 24, borderRadius: "50%", border: "1.5px solid rgba(150,110,20,0.25)", background: "#fff", color: "#c8941a", fontSize: 13, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0, flexShrink: 0 }}
-              >
-                i
-              </button>
-            </div>
-            <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: "#f0a500", fontSize: 15, fontWeight: 700, margin: 0 }}>
-              <CheersIcon size={20} /> {L.appTagline}
-            </p>
+      <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.45)" }}>
+        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.letGuestsScan}</h3>
+        <div style={{ fontSize: 12, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
+          {vrij > 0 ? L.freeSeats(vrij) : L.allTakenAdmin}
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ display: "inline-block", background: "#fff", padding: 10, borderRadius: 14, border: "1px solid rgba(120,95,20,0.15)" }}>
+            <QRCodeSVG value={inviteLink} size={132} bgColor="#ffffff" fgColor="#4a3f1e" />
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "0.18em", color: "#4a3f1e", marginTop: 10 }}>{inviteCode}</div>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <button style={{ ...S.btn, flex: 1, fontWeight: 800 }}
+            onClick={async () => {
+              const txt = L.joinInvite(groupName, inviteLink)
+              if (typeof navigator !== "undefined" && navigator.share) {
+                try { await navigator.share({ text: txt }); return } catch { /* geannuleerd */ }
+              }
+              if (navigator.clipboard) { navigator.clipboard.writeText(txt); setNotice(L.linkCopied) }
+            }}>{L.shareLink}</button>
+          <button style={{ ...S.btn, flex: 1, fontWeight: 800 }}
+            onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(inviteLink); setNotice(L.linkCopied) } }}>{L.copyLink}</button>
+        </div>
+        {/* Wie scande al? Zo ziet de admin de groep vollopen zonder te moeten raden. */}
+        <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 14, paddingTop: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#1f6b3a", marginBottom: 8 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {people.map((p) => (
+              <span key={p.id} style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 16,
+                background: p.claimedBy ? "rgba(31,138,76,0.12)" : "#faf7ec",
+                color: p.claimedBy ? "#1f6b3a" : "#b3a988",
+                border: p.claimedBy ? "1px solid rgba(31,138,76,0.25)" : "1px dashed rgba(120,95,20,0.25)" }}>
+                {p.claimedBy ? "📱 " : ""}{p.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Eigen drankje ───────────────────────────────────────────────────────────
+  const MAX_EIGEN_PERSOON = 5
+  const MAX_EIGEN_GROEP = 20
+  const eigenVanMij = customDrinks.filter((c) => c.by === me.current).length
+
+  const addCustomDrink = async () => {
+    const naam = ndName.trim()
+    if (!naam) { setNotice(L.nameYourDrink); return }
+    const prijs = parseFloat(ndPrice.replace(",", "."))
+    // De richtprijs is niet optioneel: zonder prijs kan Fair Split dit drankje niet
+    // wegen tegen de rest, en dan is de verdeling gewoon fout.
+    if (!(prijs > 0)) { setNotice(L.needPrice); return }
+    const sleutel = drinkKey(naam)
+    if (drinks.some((d) => d.id === sleutel)) { setNotice(L.alreadyExists(naam)); return }
+    if (!groupId) return
+
+    const coins = pay === "coin"
+      ? (parseFloat((ndCoins || "").replace(",", ".")) || coinDefault(ndCat, naam))
+      : coinDefault(ndCat, naam)
+
+    const { error } = await supabase.rpc("party_add_drink", {
+      p_group: groupId, p_key: sleutel, p_name: naam, p_cat: ndCat,
+      p_price: prijs, p_coins: coins, p_cup: CUPCAT[ndCat], p_by: me.current,
+      p_max_person: MAX_EIGEN_PERSOON, p_max_group: MAX_EIGEN_GROEP,
+    })
+    if (error) {
+      if (/PERSOON_VOL/.test(error.message)) setNotice(L.maxPerPerson(MAX_EIGEN_PERSOON))
+      else if (/GROEP_VOL/.test(error.message)) setNotice(L.maxPerGroup(MAX_EIGEN_GROEP))
+      else setNotice("Toevoegen mislukt: " + error.message)
+      return
+    }
+    setNdName(""); setNdPrice(""); setNdCoins(""); setShowAddDrink(false)
+    setActiveCat(ndCat); setDrinkSearch("")
+    setNotice(L.drinkAdded(naam))
+    loadParty(groupId)
+  }
+
+  const removeCustomDrink = async (key: string, naam: string) => {
+    if (!groupId) return
+    const { error } = await supabase.rpc("party_remove_drink", { p_group: groupId, p_key: key })
+    if (error) {
+      // Een drankje dat al besteld is, mag niet weg: dan zouden er bestellingen naar
+      // een onbestaand drankje wijzen en klopt de verdeling niet meer.
+      if (/IN_GEBRUIK/.test(error.message)) setNotice(L.drinkInUse(naam))
+      else setNotice("Verwijderen mislukt: " + error.message)
+      return
+    }
+    loadParty(groupId)
+  }
+
+  const renderAddDrink = () => {
+    if (!showAddDrink) return null
+    const mijne = customDrinks.filter((c) => c.by === me.current)
+    return (
+      <div style={S.overlay} onClick={() => setShowAddDrink(false)}>
+        <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
+            <h3 style={{ ...S.h3, margin: 0 }}>{L.ownDrinkTitle}</h3>
+            <button onClick={() => setShowAddDrink(false)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer", color: "#8a7d55" }}>✕</button>
           </div>
 
-          <div style={S.card}>
-            <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && startGroup()} placeholder={L.groupNamePlaceholder} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 12 }} />
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16, fontWeight: 800 }} onClick={startGroup} disabled={isStarting}>{isStarting ? L.loading : L.startBtn}</button>
-            {startError && (
-              <div style={{ marginTop: 12, color: "#c0392b", fontSize: 13, background: "#fff0f0", borderRadius: 10, padding: "8px 12px" }}>
-                ⚠️ {startError}
-                <button onClick={() => setStartError(null)} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", color: "#c0392b" }}>✕</button>
+          <div style={{ fontSize: 12, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
+            {L.ownDrinkIntro}
+          </div>
+
+          <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>{L.nameLabel}</div>
+          <input value={ndName} onChange={(e) => setNdName(e.target.value)} placeholder={L.namePh}
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 15, textAlign: "left", marginBottom: 12 }} />
+
+          <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>{L.categoryLabel}</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+            {CATS.map((c) => (
+              <span key={c} style={S.tab(ndCat === c)} onClick={() => setNdCat(c)}>{CAT_LABEL[c]}</span>
+            ))}
+          </div>
+
+          <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>{L.priceLabel}</div>
+          <div style={{ fontSize: 11, color: "#8a7d55", marginBottom: 6, lineHeight: 1.4 }}>
+            {L.priceHint}
+          </div>
+          <input value={ndPrice} onChange={(e) => setNdPrice(e.target.value)} inputMode="decimal" placeholder="4,50"
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 15, marginBottom: 12 }} />
+
+          {pay === "coin" && (
+            <>
+              <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>Coins <span style={{ fontWeight: 600, color: "#8a7d55" }}>{L.coinsAuto}</span></div>
+              <input value={ndCoins} onChange={(e) => setNdCoins(e.target.value)} inputMode="decimal" placeholder={String(coinDefault(ndCat, ndName || "x"))}
+                style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 15, marginBottom: 12 }} />
+            </>
+          )}
+
+          <button style={{ ...S.btnP, width: "100%", opacity: ndName.trim() && ndPrice ? 1 : 0.5 }} onClick={addCustomDrink}>
+            {L.addBtn}
+          </button>
+          <div style={{ fontSize: 11, color: "#8a7d55", textAlign: "center", marginTop: 8 }}>
+            {L.remaining(Math.max(0, MAX_EIGEN_PERSOON - eigenVanMij), MAX_EIGEN_PERSOON)}
+          </div>
+
+          {mijne.length > 0 && (
+            <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
+              <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 8 }}>{L.addedByYou}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {mijne.map((c) => (
+                  <button key={c.key} onClick={() => removeCustomDrink(c.key, c.name)}
+                    style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)" }}>
+                    ⭐ {c.name} ✕
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Spraak (beta) ───────────────────────────────────────────────────────────
+  // Bewust met een bevestigingsstap: spraakherkenning zit er geregeld naast, en niets
+  // is vervelender dan drie tequila's in je rondje die je nooit besteld hebt.
+  const startVoice = () => {
+    type SR = { lang: string; interimResults: boolean; continuous: boolean; start: () => void;
+                onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+                onerror: ((e: { error?: string }) => void) | null; onend: (() => void) | null }
+    const w = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR }
+    const Herkenner = w.SpeechRecognition ?? w.webkitSpeechRecognition
+    if (!Herkenner) { setNotice(L.voiceUnsupported); return }
+
+    const r = new Herkenner()
+    r.lang = lang === "fr" ? "fr-BE" : "nl-BE"
+    r.interimResults = false
+    r.continuous = false
+    setVoiceText(""); setVoiceHits([]); setVoiceOn(true); setVoiceOpen(true)
+
+    r.onresult = (e) => {
+      const tekst = e.results[0]?.[0]?.transcript ?? ""
+      setVoiceText(tekst)
+      setVoiceHits(parseSpraak(tekst, drinks))
+    }
+    r.onerror = (e) => {
+      setVoiceOn(false)
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") setNotice(L.voiceDenied)
+    }
+    r.onend = () => setVoiceOn(false)
+    r.start()
+  }
+
+  // De verstane drankjes in de mand zetten. Een gast zet ze op zichzelf; de admin laat
+  // ze onbekend, want hij spreekt voor de hele groep en wijst daarna toe.
+  const applyVoice = async () => {
+    for (const h of voiceHits) {
+      if (!isAdmin && meId) await bump(h.id, meId, h.qty)
+      else await bumpAnon(h.id, h.qty)
+    }
+    setVoiceOpen(false); setVoiceHits([]); setVoiceText("")
+  }
+
+  const renderVoice = () => {
+    if (!voiceOpen) return null
+    return (
+      <div style={S.overlay} onClick={() => { if (!voiceOn) setVoiceOpen(false) }}>
+        <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
+            <h3 style={{ ...S.h3, margin: 0 }}>
+              {L.voiceBtn} <span style={{ fontSize: 10, fontWeight: 800, color: "#c98a00", border: "1px solid #e08a00", borderRadius: 5, padding: "1px 5px", verticalAlign: "middle" }}>{L.voiceBeta}</span>
+            </h3>
+            {!voiceOn && <button onClick={() => setVoiceOpen(false)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer", color: "#8a7d55" }}>✕</button>}
           </div>
 
-          {/* Opgeslagen groepen — onderaan, uitklapbaar */}
-          {savedGroups.length > 0 && (
-            <div style={{ ...S.card, marginTop: 4 }}>
-              <button onClick={() => setSavedOpen((o) => !o)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", padding: 0 }}>
-                <b style={{ fontSize: 14, color: "#4a3f1e" }}>{L.savedGroups}</b>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#c98a00", background: "rgba(233,196,95,0.18)", borderRadius: 10, padding: "1px 8px" }}>{savedGroups.length}</span>
-                  <span style={{ fontSize: 12, color: "#c98a00", display: "inline-block", transform: savedOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▾</span>
+          {voiceOn ? (
+            <div style={{ textAlign: "center", padding: "24px 0" }}>
+              <div style={{ fontSize: 40, marginBottom: 10 }}>🎤</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#c98a00" }}>{L.voiceListening}</div>
+              <div style={{ fontSize: 12, color: "#8a7d55", marginTop: 8 }}>{L.voiceSay}</div>
+            </div>
+          ) : (
+            <>
+              {voiceText && (
+                <div style={{ background: "#faf7ec", border: "1px solid rgba(120,95,20,0.12)", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, color: "#8a7d55", marginBottom: 3 }}>{L.voiceHeard}</div>
+                  <div style={{ fontSize: 14, fontStyle: "italic", color: "#6b5f3a" }}>&ldquo;{voiceText}&rdquo;</div>
                 </div>
-              </button>
-              {savedOpen && (
-                <div style={{ marginTop: 12 }}>
-                  <input value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} placeholder={L.searchGroupPlaceholder} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 10, fontSize: 13 }} />
-                  {filteredSaved.map((g) => (
-                    <div
-                      key={g.id}
-                      onClick={() => { if (!isStarting) joinGroup(g.invite_code) }}
-                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 8px", borderRadius: 10, borderBottom: "1px solid rgba(0,0,0,0.05)", cursor: isStarting ? "default" : "pointer" }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: 15 }}>{g.name}</div>
-                      </div>
-                      <span style={{ fontSize: 13, color: "#c98a00", fontWeight: 700 }}>openen →</span>
-                      <button style={S.iconBtn} onClick={(e) => { e.stopPropagation(); removeGroupFromStorage(g.id); setSavedGroups(getSavedGroups()) }}>🔄</button>
-                    </div>
+              )}
+
+              {voiceHits.length === 0 ? (
+                <div style={{ fontSize: 13, color: "#b3a988", textAlign: "center", padding: "10px 0 16px", lineHeight: 1.5 }}>
+                  {L.voiceNothing}
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+                  {voiceHits.map((h) => (
+                    <span key={h.id} style={{ ...S.pill, background: "rgba(31,138,76,0.1)", border: "1px solid rgba(31,138,76,0.3)", color: "#1f6b3a", fontSize: 13, padding: "5px 10px" }}>
+                      {h.qty}× {h.name}
+                    </span>
                   ))}
                 </div>
               )}
-            </div>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <button style={{ ...S.btn, flex: 1, fontWeight: 800 }} onClick={startVoice}>{L.voiceRetry}</button>
+                {voiceHits.length > 0 && (
+                  <button style={{ ...S.btnP, flex: 2 }} onClick={applyVoice}>{L.voiceAdd}</button>
+                )}
+              </div>
+            </>
           )}
         </div>
-        {fairInfoMode && (
-          <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setFairInfoMode(null)}>
-            <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>{L.fairTitle}</h3>
-              <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-                {L.fairBody1a}<b style={{ color: "#c98a00" }}>Fair Split</b>{L.fairBody1b}<b>{L.fairNot}</b>{L.fairBody1c} <b>{L.fairBody1d}</b>
-              </p>
-              <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setFairInfoMode(null)}>{L.understood}</button>
+      </div>
+    )
+  }
+
+  // De toog-lijst. Wie gaat halen wil geen lijst per persoon — hij wil weten wat hij
+  // aan de barman moet zeggen. Totalen om te bestellen, namen om uit te delen.
+  const renderBarList = () => {
+    const r = rounds[rounds.length - 1]
+    if (!r) return null
+    const perDrank = drinks
+      .map((d) => ({ d, n: Object.values(r.orders[d.id] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[d.id] ?? 0) }))
+      .filter((x) => x.n > 0)
+    if (perDrank.length === 0) return null
+
+    return (
+      <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.45)" }}>
+        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10 }}>{L.barList}</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          {perDrank.map(({ d, n }) => (
+            <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0" }}>
+              <span style={{ fontSize: 15, fontWeight: 800 }}>{d.emoji} {d.name}</span>
+              <span style={{ fontSize: 19, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
             </div>
+          ))}
+        </div>
+        <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 10, paddingTop: 9 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>{L.barHandOut}</div>
+          <div style={{ fontSize: 12.5, color: "#6b5f3a", lineHeight: 1.6 }}>
+            {people.map((p) => {
+              const zijne = drinks.filter((d) => (r.orders[d.id]?.[p.id] ?? 0) > 0)
+              if (zijne.length === 0) return null
+              return <div key={p.id}><b>{p.name}:</b> {zijne.map((d) => `${r.orders[d.id][p.id] > 1 ? r.orders[d.id][p.id] + "× " : ""}${d.name}`).join(", ")}</div>
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Halverwege alsnog willen afrekenen. Kost niets: de rondjes en drankjes zijn in
+  // beide modi identiek, en de Fair Split valt terug op de richtprijzen.
+  const switchToSettle = () => {
+    setSettle(true)
+    persistSettings({ settle: true })
+    setView("final")
+  }
+
+  const applyBeginChoices = () => {
+    if (bpSettle === null) return
+    setOnboardedOnce(true)
+    // "Gewoon rondjes": geen pot, geen coins, geen bekers. Niet omdat het niet KAN,
+    // maar omdat het niets betekent zonder afrekening.
+    if (bpSettle === false) {
+      setSettle(false)
+      setPotChosen(false); setDepositOn(false); setPay("eur")
+      persistSettings({ settle: false, pot_on: false, deposit_on: false, pay: "eur" })
+      setBeginPrompt(false)
+      setView("hub")
+      return
+    }
+    // Fair Split: gewoon aanzetten en beginnen. Pot, bekers en coins stelt de admin
+    // in wanneer hij ze nodig heeft, via ⚙️ Groep. Ze horen niet als opstartvraag —
+    // de meeste avonden gebruiken ze niet.
+    setSettle(true)
+    persistSettings({ settle: true })
+    setBeginPrompt(false)
+    setView("hub")
+  }
+  const tryBegin = () => {
+    if (people.length === 0) { setNotice(L.addPersonFirst); return }
+    if (depositOn && (depositValue || 0) <= 0) { setNotice(L.fillDeposit); return }
+    if (pay === "coin" && (coinValue || 0) <= 0) { setNotice(L.fillCoinValue); return }
+    if (potChosen && potContribTotal <= 0.005) { setConfirmDlg({ msg: L.potNothingIn(potIsCard), yes: L.anywayWithout(potIsCard), onYes: () => { setConfirmDlg(null); setPotChosen(false); setView("hub") } }); return }
+    setView("hub")
+  }
+  // Het eerste rondje starten, met een zachte drempel: is nog niet iedereen aangemeld,
+  // dan een vriendelijke bevestiging — geen poort. De admin houdt de keuze.
+  const startFirstRound = () => {
+    if (unfinishedRound) { resumeRound(); return }
+    const nietAangemeld = people.filter((p) => !p.claimedBy).length
+    const ga = () => { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }
+    // Alleen relevant als er ooit iets te scannen viel (een invite-code bestaat) en er
+    // echt nog mensen ontbreken. Anders gewoon starten.
+    if (inviteCode && nietAangemeld > 0) {
+      setConfirmDlg({ msg: L.startNotAll(nietAangemeld, people.length), yes: L.startAnyway, no: L.startWait, onYes: () => { setConfirmDlg(null); ga() } })
+      return
+    }
+    ga()
+  }
+  const goAssignUnassigned = () => {
+    const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0))
+    if (fr < 0) return
+    setOpenRound(fr); setAllRoundsOpen(false); setEditCups(false); setEditPay(false); setView("hub"); setAssignIdx(fr)
+  }
+  const goFinal = () => {
+    if (unfinishedRound) { setNotice(L.roundUnfinished(roundNr)); setActiveCat(catsPresent[0]); setView("order"); return }
+    if (view === "confirmed") { setNotice(`Rondje ${roundNr} is nog niet betaald. Rond die betaling eerst af.`); return }
+    if (paidCount === 0) { setNotice(L.nothingToSettle); return }
+    if (blockIfUnpaid()) return
+    if (anyUnassignedRounds) {
+      const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0)
+      setConfirmDlg({
+        msg: `🔴 ${tot} drankje${tot === 1 ? "" : "s"} nog niet toegewezen.\n\nWijs toe → Fair Split: elk betaalt wat hij écht dronk.\nDoe je dat niet → gelijk verdeeld: iedereen evenveel.\n\nVoorbeeld: Jan 1 cola (€4), Tom 4 speciaalbieren (€20). Gelijk verdeeld betaalt elk €12 — Jan €8 te veel.`,
+        yes: L.equalAnyway,
+        no: "Toewijzen",
+        onYes: () => { setConfirmDlg(null); setHasSettled(true); setView("final") },
+        onNo: () => { setConfirmDlg(null); goAssignUnassigned() },
+      })
+      return
+    }
+    setHasSettled(true); setView("final") }
+  const openClose = () => {
+    setAmountDraft("")
+    // Wie haalde, schoot voor: die staat standaard als betaler klaar. Nog te wijzigen
+    // naar de pot of iemand anders op het betaalscherm.
+    if (settle && startedBy && payPersons.length === 0 && !payPot) {
+      setPayPersons([startedBy]); autoSplit([startedBy], false)
+    }
+    setShowClose(true)
+  }
+  const goAssignFromWarning = () => { setShowClose(false); setShowAssignAll(true) }
+  const commitRound = () => {
+    const effGb: Record<string, number> = {}
+    people.forEach((p) => { effGb[p.id] = gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id)) })
+    // De haler heeft de mensen op de plaats vastgezet — reset de haler-strook voor het
+    // volgende rondje.
+    setStartedBy(null)
+    if (openRoundId) {
+      // "Gewoon rondjes": het rondje is meteen klaar. Geen bedrag, geen betaler.
+      const nieuweStatus = settle ? "pending" : "closed"
+      // Bevries WIE er nu in de groep zit: dit zijn de deelnemers aan dit rondje.
+      // Vanaf hier telt een latere nieuwkomer niet meer mee voor dit rondje.
+      const leden = people.map((p) => p.id)
+      supabase.from("party_rounds").update({ status: nieuweStatus, gave_back: effGb, members: leden, ...(settle ? {} : { closed_at: new Date().toISOString() }) }).eq("id", openRoundId)
+        .then(({ error }) => { if (error) setNotice("Rondje bevestigen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
+      setOpenRoundId(null)
+    }
+    setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setAmountDraft(""); setPayPot(false); setPayPersons([]); setPayAmts({}); setPotAmtDraft(""); setPaidConfirmed(false)
+    // "Gewoon rondjes" kent geen betaalscherm: het rondje is klaar, en wie gaat halen
+    // krijgt de toog-lijst in de hub te zien.
+    setView(settle ? "confirmed" : "hub")
+    setRoundNr((n) => n + 1)
+  }
+  const persistPayment = (roundId: string, payers: Record<string, number>, potPart: number, total: number) => {
+    supabase.from("party_rounds")
+      .update({ payers, pot_part: potPart, amount: total, status: "closed", closed_at: new Date().toISOString() })
+      .eq("id", roundId)
+      .then(({ error }) => { if (error) setNotice("Betaling opslaan mislukt: " + error.message); else if (groupId) loadParty(groupId) })
+  }
+  const applyPayment = (payers: Record<string, number>, potPart: number, total: number) => setRounds((rs) => rs.map((r, i) => i === rs.length - 1 ? { ...r, payers, amount: total, potPart } : r))
+  const editOrder = () => { const last = rounds[rounds.length - 1]; if (!last) { setView("order"); return }
+    // Terug naar bestellen: hetzelfde rondje weer openzetten. De drankjes staan al in
+    // party_round_items, dus er hoeft niets verplaatst te worden.
+    supabase.from("party_rounds").update({ status: "open" }).eq("id", last.id)
+      .then(({ error }) => { if (error) setNotice("Terugkeren mislukt: " + error.message); else if (groupId) loadParty(groupId) })
+    setOpenRoundId(last.id)
+    setCart(last.orders); setCartAnon(last.anon); setGaveBackDraft(last.gaveBack); setRounds((rs) => rs.slice(0, -1)); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setPaidConfirmed(false); setActiveCat(catsPresent[0]); setView("order") }
+  const confirmPayment = () => {
+    const st = paymentState()
+    if (!st.valid) { setNotice(st.reason); return }
+    const payers: Record<string, number> = {}
+    Object.entries(st.personAmts).forEach(([pid, a]) => { if (a > 0.0001) payers[pid] = a })
+    // De afrondingscent(en) intern bij één betaler leggen zodat de boekhouding exact klopt.
+    // Zichtbaar blijft iedereen even veel betalen; het verschil verrekent de Fair Split.
+    let potPart = st.potPart
+    const ids = Object.keys(payers)
+    const diff = Math.round((st.total - (potPart + ids.reduce((a, k) => a + payers[k], 0))) * 100) / 100
+    if (Math.abs(diff) > 0.0001) {
+      if (ids.length > 0) payers[ids[ids.length - 1]] = Math.round((payers[ids[ids.length - 1]] + diff) * 100) / 100
+      else potPart = Math.round((potPart + diff) * 100) / 100
+    }
+    const laatste = rounds[rounds.length - 1]
+    if (laatste) persistPayment(laatste.id, payers, potPart, st.total)
+    applyPayment(payers, potPart, st.total)
+    setPaidConfirmed(true)
+  }
+  const closeRound = () => { if (!paidConfirmed || !paymentState().valid) { setNotice(L.confirmPaymentFirst); return } setOpenRound(rounds.length - 1); setEditCups(false); setEditPay(false); setView("hub") }
+  const cancelOrder = () => setConfirmDlg({
+    msg: L.cancelRoundConfirm(roundNr),
+    yes: L.yesCancel,
+    onYes: () => {
+      setConfirmDlg(null)
+      setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setRepeated(false)
+      if (rounds.length > 0) { setRoundNr(rounds.length); setOpenRound(rounds.length - 1); setView("hub") }
+      else { setRoundNr(1); setView("hub") }
+    },
+  })
+  const cancelRound = () => setConfirmDlg({ msg: `Het volledige rondje ${roundNr} annuleren? Alle drankjes en bekers van dit rondje worden verwijderd. Dit kan niet ongedaan gemaakt worden.`, yes: L.yesCancel, onYes: () => { const remaining = rounds.length - 1; setRounds((rs) => rs.slice(0, -1)); setPaidConfirmed(false); setConfirmDlg(null); if (remaining > 0) { setOpenRound(remaining - 1); setView("hub") } else setView("order") } })
+  const nextRound = () => { if (blockIfUnpaid()) return; setRoundNr((n) => n + 1); setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setRepeated(false); setView("order") }
+  // Neemt de drankjes én de toewijzing van het laatste rondje over. Daarna nog gewoon aanpasbaar.
+  // Wie deed mee aan dit rondje? Wie het rondje niet meemaakte, betaalt niet mee.
+  // Oude rondjes zonder members vallen terug op de hele groep.
+  const roundMembers = (r: Round) => (r.members.length > 0 ? r.members : people.map((p) => p.id))
+
+  // ── "Zelfde rondje opnieuw" met inspraak ──────────────────────────────────
+  // Het voorstel leeft op het LAATSTE rondje (proposal jsonb). De haler start het,
+  // elke gast antwoordt op zijn eigen scherm, wie zwijgt krijgt niets. Alles loopt
+  // via realtime (blok 11/12), zodat elk toestel de stand live ziet.
+  // Het voorstel leeft op het rondje waar het gestart werd (meestal het laatste
+  // betaalde). Zodra een "iets anders"-gast bestelt, opent er een nieuw open rondje
+  // dat het laatste wordt — daarom zoeken we het voorstel expliciet op, niet blind
+  // op rounds[laatste].
+  const proposalRound = rounds.find((r) => r.proposal?.active) ?? null
+  const lastRound = rounds[rounds.length - 1] ?? null
+  const activeProposal = proposalRound ? proposalRound.proposal : null
+  const proposalRoundId = proposalRound ? proposalRound.id : null
+  const myAnswer = (activeProposal && meId) ? activeProposal.answers?.[meId] : undefined
+  // Wie deed mee aan het rondje dat we herhalen? Dat zijn de mensen die mogen antwoorden.
+  const proposalPeople = proposalRound ? people.filter((p) => roundMembers(proposalRound).includes(p.id)) : []
+  // De haler (of admin) start een voorstel op basis van het laatste rondje.
+  const startProposal = async () => {
+    if (blockIfUnpaid()) return
+    if (!lastRound) { setNotice(L.nothingToRepeat); return }
+    const by = meId || (startedBy ?? null)
+    const { error } = await supabase.rpc("party_propose_repeat", { p_round: lastRound.id, p_by: by })
+    if (error) { setNotice("Voorstel starten mislukt: " + error.message); return }
+    if (groupId) loadParty(groupId)
+  }
+  // Een gast antwoordt: hetzelfde, iets anders, of bewust niks deze ronde.
+  const answerProposal = async (answer: "same" | "different" | "skip") => {
+    if (!proposalRoundId || !meId) return
+    const { error } = await supabase.rpc("party_answer_repeat", { p_round: proposalRoundId, p_person: meId, p_answer: answer })
+    if (error) { setNotice("Antwoord mislukt: " + error.message); return }
+    if (groupId) loadParty(groupId)
+  }
+  // De haler sluit het voorstel af. Nu pas ontstaat het nieuwe rondje echt:
+  //  - "hetzelfde" → we nemen zijn drankjes van het vorige rondje over
+  //  - "iets anders" → die bestelde intussen al zelf in het nieuwe rondje; niet aanraken
+  //  - "skip" of zwijgen → niets
+  // We verzekeren één open rondje (ensureRound hergebruikt het rondje dat een
+  // "iets anders"-gast misschien al opende) en bumpen de "hetzelfde"-drankjes erin.
+  const closeProposal = async () => {
+    if (!proposalRoundId || !proposalRound || !groupId) return
+    const answers = activeProposal?.answers || {}
+    const sameFolk = proposalPeople.filter((p) => answers[p.id] === "same")
+
+    const rid = await ensureRound(startedBy ?? null)
+    if (!rid) { setNotice("Rondje starten mislukt."); return }
+
+    // Voor elke "hetzelfde"-persoon zijn vorige drankjes overnemen in het nieuwe rondje.
+    for (const p of sameFolk) {
+      for (const d of drinks) {
+        const q = proposalRound.orders[d.id]?.[p.id] ?? 0
+        if (q > 0) {
+          const { error } = await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: p.id, p_drink: d.id, p_delta: q })
+          if (error) { setNotice("Overnemen mislukt: " + error.message); loadParty(groupId); return }
+        }
+      }
+    }
+
+    const { error } = await supabase.rpc("party_close_proposal", { p_round: proposalRoundId })
+    if (error) { setNotice("Afsluiten mislukt: " + error.message); return }
+    // Naar het bestelscherm van het nieuwe rondje, zodat de haler het geheel ziet en
+    // desnoods nog bijstuurt vóór hij naar de toog gaat.
+    setActiveCat(catsPresent[0])
+    setView("order")
+    loadParty(groupId)
+  }
+
+  // Het overzicht dat de HALER ziet zolang een voorstel loopt: wie antwoordde wat,
+  // en de afsluit-knop met de geruststellende regel over wie er niet bij staat.
+  const renderProposalHost = () => {
+    if (!activeProposal || !proposalRound) return null
+    const answers = activeProposal.answers || {}
+    const meedoen = proposalPeople.filter((p) => answers[p.id] === "same" || answers[p.id] === "different")
+    const stil = proposalPeople.filter((p) => !answers[p.id])
+    return (
+      <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.5)" }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 3 }}>{L.proposalTitle}</div>
+        <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>{L.proposalWaiting}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+          {proposalPeople.map((p) => {
+            const a = answers[p.id]
+            const label = a === "same" ? L.ansSame : a === "different" ? L.ansDiff : a === "skip" ? L.ansSkip : L.ansWaiting
+            const kleur = a === "same" ? "#1f6b3a" : a === "different" ? "#8a5e0f" : a === "skip" ? "#a89a6f" : "#b3a988"
+            const bg = a ? "#faf7ec" : "#fff"
+            return (
+              <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, background: bg, border: "1px solid rgba(120,95,20,0.12)" }}>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: "#4a3f1e" }}>{p.name}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: kleur }}>{label}</span>
+              </div>
+            )
+          })}
+        </div>
+        {/* De laatste blik vóór afsluiten: wie krijgt geen bestelling? Zo kan de haler
+            desgewenst nog even langs die mensen voor hij op de knop tikt. */}
+        {stil.length > 0 && (
+          <div style={{ fontSize: 11.5, color: "#8a5e0f", background: "rgba(240,165,0,0.1)", borderRadius: 10, padding: "8px 11px", marginBottom: 10, lineHeight: 1.45 }}>
+            {L.noOrderFor(stil.map((p) => p.name).join(", "))}
           </div>
         )}
-        {showAboutParty && (
-          <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setShowAboutParty(false)}>
-            <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}><RundoLogo size={22} /> {L.aboutBtnTitle}</h3>
-              <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-                {L.aboutBodyA}<b style={{ color: "#f0a500" }}>Rundo Party</b>{L.aboutBodyB}<b>{L.aboutFairPart}</b>{L.aboutBodyC}
-              </p>
-              <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowAboutParty(false)}>{L.understood}</button>
+        <button style={{ ...S.btnP, width: "100%" }}
+          onClick={() => {
+            if (meedoen.length === 0) { setConfirmDlg({ msg: L.proposalNobody, yes: L.startAnyway, onYes: () => { setConfirmDlg(null); closeProposal() }, no: L.startWait }); return }
+            closeProposal()
+          }}>{L.closeProposalBtn(meedoen.length)}</button>
+      </div>
+    )
+  }
+
+  // Het kaartje dat elke GAST ziet zolang een voorstel loopt. Drie keuzes; wie niks
+  // kiest, zwijgt (en krijgt niets). "Iets anders" schakelt door naar het bestellen.
+  const renderProposalGuest = () => {
+    if (!activeProposal || !proposalRound || !meId) return null
+    if (!roundMembers(proposalRound).includes(meId)) return null
+    // Wat had ik vorige ronde? Toon dat, zodat "hetzelfde" concreet is.
+    const mijnVorige = drinks
+      .map((d) => ({ d, n: proposalRound.orders[d.id]?.[meId] ?? 0 }))
+      .filter((x) => x.n > 0)
+    const gekozen = myAnswer
+    return (
+      <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.6)", background: "#fff8ec" }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 8 }}>{L.gProposalTitle}</div>
+        {mijnVorige.length > 0 && (
+          <div style={{ fontSize: 12, color: "#6b5f3a", marginBottom: 12, lineHeight: 1.5 }}>
+            {L.gProposalYourLast} {mijnVorige.map((x) => `${x.n}× ${x.d.name}`).join(" · ")}
+          </div>
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <button onClick={() => answerProposal("same")}
+            style={{ ...S.btnP, width: "100%", opacity: gekozen && gekozen !== "same" ? 0.5 : 1,
+              background: gekozen === "same" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : undefined }}>
+            {L.gProposalSame}{gekozen === "same" && " ✓"}
+          </button>
+          <button onClick={() => { answerProposal("different"); setActiveCat(catsPresent[0]); setGuestTab("order") }}
+            style={{ ...S.btn, width: "100%", fontWeight: 800, opacity: gekozen && gekozen !== "different" ? 0.5 : 1,
+              border: gekozen === "different" ? "1.5px solid #e08a00" : undefined }}>
+            {L.gProposalDiff}{gekozen === "different" && " ✓"}
+          </button>
+          <button onClick={() => answerProposal("skip")}
+            style={{ ...S.btn, width: "100%", fontWeight: 700, fontSize: 13, opacity: gekozen && gekozen !== "skip" ? 0.5 : 1,
+              border: gekozen === "skip" ? "1.5px solid #a89a6f" : undefined, color: "#8a7d55" }}>
+            {L.gProposalSkip}{gekozen === "skip" && " ✓"}
+          </button>
+        </div>
+        {gekozen && (
+          <div style={{ fontSize: 11.5, color: "#1f6b3a", fontWeight: 700, textAlign: "center", marginTop: 10 }}>{L.gProposalDone}</div>
+        )}
+      </div>
+    )
+  }
+
+  const repeatRound = () => {
+    if (blockIfUnpaid()) return
+    const last = rounds[rounds.length - 1]
+    if (!last) { setNotice(L.nothingToRepeat); return }
+    const orders: Assign = {}
+    Object.entries(last.orders).forEach(([did, per]) => {
+      const row: Record<string, number> = {}
+      Object.entries(per || {}).forEach(([pid, q]) => { if (people.some((p) => p.id === pid) && (q || 0) > 0) row[pid] = q })
+      if (Object.keys(row).length) orders[did] = row
+    })
+    const anon: Anon = {}
+    Object.entries(last.anon || {}).forEach(([did, q]) => { if ((q || 0) > 0) anon[did] = q })
+    setRoundNr((n) => n + 1)
+    setCart(orders); setCartAnon(anon)
+    setCupsChecked(false); setCupsTouched(false)
+    setRepeated(true)
+    setActiveCat(catsPresent[0])
+    setView("order")
+  }
+
+  const roundKeyTotal = (r: Round) => drinks.reduce((s, d) => s + (Object.values(r.orders[d.id] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[d.id] ?? 0)) * priceOf(d), 0)
+  // Wat dit rondje "waard" is. Vulde iemand een bedrag in, dan telt dat. Zo niet
+  // (modus "gewoon rondjes"), dan de som van de richtprijzen.
+  //
+  // Dit is de brug die het mogelijk maakt om ACHTERAF alsnog af te rekenen zonder dat
+  // er ooit een bedrag is ingevuld. En hij kost bijna niets: de Fair Split rekende AL
+  // met richtprijzen — die bepaalden ieders AANDEEL, en `amount` was enkel de
+  // schaalfactor. Valt die weg, dan blijft het aandeel staan.
+  const roundValue = (r: Round) => (r.amount > 0.005 ? r.amount : roundKeyTotal(r))
+
+  // Wie was er TOEN bij? Onbekende drankjes worden gedeeld over de mensen die aan dít
+  // rondje deelnamen — niet over het huidige aantal. Anders betaalt een laatkomer mee
+  const personRoundShare = (r: Round, pid: string) => {
+    const leden = roundMembers(r)
+    // Zat deze persoon niet in dit rondje? Dan draagt hij er niets aan bij.
+    if (!leden.includes(pid)) return 0
+    const n = leden.length || 1
+    const kt = roundKeyTotal(r)
+    const bedrag = roundValue(r)
+    if (kt <= 0 || bedrag <= 0) return bedrag / n
+    const own = drinks.reduce((a, d) => a + (r.orders[d.id]?.[pid] ?? 0) * priceOf(d), 0)
+    const anon = drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0) * priceOf(d), 0)
+    return ((own + anon / n) / kt) * bedrag
+  }
+  const consumption = (pid: string) => rounds.reduce((s, r) => s + personRoundShare(r, pid), 0)
+  // In "gewoon rondjes" is er nooit een bedrag ingevuld -> toon de geschatte waarde.
+  const grandTotal = useMemo(() => rounds.reduce((s, r) => s + roundValue(r), 0), [rounds]) // eslint-disable-line
+  const isSchatting = useMemo(() => rounds.length > 0 && rounds.every((r) => r.amount <= 0.005), [rounds])
+  const equalShare = people.length ? grandTotal / people.length : 0
+
+  const roundCupEur = (r: Round, pid: string) => (roundPicked(r, pid) - (r.gaveBack[pid] || 0)) * depositPerCupEur
+  const cupOwn = (pid: string) => (depositOn ? rounds.reduce((s, r) => s + roundCupEur(r, pid), 0) : 0)
+  const roundParts = (r: Round) => { const potPart = r.potPart || 0; const persons = r.payers || {}; const personSum = Object.values(persons).reduce((a, b) => a + (b || 0), 0); const base = potPart + personSum; const cupSum = depositOn ? people.reduce((a, pp) => a + roundCupEur(r, pp.id), 0) : 0; return { potPart, persons, personSum, base, cupSum } }
+  const paidByPerson = (pid: string) => rounds.reduce((s, r) => { const { persons, base, cupSum } = roundParts(r); const own = persons[pid] || 0; if (own <= 0) return s; return s + own + (base > 0 ? cupSum * (own / base) : 0) }, 0)
+  // ── Samen afrekenen ─────────────────────────────────────────────────────────
+  // Bewust GEEN gedeelde plaats: dan deelt een koppel ook één telefoon en kan de
+  // tweede zijn eigen drankje niet aantikken. Iedereen houdt dus zijn plaats en zijn
+  // drankjes; enkel de eindafrekening wordt samengeteld. Halverwege van gedachten
+  // veranderen kan, zonder dat er iets aan de bestellingen wijzigt.
+  const settleKey = (pid: string) => people.find((p) => p.id === pid)?.settleWith || pid
+  const settleGroups = useMemo(() => {
+    const g: Record<string, Person[]> = {}
+    people.forEach((p) => { (g[p.settleWith || p.id] ??= []).push(p) })
+    return Object.entries(g).map(([key, leden]) => ({
+      key, leden,
+      label: leden.map((p) => p.name).join(" & "),
+      samen: leden.length > 1,
+    })).sort((a, b) => Math.min(...a.leden.map((p) => p.seat)) - Math.min(...b.leden.map((p) => p.seat)))
+  }, [people])
+
+  const linkSettle = async (a: string, b: string) => {
+    // b sluit aan bij de groep van a. Bestond a al in een groep, dan neemt hij die mee.
+    const kop = settleKey(a)
+    const groepVanB = people.filter((p) => (p.settleWith || p.id) === (people.find((x) => x.id === b)?.settleWith || b))
+    const ids = groepVanB.map((p) => p.id)
+    const { error } = await supabase.from("party_people").update({ settle_with: kop }).in("id", ids)
+    if (error) { setNotice("Koppelen mislukt: " + error.message); return }
+    // de kop van a wijst naar zichzelf, zodat de groepering sluit
+    await supabase.from("party_people").update({ settle_with: kop }).eq("id", kop)
+    if (groupId) loadParty(groupId)
+  }
+  const unlinkSettle = async (pid: string) => {
+    const { error } = await supabase.from("party_people").update({ settle_with: null }).eq("id", pid)
+    if (error) { setNotice("Ontkoppelen mislukt: " + error.message); return }
+    // Blijft er nog één iemand alleen over in de groep, dan heeft die groep geen zin meer.
+    const kop = settleKey(pid)
+    const rest = people.filter((p) => p.id !== pid && (p.settleWith || p.id) === kop)
+    if (rest.length === 1) await supabase.from("party_people").update({ settle_with: null }).eq("id", rest[0].id)
+    if (groupId) loadParty(groupId)
+  }
+
+  // Kaart in het afrekenscherm: tik twee namen aan en ze rekenen samen af.
+  const [settlePick, setSettlePick] = useState<string | null>(null)
+  const renderSettleTogether = () => {
+    if (people.length < 2) return null
+    return (
+      <div style={S.card}>
+        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.settleTogether}</h3>
+        <div style={{ fontSize: 12, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
+          {L.settleTogetherInfo}
+          enkel het eindbedrag wordt samengeteld tot één betaling.
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+          {settleGroups.map((g) => {
+            const gekozen = settlePick === g.key
+            return (
+              <button key={g.key}
+                onClick={() => {
+                  if (g.samen) { setSettlePick(null); return }              // groepje: enkel ontkoppelen hieronder
+                  if (!settlePick) { setSettlePick(g.key); return }
+                  if (settlePick === g.key) { setSettlePick(null); return }
+                  linkSettle(settlePick, g.key); setSettlePick(null)
+                }}
+                style={{
+                  ...S.chip(gekozen ? 1 : 0), cursor: "pointer",
+                  ...(g.samen ? { background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "1px solid rgba(240,165,0,0.5)" } : {}),
+                }}>
+                {g.samen ? "🔗 " : ""}{g.label}
+              </button>
+            )
+          })}
+        </div>
+        {settlePick && (
+          <div style={{ fontSize: 12, color: "#c98a00", fontWeight: 700, marginTop: 10 }}>
+            {L.tapWhoWith(settleGroups.find((g) => g.key === settlePick)?.label ?? "")}
+          </div>
+        )}
+        {settleGroups.some((g) => g.samen) && (
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.1)" }}>
+            <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 7 }}>{L.separateAgain}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {settleGroups.filter((g) => g.samen).flatMap((g) => g.leden).map((p) => (
+                <button key={p.id} onClick={() => unlinkSettle(p.id)}
+                  style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)" }}>
+                  ✕ {p.name}
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -2557,1981 +2392,1664 @@ export default function Home() {
     )
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // RENDER: Main app
-  // ═══════════════════════════════════════════════════════════════════════
-  return (
-    <div style={S.page}>
-      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.55} } * { box-sizing: border-box; }`}</style>
-      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
-      {asleep && (
-        <div onClick={() => { lastActive.current = Date.now(); setAsleep(false) }} style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 3000, background: "rgba(20,33,58,0.92)", color: "#fff", padding: "9px 16px", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,24,40,0.3)", whiteSpace: "nowrap" }}>
-          {L.asleepBanner}
+  const settlement = useMemo(() => {
+    const paid: Record<string, number> = {}; people.forEach((p) => (paid[p.id] = 0)); let potPaid = 0
+    rounds.forEach((r) => {
+      const { potPart, persons, base, cupSum } = roundParts(r)
+      if (base <= 0) { if (potPart > 0) potPaid += potPart + cupSum; return }
+      Object.entries(persons).forEach(([pid, amt]) => { const a = amt || 0; if (a > 0) paid[pid] = (paid[pid] ?? 0) + a + cupSum * (a / base) })
+      if (potPart > 0) potPaid += potPart + cupSum * (potPart / base)
+    })
+    // Per persoon, en daarna opgeteld per afreken-groepje. Wie alleen afrekent, is een
+    // groepje van één — dan verandert er niets aan de uitkomst.
+    const perPerson: Record<string, number> = {}
+    people.forEach((p) => { perPerson[p.id] = (paid[p.id] ?? 0) + contribOf(p.id) - consumption(p.id) - cupOwn(p.id) - cardLossPer })
+    const nets: { id: string; label: string; net: number }[] = settleGroups.map((g) => ({
+      id: g.key, label: g.label,
+      net: g.leden.reduce((a, p) => a + (perPerson[p.id] ?? 0), 0),
+    }))
+    if (potContribTotal > 0 || potSpent > 0) nets.push({ id: "pot", label: "de pot", net: potPaid - potContribTotal + (potIsCard ? Math.max(0, potRemaining) : 0) })
+    const creditors = nets.filter((n) => n.net > 0.005).map((n) => ({ ...n })).sort((a, b) => b.net - a.net)
+    const debtors = nets.filter((n) => n.net < -0.005).map((n) => ({ ...n, net: -n.net })).sort((a, b) => b.net - a.net)
+    const tx: { from: string; to: string; amount: number }[] = []; let i = 0, j = 0
+    while (i < debtors.length && j < creditors.length) { const amt = Math.min(debtors[i].net, creditors[j].net); tx.push({ from: debtors[i].label, to: creditors[j].label, amount: amt }); debtors[i].net -= amt; creditors[j].net -= amt; if (debtors[i].net < 0.005) i++; if (creditors[j].net < 0.005) j++ }
+    return { tx }
+  }, [rounds, people, settleGroups, potRounds, potContribTotal, potSpent, potIsCard, potRemaining, depositOn, depositValue, depositUnit, coinValue, drinks, pay]) // eslint-disable-line
+  const anyUnassignedRounds = rounds.some((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0))
+  // Totaal aantal drankjes dat over ALLE afgeronde rondjes nog anoniem staat, plus de
+  // index van het eerste rondje waar iets ontbreekt. Voor de waarschuwing op de hub.
+  const unassignedAllRounds = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0)
+  const firstUnassignedIdx = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0))
+  const drinkTotalRound = (r: Round, did: string) => Object.values(r.orders[did] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[did] ?? 0)
+  const paidLabel = (r: Round) => {
+    const potP = r.potPart || 0
+    const entries = Object.entries(r.payers || {}).filter(([, a]) => (a || 0) > 0)
+    const parts: string[] = []
+    if (potP > 0) parts.push(`${potIsCard ? "kaart" : "pot"} ${euro(potP)}`)
+    entries.forEach(([pid, a]) => parts.push(`${people.find((p) => p.id === pid)?.name ?? "?"} ${euro(a)}`))
+    if (parts.length === 0) return L.notPaidYet
+    if (parts.length === 1 && entries.length === 1) return `door ${people.find((p) => p.id === entries[0][0])?.name ?? "?"}`
+    if (parts.length === 1 && potP > 0) return potIsCard ? L.fromCard : L.fromPot
+    return parts.join(" + ")
+  }
+
+  const S = {
+    page: { minHeight: "100vh", background: "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
+    wrap: { maxWidth: 560, margin: "0 auto", padding: "16px 16px" } as React.CSSProperties,
+    card: { background: "#fff", border: "1px solid rgba(120,95,20,0.14)", borderRadius: 18, padding: 16, marginBottom: 13, boxShadow: "0 4px 16px -8px rgba(120,95,20,0.25)" } as React.CSSProperties,
+    h1: { fontSize: 22, fontWeight: 800, margin: "0 0 2px" } as React.CSSProperties,
+    h3: { fontSize: 16.5, fontWeight: 800, margin: "0 0 10px" } as React.CSSProperties,
+    sub: { fontSize: 13.5, color: "#8a7d55", margin: "0 0 12px", lineHeight: 1.55 } as React.CSSProperties,
+    btn: { border: "1px solid rgba(120,95,20,0.18)", background: "#fff", color: "#4a3f1e", borderRadius: 12, padding: "12px 16px", fontSize: 15, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
+    btnP: { border: "none", background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 14, padding: "16px 18px", fontSize: 17, fontWeight: 800, cursor: "pointer", width: "100%", boxShadow: "0 4px 12px -4px rgba(224,138,0,0.6)" } as React.CSSProperties,
+    input: { border: "1px solid rgba(120,95,20,0.22)", borderRadius: 10, padding: "11px 12px", fontSize: 16, color: "#4a3f1e", outline: "none", width: 84, textAlign: "right" } as React.CSSProperties,
+    seg: (on: boolean) => ({ flex: 1, textAlign: "center", padding: "11px 6px", borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: "pointer", background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f3ead2", color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
+    step: { width: 38, height: 38, borderRadius: 10, border: "1px solid rgba(120,95,20,0.18)", background: "#f3ead2", color: "#8a5e0f", fontSize: 21, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
+    chip: (n: number) => ({ position: "relative", padding: "10px 14px", borderRadius: 20, fontSize: 14.5, fontWeight: 700, cursor: "pointer", userSelect: "none", border: n > 0 ? "1px solid rgba(240,165,0,0.5)" : "1px solid rgba(120,95,20,0.15)", background: n > 0 ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#faf4e4", color: n > 0 ? "#fff" : "#8a7d55" } as React.CSSProperties),
+    badge: { marginLeft: 5, background: "rgba(0,0,0,0.22)", borderRadius: 20, padding: "0 6px", fontSize: 11, fontWeight: 800 } as React.CSSProperties,
+    pill: { fontSize: 11.5, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: "rgba(120,95,20,0.08)", color: "#8a7d55" } as React.CSSProperties,
+    row: { display: "flex", alignItems: "center", gap: 10 } as React.CSSProperties,
+    tab: (on: boolean) => ({ padding: "9px 14px", borderRadius: 20, fontSize: 13.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", background: on ? "#4a3f1e" : "#f3ead2", color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
+    overlay: { position: "fixed", inset: 0, background: "rgba(40,30,5,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 14 } as React.CSSProperties,
+    sheet: { background: "#fff", borderRadius: 20, padding: 20, width: "100%", maxWidth: 460, maxHeight: "86vh", overflowY: "auto", boxShadow: "0 10px 40px rgba(0,0,0,0.25)" } as React.CSSProperties,
+  }
+  const potTag = (
+    <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potRemaining > 0 ? "#1f8a4c" : "#8a7d55" }}>{potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️ </span>}{potIsCard ? "💳 drankkaart " : "🫙 pot "}{euro(potRemaining)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+ toevoegen</span></span>
+  )
+  const renderPotModal = () => (
+    <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
+      <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+        <h3 style={{ ...S.h3, fontSize: 18, margin: "0 0 8px" }}>{potIsCard ? L.drinkCard : L.potTitle}</h3>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+          <span style={{ ...S.pill, background: "rgba(120,95,20,0.08)", color: "#8a5e0f", fontSize: 12, padding: "4px 10px" }}>ingelegd {euro(potContribTotal)}</span>
+          {potSpent > 0 && <span style={{ ...S.pill, background: "rgba(224,138,0,0.12)", color: "#c98a00", fontSize: 12, padding: "4px 10px" }}>besteed {euro(potSpent)}</span>}
+          <span style={{ ...S.pill, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(224,104,92,0.14)", color: potRemaining > 0 ? "#1f8a4c" : "#c0554a", fontSize: 12, padding: "4px 10px", fontWeight: 800 }}>nog {euro(potRemaining)}</span>
         </div>
-      )}
-      {error && (
-        <div style={S.errorBanner}>
-          ⚠️ {error}
-          <button onClick={() => setError(null)} style={{ marginLeft: 12, background: "none", border: "none", cursor: "pointer", color: "#c0392b", fontWeight: 700 }}>✕</button>
+        <div style={{ ...S.row, gap: 6, marginBottom: 8 }}>
+          <div onClick={() => setPotIsCard(false)} style={{ ...S.seg(!potIsCard), padding: "7px 6px", fontSize: 12.5, opacity: !potIsCard ? 1 : 0.5 }}>{L.potMoney}</div>
+          <div onClick={() => setPotIsCard(true)} style={{ ...S.seg(potIsCard), padding: "7px 6px", fontSize: 12.5, opacity: potIsCard ? 1 : 0.5 }}>{L.drinkCard}</div>
         </div>
-      )}
+        <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>{potIsCard ? "💳 Drankkaart van de groep — leg de kaartwaarde (bv. €15) in. Wat niet opgedronken wordt, is verloren en wordt gelijk over iedereen verdeeld." : "🫙 Echt geld — wat niet opgaat, krijgen de inleggers terug bij de afrekening."}</div>
 
-      {/* Modal: Dranken/prijzen bewerken — per categorie, geldt overal */}
-      {showEditDrinks && (
-        <div style={{ ...S.overlay, zIndex: 2600 }}>
-          <div style={{ ...S.modal, width: 440, maxHeight: "82vh", display: "flex", flexDirection: "column" }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>{L.editDrinksTitle}</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>{L.editDrinksSub}</p>
-            <div style={{ overflowY: "auto", flex: 1, marginBottom: 12 }}>
-              {!visibleDrinks.some(isGroupDrink) && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 13 }}>{L.noOwnDrinks}</div>}
-              {(() => {
-                const groups: Record<string, Drink[]> = {}
-                visibleDrinks.filter(isGroupDrink).forEach((d) => { const k = d.category ?? FALLBACK_CATEGORY; (groups[k] ||= []).push(d) })
-                const order = [...Object.keys(CATEGORY_LABELS), ...Object.keys(groups).filter((k) => !CATEGORY_LABELS[k])]
-                return order.filter((k) => groups[k]?.length).map((cat) => (
-                  <div key={cat} style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: "#c98a00", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6, paddingBottom: 4, borderBottom: "1px solid rgba(233,196,95,0.3)" }}>{catLabel(cat, lang)}</div>
-                    {groups[cat].map((d) => (
-                      <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                        {editingDrink?.id === d.id ? (
-                          <>
-                            <span style={{ fontSize: 18, width: 28, textAlign: "center" }}>{d.emoji}</span>
-                            <input value={editingDrink.name} onChange={(e) => setEditingDrink({ ...editingDrink, name: e.target.value })} style={{ ...S.input, flex: 1 }} />
-                            <span style={{ color: "#999" }}>€</span>
-                            <input type="number" value={editingDrink.price} onChange={(e) => setEditingDrink({ ...editingDrink, price: parseFloat(e.target.value) || 0 })} style={{ ...S.input, width: 70 }} />
-                            <button style={{ ...S.btn, ...S.btnPrimary, padding: "6px 10px" }} onClick={saveEditedDrink}>💾</button>
-                            <button style={{ ...S.btn, padding: "6px 10px" }} onClick={() => setEditingDrink(null)}>✕</button>
-                          </>
-                        ) : (
-                          <>
-                            <span style={{ flex: 1, fontSize: 14 }}>{d.emoji} {drinkName(d.name, lang)} <span style={{ color: "#999" }}>— €{d.price.toFixed(2)}</span></span>
-                            <button style={S.iconBtn} onClick={() => setEditingDrink(d)}>✏️</button>
-                            <button style={S.iconBtn} title={L.deleteOwnDrinkTitle} onClick={() => deleteDrinkFromList(d.id)}>🗑️</button>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ))
-              })()}
-            </div>
-            <button style={{ ...S.btn, width: "100%" }} onClick={() => { setEditingDrink(null); setShowEditDrinks(false) }}>{L.closeBtn}</button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Eigen drank toevoegen — naam + richtprijs + categorie */}
-      {showAddDrink && (
-        <div style={{ ...S.overlay, zIndex: 2300 }}>
-          <div style={{ ...S.modal, width: 400 }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700 }}>{L.addDrinkTitle}</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>{L.addDrinkSub}</p>
-
-            <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>{L.nameLabel}</label>
-            <input placeholder={L.drinkNamePlaceholder} value={newDrink.name} onChange={(e) => { setAddDrinkWarn(null); setNewDrink({ ...newDrink, name: e.target.value }) }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginTop: 4, marginBottom: 12 }} />
-
-            <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>{L.priceLabel}</label>
-            <input type="number" placeholder="0.00" value={newDrink.price} onChange={(e) => { setAddDrinkWarn(null); setNewDrink({ ...newDrink, price: e.target.value }) }} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginTop: 4, marginBottom: 18 }} />
-
-            {addDrinkWarn && (
-              <div style={{ fontSize: 12.5, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 10, padding: "9px 11px", marginBottom: 14, lineHeight: 1.45 }}>
-                ⚠️ {addDrinkWarn}
-              </div>
-            )}
-
-            <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "11px 0", fontWeight: 800 }} onClick={addDrink}>➕ {L.add}</button>
-              <button style={{ ...S.btn, flex: 1, padding: "11px 0" }} onClick={() => { setAddDrinkWarn(null); setShowAddDrink(false) }}>{L.closeBtn}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showAddPerson && (
-        <div style={S.overlay}>
-          <div style={S.modal}>
-            <h3 style={{ marginBottom: 16, fontSize: 18, fontWeight: 700 }}>{L.addPersonTitle}</h3>
-            <AddPersonForm onAdd={(name) => { addPerson(name); setShowAddPerson(false) }} onClose={() => setShowAddPerson(false)} />
-          </div>
-        </div>
-      )}
-
-      {/* Top bar */}
-      <div style={S.topBar}>
-        <div style={{ minWidth: 0 }}>
-          <div onClick={goHome} title={L.toHomeTitle} style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer" }}>
-            <RundoLogo size={34} />
-            <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}><span style={{ color: "#4a3f1e" }}>Rundo</span> <span style={{ color: "#f0a500" }}>Party</span></div>
-          </div>
-          {/* Pot-info linksboven (met de vrijgekomen ruimte) */}
-          <div style={{ marginTop: 9 }}>
-            {potTotal > 0 ? (() => {
-              const used = payments.filter((p) => p.session >= 1 && !p.participant_id).reduce((s, p) => s + p.amount, 0)
-              const left = Math.max(0, potTotal - used)
-              return (
-                <button onClick={() => setShowPotOverview(true)} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: "#a06b00", background: "linear-gradient(135deg,#fffdf6,#fff3cf)", border: "1.5px solid #ecc85a", borderRadius: 20, padding: "3px 11px", cursor: "pointer" }}>
-                  🫙 {L.potContributed(potTotal.toFixed(2))}<b style={{ color: "#4a3f1e" }}>{L.potRemaining(left.toFixed(2))}</b>
-                </button>
-              )
-            })() : (
-              <button onClick={openPotModal} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 20, padding: "3px 11px", cursor: "pointer" }}>🫙 {L.potLay}</button>
-            )}
-          </div>
-        </div>
-        <div style={{ textAlign: "right", minWidth: 0 }}>
-          <div style={{ marginBottom: 5, display: "flex", justifyContent: "flex-end" }}><LanguageToggle compact /></div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.15, marginBottom: 2 }}>{group.name}</div>
-          <div style={{ fontSize: 11.5, color: "#a89a6a", fontWeight: 700 }}>{participants.length} {participants.length === 1 ? L.person : L.people}</div>
-        </div>
-      </div>
-
-      {/* Tab navigation */}
-      <div style={S.tabBar}>
-        {([
-          { id: "setup", label: potTotal > 0 ? L.tabGroupPot : L.tabGroup },
-          { id: "ordering", label: L.tabOrder },
-          { id: "rounds", label: L.tabRounds(sessions.length) },
-          { id: "bill", label: L.tabBill },
-        ] as { id: AppView; label: string }[]).map((t) => {
-          const locked = participants.length === 0 && t.id !== "setup"
+        {potRounds.map((r, i) => {
+          const tot = Object.values(r.amounts).reduce((a, b) => a + (b || 0), 0)
+          const who = people.filter((pp) => (r.amounts[pp.id] || 0) > 0)
           return (
-          <button
-            key={t.id}
-            onClick={() => {
-              if (locked) { setToast(L.tabLockToast); return }
-              // 'Nieuwe bestelling' aanklikken terwijl je er al bent met een lopende bestelling:
-              // eerst waarschuwen dat opnieuw beginnen je huidige lijst wist.
-              if (t.id === "ordering" && view === "ordering" && cartTotalItems > 0) {
-                requestDiscardPending(() => {})
-              } else {
-                setView(t.id)
-              }
-            }}
-            style={{
-              flex: 1, border: "none", borderRadius: 12, padding: "11px 3px", fontSize: 13.5, cursor: locked ? "default" : "pointer", opacity: locked ? 0.4 : 1, lineHeight: 1.15,
-              fontWeight: view === t.id ? 800 : 700,
-              background: view === t.id ? "linear-gradient(135deg,#f6dd95,#eecb6e)" : "transparent",
-              color: view === t.id ? "#5a4a1a" : "#a89a6a",
-              boxShadow: view === t.id ? "0 3px 10px -2px rgba(233,196,95,0.5)" : "none",
-              transition: "all 0.15s",
-            }}
-          >
-            {t.label}
-          </button>
+            <div key={r.id} style={{ background: editPotId === r.id ? "rgba(240,165,0,0.18)" : "#faf4e4", borderRadius: 12, padding: "9px 11px", marginBottom: 8, border: editPotId === r.id ? "1px solid rgba(240,165,0,0.6)" : "1px solid transparent" }}>
+              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontSize: 13, fontWeight: 800 }}>{i + 1}e inleg <span style={{ fontSize: 12, fontWeight: 700, color: "#1f8a4c" }}>· {euro(tot)}</span></span>
+                {editPotId === r.id ? (
+                  <span style={{ fontSize: 12, color: "#c98a00", fontWeight: 800 }}>{L.beingEdited}</span>
+                ) : rounds.length === 0 ? (
+                  <div style={{ ...S.row, gap: 10 }}>
+                    <span style={{ fontSize: 12, color: "#8a5e0f", cursor: "pointer", fontWeight: 700 }} onClick={() => editPotRound(r.id)}>{L.edit}</span>
+                    <span style={{ fontSize: 12, color: "#c0554a", cursor: "pointer", fontWeight: 700 }} onClick={() => removePotRound(r.id, `${i + 1}e inleg`)}>{L.remove}</span>
+                  </div>
+                ) : (
+                  <span style={{ fontSize: 11, color: "#b3a988" }}>🔒 vast</span>
+                )}
+              </div>
+              <div style={{ fontSize: 12.5, color: "#6b5f3a" }}>{who.map((pp) => `${pp.name} ${euro(r.amounts[pp.id] || 0)}`).join(" · ")}</div>
+            </div>
           )
         })}
-      </div>
 
-      {/* ═══ VIEW: Setup (group + persons) ═══ */}
-      {view === "setup" && (
-        <div>
-          <div style={S.card}>
-            <h3 style={S.h3}>{L.setupCountTitle}</h3>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, padding: "12px 0" }}>
-              <button
-                style={{ ...S.btn, width: 44, height: 44, fontSize: 20, borderRadius: "50%" }}
-                onClick={() => { const n = Math.max(1, participants.length - 1); ensurePersonCount(n) }}
-              >−</button>
-              <div style={{ fontSize: 36, fontWeight: 800, minWidth: 60, textAlign: "center" }}>{participants.length}</div>
-              <button
-                style={{ ...S.btn, ...S.btnPrimary, width: 44, height: 44, fontSize: 20, borderRadius: "50%" }}
-                onClick={() => ensurePersonCount(participants.length + 1)}
-              >+</button>
-            </div>
-            <p style={{ textAlign: "center", color: "#aaa", fontSize: 12, marginTop: 4 }}>
-              {L.setupNamesOptional}
-            </p>
+        {(potRounds.length === 0 || potBuilderOpen || editPotId !== null) ? (
+        <>
+        {potIsCard ? (
+        <div style={{ background: "rgba(240,165,0,0.08)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 12, padding: 11, marginTop: 4 }}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f" }}>{editPotId !== null ? "✏️ kaart wijzigen" : "➕ Drankkaart inleggen"}</span>
+            {potDraftTotal > 0 && <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f8a4c" }}>+{euro(potDraftTotal)}</span>}
           </div>
-
-          <div style={S.card}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 8 }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0, flexWrap: "wrap" }}>
-                <h3 style={{ ...S.h3, marginBottom: 0 }}>{L.setupPersonsTitle}</h3>
-                <span style={{ fontSize: 11, fontStyle: "italic", color: "#b3a988", fontWeight: 600 }}>{L.setupTapToRename}</span>
-              </div>
-              <button style={{ ...S.btn, fontSize: 12, flexShrink: 0 }} onClick={() => setShowAddPerson(true)}>{L.setupAddName}</button>
-            </div>
-
-            {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 24 }}>{L.setupNoPersons}</div>}
-
-            {(() => {
-              const isPh = (pp: (typeof participants)[number]) => /^Persoon \d+$/.test(pp.name)
-              const named = participants.filter((pp) => !isPh(pp))
-              const placeholders = participants.filter(isPh)
-              const ordered = [...named, ...placeholders]   // namen eerst, placeholders erna
-              const cols = ordered.length <= 5 ? 1 : ordered.length <= 12 ? 2 : 3
-              const rows = Math.max(1, Math.ceil(ordered.length / cols))
-              return (
-                <div style={cols > 1 ? { display: "grid", gridAutoFlow: "column", gridTemplateRows: `repeat(${rows}, auto)`, columnGap: 16 } : undefined}>
-            {ordered.map((p, idx) => {
-              const isPlaceholder = isPh(p)
-              const posLabel = L.personLabel(idx + 1)   // hernummerd op positie (namen eerst), zonder gaten
-              return (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                {editingPerson === p.id ? (
-                  <input
-                    autoFocus
-                    value={editingPersonName}
-                    placeholder={isPlaceholder ? posLabel : p.name}
-                    onChange={(e) => setEditingPersonName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") (e.target as HTMLInputElement).blur()
-                      if (e.key === "Escape") { setEditingPersonName(""); setEditingPerson(null) }
-                    }}
-                    onBlur={() => { if (editingPersonName.trim()) renamePerson(); else { setEditingPersonName(""); setEditingPerson(null) } }}
-                    style={{ ...S.input, flex: 1 }}
-                  />
-                ) : (() => {
-                  const shown = isPlaceholder ? L.personShort(idx + 1) : p.name
-                  return (
-                    <>
-                      <span
-                        onClick={() => { setEditingPerson(p.id); setEditingPersonName("") }}
-                        style={{ flex: 1, minWidth: 0, cursor: "text", padding: "2px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600, fontSize: 15, ...(isPlaceholder ? { fontStyle: "italic", color: "#b3a988", borderBottom: "1px dashed #cdbd8e" } : {}) }}
-                      >{shown}</span>
-                      <button style={S.iconBtn} onClick={() => { setEditingPerson(p.id); setEditingPersonName("") }}>✏️</button>
-                      <button style={S.iconBtn} onClick={() => deletePerson(p.id, isPlaceholder ? posLabel : p.name)}>🗑️</button>
-                    </>
-                  )
-                })()}
-              </div>
-              )
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>{L.cardValue}</span>
+            <div style={{ ...S.row, gap: 4 }}><span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>€</span><input style={{ ...S.input, width: 70 }} type="text" inputMode="decimal" placeholder="15" value={cardValue} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setCardValue(v); applyCard(cardPayers, v) }} /></div>
+          </div>
+          <div style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700, marginBottom: 6 }}>{L.whoBoughtCard}</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 10 }}>
+            <span onClick={cardSelectAll} style={{ ...S.pill, cursor: "pointer", fontSize: 12.5, padding: "6px 12px", background: "rgba(31,138,76,0.14)", color: "#1f8a4c", fontWeight: 800, border: "1px dashed rgba(31,138,76,0.5)" }}>{L.everyone}</span>
+            {people.map((p) => { const on = cardPayers.includes(p.id); const amt = potDraft[p.id] || 0; return <span key={p.id} onClick={() => toggleCardPayer(p.id)} style={{ ...S.pill, cursor: "pointer", fontSize: 12.5, padding: "6px 12px", background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "rgba(240,165,0,0.1)", color: on ? "#fff" : "#8a5e0f", fontWeight: 700 }}>{p.name} {on ? euro(amt) : "€0"}</span> })}
+          </div>
+        </div>
+        ) : (
+        <div style={{ background: "rgba(240,165,0,0.08)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 12, padding: 11, marginTop: 4 }}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f" }}>{editPotId !== null ? "✏️ inleg wijzigen" : `➕ ${potRounds.length === 0 ? "1e inleg" : `${potRounds.length + 1}e inleg`}`}</span>
+            {potDraftTotal > 0 && <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f8a4c" }}>+{euro(potDraftTotal)}</span>}
+          </div>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+            <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>{L.equalSplit}</span>
+            <span style={{ fontSize: 11.5, color: "#c0554a", fontWeight: 700, cursor: "pointer" }} onClick={resetPotDraft}>{L.resetContrib}</span>
+          </div>
+          <div style={{ ...S.row, gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+            {[5, 10, 20, 30].map((v) => {
+              const on = everyoneChoice === v
+              return <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 13, background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: on ? "#fff" : "#4a3f1e", border: on ? "none" : "1px solid rgba(120,95,20,0.18)" }} onClick={() => { setEveryoneChoice(v); setEveryoneDraft(""); setEveryoneAmt(v) }}>€{v}</button>
             })}
-                </div>
-              )
-            })()}
           </div>
-
-          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-            <button
-              style={{ ...S.btn, flex: 1, padding: "14px 8px", fontSize: 14, fontWeight: 700, border: "1.5px solid #ecc85a", background: potTotal > 0 ? "#ecc85a" : "#fffdf6", color: "#4a3f1e" }}
-              onClick={() => (potTotal > 0 ? setShowPotOverview(true) : openPotModal())}
-            >
-              {potTotal > 0 ? L.potPlacedBtn(potTotal.toFixed(2)) : L.potLayFirst}
-            </button>
-            <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "14px 8px", fontSize: 15, fontWeight: 800 }} onClick={() => setView("ordering")}>
-              {L.startOrderingBtn}
-            </button>
+          <div style={{ ...S.row, gap: 6, marginBottom: 10 }}>
+            <span style={{ fontSize: 12, color: "#8a7d55" }}>{L.ownAmount}</span>
+            <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 12, borderColor: everyoneChoice === "custom" ? "#e08a00" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="€" value={everyoneDraft} onChange={(e) => setEveryoneDraft(e.target.value.replace(/[^0-9.,]/g, ""))} />
+            <button style={{ ...S.btn, padding: "5px 11px", fontSize: 12, opacity: (parseFloat(everyoneDraft.replace(",", ".")) || 0) > 0 ? 1 : 0.5 }} onClick={() => { const v = parseFloat(everyoneDraft.replace(",", ".")) || 0; if (v > 0) { setEveryoneChoice("custom"); setEveryoneAmt(v) } }}>toepassen</button>
           </div>
+          {people.map((p) => (
+            <div key={p.id} style={{ ...S.row, gap: 8, padding: "7px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
+              <span style={{ fontSize: 14, fontWeight: 800, width: 112, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{contribOf(p.id) > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: "#8a7d55" }}> · {euro(contribOf(p.id))}</span>}</span>
+              <input style={{ ...S.input, width: 58, padding: "5px 8px", fontSize: 12.5, flexShrink: 0 }} type="text" inputMode="decimal" placeholder="€" value={potDraft[p.id] ?? ""} onChange={(e) => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 })) }} />
+              <button style={{ ...S.btn, padding: "5px 9px", fontSize: 12, color: "#c0554a", flexShrink: 0 }} onClick={() => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: 0 })) }}>↺</button>
+              <span style={{ fontSize: 13, fontWeight: 800, marginLeft: "auto", textAlign: "right", color: (potDraft[p.id] || 0) > 0 ? "#1f8a4c" : "#b3a988" }}>{(potDraft[p.id] || 0) > 0 ? "+" + euro(potDraft[p.id] || 0) : "+€0"}</span>
+            </div>
+          ))}
         </div>
-      )}
-
-      {/* ═══ VIEW: Ordering (main focus) ═══ */}
-      {view === "ordering" && (
-        <div>
-          {/* Alles op één lijn: rondje-nummer links, titel in het midden, vorig-rondje rechts */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "2px 2px 12px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 10, background: "linear-gradient(135deg,#5a4a1a,#7a6528)", color: "#f7d461", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>{nextRoundLabel}</div>
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", whiteSpace: "nowrap" }}>{L.roundLabelPre} {nextRoundLabel}</span>
-            </div>
-            <div style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.15 }}>{cartTotalItems > 0 ? L.currentOrderTitle : ""}</div>
-            {sessions.length >= 1 && (
-              <button
-                onClick={() => requestDiscardPending(() => { setReorderShowAll(false); setShowReorderPicker(true) })}
-                style={{ flexShrink: 0, background: "rgba(214,158,20,0.1)", border: "1px solid rgba(214,158,20,0.3)", color: "#c8941a", borderRadius: 20, padding: "6px 11px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
-              >
-                {L.repeatPrevRoundBtn}
-              </button>
-            )}
+        )}
+        {editPotId !== null ? (
+          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <button style={{ ...S.btn, flex: 1 }} onClick={cancelEditPot}>✕ annuleer</button>
+            <button style={{ ...S.btnP, flex: 2 }} onClick={saveEditPot}>{potDraftTotal > 0 ? L.addContrib(euro(potDraftTotal)) : L.removeContrib}</button>
           </div>
-
-          {/* Toevoeg-knoppen: enkel bij een lege bestelling, of wanneer je op 'Bestelling wijzigen' klikte */}
-          {(cartTotalItems === 0 || orderEditing) && (
-          <>
-          {/* Bovenaan: 2 knoppen — links selecteren, rechts (smaller) spraak met info-i */}
-          <div style={{ ...S.card, padding: 14 }}>
-            <div style={{ display: "flex", alignItems: "stretch", gap: 8 }}>
-              <button
-                onClick={openDrinkSelector}
-                style={{ ...S.btn, flex: 1.15, padding: "14px 8px", fontSize: 13, fontWeight: 700, border: "none", lineHeight: 1.25, background: "linear-gradient(135deg,#f4c430,#f7d461)", color: "#4a3a0a", boxShadow: "0 6px 18px rgba(150,110,20,0.3)" }}
-              >
-                {L.selectDrinksBtn}
-              </button>
-              <span style={{ fontSize: 11, fontWeight: 800, color: "#aaa", flexShrink: 0, alignSelf: "center" }}>{L.andOr}</span>
-              <div style={{ flex: 0.85, position: "relative", display: "flex" }}>
-                <button
-                  onClick={quickVoiceActive ? stopQuickVoice : startQuickVoice}
-                  style={{
-                    ...S.btn, width: "100%", padding: "14px 8px", fontSize: 12.5, fontWeight: 700, border: "none", lineHeight: 1.25,
-                    background: quickVoiceActive ? "#e74c3c" : "linear-gradient(135deg,#f4c430,#f7d461)",
-                    color: quickVoiceActive ? "#fff" : "#4a3a0a",
-                    animation: quickVoiceActive ? "pulse 1.2s infinite" : "none",
-                    boxShadow: quickVoiceActive ? "0 0 0 5px rgba(231,76,60,0.18)" : "0 6px 18px rgba(150,110,20,0.3)",
-                  }}
-                >
-                  {quickVoiceActive ? L.voiceListening : <>{L.voiceSpeakOrder} <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.5, opacity: 0.72, border: "1px solid currentColor", borderRadius: 4, padding: "0 3px", verticalAlign: "middle", whiteSpace: "nowrap" }}>BÈTA</span></>}
-                </button>
-              </div>
-            </div>
-            <div style={{ textAlign: "right", marginTop: 8 }}><button onClick={() => setShowVoiceExample(true)} style={{ background: "none", border: "none", color: "#c8941a", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 2px" }}>{L.voiceHowLink}</button></div>
+        ) : (
+          <button style={{ ...S.btnP, marginTop: 14 }} onClick={closePot}>{potDraftTotal > 0 ? L.addContrib(euro(potDraftTotal)) : "Klaar"}</button>
+        )}
+        </>
+        ) : (
+          <div>
+            <button style={{ ...S.btnP, marginTop: 4 }} onClick={() => setPotBuilderOpen(true)}>{L.addPotContrib}</button>
+            <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={closePot}>{L.ready}</button>
           </div>
-          </>
-          )}
-
-          {cartTotalItems === 0 && !orderEditing && (
-            <div style={{ textAlign: "center", margin: "16px 6px 4px" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#a89a6a" }}>
-                {sessions.length === 0
-                  ? L.emptyOrder1
-                  : L.emptyOrderN}
-              </div>
-              {sessions.length > 0 && (
-                <div style={{ marginTop: 10, display: "flex", justifyContent: "center", gap: 16 }}>
-                  <button onClick={() => setView("rounds")} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 4px" }}>{L.toRoundsLink}</button>
-                  <button onClick={() => setView("bill")} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 4px" }}>{L.toBillLink}</button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* "Bedoelde je...?" suggestie banner */}
-          {voiceSuggestion && (
-            <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(231,168,38,0.1),rgba(231,168,38,0.05))", border: "1px solid rgba(231,168,38,0.3)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-              <div style={{ fontSize: 13 }}>
-                {L.voiceSuggestPre}<b>{voiceSuggestion.suggested.emoji} {voiceSuggestion.suggested.name}</b>?
-              </div>
-              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                <button style={{ ...S.btn, ...S.btnPrimary, fontSize: 12, padding: "6px 12px" }} onClick={acceptVoiceSuggestion}>{L.confirmYes}</button>
-                <button style={{ ...S.btn, fontSize: 12, padding: "6px 12px" }} onClick={dismissVoiceSuggestion}>{L.confirmNo}</button>
-              </div>
-            </div>
-          )}
-
-          {/* Laatst toegevoegd — ENKEL na spraak (via selector gaat het meteen naar de lijst) */}
-          {lastAddedViaVoice && (() => {
-            const shown = lastAddedDrinkIds.filter((id) => {
-              const l = cart[id]
-              if (!l || l.total <= 0) return false
-              const assignedSum = Object.values(l.assignments).reduce((s, q) => s + q, 0)
-              return assignedSum < l.total
-            })
-            if (shown.length === 0) return null
-            return (
-              <div style={{ ...S.card, background: "linear-gradient(135deg,rgba(150,110,20,0.1),rgba(233,196,95,0.06))", border: "1px solid rgba(150,110,20,0.3)" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: "#c98a00", textTransform: "uppercase", letterSpacing: 0.6 }}>{L.lastAddedTitle}</div>
-                  <button
-                    onClick={() => { setLastAddedDrinkIds([]); setLastAddedViaVoice(false) }}
-                    style={{ background: "none", border: "none", color: "#b3a476", fontSize: 11, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2, flexShrink: 0 }}
-                  >
-                    {L.assignAllLater}
-                  </button>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: shown.length > 3 ? "repeat(auto-fill, minmax(205px, 1fr))" : "1fr", gap: 8 }}>
-                  {shown.map((id) => {
-                    const d = drinks.find((dr) => dr.id === id)
-                    const line = cart[id]
-                    if (!d || !line) return null
-                    return (
-                      <div key={id} style={{ border: "1px solid rgba(150,110,20,0.14)", borderRadius: 12, padding: "8px 10px", background: "rgba(255,255,255,0.55)" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ fontSize: 18, flexShrink: 0 }}>{d.emoji}</span>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{drinkName(d.name, lang)}</div>
-                            {showPrices && <div style={{ fontSize: 10, color: "#999" }}>≈ €{(d.price * line.total).toFixed(2)}</div>}
-                          </div>
-                          <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 15 }} onClick={() => addToCart(d.id, -1)}>−</button>
-                          <span style={{ fontSize: 15, fontWeight: 800, minWidth: 18, textAlign: "center" }}>{line.total}</span>
-                          <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 15, background: "rgba(150,110,20,0.15)" }} onClick={() => addToCart(d.id, 1)}>+</button>
-                          <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={() => removeFromCart(d.id)}>🗑️</button>
-                        </div>
-                        {renderAssignControl(d.id, line, "full")}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })()}
-
-          {/* Alle bestellingen — alles wat er tot nu toe besteld werd */}
-          {cartTotalItems > 0 && (
-            <div style={{ ...S.card, padding: 0, overflow: "hidden", border: "1px solid rgba(214,158,20,0.18)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg,#f4c430,#f7d461)", padding: "12px 16px" }}>
-                <span style={{ fontSize: 17, fontWeight: 800, color: "#4a3a0a", display: "flex", alignItems: "center", gap: 8 }}>
-                  {L.allOrdersInRound}{nextRoundLabel}
-                  <span style={{ fontSize: 12, fontWeight: 800, color: "#4a3a0a", background: "#fffef2", borderRadius: 20, padding: "1px 10px" }}>{cartTotalItems}</span>
-                </span>
-                <button style={{ background: "none", border: "none", color: "#7a5f14", fontSize: 12, cursor: "pointer", textDecoration: "underline", fontWeight: 600 }} onClick={clearCart}>{L.clearAll}</button>
-              </div>
-              <div style={{ padding: 16 }}>
-              {(() => {
-                const entries = Object.entries(cart).filter(([, line]) => line.total > 0)
-                const lastSet = new Set(lastAddedDrinkIds)
-                const othersPresent = entries.some(([id]) => !lastSet.has(id))
-                const ordered = [...entries.filter(([id]) => lastSet.has(id)), ...entries.filter(([id]) => !lastSet.has(id))]
-                return (
-                  <div style={{ display: "grid", gridTemplateColumns: ordered.length > 1 ? "repeat(auto-fill, minmax(230px, 1fr))" : "1fr", gap: 10 }}>
-                    {ordered.map(([drinkId, line]) => {
-                      const d = drinks.find((dr) => dr.id === drinkId)
-                      if (!d) return null
-                      const justAdded = lastSet.has(drinkId) && othersPresent // markeer nieuw toegevoegde tussen bestaande
-                      return (
-                        <div key={drinkId} style={{ border: justAdded ? "1.5px solid #ecc85a" : "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 10, background: justAdded ? "rgba(233,196,95,0.12)" : "transparent" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                            <span style={{ fontSize: 19, flexShrink: 0 }}>{d.emoji}</span>
-                            <span style={{ flex: 1, fontSize: 14, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{drinkName(d.name, lang)}</span>
-                            <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 14 }} onClick={() => addToCart(d.id, -1)}>−</button>
-                            <span style={{ fontSize: 15, fontWeight: 800, minWidth: 20, textAlign: "center" }}>{line.total}</span>
-                            <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 14, background: "rgba(150,110,20,0.12)" }} onClick={() => addToCart(d.id, 1)}>+</button>
-                            <button style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 13 }} onClick={() => removeFromCart(d.id)}>🗑️</button>
-                          </div>
-                          {renderAssignControl(drinkId, line, "summary")}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )
-              })()}
-              </div>
-            </div>
-          )}
-
-          {/* Onderaan: afronden (primair) + wijzigen (subtiel). Afronden staat rechts — daar
-              verwacht de gebruiker de 'volgende/bevestig'-actie. */}
-          {cartTotalItems > 0 && (
-            <div style={{ display: "flex", gap: 8, alignItems: "stretch", marginTop: 2, marginBottom: 14 }}>
-              {!orderEditing && (
-                <button
-                  onClick={openDrinkSelectorEdit}
-                  style={{ ...S.btn, flex: 0.6, padding: "13px 8px", fontSize: 13, fontWeight: 700, background: "#fffef9", border: "1.5px solid rgba(120,95,20,0.22)", color: "#8a7d55" }}
-                >
-                  {L.editOrderBtn}
-                </button>
-              )}
-              <button
-                onClick={() => setShowFinishConfirm(true)}
-                style={{ ...S.btn, flex: 1.4, padding: "13px 8px", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }}
-              >
-                {L.finishOrderBtn(cartTotalItems)}
-              </button>
-            </div>
-          )}
-
-
-          {/* Kiezer: begin met een vorig rondje */}
-          {showReorderPicker && (
-            <div style={S.overlay}>
-              <div style={{ ...S.modal, width: 420, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
-                <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 800, color: "#4a3f1e" }}>{L.reorderTitle}</h3>
-                <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>{L.reorderSubA}<b>{L.reorderExact}</b>{L.reorderSubB}<b>{L.reorderAdjust}</b>.</p>
-                <div style={{ overflowY: "auto", flex: 1, marginBottom: 12 }}>
-                  {(() => {
-                    const reversed = [...sessions].reverse()
-                    const visible = reorderShowAll ? reversed : reversed.slice(0, 1)
-                    const olderCount = reversed.length - 1
-                    return (
-                      <>
-                        {visible.map((sess) => {
-                          const rows = orders.filter((o) => o.session === sess)
-                          const byDrink: Record<string, number> = {}
-                          rows.forEach((o) => { byDrink[o.drink_id] = (byDrink[o.drink_id] ?? 0) + o.quantity })
-                          const total = rows.reduce((s, o) => s + o.quantity, 0)
-                          const names = Object.entries(byDrink).map(([id, q]) => { const d = drinks.find((dr) => dr.id === id); return d ? `${q}× ${drinkName(d.name, lang)}` : null }).filter(Boolean).join(", ")
-                          const isPrev = sess === reversed[0]
-                          return (
-                            <div
-                              key={sess}
-                              style={{ padding: "11px 12px", marginBottom: 8, borderRadius: 14, border: isPrev ? "1.5px solid #ecc85a" : "1px solid rgba(0,0,0,0.1)", background: isPrev ? "#fffdf6" : "#fff" }}
-                            >
-                              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                                <span style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#5a4a1a,#7a6528)", color: "#f7d461", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, flexShrink: 0 }}>{roundLabel(sess)}</span>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>{L.roundLabelPre} {roundLabel(sess)}{isPrev && <span style={{ fontSize: 10, fontWeight: 800, color: "#a06b00", background: "rgba(233,196,95,0.25)", borderRadius: 10, padding: "1px 7px", marginLeft: 6 }}>{L.prevBadge}</span>}</div>
-                                  <div style={{ fontSize: 11, color: "#a89a6a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{total} {total === 1 ? L.drink : L.drinks}{names ? ` — ${names}` : ""}</div>
-                                </div>
-                              </div>
-                              <div style={{ display: "flex", gap: 8 }}>
-                                <button
-                                  onClick={() => { reorderFromSession(sess); setShowFinishConfirm(true) }}
-                                  style={{ ...S.btn, flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e" }}
-                                >
-                                  {L.reorderExactBtn}
-                                </button>
-                                <button
-                                  onClick={() => reorderFromSession(sess)}
-                                  style={{ ...S.btn, flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 700, background: "#fff", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55" }}
-                                >
-                                  {L.adjustBtn}
-                                </button>
-                              </div>
-                            </div>
-                          )
-                        })}
-                        {olderCount > 0 && (
-                          <button
-                            onClick={() => setReorderShowAll((v) => !v)}
-                            style={{ width: "100%", background: "none", border: "none", color: "#c8941a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", padding: "8px 0", textDecoration: "underline", textUnderlineOffset: 3 }}
-                          >
-                            {reorderShowAll ? L.reorderShowPrev : L.reorderShowOlder(olderCount)}
-                          </button>
-                        )}
-                      </>
-                    )
-                  })()}
-                </div>
-                <button style={{ ...S.btn, width: "100%", padding: "11px 0" }} onClick={() => setShowReorderPicker(false)}>{L.cancelN}</button>
-              </div>
-            </div>
-          )}
-
-          {showFinishConfirm && (
-            <div style={S.overlay}>
-              <div style={{ ...S.modal, width: 360, textAlign: "center" }}>
-                <div style={{ fontSize: 40, marginBottom: 8 }}>🧾</div>
-                <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>{L.finishConfirmTitle}</h3>
-                <p style={{ fontSize: 13, color: "#777", marginBottom: 12 }}>
-                  {L.finishConfirmSub(cartTotalItems, `${participants.length} ${participants.length === 1 ? L.person : L.people}`)}
-                </p>
-                <div style={{ textAlign: "left", maxHeight: 200, overflowY: "auto", marginBottom: 16, border: "1px solid rgba(0,0,0,0.07)", borderRadius: 12, padding: "6px 12px" }}>
-                  {Object.entries(cart).filter(([, l]) => l.total > 0).map(([id, l]) => {
-                    const d = drinks.find((dr) => dr.id === id)
-                    if (!d) return null
-                    return (
-                      <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, padding: "4px 0", borderBottom: "1px solid rgba(150,110,20,0.05)" }}>
-                        <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{d.emoji} {drinkName(d.name, lang)}</span>
-                        <span style={{ fontWeight: 800, color: "#4a3f1e", flexShrink: 0, marginLeft: 8 }}>€{l.total}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-                {(() => {
-                  const unassigned = Object.values(cart).reduce((s, l) => {
-                    if (l.total <= 0) return s
-                    const assigned = Object.values(l.assignments).reduce((a, q) => a + q, 0)
-                    return s + Math.max(0, l.total - assigned)
-                  }, 0)
-                  const primaryStyle = { ...S.btn, width: "100%", padding: "13px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }
-                  const subtleStyle = { ...S.btn, width: "100%", padding: "11px 0", fontSize: 14, fontWeight: 700 }
-                  const adjustBtn = (
-                    <button style={unassigned > 0 ? primaryStyle : subtleStyle} onClick={() => setShowFinishConfirm(false)}>
-                      {(unassigned > 0 ? "✏️ " : "✅ ") + L.orderAdjustBtn}
-                    </button>
-                  )
-                  const finishBtn = (
-                    <button style={unassigned > 0 ? subtleStyle : primaryStyle} onClick={() => { setShowFinishConfirm(false); finishRound() }}>
-                      {unassigned > 0 ? L.finishAnyway : L.finishYes}
-                    </button>
-                  )
-                  return (
-                    <>
-                      {unassigned > 0 && (
-                        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", textAlign: "left", background: "rgba(224,107,94,0.1)", border: "1px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
-                          <span style={{ fontSize: 16, lineHeight: 1 }}>⚠️</span>
-                          <span style={{ fontSize: 12.5, color: "#c0392b", lineHeight: 1.45, fontWeight: 600 }}>
-                            <b>{unassigned} {unassigned === 1 ? L.drink : L.drinks}</b>{L.unassignedWarnB}<b>&ldquo;Fair Split&rdquo;</b>{L.unassignedWarnC}<b>&ldquo;{L.orderAdjustBtn}&rdquo;</b>{L.unassignedWarnD}
-                          </span>
-                        </div>
-                      )}
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        {unassigned > 0 ? <>{adjustBtn}{finishBtn}</> : <>{finishBtn}{adjustBtn}</>}
-                      </div>
-                    </>
-                  )
-                })()}
-              </div>
-            </div>
-          )}
-
-          {/* Modal: drankje selecteren (categorie-tabs + grid) */}
-          {showDrinkSelector && (
-            <div style={S.overlay}>
-              <div style={{ ...S.modal, width: 460, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
-                <div style={{ marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{L.selectDrinksBtn}</h3>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 700, color: "#a89a6a", whiteSpace: "nowrap" }}>{participants.length} {L.persAbbr}</span>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: "#4a3a0a", background: "linear-gradient(135deg,#f4c430,#f7d461)", borderRadius: 20, padding: "3px 12px", whiteSpace: "nowrap" }}>{(selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal)} {(selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal) === 1 ? L.drink : L.drinks}</span>
-                  </div>
-                </div>
-
-                {/* category tabs */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 7, marginBottom: 10 }}>
-                  {groupedDrinks.map(([cat]) => {
-                    const isActive = activeCategory === cat || (activeCategory === null && cat === groupedDrinks[0]?.[0])
-                    return (
-                      <button key={cat} onClick={() => { setActiveCategory(cat); setSelectorSearch(""); setLastAddedCustomDrink(null) }} style={{ border: "none", borderRadius: 13, padding: "11px 6px", fontSize: 12.5, fontWeight: 700, lineHeight: 1.2, cursor: "pointer", minHeight: 46, background: isActive ? "linear-gradient(135deg,#f4c430,#f7d461)" : "#f3ecd6", color: isActive ? "#4a3a0a" : "#a08a4a", boxShadow: isActive ? "0 3px 10px -2px rgba(233,196,95,0.55)" : "none" }}>
-                        {cat}
-                      </button>
-                    )
-                  })}
-                </div>
-
-                {/* Zoekvak — over alle categorieën heen */}
-                <div style={{ position: "relative", marginBottom: 8 }}>
-                  <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, opacity: 0.55, pointerEvents: "none" }}>🔍</span>
-                  <input value={selectorSearch} onChange={(e) => setSelectorSearch(e.target.value)} placeholder={L.searchPlaceholder} style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 38, paddingRight: 34 }} />
-                  {selectorSearch && <button onClick={() => setSelectorSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#b3a476", fontSize: 16, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>}
-                </div>
-
-                {/* Melding na een zelf toegevoegd drankje: waar staat het nu */}
-                {lastAddedCustomDrink && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.35)", borderRadius: 12, padding: "8px 11px", marginBottom: 8, fontSize: 12.5, color: "#1f8a4c", lineHeight: 1.4 }}>
-                    <span style={{ flex: 1 }}>✅ <b>{lastAddedCustomDrink.name}</b> {L.customReady1}<b>{catLabel(lastAddedCustomDrink.category, lang)}</b>{L.customReady2}</span>
-                    <button onClick={() => setLastAddedCustomDrink(null)} style={{ background: "none", border: "none", color: "#1f8a4c", fontSize: 14, cursor: "pointer", flexShrink: 0, lineHeight: 1 }}>✕</button>
-                  </div>
-                )}
-
-                {/* grid */}
-                <div style={{ overflowY: "auto", flex: 1 }}>
-                  {groupedDrinks.map(([cat, list]) => {
-                    const words = normText(selectorSearch.trim()).split(/\s+/).filter(Boolean)
-                    const shown = words.length ? list.filter((d) => words.every((w) => normText(d.name).includes(w))) : list
-                    const isActive = words.length ? shown.length > 0 : (activeCategory === cat || (activeCategory === null && cat === groupedDrinks[0]?.[0]))
-                    if (!isActive) return null
-                    return (
-                      <div key={cat} style={{ marginBottom: words.length ? 14 : 0 }}>
-                        {words.length > 0 && <div style={{ fontSize: 11.5, fontWeight: 800, color: "#c98a00", marginBottom: 6, paddingBottom: 3, borderBottom: "1px solid rgba(233,196,95,0.3)" }}>{cat}</div>}
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                        {shown.map((d) => {
-                          const qty = selectorDraft[d.id] ?? 0
-                          return (
-                            <div key={d.id} style={{ background: qty > 0 ? "rgba(150,110,20,0.08)" : "#fffdf3", border: qty > 0 ? "1.5px solid rgba(150,110,20,0.35)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                <span style={{ fontSize: 20 }}>{d.emoji}</span>
-                                <span style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{drinkName(d.name, lang)}</span>
-                                {showPrices && <span style={{ fontSize: 10, color: "#bbb" }}>≈ €{d.price.toFixed(2)}</span>}
-                              </div>
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15 }} onClick={() => changeSelectorQty(d.id, -1)}>−</button>
-                                <span style={{ fontSize: 18, fontWeight: 800, minWidth: 24, textAlign: "center" }}>{qty}</span>
-                                <button style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 15, background: "rgba(150,110,20,0.12)" }} onClick={() => changeSelectorQty(d.id, 1)}>+</button>
-                              </div>
-                            </div>
-                          )
-                        })}
-                        </div>
-                      </div>
-                    )
-                  })}
-                  {selectorSearch.trim() && !groupedDrinks.some(([, list]) => list.some((d) => normText(selectorSearch.trim()).split(/\s+/).filter(Boolean).every((w) => normText(d.name).includes(w)))) && (
-                    <div style={{ textAlign: "center", color: "#a89a6a", fontSize: 13, padding: "24px 12px", lineHeight: 1.5 }}>{L.noDrinkFound}</div>
-                  )}
-                </div>
-
-                <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 10, padding: "12px 0", fontWeight: 700 }} onClick={confirmDrinkSelector}>
-                  {L.readyBtn(selectorTotal, Math.max(0, (selectorEditMode ? selectorTotal : cartTotalItems + selectorTotal) - participants.length))}
-                </button>
-
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 12 }}>
-                  <button
-                    onClick={() => { setSelectorDraft({}); setSelectorEditMode(false); setLastAddedCustomDrink(null); setSelectorSearch(""); setShowDrinkSelector(false) }}
-                    style={{ background: "none", border: "none", color: "#a89a6a", fontSize: 14, fontWeight: 700, cursor: "pointer", padding: "8px 6px", flexShrink: 0 }}
-                  >
-                    Annuleren
-                  </button>
-                  <button onClick={() => setShowAddDrink(true)} style={{ width: "62%", padding: "11px 0", fontSize: 12.5, fontWeight: 700, cursor: "pointer", color: "#a89a6a", background: "rgba(244,196,48,0.09)", border: "2px dashed rgba(214,158,20,0.4)", borderRadius: 14 }}>
-                    {L.addOwnDrinkBtn}
-                  </button>
-                </div>
-                {drinks.some(isGroupDrink) && (
-                  <div style={{ textAlign: "right", marginTop: 8 }}>
-                    <button onClick={() => setShowEditDrinks(true)} style={{ background: "none", border: "none", color: "#b3854a", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, padding: "2px 8px" }}>{L.manageOwnDrinks}</button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ═══ VIEW: Rounds (history, editable, payments) ═══ */}
-      {view === "rounds" && (
-        <div>
-          {/* Handige pot-stand: hoeveel zit er nog in de pot */}
-          {potTotal > 0 && (() => {
-            const potUsed = payments.filter((p) => p.session >= 1 && !p.participant_id).reduce((s, p) => s + p.amount, 0)
-            const potLeft = Math.max(0, potTotal - potUsed)
-            const pct = potTotal > 0 ? Math.max(0, Math.min(100, (potLeft / potTotal) * 100)) : 0
-            return (
-              <div style={{ ...S.card, padding: "12px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 13, background: "linear-gradient(135deg,#fffdf6,#fff7e3)", border: "1.5px solid #ecc85a" }}>
-                <span style={{ fontSize: 24, flexShrink: 0 }}>🍻</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ fontSize: 12, color: "#a06b00", fontWeight: 800 }}>{L.stillInPotLabel}</span>
-                    <span style={{ fontSize: 19, fontWeight: 800, color: potLeft > 0.01 ? "#4a3f1e" : "#e67e22" }}>€{potLeft.toFixed(2)}</span>
-                  </div>
-                  <div style={{ height: 6, background: "rgba(120,95,20,0.08)", borderRadius: 4, marginTop: 5, overflow: "hidden" }}>
-                    <div style={{ width: `${pct}%`, height: "100%", background: "linear-gradient(90deg,#f3d27c,#ecc564)", borderRadius: 4, transition: "width 0.2s" }} />
-                  </div>
-                  <div style={{ fontSize: 10, color: "#bbb", marginTop: 3 }}>€{potUsed.toFixed(2)} van €{potTotal.toFixed(2)} gebruikt{potLeft <= 0.01 ? " — pot is leeg" : ""}</div>
-                </div>
-                <button onClick={() => setShowPotOverview(true)} style={{ ...S.btn, flexShrink: 0, fontSize: 12, fontWeight: 800, padding: "8px 12px", border: "1.5px solid #ecc85a", background: "#fff", color: "#a06b00" }}>🫙 aanvullen</button>
-              </div>
-            )
-          })()}
-
-          {sessions.length === 0 && (
-            cartTotalItems === 0 ? (
-              <div style={{ ...S.card, textAlign: "center", padding: 32, color: "#aaa" }}>
-                {L.roundsEmptyNoOrders}
-              </div>
+        )}
+      </div>
+    </div>
+  )
+  const renderDialogs = () => (
+    <>
+      {confirmDlg && (
+        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setConfirmDlg(null)}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ ...S.h3, fontSize: 17 }}>{L.confirmTitle}</h3>
+            <p style={{ fontSize: 13.5, color: "#4a3f1e", lineHeight: 1.55, marginBottom: 16, whiteSpace: "pre-line" }}>{confirmDlg.msg}</p>
+            {confirmDlg.variant === "danger" ? (
+              <>
+                <button style={{ ...S.btnP, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", boxShadow: "none" }} onClick={() => setConfirmDlg(null)}>{L.backFinish}</button>
+                <button style={{ background: "none", border: "none", width: "100%", marginTop: 10, fontSize: 12.5, color: "#c0554a", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
+              </>
             ) : (
-              <div style={{ ...S.card, textAlign: "center", padding: "24px 20px" }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>{L.orderNotFinishedTitle}</div>
-                <div style={{ fontSize: 13, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>{L.orderNotFinishedSub}</div>
-                <button onClick={() => setView("ordering")} style={{ ...S.btn, ...S.btnPrimary, padding: "10px 20px", fontWeight: 800 }}>{L.toYourOrderBtn}</button>
-              </div>
-            )
-          )}
-
-          {sessions.length > 0 && cartTotalItems > 0 && (
-            <div style={{ ...S.card, marginBottom: 12, display: "flex", alignItems: "center", gap: 10, background: "rgba(224,107,94,0.07)", border: "1px solid rgba(224,107,94,0.4)" }}>
-              <span style={{ fontSize: 18 }}>⚠️</span>
-              <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#c0392b", fontWeight: 600, lineHeight: 1.4 }}>{L.unfinishedOrderBanner(cartTotalItems)}</div>
-              <button onClick={() => setView("ordering")} style={{ ...S.btn, flexShrink: 0, fontSize: 12.5, fontWeight: 800, padding: "8px 12px" }}>{L.viewLink}</button>
-            </div>
-          )}
-
-          {sessions.length > 1 && (() => {
-            const everyOpen = openRounds !== null && sessions.every((s) => openRounds.includes(s))
-            return (
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-                <button
-                  onClick={() => setOpenRounds(everyOpen ? [] : sessions.slice())}
-                  style={{ background: "none", border: "none", color: "#a89a6a", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
-                >
-                  {everyOpen ? L.collapseAll : L.expandAll}
-                </button>
-              </div>
-            )
-          })()}
-
-          {sessions.slice().reverse().map((s) => {
-            const grouped = getRoundGrouped(s)
-            const roundPayments = getRoundPayments(s)
-            const isEditing = editingRound === s
-            const latestSession = sessions[sessions.length - 1]
-            const isLatest = s === latestSession
-            // Standaard staat enkel het laatste rondje open; daarna kan elk rondje los open/dicht (meerdere tegelijk mogelijk)
-            const isOpen = openRounds === null ? isLatest : openRounds.includes(s)
-
-            const toggleOpen = () => {
-              const base = openRounds === null ? (latestSession != null ? [latestSession] : []) : openRounds
-              setOpenRounds(base.includes(s) ? base.filter((x) => x !== s) : [...base, s])
-            }
-
-            return (
-              <div key={s} style={S.card}>
-                <div
-                  onClick={toggleOpen}
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", userSelect: "none" }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 12, color: "#bbb", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", display: "inline-block" }}>▸</span>
-                    <b style={{ fontSize: 16 }}>{L.roundWordAlt} {roundLabel(s)}</b>
-                    {isLatest && <span style={{ fontSize: 10, color: "#4a3f1e", background: "rgba(150,110,20,0.1)", borderRadius: 8, padding: "1px 8px", fontWeight: 700 }}>{L.lastBadge}</span>}
-                    {(() => {
-                      const open = orders.filter((o) => o.session === s && !o.participant_id).reduce((sum, o) => sum + o.quantity, 0)
-                      if (open <= 0) return null
-                      return <span style={{ fontSize: 10, color: "#e0685c", background: "rgba(224,107,94,0.12)", border: "1px solid rgba(224,107,94,0.35)", borderRadius: 8, padding: "1px 8px", fontWeight: 800 }}>{L.nToAssignBadge(open)}</span>
-                    })()}
+              <>
+                {confirmDlg.no ? (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button style={{ ...S.btn, flex: 1, fontSize: 12.5, padding: "11px 4px" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
+                    <button style={{ ...S.btnP, flex: 1, fontSize: 13, padding: "11px 4px" }} onClick={() => { const f = confirmDlg?.onNo; setConfirmDlg(null); f && f() }}>{confirmDlg.no}</button>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <button style={S.iconBtn} title={L.titleFullscreen} onClick={(e) => { e.stopPropagation(); setRoundFullscreen(s) }}>🔍</button>
-                    <button style={S.iconBtn} title={L.titleEdit} onClick={(e) => { e.stopPropagation(); setEditingRound(isEditing ? null : s); if (!isOpen) toggleOpen() }}>{isEditing ? "✓" : "✏️"}</button>
-                    <button style={S.iconBtn} title={L.deleteLabel} onClick={(e) => { e.stopPropagation(); deleteRound(s) }}>🗑️</button>
-                  </div>
-                </div>
-
-                {/* Betaald door + bedrag — meteen na de rondenaam */}
-                <div style={{ marginTop: 6 }}>
-                  {roundPayments.length === 0 ? (
-                    <button style={{ ...S.btn, fontSize: 12, padding: "4px 12px" }} onClick={(e) => { e.stopPropagation(); openPaymentEditor(s) }}>{L.whoPaidBtn}</button>
-                  ) : (
-                    <div
-                      onClick={(e) => { e.stopPropagation(); openPaymentEditor(s) }}
-                      style={{ cursor: "pointer", fontSize: 13, color: "#444", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}
-                    >
-                      <span style={{ color: "#888" }}>{L.paidLabel}</span>
-                      {roundPayments.map((p) => {
-                        const isPot = !p.participant_id
-                        const person = participants.find((pa) => pa.id === p.participant_id)
-                        return (
-                          <span key={p.id} style={{ background: isPot ? "rgba(233,196,95,0.2)" : "rgba(39,174,96,0.1)", color: isPot ? "#a06b00" : "#1f8a4c", borderRadius: 10, padding: "2px 10px", fontWeight: 700 }}>
-                            {isPot ? L.viaPot : pName(person?.name ?? "?", lang)} — €{p.amount.toFixed(2)}
-                          </span>
-                        )
-                      })}
-                      <span style={{ color: "#bbb", fontSize: 11, textDecoration: "underline" }}>wijzig</span>
-                    </div>
-                  )}
-                </div>
-
-                {isOpen && (
+                ) : (
                   <>
-                    {Object.values(grouped).map((it) => (
-                      <div key={it.drink.id} style={{ marginTop: 8, padding: "6px 0", borderBottom: "1px solid rgba(150,110,20,0.05)" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <b style={{ fontSize: 13 }}>{it.drink.emoji} {drinkName(it.drink.name, lang)} — {it.totalQty}</b>
-                        </div>
-                        <div style={{ marginLeft: 8, marginTop: 4 }}>
-                          {Object.entries(it.people).map(([pid, info]) => (
-                            <div key={pid} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, marginTop: 2 }}>
-                              <span style={{ color: "#666" }}>{pName(info.name, lang)} — {info.qty}</span>
-                              {isEditing && (
-                                <button title={L.titleBackToUnassigned} style={{ ...S.iconBtn, width: 20, height: 20, fontSize: 11 }} onClick={() => unassignOrderQty(it.drink.id, pid, s, 1)}>↩</button>
-                              )}
-                            </div>
-                          ))}
-                          {it.anonymous > 0 && (
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }} onClick={(e) => e.stopPropagation()}>
-                              <span style={{ fontSize: 11, color: "#e0685c", fontWeight: 600, flexShrink: 0 }}>{L.nToAssignInline(it.anonymous)}</span>
-                              <select
-                                value=""
-                                onChange={(e) => { if (e.target.value) assignAnonymousQty(it.drink.id, s, e.target.value, 1) }}
-                                style={{ ...S.input, flex: 1, fontSize: 12, padding: "5px 8px", fontWeight: 600, cursor: "pointer" }}
-                              >
-                                <option value="">{L.forWhom}</option>
-                                {participants.map((p) => <option key={p.id} value={p.id}>{pName(p.name, lang)}</option>)}
-                              </select>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                    <button style={{ ...S.btnP, background: "linear-gradient(135deg,#e0685c,#c0554a)", boxShadow: "none" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
+                    <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={() => { const f = confirmDlg?.onNo; setConfirmDlg(null); f && f() }}>← terug</button>
                   </>
                 )}
-              </div>
-            )
-          })}
-          {sessions.length > 0 && (
-            <button onClick={() => setView("bill")} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 6, padding: "14px 0", fontSize: 15, fontWeight: 800 }}>{L.toBillBtn}</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      {notice && (
+        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setNotice("")}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <p style={{ fontSize: 15, color: "#4a3f1e", lineHeight: 1.55, marginBottom: 18, fontWeight: 600 }}>{notice}</p>
+            <button style={S.btnP} onClick={() => setNotice("")}>OK</button>
+          </div>
+        </div>
+      )}
+      {newcomer && (
+        <div style={{ position: "fixed", left: 0, right: 0, bottom: 18, display: "flex", justifyContent: "center", zIndex: 60, pointerEvents: "none", padding: "0 12px" }}>
+          <div style={{ pointerEvents: "auto", background: "#1f6b3a", color: "#fff", borderRadius: 16, padding: "12px 16px", boxShadow: "0 8px 24px rgba(0,0,0,0.22)", maxWidth: "94%", minWidth: 240 }}>
+            <div style={{ ...S.row, justifyContent: "space-between", gap: 10 }}>
+              <span style={{ fontSize: 15, fontWeight: 800 }}>👋 {L.someoneJoined(newcomer.name)}</span>
+              <button onClick={() => setNewcomer(null)}
+                style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: 18, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>✕</button>
+            </div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", fontWeight: 700, marginTop: 3 }}>
+              📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}
+            </div>
+            {isAdmin && (
+              <button onClick={() => { removePerson(newcomer.id); setNewcomer(null) }}
+                style={{ marginTop: 9, width: "100%", border: "1px solid rgba(255,255,255,0.5)", background: "transparent", color: "#fff", borderRadius: 10, padding: "7px 9px", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>{L.notRight}</button>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  )
+  const Header = () => {
+    const onboarding = view === "setup" || view === "settings"
+    return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+        <div style={{ ...S.row, gap: 10, minWidth: 0 }}>
+          <div onClick={goStart} style={{ cursor: "pointer" }}><RundoLogo size={40} /></div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ ...S.h1, fontSize: 20, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
+            <div style={{ ...S.row, gap: 5, marginTop: 2 }}><CheersIcon size={16} color="#4a3f1e" /><span style={{ fontSize: 11.5, color: "#4a3f1e", fontWeight: 700 }}>{L.tagline}</span></div>
+          </div>
+        </div>
+        {!onboarding && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, minWidth: 0, flexShrink: 0 }}>
+            {groupName.trim() && <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()} <span style={{ color: "#8a7d55", fontWeight: 700 }}>· 👥 {people.length}</span></div>}
+          </div>
+        )}
+      </div>
+      {!onboarding && (
+        <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+          <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700 }} onClick={goHome}>{L.groupSettings}</button>
+          <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "hub" ? 0.55 : 1 }} onClick={goHub}>{L.overview}</button>
+          {settle && <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "final" ? 0.55 : 1 }} onClick={goFinal}>{L.settleBtn}</button>}
+        </div>
+      )}
+    </div>
+    )
+  }
+
+  // ── START ───────────────────────────────────────────────────────────────────
+  // ── Laden (gast opent de link) ──────────────────────────────────────────────
+  if (booting) {
+    return (
+      <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ fontSize: 14, color: "#8a7d55" }}>{L.loading}</div>
+      </div>
+    )
+  }
+
+  // ── GAST: wie ben jij? ──────────────────────────────────────────────────────
+  // Twee wegen naar binnen: tik op je naam als de admin ze al invulde, of neem een
+  // lege plaats en typ ze zelf. Een naam is een etiket; claimen is wat jouw telefoon
+  // aan die plaats koppelt. Dat scheiden is wat de app laat werken voor wie NIET
+  // scant — de admin kan voor hem blijven aanduiden.
+  if (groupId && !isAdmin && !meId) {
+    const vrij = people.filter((p) => !p.claimedBy)
+    const metNaam = vrij.filter((p) => p.named)
+    const leeg = vrij.filter((p) => !p.named)
+    return (
+      <div style={S.page}><div style={S.wrap}>
+        {renderDialogs()}
+        <div style={{ display: "flex", justifyContent: "flex-end" }}><LanguageToggle compact /></div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24, marginTop: 8 }}>
+          <div style={{ ...S.row, gap: 13 }}>
+            <RundoLogo size={54} />
+            <div style={{ ...S.h1, fontSize: 28 }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
+          </div>
+          <div style={{ fontSize: 14, color: "#8a7d55", marginTop: 10 }}>{L.invitedFor} <b style={{ color: "#4a3f1e" }}>{groupName}</b></div>
+        </div>
+
+        <div style={S.card}>
+          <h3 style={{ ...S.h3, marginTop: 0 }}>{L.whoAreYou}</h3>
+
+          {vrij.length === 0 ? (
+            <>
+              <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.5 }}>{L.allSeatsTaken}</div>
+              <input id="latecomer-name" style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 16, marginBottom: 10 }}
+                placeholder={L.yourName} autoComplete="name" />
+              <button disabled={busy} style={{ ...S.btnP, width: "100%", opacity: busy ? 0.5 : 1 }}
+                onClick={() => {
+                  const el = document.getElementById("latecomer-name") as HTMLInputElement | null
+                  joinAsLatecomer((el?.value || "").trim())
+                }}>{L.joinAddSeat}</button>
+            </>
+          ) : (
+            <>
+              {metNaam.length > 0 && (
+                <>
+                  <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.5 }}>{L.tapYourName}</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8, marginBottom: leeg.length ? 16 : 0 }}>
+                    {metNaam.map((p) => (
+                      <button key={p.id} disabled={busy} onClick={() => claimSeat(p.id, p.name)}
+                        style={{ ...S.btn, padding: "13px 8px", fontWeight: 800, fontSize: 14, opacity: busy ? 0.5 : 1 }}>
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {leeg.length > 0 && (
+                <>
+                  <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 8, lineHeight: 1.5 }}>
+                    {metNaam.length > 0 ? L.notThere : L.fillNameSeat}
+                  </div>
+                  <input id="guest-name" style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 16, marginBottom: 10 }}
+                    placeholder={L.yourName} autoComplete="name" />
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
+                    {leeg.map((p) => (
+                      <button key={p.id} disabled={busy}
+                        onClick={() => {
+                          const el = document.getElementById("guest-name") as HTMLInputElement | null
+                          const naam = (el?.value || "").trim()
+                          if (!naam) { setNotice(L.fillNameFirst); return }
+                          claimSeat(p.id, naam)
+                        }}
+                        style={{ ...S.btn, padding: "13px 8px", fontWeight: 800, opacity: busy ? 0.5 : 1 }}>
+                        {L.seat(p.seat)}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
           )}
         </div>
-      )}
 
-      {/* Info-popup achter de ? bij de richtprijzen */}
-      {showIndicatiefInfo && (
-        <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setShowIndicatiefInfo(false)}>
-          <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>{L.indicatiefTitle}</h3>
-            <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              <b style={{ color: "#a89a6a" }}>{L.indicatiefWord}</b>{L.indicatiefBody1}<b style={{ color: "#c98a00" }}>Fair Split</b>{L.indicatiefBody2}<b>{L.muchFairer}</b>
-            </p>
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowIndicatiefInfo(false)}>{L.understood}</button>
-          </div>
-        </div>
-      )}
-
-      {/* Fair split — uitleg popup (ingekort) */}
-      {fairInfoMode && (
-        <div style={{ ...S.overlay, zIndex: 2200 }} onClick={() => setFairInfoMode(null)}>
-          <div style={{ ...S.modal, width: 370 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>{L.fairTitle}</h3>
-            <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              {L.fairBody1a}<b style={{ color: "#c98a00" }}>Fair Split</b>{L.fairBody1b}<b>{L.fairNot}</b>{L.fairBody1c} <b>{L.fairBody1d}</b>
-            </p>
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setFairInfoMode(null)}>{L.understood}</button>
-          </div>
-        </div>
-      )}
-
-      {/* Info-popup: spraakvoorbeeld */}
-      {showVoiceExample && (
-        <div style={{ ...S.overlay, zIndex: 2400 }} onClick={() => setShowVoiceExample(false)}>
-          <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>{L.voiceExampleTitle}</h3>
-            <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              {L.voiceExampleA}<b>&ldquo;{L.voiceEx1}&rdquo;</b>{L.voiceExampleB}<b>&ldquo;{L.voiceEx2}&rdquo;</b>{L.voiceExampleC}
-            </p>
-            <div style={{ fontSize: 12, color: "#c8941a", fontWeight: 700, background: "rgba(214,158,20,0.1)", borderRadius: 8, padding: "9px 11px", margin: "12px 0 0", lineHeight: 1.5 }}>{L.voiceBetaNote}</div>
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowVoiceExample(false)}>{L.understood}</button>
-          </div>
-        </div>
-      )}
-
-      {/* Info-popup: iedereen evenveel */}
-      {showEqualInfo && (
-        <div style={{ ...S.overlay, zIndex: 2400 }} onClick={() => setShowEqualInfo(false)}>
-          <div style={{ ...S.modal, width: 360 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 12, fontSize: 17, fontWeight: 800, color: "#4a3f1e", display: "flex", alignItems: "center", gap: 8 }}>{L.equalTitle}</h3>
-            <p style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6, margin: 0 }}>
-              {L.equalBody}
-            </p>
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontWeight: 800, marginTop: 16 }} onClick={() => setShowEqualInfo(false)}>{L.understood}</button>
-          </div>
-        </div>
-      )}
-
-      {/* Eigen bevestigings-popup (i.p.v. de kale browser-confirm) */}
-      {confirmDialog && (
-        <div style={{ ...S.overlay, zIndex: 2500 }} onClick={() => setConfirmDialog(null)}>
-          <div style={{ ...S.modal, width: 360, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 40, marginBottom: 8 }}>{confirmDialog.danger ? "⚠️" : "❓"}</div>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>{confirmDialog.title}</h3>
-            <p style={{ fontSize: 13.5, color: "#777", lineHeight: 1.5, margin: "0 0 18px" }}>{confirmDialog.message}</p>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 700 }} onClick={() => setConfirmDialog(null)}>{L.cancel}</button>
-              <button
-                style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 800, border: "none", color: confirmDialog.danger ? "#fff" : "#4a3a0a", background: confirmDialog.danger ? "linear-gradient(135deg,#e0685c,#d1483b)" : "linear-gradient(135deg,#f4c430,#f7d461)" }}
-                onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn() }}
-              >
-                {confirmDialog.confirmLabel ?? L.confirmYes}
-              </button>
+        {people.some((p) => p.claimedBy) && (
+          <div style={S.card}>
+            <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>{L.alreadyJoined}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {people.filter((p) => p.claimedBy).map((p) => <span key={p.id} style={S.pill}>📱 {p.name}</span>)}
             </div>
           </div>
+        )}
+      </div></div>
+    )
+  }
+
+  // ── GAST: bestellen ────────────────────────────────────────────────────────
+  // Eén taak, één scherm: tik aan wat JIJ wil. Geen personen kiezen, geen bedragen,
+  // geen pot — dat is werk voor wie naar de toog gaat. De gast ziet enkel zichzelf.
+  if (groupId && !isAdmin && meId) {
+    const ik = people.find((p) => p.id === meId)!
+    const zoekt = normText(drinkSearch).length > 0
+    const lijst = zoekt
+      ? drinks.filter((d) => drinkMatches(d.name, drinkSearch))
+      : drinks.filter((d) => d.cat === activeCat).filter((d) => fullList || d.fav || aQty(d.id, meId) > 0)
+    const mijn = drinks.filter((d) => aQty(d.id, meId) > 0)
+    const mijnAantal = mijn.reduce((a, d) => a + aQty(d.id, meId), 0)
+    const bezig = !!openRoundId
+
+    // Wat de gast op dit moment staat. Zelfde helpers als de admin gebruikt, dus de
+    // cijfers kunnen niet uit elkaar lopen.
+    const mijnVerbruik = consumption(meId) + cupOwn(meId)
+    const mijnBetaald = paidByPerson(meId) + contribOf(meId)
+    const mijnSaldo = mijnBetaald - mijnVerbruik
+    // Ben ik gekoppeld aan iemand? Dan is de vereffening op het groepje, niet op mij.
+    const mijnGroep = settleGroups.find((g) => g.leden.some((p) => p.id === meId))
+    const mijnTx = settlement.tx.filter((t) => t.from === (mijnGroep?.label ?? "") || t.to === (mijnGroep?.label ?? ""))
+
+    return (
+      <div style={S.page}><div style={S.wrap}>
+        {renderDialogs()}
+        {renderAddDrink()}
+        {renderVoice()}
+
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}><LanguageToggle compact /></div>
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 800 }}>🍻 {groupName}</div>
+            <div style={{ fontSize: 12, color: "#8a7d55" }}>
+              {L.youAre} <b style={{ color: "#4a3f1e" }}>{ik.name}</b>
+              {pay === "coin" ? ` · coins (1 = ${euro(coinValue)})` : ""}
+            </div>
+          </div>
+          <button style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)" }}
+            onClick={() => setConfirmDlg({ msg: L.notMeConfirm(ik.name), yes: L.releaseSeat, onYes: () => { setConfirmDlg(null); releaseSeat(meId) } })}>
+            {L.notMe}
+          </button>
         </div>
-      )}
 
-      {/* Pot-overzicht + aanvullen op elk moment */}
-      {showPotOverview && (() => {
-        const potPays = orderStable(payments.filter((p) => p.session === POT_SESSION))
-        const potUsed = payments.filter((p) => p.session >= 1 && !p.participant_id).reduce((s, p) => s + p.amount, 0)
-        const potLeft = Math.max(0, potTotal - potUsed)
-        // Groepeer in "potten" op inleg-moment (created_at), zodat je eerste/tweede pot ziet
-        const batchMap = new Map<string, Payment[]>()
-        const order: string[] = []
-        potPays.forEach((p) => {
-          const key = p.created_at ? p.created_at.slice(0, 19) : p.id
-          if (!batchMap.has(key)) { batchMap.set(key, []); order.push(key) }
-          batchMap.get(key)!.push(p)
-        })
-        const batches = order.map((k) => batchMap.get(k)!)
-        const potName = L.potName
-        const n = participants.length
-        const allTotal = parseFloat((potAddAmount || "").replace(",", "."))
-        const allPer = (!isNaN(allTotal) && allTotal > 0 && n > 0) ? allTotal / n : 0
-        return (
-          <div style={{ ...S.overlay, zIndex: 2200 }}>
-            <div style={{ ...S.modal, width: 440, maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
-              <h3 style={{ marginBottom: 4, fontSize: 19, fontWeight: 800, color: "#4a3f1e" }}>{L.potOverviewTitle}</h3>
-              <p style={{ fontSize: 12, color: "#999", marginTop: 0, marginBottom: 14 }}>{L.potOverviewSub}</p>
+        <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+          <button onClick={() => setGuestTab("order")}
+            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 12, fontWeight: 800, opacity: guestTab === "order" ? 1 : 0.55 }}>{L.tabOrder}</button>
+          <button onClick={() => setGuestTab("me")}
+            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 12, fontWeight: 800, opacity: guestTab === "me" ? 1 : 0.55 }}>{L.tabMe}</button>
+          <button onClick={() => setGuestTab("group")}
+            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 12, fontWeight: 800, opacity: guestTab === "group" ? 1 : 0.55 }}>{L.tabGroup}</button>
+        </div>
 
-              {/* Stats */}
-              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                <div style={{ flex: 1, textAlign: "center", background: "rgba(233,196,95,0.10)", borderRadius: 12, padding: "9px 4px" }}>
-                  <div style={{ fontSize: 10, color: "#a06b00", fontWeight: 700 }}>{L.potStatContributed}</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>€{potTotal.toFixed(2)}</div>
-                </div>
-                <div style={{ flex: 1, textAlign: "center", background: "rgba(120,95,20,0.05)", borderRadius: 12, padding: "9px 4px" }}>
-                  <div style={{ fontSize: 10, color: "#888", fontWeight: 700 }}>{L.potStatUsed}</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#a89a6a" }}>€{potUsed.toFixed(2)}</div>
-                </div>
-                <div style={{ flex: 1, textAlign: "center", background: "rgba(39,174,96,0.10)", borderRadius: 12, padding: "9px 4px" }}>
-                  <div style={{ fontSize: 10, color: "#1f8a4c", fontWeight: 700 }}>{L.potStatAvailable}</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#27ae60" }}>€{potLeft.toFixed(2)}</div>
-                </div>
+        {guestTab === "group" && (
+          <div style={S.card}>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ ...S.row, justifyContent: "space-between", alignItems: "baseline" }}>
+                <h3 style={{ ...S.h3, margin: 0 }}>{groupName || L.groupTitle}</h3>
+                <span style={{ ...S.pill, background: "rgba(120,95,20,0.08)", color: "#8a5e0f", flexShrink: 0 }}>{L.peopleN(people.length)}</span>
               </div>
+              <div style={{ fontSize: 12, color: "#1f6b3a", fontWeight: 700, marginTop: 4 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {people.map((p) => {
+                const benIkHet = p.id === meId
+                const aangemeld = !!p.claimedBy
+                const isHost = !!ownerDevice && p.claimedBy === ownerDevice
+                return (
+                  <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10,
+                    background: benIkHet ? "rgba(31,138,76,0.08)" : "#faf7ec",
+                    border: benIkHet ? "1px solid rgba(31,138,76,0.3)" : "1px solid rgba(120,95,20,0.1)" }}>
+                    <span style={{ fontSize: 14, fontWeight: benIkHet ? 800 : 700, color: p.named ? "#4a3f1e" : "#b3a988" }}>
+                      {p.name}
+                      {benIkHet && <span style={{ fontSize: 11, color: "#1f6b3a", fontWeight: 800 }}> · {L.youMark}</span>}
+                      {isHost && !benIkHet && <span style={{ fontSize: 11, color: "#8a5e0f", fontWeight: 800 }}> · {L.hostMark}</span>}
+                    </span>
+                    <span style={{ fontSize: 11, color: aangemeld ? "#8a5e0f" : "#b3a988", fontWeight: 700 }}>
+                      {aangemeld ? L.scannedSelf : L.notScannedYet}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", marginTop: 12, lineHeight: 1.5 }}>{L.inviteMore}</div>
+          </div>
+        )}
 
-              {/* Potten (per inleg-moment) */}
-              <div style={{ flex: 1, overflowY: "auto", marginBottom: 14 }}>
-                {batches.length === 0 && <div style={{ fontSize: 13, color: "#bbb", padding: "8px 0" }}>{L.potNoContributions}</div>}
-                {batches.map((rows, i) => {
-                  const bt = rows.reduce((s, r) => s + r.amount, 0)
+        {guestTab === "me" && (
+          <>
+            <div style={S.card}>
+              <h3 style={{ ...S.h3, marginTop: 0 }}>{L.myTab}</h3>
+              {rounds.length === 0 ? (
+                <div style={{ fontSize: 13, color: "#b3a988", textAlign: "center", padding: "14px 0" }}>
+                  {L.noRoundClosed}
+                </div>
+              ) : (
+                <>
+                  <div style={{ ...S.row, justifyContent: "space-between", padding: "6px 0" }}>
+                    <span style={{ fontSize: 13.5 }}>{L.whatYouDrank} <span style={{ fontSize: 11, color: "#8a7d55" }}>{L.yourShare}</span></span>
+                    <b style={{ fontSize: 14.5 }}>{euro(mijnVerbruik)}</b>
+                  </div>
+                  <div style={{ ...S.row, justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid rgba(120,95,20,0.1)" }}>
+                    <span style={{ fontSize: 13.5 }}>{L.whatYouPaid} {contribOf(meId) > 0 ? <span style={{ fontSize: 11, color: "#8a7d55" }}>{L.inclPot}</span> : null}</span>
+                    <b style={{ fontSize: 14.5 }}>{euro(mijnBetaald)}</b>
+                  </div>
+                  <div style={{ ...S.row, justifyContent: "space-between", padding: "11px 0 2px" }}>
+                    <span style={{ fontSize: 14, fontWeight: 800 }}>
+                      {Math.abs(mijnSaldo) < 0.005 ? L.youAreEven : mijnSaldo > 0 ? L.youGetBack : L.youStillPay}
+                    </span>
+                    <b style={{ fontSize: 19, color: Math.abs(mijnSaldo) < 0.005 ? "#1f8a4c" : mijnSaldo > 0 ? "#1f8a4c" : "#c0392b" }}>
+                      {euro(Math.abs(mijnSaldo))}
+                    </b>
+                  </div>
+                  {mijnGroep?.samen && (
+                    <div style={{ fontSize: 11.5, color: "#c98a00", fontWeight: 700, marginTop: 8 }}>
+                      {L.settlesWith(mijnGroep.leden.filter((p) => p.id !== meId).map((p) => p.name).join(" & "))}
+                    </div>
+                  )}
+                  <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 10, lineHeight: 1.5 }}>
+                    {L.directionOnly}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {mijnTx.length > 0 && (
+              <div style={S.card}>
+                <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 8 }}>{L.howYouSettle}</h3>
+                {mijnTx.map((t, i) => (
+                  <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "7px 0", borderBottom: i < mijnTx.length - 1 ? "1px solid rgba(120,95,20,0.08)" : "none" }}>
+                    <span style={{ fontSize: 14 }}><b>{t.from}</b> → {t.to}</span>
+                    <b style={{ fontSize: 15 }}>{euro(t.amount)}</b>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {rounds.length > 0 && (
+              <div style={S.card}>
+                <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 8 }}>{L.roundsTitle}</h3>
+                {rounds.map((r) => {
+                  const mijne = drinks.filter((d) => (r.orders[d.id]?.[meId] ?? 0) > 0)
                   return (
-                    <div key={i} style={{ border: "1px solid rgba(233,196,95,0.4)", borderRadius: 14, padding: "10px 12px", marginBottom: 10, background: "rgba(233,196,95,0.05)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-                        <span style={{ fontSize: 13, fontWeight: 800, color: "#a06b00" }}>{potName(i)}</span>
-                        <span style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>€{bt.toFixed(2)}</span>
+                    <div key={r.id} style={{ padding: "8px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
+                      <div style={{ ...S.row, justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 13, fontWeight: 800 }}>{L.roundN(r.seq)}</span>
+                        <span style={{ fontSize: 11.5, color: "#8a7d55" }}>{paidLabel(r)}</span>
                       </div>
-                      {rows.map((r) => {
-                        const who = r.participant_id ? pName(participants.find((p) => p.id === r.participant_id)?.name ?? "?", lang) : L.potGeneral
-                        return (
-                          <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderTop: "1px solid rgba(0,0,0,0.05)" }}>
-                            <span style={{ fontSize: 14 }}>{r.participant_id ? "👤" : "🫙"}</span>
-                            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#4a3f1e" }}>{who}</span>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: "#a06b00" }}>+€{r.amount.toFixed(2)}</span>
-                            <button style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 11 }} onClick={() => deletePotContribution(r.id)}>🗑️</button>
-                          </div>
-                        )
-                      })}
+                      <div style={{ fontSize: 12, color: mijne.length ? "#6b5f3a" : "#b3a988", marginTop: 3 }}>
+                        {mijne.length
+                          ? mijne.map((d) => `${r.orders[d.id][meId]}× ${d.name}`).join(" · ")
+                          : L.nothingThisRound}
+                      </div>
                     </div>
                   )
                 })}
               </div>
+            )}
+          </>
+        )}
 
-              {/* Aanvullen — zelfde manier als de eerste pot-inleg */}
-              <div style={{ background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 14, padding: 12, marginBottom: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#a06b00", marginBottom: 8 }}>{L.potTopUp}</div>
-                {participants.length === 0 ? (
-                  <div style={{ fontSize: 12, color: "#aaa" }}>{L.potAddPersonsFirst}</div>
-                ) : (
-                  <>
-                    <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                      {["10", "15", "20"].map((v) => (
-                        <button
-                          key={v}
-                          onClick={() => { setPotAddWarn(false); setPotAddBulk(v) }}
-                          style={{ flex: 1, borderRadius: 10, padding: "8px 0", fontSize: 13.5, fontWeight: 800, cursor: "pointer", border: potAddBulk === v ? "1.5px solid #ecc85a" : "1px solid rgba(120,95,20,0.15)", background: potAddBulk === v ? "rgba(233,196,95,0.18)" : "#fff", color: potAddBulk === v ? "#a06b00" : "#8a7d55" }}
-                        >
-                          €{v}
-                        </button>
-                      ))}
-                    </div>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, padding: "8px 10px", background: "#fff", border: "1px solid #ecc85a", borderRadius: 12 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#4a3f1e" }}>€</span>
-                      <input type="number" step="1" min="0" inputMode="numeric" placeholder={L.potAmountPlaceholder} value={potAddBulk} onChange={(e) => { setPotAddWarn(false); setPotAddBulk(e.target.value.replace(/[^\d]/g, "")) }} style={{ ...S.input, flex: 1, minWidth: 0 }} />
-                      <span style={{ fontSize: 13, color: "#777" }}>{L.perPersonAbbr}</span>
-                    </div>
-                    <button
-                      onClick={() => setPotAddPerPersonOpen((o) => !o)}
-                      style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", textAlign: "left", background: "none", border: "none", padding: "2px 0", marginBottom: 8, cursor: "pointer" }}
-                    >
-                      <span style={{ fontSize: 11, color: "#bbb", transform: potAddPerPersonOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>▸</span>
-                      <span style={{ fontSize: 11, color: "#a06b00", fontWeight: 600 }}>{L.potPerPersonToggle}</span>
-                    </button>
-                    {potAddPerPersonOpen && (
-                      <div style={{ maxHeight: 150, overflowY: "auto", marginBottom: 8 }}>
-                        {participants.map((p) => (
-                          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                            <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{pName(p.name, lang)}</span>
-                            <span style={{ color: "#999" }}>€</span>
-                            <input type="number" step="1" min="0" inputMode="numeric" placeholder="0" value={potAddDraft[p.id] ?? ""} onChange={(e) => { setPotAddWarn(false); setPotAddDraft({ ...potAddDraft, [p.id]: e.target.value.replace(/[^\d]/g, "") }) }} style={{ ...S.input, width: 72 }} />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {(() => {
-                      const draftSum = Object.values(potAddDraft).reduce((s, v) => s + (parseFloat(v) || 0), 0)
-                      const bulk = parseFloat((potAddBulk || "").replace(",", ".")) || 0
-                      const willAdd = draftSum > 0 ? draftSum : bulk * participants.length
-                      return (
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8, color: "#4a3f1e", fontWeight: 700 }}>
-                          <span>{L.potTotalAdd}</span>
-                          <span>€{willAdd.toFixed(2)}</span>
-                        </div>
-                      )
-                    })()}
-                    {potAddWarn && (
-                      <div style={{ fontSize: 12.5, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 10, padding: "8px 10px" }}>
-                        ⚠️ {L.potAddWarnMsg}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <div style={{ display: "flex", gap: 8 }}>
-                <button style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 700 }} onClick={() => setShowPotOverview(false)}>{L.cancelN}</button>
-                <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "12px 0", fontWeight: 800 }} onClick={addToPot}>{L.add}</button>
-              </div>
-            </div>
+        {guestTab === "order" && (
+        <>
+        {renderRunnerBar()}
+        {renderProposalGuest()}
+        {/* Wat je al aantikte in dit rondje. Bovenaan, want dat is wat je wil zien. */}
+        <div style={{ ...S.card, background: mijnAantal > 0 ? "rgba(31,138,76,0.06)" : "#fff" }}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: mijnAantal > 0 ? 10 : 0 }}>
+            <span style={{ fontSize: 14, fontWeight: 800 }}>
+              {bezig ? L.roundWhatYouWant(roundNr) : L.noRoundYet}
+            </span>
+            {mijnAantal > 0 && <span style={{ ...S.pill, background: "#1f8a4c", color: "#fff" }}>{mijnAantal}</span>}
           </div>
-        )
-      })()}
-
-      {/* Pot modal — gezamenlijke inleg vooraf */}
-      {showPotModal && (
-        <div style={{ ...S.overlay, zIndex: 2200 }}>
-          <div style={{ ...S.modal, width: 400, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
-            <h3 style={{ marginBottom: 4, fontSize: 18, fontWeight: 700, color: "#4a3f1e" }}>🫙 {L.potLay}</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 14 }}>{L.potModalSub}</p>
-
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14, padding: "10px 12px", background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 12 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#4a3f1e" }}>€</span>
-              <input type="number" value={potBulk} onChange={(e) => setPotBulk(e.target.value)} style={{ ...S.input, width: 70 }} />
-              <span style={{ fontSize: 13, color: "#777" }}>{L.perPersonAbbr}</span>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontSize: 13, padding: "8px 0" }} onClick={setPotForEveryone}>{L.add}</button>
+          {mijnAantal === 0 ? (
+            <div style={{ fontSize: 12.5, color: "#8a7d55", lineHeight: 1.5, marginTop: 6 }}>
+              {L.tapBelow}
             </div>
-
-            <div style={{ overflowY: "auto", flex: 1, marginBottom: 12 }}>
-              {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 13 }}>{L.potAddPersonsFirst}</div>}
-              {participants.map((p) => (
-                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{pName(p.name, lang)}</span>
-                  <span style={{ color: "#999" }}>€</span>
-                  <input
-                    type="number"
-                    step="1"
-                    min="0"
-                    inputMode="numeric"
-                    placeholder="0"
-                    value={potDraft[p.id] ?? ""}
-                    onChange={(e) => { setPotWarn(false); const v = e.target.value.replace(/[^\d]/g, ""); setPotDraft((prev) => ({ ...prev, [p.id]: v })) }}
-                    style={{ ...S.input, width: 80 }}
-                  />
-                </div>
+          ) : (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {mijn.map((d) => (
+                <button key={d.id} onClick={() => bump(d.id, meId, -1)}
+                  style={{ ...S.pill, cursor: "pointer", background: "#fff", border: "1px solid rgba(31,138,76,0.35)", color: "#1f6b3a", fontSize: 12 }}>
+                  {aQty(d.id, meId)}× {d.name} ✕
+                </button>
               ))}
             </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 14, color: "#4a3f1e", fontWeight: 700 }}>
-              <span>{L.potTotalInPot}</span>
-              <span>€{Object.values(potDraft).reduce((s, v) => s + (parseFloat(v) || 0), 0).toFixed(2)}</span>
-            </div>
-
-            {potWarn && (
-              <div style={{ fontSize: 13, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 12, padding: "10px 12px", marginBottom: 12, lineHeight: 1.45 }}>
-                ⚠️ {L.potWarnPre}<b>{L.cancel}</b>.
-              </div>
-            )}
-            <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "10px 0" }} onClick={savePot}>{L.saveBtn}</button>
-              <button style={{ ...S.btn, flex: 1, padding: "10px 0" }} onClick={() => { setPotWarn(false); setShowPotModal(false) }}>{L.cancel}</button>
-            </div>
-          </div>
+          )}
         </div>
-      )}
 
-      {/* Payment editor modal */}
-      {paymentEditRound !== null && (
-        <div style={S.overlay}>
-          <div style={{ ...S.modal, width: 380 }}>
-            <h3 style={{ marginBottom: 6, fontSize: 18, fontWeight: 700 }}>{L.payEditorTitle(roundLabel(paymentEditRound))}</h3>
-            <p style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>{L.payEditorSub}</p>
+        <div style={{ position: "relative", marginBottom: 9 }}>
+          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none" }}>🔍</span>
+          <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)} placeholder={L.searchDrink}
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 36, paddingRight: drinkSearch ? 34 : 12, fontSize: 15, textAlign: "left" }} />
+          {drinkSearch && (
+            <button onClick={() => setDrinkSearch("")}
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 15, color: "#8a7d55", padding: 4 }}>✕</button>
+          )}
+        </div>
 
-            {/* De pot als betaler — enkel als er een pot is */}
-            {(() => {
-              const potUsedOther = payments.filter((p) => p.session >= 1 && !p.participant_id && p.session !== paymentEditRound).reduce((s, p) => s + p.amount, 0)
-              const potAvailable = Math.max(0, potTotal - potUsedOther)
-              if (potTotal <= 0) {
-                return (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "rgba(150,110,20,0.05)", border: "1px dashed rgba(120,95,20,0.2)", borderRadius: 12, marginBottom: 12 }}>
-                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#aaa" }}>{L.potNodeLabel}</span>
-                    <span style={{ fontSize: 12, color: "#bbb" }}>{L.noPotYet}</span>
-                    <button onClick={openPotModal} style={{ background: "none", border: "none", color: "#c98a00", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>{L.addPotLink}</button>
-                  </div>
-                )
-              }
+        <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", marginBottom: 8 }}>
+          {catsPresent.map((c) => (
+            <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}</span>
+          ))}
+        </div>
+
+        {!zoekt && (
+          <div style={{ fontSize: 11.5, textAlign: "right", marginBottom: 6 }}>
+            <span onClick={() => setFullList((v) => !v)} style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }}>
+              {fullList ? L.shortList : L.fullListBtn}
+            </span>
+          </div>
+        )}
+
+        {lijst.length === 0 ? (
+          <div style={{ ...S.card, textAlign: "center", color: "#b3a988", fontSize: 13, padding: "20px 0" }}>
+            {!zoekt && !fullList ? (
+              <span onClick={() => setFullList(true)} style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }}>{L.showAll}</span>
+            ) : L.nothingFound}
+          </div>
+        ) : (
+          <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12 }}>
+            {lijst.map((d) => {
+              const n = aQty(d.id, meId)
               return (
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 12 }}>
-                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#4a3f1e" }}>{L.potNodeLabel}</span>
-                    <span style={{ color: "#999" }}>€</span>
-                    <input
-                      type="number"
-                      placeholder="0"
-                      value={paymentDraft[POT_PAYER] ?? ""}
-                      onChange={(e) => {
-                        const v = parseFloat(e.target.value)
-                        const clamped = isNaN(v) ? e.target.value : String(Math.min(v, potAvailable))
-                        setPaymentDraft((prev) => ({ ...prev, [POT_PAYER]: clamped }))
-                      }}
-                      style={{ ...S.input, width: 80 }}
-                    />
-                  </div>
-                  <div style={{ fontSize: 10, color: "#a06b00", marginTop: 3, marginLeft: 4 }}>
-                    {L.potAvailableNote(potAvailable.toFixed(2))}
+                <div key={d.id} style={{ padding: "10px", borderRadius: 12, background: n > 0 ? "rgba(31,138,76,0.08)" : "#faf7ec", border: n > 0 ? "1px solid rgba(31,138,76,0.3)" : "1px solid rgba(120,95,20,0.1)" }}>
+                  <div style={{ fontSize: 13.5, fontWeight: n > 0 ? 800 : 600, color: n > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
+                  <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
+                    <button style={{ ...S.step, opacity: n > 0 ? 1 : 0.4 }} onClick={() => n > 0 && bump(d.id, meId, -1)}>−</button>
+                    <span style={{ fontSize: 17, fontWeight: 800, color: n > 0 ? "#1f8a4c" : "#b3a988" }}>{n}</span>
+                    <button style={S.step} onClick={() => bump(d.id, meId, 1)}>+</button>
                   </div>
                 </div>
               )
-            })()}
-
-            <div style={participants.length > 4 ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", columnGap: 16, rowGap: 10 } : undefined}>
-            {participants.map((p) => (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: participants.length > 4 ? 0 : 10 }}>
-                <span style={{ flex: 1, fontSize: 14, fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pName(p.name, lang)}</span>
-                <span style={{ color: "#999" }}>€</span>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={paymentDraft[p.id] ?? ""}
-                  onChange={(e) => setPaymentDraft((prev) => ({ ...prev, [p.id]: e.target.value }))}
-                  style={{ ...S.input, width: 80 }}
-                />
-              </div>
-            ))}
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 12, marginBottom: 16, color: "#888" }}>
-              <span>{L.sumEntered}</span>
-              <span style={{ fontWeight: 700 }}>€{[POT_PAYER, ...participants.map((p) => p.id)].reduce((s, k) => s + (parseFloat(paymentDraft[k] || "") || 0), 0).toFixed(2)}</span>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1 }} onClick={savePayments}>{L.saveBtn}</button>
-              <button style={{ ...S.btn, flex: 1 }} onClick={() => setPaymentEditRound(null)}>{L.cancel}</button>
-            </div>
+            })}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Round fullscreen */}
-      {roundFullscreen !== null && (
-        <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 2000, overflowY: "auto", padding: 32 }}>
-          <div style={{ maxWidth: 600, margin: "0 auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-              <h2 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>🍻 {L.roundWordAlt} {roundLabel(roundFullscreen)}</h2>
-              <button style={S.btn} onClick={() => setRoundFullscreen(null)}>{L.closeX}</button>
-            </div>
-            {Object.values(getRoundGrouped(roundFullscreen)).map((it) => (
-              <div key={it.drink.id} style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20, padding: "16px 20px", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16 }}>
-                <span style={{ fontSize: 40 }}>{it.drink.emoji}</span>
-                <div>
-                  <div style={{ fontSize: 26, fontWeight: 800, color: "#333" }}>{it.totalQty}× {drinkName(it.drink.name, lang)}</div>
-                  <div style={{ fontSize: 13, color: "#aaa", marginTop: 2 }}>
-                    {Object.values(it.people).map((p) => `${pName(p.name, lang)} (${p.qty})`).join(", ")}
-                    {it.anonymous > 0 && L.nToAssignSuffix(it.anonymous)}
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", padding: "2px 0 14px" }}>
+          <button onClick={startVoice}
+            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
+            {L.voiceBtn} <span style={{ fontSize: 9, opacity: 0.75 }}>{L.voiceBeta}</span>
+          </button>
+          <button onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }}
+            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
+            {L.addOwnDrink}
+          </button>
+        </div>
+
+        <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", padding: "6px 0 20px", lineHeight: 1.5 }}>
+          {L.barFootnote1}<br />
+          {L.barFootnote2}
+        </div>
+        </>
+        )}
+      </div></div>
+    )
+  }
+
+  if (view === "start") {
+    return (
+      <div style={{ ...S.page, display: "flex", flexDirection: "column", justifyContent: "flex-start", padding: "0 0 40px" }}><div style={{ ...S.wrap, paddingTop: 26 }}>
+        {renderDialogs()}
+        <style>{`input::placeholder,textarea::placeholder{color:#c4b896;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 34 }}>
+          <div style={{ ...S.row, gap: 13 }}>
+            <RundoLogo size={64} />
+            <div style={{ ...S.h1, fontSize: 34, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
+          </div>
+          <div style={{ ...S.row, gap: 8, marginTop: 12 }}><CheersIcon size={22} color="#4a3f1e" /><span style={{ fontSize: 15, color: "#4a3f1e", fontWeight: 700 }}>{L.tagline}</span></div>
+        </div>
+        <div style={{ ...S.card, padding: "20px 16px" }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#8a7d55", marginBottom: 7, letterSpacing: "0.03em" }}>
+            {L.groupNameHint} <span style={{ fontWeight: 600, color: "#a89a6f", letterSpacing: 0 }}>· {L.tapToChange}</span>
+          </div>
+          <div style={{ position: "relative", marginBottom: 16 }}>
+            <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder={L.autoName()}
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 17, fontWeight: 800, background: "#fdfaf2", padding: "15px 40px 15px 14px", borderRadius: 12, border: "1.5px solid #e08a00" }} />
+            <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#c4b896", pointerEvents: "none" }}>✏️</span>
+          </div>
+          <button style={{ ...S.btnP, width: "100%" }} onClick={() => createGroup(L.autoName())}>{busy ? L.starting : L.startNow}</button>
+        </div>
+        <div style={{ ...S.card, opacity: 0.6 }}>
+          <div style={{ ...S.row, justifyContent: "space-between" }}>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>{L.savedGroups}</span>
+            <span style={{ fontSize: 11.5, color: "#8a7d55" }}>{L.savedLater}</span>
+          </div>
+          <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 8, lineHeight: 1.5 }}>{L.savedNote}<br /><span style={{ fontSize: 10.5, color: "#b3a988" }}>📌 Live-reminder: groepen automatisch opruimen na inactiviteit, tenzij vastgezet (📌) om te bewaren.</span></div>
+        </div>
+      </div></div>
+    )
+  }
+
+  // ── SETUP (GROEP) ────────────────────────────────────────────────────────────
+  if (view === "setup") {
+    return (
+      <div style={S.page} onClick={() => { setCoinInfo(false); setDepositInfo(false) }}><div style={S.wrap}>
+        <Header />
+        {showPot && renderPotModal()}
+        {renderDialogs()}
+        {beginPrompt && (
+          <div style={{ ...S.overlay, zIndex: 65 }} onClick={() => setBeginPrompt(false)}>
+            <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ ...S.h3, fontSize: 18, marginTop: 0, marginBottom: 4 }}>{L.beforeWeStart}</h3>
+
+              {/* De modus komt EERST — hij bepaalt of de rest nog relevant is. Bekers,
+                  coins en pot bestaan alleen als je afrekent. Kies je "gewoon rondjes",
+                  dan is dit scherm hiermee klaar. */}
+              <p style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e", marginBottom: 10 }}>{L.modeTitle}</p>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {/* Fair Split BOVEN — de voorkeur. Al geselecteerd bij binnenkomst. */}
+                <button onClick={() => setBpSettle(true)}
+                  style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
+                           background: bpSettle === true ? "#fff8e8" : "#fff",
+                           boxShadow: bpSettle === true ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
+                           border: bpSettle === true ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
+                  <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
+                    <span style={{ fontSize: 20 }}>⚖️</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>Fair Split</span>
+                    {bpSettle === true && <span style={{ marginLeft: "auto", fontSize: 16, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Net afgeronde ronde — fullscreen bevestiging voor de barman + snel betalen */}
-      {finishedRoundSnapshot && (
-        <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 2100, overflowY: "auto", padding: 28 }}>
-          <div style={{ maxWidth: 560, margin: "0 auto" }}>
-            <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <h2 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>{L.finishedRoundTitle(roundLabel(finishedRoundSnapshot.session))}</h2>
-            </div>
-
-            {/* Lijst van wat besteld is */}
-            {(() => {
-              const visible = Object.entries(finishedRoundSnapshot.cart).filter(([, line]) => line.total > 0)
-              const multi = visible.length > 4
-              return (
-                <div style={multi ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(185px, 1fr))", gap: 10 } : undefined}>
-                  {visible.map(([drinkId, line]) => {
-                    const d = drinks.find((dr) => dr.id === drinkId)
-                    if (!d) return null
-                    const peopleNames = Object.entries(line.assignments)
-                      .map(([pid, qty]) => {
-                        const p = participants.find((pp) => pp.id === pid)
-                        return p ? `${pName(p.name, lang)} (${qty})` : null
-                      })
-                      .filter(Boolean)
-                    return (
-                      <div key={drinkId} style={{ display: "flex", alignItems: "center", gap: multi ? 10 : 14, marginBottom: multi ? 0 : 14, padding: multi ? "10px 12px" : "14px 18px", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16 }}>
-                        <span style={{ fontSize: multi ? 24 : 32, flexShrink: 0 }}>{d.emoji}</span>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: multi ? 16 : 20, fontWeight: 800, color: "#333" }}>{line.total}× {drinkName(d.name, lang)}</div>
-                          {peopleNames.length > 0 && <div style={{ fontSize: multi ? 11 : 12, color: "#aaa", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: multi ? "nowrap" : "normal" }}>{peopleNames.join(", ")}</div>}
-                        </div>
+                  <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 13 }}>{L.modeFairSub}</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
+                    {[["🍺", "🪙", "Tom"], ["🍷🍷", "🪙🪙🪙🪙", "Els"], ["🚫", "—", "Bart"], ["🍺🍺", "🪙🪙", "Jan"]].map(([drank, geld, naam], i) => (
+                      <div key={i}>
+                        <div style={{ fontSize: 18, height: 24, whiteSpace: "nowrap", letterSpacing: -3, opacity: drank === "🚫" ? 0.4 : 1 }}>{drank}</div>
+                        <div style={{ fontSize: 14, height: 22, marginTop: 5, whiteSpace: "nowrap", letterSpacing: -3, color: geld === "—" ? "#b3a988" : undefined }}>{geld}</div>
+                        <div style={{ fontSize: 11, marginTop: 4, color: naam === "Bart" ? "#b3a988" : "#8a7d55", fontWeight: 700 }}>{naam}</div>
                       </div>
-                    )
-                  })}
-                </div>
-              )
-            })()}
-
-            {/* Snel betalen: bedrag + wie betaalde (chips, meerdere mag, incl. pot) */}
-            {(() => {
-              const round = finishedRoundSnapshot.session
-              const potUsedOther = payments.filter((p) => p.session >= 1 && !p.participant_id && p.session !== round).reduce((s, p) => s + p.amount, 0)
-              const potAvailable = Math.max(0, potTotal - potUsedOther)
-              // Wie is er al aangeduid als betaler (een bedrag ingevuld)?
-              const payerKeys = Object.entries(paymentDraft).filter(([, v]) => parseFloat(v || "") > 0).map(([k]) => k)
-              const singlePayer = payerKeys.length <= 1
-              const totalEntered = [POT_PAYER, ...participants.map((p) => p.id)].reduce((s, k) => s + (parseFloat(paymentDraft[k] || "") || 0), 0)
-
-              return (
-                <div style={{ marginTop: 22, padding: "16px 18px", background: "rgba(150,110,20,0.05)", borderRadius: 16, border: "1px solid rgba(150,110,20,0.15)" }}>
-                  <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 6, color: "#4a3f1e" }}>{L.whoPaidThisRound}</div>
-                  <p style={{ fontSize: 12, color: "#a89a6a", margin: "0 0 12px" }}>{L.tapWhoPaid}</p>
-
-                  {/* Wie betaalde? — chips: eerst de pot, dan de personen. Tik aan ? bedragveld verschijnt. */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-                    {/* De pot als betaler — als eerste getoond */}
-                    {potTotal > 0 ? (() => {
-                      const active = (paymentDraft[POT_PAYER] ?? "") !== ""
-                      return (
-                        <>
-                          <button
-                            onClick={() => {
-                              setPayWarn(false)
-                              setPaymentDraft((prev) => {
-                                const n = { ...prev }
-                                if (n[POT_PAYER] !== undefined) delete n[POT_PAYER]
-                                else n[POT_PAYER] = ""
-                                return n
-                              })
-                            }}
-                            style={{ border: active ? "1.5px solid #ecc85a" : "1px solid rgba(120,95,20,0.2)", background: active ? "rgba(233,196,95,0.25)" : "#fff", color: active ? "#a06b00" : "#8a7d55", borderRadius: 20, padding: "7px 14px", fontSize: 13, fontWeight: active ? 800 : 700, cursor: "pointer" }}
-                          >
-                            {active ? "✓ " : ""}{L.potNodeLabel}
-                          </button>
-                          <button onClick={() => setShowPotOverview(true)} title={L.titlePotView} style={{ border: "1px dashed rgba(120,95,20,0.3)", background: "rgba(150,110,20,0.04)", color: "#c98a00", borderRadius: 20, padding: "7px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
-                            {L.topUpPotLink}
-                          </button>
-                        </>
-                      )
-                    })() : (
-                      <button onClick={openPotModal} style={{ border: "1px dashed rgba(120,95,20,0.25)", background: "rgba(150,110,20,0.04)", color: "#c98a00", borderRadius: 20, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
-                        {L.noPotChip}
-                      </button>
-                    )}
-                    {participants.map((p) => {
-                      const active = (paymentDraft[p.id] ?? "") !== ""
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() => {
-                            setPayWarn(false)
-                            setPaymentDraft((prev) => {
-                              const n = { ...prev }
-                              if (n[p.id] !== undefined) delete n[p.id]
-                              else n[p.id] = ""
-                              return n
-                            })
-                          }}
-                          style={{ border: active ? "1.5px solid #c8941a" : "1px solid rgba(120,95,20,0.2)", background: active ? "rgba(214,158,20,0.12)" : "#fff", color: active ? "#6b5a24" : "#8a7d55", borderRadius: 20, padding: "7px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
-                        >
-                          {active ? "✓ " : ""}{pName(p.name, lang)}
-                        </button>
-                      )
-                    })}
+                    ))}
                   </div>
+                  <div style={{ fontSize: 11.5, color: "#4a3f1e", marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)", lineHeight: 1.5 }}>{L.modeFairLine}</div>
+                </button>
 
-                  {/* Bedragvelden voor wie aangetikt is */}
-                  {(paymentDraft[POT_PAYER] !== undefined || participants.some((p) => paymentDraft[p.id] !== undefined)) && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 4 }}>
-                      {paymentDraft[POT_PAYER] !== undefined && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#fffdf6", border: "1.5px solid #ecc85a", borderRadius: 12 }}>
-                          <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#a06b00" }}>{L.potPaidLabel}</span>
-                          <span style={{ color: "#999" }}>€</span>
-                          <input
-                            type="number"
-                            autoFocus={singlePayer}
-                            placeholder="0"
-                            value={paymentDraft[POT_PAYER] ?? ""}
-                            onChange={(e) => {
-                              setPayWarn(false)
-                              const v = parseFloat(e.target.value)
-                              const clamped = isNaN(v) ? e.target.value : String(Math.min(v, potAvailable))
-                              setPaymentDraft((prev) => ({ ...prev, [POT_PAYER]: clamped }))
-                            }}
-                            style={{ ...S.input, width: 90 }}
-                          />
-                        </div>
-                      )}
-                      {participants.filter((p) => paymentDraft[p.id] !== undefined).map((p) => (
-                        <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#fff", border: "1px solid rgba(214,158,20,0.3)", borderRadius: 12 }}>
-                          <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#6b5a24", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pName(p.name, lang)} {L.paidSuffix}</span>
-                          <span style={{ color: "#999" }}>€</span>
-                          <input
-                            type="number"
-                            autoFocus={singlePayer}
-                            placeholder="0"
-                            value={paymentDraft[p.id] ?? ""}
-                            onChange={(e) => { setPayWarn(false); setPaymentDraft((prev) => ({ ...prev, [p.id]: e.target.value })) }}
-                            style={{ ...S.input, width: 90 }}
-                          />
-                        </div>
-                      ))}
-                      {!singlePayer && (
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#a89a6a", fontWeight: 700, padding: "2px 4px" }}>
-                          <span>{L.paidTogether}</span>
-                          <span>€{totalEntered.toFixed(2)}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                {/* Geruststelling, precies waar de twijfel ontstaat. */}
+                <div style={{ textAlign: "center", fontSize: 10.5, color: "#a89a6f", padding: "9px 0" }}>{L.modeSwitchLater}</div>
 
-                  {potTotal > 0 && paymentDraft[POT_PAYER] !== undefined && (
-                    <div style={{ marginTop: 8, padding: "8px 12px", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 10, textAlign: "center", fontSize: 15, fontWeight: 800, color: "#a06b00" }}>{L.potAvailableChip(potAvailable.toFixed(2))}</div>
-                  )}
-                </div>
-              )
-            })()}
+                {/* Gewoon aantallen ONDER, met bestellijstje. */}
+                <button onClick={() => setBpSettle(false)}
+                  style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
+                           background: bpSettle === false ? "#fff8e8" : "#fff",
+                           boxShadow: bpSettle === false ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
+                           border: bpSettle === false ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
+                  <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
+                    <span style={{ fontSize: 20 }}>🍺</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
+                    {bpSettle === false && <span style={{ marginLeft: "auto", fontSize: 16, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 11 }}>{L.modeQuickSub}</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
+                  </div>
+                  {/* Bestellijstje: wat er aan de toog moet komen. */}
+                  <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 10 }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 Aan de toog</div>
+                    <div style={{ fontSize: 13, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pils · 2× Cola · 1× Wijn</div>
+                  </div>
+                </button>
+              </div>
 
-            {/* Acties */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 18 }}>
-              {payWarn && (
-                <div style={{ fontSize: 13, color: "#c0392b", background: "#fff0f0", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45 }}>
-                  ⚠️ {L.payWarnA}<b>{L.potWordInline}</b>{L.payWarnB}<b>{L.personWordInline}</b>{L.payWarnC}<b>{L.laterFill}</b>.
-                </div>
+              {bpSettle === true && (
+                <div style={{ fontSize: 11.5, color: "#8a7d55", margin: "14px 0 0", lineHeight: 1.5 }}>{L.settingsLater}</div>
               )}
-              <button
-                style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 800, border: "none", background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#4a3f1e", boxShadow: "0 4px 14px rgba(233,196,95,0.45)" }}
-                onClick={async () => {
-                  if (!group) return
-                  const round = finishedRoundSnapshot.session
-                  const inserts = (Object.entries(paymentDraft) as [string, string][])
-                    .filter(([key, amt]) => (key === POT_PAYER || participants.some((p) => p.id === key)) && parseFloat(amt) > 0)
-                    .map(([key, amt]) => ({ group_id: group.id, session: round, participant_id: key === POT_PAYER ? null : key, amount: parseFloat(amt) }))
-                  if (inserts.length === 0) { setPayWarn(true); return }
-                  await supabase.from("payments").insert(inserts)
-                  await reloadTable(group.id, "payments")
-                  setPayWarn(false)
-                  setPaymentDraft({})
-                  setFinishedRoundSnapshot(null)
-                  setBarmanStep("list")
-                  setView("ordering")
-                  setToast(L.toastRoundDone(roundLabel(round)))
-                }}
-              >
-                {L.saveCloseBtn}
+
+              <button style={{ ...S.btnP, width: "100%", marginTop: 14, opacity: bpSettle === null ? 0.45 : 1 }}
+                disabled={bpSettle === null}
+                onClick={applyBeginChoices}>
+                {L.quickStart}
               </button>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, background: "transparent", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55" }}
-                  onClick={adjustFinishedRound}
-                >
-                  ✏️ {L.orderAdjustBtn}
-                </button>
-                <button
-                  style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 13, background: "transparent", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55" }}
-                  onClick={() => { setPayWarn(false); setPaymentDraft({}); setFinishedRoundSnapshot(null); setView("ordering"); setBarmanStep("list") }}
-                >
-                  {L.laterFill}
-                </button>
-              </div>
             </div>
           </div>
+        )}
+        <div style={S.card}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{L.groupNameEdit}</div>
+          <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()}
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 15, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: "#fdfaf2" }} />
         </div>
-      )}
-
-      {/* ═══ VIEW: Totaal (wie dronk wat) ═══ */}
-      {view === "bill" && (
-        <div>
-          {/* Overall drink overview — ALL orders, assigned or not (standaard ingeklapt) */}
-          <div style={S.card}>
-            <h3 onClick={() => setShowAllOrderedDrinks((v) => !v)} style={{ ...S.h3, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, marginBottom: showAllOrderedDrinks ? 14 : 0, cursor: "pointer" }}>
-              {L.allOrderedDrinks}
-              {(() => { const tot = orders.reduce((s, o) => s + o.quantity, 0); return tot > 0 ? <span style={{ fontSize: 12, fontWeight: 800, color: "#4a3f1e", background: "#ecc85a", borderRadius: 20, padding: "1px 11px" }}>{tot} {tot === 1 ? L.drink : L.drinks}</span> : null })()}
-              <span style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 700, color: "#b3854a", textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap" }}>{showAllOrderedDrinks ? L.hideDrinks : L.showDrinksBtn}</span>
-            </h3>
-            {showAllOrderedDrinks && (() => {
-              const overallSummary: Record<string, { drink: Drink; totalQty: number; anonymousQty: number }> = {}
-              orders.forEach((o) => {
-                const d = drinks.find((dr) => dr.id === o.drink_id)
-                if (!d) return
-                if (!overallSummary[d.id]) overallSummary[d.id] = { drink: d, totalQty: 0, anonymousQty: 0 }
-                overallSummary[d.id].totalQty += o.quantity
-                if (!o.participant_id) overallSummary[d.id].anonymousQty += o.quantity
-              })
-              const items = Object.values(overallSummary)
-              if (items.length === 0) return <div style={{ color: "#aaa", textAlign: "center", padding: 12, fontSize: 13 }}>{L.nothingOrdered}</div>
-              return (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 8, alignItems: "start" }}>
-                  {items.map((it) => (
-                    <div key={it.drink.id} style={{ background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.4)", borderRadius: 12, padding: "8px 10px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 17 }}>{it.drink.emoji}</span>
-                        <span style={{ fontSize: 14, fontWeight: 800 }}>{it.totalQty}×</span>
-                        <span style={{ fontSize: 12.5, color: "#555", flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>{drinkName(it.drink.name, lang)}</span>
-                      </div>
-                      {participants.length > 0
-                        ? renderBillAssign(it.drink)
-                        : it.anonymousQty > 0 && <span style={{ fontSize: 10, color: "#e0685c", fontWeight: 600 }}>{L.nToAssignParen(it.anonymousQty)}</span>}
-                    </div>
-                  ))}
-                </div>
-              )
-            })()}
+        <div style={S.card}>
+          <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 14 }}>{L.peopleCount}</h3>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
+            <button style={{ ...S.step, width: 42, height: 42, fontSize: 22, opacity: people.length > 0 ? 1 : 0.4 }} onClick={removeLastPerson}>−</button>
+            <span style={{ fontSize: 26, fontWeight: 800, minWidth: 34, textAlign: "center" }}>{people.length}</span>
+            <button style={{ ...S.step, width: 42, height: 42, fontSize: 22, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={addPerson}>+</button>
           </div>
+          <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", marginTop: 10 }}>{L.namesOptional}</div>
+        </div>
 
-          <div style={S.card}>
-            <div style={{ marginBottom: 8 }}>
-              <h3 style={{ ...S.h3, marginBottom: 6 }}>{L.billTitle}</h3>
-              {(bill.totalActuallySpent > 0.01 || potTotal > 0) && (() => {
-                const potUsed = payments.filter((p) => p.session >= 1 && !p.participant_id).reduce((s, p) => s + p.amount, 0)
-                const potLeft = Math.max(0, potTotal - potUsed)
+        <div style={S.card}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", marginBottom: 3 }}>{L.peopleHeader(people.length)}</div>
+          <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 13, lineHeight: 1.5 }}>{L.peopleIntro(Math.max(0, people.length - 1))}</div>
+
+          {/* Wie ben JIJ? Alleen relevant als de admin nog nergens zit — normaal is hij
+              al Gast 1, dus dit blijft verborgen. Vangnet voor het randgeval. */}
+          {!meId && people.length > 0 && (
+            <div style={{ background: "#fff8e8", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 12, padding: "11px 12px", marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f", marginBottom: 3 }}>⭐ {L.whichAreYou}</div>
+              <div style={{ fontSize: 11, color: "#8a7d55", marginBottom: 9, lineHeight: 1.45 }}>{L.pickYourName}</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {people.filter((p) => !p.claimedBy).map((p) => {
+                  const idx = people.indexOf(p)
+                  return (
+                    <button key={p.id} disabled={busy} onClick={() => claimSeat(p.id, isGuestDefault(p.name) ? `Gast ${idx + 1}` : p.name)}
+                      style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(240,165,0,0.5)", background: "#fff", color: "#4a3f1e", fontWeight: 800, opacity: busy ? 0.5 : 1 }}>
+                      {isGuestDefault(p.name) ? `Gast ${idx + 1}` : p.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {(() => {
+            const mijnPlaats = people.find((p) => p.id === meId)
+            // Iedereen behalve ikzelf: geclaimd (echte naam) of nog wachtend op scan.
+            const anderen = people.filter((p) => p.id !== meId)
+            const geclaimd = anderen.filter((p) => p.claimedBy)
+            const wachtend = anderen.filter((p) => !p.claimedBy)
+            const mijnIdx = mijnPlaats ? people.indexOf(mijnPlaats) : -1
+            return (
+              <>
+                {/* JOUW plaats — de enige die de admin standaard invult. */}
+                {mijnPlaats && (
+                  <div style={{ background: "#faf7ec", borderRadius: 10, padding: "10px 11px", marginBottom: geclaimd.length || wachtend.length ? 8 : 0, border: "1px solid rgba(31,138,76,0.25)" }}>
+                    <div style={{ ...S.row, gap: 8 }}>
+                      <span style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(31,138,76,0.15)", color: "#1f6b3a", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>⭐</span>
+                      <input value={isGuestDefault(mijnPlaats.name) ? "" : mijnPlaats.name}
+                        placeholder={L.yourSeat}
+                        onChange={(e) => renamePerson(mijnPlaats.id, e.target.value === "" ? `Gast ${mijnIdx + 1}` : e.target.value)}
+                        style={{ ...S.input, flex: 1, minWidth: 0, padding: "7px 9px", fontSize: 14, fontWeight: 800, textAlign: "left", background: "#fff" }} />
+                      <span style={{ fontSize: 10.5, color: "#8a5e0f", background: "#f3e4c4", padding: "3px 9px", borderRadius: 10, fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0 }}>✏️ {L.nameLabel}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Wie al scande — echte namen, compact. */}
+                {geclaimd.map((p) => {
+                  const bezet = true
+                  return (
+                    <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: "#faf7ec", border: "1px solid rgba(120,95,20,0.1)" }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 700, color: "#4a3f1e" }}>📱 {p.name}</span>
+                      {bezet && (
+                        <button onClick={() => releaseSeat(p.id)}
+                          style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)", fontSize: 10.5, padding: "3px 8px" }}>
+                          {L.freeUp}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* De rest samengevat — géén zes lege velden, dus geen reflex om alles in
+                    te vullen. Ze wachten op de scan. */}
+                {wachtend.length > 0 && (
+                  <div style={{ ...S.row, justifyContent: "space-between", padding: "9px 11px", borderRadius: 10, background: "#fff", border: "1px dashed rgba(120,95,20,0.25)" }}>
+                    <span style={{ fontSize: 12, color: "#a89a6f" }}>{L.waitingSeats(wachtend.map((p) => people.indexOf(p) + 1).join(" · "))}</span>
+                  </div>
+                )}
+
+                {/* De uitzondering: iemand zonder telefoon. Bewust een aparte tik. */}
+                <div style={{ borderTop: "1px solid rgba(120,95,20,0.1)", marginTop: 12, paddingTop: 11, textAlign: "center" }}>
+                  <span style={{ fontSize: 11, color: "#8a7d55" }}>{L.noPhoneAdd} </span>
+                  <span onClick={addPerson} style={{ fontSize: 11.5, color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{L.addSelf}</span>
+                </div>
+              </>
+            )
+          })()}
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 24, marginBottom: 4 }}>
+          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice(L.addPersonFirst); return } if (unfinishedRound) { resumeRound(); return } if (onboardedOnce) { setOpenRound(rounds.length - 1); setView("hub") } else setBeginPrompt(true) }}>{unfinishedRound ? L.continueRound(roundNr) : "Volgende"}</button>
+        </div>
+      </div></div>
+    )
+  }
+
+  // ── SETTINGS (drank, bekers, pot) ────────────────────────────────────────────
+  if (view === "settings") {
+    return (
+      <div style={S.page} onClick={() => { setCoinInfo(false); setDepositInfo(false) }}><div style={S.wrap}>
+        <Header />
+        {showPot && renderPotModal()}
+        {renderDialogs()}
+        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10 }}>⚙️ Groepsinstellingen</h3>
+        <div style={{ ...S.card, marginBottom: 10 }}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 800 }}>Groepsnaam</span>
+            {hasSettled && <span style={{ fontSize: 11, color: "#8a7d55", fontWeight: 700 }}>🔒 vast na afrekenen</span>}
+          </div>
+          <input disabled={hasSettled} value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : "#fdfaf2", color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
+        </div>
+        {!fromOnboarding && (
+        <div style={{ ...S.card, marginBottom: 10 }}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: people.length > 0 ? 10 : 0 }}>
+            <span style={{ fontSize: 14, fontWeight: 800 }}>{L.peopleTitle}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <button style={{ ...S.step, opacity: people.length > 0 ? 1 : 0.4 }} onClick={removeLastPerson}>−</button>
+              <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{people.length}</span>
+              <button style={{ ...S.step, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={addPerson}>+</button>
+            </div>
+          </div>
+          {people.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(108px, 1fr))", gap: 6 }}>
+              {people.map((p, idx) => (
+                <input key={p.id} value={isGuestDefault(p.name) ? "" : p.name} placeholder={isGuestDefault(p.name) ? p.name : `Gast ${idx + 1}`} onChange={(e) => renamePerson(p.id, e.target.value === "" ? `Gast ${idx + 1}` : e.target.value)} style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "6px 8px", fontSize: 12.5, textAlign: "left" }} />
+              ))}
+            </div>
+          )}
+        </div>
+        )}
+        <div style={{ ...S.card, marginBottom: 10 }}>
+          <div style={{ ...S.row, justifyContent: "space-between" }}>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>{potIsCard ? L.drinkCard : L.potTitle} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>— optioneel</span></span>
+            <button style={{ ...S.btn, padding: "6px 12px", fontSize: 13 }} onClick={() => setShowPot(true)}>{potContribTotal > 0 ? `inleg ${euro(potContribTotal)}` : "+ inleggen"}</button>
+          </div>
+          {potChosen && potContribTotal <= 0.005 && <div style={{ marginTop: 8, textAlign: "right" }}><span onClick={() => setPotChosen(false)} style={{ fontSize: 12, color: "#c0554a", fontWeight: 700, cursor: "pointer" }}>✕ toch niet</span></div>}
+        </div>
+
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ ...S.card, marginBottom: 0 }}>
+          <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.3, textAlign: "center" }}>{L.cupsTitle} <span onClick={(e) => { e.stopPropagation(); setDepositInfo((v) => !v); setCoinInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 10.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
+          <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "center" }}>
+            <div style={{ ...S.seg(!depositOn), padding: "6px 8px" }} onClick={() => setDepositOn(false)}>uit</div>
+            <div style={{ ...S.seg(depositOn), padding: "6px 8px" }} onClick={() => setDepositOn(true)}>aan</div>
+          </div>
+          {depositInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>♻️ <b>Herbruikbare bekers?</b>{L.cupsInfo}</div>}
+          {depositOn && (
+            <div style={{ marginTop: 10 }}>
+              {pay === "coin" && (
+                <>
+                  <div style={{ ...S.row, gap: 6, marginBottom: 6 }}>
+                    <div style={{ ...S.seg(depositUnit === "coin"), padding: "6px 6px", fontSize: 12 }} onClick={() => setDepositUnit("coin")}>in coins</div>
+                    <div style={{ ...S.seg(depositUnit === "eur"), padding: "6px 6px", fontSize: 12 }} onClick={() => setDepositUnit("eur")}>in €</div>
+                  </div>
+                  <div style={{ fontSize: 11, color: "#c98a00", marginBottom: 8, lineHeight: 1.4 }}>💡 Coins staat aan — kies of de waarborg in <b>coins</b> of <b>€</b> is.</div>
+                </>
+              )}
+              <div style={{ ...S.row, justifyContent: "space-between" }}>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>{L.depositPerCup}</span>
+                <div style={{ ...S.row, gap: 4 }}>
+                  {effDepositUnit === "eur" && <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}>€</span>}
+                  <input style={{ ...S.input, width: 56 }} type="text" inputMode="decimal" value={depositValue} onChange={(e) => setDepositValue(parseFloat(e.target.value.replace(",", ".")) || 0)} />
+                  {effDepositUnit === "coin" && <span style={{ fontSize: 12.5, fontWeight: 700, color: "#c98a00" }}>coins</span>}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ ...S.card, marginBottom: 0 }}>
+          <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.3, textAlign: "center" }}>{L.coinsTitle} <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 10.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
+          <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "center" }}>
+            <div onClick={() => { const on = pay !== "coin"; setPay(on ? "coin" : "eur"); setDepositUnit(on ? "coin" : "eur") }} style={{ width: 44, height: 26, borderRadius: 20, background: pay === "coin" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#d9cdb0", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
+              <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: pay === "coin" ? 21 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+            </div>
+          </div>
+          {coinInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>🎟️ <b>Coins?</b>{L.coinsInfo}</div>}
+          {pay === "coin" && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ ...S.row, justifyContent: "space-between" }}>
+                <span style={{ fontSize: 14, fontWeight: 700 }}>1 coin =</span>
+                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={S.input} type="text" inputMode="decimal" value={coinValue} onChange={(e) => setCoinValue(parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
+              </div>
+              <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 12.5 }} onClick={() => setShowCoins((v) => !v)}>{showCoins ? "▴ verberg coin-prijzen" : L.coinPrices}</button>
+              {showCoins && (() => {
+                const cd = drinks.filter((d) => d.cat === coinCat)
+                const vis = cd.filter((d) => coinFull || d.fav)
                 return (
-                  <div style={{ display: "flex", flexWrap: "nowrap", gap: 5, fontSize: 11, fontWeight: 700, overflowX: "auto", paddingBottom: 2 }}>
-                    <span style={{ background: "rgba(39,174,96,0.1)", color: "#1f8a4c", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>{L.paidBadge(bill.totalActuallySpent.toFixed(2))}</span>
-                    {potTotal > 0 && <span style={{ background: "rgba(233,196,95,0.16)", color: "#a06b00", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>{L.fromPotBadge(potUsed.toFixed(2))}</span>}
-                    {potTotal > 0 && <span style={{ background: "rgba(120,95,20,0.05)", color: "#8a7d55", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>{L.stillInPotBadge(potLeft.toFixed(2))}</span>}
+                  <div style={{ marginTop: 10 }}>
+                    <p style={{ ...S.sub, marginBottom: 8 }}>{L.coinPricesInfo}</p>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                      {catsPresent.map((cc) => <span key={cc} style={{ ...S.tab(coinCat === cc), padding: "6px 10px", fontSize: 12 }} onClick={() => setCoinCat(cc)}>{CAT_LABEL[cc]}</span>)}
+                    </div>
+                    <div style={{ ...S.row, gap: 8, marginBottom: 8 }}>
+                      <div style={{ ...S.seg(!coinFull), padding: "7px 6px", fontSize: 12.5 }} onClick={() => setCoinFull(false)}>{L.shortList}</div>
+                      <div style={{ ...S.seg(coinFull), padding: "7px 6px", fontSize: 12.5 }} onClick={() => setCoinFull(true)}>{L.fullListBtn}</div>
+                    </div>
+                    {vis.length === 0 ? (
+                      <div style={{ fontSize: 12.5, color: "#8a7d55", textAlign: "center", padding: "10px 0" }}>{L.noFavsHere} <span style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }} onClick={() => setCoinFull(true)}>{L.showAll}</span></div>
+                    ) : vis.map((d) => (
+                      <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid rgba(120,95,20,0.06)" }}>
+                        <span style={{ fontSize: 13 }}>{d.emoji} {d.name}</span>
+                        <div style={{ ...S.row, gap: 5 }}>
+                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => setCoinPrice(d.id, d.coins - 0.1)}>−</button>
+                          <span style={{ minWidth: 46, textAlign: "center", fontSize: 12.5, fontWeight: 800 }}>{d.coins.toFixed(1)} c</span>
+                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => setCoinPrice(d.id, d.coins + 0.1)}>+</button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )
               })()}
             </div>
+          )}
+        </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 24 }}>
+          {rounds.length > 0
+            ? <div style={{ display: "flex", gap: 10 }}>
+                <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>{L.roundsOverview}</button>
+                {unfinishedRound
+                  ? <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>Ga verder met rondje {roundNr}</button>
+                  : <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{L.newRound}</button>}
+              </div>
+            : <button style={{ ...S.btnP, width: "100%" }} onClick={() => { if (unfinishedRound) resumeRound(); else tryBegin() }}>{unfinishedRound ? L.continueRound(roundNr) : "Starten"}</button>}
+        </div>
+      </div></div>
+    )
+  }
 
-            <div style={{ marginTop: 4 }}>
-              {/* Kolomtitels boven de twee prijskolommen (enkel bij kleine groep — bij 4+ staan labels in elke kaart) */}
-              {showBillPrices && participants.length > 0 && participants.length < 4 && !compareOther && (
-                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: 10, padding: "0 4px 6px" }}>
-                  <div style={{ width: 66, textAlign: "right", fontSize: 10, color: "#aaa", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 3, lineHeight: 1.15 }}>
-                    {L.indicatievePriceLabel}
-                    <button onClick={() => setShowIndicatiefInfo(true)} title={L.whatMeans} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#b9b088", fontSize: 12, lineHeight: 1, flexShrink: 0 }}>ℹ️</button>
+  // ── ORDER ───────────────────────────────────────────────────────────────────
+  if (view === "order") {
+    // Zoeken gaat OVER de categorieën heen en negeert de korte lijst — anders zoek je
+    // naar iets wat bestaat en krijg je "niets gevonden" omdat het toevallig niet in de
+    // favorieten zit.
+    const zoekt = normText(drinkSearch).length > 0
+    const catDrinks = zoekt ? drinks.filter((d) => drinkMatches(d.name, drinkSearch)) : drinks.filter((d) => d.cat === activeCat)
+    const catVisible = zoekt ? catDrinks : catDrinks.filter((d) => fullList || d.fav || drinkTotal(d.id) > 0)
+    const needCups = depositOn && (people.some((p) => pickedUpOf(p.id) > 0) || people.some((p) => cupsBal(p.id) !== 0))
+    const gaveBackTotal = people.reduce((a, p) => a + (gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id))), 0)
+    const cupsBlock = needCups && !cupsChecked
+    return (
+      <div style={S.page}><div style={S.wrap}>
+        <Header />
+        {showPot && renderPotModal()}
+        {renderDialogs()}
+        {renderAddDrink()}
+        {renderVoice()}
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
+          <h3 style={{ ...S.h3, margin: 0 }}>Ronde {roundNr} <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}>— {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>{repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}</h3>
+        </div>
+        {renderRunnerBar()}
+        {renderWalk()}
+        {people.length > 0 && (
+          <button onClick={walkStart}
+            style={{ width: "100%", marginBottom: 4, border: "1.5px solid rgba(240,165,0,0.5)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 12, padding: "11px 8px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }}>
+            {L.walkTable}
+          </button>
+        )}
+        {people.length > 0 && <div style={{ fontSize: 10.5, color: "#8a7d55", textAlign: "center", marginBottom: 10, lineHeight: 1.4 }}>{L.walkIntro}</div>}
+        <div style={{ position: "relative", marginBottom: 9 }}>
+          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none" }}>🔍</span>
+          <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)}
+            placeholder={L.searchDrink}
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 36, paddingRight: drinkSearch ? 34 : 12, fontSize: 15, textAlign: "left" }} />
+          {drinkSearch && (
+            <button onClick={() => setDrinkSearch("")}
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 15, color: "#8a7d55", padding: 4 }}>✕</button>
+          )}
+        </div>
+
+        {zoekt && (
+          <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 8 }}>
+            {catVisible.length === 0
+              ? "Niets gevonden — probeer een ander woord."
+              : `${catVisible.length} ${catVisible.length === 1 ? "drankje" : "drankjes"} gevonden (alle categorieën)`}
+          </div>
+        )}
+
+        <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", paddingBottom: 8, marginBottom: 8 }}>
+          {catsPresent.map((c) => {
+            const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
+            return <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: "#e0685c", fontSize: 15 }}>●</span>}</span>
+          })}
+        </div>
+        <div style={{ ...S.row, justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+          <div style={{ display: "inline-flex", border: "1px solid rgba(120,95,20,0.2)", borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
+            <span onClick={() => setFullList(false)} style={{ padding: "6px 11px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: !fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: !fullList ? "#fff" : "#8a7d55" }}>compacte lijst</span>
+            <span onClick={() => setFullList(true)} style={{ padding: "6px 11px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: fullList ? "#fff" : "#8a7d55" }}>volledige lijst</span>
+          </div>
+          {potTag}
+        </div>
+        {catVisible.length === 0 ? (
+          <div style={{ ...S.card, textAlign: "center", padding: "18px 12px", fontSize: 13, color: "#8a7d55" }}>
+            Geen favorieten in {CAT_LABEL[activeCat]}. <span style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }} onClick={() => setFullList(true)}>{L.showAll}</span>
+          </div>
+        ) : (
+          <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12 }}>
+            {catVisible.map((d) => {
+              const tot = drinkTotal(d.id), un = cartAnon[d.id] ?? 0
+              return (
+                <div key={d.id} style={{ padding: "10px 10px", borderRadius: 12, background: tot > 0 ? "rgba(31,138,76,0.08)" : "#faf4e4", border: tot > 0 ? "1.5px solid rgba(31,138,76,0.5)" : "1px solid rgba(120,95,20,0.1)", boxShadow: tot > 0 ? "0 0 0 3px rgba(31,138,76,0.1)" : "none" }}>
+                  <div style={{ fontSize: 13.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
+                  <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
+                    <button style={{ ...S.step, opacity: tot > 0 ? 1 : 0.4 }} onClick={() => bumpDown(d.id)}>−</button>
+                    <span style={{ fontSize: 17, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}</span>
+                    <button style={S.step} onClick={() => bump1(d.id)}>+</button>
                   </div>
-                  <button onClick={() => setShowFairSplit((v) => !v)} title={L.fairToggleTitle} style={{ width: 158, textAlign: "center", fontSize: 11, fontWeight: 800, color: showFairSplit ? "#4a3f1e" : "#a06b00", background: showFairSplit ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "rgba(233,196,95,0.16)", border: showFairSplit ? "none" : "1px solid rgba(233,196,95,0.55)", borderRadius: 8, padding: "4px 0", letterSpacing: 0.5, boxShadow: showFairSplit ? "0 2px 8px rgba(233,196,95,0.4)" : "none", cursor: "pointer" }}>{showFairSplit ? (splitMode === "equal" ? L.equalToggle : L.fairToggleBtn) : L.addFairToggle}</button>
                 </div>
-              )}
-              {orders.some((o) => o.participant_id) && (
-              <div style={participants.length >= 4 ? { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginTop: 2 } : undefined}>
-              {participants.map((p) => {
-                const personOrders = orders.filter((o) => o.participant_id === p.id)
-                const drinkSummary: Record<string, { drink: Drink; qty: number }> = {}
-                personOrders.forEach((o) => {
-                  const d = drinks.find((dr) => dr.id === o.drink_id)
-                  if (!d) return
-                  if (!drinkSummary[d.id]) drinkSummary[d.id] = { drink: d, qty: 0 }
-                  drinkSummary[d.id].qty += o.quantity
-                })
-                const line = bill.lines.find((l) => l.participantId === p.id)
-                const paid = line?.paid ?? 0
-                const potInlegPerson = payments.filter((pay) => pay.session === 0 && pay.participant_id === p.id).reduce((s, pay) => s + pay.amount, 0)
-                const personalPaidPerson = paid - potInlegPerson
-                const drinkValue = line?.drinkValue ?? 0
-                const fair = fairSplit.find((f) => f.participantId === p.id)
-                const myDebts = settledDebts.filter((t) => t.from === p.name)   // ik betaal aan ...
-                const myCredits = settledDebts.filter((t) => t.to === p.name)   // ik krijg van ...
-                const pricesVisible = showBillPrices
-                const multiCol = participants.length >= 4
-
+              )
+            })}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", padding: "2px 0 14px" }}>
+          <button onClick={startVoice}
+            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
+            {L.voiceBtn} <span style={{ fontSize: 9, opacity: 0.75 }}>{L.voiceBeta}</span>
+          </button>
+          <button onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }}
+            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
+            {L.addOwnDrink}
+          </button>
+        </div>
+        {roundItems > 0 && (
+          <div style={{ ...S.card, padding: "10px 12px", background: "#fffdf6" }}>
+            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.inThisRound} <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.assignHint}</span></span>
+              <span style={{ ...S.pill, background: "rgba(240,165,0,0.18)", color: "#c98a00" }}>{roundItems} drankje{roundItems === 1 ? "" : "s"}</span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => {
+                const un = cartAnon[d.id] ?? 0
                 return (
-                  <div key={p.id} style={multiCol
-                    ? { padding: 10, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, background: "#fff" }
-                    : { padding: "12px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                    {/* Naam + al ingelegd/betaald meteen erachter */}
-                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                        <span style={{ fontWeight: 800, fontSize: 15 }}>{pName(p.name, lang)}</span>
-                        {potInlegPerson > 0 && <span style={{ fontSize: 11, color: "#c98a00", fontWeight: 600 }}>{L.potInlegSuffix(potInlegPerson.toFixed(2))}</span>}
-                        {personalPaidPerson > 0.01 && <span style={{ fontSize: 11, color: "#27ae60", fontWeight: 600 }}>{L.selfPaidSuffix(personalPaidPerson.toFixed(2))}</span>}
+                  <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e", cursor: "pointer" }} onClick={() => setShowAssignAll(true)}>
+                    {d.emoji} {drinkTotal(d.id)}× {d.name}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 800, textDecoration: "underline" }}>toewijzen</span>}
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+        )}
+        {depositOn && (
+          <div style={{ marginBottom: 12 }}>
+            <button style={{ ...S.btn, width: "100%" }} onClick={() => setShowCups(true)}>{L.cups}</button>
+          </div>
+        )}
+        <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => roundItems > 0 && openClose()}>✅ Rondje {roundNr} bevestigen{roundItems > 0 && <span style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.85 }}> — {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>}</button>
+        {roundItems > 0 && (
+          <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>
+        )}
+
+        {showAssignAll && (
+          <div style={S.overlay} onClick={() => setShowAssignAll(false)}>
+            <div style={{ ...S.sheet, maxHeight: "82vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
+                <h3 style={{ ...S.h3, margin: 0, fontSize: 18 }}>{L.assign}</h3>
+                <div style={{ ...S.row, gap: 4 }}>
+                  <div style={{ ...S.seg(assignMode === "person"), padding: "6px 10px", fontSize: 12, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("person")}>{L.perPerson}</div>
+                  <div style={{ ...S.seg(assignMode === "drink"), padding: "6px 10px", fontSize: 12, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("drink")}>per drank</div>
+                </div>
+              </div>
+              {assignMode === "person" && unassignedTotal > 0 && <div style={{ fontSize: 12.5, fontWeight: 800, color: "#c0554a", marginBottom: 4 }}>🔴 {unassignedTotal} drankje{unassignedTotal === 1 ? "" : "s"} nog niet toegewezen</div>}
+              <div style={{ fontSize: 11, color: "#8a7d55", marginBottom: 8, lineHeight: 1.4 }}>{L.assignAnyone}</div>
+
+              {assignMode === "drink" ? (
+                drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => {
+                  const un = cartAnon[d.id] ?? 0
+                  return (
+                    <div key={d.id} style={{ borderTop: "1px solid rgba(120,95,20,0.1)", paddingTop: 9, marginBottom: 9 }}>
+                      <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 14, fontWeight: 800 }}>{d.emoji} {drinkTotal(d.id)}× {d.name}</span>
+                        {un > 0 && <span style={{ fontSize: 11.5, color: "#c0554a", fontWeight: 800 }}>🔴 {un} zonder naam</span>}
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {people.map((p) => { const n = aQty(d.id, p.id); return <span key={p.id} style={{ ...S.chip(n), fontSize: 12.5, padding: "5px 10px" }} onClick={() => assignFromAnon(d.id, p.id)}>{p.name}{p.claimedBy && <span style={{ fontSize: 10, marginLeft: 3, opacity: 0.7 }}>📱</span>}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); unassignCart(d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1 }}>−</span>}</span> })}
+                        {drinkTotal(d.id) === people.length && people.length > 0 && <span onClick={() => eachOne(d.id)} style={{ ...S.chip(0), fontSize: 12.5, padding: "5px 10px", border: "1.5px dashed #c98a00", background: "rgba(240,165,0,0.1)", color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{L.eachOne}</span>}
                       </div>
                     </div>
-
-                    {/* Drankjes + prijzen. Bij 4+ wrappen de prijzen onder de drankjes. */}
-                    <div style={{ display: "flex", flexWrap: multiCol ? "wrap" : "nowrap", justifyContent: "space-between", alignItems: "flex-start", gap: multiCol ? 8 : 12 }}>
-                      <div style={{ flex: multiCol ? "1 1 100%" : "1 1 0", minWidth: 0 }}>
-                        {Object.values(drinkSummary).length === 0 ? (
-                          <div style={{ fontSize: 12, color: "#bbb" }}>{L.nothingDrunk}</div>
-                        ) : (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-                            {Object.values(drinkSummary).map((ds) => (
-                              <span key={ds.drink.id} style={{ background: "rgba(150,110,20,0.05)", borderRadius: 10, padding: "3px 10px", fontSize: 12 }}>
-                                {ds.drink.emoji} {ds.qty}× {drinkName(ds.drink.name, lang)}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                  )
+                })
+              ) : (
+                <div style={{ display: people.length > 4 ? "grid" : "block", gridTemplateColumns: people.length > 4 ? "1fr 1fr" : undefined, columnGap: 12 }}>
+                {people.map((p) => {
+                  const took = drinks.filter((d) => (cart[d.id]?.[p.id] ?? 0) > 0)
+                  return (
+                    <div key={p.id} style={{ borderTop: "1px solid rgba(120,95,20,0.1)", paddingTop: 9, marginBottom: 9 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 6 }}>{p.name}{took.length > 0 && <span style={{ fontSize: 11.5, fontWeight: 600, color: "#8a7d55" }}> · {took.reduce((a, d) => a + (cart[d.id]?.[p.id] ?? 0), 0)} drankje(s)</span>}</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {drinks.filter((d) => aQty(d.id, p.id) > 0).map((d) => { const n = aQty(d.id, p.id); return <span key={d.id} style={{ ...S.chip(n), fontSize: 12.5, padding: "5px 10px" }}>{d.emoji} {d.name}<span style={S.badge}>{n}</span><span onClick={(e) => { e.stopPropagation(); unassignCart(d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>−</span></span> })}
+                        {drinks.filter((d) => (cartAnon[d.id] ?? 0) > 0).map((d) => <span key={"add" + d.id} onClick={() => assignFromAnon(d.id, p.id)} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12.5, padding: "5px 10px", borderRadius: 20, background: "#fff", border: "1px dashed rgba(120,95,20,0.4)", color: "#8a7d55", fontWeight: 700, cursor: "pointer" }}>+ {d.emoji} {d.name}</span>)}
                       </div>
+                    </div>
+                  )
+                })}
+                </div>
+              )}
+              <button style={unassignedTotal === 0 ? { ...S.btnP, marginTop: 6, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 6 }} onClick={() => setShowAssignAll(false)}>{unassignedTotal === 0 ? "Klaar — alles toegewezen" : "Klaar"}</button>
+            </div>
+          </div>
+        )}
 
-                      {pricesVisible && (() => {
-                        const compareOn = compareOther
-                        const activeKind: "fair" | "equal" = splitMode === "fair" ? "fair" : "equal"
-                        const otherKind: "fair" | "equal" = activeKind === "fair" ? "equal" : "fair"
-                        const otherRows = otherKind === "fair" ? fairRows : equalRows
-                        const otherSettled = otherKind === "fair" ? fairSettled : equalSettled
-                        const otherComp = otherRows.find((f) => f.participantId === p.id)
-                        const otherDebts = otherSettled.filter((t) => t.from === p.name)
-                        const otherCredits = otherSettled.filter((t) => t.to === p.name)
-
-                        // Verrekening ("verdeling") voor een gegeven verdeel-rij + bijhorende schulden
-                        const renderSettle = (row: typeof fair, debts: typeof myDebts, credits: typeof myCredits) => {
-                          if (!row || !row.participated) return null
-                          const net = row.fairShare - paid
-                          if (net > 0.01 && debts.length > 0) {
-                            return <>{debts.map((t, i) => (
-                              <div key={i} style={{ color: "#b35309", fontWeight: 800 }}>{L.payAmount(t.amount.toFixed(2))}{t.to === "de pot" ? L.inThePot : `${L.toPrefix}${pName(t.to, lang)}`}</div>
-                            ))}</>
-                          }
-                          if (net < -0.01 && credits.length > 0) {
-                            return <>{credits.map((t, i) => (
-                              <div key={i} style={{ color: "#146c43", fontWeight: 800 }}>{L.receiveAmount(t.amount.toFixed(2))}{t.from === "de pot" ? L.fromThePot : `${L.fromPrefix}${pName(t.from, lang)}`}</div>
-                            ))}</>
-                          }
-                          return <span style={{ color: "#6b5a24", fontWeight: 700 }}>{L.balanced}</span>
-                        }
-
-                        // Bedrag-kader met kleuridentiteit: Fair Split = blauwe rand + gouden vulling (zoals de knop),
-                        // iedereen evenveel = amber. Zo zie je meteen welk bedrag bij welke methode hoort.
-                        const splitBox = (kind: "fair" | "equal", row: typeof fair, debts: typeof myDebts, credits: typeof myCredits, compact: boolean, fullWidth = false) => {
-                          if (!row || !row.participated) return null
-                          const isFair = kind === "fair"
-                          return (
-                            <div style={{ width: fullWidth ? "100%" : (compact ? "auto" : 158), minWidth: (compact && !fullWidth) ? 100 : undefined, boxSizing: "border-box", textAlign: "center", background: isFair ? "linear-gradient(135deg,#f4c430,#f7d461)" : "rgba(232,126,20,0.12)", border: isFair ? "2px solid #3d6fd0" : "2px solid #e0842e", borderRadius: 12, padding: compact ? "5px 9px" : "7px 8px" }}>
-                              <div style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, color: isFair ? "#2f5bb0" : "#b5591a" }}>{isFair ? L.fairSplitWord : L.evenveelWord}</div>
-                              <div style={{ fontSize: compact ? 16 : 19, fontWeight: 800, color: "#4a3f1e" }}>€{row.fairShare.toFixed(2)}</div>
-                              <div style={{ fontSize: 10.5, marginTop: 2, lineHeight: 1.3 }}>{renderSettle(row, debts, credits)}</div>
-                            </div>
-                          )
-                        }
-
-                        const activeOk = showFairSplit && fair?.participated
-
-                        if (multiCol) {
-                          return (
-                            <div style={{ width: "100%", borderTop: "1px solid rgba(0,0,0,0.07)", marginTop: 8, paddingTop: 7 }}>
-                              <div style={{ fontSize: 11, color: "#aaa", marginBottom: activeOk ? 6 : 0 }}>{L.indicatiefPrefix}<b style={{ color: "#a89a6a", fontWeight: 700 }}>€{drinkValue.toFixed(2)}</b></div>
-                              {activeOk && (
-                                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                                  {splitBox(activeKind, fair, myDebts, myCredits, true, true)}
-                                  {compareOn && splitBox(otherKind, otherComp, otherDebts, otherCredits, true, true)}
-                                </div>
-                              )}
-                            </div>
-                          )
-                        }
-                        return (
-                          <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexShrink: 0 }}>
-                            <div style={{ width: 66, textAlign: "right", paddingTop: 4 }}>
-                              <div style={{ fontSize: 14, fontWeight: 700, color: "#a89a6a" }}>€{drinkValue.toFixed(2)}</div>
-                            </div>
-                            {activeOk && (
-                              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                                {splitBox(activeKind, fair, myDebts, myCredits, false)}
-                                {compareOn && splitBox(otherKind, otherComp, otherDebts, otherCredits, false)}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })()}
+        {showCups && (
+          <div style={{ ...S.overlay, zIndex: 55 }} onClick={() => setShowCups(false)}>
+            <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ ...S.h3, fontSize: 18 }}>🫙 Bekers — ronde {roundNr}</h3>
+              <p style={{ ...S.sub }}>{L.howMuchEach} <b>terug</b>? Standaard = ruil. Iedereen kan teruggeven — ook wie niks bestelde of een beker van elders binnenbrengt (gaat dan negatief = krijgt waarborg).</p>
+              <button style={{ ...S.btn, width: "100%", marginBottom: 12, fontSize: 13 }} onClick={() => { setGaveBackDraft(Object.fromEntries(people.map((p) => [p.id, 0]))); setCupsChecked(true); setShowCups(false) }}>{L.nobodyGaveBack}</button>
+              {people.map((p) => {
+                const bal = cupsBal(p.id), pu = pickedUpOf(p.id)
+                const gb = gaveBackDraft[p.id] ?? Math.min(bal, pu)
+                const newBal = bal + pu - gb
+                return (
+                  <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 2px", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
+                    <div><div style={{ fontSize: 15, fontWeight: 800 }}>{p.name}</div><div style={{ fontSize: 11.5, fontWeight: 700, color: newBal < 0 ? "#1f8a4c" : "#8a7d55" }}>beker-saldo: {newBal}{newBal < 0 ? " (krijgt waarborg)" : ""}</div></div>
+                    <div style={{ ...S.row, gap: 7 }}>
+                      <span style={{ fontSize: 11, color: "#8a7d55" }}>{L.gaveBack}</span>
+                      <button style={{ ...S.step, width: 28, height: 28, opacity: gb === 0 ? 0.4 : 1 }} onClick={() => { setCupsTouched(true); setGaveBackDraft((g) => ({ ...g, [p.id]: Math.max(0, gb - 1) })) }}>−</button>
+                      <span style={{ minWidth: 16, textAlign: "center", fontSize: 15, fontWeight: 800 }}>{gb}</span>
+                      <button style={{ ...S.step, width: 28, height: 28 }} onClick={() => { setCupsTouched(true); setGaveBackDraft((g) => ({ ...g, [p.id]: gb + 1 })) }}>+</button>
                     </div>
                   </div>
                 )
               })}
+              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                <button style={{ ...S.btn, flex: 1 }} onClick={() => setShowCups(false)}>← terug</button>
+                <button style={{ ...S.btnP, flex: 2, opacity: cupsTouched ? 1 : 0.5 }} onClick={() => { if (cupsTouched) { setCupsChecked(true); setShowCups(false) } }}>{L.ready}</button>
               </div>
-              )}
-              {participants.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20 }}>{L.setupNoPersons}</div>}
+            </div>
+          </div>
+        )}
 
-              {/* Knoppen onder de drankjes: Eerlijke rekening + Iedereen evenveel */}
-              {!showBillPrices && participants.length > 0 && (
-                <div style={{ marginTop: 14 }}>
-                  {!canSplit ? (
-                    /* Geen verdeling mogelijk: niets betaald, of nog een onbetaald rondje */
-                    (() => {
-                      const unpaidLabels = unpaidRounds.map((s) => roundLabel(s)).sort((a, b) => a - b)
-                      const heeftRondes = sessions.length > 0
-                      return (
-                        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "rgba(224,107,94,0.08)", border: "1px solid rgba(224,107,94,0.35)", borderRadius: 14, padding: "13px 15px" }}>
-                          <span style={{ fontSize: 20, lineHeight: 1 }}>⚠️</span>
-                          <div style={{ fontSize: 13, color: "#8a4b42", lineHeight: 1.5 }}>
-{heeftRondes && unpaidLabels.length > 0 ? L.noSplitBody1(unpaidLabels) : L.noSplitBody2}
-                            <div style={{ marginTop: 10 }}>
-                              <button onClick={() => { setOpenRounds(null); setView("rounds") }} style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "8px 14px", background: "linear-gradient(135deg,#f4c430,#f7d461)", border: "none", color: "#4a3a0a" }}>{L.toRoundsBtn2}</button>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })()
-                  ) : (
-                    <>
-                      <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                        {/* Eerlijke rekening met Fair split (groot, links) + info eronder */}
-                        <div style={{ flex: 1.5, display: "flex", flexDirection: "column", gap: 7 }}>
-                          <button
-                            onClick={() => {
-                              setSplitMode("fair")
-                              setCompareOther(false)
-                              const anon = orders.filter((o) => !o.participant_id && o.quantity > 0)
-                              const unassigned = anon.reduce((s, o) => s + o.quantity, 0)
-                              if (unassigned > 0) {
-                                setAssignPopupDrinkIds(Array.from(new Set(anon.map((o) => o.drink_id))))
-                                setShowAssignPopup(true)
-                              } else { setShowBillPrices(true); setShowFairSplit(true) }
-                            }}
-                            style={{ width: "100%", border: "2.5px solid #3d6fd0", borderRadius: 14, padding: "12px 14px", cursor: "pointer", background: "linear-gradient(135deg,#f4c430,#f7d461)", boxShadow: "0 6px 16px -6px rgba(61,111,208,0.5)", display: "flex", alignItems: "center", justifyContent: "center", gap: 9 }}
-                          >
-                            <span style={{ width: 26, height: 26, borderRadius: "50%", background: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}>
-                              <RundoLogo size={18} />
-                            </span>
-                            <span style={{ fontSize: 14.5, fontWeight: 800, color: "#4a3a0a", lineHeight: 1.15 }}>{L.fairBillBtn}</span>
-                          </button>
-                          <button
-                            onClick={() => setFairInfoMode("what")}
-                            style={{ background: "none", border: "none", color: "#2f5bb0", fontSize: 12, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, width: "100%", textAlign: "center", padding: 0 }}
-                          >
-                            {L.fairTitle}
-                          </button>
-                        </div>
-
-                        {/* Iedereen betaalt evenveel (smaller, rechts) + info eronder */}
-                        <div style={{ flex: 0.8, display: "flex", flexDirection: "column", gap: 7 }}>
-                          <button
-                            onClick={() => {
-                              setSplitMode("equal")
-                              setCompareOther(false)
-                              setShowBillPrices(true)
-                              setShowFairSplit(true)
-                            }}
-                            style={{ width: "100%", border: "2.5px solid #e0842e", borderRadius: 14, padding: "12px 8px", cursor: "pointer", background: "linear-gradient(135deg,#fbcf98,#f6b25e)", color: "#8a4514", fontSize: 12.5, fontWeight: 800, lineHeight: 1.25, minHeight: 54, boxShadow: "0 4px 12px -6px rgba(224,132,46,0.6)" }}
-                          >
-                            {L.equalBillBtn}
-                          </button>
-                          <button
-                            onClick={() => setShowEqualInfo(true)}
-                            style={{ background: "none", border: "none", color: "#a08a4a", fontSize: 12, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, width: "100%", textAlign: "center", padding: 0 }}
-                          >
-                            {L.equalInfoLink}
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
+        {showClose && (
+          <div style={S.overlay} onClick={() => setShowClose(false)}>
+            <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ ...S.h3, fontSize: 18 }}>✅ Ronde {roundNr} bevestigen</h3>
+              {unassignedTotal > 0 && (
+                <div onClick={goAssignFromWarning} style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.35)", borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 12.5, color: "#b0402f", cursor: "pointer" }}>
+                  🔴 <b>{unassignedTotal} drankje{unassignedTotal === 1 ? "" : "s"} nog niet toegewezen.</b> <u>{L.tapToAssign}</u>
                 </div>
               )}
+              {depositOn && (cupsBlock ? (
+                <div style={{ background: "rgba(224,104,92,0.12)", border: "1.5px solid rgba(224,104,92,0.6)", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+                  <div onClick={() => setShowCups(true)} style={{ fontSize: 12.5, color: "#b0402f", cursor: "pointer", fontWeight: 700 }}>🫙 <b>{L.cupsNotSet}</b> <u>{L.tapToArrange}</u></div>
+                  <div onClick={() => setDepositOn(false)} style={{ fontSize: 11.5, color: "#8a7d55", cursor: "pointer", marginTop: 6 }}>… of <u>ga verder zonder bekers/waarborg</u> (uitschakelen).</div>
+                </div>
+              ) : (
+                <div style={{ ...S.row, justifyContent: "space-between", background: "rgba(31,138,76,0.1)", borderRadius: 12, padding: "9px 12px", marginBottom: 12 }}>
+                  <span style={{ fontSize: 12.5, color: "#1f8a4c", fontWeight: 700 }}>🫙 {gaveBackTotal > 0 ? `${gaveBackTotal} beker${gaveBackTotal === 1 ? "" : "s"} teruggegeven ✓` : "0 bekers meegegeven ✓"}</span>
+                  <button style={{ ...S.btn, padding: "4px 10px", fontSize: 11.5 }} onClick={() => setShowCups(true)}>aanpassen</button>
+                </div>
+              ))}
+              <button style={{ ...S.btnP, opacity: cupsBlock ? 0.5 : 1 }} onClick={() => !cupsBlock && commitRound()}>✅ Bevestig rondje ({roundItems} drankje{roundItems === 1 ? "" : "s"})</button>
+              <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={() => setShowClose(false)}>Bestelling aanpassen</button>
+            </div>
+          </div>
+        )}
+      </div></div>
+    )
+  }
 
-              {/* Klein kolomtotaal, uitgelijnd onder de kolommen (enkel bij kleine groep) */}
-              {showBillPrices && participants.length > 0 && participants.length < 4 && !compareOther && (
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "8px 4px 2px", marginTop: 2 }}>
-                  <div style={{ width: 66, textAlign: "right" }}>
-                    <div style={{ fontSize: 9, color: "#aaa" }}>{L.totalSmall}</div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#a89a6a" }}>€{bill.totalDrinkValue.toFixed(2)}</div>
+  // ── CONFIRMED (overzicht + betaling) ────────────────────────────────────────
+  if (view === "confirmed") {
+    const totalInUse = people.reduce((s, p) => s + Math.max(0, cupsBal(p.id)), 0)
+    const last = rounds[rounds.length - 1]
+    const items = last ? drinks.reduce((s, d) => s + drinkTotalRound(last, d.id), 0) : 0
+    const st = paymentState()
+    return (
+      <div style={S.page}><div style={S.wrap}>
+        <Header />
+        {showPot && renderPotModal()}
+        {renderDialogs()}
+        <div style={{ ...S.row, justifyContent: "flex-end", marginBottom: 8 }}>{potTag}</div>
+        <div style={S.card}>
+          <div style={{ ...S.row, gap: 9, marginBottom: 4 }}>
+            <span style={{ fontSize: 24, flexShrink: 0 }}>🍻</span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>Ronde {roundNr} bevestigd — {items} drankjes</div>
+            </div>
+          </div>
+          {depositOn && <div style={{ fontSize: 12.5, fontWeight: 700, color: "#8a5e0f", marginBottom: 6 }}>🫙 {totalInUse} beker{totalInUse === 1 ? "" : "s"} in omloop · {euro(totalInUse * depositPerCupEur)}</div>}
+          {(() => {
+            const rl = last ? drinks.filter((d) => drinkTotalRound(last, d.id) > 0) : []
+            return (
+              <div style={{ borderTop: "1px dashed rgba(120,95,20,0.2)", paddingTop: 8, display: "grid", gridTemplateColumns: rl.length > 4 ? "1fr 1fr" : "1fr", gap: rl.length > 4 ? "4px 14px" : 4 }}>
+                {rl.map((d) => {
+                  const n = drinkTotalRound(last!, d.id)
+                  const who = people.filter((p) => (last!.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = last!.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
+                  return <div key={d.id} style={{ fontSize: 13.5 }}><b>{d.emoji} {n}× {d.name}</b>{who.length > 0 && <span style={{ color: "#8a7d55" }}> → {who.join(", ")}</span>}</div>
+                })}
+              </div>
+            )
+          })()}
+          <div style={{ ...S.row, justifyContent: "space-between", gap: 8, borderTop: "1px dashed rgba(120,95,20,0.25)", marginTop: 8, paddingTop: 8 }}>
+            <span style={{ fontSize: 13, color: "#e08a00", fontWeight: 800 }}>{L.someoneCanGo}</span>
+            <span style={{ fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{L.total}: {items}</span>
+          </div>
+          {last && (() => { const un = drinks.reduce((a, d) => a + (last.anon[d.id] ?? 0), 0); return un > 0 ? (
+            <div onClick={() => { editOrder(); setShowAssignAll(true) }} style={{ marginTop: 8, background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "8px 11px", fontSize: 12.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>🔴 {un} drankje{un === 1 ? "" : "s"} nog niet toegewezen. <u>{L.tapToAssign}</u></div>
+          ) : null })()}
+        </div>
+
+        <div style={S.card}>
+          <div style={{ fontSize: 15, fontWeight: 800, textAlign: "center", marginBottom: 8 }}>{L.exactAmount}</div>
+          <div style={{ ...S.row, gap: 8, justifyContent: "center", margin: "2px 0" }}>
+            <span style={{ fontSize: 20, fontWeight: 800 }}>€</span>
+            <input style={{ ...S.input, width: 120, fontSize: 22, textAlign: "center", fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00" value={amountDraft} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setAmountDraft(v); autoSplit(payPersons, payPot, v); setPaidConfirmed(false) }} />
+          </div>
+          <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", marginBottom: 14 }}>ⓘ hierop verdeelt de app eerlijk (Fair Split)</div>
+
+          {(parseFloat(amountDraft.replace(",", ".")) || 0) > 0 ? (
+          <>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", marginBottom: 7 }}>{L.paidBy} <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.multiplePossible}</span></div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+            <span style={{ ...S.chip(payPot ? 1 : 0), opacity: st.potAvail <= 0.005 ? 0.45 : 1 }} onClick={() => { if (!payPot && st.potAvail <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg (€0). Tik rechtsboven op “${potIsCard ? "drankkaart" : "pot"} + toevoegen” om eerst in te leggen.`); return } const nextPot = !payPot; setPayPot(nextPot); autoSplit(payPersons, nextPot); setPaidConfirmed(false) }}>{potIsCard ? "💳 drankkaart" : "{L.thePot}"}</span>
+            {people.map((p) => <span key={p.id} style={S.chip(payPersons.includes(p.id) ? 1 : 0)} onClick={() => togglePayPerson(p.id)}>{p.name}</span>)}
+          </div>
+
+          {st.multi && (
+            <div style={{ background: "#faf4e4", borderRadius: 12, padding: "10px 12px", marginTop: 10 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a7d55", marginBottom: 8 }}>Gelijk verdeeld <span style={{ fontWeight: 600, color: "#b3a988" }}>— pas aan per persoon indien nodig</span></div>
+              {payPot && (
+                <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 7 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
+                  <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 84, borderColor: st.potOver ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="0,00" value={potAmtDraft} onChange={(e) => { setPotAmtDraft(e.target.value.replace(/[^0-9.,]/g, "")); setPaidConfirmed(false) }} /></div>
+                </div>
+              )}
+              {payPersons.map((pid) => (
+                <div key={pid} style={{ ...S.row, justifyContent: "space-between", marginBottom: 7 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>👤 {people.find((p) => p.id === pid)?.name}</span>
+                  <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 84 }} type="text" inputMode="decimal" placeholder="0,00" value={payAmts[pid] ?? ""} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setPayAmts((m) => ({ ...m, [pid]: v })); setPaidConfirmed(false) }} /></div>
+                </div>
+              ))}
+              <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", paddingTop: 8, fontSize: 12, fontWeight: 800, color: st.valid ? "#1f8a4c" : "#c0554a" }}>
+                Samen {euro(st.sum)} van {euro(st.total)}{st.valid ? " ✓ klopt" : st.missing > 0 ? ` — er ontbreekt ${euro(st.missing)}` : ` — ${euro(-st.missing)} te veel`}
+              </div>
+              {st.rounding && <div style={{ fontSize: 10.5, color: "#b3a988", marginTop: 3 }}>{L.roundingNote}</div>}
+              {payPot && <div style={{ fontSize: 11, color: st.potOver ? "#c0554a" : "#8a7d55", marginTop: 5 }}>{potIsCard ? "Drankkaart" : "Pot"} beschikbaar: {euro(Math.max(0, st.potAvail))}</div>}
+            </div>
+          )}
+          {payPot && !st.multi && <div style={{ fontSize: 12, color: st.potOver ? "#c0554a" : "#8a7d55", fontWeight: 700, marginTop: 8 }}>{potIsCard ? "drankkaart" : "pot"}: {euro(Math.max(0, st.potAvail))} beschikbaar{st.potOver ? " — te weinig, kies een extra betaler of leg bij" : ""}</div>}
+
+          {(() => {
+            const okGreen = paidConfirmed && st.valid
+            const style = okGreen
+              ? { ...S.btn, width: "100%", background: "rgba(31,138,76,0.12)", color: "#1f8a4c", border: "1px solid rgba(31,138,76,0.5)", fontWeight: 800 }
+              : !st.valid
+              ? { ...S.btn, width: "100%", background: "rgba(224,104,92,0.12)", color: "#b0402f", border: "1px solid rgba(224,104,92,0.5)", fontWeight: 800 }
+              : S.btnP
+            return <button style={{ ...style, marginTop: 14 }} onClick={confirmPayment}>{okGreen ? "✓ betaling bevestigd — pas gerust nog aan" : !st.valid ? st.reason : "✓ Bevestig betaling"}</button>
+          })()}
+          </>
+          ) : (
+            <div style={{ fontSize: 12.5, color: "#b3a988", textAlign: "center", padding: "6px 0 2px" }}>{L.fillAmountFirst}</div>
+          )}
+        </div>
+
+        {paidConfirmed && st.valid && <button style={S.btnP} onClick={closeRound}>{L.closeRound}</button>}
+        <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+          <button style={{ ...S.btn, flex: 1, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelRound}>{L.cancelRound}</button>
+          <button style={{ ...S.btn, flex: 1 }} onClick={editOrder}>{L.editOrderBtn}</button>
+        </div>
+      </div></div>
+    )
+  }
+
+  // ── HUB (rondjes-overzicht, bewerkbaar) ─────────────────────────────────────
+  if (view === "hub") {
+    return (
+      <div style={S.page}><div style={S.wrap}>
+        <Header />
+        {showPot && renderPotModal()}
+        {renderDialogs()}
+        {rounds.length === 0 && renderShare()}
+        {/* De pot is een handeling aan het BEGIN van de avond: iedereen legt vooraf in.
+            Daarom staat hij hier, zichtbaar, vóór het eerste rondje — niet weggestopt
+            in de instellingen. Het ⚙️-wieltje leidt naar pot + bekers + coins samen. */}
+        {settle && rounds.length === 0 && (
+          <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.35)" }}>
+            <div style={{ ...S.row, justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{potIsCard ? L.drinkCard : L.potStartTitle}</span>
+              <span onClick={() => setView("settings")} title="⚙️" style={{ fontSize: 18, cursor: "pointer", lineHeight: 1, flexShrink: 0, opacity: 0.7 }}>⚙️</span>
+            </div>
+            {potContribTotal > 0.005 ? (
+              <div style={{ ...S.row, justifyContent: "space-between", marginTop: 4 }}>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: "#1f6b3a" }}>{L.potStartIn(euro(potContribTotal))}</span>
+                <button style={{ ...S.btn, padding: "7px 13px", fontSize: 13 }} onClick={() => setShowPot(true)}>{L.potStartMore}</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 12, color: "#8a7d55", lineHeight: 1.5, marginBottom: 11 }}>{L.potStartWhy}</div>
+                <button style={{ ...S.btn, width: "100%", fontWeight: 800 }} onClick={() => setShowPot(true)}>{L.potStartAdd}</button>
+              </>
+            )}
+          </div>
+        )}
+        {!settle && renderBarList()}
+        {!settle && rounds.length >= 1 && (
+          <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", marginBottom: 4 }}>{L.settleNow}</div>
+            <div style={{ fontSize: 12, color: "#4a6b57", lineHeight: 1.5, marginBottom: 11 }}>{L.settleNowWhy}</div>
+            <button style={{ ...S.btnP, width: "100%" }} onClick={switchToSettle}>{L.settleNowBtn}</button>
+          </div>
+        )}
+        {settle && unassignedAllRounds > 0 && firstUnassignedIdx >= 0 && (
+          <div style={{ ...S.card, background: "rgba(224,104,92,0.08)", border: "1.5px solid rgba(224,104,92,0.45)" }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#b0402f", marginBottom: 4 }}>{L.unassignedHub(unassignedAllRounds)}</div>
+            <div style={{ fontSize: 12, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 11 }}>{L.unassignedHubWhy}</div>
+            <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#e0725c,#c0554a)" }} onClick={() => setAssignIdx(firstUnassignedIdx)}>{L.unassignedHubBtn}</button>
+          </div>
+        )}
+        {assignIdx !== null && rounds[assignIdx] && (() => {
+          const idx = assignIdx
+          const r = rounds[idx]
+          const roundDrinks = drinks.filter((d) => drinkTotalRound(r, d.id) > 0)
+          const done = !drinks.some((d) => (r.anon[d.id] ?? 0) > 0)
+          return (
+            <div style={S.overlay} onClick={() => setAssignIdx(null)}>
+              <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+                <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10 }}>Toewijzen — ronde {idx + 1}</h3>
+
+                      <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, marginBottom: 8 }}>
+                        <div style={{ ...S.seg(editAssignMode === "person"), padding: "5px 9px", fontSize: 11.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
+                        <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 11.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>per drank</div>
+                      </div>
+                      {editAssignMode === "person" && (() => { const u = roundDrinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0); return u > 0 ? <div style={{ fontSize: 12, fontWeight: 800, color: "#c0554a", marginBottom: 8 }}>🔴 {u} drankje{u === 1 ? "" : "s"} nog niet toegewezen</div> : null })()}
+                      {editAssignMode === "drink" ? roundDrinks.map((d) => {
+                        const un = r.anon[d.id] ?? 0
+                        return (
+                          <div key={d.id} style={{ marginBottom: 9 }}>
+                            <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 5 }}>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 700 }}> · 🔴 {un} onbekend</span>}</div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                              {people.map((p) => { const n = r.orders[d.id]?.[p.id] ?? 0; return (
+                                <span key={p.id} style={{ ...S.chip(n), padding: "5px 10px", fontSize: 12.5 }} onClick={() => rAssignFromAnon(idx, d.id, p.id)}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1 }}>−</span>}</span>
+                              )})}
+                            </div>
+                          </div>
+                        )
+                      }) : (<div style={{ display: people.length > 4 ? "grid" : "block", gridTemplateColumns: people.length > 4 ? "1fr 1fr" : undefined, columnGap: 12 }}>{people.map((p) => {
+                        const took = roundDrinks.filter((d) => (r.orders[d.id]?.[p.id] ?? 0) > 0)
+                        return (
+                          <div key={p.id} style={{ marginBottom: 9 }}>
+                            <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 5 }}>{p.name}{took.length > 0 && <span style={{ fontSize: 11, fontWeight: 600, color: "#8a7d55" }}> · {took.reduce((a, d) => a + (r.orders[d.id]?.[p.id] ?? 0), 0)} drankje(s)</span>}</div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                              {roundDrinks.filter((d) => (r.orders[d.id]?.[p.id] ?? 0) > 0).map((d) => { const n = r.orders[d.id]?.[p.id] ?? 0; return (
+                                <span key={d.id} style={{ ...S.chip(n), padding: "5px 10px", fontSize: 12.5 }}>{d.emoji} {d.name}<span style={S.badge}>{n}</span><span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>−</span></span>
+                              )})}
+                              {roundDrinks.filter((d) => (r.anon[d.id] ?? 0) > 0).map((d) => (
+                                <span key={"add" + d.id} onClick={() => rAssignFromAnon(idx, d.id, p.id)} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 10px", fontSize: 12.5, borderRadius: 20, background: "#fff", border: "1px dashed rgba(120,95,20,0.4)", color: "#8a7d55", fontWeight: 700, cursor: "pointer" }}>+ {d.emoji} {d.name}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })}</div>)}
+                      <div style={{ fontSize: 11, color: "#8a7d55" }}>{L.redistribute}</div>
+                <button style={done ? { ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 10 }} onClick={() => setAssignIdx(null)}>{done ? "Klaar — alles toegewezen" : "Klaar"}</button>
+              </div>
+            </div>
+          )
+        })()}
+        <div style={{ ...S.row, justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
+          <h3 style={{ ...S.h3, margin: 0 }}>{L.roundsOverview}</h3>
+          {potTag}
+        </div>
+        {paidCount === 0 ? (
+          <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
+            <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{L.noRoundsDone}</div>
+            <div style={{ ...S.sub, marginBottom: 16 }}>{L.noRoundsHint}</div>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <button style={{ ...S.btnP, width: "80%" }} onClick={startFirstRound}>{unfinishedRound ? L.continueRound(roundNr) : "Start 1e rondje"}</button>
+            </div>
+          </div>
+        ) : (<>
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
+          <p style={{ ...S.sub, margin: 0 }}>{L.tapRoundToEdit}</p>
+          {paidCount > 1 && <span onClick={() => setAllRoundsOpen((v) => !v)} style={{ fontSize: 12, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", flexShrink: 0 }}>{allRoundsOpen ? "alles dichtklappen" : "alles openklappen"}</span>}
+        </div>
+
+        {rounds.map((r, idx) => ({ r, idx })).reverse().map(({ r, idx }) => {
+          if (!roundIsPaid(r)) return null
+          const items = drinks.reduce((s, d) => s + drinkTotalRound(r, d.id), 0)
+          const open = allRoundsOpen || openRound === idx
+          const roundDrinks = drinks.filter((d) => drinkTotalRound(r, d.id) > 0)
+          return (
+            <div key={idx} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+              <div style={{ cursor: "pointer", padding: 14 }} onClick={() => { if (allRoundsOpen) { setAllRoundsOpen(false); setOpenRound(idx) } else { setOpenRound(open ? null : idx) } setEditOpen(false); setEditCups(false); setEditPay(false) }}>
+                <div style={{ ...S.row, justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 15, fontWeight: 800 }}>Ronde {idx + 1} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>· {items} drankjes · {euro(r.amount)}</span>{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ fontSize: 11.5, fontWeight: 800, color: "#1f8a4c", marginLeft: 6 }}>{L.assigned}</span>}</span>
+                  <span style={{ fontSize: 14, color: "#8a7d55" }}>{open ? "▴" : "▾"}</span>
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#1f8a4c", marginTop: 3 }}>✓ betaald: {paidLabel(r)}</div>
+              </div>
+              {(() => {
+                const un = drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0)
+                if (un === 0) return null
+                return (
+                  <div onClick={() => { setAssignIdx(idx) }} style={{ margin: "0 14px 14px", background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "9px 11px", fontSize: 12.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>
+                    🔴 {un} drankje{un === 1 ? "" : "s"} nog niet toegewezen. <u>{L.tapToAssign}</u>
                   </div>
-                  {showFairSplit && (
-                    <div style={{ width: 158, textAlign: "center" }}>
-                      <div style={{ fontSize: 9, color: "#1f8a4c" }}>{L.totalSmall}</div>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: "#27ae60" }}>€{bill.totalActuallySpent.toFixed(2)}</div>
+                )
+              })()}
+              {open && (
+                <div style={{ padding: "0 14px 14px" }}>
+                  {roundDrinks.map((d) => {
+                    const who = people.filter((p) => (r.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = r.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
+                    return <div key={d.id} style={{ fontSize: 13.5, marginBottom: 3 }}><b>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}</b>{who.length > 0 && <span style={{ color: "#8a7d55" }}> → {who.join(", ")}</span>}</div>
+                  })}
+
+                  <div style={{ ...S.row, justifyContent: "flex-end", marginTop: 10 }}>
+                    <button style={{ ...S.btn, fontSize: 12, padding: "5px 12px", fontWeight: 800, color: "#8a5e0f" }} onClick={() => { const next = !editOpen; setEditOpen(next); if (!next) { setEditCups(false); setEditPay(false) } }}>{editOpen ? "▴ sluiten" : "✏️ aanpassen"}</button>
+                  </div>
+                  {editOpen && (
+                    <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                      <button style={{ ...S.btn, flex: 1, fontSize: 11.5, padding: "7px 0" }} onClick={() => { setEditCups(false); setEditPay(false); setAssignIdx(idx) }}>toewijzen{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ color: "#1f8a4c", fontWeight: 800 }}> ✓</span>}</button>
+                      <button style={{ ...S.btn, flex: 1, fontSize: 11.5, padding: "7px 0", ...(editPay ? { background: "rgba(240,165,0,0.16)", borderColor: "rgba(240,165,0,0.5)", fontWeight: 800 } : {}) }} onClick={() => { setEditPay((v) => !v); setEditCups(false) }}>{L.amountAndPayer}</button>
+                      {depositOn && <button style={{ ...S.btn, flex: 1, fontSize: 11.5, padding: "7px 0", ...(editCups ? { background: "rgba(240,165,0,0.16)", borderColor: "rgba(240,165,0,0.5)", fontWeight: 800 } : {}) }} onClick={() => { setEditCups((v) => !v); setEditPay(false) }}>bekers</button>}
+                    </div>
+                  )}
+
+
+                  {editPay && (
+                    <div style={{ marginTop: 10, background: "#faf4e4", borderRadius: 12, padding: 10 }}>
+                      <div style={{ ...S.row, gap: 8, marginBottom: 8 }}>
+                        <span style={{ fontSize: 18, fontWeight: 800 }}>€</span>
+                        <input style={{ ...S.input, width: 110, fontSize: 16, borderColor: (r.amount || 0) <= 0 ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" value={r.amount || ""} onChange={(e) => rSetAmount(idx, parseFloat(e.target.value.replace(",", ".")) || 0)} />
+                        <span style={{ fontSize: 11, color: "#8a7d55" }}>totaal — Fair-Split basis</span>
+                      </div>
+                      <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>Betaald door <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.multiplePossible}</span></div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        <span style={S.chip((r.potPart || 0) > 0 ? 1 : 0)} onClick={() => rTogglePot(idx)}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
+                        {people.map((p) => <span key={p.id} style={{ ...S.chip((r.payers?.[p.id] || 0) > 0 ? 1 : 0), padding: "6px 11px", fontSize: 13 }} onClick={() => rTogglePayer(idx, p.id)}>{p.name}</span>)}
+                      </div>
+                      {(() => {
+                        const sel = Object.keys(r.payers || {}).filter((pid) => people.some((p) => p.id === pid))
+                        const nPay = sel.length + ((r.potPart || 0) > 0 ? 1 : 0)
+                        if (nPay === 0) return <div style={{ fontSize: 11.5, color: "#c0554a", fontWeight: 700, marginTop: 6 }}>Kies wie betaalde.</div>
+                        const sum = rPaidSum(r), diff = (r.amount || 0) - sum
+                        return (
+                          <div style={{ marginTop: 8, background: "#fff", borderRadius: 10, padding: "9px 10px" }}>
+                            {nPay > 1 && <div style={{ fontSize: 11, fontWeight: 800, color: "#8a7d55", marginBottom: 7 }}>Gelijk verdeeld <span style={{ fontWeight: 600, color: "#b3a988" }}>— pas aan per persoon indien nodig</span></div>}
+                            {(r.potPart || 0) > 0 && (
+                              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+                                <span style={{ fontSize: 12.5, fontWeight: 700 }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
+                                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 78, fontSize: 13 }} type="text" inputMode="decimal" value={r.potPart || ""} onChange={(e) => rSetPotAmt(idx, parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
+                              </div>
+                            )}
+                            {sel.map((pid) => (
+                              <div key={pid} style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+                                <span style={{ fontSize: 12.5, fontWeight: 700 }}>👤 {people.find((p) => p.id === pid)?.name}</span>
+                                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 78, fontSize: 13 }} type="text" inputMode="decimal" value={r.payers[pid] || ""} onChange={(e) => rSetPayerAmt(idx, pid, parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
+                              </div>
+                            ))}
+                            <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", paddingTop: 7, fontSize: 11.5, fontWeight: 800, color: Math.abs(diff) <= 0.005 ? "#1f8a4c" : "#c0554a" }}>Samen {euro(sum)} van {euro(r.amount || 0)}{Math.abs(diff) <= 0.005 ? " ✓ klopt" : diff > 0 ? ` — er ontbreekt ${euro(diff)}` : ` — ${euro(-diff)} te veel`}</div>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  )}
+
+                  {editCups && depositOn && (
+                    <div style={{ marginTop: 10, background: "#faf4e4", borderRadius: 12, padding: 10 }}>
+                      {people.map((p) => {
+                        const nam = roundPicked(r, p.id), gb = r.gaveBack[p.id] || 0
+                        return (
+                          <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0" }}>
+                            <span style={{ fontSize: 13.5, fontWeight: 700 }}>{p.name} <span style={{ fontSize: 11, color: "#8a7d55" }}>· nam {nam}</span></span>
+                            <div style={{ ...S.row, gap: 6 }}>
+                              <span style={{ fontSize: 11, color: "#8a7d55" }}>{L.gaveBack}</span>
+                              <button style={{ ...S.step, width: 26, height: 26, fontSize: 16, opacity: gb === 0 ? 0.4 : 1 }} onClick={() => rSetGaveBack(idx, p.id, gb - 1)}>−</button>
+                              <span style={{ minWidth: 14, textAlign: "center", fontSize: 14, fontWeight: 800 }}>{gb}</span>
+                              <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => rSetGaveBack(idx, p.id, gb + 1)}>+</button>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
               )}
             </div>
+          )
+        })}
 
-            {/* Totalen + fair split-correctie */}
-            {showBillPrices && participants.length > 0 && (() => {
-              const indicatief = bill.totalDrinkValue
-              const echtBetaald = bill.totalActuallySpent
-              return (
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
-                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                    <div style={{ flex: 1, background: "rgba(120,95,20,0.04)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
-                      <div style={{ fontSize: 11, color: "#888", marginBottom: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                        <span>{L.indicatievePriceTotal} <span style={{ fontSize: 9, color: "#bbb" }}>{L.totalParen}</span></span>
-                        <button onClick={() => setShowIndicatiefInfo(true)} title={L.whatMeans} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#b9c0cc", fontSize: 13, lineHeight: 1 }}>ℹ️</button>
-                      </div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: "#a89a6a" }}>€{indicatief.toFixed(2)}</div>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ background: "rgba(39,174,96,0.08)", borderRadius: 12, padding: "10px 12px", textAlign: "center", border: "1px solid rgba(39,174,96,0.25)" }}>
-                        <div style={{ fontSize: 11, color: "#1f8a4c", marginBottom: 2 }}>{L.totalPaid}</div>
-                        <div style={{ fontSize: 18, fontWeight: 800, color: "#27ae60" }}>€{echtBetaald.toFixed(2)}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })()}
-
-            {/* Verdeling weer verbergen + de andere methode ernaast vergelijken (in beide modi) */}
-            {showBillPrices && (
-              <div style={{ display: "flex", gap: 8, marginTop: 14, alignItems: "stretch" }}>
-                <button onClick={() => { setShowBillPrices(false); setShowFairSplit(false); setCompareOther(false); setSplitMode("fair") }} style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(120,95,20,0.25)", color: "#8a7d55", fontSize: 13.5, fontWeight: 800, cursor: "pointer", borderRadius: 16, padding: "13px 10px", lineHeight: 1.2 }}>
-                  {L.backBtn}
-                </button>
-                {(() => {
-                  // In 'evenveel' vergelijk je met Fair Split (enkel als geldig); in Fair Split vergelijk je met 'evenveel'.
-                  const canCompare = splitMode === "equal" ? canFairSplit : true
-                  if (!canCompare) return null
-                  const showsFair = splitMode === "equal" // de vergelijking toont de Fair Split (blauw) of 'evenveel' (oranje)
-                  const label = compareOther ? L.hideCompare : (splitMode === "equal" ? L.compareFair : L.compareEqual)
-                  return (
-                    <button
-                      onClick={() => setCompareOther((v) => !v)}
-                      style={{ flex: 1, background: compareOther ? "#fff" : (showsFair ? "rgba(61,111,208,0.1)" : "rgba(232,126,20,0.12)"), border: showsFair ? "2px solid #3d6fd0" : "2px solid #e0842e", color: showsFair ? "#2f5bb0" : "#b5591a", fontSize: 13.5, fontWeight: 800, cursor: "pointer", borderRadius: 16, padding: "13px 10px", lineHeight: 1.2 }}
-                    >
-                      {label}
-                    </button>
-                  )
-                })()}
-              </div>
-            )}
+        </>)}
+        {paidCount > 0 && <>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button style={{ ...S.btn, flex: 1 }} onClick={goFinal}>{L.settleBtn}</button>
+            <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (unfinishedRound) resumeRound(); else nextRound() }}>{unfinishedRound ? L.continueRound(roundNr) : "➕ Nieuw rondje"}</button>
           </div>
+          {!unfinishedRound && paidCount > 0 && activeProposal ? (
+            <div style={{ marginTop: 10 }}>{renderProposalHost()}</div>
+          ) : !unfinishedRound && paidCount > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <button style={{ width: "100%", border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 14, padding: "13px 6px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }} onClick={repeatRound}>{L.repeatRound}</button>
+              <div style={{ fontSize: 11, color: "#b3a988", textAlign: "center", marginTop: 6 }}>daarna nog aanpasbaar</div>
+              <button style={{ width: "100%", marginTop: 8, border: "1.5px solid rgba(240,165,0,0.6)", background: "#fff", color: "#8a5e0f", borderRadius: 14, padding: "12px 6px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }} onClick={startProposal}>{L.askGroupRepeat}</button>
+            </div>
+          )}
+        </>}
+      </div></div>
+    )
+  }
 
-          {/* Popup: drankjes toewijzen vóór Fair Split (per rondje, compact) */}
-          {showAssignPopup && (() => {
-            // live: hoeveel staat er nu nog open (over alle drankjes)
-            const liveUnassignedTotal = orders.filter((o) => !o.participant_id).reduce((s, o) => s + o.quantity, 0)
-            // few-modus op basis van de snapshot bij openen ? drankjes blijven zichtbaar, ook na toewijzen
-            const snapshotDrinks = assignPopupDrinkIds.map((id) => drinks.find((d) => d.id === id)).filter((d): d is Drink => !!d)
-            const few = assignPopupDrinkIds.length > 0 && assignPopupDrinkIds.length <= 2
-            return (
-              <div style={S.overlay} onClick={() => setShowAssignPopup(false)}>
-                <div style={{ ...S.modal, width: 420, maxHeight: "85vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
-                  {few ? (
-                    <>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>{L.assignPopupTitle}</h3>
-                      <p style={{ fontSize: 13, color: "#777", marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
-                        {liveUnassignedTotal > 0
-                          ? <><b style={{ color: "#e0685c" }}>{L.assignBodyN(liveUnassignedTotal)}</b>{L.assignBodyPost}</>
-                          : <>{L.allAssignedInlineA}<b>{L.changeWord}</b>{L.allAssignedInlineB}</>}
-                      </p>
-                      <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-                        {snapshotDrinks.map((d) => {
-                          const tot = orders.filter((o) => o.drink_id === d.id).reduce((s, o) => s + o.quantity, 0)
-                          return (
-                            <div key={d.id} style={{ border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "8px 10px" }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ fontSize: 18, flexShrink: 0 }}>{d.emoji}</span>
-                                <span style={{ fontSize: 14, fontWeight: 800 }}>{tot}×</span>
-                                <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, overflowWrap: "anywhere" }}>{drinkName(d.name, lang)}</span>
-                              </div>
-                              {renderBillAssign(d)}
-                            </div>
-                          )
-                        })}
-                      </div>
-                      {liveUnassignedTotal === 0 ? (
-                        <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800 }} onClick={() => { setShowAssignPopup(false); setShowBillPrices(true); setShowFairSplit(true) }}>{L.showFairSplitBtn}</button>
-                      ) : (
-                        <button style={{ ...S.btn, width: "100%", padding: "11px 0", fontSize: 13 }} onClick={() => setShowAssignPopup(false)}>{L.closeBtn}</button>
-                      )}
-                    </>
-                  ) : liveUnassignedTotal === 0 ? (
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 42, marginBottom: 8 }}>✅</div>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px" }}>{L.allAssignedTitle}</h3>
-                      <p style={{ fontSize: 13, color: "#777", marginBottom: 18 }}>{L.allAssignedSub}</p>
-                      <button
-                        style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800 }}
-                        onClick={() => { setShowAssignPopup(false); setShowBillPrices(true); setShowFairSplit(true) }}
-                      >
-                        {L.showFairSplitBtn}
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>{L.toAssignTitle}</h3>
-                      <p style={{ fontSize: 13, color: "#777", marginTop: 0, marginBottom: 16, lineHeight: 1.55 }}>
-                        {L.assignRemainA}<b style={{ color: "#e0685c" }}>{L.assignRemainN(liveUnassignedTotal)}</b>{L.assignRemainB}<b>&ldquo;{L.allBestOrderedPlain}&rdquo;</b>{L.assignRemainC}<b>&ldquo;{L.roundsPlain}&rdquo;</b>.
-                      </p>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        <button
-                          style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}
-                          onClick={() => { setShowAssignPopup(false); if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }) }}
-                        >
-                          {L.toAllOrderedBtn}
-                        </button>
-                        <button style={{ ...S.btn, width: "100%", padding: "10px 0", fontSize: 13, fontWeight: 700, background: "rgba(214,158,20,0.1)", border: "1px solid rgba(214,158,20,0.3)", color: "#c8941a" }} onClick={() => { setOpenRounds(null); setShowAssignPopup(false); setView("rounds") }}>{L.toRoundsQuotedBtn}</button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )
-          })()}
-
-          <div style={{ textAlign: "center", marginTop: 24, paddingBottom: 40, color: "#aaa", fontSize: 12 }}>
-            {participants.length} personen — {sessions.length} rondes — {orders.reduce((s, o) => s + o.quantity, 0)} drankjes
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// SMALL HELPER COMPONENTS
-// ═══════════════════════════════════════════════════════════════════════════
-function AddPersonForm({ onAdd, onClose }: { onAdd: (name: string) => void; onClose: () => void }) {
-  const [lang] = useLang()
-  const L = STRINGS[lang]
-  const [name, setName] = useState("")
-  const inputRef = useRef<HTMLInputElement>(null)
-  useEffect(() => { inputRef.current?.focus() }, [])
-  const submit = () => { onAdd(name.trim()); }
+  // ── FINAL ───────────────────────────────────────────────────────────────────
   return (
-    <>
-      <input
-        ref={inputRef}
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && submit()}
-        placeholder={L.addPersonNamePlaceholder}
-        style={{ ...S.input, width: "100%", boxSizing: "border-box" }}
-      />
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button style={{ ...S.btn, ...S.btnPrimary, flex: 1 }} onClick={submit}>{L.add}</button>
-        <button style={{ ...S.btn, flex: 1 }} onClick={onClose}>{L.cancel}</button>
+    <div style={S.page}><div style={S.wrap}>
+      <Header />
+      {showPot && renderPotModal()}
+        {renderDialogs()}
+      <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
+        <h3 style={{ ...S.h3, margin: 0 }}>{L.finalBalance}</h3>
+        {pay === "coin" && (
+          <div style={{ ...S.row, gap: 6 }}>
+            <div style={{ ...S.seg(displayUnit === "eur"), flex: "none", padding: "6px 12px" }} onClick={() => setDisplayUnit("eur")}>€</div>
+            <div style={{ ...S.seg(displayUnit === "coin"), flex: "none", padding: "6px 12px" }} onClick={() => setDisplayUnit("coin")}>🎟️</div>
+          </div>
+        )}
       </div>
-    </>
-  )
-}
 
-// ═══════════════════════════════════════════════════════════════════════════
-// STYLES
-// ═══════════════════════════════════════════════════════════════════════════
-const S: Record<string, React.CSSProperties> = {
-  page: {
-    padding: 18,
-    fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    background: "linear-gradient(180deg,#fffdf4 0%,#fdf3d4 55%,#fbedc2 100%)",
-    minHeight: "100vh",
-    color: "#4a3f1e",
-    maxWidth: 720,
-    margin: "0 auto",
-    WebkitFontSmoothing: "antialiased",
-    MozOsxFontSmoothing: "grayscale",
-  },
-  card: {
-    background: "#fffef9",
-    border: "1px solid rgba(180,140,20,0.10)",
-    borderRadius: 22,
-    padding: 18,
-    boxShadow: "0 1px 2px rgba(150,110,20,0.04), 0 14px 30px -16px rgba(180,140,20,0.28)",
-    marginBottom: 14,
-  },
-  btn: {
-    border: "1px solid rgba(120,95,20,0.14)",
-    background: "#fffef9",
-    borderRadius: 12,
-    padding: "9px 16px",
-    cursor: "pointer",
-    fontSize: 14,
-    fontWeight: 600,
-    color: "#4a3f1e",
-    boxShadow: "0 1px 2px rgba(150,110,20,0.06)",
-    transition: "transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease",
-  },
-  btnPrimary: {
-    background: "linear-gradient(135deg,#f4c430,#f7d461)",
-    color: "#4a3a0a",
-    border: "none",
-    boxShadow: "0 6px 16px -6px rgba(214,158,20,0.6)",
-  },
-  iconBtn: {
-    border: "none",
-    background: "rgba(150,110,20,0.08)",
-    borderRadius: 11,
-    width: 32,
-    height: 32,
-    fontSize: 14,
-    cursor: "pointer",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "background .12s ease, transform .12s ease",
-  },
-  input: {
-    border: "1.5px solid rgba(120,95,20,0.16)",
-    borderRadius: 12,
-    padding: "10px 13px",
-    fontSize: 14,
-    outline: "none",
-    background: "#fffef9",
-    color: "#4a3f1e",
-    transition: "border-color .12s ease, box-shadow .12s ease",
-  },
-  h1: { fontSize: 29, fontWeight: 800, letterSpacing: -0.7, marginBottom: 4, color: "#5a4a1a" },
-  h3: { fontSize: 16, fontWeight: 800, marginBottom: 14, letterSpacing: -0.3, color: "#6b5a24", display: "flex", alignItems: "center", gap: 9 },
-  topBar: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 14,
-    padding: "4px 2px",
-  },
-  tabBar: {
-    display: "flex",
-    gap: 4,
-    background: "#f5eccf",
-    border: "1px solid rgba(214,158,20,0.28)",
-    borderRadius: 16,
-    padding: 6,
-    marginBottom: 18,
-    boxShadow: "0 4px 14px -6px rgba(150,110,20,0.25), inset 0 1px 2px rgba(150,110,20,0.06)",
-  },
-  stickyCart: {
-    position: "fixed",
-    bottom: 18,
-    left: 16,
-    right: 16,
-    maxWidth: 720 - 32,
-    margin: "0 auto",
-    background: "rgba(255,253,244,0.9)",
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
-    borderRadius: 20,
-    padding: "14px 18px",
-    boxShadow: "0 10px 40px -6px rgba(150,110,20,0.3)",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    zIndex: 500,
-    border: "1px solid rgba(180,140,20,0.12)",
-  },
-  overlay: {
-    position: "fixed", inset: 0, background: "rgba(60,45,10,0.4)", display: "flex",
-    alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(6px)",
-    WebkitBackdropFilter: "blur(6px)", padding: 16,
-  },
-  modal: {
-    background: "#fffef9", borderRadius: 24, padding: 24, width: 360,
-    boxShadow: "0 24px 70px -12px rgba(120,90,20,0.35)", maxHeight: "85vh", display: "flex", flexDirection: "column",
-    border: "1px solid rgba(180,140,20,0.12)",
-  },
-  toast: {
-    position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)", background: "#4a3f1e", color: "#fff",
-    padding: "11px 22px", borderRadius: 40, fontSize: 14, fontWeight: 600, zIndex: 2000,
-    boxShadow: "0 10px 30px rgba(120,90,20,0.35)", whiteSpace: "nowrap", maxWidth: "90vw", textAlign: "center",
-  },
-  errorBanner: {
-    background: "#fef2f2", border: "1px solid #fecaca", color: "#c0392b", borderRadius: 14, padding: "11px 16px",
-    marginBottom: 14, display: "flex", alignItems: "center", fontSize: 14,
-  },
+      <div style={{ ...S.card, background: "linear-gradient(135deg,#fff7e6,#fdefc9)" }}>
+        <div style={{ ...S.row, justifyContent: "space-between", fontSize: 14 }}>
+          <span style={{ fontWeight: 800 }}>{L.totalOrdered}</span>
+          <span style={{ fontWeight: 800, fontSize: 18 }}>{show(grandTotal)}</span>
+        </div>
+        {potSpent > 0 && (
+          <div style={{ marginTop: 6, borderTop: "1px dashed rgba(120,95,20,0.2)", paddingTop: 6 }}>
+            <div style={{ ...S.row, justifyContent: "space-between", fontSize: 12.5, color: "#8a7d55" }}><span>🫙 waarvan uit de pot</span><span style={{ fontWeight: 700, color: "#1f8a4c" }}>−{show(potSpent)}</span></div>
+            <div style={{ ...S.row, justifyContent: "space-between", fontSize: 12.5, color: "#8a7d55" }}><span>door personen betaald</span><span style={{ fontWeight: 700 }}>{show(grandTotal - potSpent)}</span></div>
+          </div>
+        )}
+      </div>
+
+      <div style={S.card}>
+        <div style={{ ...S.row, gap: 6, marginBottom: 8 }}>
+          <h3 style={{ ...S.h3, margin: 0 }}>{L.fairSplit}</h3>
+          <span onClick={() => setNotice("⚖️ Fair Split — Eerlijker dan gelijke verdeling. Wie weinig of goedkopere drankjes nam, betaalt niet mee voor wie meer of duurdere drankjes nam.")} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 11, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
+        </div>
+        <div style={{ marginBottom: 10 }}>
+          <button onClick={() => { setOpenFairAll((v) => !v); setOpenFair({}) }} style={{ ...S.btn, padding: "7px 14px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{openFairAll ? "▴ Sluit details" : "▾ Bekijk details"}</button>
+        </div>
+        {anyUnassignedRounds && (
+          <div style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "11px 12px", marginBottom: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#b0402f", marginBottom: 3 }}>{L.equalSplitWarn}</div>
+            <div style={{ fontSize: 11.5, color: "#8a5e0f", lineHeight: 1.5, marginBottom: 9 }}>{L.unassignedWarn}</div>
+            <button style={{ ...S.btnP, width: "100%", padding: "11px 0", fontSize: 13.5 }} onClick={goAssignUnassigned}>{L.useFairSplit}</button>
+          </div>
+        )}
+        {showEqual && (
+          <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, fontSize: 10.5, color: "#8a7d55", fontWeight: 800, paddingBottom: 4, borderBottom: "1px solid rgba(120,95,20,0.12)" }}>
+            <span>gelijke verdeling</span>
+            <span onClick={() => setNotice(L.fairSplitInfo)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 15, height: 15, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 9.5, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
+          </div>
+        )}
+        {people.map((p) => {
+          const dronk = consumption(p.id), waarborg = cupOwn(p.id), zelf = paidByPerson(p.id), inpot = contribOf(p.id)
+          const owed = dronk + waarborg - zelf - inpot + cardLossPer
+          const open = openFairAll || openFair[p.id]
+          const nettoLabel = Math.abs(owed) < 0.005 ? "staat gelijk" : owed > 0 ? `moet ${show(owed)} betalen` : `krijgt ${show(-owed)} terug`
+          const nettoColor = Math.abs(owed) < 0.005 ? "#8a7d55" : owed > 0 ? "#b35309" : "#1f8a4c"
+          return (
+            <div key={p.id} style={{ borderBottom: "1px solid rgba(120,95,20,0.06)" }}>
+              <div style={{ ...S.row, justifyContent: "space-between", padding: "7px 0", cursor: "pointer" }} onClick={() => setOpenFair((o) => ({ ...o, [p.id]: !open }))}>
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>{open ? "▾" : "▸"} {p.name} <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f8a4c" }}>· {show(dronk)}</span>
+                  {Math.abs(owed) > 0.005 && <span style={{ display: "inline-block", marginLeft: 6, fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap", background: owed > 0 ? "rgba(224,138,0,0.16)" : "rgba(31,138,76,0.14)", color: owed > 0 ? "#b35309" : "#1f8a4c" }}>{owed > 0 ? `betaalt ${show(owed)}` : `krijgt ${show(-owed)}`}</span>}
+                </span>
+                {showEqual && <span style={{ width: 96, textAlign: "right", fontSize: 12.5, color: "#8a7d55" }}>{show(equalShare)}</span>}
+              </div>
+              {open && (
+                <div style={{ background: "#faf4e4", borderRadius: 10, padding: "8px 11px", margin: "0 0 8px", fontSize: 12.5 }}>
+                  <div style={{ color: "#6b5f3a", padding: "2px 0" }}>{L.drank}</div>
+                  {(() => {
+                    const cnt: Record<string, number> = {}
+                    rounds.forEach((r) => Object.entries(r.orders).forEach(([did, per]) => { const q = per?.[p.id] ?? 0; if (q > 0) cnt[did] = (cnt[did] ?? 0) + q }))
+                    const list = drinks.filter((d) => (cnt[d.id] ?? 0) > 0)
+                    if (list.length === 0) return null
+                    return <div style={{ fontSize: 11.5, color: "#8a7d55", padding: "1px 0 5px", lineHeight: 1.5 }}>{list.map((d) => `${cnt[d.id]}× ${d.name}`).join(" · ")}</div>
+                  })()}
+                  {depositOn && Math.abs(waarborg) > 0.005 && <div style={{ color: "#6b5f3a", padding: "2px 0" }}>{L.depositAdvanced} <b style={{ color: "#4a3f1e" }}>{show(waarborg)}</b></div>}
+                  {zelf > 0.005 && (() => {
+                    const rr = rounds.map((r, i) => ((r.payers?.[p.id] || 0) > 0.005 ? i + 1 : 0)).filter((n) => n > 0)
+                    const label = rr.length === 0 ? "al betaald" : rr.length === 1 ? `al betaald in ronde ${rr[0]}` : `al betaald in ronde ${rr.join(", ")}`
+                    return <div style={{ color: "#6b5f3a", padding: "2px 0" }}>{label} <b style={{ color: "#1f8a4c" }}>{show(zelf)}</b></div>
+                  })()}
+                  {inpot > 0.005 && <div style={{ color: "#6b5f3a", padding: "2px 0" }}>{L.inPot} <b style={{ color: "#1f8a4c" }}>{show(inpot)}</b></div>}
+                  {cardLossPer > 0.005 && <div style={{ color: "#6b5f3a", padding: "2px 0" }}>{L.cardLoss} <b style={{ color: "#4a3f1e" }}>{show(cardLossPer)}</b></div>}
+                  <div style={{ padding: "6px 0 0", marginTop: 4, borderTop: "1px dashed rgba(120,95,20,0.25)", fontWeight: 800, color: nettoColor }}>{nettoLabel}</div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+        <div style={{ ...S.row, justifyContent: "space-between", padding: "9px 0 2px", borderTop: "2px solid rgba(120,95,20,0.25)", marginTop: 2 }}>
+          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 800 }}>Totaal <span style={{ fontSize: 13, fontWeight: 800, color: "#1f8a4c" }}>· {show(grandTotal)}</span></span>
+          {showEqual && <span style={{ width: 96, textAlign: "right", fontSize: 12.5, fontWeight: 800, color: "#8a7d55" }}>{show(equalShare * people.length)}</span>}
+        </div>
+        <div style={{ fontSize: 11.5, marginTop: 10, textAlign: "right" }}><span onClick={() => setShowEqual((v) => !v)} style={{ color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{showEqual ? "verberg gelijke verdeling" : "toon gelijke verdeling"}</span></div>
+      </div>
+
+      {renderSettleTogether()}
+
+      <div style={S.card}>
+        <h3 style={{ ...S.h3, marginBottom: 8 }}>{L.howYouAllSettle}</h3>
+        {isSchatting && (
+          <div style={{ background: "#fff8e8", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginBottom: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#c98a00", marginBottom: 2 }}>⚠️ {L.estimate}</div>
+            <div style={{ fontSize: 11.5, color: "#8a7d55", lineHeight: 1.5 }}>{L.estimateWhy}</div>
+          </div>
+        )}
+        <p style={{ ...S.sub, marginBottom: 8 }}>{L.fewestTransfers}</p>
+        {settlement.tx.length === 0 ? <div style={{ fontSize: 13.5, color: "#1f8a4c", fontWeight: 700 }}>{L.allEven}</div> : settlement.tx.map((t, i) => (
+          <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
+            <span style={{ fontSize: 14 }}><b>{t.from}</b> → {t.to}</span><span style={{ fontSize: 15, fontWeight: 800, color: "#b35309" }}>{show(t.amount)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 10 }}>
+        <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>{L.roundsOverview}</button>
+        <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{L.newRound}</button>
+      </div>
+    </div></div>
+  )
 }
