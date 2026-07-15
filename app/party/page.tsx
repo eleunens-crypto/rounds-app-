@@ -482,8 +482,13 @@ const T = {
     modeFairLine: "Betaal niet mee voor wat je niet dronk.",
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     barList: "🍻 Aan de toog",
+    costTitle: "Wat kostte het?",
+    costModeTotal: "totaal",
+    costModePerRound: "per rondje",
+    costWholeNight: "Hele avond",
+    costRoundN: (n: number) => `Rondje ${n}`,
+    costTotalLabel: "Totaal",
     barHandOut: "Uitdelen",
-    roundCostOptional: "Wat kostte dit rondje? (optioneel)",
     settleNow: "🧾 Toch afrekenen?",
     settleNowWhy: "We hielden alles bij. Eén tik en je weet wie wat schuldig is.",
     settleNowBtn: "Ja, verdeel het eerlijk",
@@ -789,8 +794,13 @@ const T = {
     modeFairLine: "Ne paie pas pour ce que tu n'as pas bu.",
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     barList: "🍻 Au bar",
+    costTitle: "Combien \u00e7a a co\u00fbt\u00e9 ?",
+    costModeTotal: "total",
+    costModePerRound: "par tourn\u00e9e",
+    costWholeNight: "Toute la soir\u00e9e",
+    costRoundN: (n: number) => `Tourn\u00e9e ${n}`,
+    costTotalLabel: "Total",
     barHandOut: "Distribuer",
-    roundCostOptional: "Combien a coûté cette tournée ? (optionnel)",
     settleNow: "🧾 Régler quand même ?",
     settleNowWhy: "On a tout noté. Un clic et tu sais qui doit quoi.",
     settleNowBtn: "Oui, répartis équitablement",
@@ -921,6 +931,10 @@ export default function Party() {
   const [allRoundsOpen, setAllRoundsOpen] = useState(false)
   const [repeated, setRepeated] = useState(false)
   const [hasSettled, setHasSettled] = useState(false)
+  // Gewoon rondjes: hoe geef je de bedragen in? "total" = één bedrag voor de hele
+  // avond (bewaard op het eerste rondje), "perRound" = per rondje apart. Het bedrag
+  // dat verdeeld wordt, is altijd de som van alle r.amount — één bron van waarheid.
+  const [costMode, setCostMode] = useState<"total" | "perRound">("total")
 
   const [showAssignAll, setShowAssignAll] = useState(false)
   const [assignMode, setAssignMode] = useState<"drink" | "person">("person")
@@ -1978,27 +1992,68 @@ export default function Party() {
           </div>
         </div>
         )}
-        {/* Gewoon rondjes: optioneel wat dit rondje kostte. Puur ter info hier — pas als
-            je later kiest voor eerlijk verdelen, wordt dit bedrag over de mensen verdeeld. */}
-        {!settle && (
-          <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 10, paddingTop: 10 }}>
-            <div style={{ ...S.row, justifyContent: "space-between" }}>
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: "#8a7d55" }}>{L.roundCostOptional}</span>
-              <div style={{ ...S.row, gap: 4 }}>
-                <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                <input style={{ ...S.input, width: 74 }} type="text" inputMode="decimal" placeholder="0,00"
-                  value={(r.amount || 0) > 0 ? String(r.amount).replace(".", ",") : ""}
-                  onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); rSetAmount(rounds.length - 1, parseFloat(v) || 0) }} />
+      </div>
+    )
+  }
+
+  // Gewoon rondjes: het kosten-overzicht op de hub. Je kiest tussen één totaalbedrag
+  // voor de hele avond, of per rondje apart. Wat je invult, bepaalt wat er straks te
+  // verdelen valt. Het bedrag leeft altijd in r.amount (som = totaal).
+  const totalCost = rounds.reduce((s, r) => s + (r.amount || 0), 0)
+  const setTotalCost = (v: number) => {
+    // In "total"-modus zetten we alles op het eerste rondje en de rest op 0, zodat de
+    // som klopt en er geen dubbele bedragen ontstaan. We schrijven elk rondje expliciet
+    // weg — het dirtyRound-mechanisme kan maar één rondje tegelijk markeren, dus dat
+    // volstaat hier niet voor meerdere rondjes.
+    if (rounds.length === 0) return
+    const nieuwe = rounds.map((r, i) => rRedistribute(r, i, false, [], i === 0 ? v : 0))
+    setRounds(nieuwe)
+    nieuwe.forEach((r) => persistRound(r))
+  }
+  const renderCostOverview = () => {
+    if (settle || rounds.length === 0) return null
+    return (
+      <div style={{ ...S.card }}>
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
+          <h3 style={{ ...S.h3, margin: 0, fontSize: 16 }}>{L.costTitle}</h3>
+          <div style={{ display: "inline-flex", border: "1px solid rgba(120,95,20,0.2)", borderRadius: 10, overflow: "hidden" }}>
+            <span onClick={() => setCostMode("total")} style={{ padding: "6px 11px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: costMode === "total" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: costMode === "total" ? "#fff" : "#8a7d55" }}>{L.costModeTotal}</span>
+            <span onClick={() => setCostMode("perRound")} style={{ padding: "6px 11px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: costMode === "perRound" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: costMode === "perRound" ? "#fff" : "#8a7d55" }}>{L.costModePerRound}</span>
+          </div>
+        </div>
+
+        {costMode === "total" ? (
+          <div style={{ ...S.row, justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#6b5f3a" }}>{L.costWholeNight}</span>
+            <div style={{ ...S.row, gap: 4 }}>
+              <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700 }}>€</span>
+              <input style={{ ...S.input, width: 84, fontSize: 15, fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00"
+                value={totalCost > 0 ? String(+totalCost.toFixed(2)).replace(".", ",") : ""}
+                onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); setTotalCost(parseFloat(v) || 0) }} />
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            {rounds.map((r, i) => (
+              <div key={r.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0", borderTop: i > 0 ? "1px solid rgba(120,95,20,0.08)" : "none", paddingTop: i > 0 ? 9 : 5 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#6b5f3a" }}>{L.costRoundN(i + 1)}</span>
+                <div style={{ ...S.row, gap: 4 }}>
+                  <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>€</span>
+                  <input style={{ ...S.input, width: 74 }} type="text" inputMode="decimal" placeholder="0,00"
+                    value={(r.amount || 0) > 0 ? String(r.amount).replace(".", ",") : ""}
+                    onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); rSetAmount(i, parseFloat(v) || 0) }} />
+                </div>
               </div>
+            ))}
+            <div style={{ ...S.row, justifyContent: "space-between", borderTop: "1.5px solid rgba(120,95,20,0.18)", marginTop: 4, paddingTop: 9 }}>
+              <span style={{ fontSize: 13.5, fontWeight: 800, color: "#4a3f1e" }}>{L.costTotalLabel}</span>
+              <span style={{ fontSize: 16, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</span>
             </div>
           </div>
         )}
       </div>
     )
   }
-
-  // Halverwege alsnog willen afrekenen. Kost niets: de rondjes en drankjes zijn in
-  // beide modi identiek, en de Fair Split valt terug op de richtprijzen.
   const switchToSettle = () => {
     setSettle(true)
     persistSettings({ settle: true })
@@ -3840,6 +3895,7 @@ export default function Party() {
           </div>
         )}
         {!settle && renderBarList()}
+        {!settle && renderCostOverview()}
         {!settle && rounds.length >= 1 && (
           <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", marginBottom: 4 }}>{L.settleNow}</div>
