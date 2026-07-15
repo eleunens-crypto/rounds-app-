@@ -5,7 +5,7 @@
 // - Betaling bevestigen -> rondjes-hub (overzicht) -> nieuw rondje / afrekenen
 // - Bewerken (toewijzen + bekers) in het overzicht; app herberekent automatisch
 // - Home-knop op elk scherm (geen reset); coin-prijzen zichtbaar/aanpasbaar
-// Richtprijzen blijven ONZICHTBAAR bij bestellen. Volledig lokaal. app/party-test/page.tsx
+// Richtprijzen blijven ONZICHTBAAR bij bestellen. Volledig lokaal. app/party/page.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useMemo, useState, useEffect, useCallback, useRef } from "react"
@@ -807,7 +807,7 @@ const T = {
   },
 } as const
 
-export default function PartyTest() {
+export default function Party() {
   const [lang] = useLang()
   const L = T[(lang === "fr" ? "fr" : "nl") as "nl" | "fr"]
   const [view, setView] = useState<"start" | "setup" | "settings" | "order" | "confirmed" | "hub" | "final">("start")
