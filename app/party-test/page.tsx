@@ -269,7 +269,8 @@ const T = {
     tapToRename: "tik op een naam om te hernoemen",
     noPeopleYet: "Nog geen personen",
     addPersonFirst: "Voeg eerst minstens één persoon toe.",
-    thatsMe: "dat ben ik",
+    whichAreYou: "Welke ben jij?",
+    pickYourName: "Tik je naam aan — de rest duid je zelf aan tijdens het bestellen.",
     notMeShort: "niet ik",
     freeUp: "vrijgeven",
     thisIsYou: "Dit ben jij",
@@ -443,8 +444,6 @@ const T = {
     modeTitle: "Rekenen jullie achteraf af?",
     modeQuick: "Gewoon rondjes",
     modeQuickWhy: "Wat er moet komen. Meer niet.",
-    modeFull: "Rondjes + afrekenen",
-    modeFullWhy: "Fair Split, pot, coins, bekers. Iedereen betaalt wat hij dronk.",
     modeFairLine: "Betaal niet mee voor wat je niet dronk.",
     modeSwitchLater: "Je kan later nog wisselen — er gaat niets verloren.",
     barList: "🍻 Aan de toog",
@@ -542,7 +541,8 @@ const T = {
     tapToRename: "touche un nom pour le modifier",
     noPeopleYet: "Aucune personne",
     addPersonFirst: "Ajoute d'abord au moins une personne.",
-    thatsMe: "c'est moi",
+    whichAreYou: "Lequel es-tu ?",
+    pickYourName: "Touche ton nom — le reste, tu le coches toi-même en commandant.",
     notMeShort: "pas moi",
     freeUp: "libérer",
     thisIsYou: "C'est toi",
@@ -716,8 +716,6 @@ const T = {
     modeTitle: "Vous réglez après ?",
     modeQuick: "Juste des tournées",
     modeQuickWhy: "Ce qu'il faut commander. Rien de plus.",
-    modeFull: "Tournées + règlement",
-    modeFullWhy: "Fair Split, pot, jetons, gobelets. Chacun paie ce qu'il a bu.",
     modeFairLine: "Ne paie pas pour ce que tu n'as pas bu.",
     modeSwitchLater: "Tu peux changer plus tard — rien n'est perdu.",
     barList: "🍻 Au bar",
@@ -2815,6 +2813,28 @@ export default function PartyTest() {
           <div style={{ marginBottom: 10 }}>
             <span style={{ fontSize: 14, fontWeight: 800 }}>{L.peopleTitle}</span> <span style={{ fontSize: 11.5, color: "#8a7d55", fontStyle: "italic" }}>{L.tapToRename}</span>
           </div>
+
+          {/* Wie ben JIJ? Eén keer vragen, bovenaan. Zolang je nog nergens zit, toon je
+              de namen als keuze. Zodra je gekozen hebt, verdwijnt dit blok — dan is de
+              lijst eronder puur voor het hernoemen. */}
+          {!meId && people.length > 0 && (
+            <div style={{ background: "#fff8e8", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 12, padding: "11px 12px", marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f", marginBottom: 3 }}>⭐ {L.whichAreYou}</div>
+              <div style={{ fontSize: 11, color: "#8a7d55", marginBottom: 9, lineHeight: 1.45 }}>{L.pickYourName}</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {people.filter((p) => !p.claimedBy).map((p, i) => {
+                  const idx = people.indexOf(p)
+                  return (
+                    <button key={p.id} disabled={busy} onClick={() => claimSeat(p.id, isGuestDefault(p.name) ? `Gast ${idx + 1}` : p.name)}
+                      style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(240,165,0,0.5)", background: "#fff", color: "#4a3f1e", fontWeight: 800, opacity: busy ? 0.5 : 1 }}>
+                      {isGuestDefault(p.name) ? `Gast ${idx + 1}` : p.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {people.length === 0 ? (
             <div style={{ textAlign: "center", color: "#b3a988", fontSize: 13, padding: "14px 0" }}>{L.noPeopleYet}</div>
           ) : (
@@ -2837,20 +2857,14 @@ export default function PartyTest() {
                         {ikZelf ? "⭐" : "📱"}
                       </span>
                     )}
-                    <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
-                      {!p.claimedBy && !meId && (
-                        <button onClick={() => claimSeat(p.id, isGuestDefault(p.name) ? `Gast ${idx + 1}` : p.name)} disabled={busy}
-                          style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(240,165,0,0.5)", background: "#faf4e4", color: "#8a7d55" }}>
-                          {L.thatsMe}
-                        </button>
-                      )}
-                      {(ikZelf || bezet) && (
+                    {(ikZelf || bezet) && (
+                      <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
                         <button onClick={() => releaseSeat(p.id)}
                           style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)" }}>
                           {ikZelf ? L.notMeShort : L.freeUp}
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
