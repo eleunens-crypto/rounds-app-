@@ -43,22 +43,46 @@ async function handle(req: Request) {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
-  // 2) Welke groepen zijn meer dan 48u geleden afgerekend en niet heropend?
-  //    finalized_at wordt gezet bij afrekenen en op null gezet bij heropenen, dus dit
-  //    respecteert automatisch het "heropenen reset de klok"-principe.
-  const grens = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
-  const { data: groepen, error: qErr } = await admin
+  // 2) Twee groepen mogen opgeruimd worden:
+  //    a) Afgerekend en meer dan 48u geleden afgerekend (niet heropend — finalized_at
+  //       wordt bij heropenen op null gezet, dus dat reset de klok vanzelf).
+  //    b) Nog niet afgerekend maar meer dan 72u geleden aangemaakt: vrijwel zeker een
+  //       vergeten tafel. Niemand splitst dagenlang aan één bonnetje.
+  //    We halen ze in twee aparte, eenvoudige queries op (voorspelbaarder dan één
+  //    samengestelde or-query) en voegen ze samen.
+  const grens48 = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+  const grens72 = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
+
+  const afgerekend = await admin
     .from("table_groups")
     .select("id, receipt_url")
+    .not("receipt_url", "is", null)
     .eq("finalized", true)
     .not("finalized_at", "is", null)
-    .lt("finalized_at", grens)
-    .not("receipt_url", "is", null)
+    .lt("finalized_at", grens48)
 
-  if (qErr) {
-    return NextResponse.json({ error: "query failed", detail: qErr.message }, { status: 500 })
+  const open = await admin
+    .from("table_groups")
+    .select("id, receipt_url")
+    .not("receipt_url", "is", null)
+    .or("finalized.is.null,finalized.eq.false")
+    .lt("created_at", grens72)
+
+  if (afgerekend.error || open.error) {
+    const detail = afgerekend.error?.message || open.error?.message
+    return NextResponse.json({ error: "query failed", detail }, { status: 500 })
   }
-  if (!groepen || groepen.length === 0) {
+
+  // Samenvoegen en ontdubbelen op id (voor de zekerheid).
+  const gezien = new Set<string>()
+  const groepen = [...(afgerekend.data ?? []), ...(open.data ?? [])].filter((g) => {
+    const id = String(g.id)
+    if (gezien.has(id)) return false
+    gezien.add(id)
+    return true
+  })
+
+  if (groepen.length === 0) {
     return NextResponse.json({ ok: true, groepen: 0, bestanden: 0 })
   }
 
@@ -97,4 +121,3 @@ async function handle(req: Request) {
     fouten: fouten.length ? fouten : undefined,
   })
 }
-
