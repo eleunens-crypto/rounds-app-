@@ -145,7 +145,7 @@ type Anon = Record<string, number>
 // Een rondje leeft nu in de databank. id/seq/status komen daarvandaan; de rest is
 // wat de app al kende. status: open = er wordt besteld, pending = besteld maar niet
 // betaald, closed = betaald.
-type Round = { id: string; seq: number; status: "open" | "pending" | "closed"; orders: Assign; anon: Anon; payers: Record<string, number>; amount: number; potPart: number; gaveBack: Record<string, number>; members: string[] }
+type Round = { id: string; seq: number; status: "open" | "pending" | "closed"; orders: Assign; anon: Anon; payers: Record<string, number>; amount: number; potPart: number; gaveBack: Record<string, number>; members: string[]; startedBy: string | null }
 
 const euro = (v: number) => "€" + v.toFixed(2).replace(".", ",")
 
@@ -423,6 +423,13 @@ const T = {
     drinkInUse: (n: string) => `${n} is al besteld en kan niet meer verwijderd worden.`,
 
     confirmTitle: "Even bevestigen",
+    imGoing: "🍻 Ik ga halen",
+    whoGoes: "Wie gaat er halen?",
+    xIsGoing: (n: string) => `${n} gaat halen`,
+    youAreGoing: "Jij gaat halen — tik aan wat je zelf wil",
+    iGoInstead: "Ik haal het toch",
+    notMeRunner: "Toch niet ik",
+    claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
     modeTitle: "Rekenen jullie achteraf af?",
     modeQuick: "Gewoon rondjes",
     modeQuickWhy: "Wie wil er iets? Je krijgt een lijstje voor aan de toog. Geen geld, geen gedoe.",
@@ -678,6 +685,13 @@ const T = {
     drinkInUse: (n: string) => `${n} a déjà été commandé et ne peut plus être supprimé.`,
 
     confirmTitle: "Confirmation",
+    imGoing: "🍻 J'y vais",
+    whoGoes: "Qui va chercher ?",
+    xIsGoing: (n: string) => `${n} va chercher`,
+    youAreGoing: "Tu vas chercher — coche ce que tu veux toi-même",
+    iGoInstead: "J'y vais finalement",
+    notMeRunner: "Pas moi finalement",
+    claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
     modeTitle: "Vous réglez après ?",
     modeQuick: "Juste des tournées",
     modeQuickWhy: "Qui veut quoi ? Tu obtiens une liste pour le bar. Pas d'argent, pas de prise de tête.",
@@ -794,6 +808,9 @@ export default function PartyTest() {
   const [activeCat, setActiveCat] = useState<Cat>("Bier")
   const [drinkSearch, setDrinkSearch] = useState("")
   const [guestTab, setGuestTab] = useState<"order" | "me">("order")
+  // De haler van het OPEN rondje (person-id). Wie "ik ga halen" tikt, opent het
+  // rondje en wordt dit. null = nog niemand ging halen.
+  const [startedBy, setStartedBy] = useState<string | null>(null)
   const [voiceOpen, setVoiceOpen] = useState(false)
   const [voiceOn, setVoiceOn] = useState(false)
   const [voiceText, setVoiceText] = useState("")
@@ -854,20 +871,81 @@ export default function PartyTest() {
   // pas wanneer iemand écht iets aantikt, niet bij het openen van het scherm.
   const openRoundRef = useRef<Promise<string | null> | null>(null)
   const addingPerson = useRef(false)
-  const ensureRound = async (): Promise<string | null> => {
+  const ensureRound = async (starter?: string | null): Promise<string | null> => {
     if (openRoundId) return openRoundId
     if (!groupId) return null
     if (openRoundRef.current) return openRoundRef.current   // twee snelle tikken = één rondje
     openRoundRef.current = (async () => {
       // party_open_round geeft het BESTAANDE open rondje terug als er al een is. Twee
       // gasten die tegelijk hun eerste drankje tikken, delen dus één rondje.
-      const { data, error } = await supabase.rpc("party_open_round", { p_group: groupId })
+      const { data, error } = await supabase.rpc("party_open_round", { p_group: groupId, p_starter: starter ?? null })
       openRoundRef.current = null
       if (error || !data) { setNotice("Rondje starten mislukt."); return null }
       setOpenRoundId(data as string)
+      if (starter) setStartedBy(starter)
       return data as string
     })()
     return openRoundRef.current
+  }
+
+  // "Ik ga halen": open het rondje met mezelf als haler. Iedereen die gescand heeft
+  // ziet dan "X gaat halen" en kan zijn drankje aantikken.
+  const startAsRunner = async () => {
+    if (!meId) { setNotice(L.claimSeatFirst); return }
+    await ensureRound(meId)
+    setStartedBy(meId)
+  }
+
+  // "Ik haal het toch": neem een lopend rondje over. Het rondje en alle drankjes
+  // blijven staan, alleen de haler wisselt.
+  const takeOverRound = async () => {
+    if (!meId || !openRoundId) return
+    setStartedBy(meId)
+    const { error } = await supabase.rpc("party_take_over_round", { p_round: openRoundId, p_starter: meId })
+    if (error) { setNotice("Overnemen mislukt: " + error.message); if (groupId) loadParty(groupId) }
+  }
+
+  // "Toch niet ik": geef het rondje vrij. Een ander kan het dan oppakken.
+  const releaseRunner = async () => {
+    if (!openRoundId) return
+    setStartedBy(null)
+    const { error } = await supabase.rpc("party_take_over_round", { p_round: openRoundId, p_starter: null })
+    if (error) { setNotice("Vrijgeven mislukt: " + error.message); if (groupId) loadParty(groupId) }
+  }
+
+  const runnerName = () => people.find((p) => p.id === startedBy)?.name ?? ""
+
+  // De haler-strook. Drie toestanden: niemand haalt, iemand anders haalt, jij haalt.
+  const renderRunnerBar = () => {
+    const ikHaal = !!meId && startedBy === meId
+    if (!bezig && !startedBy) {
+      // Nog geen rondje: nodig iemand uit om te gaan halen.
+      return (
+        <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)", textAlign: "center" }}>
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 10 }}>{L.whoGoes}</div>
+          <button style={{ ...S.btnP, width: "100%" }} onClick={startAsRunner}>{L.imGoing}</button>
+        </div>
+      )
+    }
+    if (ikHaal) {
+      return (
+        <div style={{ ...S.card, background: "rgba(31,138,76,0.08)", border: "1.5px solid rgba(31,138,76,0.35)" }}>
+          <div style={{ ...S.row, justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f6b3a" }}>{L.youAreGoing}</span>
+            <button style={{ ...S.btn, fontSize: 11.5, fontWeight: 700, padding: "6px 11px" }} onClick={releaseRunner}>{L.notMeRunner}</button>
+          </div>
+        </div>
+      )
+    }
+    // Iemand anders haalt.
+    return (
+      <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
+        <div style={{ ...S.row, justifyContent: "space-between" }}>
+          <span style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f" }}>🍻 {startedBy ? L.xIsGoing(runnerName()) : L.whoGoes}</span>
+          <button style={{ ...S.btn, fontSize: 11.5, fontWeight: 700, padding: "6px 11px" }} onClick={takeOverRound}>{L.iGoInstead}</button>
+        </div>
+      </div>
+    )
   }
 
   // De optelling gebeurt in Postgres (party_bump), niet hier. Twee gasten die tegelijk
@@ -1018,7 +1096,7 @@ export default function PartyTest() {
     const [{ data: g }, { data: pp }, { data: rr }, { data: ii }, { data: pt }] = await Promise.all([
       supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices,settle").eq("id", gid).single(),
       supabase.from("party_people").select("id,seat,name,claimed_by,self_joined,settle_with").eq("group_id", gid).order("seat"),
-      supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back,members").eq("group_id", gid).order("seq"),
+      supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back,members,started_by").eq("group_id", gid).order("seq"),
       supabase.from("party_round_items").select("round_id,person_id,drink_key,qty").eq("group_id", gid),
       supabase.from("party_pot").select("id,seq,amounts,is_card,card_payers").eq("group_id", gid).order("seq"),
     ])
@@ -1067,11 +1145,13 @@ export default function PartyTest() {
       amount: Number(r.amount ?? 0), potPart: Number(r.pot_part ?? 0),
       gaveBack: (r.gave_back ?? {}) as Record<string, number>,
       members: ((r.members ?? []) as string[]),
+      startedBy: (r.started_by ?? null) as string | null,
     }))
 
     // Het OPEN rondje is de mand; de rest is historiek.
     const open = alle.find((r) => r.status === "open") ?? null
     setOpenRoundId(open?.id ?? null)
+    setStartedBy(open?.startedBy ?? null)
     setCart(open?.orders ?? {})
     setCartAnon(open?.anon ?? {})
     // Bekerwerk dat al ingevuld was, blijft staan bij een refresh of op een tweede toestel.
@@ -1709,11 +1789,22 @@ export default function PartyTest() {
       return
     }
     setHasSettled(true); setView("final") }
-  const openClose = () => { setAmountDraft(""); setShowClose(true) }
+  const openClose = () => {
+    setAmountDraft("")
+    // Wie haalde, schoot voor: die staat standaard als betaler klaar. Nog te wijzigen
+    // naar de pot of iemand anders op het betaalscherm.
+    if (settle && startedBy && payPersons.length === 0 && !payPot) {
+      setPayPersons([startedBy]); autoSplit([startedBy], false)
+    }
+    setShowClose(true)
+  }
   const goAssignFromWarning = () => { setShowClose(false); setShowAssignAll(true) }
   const commitRound = () => {
     const effGb: Record<string, number> = {}
     people.forEach((p) => { effGb[p.id] = gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id)) })
+    // De haler heeft de mensen op de plaats vastgezet — reset de haler-strook voor het
+    // volgende rondje.
+    setStartedBy(null)
     if (openRoundId) {
       // "Gewoon rondjes": het rondje is meteen klaar. Geen bedrag, geen betaler.
       const nieuweStatus = settle ? "pending" : "closed"
@@ -2378,6 +2469,7 @@ export default function PartyTest() {
 
         {guestTab === "order" && (
         <>
+        {renderRunnerBar()}
         {/* Wat je al aantikte in dit rondje. Bovenaan, want dat is wat je wil zien. */}
         <div style={{ ...S.card, background: mijnAantal > 0 ? "rgba(31,138,76,0.06)" : "#fff" }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: mijnAantal > 0 ? 10 : 0 }}>
@@ -2800,6 +2892,7 @@ export default function PartyTest() {
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>Ronde {roundNr} <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}>— {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>{repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}</h3>
         </div>
+        {renderRunnerBar()}
         <div style={{ position: "relative", marginBottom: 9 }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none" }}>🔍</span>
           <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)}
