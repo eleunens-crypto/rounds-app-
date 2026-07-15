@@ -1522,7 +1522,7 @@ export default function Party() {
   }, [groupId, loadParty])
 
   // ── Groep aanmaken (admin) ──────────────────────────────────────────────────
-  const createGroup = async (fallbackNaam?: string) => {
+  const createGroup = async (fallbackNaam?: string, wilSettle: boolean = true) => {
     const naam = (groupName.trim() || fallbackNaam || "").trim()
     if (!naam) { setNotice(L.nameGroupFirst); return }
     if (busy) return
@@ -1531,7 +1531,7 @@ export default function Party() {
     for (let poging = 0; poging < 5; poging++) {
       const code = makeCode()
       const { data, error } = await supabase.from("party_groups")
-        .insert([{ name: naam, invite_code: code, owner_id: me.current }])
+        .insert([{ name: naam, invite_code: code, owner_id: me.current, settle: wilSettle }])
         .select("id,invite_code").single()
       if (!error && data) {
         localStorage.setItem("rundo_party_group", data.id)
@@ -1546,9 +1546,8 @@ export default function Party() {
         if (pid) await supabase.from("party_people").update({ claimed_by: me.current }).eq("id", pid as string)
         setBusy(false)
         // Gewoon rondjes heeft geen personen-setup nodig — meteen naar bestellen.
-        // Fair Split gaat wél eerst langs de setup (personen, QR). bpSettle is de
-        // zojuist gekozen modus; settle zelf is via setState nog niet bijgewerkt.
-        if (bpSettle === false) {
+        // Fair Split gaat wél eerst langs de setup (personen, QR).
+        if (!wilSettle) {
           setActiveCat(catsPresent[0])
           setView("order")
         } else {
@@ -1572,17 +1571,18 @@ export default function Party() {
   const startWithMode = async (fallbackNaam?: string) => {
     if (bpSettle === null) return
     setOnboardedOnce(true)
-    if (bpSettle === false) {
+    const wilSettle = bpSettle === true
+    if (!wilSettle) {
       // Gewoon rondjes: geen pot/coins/bekers vooraf — die betekenen niets zonder
       // afrekening en kunnen later optioneel aan via ⚙️.
       setSettle(false)
       setPotChosen(false); setDepositOn(false); setPay("eur")
-      persistSettings({ settle: false, pot_on: false, deposit_on: false, pay: "eur" })
     } else {
       setSettle(true)
-      persistSettings({ settle: true })
     }
-    await createGroup(fallbackNaam)
+    // De modus gaat mee in de insert (createGroup), niet via persistSettings — de groep
+    // bestaat op dit punt nog niet, dus een aparte update zou nergens landen.
+    await createGroup(fallbackNaam, wilSettle)
   }
 
   // Een plaats vrijgeven. Nodig als iemand op de verkeerde naam tikte, of als de
@@ -3083,7 +3083,7 @@ export default function Party() {
 
         {guestTab === "order" && (
         <>
-        {renderRunnerBar()}
+        {settle && renderRunnerBar()}
         {renderProposalGuest()}
         {/* Wat je al aantikte in dit rondje. Bovenaan, want dat is wat je wil zien. */}
         <div style={{ ...S.card, background: mijnAantal > 0 ? "rgba(31,138,76,0.06)" : "#fff" }}>
