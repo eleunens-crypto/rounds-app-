@@ -1495,7 +1495,15 @@ export default function Party() {
         const { data: pid } = await supabase.rpc("party_add_person", { p_group: data.id, p_name: "" })
         if (pid) await supabase.from("party_people").update({ claimed_by: me.current }).eq("id", pid as string)
         setBusy(false)
-        setView("setup")
+        // Gewoon rondjes heeft geen personen-setup nodig — meteen naar bestellen.
+        // Fair Split gaat wél eerst langs de setup (personen, QR). bpSettle is de
+        // zojuist gekozen modus; settle zelf is via setState nog niet bijgewerkt.
+        if (bpSettle === false) {
+          setActiveCat(catsPresent[0])
+          setView("order")
+        } else {
+          setView("setup")
+        }
         loadParty(data.id)
         return
       }
