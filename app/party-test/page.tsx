@@ -220,6 +220,10 @@ const T = {
     groupTitle: "👥 In deze groep",
     peopleN: (n: number) => `${n} ${n === 1 ? "persoon" : "personen"}`,
     joinedOfTotal: (a: number, b: number) => `${a} van ${b} aangemeld`,
+    hostMark: "👑 organisator",
+    startNotAll: (n: number, t: number) => `${n} van ${t} nog niet aangemeld. Toch beginnen?`,
+    startWait: "Nog even wachten",
+    startAnyway: "Toch beginnen",
     scannedSelf: "📱 zelf aangemeld",
     youMark: "⭐ jij",
     notScannedYet: "nog niet aangemeld",
@@ -505,6 +509,10 @@ const T = {
     groupTitle: "👥 Dans ce groupe",
     peopleN: (n: number) => `${n} ${n === 1 ? "personne" : "personnes"}`,
     joinedOfTotal: (a: number, b: number) => `${a} sur ${b} inscrits`,
+    hostMark: "👑 organisateur",
+    startNotAll: (n: number, t: number) => `${n} sur ${t} pas encore inscrits. Commencer quand même ?`,
+    startWait: "Attendre encore",
+    startAnyway: "Commencer",
     scannedSelf: "📱 inscrit",
     youMark: "⭐ toi",
     notScannedYet: "pas encore inscrit",
@@ -1931,6 +1939,20 @@ export default function PartyTest() {
     if (potChosen && potContribTotal <= 0.005) { setConfirmDlg({ msg: L.potNothingIn(potIsCard), yes: L.anywayWithout(potIsCard), onYes: () => { setConfirmDlg(null); setPotChosen(false); setView("hub") } }); return }
     setView("hub")
   }
+  // Het eerste rondje starten, met een zachte drempel: is nog niet iedereen aangemeld,
+  // dan een vriendelijke bevestiging — geen poort. De admin houdt de keuze.
+  const startFirstRound = () => {
+    if (unfinishedRound) { resumeRound(); return }
+    const nietAangemeld = people.filter((p) => !p.claimedBy).length
+    const ga = () => { setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }
+    // Alleen relevant als er ooit iets te scannen viel (een invite-code bestaat) en er
+    // echt nog mensen ontbreken. Anders gewoon starten.
+    if (inviteCode && nietAangemeld > 0) {
+      setConfirmDlg({ msg: L.startNotAll(nietAangemeld, people.length), yes: L.startAnyway, no: L.startWait, onYes: () => { setConfirmDlg(null); ga() } })
+      return
+    }
+    ga()
+  }
   const goAssignUnassigned = () => {
     const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0))
     if (fr < 0) return
@@ -2596,12 +2618,15 @@ export default function PartyTest() {
               {people.map((p) => {
                 const benIkHet = p.id === meId
                 const aangemeld = !!p.claimedBy
+                const isHost = !!ownerDevice && p.claimedBy === ownerDevice
                 return (
                   <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10,
                     background: benIkHet ? "rgba(31,138,76,0.08)" : "#faf7ec",
                     border: benIkHet ? "1px solid rgba(31,138,76,0.3)" : "1px solid rgba(120,95,20,0.1)" }}>
                     <span style={{ fontSize: 14, fontWeight: benIkHet ? 800 : 700, color: p.named ? "#4a3f1e" : "#b3a988" }}>
-                      {p.name}{benIkHet && <span style={{ fontSize: 11, color: "#1f6b3a", fontWeight: 800 }}> · {L.youMark}</span>}
+                      {p.name}
+                      {benIkHet && <span style={{ fontSize: 11, color: "#1f6b3a", fontWeight: 800 }}> · {L.youMark}</span>}
+                      {isHost && !benIkHet && <span style={{ fontSize: 11, color: "#8a5e0f", fontWeight: 800 }}> · {L.hostMark}</span>}
                     </span>
                     <span style={{ fontSize: 11, color: aangemeld ? "#8a5e0f" : "#b3a988", fontWeight: 700 }}>
                       {aangemeld ? L.scannedSelf : L.notScannedYet}
@@ -3555,7 +3580,7 @@ export default function PartyTest() {
             <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{L.noRoundsDone}</div>
             <div style={{ ...S.sub, marginBottom: 16 }}>{L.noRoundsHint}</div>
             <div style={{ display: "flex", justifyContent: "center" }}>
-              <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (unfinishedRound) { resumeRound(); return } setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setView("order") }}>{unfinishedRound ? L.continueRound(roundNr) : "Start 1e rondje"}</button>
+              <button style={{ ...S.btnP, width: "80%" }} onClick={startFirstRound}>{unfinishedRound ? L.continueRound(roundNr) : "Start 1e rondje"}</button>
             </div>
           </div>
         ) : (<>
