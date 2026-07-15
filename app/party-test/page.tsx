@@ -294,11 +294,12 @@ const T = {
 
     // ── startvragen
     beforeWeStart: "Voor we beginnen",
-    workWith: "Werk je met…",
-    reusableCups: "♻️ herbruikbare bekers (met waarborg)",
-    coinsInstead: "🎟️ coins in plaats van euro's",
-    sharedPot: "een gezamenlijke pot of drankkaart?",
-    adjustLater: "💡 Later aanpasbaar via ⚙️ Groep. Zet je iets op 'ja', dan vul je de details zo meteen in.",
+    settingsLater: "Pot, bekers of coins nodig? Die zet je aan via ⚙️ Groep — hoeft nu niet.",
+    potStartTitle: "🧪 Samen een pot?",
+    potStartWhy: "Iedereen legt vooraf iets in. Rondjes gaan er dan uit — niemand hoeft telkens te betalen.",
+    potStartIn: (b: string) => `In de pot: ${b}`,
+    potStartAdd: "+ Inleggen",
+    potStartMore: "Bijleggen",
     quickStart: "Snel starten",
     continueRound: (n: number) => `Ga verder met rondje ${n}`,
 
@@ -577,11 +578,12 @@ const T = {
 
     // ── startvragen
     beforeWeStart: "Avant de commencer",
-    workWith: "Tu travailles avec…",
-    reusableCups: "♻️ des gobelets réutilisables (avec caution)",
-    coinsInstead: "🎟️ des jetons au lieu d'euros",
-    sharedPot: "un pot commun ou une carte boissons ?",
-    adjustLater: "💡 Modifiable plus tard via ⚙️ Groupe. Si tu mets 'oui', tu remplis les détails juste après.",
+    settingsLater: "Besoin d'un pot, de gobelets ou de jetons ? Ça s'active via ⚙️ Groupe — pas maintenant.",
+    potStartTitle: "🧪 Une cagnotte commune ?",
+    potStartWhy: "Chacun met quelque chose d'avance. Les tournées sortent de là — personne ne paie à chaque fois.",
+    potStartIn: (b: string) => `Dans la cagnotte : ${b}`,
+    potStartAdd: "+ Mettre",
+    potStartMore: "Ajouter",
     quickStart: "Démarrage rapide",
     continueRound: (n: number) => `Continuer la tournée ${n}`,
 
@@ -837,10 +839,7 @@ export default function PartyTest() {
   const [cardValue, setCardValue] = useState("")
   const [cardPayers, setCardPayers] = useState<string[]>([])
   const [beginPrompt, setBeginPrompt] = useState(false)
-  const [bpPotType, setBpPotType] = useState<"none" | "yes" | "pot" | "card">("none")
   const [potChosen, setPotChosen] = useState(false)
-  const [bpBekers, setBpBekers] = useState(false)
-  const [bpCoins, setBpCoins] = useState(false)
   const [bpSettle, setBpSettle] = useState<boolean | null>(null)
   const [fromOnboarding, setFromOnboarding] = useState(false)
   const [onboardedOnce, setOnboardedOnce] = useState(false)
@@ -1880,10 +1879,10 @@ export default function PartyTest() {
 
   const applyBeginChoices = () => {
     if (bpSettle === null) return
+    setOnboardedOnce(true)
     // "Gewoon rondjes": geen pot, geen coins, geen bekers. Niet omdat het niet KAN,
     // maar omdat het niets betekent zonder afrekening.
     if (bpSettle === false) {
-      setOnboardedOnce(true)
       setSettle(false)
       setPotChosen(false); setDepositOn(false); setPay("eur")
       persistSettings({ settle: false, pot_on: false, deposit_on: false, pay: "eur" })
@@ -1891,30 +1890,13 @@ export default function PartyTest() {
       setView("hub")
       return
     }
-    if (bpPotType === "yes") { setNotice("Kies pot of drankkaart — of zet de pot op nee."); return }
-    setOnboardedOnce(true)
+    // Fair Split: gewoon aanzetten en beginnen. Pot, bekers en coins stelt de admin
+    // in wanneer hij ze nodig heeft, via ⚙️ Groep. Ze horen niet als opstartvraag —
+    // de meeste avonden gebruiken ze niet.
     setSettle(true)
-    const potOn = bpPotType === "pot" || bpPotType === "card"
-    // Meteen wegschrijven met de zopas gekozen waarden (de state hieronder is nog niet
-    // doorgekomen, dus we geven ze expliciet mee).
-    persistSettings({
-      settle: true,
-      pay: bpCoins ? "coin" : "eur",
-      deposit_on: bpBekers,
-      deposit_unit: bpCoins ? "coin" : "eur",
-      pot_on: potOn,
-      pot_is_card: bpPotType === "card",
-    })
-    setPotIsCard(bpPotType === "card")
-    setPotChosen(potOn)
-    setDepositOn(bpBekers)
-    setPay(bpCoins ? "coin" : "eur")
-    setDepositUnit(bpCoins ? "coin" : "eur")
+    persistSettings({ settle: true })
     setBeginPrompt(false)
-    if (!potOn && !bpBekers && !bpCoins) { setView("hub"); return }
-    setFromOnboarding(true)
-    if (potOn) { setShowPot(true); setOnbPotActive(true) }
-    else setView("settings")
+    setView("hub")
   }
   const tryBegin = () => {
     if (people.length === 0) { setNotice(L.addPersonFirst); return }
@@ -2854,44 +2836,13 @@ export default function PartyTest() {
               <p style={{ fontSize: 11, color: "#8a7d55", textAlign: "center", margin: "10px 0 0", lineHeight: 1.45 }}>{L.modeSwitchLater}</p>
 
               {bpSettle === true && (
-              <>
-              <p style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e", margin: "18px 0 14px" }}>{L.workWith}</p>
-              <div style={{ padding: "10px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
-                <div style={{ ...S.row, justifyContent: "space-between" }}>
-                  <span style={{ fontSize: 14.5, fontWeight: 700 }}>{L.sharedPot}</span>
-                  <div style={{ ...S.row, gap: 8, flexShrink: 0 }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 800, color: bpPotType !== "none" ? "#1f8a4c" : "#b3a988" }}>{bpPotType !== "none" ? "ja" : "nee"}</span>
-                    <div onClick={() => setBpPotType((t) => t === "none" ? "yes" : "none")} style={{ width: 46, height: 27, borderRadius: 20, background: bpPotType !== "none" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#d9cdb0", position: "relative", cursor: "pointer", transition: "background .15s" }}>
-                      <div style={{ width: 21, height: 21, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: bpPotType !== "none" ? 22 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
-                    </div>
-                  </div>
-                </div>
-                {bpPotType !== "none" && (
-                  <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                    <div onClick={() => setBpPotType("pot")} style={{ ...S.seg(bpPotType === "pot"), padding: "8px 4px", fontSize: 12.5 }}>🫙 pot</div>
-                    <div onClick={() => setBpPotType("card")} style={{ ...S.seg(bpPotType === "card"), padding: "8px 4px", fontSize: 12.5 }}>💳 drankkaart</div>
-                  </div>
-                )}
-              </div>
-              {[[L.reusableCups, bpBekers, setBpBekers], [L.coinsInstead, bpCoins, setBpCoins]].map(([label, val, set]: any, i) => (
-                <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
-                  <span style={{ fontSize: 14.5, fontWeight: 700, minWidth: 0 }}>{label}</span>
-                  <div style={{ ...S.row, gap: 8, flexShrink: 0 }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 800, color: val ? "#1f8a4c" : "#b3a988" }}>{val ? "ja" : "nee"}</span>
-                    <div onClick={() => set((v: boolean) => !v)} style={{ width: 46, height: 27, borderRadius: 20, background: val ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#d9cdb0", position: "relative", cursor: "pointer", transition: "background .15s" }}>
-                      <div style={{ width: 21, height: 21, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: val ? 22 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <div style={{ fontSize: 11.5, color: "#8a7d55", margin: "12px 0 14px", lineHeight: 1.5 }}>{L.adjustLater}</div>
-              </>
+                <div style={{ fontSize: 11.5, color: "#8a7d55", margin: "14px 0 0", lineHeight: 1.5 }}>{L.settingsLater}</div>
               )}
 
               <button style={{ ...S.btnP, width: "100%", marginTop: 14, opacity: bpSettle === null ? 0.45 : 1 }}
                 disabled={bpSettle === null}
                 onClick={applyBeginChoices}>
-                {bpSettle === false ? L.quickStart : (bpPotType !== "none" || bpBekers || bpCoins) ? "Verdergaan" : L.quickStart}
+                {L.quickStart}
               </button>
             </div>
           </div>
@@ -3463,6 +3414,28 @@ export default function PartyTest() {
         {showPot && renderPotModal()}
         {renderDialogs()}
         {rounds.length === 0 && renderShare()}
+        {/* De pot is een handeling aan het BEGIN van de avond: iedereen legt vooraf in.
+            Daarom staat hij hier, zichtbaar, vóór het eerste rondje — niet weggestopt
+            in de instellingen. Het ⚙️-wieltje leidt naar pot + bekers + coins samen. */}
+        {settle && rounds.length === 0 && (
+          <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.35)" }}>
+            <div style={{ ...S.row, justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{potIsCard ? L.drinkCard : L.potStartTitle}</span>
+              <span onClick={() => setView("settings")} title="⚙️" style={{ fontSize: 18, cursor: "pointer", lineHeight: 1, flexShrink: 0, opacity: 0.7 }}>⚙️</span>
+            </div>
+            {potContribTotal > 0.005 ? (
+              <div style={{ ...S.row, justifyContent: "space-between", marginTop: 4 }}>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: "#1f6b3a" }}>{L.potStartIn(euro(potContribTotal))}</span>
+                <button style={{ ...S.btn, padding: "7px 13px", fontSize: 13 }} onClick={() => setShowPot(true)}>{L.potStartMore}</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 12, color: "#8a7d55", lineHeight: 1.5, marginBottom: 11 }}>{L.potStartWhy}</div>
+                <button style={{ ...S.btn, width: "100%", fontWeight: 800 }} onClick={() => setShowPot(true)}>{L.potStartAdd}</button>
+              </>
+            )}
+          </div>
+        )}
         {!settle && renderBarList()}
         {!settle && rounds.length >= 1 && (
           <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
