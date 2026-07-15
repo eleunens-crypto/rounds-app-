@@ -918,7 +918,7 @@ export default function PartyTest() {
   // De haler-strook. Drie toestanden: niemand haalt, iemand anders haalt, jij haalt.
   const renderRunnerBar = () => {
     const ikHaal = !!meId && startedBy === meId
-    if (!bezig && !startedBy) {
+    if (!openRoundId && !startedBy) {
       // Nog geen rondje: nodig iemand uit om te gaan halen.
       return (
         <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)", textAlign: "center" }}>
@@ -3387,7 +3387,7 @@ export default function PartyTest() {
         })}
 
         </>)}
-        {rounds.length > 0 && <>
+        {paidCount > 0 && <>
           <div style={{ display: "flex", gap: 10 }}>
             <button style={{ ...S.btn, flex: 1 }} onClick={goFinal}>{L.settleBtn}</button>
             <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (unfinishedRound) resumeRound(); else nextRound() }}>{unfinishedRound ? L.continueRound(roundNr) : "➕ Nieuw rondje"}</button>
