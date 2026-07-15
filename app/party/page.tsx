@@ -3053,9 +3053,8 @@ export default function Party() {
 
               {/* De modus komt EERST — hij bepaalt of de rest nog relevant is. Bekers,
                   coins en pot bestaan alleen als je afrekent. Kies je "gewoon rondjes",
-                  dan is dit scherm hiermee klaar. */}
-              <p style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e", marginBottom: 10 }}>{L.modeTitle}</p>
-              <div style={{ display: "flex", flexDirection: "column" }}>
+                  dan is dit scherm hiermee klaar. De titel staat nu IN de Fair Split-kaart. */}
+              <div style={{ display: "flex", flexDirection: "column", marginTop: 6 }}>
                 {/* Fair Split BOVEN — de voorkeur. Al geselecteerd bij binnenkomst. */}
                 <button onClick={() => setBpSettle(true)}
                   style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
@@ -3064,7 +3063,7 @@ export default function Party() {
                            border: bpSettle === true ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
                   <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
                     <span style={{ fontSize: 20 }}>⚖️</span>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>Fair Split</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.modeTitle}</span>
                     {bpSettle === true && <span style={{ marginLeft: "auto", fontSize: 16, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
                   </div>
                   <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 13 }}>{L.modeFairSub}</div>
