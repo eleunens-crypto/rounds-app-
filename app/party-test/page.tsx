@@ -437,6 +437,13 @@ const T = {
 
     confirmTitle: "Even bevestigen",
     imGoing: "🍻 Ik ga halen",
+    walkTable: "👥 Rondje opnemen",
+    walkIntro: "Ga de tafel rond. Tik per persoon aan wat die wil.",
+    walkOf: (a: number, b: number) => `${a} van ${b}`,
+    walkNothing: "Niets",
+    walkNext: "Volgende →",
+    walkDone: "✓ Klaar",
+    walkFor: (n: string) => `Wat wil ${n}?`,
     whoGoes: "Wie gaat er halen?",
     xIsGoing: (n: string) => `${n} gaat halen`,
     youAreGoing: "Jij gaat halen — tik aan wat je zelf wil",
@@ -711,6 +718,13 @@ const T = {
 
     confirmTitle: "Confirmation",
     imGoing: "🍻 J'y vais",
+    walkTable: "👥 Faire le tour",
+    walkIntro: "Fais le tour de la table. Coche pour chacun ce qu'il veut.",
+    walkOf: (a: number, b: number) => `${a} sur ${b}`,
+    walkNothing: "Rien",
+    walkNext: "Suivant →",
+    walkDone: "✓ Terminé",
+    walkFor: (n: string) => `Que veut ${n} ?`,
     whoGoes: "Qui va chercher ?",
     xIsGoing: (n: string) => `${n} va chercher`,
     youAreGoing: "Tu vas chercher — coche ce que tu veux toi-même",
@@ -832,6 +846,9 @@ export default function PartyTest() {
   const [activeCat, setActiveCat] = useState<Cat>("Bier")
   const [drinkSearch, setDrinkSearch] = useState("")
   const [guestTab, setGuestTab] = useState<"order" | "me" | "group">("order")
+  // "Rondje opnemen": de tafel rondgaan, persoon per persoon. walkIdx = wie er nu aan
+  // de beurt is (index in people). null = het scherm is niet open.
+  const [walkIdx, setWalkIdx] = useState<number | null>(null)
   // De haler van het OPEN rondje (person-id). Wie "ik ga halen" tikt, opent het
   // rondje en wordt dit. null = nog niemand ging halen.
   const [startedBy, setStartedBy] = useState<string | null>(null)
@@ -942,6 +959,69 @@ export default function PartyTest() {
   }
 
   const runnerName = () => people.find((p) => p.id === startedBy)?.name ?? ""
+
+  // ── Rondje opnemen: de tafel rondgaan ───────────────────────────────────────
+  // Persoon per persoon. Je tikt drankjes aan die METEEN op die persoon staan (bump),
+  // geen omweg via toewijzen. Zo blijft de toewijzing die al in je hoofd zit ("Tom?
+  // pils") ook in de app staan — en werkt Fair Split achteraf zonder extra werk.
+  const walkStart = () => { setWalkIdx(0) }
+  const walkNext = () => {
+    setWalkIdx((i) => {
+      if (i === null) return null
+      const volgende = i + 1
+      return volgende >= people.length ? null : volgende
+    })
+  }
+  const renderWalk = () => {
+    if (walkIdx === null) return null
+    const p = people[walkIdx]
+    if (!p) { setWalkIdx(null); return null }
+    const zijne = drinks.filter((d) => (cart[d.id]?.[p.id] ?? 0) > 0)
+    const lijst = drinks.filter((d) => d.fav)
+    return (
+      <div style={S.overlay} onClick={() => setWalkIdx(null)}>
+        <div style={{ ...S.sheet, maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
+            <h3 style={{ ...S.h3, margin: 0, fontSize: 20 }}>{p.name}</h3>
+            <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>{L.walkOf(walkIdx + 1, people.length)}</span>
+          </div>
+          <div style={{ height: 3, background: "rgba(120,95,20,0.12)", borderRadius: 2, marginBottom: 12 }}>
+            <div style={{ width: `${((walkIdx + 1) / people.length) * 100}%`, height: 3, background: "#e08a00", borderRadius: 2, transition: "width .2s" }} />
+          </div>
+          <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 10 }}>{L.walkFor(p.name)}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 12 }}>
+            {lijst.map((d) => {
+              const n = cart[d.id]?.[p.id] ?? 0
+              return (
+                <button key={d.id} onClick={() => bump(d.id, p.id, 1)}
+                  style={{ position: "relative", textAlign: "left", padding: "11px 12px", borderRadius: 10, cursor: "pointer",
+                    background: n > 0 ? "rgba(31,138,76,0.1)" : "#faf7ec",
+                    border: n > 0 ? "1.5px solid rgba(31,138,76,0.4)" : "1px solid rgba(120,95,20,0.12)" }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 700, color: "#4a3f1e" }}>{d.emoji} {d.name}</span>
+                  {n > 0 && (
+                    <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ ...S.pill, background: "#1f8a4c", color: "#fff", fontSize: 12, padding: "2px 8px" }}>{n}</span>
+                      <span onClick={(e) => { e.stopPropagation(); bump(d.id, p.id, -1) }}
+                        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 15, fontWeight: 800 }}>−</span>
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+          {zijne.length > 0 && (
+            <div style={{ fontSize: 12, color: "#6b5f3a", marginBottom: 12, lineHeight: 1.5 }}>
+              {zijne.map((d) => `${cart[d.id][p.id]}× ${d.name}`).join(" · ")}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={{ ...S.btn, flex: 1, fontWeight: 800 }} onClick={walkNext}>{L.walkNothing}</button>
+            <button style={{ ...S.btnP, flex: 2 }} onClick={walkNext}>{walkIdx + 1 >= people.length ? L.walkDone : L.walkNext}</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // De haler-strook. Drie toestanden: niemand haalt, iemand anders haalt, jij haalt.
   const renderRunnerBar = () => {
@@ -3044,6 +3124,14 @@ export default function PartyTest() {
           <h3 style={{ ...S.h3, margin: 0 }}>Ronde {roundNr} <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}>— {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>{repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}</h3>
         </div>
         {renderRunnerBar()}
+        {renderWalk()}
+        {people.length > 0 && (
+          <button onClick={walkStart}
+            style={{ width: "100%", marginBottom: 4, border: "1.5px solid rgba(240,165,0,0.5)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 12, padding: "11px 8px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }}>
+            {L.walkTable}
+          </button>
+        )}
+        {people.length > 0 && <div style={{ fontSize: 10.5, color: "#8a7d55", textAlign: "center", marginBottom: 10, lineHeight: 1.4 }}>{L.walkIntro}</div>}
         <div style={{ position: "relative", marginBottom: 9 }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none" }}>🔍</span>
           <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)}
