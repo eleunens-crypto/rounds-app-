@@ -219,6 +219,7 @@ const T = {
     tabGroup: "👥 Groep",
     groupTitle: "👥 In deze groep",
     peopleN: (n: number) => `${n} ${n === 1 ? "persoon" : "personen"}`,
+    joinedOfTotal: (a: number, b: number) => `${a} van ${b} aangemeld`,
     scannedSelf: "📱 zelf aangemeld",
     youMark: "⭐ jij",
     notScannedYet: "nog niet aangemeld",
@@ -503,6 +504,7 @@ const T = {
     tabGroup: "👥 Groupe",
     groupTitle: "👥 Dans ce groupe",
     peopleN: (n: number) => `${n} ${n === 1 ? "personne" : "personnes"}`,
+    joinedOfTotal: (a: number, b: number) => `${a} sur ${b} inscrits`,
     scannedSelf: "📱 inscrit",
     youMark: "⭐ toi",
     notScannedYet: "pas encore inscrit",
@@ -1630,6 +1632,20 @@ export default function PartyTest() {
           <button style={{ ...S.btn, flex: 1, fontWeight: 800 }}
             onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(inviteLink); setNotice(L.linkCopied) } }}>{L.copyLink}</button>
         </div>
+        {/* Wie scande al? Zo ziet de admin de groep vollopen zonder te moeten raden. */}
+        <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 14, paddingTop: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#1f6b3a", marginBottom: 8 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {people.map((p) => (
+              <span key={p.id} style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 16,
+                background: p.claimedBy ? "rgba(31,138,76,0.12)" : "#faf7ec",
+                color: p.claimedBy ? "#1f6b3a" : "#b3a988",
+                border: p.claimedBy ? "1px solid rgba(31,138,76,0.25)" : "1px dashed rgba(120,95,20,0.25)" }}>
+                {p.claimedBy ? "📱 " : ""}{p.name}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -2569,9 +2585,12 @@ export default function PartyTest() {
 
         {guestTab === "group" && (
           <div style={S.card}>
-            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
-              <h3 style={{ ...S.h3, margin: 0 }}>{L.groupTitle}</h3>
-              <span style={{ ...S.pill, background: "rgba(120,95,20,0.08)", color: "#8a5e0f" }}>{L.peopleN(people.length)}</span>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ ...S.row, justifyContent: "space-between", alignItems: "baseline" }}>
+                <h3 style={{ ...S.h3, margin: 0 }}>{groupName || L.groupTitle}</h3>
+                <span style={{ ...S.pill, background: "rgba(120,95,20,0.08)", color: "#8a5e0f", flexShrink: 0 }}>{L.peopleN(people.length)}</span>
+              </div>
+              <div style={{ fontSize: 12, color: "#1f6b3a", fontWeight: 700, marginTop: 4 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {people.map((p) => {
