@@ -145,7 +145,7 @@ type Anon = Record<string, number>
 // Een rondje leeft nu in de databank. id/seq/status komen daarvandaan; de rest is
 // wat de app al kende. status: open = er wordt besteld, pending = besteld maar niet
 // betaald, closed = betaald.
-type Proposal = { active?: boolean; by?: string; answers?: Record<string, "same" | "different"> }
+type Proposal = { active?: boolean; by?: string; answers?: Record<string, "same" | "different" | "skip"> }
 type Round = { id: string; seq: number; status: "open" | "pending" | "closed"; orders: Assign; anon: Anon; payers: Record<string, number>; amount: number; potPart: number; gaveBack: Record<string, number>; members: string[]; startedBy: string | null; proposal: Proposal }
 
 const euro = (v: number) => "€" + v.toFixed(2).replace(".", ",")
@@ -398,6 +398,13 @@ const T = {
     ansSame: "✅ hetzelfde",
     ansDiff: "🔄 iets anders",
     ansWaiting: "⏳ nog niet",
+    ansSkip: "✋ slaat over",
+    gProposalTitle: "🗳️ Weer hetzelfde rondje?",
+    gProposalSame: "✅ Ja, hetzelfde voor mij",
+    gProposalDiff: "🔄 Iets anders kiezen",
+    gProposalSkip: "✋ Voor mij niks deze ronde",
+    gProposalDone: "Je keuze staat genoteerd.",
+    gProposalYourLast: "Vorige ronde had je:",
     closeProposalBtn: (n: number) => `Afsluiten · ${n} ${n === 1 ? "doet" : "doen"} mee`,
     noOrderFor: (names: string) => `Geen bestellingen voor ${names}`,
     proposalNobody: "Nog niemand antwoordde. Toch afsluiten?",
@@ -697,6 +704,13 @@ const T = {
     ansSame: "✅ pareil",
     ansDiff: "🔄 autre chose",
     ansWaiting: "⏳ pas encore",
+    ansSkip: "✋ passe",
+    gProposalTitle: "🗳️ La même tournée ?",
+    gProposalSame: "✅ Oui, pareil pour moi",
+    gProposalDiff: "🔄 Choisir autre chose",
+    gProposalSkip: "✋ Rien pour moi ce tour",
+    gProposalDone: "Ton choix est noté.",
+    gProposalYourLast: "Au tour d'avant tu avais :",
     closeProposalBtn: (n: number) => `Clôturer · ${n} ${n === 1 ? "participe" : "participent"}`,
     noOrderFor: (names: string) => `Pas de commande pour ${names}`,
     proposalNobody: "Personne n'a encore répondu. Clôturer quand même ?",
@@ -2093,6 +2107,7 @@ export default function PartyTest() {
   const lastRound = rounds[rounds.length - 1] ?? null
   const activeProposal = lastRound && lastRound.proposal?.active ? lastRound.proposal : null
   const proposalRoundId = activeProposal ? lastRound!.id : null
+  const myAnswer = (activeProposal && meId) ? activeProposal.answers?.[meId] : undefined
   // Wie deed mee aan het rondje dat we herhalen? Dat zijn de mensen die mogen antwoorden.
   const proposalPeople = lastRound ? people.filter((p) => roundMembers(lastRound).includes(p.id)) : []
   // De haler (of admin) start een voorstel op basis van het laatste rondje.
@@ -2102,6 +2117,13 @@ export default function PartyTest() {
     const by = meId || (startedBy ?? null)
     const { error } = await supabase.rpc("party_propose_repeat", { p_round: lastRound.id, p_by: by })
     if (error) { setNotice("Voorstel starten mislukt: " + error.message); return }
+    if (groupId) loadParty(groupId)
+  }
+  // Een gast antwoordt: hetzelfde, iets anders, of bewust niks deze ronde.
+  const answerProposal = async (answer: "same" | "different" | "skip") => {
+    if (!proposalRoundId || !meId) return
+    const { error } = await supabase.rpc("party_answer_repeat", { p_round: proposalRoundId, p_person: meId, p_answer: answer })
+    if (error) { setNotice("Antwoord mislukt: " + error.message); return }
     if (groupId) loadParty(groupId)
   }
   // De haler sluit het voorstel af. Enkel wie "same" of "different" antwoordde, telt.
@@ -2126,8 +2148,8 @@ export default function PartyTest() {
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
           {proposalPeople.map((p) => {
             const a = answers[p.id]
-            const label = a === "same" ? L.ansSame : a === "different" ? L.ansDiff : L.ansWaiting
-            const kleur = a === "same" ? "#1f6b3a" : a === "different" ? "#8a5e0f" : "#b3a988"
+            const label = a === "same" ? L.ansSame : a === "different" ? L.ansDiff : a === "skip" ? L.ansSkip : L.ansWaiting
+            const kleur = a === "same" ? "#1f6b3a" : a === "different" ? "#8a5e0f" : a === "skip" ? "#a89a6f" : "#b3a988"
             const bg = a ? "#faf7ec" : "#fff"
             return (
               <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, background: bg, border: "1px solid rgba(120,95,20,0.12)" }}>
@@ -2149,6 +2171,48 @@ export default function PartyTest() {
             if (meedoen.length === 0) { setConfirmDlg({ msg: L.proposalNobody, yes: L.startAnyway, onYes: () => { setConfirmDlg(null); closeProposal() }, no: L.startWait }); return }
             closeProposal()
           }}>{L.closeProposalBtn(meedoen.length)}</button>
+      </div>
+    )
+  }
+
+  // Het kaartje dat elke GAST ziet zolang een voorstel loopt. Drie keuzes; wie niks
+  // kiest, zwijgt (en krijgt niets). "Iets anders" schakelt door naar het bestellen.
+  const renderProposalGuest = () => {
+    if (!activeProposal || !lastRound || !meId) return null
+    if (!roundMembers(lastRound).includes(meId)) return null
+    // Wat had ik vorige ronde? Toon dat, zodat "hetzelfde" concreet is.
+    const mijnVorige = drinks
+      .map((d) => ({ d, n: lastRound.orders[d.id]?.[meId] ?? 0 }))
+      .filter((x) => x.n > 0)
+    const gekozen = myAnswer
+    return (
+      <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.6)", background: "#fff8ec" }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 8 }}>{L.gProposalTitle}</div>
+        {mijnVorige.length > 0 && (
+          <div style={{ fontSize: 12, color: "#6b5f3a", marginBottom: 12, lineHeight: 1.5 }}>
+            {L.gProposalYourLast} {mijnVorige.map((x) => `${x.n}× ${x.d.name}`).join(" · ")}
+          </div>
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <button onClick={() => answerProposal("same")}
+            style={{ ...S.btnP, width: "100%", opacity: gekozen && gekozen !== "same" ? 0.5 : 1,
+              background: gekozen === "same" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : undefined }}>
+            {L.gProposalSame}{gekozen === "same" && " ✓"}
+          </button>
+          <button onClick={() => { answerProposal("different"); setActiveCat(catsPresent[0]); setGuestTab("order") }}
+            style={{ ...S.btn, width: "100%", fontWeight: 800, opacity: gekozen && gekozen !== "different" ? 0.5 : 1,
+              border: gekozen === "different" ? "1.5px solid #e08a00" : undefined }}>
+            {L.gProposalDiff}{gekozen === "different" && " ✓"}
+          </button>
+          <button onClick={() => answerProposal("skip")}
+            style={{ ...S.btn, width: "100%", fontWeight: 700, fontSize: 13, opacity: gekozen && gekozen !== "skip" ? 0.5 : 1,
+              border: gekozen === "skip" ? "1.5px solid #a89a6f" : undefined, color: "#8a7d55" }}>
+            {L.gProposalSkip}{gekozen === "skip" && " ✓"}
+          </button>
+        </div>
+        {gekozen && (
+          <div style={{ fontSize: 11.5, color: "#1f6b3a", fontWeight: 700, textAlign: "center", marginTop: 10 }}>{L.gProposalDone}</div>
+        )}
       </div>
     )
   }
@@ -2816,6 +2880,7 @@ export default function PartyTest() {
         {guestTab === "order" && (
         <>
         {renderRunnerBar()}
+        {renderProposalGuest()}
         {/* Wat je al aantikte in dit rondje. Bovenaan, want dat is wat je wil zien. */}
         <div style={{ ...S.card, background: mijnAantal > 0 ? "rgba(31,138,76,0.06)" : "#fff" }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: mijnAantal > 0 ? 10 : 0 }}>
