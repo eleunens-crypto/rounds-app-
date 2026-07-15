@@ -213,6 +213,13 @@ const T = {
     releaseSeat: "Plaats vrijgeven",
     tabOrder: "🍺 Bestellen",
     tabMe: "🧾 Mijn stand",
+    tabGroup: "👥 Groep",
+    groupTitle: "👥 In deze groep",
+    peopleN: (n: number) => `${n} ${n === 1 ? "persoon" : "personen"}`,
+    scannedSelf: "📱 zelf aangemeld",
+    youMark: "⭐ jij",
+    notScannedYet: "nog niet aangemeld",
+    inviteMore: "Nodig meer mensen uit — laat ze de code scannen.",
     roundWhatYouWant: (n: number) => `🛒 Ronde ${n} — wat jij wil`,
     noRoundYet: "🛒 Nog geen rondje bezig",
     tapBelow: "Tik hieronder aan wat je wil. Wie naar de toog gaat, ziet het meteen op zijn scherm.",
@@ -475,6 +482,13 @@ const T = {
     releaseSeat: "Libérer la place",
     tabOrder: "🍺 Commander",
     tabMe: "🧾 Mon compte",
+    tabGroup: "👥 Groupe",
+    groupTitle: "👥 Dans ce groupe",
+    peopleN: (n: number) => `${n} ${n === 1 ? "personne" : "personnes"}`,
+    scannedSelf: "📱 inscrit",
+    youMark: "⭐ toi",
+    notScannedYet: "pas encore inscrit",
+    inviteMore: "Invite plus de monde — fais scanner le code.",
     roundWhatYouWant: (n: number) => `🛒 Tournée ${n} — ce que tu veux`,
     noRoundYet: "🛒 Aucune tournée en cours",
     tapBelow: "Touche ci-dessous ce que tu veux. Celui qui va au bar le voit tout de suite.",
@@ -807,7 +821,7 @@ export default function PartyTest() {
   const [roundNr, setRoundNr] = useState(1)
   const [activeCat, setActiveCat] = useState<Cat>("Bier")
   const [drinkSearch, setDrinkSearch] = useState("")
-  const [guestTab, setGuestTab] = useState<"order" | "me">("order")
+  const [guestTab, setGuestTab] = useState<"order" | "me" | "group">("order")
   // De haler van het OPEN rondje (person-id). Wie "ik ga halen" tikt, opent het
   // rondje en wordt dit. null = nog niemand ging halen.
   const [startedBy, setStartedBy] = useState<string | null>(null)
@@ -2388,10 +2402,40 @@ export default function PartyTest() {
 
         <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
           <button onClick={() => setGuestTab("order")}
-            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 12.5, fontWeight: 800, opacity: guestTab === "order" ? 1 : 0.55 }}>{L.tabOrder}</button>
+            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 12, fontWeight: 800, opacity: guestTab === "order" ? 1 : 0.55 }}>{L.tabOrder}</button>
           <button onClick={() => setGuestTab("me")}
-            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 12.5, fontWeight: 800, opacity: guestTab === "me" ? 1 : 0.55 }}>{L.tabMe}</button>
+            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 12, fontWeight: 800, opacity: guestTab === "me" ? 1 : 0.55 }}>{L.tabMe}</button>
+          <button onClick={() => setGuestTab("group")}
+            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 12, fontWeight: 800, opacity: guestTab === "group" ? 1 : 0.55 }}>{L.tabGroup}</button>
         </div>
+
+        {guestTab === "group" && (
+          <div style={S.card}>
+            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
+              <h3 style={{ ...S.h3, margin: 0 }}>{L.groupTitle}</h3>
+              <span style={{ ...S.pill, background: "rgba(120,95,20,0.08)", color: "#8a5e0f" }}>{L.peopleN(people.length)}</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {people.map((p) => {
+                const benIkHet = p.id === meId
+                const aangemeld = !!p.claimedBy
+                return (
+                  <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10,
+                    background: benIkHet ? "rgba(31,138,76,0.08)" : "#faf7ec",
+                    border: benIkHet ? "1px solid rgba(31,138,76,0.3)" : "1px solid rgba(120,95,20,0.1)" }}>
+                    <span style={{ fontSize: 14, fontWeight: benIkHet ? 800 : 700, color: p.named ? "#4a3f1e" : "#b3a988" }}>
+                      {p.name}{benIkHet && <span style={{ fontSize: 11, color: "#1f6b3a", fontWeight: 800 }}> · {L.youMark}</span>}
+                    </span>
+                    <span style={{ fontSize: 11, color: aangemeld ? "#8a5e0f" : "#b3a988", fontWeight: 700 }}>
+                      {aangemeld ? L.scannedSelf : L.notScannedYet}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", marginTop: 12, lineHeight: 1.5 }}>{L.inviteMore}</div>
+          </div>
+        )}
 
         {guestTab === "me" && (
           <>
