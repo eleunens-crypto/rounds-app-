@@ -2746,23 +2746,25 @@ export default function PartyTest() {
           <div onClick={goStart} style={{ cursor: "pointer" }}><RundoLogo size={40} /></div>
           <div style={{ minWidth: 0 }}>
             <div style={{ ...S.h1, fontSize: 20, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
-            <div style={{ ...S.row, gap: 5, marginTop: 2 }}><CheersIcon size={16} color="#4a3f1e" /><span style={{ fontSize: 11.5, color: "#4a3f1e", fontWeight: 700 }}>{L.tagline}</span></div>
+            {groupName.trim() && <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a5e0f", marginTop: 2, maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()} <span style={{ color: "#8a7d55", fontWeight: 700 }}>· 👥 {people.length}</span></div>}
           </div>
         </div>
         {!onboarding && (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, minWidth: 0, flexShrink: 0 }}>
-            {groupName.trim() && <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()} <span style={{ color: "#8a7d55", fontWeight: 700 }}>· 👥 {people.length}</span></div>}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            {/* Pot altijd binnen handbereik, rechtsboven. */}
+            <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "6px 11px", borderRadius: 20, fontSize: 12, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", background: potRemaining > 0.005 ? "rgba(31,138,76,0.12)" : "#fff", border: potRemaining > 0.005 ? "1px solid rgba(31,138,76,0.3)" : "0.5px solid rgba(120,95,20,0.3)", color: potRemaining > 0.005 ? "#1f8a4c" : "#8a7d55" }}>
+              {potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️</span>}
+              {potIsCard ? "💳" : "🫙"} {euro(potRemaining)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+</span>
+            </span>
           </div>
         )}
       </div>
-      {!onboarding && (
+      {!onboarding && (settle || rounds.length >= 1) && (
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
           <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700 }} onClick={goHome}>{L.groupSettings}</button>
           {settle ? (
             <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "hub" ? 0.55 : 1 }} onClick={goHub}>{L.overview}</button>
           ) : (
-            // Gewoon rondjes: "Rondjes" brengt naar het volledige overzicht (scherm 2) en
-            // licht daar op. Op het "dit rondje"-scherm (hub) is geen tab actief.
             <button style={{ flex: 1.2, padding: "8px 4px", fontSize: 11.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
               border: view === "roundsOverview" ? "none" : "1px solid rgba(120,95,20,0.25)",
               background: view === "roundsOverview" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff",
@@ -3584,10 +3586,16 @@ export default function PartyTest() {
           </button>
         )}
         {settle && people.length > 0 && <div style={{ fontSize: 10.5, color: "#8a7d55", textAlign: "center", marginBottom: 10, lineHeight: 1.4 }}>{L.walkIntro}</div>}
-        <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", paddingBottom: 8, marginBottom: 9 }}>
+        <div style={{ display: zoekt ? "none" : "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", paddingBottom: 9, marginBottom: 10, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
           {catsPresent.map((c) => {
             const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
-            return <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: "#e0685c", fontSize: 15 }}>●</span>}</span>
+            const actief = activeCat === c
+            return <span key={c} onClick={() => setActiveCat(c)}
+              style={{ flexShrink: 0, padding: "7px 14px", borderRadius: 20, fontSize: 12.5, fontWeight: actief ? 800 : 700, cursor: "pointer", whiteSpace: "nowrap",
+                       background: actief ? "#4a3f1e" : "#fff", color: actief ? "#fff" : "#8a7d55",
+                       border: actief ? "none" : "0.5px solid rgba(120,95,20,0.22)" }}>
+              {CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: actief ? "#ffd27f" : "#e0685c", fontSize: 14 }}>●</span>}
+            </span>
           })}
         </div>
 
@@ -3610,13 +3618,6 @@ export default function PartyTest() {
           </div>
         )}
 
-        <div style={{ ...S.row, justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
-          <div style={{ display: "inline-flex", border: "1px solid rgba(120,95,20,0.2)", borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
-            <span onClick={() => setFullList(false)} style={{ padding: "6px 11px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: !fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: !fullList ? "#fff" : "#8a7d55" }}>compacte lijst</span>
-            <span onClick={() => setFullList(true)} style={{ padding: "6px 11px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: fullList ? "#fff" : "#8a7d55" }}>volledige lijst</span>
-          </div>
-          {potTag}
-        </div>
         {catVisible.length === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "18px 12px", fontSize: 13, color: "#8a7d55" }}>
             Geen favorieten in {CAT_LABEL[activeCat]}. <span style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }} onClick={() => setFullList(true)}>{L.showAll}</span>
@@ -3638,15 +3639,26 @@ export default function PartyTest() {
             })}
           </div>
         )}
-        <div style={{ display: "flex", gap: 8, justifyContent: "center", padding: "2px 0 14px" }}>
-          <button onClick={startVoice}
-            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
-            {L.voiceBtn} <span style={{ fontSize: 9, opacity: 0.75 }}>{L.voiceBeta}</span>
-          </button>
-          <button onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }}
-            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
-            {L.addOwnDrink}
-          </button>
+        {/* Snel de rest van de categorie tonen zonder naar boven te scrollen. */}
+        {!zoekt && !fullList && catDrinks.length > catVisible.length && (
+          <div style={{ textAlign: "center", marginTop: 10 }}>
+            <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "9px 18px", borderRadius: 20, fontSize: 12.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(240,165,0,0.5)", color: "#c98a00" }}>
+              + {catDrinks.length - catVisible.length} meer in {CAT_LABEL[activeCat]} ▾
+            </span>
+          </div>
+        )}
+        {!zoekt && fullList && (
+          <div style={{ textAlign: "center", marginTop: 10 }}>
+            <span onClick={() => setFullList(false)} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>▴ minder tonen</span>
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 18, justifyContent: "center", padding: "4px 0 14px" }}>
+          <span onClick={startVoice} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>
+            🎤 {L.voiceBtn} <span style={{ fontSize: 8.5, opacity: 0.7 }}>{L.voiceBeta}</span>
+          </span>
+          <span onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>
+            ＋ {L.addOwnDrink}
+          </span>
         </div>
         {roundItems > 0 && (
           <div style={{ ...S.card, padding: "10px 12px", background: "#fffdf6" }}>
