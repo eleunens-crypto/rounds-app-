@@ -513,6 +513,7 @@ const T = {
     newRoundBtn: "Nieuw rondje",
     editRoundBtn: "Aanpassen",
     roundsOverviewBtn: "Rondjesoverzicht",
+    noRoundsYet: "Nog geen afgeronde bestellingen. Bevestig eerst een rondje.",
     roundsTab: "Rondjes",
     roundSummary: (n: number, items: number) => `Rondje ${n} · ${items} drankje${items === 1 ? "" : "s"}`,
     sameRoundAgainQ: "Zelfde rondje opnieuw (aanpasbaar) of een nieuw rondje?",
@@ -851,6 +852,7 @@ const T = {
     newRoundBtn: "Nouvelle tourn\u00e9e",
     editRoundBtn: "Modifier",
     roundsOverviewBtn: "Aper\u00e7u",
+    noRoundsYet: "Aucune commande termin\u00e9e. Confirme d'abord une tourn\u00e9e.",
     roundsTab: "Tourn\u00e9es",
     roundSummary: (n: number, items: number) => `Tourn\u00e9e ${n} \u00b7 ${items} boisson${items === 1 ? "" : "s"}`,
     sameRoundAgainQ: "Refaire la m\u00eame tourn\u00e9e (modifiable) ou une nouvelle ?",
@@ -990,6 +992,8 @@ export default function PartyTest() {
   const [quickHeads, setQuickHeads] = useState<string>("")
   // Rondjesoverzicht (scherm 2): welke rondjes staan open. Standaard alleen het laatste.
   const [openRounds, setOpenRounds] = useState<Set<string>>(new Set())
+  // Onthoud vanwaar je naar het rondjesoverzicht ging, zodat "terug" daarheen keert.
+  const [overviewBackTo, setOverviewBackTo] = useState<"hub" | "order">("hub")
 
   const [showAssignAll, setShowAssignAll] = useState(false)
   const [assignMode, setAssignMode] = useState<"drink" | "person">("person")
@@ -2751,15 +2755,25 @@ export default function PartyTest() {
         </div>
         {!onboarding && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            {/* Pot altijd binnen handbereik, rechtsboven. */}
-            <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "6px 11px", borderRadius: 20, fontSize: 12, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", background: potRemaining > 0.005 ? "rgba(31,138,76,0.12)" : "#fff", border: potRemaining > 0.005 ? "1px solid rgba(31,138,76,0.3)" : "0.5px solid rgba(120,95,20,0.3)", color: potRemaining > 0.005 ? "#1f8a4c" : "#8a7d55" }}>
+            {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. */}
+            <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "5px 12px 5px 7px", borderRadius: 22, fontSize: 13, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#fff", border: potRemaining > 0.005 ? "1px solid rgba(200,138,26,0.55)" : "0.5px solid rgba(120,95,20,0.3)" }}>
               {potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️</span>}
-              {potIsCard ? "💳" : "🫙"} {euro(potRemaining)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+</span>
+              {potIsCard ? (
+                <span style={{ fontSize: 17 }}>💳</span>
+              ) : (
+                <svg width="24" height="24" viewBox="0 0 34 34" style={{ display: "block" }}>
+                  <path d="M11 9 Q17 5 23 9 L26 26 Q26 31 17 31 Q8 31 8 26 Z" fill="#e0a020" stroke="#c88a1a" strokeWidth="1.5"/>
+                  <path d="M11 9 Q13 7 17 7 Q21 7 23 9 Q20 11 17 11 Q14 11 11 9 Z" fill="#f5c542" stroke="#c88a1a" strokeWidth="1"/>
+                  <text x="17" y="24" fontSize="11" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
+                </svg>
+              )}
+              <span style={{ color: "#c88a1a" }}>{euro(potRemaining)}</span>
+              <span style={{ color: "#c98a00", fontWeight: 800 }}>+</span>
             </span>
           </div>
         )}
       </div>
-      {!onboarding && (settle || rounds.length >= 1) && (
+      {!onboarding && (
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
           <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700 }} onClick={goHome}>{L.groupSettings}</button>
           {settle ? (
@@ -2769,7 +2783,7 @@ export default function PartyTest() {
               border: view === "roundsOverview" ? "none" : "1px solid rgba(120,95,20,0.25)",
               background: view === "roundsOverview" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff",
               color: view === "roundsOverview" ? "#fff" : "#8a7d55" }}
-              onClick={() => { if (rounds.length >= 1) setView("roundsOverview") }}>{L.roundsTab}</button>
+              onClick={() => { if (rounds.length >= 1) { setOverviewBackTo(view === "order" ? "order" : "hub"); setView("roundsOverview") } else setNotice(L.noRoundsYet) }}>{L.roundsOverviewBtn}</button>
           )}
           {settle && <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "final" ? 0.55 : 1 }} onClick={goFinal}>{L.settleBtn}</button>}
           {!settle && rounds.length >= 1 && (
@@ -3590,7 +3604,7 @@ export default function PartyTest() {
           {catsPresent.map((c) => {
             const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
             const actief = activeCat === c
-            return <span key={c} onClick={() => setActiveCat(c)}
+            return <span key={c} onClick={() => { setActiveCat(c); setFullList(false) }}
               style={{ flexShrink: 0, padding: "7px 14px", borderRadius: 20, fontSize: 12.5, fontWeight: actief ? 800 : 700, cursor: "pointer", whiteSpace: "nowrap",
                        background: actief ? "#4a3f1e" : "#fff", color: actief ? "#fff" : "#8a7d55",
                        border: actief ? "none" : "0.5px solid rgba(120,95,20,0.22)" }}>
@@ -3623,6 +3637,12 @@ export default function PartyTest() {
             Geen favorieten in {CAT_LABEL[activeCat]}. <span style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }} onClick={() => setFullList(true)}>{L.showAll}</span>
           </div>
         ) : (
+          <>
+          {!zoekt && fullList && (
+            <div style={{ textAlign: "left", marginBottom: 8 }}>
+              <span onClick={() => setFullList(false)} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>▴ minder tonen</span>
+            </div>
+          )}
           <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12 }}>
             {catVisible.map((d) => {
               const tot = drinkTotal(d.id), un = cartAnon[d.id] ?? 0
@@ -3638,17 +3658,18 @@ export default function PartyTest() {
               )
             })}
           </div>
+          </>
         )}
         {/* Snel de rest van de categorie tonen zonder naar boven te scrollen. */}
         {!zoekt && !fullList && catDrinks.length > catVisible.length && (
-          <div style={{ textAlign: "center", marginTop: 10 }}>
+          <div style={{ textAlign: "left", marginTop: 10 }}>
             <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "9px 18px", borderRadius: 20, fontSize: 12.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(240,165,0,0.5)", color: "#c98a00" }}>
               + {catDrinks.length - catVisible.length} meer in {CAT_LABEL[activeCat]} ▾
             </span>
           </div>
         )}
         {!zoekt && fullList && (
-          <div style={{ textAlign: "center", marginTop: 10 }}>
+          <div style={{ textAlign: "left", marginTop: 10 }}>
             <span onClick={() => setFullList(false)} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>▴ minder tonen</span>
           </div>
         )}
@@ -4012,11 +4033,13 @@ export default function PartyTest() {
             </div>
           )
         })()}
+        {settle && (
         <div style={{ ...S.row, justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.roundsOverview}</h3>
           {potTag}
         </div>
-        {paidCount === 0 ? (
+        )}
+        {settle && paidCount === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
             <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
             <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{L.noRoundsDone}</div>
@@ -4025,7 +4048,7 @@ export default function PartyTest() {
               <button style={{ ...S.btnP, width: "80%" }} onClick={startFirstRound}>{unfinishedRound ? L.continueRound(roundNr) : "Start 1e rondje"}</button>
             </div>
           </div>
-        ) : (<>
+        ) : !settle ? null : (<>
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
           <p style={{ ...S.sub, margin: 0 }}>{L.tapRoundToEdit}</p>
           {paidCount > 1 && <span onClick={() => setAllRoundsOpen((v) => !v)} style={{ fontSize: 12, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", flexShrink: 0 }}>{allRoundsOpen ? "alles dichtklappen" : "alles openklappen"}</span>}
@@ -4251,7 +4274,7 @@ export default function PartyTest() {
         {renderDialogs()}
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.roundsOverviewTitle}</h3>
-          <button style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "7px 12px" }} onClick={() => setView("hub")}>{L.back}</button>
+          <button style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "7px 12px" }} onClick={() => { if (overviewBackTo === "order") { setActiveCat(catsPresent[0]); setView("order") } else setView("hub") }}>← {L.back}</button>
         </div>
 
         {/* Totaal — de som van alle rondjes. Eén blik op wat de avond kostte. */}
