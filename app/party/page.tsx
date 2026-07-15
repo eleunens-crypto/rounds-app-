@@ -511,7 +511,10 @@ const T = {
     fairSetupDone: "Klaar — nu toewijzen",
     roundsOverviewTitle: "🧾 Rondjesoverzicht",
     newRoundBtn: "Nieuw rondje",
+    editRoundBtn: "Aanpassen",
     roundsOverviewBtn: "Rondjesoverzicht",
+    roundsTab: "Rondjes",
+    roundSummary: (n: number, items: number) => `Rondje ${n} · ${items} drankje${items === 1 ? "" : "s"}`,
     sameRoundAgainQ: "Zelfde rondje opnieuw (aanpasbaar) of een nieuw rondje?",
     sameRoundYes: "🔁 Zelfde opnieuw",
     newRoundFresh: "✨ Nieuw rondje",
@@ -846,7 +849,10 @@ const T = {
     fairSetupDone: "Termin\u00e9 — attribuer",
     roundsOverviewTitle: "🧾 Aper\u00e7u des tourn\u00e9es",
     newRoundBtn: "Nouvelle tourn\u00e9e",
+    editRoundBtn: "Modifier",
     roundsOverviewBtn: "Aper\u00e7u",
+    roundsTab: "Tourn\u00e9es",
+    roundSummary: (n: number, items: number) => `Tourn\u00e9e ${n} \u00b7 ${items} boisson${items === 1 ? "" : "s"}`,
     sameRoundAgainQ: "Refaire la m\u00eame tourn\u00e9e (modifiable) ou une nouvelle ?",
     sameRoundYes: "🔁 Refaire pareil",
     newRoundFresh: "✨ Nouvelle tourn\u00e9e",
@@ -982,6 +988,8 @@ export default function PartyTest() {
   const [costMode, setCostMode] = useState<"total" | "perRound">("total")
   // Niveau 1 (snel afrekenen): met hoeveel waren jullie? Totaal ÷ dit = ieders deel.
   const [quickHeads, setQuickHeads] = useState<string>("")
+  // Rondjesoverzicht (scherm 2): welke rondjes staan open. Standaard alleen het laatste.
+  const [openRounds, setOpenRounds] = useState<Set<string>>(new Set())
 
   const [showAssignAll, setShowAssignAll] = useState(false)
   const [assignMode, setAssignMode] = useState<"drink" | "person">("person")
@@ -2013,7 +2021,7 @@ export default function PartyTest() {
 
     return (
       <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.45)" }}>
-        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10 }}>{L.barList}</h3>
+        {settle && <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10 }}>{L.barList}</h3>}
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           {perDrank.map(({ d, n }) => (
             <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0" }}>
@@ -2022,6 +2030,7 @@ export default function PartyTest() {
             </div>
           ))}
         </div>
+        {settle && (
         <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 10, paddingTop: 9 }}>
           <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>{L.barHandOut}</div>
           <div style={{ fontSize: 12.5, color: "#6b5f3a", lineHeight: 1.6 }}>
@@ -2032,6 +2041,7 @@ export default function PartyTest() {
             })}
           </div>
         </div>
+        )}
       </div>
     )
   }
@@ -2748,8 +2758,21 @@ export default function PartyTest() {
       {!onboarding && (
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
           <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700 }} onClick={goHome}>{L.groupSettings}</button>
-          <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "hub" ? 0.55 : 1 }} onClick={goHub}>{settle ? L.overview : L.roundsOverviewBtn}</button>
+          {settle ? (
+            <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "hub" ? 0.55 : 1 }} onClick={goHub}>{L.overview}</button>
+          ) : (
+            // Gewoon rondjes: "Rondjes" brengt naar het volledige overzicht (scherm 2) en
+            // licht daar op. Op het "dit rondje"-scherm (hub) is geen tab actief.
+            <button style={{ flex: 1.2, padding: "8px 4px", fontSize: 11.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
+              border: view === "roundsOverview" ? "none" : "1px solid rgba(120,95,20,0.25)",
+              background: view === "roundsOverview" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff",
+              color: view === "roundsOverview" ? "#fff" : "#8a7d55" }}
+              onClick={() => { if (rounds.length >= 1) setView("roundsOverview") }}>{L.roundsTab}</button>
+          )}
           {settle && <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "final" ? 0.55 : 1 }} onClick={goFinal}>{L.settleBtn}</button>}
+          {!settle && rounds.length >= 1 && (
+            <button style={{ flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, borderRadius: 10, cursor: "pointer", border: "1px solid rgba(31,138,76,0.4)", background: "rgba(31,138,76,0.06)", color: "#1f8a4c" }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
+          )}
         </div>
       )}
     </div>
@@ -3648,7 +3671,7 @@ export default function PartyTest() {
             <button style={{ ...S.btn, width: "100%" }} onClick={() => setShowCups(true)}>{L.cups}</button>
           </div>
         )}
-        <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => roundItems > 0 && openClose()}>✅ Rondje {roundNr} bevestigen{roundItems > 0 && <span style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.85 }}> — {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>}</button>
+        <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => { if (roundItems === 0) return; if (settle) openClose(); else commitRound() }}>✅ Rondje {roundNr} bevestigen{roundItems > 0 && <span style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.85 }}> — {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>}</button>
         {roundItems > 0 && (
           <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>
         )}
@@ -3913,11 +3936,11 @@ export default function PartyTest() {
               </div>
             </div>
 
-            {/* Drie knoppen: afrekenen · rondjesoverzicht · nieuw rondje. */}
+            {/* Twee knoppen: aanpassen · nieuw rondje. Afrekenen zit boven in de tab-rij
+                (subtiel — niet de focus in snelle rondjes). */}
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btnP, flex: 1, padding: "12px 6px", fontSize: 13 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
-              <button style={{ ...S.btn, flex: 1, padding: "12px 6px", fontSize: 13, fontWeight: 800 }} onClick={() => setView("roundsOverview")}>{L.roundsOverviewBtn}</button>
-              <button style={{ ...S.btn, flex: 1, padding: "12px 6px", fontSize: 13, fontWeight: 800, border: "1.5px solid rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.08)", color: "#c98a00" }} onClick={askNewRound}>{L.newRoundBtn}</button>
+              <button style={{ ...S.btn, flex: 1, padding: "13px 6px", fontSize: 13, fontWeight: 800 }} onClick={editOrder}>✏️ {L.editRoundBtn}</button>
+              <button style={{ ...S.btnP, flex: 1, padding: "13px 6px", fontSize: 13 }} onClick={askNewRound}>➕ {L.newRoundBtn}</button>
             </div>
           </>
         )}
@@ -4196,53 +4219,79 @@ export default function PartyTest() {
 
   // ── RONDJESOVERZICHT (alle rondjes + bedragen, totaal of per rondje) ─────────
   if (view === "roundsOverview") {
+    // Nieuwste rondje bovenaan. Open als het in openRounds zit; het laatste rondje
+    // staat standaard open (als de gebruiker niks toggelde).
+    const laatsteId = rounds.length ? rounds[rounds.length - 1].id : ""
+    const isOpen = (r: Round) => openRounds.size === 0 ? r.id === laatsteId : openRounds.has(r.id)
+    const toggle = (id: string) => setOpenRounds((prev) => {
+      // Bij eerste toggle beginnen we vanaf "alleen laatste open", zodat de klik
+      // voorspelbaar werkt.
+      const base = prev.size === 0 ? new Set<string>([laatsteId]) : new Set(prev)
+      if (base.has(id)) base.delete(id); else base.add(id)
+      return base
+    })
+    const drinksOf = (r: Round) => drinks
+      .map((d) => ({ d, n: Object.values(r.orders[d.id] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[d.id] ?? 0) }))
+      .filter((x) => x.n > 0)
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header />
         {renderDialogs()}
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.roundsOverviewTitle}</h3>
           <button style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "7px 12px" }} onClick={() => setView("hub")}>{L.back}</button>
         </div>
-        <div style={{ ...S.card }}>
-          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 800, color: "#8a7d55" }}>{L.costTitle}</span>
-            <div style={{ display: "inline-flex", border: "1px solid rgba(120,95,20,0.2)", borderRadius: 10, overflow: "hidden" }}>
-              <span onClick={() => setCostMode("total")} style={{ padding: "6px 11px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: costMode === "total" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: costMode === "total" ? "#fff" : "#8a7d55" }}>{L.costModeTotal}</span>
-              <span onClick={() => setCostMode("perRound")} style={{ padding: "6px 11px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: costMode === "perRound" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: costMode === "perRound" ? "#fff" : "#8a7d55" }}>{L.costModePerRound}</span>
-            </div>
+
+        {/* Totaal — de som van alle rondjes. Eén blik op wat de avond kostte. */}
+        <div style={{ ...S.card, background: "rgba(240,165,0,0.06)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
+          <div style={{ ...S.row, justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f" }}>{L.costTotalLabel}</span>
+            <span style={{ fontSize: 20, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</span>
           </div>
-          {costMode === "total" ? (
-            <div style={{ ...S.row, justifyContent: "space-between" }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: "#6b5f3a" }}>{L.costWholeNight}</span>
-              <div style={{ ...S.row, gap: 4 }}>
-                <span style={{ fontSize: 15, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                <input style={{ ...S.input, width: 90, fontSize: 16, fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00"
-                  value={totalCost > 0 ? String(+totalCost.toFixed(2)).replace(".", ",") : ""}
-                  onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); setTotalCost(parseFloat(v) || 0) }} />
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-              {rounds.map((r, i) => (
-                <div key={r.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0", borderTop: i > 0 ? "1px solid rgba(120,95,20,0.08)" : "none", paddingTop: i > 0 ? 9 : 5 }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 700, color: "#6b5f3a" }}>{L.costRoundN(i + 1)}</span>
-                  <div style={{ ...S.row, gap: 4 }}>
-                    <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                    <input style={{ ...S.input, width: 78 }} type="text" inputMode="decimal" placeholder="0,00"
-                      value={(r.amount || 0) > 0 ? String(r.amount).replace(".", ",") : ""}
-                      onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); rSetAmount(i, parseFloat(v) || 0) }} />
+        </div>
+
+        {/* Elk rondje, nieuwste bovenaan. Klik de kop om open/dicht te klappen. */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {rounds.slice().reverse().map((r) => {
+            const nr = rounds.indexOf(r) + 1
+            const items = drinksOf(r).reduce((a, x) => a + x.n, 0)
+            const open = isOpen(r)
+            return (
+              <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+                <div onClick={() => toggle(r.id)} style={{ ...S.row, justifyContent: "space-between", padding: "13px 14px", cursor: "pointer", background: open ? "rgba(240,165,0,0.06)" : "#fff" }}>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>{L.roundSummary(nr, items)}</span>
+                  <div style={{ ...S.row, gap: 10 }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: (r.amount || 0) > 0 ? "#c98a00" : "#c4b896" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "€ —"}</span>
+                    <span style={{ fontSize: 13, color: "#8a7d55", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
                   </div>
                 </div>
-              ))}
-              <div style={{ ...S.row, justifyContent: "space-between", borderTop: "1.5px solid rgba(120,95,20,0.18)", marginTop: 4, paddingTop: 9 }}>
-                <span style={{ fontSize: 13.5, fontWeight: 800, color: "#4a3f1e" }}>{L.costTotalLabel}</span>
-                <span style={{ fontSize: 16, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</span>
+                {open && (
+                  <div style={{ padding: "4px 14px 14px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
+                      {drinksOf(r).map(({ d, n }) => (
+                        <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "3px 0" }}>
+                          <span style={{ fontSize: 14, fontWeight: 700 }}>{d.emoji} {d.name}</span>
+                          <span style={{ fontSize: 16, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ ...S.row, justifyContent: "space-between", borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 11 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}>{L.roundCostOptional}</span>
+                      <div style={{ ...S.row, gap: 4 }}>
+                        <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700 }}>€</span>
+                        <input style={{ ...S.input, width: 80, fontSize: 15, fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00"
+                          value={(r.amount || 0) > 0 ? String(r.amount).replace(".", ",") : ""}
+                          onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); rSetAmount(rounds.indexOf(r), parseFloat(v) || 0) }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )
+          })}
         </div>
-        <button style={{ ...S.btnP, width: "100%" }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
+
+        <button style={{ ...S.btnP, width: "100%", marginTop: 4 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
       </div></div>
     )
   }
