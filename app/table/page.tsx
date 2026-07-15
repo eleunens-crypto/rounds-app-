@@ -2083,9 +2083,9 @@ export default function RundoTable() {
   const finalizeBill = async (on: boolean) => {
     if (!group) return
     setGroup((cur) => cur ? { ...cur, finalized: on, disputed_by: on ? cur.disputed_by : null } : cur)
-    const patch = on ? { finalized: true } : { finalized: false, disputed_by: null }
+    const patch = on ? { finalized: true, finalized_at: new Date().toISOString() } : { finalized: false, disputed_by: null, finalized_at: null }
     const { error } = await supabase.from("table_groups").update(patch).eq("id", group.id)
-    if (error && /finalized|disputed_by/.test(error.message || "")) {
+    if (error && /finalized|disputed_by|finalized_at/.test(error.message || "")) {
       setError(L.finalizeColsMsg)
       return
     }
