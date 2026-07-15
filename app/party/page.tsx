@@ -504,6 +504,10 @@ const T = {
     notFairSplitYet: "Dit is een gelijke verdeling",
     notFairSplitWhy: "Iedereen betaalt evenveel, ook wie minder dronk. Wil je dat wie meer dronk ook meer betaalt? Schakel over naar Fair Split.",
     switchToFairBtn: "⚖️ Overschakelen naar Fair Split",
+    fairSetupTitle: "⚖️ Wie was erbij?",
+    fairSetupIntro: "Voeg de mensen toe. Tik een naam of laat 'm staan (Gast N). Daarna wijs je toe wie wat dronk.",
+    fairAddPerson: "+ Persoon toevoegen",
+    fairSetupDone: "Klaar — nu toewijzen",
     estimate: "schatting op richtprijzen",
     estimateWhy: "Niemand vulde bedragen in, dus rekenen we met de richtprijzen uit de lijst. Bij benadering, maar eerlijk.",
     voiceBtn: "🎤 Inspreken",
@@ -828,6 +832,10 @@ const T = {
     notFairSplitYet: "C'est un partage \u00e9gal",
     notFairSplitWhy: "Tout le monde paie pareil, m\u00eame ceux qui ont moins bu. Tu veux que ceux qui ont plus bu paient plus ? Passe au Fair Split.",
     switchToFairBtn: "⚖️ Passer au Fair Split",
+    fairSetupTitle: "⚖️ Qui \u00e9tait l\u00e0 ?",
+    fairSetupIntro: "Ajoute les personnes. Tape un nom ou laisse-le (Invit\u00e9 N). Ensuite tu attribues qui a bu quoi.",
+    fairAddPerson: "+ Ajouter une personne",
+    fairSetupDone: "Termin\u00e9 — attribuer",
     estimate: "estimation sur prix indicatifs",
     estimateWhy: "Personne n'a entré de montants, donc on calcule avec les prix indicatifs de la liste. Approximatif, mais équitable.",
     voiceBtn: "🎤 Dicter",
@@ -846,7 +854,7 @@ const T = {
 export default function Party() {
   const [lang] = useLang()
   const L = T[(lang === "fr" ? "fr" : "nl") as "nl" | "fr"]
-  const [view, setView] = useState<"start" | "setup" | "settings" | "order" | "confirmed" | "hub" | "final" | "quickSettle">("start")
+  const [view, setView] = useState<"start" | "setup" | "settings" | "order" | "confirmed" | "hub" | "final" | "quickSettle" | "fairSetup">("start")
   const [pay, setPay] = useState<"eur" | "coin">("eur")
   const [coinValue, setCoinValue] = useState(3.9)
   const [depositOn, setDepositOn] = useState(false)
@@ -2102,13 +2110,20 @@ export default function Party() {
     setView("quickSettle")
   }
 
-  // Van niveau 1 naar Fair Split (niveau 2): eerst personen + namen vragen, dan pas
-  // toewijzen. Voor nu schakelt dit naar Fair Split en de personen-setup; het simpele
-  // "hoeveel + namen"-scherm en het toewijzen bouwen we in de volgende stap.
+  // Van niveau 1 naar Fair Split (niveau 2): eerst snel personen + namen toevoegen op
+  // een kaal scherm, daarna wijs je de drankjes toe. settle gaat pas aan bij "klaar",
+  // zodat je nog terug kan zonder de modus te wijzigen.
   const goToFairSplit = () => {
+    setView("fairSetup")
+  }
+  // "Klaar" op het fairSetup-scherm: nu is Fair Split echt actief. Naar de hub, waar je
+  // per rondje (of alles samen) de anonieme drankjes aan de namen toewijst.
+  const confirmFairSetup = async () => {
+    if (people.length === 0) { setNotice(L.addPersonFirst); return }
     setSettle(true)
     persistSettings({ settle: true })
-    setView("setup")
+    setOpenRound(rounds.length - 1)
+    setView("hub")
   }
 
   const applyBeginChoices = () => {
@@ -4197,6 +4212,44 @@ export default function Party() {
           <div style={{ fontSize: 12, color: "#4a6b57", lineHeight: 1.5, marginBottom: 11 }}>{L.notFairSplitWhy}</div>
           <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={goToFairSplit}>{L.switchToFairBtn}</button>
         </div>
+      </div></div>
+    )
+  }
+
+  // ── FAIR SPLIT SETUP (snel personen + namen) ─────────────────────────────────
+  // Kaal en snel: voeg personen toe, tik een naam of laat 'm grijs staan (Gast N).
+  // Daarna wijs je op de hub de drankjes toe. Dit is de brug van niveau 1 naar Fair Split.
+  if (view === "fairSetup") {
+    return (
+      <div style={S.page}><div style={S.wrap}>
+        <Header />
+        {renderDialogs()}
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+          <h3 style={{ ...S.h3, margin: 0 }}>{L.fairSetupTitle}</h3>
+          <button style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "7px 12px" }} onClick={() => setView("quickSettle")}>{L.back}</button>
+        </div>
+        <div style={{ fontSize: 12.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>{L.fairSetupIntro}</div>
+
+        <div style={{ ...S.card }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {people.map((p, i) => {
+              const leeg = isGuestDefault(p.name)
+              return (
+                <div key={p.id} style={{ ...S.row, gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: "#b3a988", width: 20, textAlign: "center", flexShrink: 0 }}>{i + 1}</span>
+                  <input value={leeg ? "" : p.name} onChange={(e) => renamePerson(p.id, e.target.value)} placeholder={p.name}
+                    style={{ ...S.input, flex: 1, textAlign: "left", fontSize: 15, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: "#fdfaf2", color: leeg ? "#b3a988" : "#4a3f1e" }} />
+                  {people.length > 1 && (
+                    <button onClick={() => removePerson(p.id)} style={{ ...S.btn, padding: "8px 11px", fontSize: 15, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)", flexShrink: 0 }}>✕</button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          <button onClick={addPerson} style={{ ...S.btn, width: "100%", marginTop: 12, fontWeight: 800, border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.06)", color: "#c98a00" }}>{L.fairAddPerson}</button>
+        </div>
+
+        <button style={{ ...S.btnP, width: "100%", marginTop: 6, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={confirmFairSetup}>{L.fairSetupDone}</button>
       </div></div>
     )
   }
