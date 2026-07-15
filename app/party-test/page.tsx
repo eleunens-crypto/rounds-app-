@@ -873,7 +873,7 @@ export default function PartyTest() {
   const [voiceHits, setVoiceHits] = useState<{ id: string; name: string; qty: number }[]>([])
   const [coinCat, setCoinCat] = useState<Cat>("Bier")
   const [coinFull, setCoinFull] = useState(false)
-  const [fullList, setFullList] = useState(true)
+  const [fullList, setFullList] = useState(false)
   const [cart, setCart] = useState<Assign>({})
   const [cartAnon, setCartAnon] = useState<Anon>({})
   const [rounds, setRounds] = useState<Round[]>([])
@@ -2779,7 +2779,9 @@ export default function PartyTest() {
 
         {lijst.length === 0 ? (
           <div style={{ ...S.card, textAlign: "center", color: "#b3a988", fontSize: 13, padding: "20px 0" }}>
-            {L.nothingFound}
+            {!zoekt && !fullList ? (
+              <span onClick={() => setFullList(true)} style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }}>{L.showAll}</span>
+            ) : L.nothingFound}
           </div>
         ) : (
           <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12 }}>
