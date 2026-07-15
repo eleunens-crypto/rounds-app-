@@ -277,7 +277,6 @@ const T = {
     statusNot: "nog niet aangemeld",
     assignAnyone: "Je kan aan iedereen toewijzen — ook wie zelf scande.",
     pickYourName: "Tik je naam aan — de rest duid je zelf aan tijdens het bestellen.",
-    notMeShort: "niet ik",
     freeUp: "vrijgeven",
     seatLegend: "📱 = meldde zich zelf aan via de link · ⭐ = dat ben jij. Wie niet scant, duid je gewoon zelf aan tijdens het bestellen.",
     personHasDrinks: (n: string) => `${n} heeft al drankjes in een rondje en kan niet verwijderd worden. Verwijder eerst die drankjes.`,
@@ -445,9 +444,6 @@ const T = {
     imGoing: "🍻 Ik ga halen",
     walkTable: "👥 Rondje opnemen",
     walkIntro: "Ga de tafel rond. Tik per persoon aan wat die wil.",
-    walkOf: (a: number, b: number) => `${a} van ${b}`,
-    walkNothing: "Niets",
-    walkNext: "Volgende →",
     walkDone: "✓ Klaar",
     walkFor: (n: string) => `Wat wil ${n}?`,
     whoGoes: "Wie gaat er halen?",
@@ -459,6 +455,8 @@ const T = {
     modeTitle: "Rekenen jullie achteraf af?",
     modeQuick: "Gewoon rondjes",
     modeQuickWhy: "Wat er moet komen. Meer niet.",
+    modeQuickSub: "Bestel rondjes, tel gewoon de aantallen.",
+    modeFairSub: "Bestel rondjes én verdeel eerlijk achteraf.",
     modeFairLine: "Betaal niet mee voor wat je niet dronk.",
     modeSwitchLater: "Je kan later nog wisselen — er gaat niets verloren.",
     barList: "🍻 Aan de toog",
@@ -564,7 +562,6 @@ const T = {
     statusNot: "pas encore inscrit",
     assignAnyone: "Tu peux attribuer à tout le monde — même à ceux qui ont scanné.",
     pickYourName: "Touche ton nom — le reste, tu le coches toi-même en commandant.",
-    notMeShort: "pas moi",
     freeUp: "libérer",
     seatLegend: "📱 = inscrit via le lien · ⭐ = c'est toi. Ceux qui ne scannent pas, tu les coches toi-même en commandant.",
     personHasDrinks: (n: string) => `${n} a déjà des boissons dans une tournée et ne peut pas être supprimé. Supprime d'abord ces boissons.`,
@@ -732,9 +729,6 @@ const T = {
     imGoing: "🍻 J'y vais",
     walkTable: "👥 Faire le tour",
     walkIntro: "Fais le tour de la table. Coche pour chacun ce qu'il veut.",
-    walkOf: (a: number, b: number) => `${a} sur ${b}`,
-    walkNothing: "Rien",
-    walkNext: "Suivant →",
     walkDone: "✓ Terminé",
     walkFor: (n: string) => `Que veut ${n} ?`,
     whoGoes: "Qui va chercher ?",
@@ -746,6 +740,8 @@ const T = {
     modeTitle: "Vous réglez après ?",
     modeQuick: "Juste des tournées",
     modeQuickWhy: "Ce qu'il faut commander. Rien de plus.",
+    modeQuickSub: "Commande des tournées, compte juste les nombres.",
+    modeFairSub: "Commande des tournées et partage équitablement après.",
     modeFairLine: "Ne paie pas pour ce que tu n'as pas bu.",
     modeSwitchLater: "Tu peux changer plus tard — rien n'est perdu.",
     barList: "🍻 Au bar",
@@ -973,31 +969,44 @@ export default function PartyTest() {
   // Persoon per persoon. Je tikt drankjes aan die METEEN op die persoon staan (bump),
   // geen omweg via toewijzen. Zo blijft de toewijzing die al in je hoofd zit ("Tom?
   // pils") ook in de app staan — en werkt Fair Split achteraf zonder extra werk.
-  const walkStart = () => { setWalkIdx(0) }
-  const walkNext = () => {
-    setWalkIdx((i) => {
-      if (i === null) return null
-      const volgende = i + 1
-      return volgende >= people.length ? null : volgende
-    })
-  }
+  const walkStart = () => { setWalkIdx(people[0] ? 0 : null) }
   const renderWalk = () => {
     if (walkIdx === null) return null
     const p = people[walkIdx]
     if (!p) { setWalkIdx(null); return null }
     const zijne = drinks.filter((d) => (cart[d.id]?.[p.id] ?? 0) > 0)
     const lijst = drinks.filter((d) => d.fav)
+    // Hoeveel elke persoon al aantikte in dit rondje (voor de teller op de pill).
+    const aantalVan = (pid: string) => drinks.reduce((a, d) => a + (cart[d.id]?.[pid] ?? 0), 0)
     return (
       <div style={S.overlay} onClick={() => setWalkIdx(null)}>
         <div style={{ ...S.sheet, maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
-            <h3 style={{ ...S.h3, margin: 0, fontSize: 20 }}>{p.name}</h3>
-            <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>{L.walkOf(walkIdx + 1, people.length)}</span>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
+            <h3 style={{ ...S.h3, margin: 0, fontSize: 18 }}>{L.walkTable}</h3>
+            <span onClick={() => setWalkIdx(null)} style={{ fontSize: 20, cursor: "pointer", color: "#8a7d55", lineHeight: 1 }}>✕</span>
           </div>
-          <div style={{ height: 3, background: "rgba(120,95,20,0.12)", borderRadius: 2, marginBottom: 12 }}>
-            <div style={{ width: `${((walkIdx + 1) / people.length) * 100}%`, height: 3, background: "#e08a00", borderRadius: 2, transition: "width .2s" }} />
+
+          {/* Namen als pills. Tik een naam aan om voor die persoon te bestellen. De
+              groene teller toont wat elk al heeft — zo zie je wie je nog moet vragen. */}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+            {people.map((pp, i) => {
+              const geselecteerd = i === walkIdx
+              const n = aantalVan(pp.id)
+              return (
+                <button key={pp.id} onClick={() => setWalkIdx(i)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 13px", borderRadius: 20, cursor: "pointer",
+                    fontSize: 13, fontWeight: 800,
+                    background: geselecteerd ? "#e08a00" : "#faf7ec",
+                    color: geselecteerd ? "#fff" : "#4a3f1e",
+                    border: geselecteerd ? "2px solid #e08a00" : "1.5px solid rgba(120,95,20,0.18)" }}>
+                  {pp.name}
+                  {n > 0 && <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 18, height: 18, borderRadius: 9, fontSize: 11, background: geselecteerd ? "rgba(255,255,255,0.3)" : "#1f8a4c", color: "#fff" }}>{n}</span>}
+                </button>
+              )
+            })}
           </div>
-          <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 10 }}>{L.walkFor(p.name)}</div>
+
+          <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 10, fontWeight: 700 }}>{L.walkFor(p.name)}</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 12 }}>
             {lijst.map((d) => {
               const n = cart[d.id]?.[p.id] ?? 0
@@ -1023,10 +1032,7 @@ export default function PartyTest() {
               {zijne.map((d) => `${cart[d.id][p.id]}× ${d.name}`).join(" · ")}
             </div>
           )}
-          <div style={{ display: "flex", gap: 8 }}>
-            <button style={{ ...S.btn, flex: 1, fontWeight: 800 }} onClick={walkNext}>{L.walkNothing}</button>
-            <button style={{ ...S.btnP, flex: 2 }} onClick={walkNext}>{walkIdx + 1 >= people.length ? L.walkDone : L.walkNext}</button>
-          </div>
+          <button style={{ ...S.btnP, width: "100%" }} onClick={() => setWalkIdx(null)}>{L.walkDone}</button>
         </div>
       </div>
     )
@@ -2804,33 +2810,37 @@ export default function PartyTest() {
                   coins en pot bestaan alleen als je afrekent. Kies je "gewoon rondjes",
                   dan is dit scherm hiermee klaar. */}
               <p style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e", marginBottom: 10 }}>{L.modeTitle}</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {/* Gewoon aantallen: chips met drank-emoji, geen namen. */}
                 <button onClick={() => setBpSettle(false)}
-                  style={{ textAlign: "left", padding: "13px 14px", borderRadius: 12, cursor: "pointer",
-                           background: bpSettle === false ? "#fff8e8" : "#faf7ec",
-                           border: bpSettle === false ? "2px solid #e08a00" : "1px solid rgba(120,95,20,0.15)" }}>
-                  <div style={{ ...S.row, gap: 8, marginBottom: 10 }}>
-                    <span style={{ fontSize: 19 }}>🍺</span>
-                    <span style={{ fontSize: 14.5, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
+                  style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
+                           background: bpSettle === false ? "#fff8e8" : "#fff",
+                           boxShadow: bpSettle === false ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
+                           border: bpSettle === false ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
+                  <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
+                    <span style={{ fontSize: 20 }}>🍺</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
                   </div>
+                  <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 11 }}>{L.modeQuickSub}</div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <span style={{ background: "#fff", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
-                    <span style={{ background: "#fff", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
-                    <span style={{ background: "#fff", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
                   </div>
                   <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 10 }}>{L.modeQuickWhy}</div>
                 </button>
 
                 {/* Fair Split: drankjes boven, muntjes eronder. Bart = doorstreept, €0. */}
                 <button onClick={() => setBpSettle(true)}
-                  style={{ textAlign: "left", padding: "13px 14px", borderRadius: 12, cursor: "pointer",
-                           background: bpSettle === true ? "#fff8e8" : "#faf7ec",
-                           border: bpSettle === true ? "2px solid #e08a00" : "1px solid rgba(120,95,20,0.15)" }}>
-                  <div style={{ ...S.row, gap: 8, marginBottom: 12 }}>
-                    <span style={{ fontSize: 19 }}>⚖️</span>
-                    <span style={{ fontSize: 14.5, fontWeight: 800, color: "#4a3f1e" }}>Fair Split</span>
+                  style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
+                           background: bpSettle === true ? "#fff8e8" : "#fff",
+                           boxShadow: bpSettle === true ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
+                           border: bpSettle === true ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
+                  <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
+                    <span style={{ fontSize: 20 }}>⚖️</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>Fair Split</span>
                   </div>
+                  <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 13 }}>{L.modeFairSub}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
                     {[["🍺", "🪙", "Tom"], ["🍷🍷", "🪙🪙🪙🪙", "Els"], ["🚫", "—", "Bart"], ["🍺🍺", "🪙🪙", "Jan"]].map(([drank, geld, naam], i) => (
                       <div key={i}>
@@ -2919,10 +2929,10 @@ export default function PartyTest() {
                         color: ikZelf ? "#1f6b3a" : p.claimedBy ? "#8a5e0f" : "#b3a988" }}>
                         {ikZelf ? L.statusYou : p.claimedBy ? L.statusJoined : L.statusNot}
                       </span>
-                      {(ikZelf || bezet) && (
+                      {bezet && (
                         <button onClick={() => releaseSeat(p.id)}
                           style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)", fontSize: 10.5, padding: "3px 8px" }}>
-                          {ikZelf ? L.notMeShort : L.freeUp}
+                          {L.freeUp}
                         </button>
                       )}
                     </div>
