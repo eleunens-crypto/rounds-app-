@@ -464,16 +464,16 @@ const T = {
     drinkInUse: (n: string) => `${n} is al besteld en kan niet meer verwijderd worden.`,
 
     confirmTitle: "Even bevestigen",
-    imGoing: "🍻 Ik ga halen",
+    imGoing: "🍻 Ik start een rondje",
     walkTable: "👥 Rondje opnemen",
     walkIntro: "Ga de tafel rond. Tik per persoon aan wat die wil.",
     walkDone: "✓ Klaar",
     walkFor: (n: string) => `Wat wil ${n}?`,
-    whoGoes: "Wie gaat er halen?",
-    xIsGoing: (n: string) => `${n} gaat halen`,
-    youAreGoing: "Jij gaat halen — tik aan wat je zelf wil",
-    iGoInstead: "Ik haal het toch",
-    notMeRunner: "Toch niet ik",
+    whoGoes: "Klaar voor een rondje?",
+    xIsGoing: (n: string) => `🍻 ${n} haalt dit rondje`,
+    youAreGoing: "🍻 Jij haalt dit rondje",
+    iGoInstead: "ik neem het over",
+    notMeRunner: "geef door",
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
     modeTitle: "Rondjes & Fair Split",
     modeQuick: "Gewoon rondjes",
@@ -770,16 +770,16 @@ const T = {
     drinkInUse: (n: string) => `${n} a déjà été commandé et ne peut plus être supprimé.`,
 
     confirmTitle: "Confirmation",
-    imGoing: "🍻 J'y vais",
+    imGoing: "🍻 Je lance une tournée",
     walkTable: "👥 Faire le tour",
     walkIntro: "Fais le tour de la table. Coche pour chacun ce qu'il veut.",
     walkDone: "✓ Terminé",
     walkFor: (n: string) => `Que veut ${n} ?`,
-    whoGoes: "Qui va chercher ?",
-    xIsGoing: (n: string) => `${n} va chercher`,
-    youAreGoing: "Tu vas chercher — coche ce que tu veux toi-même",
-    iGoInstead: "J'y vais finalement",
-    notMeRunner: "Pas moi finalement",
+    whoGoes: "Prêt pour une tournée ?",
+    xIsGoing: (n: string) => `🍻 ${n} s'en occupe`,
+    youAreGoing: "🍻 Tu t'occupes de cette tournée",
+    iGoInstead: "je reprends",
+    notMeRunner: "passer",
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
     modeTitle: "Tournées & Fair Split",
     modeQuick: "Juste des tournées",
@@ -1085,7 +1085,7 @@ export default function Party() {
   const renderRunnerBar = () => {
     const ikHaal = !!meId && startedBy === meId
     if (!openRoundId && !startedBy) {
-      // Nog geen rondje: nodig iemand uit om te gaan halen.
+      // Nog geen rondje. Wie start, haalt — één handeling.
       return (
         <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)", textAlign: "center" }}>
           <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 10 }}>{L.whoGoes}</div>
@@ -1103,15 +1103,20 @@ export default function Party() {
         </div>
       )
     }
-    // Iemand anders haalt.
-    return (
-      <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
-        <div style={{ ...S.row, justifyContent: "space-between" }}>
-          <span style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f" }}>🍻 {startedBy ? L.xIsGoing(runnerName()) : L.whoGoes}</span>
-          <button style={{ ...S.btn, fontSize: 11.5, fontWeight: 700, padding: "6px 11px" }} onClick={takeOverRound}>{L.iGoInstead}</button>
+    if (startedBy) {
+      // Iemand anders haalt. Informatie — overnemen mag, maar rustig.
+      return (
+        <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
+          <div style={{ ...S.row, justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f" }}>{L.xIsGoing(runnerName())}</span>
+            <button style={{ ...S.btn, fontSize: 11.5, fontWeight: 700, padding: "6px 11px" }} onClick={takeOverRound}>{L.iGoInstead}</button>
+          </div>
         </div>
-      </div>
-    )
+      )
+    }
+    // Er loopt een rondje, maar niemand claimde de haler-rol (bv. admin startte het).
+    // Geen verwarrende "wie haalt?"-vraag herhalen — gewoon niks tonen.
+    return null
   }
 
   // De optelling gebeurt in Postgres (party_bump), niet hier. Twee gasten die tegelijk
@@ -2936,6 +2941,12 @@ export default function Party() {
           )}
         </div>
 
+        <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", marginBottom: 9 }}>
+          {catsPresent.map((c) => (
+            <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}</span>
+          ))}
+        </div>
+
         <div style={{ position: "relative", marginBottom: 9 }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none" }}>🔍</span>
           <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)} placeholder={L.searchDrink}
@@ -2944,12 +2955,6 @@ export default function Party() {
             <button onClick={() => setDrinkSearch("")}
               style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 15, color: "#8a7d55", padding: 4 }}>✕</button>
           )}
-        </div>
-
-        <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", marginBottom: 8 }}>
-          {catsPresent.map((c) => (
-            <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}</span>
-          ))}
         </div>
 
         {!zoekt && (
@@ -3389,6 +3394,13 @@ export default function Party() {
           </button>
         )}
         {people.length > 0 && <div style={{ fontSize: 10.5, color: "#8a7d55", textAlign: "center", marginBottom: 10, lineHeight: 1.4 }}>{L.walkIntro}</div>}
+        <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", paddingBottom: 8, marginBottom: 9 }}>
+          {catsPresent.map((c) => {
+            const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
+            return <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: "#e0685c", fontSize: 15 }}>●</span>}</span>
+          })}
+        </div>
+
         <div style={{ position: "relative", marginBottom: 9 }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none" }}>🔍</span>
           <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)}
@@ -3408,12 +3420,6 @@ export default function Party() {
           </div>
         )}
 
-        <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", paddingBottom: 8, marginBottom: 8 }}>
-          {catsPresent.map((c) => {
-            const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
-            return <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: "#e0685c", fontSize: 15 }}>●</span>}</span>
-          })}
-        </div>
         <div style={{ ...S.row, justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
           <div style={{ display: "inline-flex", border: "1px solid rgba(120,95,20,0.2)", borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
             <span onClick={() => setFullList(false)} style={{ padding: "6px 11px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: !fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: !fullList ? "#fff" : "#8a7d55" }}>compacte lijst</span>
