@@ -452,13 +452,12 @@ const T = {
     iGoInstead: "Ik haal het toch",
     notMeRunner: "Toch niet ik",
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
-    modeTitle: "Rekenen jullie achteraf af?",
+    modeTitle: "Rondjes & Fair Split",
     modeQuick: "Gewoon rondjes",
-    modeQuickWhy: "Wat er moet komen. Meer niet.",
-    modeQuickSub: "Bestel rondjes, tel gewoon de aantallen.",
-    modeFairSub: "Bestel rondjes én verdeel eerlijk achteraf.",
+    modeQuickSub: "Rondjes, aantallen en bestellijst.",
+    modeFairSub: "Rondjes, bestellijst én verdeel eerlijk achteraf.",
     modeFairLine: "Betaal niet mee voor wat je niet dronk.",
-    modeSwitchLater: "Je kan later nog wisselen — er gaat niets verloren.",
+    modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     barList: "🍻 Aan de toog",
     barHandOut: "Uitdelen",
     settleNow: "🧾 Toch afrekenen?",
@@ -737,13 +736,12 @@ const T = {
     iGoInstead: "J'y vais finalement",
     notMeRunner: "Pas moi finalement",
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
-    modeTitle: "Vous réglez après ?",
+    modeTitle: "Tournées & Fair Split",
     modeQuick: "Juste des tournées",
-    modeQuickWhy: "Ce qu'il faut commander. Rien de plus.",
-    modeQuickSub: "Commande des tournées, compte juste les nombres.",
-    modeFairSub: "Commande des tournées et partage équitablement après.",
+    modeQuickSub: "Tournées, nombres et liste de commande.",
+    modeFairSub: "Tournées, liste de commande et partage équitable.",
     modeFairLine: "Ne paie pas pour ce que tu n'as pas bu.",
-    modeSwitchLater: "Tu peux changer plus tard — rien n'est perdu.",
+    modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     barList: "🍻 Au bar",
     barHandOut: "Distribuer",
     settleNow: "🧾 Régler quand même ?",
@@ -842,7 +840,7 @@ export default function PartyTest() {
   const [cardPayers, setCardPayers] = useState<string[]>([])
   const [beginPrompt, setBeginPrompt] = useState(false)
   const [potChosen, setPotChosen] = useState(false)
-  const [bpSettle, setBpSettle] = useState<boolean | null>(null)
+  const [bpSettle, setBpSettle] = useState<boolean | null>(true)
   const [fromOnboarding, setFromOnboarding] = useState(false)
   const [onboardedOnce, setOnboardedOnce] = useState(false)
   const [onbPotActive, setOnbPotActive] = useState(false)
@@ -2810,27 +2808,8 @@ export default function PartyTest() {
                   coins en pot bestaan alleen als je afrekent. Kies je "gewoon rondjes",
                   dan is dit scherm hiermee klaar. */}
               <p style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e", marginBottom: 10 }}>{L.modeTitle}</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {/* Gewoon aantallen: chips met drank-emoji, geen namen. */}
-                <button onClick={() => setBpSettle(false)}
-                  style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
-                           background: bpSettle === false ? "#fff8e8" : "#fff",
-                           boxShadow: bpSettle === false ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
-                           border: bpSettle === false ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
-                  <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
-                    <span style={{ fontSize: 20 }}>🍺</span>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
-                  </div>
-                  <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 11 }}>{L.modeQuickSub}</div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
-                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
-                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
-                  </div>
-                  <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 10 }}>{L.modeQuickWhy}</div>
-                </button>
-
-                {/* Fair Split: drankjes boven, muntjes eronder. Bart = doorstreept, €0. */}
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {/* Fair Split BOVEN — de voorkeur. Al geselecteerd bij binnenkomst. */}
                 <button onClick={() => setBpSettle(true)}
                   style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
                            background: bpSettle === true ? "#fff8e8" : "#fff",
@@ -2839,6 +2818,7 @@ export default function PartyTest() {
                   <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
                     <span style={{ fontSize: 20 }}>⚖️</span>
                     <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>Fair Split</span>
+                    {bpSettle === true && <span style={{ marginLeft: "auto", fontSize: 16, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
                   </div>
                   <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 13 }}>{L.modeFairSub}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
@@ -2852,8 +2832,34 @@ export default function PartyTest() {
                   </div>
                   <div style={{ fontSize: 11.5, color: "#4a3f1e", marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)", lineHeight: 1.5 }}>{L.modeFairLine}</div>
                 </button>
+
+                {/* Geruststelling, precies waar de twijfel ontstaat. */}
+                <div style={{ textAlign: "center", fontSize: 10.5, color: "#a89a6f", padding: "9px 0" }}>{L.modeSwitchLater}</div>
+
+                {/* Gewoon aantallen ONDER, met bestellijstje. */}
+                <button onClick={() => setBpSettle(false)}
+                  style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
+                           background: bpSettle === false ? "#fff8e8" : "#fff",
+                           boxShadow: bpSettle === false ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
+                           border: bpSettle === false ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
+                  <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
+                    <span style={{ fontSize: 20 }}>🍺</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
+                    {bpSettle === false && <span style={{ marginLeft: "auto", fontSize: 16, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 11 }}>{L.modeQuickSub}</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
+                  </div>
+                  {/* Bestellijstje: wat er aan de toog moet komen. */}
+                  <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 10 }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 Aan de toog</div>
+                    <div style={{ fontSize: 13, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pils · 2× Cola · 1× Wijn</div>
+                  </div>
+                </button>
               </div>
-              <p style={{ fontSize: 11, color: "#8a7d55", textAlign: "center", margin: "10px 0 0", lineHeight: 1.45 }}>{L.modeSwitchLater}</p>
 
               {bpSettle === true && (
                 <div style={{ fontSize: 11.5, color: "#8a7d55", margin: "14px 0 0", lineHeight: 1.5 }}>{L.settingsLater}</div>
