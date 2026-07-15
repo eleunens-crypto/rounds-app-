@@ -299,7 +299,7 @@ const T = {
     joinInvite: (g: string, l: string) => `Doe mee met ${g} op Rundo Party: ${l}`,
 
     // ── startvragen
-    beforeWeStart: "Voor we beginnen",
+    beforeWeStart: "Kies je aanpak",
     settingsLater: "Pot, bekers of coins nodig? Die zet je aan via ⚙️ Groep — hoeft nu niet.",
     potStartTitle: "🧪 Samen een pot?",
     potStartWhy: "Iedereen legt vooraf iets in. Rondjes gaan er dan uit — niemand hoeft telkens te betalen.",
@@ -309,7 +309,7 @@ const T = {
     unassignedHub: (n: number) => `🔴 ${n} drankje${n === 1 ? "" : "s"} nog niet toegewezen`,
     unassignedHubWhy: "Zonder naam worden ze gelijk verdeeld — niet eerlijk. Wijs ze toe zodat elk betaalt wat hij dronk.",
     unassignedHubBtn: "Toewijzen",
-    quickStart: "Snel starten",
+    quickStart: "Starten",
     continueRound: (n: number) => `Ga verder met rondje ${n}`,
 
     // ── instellingen
@@ -605,7 +605,7 @@ const T = {
     joinInvite: (g: string, l: string) => `Rejoins ${g} sur Rundo Party : ${l}`,
 
     // ── startvragen
-    beforeWeStart: "Avant de commencer",
+    beforeWeStart: "Choisis ta formule",
     settingsLater: "Besoin d'un pot, de gobelets ou de jetons ? Ça s'active via ⚙️ Groupe — pas maintenant.",
     potStartTitle: "🧪 Une cagnotte commune ?",
     potStartWhy: "Chacun met quelque chose d'avance. Les tournées sortent de là — personne ne paie à chaque fois.",
@@ -615,7 +615,7 @@ const T = {
     unassignedHub: (n: number) => `🔴 ${n} boisson${n === 1 ? "" : "s"} pas encore attribuée${n === 1 ? "" : "s"}`,
     unassignedHubWhy: "Sans nom, elles sont partagées également — pas équitable. Attribue-les pour que chacun paie ce qu'il a bu.",
     unassignedHubBtn: "Attribuer",
-    quickStart: "Démarrage rapide",
+    quickStart: "Démarrer",
     continueRound: (n: number) => `Continuer la tournée ${n}`,
 
     // ── instellingen
@@ -3054,7 +3054,7 @@ export default function Party() {
         {beginPrompt && (
           <div style={{ ...S.overlay, zIndex: 65 }} onClick={() => setBeginPrompt(false)}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ ...S.h3, fontSize: 18, marginTop: 0, marginBottom: 4 }}>{L.beforeWeStart}</h3>
+              <h3 style={{ ...S.h3, fontSize: 21, marginTop: 0, marginBottom: 16 }}>{L.beforeWeStart}</h3>
 
               {/* De modus komt EERST — hij bepaalt of de rest nog relevant is. Bekers,
                   coins en pot bestaan alleen als je afrekent. Kies je "gewoon rondjes",
