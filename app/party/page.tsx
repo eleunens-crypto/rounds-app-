@@ -492,6 +492,18 @@ const T = {
     settleNow: "🧾 Toch afrekenen?",
     settleNowWhy: "We hielden alles bij. Eén tik en je weet wie wat schuldig is.",
     settleNowBtn: "Ja, verdeel het eerlijk",
+    noAmountsYet: "Je vulde nog geen bedragen in. Zonder bedragen valt er niets te verdelen — vul eerst in wat de rondjes kostten.",
+    fillAmountsNow: "Bedragen invullen",
+    later: "Later",
+    back: "Terug",
+    quickSettleTitle: "🧾 Afrekenen",
+    quickTotalLabel: "Totaal van alle rondjes",
+    quickHeadsLabel: "Met hoeveel waren jullie?",
+    quickPerHead: "Ieders deel",
+    quickPerHeadNote: (n: number) => `gelijk verdeeld over ${n} ${n === 1 ? "persoon" : "personen"}`,
+    notFairSplitYet: "Dit is een gelijke verdeling",
+    notFairSplitWhy: "Iedereen betaalt evenveel, ook wie minder dronk. Wil je dat wie meer dronk ook meer betaalt? Schakel over naar Fair Split.",
+    switchToFairBtn: "⚖️ Overschakelen naar Fair Split",
     estimate: "schatting op richtprijzen",
     estimateWhy: "Niemand vulde bedragen in, dus rekenen we met de richtprijzen uit de lijst. Bij benadering, maar eerlijk.",
     voiceBtn: "🎤 Inspreken",
@@ -804,6 +816,18 @@ const T = {
     settleNow: "🧾 Régler quand même ?",
     settleNowWhy: "On a tout noté. Un clic et tu sais qui doit quoi.",
     settleNowBtn: "Oui, répartis équitablement",
+    noAmountsYet: "Tu n'as pas encore entr\u00e9 de montants. Sans montants, rien \u00e0 partager — indique d'abord ce qu'ont co\u00fbt\u00e9 les tourn\u00e9es.",
+    fillAmountsNow: "Entrer les montants",
+    later: "Plus tard",
+    back: "Retour",
+    quickSettleTitle: "🧾 R\u00e9gler",
+    quickTotalLabel: "Total de toutes les tourn\u00e9es",
+    quickHeadsLabel: "Vous \u00e9tiez combien ?",
+    quickPerHead: "La part de chacun",
+    quickPerHeadNote: (n: number) => `partag\u00e9 \u00e9galement entre ${n} ${n === 1 ? "personne" : "personnes"}`,
+    notFairSplitYet: "C'est un partage \u00e9gal",
+    notFairSplitWhy: "Tout le monde paie pareil, m\u00eame ceux qui ont moins bu. Tu veux que ceux qui ont plus bu paient plus ? Passe au Fair Split.",
+    switchToFairBtn: "⚖️ Passer au Fair Split",
     estimate: "estimation sur prix indicatifs",
     estimateWhy: "Personne n'a entré de montants, donc on calcule avec les prix indicatifs de la liste. Approximatif, mais équitable.",
     voiceBtn: "🎤 Dicter",
@@ -822,7 +846,7 @@ const T = {
 export default function Party() {
   const [lang] = useLang()
   const L = T[(lang === "fr" ? "fr" : "nl") as "nl" | "fr"]
-  const [view, setView] = useState<"start" | "setup" | "settings" | "order" | "confirmed" | "hub" | "final">("start")
+  const [view, setView] = useState<"start" | "setup" | "settings" | "order" | "confirmed" | "hub" | "final" | "quickSettle">("start")
   const [pay, setPay] = useState<"eur" | "coin">("eur")
   const [coinValue, setCoinValue] = useState(3.9)
   const [depositOn, setDepositOn] = useState(false)
@@ -935,6 +959,8 @@ export default function Party() {
   // avond (bewaard op het eerste rondje), "perRound" = per rondje apart. Het bedrag
   // dat verdeeld wordt, is altijd de som van alle r.amount — één bron van waarheid.
   const [costMode, setCostMode] = useState<"total" | "perRound">("total")
+  // Niveau 1 (snel afrekenen in gewoon-rondjes): met hoeveel waren jullie? Totaal ÷ dit.
+  const [quickHeads, setQuickHeads] = useState<string>("")
 
   const [showAssignAll, setShowAssignAll] = useState(false)
   const [assignMode, setAssignMode] = useState<"drink" | "person">("person")
@@ -2058,6 +2084,31 @@ export default function Party() {
     setSettle(true)
     persistSettings({ settle: true })
     setView("final")
+  }
+
+  // Gewoon rondjes → afrekenen. Altijd bereikbaar, maar zonder bedragen valt er niets te
+  // verdelen: dan een melding met een duw naar het kosten-overzicht op de hub.
+  const goQuickSettle = () => {
+    if (paidCount === 0 && rounds.length === 0) { setNotice(L.nothingToSettle); return }
+    if (totalCost <= 0.005) {
+      setConfirmDlg({
+        msg: L.noAmountsYet,
+        yes: L.fillAmountsNow,
+        onYes: () => { setConfirmDlg(null); setView("hub") },
+        no: L.later,
+      })
+      return
+    }
+    setView("quickSettle")
+  }
+
+  // Van niveau 1 naar Fair Split (niveau 2): eerst personen + namen vragen, dan pas
+  // toewijzen. Voor nu schakelt dit naar Fair Split en de personen-setup; het simpele
+  // "hoeveel + namen"-scherm en het toewijzen bouwen we in de volgende stap.
+  const goToFairSplit = () => {
+    setSettle(true)
+    persistSettings({ settle: true })
+    setView("setup")
   }
 
   const applyBeginChoices = () => {
@@ -3900,7 +3951,7 @@ export default function Party() {
           <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", marginBottom: 4 }}>{L.settleNow}</div>
             <div style={{ fontSize: 12, color: "#4a6b57", lineHeight: 1.5, marginBottom: 11 }}>{L.settleNowWhy}</div>
-            <button style={{ ...S.btnP, width: "100%" }} onClick={switchToSettle}>{L.settleNowBtn}</button>
+            <button style={{ ...S.btnP, width: "100%" }} onClick={goQuickSettle}>{L.settleNowBtn}</button>
           </div>
         )}
         {settle && unassignedAllRounds > 0 && firstUnassignedIdx >= 0 && (
@@ -4099,6 +4150,53 @@ export default function Party() {
             </div>
           )}
         </>}
+      </div></div>
+    )
+  }
+
+  // ── SNEL AFREKENEN (niveau 1, gewoon rondjes) ────────────────────────────────
+  // Toont het totaal en deelt het gelijk door "met hoeveel waren jullie?". Wie het
+  // preciezer wil — wie meer dronk betaalt meer — schakelt hier over naar Fair Split.
+  if (view === "quickSettle") {
+    const heads = Math.max(0, parseInt(quickHeads || "0", 10) || 0)
+    const perHead = heads > 0 ? totalCost / heads : 0
+    return (
+      <div style={S.page}><div style={S.wrap}>
+        <Header />
+        {renderDialogs()}
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
+          <h3 style={{ ...S.h3, margin: 0 }}>{L.quickSettleTitle}</h3>
+          <button style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "7px 12px" }} onClick={() => setView("hub")}>{L.back}</button>
+        </div>
+
+        {/* Het totaal dat verdeeld wordt. */}
+        <div style={{ ...S.card, textAlign: "center", background: "rgba(240,165,0,0.06)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: "#8a7d55", marginBottom: 4 }}>{L.quickTotalLabel}</div>
+          <div style={{ fontSize: 30, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</div>
+        </div>
+
+        {/* Met hoeveel waren jullie? Totaal ÷ dit = ieders deel. */}
+        <div style={{ ...S.card }}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: perHead > 0 ? 12 : 0 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#4a3f1e" }}>{L.quickHeadsLabel}</span>
+            <input style={{ ...S.input, width: 70, fontSize: 17, fontWeight: 800, textAlign: "center" }} type="text" inputMode="numeric" placeholder="0"
+              value={quickHeads} onChange={(e) => setQuickHeads(e.target.value.replace(/[^0-9]/g, ""))} />
+          </div>
+          {perHead > 0 && (
+            <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 12, textAlign: "center" }}>
+              <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 3 }}>{L.quickPerHead}</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: "#1f8a4c" }}>{euro(perHead)}</div>
+              <div style={{ fontSize: 11.5, color: "#b3a988", marginTop: 4 }}>{L.quickPerHeadNote(heads)}</div>
+            </div>
+          )}
+        </div>
+
+        {/* De brug naar Fair Split — wie het eerlijk wil, niet gelijk. */}
+        <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: "#1f6b3a", marginBottom: 4 }}>{L.notFairSplitYet}</div>
+          <div style={{ fontSize: 12, color: "#4a6b57", lineHeight: 1.5, marginBottom: 11 }}>{L.notFairSplitWhy}</div>
+          <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={goToFairSplit}>{L.switchToFairBtn}</button>
+        </div>
       </div></div>
     )
   }
