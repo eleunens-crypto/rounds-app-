@@ -145,7 +145,8 @@ type Anon = Record<string, number>
 // Een rondje leeft nu in de databank. id/seq/status komen daarvandaan; de rest is
 // wat de app al kende. status: open = er wordt besteld, pending = besteld maar niet
 // betaald, closed = betaald.
-type Round = { id: string; seq: number; status: "open" | "pending" | "closed"; orders: Assign; anon: Anon; payers: Record<string, number>; amount: number; potPart: number; gaveBack: Record<string, number>; members: string[]; startedBy: string | null }
+type Proposal = { active?: boolean; by?: string; answers?: Record<string, "same" | "different"> }
+type Round = { id: string; seq: number; status: "open" | "pending" | "closed"; orders: Assign; anon: Anon; payers: Record<string, number>; amount: number; potPart: number; gaveBack: Record<string, number>; members: string[]; startedBy: string | null; proposal: Proposal }
 
 const euro = (v: number) => "€" + v.toFixed(2).replace(".", ",")
 
@@ -390,7 +391,16 @@ const T = {
     roundsOverview: "📋 Rondjesoverzicht",
     overview: "📋 Overzicht",
     newRound: "➕ Nieuw rondje",
-    repeatRound: "🔁 Zelfde rondje opnieuw",
+    repeatRound: "🔁 Zelfde rondje opnieuw (aanpasbaar)",
+    askGroupRepeat: "🗳️ Vraag de groep: weer hetzelfde?",
+    proposalTitle: "🗳️ Weer hetzelfde rondje?",
+    proposalWaiting: "Iedereen antwoordt op zijn scherm. Jij sluit af wanneer je wil.",
+    ansSame: "✅ hetzelfde",
+    ansDiff: "🔄 iets anders",
+    ansWaiting: "⏳ nog niet",
+    closeProposalBtn: (n: number) => `Afsluiten · ${n} ${n === 1 ? "doet" : "doen"} mee`,
+    noOrderFor: (names: string) => `Geen bestellingen voor ${names}`,
+    proposalNobody: "Nog niemand antwoordde. Toch afsluiten?",
     editOrderBtn: "✏️ Bestelling wijzigen",
     noRoundsDone: "Nog geen afgeronde rondjes",
     noRoundsHint: "Zodra een rondje bevestigd én betaald is, verschijnt het hier — dan kan je het nog aanpassen.",
@@ -680,7 +690,16 @@ const T = {
     roundsOverview: "📋 Aperçu des tournées",
     overview: "📋 Aperçu",
     newRound: "➕ Nouvelle tournée",
-    repeatRound: "🔁 Refaire la même tournée",
+    repeatRound: "🔁 Refaire la même tournée (modifiable)",
+    askGroupRepeat: "🗳️ Demande au groupe : encore pareil ?",
+    proposalTitle: "🗳️ La même tournée ?",
+    proposalWaiting: "Chacun répond sur son écran. Tu clôtures quand tu veux.",
+    ansSame: "✅ pareil",
+    ansDiff: "🔄 autre chose",
+    ansWaiting: "⏳ pas encore",
+    closeProposalBtn: (n: number) => `Clôturer · ${n} ${n === 1 ? "participe" : "participent"}`,
+    noOrderFor: (names: string) => `Pas de commande pour ${names}`,
+    proposalNobody: "Personne n'a encore répondu. Clôturer quand même ?",
     editOrderBtn: "✏️ Modifier la commande",
     noRoundsDone: "Aucune tournée terminée",
     noRoundsHint: "Dès qu'une tournée est confirmée et payée, elle apparaît ici — tu peux encore la modifier.",
@@ -1258,7 +1277,7 @@ export default function PartyTest() {
     const [{ data: g }, { data: pp }, { data: rr }, { data: ii }, { data: pt }] = await Promise.all([
       supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices,settle").eq("id", gid).single(),
       supabase.from("party_people").select("id,seat,name,claimed_by,self_joined,settle_with").eq("group_id", gid).order("seat"),
-      supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back,members,started_by").eq("group_id", gid).order("seq"),
+      supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back,members,started_by,proposal").eq("group_id", gid).order("seq"),
       supabase.from("party_round_items").select("round_id,person_id,drink_key,qty").eq("group_id", gid),
       supabase.from("party_pot").select("id,seq,amounts,is_card,card_payers").eq("group_id", gid).order("seq"),
     ])
@@ -1308,6 +1327,7 @@ export default function PartyTest() {
       gaveBack: (r.gave_back ?? {}) as Record<string, number>,
       members: ((r.members ?? []) as string[]),
       startedBy: (r.started_by ?? null) as string | null,
+      proposal: ((r.proposal ?? {}) as Proposal),
     }))
 
     // Het OPEN rondje is de mand; de rest is historiek.
@@ -2062,6 +2082,77 @@ export default function PartyTest() {
   const cancelRound = () => setConfirmDlg({ msg: `Het volledige rondje ${roundNr} annuleren? Alle drankjes en bekers van dit rondje worden verwijderd. Dit kan niet ongedaan gemaakt worden.`, yes: L.yesCancel, onYes: () => { const remaining = rounds.length - 1; setRounds((rs) => rs.slice(0, -1)); setPaidConfirmed(false); setConfirmDlg(null); if (remaining > 0) { setOpenRound(remaining - 1); setView("hub") } else setView("order") } })
   const nextRound = () => { if (blockIfUnpaid()) return; setRoundNr((n) => n + 1); setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setRepeated(false); setView("order") }
   // Neemt de drankjes én de toewijzing van het laatste rondje over. Daarna nog gewoon aanpasbaar.
+  // Wie deed mee aan dit rondje? Wie het rondje niet meemaakte, betaalt niet mee.
+  // Oude rondjes zonder members vallen terug op de hele groep.
+  const roundMembers = (r: Round) => (r.members.length > 0 ? r.members : people.map((p) => p.id))
+
+  // ── "Zelfde rondje opnieuw" met inspraak ──────────────────────────────────
+  // Het voorstel leeft op het LAATSTE rondje (proposal jsonb). De haler start het,
+  // elke gast antwoordt op zijn eigen scherm, wie zwijgt krijgt niets. Alles loopt
+  // via realtime (blok 11/12), zodat elk toestel de stand live ziet.
+  const lastRound = rounds[rounds.length - 1] ?? null
+  const activeProposal = lastRound && lastRound.proposal?.active ? lastRound.proposal : null
+  const proposalRoundId = activeProposal ? lastRound!.id : null
+  // Wie deed mee aan het rondje dat we herhalen? Dat zijn de mensen die mogen antwoorden.
+  const proposalPeople = lastRound ? people.filter((p) => roundMembers(lastRound).includes(p.id)) : []
+  // De haler (of admin) start een voorstel op basis van het laatste rondje.
+  const startProposal = async () => {
+    if (blockIfUnpaid()) return
+    if (!lastRound) { setNotice(L.nothingToRepeat); return }
+    const by = meId || (startedBy ?? null)
+    const { error } = await supabase.rpc("party_propose_repeat", { p_round: lastRound.id, p_by: by })
+    if (error) { setNotice("Voorstel starten mislukt: " + error.message); return }
+    if (groupId) loadParty(groupId)
+  }
+  // De haler sluit het voorstel af. Enkel wie "same" of "different" antwoordde, telt.
+  const closeProposal = async () => {
+    if (!proposalRoundId) return
+    const { error } = await supabase.rpc("party_close_proposal", { p_round: proposalRoundId })
+    if (error) { setNotice("Afsluiten mislukt: " + error.message); return }
+    if (groupId) loadParty(groupId)
+  }
+
+  // Het overzicht dat de HALER ziet zolang een voorstel loopt: wie antwoordde wat,
+  // en de afsluit-knop met de geruststellende regel over wie er niet bij staat.
+  const renderProposalHost = () => {
+    if (!activeProposal || !lastRound) return null
+    const answers = activeProposal.answers || {}
+    const meedoen = proposalPeople.filter((p) => answers[p.id] === "same" || answers[p.id] === "different")
+    const stil = proposalPeople.filter((p) => !answers[p.id])
+    return (
+      <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.5)" }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 3 }}>{L.proposalTitle}</div>
+        <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>{L.proposalWaiting}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+          {proposalPeople.map((p) => {
+            const a = answers[p.id]
+            const label = a === "same" ? L.ansSame : a === "different" ? L.ansDiff : L.ansWaiting
+            const kleur = a === "same" ? "#1f6b3a" : a === "different" ? "#8a5e0f" : "#b3a988"
+            const bg = a ? "#faf7ec" : "#fff"
+            return (
+              <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, background: bg, border: "1px solid rgba(120,95,20,0.12)" }}>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: "#4a3f1e" }}>{p.name}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: kleur }}>{label}</span>
+              </div>
+            )
+          })}
+        </div>
+        {/* De laatste blik vóór afsluiten: wie krijgt geen bestelling? Zo kan de haler
+            desgewenst nog even langs die mensen voor hij op de knop tikt. */}
+        {stil.length > 0 && (
+          <div style={{ fontSize: 11.5, color: "#8a5e0f", background: "rgba(240,165,0,0.1)", borderRadius: 10, padding: "8px 11px", marginBottom: 10, lineHeight: 1.45 }}>
+            {L.noOrderFor(stil.map((p) => p.name).join(", "))}
+          </div>
+        )}
+        <button style={{ ...S.btnP, width: "100%" }}
+          onClick={() => {
+            if (meedoen.length === 0) { setConfirmDlg({ msg: L.proposalNobody, yes: L.startAnyway, onYes: () => { setConfirmDlg(null); closeProposal() }, no: L.startWait }); return }
+            closeProposal()
+          }}>{L.closeProposalBtn(meedoen.length)}</button>
+      </div>
+    )
+  }
+
   const repeatRound = () => {
     if (blockIfUnpaid()) return
     const last = rounds[rounds.length - 1]
@@ -2094,10 +2185,6 @@ export default function PartyTest() {
 
   // Wie was er TOEN bij? Onbekende drankjes worden gedeeld over de mensen die aan dít
   // rondje deelnamen — niet over het huidige aantal. Anders betaalt een laatkomer mee
-  // voor rondjes die hij nooit meemaakte. Oude rondjes zonder members vallen terug op
-  // de hele groep (dat is wat de migratie invulde).
-  const roundMembers = (r: Round) => (r.members.length > 0 ? r.members : people.map((p) => p.id))
-
   const personRoundShare = (r: Round, pid: string) => {
     const leden = roundMembers(r)
     // Zat deze persoon niet in dit rondje? Dan draagt hij er niets aan bij.
@@ -3736,10 +3823,13 @@ export default function PartyTest() {
             <button style={{ ...S.btn, flex: 1 }} onClick={goFinal}>{L.settleBtn}</button>
             <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (unfinishedRound) resumeRound(); else nextRound() }}>{unfinishedRound ? L.continueRound(roundNr) : "➕ Nieuw rondje"}</button>
           </div>
-          {!unfinishedRound && paidCount > 0 && (
+          {!unfinishedRound && paidCount > 0 && activeProposal ? (
+            <div style={{ marginTop: 10 }}>{renderProposalHost()}</div>
+          ) : !unfinishedRound && paidCount > 0 && (
             <div style={{ marginTop: 10 }}>
               <button style={{ width: "100%", border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 14, padding: "13px 6px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }} onClick={repeatRound}>{L.repeatRound}</button>
               <div style={{ fontSize: 11, color: "#b3a988", textAlign: "center", marginTop: 6 }}>daarna nog aanpasbaar</div>
+              <button style={{ width: "100%", marginTop: 8, border: "1.5px solid rgba(240,165,0,0.6)", background: "#fff", color: "#8a5e0f", borderRadius: 14, padding: "12px 6px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }} onClick={startProposal}>{L.askGroupRepeat}</button>
             </div>
           )}
         </>}
