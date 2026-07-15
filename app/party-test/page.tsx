@@ -260,8 +260,15 @@ const T = {
     tagline: "Rondjes en splitten zonder gedoe!",
     autoName: () => { const d = new Date(); const m = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"]; return `Rondje ${d.getDate()} ${m[d.getMonth()]}` },
     startNow: "Beginnen",
+    groupNameHint: "NAAM VAN JE GROEP",
+    tapToChange: "tik om te wijzigen",
+    peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "persoon" : "personen"}`,
+    peopleIntro: (n: number) => `Jij bent erbij. De ${n} ${n === 1 ? "andere scant" : "anderen scannen"} de QR en vult zelf zijn naam in.`,
+    waitingSeats: (names: string) => `${names} — wachten op scan…`,
+    noPhoneAdd: "Iemand zonder telefoon?",
+    addSelf: "+ zelf toevoegen",
+    yourSeat: "Jij",
     groupNameEdit: "Naam van deze groep",
-    renameLater: "Begin meteen — of tik de naam aan om hem te wijzigen. Kan altijd nog.",
     groupNamePh: "Typ je groepsnaam",
     starting: "Bezig…",
     savedGroups: "📁 Opgeslagen groepen",
@@ -273,17 +280,11 @@ const T = {
     peopleCount: "👥 Aantal personen",
     namesOptional: "Namen zijn optioneel — pas ze aan wanneer je wil.",
     peopleTitle: "Personen",
-    tapToRename: "tik op een naam om te hernoemen",
-    noPeopleYet: "Nog geen personen",
     addPersonFirst: "Voeg eerst minstens één persoon toe.",
     whichAreYou: "Welke ben jij?",
-    statusJoined: "📱 aangemeld",
-    statusYou: "⭐ jij",
-    statusNot: "nog niet aangemeld",
     assignAnyone: "Je kan aan iedereen toewijzen — ook wie zelf scande.",
     pickYourName: "Tik je naam aan — de rest duid je zelf aan tijdens het bestellen.",
     freeUp: "vrijgeven",
-    seatLegend: "📱 = meldde zich zelf aan via de link · ⭐ = dat ben jij. Wie niet scant, duid je gewoon zelf aan tijdens het bestellen.",
     personHasDrinks: (n: string) => `${n} heeft al drankjes in een rondje en kan niet verwijderd worden. Verwijder eerst die drankjes.`,
     thisPerson: "Deze persoon",
 
@@ -549,8 +550,15 @@ const T = {
     tagline: "Les tournées et le partage, sans prise de tête !",
     autoName: () => { const d = new Date(); const m = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"]; return `Tournée ${d.getDate()} ${m[d.getMonth()]}` },
     startNow: "Commencer",
+    groupNameHint: "NOM DE TON GROUPE",
+    tapToChange: "touche pour changer",
+    peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "personne" : "personnes"}`,
+    peopleIntro: (n: number) => `Tu es là. ${n === 1 ? "L'autre scanne" : `Les ${n} autres scannent`} le QR et met son nom.`,
+    waitingSeats: (names: string) => `${names} — en attente de scan…`,
+    noPhoneAdd: "Quelqu'un sans téléphone ?",
+    addSelf: "+ ajouter moi-même",
+    yourSeat: "Toi",
     groupNameEdit: "Nom de ce groupe",
-    renameLater: "Commence tout de suite — ou touche le nom pour le changer. Modifiable plus tard.",
     groupNamePh: "Tape le nom de ton groupe",
     starting: "En cours…",
     savedGroups: "📁 Groupes enregistrés",
@@ -562,17 +570,11 @@ const T = {
     peopleCount: "👥 Nombre de personnes",
     namesOptional: "Les noms sont facultatifs — modifie-les quand tu veux.",
     peopleTitle: "Personnes",
-    tapToRename: "touche un nom pour le modifier",
-    noPeopleYet: "Aucune personne",
     addPersonFirst: "Ajoute d'abord au moins une personne.",
     whichAreYou: "Lequel es-tu ?",
-    statusJoined: "📱 inscrit",
-    statusYou: "⭐ toi",
-    statusNot: "pas encore inscrit",
     assignAnyone: "Tu peux attribuer à tout le monde — même à ceux qui ont scanné.",
     pickYourName: "Touche ton nom — le reste, tu le coches toi-même en commandant.",
     freeUp: "libérer",
-    seatLegend: "📱 = inscrit via le lien · ⭐ = c'est toi. Ceux qui ne scannent pas, tu les coches toi-même en commandant.",
     personHasDrinks: (n: string) => `${n} a déjà des boissons dans une tournée et ne peut pas être supprimé. Supprime d'abord ces boissons.`,
     thisPerson: "Cette personne",
 
@@ -2831,9 +2833,14 @@ export default function PartyTest() {
           <div style={{ ...S.row, gap: 8, marginTop: 12 }}><CheersIcon size={22} color="#4a3f1e" /><span style={{ fontSize: 15, color: "#4a3f1e", fontWeight: 700 }}>{L.tagline}</span></div>
         </div>
         <div style={{ ...S.card, padding: "20px 16px" }}>
-          <input value={groupName || L.autoName()} onChange={(e) => setGroupName(e.target.value)}
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "center", fontSize: 18, fontWeight: 800, marginBottom: 8, background: "#fdfaf2", padding: "15px 14px", borderRadius: 12 }} />
-          <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 16, lineHeight: 1.5, textAlign: "center" }}>{L.renameLater}</div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#8a7d55", marginBottom: 7, letterSpacing: "0.03em" }}>
+            {L.groupNameHint} <span style={{ fontWeight: 600, color: "#a89a6f", letterSpacing: 0 }}>· {L.tapToChange}</span>
+          </div>
+          <div style={{ position: "relative", marginBottom: 16 }}>
+            <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder={L.autoName()}
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 17, fontWeight: 800, background: "#fdfaf2", padding: "15px 40px 15px 14px", borderRadius: 12, border: "1.5px solid #e08a00" }} />
+            <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#c4b896", pointerEvents: "none" }}>✏️</span>
+          </div>
           <button style={{ ...S.btnP, width: "100%" }} onClick={() => createGroup(L.autoName())}>{busy ? L.starting : L.startNow}</button>
         </div>
         <div style={{ ...S.card, opacity: 0.6 }}>
@@ -2944,19 +2951,17 @@ export default function PartyTest() {
         </div>
 
         <div style={S.card}>
-          <div style={{ marginBottom: 10 }}>
-            <span style={{ fontSize: 14, fontWeight: 800 }}>{L.peopleTitle}</span> <span style={{ fontSize: 11.5, color: "#8a7d55", fontStyle: "italic" }}>{L.tapToRename}</span>
-          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", marginBottom: 3 }}>{L.peopleHeader(people.length)}</div>
+          <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 13, lineHeight: 1.5 }}>{L.peopleIntro(Math.max(0, people.length - 1))}</div>
 
-          {/* Wie ben JIJ? Eén keer vragen, bovenaan. Zolang je nog nergens zit, toon je
-              de namen als keuze. Zodra je gekozen hebt, verdwijnt dit blok — dan is de
-              lijst eronder puur voor het hernoemen. */}
+          {/* Wie ben JIJ? Alleen relevant als de admin nog nergens zit — normaal is hij
+              al Gast 1, dus dit blijft verborgen. Vangnet voor het randgeval. */}
           {!meId && people.length > 0 && (
             <div style={{ background: "#fff8e8", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 12, padding: "11px 12px", marginBottom: 12 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f", marginBottom: 3 }}>⭐ {L.whichAreYou}</div>
               <div style={{ fontSize: 11, color: "#8a7d55", marginBottom: 9, lineHeight: 1.45 }}>{L.pickYourName}</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {people.filter((p) => !p.claimedBy).map((p, i) => {
+                {people.filter((p) => !p.claimedBy).map((p) => {
                   const idx = people.indexOf(p)
                   return (
                     <button key={p.id} disabled={busy} onClick={() => claimSeat(p.id, isGuestDefault(p.name) ? `Gast ${idx + 1}` : p.name)}
@@ -2969,27 +2974,35 @@ export default function PartyTest() {
             </div>
           )}
 
-          {people.length === 0 ? (
-            <div style={{ textAlign: "center", color: "#b3a988", fontSize: 13, padding: "14px 0" }}>{L.noPeopleYet}</div>
-          ) : (
-            <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(148px, 1fr))", gap: 8 }}>
-              {people.map((p, idx) => {
-                const ikZelf = p.claimedBy === me.current
-                const bezet = !!p.claimedBy && !ikZelf
-                return (
-                  <div key={p.id} style={{ position: "relative" }}>
-                    {/* De admin kan ALTIJD de naam aanpassen — ook nadat een gast de plaats
-                        claimde. Iemand tikt zich verkeerd in, en dan moet je dat kunnen rechtzetten. */}
-                    <input value={isGuestDefault(p.name) ? "" : p.name}
-                      placeholder={isGuestDefault(p.name) ? p.name : `Gast ${idx + 1}`}
-                      onChange={(e) => renamePerson(p.id, e.target.value === "" ? `Gast ${idx + 1}` : e.target.value)}
-                      style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "7px 9px", fontSize: 13, textAlign: "left" }} />
-                    <div style={{ ...S.row, justifyContent: "space-between", marginTop: 4, gap: 4 }}>
-                      <span style={{ fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
-                        color: ikZelf ? "#1f6b3a" : p.claimedBy ? "#8a5e0f" : "#b3a988" }}>
-                        {ikZelf ? L.statusYou : p.claimedBy ? L.statusJoined : L.statusNot}
-                      </span>
+          {(() => {
+            const mijnPlaats = people.find((p) => p.id === meId)
+            // Iedereen behalve ikzelf: geclaimd (echte naam) of nog wachtend op scan.
+            const anderen = people.filter((p) => p.id !== meId)
+            const geclaimd = anderen.filter((p) => p.claimedBy)
+            const wachtend = anderen.filter((p) => !p.claimedBy)
+            const mijnIdx = mijnPlaats ? people.indexOf(mijnPlaats) : -1
+            return (
+              <>
+                {/* JOUW plaats — de enige die de admin standaard invult. */}
+                {mijnPlaats && (
+                  <div style={{ background: "#faf7ec", borderRadius: 10, padding: "10px 11px", marginBottom: geclaimd.length || wachtend.length ? 8 : 0, border: "1px solid rgba(31,138,76,0.25)" }}>
+                    <div style={{ ...S.row, gap: 8 }}>
+                      <span style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(31,138,76,0.15)", color: "#1f6b3a", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>⭐</span>
+                      <input value={isGuestDefault(mijnPlaats.name) ? "" : mijnPlaats.name}
+                        placeholder={L.yourSeat}
+                        onChange={(e) => renamePerson(mijnPlaats.id, e.target.value === "" ? `Gast ${mijnIdx + 1}` : e.target.value)}
+                        style={{ ...S.input, flex: 1, minWidth: 0, padding: "7px 9px", fontSize: 14, fontWeight: 800, textAlign: "left", background: "#fff" }} />
+                      <span style={{ fontSize: 10.5, color: "#8a5e0f", background: "#f3e4c4", padding: "3px 9px", borderRadius: 10, fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0 }}>✏️ {L.nameLabel}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Wie al scande — echte namen, compact. */}
+                {geclaimd.map((p) => {
+                  const bezet = true
+                  return (
+                    <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: "#faf7ec", border: "1px solid rgba(120,95,20,0.1)" }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 700, color: "#4a3f1e" }}>📱 {p.name}</span>
                       {bezet && (
                         <button onClick={() => releaseSeat(p.id)}
                           style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)", fontSize: 10.5, padding: "3px 8px" }}>
@@ -2997,15 +3010,25 @@ export default function PartyTest() {
                         </button>
                       )}
                     </div>
+                  )
+                })}
+
+                {/* De rest samengevat — géén zes lege velden, dus geen reflex om alles in
+                    te vullen. Ze wachten op de scan. */}
+                {wachtend.length > 0 && (
+                  <div style={{ ...S.row, justifyContent: "space-between", padding: "9px 11px", borderRadius: 10, background: "#fff", border: "1px dashed rgba(120,95,20,0.25)" }}>
+                    <span style={{ fontSize: 12, color: "#a89a6f" }}>{L.waitingSeats(wachtend.map((p) => people.indexOf(p) + 1).join(" · "))}</span>
                   </div>
-                )
-              })}
-            </div>
-            <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 10, lineHeight: 1.5 }}>
-              {L.seatLegend}
-            </div>
-            </>
-          )}
+                )}
+
+                {/* De uitzondering: iemand zonder telefoon. Bewust een aparte tik. */}
+                <div style={{ borderTop: "1px solid rgba(120,95,20,0.1)", marginTop: 12, paddingTop: 11, textAlign: "center" }}>
+                  <span style={{ fontSize: 11, color: "#8a7d55" }}>{L.noPhoneAdd} </span>
+                  <span onClick={addPerson} style={{ fontSize: 11.5, color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{L.addSelf}</span>
+                </div>
+              </>
+            )
+          })()}
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", marginTop: 24, marginBottom: 4 }}>
