@@ -253,9 +253,11 @@ const T = {
 
     // ── start & setup
     tagline: "Rondjes en splitten zonder gedoe!",
-    groupNameLabel: "Groepsnaam",
+    autoName: () => { const d = new Date(); const m = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"]; return `Rondje ${d.getDate()} ${m[d.getMonth()]}` },
+    startNow: "Beginnen",
+    groupNameEdit: "Naam van deze groep",
+    renameLater: "Begin meteen — of tik de naam aan om hem te wijzigen. Kan altijd nog.",
     groupNamePh: "Typ je groepsnaam",
-    startBtn: "Starten",
     starting: "Bezig…",
     savedGroups: "📁 Opgeslagen groepen",
     savedLater: "later beschikbaar",
@@ -534,9 +536,11 @@ const T = {
 
     // ── start & setup
     tagline: "Les tournées et le partage, sans prise de tête !",
-    groupNameLabel: "Nom du groupe",
+    autoName: () => { const d = new Date(); const m = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"]; return `Tournée ${d.getDate()} ${m[d.getMonth()]}` },
+    startNow: "Commencer",
+    groupNameEdit: "Nom de ce groupe",
+    renameLater: "Commence tout de suite — ou touche le nom pour le changer. Modifiable plus tard.",
     groupNamePh: "Tape le nom de ton groupe",
-    startBtn: "Démarrer",
     starting: "En cours…",
     savedGroups: "📁 Groupes enregistrés",
     savedLater: "bientôt disponible",
@@ -1402,23 +1406,31 @@ export default function PartyTest() {
   }, [groupId, loadParty])
 
   // ── Groep aanmaken (admin) ──────────────────────────────────────────────────
-  const createGroup = async () => {
-    if (!groupName.trim()) { setNotice(L.nameGroupFirst); return }
+  const createGroup = async (fallbackNaam?: string) => {
+    const naam = (groupName.trim() || fallbackNaam || "").trim()
+    if (!naam) { setNotice(L.nameGroupFirst); return }
     if (busy) return
     setBusy(true)
     // Botsende codes zijn zeldzaam, maar niet onmogelijk (unique index vangt ze).
     for (let poging = 0; poging < 5; poging++) {
       const code = makeCode()
       const { data, error } = await supabase.from("party_groups")
-        .insert([{ name: groupName.trim(), invite_code: code, owner_id: me.current }])
+        .insert([{ name: naam, invite_code: code, owner_id: me.current }])
         .select("id,invite_code").single()
       if (!error && data) {
         localStorage.setItem("rundo_party_group", data.id)
         setGroupId(data.id)
         setInviteCode(data.invite_code)
         setOwnerDevice(me.current)
+        // De admin maakte de groep en zit dus aan tafel: meteen Gast 1, geclaimd door
+        // dit toestel. Zo hoeft de admin zichzelf niet meer aan te duiden ("welke ben
+        // jij?" verdwijnt voor hem), en telt hij gewoon mee als persoon. Drinkt hij
+        // niets, dan staat hij op nul — net als ieder ander die niets nam.
+        const { data: pid } = await supabase.rpc("party_add_person", { p_group: data.id, p_name: "" })
+        if (pid) await supabase.from("party_people").update({ claimed_by: me.current }).eq("id", pid as string)
         setBusy(false)
         setView("setup")
+        loadParty(data.id)
         return
       }
       if (error && !/duplicate|unique/i.test(error.message)) {
@@ -2768,9 +2780,10 @@ export default function PartyTest() {
           <div style={{ ...S.row, gap: 8, marginTop: 12 }}><CheersIcon size={22} color="#4a3f1e" /><span style={{ fontSize: 15, color: "#4a3f1e", fontWeight: 700 }}>{L.tagline}</span></div>
         </div>
         <div style={{ ...S.card, padding: "20px 16px" }}>
-          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 11 }}>{L.groupNameLabel}</div>
-          <input style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, marginBottom: 18, background: "#fdfaf2", padding: "15px 14px", borderRadius: 12 }} type="text" placeholder={L.groupNamePh} value={groupName} onChange={(e) => setGroupName(e.target.value)} />
-          <button style={{ ...S.btnP, width: "100%", opacity: groupName.trim() ? 1 : 0.5 }} onClick={createGroup}>{busy ? L.starting : L.startBtn}</button>
+          <input value={groupName || L.autoName()} onChange={(e) => setGroupName(e.target.value)}
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "center", fontSize: 18, fontWeight: 800, marginBottom: 8, background: "#fdfaf2", padding: "15px 14px", borderRadius: 12 }} />
+          <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 16, lineHeight: 1.5, textAlign: "center" }}>{L.renameLater}</div>
+          <button style={{ ...S.btnP, width: "100%" }} onClick={() => createGroup(L.autoName())}>{busy ? L.starting : L.startNow}</button>
         </div>
         <div style={{ ...S.card, opacity: 0.6 }}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
@@ -2883,6 +2896,11 @@ export default function PartyTest() {
             </div>
           </div>
         )}
+        <div style={S.card}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{L.groupNameEdit}</div>
+          <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()}
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 15, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: "#fdfaf2" }} />
+        </div>
         <div style={S.card}>
           <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 14 }}>{L.peopleCount}</h3>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
