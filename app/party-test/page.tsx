@@ -200,7 +200,10 @@ const T = {
     fillNameSeat: "Vul je naam in en neem een plaats.",
     yourName: "Je naam",
     seat: (n: number) => `Plaats ${n}`,
-    allSeatsTaken: "Alle plaatsen zijn ingenomen. Vraag de organisator om er een bij te zetten.",
+    allSeatsTaken: "Alle plaatsen zijn ingenomen — maar je kan er zelf een bijzetten.",
+    joinAddSeat: "Erbij komen",
+    someoneJoined: (n: string) => `${n} is erbij gekomen`,
+    notRight: "klopt niet",
     alreadyJoined: "Al aangemeld",
     fillNameFirst: "Vul eerst je naam in.",
     seatTaken: "Die plaats is net door iemand anders genomen. Kies een andere.",
@@ -469,7 +472,10 @@ const T = {
     fillNameSeat: "Entre ton nom et prends une place.",
     yourName: "Ton nom",
     seat: (n: number) => `Place ${n}`,
-    allSeatsTaken: "Toutes les places sont prises. Demande à l'organisateur d'en ajouter une.",
+    allSeatsTaken: "Toutes les places sont prises — mais tu peux en ajouter une.",
+    joinAddSeat: "Me joindre",
+    someoneJoined: (n: string) => `${n} a rejoint`,
+    notRight: "pas correct",
     alreadyJoined: "Déjà inscrits",
     fillNameFirst: "Entre d'abord ton nom.",
     seatTaken: "Cette place vient d'être prise. Choisis-en une autre.",
@@ -859,6 +865,10 @@ export default function PartyTest() {
   const [paidConfirmed, setPaidConfirmed] = useState(false)
   const [confirmDlg, setConfirmDlg] = useState<{ msg: string; yes: string; onYes: () => void; onNo?: () => void; no?: string; variant?: "danger" } | null>(null)
   const [notice, setNotice] = useState<string>("")
+  // Zachte melding wanneer iemand nieuw aansluit. Vervaagt vanzelf; alleen de admin
+  // krijgt een knop om het terug te draaien (voor als een vreemde de link kreeg).
+  const [newcomer, setNewcomer] = useState<{ id: string; name: string } | null>(null)
+  const knownPeople = useRef<Set<string>>(new Set())
 
   // edit-in-hub
   const [editOpen, setEditOpen] = useState(false)
@@ -1099,6 +1109,29 @@ export default function PartyTest() {
     if (error) setNotice("Naam opslaan mislukt: " + error.message)
   }
   const personHasDrinks = (pid: string) => rounds.some((r) => Object.values(r.orders).some((o) => (o?.[pid] ?? 0) > 0)) || Object.values(cart).some((o) => (o?.[pid] ?? 0) > 0)
+  // Merk op wanneer er iemand bijkomt die zichzelf aanmeldde. De eerste lading (bij
+  // het laden van de groep) telt niet als "nieuw" — anders krijg je een melding voor
+  // iedereen die er al was.
+  const seededNewcomer = useRef(false)
+  useEffect(() => {
+    if (people.length === 0) return
+    if (!seededNewcomer.current) {
+      people.forEach((p) => knownPeople.current.add(p.id))
+      seededNewcomer.current = true
+      return
+    }
+    for (const p of people) {
+      if (!knownPeople.current.has(p.id)) {
+        knownPeople.current.add(p.id)
+        // Niet melden dat ik er zelf ben, en enkel wie zichzelf aanmeldde.
+        if (p.id !== meId && p.claimedBy) {
+          setNewcomer({ id: p.id, name: p.name })
+          setTimeout(() => setNewcomer((c) => (c && c.id === p.id ? null : c)), 6000)
+        }
+      }
+    }
+  }, [people, meId])
+
   const removePerson = (id: string) => { const pp = people.find((x) => x.id === id); if (personHasDrinks(id)) { setNotice(L.personHasDrinks(pp?.name || L.thisPerson)); return } supabase.from("party_people").delete().eq("id", id).then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message) }) }
   const removeLastPerson = () => { const last = people[people.length - 1]; if (!last) return; removePerson(last.id) }
 
@@ -1323,6 +1356,19 @@ export default function PartyTest() {
   }
 
   // Een plaats claimen: de gast (of de admin) zegt "dit ben ik".
+  // Laatkomer: groep is vol, dus we zetten in Postgres een plaats bij en claimen ze
+  // meteen (party_join_new_seat, onder slot). Daarna gedraagt de gast zich als elke
+  // andere aangemelde persoon.
+  const joinAsLatecomer = async (naam: string) => {
+    if (!groupId) return
+    if (!naam.trim()) { setNotice(L.fillNameFirst); return }
+    setBusy(true)
+    const { data, error } = await supabase.rpc("party_join_new_seat", { p_group: groupId, p_device: me.current, p_name: naam.trim() })
+    setBusy(false)
+    if (error || !data) { setNotice("Aansluiten mislukt: " + (error?.message ?? "")); return }
+    loadParty(groupId)
+  }
+
   const claimSeat = async (personId: string, naam: string) => {
     if (busy) return
     setBusy(true)
@@ -2233,6 +2279,19 @@ export default function PartyTest() {
           </div>
         </div>
       )}
+      {newcomer && (
+        <div style={{ position: "fixed", left: 0, right: 0, bottom: 18, display: "flex", justifyContent: "center", zIndex: 60, pointerEvents: "none" }}>
+          <div style={{ pointerEvents: "auto", display: "flex", alignItems: "center", gap: 10, background: "#1f6b3a", color: "#fff", borderRadius: 22, padding: "10px 16px", boxShadow: "0 6px 20px rgba(0,0,0,0.18)", maxWidth: "90%" }}>
+            <span style={{ fontSize: 13.5, fontWeight: 700 }}>👋 {L.someoneJoined(newcomer.name)}</span>
+            {isAdmin && (
+              <button onClick={() => { removePerson(newcomer.id); setNewcomer(null) }}
+                style={{ border: "1px solid rgba(255,255,255,0.5)", background: "transparent", color: "#fff", borderRadius: 12, padding: "3px 9px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>{L.notRight}</button>
+            )}
+            <button onClick={() => setNewcomer(null)}
+              style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: 16, cursor: "pointer", padding: "0 2px", lineHeight: 1 }}>✕</button>
+          </div>
+        </div>
+      )}
     </>
   )
   const Header = () => {
@@ -2299,9 +2358,16 @@ export default function PartyTest() {
           <h3 style={{ ...S.h3, marginTop: 0 }}>{L.whoAreYou}</h3>
 
           {vrij.length === 0 ? (
-            <div style={{ fontSize: 13, color: "#b3a988", textAlign: "center", padding: "16px 0", lineHeight: 1.5 }}>
-              {L.allSeatsTaken}
-            </div>
+            <>
+              <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.5 }}>{L.allSeatsTaken}</div>
+              <input id="latecomer-name" style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 16, marginBottom: 10 }}
+                placeholder={L.yourName} autoComplete="name" />
+              <button disabled={busy} style={{ ...S.btnP, width: "100%", opacity: busy ? 0.5 : 1 }}
+                onClick={() => {
+                  const el = document.getElementById("latecomer-name") as HTMLInputElement | null
+                  joinAsLatecomer((el?.value || "").trim())
+                }}>{L.joinAddSeat}</button>
+            </>
           ) : (
             <>
               {metNaam.length > 0 && (
