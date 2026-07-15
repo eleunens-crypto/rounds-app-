@@ -5,7 +5,7 @@
 // - Betaling bevestigen -> rondjes-hub (overzicht) -> nieuw rondje / afrekenen
 // - Bewerken (toewijzen + bekers) in het overzicht; app herberekent automatisch
 // - Home-knop op elk scherm (geen reset); coin-prijzen zichtbaar/aanpasbaar
-// Richtprijzen blijven ONZICHTBAAR bij bestellen. Volledig lokaal. app/party/page.tsx
+// Richtprijzen blijven ONZICHTBAAR bij bestellen. Volledig lokaal. app/party-test/page.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useMemo, useState, useEffect, useCallback, useRef } from "react"
@@ -299,7 +299,7 @@ const T = {
     joinInvite: (g: string, l: string) => `Doe mee met ${g} op Rundo Party: ${l}`,
 
     // ── startvragen
-    beforeWeStart: "Kies je aanpak",
+    beforeWeStart: "Voor we beginnen",
     settingsLater: "Pot, bekers of coins nodig? Die zet je aan via ⚙️ Groep — hoeft nu niet.",
     potStartTitle: "🧪 Samen een pot?",
     potStartWhy: "Iedereen legt vooraf iets in. Rondjes gaan er dan uit — niemand hoeft telkens te betalen.",
@@ -309,7 +309,7 @@ const T = {
     unassignedHub: (n: number) => `🔴 ${n} drankje${n === 1 ? "" : "s"} nog niet toegewezen`,
     unassignedHubWhy: "Zonder naam worden ze gelijk verdeeld — niet eerlijk. Wijs ze toe zodat elk betaalt wat hij dronk.",
     unassignedHubBtn: "Toewijzen",
-    quickStart: "Starten",
+    quickStart: "Snel starten",
     continueRound: (n: number) => `Ga verder met rondje ${n}`,
 
     // ── instellingen
@@ -464,50 +464,28 @@ const T = {
     drinkInUse: (n: string) => `${n} is al besteld en kan niet meer verwijderd worden.`,
 
     confirmTitle: "Even bevestigen",
-    imGoing: "🍻 Ik start een rondje",
+    imGoing: "🍻 Ik ga halen",
     walkTable: "👥 Rondje opnemen",
     walkIntro: "Ga de tafel rond. Tik per persoon aan wat die wil.",
     walkDone: "✓ Klaar",
     walkFor: (n: string) => `Wat wil ${n}?`,
-    whoGoes: "Klaar voor een rondje?",
-    xIsGoing: (n: string) => `🍻 ${n} haalt dit rondje`,
-    youAreGoing: "🍻 Jij haalt dit rondje",
-    iGoInstead: "ik neem het over",
-    notMeRunner: "geef door",
+    whoGoes: "Wie gaat er halen?",
+    xIsGoing: (n: string) => `${n} gaat halen`,
+    youAreGoing: "Jij gaat halen — tik aan wat je zelf wil",
+    iGoInstead: "Ik haal het toch",
+    notMeRunner: "Toch niet ik",
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
     modeTitle: "Rondjes & Fair Split",
     modeQuick: "Gewoon rondjes",
-    modeQuickSub: "Groepsbestellingen, pot leggen en handige bestellijst.",
-    modeFairSub: "Groepsbestellingen, pot leggen, bestellijst + verdeel eerlijk achteraf!",
-    modeFairLine: "Ieder betaalt zijn deel, betaal niet mee voor wat je niet dronk!",
+    modeQuickSub: "Rondjes, aantallen en bestellijst.",
+    modeFairSub: "Rondjes, bestellijst én verdeel eerlijk achteraf.",
+    modeFairLine: "Betaal niet mee voor wat je niet dronk.",
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     barList: "🍻 Aan de toog",
-    costTitle: "Wat kostte het?",
-    costModeTotal: "totaal",
-    costModePerRound: "per rondje",
-    costWholeNight: "Hele avond",
-    costRoundN: (n: number) => `Rondje ${n}`,
-    costTotalLabel: "Totaal",
     barHandOut: "Uitdelen",
     settleNow: "🧾 Toch afrekenen?",
     settleNowWhy: "We hielden alles bij. Eén tik en je weet wie wat schuldig is.",
     settleNowBtn: "Ja, verdeel het eerlijk",
-    noAmountsYet: "Je vulde nog geen bedragen in. Zonder bedragen valt er niets te verdelen — vul eerst in wat de rondjes kostten.",
-    fillAmountsNow: "Bedragen invullen",
-    later: "Later",
-    back: "Terug",
-    quickSettleTitle: "🧾 Afrekenen",
-    quickTotalLabel: "Totaal van alle rondjes",
-    quickHeadsLabel: "Met hoeveel waren jullie?",
-    quickPerHead: "Ieders deel",
-    quickPerHeadNote: (n: number) => `gelijk verdeeld over ${n} ${n === 1 ? "persoon" : "personen"}`,
-    notFairSplitYet: "Dit is een gelijke verdeling",
-    notFairSplitWhy: "Iedereen betaalt evenveel, ook wie minder dronk. Wil je dat wie meer dronk ook meer betaalt? Schakel over naar Fair Split.",
-    switchToFairBtn: "⚖️ Overschakelen naar Fair Split",
-    fairSetupTitle: "⚖️ Wie was erbij?",
-    fairSetupIntro: "Voeg de mensen toe. Tik een naam of laat 'm staan (Gast N). Daarna wijs je toe wie wat dronk.",
-    fairAddPerson: "+ Persoon toevoegen",
-    fairSetupDone: "Klaar — nu toewijzen",
     estimate: "schatting op richtprijzen",
     estimateWhy: "Niemand vulde bedragen in, dus rekenen we met de richtprijzen uit de lijst. Bij benadering, maar eerlijk.",
     voiceBtn: "🎤 Inspreken",
@@ -627,7 +605,7 @@ const T = {
     joinInvite: (g: string, l: string) => `Rejoins ${g} sur Rundo Party : ${l}`,
 
     // ── startvragen
-    beforeWeStart: "Choisis ta formule",
+    beforeWeStart: "Avant de commencer",
     settingsLater: "Besoin d'un pot, de gobelets ou de jetons ? Ça s'active via ⚙️ Groupe — pas maintenant.",
     potStartTitle: "🧪 Une cagnotte commune ?",
     potStartWhy: "Chacun met quelque chose d'avance. Les tournées sortent de là — personne ne paie à chaque fois.",
@@ -637,7 +615,7 @@ const T = {
     unassignedHub: (n: number) => `🔴 ${n} boisson${n === 1 ? "" : "s"} pas encore attribuée${n === 1 ? "" : "s"}`,
     unassignedHubWhy: "Sans nom, elles sont partagées également — pas équitable. Attribue-les pour que chacun paie ce qu'il a bu.",
     unassignedHubBtn: "Attribuer",
-    quickStart: "Démarrer",
+    quickStart: "Démarrage rapide",
     continueRound: (n: number) => `Continuer la tournée ${n}`,
 
     // ── instellingen
@@ -792,50 +770,28 @@ const T = {
     drinkInUse: (n: string) => `${n} a déjà été commandé et ne peut plus être supprimé.`,
 
     confirmTitle: "Confirmation",
-    imGoing: "🍻 Je lance une tournée",
+    imGoing: "🍻 J'y vais",
     walkTable: "👥 Faire le tour",
     walkIntro: "Fais le tour de la table. Coche pour chacun ce qu'il veut.",
     walkDone: "✓ Terminé",
     walkFor: (n: string) => `Que veut ${n} ?`,
-    whoGoes: "Prêt pour une tournée ?",
-    xIsGoing: (n: string) => `🍻 ${n} s'en occupe`,
-    youAreGoing: "🍻 Tu t'occupes de cette tournée",
-    iGoInstead: "je reprends",
-    notMeRunner: "passer",
+    whoGoes: "Qui va chercher ?",
+    xIsGoing: (n: string) => `${n} va chercher`,
+    youAreGoing: "Tu vas chercher — coche ce que tu veux toi-même",
+    iGoInstead: "J'y vais finalement",
+    notMeRunner: "Pas moi finalement",
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
     modeTitle: "Tournées & Fair Split",
     modeQuick: "Juste des tournées",
-    modeQuickSub: "Commandes de groupe, cagnotte et liste de commande pratique.",
-    modeFairSub: "Commandes de groupe, cagnotte, liste de commande + partage équitable !",
-    modeFairLine: "Chacun paie sa part, ne paie pas pour ce que tu n'as pas bu !",
+    modeQuickSub: "Tournées, nombres et liste de commande.",
+    modeFairSub: "Tournées, liste de commande et partage équitable.",
+    modeFairLine: "Ne paie pas pour ce que tu n'as pas bu.",
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     barList: "🍻 Au bar",
-    costTitle: "Combien \u00e7a a co\u00fbt\u00e9 ?",
-    costModeTotal: "total",
-    costModePerRound: "par tourn\u00e9e",
-    costWholeNight: "Toute la soir\u00e9e",
-    costRoundN: (n: number) => `Tourn\u00e9e ${n}`,
-    costTotalLabel: "Total",
     barHandOut: "Distribuer",
     settleNow: "🧾 Régler quand même ?",
     settleNowWhy: "On a tout noté. Un clic et tu sais qui doit quoi.",
     settleNowBtn: "Oui, répartis équitablement",
-    noAmountsYet: "Tu n'as pas encore entr\u00e9 de montants. Sans montants, rien \u00e0 partager — indique d'abord ce qu'ont co\u00fbt\u00e9 les tourn\u00e9es.",
-    fillAmountsNow: "Entrer les montants",
-    later: "Plus tard",
-    back: "Retour",
-    quickSettleTitle: "🧾 R\u00e9gler",
-    quickTotalLabel: "Total de toutes les tourn\u00e9es",
-    quickHeadsLabel: "Vous \u00e9tiez combien ?",
-    quickPerHead: "La part de chacun",
-    quickPerHeadNote: (n: number) => `partag\u00e9 \u00e9galement entre ${n} ${n === 1 ? "personne" : "personnes"}`,
-    notFairSplitYet: "C'est un partage \u00e9gal",
-    notFairSplitWhy: "Tout le monde paie pareil, m\u00eame ceux qui ont moins bu. Tu veux que ceux qui ont plus bu paient plus ? Passe au Fair Split.",
-    switchToFairBtn: "⚖️ Passer au Fair Split",
-    fairSetupTitle: "⚖️ Qui \u00e9tait l\u00e0 ?",
-    fairSetupIntro: "Ajoute les personnes. Tape un nom ou laisse-le (Invit\u00e9 N). Ensuite tu attribues qui a bu quoi.",
-    fairAddPerson: "+ Ajouter une personne",
-    fairSetupDone: "Termin\u00e9 — attribuer",
     estimate: "estimation sur prix indicatifs",
     estimateWhy: "Personne n'a entré de montants, donc on calcule avec les prix indicatifs de la liste. Approximatif, mais équitable.",
     voiceBtn: "🎤 Dicter",
@@ -851,10 +807,10 @@ const T = {
   },
 } as const
 
-export default function Party() {
+export default function PartyTest() {
   const [lang] = useLang()
   const L = T[(lang === "fr" ? "fr" : "nl") as "nl" | "fr"]
-  const [view, setView] = useState<"start" | "setup" | "settings" | "order" | "confirmed" | "hub" | "final" | "quickSettle" | "fairSetup">("start")
+  const [view, setView] = useState<"start" | "setup" | "settings" | "order" | "confirmed" | "hub" | "final">("start")
   const [pay, setPay] = useState<"eur" | "coin">("eur")
   const [coinValue, setCoinValue] = useState(3.9)
   const [depositOn, setDepositOn] = useState(false)
@@ -963,12 +919,6 @@ export default function Party() {
   const [allRoundsOpen, setAllRoundsOpen] = useState(false)
   const [repeated, setRepeated] = useState(false)
   const [hasSettled, setHasSettled] = useState(false)
-  // Gewoon rondjes: hoe geef je de bedragen in? "total" = één bedrag voor de hele
-  // avond (bewaard op het eerste rondje), "perRound" = per rondje apart. Het bedrag
-  // dat verdeeld wordt, is altijd de som van alle r.amount — één bron van waarheid.
-  const [costMode, setCostMode] = useState<"total" | "perRound">("total")
-  // Niveau 1 (snel afrekenen in gewoon-rondjes): met hoeveel waren jullie? Totaal ÷ dit.
-  const [quickHeads, setQuickHeads] = useState<string>("")
 
   const [showAssignAll, setShowAssignAll] = useState(false)
   const [assignMode, setAssignMode] = useState<"drink" | "person">("person")
@@ -1135,7 +1085,7 @@ export default function Party() {
   const renderRunnerBar = () => {
     const ikHaal = !!meId && startedBy === meId
     if (!openRoundId && !startedBy) {
-      // Nog geen rondje. Wie start, haalt — één handeling.
+      // Nog geen rondje: nodig iemand uit om te gaan halen.
       return (
         <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)", textAlign: "center" }}>
           <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 10 }}>{L.whoGoes}</div>
@@ -1153,20 +1103,15 @@ export default function Party() {
         </div>
       )
     }
-    if (startedBy) {
-      // Iemand anders haalt. Informatie — overnemen mag, maar rustig.
-      return (
-        <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
-          <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <span style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f" }}>{L.xIsGoing(runnerName())}</span>
-            <button style={{ ...S.btn, fontSize: 11.5, fontWeight: 700, padding: "6px 11px" }} onClick={takeOverRound}>{L.iGoInstead}</button>
-          </div>
+    // Iemand anders haalt.
+    return (
+      <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
+        <div style={{ ...S.row, justifyContent: "space-between" }}>
+          <span style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f" }}>🍻 {startedBy ? L.xIsGoing(runnerName()) : L.whoGoes}</span>
+          <button style={{ ...S.btn, fontSize: 11.5, fontWeight: 700, padding: "6px 11px" }} onClick={takeOverRound}>{L.iGoInstead}</button>
         </div>
-      )
-    }
-    // Er loopt een rondje, maar niemand claimde de haler-rol (bv. admin startte het).
-    // Geen verwarrende "wie haalt?"-vraag herhalen — gewoon niks tonen.
-    return null
+      </div>
+    )
   }
 
   // De optelling gebeurt in Postgres (party_bump), niet hier. Twee gasten die tegelijk
@@ -1522,7 +1467,7 @@ export default function Party() {
   }, [groupId, loadParty])
 
   // ── Groep aanmaken (admin) ──────────────────────────────────────────────────
-  const createGroup = async (fallbackNaam?: string, wilSettle: boolean = true) => {
+  const createGroup = async (fallbackNaam?: string) => {
     const naam = (groupName.trim() || fallbackNaam || "").trim()
     if (!naam) { setNotice(L.nameGroupFirst); return }
     if (busy) return
@@ -1531,7 +1476,7 @@ export default function Party() {
     for (let poging = 0; poging < 5; poging++) {
       const code = makeCode()
       const { data, error } = await supabase.from("party_groups")
-        .insert([{ name: naam, invite_code: code, owner_id: me.current, settle: wilSettle }])
+        .insert([{ name: naam, invite_code: code, owner_id: me.current }])
         .select("id,invite_code").single()
       if (!error && data) {
         localStorage.setItem("rundo_party_group", data.id)
@@ -1545,14 +1490,7 @@ export default function Party() {
         const { data: pid } = await supabase.rpc("party_add_person", { p_group: data.id, p_name: "" })
         if (pid) await supabase.from("party_people").update({ claimed_by: me.current }).eq("id", pid as string)
         setBusy(false)
-        // Gewoon rondjes heeft geen personen-setup nodig — meteen naar bestellen.
-        // Fair Split gaat wél eerst langs de setup (personen, QR).
-        if (!wilSettle) {
-          setActiveCat(catsPresent[0])
-          setView("order")
-        } else {
-          setView("setup")
-        }
+        setView("setup")
         loadParty(data.id)
         return
       }
@@ -1562,27 +1500,6 @@ export default function Party() {
     }
     setNotice(L.createFailed)
     setBusy(false)
-  }
-
-  // Nieuwe start-flow: op het startscherm kies je EERST de aanpak (Fair Split of gewoon
-  // rondjes) en de groepsnaam, en "Starten" doet allebei. De modus wordt vastgelegd,
-  // daarna maken we de groep aan. Zo is de moduskeuze de eerste beslissing, niet iets
-  // wat pas ná het aanmaken opduikt.
-  const startWithMode = async (fallbackNaam?: string) => {
-    if (bpSettle === null) return
-    setOnboardedOnce(true)
-    const wilSettle = bpSettle === true
-    if (!wilSettle) {
-      // Gewoon rondjes: geen pot/coins/bekers vooraf — die betekenen niets zonder
-      // afrekening en kunnen later optioneel aan via ⚙️.
-      setSettle(false)
-      setPotChosen(false); setDepositOn(false); setPay("eur")
-    } else {
-      setSettle(true)
-    }
-    // De modus gaat mee in de insert (createGroup), niet via persistSettings — de groep
-    // bestaat op dit punt nog niet, dus een aparte update zou nergens landen.
-    await createGroup(fallbackNaam, wilSettle)
   }
 
   // Een plaats vrijgeven. Nodig als iemand op de verkeerde naam tikte, of als de
@@ -2014,7 +1931,6 @@ export default function Party() {
             </div>
           ))}
         </div>
-        {settle && (
         <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 10, paddingTop: 9 }}>
           <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>{L.barHandOut}</div>
           <div style={{ fontSize: 12.5, color: "#6b5f3a", lineHeight: 1.6 }}>
@@ -2025,105 +1941,16 @@ export default function Party() {
             })}
           </div>
         </div>
-        )}
       </div>
     )
   }
 
-  // Gewoon rondjes: het kosten-overzicht op de hub. Je kiest tussen één totaalbedrag
-  // voor de hele avond, of per rondje apart. Wat je invult, bepaalt wat er straks te
-  // verdelen valt. Het bedrag leeft altijd in r.amount (som = totaal).
-  const totalCost = rounds.reduce((s, r) => s + (r.amount || 0), 0)
-  const setTotalCost = (v: number) => {
-    // In "total"-modus zetten we alles op het eerste rondje en de rest op 0, zodat de
-    // som klopt en er geen dubbele bedragen ontstaan. We schrijven elk rondje expliciet
-    // weg — het dirtyRound-mechanisme kan maar één rondje tegelijk markeren, dus dat
-    // volstaat hier niet voor meerdere rondjes.
-    if (rounds.length === 0) return
-    const nieuwe = rounds.map((r, i) => rRedistribute(r, i, false, [], i === 0 ? v : 0))
-    setRounds(nieuwe)
-    nieuwe.forEach((r) => persistRound(r))
-  }
-  const renderCostOverview = () => {
-    if (settle || rounds.length === 0) return null
-    return (
-      <div style={{ ...S.card }}>
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
-          <h3 style={{ ...S.h3, margin: 0, fontSize: 16 }}>{L.costTitle}</h3>
-          <div style={{ display: "inline-flex", border: "1px solid rgba(120,95,20,0.2)", borderRadius: 10, overflow: "hidden" }}>
-            <span onClick={() => setCostMode("total")} style={{ padding: "6px 11px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: costMode === "total" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: costMode === "total" ? "#fff" : "#8a7d55" }}>{L.costModeTotal}</span>
-            <span onClick={() => setCostMode("perRound")} style={{ padding: "6px 11px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: costMode === "perRound" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: costMode === "perRound" ? "#fff" : "#8a7d55" }}>{L.costModePerRound}</span>
-          </div>
-        </div>
-
-        {costMode === "total" ? (
-          <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#6b5f3a" }}>{L.costWholeNight}</span>
-            <div style={{ ...S.row, gap: 4 }}>
-              <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700 }}>€</span>
-              <input style={{ ...S.input, width: 84, fontSize: 15, fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00"
-                value={totalCost > 0 ? String(+totalCost.toFixed(2)).replace(".", ",") : ""}
-                onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); setTotalCost(parseFloat(v) || 0) }} />
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-            {rounds.map((r, i) => (
-              <div key={r.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0", borderTop: i > 0 ? "1px solid rgba(120,95,20,0.08)" : "none", paddingTop: i > 0 ? 9 : 5 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#6b5f3a" }}>{L.costRoundN(i + 1)}</span>
-                <div style={{ ...S.row, gap: 4 }}>
-                  <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                  <input style={{ ...S.input, width: 74 }} type="text" inputMode="decimal" placeholder="0,00"
-                    value={(r.amount || 0) > 0 ? String(r.amount).replace(".", ",") : ""}
-                    onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); rSetAmount(i, parseFloat(v) || 0) }} />
-                </div>
-              </div>
-            ))}
-            <div style={{ ...S.row, justifyContent: "space-between", borderTop: "1.5px solid rgba(120,95,20,0.18)", marginTop: 4, paddingTop: 9 }}>
-              <span style={{ fontSize: 13.5, fontWeight: 800, color: "#4a3f1e" }}>{L.costTotalLabel}</span>
-              <span style={{ fontSize: 16, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</span>
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
+  // Halverwege alsnog willen afrekenen. Kost niets: de rondjes en drankjes zijn in
+  // beide modi identiek, en de Fair Split valt terug op de richtprijzen.
   const switchToSettle = () => {
     setSettle(true)
     persistSettings({ settle: true })
     setView("final")
-  }
-
-  // Gewoon rondjes → afrekenen. Altijd bereikbaar, maar zonder bedragen valt er niets te
-  // verdelen: dan een melding met een duw naar het kosten-overzicht op de hub.
-  const goQuickSettle = () => {
-    if (paidCount === 0 && rounds.length === 0) { setNotice(L.nothingToSettle); return }
-    if (totalCost <= 0.005) {
-      setConfirmDlg({
-        msg: L.noAmountsYet,
-        yes: L.fillAmountsNow,
-        onYes: () => { setConfirmDlg(null); setView("hub") },
-        no: L.later,
-      })
-      return
-    }
-    setView("quickSettle")
-  }
-
-  // Van niveau 1 naar Fair Split (niveau 2): eerst snel personen + namen toevoegen op
-  // een kaal scherm, daarna wijs je de drankjes toe. settle gaat pas aan bij "klaar",
-  // zodat je nog terug kan zonder de modus te wijzigen.
-  const goToFairSplit = () => {
-    setView("fairSetup")
-  }
-  // "Klaar" op het fairSetup-scherm: nu is Fair Split echt actief. Naar de hub, waar je
-  // per rondje (of alles samen) de anonieme drankjes aan de namen toewijst.
-  const confirmFairSetup = async () => {
-    if (people.length === 0) { setNotice(L.addPersonFirst); return }
-    setSettle(true)
-    persistSettings({ settle: true })
-    setOpenRound(rounds.length - 1)
-    setView("hub")
   }
 
   const applyBeginChoices = () => {
@@ -2277,17 +2104,12 @@ export default function Party() {
   // Het voorstel leeft op het LAATSTE rondje (proposal jsonb). De haler start het,
   // elke gast antwoordt op zijn eigen scherm, wie zwijgt krijgt niets. Alles loopt
   // via realtime (blok 11/12), zodat elk toestel de stand live ziet.
-  // Het voorstel leeft op het rondje waar het gestart werd (meestal het laatste
-  // betaalde). Zodra een "iets anders"-gast bestelt, opent er een nieuw open rondje
-  // dat het laatste wordt — daarom zoeken we het voorstel expliciet op, niet blind
-  // op rounds[laatste].
-  const proposalRound = rounds.find((r) => r.proposal?.active) ?? null
   const lastRound = rounds[rounds.length - 1] ?? null
-  const activeProposal = proposalRound ? proposalRound.proposal : null
-  const proposalRoundId = proposalRound ? proposalRound.id : null
+  const activeProposal = lastRound && lastRound.proposal?.active ? lastRound.proposal : null
+  const proposalRoundId = activeProposal ? lastRound!.id : null
   const myAnswer = (activeProposal && meId) ? activeProposal.answers?.[meId] : undefined
   // Wie deed mee aan het rondje dat we herhalen? Dat zijn de mensen die mogen antwoorden.
-  const proposalPeople = proposalRound ? people.filter((p) => roundMembers(proposalRound).includes(p.id)) : []
+  const proposalPeople = lastRound ? people.filter((p) => roundMembers(lastRound).includes(p.id)) : []
   // De haler (of admin) start een voorstel op basis van het laatste rondje.
   const startProposal = async () => {
     if (blockIfUnpaid()) return
@@ -2304,44 +2126,18 @@ export default function Party() {
     if (error) { setNotice("Antwoord mislukt: " + error.message); return }
     if (groupId) loadParty(groupId)
   }
-  // De haler sluit het voorstel af. Nu pas ontstaat het nieuwe rondje echt:
-  //  - "hetzelfde" → we nemen zijn drankjes van het vorige rondje over
-  //  - "iets anders" → die bestelde intussen al zelf in het nieuwe rondje; niet aanraken
-  //  - "skip" of zwijgen → niets
-  // We verzekeren één open rondje (ensureRound hergebruikt het rondje dat een
-  // "iets anders"-gast misschien al opende) en bumpen de "hetzelfde"-drankjes erin.
+  // De haler sluit het voorstel af. Enkel wie "same" of "different" antwoordde, telt.
   const closeProposal = async () => {
-    if (!proposalRoundId || !proposalRound || !groupId) return
-    const answers = activeProposal?.answers || {}
-    const sameFolk = proposalPeople.filter((p) => answers[p.id] === "same")
-
-    const rid = await ensureRound(startedBy ?? null)
-    if (!rid) { setNotice("Rondje starten mislukt."); return }
-
-    // Voor elke "hetzelfde"-persoon zijn vorige drankjes overnemen in het nieuwe rondje.
-    for (const p of sameFolk) {
-      for (const d of drinks) {
-        const q = proposalRound.orders[d.id]?.[p.id] ?? 0
-        if (q > 0) {
-          const { error } = await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: p.id, p_drink: d.id, p_delta: q })
-          if (error) { setNotice("Overnemen mislukt: " + error.message); loadParty(groupId); return }
-        }
-      }
-    }
-
+    if (!proposalRoundId) return
     const { error } = await supabase.rpc("party_close_proposal", { p_round: proposalRoundId })
     if (error) { setNotice("Afsluiten mislukt: " + error.message); return }
-    // Naar het bestelscherm van het nieuwe rondje, zodat de haler het geheel ziet en
-    // desnoods nog bijstuurt vóór hij naar de toog gaat.
-    setActiveCat(catsPresent[0])
-    setView("order")
-    loadParty(groupId)
+    if (groupId) loadParty(groupId)
   }
 
   // Het overzicht dat de HALER ziet zolang een voorstel loopt: wie antwoordde wat,
   // en de afsluit-knop met de geruststellende regel over wie er niet bij staat.
   const renderProposalHost = () => {
-    if (!activeProposal || !proposalRound) return null
+    if (!activeProposal || !lastRound) return null
     const answers = activeProposal.answers || {}
     const meedoen = proposalPeople.filter((p) => answers[p.id] === "same" || answers[p.id] === "different")
     const stil = proposalPeople.filter((p) => !answers[p.id])
@@ -2382,11 +2178,11 @@ export default function Party() {
   // Het kaartje dat elke GAST ziet zolang een voorstel loopt. Drie keuzes; wie niks
   // kiest, zwijgt (en krijgt niets). "Iets anders" schakelt door naar het bestellen.
   const renderProposalGuest = () => {
-    if (!activeProposal || !proposalRound || !meId) return null
-    if (!roundMembers(proposalRound).includes(meId)) return null
+    if (!activeProposal || !lastRound || !meId) return null
+    if (!roundMembers(lastRound).includes(meId)) return null
     // Wat had ik vorige ronde? Toon dat, zodat "hetzelfde" concreet is.
     const mijnVorige = drinks
-      .map((d) => ({ d, n: proposalRound.orders[d.id]?.[meId] ?? 0 }))
+      .map((d) => ({ d, n: lastRound.orders[d.id]?.[meId] ?? 0 }))
       .filter((x) => x.n > 0)
     const gekozen = myAnswer
     return (
@@ -3083,7 +2879,7 @@ export default function Party() {
 
         {guestTab === "order" && (
         <>
-        {settle && renderRunnerBar()}
+        {renderRunnerBar()}
         {renderProposalGuest()}
         {/* Wat je al aantikte in dit rondje. Bovenaan, want dat is wat je wil zien. */}
         <div style={{ ...S.card, background: mijnAantal > 0 ? "rgba(31,138,76,0.06)" : "#fff" }}>
@@ -3109,12 +2905,6 @@ export default function Party() {
           )}
         </div>
 
-        <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", marginBottom: 9 }}>
-          {catsPresent.map((c) => (
-            <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}</span>
-          ))}
-        </div>
-
         <div style={{ position: "relative", marginBottom: 9 }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none" }}>🔍</span>
           <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)} placeholder={L.searchDrink}
@@ -3123,6 +2913,12 @@ export default function Party() {
             <button onClick={() => setDrinkSearch("")}
               style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 15, color: "#8a7d55", padding: 4 }}>✕</button>
           )}
+        </div>
+
+        <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", marginBottom: 8 }}>
+          {catsPresent.map((c) => (
+            <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}</span>
+          ))}
         </div>
 
         {!zoekt && (
@@ -3183,86 +2979,24 @@ export default function Party() {
       <div style={{ ...S.page, display: "flex", flexDirection: "column", justifyContent: "flex-start", padding: "0 0 40px" }}><div style={{ ...S.wrap, paddingTop: 26 }}>
         {renderDialogs()}
         <style>{`input::placeholder,textarea::placeholder{color:#c4b896;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 26 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 34 }}>
           <div style={{ ...S.row, gap: 13 }}>
             <RundoLogo size={64} />
             <div style={{ ...S.h1, fontSize: 34, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
           </div>
           <div style={{ ...S.row, gap: 8, marginTop: 12 }}><CheersIcon size={22} color="#4a3f1e" /><span style={{ fontSize: 15, color: "#4a3f1e", fontWeight: 700 }}>{L.tagline}</span></div>
         </div>
-
-        {/* Eerst de aanpak kiezen — dat bepaalt de hele avond. Daarna pas de naam. */}
-        <div style={{ ...S.card, padding: "18px 16px" }}>
-          <h3 style={{ ...S.h3, fontSize: 21, marginTop: 0, marginBottom: 16 }}>{L.beforeWeStart}</h3>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {/* Fair Split BOVEN — de voorkeur. Al geselecteerd bij binnenkomst. */}
-            <button onClick={() => setBpSettle(true)}
-              style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
-                       background: bpSettle === true ? "#fff8e8" : "#fff",
-                       boxShadow: bpSettle === true ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
-                       border: bpSettle === true ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
-              <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
-                <span style={{ fontSize: 20 }}>⚖️</span>
-                <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.modeTitle}</span>
-                {bpSettle === true && <span style={{ marginLeft: "auto", fontSize: 16, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
-              </div>
-              <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 13 }}>{L.modeFairSub}</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
-                {[["🍺", "🪙", "Tom"], ["🍷🍷", "🪙🪙🪙🪙", "Els"], ["🚫", "—", "Bart"], ["🍺🍺", "🪙🪙", "Jan"]].map(([drank, geld, naam], i) => (
-                  <div key={i}>
-                    <div style={{ fontSize: 18, height: 24, whiteSpace: "nowrap", letterSpacing: -3, opacity: drank === "🚫" ? 0.4 : 1 }}>{drank}</div>
-                    <div style={{ fontSize: 14, height: 22, marginTop: 5, whiteSpace: "nowrap", letterSpacing: -3, color: geld === "—" ? "#b3a988" : undefined }}>{geld}</div>
-                    <div style={{ fontSize: 11, marginTop: 4, color: naam === "Bart" ? "#b3a988" : "#8a7d55", fontWeight: 700 }}>{naam}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ fontSize: 11.5, color: "#4a3f1e", marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)", lineHeight: 1.5 }}>{L.modeFairLine}</div>
-            </button>
-
-            {/* Geruststelling, precies waar de twijfel ontstaat. */}
-            <div style={{ textAlign: "center", fontSize: 10.5, color: "#a89a6f", padding: "9px 0" }}>{L.modeSwitchLater}</div>
-
-            {/* Gewoon aantallen ONDER, met bestellijstje. */}
-            <button onClick={() => setBpSettle(false)}
-              style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
-                       background: bpSettle === false ? "#fff8e8" : "#fff",
-                       boxShadow: bpSettle === false ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
-                       border: bpSettle === false ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
-              <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
-                <span style={{ fontSize: 20 }}>🍺</span>
-                <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
-                {bpSettle === false && <span style={{ marginLeft: "auto", fontSize: 16, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
-              </div>
-              <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 11 }}>{L.modeQuickSub}</div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
-                <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
-                <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
-              </div>
-              {/* Bestellijstje: wat er aan de toog moet komen. */}
-              <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 10 }}>
-                <div style={{ fontSize: 10.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 Aan de toog</div>
-                <div style={{ fontSize: 13, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pils · 2× Cola · 1× Wijn</div>
-              </div>
-            </button>
+        <div style={{ ...S.card, padding: "20px 16px" }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#8a7d55", marginBottom: 7, letterSpacing: "0.03em" }}>
+            {L.groupNameHint} <span style={{ fontWeight: 600, color: "#a89a6f", letterSpacing: 0 }}>· {L.tapToChange}</span>
           </div>
-
-          {/* Groepsnaam, onder de keuze. Automatische naam staat al ingevuld. */}
-          <div style={{ marginTop: 18 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#8a7d55", marginBottom: 7, letterSpacing: "0.03em" }}>
-              {L.groupNameHint} <span style={{ fontWeight: 600, color: "#a89a6f", letterSpacing: 0 }}>· {L.tapToChange}</span>
-            </div>
-            <div style={{ position: "relative", marginBottom: 16 }}>
-              <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder={L.autoName()}
-                style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 17, fontWeight: 800, background: "#fdfaf2", padding: "15px 40px 15px 14px", borderRadius: 12, border: "1.5px solid #e08a00" }} />
-              <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#c4b896", pointerEvents: "none" }}>✏️</span>
-            </div>
-            <button style={{ ...S.btnP, width: "100%", opacity: bpSettle === null ? 0.45 : 1 }}
-              disabled={bpSettle === null}
-              onClick={() => startWithMode(L.autoName())}>{busy ? L.starting : L.startNow}</button>
+          <div style={{ position: "relative", marginBottom: 16 }}>
+            <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder={L.autoName()}
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 17, fontWeight: 800, background: "#fdfaf2", padding: "15px 40px 15px 14px", borderRadius: 12, border: "1.5px solid #e08a00" }} />
+            <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#c4b896", pointerEvents: "none" }}>✏️</span>
           </div>
+          <button style={{ ...S.btnP, width: "100%" }} onClick={() => createGroup(L.autoName())}>{busy ? L.starting : L.startNow}</button>
         </div>
-
         <div style={{ ...S.card, opacity: 0.6 }}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
             <span style={{ fontSize: 14, fontWeight: 700 }}>{L.savedGroups}</span>
@@ -3284,12 +3018,13 @@ export default function Party() {
         {beginPrompt && (
           <div style={{ ...S.overlay, zIndex: 65 }} onClick={() => setBeginPrompt(false)}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ ...S.h3, fontSize: 21, marginTop: 0, marginBottom: 16 }}>{L.beforeWeStart}</h3>
+              <h3 style={{ ...S.h3, fontSize: 18, marginTop: 0, marginBottom: 4 }}>{L.beforeWeStart}</h3>
 
               {/* De modus komt EERST — hij bepaalt of de rest nog relevant is. Bekers,
                   coins en pot bestaan alleen als je afrekent. Kies je "gewoon rondjes",
-                  dan is dit scherm hiermee klaar. De titel staat nu IN de Fair Split-kaart. */}
-              <div style={{ display: "flex", flexDirection: "column", marginTop: 6 }}>
+                  dan is dit scherm hiermee klaar. */}
+              <p style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e", marginBottom: 10 }}>{L.modeTitle}</p>
+              <div style={{ display: "flex", flexDirection: "column" }}>
                 {/* Fair Split BOVEN — de voorkeur. Al geselecteerd bij binnenkomst. */}
                 <button onClick={() => setBpSettle(true)}
                   style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
@@ -3298,7 +3033,7 @@ export default function Party() {
                            border: bpSettle === true ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
                   <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
                     <span style={{ fontSize: 20 }}>⚖️</span>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.modeTitle}</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>Fair Split</span>
                     {bpSettle === true && <span style={{ marginLeft: "auto", fontSize: 16, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
                   </div>
                   <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 13 }}>{L.modeFairSub}</div>
@@ -3615,22 +3350,15 @@ export default function Party() {
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>Ronde {roundNr} <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}>— {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>{repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}</h3>
         </div>
-        {settle && renderRunnerBar()}
-        {settle && renderWalk()}
-        {settle && people.length > 0 && (
+        {renderRunnerBar()}
+        {renderWalk()}
+        {people.length > 0 && (
           <button onClick={walkStart}
             style={{ width: "100%", marginBottom: 4, border: "1.5px solid rgba(240,165,0,0.5)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 12, padding: "11px 8px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }}>
             {L.walkTable}
           </button>
         )}
-        {settle && people.length > 0 && <div style={{ fontSize: 10.5, color: "#8a7d55", textAlign: "center", marginBottom: 10, lineHeight: 1.4 }}>{L.walkIntro}</div>}
-        <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", paddingBottom: 8, marginBottom: 9 }}>
-          {catsPresent.map((c) => {
-            const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
-            return <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: "#e0685c", fontSize: 15 }}>●</span>}</span>
-          })}
-        </div>
-
+        {people.length > 0 && <div style={{ fontSize: 10.5, color: "#8a7d55", textAlign: "center", marginBottom: 10, lineHeight: 1.4 }}>{L.walkIntro}</div>}
         <div style={{ position: "relative", marginBottom: 9 }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none" }}>🔍</span>
           <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)}
@@ -3650,6 +3378,12 @@ export default function Party() {
           </div>
         )}
 
+        <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", paddingBottom: 8, marginBottom: 8 }}>
+          {catsPresent.map((c) => {
+            const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
+            return <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: "#e0685c", fontSize: 15 }}>●</span>}</span>
+          })}
+        </div>
         <div style={{ ...S.row, justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
           <div style={{ display: "inline-flex", border: "1px solid rgba(120,95,20,0.2)", borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
             <span onClick={() => setFullList(false)} style={{ padding: "6px 11px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: !fullList ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: !fullList ? "#fff" : "#8a7d55" }}>compacte lijst</span>
@@ -3961,12 +3695,11 @@ export default function Party() {
           </div>
         )}
         {!settle && renderBarList()}
-        {!settle && renderCostOverview()}
         {!settle && rounds.length >= 1 && (
           <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", marginBottom: 4 }}>{L.settleNow}</div>
             <div style={{ fontSize: 12, color: "#4a6b57", lineHeight: 1.5, marginBottom: 11 }}>{L.settleNowWhy}</div>
-            <button style={{ ...S.btnP, width: "100%" }} onClick={goQuickSettle}>{L.settleNowBtn}</button>
+            <button style={{ ...S.btnP, width: "100%" }} onClick={switchToSettle}>{L.settleNowBtn}</button>
           </div>
         )}
         {settle && unassignedAllRounds > 0 && firstUnassignedIdx >= 0 && (
@@ -4165,91 +3898,6 @@ export default function Party() {
             </div>
           )}
         </>}
-      </div></div>
-    )
-  }
-
-  // ── SNEL AFREKENEN (niveau 1, gewoon rondjes) ────────────────────────────────
-  // Toont het totaal en deelt het gelijk door "met hoeveel waren jullie?". Wie het
-  // preciezer wil — wie meer dronk betaalt meer — schakelt hier over naar Fair Split.
-  if (view === "quickSettle") {
-    const heads = Math.max(0, parseInt(quickHeads || "0", 10) || 0)
-    const perHead = heads > 0 ? totalCost / heads : 0
-    return (
-      <div style={S.page}><div style={S.wrap}>
-        <Header />
-        {renderDialogs()}
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
-          <h3 style={{ ...S.h3, margin: 0 }}>{L.quickSettleTitle}</h3>
-          <button style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "7px 12px" }} onClick={() => setView("hub")}>{L.back}</button>
-        </div>
-
-        {/* Het totaal dat verdeeld wordt. */}
-        <div style={{ ...S.card, textAlign: "center", background: "rgba(240,165,0,0.06)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: "#8a7d55", marginBottom: 4 }}>{L.quickTotalLabel}</div>
-          <div style={{ fontSize: 30, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</div>
-        </div>
-
-        {/* Met hoeveel waren jullie? Totaal ÷ dit = ieders deel. */}
-        <div style={{ ...S.card }}>
-          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: perHead > 0 ? 12 : 0 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#4a3f1e" }}>{L.quickHeadsLabel}</span>
-            <input style={{ ...S.input, width: 70, fontSize: 17, fontWeight: 800, textAlign: "center" }} type="text" inputMode="numeric" placeholder="0"
-              value={quickHeads} onChange={(e) => setQuickHeads(e.target.value.replace(/[^0-9]/g, ""))} />
-          </div>
-          {perHead > 0 && (
-            <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 12, textAlign: "center" }}>
-              <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 3 }}>{L.quickPerHead}</div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: "#1f8a4c" }}>{euro(perHead)}</div>
-              <div style={{ fontSize: 11.5, color: "#b3a988", marginTop: 4 }}>{L.quickPerHeadNote(heads)}</div>
-            </div>
-          )}
-        </div>
-
-        {/* De brug naar Fair Split — wie het eerlijk wil, niet gelijk. */}
-        <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
-          <div style={{ fontSize: 13.5, fontWeight: 800, color: "#1f6b3a", marginBottom: 4 }}>{L.notFairSplitYet}</div>
-          <div style={{ fontSize: 12, color: "#4a6b57", lineHeight: 1.5, marginBottom: 11 }}>{L.notFairSplitWhy}</div>
-          <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={goToFairSplit}>{L.switchToFairBtn}</button>
-        </div>
-      </div></div>
-    )
-  }
-
-  // ── FAIR SPLIT SETUP (snel personen + namen) ─────────────────────────────────
-  // Kaal en snel: voeg personen toe, tik een naam of laat 'm grijs staan (Gast N).
-  // Daarna wijs je op de hub de drankjes toe. Dit is de brug van niveau 1 naar Fair Split.
-  if (view === "fairSetup") {
-    return (
-      <div style={S.page}><div style={S.wrap}>
-        <Header />
-        {renderDialogs()}
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-          <h3 style={{ ...S.h3, margin: 0 }}>{L.fairSetupTitle}</h3>
-          <button style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "7px 12px" }} onClick={() => setView("quickSettle")}>{L.back}</button>
-        </div>
-        <div style={{ fontSize: 12.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>{L.fairSetupIntro}</div>
-
-        <div style={{ ...S.card }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {people.map((p, i) => {
-              const leeg = isGuestDefault(p.name)
-              return (
-                <div key={p.id} style={{ ...S.row, gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: "#b3a988", width: 20, textAlign: "center", flexShrink: 0 }}>{i + 1}</span>
-                  <input value={leeg ? "" : p.name} onChange={(e) => renamePerson(p.id, e.target.value)} placeholder={p.name}
-                    style={{ ...S.input, flex: 1, textAlign: "left", fontSize: 15, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: "#fdfaf2", color: leeg ? "#b3a988" : "#4a3f1e" }} />
-                  {people.length > 1 && (
-                    <button onClick={() => removePerson(p.id)} style={{ ...S.btn, padding: "8px 11px", fontSize: 15, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)", flexShrink: 0 }}>✕</button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-          <button onClick={addPerson} style={{ ...S.btn, width: "100%", marginTop: 12, fontWeight: 800, border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.06)", color: "#c98a00" }}>{L.fairAddPerson}</button>
-        </div>
-
-        <button style={{ ...S.btnP, width: "100%", marginTop: 6, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={confirmFairSetup}>{L.fairSetupDone}</button>
       </div></div>
     )
   }
