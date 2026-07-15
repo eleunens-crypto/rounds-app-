@@ -483,6 +483,7 @@ const T = {
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     barList: "🍻 Aan de toog",
     barHandOut: "Uitdelen",
+    roundCostOptional: "Wat kostte dit rondje? (optioneel)",
     settleNow: "🧾 Toch afrekenen?",
     settleNowWhy: "We hielden alles bij. Eén tik en je weet wie wat schuldig is.",
     settleNowBtn: "Ja, verdeel het eerlijk",
@@ -789,6 +790,7 @@ const T = {
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     barList: "🍻 Au bar",
     barHandOut: "Distribuer",
+    roundCostOptional: "Combien a coûté cette tournée ? (optionnel)",
     settleNow: "🧾 Régler quand même ?",
     settleNowWhy: "On a tout noté. Un clic et tu sais qui doit quoi.",
     settleNowBtn: "Oui, répartis équitablement",
@@ -1964,6 +1966,7 @@ export default function Party() {
             </div>
           ))}
         </div>
+        {settle && (
         <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 10, paddingTop: 9 }}>
           <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>{L.barHandOut}</div>
           <div style={{ fontSize: 12.5, color: "#6b5f3a", lineHeight: 1.6 }}>
@@ -1974,6 +1977,22 @@ export default function Party() {
             })}
           </div>
         </div>
+        )}
+        {/* Gewoon rondjes: optioneel wat dit rondje kostte. Puur ter info hier — pas als
+            je later kiest voor eerlijk verdelen, wordt dit bedrag over de mensen verdeeld. */}
+        {!settle && (
+          <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 10, paddingTop: 10 }}>
+            <div style={{ ...S.row, justifyContent: "space-between" }}>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: "#8a7d55" }}>{L.roundCostOptional}</span>
+              <div style={{ ...S.row, gap: 4 }}>
+                <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>€</span>
+                <input style={{ ...S.input, width: 74 }} type="text" inputMode="decimal" placeholder="0,00"
+                  value={(r.amount || 0) > 0 ? String(r.amount).replace(".", ",") : ""}
+                  onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); rSetAmount(rounds.length - 1, parseFloat(v) || 0) }} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
