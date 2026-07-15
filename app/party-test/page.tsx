@@ -145,7 +145,7 @@ type Anon = Record<string, number>
 // Een rondje leeft nu in de databank. id/seq/status komen daarvandaan; de rest is
 // wat de app al kende. status: open = er wordt besteld, pending = besteld maar niet
 // betaald, closed = betaald.
-type Round = { id: string; seq: number; status: "open" | "pending" | "closed"; orders: Assign; anon: Anon; payers: Record<string, number>; amount: number; potPart: number; gaveBack: Record<string, number> }
+type Round = { id: string; seq: number; status: "open" | "pending" | "closed"; orders: Assign; anon: Anon; payers: Record<string, number>; amount: number; potPart: number; gaveBack: Record<string, number>; members: string[] }
 
 const euro = (v: number) => "€" + v.toFixed(2).replace(".", ",")
 
@@ -423,6 +423,19 @@ const T = {
     drinkInUse: (n: string) => `${n} is al besteld en kan niet meer verwijderd worden.`,
 
     confirmTitle: "Even bevestigen",
+    modeTitle: "Rekenen jullie achteraf af?",
+    modeQuick: "Gewoon rondjes",
+    modeQuickWhy: "Wie wil er iets? Je krijgt een lijstje voor aan de toog. Geen geld, geen gedoe.",
+    modeFull: "Rondjes + afrekenen",
+    modeFullWhy: "Fair Split, pot, coins, bekers. Iedereen betaalt wat hij dronk.",
+    modeSwitchLater: "Je kan later nog wisselen — er gaat niets verloren.",
+    barList: "🍻 Aan de toog",
+    barHandOut: "Uitdelen",
+    settleNow: "🧾 Toch afrekenen?",
+    settleNowWhy: "We hielden alles bij. Eén tik en je weet wie wat schuldig is.",
+    settleNowBtn: "Ja, verdeel het eerlijk",
+    estimate: "schatting op richtprijzen",
+    estimateWhy: "Niemand vulde bedragen in, dus rekenen we met de richtprijzen uit de lijst. Bij benadering, maar eerlijk.",
     voiceBtn: "🎤 Inspreken",
     voiceBeta: "beta",
     voiceListening: "🎤 Luisteren…",
@@ -665,6 +678,19 @@ const T = {
     drinkInUse: (n: string) => `${n} a déjà été commandé et ne peut plus être supprimé.`,
 
     confirmTitle: "Confirmation",
+    modeTitle: "Vous réglez après ?",
+    modeQuick: "Juste des tournées",
+    modeQuickWhy: "Qui veut quoi ? Tu obtiens une liste pour le bar. Pas d'argent, pas de prise de tête.",
+    modeFull: "Tournées + règlement",
+    modeFullWhy: "Fair Split, pot, jetons, gobelets. Chacun paie ce qu'il a bu.",
+    modeSwitchLater: "Tu peux changer plus tard — rien n'est perdu.",
+    barList: "🍻 Au bar",
+    barHandOut: "Distribuer",
+    settleNow: "🧾 Régler quand même ?",
+    settleNowWhy: "On a tout noté. Un clic et tu sais qui doit quoi.",
+    settleNowBtn: "Oui, répartis équitablement",
+    estimate: "estimation sur prix indicatifs",
+    estimateWhy: "Personne n'a entré de montants, donc on calcule avec les prix indicatifs de la liste. Approximatif, mais équitable.",
     voiceBtn: "🎤 Dicter",
     voiceBeta: "bêta",
     voiceListening: "🎤 J'écoute…",
@@ -700,6 +726,8 @@ export default function PartyTest() {
   const mounted = useRef(true)
   const [groupId, setGroupId] = useState<string | null>(null)
   const [openRoundId, setOpenRoundId] = useState<string | null>(null)
+  // false = "gewoon rondjes" (geen geld). Eén app, het geld-gedeelte verborgen.
+  const [settle, setSettle] = useState(true)
   type Custom = { key: string; name: string; cat: Cat; price: number; coins: number; cup: boolean; by: string }
   const [customDrinks, setCustomDrinks] = useState<Custom[]>([])
   // Afwijkende coin-prijzen voor dit feest. Ook jsonb op de groep-rij, dus gratis mee.
@@ -757,6 +785,7 @@ export default function PartyTest() {
   const [potChosen, setPotChosen] = useState(false)
   const [bpBekers, setBpBekers] = useState(false)
   const [bpCoins, setBpCoins] = useState(false)
+  const [bpSettle, setBpSettle] = useState<boolean | null>(null)
   const [fromOnboarding, setFromOnboarding] = useState(false)
   const [onboardedOnce, setOnboardedOnce] = useState(false)
   const [onbPotActive, setOnbPotActive] = useState(false)
@@ -987,9 +1016,9 @@ export default function PartyTest() {
   // (iedereen bestelt tegelijk) niet tientallen herladingen uitlokt.
   const loadParty = useCallback(async (gid: string) => {
     const [{ data: g }, { data: pp }, { data: rr }, { data: ii }, { data: pt }] = await Promise.all([
-      supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices").eq("id", gid).single(),
+      supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices,settle").eq("id", gid).single(),
       supabase.from("party_people").select("id,seat,name,claimed_by,self_joined,settle_with").eq("group_id", gid).order("seat"),
-      supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back").eq("group_id", gid).order("seq"),
+      supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back,members").eq("group_id", gid).order("seq"),
       supabase.from("party_round_items").select("round_id,person_id,drink_key,qty").eq("group_id", gid),
       supabase.from("party_pot").select("id,seq,amounts,is_card,card_payers").eq("group_id", gid).order("seq"),
     ])
@@ -1004,6 +1033,7 @@ export default function PartyTest() {
       setDepositValue(Number(g.deposit_value))
       setDepositUnit(g.deposit_unit as "eur" | "coin")
       setPotIsCard(!!g.pot_is_card)
+      setSettle(g.settle !== false)
       setCustomDrinks(((g.custom_drinks ?? []) as Custom[]))
       setCoinPrices(((g.coin_prices ?? {}) as Record<string, number>))
     }
@@ -1036,6 +1066,7 @@ export default function PartyTest() {
       payers: (r.payers ?? {}) as Record<string, number>,
       amount: Number(r.amount ?? 0), potPart: Number(r.pot_part ?? 0),
       gaveBack: (r.gave_back ?? {}) as Record<string, number>,
+      members: ((r.members ?? []) as string[]),
     }))
 
     // Het OPEN rondje is de mand; de rest is historiek.
@@ -1568,13 +1599,70 @@ export default function PartyTest() {
     )
   }
 
+  // De toog-lijst. Wie gaat halen wil geen lijst per persoon — hij wil weten wat hij
+  // aan de barman moet zeggen. Totalen om te bestellen, namen om uit te delen.
+  const renderBarList = () => {
+    const r = rounds[rounds.length - 1]
+    if (!r) return null
+    const perDrank = drinks
+      .map((d) => ({ d, n: Object.values(r.orders[d.id] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[d.id] ?? 0) }))
+      .filter((x) => x.n > 0)
+    if (perDrank.length === 0) return null
+
+    return (
+      <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.45)" }}>
+        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10 }}>{L.barList}</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          {perDrank.map(({ d, n }) => (
+            <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0" }}>
+              <span style={{ fontSize: 15, fontWeight: 800 }}>{d.emoji} {d.name}</span>
+              <span style={{ fontSize: 19, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 10, paddingTop: 9 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>{L.barHandOut}</div>
+          <div style={{ fontSize: 12.5, color: "#6b5f3a", lineHeight: 1.6 }}>
+            {people.map((p) => {
+              const zijne = drinks.filter((d) => (r.orders[d.id]?.[p.id] ?? 0) > 0)
+              if (zijne.length === 0) return null
+              return <div key={p.id}><b>{p.name}:</b> {zijne.map((d) => `${r.orders[d.id][p.id] > 1 ? r.orders[d.id][p.id] + "× " : ""}${d.name}`).join(", ")}</div>
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Halverwege alsnog willen afrekenen. Kost niets: de rondjes en drankjes zijn in
+  // beide modi identiek, en de Fair Split valt terug op de richtprijzen.
+  const switchToSettle = () => {
+    setSettle(true)
+    persistSettings({ settle: true })
+    setView("final")
+  }
+
   const applyBeginChoices = () => {
+    if (bpSettle === null) return
+    // "Gewoon rondjes": geen pot, geen coins, geen bekers. Niet omdat het niet KAN,
+    // maar omdat het niets betekent zonder afrekening.
+    if (bpSettle === false) {
+      setOnboardedOnce(true)
+      setSettle(false)
+      setPotChosen(false); setDepositOn(false); setPay("eur")
+      persistSettings({ settle: false, pot_on: false, deposit_on: false, pay: "eur" })
+      setBeginPrompt(false)
+      setView("hub")
+      return
+    }
     if (bpPotType === "yes") { setNotice("Kies pot of drankkaart — of zet de pot op nee."); return }
     setOnboardedOnce(true)
+    setSettle(true)
     const potOn = bpPotType === "pot" || bpPotType === "card"
     // Meteen wegschrijven met de zopas gekozen waarden (de state hieronder is nog niet
     // doorgekomen, dus we geven ze expliciet mee).
     persistSettings({
+      settle: true,
       pay: bpCoins ? "coin" : "eur",
       deposit_on: bpBekers,
       deposit_unit: bpCoins ? "coin" : "eur",
@@ -1627,11 +1715,20 @@ export default function PartyTest() {
     const effGb: Record<string, number> = {}
     people.forEach((p) => { effGb[p.id] = gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id)) })
     if (openRoundId) {
-      supabase.from("party_rounds").update({ status: "pending", gave_back: effGb }).eq("id", openRoundId)
+      // "Gewoon rondjes": het rondje is meteen klaar. Geen bedrag, geen betaler.
+      const nieuweStatus = settle ? "pending" : "closed"
+      // Bevries WIE er nu in de groep zit: dit zijn de deelnemers aan dit rondje.
+      // Vanaf hier telt een latere nieuwkomer niet meer mee voor dit rondje.
+      const leden = people.map((p) => p.id)
+      supabase.from("party_rounds").update({ status: nieuweStatus, gave_back: effGb, members: leden, ...(settle ? {} : { closed_at: new Date().toISOString() }) }).eq("id", openRoundId)
         .then(({ error }) => { if (error) setNotice("Rondje bevestigen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
       setOpenRoundId(null)
     }
-    setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setAmountDraft(""); setPayPot(false); setPayPersons([]); setPayAmts({}); setPotAmtDraft(""); setPaidConfirmed(false); setView("confirmed")
+    setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setShowClose(false); setAmountDraft(""); setPayPot(false); setPayPersons([]); setPayAmts({}); setPotAmtDraft(""); setPaidConfirmed(false)
+    // "Gewoon rondjes" kent geen betaalscherm: het rondje is klaar, en wie gaat halen
+    // krijgt de toog-lijst in de hub te zien.
+    setView(settle ? "confirmed" : "hub")
+    setRoundNr((n) => n + 1)
   }
   const persistPayment = (roundId: string, payers: Record<string, number>, potPart: number, total: number) => {
     supabase.from("party_rounds")
@@ -1701,14 +1798,37 @@ export default function PartyTest() {
   }
 
   const roundKeyTotal = (r: Round) => drinks.reduce((s, d) => s + (Object.values(r.orders[d.id] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[d.id] ?? 0)) * priceOf(d), 0)
+  // Wat dit rondje "waard" is. Vulde iemand een bedrag in, dan telt dat. Zo niet
+  // (modus "gewoon rondjes"), dan de som van de richtprijzen.
+  //
+  // Dit is de brug die het mogelijk maakt om ACHTERAF alsnog af te rekenen zonder dat
+  // er ooit een bedrag is ingevuld. En hij kost bijna niets: de Fair Split rekende AL
+  // met richtprijzen — die bepaalden ieders AANDEEL, en `amount` was enkel de
+  // schaalfactor. Valt die weg, dan blijft het aandeel staan.
+  const roundValue = (r: Round) => (r.amount > 0.005 ? r.amount : roundKeyTotal(r))
+
+  // Wie was er TOEN bij? Onbekende drankjes worden gedeeld over de mensen die aan dít
+  // rondje deelnamen — niet over het huidige aantal. Anders betaalt een laatkomer mee
+  // voor rondjes die hij nooit meemaakte. Oude rondjes zonder members vallen terug op
+  // de hele groep (dat is wat de migratie invulde).
+  const roundMembers = (r: Round) => (r.members.length > 0 ? r.members : people.map((p) => p.id))
+
   const personRoundShare = (r: Round, pid: string) => {
-    const kt = roundKeyTotal(r); if (kt <= 0 || r.amount <= 0) return people.length ? r.amount / people.length : 0
+    const leden = roundMembers(r)
+    // Zat deze persoon niet in dit rondje? Dan draagt hij er niets aan bij.
+    if (!leden.includes(pid)) return 0
+    const n = leden.length || 1
+    const kt = roundKeyTotal(r)
+    const bedrag = roundValue(r)
+    if (kt <= 0 || bedrag <= 0) return bedrag / n
     const own = drinks.reduce((a, d) => a + (r.orders[d.id]?.[pid] ?? 0) * priceOf(d), 0)
     const anon = drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0) * priceOf(d), 0)
-    return ((own + anon / people.length) / kt) * r.amount
+    return ((own + anon / n) / kt) * bedrag
   }
   const consumption = (pid: string) => rounds.reduce((s, r) => s + personRoundShare(r, pid), 0)
-  const grandTotal = useMemo(() => rounds.reduce((s, r) => s + r.amount, 0), [rounds])
+  // In "gewoon rondjes" is er nooit een bedrag ingevuld -> toon de geschatte waarde.
+  const grandTotal = useMemo(() => rounds.reduce((s, r) => s + roundValue(r), 0), [rounds]) // eslint-disable-line
+  const isSchatting = useMemo(() => rounds.length > 0 && rounds.every((r) => r.amount <= 0.005), [rounds])
   const equalShare = people.length ? grandTotal / people.length : 0
 
   const roundCupEur = (r: Round, pid: string) => (roundPicked(r, pid) - (r.gaveBack[pid] || 0)) * depositPerCupEur
@@ -2032,7 +2152,7 @@ export default function PartyTest() {
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
           <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700 }} onClick={goHome}>{L.groupSettings}</button>
           <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "hub" ? 0.55 : 1 }} onClick={goHub}>{L.overview}</button>
-          <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "final" ? 0.55 : 1 }} onClick={goFinal}>{L.settleBtn}</button>
+          {settle && <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "final" ? 0.55 : 1 }} onClick={goFinal}>{L.settleBtn}</button>}
         </div>
       )}
     </div>
@@ -2388,7 +2508,32 @@ export default function PartyTest() {
           <div style={{ ...S.overlay, zIndex: 65 }} onClick={() => setBeginPrompt(false)}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ ...S.h3, fontSize: 18, marginTop: 0, marginBottom: 4 }}>{L.beforeWeStart}</h3>
-              <p style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e", marginBottom: 14 }}>{L.workWith}</p>
+
+              {/* De modus komt EERST — hij bepaalt of de rest nog relevant is. Bekers,
+                  coins en pot bestaan alleen als je afrekent. Kies je "gewoon rondjes",
+                  dan is dit scherm hiermee klaar. */}
+              <p style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e", marginBottom: 10 }}>{L.modeTitle}</p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <button onClick={() => setBpSettle(false)}
+                  style={{ textAlign: "left", padding: "12px 11px", borderRadius: 12, cursor: "pointer",
+                           background: bpSettle === false ? "#fff8e8" : "#faf7ec",
+                           border: bpSettle === false ? "2px solid #e08a00" : "1px solid rgba(120,95,20,0.15)" }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 3 }}>🍻 {L.modeQuick}</div>
+                  <div style={{ fontSize: 11, color: "#8a7d55", lineHeight: 1.45 }}>{L.modeQuickWhy}</div>
+                </button>
+                <button onClick={() => setBpSettle(true)}
+                  style={{ textAlign: "left", padding: "12px 11px", borderRadius: 12, cursor: "pointer",
+                           background: bpSettle === true ? "#fff8e8" : "#faf7ec",
+                           border: bpSettle === true ? "2px solid #e08a00" : "1px solid rgba(120,95,20,0.15)" }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 3 }}>🧾 {L.modeFull}</div>
+                  <div style={{ fontSize: 11, color: "#8a7d55", lineHeight: 1.45 }}>{L.modeFullWhy}</div>
+                </button>
+              </div>
+              <p style={{ fontSize: 11, color: "#8a7d55", textAlign: "center", margin: "10px 0 0", lineHeight: 1.45 }}>{L.modeSwitchLater}</p>
+
+              {bpSettle === true && (
+              <>
+              <p style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e", margin: "18px 0 14px" }}>{L.workWith}</p>
               <div style={{ padding: "10px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
                 <div style={{ ...S.row, justifyContent: "space-between" }}>
                   <span style={{ fontSize: 14.5, fontWeight: 700 }}>{L.sharedPot}</span>
@@ -2418,7 +2563,14 @@ export default function PartyTest() {
                 </div>
               ))}
               <div style={{ fontSize: 11.5, color: "#8a7d55", margin: "12px 0 14px", lineHeight: 1.5 }}>{L.adjustLater}</div>
-              <button style={{ ...S.btnP, width: "100%" }} onClick={applyBeginChoices}>{(bpPotType !== "none" || bpBekers || bpCoins) ? "Verdergaan" : L.quickStart}</button>
+              </>
+              )}
+
+              <button style={{ ...S.btnP, width: "100%", marginTop: 14, opacity: bpSettle === null ? 0.45 : 1 }}
+                disabled={bpSettle === null}
+                onClick={applyBeginChoices}>
+                {bpSettle === false ? L.quickStart : (bpPotType !== "none" || bpBekers || bpCoins) ? "Verdergaan" : L.quickStart}
+              </button>
             </div>
           </div>
         )}
@@ -2960,6 +3112,14 @@ export default function PartyTest() {
         {showPot && renderPotModal()}
         {renderDialogs()}
         {rounds.length === 0 && renderShare()}
+        {!settle && renderBarList()}
+        {!settle && rounds.length >= 1 && (
+          <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", marginBottom: 4 }}>{L.settleNow}</div>
+            <div style={{ fontSize: 12, color: "#4a6b57", lineHeight: 1.5, marginBottom: 11 }}>{L.settleNowWhy}</div>
+            <button style={{ ...S.btnP, width: "100%" }} onClick={switchToSettle}>{L.settleNowBtn}</button>
+          </div>
+        )}
         {assignIdx !== null && rounds[assignIdx] && (() => {
           const idx = assignIdx
           const r = rounds[idx]
@@ -3249,6 +3409,12 @@ export default function PartyTest() {
 
       <div style={S.card}>
         <h3 style={{ ...S.h3, marginBottom: 8 }}>{L.howYouAllSettle}</h3>
+        {isSchatting && (
+          <div style={{ background: "#fff8e8", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginBottom: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#c98a00", marginBottom: 2 }}>⚠️ {L.estimate}</div>
+            <div style={{ fontSize: 11.5, color: "#8a7d55", lineHeight: 1.5 }}>{L.estimateWhy}</div>
+          </div>
+        )}
         <p style={{ ...S.sub, marginBottom: 8 }}>{L.fewestTransfers}</p>
         {settlement.tx.length === 0 ? <div style={{ fontSize: 13.5, color: "#1f8a4c", fontWeight: 700 }}>{L.allEven}</div> : settlement.tx.map((t, i) => (
           <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
