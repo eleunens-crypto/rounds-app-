@@ -1220,21 +1220,27 @@ export default function PartyTest() {
   // het laden van de groep) telt niet als "nieuw" — anders krijg je een melding voor
   // iedereen die er al was.
   const seededNewcomer = useRef(false)
+  // Onthoud wie er al geclaimd was, zodat we een NIEUWE aanmelding herkennen — of het
+  // nu een laatkomer is die een plaats bijzette, of iemand die een bestaande vrije
+  // plaats claimde via de QR. Beide zijn "iemand meldt zich aan".
+  const claimedSeats = useRef<Set<string>>(new Set())
   useEffect(() => {
     if (people.length === 0) return
     if (!seededNewcomer.current) {
-      people.forEach((p) => knownPeople.current.add(p.id))
+      people.forEach((p) => { knownPeople.current.add(p.id); if (p.claimedBy) claimedSeats.current.add(p.id) })
       seededNewcomer.current = true
       return
     }
     for (const p of people) {
-      if (!knownPeople.current.has(p.id)) {
-        knownPeople.current.add(p.id)
-        // Niet melden dat ik er zelf ben, en enkel wie zichzelf aanmeldde.
-        if (p.id !== meId && p.claimedBy) {
-          setNewcomer({ id: p.id, name: p.name })
-          setTimeout(() => setNewcomer((c) => (c && c.id === p.id ? null : c)), 6000)
-        }
+      const isNieuwePersoon = !knownPeople.current.has(p.id)
+      const netGeclaimd = !!p.claimedBy && !claimedSeats.current.has(p.id)
+      knownPeople.current.add(p.id)
+      if (p.claimedBy) claimedSeats.current.add(p.id)
+      // Meld wie zich aanmeldt: een nieuwe persoon met een claim, óf een bestaande
+      // plaats die net geclaimd werd. Niet mezelf.
+      if (p.id !== meId && p.claimedBy && (isNieuwePersoon || netGeclaimd)) {
+        setNewcomer({ id: p.id, name: p.name })
+        setTimeout(() => setNewcomer((c) => (c && c.id === p.id ? null : c)), 7000)
       }
     }
   }, [people, meId])
@@ -2410,15 +2416,20 @@ export default function PartyTest() {
         </div>
       )}
       {newcomer && (
-        <div style={{ position: "fixed", left: 0, right: 0, bottom: 18, display: "flex", justifyContent: "center", zIndex: 60, pointerEvents: "none" }}>
-          <div style={{ pointerEvents: "auto", display: "flex", alignItems: "center", gap: 10, background: "#1f6b3a", color: "#fff", borderRadius: 22, padding: "10px 16px", boxShadow: "0 6px 20px rgba(0,0,0,0.18)", maxWidth: "90%" }}>
-            <span style={{ fontSize: 13.5, fontWeight: 700 }}>👋 {L.someoneJoined(newcomer.name)}</span>
+        <div style={{ position: "fixed", left: 0, right: 0, bottom: 18, display: "flex", justifyContent: "center", zIndex: 60, pointerEvents: "none", padding: "0 12px" }}>
+          <div style={{ pointerEvents: "auto", background: "#1f6b3a", color: "#fff", borderRadius: 16, padding: "12px 16px", boxShadow: "0 8px 24px rgba(0,0,0,0.22)", maxWidth: "94%", minWidth: 240 }}>
+            <div style={{ ...S.row, justifyContent: "space-between", gap: 10 }}>
+              <span style={{ fontSize: 15, fontWeight: 800 }}>👋 {L.someoneJoined(newcomer.name)}</span>
+              <button onClick={() => setNewcomer(null)}
+                style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: 18, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>✕</button>
+            </div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", fontWeight: 700, marginTop: 3 }}>
+              📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}
+            </div>
             {isAdmin && (
               <button onClick={() => { removePerson(newcomer.id); setNewcomer(null) }}
-                style={{ border: "1px solid rgba(255,255,255,0.5)", background: "transparent", color: "#fff", borderRadius: 12, padding: "3px 9px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>{L.notRight}</button>
+                style={{ marginTop: 9, width: "100%", border: "1px solid rgba(255,255,255,0.5)", background: "transparent", color: "#fff", borderRadius: 10, padding: "7px 9px", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>{L.notRight}</button>
             )}
-            <button onClick={() => setNewcomer(null)}
-              style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: 16, cursor: "pointer", padding: "0 2px", lineHeight: 1 }}>✕</button>
           </div>
         </div>
       )}
