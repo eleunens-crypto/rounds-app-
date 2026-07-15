@@ -57,32 +57,6 @@ export default function Home() {
           {t.chooseMode}
         </p>
 
-        {/* PARTY-kaart — warm geel */}
-        <Link href="/party-test" style={{ textDecoration: "none" }}>
-          <div style={{ ...S.modeCard, ...S.partyCard }} className="rundo-card rundo-card-party">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/party-image.png" alt="" style={S.cardPhoto} />
-            {/* Warme gloed die de foto iets verlicht */}
-            <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "62%", zIndex: 1, background: "radial-gradient(120% 90% at 88% 32%, rgba(255,214,130,0.42) 0%, rgba(255,190,90,0.16) 42%, rgba(255,190,90,0) 72%)", mixBlendMode: "screen", pointerEvents: "none" }} />
-            <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #211c14 0%, #211c14 42%, rgba(33,28,20,0.85) 56%, rgba(33,28,20,0.35) 72%, rgba(33,28,20,0) 100%)" }} />
-            <div style={S.cardBody}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/rundo-party-logo.png" alt="Rundo Party" style={{ display: "block", height: 46, width: "auto", maxWidth: "100%", objectFit: "contain", marginBottom: 6 }} />
-              <div style={{ ...S.logoSub, color: "#f0a500", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/icon-party.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
-                <span>{t.partySub}</span>
-              </div>
-              <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                <span style={S.infoBadge}>i</span>
-                <p style={{ fontSize: 13.5, color: "#d8dced", lineHeight: 1.5, margin: 0 }}>
-                  {t.partyDesc}
-                </p>
-              </div>
-            </div>
-          </div>
-        </Link>
-
         {/* TABLE-kaart — koel blauw */}
         <Link href="/table" style={{ textDecoration: "none" }}>
           <div style={{ ...S.modeCard, ...S.tableCard }} className="rundo-card rundo-card-table">
@@ -101,6 +75,32 @@ export default function Home() {
                 <span style={{ ...S.infoBadge, background: "rgba(91,159,214,0.22)", color: "#9cc6ec" }}>i</span>
                 <p style={{ fontSize: 13.5, color: "#d8dced", lineHeight: 1.5, margin: 0 }}>
                   {t.tableDesc}
+                </p>
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        {/* PARTY-kaart — warm geel */}
+        <Link href="/party" style={{ textDecoration: "none" }}>
+          <div style={{ ...S.modeCard, ...S.partyCard }} className="rundo-card rundo-card-party">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/party-image.png" alt="" style={S.cardPhoto} />
+            {/* Warme gloed die de foto iets verlicht */}
+            <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "62%", zIndex: 1, background: "radial-gradient(120% 90% at 88% 32%, rgba(255,214,130,0.42) 0%, rgba(255,190,90,0.16) 42%, rgba(255,190,90,0) 72%)", mixBlendMode: "screen", pointerEvents: "none" }} />
+            <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #211c14 0%, #211c14 42%, rgba(33,28,20,0.85) 56%, rgba(33,28,20,0.35) 72%, rgba(33,28,20,0) 100%)" }} />
+            <div style={S.cardBody}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/rundo-party-logo.png" alt="Rundo Party" style={{ display: "block", height: 46, width: "auto", maxWidth: "100%", objectFit: "contain", marginBottom: 6 }} />
+              <div style={{ ...S.logoSub, color: "#f0a500", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/icon-party.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
+                <span>{t.partySub}</span>
+              </div>
+              <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <span style={S.infoBadge}>i</span>
+                <p style={{ fontSize: 13.5, color: "#d8dced", lineHeight: 1.5, margin: 0 }}>
+                  {t.partyDesc}
                 </p>
               </div>
             </div>
