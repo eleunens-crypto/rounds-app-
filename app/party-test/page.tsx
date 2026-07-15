@@ -300,6 +300,9 @@ const T = {
     potStartIn: (b: string) => `In de pot: ${b}`,
     potStartAdd: "+ Inleggen",
     potStartMore: "Bijleggen",
+    unassignedHub: (n: number) => `🔴 ${n} drankje${n === 1 ? "" : "s"} nog niet toegewezen`,
+    unassignedHubWhy: "Zonder naam worden ze gelijk verdeeld — niet eerlijk. Wijs ze toe zodat elk betaalt wat hij dronk.",
+    unassignedHubBtn: "Toewijzen",
     quickStart: "Snel starten",
     continueRound: (n: number) => `Ga verder met rondje ${n}`,
 
@@ -584,6 +587,9 @@ const T = {
     potStartIn: (b: string) => `Dans la cagnotte : ${b}`,
     potStartAdd: "+ Mettre",
     potStartMore: "Ajouter",
+    unassignedHub: (n: number) => `🔴 ${n} boisson${n === 1 ? "" : "s"} pas encore attribuée${n === 1 ? "" : "s"}`,
+    unassignedHubWhy: "Sans nom, elles sont partagées également — pas équitable. Attribue-les pour que chacun paie ce qu'il a bu.",
+    unassignedHubBtn: "Attribuer",
     quickStart: "Démarrage rapide",
     continueRound: (n: number) => `Continuer la tournée ${n}`,
 
@@ -2178,6 +2184,10 @@ export default function PartyTest() {
     return { tx }
   }, [rounds, people, settleGroups, potRounds, potContribTotal, potSpent, potIsCard, potRemaining, depositOn, depositValue, depositUnit, coinValue, drinks, pay]) // eslint-disable-line
   const anyUnassignedRounds = rounds.some((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0))
+  // Totaal aantal drankjes dat over ALLE afgeronde rondjes nog anoniem staat, plus de
+  // index van het eerste rondje waar iets ontbreekt. Voor de waarschuwing op de hub.
+  const unassignedAllRounds = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0)
+  const firstUnassignedIdx = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0))
   const drinkTotalRound = (r: Round, did: string) => Object.values(r.orders[did] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[did] ?? 0)
   const paidLabel = (r: Round) => {
     const potP = r.potPart || 0
@@ -3442,6 +3452,13 @@ export default function PartyTest() {
             <div style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", marginBottom: 4 }}>{L.settleNow}</div>
             <div style={{ fontSize: 12, color: "#4a6b57", lineHeight: 1.5, marginBottom: 11 }}>{L.settleNowWhy}</div>
             <button style={{ ...S.btnP, width: "100%" }} onClick={switchToSettle}>{L.settleNowBtn}</button>
+          </div>
+        )}
+        {settle && unassignedAllRounds > 0 && firstUnassignedIdx >= 0 && (
+          <div style={{ ...S.card, background: "rgba(224,104,92,0.08)", border: "1.5px solid rgba(224,104,92,0.45)" }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#b0402f", marginBottom: 4 }}>{L.unassignedHub(unassignedAllRounds)}</div>
+            <div style={{ fontSize: 12, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 11 }}>{L.unassignedHubWhy}</div>
+            <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#e0725c,#c0554a)" }} onClick={() => setAssignIdx(firstUnassignedIdx)}>{L.unassignedHubBtn}</button>
           </div>
         )}
         {assignIdx !== null && rounds[assignIdx] && (() => {
