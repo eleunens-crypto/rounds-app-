@@ -2104,12 +2104,17 @@ export default function PartyTest() {
   // Het voorstel leeft op het LAATSTE rondje (proposal jsonb). De haler start het,
   // elke gast antwoordt op zijn eigen scherm, wie zwijgt krijgt niets. Alles loopt
   // via realtime (blok 11/12), zodat elk toestel de stand live ziet.
+  // Het voorstel leeft op het rondje waar het gestart werd (meestal het laatste
+  // betaalde). Zodra een "iets anders"-gast bestelt, opent er een nieuw open rondje
+  // dat het laatste wordt — daarom zoeken we het voorstel expliciet op, niet blind
+  // op rounds[laatste].
+  const proposalRound = rounds.find((r) => r.proposal?.active) ?? null
   const lastRound = rounds[rounds.length - 1] ?? null
-  const activeProposal = lastRound && lastRound.proposal?.active ? lastRound.proposal : null
-  const proposalRoundId = activeProposal ? lastRound!.id : null
+  const activeProposal = proposalRound ? proposalRound.proposal : null
+  const proposalRoundId = proposalRound ? proposalRound.id : null
   const myAnswer = (activeProposal && meId) ? activeProposal.answers?.[meId] : undefined
   // Wie deed mee aan het rondje dat we herhalen? Dat zijn de mensen die mogen antwoorden.
-  const proposalPeople = lastRound ? people.filter((p) => roundMembers(lastRound).includes(p.id)) : []
+  const proposalPeople = proposalRound ? people.filter((p) => roundMembers(proposalRound).includes(p.id)) : []
   // De haler (of admin) start een voorstel op basis van het laatste rondje.
   const startProposal = async () => {
     if (blockIfUnpaid()) return
@@ -2126,18 +2131,44 @@ export default function PartyTest() {
     if (error) { setNotice("Antwoord mislukt: " + error.message); return }
     if (groupId) loadParty(groupId)
   }
-  // De haler sluit het voorstel af. Enkel wie "same" of "different" antwoordde, telt.
+  // De haler sluit het voorstel af. Nu pas ontstaat het nieuwe rondje echt:
+  //  - "hetzelfde" → we nemen zijn drankjes van het vorige rondje over
+  //  - "iets anders" → die bestelde intussen al zelf in het nieuwe rondje; niet aanraken
+  //  - "skip" of zwijgen → niets
+  // We verzekeren één open rondje (ensureRound hergebruikt het rondje dat een
+  // "iets anders"-gast misschien al opende) en bumpen de "hetzelfde"-drankjes erin.
   const closeProposal = async () => {
-    if (!proposalRoundId) return
+    if (!proposalRoundId || !proposalRound || !groupId) return
+    const answers = activeProposal?.answers || {}
+    const sameFolk = proposalPeople.filter((p) => answers[p.id] === "same")
+
+    const rid = await ensureRound(startedBy ?? null)
+    if (!rid) { setNotice("Rondje starten mislukt."); return }
+
+    // Voor elke "hetzelfde"-persoon zijn vorige drankjes overnemen in het nieuwe rondje.
+    for (const p of sameFolk) {
+      for (const d of drinks) {
+        const q = proposalRound.orders[d.id]?.[p.id] ?? 0
+        if (q > 0) {
+          const { error } = await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: p.id, p_drink: d.id, p_delta: q })
+          if (error) { setNotice("Overnemen mislukt: " + error.message); loadParty(groupId); return }
+        }
+      }
+    }
+
     const { error } = await supabase.rpc("party_close_proposal", { p_round: proposalRoundId })
     if (error) { setNotice("Afsluiten mislukt: " + error.message); return }
-    if (groupId) loadParty(groupId)
+    // Naar het bestelscherm van het nieuwe rondje, zodat de haler het geheel ziet en
+    // desnoods nog bijstuurt vóór hij naar de toog gaat.
+    setActiveCat(catsPresent[0])
+    setView("order")
+    loadParty(groupId)
   }
 
   // Het overzicht dat de HALER ziet zolang een voorstel loopt: wie antwoordde wat,
   // en de afsluit-knop met de geruststellende regel over wie er niet bij staat.
   const renderProposalHost = () => {
-    if (!activeProposal || !lastRound) return null
+    if (!activeProposal || !proposalRound) return null
     const answers = activeProposal.answers || {}
     const meedoen = proposalPeople.filter((p) => answers[p.id] === "same" || answers[p.id] === "different")
     const stil = proposalPeople.filter((p) => !answers[p.id])
@@ -2178,11 +2209,11 @@ export default function PartyTest() {
   // Het kaartje dat elke GAST ziet zolang een voorstel loopt. Drie keuzes; wie niks
   // kiest, zwijgt (en krijgt niets). "Iets anders" schakelt door naar het bestellen.
   const renderProposalGuest = () => {
-    if (!activeProposal || !lastRound || !meId) return null
-    if (!roundMembers(lastRound).includes(meId)) return null
+    if (!activeProposal || !proposalRound || !meId) return null
+    if (!roundMembers(proposalRound).includes(meId)) return null
     // Wat had ik vorige ronde? Toon dat, zodat "hetzelfde" concreet is.
     const mijnVorige = drinks
-      .map((d) => ({ d, n: lastRound.orders[d.id]?.[meId] ?? 0 }))
+      .map((d) => ({ d, n: proposalRound.orders[d.id]?.[meId] ?? 0 }))
       .filter((x) => x.n > 0)
     const gekozen = myAnswer
     return (
