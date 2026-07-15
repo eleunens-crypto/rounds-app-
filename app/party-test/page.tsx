@@ -442,9 +442,10 @@ const T = {
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
     modeTitle: "Rekenen jullie achteraf af?",
     modeQuick: "Gewoon rondjes",
-    modeQuickWhy: "Wie wil er iets? Je krijgt een lijstje voor aan de toog. Geen geld, geen gedoe.",
+    modeQuickWhy: "Wat er moet komen. Meer niet.",
     modeFull: "Rondjes + afrekenen",
     modeFullWhy: "Fair Split, pot, coins, bekers. Iedereen betaalt wat hij dronk.",
+    modeFairLine: "Betaal niet mee voor wat je niet dronk.",
     modeSwitchLater: "Je kan later nog wisselen — er gaat niets verloren.",
     barList: "🍻 Aan de toog",
     barHandOut: "Uitdelen",
@@ -714,9 +715,10 @@ const T = {
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
     modeTitle: "Vous réglez après ?",
     modeQuick: "Juste des tournées",
-    modeQuickWhy: "Qui veut quoi ? Tu obtiens une liste pour le bar. Pas d'argent, pas de prise de tête.",
+    modeQuickWhy: "Ce qu'il faut commander. Rien de plus.",
     modeFull: "Tournées + règlement",
     modeFullWhy: "Fair Split, pot, jetons, gobelets. Chacun paie ce qu'il a bu.",
+    modeFairLine: "Ne paie pas pour ce que tu n'as pas bu.",
     modeSwitchLater: "Tu peux changer plus tard — rien n'est perdu.",
     barList: "🍻 Au bar",
     barHandOut: "Distribuer",
@@ -2715,20 +2717,43 @@ export default function PartyTest() {
                   coins en pot bestaan alleen als je afrekent. Kies je "gewoon rondjes",
                   dan is dit scherm hiermee klaar. */}
               <p style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e", marginBottom: 10 }}>{L.modeTitle}</p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                {/* Gewoon aantallen: chips met drank-emoji, geen namen. */}
                 <button onClick={() => setBpSettle(false)}
-                  style={{ textAlign: "left", padding: "12px 11px", borderRadius: 12, cursor: "pointer",
+                  style={{ textAlign: "left", padding: "13px 14px", borderRadius: 12, cursor: "pointer",
                            background: bpSettle === false ? "#fff8e8" : "#faf7ec",
                            border: bpSettle === false ? "2px solid #e08a00" : "1px solid rgba(120,95,20,0.15)" }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 3 }}>🍻 {L.modeQuick}</div>
-                  <div style={{ fontSize: 11, color: "#8a7d55", lineHeight: 1.45 }}>{L.modeQuickWhy}</div>
+                  <div style={{ ...S.row, gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 19 }}>🍺</span>
+                    <span style={{ fontSize: 14.5, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <span style={{ background: "#fff", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
+                    <span style={{ background: "#fff", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
+                    <span style={{ background: "#fff", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 10 }}>{L.modeQuickWhy}</div>
                 </button>
+
+                {/* Fair Split: drankjes boven, muntjes eronder. Bart = doorstreept, €0. */}
                 <button onClick={() => setBpSettle(true)}
-                  style={{ textAlign: "left", padding: "12px 11px", borderRadius: 12, cursor: "pointer",
+                  style={{ textAlign: "left", padding: "13px 14px", borderRadius: 12, cursor: "pointer",
                            background: bpSettle === true ? "#fff8e8" : "#faf7ec",
                            border: bpSettle === true ? "2px solid #e08a00" : "1px solid rgba(120,95,20,0.15)" }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 3 }}>🧾 {L.modeFull}</div>
-                  <div style={{ fontSize: 11, color: "#8a7d55", lineHeight: 1.45 }}>{L.modeFullWhy}</div>
+                  <div style={{ ...S.row, gap: 8, marginBottom: 12 }}>
+                    <span style={{ fontSize: 19 }}>⚖️</span>
+                    <span style={{ fontSize: 14.5, fontWeight: 800, color: "#4a3f1e" }}>Fair Split</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
+                    {[["🍺", "🪙", "Tom"], ["🍷🍷", "🪙🪙🪙🪙", "Els"], ["🚫", "—", "Bart"], ["🍺🍺", "🪙🪙", "Jan"]].map(([drank, geld, naam], i) => (
+                      <div key={i}>
+                        <div style={{ fontSize: 18, height: 24, whiteSpace: "nowrap", letterSpacing: -3, opacity: drank === "🚫" ? 0.4 : 1 }}>{drank}</div>
+                        <div style={{ fontSize: 14, height: 22, marginTop: 5, whiteSpace: "nowrap", letterSpacing: -3, color: geld === "—" ? "#b3a988" : undefined }}>{geld}</div>
+                        <div style={{ fontSize: 11, marginTop: 4, color: naam === "Bart" ? "#b3a988" : "#8a7d55", fontWeight: 700 }}>{naam}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "#4a3f1e", marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)", lineHeight: 1.5 }}>{L.modeFairLine}</div>
                 </button>
               </div>
               <p style={{ fontSize: 11, color: "#8a7d55", textAlign: "center", margin: "10px 0 0", lineHeight: 1.45 }}>{L.modeSwitchLater}</p>
