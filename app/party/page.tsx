@@ -2828,7 +2828,7 @@ export default function PartyTest() {
                   <span style={{ fontSize: 11, color: "#b3a988" }}>🔒 vast</span>
                 )}
               </div>
-              <div style={{ fontSize: 12.5, color: "#6b5f3a" }}>{who.map((pp) => `${pp.name} ${euro(r.amounts[pp.id] || 0)}`).join(" · ")}</div>
+              <div style={{ fontSize: 12.5, color: "#6b5f3a" }}>{settle ? who.map((pp) => `${pp.name} ${euro(r.amounts[pp.id] || 0)}`).join(" · ") : euro(tot)}</div>
             </div>
           )
         })}
@@ -2843,13 +2843,15 @@ export default function PartyTest() {
           </div>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
             <span style={{ fontSize: 13, fontWeight: 700 }}>{L.cardValue}</span>
-            <div style={{ ...S.row, gap: 4 }}><span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>€</span><input style={{ ...S.input, width: 70 }} type="text" inputMode="decimal" placeholder="15" value={cardValue} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setCardValue(v); applyCard(cardPayers, v) }} /></div>
+            <div style={{ ...S.row, gap: 4 }}><span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>€</span><input style={{ ...S.input, width: 70 }} type="text" inputMode="decimal" placeholder="15" value={cardValue} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setCardValue(v); if (settle) applyCard(cardPayers, v); else setPotDraft({ pot: parseFloat(v.replace(",", ".")) || 0 }) }} /></div>
           </div>
+          {settle && <>
           <div style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700, marginBottom: 6 }}>{L.whoBoughtCard}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 10 }}>
             <span onClick={cardSelectAll} style={{ ...S.pill, cursor: "pointer", fontSize: 12.5, padding: "6px 12px", background: "rgba(31,138,76,0.14)", color: "#1f8a4c", fontWeight: 800, border: "1px dashed rgba(31,138,76,0.5)" }}>{L.everyone}</span>
             {people.map((p) => { const on = cardPayers.includes(p.id); const amt = potDraft[p.id] || 0; return <span key={p.id} onClick={() => toggleCardPayer(p.id)} style={{ ...S.pill, cursor: "pointer", fontSize: 12.5, padding: "6px 12px", background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "rgba(240,165,0,0.1)", color: on ? "#fff" : "#8a5e0f", fontWeight: 700 }}>{p.name} {on ? euro(amt) : "€0"}</span> })}
           </div>
+          </>}
         </div>
         ) : (
         <div style={{ background: "rgba(240,165,0,0.08)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 12, padding: 11, marginTop: 4 }}>
@@ -2857,6 +2859,8 @@ export default function PartyTest() {
             <span style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f" }}>{editPotId !== null ? "✏️ inleg wijzigen" : `➕ ${potRounds.length === 0 ? "1e inleg" : `${potRounds.length + 1}e inleg`}`}</span>
             {potDraftTotal > 0 && <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f8a4c" }}>+{euro(potDraftTotal)}</span>}
           </div>
+          {settle ? (
+          <>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
             <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>{L.equalSplit}</span>
             <span style={{ fontSize: 11.5, color: "#c0554a", fontWeight: 700, cursor: "pointer" }} onClick={resetPotDraft}>{L.resetContrib}</span>
@@ -2880,6 +2884,24 @@ export default function PartyTest() {
               <span style={{ fontSize: 13, fontWeight: 800, marginLeft: "auto", textAlign: "right", color: (potDraft[p.id] || 0) > 0 ? "#1f8a4c" : "#b3a988" }}>{(potDraft[p.id] || 0) > 0 ? "+" + euro(potDraft[p.id] || 0) : "+€0"}</span>
             </div>
           ))}
+          </>
+          ) : (
+          <>
+          {/* Snelle rondjes: gewoon één bedrag, geen personen. Onder één vaste sleutel. */}
+          <div style={{ ...S.row, gap: 8, marginBottom: 10 }}>
+            <span style={{ fontSize: 20, color: "#8a7d55", fontWeight: 700 }}>€</span>
+            <input style={{ ...S.input, flex: 1, fontSize: 20, fontWeight: 800, padding: "10px 12px", color: "#c88a1a" }} type="text" inputMode="decimal" placeholder="0,00"
+              value={potDraft.pot ? String(potDraft.pot).replace(".", ",") : ""}
+              onChange={(e) => { const v = parseFloat(e.target.value.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0; setPotDraft({ pot: v }) }} />
+          </div>
+          <div style={{ ...S.row, gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+            {[10, 20, 50].map((v) => (
+              <button key={v} style={{ ...S.btn, flex: 1, padding: "8px 6px", fontSize: 13, fontWeight: 800 }} onClick={() => setPotDraft((c) => ({ pot: (c.pot || 0) + v }))}>+ €{v}</button>
+            ))}
+            <button style={{ ...S.btn, padding: "8px 11px", fontSize: 12, color: "#c0554a" }} onClick={() => setPotDraft({ pot: 0 })}>↺</button>
+          </div>
+          </>
+          )}
         </div>
         )}
         {editPotId !== null ? (
