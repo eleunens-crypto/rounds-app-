@@ -3880,8 +3880,8 @@ export default function PartyTest() {
           ) : (
             // Groep bestaat, nog geen rondjes: kies zelf waar je heen wil.
             <div style={{ display: "flex", gap: 10 }}>
-              <button style={{ ...S.btn, flex: 1 }} onClick={() => { setActiveCat(catsPresent[0]); setView("order") }}>{L.toFirstRound}</button>
-              <button style={{ ...S.btnP, flex: 1 }} onClick={() => setView("hub")}>{L.roundsOverview}</button>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => setView("hub")}>{L.roundsOverview}</button>
+              <button style={{ ...S.btnP, flex: 1 }} onClick={() => { setActiveCat(catsPresent[0]); setView("order") }}>{L.toFirstRound}</button>
             </div>
           )}
         </div>
