@@ -471,6 +471,7 @@ const T = {
     noRoundsDone: "Nog geen afgeronde rondjes",
     noRoundsHint: "Zodra een rondje bevestigd én betaald is, verschijnt het hier — dan kan je het nog aanpassen.",
     startFirstRoundBtn: "Start 1e rondje",
+    toFirstRound: "Naar 1e rondje",
     noRoundsHintQuick: "Noteer wat er besteld wordt. Je afgeronde rondjes verschijnen hier.",
     roundBusy: (n: number) => `Je bent bezig met rondje ${n}`,
     tapRoundToEdit: "Tik een ronde open om aan te passen.",
@@ -832,6 +833,7 @@ const T = {
     noRoundsDone: "Aucune tournée terminée",
     noRoundsHint: "Dès qu'une tournée est confirmée et payée, elle apparaît ici — tu peux encore la modifier.",
     startFirstRoundBtn: "1re tourn\u00e9e",
+    toFirstRound: "1re tourn\u00e9e",
     noRoundsHintQuick: "Note ce qui est command\u00e9. Tes tourn\u00e9es termin\u00e9es appara\u00eetront ici.",
     roundBusy: (n: number) => `Tourn\u00e9e ${n} en cours`,
     tapRoundToEdit: "Touche une tournée pour la modifier.",
@@ -3876,8 +3878,11 @@ export default function PartyTest() {
               <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>Ga verder met rondje {roundNr}</button>
             </div>
           ) : (
-            // Nog helemaal niets: starten.
-            <button style={{ ...S.btnP, width: "100%" }} onClick={() => tryBegin()}>Starten</button>
+            // Groep bestaat, nog geen rondjes: kies zelf waar je heen wil.
+            <div style={{ display: "flex", gap: 10 }}>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => { setActiveCat(catsPresent[0]); setView("order") }}>{L.toFirstRound}</button>
+              <button style={{ ...S.btnP, flex: 1 }} onClick={() => setView("hub")}>{L.roundsOverview}</button>
+            </div>
           )}
         </div>
       </div></div>
