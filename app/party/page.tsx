@@ -305,6 +305,9 @@ const T = {
     savedNote: "Groepen bewaren tussen sessies komt in de volledige app (met database).",
     nameGroupFirst: "Geef je groep eerst een naam.",
     dupGroupName: (n: string) => `"${n}" bestaat al en staat nog open. Geef deze groep een andere naam, of sluit de vorige eerst af.`,
+    delGroupConfirm: (n: string) => `"${n}" verwijderen? Dit kan niet ongedaan worden — alle rondjes en gegevens van deze groep gaan weg.`,
+    delGroupYes: "Verwijderen",
+    cancel: "Annuleren",
     createFailed: "Groep aanmaken mislukt. Probeer opnieuw.",
 
     peopleCount: "👥 Aantal personen",
@@ -651,6 +654,9 @@ const T = {
     savedNote: "La sauvegarde des groupes entre les sessions arrive dans l'app complète.",
     nameGroupFirst: "Donne d'abord un nom à ton groupe.",
     dupGroupName: (n: string) => `"${n}" existe déjà et est encore ouvert. Donne un autre nom à ce groupe, ou clôture d'abord le précédent.`,
+    delGroupConfirm: (n: string) => `Supprimer "${n}" ? C'est d\u00e9finitif — toutes les tourn\u00e9es et donn\u00e9es de ce groupe seront perdues.`,
+    delGroupYes: "Supprimer",
+    cancel: "Annuler",
     createFailed: "Échec de la création du groupe. Réessaie.",
 
     peopleCount: "👥 Nombre de personnes",
@@ -1487,6 +1493,9 @@ export default function PartyTest() {
     })))
     const kaart = (pt || []).find((r) => r.is_card)
     if (kaart) setCardPayers(((kaart.card_payers ?? []) as string[]))
+    // Geef terug hoe "vol" de groep is, zodat de aanroeper kan beslissen waar je landt:
+    // een verse groep zonder rondjes stuur je naar het bestelscherm, niet naar een lege hub.
+    return { rondjes: gedaan.length, heeftOpen: !!open, settle: g ? g.settle !== false : true }
   }, [])
 
   useEffect(() => {
@@ -1558,12 +1567,32 @@ export default function PartyTest() {
     setBusy(true)
     localStorage.setItem("rundo_party_group", id)
     setGroupId(id)
-    await loadParty(id)
+    const res = await loadParty(id)
     setBusy(false)
-    // Naar de hub — daar zie je de rondjes en kan je verder. loadParty heeft settle en
-    // de rest al gezet, dus de juiste modus toont vanzelf.
-    setOpenRound(rounds.length - 1)
-    setView("hub")
+    // Een verse groep (nog geen enkel rondje, ook geen lopend rondje) heeft niets te
+    // tonen op de hub. Stuur je dan meteen naar het bestelscherm, zodat je kan beginnen.
+    if (res && res.rondjes === 0 && !res.heeftOpen) {
+      setActiveCat(catsPresent[0])
+      setView("order")
+    } else {
+      setView("hub")
+    }
+  }
+
+  // Een eigen opgeslagen groep verwijderen (met bevestiging). Cascade in de database
+  // ruimt de rondjes, drankjes, personen en pot mee op.
+  const deleteSavedGroup = (g: SavedGroup) => {
+    setConfirmDlg({
+      msg: L.delGroupConfirm(g.name || L.autoName()),
+      yes: L.delGroupYes, no: L.cancel, variant: "danger",
+      onYes: async () => {
+        setConfirmDlg(null)
+        const { error } = await supabase.from("party_groups").delete().eq("id", g.id)
+        if (error) { setNotice("Verwijderen mislukt: " + error.message); return }
+        if (localStorage.getItem("rundo_party_group") === g.id) localStorage.removeItem("rundo_party_group")
+        setSavedGroups((prev) => prev.filter((x) => x.id !== g.id))
+      },
+    })
   }
 
   // Realtime, met twee zuinigheidsmaatregelen — een feest van 8 mensen met telefoons
@@ -3333,16 +3362,22 @@ export default function PartyTest() {
           const open = savedGroups.filter((g) => !g.finalized)
           const dicht = savedGroups.filter((g) => g.finalized)
           const rij = (g: SavedGroup) => (
-            <button key={g.id} onClick={() => openSavedGroup(g.id)} disabled={busy}
-              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", textAlign: "left", padding: "12px 14px", borderRadius: 12, background: "#fff", border: "1px solid rgba(120,95,20,0.15)", cursor: "pointer", marginBottom: 7 }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</div>
-                <div style={{ fontSize: 11, color: "#a89a6f", marginTop: 2 }}>
-                  {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
+            <div key={g.id} style={{ display: "flex", alignItems: "stretch", gap: 7, marginBottom: 7 }}>
+              <button onClick={() => openSavedGroup(g.id)} disabled={busy}
+                style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "space-between", textAlign: "left", padding: "12px 14px", borderRadius: 12, background: "#fff", border: "1px solid rgba(120,95,20,0.15)", cursor: "pointer" }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</div>
+                  <div style={{ fontSize: 11, color: "#a89a6f", marginTop: 2 }}>
+                    {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
+                  </div>
                 </div>
-              </div>
-              <span style={{ fontSize: 16, color: "#c4b896", flexShrink: 0, marginLeft: 10 }}>›</span>
-            </button>
+                <span style={{ fontSize: 16, color: "#c4b896", flexShrink: 0, marginLeft: 10 }}>›</span>
+              </button>
+              {g.owned && (
+                <button onClick={() => deleteSavedGroup(g)} disabled={busy} aria-label={L.delGroupYes}
+                  style={{ flexShrink: 0, width: 44, borderRadius: 12, background: "#fff", border: "1px solid rgba(224,104,92,0.35)", color: "#c0554a", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>🗑️</button>
+              )}
+            </div>
           )
           return (
             <div style={{ marginTop: 18 }}>
