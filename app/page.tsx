@@ -8,8 +8,8 @@ const T = {
   nl: {
     tagline: "Rondjes en rekeningen zonder gedoe!",
     chooseMode: "Kies je mode om te starten",
-    partySub: "Rondjes en splitten zonder gedoe",
-    partyDesc: "Ideaal op fuiven, festivals, vrijgezellenfeesten, teambuildings enz.",
+    partySub: "Rondjes opnemen en splitten zonder gedoe",
+    partyDesc: "Ideaal voor groepsbestellingen op café of andere events (fuif, festival, afterwork..)",
     tableSub: "Scan de rekening en verdeel in groep",
     tableDesc: "Ideaal als groep op restaurant, café of na activiteit.",
     footer: "Gratis · geen registratie · eerlijk splitten",
@@ -17,8 +17,8 @@ const T = {
   fr: {
     tagline: "Tournées et additions, sans prise de tête !",
     chooseMode: "Choisis ton mode pour démarrer",
-    partySub: "Tournées et partage, sans prise de tête",
-    partyDesc: "Idéal en soirée, au festival, à un EVG/EVJF, un team building, etc.",
+    partySub: "Prendre les tournées et partager, sans prise de tête",
+    partyDesc: "Idéal pour les commandes de groupe au café ou autres events (soirée, festival, afterwork..)",
     tableSub: "Scanne l'addition et partage en groupe",
     tableDesc: "Idéal en groupe au resto, au café ou après une activité.",
     footer: "Gratuit · sans inscription · partage équitable",
