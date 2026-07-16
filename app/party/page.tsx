@@ -279,6 +279,7 @@ const T = {
     savedLater: "later beschikbaar",
     savedNote: "Groepen bewaren tussen sessies komt in de volledige app (met database).",
     nameGroupFirst: "Geef je groep eerst een naam.",
+    dupGroupName: (n: string) => `"${n}" bestaat al en staat nog open. Geef deze groep een andere naam, of sluit de vorige eerst af.`,
     createFailed: "Groep aanmaken mislukt. Probeer opnieuw.",
 
     peopleCount: "👥 Aantal personen",
@@ -624,6 +625,7 @@ const T = {
     savedLater: "bientôt disponible",
     savedNote: "La sauvegarde des groupes entre les sessions arrive dans l'app complète.",
     nameGroupFirst: "Donne d'abord un nom à ton groupe.",
+    dupGroupName: (n: string) => `"${n}" existe déjà et est encore ouvert. Donne un autre nom à ce groupe, ou clôture d'abord le précédent.`,
     createFailed: "Échec de la création du groupe. Réessaie.",
 
     peopleCount: "👥 Nombre de personnes",
@@ -1607,8 +1609,12 @@ export default function PartyTest() {
 
   // ── Groep aanmaken (admin) ──────────────────────────────────────────────────
   const createGroup = async (fallbackNaam?: string, wilSettle: boolean = true) => {
-    const naam = (groupName.trim() || fallbackNaam || "").trim()
+    const naam = groupName.trim()
     if (!naam) { setNotice(L.nameGroupFirst); return }
+    // Geen tweede open groep met dezelfde naam (hoofdletter-ongevoelig). Afgesloten
+    // groepen met die naam blokkeren niet — dan mag je 'm hergebruiken.
+    const dubbel = savedGroups.find((g) => !g.finalized && g.name.trim().toLowerCase() === naam.toLowerCase())
+    if (dubbel) { setNotice(L.dupGroupName(naam)); return }
     if (busy) return
     setBusy(true)
     // Botsende codes zijn zeldzaam, maar niet onmogelijk (unique index vangt ze).
@@ -3294,7 +3300,7 @@ export default function PartyTest() {
 
           <button style={{ ...S.btnP, width: "100%", marginTop: 18, opacity: bpSettle === null ? 0.45 : 1 }}
             disabled={bpSettle === null}
-            onClick={() => startWithMode(L.autoName())}>{busy ? L.starting : L.startNow}</button>
+            onClick={() => startWithMode()}>{busy ? L.starting : L.startNow}</button>
         </div>
 
         {savedGroups.length > 0 && (() => {
