@@ -163,10 +163,17 @@ function parseSpraak(tekst: string, lijst: { id: string; name: string }[]): { id
   const woorden = normText(tekst).split(" ").filter(Boolean)
   const treffers: { id: string; name: string; qty: number }[] = []
 
-  // Langste namen eerst: anders kaapt "cola" de match van "coca cola zero".
-  const namen = [...lijst]
-    .map((d) => ({ ...d, delen: normText(d.name).split(" ").filter(Boolean) }))
-    .sort((a, b) => b.delen.length - a.delen.length)
+  // Elk drankje kric zijn genormaliseerde woorden. We matchen FLEXIBEL: de gesproken
+  // woorden hoeven niet exact of volledig te zijn. "cola zero" vindt "coca-cola zero",
+  // "mojito" vindt "virgin mojito". We scoren hoeveel naamwoorden voorkomen in wat er
+  // gezegd is, en kiezen per gesproken stuk het best passende drankje.
+  const namen = lijst.map((d) => {
+    const delen = normText(d.name).split(" ").filter(Boolean)
+    return { ...d, delen, kern: delen.filter((w) => w.length >= 3) }
+  })
+
+  // Stopwoorden die geen drankje aanduiden (merk/vulwoorden die vaak wegvallen).
+  const negeer = new Set(["een", "de", "het", "en", "met", "van", "glas", "keer", "x"])
 
   let i = 0
   while (i < woorden.length) {
@@ -175,13 +182,31 @@ function parseSpraak(tekst: string, lijst: { id: string; name: string }[]): { id
     if (TELWOORD[w] !== undefined) { aantal = TELWOORD[w]; i++ }
     else if (/^\d+$/.test(w)) { aantal = Math.min(20, parseInt(w, 10)); i++ }
     if (i >= woorden.length) break
+    if (negeer.has(woorden[i])) { i++; continue }
 
-    const kandidaat = namen.find((d) => d.delen.every((deel, k) => woorden[i + k] === deel))
-    if (kandidaat) {
-      const bestaand = treffers.find((t) => t.id === kandidaat.id)
+    // Neem een venster van maximaal de volgende 4 woorden en zoek het drankje dat er
+    // het best bij past: zoveel mogelijk kernwoorden van de naam die in het venster
+    // voorkomen. Langere namen die volledig passen winnen van korte losse matches.
+    const venster = woorden.slice(i, i + 4)
+    let best: { d: typeof namen[number]; score: number; verbruikt: number } | null = null
+    for (const d of namen) {
+      const kern = d.kern.length ? d.kern : d.delen
+      if (kern.length === 0) continue
+      const aanwezig = kern.filter((deel) => venster.some((vw) => vw === deel || (vw.length >= 4 && deel.length >= 4 && (vw.startsWith(deel) || deel.startsWith(vw)))))
+      if (aanwezig.length === 0) continue
+      // Score: aandeel van de naam dat herkend is. Volledige match = 1.
+      const score = aanwezig.length / kern.length
+      // Alleen tellen als een betekenisvol deel van de naam herkend is.
+      if (score < 0.5) continue
+      const beter = !best || score > best.score || (score === best.score && kern.length > (best.d.kern.length || best.d.delen.length))
+      if (beter) best = { d, score, verbruikt: Math.min(venster.length, Math.max(1, aanwezig.length)) }
+    }
+
+    if (best) {
+      const bestaand = treffers.find((t) => t.id === best!.d.id)
       if (bestaand) bestaand.qty += aantal
-      else treffers.push({ id: kandidaat.id, name: kandidaat.name, qty: aantal })
-      i += kandidaat.delen.length
+      else treffers.push({ id: best.d.id, name: best.d.name, qty: aantal })
+      i += best.verbruikt
     } else {
       i++
     }
@@ -3694,7 +3719,8 @@ export default function PartyTest() {
           </button>
         )}
         {settle && people.length > 0 && <div style={{ fontSize: 10.5, color: "#8a7d55", textAlign: "center", marginBottom: 10, lineHeight: 1.4 }}>{L.walkIntro}</div>}
-        <div style={{ display: zoekt ? "none" : "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", paddingBottom: 9, marginBottom: 10, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+        <div className="rundo-catscroll" style={{ display: zoekt ? "none" : "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", padding: "0 8px 9px 0", marginBottom: 10, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+          <style>{`.rundo-catscroll::-webkit-scrollbar{display:none}`}</style>
           {catsPresent.map((c) => {
             const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
             const actief = activeCat === c
