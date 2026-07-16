@@ -360,6 +360,8 @@ const T = {
     settingsLater: "Pot, bekers of coins nodig? Die zet je aan via ⚙️ Groep — hoeft nu niet.",
     potStartTitle: "🧪 Samen een pot?",
     potHowMany: "Met hoeveel zijn jullie?",
+    perManShort: "p.p.",
+    potTotalIn: "Totaal in de pot:",
     potPerPerson: (v: string) => `≈ ${v} per persoon`,
     potStartWhy: "Iedereen legt vooraf iets in. Rondjes gaan er dan uit — niemand hoeft telkens te betalen.",
     potStartIn: (b: string) => `In de pot: ${b}`,
@@ -722,6 +724,8 @@ const T = {
     settingsLater: "Besoin d'un pot, de gobelets ou de jetons ? Ça s'active via ⚙️ Groupe — pas maintenant.",
     potStartTitle: "🧪 Une cagnotte commune ?",
     potHowMany: "Vous \u00eates combien ?",
+    perManShort: "p.p.",
+    potTotalIn: "Total dans la cagnotte :",
     potPerPerson: (v: string) => `\u2248 ${v} par personne`,
     potStartWhy: "Chacun met quelque chose d'avance. Les tournées sortent de là — personne ne paie à chaque fois.",
     potStartIn: (b: string) => `Dans la cagnotte : ${b}`,
@@ -1041,6 +1045,8 @@ export default function PartyTest() {
   }
   const [potRounds, setPotRounds] = useState<{ id: string; seq: number; amounts: Record<string, number> }[]>([])
   const [potDraft, setPotDraft] = useState<Record<string, number>>({})
+  // Snelle rondjes: bedrag dat IEDEREEN inlegt. Het totaal (potDraft.pot) = dit × aantal.
+  const [potPerMan, setPotPerMan] = useState<number>(0)
   const [everyoneDraft, setEveryoneDraft] = useState<string>("")
   const [everyoneChoice, setEveryoneChoice] = useState<number | "custom" | null>(null)
   const [editPotId, setEditPotId] = useState<string | null>(null)
@@ -1373,6 +1379,14 @@ export default function PartyTest() {
     const { error } = await supabase.rpc("party_bump", { p_group: groupId, p_round: r.id, p_person: pid, p_drink: did, p_delta: delta })
     if (error) setNotice("Opslaan mislukt: " + error.message)
   }
+
+  // Snelle rondjes: het totaal in de pot volgt uit "iedereen legt X in" × aantal
+  // personen. Zo klopt het opgeslagen totaal, of je nu het bedrag of het aantal wijzigt.
+  useEffect(() => {
+    if (settle) return
+    const totaal = potPerMan * people.length
+    setPotDraft((c) => (c.pot === totaal ? c : { pot: totaal }))
+  }, [settle, potPerMan, people.length])
 
   // Wie een bestaand rondje bijstelt (bedrag, betaler, bekers) markeert het als vuil;
   // dit effect schrijft het daarna weg. Zo hoeft geen enkele mutator databank-logica
@@ -2816,7 +2830,7 @@ export default function PartyTest() {
           <div onClick={() => setPotIsCard(true)} style={{ ...S.seg(potIsCard), padding: "7px 6px", fontSize: 12.5, opacity: potIsCard ? 1 : 0.5 }}>{L.drinkCard}</div>
         </div>
         )}
-        <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>{potIsCard ? "💳 Drankkaart van de groep — leg de kaartwaarde (bv. €15) in. Wat niet opgedronken wordt, is verloren en wordt gelijk over iedereen verdeeld." : "🫙 Echt geld — wat niet opgaat, krijgen de inleggers terug bij de afrekening."}</div>
+        {settle && <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>{potIsCard ? "💳 Drankkaart van de groep — leg de kaartwaarde (bv. €15) in. Wat niet opgedronken wordt, is verloren en wordt gelijk over iedereen verdeeld." : "🫙 Echt geld — wat niet opgaat, krijgen de inleggers terug bij de afrekening."}</div>}
 
         {!settle && (
           <div style={{ background: "#faf4e4", borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}>
@@ -2828,9 +2842,6 @@ export default function PartyTest() {
                 <button style={{ ...S.step, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={addPerson}>+</button>
               </div>
             </div>
-            {people.length > 0 && potContribTotal > 0.005 && (
-              <div style={{ fontSize: 12, color: "#1f6b3a", fontWeight: 700, marginTop: 9, textAlign: "right" }}>{L.potPerPerson(euro(potContribTotal / people.length))}</div>
-            )}
           </div>
         )}
 
@@ -2911,18 +2922,23 @@ export default function PartyTest() {
           </>
           ) : (
           <>
-          {/* Snelle rondjes: gewoon één bedrag, geen personen. Onder één vaste sleutel. */}
+          {/* Snelle rondjes: iedereen legt hetzelfde in. Totaal = per man × aantal. */}
           <div style={{ ...S.row, gap: 8, marginBottom: 10 }}>
             <span style={{ fontSize: 20, color: "#8a7d55", fontWeight: 700 }}>€</span>
-            <input style={{ ...S.input, flex: 1, fontSize: 20, fontWeight: 800, padding: "10px 12px", color: "#c88a1a" }} type="text" inputMode="decimal" placeholder="0,00"
-              value={potDraft.pot ? String(potDraft.pot).replace(".", ",") : ""}
-              onChange={(e) => { const v = parseFloat(e.target.value.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0; setPotDraft({ pot: v }) }} />
+            <input style={{ ...S.input, flex: 1, fontSize: 20, fontWeight: 800, padding: "10px 12px", color: "#c88a1a", textAlign: "right" }} type="text" inputMode="decimal" placeholder="0,00"
+              value={potPerMan ? String(potPerMan).replace(".", ",") : ""}
+              onChange={(e) => setPotPerMan(parseFloat(e.target.value.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0)} />
+            <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700, whiteSpace: "nowrap" }}>{L.perManShort}</span>
           </div>
-          <div style={{ ...S.row, gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
-            {[10, 20, 50].map((v) => (
-              <button key={v} style={{ ...S.btn, flex: 1, padding: "8px 6px", fontSize: 13, fontWeight: 800 }} onClick={() => setPotDraft((c) => ({ pot: (c.pot || 0) + v }))}>+ €{v}</button>
+          <div style={{ ...S.row, gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+            {[5, 10, 20].map((v) => (
+              <button key={v} style={{ ...S.btn, flex: 1, padding: "8px 6px", fontSize: 13, fontWeight: 800, background: potPerMan === v ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: potPerMan === v ? "#fff" : "#4a3f1e", border: potPerMan === v ? "none" : "1px solid rgba(120,95,20,0.18)" }} onClick={() => setPotPerMan(v)}>€{v}</button>
             ))}
-            <button style={{ ...S.btn, padding: "8px 11px", fontSize: 12, color: "#c0554a" }} onClick={() => setPotDraft({ pot: 0 })}>↺</button>
+            <button style={{ ...S.btn, padding: "8px 11px", fontSize: 12, color: "#c0554a" }} onClick={() => setPotPerMan(0)}>↺</button>
+          </div>
+          <div style={{ ...S.row, justifyContent: "center", alignItems: "baseline", gap: 8, padding: "11px", background: "rgba(31,138,76,0.09)", borderRadius: 12 }}>
+            <span style={{ fontSize: 13, color: "#1f6b3a", fontWeight: 700 }}>{L.potTotalIn}</span>
+            <span style={{ fontSize: 23, fontWeight: 800, color: "#1f8a4c" }}>{euro(potPerMan * people.length)}</span>
           </div>
           </>
           )}
@@ -3016,9 +3032,10 @@ export default function PartyTest() {
             {groupName.trim() && <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a5e0f", marginTop: 2, maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()}{settle && <span style={{ color: "#8a7d55", fontWeight: 700 }}> · 👥 {people.length}</span>}</div>}
           </div>
         </div>
-        {!onboarding && (
+        {!!groupId && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. */}
+            {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. Ook op de
+                instellingen zichtbaar, zodat je altijd ziet wat er nog in de pot zit. */}
             <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "5px 12px 5px 7px", borderRadius: 22, fontSize: 13, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#fff", border: potRemaining > 0.005 ? "1px solid rgba(200,138,26,0.55)" : "0.5px solid rgba(120,95,20,0.3)" }}>
               {potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️</span>}
               {potIsCard ? (
