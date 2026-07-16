@@ -62,15 +62,15 @@ type Cat = "Bier" | "BierAV" | "Frisdrank" | "Wijn" | "Cocktail" | "Mocktail" | 
 type Drink = { id: string; name: string; emoji: string; cat: Cat; price: number; cup: boolean; fav: boolean; coins: number; custom?: boolean; by?: string }
 
 const CATS: Cat[] = ["Bier", "BierAV", "Frisdrank", "Wijn", "Cocktail", "Mocktail", "Longdrink", "Shot", "Warm"]
-const CAT_LABEL: Record<Cat, string> = { Bier: "🍺 Bier", BierAV: "🌿 AV-bier", Frisdrank: "🥤 Fris", Wijn: "🍷 Wijn", Cocktail: "🍸 Cocktail", Mocktail: "🍹 Mocktail", Longdrink: "🥃 Longdrink", Shot: "🔥 Shot", Warm: "☕ Warm" }
+const CAT_LABEL: Record<Cat, string> = { Bier: "🍺 Bier", BierAV: "🌿 0,0%-bier", Frisdrank: "🥤 Fris", Wijn: "🍷 Wijn", Cocktail: "🍸 Cocktail", Mocktail: "🍹 Mocktail", Longdrink: "🥃 Longdrink", Shot: "🔥 Shot", Warm: "☕ Warm" }
 const CAT_EMOJI: Record<Cat, string> = { Bier: "🍺", BierAV: "🌿", Frisdrank: "🥤", Wijn: "🍷", Cocktail: "🍸", Mocktail: "🍹", Longdrink: "🥃", Shot: "🔥", Warm: "☕" }
 const CUPCAT: Record<Cat, boolean> = { Bier: true, BierAV: true, Frisdrank: true, Wijn: true, Cocktail: true, Mocktail: true, Longdrink: false, Shot: false, Warm: false }
 
 const DATA: [Cat, string, number][] = [
-  ["Bier", "Pils", 3.2], ["Bier", "Duvel", 5], ["Bier", "Chimay Blauw", 5.5], ["Bier", "Cornet", 5], ["Bier", "Geuze", 5], ["Bier", "Hoegaarden Wit", 4], ["Bier", "Kriek", 4.5], ["Bier", "La Chouffe", 5], ["Bier", "Leffe Blond", 4.5], ["Bier", "Tripel Karmeliet", 5.5], ["Bier", "Vedett Extra Blond", 4], ["Bier", "Westmalle Tripel", 5],
+  ["Bier", "Pintje", 3.2], ["Bier", "Duvel", 5], ["Bier", "Chimay Blauw", 5.5], ["Bier", "Cornet", 5], ["Bier", "Geuze", 5], ["Bier", "Hoegaarden Wit", 4], ["Bier", "Kriek", 4.5], ["Bier", "La Chouffe", 5], ["Bier", "Leffe Blond", 4.5], ["Bier", "Tripel Karmeliet", 5.5], ["Bier", "Vedett Extra Blond", 4], ["Bier", "Westmalle Tripel", 5],
   ["BierAV", "Jupiler 0.0", 3], ["BierAV", "Stella Artois 0.0", 3], ["BierAV", "Carlsberg 0.0", 3], ["BierAV", "Corona Cero", 3.5], ["BierAV", "Hoegaarden 0.0", 3.5], ["BierAV", "La Chouffe 0.0", 4], ["BierAV", "Leffe Blond 0.0", 3.5], ["BierAV", "Sportzot", 3.5], ["BierAV", "Cornet 0.0", 4], ["BierAV", "Vedett 0.0", 3.5], ["BierAV", "Cristal 0.0", 3], ["BierAV", "Maes 0.0", 3], ["BierAV", "Palm 0.0", 3.5], ["BierAV", "Kriek 0.0", 3.5], ["BierAV", "Duvel 0.0", 4],
   ["Frisdrank", "Coca-Cola", 3], ["Frisdrank", "Coca-Cola Zero", 3], ["Frisdrank", "Coca-Cola Light", 3], ["Frisdrank", "Fanta", 3], ["Frisdrank", "Sprite", 3], ["Frisdrank", "Ice Tea", 3], ["Frisdrank", "Red Bull", 4], ["Frisdrank", "Schweppes Tonic", 3.5], ["Frisdrank", "Appelsap", 3], ["Frisdrank", "Sinaasappelsap", 4], ["Frisdrank", "Water plat", 2.8], ["Frisdrank", "Water bruis", 2.8], ["Frisdrank", "Ice Tea Green", 3],
-  ["Wijn", "Huiswijn rood", 5], ["Wijn", "Huiswijn wit", 5], ["Wijn", "Huiswijn rosé", 5], ["Wijn", "Cava", 6.5], ["Wijn", "Prosecco", 6.5], ["Wijn", "Champagne", 11], ["Wijn", "Cabernet Sauvignon", 5.5], ["Wijn", "Chardonnay", 5.5], ["Wijn", "Merlot", 5.5], ["Wijn", "Pinot Noir", 5.5], ["Wijn", "Sauvignon Blanc", 5.5], ["Wijn", "Sangria", 5], ["Wijn", "Porto", 5],
+  ["Wijn", "Rode wijn", 5], ["Wijn", "Witte wijn", 5], ["Wijn", "Rosé", 5], ["Wijn", "Cava", 6.5], ["Wijn", "Prosecco", 6.5], ["Wijn", "Champagne", 11], ["Wijn", "Cabernet Sauvignon", 5.5], ["Wijn", "Chardonnay", 5.5], ["Wijn", "Merlot", 5.5], ["Wijn", "Pinot Noir", 5.5], ["Wijn", "Sauvignon Blanc", 5.5], ["Wijn", "Sangria", 5], ["Wijn", "Porto", 5],
   ["Cocktail", "Aperol Spritz", 10], ["Cocktail", "Gin Tonic", 11], ["Cocktail", "Mojito", 11.5], ["Cocktail", "Margarita", 11.5], ["Cocktail", "Cosmopolitan", 11.5], ["Cocktail", "Espresso Martini", 12.5], ["Cocktail", "Hugo Spritz", 10], ["Cocktail", "Moscow Mule", 11.5], ["Cocktail", "Negroni", 11.5], ["Cocktail", "Piña Colada", 11.5], ["Cocktail", "Pornstar Martini", 13], ["Cocktail", "Sex on the Beach", 10.5], ["Cocktail", "Caipirinha", 11.5],
   ["Mocktail", "Virgin Mojito", 7.5], ["Mocktail", "Virgin Gin Tonic", 7.5], ["Mocktail", "Hugo 0.0", 7.5], ["Mocktail", "Berry Mule", 7.5], ["Mocktail", "Gimber", 5.5], ["Mocktail", "Strawberry Daiquiri 0.0", 7.5], ["Mocktail", "Virgin Sunrise", 7], ["Mocktail", "Virgin Aperol Spritz", 7.5], ["Mocktail", "Virgin Moscow Mule", 7.5], ["Mocktail", "Virgin Colada", 7.5], ["Mocktail", "Shirley Temple", 6], ["Mocktail", "Ipanema", 6.5], ["Mocktail", "Crodino", 5.5], ["Mocktail", "Virgin Passion Spritz", 7.5],
   ["Longdrink", "Vodka Red Bull", 10], ["Longdrink", "Vodka Orange", 9], ["Longdrink", "Cuba Libre", 9], ["Longdrink", "Rum Cola", 9], ["Longdrink", "Whisky Cola", 9.5], ["Longdrink", "Malibu Cola", 9], ["Longdrink", "Malibu Ananas", 9], ["Longdrink", "Bacardi Lemon", 9], ["Longdrink", "Passoã Orange", 9], ["Longdrink", "Pisang Orange", 9], ["Longdrink", "Safari Orange", 9], ["Longdrink", "Jägermeister Red Bull", 10], ["Longdrink", "Bacardi Cola", 9], ["Longdrink", "Vodka Cassis", 9], ["Longdrink", "Vodka Sprite", 9], ["Longdrink", "Gin Cassis", 9.5], ["Longdrink", "Whisky Ginger Ale", 9.5],
@@ -81,13 +81,13 @@ const DATA: [Cat, string, number][] = [
 // Alles hierbuiten blijft gewoon bestaan in DATA en verschijnt zodra fullList aan staat.
 const FAVS = new Set([
   // Bier
-  "Pils", "Duvel",
+  "Pintje", "Duvel",
   // AV-bier
   "Jupiler 0.0", "Carlsberg 0.0", "Sportzot",
   // Frisdrank
   "Coca-Cola", "Coca-Cola Zero", "Coca-Cola Light", "Fanta", "Schweppes Tonic", "Water plat", "Water bruis",
   // Wijn
-  "Huiswijn wit", "Huiswijn rood", "Huiswijn rosé", "Cava", "Champagne",
+  "Witte wijn", "Rode wijn", "Rosé", "Cava", "Champagne",
   // Cocktail
   "Aperol Spritz", "Gin Tonic", "Moscow Mule", "Pornstar Martini",
   // Mocktail
@@ -100,7 +100,7 @@ const FAVS = new Set([
   "Koffie", "Espresso", "Decafé koffie", "Latte Macchiato", "Thee", "Warme chocolademelk", "Irish Coffee",
 ])
 // Vaste festival-coinprijzen (standaard) — bijstelbaar per 0,1 in de app.
-const PILS = new Set(["Pils", "Jupiler 0.0", "Stella Artois 0.0", "Carlsberg 0.0", "Corona Cero", "Hoegaarden 0.0", "Leffe Blond 0.0", "Sportzot", "Vedett 0.0", "Cristal 0.0", "Maes 0.0", "Palm 0.0"])
+const PILS = new Set(["Pintje", "Jupiler 0.0", "Stella Artois 0.0", "Carlsberg 0.0", "Corona Cero", "Hoegaarden 0.0", "Leffe Blond 0.0", "Sportzot", "Vedett 0.0", "Cristal 0.0", "Maes 0.0", "Palm 0.0"])
 const COIN3 = new Set(["Champagne", "Irish Coffee", "Hasseltse koffie"])
 const coinDefault = (cat: Cat, name: string): number => {
   if (name === "Red Bull" || name === "Glühwein") return 1.5
@@ -159,17 +159,41 @@ const TELWOORD: Record<string, number> = {
   un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8, neuf: 9, dix: 10,
 }
 
+// Andere namen die mensen voor een drankje gebruiken. De sleutel is de drinkKey (uit de
+// naam afgeleid), de waarde is een lijst extra termen waarop de spraak ook mag matchen.
+// Bewust GEEN heel korte, dubbelzinnige termen ("wit", "zero", "blond") — die zouden
+// verkeerd kunnen vallen tussen meerdere drankjes.
+const SPRAAK_SYNONIEMEN: Record<string, string[]> = {
+  "pintje": ["pint", "pils"],
+  "leffe-blond": ["leffe"],
+  "hoegaarden-wit": ["hoegaarden", "witbier", "wit bier"],
+  "la-chouffe": ["chouffe"],
+  "tripel-karmeliet": ["karmeliet", "tripel"],
+  "coca-cola": ["cola", "coca"],
+  "coca-cola-zero": ["cola zero", "coca zero"],
+  "coca-cola-light": ["cola light"],
+  "ice-tea": ["icetea", "ijsthee"],
+  "water-plat": ["plat water", "water", "spa plat"],
+  "water-bruis": ["bruiswater", "spa bruis", "bruis water"],
+  "rode-wijn": ["rood", "rooie", "rooiewijn"],
+  "witte-wijn": ["witte wijn"],
+  "rose": ["rosee"],
+  "cappuccino": ["capucino"],
+}
+
 function parseSpraak(tekst: string, lijst: { id: string; name: string }[]): { id: string; name: string; qty: number }[] {
   const woorden = normText(tekst).split(" ").filter(Boolean)
   const treffers: { id: string; name: string; qty: number }[] = []
 
-  // Elk drankje kric zijn genormaliseerde woorden. We matchen FLEXIBEL: de gesproken
-  // woorden hoeven niet exact of volledig te zijn. "cola zero" vindt "coca-cola zero",
-  // "mojito" vindt "virgin mojito". We scoren hoeveel naamwoorden voorkomen in wat er
-  // gezegd is, en kiezen per gesproken stuk het best passende drankje.
+  // Elk drankje krijgt zijn genormaliseerde woorden PLUS eventuele synoniemen (andere
+  // namen die mensen gebruiken: "pint"/"pintje" voor Pintje, "coca" voor Coca-Cola).
+  // We matchen FLEXIBEL: de gesproken woorden hoeven niet exact of volledig te zijn.
+  // Per drankje bewaren we meerdere woordgroepen; matcht er één, dan is het raak.
   const namen = lijst.map((d) => {
-    const delen = normText(d.name).split(" ").filter(Boolean)
-    return { ...d, delen, kern: delen.filter((w) => w.length >= 3) }
+    const eigen = normText(d.name).split(" ").filter(Boolean)
+    const syn = (SPRAAK_SYNONIEMEN[d.id] || []).map((z) => normText(z).split(" ").filter(Boolean))
+    const groepen = [eigen, ...syn].map((delen) => ({ delen, kern: delen.filter((w) => w.length >= 3) }))
+    return { id: d.id, name: d.name, groepen }
   })
 
   // Stopwoorden die geen drankje aanduiden (merk/vulwoorden die vaak wegvallen).
@@ -185,21 +209,21 @@ function parseSpraak(tekst: string, lijst: { id: string; name: string }[]): { id
     if (negeer.has(woorden[i])) { i++; continue }
 
     // Neem een venster van maximaal de volgende 4 woorden en zoek het drankje dat er
-    // het best bij past: zoveel mogelijk kernwoorden van de naam die in het venster
-    // voorkomen. Langere namen die volledig passen winnen van korte losse matches.
+    // het best bij past: zoveel mogelijk kernwoorden van (een naam OF synoniem) die in
+    // het venster voorkomen. Langere namen die volledig passen winnen van losse matches.
     const venster = woorden.slice(i, i + 4)
-    let best: { d: typeof namen[number]; score: number; verbruikt: number } | null = null
+    let best: { d: typeof namen[number]; score: number; kernlen: number; verbruikt: number } | null = null
     for (const d of namen) {
-      const kern = d.kern.length ? d.kern : d.delen
-      if (kern.length === 0) continue
-      const aanwezig = kern.filter((deel) => venster.some((vw) => vw === deel || (vw.length >= 4 && deel.length >= 4 && (vw.startsWith(deel) || deel.startsWith(vw)))))
-      if (aanwezig.length === 0) continue
-      // Score: aandeel van de naam dat herkend is. Volledige match = 1.
-      const score = aanwezig.length / kern.length
-      // Alleen tellen als een betekenisvol deel van de naam herkend is.
-      if (score < 0.5) continue
-      const beter = !best || score > best.score || (score === best.score && kern.length > (best.d.kern.length || best.d.delen.length))
-      if (beter) best = { d, score, verbruikt: Math.min(venster.length, Math.max(1, aanwezig.length)) }
+      for (const g of d.groepen) {
+        const kern = g.kern.length ? g.kern : g.delen
+        if (kern.length === 0) continue
+        const aanwezig = kern.filter((deel) => venster.some((vw) => vw === deel || (vw.length >= 4 && deel.length >= 4 && (vw.startsWith(deel) || deel.startsWith(vw)))))
+        if (aanwezig.length === 0) continue
+        const score = aanwezig.length / kern.length
+        if (score < 0.5) continue
+        const beter = !best || score > best.score || (score === best.score && kern.length > best.kernlen)
+        if (beter) best = { d, score, kernlen: kern.length, verbruikt: Math.min(venster.length, Math.max(1, aanwezig.length)) }
+      }
     }
 
     if (best) {
@@ -568,7 +592,7 @@ const T = {
     voiceBtn: "🎤 Inspreken",
     voiceBeta: "beta",
     voiceListening: "🎤 Luisteren…",
-    voiceSay: "Zeg bijvoorbeeld: \"drie pils en twee cola\"",
+    voiceSay: "Zeg bijvoorbeeld \"2 cola zero\". Werkt het best per drankje apart.",
     voiceHeard: "Verstaan",
     voiceNothing: "Niets herkend. Probeer opnieuw, of tik het gewoon aan.",
     voiceAdd: "Toevoegen aan rondje",
@@ -926,7 +950,7 @@ const T = {
     voiceBtn: "🎤 Dicter",
     voiceBeta: "bêta",
     voiceListening: "🎤 J'écoute…",
-    voiceSay: "Dis par exemple : « trois pils et deux cola »",
+    voiceSay: "Dis par exemple « 2 cola zero ». Fonctionne mieux par boisson.",
     voiceHeard: "Compris",
     voiceNothing: "Rien reconnu. Réessaie, ou touche simplement les boissons.",
     voiceAdd: "Ajouter à la tournée",
