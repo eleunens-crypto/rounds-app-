@@ -516,6 +516,7 @@ const T = {
     modeFairSub: "Groepsbestellingen, pot leggen, bestellijst + verdeel eerlijk achteraf!",
     modeFairLine: "Ieder betaalt zijn deel, betaal niet mee voor wat je niet dronk!",
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
+    chooseHow: "Kies hoe jullie bestellen",
     barList: "🍻 Aan de toog",
     barHandOut: "Uitdelen",
     settleNow: "🧾 Toch afrekenen?",
@@ -865,6 +866,7 @@ const T = {
     modeFairSub: "Commandes de groupe, cagnotte, liste de commande + partage équitable !",
     modeFairLine: "Chacun paie sa part, ne paie pas pour ce que tu n'as pas bu !",
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
+    chooseHow: "Choisissez comment commander",
     barList: "🍻 Au bar",
     barHandOut: "Distribuer",
     settleNow: "🧾 Régler quand même ?",
@@ -1003,6 +1005,10 @@ export default function PartyTest() {
   const [bpSettle, setBpSettle] = useState<boolean | null>(true)
   const [fromOnboarding, setFromOnboarding] = useState(false)
   const [onboardedOnce, setOnboardedOnce] = useState(false)
+  // Als je een verse groep (nog geen rondjes) heropent, land je op de kaders om de modus
+  // te (her)bevestigen. Deze id onthoudt WELKE bestaande groep we dan bijwerken, zodat
+  // "Beginnen" niet een nieuwe groep maakt maar deze verse groep voortzet.
+  const [resumeGroupId, setResumeGroupId] = useState<string | null>(null)
   const [onbPotActive, setOnbPotActive] = useState(false)
 
   const [roundNr, setRoundNr] = useState(1)
@@ -1569,12 +1575,15 @@ export default function PartyTest() {
     setGroupId(id)
     const res = await loadParty(id)
     setBusy(false)
-    // Een verse groep (nog geen enkel rondje, ook geen lopend rondje) heeft niets te
-    // tonen op de hub. Stuur je dan meteen naar het bestelscherm, zodat je kan beginnen.
     if (res && res.rondjes === 0 && !res.heeftOpen) {
-      setActiveCat(catsPresent[0])
-      setView("order")
+      // Verse groep: nog nooit een rondje. Terug naar de kaders zodat je de modus kan
+      // (her)bevestigen of alsnog wisselen. De al-gekozen modus staat voorgeselecteerd,
+      // en resumeGroupId zorgt dat "Beginnen" DEZE groep voortzet (geen nieuwe maakt).
+      setResumeGroupId(id)
+      setBpSettle(res.settle)
+      setView("start")
     } else {
+      setResumeGroupId(null)
       setView("hub")
     }
   }
@@ -1720,6 +1729,19 @@ export default function PartyTest() {
       setPotChosen(false); setDepositOn(false); setPay("eur")
     } else {
       setSettle(true)
+    }
+    // Hervat je een bestaande verse groep? Dan de modus op die groep bijwerken en er
+    // meteen in duiken — geen nieuwe groep aanmaken.
+    if (resumeGroupId) {
+      setSettle(wilSettle)
+      const naam = groupName.trim()
+      await supabase.from("party_groups").update({ settle: wilSettle, ...(naam ? { name: naam } : {}), last_active: new Date().toISOString() }).eq("id", resumeGroupId)
+      const rid = resumeGroupId
+      setResumeGroupId(null)
+      if (!wilSettle) { setActiveCat(catsPresent[0]); setView("order") }
+      else setView("setup")
+      loadParty(rid)
+      return
     }
     await createGroup(fallbackNaam, wilSettle)
   }
@@ -3294,6 +3316,8 @@ export default function PartyTest() {
             <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#c4b896", pointerEvents: "none" }}>✏️</span>
           </div>
 
+          <div style={{ textAlign: "center", fontSize: 13, fontWeight: 800, color: "#8a7d55", marginBottom: 12 }}>{L.chooseHow}</div>
+
           <div style={{ display: "flex", flexDirection: "column" }}>
             {/* Fair Split BOVEN — de voorkeur. Al geselecteerd bij binnenkomst. */}
             <button onClick={() => setBpSettle(true)}
@@ -3321,8 +3345,6 @@ export default function PartyTest() {
                 ))}
               </div>
             </button>
-
-            <div style={{ textAlign: "center", fontSize: 10.5, color: "#a89a6f", padding: "9px 0" }}>{L.modeSwitchLater}</div>
 
             {/* Snel drankjes noteren. */}
             <button onClick={() => setBpSettle(false)}
