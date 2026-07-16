@@ -359,6 +359,8 @@ const T = {
     beforeWeStart: "Kies je aanpak",
     settingsLater: "Pot, bekers of coins nodig? Die zet je aan via ⚙️ Groep — hoeft nu niet.",
     potStartTitle: "🧪 Samen een pot?",
+    potHowMany: "Met hoeveel zijn jullie?",
+    potPerPerson: (v: string) => `≈ ${v} per persoon`,
     potStartWhy: "Iedereen legt vooraf iets in. Rondjes gaan er dan uit — niemand hoeft telkens te betalen.",
     potStartIn: (b: string) => `In de pot: ${b}`,
     potStartAdd: "+ Inleggen",
@@ -718,6 +720,8 @@ const T = {
     beforeWeStart: "Choisis ta formule",
     settingsLater: "Besoin d'un pot, de gobelets ou de jetons ? Ça s'active via ⚙️ Groupe — pas maintenant.",
     potStartTitle: "🧪 Une cagnotte commune ?",
+    potHowMany: "Vous \u00eates combien ?",
+    potPerPerson: (v: string) => `\u2248 ${v} par personne`,
     potStartWhy: "Chacun met quelque chose d'avance. Les tournées sortent de là — personne ne paie à chaque fois.",
     potStartIn: (b: string) => `Dans la cagnotte : ${b}`,
     potStartAdd: "+ Mettre",
@@ -2811,6 +2815,22 @@ export default function PartyTest() {
         </div>
         )}
         <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>{potIsCard ? "💳 Drankkaart van de groep — leg de kaartwaarde (bv. €15) in. Wat niet opgedronken wordt, is verloren en wordt gelijk over iedereen verdeeld." : "🫙 Echt geld — wat niet opgaat, krijgen de inleggers terug bij de afrekening."}</div>
+
+        {!settle && (
+          <div style={{ background: "#faf4e4", borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}>
+            <div style={{ ...S.row, justifyContent: "space-between" }}>
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#4a3f1e" }}>{L.potHowMany}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <button style={{ ...S.step, opacity: people.length > 0 ? 1 : 0.4 }} onClick={removeLastPerson}>−</button>
+                <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{people.length}</span>
+                <button style={{ ...S.step, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={addPerson}>+</button>
+              </div>
+            </div>
+            {people.length > 0 && potContribTotal > 0.005 && (
+              <div style={{ fontSize: 12, color: "#1f6b3a", fontWeight: 700, marginTop: 9, textAlign: "right" }}>{L.potPerPerson(euro(potContribTotal / people.length))}</div>
+            )}
+          </div>
+        )}
 
         {potRounds.map((r, i) => {
           const tot = Object.values(r.amounts).reduce((a, b) => a + (b || 0), 0)
