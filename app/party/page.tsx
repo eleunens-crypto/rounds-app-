@@ -3898,47 +3898,44 @@ export default function PartyTest() {
             Geen favorieten in {CAT_LABEL[activeCat]}. <span style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }} onClick={() => setFullList(true)}>{L.showAll}</span>
           </div>
         ) : (
-          <>
-          {!zoekt && fullList && (
-            <div style={{ textAlign: "left", marginBottom: 8 }}>
-              <span onClick={() => setFullList(false)} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>▴ minder tonen</span>
-            </div>
-          )}
-          <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12 }}>
-            {catVisible.map((d) => {
-              const tot = drinkTotal(d.id), un = cartAnon[d.id] ?? 0
-              return (
-                <div key={d.id} style={{ padding: "10px 10px", borderRadius: 12, background: tot > 0 ? "rgba(31,138,76,0.08)" : "#faf4e4", border: tot > 0 ? "1.5px solid rgba(31,138,76,0.5)" : "1px solid rgba(120,95,20,0.1)", boxShadow: tot > 0 ? "0 0 0 3px rgba(31,138,76,0.1)" : "none" }}>
-                  <div style={{ fontSize: 13.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
-                  <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
-                    <button style={{ ...S.step, opacity: tot > 0 ? 1 : 0.4 }} onClick={() => bumpDown(d.id)}>−</button>
-                    <span style={{ fontSize: 17, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}</span>
-                    <button style={S.step} onClick={() => bump1(d.id)}>+</button>
+          <div style={{ position: "relative" }}>
+            <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12 }}>
+              {catVisible.map((d) => {
+                const tot = drinkTotal(d.id), un = cartAnon[d.id] ?? 0
+                return (
+                  <div key={d.id} style={{ padding: "10px 10px", borderRadius: 12, background: tot > 0 ? "rgba(31,138,76,0.08)" : "#faf4e4", border: tot > 0 ? "1.5px solid rgba(31,138,76,0.5)" : "1px solid rgba(120,95,20,0.1)", boxShadow: tot > 0 ? "0 0 0 3px rgba(31,138,76,0.1)" : "none" }}>
+                    <div style={{ fontSize: 13.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
+                    <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
+                      <button style={{ ...S.step, opacity: tot > 0 ? 1 : 0.4 }} onClick={() => bumpDown(d.id)}>−</button>
+                      <span style={{ fontSize: 17, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}</span>
+                      <button style={S.step} onClick={() => bump1(d.id)}>+</button>
+                    </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
+            {/* "Meer/minder" hangt centraal, half over de onderrand van de lijst. */}
+            {!zoekt && !fullList && catDrinks.length > catVisible.length && (
+              <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
+                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(240,165,0,0.6)", color: "#c98a00", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
+                  + {catDrinks.length - catVisible.length} meer ▾
+                </span>
+              </div>
+            )}
+            {!zoekt && fullList && (
+              <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
+                  ▴ minder tonen
+                </span>
+              </div>
+            )}
           </div>
-          </>
         )}
-        {/* Snel de rest van de categorie tonen zonder naar boven te scrollen. */}
-        {!zoekt && !fullList && catDrinks.length > catVisible.length && (
-          <div style={{ textAlign: "left", marginTop: 10 }}>
-            <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "9px 18px", borderRadius: 20, fontSize: 12.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(240,165,0,0.5)", color: "#c98a00" }}>
-              + {catDrinks.length - catVisible.length} meer in {CAT_LABEL[activeCat]} ▾
-            </span>
-          </div>
-        )}
-        {!zoekt && fullList && (
-          <div style={{ textAlign: "left", marginTop: 10 }}>
-            <span onClick={() => setFullList(false)} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>▴ minder tonen</span>
-          </div>
-        )}
-        <div style={{ display: "flex", gap: 18, justifyContent: "center", padding: "4px 0 14px" }}>
-          <span onClick={startVoice} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "18px 0 14px" }}>
+          <span onClick={startVoice} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "7px 12px", borderRadius: 16, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
             🎤 {L.voiceBtn} <span style={{ fontSize: 8.5, opacity: 0.7 }}>{L.voiceBeta}</span>
           </span>
-          <span onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>
+          <span onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "7px 12px", borderRadius: 16, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
             ＋ {L.addOwnDrink}
           </span>
         </div>
