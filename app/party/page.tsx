@@ -272,7 +272,7 @@ const T = {
     groupNameEdit: "Naam van deze groep",
     groupNamePh: "Typ je groepsnaam",
     starting: "Bezig…",
-    savedGroups: "📁 Opgeslagen groepen",
+    savedGroups: "Opgeslagen groepen",
     savedLater: "later beschikbaar",
     savedNote: "Groepen bewaren tussen sessies komt in de volledige app (met database).",
     nameGroupFirst: "Geef je groep eerst een naam.",
@@ -475,8 +475,11 @@ const T = {
     iGoInstead: "ik neem het over",
     notMeRunner: "geef door",
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
-    modeTitle: "Rondjes & Fair Split",
-    modeQuick: "Gewoon rondjes",
+    modeTitle: "Samen bestellen & Fair Split",
+    modeQuick: "Snel drankjes noteren",
+    modeFairInfo: "Groepsbestellingen, pot leggen en delen via QR. Ieder betaalt zijn deel > betaal niet mee voor wat je niet dronk!",
+    modeQuickInfo: "Hou gewoon bij wat er besteld wordt en leg eventueel een pot, verdelen kan later nog.",
+    groupNamePlaceholder: "Bv. De Bubbelkes",
     modeQuickSub: "Groepsbestellingen, pot leggen en handige bestellijst.",
     modeFairSub: "Groepsbestellingen, pot leggen, bestellijst + verdeel eerlijk achteraf!",
     modeFairLine: "Ieder betaalt zijn deel, betaal niet mee voor wat je niet dronk!",
@@ -611,7 +614,7 @@ const T = {
     groupNameEdit: "Nom de ce groupe",
     groupNamePh: "Tape le nom de ton groupe",
     starting: "En cours…",
-    savedGroups: "📁 Groupes enregistrés",
+    savedGroups: "Groupes enregistrés",
     savedLater: "bientôt disponible",
     savedNote: "La sauvegarde des groupes entre les sessions arrive dans l'app complète.",
     nameGroupFirst: "Donne d'abord un nom à ton groupe.",
@@ -814,8 +817,11 @@ const T = {
     iGoInstead: "je reprends",
     notMeRunner: "passer",
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
-    modeTitle: "Tournées & Fair Split",
-    modeQuick: "Juste des tournées",
+    modeTitle: "Commander ensemble & Fair Split",
+    modeQuick: "Noter les boissons",
+    modeFairInfo: "Commandes de groupe, cagnotte et partage via QR. Chacun paie sa part > ne paie pas pour ce que tu n'as pas bu !",
+    modeQuickInfo: "Note simplement ce qui est command\u00e9 et mets \u00e9ventuellement une cagnotte, tu peux partager plus tard.",
+    groupNamePlaceholder: "Ex. Les Bulles",
     modeQuickSub: "Commandes de groupe, cagnotte et liste de commande pratique.",
     modeFairSub: "Commandes de groupe, cagnotte, liste de commande + partage équitable !",
     modeFairLine: "Chacun paie sa part, ne paie pas pour ce que tu n'as pas bu !",
@@ -994,6 +1000,8 @@ export default function PartyTest() {
   const [openRounds, setOpenRounds] = useState<Set<string>>(new Set())
   // Onthoud vanwaar je naar het rondjesoverzicht ging, zodat "terug" daarheen keert.
   const [overviewBackTo, setOverviewBackTo] = useState<"hub" | "order">("hub")
+  // Welke mode-kaart heeft zijn info-uitleg opengeklapt (via de i-knop).
+  const [openInfo, setOpenInfo] = useState<"fair" | "quick" | null>(null)
 
   const [showAssignAll, setShowAssignAll] = useState(false)
   const [assignMode, setAssignMode] = useState<"drink" | "person">("person")
@@ -3157,17 +3165,24 @@ export default function PartyTest() {
       <div style={{ ...S.page, display: "flex", flexDirection: "column", justifyContent: "flex-start", padding: "0 0 40px" }}><div style={{ ...S.wrap, paddingTop: 26 }}>
         {renderDialogs()}
         <style>{`input::placeholder,textarea::placeholder{color:#c4b896;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 26 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 22 }}>
           <div style={{ ...S.row, gap: 13 }}>
-            <RundoLogo size={64} />
-            <div style={{ ...S.h1, fontSize: 34, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
+            <RundoLogo size={58} />
+            <div style={{ ...S.h1, fontSize: 32, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
           </div>
-          <div style={{ ...S.row, gap: 8, marginTop: 12 }}><CheersIcon size={22} color="#4a3f1e" /><span style={{ fontSize: 15, color: "#4a3f1e", fontWeight: 700 }}>{L.tagline}</span></div>
         </div>
 
-        {/* Eerst de aanpak kiezen — dat bepaalt de hele avond. Daarna pas de naam. */}
         <div style={{ ...S.card, padding: "18px 16px" }}>
-          <h3 style={{ ...S.h3, fontSize: 21, marginTop: 0, marginBottom: 16 }}>{L.beforeWeStart}</h3>
+          {/* Groepsnaam bovenaan. Leeg laten mag — dan valt hij terug op "Rondje + datum". */}
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#8a7d55", marginBottom: 7, letterSpacing: "0.03em" }}>
+            {L.groupNameHint} <span style={{ fontWeight: 600, color: "#a89a6f", letterSpacing: 0 }}>· {L.tapToChange}</span>
+          </div>
+          <div style={{ position: "relative", marginBottom: 18 }}>
+            <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder={L.groupNamePlaceholder}
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 17, fontWeight: 800, background: "#fdfaf2", padding: "15px 40px 15px 14px", borderRadius: 12, border: "1.5px solid #e08a00" }} />
+            <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#c4b896", pointerEvents: "none" }}>✏️</span>
+          </div>
+
           <div style={{ display: "flex", flexDirection: "column" }}>
             {/* Fair Split BOVEN — de voorkeur. Al geselecteerd bij binnenkomst. */}
             <button onClick={() => setBpSettle(true)}
@@ -3175,12 +3190,16 @@ export default function PartyTest() {
                        background: bpSettle === true ? "#fff8e8" : "#fff",
                        boxShadow: bpSettle === true ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
                        border: bpSettle === true ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
-              <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
-                <span style={{ fontSize: 20 }}>⚖️</span>
+              <div style={{ ...S.row, gap: 7, marginBottom: 13 }}>
                 <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.modeTitle}</span>
+                <span onClick={(e) => { e.stopPropagation(); setOpenInfo(openInfo === "fair" ? null : "fair") }}
+                  style={{ width: 18, height: 18, borderRadius: "50%", fontSize: 11, fontWeight: 800, fontStyle: "italic", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                           background: openInfo === "fair" ? "#e08a00" : "transparent", color: openInfo === "fair" ? "#fff" : "#c4a94a", border: openInfo === "fair" ? "none" : "1.5px solid #c4a94a" }}>i</span>
                 {bpSettle === true && <span style={{ marginLeft: "auto", fontSize: 16, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
               </div>
-              <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 13 }}>{L.modeFairSub}</div>
+              {openInfo === "fair" && (
+                <div style={{ marginBottom: 13, padding: "10px 11px", background: "#fffdf6", borderRadius: 9, fontSize: 11.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeFairInfo}</div>
+              )}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
                 {[["🍺", "🪙", "Tom"], ["🍷🍷", "🪙🪙🪙🪙", "Els"], ["🚫", "—", "Bart"], ["🍺🍺", "🪙🪙", "Jan"]].map(([drank, geld, naam], i) => (
                   <div key={i}>
@@ -3190,24 +3209,26 @@ export default function PartyTest() {
                   </div>
                 ))}
               </div>
-              <div style={{ fontSize: 11.5, color: "#4a3f1e", marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)", lineHeight: 1.5 }}>{L.modeFairLine}</div>
             </button>
 
-            {/* Geruststelling, precies waar de twijfel ontstaat. */}
             <div style={{ textAlign: "center", fontSize: 10.5, color: "#a89a6f", padding: "9px 0" }}>{L.modeSwitchLater}</div>
 
-            {/* Gewoon aantallen ONDER, met bestellijstje. */}
+            {/* Snel drankjes noteren. */}
             <button onClick={() => setBpSettle(false)}
               style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
                        background: bpSettle === false ? "#fff8e8" : "#fff",
                        boxShadow: bpSettle === false ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
                        border: bpSettle === false ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
-              <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
-                <span style={{ fontSize: 20 }}>🍺</span>
+              <div style={{ ...S.row, gap: 7, marginBottom: 12 }}>
                 <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
+                <span onClick={(e) => { e.stopPropagation(); setOpenInfo(openInfo === "quick" ? null : "quick") }}
+                  style={{ width: 18, height: 18, borderRadius: "50%", fontSize: 11, fontWeight: 800, fontStyle: "italic", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                           background: openInfo === "quick" ? "#e08a00" : "transparent", color: openInfo === "quick" ? "#fff" : "#c4a94a", border: openInfo === "quick" ? "none" : "1.5px solid #c4a94a" }}>i</span>
                 {bpSettle === false && <span style={{ marginLeft: "auto", fontSize: 16, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
               </div>
-              <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 11 }}>{L.modeQuickSub}</div>
+              {openInfo === "quick" && (
+                <div style={{ marginBottom: 12, padding: "10px 11px", background: "#fffdf6", borderRadius: 9, fontSize: 11.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeQuickInfo}</div>
+              )}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
                 <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
                 <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
@@ -3220,28 +3241,13 @@ export default function PartyTest() {
             </button>
           </div>
 
-          {/* Groepsnaam, onder de keuze. Automatische naam staat al ingevuld. */}
-          <div style={{ marginTop: 18 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#8a7d55", marginBottom: 7, letterSpacing: "0.03em" }}>
-              {L.groupNameHint} <span style={{ fontWeight: 600, color: "#a89a6f", letterSpacing: 0 }}>· {L.tapToChange}</span>
-            </div>
-            <div style={{ position: "relative", marginBottom: 16 }}>
-              <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder={L.autoName()}
-                style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 17, fontWeight: 800, background: "#fdfaf2", padding: "15px 40px 15px 14px", borderRadius: 12, border: "1.5px solid #e08a00" }} />
-              <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#c4b896", pointerEvents: "none" }}>✏️</span>
-            </div>
-            <button style={{ ...S.btnP, width: "100%", opacity: bpSettle === null ? 0.45 : 1 }}
-              disabled={bpSettle === null}
-              onClick={() => startWithMode(L.autoName())}>{busy ? L.starting : L.startNow}</button>
-          </div>
+          <button style={{ ...S.btnP, width: "100%", marginTop: 18, opacity: bpSettle === null ? 0.45 : 1 }}
+            disabled={bpSettle === null}
+            onClick={() => startWithMode(L.autoName())}>{busy ? L.starting : L.startNow}</button>
         </div>
 
-        <div style={{ ...S.card, opacity: 0.6 }}>
-          <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <span style={{ fontSize: 14, fontWeight: 700 }}>{L.savedGroups}</span>
-            <span style={{ fontSize: 11.5, color: "#8a7d55" }}>{L.savedLater}</span>
-          </div>
-          <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 8, lineHeight: 1.5 }}>{L.savedNote}<br /><span style={{ fontSize: 10.5, color: "#b3a988" }}>📌 Live-reminder: groepen automatisch opruimen na inactiviteit, tenzij vastgezet (📌) om te bewaren.</span></div>
+        <div style={{ padding: "10px 6px 0" }}>
+          <span style={{ fontSize: 11.5, color: "#b3a988" }}>{L.savedGroups} · {L.savedLater}</span>
         </div>
       </div></div>
     )
