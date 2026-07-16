@@ -517,6 +517,8 @@ const T = {
     modeFairLine: "Ieder betaalt zijn deel, betaal niet mee voor wat je niet dronk!",
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe jullie bestellen",
+    chosen: "GEKOZEN",
+    tapToChoose: "tik om te kiezen",
     switchModeLink: "Van aanpak wisselen",
     switchModeWarn: "Van aanpak wisselen? Je begint helemaal opnieuw — wat je tot nu toe noteerde, verdwijnt.",
     switchModeYes: "Wisselen en opnieuw",
@@ -870,6 +872,8 @@ const T = {
     modeFairLine: "Chacun paie sa part, ne paie pas pour ce que tu n'as pas bu !",
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
+    chosen: "CHOISI",
+    tapToChoose: "appuie pour choisir",
     switchModeLink: "Changer de formule",
     switchModeWarn: "Changer de formule ? Tu recommences \u00e0 z\u00e9ro — ce que tu as not\u00e9 jusqu'ici dispara\u00eet.",
     switchModeYes: "Changer et recommencer",
@@ -3358,19 +3362,21 @@ export default function PartyTest() {
 
           <div style={{ textAlign: "center", fontSize: 13, fontWeight: 800, color: "#8a7d55", marginBottom: 12 }}>{L.chooseHow}</div>
 
-          <div style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             {/* Fair Split BOVEN — de voorkeur. Al geselecteerd bij binnenkomst. */}
             <button onClick={() => setBpSettle(true)}
-              style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
+              style={{ position: "relative", textAlign: "left", padding: "17px 15px 15px", borderRadius: 14, cursor: "pointer", overflow: "visible",
                        background: bpSettle === true ? "#fff8e8" : "#fff",
-                       boxShadow: bpSettle === true ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
-                       border: bpSettle === true ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
+                       boxShadow: bpSettle === true ? "0 3px 14px rgba(224,138,0,0.18)" : "0 1px 4px rgba(120,95,20,0.06)",
+                       border: bpSettle === true ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.16)" }}>
+              {bpSettle === true && (
+                <span style={{ position: "absolute", top: -11, left: 14, background: "#1f8a4c", color: "#fff", fontSize: 10, fontWeight: 800, letterSpacing: "0.03em", padding: "3px 11px", borderRadius: 20, boxShadow: "0 2px 6px rgba(31,138,76,0.3)" }}>✓ {L.chosen}</span>
+              )}
               <div style={{ ...S.row, gap: 7, marginBottom: 13 }}>
                 <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.modeTitle}</span>
                 <span onClick={(e) => { e.stopPropagation(); setOpenInfo(openInfo === "fair" ? null : "fair") }}
                   style={{ width: 18, height: 18, borderRadius: "50%", fontSize: 11, fontWeight: 800, fontStyle: "italic", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
                            background: openInfo === "fair" ? "#e08a00" : "transparent", color: openInfo === "fair" ? "#fff" : "#c4a94a", border: openInfo === "fair" ? "none" : "1.5px solid #c4a94a" }}>i</span>
-                {bpSettle === true && <span style={{ marginLeft: "auto", fontSize: 16, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
               </div>
               {openInfo === "fair" && (
                 <div style={{ marginBottom: 13, padding: "10px 11px", background: "#fffdf6", borderRadius: 9, fontSize: 11.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeFairInfo}</div>
@@ -3384,20 +3390,23 @@ export default function PartyTest() {
                   </div>
                 ))}
               </div>
+              {bpSettle !== true && <div style={{ fontSize: 11, color: "#c98a00", fontWeight: 800, marginTop: 11 }}>{L.tapToChoose} ›</div>}
             </button>
 
             {/* Snel drankjes noteren. */}
             <button onClick={() => setBpSettle(false)}
-              style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
+              style={{ position: "relative", textAlign: "left", padding: "17px 15px 15px", borderRadius: 14, cursor: "pointer", overflow: "visible",
                        background: bpSettle === false ? "#fff8e8" : "#fff",
-                       boxShadow: bpSettle === false ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
-                       border: bpSettle === false ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
+                       boxShadow: bpSettle === false ? "0 3px 14px rgba(224,138,0,0.18)" : "0 1px 4px rgba(120,95,20,0.06)",
+                       border: bpSettle === false ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.16)" }}>
+              {bpSettle === false && (
+                <span style={{ position: "absolute", top: -11, left: 14, background: "#1f8a4c", color: "#fff", fontSize: 10, fontWeight: 800, letterSpacing: "0.03em", padding: "3px 11px", borderRadius: 20, boxShadow: "0 2px 6px rgba(31,138,76,0.3)" }}>✓ {L.chosen}</span>
+              )}
               <div style={{ ...S.row, gap: 7, marginBottom: 12 }}>
                 <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
                 <span onClick={(e) => { e.stopPropagation(); setOpenInfo(openInfo === "quick" ? null : "quick") }}
                   style={{ width: 18, height: 18, borderRadius: "50%", fontSize: 11, fontWeight: 800, fontStyle: "italic", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
                            background: openInfo === "quick" ? "#e08a00" : "transparent", color: openInfo === "quick" ? "#fff" : "#c4a94a", border: openInfo === "quick" ? "none" : "1.5px solid #c4a94a" }}>i</span>
-                {bpSettle === false && <span style={{ marginLeft: "auto", fontSize: 16, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
               </div>
               {openInfo === "quick" && (
                 <div style={{ marginBottom: 12, padding: "10px 11px", background: "#fffdf6", borderRadius: 9, fontSize: 11.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeQuickInfo}</div>
@@ -3411,6 +3420,7 @@ export default function PartyTest() {
                 <div style={{ fontSize: 10.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 Aan de toog</div>
                 <div style={{ fontSize: 13, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pils · 2× Cola · 1× Wijn</div>
               </div>
+              {bpSettle !== false && <div style={{ fontSize: 11, color: "#c98a00", fontWeight: 800, marginTop: 11 }}>{L.tapToChoose} ›</div>}
             </button>
           </div>
 
