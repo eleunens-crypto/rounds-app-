@@ -444,6 +444,8 @@ const T = {
     editOrderBtn: "✏️ Bestelling wijzigen",
     noRoundsDone: "Nog geen afgeronde rondjes",
     noRoundsHint: "Zodra een rondje bevestigd én betaald is, verschijnt het hier — dan kan je het nog aanpassen.",
+    startFirstRoundBtn: "Start 1e rondje",
+    noRoundsHintQuick: "Noteer wat er besteld wordt. Je afgeronde rondjes verschijnen hier.",
     tapRoundToEdit: "Tik een ronde open om aan te passen.",
     settleBtn: "🧾 Afrekenen",
     nothingToSettle: "Er zijn nog geen afgeronde rondjes om af te rekenen.",
@@ -800,6 +802,8 @@ const T = {
     editOrderBtn: "✏️ Modifier la commande",
     noRoundsDone: "Aucune tournée terminée",
     noRoundsHint: "Dès qu'une tournée est confirmée et payée, elle apparaît ici — tu peux encore la modifier.",
+    startFirstRoundBtn: "1re tourn\u00e9e",
+    noRoundsHintQuick: "Note ce qui est command\u00e9. Tes tourn\u00e9es termin\u00e9es appara\u00eetront ici.",
     tapRoundToEdit: "Touche une tournée pour la modifier.",
     settleBtn: "🧾 Régler",
     nothingToSettle: "Aucune tournée terminée à régler.",
@@ -3787,13 +3791,15 @@ export default function PartyTest() {
         </div>
         )}
         <div style={{ marginTop: 24 }}>
-          {rounds.length > 0
-            ? <div style={{ display: "flex", gap: 10 }}>
-                <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>{L.roundsOverview}</button>
-                {unfinishedRound
-                  ? <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>Ga verder met rondje {roundNr}</button>
-                  : <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{L.newRound}</button>}
-              </div>
+          {(rounds.length > 0 || onboardedOnce)
+            ? <>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>{L.roundsOverview}</button>
+                  {unfinishedRound
+                    ? <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>Ga verder met rondje {roundNr}</button>
+                    : <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{L.newRound}</button>}
+                </div>
+              </>
             : <button style={{ ...S.btnP, width: "100%" }} onClick={() => { if (unfinishedRound) resumeRound(); else tryBegin() }}>{unfinishedRound ? L.continueRound(roundNr) : "Starten"}</button>}
         </div>
       </div></div>
@@ -4185,6 +4191,16 @@ export default function PartyTest() {
                 <button style={{ ...S.btn, width: "100%", fontWeight: 800 }} onClick={() => setShowPot(true)}>{L.potStartAdd}</button>
               </>
             )}
+          </div>
+        )}
+        {!settle && rounds.length === 0 && !openRoundId && (
+          <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
+            <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{L.noRoundsDone}</div>
+            <div style={{ ...S.sub, marginBottom: 16 }}>{L.noRoundsHintQuick}</div>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <button style={{ ...S.btnP, width: "80%" }} onClick={() => { setActiveCat(catsPresent[0]); setView("order") }}>{L.startFirstRoundBtn}</button>
+            </div>
           </div>
         )}
         {!settle && renderBarList()}
