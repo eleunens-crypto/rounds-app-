@@ -1758,7 +1758,7 @@ export default function PartyTest() {
     supabase.from("party_groups").update({
       name: groupName.trim(), pay, coin_value: coinValue,
       deposit_on: depositOn, deposit_value: depositValue, deposit_unit: depositUnit,
-      pot_on: potChosen, pot_is_card: potIsCard, ...(extra ?? {}),
+      pot_on: potChosen, pot_is_card: potIsCard, last_active: new Date().toISOString(), ...(extra ?? {}),
     }).eq("id", groupId).then(({ error }) => { if (error) setNotice("Instellingen opslaan mislukt: " + error.message) })
   }
 
