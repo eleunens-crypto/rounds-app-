@@ -370,7 +370,7 @@ const T = {
     continueRound: (n: number) => `Ga verder met rondje ${n}`,
 
     // ── instellingen
-    groupSettings: "⚙️ Groep",
+    groupSettings: "⚙️ Groepsinstellingen",
     cupsTitle: "♻️ Herbruikbare bekers",
     cupsInfo: "Voor events met waarborg per beker die je terugkrijgt bij inleveren. Zet aan om de borg mee te verrekenen.",
     depositPerCup: "Waarborg/beker",
@@ -470,6 +470,7 @@ const T = {
     noRoundsHint: "Zodra een rondje bevestigd én betaald is, verschijnt het hier — dan kan je het nog aanpassen.",
     startFirstRoundBtn: "Start 1e rondje",
     noRoundsHintQuick: "Noteer wat er besteld wordt. Je afgeronde rondjes verschijnen hier.",
+    roundBusy: (n: number) => `Je bent bezig met rondje ${n}`,
     tapRoundToEdit: "Tik een ronde open om aan te passen.",
     settleBtn: "🧾 Afrekenen",
     nothingToSettle: "Er zijn nog geen afgeronde rondjes om af te rekenen.",
@@ -728,7 +729,7 @@ const T = {
     continueRound: (n: number) => `Continuer la tournée ${n}`,
 
     // ── instellingen
-    groupSettings: "⚙️ Groupe",
+    groupSettings: "⚙️ Paramètres",
     cupsTitle: "♻️ Gobelets réutilisables",
     cupsInfo: "Pour les events avec caution par gobelet, remboursée au retour. Active pour l'inclure dans le décompte.",
     depositPerCup: "Caution/gobelet",
@@ -828,6 +829,7 @@ const T = {
     noRoundsHint: "Dès qu'une tournée est confirmée et payée, elle apparaît ici — tu peux encore la modifier.",
     startFirstRoundBtn: "1re tourn\u00e9e",
     noRoundsHintQuick: "Note ce qui est command\u00e9. Tes tourn\u00e9es termin\u00e9es appara\u00eetront ici.",
+    roundBusy: (n: number) => `Tourn\u00e9e ${n} en cours`,
     tapRoundToEdit: "Touche une tournée pour la modifier.",
     settleBtn: "🧾 Régler",
     nothingToSettle: "Aucune tournée terminée à régler.",
@@ -2965,7 +2967,7 @@ export default function PartyTest() {
           <div onClick={goSiteHome} style={{ cursor: "pointer" }}><RundoLogo size={40} /></div>
           <div style={{ minWidth: 0 }}>
             <div style={{ ...S.h1, fontSize: 20, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
-            {groupName.trim() && <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a5e0f", marginTop: 2, maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()} <span style={{ color: "#8a7d55", fontWeight: 700 }}>· 👥 {people.length}</span></div>}
+            {groupName.trim() && <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a5e0f", marginTop: 2, maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()}{settle && <span style={{ color: "#8a7d55", fontWeight: 700 }}> · 👥 {people.length}</span>}</div>}
           </div>
         </div>
         {!onboarding && (
@@ -2976,10 +2978,10 @@ export default function PartyTest() {
               {potIsCard ? (
                 <span style={{ fontSize: 17 }}>💳</span>
               ) : (
-                <svg width="24" height="24" viewBox="0 0 34 34" style={{ display: "block" }}>
-                  <path d="M11 9 Q17 5 23 9 L26 26 Q26 31 17 31 Q8 31 8 26 Z" fill="#e0a020" stroke="#c88a1a" strokeWidth="1.5"/>
-                  <path d="M11 9 Q13 7 17 7 Q21 7 23 9 Q20 11 17 11 Q14 11 11 9 Z" fill="#f5c542" stroke="#c88a1a" strokeWidth="1"/>
-                  <text x="17" y="24" fontSize="11" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
+                <svg width="24" height="24" viewBox="0 0 40 40" style={{ display: "block" }}>
+                  <path d="M16 13 L14 7 Q20 5 26 7 L24 13 Z" fill="#d99616" stroke="#b9821a" strokeWidth="1.2" strokeLinejoin="round"/>
+                  <path d="M13 14 Q20 11 27 14 Q33 19 32 27 Q31 35 20 35 Q9 35 8 27 Q7 19 13 14 Z" fill="#e8a821" stroke="#b9821a" strokeWidth="1.5"/>
+                  <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
                 </svg>
               )}
               <span style={{ color: "#c88a1a" }}>{euro(potRemaining)}</span>
@@ -2990,7 +2992,7 @@ export default function PartyTest() {
       </div>
       {!onboarding && (
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-          <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700 }} onClick={goHome}>{L.groupSettings}</button>
+          <button style={{ ...S.btn, flex: 1.5, padding: "8px 3px", fontSize: 10.5, fontWeight: 700, lineHeight: 1.15 }} onClick={goHome}>{L.groupSettings}</button>
           {settle ? (
             <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "hub" ? 0.55 : 1 }} onClick={goHub}>{L.overview}</button>
           ) : (
@@ -3815,16 +3817,24 @@ export default function PartyTest() {
         </div>
         )}
         <div style={{ marginTop: 24 }}>
-          {(rounds.length > 0 || onboardedOnce)
-            ? <>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>{L.roundsOverview}</button>
-                  {unfinishedRound
-                    ? <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>Ga verder met rondje {roundNr}</button>
-                    : <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{L.newRound}</button>}
-                </div>
-              </>
-            : <button style={{ ...S.btnP, width: "100%" }} onClick={() => { if (unfinishedRound) resumeRound(); else tryBegin() }}>{unfinishedRound ? L.continueRound(roundNr) : "Starten"}</button>}
+          {rounds.length > 0 ? (
+            // Er zijn afgeronde rondjes: overzicht + nieuw/verder.
+            <div style={{ display: "flex", gap: 10 }}>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>{L.roundsOverview}</button>
+              {unfinishedRound
+                ? <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>Ga verder met rondje {roundNr}</button>
+                : <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{L.newRound}</button>}
+            </div>
+          ) : unfinishedRound ? (
+            // Nog geen afgerond rondje, maar wel bezig met rondje 1: verder of terug.
+            <div style={{ display: "flex", gap: 10 }}>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => setNotice(L.noRoundsYet)}>{L.roundsOverview}</button>
+              <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>Ga verder met rondje {roundNr}</button>
+            </div>
+          ) : (
+            // Nog helemaal niets: starten.
+            <button style={{ ...S.btnP, width: "100%" }} onClick={() => tryBegin()}>Starten</button>
+          )}
         </div>
       </div></div>
     )
@@ -3933,7 +3943,7 @@ export default function PartyTest() {
         )}
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "18px 0 14px" }}>
           <span onClick={startVoice} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "7px 12px", borderRadius: 16, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
-            🎤 {L.voiceBtn} <span style={{ fontSize: 8.5, opacity: 0.7 }}>{L.voiceBeta}</span>
+            {L.voiceBtn} 🎤 <span style={{ fontSize: 8.5, fontWeight: 800, color: "#c98a00", background: "rgba(240,165,0,0.16)", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 5, padding: "1px 4px", letterSpacing: "0.03em" }}>{L.voiceBeta}</span>
           </span>
           <span onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "7px 12px", borderRadius: 16, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
             ＋ {L.addOwnDrink}
@@ -4221,6 +4231,16 @@ export default function PartyTest() {
             <div style={{ ...S.sub, marginBottom: 16 }}>{L.noRoundsHintQuick}</div>
             <div style={{ display: "flex", justifyContent: "center" }}>
               <button style={{ ...S.btnP, width: "80%" }} onClick={() => { setActiveCat(catsPresent[0]); setView("order") }}>{L.startFirstRoundBtn}</button>
+            </div>
+          </div>
+        )}
+        {!settle && rounds.length === 0 && openRoundId && (
+          <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
+            <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{L.roundBusy(roundNr)}</div>
+            <div style={{ ...S.sub, marginBottom: 16 }}>{L.noRoundsHintQuick}</div>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <button style={{ ...S.btnP, width: "80%" }} onClick={() => setView("order")}>Ga verder met rondje {roundNr}</button>
             </div>
           </div>
         )}
