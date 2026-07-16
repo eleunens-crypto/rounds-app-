@@ -567,6 +567,16 @@ const T = {
     costRoundN: (n: number) => `Rondje ${n}`,
     costTotalLabel: "Totaal",
     roundCostOptional: "Wat kostte dit rondje? (optioneel)",
+    skipCostWarn: "Je vulde al iets in bij dit rondje. Toch overslaan zonder het op te slaan?",
+    skipCostYes: "Ja, overslaan",
+    payFromPotQ: "Uit de pot betalen?",
+    potHasLeft: (v: string) => `nog ${v} in pot`,
+    maxAmount: (v: string) => `max ${v}`,
+    restSelf: "Rest zelf:",
+    potEmptyLabel: "Pot is leeg",
+    potFillBtn: "+ Pot bijvullen",
+    skipRound: "Overslaan",
+    closeRound: "Afsluiten",
     noAmountsYet: "Je vulde nog geen bedragen in. Zonder bedragen valt er niets te verdelen — vul eerst in wat de rondjes kostten.",
     fillAmountsNow: "Bedragen invullen",
     later: "Later",
@@ -931,6 +941,16 @@ const T = {
     costRoundN: (n: number) => `Tourn\u00e9e ${n}`,
     costTotalLabel: "Total",
     roundCostOptional: "Combien a co\u00fbt\u00e9 cette tourn\u00e9e ? (optionnel)",
+    skipCostWarn: "Tu as d\u00e9j\u00e0 rempli quelque chose pour cette tourn\u00e9e. Passer quand m\u00eame sans enregistrer ?",
+    skipCostYes: "Oui, passer",
+    payFromPotQ: "Payer avec la cagnotte ?",
+    potHasLeft: (v: string) => `${v} dans la cagnotte`,
+    maxAmount: (v: string) => `max ${v}`,
+    restSelf: "Reste \u00e0 payer :",
+    potEmptyLabel: "Cagnotte vide",
+    potFillBtn: "+ Remplir la cagnotte",
+    skipRound: "Passer",
+    closeRound: "Cl\u00f4turer",
     noAmountsYet: "Tu n'as pas encore entr\u00e9 de montants. Sans montants, rien \u00e0 partager — indique d'abord ce qu'ont co\u00fbt\u00e9 les tourn\u00e9es.",
     fillAmountsNow: "Entrer les montants",
     later: "Plus tard",
@@ -1421,6 +1441,21 @@ export default function PartyTest() {
   const rTogglePot = (idx: number) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = !((r.potPart || 0) > 0); if (usePot && potAvailFor(idx) <= 0.005) { setNotice(L.potEmpty(potIsCard)); return r } return rRedistribute(r, idx, usePot, persons, r.amount) })); setDirtyRound(idx) }
   const rSetPayerAmt = (idx: number, pid: string, v: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, payers: { ...(r.payers || {}), [pid]: Math.max(0, v) } } : r)); setDirtyRound(idx) }
   const rSetPotAmt = (idx: number, v: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, potPart: Math.max(0, Math.min(v, Math.max(0, potAvailFor(idx)))) } : r)); setDirtyRound(idx) }
+  // Snelle rondjes: alleen het rondjebedrag zetten, zonder de Fair-Split payer-verdeling.
+  // Het pot-deel (potPart) beheren we los via rSetPotAmt (handmatig, geklemd op de pot).
+  const qSetAmount = (idx: number, v: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, amount: v } : r)); setDirtyRound(idx) }
+  // Snelle rondjes: rondje afsluiten en naar het overzicht. "skip" = zonder bedrag; als
+  // er dan tóch al iets ingevuld staat, waarschuwen zodat je het niet per ongeluk weggooit.
+  const closeQuickRound = (skip: boolean) => {
+    const r = rounds[rounds.length - 1]
+    const heeftIets = r && ((r.amount || 0) > 0.005 || (r.potPart || 0) > 0.005)
+    const naar = () => { setOverviewBackTo("hub"); setView("roundsOverview") }
+    if (skip && heeftIets) {
+      setConfirmDlg({ variant: "danger", msg: L.skipCostWarn, yes: L.skipCostYes, onYes: () => { setConfirmDlg(null); naar() } })
+    } else {
+      naar()
+    }
+  }
   const rPaidSum = (r: Round) => (r.potPart || 0) + Object.values(r.payers || {}).reduce((a, b) => a + (b || 0), 0)
   const rTogglePayer = (idx: number, pid: string) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const cur = Object.keys(r.payers || {}); const persons = cur.includes(pid) ? cur.filter((x) => x !== pid) : [...cur, pid]; const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, r.amount) })); setDirtyRound(idx) }
 
@@ -4311,29 +4346,66 @@ export default function PartyTest() {
           </div>
         )}
         {!settle && renderBarList()}
-        {!settle && rounds.length >= 1 && (
+        {!settle && rounds.length >= 1 && (() => {
+          const idx = rounds.length - 1
+          const r = rounds[idx]
+          const amount = r?.amount || 0
+          const potPart = r?.potPart || 0
+          const potAvail = Math.max(0, potAvailFor(idx))
+          const zelf = Math.max(0, amount - potPart)
+          return (
           <>
-            {/* Optioneel wat dit rondje kostte — duidelijk vrijblijvend. */}
+            {/* Wat kostte dit rondje — vrijblijvend, maar sluit het rondje af. */}
             <div style={{ ...S.card }}>
-              <div style={{ ...S.row, justifyContent: "space-between" }}>
+              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: amount > 0.005 ? 12 : 0 }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}>{L.roundCostOptional}</span>
                 <div style={{ ...S.row, gap: 4 }}>
                   <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700 }}>€</span>
                   <input style={{ ...S.input, width: 80, fontSize: 15, fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00"
-                    value={(() => { const r = rounds[rounds.length - 1]; return (r?.amount || 0) > 0 ? String(r.amount).replace(".", ",") : "" })()}
-                    onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); rSetAmount(rounds.length - 1, parseFloat(v) || 0) }} />
+                    value={amount > 0 ? String(amount).replace(".", ",") : ""}
+                    onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }} />
                 </div>
               </div>
+
+              {/* Betalen via de pot — pas relevant zodra er een bedrag staat. */}
+              {amount > 0.005 && (
+                potAvail > 0.005 ? (
+                  <div style={{ background: "rgba(31,138,76,0.07)", border: "1px dashed rgba(31,138,76,0.4)", borderRadius: 12, padding: 12 }}>
+                    <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9 }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f6b3a" }}>{L.payFromPotQ}</span>
+                      <span style={{ fontSize: 11.5, color: "#8a7d55", fontWeight: 700 }}>{L.potHasLeft(euro(potAvail))}</span>
+                    </div>
+                    <div style={{ ...S.row, gap: 8 }}>
+                      <span style={{ fontSize: 15, color: "#8a7d55", fontWeight: 700 }}>€</span>
+                      <input style={{ ...S.input, flex: 1, fontSize: 15, fontWeight: 800, color: "#1f8a4c", textAlign: "right" }} type="text" inputMode="decimal" placeholder="0,00"
+                        value={potPart > 0 ? String(potPart).replace(".", ",") : ""}
+                        onChange={(e) => { const v = parseFloat(e.target.value.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0; rSetPotAmt(idx, Math.min(v, amount)) }} />
+                      <span style={{ fontSize: 11.5, color: "#8a7d55", fontWeight: 700, whiteSpace: "nowrap" }}>{L.maxAmount(euro(Math.min(potAvail, amount)))}</span>
+                    </div>
+                    {potPart > 0.005 && (
+                      <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 8, textAlign: "right" }}>{L.restSelf} <b style={{ color: "#4a3f1e" }}>{euro(zelf)}</b></div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ background: "rgba(240,165,0,0.08)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 12, padding: 12, ...S.row, justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 12.5, color: "#8a5e0f", fontWeight: 700 }}>{L.potEmptyLabel}</span>
+                    <button style={{ ...S.btn, padding: "7px 13px", fontSize: 12, fontWeight: 800, color: "#c98a00", border: "1px solid rgba(240,165,0,0.6)" }} onClick={() => setShowPot(true)}>{L.potFillBtn}</button>
+                  </div>
+                )
+              )}
             </div>
 
-            {/* Twee knoppen: aanpassen · nieuw rondje. Afrekenen zit boven in de tab-rij
-                (subtiel — niet de focus in snelle rondjes). */}
+            {/* Afsluiten: overslaan (zonder bedrag) of bevestigen — beide naar overzicht. */}
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, flex: 1, padding: "13px 6px", fontSize: 13, fontWeight: 800 }} onClick={editOrder}>✏️ {L.editRoundBtn}</button>
-              <button style={{ ...S.btnP, flex: 1, padding: "13px 6px", fontSize: 13 }} onClick={askNewRound}>➕ {L.newRoundBtn}</button>
+              <button style={{ ...S.btn, flex: 1, padding: "13px 6px", fontSize: 13, fontWeight: 800, color: "#8a7d55" }} onClick={() => closeQuickRound(true)}>{L.skipRound}</button>
+              <button style={{ ...S.btnP, flex: 1.4, padding: "13px 6px", fontSize: 13 }} onClick={() => closeQuickRound(false)}>✓ {L.closeRound}</button>
+            </div>
+            <div style={{ textAlign: "center", marginTop: 12 }}>
+              <span onClick={editOrder} style={{ fontSize: 12, color: "#a89a6f", fontWeight: 800, cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
             </div>
           </>
-        )}
+          )
+        })()}
         {settle && unassignedAllRounds > 0 && firstUnassignedIdx >= 0 && (
           <div style={{ ...S.card, background: "rgba(224,104,92,0.08)", border: "1.5px solid rgba(224,104,92,0.45)" }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: "#b0402f", marginBottom: 4 }}>{L.unassignedHub(unassignedAllRounds)}</div>
