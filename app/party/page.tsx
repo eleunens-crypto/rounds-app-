@@ -578,7 +578,6 @@ const T = {
     potEmptyLabel: "Pot is leeg",
     potFillBtn: "+ Pot bijvullen",
     skipRound: "Overslaan",
-    closeRound: "Afsluiten",
     noAmountsYet: "Je vulde nog geen bedragen in. Zonder bedragen valt er niets te verdelen — vul eerst in wat de rondjes kostten.",
     fillAmountsNow: "Bedragen invullen",
     later: "Later",
@@ -954,7 +953,6 @@ const T = {
     potEmptyLabel: "Cagnotte vide",
     potFillBtn: "+ Remplir la cagnotte",
     skipRound: "Passer",
-    closeRound: "Cl\u00f4turer",
     noAmountsYet: "Tu n'as pas encore entr\u00e9 de montants. Sans montants, rien \u00e0 partager — indique d'abord ce qu'ont co\u00fbt\u00e9 les tourn\u00e9es.",
     fillAmountsNow: "Entrer les montants",
     later: "Plus tard",
@@ -4418,7 +4416,7 @@ export default function PartyTest() {
             {/* Afsluiten: overslaan (zonder bedrag) of bevestigen — beide naar overzicht. */}
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1, padding: "13px 6px", fontSize: 13, fontWeight: 800, color: "#8a7d55" }} onClick={() => closeQuickRound(true)}>{L.skipRound}</button>
-              <button style={{ ...S.btnP, flex: 1.4, padding: "13px 6px", fontSize: 13 }} onClick={() => closeQuickRound(false)}>✓ {L.closeRound}</button>
+              <button style={{ ...S.btnP, flex: 1.4, padding: "13px 6px", fontSize: 13 }} onClick={() => closeQuickRound(false)}>{L.closeRound}</button>
             </div>
             <div style={{ textAlign: "center", marginTop: 12 }}>
               <span onClick={editOrder} style={{ fontSize: 12, color: "#a89a6f", fontWeight: 800, cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
