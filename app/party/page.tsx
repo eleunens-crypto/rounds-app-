@@ -273,6 +273,9 @@ const T = {
     groupNamePh: "Typ je groepsnaam",
     starting: "Bezig…",
     savedGroups: "Opgeslagen groepen",
+    asGuest: "als gast",
+    groupsOpen: "Open",
+    groupsClosed: "Afgesloten",
     savedLater: "later beschikbaar",
     savedNote: "Groepen bewaren tussen sessies komt in de volledige app (met database).",
     nameGroupFirst: "Geef je groep eerst een naam.",
@@ -615,6 +618,9 @@ const T = {
     groupNamePh: "Tape le nom de ton groupe",
     starting: "En cours…",
     savedGroups: "Groupes enregistrés",
+    asGuest: "en tant qu'invit\u00e9",
+    groupsOpen: "Ouvert",
+    groupsClosed: "Cl\u00f4tur\u00e9",
     savedLater: "bientôt disponible",
     savedNote: "La sauvegarde des groupes entre les sessions arrive dans l'app complète.",
     nameGroupFirst: "Donne d'abord un nom à ton groupe.",
@@ -916,6 +922,10 @@ export default function PartyTest() {
   const [ownerDevice, setOwnerDevice] = useState<string>("")
   const [booting, setBooting] = useState(true)   // eerste laadbeurt (code uit de URL)
   const [busy, setBusy] = useState(false)        // groep aanmaken / plaats claimen
+  // Opgeslagen groepen: alle groepen waar dit toestel bij hoort (zelf gemaakt of via
+  // QR aan deelgenomen). Getoond op het startscherm zodat je kan terugkeren.
+  type SavedGroup = { id: string; name: string; last_active: string; finalized: boolean; owned: boolean }
+  const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
   const isAdmin = !!ownerDevice && ownerDevice === me.current
   // Mijn eigen plaats: die waarop dit toestel zit. Nodig zodra gasten hun eigen
   // drankjes aantikken (blok 3).
@@ -1474,19 +1484,60 @@ export default function PartyTest() {
         return
       }
       if (vorige) {
+        // Optie A: we openen de laatste groep NIET automatisch meer. Je landt op het
+        // keuzescherm en kiest zelf: verdergaan met een opgeslagen groep, of een nieuwe
+        // starten (eventueel in een andere modus). De groep blijft bestaan en verschijnt
+        // in de opgeslagen-groepen-lijst. We checken enkel of hij nog bestaat; zo niet,
+        // ruimen we de verwijzing op.
         const { data } = await supabase.from("party_groups").select("id").eq("id", vorige).maybeSingle()
-        if (data) {
-          setGroupId(data.id)
-          await loadParty(data.id)
-          setView("setup")
-          setBooting(false)
-          return
-        }
-        localStorage.removeItem("rundo_party_group") // groep opgeruimd of gewist
+        if (!data) localStorage.removeItem("rundo_party_group") // groep opgeruimd of gewist
       }
       setBooting(false)
     })()
   }, [loadParty])
+
+  // Haal alle groepen op waar dit toestel bij hoort: zelf gemaakt (owner_id) of via QR
+  // aan deelgenomen (een party_people-rij met claimed_by = dit toestel). We voegen ze
+  // samen, ontdubbelen op id, en sorteren op recentheid (nieuwste eerst).
+  const loadSavedGroups = useCallback(async () => {
+    const dev = me.current
+    const [eigen, gast] = await Promise.all([
+      supabase.from("party_groups").select("id,name,last_active,finalized,owner_id").eq("owner_id", dev),
+      supabase.from("party_people").select("group_id").eq("claimed_by", dev),
+    ])
+    const map = new Map<string, SavedGroup>()
+    for (const g of eigen.data ?? []) {
+      map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: true })
+    }
+    // Gast-groepen die nog niet als eigen bekend zijn, apart ophalen voor hun details.
+    const gastIds = [...new Set((gast.data ?? []).map((r) => r.group_id as string))].filter((id) => !map.has(id))
+    if (gastIds.length > 0) {
+      const { data: extra } = await supabase.from("party_groups").select("id,name,last_active,finalized").in("id", gastIds)
+      for (const g of extra ?? []) {
+        map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: false })
+      }
+    }
+    const lijst = [...map.values()].sort((a, b) => (b.last_active || "").localeCompare(a.last_active || ""))
+    if (mounted.current) setSavedGroups(lijst)
+  }, [])
+
+  // Bij het openen (als je op het startscherm bent) de opgeslagen groepen laden.
+  useEffect(() => {
+    if (!booting && view === "start") loadSavedGroups()
+  }, [booting, view, loadSavedGroups])
+
+  // Een opgeslagen groep heropenen vanaf het startscherm.
+  const openSavedGroup = async (id: string) => {
+    setBusy(true)
+    localStorage.setItem("rundo_party_group", id)
+    setGroupId(id)
+    await loadParty(id)
+    setBusy(false)
+    // Naar de hub — daar zie je de rondjes en kan je verder. loadParty heeft settle en
+    // de rest al gezet, dus de juiste modus toont vanzelf.
+    setOpenRound(rounds.length - 1)
+    setView("hub")
+  }
 
   // Realtime, met twee zuinigheidsmaatregelen — een feest van 8 mensen met telefoons
   // in de broekzak mag geen quota opeten.
@@ -3246,9 +3297,40 @@ export default function PartyTest() {
             onClick={() => startWithMode(L.autoName())}>{busy ? L.starting : L.startNow}</button>
         </div>
 
-        <div style={{ padding: "10px 6px 0" }}>
-          <span style={{ fontSize: 11.5, color: "#b3a988" }}>{L.savedGroups} · {L.savedLater}</span>
-        </div>
+        {savedGroups.length > 0 && (() => {
+          const fmt = (iso: string) => { const d = new Date(iso); return isNaN(d.getTime()) ? "" : `${d.getDate()}/${d.getMonth() + 1}` }
+          const open = savedGroups.filter((g) => !g.finalized)
+          const dicht = savedGroups.filter((g) => g.finalized)
+          const rij = (g: SavedGroup) => (
+            <button key={g.id} onClick={() => openSavedGroup(g.id)} disabled={busy}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", textAlign: "left", padding: "12px 14px", borderRadius: 12, background: "#fff", border: "1px solid rgba(120,95,20,0.15)", cursor: "pointer", marginBottom: 7 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</div>
+                <div style={{ fontSize: 11, color: "#a89a6f", marginTop: 2 }}>
+                  {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
+                </div>
+              </div>
+              <span style={{ fontSize: 16, color: "#c4b896", flexShrink: 0, marginLeft: 10 }}>›</span>
+            </button>
+          )
+          return (
+            <div style={{ marginTop: 18 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", marginBottom: 9, letterSpacing: "0.02em" }}>{L.savedGroups}</div>
+              {open.length > 0 && (
+                <div style={{ marginBottom: dicht.length > 0 ? 14 : 0 }}>
+                  <div style={{ fontSize: 10.5, fontWeight: 800, color: "#1f8a4c", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>● {L.groupsOpen}</div>
+                  {open.map(rij)}
+                </div>
+              )}
+              {dicht.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 10.5, fontWeight: 800, color: "#a89a6f", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>✓ {L.groupsClosed}</div>
+                  {dicht.map(rij)}
+                </div>
+              )}
+            </div>
+          )
+        })()}
       </div></div>
     )
   }
