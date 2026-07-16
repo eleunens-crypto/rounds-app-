@@ -517,6 +517,9 @@ const T = {
     modeFairLine: "Ieder betaalt zijn deel, betaal niet mee voor wat je niet dronk!",
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe jullie bestellen",
+    switchModeLink: "Van aanpak wisselen",
+    switchModeWarn: "Van aanpak wisselen? Je begint helemaal opnieuw — wat je tot nu toe noteerde, verdwijnt.",
+    switchModeYes: "Wisselen en opnieuw",
     barList: "🍻 Aan de toog",
     barHandOut: "Uitdelen",
     settleNow: "🧾 Toch afrekenen?",
@@ -867,6 +870,9 @@ const T = {
     modeFairLine: "Chacun paie sa part, ne paie pas pour ce que tu n'as pas bu !",
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
+    switchModeLink: "Changer de formule",
+    switchModeWarn: "Changer de formule ? Tu recommences \u00e0 z\u00e9ro — ce que tu as not\u00e9 jusqu'ici dispara\u00eet.",
+    switchModeYes: "Changer et recommencer",
     barList: "🍻 Au bar",
     barHandOut: "Distribuer",
     settleNow: "🧾 Régler quand même ?",
@@ -1835,8 +1841,42 @@ export default function PartyTest() {
     setOpenRoundId(null)
     setRounds((rs) => (rs.length && !roundIsPaid(rs[rs.length - 1]) ? rs.slice(0, -1) : rs)); setCart({}); setCartAnon({}); setAmountDraft(""); setPayPot(false); setPayPersons([]); setPayAmts({}); setPotAmtDraft(""); setPaidConfirmed(false) }
   const goStart = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("start") } }); else setView("start") }
+  // Naar het echte beginscherm van de site (waar je Rundo Table of Party kiest). Bij een
+  // onbevestigd rondje eerst waarschuwen, zodat je geen werk verliest.
+  const goSiteHome = () => {
+    const ga = () => { window.location.href = "/" }
+    if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); ga() } })
+    else ga()
+  }
   const goHome = () => { setFromOnboarding(false); if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("settings") } }); else setView("settings") }
   const potAvailNow = () => { const curPotPart = rounds.length ? (rounds[rounds.length - 1].potPart || 0) : 0; return potContribTotal - (potSpent - curPotPart) }
+  // Van aanpak wisselen: je begint helemaal opnieuw in de andere modus. We wissen de
+  // rondjes, drankjes en pot van deze groep en sturen je terug naar de kaders met de
+  // andere modus voorgeselecteerd. De groep zelf (naam, id) blijft — geen dubbels.
+  const switchMode = () => {
+    if (!groupId) return
+    setConfirmDlg({
+      variant: "danger", msg: L.switchModeWarn, yes: L.switchModeYes, no: L.cancel,
+      onYes: async () => {
+        setConfirmDlg(null)
+        // Child-data weg (rondjes, items, pot). CASCADE zit op de groep, niet hiertussen,
+        // dus we wissen expliciet per tabel.
+        await Promise.all([
+          supabase.from("party_round_items").delete().eq("group_id", groupId),
+          supabase.from("party_rounds").delete().eq("group_id", groupId),
+          supabase.from("party_pot").delete().eq("group_id", groupId),
+        ])
+        // Lokale staat leegmaken zodat er niets blijft hangen.
+        setRounds([]); setCart({}); setCartAnon({}); setPotRounds([]); setOpenRoundId(null); setStartedBy(null)
+        setRoundNr(1); setHasSettled(false)
+        // Terug naar de kaders met de ándere modus voorgeselecteerd, deze groep hervatten.
+        setResumeGroupId(groupId)
+        setBpSettle(!settle)
+        setOpenInfo(null)
+        setView("start")
+      },
+    })
+  }
   const paymentState = () => {
     const total = parseFloat(amountDraft.replace(",", ".")) || 0
     const potAvail = potAvailNow()
@@ -2888,7 +2928,7 @@ export default function PartyTest() {
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
         <div style={{ ...S.row, gap: 10, minWidth: 0 }}>
-          <div onClick={goStart} style={{ cursor: "pointer" }}><RundoLogo size={40} /></div>
+          <div onClick={goSiteHome} style={{ cursor: "pointer" }}><RundoLogo size={40} /></div>
           <div style={{ minWidth: 0 }}>
             <div style={{ ...S.h1, fontSize: 20, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
             {groupName.trim() && <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a5e0f", marginTop: 2, maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()} <span style={{ color: "#8a7d55", fontWeight: 700 }}>· 👥 {people.length}</span></div>}
@@ -3885,6 +3925,9 @@ export default function PartyTest() {
         {roundItems > 0 && (
           <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>
         )}
+        <div style={{ textAlign: "center", marginTop: 16 }}>
+          <span onClick={switchMode} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>↺ {L.switchModeLink}</span>
+        </div>
 
         {showAssignAll && (
           <div style={S.overlay} onClick={() => setShowAssignAll(false)}>
@@ -4352,6 +4395,9 @@ export default function PartyTest() {
             </div>
           )}
         </>}
+        <div style={{ textAlign: "center", marginTop: 16 }}>
+          <span onClick={switchMode} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>↺ {L.switchModeLink}</span>
+        </div>
       </div></div>
     )
   }
