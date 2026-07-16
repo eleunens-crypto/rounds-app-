@@ -312,6 +312,7 @@ const T = {
 
     peopleCount: "👥 Aantal personen",
     namesOptional: "Namen zijn optioneel — pas ze aan wanneer je wil.",
+    namesForPot: "Voeg personen toe als je een pot wil leggen — namen zijn optioneel.",
     peopleTitle: "Personen",
     addPersonFirst: "Voeg eerst minstens één persoon toe.",
     whichAreYou: "Welke ben jij?",
@@ -667,6 +668,7 @@ const T = {
 
     peopleCount: "👥 Nombre de personnes",
     namesOptional: "Les noms sont facultatifs — modifie-les quand tu veux.",
+    namesForPot: "Ajoute des personnes si tu veux une cagnotte — les noms sont optionnels.",
     peopleTitle: "Personnes",
     addPersonFirst: "Ajoute d'abord au moins une personne.",
     whichAreYou: "Lequel es-tu ?",
@@ -1942,7 +1944,7 @@ export default function PartyTest() {
   // Delen kan pas als de groep vaststaat: naam, aantal personen én de startvragen.
   // Zo kan er niemand ongevraagd bijkomen en blijft de groep even groot als de admin
   // aangaf — gasten claimen enkel een vrije plaats, ze maken er geen bij.
-  const canShare = isAdmin && !!inviteCode && people.length > 0 && onboardedOnce
+  const canShare = settle && isAdmin && !!inviteCode && people.length > 0 && onboardedOnce
   const renderShare = () => {
     if (!canShare) return null
     const vrij = people.filter((p) => !p.claimedBy).length
@@ -3674,7 +3676,7 @@ export default function PartyTest() {
           </div>
           <input disabled={hasSettled} value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : "#fdfaf2", color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
         </div>
-        {!fromOnboarding && (
+        {settle && !fromOnboarding && (
         <div style={{ ...S.card, marginBottom: 10 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: people.length > 0 ? 10 : 0 }}>
             <span style={{ fontSize: 14, fontWeight: 800 }}>{L.peopleTitle}</span>
@@ -3701,6 +3703,7 @@ export default function PartyTest() {
           {potChosen && potContribTotal <= 0.005 && <div style={{ marginTop: 8, textAlign: "right" }}><span onClick={() => setPotChosen(false)} style={{ fontSize: 12, color: "#c0554a", fontWeight: 700, cursor: "pointer" }}>✕ toch niet</span></div>}
         </div>
 
+        {settle && (
         <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 0 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ ...S.card, marginBottom: 0 }}>
@@ -3782,6 +3785,7 @@ export default function PartyTest() {
         </div>
           </div>
         </div>
+        )}
         <div style={{ marginTop: 24 }}>
           {rounds.length > 0
             ? <div style={{ display: "flex", gap: 10 }}>
