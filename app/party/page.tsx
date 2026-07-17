@@ -570,6 +570,8 @@ const T = {
     costRoundN: (n: number) => `Rondje ${n}`,
     costTotalLabel: "Totaal",
     roundCostOptional: "Hoeveel betaald voor dit rondje?",
+    paidLabel: "Betaald",
+    paidFromPot: (v: string) => `${v} uit de pot`,
     skipCostWarn: "Je vulde al iets in bij dit rondje. Toch overslaan zonder het op te slaan?",
     skipCostYes: "Ja, overslaan",
     finishRoundFirst: "Rond eerst dit rondje af — vul in wat het kostte of tik Overslaan.",
@@ -951,6 +953,8 @@ const T = {
     costRoundN: (n: number) => `Tourn\u00e9e ${n}`,
     costTotalLabel: "Total",
     roundCostOptional: "Combien pay\u00e9 pour cette tourn\u00e9e ?",
+    paidLabel: "Pay\u00e9",
+    paidFromPot: (v: string) => `${v} de la cagnotte`,
     skipCostWarn: "Tu as d\u00e9j\u00e0 rempli quelque chose pour cette tourn\u00e9e. Passer quand m\u00eame sans enregistrer ?",
     skipCostYes: "Oui, passer",
     finishRoundFirst: "Cl\u00f4ture d\u2019abord cette tourn\u00e9e — indique le montant ou appuie sur Passer.",
@@ -3021,7 +3025,10 @@ export default function PartyTest() {
             <button style={{ ...S.btnP, flex: 2 }} onClick={saveEditPot}>{potDraftTotal > 0 ? L.addContrib(euro(potDraftTotal)) : L.removeContrib}</button>
           </div>
         ) : (
-          <button style={{ ...S.btnP, marginTop: 14 }} onClick={closePot}>{potDraftTotal > 0 ? L.addContrib(euro(potDraftTotal)) : "Klaar"}</button>
+          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <button style={{ ...S.btn, flex: 1 }} onClick={() => { setPotDraft({}); setPotPerMan(0); setShowPot(false) }}>✕ {L.cancel}</button>
+            <button style={{ ...S.btnP, flex: 2 }} onClick={closePot}>{potDraftTotal > 0 ? L.addContrib(euro(potDraftTotal)) : "Klaar"}</button>
+          </div>
         )}
         </>
         ) : (
@@ -4794,14 +4801,28 @@ export default function PartyTest() {
                         </div>
                       ))}
                     </div>
-                    <div style={{ ...S.row, justifyContent: "space-between", borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 11 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}>{L.roundCostOptional}</span>
-                      <div style={{ ...S.row, gap: 4 }}>
-                        <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                        <input style={{ ...S.input, width: 80, fontSize: 15, fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00"
-                          value={(r.amount || 0) > 0 ? String(r.amount).replace(".", ",") : ""}
-                          onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); rSetAmount(rounds.indexOf(r), parseFloat(v) || 0) }} />
+                    {/* Hoeveel betaald + waaruit (pot of zelf). */}
+                    <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 11 }}>
+                      <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}>{L.paidLabel}</span>
+                        <div style={{ ...S.row, gap: 4 }}>
+                          <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700 }}>€</span>
+                          <input style={{ ...S.input, width: 78, fontSize: 15, fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00"
+                            value={(r.amount || 0) > 0 ? String(r.amount).replace(".", ",") : ""}
+                            onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); rSetAmount(rounds.indexOf(r), parseFloat(v) || 0) }}
+                            onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} />
+                        </div>
                       </div>
+                      {(r.potPart || 0) > 0.005 && (
+                        <div style={{ fontSize: 12, color: "#1f6b3a", fontWeight: 700, marginBottom: 8 }}>🫙 {L.paidFromPot(euro(r.potPart || 0))}</div>
+                      )}
+                      {/* Potloodje: de bestelling van dit rondje nog bijwerken (alleen het
+                          laatste rondje kan terug naar bestellen). */}
+                      {nr === rounds.length && (
+                        <div style={{ textAlign: "right" }}>
+                          <span onClick={editOrder} style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 800, cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -4810,7 +4831,10 @@ export default function PartyTest() {
           })}
         </div>
 
-        <button style={{ ...S.btnP, width: "100%", marginTop: 4 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
+        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+          <button style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 14, fontWeight: 800 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
+          <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 14 }} onClick={nextRound}>➕ {L.newRound}</button>
+        </div>
       </div></div>
     )
   }
