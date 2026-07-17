@@ -431,6 +431,7 @@ const T = {
     potMoney: "🫙 Pot (geld)",
     drinkCard: "💳 Drankkaart",
     addPotContrib: "➕ Inleg pot toevoegen",
+    nthDeposit: (n: number) => `${n}e inleg`,
     resetContrib: "↺ reset inleg",
     everyone: "👥 verdeel over iedereen",
     ownAmount: "of eigen bedrag:",
@@ -593,6 +594,7 @@ const T = {
     potEmptyLabel: "Pot is leeg",
     potFillBtn: "+ Pot bijvullen",
     skipRound: "Overslaan",
+    tapToConfirm: "tik ✓ om te bevestigen",
     noAmountsYet: "Je vulde nog geen bedragen in. Zonder bedragen valt er niets te verdelen — vul eerst in wat de rondjes kostten.",
     fillAmountsNow: "Bedragen invullen",
     later: "Later",
@@ -821,6 +823,7 @@ const T = {
     potMoney: "🫙 Pot (argent)",
     drinkCard: "💳 Carte boissons",
     addPotContrib: "➕ Ajouter une mise au pot",
+    nthDeposit: (n: number) => `Mise ${n}`,
     resetContrib: "↺ réinitialiser",
     everyone: "👥 répartir sur tous",
     ownAmount: "ou montant libre :",
@@ -983,6 +986,7 @@ const T = {
     potEmptyLabel: "Cagnotte vide",
     potFillBtn: "+ Remplir la cagnotte",
     skipRound: "Passer",
+    tapToConfirm: "appuie sur ✓ pour confirmer",
     noAmountsYet: "Tu n'as pas encore entr\u00e9 de montants. Sans montants, rien \u00e0 partager — indique d'abord ce qu'ont co\u00fbt\u00e9 les tourn\u00e9es.",
     fillAmountsNow: "Entrer les montants",
     later: "Plus tard",
@@ -2938,21 +2942,29 @@ export default function PartyTest() {
           const tot = Object.values(r.amounts).reduce((a, b) => a + (b || 0), 0)
           const who = people.filter((pp) => (r.amounts[pp.id] || 0) > 0)
           return (
-            <div key={r.id} style={{ background: editPotId === r.id ? "rgba(240,165,0,0.18)" : "#faf4e4", borderRadius: 12, padding: "9px 11px", marginBottom: 8, border: editPotId === r.id ? "1px solid rgba(240,165,0,0.6)" : "1px solid transparent" }}>
-              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: 800 }}>{i + 1}e inleg <span style={{ fontSize: 12, fontWeight: 700, color: "#1f8a4c" }}>· {euro(tot)}</span></span>
-                {editPotId === r.id ? (
-                  <span style={{ fontSize: 12, color: "#c98a00", fontWeight: 800 }}>{L.beingEdited}</span>
-                ) : rounds.length === 0 ? (
-                  <div style={{ ...S.row, gap: 10 }}>
-                    <span style={{ fontSize: 12, color: "#8a5e0f", cursor: "pointer", fontWeight: 700 }} onClick={() => editPotRound(r.id)}>{L.edit}</span>
-                    <span style={{ fontSize: 12, color: "#c0554a", cursor: "pointer", fontWeight: 700 }} onClick={() => removePotRound(r.id, `${i + 1}e inleg`)}>{L.remove}</span>
-                  </div>
-                ) : (
-                  <span style={{ fontSize: 11, color: "#b3a988" }}>🔒 vast</span>
-                )}
+            <div key={r.id} style={{ background: editPotId === r.id ? "rgba(240,165,0,0.18)" : "#faf4e4", borderRadius: 12, padding: "11px 13px", marginBottom: 8, border: editPotId === r.id ? "1px solid rgba(240,165,0,0.6)" : "1px solid transparent" }}>
+              <div style={{ ...S.row, justifyContent: "space-between" }}>
+                <div style={{ ...S.row, gap: 8 }}>
+                  <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#e8a821", color: "#fff", fontSize: 12, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</span>
+                  <span style={{ fontSize: 13.5, fontWeight: 800, color: "#4a3f1e" }}>{L.nthDeposit(i + 1)}</span>
+                </div>
+                <div style={{ ...S.row, gap: 10 }}>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c" }}>{euro(tot)}</span>
+                  {editPotId === r.id ? (
+                    <span style={{ fontSize: 12, color: "#c98a00", fontWeight: 800 }}>{L.beingEdited}</span>
+                  ) : rounds.length === 0 ? (
+                    <div style={{ ...S.row, gap: 8 }}>
+                      <span style={{ fontSize: 13, color: "#8a5e0f", cursor: "pointer", fontWeight: 700 }} onClick={() => editPotRound(r.id)}>✏️</span>
+                      <span style={{ fontSize: 13, color: "#c0554a", cursor: "pointer", fontWeight: 700 }} onClick={() => removePotRound(r.id, `${i + 1}e inleg`)}>🗑️</span>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: 11, color: "#b3a988" }}>🔒</span>
+                  )}
+                </div>
               </div>
-              <div style={{ fontSize: 12.5, color: "#6b5f3a" }}>{settle ? who.map((pp) => `${pp.name} ${euro(r.amounts[pp.id] || 0)}`).join(" · ") : euro(tot)}</div>
+              {settle && who.length > 0 && (
+                <div style={{ fontSize: 12, color: "#8a7d55", marginTop: 5, paddingLeft: 30 }}>{who.map((pp) => `${pp.name} ${euro(r.amounts[pp.id] || 0)}`).join(" · ")}</div>
+              )}
             </div>
           )
         })}
@@ -3047,6 +3059,12 @@ export default function PartyTest() {
         </>
         ) : (
           <div>
+            {potRounds.length > 0 && (
+              <div style={{ ...S.row, justifyContent: "space-between", padding: "10px 13px", background: "rgba(31,138,76,0.09)", borderRadius: 12, marginBottom: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: "#1f6b3a" }}>{L.potTotalIn}</span>
+                <span style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c" }}>{euro(potContribTotal)}</span>
+              </div>
+            )}
             <button style={{ ...S.btnP, marginTop: 4 }} onClick={() => setPotBuilderOpen(true)}>{L.addPotContrib}</button>
             <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={closePot}>{L.ready}</button>
           </div>
@@ -4442,7 +4460,9 @@ export default function PartyTest() {
                   onClick={() => { if (potAvail <= 0.005) { setNotice(L.potEmptyNote); setShowPot(true); return } setPayVia("pot") }}>🫙 {L.paidPot}</button>
               </div>
 
-              {/* Eén bedrag-veld met ✓ groot rechts. */}
+              {/* Eén bedrag-veld met ✓ groot rechts. Het vinkje is grijs zolang er niks
+                  staat, en wordt omrand-groen (uitnodigend, "tik me") zodra er een bedrag
+                  is — niet meteen vol groen, zodat duidelijk is dat je nog moet bevestigen. */}
               <div style={{ ...S.row, gap: 8 }}>
                 <span style={{ fontSize: 19, color: "#8a7d55", fontWeight: 700 }}>€</span>
                 <input style={{ ...S.input, flex: 1, fontSize: 19, fontWeight: 800, padding: "12px", textAlign: "left",
@@ -4454,11 +4474,15 @@ export default function PartyTest() {
                   onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }}
                   onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); if ((rounds[idx]?.amount || 0) > 0.005) confirmQuickPay() } }} />
                 <button style={{ width: 52, height: 52, borderRadius: 12, fontSize: 22, fontWeight: 800, cursor: "pointer", flexShrink: 0,
-                  background: amount > 0.005 ? "linear-gradient(135deg,#2fae6a,#157a3f)" : "#d8d2c2",
-                  color: "#fff", border: "none",
-                  boxShadow: amount > 0.005 ? "0 2px 10px rgba(31,138,76,0.35)" : "none" }}
-                  onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); confirmQuickPay() }}>✓</button>
+                  background: amount > 0.005 ? "#fff" : "#e8e2d2",
+                  color: amount > 0.005 ? "#1f8a4c" : "#b3a988",
+                  border: amount > 0.005 ? "2px solid #1f8a4c" : "none",
+                  boxShadow: amount > 0.005 ? "0 0 0 3px rgba(31,138,76,0.15)" : "none" }}
+                  onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}>✓</button>
               </div>
+              {amount > 0.005 && (
+                <div style={{ fontSize: 11, color: "#1f8a4c", fontWeight: 800, textAlign: "right", marginTop: 6 }}>{L.tapToConfirm}</div>
+              )}
 
               {/* Pot-context (variant A). Genoeg in pot → toon wat overblijft. Te weinig →
                   toon automatische verdeling (pot + zelf) met een knopje om aan te vullen. */}
