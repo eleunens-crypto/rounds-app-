@@ -551,6 +551,8 @@ const T = {
     modeFairLine: "Ieder betaalt zijn deel, betaal niet mee voor wat je niet dronk!",
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe jullie bestellen",
+    howManyPeople: "Met hoeveel zijn jullie?",
+    headcountForward: "Dit geldt vanaf het volgende rondje. Eerdere rondjes houden hun aantal — corrigeer die desnoods in het rondjesoverzicht.",
     chosen: "GEKOZEN",
     tapToChoose: "tik om te kiezen",
     exampleTag: "voorbeeld",
@@ -943,6 +945,8 @@ const T = {
     modeFairLine: "Chacun paie sa part, ne paie pas pour ce que tu n'as pas bu !",
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
+    howManyPeople: "Vous \u00eates combien ?",
+    headcountForward: "Valable \u00e0 partir de la prochaine tourn\u00e9e. Les tourn\u00e9es pr\u00e9c\u00e9dentes gardent leur nombre \u2014 corrige-les au besoin dans l\u2019aper\u00e7u.",
     chosen: "CHOISI",
     tapToChoose: "appuie pour choisir",
     exampleTag: "exemple",
@@ -3144,7 +3148,9 @@ export default function PartyTest() {
           <div onClick={goSiteHome} style={{ cursor: "pointer" }}><RundoLogo size={40} /></div>
           <div style={{ minWidth: 0 }}>
             <div style={{ ...S.h1, fontSize: 20, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
-            {groupName.trim() && <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a5e0f", marginTop: 2, maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()}{settle && <span style={{ color: "#8a7d55", fontWeight: 700 }}> · 👥 {people.length}</span>}</div>}
+            {groupName.trim() && <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a5e0f", marginTop: 2, maxWidth: 190, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()}{settle
+              ? <span style={{ color: "#8a7d55", fontWeight: 700 }}> · 👥 {people.length}</span>
+              : <span onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }} style={{ color: "#8a7d55", fontWeight: 700, cursor: "pointer" }}> · 👤 {headcount} ›</span>}</div>}
           </div>
         </div>
         {!!groupId && (
@@ -3570,6 +3576,19 @@ export default function PartyTest() {
             <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#c4b896", pointerEvents: "none" }}>✏️</span>
           </div>
 
+          {/* Aantal aanwezigen — alleen bij snelle rondjes. Hiermee verdeelt de afrekening
+              later elk rondje eerlijk. Kan achteraf nog via de header of instellingen. */}
+          {bpSettle === false && (
+            <div style={{ ...S.row, justifyContent: "space-between", padding: "12px 14px", background: "#faf4e4", borderRadius: 12, marginBottom: 18 }}>
+              <span style={{ fontSize: 13.5, fontWeight: 800, color: "#4a3f1e" }}>👤 {L.howManyPeople}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <button style={{ width: 34, height: 34, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 18, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: headcount > 2 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(2, n - 1))}>−</button>
+                <span style={{ fontSize: 19, fontWeight: 800, minWidth: 20, textAlign: "center", color: "#4a3f1e" }}>{headcount}</span>
+                <button style={{ width: 34, height: 34, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 18, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n + 1)}>+</button>
+              </div>
+            </div>
+          )}
+
           <div style={{ textAlign: "center", fontSize: 13, fontWeight: 800, color: "#8a7d55", marginBottom: 12 }}>{L.chooseHow}</div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -3890,6 +3909,23 @@ export default function PartyTest() {
           </div>
           <input disabled={hasSettled} value={groupName} onChange={(e) => setGroupName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : "#fdfaf2", color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
         </div>
+        {/* Snelle rondjes: aantal aanwezigen. Wijzigen geldt vanaf het volgende rondje —
+            eerdere rondjes houden hun eigen aantal. Corrigeren per rondje kan in het overzicht. */}
+        {!settle && (
+        <div style={{ ...S.card, marginBottom: 10 }}>
+          <div style={{ ...S.row, justifyContent: "space-between" }}>
+            <span style={{ fontSize: 14, fontWeight: 800 }}>👤 {L.howManyPeople}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <button style={{ ...S.step, opacity: headcount > 2 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(2, n - 1))}>−</button>
+              <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{headcount}</span>
+              <button style={{ ...S.step, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={() => setHeadcount((n) => n + 1)}>+</button>
+            </div>
+          </div>
+          {rounds.length > 0 && (
+            <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 9, lineHeight: 1.5 }}>{L.headcountForward}</div>
+          )}
+        </div>
+        )}
         {settle && !fromOnboarding && (
         <div style={{ ...S.card, marginBottom: 10 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: people.length > 0 ? 10 : 0 }}>
