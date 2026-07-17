@@ -2791,6 +2791,10 @@ export default function PartyTest() {
   }
 
   const roundKeyTotal = (r: Round) => drinks.reduce((s, d) => s + (Object.values(r.orders[d.id] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[d.id] ?? 0)) * priceOf(d), 0)
+  // Drankjes (met aantal) van een rondje — gebruikt op het afreken-scherm én in het overzicht.
+  const drinksOf = (r: Round) => drinks
+    .map((d) => ({ d, n: Object.values(r.orders[d.id] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[d.id] ?? 0) }))
+    .filter((x) => x.n > 0)
   // Wat dit rondje "waard" is. Vulde iemand een bedrag in, dan telt dat. Zo niet
   // (modus "gewoon rondjes"), dan de som van de richtprijzen.
   //
@@ -3274,11 +3278,17 @@ export default function PartyTest() {
           )}
           {settle && <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 13, fontWeight: 700, opacity: view === "final" ? 0.55 : 1 }} onClick={goFinal}>{L.settleBtn}</button>}
           {!settle && rounds.length >= 1 && (
-            <button style={{ flex: 1, padding: "11px 4px", fontSize: 13, fontWeight: 700, borderRadius: 10, cursor: "pointer",
-              border: view === "quickSettle" ? "none" : "1px solid rgba(31,138,76,0.4)",
-              background: view === "quickSettle" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#fff",
-              color: view === "quickSettle" ? "#fff" : "#1f8a4c" }}
-              onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } goQuickSettle() }}>{L.quickSettleTitle}</button>
+            !lastRoundHandled ? (
+              // Bezig een rondje af te ronden op de hub: geen afreken-knop maar een rustig
+              // label dat toont waar je bent. Niet klikbaar, niet opgelicht.
+              <div style={{ flex: 1, padding: "11px 4px", fontSize: 13, fontWeight: 800, borderRadius: 10, textAlign: "center", background: "#faf4e4", color: "#8a5e0f", border: "1px solid rgba(240,165,0,0.35)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{L.roundWord} {roundNr}</div>
+            ) : (
+              <button style={{ flex: 1, padding: "11px 4px", fontSize: 13, fontWeight: 700, borderRadius: 10, cursor: "pointer",
+                border: view === "quickSettle" ? "none" : "1px solid rgba(31,138,76,0.4)",
+                background: view === "quickSettle" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#fff",
+                color: view === "quickSettle" ? "#fff" : "#1f8a4c" }}
+                onClick={goQuickSettle}>{L.quickSettleTitle}</button>
+            )
           )}
         </div>
       )}
@@ -5000,9 +5010,6 @@ export default function PartyTest() {
       if (base.has(id)) base.delete(id); else base.add(id)
       return base
     })
-    const drinksOf = (r: Round) => drinks
-      .map((d) => ({ d, n: Object.values(r.orders[d.id] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[d.id] ?? 0) }))
-      .filter((x) => x.n > 0)
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header />
