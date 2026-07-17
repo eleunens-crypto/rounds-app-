@@ -146,7 +146,7 @@ type Anon = Record<string, number>
 // wat de app al kende. status: open = er wordt besteld, pending = besteld maar niet
 // betaald, closed = betaald.
 type Proposal = { active?: boolean; by?: string; answers?: Record<string, "same" | "different" | "skip"> }
-type Round = { id: string; seq: number; status: "open" | "pending" | "closed"; orders: Assign; anon: Anon; payers: Record<string, number>; amount: number; potPart: number; gaveBack: Record<string, number>; members: string[]; startedBy: string | null; proposal: Proposal }
+type Round = { id: string; seq: number; status: "open" | "pending" | "closed"; orders: Assign; anon: Anon; payers: Record<string, number>; amount: number; potPart: number; gaveBack: Record<string, number>; members: string[]; startedBy: string | null; proposal: Proposal; headcount: number }
 
 const euro = (v: number) => "€" + v.toFixed(2).replace(".", ",")
 
@@ -1056,6 +1056,10 @@ export default function PartyTest() {
   const [lastRoundHandled, setLastRoundHandled] = useState(true)
   // Snelle rondjes afrekenen: betaalt dit rondje uit eigen zak ("self") of uit de pot ("pot")?
   const [payVia, setPayVia] = useState<"self" | "pot">("self")
+  // Huidig aantal aanwezigen (snelle rondjes). Start op 2; elk afgesloten rondje krijgt
+  // dit getal mee. Wijzig je het (header/instellingen), dan geldt het vanaf het volgende
+  // rondje — eerdere rondjes houden hun eigen aantal (eerlijk voor laatkomers).
+  const [headcount, setHeadcount] = useState(2)
   // false = "gewoon rondjes" (geen geld). Eén app, het geld-gedeelte verborgen.
   const [settle, setSettle] = useState(true)
   type Custom = { key: string; name: string; cat: Cat; price: number; coins: number; cup: boolean; by: string }
@@ -1582,7 +1586,7 @@ export default function PartyTest() {
     const [{ data: g }, { data: pp }, { data: rr }, { data: ii }, { data: pt }] = await Promise.all([
       supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices,settle").eq("id", gid).single(),
       supabase.from("party_people").select("id,seat,name,claimed_by,self_joined,settle_with").eq("group_id", gid).order("seat"),
-      supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back,members,started_by,proposal").eq("group_id", gid).order("seq"),
+      supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back,members,started_by,proposal,headcount").eq("group_id", gid).order("seq"),
       supabase.from("party_round_items").select("round_id,person_id,drink_key,qty").eq("group_id", gid),
       supabase.from("party_pot").select("id,seq,amounts,is_card,card_payers").eq("group_id", gid).order("seq"),
     ])
@@ -1633,6 +1637,7 @@ export default function PartyTest() {
       members: ((r.members ?? []) as string[]),
       startedBy: (r.started_by ?? null) as string | null,
       proposal: ((r.proposal ?? {}) as Proposal),
+      headcount: Number(r.headcount ?? 2),
     }))
 
     // Het OPEN rondje is de mand; de rest is historiek.
@@ -2521,7 +2526,7 @@ export default function PartyTest() {
       // Bevries WIE er nu in de groep zit: dit zijn de deelnemers aan dit rondje.
       // Vanaf hier telt een latere nieuwkomer niet meer mee voor dit rondje.
       const leden = people.map((p) => p.id)
-      supabase.from("party_rounds").update({ status: nieuweStatus, gave_back: effGb, members: leden, ...(settle ? {} : { closed_at: new Date().toISOString() }) }).eq("id", openRoundId)
+      supabase.from("party_rounds").update({ status: nieuweStatus, gave_back: effGb, members: leden, headcount, ...(settle ? {} : { closed_at: new Date().toISOString() }) }).eq("id", openRoundId)
         .then(({ error }) => { if (error) setNotice("Rondje bevestigen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
       setOpenRoundId(null)
     }
