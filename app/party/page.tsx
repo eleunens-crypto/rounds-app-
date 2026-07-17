@@ -554,6 +554,8 @@ const T = {
     tapToChoose: "tik om te kiezen",
     exampleTag: "voorbeeld",
     switchModeLink: "Van aanpak wisselen",
+    switchToFair: "Naar Fair Split modus",
+    switchToQuick: "Naar snelle rondjes",
     switchModeWarn: "Van aanpak wisselen? Je begint helemaal opnieuw — wat je tot nu toe noteerde, verdwijnt.",
     switchModeYes: "Wisselen en opnieuw",
     barList: "🍻 Aan de toog",
@@ -567,7 +569,7 @@ const T = {
     costWholeNight: "Hele avond",
     costRoundN: (n: number) => `Rondje ${n}`,
     costTotalLabel: "Totaal",
-    roundCostOptional: "Wat kostte dit rondje? (optioneel)",
+    roundCostOptional: "Hoeveel betaald voor dit rondje?",
     skipCostWarn: "Je vulde al iets in bij dit rondje. Toch overslaan zonder het op te slaan?",
     skipCostYes: "Ja, overslaan",
     finishRoundFirst: "Rond eerst dit rondje af — vul in wat het kostte of tik Overslaan.",
@@ -929,6 +931,8 @@ const T = {
     tapToChoose: "appuie pour choisir",
     exampleTag: "exemple",
     switchModeLink: "Changer de formule",
+    switchToFair: "Vers le mode Fair Split",
+    switchToQuick: "Vers les tourn\u00e9es rapides",
     switchModeWarn: "Changer de formule ? Tu recommences \u00e0 z\u00e9ro — ce que tu as not\u00e9 jusqu'ici dispara\u00eet.",
     switchModeYes: "Changer et recommencer",
     barList: "🍻 Au bar",
@@ -942,7 +946,7 @@ const T = {
     costWholeNight: "Toute la soir\u00e9e",
     costRoundN: (n: number) => `Tourn\u00e9e ${n}`,
     costTotalLabel: "Total",
-    roundCostOptional: "Combien a co\u00fbt\u00e9 cette tourn\u00e9e ? (optionnel)",
+    roundCostOptional: "Combien pay\u00e9 pour cette tourn\u00e9e ?",
     skipCostWarn: "Tu as d\u00e9j\u00e0 rempli quelque chose pour cette tourn\u00e9e. Passer quand m\u00eame sans enregistrer ?",
     skipCostYes: "Oui, passer",
     finishRoundFirst: "Cl\u00f4ture d\u2019abord cette tourn\u00e9e — indique le montant ou appuie sur Passer.",
@@ -3078,12 +3082,12 @@ export default function PartyTest() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. Ook op de
                 instellingen zichtbaar, zodat je altijd ziet wat er nog in de pot zit. */}
-            <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "5px 12px 5px 7px", borderRadius: 22, fontSize: 13, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#fff", border: potRemaining > 0.005 ? "1px solid rgba(200,138,26,0.55)" : "0.5px solid rgba(120,95,20,0.3)" }}>
+            <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 9px", borderRadius: 22, fontSize: 14.5, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#fff", border: potRemaining > 0.005 ? "1px solid rgba(200,138,26,0.55)" : "0.5px solid rgba(120,95,20,0.3)" }}>
               {potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️</span>}
               {potIsCard ? (
-                <span style={{ fontSize: 17 }}>💳</span>
+                <span style={{ fontSize: 19 }}>💳</span>
               ) : (
-                <svg width="24" height="24" viewBox="0 0 40 40" style={{ display: "block" }}>
+                <svg width="27" height="27" viewBox="0 0 40 40" style={{ display: "block" }}>
                   <path d="M16 13 L14 7 Q20 5 26 7 L24 13 Z" fill="#d99616" stroke="#b9821a" strokeWidth="1.2" strokeLinejoin="round"/>
                   <path d="M13 14 Q20 11 27 14 Q33 19 32 27 Q31 35 20 35 Q9 35 8 27 Q7 19 13 14 Z" fill="#e8a821" stroke="#b9821a" strokeWidth="1.5"/>
                   <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
@@ -3097,19 +3101,19 @@ export default function PartyTest() {
       </div>
       {!onboarding && (
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-          <button style={{ ...S.btn, flex: 1.5, padding: "8px 3px", fontSize: 10.5, fontWeight: 700, lineHeight: 1.15 }} onClick={() => { if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupSettings}</button>
+          <button style={{ ...S.btn, flex: 1.5, padding: "11px 4px", fontSize: 12, fontWeight: 700, lineHeight: 1.15 }} onClick={() => { if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupSettings}</button>
           {settle ? (
-            <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "hub" ? 0.55 : 1 }} onClick={goHub}>{L.overview}</button>
+            <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 13, fontWeight: 700, opacity: view === "hub" ? 0.55 : 1 }} onClick={goHub}>{L.overview}</button>
           ) : (
-            <button style={{ flex: 1.2, padding: "8px 4px", fontSize: 11.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
+            <button style={{ flex: 1.2, padding: "11px 4px", fontSize: 13, fontWeight: 800, borderRadius: 10, cursor: "pointer",
               border: view === "roundsOverview" ? "none" : "1px solid rgba(120,95,20,0.25)",
               background: view === "roundsOverview" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff",
               color: view === "roundsOverview" ? "#fff" : "#8a7d55" }}
               onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } if (rounds.length >= 1) { setOverviewBackTo(view === "order" ? "order" : "hub"); setView("roundsOverview") } else setNotice(L.noRoundsYet) }}>{L.roundsOverviewBtn}</button>
           )}
-          {settle && <button style={{ ...S.btn, flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, opacity: view === "final" ? 0.55 : 1 }} onClick={goFinal}>{L.settleBtn}</button>}
+          {settle && <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 13, fontWeight: 700, opacity: view === "final" ? 0.55 : 1 }} onClick={goFinal}>{L.settleBtn}</button>}
           {!settle && rounds.length >= 1 && (
-            <button style={{ flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 700, borderRadius: 10, cursor: "pointer", border: "1px solid rgba(31,138,76,0.4)", background: "rgba(31,138,76,0.06)", color: "#1f8a4c" }} onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } goQuickSettle() }}>{L.quickSettleTitle}</button>
+            <button style={{ flex: 1, padding: "11px 4px", fontSize: 13, fontWeight: 700, borderRadius: 10, cursor: "pointer", border: "1px solid rgba(31,138,76,0.4)", background: "rgba(31,138,76,0.06)", color: "#1f8a4c" }} onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } goQuickSettle() }}>{L.quickSettleTitle}</button>
           )}
         </div>
       )}
@@ -3492,7 +3496,7 @@ export default function PartyTest() {
             {L.groupNameHint} <span style={{ fontWeight: 600, color: "#a89a6f", letterSpacing: 0 }}>· {L.tapToChange}</span>
           </div>
           <div style={{ position: "relative", marginBottom: 18 }}>
-            <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder={L.groupNamePlaceholder}
+            <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.groupNamePlaceholder}
               style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 17, fontWeight: 800, background: "#fdfaf2", padding: "15px 40px 15px 14px", borderRadius: 12, border: "1.5px solid #e08a00" }} />
             <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#c4b896", pointerEvents: "none" }}>✏️</span>
           </div>
@@ -3699,7 +3703,7 @@ export default function PartyTest() {
         )}
         <div style={S.card}>
           <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{L.groupNameEdit}</div>
-          <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()}
+          <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
             style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 15, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: "#fdfaf2" }} />
         </div>
         {settle && (
@@ -3815,7 +3819,7 @@ export default function PartyTest() {
             <span style={{ fontSize: 14, fontWeight: 800 }}>Groepsnaam</span>
             {hasSettled && <span style={{ fontSize: 11, color: "#8a7d55", fontWeight: 700 }}>🔒 vast na afrekenen</span>}
           </div>
-          <input disabled={hasSettled} value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : "#fdfaf2", color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
+          <input disabled={hasSettled} value={groupName} onChange={(e) => setGroupName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : "#fdfaf2", color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
         </div>
         {settle && !fromOnboarding && (
         <div style={{ ...S.card, marginBottom: 10 }}>
@@ -3990,10 +3994,10 @@ export default function PartyTest() {
             const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
             const actief = activeCat === c
             return <span key={c} onClick={() => { setActiveCat(c); setFullList(false) }}
-              style={{ flexShrink: 0, padding: "7px 14px", borderRadius: 20, fontSize: 12.5, fontWeight: actief ? 800 : 700, cursor: "pointer", whiteSpace: "nowrap",
+              style={{ flexShrink: 0, padding: "10px 17px", borderRadius: 22, fontSize: 14.5, fontWeight: actief ? 800 : 700, cursor: "pointer", whiteSpace: "nowrap",
                        background: actief ? "#4a3f1e" : "#fff", color: actief ? "#fff" : "#8a7d55",
                        border: actief ? "none" : "0.5px solid rgba(120,95,20,0.22)" }}>
-              {CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: actief ? "#ffd27f" : "#e0685c", fontSize: 14 }}>●</span>}
+              {CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: actief ? "#ffd27f" : "#e0685c", fontSize: 15 }}>●</span>}
             </span>
           })}
         </div>
@@ -4024,13 +4028,13 @@ export default function PartyTest() {
         ) : (
           <div style={{ position: "relative" }}>
             {!zoekt && fullList && (
-              <div style={{ textAlign: "right", marginBottom: 8 }}>
-                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "5px 13px", borderRadius: 16, fontSize: 11, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f" }}>
+              <div style={{ position: "absolute", left: "50%", top: -13, transform: "translateX(-50%)", whiteSpace: "nowrap", zIndex: 2 }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
                   ▴ minder tonen
                 </span>
               </div>
             )}
-            <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12 }}>
+            <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12 }}>
               {catVisible.map((d) => {
                 const tot = drinkTotal(d.id), un = cartAnon[d.id] ?? 0
                 return (
@@ -4098,7 +4102,7 @@ export default function PartyTest() {
           <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>
         )}
         <div style={{ textAlign: "center", marginTop: 16 }}>
-          <span onClick={switchMode} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>↺ {L.switchModeLink}</span>
+          <span onClick={switchMode} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>↺ {settle ? L.switchToQuick : L.switchToFair}</span>
         </div>
 
         {showAssignAll && (
@@ -4375,51 +4379,54 @@ export default function PartyTest() {
           const zelf = Math.max(0, amount - potPart)
           return (
           <>
-            {/* Wat kostte dit rondje — vrijblijvend, maar sluit het rondje af. */}
+            {/* Hoeveel betaald voor dit rondje — met bevestig-knopje dat het toetsenbord
+                sluit, zodat het invulveld niet achter het toetsenbord blijft hangen. */}
             <div style={{ ...S.card }}>
-              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: amount > 0.005 ? 12 : 0 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}>{L.roundCostOptional}</span>
-                <div style={{ ...S.row, gap: 4 }}>
-                  <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                  <input style={{ ...S.input, width: 80, fontSize: 15, fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00"
-                    value={amount > 0 ? String(amount).replace(".", ",") : ""}
-                    onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }} />
-                </div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", marginBottom: 11 }}>{L.roundCostOptional}</div>
+              <div style={{ ...S.row, gap: 8 }}>
+                <span style={{ fontSize: 19, color: "#8a7d55", fontWeight: 700 }}>€</span>
+                <input style={{ ...S.input, flex: 1, fontSize: 19, fontWeight: 800, padding: "11px 12px", color: "#c88a1a" }} type="text" inputMode="decimal" placeholder="0,00"
+                  value={amount > 0 ? String(amount).replace(".", ",") : ""}
+                  onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} />
+                <button style={{ ...S.btnP, padding: "11px 16px", fontSize: 15 }} onClick={() => (document.activeElement as HTMLElement)?.blur?.()}>✓</button>
               </div>
 
-              {/* Uit de pot betalen — losse, optionele keuze. Altijd beschikbaar als er
-                  een pot is, los van het rondjebedrag. Handmatig bedrag, geen max. */}
+              {/* Uit de pot betalen — losse, optionele keuze. Altijd beschikbaar als er een
+                  pot is; anders de knop om de pot bij te vullen. */}
               {potAvail > 0.005 ? (
                 <div style={{ background: "rgba(31,138,76,0.07)", border: "1px dashed rgba(31,138,76,0.4)", borderRadius: 12, padding: 12, marginTop: 12 }}>
                   <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9 }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f6b3a" }}>{L.payFromPotQ}</span>
-                    <span style={{ fontSize: 11.5, color: "#8a7d55", fontWeight: 700 }}>{L.potHasLeft(euro(potAvail))}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "#1f6b3a" }}>{L.payFromPotQ}</span>
+                    <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>{L.potHasLeft(euro(potAvail))}</span>
                   </div>
                   <div style={{ ...S.row, gap: 8 }}>
-                    <span style={{ fontSize: 15, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                    <input style={{ ...S.input, flex: 1, fontSize: 15, fontWeight: 800, color: "#1f8a4c", textAlign: "right" }} type="text" inputMode="decimal" placeholder="0,00"
+                    <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>€</span>
+                    <input style={{ ...S.input, flex: 1, fontSize: 16, fontWeight: 800, color: "#1f8a4c", textAlign: "right" }} type="text" inputMode="decimal" placeholder="0,00"
                       value={potPart > 0 ? String(potPart).replace(".", ",") : ""}
-                      onChange={(e) => { const v = parseFloat(e.target.value.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0; rSetPotAmt(idx, v) }} />
+                      onChange={(e) => { const v = parseFloat(e.target.value.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0; rSetPotAmt(idx, v) }}
+                      onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} />
+                    <button style={{ ...S.btn, padding: "9px 13px", fontSize: 14, color: "#1f8a4c", border: "1px solid rgba(31,138,76,0.4)" }} onClick={() => (document.activeElement as HTMLElement)?.blur?.()}>✓</button>
                   </div>
                   {potPart > 0.005 && amount > 0.005 && (
-                    <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 8, textAlign: "right" }}>{L.restSelf} <b style={{ color: "#4a3f1e" }}>{euro(zelf)}</b></div>
+                    <div style={{ fontSize: 12, color: "#8a7d55", marginTop: 8, textAlign: "right" }}>{L.restSelf} <b style={{ color: "#4a3f1e" }}>{euro(zelf)}</b></div>
                   )}
                 </div>
               ) : (
                 <div style={{ background: "rgba(240,165,0,0.08)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 12, padding: 12, marginTop: 12, ...S.row, justifyContent: "space-between" }}>
-                  <span style={{ fontSize: 12.5, color: "#8a5e0f", fontWeight: 700 }}>{L.potEmptyLabel}</span>
-                  <button style={{ ...S.btn, padding: "7px 13px", fontSize: 12, fontWeight: 800, color: "#c98a00", border: "1px solid rgba(240,165,0,0.6)" }} onClick={() => setShowPot(true)}>{L.potFillBtn}</button>
+                  <span style={{ fontSize: 13, color: "#8a5e0f", fontWeight: 700 }}>{L.potEmptyLabel}</span>
+                  <button style={{ ...S.btn, padding: "8px 14px", fontSize: 13, fontWeight: 800, color: "#c98a00", border: "1px solid rgba(240,165,0,0.6)" }} onClick={() => setShowPot(true)}>{L.potFillBtn}</button>
                 </div>
               )}
             </div>
 
             {/* Afsluiten: overslaan (zonder bedrag) of bevestigen — beide naar overzicht. */}
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, flex: 1, padding: "13px 6px", fontSize: 13, fontWeight: 800, color: "#8a7d55" }} onClick={() => closeQuickRound(true)}>{L.skipRound}</button>
-              <button style={{ ...S.btnP, flex: 1.4, padding: "13px 6px", fontSize: 13 }} onClick={() => closeQuickRound(false)}>{L.closeRound}</button>
+              <button style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 14, fontWeight: 800, color: "#8a7d55" }} onClick={() => closeQuickRound(true)}>{L.skipRound}</button>
+              <button style={{ ...S.btnP, flex: 1.4, padding: "14px 6px", fontSize: 14 }} onClick={() => closeQuickRound(false)}>{L.closeRound}</button>
             </div>
             <div style={{ textAlign: "center", marginTop: 12 }}>
-              <span onClick={editOrder} style={{ fontSize: 12, color: "#a89a6f", fontWeight: 800, cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
+              <span onClick={editOrder} style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 800, cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
             </div>
           </>
           )
@@ -4623,7 +4630,7 @@ export default function PartyTest() {
           )}
         </>}
         <div style={{ textAlign: "center", marginTop: 16 }}>
-          <span onClick={switchMode} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>↺ {L.switchModeLink}</span>
+          <span onClick={switchMode} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>↺ {settle ? L.switchToQuick : L.switchToFair}</span>
         </div>
       </div></div>
     )
