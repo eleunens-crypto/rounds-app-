@@ -1721,6 +1721,9 @@ export default function RundoTable() {
   const [adminFinalPopup, setAdminFinalPopup] = useState(false)
   const [showShareWarn, setShowShareWarn] = useState(false)   // waarschuwing bij delen terwijl totalen niet kloppen
   const [showFinalizeWarn, setShowFinalizeWarn] = useState(false) // waarschuwing bij afsluiten terwijl totalen niet kloppen
+  // Centrale in-app melding (midden op het scherm, met OK) — vervangt browser-alerts en
+  // toont o.a. gast-opmerkingen bij de admin. Titel optioneel.
+  const [centerNote, setCenterNote] = useState<{ title?: string; body: string } | null>(null)
   const [tipInput, setTipInput] = useState("")
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteModalText, setInviteModalText] = useState("")
@@ -3983,9 +3986,9 @@ export default function RundoTable() {
                   <span style={{ fontSize: 13, fontWeight: 800, color: "#3b486a", flexShrink: 0 }}>{L.tipHeader}</span>
                   <div style={{ display: "inline-flex", alignItems: "center", flexShrink: 0, border: "1px solid rgba(20,33,58,0.15)", borderRadius: 10, background: "#fff", overflow: "hidden" }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: "#5a6680", padding: "0 1px 0 10px" }}>€</span>
-                    <input type="text" inputMode="decimal" value={tipInput} onChange={(e) => setTipInput(numFilter(e.target.value, true))} placeholder="0,00" style={{ width: 62, border: "none", outline: "none", background: "transparent", textAlign: "right", padding: "8px 10px 8px 2px", fontSize: 14 }} />
+                    <input type="text" inputMode="decimal" value={tipInput} onChange={(e) => setTipInput(numFilter(e.target.value, true))} onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); addTip() } }} placeholder="0,00" style={{ width: 62, border: "none", outline: "none", background: "transparent", textAlign: "right", padding: "8px 10px 8px 2px", fontSize: 14 }} />
                   </div>
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={addTip} style={{ ...S.btn, ...S.btnPrimary, fontSize: 12.5, fontWeight: 700, padding: "8px 14px", flexShrink: 0 }}>{L.addTipShort}</button>
+                  <button onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); addTip() }} style={{ ...S.btn, ...S.btnPrimary, fontSize: 12.5, fontWeight: 700, padding: "8px 14px", flexShrink: 0 }}>{L.addTipShort}</button>
                   <span style={{ fontSize: 10.5, color: "#9aa0ab", width: "100%", marginTop: 2 }}>{L.tipOptional}</span>
                 </div>
               )}
@@ -4002,12 +4005,12 @@ export default function RundoTable() {
                 const delen: string[] = []
                 if (openUnits > 0) delen.push(L.unitsNotAssigned(openUnits))
                 if (undecidedShared.length > 0) delen.push(L.sharedNobodyTakes(undecidedShared.length))
-                alert(`${L.cantFinalizeTitle}\n\n• ${delen.join("\n• ")}\n\n${L.assignFirstHint}`)
+                setCenterNote({ title: L.cantFinalizeTitle, body: `• ${delen.join("\n• ")}\n\n${L.assignFirstHint}` })
                 setShowTodo(true)
                 return
               }
-              // De bon klopt niet: benoem het verschil en laat bewust bevestigen.
-              if (!billOk && !confirm(L.mismatchFinalize(billDiff))) { setShowFinalizeWarn(true); return }
+              // De bon klopt niet: toon de in-app waarschuwing i.p.v. een browser-popup.
+              if (!billOk) { setShowFinalizeWarn(true); return }
               // Gedeelde items: waarschuw als er te weinig mensen aanduidden dat ze meededen.
               const shareProblems = baseItems.filter((it) => it.is_shared).map((it) => {
                 const st = sharedStatus(it)
@@ -4253,6 +4256,17 @@ export default function RundoTable() {
           </div>
         )
       })()}
+
+      {/* Centrale in-app melding (vervangt browser-alerts, toont gast-opmerkingen). */}
+      {centerNote && (
+        <div style={{ ...S.overlay, zIndex: 3200 }} onClick={() => setCenterNote(null)}>
+          <div style={{ ...S.modal, width: 340 }} onClick={(e) => e.stopPropagation()}>
+            {centerNote.title && <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: 17, fontWeight: 800, color: "#14213a" }}>{centerNote.title}</h3>}
+            <p style={{ fontSize: 14, color: "#3b486a", lineHeight: 1.55, margin: "0 0 16px", whiteSpace: "pre-line" }}>{centerNote.body}</p>
+            <button onClick={() => setCenterNote(null)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 15 }}>OK</button>
+          </div>
+        </div>
+      )}
 
       {/* ─── Pop-up: rekening afgesloten (voor de beheerder), met overzicht per persoon ─── */}
       {adminFinalPopup && (
