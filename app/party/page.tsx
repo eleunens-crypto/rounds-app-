@@ -3025,7 +3025,7 @@ export default function PartyTest() {
                   <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c" }}>{euro(tot)}</span>
                   {editPotId === r.id ? (
                     <span style={{ fontSize: 12, color: "#c98a00", fontWeight: 800 }}>{L.beingEdited}</span>
-                  ) : rounds.length === 0 ? (
+                  ) : (settle ? rounds.length === 0 : potSpent < 0.005) ? (
                     <div style={{ ...S.row, gap: 8 }}>
                       <span style={{ fontSize: 13, color: "#8a5e0f", cursor: "pointer", fontWeight: 700 }} onClick={() => editPotRound(r.id)}>✏️</span>
                       <span style={{ fontSize: 13, color: "#c0554a", cursor: "pointer", fontWeight: 700 }} onClick={() => removePotRound(r.id, `${i + 1}e inleg`)}>🗑️</span>
@@ -3276,7 +3276,7 @@ export default function PartyTest() {
           {settle ? (
             <div style={{ fontSize: 12, fontWeight: 700, color: "#8a7d55", marginTop: 2 }}>👥 {people.length}</div>
           ) : (
-            <div onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }} style={{ fontSize: 12.5, fontWeight: 700, color: "#8a7d55", marginTop: 3, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 12px", borderRadius: 14, background: "#faf4e4" }}>👤 {headcount < 1 ? "—" : headcount} {L.people} · {L.adjust} ›</div>
+            <div onClick={() => setShowPeoplePop(true)} style={{ fontSize: 12.5, fontWeight: 700, color: "#8a7d55", marginTop: 3, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 12px", borderRadius: 14, background: "#faf4e4" }}>👤 {headcount < 1 ? "—" : headcount} {L.people} · {L.adjust} ›</div>
           )}
         </div>
       )}
@@ -4638,7 +4638,7 @@ export default function PartyTest() {
                 <button style={{ flex: 1, padding: "10px 6px", fontSize: 12.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
                   background: payVia === "pot" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#f7f1e2",
                   color: payVia === "pot" ? "#fff" : "#8a7d55", border: "none" }}
-                  onClick={() => { setPayVia("pot"); if (potAvail <= 0.005) { setNotice(L.potEmptyNote); setShowPot(true) } }}>🫙 {L.paidPot}</button>
+                  onClick={() => { setPayVia("pot"); if (potAvail <= 0.005) { setNotice(L.potEmptyNote); setShowPot(true) } }}>🫙 {L.paidPot}{potAvail > 0.005 && <span style={{ fontWeight: 800, opacity: payVia === "pot" ? 1 : 0.75 }}> · {euro(potAvail)}</span>}</button>
               </div>
 
               {/* Bedrag-veld met ✓ én Overslaan samen op één rij. Het vinkje pulseert groen
@@ -4879,14 +4879,8 @@ export default function PartyTest() {
             <button style={{ ...S.btn, flex: 1 }} onClick={goFinal}>{L.settleBtn}</button>
             <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (unfinishedRound) resumeRound(); else nextRound() }}>{unfinishedRound ? L.continueRound(roundNr) : "➕ Nieuw rondje"}</button>
           </div>
-          {!unfinishedRound && paidCount > 0 && activeProposal ? (
+          {!unfinishedRound && paidCount > 0 && activeProposal && (
             <div style={{ marginTop: 10 }}>{renderProposalHost()}</div>
-          ) : !unfinishedRound && paidCount > 0 && (
-            <div style={{ marginTop: 10 }}>
-              <button style={{ width: "100%", border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 14, padding: "13px 6px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }} onClick={repeatRound}>{L.repeatRound}</button>
-              <div style={{ fontSize: 11, color: "#b3a988", textAlign: "center", marginTop: 6 }}>daarna nog aanpasbaar</div>
-              <button style={{ width: "100%", marginTop: 8, border: "1.5px solid rgba(240,165,0,0.6)", background: "#fff", color: "#8a5e0f", borderRadius: 14, padding: "12px 6px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }} onClick={startProposal}>{L.askGroupRepeat}</button>
-            </div>
           )}
         </>}
         <div style={{ textAlign: "center", marginTop: 16 }}>
