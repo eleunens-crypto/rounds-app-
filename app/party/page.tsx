@@ -558,6 +558,8 @@ const T = {
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe jullie bestellen",
     howManyPeople: "Met hoeveel zijn jullie?",
+    people: "pers.",
+    adjust: "aanpassen",
     nameRequired: "Geef eerst je groep een naam.",
     peopleRequired: "Kies eerst met hoeveel personen jullie zijn.",
     headcountForward: "Dit geldt vanaf het volgende rondje. Eerdere rondjes houden hun aantal — corrigeer die desnoods in het rondjesoverzicht.",
@@ -581,6 +583,7 @@ const T = {
     costRoundN: (n: number) => `Rondje ${n}`,
     costTotalLabel: "Totaal",
     roundCostOptional: "Hoeveel betaald voor dit rondje?",
+    thisRoundLabel: "Dit rondje",
     paidLabel: "Betaald",
     paidNote: (v: string) => `Betaald ${v}`,
     noAmountNote: "Geen bedrag ingevuld",
@@ -969,6 +972,8 @@ const T = {
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
     howManyPeople: "Vous \u00eates combien ?",
+    people: "pers.",
+    adjust: "modifier",
     nameRequired: "Donne d\u2019abord un nom \u00e0 ton groupe.",
     peopleRequired: "Choisis d\u2019abord combien vous \u00eates.",
     headcountForward: "Valable \u00e0 partir de la prochaine tourn\u00e9e. Les tourn\u00e9es pr\u00e9c\u00e9dentes gardent leur nombre \u2014 corrige-les au besoin dans l\u2019aper\u00e7u.",
@@ -992,6 +997,7 @@ const T = {
     costRoundN: (n: number) => `Tourn\u00e9e ${n}`,
     costTotalLabel: "Total",
     roundCostOptional: "Combien pay\u00e9 pour cette tourn\u00e9e ?",
+    thisRoundLabel: "Cette tourn\u00e9e",
     paidLabel: "Pay\u00e9",
     paidNote: (v: string) => `Pay\u00e9 ${v}`,
     noAmountNote: "Aucun montant indiqu\u00e9",
@@ -1492,9 +1498,9 @@ export default function PartyTest() {
   // personen. Zo klopt het opgeslagen totaal, of je nu het bedrag of het aantal wijzigt.
   useEffect(() => {
     if (settle) return
-    const totaal = potPerMan * people.length
+    const totaal = potPerMan * Math.max(1, headcount)
     setPotDraft((c) => (c.pot === totaal ? c : { pot: totaal }))
-  }, [settle, potPerMan, people.length])
+  }, [settle, potPerMan, headcount])
 
   // Wie een bestaand rondje bijstelt (bedrag, betaler, bekers) markeert het als vuil;
   // dit effect schrijft het daarna weg. Zo hoeft geen enkele mutator databank-logica
@@ -2975,7 +2981,16 @@ export default function PartyTest() {
   const renderPotModal = () => (
     <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
       <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ ...S.h3, fontSize: 18, margin: "0 0 8px" }}>{potIsCard ? L.drinkCard : L.potTitle}</h3>
+        <div style={{ ...S.row, justifyContent: "space-between", margin: "0 0 8px" }}>
+          <h3 style={{ ...S.h3, fontSize: 18, margin: 0 }}>{potIsCard ? L.drinkCard : L.potTitle}</h3>
+          {!settle && (
+            <div style={{ display: "flex", alignItems: "center", gap: 9, background: "#faf4e4", borderRadius: 20, padding: "4px 8px" }}>
+              <button style={{ width: 26, height: 26, borderRadius: 8, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 15, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", minWidth: 34, textAlign: "center" }}>👤 {headcount < 1 ? "—" : headcount}</span>
+              <button style={{ width: 26, height: 26, borderRadius: 8, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 15, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 1 : n + 1)}>+</button>
+            </div>
+          )}
+        </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
           <span style={{ ...S.pill, background: "rgba(120,95,20,0.08)", color: "#8a5e0f", fontSize: 12, padding: "4px 10px" }}>ingelegd {euro(potContribTotal)}</span>
           {potSpent > 0 && <span style={{ ...S.pill, background: "rgba(224,138,0,0.12)", color: "#c98a00", fontSize: 12, padding: "4px 10px" }}>besteed {euro(potSpent)}</span>}
@@ -2989,18 +3004,6 @@ export default function PartyTest() {
         )}
         {settle && <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>{potIsCard ? "💳 Drankkaart van de groep — leg de kaartwaarde (bv. €15) in. Wat niet opgedronken wordt, is verloren en wordt gelijk over iedereen verdeeld." : "🫙 Echt geld — wat niet opgaat, krijgen de inleggers terug bij de afrekening."}</div>}
 
-        {!settle && (
-          <div style={{ background: "#faf4e4", borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}>
-            <div style={{ ...S.row, justifyContent: "space-between" }}>
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#4a3f1e" }}>{L.potHowMany}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <button style={{ ...S.step, opacity: people.length > 0 ? 1 : 0.4 }} onClick={removeLastPerson}>−</button>
-                <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{people.length}</span>
-                <button style={{ ...S.step, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={addPerson}>+</button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {potRounds.map((r, i) => {
           const tot = Object.values(r.amounts).reduce((a, b) => a + (b || 0), 0)
@@ -3102,7 +3105,7 @@ export default function PartyTest() {
             <button style={{ ...S.btn, padding: "8px 11px", fontSize: 12, color: "#c0554a" }} onClick={() => setPotPerMan(0)}>↺</button>
           </div>
           {(() => {
-            const nieuweInleg = potPerMan * people.length
+            const nieuweInleg = potPerMan * Math.max(1, headcount)
             const alIn = potRemaining // wat er NU nog in zit (na eerder uitgeven)
             const heeftPot = potContribTotal > 0.005
             return heeftPot ? (
@@ -3220,20 +3223,14 @@ export default function PartyTest() {
     const onboarding = view === "setup" || view === "settings"
     return (
     <div style={{ marginBottom: 12 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-        <div style={{ ...S.row, gap: 10, minWidth: 0 }}>
-          <div onClick={goSiteHome} style={{ cursor: "pointer" }}><RundoLogo size={40} /></div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ ...S.h1, fontSize: 20, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
-            {groupName.trim() && <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a5e0f", marginTop: 2, maxWidth: 190, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()}{settle
-              ? <span style={{ color: "#8a7d55", fontWeight: 700 }}> · 👥 {people.length}</span>
-              : <span onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }} style={{ color: "#8a7d55", fontWeight: 700, cursor: "pointer" }}> · 👤 {headcount} ›</span>}</div>}
-          </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+        <div onClick={goSiteHome} style={{ cursor: "pointer", ...S.row, gap: 10 }}>
+          <RundoLogo size={40} />
+          <div style={{ ...S.h1, fontSize: 20, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
         </div>
         {!!groupId && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. Ook op de
-                instellingen zichtbaar, zodat je altijd ziet wat er nog in de pot zit. */}
+            {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. */}
             <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 9px", borderRadius: 22, fontSize: 14.5, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#fff", border: potRemaining > 0.005 ? "1px solid rgba(200,138,26,0.55)" : "0.5px solid rgba(120,95,20,0.3)" }}>
               {potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️</span>}
               {potIsCard ? (
@@ -3251,6 +3248,18 @@ export default function PartyTest() {
           </div>
         )}
       </div>
+      {/* Groepsnaam + aantal personen — gecentreerd onder de logobalk. Bij snelle rondjes
+          is het aantal klikbaar naar de instellingen. */}
+      {groupName.trim() && (
+        <div style={{ textAlign: "center", marginTop: 9 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2 }}>{groupName.trim()}</div>
+          {settle ? (
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#8a7d55", marginTop: 2 }}>👥 {people.length}</div>
+          ) : (
+            <div onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }} style={{ fontSize: 12.5, fontWeight: 700, color: "#8a7d55", marginTop: 3, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 12px", borderRadius: 14, background: "#faf4e4" }}>👤 {headcount < 1 ? "—" : headcount} {L.people} · {L.adjust} ›</div>
+          )}
+        </div>
+      )}
       {!onboarding && (
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
           <button style={{ ...S.btn, flex: 1.5, padding: "11px 4px", fontSize: 12, fontWeight: 700, lineHeight: 1.15 }} onClick={() => { if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupSettings}</button>
@@ -4570,6 +4579,21 @@ export default function PartyTest() {
           const zelf = Math.max(0, amount - potPart)
           return (
           <>
+            {/* Drankjes van dit net-bevestigde rondje, met de aanpas-knop erin verwerkt. */}
+            {(() => { const laatste = rounds[idx]; const lijst = laatste ? drinksOf(laatste) : []; return lijst.length > 0 && (
+              <div style={{ ...S.card, padding: "12px 14px", background: "#fffdf6" }}>
+                <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9, paddingBottom: 9, borderBottom: "1px solid rgba(120,95,20,0.1)" }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55" }}>📋 {L.thisRoundLabel}</span>
+                  <span onClick={editOrder} style={{ fontSize: 11.5, color: "#c98a00", fontWeight: 800, padding: "5px 11px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {lijst.map(({ d, n }) => (
+                    <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e" }}>{d.emoji} {n}× {d.name}</span>
+                  ))}
+                </div>
+              </div>
+            ) })()}
+
             {/* Hoeveel betaald voor dit rondje. Kies eerst de bron (zelf/pot), vul één
                 bedrag in, en bevestig met ✓ (of sla over). Beide sluiten het rondje af. */}
             <div style={{ ...S.card }}>
@@ -4587,13 +4611,12 @@ export default function PartyTest() {
                   onClick={() => { if (potAvail <= 0.005) { setNotice(L.potEmptyNote); setShowPot(true); return } setPayVia("pot") }}>🫙 {L.paidPot}</button>
               </div>
 
-              {/* Eén bedrag-veld met ✓ groot rechts. Zolang er niks staat is het vinkje
-                  grijs; zodra er een bedrag is wordt het omrand-groen én pulseert het, zodat
-                  onmiskenbaar is dat je nog moet tikken om te bevestigen. */}
+              {/* Bedrag-veld met ✓ én Overslaan samen op één rij. Het vinkje pulseert groen
+                  (omrand) zodra er een bedrag staat = "tik om te bevestigen". */}
               <style>{`@keyframes rundoPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,138,76,0.45)}50%{box-shadow:0 0 0 7px rgba(31,138,76,0)}}.rundo-pulse{animation:rundoPulse 1.4s infinite}`}</style>
-              <div style={{ ...S.row, gap: 8 }}>
+              <div style={{ ...S.row, gap: 7 }}>
                 <span style={{ fontSize: 19, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                <input style={{ ...S.input, flex: 1, fontSize: 19, fontWeight: 800, padding: "12px", textAlign: "left",
+                <input style={{ ...S.input, flex: 1, minWidth: 0, fontSize: 19, fontWeight: 800, padding: "12px", textAlign: "left",
                   color: "#c88a1a",
                   borderColor: amount > 0.005 ? "#e08a00" : "rgba(120,95,20,0.22)",
                   background: amount > 0.005 ? "#fff" : "#fdfaf2" }}
@@ -4601,14 +4624,15 @@ export default function PartyTest() {
                   value={amount > 0 ? String(amount).replace(".", ",") : ""}
                   onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }}
                   onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); if ((rounds[idx]?.amount || 0) > 0.005) confirmQuickPay() } }} />
-                <button className={amount > 0.005 ? "rundo-pulse" : undefined} style={{ width: 52, height: 52, borderRadius: 12, fontSize: 22, fontWeight: 800, cursor: "pointer", flexShrink: 0,
+                <button className={amount > 0.005 ? "rundo-pulse" : undefined} style={{ width: 50, height: 50, borderRadius: 12, fontSize: 21, fontWeight: 800, cursor: "pointer", flexShrink: 0,
                   background: amount > 0.005 ? "#fff" : "#e8e2d2",
                   color: amount > 0.005 ? "#1f8a4c" : "#b3a988",
                   border: amount > 0.005 ? "2px solid #1f8a4c" : "none" }}
                   onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}>✓</button>
+                <button style={{ padding: "0 12px", height: 50, borderRadius: 12, fontSize: 12.5, fontWeight: 800, cursor: "pointer", flexShrink: 0, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", color: "#8a7d55", whiteSpace: "nowrap" }} onClick={() => closeQuickRound(true)}>{L.skipRound}</button>
               </div>
               {amount > 0.005 && (
-                <div style={{ fontSize: 11.5, color: "#1f8a4c", fontWeight: 800, textAlign: "right", marginTop: 7 }}>{L.tapToConfirm}</div>
+                <div style={{ fontSize: 11.5, color: "#1f8a4c", fontWeight: 800, textAlign: "right", marginTop: 7, paddingRight: 78 }}>{L.tapToConfirm}</div>
               )}
 
               {/* Pot-context (variant A). Genoeg in pot → toon wat overblijft. Te weinig →
@@ -4633,12 +4657,6 @@ export default function PartyTest() {
                   </div>
                 )
               )}
-            </div>
-
-            {/* Overslaan (smal) + Bestelling aanpassen (breed) op één rij, knop-vorm. */}
-            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-              <button style={{ width: 110, padding: "12px 6px", fontSize: 13, fontWeight: 800, borderRadius: 11, cursor: "pointer", background: "#fff", border: "1px solid rgba(120,95,20,0.25)", color: "#8a7d55" }} onClick={() => closeQuickRound(true)}>{L.skipRound}</button>
-              <button style={{ flex: 1, padding: "12px 6px", fontSize: 13, fontWeight: 800, borderRadius: 11, cursor: "pointer", background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.18)", color: "#8a5e0f" }} onClick={editOrder}>✏️ {L.editOrderFull}</button>
             </div>
           </>
           )
