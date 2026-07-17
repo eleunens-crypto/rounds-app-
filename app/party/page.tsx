@@ -1108,6 +1108,8 @@ export default function PartyTest() {
   // welke rondjes getrakteerd zijn (tellen niet mee in de verdeling — komen op de tracteur).
   const [settleMode, setSettleMode] = useState<"verdelen" | "allesZelf">("verdelen")
   const [treatedRounds, setTreatedRounds] = useState<Set<string>>(new Set())
+  // Kleine pop-up om het aantal personen aan te passen (vanaf het afreken-scherm van een rondje).
+  const [showPeoplePop, setShowPeoplePop] = useState(false)
   // false = "gewoon rondjes" (geen geld). Eén app, het geld-gedeelte verborgen.
   const [settle, setSettle] = useState(true)
   type Custom = { key: string; name: string; cat: Cat; price: number; coins: number; cup: boolean; by: string }
@@ -3203,6 +3205,20 @@ export default function PartyTest() {
           </div>
         </div>
       )}
+      {showPeoplePop && (
+        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setShowPeoplePop(false)}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ ...S.h3, fontSize: 17, marginBottom: 4 }}>👤 {L.howManyPeople}</h3>
+            <p style={{ fontSize: 12.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 16 }}>{L.headcountForward}</p>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 22, marginBottom: 18 }}>
+              <button style={{ width: 44, height: 44, borderRadius: 12, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 22, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
+              <span style={{ fontSize: 30, fontWeight: 800, minWidth: 44, textAlign: "center", color: headcount < 1 ? "#c4b896" : "#4a3f1e" }}>{headcount < 1 ? "—" : headcount}</span>
+              <button style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 22, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 1 : n + 1)}>+</button>
+            </div>
+            <button style={S.btnP} onClick={() => setShowPeoplePop(false)}>{L.ready}</button>
+          </div>
+        </div>
+      )}
       {newcomer && (
         <div style={{ position: "fixed", left: 0, right: 0, bottom: 18, display: "flex", justifyContent: "center", zIndex: 60, pointerEvents: "none", padding: "0 12px" }}>
           <div style={{ pointerEvents: "auto", background: "#1f6b3a", color: "#fff", borderRadius: 16, padding: "12px 16px", boxShadow: "0 8px 24px rgba(0,0,0,0.22)", maxWidth: "94%", minWidth: 240 }}>
@@ -4589,6 +4605,10 @@ export default function PartyTest() {
           const zelf = Math.max(0, amount - potPart)
           return (
           <>
+            {/* Aantal personen — snel aan te passen zonder het scherm te verlaten. */}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+              <span onClick={() => setShowPeoplePop(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 16, padding: "5px 12px", cursor: "pointer" }}>👤 {headcount < 1 ? "—" : headcount} {L.people} · {L.adjust} ›</span>
+            </div>
             {/* Drankjes van dit net-bevestigde rondje, met de aanpas-knop erin verwerkt. */}
             {(() => { const laatste = rounds[idx]; const lijst = laatste ? drinksOf(laatste) : []; return lijst.length > 0 && (
               <div style={{ ...S.card, padding: "12px 14px", background: "#fffdf6" }}>
@@ -4618,7 +4638,7 @@ export default function PartyTest() {
                 <button style={{ flex: 1, padding: "10px 6px", fontSize: 12.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
                   background: payVia === "pot" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#f7f1e2",
                   color: payVia === "pot" ? "#fff" : "#8a7d55", border: "none" }}
-                  onClick={() => { if (potAvail <= 0.005) { setNotice(L.potEmptyNote); setShowPot(true); return } setPayVia("pot") }}>🫙 {L.paidPot}</button>
+                  onClick={() => { setPayVia("pot"); if (potAvail <= 0.005) { setNotice(L.potEmptyNote); setShowPot(true) } }}>🫙 {L.paidPot}</button>
               </div>
 
               {/* Bedrag-veld met ✓ én Overslaan samen op één rij. Het vinkje pulseert groen
