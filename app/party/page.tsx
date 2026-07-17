@@ -583,6 +583,10 @@ const T = {
     paidPot: "Uit de pot",
     potEmptyNote: "De pot is nog leeg — vul eerst iets in.",
     potNotEnough: (v: string) => `Pot heeft maar ${v} — de rest reken je zelf af.`,
+    potPayLeft: (bedrag: string, over: string) => `${bedrag} uit de pot \u2192 ${over} over na dit rondje`,
+    potSplitTitle: "Pot niet genoeg \u2014 zo verdeeld:",
+    potWord: "pot",
+    selfAdded: "Zelf bijgelegd",
     potHasLeft: (v: string) => `nog ${v} in pot`,
     maxAmount: (v: string) => `max ${v}`,
     restSelf: "Rest zelf:",
@@ -969,6 +973,10 @@ const T = {
     paidPot: "De la cagnotte",
     potEmptyNote: "La cagnotte est vide — ajoute d\u2019abord un montant.",
     potNotEnough: (v: string) => `La cagnotte n\u2019a que ${v} — le reste, tu le paies toi-m\u00eame.`,
+    potPayLeft: (bedrag: string, over: string) => `${bedrag} de la cagnotte \u2192 ${over} restant apr\u00e8s`,
+    potSplitTitle: "Cagnotte insuffisante \u2014 r\u00e9partition :",
+    potWord: "cagnotte",
+    selfAdded: "Ajout\u00e9 soi-m\u00eame",
     potHasLeft: (v: string) => `${v} dans la cagnotte`,
     maxAmount: (v: string) => `max ${v}`,
     restSelf: "Reste \u00e0 payer :",
@@ -4452,11 +4460,27 @@ export default function PartyTest() {
                   onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); confirmQuickPay() }}>✓</button>
               </div>
 
-              {/* Pot-context: hoeveel er nog in zit, of te weinig. */}
-              {payVia === "pot" && (
-                <div style={{ fontSize: 11.5, color: amount > potAvail + 0.005 ? "#c0554a" : "#1f6b3a", fontWeight: 700, marginTop: 8 }}>
-                  {amount > potAvail + 0.005 ? L.potNotEnough(euro(potAvail)) : L.potHasLeft(euro(potAvail))}
-                </div>
+              {/* Pot-context (variant A). Genoeg in pot → toon wat overblijft. Te weinig →
+                  toon automatische verdeling (pot + zelf) met een knopje om aan te vullen. */}
+              {payVia === "pot" && amount > 0.005 && (
+                amount <= potAvail + 0.005 ? (
+                  <div style={{ fontSize: 12, color: "#1f6b3a", fontWeight: 700, marginTop: 9 }}>
+                    🫙 {L.potPayLeft(euro(amount), euro(potAvail - amount))}
+                  </div>
+                ) : (
+                  <div style={{ background: "rgba(240,165,0,0.09)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 10, padding: "10px 12px", marginTop: 10 }}>
+                    <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, color: "#8a5e0f", fontWeight: 800 }}>{L.potSplitTitle}</span>
+                      <span onClick={() => setShowPot(true)} style={{ fontSize: 11, color: "#c98a00", fontWeight: 800, padding: "3px 9px", borderRadius: 12, border: "1px solid rgba(240,165,0,0.6)", background: "#fff", cursor: "pointer" }}>+ {L.potWord}</span>
+                    </div>
+                    <div style={{ ...S.row, justifyContent: "space-between", fontSize: 12.5, color: "#4a3f1e", fontWeight: 700 }}>
+                      <span>🫙 {L.fromPot}</span><span style={{ color: "#1f8a4c" }}>{euro(potAvail)}</span>
+                    </div>
+                    <div style={{ ...S.row, justifyContent: "space-between", fontSize: 12.5, color: "#4a3f1e", fontWeight: 700, marginTop: 3 }}>
+                      <span>💶 {L.selfAdded}</span><span style={{ color: "#c88a1a" }}>{euro(amount - potAvail)}</span>
+                    </div>
+                  </div>
+                )
               )}
 
               {/* Overslaan — gecentreerd eronder, de rustige tweede keuze. */}
