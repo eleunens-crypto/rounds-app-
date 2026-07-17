@@ -4125,7 +4125,7 @@ export default function PartyTest() {
             return rounds.length > 0 ? (
             // Er zijn afgeronde rondjes: overzicht + nieuw/verder.
             <div style={{ display: "flex", gap: 10 }}>
-              <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>{L.roundsOverview}</button>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (!settle) { setOverviewBackTo("hub"); setView("roundsOverview") } else { setOpenRound(rounds.length - 1); setView("hub") } }}>{L.roundsOverview}</button>
               {echtOnafgerond
                 ? <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>
                 : <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{L.newRound}</button>}
