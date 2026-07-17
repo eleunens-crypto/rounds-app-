@@ -611,6 +611,14 @@ const T = {
     back: "Terug",
     quickSettleTitle: "🧾 Afrekenen",
     quickTotalLabel: "Totaal van alle rondjes",
+    splitOverGroup: "Verdelen",
+    payAllSelf: "Alles zelf",
+    treatHint: "Tik een rondje dat jij trakteert (telt niet mee in de verdeling):",
+    roundWord: "Rondje",
+    yourTreat: "jouw traktatie",
+    eachPaysNote: "Ieder betaalt",
+    plusTreat: (v: string) => `Jij trakteert ${v} extra`,
+    payAllNote: "De hele rekening komt op jou:",
     quickHeadsLabel: "Met hoeveel waren jullie?",
     quickPerHead: "Ieders deel",
     quickPerHeadNote: (n: number) => `gelijk verdeeld over ${n} ${n === 1 ? "persoon" : "personen"}`,
@@ -1014,6 +1022,14 @@ const T = {
     back: "Retour",
     quickSettleTitle: "🧾 R\u00e9gler",
     quickTotalLabel: "Total de toutes les tourn\u00e9es",
+    splitOverGroup: "Partager",
+    payAllSelf: "Tout payer",
+    treatHint: "Touche une tourn\u00e9e que tu offres (non incluse dans le partage) :",
+    roundWord: "Tourn\u00e9e",
+    yourTreat: "ta tourn\u00e9e offerte",
+    eachPaysNote: "Chacun paie",
+    plusTreat: (v: string) => `Tu offres ${v} en plus`,
+    payAllNote: "Toute l\u2019addition est pour toi :",
     quickHeadsLabel: "Vous \u00e9tiez combien ?",
     quickPerHead: "La part de chacun",
     quickPerHeadNote: (n: number) => `partag\u00e9 \u00e9galement entre ${n} ${n === 1 ? "personne" : "personnes"}`,
@@ -1082,6 +1098,10 @@ export default function PartyTest() {
   // gebruiker moet het bewust instellen (naam én aantal verplicht). Elk afgesloten rondje
   // krijgt dit getal mee; wijzig je het later, dan geldt het vanaf het volgende rondje.
   const [headcount, setHeadcount] = useState(0)
+  // Afreken-scherm snelle rondjes: verdelen over de groep, of alles op één iemand. En
+  // welke rondjes getrakteerd zijn (tellen niet mee in de verdeling — komen op de tracteur).
+  const [settleMode, setSettleMode] = useState<"verdelen" | "allesZelf">("verdelen")
+  const [treatedRounds, setTreatedRounds] = useState<Set<string>>(new Set())
   // false = "gewoon rondjes" (geen geld). Eén app, het geld-gedeelte verborgen.
   const [settle, setSettle] = useState(true)
   type Custom = { key: string; name: string; cat: Cat; price: number; coins: number; cup: boolean; by: string }
@@ -4828,10 +4848,15 @@ export default function PartyTest() {
     )
   }
 
-  // ── SNEL AFREKENEN (niveau 1, gewoon rondjes) ────────────────────────────────
+  // ── SNEL AFREKENEN (niveau 2: elk rondje ÷ wie er toen was) ──────────────────
   if (view === "quickSettle") {
-    const heads = Math.max(0, parseInt(quickHeads || "0", 10) || 0)
-    const perHead = heads > 0 ? totalCost / heads : 0
+    const betaalde = rounds.filter((r) => (r.amount || 0) > 0.005)
+    const getrakteerd = betaalde.filter((r) => treatedRounds.has(r.id))
+    const teVerdelen = betaalde.filter((r) => !treatedRounds.has(r.id))
+    // Niveau 2: elk niet-getrakteerd rondje ÷ het aantal aanwezigen van dat rondje.
+    const perPersoon = teVerdelen.reduce((s, r) => s + (r.amount || 0) / Math.max(1, r.headcount || 1), 0)
+    const traktatieTot = getrakteerd.reduce((s, r) => s + (r.amount || 0), 0)
+    const alles = settleMode === "allesZelf"
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header />
@@ -4840,24 +4865,67 @@ export default function PartyTest() {
           <h3 style={{ ...S.h3, margin: 0 }}>{L.quickSettleTitle}</h3>
           <button style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "7px 12px" }} onClick={() => setView("hub")}>{L.back}</button>
         </div>
+
         <div style={{ ...S.card, textAlign: "center", background: "rgba(240,165,0,0.06)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: "#8a7d55", marginBottom: 4 }}>{L.quickTotalLabel}</div>
           <div style={{ fontSize: 30, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</div>
         </div>
-        <div style={{ ...S.card }}>
-          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: perHead > 0 ? 12 : 0 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#4a3f1e" }}>{L.quickHeadsLabel}</span>
-            <input style={{ ...S.input, width: 70, fontSize: 17, fontWeight: 800, textAlign: "center" }} type="text" inputMode="numeric" placeholder="0"
-              value={quickHeads} onChange={(e) => setQuickHeads(e.target.value.replace(/[^0-9]/g, ""))} />
-          </div>
-          {perHead > 0 && (
-            <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 12, textAlign: "center" }}>
-              <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 3 }}>{L.quickPerHead}</div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: "#1f8a4c" }}>{euro(perHead)}</div>
-              <div style={{ fontSize: 11.5, color: "#b3a988", marginTop: 4 }}>{L.quickPerHeadNote(heads)}</div>
-            </div>
-          )}
+
+        {/* Schakelaar: verdelen over de groep, of alles op één iemand. */}
+        <div style={{ display: "flex", gap: 4, background: "#f7f1e2", padding: 4, borderRadius: 12, marginBottom: 12 }}>
+          <button style={{ flex: 1, padding: "10px 6px", borderRadius: 9, fontSize: 12.5, fontWeight: 800, cursor: "pointer", border: "none",
+            background: !alles ? "#fff" : "transparent", color: !alles ? "#4a3f1e" : "#8a7d55", boxShadow: !alles ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}
+            onClick={() => setSettleMode("verdelen")}>👥 {L.splitOverGroup}</button>
+          <button style={{ flex: 1, padding: "10px 6px", borderRadius: 9, fontSize: 12.5, fontWeight: 800, cursor: "pointer", border: "none",
+            background: alles ? "#fff" : "transparent", color: alles ? "#4a3f1e" : "#8a7d55", boxShadow: alles ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}
+            onClick={() => setSettleMode("allesZelf")}>💶 {L.payAllSelf}</button>
         </div>
+
+        {!alles ? (
+          <>
+            {betaalde.length > 0 && (
+              <div style={{ ...S.card }}>
+                <div style={{ fontSize: 11, color: "#8a7d55", fontWeight: 800, marginBottom: 9 }}>{L.treatHint}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {betaalde.map((r) => {
+                    const nr = rounds.indexOf(r) + 1
+                    const on = treatedRounds.has(r.id)
+                    return (
+                      <div key={r.id} onClick={() => setTreatedRounds((prev) => { const n = new Set(prev); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n })}
+                        style={{ ...S.row, justifyContent: "space-between", padding: "10px 12px", borderRadius: 9, cursor: "pointer",
+                          background: on ? "rgba(31,138,76,0.08)" : "#faf7ec", border: on ? "1px solid rgba(31,138,76,0.4)" : "1px solid transparent" }}>
+                        <span style={{ fontSize: 13, fontWeight: on ? 800 : 700, color: on ? "#1f6b3a" : "#4a3f1e" }}>
+                          {L.roundWord} {nr} · 👤{r.headcount || 1}{on && <span style={{ fontWeight: 700, color: "#8a7d55" }}> · 🎁 {L.yourTreat}</span>}
+                        </span>
+                        <div style={{ ...S.row, gap: 9 }}>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: on ? "#1f8a4c" : "#8a7d55" }}>{euro(r.amount || 0)}</span>
+                          <span style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800,
+                            background: on ? "#1f8a4c" : "#fff", color: "#fff", border: on ? "none" : "1.5px solid rgba(120,95,20,0.3)" }}>{on ? "✓" : ""}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Resultaat: ieder z'n deel + eventuele traktatie. */}
+            <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)", textAlign: "center" }}>
+              <div style={{ fontSize: 12.5, color: "#4a6b57", marginBottom: 3 }}>{L.eachPaysNote}</div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: "#1f8a4c" }}>{euro(perPersoon)}</div>
+              {traktatieTot > 0.005 && (
+                <div style={{ fontSize: 12, color: "#8a5e0f", fontWeight: 700, marginTop: 7 }}>🎁 {L.plusTreat(euro(traktatieTot))}</div>
+              )}
+            </div>
+          </>
+        ) : (
+          <div style={{ ...S.card, background: "rgba(240,165,0,0.06)", border: "1.5px solid rgba(240,165,0,0.4)", textAlign: "center" }}>
+            <div style={{ fontSize: 13, color: "#8a5e0f", fontWeight: 700, marginBottom: 6, lineHeight: 1.5 }}>{L.payAllNote}</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</div>
+          </div>
+        )}
+
+        {/* Fair Split blijft de weg naar een echt per-persoon-detail. */}
         <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
           <div style={{ fontSize: 13.5, fontWeight: 800, color: "#1f6b3a", marginBottom: 4 }}>{L.notFairSplitYet}</div>
           <div style={{ fontSize: 12, color: "#4a6b57", lineHeight: 1.5, marginBottom: 11 }}>{L.notFairSplitWhy}</div>
