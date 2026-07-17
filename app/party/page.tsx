@@ -5030,7 +5030,7 @@ export default function PartyTest() {
         {renderDialogs()}
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.roundsOverviewTitle}</h3>
-          <button style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "7px 12px" }} onClick={() => { if (overviewBackTo === "order") { setActiveCat(catsPresent[0]); setView("order") } else setView("hub") }}>← {L.back}</button>
+          {settle && <button style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "7px 12px" }} onClick={() => { if (overviewBackTo === "order") { setActiveCat(catsPresent[0]); setView("order") } else setView("hub") }}>← {L.back}</button>}
         </div>
 
         {/* Totaal — de som van alle rondjes. Eén blik op wat de avond kostte. */}
