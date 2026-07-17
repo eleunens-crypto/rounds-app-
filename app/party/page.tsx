@@ -1474,7 +1474,7 @@ export default function PartyTest() {
   const roundIsPaid = (r: Round) => (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))
   const unpaidIdx = () => rounds.findIndex((r) => !roundIsPaid(r))
   const paidCount = rounds.filter(roundIsPaid).length
-  const blockIfUnpaid = () => { const i = unpaidIdx(); if (i < 0) return false; setNotice(L.roundUnpaid(i + 1)); setView("confirmed"); return true }
+  const blockIfUnpaid = () => { if (!settle) return false; const i = unpaidIdx(); if (i < 0) return false; setNotice(L.roundUnpaid(i + 1)); setView("confirmed"); return true }
   const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon, drinks]) // eslint-disable-line
   const pickedUpOf = (pid: string) => drinks.reduce((a, d) => a + (d.cup ? aQty(d.id, pid) : 0), 0)
 
@@ -5091,6 +5091,9 @@ export default function PartyTest() {
           <button style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 14, fontWeight: 800 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
           <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 14 }} onClick={nextRound}>{L.newRound}</button>
         </div>
+        {rounds.length > 0 && (
+          <button style={{ width: "100%", marginTop: 8, border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 14, padding: "12px 6px", fontSize: 13, fontWeight: 800, cursor: "pointer" }} onClick={repeatRound}>{L.repeatRound}</button>
+        )}
       </div></div>
     )
   }
