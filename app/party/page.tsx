@@ -552,6 +552,8 @@ const T = {
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe jullie bestellen",
     howManyPeople: "Met hoeveel zijn jullie?",
+    nameRequired: "Geef eerst je groep een naam.",
+    peopleRequired: "Kies eerst met hoeveel personen jullie zijn.",
     headcountForward: "Dit geldt vanaf het volgende rondje. Eerdere rondjes houden hun aantal — corrigeer die desnoods in het rondjesoverzicht.",
     chosen: "GEKOZEN",
     tapToChoose: "tik om te kiezen",
@@ -616,6 +618,7 @@ const T = {
     roundsOverviewTitle: "🧾 Rondjesoverzicht",
     newRoundBtn: "Nieuw rondje",
     editRoundBtn: "Aanpassen",
+    editOrderFull: "Bestelling aanpassen",
     roundsOverviewBtn: "Rondjesoverzicht",
     noRoundsYet: "Nog geen afgeronde bestellingen. Bevestig eerst een rondje.",
     roundsTab: "Rondjes",
@@ -946,6 +949,8 @@ const T = {
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
     howManyPeople: "Vous \u00eates combien ?",
+    nameRequired: "Donne d\u2019abord un nom \u00e0 ton groupe.",
+    peopleRequired: "Choisis d\u2019abord combien vous \u00eates.",
     headcountForward: "Valable \u00e0 partir de la prochaine tourn\u00e9e. Les tourn\u00e9es pr\u00e9c\u00e9dentes gardent leur nombre \u2014 corrige-les au besoin dans l\u2019aper\u00e7u.",
     chosen: "CHOISI",
     tapToChoose: "appuie pour choisir",
@@ -1010,6 +1015,7 @@ const T = {
     roundsOverviewTitle: "🧾 Aper\u00e7u des tourn\u00e9es",
     newRoundBtn: "Nouvelle tourn\u00e9e",
     editRoundBtn: "Modifier",
+    editOrderFull: "Modifier la commande",
     roundsOverviewBtn: "Aper\u00e7u",
     noRoundsYet: "Aucune commande termin\u00e9e. Confirme d'abord une tourn\u00e9e.",
     roundsTab: "Tourn\u00e9es",
@@ -1060,10 +1066,10 @@ export default function PartyTest() {
   const [lastRoundHandled, setLastRoundHandled] = useState(true)
   // Snelle rondjes afrekenen: betaalt dit rondje uit eigen zak ("self") of uit de pot ("pot")?
   const [payVia, setPayVia] = useState<"self" | "pot">("self")
-  // Huidig aantal aanwezigen (snelle rondjes). Start op 2; elk afgesloten rondje krijgt
-  // dit getal mee. Wijzig je het (header/instellingen), dan geldt het vanaf het volgende
-  // rondje — eerdere rondjes houden hun eigen aantal (eerlijk voor laatkomers).
-  const [headcount, setHeadcount] = useState(2)
+  // Huidig aantal aanwezigen (snelle rondjes). Start op 0 = "nog niet gekozen": de
+  // gebruiker moet het bewust instellen (naam én aantal verplicht). Elk afgesloten rondje
+  // krijgt dit getal mee; wijzig je het later, dan geldt het vanaf het volgende rondje.
+  const [headcount, setHeadcount] = useState(0)
   // false = "gewoon rondjes" (geen geld). Eén app, het geld-gedeelte verborgen.
   const [settle, setSettle] = useState(true)
   type Custom = { key: string; name: string; cat: Cat; price: number; coins: number; cup: boolean; by: string }
@@ -1662,6 +1668,10 @@ export default function PartyTest() {
     const gedaan = alle.filter((r) => r.status !== "open")
     setRounds(gedaan)
     setRoundNr(open ? open.seq : Math.max(1, gedaan.length))
+    // Huidig aantal = dat van het laatst bekende rondje (open of laatste afgeronde). Zo
+    // hervat een geladen groep met het juiste aantal, in plaats van opnieuw "ongekozen".
+    const laatstBekend = open ?? gedaan[gedaan.length - 1]
+    if (laatstBekend) setHeadcount(laatstBekend.headcount || 2)
 
     setPotRounds((pt || []).map((r) => ({
       id: r.id as string, seq: r.seq as number,
@@ -1892,8 +1902,14 @@ export default function PartyTest() {
   // (createGroup), niet via persistSettings — de groep bestaat op dit punt nog niet.
   const startWithMode = async (fallbackNaam?: string) => {
     if (bpSettle === null) return
-    setOnboardedOnce(true)
     const wilSettle = bpSettle === true
+    // Snelle rondjes: groepsnaam én aantal personen moeten bewust ingevuld zijn — geen
+    // stilzwijgende default, zodat je niet per ongeluk met een verkeerd aantal verdeelt.
+    if (!wilSettle) {
+      if (!groupName.trim()) { setNotice(L.nameRequired); return }
+      if (headcount < 2) { setNotice(L.peopleRequired); return }
+    }
+    setOnboardedOnce(true)
     if (!wilSettle) {
       setSettle(false)
       setPotChosen(false); setDepositOn(false); setPay("eur")
@@ -3195,7 +3211,11 @@ export default function PartyTest() {
           )}
           {settle && <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 13, fontWeight: 700, opacity: view === "final" ? 0.55 : 1 }} onClick={goFinal}>{L.settleBtn}</button>}
           {!settle && rounds.length >= 1 && (
-            <button style={{ flex: 1, padding: "11px 4px", fontSize: 13, fontWeight: 700, borderRadius: 10, cursor: "pointer", border: "1px solid rgba(31,138,76,0.4)", background: "rgba(31,138,76,0.06)", color: "#1f8a4c" }} onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } goQuickSettle() }}>{L.quickSettleTitle}</button>
+            <button style={{ flex: 1, padding: "11px 4px", fontSize: 13, fontWeight: 700, borderRadius: 10, cursor: "pointer",
+              border: view === "quickSettle" ? "none" : "1px solid rgba(31,138,76,0.4)",
+              background: view === "quickSettle" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#fff",
+              color: view === "quickSettle" ? "#fff" : "#1f8a4c" }}
+              onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } goQuickSettle() }}>{L.quickSettleTitle}</button>
           )}
         </div>
       )}
@@ -3586,12 +3606,12 @@ export default function PartyTest() {
           {/* Aantal aanwezigen — alleen bij snelle rondjes. Hiermee verdeelt de afrekening
               later elk rondje eerlijk. Kan achteraf nog via de header of instellingen. */}
           {bpSettle === false && (
-            <div style={{ ...S.row, justifyContent: "space-between", padding: "12px 14px", background: "#faf4e4", borderRadius: 12, marginBottom: 18 }}>
+            <div style={{ ...S.row, justifyContent: "space-between", padding: "12px 14px", background: headcount < 2 ? "rgba(224,138,0,0.1)" : "#faf4e4", borderRadius: 12, marginBottom: 18, border: headcount < 2 ? "1.5px solid rgba(224,138,0,0.5)" : "1.5px solid transparent" }}>
               <span style={{ fontSize: 13.5, fontWeight: 800, color: "#4a3f1e" }}>👤 {L.howManyPeople}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                 <button style={{ width: 34, height: 34, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 18, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: headcount > 2 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(2, n - 1))}>−</button>
-                <span style={{ fontSize: 19, fontWeight: 800, minWidth: 20, textAlign: "center", color: "#4a3f1e" }}>{headcount}</span>
-                <button style={{ width: 34, height: 34, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 18, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n + 1)}>+</button>
+                <span style={{ fontSize: 19, fontWeight: 800, minWidth: 24, textAlign: "center", color: headcount < 2 ? "#c4b896" : "#4a3f1e" }}>{headcount < 2 ? "—" : headcount}</span>
+                <button style={{ width: 34, height: 34, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 18, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 2 ? 2 : n + 1)}>+</button>
               </div>
             </div>
           )}
@@ -3924,8 +3944,8 @@ export default function PartyTest() {
             <span style={{ fontSize: 14, fontWeight: 800 }}>👤 {L.howManyPeople}</span>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <button style={{ ...S.step, opacity: headcount > 2 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(2, n - 1))}>−</button>
-              <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{headcount}</span>
-              <button style={{ ...S.step, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={() => setHeadcount((n) => n + 1)}>+</button>
+              <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center", color: headcount < 2 ? "#c4b896" : undefined }}>{headcount < 2 ? "—" : headcount}</span>
+              <button style={{ ...S.step, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={() => setHeadcount((n) => n < 2 ? 2 : n + 1)}>+</button>
             </div>
           </div>
           {rounds.length > 0 && (
@@ -4513,9 +4533,10 @@ export default function PartyTest() {
                   onClick={() => { if (potAvail <= 0.005) { setNotice(L.potEmptyNote); setShowPot(true); return } setPayVia("pot") }}>🫙 {L.paidPot}</button>
               </div>
 
-              {/* Eén bedrag-veld met ✓ groot rechts. Het vinkje is grijs zolang er niks
-                  staat, en wordt omrand-groen (uitnodigend, "tik me") zodra er een bedrag
-                  is — niet meteen vol groen, zodat duidelijk is dat je nog moet bevestigen. */}
+              {/* Eén bedrag-veld met ✓ groot rechts. Zolang er niks staat is het vinkje
+                  grijs; zodra er een bedrag is wordt het omrand-groen én pulseert het, zodat
+                  onmiskenbaar is dat je nog moet tikken om te bevestigen. */}
+              <style>{`@keyframes rundoPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,138,76,0.45)}50%{box-shadow:0 0 0 7px rgba(31,138,76,0)}}.rundo-pulse{animation:rundoPulse 1.4s infinite}`}</style>
               <div style={{ ...S.row, gap: 8 }}>
                 <span style={{ fontSize: 19, color: "#8a7d55", fontWeight: 700 }}>€</span>
                 <input style={{ ...S.input, flex: 1, fontSize: 19, fontWeight: 800, padding: "12px", textAlign: "left",
@@ -4526,15 +4547,14 @@ export default function PartyTest() {
                   value={amount > 0 ? String(amount).replace(".", ",") : ""}
                   onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }}
                   onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); if ((rounds[idx]?.amount || 0) > 0.005) confirmQuickPay() } }} />
-                <button style={{ width: 52, height: 52, borderRadius: 12, fontSize: 22, fontWeight: 800, cursor: "pointer", flexShrink: 0,
+                <button className={amount > 0.005 ? "rundo-pulse" : undefined} style={{ width: 52, height: 52, borderRadius: 12, fontSize: 22, fontWeight: 800, cursor: "pointer", flexShrink: 0,
                   background: amount > 0.005 ? "#fff" : "#e8e2d2",
                   color: amount > 0.005 ? "#1f8a4c" : "#b3a988",
-                  border: amount > 0.005 ? "2px solid #1f8a4c" : "none",
-                  boxShadow: amount > 0.005 ? "0 0 0 3px rgba(31,138,76,0.15)" : "none" }}
+                  border: amount > 0.005 ? "2px solid #1f8a4c" : "none" }}
                   onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}>✓</button>
               </div>
               {amount > 0.005 && (
-                <div style={{ fontSize: 11, color: "#1f8a4c", fontWeight: 800, textAlign: "right", marginTop: 6 }}>{L.tapToConfirm}</div>
+                <div style={{ fontSize: 11.5, color: "#1f8a4c", fontWeight: 800, textAlign: "right", marginTop: 7 }}>{L.tapToConfirm}</div>
               )}
 
               {/* Pot-context (variant A). Genoeg in pot → toon wat overblijft. Te weinig →
@@ -4559,15 +4579,12 @@ export default function PartyTest() {
                   </div>
                 )
               )}
-
-              {/* Overslaan — gecentreerd eronder, de rustige tweede keuze. */}
-              <div style={{ textAlign: "center", marginTop: 13 }}>
-                <span onClick={() => closeQuickRound(true)} style={{ fontSize: 13, color: "#8a7d55", fontWeight: 800, cursor: "pointer" }}>{L.skipRound} ›</span>
-              </div>
             </div>
 
-            <div style={{ textAlign: "center", marginTop: 4, marginBottom: 4 }}>
-              <span onClick={editOrder} style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 800, cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
+            {/* Overslaan (smal) + Bestelling aanpassen (breed) op één rij, knop-vorm. */}
+            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+              <button style={{ width: 110, padding: "12px 6px", fontSize: 13, fontWeight: 800, borderRadius: 11, cursor: "pointer", background: "#fff", border: "1px solid rgba(120,95,20,0.25)", color: "#8a7d55" }} onClick={() => closeQuickRound(true)}>{L.skipRound}</button>
+              <button style={{ flex: 1, padding: "12px 6px", fontSize: 13, fontWeight: 800, borderRadius: 11, cursor: "pointer", background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.18)", color: "#8a5e0f" }} onClick={editOrder}>✏️ {L.editOrderFull}</button>
             </div>
           </>
           )
