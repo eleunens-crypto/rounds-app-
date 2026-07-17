@@ -571,6 +571,9 @@ const T = {
     costTotalLabel: "Totaal",
     roundCostOptional: "Hoeveel betaald voor dit rondje?",
     paidLabel: "Betaald",
+    paidNote: (v: string) => `Betaald ${v}`,
+    noAmountNote: "Geen bedrag ingevuld",
+    noPotUsed: "geen pot gebruikt",
     paidFromPot: (v: string) => `${v} uit de pot`,
     skipCostWarn: "Je vulde al iets in bij dit rondje. Toch overslaan zonder het op te slaan?",
     skipCostYes: "Ja, overslaan",
@@ -954,6 +957,9 @@ const T = {
     costTotalLabel: "Total",
     roundCostOptional: "Combien pay\u00e9 pour cette tourn\u00e9e ?",
     paidLabel: "Pay\u00e9",
+    paidNote: (v: string) => `Pay\u00e9 ${v}`,
+    noAmountNote: "Aucun montant indiqu\u00e9",
+    noPotUsed: "sans cagnotte",
     paidFromPot: (v: string) => `${v} de la cagnotte`,
     skipCostWarn: "Tu as d\u00e9j\u00e0 rempli quelque chose pour cette tourn\u00e9e. Passer quand m\u00eame sans enregistrer ?",
     skipCostYes: "Oui, passer",
@@ -4784,45 +4790,36 @@ export default function PartyTest() {
             const open = isOpen(r)
             return (
               <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-                <div onClick={() => toggle(r.id)} style={{ ...S.row, justifyContent: "space-between", padding: "13px 14px", cursor: "pointer", background: open ? "rgba(240,165,0,0.06)" : "#fff" }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>{L.roundSummary(nr, items)}</span>
-                  <div style={{ ...S.row, gap: 10 }}>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: (r.amount || 0) > 0 ? "#c98a00" : "#c4b896" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "€ —"}</span>
-                    <span style={{ fontSize: 13, color: "#8a7d55", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
+                <div onClick={() => toggle(r.id)} style={{ padding: "12px 14px", cursor: "pointer", background: open ? "rgba(240,165,0,0.06)" : "#fff" }}>
+                  <div style={{ ...S.row, justifyContent: "space-between" }}>
+                    <div style={{ ...S.row, gap: 8 }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>{L.roundSummary(nr, items)}</span>
+                      {nr === rounds.length && (
+                        <span onClick={(e) => { e.stopPropagation(); editOrder() }} style={{ fontSize: 13, color: "#a89a6f", fontWeight: 800, cursor: "pointer" }}>✏️</span>
+                      )}
+                    </div>
+                    <div style={{ ...S.row, gap: 10 }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: (r.amount || 0) > 0 ? "#c98a00" : "#c4b896" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "€ —"}</span>
+                      <span style={{ fontSize: 13, color: "#8a7d55", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
+                    </div>
+                  </div>
+                  {/* Betaald-melding net onder de titel — leesbaar, geen invulveld meer. */}
+                  <div style={{ fontSize: 12, color: "#8a7d55", fontWeight: 600, marginTop: 4 }}>
+                    {(r.amount || 0) > 0.005 ? L.paidNote(euro(r.amount)) : L.noAmountNote}
+                    {(r.potPart || 0) > 0.005
+                      ? <span style={{ color: "#1f6b3a", fontWeight: 700 }}> · 🫙 {L.paidFromPot(euro(r.potPart || 0))}</span>
+                      : <span style={{ color: "#b3a988" }}> · {L.noPotUsed}</span>}
                   </div>
                 </div>
                 {open && (
                   <div style={{ padding: "4px 14px 14px" }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       {drinksOf(r).map(({ d, n }) => (
                         <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "3px 0" }}>
                           <span style={{ fontSize: 14, fontWeight: 700 }}>{d.emoji} {d.name}</span>
                           <span style={{ fontSize: 16, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
                         </div>
                       ))}
-                    </div>
-                    {/* Hoeveel betaald + waaruit (pot of zelf). */}
-                    <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 11 }}>
-                      <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}>{L.paidLabel}</span>
-                        <div style={{ ...S.row, gap: 4 }}>
-                          <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                          <input style={{ ...S.input, width: 78, fontSize: 15, fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00"
-                            value={(r.amount || 0) > 0 ? String(r.amount).replace(".", ",") : ""}
-                            onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); rSetAmount(rounds.indexOf(r), parseFloat(v) || 0) }}
-                            onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} />
-                        </div>
-                      </div>
-                      {(r.potPart || 0) > 0.005 && (
-                        <div style={{ fontSize: 12, color: "#1f6b3a", fontWeight: 700, marginBottom: 8 }}>🫙 {L.paidFromPot(euro(r.potPart || 0))}</div>
-                      )}
-                      {/* Potloodje: de bestelling van dit rondje nog bijwerken (alleen het
-                          laatste rondje kan terug naar bestellen). */}
-                      {nr === rounds.length && (
-                        <div style={{ textAlign: "right" }}>
-                          <span onClick={editOrder} style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 800, cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
@@ -4833,7 +4830,7 @@ export default function PartyTest() {
 
         <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
           <button style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 14, fontWeight: 800 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
-          <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 14 }} onClick={nextRound}>➕ {L.newRound}</button>
+          <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 14 }} onClick={nextRound}>{L.newRound}</button>
         </div>
       </div></div>
     )
