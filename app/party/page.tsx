@@ -1497,13 +1497,20 @@ export default function PartyTest() {
   // Snelle rondjes: rondje afsluiten en naar het overzicht. "skip" = zonder bedrag; als
   // er dan tóch al iets ingevuld staat, waarschuwen zodat je het niet per ongeluk weggooit.
   const closeQuickRound = (skip: boolean) => {
-    const r = rounds[rounds.length - 1]
+    const idx = rounds.length - 1
+    const r = rounds[idx]
     const heeftIets = r && ((r.amount || 0) > 0.005 || (r.potPart || 0) > 0.005)
-    const naar = () => { setLastRoundHandled(true); setPayVia("self"); setOverviewBackTo("hub"); setView("roundsOverview") }
+    // Overslaan = géén bedrag. Wis wat er stond, zodat het overzicht "geen bedrag" toont
+    // en de pot niet onterecht wordt aangesproken.
+    const doeOverslaan = () => {
+      setRounds((rs) => rs.map((rr, i) => i === idx ? { ...rr, amount: 0, potPart: 0 } : rr))
+      if (r) setDirtyRound(idx)
+      setLastRoundHandled(true); setPayVia("self"); setOverviewBackTo("hub"); setView("roundsOverview")
+    }
     if (skip && heeftIets) {
-      setConfirmDlg({ variant: "danger", msg: L.skipCostWarn, yes: L.skipCostYes, onYes: () => { setConfirmDlg(null); naar() } })
+      setConfirmDlg({ variant: "danger", msg: L.skipCostWarn, yes: L.skipCostYes, onYes: () => { setConfirmDlg(null); doeOverslaan() } })
     } else {
-      naar()
+      doeOverslaan()
     }
   }
   // Snelle rondjes: bevestig het betaalde bedrag via de gekozen bron (zelf of pot) en
@@ -4037,19 +4044,23 @@ export default function PartyTest() {
         </div>
         )}
         <div style={{ marginTop: 24 }}>
-          {rounds.length > 0 ? (
+          {(() => {
+            // In snelle rondjes telt een rondje als "afgehandeld" zodra het bevestigd of
+            // overgeslagen is; dan is er nooit "ga verder", enkel een nieuw rondje.
+            const echtOnafgerond = unfinishedRound && (settle || !lastRoundHandled)
+            return rounds.length > 0 ? (
             // Er zijn afgeronde rondjes: overzicht + nieuw/verder.
             <div style={{ display: "flex", gap: 10 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>{L.roundsOverview}</button>
-              {unfinishedRound
-                ? <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>Ga verder met rondje {roundNr}</button>
+              {echtOnafgerond
+                ? <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>
                 : <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{L.newRound}</button>}
             </div>
-          ) : unfinishedRound ? (
+          ) : echtOnafgerond ? (
             // Nog geen afgerond rondje, maar wel bezig met rondje 1: verder of terug.
             <div style={{ display: "flex", gap: 10 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setNotice(L.noRoundsYet)}>{L.roundsOverview}</button>
-              <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>Ga verder met rondje {roundNr}</button>
+              <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>
             </div>
           ) : (
             // Groep bestaat, nog geen rondjes: kies zelf waar je heen wil.
@@ -4057,7 +4068,8 @@ export default function PartyTest() {
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setView("hub")}>{L.roundsOverview}</button>
               <button style={{ ...S.btnP, flex: 1 }} onClick={() => { setActiveCat(catsPresent[0]); setView("order") }}>{L.toFirstRound}</button>
             </div>
-          )}
+          )
+          })()}
         </div>
       </div></div>
     )
