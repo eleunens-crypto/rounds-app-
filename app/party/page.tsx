@@ -574,6 +574,10 @@ const T = {
     skipCostYes: "Ja, overslaan",
     finishRoundFirst: "Rond eerst dit rondje af — vul in wat het kostte of tik Overslaan.",
     payFromPotQ: "Uit de pot betalen?",
+    paidSelf: "Zelf betaald",
+    paidPot: "Uit de pot",
+    potEmptyNote: "De pot is nog leeg — vul eerst iets in.",
+    potNotEnough: (v: string) => `Pot heeft maar ${v} — de rest reken je zelf af.`,
     potHasLeft: (v: string) => `nog ${v} in pot`,
     maxAmount: (v: string) => `max ${v}`,
     restSelf: "Rest zelf:",
@@ -951,6 +955,10 @@ const T = {
     skipCostYes: "Oui, passer",
     finishRoundFirst: "Cl\u00f4ture d\u2019abord cette tourn\u00e9e — indique le montant ou appuie sur Passer.",
     payFromPotQ: "Payer avec la cagnotte ?",
+    paidSelf: "Pay\u00e9 soi-m\u00eame",
+    paidPot: "De la cagnotte",
+    potEmptyNote: "La cagnotte est vide — ajoute d\u2019abord un montant.",
+    potNotEnough: (v: string) => `La cagnotte n\u2019a que ${v} — le reste, tu le paies toi-m\u00eame.`,
     potHasLeft: (v: string) => `${v} dans la cagnotte`,
     maxAmount: (v: string) => `max ${v}`,
     restSelf: "Reste \u00e0 payer :",
@@ -1024,6 +1032,8 @@ export default function PartyTest() {
   // bewust overgeslagen)? Zolang niet, houden de tabs je even op dit scherm zodat je de
   // kans om het bedrag in te vullen niet mist.
   const [lastRoundHandled, setLastRoundHandled] = useState(true)
+  // Snelle rondjes afrekenen: betaalt dit rondje uit eigen zak ("self") of uit de pot ("pot")?
+  const [payVia, setPayVia] = useState<"self" | "pot">("self")
   // false = "gewoon rondjes" (geen geld). Eén app, het geld-gedeelte verborgen.
   const [settle, setSettle] = useState(true)
   type Custom = { key: string; name: string; cat: Cat; price: number; coins: number; cup: boolean; by: string }
@@ -1459,12 +1469,27 @@ export default function PartyTest() {
   const closeQuickRound = (skip: boolean) => {
     const r = rounds[rounds.length - 1]
     const heeftIets = r && ((r.amount || 0) > 0.005 || (r.potPart || 0) > 0.005)
-    const naar = () => { setLastRoundHandled(true); setOverviewBackTo("hub"); setView("roundsOverview") }
+    const naar = () => { setLastRoundHandled(true); setPayVia("self"); setOverviewBackTo("hub"); setView("roundsOverview") }
     if (skip && heeftIets) {
       setConfirmDlg({ variant: "danger", msg: L.skipCostWarn, yes: L.skipCostYes, onYes: () => { setConfirmDlg(null); naar() } })
     } else {
       naar()
     }
+  }
+  // Snelle rondjes: bevestig het betaalde bedrag via de gekozen bron (zelf of pot) en
+  // sluit het rondje af. Bij "pot" gaat het bedrag (geklemd op wat er in de pot zit) als
+  // potPart; bij "zelf" telt het gewoon als rondjebedrag zonder pot-aandeel.
+  const confirmQuickPay = () => {
+    const idx = rounds.length - 1
+    const r = rounds[idx]
+    const bedrag = r?.amount || 0
+    if (payVia === "pot") {
+      const uitPot = Math.min(bedrag, Math.max(0, potAvailFor(idx)))
+      rSetPotAmt(idx, uitPot)
+    } else {
+      rSetPotAmt(idx, 0)
+    }
+    setLastRoundHandled(true); setPayVia("self"); setOverviewBackTo("hub"); setView("roundsOverview")
   }
   const rPaidSum = (r: Round) => (r.potPart || 0) + Object.values(r.payers || {}).reduce((a, b) => a + (b || 0), 0)
   const rTogglePayer = (idx: number, pid: string) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const cur = Object.keys(r.payers || {}); const persons = cur.includes(pid) ? cur.filter((x) => x !== pid) : [...cur, pid]; const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, r.amount) })); setDirtyRound(idx) }
@@ -4379,53 +4404,55 @@ export default function PartyTest() {
           const zelf = Math.max(0, amount - potPart)
           return (
           <>
-            {/* Hoeveel betaald voor dit rondje — met bevestig-knopje dat het toetsenbord
-                sluit, zodat het invulveld niet achter het toetsenbord blijft hangen. */}
+            {/* Hoeveel betaald voor dit rondje. Kies eerst de bron (zelf/pot), vul één
+                bedrag in, en bevestig met ✓ (of sla over). Beide sluiten het rondje af. */}
             <div style={{ ...S.card }}>
               <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", marginBottom: 11 }}>{L.roundCostOptional}</div>
-              <div style={{ ...S.row, gap: 8 }}>
-                <span style={{ fontSize: 19, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                <input style={{ ...S.input, flex: 1, fontSize: 19, fontWeight: 800, padding: "11px 12px", color: "#c88a1a" }} type="text" inputMode="decimal" placeholder="0,00"
-                  value={amount > 0 ? String(amount).replace(".", ",") : ""}
-                  onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }}
-                  onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} />
-                <button style={{ ...S.btnP, padding: "11px 16px", fontSize: 15 }} onClick={() => (document.activeElement as HTMLElement)?.blur?.()}>✓</button>
+
+              {/* Bron: zelf betaald of uit de pot. */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                <button style={{ flex: 1, padding: "10px 6px", fontSize: 12.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
+                  background: payVia === "self" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f7f1e2",
+                  color: payVia === "self" ? "#fff" : "#8a7d55", border: "none" }}
+                  onClick={() => setPayVia("self")}>💶 {L.paidSelf}</button>
+                <button style={{ flex: 1, padding: "10px 6px", fontSize: 12.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
+                  background: payVia === "pot" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#f7f1e2",
+                  color: payVia === "pot" ? "#fff" : "#8a7d55", border: "none" }}
+                  onClick={() => { if (potAvail <= 0.005) { setNotice(L.potEmptyNote); setShowPot(true); return } setPayVia("pot") }}>🫙 {L.paidPot}</button>
               </div>
 
-              {/* Uit de pot betalen — losse, optionele keuze. Altijd beschikbaar als er een
-                  pot is; anders de knop om de pot bij te vullen. */}
-              {potAvail > 0.005 ? (
-                <div style={{ background: "rgba(31,138,76,0.07)", border: "1px dashed rgba(31,138,76,0.4)", borderRadius: 12, padding: 12, marginTop: 12 }}>
-                  <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9 }}>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: "#1f6b3a" }}>{L.payFromPotQ}</span>
-                    <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>{L.potHasLeft(euro(potAvail))}</span>
-                  </div>
-                  <div style={{ ...S.row, gap: 8 }}>
-                    <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                    <input style={{ ...S.input, flex: 1, fontSize: 16, fontWeight: 800, color: "#1f8a4c", textAlign: "right" }} type="text" inputMode="decimal" placeholder="0,00"
-                      value={potPart > 0 ? String(potPart).replace(".", ",") : ""}
-                      onChange={(e) => { const v = parseFloat(e.target.value.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0; rSetPotAmt(idx, v) }}
-                      onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} />
-                    <button style={{ ...S.btn, padding: "9px 13px", fontSize: 14, color: "#1f8a4c", border: "1px solid rgba(31,138,76,0.4)" }} onClick={() => (document.activeElement as HTMLElement)?.blur?.()}>✓</button>
-                  </div>
-                  {potPart > 0.005 && amount > 0.005 && (
-                    <div style={{ fontSize: 12, color: "#8a7d55", marginTop: 8, textAlign: "right" }}>{L.restSelf} <b style={{ color: "#4a3f1e" }}>{euro(zelf)}</b></div>
-                  )}
-                </div>
-              ) : (
-                <div style={{ background: "rgba(240,165,0,0.08)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 12, padding: 12, marginTop: 12, ...S.row, justifyContent: "space-between" }}>
-                  <span style={{ fontSize: 13, color: "#8a5e0f", fontWeight: 700 }}>{L.potEmptyLabel}</span>
-                  <button style={{ ...S.btn, padding: "8px 14px", fontSize: 13, fontWeight: 800, color: "#c98a00", border: "1px solid rgba(240,165,0,0.6)" }} onClick={() => setShowPot(true)}>{L.potFillBtn}</button>
+              {/* Eén bedrag-veld met ✓ groot rechts. */}
+              <div style={{ ...S.row, gap: 8 }}>
+                <span style={{ fontSize: 19, color: "#8a7d55", fontWeight: 700 }}>€</span>
+                <input style={{ ...S.input, flex: 1, fontSize: 19, fontWeight: 800, padding: "12px", textAlign: "left",
+                  color: payVia === "pot" ? "#1f8a4c" : "#c88a1a",
+                  borderColor: amount > 0.005 ? (payVia === "pot" ? "rgba(31,138,76,0.5)" : "#e08a00") : "rgba(120,95,20,0.22)",
+                  background: amount > 0.005 ? (payVia === "pot" ? "rgba(31,138,76,0.05)" : "#fff") : "#fdfaf2" }}
+                  type="text" inputMode="decimal" placeholder="0,00"
+                  value={amount > 0 ? String(amount).replace(".", ",") : ""}
+                  onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }}
+                  onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); if ((rounds[idx]?.amount || 0) > 0.005) confirmQuickPay() } }} />
+                <button style={{ width: 52, height: 52, borderRadius: 12, fontSize: 22, fontWeight: 800, cursor: "pointer", flexShrink: 0,
+                  background: amount > 0.005 ? "linear-gradient(135deg,#2fae6a,#157a3f)" : "#d8d2c2",
+                  color: "#fff", border: "none",
+                  boxShadow: amount > 0.005 ? "0 2px 10px rgba(31,138,76,0.35)" : "none" }}
+                  onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); confirmQuickPay() }}>✓</button>
+              </div>
+
+              {/* Pot-context: hoeveel er nog in zit, of te weinig. */}
+              {payVia === "pot" && (
+                <div style={{ fontSize: 11.5, color: amount > potAvail + 0.005 ? "#c0554a" : "#1f6b3a", fontWeight: 700, marginTop: 8 }}>
+                  {amount > potAvail + 0.005 ? L.potNotEnough(euro(potAvail)) : L.potHasLeft(euro(potAvail))}
                 </div>
               )}
+
+              {/* Overslaan — gecentreerd eronder, de rustige tweede keuze. */}
+              <div style={{ textAlign: "center", marginTop: 13 }}>
+                <span onClick={() => closeQuickRound(true)} style={{ fontSize: 13, color: "#8a7d55", fontWeight: 800, cursor: "pointer" }}>{L.skipRound} ›</span>
+              </div>
             </div>
 
-            {/* Afsluiten: overslaan (zonder bedrag) of bevestigen — beide naar overzicht. */}
-            <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 14, fontWeight: 800, color: "#8a7d55" }} onClick={() => closeQuickRound(true)}>{L.skipRound}</button>
-              <button style={{ ...S.btnP, flex: 1.4, padding: "14px 6px", fontSize: 14 }} onClick={() => closeQuickRound(false)}>{L.closeRound}</button>
-            </div>
-            <div style={{ textAlign: "center", marginTop: 12 }}>
+            <div style={{ textAlign: "center", marginTop: 4, marginBottom: 4 }}>
               <span onClick={editOrder} style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 800, cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
             </div>
           </>
