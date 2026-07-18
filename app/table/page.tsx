@@ -609,6 +609,9 @@ const STRINGS = {
     enterCorrectTotal: "Vul het correcte rekeningtotaal in zoals op de bon",
     totalMatches: "✓ Totaalbedrag klopt met de bon",
     checkTotalPrompt: "Kijk op je bon — klopt dit totaalbedrag? Tik dan op Ja.",
+    checkTotalSub: "Vergelijk met het bedrag onderaan je bon en tik Ja of Neen.",
+    checkTotalFirstTitle: "Eerst het bontotaal nakijken",
+    checkTotalFirstBody: "Bevestig bovenaan of het totaal van de bon klopt. Zo weet je zeker dat de verdeling op het juiste bedrag gebeurt.",
     receiptTotalLabel: "Rekeningtotaal op de bon: €",
     amountPlaceholder: "bv. 65.90",
     totalConfirmedTitle: "Bon-totaal bevestigd",
@@ -1227,6 +1230,9 @@ const STRINGS = {
     enterCorrectTotal: "Indique le total exact tel qu'il figure sur l'addition",
     totalMatches: "✓ Le total correspond à l'addition",
     checkTotalPrompt: "Regarde ton addition — ce total est-il correct ? Touche alors Oui.",
+    checkTotalSub: "Compare avec le montant en bas de ton ticket et touche Oui ou Non.",
+    checkTotalFirstTitle: "V\u00e9rifie d\u2019abord le total",
+    checkTotalFirstBody: "Confirme en haut si le total du ticket est correct. Ainsi le partage se fait sur le bon montant.",
     receiptTotalLabel: "Total sur l'addition : €",
     amountPlaceholder: "ex. 65,90",
     totalConfirmedTitle: "Total de l'addition confirmé",
@@ -3256,6 +3262,12 @@ export default function RundoTable() {
             { id: "overview", label: L.tabAssign },
           ] as { id: AdminTab; label: string }[]).map((t) => (
             <button key={t.id} onClick={() => {
+              // Het bon-totaal moet eerst nagekeken én bevestigd zijn — anders loop je met een
+              // verkeerd totaal door de hele verdeling heen.
+              if ((t.id === "guests" || t.id === "overview") && items.length > 0 && !receiptConfirmed) {
+                setCenterNote({ title: L.checkTotalFirstTitle, body: L.checkTotalFirstBody })
+                setAdminTab("scan"); scrollTop(); return
+              }
               // Weg van de bon terwijl die niet klopt? Eerst waarschuwen — één keer, dan mag je door.
               if ((t.id === "guests" || t.id === "overview") && warnMismatch) { setShowShareWarn(true); return }
               // Naar toewijzen kan pas als gasten in orde is: aantal personen én je eigen naam.
@@ -3316,33 +3328,39 @@ export default function RundoTable() {
             const mismatch = entered != null && !match && !rounding
             const saveTotal = () => { setReceiptConfirmed(false); const raw = (receiptInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }
             const greenState = !receiptEditing && receiptConfirmed
-            const jaBtn = { border: "none", background: "#27ae60", color: "#fff", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer" }
-            const neenBtn = { border: "1.5px solid rgba(20,33,58,0.2)", background: "#fff", color: "#5a6680", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer" }
+            // Niks staat voorgeselecteerd: pas ná een klik op Ja kleurt het groen. Zolang er
+            // niets gekozen is, nodigt de knop uit (omrand) i.p.v. "al gedaan" te lijken.
+            const jaBtn = { border: "none", background: "#27ae60", color: "#fff", borderRadius: 10, padding: "11px 22px", fontSize: 15, fontWeight: 800, cursor: "pointer" }
+            const jaOpen = { border: "2px solid #27ae60", background: "#fff", color: "#1f8a4c", borderRadius: 10, padding: "10px 22px", fontSize: 15, fontWeight: 800, cursor: "pointer" }
+            const neenBtn = { border: "2px solid rgba(20,33,58,0.2)", background: "#fff", color: "#5a6680", borderRadius: 10, padding: "10px 22px", fontSize: 15, fontWeight: 800, cursor: "pointer" }
             const jaNeen = (
-              <span style={{ display: "inline-flex", gap: 6 }}>
-                <button onClick={() => { setReceiptConfirmed(true); setReceiptEditing(false) }} style={{ ...jaBtn }}>{L.yes}</button>
+              <span style={{ display: "inline-flex", gap: 8 }}>
+                <button onClick={() => { setReceiptConfirmed(true); setReceiptEditing(false) }} style={greenState ? { ...jaBtn } : { ...jaOpen }}>{L.yes}</button>
                 <button onClick={() => { setReceiptEditing(true); setReceiptConfirmed(false); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }} style={{ ...neenBtn, ...(receiptEditing ? { borderColor: "#1499b0", color: "#1499b0" } : {}) }}>{L.no}</button>
               </span>
             )
             return (
-              <div style={{ ...S.card, padding: "11px 14px", marginBottom: 12, background: greenState ? "rgba(39,174,96,0.06)" : mismatch ? "rgba(224,107,94,0.06)" : "#fff", border: greenState ? "1.5px solid #27ae60" : mismatch ? "1.5px solid rgba(224,107,94,0.5)" : "1px solid rgba(16,24,40,0.08)" }}>
+              <div style={{ ...S.card, padding: "16px 16px", marginBottom: 14, background: greenState ? "rgba(39,174,96,0.06)" : mismatch ? "rgba(224,107,94,0.06)" : "rgba(243,156,18,0.07)", border: greenState ? "2px solid #27ae60" : mismatch ? "2px solid rgba(224,107,94,0.5)" : "2px solid rgba(243,156,18,0.6)" }}>
                 {entered == null ? (
-                  <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#5a6680", marginBottom: 8 }}>{L.enterTotalPrefix}€{billTotal.toFixed(2).replace(".", ",")}</span>
+                  <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: "#8a5a00", marginBottom: 10, lineHeight: 1.4 }}>{L.enterTotalPrefix}€{billTotal.toFixed(2).replace(".", ",")}</span>
                 ) : receiptEditing ? (
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>{L.enterCorrectTotal}</span>
+                  <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: "#14213a", marginBottom: 9 }}>{L.enterCorrectTotal}</span>
                 ) : receiptConfirmed ? (
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", marginBottom: 6 }}>{L.totalMatches}</span>
+                  <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: "#1f8a4c", marginBottom: 9 }}>{L.totalMatches}</span>
                 ) : (
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>{L.checkTotalPrompt}</span>
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 16.5, fontWeight: 800, color: "#8a5a00", lineHeight: 1.35 }}>{L.checkTotalPrompt}</div>
+                    <div style={{ fontSize: 12.5, color: "#8a6a2a", marginTop: 4, lineHeight: 1.45 }}>{L.checkTotalSub}</div>
+                  </div>
                 )}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "#9aa0ab" }}>{L.receiptTotalLabel}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#5a6680" }}>{L.receiptTotalLabel}</span>
                   <input ref={receiptInputRef} type="text" inputMode="decimal" defaultValue={entered != null ? entered.toFixed(2).replace(".", ",") : ""} key={entered ?? "leeg"} placeholder={L.amountPlaceholder}
                     onInput={(e) => { e.currentTarget.value = numFilter(e.currentTarget.value) }}
                     onBlur={saveTotal}
                     onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
-                    style={{ ...S.input, width: 100, padding: "6px 9px", fontSize: 16, fontWeight: 700 }} />
-                  {greenState && <span title={L.totalConfirmedTitle} style={{ color: "#1f8a4c", fontSize: 22, fontWeight: 800, lineHeight: 1 }}>✓</span>}
+                    style={{ ...S.input, width: 118, padding: "10px 11px", fontSize: 18, fontWeight: 800 }} />
+                  {greenState && <span title={L.totalConfirmedTitle} style={{ color: "#1f8a4c", fontSize: 24, fontWeight: 800, lineHeight: 1 }}>✓</span>}
                   {receiptEditing && (
                     <button onClick={() => { saveTotal(); setReceiptConfirmed(true); setReceiptEditing(false) }} title={L.confirmAmountTitle} style={{ ...jaBtn }}>{L.confirmAmount}</button>
                   )}
