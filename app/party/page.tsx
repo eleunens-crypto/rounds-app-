@@ -563,6 +563,7 @@ const T = {
     nameRequired: "Geef eerst je groep een naam.",
     peopleRequired: "Kies eerst met hoeveel personen jullie zijn.",
     headcountForward: "Dit geldt vanaf het volgende rondje. Eerdere rondjes houden hun aantal — corrigeer die desnoods in het rondjesoverzicht.",
+    headcountNotRetro: "Dit verandert de bedragen hieronder niet: elk rondje houdt het aantal dat toen gold. Wil je een eerder rondje corrigeren, doe dat in het rondjesoverzicht.",
     chosen: "GEKOZEN",
     tapToChoose: "tik om te kiezen",
     exampleTag: "voorbeeld",
@@ -627,6 +628,11 @@ const T = {
     notAssignedYet: (n: number) => `${n} drankje${n === 1 ? "" : "s"} nog niet toegewezen.`,
     yourTreat: "jouw traktatie",
     eachPaysNote: "Ieder betaalt",
+    notEveryoneAllRounds: "Niet iedereen deed elk rondje mee, dus het verschilt per persoon:",
+    fromStart: "van bij het begin",
+    fromRound: (n: number) => `vanaf rondje ${n}`,
+    untilRound: (n: number) => `tot en met rondje ${n}`,
+    roundsRange: (a: number, b: number) => `rondje ${a} t/m ${b}`,
     plusTreat: (v: string) => `Jij trakteert ${v} extra`,
     payAllNote: "De hele rekening komt op jou:",
     quickHeadsLabel: "Met hoeveel waren jullie?",
@@ -984,6 +990,7 @@ const T = {
     nameRequired: "Donne d\u2019abord un nom \u00e0 ton groupe.",
     peopleRequired: "Choisis d\u2019abord combien vous \u00eates.",
     headcountForward: "Valable \u00e0 partir de la prochaine tourn\u00e9e. Les tourn\u00e9es pr\u00e9c\u00e9dentes gardent leur nombre \u2014 corrige-les au besoin dans l\u2019aper\u00e7u.",
+    headcountNotRetro: "Cela ne change pas les montants ci-dessous : chaque tourn\u00e9e garde le nombre du moment. Pour corriger une tourn\u00e9e pass\u00e9e, va dans l\u2019aper\u00e7u.",
     chosen: "CHOISI",
     tapToChoose: "appuie pour choisir",
     exampleTag: "exemple",
@@ -1048,6 +1055,11 @@ const T = {
     notAssignedYet: (n: number) => `${n} boisson${n === 1 ? "" : "s"} pas encore attribu\u00e9e${n === 1 ? "" : "s"}.`,
     yourTreat: "ta tourn\u00e9e offerte",
     eachPaysNote: "Chacun paie",
+    notEveryoneAllRounds: "Tout le monde n\u2019a pas particip\u00e9 \u00e0 chaque tourn\u00e9e, donc \u00e7a varie :",
+    fromStart: "depuis le d\u00e9but",
+    fromRound: (n: number) => `\u00e0 partir de la tourn\u00e9e ${n}`,
+    untilRound: (n: number) => `jusqu\u2019\u00e0 la tourn\u00e9e ${n}`,
+    roundsRange: (a: number, b: number) => `tourn\u00e9es ${a} \u00e0 ${b}`,
     plusTreat: (v: string) => `Tu offres ${v} en plus`,
     payAllNote: "Toute l\u2019addition est pour toi :",
     quickHeadsLabel: "Vous \u00e9tiez combien ?",
@@ -3223,7 +3235,7 @@ export default function PartyTest() {
         <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setShowPeoplePop(false)}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ ...S.h3, fontSize: 17, marginBottom: 4 }}>👤 {L.howManyPeople}</h3>
-            <p style={{ fontSize: 12.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 16 }}>{L.headcountForward}</p>
+            <p style={{ fontSize: 12.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 16 }}>{view === "quickSettle" ? L.headcountNotRetro : L.headcountForward}</p>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 22, marginBottom: 18 }}>
               <button style={{ width: 44, height: 44, borderRadius: 12, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 22, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
               <span style={{ fontSize: 30, fontWeight: 800, minWidth: 44, textAlign: "center", color: headcount < 1 ? "#c4b896" : "#4a3f1e" }}>{headcount < 1 ? "—" : headcount}</span>
@@ -4911,9 +4923,36 @@ export default function PartyTest() {
     const betaalde = rounds.filter((r) => (r.amount || 0) > 0.005)
     const getrakteerd = betaalde.filter((r) => treatedRounds.has(r.id))
     const teVerdelen = betaalde.filter((r) => !treatedRounds.has(r.id))
-    // Niveau 2: elk niet-getrakteerd rondje ÷ het aantal aanwezigen van dat rondje.
-    const perPersoon = teVerdelen.reduce((s, r) => s + (r.amount || 0) / Math.max(1, r.headcount || 1), 0)
     const traktatieTot = getrakteerd.reduce((s, r) => s + (r.amount || 0), 0)
+    // Wie wanneer meedeed, afgeleid uit het aantal per rondje: gaat het omhoog dan schoof
+    // er iemand aan, gaat het omlaag dan ging er iemand weg (de laatst aangekomene eerst).
+    // Zo betaalt een laatkomer niet mee voor rondjes van vóór z'n aankomst.
+    const groepen: { count: number; from: number; until: number | null }[] = []
+    let vorigAantal = 0
+    rounds.forEach((r, i) => {
+      const h = Math.max(1, r.headcount || 1)
+      if (h > vorigAantal) groepen.push({ count: h - vorigAantal, from: i, until: null })
+      else if (h < vorigAantal) {
+        let weg = vorigAantal - h
+        for (let j = groepen.length - 1; j >= 0 && weg > 0; j--) {
+          if (groepen[j].until !== null) continue
+          const neem = Math.min(weg, groepen[j].count)
+          if (neem === groepen[j].count) groepen[j].until = i - 1
+          else { groepen[j].count -= neem; groepen.push({ count: neem, from: groepen[j].from, until: i - 1 }) }
+          weg -= neem
+        }
+      }
+      vorigAantal = h
+    })
+    // Wat één persoon uit zo'n groep betaalt: z'n deel van elk rondje waar hij bij was.
+    const deelVan = (g: { from: number; until: number | null }) => rounds.reduce((s, r, i) => {
+      if (i < g.from || (g.until !== null && i > g.until)) return s
+      if (!teVerdelen.includes(r)) return s
+      return s + (r.amount || 0) / Math.max(1, r.headcount || 1)
+    }, 0)
+    const groepenMetDeel = groepen.filter((g) => g.count > 0).map((g) => ({ ...g, deel: deelVan(g) }))
+    const gelijkVoorIedereen = groepenMetDeel.length <= 1
+    const perPersoon = groepenMetDeel[0]?.deel ?? 0
     const alles = settleMode === "allesZelf"
     return (
       <div style={S.page}><div style={S.wrap}>
@@ -4967,14 +5006,36 @@ export default function PartyTest() {
               </div>
             )}
 
-            {/* Resultaat: ieder z'n deel + eventuele traktatie. */}
-            <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)", textAlign: "center" }}>
-              <div style={{ fontSize: 12.5, color: "#4a6b57", marginBottom: 3 }}>{L.eachPaysNote}</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: "#1f8a4c" }}>{euro(perPersoon)}</div>
-              {traktatieTot > 0.005 && (
-                <div style={{ fontSize: 12, color: "#8a5e0f", fontWeight: 700, marginTop: 7 }}>🎁 {L.plusTreat(euro(traktatieTot))}</div>
-              )}
-            </div>
+            {/* Resultaat. Was de groep de hele avond gelijk, dan volstaat één bedrag.
+                Schoof er iemand later aan (of ging er iemand weg), dan is er geen enkel
+                bedrag meer dat voor iedereen klopt — dan tonen we het per groep. */}
+            {gelijkVoorIedereen ? (
+              <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)", textAlign: "center" }}>
+                <div style={{ fontSize: 12.5, color: "#4a6b57", marginBottom: 3 }}>{L.eachPaysNote}</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: "#1f8a4c" }}>{euro(perPersoon)}</div>
+                {traktatieTot > 0.005 && (
+                  <div style={{ fontSize: 12, color: "#8a5e0f", fontWeight: 700, marginTop: 7 }}>🎁 {L.plusTreat(euro(traktatieTot))}</div>
+                )}
+              </div>
+            ) : (
+              <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
+                <div style={{ fontSize: 12.5, color: "#4a6b57", marginBottom: 3 }}>{L.eachPaysNote}</div>
+                <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.45 }}>{L.notEveryoneAllRounds}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                  {groepenMetDeel.map((g, i) => (
+                    <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "10px 12px", background: "#fff", borderRadius: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#4a3f1e" }}>
+                        {g.count}× {g.from === 0 && g.until === null ? L.fromStart : g.until === null ? L.fromRound(g.from + 1) : g.from === 0 ? L.untilRound(g.until + 1) : L.roundsRange(g.from + 1, g.until + 1)}
+                      </span>
+                      <span style={{ fontSize: 17, fontWeight: 800, color: "#1f8a4c" }}>{euro(g.deel)}</span>
+                    </div>
+                  ))}
+                </div>
+                {traktatieTot > 0.005 && (
+                  <div style={{ fontSize: 12, color: "#8a5e0f", fontWeight: 700, marginTop: 9, textAlign: "center" }}>🎁 {L.plusTreat(euro(traktatieTot))}</div>
+                )}
+              </div>
+            )}
           </>
         ) : (
           <div style={{ ...S.card, background: "rgba(240,165,0,0.06)", border: "1.5px solid rgba(240,165,0,0.4)", textAlign: "center" }}>
