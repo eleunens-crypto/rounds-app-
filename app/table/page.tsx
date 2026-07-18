@@ -1700,8 +1700,19 @@ export default function RundoTable() {
       if (isField(target) || (target && target.closest && target.closest("input,textarea,select,[contenteditable=true]"))) return
       active?.blur()
     }
+    // Enter betekent "klaar met typen": het toetsenbord gaat weg. In een tekstvak (meerdere
+    // regels) mag Enter gewoon een nieuwe regel maken, dus die slaan we over.
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return
+      const active = document.activeElement as HTMLElement | null
+      if (!active || active.tagName !== "INPUT") return
+      const type = (active as HTMLInputElement).type
+      if (type === "file" || type === "checkbox" || type === "radio") return
+      active.blur()
+    }
     document.addEventListener("pointerdown", onPointerDown)
-    return () => document.removeEventListener("pointerdown", onPointerDown)
+    document.addEventListener("keydown", onKeyDown)
+    return () => { document.removeEventListener("pointerdown", onPointerDown); document.removeEventListener("keydown", onKeyDown) }
   }, [])
   const autoJoined = useRef(false)
 
@@ -1736,6 +1747,14 @@ export default function RundoTable() {
   const [confirmDlg, setConfirmDlg] = useState<{ title?: string; body: string; yes: string; danger?: boolean; onYes: () => void } | null>(null)
   const askConfirm = (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean }) =>
     setConfirmDlg({ body, yes, onYes, title: opts?.title, danger: opts?.danger })
+  // Zolang het bontotaal niet nagekeken én bevestigd is, blijft de rest op slot: items,
+  // btw, gasten en toewijzen. Anders bouw je de hele verdeling op een verkeerd bedrag.
+  const requireTotal = () => {
+    if (!(items.length > 0 && !receiptConfirmed)) return true
+    setCenterNote({ title: L.checkTotalFirstTitle, body: L.checkTotalFirstBody })
+    setAdminTab("scan"); scrollTop()
+    return false
+  }
   // Houdt bij welke opmerkingen de beheerder al gezien heeft, zodat een nieuwe binnenkomende
   // opmerking meteen centraal op het scherm verschijnt (en niet stilletjes in een banner blijft).
   const seenRemarks = useRef<Set<string> | null>(null)
@@ -2735,6 +2754,7 @@ export default function RundoTable() {
   const addTip = async () => {
     if (group?.finalized) { setToast(L.reopenFirst); return }
     if (!group) return
+    if (!requireTotal()) return
     const amt = parseFloat((tipInput || "").replace(",", ".")) || 0
     if (amt <= 0) { setToast(L.enterTipFirst); return }
     const { error } = await supabase.from("table_items").insert([{ group_id: group.id, name: "Fooi", unit_price: amt, quantity: 1, is_shared: false, category: null, distribute: "all" }])
@@ -2754,6 +2774,7 @@ export default function RundoTable() {
     if (group.finalized) { setToast(L.reopenFirst); return }
     const zeros = baseItems.filter((it) => it.unit_price <= 0.0001)
     if (zeros.length === 0) return
+    if (!requireTotal()) return
     askConfirm(L.confirmDeleteZeros(zeros.length), L.deleteTitle, async () => {
       const ids = zeros.map((it) => it.id)
       await supabase.from("table_claims").delete().in("item_id", ids)
@@ -3028,6 +3049,7 @@ export default function RundoTable() {
   // Waarschuw zolang de bon niet klopt én de gebruiker het verschil niet bewust aanvaardde.
   const warnMismatch = !billOk && !billMismatchAck
   const goGuests = () => {
+    if (!requireTotal()) return
     if (warnMismatch) { setShowShareWarn(true); return }
     setAdminTab("guests"); scrollTop()
   }
@@ -3201,7 +3223,12 @@ export default function RundoTable() {
 
   return (
     <div style={S.page}>
-      <style>{`* { box-sizing: border-box; }`}</style>
+      <style>{`* { box-sizing: border-box; }
+        @keyframes rundoNeedsCheck {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(243,156,18,0.55); border-color: rgba(243,156,18,0.95); }
+          50% { box-shadow: 0 0 0 9px rgba(243,156,18,0); border-color: rgba(243,156,18,0.55); }
+        }
+        .rundo-needs-check { animation: rundoNeedsCheck 1.5s infinite; }`}</style>
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       {error && (
         <div style={S.errorBanner}>⚠️ {error}
@@ -3262,12 +3289,9 @@ export default function RundoTable() {
             { id: "overview", label: L.tabAssign },
           ] as { id: AdminTab; label: string }[]).map((t) => (
             <button key={t.id} onClick={() => {
-              // Het bon-totaal moet eerst nagekeken én bevestigd zijn — anders loop je met een
+              // Het bontotaal moet eerst nagekeken én bevestigd zijn — anders loop je met een
               // verkeerd totaal door de hele verdeling heen.
-              if ((t.id === "guests" || t.id === "overview") && items.length > 0 && !receiptConfirmed) {
-                setCenterNote({ title: L.checkTotalFirstTitle, body: L.checkTotalFirstBody })
-                setAdminTab("scan"); scrollTop(); return
-              }
+              if ((t.id === "guests" || t.id === "overview") && !requireTotal()) return
               // Weg van de bon terwijl die niet klopt? Eerst waarschuwen — één keer, dan mag je door.
               if ((t.id === "guests" || t.id === "overview") && warnMismatch) { setShowShareWarn(true); return }
               // Naar toewijzen kan pas als gasten in orde is: aantal personen én je eigen naam.
@@ -3328,29 +3352,29 @@ export default function RundoTable() {
             const mismatch = entered != null && !match && !rounding
             const saveTotal = () => { setReceiptConfirmed(false); const raw = (receiptInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }
             const greenState = !receiptEditing && receiptConfirmed
-            // Niks staat voorgeselecteerd: pas ná een klik op Ja kleurt het groen. Zolang er
-            // niets gekozen is, nodigt de knop uit (omrand) i.p.v. "al gedaan" te lijken.
-            const jaBtn = { border: "none", background: "#27ae60", color: "#fff", borderRadius: 10, padding: "11px 22px", fontSize: 16, fontWeight: 800, cursor: "pointer" }
-            const jaOpen = { border: "2px solid #27ae60", background: "#fff", color: "#1f8a4c", borderRadius: 10, padding: "10px 22px", fontSize: 16, fontWeight: 800, cursor: "pointer" }
-            const neenBtn = { border: "2px solid rgba(20,33,58,0.2)", background: "#fff", color: "#5a6680", borderRadius: 10, padding: "10px 22px", fontSize: 16, fontWeight: 800, cursor: "pointer" }
+            // Zolang er niet bevestigd is, is alles oranje: het kader pulseert en de knop
+            // nodigt uit. Groen verschijnt pas ná de bevestiging — nooit ervoor.
+            const jaBtn = { border: "none", background: "#27ae60", color: "#fff", borderRadius: 10, padding: "12px 24px", fontSize: 16, fontWeight: 800, cursor: "pointer" }
+            const actieBtn = { border: "2px solid #e07b28", background: "#fff", color: "#c25f10", borderRadius: 10, padding: "11px 24px", fontSize: 16, fontWeight: 800, cursor: "pointer" }
+            const neenBtn = { border: "2px solid rgba(20,33,58,0.2)", background: "#fff", color: "#5a6680", borderRadius: 10, padding: "11px 24px", fontSize: 16, fontWeight: 800, cursor: "pointer" }
             const jaNeen = (
               <span style={{ display: "inline-flex", gap: 8 }}>
-                <button onClick={() => { setReceiptConfirmed(true); setReceiptEditing(false) }} style={greenState ? { ...jaBtn } : { ...jaOpen }}>{L.yes}</button>
+                <button onClick={() => { setReceiptConfirmed(true); setReceiptEditing(false) }} style={greenState ? { ...jaBtn } : { ...actieBtn }}>{L.yes}</button>
                 <button onClick={() => { setReceiptEditing(true); setReceiptConfirmed(false); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }} style={{ ...neenBtn, ...(receiptEditing ? { borderColor: "#1499b0", color: "#1499b0" } : {}) }}>{L.no}</button>
               </span>
             )
             return (
-              <div style={{ ...S.card, padding: "16px 16px", marginBottom: 14, background: greenState ? "rgba(39,174,96,0.06)" : mismatch ? "rgba(224,107,94,0.06)" : "rgba(243,156,18,0.07)", border: greenState ? "2px solid #27ae60" : mismatch ? "2px solid rgba(224,107,94,0.5)" : "2px solid rgba(243,156,18,0.6)" }}>
+              <div className={greenState ? undefined : "rundo-needs-check"} style={{ ...S.card, padding: "18px 16px", marginBottom: 14, background: greenState ? "rgba(39,174,96,0.06)" : "rgba(243,156,18,0.12)", border: greenState ? "2px solid #27ae60" : "3px solid rgba(243,156,18,0.95)" }}>
                 {entered == null ? (
                   <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#8a5a00", marginBottom: 10, lineHeight: 1.4 }}>{L.enterTotalPrefix}€{billTotal.toFixed(2).replace(".", ",")}</span>
                 ) : receiptEditing ? (
-                  <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#14213a", marginBottom: 9 }}>{L.enterCorrectTotal}</span>
+                  <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#c25f10", marginBottom: 9 }}>{L.enterCorrectTotal}</span>
                 ) : receiptConfirmed ? (
                   <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#1f8a4c", marginBottom: 9 }}>{L.totalMatches}</span>
                 ) : (
-                  <div style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 17.5, fontWeight: 800, color: "#8a5a00", lineHeight: 1.35 }}>{L.checkTotalPrompt}</div>
-                    <div style={{ fontSize: 14, color: "#8a6a2a", marginTop: 4, lineHeight: 1.45 }}>{L.checkTotalSub}</div>
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "#8a5a00", lineHeight: 1.35 }}>{L.checkTotalPrompt}</div>
+                    <div style={{ fontSize: 14, color: "#8a6a2a", marginTop: 5, lineHeight: 1.45 }}>{L.checkTotalSub}</div>
                   </div>
                 )}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -3362,7 +3386,7 @@ export default function RundoTable() {
                     style={{ ...S.input, width: 118, padding: "10px 11px", fontSize: 19, fontWeight: 800 }} />
                   {greenState && <span title={L.totalConfirmedTitle} style={{ color: "#1f8a4c", fontSize: 24, fontWeight: 800, lineHeight: 1 }}>✓</span>}
                   {receiptEditing && (
-                    <button onClick={() => { saveTotal(); setReceiptConfirmed(true); setReceiptEditing(false) }} title={L.confirmAmountTitle} style={{ ...jaBtn }}>{L.confirmAmount}</button>
+                    <button onClick={() => { saveTotal(); setReceiptConfirmed(true); setReceiptEditing(false) }} title={L.confirmAmountTitle} style={{ ...actieBtn }}>{L.confirmAmount}</button>
                   )}
                   {entered != null && jaNeen}
                 </div>
@@ -3441,7 +3465,7 @@ export default function RundoTable() {
           <ItemList
             items={baseItems} claimedQty={claimedQty} participants={participants} claimsForItem={claimsForItem}
             sharerIds={sharerIds} shareHeads={shareHeads} toggleShareClaim={toggleShareClaim} setShareFixed={setShareFixed}
-            onEdit={(it) => { setTotalDraft(null); setEditItem(it) }} onToggleShared={toggleShared} onDelete={deleteItem} onSetExpected={isAdmin ? setShareExpected : undefined} onAddManual={() => openNewItem("bill")} bareBill
+            onEdit={(it) => { if (!requireTotal()) return; setTotalDraft(null); setEditItem(it) }} onToggleShared={(it) => { if (!requireTotal()) return; toggleShared(it) }} onDelete={(id) => { if (!requireTotal()) return; deleteItem(id) }} onSetExpected={isAdmin ? ((id, n) => { if (!requireTotal()) return; setShareExpected(id, n) }) : undefined} onAddManual={() => { if (!requireTotal()) return; openNewItem("bill") }} bareBill
             recentItemId={recentItemId} onGoGuests={goGuests}
             scanFlags={scanFlags}
             billOk={billOk}
@@ -3519,7 +3543,7 @@ export default function RundoTable() {
                   )
                 })}
                 <div style={{ display: "flex", flexDirection: "column", gap: 7, alignItems: "flex-end", marginTop: 8, width: "100%" }}>
-                  <button onClick={() => setTaxModal({ kind: "cost", mode: "amount", pct: "21", name: L.wordCost, amount: "", scope: "all", ids: [] })}
+                  <button onClick={() => { if (!requireTotal()) return; setTaxModal({ kind: "cost", mode: "amount", pct: "21", name: L.wordCost, amount: "", scope: "all", ids: [] }) }}
                     style={{ alignSelf: "flex-end", width: "auto", maxWidth: "100%", minWidth: 190, boxSizing: "border-box", background: "rgba(20,153,176,0.12)", color: "#0f7d90", border: "1px solid rgba(20,153,176,0.4)", borderRadius: 12, padding: "11px 16px", fontSize: 14, fontWeight: 800, cursor: "pointer", whiteSpace: "normal", lineHeight: 1.3, textAlign: "center" }}>{L.taxAddBtn}</button>
                   <button onClick={() => setShowTaxInfo(true)} title={L.explainTooltip}
                     style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: "#5a6680", textDecoration: "underline", padding: 0 }}>ⓘ {L.whatIsThis}</button>
