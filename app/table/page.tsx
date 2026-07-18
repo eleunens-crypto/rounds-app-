@@ -3352,6 +3352,16 @@ export default function RundoTable() {
             const mismatch = entered != null && !match && !rounding
             const saveTotal = () => { setReceiptConfirmed(false); const raw = (receiptInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }
             const greenState = !receiptEditing && receiptConfirmed
+            // Bevestigen in één tik. We reageren op pointerdown (vóór het veld z'n focus
+            // verliest en alles hertekent, wat anders de klik opat) en zetten de bevestiging
+            // ná de blur, zodat die het laatste woord heeft.
+            const bevestigTotaal = () => {
+              receiptInputRef.current?.blur()
+              saveTotal()
+              setReceiptConfirmed(true)
+              setReceiptEditing(false)
+            }
+            const tikBevestig = (e: React.PointerEvent) => { e.preventDefault(); bevestigTotaal() }
             // Zolang er niet bevestigd is, is alles oranje: het kader pulseert en de knop
             // nodigt uit. Groen verschijnt pas ná de bevestiging — nooit ervoor.
             const jaBtn = { border: "none", background: "#27ae60", color: "#fff", borderRadius: 10, padding: "12px 24px", fontSize: 16, fontWeight: 800, cursor: "pointer" }
@@ -3359,8 +3369,8 @@ export default function RundoTable() {
             const neenBtn = { border: "2px solid rgba(20,33,58,0.2)", background: "#fff", color: "#5a6680", borderRadius: 10, padding: "11px 24px", fontSize: 16, fontWeight: 800, cursor: "pointer" }
             const jaNeen = (
               <span style={{ display: "inline-flex", gap: 8 }}>
-                <button onClick={() => { setReceiptConfirmed(true); setReceiptEditing(false) }} style={greenState ? { ...jaBtn } : { ...actieBtn }}>{L.yes}</button>
-                <button onClick={() => { setReceiptEditing(true); setReceiptConfirmed(false); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }} style={{ ...neenBtn, ...(receiptEditing ? { borderColor: "#1499b0", color: "#1499b0" } : {}) }}>{L.no}</button>
+                <button onPointerDown={tikBevestig} style={greenState ? { ...jaBtn } : { ...actieBtn }}>{L.yes}</button>
+                <button onPointerDown={(e) => { e.preventDefault(); setReceiptEditing(true); setReceiptConfirmed(false); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }} style={{ ...neenBtn, ...(receiptEditing ? { borderColor: "#1499b0", color: "#1499b0" } : {}) }}>{L.no}</button>
               </span>
             )
             return (
@@ -3386,7 +3396,7 @@ export default function RundoTable() {
                     style={{ ...S.input, width: 118, padding: "10px 11px", fontSize: 19, fontWeight: 800 }} />
                   {greenState && <span title={L.totalConfirmedTitle} style={{ color: "#1f8a4c", fontSize: 24, fontWeight: 800, lineHeight: 1 }}>✓</span>}
                   {receiptEditing && (
-                    <button onClick={() => { saveTotal(); setReceiptConfirmed(true); setReceiptEditing(false) }} title={L.confirmAmountTitle} style={{ ...actieBtn }}>{L.confirmAmount}</button>
+                    <button onPointerDown={tikBevestig} title={L.confirmAmountTitle} style={{ ...actieBtn }}>{L.confirmAmount}</button>
                   )}
                   {entered != null && jaNeen}
                 </div>
