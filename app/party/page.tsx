@@ -583,6 +583,8 @@ const T = {
     costRoundN: (n: number) => `Rondje ${n}`,
     costTotalLabel: "Totaal",
     roundCostOptional: "Hoeveel betaald voor dit rondje?",
+    roundCostFor: (n: number) => `Hoeveel betaald voor rondje ${n}?`,
+    orderedLabel: "Besteld",
     thisRoundLabel: "Dit rondje",
     paidLabel: "Betaald",
     paidNote: (v: string) => `Betaald ${v}`,
@@ -618,6 +620,11 @@ const T = {
     payAllSelf: "Alles zelf",
     treatHint: "Tik een rondje dat jij trakteert (telt niet mee in de verdeling):",
     roundWord: "Rondje",
+    drinksCount: (n: number) => `${n} drankje${n === 1 ? "" : "s"}`,
+    confirmRoundTitle: (n: number) => `\u2705 Rondje ${n} bevestigen`,
+    confirmRoundBtn: (n: number) => `\u2705 Bevestig rondje (${n} drankje${n === 1 ? "" : "s"})`,
+    roundConfirmed: (nr: number, n: number) => `Rondje ${nr} bevestigd \u2014 ${n} drankje${n === 1 ? "" : "s"}`,
+    notAssignedYet: (n: number) => `${n} drankje${n === 1 ? "" : "s"} nog niet toegewezen.`,
     yourTreat: "jouw traktatie",
     eachPaysNote: "Ieder betaalt",
     plusTreat: (v: string) => `Jij trakteert ${v} extra`,
@@ -997,6 +1004,8 @@ const T = {
     costRoundN: (n: number) => `Tourn\u00e9e ${n}`,
     costTotalLabel: "Total",
     roundCostOptional: "Combien pay\u00e9 pour cette tourn\u00e9e ?",
+    roundCostFor: (n: number) => `Combien pay\u00e9 pour la tourn\u00e9e ${n} ?`,
+    orderedLabel: "Command\u00e9",
     thisRoundLabel: "Cette tourn\u00e9e",
     paidLabel: "Pay\u00e9",
     paidNote: (v: string) => `Pay\u00e9 ${v}`,
@@ -1032,6 +1041,11 @@ const T = {
     payAllSelf: "Tout payer",
     treatHint: "Touche une tourn\u00e9e que tu offres (non incluse dans le partage) :",
     roundWord: "Tourn\u00e9e",
+    drinksCount: (n: number) => `${n} boisson${n === 1 ? "" : "s"}`,
+    confirmRoundTitle: (n: number) => `\u2705 Confirmer la tourn\u00e9e ${n}`,
+    confirmRoundBtn: (n: number) => `\u2705 Confirmer la tourn\u00e9e (${n} boisson${n === 1 ? "" : "s"})`,
+    roundConfirmed: (nr: number, n: number) => `Tourn\u00e9e ${nr} confirm\u00e9e \u2014 ${n} boisson${n === 1 ? "" : "s"}`,
+    notAssignedYet: (n: number) => `${n} boisson${n === 1 ? "" : "s"} pas encore attribu\u00e9e${n === 1 ? "" : "s"}.`,
     yourTreat: "ta tourn\u00e9e offerte",
     eachPaysNote: "Chacun paie",
     plusTreat: (v: string) => `Tu offres ${v} en plus`,
@@ -4203,7 +4217,7 @@ export default function PartyTest() {
         {renderAddDrink()}
         {renderVoice()}
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
-          <h3 style={{ ...S.h3, margin: 0 }}>Ronde {roundNr} <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}>— {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>{repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}</h3>
+          <h3 style={{ ...S.h3, margin: 0 }}>{L.roundWord} {roundNr} <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}>— {L.drinksCount(roundItems)}</span>{repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}</h3>
         </div>
         {settle && renderRunnerBar()}
         {settle && renderWalk()}
@@ -4304,7 +4318,7 @@ export default function PartyTest() {
           <div style={{ ...S.card, padding: "10px 12px", background: "#fffdf6" }}>
             <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
               <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{settle ? L.inThisRound : "📋 Aan de toog"} {settle && <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.assignHint}</span>}</span>
-              <span style={{ ...S.pill, background: "rgba(240,165,0,0.18)", color: "#c98a00" }}>{roundItems} drankje{roundItems === 1 ? "" : "s"}</span>
+              <span style={{ ...S.pill, background: "rgba(240,165,0,0.18)", color: "#c98a00" }}>{L.drinksCount(roundItems)}</span>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => {
@@ -4323,7 +4337,7 @@ export default function PartyTest() {
             <button style={{ ...S.btn, width: "100%" }} onClick={() => setShowCups(true)}>{L.cups}</button>
           </div>
         )}
-        <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => { if (roundItems === 0) return; if (settle) openClose(); else commitRound() }}>✅ Rondje {roundNr} bevestigen{roundItems > 0 && <span style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.85 }}> — {roundItems} drankje{roundItems === 1 ? "" : "s"}</span>}</button>
+        <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => { if (roundItems === 0) return; if (settle) openClose(); else commitRound() }}>{L.confirmRoundTitle(roundNr)}{roundItems > 0 && <span style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.85 }}> — {L.drinksCount(roundItems)}</span>}</button>
         {roundItems > 0 && (
           <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>
         )}
@@ -4341,7 +4355,7 @@ export default function PartyTest() {
                   <div style={{ ...S.seg(assignMode === "drink"), padding: "6px 10px", fontSize: 12, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("drink")}>per drank</div>
                 </div>
               </div>
-              {assignMode === "person" && unassignedTotal > 0 && <div style={{ fontSize: 12.5, fontWeight: 800, color: "#c0554a", marginBottom: 4 }}>🔴 {unassignedTotal} drankje{unassignedTotal === 1 ? "" : "s"} nog niet toegewezen</div>}
+              {assignMode === "person" && unassignedTotal > 0 && <div style={{ fontSize: 12.5, fontWeight: 800, color: "#c0554a", marginBottom: 4 }}>🔴 {L.notAssignedYet(unassignedTotal)}</div>}
               <div style={{ fontSize: 11, color: "#8a7d55", marginBottom: 8, lineHeight: 1.4 }}>{L.assignAnyone}</div>
 
               {assignMode === "drink" ? (
@@ -4414,10 +4428,10 @@ export default function PartyTest() {
         {showClose && (
           <div style={S.overlay} onClick={() => setShowClose(false)}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ ...S.h3, fontSize: 18 }}>✅ Ronde {roundNr} bevestigen</h3>
+              <h3 style={{ ...S.h3, fontSize: 18 }}>{L.confirmRoundTitle(roundNr)}</h3>
               {unassignedTotal > 0 && (
                 <div onClick={goAssignFromWarning} style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.35)", borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 12.5, color: "#b0402f", cursor: "pointer" }}>
-                  🔴 <b>{unassignedTotal} drankje{unassignedTotal === 1 ? "" : "s"} nog niet toegewezen.</b> <u>{L.tapToAssign}</u>
+                  🔴 <b>{L.notAssignedYet(unassignedTotal)}</b> <u>{L.tapToAssign}</u>
                 </div>
               )}
               {depositOn && (cupsBlock ? (
@@ -4431,7 +4445,7 @@ export default function PartyTest() {
                   <button style={{ ...S.btn, padding: "4px 10px", fontSize: 11.5 }} onClick={() => setShowCups(true)}>aanpassen</button>
                 </div>
               ))}
-              <button style={{ ...S.btnP, opacity: cupsBlock ? 0.5 : 1 }} onClick={() => !cupsBlock && commitRound()}>✅ Bevestig rondje ({roundItems} drankje{roundItems === 1 ? "" : "s"})</button>
+              <button style={{ ...S.btnP, opacity: cupsBlock ? 0.5 : 1 }} onClick={() => !cupsBlock && commitRound()}>{L.confirmRoundBtn(roundItems)}</button>
               <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={() => setShowClose(false)}>Bestelling aanpassen</button>
             </div>
           </div>
@@ -4456,7 +4470,7 @@ export default function PartyTest() {
           <div style={{ ...S.row, gap: 9, marginBottom: 4 }}>
             <span style={{ fontSize: 24, flexShrink: 0 }}>🍻</span>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 15, fontWeight: 800 }}>Ronde {roundNr} bevestigd — {items} drankjes</div>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>{L.roundConfirmed(roundNr, items)}</div>
             </div>
           </div>
           {depositOn && <div style={{ fontSize: 12.5, fontWeight: 700, color: "#8a5e0f", marginBottom: 6 }}>🫙 {totalInUse} beker{totalInUse === 1 ? "" : "s"} in omloop · {euro(totalInUse * depositPerCupEur)}</div>}
@@ -4477,7 +4491,7 @@ export default function PartyTest() {
             <span style={{ fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{L.total}: {items}</span>
           </div>
           {last && (() => { const un = drinks.reduce((a, d) => a + (last.anon[d.id] ?? 0), 0); return un > 0 ? (
-            <div onClick={() => { editOrder(); setShowAssignAll(true) }} style={{ marginTop: 8, background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "8px 11px", fontSize: 12.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>🔴 {un} drankje{un === 1 ? "" : "s"} nog niet toegewezen. <u>{L.tapToAssign}</u></div>
+            <div onClick={() => { editOrder(); setShowAssignAll(true) }} style={{ marginTop: 8, background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "8px 11px", fontSize: 12.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>🔴 {L.notAssignedYet(un)} <u>{L.tapToAssign}</u></div>
           ) : null })()}
         </div>
 
@@ -4605,15 +4619,17 @@ export default function PartyTest() {
           const zelf = Math.max(0, amount - potPart)
           return (
           <>
-            {/* Aantal personen — snel aan te passen zonder het scherm te verlaten. */}
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-              <span onClick={() => setShowPeoplePop(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 16, padding: "5px 12px", cursor: "pointer" }}>👤 {headcount < 1 ? "—" : headcount} {L.people} · {L.adjust} ›</span>
+            {/* Kop met het rondje-nummer: bij rondje 2, 3, … is meteen duidelijk waar je mee
+                bezig bent. De flow zelf is voor elk rondje identiek. */}
+            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 15.5, fontWeight: 800, color: "#8a5e0f", background: "linear-gradient(135deg,#fdf3dc,#fae9c2)", border: "1.5px solid rgba(240,165,0,0.45)", borderRadius: 18, padding: "7px 16px" }}>🍻 {L.roundWord} {idx + 1}</span>
+              <span onClick={() => setShowPeoplePop(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 16, padding: "5px 12px", cursor: "pointer" }}>👤 {headcount < 1 ? "—" : headcount} · {L.adjust} ›</span>
             </div>
             {/* Drankjes van dit net-bevestigde rondje, met de aanpas-knop erin verwerkt. */}
             {(() => { const laatste = rounds[idx]; const lijst = laatste ? drinksOf(laatste) : []; return lijst.length > 0 && (
               <div style={{ ...S.card, padding: "12px 14px", background: "#fffdf6" }}>
                 <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9, paddingBottom: 9, borderBottom: "1px solid rgba(120,95,20,0.1)" }}>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55" }}>📋 {L.thisRoundLabel}</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55" }}>📋 {L.orderedLabel}</span>
                   <span onClick={editOrder} style={{ fontSize: 11.5, color: "#c98a00", fontWeight: 800, padding: "5px 11px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -4627,7 +4643,7 @@ export default function PartyTest() {
             {/* Hoeveel betaald voor dit rondje. Kies eerst de bron (zelf/pot), vul één
                 bedrag in, en bevestig met ✓ (of sla over). Beide sluiten het rondje af. */}
             <div style={{ ...S.card }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", marginBottom: 11 }}>{L.roundCostOptional}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", marginBottom: 11 }}>{L.roundCostFor(idx + 1)}</div>
 
               {/* Bron: zelf betaald of uit de pot. */}
               <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
@@ -4712,7 +4728,7 @@ export default function PartyTest() {
                         <div style={{ ...S.seg(editAssignMode === "person"), padding: "5px 9px", fontSize: 11.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
                         <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 11.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>per drank</div>
                       </div>
-                      {editAssignMode === "person" && (() => { const u = roundDrinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0); return u > 0 ? <div style={{ fontSize: 12, fontWeight: 800, color: "#c0554a", marginBottom: 8 }}>🔴 {u} drankje{u === 1 ? "" : "s"} nog niet toegewezen</div> : null })()}
+                      {editAssignMode === "person" && (() => { const u = roundDrinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0); return u > 0 ? <div style={{ fontSize: 12, fontWeight: 800, color: "#c0554a", marginBottom: 8 }}>🔴 {L.notAssignedYet(u)}</div> : null })()}
                       {editAssignMode === "drink" ? roundDrinks.map((d) => {
                         const un = r.anon[d.id] ?? 0
                         return (
@@ -4777,7 +4793,7 @@ export default function PartyTest() {
             <div key={idx} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
               <div style={{ cursor: "pointer", padding: 14 }} onClick={() => { if (allRoundsOpen) { setAllRoundsOpen(false); setOpenRound(idx) } else { setOpenRound(open ? null : idx) } setEditOpen(false); setEditCups(false); setEditPay(false) }}>
                 <div style={{ ...S.row, justifyContent: "space-between" }}>
-                  <span style={{ fontSize: 15, fontWeight: 800 }}>Ronde {idx + 1} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>· {items} drankjes · {euro(r.amount)}</span>{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ fontSize: 11.5, fontWeight: 800, color: "#1f8a4c", marginLeft: 6 }}>{L.assigned}</span>}</span>
+                  <span style={{ fontSize: 15, fontWeight: 800 }}>{L.roundWord} {idx + 1} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>· {L.drinksCount(items)} · {euro(r.amount)}</span>{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ fontSize: 11.5, fontWeight: 800, color: "#1f8a4c", marginLeft: 6 }}>{L.assigned}</span>}</span>
                   <span style={{ fontSize: 14, color: "#8a7d55" }}>{open ? "▴" : "▾"}</span>
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#1f8a4c", marginTop: 3 }}>✓ betaald: {paidLabel(r)}</div>
@@ -4787,7 +4803,7 @@ export default function PartyTest() {
                 if (un === 0) return null
                 return (
                   <div onClick={() => { setAssignIdx(idx) }} style={{ margin: "0 14px 14px", background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "9px 11px", fontSize: 12.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>
-                    🔴 {un} drankje{un === 1 ? "" : "s"} nog niet toegewezen. <u>{L.tapToAssign}</u>
+                    🔴 {L.notAssignedYet(un)} <u>{L.tapToAssign}</u>
                   </div>
                 )
               })()}
