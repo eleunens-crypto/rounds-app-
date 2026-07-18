@@ -3896,6 +3896,7 @@ export default function RundoTable() {
             iConfirmed={iConfirmed} confirmMe={confirmMe}
             onPickMe={pickMe}
             finalized={!!group.finalized} iDispute={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name)} iResolved={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name && d.resolved)} iComment={(me && parseDisputes(group.disputed_by || "").find((d) => d.name === me.name)?.comment) || ""} onToggleDispute={(on, comment) => { if (me) flagDispute(me.name, on, comment) }}
+            askConfirm={askConfirm}
           />
         </>
       )}
@@ -5114,10 +5115,11 @@ function ClaimScreen(props: {
   claimPid: string | null; setClaimPid: (id: string | null) => void
   iConfirmed: boolean; confirmMe: () => void; onPickMe: (id: string) => void
   finalized: boolean; iDispute: boolean; iResolved: boolean; iComment: string; onToggleDispute: (on: boolean, comment?: string) => void
+  askConfirm: (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean }) => void
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, onToggleShared, claimMembers, sharePicking, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onSetExpected, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute } = props
+  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, onToggleShared, claimMembers, sharePicking, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onSetExpected, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
   const adminPid = props.claimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   const [disputeOpen, setDisputeOpen] = useState(false)
