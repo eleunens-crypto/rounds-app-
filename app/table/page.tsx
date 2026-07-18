@@ -592,6 +592,7 @@ const STRINGS = {
     finalizedAdminNote: "Gasten kunnen niets meer wijzigen.",
     finalizedGuestNote: "Bekijk je deel hieronder.",
     remarksOpen: "⚠️ Opmerkingen — vink af wat je gecheckt hebt:",
+    newRemarkTitle: "💬 Nieuwe opmerking van een gast",
     remarksDone: "✓ Alle opmerkingen afgehandeld",
     resolved: "opgelost",
     reopenRemark: "↩ Terug openen",
@@ -1209,6 +1210,7 @@ const STRINGS = {
     finalizedAdminNote: "Les invités ne peuvent plus rien modifier.",
     finalizedGuestNote: "Vois ta part ci-dessous.",
     remarksOpen: "⚠️ Remarques — coche ce que tu as vérifié :",
+    newRemarkTitle: "\ud83d\udcac Nouvelle remarque d\u2019un invit\u00e9",
     remarksDone: "✓ Toutes les remarques traitées",
     resolved: "réglé",
     reopenRemark: "↩ Rouvrir",
@@ -1724,6 +1726,26 @@ export default function RundoTable() {
   // Centrale in-app melding (midden op het scherm, met OK) — vervangt browser-alerts en
   // toont o.a. gast-opmerkingen bij de admin. Titel optioneel.
   const [centerNote, setCenterNote] = useState<{ title?: string; body: string } | null>(null)
+  // In-app ja/nee-bevestiging — vervangt de browser-confirm die op een foutmelding lijkt.
+  const [confirmDlg, setConfirmDlg] = useState<{ title?: string; body: string; yes: string; danger?: boolean; onYes: () => void } | null>(null)
+  const askConfirm = (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean }) =>
+    setConfirmDlg({ body, yes, onYes, title: opts?.title, danger: opts?.danger })
+  // Houdt bij welke opmerkingen de beheerder al gezien heeft, zodat een nieuwe binnenkomende
+  // opmerking meteen centraal op het scherm verschijnt (en niet stilletjes in een banner blijft).
+  const seenRemarks = useRef<Set<string> | null>(null)
+  useEffect(() => {
+    if (!group) return
+    const open = parseDisputes(group.disputed_by || "").filter((d) => !d.resolved)
+    const keys = new Set(open.map((d) => `${d.name}::${d.comment}`))
+    // Bij het eerste laden alleen onthouden — anders popt alles op wat er al stond.
+    if (seenRemarks.current === null || !isAdmin) { seenRemarks.current = keys; return }
+    const nieuwe = [...keys].filter((k) => !seenRemarks.current!.has(k))
+    seenRemarks.current = keys
+    if (nieuwe.length > 0) {
+      const tekst = nieuwe.map((k) => { const [n, c] = k.split("::"); return c ? `${n}: “${c}”` : n }).join("\n")
+      setCenterNote({ title: L.newRemarkTitle, body: tekst })
+    }
+  }, [group?.disputed_by, isAdmin]) // eslint-disable-line react-hooks/exhaustive-deps
   const [tipInput, setTipInput] = useState("")
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteModalText, setInviteModalText] = useState("")
@@ -1987,16 +2009,17 @@ export default function RundoTable() {
     } finally { setBusy(false) }
   }
 
-  const forgetSavedGroup = async (id: string) => {
-    if (!confirm(L.confirmDeleteGroup)) return
-    await supabase.from("table_claims").delete().eq("group_id", id)
-    await supabase.from("table_confirmations").delete().eq("group_id", id)
-    await supabase.from("table_items").delete().eq("group_id", id)
-    await supabase.from("table_participants").delete().eq("group_id", id)
-    const { error } = await supabase.from("table_groups").delete().eq("id", id)
-    if (error) { setStartError(L.errDeleteFailed + error.message); return }
-    if (getLastGroup() === id) rememberLastGroup(null)
-    removeMyGroup(id); setMyGroups(getMyGroups())
+  const forgetSavedGroup = (id: string) => {
+    askConfirm(L.confirmDeleteGroup, L.deleteTitle, async () => {
+      await supabase.from("table_claims").delete().eq("group_id", id)
+      await supabase.from("table_confirmations").delete().eq("group_id", id)
+      await supabase.from("table_items").delete().eq("group_id", id)
+      await supabase.from("table_participants").delete().eq("group_id", id)
+      const { error } = await supabase.from("table_groups").delete().eq("id", id)
+      if (error) { setStartError(L.errDeleteFailed + error.message); return }
+      if (getLastGroup() === id) rememberLastGroup(null)
+      removeMyGroup(id); setMyGroups(getMyGroups())
+    }, { danger: true })
   }
 
   const goToChooser = () => {
@@ -2061,24 +2084,27 @@ export default function RundoTable() {
     const current = Math.max(1, participants.find((p) => p.id === pid)?.seats ?? 1)
     if (val === current) return
     const hasClaims = claims.some((c) => c.participant_id === pid && c.quantity > 0)
-    if (hasClaims && !confirm(L.confirmSeatsChange)) return
-    setParticipants((cur) => cur.map((p) => p.id === pid ? { ...p, seats: val } : p))
-    if (hasClaims) setClaims((cur) => cur.filter((c) => c.participant_id !== pid))
-    if (hasClaims) await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", pid)
-    const { error } = await supabase.from("table_participants").update({ seats: val }).eq("id", pid)
-    if (error && /seats/.test(error.message || "")) { setError(L.seatsSaveMsg); return }
-    // Houd het totaal kloppend: een plaats die voor 2 telt, "eet" een vrije plaats op.
-    // Zo blijft de som van alle personen gelijk aan het getal in de teller.
-    const delta = val - current
-    if (delta > 0) {
-      const isFree = (p: Participant) => (new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName)
-        && p.id !== pid && p.id !== meId && !claims.some((c) => c.participant_id === p.id && c.quantity > 0)
-      const spare = participants.filter(isFree).slice(-delta)
-      for (const sp of spare) await supabase.from("table_participants").delete().eq("id", sp.id)
-      if (spare.length > 0) setToast(L.seatFreedUp)
+    const doorgaan = async () => {
+      setParticipants((cur) => cur.map((p) => p.id === pid ? { ...p, seats: val } : p))
+      if (hasClaims) setClaims((cur) => cur.filter((c) => c.participant_id !== pid))
+      if (hasClaims) await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", pid)
+      const { error } = await supabase.from("table_participants").update({ seats: val }).eq("id", pid)
+      if (error && /seats/.test(error.message || "")) { setError(L.seatsSaveMsg); return }
+      // Houd het totaal kloppend: een plaats die voor 2 telt, "eet" een vrije plaats op.
+      // Zo blijft de som van alle personen gelijk aan het getal in de teller.
+      const delta = val - current
+      if (delta > 0) {
+        const isFree = (p: Participant) => (new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName)
+          && p.id !== pid && p.id !== meId && !claims.some((c) => c.participant_id === p.id && c.quantity > 0)
+        const spare = participants.filter(isFree).slice(-delta)
+        for (const sp of spare) await supabase.from("table_participants").delete().eq("id", sp.id)
+        if (spare.length > 0) setToast(L.seatFreedUp)
+      }
+      await loadAll(group.id)
+      if (hasClaims) setToast(L.seatsChanged)
     }
-    await loadAll(group.id)
-    if (hasClaims) setToast(L.seatsChanged)
+    if (hasClaims) { askConfirm(L.confirmSeatsChange, L.yes, () => { void doorgaan() }, { danger: true }); return }
+    await doorgaan()
   }
 
   const seatsOf = (pid: string) => Math.max(1, participants.find((p) => p.id === pid)?.seats ?? 1)
@@ -2200,17 +2226,18 @@ export default function RundoTable() {
     if (!group) return
     const p = participants.find((x) => x.id === id)
     if (!p) return
-    if (!confirm(L.confirmReleaseSpot(p.name))) return
-    const seats = Math.max(1, p.seats ?? 1)
-    await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", id)
-    await supabase.from("table_confirmations").delete().eq("group_id", group.id).eq("participant_id", id)
-    // De plaats zelf blijft bestaan, maar wordt weer naamloos en voor één persoon.
-    await supabase.from("table_participants").update({ name: L.guestWord, seats: 1, self_joined: false }).eq("id", id)
-    // Zat er een koppel op? Dan komen de extra personen als losse vrije plaatsen terug.
-    for (let i = 1; i < seats; i++) await addGuest(L.guestWord, false, 1)
-    setFillingSpots((cur) => cur.filter((x) => x !== id))
-    await loadAll(group.id)
-    setToast(L.spotReleased)
+    askConfirm(L.confirmReleaseSpot(p.name), L.yes, async () => {
+      const seats = Math.max(1, p.seats ?? 1)
+      await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", id)
+      await supabase.from("table_confirmations").delete().eq("group_id", group.id).eq("participant_id", id)
+      // De plaats zelf blijft bestaan, maar wordt weer naamloos en voor één persoon.
+      await supabase.from("table_participants").update({ name: L.guestWord, seats: 1, self_joined: false }).eq("id", id)
+      // Zat er een koppel op? Dan komen de extra personen als losse vrije plaatsen terug.
+      for (let i = 1; i < seats; i++) await addGuest(L.guestWord, false, 1)
+      setFillingSpots((cur) => cur.filter((x) => x !== id))
+      await loadAll(group.id)
+      setToast(L.spotReleased)
+    }, { danger: true })
   }
 
   // Zet het aantal gasten in één beweging. Omhoog = extra gasten aanmaken.
@@ -2310,12 +2337,15 @@ export default function RundoTable() {
     const last = participants[participants.length - 1]
     if (!last) return
     const used = claims.filter((c) => c.participant_id === last.id && c.quantity > 0).length
-    if (used > 0 && !confirm(L.confirmRemoveLast(last.name, used))) return
-    await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", last.id)
-    await supabase.from("table_confirmations").delete().eq("group_id", group.id).eq("participant_id", last.id)
-    await supabase.from("table_participants").delete().eq("id", last.id)
-    if (meId === last.id) { setMeIdStored(group.id, null); setMeId(null) }
-    await loadAll(group.id)
+    const wisLaatste = async () => {
+      await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", last.id)
+      await supabase.from("table_confirmations").delete().eq("group_id", group.id).eq("participant_id", last.id)
+      await supabase.from("table_participants").delete().eq("id", last.id)
+      if (meId === last.id) { setMeIdStored(group.id, null); setMeId(null) }
+      await loadAll(group.id)
+    }
+    if (used > 0) { askConfirm(L.confirmRemoveLast(last.name, used), L.yes, () => { void wisLaatste() }, { danger: true }); return }
+    await wisLaatste()
   }
 
   const renameGuest = async (id: string, name: string) => {
@@ -2333,20 +2363,23 @@ export default function RundoTable() {
     if (!group) return
     const hasItems = items.length > 0
     const hasClaims = claims.length > 0
+    const opnieuw = async () => {
+      if (hasItems || hasClaims) {
+        await supabase.from("table_claims").delete().eq("group_id", group.id)
+        await supabase.from("table_items").delete().eq("group_id", group.id)
+      }
+      if (group.receipt_url) {
+        await supabase.from("table_groups").update({ receipt_url: null }).eq("id", group.id)
+        setGroup((g) => g ? { ...g, receipt_url: null } : g)
+      }
+      setItems([]); setClaims([])
+      setShowScan(true)
+    }
     if (hasItems || hasClaims) {
-      const msg = hasClaims
-        ? L.rescanConfirmClaims
-        : L.rescanConfirmItems
-      if (!confirm(msg)) return
-      await supabase.from("table_claims").delete().eq("group_id", group.id)
-      await supabase.from("table_items").delete().eq("group_id", group.id)
+      askConfirm(hasClaims ? L.rescanConfirmClaims : L.rescanConfirmItems, L.yes, () => { void opnieuw() }, { danger: true })
+      return
     }
-    if (group.receipt_url) {
-      await supabase.from("table_groups").update({ receipt_url: null }).eq("id", group.id)
-      setGroup((g) => g ? { ...g, receipt_url: null } : g)
-    }
-    setItems([]); setClaims([])
-    setShowScan(true)
+    await opnieuw()
   }
 
   const retryAiScan = () => {
@@ -2715,20 +2748,22 @@ export default function RundoTable() {
     if (group.finalized) { setToast(L.reopenFirst); return }
     const zeros = baseItems.filter((it) => it.unit_price <= 0.0001)
     if (zeros.length === 0) return
-    if (!confirm(L.confirmDeleteZeros(zeros.length))) return
-    const ids = zeros.map((it) => it.id)
-    await supabase.from("table_claims").delete().in("item_id", ids)
-    await supabase.from("table_items").delete().in("id", ids)
-    await loadAll(group.id)
-    setToast(L.zerosDeleted(zeros.length))
+    askConfirm(L.confirmDeleteZeros(zeros.length), L.deleteTitle, async () => {
+      const ids = zeros.map((it) => it.id)
+      await supabase.from("table_claims").delete().in("item_id", ids)
+      await supabase.from("table_items").delete().in("id", ids)
+      await loadAll(group.id)
+      setToast(L.zerosDeleted(zeros.length))
+    }, { danger: true })
   }
   const deleteItem = async (id: string) => {
     if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     if (!group) return
-    if (!confirm(L.confirmDeleteItem)) return
-    await supabase.from("table_claims").delete().eq("item_id", id)
-    await supabase.from("table_items").delete().eq("id", id)
-    await loadAll(group.id)
+    askConfirm(L.confirmDeleteItem, L.deleteTitle, async () => {
+      await supabase.from("table_claims").delete().eq("item_id", id)
+      await supabase.from("table_items").delete().eq("id", id)
+      await loadAll(group.id)
+    }, { danger: true })
   }
 
   const claimedQty = (itemId: string) =>
@@ -4019,9 +4054,15 @@ export default function RundoTable() {
                 if (st.warn === "many") return `${it.name}: ${L.tooManySharedAdmin(st.heads, it.share_expected as number)}`
                 return null
               }).filter(Boolean) as string[]
-              if (shareProblems.length > 0 && !confirm(`${L.sharedProblemTitle}\n\n• ${shareProblems.join("\n• ")}\n\n${L.sharedProblemAsk}`)) return
-              if (!hasTip) { setShowTipReminder(true); return }
-              if (confirm(L.finalizeConfirm)) finalizeBill(true)
+              const naarTipOfAfsluiten = () => {
+                if (!hasTip) { setShowTipReminder(true); return }
+                askConfirm(L.finalizeConfirm, L.finalizeBtn, () => finalizeBill(true))
+              }
+              if (shareProblems.length > 0) {
+                askConfirm(`• ${shareProblems.join("\n• ")}\n\n${L.sharedProblemAsk}`, L.yes, naarTipOfAfsluiten, { title: L.sharedProblemTitle, danger: true })
+                return
+              }
+              naarTipOfAfsluiten()
             }} style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
               {L.finalizeBtn}
             </button>
@@ -4264,6 +4305,18 @@ export default function RundoTable() {
             {centerNote.title && <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: 17, fontWeight: 800, color: "#14213a" }}>{centerNote.title}</h3>}
             <p style={{ fontSize: 14, color: "#3b486a", lineHeight: 1.55, margin: "0 0 16px", whiteSpace: "pre-line" }}>{centerNote.body}</p>
             <button onClick={() => setCenterNote(null)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 15 }}>OK</button>
+          </div>
+        </div>
+      )}
+
+      {/* In-app ja/nee-bevestiging. */}
+      {confirmDlg && (
+        <div style={{ ...S.overlay, zIndex: 3200 }} onClick={() => setConfirmDlg(null)}>
+          <div style={{ ...S.modal, width: 340 }} onClick={(e) => e.stopPropagation()}>
+            {confirmDlg.title && <h3 style={{ marginTop: 0, marginBottom: 9, fontSize: 17, fontWeight: 800, color: confirmDlg.danger ? "#c0392b" : "#14213a" }}>{confirmDlg.title}</h3>}
+            <p style={{ fontSize: 14, color: "#3b486a", lineHeight: 1.55, margin: "0 0 16px", whiteSpace: "pre-line" }}>{confirmDlg.body}</p>
+            <button onClick={() => { const fn = confirmDlg.onYes; setConfirmDlg(null); fn() }} style={{ ...S.btn, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 15, border: "none", color: "#fff", background: confirmDlg.danger ? "linear-gradient(135deg,#e74c3c,#c0392b)" : "linear-gradient(135deg,#1f8a4c,#27ae60)" }}>{confirmDlg.yes}</button>
+            <button onClick={() => setConfirmDlg(null)} style={{ ...S.btn, width: "100%", padding: "10px 0", marginTop: 8, fontSize: 13.5, fontWeight: 700, color: "#5a6680", background: "transparent", border: "none" }}>{L.cancel}</button>
           </div>
         </div>
       )}
@@ -5163,7 +5216,7 @@ function ClaimScreen(props: {
                                 return (
                                   <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                                     <button onClick={() => {
-                                      if (!on && explicitConfirmed(p.id) && !confirm(L.notSelectedShare(p.name))) return
+                                      if (!on && explicitConfirmed(p.id)) { askConfirm(L.notSelectedShare(p.name), L.yes, () => toggleShareClaim(it.id, p.id)); return }
                                       toggleShareClaim(it.id, p.id)
                                     }} style={{
                                       fontSize: 11, fontWeight: 700, borderRadius: 10, padding: "3px 10px", cursor: "pointer",
@@ -5254,7 +5307,7 @@ function ClaimScreen(props: {
                       </div>
                       {assignItem === it.id && (
                         <AssignPicker participants={participants} itemId={it.id} confirmedFn={explicitConfirmed}
-                          onAssign={(pid, warn) => { if (warn && !confirm(L.notSelectedAdd(participants.find((x) => x.id === pid)?.name))) return; setClaim(it.id, pid, myQty(it.id, pid) + 1); setAssignItem(null) }}
+                          onAssign={(pid, warn) => { const doe = () => { setClaim(it.id, pid, myQty(it.id, pid) + 1); setAssignItem(null) }; if (warn) { askConfirm(L.notSelectedAdd(participants.find((x) => x.id === pid)?.name), L.yes, doe); return } doe() }}
                           onClose={() => setAssignItem(null)} />
                       )}
                     </div>
