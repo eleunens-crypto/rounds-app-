@@ -623,6 +623,7 @@ const STRINGS = {
     amountPlaceholder: "bv. 65.90",
     totalConfirmedTitle: "Bon-totaal bevestigd",
     confirmAmount: "✓ Bevestig",
+    changeAmount: "bedrag aanpassen",
     confirmAmountTitle: "Bevestig dit bedrag",
     yes: "Ja",
     no: "Neen",
@@ -1256,6 +1257,7 @@ const STRINGS = {
     amountPlaceholder: "ex. 65,90",
     totalConfirmedTitle: "Total de l'addition confirmé",
     confirmAmount: "✓ Confirme",
+    changeAmount: "modifier le montant",
     confirmAmountTitle: "Confirme ce montant",
     yes: "Oui",
     no: "Non",
@@ -1829,6 +1831,7 @@ export default function RundoTable() {
   const [askSeats, setAskSeats] = useState(false)  // "voor hoeveel personen?" bij het toevoegen
   const [roundingOk, setRoundingOk] = useState(false)  // centenverschil bewust aanvaard
   const [totalDraft, setTotalDraft] = useState<string | null>(null)  // wat je intikt bij "regeltotaal"
+  const [priceDraft, setPriceDraft] = useState<string | null>(null)  // idem voor de stukprijs
   const [billMismatchAck, setBillMismatchAck] = useState(false)  // bewust doorgegaan ondanks verschil
   const [showJoined, setShowJoined] = useState(false)
   // Bewaarde foto van de laatste scan, zodat je een mislukte AI-scan opnieuw kan proberen.
@@ -3393,8 +3396,13 @@ export default function RundoTable() {
             const neenBtn = { border: "2px solid rgba(20,33,58,0.2)", background: "#fff", color: "#5a6680", borderRadius: 10, padding: "11px 24px", fontSize: 16, fontWeight: 800, cursor: "pointer" }
             const jaNeen = (
               <span style={{ display: "inline-flex", gap: 8 }}>
-                <button onPointerDown={tikBevestig} style={greenState ? { ...jaBtn } : { ...actieBtn }}>{L.yes}</button>
-                <button onPointerDown={(e) => { e.preventDefault(); setReceiptEditing(true); setReceiptConfirmed(false); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }} style={{ ...neenBtn, ...(receiptEditing ? { borderColor: "#1499b0", color: "#1499b0" } : {}) }}>{L.no}</button>
+                {/* Eenmaal bevestigd verdwijnt "Ja" — anders lijkt het alsof je nóg eens
+                    moet bevestigen. Enkel de weg terug (aanpassen) blijft staan. */}
+                {!greenState && <button onPointerDown={tikBevestig} style={{ ...actieBtn }}>{L.yes}</button>}
+                <button onPointerDown={(e) => { e.preventDefault(); setReceiptEditing(true); setReceiptConfirmed(false); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }}
+                  style={greenState
+                    ? { border: "none", background: "transparent", color: "#5a6680", borderRadius: 10, padding: "11px 14px", fontSize: 14, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }
+                    : { ...neenBtn, ...(receiptEditing ? { borderColor: "#1499b0", color: "#1499b0" } : {}) }}>{greenState ? L.changeAmount : L.no}</button>
               </span>
             )
             return (
@@ -3531,7 +3539,7 @@ export default function RundoTable() {
                         ) : (
                           <>
                             <span style={{ color: "#999", fontSize: 14.5 }}>€</span>
-                            <input type="number" step="0.01" defaultValue={t.unit_price ? t.unit_price.toFixed(2) : ""} placeholder="0.00"
+                            <input type="text" inputMode="decimal" defaultValue={t.unit_price ? t.unit_price.toFixed(2).replace(".", ",") : ""} placeholder="0,00"
                               onBlur={(e) => { if (group?.finalized) { setToast(L.reopenFirst); loadAll(group.id); return } const v = parseFloat(e.target.value.replace(",", ".")) || 0; supabase.from("table_items").update({ unit_price: v, quantity: 1 }).eq("id", t.id).then(() => loadAll(group.id)) }}
                               style={{ ...S.input, width: 78, textAlign: "right", padding: "8px 8px" }} />
                           </>
@@ -4613,7 +4621,7 @@ export default function RundoTable() {
                           <span style={{ fontSize: 17 }}>🧮</span>
                           <input value={it.name} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} style={{ ...S.input, flex: 1, minWidth: 0, fontWeight: 700 }} />
                           <span style={{ fontSize: 14, color: "#888" }}>€</span>
-                          <input type="number" step="0.01" value={it.unit_price || ""} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, unit_price: parseFloat(e.target.value) || 0, quantity: 1 } : x))} style={{ ...S.input, width: 80, textAlign: "right", padding: "8px 8px" }} />
+                          <input type="text" inputMode="decimal" placeholder="0,00" value={it.unit_price || ""} onChange={(e) => { const raw = numFilter(e.target.value); setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, unit_price: parseFloat(raw.replace(",", ".")) || 0, quantity: 1 } : x)) }} style={{ ...S.input, width: 80, textAlign: "right", padding: "8px 8px" }} />
                           <button onClick={() => setScanPreview((cur) => cur.filter((_, j) => j !== i))} style={{ ...S.iconBtn, flexShrink: 0 }}>✕</button>
                         </div>
                         <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 4 }}>{L.howToSplit}</div>
@@ -4670,7 +4678,7 @@ export default function RundoTable() {
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                           <span style={{ fontSize: 14, color: "#888" }}>{L.perPiece}</span>
-                          <input type="number" step="0.01" value={it.unit_price || ""} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, unit_price: parseFloat(e.target.value) || 0 } : x))} style={{ ...S.input, width: 84, padding: "8px 8px" }} />
+                          <input type="text" inputMode="decimal" placeholder="0,00" value={it.unit_price || ""} onChange={(e) => { const raw = numFilter(e.target.value); setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, unit_price: parseFloat(raw.replace(",", ".")) || 0 } : x)) }} style={{ ...S.input, width: 84, padding: "8px 8px" }} />
                         </div>
                         <span style={{ marginLeft: "auto", fontSize: 14.5, fontWeight: 800, color: scanMatch ? "#1f8a4c" : "#14213a", whiteSpace: "nowrap" }}>= €{lineTotal.toFixed(2).replace(".", ",")}</span>
                       </div>
@@ -4722,7 +4730,7 @@ export default function RundoTable() {
                     <span style={{ fontSize: 14.5, fontWeight: 700, color: "#5a6680" }}>{L.totalOnBill}</span>
                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <span style={{ color: "#999" }}>€</span>
-                      <input type="number" step="0.01" placeholder="0.00" value={scanTotal} onChange={(e) => setScanTotal(numFilter(e.target.value))} style={{ ...S.input, width: 90, textAlign: "right", padding: "8px 8px" }} />
+                      <input type="text" inputMode="decimal" placeholder="0,00" value={scanTotal} onChange={(e) => setScanTotal(numFilter(e.target.value))} style={{ ...S.input, width: 90, textAlign: "right", padding: "8px 8px" }} />
                     </div>
                   </div>
                   {hasBill && (
@@ -4782,17 +4790,21 @@ export default function RundoTable() {
               </div>
               <div style={{ flex: 1, minWidth: 90 }}>
                 <label style={S.lbl}>{L.pricePerLabel}</label>
-                <input type="number" step="0.01" value={editItem.unit_price || ""} onChange={(e) => setEditItem({ ...editItem, unit_price: parseFloat(e.target.value) || 0 })} style={{ ...S.input, width: "100%", boxSizing: "border-box" }} />
+                <input type="text" inputMode="decimal" placeholder="0,00"
+                  value={priceDraft ?? (editItem.unit_price || "")}
+                  onChange={(e) => { const raw = numFilter(e.target.value); setPriceDraft(raw); setEditItem((cur) => cur ? { ...cur, unit_price: parseFloat(raw.replace(",", ".")) || 0 } : cur) }}
+                  onBlur={() => setPriceDraft(null)}
+                  style={{ ...S.input, width: "100%", boxSizing: "border-box" }} />
               </div>
               <div style={{ flex: 1, minWidth: 90 }}>
                 <label style={{ ...S.lbl, color: "#0f7d90", fontWeight: 800 }}>{L.lineTotalLabel}</label>
-                <input type="number" step="0.01"
+                <input type="text" inputMode="decimal" placeholder="0,00"
                   value={totalDraft ?? (editItem.quantity > 0 ? +((editItem.unit_price || 0) * editItem.quantity).toFixed(2) : "")}
                   onChange={(e) => {
                     // Toon precies wat je tikt; de stukprijs volgt meteen, maar stuurt het veld niet terug.
-                    const raw = e.target.value
+                    const raw = numFilter(e.target.value)
                     setTotalDraft(raw)
-                    const total = parseFloat(raw)
+                    const total = parseFloat(raw.replace(",", "."))
                     const q = Math.max(1, editItem.quantity || 1)
                     setEditItem((cur) => cur ? { ...cur, unit_price: isFinite(total) ? +(total / q).toFixed(4) : 0 } : cur)
                   }}
@@ -4842,7 +4854,7 @@ export default function RundoTable() {
               </div>
               <div style={{ flex: 1, minWidth: 90 }}>
                 <label style={S.lbl}>{L.pricePerLabel}</label>
-                <input type="number" step="0.01" placeholder="0.00" value={newItem.unit_price} onChange={(e) => setNewItem({ ...newItem, unit_price: numFilter(e.target.value) })} style={{ ...S.input, width: "100%", boxSizing: "border-box" }} />
+                <input type="text" inputMode="decimal" placeholder="0,00" value={newItem.unit_price} onChange={(e) => setNewItem({ ...newItem, unit_price: numFilter(e.target.value) })} style={{ ...S.input, width: "100%", boxSizing: "border-box" }} />
               </div>
             </div>
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15.5, marginBottom: 16, cursor: "pointer" }}>
