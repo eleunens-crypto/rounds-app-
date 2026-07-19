@@ -807,6 +807,11 @@ const STRINGS = {
     missingLabel: "ontbreekt",
     extraLabel: "te veel",
     itemsAddUpPre: "items tellen op tot ",
+    itemListOff: "De itemlijst klopt nog niet",
+    receiptConfirmedLabel: "Bon (bevestigd)",
+    itemsBelowLabel: "Items hieronder",
+    tooMuchInList: "Te veel in de lijst",
+    tooLittleInList: "Te weinig in de lijst",
     compareFix: "Vergelijk met de bon en corrigeer hieronder!",
     roundingTitle: "Niets gevonden? Mogelijk afrondingsverschil",
     roundingSub: "Aanvaarden en verdergaan",
@@ -1428,6 +1433,11 @@ const STRINGS = {
     missingLabel: "manque",
     extraLabel: "en trop",
     itemsAddUpPre: "les articles totalisent ",
+    itemListOff: "La liste d\u2019articles ne colle pas encore",
+    receiptConfirmedLabel: "Ticket (confirm\u00e9)",
+    itemsBelowLabel: "Articles ci-dessous",
+    tooMuchInList: "En trop dans la liste",
+    tooLittleInList: "Manque dans la liste",
     compareFix: "Compare avec l'addition et corrige ci-dessous !",
     roundingTitle: "Rien trouvé ? Peut-être un écart d'arrondi",
     roundingSub: "Accepter et continuer",
@@ -3421,13 +3431,22 @@ export default function RundoTable() {
                   // Elk verschil verdient dezelfde melding. Enkel bij een klein bedrag krijg je
                   // er een schakelaar bij: vind je niets, dan is het wellicht gewoon afronding.
                   return (
-                    <div style={{ marginTop: 8, background: "rgba(243,156,18,0.11)", border: "1px solid rgba(243,156,18,0.55)", borderRadius: 10, padding: "10px 11px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 8 }}>
-                        <span style={{ flexShrink: 0, background: "#e07b28", borderRadius: 8, padding: "7px 9px", fontSize: 16, fontWeight: 800, color: "#fff", lineHeight: 1.15 }}>€{diffTxt}</span>
-                        <span style={{ fontSize: 13.5, color: "#8a4514", lineHeight: 1.4 }}>
-                          <b>{higher ? L.extraLabel : L.missingLabel}</b> — {L.itemsAddUpPre}
-                          <b style={{ fontSize: 14.5, color: "#7a3d0f" }}>€{billTotal.toFixed(2).replace(".", ",")}</b>
-                        </span>
+                    <div style={{ marginTop: 8, background: "rgba(243,156,18,0.11)", border: "1.5px solid rgba(243,156,18,0.55)", borderRadius: 12, padding: "13px" }}>
+                      {/* Eigen kop: het bontotaal is bevestigd, maar de lijst eronder telt
+                          anders op. Zonder die kop lijkt de groene en oranje melding elkaar
+                          tegen te spreken. */}
+                      <div style={{ fontSize: 14.5, fontWeight: 800, color: "#8a4514", marginBottom: 10 }}>⚠ {L.itemListOff}</div>
+                      <div style={{ background: "#fff", borderRadius: 9, padding: "11px 12px", marginBottom: 10 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#5a6680", marginBottom: 5 }}>
+                          <span>{L.receiptConfirmedLabel}</span><span style={{ fontWeight: 700 }}>€{(entered ?? 0).toFixed(2).replace(".", ",")}</span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#5a6680", marginBottom: 7 }}>
+                          <span>{L.itemsBelowLabel}</span><span style={{ fontWeight: 700 }}>€{billTotal.toFixed(2).replace(".", ",")}</span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", borderTop: "1px solid rgba(20,33,58,0.12)", paddingTop: 7 }}>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: "#8a4514" }}>{higher ? L.tooMuchInList : L.tooLittleInList}</span>
+                          <span style={{ fontSize: 19, fontWeight: 800, color: "#e07b28" }}>€{diffTxt}</span>
+                        </div>
                       </div>
                       <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a4514", marginBottom: 4 }}>{L.compareFix}</div>
                       <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13.5, color: "#8a4514", lineHeight: 1.65 }}>
