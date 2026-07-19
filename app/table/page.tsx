@@ -505,6 +505,13 @@ const STRINGS = {
     lockedName: "🔒 Vul eerst je eigen naam in",
     shareLinkBtn: "🔗 Deel de link",
     shareLinkHint: "Kies daarna je berichtenapp — WhatsApp, Messenger, sms…",
+    nowAssignTitle: "Wijs nu je gerechten toe",
+    nowAssignSub: "Duid aan wat jij nam. Wie de link opende, doet dat zelf.",
+    goAssignBtn: "\ud83c\udf7d\ufe0f Naar toewijzen \u2192",
+    assignForOthersBtn: "Iemand zonder gsm? Duid voor hen aan",
+    onePersonLess: "\u00e9\u00e9n minder",
+    somebodyOnMySpot: "nog iemand op mijn plaats",
+    qrJoinedLegend: "\ud83d\udcf1 = kwam via de link binnen en duidt normaal zelf aan.",
     copyLinkPre: "Liever zelf plakken?",
     copyLinkAction: "Kopieer de link",
     copyLinkPost: "en stuur hem waar je wil.",
@@ -929,7 +936,7 @@ const STRINGS = {
     errSave: "Opslaan mislukt",
     enterTipFirst: "Vul eerst een fooibedrag in.",
     confirmDeleteItem: "Dit item van de bon verwijderen? Wat er al aan toegewezen werd, verdwijnt mee.",
-    claimTitle: "✅ Wie heeft wat genomen? Wijs hier toe!",
+    claimTitle: "Wie heeft wat genomen? Wijs hier toe!",
     warnBadge: (n: number) => `⚠️ ${n} ${n === 1 ? "melding" : "meldingen"}`,
     statWhoTook: "Wie nam wat",
     perPersonShort: "Rekening p.p.",
@@ -1131,6 +1138,13 @@ const STRINGS = {
     lockedName: "🔒 Indique d'abord ton propre nom",
     shareLinkBtn: "🔗 Partager le lien",
     shareLinkHint: "Choisis ensuite ton app de messagerie — WhatsApp, Messenger, SMS…",
+    nowAssignTitle: "Attribue maintenant tes plats",
+    nowAssignSub: "Indique ce que tu as pris. Ceux qui ont ouvert le lien le font eux-m\u00eames.",
+    goAssignBtn: "\ud83c\udf7d\ufe0f Vers l\u2019attribution \u2192",
+    assignForOthersBtn: "Quelqu\u2019un sans t\u00e9l\u00e9phone ? Attribue pour lui",
+    onePersonLess: "un de moins",
+    somebodyOnMySpot: "quelqu\u2019un \u00e0 ma place",
+    qrJoinedLegend: "\ud83d\udcf1 = arriv\u00e9 via le lien et attribue normalement lui-m\u00eame.",
     copyLinkPre: "Tu préfères coller toi-même ?",
     copyLinkAction: "Copie le lien",
     copyLinkPost: "et envoie-le où tu veux.",
@@ -1555,7 +1569,7 @@ const STRINGS = {
     errSave: "Échec de l'enregistrement",
     enterTipFirst: "Indique d'abord un montant de pourboire.",
     confirmDeleteItem: "Supprimer cet article de l'addition ? Ce qui y était attribué disparaît aussi.",
-    claimTitle: "✅ Qui a pris quoi ? Répartis ici !",
+    claimTitle: "Qui a pris quoi ? Répartis ici !",
     warnBadge: (n: number) => `⚠️ ${n} ${n === 1 ? "alerte" : "alertes"}`,
     statWhoTook: "Qui a pris quoi",
     perPersonShort: "Addition p.p.",
@@ -3618,11 +3632,30 @@ export default function RundoTable() {
                 const me = participants.find((x) => x.id === meId) || participants[0]
                 if (!me) return null
                 const isPh = new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(me.name.trim()) || me.name.trim() === L.adminName
+                const seats = Math.max(1, me.seats ?? 1)
+                // Namen van de plaats: "Jan & Marie" wordt als twee losse velden getoond.
+                const delen = isPh ? [] : me.name.split("&").map((x) => x.trim()).filter(Boolean)
+                const bewaar = (idx: number, waarde: string) => {
+                  const lijst = Array.from({ length: Math.max(seats, idx + 1) }, (_, i) => (i === idx ? waarde.trim() : (delen[i] ?? "")))
+                  const naam = lijst.filter(Boolean).join(" & ")
+                  if (naam && naam !== me.name) renameGuest(me.id, naam)
+                }
                 return (
-                  <input id="own-name" key={`self-${me.id}-${me.name}`} defaultValue={isPh ? "" : me.name} placeholder={L.ownNamePlaceholder}
-                    onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== me.name) renameGuest(me.id, v) }}
-                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
-                    style={{ ...S.input, width: "100%", boxSizing: "border-box", border: isPh ? "1.5px solid rgba(192,57,43,0.5)" : "1.5px solid rgba(20,153,176,0.5)", background: isPh ? "rgba(192,57,43,0.03)" : "rgba(20,153,176,0.04)" }} />
+                  <>
+                    {Array.from({ length: seats }, (_, i) => i).map((i) => (
+                      <input key={`self-${me.id}-${i}-${me.name}`} id={i === 0 ? "own-name" : undefined} defaultValue={delen[i] ?? ""}
+                        placeholder={seats === 1 ? L.ownNamePlaceholder : i === 0 ? L.firstName : i === 1 ? L.secondName : L.extraName(i + 1)}
+                        onBlur={(e) => bewaar(i, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+                        style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 7, border: (i === 0 && isPh) ? "1.5px solid rgba(192,57,43,0.5)" : "1.5px solid rgba(20,153,176,0.5)", background: (i === 0 && isPh) ? "rgba(192,57,43,0.03)" : "rgba(20,153,176,0.04)" }} />
+                    ))}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 2 }}>
+                      {seats > 1 && (
+                        <button onPointerDown={(e) => { e.preventDefault(); setSeats(me.id, seats - 1) }} style={{ ...S.smallBtn, fontSize: 13, fontWeight: 800, color: "#5a6680" }}>− {L.onePersonLess}</button>
+                      )}
+                      <button onPointerDown={(e) => { e.preventDefault(); setSeats(me.id, seats + 1) }} style={{ ...S.smallBtn, fontSize: 13, fontWeight: 800, color: "#1499b0", borderColor: "rgba(20,153,176,0.4)" }}>+ {L.somebodyOnMySpot}</button>
+                    </div>
+                  </>
                 )
               })()}
             </div>
@@ -3680,12 +3713,23 @@ export default function RundoTable() {
                     <span onClick={() => { if (!requireName()) return; if (navigator.clipboard) navigator.clipboard.writeText(invite); setToast(L.toastInviteCopied) }} style={{ fontWeight: 800, color: "#1499b0", textDecoration: "underline", cursor: "pointer" }}>{L.copyLinkAction}</span>{" "}
                     {L.copyLinkPost}
                   </div>
+
+                  {/* Gedeeld? Dan is de volgende stap: zelf aanduiden wat jij nam. En wie
+                      geen gsm heeft (of geen zin), duid je er gewoon bij aan. */}
+                  <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
+                    <div style={{ fontSize: 15.5, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.nowAssignTitle}</div>
+                    <div style={{ fontSize: 13.5, color: "#5a6680", lineHeight: 1.45, marginBottom: 10 }}>{L.nowAssignSub}</div>
+                    <button onClick={() => { if (!requireTotal()) return; if (!requireName()) return; setAdminTab("overview"); scrollTop() }}
+                      style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 15.5, fontWeight: 800 }}>{L.goAssignBtn}</button>
+                    <button onClick={() => { if (typeof document !== "undefined") document.getElementById("wie-duid-ik-aan")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
+                      style={{ ...S.btn, width: "100%", marginTop: 8, padding: "10px 0", fontSize: 13.5, fontWeight: 700, color: "#5a6680" }}>{L.assignForOthersBtn}</button>
+                  </div>
                 </>
               )
             })()}
           </div>
 
-          <div style={{ ...S.card, order: 3 }}>
+          <div style={{ ...S.card, order: 3 }} id="wie-duid-ik-aan">
             <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
               <div style={{ fontSize: 16, fontWeight: 800, color: "#14213a", marginBottom: 6 }}>{L.whoAssignTitle}</div>
             </div>
@@ -3735,9 +3779,11 @@ export default function RundoTable() {
               )
               const Row = (p: Participant) => {
                 const isMe = p.id === meId
+                // Enkel wie zich via de link aanmeldde krijgt een badge; dat jij voor de
+                // rest aanduidt spreekt voor zich.
                 const origin = p.self_joined
                   ? { label: L.badgeSelf, color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
-                  : { label: L.badgeAdmin, color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
+                  : null
                 const badge = isMe ? { label: `${L.badgeMe} · ${L.adminBadge}`, color: "#1f8a4c", bg: "rgba(39,174,96,0.15)" } : origin
                 if (twoCol) {
                   return (
@@ -3748,7 +3794,7 @@ export default function RundoTable() {
                         {delBtn(p)}
                       </div>
                       <div style={{ marginTop: 5 }}>
-                        <span style={{ fontSize: 11.5, fontWeight: 700, color: badge.color, background: badge.bg, borderRadius: 7, padding: "3px 6px" }}>{badge.label}</span>
+                        {badge && <span style={{ fontSize: 11.5, fontWeight: 700, color: badge.color, background: badge.bg, borderRadius: 7, padding: "3px 6px" }}>{badge.label}</span>}
                       </div>
                     </div>
                   )
@@ -3757,7 +3803,7 @@ export default function RundoTable() {
                   <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 6px", borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: isMe ? 10 : 0, background: isMe ? "rgba(39,174,96,0.07)" : "transparent" }}>
                     <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 7 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>{namesBlock(p, 15)}</div>
-                      <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: badge.color, background: badge.bg, borderRadius: 7, padding: "4px 7px", whiteSpace: "nowrap" }}>{badge.label}</span>
+                      {badge && <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: badge.color, background: badge.bg, borderRadius: 7, padding: "4px 7px", whiteSpace: "nowrap" }}>{badge.label}</span>}
                     </div>
                     <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
                     {delBtn(p)}
@@ -3858,47 +3904,16 @@ export default function RundoTable() {
       )}
 
       {/* ─── ADMIN: Stand van zaken (bovenaan overzicht-tab) ─── */}
-      {isAdmin && adminTab === "overview" && participants.length > 0 && (
-        <div style={{ ...S.card, padding: 12 }}>
-          <button onClick={() => setShowJoined((v) => !v)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: 0 }}>
-            <span style={{ fontSize: 15.5, fontWeight: 800, color: "#14213a" }}>{L.whoJoinedTitle} {showJoined ? "▾" : "▸"}</span>
-            <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, borderRadius: 20, padding: "5px 9px", color: joinedCount >= totalPersons ? "#fff" : "#1499b0", background: joinedCount >= totalPersons ? "#27ae60" : "rgba(20,153,176,0.12)" }}>{L.joinedOf(joinedCount, totalPersons)}</span>
-          </button>
-          {showJoined && <div style={{ marginTop: 8 }}>{joinedList({ clickable: true })}</div>}
-        </div>
-      )}
-      {isAdmin && adminTab === "overview" && (
-        <div style={{ ...S.card, padding: 12 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#3b486a", marginBottom: 8 }}>{L.overviewTitle}</div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <Stat label={L.statTotal} value={`€${(billTotal + tipTotal).toFixed(2).replace(".", ",")}`} tone="navy" />
-            <div onClick={() => { if (typeof document !== "undefined") document.getElementById("rekening-per-persoon")?.scrollIntoView({ behavior: "smooth", block: "start" }) }} style={{ flex: 1, cursor: "pointer", textAlign: "center", background: allAssignedNow ? "rgba(39,174,96,0.14)" : "rgba(233,196,95,0.16)", border: allAssignedNow ? "2px solid rgba(39,174,96,0.75)" : "2px solid transparent", boxShadow: allAssignedNow ? "0 0 0 3px rgba(39,174,96,0.15), 0 4px 14px -4px rgba(39,174,96,0.55)" : "none", borderRadius: 12, padding: "8px 6px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 2 }} title={L.viewPerPersonAttr}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: allAssignedNow ? "#1f8a4c" : "#a06b00", lineHeight: 1.25 }}>{L.viewPerPerson}{allAssignedNow ? " →" : ""}</span>
-            </div>
-            {openUnits > 0 ? (
-              <div onClick={() => setShowTodo((v) => !v)} style={{ flex: 1, cursor: "pointer" }}>
-                <Stat label={L.statNotClaimed} value={`${openUnits}`} tone="red" />
+      {/* De todo-lijst blijft: die springt open als je wil afsluiten terwijl er nog
+          items open staan. De overzicht- en 'wie doet mee'-blokken zijn weg — je komt
+          hier om toe te wijzen, niet om statistieken te lezen. */}
+      {isAdmin && adminTab === "overview" && showTodo && (openUnits > 0 || undecidedShared.length > 0) && (
+        <div style={{ ...S.card, padding: 12 }} id="nog-te-doen">
+            <div style={{ border: "1px solid rgba(224,107,94,0.35)", background: "rgba(224,107,94,0.05)", borderRadius: 12, padding: "10px 12px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: 14, fontWeight: 800, color: "#c0392b" }}>{L.todoTitle}</span>
+                <button onClick={() => setShowTodo(false)} style={{ background: "none", border: "none", fontSize: 18, color: "#c0392b", cursor: "pointer", padding: 0, lineHeight: 1 }}>✕</button>
               </div>
-            ) : (
-              <div style={{ flex: 1, textAlign: "center", background: "rgba(39,174,96,0.12)", borderRadius: 12, padding: "8px 4px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 1 }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: "#27ae60", lineHeight: 1 }}>✓</div>
-                <div style={{ fontSize: 13.5, fontWeight: 800, color: "#27ae60", lineHeight: 1.15 }}>{L.allClaimed}</div>
-              </div>
-            )}
-          </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 9 }}>
-            <button onClick={() => { setJumpToAssign((n) => n + 1); if (typeof document !== "undefined") document.getElementById("wie-nam-wat")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
-              style={{ flex: 1, textAlign: "center", background: "#fff", border: "1px solid rgba(16,24,40,0.15)", borderRadius: 10, padding: "10px 6px", fontSize: 14, fontWeight: 800, color: "#14213a", cursor: "pointer" }}>👥 {L.statWhoTook}</button>
-            <button onClick={() => { if (typeof document !== "undefined") document.getElementById("rekening-per-persoon")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
-              style={{ flex: 1, textAlign: "center", background: "#fff", border: "1px solid rgba(16,24,40,0.15)", borderRadius: 10, padding: "10px 6px", fontSize: 14, fontWeight: 800, color: "#14213a", cursor: "pointer" }}>🧾 {L.perPersonShort}</button>
-            {baseItems.some((it) => it.is_shared) && (
-              <button onClick={() => { if (typeof document !== "undefined") document.getElementById("gedeelde-items")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
-                style={{ flex: 1, textAlign: "center", background: "#fff", border: "1px solid rgba(16,24,40,0.15)", borderRadius: 10, padding: "10px 6px", fontSize: 14, fontWeight: 800, color: "#14213a", cursor: "pointer" }}>👥 {L.statSharedItems}</button>
-            )}
-          </div>
-          {showTodo && (openUnits > 0 || undecidedShared.length > 0) && (
-            <div style={{ marginTop: 10, border: "1px solid rgba(224,107,94,0.35)", background: "rgba(224,107,94,0.05)", borderRadius: 12, padding: "10px 12px" }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#c0392b", marginBottom: 6 }}>{L.todoTitle}</div>
               {participants.length === 0 && <div style={{ fontSize: 14, color: "#a06b00", marginBottom: 6 }}>{L.addGuestsToAssign}</div>}
               {items.filter((it) => !it.is_shared && it.quantity - claimedQty(it.id) > 0).map((it) => {
                 const openN = it.quantity - claimedQty(it.id)
@@ -3928,7 +3943,6 @@ export default function RundoTable() {
                 </div>
               ))}
             </div>
-          )}
         </div>
       )}
 
@@ -4053,7 +4067,10 @@ export default function RundoTable() {
                     </div>
                   ) : (
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                      <span style={{ fontSize: 14.5, fontWeight: 700, color: "#5a6680" }}>{L.assignedLabel} <span style={{ color: "#c0392b", fontWeight: 700 }}>{L.todoLeft(todo)}</span></span>
+                      <span style={{ fontSize: 14.5, fontWeight: 700, color: "#5a6680" }}>{L.assignedLabel}{" "}
+                        <span onClick={() => { setShowTodo(true); setTimeout(() => { if (typeof document !== "undefined") document.getElementById("nog-te-doen")?.scrollIntoView({ behavior: "smooth", block: "start" }) }, 50) }}
+                          style={{ color: "#c0392b", fontWeight: 800, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>{L.todoLeft(todo)}</span>
+                      </span>
                       <span style={{ fontSize: 17, fontWeight: 800, color: "#14213a" }}>€{assignedSum.toFixed(2).replace(".", ",")} <span style={{ fontSize: 14, color: "#9aa0ab", fontWeight: 700 }}>/ €{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</span></span>
                     </div>
                   )}
@@ -5116,11 +5133,11 @@ function AssignPicker({ participants, itemId, isShared, confirmedFn, onAssign, o
   confirmedFn: (pid: string) => boolean
   onAssign: (pid: string, warn: boolean) => void; onClose: () => void
 }) {
-  const [showOthers, setShowOthers] = useState(false)
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const open = participants.filter((p) => !confirmedFn(p.id))
-  const others = participants.filter((p) => confirmedFn(p.id))
+  // Alle namen meteen zichtbaar — niets meer verstopt achter "andere persoon". Wie via de
+  // QR-link binnenkwam krijgt een eigen kleur: die duidt in principe zelf aan.
+  const heeftZelfAangemeld = participants.some((p) => p.self_joined)
   return (
     <div style={{ marginTop: 8, marginLeft: 25, padding: 10, borderRadius: 12, background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.2)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -5128,18 +5145,20 @@ function AssignPicker({ participants, itemId, isShared, confirmedFn, onAssign, o
         <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 14.5, color: "#9aa0ab", fontWeight: 800 }}>✕</button>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-        {open.length === 0 && !showOthers && <span style={{ fontSize: 13.5, color: "#9aa0ab" }}>{L.everyoneConfirmed}</span>}
-        {open.map((p) => (
-          <button key={p.id} onClick={() => onAssign(p.id, false)} style={{ fontSize: 14, fontWeight: 700, borderRadius: 10, padding: "7px 11px", cursor: "pointer", border: "1px solid rgba(16,24,40,0.12)", background: "#fff", color: "#5a6680" }}>{p.name}</button>
-        ))}
-        {!showOthers && others.length > 0 && (
-          <button onClick={() => setShowOthers(true)} style={{ fontSize: 14, fontWeight: 700, borderRadius: 10, padding: "7px 11px", cursor: "pointer", border: "1px dashed rgba(16,24,40,0.25)", background: "transparent", color: "#8b93a8" }}>{L.otherPerson}</button>
-        )}
-        {showOthers && others.map((p) => (
-          <button key={p.id} onClick={() => onAssign(p.id, true)} style={{ fontSize: 14, fontWeight: 700, borderRadius: 10, padding: "7px 11px", cursor: "pointer", border: "1px solid rgba(224,107,94,0.4)", background: "rgba(224,107,94,0.06)", color: "#c0392b" }}>{p.name} ⚠️</button>
-        ))}
+        {participants.map((p) => {
+          const klaar = confirmedFn(p.id)
+          const viaQr = !!p.self_joined
+          return (
+            <button key={p.id} onClick={() => onAssign(p.id, klaar)} style={{
+              fontSize: 14, fontWeight: 700, borderRadius: 10, padding: "7px 11px", cursor: "pointer",
+              border: viaQr ? "2px solid #1499b0" : "1px solid rgba(16,24,40,0.12)",
+              background: viaQr ? "rgba(20,153,176,0.08)" : "#fff",
+              color: viaQr ? "#0f7488" : "#5a6680", opacity: klaar ? 0.75 : 1,
+            }}>{viaQr && "📱 "}{p.name}{klaar && " ✓"}</button>
+          )
+        })}
       </div>
-      {showOthers && <div style={{ fontSize: 12.5, color: "#a06b00", marginTop: 6 }}>{L.assignConfirmedWarn}</div>}
+      {heeftZelfAangemeld && <div style={{ fontSize: 12.5, color: "#0f7488", marginTop: 7, lineHeight: 1.45 }}>{L.qrJoinedLegend}</div>}
     </div>
   )
 }
@@ -5238,7 +5257,6 @@ function ClaimScreen(props: {
         <div style={S.card}>
           <div onClick={isAdmin && !(warnCount && warnCount > 0) ? () => setClaimCollapsed((v) => !v) : undefined} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, cursor: isAdmin ? "pointer" : "default", marginBottom: (isAdmin && claimCollapsed) ? 0 : 10 }}>
             <h3 style={{ ...S.h3, marginBottom: 0 }}>{L.claimTitle}</h3>
-            {!!warnCount && warnCount > 0 && <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#b5591a", background: "rgba(243,156,18,0.14)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 20, padding: "5px 8px", whiteSpace: "nowrap" }}>{L.warnBadge(warnCount)}</span>}
             {isAdmin && !(warnCount && warnCount > 0) && <span style={{ fontSize: 14, color: "#9aa0ab", fontWeight: 700, flexShrink: 0 }}>{claimCollapsed ? L.collapseOpen : L.collapseClose}</span>}
           </div>
           {isAdmin && claimCollapsed && !(warnCount && warnCount > 0)
