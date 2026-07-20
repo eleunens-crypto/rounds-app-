@@ -665,6 +665,9 @@ const STRINGS = {
     checkTax: "BTW / andere kosten / kortingen apart toegevoegd?",
     checkShared: "gedeelde items?",
     allOkGoGuests: "✓ Alles klopt — ga naar Gasten en delen →",
+    allOkTitle: "Alles klopt",
+    allOkSub: "Ga verder naar het delen met je gasten.",
+    goGuestsBtn: "Naar Gasten en delen \u2192",
     scanModalTitle: "🧾 Rekening scannen",
     scanModalTitleAdded: "🧾 Rekening toegevoegd",
     scanModalIntro: "Maak een duidelijke foto van de rekening of kies er één uit je galerij.",
@@ -1336,6 +1339,9 @@ const STRINGS = {
     checkTax: "TVA / autres frais / réductions ajoutés séparément ?",
     checkShared: "articles partagés ?",
     allOkGoGuests: "✓ Tout est correct — vers Invités et partage →",
+    allOkTitle: "Tout est correct",
+    allOkSub: "Continue vers le partage avec tes invit\u00e9s.",
+    goGuestsBtn: "Vers Invit\u00e9s et partage \u2192",
     scanModalTitle: "🧾 Scanner l'addition",
     scanModalTitleAdded: "🧾 Addition ajoutée",
     scanModalIntro: "Prends ou choisis une photo de l'addition. Tu pourras ensuite vérifier et corriger les articles reconnus.",
@@ -3646,10 +3652,6 @@ export default function RundoTable() {
             )
           })()}
 
-          {items.length > 0 && receiptConfirmed && !receiptEditing && group?.receipt_total != null && Math.abs((group.receipt_total ?? 0) - billTotal) < 0.005 && (
-            <button onClick={goGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginBottom: 10, padding: "9px 0", fontSize: 16.5, fontWeight: 800, boxShadow: "0 0 0 2px rgba(39,174,96,0.5), 0 6px 16px -6px rgba(39,174,96,0.6)" }}>{L.allOkGoGuests}</button>
-          )}
-
           {items.length > 0 && (
             <>
           {isAdmin && zeroPriceItems.length > 0 && (
@@ -5395,7 +5397,15 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         )
       })()}
       {onGoGuests && (
-        <button onClick={onGoGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, padding: "14px 0", fontSize: 18, fontWeight: 800, boxShadow: billOk ? "0 0 0 2px rgba(39,174,96,0.55), 0 8px 24px -6px rgba(39,174,96,0.65)" : "0 0 0 2px rgba(224,107,94,0.6), 0 8px 24px -6px rgba(224,107,94,0.65)" }}>{billOk ? L.allOkGoGuests : L.billCorrectGoGuests}</button>
+        billOk ? (
+          <div style={{ ...S.card, marginTop: 16, background: "linear-gradient(160deg,#eafaf1,#d9f2e4)", border: "2px solid rgba(31,138,76,0.45)", padding: "18px 16px" }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#15703f", marginBottom: 5, lineHeight: 1.25 }}>{L.allOkTitle}</div>
+            <div style={{ fontSize: 16, color: "#3c6b51", lineHeight: 1.5, marginBottom: 14 }}>{L.allOkSub}</div>
+            <button onClick={onGoGuests} style={{ width: "100%", padding: "16px 0", fontSize: 18, fontWeight: 800, border: "none", borderRadius: 14, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 8px 20px -8px rgba(31,138,76,0.75)", cursor: "pointer" }}>{L.goGuestsBtn}</button>
+          </div>
+        ) : (
+          <button onClick={onGoGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, padding: "14px 0", fontSize: 18, fontWeight: 800, boxShadow: "0 0 0 2px rgba(224,107,94,0.6), 0 8px 24px -6px rgba(224,107,94,0.65)" }}>{L.billCorrectGoGuests}</button>
+        )
       )}
     </div>
   )
