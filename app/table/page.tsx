@@ -489,6 +489,8 @@ const STRINGS = {
     yourselfFirstTitle: "✍️ Voeg eerst jezelf (als admin) hier toe",
     yourselfStepTitle: "\u270d\ufe0f Voeg eerst jezelf toe",
     yourselfStepSub: "\u2026 en eventueel je partner en/of kinderen als jullie samen betalen.",
+    addYourselfBtn: "\u270d\ufe0f Vul je naam in",
+    howManyAdminQ: "Voor hoeveel personen betaal jij?",
     howManyOnYourSpot: "Met hoeveel zit je op jouw plaats?",
     pickCountFirst: "Kies eerst hierboven met hoeveel je bent.",
     adminBadge: "admin",
@@ -1130,6 +1132,8 @@ const STRINGS = {
     yourselfFirstTitle: "✍️ Ajoute-toi d'abord (en tant qu'admin)",
     yourselfStepTitle: "\u270d\ufe0f Ajoute-toi d\u2019abord",
     yourselfStepSub: "\u2026 et \u00e9ventuellement ton/ta partenaire et/ou tes enfants si vous payez ensemble.",
+    addYourselfBtn: "\u270d\ufe0f Remplis ton nom",
+    howManyAdminQ: "Pour combien de personnes paies-tu ?",
     howManyOnYourSpot: "Combien \u00eates-vous \u00e0 ta place ?",
     pickCountFirst: "Choisis d\u2019abord ci-dessus combien vous \u00eates.",
     adminBadge: "admin",
@@ -1853,8 +1857,10 @@ export default function RundoTable() {
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [receiptZoom, setReceiptZoom] = useState(1)  // 1 = passend op het scherm
-  // Heeft de beheerder bewust gekozen met hoeveel hij op zijn plaats zit?
-  const [selfSeatsPicked, setSelfSeatsPicked] = useState(false)
+  // Popup waarin de beheerder zichzelf toevoegt: eerst met hoeveel, dan de naam/namen.
+  const [showSelfModal, setShowSelfModal] = useState(false)
+  const [selfSeats, setSelfSeats] = useState(1)
+  const [selfNames, setSelfNames] = useState<string[]>([""])
   const [newGuest, setNewGuest] = useState("")
   const [claimSpot, setClaimSpot] = useState<string | null>(null)
   const [claimSeats, setClaimSeats] = useState(1)
@@ -3683,55 +3689,26 @@ export default function RundoTable() {
                 if (!me) return null
                 const isPh = new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(me.name.trim()) || me.name.trim() === L.adminName
                 const seats = Math.max(1, me.seats ?? 1)
-                // Zelfde volgorde als bij een gast die via de link binnenkomt: eerst hoeveel
-                // personen op jouw plaats, dan pas de naam of namen.
-                const moetKiezen = isPh && !selfSeatsPicked
-                const delen = isPh ? [] : me.name.split("&").map((x) => x.trim()).filter(Boolean)
-                const bewaar = (idx: number, waarde: string) => {
-                  const lijst = Array.from({ length: Math.max(seats, idx + 1) }, (_, i) => (i === idx ? waarde.trim() : (delen[i] ?? "")))
-                  const naam = lijst.filter(Boolean).join(" & ")
-                  if (naam && naam !== me.name) renameGuest(me.id, naam)
+                const openPopup = () => {
+                  setSelfNames(isPh ? Array.from({ length: seats }, () => "") : me.name.split(/\s*&\s*/).map((x) => x.trim()))
+                  setSelfSeats(seats)
+                  setShowSelfModal(true)
                 }
-                const kies = (n: number) => { setSelfSeatsPicked(true); if (n !== seats) setSeats(me.id, n) }
                 return (
                   <>
                     <div style={{ fontSize: 17, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.yourselfStepTitle} <span style={{ color: "#c0392b" }}>*</span></div>
-                    <div style={{ fontSize: 14.5, color: "#5a6680", lineHeight: 1.45, marginBottom: 10 }}>{L.yourselfStepSub}</div>
-
-                    <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-                      {[1, 2, 3].map((n) => {
-                        const aan = !moetKiezen && (n === 3 ? seats >= 3 : seats === n)
-                        const label = n === 1 ? L.onePerson : n === 2 ? L.twoPersons : L.threePlus
-                        return (
-                          <button key={n} onClick={() => kies(n === 3 ? Math.max(3, seats) : n)}
-                            style={{ flex: 1, fontSize: 15, fontWeight: 800, padding: "12px 4px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
-                        )
-                      })}
-                    </div>
-                    {!moetKiezen && seats >= 3 && (
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginBottom: 12 }}>
-                        <button onClick={() => setSeats(me.id, Math.max(3, seats - 1))} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 19 }}>−</button>
-                        <b style={{ fontSize: 18, color: "#14213a" }}>{seats}</b>
-                        <button onClick={() => setSeats(me.id, Math.min(8, seats + 1))} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 19, background: "rgba(27,42,74,0.12)" }}>+</button>
-                      </div>
-                    )}
-
-                    {moetKiezen ? (
-                      <div style={{ fontSize: 14.5, color: "#c0392b", fontWeight: 700 }}>{L.pickCountFirst}</div>
+                    <div style={{ fontSize: 15, color: "#5a6680", lineHeight: 1.45, marginBottom: 11 }}>{L.yourselfStepSub}</div>
+                    {isPh ? (
+                      <button onClick={openPopup}
+                        style={{ width: "100%", padding: "15px 0", fontSize: 16.5, fontWeight: 800, borderRadius: 12, border: "1.5px solid rgba(192,57,43,0.5)", background: "rgba(192,57,43,0.04)", color: "#c0392b", cursor: "pointer" }}>{L.addYourselfBtn}</button>
                     ) : (
-                      <>
-                        <div style={{ fontSize: 15.5, fontWeight: 800, color: "#14213a", marginBottom: 7 }}>{seats > 1 ? L.yourNamesQ : L.yourNameQ}</div>
-                        {Array.from({ length: seats }, (_, i) => i).map((i) => (
-                          <input key={`self-${me.id}-${i}-${me.name}`} id={i === 0 ? "own-name" : undefined} defaultValue={delen[i] ?? ""}
-                            placeholder={seats === 1 ? L.ownNamePlaceholder : i === 0 ? L.firstName : i === 1 ? L.secondName : L.extraName(i + 1)}
-                            onBlur={(e) => bewaar(i, e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
-                            style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 7, border: (i === 0 && isPh) ? "1.5px solid rgba(192,57,43,0.5)" : "1.5px solid rgba(20,153,176,0.5)", background: (i === 0 && isPh) ? "rgba(192,57,43,0.03)" : "rgba(20,153,176,0.04)" }} />
-                        ))}
-                        {seats > 1 && delen.filter(Boolean).length > 0 && (
-                          <div style={{ fontSize: 14, color: "#9aa0ab" }}>{L.showsAsOne} <b style={{ color: "#14213a" }}>{delen.filter(Boolean).join(" & ")}</b></div>
-                        )}
-                      </>
+                      <div onClick={openPopup} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", borderRadius: 12, border: "1.5px solid rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.05)", padding: "13px 14px" }}>
+                        <span style={{ minWidth: 0 }}>
+                          <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{me.name}</span>
+                          <span style={{ fontSize: 14, color: "#5a6680" }}>{seats} {seats === 1 ? L.person : L.persons}</span>
+                        </span>
+                        <span style={{ flexShrink: 0, fontSize: 15, fontWeight: 800, color: "#1499b0" }}>✏️ ›</span>
+                      </div>
                     )}
                   </>
                 )
@@ -4520,6 +4497,57 @@ export default function RundoTable() {
           </div>
         </div>
       )}
+
+      {/* Popup voor de beheerder: zelfde stappen als een gast die via de link binnenkomt —
+          eerst met hoeveel, dan de naam of namen. */}
+      {showSelfModal && (() => {
+        const me = participants.find((x) => x.id === meId) || participants[0]
+        if (!me) return null
+        const bewaar = () => {
+          const naam = selfNames.slice(0, selfSeats).map((x) => x.trim()).filter(Boolean).join(" & ")
+          if (!naam) { setCenterNote({ body: L.enterYourName }); return }
+          if (selfSeats !== Math.max(1, me.seats ?? 1)) setSeats(me.id, selfSeats)
+          if (naam !== me.name) renameGuest(me.id, naam)
+          setShowSelfModal(false)
+        }
+        return (
+          <div style={{ ...S.overlay, zIndex: 3100 }} onClick={() => setShowSelfModal(false)}>
+            <div style={{ ...S.modal, width: "min(400px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 3 }}>{L.howManyAdminQ}</h3>
+              <div style={{ fontSize: 15, color: "#9aa0ab", lineHeight: 1.45, marginBottom: 13 }}>{L.howManyAdminSub}</div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                {[1, 2, 3].map((n) => {
+                  const aan = n === 3 ? selfSeats >= 3 : selfSeats === n
+                  const label = n === 1 ? L.onePerson : n === 2 ? L.twoPersons : L.threePlus
+                  return (
+                    <button key={n} onClick={() => { const v = n === 3 ? Math.max(3, selfSeats) : n; setSelfSeats(v); setSelfNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? "")) }}
+                      style={{ flex: 1, fontSize: 15.5, fontWeight: 800, padding: "13px 4px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
+                  )
+                })}
+              </div>
+              {selfSeats >= 3 && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginBottom: 12 }}>
+                  <button onClick={() => { const v = Math.max(3, selfSeats - 1); setSelfSeats(v); setSelfNames((c) => c.slice(0, v)) }} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 19 }}>−</button>
+                  <b style={{ fontSize: 18, color: "#14213a" }}>{selfSeats}</b>
+                  <button onClick={() => { const v = Math.min(8, selfSeats + 1); setSelfSeats(v); setSelfNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? "")) }} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 19, background: "rgba(27,42,74,0.12)" }}>+</button>
+                </div>
+              )}
+              <div style={{ fontSize: 17, fontWeight: 800, color: "#14213a", marginBottom: 8 }}>{selfSeats > 1 ? L.yourNamesQ : L.yourNameQ}</div>
+              {Array.from({ length: selfSeats }, (_, i) => i).map((i) => (
+                <input key={i} value={selfNames[i] ?? ""} onChange={(e) => setSelfNames((c) => { const n = [...c]; n[i] = e.target.value; return n })}
+                  onKeyDown={(e) => { if (e.key === "Enter") bewaar() }}
+                  placeholder={selfSeats === 1 ? L.namePlaceholder : i === 0 ? L.firstName : i === 1 ? L.secondName : L.extraName(i + 1)}
+                  style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 7 }} autoFocus={i === 0} />
+              ))}
+              {selfSeats > 1 && selfNames.filter((n) => n.trim()).length > 0 && (
+                <div style={{ fontSize: 15, color: "#9aa0ab", marginBottom: 10 }}>{L.showsAsOne} <b style={{ color: "#14213a" }}>{selfNames.filter((n) => n.trim()).join(" & ")}</b></div>
+              )}
+              <button onClick={bewaar} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 17, fontWeight: 800, marginTop: 4 }}>{selfSeats > 1 ? L.thatsUs : L.thatsMe}</button>
+              <button onClick={() => setShowSelfModal(false)} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>{L.cancel}</button>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* In-app ja/nee-bevestiging. */}
       {confirmDlg && (
