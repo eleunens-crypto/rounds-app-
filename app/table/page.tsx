@@ -509,7 +509,7 @@ const STRINGS = {
     personsFirst: "⚠️ Vul eerst in met hoeveel jullie zijn.",
     lockedPersons: "🔒 Eerst het aantal personen invullen",
     lockedName: "🔒 Vul eerst je eigen naam in",
-    shareLinkBtn: "🔗 Deel de link",
+    shareLinkBtn: "🔗 Toch link delen",
     shareLinkHint: "Kies daarna je berichtenapp — WhatsApp, Messenger, sms…",
     nowAssignTitle: "Klaar? Ga naar toewijzen",
     nowAssignSub: "Duid aan wie wat nam. Zo weet iedereen wat hij moet betalen.",
@@ -536,6 +536,7 @@ const STRINGS = {
     copyLinkPre: "Of",
     copyLinkAction: "kopieer de link hier",
     copyLinkLink: "Liever kopiëren en zelf plakken?",
+    shareDeliveryHint: "QR scannen is het snelste. Link delen kan soms 1 of 2 min. duren.",
     copyLinkPost: " en plak waar je wil.",
     billOkBadge: "✓ bon klopt — je kan delen",
     seatFreedUp: "Die plaats telt nu voor 2 — er is één vrije plaats minder.",
@@ -568,7 +569,7 @@ const STRINGS = {
     sharedProblemTitle: "Let op — gedeelde items kloppen mogelijk niet:",
     sharedProblemAsk: "Toch afsluiten?",
     totalsMatch: "✓ klopt met de bon",
-    tipInclLabel: (a: string) => `💶 incl. €${a} fooi`,
+    tipInclLabel: (a: string) => `incl. €${a} fooi`,
     totalsDiff: (d: number) => `⚠️ €${d.toFixed(2).replace(".", ",")} verschil`,
     mixHint: "Gebruik gerust allebei — het één sluit het ander niet uit.",
     meLabel: "jij",
@@ -858,7 +859,7 @@ const STRINGS = {
     itemsBelowLabel: "Items hieronder",
     tooMuchInList: "Te veel in de lijst",
     tooLittleInList: "Te weinig in de lijst",
-    compareFix: "Vergelijk met de bon en corrigeer hieronder!",
+    compareFix: "Vergelijk met de itemlijst hieronder en corrigeer!",
     roundingTitle: "Niets gevonden? Mogelijk afrondingsverschil",
     roundingSub: "Aanvaarden en verdergaan",
     roundingDone: (d: string) => `€${d} afronding aanvaard. Je kan verder naar Gasten & delen.`,
@@ -920,7 +921,8 @@ const STRINGS = {
     tipEqualNote: "· gelijk over wie bestelde",
     clearTip: "Wissen",
     changeTip: "Wijzigen",
-    whoPaysTip: "Wie betaalt de fooi mee?",
+    whoPaysTip: "De fooi wordt verdeeld over deze personen",
+    whoPaysTipSub: "Tik iemand aan om hem weg te laten.",
     tipSplitHint: "Standaard betaalt iedereen mee. Tik iemand aan om die eruit te halen.",
     tipItemName: "Fooi",
     taxLineLabel: "BTW / kosten (verdeeld)",
@@ -959,6 +961,8 @@ const STRINGS = {
     seatsSaveMsg: "Voeg in Supabase de kolom seats toe aan table_participants om dit te bewaren.",
     seatsChanged: "Aantal personen aangepast — eerdere keuzes gewist, tik opnieuw aan",
     finalizeColsMsg: "Voeg in Supabase de kolommen finalized (bool) en disputed_by (text) toe aan table_groups.",
+    unresolvedRemarkTitle: "Eerst de opmerking oplossen",
+    unresolvedRemarkBody: "Een gast liet een opmerking na. Los die eerst bovenaan op voor je de rekening opnieuw afsluit \u2014 zo weet de gast dat het geregeld is.",
     errPing: "Seintje versturen mislukt",
     errUpdate: "Bijwerken mislukt",
     confirmDeleteGuest: "Deze gast verwijderen? Zijn/haar claims verdwijnen ook.",
@@ -1184,7 +1188,7 @@ const STRINGS = {
     personsFirst: "⚠️ Indique d'abord combien vous êtes.",
     lockedPersons: "🔒 Indique d'abord le nombre de personnes",
     lockedName: "🔒 Indique d'abord ton propre nom",
-    shareLinkBtn: "🔗 Partage le lien",
+    shareLinkBtn: "🔗 Partager quand m\u00eame",
     shareLinkHint: "Choisis ensuite ton app de messagerie — WhatsApp, Messenger, SMS…",
     nowAssignTitle: "Prêt ? Va vers l’attribution",
     nowAssignSub: "Indique qui a pris quoi. Ainsi chacun sait ce qu\u2019il doit payer.",
@@ -1211,6 +1215,7 @@ const STRINGS = {
     copyLinkPre: "Ou",
     copyLinkAction: "copie le lien ici",
     copyLinkLink: "Tu préfères copier et coller toi-même ?",
+    shareDeliveryHint: "Scanner le QR est le plus rapide. Partager le lien peut prendre 1 \u00e0 2 min.",
     copyLinkPost: " et colle-le o\u00f9 tu veux.",
     billOkBadge: "✓ l'addition est correcte — tu peux partager",
     seatFreedUp: "Cette place compte maintenant pour 2 — il y a une place libre en moins.",
@@ -1243,7 +1248,7 @@ const STRINGS = {
     sharedProblemTitle: "Attention — les articles partagés semblent incorrects :",
     sharedProblemAsk: "Clôturer quand même ?",
     totalsMatch: "✓ correspond à l'addition",
-    tipInclLabel: (a: string) => `💶 pourboire de €${a} inclus`,
+    tipInclLabel: (a: string) => `pourboire de €${a} inclus`,
     totalsDiff: (d: number) => `⚠️ €${d.toFixed(2).replace(".", ",")} d'écart`,
     mixHint: "Utilisez les deux — l'un n'exclut pas l'autre.",
     meLabel: "toi",
@@ -1533,7 +1538,7 @@ const STRINGS = {
     itemsBelowLabel: "Articles ci-dessous",
     tooMuchInList: "En trop dans la liste",
     tooLittleInList: "Manque dans la liste",
-    compareFix: "Compare avec l'addition et corrige ci-dessous !",
+    compareFix: "Compare avec la liste d'articles ci-dessous et corrige !",
     roundingTitle: "Rien trouvé ? Peut-être un écart d'arrondi",
     roundingSub: "Accepter et continuer",
     roundingDone: (d: string) => `Écart d'arrondi de €${d} accepté. Tu peux continuer.`,
@@ -1595,7 +1600,8 @@ const STRINGS = {
     tipEqualNote: "· également entre ceux qui ont commandé",
     clearTip: "Effacer",
     changeTip: "Modifier",
-    whoPaysTip: "Qui participe au pourboire ?",
+    whoPaysTip: "Le pourboire est r\u00e9parti entre ces personnes",
+    whoPaysTipSub: "Touche quelqu\u2019un pour l\u2019exclure.",
     tipSplitHint: "Par d\u00e9faut tout le monde participe. Touche quelqu\u2019un pour l\u2019exclure.",
     tipItemName: "Pourboire",
     taxLineLabel: "TVA / frais (répartis)",
@@ -1634,6 +1640,8 @@ const STRINGS = {
     seatsSaveMsg: "Ajoute la colonne seats à table_participants dans Supabase pour l'enregistrer.",
     seatsChanged: "Nombre de personnes modifié — choix précédents effacés, coche à nouveau",
     finalizeColsMsg: "Ajoute les colonnes finalized (bool) et disputed_by (text) à table_groups dans Supabase.",
+    unresolvedRemarkTitle: "R\u00e9sous d\u2019abord la remarque",
+    unresolvedRemarkBody: "Un invit\u00e9 a laiss\u00e9 une remarque. R\u00e9sous-la d\u2019abord en haut avant de refermer l\u2019addition \u2014 ainsi l\u2019invit\u00e9 sait que c\u2019est r\u00e9gl\u00e9.",
     errPing: "Échec de l'envoi du signal",
     errUpdate: "Échec de la mise à jour",
     confirmDeleteGuest: "Supprimer cet invité ? Ses sélections disparaissent aussi.",
@@ -2268,8 +2276,19 @@ export default function RundoTable() {
 
   const finalizeBill = async (on: boolean) => {
     if (!group) return
-    setGroup((cur) => cur ? { ...cur, finalized: on, disputed_by: on ? cur.disputed_by : null } : cur)
-    const patch = on ? { finalized: true, finalized_at: new Date().toISOString() } : { finalized: false, disputed_by: null, finalized_at: null }
+    // Afsluiten mag niet zolang er nog een onopgeloste gast-opmerking bovenaan staat —
+    // anders verdwijnt die stil en wordt de gast niet opnieuw verwittigd.
+    if (on) {
+      const openDisputes = parseDisputes(group.disputed_by || "").filter((d) => !d.resolved)
+      if (openDisputes.length > 0) {
+        setCenterNote({ title: L.unresolvedRemarkTitle, body: L.unresolvedRemarkBody })
+        return
+      }
+    }
+    // Bij heropenen laten we disputed_by staan — een open melding blijft dus openstaan
+    // tot de beheerder ze bovenaan oplost.
+    setGroup((cur) => cur ? { ...cur, finalized: on } : cur)
+    const patch = on ? { finalized: true, finalized_at: new Date().toISOString() } : { finalized: false, finalized_at: null }
     const { error } = await supabase.from("table_groups").update(patch).eq("id", group.id)
     if (error && /finalized|disputed_by|finalized_at/.test(error.message || "")) {
       setError(L.finalizeColsMsg)
@@ -3638,7 +3657,7 @@ export default function RundoTable() {
                           <span style={{ fontSize: 21, fontWeight: 800, color: "#e07b28" }}>€{diffTxt}</span>
                         </div>
                       </div>
-                      <div style={{ fontSize: 15.5, fontWeight: 800, color: "#8a4514", marginBottom: 4 }}>{L.compareFix}</div>
+                      <div style={{ fontSize: 17.5, fontWeight: 800, color: "#c0392b", marginBottom: 6 }}>{L.compareFix}</div>
                       <ul style={{ margin: 0, paddingLeft: 16, fontSize: 15.5, color: "#8a4514", lineHeight: 1.65 }}>
                         <li>{L.checkTax}</li>
                         <li>{L.checkPrices}</li>
@@ -3693,8 +3712,8 @@ export default function RundoTable() {
                   const targetCount = taxTargetIds(t).size
                   const open = taxConfig === t.id
                   return (
-                    <div key={t.id} style={{ borderTop: "1px solid rgba(0,0,0,0.05)", paddingTop: 9, marginTop: 9 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div key={t.id} style={{ borderTop: "1px solid rgba(0,0,0,0.05)", paddingTop: 9, marginTop: 9, minWidth: 0, overflowWrap: "anywhere" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 20, flexShrink: 0 }}>🧮</span>
                         <input value={t.name} onChange={(e) => setItems((cur) => cur.map((x) => x.id === t.id ? { ...x, name: e.target.value } : x))}
                           onBlur={(e) => { if (group?.finalized) { setToast(L.reopenFirst); loadAll(group.id); return } supabase.from("table_items").update({ name: e.target.value }).eq("id", t.id).then(() => loadAll(group.id)) }}
@@ -3718,11 +3737,11 @@ export default function RundoTable() {
                         ))}
                         <button onClick={() => setTaxRate(t, null)} style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 9, padding: "6px 11px", cursor: "pointer", border: !t.tax_rate ? "none" : "1px solid rgba(16,24,40,0.14)", background: !t.tax_rate ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff", color: !t.tax_rate ? "#fff" : "#5a6680" }}>{L.fixedAmount}</button>
                       </div>
-                      <div style={{ fontSize: 15.5, color: "#9aa0ab", marginTop: 4, marginLeft: 25 }}>
+                      <div style={{ fontSize: 15.5, color: "#9aa0ab", marginTop: 4, marginLeft: 25, overflowWrap: "anywhere" }}>
                         {t.tax_rate ? `${t.tax_rate}% ` : ""}{L.distributedWord} {overAll ? L.overWholeBillShort : L.overNItems(targetCount)}{L.tapGearToChange}
                       </div>
                       <div style={{ marginLeft: 25, marginTop: 4 }}>
-                        <button onClick={() => deleteItem(t.id)} style={{ border: "none", background: "none", padding: 0, cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#c0685c" }}>{L.removeCosts}</button>
+                        <button onClick={() => deleteItem(t.id)} style={{ border: "none", background: "none", padding: 0, cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#c0685c", textAlign: "left", overflowWrap: "anywhere" }}>{L.removeCosts}</button>
                       </div>
                       {open && (
                         <div style={{ marginLeft: 25, marginTop: 8, padding: 10, borderRadius: 12, background: "#fbfaff", border: "1px solid rgba(90,108,166,0.2)" }}>
@@ -3871,6 +3890,10 @@ export default function RundoTable() {
                     </div>
                   </div>
 
+                  <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "rgba(20,153,176,0.08)", border: "1px solid rgba(20,153,176,0.3)", borderRadius: 11, padding: "10px 12px", marginBottom: 11 }}>
+                    <span style={{ fontSize: 18, flexShrink: 0 }}>💡</span>
+                    <span style={{ fontSize: 13.5, color: "#0f6072", lineHeight: 1.45 }}>{L.shareDeliveryHint}</span>
+                  </div>
                   <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (requireName()) doShare() }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800 }}>{L.shareLinkBtn}</button>
                   <div style={{ textAlign: "center", marginTop: 10 }}>
                     <span onClick={() => { if (!requireName()) return; if (navigator.clipboard) navigator.clipboard.writeText(invite); setToast(L.toastInviteCopied) }} style={{ fontSize: 14.5, fontWeight: 800, color: "#1499b0", textDecoration: "underline", cursor: "pointer" }}>📋 {L.copyLinkLink}</span>
@@ -4190,12 +4213,14 @@ export default function RundoTable() {
                         <span style={{ minWidth: 0 }}>
                           <span style={{ display: "block", fontSize: 16, fontWeight: 700, color: "#5a6680" }}>{L.billTotalLabel}</span>
                           {tipTotal > 0.005 && (
-                            <span style={{ display: "block", fontSize: 15.5, fontWeight: 700, color: "#a06b00", marginTop: 2 }}>{L.tipInclLabel(tipTotal.toFixed(2).replace(".", ","))}</span>
+                            <span style={{ display: "block", fontSize: 15.5, fontWeight: 700, color: "#5a6680", marginTop: 2 }}>{L.tipInclLabel(tipTotal.toFixed(2).replace(".", ","))}</span>
                           )}
                         </span>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
                           <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a" }}>€{billSum.toFixed(2).replace(".", ",")}</span>
-                          <span style={{ fontSize: 15.5, fontWeight: 800, color: ok ? "#1f8a4c" : "#b5591a", background: ok ? "rgba(39,174,96,0.12)" : "rgba(243,156,18,0.12)", border: ok ? "1px solid rgba(39,174,96,0.4)" : "1px solid rgba(243,156,18,0.45)", borderRadius: 7, padding: "4px 7px", whiteSpace: "nowrap" }}>{ok ? L.totalsMatch : L.totalsDiff(diff)}</span>
+                          {!ok && (
+                            <span style={{ fontSize: 15.5, fontWeight: 800, color: "#b5591a", background: "rgba(243,156,18,0.12)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 7, padding: "4px 7px", whiteSpace: "nowrap" }}>{L.totalsDiff(diff)}</span>
+                          )}
                         </span>
                       </div>
                     )
@@ -4240,7 +4265,8 @@ export default function RundoTable() {
                   }
                   return (
                     <div style={{ marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
-                      <div style={{ fontSize: 15.5, fontWeight: 800, color: "#3b486a", marginBottom: 7 }}>{L.whoPaysTip}</div>
+                      <div style={{ fontSize: 15.5, fontWeight: 800, color: "#3b486a", marginBottom: 2 }}>{L.whoPaysTip}</div>
+                      <div style={{ fontSize: 14, color: "#9aa0ab", marginBottom: 8, lineHeight: 1.4 }}>{L.whoPaysTipSub}</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         {participants.map((q) => {
                           const aan = doetMee(q.id)
@@ -4252,7 +4278,6 @@ export default function RundoTable() {
                           )
                         })}
                       </div>
-                      <div style={{ fontSize: 15, color: "#9aa0ab", marginTop: 7, lineHeight: 1.45 }}>{L.tipSplitHint}</div>
                     </div>
                   )
                 })()}
@@ -4369,7 +4394,6 @@ export default function RundoTable() {
               </div>
             )}
 
-            <div style={{ fontSize: 15.5, fontWeight: 700, color: "#9aa0ab", marginBottom: 4 }}>{L.taxDesc}</div>
             <input value={tm.name} onChange={(e) => setTaxModal({ ...tm, name: e.target.value })} placeholder={ph}
               style={{ width: "100%", boxSizing: "border-box", border: "1px solid rgba(16,24,40,0.15)", borderRadius: 10, padding: "9px 11px", fontSize: 18, color: "#14213a", marginBottom: 6 }} />
             {/* Eén tik en de omschrijving staat er — en passant zie je dat het veld aanpasbaar is. */}
