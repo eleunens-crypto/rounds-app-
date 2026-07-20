@@ -921,7 +921,7 @@ const STRINGS = {
     clearTip: "Wissen",
     changeTip: "Wijzigen",
     whoPaysTip: "Wie betaalt de fooi mee?",
-    tipSplitHint: "De fooi wordt verdeeld over wie hier aan staat, per persoon.",
+    tipSplitHint: "Standaard betaalt iedereen mee. Tik iemand aan om die eruit te halen.",
     tipItemName: "Fooi",
     taxLineLabel: "BTW / kosten (verdeeld)",
     explainTooltip: "uitleg",
@@ -1596,7 +1596,7 @@ const STRINGS = {
     clearTip: "Effacer",
     changeTip: "Modifier",
     whoPaysTip: "Qui participe au pourboire ?",
-    tipSplitHint: "Le pourboire est r\u00e9parti entre les personnes activ\u00e9es ici, par personne.",
+    tipSplitHint: "Par d\u00e9faut tout le monde participe. Touche quelqu\u2019un pour l\u2019exclure.",
     tipItemName: "Pourboire",
     taxLineLabel: "TVA / frais (répartis)",
     explainTooltip: "explication",
@@ -3096,11 +3096,10 @@ export default function RundoTable() {
 
   const tipShare = (pid: string): number => {
     if (tipTotal <= 0) return 0
-    const has = (q: string) => baseItems.some((it) => it.is_shared ? sharerIds(it.id).includes(q) : myQty(it.id, q) > 0)
     // Zette de beheerder zelf mensen aan of uit? Dan telt die keuze. Zolang hij niets
-    // aanpaste, betaalt gewoon iedereen mee die iets bestelde.
+    // aanpaste, betaalt gewoon iedereen mee (gelijk verdeeld per persoon).
     const gekozen = tipPickedIds()
-    const doetMee = (q: string) => gekozen.length > 0 ? gekozen.includes(q) : has(q)
+    const doetMee = (q: string) => gekozen.length > 0 ? gekozen.includes(q) : true
     if (!doetMee(pid)) return 0
     // Een koppel is één rij met seats: 2. De fooi verdelen we per persoon, niet per rij —
     // anders betaalt een koppel samen evenveel fooi als iemand die alleen kwam.
@@ -4226,11 +4225,12 @@ export default function RundoTable() {
                     per persoon aan- of uitzetten. */}
                 {isAdmin && participants.length > 0 && (() => {
                   const gekozen = tipPickedIds()
-                  const besteldeIets = (q: string) => baseItems.some((it) => it.is_shared ? sharerIds(it.id).includes(q) : myQty(it.id, q) > 0)
-                  const doetMee = (q: string) => gekozen.length > 0 ? gekozen.includes(q) : besteldeIets(q)
+                  // Standaard betaalt IEDEREEN mee. Pas als de beheerder zelf iemand uitzet,
+                  // wordt de keuze handmatig en telt enkel wie aan staat.
+                  const doetMee = (q: string) => gekozen.length > 0 ? gekozen.includes(q) : true
                   const zet = (pid: string, aan: boolean) => {
-                    // Van "automatisch" naar "handmatig": leg eerst de huidige verdeling vast.
-                    const basis = gekozen.length > 0 ? gekozen : participants.filter((q) => besteldeIets(q.id)).map((q) => q.id)
+                    // Van "iedereen" naar "handmatig": leg eerst de huidige (volledige) groep vast.
+                    const basis = gekozen.length > 0 ? gekozen : participants.map((q) => q.id)
                     const volgende = aan ? [...new Set([...basis, pid])] : basis.filter((x) => x !== pid)
                     participants.forEach((q) => {
                       const moet = volgende.includes(q.id) ? 1 : 0
