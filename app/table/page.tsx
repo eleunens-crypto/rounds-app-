@@ -509,7 +509,7 @@ const STRINGS = {
     personsFirst: "⚠️ Vul eerst in met hoeveel jullie zijn.",
     lockedPersons: "🔒 Eerst het aantal personen invullen",
     lockedName: "🔒 Vul eerst je eigen naam in",
-    shareLinkBtn: "🔗 Deel de link",
+    shareLinkBtn: "🔗 Of deel de link",
     shareLinkHint: "Kies daarna je berichtenapp — WhatsApp, Messenger, sms…",
     nowAssignTitle: "Wijs nu je gerechten toe",
     nowAssignSub: "Duid aan wat jij nam. Wie de link opende, doet dat zelf.",
@@ -538,10 +538,10 @@ const STRINGS = {
     seatFreedUp: "Die plaats telt nu voor 2 — er is één vrije plaats minder.",
     howManyGroupSub: "Iedereen aan tafel — jezelf inbegrepen.",
     personsWord: "Aantal personen",
-    shareStepTitle: "📱 Deel met je gasten",
-    shareStepSub: "Zij kiezen een vrije plaats, zetten hun naam erop en tikken zelf aan wat ze aten.",
+    shareStepTitle: "📱 Deel je groep via de QR-code",
+    shareStepSub: "Laat je tafelgenoten deze code scannen. Iedereen zet dan zelf zijn naam en duidt aan wat hij nam.",
     sendViaApp: "💬 Versturen via WhatsApp, Messenger…",
-    scanThis: "Laat hen dit scannen",
+    scanThis: "Laat je gasten dit scannen",
     yourselfTitle: "✍️ Vergeet jezelf niet",
     othersTitle: "📝 Iemand zonder smartphone?",
     othersSub: "Geen gsm of geen zin om zelf aan te tikken? Zet hun naam hieronder — jij duidt dan voor hen aan.",
@@ -1170,7 +1170,7 @@ const STRINGS = {
     personsFirst: "⚠️ Indique d'abord combien vous êtes.",
     lockedPersons: "🔒 Indique d'abord le nombre de personnes",
     lockedName: "🔒 Indique d'abord ton propre nom",
-    shareLinkBtn: "🔗 Partager le lien",
+    shareLinkBtn: "🔗 Ou partage le lien",
     shareLinkHint: "Choisis ensuite ton app de messagerie — WhatsApp, Messenger, SMS…",
     nowAssignTitle: "Attribue maintenant tes plats",
     nowAssignSub: "Indique ce que tu as pris. Ceux qui ont ouvert le lien le font eux-m\u00eames.",
@@ -1199,10 +1199,10 @@ const STRINGS = {
     seatFreedUp: "Cette place compte maintenant pour 2 — il y a une place libre en moins.",
     howManyGroupSub: "Tout le monde à table — toi compris.",
     personsWord: "Nombre de personnes",
-    shareStepTitle: "📱 Partage avec tes invités",
-    shareStepSub: "Ils choisissent une place libre, y mettent leur nom et cochent ce qu'ils ont pris.",
+    shareStepTitle: "📱 Partage ton groupe via le QR",
+    shareStepSub: "Fais scanner ce code à tes convives. Chacun met alors son nom et coche ce qu'il a pris.",
     sendViaApp: "💬 Envoyer via WhatsApp, Messenger…",
-    scanThis: "Fais-leur scanner ceci",
+    scanThis: "Fais scanner à tes invités",
     yourselfTitle: "✍️ Ne t'oublie pas",
     othersTitle: "📝 Quelqu'un sans smartphone ?",
     othersSub: "Pas de smartphone ou pas envie ? Mets son nom ci-dessous — tu coches alors pour lui.",
@@ -3768,17 +3768,10 @@ export default function RundoTable() {
               </div>
             ) : (() => {
               const entered = group?.receipt_total ?? null
-              const match = entered != null && Math.abs(entered - billTotal) < 0.005
               return (
                 <>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 3 }}>
-                    <h3 style={{ ...S.h3, marginBottom: 0 }}>{L.shareStepTitle}</h3>
-                    {match && <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.12)", border: "1px solid rgba(39,174,96,0.4)", borderRadius: 8, padding: "5px 8px", lineHeight: 1.3 }}>{L.billOkBadge}</span>}
-                  </div>
+                  <h3 style={{ ...S.h3, marginBottom: 3 }}>{L.shareStepTitle}</h3>
                   <div style={{ fontSize: 16, color: "#5a6680", lineHeight: 1.55, marginBottom: 13 }}>{L.shareStepSub}</div>
-                  {!match && (
-                    <div style={{ background: "rgba(224,107,94,0.1)", border: "1px solid rgba(224,107,94,0.55)", borderRadius: 10, padding: "9px 11px", fontSize: 16, color: "#b0402f", fontWeight: 700, marginBottom: 12, lineHeight: 1.45 }}>{L.shareBlocked}</div>
-                  )}
                 </>
               )
             })()}
@@ -3797,10 +3790,12 @@ export default function RundoTable() {
               return (
                 <>
                   <div style={{ textAlign: "center", marginBottom: 12 }}>
-                    <div style={{ display: "inline-block", background: "#fff", padding: 10, borderRadius: 14, border: "1px solid rgba(16,24,40,0.1)" }}>
-                      <QRCodeSVG value={link} size={130} bgColor="#ffffff" fgColor="#1b2a4a" />
+                    <div style={{ display: "inline-block", padding: 14, background: "#f4fbfc", border: "2px solid rgba(20,153,176,0.35)", borderRadius: 16 }}>
+                      <div style={{ background: "#fff", padding: 8, borderRadius: 10, display: "inline-block" }}>
+                        <QRCodeSVG value={link} size={150} bgColor="#ffffff" fgColor="#1b2a4a" />
+                      </div>
+                      <div style={{ fontSize: 15.5, fontWeight: 800, color: "#0f7488", marginTop: 10 }}>👆 {L.scanThis}</div>
                     </div>
-                    <div style={{ fontSize: 15.5, color: "#9aa0ab", marginTop: 7 }}>{L.scanThis}</div>
                   </div>
 
                   <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (requireName()) doShare() }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800 }}>{L.shareLinkBtn}</button>
