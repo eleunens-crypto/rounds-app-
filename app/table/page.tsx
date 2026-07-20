@@ -519,12 +519,15 @@ const STRINGS = {
     assignForSomeoneSub: "Doe dit enkel als die persoon geen gsm heeft of het niet zelf wil doen.",
     addYourselfFirst: "Vul eerst hierboven je eigen naam in.",
     addGuestModalTitle: "Voor wie duid je aan?",
-    addGuestModalSub: "Een koppel of gezin dat samen betaalt? Zet ze als \u00e9\u00e9n. Alleenstaand? Kies 1.",
+    addGuestModalSub: "Een koppel of gezin dat samen betaalt? Kies met 2 of met 3+.",
     howManyPersonsQ: "Voor hoeveel personen?",
     theirNameQ: "Hoe heet die persoon?",
     theirNamesQ: "Hoe heten ze?",
     addThisGuest: "Toevoegen",
     enterGuestName: "Vul eerst een naam in.",
+    guestAddedTitle: "\u2713 Toegevoegd",
+    guestAddedBody: "Die persoon staat nu in de lijst. Ga naar toewijzen, of voeg nog iemand toe.",
+    addAnother: "Nog iemand toevoegen",
     onePersonLess: "\u00e9\u00e9n minder",
     somebodyOnMySpot: "nog iemand op mijn plaats",
     qrJoinedLegend: "\ud83d\udcf1 = kwam via de link binnen en duidt normaal zelf aan.",
@@ -1177,12 +1180,15 @@ const STRINGS = {
     assignForSomeoneSub: "\u00c0 faire seulement si cette personne n\u2019a pas de t\u00e9l\u00e9phone ou ne veut pas le faire elle-m\u00eame.",
     addYourselfFirst: "Remplis d\u2019abord ton propre nom ci-dessus.",
     addGuestModalTitle: "Pour qui coches-tu ?",
-    addGuestModalSub: "Un couple ou une famille qui paie ensemble ? Mets-les comme un seul. Seul ? Choisis 1.",
+    addGuestModalSub: "Un couple ou une famille qui paie ensemble ? Choisis 2 ou 3+.",
     howManyPersonsQ: "Pour combien de personnes ?",
     theirNameQ: "Comment s\u2019appelle cette personne ?",
     theirNamesQ: "Comment s\u2019appellent-ils ?",
     addThisGuest: "Ajouter",
     enterGuestName: "Entre d\u2019abord un nom.",
+    guestAddedTitle: "\u2713 Ajout\u00e9",
+    guestAddedBody: "Cette personne est maintenant dans la liste. Va vers l\u2019attribution, ou ajoute quelqu\u2019un d\u2019autre.",
+    addAnother: "Ajouter quelqu\u2019un d\u2019autre"
     onePersonLess: "un de moins",
     somebodyOnMySpot: "quelqu\u2019un \u00e0 ma place",
     qrJoinedLegend: "\ud83d\udcf1 = arriv\u00e9 via le lien et attribue normalement lui-m\u00eame.",
@@ -1816,7 +1822,7 @@ export default function RundoTable() {
   const [showFinalizeWarn, setShowFinalizeWarn] = useState(false) // waarschuwing bij afsluiten terwijl totalen niet kloppen
   // Centrale in-app melding (midden op het scherm, met OK) — vervangt browser-alerts en
   // toont o.a. gast-opmerkingen bij de admin. Titel optioneel.
-  const [centerNote, setCenterNote] = useState<{ title?: string; body: string } | null>(null)
+  const [centerNote, setCenterNote] = useState<{ title?: string; body: string; actionLabel?: string; onAction?: () => void } | null>(null)
   // In-app ja/nee-bevestiging — vervangt de browser-confirm die op een foutmelding lijkt.
   const [confirmDlg, setConfirmDlg] = useState<{ title?: string; body: string; yes: string; danger?: boolean; onYes: () => void } | null>(null)
   const askConfirm = (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean }) =>
@@ -3802,7 +3808,6 @@ export default function RundoTable() {
                     {L.copyLinkPre}{" "}
                     <span onClick={() => { if (!requireName()) return; if (navigator.clipboard) navigator.clipboard.writeText(invite); setToast(L.toastInviteCopied) }} style={{ fontWeight: 800, color: "#1499b0", textDecoration: "underline", cursor: "pointer" }}>{L.copyLinkAction}</span>{L.copyLinkPost}
                   </div>
-                  <div style={{ fontSize: 14.5, color: "#9aa0ab", textAlign: "center", marginTop: 5, lineHeight: 1.45 }}>{L.shareLinkHint}</div>
                 </>
               )
             })()}
@@ -3819,14 +3824,6 @@ export default function RundoTable() {
           )}
 
           <div style={{ ...S.card, order: 3 }} id="wie-duid-ik-aan">
-
-            {participants.length > 0 && (
-              <button onClick={() => setShowGuestList((v) => !v)}
-                style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 12, marginBottom: showGuestList ? 6 : 0, background: "none", border: "none", padding: "4px 0", cursor: "pointer" }}>
-                <span style={{ fontSize: 15.5, fontWeight: 700, color: "#5a6680" }}>👥 {totalPersons} {totalPersons === 1 ? L.person : L.persons}</span>
-                <span style={{ fontSize: 15, fontWeight: 800, color: "#1499b0" }}>{showGuestList ? L.hideNames : L.editNamesBtn} {showGuestList ? "▴" : "▾"}</span>
-              </button>
-            )}
 
             {showGuestList && (() => {
               const twoCol = participants.length > 5
@@ -4471,7 +4468,10 @@ export default function RundoTable() {
           <div style={{ ...S.modal, width: "min(340px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
             {centerNote.title && <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: 20, fontWeight: 800, color: "#14213a" }}>{centerNote.title}</h3>}
             <p style={{ fontSize: 18, color: "#3b486a", lineHeight: 1.55, margin: "0 0 16px", whiteSpace: "pre-line" }}>{centerNote.body}</p>
-            <button onClick={() => setCenterNote(null)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 18 }}>OK</button>
+            {centerNote.actionLabel && centerNote.onAction && (
+              <button onClick={() => { const fn = centerNote.onAction!; setCenterNote(null); fn() }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontWeight: 800, fontSize: 18, marginBottom: 8 }}>{centerNote.actionLabel}</button>
+            )}
+            <button onClick={() => setCenterNote(null)} style={centerNote.actionLabel ? { width: "100%", padding: "10px 0", background: "none", border: "none", fontSize: 15.5, fontWeight: 700, color: "#9aa0ab", cursor: "pointer" } : { ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 18 }}>{centerNote.actionLabel ? L.addAnother : "OK"}</button>
           </div>
         </div>
       )}
@@ -4483,7 +4483,18 @@ export default function RundoTable() {
           const naam = guestNames.slice(0, guestSeats).map((x) => x.trim()).filter(Boolean).join(" & ")
           if (!naam) { setCenterNote({ body: L.enterGuestName }); return }
           setShowGuestModal(false)
-          await addGuest(naam, false, guestSeats)
+          // Neem een bestaande vrije plaats in — zo blijft het aantal personen gelijk (de
+          // "extra" persoon is gewoon een van de plaatsen die al geteld waren).
+          const vrij = participants.filter((p) => p.id !== meId && isFreeSpot(p) && !p.self_joined)
+          if (vrij.length === 0) { setCenterNote({ body: L.noFreeSpots }); return }
+          const doel = vrij[0]
+          // Een koppel/gezin zet op één plaats: extra vrije plaatsen worden opgeslokt.
+          const extra = Math.min(guestSeats, vrij.length) - 1
+          for (let i = 0; i < extra; i++) await supabase.from("table_participants").delete().eq("id", vrij[1 + i].id)
+          await supabase.from("table_participants").update({ name: naam, seats: Math.max(1, Math.min(guestSeats, vrij.length)) }).eq("id", doel.id)
+          if (group) await loadAll(group.id)
+          // Klaar? Bied meteen aan om door te gaan naar toewijzen (of nog iemand toe te voegen).
+          setCenterNote({ title: L.guestAddedTitle, body: L.guestAddedBody, actionLabel: L.goAssignBtn, onAction: () => { setAdminTab("overview"); scrollTop() } })
         }
         return (
           <div style={{ ...S.overlay, zIndex: 3100 }}>
