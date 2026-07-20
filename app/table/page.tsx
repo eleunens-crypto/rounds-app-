@@ -861,7 +861,7 @@ const STRINGS = {
     tooLittleInList: "Te weinig in de lijst",
     compareFix: "Vergelijk met de itemlijst hieronder en corrigeer!",
     goToItemList: "Ga naar de itemlijst",
-    checkHere: "hier checken!",
+    checkBelow: "\u2192 hieronder checken",
     roundingTitle: "Niets gevonden? Mogelijk afrondingsverschil",
     roundingSub: "Aanvaarden en verdergaan",
     roundingDone: (d: string) => `€${d} afronding aanvaard. Je kan verder naar Gasten & delen.`,
@@ -1542,7 +1542,7 @@ const STRINGS = {
     tooLittleInList: "Manque dans la liste",
     compareFix: "Compare avec la liste d'articles ci-dessous et corrige !",
     goToItemList: "Vers la liste d\u2019articles",
-    checkHere: "\u00e0 v\u00e9rifier ici !",
+    checkBelow: "\u2192 \u00e0 v\u00e9rifier ci-dessous",
     roundingTitle: "Rien trouvé ? Peut-être un écart d'arrondi",
     roundingSub: "Accepter et continuer",
     roundingDone: (d: string) => `Écart d'arrondi de €${d} accepté. Tu peux continuer.`,
@@ -5282,7 +5282,14 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   return (
     <div style={S.card}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <h3 id="items-op-de-bon" style={{ ...S.h3, marginBottom: 0, display: "flex", alignItems: "baseline", gap: 8, ...(billOverBy != null && Math.abs(billOverBy) >= 0.005 ? { background: "rgba(224,107,94,0.1)", border: "1.5px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "11px 13px" } : {}) }}>{L.itemsOnBill}{(billOverBy != null && Math.abs(billOverBy) >= 0.005) ? <span style={{ fontSize: 16.5, fontWeight: 800, color: "#c0392b" }}>→ {L.checkHere}</span> : (!billOk && <span style={{ fontSize: 16.5, fontWeight: 800, color: "#c0392b" }}>{L.checkExcl}</span>)}</h3>
+        {(billOverBy != null && Math.abs(billOverBy) >= 0.005) ? (
+          <div id="items-op-de-bon" style={{ background: "rgba(224,107,94,0.1)", border: "1.5px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "11px 13px", marginBottom: 4 }}>
+            <h3 style={{ ...S.h3, margin: 0, display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>{L.itemsOnBill}<span style={{ fontSize: 16.5, fontWeight: 800, color: "#c0392b" }}>{L.checkBelow}</span></h3>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#c0392b", marginTop: 4 }}>{billOverBy > 0 ? L.overVsReceipt(`€${billOverBy.toFixed(2).replace(".", ",")}`) : L.underVsReceipt(`€${Math.abs(billOverBy).toFixed(2).replace(".", ",")}`)}</div>
+          </div>
+        ) : (
+          <h3 id="items-op-de-bon" style={{ ...S.h3, marginBottom: 0, display: "flex", alignItems: "baseline", gap: 8 }}>{L.itemsOnBill}{!billOk && <span style={{ fontSize: 16.5, fontWeight: 800, color: "#c0392b" }}>{L.checkExcl}</span>}</h3>
+        )}
       </div>
       {items.length > 0 && (
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, background: "rgba(90,108,166,0.06)", borderRadius: 10, padding: "9px 11px" }}>
