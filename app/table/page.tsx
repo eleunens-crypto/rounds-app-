@@ -605,6 +605,9 @@ const STRINGS = {
     deleteTitle: "verwijderen",
     emptyList: "Nog niemand in de lijst.",
     toAssignBtn: "Link gedeeld? Naar toewijzen →",
+    toAssignHint: "Wie at of dronk wat? Duid het hier toe.",
+    editNamesBtn: "namen bekijken",
+    hideNames: "verbergen",
     guestWord: "Gast",
     adminName: "Ik",
     close: "✕ Sluiten",
@@ -1257,6 +1260,9 @@ const STRINGS = {
     deleteTitle: "supprimer",
     emptyList: "Personne dans la liste pour l'instant.",
     toAssignBtn: "Lien partagé ? Vers « Répartir » →",
+    toAssignHint: "Qui a mang\u00e9 ou bu quoi ? Attribue ici.",
+    editNamesBtn: "voir les noms",
+    hideNames: "masquer",
     guestWord: "Invité",
     adminName: "Moi",
     close: "✕ Fermer",
@@ -1883,6 +1889,7 @@ export default function RundoTable() {
   const [showGuestModal, setShowGuestModal] = useState(false)
   const [guestSeats, setGuestSeats] = useState(1)
   const [guestNames, setGuestNames] = useState<string[]>([""])
+  const [showGuestList, setShowGuestList] = useState(false)  // namenlijst op de delen-tab in-/uitklappen
   const [newGuest, setNewGuest] = useState("")
   const [claimSpot, setClaimSpot] = useState<string | null>(null)
   const [claimSeats, setClaimSeats] = useState(1)
@@ -3783,16 +3790,11 @@ export default function RundoTable() {
                   </div>
 
                   <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (requireName()) doShare() }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800 }}>{L.shareLinkBtn}</button>
-                  <div style={{ fontSize: 15.5, color: "#9aa0ab", textAlign: "center", marginTop: 6, lineHeight: 1.45 }}>{L.shareLinkHint}</div>
-
-                  <div style={{ borderTop: "1px solid rgba(16,24,40,0.08)", marginTop: 11, paddingTop: 10, fontSize: 15.5, color: "#5a6680", lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 15.5, color: "#5a6680", textAlign: "center", marginTop: 8, lineHeight: 1.5 }}>
                     {L.copyLinkPre}{" "}
                     <span onClick={() => { if (!requireName()) return; if (navigator.clipboard) navigator.clipboard.writeText(invite); setToast(L.toastInviteCopied) }} style={{ fontWeight: 800, color: "#1499b0", textDecoration: "underline", cursor: "pointer" }}>{L.copyLinkAction}</span>{L.copyLinkPost}
                   </div>
-
-                  {/* Hoort bij het delen: wie de link niet kan gebruiken, duid jij zelf aan. */}
-                  <button onClick={() => { if (typeof document !== "undefined") document.getElementById("wie-duid-ik-aan")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
-                    style={{ width: "100%", marginTop: 9, padding: "11px 12px", fontSize: 15, fontWeight: 700, lineHeight: 1.4, textAlign: "left", borderRadius: 10, color: "#5a6680", background: "rgba(16,24,40,0.03)", border: "1px solid rgba(16,24,40,0.12)", cursor: "pointer" }}>{L.assignForOthersBtn}</button>
+                  <div style={{ fontSize: 14.5, color: "#9aa0ab", textAlign: "center", marginTop: 5, lineHeight: 1.45 }}>{L.shareLinkHint}</div>
                 </>
               )
             })()}
@@ -3811,12 +3813,14 @@ export default function RundoTable() {
           <div style={{ ...S.card, order: 3 }} id="wie-duid-ik-aan">
 
             {participants.length > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 12, marginBottom: 2 }}>
-                <span style={{ fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>{totalPersons} {totalPersons === 1 ? L.person : L.persons} {L.editNameHint}</span>
-              </div>
+              <button onClick={() => setShowGuestList((v) => !v)}
+                style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 12, marginBottom: showGuestList ? 6 : 0, background: "none", border: "none", padding: "4px 0", cursor: "pointer" }}>
+                <span style={{ fontSize: 15.5, fontWeight: 700, color: "#5a6680" }}>👥 {totalPersons} {totalPersons === 1 ? L.person : L.persons}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: "#1499b0" }}>{showGuestList ? L.hideNames : L.editNamesBtn} {showGuestList ? "▴" : "▾"}</span>
+              </button>
             )}
 
-            {(() => {
+            {showGuestList && (() => {
               const twoCol = participants.length > 5
               const isPlaceholderName = (p: Participant) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName
               const splitNames = (p: Participant) => {
@@ -3916,7 +3920,10 @@ export default function RundoTable() {
                 </button>
               )}
           </div>
-          <button onClick={() => { if (warnMismatch) { setShowShareWarn(true); return } if (requireName()) { setAdminTab("overview"); scrollTop() } }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 18, fontWeight: 700 }}>{L.toAssignBtn}</button>
+          <div style={{ order: 3, marginTop: 14 }}>
+            <button onClick={() => { if (warnMismatch) { setShowShareWarn(true); return } if (requireName()) { setAdminTab("overview"); scrollTop() } }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 18.5, fontWeight: 800 }}>{L.toAssignBtn}</button>
+            <div style={{ fontSize: 14.5, color: "#9aa0ab", textAlign: "center", marginTop: 6, lineHeight: 1.45 }}>{L.toAssignHint}</div>
+          </div>
         </div>
       )}
 
@@ -5279,7 +5286,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         )
       })}
       <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end", marginTop: 12, marginBottom: 2 }}>
-        <button onClick={onAddManual} style={{ ...S.btn, ...S.btnPrimary, width: "62%", minWidth: 190, padding: "11px 10px", fontSize: 16.5, fontWeight: 800, whiteSpace: "nowrap" }}>{L.addItemBtn}</button>
+        <button onClick={onAddManual} style={{ width: "62%", minWidth: 190, boxSizing: "border-box", background: "rgba(20,153,176,0.12)", color: "#0f7d90", border: "1px solid rgba(20,153,176,0.4)", borderRadius: 12, padding: "11px 10px", fontSize: 16.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{L.addItemBtn}</button>
         {taxNode}
       </div>
       {items.length > 0 && (() => {
