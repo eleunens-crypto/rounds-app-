@@ -1188,7 +1188,7 @@ const STRINGS = {
     enterGuestName: "Entre d\u2019abord un nom.",
     guestAddedTitle: "\u2713 Ajout\u00e9",
     guestAddedBody: "Cette personne est maintenant dans la liste. Va vers l\u2019attribution, ou ajoute quelqu\u2019un d\u2019autre.",
-    addAnother: "Ajouter quelqu\u2019un d\u2019autre"
+    addAnother: "Ajouter quelqu\u2019un d\u2019autre",
     onePersonLess: "un de moins",
     somebodyOnMySpot: "quelqu\u2019un \u00e0 ma place",
     qrJoinedLegend: "\ud83d\udcf1 = arriv\u00e9 via le lien et attribue normalement lui-m\u00eame.",
