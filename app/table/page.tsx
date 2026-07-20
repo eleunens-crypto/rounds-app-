@@ -515,12 +515,21 @@ const STRINGS = {
     nowAssignSub: "Duid aan wat jij nam. Wie de link opende, doet dat zelf.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Naar toewijzen \u2192",
     assignForOthersBtn: "Kan iemand dit niet zelf doen of heeft die persoon geen gsm? Duid dit dan voor hen aan.",
+    assignForSomeoneTitle: "Zelf aanduiden voor iemand?",
+    assignForSomeoneSub: "Doe dit enkel als die persoon geen gsm heeft of het niet zelf wil doen.",
+    addGuestModalTitle: "Voor wie duid je aan?",
+    addGuestModalSub: "Een koppel of gezin dat samen betaalt? Zet ze als \u00e9\u00e9n. Alleenstaand? Kies 1.",
+    howManyPersonsQ: "Voor hoeveel personen?",
+    theirNameQ: "Hoe heet die persoon?",
+    theirNamesQ: "Hoe heten ze?",
+    addThisGuest: "Toevoegen",
+    enterGuestName: "Vul eerst een naam in.",
     onePersonLess: "\u00e9\u00e9n minder",
     somebodyOnMySpot: "nog iemand op mijn plaats",
     qrJoinedLegend: "\ud83d\udcf1 = kwam via de link binnen en duidt normaal zelf aan.",
     copyLinkPre: "Of",
     copyLinkAction: "kopieer de link hier",
-    copyLinkPost: ".",
+    copyLinkPost: " en plak waar je wil.",
     billOkBadge: "✓ bon klopt — je kan delen",
     seatFreedUp: "Die plaats telt nu voor 2 — er is één vrije plaats minder.",
     howManyGroupSub: "Iedereen aan tafel — jezelf inbegrepen.",
@@ -1158,12 +1167,21 @@ const STRINGS = {
     nowAssignSub: "Indique ce que tu as pris. Ceux qui ont ouvert le lien le font eux-m\u00eames.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Vers l\u2019attribution \u2192",
     assignForOthersBtn: "Quelqu\u2019un ne peut pas le faire lui-m\u00eame ou n\u2019a pas de t\u00e9l\u00e9phone ? Attribue pour lui.",
+    assignForSomeoneTitle: "Cocher toi-m\u00eame pour quelqu\u2019un ?",
+    assignForSomeoneSub: "\u00c0 faire seulement si cette personne n\u2019a pas de t\u00e9l\u00e9phone ou ne veut pas le faire elle-m\u00eame.",
+    addGuestModalTitle: "Pour qui coches-tu ?",
+    addGuestModalSub: "Un couple ou une famille qui paie ensemble ? Mets-les comme un seul. Seul ? Choisis 1.",
+    howManyPersonsQ: "Pour combien de personnes ?",
+    theirNameQ: "Comment s\u2019appelle cette personne ?",
+    theirNamesQ: "Comment s\u2019appellent-ils ?",
+    addThisGuest: "Ajouter",
+    enterGuestName: "Entre d\u2019abord un nom.",
     onePersonLess: "un de moins",
     somebodyOnMySpot: "quelqu\u2019un \u00e0 ma place",
     qrJoinedLegend: "\ud83d\udcf1 = arriv\u00e9 via le lien et attribue normalement lui-m\u00eame.",
     copyLinkPre: "Ou",
     copyLinkAction: "copie le lien ici",
-    copyLinkPost: ".",
+    copyLinkPost: " et colle-le o\u00f9 tu veux.",
     billOkBadge: "✓ l'addition est correcte — tu peux partager",
     seatFreedUp: "Cette place compte maintenant pour 2 — il y a une place libre en moins.",
     howManyGroupSub: "Tout le monde à table — toi compris.",
@@ -1861,6 +1879,10 @@ export default function RundoTable() {
   const [showSelfModal, setShowSelfModal] = useState(false)
   const [selfSeats, setSelfSeats] = useState(1)
   const [selfNames, setSelfNames] = useState<string[]>([""])
+  // Popup om zelf een gast (koppel/gezin/alleenstaande) toe te voegen — meermaals bruikbaar.
+  const [showGuestModal, setShowGuestModal] = useState(false)
+  const [guestSeats, setGuestSeats] = useState(1)
+  const [guestNames, setGuestNames] = useState<string[]>([""])
   const [newGuest, setNewGuest] = useState("")
   const [claimSpot, setClaimSpot] = useState<string | null>(null)
   const [claimSeats, setClaimSeats] = useState(1)
@@ -3884,73 +3906,14 @@ export default function RundoTable() {
               )
             })()}
               {(
-                <>
-                  {!askSeats ? (
-                    <>
-                      <div style={{ textAlign: "center", marginTop: 12 }}>
-                        <button onClick={() => { if (requireName()) setAskSeats(true) }}
-                          style={{ width: "70%", border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.04)", borderRadius: 11, padding: "10px", textAlign: "center", fontSize: 16, fontWeight: 800, color: "#0f7d90", cursor: "pointer" }}>{L.addSelfAssign}</button>
-                        <div style={{ fontSize: 15, color: "#9aa0ab", marginTop: 5 }}>{L.addSelfAssignHint(totalPersons)}</div>
-                      </div>
-                    </>
-                  ) : (() => {
-                    // Vraag meteen om hoeveel personen het gaat — zo vergeet je een partner niet.
-                    const freeSpots = participants.filter((p) => p.id !== meId && !p.self_joined && isFreeSpot(p) && !fillingSpots.includes(p.id))
-                    const maxSeats = Math.min(4, freeSpots.length)
-                    const pick = async (n: number) => {
-                      if (freeSpots.length < n) { setToast(L.notEnoughFree(freeSpots.length)); return }
-                      const spot = freeSpots[0]
-                      setFillingSpots((cur) => [...cur, spot.id])
-                      setAskSeats(false)
-                      if (n > 1) await setSeats(spot.id, n)
-                    }
-                    return (
-                      <div style={{ border: "1.5px solid rgba(20,153,176,0.45)", background: "rgba(20,153,176,0.05)", borderRadius: 12, padding: "12px 13px" }}>
-                        <div style={{ fontSize: 18, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.askSeatsTitle}</div>
-                        <div style={{ fontSize: 15.5, color: "#5a6680", lineHeight: 1.45, marginBottom: 10 }}>{L.askSeatsSub}</div>
-                        {maxSeats === 0 ? (
-                          <div style={{ fontSize: 16, color: "#c0392b", fontWeight: 700 }}>{L.noFreeSpots}</div>
-                        ) : (
-                          <div style={{ display: "flex", gap: 7 }}>
-                            {Array.from({ length: maxSeats }, (_, k) => k + 1).map((n) => (
-                              <button key={n} onClick={() => pick(n)}
-                                style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(16,24,40,0.15)", borderRadius: 10, padding: "11px 4px", fontSize: 18, fontWeight: 800, color: "#14213a", cursor: "pointer" }}>{n}</button>
-                            ))}
-                          </div>
-                        )}
-                        <button onClick={() => setAskSeats(false)}
-                          style={{ width: "100%", marginTop: 9, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>{L.cancel}</button>
-                      </div>
-                    )
-                  })()}
-                  <div style={{ display: "flex", gap: 7, background: "rgba(243,156,18,0.09)", border: "1px solid rgba(243,156,18,0.4)", borderRadius: 10, padding: "9px 10px", marginTop: 9 }}>
-                    <span style={{ flexShrink: 0 }}>⚠️</span>
-                    <span style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5 }}>{L.shareLinkWarn}</span>
-                  </div>
-                  {(() => {
-                    // Wie zich via de link aanmeldde: één rustige regel, niet aanklikbaar.
-                    // Iedereen met een naam hoort in deze lijst: jijzelf, wie jij toevoegde,
-                    // én wie zich via de link aanmeldde. Enkel vrije plaatsen blijven eruit.
-                    const joined = participants.filter((p) => !isFreeSpot(p))
-                    // Dezelfde groep telt én levert de namen: zo kunnen ze nooit uiteenlopen.
-                    const knownHeads = joined.reduce((a, x) => a + Math.max(1, x.seats ?? 1), 0)
-                    const all = knownHeads >= totalPersons
-                    const names = joined.map((p) => p.name).join(", ").replace(/, ([^,]*)$/, ` ${L.andWord} $1`)
-                    return (
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(16,24,40,0.07)" }}>
-                        <span style={{ flexShrink: 0, fontSize: 16.5 }}>✅</span>
-                        <span style={{ flex: 1, minWidth: 0, fontSize: 16, color: "#5a6680", lineHeight: 1.45 }}>
-                          <b style={{ color: all ? "#1f8a4c" : "#14213a" }}>{all ? L.selfJoinedAll : `${L.selfJoinedTitle}:`}</b>{" "}
-                          {joined.length > 0 ? names : L.nobodyJoinedYet}
-                        </span>
-                        <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, borderRadius: 20, padding: "4px 9px", whiteSpace: "nowrap",
-                          color: all ? "#fff" : "#b5591a",
-                          background: all ? "#27ae60" : "rgba(243,156,18,0.14)",
-                          border: all ? "1px solid #27ae60" : "1px solid rgba(243,156,18,0.5)" }}>{L.selfJoinedCount(knownHeads, totalPersons)}</span>
-                      </div>
-                    )
-                  })()}
-                </>
+                <button onClick={() => { if (!requireName()) return; setGuestSeats(1); setGuestNames([""]); setShowGuestModal(true) }}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", marginTop: 12, padding: "15px 15px", borderRadius: 12, border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.05)", cursor: "pointer" }}>
+                  <span style={{ flexShrink: 0, fontSize: 24 }}>✍️</span>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#0f7488", marginBottom: 2 }}>{L.assignForSomeoneTitle}</span>
+                    <span style={{ display: "block", fontSize: 14.5, color: "#5a6680", lineHeight: 1.45 }}>{L.assignForSomeoneSub}</span>
+                  </span>
+                </button>
               )}
           </div>
           <button onClick={() => { if (warnMismatch) { setShowShareWarn(true); return } if (requireName()) { setAdminTab("overview"); scrollTop() } }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", order: 3, marginTop: 14, padding: "13px 0", fontSize: 18, fontWeight: 700 }}>{L.toAssignBtn}</button>
@@ -4497,6 +4460,55 @@ export default function RundoTable() {
           </div>
         </div>
       )}
+
+      {/* Popup om zelf iemand toe te voegen voor wie jij aanduidt — koppel, gezin of
+          alleenstaande. Kan je meerdere keren gebruiken (elk voegt een aparte plaats toe). */}
+      {showGuestModal && (() => {
+        const bewaar = async () => {
+          const naam = guestNames.slice(0, guestSeats).map((x) => x.trim()).filter(Boolean).join(" & ")
+          if (!naam) { setCenterNote({ body: L.enterGuestName }); return }
+          setShowGuestModal(false)
+          await addGuest(naam, false, guestSeats)
+        }
+        return (
+          <div style={{ ...S.overlay, zIndex: 3100 }}>
+            <div style={{ ...S.modal, width: "min(400px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 3 }}>{L.addGuestModalTitle}</h3>
+              <div style={{ fontSize: 15, color: "#9aa0ab", lineHeight: 1.45, marginBottom: 13 }}>{L.addGuestModalSub}</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#14213a", marginBottom: 7 }}>{L.howManyPersonsQ}</div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                {[1, 2, 3].map((n) => {
+                  const aan = n === 3 ? guestSeats >= 3 : guestSeats === n
+                  const label = n === 1 ? L.onePerson : n === 2 ? L.twoPersons : L.threePlus
+                  return (
+                    <button key={n} onClick={() => { const v = n === 3 ? Math.max(3, guestSeats) : n; setGuestSeats(v); setGuestNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? "")) }}
+                      style={{ flex: 1, fontSize: 16, fontWeight: 800, padding: "13px 4px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
+                  )
+                })}
+              </div>
+              {guestSeats >= 3 && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginBottom: 12 }}>
+                  <button onClick={() => { const v = Math.max(3, guestSeats - 1); setGuestSeats(v); setGuestNames((c) => c.slice(0, v)) }} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 20 }}>−</button>
+                  <b style={{ fontSize: 19, color: "#14213a" }}>{guestSeats}</b>
+                  <button onClick={() => { const v = Math.min(8, guestSeats + 1); setGuestSeats(v); setGuestNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? "")) }} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 20, background: "rgba(27,42,74,0.12)" }}>+</button>
+                </div>
+              )}
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#14213a", marginBottom: 8 }}>{guestSeats > 1 ? L.theirNamesQ : L.theirNameQ}</div>
+              {Array.from({ length: guestSeats }, (_, i) => i).map((i) => (
+                <input key={i} value={guestNames[i] ?? ""} onChange={(e) => setGuestNames((c) => { const n = [...c]; n[i] = e.target.value; return n })}
+                  onKeyDown={(e) => { if (e.key === "Enter") bewaar() }}
+                  placeholder={guestSeats === 1 ? L.namePlaceholder : i === 0 ? L.firstName : i === 1 ? L.secondName : L.extraName(i + 1)}
+                  style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 7 }} autoFocus={i === 0} />
+              ))}
+              {guestSeats > 1 && guestNames.filter((n) => n.trim()).length > 0 && (
+                <div style={{ fontSize: 15, color: "#9aa0ab", marginBottom: 10 }}>{L.showsAsOne} <b style={{ color: "#14213a" }}>{guestNames.filter((n) => n.trim()).join(" & ")}</b></div>
+              )}
+              <button onClick={bewaar} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{L.addThisGuest}</button>
+              <button onClick={() => setShowGuestModal(false)} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>{L.cancel}</button>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Popup voor de beheerder: zelfde stappen als een gast die via de link binnenkomt —
           eerst met hoeveel, dan de naam of namen. */}
