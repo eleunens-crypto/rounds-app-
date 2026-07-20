@@ -793,7 +793,7 @@ const STRINGS = {
     finalizeWarnBody: "Na het afsluiten kan niemand nog iets wijzigen. Controleer eerst de items of het bontotaal.",
     finalizeAnyway: "Toch afsluiten",
     billClosedTitle: "Rekening afgesloten",
-    billClosedBody: "Je gasten kunnen niets meer wijzigen. Dit is de verdeling per persoon:",
+    billClosedBody: "Je gasten kregen dit bericht ook \u00e9n kunnen niets meer wijzigen \u2014 tenzij je de rekening heropent.",
     noGuestsYet: "Nog geen gasten toegevoegd.",
     overWholeBill: "📊 Over de hele rekening",
     overCertainItems: "🎯 Over bepaalde items",
@@ -840,8 +840,9 @@ const STRINGS = {
     tipAddBtn: "💰 Fooi toevoegen",
     tipSkipBtn: "Afsluiten zonder fooi",
     sharedWithN: (n: number) => `gedeeld met ${n} ${n === 1 ? "persoon" : "personen"}`,
-    tapForDetail: "Tik op een naam voor het detail",
-    totalTogether: "Samen",
+    showDetails: "Toon details",
+    hideDetails: "Verberg details",
+    totalTogether: "Totaal",
     nothingAssigned: "Niets aangeduid.",
     andWord: "en",
     addSelfAssign: "+ Persoon voor wie ik zelf aanduid",
@@ -1474,7 +1475,7 @@ const STRINGS = {
     finalizeWarnBody: "Une fois clôturé, plus personne ne peut modifier. Vérifie d'abord les articles ou le total de l'addition.",
     finalizeAnyway: "Clôturer quand même",
     billClosedTitle: "Addition clôturée",
-    billClosedBody: "Tes invités ne peuvent plus rien modifier. Voici la répartition par personne :",
+    billClosedBody: "Tes invités ont reçu ce message aussi et ne peuvent plus rien modifier — sauf si tu rouvres l'addition.",
     noGuestsYet: "Aucun invité ajouté.",
     overWholeBill: "📊 Sur toute l'addition",
     overCertainItems: "🎯 Sur certains articles",
@@ -1521,8 +1522,9 @@ const STRINGS = {
     tipAddBtn: "💰 Ajouter un pourboire",
     tipSkipBtn: "Clôturer sans pourboire",
     sharedWithN: (n: number) => `partagé avec ${n} ${n === 1 ? "personne" : "personnes"}`,
-    tapForDetail: "Touche un nom pour le détail",
-    totalTogether: "Ensemble",
+    showDetails: "Voir les détails",
+    hideDetails: "Masquer les détails",
+    totalTogether: "Total",
     nothingAssigned: "Rien de coché.",
     andWord: "et",
     addSelfAssign: "+ Personne pour qui je coche moi-même",
@@ -4717,7 +4719,12 @@ export default function RundoTable() {
               <h3 style={{ fontSize: 21, fontWeight: 800, color: "#1f8a4c", margin: "0 0 4px" }}>{L.billClosedTitle}</h3>
               <p style={{ fontSize: 16.5, color: "#5a6680", lineHeight: 1.5, margin: 0 }}>{L.billClosedBody}</p>
             </div>
-            <div style={{ fontSize: 15.5, color: "#9aa0ab", textAlign: "center", marginBottom: 7 }}>{L.tapForDetail}</div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+              <button onClick={() => setExpandedPeople((cur) => cur.size >= participants.length && participants.length > 0 ? new Set() : new Set(participants.map((p) => p.id)))}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14.5, fontWeight: 800, color: "#0f7488", background: "rgba(20,153,176,0.12)", border: "1px solid rgba(20,153,176,0.4)", borderRadius: 10, padding: "8px 13px", cursor: "pointer" }}>
+                {(expandedPeople.size >= participants.length && participants.length > 0) ? `${L.hideDetails} ▴` : `${L.showDetails} ▾`}
+              </button>
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {participants.map((p) => {
                 const pt = personTotal(p.id)
