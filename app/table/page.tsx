@@ -631,6 +631,13 @@ const STRINGS = {
     markResolved: "Markeer als opgelost",
     reopenBill: "🔓 Rekening heropenen — gasten kunnen weer wijzigen",
     viewReceipt: "🧾 Bon bekijken",
+    groupWord: "Groep",
+    nFree: (n: number) => `${n} vrij`,
+    tagAdmin: "jij \u00b7 admin",
+    tagViaLink: "via de link",
+    tagByYou: "jij duidt aan",
+    tagFree: "nog invullen",
+    freeSpotName: "Nog vrij \u2014 geen naam",
     rescan: "🔄 Bon opnieuw scannen",
     startScan: "Start hier — Scan je rekening 📸",
     scanOk: "Scan gelukt en items herkend",
@@ -1295,6 +1302,13 @@ const STRINGS = {
     markResolved: "Marquer comme réglé",
     reopenBill: "🔓 Rouvrir l'addition — les invités peuvent à nouveau modifier",
     viewReceipt: "🧾 Voir l'addition",
+    groupWord: "Groupe",
+    nFree: (n: number) => `${n} libre${n !== 1 ? "s" : ""}`,
+    tagAdmin: "toi \u00b7 admin",
+    tagViaLink: "via le lien",
+    tagByYou: "tu coches",
+    tagFree: "\u00e0 remplir",
+    freeSpotName: "Encore libre \u2014 sans nom",
     rescan: "🔄 Rescanner l'addition",
     startScan: "Commence ici — scanne ton addition 📸",
     scanOk: "Scan réussi, articles reconnus",
@@ -1898,6 +1912,7 @@ export default function RundoTable() {
   const [retryFile, setRetryFile] = useState<File | null>(null)
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
+  const [showGroupPeek, setShowGroupPeek] = useState(false)  // groepsoverzicht in-/uitklappen
   const [receiptZoom, setReceiptZoom] = useState(1)  // 1 = passend op het scherm
   // Popup waarin de beheerder zichzelf toevoegt: eerst met hoeveel, dan de naam/namen.
   const [showSelfModal, setShowSelfModal] = useState(false)
@@ -3432,10 +3447,48 @@ export default function RundoTable() {
         </div>
       )}
 
-      {/* Subtiele bon-preview, in elke tab beschikbaar (behalve op de Bon-tab, die heeft z'n eigen knop) */}
-      {group.receipt_url && adminTab !== "scan" && (
-        <div style={{ textAlign: "right", marginTop: -6, marginBottom: 10 }}>
-          <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#1499b0", padding: "4px 4px" }}>{L.viewReceipt}{(group.receipt_url!.split(/\s+/).filter(Boolean).length > 1) ? ` (${group.receipt_url!.split(/\s+/).filter(Boolean).length})` : ""}</button>
+      {/* Subtiele bon-preview + groepsoverzicht, in elke tab behalve de Bon-tab. */}
+      {adminTab !== "scan" && (
+        <div style={{ marginTop: -6, marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+            {(() => {
+              const vrij = participants.filter((p) => isFreeSpot(p) && !p.self_joined).reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
+              return (
+                <button onClick={() => setShowGroupPeek((v) => !v)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: vrij > 0 ? "#c0392b" : "#5a6680", padding: "4px 4px", display: "inline-flex", alignItems: "center", gap: 7 }}>
+                  👥 {L.groupWord}{vrij > 0
+                    ? <span style={{ fontSize: 13.5, fontWeight: 800, background: "rgba(224,107,94,0.14)", border: "1px solid rgba(224,107,94,0.4)", borderRadius: 12, padding: "2px 9px" }}>⚠️ {L.nFree(vrij)}</span>
+                    : ` (${totalPersons})`} {showGroupPeek ? "▴" : "▾"}
+                </button>
+              )
+            })()}
+            {group.receipt_url && (
+              <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#1499b0", padding: "4px 4px" }}>{L.viewReceipt}{(group.receipt_url!.split(/\s+/).filter(Boolean).length > 1) ? ` (${group.receipt_url!.split(/\s+/).filter(Boolean).length})` : ""}</button>
+            )}
+          </div>
+          {showGroupPeek && (
+            <div style={{ border: "1px solid rgba(16,24,40,0.12)", borderRadius: 12, padding: "10px 12px", marginTop: 8 }}>
+              {participants.map((p) => {
+                const isAdminSpot = p.id === ownerPid
+                const vrij = isFreeSpot(p) && !p.self_joined
+                const cat = isAdminSpot
+                  ? { icon: "👤", label: L.tagAdmin, color: "#1f8a4c", bg: "rgba(39,174,96,0.14)", brd: "transparent" }
+                  : p.self_joined
+                  ? { icon: "📱", label: L.tagViaLink, color: "#0f7488", bg: "rgba(20,153,176,0.12)", brd: "rgba(20,153,176,0.35)" }
+                  : vrij
+                  ? { icon: "⚠️", label: L.tagFree, color: "#c0392b", bg: "rgba(224,107,94,0.12)", brd: "rgba(224,107,94,0.4)" }
+                  : { icon: "✍️", label: L.tagByYou, color: "#8a5e0f", bg: "rgba(243,156,18,0.14)", brd: "transparent" }
+                return (
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: vrij ? "#c0392b" : "#14213a", fontStyle: vrij ? "italic" : "normal", display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+                      <span style={{ flexShrink: 0 }}>{cat.icon}</span>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{vrij ? L.freeSpotName : p.name}{!vrij && (p.seats ?? 1) > 1 ? ` · ${p.seats}p.` : ""}</span>
+                    </span>
+                    <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: cat.color, background: cat.bg, border: `1px solid ${cat.brd}`, borderRadius: 14, padding: "4px 10px", whiteSpace: "nowrap" }}>{cat.label}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
