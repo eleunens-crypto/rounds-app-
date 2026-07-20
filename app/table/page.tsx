@@ -1,4 +1,4 @@
-"use client"
+p"use client"
 
 import { useEffect, useState, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase"
@@ -511,8 +511,8 @@ const STRINGS = {
     lockedName: "🔒 Vul eerst je eigen naam in",
     shareLinkBtn: "🔗 Deel de link",
     shareLinkHint: "Kies daarna je berichtenapp — WhatsApp, Messenger, sms…",
-    nowAssignTitle: "Wijs nu je gerechten toe",
-    nowAssignSub: "Duid aan wat jij nam. Wie de link opende, doet dat zelf.",
+    nowAssignTitle: "Klaar? Ga naar toewijzen",
+    nowAssignSub: "Duid aan wie wat nam. Zo weet iedereen wat hij moet betalen.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Naar toewijzen \u2192",
     assignForOthersBtn: "Kan iemand dit niet zelf doen of heeft die persoon geen gsm? Duid dit dan voor hen aan.",
     assignForSomeoneTitle: "Zelf aanduiden voor iemand?",
@@ -1175,8 +1175,8 @@ const STRINGS = {
     lockedName: "🔒 Indique d'abord ton propre nom",
     shareLinkBtn: "🔗 Partage le lien",
     shareLinkHint: "Choisis ensuite ton app de messagerie — WhatsApp, Messenger, SMS…",
-    nowAssignTitle: "Attribue maintenant tes plats",
-    nowAssignSub: "Indique ce que tu as pris. Ceux qui ont ouvert le lien le font eux-m\u00eames.",
+    nowAssignTitle: "Prêt ? Va vers l’attribution",
+    nowAssignSub: "Indique qui a pris quoi. Ainsi chacun sait ce qu\u2019il doit payer.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Vers l\u2019attribution \u2192",
     assignForOthersBtn: "Quelqu\u2019un ne peut pas le faire lui-m\u00eame ou n\u2019a pas de t\u00e9l\u00e9phone ? Attribue pour lui.",
     assignForSomeoneTitle: "Cocher toi-m\u00eame pour quelqu\u2019un ?",
@@ -3813,16 +3813,6 @@ export default function RundoTable() {
             })()}
           </div>
 
-          {/* Eigen, opvallende kaart: gedeeld met de tafel? Dan is dit je volgende stap. */}
-          {personsSet && adminNamed && (
-            <div style={{ ...S.card, order: 2.5, background: "linear-gradient(160deg,#eafaf1,#d9f2e4)", border: "2px solid rgba(31,138,76,0.45)", padding: "18px 16px" }}>
-              <div style={{ fontSize: 21, fontWeight: 800, color: "#15703f", marginBottom: 5, lineHeight: 1.25 }}>{L.nowAssignTitle}</div>
-              <div style={{ fontSize: 16.5, color: "#3c6b51", lineHeight: 1.5, marginBottom: 14 }}>{L.nowAssignSub}</div>
-              <button onClick={() => { if (!requireTotal()) return; if (!requireName()) return; setAdminTab("overview"); scrollTop() }}
-                style={{ width: "100%", padding: "16px 0", fontSize: 19, fontWeight: 800, border: "none", borderRadius: 14, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 8px 20px -8px rgba(31,138,76,0.75)", cursor: "pointer" }}>{L.goAssignBtn}</button>
-            </div>
-          )}
-
           <div style={{ ...S.card, order: 3 }} id="wie-duid-ik-aan">
 
             {showGuestList && (() => {
@@ -3944,9 +3934,11 @@ export default function RundoTable() {
                 )
               })()}
           </div>
-          <div style={{ order: 3, marginTop: 14 }}>
-            <button onClick={() => { if (warnMismatch) { setShowShareWarn(true); return } if (requireName()) { setAdminTab("overview"); scrollTop() } }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 18.5, fontWeight: 800 }}>{L.toAssignBtn}</button>
-            <div style={{ fontSize: 14.5, color: "#9aa0ab", textAlign: "center", marginTop: 6, lineHeight: 1.45 }}>{L.toAssignHint}</div>
+          <div style={{ order: 3, marginTop: 14, ...S.card, background: "linear-gradient(160deg,#eafaf1,#d9f2e4)", border: "2px solid rgba(31,138,76,0.45)", padding: "18px 16px" }}>
+            <div style={{ fontSize: 21, fontWeight: 800, color: "#15703f", marginBottom: 5, lineHeight: 1.25 }}>{L.nowAssignTitle}</div>
+            <div style={{ fontSize: 16.5, color: "#3c6b51", lineHeight: 1.5, marginBottom: 14 }}>{L.nowAssignSub}</div>
+            <button onClick={() => { if (warnMismatch) { setShowShareWarn(true); return } if (!requireName()) return; setAdminTab("overview"); scrollTop() }}
+              style={{ width: "100%", padding: "16px 0", fontSize: 19, fontWeight: 800, border: "none", borderRadius: 14, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 8px 20px -8px rgba(31,138,76,0.75)", cursor: "pointer" }}>{L.goAssignBtn}</button>
           </div>
         </div>
       )}
