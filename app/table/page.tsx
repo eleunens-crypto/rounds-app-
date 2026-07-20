@@ -760,7 +760,9 @@ const STRINGS = {
     pricePerLabel: "Prijs/stuk (€)",
     lineTotal: "Regeltotaal",
     lineTotalLabel: "Regeltotaal (€)",
-    priceHint: "Pas één van beide aan — het andere volgt.",
+    priceHint: "Pas prijs/stuk óf regeltotaal aan — het andere rekent zichzelf uit.",
+    editable: "pas aan",
+    orEditThis: "of pas dit aan",
     sharedByOthers: (names: string) => `Dit item is al toegewezen aan ${names}. Vraag de admin om het aan te passen.`,
     yourNameLabel: "✏️ Jouw naam",
     editMe: "✏️ Wijzig",
@@ -1442,7 +1444,9 @@ const STRINGS = {
     pricePerLabel: "Prix/pièce (€)",
     lineTotal: "Total de la ligne",
     lineTotalLabel: "Total ligne (€)",
-    priceHint: "Modifie l'un des deux — l'autre suit.",
+    priceHint: "Modifie le prix/pièce ou le total — l’autre se calcule tout seul.",
+    editable: "modifiable",
+    orEditThis: "ou modifie ceci",
     sharedByOthers: (names: string) => `Cet article est déjà attribué à ${names}. Demande à l'hôte de le modifier.`,
     yourNameLabel: "✏️ Ton nom",
     editMe: "✏️ Modifier",
@@ -5086,7 +5090,7 @@ export default function RundoTable() {
                 </div>
               </div>
               <div style={{ flex: 1, minWidth: 90 }}>
-                <label style={S.lbl}>{L.pricePerLabel}</label>
+                <label style={{ ...S.lbl, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>{L.pricePerLabel} <span style={{ fontSize: 11.5, fontWeight: 800, color: "#0f7488", background: "rgba(20,153,176,0.12)", borderRadius: 20, padding: "2px 8px" }}>✏️ {L.editable}</span></label>
                 <input type="text" inputMode="decimal" placeholder="0,00"
                   value={priceDraft ?? (editItem.unit_price || "")}
                   onChange={(e) => { const raw = numFilter(e.target.value); setPriceDraft(raw); setEditItem((cur) => cur ? { ...cur, unit_price: parseFloat(raw.replace(",", ".")) || 0 } : cur) }}
@@ -5094,7 +5098,7 @@ export default function RundoTable() {
                   style={{ ...S.input, width: "100%", boxSizing: "border-box" }} />
               </div>
               <div style={{ flex: 1, minWidth: 90 }}>
-                <label style={{ ...S.lbl, color: "#0f7d90", fontWeight: 800 }}>{L.lineTotalLabel}</label>
+                <label style={{ ...S.lbl, color: "#0f7d90", fontWeight: 800, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>{L.lineTotalLabel} <span style={{ fontSize: 11.5, fontWeight: 800, color: "#0f7488", background: "rgba(20,153,176,0.12)", borderRadius: 20, padding: "2px 8px" }}>✏️ {L.orEditThis}</span></label>
                 <input type="text" inputMode="decimal" placeholder="0,00"
                   value={totalDraft ?? (editItem.quantity > 0 ? +((editItem.unit_price || 0) * editItem.quantity).toFixed(2) : "")}
                   onChange={(e) => {
