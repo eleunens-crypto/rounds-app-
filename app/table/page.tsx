@@ -487,8 +487,8 @@ const STRINGS = {
     sharePopupSub: "Ze kiezen zelf een vrije plaats, zetten hun naam erop en tikken aan wat ze aten.",
     howManyGroupTitle: "👥 Met hoeveel zijn jullie in de groep?",
     yourselfFirstTitle: "✍️ Voeg eerst jezelf (als admin) hier toe",
-    yourselfStepTitle: "\u270d\ufe0f Voeg jezelf toe",
-    yourselfStepSub: "Jij hoort er ook bij. Kies eerst met hoeveel je op jouw plaats zit.",
+    yourselfStepTitle: "\u270d\ufe0f Voeg eerst jezelf toe",
+    yourselfStepSub: "\u2026 en eventueel je partner en/of kinderen als jullie samen betalen.",
     howManyOnYourSpot: "Met hoeveel zit je op jouw plaats?",
     pickCountFirst: "Kies eerst hierboven met hoeveel je bent.",
     adminBadge: "admin",
@@ -886,6 +886,8 @@ const STRINGS = {
     tipEqualNote: "· gelijk over wie bestelde",
     clearTip: "Wissen",
     changeTip: "Wijzigen",
+    whoPaysTip: "Wie betaalt de fooi mee?",
+    tipSplitHint: "De fooi wordt verdeeld over wie hier aan staat, per persoon.",
     tipItemName: "Fooi",
     taxLineLabel: "BTW / kosten (verdeeld)",
     explainTooltip: "uitleg",
@@ -1126,8 +1128,8 @@ const STRINGS = {
     sharePopupSub: "Ils choisissent une place libre, y mettent leur nom et cochent ce qu'ils ont pris.",
     howManyGroupTitle: "👥 Vous êtes combien dans le groupe ?",
     yourselfFirstTitle: "✍️ Ajoute-toi d'abord (en tant qu'admin)",
-    yourselfStepTitle: "\u270d\ufe0f Ajoute-toi",
-    yourselfStepSub: "Tu en fais partie aussi. Choisis d\u2019abord combien vous \u00eates \u00e0 ta place.",
+    yourselfStepTitle: "\u270d\ufe0f Ajoute-toi d\u2019abord",
+    yourselfStepSub: "\u2026 et \u00e9ventuellement ton/ta partenaire et/ou tes enfants si vous payez ensemble.",
     howManyOnYourSpot: "Combien \u00eates-vous \u00e0 ta place ?",
     pickCountFirst: "Choisis d\u2019abord ci-dessus combien vous \u00eates.",
     adminBadge: "admin",
@@ -1525,6 +1527,8 @@ const STRINGS = {
     tipEqualNote: "· également entre ceux qui ont commandé",
     clearTip: "Effacer",
     changeTip: "Modifier",
+    whoPaysTip: "Qui participe au pourboire ?",
+    tipSplitHint: "Le pourboire est r\u00e9parti entre les personnes activ\u00e9es ici, par personne.",
     tipItemName: "Pourboire",
     taxLineLabel: "TVA / frais (répartis)",
     explainTooltip: "explication",
@@ -2921,6 +2925,12 @@ export default function RundoTable() {
 
   const isTax = (it: BillItem) => it.distribute != null && it.distribute !== ""
   const isTip = (it: BillItem) => it.name.trim().toLowerCase() === "fooi"
+  // Wie betaalt de fooi mee? Leeg = nog niets aangepast, dan geldt "iedereen die bestelde".
+  const tipPickedIds = (): string[] => {
+    const tip = items.find((it) => isTip(it))
+    if (!tip) return []
+    return claims.filter((c) => c.item_id === tip.id && c.quantity > 0).map((c) => c.participant_id)
+  }
   const baseItems = items.filter((it) => !isTax(it))
   const taxItems = items.filter((it) => isTax(it) && !isTip(it))
   const tipTotal = items.filter((it) => isTip(it)).reduce((s, it) => s + itemTotal(it), 0)
@@ -3011,10 +3021,14 @@ export default function RundoTable() {
   const tipShare = (pid: string): number => {
     if (tipTotal <= 0) return 0
     const has = (q: string) => baseItems.some((it) => it.is_shared ? sharerIds(it.id).includes(q) : myQty(it.id, q) > 0)
-    if (!has(pid)) return 0
+    // Zette de beheerder zelf mensen aan of uit? Dan telt die keuze. Zolang hij niets
+    // aanpaste, betaalt gewoon iedereen mee die iets bestelde.
+    const gekozen = tipPickedIds()
+    const doetMee = (q: string) => gekozen.length > 0 ? gekozen.includes(q) : has(q)
+    if (!doetMee(pid)) return 0
     // Een koppel is één rij met seats: 2. De fooi verdelen we per persoon, niet per rij —
     // anders betaalt een koppel samen evenveel fooi als iemand die alleen kwam.
-    const heads = participants.reduce((s, q) => s + (has(q.id) ? seatsOf(q.id) : 0), 0)
+    const heads = participants.reduce((s, q) => s + (doetMee(q.id) ? seatsOf(q.id) : 0), 0)
     return heads > 0 ? tipTotal * (seatsOf(pid) / heads) : 0
   }
 
@@ -3684,7 +3698,6 @@ export default function RundoTable() {
                     <div style={{ fontSize: 17, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.yourselfStepTitle} <span style={{ color: "#c0392b" }}>*</span></div>
                     <div style={{ fontSize: 14.5, color: "#5a6680", lineHeight: 1.45, marginBottom: 10 }}>{L.yourselfStepSub}</div>
 
-                    <div style={{ fontSize: 15.5, fontWeight: 800, color: "#14213a", marginBottom: 7 }}>{L.howManyOnYourSpot}</div>
                     <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
                       {[1, 2, 3].map((n) => {
                         const aan = !moetKiezen && (n === 3 ? seats >= 3 : seats === n)
@@ -4165,11 +4178,11 @@ export default function RundoTable() {
           {!group.finalized && (
             <div id="fooi-sectie" style={{ ...S.card, padding: "11px 14px", marginTop: 10 }}>
               {tipItem ? (
+                <>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 16, fontWeight: 700, color: "#15703f" }}>
                     <span style={{ fontSize: 19 }}>✓</span>
                     {L.tipLabelPre}<b>€{(tipItem.unit_price ?? 0).toFixed(2).replace(".", ",")}</b>
-                    <span style={{ fontSize: 15, color: "#5a8a6a", fontWeight: 600 }}>{L.tipEqualNote}</span>
                   </span>
                   <span style={{ display: "inline-flex", gap: 7, flexShrink: 0 }}>
                     <button onPointerDown={(e) => { e.preventDefault(); setTipInput((tipItem.unit_price ?? 0).toFixed(2).replace(".", ",")); wisItemDirect(tipItem.id) }}
@@ -4178,6 +4191,41 @@ export default function RundoTable() {
                       style={{ ...S.btn, fontSize: 15.5, fontWeight: 700, padding: "8px 12px" }}>{L.clearTip}</button>
                   </span>
                 </div>
+                {/* Wie draagt bij? Standaard iedereen die iets bestelde; hier kan je
+                    per persoon aan- of uitzetten. */}
+                {isAdmin && participants.length > 0 && (() => {
+                  const gekozen = tipPickedIds()
+                  const besteldeIets = (q: string) => baseItems.some((it) => it.is_shared ? sharerIds(it.id).includes(q) : myQty(it.id, q) > 0)
+                  const doetMee = (q: string) => gekozen.length > 0 ? gekozen.includes(q) : besteldeIets(q)
+                  const zet = (pid: string, aan: boolean) => {
+                    // Van "automatisch" naar "handmatig": leg eerst de huidige verdeling vast.
+                    const basis = gekozen.length > 0 ? gekozen : participants.filter((q) => besteldeIets(q.id)).map((q) => q.id)
+                    const volgende = aan ? [...new Set([...basis, pid])] : basis.filter((x) => x !== pid)
+                    participants.forEach((q) => {
+                      const moet = volgende.includes(q.id) ? 1 : 0
+                      const nu = claims.some((c) => c.item_id === tipItem.id && c.participant_id === q.id && c.quantity > 0) ? 1 : 0
+                      if (moet !== nu) setClaim(tipItem.id, q.id, moet)
+                    })
+                  }
+                  return (
+                    <div style={{ marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#3b486a", marginBottom: 7 }}>{L.whoPaysTip}</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {participants.map((q) => {
+                          const aan = doetMee(q.id)
+                          return (
+                            <button key={q.id} onClick={() => zet(q.id, !aan)}
+                              style={{ fontSize: 15, fontWeight: 700, borderRadius: 10, padding: "9px 13px", cursor: "pointer", color: aan ? "#15703f" : "#9aa0ab", background: aan ? "rgba(39,174,96,0.12)" : "#fff", border: aan ? "1.5px solid rgba(39,174,96,0.5)" : "1.5px solid rgba(16,24,40,0.15)", textDecoration: aan ? "none" : "line-through" }}>
+                              {aan ? "✓ " : ""}{q.name}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <div style={{ fontSize: 14, color: "#9aa0ab", marginTop: 7, lineHeight: 1.45 }}>{L.tipSplitHint}</div>
+                    </div>
+                  )
+                })()}
+                </>
               ) : (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 16, fontWeight: 800, color: "#3b486a", flexShrink: 0 }}>{L.tipHeader}</span>
@@ -4879,7 +4927,7 @@ export default function RundoTable() {
                   style={{ ...S.input, width: "100%", boxSizing: "border-box", fontWeight: 800, border: "1.5px solid rgba(20,153,176,0.55)", background: "rgba(20,153,176,0.05)" }} />
               </div>
             </div>
-            <div style={{ fontSize: 14, color: "#9aa0ab", marginTop: -4, marginBottom: 12 }}>{L.priceHint}</div>
+            <div style={{ fontSize: 14.5, fontWeight: 700, color: "#0f7d90", background: "rgba(20,153,176,0.1)", border: "1px solid rgba(20,153,176,0.3)", borderRadius: 9, padding: "8px 11px", marginTop: 2, marginBottom: 12 }}>💡 {L.priceHint}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 13 }}>
               <button onClick={() => setEditItem((cur) => cur ? { ...cur, is_shared: !cur.is_shared } : cur)}
                 style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, padding: "8px 9px", cursor: "pointer",
