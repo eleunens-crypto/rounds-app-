@@ -517,6 +517,7 @@ const STRINGS = {
     assignForOthersBtn: "Kan iemand dit niet zelf doen of heeft die persoon geen gsm? Duid dit dan voor hen aan.",
     assignForSomeoneTitle: "Zelf aanduiden voor iemand?",
     assignForSomeoneSub: "Doe dit enkel als die persoon geen gsm heeft of het niet zelf wil doen.",
+    addYourselfFirst: "Vul eerst hierboven je eigen naam in.",
     addGuestModalTitle: "Voor wie duid je aan?",
     addGuestModalSub: "Een koppel of gezin dat samen betaalt? Zet ze als \u00e9\u00e9n. Alleenstaand? Kies 1.",
     howManyPersonsQ: "Voor hoeveel personen?",
@@ -1174,6 +1175,7 @@ const STRINGS = {
     assignForOthersBtn: "Quelqu\u2019un ne peut pas le faire lui-m\u00eame ou n\u2019a pas de t\u00e9l\u00e9phone ? Attribue pour lui.",
     assignForSomeoneTitle: "Cocher toi-m\u00eame pour quelqu\u2019un ?",
     assignForSomeoneSub: "\u00c0 faire seulement si cette personne n\u2019a pas de t\u00e9l\u00e9phone ou ne veut pas le faire elle-m\u00eame.",
+    addYourselfFirst: "Remplis d\u2019abord ton propre nom ci-dessus.",
     addGuestModalTitle: "Pour qui coches-tu ?",
     addGuestModalSub: "Un couple ou une famille qui paie ensemble ? Mets-les comme un seul. Seul ? Choisis 1.",
     howManyPersonsQ: "Pour combien de personnes ?",
@@ -3474,17 +3476,18 @@ export default function RundoTable() {
             // Zolang er niet bevestigd is, is alles oranje: het kader pulseert en de knop
             // nodigt uit. Groen verschijnt pas ná de bevestiging — nooit ervoor.
             const jaBtn = { border: "none", background: "#27ae60", color: "#fff", borderRadius: 10, padding: "12px 24px", fontSize: 18, fontWeight: 800, cursor: "pointer" }
+            // Vóór de bevestiging zien Ja en Neen er identiek uit — geen van beide "voorgekozen".
+            const keuzeBtn = { border: "2px solid rgba(20,33,58,0.28)", background: "#fff", color: "#3b486a", borderRadius: 10, padding: "11px 24px", fontSize: 18, fontWeight: 800, cursor: "pointer" }
             const actieBtn = { border: "2px solid #e07b28", background: "#fff", color: "#c25f10", borderRadius: 10, padding: "11px 24px", fontSize: 18, fontWeight: 800, cursor: "pointer" }
-            const neenBtn = { border: "2px solid rgba(20,33,58,0.2)", background: "#fff", color: "#5a6680", borderRadius: 10, padding: "11px 24px", fontSize: 18, fontWeight: 800, cursor: "pointer" }
             const jaNeen = (
               <span style={{ display: "inline-flex", gap: 8 }}>
                 {/* Eenmaal bevestigd verdwijnt "Ja" — anders lijkt het alsof je nóg eens
                     moet bevestigen. Enkel de weg terug (aanpassen) blijft staan. */}
-                {!greenState && <button onPointerDown={tikBevestig} style={{ ...actieBtn }}>{L.yes}</button>}
+                {!greenState && <button onPointerDown={tikBevestig} style={{ ...keuzeBtn }}>{L.yes}</button>}
                 <button onPointerDown={(e) => { e.preventDefault(); setReceiptEditing(true); setReceiptConfirmed(false); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }}
                   style={greenState
                     ? { border: "none", background: "transparent", color: "#5a6680", borderRadius: 10, padding: "11px 14px", fontSize: 16, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }
-                    : { ...neenBtn, ...(receiptEditing ? { borderColor: "#1499b0", color: "#1499b0" } : {}) }}>{greenState ? L.changeAmount : L.no}</button>
+                    : { ...keuzeBtn, ...(receiptEditing ? { borderColor: "#1499b0", color: "#1499b0" } : {}) }}>{greenState ? L.changeAmount : L.no}</button>
               </span>
             )
             return (
@@ -3915,12 +3918,12 @@ export default function RundoTable() {
               )
             })()}
               {(
-                <button onClick={() => { if (!requireName()) return; setGuestSeats(1); setGuestNames([""]); setShowGuestModal(true) }}
-                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", marginTop: 12, padding: "15px 15px", borderRadius: 12, border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.05)", cursor: "pointer" }}>
+                <button onClick={() => { if (!requireName()) return; setGuestSeats(1); setGuestNames([""]); setShowGuestModal(true) }} disabled={!personsSet || !adminNamed}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", marginTop: 12, padding: "15px 15px", borderRadius: 12, border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.05)", cursor: (!personsSet || !adminNamed) ? "not-allowed" : "pointer", opacity: (!personsSet || !adminNamed) ? 0.45 : 1 }}>
                   <span style={{ flexShrink: 0, fontSize: 24 }}>✍️</span>
                   <span style={{ minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#0f7488", marginBottom: 2 }}>{L.assignForSomeoneTitle}</span>
-                    <span style={{ display: "block", fontSize: 14.5, color: "#5a6680", lineHeight: 1.45 }}>{L.assignForSomeoneSub}</span>
+                    <span style={{ display: "block", fontSize: 14.5, color: "#5a6680", lineHeight: 1.45 }}>{(!personsSet || !adminNamed) ? L.addYourselfFirst : L.assignForSomeoneSub}</span>
                   </span>
                 </button>
               )}
@@ -4678,10 +4681,10 @@ export default function RundoTable() {
                         </div>
                       ))}
                       {photos.length < 2 && (
-                        <label style={{ width: 50, height: 64, borderRadius: 9, border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.04)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-                          <span style={{ fontSize: 19, color: "#1499b0", lineHeight: 1 }}>+</span>
+                        <label style={{ width: 92, minHeight: 74, borderRadius: 10, border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.04)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, padding: "6px 6px", gap: 1 }}>
+                          <span style={{ fontSize: 20, color: "#1499b0", lineHeight: 1 }}>＋</span>
                           <span style={{ fontSize: 13, color: "#1499b0", fontWeight: 800, textAlign: "center", lineHeight: 1.15 }}>{L.addSecondHalf}</span>
-                          <span style={{ fontSize: 12, color: "#9aa0ab", fontWeight: 700, textAlign: "center", lineHeight: 1.1 }}>{L.addSecondHalfHint}</span>
+                          <span style={{ fontSize: 11, color: "#9aa0ab", fontWeight: 700, textAlign: "center", lineHeight: 1.15 }}>{L.addSecondHalfHint}</span>
                           <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => addPhoto(e.target.files?.[0])} />
                         </label>
                       )}
