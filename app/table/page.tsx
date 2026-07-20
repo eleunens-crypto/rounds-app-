@@ -732,6 +732,8 @@ const STRINGS = {
     orderedItems: "Bestelde items: ",
     taxShort: "BTW",
     totalWord: "Totaal",
+    overVsReceipt: (v: string) => `${v} te veel t.o.v. de bon`,
+    underVsReceipt: (v: string) => `${v} te weinig t.o.v. de bon`,
     billCorrectGoGuests: "Bon correct? Ga naar Gasten en delen! →",
     editItemTitle: "✏️ Item bewerken",
     nameLabel: "Naam",
@@ -1387,6 +1389,8 @@ const STRINGS = {
     orderedItems: "Articles commandés : ",
     taxShort: "TVA",
     totalWord: "Total",
+    overVsReceipt: (v: string) => `${v} de trop vs le ticket`,
+    underVsReceipt: (v: string) => `${v} en moins vs le ticket`,
     billCorrectGoGuests: "Addition correcte ? Vers Invités et partage ! →",
     editItemTitle: "✏️ Modifier l'article",
     nameLabel: "Nom",
@@ -3598,6 +3602,7 @@ export default function RundoTable() {
             recentItemId={recentItemId} onGoGuests={goGuests}
             scanFlags={scanFlags}
             billOk={billOk}
+            billOverBy={(receiptConfirmed && !receiptEditing && group?.receipt_total != null) ? +(billTotal - group.receipt_total).toFixed(2) : null}
             taxLines={taxItems.map((t) => ({ name: t.name, amount: taxAmount(t) }))}
             taxNode={
               <div style={{ marginTop: 6 }}>
@@ -5133,7 +5138,7 @@ function TopBar({ group, isAdmin, onHome, me, totalPersons, guestSeats, onGuestS
   )
 }
 
-function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, shareHeads, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onSetExpected, onAddManual, bareBill, taxLines, taxNode, recentItemId, onGoGuests, billOk, scanFlags }: {
+function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, shareHeads, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onSetExpected, onAddManual, bareBill, taxLines, taxNode, recentItemId, onGoGuests, billOk, billOverBy, scanFlags }: {
   items: BillItem[]; claimedQty: (id: string) => number
   participants: Participant[]; claimsForItem: (id: string) => { name: string; qty: number }[]
   sharerIds: (id: string) => string[]; shareHeads: (id: string) => number; toggleShareClaim: (itemId: string, pid: string) => void
@@ -5145,6 +5150,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   recentItemId?: string | null
   onGoGuests?: () => void
   billOk?: boolean
+  billOverBy?: number | null
   scanFlags?: Record<string, { note: string }>
 }) {
   const [openFlag, setOpenFlag] = useState<string | null>(null)
@@ -5302,6 +5308,11 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
               <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a" }}>{L.totalWord}</span>
               <span style={{ fontSize: 21, fontWeight: 800, color: "#14213a" }}>€{(sum + tax).toFixed(2).replace(".", ",")}</span>
             </div>
+            {billOverBy != null && Math.abs(billOverBy) >= 0.005 && (
+              <div style={{ textAlign: "right", marginTop: 4, fontSize: 15, fontWeight: 800, color: "#c0392b" }}>
+                {billOverBy > 0 ? L.overVsReceipt(`€${billOverBy.toFixed(2).replace(".", ",")}`) : L.underVsReceipt(`€${Math.abs(billOverBy).toFixed(2).replace(".", ",")}`)}
+              </div>
+            )}
           </div>
         )
       })()}
