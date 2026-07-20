@@ -860,6 +860,8 @@ const STRINGS = {
     tooMuchInList: "Te veel in de lijst",
     tooLittleInList: "Te weinig in de lijst",
     compareFix: "Vergelijk met de itemlijst hieronder en corrigeer!",
+    goToItemList: "Ga naar de itemlijst",
+    checkHere: "hier checken!",
     roundingTitle: "Niets gevonden? Mogelijk afrondingsverschil",
     roundingSub: "Aanvaarden en verdergaan",
     roundingDone: (d: string) => `€${d} afronding aanvaard. Je kan verder naar Gasten & delen.`,
@@ -1539,6 +1541,8 @@ const STRINGS = {
     tooMuchInList: "En trop dans la liste",
     tooLittleInList: "Manque dans la liste",
     compareFix: "Compare avec la liste d'articles ci-dessous et corrige !",
+    goToItemList: "Vers la liste d\u2019articles",
+    checkHere: "\u00e0 v\u00e9rifier ici !",
     roundingTitle: "Rien trouvé ? Peut-être un écart d'arrondi",
     roundingSub: "Accepter et continuer",
     roundingDone: (d: string) => `Écart d'arrondi de €${d} accepté. Tu peux continuer.`,
@@ -3663,6 +3667,8 @@ export default function RundoTable() {
                         <li>{L.checkPrices}</li>
                         <li>{L.checkShared}</li>
                       </ul>
+                      <button onClick={() => { if (typeof document !== "undefined") document.getElementById("items-op-de-bon")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
+                        style={{ marginTop: 11, display: "inline-flex", alignItems: "center", gap: 7, fontSize: 15, fontWeight: 800, color: "#fff", background: "#c0392b", border: "none", borderRadius: 10, padding: "10px 15px", cursor: "pointer" }}>⬇ {L.goToItemList}</button>
                       {rounding && (
                         <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 9, background: "rgba(255,255,255,0.75)", border: "1px solid rgba(90,108,166,0.28)", borderRadius: 9, padding: "9px 10px" }}>
                           <span style={{ flexShrink: 0, fontSize: 18 }}>🧮</span>
@@ -5276,7 +5282,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   return (
     <div style={S.card}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <h3 style={{ ...S.h3, marginBottom: 0, display: "flex", alignItems: "baseline", gap: 8 }}>{L.itemsOnBill}{!billOk && <span style={{ fontSize: 16.5, fontWeight: 800, color: "#c0392b" }}>{L.checkExcl}</span>}</h3>
+        <h3 id="items-op-de-bon" style={{ ...S.h3, marginBottom: 0, display: "flex", alignItems: "baseline", gap: 8, ...(billOverBy != null && Math.abs(billOverBy) >= 0.005 ? { background: "rgba(224,107,94,0.1)", border: "1.5px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "11px 13px" } : {}) }}>{L.itemsOnBill}{(billOverBy != null && Math.abs(billOverBy) >= 0.005) ? <span style={{ fontSize: 16.5, fontWeight: 800, color: "#c0392b" }}>→ {L.checkHere}</span> : (!billOk && <span style={{ fontSize: 16.5, fontWeight: 800, color: "#c0392b" }}>{L.checkExcl}</span>)}</h3>
       </div>
       {items.length > 0 && (
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, background: "rgba(90,108,166,0.06)", borderRadius: 10, padding: "9px 11px" }}>
