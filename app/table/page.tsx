@@ -633,11 +633,12 @@ const STRINGS = {
     viewReceipt: "🧾 Bon bekijken",
     groupWord: "Groep",
     nFree: (n: number) => `${n} vrij`,
+    nStillFree: (n: number) => `${n} nog vrij`,
     tagAdmin: "jij \u00b7 admin",
     tagViaLink: "via de link",
     tagByYou: "jij duidt aan",
-    tagFree: "nog invullen",
-    freeSpotName: "Nog vrij \u2014 geen naam",
+    tagFree: "nog niemand",
+    freeSpotName: "Wacht op iemand",
     rescan: "🔄 Bon opnieuw scannen",
     startScan: "Start hier — Scan je rekening 📸",
     scanOk: "Scan gelukt en items herkend",
@@ -1307,11 +1308,12 @@ const STRINGS = {
     viewReceipt: "🧾 Voir l'addition",
     groupWord: "Groupe",
     nFree: (n: number) => `${n} libre${n !== 1 ? "s" : ""}`,
+    nStillFree: (n: number) => `${n} encore libre${n !== 1 ? "s" : ""}`,
     tagAdmin: "toi \u00b7 admin",
     tagViaLink: "via le lien",
     tagByYou: "tu coches",
-    tagFree: "\u00e0 remplir",
-    freeSpotName: "Encore libre \u2014 sans nom",
+    tagFree: "personne",
+    freeSpotName: "En attente de quelqu\u2019un",
     rescan: "🔄 Rescanner l'addition",
     startScan: "Commence ici — scanne ton addition 📸",
     scanOk: "Scan réussi, articles reconnus",
@@ -3459,11 +3461,18 @@ export default function RundoTable() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             {(() => {
               const vrij = participants.filter((p) => isFreeSpot(p) && !p.self_joined).reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
+              // Iemand anders dan jij al ingevuld? (QR-gast of door jou aangeduid)
+              const iemandIngevuld = participants.some((p) => p.id !== ownerPid && !isFreeSpot(p))
+              // Kleur volgt de fase: compleet = groen, bezig-met-gaten = zacht oranje,
+              // net begonnen = neutraal grijs. Nooit rood — lege plekken zijn normaal.
+              const kleur = vrij === 0 ? "#1f8a4c" : iemandIngevuld ? "#b5591a" : "#5a6680"
               return (
-                <button onClick={() => setShowGroupPeek((v) => !v)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: vrij > 0 ? "#c0392b" : "#5a6680", padding: "4px 4px", display: "inline-flex", alignItems: "center", gap: 7 }}>
-                  👥 {L.groupWord}{vrij > 0
-                    ? <span style={{ fontSize: 13.5, fontWeight: 800, background: "rgba(224,107,94,0.14)", border: "1px solid rgba(224,107,94,0.4)", borderRadius: 12, padding: "2px 9px" }}>⚠️ {L.nFree(vrij)}</span>
-                    : ` (${totalPersons})`} {showGroupPeek ? "▴" : "▾"}
+                <button onClick={() => setShowGroupPeek((v) => !v)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: kleur, padding: "4px 4px", display: "inline-flex", alignItems: "center", gap: 7 }}>
+                  👥 {L.groupWord}{vrij === 0
+                    ? <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 12, padding: "2px 9px" }}>✓ {totalPersons}</span>
+                    : iemandIngevuld
+                    ? <span style={{ fontSize: 13.5, fontWeight: 800, color: "#b5591a", background: "rgba(243,156,18,0.14)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 12, padding: "2px 9px" }}>{L.nStillFree(vrij)}</span>
+                    : <span style={{ fontSize: 13.5, fontWeight: 800, color: "#5a6680", background: "rgba(16,24,40,0.06)", borderRadius: 12, padding: "2px 9px" }}>{totalPersons}</span>} {showGroupPeek ? "▴" : "▾"}
                 </button>
               )
             })()}
@@ -3471,7 +3480,9 @@ export default function RundoTable() {
               <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#1499b0", padding: "4px 4px" }}>{L.viewReceipt}{(group.receipt_url!.split(/\s+/).filter(Boolean).length > 1) ? ` (${group.receipt_url!.split(/\s+/).filter(Boolean).length})` : ""}</button>
             )}
           </div>
-          {showGroupPeek && (
+          {showGroupPeek && (() => {
+            const iemandIngevuld = participants.some((q) => q.id !== ownerPid && !isFreeSpot(q))
+            return (
             <div style={{ border: "1px solid rgba(16,24,40,0.12)", borderRadius: 12, padding: "10px 12px", marginTop: 8 }}>
               {participants.map((p) => {
                 const isAdminSpot = p.id === ownerPid
@@ -3481,11 +3492,13 @@ export default function RundoTable() {
                   : p.self_joined
                   ? { icon: "📱", label: L.tagViaLink, color: "#0f7488", bg: "rgba(20,153,176,0.12)", brd: "rgba(20,153,176,0.35)" }
                   : vrij
-                  ? { icon: "⚠️", label: L.tagFree, color: "#c0392b", bg: "rgba(224,107,94,0.12)", brd: "rgba(224,107,94,0.4)" }
+                  ? (iemandIngevuld
+                      ? { icon: "⏳", label: L.tagFree, color: "#b5591a", bg: "rgba(243,156,18,0.14)", brd: "rgba(243,156,18,0.45)" }
+                      : { icon: "⏳", label: L.tagFree, color: "#8a93a3", bg: "rgba(16,24,40,0.05)", brd: "transparent" })
                   : { icon: "✍️", label: L.tagByYou, color: "#8a5e0f", bg: "rgba(243,156,18,0.14)", brd: "transparent" }
                 return (
                   <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: vrij ? "#c0392b" : "#14213a", fontStyle: vrij ? "italic" : "normal", display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: vrij ? "#9aa0ab" : "#14213a", fontStyle: vrij ? "italic" : "normal", display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
                       <span style={{ flexShrink: 0 }}>{cat.icon}</span>
                       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{vrij ? L.freeSpotName : p.name}{!vrij && (p.seats ?? 1) > 1 ? ` · ${p.seats}p.` : ""}</span>
                     </span>
@@ -3494,7 +3507,7 @@ export default function RundoTable() {
                 )
               })}
             </div>
-          )}
+          ); })()}
         </div>
       )}
 
