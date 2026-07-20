@@ -4511,7 +4511,7 @@ export default function RundoTable() {
           setShowSelfModal(false)
         }
         return (
-          <div style={{ ...S.overlay, zIndex: 3100 }} onClick={() => setShowSelfModal(false)}>
+          <div style={{ ...S.overlay, zIndex: 3100 }}>
             <div style={{ ...S.modal, width: "min(400px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 3 }}>{L.howManyAdminQ}</h3>
               <div style={{ fontSize: 15, color: "#9aa0ab", lineHeight: 1.45, marginBottom: 13 }}>{L.howManyAdminSub}</div>
