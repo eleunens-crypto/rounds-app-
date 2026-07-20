@@ -509,7 +509,7 @@ const STRINGS = {
     personsFirst: "⚠️ Vul eerst in met hoeveel jullie zijn.",
     lockedPersons: "🔒 Eerst het aantal personen invullen",
     lockedName: "🔒 Vul eerst je eigen naam in",
-    shareLinkBtn: "🔗 Of deel de link",
+    shareLinkBtn: "🔗 Deel de link",
     shareLinkHint: "Kies daarna je berichtenapp — WhatsApp, Messenger, sms…",
     nowAssignTitle: "Wijs nu je gerechten toe",
     nowAssignSub: "Duid aan wat jij nam. Wie de link opende, doet dat zelf.",
@@ -533,6 +533,7 @@ const STRINGS = {
     qrJoinedLegend: "\ud83d\udcf1 = kwam via de link binnen en duidt normaal zelf aan.",
     copyLinkPre: "Of",
     copyLinkAction: "kopieer de link hier",
+    copyLinkLink: "Liever kopiëren en zelf plakken?",
     copyLinkPost: " en plak waar je wil.",
     billOkBadge: "✓ bon klopt — je kan delen",
     seatFreedUp: "Die plaats telt nu voor 2 — er is één vrije plaats minder.",
@@ -1170,7 +1171,7 @@ const STRINGS = {
     personsFirst: "⚠️ Indique d'abord combien vous êtes.",
     lockedPersons: "🔒 Indique d'abord le nombre de personnes",
     lockedName: "🔒 Indique d'abord ton propre nom",
-    shareLinkBtn: "🔗 Ou partage le lien",
+    shareLinkBtn: "🔗 Partage le lien",
     shareLinkHint: "Choisis ensuite ton app de messagerie — WhatsApp, Messenger, SMS…",
     nowAssignTitle: "Attribue maintenant tes plats",
     nowAssignSub: "Indique ce que tu as pris. Ceux qui ont ouvert le lien le font eux-m\u00eames.",
@@ -1194,6 +1195,7 @@ const STRINGS = {
     qrJoinedLegend: "\ud83d\udcf1 = arriv\u00e9 via le lien et attribue normalement lui-m\u00eame.",
     copyLinkPre: "Ou",
     copyLinkAction: "copie le lien ici",
+    copyLinkLink: "Tu préfères copier et coller toi-même ?",
     copyLinkPost: " et colle-le o\u00f9 tu veux.",
     billOkBadge: "✓ l'addition est correcte — tu peux partager",
     seatFreedUp: "Cette place compte maintenant pour 2 — il y a une place libre en moins.",
@@ -3799,9 +3801,8 @@ export default function RundoTable() {
                   </div>
 
                   <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (requireName()) doShare() }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800 }}>{L.shareLinkBtn}</button>
-                  <div style={{ fontSize: 15.5, color: "#5a6680", textAlign: "center", marginTop: 8, lineHeight: 1.5 }}>
-                    {L.copyLinkPre}{" "}
-                    <span onClick={() => { if (!requireName()) return; if (navigator.clipboard) navigator.clipboard.writeText(invite); setToast(L.toastInviteCopied) }} style={{ fontWeight: 800, color: "#1499b0", textDecoration: "underline", cursor: "pointer" }}>{L.copyLinkAction}</span>{L.copyLinkPost}
+                  <div style={{ textAlign: "center", marginTop: 10 }}>
+                    <span onClick={() => { if (!requireName()) return; if (navigator.clipboard) navigator.clipboard.writeText(invite); setToast(L.toastInviteCopied) }} style={{ fontSize: 14.5, fontWeight: 800, color: "#1499b0", textDecoration: "underline", cursor: "pointer" }}>📋 {L.copyLinkLink}</span>
                   </div>
                 </>
               )
