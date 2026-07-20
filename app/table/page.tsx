@@ -487,6 +487,10 @@ const STRINGS = {
     sharePopupSub: "Ze kiezen zelf een vrije plaats, zetten hun naam erop en tikken aan wat ze aten.",
     howManyGroupTitle: "👥 Met hoeveel zijn jullie in de groep?",
     yourselfFirstTitle: "✍️ Voeg eerst jezelf (als admin) hier toe",
+    yourselfStepTitle: "\u270d\ufe0f Voeg jezelf toe",
+    yourselfStepSub: "Jij hoort er ook bij. Kies eerst met hoeveel je op jouw plaats zit.",
+    howManyOnYourSpot: "Met hoeveel zit je op jouw plaats?",
+    pickCountFirst: "Kies eerst hierboven met hoeveel je bent.",
     adminBadge: "admin",
     nameRequired: "Vul eerst je eigen naam in — anders weet niemand wie de rekening deelde.",
     whoJoinedTitle: "👥 Wie doet al mee?",
@@ -1122,6 +1126,10 @@ const STRINGS = {
     sharePopupSub: "Ils choisissent une place libre, y mettent leur nom et cochent ce qu'ils ont pris.",
     howManyGroupTitle: "👥 Vous êtes combien dans le groupe ?",
     yourselfFirstTitle: "✍️ Ajoute-toi d'abord (en tant qu'admin)",
+    yourselfStepTitle: "\u270d\ufe0f Ajoute-toi",
+    yourselfStepSub: "Tu en fais partie aussi. Choisis d\u2019abord combien vous \u00eates \u00e0 ta place.",
+    howManyOnYourSpot: "Combien \u00eates-vous \u00e0 ta place ?",
+    pickCountFirst: "Choisis d\u2019abord ci-dessus combien vous \u00eates.",
     adminBadge: "admin",
     nameRequired: "Indique d'abord ton nom — sinon personne ne sait qui a partagé l'addition.",
     whoJoinedTitle: "👥 Qui participe déjà ?",
@@ -1841,6 +1849,8 @@ export default function RundoTable() {
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [receiptZoom, setReceiptZoom] = useState(1)  // 1 = passend op het scherm
+  // Heeft de beheerder bewust gekozen met hoeveel hij op zijn plaats zit?
+  const [selfSeatsPicked, setSelfSeatsPicked] = useState(false)
   const [newGuest, setNewGuest] = useState("")
   const [claimSpot, setClaimSpot] = useState<string | null>(null)
   const [claimSeats, setClaimSeats] = useState(1)
@@ -3654,34 +3664,62 @@ export default function RundoTable() {
             )}
             {personsSet && (
             <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
-              <div style={{ fontSize: 17, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.yourselfFirstTitle} <span style={{ color: "#c0392b" }}>*</span></div>
               {(() => {
                 const me = participants.find((x) => x.id === meId) || participants[0]
                 if (!me) return null
                 const isPh = new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(me.name.trim()) || me.name.trim() === L.adminName
                 const seats = Math.max(1, me.seats ?? 1)
-                // Namen van de plaats: "Jan & Marie" wordt als twee losse velden getoond.
+                // Zelfde volgorde als bij een gast die via de link binnenkomt: eerst hoeveel
+                // personen op jouw plaats, dan pas de naam of namen.
+                const moetKiezen = isPh && !selfSeatsPicked
                 const delen = isPh ? [] : me.name.split("&").map((x) => x.trim()).filter(Boolean)
                 const bewaar = (idx: number, waarde: string) => {
                   const lijst = Array.from({ length: Math.max(seats, idx + 1) }, (_, i) => (i === idx ? waarde.trim() : (delen[i] ?? "")))
                   const naam = lijst.filter(Boolean).join(" & ")
                   if (naam && naam !== me.name) renameGuest(me.id, naam)
                 }
+                const kies = (n: number) => { setSelfSeatsPicked(true); if (n !== seats) setSeats(me.id, n) }
                 return (
                   <>
-                    {Array.from({ length: seats }, (_, i) => i).map((i) => (
-                      <input key={`self-${me.id}-${i}-${me.name}`} id={i === 0 ? "own-name" : undefined} defaultValue={delen[i] ?? ""}
-                        placeholder={seats === 1 ? L.ownNamePlaceholder : i === 0 ? L.firstName : i === 1 ? L.secondName : L.extraName(i + 1)}
-                        onBlur={(e) => bewaar(i, e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
-                        style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 7, border: (i === 0 && isPh) ? "1.5px solid rgba(192,57,43,0.5)" : "1.5px solid rgba(20,153,176,0.5)", background: (i === 0 && isPh) ? "rgba(192,57,43,0.03)" : "rgba(20,153,176,0.04)" }} />
-                    ))}
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 2 }}>
-                      {seats > 1 && (
-                        <button onPointerDown={(e) => { e.preventDefault(); setSeats(me.id, seats - 1) }} style={{ ...S.smallBtn, fontSize: 15, fontWeight: 800, color: "#5a6680" }}>− {L.onePersonLess}</button>
-                      )}
-                      <button onPointerDown={(e) => { e.preventDefault(); setSeats(me.id, seats + 1) }} style={{ ...S.smallBtn, fontSize: 15, fontWeight: 800, color: "#1499b0", borderColor: "rgba(20,153,176,0.4)" }}>+ {L.somebodyOnMySpot}</button>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.yourselfStepTitle} <span style={{ color: "#c0392b" }}>*</span></div>
+                    <div style={{ fontSize: 14.5, color: "#5a6680", lineHeight: 1.45, marginBottom: 10 }}>{L.yourselfStepSub}</div>
+
+                    <div style={{ fontSize: 15.5, fontWeight: 800, color: "#14213a", marginBottom: 7 }}>{L.howManyOnYourSpot}</div>
+                    <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                      {[1, 2, 3].map((n) => {
+                        const aan = !moetKiezen && (n === 3 ? seats >= 3 : seats === n)
+                        const label = n === 1 ? L.onePerson : n === 2 ? L.twoPersons : L.threePlus
+                        return (
+                          <button key={n} onClick={() => kies(n === 3 ? Math.max(3, seats) : n)}
+                            style={{ flex: 1, fontSize: 15, fontWeight: 800, padding: "12px 4px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
+                        )
+                      })}
                     </div>
+                    {!moetKiezen && seats >= 3 && (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginBottom: 12 }}>
+                        <button onClick={() => setSeats(me.id, Math.max(3, seats - 1))} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 19 }}>−</button>
+                        <b style={{ fontSize: 18, color: "#14213a" }}>{seats}</b>
+                        <button onClick={() => setSeats(me.id, Math.min(8, seats + 1))} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 19, background: "rgba(27,42,74,0.12)" }}>+</button>
+                      </div>
+                    )}
+
+                    {moetKiezen ? (
+                      <div style={{ fontSize: 14.5, color: "#c0392b", fontWeight: 700 }}>{L.pickCountFirst}</div>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: 15.5, fontWeight: 800, color: "#14213a", marginBottom: 7 }}>{seats > 1 ? L.yourNamesQ : L.yourNameQ}</div>
+                        {Array.from({ length: seats }, (_, i) => i).map((i) => (
+                          <input key={`self-${me.id}-${i}-${me.name}`} id={i === 0 ? "own-name" : undefined} defaultValue={delen[i] ?? ""}
+                            placeholder={seats === 1 ? L.ownNamePlaceholder : i === 0 ? L.firstName : i === 1 ? L.secondName : L.extraName(i + 1)}
+                            onBlur={(e) => bewaar(i, e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+                            style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 7, border: (i === 0 && isPh) ? "1.5px solid rgba(192,57,43,0.5)" : "1.5px solid rgba(20,153,176,0.5)", background: (i === 0 && isPh) ? "rgba(192,57,43,0.03)" : "rgba(20,153,176,0.04)" }} />
+                        ))}
+                        {seats > 1 && delen.filter(Boolean).length > 0 && (
+                          <div style={{ fontSize: 14, color: "#9aa0ab" }}>{L.showsAsOne} <b style={{ color: "#14213a" }}>{delen.filter(Boolean).join(" & ")}</b></div>
+                        )}
+                      </>
+                    )}
                   </>
                 )
               })()}
