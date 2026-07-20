@@ -516,6 +516,8 @@ const STRINGS = {
     goAssignBtn: "\ud83c\udf7d\ufe0f Naar toewijzen \u2192",
     assignForOthersBtn: "Kan iemand dit niet zelf doen of heeft die persoon geen gsm? Duid dit dan voor hen aan.",
     assignForSomeoneTitle: "Zelf aanduiden voor iemand?",
+    youAssignForList: "Jij duidt aan voor:",
+    assignForAnother: "Zelf aanduiden voor nog iemand anders",
     assignForSomeoneSub: "Doe dit enkel als die persoon geen gsm heeft of het niet zelf wil doen.",
     addYourselfFirst: "Vul eerst hierboven je eigen naam in.",
     addGuestModalTitle: "Voor wie duid je aan?",
@@ -1178,6 +1180,8 @@ const STRINGS = {
     goAssignBtn: "\ud83c\udf7d\ufe0f Vers l\u2019attribution \u2192",
     assignForOthersBtn: "Quelqu\u2019un ne peut pas le faire lui-m\u00eame ou n\u2019a pas de t\u00e9l\u00e9phone ? Attribue pour lui.",
     assignForSomeoneTitle: "Cocher toi-m\u00eame pour quelqu\u2019un ?",
+    youAssignForList: "Tu coches pour :",
+    assignForAnother: "Cocher pour encore quelqu\u2019un d\u2019autre",
     assignForSomeoneSub: "\u00c0 faire seulement si cette personne n\u2019a pas de t\u00e9l\u00e9phone ou ne veut pas le faire elle-m\u00eame.",
     addYourselfFirst: "Remplis d\u2019abord ton propre nom ci-dessus.",
     addGuestModalTitle: "Pour qui coches-tu ?",
@@ -3910,16 +3914,35 @@ export default function RundoTable() {
                 </div>
               )
             })()}
-              {(
-                <button onClick={() => { if (!requireName()) return; setGuestSeats(1); setGuestNames([""]); setShowGuestModal(true) }} disabled={!personsSet || !adminNamed}
-                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", marginTop: 12, padding: "15px 15px", borderRadius: 12, border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.05)", cursor: (!personsSet || !adminNamed) ? "not-allowed" : "pointer", opacity: (!personsSet || !adminNamed) ? 0.45 : 1 }}>
-                  <span style={{ flexShrink: 0, fontSize: 24 }}>✍️</span>
-                  <span style={{ minWidth: 0 }}>
-                    <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#0f7488", marginBottom: 2 }}>{L.assignForSomeoneTitle}</span>
-                    <span style={{ display: "block", fontSize: 14.5, color: "#5a6680", lineHeight: 1.45 }}>{(!personsSet || !adminNamed) ? L.addYourselfFirst : L.assignForSomeoneSub}</span>
-                  </span>
-                </button>
-              )}
+              {(() => {
+                // Wie jij zelf toewees: een naam, niet via de link, en niet jijzelf.
+                const doorJou = participants.filter((p) => p.id !== meId && !p.self_joined && !isFreeSpot(p))
+                const heeftAl = doorJou.length > 0
+                return (
+                  <>
+                    {heeftAl && (
+                      <div style={{ marginTop: 12, background: "rgba(20,153,176,0.06)", border: "1px solid rgba(20,153,176,0.25)", borderRadius: 12, padding: "10px 13px" }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 800, color: "#0f7488", marginBottom: 6 }}>{L.youAssignForList}</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {doorJou.map((p) => (
+                            <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 14.5, fontWeight: 700, color: "#14213a", background: "#fff", border: "1px solid rgba(20,153,176,0.3)", borderRadius: 16, padding: "5px 11px" }}>
+                              {p.name}{(p.seats ?? 1) > 1 ? ` · ${p.seats}p.` : ""}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <button onClick={() => { if (!requireName()) return; setGuestSeats(1); setGuestNames([""]); setShowGuestModal(true) }} disabled={!personsSet || !adminNamed}
+                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", marginTop: heeftAl ? 8 : 12, padding: "15px 15px", borderRadius: 12, border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.05)", cursor: (!personsSet || !adminNamed) ? "not-allowed" : "pointer", opacity: (!personsSet || !adminNamed) ? 0.45 : 1 }}>
+                      <span style={{ flexShrink: 0, fontSize: 24 }}>✍️</span>
+                      <span style={{ minWidth: 0 }}>
+                        <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#0f7488", marginBottom: 2 }}>{heeftAl ? L.assignForAnother : L.assignForSomeoneTitle}</span>
+                        <span style={{ display: "block", fontSize: 14.5, color: "#5a6680", lineHeight: 1.45 }}>{(!personsSet || !adminNamed) ? L.addYourselfFirst : L.assignForSomeoneSub}</span>
+                      </span>
+                    </button>
+                  </>
+                )
+              })()}
           </div>
           <div style={{ order: 3, marginTop: 14 }}>
             <button onClick={() => { if (warnMismatch) { setShowShareWarn(true); return } if (requireName()) { setAdminTab("overview"); scrollTop() } }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 18.5, fontWeight: 800 }}>{L.toAssignBtn}</button>
