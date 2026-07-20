@@ -3777,6 +3777,10 @@ export default function RundoTable() {
                     {L.copyLinkPre}{" "}
                     <span onClick={() => { if (!requireName()) return; if (navigator.clipboard) navigator.clipboard.writeText(invite); setToast(L.toastInviteCopied) }} style={{ fontWeight: 800, color: "#1499b0", textDecoration: "underline", cursor: "pointer" }}>{L.copyLinkAction}</span>{L.copyLinkPost}
                   </div>
+
+                  {/* Hoort bij het delen: wie de link niet kan gebruiken, duid jij zelf aan. */}
+                  <button onClick={() => { if (typeof document !== "undefined") document.getElementById("wie-duid-ik-aan")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
+                    style={{ width: "100%", marginTop: 9, padding: "11px 12px", fontSize: 14, fontWeight: 700, lineHeight: 1.4, textAlign: "left", borderRadius: 10, color: "#5a6680", background: "rgba(16,24,40,0.03)", border: "1px solid rgba(16,24,40,0.12)", cursor: "pointer" }}>{L.assignForOthersBtn}</button>
                 </>
               )
             })()}
@@ -3789,8 +3793,6 @@ export default function RundoTable() {
               <div style={{ fontSize: 16, color: "#3c6b51", lineHeight: 1.5, marginBottom: 14 }}>{L.nowAssignSub}</div>
               <button onClick={() => { if (!requireTotal()) return; if (!requireName()) return; setAdminTab("overview"); scrollTop() }}
                 style={{ width: "100%", padding: "16px 0", fontSize: 18, fontWeight: 800, border: "none", borderRadius: 14, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 8px 20px -8px rgba(31,138,76,0.75)", cursor: "pointer" }}>{L.goAssignBtn}</button>
-              <button onClick={() => { if (typeof document !== "undefined") document.getElementById("wie-duid-ik-aan")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
-                style={{ width: "100%", marginTop: 10, padding: "13px 14px", fontSize: 16, fontWeight: 700, lineHeight: 1.4, borderRadius: 12, color: "#15703f", background: "rgba(255,255,255,0.85)", border: "1.5px solid rgba(31,138,76,0.4)", cursor: "pointer" }}>{L.assignForOthersBtn}</button>
             </div>
           )}
 
