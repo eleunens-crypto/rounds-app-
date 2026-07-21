@@ -3444,9 +3444,8 @@ export default function PartyTest() {
   if (groupId && !isAdmin && meId) {
     const ik = people.find((p) => p.id === meId)!
     const zoekt = normText(drinkSearch).length > 0
-    const lijst = zoekt
-      ? drinks.filter((d) => drinkMatches(d.name, drinkSearch))
-      : drinks.filter((d) => d.cat === activeCat).filter((d) => fullList || d.fav || aQty(d.id, meId) > 0)
+    const catDrinks = zoekt ? drinks.filter((d) => drinkMatches(d.name, drinkSearch)) : drinks.filter((d) => d.cat === activeCat)
+    const lijst = zoekt ? catDrinks : catDrinks.filter((d) => fullList || d.fav || aQty(d.id, meId) > 0)
     const mijn = drinks.filter((d) => aQty(d.id, meId) > 0)
     const mijnAantal = mijn.reduce((a, d) => a + aQty(d.id, meId), 0)
     const bezig = !!openRoundId
@@ -3642,14 +3641,6 @@ export default function PartyTest() {
           ))}
         </div>
 
-        {!zoekt && (
-          <div style={{ fontSize: 11.5, textAlign: "right", marginBottom: 6 }}>
-            <span onClick={() => setFullList((v) => !v)} style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }}>
-              {fullList ? L.shortList : L.fullListBtn}
-            </span>
-          </div>
-        )}
-
         {lijst.length === 0 ? (
           <div style={{ ...S.card, textAlign: "center", color: "#b3a988", fontSize: 13, padding: "20px 0" }}>
             {!zoekt && !fullList ? (
@@ -3657,7 +3648,15 @@ export default function PartyTest() {
             ) : L.nothingFound}
           </div>
         ) : (
-          <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12 }}>
+          <div style={{ position: "relative" }}>
+            {!zoekt && fullList && (
+              <div style={{ position: "absolute", left: "50%", top: -13, transform: "translateX(-50%)", whiteSpace: "nowrap", zIndex: 2 }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
+                  ▴ minder tonen
+                </span>
+              </div>
+            )}
+            <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > lijst.length || fullList)) ? 26 : 12 }}>
             {lijst.map((d) => {
               const n = aQty(d.id, meId)
               return (
@@ -3671,6 +3670,22 @@ export default function PartyTest() {
                 </div>
               )
             })}
+            </div>
+            {/* "Meer/minder" hangt centraal, half over de onderrand van de lijst. */}
+            {!zoekt && !fullList && catDrinks.length > lijst.length && (
+              <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
+                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(240,165,0,0.6)", color: "#c98a00", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
+                  + {catDrinks.length - lijst.length} meer ▾
+                </span>
+              </div>
+            )}
+            {!zoekt && fullList && (
+              <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
+                  ▴ minder tonen
+                </span>
+              </div>
+            )}
           </div>
         )}
 
