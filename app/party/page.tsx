@@ -4748,12 +4748,12 @@ export default function PartyTest() {
                   value={amount > 0 ? String(amount).replace(".", ",") : ""}
                   onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }}
                   onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); if ((rounds[idx]?.amount || 0) > 0.005) confirmQuickPay() } }} />
-                <button className={amount > 0.005 ? "rundo-pulse" : undefined} style={{ width: 50, height: 50, borderRadius: 12, fontSize: 22, fontWeight: 800, cursor: "pointer", flexShrink: 0,
+                <button className={amount > 0.005 ? "rundo-pulse" : undefined} style={{ width: 64, height: 58, borderRadius: 13, fontSize: 27, fontWeight: 800, cursor: "pointer", flexShrink: 0,
                   background: amount > 0.005 ? "#fff" : "#e8e2d2",
                   color: amount > 0.005 ? "#1f8a4c" : "#b3a988",
-                  border: amount > 0.005 ? "2px solid #1f8a4c" : "none" }}
+                  border: amount > 0.005 ? "2.5px solid #1f8a4c" : "none" }}
                   onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}>✓</button>
-                <button style={{ padding: "0 12px", height: 50, borderRadius: 12, fontSize: 14.5, fontWeight: 800, cursor: "pointer", flexShrink: 0, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", color: "#8a7d55", whiteSpace: "nowrap" }} onClick={() => closeQuickRound(true)}>{L.skipRound}</button>
+                <button style={{ padding: "0 10px", height: 40, alignSelf: "center", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", flexShrink: 0, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", color: "#a89a6f", whiteSpace: "nowrap" }} onClick={() => closeQuickRound(true)}>{L.cancel}</button>
               </div>
               {amount > 0.005 && (
                 <div style={{ fontSize: 13.5, color: "#1f8a4c", fontWeight: 800, textAlign: "right", marginTop: 7, paddingRight: 78 }}>{L.tapToConfirm}</div>
@@ -5202,13 +5202,17 @@ export default function PartyTest() {
                 <div style={{ position: "absolute", left: "50%", top: -13, transform: "translateX(-50%)", zIndex: 2 }}>
                   <span onClick={klik} style={pil}>{allesOpen ? `▴ ${L.hideDetails}` : `▾ ${L.showDetails}`}</span>
                 </div>
-                <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", zIndex: 2 }}>
-                  <span onClick={klik} style={pil}>{allesOpen ? `▴ ${L.hideDetails}` : `▾ ${L.showDetails}`}</span>
-                </div>
+                {/* Onderaan pas nodig zodra alles openstaat: dan is de lijst lang en wil je
+                    niet terug naar boven scrollen om ze weer dicht te klappen. */}
+                {allesOpen && (
+                  <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", zIndex: 2 }}>
+                    <span onClick={klik} style={pil}>▴ {L.hideDetails}</span>
+                  </div>
+                )}
               </>
             )
           })()}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: rounds.length > 0 ? 14 : 0, paddingBottom: rounds.length > 0 ? 14 : 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: rounds.length > 0 ? 14 : 0, paddingBottom: (rounds.length > 0 && openRounds.size >= rounds.length) ? 14 : 0 }}>
           {rounds.slice().reverse().map((r) => {
             const nr = rounds.indexOf(r) + 1
             const items = drinksOf(r).reduce((a, x) => a + x.n, 0)
