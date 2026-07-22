@@ -1241,6 +1241,8 @@ export default function PartyTest() {
   // weet elke inleg apart voor hoeveel mensen hij gold (nodig voor een latere Fair Split).
   useEffect(() => {
     if (showPot) setPotJustAdded(false)
+  }, [showPot])
+  useEffect(() => {
     if (potBuilderOpen || showPot) { setPotPeopleOk(false); setPotPeopleDraft(headcount >= 1 ? headcount : 2) }
   }, [potBuilderOpen, showPot])  // eslint-disable-line react-hooks/exhaustive-deps
   const [potIsCard, setPotIsCard] = useState(false)
@@ -4790,10 +4792,14 @@ export default function PartyTest() {
             <div style={{ ...S.card }}>
               <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 11 }}>{L.roundCostFor(idx + 1)}</div>
 
-              {/* Bijleggen staat vlak boven de keuze, zodat je 't ziet vóór je kiest. */}
+              {/* Staat vlak boven de knop "uit de pot", rechts uitgelijnd zodat de link
+                  duidelijk bij die knop hoort. */}
               {(payVia === "pot" || potContribTotal > 0.005) && (
-                <div style={{ textAlign: "center", marginBottom: 5, lineHeight: 1.2 }}>
-                  <span onClick={() => setShowPot(true)} style={{ display: "inline-block", fontSize: 13, fontWeight: 800, color: "#c98a00", cursor: "pointer", textDecoration: "underline" }}>{L.addToPot}</span>
+                <div style={{ display: "flex", marginBottom: 4 }}>
+                  <span style={{ flex: 1 }} />
+                  <span style={{ flex: 1, textAlign: "center" }}>
+                    <span onClick={() => setShowPot(true)} style={{ display: "inline-block", fontSize: 13, fontWeight: 800, color: "#c98a00", cursor: "pointer", textDecoration: "underline", lineHeight: 1.2 }}>{L.addToPot}</span>
+                  </span>
                 </div>
               )}
               {/* Bron: zelf betaald of uit de pot. */}
