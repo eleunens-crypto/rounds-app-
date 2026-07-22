@@ -598,6 +598,9 @@ const T = {
     orderedLabel: "Besteld",
     thisRoundLabel: "Dit rondje",
     paidLabel: "Betaald",
+    adjustWord: "Aanpassen",
+    editRoundHead: (n: number) => `Rondje ${n} aanpassen`,
+    paidWithQ: "Waarmee betaald?",
     paidNote: (v: string) => `Betaald ${v}`,
     noAmountNote: "Geen bedrag ingevuld",
     noPotUsed: "geen pot gebruikt",
@@ -1043,6 +1046,9 @@ const T = {
     orderedLabel: "Command\u00e9",
     thisRoundLabel: "Cette tourn\u00e9e",
     paidLabel: "Pay\u00e9",
+    adjustWord: "Modifier",
+    editRoundHead: (n: number) => `Modifier la tourn\u00e9e ${n}`,
+    paidWithQ: "Pay\u00e9 avec quoi ?",
     paidNote: (v: string) => `Pay\u00e9 ${v}`,
     noAmountNote: "Aucun montant indiqu\u00e9",
     noPotUsed: "sans cagnotte",
@@ -1245,6 +1251,9 @@ export default function PartyTest() {
   useEffect(() => {
     if (potBuilderOpen || showPot) { setPotPeopleOk(false); setPotPeopleDraft(headcount >= 1 ? headcount : 2) }
   }, [potBuilderOpen, showPot])  // eslint-disable-line react-hooks/exhaustive-deps
+  // Welk afgerond rondje staat in bewerkmodus? Buiten die modus is het overzicht
+  // gewoon leesbaar, zodat je niets per ongeluk verandert.
+  const [editRoundId, setEditRoundId] = useState<string | null>(null)
   const [potIsCard, setPotIsCard] = useState(false)
   const [cardValue, setCardValue] = useState("")
   const [cardPayers, setCardPayers] = useState<string[]>([])
@@ -5307,13 +5316,20 @@ export default function PartyTest() {
             const items = drinksOf(r).reduce((a, x) => a + x.n, 0)
             const open = isOpen(r)
             return (
-              <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-                <div onClick={() => toggle(r.id)} style={{ padding: "12px 14px", cursor: "pointer", background: open ? "rgba(240,165,0,0.06)" : "#fff" }}>
-                  <div style={{ ...S.row, justifyContent: "space-between" }}>
-                    <div style={{ ...S.row, gap: 8 }}>
-                      <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.roundSummary(nr, items)}</span>
+              <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden", ...(editRoundId === r.id ? { boxShadow: "inset 0 0 0 2px rgba(240,165,0,0.55)", background: "#fffdf3" } : {}) }}>
+                <div onClick={() => toggle(r.id)} style={{ padding: "12px 14px", cursor: "pointer", background: editRoundId === r.id ? "rgba(240,165,0,0.1)" : open ? "rgba(240,165,0,0.06)" : "#fff" }}>
+                  <div style={{ ...S.row, justifyContent: "space-between", gap: 8 }}>
+                    <div style={{ ...S.row, gap: 8, minWidth: 0 }}>
+                      <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{editRoundId === r.id ? L.editRoundHead(nr) : L.roundSummary(nr, items)}</span>
                     </div>
-                    <div style={{ ...S.row, gap: 10 }}>
+                    <div style={{ ...S.row, gap: 9, flexShrink: 0 }}>
+                      {editRoundId === r.id ? (
+                        <span onClick={(e) => { e.stopPropagation(); setEditRoundId(null) }}
+                          style={{ fontSize: 13, fontWeight: 800, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", border: "none", borderRadius: 14, padding: "7px 14px", cursor: "pointer", whiteSpace: "nowrap" }}>✓ {L.ready}</span>
+                      ) : (
+                        <span onClick={(e) => { e.stopPropagation(); setEditRoundId(r.id); setOpenRounds((prev) => new Set(prev).add(r.id)) }}
+                          style={{ fontSize: 13, fontWeight: 800, color: "#c98a00", background: "#faf4e4", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 14, padding: "6px 12px", cursor: "pointer", whiteSpace: "nowrap" }}>✏️ {L.adjustWord}</span>
+                      )}
                       <span style={{ fontSize: 15.5, fontWeight: 800, color: (r.amount || 0) > 0 ? "#c98a00" : "#c4b896" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "€ —"}</span>
                       <span style={{ fontSize: 15, color: "#8a7d55", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
                     </div>
@@ -5328,45 +5344,77 @@ export default function PartyTest() {
                 </div>
                 {open && (() => {
                   const idx = rounds.indexOf(r)
+                  const bewerk = editRoundId === r.id
+                  const uitPot = (r.potPart || 0) > 0.005
                   return (
                   <div style={{ padding: "4px 14px 14px" }}>
-                    {/* Aantallen hier meteen bijstellen — het rondje blijft afgerond. */}
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       {drinksOf(r).map(({ d, n }) => (
                         <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "3px 0" }}>
                           <span style={{ fontSize: 15.5, fontWeight: 700 }}>{d.emoji} {d.name}</span>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
-                            <button style={{ width: 30, height: 30, borderRadius: 8, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 16, color: "#8a7d55", fontWeight: 800, cursor: "pointer" }}
-                              onClick={(e) => { e.stopPropagation(); rBumpAnon(idx, d.id, -1) }}>−</button>
-                            <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00", minWidth: 28, textAlign: "center" }}>{n}×</span>
-                            <button style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 16, color: "#fff", fontWeight: 800, cursor: "pointer" }}
-                              onClick={(e) => { e.stopPropagation(); rBumpAnon(idx, d.id, 1) }}>+</button>
-                          </span>
+                          {bewerk ? (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
+                              <button style={{ width: 30, height: 30, borderRadius: 8, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 16, color: "#8a7d55", fontWeight: 800, cursor: "pointer" }}
+                                onClick={(e) => { e.stopPropagation(); rBumpAnon(idx, d.id, -1) }}>−</button>
+                              <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00", minWidth: 28, textAlign: "center" }}>{n}×</span>
+                              <button style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 16, color: "#fff", fontWeight: 800, cursor: "pointer" }}
+                                onClick={(e) => { e.stopPropagation(); rBumpAnon(idx, d.id, 1) }}>+</button>
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
+                          )}
                         </div>
                       ))}
                     </div>
-                    {/* Betaald bedrag, ook hier direct aanpasbaar. */}
-                    <div style={{ ...S.row, justifyContent: "space-between", marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
+
+                    <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
                       <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>💶 {L.paidLabel}</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                        <input onClick={(e) => e.stopPropagation()} type="text" inputMode="decimal" placeholder="0,00"
-                          value={(r.amount || 0) > 0 ? String(r.amount).replace(".", ",") : ""}
-                          onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }}
-                          style={{ ...S.input, width: 92, padding: "8px 10px", fontSize: 16, fontWeight: 800, color: "#c88a1a", textAlign: "right" }} />
-                      </div>
+                      {bewerk ? (
+                        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>€</span>
+                          <input onClick={(e) => e.stopPropagation()} type="text" inputMode="decimal" placeholder="0,00"
+                            value={(r.amount || 0) > 0 ? String(r.amount).replace(".", ",") : ""}
+                            onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }}
+                            style={{ ...S.input, width: 92, padding: "8px 10px", fontSize: 16, fontWeight: 800, color: "#c88a1a", textAlign: "right" }} />
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "—"}</span>
+                      )}
                     </div>
-                    {/* Het aantal personen komt uit het aantal drankjes, maar je kan het
-                        hier bijstellen als er iemand meedronk zonder te bestellen. */}
+
                     <div style={{ ...S.row, justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
                       <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>👤 {L.peopleInRound}</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <button style={{ width: 32, height: 32, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: (r.headcount || 1) > 1 ? 1 : 0.4 }}
-                          onClick={(e) => { e.stopPropagation(); setRoundHeadcount(r.id, Math.max(1, (r.headcount || 1) - 1)) }}>−</button>
-                        <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#4a3f1e" }}>{r.headcount || 1}</span>
-                        <button style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
-                          onClick={(e) => { e.stopPropagation(); setRoundHeadcount(r.id, (r.headcount || 1) + 1) }}>+</button>
-                      </div>
+                      {bewerk ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <button style={{ width: 32, height: 32, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: (r.headcount || 1) > 1 ? 1 : 0.4 }}
+                            onClick={(e) => { e.stopPropagation(); setRoundHeadcount(r.id, Math.max(1, (r.headcount || 1) - 1)) }}>−</button>
+                          <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#4a3f1e" }}>{r.headcount || 1}</span>
+                          <button style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
+                            onClick={(e) => { e.stopPropagation(); setRoundHeadcount(r.id, (r.headcount || 1) + 1) }}>+</button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{r.headcount || 1}</span>
+                      )}
+                    </div>
+
+                    {/* Waarmee betaald? Ook achteraf nog te corrigeren. */}
+                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
+                      {bewerk ? (
+                        <>
+                          <div style={{ fontSize: 13.5, color: "#8a7d55", fontWeight: 800, marginBottom: 6 }}>🫙 {L.paidWithQ}</div>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button onClick={(e) => { e.stopPropagation(); if (uitPot) rTogglePot(idx) }}
+                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 13.5, fontWeight: 800, border: "none", cursor: "pointer", background: !uitPot ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f7f1e2", color: !uitPot ? "#fff" : "#8a7d55" }}>💶 {L.paidSelf}</button>
+                            <button onClick={(e) => { e.stopPropagation(); if (!uitPot) rTogglePot(idx) }}
+                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 13.5, fontWeight: 800, border: "none", cursor: "pointer", background: uitPot ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#f7f1e2", color: uitPot ? "#fff" : "#8a7d55" }}>🫙 {L.paidPot}</button>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ ...S.row, justifyContent: "space-between" }}>
+                          <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>🫙 {L.paidWithQ}</span>
+                          <span style={{ fontSize: 15.5, fontWeight: 800, color: uitPot ? "#1f8a4c" : "#8a7d55" }}>{uitPot ? L.paidFromPot(euro(r.potPart || 0)) : L.paidSelf}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   )
