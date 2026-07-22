@@ -2122,6 +2122,20 @@ export default function PartyTest() {
   } })
   const catsPresent = CATS.filter((c) => drinks.some((d) => d.cat === c))
   const bump1 = (did: string) => bumpAnon(did, 1)
+  // Een drankje in één tik volledig uit de lopende bestelling halen — zowel de nog niet
+  // toegewezen exemplaren als die al aan iemand hingen.
+  const clearDrink = async (did: string) => {
+    const anon = cartAnon[did] ?? 0
+    const perPersoon = Object.entries(cart[did] ?? {}).filter(([, n]) => (n || 0) > 0)
+    setCartAnon((a) => ({ ...a, [did]: 0 }))
+    setCart((c) => ({ ...c, [did]: {} }))
+    const rid = await ensureRound()
+    if (!rid || !groupId) return
+    if (anon > 0) await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: null, p_drink: did, p_delta: -anon })
+    for (const [pid, n] of perPersoon) {
+      await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: pid, p_drink: did, p_delta: -(n || 0) })
+    }
+  }
   const bumpDown = (did: string) => { if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); return } const entry = cart[did]; if (!entry) return; const pid = Object.keys(entry).find((k) => (entry[k] ?? 0) > 0); if (pid) bump(did, pid, -1) }
   const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
 
@@ -2502,21 +2516,7 @@ export default function PartyTest() {
           {perDrank.map(({ d, n }) => (
             <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0" }}>
               <span style={{ fontSize: 16, fontWeight: 800 }}>{d.emoji} {d.name}</span>
-              {settle ? (
-                <span style={{ fontSize: 20, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
-              ) : (
-                // Snelle rondjes: hier meteen bijstellen of weghalen, zonder terug naar
-                // het bestelscherm te moeten.
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-                  <button style={{ ...S.step, width: 32, height: 32, fontSize: 18 }}
-                    onClick={() => rBumpAnon(rounds.length - 1, d.id, -1)}>−</button>
-                  <span style={{ fontSize: 20, fontWeight: 800, color: "#c98a00", minWidth: 30, textAlign: "center" }}>{n}×</span>
-                  <button style={{ ...S.step, width: 32, height: 32, fontSize: 18, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }}
-                    onClick={() => rBumpAnon(rounds.length - 1, d.id, 1)}>+</button>
-                  <button title={L.removeWord} style={{ width: 32, height: 32, borderRadius: 9, border: "1px solid rgba(224,104,92,0.4)", background: "#fff", color: "#c0554a", fontSize: 15, cursor: "pointer" }}
-                    onClick={() => rBumpAnon(rounds.length - 1, d.id, -n)}>🗑️</button>
-                </span>
-              )}
+              <span style={{ fontSize: 20, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
             </div>
           ))}
         </div>
@@ -4422,8 +4422,13 @@ export default function PartyTest() {
               {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => {
                 const un = cartAnon[d.id] ?? 0
                 return (
-                  <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, fontSize: 14.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e", cursor: settle ? "pointer" : "default" }} onClick={() => settle && setShowAssignAll(true)}>
-                    {d.emoji} {drinkTotal(d.id)}× {d.name}{settle && un > 0 && <span style={{ color: "#c0554a", fontWeight: 800, textDecoration: "underline" }}>toewijzen</span>}
+                  <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 6px 4px 10px", borderRadius: 20, fontSize: 14.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e" }}>
+                    <span style={{ cursor: settle ? "pointer" : "default" }} onClick={() => settle && setShowAssignAll(true)}>
+                      {d.emoji} {drinkTotal(d.id)}× {d.name}{settle && un > 0 && <span style={{ color: "#c0554a", fontWeight: 800, textDecoration: "underline" }}> toewijzen</span>}
+                    </span>
+                    {/* Meteen weghalen — handig als je je vertikte bij het bestellen. */}
+                    <button title={L.removeWord} onClick={() => clearDrink(d.id)}
+                      style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, border: "none", background: "rgba(224,104,92,0.16)", color: "#c0554a", fontSize: 13, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>✕</button>
                   </span>
                 )
               })}
@@ -4753,6 +4758,13 @@ export default function PartyTest() {
                   color: payVia === "pot" ? "#fff" : "#8a7d55", border: "none" }}
                   onClick={() => { setPayVia("pot"); if (potAvail <= 0.005) { setNotice(L.potEmptyNote); setShowPot(true) } }}>🫙 {L.paidPot}{potAvail > 0.005 && <span style={{ fontWeight: 800, opacity: payVia === "pot" ? 1 : 0.75 }}> · {euro(potAvail)}</span>}</button>
               </div>
+              {/* Ook met geld in de pot wil je soms nog bijleggen — bijvoorbeeld als dit
+                  rondje er net niet uit kan. */}
+              {payVia === "pot" && (
+                <div style={{ textAlign: "right", marginTop: 6 }}>
+                  <span onClick={() => setShowPot(true)} style={{ fontSize: 13.5, fontWeight: 800, color: "#c98a00", cursor: "pointer", textDecoration: "underline" }}>＋ {L.addToPot}</span>
+                </div>
+              )}
 
               {/* Bedrag-veld met ✓ én Overslaan samen op één rij. Het vinkje pulseert groen
                   (omrand) zodra er een bedrag staat = "tik om te bevestigen". */}
