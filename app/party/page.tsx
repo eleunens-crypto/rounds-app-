@@ -4968,7 +4968,7 @@ export default function PartyTest() {
         })}
 
         </>)}
-        {paidCount > 0 && <>
+        {paidCount > 0 && laatsteRondjeKlaar() && <>
           <div style={{ display: "flex", gap: 10 }}>
             <button style={{ ...S.btn, flex: 1 }} onClick={goFinal}>{L.settleBtn}</button>
             <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (unfinishedRound) resumeRound(); else nextRound() }}>{unfinishedRound ? L.continueRound(roundNr) : "➕ Nieuw rondje"}</button>
