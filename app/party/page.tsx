@@ -4237,13 +4237,18 @@ export default function PartyTest() {
             // In snelle rondjes telt een rondje als "afgehandeld" zodra het bevestigd of
             // overgeslagen is; dan is er nooit "ga verder", enkel een nieuw rondje.
             const echtOnafgerond = unfinishedRound && (settle || !lastRoundHandled)
+            // Zolang het bedrag van het vorige rondje niet bevestigd of overgeslagen is,
+            // tonen we geen "nieuw rondje" — anders loop je zo van het afronden weg.
+            const magNieuw = settle || lastRoundHandled
             return rounds.length > 0 ? (
             // Er zijn afgeronde rondjes: overzicht + nieuw/verder.
             <div style={{ display: "flex", gap: 10 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (!settle) { setOverviewBackTo("hub"); setView("roundsOverview") } else { setOpenRound(rounds.length - 1); setView("hub") } }}>{L.roundsOverview}</button>
               {echtOnafgerond
                 ? <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>
-                : <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{L.newRound}</button>}
+                : magNieuw
+                ? <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{L.newRound}</button>
+                : null}
             </div>
           ) : echtOnafgerond ? (
             // Nog geen afgerond rondje, maar wel bezig met rondje 1: verder of terug.
