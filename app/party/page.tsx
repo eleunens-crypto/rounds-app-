@@ -575,7 +575,9 @@ const T = {
     switchToQuick: "Naar snelle rondjes",
     switchModeWarn: "Van aanpak wisselen? Je begint helemaal opnieuw — wat je tot nu toe noteerde, verdwijnt.",
     switchModeYes: "Wisselen en opnieuw",
-    barList: "🍻 Aan de toog",
+    barList: "📋 Bestelling",
+    tapToRename: "tik om de naam te wijzigen",
+    removeWord: "Weghalen",
     barHandOut: "Uitdelen",
     settleNow: "🧾 Toch afrekenen?",
     settleNowWhy: "We hielden alles bij. Eén tik en je weet wie wat schuldig is.",
@@ -1008,7 +1010,9 @@ const T = {
     switchToQuick: "Vers les tourn\u00e9es rapides",
     switchModeWarn: "Changer de formule ? Tu recommences \u00e0 z\u00e9ro — ce que tu as not\u00e9 jusqu'ici dispara\u00eet.",
     switchModeYes: "Changer et recommencer",
-    barList: "🍻 Au bar",
+    barList: "📋 Commande",
+    tapToRename: "touche pour renommer",
+    removeWord: "Retirer",
     barHandOut: "Distribuer",
     settleNow: "🧾 Régler quand même ?",
     settleNowWhy: "On a tout noté. Un clic et tu sais qui doit quoi.",
@@ -2493,7 +2497,21 @@ export default function PartyTest() {
           {perDrank.map(({ d, n }) => (
             <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0" }}>
               <span style={{ fontSize: 16, fontWeight: 800 }}>{d.emoji} {d.name}</span>
-              <span style={{ fontSize: 20, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
+              {settle ? (
+                <span style={{ fontSize: 20, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
+              ) : (
+                // Snelle rondjes: hier meteen bijstellen of weghalen, zonder terug naar
+                // het bestelscherm te moeten.
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                  <button style={{ ...S.step, width: 32, height: 32, fontSize: 18 }}
+                    onClick={() => rBumpAnon(rounds.length - 1, d.id, -1)}>−</button>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: "#c98a00", minWidth: 30, textAlign: "center" }}>{n}×</span>
+                  <button style={{ ...S.step, width: 32, height: 32, fontSize: 18, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }}
+                    onClick={() => rBumpAnon(rounds.length - 1, d.id, 1)}>+</button>
+                  <button title={L.removeWord} style={{ width: 32, height: 32, borderRadius: 9, border: "1px solid rgba(224,104,92,0.4)", background: "#fff", color: "#c0554a", fontSize: 15, cursor: "pointer" }}
+                    onClick={() => rBumpAnon(rounds.length - 1, d.id, -n)}>🗑️</button>
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -3370,7 +3388,12 @@ export default function PartyTest() {
           is het aantal klikbaar naar de instellingen. */}
       {groupName.trim() && (
         <div style={{ textAlign: "center", marginTop: 9 }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2 }}>{groupName.trim()}</div>
+          {/* De naam is aanpasbaar: potlood + omkadering maken dat zichtbaar. */}
+          <div onClick={() => setView("settings")} style={{ display: "inline-flex", alignItems: "center", gap: 7, cursor: "pointer", padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px dashed rgba(240,165,0,0.55)" }}>
+            <span style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2 }}>{groupName.trim()}</span>
+            <span style={{ fontSize: 13 }}>✏️</span>
+          </div>
+          <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 3 }}>{L.tapToRename}</div>
           {settle && (
             <div style={{ fontSize: 14, fontWeight: 700, color: "#8a7d55", marginTop: 2 }}>👥 {people.length}</div>
           )}
@@ -3855,7 +3878,7 @@ export default function PartyTest() {
                   <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 14.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
                 </div>
                 <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 Aan de toog</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 Bestelling</div>
                   <div style={{ fontSize: 15, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pintje · 2× Cola · 1× Wijn</div>
                 </div>
               </div>
@@ -3975,7 +3998,7 @@ export default function PartyTest() {
                   </div>
                   {/* Bestellijstje: wat er aan de toog moet komen. */}
                   <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 10 }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 Aan de toog</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 Bestelling</div>
                     <div style={{ fontSize: 15, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pils · 2× Cola · 1× Wijn</div>
                   </div>
                 </button>
@@ -4379,7 +4402,7 @@ export default function PartyTest() {
         {roundItems > 0 && (
           <div style={{ ...S.card, padding: "10px 12px", background: "#fffdf6" }}>
             <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-              <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>{settle ? L.inThisRound : "📋 Aan de toog"} {settle && <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.assignHint}</span>}</span>
+              <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>{settle ? L.inThisRound : "📋 Bestelling"} {settle && <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.assignHint}</span>}</span>
               <span style={{ ...S.pill, background: "rgba(240,165,0,0.18)", color: "#c98a00" }}>{L.drinksCount(roundItems)}</span>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
