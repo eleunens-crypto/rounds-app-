@@ -369,6 +369,8 @@ const T = {
     newPotTotal: "Nieuw totaal",
     firstDeposit: "1e inleg",
     addToPot: "Toevoegen aan de pot",
+    potFillAmount: "Vul eerst een bedrag in.",
+    potAdded: (v: string) => `\u2713 ${v} toegevoegd aan de pot`,
     setPotTo: (v: string) => `Pot op ${v} zetten`,
     potPerPerson: (v: string) => `≈ ${v} per persoon`,
     potStartWhy: "Iedereen legt vooraf iets in. Rondjes gaan er dan uit — niemand hoeft telkens te betalen.",
@@ -811,6 +813,8 @@ const T = {
     newPotTotal: "Nouveau total",
     firstDeposit: "1re mise",
     addToPot: "Ajouter \u00e0 la cagnotte",
+    potFillAmount: "Entre d\u2019abord un montant.",
+    potAdded: (v: string) => `\u2713 ${v} ajout\u00e9 \u00e0 la cagnotte`,
     setPotTo: (v: string) => `Mettre la cagnotte \u00e0 ${v}`,
     potPerPerson: (v: string) => `\u2248 ${v} par personne`,
     potStartWhy: "Chacun met quelque chose d'avance. Les tournées sortent de là — personne ne paie à chaque fois.",
@@ -2097,6 +2101,20 @@ export default function PartyTest() {
   }
   const setEveryoneAmt = (v: number) => setPotDraft(Object.fromEntries(people.map((p) => [p.id, v])))
   const resetPotDraft = () => { setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft("") }
+  // Een inleg meteen wegschrijven en de pot herladen. Apart van closePot, zodat het
+  // opslaan niet afhangt van het sluiten van het venster.
+  const saveQuickPot = async () => {
+    const totaal = settle ? potDraftTotal : potPerMan * Math.max(1, headcount)
+    if (totaal <= 0.001) { setNotice(L.potFillAmount); return }
+    if (!groupId) return
+    const bedragen = settle ? potDraft : { pot: totaal }
+    const { error } = await supabase.rpc("party_add_pot", { p_group: groupId, p_amounts: bedragen, p_is_card: potIsCard, p_payers: cardPayers })
+    if (error) { setNotice("Inleg opslaan mislukt: " + error.message); return }
+    setPotDraft({}); setPotPerMan(0); setEveryoneChoice(null); setEveryoneDraft("")
+    setPotBuilderOpen(false)
+    await loadParty(groupId)
+    setToast(L.potAdded(euro(totaal)))
+  }
   const closePot = () => {
     const added = (editPotId === null && potDraftTotal > 0.001) ? potDraftTotal : 0
     if (added > 0 && groupId) {
@@ -3268,8 +3286,8 @@ export default function PartyTest() {
           </div>
         ) : (
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-            <button style={{ ...S.btn, flex: 1 }} onClick={() => { setPotDraft({}); setPotPerMan(0); setShowPot(false) }}>✕ {L.cancel}</button>
-            <button style={{ ...S.btnP, flex: 2 }} onClick={closePot}>{potDraftTotal > 0
+            <button style={{ ...S.btn, flex: 1 }} onClick={() => { setPotDraft({}); setPotPerMan(0); if (potRounds.length === 0) setShowPot(false); else setPotBuilderOpen(false) }}>✕ {L.cancel}</button>
+            <button style={{ ...S.btnP, flex: 2 }} onClick={saveQuickPot}>{potDraftTotal > 0
               ? (!settle && potContribTotal > 0.005 ? L.setPotTo(euro(potRemaining + potDraftTotal)) : L.addContrib(euro(potDraftTotal)))
               : "Klaar"}</button>
           </div>
