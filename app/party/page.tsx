@@ -1203,6 +1203,12 @@ export default function PartyTest() {
   const [potPerMan, setPotPerMan] = useState<number>(0)
   // Aantal inleggers dat de beheerder kiest vóór hij de pot invult (snelle rondjes).
   const [potPeopleDraft, setPotPeopleDraft] = useState(2)
+  // Is de vraag "met hoeveel leggen jullie in?" beantwoord voor deze pot-sessie?
+  const [potPeopleOk, setPotPeopleOk] = useState(false)
+  // Elke keer dat de pot opengaat, opnieuw vragen met hoeveel er ingelegd wordt.
+  useEffect(() => {
+    if (showPot) { setPotPeopleOk(false); setPotPeopleDraft(headcount >= 1 ? headcount : 2) }
+  }, [showPot])  // eslint-disable-line react-hooks/exhaustive-deps
   const [everyoneDraft, setEveryoneDraft] = useState<string>("")
   const [everyoneChoice, setEveryoneChoice] = useState<number | "custom" | null>(null)
   const [editPotId, setEditPotId] = useState<string | null>(null)
@@ -3049,7 +3055,7 @@ export default function PartyTest() {
   const renderPotModal = () => (
     // Bij snelle rondjes weet de app het aantal inleggers nog niet. Dat vragen we eerst,
     // want zonder dat aantal kan "per persoon" niets betekenen. Annuleren mag altijd.
-    (!settle && headcount < 1) ? (
+    (!settle && !potPeopleOk) ? (
       <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
         <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
           <h3 style={{ ...S.h3, fontSize: 19, marginTop: 0, marginBottom: 6 }}>{potIsCard ? L.drinkCard : L.potTitle}</h3>
@@ -3060,7 +3066,7 @@ export default function PartyTest() {
             <span style={{ fontSize: 30, fontWeight: 800, minWidth: 44, textAlign: "center", color: "#4a3f1e" }}>{potPeopleDraft}</span>
             <button style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 23, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setPotPeopleDraft((n) => n + 1)}>+</button>
           </div>
-          <button style={{ ...S.btnP, width: "100%" }} onClick={() => setHeadcount(Math.max(1, potPeopleDraft))}>{L.continueWord} →</button>
+          <button style={{ ...S.btnP, width: "100%" }} onClick={() => { setHeadcount(Math.max(1, potPeopleDraft)); setPotPeopleOk(true) }}>{L.continueWord} →</button>
           <button style={{ background: "none", border: "none", width: "100%", marginTop: 11, fontSize: 15, color: "#a89a6f", fontWeight: 700, cursor: "pointer" }} onClick={closePot}>{L.cancel}</button>
         </div>
       </div>
