@@ -652,6 +652,7 @@ const T = {
     headcountVaried: "Niet elk rondje had hetzelfde aantal personen:",
     splitOver: "Verdelen over",
     showPerRound: "Liever exact per rondje verdelen",
+    treatShort: "Rondje trakteren?",
     backToOneAmount: "\u2190 Terug naar \u00e9\u00e9n bedrag",
     perRoundTitle: "Per rondje verdeeld",
     notEveryoneAllRounds: "Niet iedereen deed elk rondje mee, dus het verschilt per persoon:",
@@ -1108,6 +1109,7 @@ const T = {
     headcountVaried: "Toutes les tourn\u00e9es n\u2019avaient pas le m\u00eame nombre de personnes :",
     splitOver: "R\u00e9partir sur",
     showPerRound: "Plut\u00f4t r\u00e9partir par tourn\u00e9e",
+    treatShort: "Offrir une tourn\u00e9e ?",
     backToOneAmount: "\u2190 Retour \u00e0 un seul montant",
     perRoundTitle: "R\u00e9parti par tourn\u00e9e",
     notEveryoneAllRounds: "Tout le monde n\u2019a pas particip\u00e9 \u00e0 chaque tourn\u00e9e, donc \u00e7a varie :",
@@ -1195,6 +1197,7 @@ export default function PartyTest() {
   // een rondje voorkwam; de beheerder kan het bijstellen.
   const [splitPeople, setSplitPeople] = useState<number | null>(null)
   const [showPerRound, setShowPerRound] = useState(false)
+  const [showTreat, setShowTreat] = useState(false)
   const [treatedRounds, setTreatedRounds] = useState<Set<string>>(new Set())
   // Kleine pop-up om het aantal personen aan te passen (vanaf het afreken-scherm van een rondje).
   const [showPeoplePop, setShowPeoplePop] = useState(false)
@@ -5203,17 +5206,17 @@ export default function PartyTest() {
                 <>
                   {wisselde && (
                     <div style={{ background: "rgba(240,165,0,0.1)", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 10, padding: "10px 12px", marginBottom: 11 }}>
-                      <div style={{ fontSize: 13.5, color: "#8a5e0f", fontWeight: 800, marginBottom: 4 }}>\u26a0\ufe0f {L.headcountVaried}</div>
+                      <div style={{ fontSize: 13.5, color: "#8a5e0f", fontWeight: 800, marginBottom: 4 }}>⚠️ {L.headcountVaried}</div>
                       <div style={{ fontSize: 13, color: "#8a5e0f", lineHeight: 1.6 }}>
-                        {betaalde.map((r, i) => `${L.roundWord} ${rounds.indexOf(r) + 1}: ${Math.max(1, r.headcount || 1)} ${L.people}`).join("  \u00b7  ")}
+                        {betaalde.map((r, i) => `${L.roundWord} ${rounds.indexOf(r) + 1}: ${Math.max(1, r.headcount || 1)} ${L.people}`).join("  ·  ")}
                       </div>
                     </div>
                   )}
                   <div style={{ ...S.row, justifyContent: "space-between", background: "#faf4e4", borderRadius: 10, padding: "10px 13px", marginBottom: 12 }}>
-                    <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>{L.splitOver} \ud83d\udc64 {deelAantal} {L.people}</span>
+                    <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>{L.splitOver} 👤 {deelAantal} {L.people}</span>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <button style={{ width: 32, height: 32, borderRadius: 9, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: deelAantal > 1 ? 1 : 0.4 }}
-                        onClick={() => setSplitPeople(Math.max(1, deelAantal - 1))}>\u2212</button>
+                        onClick={() => setSplitPeople(Math.max(1, deelAantal - 1))}>−</button>
                       <button style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
                         onClick={() => setSplitPeople(deelAantal + 1)}>+</button>
                     </div>
@@ -5222,13 +5225,22 @@ export default function PartyTest() {
                     <div style={{ fontSize: 14.5, color: "#4a6b57", marginBottom: 3 }}>{L.eachPaysNote}</div>
                     <div style={{ fontSize: 30, fontWeight: 800, color: "#1f8a4c" }}>{euro(teVerdelenTot / deelAantal)}</div>
                     {traktatieTot > 0.005 && (
-                      <div style={{ fontSize: 14, color: "#8a5e0f", fontWeight: 700, marginTop: 7 }}>\ud83c\udf81 {L.plusTreat(euro(traktatieTot))}</div>
+                      <div style={{ fontSize: 14, color: "#8a5e0f", fontWeight: 700, marginTop: 7 }}>🎁 {L.plusTreat(euro(traktatieTot))}</div>
                     )}
                   </div>
-                  <div style={{ textAlign: "center", marginTop: 10 }}>
-                    <span onClick={() => setShowPerRound((v) => !v)} style={{ fontSize: 13.5, fontWeight: 800, color: "#c98a00", textDecoration: "underline", cursor: "pointer" }}>
+                  {/* Twee rustige keuzes onder het bedrag: detail per rondje, of iemand
+                      die een rondje trakteert. */}
+                  <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                    <button onClick={() => { setShowPerRound((v) => !v); setShowTreat(false) }}
+                      style={{ flex: 1, padding: "10px 8px", borderRadius: 11, fontSize: 13, fontWeight: 800, cursor: "pointer", lineHeight: 1.3,
+                        background: showPerRound ? "rgba(240,165,0,0.14)" : "#fff", border: showPerRound ? "1px solid rgba(240,165,0,0.6)" : "1px solid rgba(120,95,20,0.22)", color: "#8a5e0f" }}>
                       {showPerRound ? L.backToOneAmount : L.showPerRound}
-                    </span>
+                    </button>
+                    <button onClick={() => { setShowTreat((v) => !v); setShowPerRound(false) }}
+                      style={{ flex: 1, padding: "10px 8px", borderRadius: 11, fontSize: 13, fontWeight: 800, cursor: "pointer", lineHeight: 1.3,
+                        background: showTreat ? "rgba(240,165,0,0.14)" : "#fff", border: showTreat ? "1px solid rgba(240,165,0,0.6)" : "1px solid rgba(120,95,20,0.22)", color: "#8a5e0f" }}>
+                      🎁 {L.treatShort}
+                    </button>
                   </div>
                   {showPerRound && (
                     <div style={{ ...S.card, marginTop: 10 }}>
@@ -5239,8 +5251,8 @@ export default function PartyTest() {
                         const getr = treatedRounds.has(r.id)
                         return (
                           <div key={r.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid rgba(120,95,20,0.08)", fontSize: 14.5 }}>
-                            <span>{L.roundWord} {nr} \u00b7 \ud83d\udc64 {h}</span>
-                            <span style={{ fontWeight: 800 }}>{getr ? `\ud83c\udf81 ${L.yourTreat}` : `${euro(r.amount || 0)} \u2192 ${euro((r.amount || 0) / h)} p.p.`}</span>
+                            <span>{L.roundWord} {nr} · 👤 {h}</span>
+                            <span style={{ fontWeight: 800 }}>{getr ? `🎁 ${L.yourTreat}` : `${euro(r.amount || 0)} → ${euro((r.amount || 0) / h)} p.p.`}</span>
                           </div>
                         )
                       })}
@@ -5250,7 +5262,7 @@ export default function PartyTest() {
               )
             })()}
 
-            {betaalde.length > 0 && (
+            {betaalde.length > 0 && showTreat && (
               <div style={{ ...S.card }}>
                 <div style={{ fontSize: 15, color: "#8a7d55", fontWeight: 800, marginBottom: 9, lineHeight: 1.45 }}>{L.treatHint}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
