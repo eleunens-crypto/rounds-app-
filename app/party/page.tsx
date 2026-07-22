@@ -619,14 +619,11 @@ const T = {
     potEmptyNote: "De pot is nog leeg — vul eerst iets in.",
     potNotEnough: (v: string) => `Pot heeft maar ${v} — de rest reken je zelf af.`,
     potPayLeft: (bedrag: string, over: string) => `${bedrag} uit de pot \u2192 ${over} over na dit rondje`,
-    potSplitTitle: "Pot niet genoeg \u2014 zo verdeeld:",
     potShortTitle: "Niet genoeg in de pot",
-    potShortBy: (inPot: string, tekort: string) => `Er zit nog ${inPot} in de pot, je komt ${tekort} tekort. Wat wil je doen?`,
+    potShortSimple: (inPot: string, kost: string) => `Nog ${inPot} in de pot, dit rondje kost ${kost}.`,
     potChoiceTopUp: "\ud83e\uded9 Toevoegen aan de pot",
     potChoicePaySelf: "\ud83d\udcb6 Alles zelf betalen",
-    potChoiceSplit: (inPot: string, zelf: string) => `Pot ${inPot} + zelf ${zelf} bijpassen`,
     potWord: "pot",
-    selfAdded: "Zelf bijgelegd",
     potHasLeft: (v: string) => `nog ${v} in pot`,
     maxAmount: (v: string) => `max ${v}`,
     restSelf: "Rest zelf:",
@@ -1072,14 +1069,11 @@ const T = {
     potEmptyNote: "La cagnotte est vide — ajoute d\u2019abord un montant.",
     potNotEnough: (v: string) => `La cagnotte n\u2019a que ${v} — le reste, tu le paies toi-m\u00eame.`,
     potPayLeft: (bedrag: string, over: string) => `${bedrag} de la cagnotte \u2192 ${over} restant apr\u00e8s`,
-    potSplitTitle: "Cagnotte insuffisante \u2014 r\u00e9partition :",
     potShortTitle: "Pas assez dans la cagnotte",
-    potShortBy: (inPot: string, tekort: string) => `Il reste ${inPot} dans la cagnotte, il manque ${tekort}. Que veux-tu faire ?`,
+    potShortSimple: (inPot: string, kost: string) => `Il reste ${inPot} dans la cagnotte, cette tourn\u00e9e co\u00fbte ${kost}.`,
     potChoiceTopUp: "\ud83e\uded9 Ajouter \u00e0 la cagnotte",
     potChoicePaySelf: "\ud83d\udcb6 Tout payer soi-m\u00eame",
-    potChoiceSplit: (inPot: string, zelf: string) => `Cagnotte ${inPot} + ${zelf} de ta poche`,
     potWord: "cagnotte",
-    selfAdded: "Ajout\u00e9 soi-m\u00eame",
     potHasLeft: (v: string) => `${v} dans la cagnotte`,
     maxAmount: (v: string) => `max ${v}`,
     restSelf: "Reste \u00e0 payer :",
@@ -1283,12 +1277,12 @@ export default function PartyTest() {
       const delta = (n || 0) - (huidig[did] || 0)
       if (delta !== 0) rBumpAnon(idx, did, delta)
     })
+    const beschikbaar = Math.max(0, potAvailFor(idx))
+    // Komt de pot tekort, dan moet je eerst kiezen — net als bij het bestellen.
+    if (editDraft.usePot && editDraft.amount > beschikbaar + 0.005) { setNotice(L.potShortTitle); return }
     if (Math.abs((r.amount || 0) - editDraft.amount) > 0.001) qSetAmount(idx, editDraft.amount)
     if (Math.max(1, r.headcount || 1) !== editDraft.headcount) await setRoundHeadcount(r.id, editDraft.headcount)
-    // Bron expliciet zetten op basis van het nieuwe bedrag: zo hangt het niet af van
-    // staat die pas na de render bijwerkt.
-    const beschikbaar = Math.max(0, potAvailFor(idx))
-    rSetPotAmt(idx, editDraft.usePot ? Math.min(editDraft.amount, beschikbaar) : 0)
+    rSetPotAmt(idx, editDraft.usePot ? editDraft.amount : 0)
     cancelEditRound()
   }
   const [potIsCard, setPotIsCard] = useState(false)
@@ -1704,13 +1698,12 @@ export default function PartyTest() {
     const bedrag = r?.amount || 0
     if (payVia === "pot") {
       const beschikbaar = Math.max(0, potAvailFor(idx))
-      // Komt de pot tekort, dan splitsen we alleen als de beheerder daar bewust voor koos.
-      if (bedrag > beschikbaar + 0.005 && !potSplitOk) { setNotice(L.potShortTitle); return }
-      rSetPotAmt(idx, Math.min(bedrag, beschikbaar))
+      // Binair: een rondje komt volledig uit de pot, of je betaalt het volledig zelf.
+      if (bedrag > beschikbaar + 0.005) { setNotice(L.potShortTitle); return }
+      rSetPotAmt(idx, bedrag)
     } else {
       rSetPotAmt(idx, 0)
     }
-    setPotSplitOk(false)
     setLastRoundHandled(true); setPayVia("self"); setOverviewBackTo("hub"); setView("roundsOverview")
   }
   const rPaidSum = (r: Round) => (r.potPart || 0) + Object.values(r.payers || {}).reduce((a, b) => a + (b || 0), 0)
@@ -2774,11 +2767,13 @@ export default function PartyTest() {
       // Bevries WIE er nu in de groep zit: dit zijn de deelnemers aan dit rondje.
       // Vanaf hier telt een latere nieuwkomer niet meer mee voor dit rondje.
       const leden = people.map((p) => p.id)
-      // Snelle rondjes: het aantal personen leiden we af uit het aantal drankjes —
-      // 3 drankjes betekent dat er 3 mensen meededen. Achteraf nog aanpasbaar in het
-      // rondjesoverzicht. Bij Fair Split blijft de ingestelde groepsgrootte gelden.
+      // De groep blijft meestal dezelfde hele avond. Een volgend rondje neemt daarom het
+      // aantal van het vorige over — ook als er die ronde iemand niets dronk. Enkel bij
+      // het allereerste rondje leiden we het af uit het aantal drankjes, als startpunt.
+      // Per rondje bijstellen kan altijd in het rondjesoverzicht.
+      const vorige = rounds.length > 0 ? Math.max(1, rounds[rounds.length - 1].headcount || 1) : 0
       const drankjesNu = drinks.reduce((s, d) => s + drinkTotal(d.id), 0)
-      const effHeadcount = settle ? headcount : Math.max(1, drankjesNu || headcount || 1)
+      const effHeadcount = settle ? headcount : (vorige > 0 ? vorige : Math.max(1, drankjesNu || headcount || 1))
       supabase.from("party_rounds").update({ status: nieuweStatus, gave_back: effGb, members: leden, headcount: effHeadcount, ...(settle ? {} : { closed_at: new Date().toISOString() }) }).eq("id", openRoundId)
         .then(({ error }) => { if (error) setNotice("Rondje bevestigen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
       setOpenRoundId(null)
@@ -4836,7 +4831,19 @@ export default function PartyTest() {
             {/* Hoeveel betaald voor dit rondje. Kies eerst de bron (zelf/pot), vul één
                 bedrag in, en bevestig met ✓ (of sla over). Beide sluiten het rondje af. */}
             <div style={{ ...S.card }}>
-              <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 11 }}>{L.roundCostFor(idx + 1)}</div>
+              <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 9 }}>{L.roundCostFor(idx + 1)}</div>
+
+              {/* Aantal personen staat er gewoon bij: geen vraag, maar wel zichtbaar zodat
+                  een verandering meteen opvalt in plaats van pas bij het afrekenen. */}
+              <div style={{ ...S.row, justifyContent: "space-between", background: "#faf4e4", borderRadius: 10, padding: "8px 12px", marginBottom: 11 }}>
+                <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>👤 {r?.headcount || 1} {L.people}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <button style={{ width: 30, height: 30, borderRadius: 8, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", fontSize: 16, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: (r?.headcount || 1) > 1 ? 1 : 0.4 }}
+                    onClick={() => r && setRoundHeadcount(r.id, Math.max(1, (r.headcount || 1) - 1))}>−</button>
+                  <button style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 16, color: "#fff", fontWeight: 800, cursor: "pointer" }}
+                    onClick={() => r && setRoundHeadcount(r.id, (r.headcount || 1) + 1)}>+</button>
+                </div>
+              </div>
 
               {/* Staat vlak boven de knop "uit de pot", rechts uitgelijnd zodat de link
                   duidelijk bij die knop hoort. */}
@@ -4892,25 +4899,14 @@ export default function PartyTest() {
                     🫙 {L.potPayLeft(euro(amount), euro(potAvail - amount))}
                   </div>
                 ) : (
-                  // Te weinig in de pot: niet stilzwijgend aanvullen, maar laten kiezen.
+                  // Te weinig in de pot: geen mengvorm. Ofwel bijvullen, ofwel zelf betalen.
                   <div style={{ background: "rgba(224,104,92,0.08)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 10, padding: "11px 12px", marginTop: 10 }}>
                     <div style={{ fontSize: 14.5, fontWeight: 800, color: "#b0402f", marginBottom: 3 }}>⚠️ {L.potShortTitle}</div>
-                    <div style={{ fontSize: 13.5, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 10 }}>{L.potShortBy(euro(potAvail), euro(amount - potAvail))}</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                      <button style={{ ...S.btn, width: "100%", fontSize: 14.5, fontWeight: 800, padding: "10px 8px" }} onClick={() => setShowPot(true)}>{L.potChoiceTopUp}</button>
-                      <button style={{ ...S.btn, width: "100%", fontSize: 14.5, fontWeight: 800, padding: "10px 8px" }} onClick={() => setPayVia("self")}>{L.potChoicePaySelf}</button>
-                      <button style={{ ...S.btn, width: "100%", fontSize: 14.5, fontWeight: 800, padding: "10px 8px", borderColor: "rgba(31,138,76,0.45)", color: "#1f6b3a" }} onClick={() => setPotSplitOk(true)}>{L.potChoiceSplit(euro(potAvail), euro(amount - potAvail))}</button>
+                    <div style={{ fontSize: 13.5, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 10 }}>{L.potShortSimple(euro(potAvail), euro(amount))}</div>
+                    <div style={{ display: "flex", gap: 7 }}>
+                      <button style={{ ...S.btn, flex: 1, fontSize: 14, fontWeight: 800, padding: "10px 6px" }} onClick={() => setShowPot(true)}>{L.potChoiceTopUp}</button>
+                      <button style={{ ...S.btn, flex: 1, fontSize: 14, fontWeight: 800, padding: "10px 6px" }} onClick={() => setPayVia("self")}>{L.potChoicePaySelf}</button>
                     </div>
-                    {potSplitOk && (
-                      <div style={{ marginTop: 10, paddingTop: 9, borderTop: "1px solid rgba(224,104,92,0.25)" }}>
-                        <div style={{ ...S.row, justifyContent: "space-between", fontSize: 14.5, color: "#4a3f1e", fontWeight: 700 }}>
-                          <span>🫙 {L.fromPot}</span><span style={{ color: "#1f8a4c" }}>{euro(potAvail)}</span>
-                        </div>
-                        <div style={{ ...S.row, justifyContent: "space-between", fontSize: 14.5, color: "#4a3f1e", fontWeight: 700, marginTop: 3 }}>
-                          <span>💶 {L.selfAdded}</span><span style={{ color: "#c88a1a" }}>{euro(amount - potAvail)}</span>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )
               )}
@@ -5455,6 +5451,17 @@ export default function PartyTest() {
                               style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 13.5, fontWeight: 800, border: "none", cursor: potLeeg ? "not-allowed" : "pointer", opacity: potLeeg ? 0.5 : 1, background: uitPot ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#f7f1e2", color: uitPot ? "#fff" : "#8a7d55" }}>🫙 {L.paidPot}{potLeeg ? ` · ${L.emptyWord}` : ""}</button>
                           </div>
                           {potLeeg && <div style={{ fontSize: 12.5, color: "#c0554a", fontWeight: 700, marginTop: 6 }}>{L.potEmptyFillFirst}</div>}
+                          {/* Te weinig in de pot: binair — bijvullen of zelf betalen. */}
+                          {!potLeeg && dr.usePot && dr.amount > Math.max(0, potAvailFor(idx)) + 0.005 && (
+                            <div style={{ background: "rgba(224,104,92,0.08)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 10, padding: "10px 11px", marginTop: 9 }}>
+                              <div style={{ fontSize: 13.5, fontWeight: 800, color: "#b0402f", marginBottom: 3 }}>⚠️ {L.potShortTitle}</div>
+                              <div style={{ fontSize: 12.5, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 9 }}>{L.potShortSimple(euro(Math.max(0, potAvailFor(idx))), euro(dr.amount))}</div>
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button style={{ ...S.btn, flex: 1, fontSize: 13, fontWeight: 800, padding: "9px 6px" }} onClick={(e) => { e.stopPropagation(); setShowPot(true) }}>{L.potChoiceTopUp}</button>
+                                <button style={{ ...S.btn, flex: 1, fontSize: 13, fontWeight: 800, padding: "9px 6px" }} onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, usePot: false } : c) }}>{L.potChoicePaySelf}</button>
+                              </div>
+                            </div>
+                          )}
                         </>
                       ) : (
                         <div style={{ ...S.row, justifyContent: "space-between" }}>
