@@ -444,6 +444,7 @@ const T = {
     potMoney: "🫙 Pot (geld)",
     drinkCard: "💳 Drankkaart",
     addPotContrib: "➕ Inleg pot toevoegen",
+    addMoreToPot: "\u2795 Nog extra inleggen",
     nthDeposit: (n: number) => `${n}e inleg`,
     resetContrib: "↺ reset inleg",
     everyone: "👥 verdeel over iedereen",
@@ -888,6 +889,7 @@ const T = {
     potMoney: "🫙 Pot (argent)",
     drinkCard: "💳 Carte boissons",
     addPotContrib: "➕ Ajouter une mise au pot",
+    addMoreToPot: "\u2795 Ajouter encore",
     nthDeposit: (n: number) => `Mise ${n}`,
     resetContrib: "↺ réinitialiser",
     everyone: "👥 répartir sur tous",
@@ -1229,6 +1231,8 @@ export default function PartyTest() {
   const [potPeopleOk, setPotPeopleOk] = useState(false)
   // Koos de beheerder bewust voor "deels pot, deels zelf"? Dan tonen we die verdeling.
   const [potSplitOk, setPotSplitOk] = useState(false)
+  // Net een inleg toegevoegd? Dan is "Klaar" de logische volgende stap, niet nóg een inleg.
+  const [potJustAdded, setPotJustAdded] = useState(false)
   const [everyoneDraft, setEveryoneDraft] = useState<string>("")
   const [everyoneChoice, setEveryoneChoice] = useState<number | "custom" | null>(null)
   const [editPotId, setEditPotId] = useState<string | null>(null)
@@ -1236,6 +1240,7 @@ export default function PartyTest() {
   // Bij elke nieuwe inleg opnieuw vragen met hoeveel personen er ingelegd wordt — zo
   // weet elke inleg apart voor hoeveel mensen hij gold (nodig voor een latere Fair Split).
   useEffect(() => {
+    if (showPot) setPotJustAdded(false)
     if (potBuilderOpen || showPot) { setPotPeopleOk(false); setPotPeopleDraft(headcount >= 1 ? headcount : 2) }
   }, [potBuilderOpen, showPot])  // eslint-disable-line react-hooks/exhaustive-deps
   const [potIsCard, setPotIsCard] = useState(false)
@@ -2112,6 +2117,7 @@ export default function PartyTest() {
     if (error) { setNotice("Inleg opslaan mislukt: " + error.message); return }
     setPotDraft({}); setPotPerMan(0); setEveryoneChoice(null); setEveryoneDraft("")
     setPotBuilderOpen(false)
+    setPotJustAdded(true)
     await loadParty(groupId)
     setNotice(L.potAdded(euro(totaal)))
   }
@@ -3302,8 +3308,18 @@ export default function PartyTest() {
                 <span style={{ fontSize: 19, fontWeight: 800, color: "#1f8a4c" }}>{euro(potContribTotal)}</span>
               </div>
             )}
-            <button style={{ ...S.btnP, width: "100%", marginTop: 4 }} onClick={() => setPotBuilderOpen(true)}>{L.addPotContrib}</button>
-            <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14, padding: "9px 6px" }} onClick={closePot}>{L.ready}</button>
+            {potJustAdded ? (
+              // Net iets ingelegd: afronden is nu de logische stap.
+              <>
+                <button style={{ ...S.btnP, width: "100%", marginTop: 4 }} onClick={closePot}>{L.ready}</button>
+                <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14, padding: "9px 6px" }} onClick={() => setPotBuilderOpen(true)}>{L.addMoreToPot}</button>
+              </>
+            ) : (
+              <>
+                <button style={{ ...S.btnP, width: "100%", marginTop: 4 }} onClick={() => setPotBuilderOpen(true)}>{L.addPotContrib}</button>
+                <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14, padding: "9px 6px" }} onClick={closePot}>{L.ready}</button>
+              </>
+            )}
           </div>
         )}
       </div>
