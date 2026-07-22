@@ -650,8 +650,8 @@ const T = {
     fairSetupDone: "Klaar — nu toewijzen",
     roundsOverviewTitle: "🧾 Rondjesoverzicht",
     peopleInRound: "personen in dit rondje",
-    expandAll: "alles open",
-    collapseAll: "alles dicht",
+    showDetails: "Toon details",
+    hideDetails: "Verberg details",
     newRoundBtn: "Nieuw rondje",
     editRoundBtn: "Aanpassen",
     editOrderFull: "Bestelling aanpassen",
@@ -1083,8 +1083,8 @@ const T = {
     fairSetupDone: "Termin\u00e9 — attribuer",
     roundsOverviewTitle: "🧾 Aper\u00e7u des tourn\u00e9es",
     peopleInRound: "personnes dans cette tourn\u00e9e",
-    expandAll: "tout ouvrir",
-    collapseAll: "tout fermer",
+    showDetails: "Voir les détails",
+    hideDetails: "Masquer les détails",
     newRoundBtn: "Nouvelle tourn\u00e9e",
     editRoundBtn: "Modifier",
     editOrderFull: "Modifier la commande",
@@ -1532,7 +1532,7 @@ export default function PartyTest() {
     return laatsteRondjeKlaar() ? -1 : rounds.length - 1
   }
   const paidCount = rounds.filter(roundIsPaid).length
-  const blockIfUnpaid = () => { const i = unpaidIdx(); if (i < 0) return false; setNotice(L.roundUnpaid(i + 1)); if (settle) setView("confirmed"); else setView("roundsOverview"); return true }
+  const blockIfUnpaid = () => { const i = unpaidIdx(); if (i < 0) return false; setNotice(L.roundUnpaid(i + 1)); if (settle) setView("confirmed"); return true }
   const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon, drinks]) // eslint-disable-line
   const pickedUpOf = (pid: string) => drinks.reduce((a, d) => a + (d.cup ? aQty(d.id, pid) : 0), 0)
 
@@ -5160,13 +5160,12 @@ export default function PartyTest() {
     // Nieuwste rondje bovenaan. Open als het in openRounds zit; het laatste rondje
     // staat standaard open (als de gebruiker niks toggelde).
     const laatsteId = rounds.length ? rounds[rounds.length - 1].id : ""
-    const isOpen = (r: Round) => openRounds.size === 0 ? r.id === laatsteId : openRounds.has(r.id)
+    // Standaard staat alles dicht — je opent zelf wat je wil bekijken.
+    const isOpen = (r: Round) => openRounds.has(r.id)
     const toggle = (id: string) => setOpenRounds((prev) => {
-      // Bij eerste toggle beginnen we vanaf "alleen laatste open", zodat de klik
-      // voorspelbaar werkt.
-      const base = prev.size === 0 ? new Set<string>([laatsteId]) : new Set(prev)
-      if (base.has(id)) base.delete(id); else base.add(id)
-      return base
+      const n = new Set(prev)
+      if (n.has(id)) n.delete(id); else n.add(id)
+      return n
     })
     return (
       <div style={S.page}><div style={S.wrap}>
@@ -5175,12 +5174,12 @@ export default function PartyTest() {
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6, gap: 8 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.roundsOverviewTitle}</h3>
           <div style={{ display: "flex", gap: 7, flexShrink: 0 }}>
-            {rounds.length > 1 && (() => {
+            {rounds.length > 0 && (() => {
               const allesOpen = openRounds.size >= rounds.length
               return (
-                <button style={{ ...S.btn, fontSize: 14, fontWeight: 700, padding: "7px 12px" }}
-                  onClick={() => setOpenRounds(allesOpen ? new Set<string>([laatsteId]) : new Set(rounds.map((r) => r.id)))}>
-                  {allesOpen ? `▴ ${L.collapseAll}` : `▾ ${L.expandAll}`}
+                <button style={{ ...S.btn, fontSize: 14, fontWeight: 800, padding: "8px 13px", background: "#fff", border: "1px solid rgba(240,165,0,0.55)", color: "#c98a00" }}
+                  onClick={() => setOpenRounds(allesOpen ? new Set<string>() : new Set(rounds.map((r) => r.id)))}>
+                  {allesOpen ? `▴ ${L.hideDetails}` : `▾ ${L.showDetails}`}
                 </button>
               )
             })()}
@@ -5253,6 +5252,18 @@ export default function PartyTest() {
             )
           })}
         </div>
+
+        {rounds.length > 0 && (() => {
+          const allesOpen = openRounds.size >= rounds.length
+          return (
+            <div style={{ textAlign: "center", marginTop: 10 }}>
+              <button style={{ ...S.btn, fontSize: 14, fontWeight: 800, padding: "9px 16px", background: "#fff", border: "1px solid rgba(240,165,0,0.55)", color: "#c98a00" }}
+                onClick={() => setOpenRounds(allesOpen ? new Set<string>() : new Set(rounds.map((r) => r.id)))}>
+                {allesOpen ? `▴ ${L.hideDetails}` : `▾ ${L.showDetails}`}
+              </button>
+            </div>
+          )
+        })()}
 
         <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
           <button style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 15.5, fontWeight: 800 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
