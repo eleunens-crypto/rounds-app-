@@ -609,7 +609,7 @@ const T = {
     potNotEnough: (v: string) => `Pot heeft maar ${v} — de rest reken je zelf af.`,
     potPayLeft: (bedrag: string, over: string) => `${bedrag} uit de pot \u2192 ${over} over na dit rondje`,
     potSplitTitle: "Pot niet genoeg \u2014 zo verdeeld:",
-    potNotEnough: "Niet genoeg in de pot",
+    potShortTitle: "Niet genoeg in de pot",
     potShortBy: (inPot: string, tekort: string) => `Er zit nog ${inPot} in de pot, je komt ${tekort} tekort. Wat wil je doen?`,
     potChoiceTopUp: "\ud83e\uded9 Pot bijleggen en daaruit betalen",
     potChoicePaySelf: "\ud83d\udcb6 Alles zelf betalen",
@@ -1051,7 +1051,7 @@ const T = {
     potNotEnough: (v: string) => `La cagnotte n\u2019a que ${v} — le reste, tu le paies toi-m\u00eame.`,
     potPayLeft: (bedrag: string, over: string) => `${bedrag} de la cagnotte \u2192 ${over} restant apr\u00e8s`,
     potSplitTitle: "Cagnotte insuffisante \u2014 r\u00e9partition :",
-    potNotEnough: "Pas assez dans la cagnotte",
+    potShortTitle: "Pas assez dans la cagnotte",
     potShortBy: (inPot: string, tekort: string) => `Il reste ${inPot} dans la cagnotte, il manque ${tekort}. Que veux-tu faire ?`,
     potChoiceTopUp: "\ud83e\uded9 Compl\u00e9ter la cagnotte et payer avec",
     potChoicePaySelf: "\ud83d\udcb6 Tout payer soi-m\u00eame",
@@ -1648,7 +1648,7 @@ export default function PartyTest() {
     if (payVia === "pot") {
       const beschikbaar = Math.max(0, potAvailFor(idx))
       // Komt de pot tekort, dan splitsen we alleen als de beheerder daar bewust voor koos.
-      if (bedrag > beschikbaar + 0.005 && !potSplitOk) { setNotice(L.potNotEnough); return }
+      if (bedrag > beschikbaar + 0.005 && !potSplitOk) { setNotice(L.potShortTitle); return }
       rSetPotAmt(idx, Math.min(bedrag, beschikbaar))
     } else {
       rSetPotAmt(idx, 0)
@@ -4805,7 +4805,7 @@ export default function PartyTest() {
                 ) : (
                   // Te weinig in de pot: niet stilzwijgend aanvullen, maar laten kiezen.
                   <div style={{ background: "rgba(224,104,92,0.08)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 10, padding: "11px 12px", marginTop: 10 }}>
-                    <div style={{ fontSize: 14.5, fontWeight: 800, color: "#b0402f", marginBottom: 3 }}>⚠️ {L.potNotEnough}</div>
+                    <div style={{ fontSize: 14.5, fontWeight: 800, color: "#b0402f", marginBottom: 3 }}>⚠️ {L.potShortTitle}</div>
                     <div style={{ fontSize: 13.5, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 10 }}>{L.potShortBy(euro(potAvail), euro(amount - potAvail))}</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                       <button style={{ ...S.btn, width: "100%", fontSize: 14.5, fontWeight: 800, padding: "10px 8px" }} onClick={() => setShowPot(true)}>{L.potChoiceTopUp}</button>
