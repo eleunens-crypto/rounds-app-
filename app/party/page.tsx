@@ -1285,8 +1285,10 @@ export default function PartyTest() {
     })
     if (Math.abs((r.amount || 0) - editDraft.amount) > 0.001) qSetAmount(idx, editDraft.amount)
     if (Math.max(1, r.headcount || 1) !== editDraft.headcount) await setRoundHeadcount(r.id, editDraft.headcount)
-    const nuPot = (r.potPart || 0) > 0.005
-    if (nuPot !== editDraft.usePot) rTogglePot(idx)
+    // Bron expliciet zetten op basis van het nieuwe bedrag: zo hangt het niet af van
+    // staat die pas na de render bijwerkt.
+    const beschikbaar = Math.max(0, potAvailFor(idx))
+    rSetPotAmt(idx, editDraft.usePot ? Math.min(editDraft.amount, beschikbaar) : 0)
     cancelEditRound()
   }
   const [potIsCard, setPotIsCard] = useState(false)
@@ -5383,7 +5385,7 @@ export default function PartyTest() {
                   const bewerk = editRoundId === r.id && editDraft !== null
                   const dr = editDraft
                   const uitPot = bewerk && dr ? dr.usePot : (r.potPart || 0) > 0.005
-                  const potLeeg = potRemaining <= 0.005
+                  const potLeeg = Math.max(0, potAvailFor(idx)) <= 0.005
                   return (
                   <div style={{ padding: "4px 14px 14px" }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
