@@ -362,6 +362,8 @@ const T = {
     potHowMany: "Met hoeveel zijn jullie?",
     perManShort: "p.p.",
     potTotalIn: "Totaal in de pot:",
+    potInShort: "ingelegd",
+    potStillIn: "nog in pot",
     alreadyInPot: "Al in de pot",
     nowAdding: "Nu erbij",
     newPotTotal: "Nieuw totaal",
@@ -797,6 +799,8 @@ const T = {
     potHowMany: "Vous \u00eates combien ?",
     perManShort: "p.p.",
     potTotalIn: "Total dans la cagnotte :",
+    potInShort: "vers\u00e9",
+    potStillIn: "reste",
     alreadyInPot: "D\u00e9j\u00e0 dans la cagnotte",
     nowAdding: "Ajout\u00e9 maintenant",
     newPotTotal: "Nouveau total",
@@ -4157,9 +4161,17 @@ export default function PartyTest() {
         </div>
         )}
         <div style={{ ...S.card, marginBottom: 10 }}>
-          <div style={{ ...S.row, justifyContent: "space-between" }}>
+          <div style={{ ...S.row, justifyContent: "space-between", gap: 10 }}>
             <span style={{ fontSize: 15.5, fontWeight: 700 }}>{potIsCard ? L.drinkCard : L.potTitle} <span style={{ fontSize: 14, fontWeight: 600, color: "#8a7d55" }}>— optioneel</span></span>
-            <button style={{ ...S.btn, padding: "6px 12px", fontSize: 15 }} onClick={() => setShowPot(true)}>{potContribTotal > 0 ? `inleg ${euro(potContribTotal)}` : "+ inleggen"}</button>
+            {potContribTotal > 0.005 ? (
+              // Twee cijfers die er echt toe doen: wat erin ging, en wat er nu nog is.
+              <button style={{ ...S.btn, padding: "8px 13px", textAlign: "right", lineHeight: 1.3, flexShrink: 0 }} onClick={() => setShowPot(true)}>
+                <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", fontWeight: 700 }}>{L.potInShort} {euro(potContribTotal)}</span>
+                <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: potRemaining > 0.005 ? "#1f8a4c" : "#c0554a" }}>{L.potStillIn} {euro(Math.max(0, potRemaining))}</span>
+              </button>
+            ) : (
+              <button style={{ ...S.btn, padding: "6px 12px", fontSize: 15, flexShrink: 0 }} onClick={() => setShowPot(true)}>+ inleggen</button>
+            )}
           </div>
           {potChosen && potContribTotal <= 0.005 && <div style={{ marginTop: 8, textAlign: "right" }}><span onClick={() => setPotChosen(false)} style={{ fontSize: 14, color: "#c0554a", fontWeight: 700, cursor: "pointer" }}>✕ toch niet</span></div>}
         </div>
