@@ -389,6 +389,9 @@ const T = {
     coinPrices: "🎟️ coin-prijzen per drankje",
     coinPricesInfo: "Standaard festival-coins per drankje. Pas aan met − / + (stapjes van 0,1).",
     potTitle: "🫙 Pot",
+    potHowManyQ: "Met hoeveel personen leggen jullie in?",
+    potHowManySub: "Nodig om het bedrag per persoon te kunnen berekenen.",
+    continueWord: "Verder",
     fillCoinValue: "Vul de coin-waarde in (1 coin = €…) — of zet coins op 'uit'.",
     fillDeposit: "Vul het waarborgbedrag per beker in — of zet bekers op 'uit'.",
 
@@ -819,6 +822,9 @@ const T = {
     coinPrices: "🎟️ prix en jetons par boisson",
     coinPricesInfo: "Jetons festival par défaut. Ajuste avec − / + (pas de 0,1).",
     potTitle: "🫙 Pot",
+    potHowManyQ: "Vous \u00eates combien \u00e0 mettre au pot ?",
+    potHowManySub: "N\u00e9cessaire pour calculer le montant par personne.",
+    continueWord: "Continuer",
     fillCoinValue: "Entre la valeur du jeton (1 jeton = €…) — ou désactive les jetons.",
     fillDeposit: "Entre le montant de la caution par gobelet — ou désactive les gobelets.",
 
@@ -1195,6 +1201,8 @@ export default function PartyTest() {
   const [potDraft, setPotDraft] = useState<Record<string, number>>({})
   // Snelle rondjes: bedrag dat IEDEREEN inlegt. Het totaal (potDraft.pot) = dit × aantal.
   const [potPerMan, setPotPerMan] = useState<number>(0)
+  // Aantal inleggers dat de beheerder kiest vóór hij de pot invult (snelle rondjes).
+  const [potPeopleDraft, setPotPeopleDraft] = useState(2)
   const [everyoneDraft, setEveryoneDraft] = useState<string>("")
   const [everyoneChoice, setEveryoneChoice] = useState<number | "custom" | null>(null)
   const [editPotId, setEditPotId] = useState<string | null>(null)
@@ -3039,6 +3047,24 @@ export default function PartyTest() {
     <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 6, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potRemaining > 0 ? "#1f8a4c" : "#8a7d55" }}>{potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️ </span>}{potIsCard ? "💳 drankkaart " : "🫙 pot "}{euro(potRemaining)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+ toevoegen</span></span>
   )
   const renderPotModal = () => (
+    // Bij snelle rondjes weet de app het aantal inleggers nog niet. Dat vragen we eerst,
+    // want zonder dat aantal kan "per persoon" niets betekenen. Annuleren mag altijd.
+    (!settle && headcount < 1) ? (
+      <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
+        <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+          <h3 style={{ ...S.h3, fontSize: 19, marginTop: 0, marginBottom: 6 }}>{potIsCard ? L.drinkCard : L.potTitle}</h3>
+          <p style={{ fontSize: 16, fontWeight: 700, color: "#4a3f1e", marginBottom: 4 }}>{L.potHowManyQ}</p>
+          <p style={{ fontSize: 14.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 16 }}>{L.potHowManySub}</p>
+          <div style={{ ...S.row, justifyContent: "center", gap: 18, marginBottom: 18 }}>
+            <button style={{ width: 44, height: 44, borderRadius: 12, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 23, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: potPeopleDraft > 1 ? 1 : 0.4 }} onClick={() => setPotPeopleDraft((n) => Math.max(1, n - 1))}>−</button>
+            <span style={{ fontSize: 30, fontWeight: 800, minWidth: 44, textAlign: "center", color: "#4a3f1e" }}>{potPeopleDraft}</span>
+            <button style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 23, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setPotPeopleDraft((n) => n + 1)}>+</button>
+          </div>
+          <button style={{ ...S.btnP, width: "100%" }} onClick={() => setHeadcount(Math.max(1, potPeopleDraft))}>{L.continueWord} →</button>
+          <button style={{ background: "none", border: "none", width: "100%", marginTop: 11, fontSize: 15, color: "#a89a6f", fontWeight: 700, cursor: "pointer" }} onClick={closePot}>{L.cancel}</button>
+        </div>
+      </div>
+    ) : (
     <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
       <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
         <div style={{ ...S.row, justifyContent: "space-between", margin: "0 0 8px" }}>
@@ -3220,6 +3246,7 @@ export default function PartyTest() {
         )}
       </div>
     </div>
+    )
   )
   const renderDialogs = () => (
     <>
