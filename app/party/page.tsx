@@ -619,7 +619,7 @@ const T = {
     quickTotalLabel: "Totaal van alle rondjes",
     splitOverGroup: "Verdelen",
     payAllSelf: "Alles zelf",
-    treatHint: "Tik een rondje dat jij trakteert (telt niet mee in de verdeling):",
+    treatHint: "Rondje trakteren? Tik hieronder aan (telt dan niet mee in de verdeling)",
     roundWord: "Rondje",
     drinksCount: (n: number) => `${n} drankje${n === 1 ? "" : "s"}`,
     confirmRoundTitle: (n: number) => `\u2705 Rondje ${n} bevestigen`,
@@ -646,6 +646,8 @@ const T = {
     fairAddPerson: "+ Persoon toevoegen",
     fairSetupDone: "Klaar — nu toewijzen",
     roundsOverviewTitle: "🧾 Rondjesoverzicht",
+    expandAll: "alles open",
+    collapseAll: "alles dicht",
     newRoundBtn: "Nieuw rondje",
     editRoundBtn: "Aanpassen",
     editOrderFull: "Bestelling aanpassen",
@@ -1046,7 +1048,7 @@ const T = {
     quickTotalLabel: "Total de toutes les tourn\u00e9es",
     splitOverGroup: "Partager",
     payAllSelf: "Tout payer",
-    treatHint: "Touche une tourn\u00e9e que tu offres (non incluse dans le partage) :",
+    treatHint: "Tu offres une tourn\u00e9e ? Touche-la ci-dessous (elle ne compte pas dans le partage)",
     roundWord: "Tourn\u00e9e",
     drinksCount: (n: number) => `${n} boisson${n === 1 ? "" : "s"}`,
     confirmRoundTitle: (n: number) => `\u2705 Confirmer la tourn\u00e9e ${n}`,
@@ -1073,6 +1075,8 @@ const T = {
     fairAddPerson: "+ Ajouter une personne",
     fairSetupDone: "Termin\u00e9 — attribuer",
     roundsOverviewTitle: "🧾 Aper\u00e7u des tourn\u00e9es",
+    expandAll: "tout ouvrir",
+    collapseAll: "tout fermer",
     newRoundBtn: "Nouvelle tourn\u00e9e",
     editRoundBtn: "Modifier",
     editOrderFull: "Modifier la commande",
@@ -1353,8 +1357,8 @@ export default function PartyTest() {
       <div style={S.overlay} onClick={() => setWalkIdx(null)}>
         <div style={{ ...S.sheet, maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
-            <h3 style={{ ...S.h3, margin: 0, fontSize: 18 }}>{L.walkTable}</h3>
-            <span onClick={() => setWalkIdx(null)} style={{ fontSize: 20, cursor: "pointer", color: "#8a7d55", lineHeight: 1 }}>✕</span>
+            <h3 style={{ ...S.h3, margin: 0, fontSize: 19 }}>{L.walkTable}</h3>
+            <span onClick={() => setWalkIdx(null)} style={{ fontSize: 21, cursor: "pointer", color: "#8a7d55", lineHeight: 1 }}>✕</span>
           </div>
 
           {/* Namen als pills. Tik een naam aan om voor die persoon te bestellen. De
@@ -1366,18 +1370,18 @@ export default function PartyTest() {
               return (
                 <button key={pp.id} onClick={() => setWalkIdx(i)}
                   style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 13px", borderRadius: 20, cursor: "pointer",
-                    fontSize: 13, fontWeight: 800,
+                    fontSize: 15, fontWeight: 800,
                     background: geselecteerd ? "#e08a00" : "#faf7ec",
                     color: geselecteerd ? "#fff" : "#4a3f1e",
                     border: geselecteerd ? "2px solid #e08a00" : "1.5px solid rgba(120,95,20,0.18)" }}>
                   {pp.name}
-                  {n > 0 && <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 18, height: 18, borderRadius: 9, fontSize: 11, background: geselecteerd ? "rgba(255,255,255,0.3)" : "#1f8a4c", color: "#fff" }}>{n}</span>}
+                  {n > 0 && <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 18, height: 18, borderRadius: 9, fontSize: 13, background: geselecteerd ? "rgba(255,255,255,0.3)" : "#1f8a4c", color: "#fff" }}>{n}</span>}
                 </button>
               )
             })}
           </div>
 
-          <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 10, fontWeight: 700 }}>{L.walkFor(p.name)}</div>
+          <div style={{ fontSize: 14.5, color: "#8a7d55", marginBottom: 10, fontWeight: 700 }}>{L.walkFor(p.name)}</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 12 }}>
             {lijst.map((d) => {
               const n = cart[d.id]?.[p.id] ?? 0
@@ -1386,12 +1390,12 @@ export default function PartyTest() {
                   style={{ position: "relative", textAlign: "left", padding: "11px 12px", borderRadius: 10, cursor: "pointer",
                     background: n > 0 ? "rgba(31,138,76,0.1)" : "#faf7ec",
                     border: n > 0 ? "1.5px solid rgba(31,138,76,0.4)" : "1px solid rgba(120,95,20,0.12)" }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 700, color: "#4a3f1e" }}>{d.emoji} {d.name}</span>
+                  <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a3f1e" }}>{d.emoji} {d.name}</span>
                   {n > 0 && (
                     <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ ...S.pill, background: "#1f8a4c", color: "#fff", fontSize: 12, padding: "2px 8px" }}>{n}</span>
+                      <span style={{ ...S.pill, background: "#1f8a4c", color: "#fff", fontSize: 14, padding: "2px 8px" }}>{n}</span>
                       <span onClick={(e) => { e.stopPropagation(); bump(d.id, p.id, -1) }}
-                        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 15, fontWeight: 800 }}>−</span>
+                        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 16, fontWeight: 800 }}>−</span>
                     </span>
                   )}
                 </button>
@@ -1399,7 +1403,7 @@ export default function PartyTest() {
             })}
           </div>
           {zijne.length > 0 && (
-            <div style={{ fontSize: 12, color: "#6b5f3a", marginBottom: 12, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 14, color: "#6b5f3a", marginBottom: 12, lineHeight: 1.5 }}>
               {zijne.map((d) => `${cart[d.id][p.id]}× ${d.name}`).join(" · ")}
             </div>
           )}
@@ -1416,7 +1420,7 @@ export default function PartyTest() {
       // Nog geen rondje. Wie start, haalt — één handeling.
       return (
         <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)", textAlign: "center" }}>
-          <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 10 }}>{L.whoGoes}</div>
+          <div style={{ fontSize: 15.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 10 }}>{L.whoGoes}</div>
           <button style={{ ...S.btnP, width: "100%" }} onClick={startAsRunner}>{L.imGoing}</button>
         </div>
       )
@@ -1425,8 +1429,8 @@ export default function PartyTest() {
       return (
         <div style={{ ...S.card, background: "rgba(31,138,76,0.08)", border: "1.5px solid rgba(31,138,76,0.35)" }}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f6b3a" }}>{L.youAreGoing}</span>
-            <button style={{ ...S.btn, fontSize: 11.5, fontWeight: 700, padding: "6px 11px" }} onClick={releaseRunner}>{L.notMeRunner}</button>
+            <span style={{ fontSize: 15.5, fontWeight: 800, color: "#1f6b3a" }}>{L.youAreGoing}</span>
+            <button style={{ ...S.btn, fontSize: 13.5, fontWeight: 700, padding: "6px 11px" }} onClick={releaseRunner}>{L.notMeRunner}</button>
           </div>
         </div>
       )
@@ -1436,8 +1440,8 @@ export default function PartyTest() {
       return (
         <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <span style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f" }}>{L.xIsGoing(runnerName())}</span>
-            <button style={{ ...S.btn, fontSize: 11.5, fontWeight: 700, padding: "6px 11px" }} onClick={takeOverRound}>{L.iGoInstead}</button>
+            <span style={{ fontSize: 15.5, fontWeight: 800, color: "#8a5e0f" }}>{L.xIsGoing(runnerName())}</span>
+            <button style={{ ...S.btn, fontSize: 13.5, fontWeight: 700, padding: "6px 11px" }} onClick={takeOverRound}>{L.iGoInstead}</button>
           </div>
         </div>
       )
@@ -1969,12 +1973,9 @@ export default function PartyTest() {
   const startWithMode = async (fallbackNaam?: string) => {
     if (bpSettle === null) return
     const wilSettle = bpSettle === true
-    // Snelle rondjes: groepsnaam én aantal personen moeten bewust ingevuld zijn — geen
-    // stilzwijgende default, zodat je niet per ongeluk met een verkeerd aantal verdeelt.
-    if (!wilSettle) {
-      if (!groupName.trim()) { setNotice(L.nameRequired); return }
-      if (headcount < 1) { setNotice(L.peopleRequired); return }
-    }
+    // Geen naam of aantal personen meer vragen bij de start: je duikt meteen in de
+    // drankjes. De naam valt terug op "Rondje + datum", het aantal leidt de app later
+    // zelf af uit de bestelde drankjes (en blijft aanpasbaar in het rondjesoverzicht).
     setOnboardedOnce(true)
     if (!wilSettle) {
       setSettle(false)
@@ -2191,14 +2192,14 @@ export default function PartyTest() {
     return (
       <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.45)" }}>
         <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.letGuestsScan}</h3>
-        <div style={{ fontSize: 12, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 14, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
           {vrij > 0 ? L.freeSeats(vrij) : L.allTakenAdmin}
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ display: "inline-block", background: "#fff", padding: 10, borderRadius: 14, border: "1px solid rgba(120,95,20,0.15)" }}>
             <QRCodeSVG value={inviteLink} size={132} bgColor="#ffffff" fgColor="#4a3f1e" />
           </div>
-          <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "0.18em", color: "#4a3f1e", marginTop: 10 }}>{inviteCode}</div>
+          <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: "0.18em", color: "#4a3f1e", marginTop: 10 }}>{inviteCode}</div>
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
           <button style={{ ...S.btn, flex: 1, fontWeight: 800 }}
@@ -2214,10 +2215,10 @@ export default function PartyTest() {
         </div>
         {/* Wie scande al? Zo ziet de admin de groep vollopen zonder te moeten raden. */}
         <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 14, paddingTop: 12 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: "#1f6b3a", marginBottom: 8 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", marginBottom: 8 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {people.map((p) => (
-              <span key={p.id} style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 16,
+              <span key={p.id} style={{ fontSize: 14, fontWeight: 700, padding: "4px 10px", borderRadius: 16,
                 background: p.claimedBy ? "rgba(31,138,76,0.12)" : "#faf7ec",
                 color: p.claimedBy ? "#1f6b3a" : "#b3a988",
                 border: p.claimedBy ? "1px solid rgba(31,138,76,0.25)" : "1px dashed rgba(120,95,20,0.25)" }}>
@@ -2288,49 +2289,49 @@ export default function PartyTest() {
         <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
             <h3 style={{ ...S.h3, margin: 0 }}>{L.ownDrinkTitle}</h3>
-            <button onClick={() => setShowAddDrink(false)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer", color: "#8a7d55" }}>✕</button>
+            <button onClick={() => setShowAddDrink(false)} style={{ border: "none", background: "none", fontSize: 21, cursor: "pointer", color: "#8a7d55" }}>✕</button>
           </div>
 
-          <div style={{ fontSize: 12, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 14, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
             {L.ownDrinkIntro}
           </div>
 
-          <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>{L.nameLabel}</div>
+          <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 5 }}>{L.nameLabel}</div>
           <input value={ndName} onChange={(e) => setNdName(e.target.value)} placeholder={L.namePh}
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 15, textAlign: "left", marginBottom: 12 }} />
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 16, textAlign: "left", marginBottom: 12 }} />
 
-          <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>{L.categoryLabel}</div>
+          <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 5 }}>{L.categoryLabel}</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
             {CATS.map((c) => (
               <span key={c} style={S.tab(ndCat === c)} onClick={() => setNdCat(c)}>{CAT_LABEL[c]}</span>
             ))}
           </div>
 
-          <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>{L.priceLabel}</div>
-          <div style={{ fontSize: 11, color: "#8a7d55", marginBottom: 6, lineHeight: 1.4 }}>
+          <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 5 }}>{L.priceLabel}</div>
+          <div style={{ fontSize: 13, color: "#8a7d55", marginBottom: 6, lineHeight: 1.4 }}>
             {L.priceHint}
           </div>
           <input value={ndPrice} onChange={(e) => setNdPrice(e.target.value)} inputMode="decimal" placeholder="4,50"
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 15, marginBottom: 12 }} />
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 16, marginBottom: 12 }} />
 
           {pay === "coin" && (
             <>
-              <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 5 }}>Coins <span style={{ fontWeight: 600, color: "#8a7d55" }}>{L.coinsAuto}</span></div>
+              <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 5 }}>Coins <span style={{ fontWeight: 600, color: "#8a7d55" }}>{L.coinsAuto}</span></div>
               <input value={ndCoins} onChange={(e) => setNdCoins(e.target.value)} inputMode="decimal" placeholder={String(coinDefault(ndCat, ndName || "x"))}
-                style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 15, marginBottom: 12 }} />
+                style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 16, marginBottom: 12 }} />
             </>
           )}
 
           <button style={{ ...S.btnP, width: "100%", opacity: ndName.trim() && ndPrice ? 1 : 0.5 }} onClick={addCustomDrink}>
             {L.addBtn}
           </button>
-          <div style={{ fontSize: 11, color: "#8a7d55", textAlign: "center", marginTop: 8 }}>
+          <div style={{ fontSize: 13, color: "#8a7d55", textAlign: "center", marginTop: 8 }}>
             {L.remaining(Math.max(0, MAX_EIGEN_PERSOON - eigenVanMij), MAX_EIGEN_PERSOON)}
           </div>
 
           {mijne.length > 0 && (
             <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
-              <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 8 }}>{L.addedByYou}</div>
+              <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 8 }}>{L.addedByYou}</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {mijne.map((c) => (
                   <button key={c.key} onClick={() => removeCustomDrink(c.key, c.name)}
@@ -2395,32 +2396,32 @@ export default function PartyTest() {
             <h3 style={{ ...S.h3, margin: 0 }}>
               {L.voiceBtn} <span style={{ fontSize: 10, fontWeight: 800, color: "#c98a00", border: "1px solid #e08a00", borderRadius: 5, padding: "1px 5px", verticalAlign: "middle" }}>{L.voiceBeta}</span>
             </h3>
-            {!voiceOn && <button onClick={() => setVoiceOpen(false)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer", color: "#8a7d55" }}>✕</button>}
+            {!voiceOn && <button onClick={() => setVoiceOpen(false)} style={{ border: "none", background: "none", fontSize: 21, cursor: "pointer", color: "#8a7d55" }}>✕</button>}
           </div>
 
           {voiceOn ? (
             <div style={{ textAlign: "center", padding: "24px 0" }}>
               <div style={{ fontSize: 40, marginBottom: 10 }}>🎤</div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#c98a00" }}>{L.voiceListening}</div>
-              <div style={{ fontSize: 12, color: "#8a7d55", marginTop: 8 }}>{L.voiceSay}</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#c98a00" }}>{L.voiceListening}</div>
+              <div style={{ fontSize: 14, color: "#8a7d55", marginTop: 8 }}>{L.voiceSay}</div>
             </div>
           ) : (
             <>
               {voiceText && (
                 <div style={{ background: "#faf7ec", border: "1px solid rgba(120,95,20,0.12)", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
-                  <div style={{ fontSize: 11, color: "#8a7d55", marginBottom: 3 }}>{L.voiceHeard}</div>
-                  <div style={{ fontSize: 14, fontStyle: "italic", color: "#6b5f3a" }}>&ldquo;{voiceText}&rdquo;</div>
+                  <div style={{ fontSize: 13, color: "#8a7d55", marginBottom: 3 }}>{L.voiceHeard}</div>
+                  <div style={{ fontSize: 15.5, fontStyle: "italic", color: "#6b5f3a" }}>&ldquo;{voiceText}&rdquo;</div>
                 </div>
               )}
 
               {voiceHits.length === 0 ? (
-                <div style={{ fontSize: 13, color: "#b3a988", textAlign: "center", padding: "10px 0 16px", lineHeight: 1.5 }}>
+                <div style={{ fontSize: 15, color: "#b3a988", textAlign: "center", padding: "10px 0 16px", lineHeight: 1.5 }}>
                   {L.voiceNothing}
                 </div>
               ) : (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
                   {voiceHits.map((h) => (
-                    <span key={h.id} style={{ ...S.pill, background: "rgba(31,138,76,0.1)", border: "1px solid rgba(31,138,76,0.3)", color: "#1f6b3a", fontSize: 13, padding: "5px 10px" }}>
+                    <span key={h.id} style={{ ...S.pill, background: "rgba(31,138,76,0.1)", border: "1px solid rgba(31,138,76,0.3)", color: "#1f6b3a", fontSize: 15, padding: "5px 10px" }}>
                       {h.qty}× {h.name}
                     </span>
                   ))}
@@ -2456,15 +2457,15 @@ export default function PartyTest() {
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           {perDrank.map(({ d, n }) => (
             <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0" }}>
-              <span style={{ fontSize: 15, fontWeight: 800 }}>{d.emoji} {d.name}</span>
-              <span style={{ fontSize: 19, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
+              <span style={{ fontSize: 16, fontWeight: 800 }}>{d.emoji} {d.name}</span>
+              <span style={{ fontSize: 20, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
             </div>
           ))}
         </div>
         {settle && (
         <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 10, paddingTop: 9 }}>
-          <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>{L.barHandOut}</div>
-          <div style={{ fontSize: 12.5, color: "#6b5f3a", lineHeight: 1.6 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>{L.barHandOut}</div>
+          <div style={{ fontSize: 14.5, color: "#6b5f3a", lineHeight: 1.6 }}>
             {people.map((p) => {
               const zijne = drinks.filter((d) => (r.orders[d.id]?.[p.id] ?? 0) > 0)
               if (zijne.length === 0) return null
@@ -2724,8 +2725,8 @@ export default function PartyTest() {
     const stil = proposalPeople.filter((p) => !answers[p.id])
     return (
       <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.5)" }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 3 }}>{L.proposalTitle}</div>
-        <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>{L.proposalWaiting}</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", marginBottom: 3 }}>{L.proposalTitle}</div>
+        <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>{L.proposalWaiting}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
           {proposalPeople.map((p) => {
             const a = answers[p.id]
@@ -2734,8 +2735,8 @@ export default function PartyTest() {
             const bg = a ? "#faf7ec" : "#fff"
             return (
               <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, background: bg, border: "1px solid rgba(120,95,20,0.12)" }}>
-                <span style={{ fontSize: 13.5, fontWeight: 700, color: "#4a3f1e" }}>{p.name}</span>
-                <span style={{ fontSize: 12, fontWeight: 800, color: kleur }}>{label}</span>
+                <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a3f1e" }}>{p.name}</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: kleur }}>{label}</span>
               </div>
             )
           })}
@@ -2743,7 +2744,7 @@ export default function PartyTest() {
         {/* De laatste blik vóór afsluiten: wie krijgt geen bestelling? Zo kan de haler
             desgewenst nog even langs die mensen voor hij op de knop tikt. */}
         {stil.length > 0 && (
-          <div style={{ fontSize: 11.5, color: "#8a5e0f", background: "rgba(240,165,0,0.1)", borderRadius: 10, padding: "8px 11px", marginBottom: 10, lineHeight: 1.45 }}>
+          <div style={{ fontSize: 13.5, color: "#8a5e0f", background: "rgba(240,165,0,0.1)", borderRadius: 10, padding: "8px 11px", marginBottom: 10, lineHeight: 1.45 }}>
             {L.noOrderFor(stil.map((p) => p.name).join(", "))}
           </div>
         )}
@@ -2768,9 +2769,9 @@ export default function PartyTest() {
     const gekozen = myAnswer
     return (
       <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.6)", background: "#fff8ec" }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 8 }}>{L.gProposalTitle}</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", marginBottom: 8 }}>{L.gProposalTitle}</div>
         {mijnVorige.length > 0 && (
-          <div style={{ fontSize: 12, color: "#6b5f3a", marginBottom: 12, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 14, color: "#6b5f3a", marginBottom: 12, lineHeight: 1.5 }}>
             {L.gProposalYourLast} {mijnVorige.map((x) => `${x.n}× ${x.d.name}`).join(" · ")}
           </div>
         )}
@@ -2786,13 +2787,13 @@ export default function PartyTest() {
             {L.gProposalDiff}{gekozen === "different" && " ✓"}
           </button>
           <button onClick={() => answerProposal("skip")}
-            style={{ ...S.btn, width: "100%", fontWeight: 700, fontSize: 13, opacity: gekozen && gekozen !== "skip" ? 0.5 : 1,
+            style={{ ...S.btn, width: "100%", fontWeight: 700, fontSize: 15, opacity: gekozen && gekozen !== "skip" ? 0.5 : 1,
               border: gekozen === "skip" ? "1.5px solid #a89a6f" : undefined, color: "#8a7d55" }}>
             {L.gProposalSkip}{gekozen === "skip" && " ✓"}
           </button>
         </div>
         {gekozen && (
-          <div style={{ fontSize: 11.5, color: "#1f6b3a", fontWeight: 700, textAlign: "center", marginTop: 10 }}>{L.gProposalDone}</div>
+          <div style={{ fontSize: 13.5, color: "#1f6b3a", fontWeight: 700, textAlign: "center", marginTop: 10 }}>{L.gProposalDone}</div>
         )}
       </div>
     )
@@ -2900,7 +2901,7 @@ export default function PartyTest() {
     return (
       <div style={S.card}>
         <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.settleTogether}</h3>
-        <div style={{ fontSize: 12, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 14, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
           {L.settleTogetherInfo}
           enkel het eindbedrag wordt samengeteld tot één betaling.
         </div>
@@ -2925,13 +2926,13 @@ export default function PartyTest() {
           })}
         </div>
         {settlePick && (
-          <div style={{ fontSize: 12, color: "#c98a00", fontWeight: 700, marginTop: 10 }}>
+          <div style={{ fontSize: 14, color: "#c98a00", fontWeight: 700, marginTop: 10 }}>
             {L.tapWhoWith(settleGroups.find((g) => g.key === settlePick)?.label ?? "")}
           </div>
         )}
         {settleGroups.some((g) => g.samen) && (
           <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.1)" }}>
-            <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 7 }}>{L.separateAgain}</div>
+            <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 7 }}>{L.separateAgain}</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {settleGroups.filter((g) => g.samen).flatMap((g) => g.leden).map((p) => (
                 <button key={p.id} onClick={() => unlinkSettle(p.id)}
@@ -2991,50 +2992,50 @@ export default function PartyTest() {
     page: { minHeight: "100vh", background: "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
     wrap: { maxWidth: 560, margin: "0 auto", padding: "16px 16px" } as React.CSSProperties,
     card: { background: "#fff", border: "1px solid rgba(120,95,20,0.14)", borderRadius: 18, padding: 16, marginBottom: 13, boxShadow: "0 4px 16px -8px rgba(120,95,20,0.25)" } as React.CSSProperties,
-    h1: { fontSize: 22, fontWeight: 800, margin: "0 0 2px" } as React.CSSProperties,
-    h3: { fontSize: 16.5, fontWeight: 800, margin: "0 0 10px" } as React.CSSProperties,
-    sub: { fontSize: 13.5, color: "#8a7d55", margin: "0 0 12px", lineHeight: 1.55 } as React.CSSProperties,
-    btn: { border: "1px solid rgba(120,95,20,0.18)", background: "#fff", color: "#4a3f1e", borderRadius: 12, padding: "12px 16px", fontSize: 15, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
-    btnP: { border: "none", background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 14, padding: "16px 18px", fontSize: 17, fontWeight: 800, cursor: "pointer", width: "100%", boxShadow: "0 4px 12px -4px rgba(224,138,0,0.6)" } as React.CSSProperties,
-    input: { border: "1px solid rgba(120,95,20,0.22)", borderRadius: 10, padding: "11px 12px", fontSize: 16, color: "#4a3f1e", outline: "none", width: 84, textAlign: "right" } as React.CSSProperties,
-    seg: (on: boolean) => ({ flex: 1, textAlign: "center", padding: "11px 6px", borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: "pointer", background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f3ead2", color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
-    step: { width: 38, height: 38, borderRadius: 10, border: "1px solid rgba(120,95,20,0.18)", background: "#f3ead2", color: "#8a5e0f", fontSize: 21, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
-    chip: (n: number) => ({ position: "relative", padding: "10px 14px", borderRadius: 20, fontSize: 14.5, fontWeight: 700, cursor: "pointer", userSelect: "none", border: n > 0 ? "1px solid rgba(240,165,0,0.5)" : "1px solid rgba(120,95,20,0.15)", background: n > 0 ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#faf4e4", color: n > 0 ? "#fff" : "#8a7d55" } as React.CSSProperties),
-    badge: { marginLeft: 5, background: "rgba(0,0,0,0.22)", borderRadius: 20, padding: "0 6px", fontSize: 11, fontWeight: 800 } as React.CSSProperties,
-    pill: { fontSize: 11.5, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: "rgba(120,95,20,0.08)", color: "#8a7d55" } as React.CSSProperties,
+    h1: { fontSize: 23, fontWeight: 800, margin: "0 0 2px" } as React.CSSProperties,
+    h3: { fontSize: 17.5, fontWeight: 800, margin: "0 0 10px" } as React.CSSProperties,
+    sub: { fontSize: 15.5, color: "#8a7d55", margin: "0 0 12px", lineHeight: 1.55 } as React.CSSProperties,
+    btn: { border: "1px solid rgba(120,95,20,0.18)", background: "#fff", color: "#4a3f1e", borderRadius: 12, padding: "12px 16px", fontSize: 16, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
+    btnP: { border: "none", background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 14, padding: "16px 18px", fontSize: 18, fontWeight: 800, cursor: "pointer", width: "100%", boxShadow: "0 4px 12px -4px rgba(224,138,0,0.6)" } as React.CSSProperties,
+    input: { border: "1px solid rgba(120,95,20,0.22)", borderRadius: 10, padding: "11px 12px", fontSize: 17, color: "#4a3f1e", outline: "none", width: 84, textAlign: "right" } as React.CSSProperties,
+    seg: (on: boolean) => ({ flex: 1, textAlign: "center", padding: "11px 6px", borderRadius: 10, fontSize: 15.5, fontWeight: 800, cursor: "pointer", background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f3ead2", color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
+    step: { width: 38, height: 38, borderRadius: 10, border: "1px solid rgba(120,95,20,0.18)", background: "#f3ead2", color: "#8a5e0f", fontSize: 22, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
+    chip: (n: number) => ({ position: "relative", padding: "10px 14px", borderRadius: 20, fontSize: 16, fontWeight: 700, cursor: "pointer", userSelect: "none", border: n > 0 ? "1px solid rgba(240,165,0,0.5)" : "1px solid rgba(120,95,20,0.15)", background: n > 0 ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#faf4e4", color: n > 0 ? "#fff" : "#8a7d55" } as React.CSSProperties),
+    badge: { marginLeft: 5, background: "rgba(0,0,0,0.22)", borderRadius: 20, padding: "0 6px", fontSize: 13, fontWeight: 800 } as React.CSSProperties,
+    pill: { fontSize: 13.5, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: "rgba(120,95,20,0.08)", color: "#8a7d55" } as React.CSSProperties,
     row: { display: "flex", alignItems: "center", gap: 10 } as React.CSSProperties,
-    tab: (on: boolean) => ({ padding: "9px 14px", borderRadius: 20, fontSize: 13.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", background: on ? "#4a3f1e" : "#f3ead2", color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
+    tab: (on: boolean) => ({ padding: "9px 14px", borderRadius: 20, fontSize: 15.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", background: on ? "#4a3f1e" : "#f3ead2", color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
     overlay: { position: "fixed", inset: 0, background: "rgba(40,30,5,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 14 } as React.CSSProperties,
     sheet: { background: "#fff", borderRadius: 20, padding: 20, width: "100%", maxWidth: 460, maxHeight: "86vh", overflowY: "auto", boxShadow: "0 10px 40px rgba(0,0,0,0.25)" } as React.CSSProperties,
   }
   const potTag = (
-    <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potRemaining > 0 ? "#1f8a4c" : "#8a7d55" }}>{potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️ </span>}{potIsCard ? "💳 drankkaart " : "🫙 pot "}{euro(potRemaining)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+ toevoegen</span></span>
+    <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 6, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potRemaining > 0 ? "#1f8a4c" : "#8a7d55" }}>{potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️ </span>}{potIsCard ? "💳 drankkaart " : "🫙 pot "}{euro(potRemaining)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+ toevoegen</span></span>
   )
   const renderPotModal = () => (
     <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
       <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
         <div style={{ ...S.row, justifyContent: "space-between", margin: "0 0 8px" }}>
-          <h3 style={{ ...S.h3, fontSize: 18, margin: 0 }}>{potIsCard ? L.drinkCard : L.potTitle}</h3>
+          <h3 style={{ ...S.h3, fontSize: 19, margin: 0 }}>{potIsCard ? L.drinkCard : L.potTitle}</h3>
           {!settle && (
             <div style={{ display: "flex", alignItems: "center", gap: 9, background: "#faf4e4", borderRadius: 20, padding: "4px 8px" }}>
-              <button style={{ width: 26, height: 26, borderRadius: 8, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 15, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
-              <span style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", minWidth: 34, textAlign: "center" }}>👤 {headcount < 1 ? "—" : headcount}</span>
-              <button style={{ width: 26, height: 26, borderRadius: 8, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 15, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 1 : n + 1)}>+</button>
+              <button style={{ width: 26, height: 26, borderRadius: 8, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 16, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
+              <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", minWidth: 34, textAlign: "center" }}>👤 {headcount < 1 ? "—" : headcount}</span>
+              <button style={{ width: 26, height: 26, borderRadius: 8, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 16, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 1 : n + 1)}>+</button>
             </div>
           )}
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-          <span style={{ ...S.pill, background: "rgba(120,95,20,0.08)", color: "#8a5e0f", fontSize: 12, padding: "4px 10px" }}>ingelegd {euro(potContribTotal)}</span>
-          {potSpent > 0 && <span style={{ ...S.pill, background: "rgba(224,138,0,0.12)", color: "#c98a00", fontSize: 12, padding: "4px 10px" }}>besteed {euro(potSpent)}</span>}
-          <span style={{ ...S.pill, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(224,104,92,0.14)", color: potRemaining > 0 ? "#1f8a4c" : "#c0554a", fontSize: 12, padding: "4px 10px", fontWeight: 800 }}>nog {euro(potRemaining)}</span>
+          <span style={{ ...S.pill, background: "rgba(120,95,20,0.08)", color: "#8a5e0f", fontSize: 14, padding: "4px 10px" }}>ingelegd {euro(potContribTotal)}</span>
+          {potSpent > 0 && <span style={{ ...S.pill, background: "rgba(224,138,0,0.12)", color: "#c98a00", fontSize: 14, padding: "4px 10px" }}>besteed {euro(potSpent)}</span>}
+          <span style={{ ...S.pill, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(224,104,92,0.14)", color: potRemaining > 0 ? "#1f8a4c" : "#c0554a", fontSize: 14, padding: "4px 10px", fontWeight: 800 }}>nog {euro(potRemaining)}</span>
         </div>
         {settle && (
         <div style={{ ...S.row, gap: 6, marginBottom: 8 }}>
-          <div onClick={() => setPotIsCard(false)} style={{ ...S.seg(!potIsCard), padding: "7px 6px", fontSize: 12.5, opacity: !potIsCard ? 1 : 0.5 }}>{L.potMoney}</div>
-          <div onClick={() => setPotIsCard(true)} style={{ ...S.seg(potIsCard), padding: "7px 6px", fontSize: 12.5, opacity: potIsCard ? 1 : 0.5 }}>{L.drinkCard}</div>
+          <div onClick={() => setPotIsCard(false)} style={{ ...S.seg(!potIsCard), padding: "7px 6px", fontSize: 14.5, opacity: !potIsCard ? 1 : 0.5 }}>{L.potMoney}</div>
+          <div onClick={() => setPotIsCard(true)} style={{ ...S.seg(potIsCard), padding: "7px 6px", fontSize: 14.5, opacity: potIsCard ? 1 : 0.5 }}>{L.drinkCard}</div>
         </div>
         )}
-        {settle && <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>{potIsCard ? "💳 Drankkaart van de groep — leg de kaartwaarde (bv. €15) in. Wat niet opgedronken wordt, is verloren en wordt gelijk over iedereen verdeeld." : "🫙 Echt geld — wat niet opgaat, krijgen de inleggers terug bij de afrekening."}</div>}
+        {settle && <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>{potIsCard ? "💳 Drankkaart van de groep — leg de kaartwaarde (bv. €15) in. Wat niet opgedronken wordt, is verloren en wordt gelijk over iedereen verdeeld." : "🫙 Echt geld — wat niet opgaat, krijgen de inleggers terug bij de afrekening."}</div>}
 
 
         {potRounds.map((r, i) => {
@@ -3044,25 +3045,25 @@ export default function PartyTest() {
             <div key={r.id} style={{ background: editPotId === r.id ? "rgba(240,165,0,0.18)" : "#faf4e4", borderRadius: 12, padding: "11px 13px", marginBottom: 8, border: editPotId === r.id ? "1px solid rgba(240,165,0,0.6)" : "1px solid transparent" }}>
               <div style={{ ...S.row, justifyContent: "space-between" }}>
                 <div style={{ ...S.row, gap: 8 }}>
-                  <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#e8a821", color: "#fff", fontSize: 12, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</span>
-                  <span style={{ fontSize: 13.5, fontWeight: 800, color: "#4a3f1e" }}>{L.nthDeposit(i + 1)}</span>
+                  <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#e8a821", color: "#fff", fontSize: 14, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</span>
+                  <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.nthDeposit(i + 1)}</span>
                 </div>
                 <div style={{ ...S.row, gap: 10 }}>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c" }}>{euro(tot)}</span>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: "#1f8a4c" }}>{euro(tot)}</span>
                   {editPotId === r.id ? (
-                    <span style={{ fontSize: 12, color: "#c98a00", fontWeight: 800 }}>{L.beingEdited}</span>
+                    <span style={{ fontSize: 14, color: "#c98a00", fontWeight: 800 }}>{L.beingEdited}</span>
                   ) : (settle ? rounds.length === 0 : potSpent < 0.005) ? (
                     <div style={{ ...S.row, gap: 8 }}>
-                      <span style={{ fontSize: 13, color: "#8a5e0f", cursor: "pointer", fontWeight: 700 }} onClick={() => editPotRound(r.id)}>✏️</span>
-                      <span style={{ fontSize: 13, color: "#c0554a", cursor: "pointer", fontWeight: 700 }} onClick={() => removePotRound(r.id, `${i + 1}e inleg`)}>🗑️</span>
+                      <span style={{ fontSize: 15, color: "#8a5e0f", cursor: "pointer", fontWeight: 700 }} onClick={() => editPotRound(r.id)}>✏️</span>
+                      <span style={{ fontSize: 15, color: "#c0554a", cursor: "pointer", fontWeight: 700 }} onClick={() => removePotRound(r.id, `${i + 1}e inleg`)}>🗑️</span>
                     </div>
                   ) : (
-                    <span style={{ fontSize: 11, color: "#b3a988" }}>🔒</span>
+                    <span style={{ fontSize: 13, color: "#b3a988" }}>🔒</span>
                   )}
                 </div>
               </div>
               {settle && who.length > 0 && (
-                <div style={{ fontSize: 12, color: "#8a7d55", marginTop: 5, paddingLeft: 30 }}>{who.map((pp) => `${pp.name} ${euro(r.amounts[pp.id] || 0)}`).join(" · ")}</div>
+                <div style={{ fontSize: 14, color: "#8a7d55", marginTop: 5, paddingLeft: 30 }}>{who.map((pp) => `${pp.name} ${euro(r.amounts[pp.id] || 0)}`).join(" · ")}</div>
               )}
             </div>
           )
@@ -3073,50 +3074,50 @@ export default function PartyTest() {
         {potIsCard ? (
         <div style={{ background: "rgba(240,165,0,0.08)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 12, padding: 11, marginTop: 4 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f" }}>{editPotId !== null ? "✏️ kaart wijzigen" : "➕ Drankkaart inleggen"}</span>
-            {potDraftTotal > 0 && <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f8a4c" }}>+{euro(potDraftTotal)}</span>}
+            <span style={{ fontSize: 15, fontWeight: 800, color: "#8a5e0f" }}>{editPotId !== null ? "✏️ kaart wijzigen" : "➕ Drankkaart inleggen"}</span>
+            {potDraftTotal > 0 && <span style={{ fontSize: 14.5, fontWeight: 800, color: "#1f8a4c" }}>+{euro(potDraftTotal)}</span>}
           </div>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>{L.cardValue}</span>
-            <div style={{ ...S.row, gap: 4 }}><span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>€</span><input style={{ ...S.input, width: 70 }} type="text" inputMode="decimal" placeholder="15" value={cardValue} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setCardValue(v); if (settle) applyCard(cardPayers, v); else setPotDraft({ pot: parseFloat(v.replace(",", ".")) || 0 }) }} /></div>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>{L.cardValue}</span>
+            <div style={{ ...S.row, gap: 4 }}><span style={{ fontSize: 15, color: "#8a7d55", fontWeight: 700 }}>€</span><input style={{ ...S.input, width: 70 }} type="text" inputMode="decimal" placeholder="15" value={cardValue} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setCardValue(v); if (settle) applyCard(cardPayers, v); else setPotDraft({ pot: parseFloat(v.replace(",", ".")) || 0 }) }} /></div>
           </div>
           {settle && <>
-          <div style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700, marginBottom: 6 }}>{L.whoBoughtCard}</div>
+          <div style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700, marginBottom: 6 }}>{L.whoBoughtCard}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 10 }}>
-            <span onClick={cardSelectAll} style={{ ...S.pill, cursor: "pointer", fontSize: 12.5, padding: "6px 12px", background: "rgba(31,138,76,0.14)", color: "#1f8a4c", fontWeight: 800, border: "1px dashed rgba(31,138,76,0.5)" }}>{L.everyone}</span>
-            {people.map((p) => { const on = cardPayers.includes(p.id); const amt = potDraft[p.id] || 0; return <span key={p.id} onClick={() => toggleCardPayer(p.id)} style={{ ...S.pill, cursor: "pointer", fontSize: 12.5, padding: "6px 12px", background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "rgba(240,165,0,0.1)", color: on ? "#fff" : "#8a5e0f", fontWeight: 700 }}>{p.name} {on ? euro(amt) : "€0"}</span> })}
+            <span onClick={cardSelectAll} style={{ ...S.pill, cursor: "pointer", fontSize: 14.5, padding: "6px 12px", background: "rgba(31,138,76,0.14)", color: "#1f8a4c", fontWeight: 800, border: "1px dashed rgba(31,138,76,0.5)" }}>{L.everyone}</span>
+            {people.map((p) => { const on = cardPayers.includes(p.id); const amt = potDraft[p.id] || 0; return <span key={p.id} onClick={() => toggleCardPayer(p.id)} style={{ ...S.pill, cursor: "pointer", fontSize: 14.5, padding: "6px 12px", background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "rgba(240,165,0,0.1)", color: on ? "#fff" : "#8a5e0f", fontWeight: 700 }}>{p.name} {on ? euro(amt) : "€0"}</span> })}
           </div>
           </>}
         </div>
         ) : (
         <div style={{ background: "rgba(240,165,0,0.08)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 12, padding: 11, marginTop: 4 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f" }}>{editPotId !== null ? "✏️ inleg wijzigen" : (potRounds.length === 0 ? `➕ ${L.firstDeposit}` : `➕ ${L.addToPot}`)}</span>
-            {potDraftTotal > 0 && <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f8a4c" }}>+{euro(potDraftTotal)}</span>}
+            <span style={{ fontSize: 15, fontWeight: 800, color: "#8a5e0f" }}>{editPotId !== null ? "✏️ inleg wijzigen" : (potRounds.length === 0 ? `➕ ${L.firstDeposit}` : `➕ ${L.addToPot}`)}</span>
+            {potDraftTotal > 0 && <span style={{ fontSize: 14.5, fontWeight: 800, color: "#1f8a4c" }}>+{euro(potDraftTotal)}</span>}
           </div>
           {settle ? (
           <>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-            <span style={{ fontSize: 12, color: "#8a7d55", fontWeight: 700 }}>{L.equalSplit}</span>
-            <span style={{ fontSize: 11.5, color: "#c0554a", fontWeight: 700, cursor: "pointer" }} onClick={resetPotDraft}>{L.resetContrib}</span>
+            <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700 }}>{L.equalSplit}</span>
+            <span style={{ fontSize: 13.5, color: "#c0554a", fontWeight: 700, cursor: "pointer" }} onClick={resetPotDraft}>{L.resetContrib}</span>
           </div>
           <div style={{ ...S.row, gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
             {[5, 10, 20, 30].map((v) => {
               const on = everyoneChoice === v
-              return <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 13, background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: on ? "#fff" : "#4a3f1e", border: on ? "none" : "1px solid rgba(120,95,20,0.18)" }} onClick={() => { setEveryoneChoice(v); setEveryoneDraft(""); setEveryoneAmt(v) }}>€{v}</button>
+              return <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 15, background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: on ? "#fff" : "#4a3f1e", border: on ? "none" : "1px solid rgba(120,95,20,0.18)" }} onClick={() => { setEveryoneChoice(v); setEveryoneDraft(""); setEveryoneAmt(v) }}>€{v}</button>
             })}
           </div>
           <div style={{ ...S.row, gap: 6, marginBottom: 10 }}>
-            <span style={{ fontSize: 12, color: "#8a7d55" }}>{L.ownAmount}</span>
-            <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 12, borderColor: everyoneChoice === "custom" ? "#e08a00" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="€" value={everyoneDraft} onChange={(e) => setEveryoneDraft(e.target.value.replace(/[^0-9.,]/g, ""))} />
-            <button style={{ ...S.btn, padding: "5px 11px", fontSize: 12, opacity: (parseFloat(everyoneDraft.replace(",", ".")) || 0) > 0 ? 1 : 0.5 }} onClick={() => { const v = parseFloat(everyoneDraft.replace(",", ".")) || 0; if (v > 0) { setEveryoneChoice("custom"); setEveryoneAmt(v) } }}>toepassen</button>
+            <span style={{ fontSize: 14, color: "#8a7d55" }}>{L.ownAmount}</span>
+            <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 14, borderColor: everyoneChoice === "custom" ? "#e08a00" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="€" value={everyoneDraft} onChange={(e) => setEveryoneDraft(e.target.value.replace(/[^0-9.,]/g, ""))} />
+            <button style={{ ...S.btn, padding: "5px 11px", fontSize: 14, opacity: (parseFloat(everyoneDraft.replace(",", ".")) || 0) > 0 ? 1 : 0.5 }} onClick={() => { const v = parseFloat(everyoneDraft.replace(",", ".")) || 0; if (v > 0) { setEveryoneChoice("custom"); setEveryoneAmt(v) } }}>toepassen</button>
           </div>
           {people.map((p) => (
             <div key={p.id} style={{ ...S.row, gap: 8, padding: "7px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
-              <span style={{ fontSize: 14, fontWeight: 800, width: 112, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{contribOf(p.id) > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: "#8a7d55" }}> · {euro(contribOf(p.id))}</span>}</span>
-              <input style={{ ...S.input, width: 58, padding: "5px 8px", fontSize: 12.5, flexShrink: 0 }} type="text" inputMode="decimal" placeholder="€" value={potDraft[p.id] ?? ""} onChange={(e) => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 })) }} />
-              <button style={{ ...S.btn, padding: "5px 9px", fontSize: 12, color: "#c0554a", flexShrink: 0 }} onClick={() => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: 0 })) }}>↺</button>
-              <span style={{ fontSize: 13, fontWeight: 800, marginLeft: "auto", textAlign: "right", color: (potDraft[p.id] || 0) > 0 ? "#1f8a4c" : "#b3a988" }}>{(potDraft[p.id] || 0) > 0 ? "+" + euro(potDraft[p.id] || 0) : "+€0"}</span>
+              <span style={{ fontSize: 15.5, fontWeight: 800, width: 112, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{contribOf(p.id) > 0 && <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}> · {euro(contribOf(p.id))}</span>}</span>
+              <input style={{ ...S.input, width: 58, padding: "5px 8px", fontSize: 14.5, flexShrink: 0 }} type="text" inputMode="decimal" placeholder="€" value={potDraft[p.id] ?? ""} onChange={(e) => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 })) }} />
+              <button style={{ ...S.btn, padding: "5px 9px", fontSize: 14, color: "#c0554a", flexShrink: 0 }} onClick={() => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: 0 })) }}>↺</button>
+              <span style={{ fontSize: 15, fontWeight: 800, marginLeft: "auto", textAlign: "right", color: (potDraft[p.id] || 0) > 0 ? "#1f8a4c" : "#b3a988" }}>{(potDraft[p.id] || 0) > 0 ? "+" + euro(potDraft[p.id] || 0) : "+€0"}</span>
             </div>
           ))}
           </>
@@ -3124,17 +3125,17 @@ export default function PartyTest() {
           <>
           {/* Snelle rondjes: iedereen legt hetzelfde in. Totaal = per man × aantal. */}
           <div style={{ ...S.row, gap: 8, marginBottom: 10 }}>
-            <span style={{ fontSize: 20, color: "#8a7d55", fontWeight: 700 }}>€</span>
-            <input style={{ ...S.input, flex: 1, fontSize: 20, fontWeight: 800, padding: "10px 12px", color: "#c88a1a", textAlign: "right" }} type="text" inputMode="decimal" placeholder="0,00"
+            <span style={{ fontSize: 21, color: "#8a7d55", fontWeight: 700 }}>€</span>
+            <input style={{ ...S.input, flex: 1, fontSize: 21, fontWeight: 800, padding: "10px 12px", color: "#c88a1a", textAlign: "right" }} type="text" inputMode="decimal" placeholder="0,00"
               value={potPerMan ? String(potPerMan).replace(".", ",") : ""}
               onChange={(e) => setPotPerMan(parseFloat(e.target.value.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0)} />
-            <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700, whiteSpace: "nowrap" }}>{L.perManShort}</span>
+            <span style={{ fontSize: 15, color: "#8a7d55", fontWeight: 700, whiteSpace: "nowrap" }}>{L.perManShort}</span>
           </div>
           <div style={{ ...S.row, gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
             {[5, 10, 20].map((v) => (
-              <button key={v} style={{ ...S.btn, flex: 1, padding: "8px 6px", fontSize: 13, fontWeight: 800, background: potPerMan === v ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: potPerMan === v ? "#fff" : "#4a3f1e", border: potPerMan === v ? "none" : "1px solid rgba(120,95,20,0.18)" }} onClick={() => setPotPerMan(v)}>€{v}</button>
+              <button key={v} style={{ ...S.btn, flex: 1, padding: "8px 6px", fontSize: 15, fontWeight: 800, background: potPerMan === v ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: potPerMan === v ? "#fff" : "#4a3f1e", border: potPerMan === v ? "none" : "1px solid rgba(120,95,20,0.18)" }} onClick={() => setPotPerMan(v)}>€{v}</button>
             ))}
-            <button style={{ ...S.btn, padding: "8px 11px", fontSize: 12, color: "#c0554a" }} onClick={() => setPotPerMan(0)}>↺</button>
+            <button style={{ ...S.btn, padding: "8px 11px", fontSize: 14, color: "#c0554a" }} onClick={() => setPotPerMan(0)}>↺</button>
           </div>
           {(() => {
             const nieuweInleg = potPerMan * Math.max(1, headcount)
@@ -3142,20 +3143,20 @@ export default function PartyTest() {
             const heeftPot = potContribTotal > 0.005
             return heeftPot ? (
               <div style={{ background: "rgba(31,138,76,0.08)", borderRadius: 12, padding: "11px 13px" }}>
-                <div style={{ ...S.row, justifyContent: "space-between", fontSize: 12.5, color: "#6b5f3a", marginBottom: 4 }}>
+                <div style={{ ...S.row, justifyContent: "space-between", fontSize: 14.5, color: "#6b5f3a", marginBottom: 4 }}>
                   <span>{L.alreadyInPot}</span><span style={{ fontWeight: 700 }}>{euro(alIn)}</span>
                 </div>
-                <div style={{ ...S.row, justifyContent: "space-between", fontSize: 12.5, color: "#1f6b3a", marginBottom: 7 }}>
+                <div style={{ ...S.row, justifyContent: "space-between", fontSize: 14.5, color: "#1f6b3a", marginBottom: 7 }}>
                   <span>{L.nowAdding}</span><span style={{ fontWeight: 700 }}>+ {euro(nieuweInleg)}</span>
                 </div>
                 <div style={{ ...S.row, justifyContent: "space-between", alignItems: "baseline", borderTop: "1px solid rgba(31,138,76,0.2)", paddingTop: 7 }}>
-                  <span style={{ fontSize: 13, color: "#1f6b3a", fontWeight: 800 }}>{L.newPotTotal}</span>
-                  <span style={{ fontSize: 20, color: "#1f8a4c", fontWeight: 800 }}>{euro(alIn + nieuweInleg)}</span>
+                  <span style={{ fontSize: 15, color: "#1f6b3a", fontWeight: 800 }}>{L.newPotTotal}</span>
+                  <span style={{ fontSize: 21, color: "#1f8a4c", fontWeight: 800 }}>{euro(alIn + nieuweInleg)}</span>
                 </div>
               </div>
             ) : (
               <div style={{ ...S.row, justifyContent: "center", alignItems: "baseline", gap: 8, padding: "11px", background: "rgba(31,138,76,0.09)", borderRadius: 12 }}>
-                <span style={{ fontSize: 13, color: "#1f6b3a", fontWeight: 700 }}>{L.potTotalIn}</span>
+                <span style={{ fontSize: 15, color: "#1f6b3a", fontWeight: 700 }}>{L.potTotalIn}</span>
                 <span style={{ fontSize: 23, fontWeight: 800, color: "#1f8a4c" }}>{euro(nieuweInleg)}</span>
               </div>
             )
@@ -3182,8 +3183,8 @@ export default function PartyTest() {
           <div>
             {potRounds.length > 0 && (
               <div style={{ ...S.row, justifyContent: "space-between", padding: "10px 13px", background: "rgba(31,138,76,0.09)", borderRadius: 12, marginBottom: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: "#1f6b3a" }}>{L.potTotalIn}</span>
-                <span style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c" }}>{euro(potContribTotal)}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: "#1f6b3a" }}>{L.potTotalIn}</span>
+                <span style={{ fontSize: 19, fontWeight: 800, color: "#1f8a4c" }}>{euro(potContribTotal)}</span>
               </div>
             )}
             <button style={{ ...S.btnP, marginTop: 4 }} onClick={() => setPotBuilderOpen(true)}>{L.addPotContrib}</button>
@@ -3198,20 +3199,23 @@ export default function PartyTest() {
       {confirmDlg && (
         <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setConfirmDlg(null)}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ ...S.h3, fontSize: 17 }}>{L.confirmTitle}</h3>
-            <p style={{ fontSize: 13.5, color: "#4a3f1e", lineHeight: 1.55, marginBottom: 16, whiteSpace: "pre-line" }}>{confirmDlg.msg}</p>
+            <h3 style={{ ...S.h3, fontSize: 18 }}>{L.confirmTitle}</h3>
+            <p style={{ fontSize: 15.5, color: "#4a3f1e", lineHeight: 1.55, marginBottom: 16, whiteSpace: "pre-line" }}>{confirmDlg.msg}</p>
             {confirmDlg.variant === "danger" ? (
               <>
                 <button style={{ ...S.btnP, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", boxShadow: "none" }} onClick={() => setConfirmDlg(null)}>{L.backFinish}</button>
-                <button style={{ background: "none", border: "none", width: "100%", marginTop: 10, fontSize: 12.5, color: "#c0554a", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
+                <button style={{ background: "none", border: "none", width: "100%", marginTop: 10, fontSize: 14.5, color: "#c0554a", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
               </>
             ) : (
               <>
                 {confirmDlg.no ? (
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button style={{ ...S.btn, flex: 1, fontSize: 12.5, padding: "11px 4px" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
-                    <button style={{ ...S.btnP, flex: 1, fontSize: 13, padding: "11px 4px" }} onClick={() => { const f = confirmDlg?.onNo; setConfirmDlg(null); f && f() }}>{confirmDlg.no}</button>
-                  </div>
+                  <>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button style={{ ...S.btn, flex: 1, fontSize: 14.5, padding: "11px 4px" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
+                      <button style={{ ...S.btnP, flex: 1, fontSize: 15, padding: "11px 4px" }} onClick={() => { const f = confirmDlg?.onNo; setConfirmDlg(null); f && f() }}>{confirmDlg.no}</button>
+                    </div>
+                    <button style={{ background: "none", border: "none", width: "100%", marginTop: 11, fontSize: 14.5, color: "#a89a6f", fontWeight: 700, cursor: "pointer" }} onClick={() => setConfirmDlg(null)}>{L.cancel}</button>
+                  </>
                 ) : (
                   <>
                     <button style={{ ...S.btnP, background: "linear-gradient(135deg,#e0685c,#c0554a)", boxShadow: "none" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
@@ -3226,7 +3230,7 @@ export default function PartyTest() {
       {notice && (
         <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setNotice("")}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-            <p style={{ fontSize: 15, color: "#4a3f1e", lineHeight: 1.55, marginBottom: 18, fontWeight: 600 }}>{notice}</p>
+            <p style={{ fontSize: 16, color: "#4a3f1e", lineHeight: 1.55, marginBottom: 18, fontWeight: 600 }}>{notice}</p>
             <button style={S.btnP} onClick={() => setNotice("")}>OK</button>
           </div>
         </div>
@@ -3234,12 +3238,12 @@ export default function PartyTest() {
       {showPeoplePop && (
         <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setShowPeoplePop(false)}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ ...S.h3, fontSize: 17, marginBottom: 4 }}>👤 {L.howManyPeople}</h3>
-            <p style={{ fontSize: 12.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 16 }}>{view === "quickSettle" ? L.headcountNotRetro : L.headcountForward}</p>
+            <h3 style={{ ...S.h3, fontSize: 18, marginBottom: 4 }}>👤 {L.howManyPeople}</h3>
+            <p style={{ fontSize: 14.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 16 }}>{view === "quickSettle" ? L.headcountNotRetro : L.headcountForward}</p>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 22, marginBottom: 18 }}>
-              <button style={{ width: 44, height: 44, borderRadius: 12, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 22, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
+              <button style={{ width: 44, height: 44, borderRadius: 12, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 23, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
               <span style={{ fontSize: 30, fontWeight: 800, minWidth: 44, textAlign: "center", color: headcount < 1 ? "#c4b896" : "#4a3f1e" }}>{headcount < 1 ? "—" : headcount}</span>
-              <button style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 22, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 1 : n + 1)}>+</button>
+              <button style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 23, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 1 : n + 1)}>+</button>
             </div>
             <button style={S.btnP} onClick={() => setShowPeoplePop(false)}>{L.ready}</button>
           </div>
@@ -3249,16 +3253,16 @@ export default function PartyTest() {
         <div style={{ position: "fixed", left: 0, right: 0, bottom: 18, display: "flex", justifyContent: "center", zIndex: 60, pointerEvents: "none", padding: "0 12px" }}>
           <div style={{ pointerEvents: "auto", background: "#1f6b3a", color: "#fff", borderRadius: 16, padding: "12px 16px", boxShadow: "0 8px 24px rgba(0,0,0,0.22)", maxWidth: "94%", minWidth: 240 }}>
             <div style={{ ...S.row, justifyContent: "space-between", gap: 10 }}>
-              <span style={{ fontSize: 15, fontWeight: 800 }}>👋 {L.someoneJoined(newcomer.name)}</span>
+              <span style={{ fontSize: 16, fontWeight: 800 }}>👋 {L.someoneJoined(newcomer.name)}</span>
               <button onClick={() => setNewcomer(null)}
-                style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: 18, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>✕</button>
+                style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: 19, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>✕</button>
             </div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", fontWeight: 700, marginTop: 3 }}>
+            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", fontWeight: 700, marginTop: 3 }}>
               📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}
             </div>
             {isAdmin && (
               <button onClick={() => { removePerson(newcomer.id); setNewcomer(null) }}
-                style={{ marginTop: 9, width: "100%", border: "1px solid rgba(255,255,255,0.5)", background: "transparent", color: "#fff", borderRadius: 10, padding: "7px 9px", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>{L.notRight}</button>
+                style={{ marginTop: 9, width: "100%", border: "1px solid rgba(255,255,255,0.5)", background: "transparent", color: "#fff", borderRadius: 10, padding: "7px 9px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>{L.notRight}</button>
             )}
           </div>
         </div>
@@ -3272,15 +3276,15 @@ export default function PartyTest() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
         <div onClick={goSiteHome} style={{ cursor: "pointer", ...S.row, gap: 10 }}>
           <RundoLogo size={40} />
-          <div style={{ ...S.h1, fontSize: 20, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
+          <div style={{ ...S.h1, fontSize: 21, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
         </div>
         {!!groupId && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. */}
-            <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 9px", borderRadius: 22, fontSize: 14.5, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#fff", border: potRemaining > 0.005 ? "1px solid rgba(200,138,26,0.55)" : "0.5px solid rgba(120,95,20,0.3)" }}>
+            <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 9px", borderRadius: 22, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#fff", border: potRemaining > 0.005 ? "1px solid rgba(200,138,26,0.55)" : "0.5px solid rgba(120,95,20,0.3)" }}>
               {potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️</span>}
               {potIsCard ? (
-                <span style={{ fontSize: 19 }}>💳</span>
+                <span style={{ fontSize: 20 }}>💳</span>
               ) : (
                 <svg width="27" height="27" viewBox="0 0 40 40" style={{ display: "block" }}>
                   <path d="M16 13 L14 7 Q20 5 26 7 L24 13 Z" fill="#d99616" stroke="#b9821a" strokeWidth="1.2" strokeLinejoin="round"/>
@@ -3298,34 +3302,34 @@ export default function PartyTest() {
           is het aantal klikbaar naar de instellingen. */}
       {groupName.trim() && (
         <div style={{ textAlign: "center", marginTop: 9 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2 }}>{groupName.trim()}</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2 }}>{groupName.trim()}</div>
           {settle ? (
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#8a7d55", marginTop: 2 }}>👥 {people.length}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#8a7d55", marginTop: 2 }}>👥 {people.length}</div>
           ) : (
-            <div onClick={() => setShowPeoplePop(true)} style={{ fontSize: 12.5, fontWeight: 700, color: "#8a7d55", marginTop: 3, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 12px", borderRadius: 14, background: "#faf4e4" }}>👤 {headcount < 1 ? "—" : headcount} {L.people} · {L.adjust} ›</div>
+            <div onClick={() => setShowPeoplePop(true)} style={{ fontSize: 14.5, fontWeight: 700, color: "#8a7d55", marginTop: 3, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 12px", borderRadius: 14, background: "#faf4e4" }}>👤 {headcount < 1 ? "—" : headcount} {L.people} · {L.adjust} ›</div>
           )}
         </div>
       )}
       {!onboarding && (
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-          <button style={{ ...S.btn, flex: 1.5, padding: "11px 4px", fontSize: 12, fontWeight: 700, lineHeight: 1.15 }} onClick={() => { if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupSettings}</button>
+          <button style={{ ...S.btn, flex: 1.5, padding: "11px 4px", fontSize: 14, fontWeight: 700, lineHeight: 1.15 }} onClick={() => { if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupSettings}</button>
           {settle ? (
-            <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 13, fontWeight: 700, opacity: view === "hub" ? 0.55 : 1 }} onClick={goHub}>{L.overview}</button>
+            <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 700, opacity: view === "hub" ? 0.55 : 1 }} onClick={goHub}>{L.overview}</button>
           ) : (
-            <button style={{ flex: 1.2, padding: "11px 4px", fontSize: 13, fontWeight: 800, borderRadius: 10, cursor: "pointer",
+            <button style={{ flex: 1.2, padding: "11px 4px", fontSize: 15, fontWeight: 800, borderRadius: 10, cursor: "pointer",
               border: view === "roundsOverview" ? "none" : "1px solid rgba(120,95,20,0.25)",
               background: view === "roundsOverview" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff",
               color: view === "roundsOverview" ? "#fff" : "#8a7d55" }}
               onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } if (rounds.length >= 1) { setOverviewBackTo(view === "order" ? "order" : "hub"); setView("roundsOverview") } else setNotice(L.noRoundsYet) }}>{L.roundsOverviewBtn}</button>
           )}
-          {settle && <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 13, fontWeight: 700, opacity: view === "final" ? 0.55 : 1 }} onClick={goFinal}>{L.settleBtn}</button>}
+          {settle && <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 700, opacity: view === "final" ? 0.55 : 1 }} onClick={goFinal}>{L.settleBtn}</button>}
           {!settle && rounds.length >= 1 && (
             !lastRoundHandled ? (
               // Bezig een rondje af te ronden op de hub: geen afreken-knop maar een rustig
               // label dat toont waar je bent. Niet klikbaar, niet opgelicht.
-              <div style={{ flex: 1, padding: "11px 4px", fontSize: 13, fontWeight: 800, borderRadius: 10, textAlign: "center", background: "#faf4e4", color: "#8a5e0f", border: "1px solid rgba(240,165,0,0.35)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{L.roundWord} {roundNr}</div>
+              <div style={{ flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 800, borderRadius: 10, textAlign: "center", background: "#faf4e4", color: "#8a5e0f", border: "1px solid rgba(240,165,0,0.35)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{L.roundWord} {roundNr}</div>
             ) : (
-              <button style={{ flex: 1, padding: "11px 4px", fontSize: 13, fontWeight: 700, borderRadius: 10, cursor: "pointer",
+              <button style={{ flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 700, borderRadius: 10, cursor: "pointer",
                 border: view === "quickSettle" ? "none" : "1px solid rgba(31,138,76,0.4)",
                 background: view === "quickSettle" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#fff",
                 color: view === "quickSettle" ? "#fff" : "#1f8a4c" }}
@@ -3343,7 +3347,7 @@ export default function PartyTest() {
   if (booting) {
     return (
       <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ fontSize: 14, color: "#8a7d55" }}>{L.loading}</div>
+        <div style={{ fontSize: 15.5, color: "#8a7d55" }}>{L.loading}</div>
       </div>
     )
   }
@@ -3366,7 +3370,7 @@ export default function PartyTest() {
             <RundoLogo size={54} />
             <div style={{ ...S.h1, fontSize: 28 }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
           </div>
-          <div style={{ fontSize: 14, color: "#8a7d55", marginTop: 10 }}>{L.invitedFor} <b style={{ color: "#4a3f1e" }}>{groupName}</b></div>
+          <div style={{ fontSize: 15.5, color: "#8a7d55", marginTop: 10 }}>{L.invitedFor} <b style={{ color: "#4a3f1e" }}>{groupName}</b></div>
         </div>
 
         <div style={S.card}>
@@ -3374,8 +3378,8 @@ export default function PartyTest() {
 
           {vrij.length === 0 ? (
             <>
-              <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.5 }}>{L.allSeatsTaken}</div>
-              <input id="latecomer-name" style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 16, marginBottom: 10 }}
+              <div style={{ fontSize: 14.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.5 }}>{L.allSeatsTaken}</div>
+              <input id="latecomer-name" style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 17, marginBottom: 10 }}
                 placeholder={L.yourName} autoComplete="name" />
               <button disabled={busy} style={{ ...S.btnP, width: "100%", opacity: busy ? 0.5 : 1 }}
                 onClick={() => {
@@ -3387,11 +3391,11 @@ export default function PartyTest() {
             <>
               {metNaam.length > 0 && (
                 <>
-                  <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.5 }}>{L.tapYourName}</div>
+                  <div style={{ fontSize: 14.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.5 }}>{L.tapYourName}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8, marginBottom: leeg.length ? 16 : 0 }}>
                     {metNaam.map((p) => (
                       <button key={p.id} disabled={busy} onClick={() => claimSeat(p.id, p.name)}
-                        style={{ ...S.btn, padding: "13px 8px", fontWeight: 800, fontSize: 14, opacity: busy ? 0.5 : 1 }}>
+                        style={{ ...S.btn, padding: "13px 8px", fontWeight: 800, fontSize: 15.5, opacity: busy ? 0.5 : 1 }}>
                         {p.name}
                       </button>
                     ))}
@@ -3401,10 +3405,10 @@ export default function PartyTest() {
 
               {leeg.length > 0 && (
                 <>
-                  <div style={{ fontSize: 12.5, color: "#8a7d55", marginBottom: 8, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 14.5, color: "#8a7d55", marginBottom: 8, lineHeight: 1.5 }}>
                     {metNaam.length > 0 ? L.notThere : L.fillNameSeat}
                   </div>
-                  <input id="guest-name" style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 16, marginBottom: 10 }}
+                  <input id="guest-name" style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 17, marginBottom: 10 }}
                     placeholder={L.yourName} autoComplete="name" />
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
                     {leeg.map((p) => (
@@ -3428,7 +3432,7 @@ export default function PartyTest() {
 
         {people.some((p) => p.claimedBy) && (
           <div style={S.card}>
-            <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>{L.alreadyJoined}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{L.alreadyJoined}</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {people.filter((p) => p.claimedBy).map((p) => <span key={p.id} style={S.pill}>📱 {p.name}</span>)}
             </div>
@@ -3468,8 +3472,8 @@ export default function PartyTest() {
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}><LanguageToggle compact /></div>
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800 }}>🍻 {groupName}</div>
-            <div style={{ fontSize: 12, color: "#8a7d55" }}>
+            <div style={{ fontSize: 19, fontWeight: 800 }}>🍻 {groupName}</div>
+            <div style={{ fontSize: 14, color: "#8a7d55" }}>
               {L.youAre} <b style={{ color: "#4a3f1e" }}>{ik.name}</b>
               {pay === "coin" ? ` · coins (1 = ${euro(coinValue)})` : ""}
             </div>
@@ -3482,11 +3486,11 @@ export default function PartyTest() {
 
         <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
           <button onClick={() => setGuestTab("order")}
-            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 12, fontWeight: 800, opacity: guestTab === "order" ? 1 : 0.55 }}>{L.tabOrder}</button>
+            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 14, fontWeight: 800, opacity: guestTab === "order" ? 1 : 0.55 }}>{L.tabOrder}</button>
           <button onClick={() => setGuestTab("me")}
-            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 12, fontWeight: 800, opacity: guestTab === "me" ? 1 : 0.55 }}>{L.tabMe}</button>
+            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 14, fontWeight: 800, opacity: guestTab === "me" ? 1 : 0.55 }}>{L.tabMe}</button>
           <button onClick={() => setGuestTab("group")}
-            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 12, fontWeight: 800, opacity: guestTab === "group" ? 1 : 0.55 }}>{L.tabGroup}</button>
+            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 14, fontWeight: 800, opacity: guestTab === "group" ? 1 : 0.55 }}>{L.tabGroup}</button>
         </div>
 
         {guestTab === "group" && (
@@ -3496,7 +3500,7 @@ export default function PartyTest() {
                 <h3 style={{ ...S.h3, margin: 0 }}>{groupName || L.groupTitle}</h3>
                 <span style={{ ...S.pill, background: "rgba(120,95,20,0.08)", color: "#8a5e0f", flexShrink: 0 }}>{L.peopleN(people.length)}</span>
               </div>
-              <div style={{ fontSize: 12, color: "#1f6b3a", fontWeight: 700, marginTop: 4 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</div>
+              <div style={{ fontSize: 14, color: "#1f6b3a", fontWeight: 700, marginTop: 4 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {people.map((p) => {
@@ -3507,19 +3511,19 @@ export default function PartyTest() {
                   <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10,
                     background: benIkHet ? "rgba(31,138,76,0.08)" : "#faf7ec",
                     border: benIkHet ? "1px solid rgba(31,138,76,0.3)" : "1px solid rgba(120,95,20,0.1)" }}>
-                    <span style={{ fontSize: 14, fontWeight: benIkHet ? 800 : 700, color: p.named ? "#4a3f1e" : "#b3a988" }}>
+                    <span style={{ fontSize: 15.5, fontWeight: benIkHet ? 800 : 700, color: p.named ? "#4a3f1e" : "#b3a988" }}>
                       {p.name}
-                      {benIkHet && <span style={{ fontSize: 11, color: "#1f6b3a", fontWeight: 800 }}> · {L.youMark}</span>}
-                      {isHost && !benIkHet && <span style={{ fontSize: 11, color: "#8a5e0f", fontWeight: 800 }}> · {L.hostMark}</span>}
+                      {benIkHet && <span style={{ fontSize: 13, color: "#1f6b3a", fontWeight: 800 }}> · {L.youMark}</span>}
+                      {isHost && !benIkHet && <span style={{ fontSize: 13, color: "#8a5e0f", fontWeight: 800 }}> · {L.hostMark}</span>}
                     </span>
-                    <span style={{ fontSize: 11, color: aangemeld ? "#8a5e0f" : "#b3a988", fontWeight: 700 }}>
+                    <span style={{ fontSize: 13, color: aangemeld ? "#8a5e0f" : "#b3a988", fontWeight: 700 }}>
                       {aangemeld ? L.scannedSelf : L.notScannedYet}
                     </span>
                   </div>
                 )
               })}
             </div>
-            <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", marginTop: 12, lineHeight: 1.5 }}>{L.inviteMore}</div>
+            <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", marginTop: 12, lineHeight: 1.5 }}>{L.inviteMore}</div>
           </div>
         )}
 
@@ -3528,33 +3532,33 @@ export default function PartyTest() {
             <div style={S.card}>
               <h3 style={{ ...S.h3, marginTop: 0 }}>{L.myTab}</h3>
               {rounds.length === 0 ? (
-                <div style={{ fontSize: 13, color: "#b3a988", textAlign: "center", padding: "14px 0" }}>
+                <div style={{ fontSize: 15, color: "#b3a988", textAlign: "center", padding: "14px 0" }}>
                   {L.noRoundClosed}
                 </div>
               ) : (
                 <>
                   <div style={{ ...S.row, justifyContent: "space-between", padding: "6px 0" }}>
-                    <span style={{ fontSize: 13.5 }}>{L.whatYouDrank} <span style={{ fontSize: 11, color: "#8a7d55" }}>{L.yourShare}</span></span>
-                    <b style={{ fontSize: 14.5 }}>{euro(mijnVerbruik)}</b>
+                    <span style={{ fontSize: 15.5 }}>{L.whatYouDrank} <span style={{ fontSize: 13, color: "#8a7d55" }}>{L.yourShare}</span></span>
+                    <b style={{ fontSize: 16 }}>{euro(mijnVerbruik)}</b>
                   </div>
                   <div style={{ ...S.row, justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid rgba(120,95,20,0.1)" }}>
-                    <span style={{ fontSize: 13.5 }}>{L.whatYouPaid} {contribOf(meId) > 0 ? <span style={{ fontSize: 11, color: "#8a7d55" }}>{L.inclPot}</span> : null}</span>
-                    <b style={{ fontSize: 14.5 }}>{euro(mijnBetaald)}</b>
+                    <span style={{ fontSize: 15.5 }}>{L.whatYouPaid} {contribOf(meId) > 0 ? <span style={{ fontSize: 13, color: "#8a7d55" }}>{L.inclPot}</span> : null}</span>
+                    <b style={{ fontSize: 16 }}>{euro(mijnBetaald)}</b>
                   </div>
                   <div style={{ ...S.row, justifyContent: "space-between", padding: "11px 0 2px" }}>
-                    <span style={{ fontSize: 14, fontWeight: 800 }}>
+                    <span style={{ fontSize: 15.5, fontWeight: 800 }}>
                       {Math.abs(mijnSaldo) < 0.005 ? L.youAreEven : mijnSaldo > 0 ? L.youGetBack : L.youStillPay}
                     </span>
-                    <b style={{ fontSize: 19, color: Math.abs(mijnSaldo) < 0.005 ? "#1f8a4c" : mijnSaldo > 0 ? "#1f8a4c" : "#c0392b" }}>
+                    <b style={{ fontSize: 20, color: Math.abs(mijnSaldo) < 0.005 ? "#1f8a4c" : mijnSaldo > 0 ? "#1f8a4c" : "#c0392b" }}>
                       {euro(Math.abs(mijnSaldo))}
                     </b>
                   </div>
                   {mijnGroep?.samen && (
-                    <div style={{ fontSize: 11.5, color: "#c98a00", fontWeight: 700, marginTop: 8 }}>
+                    <div style={{ fontSize: 13.5, color: "#c98a00", fontWeight: 700, marginTop: 8 }}>
                       {L.settlesWith(mijnGroep.leden.filter((p) => p.id !== meId).map((p) => p.name).join(" & "))}
                     </div>
                   )}
-                  <div style={{ fontSize: 11, color: "#8a7d55", marginTop: 10, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 13, color: "#8a7d55", marginTop: 10, lineHeight: 1.5 }}>
                     {L.directionOnly}
                   </div>
                 </>
@@ -3566,8 +3570,8 @@ export default function PartyTest() {
                 <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 8 }}>{L.howYouSettle}</h3>
                 {mijnTx.map((t, i) => (
                   <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "7px 0", borderBottom: i < mijnTx.length - 1 ? "1px solid rgba(120,95,20,0.08)" : "none" }}>
-                    <span style={{ fontSize: 14 }}><b>{t.from}</b> → {t.to}</span>
-                    <b style={{ fontSize: 15 }}>{euro(t.amount)}</b>
+                    <span style={{ fontSize: 15.5 }}><b>{t.from}</b> → {t.to}</span>
+                    <b style={{ fontSize: 16 }}>{euro(t.amount)}</b>
                   </div>
                 ))}
               </div>
@@ -3581,10 +3585,10 @@ export default function PartyTest() {
                   return (
                     <div key={r.id} style={{ padding: "8px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
                       <div style={{ ...S.row, justifyContent: "space-between" }}>
-                        <span style={{ fontSize: 13, fontWeight: 800 }}>{L.roundN(r.seq)}</span>
-                        <span style={{ fontSize: 11.5, color: "#8a7d55" }}>{paidLabel(r)}</span>
+                        <span style={{ fontSize: 15, fontWeight: 800 }}>{L.roundN(r.seq)}</span>
+                        <span style={{ fontSize: 13.5, color: "#8a7d55" }}>{paidLabel(r)}</span>
                       </div>
-                      <div style={{ fontSize: 12, color: mijne.length ? "#6b5f3a" : "#b3a988", marginTop: 3 }}>
+                      <div style={{ fontSize: 14, color: mijne.length ? "#6b5f3a" : "#b3a988", marginTop: 3 }}>
                         {mijne.length
                           ? mijne.map((d) => `${r.orders[d.id][meId]}× ${d.name}`).join(" · ")
                           : L.nothingThisRound}
@@ -3604,20 +3608,20 @@ export default function PartyTest() {
         {/* Wat je al aantikte in dit rondje. Bovenaan, want dat is wat je wil zien. */}
         <div style={{ ...S.card, background: mijnAantal > 0 ? "rgba(31,138,76,0.06)" : "#fff" }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: mijnAantal > 0 ? 10 : 0 }}>
-            <span style={{ fontSize: 14, fontWeight: 800 }}>
+            <span style={{ fontSize: 15.5, fontWeight: 800 }}>
               {bezig ? L.roundWhatYouWant(roundNr) : L.noRoundYet}
             </span>
             {mijnAantal > 0 && <span style={{ ...S.pill, background: "#1f8a4c", color: "#fff" }}>{mijnAantal}</span>}
           </div>
           {mijnAantal === 0 ? (
-            <div style={{ fontSize: 12.5, color: "#8a7d55", lineHeight: 1.5, marginTop: 6 }}>
+            <div style={{ fontSize: 14.5, color: "#8a7d55", lineHeight: 1.5, marginTop: 6 }}>
               {L.tapBelow}
             </div>
           ) : (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {mijn.map((d) => (
                 <button key={d.id} onClick={() => bump(d.id, meId, -1)}
-                  style={{ ...S.pill, cursor: "pointer", background: "#fff", border: "1px solid rgba(31,138,76,0.35)", color: "#1f6b3a", fontSize: 12 }}>
+                  style={{ ...S.pill, cursor: "pointer", background: "#fff", border: "1px solid rgba(31,138,76,0.35)", color: "#1f6b3a", fontSize: 14 }}>
                   {aQty(d.id, meId)}× {d.name} ✕
                 </button>
               ))}
@@ -3626,12 +3630,12 @@ export default function PartyTest() {
         </div>
 
         <div style={{ position: "relative", marginBottom: 9 }}>
-          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none" }}>🔍</span>
+          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🔍</span>
           <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)} placeholder={L.searchDrink}
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 36, paddingRight: drinkSearch ? 34 : 12, fontSize: 15, textAlign: "left" }} />
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 36, paddingRight: drinkSearch ? 34 : 12, fontSize: 16, textAlign: "left" }} />
           {drinkSearch && (
             <button onClick={() => setDrinkSearch("")}
-              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 15, color: "#8a7d55", padding: 4 }}>✕</button>
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8a7d55", padding: 4 }}>✕</button>
           )}
         </div>
 
@@ -3642,7 +3646,7 @@ export default function PartyTest() {
         </div>
 
         {lijst.length === 0 ? (
-          <div style={{ ...S.card, textAlign: "center", color: "#b3a988", fontSize: 13, padding: "20px 0" }}>
+          <div style={{ ...S.card, textAlign: "center", color: "#b3a988", fontSize: 15, padding: "20px 0" }}>
             {!zoekt && !fullList ? (
               <span onClick={() => setFullList(true)} style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }}>{L.showAll}</span>
             ) : L.nothingFound}
@@ -3651,7 +3655,7 @@ export default function PartyTest() {
           <div style={{ position: "relative" }}>
             {!zoekt && fullList && (
               <div style={{ position: "absolute", left: "50%", top: -13, transform: "translateX(-50%)", whiteSpace: "nowrap", zIndex: 2 }}>
-                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
                   ▴ minder tonen
                 </span>
               </div>
@@ -3661,10 +3665,10 @@ export default function PartyTest() {
               const n = aQty(d.id, meId)
               return (
                 <div key={d.id} style={{ padding: "10px", borderRadius: 12, background: n > 0 ? "rgba(31,138,76,0.08)" : "#faf7ec", border: n > 0 ? "1px solid rgba(31,138,76,0.3)" : "1px solid rgba(120,95,20,0.1)" }}>
-                  <div style={{ fontSize: 13.5, fontWeight: n > 0 ? 800 : 600, color: n > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
+                  <div style={{ fontSize: 15.5, fontWeight: n > 0 ? 800 : 600, color: n > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
                   <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
                     <button style={{ ...S.step, opacity: n > 0 ? 1 : 0.4 }} onClick={() => n > 0 && bump(d.id, meId, -1)}>−</button>
-                    <span style={{ fontSize: 17, fontWeight: 800, color: n > 0 ? "#1f8a4c" : "#b3a988" }}>{n}</span>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: n > 0 ? "#1f8a4c" : "#b3a988" }}>{n}</span>
                     <button style={S.step} onClick={() => bump(d.id, meId, 1)}>+</button>
                   </div>
                 </div>
@@ -3674,14 +3678,14 @@ export default function PartyTest() {
             {/* "Meer/minder" hangt centraal, half over de onderrand van de lijst. */}
             {!zoekt && !fullList && catDrinks.length > lijst.length && (
               <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
-                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(240,165,0,0.6)", color: "#c98a00", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
+                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(240,165,0,0.6)", color: "#c98a00", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
                   + {catDrinks.length - lijst.length} meer ▾
                 </span>
               </div>
             )}
             {!zoekt && fullList && (
               <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
-                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
                   ▴ minder tonen
                 </span>
               </div>
@@ -3691,16 +3695,16 @@ export default function PartyTest() {
 
         <div style={{ display: "flex", gap: 8, justifyContent: "center", padding: "2px 0 14px" }}>
           <button onClick={startVoice}
-            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
+            style={{ ...S.btn, fontSize: 14.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
             {L.voiceBtn} <span style={{ fontSize: 9, opacity: 0.75 }}>{L.voiceBeta}</span>
           </button>
           <button onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }}
-            style={{ ...S.btn, fontSize: 12.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
+            style={{ ...S.btn, fontSize: 14.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
             {L.addOwnDrink}
           </button>
         </div>
 
-        <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", padding: "6px 0 20px", lineHeight: 1.5 }}>
+        <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", padding: "6px 0 20px", lineHeight: 1.5 }}>
           {L.barFootnote1}<br />
           {L.barFootnote2}
         </div>
@@ -3723,30 +3727,7 @@ export default function PartyTest() {
         </div>
 
         <div style={{ ...S.card, padding: "18px 16px" }}>
-          {/* Groepsnaam bovenaan. Leeg laten mag — dan valt hij terug op "Rondje + datum". */}
-          <div style={{ fontSize: 11, fontWeight: 800, color: "#8a7d55", marginBottom: 7, letterSpacing: "0.03em" }}>
-            {L.groupNameHint} <span style={{ fontWeight: 600, color: "#a89a6f", letterSpacing: 0 }}>· {L.tapToChange}</span>
-          </div>
-          <div style={{ position: "relative", marginBottom: 18 }}>
-            <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.groupNamePlaceholder}
-              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 17, fontWeight: 800, background: "#fdfaf2", padding: "15px 40px 15px 14px", borderRadius: 12, border: "1.5px solid #e08a00" }} />
-            <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#c4b896", pointerEvents: "none" }}>✏️</span>
-          </div>
-
-          {/* Aantal aanwezigen — alleen bij snelle rondjes. Hiermee verdeelt de afrekening
-              later elk rondje eerlijk. Kan achteraf nog via de header of instellingen. */}
-          {bpSettle === false && (
-            <div style={{ ...S.row, justifyContent: "space-between", padding: "12px 14px", background: headcount < 1 ? "rgba(224,138,0,0.1)" : "#faf4e4", borderRadius: 12, marginBottom: 18, border: headcount < 1 ? "1.5px solid rgba(224,138,0,0.5)" : "1.5px solid transparent" }}>
-              <span style={{ fontSize: 13.5, fontWeight: 800, color: "#4a3f1e" }}>👤 {L.howManyPeople}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <button style={{ width: 34, height: 34, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 18, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
-                <span style={{ fontSize: 19, fontWeight: 800, minWidth: 24, textAlign: "center", color: headcount < 1 ? "#c4b896" : "#4a3f1e" }}>{headcount < 1 ? "—" : headcount}</span>
-                <button style={{ width: 34, height: 34, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 18, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 1 : n + 1)}>+</button>
-              </div>
-            </div>
-          )}
-
-          <div style={{ textAlign: "center", fontSize: 13, fontWeight: 800, color: "#8a7d55", marginBottom: 12 }}>{L.chooseHow}</div>
+          <div style={{ textAlign: "center", fontSize: 16, fontWeight: 800, color: "#8a7d55", marginBottom: 12 }}>{L.chooseHow}</div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             {/* Fair Split BOVEN — de voorkeur. Al geselecteerd bij binnenkomst. */}
@@ -3759,27 +3740,27 @@ export default function PartyTest() {
                 <span style={{ position: "absolute", top: -11, left: 14, background: "#1f8a4c", color: "#fff", fontSize: 10, fontWeight: 800, letterSpacing: "0.03em", padding: "3px 11px", borderRadius: 20, boxShadow: "0 2px 6px rgba(31,138,76,0.3)" }}>✓ {L.chosen}</span>
               )}
               <div style={{ ...S.row, gap: 7, marginBottom: 13 }}>
-                <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.modeTitle}</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{L.modeTitle}</span>
                 <span onClick={(e) => { e.stopPropagation(); setOpenInfo(openInfo === "fair" ? null : "fair") }}
-                  style={{ width: 18, height: 18, borderRadius: "50%", fontSize: 11, fontWeight: 800, fontStyle: "italic", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                  style={{ width: 18, height: 18, borderRadius: "50%", fontSize: 13, fontWeight: 800, fontStyle: "italic", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
                            background: openInfo === "fair" ? "#e08a00" : "transparent", color: openInfo === "fair" ? "#fff" : "#c4a94a", border: openInfo === "fair" ? "none" : "1.5px solid #c4a94a" }}>i</span>
               </div>
               {openInfo === "fair" && (
-                <div style={{ marginBottom: 13, padding: "10px 11px", background: "#fffdf6", borderRadius: 9, fontSize: 11.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeFairInfo}</div>
+                <div style={{ marginBottom: 13, padding: "10px 11px", background: "#fffdf6", borderRadius: 9, fontSize: 13.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeFairInfo}</div>
               )}
               <div style={{ position: "relative", border: "1px dashed rgba(120,95,20,0.2)", borderRadius: 10, padding: "13px 6px 8px" }}>
                 <span style={{ position: "absolute", top: -8, right: 10, background: bpSettle === true ? "#f0f9f4" : "#faf4e4", color: "#a89a6f", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.04em", padding: "1px 7px", borderRadius: 10, textTransform: "uppercase" }}>{L.exampleTag}</span>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
                   {[["🍺", "🪙", "Tom"], ["🍷🍷", "🪙🪙🪙🪙", "Els"], ["🚫", "—", "Bart"], ["🍺🍺", "🪙🪙", "Jan"]].map(([drank, geld, naam], i) => (
                     <div key={i}>
-                      <div style={{ fontSize: 18, height: 24, whiteSpace: "nowrap", letterSpacing: -3, opacity: drank === "🚫" ? 0.4 : 1 }}>{drank}</div>
-                      <div style={{ fontSize: 14, height: 22, marginTop: 5, whiteSpace: "nowrap", letterSpacing: -3, color: geld === "—" ? "#b3a988" : undefined }}>{geld}</div>
-                      <div style={{ fontSize: 11, marginTop: 4, color: naam === "Bart" ? "#b3a988" : "#8a7d55", fontWeight: 700 }}>{naam}</div>
+                      <div style={{ fontSize: 19, height: 24, whiteSpace: "nowrap", letterSpacing: -3, opacity: drank === "🚫" ? 0.4 : 1 }}>{drank}</div>
+                      <div style={{ fontSize: 15.5, height: 22, marginTop: 5, whiteSpace: "nowrap", letterSpacing: -3, color: geld === "—" ? "#b3a988" : undefined }}>{geld}</div>
+                      <div style={{ fontSize: 13, marginTop: 4, color: naam === "Bart" ? "#b3a988" : "#8a7d55", fontWeight: 700 }}>{naam}</div>
                     </div>
                   ))}
                 </div>
               </div>
-              {bpSettle !== true && <div style={{ fontSize: 11, color: "#c98a00", fontWeight: 800, marginTop: 11 }}>{L.tapToChoose} ›</div>}
+              {bpSettle !== true && <div style={{ fontSize: 13, color: "#c98a00", fontWeight: 800, marginTop: 11 }}>{L.tapToChoose} ›</div>}
             </button>
 
             {/* Snel drankjes noteren. */}
@@ -3792,27 +3773,27 @@ export default function PartyTest() {
                 <span style={{ position: "absolute", top: -11, left: 14, background: "#1f8a4c", color: "#fff", fontSize: 10, fontWeight: 800, letterSpacing: "0.03em", padding: "3px 11px", borderRadius: 20, boxShadow: "0 2px 6px rgba(31,138,76,0.3)" }}>✓ {L.chosen}</span>
               )}
               <div style={{ ...S.row, gap: 7, marginBottom: 12 }}>
-                <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
                 <span onClick={(e) => { e.stopPropagation(); setOpenInfo(openInfo === "quick" ? null : "quick") }}
-                  style={{ width: 18, height: 18, borderRadius: "50%", fontSize: 11, fontWeight: 800, fontStyle: "italic", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                  style={{ width: 18, height: 18, borderRadius: "50%", fontSize: 13, fontWeight: 800, fontStyle: "italic", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
                            background: openInfo === "quick" ? "#e08a00" : "transparent", color: openInfo === "quick" ? "#fff" : "#c4a94a", border: openInfo === "quick" ? "none" : "1.5px solid #c4a94a" }}>i</span>
               </div>
               {openInfo === "quick" && (
-                <div style={{ marginBottom: 12, padding: "10px 11px", background: "#fffdf6", borderRadius: 9, fontSize: 11.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeQuickInfo}</div>
+                <div style={{ marginBottom: 12, padding: "10px 11px", background: "#fffdf6", borderRadius: 9, fontSize: 13.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeQuickInfo}</div>
               )}
               <div style={{ position: "relative", border: "1px dashed rgba(120,95,20,0.2)", borderRadius: 10, padding: "13px 10px 10px" }}>
                 <span style={{ position: "absolute", top: -8, right: 10, background: bpSettle === false ? "#f0f9f4" : "#faf4e4", color: "#a89a6f", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.04em", padding: "1px 7px", borderRadius: 10, textTransform: "uppercase" }}>{L.exampleTag}</span>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                  <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
-                  <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
-                  <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
+                  <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 14.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
+                  <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 14.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
+                  <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 14.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
                 </div>
                 <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 10 }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 Aan de toog</div>
-                  <div style={{ fontSize: 13, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pintje · 2× Cola · 1× Wijn</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 Aan de toog</div>
+                  <div style={{ fontSize: 15, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pintje · 2× Cola · 1× Wijn</div>
                 </div>
               </div>
-              {bpSettle !== false && <div style={{ fontSize: 11, color: "#c98a00", fontWeight: 800, marginTop: 11 }}>{L.tapToChoose} ›</div>}
+              {bpSettle !== false && <div style={{ fontSize: 13, color: "#c98a00", fontWeight: 800, marginTop: 11 }}>{L.tapToChoose} ›</div>}
             </button>
           </div>
 
@@ -3830,31 +3811,31 @@ export default function PartyTest() {
               <button onClick={() => openSavedGroup(g.id)} disabled={busy}
                 style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "space-between", textAlign: "left", padding: "12px 14px", borderRadius: 12, background: "#fff", border: "1px solid rgba(120,95,20,0.15)", cursor: "pointer" }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</div>
-                  <div style={{ fontSize: 11, color: "#a89a6f", marginTop: 2 }}>
+                  <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</div>
+                  <div style={{ fontSize: 13, color: "#a89a6f", marginTop: 2 }}>
                     {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
                   </div>
                 </div>
-                <span style={{ fontSize: 16, color: "#c4b896", flexShrink: 0, marginLeft: 10 }}>›</span>
+                <span style={{ fontSize: 17, color: "#c4b896", flexShrink: 0, marginLeft: 10 }}>›</span>
               </button>
               {g.owned && (
                 <button onClick={() => deleteSavedGroup(g)} disabled={busy} aria-label={L.delGroupYes}
-                  style={{ flexShrink: 0, width: 44, borderRadius: 12, background: "#fff", border: "1px solid rgba(224,104,92,0.35)", color: "#c0554a", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>🗑️</button>
+                  style={{ flexShrink: 0, width: 44, borderRadius: 12, background: "#fff", border: "1px solid rgba(224,104,92,0.35)", color: "#c0554a", fontSize: 17, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>🗑️</button>
               )}
             </div>
           )
           return (
             <div style={{ marginTop: 18 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", marginBottom: 9, letterSpacing: "0.02em" }}>{L.savedGroups}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 9, letterSpacing: "0.02em" }}>{L.savedGroups}</div>
               {open.length > 0 && (
                 <div style={{ marginBottom: dicht.length > 0 ? 14 : 0 }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 800, color: "#1f8a4c", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>● {L.groupsOpen}</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#1f8a4c", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>● {L.groupsOpen}</div>
                   {open.map(rij)}
                 </div>
               )}
               {dicht.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 10.5, fontWeight: 800, color: "#a89a6f", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>✓ {L.groupsClosed}</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#a89a6f", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>✓ {L.groupsClosed}</div>
                   {dicht.map(rij)}
                 </div>
               )}
@@ -3875,12 +3856,12 @@ export default function PartyTest() {
         {beginPrompt && (
           <div style={{ ...S.overlay, zIndex: 65 }} onClick={() => setBeginPrompt(false)}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ ...S.h3, fontSize: 18, marginTop: 0, marginBottom: 4 }}>{L.beforeWeStart}</h3>
+              <h3 style={{ ...S.h3, fontSize: 19, marginTop: 0, marginBottom: 4 }}>{L.beforeWeStart}</h3>
 
               {/* De modus komt EERST — hij bepaalt of de rest nog relevant is. Bekers,
                   coins en pot bestaan alleen als je afrekent. Kies je "gewoon rondjes",
                   dan is dit scherm hiermee klaar. */}
-              <p style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e", marginBottom: 10 }}>{L.modeTitle}</p>
+              <p style={{ fontSize: 16, fontWeight: 700, color: "#4a3f1e", marginBottom: 10 }}>{L.modeTitle}</p>
               <div style={{ display: "flex", flexDirection: "column" }}>
                 {/* Fair Split BOVEN — de voorkeur. Al geselecteerd bij binnenkomst. */}
                 <button onClick={() => setBpSettle(true)}
@@ -3889,25 +3870,25 @@ export default function PartyTest() {
                            boxShadow: bpSettle === true ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
                            border: bpSettle === true ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
                   <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
-                    <span style={{ fontSize: 20 }}>⚖️</span>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>Fair Split</span>
-                    {bpSettle === true && <span style={{ marginLeft: "auto", fontSize: 16, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
+                    <span style={{ fontSize: 21 }}>⚖️</span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>Fair Split</span>
+                    {bpSettle === true && <span style={{ marginLeft: "auto", fontSize: 17, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
                   </div>
-                  <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 13 }}>{L.modeFairSub}</div>
+                  <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 13 }}>{L.modeFairSub}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
                     {[["🍺", "🪙", "Tom"], ["🍷🍷", "🪙🪙🪙🪙", "Els"], ["🚫", "—", "Bart"], ["🍺🍺", "🪙🪙", "Jan"]].map(([drank, geld, naam], i) => (
                       <div key={i}>
-                        <div style={{ fontSize: 18, height: 24, whiteSpace: "nowrap", letterSpacing: -3, opacity: drank === "🚫" ? 0.4 : 1 }}>{drank}</div>
-                        <div style={{ fontSize: 14, height: 22, marginTop: 5, whiteSpace: "nowrap", letterSpacing: -3, color: geld === "—" ? "#b3a988" : undefined }}>{geld}</div>
-                        <div style={{ fontSize: 11, marginTop: 4, color: naam === "Bart" ? "#b3a988" : "#8a7d55", fontWeight: 700 }}>{naam}</div>
+                        <div style={{ fontSize: 19, height: 24, whiteSpace: "nowrap", letterSpacing: -3, opacity: drank === "🚫" ? 0.4 : 1 }}>{drank}</div>
+                        <div style={{ fontSize: 15.5, height: 22, marginTop: 5, whiteSpace: "nowrap", letterSpacing: -3, color: geld === "—" ? "#b3a988" : undefined }}>{geld}</div>
+                        <div style={{ fontSize: 13, marginTop: 4, color: naam === "Bart" ? "#b3a988" : "#8a7d55", fontWeight: 700 }}>{naam}</div>
                       </div>
                     ))}
                   </div>
-                  <div style={{ fontSize: 11.5, color: "#4a3f1e", marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)", lineHeight: 1.5 }}>{L.modeFairLine}</div>
+                  <div style={{ fontSize: 13.5, color: "#4a3f1e", marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)", lineHeight: 1.5 }}>{L.modeFairLine}</div>
                 </button>
 
                 {/* Geruststelling, precies waar de twijfel ontstaat. */}
-                <div style={{ textAlign: "center", fontSize: 10.5, color: "#a89a6f", padding: "9px 0" }}>{L.modeSwitchLater}</div>
+                <div style={{ textAlign: "center", fontSize: 12, color: "#a89a6f", padding: "9px 0" }}>{L.modeSwitchLater}</div>
 
                 {/* Gewoon aantallen ONDER, met bestellijstje. */}
                 <button onClick={() => setBpSettle(false)}
@@ -3916,26 +3897,26 @@ export default function PartyTest() {
                            boxShadow: bpSettle === false ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
                            border: bpSettle === false ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
                   <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
-                    <span style={{ fontSize: 20 }}>🍺</span>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
-                    {bpSettle === false && <span style={{ marginLeft: "auto", fontSize: 16, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
+                    <span style={{ fontSize: 21 }}>🍺</span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
+                    {bpSettle === false && <span style={{ marginLeft: "auto", fontSize: 17, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
                   </div>
-                  <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 11 }}>{L.modeQuickSub}</div>
+                  <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 11 }}>{L.modeQuickSub}</div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
-                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
-                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 12.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 14.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 14.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 14.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
                   </div>
                   {/* Bestellijstje: wat er aan de toog moet komen. */}
                   <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 10 }}>
-                    <div style={{ fontSize: 10.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 Aan de toog</div>
-                    <div style={{ fontSize: 13, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pils · 2× Cola · 1× Wijn</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 Aan de toog</div>
+                    <div style={{ fontSize: 15, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pils · 2× Cola · 1× Wijn</div>
                   </div>
                 </button>
               </div>
 
               {bpSettle === true && (
-                <div style={{ fontSize: 11.5, color: "#8a7d55", margin: "14px 0 0", lineHeight: 1.5 }}>{L.settingsLater}</div>
+                <div style={{ fontSize: 13.5, color: "#8a7d55", margin: "14px 0 0", lineHeight: 1.5 }}>{L.settingsLater}</div>
               )}
 
               <button style={{ ...S.btnP, width: "100%", marginTop: 14, opacity: bpSettle === null ? 0.45 : 1 }}
@@ -3947,32 +3928,32 @@ export default function PartyTest() {
           </div>
         )}
         <div style={S.card}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{L.groupNameEdit}</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{L.groupNameEdit}</div>
           <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 15, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: "#fdfaf2" }} />
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: "#fdfaf2" }} />
         </div>
         {settle && (
         <div style={S.card}>
           <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 14 }}>{L.peopleCount}</h3>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
-            <button style={{ ...S.step, width: 42, height: 42, fontSize: 22, opacity: people.length > 0 ? 1 : 0.4 }} onClick={removeLastPerson}>−</button>
+            <button style={{ ...S.step, width: 42, height: 42, fontSize: 23, opacity: people.length > 0 ? 1 : 0.4 }} onClick={removeLastPerson}>−</button>
             <span style={{ fontSize: 26, fontWeight: 800, minWidth: 34, textAlign: "center" }}>{people.length}</span>
-            <button style={{ ...S.step, width: 42, height: 42, fontSize: 22, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={addPerson}>+</button>
+            <button style={{ ...S.step, width: 42, height: 42, fontSize: 23, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={addPerson}>+</button>
           </div>
-          <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", marginTop: 10 }}>{L.namesOptional}</div>
+          <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", marginTop: 10 }}>{L.namesOptional}</div>
         </div>
         )}
 
         <div style={S.card}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", marginBottom: 3 }}>{L.peopleHeader(people.length)}</div>
-          <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 13, lineHeight: 1.5 }}>{L.peopleIntro(Math.max(0, people.length - 1))}</div>
+          <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 3 }}>{L.peopleHeader(people.length)}</div>
+          <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 13, lineHeight: 1.5 }}>{L.peopleIntro(Math.max(0, people.length - 1))}</div>
 
           {/* Wie ben JIJ? Alleen relevant als de admin nog nergens zit — normaal is hij
               al Gast 1, dus dit blijft verborgen. Vangnet voor het randgeval. */}
           {!meId && people.length > 0 && (
             <div style={{ background: "#fff8e8", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 12, padding: "11px 12px", marginBottom: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f", marginBottom: 3 }}>⭐ {L.whichAreYou}</div>
-              <div style={{ fontSize: 11, color: "#8a7d55", marginBottom: 9, lineHeight: 1.45 }}>{L.pickYourName}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#8a5e0f", marginBottom: 3 }}>⭐ {L.whichAreYou}</div>
+              <div style={{ fontSize: 13, color: "#8a7d55", marginBottom: 9, lineHeight: 1.45 }}>{L.pickYourName}</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {people.filter((p) => !p.claimedBy).map((p) => {
                   const idx = people.indexOf(p)
@@ -4000,12 +3981,12 @@ export default function PartyTest() {
                 {mijnPlaats && (
                   <div style={{ background: "#faf7ec", borderRadius: 10, padding: "10px 11px", marginBottom: geclaimd.length || wachtend.length ? 8 : 0, border: "1px solid rgba(31,138,76,0.25)" }}>
                     <div style={{ ...S.row, gap: 8 }}>
-                      <span style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(31,138,76,0.15)", color: "#1f6b3a", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>⭐</span>
+                      <span style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(31,138,76,0.15)", color: "#1f6b3a", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>⭐</span>
                       <input value={isGuestDefault(mijnPlaats.name) ? "" : mijnPlaats.name}
                         placeholder={L.yourSeat}
                         onChange={(e) => renamePerson(mijnPlaats.id, e.target.value === "" ? `Gast ${mijnIdx + 1}` : e.target.value)}
-                        style={{ ...S.input, flex: 1, minWidth: 0, padding: "7px 9px", fontSize: 14, fontWeight: 800, textAlign: "left", background: "#fff" }} />
-                      <span style={{ fontSize: 10.5, color: "#8a5e0f", background: "#f3e4c4", padding: "3px 9px", borderRadius: 10, fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0 }}>✏️ {L.nameLabel}</span>
+                        style={{ ...S.input, flex: 1, minWidth: 0, padding: "7px 9px", fontSize: 15.5, fontWeight: 800, textAlign: "left", background: "#fff" }} />
+                      <span style={{ fontSize: 12, color: "#8a5e0f", background: "#f3e4c4", padding: "3px 9px", borderRadius: 10, fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0 }}>✏️ {L.nameLabel}</span>
                     </div>
                   </div>
                 )}
@@ -4015,10 +3996,10 @@ export default function PartyTest() {
                   const bezet = true
                   return (
                     <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: "#faf7ec", border: "1px solid rgba(120,95,20,0.1)" }}>
-                      <span style={{ fontSize: 13.5, fontWeight: 700, color: "#4a3f1e" }}>📱 {p.name}</span>
+                      <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a3f1e" }}>📱 {p.name}</span>
                       {bezet && (
                         <button onClick={() => releaseSeat(p.id)}
-                          style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)", fontSize: 10.5, padding: "3px 8px" }}>
+                          style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)", fontSize: 12, padding: "3px 8px" }}>
                           {L.freeUp}
                         </button>
                       )}
@@ -4030,14 +4011,14 @@ export default function PartyTest() {
                     te vullen. Ze wachten op de scan. */}
                 {wachtend.length > 0 && (
                   <div style={{ ...S.row, justifyContent: "space-between", padding: "9px 11px", borderRadius: 10, background: "#fff", border: "1px dashed rgba(120,95,20,0.25)" }}>
-                    <span style={{ fontSize: 12, color: "#a89a6f" }}>{L.waitingSeats(wachtend.map((p) => people.indexOf(p) + 1).join(" · "))}</span>
+                    <span style={{ fontSize: 14, color: "#a89a6f" }}>{L.waitingSeats(wachtend.map((p) => people.indexOf(p) + 1).join(" · "))}</span>
                   </div>
                 )}
 
                 {/* De uitzondering: iemand zonder telefoon. Bewust een aparte tik. */}
                 <div style={{ borderTop: "1px solid rgba(120,95,20,0.1)", marginTop: 12, paddingTop: 11, textAlign: "center" }}>
-                  <span style={{ fontSize: 11, color: "#8a7d55" }}>{L.noPhoneAdd} </span>
-                  <span onClick={addPerson} style={{ fontSize: 11.5, color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{L.addSelf}</span>
+                  <span style={{ fontSize: 13, color: "#8a7d55" }}>{L.noPhoneAdd} </span>
+                  <span onClick={addPerson} style={{ fontSize: 13.5, color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{L.addSelf}</span>
                 </div>
               </>
             )
@@ -4061,8 +4042,8 @@ export default function PartyTest() {
         <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10 }}>⚙️ Groepsinstellingen</h3>
         <div style={{ ...S.card, marginBottom: 10 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-            <span style={{ fontSize: 14, fontWeight: 800 }}>Groepsnaam</span>
-            {hasSettled && <span style={{ fontSize: 11, color: "#8a7d55", fontWeight: 700 }}>🔒 vast na afrekenen</span>}
+            <span style={{ fontSize: 15.5, fontWeight: 800 }}>Groepsnaam</span>
+            {hasSettled && <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>🔒 vast na afrekenen</span>}
           </div>
           <input disabled={hasSettled} value={groupName} onChange={(e) => setGroupName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : "#fdfaf2", color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
         </div>
@@ -4071,32 +4052,32 @@ export default function PartyTest() {
         {!settle && (
         <div style={{ ...S.card, marginBottom: 10 }}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <span style={{ fontSize: 14, fontWeight: 800 }}>👤 {L.howManyPeople}</span>
+            <span style={{ fontSize: 15.5, fontWeight: 800 }}>👤 {L.howManyPeople}</span>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <button style={{ ...S.step, opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
-              <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center", color: headcount < 1 ? "#c4b896" : undefined }}>{headcount < 1 ? "—" : headcount}</span>
+              <span style={{ fontSize: 19, fontWeight: 800, minWidth: 22, textAlign: "center", color: headcount < 1 ? "#c4b896" : undefined }}>{headcount < 1 ? "—" : headcount}</span>
               <button style={{ ...S.step, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={() => setHeadcount((n) => n < 1 ? 1 : n + 1)}>+</button>
             </div>
           </div>
           {rounds.length > 0 && (
-            <div style={{ fontSize: 11.5, color: "#8a7d55", marginTop: 9, lineHeight: 1.5 }}>{L.headcountForward}</div>
+            <div style={{ fontSize: 13.5, color: "#8a7d55", marginTop: 9, lineHeight: 1.5 }}>{L.headcountForward}</div>
           )}
         </div>
         )}
         {settle && !fromOnboarding && (
         <div style={{ ...S.card, marginBottom: 10 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: people.length > 0 ? 10 : 0 }}>
-            <span style={{ fontSize: 14, fontWeight: 800 }}>{L.peopleTitle}</span>
+            <span style={{ fontSize: 15.5, fontWeight: 800 }}>{L.peopleTitle}</span>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <button style={{ ...S.step, opacity: people.length > 0 ? 1 : 0.4 }} onClick={removeLastPerson}>−</button>
-              <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{people.length}</span>
+              <span style={{ fontSize: 19, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{people.length}</span>
               <button style={{ ...S.step, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={addPerson}>+</button>
             </div>
           </div>
           {people.length > 0 && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(108px, 1fr))", gap: 6 }}>
               {people.map((p, idx) => (
-                <input key={p.id} value={isGuestDefault(p.name) ? "" : p.name} placeholder={isGuestDefault(p.name) ? p.name : `Gast ${idx + 1}`} onChange={(e) => renamePerson(p.id, e.target.value === "" ? `Gast ${idx + 1}` : e.target.value)} style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "6px 8px", fontSize: 12.5, textAlign: "left" }} />
+                <input key={p.id} value={isGuestDefault(p.name) ? "" : p.name} placeholder={isGuestDefault(p.name) ? p.name : `Gast ${idx + 1}`} onChange={(e) => renamePerson(p.id, e.target.value === "" ? `Gast ${idx + 1}` : e.target.value)} style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "6px 8px", fontSize: 14.5, textAlign: "left" }} />
               ))}
             </div>
           )}
@@ -4104,39 +4085,39 @@ export default function PartyTest() {
         )}
         <div style={{ ...S.card, marginBottom: 10 }}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <span style={{ fontSize: 14, fontWeight: 700 }}>{potIsCard ? L.drinkCard : L.potTitle} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>— optioneel</span></span>
-            <button style={{ ...S.btn, padding: "6px 12px", fontSize: 13 }} onClick={() => setShowPot(true)}>{potContribTotal > 0 ? `inleg ${euro(potContribTotal)}` : "+ inleggen"}</button>
+            <span style={{ fontSize: 15.5, fontWeight: 700 }}>{potIsCard ? L.drinkCard : L.potTitle} <span style={{ fontSize: 14, fontWeight: 600, color: "#8a7d55" }}>— optioneel</span></span>
+            <button style={{ ...S.btn, padding: "6px 12px", fontSize: 15 }} onClick={() => setShowPot(true)}>{potContribTotal > 0 ? `inleg ${euro(potContribTotal)}` : "+ inleggen"}</button>
           </div>
-          {potChosen && potContribTotal <= 0.005 && <div style={{ marginTop: 8, textAlign: "right" }}><span onClick={() => setPotChosen(false)} style={{ fontSize: 12, color: "#c0554a", fontWeight: 700, cursor: "pointer" }}>✕ toch niet</span></div>}
+          {potChosen && potContribTotal <= 0.005 && <div style={{ marginTop: 8, textAlign: "right" }}><span onClick={() => setPotChosen(false)} style={{ fontSize: 14, color: "#c0554a", fontWeight: 700, cursor: "pointer" }}>✕ toch niet</span></div>}
         </div>
 
         {settle && (
         <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 0 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ ...S.card, marginBottom: 0 }}>
-          <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.3, textAlign: "center" }}>{L.cupsTitle} <span onClick={(e) => { e.stopPropagation(); setDepositInfo((v) => !v); setCoinInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 10.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
+          <h3 style={{ ...S.h3, margin: 0, fontSize: 15.5, lineHeight: 1.3, textAlign: "center" }}>{L.cupsTitle} <span onClick={(e) => { e.stopPropagation(); setDepositInfo((v) => !v); setCoinInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
           <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "center" }}>
             <div style={{ ...S.seg(!depositOn), padding: "6px 8px" }} onClick={() => setDepositOn(false)}>uit</div>
             <div style={{ ...S.seg(depositOn), padding: "6px 8px" }} onClick={() => setDepositOn(true)}>aan</div>
           </div>
-          {depositInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>♻️ <b>Herbruikbare bekers?</b>{L.cupsInfo}</div>}
+          {depositInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 14, color: "#6b5f3a", lineHeight: 1.5 }}>♻️ <b>Herbruikbare bekers?</b>{L.cupsInfo}</div>}
           {depositOn && (
             <div style={{ marginTop: 10 }}>
               {pay === "coin" && (
                 <>
                   <div style={{ ...S.row, gap: 6, marginBottom: 6 }}>
-                    <div style={{ ...S.seg(depositUnit === "coin"), padding: "6px 6px", fontSize: 12 }} onClick={() => setDepositUnit("coin")}>in coins</div>
-                    <div style={{ ...S.seg(depositUnit === "eur"), padding: "6px 6px", fontSize: 12 }} onClick={() => setDepositUnit("eur")}>in €</div>
+                    <div style={{ ...S.seg(depositUnit === "coin"), padding: "6px 6px", fontSize: 14 }} onClick={() => setDepositUnit("coin")}>in coins</div>
+                    <div style={{ ...S.seg(depositUnit === "eur"), padding: "6px 6px", fontSize: 14 }} onClick={() => setDepositUnit("eur")}>in €</div>
                   </div>
-                  <div style={{ fontSize: 11, color: "#c98a00", marginBottom: 8, lineHeight: 1.4 }}>💡 Coins staat aan — kies of de waarborg in <b>coins</b> of <b>€</b> is.</div>
+                  <div style={{ fontSize: 13, color: "#c98a00", marginBottom: 8, lineHeight: 1.4 }}>💡 Coins staat aan — kies of de waarborg in <b>coins</b> of <b>€</b> is.</div>
                 </>
               )}
               <div style={{ ...S.row, justifyContent: "space-between" }}>
-                <span style={{ fontSize: 13, fontWeight: 700 }}>{L.depositPerCup}</span>
+                <span style={{ fontSize: 15, fontWeight: 700 }}>{L.depositPerCup}</span>
                 <div style={{ ...S.row, gap: 4 }}>
-                  {effDepositUnit === "eur" && <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}>€</span>}
+                  {effDepositUnit === "eur" && <span style={{ fontSize: 15, fontWeight: 700, color: "#8a7d55" }}>€</span>}
                   <input style={{ ...S.input, width: 56 }} type="text" inputMode="decimal" value={depositValue} onChange={(e) => setDepositValue(parseFloat(e.target.value.replace(",", ".")) || 0)} />
-                  {effDepositUnit === "coin" && <span style={{ fontSize: 12.5, fontWeight: 700, color: "#c98a00" }}>coins</span>}
+                  {effDepositUnit === "coin" && <span style={{ fontSize: 14.5, fontWeight: 700, color: "#c98a00" }}>coins</span>}
                 </div>
               </div>
             </div>
@@ -4145,20 +4126,20 @@ export default function PartyTest() {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ ...S.card, marginBottom: 0 }}>
-          <h3 style={{ ...S.h3, margin: 0, fontSize: 13.5, lineHeight: 1.3, textAlign: "center" }}>{L.coinsTitle} <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 10.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
+          <h3 style={{ ...S.h3, margin: 0, fontSize: 15.5, lineHeight: 1.3, textAlign: "center" }}>{L.coinsTitle} <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
           <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "center" }}>
             <div onClick={() => { const on = pay !== "coin"; setPay(on ? "coin" : "eur"); setDepositUnit(on ? "coin" : "eur") }} style={{ width: 44, height: 26, borderRadius: 20, background: pay === "coin" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#d9cdb0", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
               <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: pay === "coin" ? 21 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
             </div>
           </div>
-          {coinInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 12, color: "#6b5f3a", lineHeight: 1.5 }}>🎟️ <b>Coins?</b>{L.coinsInfo}</div>}
+          {coinInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 14, color: "#6b5f3a", lineHeight: 1.5 }}>🎟️ <b>Coins?</b>{L.coinsInfo}</div>}
           {pay === "coin" && (
             <div style={{ marginTop: 12 }}>
               <div style={{ ...S.row, justifyContent: "space-between" }}>
-                <span style={{ fontSize: 14, fontWeight: 700 }}>1 coin =</span>
+                <span style={{ fontSize: 15.5, fontWeight: 700 }}>1 coin =</span>
                 <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={S.input} type="text" inputMode="decimal" value={coinValue} onChange={(e) => setCoinValue(parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
               </div>
-              <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 12.5 }} onClick={() => setShowCoins((v) => !v)}>{showCoins ? "▴ verberg coin-prijzen" : L.coinPrices}</button>
+              <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 14.5 }} onClick={() => setShowCoins((v) => !v)}>{showCoins ? "▴ verberg coin-prijzen" : L.coinPrices}</button>
               {showCoins && (() => {
                 const cd = drinks.filter((d) => d.cat === coinCat)
                 const vis = cd.filter((d) => coinFull || d.fav)
@@ -4166,21 +4147,21 @@ export default function PartyTest() {
                   <div style={{ marginTop: 10 }}>
                     <p style={{ ...S.sub, marginBottom: 8 }}>{L.coinPricesInfo}</p>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-                      {catsPresent.map((cc) => <span key={cc} style={{ ...S.tab(coinCat === cc), padding: "6px 10px", fontSize: 12 }} onClick={() => setCoinCat(cc)}>{CAT_LABEL[cc]}</span>)}
+                      {catsPresent.map((cc) => <span key={cc} style={{ ...S.tab(coinCat === cc), padding: "6px 10px", fontSize: 14 }} onClick={() => setCoinCat(cc)}>{CAT_LABEL[cc]}</span>)}
                     </div>
                     <div style={{ ...S.row, gap: 8, marginBottom: 8 }}>
-                      <div style={{ ...S.seg(!coinFull), padding: "7px 6px", fontSize: 12.5 }} onClick={() => setCoinFull(false)}>{L.shortList}</div>
-                      <div style={{ ...S.seg(coinFull), padding: "7px 6px", fontSize: 12.5 }} onClick={() => setCoinFull(true)}>{L.fullListBtn}</div>
+                      <div style={{ ...S.seg(!coinFull), padding: "7px 6px", fontSize: 14.5 }} onClick={() => setCoinFull(false)}>{L.shortList}</div>
+                      <div style={{ ...S.seg(coinFull), padding: "7px 6px", fontSize: 14.5 }} onClick={() => setCoinFull(true)}>{L.fullListBtn}</div>
                     </div>
                     {vis.length === 0 ? (
-                      <div style={{ fontSize: 12.5, color: "#8a7d55", textAlign: "center", padding: "10px 0" }}>{L.noFavsHere} <span style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }} onClick={() => setCoinFull(true)}>{L.showAll}</span></div>
+                      <div style={{ fontSize: 14.5, color: "#8a7d55", textAlign: "center", padding: "10px 0" }}>{L.noFavsHere} <span style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }} onClick={() => setCoinFull(true)}>{L.showAll}</span></div>
                     ) : vis.map((d) => (
                       <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid rgba(120,95,20,0.06)" }}>
-                        <span style={{ fontSize: 13 }}>{d.emoji} {d.name}</span>
+                        <span style={{ fontSize: 15 }}>{d.emoji} {d.name}</span>
                         <div style={{ ...S.row, gap: 5 }}>
-                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => setCoinPrice(d.id, d.coins - 0.1)}>−</button>
-                          <span style={{ minWidth: 46, textAlign: "center", fontSize: 12.5, fontWeight: 800 }}>{d.coins.toFixed(1)} c</span>
-                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => setCoinPrice(d.id, d.coins + 0.1)}>+</button>
+                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 17 }} onClick={() => setCoinPrice(d.id, d.coins - 0.1)}>−</button>
+                          <span style={{ minWidth: 46, textAlign: "center", fontSize: 14.5, fontWeight: 800 }}>{d.coins.toFixed(1)} c</span>
+                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 17 }} onClick={() => setCoinPrice(d.id, d.coins + 0.1)}>+</button>
                         </div>
                       </div>
                     ))}
@@ -4244,44 +4225,44 @@ export default function PartyTest() {
         {renderAddDrink()}
         {renderVoice()}
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
-          <h3 style={{ ...S.h3, margin: 0 }}>{L.roundWord} {roundNr} <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}>— {L.drinksCount(roundItems)}</span>{repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}</h3>
+          <h3 style={{ ...S.h3, margin: 0 }}>{L.roundWord} {roundNr} <span style={{ fontSize: 15, fontWeight: 600, color: "#8a7d55" }}>— {L.drinksCount(roundItems)}</span>{repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}</h3>
         </div>
         {settle && renderRunnerBar()}
         {settle && renderWalk()}
         {settle && people.length > 0 && (
           <button onClick={walkStart}
-            style={{ width: "100%", marginBottom: 4, border: "1.5px solid rgba(240,165,0,0.5)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 12, padding: "11px 8px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }}>
+            style={{ width: "100%", marginBottom: 4, border: "1.5px solid rgba(240,165,0,0.5)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 12, padding: "11px 8px", fontSize: 15.5, fontWeight: 800, cursor: "pointer" }}>
             {L.walkTable}
           </button>
         )}
-        {settle && people.length > 0 && <div style={{ fontSize: 10.5, color: "#8a7d55", textAlign: "center", marginBottom: 10, lineHeight: 1.4 }}>{L.walkIntro}</div>}
+        {settle && people.length > 0 && <div style={{ fontSize: 12, color: "#8a7d55", textAlign: "center", marginBottom: 10, lineHeight: 1.4 }}>{L.walkIntro}</div>}
         <div className="rundo-catscroll" style={{ display: zoekt ? "none" : "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", padding: "0 8px 9px 0", marginBottom: 10, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
           <style>{`.rundo-catscroll::-webkit-scrollbar{display:none}`}</style>
           {catsPresent.map((c) => {
             const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
             const actief = activeCat === c
             return <span key={c} onClick={() => { setActiveCat(c); setFullList(false) }}
-              style={{ flexShrink: 0, padding: "10px 17px", borderRadius: 22, fontSize: 14.5, fontWeight: actief ? 800 : 700, cursor: "pointer", whiteSpace: "nowrap",
+              style={{ flexShrink: 0, padding: "10px 17px", borderRadius: 22, fontSize: 16, fontWeight: actief ? 800 : 700, cursor: "pointer", whiteSpace: "nowrap",
                        background: actief ? "#4a3f1e" : "#fff", color: actief ? "#fff" : "#8a7d55",
                        border: actief ? "none" : "0.5px solid rgba(120,95,20,0.22)" }}>
-              {CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: actief ? "#ffd27f" : "#e0685c", fontSize: 15 }}>●</span>}
+              {CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: actief ? "#ffd27f" : "#e0685c", fontSize: 16 }}>●</span>}
             </span>
           })}
         </div>
 
         <div style={{ position: "relative", marginBottom: 9 }}>
-          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none" }}>🔍</span>
+          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🔍</span>
           <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)}
             placeholder={L.searchDrink}
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 36, paddingRight: drinkSearch ? 34 : 12, fontSize: 15, textAlign: "left" }} />
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 36, paddingRight: drinkSearch ? 34 : 12, fontSize: 16, textAlign: "left" }} />
           {drinkSearch && (
             <button onClick={() => setDrinkSearch("")}
-              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 15, color: "#8a7d55", padding: 4 }}>✕</button>
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8a7d55", padding: 4 }}>✕</button>
           )}
         </div>
 
         {zoekt && (
-          <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 8 }}>
+          <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 8 }}>
             {catVisible.length === 0
               ? "Niets gevonden — probeer een ander woord."
               : `${catVisible.length} ${catVisible.length === 1 ? "drankje" : "drankjes"} gevonden (alle categorieën)`}
@@ -4289,14 +4270,14 @@ export default function PartyTest() {
         )}
 
         {catVisible.length === 0 ? (
-          <div style={{ ...S.card, textAlign: "center", padding: "18px 12px", fontSize: 13, color: "#8a7d55" }}>
+          <div style={{ ...S.card, textAlign: "center", padding: "18px 12px", fontSize: 15, color: "#8a7d55" }}>
             Geen favorieten in {CAT_LABEL[activeCat]}. <span style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }} onClick={() => setFullList(true)}>{L.showAll}</span>
           </div>
         ) : (
           <div style={{ position: "relative" }}>
             {!zoekt && fullList && (
               <div style={{ position: "absolute", left: "50%", top: -13, transform: "translateX(-50%)", whiteSpace: "nowrap", zIndex: 2 }}>
-                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
                   ▴ minder tonen
                 </span>
               </div>
@@ -4306,10 +4287,10 @@ export default function PartyTest() {
                 const tot = drinkTotal(d.id), un = cartAnon[d.id] ?? 0
                 return (
                   <div key={d.id} style={{ padding: "10px 10px", borderRadius: 12, background: tot > 0 ? "rgba(31,138,76,0.08)" : "#faf4e4", border: tot > 0 ? "1.5px solid rgba(31,138,76,0.5)" : "1px solid rgba(120,95,20,0.1)", boxShadow: tot > 0 ? "0 0 0 3px rgba(31,138,76,0.1)" : "none" }}>
-                    <div style={{ fontSize: 13.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
+                    <div style={{ fontSize: 15.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
                     <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
                       <button style={{ ...S.step, opacity: tot > 0 ? 1 : 0.4 }} onClick={() => bumpDown(d.id)}>−</button>
-                      <span style={{ fontSize: 17, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}</span>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}</span>
                       <button style={S.step} onClick={() => bump1(d.id)}>+</button>
                     </div>
                   </div>
@@ -4319,14 +4300,14 @@ export default function PartyTest() {
             {/* "Meer/minder" hangt centraal, half over de onderrand van de lijst. */}
             {!zoekt && !fullList && catDrinks.length > catVisible.length && (
               <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
-                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(240,165,0,0.6)", color: "#c98a00", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
+                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(240,165,0,0.6)", color: "#c98a00", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
                   + {catDrinks.length - catVisible.length} meer ▾
                 </span>
               </div>
             )}
             {!zoekt && fullList && (
               <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
-                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
                   ▴ minder tonen
                 </span>
               </div>
@@ -4334,24 +4315,24 @@ export default function PartyTest() {
           </div>
         )}
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "18px 0 14px" }}>
-          <span onClick={startVoice} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "7px 12px", borderRadius: 16, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
+          <span onClick={startVoice} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "7px 12px", borderRadius: 16, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
             {L.voiceBtn} 🎤 <span style={{ fontSize: 8.5, fontWeight: 800, color: "#c98a00", background: "rgba(240,165,0,0.16)", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 5, padding: "1px 4px", letterSpacing: "0.03em" }}>{L.voiceBeta}</span>
           </span>
-          <span onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "7px 12px", borderRadius: 16, fontSize: 11.5, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
+          <span onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "7px 12px", borderRadius: 16, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
             ＋ {L.addOwnDrink}
           </span>
         </div>
         {roundItems > 0 && (
           <div style={{ ...S.card, padding: "10px 12px", background: "#fffdf6" }}>
             <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{settle ? L.inThisRound : "📋 Aan de toog"} {settle && <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.assignHint}</span>}</span>
+              <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>{settle ? L.inThisRound : "📋 Aan de toog"} {settle && <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.assignHint}</span>}</span>
               <span style={{ ...S.pill, background: "rgba(240,165,0,0.18)", color: "#c98a00" }}>{L.drinksCount(roundItems)}</span>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => {
                 const un = cartAnon[d.id] ?? 0
                 return (
-                  <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e", cursor: settle ? "pointer" : "default" }} onClick={() => settle && setShowAssignAll(true)}>
+                  <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, fontSize: 14.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e", cursor: settle ? "pointer" : "default" }} onClick={() => settle && setShowAssignAll(true)}>
                     {d.emoji} {drinkTotal(d.id)}× {d.name}{settle && un > 0 && <span style={{ color: "#c0554a", fontWeight: 800, textDecoration: "underline" }}>toewijzen</span>}
                   </span>
                 )
@@ -4364,26 +4345,26 @@ export default function PartyTest() {
             <button style={{ ...S.btn, width: "100%" }} onClick={() => setShowCups(true)}>{L.cups}</button>
           </div>
         )}
-        <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => { if (roundItems === 0) return; if (settle) openClose(); else commitRound() }}>{L.confirmRoundTitle(roundNr)}{roundItems > 0 && <span style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.85 }}> — {L.drinksCount(roundItems)}</span>}</button>
+        <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => { if (roundItems === 0) return; if (settle) openClose(); else commitRound() }}>{L.confirmRoundTitle(roundNr)}{roundItems > 0 && <span style={{ fontSize: 14.5, fontWeight: 600, opacity: 0.85 }}> — {L.drinksCount(roundItems)}</span>}</button>
         {roundItems > 0 && (
           <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>
         )}
         <div style={{ textAlign: "center", marginTop: 16 }}>
-          <span onClick={switchMode} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>↺ {settle ? L.switchToQuick : L.switchToFair}</span>
+          <span onClick={switchMode} style={{ fontSize: 13.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>↺ {settle ? L.switchToQuick : L.switchToFair}</span>
         </div>
 
         {showAssignAll && (
           <div style={S.overlay} onClick={() => setShowAssignAll(false)}>
             <div style={{ ...S.sheet, maxHeight: "82vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
               <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
-                <h3 style={{ ...S.h3, margin: 0, fontSize: 18 }}>{L.assign}</h3>
+                <h3 style={{ ...S.h3, margin: 0, fontSize: 19 }}>{L.assign}</h3>
                 <div style={{ ...S.row, gap: 4 }}>
-                  <div style={{ ...S.seg(assignMode === "person"), padding: "6px 10px", fontSize: 12, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("person")}>{L.perPerson}</div>
-                  <div style={{ ...S.seg(assignMode === "drink"), padding: "6px 10px", fontSize: 12, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("drink")}>per drank</div>
+                  <div style={{ ...S.seg(assignMode === "person"), padding: "6px 10px", fontSize: 14, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("person")}>{L.perPerson}</div>
+                  <div style={{ ...S.seg(assignMode === "drink"), padding: "6px 10px", fontSize: 14, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("drink")}>per drank</div>
                 </div>
               </div>
-              {assignMode === "person" && unassignedTotal > 0 && <div style={{ fontSize: 12.5, fontWeight: 800, color: "#c0554a", marginBottom: 4 }}>🔴 {L.notAssignedYet(unassignedTotal)}</div>}
-              <div style={{ fontSize: 11, color: "#8a7d55", marginBottom: 8, lineHeight: 1.4 }}>{L.assignAnyone}</div>
+              {assignMode === "person" && unassignedTotal > 0 && <div style={{ fontSize: 14.5, fontWeight: 800, color: "#c0554a", marginBottom: 4 }}>🔴 {L.notAssignedYet(unassignedTotal)}</div>}
+              <div style={{ fontSize: 13, color: "#8a7d55", marginBottom: 8, lineHeight: 1.4 }}>{L.assignAnyone}</div>
 
               {assignMode === "drink" ? (
                 drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => {
@@ -4391,12 +4372,12 @@ export default function PartyTest() {
                   return (
                     <div key={d.id} style={{ borderTop: "1px solid rgba(120,95,20,0.1)", paddingTop: 9, marginBottom: 9 }}>
                       <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-                        <span style={{ fontSize: 14, fontWeight: 800 }}>{d.emoji} {drinkTotal(d.id)}× {d.name}</span>
-                        {un > 0 && <span style={{ fontSize: 11.5, color: "#c0554a", fontWeight: 800 }}>🔴 {un} zonder naam</span>}
+                        <span style={{ fontSize: 15.5, fontWeight: 800 }}>{d.emoji} {drinkTotal(d.id)}× {d.name}</span>
+                        {un > 0 && <span style={{ fontSize: 13.5, color: "#c0554a", fontWeight: 800 }}>🔴 {un} zonder naam</span>}
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {people.map((p) => { const n = aQty(d.id, p.id); return <span key={p.id} style={{ ...S.chip(n), fontSize: 12.5, padding: "5px 10px" }} onClick={() => assignFromAnon(d.id, p.id)}>{p.name}{p.claimedBy && <span style={{ fontSize: 10, marginLeft: 3, opacity: 0.7 }}>📱</span>}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); unassignCart(d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1 }}>−</span>}</span> })}
-                        {drinkTotal(d.id) === people.length && people.length > 0 && <span onClick={() => eachOne(d.id)} style={{ ...S.chip(0), fontSize: 12.5, padding: "5px 10px", border: "1.5px dashed #c98a00", background: "rgba(240,165,0,0.1)", color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{L.eachOne}</span>}
+                        {people.map((p) => { const n = aQty(d.id, p.id); return <span key={p.id} style={{ ...S.chip(n), fontSize: 14.5, padding: "5px 10px" }} onClick={() => assignFromAnon(d.id, p.id)}>{p.name}{p.claimedBy && <span style={{ fontSize: 10, marginLeft: 3, opacity: 0.7 }}>📱</span>}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); unassignCart(d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 15.5, fontWeight: 800, lineHeight: 1 }}>−</span>}</span> })}
+                        {drinkTotal(d.id) === people.length && people.length > 0 && <span onClick={() => eachOne(d.id)} style={{ ...S.chip(0), fontSize: 14.5, padding: "5px 10px", border: "1.5px dashed #c98a00", background: "rgba(240,165,0,0.1)", color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{L.eachOne}</span>}
                       </div>
                     </div>
                   )
@@ -4407,10 +4388,10 @@ export default function PartyTest() {
                   const took = drinks.filter((d) => (cart[d.id]?.[p.id] ?? 0) > 0)
                   return (
                     <div key={p.id} style={{ borderTop: "1px solid rgba(120,95,20,0.1)", paddingTop: 9, marginBottom: 9 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 6 }}>{p.name}{took.length > 0 && <span style={{ fontSize: 11.5, fontWeight: 600, color: "#8a7d55" }}> · {took.reduce((a, d) => a + (cart[d.id]?.[p.id] ?? 0), 0)} drankje(s)</span>}</div>
+                      <div style={{ fontSize: 15.5, fontWeight: 800, marginBottom: 6 }}>{p.name}{took.length > 0 && <span style={{ fontSize: 13.5, fontWeight: 600, color: "#8a7d55" }}> · {took.reduce((a, d) => a + (cart[d.id]?.[p.id] ?? 0), 0)} drankje(s)</span>}</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {drinks.filter((d) => aQty(d.id, p.id) > 0).map((d) => { const n = aQty(d.id, p.id); return <span key={d.id} style={{ ...S.chip(n), fontSize: 12.5, padding: "5px 10px" }}>{d.emoji} {d.name}<span style={S.badge}>{n}</span><span onClick={(e) => { e.stopPropagation(); unassignCart(d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>−</span></span> })}
-                        {drinks.filter((d) => (cartAnon[d.id] ?? 0) > 0).map((d) => <span key={"add" + d.id} onClick={() => assignFromAnon(d.id, p.id)} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12.5, padding: "5px 10px", borderRadius: 20, background: "#fff", border: "1px dashed rgba(120,95,20,0.4)", color: "#8a7d55", fontWeight: 700, cursor: "pointer" }}>+ {d.emoji} {d.name}</span>)}
+                        {drinks.filter((d) => aQty(d.id, p.id) > 0).map((d) => { const n = aQty(d.id, p.id); return <span key={d.id} style={{ ...S.chip(n), fontSize: 14.5, padding: "5px 10px" }}>{d.emoji} {d.name}<span style={S.badge}>{n}</span><span onClick={(e) => { e.stopPropagation(); unassignCart(d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 15.5, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>−</span></span> })}
+                        {drinks.filter((d) => (cartAnon[d.id] ?? 0) > 0).map((d) => <span key={"add" + d.id} onClick={() => assignFromAnon(d.id, p.id)} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 14.5, padding: "5px 10px", borderRadius: 20, background: "#fff", border: "1px dashed rgba(120,95,20,0.4)", color: "#8a7d55", fontWeight: 700, cursor: "pointer" }}>+ {d.emoji} {d.name}</span>)}
                       </div>
                     </div>
                   )
@@ -4425,20 +4406,20 @@ export default function PartyTest() {
         {showCups && (
           <div style={{ ...S.overlay, zIndex: 55 }} onClick={() => setShowCups(false)}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ ...S.h3, fontSize: 18 }}>🫙 Bekers — ronde {roundNr}</h3>
+              <h3 style={{ ...S.h3, fontSize: 19 }}>🫙 Bekers — ronde {roundNr}</h3>
               <p style={{ ...S.sub }}>{L.howMuchEach} <b>terug</b>? Standaard = ruil. Iedereen kan teruggeven — ook wie niks bestelde of een beker van elders binnenbrengt (gaat dan negatief = krijgt waarborg).</p>
-              <button style={{ ...S.btn, width: "100%", marginBottom: 12, fontSize: 13 }} onClick={() => { setGaveBackDraft(Object.fromEntries(people.map((p) => [p.id, 0]))); setCupsChecked(true); setShowCups(false) }}>{L.nobodyGaveBack}</button>
+              <button style={{ ...S.btn, width: "100%", marginBottom: 12, fontSize: 15 }} onClick={() => { setGaveBackDraft(Object.fromEntries(people.map((p) => [p.id, 0]))); setCupsChecked(true); setShowCups(false) }}>{L.nobodyGaveBack}</button>
               {people.map((p) => {
                 const bal = cupsBal(p.id), pu = pickedUpOf(p.id)
                 const gb = gaveBackDraft[p.id] ?? Math.min(bal, pu)
                 const newBal = bal + pu - gb
                 return (
                   <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 2px", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
-                    <div><div style={{ fontSize: 15, fontWeight: 800 }}>{p.name}</div><div style={{ fontSize: 11.5, fontWeight: 700, color: newBal < 0 ? "#1f8a4c" : "#8a7d55" }}>beker-saldo: {newBal}{newBal < 0 ? " (krijgt waarborg)" : ""}</div></div>
+                    <div><div style={{ fontSize: 16, fontWeight: 800 }}>{p.name}</div><div style={{ fontSize: 13.5, fontWeight: 700, color: newBal < 0 ? "#1f8a4c" : "#8a7d55" }}>beker-saldo: {newBal}{newBal < 0 ? " (krijgt waarborg)" : ""}</div></div>
                     <div style={{ ...S.row, gap: 7 }}>
-                      <span style={{ fontSize: 11, color: "#8a7d55" }}>{L.gaveBack}</span>
+                      <span style={{ fontSize: 13, color: "#8a7d55" }}>{L.gaveBack}</span>
                       <button style={{ ...S.step, width: 28, height: 28, opacity: gb === 0 ? 0.4 : 1 }} onClick={() => { setCupsTouched(true); setGaveBackDraft((g) => ({ ...g, [p.id]: Math.max(0, gb - 1) })) }}>−</button>
-                      <span style={{ minWidth: 16, textAlign: "center", fontSize: 15, fontWeight: 800 }}>{gb}</span>
+                      <span style={{ minWidth: 16, textAlign: "center", fontSize: 16, fontWeight: 800 }}>{gb}</span>
                       <button style={{ ...S.step, width: 28, height: 28 }} onClick={() => { setCupsTouched(true); setGaveBackDraft((g) => ({ ...g, [p.id]: gb + 1 })) }}>+</button>
                     </div>
                   </div>
@@ -4455,21 +4436,21 @@ export default function PartyTest() {
         {showClose && (
           <div style={S.overlay} onClick={() => setShowClose(false)}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ ...S.h3, fontSize: 18 }}>{L.confirmRoundTitle(roundNr)}</h3>
+              <h3 style={{ ...S.h3, fontSize: 19 }}>{L.confirmRoundTitle(roundNr)}</h3>
               {unassignedTotal > 0 && (
-                <div onClick={goAssignFromWarning} style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.35)", borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 12.5, color: "#b0402f", cursor: "pointer" }}>
+                <div onClick={goAssignFromWarning} style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.35)", borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 14.5, color: "#b0402f", cursor: "pointer" }}>
                   🔴 <b>{L.notAssignedYet(unassignedTotal)}</b> <u>{L.tapToAssign}</u>
                 </div>
               )}
               {depositOn && (cupsBlock ? (
                 <div style={{ background: "rgba(224,104,92,0.12)", border: "1.5px solid rgba(224,104,92,0.6)", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
-                  <div onClick={() => setShowCups(true)} style={{ fontSize: 12.5, color: "#b0402f", cursor: "pointer", fontWeight: 700 }}>🫙 <b>{L.cupsNotSet}</b> <u>{L.tapToArrange}</u></div>
-                  <div onClick={() => setDepositOn(false)} style={{ fontSize: 11.5, color: "#8a7d55", cursor: "pointer", marginTop: 6 }}>… of <u>ga verder zonder bekers/waarborg</u> (uitschakelen).</div>
+                  <div onClick={() => setShowCups(true)} style={{ fontSize: 14.5, color: "#b0402f", cursor: "pointer", fontWeight: 700 }}>🫙 <b>{L.cupsNotSet}</b> <u>{L.tapToArrange}</u></div>
+                  <div onClick={() => setDepositOn(false)} style={{ fontSize: 13.5, color: "#8a7d55", cursor: "pointer", marginTop: 6 }}>… of <u>ga verder zonder bekers/waarborg</u> (uitschakelen).</div>
                 </div>
               ) : (
                 <div style={{ ...S.row, justifyContent: "space-between", background: "rgba(31,138,76,0.1)", borderRadius: 12, padding: "9px 12px", marginBottom: 12 }}>
-                  <span style={{ fontSize: 12.5, color: "#1f8a4c", fontWeight: 700 }}>🫙 {gaveBackTotal > 0 ? `${gaveBackTotal} beker${gaveBackTotal === 1 ? "" : "s"} teruggegeven ✓` : "0 bekers meegegeven ✓"}</span>
-                  <button style={{ ...S.btn, padding: "4px 10px", fontSize: 11.5 }} onClick={() => setShowCups(true)}>aanpassen</button>
+                  <span style={{ fontSize: 14.5, color: "#1f8a4c", fontWeight: 700 }}>🫙 {gaveBackTotal > 0 ? `${gaveBackTotal} beker${gaveBackTotal === 1 ? "" : "s"} teruggegeven ✓` : "0 bekers meegegeven ✓"}</span>
+                  <button style={{ ...S.btn, padding: "4px 10px", fontSize: 13.5 }} onClick={() => setShowCups(true)}>aanpassen</button>
                 </div>
               ))}
               <button style={{ ...S.btnP, opacity: cupsBlock ? 0.5 : 1 }} onClick={() => !cupsBlock && commitRound()}>{L.confirmRoundBtn(roundItems)}</button>
@@ -4497,10 +4478,10 @@ export default function PartyTest() {
           <div style={{ ...S.row, gap: 9, marginBottom: 4 }}>
             <span style={{ fontSize: 24, flexShrink: 0 }}>🍻</span>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 15, fontWeight: 800 }}>{L.roundConfirmed(roundNr, items)}</div>
+              <div style={{ fontSize: 16, fontWeight: 800 }}>{L.roundConfirmed(roundNr, items)}</div>
             </div>
           </div>
-          {depositOn && <div style={{ fontSize: 12.5, fontWeight: 700, color: "#8a5e0f", marginBottom: 6 }}>🫙 {totalInUse} beker{totalInUse === 1 ? "" : "s"} in omloop · {euro(totalInUse * depositPerCupEur)}</div>}
+          {depositOn && <div style={{ fontSize: 14.5, fontWeight: 700, color: "#8a5e0f", marginBottom: 6 }}>🫙 {totalInUse} beker{totalInUse === 1 ? "" : "s"} in omloop · {euro(totalInUse * depositPerCupEur)}</div>}
           {(() => {
             const rl = last ? drinks.filter((d) => drinkTotalRound(last, d.id) > 0) : []
             return (
@@ -4508,31 +4489,31 @@ export default function PartyTest() {
                 {rl.map((d) => {
                   const n = drinkTotalRound(last!, d.id)
                   const who = people.filter((p) => (last!.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = last!.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
-                  return <div key={d.id} style={{ fontSize: 13.5 }}><b>{d.emoji} {n}× {d.name}</b>{who.length > 0 && <span style={{ color: "#8a7d55" }}> → {who.join(", ")}</span>}</div>
+                  return <div key={d.id} style={{ fontSize: 15.5 }}><b>{d.emoji} {n}× {d.name}</b>{who.length > 0 && <span style={{ color: "#8a7d55" }}> → {who.join(", ")}</span>}</div>
                 })}
               </div>
             )
           })()}
           <div style={{ ...S.row, justifyContent: "space-between", gap: 8, borderTop: "1px dashed rgba(120,95,20,0.25)", marginTop: 8, paddingTop: 8 }}>
-            <span style={{ fontSize: 13, color: "#e08a00", fontWeight: 800 }}>{L.someoneCanGo}</span>
-            <span style={{ fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{L.total}: {items}</span>
+            <span style={{ fontSize: 15, color: "#e08a00", fontWeight: 800 }}>{L.someoneCanGo}</span>
+            <span style={{ fontSize: 15.5, fontWeight: 800, flexShrink: 0 }}>{L.total}: {items}</span>
           </div>
           {last && (() => { const un = drinks.reduce((a, d) => a + (last.anon[d.id] ?? 0), 0); return un > 0 ? (
-            <div onClick={() => { editOrder(); setShowAssignAll(true) }} style={{ marginTop: 8, background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "8px 11px", fontSize: 12.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>🔴 {L.notAssignedYet(un)} <u>{L.tapToAssign}</u></div>
+            <div onClick={() => { editOrder(); setShowAssignAll(true) }} style={{ marginTop: 8, background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "8px 11px", fontSize: 14.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>🔴 {L.notAssignedYet(un)} <u>{L.tapToAssign}</u></div>
           ) : null })()}
         </div>
 
         <div style={S.card}>
-          <div style={{ fontSize: 15, fontWeight: 800, textAlign: "center", marginBottom: 8 }}>{L.exactAmount}</div>
+          <div style={{ fontSize: 16, fontWeight: 800, textAlign: "center", marginBottom: 8 }}>{L.exactAmount}</div>
           <div style={{ ...S.row, gap: 8, justifyContent: "center", margin: "2px 0" }}>
-            <span style={{ fontSize: 20, fontWeight: 800 }}>€</span>
-            <input style={{ ...S.input, width: 120, fontSize: 22, textAlign: "center", fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00" value={amountDraft} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setAmountDraft(v); autoSplit(payPersons, payPot, v); setPaidConfirmed(false) }} />
+            <span style={{ fontSize: 21, fontWeight: 800 }}>€</span>
+            <input style={{ ...S.input, width: 120, fontSize: 23, textAlign: "center", fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00" value={amountDraft} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setAmountDraft(v); autoSplit(payPersons, payPot, v); setPaidConfirmed(false) }} />
           </div>
-          <div style={{ fontSize: 11.5, color: "#8a7d55", textAlign: "center", marginBottom: 14 }}>ⓘ hierop verdeelt de app eerlijk (Fair Split)</div>
+          <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", marginBottom: 14 }}>ⓘ hierop verdeelt de app eerlijk (Fair Split)</div>
 
           {(parseFloat(amountDraft.replace(",", ".")) || 0) > 0 ? (
           <>
-          <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", marginBottom: 7 }}>{L.paidBy} <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.multiplePossible}</span></div>
+          <div style={{ fontSize: 14.5, fontWeight: 800, color: "#8a7d55", marginBottom: 7 }}>{L.paidBy} <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.multiplePossible}</span></div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
             <span style={{ ...S.chip(payPot ? 1 : 0), opacity: st.potAvail <= 0.005 ? 0.45 : 1 }} onClick={() => { if (!payPot && st.potAvail <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg (€0). Tik rechtsboven op “${potIsCard ? "drankkaart" : "pot"} + toevoegen” om eerst in te leggen.`); return } const nextPot = !payPot; setPayPot(nextPot); autoSplit(payPersons, nextPot); setPaidConfirmed(false) }}>{potIsCard ? "💳 drankkaart" : "{L.thePot}"}</span>
             {people.map((p) => <span key={p.id} style={S.chip(payPersons.includes(p.id) ? 1 : 0)} onClick={() => togglePayPerson(p.id)}>{p.name}</span>)}
@@ -4540,27 +4521,27 @@ export default function PartyTest() {
 
           {st.multi && (
             <div style={{ background: "#faf4e4", borderRadius: 12, padding: "10px 12px", marginTop: 10 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a7d55", marginBottom: 8 }}>Gelijk verdeeld <span style={{ fontWeight: 600, color: "#b3a988" }}>— pas aan per persoon indien nodig</span></div>
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a7d55", marginBottom: 8 }}>Gelijk verdeeld <span style={{ fontWeight: 600, color: "#b3a988" }}>— pas aan per persoon indien nodig</span></div>
               {payPot && (
                 <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 7 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
+                  <span style={{ fontSize: 15, fontWeight: 700 }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
                   <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 84, borderColor: st.potOver ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="0,00" value={potAmtDraft} onChange={(e) => { setPotAmtDraft(e.target.value.replace(/[^0-9.,]/g, "")); setPaidConfirmed(false) }} /></div>
                 </div>
               )}
               {payPersons.map((pid) => (
                 <div key={pid} style={{ ...S.row, justifyContent: "space-between", marginBottom: 7 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>👤 {people.find((p) => p.id === pid)?.name}</span>
+                  <span style={{ fontSize: 15, fontWeight: 700 }}>👤 {people.find((p) => p.id === pid)?.name}</span>
                   <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 84 }} type="text" inputMode="decimal" placeholder="0,00" value={payAmts[pid] ?? ""} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setPayAmts((m) => ({ ...m, [pid]: v })); setPaidConfirmed(false) }} /></div>
                 </div>
               ))}
-              <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", paddingTop: 8, fontSize: 12, fontWeight: 800, color: st.valid ? "#1f8a4c" : "#c0554a" }}>
+              <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", paddingTop: 8, fontSize: 14, fontWeight: 800, color: st.valid ? "#1f8a4c" : "#c0554a" }}>
                 Samen {euro(st.sum)} van {euro(st.total)}{st.valid ? " ✓ klopt" : st.missing > 0 ? ` — er ontbreekt ${euro(st.missing)}` : ` — ${euro(-st.missing)} te veel`}
               </div>
-              {st.rounding && <div style={{ fontSize: 10.5, color: "#b3a988", marginTop: 3 }}>{L.roundingNote}</div>}
-              {payPot && <div style={{ fontSize: 11, color: st.potOver ? "#c0554a" : "#8a7d55", marginTop: 5 }}>{potIsCard ? "Drankkaart" : "Pot"} beschikbaar: {euro(Math.max(0, st.potAvail))}</div>}
+              {st.rounding && <div style={{ fontSize: 12, color: "#b3a988", marginTop: 3 }}>{L.roundingNote}</div>}
+              {payPot && <div style={{ fontSize: 13, color: st.potOver ? "#c0554a" : "#8a7d55", marginTop: 5 }}>{potIsCard ? "Drankkaart" : "Pot"} beschikbaar: {euro(Math.max(0, st.potAvail))}</div>}
             </div>
           )}
-          {payPot && !st.multi && <div style={{ fontSize: 12, color: st.potOver ? "#c0554a" : "#8a7d55", fontWeight: 700, marginTop: 8 }}>{potIsCard ? "drankkaart" : "pot"}: {euro(Math.max(0, st.potAvail))} beschikbaar{st.potOver ? " — te weinig, kies een extra betaler of leg bij" : ""}</div>}
+          {payPot && !st.multi && <div style={{ fontSize: 14, color: st.potOver ? "#c0554a" : "#8a7d55", fontWeight: 700, marginTop: 8 }}>{potIsCard ? "drankkaart" : "pot"}: {euro(Math.max(0, st.potAvail))} beschikbaar{st.potOver ? " — te weinig, kies een extra betaler of leg bij" : ""}</div>}
 
           {(() => {
             const okGreen = paidConfirmed && st.valid
@@ -4573,7 +4554,7 @@ export default function PartyTest() {
           })()}
           </>
           ) : (
-            <div style={{ fontSize: 12.5, color: "#b3a988", textAlign: "center", padding: "6px 0 2px" }}>{L.fillAmountFirst}</div>
+            <div style={{ fontSize: 14.5, color: "#b3a988", textAlign: "center", padding: "6px 0 2px" }}>{L.fillAmountFirst}</div>
           )}
         </div>
 
@@ -4600,17 +4581,17 @@ export default function PartyTest() {
         {settle && rounds.length === 0 && (
           <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.35)" }}>
             <div style={{ ...S.row, justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{potIsCard ? L.drinkCard : L.potStartTitle}</span>
-              <span onClick={() => setView("settings")} title="⚙️" style={{ fontSize: 18, cursor: "pointer", lineHeight: 1, flexShrink: 0, opacity: 0.7 }}>⚙️</span>
+              <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{potIsCard ? L.drinkCard : L.potStartTitle}</span>
+              <span onClick={() => setView("settings")} title="⚙️" style={{ fontSize: 19, cursor: "pointer", lineHeight: 1, flexShrink: 0, opacity: 0.7 }}>⚙️</span>
             </div>
             {potContribTotal > 0.005 ? (
               <div style={{ ...S.row, justifyContent: "space-between", marginTop: 4 }}>
-                <span style={{ fontSize: 13.5, fontWeight: 700, color: "#1f6b3a" }}>{L.potStartIn(euro(potContribTotal))}</span>
-                <button style={{ ...S.btn, padding: "7px 13px", fontSize: 13 }} onClick={() => setShowPot(true)}>{L.potStartMore}</button>
+                <span style={{ fontSize: 15.5, fontWeight: 700, color: "#1f6b3a" }}>{L.potStartIn(euro(potContribTotal))}</span>
+                <button style={{ ...S.btn, padding: "7px 13px", fontSize: 15 }} onClick={() => setShowPot(true)}>{L.potStartMore}</button>
               </div>
             ) : (
               <>
-                <div style={{ fontSize: 12, color: "#8a7d55", lineHeight: 1.5, marginBottom: 11 }}>{L.potStartWhy}</div>
+                <div style={{ fontSize: 14, color: "#8a7d55", lineHeight: 1.5, marginBottom: 11 }}>{L.potStartWhy}</div>
                 <button style={{ ...S.btn, width: "100%", fontWeight: 800 }} onClick={() => setShowPot(true)}>{L.potStartAdd}</button>
               </>
             )}
@@ -4619,7 +4600,7 @@ export default function PartyTest() {
         {!settle && rounds.length === 0 && !openRoundId && (
           <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
             <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
-            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{L.noRoundsDone}</div>
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{L.noRoundsDone}</div>
             <div style={{ ...S.sub, marginBottom: 16 }}>{L.noRoundsHintQuick}</div>
             <div style={{ display: "flex", justifyContent: "center" }}>
               <button style={{ ...S.btnP, width: "80%" }} onClick={() => { setActiveCat(catsPresent[0]); setView("order") }}>{L.startFirstRoundBtn}</button>
@@ -4629,7 +4610,7 @@ export default function PartyTest() {
         {!settle && rounds.length === 0 && openRoundId && (
           <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
             <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
-            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{L.roundBusy(roundNr)}</div>
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{L.roundBusy(roundNr)}</div>
             <div style={{ ...S.sub, marginBottom: 16 }}>{L.noRoundsHintQuick}</div>
             <div style={{ display: "flex", justifyContent: "center" }}>
               <button style={{ ...S.btnP, width: "80%" }} onClick={() => setView("order")}>Ga verder met rondje {roundNr}</button>
@@ -4649,19 +4630,19 @@ export default function PartyTest() {
             {/* Kop met het rondje-nummer: bij rondje 2, 3, … is meteen duidelijk waar je mee
                 bezig bent. De flow zelf is voor elk rondje identiek. */}
             <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9 }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 15.5, fontWeight: 800, color: "#8a5e0f", background: "linear-gradient(135deg,#fdf3dc,#fae9c2)", border: "1.5px solid rgba(240,165,0,0.45)", borderRadius: 18, padding: "7px 16px" }}>🍻 {L.roundWord} {idx + 1}</span>
-              <span onClick={() => setShowPeoplePop(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 16, padding: "5px 12px", cursor: "pointer" }}>👤 {headcount < 1 ? "—" : headcount} · {L.adjust} ›</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 16.5, fontWeight: 800, color: "#8a5e0f", background: "linear-gradient(135deg,#fdf3dc,#fae9c2)", border: "1.5px solid rgba(240,165,0,0.45)", borderRadius: 18, padding: "7px 16px" }}>🍻 {L.roundWord} {idx + 1}</span>
+              <span onClick={() => setShowPeoplePop(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14.5, fontWeight: 800, color: "#8a5e0f", background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 16, padding: "5px 12px", cursor: "pointer" }}>👤 {headcount < 1 ? "—" : headcount} · {L.adjust} ›</span>
             </div>
             {/* Drankjes van dit net-bevestigde rondje, met de aanpas-knop erin verwerkt. */}
             {(() => { const laatste = rounds[idx]; const lijst = laatste ? drinksOf(laatste) : []; return lijst.length > 0 && (
               <div style={{ ...S.card, padding: "12px 14px", background: "#fffdf6" }}>
                 <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9, paddingBottom: 9, borderBottom: "1px solid rgba(120,95,20,0.1)" }}>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55" }}>📋 {L.orderedLabel}</span>
-                  <span onClick={editOrder} style={{ fontSize: 11.5, color: "#c98a00", fontWeight: 800, padding: "5px 11px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55" }}>📋 {L.orderedLabel}</span>
+                  <span onClick={editOrder} style={{ fontSize: 13.5, color: "#c98a00", fontWeight: 800, padding: "5px 11px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {lijst.map(({ d, n }) => (
-                    <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e" }}>{d.emoji} {n}× {d.name}</span>
+                    <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, fontSize: 14.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e" }}>{d.emoji} {n}× {d.name}</span>
                   ))}
                 </div>
               </div>
@@ -4670,15 +4651,15 @@ export default function PartyTest() {
             {/* Hoeveel betaald voor dit rondje. Kies eerst de bron (zelf/pot), vul één
                 bedrag in, en bevestig met ✓ (of sla over). Beide sluiten het rondje af. */}
             <div style={{ ...S.card }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", marginBottom: 11 }}>{L.roundCostFor(idx + 1)}</div>
+              <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 11 }}>{L.roundCostFor(idx + 1)}</div>
 
               {/* Bron: zelf betaald of uit de pot. */}
               <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-                <button style={{ flex: 1, padding: "10px 6px", fontSize: 12.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
+                <button style={{ flex: 1, padding: "10px 6px", fontSize: 14.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
                   background: payVia === "self" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f7f1e2",
                   color: payVia === "self" ? "#fff" : "#8a7d55", border: "none" }}
                   onClick={() => setPayVia("self")}>💶 {L.paidSelf}</button>
-                <button style={{ flex: 1, padding: "10px 6px", fontSize: 12.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
+                <button style={{ flex: 1, padding: "10px 6px", fontSize: 14.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
                   background: payVia === "pot" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#f7f1e2",
                   color: payVia === "pot" ? "#fff" : "#8a7d55", border: "none" }}
                   onClick={() => { setPayVia("pot"); if (potAvail <= 0.005) { setNotice(L.potEmptyNote); setShowPot(true) } }}>🫙 {L.paidPot}{potAvail > 0.005 && <span style={{ fontWeight: 800, opacity: payVia === "pot" ? 1 : 0.75 }}> · {euro(potAvail)}</span>}</button>
@@ -4688,8 +4669,8 @@ export default function PartyTest() {
                   (omrand) zodra er een bedrag staat = "tik om te bevestigen". */}
               <style>{`@keyframes rundoPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,138,76,0.45)}50%{box-shadow:0 0 0 7px rgba(31,138,76,0)}}.rundo-pulse{animation:rundoPulse 1.4s infinite}`}</style>
               <div style={{ ...S.row, gap: 7 }}>
-                <span style={{ fontSize: 19, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                <input style={{ ...S.input, flex: 1, minWidth: 0, fontSize: 19, fontWeight: 800, padding: "12px", textAlign: "left",
+                <span style={{ fontSize: 20, color: "#8a7d55", fontWeight: 700 }}>€</span>
+                <input style={{ ...S.input, flex: 1, minWidth: 0, fontSize: 20, fontWeight: 800, padding: "12px", textAlign: "left",
                   color: "#c88a1a",
                   borderColor: amount > 0.005 ? "#e08a00" : "rgba(120,95,20,0.22)",
                   background: amount > 0.005 ? "#fff" : "#fdfaf2" }}
@@ -4697,34 +4678,34 @@ export default function PartyTest() {
                   value={amount > 0 ? String(amount).replace(".", ",") : ""}
                   onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }}
                   onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); if ((rounds[idx]?.amount || 0) > 0.005) confirmQuickPay() } }} />
-                <button className={amount > 0.005 ? "rundo-pulse" : undefined} style={{ width: 50, height: 50, borderRadius: 12, fontSize: 21, fontWeight: 800, cursor: "pointer", flexShrink: 0,
+                <button className={amount > 0.005 ? "rundo-pulse" : undefined} style={{ width: 50, height: 50, borderRadius: 12, fontSize: 22, fontWeight: 800, cursor: "pointer", flexShrink: 0,
                   background: amount > 0.005 ? "#fff" : "#e8e2d2",
                   color: amount > 0.005 ? "#1f8a4c" : "#b3a988",
                   border: amount > 0.005 ? "2px solid #1f8a4c" : "none" }}
                   onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}>✓</button>
-                <button style={{ padding: "0 12px", height: 50, borderRadius: 12, fontSize: 12.5, fontWeight: 800, cursor: "pointer", flexShrink: 0, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", color: "#8a7d55", whiteSpace: "nowrap" }} onClick={() => closeQuickRound(true)}>{L.skipRound}</button>
+                <button style={{ padding: "0 12px", height: 50, borderRadius: 12, fontSize: 14.5, fontWeight: 800, cursor: "pointer", flexShrink: 0, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", color: "#8a7d55", whiteSpace: "nowrap" }} onClick={() => closeQuickRound(true)}>{L.skipRound}</button>
               </div>
               {amount > 0.005 && (
-                <div style={{ fontSize: 11.5, color: "#1f8a4c", fontWeight: 800, textAlign: "right", marginTop: 7, paddingRight: 78 }}>{L.tapToConfirm}</div>
+                <div style={{ fontSize: 13.5, color: "#1f8a4c", fontWeight: 800, textAlign: "right", marginTop: 7, paddingRight: 78 }}>{L.tapToConfirm}</div>
               )}
 
               {/* Pot-context (variant A). Genoeg in pot → toon wat overblijft. Te weinig →
                   toon automatische verdeling (pot + zelf) met een knopje om aan te vullen. */}
               {payVia === "pot" && amount > 0.005 && (
                 amount <= potAvail + 0.005 ? (
-                  <div style={{ fontSize: 12, color: "#1f6b3a", fontWeight: 700, marginTop: 9 }}>
+                  <div style={{ fontSize: 14, color: "#1f6b3a", fontWeight: 700, marginTop: 9 }}>
                     🫙 {L.potPayLeft(euro(amount), euro(potAvail - amount))}
                   </div>
                 ) : (
                   <div style={{ background: "rgba(240,165,0,0.09)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 10, padding: "10px 12px", marginTop: 10 }}>
                     <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-                      <span style={{ fontSize: 12, color: "#8a5e0f", fontWeight: 800 }}>{L.potSplitTitle}</span>
-                      <span onClick={() => setShowPot(true)} style={{ fontSize: 11, color: "#c98a00", fontWeight: 800, padding: "3px 9px", borderRadius: 12, border: "1px solid rgba(240,165,0,0.6)", background: "#fff", cursor: "pointer" }}>+ {L.potWord}</span>
+                      <span style={{ fontSize: 14, color: "#8a5e0f", fontWeight: 800 }}>{L.potSplitTitle}</span>
+                      <span onClick={() => setShowPot(true)} style={{ fontSize: 13, color: "#c98a00", fontWeight: 800, padding: "3px 9px", borderRadius: 12, border: "1px solid rgba(240,165,0,0.6)", background: "#fff", cursor: "pointer" }}>+ {L.potWord}</span>
                     </div>
-                    <div style={{ ...S.row, justifyContent: "space-between", fontSize: 12.5, color: "#4a3f1e", fontWeight: 700 }}>
+                    <div style={{ ...S.row, justifyContent: "space-between", fontSize: 14.5, color: "#4a3f1e", fontWeight: 700 }}>
                       <span>🫙 {L.fromPot}</span><span style={{ color: "#1f8a4c" }}>{euro(potAvail)}</span>
                     </div>
-                    <div style={{ ...S.row, justifyContent: "space-between", fontSize: 12.5, color: "#4a3f1e", fontWeight: 700, marginTop: 3 }}>
+                    <div style={{ ...S.row, justifyContent: "space-between", fontSize: 14.5, color: "#4a3f1e", fontWeight: 700, marginTop: 3 }}>
                       <span>💶 {L.selfAdded}</span><span style={{ color: "#c88a1a" }}>{euro(amount - potAvail)}</span>
                     </div>
                   </div>
@@ -4736,8 +4717,8 @@ export default function PartyTest() {
         })()}
         {settle && unassignedAllRounds > 0 && firstUnassignedIdx >= 0 && (
           <div style={{ ...S.card, background: "rgba(224,104,92,0.08)", border: "1.5px solid rgba(224,104,92,0.45)" }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: "#b0402f", marginBottom: 4 }}>{L.unassignedHub(unassignedAllRounds)}</div>
-            <div style={{ fontSize: 12, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 11 }}>{L.unassignedHubWhy}</div>
+            <div style={{ fontSize: 15.5, fontWeight: 800, color: "#b0402f", marginBottom: 4 }}>{L.unassignedHub(unassignedAllRounds)}</div>
+            <div style={{ fontSize: 14, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 11 }}>{L.unassignedHubWhy}</div>
             <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#e0725c,#c0554a)" }} onClick={() => setAssignIdx(firstUnassignedIdx)}>{L.unassignedHubBtn}</button>
           </div>
         )}
@@ -4752,18 +4733,18 @@ export default function PartyTest() {
                 <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10 }}>Toewijzen — ronde {idx + 1}</h3>
 
                       <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, marginBottom: 8 }}>
-                        <div style={{ ...S.seg(editAssignMode === "person"), padding: "5px 9px", fontSize: 11.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
-                        <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 11.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>per drank</div>
+                        <div style={{ ...S.seg(editAssignMode === "person"), padding: "5px 9px", fontSize: 13.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
+                        <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 13.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>per drank</div>
                       </div>
-                      {editAssignMode === "person" && (() => { const u = roundDrinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0); return u > 0 ? <div style={{ fontSize: 12, fontWeight: 800, color: "#c0554a", marginBottom: 8 }}>🔴 {L.notAssignedYet(u)}</div> : null })()}
+                      {editAssignMode === "person" && (() => { const u = roundDrinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0); return u > 0 ? <div style={{ fontSize: 14, fontWeight: 800, color: "#c0554a", marginBottom: 8 }}>🔴 {L.notAssignedYet(u)}</div> : null })()}
                       {editAssignMode === "drink" ? roundDrinks.map((d) => {
                         const un = r.anon[d.id] ?? 0
                         return (
                           <div key={d.id} style={{ marginBottom: 9 }}>
-                            <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 5 }}>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 700 }}> · 🔴 {un} onbekend</span>}</div>
+                            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 5 }}>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 700 }}> · 🔴 {un} onbekend</span>}</div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                               {people.map((p) => { const n = r.orders[d.id]?.[p.id] ?? 0; return (
-                                <span key={p.id} style={{ ...S.chip(n), padding: "5px 10px", fontSize: 12.5 }} onClick={() => rAssignFromAnon(idx, d.id, p.id)}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1 }}>−</span>}</span>
+                                <span key={p.id} style={{ ...S.chip(n), padding: "5px 10px", fontSize: 14.5 }} onClick={() => rAssignFromAnon(idx, d.id, p.id)}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 15.5, fontWeight: 800, lineHeight: 1 }}>−</span>}</span>
                               )})}
                             </div>
                           </div>
@@ -4772,19 +4753,19 @@ export default function PartyTest() {
                         const took = roundDrinks.filter((d) => (r.orders[d.id]?.[p.id] ?? 0) > 0)
                         return (
                           <div key={p.id} style={{ marginBottom: 9 }}>
-                            <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 5 }}>{p.name}{took.length > 0 && <span style={{ fontSize: 11, fontWeight: 600, color: "#8a7d55" }}> · {took.reduce((a, d) => a + (r.orders[d.id]?.[p.id] ?? 0), 0)} drankje(s)</span>}</div>
+                            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 5 }}>{p.name}{took.length > 0 && <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}> · {took.reduce((a, d) => a + (r.orders[d.id]?.[p.id] ?? 0), 0)} drankje(s)</span>}</div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                               {roundDrinks.filter((d) => (r.orders[d.id]?.[p.id] ?? 0) > 0).map((d) => { const n = r.orders[d.id]?.[p.id] ?? 0; return (
-                                <span key={d.id} style={{ ...S.chip(n), padding: "5px 10px", fontSize: 12.5 }}>{d.emoji} {d.name}<span style={S.badge}>{n}</span><span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>−</span></span>
+                                <span key={d.id} style={{ ...S.chip(n), padding: "5px 10px", fontSize: 14.5 }}>{d.emoji} {d.name}<span style={S.badge}>{n}</span><span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 15.5, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>−</span></span>
                               )})}
                               {roundDrinks.filter((d) => (r.anon[d.id] ?? 0) > 0).map((d) => (
-                                <span key={"add" + d.id} onClick={() => rAssignFromAnon(idx, d.id, p.id)} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 10px", fontSize: 12.5, borderRadius: 20, background: "#fff", border: "1px dashed rgba(120,95,20,0.4)", color: "#8a7d55", fontWeight: 700, cursor: "pointer" }}>+ {d.emoji} {d.name}</span>
+                                <span key={"add" + d.id} onClick={() => rAssignFromAnon(idx, d.id, p.id)} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 10px", fontSize: 14.5, borderRadius: 20, background: "#fff", border: "1px dashed rgba(120,95,20,0.4)", color: "#8a7d55", fontWeight: 700, cursor: "pointer" }}>+ {d.emoji} {d.name}</span>
                               ))}
                             </div>
                           </div>
                         )
                       })}</div>)}
-                      <div style={{ fontSize: 11, color: "#8a7d55" }}>{L.redistribute}</div>
+                      <div style={{ fontSize: 13, color: "#8a7d55" }}>{L.redistribute}</div>
                 <button style={done ? { ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 10 }} onClick={() => setAssignIdx(null)}>{done ? "Klaar — alles toegewezen" : "Klaar"}</button>
               </div>
             </div>
@@ -4799,7 +4780,7 @@ export default function PartyTest() {
         {settle && paidCount === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
             <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
-            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{L.noRoundsDone}</div>
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{L.noRoundsDone}</div>
             <div style={{ ...S.sub, marginBottom: 16 }}>{L.noRoundsHint}</div>
             <div style={{ display: "flex", justifyContent: "center" }}>
               <button style={{ ...S.btnP, width: "80%" }} onClick={startFirstRound}>{unfinishedRound ? L.continueRound(roundNr) : "Start 1e rondje"}</button>
@@ -4808,7 +4789,7 @@ export default function PartyTest() {
         ) : !settle ? null : (<>
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
           <p style={{ ...S.sub, margin: 0 }}>{L.tapRoundToEdit}</p>
-          {paidCount > 1 && <span onClick={() => setAllRoundsOpen((v) => !v)} style={{ fontSize: 12, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", flexShrink: 0 }}>{allRoundsOpen ? "alles dichtklappen" : "alles openklappen"}</span>}
+          {paidCount > 1 && <span onClick={() => setAllRoundsOpen((v) => !v)} style={{ fontSize: 14, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", flexShrink: 0 }}>{allRoundsOpen ? "alles dichtklappen" : "alles openklappen"}</span>}
         </div>
 
         {rounds.map((r, idx) => ({ r, idx })).reverse().map(({ r, idx }) => {
@@ -4820,16 +4801,16 @@ export default function PartyTest() {
             <div key={idx} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
               <div style={{ cursor: "pointer", padding: 14 }} onClick={() => { if (allRoundsOpen) { setAllRoundsOpen(false); setOpenRound(idx) } else { setOpenRound(open ? null : idx) } setEditOpen(false); setEditCups(false); setEditPay(false) }}>
                 <div style={{ ...S.row, justifyContent: "space-between" }}>
-                  <span style={{ fontSize: 15, fontWeight: 800 }}>{L.roundWord} {idx + 1} <span style={{ fontSize: 12, fontWeight: 600, color: "#8a7d55" }}>· {L.drinksCount(items)} · {euro(r.amount)}</span>{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ fontSize: 11.5, fontWeight: 800, color: "#1f8a4c", marginLeft: 6 }}>{L.assigned}</span>}</span>
-                  <span style={{ fontSize: 14, color: "#8a7d55" }}>{open ? "▴" : "▾"}</span>
+                  <span style={{ fontSize: 16, fontWeight: 800 }}>{L.roundWord} {idx + 1} <span style={{ fontSize: 14, fontWeight: 600, color: "#8a7d55" }}>· {L.drinksCount(items)} · {euro(r.amount)}</span>{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", marginLeft: 6 }}>{L.assigned}</span>}</span>
+                  <span style={{ fontSize: 15.5, color: "#8a7d55" }}>{open ? "▴" : "▾"}</span>
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#1f8a4c", marginTop: 3 }}>✓ betaald: {paidLabel(r)}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#1f8a4c", marginTop: 3 }}>✓ betaald: {paidLabel(r)}</div>
               </div>
               {(() => {
                 const un = drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0)
                 if (un === 0) return null
                 return (
-                  <div onClick={() => { setAssignIdx(idx) }} style={{ margin: "0 14px 14px", background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "9px 11px", fontSize: 12.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>
+                  <div onClick={() => { setAssignIdx(idx) }} style={{ margin: "0 14px 14px", background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "9px 11px", fontSize: 14.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>
                     🔴 {L.notAssignedYet(un)} <u>{L.tapToAssign}</u>
                   </div>
                 )
@@ -4838,17 +4819,17 @@ export default function PartyTest() {
                 <div style={{ padding: "0 14px 14px" }}>
                   {roundDrinks.map((d) => {
                     const who = people.filter((p) => (r.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = r.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
-                    return <div key={d.id} style={{ fontSize: 13.5, marginBottom: 3 }}><b>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}</b>{who.length > 0 && <span style={{ color: "#8a7d55" }}> → {who.join(", ")}</span>}</div>
+                    return <div key={d.id} style={{ fontSize: 15.5, marginBottom: 3 }}><b>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}</b>{who.length > 0 && <span style={{ color: "#8a7d55" }}> → {who.join(", ")}</span>}</div>
                   })}
 
                   <div style={{ ...S.row, justifyContent: "flex-end", marginTop: 10 }}>
-                    <button style={{ ...S.btn, fontSize: 12, padding: "5px 12px", fontWeight: 800, color: "#8a5e0f" }} onClick={() => { const next = !editOpen; setEditOpen(next); if (!next) { setEditCups(false); setEditPay(false) } }}>{editOpen ? "▴ sluiten" : "✏️ aanpassen"}</button>
+                    <button style={{ ...S.btn, fontSize: 14, padding: "5px 12px", fontWeight: 800, color: "#8a5e0f" }} onClick={() => { const next = !editOpen; setEditOpen(next); if (!next) { setEditCups(false); setEditPay(false) } }}>{editOpen ? "▴ sluiten" : "✏️ aanpassen"}</button>
                   </div>
                   {editOpen && (
                     <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                      <button style={{ ...S.btn, flex: 1, fontSize: 11.5, padding: "7px 0" }} onClick={() => { setEditCups(false); setEditPay(false); setAssignIdx(idx) }}>toewijzen{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ color: "#1f8a4c", fontWeight: 800 }}> ✓</span>}</button>
-                      <button style={{ ...S.btn, flex: 1, fontSize: 11.5, padding: "7px 0", ...(editPay ? { background: "rgba(240,165,0,0.16)", borderColor: "rgba(240,165,0,0.5)", fontWeight: 800 } : {}) }} onClick={() => { setEditPay((v) => !v); setEditCups(false) }}>{L.amountAndPayer}</button>
-                      {depositOn && <button style={{ ...S.btn, flex: 1, fontSize: 11.5, padding: "7px 0", ...(editCups ? { background: "rgba(240,165,0,0.16)", borderColor: "rgba(240,165,0,0.5)", fontWeight: 800 } : {}) }} onClick={() => { setEditCups((v) => !v); setEditPay(false) }}>bekers</button>}
+                      <button style={{ ...S.btn, flex: 1, fontSize: 13.5, padding: "7px 0" }} onClick={() => { setEditCups(false); setEditPay(false); setAssignIdx(idx) }}>toewijzen{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ color: "#1f8a4c", fontWeight: 800 }}> ✓</span>}</button>
+                      <button style={{ ...S.btn, flex: 1, fontSize: 13.5, padding: "7px 0", ...(editPay ? { background: "rgba(240,165,0,0.16)", borderColor: "rgba(240,165,0,0.5)", fontWeight: 800 } : {}) }} onClick={() => { setEditPay((v) => !v); setEditCups(false) }}>{L.amountAndPayer}</button>
+                      {depositOn && <button style={{ ...S.btn, flex: 1, fontSize: 13.5, padding: "7px 0", ...(editCups ? { background: "rgba(240,165,0,0.16)", borderColor: "rgba(240,165,0,0.5)", fontWeight: 800 } : {}) }} onClick={() => { setEditCups((v) => !v); setEditPay(false) }}>bekers</button>}
                     </div>
                   )}
 
@@ -4856,36 +4837,36 @@ export default function PartyTest() {
                   {editPay && (
                     <div style={{ marginTop: 10, background: "#faf4e4", borderRadius: 12, padding: 10 }}>
                       <div style={{ ...S.row, gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontSize: 18, fontWeight: 800 }}>€</span>
-                        <input style={{ ...S.input, width: 110, fontSize: 16, borderColor: (r.amount || 0) <= 0 ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" value={r.amount || ""} onChange={(e) => rSetAmount(idx, parseFloat(e.target.value.replace(",", ".")) || 0)} />
-                        <span style={{ fontSize: 11, color: "#8a7d55" }}>totaal — Fair-Split basis</span>
+                        <span style={{ fontSize: 19, fontWeight: 800 }}>€</span>
+                        <input style={{ ...S.input, width: 110, fontSize: 17, borderColor: (r.amount || 0) <= 0 ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" value={r.amount || ""} onChange={(e) => rSetAmount(idx, parseFloat(e.target.value.replace(",", ".")) || 0)} />
+                        <span style={{ fontSize: 13, color: "#8a7d55" }}>totaal — Fair-Split basis</span>
                       </div>
-                      <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>Betaald door <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.multiplePossible}</span></div>
+                      <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>Betaald door <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.multiplePossible}</span></div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         <span style={S.chip((r.potPart || 0) > 0 ? 1 : 0)} onClick={() => rTogglePot(idx)}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
-                        {people.map((p) => <span key={p.id} style={{ ...S.chip((r.payers?.[p.id] || 0) > 0 ? 1 : 0), padding: "6px 11px", fontSize: 13 }} onClick={() => rTogglePayer(idx, p.id)}>{p.name}</span>)}
+                        {people.map((p) => <span key={p.id} style={{ ...S.chip((r.payers?.[p.id] || 0) > 0 ? 1 : 0), padding: "6px 11px", fontSize: 15 }} onClick={() => rTogglePayer(idx, p.id)}>{p.name}</span>)}
                       </div>
                       {(() => {
                         const sel = Object.keys(r.payers || {}).filter((pid) => people.some((p) => p.id === pid))
                         const nPay = sel.length + ((r.potPart || 0) > 0 ? 1 : 0)
-                        if (nPay === 0) return <div style={{ fontSize: 11.5, color: "#c0554a", fontWeight: 700, marginTop: 6 }}>Kies wie betaalde.</div>
+                        if (nPay === 0) return <div style={{ fontSize: 13.5, color: "#c0554a", fontWeight: 700, marginTop: 6 }}>Kies wie betaalde.</div>
                         const sum = rPaidSum(r), diff = (r.amount || 0) - sum
                         return (
                           <div style={{ marginTop: 8, background: "#fff", borderRadius: 10, padding: "9px 10px" }}>
-                            {nPay > 1 && <div style={{ fontSize: 11, fontWeight: 800, color: "#8a7d55", marginBottom: 7 }}>Gelijk verdeeld <span style={{ fontWeight: 600, color: "#b3a988" }}>— pas aan per persoon indien nodig</span></div>}
+                            {nPay > 1 && <div style={{ fontSize: 13, fontWeight: 800, color: "#8a7d55", marginBottom: 7 }}>Gelijk verdeeld <span style={{ fontWeight: 600, color: "#b3a988" }}>— pas aan per persoon indien nodig</span></div>}
                             {(r.potPart || 0) > 0 && (
                               <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-                                <span style={{ fontSize: 12.5, fontWeight: 700 }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
-                                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 78, fontSize: 13 }} type="text" inputMode="decimal" value={r.potPart || ""} onChange={(e) => rSetPotAmt(idx, parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
+                                <span style={{ fontSize: 14.5, fontWeight: 700 }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
+                                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 78, fontSize: 15 }} type="text" inputMode="decimal" value={r.potPart || ""} onChange={(e) => rSetPotAmt(idx, parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
                               </div>
                             )}
                             {sel.map((pid) => (
                               <div key={pid} style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-                                <span style={{ fontSize: 12.5, fontWeight: 700 }}>👤 {people.find((p) => p.id === pid)?.name}</span>
-                                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 78, fontSize: 13 }} type="text" inputMode="decimal" value={r.payers[pid] || ""} onChange={(e) => rSetPayerAmt(idx, pid, parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
+                                <span style={{ fontSize: 14.5, fontWeight: 700 }}>👤 {people.find((p) => p.id === pid)?.name}</span>
+                                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 78, fontSize: 15 }} type="text" inputMode="decimal" value={r.payers[pid] || ""} onChange={(e) => rSetPayerAmt(idx, pid, parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
                               </div>
                             ))}
-                            <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", paddingTop: 7, fontSize: 11.5, fontWeight: 800, color: Math.abs(diff) <= 0.005 ? "#1f8a4c" : "#c0554a" }}>Samen {euro(sum)} van {euro(r.amount || 0)}{Math.abs(diff) <= 0.005 ? " ✓ klopt" : diff > 0 ? ` — er ontbreekt ${euro(diff)}` : ` — ${euro(-diff)} te veel`}</div>
+                            <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", paddingTop: 7, fontSize: 13.5, fontWeight: 800, color: Math.abs(diff) <= 0.005 ? "#1f8a4c" : "#c0554a" }}>Samen {euro(sum)} van {euro(r.amount || 0)}{Math.abs(diff) <= 0.005 ? " ✓ klopt" : diff > 0 ? ` — er ontbreekt ${euro(diff)}` : ` — ${euro(-diff)} te veel`}</div>
                           </div>
                         )
                       })()}
@@ -4898,12 +4879,12 @@ export default function PartyTest() {
                         const nam = roundPicked(r, p.id), gb = r.gaveBack[p.id] || 0
                         return (
                           <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0" }}>
-                            <span style={{ fontSize: 13.5, fontWeight: 700 }}>{p.name} <span style={{ fontSize: 11, color: "#8a7d55" }}>· nam {nam}</span></span>
+                            <span style={{ fontSize: 15.5, fontWeight: 700 }}>{p.name} <span style={{ fontSize: 13, color: "#8a7d55" }}>· nam {nam}</span></span>
                             <div style={{ ...S.row, gap: 6 }}>
-                              <span style={{ fontSize: 11, color: "#8a7d55" }}>{L.gaveBack}</span>
-                              <button style={{ ...S.step, width: 26, height: 26, fontSize: 16, opacity: gb === 0 ? 0.4 : 1 }} onClick={() => rSetGaveBack(idx, p.id, gb - 1)}>−</button>
-                              <span style={{ minWidth: 14, textAlign: "center", fontSize: 14, fontWeight: 800 }}>{gb}</span>
-                              <button style={{ ...S.step, width: 26, height: 26, fontSize: 16 }} onClick={() => rSetGaveBack(idx, p.id, gb + 1)}>+</button>
+                              <span style={{ fontSize: 13, color: "#8a7d55" }}>{L.gaveBack}</span>
+                              <button style={{ ...S.step, width: 26, height: 26, fontSize: 17, opacity: gb === 0 ? 0.4 : 1 }} onClick={() => rSetGaveBack(idx, p.id, gb - 1)}>−</button>
+                              <span style={{ minWidth: 14, textAlign: "center", fontSize: 15.5, fontWeight: 800 }}>{gb}</span>
+                              <button style={{ ...S.step, width: 26, height: 26, fontSize: 17 }} onClick={() => rSetGaveBack(idx, p.id, gb + 1)}>+</button>
                             </div>
                           </div>
                         )
@@ -4927,7 +4908,7 @@ export default function PartyTest() {
           )}
         </>}
         <div style={{ textAlign: "center", marginTop: 16 }}>
-          <span onClick={switchMode} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>↺ {settle ? L.switchToQuick : L.switchToFair}</span>
+          <span onClick={switchMode} style={{ fontSize: 13.5, fontWeight: 700, cursor: "pointer", color: "#a89a6f" }}>↺ {settle ? L.switchToQuick : L.switchToFair}</span>
         </div>
       </div></div>
     )
@@ -4975,29 +4956,61 @@ export default function PartyTest() {
         {renderDialogs()}
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.quickSettleTitle}</h3>
-          <button style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "7px 12px" }} onClick={() => setView("hub")}>{L.back}</button>
+          <button style={{ ...S.btn, fontSize: 14, fontWeight: 700, padding: "7px 12px" }} onClick={() => setView("hub")}>{L.back}</button>
         </div>
 
         <div style={{ ...S.card, textAlign: "center", background: "rgba(240,165,0,0.06)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: "#8a7d55", marginBottom: 4 }}>{L.quickTotalLabel}</div>
+          <div style={{ fontSize: 14.5, fontWeight: 700, color: "#8a7d55", marginBottom: 4 }}>{L.quickTotalLabel}</div>
           <div style={{ fontSize: 30, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</div>
         </div>
 
         {/* Schakelaar: verdelen over de groep, of alles op één iemand. */}
         <div style={{ display: "flex", gap: 4, background: "#f7f1e2", padding: 4, borderRadius: 12, marginBottom: 12 }}>
-          <button style={{ flex: 1, padding: "10px 6px", borderRadius: 9, fontSize: 12.5, fontWeight: 800, cursor: "pointer", border: "none",
+          <button style={{ flex: 1, padding: "10px 6px", borderRadius: 9, fontSize: 14.5, fontWeight: 800, cursor: "pointer", border: "none",
             background: !alles ? "#fff" : "transparent", color: !alles ? "#4a3f1e" : "#8a7d55", boxShadow: !alles ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}
             onClick={() => setSettleMode("verdelen")}>👥 {L.splitOverGroup}</button>
-          <button style={{ flex: 1, padding: "10px 6px", borderRadius: 9, fontSize: 12.5, fontWeight: 800, cursor: "pointer", border: "none",
+          <button style={{ flex: 1, padding: "10px 6px", borderRadius: 9, fontSize: 14.5, fontWeight: 800, cursor: "pointer", border: "none",
             background: alles ? "#fff" : "transparent", color: alles ? "#4a3f1e" : "#8a7d55", boxShadow: alles ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}
             onClick={() => setSettleMode("allesZelf")}>💶 {L.payAllSelf}</button>
         </div>
 
         {!alles ? (
           <>
+
+            {/* Resultaat. Was de groep de hele avond gelijk, dan volstaat één bedrag.
+                Schoof er iemand later aan (of ging er iemand weg), dan is er geen enkel
+                bedrag meer dat voor iedereen klopt — dan tonen we het per groep. */}
+            {gelijkVoorIedereen ? (
+              <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)", textAlign: "center" }}>
+                <div style={{ fontSize: 14.5, color: "#4a6b57", marginBottom: 3 }}>{L.eachPaysNote}</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: "#1f8a4c" }}>{euro(perPersoon)}</div>
+                {traktatieTot > 0.005 && (
+                  <div style={{ fontSize: 14, color: "#8a5e0f", fontWeight: 700, marginTop: 7 }}>🎁 {L.plusTreat(euro(traktatieTot))}</div>
+                )}
+              </div>
+            ) : (
+              <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
+                <div style={{ fontSize: 14.5, color: "#4a6b57", marginBottom: 3 }}>{L.eachPaysNote}</div>
+                <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.45 }}>{L.notEveryoneAllRounds}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                  {groepenMetDeel.map((g, i) => (
+                    <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "10px 12px", background: "#fff", borderRadius: 10 }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e" }}>
+                        {g.count}× {g.from === 0 && g.until === null ? L.fromStart : g.until === null ? L.fromRound(g.from + 1) : g.from === 0 ? L.untilRound(g.until + 1) : L.roundsRange(g.from + 1, g.until + 1)}
+                      </span>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c" }}>{euro(g.deel)}</span>
+                    </div>
+                  ))}
+                </div>
+                {traktatieTot > 0.005 && (
+                  <div style={{ fontSize: 14, color: "#8a5e0f", fontWeight: 700, marginTop: 9, textAlign: "center" }}>🎁 {L.plusTreat(euro(traktatieTot))}</div>
+                )}
+              </div>
+            )}
+
             {betaalde.length > 0 && (
               <div style={{ ...S.card }}>
-                <div style={{ fontSize: 11, color: "#8a7d55", fontWeight: 800, marginBottom: 9 }}>{L.treatHint}</div>
+                <div style={{ fontSize: 15, color: "#8a7d55", fontWeight: 800, marginBottom: 9, lineHeight: 1.45 }}>{L.treatHint}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {betaalde.map((r) => {
                     const nr = rounds.indexOf(r) + 1
@@ -5006,12 +5019,12 @@ export default function PartyTest() {
                       <div key={r.id} onClick={() => setTreatedRounds((prev) => { const n = new Set(prev); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n })}
                         style={{ ...S.row, justifyContent: "space-between", padding: "10px 12px", borderRadius: 9, cursor: "pointer",
                           background: on ? "rgba(31,138,76,0.08)" : "#faf7ec", border: on ? "1px solid rgba(31,138,76,0.4)" : "1px solid transparent" }}>
-                        <span style={{ fontSize: 13, fontWeight: on ? 800 : 700, color: on ? "#1f6b3a" : "#4a3f1e" }}>
+                        <span style={{ fontSize: 15, fontWeight: on ? 800 : 700, color: on ? "#1f6b3a" : "#4a3f1e" }}>
                           {L.roundWord} {nr} · 👤{r.headcount || 1}{on && <span style={{ fontWeight: 700, color: "#8a7d55" }}> · 🎁 {L.yourTreat}</span>}
                         </span>
                         <div style={{ ...S.row, gap: 9 }}>
-                          <span style={{ fontSize: 13, fontWeight: 800, color: on ? "#1f8a4c" : "#8a7d55" }}>{euro(r.amount || 0)}</span>
-                          <span style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800,
+                          <span style={{ fontSize: 15, fontWeight: 800, color: on ? "#1f8a4c" : "#8a7d55" }}>{euro(r.amount || 0)}</span>
+                          <span style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
                             background: on ? "#1f8a4c" : "#fff", color: "#fff", border: on ? "none" : "1.5px solid rgba(120,95,20,0.3)" }}>{on ? "✓" : ""}</span>
                         </div>
                       </div>
@@ -5020,49 +5033,18 @@ export default function PartyTest() {
                 </div>
               </div>
             )}
-
-            {/* Resultaat. Was de groep de hele avond gelijk, dan volstaat één bedrag.
-                Schoof er iemand later aan (of ging er iemand weg), dan is er geen enkel
-                bedrag meer dat voor iedereen klopt — dan tonen we het per groep. */}
-            {gelijkVoorIedereen ? (
-              <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)", textAlign: "center" }}>
-                <div style={{ fontSize: 12.5, color: "#4a6b57", marginBottom: 3 }}>{L.eachPaysNote}</div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: "#1f8a4c" }}>{euro(perPersoon)}</div>
-                {traktatieTot > 0.005 && (
-                  <div style={{ fontSize: 12, color: "#8a5e0f", fontWeight: 700, marginTop: 7 }}>🎁 {L.plusTreat(euro(traktatieTot))}</div>
-                )}
-              </div>
-            ) : (
-              <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
-                <div style={{ fontSize: 12.5, color: "#4a6b57", marginBottom: 3 }}>{L.eachPaysNote}</div>
-                <div style={{ fontSize: 11.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.45 }}>{L.notEveryoneAllRounds}</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  {groepenMetDeel.map((g, i) => (
-                    <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "10px 12px", background: "#fff", borderRadius: 10 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#4a3f1e" }}>
-                        {g.count}× {g.from === 0 && g.until === null ? L.fromStart : g.until === null ? L.fromRound(g.from + 1) : g.from === 0 ? L.untilRound(g.until + 1) : L.roundsRange(g.from + 1, g.until + 1)}
-                      </span>
-                      <span style={{ fontSize: 17, fontWeight: 800, color: "#1f8a4c" }}>{euro(g.deel)}</span>
-                    </div>
-                  ))}
-                </div>
-                {traktatieTot > 0.005 && (
-                  <div style={{ fontSize: 12, color: "#8a5e0f", fontWeight: 700, marginTop: 9, textAlign: "center" }}>🎁 {L.plusTreat(euro(traktatieTot))}</div>
-                )}
-              </div>
-            )}
           </>
         ) : (
           <div style={{ ...S.card, background: "rgba(240,165,0,0.06)", border: "1.5px solid rgba(240,165,0,0.4)", textAlign: "center" }}>
-            <div style={{ fontSize: 13, color: "#8a5e0f", fontWeight: 700, marginBottom: 6, lineHeight: 1.5 }}>{L.payAllNote}</div>
+            <div style={{ fontSize: 15, color: "#8a5e0f", fontWeight: 700, marginBottom: 6, lineHeight: 1.5 }}>{L.payAllNote}</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</div>
           </div>
         )}
 
         {/* Fair Split blijft de weg naar een echt per-persoon-detail. */}
         <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
-          <div style={{ fontSize: 13.5, fontWeight: 800, color: "#1f6b3a", marginBottom: 4 }}>{L.notFairSplitYet}</div>
-          <div style={{ fontSize: 12, color: "#4a6b57", lineHeight: 1.5, marginBottom: 11 }}>{L.notFairSplitWhy}</div>
+          <div style={{ fontSize: 15.5, fontWeight: 800, color: "#1f6b3a", marginBottom: 4 }}>{L.notFairSplitYet}</div>
+          <div style={{ fontSize: 14, color: "#4a6b57", lineHeight: 1.5, marginBottom: 11 }}>{L.notFairSplitWhy}</div>
           <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={goToFairSplit}>{L.switchToFairBtn}</button>
         </div>
       </div></div>
@@ -5077,20 +5059,20 @@ export default function PartyTest() {
         {renderDialogs()}
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.fairSetupTitle}</h3>
-          <button style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "7px 12px" }} onClick={() => setView("quickSettle")}>{L.back}</button>
+          <button style={{ ...S.btn, fontSize: 14, fontWeight: 700, padding: "7px 12px" }} onClick={() => setView("quickSettle")}>{L.back}</button>
         </div>
-        <div style={{ fontSize: 12.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>{L.fairSetupIntro}</div>
+        <div style={{ fontSize: 14.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>{L.fairSetupIntro}</div>
         <div style={{ ...S.card }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {people.map((p, i) => {
               const leeg = isGuestDefault(p.name)
               return (
                 <div key={p.id} style={{ ...S.row, gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: "#b3a988", width: 20, textAlign: "center", flexShrink: 0 }}>{i + 1}</span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: "#b3a988", width: 20, textAlign: "center", flexShrink: 0 }}>{i + 1}</span>
                   <input value={leeg ? "" : p.name} onChange={(e) => renamePerson(p.id, e.target.value)} placeholder={p.name}
-                    style={{ ...S.input, flex: 1, textAlign: "left", fontSize: 15, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: "#fdfaf2", color: leeg ? "#b3a988" : "#4a3f1e" }} />
+                    style={{ ...S.input, flex: 1, textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: "#fdfaf2", color: leeg ? "#b3a988" : "#4a3f1e" }} />
                   {people.length > 1 && (
-                    <button onClick={() => removePerson(p.id)} style={{ ...S.btn, padding: "8px 11px", fontSize: 15, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)", flexShrink: 0 }}>✕</button>
+                    <button onClick={() => removePerson(p.id)} style={{ ...S.btn, padding: "8px 11px", fontSize: 16, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)", flexShrink: 0 }}>✕</button>
                   )}
                 </div>
               )
@@ -5120,16 +5102,27 @@ export default function PartyTest() {
       <div style={S.page}><div style={S.wrap}>
         <Header />
         {renderDialogs()}
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6, gap: 8 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.roundsOverviewTitle}</h3>
-          {settle && <button style={{ ...S.btn, fontSize: 12, fontWeight: 700, padding: "7px 12px" }} onClick={() => { if (overviewBackTo === "order") { setActiveCat(catsPresent[0]); setView("order") } else setView("hub") }}>← {L.back}</button>}
+          <div style={{ display: "flex", gap: 7, flexShrink: 0 }}>
+            {rounds.length > 1 && (() => {
+              const allesOpen = openRounds.size >= rounds.length
+              return (
+                <button style={{ ...S.btn, fontSize: 14, fontWeight: 700, padding: "7px 12px" }}
+                  onClick={() => setOpenRounds(allesOpen ? new Set<string>([laatsteId]) : new Set(rounds.map((r) => r.id)))}>
+                  {allesOpen ? `▴ ${L.collapseAll}` : `▾ ${L.expandAll}`}
+                </button>
+              )
+            })()}
+            {settle && <button style={{ ...S.btn, fontSize: 14, fontWeight: 700, padding: "7px 12px" }} onClick={() => { if (overviewBackTo === "order") { setActiveCat(catsPresent[0]); setView("order") } else setView("hub") }}>← {L.back}</button>}
+          </div>
         </div>
 
         {/* Totaal — de som van alle rondjes. Eén blik op wat de avond kostte. */}
         <div style={{ ...S.card, background: "rgba(240,165,0,0.06)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
           <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <span style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f" }}>{L.costTotalLabel}</span>
-            <span style={{ fontSize: 20, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</span>
+            <span style={{ fontSize: 15.5, fontWeight: 800, color: "#8a5e0f" }}>{L.costTotalLabel}</span>
+            <span style={{ fontSize: 21, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</span>
           </div>
         </div>
 
@@ -5144,18 +5137,18 @@ export default function PartyTest() {
                 <div onClick={() => toggle(r.id)} style={{ padding: "12px 14px", cursor: "pointer", background: open ? "rgba(240,165,0,0.06)" : "#fff" }}>
                   <div style={{ ...S.row, justifyContent: "space-between" }}>
                     <div style={{ ...S.row, gap: 8 }}>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e" }}>{L.roundSummary(nr, items)}</span>
+                      <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.roundSummary(nr, items)}</span>
                       {nr === rounds.length && (
-                        <span onClick={(e) => { e.stopPropagation(); editOrder() }} style={{ fontSize: 13, color: "#a89a6f", fontWeight: 800, cursor: "pointer" }}>✏️</span>
+                        <span onClick={(e) => { e.stopPropagation(); editOrder() }} style={{ fontSize: 15, color: "#a89a6f", fontWeight: 800, cursor: "pointer" }}>✏️</span>
                       )}
                     </div>
                     <div style={{ ...S.row, gap: 10 }}>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: (r.amount || 0) > 0 ? "#c98a00" : "#c4b896" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "€ —"}</span>
-                      <span style={{ fontSize: 13, color: "#8a7d55", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
+                      <span style={{ fontSize: 15.5, fontWeight: 800, color: (r.amount || 0) > 0 ? "#c98a00" : "#c4b896" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "€ —"}</span>
+                      <span style={{ fontSize: 15, color: "#8a7d55", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
                     </div>
                   </div>
                   {/* Betaald-melding net onder de titel — leesbaar, geen invulveld meer. */}
-                  <div style={{ fontSize: 12, color: "#8a7d55", fontWeight: 600, marginTop: 4 }}>
+                  <div style={{ fontSize: 14, color: "#8a7d55", fontWeight: 600, marginTop: 4 }}>
                     {(r.amount || 0) > 0.005 ? L.paidNote(euro(r.amount)) : L.noAmountNote}
                     {(r.potPart || 0) > 0.005
                       ? <span style={{ color: "#1f6b3a", fontWeight: 700 }}> · 🫙 {L.paidFromPot(euro(r.potPart || 0))}</span>
@@ -5167,8 +5160,8 @@ export default function PartyTest() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       {drinksOf(r).map(({ d, n }) => (
                         <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "3px 0" }}>
-                          <span style={{ fontSize: 14, fontWeight: 700 }}>{d.emoji} {d.name}</span>
-                          <span style={{ fontSize: 16, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
+                          <span style={{ fontSize: 15.5, fontWeight: 700 }}>{d.emoji} {d.name}</span>
+                          <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
                         </div>
                       ))}
                     </div>
@@ -5180,11 +5173,11 @@ export default function PartyTest() {
         </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-          <button style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 14, fontWeight: 800 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
-          <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 14 }} onClick={nextRound}>{L.newRound}</button>
+          <button style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 15.5, fontWeight: 800 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
+          <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 15.5 }} onClick={nextRound}>{L.newRound}</button>
         </div>
         {rounds.length > 0 && (
-          <button style={{ width: "100%", marginTop: 8, border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 14, padding: "12px 6px", fontSize: 13, fontWeight: 800, cursor: "pointer" }} onClick={repeatRound}>{L.repeatRound}</button>
+          <button style={{ width: "100%", marginTop: 8, border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 14, padding: "12px 6px", fontSize: 15, fontWeight: 800, cursor: "pointer" }} onClick={repeatRound}>{L.repeatRound}</button>
         )}
       </div></div>
     )
@@ -5207,14 +5200,14 @@ export default function PartyTest() {
       </div>
 
       <div style={{ ...S.card, background: "linear-gradient(135deg,#fff7e6,#fdefc9)" }}>
-        <div style={{ ...S.row, justifyContent: "space-between", fontSize: 14 }}>
+        <div style={{ ...S.row, justifyContent: "space-between", fontSize: 15.5 }}>
           <span style={{ fontWeight: 800 }}>{L.totalOrdered}</span>
-          <span style={{ fontWeight: 800, fontSize: 18 }}>{show(grandTotal)}</span>
+          <span style={{ fontWeight: 800, fontSize: 19 }}>{show(grandTotal)}</span>
         </div>
         {potSpent > 0 && (
           <div style={{ marginTop: 6, borderTop: "1px dashed rgba(120,95,20,0.2)", paddingTop: 6 }}>
-            <div style={{ ...S.row, justifyContent: "space-between", fontSize: 12.5, color: "#8a7d55" }}><span>🫙 waarvan uit de pot</span><span style={{ fontWeight: 700, color: "#1f8a4c" }}>−{show(potSpent)}</span></div>
-            <div style={{ ...S.row, justifyContent: "space-between", fontSize: 12.5, color: "#8a7d55" }}><span>door personen betaald</span><span style={{ fontWeight: 700 }}>{show(grandTotal - potSpent)}</span></div>
+            <div style={{ ...S.row, justifyContent: "space-between", fontSize: 14.5, color: "#8a7d55" }}><span>🫙 waarvan uit de pot</span><span style={{ fontWeight: 700, color: "#1f8a4c" }}>−{show(potSpent)}</span></div>
+            <div style={{ ...S.row, justifyContent: "space-between", fontSize: 14.5, color: "#8a7d55" }}><span>door personen betaald</span><span style={{ fontWeight: 700 }}>{show(grandTotal - potSpent)}</span></div>
           </div>
         )}
       </div>
@@ -5222,20 +5215,20 @@ export default function PartyTest() {
       <div style={S.card}>
         <div style={{ ...S.row, gap: 6, marginBottom: 8 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.fairSplit}</h3>
-          <span onClick={() => setNotice("⚖️ Fair Split — Eerlijker dan gelijke verdeling. Wie weinig of goedkopere drankjes nam, betaalt niet mee voor wie meer of duurdere drankjes nam.")} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 11, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
+          <span onClick={() => setNotice("⚖️ Fair Split — Eerlijker dan gelijke verdeling. Wie weinig of goedkopere drankjes nam, betaalt niet mee voor wie meer of duurdere drankjes nam.")} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 13, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
         </div>
         <div style={{ marginBottom: 10 }}>
-          <button onClick={() => { setOpenFairAll((v) => !v); setOpenFair({}) }} style={{ ...S.btn, padding: "7px 14px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{openFairAll ? "▴ Sluit details" : "▾ Bekijk details"}</button>
+          <button onClick={() => { setOpenFairAll((v) => !v); setOpenFair({}) }} style={{ ...S.btn, padding: "7px 14px", fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>{openFairAll ? "▴ Sluit details" : "▾ Bekijk details"}</button>
         </div>
         {anyUnassignedRounds && (
           <div style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "11px 12px", marginBottom: 10 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: "#b0402f", marginBottom: 3 }}>{L.equalSplitWarn}</div>
-            <div style={{ fontSize: 11.5, color: "#8a5e0f", lineHeight: 1.5, marginBottom: 9 }}>{L.unassignedWarn}</div>
-            <button style={{ ...S.btnP, width: "100%", padding: "11px 0", fontSize: 13.5 }} onClick={goAssignUnassigned}>{L.useFairSplit}</button>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#b0402f", marginBottom: 3 }}>{L.equalSplitWarn}</div>
+            <div style={{ fontSize: 13.5, color: "#8a5e0f", lineHeight: 1.5, marginBottom: 9 }}>{L.unassignedWarn}</div>
+            <button style={{ ...S.btnP, width: "100%", padding: "11px 0", fontSize: 15.5 }} onClick={goAssignUnassigned}>{L.useFairSplit}</button>
           </div>
         )}
         {showEqual && (
-          <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, fontSize: 10.5, color: "#8a7d55", fontWeight: 800, paddingBottom: 4, borderBottom: "1px solid rgba(120,95,20,0.12)" }}>
+          <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, fontSize: 12, color: "#8a7d55", fontWeight: 800, paddingBottom: 4, borderBottom: "1px solid rgba(120,95,20,0.12)" }}>
             <span>gelijke verdeling</span>
             <span onClick={() => setNotice(L.fairSplitInfo)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 15, height: 15, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 9.5, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
           </div>
@@ -5249,20 +5242,20 @@ export default function PartyTest() {
           return (
             <div key={p.id} style={{ borderBottom: "1px solid rgba(120,95,20,0.06)" }}>
               <div style={{ ...S.row, justifyContent: "space-between", padding: "7px 0", cursor: "pointer" }} onClick={() => setOpenFair((o) => ({ ...o, [p.id]: !open }))}>
-                <span style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>{open ? "▾" : "▸"} {p.name} <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f8a4c" }}>· {show(dronk)}</span>
-                  {Math.abs(owed) > 0.005 && <span style={{ display: "inline-block", marginLeft: 6, fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap", background: owed > 0 ? "rgba(224,138,0,0.16)" : "rgba(31,138,76,0.14)", color: owed > 0 ? "#b35309" : "#1f8a4c" }}>{owed > 0 ? `betaalt ${show(owed)}` : `krijgt ${show(-owed)}`}</span>}
+                <span style={{ flex: 1, fontSize: 15.5, fontWeight: 700 }}>{open ? "▾" : "▸"} {p.name} <span style={{ fontSize: 14.5, fontWeight: 800, color: "#1f8a4c" }}>· {show(dronk)}</span>
+                  {Math.abs(owed) > 0.005 && <span style={{ display: "inline-block", marginLeft: 6, fontSize: 13, fontWeight: 800, padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap", background: owed > 0 ? "rgba(224,138,0,0.16)" : "rgba(31,138,76,0.14)", color: owed > 0 ? "#b35309" : "#1f8a4c" }}>{owed > 0 ? `betaalt ${show(owed)}` : `krijgt ${show(-owed)}`}</span>}
                 </span>
-                {showEqual && <span style={{ width: 96, textAlign: "right", fontSize: 12.5, color: "#8a7d55" }}>{show(equalShare)}</span>}
+                {showEqual && <span style={{ width: 96, textAlign: "right", fontSize: 14.5, color: "#8a7d55" }}>{show(equalShare)}</span>}
               </div>
               {open && (
-                <div style={{ background: "#faf4e4", borderRadius: 10, padding: "8px 11px", margin: "0 0 8px", fontSize: 12.5 }}>
+                <div style={{ background: "#faf4e4", borderRadius: 10, padding: "8px 11px", margin: "0 0 8px", fontSize: 14.5 }}>
                   <div style={{ color: "#6b5f3a", padding: "2px 0" }}>{L.drank}</div>
                   {(() => {
                     const cnt: Record<string, number> = {}
                     rounds.forEach((r) => Object.entries(r.orders).forEach(([did, per]) => { const q = per?.[p.id] ?? 0; if (q > 0) cnt[did] = (cnt[did] ?? 0) + q }))
                     const list = drinks.filter((d) => (cnt[d.id] ?? 0) > 0)
                     if (list.length === 0) return null
-                    return <div style={{ fontSize: 11.5, color: "#8a7d55", padding: "1px 0 5px", lineHeight: 1.5 }}>{list.map((d) => `${cnt[d.id]}× ${d.name}`).join(" · ")}</div>
+                    return <div style={{ fontSize: 13.5, color: "#8a7d55", padding: "1px 0 5px", lineHeight: 1.5 }}>{list.map((d) => `${cnt[d.id]}× ${d.name}`).join(" · ")}</div>
                   })()}
                   {depositOn && Math.abs(waarborg) > 0.005 && <div style={{ color: "#6b5f3a", padding: "2px 0" }}>{L.depositAdvanced} <b style={{ color: "#4a3f1e" }}>{show(waarborg)}</b></div>}
                   {zelf > 0.005 && (() => {
@@ -5279,10 +5272,10 @@ export default function PartyTest() {
           )
         })}
         <div style={{ ...S.row, justifyContent: "space-between", padding: "9px 0 2px", borderTop: "2px solid rgba(120,95,20,0.25)", marginTop: 2 }}>
-          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 800 }}>Totaal <span style={{ fontSize: 13, fontWeight: 800, color: "#1f8a4c" }}>· {show(grandTotal)}</span></span>
-          {showEqual && <span style={{ width: 96, textAlign: "right", fontSize: 12.5, fontWeight: 800, color: "#8a7d55" }}>{show(equalShare * people.length)}</span>}
+          <span style={{ flex: 1, fontSize: 15.5, fontWeight: 800 }}>Totaal <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c" }}>· {show(grandTotal)}</span></span>
+          {showEqual && <span style={{ width: 96, textAlign: "right", fontSize: 14.5, fontWeight: 800, color: "#8a7d55" }}>{show(equalShare * people.length)}</span>}
         </div>
-        <div style={{ fontSize: 11.5, marginTop: 10, textAlign: "right" }}><span onClick={() => setShowEqual((v) => !v)} style={{ color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{showEqual ? "verberg gelijke verdeling" : "toon gelijke verdeling"}</span></div>
+        <div style={{ fontSize: 13.5, marginTop: 10, textAlign: "right" }}><span onClick={() => setShowEqual((v) => !v)} style={{ color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{showEqual ? "verberg gelijke verdeling" : "toon gelijke verdeling"}</span></div>
       </div>
 
       {renderSettleTogether()}
@@ -5291,14 +5284,14 @@ export default function PartyTest() {
         <h3 style={{ ...S.h3, marginBottom: 8 }}>{L.howYouAllSettle}</h3>
         {isSchatting && (
           <div style={{ background: "#fff8e8", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginBottom: 10 }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: "#c98a00", marginBottom: 2 }}>⚠️ {L.estimate}</div>
-            <div style={{ fontSize: 11.5, color: "#8a7d55", lineHeight: 1.5 }}>{L.estimateWhy}</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#c98a00", marginBottom: 2 }}>⚠️ {L.estimate}</div>
+            <div style={{ fontSize: 13.5, color: "#8a7d55", lineHeight: 1.5 }}>{L.estimateWhy}</div>
           </div>
         )}
         <p style={{ ...S.sub, marginBottom: 8 }}>{L.fewestTransfers}</p>
-        {settlement.tx.length === 0 ? <div style={{ fontSize: 13.5, color: "#1f8a4c", fontWeight: 700 }}>{L.allEven}</div> : settlement.tx.map((t, i) => (
+        {settlement.tx.length === 0 ? <div style={{ fontSize: 15.5, color: "#1f8a4c", fontWeight: 700 }}>{L.allEven}</div> : settlement.tx.map((t, i) => (
           <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
-            <span style={{ fontSize: 14 }}><b>{t.from}</b> → {t.to}</span><span style={{ fontSize: 15, fontWeight: 800, color: "#b35309" }}>{show(t.amount)}</span>
+            <span style={{ fontSize: 15.5 }}><b>{t.from}</b> → {t.to}</span><span style={{ fontSize: 16, fontWeight: 800, color: "#b35309" }}>{show(t.amount)}</span>
           </div>
         ))}
       </div>
