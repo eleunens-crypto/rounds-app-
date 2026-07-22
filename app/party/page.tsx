@@ -309,7 +309,7 @@ const T = {
     // ── start & setup
     tagline: "Rondjes en splitten zonder gedoe!",
     autoName: () => { const d = new Date(); const m = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"]; return `Rondje ${d.getDate()} ${m[d.getMonth()]}` },
-    startNow: "Beginnen",
+    startNow: "Start",
     groupNameHint: "NAAM VAN JE GROEP",
     tapToChange: "tik om te wijzigen",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "persoon" : "personen"}`,
@@ -611,7 +611,7 @@ const T = {
     potSplitTitle: "Pot niet genoeg \u2014 zo verdeeld:",
     potShortTitle: "Niet genoeg in de pot",
     potShortBy: (inPot: string, tekort: string) => `Er zit nog ${inPot} in de pot, je komt ${tekort} tekort. Wat wil je doen?`,
-    potChoiceTopUp: "\ud83e\uded9 Pot bijleggen en daaruit betalen",
+    potChoiceTopUp: "\ud83e\uded9 Toevoegen aan de pot",
     potChoicePaySelf: "\ud83d\udcb6 Alles zelf betalen",
     potChoiceSplit: (inPot: string, zelf: string) => `Pot ${inPot} + zelf ${zelf} bijpassen`,
     potWord: "pot",
@@ -751,7 +751,7 @@ const T = {
     // ── start & setup
     tagline: "Les tournées et le partage, sans prise de tête !",
     autoName: () => { const d = new Date(); const m = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"]; return `Tournée ${d.getDate()} ${m[d.getMonth()]}` },
-    startNow: "Commencer",
+    startNow: "Start",
     groupNameHint: "NOM DE TON GROUPE",
     tapToChange: "touche pour changer",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "personne" : "personnes"}`,
@@ -1053,7 +1053,7 @@ const T = {
     potSplitTitle: "Cagnotte insuffisante \u2014 r\u00e9partition :",
     potShortTitle: "Pas assez dans la cagnotte",
     potShortBy: (inPot: string, tekort: string) => `Il reste ${inPot} dans la cagnotte, il manque ${tekort}. Que veux-tu faire ?`,
-    potChoiceTopUp: "\ud83e\uded9 Compl\u00e9ter la cagnotte et payer avec",
+    potChoiceTopUp: "\ud83e\uded9 Ajouter \u00e0 la cagnotte",
     potChoicePaySelf: "\ud83d\udcb6 Tout payer soi-m\u00eame",
     potChoiceSplit: (inPot: string, zelf: string) => `Cagnotte ${inPot} + ${zelf} de ta poche`,
     potWord: "cagnotte",
@@ -4717,7 +4717,6 @@ export default function PartyTest() {
             </div>
           </div>
         )}
-        {!settle && renderBarList()}
         {!settle && rounds.length >= 1 && (() => {
           const idx = rounds.length - 1
           const r = rounds[idx]
@@ -4735,14 +4734,15 @@ export default function PartyTest() {
             {/* Drankjes van dit net-bevestigde rondje, met de aanpas-knop erin verwerkt. */}
             {(() => { const laatste = rounds[idx]; const lijst = laatste ? drinksOf(laatste) : []; return lijst.length > 0 && (
               <div style={{ ...S.card, padding: "12px 14px", background: "#fffdf6" }}>
-                <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9, paddingBottom: 9, borderBottom: "1px solid rgba(120,95,20,0.1)" }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55" }}>📋 {L.orderedLabel}</span>
-                  <span onClick={editOrder} style={{ fontSize: 13.5, color: "#c98a00", fontWeight: 800, padding: "5px 11px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
-                </div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 9, paddingBottom: 9, borderBottom: "1px solid rgba(120,95,20,0.1)" }}>📋 {L.orderedLabel}</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {lijst.map(({ d, n }) => (
                     <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, fontSize: 14.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e" }}>{d.emoji} {n}× {d.name}</span>
                   ))}
+                </div>
+                {/* Aanpassen hoort bij de lijst zelf: rechtsonder, na de drankjes. */}
+                <div style={{ textAlign: "right", marginTop: 10 }}>
+                  <span onClick={editOrder} style={{ fontSize: 13.5, color: "#c98a00", fontWeight: 800, padding: "6px 12px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
                 </div>
               </div>
             ) })()}
@@ -4752,6 +4752,12 @@ export default function PartyTest() {
             <div style={{ ...S.card }}>
               <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 11 }}>{L.roundCostFor(idx + 1)}</div>
 
+              {/* Bijleggen staat vlak boven de keuze, zodat je 't ziet vóór je kiest. */}
+              {(payVia === "pot" || potContribTotal > 0.005) && (
+                <div style={{ textAlign: "center", marginBottom: 8 }}>
+                  <span onClick={() => setShowPot(true)} style={{ fontSize: 13.5, fontWeight: 800, color: "#c98a00", cursor: "pointer", textDecoration: "underline" }}>{L.addToPot}</span>
+                </div>
+              )}
               {/* Bron: zelf betaald of uit de pot. */}
               <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
                 <button style={{ flex: 1, padding: "10px 6px", fontSize: 14.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
@@ -4763,13 +4769,6 @@ export default function PartyTest() {
                   color: payVia === "pot" ? "#fff" : "#8a7d55", border: "none" }}
                   onClick={() => { setPayVia("pot"); if (potAvail <= 0.005) { setNotice(L.potEmptyNote); setShowPot(true) } }}>🫙 {L.paidPot}{potAvail > 0.005 && <span style={{ fontWeight: 800, opacity: payVia === "pot" ? 1 : 0.75 }}> · {euro(potAvail)}</span>}</button>
               </div>
-              {/* Ook met geld in de pot wil je soms nog bijleggen — bijvoorbeeld als dit
-                  rondje er net niet uit kan. */}
-              {payVia === "pot" && (
-                <div style={{ textAlign: "center", marginTop: 6 }}>
-                  <span onClick={() => setShowPot(true)} style={{ fontSize: 13.5, fontWeight: 800, color: "#c98a00", cursor: "pointer", textDecoration: "underline" }}>{L.addToPot}</span>
-                </div>
-              )}
 
               {/* Bedrag-veld met ✓ én Overslaan samen op één rij. Het vinkje pulseert groen
                   (omrand) zodra er een bedrag staat = "tik om te bevestigen". */}
