@@ -3285,11 +3285,12 @@ export default function PartyTest() {
             <button style={{ ...S.btnP, flex: 2 }} onClick={saveEditPot}>{potDraftTotal > 0 ? L.addContrib(euro(potDraftTotal)) : L.removeContrib}</button>
           </div>
         ) : (
-          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-            <button style={{ ...S.btn, flex: 1 }} onClick={() => { setPotDraft({}); setPotPerMan(0); if (potRounds.length === 0) setShowPot(false); else setPotBuilderOpen(false) }}>✕ {L.cancel}</button>
-            <button style={{ ...S.btnP, flex: 2 }} onClick={saveQuickPot}>{potDraftTotal > 0
+          <div style={{ marginTop: 14 }}>
+            <button style={{ ...S.btnP, width: "100%" }} onClick={saveQuickPot}>{potDraftTotal > 0
               ? (!settle && potContribTotal > 0.005 ? L.setPotTo(euro(potRemaining + potDraftTotal)) : L.addContrib(euro(potDraftTotal)))
-              : "Klaar"}</button>
+              : L.ready}</button>
+            <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14, padding: "9px 6px", color: "#a89a6f" }}
+              onClick={() => { setPotDraft({}); setPotPerMan(0); if (potRounds.length === 0) setShowPot(false); else setPotBuilderOpen(false) }}>✕ {L.cancel}</button>
           </div>
         )}
         </>
@@ -3301,8 +3302,8 @@ export default function PartyTest() {
                 <span style={{ fontSize: 19, fontWeight: 800, color: "#1f8a4c" }}>{euro(potContribTotal)}</span>
               </div>
             )}
-            <button style={{ ...S.btnP, marginTop: 4 }} onClick={() => setPotBuilderOpen(true)}>{L.addPotContrib}</button>
-            <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={closePot}>{L.ready}</button>
+            <button style={{ ...S.btnP, width: "100%", marginTop: 4 }} onClick={closePot}>{L.ready}</button>
+            <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14, padding: "9px 6px" }} onClick={() => setPotBuilderOpen(true)}>{L.addPotContrib}</button>
           </div>
         )}
       </div>
@@ -4753,13 +4754,16 @@ export default function PartyTest() {
             {(() => { const laatste = rounds[idx]; const lijst = laatste ? drinksOf(laatste) : []; return lijst.length > 0 && (
               <div style={{ ...S.card, padding: "12px 14px", background: "#fffdf6" }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 9, paddingBottom: 9, borderBottom: "1px solid rgba(120,95,20,0.1)" }}>📋 {L.orderedLabel}</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                   {lijst.map(({ d, n }) => (
-                    <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, fontSize: 14.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e" }}>{d.emoji} {n}× {d.name}</span>
+                    <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "4px 0" }}>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{d.emoji} {d.name}</span>
+                      <span style={{ fontSize: 19, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
+                    </div>
                   ))}
                 </div>
                 {/* Aanpassen hoort bij de lijst zelf: rechtsonder, na de drankjes. */}
-                <div style={{ textAlign: "right", marginTop: 10 }}>
+                <div style={{ textAlign: "right", marginTop: 11, paddingTop: 9, borderTop: "1px solid rgba(120,95,20,0.1)" }}>
                   <span onClick={editOrder} style={{ fontSize: 13.5, color: "#c98a00", fontWeight: 800, padding: "6px 12px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
                 </div>
               </div>
@@ -4772,8 +4776,8 @@ export default function PartyTest() {
 
               {/* Bijleggen staat vlak boven de keuze, zodat je 't ziet vóór je kiest. */}
               {(payVia === "pot" || potContribTotal > 0.005) && (
-                <div style={{ textAlign: "center", marginBottom: 8 }}>
-                  <span onClick={() => setShowPot(true)} style={{ fontSize: 13.5, fontWeight: 800, color: "#c98a00", cursor: "pointer", textDecoration: "underline" }}>{L.addToPot}</span>
+                <div style={{ textAlign: "center", marginBottom: 5, lineHeight: 1.2 }}>
+                  <span onClick={() => setShowPot(true)} style={{ display: "inline-block", fontSize: 13, fontWeight: 800, color: "#c98a00", cursor: "pointer", textDecoration: "underline" }}>{L.addToPot}</span>
                 </div>
               )}
               {/* Bron: zelf betaald of uit de pot. */}
