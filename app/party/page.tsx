@@ -5312,9 +5312,6 @@ export default function PartyTest() {
                   <div style={{ ...S.row, justifyContent: "space-between" }}>
                     <div style={{ ...S.row, gap: 8 }}>
                       <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.roundSummary(nr, items)}</span>
-                      {nr === rounds.length && (
-                        <span onClick={(e) => { e.stopPropagation(); editOrder() }} style={{ fontSize: 15, color: "#a89a6f", fontWeight: 800, cursor: "pointer" }}>✏️</span>
-                      )}
                     </div>
                     <div style={{ ...S.row, gap: 10 }}>
                       <span style={{ fontSize: 15.5, fontWeight: 800, color: (r.amount || 0) > 0 ? "#c98a00" : "#c4b896" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "€ —"}</span>
@@ -5329,19 +5326,39 @@ export default function PartyTest() {
                       : <span style={{ color: "#b3a988" }}> · {L.noPotUsed}</span>}
                   </div>
                 </div>
-                {open && (
+                {open && (() => {
+                  const idx = rounds.indexOf(r)
+                  return (
                   <div style={{ padding: "4px 14px 14px" }}>
+                    {/* Aantallen hier meteen bijstellen — het rondje blijft afgerond. */}
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       {drinksOf(r).map(({ d, n }) => (
                         <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "3px 0" }}>
                           <span style={{ fontSize: 15.5, fontWeight: 700 }}>{d.emoji} {d.name}</span>
-                          <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
+                            <button style={{ width: 30, height: 30, borderRadius: 8, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 16, color: "#8a7d55", fontWeight: 800, cursor: "pointer" }}
+                              onClick={(e) => { e.stopPropagation(); rBumpAnon(idx, d.id, -1) }}>−</button>
+                            <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00", minWidth: 28, textAlign: "center" }}>{n}×</span>
+                            <button style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 16, color: "#fff", fontWeight: 800, cursor: "pointer" }}
+                              onClick={(e) => { e.stopPropagation(); rBumpAnon(idx, d.id, 1) }}>+</button>
+                          </span>
                         </div>
                       ))}
                     </div>
+                    {/* Betaald bedrag, ook hier direct aanpasbaar. */}
+                    <div style={{ ...S.row, justifyContent: "space-between", marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>💶 {L.paidLabel}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>€</span>
+                        <input onClick={(e) => e.stopPropagation()} type="text" inputMode="decimal" placeholder="0,00"
+                          value={(r.amount || 0) > 0 ? String(r.amount).replace(".", ",") : ""}
+                          onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }}
+                          style={{ ...S.input, width: 92, padding: "8px 10px", fontSize: 16, fontWeight: 800, color: "#c88a1a", textAlign: "right" }} />
+                      </div>
+                    </div>
                     {/* Het aantal personen komt uit het aantal drankjes, maar je kan het
                         hier bijstellen als er iemand meedronk zonder te bestellen. */}
-                    <div style={{ ...S.row, justifyContent: "space-between", marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
+                    <div style={{ ...S.row, justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
                       <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>👤 {L.peopleInRound}</span>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <button style={{ width: 32, height: 32, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: (r.headcount || 1) > 1 ? 1 : 0.4 }}
@@ -5352,7 +5369,8 @@ export default function PartyTest() {
                       </div>
                     </div>
                   </div>
-                )}
+                  )
+                })()}
               </div>
             )
           })}
