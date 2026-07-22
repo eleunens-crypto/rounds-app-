@@ -4113,23 +4113,6 @@ export default function PartyTest() {
           </div>
           <input disabled={hasSettled} value={groupName} onChange={(e) => setGroupName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : "#fdfaf2", color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
         </div>
-        {/* Snelle rondjes: aantal aanwezigen. Wijzigen geldt vanaf het volgende rondje —
-            eerdere rondjes houden hun eigen aantal. Corrigeren per rondje kan in het overzicht. */}
-        {!settle && (
-        <div style={{ ...S.card, marginBottom: 10 }}>
-          <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <span style={{ fontSize: 15.5, fontWeight: 800 }}>👤 {L.howManyPeople}</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <button style={{ ...S.step, opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
-              <span style={{ fontSize: 19, fontWeight: 800, minWidth: 22, textAlign: "center", color: headcount < 1 ? "#c4b896" : undefined }}>{headcount < 1 ? "—" : headcount}</span>
-              <button style={{ ...S.step, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={() => setHeadcount((n) => n < 1 ? 1 : n + 1)}>+</button>
-            </div>
-          </div>
-          {rounds.length > 0 && (
-            <div style={{ fontSize: 13.5, color: "#8a7d55", marginTop: 9, lineHeight: 1.5 }}>{L.headcountForward}</div>
-          )}
-        </div>
-        )}
         {settle && !fromOnboarding && (
         <div style={{ ...S.card, marginBottom: 10 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: people.length > 0 ? 10 : 0 }}>
@@ -5023,6 +5006,7 @@ export default function PartyTest() {
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header />
+        {showPot && renderPotModal()}
         {renderDialogs()}
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.quickSettleTitle}</h3>
@@ -5170,6 +5154,7 @@ export default function PartyTest() {
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header />
+        {showPot && renderPotModal()}
         {renderDialogs()}
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6, gap: 8 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.roundsOverviewTitle}</h3>
