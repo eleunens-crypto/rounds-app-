@@ -1518,11 +1518,19 @@ export default function PartyTest() {
   const resumeRound = () => { if (blockIfUnpaid()) return; setActiveCat(catsPresent[0]); setView("order") }
   const unfinishedRound = roundItems > 0 && rounds.length < roundNr
   // Snelle rondjes kennen geen betalers: daar telt een rondje als afgehandeld zodra er
-  // een bedrag op staat. Bij Fair Split moet er ook iemand betaald hebben (of de pot).
+  // een bedrag op staat én je dat bewust bevestigde of oversloeg. Enkel een bedrag
+  // intikken volstaat dus niet — anders kan je halverwege wegwandelen.
   const roundIsPaid = (r: Round) => settle
     ? (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))
     : (r.amount || 0) > 0.005
-  const unpaidIdx = () => rounds.findIndex((r) => !roundIsPaid(r))
+  // Het laatste rondje van een snelle avond is pas "klaar" na bevestigen of overslaan.
+  const laatsteRondjeKlaar = () => settle || lastRoundHandled || rounds.length === 0
+  const unpaidIdx = () => {
+    const i = rounds.findIndex((r) => !roundIsPaid(r))
+    if (i >= 0) return i
+    // Alles heeft een bedrag, maar het laatste is nog niet bevestigd? Dan blijft dat open.
+    return laatsteRondjeKlaar() ? -1 : rounds.length - 1
+  }
   const paidCount = rounds.filter(roundIsPaid).length
   const blockIfUnpaid = () => { const i = unpaidIdx(); if (i < 0) return false; setNotice(L.roundUnpaid(i + 1)); if (settle) setView("confirmed"); else setView("roundsOverview"); return true }
   const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon, drinks]) // eslint-disable-line
@@ -5248,9 +5256,11 @@ export default function PartyTest() {
 
         <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
           <button style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 15.5, fontWeight: 800 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
-          <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 15.5 }} onClick={nextRound}>{L.newRound}</button>
+          {laatsteRondjeKlaar() && (
+            <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 15.5 }} onClick={nextRound}>{L.newRound}</button>
+          )}
         </div>
-        {rounds.length > 0 && (
+        {rounds.length > 0 && laatsteRondjeKlaar() && (
           <button style={{ width: "100%", marginTop: 8, border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 14, padding: "12px 6px", fontSize: 15, fontWeight: 800, cursor: "pointer" }} onClick={repeatRound}>{L.repeatRound}</button>
         )}
       </div></div>
