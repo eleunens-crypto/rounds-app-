@@ -646,6 +646,7 @@ const T = {
     fairAddPerson: "+ Persoon toevoegen",
     fairSetupDone: "Klaar — nu toewijzen",
     roundsOverviewTitle: "🧾 Rondjesoverzicht",
+    peopleInRound: "personen in dit rondje",
     expandAll: "alles open",
     collapseAll: "alles dicht",
     newRoundBtn: "Nieuw rondje",
@@ -1075,6 +1076,7 @@ const T = {
     fairAddPerson: "+ Ajouter une personne",
     fairSetupDone: "Termin\u00e9 — attribuer",
     roundsOverviewTitle: "🧾 Aper\u00e7u des tourn\u00e9es",
+    peopleInRound: "personnes dans cette tourn\u00e9e",
     expandAll: "tout ouvrir",
     collapseAll: "tout fermer",
     newRoundBtn: "Nouvelle tourn\u00e9e",
@@ -1501,10 +1503,14 @@ export default function PartyTest() {
   const roundItems = useMemo(() => drinks.reduce((s, d) => s + drinkTotal(d.id), 0), [cart, cartAnon, drinks]) // eslint-disable-line
   const resumeRound = () => { if (blockIfUnpaid()) return; setActiveCat(catsPresent[0]); setView("order") }
   const unfinishedRound = roundItems > 0 && rounds.length < roundNr
-  const roundIsPaid = (r: Round) => (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))
+  // Snelle rondjes kennen geen betalers: daar telt een rondje als afgehandeld zodra er
+  // een bedrag op staat. Bij Fair Split moet er ook iemand betaald hebben (of de pot).
+  const roundIsPaid = (r: Round) => settle
+    ? (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))
+    : (r.amount || 0) > 0.005
   const unpaidIdx = () => rounds.findIndex((r) => !roundIsPaid(r))
   const paidCount = rounds.filter(roundIsPaid).length
-  const blockIfUnpaid = () => { if (!settle) return false; const i = unpaidIdx(); if (i < 0) return false; setNotice(L.roundUnpaid(i + 1)); setView("confirmed"); return true }
+  const blockIfUnpaid = () => { const i = unpaidIdx(); if (i < 0) return false; setNotice(L.roundUnpaid(i + 1)); if (settle) setView("confirmed"); else setView("roundsOverview"); return true }
   const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon, drinks]) // eslint-disable-line
   const pickedUpOf = (pid: string) => drinks.reduce((a, d) => a + (d.cup ? aQty(d.id, pid) : 0), 0)
 
@@ -1922,12 +1928,19 @@ export default function PartyTest() {
 
   // ── Groep aanmaken (admin) ──────────────────────────────────────────────────
   const createGroup = async (fallbackNaam?: string, wilSettle: boolean = true) => {
-    const naam = groupName.trim()
-    if (!naam) { setNotice(L.nameGroupFirst); return }
-    // Geen tweede open groep met dezelfde naam (hoofdletter-ongevoelig). Afgesloten
-    // groepen met die naam blokkeren niet — dan mag je 'm hergebruiken.
-    const dubbel = savedGroups.find((g) => !g.finalized && g.name.trim().toLowerCase() === naam.toLowerCase())
-    if (dubbel) { setNotice(L.dupGroupName(naam)); return }
+    // Geen naam meer nodig bij de start: leeg laten valt terug op "Rondje + datum".
+    // De naam blijft achteraf aanpasbaar via ⚙️ Groep.
+    const getypt = groupName.trim() || fallbackNaam?.trim() || ""
+    let naam = getypt || L.autoName()
+    // Zelf getypt en al in gebruik? Dan waarschuwen. Automatisch gekozen? Dan tellen we
+    // gewoon door (Rondje 20 juli 2, 3 …) zodat je nooit vastloopt op de startknop.
+    if (getypt) {
+      const dubbel = savedGroups.find((g) => !g.finalized && g.name.trim().toLowerCase() === naam.toLowerCase())
+      if (dubbel) { setNotice(L.dupGroupName(naam)); return }
+    } else {
+      const bestaat = (n: string) => savedGroups.some((g) => !g.finalized && g.name.trim().toLowerCase() === n.toLowerCase())
+      if (bestaat(naam)) { let i = 2; while (bestaat(`${naam} ${i}`)) i++; naam = `${naam} ${i}` }
+    }
     if (busy) return
     setBusy(true)
     // Botsende codes zijn zeldzaam, maar niet onmogelijk (unique index vangt ze).
@@ -2534,6 +2547,15 @@ export default function PartyTest() {
     })
   }
 
+  // Het aantal personen van één rondje bijstellen. De app leidt dit af uit het aantal
+  // drankjes, maar soms nam iemand twee glazen of dronk er iemand niets mee.
+  const setRoundHeadcount = async (roundId: string, n: number) => {
+    const val = Math.max(1, n)
+    setRounds((cur) => cur.map((r) => r.id === roundId ? { ...r, headcount: val } : r))
+    const { error } = await supabase.from("party_rounds").update({ headcount: val }).eq("id", roundId)
+    if (error) setNotice("Aanpassen mislukt: " + error.message)
+  }
+
   const applyBeginChoices = () => {
     if (bpSettle === null) return
     setOnboardedOnce(true)
@@ -2620,7 +2642,12 @@ export default function PartyTest() {
       // Bevries WIE er nu in de groep zit: dit zijn de deelnemers aan dit rondje.
       // Vanaf hier telt een latere nieuwkomer niet meer mee voor dit rondje.
       const leden = people.map((p) => p.id)
-      supabase.from("party_rounds").update({ status: nieuweStatus, gave_back: effGb, members: leden, headcount, ...(settle ? {} : { closed_at: new Date().toISOString() }) }).eq("id", openRoundId)
+      // Snelle rondjes: het aantal personen leiden we af uit het aantal drankjes —
+      // 3 drankjes betekent dat er 3 mensen meededen. Achteraf nog aanpasbaar in het
+      // rondjesoverzicht. Bij Fair Split blijft de ingestelde groepsgrootte gelden.
+      const drankjesNu = drinks.reduce((s, d) => s + drinkTotal(d.id), 0)
+      const effHeadcount = settle ? headcount : Math.max(1, drankjesNu || headcount || 1)
+      supabase.from("party_rounds").update({ status: nieuweStatus, gave_back: effGb, members: leden, headcount: effHeadcount, ...(settle ? {} : { closed_at: new Date().toISOString() }) }).eq("id", openRoundId)
         .then(({ error }) => { if (error) setNotice("Rondje bevestigen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
       setOpenRoundId(null)
     }
@@ -3303,10 +3330,8 @@ export default function PartyTest() {
       {groupName.trim() && (
         <div style={{ textAlign: "center", marginTop: 9 }}>
           <div style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2 }}>{groupName.trim()}</div>
-          {settle ? (
+          {settle && (
             <div style={{ fontSize: 14, fontWeight: 700, color: "#8a7d55", marginTop: 2 }}>👥 {people.length}</div>
-          ) : (
-            <div onClick={() => setShowPeoplePop(true)} style={{ fontSize: 14.5, fontWeight: 700, color: "#8a7d55", marginTop: 3, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 12px", borderRadius: 14, background: "#faf4e4" }}>👤 {headcount < 1 ? "—" : headcount} {L.people} · {L.adjust} ›</div>
           )}
         </div>
       )}
@@ -4631,7 +4656,6 @@ export default function PartyTest() {
                 bezig bent. De flow zelf is voor elk rondje identiek. */}
             <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9 }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 16.5, fontWeight: 800, color: "#8a5e0f", background: "linear-gradient(135deg,#fdf3dc,#fae9c2)", border: "1.5px solid rgba(240,165,0,0.45)", borderRadius: 18, padding: "7px 16px" }}>🍻 {L.roundWord} {idx + 1}</span>
-              <span onClick={() => setShowPeoplePop(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14.5, fontWeight: 800, color: "#8a5e0f", background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 16, padding: "5px 12px", cursor: "pointer" }}>👤 {headcount < 1 ? "—" : headcount} · {L.adjust} ›</span>
             </div>
             {/* Drankjes van dit net-bevestigde rondje, met de aanpas-knop erin verwerkt. */}
             {(() => { const laatste = rounds[idx]; const lijst = laatste ? drinksOf(laatste) : []; return lijst.length > 0 && (
@@ -5164,6 +5188,18 @@ export default function PartyTest() {
                           <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
                         </div>
                       ))}
+                    </div>
+                    {/* Het aantal personen komt uit het aantal drankjes, maar je kan het
+                        hier bijstellen als er iemand meedronk zonder te bestellen. */}
+                    <div style={{ ...S.row, justifyContent: "space-between", marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>👤 {L.peopleInRound}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <button style={{ width: 32, height: 32, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: (r.headcount || 1) > 1 ? 1 : 0.4 }}
+                          onClick={(e) => { e.stopPropagation(); setRoundHeadcount(r.id, Math.max(1, (r.headcount || 1) - 1)) }}>−</button>
+                        <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#4a3f1e" }}>{r.headcount || 1}</span>
+                        <button style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
+                          onClick={(e) => { e.stopPropagation(); setRoundHeadcount(r.id, (r.headcount || 1) + 1) }}>+</button>
+                      </div>
                     </div>
                   </div>
                 )}
