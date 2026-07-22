@@ -599,6 +599,11 @@ const T = {
     thisRoundLabel: "Dit rondje",
     paidLabel: "Betaald",
     adjustWord: "Aanpassen",
+    notSavedYet: "niet opgeslagen",
+    saveWord: "Opslaan",
+    potTopUp: "Pot bijvullen",
+    emptyWord: "leeg",
+    potEmptyFillFirst: "De pot is leeg — vul eerst bij om hieruit te betalen.",
     editRoundHead: (n: number) => `Rondje ${n} aanpassen`,
     paidWithQ: "Waarmee betaald?",
     paidNote: (v: string) => `Betaald ${v}`,
@@ -1047,6 +1052,11 @@ const T = {
     thisRoundLabel: "Cette tourn\u00e9e",
     paidLabel: "Pay\u00e9",
     adjustWord: "Modifier",
+    notSavedYet: "non enregistr\u00e9",
+    saveWord: "Enregistrer",
+    potTopUp: "Compl\u00e9ter la cagnotte",
+    emptyWord: "vide",
+    potEmptyFillFirst: "La cagnotte est vide \u2014 compl\u00e8te-la d\u2019abord pour payer avec.",
     editRoundHead: (n: number) => `Modifier la tourn\u00e9e ${n}`,
     paidWithQ: "Pay\u00e9 avec quoi ?",
     paidNote: (v: string) => `Pay\u00e9 ${v}`,
@@ -1254,6 +1264,31 @@ export default function PartyTest() {
   // Welk afgerond rondje staat in bewerkmodus? Buiten die modus is het overzicht
   // gewoon leesbaar, zodat je niets per ongeluk verandert.
   const [editRoundId, setEditRoundId] = useState<string | null>(null)
+  // Wijzigingen houden we eerst hier bij; pas op "Opslaan" gaan ze naar de rekening.
+  const [editDraft, setEditDraft] = useState<{ drinks: Record<string, number>; amount: number; headcount: number; usePot: boolean } | null>(null)
+  const startEditRound = (r: Round) => {
+    const d: Record<string, number> = {}
+    drinksOf(r).forEach(({ d: dr, n }) => { d[dr.id] = n })
+    setEditDraft({ drinks: d, amount: r.amount || 0, headcount: Math.max(1, r.headcount || 1), usePot: (r.potPart || 0) > 0.005 })
+    setEditRoundId(r.id)
+  }
+  const cancelEditRound = () => { setEditDraft(null); setEditRoundId(null) }
+  // Alles in één keer wegschrijven: aantallen als verschil, bedrag, personen en bron.
+  const saveEditRound = async (r: Round) => {
+    if (!editDraft) { cancelEditRound(); return }
+    const idx = rounds.indexOf(r)
+    const huidig: Record<string, number> = {}
+    drinksOf(r).forEach(({ d, n }) => { huidig[d.id] = n })
+    Object.entries(editDraft.drinks).forEach(([did, n]) => {
+      const delta = (n || 0) - (huidig[did] || 0)
+      if (delta !== 0) rBumpAnon(idx, did, delta)
+    })
+    if (Math.abs((r.amount || 0) - editDraft.amount) > 0.001) qSetAmount(idx, editDraft.amount)
+    if (Math.max(1, r.headcount || 1) !== editDraft.headcount) await setRoundHeadcount(r.id, editDraft.headcount)
+    const nuPot = (r.potPart || 0) > 0.005
+    if (nuPot !== editDraft.usePot) rTogglePot(idx)
+    cancelEditRound()
+  }
   const [potIsCard, setPotIsCard] = useState(false)
   const [cardValue, setCardValue] = useState("")
   const [cardPayers, setCardPayers] = useState<string[]>([])
@@ -5324,14 +5359,15 @@ export default function PartyTest() {
                     </div>
                     <div style={{ ...S.row, gap: 9, flexShrink: 0 }}>
                       {editRoundId === r.id ? (
-                        <span onClick={(e) => { e.stopPropagation(); setEditRoundId(null) }}
-                          style={{ fontSize: 13, fontWeight: 800, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", border: "none", borderRadius: 14, padding: "7px 14px", cursor: "pointer", whiteSpace: "nowrap" }}>✓ {L.ready}</span>
+                        <span style={{ fontSize: 12.5, fontWeight: 800, color: "#c0554a", background: "rgba(224,104,92,0.12)", borderRadius: 12, padding: "4px 10px", whiteSpace: "nowrap" }}>{L.notSavedYet}</span>
                       ) : (
-                        <span onClick={(e) => { e.stopPropagation(); setEditRoundId(r.id); setOpenRounds((prev) => new Set(prev).add(r.id)) }}
-                          style={{ fontSize: 13, fontWeight: 800, color: "#c98a00", background: "#faf4e4", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 14, padding: "6px 12px", cursor: "pointer", whiteSpace: "nowrap" }}>✏️ {L.adjustWord}</span>
+                        <>
+                          <span onClick={(e) => { e.stopPropagation(); startEditRound(r); setOpenRounds((prev) => new Set(prev).add(r.id)) }}
+                            style={{ fontSize: 13, fontWeight: 800, color: "#c98a00", background: "#faf4e4", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 14, padding: "6px 12px", cursor: "pointer", whiteSpace: "nowrap" }}>✏️ {L.adjustWord}</span>
+                          <span style={{ fontSize: 15.5, fontWeight: 800, color: (r.amount || 0) > 0 ? "#c98a00" : "#c4b896" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "€ —"}</span>
+                          <span style={{ fontSize: 15, color: "#8a7d55", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
+                        </>
                       )}
-                      <span style={{ fontSize: 15.5, fontWeight: 800, color: (r.amount || 0) > 0 ? "#c98a00" : "#c4b896" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "€ —"}</span>
-                      <span style={{ fontSize: 15, color: "#8a7d55", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
                     </div>
                   </div>
                   {/* Betaald-melding net onder de titel — leesbaar, geen invulveld meer. */}
@@ -5344,37 +5380,42 @@ export default function PartyTest() {
                 </div>
                 {open && (() => {
                   const idx = rounds.indexOf(r)
-                  const bewerk = editRoundId === r.id
-                  const uitPot = (r.potPart || 0) > 0.005
+                  const bewerk = editRoundId === r.id && editDraft !== null
+                  const dr = editDraft
+                  const uitPot = bewerk && dr ? dr.usePot : (r.potPart || 0) > 0.005
+                  const potLeeg = potRemaining <= 0.005
                   return (
                   <div style={{ padding: "4px 14px 14px" }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      {drinksOf(r).map(({ d, n }) => (
+                      {drinksOf(r).map(({ d, n }) => {
+                        const val = bewerk && dr ? (dr.drinks[d.id] ?? n) : n
+                        return (
                         <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "3px 0" }}>
                           <span style={{ fontSize: 15.5, fontWeight: 700 }}>{d.emoji} {d.name}</span>
                           {bewerk ? (
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
                               <button style={{ width: 30, height: 30, borderRadius: 8, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 16, color: "#8a7d55", fontWeight: 800, cursor: "pointer" }}
-                                onClick={(e) => { e.stopPropagation(); rBumpAnon(idx, d.id, -1) }}>−</button>
-                              <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00", minWidth: 28, textAlign: "center" }}>{n}×</span>
+                                onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, drinks: { ...c.drinks, [d.id]: Math.max(0, (c.drinks[d.id] ?? n) - 1) } } : c) }}>−</button>
+                              <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00", minWidth: 28, textAlign: "center" }}>{val}×</span>
                               <button style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 16, color: "#fff", fontWeight: 800, cursor: "pointer" }}
-                                onClick={(e) => { e.stopPropagation(); rBumpAnon(idx, d.id, 1) }}>+</button>
+                                onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, drinks: { ...c.drinks, [d.id]: (c.drinks[d.id] ?? n) + 1 } } : c) }}>+</button>
                             </span>
                           ) : (
                             <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
                           )}
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
 
                     <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
                       <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>💶 {L.paidLabel}</span>
-                      {bewerk ? (
+                      {bewerk && dr ? (
                         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>€</span>
                           <input onClick={(e) => e.stopPropagation()} type="text" inputMode="decimal" placeholder="0,00"
-                            value={(r.amount || 0) > 0 ? String(r.amount).replace(".", ",") : ""}
-                            onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }}
+                            value={dr.amount > 0 ? String(dr.amount).replace(".", ",") : ""}
+                            onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); setEditDraft((c) => c ? { ...c, amount: parseFloat(v) || 0 } : c) }}
                             style={{ ...S.input, width: 92, padding: "8px 10px", fontSize: 16, fontWeight: 800, color: "#c88a1a", textAlign: "right" }} />
                         </span>
                       ) : (
@@ -5384,13 +5425,13 @@ export default function PartyTest() {
 
                     <div style={{ ...S.row, justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
                       <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>👤 {L.peopleInRound}</span>
-                      {bewerk ? (
+                      {bewerk && dr ? (
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <button style={{ width: 32, height: 32, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: (r.headcount || 1) > 1 ? 1 : 0.4 }}
-                            onClick={(e) => { e.stopPropagation(); setRoundHeadcount(r.id, Math.max(1, (r.headcount || 1) - 1)) }}>−</button>
-                          <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#4a3f1e" }}>{r.headcount || 1}</span>
+                          <button style={{ width: 32, height: 32, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: dr.headcount > 1 ? 1 : 0.4 }}
+                            onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: Math.max(1, c.headcount - 1) } : c) }}>−</button>
+                          <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#4a3f1e" }}>{dr.headcount}</span>
                           <button style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
-                            onClick={(e) => { e.stopPropagation(); setRoundHeadcount(r.id, (r.headcount || 1) + 1) }}>+</button>
+                            onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: c.headcount + 1 } : c) }}>+</button>
                         </div>
                       ) : (
                         <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{r.headcount || 1}</span>
@@ -5399,15 +5440,19 @@ export default function PartyTest() {
 
                     {/* Waarmee betaald? Ook achteraf nog te corrigeren. */}
                     <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
-                      {bewerk ? (
+                      {bewerk && dr ? (
                         <>
-                          <div style={{ fontSize: 13.5, color: "#8a7d55", fontWeight: 800, marginBottom: 6 }}>🫙 {L.paidWithQ}</div>
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <button onClick={(e) => { e.stopPropagation(); if (uitPot) rTogglePot(idx) }}
-                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 13.5, fontWeight: 800, border: "none", cursor: "pointer", background: !uitPot ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f7f1e2", color: !uitPot ? "#fff" : "#8a7d55" }}>💶 {L.paidSelf}</button>
-                            <button onClick={(e) => { e.stopPropagation(); if (!uitPot) rTogglePot(idx) }}
-                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 13.5, fontWeight: 800, border: "none", cursor: "pointer", background: uitPot ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#f7f1e2", color: uitPot ? "#fff" : "#8a7d55" }}>🫙 {L.paidPot}</button>
+                          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+                            <span style={{ fontSize: 13.5, color: "#8a7d55", fontWeight: 800 }}>🫙 {L.paidWithQ}</span>
+                            <span onClick={(e) => { e.stopPropagation(); setShowPot(true) }} style={{ fontSize: 13, fontWeight: 800, color: "#c98a00", textDecoration: "underline", cursor: "pointer" }}>{L.potTopUp}</span>
                           </div>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, usePot: false } : c) }}
+                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 13.5, fontWeight: 800, border: "none", cursor: "pointer", background: !uitPot ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f7f1e2", color: !uitPot ? "#fff" : "#8a7d55" }}>💶 {L.paidSelf}</button>
+                            <button onClick={(e) => { e.stopPropagation(); if (!potLeeg) setEditDraft((c) => c ? { ...c, usePot: true } : c) }}
+                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 13.5, fontWeight: 800, border: "none", cursor: potLeeg ? "not-allowed" : "pointer", opacity: potLeeg ? 0.5 : 1, background: uitPot ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#f7f1e2", color: uitPot ? "#fff" : "#8a7d55" }}>🫙 {L.paidPot}{potLeeg ? ` · ${L.emptyWord}` : ""}</button>
+                          </div>
+                          {potLeeg && <div style={{ fontSize: 12.5, color: "#c0554a", fontWeight: 700, marginTop: 6 }}>{L.potEmptyFillFirst}</div>}
                         </>
                       ) : (
                         <div style={{ ...S.row, justifyContent: "space-between" }}>
@@ -5416,6 +5461,14 @@ export default function PartyTest() {
                         </div>
                       )}
                     </div>
+
+                    {bewerk && (
+                      <div style={{ marginTop: 14 }}>
+                        <button style={{ ...S.btnP, width: "100%" }} onClick={(e) => { e.stopPropagation(); saveEditRound(r) }}>💾 {L.saveWord}</button>
+                        <button style={{ width: "100%", marginTop: 8, padding: "9px 0", background: "none", border: "none", fontSize: 14, fontWeight: 700, color: "#a89a6f", cursor: "pointer" }}
+                          onClick={(e) => { e.stopPropagation(); cancelEditRound() }}>✕ {L.cancel}</button>
+                      </div>
+                    )}
                   </div>
                   )
                 })()}
