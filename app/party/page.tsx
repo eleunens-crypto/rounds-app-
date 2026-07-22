@@ -2113,7 +2113,7 @@ export default function PartyTest() {
     setPotDraft({}); setPotPerMan(0); setEveryoneChoice(null); setEveryoneDraft("")
     setPotBuilderOpen(false)
     await loadParty(groupId)
-    setToast(L.potAdded(euro(totaal)))
+    setNotice(L.potAdded(euro(totaal)))
   }
   const closePot = () => {
     const added = (editPotId === null && potDraftTotal > 0.001) ? potDraftTotal : 0
