@@ -595,6 +595,7 @@ const T = {
     costTotalLabel: "Totaal",
     roundCostOptional: "Hoeveel betaald voor dit rondje?",
     roundCostFor: (n: number) => `Hoeveel betaald voor rondje ${n}?`,
+    withHowManyQ: "Met hoeveel personen was dit rondje?",
     orderedLabel: "Besteld",
     thisRoundLabel: "Dit rondje",
     paidLabel: "Betaald",
@@ -648,6 +649,11 @@ const T = {
     notAssignedYet: (n: number) => `${n} drankje${n === 1 ? "" : "s"} nog niet toegewezen.`,
     yourTreat: "jouw traktatie",
     eachPaysNote: "Ieder betaalt",
+    headcountVaried: "Niet elk rondje had hetzelfde aantal personen:",
+    splitOver: "Verdelen over",
+    showPerRound: "Liever exact per rondje verdelen",
+    backToOneAmount: "\u2190 Terug naar \u00e9\u00e9n bedrag",
+    perRoundTitle: "Per rondje verdeeld",
     notEveryoneAllRounds: "Niet iedereen deed elk rondje mee, dus het verschilt per persoon:",
     fromStart: "van bij het begin",
     fromRound: (n: number) => `vanaf rondje ${n}`,
@@ -1045,6 +1051,7 @@ const T = {
     costTotalLabel: "Total",
     roundCostOptional: "Combien pay\u00e9 pour cette tourn\u00e9e ?",
     roundCostFor: (n: number) => `Combien pay\u00e9 pour la tourn\u00e9e ${n} ?`,
+    withHowManyQ: "\u00c0 combien \u00e9tiez-vous pour cette tourn\u00e9e ?",
     orderedLabel: "Command\u00e9",
     thisRoundLabel: "Cette tourn\u00e9e",
     paidLabel: "Pay\u00e9",
@@ -1098,6 +1105,11 @@ const T = {
     notAssignedYet: (n: number) => `${n} boisson${n === 1 ? "" : "s"} pas encore attribu\u00e9e${n === 1 ? "" : "s"}.`,
     yourTreat: "ta tourn\u00e9e offerte",
     eachPaysNote: "Chacun paie",
+    headcountVaried: "Toutes les tourn\u00e9es n\u2019avaient pas le m\u00eame nombre de personnes :",
+    splitOver: "R\u00e9partir sur",
+    showPerRound: "Plut\u00f4t r\u00e9partir par tourn\u00e9e",
+    backToOneAmount: "\u2190 Retour \u00e0 un seul montant",
+    perRoundTitle: "R\u00e9parti par tourn\u00e9e",
     notEveryoneAllRounds: "Tout le monde n\u2019a pas particip\u00e9 \u00e0 chaque tourn\u00e9e, donc \u00e7a varie :",
     fromStart: "depuis le d\u00e9but",
     fromRound: (n: number) => `\u00e0 partir de la tourn\u00e9e ${n}`,
@@ -1179,6 +1191,10 @@ export default function PartyTest() {
   // Afreken-scherm snelle rondjes: verdelen over de groep, of alles op één iemand. En
   // welke rondjes getrakteerd zijn (tellen niet mee in de verdeling — komen op de tracteur).
   const [settleMode, setSettleMode] = useState<"verdelen" | "allesZelf">("verdelen")
+  // Over hoeveel personen verdeelt het afrekenscherm? Leeg = het hoogste aantal dat in
+  // een rondje voorkwam; de beheerder kan het bijstellen.
+  const [splitPeople, setSplitPeople] = useState<number | null>(null)
+  const [showPerRound, setShowPerRound] = useState(false)
   const [treatedRounds, setTreatedRounds] = useState<Set<string>>(new Set())
   // Kleine pop-up om het aantal personen aan te passen (vanaf het afreken-scherm van een rondje).
   const [showPeoplePop, setShowPeoplePop] = useState(false)
@@ -3208,7 +3224,6 @@ export default function PartyTest() {
                     <span style={{ fontSize: 14, color: "#c98a00", fontWeight: 800 }}>{L.beingEdited}</span>
                   ) : (settle ? rounds.length === 0 : potSpent < 0.005) ? (
                     <div style={{ ...S.row, gap: 8 }}>
-                      <span style={{ fontSize: 15, color: "#8a5e0f", cursor: "pointer", fontWeight: 700 }} onClick={() => editPotRound(r.id)}>✏️</span>
                       <span style={{ fontSize: 15, color: "#c0554a", cursor: "pointer", fontWeight: 700 }} onClick={() => removePotRound(r.id, `${i + 1}e inleg`)}>🗑️</span>
                     </div>
                   ) : (
@@ -4831,11 +4846,10 @@ export default function PartyTest() {
             {/* Hoeveel betaald voor dit rondje. Kies eerst de bron (zelf/pot), vul één
                 bedrag in, en bevestig met ✓ (of sla over). Beide sluiten het rondje af. */}
             <div style={{ ...S.card }}>
-              <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 9 }}>{L.roundCostFor(idx + 1)}</div>
-
               {/* Aantal personen staat er gewoon bij: geen vraag, maar wel zichtbaar zodat
                   een verandering meteen opvalt in plaats van pas bij het afrekenen. */}
-              <div style={{ ...S.row, justifyContent: "space-between", background: "#faf4e4", borderRadius: 10, padding: "8px 12px", marginBottom: 11 }}>
+              <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>{L.withHowManyQ}</div>
+              <div style={{ ...S.row, justifyContent: "space-between", background: "#faf4e4", borderRadius: 10, padding: "8px 12px", marginBottom: 13 }}>
                 <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>👤 {r?.headcount || 1} {L.people}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <button style={{ width: 30, height: 30, borderRadius: 8, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", fontSize: 16, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: (r?.headcount || 1) > 1 ? 1 : 0.4 }}
@@ -4856,6 +4870,7 @@ export default function PartyTest() {
                 </div>
               )}
               {/* Bron: zelf betaald of uit de pot. */}
+              <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>{L.roundCostFor(idx + 1)}</div>
               <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
                 <button style={{ flex: 1, padding: "10px 6px", fontSize: 14.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
                   background: payVia === "self" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f7f1e2",
@@ -5177,36 +5192,63 @@ export default function PartyTest() {
         {!alles ? (
           <>
 
-            {/* Resultaat. Was de groep de hele avond gelijk, dan volstaat één bedrag.
-                Schoof er iemand later aan (of ging er iemand weg), dan is er geen enkel
-                bedrag meer dat voor iedereen klopt — dan tonen we het per groep. */}
-            {gelijkVoorIedereen ? (
-              <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)", textAlign: "center" }}>
-                <div style={{ fontSize: 14.5, color: "#4a6b57", marginBottom: 3 }}>{L.eachPaysNote}</div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: "#1f8a4c" }}>{euro(perPersoon)}</div>
-                {traktatieTot > 0.005 && (
-                  <div style={{ fontSize: 14, color: "#8a5e0f", fontWeight: 700, marginTop: 7 }}>🎁 {L.plusTreat(euro(traktatieTot))}</div>
-                )}
-              </div>
-            ) : (
-              <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
-                <div style={{ fontSize: 14.5, color: "#4a6b57", marginBottom: 3 }}>{L.eachPaysNote}</div>
-                <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.45 }}>{L.notEveryoneAllRounds}</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  {groepenMetDeel.map((g, i) => (
-                    <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "10px 12px", background: "#fff", borderRadius: 10 }}>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e" }}>
-                        {g.count}× {g.from === 0 && g.until === null ? L.fromStart : g.until === null ? L.fromRound(g.from + 1) : g.from === 0 ? L.untilRound(g.until + 1) : L.roundsRange(g.from + 1, g.until + 1)}
-                      </span>
-                      <span style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c" }}>{euro(g.deel)}</span>
+            {/* Eén bedrag, verdeeld over een aantal dat jij bepaalt. Wisselde het aantal
+                per rondje, dan melden we dat maar houden we het bedrag simpel. */}
+            {(() => {
+              const aantallen = betaalde.map((r) => Math.max(1, r.headcount || 1))
+              const wisselde = new Set(aantallen).size > 1
+              const deelAantal = Math.max(1, splitPeople ?? (aantallen.length ? Math.max(...aantallen) : 1))
+              const teVerdelenTot = teVerdelen.reduce((s, r) => s + (r.amount || 0), 0)
+              return (
+                <>
+                  {wisselde && (
+                    <div style={{ background: "rgba(240,165,0,0.1)", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 10, padding: "10px 12px", marginBottom: 11 }}>
+                      <div style={{ fontSize: 13.5, color: "#8a5e0f", fontWeight: 800, marginBottom: 4 }}>\u26a0\ufe0f {L.headcountVaried}</div>
+                      <div style={{ fontSize: 13, color: "#8a5e0f", lineHeight: 1.6 }}>
+                        {betaalde.map((r, i) => `${L.roundWord} ${rounds.indexOf(r) + 1}: ${Math.max(1, r.headcount || 1)} ${L.people}`).join("  \u00b7  ")}
+                      </div>
                     </div>
-                  ))}
-                </div>
-                {traktatieTot > 0.005 && (
-                  <div style={{ fontSize: 14, color: "#8a5e0f", fontWeight: 700, marginTop: 9, textAlign: "center" }}>🎁 {L.plusTreat(euro(traktatieTot))}</div>
-                )}
-              </div>
-            )}
+                  )}
+                  <div style={{ ...S.row, justifyContent: "space-between", background: "#faf4e4", borderRadius: 10, padding: "10px 13px", marginBottom: 12 }}>
+                    <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>{L.splitOver} \ud83d\udc64 {deelAantal} {L.people}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <button style={{ width: 32, height: 32, borderRadius: 9, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: deelAantal > 1 ? 1 : 0.4 }}
+                        onClick={() => setSplitPeople(Math.max(1, deelAantal - 1))}>\u2212</button>
+                      <button style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
+                        onClick={() => setSplitPeople(deelAantal + 1)}>+</button>
+                    </div>
+                  </div>
+                  <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)", textAlign: "center" }}>
+                    <div style={{ fontSize: 14.5, color: "#4a6b57", marginBottom: 3 }}>{L.eachPaysNote}</div>
+                    <div style={{ fontSize: 30, fontWeight: 800, color: "#1f8a4c" }}>{euro(teVerdelenTot / deelAantal)}</div>
+                    {traktatieTot > 0.005 && (
+                      <div style={{ fontSize: 14, color: "#8a5e0f", fontWeight: 700, marginTop: 7 }}>\ud83c\udf81 {L.plusTreat(euro(traktatieTot))}</div>
+                    )}
+                  </div>
+                  <div style={{ textAlign: "center", marginTop: 10 }}>
+                    <span onClick={() => setShowPerRound((v) => !v)} style={{ fontSize: 13.5, fontWeight: 800, color: "#c98a00", textDecoration: "underline", cursor: "pointer" }}>
+                      {showPerRound ? L.backToOneAmount : L.showPerRound}
+                    </span>
+                  </div>
+                  {showPerRound && (
+                    <div style={{ ...S.card, marginTop: 10 }}>
+                      <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 9 }}>{L.perRoundTitle}</div>
+                      {betaalde.map((r) => {
+                        const nr = rounds.indexOf(r) + 1
+                        const h = Math.max(1, r.headcount || 1)
+                        const getr = treatedRounds.has(r.id)
+                        return (
+                          <div key={r.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid rgba(120,95,20,0.08)", fontSize: 14.5 }}>
+                            <span>{L.roundWord} {nr} \u00b7 \ud83d\udc64 {h}</span>
+                            <span style={{ fontWeight: 800 }}>{getr ? `\ud83c\udf81 ${L.yourTreat}` : `${euro(r.amount || 0)} \u2192 ${euro((r.amount || 0) / h)} p.p.`}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </>
+              )
+            })()}
 
             {betaalde.length > 0 && (
               <div style={{ ...S.card }}>
