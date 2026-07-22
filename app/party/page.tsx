@@ -3302,8 +3302,8 @@ export default function PartyTest() {
                 <span style={{ fontSize: 19, fontWeight: 800, color: "#1f8a4c" }}>{euro(potContribTotal)}</span>
               </div>
             )}
-            <button style={{ ...S.btnP, width: "100%", marginTop: 4 }} onClick={closePot}>{L.ready}</button>
-            <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14, padding: "9px 6px" }} onClick={() => setPotBuilderOpen(true)}>{L.addPotContrib}</button>
+            <button style={{ ...S.btnP, width: "100%", marginTop: 4 }} onClick={() => setPotBuilderOpen(true)}>{L.addPotContrib}</button>
+            <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14, padding: "9px 6px" }} onClick={closePot}>{L.ready}</button>
           </div>
         )}
       </div>
