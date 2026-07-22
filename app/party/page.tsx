@@ -3396,9 +3396,9 @@ export default function PartyTest() {
               <div style={{ flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 800, borderRadius: 10, textAlign: "center", background: "#faf4e4", color: "#8a5e0f", border: "1px solid rgba(240,165,0,0.35)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{L.roundWord} {roundNr}</div>
             ) : (
               <button style={{ flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 700, borderRadius: 10, cursor: "pointer",
-                border: view === "quickSettle" ? "none" : "1px solid rgba(31,138,76,0.4)",
-                background: view === "quickSettle" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#fff",
-                color: view === "quickSettle" ? "#fff" : "#1f8a4c" }}
+                border: view === "quickSettle" ? "none" : "1px solid rgba(120,95,20,0.25)",
+                background: view === "quickSettle" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff",
+                color: view === "quickSettle" ? "#fff" : "#8a7d55" }}
                 onClick={goQuickSettle}>{L.quickSettleTitle}</button>
             )
           )}
@@ -5174,15 +5174,6 @@ export default function PartyTest() {
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6, gap: 8 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.roundsOverviewTitle}</h3>
           <div style={{ display: "flex", gap: 7, flexShrink: 0 }}>
-            {rounds.length > 0 && (() => {
-              const allesOpen = openRounds.size >= rounds.length
-              return (
-                <button style={{ ...S.btn, fontSize: 14, fontWeight: 800, padding: "8px 13px", background: "#fff", border: "1px solid rgba(240,165,0,0.55)", color: "#c98a00" }}
-                  onClick={() => setOpenRounds(allesOpen ? new Set<string>() : new Set(rounds.map((r) => r.id)))}>
-                  {allesOpen ? `▴ ${L.hideDetails}` : `▾ ${L.showDetails}`}
-                </button>
-              )
-            })()}
             {settle && <button style={{ ...S.btn, fontSize: 14, fontWeight: 700, padding: "7px 12px" }} onClick={() => { if (overviewBackTo === "order") { setActiveCat(catsPresent[0]); setView("order") } else setView("hub") }}>← {L.back}</button>}
           </div>
         </div>
@@ -5195,8 +5186,29 @@ export default function PartyTest() {
           </div>
         </div>
 
-        {/* Elk rondje, nieuwste bovenaan. Klik de kop om open/dicht te klappen. */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {/* Elk rondje, nieuwste bovenaan. Klik de kop om open/dicht te klappen.
+            De toon/verberg-pil hangt half over de rand, boven én onder. */}
+        <div style={{ position: "relative" }}>
+          {rounds.length > 0 && (() => {
+            const allesOpen = openRounds.size >= rounds.length
+            const pil = {
+              display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 12.5, fontWeight: 800,
+              cursor: "pointer", background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a7d55",
+              boxShadow: "0 2px 6px rgba(120,95,20,0.14)", whiteSpace: "nowrap" as const,
+            }
+            const klik = () => setOpenRounds(allesOpen ? new Set<string>() : new Set(rounds.map((r) => r.id)))
+            return (
+              <>
+                <div style={{ position: "absolute", left: "50%", top: -13, transform: "translateX(-50%)", zIndex: 2 }}>
+                  <span onClick={klik} style={pil}>{allesOpen ? `▴ ${L.hideDetails}` : `▾ ${L.showDetails}`}</span>
+                </div>
+                <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", zIndex: 2 }}>
+                  <span onClick={klik} style={pil}>{allesOpen ? `▴ ${L.hideDetails}` : `▾ ${L.showDetails}`}</span>
+                </div>
+              </>
+            )
+          })()}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: rounds.length > 0 ? 14 : 0, paddingBottom: rounds.length > 0 ? 14 : 0 }}>
           {rounds.slice().reverse().map((r) => {
             const nr = rounds.indexOf(r) + 1
             const items = drinksOf(r).reduce((a, x) => a + x.n, 0)
@@ -5251,21 +5263,10 @@ export default function PartyTest() {
               </div>
             )
           })}
+          </div>
         </div>
 
-        {rounds.length > 0 && (() => {
-          const allesOpen = openRounds.size >= rounds.length
-          return (
-            <div style={{ textAlign: "center", marginTop: 10 }}>
-              <button style={{ ...S.btn, fontSize: 14, fontWeight: 800, padding: "9px 16px", background: "#fff", border: "1px solid rgba(240,165,0,0.55)", color: "#c98a00" }}
-                onClick={() => setOpenRounds(allesOpen ? new Set<string>() : new Set(rounds.map((r) => r.id)))}>
-                {allesOpen ? `▴ ${L.hideDetails}` : `▾ ${L.showDetails}`}
-              </button>
-            </div>
-          )
-        })()}
-
-        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
           <button style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 15.5, fontWeight: 800 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
           {laatsteRondjeKlaar() && (
             <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 15.5 }} onClick={nextRound}>{L.newRound}</button>
