@@ -846,7 +846,7 @@ const T = {
     unassignedHubWhy: "Sans nom, elles sont partagées également — pas équitable. Attribue-les pour que chacun paie ce qu'il a bu.",
     unassignedHubBtn: "Attribuer",
     assignAllBtn: "Tout attribuer d\u2019un coup",
-    assignFirstNote: "Attribue d\u2019abord toutes les boissons. Ensuite tu peux continuer.",,
+    assignFirstNote: "Attribue d\u2019abord toutes les boissons. Ensuite tu peux continuer.",
     assignPerRoundBtn: "Attribuer par tourn\u00e9e",
     assignTitle: "Attribuer",
     roundXofY: (a: number, b: number) => `Tourn\u00e9e ${a} sur ${b}`,
