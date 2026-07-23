@@ -2,7 +2,7 @@
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RUNDO PARTY — TESTPAGINA v7
-// - Betaling bevestigen -> rondjes-hub (overzicht) -> nieuw rondje / afrekenen/
+// - Betaling bevestigen -> rondjes-hub (overzicht) -> nieuw rondje / afrekenen
 // - Bewerken (toewijzen + bekers) in het overzicht; app herberekent automatisch
 // - Home-knop op elk scherm (geen reset); coin-prijzen zichtbaar/aanpasbaar
 // Richtprijzen blijven ONZICHTBAAR bij bestellen. Volledig lokaal. app/party-test/page.tsx
@@ -81,9 +81,9 @@ const DATA: [Cat, string, number][] = [
 // Alles hierbuiten blijft gewoon bestaan in DATA en verschijnt zodra fullList aan staat.
 const FAVS = new Set([
   // Bier
-  "Pintje", "Duvel",
+  "Pintje", "Duvel", "Kriek", "Cornet",
   // AV-bier
-  "Jupiler 0.0", "Carlsberg 0.0", "Sportzot",
+  "Jupiler 0.0", "Carlsberg 0.0", "Sportzot", "Cornet 0.0",
   // Frisdrank
   "Coca-Cola", "Coca-Cola Zero", "Coca-Cola Light", "Fanta", "Schweppes Tonic", "Water plat", "Water bruis",
   // Wijn
@@ -306,7 +306,7 @@ const T = {
     nothingThisRound: "jij had niets in dit rondje",
 
     addOwnDrink: "⭐ Eigen drankje",
-    newDrinkTile: "Nieuw drankje",
+    newDrinkTile: "Eigen drankje?",
 
     // ── start & setup
     tagline: "Rondjes en splitten zonder gedoe!",
@@ -324,6 +324,17 @@ const T = {
     groupNamePh: "Typ je groepsnaam",
     starting: "Bezig…",
     savedGroups: "Opgeslagen groepen",
+    modeFairShort: "Fair Split",
+    modeQuickShort: "Snelle rondjes",
+    pinOn: "Vastzetten",
+    pinOff: "Losmaken",
+    maxPins: (n: number) => `Je kan maximaal ${n} groepen vastzetten. Maak er eerst een los.`,
+    showAllGroups: "Toon alle groepen",
+    showLessGroups: "Toon er minder",
+    cleanupNote: "Afgesloten groepen verdwijnen na een maand. Vastgezette groepen blijven.",
+    stalePins: (n: number) => `${n} vastgezette ${n === 1 ? "groep is" : "groepen zijn"} al lang niet gebruikt`,
+    stalePinsWhy: "Losmaken? Dan worden ze na een maand opgeruimd, net als de andere afgesloten groepen.",
+    stalePinsKeep: "Houden",
     asGuest: "als gast",
     groupsOpen: "Open",
     groupsClosed: "Afgesloten",
@@ -548,9 +559,10 @@ const T = {
     addBtn: "Toevoegen",
     remaining: (n: number, max: number) => `Nog ${n} van je ${max} eigen drankjes over`,
     addedByYou: "Door jou toegevoegd",
+    removeHint: "Verwijder wat je niet meer nodig hebt. Al besteld in een rondje? Dan blijft het staan.",
     nameYourDrink: "Geef je drankje een naam.",
     needPrice: "Vul een richtprijs in — anders kan Fair Split dit drankje niet eerlijk verdelen.",
-    needAmountOrCancel: "Vul het betaalde bedrag in, of tik Annuleren om de wijziging ongedaan te maken.",
+    needAmountOrCancel: "Uit de pot betalen kan niet zonder bedrag. Vul een bedrag in, of kies Zelf betaald.",
     alreadyExists: (n: string) => `"${n}" staat al in de lijst.`,
     maxPerPerson: (n: number) => `Je kan maximaal ${n} eigen drankjes toevoegen.`,
     maxPerGroup: (n: number) => `De groep zit aan het maximum van ${n} eigen drankjes.`,
@@ -655,9 +667,18 @@ const T = {
     back: "Terug",
     quickSettleTitle: "🧾 Afrekenen",
     quickTotalLabel: "Totaal van alle rondjes",
+    andWord: "en",
+    roundsNoAmountNamed: (lijst: string) => `Rondje ${lijst} zonder bedrag`,
+    roundsNoAmountCount: (n: number) => `${n} rondjes zonder bedrag`,
+    roundsNoAmountWhy: "Die tellen niet mee in de verdeling hieronder. Vul ze aan of laat ze zo.",
+    fillAmountsBtn: "Bedragen aanvullen ›",
+    noAmountBadge: "zonder bedrag",
+    addAmountBtn: "€ Bedrag toevoegen",
     splitOverGroup: "Verdelen",
     splitEqually: "Gelijk verdelen",
-    fairSplitExplain: "Bij Fair Split hangt elk drankje aan een naam. Wie meer dronk, betaalt meer \u2014 en wie niets nam, betaalt niets.\n\nJe wijst per rondje toe wie wat nam. Let op: overstappen wist wat je tot nu toe noteerde.",
+    splitWithFair: "Verdeel met Fair Split",
+    backToEqual: "← Terug naar gelijk verdelen",
+    fairSplitExplain: "Liever eerlijk betalen volgens wat iedereen dronk (Fair Split!) Wijs drankjes en betalers hier toe.",
     payAllSelf: "Alles zelf",
     treatHint: "Rondje trakteren? Tik hieronder aan (telt dan niet mee in de verdeling)",
     roundWord: "Rondje",
@@ -689,6 +710,7 @@ const T = {
     switchToFairBtn: "⚖️ Overschakelen naar Fair Split",
     fairSetupTitle: "⚖️ Wie was erbij?",
     fairSetupIntro: "Voeg de mensen toe. Tik een naam of laat 'm staan (Gast N). Daarna wijs je toe wie wat dronk.",
+    guestNamePh: "tik om naam te wijzigen",
     fairAddPerson: "+ Persoon toevoegen",
     fairSetupDone: "Klaar — nu toewijzen",
     roundsOverviewTitle: "🧾 Rondjesoverzicht",
@@ -781,7 +803,7 @@ const T = {
     nothingThisRound: "tu n'avais rien dans cette tournée",
 
     addOwnDrink: "⭐ Boisson perso",
-    newDrinkTile: "Nouvelle boisson",
+    newDrinkTile: "Boisson perso ?",
 
     // ── start & setup
     tagline: "Les tournées et le partage, sans prise de tête !",
@@ -799,6 +821,17 @@ const T = {
     groupNamePh: "Tape le nom de ton groupe",
     starting: "En cours…",
     savedGroups: "Groupes enregistrés",
+    modeFairShort: "Fair Split",
+    modeQuickShort: "Tournées rapides",
+    pinOn: "Épingler",
+    pinOff: "Détacher",
+    maxPins: (n: number) => `Tu peux épingler ${n} groupes au maximum. Détaches-en un d'abord.`,
+    showAllGroups: "Voir tous les groupes",
+    showLessGroups: "Voir moins",
+    cleanupNote: "Les groupes clôturés disparaissent après un mois. Les groupes épinglés restent.",
+    stalePins: (n: number) => `${n} groupe${n === 1 ? "" : "s"} épinglé${n === 1 ? "" : "s"} depuis longtemps inutilisé${n === 1 ? "" : "s"}`,
+    stalePinsWhy: "Les détacher ? Ils seront alors supprimés après un mois, comme les autres groupes clôturés.",
+    stalePinsKeep: "Garder",
     asGuest: "en tant qu'invit\u00e9",
     groupsOpen: "Ouvert",
     groupsClosed: "Cl\u00f4tur\u00e9",
@@ -1023,9 +1056,10 @@ const T = {
     addBtn: "Ajouter",
     remaining: (n: number, max: number) => `Encore ${n} de tes ${max} boissons personnalisées`,
     addedByYou: "Ajouté par toi",
+    removeHint: "Supprime ce dont tu n'as plus besoin. Déjà commandé dans une tournée ? Alors ça reste.",
     nameYourDrink: "Donne un nom à ta boisson.",
     needPrice: "Entre un prix indicatif — sinon le Fair Split ne peut pas répartir cette boisson.",
-    needAmountOrCancel: "Indique le montant payé, ou touche Annuler pour abandonner la modification.",
+    needAmountOrCancel: "Payer avec la cagnotte sans montant, ça ne va pas. Indique un montant, ou choisis Payé soi-même.",
     alreadyExists: (n: string) => `« ${n} » est déjà dans la liste.`,
     maxPerPerson: (n: number) => `Tu peux ajouter maximum ${n} boissons personnalisées.`,
     maxPerGroup: (n: number) => `Le groupe a atteint le maximum de ${n} boissons personnalisées.`,
@@ -1130,9 +1164,18 @@ const T = {
     back: "Retour",
     quickSettleTitle: "🧾 R\u00e9gler",
     quickTotalLabel: "Total de toutes les tourn\u00e9es",
+    andWord: "et",
+    roundsNoAmountNamed: (lijst: string) => `Tournée ${lijst} sans montant`,
+    roundsNoAmountCount: (n: number) => `${n} tournées sans montant`,
+    roundsNoAmountWhy: "Elles ne comptent pas dans le partage ci-dessous. Complète-les ou laisse-les.",
+    fillAmountsBtn: "Compléter les montants ›",
+    noAmountBadge: "sans montant",
+    addAmountBtn: "€ Ajouter le montant",
     splitOverGroup: "Partager",
     splitEqually: "R\u00e9partir \u00e9galement",
-    fairSplitExplain: "Avec Fair Split, chaque boisson est li\u00e9e \u00e0 un nom. Qui a bu plus paie plus \u2014 qui n\u2019a rien pris ne paie rien.\n\nTu attribues par tourn\u00e9e qui a pris quoi. Attention : changer efface ce que tu as not\u00e9.",
+    splitWithFair: "Partager avec Fair Split",
+    backToEqual: "← Retour au partage égal",
+    fairSplitExplain: "Tu préfères payer selon ce que chacun a bu (Fair Split !) Attribue ici les boissons et les payeurs.",
     payAllSelf: "Tout payer",
     treatHint: "Tu offres une tourn\u00e9e ? Touche-la ci-dessous (elle ne compte pas dans le partage)",
     roundWord: "Tourn\u00e9e",
@@ -1164,6 +1207,7 @@ const T = {
     switchToFairBtn: "⚖️ Passer au Fair Split",
     fairSetupTitle: "⚖️ Qui \u00e9tait l\u00e0 ?",
     fairSetupIntro: "Ajoute les personnes. Tape un nom ou laisse-le (Invit\u00e9 N). Ensuite tu attribues qui a bu quoi.",
+    guestNamePh: "touche pour renommer",
     fairAddPerson: "+ Ajouter une personne",
     fairSetupDone: "Termin\u00e9 — attribuer",
     roundsOverviewTitle: "🧾 Aper\u00e7u des tourn\u00e9es",
@@ -1255,8 +1299,20 @@ export default function PartyTest() {
   const [busy, setBusy] = useState(false)        // groep aanmaken / plaats claimen
   // Opgeslagen groepen: alle groepen waar dit toestel bij hoort (zelf gemaakt of via
   // QR aan deelgenomen). Getoond op het startscherm zodat je kan terugkeren.
-  type SavedGroup = { id: string; name: string; last_active: string; finalized: boolean; owned: boolean }
+  type SavedGroup = { id: string; name: string; last_active: string; finalized: boolean; owned: boolean; settle: boolean; pinned: boolean }
+  // Opruimbeleid. Een groep die een dag stilligt sluit zichzelf af; een afgesloten groep
+  // verdwijnt na een maand, tenzij hij vastgezet is. Vastgezet blijft vastgezet — een pin
+  // die na verloop van tijd toch wist, is geen pin maar uitstel. Wel suggereren we opruimen
+  // wanneer de gebruiker er is, want een waarschuwing die niemand ziet beschermt niemand.
+  const DAG = 86400000
+  const AUTO_SLUIT = DAG
+  const AUTO_WIS = 30 * DAG
+  const PIN_STIL = 180 * DAG
+  const MAX_PINS = 5
+  const GROEPEN_ZICHTBAAR = 5
   const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
+  const [showAllGroups, setShowAllGroups] = useState(false)
+  const [stalePins, setStalePins] = useState<SavedGroup[]>([])
   const isAdmin = !!ownerDevice && ownerDevice === me.current
   // Mijn eigen plaats: die waarop dit toestel zit. Nodig zodra gasten hun eigen
   // drankjes aantikken (blok 3).
@@ -1268,7 +1324,7 @@ export default function PartyTest() {
   const drinks: Drink[] = useMemo(() => [
     ...DEMO_DRINKS,
     ...customDrinks.map((c) => ({
-      id: c.key, name: c.name, emoji: "⭐", cat: "Eigen", price: Number(c.price),
+      id: c.key, name: c.name, emoji: "⭐", cat: "Eigen" as Cat, price: Number(c.price),
       cup: !!c.cup, fav: true, coins: Number(c.coins), custom: true, by: c.by,
     })),
   ].map((d) => (coinPrices[d.id] !== undefined ? { ...d, coins: coinPrices[d.id] } : d)),
@@ -1326,10 +1382,10 @@ export default function PartyTest() {
   // Alles in één keer wegschrijven: aantallen als verschil, bedrag, personen en bron.
   const saveEditRound = async (r: Round) => {
     if (!editDraft) { cancelEditRound(); return }
-    // Zonder bedrag heeft "waarmee betaald" geen betekenis: er zou nul uit de pot gaan
-    // terwijl het rondje wél als uit-de-pot-betaald wordt weggeschreven. Eerst een bedrag,
-    // of annuleren. Vóór alle bumps, zodat er nog niets is weggeschreven.
-    if ((editDraft.amount || 0) <= 0.005) { setNotice(L.needAmountOrCancel); return }
+    // Uit de pot betalen zonder bedrag kan niet: er zou nul uit de pot gaan terwijl het
+    // rondje wél als betaald geldt. Een bedrag wissen mag wél — dan valt het rondje
+    // terug op "geen bedrag ingevuld", wat een geldige toestand is.
+    if (editDraft.usePot && (editDraft.amount || 0) <= 0.005) { setNotice(L.needAmountOrCancel); return }
     const idx = rounds.indexOf(r)
     const huidig: Record<string, number> = {}
     drinksOf(r).forEach(({ d, n }) => { huidig[d.id] = n })
@@ -1376,6 +1432,16 @@ export default function PartyTest() {
   const [coinCat, setCoinCat] = useState<Cat>("Bier")
   const [coinFull, setCoinFull] = useState(false)
   const [fullList, setFullList] = useState(false)
+  // De groepsnaam is in de header zelf aanpasbaar — niet via een omweg naar de instellingen.
+  const [editName, setEditName] = useState(false)
+  // Kwam je via "Bedragen aanvullen"? Dan krijgen de lege rondjes een tint en een knop.
+  // Anders blijft het overzicht rustig en volstaat een label.
+  const [fillMode, setFillMode] = useState(false)
+  // Tik op de Fair Split-tab: eerst uitleggen wat er gebeurt, dan pas overstappen.
+  const [fairIntro, setFairIntro] = useState(false)
+  // Kwam je vanuit de gelijke verdeling? Dan bieden we onderweg een weg terug.
+  const [fromQuick, setFromQuick] = useState(false)
+  useEffect(() => { if (view !== "roundsOverview") setFillMode(false) }, [view])
   // Pijltjes bij de categorierij: ze tonen dat er links of rechts nog meer staat,
   // want een halve pil aan de rand leest als een afsnijfout en niet als een uitnodiging.
   const catScroll = useRef<HTMLDivElement | null>(null)
@@ -1967,29 +2033,63 @@ export default function PartyTest() {
   const loadSavedGroups = useCallback(async () => {
     const dev = me.current
     const [eigen, gast] = await Promise.all([
-      supabase.from("party_groups").select("id,name,last_active,finalized,owner_id").eq("owner_id", dev),
+      supabase.from("party_groups").select("id,name,last_active,finalized,owner_id,settle,pinned").eq("owner_id", dev),
       supabase.from("party_people").select("group_id").eq("claimed_by", dev),
     ])
     const map = new Map<string, SavedGroup>()
     for (const g of eigen.data ?? []) {
-      map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: true })
+      map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: true, settle: g.settle !== false, pinned: !!g.pinned })
     }
     // Gast-groepen die nog niet als eigen bekend zijn, apart ophalen voor hun details.
     const gastIds = [...new Set((gast.data ?? []).map((r) => r.group_id as string))].filter((id) => !map.has(id))
     if (gastIds.length > 0) {
-      const { data: extra } = await supabase.from("party_groups").select("id,name,last_active,finalized").in("id", gastIds)
+      const { data: extra } = await supabase.from("party_groups").select("id,name,last_active,finalized,settle,pinned").in("id", gastIds)
       for (const g of extra ?? []) {
-        map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: false })
+        map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: false, settle: g.settle !== false, pinned: !!g.pinned })
       }
     }
-    const lijst = [...map.values()].sort((a, b) => (b.last_active || "").localeCompare(a.last_active || ""))
-    if (mounted.current) setSavedGroups(lijst)
+    const lijst = [...map.values()].sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+      return (b.last_active || "").localeCompare(a.last_active || "")
+    })
+
+    const nu = Date.now()
+    const tijd = (iso: string) => { const d = new Date(iso).getTime(); return isNaN(d) ? nu : d }
+
+    // Stilgevallen groepen sluiten zichzelf af, zodat de lijst "Open" kort blijft.
+    const sluiten = lijst.filter((g) => g.owned && !g.finalized && nu - tijd(g.last_active) > AUTO_SLUIT)
+    if (sluiten.length > 0) {
+      await supabase.from("party_groups").update({ finalized: true }).in("id", sluiten.map((g) => g.id))
+      sluiten.forEach((g) => { g.finalized = true })
+    }
+
+    // Afgesloten, niet vastgezet en een maand oud: weg. Enkel je eigen groepen.
+    const wissen = lijst.filter((g) => g.owned && g.finalized && !g.pinned && nu - tijd(g.last_active) > AUTO_WIS)
+    if (wissen.length > 0) {
+      await supabase.from("party_groups").delete().in("id", wissen.map((g) => g.id))
+    }
+    const over = lijst.filter((g) => !wissen.some((w) => w.id === g.id))
+
+    // Vastgezet maar een half jaar niet aangeraakt: voorstellen, niet beslissen.
+    const stil = over.filter((g) => g.owned && g.pinned && nu - tijd(g.last_active) > PIN_STIL)
+
+    if (mounted.current) { setSavedGroups(over); setStalePins(stil) }
   }, [])
 
   // Bij het openen (als je op het startscherm bent) de opgeslagen groepen laden.
   useEffect(() => {
     if (!booting && view === "start") loadSavedGroups()
   }, [booting, view, loadSavedGroups])
+
+  // Vastzetten beschermt tegen het automatische opruimen. Maximaal vijf, zodat de pin
+  // een keuze blijft en niet stilaan de hele lijst omvat.
+  const togglePin = async (g: SavedGroup) => {
+    if (!g.pinned && savedGroups.filter((x) => x.pinned).length >= MAX_PINS) { setNotice(L.maxPins(MAX_PINS)); return }
+    const { error } = await supabase.from("party_groups").update({ pinned: !g.pinned }).eq("id", g.id)
+    if (error) { setNotice("Vastzetten mislukt: " + error.message); return }
+    setSavedGroups((prev) => prev.map((x) => x.id === g.id ? { ...x, pinned: !x.pinned } : x))
+    setStalePins((prev) => prev.filter((x) => x.id !== g.id))
+  }
 
   // Een opgeslagen groep heropenen vanaf het startscherm.
   const openSavedGroup = async (id: string) => {
@@ -2270,7 +2370,12 @@ export default function PartyTest() {
     supabase.from("party_pot").delete().eq("id", id).then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
     setPotRounds((rs) => rs.filter((r) => r.id !== id)); setConfirmDlg(null)
   } })
-  const catsPresent = CATS.filter((c) => c === "Eigen" || drinks.some((d) => d.cat === c))
+  // Zodra er een eigen drankje bestaat, springt ⭐ Eigen vooraan — dat is dan de
+  // categorie die je zelf hebt aangemaakt en dus het eerst zoekt. Zolang ze leeg is,
+  // blijft ze achteraan staan en duwt ze de gewone lijst niet opzij.
+  const heeftEigen = drinks.some((d) => d.cat === "Eigen")
+  const catOrde: Cat[] = heeftEigen ? ["Eigen", ...CATS.filter((c) => c !== "Eigen")] : CATS
+  const catsPresent = catOrde.filter((c) => c === "Eigen" || drinks.some((d) => d.cat === c))
   const bump1 = (did: string) => bumpAnon(did, 1)
   // Een drankje in één tik volledig uit de lopende bestelling halen — zowel de nog niet
   // toegewezen exemplaren als die al aan iemand hingen.
@@ -2510,8 +2615,11 @@ export default function PartyTest() {
           <div style={{ fontSize: 13, color: "#8a7d55", marginBottom: 6, lineHeight: 1.4 }}>
             {L.priceHint}
           </div>
-          <input value={ndPrice} onChange={(e) => setNdPrice(e.target.value)} inputMode="decimal" placeholder="4,50"
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 16, marginBottom: 12 }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 19, fontWeight: 700, color: "#8a7d55", flexShrink: 0 }}>€</span>
+            <input value={ndPrice} onChange={(e) => setNdPrice(e.target.value)} inputMode="decimal" placeholder="4,50"
+              style={{ ...S.input, flex: 1, minWidth: 0, boxSizing: "border-box", fontSize: 16, textAlign: "left" }} />
+          </div>
 
 
           <button style={{ ...S.btnP, width: "100%", opacity: ndName.trim() && ndPrice ? 1 : 0.5 }} onClick={addCustomDrink}>
@@ -2523,13 +2631,16 @@ export default function PartyTest() {
 
           {mijne.length > 0 && (
             <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
-              <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 8 }}>{L.addedByYou}</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 3 }}>{L.addedByYou}</div>
+              <div style={{ fontSize: 13, color: "#8a7d55", marginBottom: 9, lineHeight: 1.45 }}>{L.removeHint}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {mijne.map((c) => (
-                  <button key={c.key} onClick={() => removeCustomDrink(c.key, c.name)}
-                    style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)" }}>
-                    ⭐ {c.name} ✕
-                  </button>
+                  <div key={c.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 11px", borderRadius: 10, background: "#faf7ec", border: "1px solid rgba(120,95,20,0.12)" }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>⭐ {c.name}</span>
+                    <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700, flexShrink: 0 }}>{euro(Number(c.price))}</span>
+                    <button onClick={() => removeCustomDrink(c.key, c.name)} aria-label={L.removeWord}
+                      style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 9, background: "#fff", border: "1px solid rgba(224,104,92,0.4)", color: "#c0554a", fontSize: 16, cursor: "pointer" }}>🗑️</button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -2692,20 +2803,23 @@ export default function PartyTest() {
   // Gewoon rondjes → afrekenen. Altijd bereikbaar. Zonder bedragen valt er niets te
   // verdelen: dan een melding met een duw naar het rondjesoverzicht.
   const goQuickSettle = () => {
-    if (paidCount === 0 && rounds.length === 0) { setNotice(L.nothingToSettle); return }
-    if (totalCost <= 0.005) {
-      setConfirmDlg({
-        msg: L.noAmountsYet,
-        yes: L.fillAmountsNow,
-        onYes: () => { setConfirmDlg(null); setView("roundsOverview") },
-        no: L.later,
-      })
-      return
-    }
+    // Geen enkel rondje? Dan valt er niets te verdelen. Wél rondjes maar (nog) geen
+    // bedragen? Dan gewoon doorlaten: het afrekenscherm zegt zelf welke rondjes leeg
+    // zijn en biedt de knop om ze aan te vullen. Een pop-up ervoor is een drempel die
+    // hetzelfde vertelt, maar zonder de knop.
+    if (rounds.length === 0) { setNotice(L.nothingToSettle); return }
     setView("quickSettle")
   }
   // Van niveau 1 naar Fair Split: eerst snel personen + namen, daarna toewijzen.
-  const goToFairSplit = () => { setView("fairSetup") }
+  const goToFairSplit = () => { setFromQuick(true); setView("fairSetup") }
+  // Terug naar de gelijke verdeling: de modus omzetten en de rondjes ongemoeid laten.
+  const backToEqualSplit = () => {
+    setSettle(false)
+    persistSettings({ settle: false })
+    setFromQuick(false)
+    setFairIntro(false)
+    setView("quickSettle")
+  }
   const confirmFairSetup = async () => {
     if (people.length === 0) { setNotice(L.addPersonFirst); return }
     setSettle(true)
@@ -3532,12 +3646,23 @@ export default function PartyTest() {
           is het aantal klikbaar naar de instellingen. */}
       {groupName.trim() && (
         <div style={{ textAlign: "center", marginTop: 9 }}>
-          {/* De naam is aanpasbaar: potlood + omkadering maken dat zichtbaar. */}
-          <div onClick={() => setView("settings")} style={{ display: "inline-flex", alignItems: "center", gap: 7, cursor: "pointer", padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px dashed rgba(240,165,0,0.55)" }}>
-            <span style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2 }}>{groupName.trim()}</span>
-            <span style={{ fontSize: 13 }}>✏️</span>
-          </div>
-          <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 3 }}>{L.tapToRename}</div>
+          {/* De naam is aanpasbaar: potlood + omkadering maken dat zichtbaar. Op het
+              instellingenscherm staat het naamveld al open, dus daar geen tweede ingang. */}
+          {editName && !onboarding ? (
+            <input autoFocus value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              onBlur={() => { setEditName(false); persistSettings() }}
+              onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
+              style={{ ...S.input, width: "auto", minWidth: 180, maxWidth: "88%", textAlign: "center", fontSize: 17, fontWeight: 800, padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.8)" }} />
+          ) : (
+            <div onClick={() => { if (!onboarding) setEditName(true) }} style={{ display: "inline-flex", alignItems: "center", gap: 7, cursor: onboarding ? "default" : "pointer", padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px dashed rgba(240,165,0,0.55)" }}>
+              <span style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2 }}>{groupName.trim()}</span>
+              {!onboarding && <span style={{ fontSize: 13 }}>✏️</span>}
+            </div>
+          )}
+          {!onboarding && (
+            <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 3 }}>{L.tapToRename}</div>
+          )}
           {settle && (
             <div style={{ fontSize: 14, fontWeight: 700, color: "#8a7d55", marginTop: 2 }}>👥 {people.length}</div>
           )}
@@ -3960,8 +4085,8 @@ export default function PartyTest() {
           </div>
         </div>
 
-        <div style={{ ...S.card, padding: "18px 16px" }}>
-          <div style={{ textAlign: "center", fontSize: 16, fontWeight: 800, color: "#8a7d55", marginBottom: 12 }}>{L.chooseHow}</div>
+        <div style={{ ...S.card, padding: "22px 18px" }}>
+          <div style={{ textAlign: "center", fontSize: 19, fontWeight: 800, color: "#6b5f3a", marginBottom: 16 }}>{L.chooseHow}</div>
 
           <div>
             {/* Elke keuze is één blok: de rij én z’n voorbeeld zitten binnen dezelfde
@@ -3969,80 +4094,80 @@ export default function PartyTest() {
             <div style={{ borderRadius: 12, overflow: "hidden", opacity: bpSettle === true ? 0.6 : 1,
                           border: bpSettle === false ? "2.5px solid #1f8a4c" : "2px solid rgba(120,95,20,0.16)" }}>
               <button onClick={() => setBpSettle(false)}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 11, textAlign: "left", padding: "13px 14px", border: "none", cursor: "pointer", background: bpSettle === false ? "#f0f9f4" : "#fff" }}>
-                <span style={{ fontSize: 24, flexShrink: 0 }}>🍻</span>
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", padding: "17px 16px", border: "none", cursor: "pointer", background: bpSettle === false ? "#f0f9f4" : "#fff" }}>
+                <span style={{ fontSize: 31, flexShrink: 0 }}>🍻</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
-                  <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.4 }}>{L.modeQuickSub}</span>
+                  <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.25 }}>{L.modeQuick}</span>
+                  <span style={{ display: "block", fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 2 }}>{L.modeQuickSub}</span>
                 </span>
-                {bpSettle === false && <span style={{ color: "#1f8a4c", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>✓</span>}
+                {bpSettle === false && <span style={{ color: "#1f8a4c", fontWeight: 800, fontSize: 24, flexShrink: 0 }}>✓</span>}
               </button>
               {bpSettle === false && (
-                <div style={{ background: "#fbfefc", borderTop: "1.5px dashed rgba(31,138,76,0.35)", padding: "11px 12px" }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 800, color: "#5a9a75", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>↓ {L.howItWorks}</div>
+                <div style={{ background: "#fbfefc", borderTop: "1.5px dashed rgba(31,138,76,0.35)", padding: "14px 15px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#5a9a75", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 11 }}>↓ {L.howItWorks}</div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 13.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
-                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 13.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
-                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 13.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
                   </div>
                   <div style={{ borderTop: "1px solid rgba(31,138,76,0.15)", paddingTop: 9 }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: "#8a7d55", marginBottom: 4 }}>📋 Bestelling</div>
-                    <div style={{ fontSize: 13, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pintje · 2× Cola · 1× Wijn</div>
+                    <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 Bestelling</div>
+                    <div style={{ fontSize: 15, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pintje · 2× Cola · 1× Wijn</div>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Duidelijk dat er een tweede, andere keuze volgt. */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 0" }}>
-              <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.2)" }} />
-              <span style={{ fontSize: 12, fontWeight: 800, color: "#a89a6f" }}>{L.orWord}</span>
-              <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.2)" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "24px 0" }}>
+              <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(120,95,20,0.28)" }} />
+              <span style={{ fontSize: 20, fontWeight: 800, color: "#8a7d55", letterSpacing: "0.04em", padding: "0 2px" }}>{L.orWord}</span>
+              <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(120,95,20,0.28)" }} />
             </div>
 
             <div style={{ borderRadius: 12, overflow: "hidden", opacity: bpSettle === false ? 0.6 : 1,
                           border: bpSettle === true ? "2.5px solid #1f8a4c" : "2px solid rgba(120,95,20,0.16)" }}>
               <button onClick={() => setBpSettle(true)}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 11, textAlign: "left", padding: "13px 14px", border: "none", cursor: "pointer", background: bpSettle === true ? "#f0f9f4" : "#fff" }}>
-                <span style={{ fontSize: 24, flexShrink: 0 }}>⚖️</span>
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", padding: "17px 16px", border: "none", cursor: "pointer", background: bpSettle === true ? "#f0f9f4" : "#fff" }}>
+                <span style={{ fontSize: 31, flexShrink: 0 }}>⚖️</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.modeTitle}</span>
-                  <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.4 }}>{L.modeFairSub}</span>
+                  <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.25 }}>{L.modeTitle}</span>
+                  <span style={{ display: "block", fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 2 }}>{L.modeFairSub}</span>
                 </span>
-                {bpSettle === true && <span style={{ color: "#1f8a4c", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>✓</span>}
+                {bpSettle === true && <span style={{ color: "#1f8a4c", fontWeight: 800, fontSize: 24, flexShrink: 0 }}>✓</span>}
               </button>
               {bpSettle === true && (
-                <div style={{ background: "#fbfefc", borderTop: "1.5px dashed rgba(31,138,76,0.35)", padding: "11px 12px" }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 800, color: "#5a9a75", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>↓ {L.howItWorks}</div>
+                <div style={{ background: "#fbfefc", borderTop: "1.5px dashed rgba(31,138,76,0.35)", padding: "14px 15px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#5a9a75", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 11 }}>↓ {L.howItWorks}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
                     {/* De QR staat vooraan: scannen is de eerste stap, zonder scan geen Fair Split. */}
                     <div>
-                      <div style={{ height: 50, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <span style={{ display: "inline-flex", padding: 2, borderRadius: 6, background: "#fff", border: "1px solid rgba(120,95,20,0.35)" }}>
-                          <QRCodeSVG value="rundo-party" size={34} bgColor="transparent" fgColor="#4a3f1e" />
+                      <div style={{ height: 58, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ display: "inline-flex", padding: 3, borderRadius: 7, background: "#fff", border: "1px solid rgba(120,95,20,0.35)" }}>
+                          <QRCodeSVG value="rundo-party" size={40} bgColor="transparent" fgColor="#4a3f1e" />
                         </span>
                       </div>
-                      <div style={{ fontSize: 11.5, marginTop: 3, color: "#4a3f1e", fontWeight: 800 }}>QR scannen</div>
+                      <div style={{ fontSize: 13, marginTop: 4, color: "#4a3f1e", fontWeight: 800 }}>QR scannen</div>
                     </div>
                     {[{ drank: "🍺", munten: 1, naam: "Tom" }, { drank: "🍷🍷", munten: 3, naam: "Els" }, { drank: "🍻", munten: 2, naam: "Bart" }].map((x) => (
                       <div key={x.naam}>
-                        <div style={{ fontSize: 19, height: 24, whiteSpace: "nowrap", letterSpacing: -3 }}>{x.drank}</div>
-                        <div style={{ height: 22, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                        <div style={{ fontSize: 23, height: 30, whiteSpace: "nowrap", letterSpacing: -3 }}>{x.drank}</div>
+                        <div style={{ height: 24, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
                           {Array.from({ length: x.munten }).map((_, k) => (
-                            <span key={k} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 15, height: 15, borderRadius: "50%", background: "#FAC775", color: "#412402", fontSize: 10, fontWeight: 800 }}>€</span>
+                            <span key={k} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#FAC775", color: "#412402", fontSize: 11.5, fontWeight: 800 }}>€</span>
                           ))}
                         </div>
-                        <div style={{ fontSize: 11.5, marginTop: 3, color: "#8a7d55", fontWeight: 700 }}>{x.naam}</div>
+                        <div style={{ fontSize: 13, marginTop: 4, color: "#8a7d55", fontWeight: 700 }}>{x.naam}</div>
                       </div>
                     ))}
                   </div>
-                  <div style={{ fontSize: 12.5, color: "#6b5f3a", marginTop: 10, paddingTop: 9, borderTop: "1px solid rgba(31,138,76,0.15)", lineHeight: 1.5 }}>{L.modeFairLine}</div>
+                  <div style={{ fontSize: 14.5, color: "#6b5f3a", marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(31,138,76,0.15)", lineHeight: 1.5 }}>{L.modeFairLine}</div>
                 </div>
               )}
             </div>
           </div>
 
-          <button style={{ ...S.btnP, width: "100%", marginTop: 18, opacity: bpSettle === null ? 0.45 : 1 }}
+          <button style={{ ...S.btnP, width: "100%", marginTop: 22, padding: "18px", fontSize: 20, opacity: bpSettle === null ? 0.45 : 1 }}
             disabled={bpSettle === null}
             onClick={() => startWithMode()}>{busy ? L.starting : L.startNow}</button>
         </div>
@@ -4054,15 +4179,24 @@ export default function PartyTest() {
           const rij = (g: SavedGroup) => (
             <div key={g.id} style={{ display: "flex", alignItems: "stretch", gap: 7, marginBottom: 7 }}>
               <button onClick={() => openSavedGroup(g.id)} disabled={busy}
-                style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "space-between", textAlign: "left", padding: "12px 14px", borderRadius: 12, background: "#fff", border: "1px solid rgba(120,95,20,0.15)", cursor: "pointer" }}>
-                <div style={{ minWidth: 0 }}>
+                style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 11, textAlign: "left", padding: "12px 14px", borderRadius: 12, background: "#fff", border: "1px solid rgba(120,95,20,0.15)", cursor: "pointer" }}>
+                {/* Aan de kleur en het icoon zie je in één oogopslag welke modus het was. */}
+                <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, background: g.settle ? "rgba(31,138,76,0.12)" : "rgba(240,165,0,0.16)" }}>{g.settle ? "⚖️" : "🍻"}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</div>
-                  <div style={{ fontSize: 13, color: "#a89a6f", marginTop: 2 }}>
-                    {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
+                  <div style={{ fontSize: 13, color: "#a89a6f", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {g.settle ? L.modeFairShort : L.modeQuickShort} · {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
                   </div>
                 </div>
-                <span style={{ fontSize: 17, color: "#c4b896", flexShrink: 0, marginLeft: 10 }}>›</span>
+                <span style={{ fontSize: 17, color: "#c4b896", flexShrink: 0 }}>›</span>
               </button>
+              {g.owned && (
+                <button onClick={() => togglePin(g)} disabled={busy} aria-label={g.pinned ? L.pinOff : L.pinOn} title={g.pinned ? L.pinOff : L.pinOn}
+                  style={{ flexShrink: 0, width: 44, borderRadius: 12, fontSize: 17, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                    background: g.pinned ? "rgba(240,165,0,0.16)" : "#fff",
+                    border: g.pinned ? "1px solid rgba(240,165,0,0.6)" : "1px solid rgba(120,95,20,0.2)",
+                    opacity: g.pinned ? 1 : 0.55 }}>📌</button>
+              )}
               {g.owned && (
                 <button onClick={() => deleteSavedGroup(g)} disabled={busy} aria-label={L.delGroupYes}
                   style={{ flexShrink: 0, width: 44, borderRadius: 12, background: "#fff", border: "1px solid rgba(224,104,92,0.35)", color: "#c0554a", fontSize: 17, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>🗑️</button>
@@ -4072,18 +4206,47 @@ export default function PartyTest() {
           return (
             <div style={{ marginTop: 18 }}>
               <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 9, letterSpacing: "0.02em" }}>{L.savedGroups}</div>
+
+              {/* Opruimen voorstellen op het moment dat de gebruiker er is. */}
+              {stalePins.length > 0 && (
+                <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.45)", padding: "12px 13px" }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 3 }}>📌 {L.stalePins(stalePins.length)}</div>
+                  <div style={{ fontSize: 13, color: "#8a7d55", lineHeight: 1.5, marginBottom: 9 }}>{stalePins.map((g) => g.name || L.autoName()).join(" · ")}</div>
+                  <div style={{ fontSize: 13, color: "#8a7d55", lineHeight: 1.5, marginBottom: 10 }}>{L.stalePinsWhy}</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button style={{ ...S.btn, flex: 1, fontSize: 14, fontWeight: 800, padding: "10px 6px" }}
+                      onClick={async () => {
+                        const ids = stalePins.map((g) => g.id)
+                        await supabase.from("party_groups").update({ pinned: false }).in("id", ids)
+                        setSavedGroups((prev) => prev.map((x) => ids.includes(x.id) ? { ...x, pinned: false } : x))
+                        setStalePins([])
+                      }}>{L.pinOff}</button>
+                    <button style={{ ...S.btn, flex: 1, fontSize: 14, fontWeight: 700, padding: "10px 6px", color: "#a89a6f" }}
+                      onClick={() => setStalePins([])}>{L.stalePinsKeep}</button>
+                  </div>
+                </div>
+              )}
+
               {open.length > 0 && (
                 <div style={{ marginBottom: dicht.length > 0 ? 14 : 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 800, color: "#1f8a4c", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>● {L.groupsOpen}</div>
-                  {open.map(rij)}
+                  {(showAllGroups ? open : open.slice(0, GROEPEN_ZICHTBAAR)).map(rij)}
                 </div>
               )}
               {dicht.length > 0 && (
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: "#a89a6f", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>✓ {L.groupsClosed}</div>
-                  {dicht.map(rij)}
+                  {(showAllGroups ? dicht : dicht.slice(0, GROEPEN_ZICHTBAAR)).map(rij)}
                 </div>
               )}
+              {open.length + dicht.length > GROEPEN_ZICHTBAAR && (
+                <div style={{ textAlign: "center", marginTop: 4 }}>
+                  <span onClick={() => setShowAllGroups((v) => !v)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 13, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a7d55" }}>
+                    {showAllGroups ? `▴ ${L.showLessGroups}` : `▾ ${L.showAllGroups}`}
+                  </span>
+                </div>
+              )}
+              <div style={{ fontSize: 12, color: "#b3a988", textAlign: "center", marginTop: 12, lineHeight: 1.5 }}>{L.cleanupNote}</div>
             </div>
           )
         })()}
@@ -4304,6 +4467,7 @@ export default function PartyTest() {
             {hasSettled && <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>🔒 vast na afrekenen</span>}
           </div>
           <input disabled={hasSettled} value={groupName} onChange={(e) => setGroupName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : "#fdfaf2", color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
+          {!hasSettled && <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 6 }}>{L.tapToRename}</div>}
         </div>
         {settle && !fromOnboarding && (
         <div style={{ ...S.card, marginBottom: 10 }}>
@@ -5023,6 +5187,10 @@ export default function PartyTest() {
               onClick={() => { setAssignAllMode(true); setAssignIdx(firstUnassignedIdx) }}>{L.assignAllBtn}</button>
             <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14.5, fontWeight: 800 }}
               onClick={() => { setAssignAllMode(false); setAssignIdx(firstUnassignedIdx) }}>{L.assignPerRoundBtn}</button>
+            {fromQuick && (
+              <button style={{ width: "100%", marginTop: 10, padding: "9px 0", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#8a7d55", cursor: "pointer", textDecoration: "underline" }}
+                onClick={backToEqualSplit}>{L.backToEqual}</button>
+            )}
           </div>
         )}
         {assignIdx !== null && rounds[assignIdx] && (() => {
@@ -5258,6 +5426,17 @@ export default function PartyTest() {
   // ── SNEL AFREKENEN (niveau 2: elk rondje ÷ wie er toen was) ──────────────────
   if (view === "quickSettle") {
     const betaalde = rounds.filter((r) => (r.amount || 0) > 0.005)
+    // Rondjes die overgeslagen zijn tellen niet mee in het totaal. Dat is een geldige
+    // keuze, maar je moet het wel wéten voor je de verdeling leest.
+    const zonderBedrag = rounds.filter((r) => (r.amount || 0) <= 0.005)
+    const zbNrs = zonderBedrag.map((r) => rounds.indexOf(r) + 1)
+    const zbLabel = zbNrs.length === 0 ? "" : zbNrs.length <= 3
+      ? L.roundsNoAmountNamed(zbNrs.length === 1 ? String(zbNrs[0]) : `${zbNrs.slice(0, -1).join(", ")} ${L.andWord} ${zbNrs[zbNrs.length - 1]}`)
+      : L.roundsNoAmountCount(zbNrs.length)
+    // Wisselde het aantal personen tussen de rondjes? Dan hoort dat bij het totaal,
+    // niet in een apart kader verderop.
+    const aantallen = betaalde.map((r) => Math.max(1, r.headcount || 1))
+    const wisselde = new Set(aantallen).size > 1
     const getrakteerd = betaalde.filter((r) => treatedRounds.has(r.id))
     const teVerdelen = betaalde.filter((r) => !treatedRounds.has(r.id))
     const traktatieTot = getrakteerd.reduce((s, r) => s + (r.amount || 0), 0)
@@ -5304,22 +5483,56 @@ export default function PartyTest() {
         <div style={{ ...S.card, textAlign: "center", background: "rgba(240,165,0,0.06)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
           <div style={{ fontSize: 14.5, fontWeight: 700, color: "#8a7d55", marginBottom: 4 }}>{L.quickTotalLabel}</div>
           <div style={{ fontSize: 30, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</div>
+          {wisselde && (
+            <div style={{ marginTop: 12, paddingTop: 11, borderTop: "1px dashed rgba(120,95,20,0.25)", textAlign: "left" }}>
+              <div style={{ fontSize: 13, color: "#8a5e0f", fontWeight: 800, marginBottom: 4 }}>⚠️ {L.headcountVaried}</div>
+              <div style={{ fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.6 }}>
+                {betaalde.map((r) => `${L.roundWord} ${rounds.indexOf(r) + 1}: ${Math.max(1, r.headcount || 1)} ${L.people}`).join("  ·  ")}
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Los van het totaalkader: het bedrag klopt, er ontbreekt alleen iets. */}
+        {zonderBedrag.length > 0 && (
+          <div style={{ ...S.card, background: "rgba(224,104,92,0.08)", border: "1px solid rgba(224,104,92,0.45)", padding: "12px 13px" }}>
+            <div style={{ fontSize: 14.5, fontWeight: 800, color: "#b0402f", marginBottom: 3 }}>{zbLabel}</div>
+            <div style={{ fontSize: 13.5, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 10 }}>{L.roundsNoAmountWhy}</div>
+            <button
+              onClick={() => {
+                // Niets openklappen: in het overzicht markeren we de lege rondjes en
+                // zetten we er een knop bij, zodat je zelf kiest waar je begint.
+                setFillMode(true)
+                setOverviewBackTo("hub")
+                setView("roundsOverview")
+              }}
+              style={{ width: "100%", padding: "11px 6px", borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(224,104,92,0.4)", color: "#b0402f" }}>
+              {L.fillAmountsBtn}
+            </button>
+          </div>
+        )}
 
         {/* Links: gelijk verdelen over de groep. Rechts: overstappen naar Fair Split,
             waar elk drankje aan een naam hangt. */}
         <div style={{ display: "flex", gap: 4, background: "#f7f1e2", padding: 4, borderRadius: 12, marginBottom: 12 }}>
-          <button style={{ flex: 1, padding: "10px 6px", borderRadius: 9, fontSize: 14.5, fontWeight: 800, cursor: "pointer", border: "none",
-            background: "#fff", color: "#4a3f1e", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}
-            onClick={() => setSettleMode("verdelen")}>👥 {L.splitEqually}</button>
-          <button style={{ flex: 1, padding: "10px 6px", borderRadius: 9, fontSize: 14.5, fontWeight: 800, cursor: "pointer", border: "none",
-            background: "transparent", color: "#8a7d55", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-            onClick={switchMode}>
-            ⚖️ {L.modeTitle}
-            <span onClick={(e) => { e.stopPropagation(); setNotice(L.fairSplitExplain) }}
-              style={{ width: 19, height: 19, borderRadius: "50%", border: "1.5px solid #b8ac8a", color: "#8a7d55", fontSize: 11, fontWeight: 800, fontStyle: "italic", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>i</span>
-          </button>
+          <button style={{ flex: 1, padding: "11px 6px", borderRadius: 9, fontSize: 14, fontWeight: 800, cursor: "pointer", border: "none", lineHeight: 1.25,
+            background: fairIntro ? "transparent" : "#fff", color: fairIntro ? "#a89a6f" : "#4a3f1e",
+            boxShadow: fairIntro ? "none" : "0 1px 3px rgba(0,0,0,0.08)" }}
+            onClick={() => { setSettleMode("verdelen"); setFairIntro(false) }}>👥 {L.splitEqually}</button>
+          <button style={{ flex: 1, padding: "11px 6px", borderRadius: 9, fontSize: 14, fontWeight: 800, cursor: "pointer", border: "none", lineHeight: 1.25,
+            background: fairIntro ? "#fff" : "transparent", color: fairIntro ? "#1f6b3a" : "#a89a6f",
+            boxShadow: fairIntro ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}
+            onClick={() => setFairIntro(true)}>⚖️ {L.splitWithFair}</button>
         </div>
+
+        {/* De uitleg verschijnt waar je tikte, met de overstap eronder. */}
+        {fairIntro && (
+          <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
+            <div style={{ fontSize: 14.5, color: "#4a6b57", lineHeight: 1.55, marginBottom: 12 }}>{L.fairSplitExplain}</div>
+            <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={goToFairSplit}>{L.switchToFairBtn}</button>
+            <button style={{ width: "100%", marginTop: 8, padding: "9px 0", background: "none", border: "none", fontSize: 14, fontWeight: 700, color: "#a89a6f", cursor: "pointer" }} onClick={() => setFairIntro(false)}>{L.later}</button>
+          </div>
+        )}
 
         {!alles ? (
           <>
@@ -5327,28 +5540,17 @@ export default function PartyTest() {
             {/* Eén bedrag, verdeeld over een aantal dat jij bepaalt. Wisselde het aantal
                 per rondje, dan melden we dat maar houden we het bedrag simpel. */}
             {(() => {
-              const aantallen = betaalde.map((r) => Math.max(1, r.headcount || 1))
-              const wisselde = new Set(aantallen).size > 1
               const deelAantal = Math.max(1, splitPeople ?? (aantallen.length ? Math.max(...aantallen) : 1))
               const teVerdelenTot = teVerdelen.reduce((s, r) => s + (r.amount || 0), 0)
               return (
                 <>
-                  {wisselde && (
-                    <div style={{ background: "rgba(240,165,0,0.1)", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 10, padding: "10px 12px", marginBottom: 11 }}>
-                      <div style={{ fontSize: 13.5, color: "#8a5e0f", fontWeight: 800, marginBottom: 4 }}>⚠️ {L.headcountVaried}</div>
-                      <div style={{ fontSize: 13, color: "#8a5e0f", lineHeight: 1.6 }}>
-                        {betaalde.map((r, i) => `${L.roundWord} ${rounds.indexOf(r) + 1}: ${Math.max(1, r.headcount || 1)} ${L.people}`).join("  ·  ")}
-                      </div>
-                    </div>
-                  )}
-                  <div style={{ ...S.row, justifyContent: "space-between", background: "#faf4e4", borderRadius: 10, padding: "10px 13px", marginBottom: 12 }}>
-                    <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>{L.splitOver} 👤 {deelAantal} {L.people}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <button style={{ width: 32, height: 32, borderRadius: 9, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: deelAantal > 1 ? 1 : 0.4 }}
-                        onClick={() => setSplitPeople(Math.max(1, deelAantal - 1))}>−</button>
-                      <button style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
-                        onClick={() => setSplitPeople(deelAantal + 1)}>+</button>
-                    </div>
+                  {/* Gecentreerd tussen de twee knoppen: het getal is hier de hoofdzaak. */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, background: "#faf4e4", borderRadius: 10, padding: "10px 13px", marginBottom: 12 }}>
+                    <button style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 9, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: deelAantal > 1 ? 1 : 0.4 }}
+                      onClick={() => setSplitPeople(Math.max(1, deelAantal - 1))}>−</button>
+                    <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f", textAlign: "center" }}>{L.splitOver} 👤 {deelAantal} {L.people}</span>
+                    <button style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
+                      onClick={() => setSplitPeople(deelAantal + 1)}>+</button>
                   </div>
                   <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)", textAlign: "center" }}>
                     <div style={{ fontSize: 14.5, color: "#4a6b57", marginBottom: 3 }}>{L.eachPaysNote}</div>
@@ -5356,6 +5558,8 @@ export default function PartyTest() {
                     {traktatieTot > 0.005 && (
                       <div style={{ fontSize: 14, color: "#8a5e0f", fontWeight: 700, marginTop: 7 }}>🎁 {L.plusTreat(euro(traktatieTot))}</div>
                     )}
+                    {/* De kanttekening hoort bij het bedrag, niet in een eigen kader. */}
+                    <div style={{ fontSize: 13, color: "#4a6b57", lineHeight: 1.55, marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(31,138,76,0.2)", textAlign: "left" }}>{L.notFairSplitWhy}</div>
                   </div>
                   {/* Twee rustige keuzes onder het bedrag: detail per rondje, of iemand
                       die een rondje trakteert. */}
@@ -5424,12 +5628,6 @@ export default function PartyTest() {
           </div>
         )}
 
-        {/* Fair Split blijft de weg naar een echt per-persoon-detail. */}
-        <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
-          <div style={{ fontSize: 15.5, fontWeight: 800, color: "#1f6b3a", marginBottom: 4 }}>{L.notFairSplitYet}</div>
-          <div style={{ fontSize: 14, color: "#4a6b57", lineHeight: 1.5, marginBottom: 11 }}>{L.notFairSplitWhy}</div>
-          <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={goToFairSplit}>{L.switchToFairBtn}</button>
-        </div>
       </div></div>
     )
   }
@@ -5442,9 +5640,8 @@ export default function PartyTest() {
         {renderDialogs()}
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.fairSetupTitle}</h3>
-          <button style={{ ...S.btn, fontSize: 14, fontWeight: 700, padding: "7px 12px" }} onClick={() => setView("quickSettle")}>{L.back}</button>
+          <button style={{ ...S.btn, fontSize: 13.5, fontWeight: 700, padding: "7px 12px" }} onClick={backToEqualSplit}>{L.backToEqual}</button>
         </div>
-        <div style={{ fontSize: 14.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>{L.fairSetupIntro}</div>
         <div style={{ ...S.card }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {people.map((p, i) => {
@@ -5452,7 +5649,7 @@ export default function PartyTest() {
               return (
                 <div key={p.id} style={{ ...S.row, gap: 8 }}>
                   <span style={{ fontSize: 15, fontWeight: 800, color: "#b3a988", width: 20, textAlign: "center", flexShrink: 0 }}>{i + 1}</span>
-                  <input value={leeg ? "" : p.name} onChange={(e) => renamePerson(p.id, e.target.value)} placeholder={p.name}
+                  <input value={leeg ? "" : p.name} onChange={(e) => renamePerson(p.id, e.target.value)} placeholder={`${p.name} · ${L.guestNamePh}`}
                     style={{ ...S.input, flex: 1, textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: "#fdfaf2", color: leeg ? "#b3a988" : "#4a3f1e" }} />
                   {people.length > 1 && (
                     <button onClick={() => removePerson(p.id)} style={{ ...S.btn, padding: "8px 11px", fontSize: 16, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)", flexShrink: 0 }}>✕</button>
@@ -5531,12 +5728,17 @@ export default function PartyTest() {
             const nr = rounds.indexOf(r) + 1
             const items = drinksOf(r).reduce((a, x) => a + x.n, 0)
             const open = isOpen(r)
+            const geenBedrag = (r.amount || 0) <= 0.005
+            const invulRij = fillMode && geenBedrag && editRoundId !== r.id
             return (
-              <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden", ...(editRoundId === r.id ? { boxShadow: "inset 0 0 0 2px rgba(240,165,0,0.55)", background: "#fffdf3" } : {}) }}>
-                <div onClick={() => toggle(r.id)} style={{ padding: "12px 14px", cursor: "pointer", background: editRoundId === r.id ? "rgba(240,165,0,0.1)" : open ? "rgba(240,165,0,0.06)" : "#fff" }}>
+              <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden", ...(editRoundId === r.id ? { boxShadow: "inset 0 0 0 2px rgba(240,165,0,0.55)", background: "#fffdf3" } : invulRij ? { border: "1.5px solid rgba(240,165,0,0.55)", background: "#fffdf3" } : {}) }}>
+                <div onClick={() => toggle(r.id)} style={{ padding: "12px 14px", cursor: "pointer", background: editRoundId === r.id ? "rgba(240,165,0,0.1)" : open ? "rgba(240,165,0,0.06)" : invulRij ? "rgba(240,165,0,0.09)" : "#fff" }}>
                   <div style={{ ...S.row, justifyContent: "space-between", gap: 8 }}>
                     <div style={{ ...S.row, gap: 8, minWidth: 0 }}>
                       <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{editRoundId === r.id ? L.editRoundHead(nr) : L.roundSummary(nr, items)}</span>
+                      {geenBedrag && editRoundId !== r.id && (
+                        <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 800, color: "#8a5e0f", background: "rgba(240,165,0,0.16)", borderRadius: 12, padding: "3px 9px", whiteSpace: "nowrap" }}>{L.noAmountBadge}</span>
+                      )}
                     </div>
                     <div style={{ ...S.row, gap: 9, flexShrink: 0 }}>
                       {editRoundId === r.id ? (
@@ -5556,6 +5758,13 @@ export default function PartyTest() {
                       ? <span style={{ color: "#1f6b3a", fontWeight: 700 }}> · 🫙 {L.paidFromPot(euro(r.potPart || 0))}</span>
                       : <span style={{ color: "#b3a988" }}> · {L.noPotUsed}</span>}
                   </div>
+                  {/* Kwam je aanvullen? Dan hoef je niet eerst open te klappen. */}
+                  {invulRij && (
+                    <div style={{ textAlign: "right", marginTop: 9 }}>
+                      <span onClick={(e) => { e.stopPropagation(); setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r) }}
+                        style={{ display: "inline-block", fontSize: 13, fontWeight: 800, color: "#c98a00", background: "#fff", border: "1px solid rgba(240,165,0,0.6)", borderRadius: 14, padding: "8px 14px", cursor: "pointer", whiteSpace: "nowrap" }}>{L.addAmountBtn}</span>
+                    </div>
+                  )}
                 </div>
                 {open && (() => {
                   const idx = rounds.indexOf(r)
