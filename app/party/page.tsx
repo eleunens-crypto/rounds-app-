@@ -2725,16 +2725,11 @@ export default function PartyTest() {
   // Gewoon rondjes → afrekenen. Altijd bereikbaar. Zonder bedragen valt er niets te
   // verdelen: dan een melding met een duw naar het rondjesoverzicht.
   const goQuickSettle = () => {
-    if (paidCount === 0 && rounds.length === 0) { setNotice(L.nothingToSettle); return }
-    if (totalCost <= 0.005) {
-      setConfirmDlg({
-        msg: L.noAmountsYet,
-        yes: L.fillAmountsNow,
-        onYes: () => { setConfirmDlg(null); setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview") },
-        no: L.later,
-      })
-      return
-    }
+    // Geen enkel rondje? Dan valt er niets te verdelen. Wél rondjes maar (nog) geen
+    // bedragen? Dan gewoon doorlaten: het afrekenscherm zegt zelf welke rondjes leeg
+    // zijn en biedt de knop om ze aan te vullen. Een pop-up ervoor is een drempel die
+    // hetzelfde vertelt, maar zonder de knop.
+    if (rounds.length === 0) { setNotice(L.nothingToSettle); return }
     setView("quickSettle")
   }
   // Van niveau 1 naar Fair Split: eerst snel personen + namen, daarna toewijzen.
