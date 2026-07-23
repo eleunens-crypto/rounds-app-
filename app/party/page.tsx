@@ -551,7 +551,7 @@ const T = {
     removeHint: "Verwijder wat je niet meer nodig hebt. Al besteld in een rondje? Dan blijft het staan.",
     nameYourDrink: "Geef je drankje een naam.",
     needPrice: "Vul een richtprijs in — anders kan Fair Split dit drankje niet eerlijk verdelen.",
-    needAmountOrCancel: "Vul het betaalde bedrag in, of tik Annuleren om de wijziging ongedaan te maken.",
+    needAmountOrCancel: "Uit de pot betalen kan niet zonder bedrag. Vul een bedrag in, of kies Zelf betaald.",
     alreadyExists: (n: string) => `"${n}" staat al in de lijst.`,
     maxPerPerson: (n: number) => `Je kan maximaal ${n} eigen drankjes toevoegen.`,
     maxPerGroup: (n: number) => `De groep zit aan het maximum van ${n} eigen drankjes.`,
@@ -1034,7 +1034,7 @@ const T = {
     removeHint: "Supprime ce dont tu n'as plus besoin. Déjà commandé dans une tournée ? Alors ça reste.",
     nameYourDrink: "Donne un nom à ta boisson.",
     needPrice: "Entre un prix indicatif — sinon le Fair Split ne peut pas répartir cette boisson.",
-    needAmountOrCancel: "Indique le montant payé, ou touche Annuler pour abandonner la modification.",
+    needAmountOrCancel: "Payer avec la cagnotte sans montant, ça ne va pas. Indique un montant, ou choisis Payé soi-même.",
     alreadyExists: (n: string) => `« ${n} » est déjà dans la liste.`,
     maxPerPerson: (n: number) => `Tu peux ajouter maximum ${n} boissons personnalisées.`,
     maxPerGroup: (n: number) => `Le groupe a atteint le maximum de ${n} boissons personnalisées.`,
@@ -1342,10 +1342,10 @@ export default function PartyTest() {
   // Alles in één keer wegschrijven: aantallen als verschil, bedrag, personen en bron.
   const saveEditRound = async (r: Round) => {
     if (!editDraft) { cancelEditRound(); return }
-    // Zonder bedrag heeft "waarmee betaald" geen betekenis: er zou nul uit de pot gaan
-    // terwijl het rondje wél als uit-de-pot-betaald wordt weggeschreven. Eerst een bedrag,
-    // of annuleren. Vóór alle bumps, zodat er nog niets is weggeschreven.
-    if ((editDraft.amount || 0) <= 0.005) { setNotice(L.needAmountOrCancel); return }
+    // Uit de pot betalen zonder bedrag kan niet: er zou nul uit de pot gaan terwijl het
+    // rondje wél als betaald geldt. Een bedrag wissen mag wél — dan valt het rondje
+    // terug op "geen bedrag ingevuld", wat een geldige toestand is.
+    if (editDraft.usePot && (editDraft.amount || 0) <= 0.005) { setNotice(L.needAmountOrCancel); return }
     const idx = rounds.indexOf(r)
     const huidig: Record<string, number> = {}
     drinksOf(r).forEach(({ d, n }) => { huidig[d.id] = n })
@@ -2730,7 +2730,7 @@ export default function PartyTest() {
       setConfirmDlg({
         msg: L.noAmountsYet,
         yes: L.fillAmountsNow,
-        onYes: () => { setConfirmDlg(null); setView("roundsOverview") },
+        onYes: () => { setConfirmDlg(null); setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview") },
         no: L.later,
       })
       return
