@@ -9,9 +9,9 @@ const T = {
     tagline: "Rondjes en rekeningen zonder gedoe!",
     chooseMode: "Kies je mode om te starten",
     partySub: "Rondjes opnemen en splitten zonder gedoe",
-    partyDesc: "Ideaal voor groepsbestellingen op café of andere events (fuif, festival, afterwork..)",
+    partyDesc: "Groepsbestellingen opnemen op café of andere events (fuif, festival, afterwork..)",
     tableSub: "Scan de rekening en verdeel in groep",
-    tableDesc: "Ideaal als groep op restaurant, café of na activiteit.",
+    tableDesc: "Voor het delen van de rekening op restaurant, café of na een activiteit.",
     whenChoose: "Wanneer kies ik dit?",
     start: "Starten",
     pickFirst: "Kies eerst een mode",
@@ -21,9 +21,9 @@ const T = {
     tagline: "Tournées et additions, sans prise de tête !",
     chooseMode: "Choisis ton mode pour démarrer",
     partySub: "Prendre les tournées et partager, sans prise de tête",
-    partyDesc: "Idéal pour les commandes de groupe au café ou autres events (soirée, festival, afterwork..)",
+    partyDesc: "Prendre les commandes de groupe au café ou autres events (soirée, festival, afterwork..)",
     tableSub: "Scanne l'addition et partage en groupe",
-    tableDesc: "Idéal en groupe au resto, au café ou après une activité.",
+    tableDesc: "Pour partager l'addition au resto, au café ou après une activité.",
     whenChoose: "Quand choisir ceci ?",
     start: "Démarrer",
     pickFirst: "Choisis d'abord un mode",
@@ -134,7 +134,7 @@ export default function Home() {
               <img src="/icon-table.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
               <span>{t.tableSub}</span>
             </div>
-            {infoRow("table", t.tableDesc, "#9cc6ec", { ...S.infoBadge, background: "rgba(91,159,214,0.22)", color: "#9cc6ec" })}
+            {infoRow("table", t.tableDesc, "#3bbfc4", { ...S.infoBadge, background: "rgba(91,159,214,0.22)", color: "#9cc6ec" })}
           </div>
         </div>
 
@@ -154,7 +154,7 @@ export default function Home() {
               <img src="/icon-party.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
               <span>{t.partySub}</span>
             </div>
-            {infoRow("party", t.partyDesc, "#f0c14b", S.infoBadge)}
+            {infoRow("party", t.partyDesc, "#f0a500", S.infoBadge)}
           </div>
         </div>
 
