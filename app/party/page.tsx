@@ -4011,12 +4011,11 @@ export default function PartyTest() {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
                     {/* De QR staat vooraan: scannen is de eerste stap, zonder scan geen Fair Split. */}
                     <div>
-                      <div style={{ height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <span style={{ display: "inline-flex", padding: 2, borderRadius: 5, background: "#fff", border: "1px solid rgba(120,95,20,0.35)" }}>
-                          <QRCodeSVG value="rundo-party" size={18} bgColor="transparent" fgColor="#4a3f1e" />
+                      <div style={{ height: 50, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ display: "inline-flex", padding: 2, borderRadius: 6, background: "#fff", border: "1px solid rgba(120,95,20,0.35)" }}>
+                          <QRCodeSVG value="rundo-party" size={34} bgColor="transparent" fgColor="#4a3f1e" />
                         </span>
                       </div>
-                      <div style={{ height: 22, marginTop: 4 }} />
                       <div style={{ fontSize: 11.5, marginTop: 3, color: "#4a3f1e", fontWeight: 800 }}>QR scannen</div>
                     </div>
                     {[{ drank: "🍺", munten: 1, naam: "Tom" }, { drank: "🍷🍷", munten: 3, naam: "Els" }, { drank: "🍻", munten: 2, naam: "Bart" }].map((x) => (
@@ -4118,12 +4117,11 @@ export default function PartyTest() {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
                     {/* Zelfde opbouw als op het startscherm: eerst scannen, dan wie wat nam. */}
                     <div>
-                      <div style={{ height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ height: 51, display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <span style={{ display: "inline-flex", padding: 2, borderRadius: 6, background: "#fff", border: "1px solid rgba(120,95,20,0.35)" }}>
-                          <QRCodeSVG value="rundo-party" size={22} bgColor="transparent" fgColor="#4a3f1e" />
+                          <QRCodeSVG value="rundo-party" size={38} bgColor="transparent" fgColor="#4a3f1e" />
                         </span>
                       </div>
-                      <div style={{ height: 22, marginTop: 5 }} />
                       <div style={{ fontSize: 13, marginTop: 4, color: "#4a3f1e", fontWeight: 800 }}>QR scannen</div>
                     </div>
                     {[{ drank: "🍺", munten: 1, naam: "Tom" }, { drank: "🍷🍷", munten: 3, naam: "Els" }, { drank: "🍻", munten: 2, naam: "Bart" }].map((x) => (
