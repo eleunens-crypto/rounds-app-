@@ -326,6 +326,15 @@ const T = {
     savedGroups: "Opgeslagen groepen",
     modeFairShort: "Fair Split",
     modeQuickShort: "Snelle rondjes",
+    pinOn: "Vastzetten",
+    pinOff: "Losmaken",
+    maxPins: (n: number) => `Je kan maximaal ${n} groepen vastzetten. Maak er eerst een los.`,
+    showAllGroups: "Toon alle groepen",
+    showLessGroups: "Toon er minder",
+    cleanupNote: "Afgesloten groepen verdwijnen na een maand. Vastgezette groepen blijven.",
+    stalePins: (n: number) => `${n} vastgezette ${n === 1 ? "groep is" : "groepen zijn"} al lang niet gebruikt`,
+    stalePinsWhy: "Losmaken? Dan worden ze na een maand opgeruimd, net als de andere afgesloten groepen.",
+    stalePinsKeep: "Houden",
     asGuest: "als gast",
     groupsOpen: "Open",
     groupsClosed: "Afgesloten",
@@ -811,6 +820,15 @@ const T = {
     savedGroups: "Groupes enregistrés",
     modeFairShort: "Fair Split",
     modeQuickShort: "Tournées rapides",
+    pinOn: "Épingler",
+    pinOff: "Détacher",
+    maxPins: (n: number) => `Tu peux épingler ${n} groupes au maximum. Détaches-en un d'abord.`,
+    showAllGroups: "Voir tous les groupes",
+    showLessGroups: "Voir moins",
+    cleanupNote: "Les groupes clôturés disparaissent après un mois. Les groupes épinglés restent.",
+    stalePins: (n: number) => `${n} groupe${n === 1 ? "" : "s"} épinglé${n === 1 ? "" : "s"} depuis longtemps inutilisé${n === 1 ? "" : "s"}`,
+    stalePinsWhy: "Les détacher ? Ils seront alors supprimés après un mois, comme les autres groupes clôturés.",
+    stalePinsKeep: "Garder",
     asGuest: "en tant qu'invit\u00e9",
     groupsOpen: "Ouvert",
     groupsClosed: "Cl\u00f4tur\u00e9",
@@ -1275,8 +1293,20 @@ export default function PartyTest() {
   const [busy, setBusy] = useState(false)        // groep aanmaken / plaats claimen
   // Opgeslagen groepen: alle groepen waar dit toestel bij hoort (zelf gemaakt of via
   // QR aan deelgenomen). Getoond op het startscherm zodat je kan terugkeren.
-  type SavedGroup = { id: string; name: string; last_active: string; finalized: boolean; owned: boolean; settle: boolean }
+  type SavedGroup = { id: string; name: string; last_active: string; finalized: boolean; owned: boolean; settle: boolean; pinned: boolean }
+  // Opruimbeleid. Een groep die een dag stilligt sluit zichzelf af; een afgesloten groep
+  // verdwijnt na een maand, tenzij hij vastgezet is. Vastgezet blijft vastgezet — een pin
+  // die na verloop van tijd toch wist, is geen pin maar uitstel. Wel suggereren we opruimen
+  // wanneer de gebruiker er is, want een waarschuwing die niemand ziet beschermt niemand.
+  const DAG = 86400000
+  const AUTO_SLUIT = DAG
+  const AUTO_WIS = 30 * DAG
+  const PIN_STIL = 180 * DAG
+  const MAX_PINS = 5
+  const GROEPEN_ZICHTBAAR = 5
   const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
+  const [showAllGroups, setShowAllGroups] = useState(false)
+  const [stalePins, setStalePins] = useState<SavedGroup[]>([])
   const isAdmin = !!ownerDevice && ownerDevice === me.current
   // Mijn eigen plaats: die waarop dit toestel zit. Nodig zodra gasten hun eigen
   // drankjes aantikken (blok 3).
@@ -1995,29 +2025,63 @@ export default function PartyTest() {
   const loadSavedGroups = useCallback(async () => {
     const dev = me.current
     const [eigen, gast] = await Promise.all([
-      supabase.from("party_groups").select("id,name,last_active,finalized,owner_id,settle").eq("owner_id", dev),
+      supabase.from("party_groups").select("id,name,last_active,finalized,owner_id,settle,pinned").eq("owner_id", dev),
       supabase.from("party_people").select("group_id").eq("claimed_by", dev),
     ])
     const map = new Map<string, SavedGroup>()
     for (const g of eigen.data ?? []) {
-      map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: true, settle: g.settle !== false })
+      map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: true, settle: g.settle !== false, pinned: !!g.pinned })
     }
     // Gast-groepen die nog niet als eigen bekend zijn, apart ophalen voor hun details.
     const gastIds = [...new Set((gast.data ?? []).map((r) => r.group_id as string))].filter((id) => !map.has(id))
     if (gastIds.length > 0) {
-      const { data: extra } = await supabase.from("party_groups").select("id,name,last_active,finalized,settle").in("id", gastIds)
+      const { data: extra } = await supabase.from("party_groups").select("id,name,last_active,finalized,settle,pinned").in("id", gastIds)
       for (const g of extra ?? []) {
-        map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: false, settle: g.settle !== false })
+        map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: false, settle: g.settle !== false, pinned: !!g.pinned })
       }
     }
-    const lijst = [...map.values()].sort((a, b) => (b.last_active || "").localeCompare(a.last_active || ""))
-    if (mounted.current) setSavedGroups(lijst)
+    const lijst = [...map.values()].sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+      return (b.last_active || "").localeCompare(a.last_active || "")
+    })
+
+    const nu = Date.now()
+    const tijd = (iso: string) => { const d = new Date(iso).getTime(); return isNaN(d) ? nu : d }
+
+    // Stilgevallen groepen sluiten zichzelf af, zodat de lijst "Open" kort blijft.
+    const sluiten = lijst.filter((g) => g.owned && !g.finalized && nu - tijd(g.last_active) > AUTO_SLUIT)
+    if (sluiten.length > 0) {
+      await supabase.from("party_groups").update({ finalized: true }).in("id", sluiten.map((g) => g.id))
+      sluiten.forEach((g) => { g.finalized = true })
+    }
+
+    // Afgesloten, niet vastgezet en een maand oud: weg. Enkel je eigen groepen.
+    const wissen = lijst.filter((g) => g.owned && g.finalized && !g.pinned && nu - tijd(g.last_active) > AUTO_WIS)
+    if (wissen.length > 0) {
+      await supabase.from("party_groups").delete().in("id", wissen.map((g) => g.id))
+    }
+    const over = lijst.filter((g) => !wissen.some((w) => w.id === g.id))
+
+    // Vastgezet maar een half jaar niet aangeraakt: voorstellen, niet beslissen.
+    const stil = over.filter((g) => g.owned && g.pinned && nu - tijd(g.last_active) > PIN_STIL)
+
+    if (mounted.current) { setSavedGroups(over); setStalePins(stil) }
   }, [])
 
   // Bij het openen (als je op het startscherm bent) de opgeslagen groepen laden.
   useEffect(() => {
     if (!booting && view === "start") loadSavedGroups()
   }, [booting, view, loadSavedGroups])
+
+  // Vastzetten beschermt tegen het automatische opruimen. Maximaal vijf, zodat de pin
+  // een keuze blijft en niet stilaan de hele lijst omvat.
+  const togglePin = async (g: SavedGroup) => {
+    if (!g.pinned && savedGroups.filter((x) => x.pinned).length >= MAX_PINS) { setNotice(L.maxPins(MAX_PINS)); return }
+    const { error } = await supabase.from("party_groups").update({ pinned: !g.pinned }).eq("id", g.id)
+    if (error) { setNotice("Vastzetten mislukt: " + error.message); return }
+    setSavedGroups((prev) => prev.map((x) => x.id === g.id ? { ...x, pinned: !x.pinned } : x))
+    setStalePins((prev) => prev.filter((x) => x.id !== g.id))
+  }
 
   // Een opgeslagen groep heropenen vanaf het startscherm.
   const openSavedGroup = async (id: string) => {
@@ -4111,6 +4175,13 @@ export default function PartyTest() {
                 <span style={{ fontSize: 17, color: "#c4b896", flexShrink: 0 }}>›</span>
               </button>
               {g.owned && (
+                <button onClick={() => togglePin(g)} disabled={busy} aria-label={g.pinned ? L.pinOff : L.pinOn} title={g.pinned ? L.pinOff : L.pinOn}
+                  style={{ flexShrink: 0, width: 44, borderRadius: 12, fontSize: 17, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                    background: g.pinned ? "rgba(240,165,0,0.16)" : "#fff",
+                    border: g.pinned ? "1px solid rgba(240,165,0,0.6)" : "1px solid rgba(120,95,20,0.2)",
+                    opacity: g.pinned ? 1 : 0.55 }}>📌</button>
+              )}
+              {g.owned && (
                 <button onClick={() => deleteSavedGroup(g)} disabled={busy} aria-label={L.delGroupYes}
                   style={{ flexShrink: 0, width: 44, borderRadius: 12, background: "#fff", border: "1px solid rgba(224,104,92,0.35)", color: "#c0554a", fontSize: 17, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>🗑️</button>
               )}
@@ -4119,18 +4190,47 @@ export default function PartyTest() {
           return (
             <div style={{ marginTop: 18 }}>
               <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 9, letterSpacing: "0.02em" }}>{L.savedGroups}</div>
+
+              {/* Opruimen voorstellen op het moment dat de gebruiker er is. */}
+              {stalePins.length > 0 && (
+                <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.45)", padding: "12px 13px" }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 3 }}>📌 {L.stalePins(stalePins.length)}</div>
+                  <div style={{ fontSize: 13, color: "#8a7d55", lineHeight: 1.5, marginBottom: 9 }}>{stalePins.map((g) => g.name || L.autoName()).join(" · ")}</div>
+                  <div style={{ fontSize: 13, color: "#8a7d55", lineHeight: 1.5, marginBottom: 10 }}>{L.stalePinsWhy}</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button style={{ ...S.btn, flex: 1, fontSize: 14, fontWeight: 800, padding: "10px 6px" }}
+                      onClick={async () => {
+                        const ids = stalePins.map((g) => g.id)
+                        await supabase.from("party_groups").update({ pinned: false }).in("id", ids)
+                        setSavedGroups((prev) => prev.map((x) => ids.includes(x.id) ? { ...x, pinned: false } : x))
+                        setStalePins([])
+                      }}>{L.pinOff}</button>
+                    <button style={{ ...S.btn, flex: 1, fontSize: 14, fontWeight: 700, padding: "10px 6px", color: "#a89a6f" }}
+                      onClick={() => setStalePins([])}>{L.stalePinsKeep}</button>
+                  </div>
+                </div>
+              )}
+
               {open.length > 0 && (
                 <div style={{ marginBottom: dicht.length > 0 ? 14 : 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 800, color: "#1f8a4c", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>● {L.groupsOpen}</div>
-                  {open.map(rij)}
+                  {(showAllGroups ? open : open.slice(0, GROEPEN_ZICHTBAAR)).map(rij)}
                 </div>
               )}
               {dicht.length > 0 && (
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: "#a89a6f", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>✓ {L.groupsClosed}</div>
-                  {dicht.map(rij)}
+                  {(showAllGroups ? dicht : dicht.slice(0, GROEPEN_ZICHTBAAR)).map(rij)}
                 </div>
               )}
+              {open.length + dicht.length > GROEPEN_ZICHTBAAR && (
+                <div style={{ textAlign: "center", marginTop: 4 }}>
+                  <span onClick={() => setShowAllGroups((v) => !v)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 13, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a7d55" }}>
+                    {showAllGroups ? `▴ ${L.showLessGroups}` : `▾ ${L.showAllGroups}`}
+                  </span>
+                </div>
+              )}
+              <div style={{ fontSize: 12, color: "#b3a988", textAlign: "center", marginTop: 12, lineHeight: 1.5 }}>{L.cleanupNote}</div>
             </div>
           )
         })()}
