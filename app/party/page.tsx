@@ -304,7 +304,7 @@ const T = {
     roundN: (n: number) => `Ronde ${n}`,
     nothingThisRound: "jij had niets in dit rondje",
 
-    addOwnDrink: "⭐ Eigen drankje toevoegen",
+    addOwnDrink: "⭐ Eigen drankje",
 
     // ── start & setup
     tagline: "Rondjes en splitten zonder gedoe!",
@@ -776,7 +776,7 @@ const T = {
     roundN: (n: number) => `Tournée ${n}`,
     nothingThisRound: "tu n'avais rien dans cette tournée",
 
-    addOwnDrink: "⭐ Ajouter une boisson",
+    addOwnDrink: "⭐ Boisson perso",
 
     // ── start & setup
     tagline: "Les tournées et le partage, sans prise de tête !",
@@ -3857,7 +3857,7 @@ export default function PartyTest() {
           )}
         </div>
 
-        <div style={{ position: "relative", marginBottom: 9 }}>
+        <div style={{ position: "relative", marginBottom: 6 }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🔍</span>
           <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)} placeholder={L.searchDrink}
             style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 36, paddingRight: drinkSearch ? 34 : 12, fontSize: 16, textAlign: "left" }} />
@@ -3865,6 +3865,16 @@ export default function PartyTest() {
             <button onClick={() => setDrinkSearch("")}
               style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8a7d55", padding: 4 }}>✕</button>
           )}
+        </div>
+
+        {/* Vlak onder het zoekveld: precies waar je kijkt als je zoekopdracht niets oplevert. */}
+        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap", marginBottom: 10 }}>
+          <span onClick={startVoice} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "6px 11px", borderRadius: 14, fontSize: 12, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
+            {L.voiceBtn} <span style={{ fontSize: 8.5, fontWeight: 800, color: "#c98a00", border: "1px solid rgba(240,165,0,0.6)", borderRadius: 4, padding: "0 3px", letterSpacing: "0.03em" }}>{L.voiceBeta}</span>
+          </span>
+          <span onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "6px 11px", borderRadius: 14, fontSize: 12, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
+            {L.addOwnDrink}
+          </span>
         </div>
 
         <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", marginBottom: 8 }}>
@@ -3920,17 +3930,6 @@ export default function PartyTest() {
             )}
           </div>
         )}
-
-        <div style={{ display: "flex", gap: 8, justifyContent: "center", padding: "2px 0 14px" }}>
-          <button onClick={startVoice}
-            style={{ ...S.btn, fontSize: 14.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
-            {L.voiceBtn} <span style={{ fontSize: 9, opacity: 0.75 }}>{L.voiceBeta}</span>
-          </button>
-          <button onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }}
-            style={{ ...S.btn, fontSize: 14.5, fontWeight: 800, padding: "9px 14px", border: "1px dashed rgba(240,165,0,0.6)", background: "#fffdf6", color: "#c98a00" }}>
-            {L.addOwnDrink}
-          </button>
-        </div>
 
         <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", padding: "6px 0 20px", lineHeight: 1.5 }}>
           {L.barFootnote1}<br />
@@ -4498,7 +4497,7 @@ export default function PartyTest() {
           })}
         </div>
 
-        <div style={{ position: "relative", marginBottom: 9 }}>
+        <div style={{ position: "relative", marginBottom: 6 }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🔍</span>
           <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)}
             placeholder={L.searchDrink}
@@ -4507,6 +4506,16 @@ export default function PartyTest() {
             <button onClick={() => setDrinkSearch("")}
               style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8a7d55", padding: 4 }}>✕</button>
           )}
+        </div>
+
+        {/* Vlak onder het zoekveld: precies waar je kijkt als je zoekopdracht niets oplevert. */}
+        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap", marginBottom: 10 }}>
+          <span onClick={startVoice} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "6px 11px", borderRadius: 14, fontSize: 12, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
+            {L.voiceBtn} <span style={{ fontSize: 8.5, fontWeight: 800, color: "#c98a00", border: "1px solid rgba(240,165,0,0.6)", borderRadius: 4, padding: "0 3px", letterSpacing: "0.03em" }}>{L.voiceBeta}</span>
+          </span>
+          <span onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "6px 11px", borderRadius: 14, fontSize: 12, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
+            {L.addOwnDrink}
+          </span>
         </div>
 
         {zoekt && (
@@ -4562,14 +4571,6 @@ export default function PartyTest() {
             )}
           </div>
         )}
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "18px 0 14px" }}>
-          <span onClick={startVoice} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "7px 12px", borderRadius: 16, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
-            {L.voiceBtn} 🎤 <span style={{ fontSize: 8.5, fontWeight: 800, color: "#c98a00", background: "rgba(240,165,0,0.16)", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 5, padding: "1px 4px", letterSpacing: "0.03em" }}>{L.voiceBeta}</span>
-          </span>
-          <span onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "7px 12px", borderRadius: 16, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
-            ＋ {L.addOwnDrink}
-          </span>
-        </div>
         {roundItems > 0 && (
           <div style={{ ...S.card, padding: "10px 12px", background: "#fffdf6" }}>
             <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
