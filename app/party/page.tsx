@@ -575,7 +575,7 @@ const T = {
     howItWorks: "zo werkt dat",
     orWord: "of",
     modeFairSub: "Scan QR, bestel samen & eerlijk afrekenen",
-    modeFairLine: "Ieder betaalt zijn deel, betaal niet mee voor wat je niet dronk!",
+    modeFairLine: "Eerlijk betalen volgens wat je dronk",
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe jullie bestellen",
     howManyPeople: "Met hoeveel zijn jullie?",
@@ -1047,7 +1047,7 @@ const T = {
     howItWorks: "voici comment",
     orWord: "ou",
     modeFairSub: "Scanne le QR, commandez ensemble & partagez équitablement",
-    modeFairLine: "Chacun paie sa part, ne paie pas pour ce que tu n'as pas bu !",
+    modeFairLine: "Payer équitablement selon ce que tu as bu",
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
     howManyPeople: "Vous \u00eates combien ?",
@@ -4890,7 +4890,7 @@ export default function PartyTest() {
             {/* Drankjes van dit net-bevestigde rondje, met de aanpas-knop erin verwerkt. */}
             {(() => { const laatste = rounds[idx]; const lijst = laatste ? drinksOf(laatste) : []; return lijst.length > 0 && (
               <div style={{ ...S.card, padding: "12px 14px", background: "#fffdf6" }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 9, paddingBottom: 9, borderBottom: "1px solid rgba(120,95,20,0.1)" }}>📋 {L.orderedLabel}</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 9, paddingBottom: 9, borderBottom: "1px solid rgba(120,95,20,0.1)" }}>📋 {L.orderedLabel} <span style={{ fontWeight: 600, color: "#b3a988" }}>— {L.drinksCount(lijst.reduce((a, x) => a + x.n, 0))}</span></div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                   {lijst.map(({ d, n }) => (
                     <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "4px 0" }}>
@@ -5520,8 +5520,6 @@ export default function PartyTest() {
                         <span style={{ fontSize: 12.5, fontWeight: 800, color: "#c0554a", background: "rgba(224,104,92,0.12)", borderRadius: 12, padding: "4px 10px", whiteSpace: "nowrap" }}>{L.notSavedYet}</span>
                       ) : (
                         <>
-                          <span onClick={(e) => { e.stopPropagation(); startEditRound(r); setOpenRounds((prev) => new Set(prev).add(r.id)) }}
-                            style={{ fontSize: 13, fontWeight: 800, color: "#c98a00", background: "#faf4e4", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 14, padding: "6px 12px", cursor: "pointer", whiteSpace: "nowrap" }}>✏️ {L.adjustWord}</span>
                           <span style={{ fontSize: 15.5, fontWeight: 800, color: (r.amount || 0) > 0 ? "#c98a00" : "#c4b896" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "€ —"}</span>
                           <span style={{ fontSize: 15, color: "#8a7d55", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
                         </>
@@ -5581,21 +5579,6 @@ export default function PartyTest() {
                       )}
                     </div>
 
-                    <div style={{ ...S.row, justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
-                      <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>👤 {L.peopleInRound}</span>
-                      {bewerk && dr ? (
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <button style={{ width: 32, height: 32, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: dr.headcount > 1 ? 1 : 0.4 }}
-                            onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: Math.max(1, c.headcount - 1) } : c) }}>−</button>
-                          <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#4a3f1e" }}>{dr.headcount}</span>
-                          <button style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
-                            onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: c.headcount + 1 } : c) }}>+</button>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{r.headcount || 1}</span>
-                      )}
-                    </div>
-
                     {/* Waarmee betaald? Ook achteraf nog te corrigeren. */}
                     <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
                       {bewerk && dr ? (
@@ -5631,11 +5614,34 @@ export default function PartyTest() {
                       )}
                     </div>
 
+                    <div style={{ ...S.row, justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>👤 {L.peopleInRound}</span>
+                      {bewerk && dr ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <button style={{ width: 32, height: 32, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: dr.headcount > 1 ? 1 : 0.4 }}
+                            onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: Math.max(1, c.headcount - 1) } : c) }}>−</button>
+                          <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#4a3f1e" }}>{dr.headcount}</span>
+                          <button style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
+                            onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: c.headcount + 1 } : c) }}>+</button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{r.headcount || 1}</span>
+                      )}
+                    </div>
+
                     {bewerk && (
                       <div style={{ marginTop: 14 }}>
                         <button style={{ ...S.btnP, width: "100%" }} onClick={(e) => { e.stopPropagation(); saveEditRound(r) }}>💾 {L.saveWord}</button>
                         <button style={{ width: "100%", marginTop: 8, padding: "9px 0", background: "none", border: "none", fontSize: 14, fontWeight: 700, color: "#a89a6f", cursor: "pointer" }}
                           onClick={(e) => { e.stopPropagation(); cancelEditRound() }}>✕ {L.cancel}</button>
+                      </div>
+                    )}
+
+                    {/* Aanpassen staat onderaan en enkel bij een open rondje — zo tik je er niet per ongeluk op. */}
+                    {!bewerk && (
+                      <div style={{ marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(120,95,20,0.12)", textAlign: "right" }}>
+                        <span onClick={(e) => { e.stopPropagation(); startEditRound(r) }}
+                          style={{ display: "inline-block", fontSize: 13, fontWeight: 800, color: "#c98a00", background: "#faf4e4", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 14, padding: "7px 14px", cursor: "pointer", whiteSpace: "nowrap" }}>✏️ {L.adjustWord}</span>
                       </div>
                     )}
                   </div>
