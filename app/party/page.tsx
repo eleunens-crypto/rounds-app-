@@ -681,11 +681,14 @@ const T = {
     payersTitle: "Wie betaalde?",
     payersIntro: "Per rondje het bedrag en wie het voorschoot. Zonder dat kan de eindbalans niet kloppen.",
     sameForAll: "Dezelfde betaler voor alle rondjes",
-    toFinal: "Naar de eindbalans",
+    toFinal: "Fair Split Eindbalans",
     missingPayer: (n: number) => `Nog ${n} ${n === 1 ? "rondje" : "rondjes"} zonder bedrag of betaler`,
     potNotSplit: "De pot staat op de groep, nog niet op namen.",
     splitPotEqually: (n: number) => `Gelijk verdelen over ${n} ${n === 1 ? "persoon" : "personen"}`,
     potOnNames: "In de pot gelegd",
+    potPerPersonEdit: "Aanpassen per persoon",
+    potSpreadEven: "Gelijk verdelen",
+    potNewTotal: "Nieuw totaal in de pot",
     backToEqual: "← Terug naar gelijk verdelen",
     fairSplitExplain: "Liever eerlijk betalen volgens wat iedereen dronk (Fair Split!) Wijs drankjes en betalers hier toe.",
     payAllSelf: "Alles zelf",
@@ -716,7 +719,7 @@ const T = {
     quickPerHeadNote: (n: number) => `gelijk verdeeld over ${n} ${n === 1 ? "persoon" : "personen"}`,
     notFairSplitYet: "Dit is een gelijke verdeling",
     notFairSplitWhy: "Iedereen betaalt evenveel, ook wie minder dronk. Wil je dat wie meer dronk ook meer betaalt? Schakel over naar Fair Split.",
-    switchToFairBtn: "⚖️ Overschakelen naar Fair Split",
+    switchToFairBtn: "Naar Fair Split",
     fairSetupTitle: "⚖️ Wie was erbij?",
     fairSetupIntro: "Voeg de mensen toe. Tik een naam of laat 'm staan (Gast N). Daarna wijs je toe wie wat dronk.",
     guestNamePh: "tik om naam te wijzigen",
@@ -1187,11 +1190,14 @@ const T = {
     payersTitle: "Qui a payé ?",
     payersIntro: "Par tournée : le montant et qui l'a avancé. Sans ça, le bilan final ne peut pas être juste.",
     sameForAll: "Le même payeur pour toutes les tournées",
-    toFinal: "Vers le bilan final",
+    toFinal: "Bilan final Fair Split",
     missingPayer: (n: number) => `Encore ${n} tournée${n === 1 ? "" : "s"} sans montant ou sans payeur`,
     potNotSplit: "La cagnotte est sur le groupe, pas encore sur des noms.",
     splitPotEqually: (n: number) => `Répartir également sur ${n} personne${n === 1 ? "" : "s"}`,
     potOnNames: "Mis dans la cagnotte",
+    potPerPersonEdit: "Ajuster par personne",
+    potSpreadEven: "Répartir également",
+    potNewTotal: "Nouveau total dans la cagnotte",
     backToEqual: "← Retour au partage égal",
     fairSplitExplain: "Tu préfères payer selon ce que chacun a bu (Fair Split !) Attribue ici les boissons et les payeurs.",
     payAllSelf: "Tout payer",
@@ -1222,7 +1228,7 @@ const T = {
     quickPerHeadNote: (n: number) => `partag\u00e9 \u00e9galement entre ${n} ${n === 1 ? "personne" : "personnes"}`,
     notFairSplitYet: "C'est un partage \u00e9gal",
     notFairSplitWhy: "Tout le monde paie pareil, m\u00eame ceux qui ont moins bu. Tu veux que ceux qui ont plus bu paient plus ? Passe au Fair Split.",
-    switchToFairBtn: "⚖️ Passer au Fair Split",
+    switchToFairBtn: "Vers Fair Split",
     fairSetupTitle: "⚖️ Qui \u00e9tait l\u00e0 ?",
     fairSetupIntro: "Ajoute les personnes. Tape un nom ou laisse-le (Invit\u00e9 N). Ensuite tu attribues qui a bu quoi.",
     guestNamePh: "touche pour renommer",
@@ -1330,6 +1336,8 @@ export default function PartyTest() {
   const GROEPEN_ZICHTBAAR = 5
   const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
   const [showAllGroups, setShowAllGroups] = useState(false)
+  // Werkblad voor het verdelen van de pot over namen; null = niet in bewerkmodus.
+  const [potNames, setPotNames] = useState<Record<string, number> | null>(null)
   const [stalePins, setStalePins] = useState<SavedGroup[]>([])
   const isAdmin = !!ownerDevice && ownerDevice === me.current
   // Mijn eigen plaats: die waarop dit toestel zit. Nodig zodra gasten hun eigen
@@ -2850,6 +2858,17 @@ export default function PartyTest() {
   // In snelle rondjes gaat de pot naar de groep, zonder namen. Fair Split rekent per
   // persoon, dus die inleg moet eerst over namen verdeeld worden.
   const potZonderNamen = potRounds.some((r) => Object.keys(r.amounts).some((k) => !people.some((p) => p.id === k)))
+  // Bij het verdelen over namen voegen we de losse inlegrondes samen tot één rij: wie
+  // wat inlegde is vanaf hier de vraag, niet in welke beurt het gebeurde.
+  const bewaarPotPerPersoon = async (bedragen: Record<string, number>) => {
+    if (!groupId || potRounds.length === 0) return
+    const [eerste, ...rest] = potRounds
+    const { error } = await supabase.from("party_pot").update({ amounts: bedragen }).eq("id", eerste.id)
+    if (error) { setNotice("Pot opslaan mislukt: " + error.message); return }
+    if (rest.length > 0) await supabase.from("party_pot").delete().in("id", rest.map((r) => r.id))
+    setPotNames(null)
+    loadParty(groupId)
+  }
   const verdeelPotOverNamen = async () => {
     if (people.length === 0) return
     for (const r of potRounds) {
@@ -3656,7 +3675,10 @@ export default function PartyTest() {
     </>
   )
   const Header = () => {
-    const onboarding = view === "setup" || view === "settings"
+    // Onderweg van gelijk verdelen naar Fair Split is er maar één route: namen,
+    // toewijzen, pot, betalers, eindbalans. Instellingen en overzichten zouden je
+    // daar alleen uit halen, dus die verbergen we tot de omschakeling rond is.
+    const onboarding = view === "setup" || view === "settings" || fromQuick
     return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
@@ -5588,7 +5610,7 @@ export default function PartyTest() {
         {/* De uitleg verschijnt waar je tikte, met de overstap eronder. */}
         {settleChoice === "fair" && (
           <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
-            <div style={{ fontSize: 14.5, color: "#4a6b57", lineHeight: 1.55, marginBottom: 12 }}>{L.fairSplitExplain}</div>
+            <div style={{ fontSize: 14.5, color: "#4a6b57", lineHeight: 1.55, marginBottom: 14, textAlign: "center" }}>{L.fairSplitExplain}</div>
             <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={goToFairSplit}>{L.switchToFairBtn}</button>
             <button style={{ width: "100%", marginTop: 8, padding: "9px 0", background: "none", border: "none", fontSize: 14, fontWeight: 700, color: "#a89a6f", cursor: "pointer" }} onClick={() => setSettleChoice(null)}>{L.later}</button>
           </div>
@@ -6034,17 +6056,48 @@ export default function PartyTest() {
               <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>🫙 {L.potOnNames}</span>
               <span style={{ fontSize: 16, fontWeight: 800, color: "#1f8a4c" }}>{euro(potContribTotal)}</span>
             </div>
-            {potZonderNamen ? (
+            {potNames !== null ? (
+              <>
+                {/* Per persoon aanpasbaar. Wie meer intikt, verhoogt meteen de pot. */}
+                {people.map((p) => (
+                  <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                      <span style={{ fontSize: 15, color: "#8a7d55", fontWeight: 700 }}>€</span>
+                      <input type="text" inputMode="decimal" placeholder="0,00"
+                        value={(potNames[p.id] || 0) > 0 ? String(potNames[p.id]).replace(".", ",") : ""}
+                        onChange={(e) => { const v = parseFloat(e.target.value.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0; setPotNames((c) => ({ ...(c || {}), [p.id]: v })) }}
+                        style={{ ...S.input, width: 82, padding: "7px 9px", fontSize: 15, fontWeight: 800 }} />
+                    </span>
+                  </div>
+                ))}
+                <div style={{ ...S.row, justifyContent: "space-between", paddingTop: 10, marginTop: 4, borderTop: "1px dashed rgba(120,95,20,0.25)" }}>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55" }}>{L.potNewTotal}</span>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: "#1f8a4c" }}>{euro(Object.values(potNames).reduce((a, b) => a + (b || 0), 0))}</span>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 11 }}>
+                  <button style={{ ...S.btn, flex: 1, fontSize: 13.5, fontWeight: 800, padding: "10px 6px" }}
+                    onClick={() => { const per = potContribTotal / Math.max(1, people.length); const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(per * 100) / 100 }); setPotNames(n) }}>{L.potSpreadEven}</button>
+                  <button style={{ ...S.btnP, flex: 1, fontSize: 14, padding: "10px 6px" }}
+                    onClick={() => bewaarPotPerPersoon(potNames)}>{L.saveWord}</button>
+                </div>
+                <button style={{ width: "100%", marginTop: 8, padding: "8px 0", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#a89a6f", cursor: "pointer" }}
+                  onClick={() => setPotNames(null)}>{L.cancel}</button>
+              </>
+            ) : potZonderNamen ? (
               <>
                 <div style={{ fontSize: 13.5, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 10 }}>{L.potNotSplit}</div>
                 <button style={{ ...S.btn, width: "100%", fontWeight: 800, fontSize: 14.5 }} onClick={verdeelPotOverNamen}>{L.splitPotEqually(people.length)}</button>
+                <button style={{ width: "100%", marginTop: 8, padding: "8px 0", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#8a7d55", cursor: "pointer", textDecoration: "underline" }}
+                  onClick={() => { const per = potContribTotal / Math.max(1, people.length); const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(per * 100) / 100 }); setPotNames(n) }}>{L.potPerPersonEdit}</button>
               </>
             ) : (
               <>
                 <div style={{ fontSize: 14, color: "#6b5f3a", lineHeight: 1.6 }}>
                   {people.filter((p) => contribOf(p.id) > 0.005).map((p) => `${p.name} ${euro(contribOf(p.id))}`).join(" · ")}
                 </div>
-                <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 14 }} onClick={() => setShowPot(true)}>{L.adjustWord}</button>
+                <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 14, fontWeight: 800 }}
+                  onClick={() => { const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(contribOf(p.id) * 100) / 100 }); setPotNames(n) }}>{L.potPerPersonEdit}</button>
               </>
             )}
           </div>
@@ -6056,7 +6109,7 @@ export default function PartyTest() {
           </div>
         )}
         <button style={{ ...S.btnP, width: "100%", opacity: klaar ? 1 : 0.45 }}
-          onClick={() => { if (!klaar) return; setHasSettled(true); setView("final") }}>{L.toFinal}</button>
+          onClick={() => { if (!klaar) return; setFromQuick(false); setHasSettled(true); setView("final") }}>{L.toFinal}</button>
       </div></div>
     )
   }
