@@ -661,6 +661,8 @@ const T = {
     roundsNoAmountCount: (n: number) => `${n} rondjes zonder bedrag`,
     roundsNoAmountWhy: "Die tellen niet mee in de verdeling hieronder. Vul ze aan of laat ze zo.",
     fillAmountsBtn: "Bedragen aanvullen ›",
+    noAmountBadge: "zonder bedrag",
+    addAmountBtn: "€ Bedrag toevoegen",
     splitOverGroup: "Verdelen",
     splitEqually: "Gelijk verdelen",
     fairSplitExplain: "Bij Fair Split hangt elk drankje aan een naam. Wie meer dronk, betaalt meer \u2014 en wie niets nam, betaalt niets.\n\nJe wijst per rondje toe wie wat nam. Let op: overstappen wist wat je tot nu toe noteerde.",
@@ -1142,6 +1144,8 @@ const T = {
     roundsNoAmountCount: (n: number) => `${n} tournées sans montant`,
     roundsNoAmountWhy: "Elles ne comptent pas dans le partage ci-dessous. Complète-les ou laisse-les.",
     fillAmountsBtn: "Compléter les montants ›",
+    noAmountBadge: "sans montant",
+    addAmountBtn: "€ Ajouter le montant",
     splitOverGroup: "Partager",
     splitEqually: "R\u00e9partir \u00e9galement",
     fairSplitExplain: "Avec Fair Split, chaque boisson est li\u00e9e \u00e0 un nom. Qui a bu plus paie plus \u2014 qui n\u2019a rien pris ne paie rien.\n\nTu attribues par tourn\u00e9e qui a pris quoi. Attention : changer efface ce que tu as not\u00e9.",
@@ -1390,6 +1394,10 @@ export default function PartyTest() {
   const [fullList, setFullList] = useState(false)
   // De groepsnaam is in de header zelf aanpasbaar — niet via een omweg naar de instellingen.
   const [editName, setEditName] = useState(false)
+  // Kwam je via "Bedragen aanvullen"? Dan krijgen de lege rondjes een tint en een knop.
+  // Anders blijft het overzicht rustig en volstaat een label.
+  const [fillMode, setFillMode] = useState(false)
+  useEffect(() => { if (view !== "roundsOverview") setFillMode(false) }, [view])
   // Pijltjes bij de categorierij: ze tonen dat er links of rechts nog meer staat,
   // want een halve pil aan de rand leest als een afsnijfout en niet als een uitnodiging.
   const catScroll = useRef<HTMLDivElement | null>(null)
@@ -5357,10 +5365,9 @@ export default function PartyTest() {
             <div style={{ fontSize: 13.5, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 10 }}>{L.roundsNoAmountWhy}</div>
             <button
               onClick={() => {
-                // Zet de lege rondjes meteen open en het eerste in bewerkmodus, zodat je
-                // niet nog eens drie keer moet tikken om bij het bedragveld te komen.
-                setOpenRounds(new Set(zonderBedrag.map((r) => r.id)))
-                if (zonderBedrag[0]) startEditRound(zonderBedrag[0])
+                // Niets openklappen: in het overzicht markeren we de lege rondjes en
+                // zetten we er een knop bij, zodat je zelf kiest waar je begint.
+                setFillMode(true)
                 setOverviewBackTo("hub")
                 setView("roundsOverview")
               }}
@@ -5595,12 +5602,17 @@ export default function PartyTest() {
             const nr = rounds.indexOf(r) + 1
             const items = drinksOf(r).reduce((a, x) => a + x.n, 0)
             const open = isOpen(r)
+            const geenBedrag = (r.amount || 0) <= 0.005
+            const invulRij = fillMode && geenBedrag && editRoundId !== r.id
             return (
-              <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden", ...(editRoundId === r.id ? { boxShadow: "inset 0 0 0 2px rgba(240,165,0,0.55)", background: "#fffdf3" } : {}) }}>
-                <div onClick={() => toggle(r.id)} style={{ padding: "12px 14px", cursor: "pointer", background: editRoundId === r.id ? "rgba(240,165,0,0.1)" : open ? "rgba(240,165,0,0.06)" : "#fff" }}>
+              <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden", ...(editRoundId === r.id ? { boxShadow: "inset 0 0 0 2px rgba(240,165,0,0.55)", background: "#fffdf3" } : invulRij ? { border: "1.5px solid rgba(240,165,0,0.55)", background: "#fffdf3" } : {}) }}>
+                <div onClick={() => toggle(r.id)} style={{ padding: "12px 14px", cursor: "pointer", background: editRoundId === r.id ? "rgba(240,165,0,0.1)" : open ? "rgba(240,165,0,0.06)" : invulRij ? "rgba(240,165,0,0.09)" : "#fff" }}>
                   <div style={{ ...S.row, justifyContent: "space-between", gap: 8 }}>
                     <div style={{ ...S.row, gap: 8, minWidth: 0 }}>
                       <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{editRoundId === r.id ? L.editRoundHead(nr) : L.roundSummary(nr, items)}</span>
+                      {geenBedrag && editRoundId !== r.id && (
+                        <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 800, color: "#8a5e0f", background: "rgba(240,165,0,0.16)", borderRadius: 12, padding: "3px 9px", whiteSpace: "nowrap" }}>{L.noAmountBadge}</span>
+                      )}
                     </div>
                     <div style={{ ...S.row, gap: 9, flexShrink: 0 }}>
                       {editRoundId === r.id ? (
@@ -5620,6 +5632,13 @@ export default function PartyTest() {
                       ? <span style={{ color: "#1f6b3a", fontWeight: 700 }}> · 🫙 {L.paidFromPot(euro(r.potPart || 0))}</span>
                       : <span style={{ color: "#b3a988" }}> · {L.noPotUsed}</span>}
                   </div>
+                  {/* Kwam je aanvullen? Dan hoef je niet eerst open te klappen. */}
+                  {invulRij && (
+                    <div style={{ textAlign: "right", marginTop: 9 }}>
+                      <span onClick={(e) => { e.stopPropagation(); setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r) }}
+                        style={{ display: "inline-block", fontSize: 13, fontWeight: 800, color: "#c98a00", background: "#fff", border: "1px solid rgba(240,165,0,0.6)", borderRadius: 14, padding: "8px 14px", cursor: "pointer", whiteSpace: "nowrap" }}>{L.addAmountBtn}</span>
+                    </div>
+                  )}
                 </div>
                 {open && (() => {
                   const idx = rounds.indexOf(r)
