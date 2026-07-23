@@ -386,6 +386,9 @@ const T = {
     assignTitle: "Toewijzen",
     roundXofY: (a: number, b: number) => `Rondje ${a} van ${b}`,
     assignAllHint: "je loopt ze allemaal af",
+    assignAllSub: (n: number) => `Alle ${n} rondjes in \u00e9\u00e9n keer`,
+    roundDoneNext: "Dit rondje is rond",
+    roundDoneShort: "Rondje toegewezen",
     nextRoundAssign: (n: number) => `Volgende: rondje ${n} \u2192`,
     allAssignedDone: "Klaar \u2014 alles toegewezen",
     quickStart: "Starten",
@@ -851,6 +854,9 @@ const T = {
     assignTitle: "Attribuer",
     roundXofY: (a: number, b: number) => `Tourn\u00e9e ${a} sur ${b}`,
     assignAllHint: "tu les parcours toutes",
+    assignAllSub: (n: number) => `Les ${n} tourn\u00e9es d\u2019un coup`,
+    roundDoneNext: "Cette tourn\u00e9e est compl\u00e8te",
+    roundDoneShort: "Tourn\u00e9e attribu\u00e9e",
     nextRoundAssign: (n: number) => `Suivante : tourn\u00e9e ${n} \u2192`,
     allAssignedDone: "Termin\u00e9 \u2014 tout est attribu\u00e9",
     quickStart: "Démarrer",
@@ -4957,30 +4963,48 @@ export default function PartyTest() {
           </div>
         )}
         {assignIdx !== null && rounds[assignIdx] && (() => {
-          const idx = assignIdx
-          const r = rounds[idx]
-          const roundDrinks = drinks.filter((d) => drinkTotalRound(r, d.id) > 0)
-          const done = !drinks.some((d) => (r.anon[d.id] ?? 0) > 0)
+          // "Alles meteen" toont elk rondje in één lijst; "per rondje" toont er precies één
+          // en springt daarna door naar het volgende dat nog namen mist.
+          const toonIdx = assignAllMode
+            ? rounds.map((_, i) => i).filter((i) => drinks.some((d) => drinkTotalRound(rounds[i], d.id) > 0))
+            : [assignIdx]
+          const done = !toonIdx.some((i) => drinks.some((d) => (rounds[i].anon[d.id] ?? 0) > 0))
+          const volgende = assignAllMode ? -1 : rounds.findIndex((rr, i) => i !== assignIdx && drinks.some((d) => (rr.anon[d.id] ?? 0) > 0))
+          const naarVolgende = done && volgende >= 0
+          const nogOpen = rounds.filter((rr) => drinks.some((d) => (rr.anon[d.id] ?? 0) > 0)).length
           return (
-            <div style={S.overlay} onClick={() => setAssignIdx(null)}>
+            <div style={S.overlay} onClick={() => { setAssignIdx(null); setAssignAllMode(false) }}>
               <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                 <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.assignTitle}</h3>
-                {/* Waar zit je in de rij? Bij "alles meteen" loop je de rondjes één voor
-                    één af; per rondje toewijzen doet er precies één. */}
                 <div style={{ fontSize: 13.5, color: "#8a7d55", fontWeight: 700, marginBottom: 10 }}>
-                  {L.roundXofY(idx + 1, rounds.length)}{assignAllMode ? ` · ${L.assignAllHint}` : ""}
+                  {assignAllMode ? L.assignAllSub(toonIdx.length) : L.roundXofY(assignIdx + 1, rounds.length)}
                 </div>
 
-                      <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, marginBottom: 8 }}>
-                        <div style={{ ...S.seg(editAssignMode === "person"), padding: "5px 9px", fontSize: 13.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
-                        <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 13.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>per drank</div>
-                      </div>
-                      {editAssignMode === "person" && (() => { const u = roundDrinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0); return u > 0 ? <div style={{ fontSize: 14, fontWeight: 800, color: "#c0554a", marginBottom: 8 }}>🔴 {L.notAssignedYet(u)}</div> : null })()}
+                <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, marginBottom: 8 }}>
+                  <div style={{ ...S.seg(editAssignMode === "person"), padding: "5px 9px", fontSize: 13.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
+                  <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 13.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>per drank</div>
+                </div>
+
+                {toonIdx.map((idx) => {
+                  const r = rounds[idx]
+                  const roundDrinks = drinks.filter((d) => drinkTotalRound(r, d.id) > 0)
+                  const un = roundDrinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0)
+                  return (
+                    <div key={r.id} style={{ marginBottom: toonIdx.length > 1 ? 16 : 0 }}>
+                      {toonIdx.length > 1 && (
+                        <div style={{ ...S.row, justifyContent: "space-between", background: un > 0 ? "rgba(224,104,92,0.1)" : "rgba(31,138,76,0.1)", borderRadius: 9, padding: "7px 11px", marginBottom: 8 }}>
+                          <span style={{ fontSize: 14.5, fontWeight: 800, color: un > 0 ? "#b0402f" : "#1f6b3a" }}>{L.roundWord} {idx + 1}</span>
+                          <span style={{ fontSize: 13.5, fontWeight: 800, color: un > 0 ? "#b0402f" : "#1f8a4c" }}>{un > 0 ? `🔴 ${un}` : "✓"}</span>
+                        </div>
+                      )}
+                      {toonIdx.length === 1 && un > 0 && editAssignMode === "person" && (
+                        <div style={{ fontSize: 14, fontWeight: 800, color: "#c0554a", marginBottom: 8 }}>🔴 {L.notAssignedYet(un)}</div>
+                      )}
                       {editAssignMode === "drink" ? roundDrinks.map((d) => {
-                        const un = r.anon[d.id] ?? 0
+                        const dun = r.anon[d.id] ?? 0
                         return (
                           <div key={d.id} style={{ marginBottom: 9 }}>
-                            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 5 }}>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}{un > 0 && <span style={{ color: "#c0554a", fontWeight: 700 }}> · 🔴 {un} onbekend</span>}</div>
+                            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 5 }}>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}{dun > 0 && <span style={{ color: "#c0554a", fontWeight: 700 }}> · 🔴 {dun} onbekend</span>}</div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                               {people.map((p) => { const n = r.orders[d.id]?.[p.id] ?? 0; return (
                                 <span key={p.id} style={{ ...S.chip(n), padding: "5px 10px", fontSize: 14.5 }} onClick={() => rAssignFromAnon(idx, d.id, p.id)}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 15.5, fontWeight: 800, lineHeight: 1 }}>−</span>}</span>
@@ -5004,21 +5028,23 @@ export default function PartyTest() {
                           </div>
                         )
                       })}</div>)}
-                      <div style={{ fontSize: 13, color: "#8a7d55" }}>{L.redistribute}</div>
-                {(() => {
-                  // Bij "alles meteen" springen we door naar het eerstvolgende rondje dat
-                  // nog drankjes zonder naam heeft; is er geen meer, dan zijn we klaar.
-                  const volgende = assignAllMode
-                    ? rounds.findIndex((rr, i) => i !== idx && drinks.some((d) => (rr.anon[d.id] ?? 0) > 0))
-                    : -1
-                  const naarVolgende = done && volgende >= 0
-                  return (
-                    <button style={done ? { ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 10 }}
-                      onClick={() => { if (naarVolgende) setAssignIdx(volgende); else { setAssignIdx(null); setAssignAllMode(false) } }}>
-                      {naarVolgende ? L.nextRoundAssign(volgende + 1) : done ? L.allAssignedDone : L.ready}
-                    </button>
+                    </div>
                   )
-                })()}
+                })}
+
+                <div style={{ fontSize: 13, color: "#8a7d55" }}>{L.redistribute}</div>
+
+                {/* Alles rond? Dan een duidelijk groen vinkje in plaats van een gewone knop. */}
+                {done && (
+                  <div style={{ background: "rgba(31,138,76,0.1)", border: "1.5px solid rgba(31,138,76,0.45)", borderRadius: 11, padding: "12px 13px", marginTop: 12, textAlign: "center" }}>
+                    <div style={{ fontSize: 22, marginBottom: 2 }}>✅</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#1f6b3a" }}>{naarVolgende ? L.roundDoneNext : nogOpen === 0 ? L.allAssignedDone : L.roundDoneShort}</div>
+                  </div>
+                )}
+                <button style={done ? { ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 10 }}
+                  onClick={() => { if (naarVolgende) setAssignIdx(volgende); else { setAssignIdx(null); setAssignAllMode(false) } }}>
+                  {naarVolgende ? L.nextRoundAssign(volgende + 1) : done ? L.ready : L.ready}
+                </button>
               </div>
             </div>
           )
@@ -5038,7 +5064,7 @@ export default function PartyTest() {
               <button style={{ ...S.btnP, width: "80%" }} onClick={startFirstRound}>{unfinishedRound ? L.continueRound(roundNr) : "Start 1e rondje"}</button>
             </div>
           </div>
-        ) : !settle ? null : (<>
+        ) : (!settle || unassignedAllRounds > 0) ? null : (<>
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
           <p style={{ ...S.sub, margin: 0 }}>{L.tapRoundToEdit}</p>
           {paidCount > 1 && <span onClick={() => setAllRoundsOpen((v) => !v)} style={{ fontSize: 14, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", flexShrink: 0 }}>{allRoundsOpen ? "alles dichtklappen" : "alles openklappen"}</span>}
