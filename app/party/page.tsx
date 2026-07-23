@@ -529,6 +529,7 @@ const T = {
     totalOrdered: "💰 Totaal besteld",
     fairSplit: "⚖️ Fair Split",
     equalSplit: "iedereen evenveel",
+    equalWouldBe: (v: string) => `Gelijk verdelen zou ${v} per persoon zijn.`,
     equalSplitWarn: "⚠️ Dit is een gelijke verdeling, geen Fair Split.",
     fairSplitInfo: "Gelijke verdeling = totaal ÷ aantal personen. Fair Split is eerlijker: wie weinig of niks dronk, betaalt niet mee voor wie veel dronk.",
     unassignedWarn: "Wijs de resterende drankjes toe, dan verdeelt de app eerlijk op wat elk verteerde.",
@@ -1038,6 +1039,7 @@ const T = {
     totalOrdered: "💰 Total commandé",
     fairSplit: "⚖️ Fair Split",
     equalSplit: "part égale",
+    equalWouldBe: (v: string) => `Un partage égal ferait ${v} par personne.`,
     equalSplitWarn: "⚠️ Ceci est une répartition égale, pas un Fair Split.",
     fairSplitInfo: "Répartition égale = total ÷ nombre de personnes. Le Fair Split est plus juste : qui a peu ou rien bu ne paie pas pour ceux qui ont beaucoup bu.",
     unassignedWarn: "Attribue les boissons restantes, puis l'app répartit selon ce que chacun a consommé.",
@@ -6148,6 +6150,10 @@ export default function PartyTest() {
           <h3 style={{ ...S.h3, margin: 0 }}>{L.fairSplit}</h3>
           <span onClick={() => setNotice("⚖️ Fair Split — Eerlijker dan gelijke verdeling. Wie weinig of goedkopere drankjes nam, betaalt niet mee voor wie meer of duurdere drankjes nam.")} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 13, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
         </div>
+        {/* Eén regel om de twee manieren tegen elkaar te zetten. */}
+        {people.length > 0 && (
+          <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.5 }}>👥 {L.equalWouldBe(show(equalShare))}</div>
+        )}
         <div style={{ marginBottom: 10 }}>
           <button onClick={() => { setOpenFairAll((v) => !v); setOpenFair({}) }} style={{ ...S.btn, padding: "7px 14px", fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>{openFairAll ? "▴ Sluit details" : "▾ Bekijk details"}</button>
         </div>
@@ -6176,7 +6182,18 @@ export default function PartyTest() {
                 <span style={{ flex: 1, fontSize: 15.5, fontWeight: 700 }}>{open ? "▾" : "▸"} {p.name} <span style={{ fontSize: 14.5, fontWeight: 800, color: "#1f8a4c" }}>· {show(dronk)}</span>
                   {Math.abs(owed) > 0.005 && <span style={{ display: "inline-block", marginLeft: 6, fontSize: 13, fontWeight: 800, padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap", background: owed > 0 ? "rgba(224,138,0,0.16)" : "rgba(31,138,76,0.14)", color: owed > 0 ? "#b35309" : "#1f8a4c" }}>{owed > 0 ? `betaalt ${show(owed)}` : `krijgt ${show(-owed)}`}</span>}
                 </span>
-                {showEqual && <span style={{ width: 96, textAlign: "right", fontSize: 14.5, color: "#8a7d55" }}>{show(equalShare)}</span>}
+                {showEqual && (
+                  <span style={{ width: 104, textAlign: "right", flexShrink: 0 }}>
+                    <span style={{ display: "block", fontSize: 14.5, color: "#8a7d55" }}>{show(equalShare)}</span>
+                    {/* Het verschil geeft de vergelijking pas betekenis: hetzelfde getal
+                        bij iedereen herhalen zegt niets. */}
+                    {Math.abs(dronk - equalShare) > 0.005 && (
+                      <span style={{ display: "block", fontSize: 12, fontWeight: 800, color: dronk < equalShare ? "#1f8a4c" : "#b35309" }}>
+                        {dronk < equalShare ? "−" : "+"}{show(Math.abs(dronk - equalShare))}
+                      </span>
+                    )}
+                  </span>
+                )}
               </div>
               {open && (
                 <div style={{ background: "#faf4e4", borderRadius: 10, padding: "8px 11px", margin: "0 0 8px", fontSize: 14.5 }}>
