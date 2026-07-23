@@ -678,6 +678,14 @@ const T = {
     splitEqually: "Gelijk verdelen",
     splitWithFair: "Verdeel met Fair Split",
     fastest: "snelste",
+    payersTitle: "Wie betaalde?",
+    payersIntro: "Per rondje het bedrag en wie het voorschoot. Zonder dat kan de eindbalans niet kloppen.",
+    sameForAll: "Dezelfde betaler voor alle rondjes",
+    toFinal: "Naar de eindbalans",
+    missingPayer: (n: number) => `Nog ${n} ${n === 1 ? "rondje" : "rondjes"} zonder bedrag of betaler`,
+    potNotSplit: "De pot staat op de groep, nog niet op namen.",
+    splitPotEqually: (n: number) => `Gelijk verdelen over ${n} ${n === 1 ? "persoon" : "personen"}`,
+    potOnNames: "In de pot gelegd",
     backToEqual: "← Terug naar gelijk verdelen",
     fairSplitExplain: "Liever eerlijk betalen volgens wat iedereen dronk (Fair Split!) Wijs drankjes en betalers hier toe.",
     payAllSelf: "Alles zelf",
@@ -1176,6 +1184,14 @@ const T = {
     splitEqually: "R\u00e9partir \u00e9galement",
     splitWithFair: "Partager avec Fair Split",
     fastest: "le plus rapide",
+    payersTitle: "Qui a payé ?",
+    payersIntro: "Par tournée : le montant et qui l'a avancé. Sans ça, le bilan final ne peut pas être juste.",
+    sameForAll: "Le même payeur pour toutes les tournées",
+    toFinal: "Vers le bilan final",
+    missingPayer: (n: number) => `Encore ${n} tournée${n === 1 ? "" : "s"} sans montant ou sans payeur`,
+    potNotSplit: "La cagnotte est sur le groupe, pas encore sur des noms.",
+    splitPotEqually: (n: number) => `Répartir également sur ${n} personne${n === 1 ? "" : "s"}`,
+    potOnNames: "Mis dans la cagnotte",
     backToEqual: "← Retour au partage égal",
     fairSplitExplain: "Tu préfères payer selon ce que chacun a bu (Fair Split !) Attribue ici les boissons et les payeurs.",
     payAllSelf: "Tout payer",
@@ -1244,7 +1260,7 @@ const T = {
 export default function PartyTest() {
   const [lang] = useLang()
   const L = T[(lang === "fr" ? "fr" : "nl") as "nl" | "fr"]
-  const [view, setView] = useState<"start" | "setup" | "settings" | "order" | "confirmed" | "hub" | "final" | "quickSettle" | "fairSetup" | "roundsOverview">("start")
+  const [view, setView] = useState<"start" | "setup" | "settings" | "order" | "confirmed" | "hub" | "final" | "quickSettle" | "fairSetup" | "roundsOverview" | "payers">("start")
   const [pay, setPay] = useState<"eur" | "coin">("eur")
   const [coinValue, setCoinValue] = useState(3.9)
   const [depositOn, setDepositOn] = useState(false)
@@ -2824,6 +2840,27 @@ export default function PartyTest() {
     setFromQuick(false)
     setSettleChoice("equal")
     setView("quickSettle")
+  }
+  // Eén tik voor het meest voorkomende geval: dezelfde persoon haalde telkens.
+  const zelfdeBetalerVoorAlles = (pid: string) => {
+    const nieuwe = rounds.map((r, idx) => (r.amount || 0) > 0.005 ? rRedistribute(r, idx, false, [pid], r.amount) : r)
+    setRounds(nieuwe)
+    nieuwe.forEach((r) => persistRound(r))
+  }
+  // In snelle rondjes gaat de pot naar de groep, zonder namen. Fair Split rekent per
+  // persoon, dus die inleg moet eerst over namen verdeeld worden.
+  const potZonderNamen = potRounds.some((r) => Object.keys(r.amounts).some((k) => !people.some((p) => p.id === k)))
+  const verdeelPotOverNamen = async () => {
+    if (people.length === 0) return
+    for (const r of potRounds) {
+      const tot = Object.values(r.amounts).reduce((a, b) => a + (b || 0), 0)
+      const per = tot / people.length
+      const nieuw: Record<string, number> = {}
+      people.forEach((p) => { nieuw[p.id] = per })
+      const { error } = await supabase.from("party_pot").update({ amounts: nieuw }).eq("id", r.id)
+      if (error) { setNotice("Pot verdelen mislukt: " + error.message); return }
+    }
+    if (groupId) loadParty(groupId)
   }
   const confirmFairSetup = async () => {
     if (people.length === 0) { setNotice(L.addPersonFirst); return }
@@ -5198,6 +5235,14 @@ export default function PartyTest() {
             )}
           </div>
         )}
+        {/* Alles toegewezen? Dan rest nog wie wat voorschoot. */}
+        {settle && fromQuick && unassignedAllRounds === 0 && rounds.length > 0 && (
+          <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
+            <div style={{ fontSize: 15.5, fontWeight: 800, color: "#1f6b3a", marginBottom: 4 }}>💶 {L.payersTitle}</div>
+            <div style={{ fontSize: 14, color: "#4a6b57", lineHeight: 1.5, marginBottom: 11 }}>{L.payersIntro}</div>
+            <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={() => setView("payers")}>{L.payersTitle}</button>
+          </div>
+        )}
         {assignIdx !== null && rounds[assignIdx] && (() => {
           // "Alles meteen" toont elk rondje in één lijst; "per rondje" toont er precies één
           // en springt daarna door naar het volgende dat nog namen mist.
@@ -5278,7 +5323,7 @@ export default function PartyTest() {
                   </div>
                 )}
                 <button style={done ? { ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 10 }}
-                  onClick={() => { if (naarVolgende) setAssignIdx(volgende); else { setAssignIdx(null); setAssignAllMode(false) } }}>
+                  onClick={() => { if (naarVolgende) setAssignIdx(volgende); else { setAssignIdx(null); setAssignAllMode(false); if (fromQuick && done) setView("payers") } }}>
                   {naarVolgende ? L.nextRoundAssign(volgende + 1) : done ? L.ready : L.ready}
                 </button>
               </div>
@@ -5912,6 +5957,106 @@ export default function PartyTest() {
         {rounds.length > 0 && laatsteRondjeKlaar() && (
           <button style={{ width: "100%", marginTop: 8, border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 14, padding: "12px 6px", fontSize: 15, fontWeight: 800, cursor: "pointer" }} onClick={repeatRound}>{L.repeatRound}</button>
         )}
+      </div></div>
+    )
+  }
+
+  // ── WIE BETAALDE (na het toewijzen, vóór de eindbalans) ─────────────────────
+  // Eén scherm voor de twee dingen die de snelle modus niet bijhoudt: wie het rondje
+  // voorschoot, en van wie het geld in de pot komt. Zonder die twee kan de eindbalans
+  // niet uitrekenen wie aan wie moet overschrijven.
+  if (view === "payers") {
+    const zonderBetaler = rounds.filter((r) => (r.amount || 0) <= 0.005 || Object.values(r.payers || {}).every((a) => (a || 0) <= 0.005))
+    const klaar = zonderBetaler.length === 0 && !potZonderNamen
+    return (
+      <div style={S.page}><div style={S.wrap}>
+        <Header />
+        {showPot && renderPotModal()}
+        {renderDialogs()}
+
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6, gap: 8 }}>
+          <h3 style={{ ...S.h3, margin: 0 }}>💶 {L.payersTitle}</h3>
+          {fromQuick && (
+            <button style={{ ...S.btn, fontSize: 13, fontWeight: 700, padding: "7px 11px", flexShrink: 0 }} onClick={backToEqualSplit}>{L.backToEqual}</button>
+          )}
+        </div>
+        <div style={{ fontSize: 14, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>{L.payersIntro}</div>
+
+        {/* Meestal haalde dezelfde persoon telkens: dan is dit één tik voor de avond. */}
+        {people.length > 0 && rounds.length > 1 && (
+          <div style={{ ...S.card, padding: "12px 13px" }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 9 }}>⚡ {L.sameForAll}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {people.map((p) => (
+                <span key={p.id} onClick={() => zelfdeBetalerVoorAlles(p.id)}
+                  style={{ ...S.pill, cursor: "pointer", fontSize: 14.5, padding: "6px 12px", background: "#fff", border: "1px solid rgba(120,95,20,0.25)", color: "#4a3f1e" }}>{p.name}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {rounds.map((r, idx) => {
+          const items = drinksOf(r).reduce((a, x) => a + x.n, 0)
+          const geenBedrag = (r.amount || 0) <= 0.005
+          const gekozen = Object.keys(r.payers || {}).filter((pid) => (r.payers[pid] || 0) > 0.005)
+          const mist = geenBedrag || gekozen.length === 0
+          return (
+            <div key={r.id} style={{ ...S.card, padding: "12px 14px", ...(mist ? { border: "1.5px solid rgba(240,165,0,0.55)", background: "#fffdf3" } : {}) }}>
+              <div style={{ ...S.row, justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.roundSummary(idx + 1, items)}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>€</span>
+                  <input type="text" inputMode="decimal" placeholder="0,00"
+                    value={(r.amount || 0) > 0 ? String(r.amount).replace(".", ",") : ""}
+                    onChange={(e) => rSetAmount(idx, parseFloat(e.target.value.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0)}
+                    style={{ ...S.input, width: 88, padding: "8px 10px", fontSize: 16, fontWeight: 800, color: "#c88a1a", textAlign: "right" }} />
+                </span>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {people.map((p) => {
+                  const on = (r.payers?.[p.id] || 0) > 0.005
+                  return (
+                    <span key={p.id} onClick={() => { if (geenBedrag) { setNotice(L.fillAmountFirst); return } rTogglePayer(idx, p.id) }}
+                      style={{ ...S.chip(on ? 1 : 0), fontSize: 14.5, padding: "6px 11px", opacity: geenBedrag ? 0.5 : 1 }}>
+                      {p.name}{on && gekozen.length > 1 && <span style={S.badge}>{euro(r.payers[p.id])}</span>}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+
+        {/* De pot: in de snelle modus zonder namen ingelegd, hier op namen gezet. */}
+        {potContribTotal > 0.005 && (
+          <div style={{ ...S.card, ...(potZonderNamen ? { border: "1.5px solid rgba(240,165,0,0.55)", background: "#fffdf3" } : {}) }}>
+            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>🫙 {L.potOnNames}</span>
+              <span style={{ fontSize: 16, fontWeight: 800, color: "#1f8a4c" }}>{euro(potContribTotal)}</span>
+            </div>
+            {potZonderNamen ? (
+              <>
+                <div style={{ fontSize: 13.5, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 10 }}>{L.potNotSplit}</div>
+                <button style={{ ...S.btn, width: "100%", fontWeight: 800, fontSize: 14.5 }} onClick={verdeelPotOverNamen}>{L.splitPotEqually(people.length)}</button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 14, color: "#6b5f3a", lineHeight: 1.6 }}>
+                  {people.filter((p) => contribOf(p.id) > 0.005).map((p) => `${p.name} ${euro(contribOf(p.id))}`).join(" · ")}
+                </div>
+                <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 14 }} onClick={() => setShowPot(true)}>{L.adjustWord}</button>
+              </>
+            )}
+          </div>
+        )}
+
+        {!klaar && (
+          <div style={{ fontSize: 13.5, color: "#b0402f", fontWeight: 800, textAlign: "center", marginBottom: 8 }}>
+            {zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit}
+          </div>
+        )}
+        <button style={{ ...S.btnP, width: "100%", opacity: klaar ? 1 : 0.45 }}
+          onClick={() => { if (!klaar) return; setHasSettled(true); setView("final") }}>{L.toFinal}</button>
       </div></div>
     )
   }
