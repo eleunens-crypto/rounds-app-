@@ -81,9 +81,9 @@ const DATA: [Cat, string, number][] = [
 // Alles hierbuiten blijft gewoon bestaan in DATA en verschijnt zodra fullList aan staat.
 const FAVS = new Set([
   // Bier
-  "Pintje", "Duvel",
+  "Pintje", "Duvel", "Kriek", "Cornet",
   // AV-bier
-  "Jupiler 0.0", "Carlsberg 0.0", "Sportzot",
+  "Jupiler 0.0", "Carlsberg 0.0", "Sportzot", "Cornet 0.0",
   // Frisdrank
   "Coca-Cola", "Coca-Cola Zero", "Coca-Cola Light", "Fanta", "Schweppes Tonic", "Water plat", "Water bruis",
   // Wijn
@@ -2270,7 +2270,12 @@ export default function PartyTest() {
     supabase.from("party_pot").delete().eq("id", id).then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
     setPotRounds((rs) => rs.filter((r) => r.id !== id)); setConfirmDlg(null)
   } })
-  const catsPresent = CATS.filter((c) => c === "Eigen" || drinks.some((d) => d.cat === c))
+  // Zodra er een eigen drankje bestaat, springt ⭐ Eigen vooraan — dat is dan de
+  // categorie die je zelf hebt aangemaakt en dus het eerst zoekt. Zolang ze leeg is,
+  // blijft ze achteraan staan en duwt ze de gewone lijst niet opzij.
+  const heeftEigen = drinks.some((d) => d.cat === "Eigen")
+  const catOrde: Cat[] = heeftEigen ? ["Eigen", ...CATS.filter((c) => c !== "Eigen")] : CATS
+  const catsPresent = catOrde.filter((c) => c === "Eigen" || drinks.some((d) => d.cat === c))
   const bump1 = (did: string) => bumpAnon(did, 1)
   // Een drankje in één tik volledig uit de lopende bestelling halen — zowel de nog niet
   // toegewezen exemplaren als die al aan iemand hingen.
