@@ -665,7 +665,7 @@ const T = {
     addAmountBtn: "€ Bedrag toevoegen",
     splitOverGroup: "Verdelen",
     splitEqually: "Gelijk verdelen",
-    fairSplitExplain: "Bij Fair Split hangt elk drankje aan een naam. Wie meer dronk, betaalt meer \u2014 en wie niets nam, betaalt niets.\n\nJe wijst per rondje toe wie wat nam. Let op: overstappen wist wat je tot nu toe noteerde.",
+    fairSplitExplain: "Liever eerlijk betalen volgens wat iedereen dronk (Fair Split!) Wijs drankjes en betalers hier toe.",
     payAllSelf: "Alles zelf",
     treatHint: "Rondje trakteren? Tik hieronder aan (telt dan niet mee in de verdeling)",
     roundWord: "Rondje",
@@ -1148,7 +1148,7 @@ const T = {
     addAmountBtn: "€ Ajouter le montant",
     splitOverGroup: "Partager",
     splitEqually: "R\u00e9partir \u00e9galement",
-    fairSplitExplain: "Avec Fair Split, chaque boisson est li\u00e9e \u00e0 un nom. Qui a bu plus paie plus \u2014 qui n\u2019a rien pris ne paie rien.\n\nTu attribues par tourn\u00e9e qui a pris quoi. Attention : changer efface ce que tu as not\u00e9.",
+    fairSplitExplain: "Tu préfères payer selon ce que chacun a bu (Fair Split !) Attribue ici les boissons et les payeurs.",
     payAllSelf: "Tout payer",
     treatHint: "Tu offres une tourn\u00e9e ? Touche-la ci-dessous (elle ne compte pas dans le partage)",
     roundWord: "Tourn\u00e9e",
@@ -1397,6 +1397,8 @@ export default function PartyTest() {
   // Kwam je via "Bedragen aanvullen"? Dan krijgen de lege rondjes een tint en een knop.
   // Anders blijft het overzicht rustig en volstaat een label.
   const [fillMode, setFillMode] = useState(false)
+  // Tik op de Fair Split-tab: eerst uitleggen wat er gebeurt, dan pas overstappen.
+  const [fairIntro, setFairIntro] = useState(false)
   useEffect(() => { if (view !== "roundsOverview") setFillMode(false) }, [view])
   // Pijltjes bij de categorierij: ze tonen dat er links of rechts nog meer staat,
   // want een halve pil aan de rand leest als een afsnijfout en niet als een uitnodiging.
@@ -5380,12 +5382,19 @@ export default function PartyTest() {
             onClick={() => setSettleMode("verdelen")}>👥 {L.splitEqually}</button>
           <button style={{ flex: 1, padding: "10px 6px", borderRadius: 9, fontSize: 14.5, fontWeight: 800, cursor: "pointer", border: "none",
             background: "transparent", color: "#8a7d55", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-            onClick={switchMode}>
+            onClick={() => setFairIntro((v) => !v)}>
             ⚖️ {L.modeTitle}
-            <span onClick={(e) => { e.stopPropagation(); setNotice(L.fairSplitExplain) }}
-              style={{ width: 19, height: 19, borderRadius: "50%", border: "1.5px solid #b8ac8a", color: "#8a7d55", fontSize: 11, fontWeight: 800, fontStyle: "italic", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>i</span>
           </button>
         </div>
+
+        {/* De uitleg verschijnt waar je tikte, met de overstap eronder. */}
+        {fairIntro && (
+          <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
+            <div style={{ fontSize: 14.5, color: "#4a6b57", lineHeight: 1.55, marginBottom: 12 }}>{L.fairSplitExplain}</div>
+            <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={goToFairSplit}>{L.switchToFairBtn}</button>
+            <button style={{ width: "100%", marginTop: 8, padding: "9px 0", background: "none", border: "none", fontSize: 14, fontWeight: 700, color: "#a89a6f", cursor: "pointer" }} onClick={() => setFairIntro(false)}>{L.later}</button>
+          </div>
+        )}
 
         {!alles ? (
           <>
@@ -5422,6 +5431,8 @@ export default function PartyTest() {
                     {traktatieTot > 0.005 && (
                       <div style={{ fontSize: 14, color: "#8a5e0f", fontWeight: 700, marginTop: 7 }}>🎁 {L.plusTreat(euro(traktatieTot))}</div>
                     )}
+                    {/* De kanttekening hoort bij het bedrag, niet in een eigen kader. */}
+                    <div style={{ fontSize: 13, color: "#4a6b57", lineHeight: 1.55, marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(31,138,76,0.2)", textAlign: "left" }}>{L.notFairSplitWhy}</div>
                   </div>
                   {/* Twee rustige keuzes onder het bedrag: detail per rondje, of iemand
                       die een rondje trakteert. */}
@@ -5490,12 +5501,6 @@ export default function PartyTest() {
           </div>
         )}
 
-        {/* Fair Split blijft de weg naar een echt per-persoon-detail. */}
-        <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
-          <div style={{ fontSize: 15.5, fontWeight: 800, color: "#1f6b3a", marginBottom: 4 }}>{L.notFairSplitYet}</div>
-          <div style={{ fontSize: 14, color: "#4a6b57", lineHeight: 1.5, marginBottom: 11 }}>{L.notFairSplitWhy}</div>
-          <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={goToFairSplit}>{L.switchToFairBtn}</button>
-        </div>
       </div></div>
     )
   }
