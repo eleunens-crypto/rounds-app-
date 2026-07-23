@@ -677,6 +677,7 @@ const T = {
     splitOverGroup: "Verdelen",
     splitEqually: "Gelijk verdelen",
     splitWithFair: "Verdeel met Fair Split",
+    fastest: "snelste",
     backToEqual: "← Terug naar gelijk verdelen",
     fairSplitExplain: "Liever eerlijk betalen volgens wat iedereen dronk (Fair Split!) Wijs drankjes en betalers hier toe.",
     payAllSelf: "Alles zelf",
@@ -1174,6 +1175,7 @@ const T = {
     splitOverGroup: "Partager",
     splitEqually: "R\u00e9partir \u00e9galement",
     splitWithFair: "Partager avec Fair Split",
+    fastest: "le plus rapide",
     backToEqual: "← Retour au partage égal",
     fairSplitExplain: "Tu préfères payer selon ce que chacun a bu (Fair Split !) Attribue ici les boissons et les payeurs.",
     payAllSelf: "Tout payer",
@@ -1438,7 +1440,10 @@ export default function PartyTest() {
   // Anders blijft het overzicht rustig en volstaat een label.
   const [fillMode, setFillMode] = useState(false)
   // Tik op de Fair Split-tab: eerst uitleggen wat er gebeurt, dan pas overstappen.
-  const [fairIntro, setFairIntro] = useState(false)
+  // Drie toestanden: nog niets gekozen (allebei opgelicht, verder niets in beeld),
+  // gelijk verdelen, of Fair Split. Zonder die derde toestand zou "gelijk verdelen"
+  // stilzwijgend de standaard zijn, en dat is precies de keuze die de gebruiker maakt.
+  const [settleChoice, setSettleChoice] = useState<"equal" | "fair" | null>(null)
   // Kwam je vanuit de gelijke verdeling? Dan bieden we onderweg een weg terug.
   const [fromQuick, setFromQuick] = useState(false)
   useEffect(() => { if (view !== "roundsOverview") setFillMode(false) }, [view])
@@ -2817,7 +2822,7 @@ export default function PartyTest() {
     setSettle(false)
     persistSettings({ settle: false })
     setFromQuick(false)
-    setFairIntro(false)
+    setSettleChoice("equal")
     setView("quickSettle")
   }
   const confirmFairSetup = async () => {
@@ -3236,7 +3241,7 @@ export default function PartyTest() {
             return (
               <button key={g.key}
                 onClick={() => {
-                  if (g.samen) { setSettlePick(null); return }              // groepje: enkel ontkoppelen hieronder
+                  if (g.samen) { setSettleChoice(null); return }              // groepje: enkel ontkoppelen hieronder
                   if (!settlePick) { setSettlePick(g.key); return }
                   if (settlePick === g.key) { setSettlePick(null); return }
                   linkSettle(settlePick, g.key); setSettlePick(null)
@@ -5471,7 +5476,7 @@ export default function PartyTest() {
     const perPersoon = groepenMetDeel[0]?.deel ?? 0
     const alles = settleMode === "allesZelf"
     return (
-      <div style={S.page}><div style={S.wrap}>
+      <div style={S.page} onClick={() => { setShowPerRound(false); setShowTreat(false) }}><div style={S.wrap}>
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
@@ -5512,25 +5517,35 @@ export default function PartyTest() {
           </div>
         )}
 
-        {/* Links: gelijk verdelen over de groep. Rechts: overstappen naar Fair Split,
-            waar elk drankje aan een naam hangt. */}
-        <div style={{ display: "flex", gap: 4, background: "#f7f1e2", padding: 4, borderRadius: 12, marginBottom: 12 }}>
-          <button style={{ flex: 1, padding: "11px 6px", borderRadius: 9, fontSize: 14, fontWeight: 800, cursor: "pointer", border: "none", lineHeight: 1.25,
-            background: fairIntro ? "transparent" : "#fff", color: fairIntro ? "#a89a6f" : "#4a3f1e",
-            boxShadow: fairIntro ? "none" : "0 1px 3px rgba(0,0,0,0.08)" }}
-            onClick={() => { setSettleMode("verdelen"); setFairIntro(false) }}>👥 {L.splitEqually}</button>
-          <button style={{ flex: 1, padding: "11px 6px", borderRadius: 9, fontSize: 14, fontWeight: 800, cursor: "pointer", border: "none", lineHeight: 1.25,
-            background: fairIntro ? "#fff" : "transparent", color: fairIntro ? "#1f6b3a" : "#a89a6f",
-            boxShadow: fairIntro ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}
-            onClick={() => setFairIntro(true)}>⚖️ {L.splitWithFair}</button>
+        {/* Bij het openen staat er nog niets onder: eerst kiezen hoe je verdeelt.
+            Wat niet gekozen is, dimt — zoals op het keuzescherm van de app zelf. */}
+        <div style={{ display: "flex", alignItems: "stretch", gap: 10, marginTop: 16, marginBottom: 14 }}>
+          <button onClick={() => { setSettleMode("verdelen"); setSettleChoice("equal") }}
+            style={{ flex: 1, position: "relative", background: "#fff", borderRadius: 14, padding: "19px 10px 15px", textAlign: "center", cursor: "pointer",
+              border: settleChoice === "fair" ? "1.5px solid rgba(120,95,20,0.2)" : "2px solid rgba(240,165,0,0.55)",
+              boxShadow: settleChoice === "fair" ? "none" : "0 4px 14px -8px rgba(240,165,0,0.5)",
+              opacity: settleChoice === "fair" ? 0.5 : 1 }}>
+            <span style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: "#e08a00", color: "#fff", fontSize: 10.5, fontWeight: 800, borderRadius: 10, padding: "3px 10px", whiteSpace: "nowrap" }}>{L.fastest}</span>
+            <div style={{ fontSize: 23, marginBottom: 5 }}>👥</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.3 }}>{L.splitEqually}</div>
+          </button>
+          <div style={{ display: "flex", alignItems: "center", fontSize: 14, fontWeight: 800, color: "#a89a6f" }}>{L.orWord}</div>
+          <button onClick={() => setSettleChoice("fair")}
+            style={{ flex: 1, background: "#fff", borderRadius: 14, padding: "19px 10px 15px", textAlign: "center", cursor: "pointer",
+              border: settleChoice === "equal" ? "1.5px solid rgba(120,95,20,0.2)" : "2px solid rgba(31,138,76,0.5)",
+              boxShadow: settleChoice === "equal" ? "none" : "0 4px 14px -8px rgba(31,138,76,0.5)",
+              opacity: settleChoice === "equal" ? 0.5 : 1 }}>
+            <div style={{ fontSize: 23, marginBottom: 5 }}>⚖️</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.3 }}>{L.splitWithFair}</div>
+          </button>
         </div>
 
         {/* De uitleg verschijnt waar je tikte, met de overstap eronder. */}
-        {fairIntro && (
+        {settleChoice === "fair" && (
           <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
             <div style={{ fontSize: 14.5, color: "#4a6b57", lineHeight: 1.55, marginBottom: 12 }}>{L.fairSplitExplain}</div>
             <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={goToFairSplit}>{L.switchToFairBtn}</button>
-            <button style={{ width: "100%", marginTop: 8, padding: "9px 0", background: "none", border: "none", fontSize: 14, fontWeight: 700, color: "#a89a6f", cursor: "pointer" }} onClick={() => setFairIntro(false)}>{L.later}</button>
+            <button style={{ width: "100%", marginTop: 8, padding: "9px 0", background: "none", border: "none", fontSize: 14, fontWeight: 700, color: "#a89a6f", cursor: "pointer" }} onClick={() => setSettleChoice(null)}>{L.later}</button>
           </div>
         )}
 
@@ -5544,6 +5559,8 @@ export default function PartyTest() {
               const teVerdelenTot = teVerdelen.reduce((s, r) => s + (r.amount || 0), 0)
               return (
                 <>
+                  {/* Koos je Fair Split? Dan is de gelijke verdeling niet meer aan de orde. */}
+                  {settleChoice === "equal" && (<>
                   {/* Gecentreerd tussen de twee knoppen: het getal is hier de hoofdzaak. */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, background: "#faf4e4", borderRadius: 10, padding: "10px 13px", marginBottom: 12 }}>
                     <button style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 9, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: deelAantal > 1 ? 1 : 0.4 }}
@@ -5552,8 +5569,6 @@ export default function PartyTest() {
                     <button style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
                       onClick={() => setSplitPeople(deelAantal + 1)}>+</button>
                   </div>
-                  {/* Koos je Fair Split? Dan is de gelijke verdeling niet meer aan de orde. */}
-                  {!fairIntro && (<>
                   <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)", textAlign: "center" }}>
                     <div style={{ fontSize: 14.5, color: "#4a6b57", marginBottom: 3 }}>{L.eachPaysNote}</div>
                     <div style={{ fontSize: 30, fontWeight: 800, color: "#1f8a4c" }}>{euro(teVerdelenTot / deelAantal)}</div>
@@ -5566,19 +5581,19 @@ export default function PartyTest() {
                   {/* Twee rustige keuzes onder het bedrag: detail per rondje, of iemand
                       die een rondje trakteert. */}
                   <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                    <button onClick={() => { setShowPerRound((v) => !v); setShowTreat(false) }}
+                    <button onClick={(e) => { e.stopPropagation(); setShowPerRound((v) => !v); setShowTreat(false) }}
                       style={{ flex: 1, padding: "10px 8px", borderRadius: 11, fontSize: 13, fontWeight: 800, cursor: "pointer", lineHeight: 1.3,
                         background: showPerRound ? "rgba(240,165,0,0.14)" : "#fff", border: showPerRound ? "1px solid rgba(240,165,0,0.6)" : "1px solid rgba(120,95,20,0.22)", color: "#8a5e0f" }}>
                       {showPerRound ? L.backToOneAmount : L.showPerRound}
                     </button>
-                    <button onClick={() => { setShowTreat((v) => !v); setShowPerRound(false) }}
+                    <button onClick={(e) => { e.stopPropagation(); setShowTreat((v) => !v); setShowPerRound(false) }}
                       style={{ flex: 1, padding: "10px 8px", borderRadius: 11, fontSize: 13, fontWeight: 800, cursor: "pointer", lineHeight: 1.3,
                         background: showTreat ? "rgba(240,165,0,0.14)" : "#fff", border: showTreat ? "1px solid rgba(240,165,0,0.6)" : "1px solid rgba(120,95,20,0.22)", color: "#8a5e0f" }}>
                       🎁 {L.treatShort}
                     </button>
                   </div>
                   {showPerRound && (
-                    <div style={{ ...S.card, marginTop: 10 }}>
+                    <div onClick={(e) => e.stopPropagation()} style={{ ...S.card, marginTop: 10 }}>
                       <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 9 }}>{L.perRoundTitle}</div>
                       {betaalde.map((r) => {
                         const nr = rounds.indexOf(r) + 1
@@ -5598,8 +5613,8 @@ export default function PartyTest() {
               )
             })()}
 
-            {!fairIntro && betaalde.length > 0 && showTreat && (
-              <div style={{ ...S.card }}>
+            {settleChoice === "equal" && betaalde.length > 0 && showTreat && (
+              <div onClick={(e) => e.stopPropagation()} style={{ ...S.card }}>
                 <div style={{ fontSize: 15, color: "#8a7d55", fontWeight: 800, marginBottom: 9, lineHeight: 1.45 }}>{L.treatHint}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {betaalde.map((r) => {
