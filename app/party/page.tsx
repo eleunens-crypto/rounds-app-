@@ -548,6 +548,7 @@ const T = {
     addBtn: "Toevoegen",
     remaining: (n: number, max: number) => `Nog ${n} van je ${max} eigen drankjes over`,
     addedByYou: "Door jou toegevoegd",
+    removeHint: "Verwijder wat je niet meer nodig hebt. Al besteld in een rondje? Dan blijft het staan.",
     nameYourDrink: "Geef je drankje een naam.",
     needPrice: "Vul een richtprijs in — anders kan Fair Split dit drankje niet eerlijk verdelen.",
     needAmountOrCancel: "Vul het betaalde bedrag in, of tik Annuleren om de wijziging ongedaan te maken.",
@@ -1023,6 +1024,7 @@ const T = {
     addBtn: "Ajouter",
     remaining: (n: number, max: number) => `Encore ${n} de tes ${max} boissons personnalisées`,
     addedByYou: "Ajouté par toi",
+    removeHint: "Supprime ce dont tu n'as plus besoin. Déjà commandé dans une tournée ? Alors ça reste.",
     nameYourDrink: "Donne un nom à ta boisson.",
     needPrice: "Entre un prix indicatif — sinon le Fair Split ne peut pas répartir cette boisson.",
     needAmountOrCancel: "Indique le montant payé, ou touche Annuler pour abandonner la modification.",
@@ -2517,8 +2519,11 @@ export default function PartyTest() {
           <div style={{ fontSize: 13, color: "#8a7d55", marginBottom: 6, lineHeight: 1.4 }}>
             {L.priceHint}
           </div>
-          <input value={ndPrice} onChange={(e) => setNdPrice(e.target.value)} inputMode="decimal" placeholder="4,50"
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 16, marginBottom: 12 }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 19, fontWeight: 700, color: "#8a7d55", flexShrink: 0 }}>€</span>
+            <input value={ndPrice} onChange={(e) => setNdPrice(e.target.value)} inputMode="decimal" placeholder="4,50"
+              style={{ ...S.input, flex: 1, minWidth: 0, boxSizing: "border-box", fontSize: 16, textAlign: "left" }} />
+          </div>
 
 
           <button style={{ ...S.btnP, width: "100%", opacity: ndName.trim() && ndPrice ? 1 : 0.5 }} onClick={addCustomDrink}>
@@ -2530,13 +2535,16 @@ export default function PartyTest() {
 
           {mijne.length > 0 && (
             <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
-              <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 8 }}>{L.addedByYou}</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 3 }}>{L.addedByYou}</div>
+              <div style={{ fontSize: 13, color: "#8a7d55", marginBottom: 9, lineHeight: 1.45 }}>{L.removeHint}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {mijne.map((c) => (
-                  <button key={c.key} onClick={() => removeCustomDrink(c.key, c.name)}
-                    style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)" }}>
-                    ⭐ {c.name} ✕
-                  </button>
+                  <div key={c.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 11px", borderRadius: 10, background: "#faf7ec", border: "1px solid rgba(120,95,20,0.12)" }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>⭐ {c.name}</span>
+                    <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700, flexShrink: 0 }}>{euro(Number(c.price))}</span>
+                    <button onClick={() => removeCustomDrink(c.key, c.name)} aria-label={L.removeWord}
+                      style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 9, background: "#fff", border: "1px solid rgba(224,104,92,0.4)", color: "#c0554a", fontSize: 16, cursor: "pointer" }}>🗑️</button>
+                  </div>
                 ))}
               </div>
             </div>
