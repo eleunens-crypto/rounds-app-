@@ -656,6 +656,11 @@ const T = {
     back: "Terug",
     quickSettleTitle: "🧾 Afrekenen",
     quickTotalLabel: "Totaal van alle rondjes",
+    andWord: "en",
+    roundsNoAmountNamed: (lijst: string) => `Rondje ${lijst} zonder bedrag`,
+    roundsNoAmountCount: (n: number) => `${n} rondjes zonder bedrag`,
+    roundsNoAmountWhy: "Die tellen niet mee in de verdeling hieronder. Vul ze aan of laat ze zo.",
+    fillAmountsBtn: "Bedragen aanvullen ›",
     splitOverGroup: "Verdelen",
     splitEqually: "Gelijk verdelen",
     fairSplitExplain: "Bij Fair Split hangt elk drankje aan een naam. Wie meer dronk, betaalt meer \u2014 en wie niets nam, betaalt niets.\n\nJe wijst per rondje toe wie wat nam. Let op: overstappen wist wat je tot nu toe noteerde.",
@@ -1132,6 +1137,11 @@ const T = {
     back: "Retour",
     quickSettleTitle: "🧾 R\u00e9gler",
     quickTotalLabel: "Total de toutes les tourn\u00e9es",
+    andWord: "et",
+    roundsNoAmountNamed: (lijst: string) => `Tournée ${lijst} sans montant`,
+    roundsNoAmountCount: (n: number) => `${n} tournées sans montant`,
+    roundsNoAmountWhy: "Elles ne comptent pas dans le partage ci-dessous. Complète-les ou laisse-les.",
+    fillAmountsBtn: "Compléter les montants ›",
     splitOverGroup: "Partager",
     splitEqually: "R\u00e9partir \u00e9galement",
     fairSplitExplain: "Avec Fair Split, chaque boisson est li\u00e9e \u00e0 un nom. Qui a bu plus paie plus \u2014 qui n\u2019a rien pris ne paie rien.\n\nTu attribues par tourn\u00e9e qui a pris quoi. Attention : changer efface ce que tu as not\u00e9.",
@@ -5285,6 +5295,13 @@ export default function PartyTest() {
   // ── SNEL AFREKENEN (niveau 2: elk rondje ÷ wie er toen was) ──────────────────
   if (view === "quickSettle") {
     const betaalde = rounds.filter((r) => (r.amount || 0) > 0.005)
+    // Rondjes die overgeslagen zijn tellen niet mee in het totaal. Dat is een geldige
+    // keuze, maar je moet het wel wéten voor je de verdeling leest.
+    const zonderBedrag = rounds.filter((r) => (r.amount || 0) <= 0.005)
+    const zbNrs = zonderBedrag.map((r) => rounds.indexOf(r) + 1)
+    const zbLabel = zbNrs.length === 0 ? "" : zbNrs.length <= 3
+      ? L.roundsNoAmountNamed(zbNrs.length === 1 ? String(zbNrs[0]) : `${zbNrs.slice(0, -1).join(", ")} ${L.andWord} ${zbNrs[zbNrs.length - 1]}`)
+      : L.roundsNoAmountCount(zbNrs.length)
     const getrakteerd = betaalde.filter((r) => treatedRounds.has(r.id))
     const teVerdelen = betaalde.filter((r) => !treatedRounds.has(r.id))
     const traktatieTot = getrakteerd.reduce((s, r) => s + (r.amount || 0), 0)
@@ -5332,6 +5349,26 @@ export default function PartyTest() {
           <div style={{ fontSize: 14.5, fontWeight: 700, color: "#8a7d55", marginBottom: 4 }}>{L.quickTotalLabel}</div>
           <div style={{ fontSize: 30, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</div>
         </div>
+
+        {/* Los van het totaalkader: het bedrag klopt, er ontbreekt alleen iets. */}
+        {zonderBedrag.length > 0 && (
+          <div style={{ ...S.card, background: "rgba(224,104,92,0.08)", border: "1px solid rgba(224,104,92,0.45)", padding: "12px 13px" }}>
+            <div style={{ fontSize: 14.5, fontWeight: 800, color: "#b0402f", marginBottom: 3 }}>{zbLabel}</div>
+            <div style={{ fontSize: 13.5, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 10 }}>{L.roundsNoAmountWhy}</div>
+            <button
+              onClick={() => {
+                // Zet de lege rondjes meteen open en het eerste in bewerkmodus, zodat je
+                // niet nog eens drie keer moet tikken om bij het bedragveld te komen.
+                setOpenRounds(new Set(zonderBedrag.map((r) => r.id)))
+                if (zonderBedrag[0]) startEditRound(zonderBedrag[0])
+                setOverviewBackTo("hub")
+                setView("roundsOverview")
+              }}
+              style={{ width: "100%", padding: "11px 6px", borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(224,104,92,0.4)", color: "#b0402f" }}>
+              {L.fillAmountsBtn}
+            </button>
+          </div>
+        )}
 
         {/* Links: gelijk verdelen over de groep. Rechts: overstappen naar Fair Split,
             waar elk drankje aan een naam hangt. */}
