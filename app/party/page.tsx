@@ -567,14 +567,14 @@ const T = {
     notMeRunner: "geef door",
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
     modeTitle: "Samen bestellen & Fair Split",
-    modeQuick: "Snel drankjes noteren",
+    modeQuick: "Snelle groepsbestelling",
     modeFairInfo: "Groepsbestellingen, pot leggen en delen via QR. Ieder betaalt zijn deel > betaal niet mee voor wat je niet dronk!",
     modeQuickInfo: "Hou gewoon bij wat er besteld wordt en leg eventueel een pot, verdelen kan later nog.",
     groupNamePlaceholder: "Bv. De Bubbelkes",
-    modeQuickSub: "Groepsbestellingen, pot leggen en handige bestellijst.",
+    modeQuickSub: "Snel 1 of meerdere rondjes noteren!",
     howItWorks: "zo werkt dat",
     orWord: "of",
-    modeFairSub: "Groepsbestellingen, pot leggen, bestellijst + verdeel eerlijk achteraf!",
+    modeFairSub: "Samen bestellen & eerlijk verdelen!",
     modeFairLine: "Ieder betaalt zijn deel, betaal niet mee voor wat je niet dronk!",
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe jullie bestellen",
@@ -1039,14 +1039,14 @@ const T = {
     notMeRunner: "passer",
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
     modeTitle: "Commander ensemble & Fair Split",
-    modeQuick: "Noter les boissons",
+    modeQuick: "Commande de groupe rapide",
     modeFairInfo: "Commandes de groupe, cagnotte et partage via QR. Chacun paie sa part > ne paie pas pour ce que tu n'as pas bu !",
     modeQuickInfo: "Note simplement ce qui est command\u00e9 et mets \u00e9ventuellement une cagnotte, tu peux partager plus tard.",
     groupNamePlaceholder: "Ex. Les Bulles",
-    modeQuickSub: "Commandes de groupe, cagnotte et liste de commande pratique.",
+    modeQuickSub: "Note vite une ou plusieurs tournées !",
     howItWorks: "voici comment",
     orWord: "ou",
-    modeFairSub: "Commandes de groupe, cagnotte, liste de commande + partage équitable !",
+    modeFairSub: "Commander ensemble & partager équitablement !",
     modeFairLine: "Chacun paie sa part, ne paie pas pour ce que tu n'as pas bu !",
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
@@ -1341,7 +1341,7 @@ export default function PartyTest() {
   const [cardPayers, setCardPayers] = useState<string[]>([])
   const [beginPrompt, setBeginPrompt] = useState(false)
   const [potChosen, setPotChosen] = useState(false)
-  const [bpSettle, setBpSettle] = useState<boolean | null>(true)
+  const [bpSettle, setBpSettle] = useState<boolean | null>(null)
   const [fromOnboarding, setFromOnboarding] = useState(false)
   const [onboardedOnce, setOnboardedOnce] = useState(false)
   // Als je een verse groep (nog geen rondjes) heropent, land je op de kaders om de modus
@@ -3960,6 +3960,40 @@ export default function PartyTest() {
           <div>
             {/* Elke keuze is één blok: de rij én z’n voorbeeld zitten binnen dezelfde
                 omlijning, zodat meteen duidelijk is wat bij wat hoort. */}
+            <div style={{ borderRadius: 12, overflow: "hidden", opacity: bpSettle === true ? 0.6 : 1,
+                          border: bpSettle === false ? "2.5px solid #1f8a4c" : "2px solid rgba(120,95,20,0.16)" }}>
+              <button onClick={() => setBpSettle(false)}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 11, textAlign: "left", padding: "13px 14px", border: "none", cursor: "pointer", background: bpSettle === false ? "#f0f9f4" : "#fff" }}>
+                <span style={{ fontSize: 24, flexShrink: 0 }}>🍻</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
+                  <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.4 }}>{L.modeQuickSub}</span>
+                </span>
+                {bpSettle === false && <span style={{ color: "#1f8a4c", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>✓</span>}
+              </button>
+              {bpSettle === false && (
+                <div style={{ background: "#fbfefc", borderTop: "1.5px dashed rgba(31,138,76,0.35)", padding: "11px 12px" }}>
+                  <div style={{ fontSize: 10.5, fontWeight: 800, color: "#5a9a75", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>↓ {L.howItWorks}</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 13.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 13.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 13.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
+                  </div>
+                  <div style={{ borderTop: "1px solid rgba(31,138,76,0.15)", paddingTop: 9 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: "#8a7d55", marginBottom: 4 }}>📋 Bestelling</div>
+                    <div style={{ fontSize: 13, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pintje · 2× Cola · 1× Wijn</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Duidelijk dat er een tweede, andere keuze volgt. */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 0" }}>
+              <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.2)" }} />
+              <span style={{ fontSize: 12, fontWeight: 800, color: "#a89a6f" }}>{L.orWord}</span>
+              <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.2)" }} />
+            </div>
+
             <div style={{ borderRadius: 12, overflow: "hidden", opacity: bpSettle === false ? 0.6 : 1,
                           border: bpSettle === true ? "2.5px solid #1f8a4c" : "2px solid rgba(120,95,20,0.16)" }}>
               <button onClick={() => setBpSettle(true)}
@@ -3984,40 +4018,6 @@ export default function PartyTest() {
                     ))}
                   </div>
                   <div style={{ fontSize: 12.5, color: "#6b5f3a", marginTop: 10, paddingTop: 9, borderTop: "1px solid rgba(31,138,76,0.15)", lineHeight: 1.5 }}>{L.modeFairLine}</div>
-                </div>
-              )}
-            </div>
-
-            {/* Duidelijk dat er een tweede, andere keuze volgt. */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 0" }}>
-              <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.2)" }} />
-              <span style={{ fontSize: 12, fontWeight: 800, color: "#a89a6f" }}>{L.orWord}</span>
-              <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.2)" }} />
-            </div>
-
-            <div style={{ borderRadius: 12, overflow: "hidden", opacity: bpSettle === true ? 0.6 : 1,
-                          border: bpSettle === false ? "2.5px solid #1f8a4c" : "2px solid rgba(120,95,20,0.16)" }}>
-              <button onClick={() => setBpSettle(false)}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 11, textAlign: "left", padding: "13px 14px", border: "none", cursor: "pointer", background: bpSettle === false ? "#f0f9f4" : "#fff" }}>
-                <span style={{ fontSize: 24, flexShrink: 0 }}>🍻</span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
-                  <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.4 }}>{L.modeQuickSub}</span>
-                </span>
-                {bpSettle === false && <span style={{ color: "#1f8a4c", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>✓</span>}
-              </button>
-              {bpSettle === false && (
-                <div style={{ background: "#fbfefc", borderTop: "1.5px dashed rgba(31,138,76,0.35)", padding: "11px 12px" }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 800, color: "#5a9a75", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>↓ {L.howItWorks}</div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 13.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
-                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 13.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
-                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 13.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
-                  </div>
-                  <div style={{ borderTop: "1px solid rgba(31,138,76,0.15)", paddingTop: 9 }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: "#8a7d55", marginBottom: 4 }}>📋 Bestelling</div>
-                    <div style={{ fontSize: 13, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pintje · 2× Cola · 1× Wijn</div>
-                  </div>
                 </div>
               )}
             </div>
