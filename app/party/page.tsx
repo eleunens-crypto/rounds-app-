@@ -566,7 +566,7 @@ const T = {
     iGoInstead: "ik neem het over",
     notMeRunner: "geef door",
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
-    modeTitle: "Samen bestellen & Fair Split",
+    modeTitle: "Samen bestellen + Fair Split",
     modeQuick: "Snelle groepsbestelling",
     modeFairInfo: "Groepsbestellingen, pot leggen en delen via QR. Ieder betaalt zijn deel > betaal niet mee voor wat je niet dronk!",
     modeQuickInfo: "Hou gewoon bij wat er besteld wordt en leg eventueel een pot, verdelen kan later nog.",
@@ -574,7 +574,7 @@ const T = {
     modeQuickSub: "Snel 1 of meerdere rondjes noteren!",
     howItWorks: "zo werkt dat",
     orWord: "of",
-    modeFairSub: "Samen bestellen & eerlijk verdelen!",
+    modeFairSub: "Scan QR, bestel samen & eerlijk afrekenen",
     modeFairLine: "Ieder betaalt zijn deel, betaal niet mee voor wat je niet dronk!",
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe jullie bestellen",
@@ -1038,7 +1038,7 @@ const T = {
     iGoInstead: "je reprends",
     notMeRunner: "passer",
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
-    modeTitle: "Commander ensemble & Fair Split",
+    modeTitle: "Commander ensemble + Fair Split",
     modeQuick: "Commande de groupe rapide",
     modeFairInfo: "Commandes de groupe, cagnotte et partage via QR. Chacun paie sa part > ne paie pas pour ce que tu n'as pas bu !",
     modeQuickInfo: "Note simplement ce qui est command\u00e9 et mets \u00e9ventuellement une cagnotte, tu peux partager plus tard.",
@@ -1046,7 +1046,7 @@ const T = {
     modeQuickSub: "Note vite une ou plusieurs tournées !",
     howItWorks: "voici comment",
     orWord: "ou",
-    modeFairSub: "Commander ensemble & partager équitablement !",
+    modeFairSub: "Scanne le QR, commandez ensemble & partagez équitablement",
     modeFairLine: "Chacun paie sa part, ne paie pas pour ce que tu n'as pas bu !",
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
@@ -4009,11 +4009,25 @@ export default function PartyTest() {
                 <div style={{ background: "#fbfefc", borderTop: "1.5px dashed rgba(31,138,76,0.35)", padding: "11px 12px" }}>
                   <div style={{ fontSize: 10.5, fontWeight: 800, color: "#5a9a75", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>↓ {L.howItWorks}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
-                    {[["🍺", "🪙", "Tom"], ["🍷🍷", "🪙🪙🪙🪙", "Els"], ["🚫", "—", "Bart"], ["🍺🍺", "🪙🪙", "Jan"]].map(([drank, geld, naam], i) => (
-                      <div key={i}>
-                        <div style={{ fontSize: 19, height: 24, whiteSpace: "nowrap", letterSpacing: -3, opacity: naam === "Bart" ? 0.4 : 1 }}>{drank}</div>
-                        <div style={{ fontSize: 14, height: 22, marginTop: 4, whiteSpace: "nowrap", letterSpacing: -3, color: naam === "Bart" ? "#b3a988" : undefined }}>{geld}</div>
-                        <div style={{ fontSize: 11.5, marginTop: 3, color: naam === "Bart" ? "#b3a988" : "#8a7d55", fontWeight: 700 }}>{naam}</div>
+                    {/* De QR staat vooraan: scannen is de eerste stap, zonder scan geen Fair Split. */}
+                    <div>
+                      <div style={{ height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ display: "inline-flex", padding: 2, borderRadius: 5, background: "#fff", border: "1px solid rgba(120,95,20,0.35)" }}>
+                          <QRCodeSVG value="rundo-party" size={18} bgColor="transparent" fgColor="#4a3f1e" />
+                        </span>
+                      </div>
+                      <div style={{ height: 22, marginTop: 4 }} />
+                      <div style={{ fontSize: 11.5, marginTop: 3, color: "#4a3f1e", fontWeight: 800 }}>QR scannen</div>
+                    </div>
+                    {[{ drank: "🍺", munten: 1, naam: "Tom" }, { drank: "🍷🍷", munten: 3, naam: "Els" }, { drank: "🍻", munten: 2, naam: "Bart" }].map((x) => (
+                      <div key={x.naam}>
+                        <div style={{ fontSize: 19, height: 24, whiteSpace: "nowrap", letterSpacing: -3 }}>{x.drank}</div>
+                        <div style={{ height: 22, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                          {Array.from({ length: x.munten }).map((_, k) => (
+                            <span key={k} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 15, height: 15, borderRadius: "50%", background: "#FAC775", color: "#412402", fontSize: 10, fontWeight: 800 }}>€</span>
+                          ))}
+                        </div>
+                        <div style={{ fontSize: 11.5, marginTop: 3, color: "#8a7d55", fontWeight: 700 }}>{x.naam}</div>
                       </div>
                     ))}
                   </div>
@@ -4102,11 +4116,25 @@ export default function PartyTest() {
                   </div>
                   <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 13 }}>{L.modeFairSub}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
-                    {[["🍺", "🪙", "Tom"], ["🍷🍷", "🪙🪙🪙🪙", "Els"], ["🚫", "—", "Bart"], ["🍺🍺", "🪙🪙", "Jan"]].map(([drank, geld, naam], i) => (
-                      <div key={i}>
-                        <div style={{ fontSize: 19, height: 24, whiteSpace: "nowrap", letterSpacing: -3, opacity: drank === "🚫" ? 0.4 : 1 }}>{drank}</div>
-                        <div style={{ fontSize: 15.5, height: 22, marginTop: 5, whiteSpace: "nowrap", letterSpacing: -3, color: geld === "—" ? "#b3a988" : undefined }}>{geld}</div>
-                        <div style={{ fontSize: 13, marginTop: 4, color: naam === "Bart" ? "#b3a988" : "#8a7d55", fontWeight: 700 }}>{naam}</div>
+                    {/* Zelfde opbouw als op het startscherm: eerst scannen, dan wie wat nam. */}
+                    <div>
+                      <div style={{ height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ display: "inline-flex", padding: 2, borderRadius: 6, background: "#fff", border: "1px solid rgba(120,95,20,0.35)" }}>
+                          <QRCodeSVG value="rundo-party" size={22} bgColor="transparent" fgColor="#4a3f1e" />
+                        </span>
+                      </div>
+                      <div style={{ height: 22, marginTop: 5 }} />
+                      <div style={{ fontSize: 13, marginTop: 4, color: "#4a3f1e", fontWeight: 800 }}>QR scannen</div>
+                    </div>
+                    {[{ drank: "🍺", munten: 1, naam: "Tom" }, { drank: "🍷🍷", munten: 3, naam: "Els" }, { drank: "🍻", munten: 2, naam: "Bart" }].map((x) => (
+                      <div key={x.naam}>
+                        <div style={{ fontSize: 19, height: 24, whiteSpace: "nowrap", letterSpacing: -3 }}>{x.drank}</div>
+                        <div style={{ height: 22, marginTop: 5, display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                          {Array.from({ length: x.munten }).map((_, k) => (
+                            <span key={k} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", background: "#FAC775", color: "#412402", fontSize: 11, fontWeight: 800 }}>€</span>
+                          ))}
+                        </div>
+                        <div style={{ fontSize: 13, marginTop: 4, color: "#8a7d55", fontWeight: 700 }}>{x.naam}</div>
                       </div>
                     ))}
                   </div>
