@@ -572,6 +572,8 @@ const T = {
     modeQuickInfo: "Hou gewoon bij wat er besteld wordt en leg eventueel een pot, verdelen kan later nog.",
     groupNamePlaceholder: "Bv. De Bubbelkes",
     modeQuickSub: "Groepsbestellingen, pot leggen en handige bestellijst.",
+    howItWorks: "zo werkt dat",
+    orWord: "of",
     modeFairSub: "Groepsbestellingen, pot leggen, bestellijst + verdeel eerlijk achteraf!",
     modeFairLine: "Ieder betaalt zijn deel, betaal niet mee voor wat je niet dronk!",
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
@@ -1040,6 +1042,8 @@ const T = {
     modeQuickInfo: "Note simplement ce qui est command\u00e9 et mets \u00e9ventuellement une cagnotte, tu peux partager plus tard.",
     groupNamePlaceholder: "Ex. Les Bulles",
     modeQuickSub: "Commandes de groupe, cagnotte et liste de commande pratique.",
+    howItWorks: "voici comment",
+    orWord: "ou",
     modeFairSub: "Commandes de groupe, cagnotte, liste de commande + partage équitable !",
     modeFairLine: "Chacun paie sa part, ne paie pas pour ce que tu n'as pas bu !",
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
@@ -3951,63 +3955,70 @@ export default function PartyTest() {
         <div style={{ ...S.card, padding: "18px 16px" }}>
           <div style={{ textAlign: "center", fontSize: 16, fontWeight: 800, color: "#8a7d55", marginBottom: 12 }}>{L.chooseHow}</div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-            {/* Compacte rijen. Het voorbeeld eronder volgt je keuze, zodat je meteen ziet
-                wat de gekozen aanpak doet zonder ergens op te moeten klikken. */}
-            <button onClick={() => setBpSettle(true)}
-              style={{ display: "flex", alignItems: "center", gap: 11, textAlign: "left", padding: "13px 14px", borderRadius: 12, cursor: "pointer",
-                       background: bpSettle === true ? "#f0f9f4" : "#fff",
-                       border: bpSettle === true ? "2.5px solid #1f8a4c" : "2px solid rgba(120,95,20,0.16)" }}>
-              <span style={{ fontSize: 24, flexShrink: 0 }}>⚖️</span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.modeTitle}</span>
-                <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.4 }}>{L.modeFairSub}</span>
-              </span>
-              {bpSettle === true && <span style={{ color: "#1f8a4c", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>✓</span>}
-            </button>
-
-            {bpSettle === true && (
-              <div style={{ position: "relative", background: "#fffdf6", border: "1px dashed rgba(120,95,20,0.25)", borderRadius: 11, padding: "14px 10px 10px" }}>
-                <span style={{ position: "absolute", top: -8, right: 10, background: "#fffdf6", color: "#a89a6f", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.04em", padding: "1px 7px", borderRadius: 10, textTransform: "uppercase" }}>{L.exampleTag}</span>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
-                  {[["🍺", "🪙", "Tom"], ["🍷🍷", "🪙🪙🪙🪙", "Els"], ["🚫", "—", "Bart"], ["🍺🍺", "🪙🪙", "Jan"]].map(([drank, geld, naam], i) => (
-                    <div key={i}>
-                      <div style={{ fontSize: 19, height: 24, whiteSpace: "nowrap", letterSpacing: -3, opacity: drank === "🚫" ? 0.4 : 1 }}>{drank}</div>
-                      <div style={{ fontSize: 14, height: 22, marginTop: 4, whiteSpace: "nowrap", letterSpacing: -3, color: geld === "—" ? "#b3a988" : undefined }}>{geld}</div>
-                      <div style={{ fontSize: 11.5, marginTop: 3, color: naam === "Bart" ? "#b3a988" : "#8a7d55", fontWeight: 700 }}>{naam}</div>
-                    </div>
-                  ))}
+          <div>
+            {/* Elke keuze is één blok: de rij én z’n voorbeeld zitten binnen dezelfde
+                omlijning, zodat meteen duidelijk is wat bij wat hoort. */}
+            <div style={{ borderRadius: 12, overflow: "hidden", opacity: bpSettle === false ? 0.6 : 1,
+                          border: bpSettle === true ? "2.5px solid #1f8a4c" : "2px solid rgba(120,95,20,0.16)" }}>
+              <button onClick={() => setBpSettle(true)}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 11, textAlign: "left", padding: "13px 14px", border: "none", cursor: "pointer", background: bpSettle === true ? "#f0f9f4" : "#fff" }}>
+                <span style={{ fontSize: 24, flexShrink: 0 }}>⚖️</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.modeTitle}</span>
+                  <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.4 }}>{L.modeFairSub}</span>
+                </span>
+                {bpSettle === true && <span style={{ color: "#1f8a4c", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>✓</span>}
+              </button>
+              {bpSettle === true && (
+                <div style={{ background: "#fbfefc", borderTop: "1.5px dashed rgba(31,138,76,0.35)", padding: "11px 12px" }}>
+                  <div style={{ fontSize: 10.5, fontWeight: 800, color: "#5a9a75", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>↓ {L.howItWorks}</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
+                    {[["🍺", "🪙", "Tom"], ["🍷🍷", "🪙🪙🪙🪙", "Els"], ["🚫", "—", "Bart"], ["🍺🍺", "🪙🪙", "Jan"]].map(([drank, geld, naam], i) => (
+                      <div key={i}>
+                        <div style={{ fontSize: 19, height: 24, whiteSpace: "nowrap", letterSpacing: -3, opacity: naam === "Bart" ? 0.4 : 1 }}>{drank}</div>
+                        <div style={{ fontSize: 14, height: 22, marginTop: 4, whiteSpace: "nowrap", letterSpacing: -3, color: naam === "Bart" ? "#b3a988" : undefined }}>{geld}</div>
+                        <div style={{ fontSize: 11.5, marginTop: 3, color: naam === "Bart" ? "#b3a988" : "#8a7d55", fontWeight: 700 }}>{naam}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 12.5, color: "#6b5f3a", marginTop: 10, paddingTop: 9, borderTop: "1px solid rgba(31,138,76,0.15)", lineHeight: 1.5 }}>{L.modeFairLine}</div>
                 </div>
-                <div style={{ fontSize: 12.5, color: "#6b5f3a", marginTop: 10, paddingTop: 9, borderTop: "1px solid rgba(120,95,20,0.12)", lineHeight: 1.5 }}>{L.modeFairLine}</div>
-              </div>
-            )}
+              )}
+            </div>
 
-            <button onClick={() => setBpSettle(false)}
-              style={{ display: "flex", alignItems: "center", gap: 11, textAlign: "left", padding: "13px 14px", borderRadius: 12, cursor: "pointer",
-                       background: bpSettle === false ? "#f0f9f4" : "#fff",
-                       border: bpSettle === false ? "2.5px solid #1f8a4c" : "2px solid rgba(120,95,20,0.16)" }}>
-              <span style={{ fontSize: 24, flexShrink: 0 }}>🍻</span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
-                <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.4 }}>{L.modeQuickSub}</span>
-              </span>
-              {bpSettle === false && <span style={{ color: "#1f8a4c", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>✓</span>}
-            </button>
+            {/* Duidelijk dat er een tweede, andere keuze volgt. */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 0" }}>
+              <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.2)" }} />
+              <span style={{ fontSize: 12, fontWeight: 800, color: "#a89a6f" }}>{L.orWord}</span>
+              <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.2)" }} />
+            </div>
 
-            {bpSettle === false && (
-              <div style={{ position: "relative", background: "#fffdf6", border: "1px dashed rgba(120,95,20,0.25)", borderRadius: 11, padding: "14px 12px 12px" }}>
-                <span style={{ position: "absolute", top: -8, right: 10, background: "#fffdf6", color: "#a89a6f", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.04em", padding: "1px 7px", borderRadius: 10, textTransform: "uppercase" }}>{L.exampleTag}</span>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                  <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 13.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
-                  <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 13.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
-                  <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 13.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
+            <div style={{ borderRadius: 12, overflow: "hidden", opacity: bpSettle === true ? 0.6 : 1,
+                          border: bpSettle === false ? "2.5px solid #1f8a4c" : "2px solid rgba(120,95,20,0.16)" }}>
+              <button onClick={() => setBpSettle(false)}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 11, textAlign: "left", padding: "13px 14px", border: "none", cursor: "pointer", background: bpSettle === false ? "#f0f9f4" : "#fff" }}>
+                <span style={{ fontSize: 24, flexShrink: 0 }}>🍻</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
+                  <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.4 }}>{L.modeQuickSub}</span>
+                </span>
+                {bpSettle === false && <span style={{ color: "#1f8a4c", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>✓</span>}
+              </button>
+              {bpSettle === false && (
+                <div style={{ background: "#fbfefc", borderTop: "1.5px dashed rgba(31,138,76,0.35)", padding: "11px 12px" }}>
+                  <div style={{ fontSize: 10.5, fontWeight: 800, color: "#5a9a75", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>↓ {L.howItWorks}</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 13.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 13.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
+                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 13.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
+                  </div>
+                  <div style={{ borderTop: "1px solid rgba(31,138,76,0.15)", paddingTop: 9 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: "#8a7d55", marginBottom: 4 }}>📋 Bestelling</div>
+                    <div style={{ fontSize: 13, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pintje · 2× Cola · 1× Wijn</div>
+                  </div>
                 </div>
-                <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 9 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: "#8a7d55", marginBottom: 4 }}>📋 Bestelling</div>
-                  <div style={{ fontSize: 13, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pintje · 2× Cola · 1× Wijn</div>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           <button style={{ ...S.btnP, width: "100%", marginTop: 18, opacity: bpSettle === null ? 0.45 : 1 }}
