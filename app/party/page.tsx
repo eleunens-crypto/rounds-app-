@@ -306,7 +306,7 @@ const T = {
     nothingThisRound: "jij had niets in dit rondje",
 
     addOwnDrink: "⭐ Eigen drankje",
-    newDrinkTile: "Nieuw drankje",
+    newDrinkTile: "Eigen drankje?",
 
     // ── start & setup
     tagline: "Rondjes en splitten zonder gedoe!",
@@ -781,7 +781,7 @@ const T = {
     nothingThisRound: "tu n'avais rien dans cette tournée",
 
     addOwnDrink: "⭐ Boisson perso",
-    newDrinkTile: "Nouvelle boisson",
+    newDrinkTile: "Boisson perso ?",
 
     // ── start & setup
     tagline: "Les tournées et le partage, sans prise de tête !",
@@ -1376,6 +1376,8 @@ export default function PartyTest() {
   const [coinCat, setCoinCat] = useState<Cat>("Bier")
   const [coinFull, setCoinFull] = useState(false)
   const [fullList, setFullList] = useState(false)
+  // De groepsnaam is in de header zelf aanpasbaar — niet via een omweg naar de instellingen.
+  const [editName, setEditName] = useState(false)
   // Pijltjes bij de categorierij: ze tonen dat er links of rechts nog meer staat,
   // want een halve pil aan de rand leest als een afsnijfout en niet als een uitnodiging.
   const catScroll = useRef<HTMLDivElement | null>(null)
@@ -3537,12 +3539,23 @@ export default function PartyTest() {
           is het aantal klikbaar naar de instellingen. */}
       {groupName.trim() && (
         <div style={{ textAlign: "center", marginTop: 9 }}>
-          {/* De naam is aanpasbaar: potlood + omkadering maken dat zichtbaar. */}
-          <div onClick={() => setView("settings")} style={{ display: "inline-flex", alignItems: "center", gap: 7, cursor: "pointer", padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px dashed rgba(240,165,0,0.55)" }}>
-            <span style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2 }}>{groupName.trim()}</span>
-            <span style={{ fontSize: 13 }}>✏️</span>
-          </div>
-          <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 3 }}>{L.tapToRename}</div>
+          {/* De naam is aanpasbaar: potlood + omkadering maken dat zichtbaar. Op het
+              instellingenscherm staat het naamveld al open, dus daar geen tweede ingang. */}
+          {editName && !onboarding ? (
+            <input autoFocus value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              onBlur={() => { setEditName(false); persistSettings() }}
+              onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
+              style={{ ...S.input, width: "auto", minWidth: 180, maxWidth: "88%", textAlign: "center", fontSize: 17, fontWeight: 800, padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.8)" }} />
+          ) : (
+            <div onClick={() => { if (!onboarding) setEditName(true) }} style={{ display: "inline-flex", alignItems: "center", gap: 7, cursor: onboarding ? "default" : "pointer", padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px dashed rgba(240,165,0,0.55)" }}>
+              <span style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2 }}>{groupName.trim()}</span>
+              {!onboarding && <span style={{ fontSize: 13 }}>✏️</span>}
+            </div>
+          )}
+          {!onboarding && (
+            <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 3 }}>{L.tapToRename}</div>
+          )}
           {settle && (
             <div style={{ fontSize: 14, fontWeight: 700, color: "#8a7d55", marginTop: 2 }}>👥 {people.length}</div>
           )}
@@ -4309,6 +4322,7 @@ export default function PartyTest() {
             {hasSettled && <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>🔒 vast na afrekenen</span>}
           </div>
           <input disabled={hasSettled} value={groupName} onChange={(e) => setGroupName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : "#fdfaf2", color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
+          {!hasSettled && <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 6 }}>{L.tapToRename}</div>}
         </div>
         {settle && !fromOnboarding && (
         <div style={{ ...S.card, marginBottom: 10 }}>
