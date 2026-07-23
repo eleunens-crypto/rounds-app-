@@ -5552,6 +5552,8 @@ export default function PartyTest() {
                     <button style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
                       onClick={() => setSplitPeople(deelAantal + 1)}>+</button>
                   </div>
+                  {/* Koos je Fair Split? Dan is de gelijke verdeling niet meer aan de orde. */}
+                  {!fairIntro && (<>
                   <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)", textAlign: "center" }}>
                     <div style={{ fontSize: 14.5, color: "#4a6b57", marginBottom: 3 }}>{L.eachPaysNote}</div>
                     <div style={{ fontSize: 30, fontWeight: 800, color: "#1f8a4c" }}>{euro(teVerdelenTot / deelAantal)}</div>
@@ -5559,7 +5561,7 @@ export default function PartyTest() {
                       <div style={{ fontSize: 14, color: "#8a5e0f", fontWeight: 700, marginTop: 7 }}>🎁 {L.plusTreat(euro(traktatieTot))}</div>
                     )}
                     {/* De kanttekening hoort bij het bedrag, niet in een eigen kader. */}
-                    <div style={{ fontSize: 13, color: "#4a6b57", lineHeight: 1.55, marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(31,138,76,0.2)", textAlign: "left" }}>{L.notFairSplitWhy}</div>
+                    <div style={{ fontSize: 13, color: "#4a6b57", lineHeight: 1.55, marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(31,138,76,0.2)", textAlign: "center" }}>{L.notFairSplitWhy}</div>
                   </div>
                   {/* Twee rustige keuzes onder het bedrag: detail per rondje, of iemand
                       die een rondje trakteert. */}
@@ -5591,11 +5593,12 @@ export default function PartyTest() {
                       })}
                     </div>
                   )}
+                  </>)}
                 </>
               )
             })()}
 
-            {betaalde.length > 0 && showTreat && (
+            {!fairIntro && betaalde.length > 0 && showTreat && (
               <div style={{ ...S.card }}>
                 <div style={{ fontSize: 15, color: "#8a7d55", fontWeight: 800, marginBottom: 9, lineHeight: 1.45 }}>{L.treatHint}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
