@@ -2,7 +2,7 @@
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RUNDO PARTY — TESTPAGINA v7
-// - Betaling bevestigen -> rondjes-hub (overzicht) -> nieuw rondje / afrekenen
+// - Betaling bevestigen -> rondjes-hub (overzicht) -> nieuw rondje / afrekenen/
 // - Bewerken (toewijzen + bekers) in het overzicht; app herberekent automatisch
 // - Home-knop op elk scherm (geen reset); coin-prijzen zichtbaar/aanpasbaar
 // Richtprijzen blijven ONZICHTBAAR bij bestellen. Volledig lokaal. app/party-test/page.tsx
@@ -58,13 +58,13 @@ function deviceId(): string {
 // Uitnodigingscode zonder I/O/0/1 — die worden verkeerd overgetikt vanaf een scherm.
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 const makeCode = () => Array.from({ length: 6 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("")
-type Cat = "Bier" | "BierAV" | "Frisdrank" | "Wijn" | "Cocktail" | "Mocktail" | "Longdrink" | "Shot" | "Warm"
+type Cat = "Bier" | "BierAV" | "Frisdrank" | "Wijn" | "Cocktail" | "Mocktail" | "Longdrink" | "Shot" | "Warm" | "Eigen"
 type Drink = { id: string; name: string; emoji: string; cat: Cat; price: number; cup: boolean; fav: boolean; coins: number; custom?: boolean; by?: string }
 
-const CATS: Cat[] = ["Bier", "BierAV", "Frisdrank", "Wijn", "Cocktail", "Mocktail", "Longdrink", "Shot", "Warm"]
-const CAT_LABEL: Record<Cat, string> = { Bier: "🍺 Bier", BierAV: "🌿 0,0%-bier", Frisdrank: "🥤 Fris", Wijn: "🍷 Wijn", Cocktail: "🍸 Cocktail", Mocktail: "🍹 Mocktail", Longdrink: "🥃 Longdrink", Shot: "🔥 Shot", Warm: "☕ Warm" }
-const CAT_EMOJI: Record<Cat, string> = { Bier: "🍺", BierAV: "🌿", Frisdrank: "🥤", Wijn: "🍷", Cocktail: "🍸", Mocktail: "🍹", Longdrink: "🥃", Shot: "🔥", Warm: "☕" }
-const CUPCAT: Record<Cat, boolean> = { Bier: true, BierAV: true, Frisdrank: true, Wijn: true, Cocktail: true, Mocktail: true, Longdrink: false, Shot: false, Warm: false }
+const CATS: Cat[] = ["Bier", "BierAV", "Frisdrank", "Wijn", "Cocktail", "Mocktail", "Longdrink", "Shot", "Warm", "Eigen"]
+const CAT_LABEL: Record<Cat, string> = { Bier: "🍺 Bier", BierAV: "🌿 0,0%-bier", Frisdrank: "🥤 Fris", Wijn: "🍷 Wijn", Cocktail: "🍸 Cocktail", Mocktail: "🍹 Mocktail", Longdrink: "🥃 Longdrink", Shot: "🔥 Shot", Warm: "☕ Warm", Eigen: "⭐ Eigen" }
+const CAT_EMOJI: Record<Cat, string> = { Bier: "🍺", BierAV: "🌿", Frisdrank: "🥤", Wijn: "🍷", Cocktail: "🍸", Mocktail: "🍹", Longdrink: "🥃", Shot: "🔥", Warm: "☕", Eigen: "⭐" }
+const CUPCAT: Record<Cat, boolean> = { Bier: true, BierAV: true, Frisdrank: true, Wijn: true, Cocktail: true, Mocktail: true, Longdrink: false, Shot: false, Warm: false, Eigen: true }
 
 const DATA: [Cat, string, number][] = [
   ["Bier", "Pintje", 3.2], ["Bier", "Duvel", 5], ["Bier", "Chimay Blauw", 5.5], ["Bier", "Cornet", 5], ["Bier", "Geuze", 5], ["Bier", "Hoegaarden Wit", 4], ["Bier", "Kriek", 4.5], ["Bier", "La Chouffe", 5], ["Bier", "Leffe Blond", 4.5], ["Bier", "Tripel Karmeliet", 5.5], ["Bier", "Vedett Extra Blond", 4], ["Bier", "Westmalle Tripel", 5],
@@ -115,6 +115,7 @@ const coinDefault = (cat: Cat, name: string): number => {
     case "Mocktail": return 2
     case "Shot": return 1
     case "Warm": return 1
+    case "Eigen": return 2
     default: return 1
   }
 }
@@ -305,6 +306,7 @@ const T = {
     nothingThisRound: "jij had niets in dit rondje",
 
     addOwnDrink: "⭐ Eigen drankje",
+    newDrinkTile: "Nieuw drankje",
 
     // ── start & setup
     tagline: "Rondjes en splitten zonder gedoe!",
@@ -548,6 +550,7 @@ const T = {
     addedByYou: "Door jou toegevoegd",
     nameYourDrink: "Geef je drankje een naam.",
     needPrice: "Vul een richtprijs in — anders kan Fair Split dit drankje niet eerlijk verdelen.",
+    needAmountOrCancel: "Vul het betaalde bedrag in, of tik Annuleren om de wijziging ongedaan te maken.",
     alreadyExists: (n: string) => `"${n}" staat al in de lijst.`,
     maxPerPerson: (n: number) => `Je kan maximaal ${n} eigen drankjes toevoegen.`,
     maxPerGroup: (n: number) => `De groep zit aan het maximum van ${n} eigen drankjes.`,
@@ -644,6 +647,7 @@ const T = {
     potEmptyLabel: "Pot is leeg",
     potFillBtn: "+ Pot bijvullen",
     skipRound: "Overslaan",
+    skipPayment: "Betaling overslaan",
     tapToConfirm: "tik ✓ om te bevestigen",
     noAmountsYet: "Je vulde nog geen bedragen in. Zonder bedragen valt er niets te verdelen — vul eerst in wat de rondjes kostten.",
     fillAmountsNow: "Bedragen invullen",
@@ -777,6 +781,7 @@ const T = {
     nothingThisRound: "tu n'avais rien dans cette tournée",
 
     addOwnDrink: "⭐ Boisson perso",
+    newDrinkTile: "Nouvelle boisson",
 
     // ── start & setup
     tagline: "Les tournées et le partage, sans prise de tête !",
@@ -1020,6 +1025,7 @@ const T = {
     addedByYou: "Ajouté par toi",
     nameYourDrink: "Donne un nom à ta boisson.",
     needPrice: "Entre un prix indicatif — sinon le Fair Split ne peut pas répartir cette boisson.",
+    needAmountOrCancel: "Indique le montant payé, ou touche Annuler pour abandonner la modification.",
     alreadyExists: (n: string) => `« ${n} » est déjà dans la liste.`,
     maxPerPerson: (n: number) => `Tu peux ajouter maximum ${n} boissons personnalisées.`,
     maxPerGroup: (n: number) => `Le groupe a atteint le maximum de ${n} boissons personnalisées.`,
@@ -1116,6 +1122,7 @@ const T = {
     potEmptyLabel: "Cagnotte vide",
     potFillBtn: "+ Remplir la cagnotte",
     skipRound: "Passer",
+    skipPayment: "Passer le paiement",
     tapToConfirm: "appuie sur ✓ pour confirmer",
     noAmountsYet: "Tu n'as pas encore entr\u00e9 de montants. Sans montants, rien \u00e0 partager — indique d'abord ce qu'ont co\u00fbt\u00e9 les tourn\u00e9es.",
     fillAmountsNow: "Entrer les montants",
@@ -1241,9 +1248,7 @@ export default function PartyTest() {
   const [coinPrices, setCoinPrices] = useState<Record<string, number>>({})
   const [showAddDrink, setShowAddDrink] = useState(false)
   const [ndName, setNdName] = useState("")
-  const [ndCat, setNdCat] = useState<Cat>("Bier")
   const [ndPrice, setNdPrice] = useState("")
-  const [ndCoins, setNdCoins] = useState("")
   const [inviteCode, setInviteCode] = useState<string>("")
   const [ownerDevice, setOwnerDevice] = useState<string>("")
   const [booting, setBooting] = useState(true)   // eerste laadbeurt (code uit de URL)
@@ -1263,7 +1268,7 @@ export default function PartyTest() {
   const drinks: Drink[] = useMemo(() => [
     ...DEMO_DRINKS,
     ...customDrinks.map((c) => ({
-      id: c.key, name: c.name, emoji: "⭐", cat: c.cat, price: Number(c.price),
+      id: c.key, name: c.name, emoji: "⭐", cat: "Eigen", price: Number(c.price),
       cup: !!c.cup, fav: true, coins: Number(c.coins), custom: true, by: c.by,
     })),
   ].map((d) => (coinPrices[d.id] !== undefined ? { ...d, coins: coinPrices[d.id] } : d)),
@@ -1321,6 +1326,10 @@ export default function PartyTest() {
   // Alles in één keer wegschrijven: aantallen als verschil, bedrag, personen en bron.
   const saveEditRound = async (r: Round) => {
     if (!editDraft) { cancelEditRound(); return }
+    // Zonder bedrag heeft "waarmee betaald" geen betekenis: er zou nul uit de pot gaan
+    // terwijl het rondje wél als uit-de-pot-betaald wordt weggeschreven. Eerst een bedrag,
+    // of annuleren. Vóór alle bumps, zodat er nog niets is weggeschreven.
+    if ((editDraft.amount || 0) <= 0.005) { setNotice(L.needAmountOrCancel); return }
     const idx = rounds.indexOf(r)
     const huidig: Record<string, number> = {}
     drinksOf(r).forEach(({ d, n }) => { huidig[d.id] = n })
@@ -1367,6 +1376,17 @@ export default function PartyTest() {
   const [coinCat, setCoinCat] = useState<Cat>("Bier")
   const [coinFull, setCoinFull] = useState(false)
   const [fullList, setFullList] = useState(false)
+  // Pijltjes bij de categorierij: ze tonen dat er links of rechts nog meer staat,
+  // want een halve pil aan de rand leest als een afsnijfout en niet als een uitnodiging.
+  const catScroll = useRef<HTMLDivElement | null>(null)
+  const [catMore, setCatMore] = useState({ left: false, right: false })
+  const updateCatArrows = () => {
+    const el = catScroll.current
+    if (!el) return
+    setCatMore({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 })
+  }
+  // Bij het openen van een bestelscherm meteen kijken of er rechts nog categorieën staan.
+  useEffect(() => { updateCatArrows() }, [view, guestTab, activeCat])  // eslint-disable-line react-hooks/exhaustive-deps
   const [cart, setCart] = useState<Assign>({})
   const [cartAnon, setCartAnon] = useState<Anon>({})
   const [rounds, setRounds] = useState<Round[]>([])
@@ -1645,7 +1665,7 @@ export default function PartyTest() {
   // intikken volstaat dus niet — anders kan je halverwege wegwandelen.
   const roundIsPaid = (r: Round) => settle
     ? (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))
-    : (r.amount || 0) > 0.005
+    : true
   // Het laatste rondje van een snelle avond is pas "klaar" na bevestigen of overslaan.
   const laatsteRondjeKlaar = () => settle || lastRoundHandled || rounds.length === 0
   const unpaidIdx = () => {
@@ -1655,7 +1675,7 @@ export default function PartyTest() {
     return laatsteRondjeKlaar() ? -1 : rounds.length - 1
   }
   const paidCount = rounds.filter(roundIsPaid).length
-  const blockIfUnpaid = () => { const i = unpaidIdx(); if (i < 0) return false; setNotice(L.roundUnpaid(i + 1)); if (settle) setView("confirmed"); return true }
+  const blockIfUnpaid = () => { const i = unpaidIdx(); if (i < 0) return false; setNotice(settle ? L.roundUnpaid(i + 1) : L.finishRoundFirst); if (settle) setView("confirmed"); return true }
   const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon, drinks]) // eslint-disable-line
   const pickedUpOf = (pid: string) => drinks.reduce((a, d) => a + (d.cup ? aQty(d.id, pid) : 0), 0)
 
@@ -2250,7 +2270,7 @@ export default function PartyTest() {
     supabase.from("party_pot").delete().eq("id", id).then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
     setPotRounds((rs) => rs.filter((r) => r.id !== id)); setConfirmDlg(null)
   } })
-  const catsPresent = CATS.filter((c) => drinks.some((d) => d.cat === c))
+  const catsPresent = CATS.filter((c) => c === "Eigen" || drinks.some((d) => d.cat === c))
   const bump1 = (did: string) => bumpAnon(did, 1)
   // Een drankje in één tik volledig uit de lopende bestelling halen — zowel de nog niet
   // toegewezen exemplaren als die al aan iemand hingen.
@@ -2435,13 +2455,11 @@ export default function PartyTest() {
     if (drinks.some((d) => d.id === sleutel)) { setNotice(L.alreadyExists(naam)); return }
     if (!groupId) return
 
-    const coins = pay === "coin"
-      ? (parseFloat((ndCoins || "").replace(",", ".")) || coinDefault(ndCat, naam))
-      : coinDefault(ndCat, naam)
+    const coins = coinDefault("Eigen", naam)
 
     const { error } = await supabase.rpc("party_add_drink", {
-      p_group: groupId, p_key: sleutel, p_name: naam, p_cat: ndCat,
-      p_price: prijs, p_coins: coins, p_cup: CUPCAT[ndCat], p_by: me.current,
+      p_group: groupId, p_key: sleutel, p_name: naam, p_cat: "Eigen",
+      p_price: prijs, p_coins: coins, p_cup: true, p_by: me.current,
       p_max_person: MAX_EIGEN_PERSOON, p_max_group: MAX_EIGEN_GROEP,
     })
     if (error) {
@@ -2450,8 +2468,8 @@ export default function PartyTest() {
       else setNotice("Toevoegen mislukt: " + error.message)
       return
     }
-    setNdName(""); setNdPrice(""); setNdCoins(""); setShowAddDrink(false)
-    setActiveCat(ndCat); setDrinkSearch("")
+    setNdName(""); setNdPrice(""); setShowAddDrink(false)
+    setActiveCat("Eigen"); setDrinkSearch("")
     loadParty(groupId)
   }
 
@@ -2487,12 +2505,6 @@ export default function PartyTest() {
           <input value={ndName} onChange={(e) => setNdName(e.target.value)} placeholder={L.namePh}
             style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 16, textAlign: "left", marginBottom: 12 }} />
 
-          <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 5 }}>{L.categoryLabel}</div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-            {CATS.map((c) => (
-              <span key={c} style={S.tab(ndCat === c)} onClick={() => setNdCat(c)}>{CAT_LABEL[c]}</span>
-            ))}
-          </div>
 
           <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 5 }}>{L.priceLabel}</div>
           <div style={{ fontSize: 13, color: "#8a7d55", marginBottom: 6, lineHeight: 1.4 }}>
@@ -2501,13 +2513,6 @@ export default function PartyTest() {
           <input value={ndPrice} onChange={(e) => setNdPrice(e.target.value)} inputMode="decimal" placeholder="4,50"
             style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 16, marginBottom: 12 }} />
 
-          {pay === "coin" && (
-            <>
-              <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 5 }}>Coins <span style={{ fontWeight: 600, color: "#8a7d55" }}>{L.coinsAuto}</span></div>
-              <input value={ndCoins} onChange={(e) => setNdCoins(e.target.value)} inputMode="decimal" placeholder={String(coinDefault(ndCat, ndName || "x"))}
-                style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 16, marginBottom: 12 }} />
-            </>
-          )}
 
           <button style={{ ...S.btnP, width: "100%", opacity: ndName.trim() && ndPrice ? 1 : 0.5 }} onClick={addCustomDrink}>
             {L.addBtn}
@@ -3857,24 +3862,19 @@ export default function PartyTest() {
           )}
         </div>
 
-        <div style={{ position: "relative", marginBottom: 6 }}>
-          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🔍</span>
-          <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)} placeholder={L.searchDrink}
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 36, paddingRight: drinkSearch ? 34 : 12, fontSize: 16, textAlign: "left" }} />
-          {drinkSearch && (
-            <button onClick={() => setDrinkSearch("")}
-              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8a7d55", padding: 4 }}>✕</button>
-          )}
-        </div>
-
-        {/* Vlak onder het zoekveld: precies waar je kijkt als je zoekopdracht niets oplevert. */}
-        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap", marginBottom: 10 }}>
-          <span onClick={startVoice} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "6px 11px", borderRadius: 14, fontSize: 12, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
-            {L.voiceBtn} <span style={{ fontSize: 8.5, fontWeight: 800, color: "#c98a00", border: "1px solid rgba(240,165,0,0.6)", borderRadius: 4, padding: "0 3px", letterSpacing: "0.03em" }}>{L.voiceBeta}</span>
-          </span>
-          <span onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "6px 11px", borderRadius: 14, fontSize: 12, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
-            {L.addOwnDrink}
-          </span>
+        <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: 10 }}>
+          <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+            <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🔍</span>
+            <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)} placeholder={L.searchDrink}
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 36, paddingRight: drinkSearch ? 34 : 12, fontSize: 16, textAlign: "left" }} />
+            {drinkSearch && (
+              <button onClick={() => setDrinkSearch("")}
+                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8a7d55", padding: 4 }}>✕</button>
+            )}
+          </div>
+          <button onClick={startVoice} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, padding: "0 13px", borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(240,165,0,0.6)", color: "#c98a00", whiteSpace: "nowrap" }}>
+            {L.voiceBtn} <span style={{ fontSize: 8.5, fontWeight: 800, border: "1px solid rgba(240,165,0,0.6)", borderRadius: 4, padding: "0 3px", letterSpacing: "0.03em" }}>{L.voiceBeta}</span>
+          </button>
         </div>
 
         <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", marginBottom: 8 }}>
@@ -3883,7 +3883,7 @@ export default function PartyTest() {
           ))}
         </div>
 
-        {lijst.length === 0 ? (
+        {(lijst.length === 0 && (zoekt || activeCat !== "Eigen")) ? (
           <div style={{ ...S.card, textAlign: "center", color: "#b3a988", fontSize: 15, padding: "20px 0" }}>
             {!zoekt && !fullList ? (
               <span onClick={() => setFullList(true)} style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }}>{L.showAll}</span>
@@ -3912,6 +3912,13 @@ export default function PartyTest() {
                 </div>
               )
             })}
+            {!zoekt && (
+              <div onClick={() => { setShowAddDrink(true); setNdName("") }}
+                style={{ padding: "10px", borderRadius: 12, background: "#fffdf6", border: "1.5px dashed rgba(240,165,0,0.6)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 74, cursor: "pointer", color: "#c98a00" }}>
+                <div style={{ fontSize: 20, lineHeight: 1 }}>＋</div>
+                <div style={{ fontSize: 13, fontWeight: 800, marginTop: 5 }}>{L.newDrinkTile}</div>
+              </div>
+            )}
             </div>
             {/* "Meer/minder" hangt centraal, half over de onderrand van de lijst. */}
             {!zoekt && !fullList && catDrinks.length > lijst.length && (
@@ -4483,7 +4490,8 @@ export default function PartyTest() {
           </button>
         )}
         {settle && people.length > 0 && <div style={{ fontSize: 12, color: "#8a7d55", textAlign: "center", marginBottom: 10, lineHeight: 1.4 }}>{L.walkIntro}</div>}
-        <div className="rundo-catscroll" style={{ display: zoekt ? "none" : "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", padding: "0 8px 9px 0", marginBottom: 10, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+        <div style={{ display: zoekt ? "none" : "block", position: "relative", marginBottom: 10 }}>
+          <div ref={catScroll} onScroll={updateCatArrows} className="rundo-catscroll" style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", padding: "0 8px 9px 0", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
           <style>{`.rundo-catscroll::-webkit-scrollbar{display:none}`}</style>
           {catsPresent.map((c) => {
             const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
@@ -4495,27 +4503,35 @@ export default function PartyTest() {
               {CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: actief ? "#ffd27f" : "#e0685c", fontSize: 16 }}>●</span>}
             </span>
           })}
-        </div>
-
-        <div style={{ position: "relative", marginBottom: 6 }}>
-          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🔍</span>
-          <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)}
-            placeholder={L.searchDrink}
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 36, paddingRight: drinkSearch ? 34 : 12, fontSize: 16, textAlign: "left" }} />
-          {drinkSearch && (
-            <button onClick={() => setDrinkSearch("")}
-              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8a7d55", padding: 4 }}>✕</button>
+          </div>
+          {catMore.left && (
+            <div onClick={() => catScroll.current?.scrollBy({ left: -170, behavior: "smooth" })}
+              style={{ position: "absolute", left: 0, top: 0, bottom: 9, width: 46, display: "flex", alignItems: "center", justifyContent: "flex-start", cursor: "pointer", background: "linear-gradient(to left, rgba(253,246,227,0), #fdf6e3 60%)" }}>
+              <span style={{ width: 30, height: 30, borderRadius: "50%", background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a5e0f", fontSize: 17, fontWeight: 800, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>‹</span>
+            </div>
+          )}
+          {catMore.right && (
+            <div onClick={() => catScroll.current?.scrollBy({ left: 170, behavior: "smooth" })}
+              style={{ position: "absolute", right: 0, top: 0, bottom: 9, width: 46, display: "flex", alignItems: "center", justifyContent: "flex-end", cursor: "pointer", background: "linear-gradient(to right, rgba(253,246,227,0), #fdf6e3 60%)" }}>
+              <span style={{ width: 30, height: 30, borderRadius: "50%", background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a5e0f", fontSize: 17, fontWeight: 800, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>›</span>
+            </div>
           )}
         </div>
 
-        {/* Vlak onder het zoekveld: precies waar je kijkt als je zoekopdracht niets oplevert. */}
-        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap", marginBottom: 10 }}>
-          <span onClick={startVoice} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "6px 11px", borderRadius: 14, fontSize: 12, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
-            {L.voiceBtn} <span style={{ fontSize: 8.5, fontWeight: 800, color: "#c98a00", border: "1px solid rgba(240,165,0,0.6)", borderRadius: 4, padding: "0 3px", letterSpacing: "0.03em" }}>{L.voiceBeta}</span>
-          </span>
-          <span onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "6px 11px", borderRadius: 14, fontSize: 12, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(200,160,90,0.45)", color: "#a8863f", whiteSpace: "nowrap" }}>
-            {L.addOwnDrink}
-          </span>
+        <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: 10 }}>
+          <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+            <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🔍</span>
+            <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)}
+              placeholder={L.searchDrink}
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 36, paddingRight: drinkSearch ? 34 : 12, fontSize: 16, textAlign: "left" }} />
+            {drinkSearch && (
+              <button onClick={() => setDrinkSearch("")}
+                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8a7d55", padding: 4 }}>✕</button>
+            )}
+          </div>
+          <button onClick={startVoice} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, padding: "0 13px", borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(240,165,0,0.6)", color: "#c98a00", whiteSpace: "nowrap" }}>
+            {L.voiceBtn} <span style={{ fontSize: 8.5, fontWeight: 800, border: "1px solid rgba(240,165,0,0.6)", borderRadius: 4, padding: "0 3px", letterSpacing: "0.03em" }}>{L.voiceBeta}</span>
+          </button>
         </div>
 
         {zoekt && (
@@ -4526,7 +4542,7 @@ export default function PartyTest() {
           </div>
         )}
 
-        {catVisible.length === 0 ? (
+        {(catVisible.length === 0 && (zoekt || activeCat !== "Eigen")) ? (
           <div style={{ ...S.card, textAlign: "center", padding: "18px 12px", fontSize: 15, color: "#8a7d55" }}>
             Geen favorieten in {CAT_LABEL[activeCat]}. <span style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }} onClick={() => setFullList(true)}>{L.showAll}</span>
           </div>
@@ -4553,6 +4569,13 @@ export default function PartyTest() {
                   </div>
                 )
               })}
+              {!zoekt && (
+                <div onClick={() => { setShowAddDrink(true); setNdName("") }}
+                  style={{ padding: "10px", borderRadius: 12, background: "#fffdf6", border: "1.5px dashed rgba(240,165,0,0.6)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 74, cursor: "pointer", color: "#c98a00" }}>
+                  <div style={{ fontSize: 20, lineHeight: 1 }}>＋</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, marginTop: 5 }}>{L.newDrinkTile}</div>
+                </div>
+              )}
             </div>
             {/* "Meer/minder" hangt centraal, half over de onderrand van de lijst. */}
             {!zoekt && !fullList && catDrinks.length > catVisible.length && (
@@ -4950,7 +4973,7 @@ export default function PartyTest() {
               <style>{`@keyframes rundoPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,138,76,0.45)}50%{box-shadow:0 0 0 7px rgba(31,138,76,0)}}.rundo-pulse{animation:rundoPulse 1.4s infinite}`}</style>
               <div style={{ ...S.row, gap: 7 }}>
                 <span style={{ fontSize: 20, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                <input style={{ ...S.input, flex: 1, minWidth: 0, fontSize: 20, fontWeight: 800, padding: "12px", textAlign: "left",
+                <input style={{ ...S.input, flex: 1, minWidth: 70, fontSize: 19, fontWeight: 800, padding: "12px 10px", textAlign: "left",
                   color: "#c88a1a",
                   borderColor: amount > 0.005 ? "#e08a00" : "rgba(120,95,20,0.22)",
                   background: amount > 0.005 ? "#fff" : "#fdfaf2" }}
@@ -4958,12 +4981,12 @@ export default function PartyTest() {
                   value={amount > 0 ? String(amount).replace(".", ",") : ""}
                   onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }}
                   onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); if ((rounds[idx]?.amount || 0) > 0.005) confirmQuickPay() } }} />
-                <button className={amount > 0.005 ? "rundo-pulse" : undefined} style={{ width: 64, height: 58, borderRadius: 13, fontSize: 27, fontWeight: 800, cursor: "pointer", flexShrink: 0,
+                <button className={amount > 0.005 ? "rundo-pulse" : undefined} style={{ width: 54, height: 56, borderRadius: 13, fontSize: 27, fontWeight: 800, cursor: "pointer", flexShrink: 0,
                   background: amount > 0.005 ? "#fff" : "#e8e2d2",
                   color: amount > 0.005 ? "#1f8a4c" : "#b3a988",
                   border: amount > 0.005 ? "2.5px solid #1f8a4c" : "none" }}
                   onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}>✓</button>
-                <button style={{ padding: "0 10px", height: 40, alignSelf: "center", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", flexShrink: 0, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", color: "#a89a6f", whiteSpace: "nowrap" }} onClick={() => closeQuickRound(true)}>{L.cancel}</button>
+                <button style={{ padding: "0 10px", height: 46, alignSelf: "center", borderRadius: 10, fontSize: 12.5, fontWeight: 700, cursor: "pointer", flexShrink: 0, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", color: "#a89a6f", lineHeight: 1.25, maxWidth: 92 }} onClick={() => closeQuickRound(true)}>{L.skipPayment}</button>
               </div>
               {amount > 0.005 && (
                 <div style={{ fontSize: 13.5, color: "#1f8a4c", fontWeight: 800, textAlign: "right", marginTop: 7, paddingRight: 78 }}>{L.tapToConfirm}</div>
