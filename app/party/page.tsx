@@ -324,6 +324,8 @@ const T = {
     groupNamePh: "Typ je groepsnaam",
     starting: "Bezig…",
     savedGroups: "Opgeslagen groepen",
+    modeFairShort: "Fair Split",
+    modeQuickShort: "Snelle rondjes",
     asGuest: "als gast",
     groupsOpen: "Open",
     groupsClosed: "Afgesloten",
@@ -807,6 +809,8 @@ const T = {
     groupNamePh: "Tape le nom de ton groupe",
     starting: "En cours…",
     savedGroups: "Groupes enregistrés",
+    modeFairShort: "Fair Split",
+    modeQuickShort: "Tournées rapides",
     asGuest: "en tant qu'invit\u00e9",
     groupsOpen: "Ouvert",
     groupsClosed: "Cl\u00f4tur\u00e9",
@@ -1271,7 +1275,7 @@ export default function PartyTest() {
   const [busy, setBusy] = useState(false)        // groep aanmaken / plaats claimen
   // Opgeslagen groepen: alle groepen waar dit toestel bij hoort (zelf gemaakt of via
   // QR aan deelgenomen). Getoond op het startscherm zodat je kan terugkeren.
-  type SavedGroup = { id: string; name: string; last_active: string; finalized: boolean; owned: boolean }
+  type SavedGroup = { id: string; name: string; last_active: string; finalized: boolean; owned: boolean; settle: boolean }
   const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
   const isAdmin = !!ownerDevice && ownerDevice === me.current
   // Mijn eigen plaats: die waarop dit toestel zit. Nodig zodra gasten hun eigen
@@ -1991,19 +1995,19 @@ export default function PartyTest() {
   const loadSavedGroups = useCallback(async () => {
     const dev = me.current
     const [eigen, gast] = await Promise.all([
-      supabase.from("party_groups").select("id,name,last_active,finalized,owner_id").eq("owner_id", dev),
+      supabase.from("party_groups").select("id,name,last_active,finalized,owner_id,settle").eq("owner_id", dev),
       supabase.from("party_people").select("group_id").eq("claimed_by", dev),
     ])
     const map = new Map<string, SavedGroup>()
     for (const g of eigen.data ?? []) {
-      map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: true })
+      map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: true, settle: g.settle !== false })
     }
     // Gast-groepen die nog niet als eigen bekend zijn, apart ophalen voor hun details.
     const gastIds = [...new Set((gast.data ?? []).map((r) => r.group_id as string))].filter((id) => !map.has(id))
     if (gastIds.length > 0) {
-      const { data: extra } = await supabase.from("party_groups").select("id,name,last_active,finalized").in("id", gastIds)
+      const { data: extra } = await supabase.from("party_groups").select("id,name,last_active,finalized,settle").in("id", gastIds)
       for (const g of extra ?? []) {
-        map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: false })
+        map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: false, settle: g.settle !== false })
       }
     }
     const lijst = [...map.values()].sort((a, b) => (b.last_active || "").localeCompare(a.last_active || ""))
@@ -4095,14 +4099,16 @@ export default function PartyTest() {
           const rij = (g: SavedGroup) => (
             <div key={g.id} style={{ display: "flex", alignItems: "stretch", gap: 7, marginBottom: 7 }}>
               <button onClick={() => openSavedGroup(g.id)} disabled={busy}
-                style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "space-between", textAlign: "left", padding: "12px 14px", borderRadius: 12, background: "#fff", border: "1px solid rgba(120,95,20,0.15)", cursor: "pointer" }}>
-                <div style={{ minWidth: 0 }}>
+                style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 11, textAlign: "left", padding: "12px 14px", borderRadius: 12, background: "#fff", border: "1px solid rgba(120,95,20,0.15)", cursor: "pointer" }}>
+                {/* Aan de kleur en het icoon zie je in één oogopslag welke modus het was. */}
+                <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, background: g.settle ? "rgba(31,138,76,0.12)" : "rgba(240,165,0,0.16)" }}>{g.settle ? "⚖️" : "🍻"}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</div>
-                  <div style={{ fontSize: 13, color: "#a89a6f", marginTop: 2 }}>
-                    {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
+                  <div style={{ fontSize: 13, color: "#a89a6f", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {g.settle ? L.modeFairShort : L.modeQuickShort} · {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
                   </div>
                 </div>
-                <span style={{ fontSize: 17, color: "#c4b896", flexShrink: 0, marginLeft: 10 }}>›</span>
+                <span style={{ fontSize: 17, color: "#c4b896", flexShrink: 0 }}>›</span>
               </button>
               {g.owned && (
                 <button onClick={() => deleteSavedGroup(g)} disabled={busy} aria-label={L.delGroupYes}
