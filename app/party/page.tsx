@@ -652,6 +652,8 @@ const T = {
     quickSettleTitle: "🧾 Afrekenen",
     quickTotalLabel: "Totaal van alle rondjes",
     splitOverGroup: "Verdelen",
+    splitEqually: "Gelijk verdelen",
+    fairSplitExplain: "Bij Fair Split hangt elk drankje aan een naam. Wie meer dronk, betaalt meer \u2014 en wie niets nam, betaalt niets.\n\nJe wijst per rondje toe wie wat nam. Let op: overstappen wist wat je tot nu toe noteerde.",
     payAllSelf: "Alles zelf",
     treatHint: "Rondje trakteren? Tik hieronder aan (telt dan niet mee in de verdeling)",
     roundWord: "Rondje",
@@ -1122,6 +1124,8 @@ const T = {
     quickSettleTitle: "🧾 R\u00e9gler",
     quickTotalLabel: "Total de toutes les tourn\u00e9es",
     splitOverGroup: "Partager",
+    splitEqually: "R\u00e9partir \u00e9galement",
+    fairSplitExplain: "Avec Fair Split, chaque boisson est li\u00e9e \u00e0 un nom. Qui a bu plus paie plus \u2014 qui n\u2019a rien pris ne paie rien.\n\nTu attribues par tourn\u00e9e qui a pris quoi. Attention : changer efface ce que tu as not\u00e9.",
     payAllSelf: "Tout payer",
     treatHint: "Tu offres une tourn\u00e9e ? Touche-la ci-dessous (elle ne compte pas dans le partage)",
     roundWord: "Tourn\u00e9e",
@@ -2207,7 +2211,6 @@ export default function PartyTest() {
     setPotBuilderOpen(false)
     setPotJustAdded(true)
     await loadParty(groupId)
-    setNotice(L.potAdded(euro(totaal)))
   }
   const closePot = () => {
     const added = (editPotId === null && potDraftTotal > 0.001) ? potDraftTotal : 0
@@ -2449,7 +2452,6 @@ export default function PartyTest() {
     }
     setNdName(""); setNdPrice(""); setNdCoins(""); setShowAddDrink(false)
     setActiveCat(ndCat); setDrinkSearch("")
-    setNotice(L.drinkAdded(naam))
     loadParty(groupId)
   }
 
@@ -5254,14 +5256,19 @@ export default function PartyTest() {
           <div style={{ fontSize: 30, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</div>
         </div>
 
-        {/* Schakelaar: verdelen over de groep, of alles op één iemand. */}
+        {/* Links: gelijk verdelen over de groep. Rechts: overstappen naar Fair Split,
+            waar elk drankje aan een naam hangt. */}
         <div style={{ display: "flex", gap: 4, background: "#f7f1e2", padding: 4, borderRadius: 12, marginBottom: 12 }}>
           <button style={{ flex: 1, padding: "10px 6px", borderRadius: 9, fontSize: 14.5, fontWeight: 800, cursor: "pointer", border: "none",
-            background: !alles ? "#fff" : "transparent", color: !alles ? "#4a3f1e" : "#8a7d55", boxShadow: !alles ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}
-            onClick={() => setSettleMode("verdelen")}>👥 {L.splitOverGroup}</button>
+            background: "#fff", color: "#4a3f1e", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}
+            onClick={() => setSettleMode("verdelen")}>👥 {L.splitEqually}</button>
           <button style={{ flex: 1, padding: "10px 6px", borderRadius: 9, fontSize: 14.5, fontWeight: 800, cursor: "pointer", border: "none",
-            background: alles ? "#fff" : "transparent", color: alles ? "#4a3f1e" : "#8a7d55", boxShadow: alles ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}
-            onClick={() => setSettleMode("allesZelf")}>💶 {L.payAllSelf}</button>
+            background: "transparent", color: "#8a7d55", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+            onClick={switchMode}>
+            ⚖️ {L.modeTitle}
+            <span onClick={(e) => { e.stopPropagation(); setNotice(L.fairSplitExplain) }}
+              style={{ width: 19, height: 19, borderRadius: "50%", border: "1.5px solid #b8ac8a", color: "#8a7d55", fontSize: 11, fontWeight: 800, fontStyle: "italic", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>i</span>
+          </button>
         </div>
 
         {!alles ? (
