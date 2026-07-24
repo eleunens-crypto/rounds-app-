@@ -2314,15 +2314,20 @@ export default function PartyTest() {
       const { data: rid } = await supabase.rpc("party_open_round", { p_group: gid, p_starter: null })
       if (!rid) continue
       for (const it of perRondje[i]) {
-        await supabase.rpc("party_bump", { p_group: gid, p_round: rid, p_person: scenario === "assign" ? null : it.pid, p_drink: it.key, p_delta: it.n })
+        // In de snelle modus hangen drankjes nooit aan een naam. Alleen de scenario's
+        // die ná het toewijzen beginnen, krijgen ze wél toegewezen.
+        const aanWie = (scenario === "payers" || scenario === "final") ? it.pid : null
+        await supabase.rpc("party_bump", { p_group: gid, p_round: rid, p_person: aanWie, p_drink: it.key, p_delta: it.n })
       }
       // Rondje 2 komt uit de pot; rondje 1 blijft open werk behalve in "final".
       const uitPot = i === 1 ? bedragen[i] : 0
       const betalers = scenario === "final" && i === 0 ? { [ids[0]]: bedragen[0] } : {}
       await supabase.from("party_rounds").update({
         status: "closed", closed_at: new Date().toISOString(),
-        amount: scenario === "assign" ? 0 : bedragen[i],
-        pot_part: scenario === "assign" ? 0 : uitPot,
+        // Bedragen en potbetalingen bestaan al vóór de omschakeling: in de snelle modus
+        // vul je die per rondje in. Alleen de namen achter de drankjes ontbreken nog.
+        amount: bedragen[i],
+        pot_part: uitPot,
         payers: betalers, headcount: 4, members: ids,
       }).eq("id", rid)
     }
@@ -5351,11 +5356,14 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
-        {rounds.length === 0 && renderShare()}
+        {/* Tijdens de omschakeling van snel naar Fair Split is de hub enkel het
+            toewijsscherm. Rondjesoverzicht, nieuwe rondjes en afrekenen horen daar
+            niet: die leiden je weg uit een traject van drie stappen. */}
+        {!fromQuick && rounds.length === 0 && renderShare()}
         {/* De pot is een handeling aan het BEGIN van de avond: iedereen legt vooraf in.
             Daarom staat hij hier, zichtbaar, vóór het eerste rondje — niet weggestopt
             in de instellingen. Het ⚙️-wieltje leidt naar pot + bekers + coins samen. */}
-        {settle && rounds.length === 0 && (
+        {!fromQuick && settle && rounds.length === 0 && (
           <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.35)" }}>
             <div style={{ ...S.row, justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
               <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{potIsCard ? L.drinkCard : L.potStartTitle}</span>
@@ -5629,13 +5637,13 @@ export default function PartyTest() {
             </div>
           )
         })()}
-        {settle && unassignedAllRounds === 0 && (
+        {!fromQuick && settle && unassignedAllRounds === 0 && (
         <div style={{ ...S.row, justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.roundsOverview}</h3>
           {potTag}
         </div>
         )}
-        {settle && paidCount === 0 ? (
+        {fromQuick ? null : settle && paidCount === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
             <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{L.noRoundsDone}</div>
@@ -5756,7 +5764,7 @@ export default function PartyTest() {
         })}
 
         </>)}
-        {paidCount > 0 && laatsteRondjeKlaar() && !(settle && unassignedAllRounds > 0) && <>
+        {!fromQuick && paidCount > 0 && laatsteRondjeKlaar() && !(settle && unassignedAllRounds > 0) && <>
           <div style={{ display: "flex", gap: 10 }}>
             <button style={{ ...S.btn, flex: 1 }} onClick={goFinal}>{L.settleBtn}</button>
             <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (unfinishedRound) resumeRound(); else nextRound() }}>{unfinishedRound ? L.continueRound(roundNr) : "➕ Nieuw rondje"}</button>
