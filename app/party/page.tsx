@@ -717,6 +717,12 @@ const T = {
     byPeople: "door personen",
     potStillFree: (v: string, tot: string) => `Nog ${v} beschikbaar van de ${tot} in de pot`,
     potFree: (v: string) => `${v} vrij`,
+    potUsedFree: (g: string, v: string) => `${g} gebruikt · ${v} vrij`,
+    potShared: (tot: string, n: number) => `Pot ${tot} · verdeeld over ${n}`,
+    changeWord: "wijzig",
+    totalOf: (v: string) => `${v} totaal`,
+    stillOpen: (v: string) => `${v} open`,
+    allCovered: "alles gedekt ✓",
     fairSplitExplain: "Liever eerlijk betalen volgens wat iedereen dronk (Fair Split!) Wijs drankjes en betalers hier toe.",
     payAllSelf: "Alles zelf",
     treatHint: "Rondje trakteren? Tik hieronder aan (telt dan niet mee in de verdeling)",
@@ -1253,6 +1259,12 @@ const T = {
     byPeople: "par les personnes",
     potStillFree: (v: string, tot: string) => `Encore ${v} disponible sur les ${tot} de la cagnotte`,
     potFree: (v: string) => `${v} libre`,
+    potUsedFree: (g: string, v: string) => `${g} utilisé · ${v} libre`,
+    potShared: (tot: string, n: number) => `Cagnotte ${tot} · répartie sur ${n}`,
+    changeWord: "modifier",
+    totalOf: (v: string) => `${v} au total`,
+    stillOpen: (v: string) => `${v} ouvert`,
+    allCovered: "tout couvert ✓",
     fairSplitExplain: "Tu préfères payer selon ce que chacun a bu (Fair Split !) Attribue ici les boissons et les payeurs.",
     payAllSelf: "Tout payer",
     treatHint: "Tu offres une tourn\u00e9e ? Touche-la ci-dessous (elle ne compte pas dans le partage)",
@@ -1407,6 +1419,8 @@ export default function PartyTest() {
   })
   // Staat de koppel-kiezer open in de verrekening?
   const [showTogether, setShowTogether] = useState(false)
+  // Staat de snelkoppeling "dezelfde betaler voor alles" open?
+  const [showSameFor, setShowSameFor] = useState(false)
   const [stalePins, setStalePins] = useState<SavedGroup[]>([])
   const isAdmin = !!ownerDevice && ownerDevice === me.current
   // Mijn eigen plaats: die waarop dit toestel zit. Nodig zodra gasten hun eigen
@@ -6105,59 +6119,106 @@ export default function PartyTest() {
 
         {fromQuick && stapBalk(3)}
         <h3 style={{ ...S.h3, margin: "0 0 9px" }}>💶 {L.payersTitle}</h3>
-        {/* De melding staat waar de uitleg stond: pas als er iets ontbreekt, en niet
-            als losse regel onderaan waar je er al voorbij gescrold bent. */}
-        {!klaar && (
-          <div style={{ background: "rgba(224,104,92,0.08)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "10px 12px", fontSize: 13.5, color: "#b0402f", fontWeight: 800, marginBottom: 12 }}>
-            {zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit}
-          </div>
-        )}
 
-        {/* Wat de pot draagt, hoort meteen zichtbaar te zijn: het scheelt in wie wat terugkrijgt. */}
-        {/* Alle cijfers van dit scherm in één blik: wat het kostte, wat er al gedekt is,
-            en waar dat geld vandaan komt. */}
+        {/* Eén regel volstaat: het totaal staat vast, en wat je nog moet doen is het
+            openstaande bedrag. De rest — pot, personen — lees je bij de rondjes zelf. */}
         {(() => {
           const totaalRondjes = rounds.reduce((a, r) => a + (r.amount || 0), 0)
           const doorPersonen = rounds.reduce((a, r) => a + Object.values(r.payers || {}).reduce((x, y) => x + (y || 0), 0), 0)
-          const gedekt = potSpent + doorPersonen
-          const openstaand = Math.max(0, totaalRondjes - gedekt)
+          const openstaand = Math.max(0, totaalRondjes - potSpent - doorPersonen)
           return (
-            <div style={{ ...S.card, padding: 14 }}>
-              <div style={{ display: "flex", textAlign: "center" }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10.5, color: "#a89a6f", letterSpacing: "0.03em" }}>{L.sumTotal}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", marginTop: 2 }}>{euro(totaalRondjes)}</div>
-                </div>
-                <div style={{ flex: 1, borderLeft: "1px solid rgba(120,95,20,0.12)" }}>
-                  <div style={{ fontSize: 10.5, color: "#a89a6f", letterSpacing: "0.03em" }}>{L.sumCovered}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c", marginTop: 2 }}>{euro(gedekt)}</div>
-                </div>
-                <div style={{ flex: 1, borderLeft: "1px solid rgba(120,95,20,0.12)" }}>
-                  <div style={{ fontSize: 10.5, color: "#a89a6f", letterSpacing: "0.03em" }}>{L.sumOpen}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: openstaand > 0.005 ? "#b0402f" : "#1f8a4c", marginTop: 2 }}>{euro(openstaand)}</div>
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 11, paddingTop: 11, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
-                <div style={{ flex: 1, background: "rgba(31,138,76,0.08)", borderRadius: 10, padding: "8px 10px" }}>
-                  <div style={{ fontSize: 11.5, color: "#5a9a75" }}>🫙 {L.byPot}</div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: "#1f6b3a", marginTop: 1 }}>{euro(potSpent)}</div>
-                </div>
-                <div style={{ flex: 1, background: "#faf7ec", borderRadius: 10, padding: "8px 10px" }}>
-                  <div style={{ fontSize: 11.5, color: "#a89a6f" }}>👤 {L.byPeople}</div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55", marginTop: 1 }}>{euro(doorPersonen)}</div>
-                </div>
-              </div>
-              {potContribTotal > 0.005 && (
-                <div style={{ fontSize: 12.5, color: "#1f6b3a", marginTop: 9, textAlign: "center" }}>{L.potStillFree(euro(Math.max(0, potRemaining)), euro(potContribTotal))}</div>
-              )}
+            <div style={{ ...S.row, justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "0 4px 11px", borderBottom: "1px solid rgba(120,95,20,0.18)", marginBottom: 12 }}>
+              <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 800 }}>{L.totalOf(euro(totaalRondjes))}</span>
+              <span style={{ fontSize: 19, fontWeight: 800, color: openstaand > 0.005 ? "#b0402f" : "#1f8a4c" }}>{openstaand > 0.005 ? L.stillOpen(euro(openstaand)) : L.allCovered}</span>
             </div>
           )
         })()}
 
-        {/* Meestal haalde dezelfde persoon telkens: dan is dit één tik voor de avond. */}
-        {people.length > 0 && rounds.length > 1 && (
+        {/* Zolang de pot nog niet op namen staat, is dit een taak — dus bovenaan. Is hij
+            verdeeld, dan wordt het informatie en schuift hij als regel naar onderen. */}
+        {potContribTotal > 0.005 && (potZonderNamen || potNames !== null) && (
+          <div style={{ width: "82%", margin: "0 auto 13px", position: "relative", background: "#f4faf6", border: "1.5px solid rgba(31,138,76,0.4)", borderRadius: 16, padding: "16px 14px 14px" }}>
+            {/* Een zakje op de hoek en een smaller kader: de pot is geen rondje in de rij. */}
+            <span style={{ position: "absolute", top: -14, left: -12, width: 38, height: 38, borderRadius: "50%", background: "#fff", border: "1.5px solid rgba(31,138,76,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19 }}>💰</span>
+            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 3, paddingLeft: 20 }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "#1f6b3a" }}>{L.potOnNames}</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c" }}>{euro(potContribTotal)}</span>
+            </div>
+            {potSpent > 0.005 && (
+              <div style={{ fontSize: 12.5, color: "#5a9a75", paddingLeft: 20, marginBottom: 8 }}>{L.potUsedFree(euro(potSpent), euro(Math.max(0, potRemaining)))}</div>
+            )}
+            {potNames !== null ? (
+              <>
+                {/* Per persoon aanpasbaar. Wie meer intikt, verhoogt meteen de pot. */}
+                {people.map((p) => (
+                  <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                      <span style={{ fontSize: 15, color: "#8a7d55", fontWeight: 700 }}>€</span>
+                      <input type="text" inputMode="decimal" placeholder="0,00"
+                        {...bedragVeld(`potnaam-${p.id}`, potNames[p.id] || 0, (v) => setPotNames((c) => ({ ...(c || {}), [p.id]: v })))}
+                        style={{ ...S.input, width: 82, padding: "7px 9px", fontSize: 15, fontWeight: 800 }} />
+                    </span>
+                  </div>
+                ))}
+                <div style={{ ...S.row, justifyContent: "space-between", paddingTop: 10, marginTop: 4, borderTop: "1px dashed rgba(120,95,20,0.25)" }}>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55" }}>{L.potNewTotal}</span>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: Object.values(potNames).reduce((a, b) => a + (b || 0), 0) > potContribTotal + 0.005 ? "#b0402f" : "#1f8a4c" }}>{euro(Object.values(potNames).reduce((a, b) => a + (b || 0), 0))}</span>
+                </div>
+                {/* Meer verdelen dan er ooit inging kan kloppen (iemand legde bij), maar
+                    het is bijna altijd een tikfout. Dus melden, niet blokkeren. */}
+                {Object.values(potNames).reduce((a, b) => a + (b || 0), 0) > potContribTotal + 0.005 && (
+                  <div style={{ fontSize: 12.5, color: "#b0402f", fontWeight: 800, marginTop: 6 }}>⚠️ {L.potOverShort(euro(Object.values(potNames).reduce((a, b) => a + (b || 0), 0) - potContribTotal))}</div>
+                )}
+                <div style={{ display: "flex", gap: 8, marginTop: 11 }}>
+                  <button style={{ ...S.btn, flex: 1, fontSize: 13.5, fontWeight: 800, padding: "10px 6px" }}
+                    onClick={() => { const per = potContribTotal / Math.max(1, people.length); const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(per * 100) / 100 }); setPotNames(n) }}>{L.potSpreadEven}</button>
+                  <button style={{ ...S.btnP, flex: 1, fontSize: 14, padding: "10px 6px" }}
+                    onClick={() => {
+                      const nieuw = Object.values(potNames).reduce((a, b) => a + (b || 0), 0)
+                      if (nieuw > potContribTotal + 0.005) {
+                        setConfirmDlg({ msg: L.potOverMax(euro(nieuw), euro(potContribTotal)), yes: L.saveAnyway,
+                          onYes: () => { setConfirmDlg(null); bewaarPotPerPersoon(potNames) } })
+                        return
+                      }
+                      bewaarPotPerPersoon(potNames)
+                    }}>{L.saveWord}</button>
+                </div>
+                <button style={{ width: "100%", marginTop: 8, padding: "8px 0", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#a89a6f", cursor: "pointer" }}
+                  onClick={() => setPotNames(null)}>{L.cancel}</button>
+              </>
+            ) : potZonderNamen ? (
+              <>
+                <div style={{ fontSize: 13, color: "#5a9a75", lineHeight: 1.5, marginBottom: 10 }}>{L.potNotSplit}</div>
+                <button style={{ ...S.btn, width: "100%", fontWeight: 800, fontSize: 14.5 }} onClick={verdeelPotOverNamen}>{L.splitPotEqually(people.length)}</button>
+                <button style={{ width: "100%", marginTop: 8, padding: "8px 0", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#8a7d55", cursor: "pointer", textDecoration: "underline" }}
+                  onClick={() => { const per = potContribTotal / Math.max(1, people.length); const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(per * 100) / 100 }); setPotNames(n) }}>{L.potPerPersonEdit}</button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 14, color: "#6b5f3a", lineHeight: 1.6 }}>
+                  {people.filter((p) => contribOf(p.id) > 0.005).map((p) => `${p.name} ${euro(contribOf(p.id))}`).join(" · ")}
+                </div>
+                <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 14, fontWeight: 800 }}
+                  onClick={() => { const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(contribOf(p.id) * 100) / 100 }); setPotNames(n) }}>{L.potPerPersonEdit}</button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Een snelkoppeling die je meestal niet nodig hebt: pas uitklappen bij een tik. */}
+        {people.length > 0 && rounds.length > 1 && !showSameFor && (
+          <div style={{ textAlign: "right", marginBottom: 11 }}>
+            <span onClick={() => setShowSameFor(true)}
+              style={{ fontSize: 12.5, fontWeight: 800, color: "#c98a00", background: "#fffdf6", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 14, padding: "5px 11px", cursor: "pointer", whiteSpace: "nowrap" }}>⚡ {L.sameForAll} ▾</span>
+          </div>
+        )}
+        {people.length > 0 && rounds.length > 1 && showSameFor && (
           <div style={{ ...S.card, padding: "12px 13px" }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 9 }}>⚡ {L.sameForAll}</div>
+            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9 }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55" }}>⚡ {L.sameForAll}</span>
+              <span onClick={() => setShowSameFor(false)} style={{ fontSize: 15, color: "#c4b896", cursor: "pointer" }}>✕</span>
+            </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {potContribTotal > 0.005 && (
                 <span onClick={() => zelfdeBetalerVoorAlles(null)}
@@ -6225,71 +6286,13 @@ export default function PartyTest() {
           )
         })}
 
-        {/* De pot: in de snelle modus zonder namen ingelegd, hier op namen gezet. */}
-        {potContribTotal > 0.005 && (
-          <div style={{ width: "82%", margin: "0 auto 13px", position: "relative", background: "#f4faf6", border: "1.5px solid rgba(31,138,76,0.4)", borderRadius: 16, padding: "16px 14px 14px" }}>
-            {/* Een zakje op de hoek en een smaller kader: de pot is geen rondje in de rij. */}
-            <span style={{ position: "absolute", top: -14, left: -12, width: 38, height: 38, borderRadius: "50%", background: "#fff", border: "1.5px solid rgba(31,138,76,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19 }}>💰</span>
-            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, paddingLeft: 20 }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: "#1f6b3a" }}>{L.potOnNames}</span>
-              <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c" }}>{euro(potContribTotal)}</span>
-            </div>
-            {potNames !== null ? (
-              <>
-                {/* Per persoon aanpasbaar. Wie meer intikt, verhoogt meteen de pot. */}
-                {people.map((p) => (
-                  <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: "#4a3f1e", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                      <span style={{ fontSize: 15, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                      <input type="text" inputMode="decimal" placeholder="0,00"
-                        {...bedragVeld(`potnaam-${p.id}`, potNames[p.id] || 0, (v) => setPotNames((c) => ({ ...(c || {}), [p.id]: v })))}
-                        style={{ ...S.input, width: 82, padding: "7px 9px", fontSize: 15, fontWeight: 800 }} />
-                    </span>
-                  </div>
-                ))}
-                <div style={{ ...S.row, justifyContent: "space-between", paddingTop: 10, marginTop: 4, borderTop: "1px dashed rgba(120,95,20,0.25)" }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55" }}>{L.potNewTotal}</span>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: Object.values(potNames).reduce((a, b) => a + (b || 0), 0) > potContribTotal + 0.005 ? "#b0402f" : "#1f8a4c" }}>{euro(Object.values(potNames).reduce((a, b) => a + (b || 0), 0))}</span>
-                </div>
-                {/* Meer verdelen dan er ooit inging kan kloppen (iemand legde bij), maar
-                    het is bijna altijd een tikfout. Dus melden, niet blokkeren. */}
-                {Object.values(potNames).reduce((a, b) => a + (b || 0), 0) > potContribTotal + 0.005 && (
-                  <div style={{ fontSize: 12.5, color: "#b0402f", fontWeight: 800, marginTop: 6 }}>⚠️ {L.potOverShort(euro(Object.values(potNames).reduce((a, b) => a + (b || 0), 0) - potContribTotal))}</div>
-                )}
-                <div style={{ display: "flex", gap: 8, marginTop: 11 }}>
-                  <button style={{ ...S.btn, flex: 1, fontSize: 13.5, fontWeight: 800, padding: "10px 6px" }}
-                    onClick={() => { const per = potContribTotal / Math.max(1, people.length); const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(per * 100) / 100 }); setPotNames(n) }}>{L.potSpreadEven}</button>
-                  <button style={{ ...S.btnP, flex: 1, fontSize: 14, padding: "10px 6px" }}
-                    onClick={() => {
-                      const nieuw = Object.values(potNames).reduce((a, b) => a + (b || 0), 0)
-                      if (nieuw > potContribTotal + 0.005) {
-                        setConfirmDlg({ msg: L.potOverMax(euro(nieuw), euro(potContribTotal)), yes: L.saveAnyway,
-                          onYes: () => { setConfirmDlg(null); bewaarPotPerPersoon(potNames) } })
-                        return
-                      }
-                      bewaarPotPerPersoon(potNames)
-                    }}>{L.saveWord}</button>
-                </div>
-                <button style={{ width: "100%", marginTop: 8, padding: "8px 0", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#a89a6f", cursor: "pointer" }}
-                  onClick={() => setPotNames(null)}>{L.cancel}</button>
-              </>
-            ) : potZonderNamen ? (
-              <>
-                <div style={{ fontSize: 13, color: "#5a9a75", lineHeight: 1.5, marginBottom: 10 }}>{L.potNotSplit}</div>
-                <button style={{ ...S.btn, width: "100%", fontWeight: 800, fontSize: 14.5 }} onClick={verdeelPotOverNamen}>{L.splitPotEqually(people.length)}</button>
-                <button style={{ width: "100%", marginTop: 8, padding: "8px 0", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#8a7d55", cursor: "pointer", textDecoration: "underline" }}
-                  onClick={() => { const per = potContribTotal / Math.max(1, people.length); const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(per * 100) / 100 }); setPotNames(n) }}>{L.potPerPersonEdit}</button>
-              </>
-            ) : (
-              <>
-                <div style={{ fontSize: 14, color: "#6b5f3a", lineHeight: 1.6 }}>
-                  {people.filter((p) => contribOf(p.id) > 0.005).map((p) => `${p.name} ${euro(contribOf(p.id))}`).join(" · ")}
-                </div>
-                <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 14, fontWeight: 800 }}
-                  onClick={() => { const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(contribOf(p.id) * 100) / 100 }); setPotNames(n) }}>{L.potPerPersonEdit}</button>
-              </>
-            )}
+
+        {/* Verdeeld? Dan volstaat één regel, met een weg terug als je wil bijstellen. */}
+        {potContribTotal > 0.005 && !potZonderNamen && potNames === null && (
+          <div style={{ ...S.row, justifyContent: "space-between", gap: 8, background: "#f4faf6", border: "1px solid rgba(31,138,76,0.3)", borderRadius: 13, padding: "9px 12px", marginBottom: 13 }}>
+            <span style={{ fontSize: 13, color: "#1f6b3a", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>💰 {L.potShared(euro(potContribTotal), people.filter((pp) => contribOf(pp.id) > 0.005).length)}</span>
+            <span onClick={() => { const n: Record<string, number> = {}; people.forEach((pp) => { n[pp.id] = Math.round(contribOf(pp.id) * 100) / 100 }); setPotNames(n) }}
+              style={{ flexShrink: 0, fontSize: 12.5, color: "#5a9a75", textDecoration: "underline", cursor: "pointer", fontWeight: 800 }}>{L.changeWord}</span>
           </div>
         )}
 
