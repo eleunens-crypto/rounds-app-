@@ -706,6 +706,10 @@ const T = {
     backToSettle: "← Terug naar afrekenen",
     stepOf: (n: number, t: number) => `stap ${n} van ${t}`,
     backToAssign: "← Terug naar toewijzen",
+    backToNames: "← Terug naar namen",
+    potShort: "In de pot",
+    splitEvenShort: (n: number) => `Gelijk over ${n}`,
+    perPersonShort: "Per persoon",
     toStep3: "Naar stap 3 · wie betaalde →",
     keepEditing: "Nog iets aanpassen",
     notCovered: (v: string) => `Nog ${v} niet gedekt`,
@@ -1248,6 +1252,10 @@ const T = {
     backToSettle: "← Retour au décompte",
     stepOf: (n: number, t: number) => `étape ${n} sur ${t}`,
     backToAssign: "← Retour à l'attribution",
+    backToNames: "← Retour aux noms",
+    potShort: "Dans la cagnotte",
+    splitEvenShort: (n: number) => `Également sur ${n}`,
+    perPersonShort: "Par personne",
     toStep3: "Vers l'étape 3 · qui a payé →",
     keepEditing: "Encore modifier",
     notCovered: (v: string) => `Encore ${v} non couvert`,
@@ -1568,11 +1576,7 @@ export default function PartyTest() {
     } catch { /* sessionStorage niet beschikbaar */ }
   }, [groupId, view, fromQuick, booting])
   useEffect(() => { if (view !== "roundsOverview") setFillMode(false) }, [view])
-  // Onderweg van snel naar Fair Split: is alles toegewezen, dan is "wie betaalde" de
-  // enige volgende stap. Zonder dit zou je op de hub stranden zonder knop.
-  useEffect(() => {
-    if (view === "hub" && fromQuick && settle && rounds.length > 0 && unassignedAllRounds === 0 && assignIdx === null) setView("payers")
-  })  // eslint-disable-line react-hooks/exhaustive-deps
+
   // Pijltjes bij de categorierij: ze tonen dat er links of rechts nog meer staat,
   // want een halve pil aan de rand leest als een afsnijfout en niet als een uitnodiging.
   const catScroll = useRef<HTMLDivElement | null>(null)
@@ -5509,6 +5513,12 @@ export default function PartyTest() {
           </>
           )
         })()}
+        {/* Alles toegewezen en je kwam uit de snelle modus? Dan is dit de weg vooruit.
+            Eén knop, geen kaart: je hebt hier verder niets te beslissen. */}
+        {settle && fromQuick && rounds.length > 0 && unassignedAllRounds === 0 && (
+          <button style={{ ...S.btnP, width: "100%", marginBottom: 13, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }}
+            onClick={() => setView("payers")}>{L.toStep3}</button>
+        )}
         {settle && unassignedAllRounds > 0 && firstUnassignedIdx >= 0 && (
           <div style={{ ...S.card, background: "rgba(224,104,92,0.08)", border: "1.5px solid rgba(224,104,92,0.45)" }}>
             {fromQuick && stapBalk(2)}
@@ -5603,8 +5613,12 @@ export default function PartyTest() {
                 {/* Alles rond en je kwam uit de snelle modus? Dan zelf kiezen of je
                     doorgaat of nog iets bijstelt — geen automatische sprong. */}
                 {done && !naarVolgende && fromQuick ? (
-                  <button style={{ ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }}
-                    onClick={() => { setAssignIdx(null); setAssignAllMode(false); setView("payers") }}>{L.toStep3}</button>
+                  <>
+                    <button style={{ ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }}
+                      onClick={() => { setAssignIdx(null); setAssignAllMode(false); setView("payers") }}>{L.toStep3}</button>
+                    <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14.5, fontWeight: 700, color: "#8a7d55" }}
+                      onClick={() => { setAssignIdx(null); setAssignAllMode(false); setView("fairSetup") }}>{L.backToNames}</button>
+                  </>
                 ) : (
                   <button style={done ? { ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 10 }}
                     onClick={() => { if (naarVolgende) setAssignIdx(volgende); else { setAssignIdx(null); setAssignAllMode(false) } }}>
@@ -6290,16 +6304,15 @@ export default function PartyTest() {
         {/* Zolang de pot nog niet op namen staat, is dit een taak — dus bovenaan. Is hij
             verdeeld, dan wordt het informatie en schuift hij als regel naar onderen. */}
         {potContribTotal > 0.005 && (potZonderNamen || potNames !== null) && (
-          <div style={{ width: "82%", margin: "0 auto 13px", position: "relative", background: "#f4faf6", border: "1.5px solid rgba(31,138,76,0.4)", borderRadius: 16, padding: "16px 14px 14px" }}>
+          <div style={{ margin: "12px 0 13px", position: "relative", background: "#f4faf6", border: "1.5px solid rgba(31,138,76,0.4)", borderRadius: 16, padding: "13px 13px 12px" }}>
             {/* Een zakje op de hoek en een smaller kader: de pot is geen rondje in de rij. */}
-            <span style={{ position: "absolute", top: -14, left: -12, width: 38, height: 38, borderRadius: "50%", background: "#fff", border: "1.5px solid rgba(31,138,76,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19 }}>💰</span>
-            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 3, paddingLeft: 20 }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: "#1f6b3a" }}>{L.potOnNames}</span>
-              <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c" }}>{euro(potContribTotal)}</span>
+            <span style={{ position: "absolute", top: -13, left: -11, width: 34, height: 34, borderRadius: "50%", background: "#fff", border: "1.5px solid rgba(31,138,76,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>💰</span>
+            <div style={{ ...S.row, justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 10, paddingLeft: 20 }}>
+              <span style={{ fontSize: 14.5, fontWeight: 800, color: "#1f6b3a", minWidth: 0 }}>{L.potShort}
+                {potSpent > 0.005 && <span style={{ fontSize: 12.5, fontWeight: 600, color: "#5a9a75" }}> · {L.potUsedFree(euro(potSpent), euro(Math.max(0, potRemaining)))}</span>}
+              </span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c", flexShrink: 0 }}>{euro(potContribTotal)}</span>
             </div>
-            {potSpent > 0.005 && (
-              <div style={{ fontSize: 12.5, color: "#5a9a75", paddingLeft: 20, marginBottom: 8 }}>{L.potUsedFree(euro(potSpent), euro(Math.max(0, potRemaining)))}</div>
-            )}
             {potNames !== null ? (
               <>
                 {/* Per persoon aanpasbaar. Wie meer intikt, verhoogt meteen de pot. */}
@@ -6342,18 +6355,24 @@ export default function PartyTest() {
               </>
             ) : potZonderNamen ? (
               <>
-                <div style={{ fontSize: 13, color: "#5a9a75", lineHeight: 1.5, marginBottom: 10 }}>{L.potNotSplit}</div>
-                <button style={{ ...S.btn, width: "100%", fontWeight: 800, fontSize: 14.5 }} onClick={verdeelPotOverNamen}>{L.splitPotEqually(people.length)}</button>
-                <button style={{ width: "100%", marginTop: 8, padding: "8px 0", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#8a7d55", cursor: "pointer", textDecoration: "underline" }}
-                  onClick={() => { const per = potContribTotal / Math.max(1, people.length); const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(per * 100) / 100 }); setPotNames(n) }}>{L.potPerPersonEdit}</button>
+                {/* Twee keuzes naast elkaar; dat de pot nog verdeeld moet worden, blijkt
+                    uit het feit dat deze knoppen er staan. Een zin erbij is dubbelop. */}
+                <div style={{ display: "flex", gap: 7 }}>
+                  <button style={{ flex: 1, background: "#fff", border: "1px solid rgba(31,138,76,0.35)", borderRadius: 9, padding: "9px 6px", fontSize: 13, fontWeight: 800, color: "#1f6b3a", cursor: "pointer" }}
+                    onClick={verdeelPotOverNamen}>{L.splitEvenShort(people.length)}</button>
+                  <button style={{ flex: 1, background: "#fff", border: "1px solid rgba(31,138,76,0.2)", borderRadius: 9, padding: "9px 6px", fontSize: 13, fontWeight: 800, color: "#5a9a75", cursor: "pointer" }}
+                    onClick={() => { const per = potContribTotal / Math.max(1, people.length); const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(per * 100) / 100 }); setPotNames(n) }}>{L.perPersonShort}</button>
+                </div>
               </>
             ) : (
               <>
-                <div style={{ fontSize: 14, color: "#6b5f3a", lineHeight: 1.6 }}>
-                  {people.filter((p) => contribOf(p.id) > 0.005).map((p) => `${p.name} ${euro(contribOf(p.id))}`).join(" · ")}
+                <div style={{ ...S.row, justifyContent: "space-between", gap: 9 }}>
+                  <span style={{ fontSize: 13, color: "#5a9a75", lineHeight: 1.5, minWidth: 0 }}>
+                    {people.filter((p) => contribOf(p.id) > 0.005).map((p) => `${p.name} ${euro(contribOf(p.id))}`).join(" · ")}
+                  </span>
+                  <button style={{ flexShrink: 0, background: "#fff", border: "1px solid rgba(31,138,76,0.35)", borderRadius: 9, padding: "8px 12px", fontSize: 13, fontWeight: 800, color: "#1f6b3a", cursor: "pointer", whiteSpace: "nowrap" }}
+                    onClick={() => { const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(contribOf(p.id) * 100) / 100 }); setPotNames(n) }}>{L.perPersonShort}</button>
                 </div>
-                <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 14, fontWeight: 800 }}
-                  onClick={() => { const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(contribOf(p.id) * 100) / 100 }); setPotNames(n) }}>{L.potPerPersonEdit}</button>
               </>
             )}
           </div>
