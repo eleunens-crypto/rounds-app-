@@ -5200,16 +5200,17 @@ export default function PartyTest() {
 
               {/* Staat vlak boven de knop "uit de pot", rechts uitgelijnd zodat de link
                   duidelijk bij die knop hoort. */}
+              {/* Bron: zelf betaald of uit de pot. */}
+              <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 8 }}>{L.roundCostFor(idx + 1)}</div>
+              {/* Vlak boven de knop "uit de pot", zodat de link er zichtbaar bij hoort. */}
               {(payVia === "pot" || potContribTotal > 0.005) && (
-                <div style={{ display: "flex", marginBottom: 4 }}>
+                <div style={{ display: "flex", marginBottom: 7 }}>
                   <span style={{ flex: 1 }} />
                   <span style={{ flex: 1, textAlign: "center" }}>
                     <span onClick={() => setShowPot(true)} style={{ display: "inline-block", fontSize: 13, fontWeight: 800, color: "#c98a00", cursor: "pointer", textDecoration: "underline", lineHeight: 1.2 }}>{L.addToPot}</span>
                   </span>
                 </div>
               )}
-              {/* Bron: zelf betaald of uit de pot. */}
-              <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>{L.roundCostFor(idx + 1)}</div>
               <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
                 <button style={{ flex: 1, padding: "10px 6px", fontSize: 14.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
                   background: payVia === "self" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f7f1e2",
@@ -5226,7 +5227,7 @@ export default function PartyTest() {
               <style>{`@keyframes rundoPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,138,76,0.45)}50%{box-shadow:0 0 0 7px rgba(31,138,76,0)}}.rundo-pulse{animation:rundoPulse 1.4s infinite}`}</style>
               <div style={{ ...S.row, gap: 7 }}>
                 <span style={{ fontSize: 20, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                <input style={{ ...S.input, flex: 1, minWidth: 60, maxWidth: 118, fontSize: 19, fontWeight: 800, padding: "12px 10px", textAlign: "left",
+                <input style={{ ...S.input, flex: 1, minWidth: 60, fontSize: 19, fontWeight: 800, padding: "12px 10px", textAlign: "left",
                   color: "#c88a1a",
                   borderColor: amount > 0.005 ? "#e08a00" : "rgba(120,95,20,0.22)",
                   background: amount > 0.005 ? "#fff" : "#fdfaf2" }}
@@ -5239,7 +5240,7 @@ export default function PartyTest() {
                   color: amount > 0.005 ? "#1f8a4c" : "#b3a988",
                   border: amount > 0.005 ? "2.5px solid #1f8a4c" : "none" }}
                   onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}>✓</button>
-                <button style={{ padding: "0 14px", height: 56, borderRadius: 13, fontSize: 13.5, fontWeight: 800, cursor: "pointer", flexShrink: 0, background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a7d55", lineHeight: 1.25, maxWidth: 122 }} onClick={() => closeQuickRound(true)}>{L.skipPayment}</button>
+                <button style={{ padding: "0 14px", height: 56, borderRadius: 13, fontSize: 13.5, fontWeight: 800, cursor: "pointer", flexShrink: 0, background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a7d55", lineHeight: 1.25, width: 132, marginLeft: "auto" }} onClick={() => closeQuickRound(true)}>{L.skipPayment}</button>
               </div>
               {amount > 0.005 && (
                 <div style={{ fontSize: 13.5, color: "#1f8a4c", fontWeight: 800, textAlign: "right", marginTop: 7, paddingRight: 78 }}>{L.tapToConfirm}</div>
