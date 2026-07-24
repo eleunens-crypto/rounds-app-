@@ -542,6 +542,14 @@ const T = {
     perPerson: "per persoon",
     drank: "dronk",
     settleTogether: "👥 Rekent er iemand samen af?",
+    settleTogetherLink: "🔗 samen afrekenen?",
+    settleTogetherCount: (n: number) => `🔗 ${n} ${n === 1 ? "koppel" : "koppels"}`,
+    closeWord: "sluiten",
+    paysTo: (v: string, wie: string) => `betaalt ${v} aan ${wie}`,
+    getsFrom: (v: string, wie: string) => `krijgt ${v} van ${wie}`,
+    severalTransfers: (n: number) => `${n} overschrijvingen`,
+    togetherDrank: "Samen gedronken",
+    potBackToContributors: (v: string) => `Nog ${v} in de pot — gaat terug naar wie inlegde.`,
     settleTogetherInfo: "Voor koppels, huisgenoten, wie samen naar huis rijdt. Iedereen houdt zijn eigen drankjes — enkel het eindbedrag wordt samengeteld.",
     tapWhoWith: (n: string) => `Tik nu op wie samen met ${n} afrekent.`,
     separateAgain: "Weer apart zetten:",
@@ -1052,6 +1060,14 @@ const T = {
     perPerson: "par personne",
     drank: "a bu",
     settleTogether: "👥 Quelqu'un règle-t-il ensemble ?",
+    settleTogetherLink: "🔗 régler ensemble ?",
+    settleTogetherCount: (n: number) => `🔗 ${n} ${n === 1 ? "duo" : "duos"}`,
+    closeWord: "fermer",
+    paysTo: (v: string, wie: string) => `paie ${v} à ${wie}`,
+    getsFrom: (v: string, wie: string) => `reçoit ${v} de ${wie}`,
+    severalTransfers: (n: number) => `${n} virements`,
+    togetherDrank: "Bu ensemble",
+    potBackToContributors: (v: string) => `Encore ${v} dans la cagnotte — revient à ceux qui ont misé.`,
     settleTogetherInfo: "Pour les couples, colocataires, ceux qui rentrent ensemble. Chacun garde ses boissons — seul le montant final est additionné.",
     tapWhoWith: (n: string) => `Touche maintenant qui règle avec ${n}.`,
     separateAgain: "Séparer à nouveau :",
@@ -1340,6 +1356,8 @@ export default function PartyTest() {
   const [showAllGroups, setShowAllGroups] = useState(false)
   // Werkblad voor het verdelen van de pot over namen; null = niet in bewerkmodus.
   const [potNames, setPotNames] = useState<Record<string, number> | null>(null)
+  // Staat de koppel-kiezer open in de verrekening?
+  const [showTogether, setShowTogether] = useState(false)
   const [stalePins, setStalePins] = useState<SavedGroup[]>([])
   const isAdmin = !!ownerDevice && ownerDevice === me.current
   // Mijn eigen plaats: die waarop dit toestel zit. Nodig zodra gasten hun eigen
@@ -2885,6 +2903,15 @@ export default function PartyTest() {
   }
   const confirmFairSetup = async () => {
     if (people.length === 0) { setNotice(L.addPersonFirst); return }
+    // Elk rondje bevriest bij het bevestigen wie er toen in de groep zat. In de snelle
+    // modus was dat alleen de beheerder; de anderen komen er hier pas bij. Zonder deze
+    // bijwerking telt hun consumptie voor nul en klopt de eindbalans niet.
+    if (groupId && rounds.length > 0) {
+      const leden = people.map((pp) => pp.id)
+      const { error } = await supabase.from("party_rounds").update({ members: leden }).eq("group_id", groupId)
+      if (error) { setNotice("Deelnemers bijwerken mislukt: " + error.message); return }
+      setRounds((rs) => rs.map((r) => ({ ...r, members: leden })))
+    }
     setSettle(true)
     persistSettings({ settle: true })
     setOpenRound(rounds.length - 1)
@@ -3287,11 +3314,9 @@ export default function PartyTest() {
   const renderSettleTogether = () => {
     if (people.length < 2) return null
     return (
-      <div style={S.card}>
-        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.settleTogether}</h3>
-        <div style={{ fontSize: 14, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
+      <div style={{ background: "#faf7ec", borderRadius: 12, padding: 12, marginBottom: 12 }}>
+        <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.5 }}>
           {L.settleTogetherInfo}
-          enkel het eindbedrag wordt samengeteld tot één betaling.
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
           {settleGroups.map((g) => {
@@ -6175,12 +6200,18 @@ export default function PartyTest() {
           const owed = dronk + waarborg - zelf - inpot + cardLossPer
           const open = openFairAll || openFair[p.id]
           const nettoLabel = Math.abs(owed) < 0.005 ? "staat gelijk" : owed > 0 ? `moet ${show(owed)} betalen` : `krijgt ${show(-owed)} terug`
+          // Wie betaalt aan wie? Bij één overschrijving noemen we de tegenpartij; bij
+          // meer zou dat niet passen, dus tonen we het aantal en staat het detail eronder.
+          const mijnGroep = settleGroups.find((g) => g.leden.some((x) => x.id === p.id))
+          const alleen = !mijnGroep?.samen
+          const mijnTx = settlement.tx.filter((t) => t.from === mijnGroep?.label || t.to === mijnGroep?.label)
+          const tegenpartij = alleen && mijnTx.length === 1 ? (owed > 0 ? mijnTx[0].to : mijnTx[0].from) : ""
           const nettoColor = Math.abs(owed) < 0.005 ? "#8a7d55" : owed > 0 ? "#b35309" : "#1f8a4c"
           return (
             <div key={p.id} style={{ borderBottom: "1px solid rgba(120,95,20,0.06)" }}>
               <div style={{ ...S.row, justifyContent: "space-between", padding: "7px 0", cursor: "pointer" }} onClick={() => setOpenFair((o) => ({ ...o, [p.id]: !open }))}>
                 <span style={{ flex: 1, fontSize: 15.5, fontWeight: 700 }}>{open ? "▾" : "▸"} {p.name} <span style={{ fontSize: 14.5, fontWeight: 800, color: "#1f8a4c" }}>· {show(dronk)}</span>
-                  {Math.abs(owed) > 0.005 && <span style={{ display: "inline-block", marginLeft: 6, fontSize: 13, fontWeight: 800, padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap", background: owed > 0 ? "rgba(224,138,0,0.16)" : "rgba(31,138,76,0.14)", color: owed > 0 ? "#b35309" : "#1f8a4c" }}>{owed > 0 ? `betaalt ${show(owed)}` : `krijgt ${show(-owed)}`}</span>}
+                  {Math.abs(owed) > 0.005 && <span style={{ display: "inline-block", marginLeft: 6, fontSize: 12.5, fontWeight: 800, padding: "2px 8px", borderRadius: 20, background: owed > 0 ? "rgba(224,138,0,0.16)" : "rgba(31,138,76,0.14)", color: owed > 0 ? "#b35309" : "#1f8a4c" }}>{tegenpartij ? (owed > 0 ? L.paysTo(show(owed), tegenpartij) : L.getsFrom(show(-owed), tegenpartij)) : `${owed > 0 ? `betaalt ${show(owed)}` : `krijgt ${show(-owed)}`}${mijnTx.length > 1 ? ` · ${L.severalTransfers(mijnTx.length)}` : ""}`}</span>}
                 </span>
                 {showEqual && <span style={{ width: 96, textAlign: "right", fontSize: 14.5, color: "#8a7d55", flexShrink: 0 }}>{show(equalShare)}</span>}
               </div>
@@ -6209,16 +6240,29 @@ export default function PartyTest() {
           )
         })}
         <div style={{ ...S.row, justifyContent: "space-between", padding: "9px 0 2px", borderTop: "2px solid rgba(120,95,20,0.25)", marginTop: 2 }}>
-          <span style={{ flex: 1, fontSize: 15.5, fontWeight: 800 }}>Totaal <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c" }}>· {show(grandTotal)}</span></span>
+          <span style={{ flex: 1, fontSize: 15.5, fontWeight: 800 }}>{L.togetherDrank} <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c" }}>· {show(grandTotal)}</span></span>
           {showEqual && <span style={{ width: 96, textAlign: "right", fontSize: 14.5, fontWeight: 800, color: "#8a7d55" }}>{show(equalShare * people.length)}</span>}
         </div>
+        {potRemaining > 0.005 && (
+          <div style={{ fontSize: 13, color: "#1f6b3a", background: "rgba(31,138,76,0.08)", borderRadius: 10, padding: "9px 11px", marginTop: 10, lineHeight: 1.5 }}>🫙 {L.potBackToContributors(show(potRemaining))}</div>
+        )}
         <div style={{ fontSize: 13.5, marginTop: 10, textAlign: "right" }}><span onClick={() => setShowEqual((v) => !v)} style={{ color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{showEqual ? "verberg gelijke verdeling" : "toon gelijke verdeling"}</span></div>
       </div>
 
-      {renderSettleTogether()}
-
       <div style={S.card}>
-        <h3 style={{ ...S.h3, marginBottom: 8 }}>{L.howYouAllSettle}</h3>
+        {/* Samen afrekenen is een uitzondering: als link in de kop, niet als eigen sectie. */}
+        <div style={{ ...S.row, justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+          <h3 style={{ ...S.h3, margin: 0 }}>{L.howYouAllSettle}</h3>
+          {people.length >= 2 && (
+            <span onClick={() => setShowTogether((v) => !v)}
+              style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, borderRadius: 14, padding: "5px 10px", cursor: "pointer", whiteSpace: "nowrap",
+                background: showTogether ? "#e08a00" : "#fffdf6", color: showTogether ? "#fff" : "#c98a00",
+                border: "1px solid rgba(240,165,0,0.55)" }}>
+              {showTogether ? `🔗 ${L.closeWord}` : settleGroups.some((g) => g.samen) ? L.settleTogetherCount(settleGroups.filter((g) => g.samen).length) : L.settleTogetherLink}
+            </span>
+          )}
+        </div>
+        {showTogether && renderSettleTogether()}
         {isSchatting && (
           <div style={{ background: "#fff8e8", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginBottom: 10 }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: "#c98a00", marginBottom: 2 }}>⚠️ {L.estimate}</div>
