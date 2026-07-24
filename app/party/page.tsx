@@ -6182,18 +6182,7 @@ export default function PartyTest() {
                 <span style={{ flex: 1, fontSize: 15.5, fontWeight: 700 }}>{open ? "▾" : "▸"} {p.name} <span style={{ fontSize: 14.5, fontWeight: 800, color: "#1f8a4c" }}>· {show(dronk)}</span>
                   {Math.abs(owed) > 0.005 && <span style={{ display: "inline-block", marginLeft: 6, fontSize: 13, fontWeight: 800, padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap", background: owed > 0 ? "rgba(224,138,0,0.16)" : "rgba(31,138,76,0.14)", color: owed > 0 ? "#b35309" : "#1f8a4c" }}>{owed > 0 ? `betaalt ${show(owed)}` : `krijgt ${show(-owed)}`}</span>}
                 </span>
-                {showEqual && (
-                  <span style={{ width: 104, textAlign: "right", flexShrink: 0 }}>
-                    <span style={{ display: "block", fontSize: 14.5, color: "#8a7d55" }}>{show(equalShare)}</span>
-                    {/* Het verschil geeft de vergelijking pas betekenis: hetzelfde getal
-                        bij iedereen herhalen zegt niets. */}
-                    {Math.abs(dronk - equalShare) > 0.005 && (
-                      <span style={{ display: "block", fontSize: 12, fontWeight: 800, color: dronk < equalShare ? "#1f8a4c" : "#b35309" }}>
-                        {dronk < equalShare ? "−" : "+"}{show(Math.abs(dronk - equalShare))}
-                      </span>
-                    )}
-                  </span>
-                )}
+                {showEqual && <span style={{ width: 96, textAlign: "right", fontSize: 14.5, color: "#8a7d55", flexShrink: 0 }}>{show(equalShare)}</span>}
               </div>
               {open && (
                 <div style={{ background: "#faf4e4", borderRadius: 10, padding: "8px 11px", margin: "0 0 8px", fontSize: 14.5 }}>
