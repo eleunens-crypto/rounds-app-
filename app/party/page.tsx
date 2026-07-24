@@ -708,6 +708,8 @@ const T = {
     backToAssign: "← Terug naar toewijzen",
     toStep3: "Naar stap 3 · wie betaalde →",
     keepEditing: "Nog iets aanpassen",
+    notCovered: (v: string) => `Nog ${v} niet gedekt`,
+    fromPotSummary: (tot: string, pot: string) => `Van ${tot} komt ${pot} uit de pot.`,
     fairSplitExplain: "Liever eerlijk betalen volgens wat iedereen dronk (Fair Split!) Wijs drankjes en betalers hier toe.",
     payAllSelf: "Alles zelf",
     treatHint: "Rondje trakteren? Tik hieronder aan (telt dan niet mee in de verdeling)",
@@ -1235,6 +1237,8 @@ const T = {
     backToAssign: "← Retour à l'attribution",
     toStep3: "Vers l'étape 3 · qui a payé →",
     keepEditing: "Encore modifier",
+    notCovered: (v: string) => `Encore ${v} non couvert`,
+    fromPotSummary: (tot: string, pot: string) => `Sur ${tot}, ${pot} vient de la cagnotte.`,
     fairSplitExplain: "Tu préfères payer selon ce que chacun a bu (Fair Split !) Attribue ici les boissons et les payeurs.",
     payAllSelf: "Tout payer",
     treatHint: "Tu offres une tourn\u00e9e ? Touche-la ci-dessous (elle ne compte pas dans le partage)",
@@ -1374,6 +1378,19 @@ export default function PartyTest() {
   const [showAllGroups, setShowAllGroups] = useState(false)
   // Werkblad voor het verdelen van de pot over namen; null = niet in bewerkmodus.
   const [potNames, setPotNames] = useState<Record<string, number> | null>(null)
+  // Bedragvelden: zolang je typt houden we jouw tekst aan, ook halve invoer als "18,"
+  // of "0,5". Zetten we elke toetsaanslag meteen om naar een getal, dan verdwijnt de
+  // komma weer voor je het cijfer erna kan intikken en kan je enkel ronde bedragen.
+  const [ruweBedragen, setRuweBedragen] = useState<Record<string, string>>({})
+  const bedragVeld = (sleutel: string, waarde: number, zet: (v: number) => void) => ({
+    value: ruweBedragen[sleutel] ?? (waarde > 0 ? String(waarde).replace(".", ",") : ""),
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+      const tekst = e.target.value.replace(/[^0-9.,]/g, "")
+      setRuweBedragen((c) => ({ ...c, [sleutel]: tekst }))
+      zet(parseFloat(tekst.replace(",", ".")) || 0)
+    },
+    onBlur: () => setRuweBedragen((c) => { const n = { ...c }; delete n[sleutel]; return n }),
+  })
   // Staat de koppel-kiezer open in de verrekening?
   const [showTogether, setShowTogether] = useState(false)
   const [stalePins, setStalePins] = useState<SavedGroup[]>([])
@@ -3588,8 +3605,7 @@ export default function PartyTest() {
           <div style={{ ...S.row, gap: 8, marginBottom: 10 }}>
             <span style={{ fontSize: 21, color: "#8a7d55", fontWeight: 700 }}>€</span>
             <input style={{ ...S.input, flex: 1, fontSize: 21, fontWeight: 800, padding: "10px 12px", color: "#c88a1a", textAlign: "right" }} type="text" inputMode="decimal" placeholder="0,00"
-              value={potPerMan ? String(potPerMan).replace(".", ",") : ""}
-              onChange={(e) => setPotPerMan(parseFloat(e.target.value.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0)} />
+              {...bedragVeld("potPerMan", potPerMan, setPotPerMan)} />
             <span style={{ fontSize: 15, color: "#8a7d55", fontWeight: 700, whiteSpace: "nowrap" }}>{L.perManShort}</span>
           </div>
           <div style={{ ...S.row, gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
@@ -5272,8 +5288,7 @@ export default function PartyTest() {
                   borderColor: amount > 0.005 ? "#e08a00" : "rgba(120,95,20,0.22)",
                   background: amount > 0.005 ? "#fff" : "#fdfaf2" }}
                   type="text" inputMode="decimal" placeholder="0,00"
-                  value={amount > 0 ? String(amount).replace(".", ",") : ""}
-                  onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); qSetAmount(idx, parseFloat(v) || 0) }}
+                  {...bedragVeld(`hub-${idx}`, amount, (v) => qSetAmount(idx, v))}
                   onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); if ((rounds[idx]?.amount || 0) > 0.005) confirmQuickPay() } }} />
                 <button className={amount > 0.005 ? "rundo-pulse" : undefined} style={{ width: 54, height: 56, borderRadius: 13, fontSize: 27, fontWeight: 800, cursor: "pointer", flexShrink: 0,
                   background: amount > 0.005 ? "#fff" : "#e8e2d2",
@@ -5999,8 +6014,7 @@ export default function PartyTest() {
                         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>€</span>
                           <input onClick={(e) => e.stopPropagation()} type="text" inputMode="decimal" placeholder="0,00"
-                            value={dr.amount > 0 ? String(dr.amount).replace(".", ",") : ""}
-                            onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); setEditDraft((c) => c ? { ...c, amount: parseFloat(v) || 0 } : c) }}
+                            {...bedragVeld(`edit-${r.id}`, dr.amount, (v) => setEditDraft((c) => c ? { ...c, amount: v } : c))}
                             style={{ ...S.input, width: 92, padding: "8px 10px", fontSize: 16, fontWeight: 800, color: "#c88a1a", textAlign: "right" }} />
                         </span>
                       ) : (
@@ -6060,7 +6074,9 @@ export default function PartyTest() {
   // voorschoot, en van wie het geld in de pot komt. Zonder die twee kan de eindbalans
   // niet uitrekenen wie aan wie moet overschrijven.
   if (view === "payers") {
-    const zonderBetaler = rounds.filter((r) => (r.amount || 0) <= 0.005 || Object.values(r.payers || {}).every((a) => (a || 0) <= 0.005))
+    // Gedekt = pot + personen samen komen aan het bedrag. Een rondje dat volledig uit
+    // de pot ging heeft geen enkele persoon als betaler, en dat is prima.
+    const zonderBetaler = rounds.filter((r) => (r.amount || 0) <= 0.005 || rPaidSum(r) < (r.amount || 0) - 0.005)
     const klaar = zonderBetaler.length === 0 && !potZonderNamen
     return (
       <div style={S.page}><div style={S.wrap}>
@@ -6075,6 +6091,13 @@ export default function PartyTest() {
         {!klaar && (
           <div style={{ background: "rgba(224,104,92,0.08)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "10px 12px", fontSize: 13.5, color: "#b0402f", fontWeight: 800, marginBottom: 12 }}>
             {zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit}
+          </div>
+        )}
+
+        {/* Wat de pot draagt, hoort meteen zichtbaar te zijn: het scheelt in wie wat terugkrijgt. */}
+        {potSpent > 0.005 && (
+          <div style={{ fontSize: 13.5, color: "#1f6b3a", background: "rgba(31,138,76,0.08)", borderRadius: 10, padding: "9px 11px", marginBottom: 12, lineHeight: 1.5 }}>
+            🫙 {L.fromPotSummary(euro(rounds.reduce((a, r) => a + (r.amount || 0), 0)), euro(potSpent))}
           </div>
         )}
 
@@ -6095,7 +6118,9 @@ export default function PartyTest() {
           const items = drinksOf(r).reduce((a, x) => a + x.n, 0)
           const geenBedrag = (r.amount || 0) <= 0.005
           const gekozen = Object.keys(r.payers || {}).filter((pid) => (r.payers[pid] || 0) > 0.005)
-          const mist = geenBedrag || gekozen.length === 0
+          const uitPot = (r.potPart || 0) > 0.005
+          const tekort = (r.amount || 0) - rPaidSum(r)
+          const mist = geenBedrag || tekort > 0.005
           return (
             <div key={r.id} style={{ ...S.card, padding: "12px 14px", ...(mist ? { border: "1.5px solid rgba(240,165,0,0.55)", background: "#fffdf3" } : {}) }}>
               <div style={{ ...S.row, justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
@@ -6103,22 +6128,33 @@ export default function PartyTest() {
                 <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                   <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>€</span>
                   <input type="text" inputMode="decimal" placeholder="0,00"
-                    value={(r.amount || 0) > 0 ? String(r.amount).replace(".", ",") : ""}
-                    onChange={(e) => rSetAmount(idx, parseFloat(e.target.value.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0)}
+                    {...bedragVeld(`payer-${r.id}`, r.amount || 0, (v) => rSetAmount(idx, v))}
                     style={{ ...S.input, width: 88, padding: "8px 10px", fontSize: 16, fontWeight: 800, color: "#c88a1a", textAlign: "right" }} />
                 </span>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {/* De pot is een betaler zoals een persoon: hij heeft geld en geeft het uit. */}
+                {potContribTotal > 0.005 && (
+                  <span onClick={() => { if (geenBedrag) { setNotice(L.fillAmountFirst); return } rTogglePot(idx) }}
+                    style={{ ...S.chip(uitPot ? 1 : 0), fontSize: 14.5, padding: "6px 11px", opacity: geenBedrag ? 0.5 : 1,
+                      ...(uitPot ? { background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", border: "1px solid rgba(31,138,76,0.5)" } : {}) }}>
+                    🫙 {L.potWord}<span style={{ fontWeight: 600, opacity: 0.8 }}> · {euro(Math.max(0, potAvailFor(idx)))}</span>
+                  </span>
+                )}
                 {people.map((p) => {
                   const on = (r.payers?.[p.id] || 0) > 0.005
                   return (
                     <span key={p.id} onClick={() => { if (geenBedrag) { setNotice(L.fillAmountFirst); return } rTogglePayer(idx, p.id) }}
                       style={{ ...S.chip(on ? 1 : 0), fontSize: 14.5, padding: "6px 11px", opacity: geenBedrag ? 0.5 : 1 }}>
-                      {p.name}{on && gekozen.length > 1 && <span style={S.badge}>{euro(r.payers[p.id])}</span>}
+                      {p.name}{on && (gekozen.length > 1 || uitPot) && <span style={S.badge}>{euro(r.payers[p.id])}</span>}
                     </span>
                   )
                 })}
               </div>
+              {/* Dekt de pot het niet helemaal, dan moet er iemand bijspringen. */}
+              {!geenBedrag && tekort > 0.005 && (
+                <div style={{ fontSize: 12.5, color: "#b0402f", fontWeight: 800, marginTop: 8 }}>⚠️ {L.notCovered(euro(tekort))}</div>
+              )}
             </div>
           )
         })}
@@ -6139,8 +6175,7 @@ export default function PartyTest() {
                     <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                       <span style={{ fontSize: 15, color: "#8a7d55", fontWeight: 700 }}>€</span>
                       <input type="text" inputMode="decimal" placeholder="0,00"
-                        value={(potNames[p.id] || 0) > 0 ? String(potNames[p.id]).replace(".", ",") : ""}
-                        onChange={(e) => { const v = parseFloat(e.target.value.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0; setPotNames((c) => ({ ...(c || {}), [p.id]: v })) }}
+                        {...bedragVeld(`potnaam-${p.id}`, potNames[p.id] || 0, (v) => setPotNames((c) => ({ ...(c || {}), [p.id]: v })))}
                         style={{ ...S.input, width: 82, padding: "7px 9px", fontSize: 15, fontWeight: 800 }} />
                     </span>
                   </div>
@@ -6198,7 +6233,7 @@ export default function PartyTest() {
           }}>{L.toFinal}</button>
         {fromQuick && (
           <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 15, fontWeight: 700, color: "#8a7d55" }}
-            onClick={() => setView("hub")}>{L.backToAssign}</button>
+            onClick={() => { setAssignAllMode(true); setAssignIdx(0); setView("hub") }}>{L.backToAssign}</button>
         )}
       </div></div>
     )
