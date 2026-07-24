@@ -1421,6 +1421,7 @@ export default function PartyTest() {
   const [showTogether, setShowTogether] = useState(false)
   // Staat de snelkoppeling "dezelfde betaler voor alles" open?
   const [showSameFor, setShowSameFor] = useState(false)
+
   const [stalePins, setStalePins] = useState<SavedGroup[]>([])
   const isAdmin = !!ownerDevice && ownerDevice === me.current
   // Mijn eigen plaats: die waarop dit toestel zit. Nodig zodra gasten hun eigen
@@ -1553,6 +1554,16 @@ export default function PartyTest() {
   const [settleChoice, setSettleChoice] = useState<"equal" | "fair" | null>(null)
   // Kwam je vanuit de gelijke verdeling? Dan bieden we onderweg een weg terug.
   const [fromQuick, setFromQuick] = useState(false)
+  // Waar je was bij een refresh. Een gast die per ongeluk ververst midden in een
+  // rondje mag niet terug naar het keuzescherm; het keuzescherm zelf wist deze sleutel,
+  // zodat je van daaruit wél altijd vers begint.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      if (groupId && view !== "start") sessionStorage.setItem("rundo_party_session", JSON.stringify({ g: groupId, v: view, fq: fromQuick }))
+      else sessionStorage.removeItem("rundo_party_session")
+    } catch { /* sessionStorage niet beschikbaar */ }
+  }, [groupId, view, fromQuick])
   useEffect(() => { if (view !== "roundsOverview") setFillMode(false) }, [view])
   // Onderweg van snel naar Fair Split: is alles toegewezen, dan is "wie betaalde" de
   // enige volgende stap. Zonder dit zou je op de hub stranden zonder knop.
@@ -2131,6 +2142,21 @@ export default function PartyTest() {
         setBooting(false)
         return
       }
+      // Verversen midden in een groep: terug naar waar je was.
+      let sessie: { g?: string; v?: string; fq?: boolean } | null = null
+      try { const rauw = sessionStorage.getItem("rundo_party_session"); if (rauw) sessie = JSON.parse(rauw) } catch { /* niets */ }
+      if (sessie?.g) {
+        const { data } = await supabase.from("party_groups").select("id").eq("id", sessie.g).maybeSingle()
+        if (data) {
+          setGroupId(sessie.g)
+          await loadParty(sessie.g)
+          if (sessie.fq) setFromQuick(true)
+          if (sessie.v) setView(sessie.v as typeof view)
+          setBooting(false)
+          return
+        }
+        try { sessionStorage.removeItem("rundo_party_session") } catch { /* niets */ }
+      }
       if (vorige) {
         // Optie A: we openen de laatste groep NIET automatisch meer. Je landt op het
         // keuzescherm en kiest zelf: verdergaan met een opgeslagen groep, of een nieuwe
@@ -2208,6 +2234,89 @@ export default function PartyTest() {
     setStalePins((prev) => prev.filter((x) => x.id !== g.id))
   }
 
+  // ── Testscenario's ──────────────────────────────────────────────────────────
+  // Alleen zichtbaar met ?seed in de URL. Zet in één tik een volledige groep klaar
+  // zodat je een scherm kan beoordelen zonder eerst een avond na te spelen.
+  const [seedMode, setSeedMode] = useState(false)
+  useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("seed")) setSeedMode(true)
+  }, [])
+
+  // Zet de huidige groep terug naar het beginpunt van de snelle modus, zodat je de
+  // omschakeling naar Fair Split opnieuw kan doorlopen zonder een nieuwe groep te maken.
+  // De drankjes blijven staan; alleen wat de omschakeling veroorzaakte wordt teruggedraaid.
+  const resetNaarSnel = async () => {
+    if (!groupId || busy) return
+    setBusy(true)
+    await supabase.from("party_groups").update({ settle: false }).eq("id", groupId)
+    // members leeg = "iedereen die er nu is", payers en pot-aandeel terug op nul.
+    await supabase.from("party_rounds").update({ members: [], payers: {}, pot_part: 0 }).eq("group_id", groupId)
+    // De pot terug op de groep in plaats van op namen.
+    const totaal = potRounds.reduce((a, r) => a + Object.values(r.amounts).reduce((x, y) => x + (y || 0), 0), 0)
+    if (potRounds.length > 0) {
+      await supabase.from("party_pot").update({ amounts: { pot: totaal } }).eq("id", potRounds[0].id)
+      if (potRounds.length > 1) await supabase.from("party_pot").delete().in("id", potRounds.slice(1).map((r) => r.id))
+    }
+    setSettle(false); setFromQuick(false); setHasSettled(false)
+    setSettleChoice(null); setPotNames(null); setFillMode(false)
+    await loadParty(groupId)
+    setBusy(false)
+    setView("quickSettle")
+  }
+
+  const seedTest = async (scenario: "quick" | "assign" | "payers" | "final") => {
+    if (busy) return
+    setBusy(true)
+    const tijd = new Date().toTimeString().slice(0, 5)
+    const metFair = scenario !== "quick"
+    const { data: g, error } = await supabase.from("party_groups")
+      .insert([{ name: `TEST ${scenario} ${tijd}`, invite_code: makeCode(), owner_id: me.current, settle: metFair }])
+      .select("id").single()
+    if (error || !g) { setNotice("Seed mislukt: " + (error?.message ?? "")); setBusy(false); return }
+    const gid = g.id as string
+
+    // Vier personen met een naam, zodat de schermen niet vol "Gast 3" staan.
+    const ids: string[] = []
+    for (const naam of ["Erent", "Eva", "Ilke", "Yelte"]) {
+      const { data: pid } = await supabase.rpc("party_add_person", { p_group: gid, p_name: naam })
+      if (pid) ids.push(pid as string)
+    }
+    await supabase.from("party_people").update({ claimed_by: me.current }).eq("id", ids[0])
+
+    // Een pot van 40 euro, in de snelle modus zonder namen ingelegd.
+    await supabase.rpc("party_add_pot", { p_group: gid, p_amounts: metFair && scenario === "final" ? Object.fromEntries(ids.map((i) => [i, 10])) : { pot: 40 }, p_is_card: false, p_payers: [] })
+
+    // Twee rondjes. Bij "assign" blijven de drankjes op onbekend staan.
+    const perRondje: { key: string; n: number; pid: string | null }[][] = [
+      [{ key: "pintje", n: 2, pid: ids[0] }, { key: "duvel", n: 1, pid: ids[1] }, { key: "gin-tonic", n: 1, pid: ids[2] }],
+      [{ key: "coca-cola", n: 2, pid: ids[3] }, { key: "pintje", n: 2, pid: ids[1] }],
+    ]
+    const bedragen = [16.21, 21]
+    for (let i = 0; i < perRondje.length; i++) {
+      const { data: rid } = await supabase.rpc("party_open_round", { p_group: gid, p_starter: null })
+      if (!rid) continue
+      for (const it of perRondje[i]) {
+        await supabase.rpc("party_bump", { p_group: gid, p_round: rid, p_person: scenario === "assign" ? null : it.pid, p_drink: it.key, p_delta: it.n })
+      }
+      // Rondje 2 komt uit de pot; rondje 1 blijft open werk behalve in "final".
+      const uitPot = i === 1 ? bedragen[i] : 0
+      const betalers = scenario === "final" && i === 0 ? { [ids[0]]: bedragen[0] } : {}
+      await supabase.from("party_rounds").update({
+        status: "closed", closed_at: new Date().toISOString(),
+        amount: scenario === "assign" ? 0 : bedragen[i],
+        pot_part: scenario === "assign" ? 0 : uitPot,
+        payers: betalers, headcount: 4, members: ids,
+      }).eq("id", rid)
+    }
+
+    localStorage.setItem("rundo_party_group", gid)
+    setGroupId(gid)
+    await loadParty(gid)
+    setFromQuick(scenario === "assign" || scenario === "payers")
+    setHasSettled(scenario === "final")
+    setView(scenario === "quick" ? "quickSettle" : scenario === "assign" ? "hub" : scenario === "payers" ? "payers" : "final")
+    setBusy(false)
+  }
   // Een opgeslagen groep heropenen vanaf het startscherm.
   const openSavedGroup = async (id: string) => {
     setBusy(true)
@@ -4350,6 +4459,32 @@ export default function PartyTest() {
             disabled={bpSettle === null}
             onClick={() => startWithMode()}>{busy ? L.starting : L.startNow}</button>
         </div>
+
+        {/* Testknoppen: enkel met ?seed in de URL, dus onzichtbaar voor gebruikers. */}
+        {seedMode && (
+          <div style={{ ...S.card, marginTop: 16, border: "1px dashed rgba(120,95,20,0.35)" }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#8a7d55", marginBottom: 2 }}>🧪 Testgroep aanmaken</div>
+            <div style={{ fontSize: 11.5, color: "#b3a988", marginBottom: 9, lineHeight: 1.4 }}>Alleen voor jou als beheerder — zichtbaar door ?seed in de URL.</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {([
+                ["quick", "snelle rondjes"],
+                ["assign", "stap 2 · toewijzen"],
+                ["payers", "stap 3 · wie betaalde"],
+                ["final", "eindbalans"],
+              ] as const).map(([k, label]) => (
+                <button key={k} disabled={busy} onClick={() => seedTest(k)}
+                  style={{ ...S.btn, fontSize: 13, fontWeight: 800, padding: "8px 12px", opacity: busy ? 0.5 : 1 }}>{label}</button>
+              ))}
+            </div>
+            {/* Terugzetten kan alleen bij een groep die je zelf beheert. */}
+            {groupId && isAdmin && (
+              <button disabled={busy} onClick={resetNaarSnel}
+                style={{ ...S.btn, width: "100%", marginTop: 9, fontSize: 13, fontWeight: 800, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)", opacity: busy ? 0.5 : 1 }}>
+                ↺ Deze groep terug naar snelle rondjes
+              </button>
+            )}
+          </div>
+        )}
 
         {savedGroups.length > 0 && (() => {
           const fmt = (iso: string) => { const d = new Date(iso); return isNaN(d.getTime()) ? "" : `${d.getDate()}/${d.getMonth() + 1}` }
