@@ -1558,12 +1558,15 @@ export default function PartyTest() {
   // rondje mag niet terug naar het keuzescherm; het keuzescherm zelf wist deze sleutel,
   // zodat je van daaruit wél altijd vers begint.
   useEffect(() => {
-    if (typeof window === "undefined") return
+    // Wachten tot het opstarten klaar is. Anders draait dit effect bij de eerste render
+    // — met view "start" en nog geen groep — en wist het de sleutel net voordat het
+    // herstel hem kan lezen.
+    if (typeof window === "undefined" || booting) return
     try {
       if (groupId && view !== "start") sessionStorage.setItem("rundo_party_session", JSON.stringify({ g: groupId, v: view, fq: fromQuick }))
       else sessionStorage.removeItem("rundo_party_session")
     } catch { /* sessionStorage niet beschikbaar */ }
-  }, [groupId, view, fromQuick])
+  }, [groupId, view, fromQuick, booting])
   useEffect(() => { if (view !== "roundsOverview") setFillMode(false) }, [view])
   // Onderweg van snel naar Fair Split: is alles toegewezen, dan is "wie betaalde" de
   // enige volgende stap. Zonder dit zou je op de hub stranden zonder knop.
@@ -2237,9 +2240,17 @@ export default function PartyTest() {
   // ── Testscenario's ──────────────────────────────────────────────────────────
   // Alleen zichtbaar met ?seed in de URL. Zet in één tik een volledige groep klaar
   // zodat je een scherm kan beoordelen zonder eerst een avond na te spelen.
+  // Eén keer ?seed in de URL zetten en het blijft aan staan, ook na een refresh of een
+  // nieuwe build. Uitzetten kan met de link in het kader zelf, of met ?seed=off.
   const [seedMode, setSeedMode] = useState(false)
   useEffect(() => {
-    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("seed")) setSeedMode(true)
+    if (typeof window === "undefined") return
+    try {
+      const q = new URLSearchParams(window.location.search).get("seed")
+      if (q === "off") localStorage.removeItem("rundo_seed")
+      else if (q !== null) localStorage.setItem("rundo_seed", "1")
+      setSeedMode(localStorage.getItem("rundo_seed") === "1")
+    } catch { /* localStorage niet beschikbaar */ }
   }, [])
 
   // Zet de huidige groep terug naar het beginpunt van de snelle modus, zodat je de
@@ -4464,7 +4475,11 @@ export default function PartyTest() {
         {seedMode && (
           <div style={{ ...S.card, marginTop: 16, border: "1px dashed rgba(120,95,20,0.35)" }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: "#8a7d55", marginBottom: 2 }}>🧪 Testgroep aanmaken</div>
-            <div style={{ fontSize: 11.5, color: "#b3a988", marginBottom: 9, lineHeight: 1.4 }}>Alleen voor jou als beheerder — zichtbaar door ?seed in de URL.</div>
+            <div style={{ fontSize: 11.5, color: "#b3a988", marginBottom: 9, lineHeight: 1.4 }}>
+              Alleen op dit toestel zichtbaar, voor jouw eigen tests.
+              <span onClick={() => { try { localStorage.removeItem("rundo_seed") } catch { /* niets */ } setSeedMode(false) }}
+                style={{ marginLeft: 6, color: "#c0554a", fontWeight: 800, cursor: "pointer", textDecoration: "underline" }}>verbergen</span>
+            </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {([
                 ["quick", "snelle rondjes"],
