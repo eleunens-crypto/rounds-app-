@@ -710,6 +710,13 @@ const T = {
     keepEditing: "Nog iets aanpassen",
     notCovered: (v: string) => `Nog ${v} niet gedekt`,
     fromPotSummary: (tot: string, pot: string) => `Van ${tot} komt ${pot} uit de pot.`,
+    sumTotal: "TOTAAL",
+    sumCovered: "GEDEKT",
+    sumOpen: "OPEN",
+    byPot: "uit de pot",
+    byPeople: "door personen",
+    potStillFree: (v: string, tot: string) => `Nog ${v} beschikbaar van de ${tot} in de pot`,
+    potFree: (v: string) => `${v} vrij`,
     fairSplitExplain: "Liever eerlijk betalen volgens wat iedereen dronk (Fair Split!) Wijs drankjes en betalers hier toe.",
     payAllSelf: "Alles zelf",
     treatHint: "Rondje trakteren? Tik hieronder aan (telt dan niet mee in de verdeling)",
@@ -1239,6 +1246,13 @@ const T = {
     keepEditing: "Encore modifier",
     notCovered: (v: string) => `Encore ${v} non couvert`,
     fromPotSummary: (tot: string, pot: string) => `Sur ${tot}, ${pot} vient de la cagnotte.`,
+    sumTotal: "TOTAL",
+    sumCovered: "COUVERT",
+    sumOpen: "OUVERT",
+    byPot: "de la cagnotte",
+    byPeople: "par les personnes",
+    potStillFree: (v: string, tot: string) => `Encore ${v} disponible sur les ${tot} de la cagnotte`,
+    potFree: (v: string) => `${v} libre`,
     fairSplitExplain: "Tu préfères payer selon ce que chacun a bu (Fair Split !) Attribue ici les boissons et les payeurs.",
     payAllSelf: "Tout payer",
     treatHint: "Tu offres une tourn\u00e9e ? Touche-la ci-dessous (elle ne compte pas dans le partage)",
@@ -2910,8 +2924,12 @@ export default function PartyTest() {
     setView("quickSettle")
   }
   // Eén tik voor het meest voorkomende geval: dezelfde persoon haalde telkens.
-  const zelfdeBetalerVoorAlles = (pid: string) => {
-    const nieuwe = rounds.map((r, idx) => (r.amount || 0) > 0.005 ? rRedistribute(r, idx, false, [pid], r.amount) : r)
+  // pid = null betekent: de pot draagt alles. Komt de pot tekort, dan klemt
+  // rRedistribute het aandeel op wat er in zit en blijft de rest zichtbaar openstaan.
+  const zelfdeBetalerVoorAlles = (pid: string | null) => {
+    const nieuwe = rounds.map((r, idx) => (r.amount || 0) > 0.005
+      ? rRedistribute(r, idx, pid === null, pid === null ? [] : [pid], r.amount)
+      : r)
     setRounds(nieuwe)
     nieuwe.forEach((r) => persistRound(r))
   }
@@ -5582,8 +5600,9 @@ export default function PartyTest() {
       ? L.roundsNoAmountNamed(zbNrs.length === 1 ? String(zbNrs[0]) : `${zbNrs.slice(0, -1).join(", ")} ${L.andWord} ${zbNrs[zbNrs.length - 1]}`)
       : L.roundsNoAmountCount(zbNrs.length)
     // Wisselde het aantal personen tussen de rondjes? Dan hoort dat bij het totaal,
-    // niet in een apart kader verderop.
-    const aantallen = betaalde.map((r) => Math.max(1, r.headcount || 1))
+    // niet in een apart kader verderop. We kijken naar álle rondjes, ook die zonder
+    // bedrag: ook daar heb je het aantal kunnen bijstellen, en het verschil telt.
+    const aantallen = rounds.map((r) => Math.max(1, r.headcount || 1))
     const wisselde = new Set(aantallen).size > 1
     const getrakteerd = betaalde.filter((r) => treatedRounds.has(r.id))
     const teVerdelen = betaalde.filter((r) => !treatedRounds.has(r.id))
@@ -5634,7 +5653,7 @@ export default function PartyTest() {
             <div style={{ marginTop: 12, paddingTop: 11, borderTop: "1px dashed rgba(120,95,20,0.25)", textAlign: "left" }}>
               <div style={{ fontSize: 13, color: "#8a5e0f", fontWeight: 800, marginBottom: 4 }}>⚠️ {L.headcountVaried}</div>
               <div style={{ fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.6 }}>
-                {betaalde.map((r) => `${L.roundWord} ${rounds.indexOf(r) + 1}: ${Math.max(1, r.headcount || 1)} ${L.people}`).join("  ·  ")}
+                {rounds.map((r, i) => `${L.roundWord} ${i + 1}: ${Math.max(1, r.headcount || 1)} ${L.people}`).join("  ·  ")}
               </div>
             </div>
           )}
@@ -6095,17 +6114,55 @@ export default function PartyTest() {
         )}
 
         {/* Wat de pot draagt, hoort meteen zichtbaar te zijn: het scheelt in wie wat terugkrijgt. */}
-        {potSpent > 0.005 && (
-          <div style={{ fontSize: 13.5, color: "#1f6b3a", background: "rgba(31,138,76,0.08)", borderRadius: 10, padding: "9px 11px", marginBottom: 12, lineHeight: 1.5 }}>
-            🫙 {L.fromPotSummary(euro(rounds.reduce((a, r) => a + (r.amount || 0), 0)), euro(potSpent))}
-          </div>
-        )}
+        {/* Alle cijfers van dit scherm in één blik: wat het kostte, wat er al gedekt is,
+            en waar dat geld vandaan komt. */}
+        {(() => {
+          const totaalRondjes = rounds.reduce((a, r) => a + (r.amount || 0), 0)
+          const doorPersonen = rounds.reduce((a, r) => a + Object.values(r.payers || {}).reduce((x, y) => x + (y || 0), 0), 0)
+          const gedekt = potSpent + doorPersonen
+          const openstaand = Math.max(0, totaalRondjes - gedekt)
+          return (
+            <div style={{ ...S.card, padding: 14 }}>
+              <div style={{ display: "flex", textAlign: "center" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10.5, color: "#a89a6f", letterSpacing: "0.03em" }}>{L.sumTotal}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", marginTop: 2 }}>{euro(totaalRondjes)}</div>
+                </div>
+                <div style={{ flex: 1, borderLeft: "1px solid rgba(120,95,20,0.12)" }}>
+                  <div style={{ fontSize: 10.5, color: "#a89a6f", letterSpacing: "0.03em" }}>{L.sumCovered}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c", marginTop: 2 }}>{euro(gedekt)}</div>
+                </div>
+                <div style={{ flex: 1, borderLeft: "1px solid rgba(120,95,20,0.12)" }}>
+                  <div style={{ fontSize: 10.5, color: "#a89a6f", letterSpacing: "0.03em" }}>{L.sumOpen}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: openstaand > 0.005 ? "#b0402f" : "#1f8a4c", marginTop: 2 }}>{euro(openstaand)}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 11, paddingTop: 11, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
+                <div style={{ flex: 1, background: "rgba(31,138,76,0.08)", borderRadius: 10, padding: "8px 10px" }}>
+                  <div style={{ fontSize: 11.5, color: "#5a9a75" }}>🫙 {L.byPot}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: "#1f6b3a", marginTop: 1 }}>{euro(potSpent)}</div>
+                </div>
+                <div style={{ flex: 1, background: "#faf7ec", borderRadius: 10, padding: "8px 10px" }}>
+                  <div style={{ fontSize: 11.5, color: "#a89a6f" }}>👤 {L.byPeople}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55", marginTop: 1 }}>{euro(doorPersonen)}</div>
+                </div>
+              </div>
+              {potContribTotal > 0.005 && (
+                <div style={{ fontSize: 12.5, color: "#1f6b3a", marginTop: 9, textAlign: "center" }}>{L.potStillFree(euro(Math.max(0, potRemaining)), euro(potContribTotal))}</div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Meestal haalde dezelfde persoon telkens: dan is dit één tik voor de avond. */}
         {people.length > 0 && rounds.length > 1 && (
           <div style={{ ...S.card, padding: "12px 13px" }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 9 }}>⚡ {L.sameForAll}</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {potContribTotal > 0.005 && (
+                <span onClick={() => zelfdeBetalerVoorAlles(null)}
+                  style={{ ...S.pill, cursor: "pointer", fontSize: 14.5, padding: "6px 12px", background: "#f0f9f4", border: "1px solid rgba(31,138,76,0.4)", color: "#1f6b3a" }}>🫙 {L.thePot}</span>
+              )}
               {people.map((p) => (
                 <span key={p.id} onClick={() => zelfdeBetalerVoorAlles(p.id)}
                   style={{ ...S.pill, cursor: "pointer", fontSize: 14.5, padding: "6px 12px", background: "#fff", border: "1px solid rgba(120,95,20,0.25)", color: "#4a3f1e" }}>{p.name}</span>
@@ -6122,9 +6179,16 @@ export default function PartyTest() {
           const tekort = (r.amount || 0) - rPaidSum(r)
           const mist = geenBedrag || tekort > 0.005
           return (
-            <div key={r.id} style={{ ...S.card, padding: "12px 14px", ...(mist ? { border: "1.5px solid rgba(240,165,0,0.55)", background: "#fffdf3" } : {}) }}>
+            <div key={r.id} style={{ ...S.card, position: "relative", padding: "13px 14px", ...(mist
+              ? { border: "2px solid rgba(224,104,92,0.6)", background: "rgba(224,104,92,0.05)" }
+              : {}) }}>
+              {/* Het vinkje verschijnt pas als een rondje rond is: zo blijft je oog hangen
+                  bij de kaders die er nog niet staan. */}
+              {!mist && (
+                <span style={{ position: "absolute", top: -11, left: 13, width: 23, height: 23, borderRadius: "50%", background: "#1f8a4c", color: "#fff", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>✓</span>
+              )}
               <div style={{ ...S.row, justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
-                <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.roundSummary(idx + 1, items)}</span>
+                <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", paddingLeft: mist ? 0 : 20 }}>{L.roundSummary(idx + 1, items)}</span>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                   <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>€</span>
                   <input type="text" inputMode="decimal" placeholder="0,00"
@@ -6138,7 +6202,9 @@ export default function PartyTest() {
                   <span onClick={() => { if (geenBedrag) { setNotice(L.fillAmountFirst); return } rTogglePot(idx) }}
                     style={{ ...S.chip(uitPot ? 1 : 0), fontSize: 14.5, padding: "6px 11px", opacity: geenBedrag ? 0.5 : 1,
                       ...(uitPot ? { background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", border: "1px solid rgba(31,138,76,0.5)" } : {}) }}>
-                    🫙 {L.potWord}<span style={{ fontWeight: 600, opacity: 0.8 }}> · {euro(Math.max(0, potAvailFor(idx)))}</span>
+                    {/* Gekozen: wat de pot voor dít rondje draagt. Niet gekozen: wat er nog
+                        beschikbaar is. Zonder dat onderscheid lijken beide getallen hetzelfde. */}
+                    🫙 {L.potWord}<span style={{ fontWeight: 600, opacity: 0.85 }}> · {uitPot ? euro(r.potPart || 0) : L.potFree(euro(Math.max(0, potAvailFor(idx))))}</span>
                   </span>
                 )}
                 {people.map((p) => {
@@ -6161,10 +6227,12 @@ export default function PartyTest() {
 
         {/* De pot: in de snelle modus zonder namen ingelegd, hier op namen gezet. */}
         {potContribTotal > 0.005 && (
-          <div style={{ ...S.card, ...(potZonderNamen ? { border: "1.5px solid rgba(240,165,0,0.55)", background: "#fffdf3" } : {}) }}>
-            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>🫙 {L.potOnNames}</span>
-              <span style={{ fontSize: 16, fontWeight: 800, color: "#1f8a4c" }}>{euro(potContribTotal)}</span>
+          <div style={{ width: "82%", margin: "0 auto 13px", position: "relative", background: "#f4faf6", border: "1.5px solid rgba(31,138,76,0.4)", borderRadius: 16, padding: "16px 14px 14px" }}>
+            {/* Een zakje op de hoek en een smaller kader: de pot is geen rondje in de rij. */}
+            <span style={{ position: "absolute", top: -14, left: -12, width: 38, height: 38, borderRadius: "50%", background: "#fff", border: "1.5px solid rgba(31,138,76,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19 }}>💰</span>
+            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, paddingLeft: 20 }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "#1f6b3a" }}>{L.potOnNames}</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c" }}>{euro(potContribTotal)}</span>
             </div>
             {potNames !== null ? (
               <>
@@ -6208,7 +6276,7 @@ export default function PartyTest() {
               </>
             ) : potZonderNamen ? (
               <>
-                <div style={{ fontSize: 13.5, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 10 }}>{L.potNotSplit}</div>
+                <div style={{ fontSize: 13, color: "#5a9a75", lineHeight: 1.5, marginBottom: 10 }}>{L.potNotSplit}</div>
                 <button style={{ ...S.btn, width: "100%", fontWeight: 800, fontSize: 14.5 }} onClick={verdeelPotOverNamen}>{L.splitPotEqually(people.length)}</button>
                 <button style={{ width: "100%", marginTop: 8, padding: "8px 0", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#8a7d55", cursor: "pointer", textDecoration: "underline" }}
                   onClick={() => { const per = potContribTotal / Math.max(1, people.length); const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(per * 100) / 100 }); setPotNames(n) }}>{L.potPerPersonEdit}</button>
