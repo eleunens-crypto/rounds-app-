@@ -701,6 +701,10 @@ const T = {
     potNewTotal: "Nieuw totaal in de pot",
     backToEqual: "← Terug naar gelijk verdelen",
     backToSettle: "← Terug naar afrekenen",
+    stepOf: (n: number, t: number) => `stap ${n} van ${t}`,
+    backToAssign: "← Terug naar toewijzen",
+    toStep3: "Naar stap 3 · wie betaalde →",
+    keepEditing: "Nog iets aanpassen",
     fairSplitExplain: "Liever eerlijk betalen volgens wat iedereen dronk (Fair Split!) Wijs drankjes en betalers hier toe.",
     payAllSelf: "Alles zelf",
     treatHint: "Rondje trakteren? Tik hieronder aan (telt dan niet mee in de verdeling)",
@@ -1221,6 +1225,10 @@ const T = {
     potNewTotal: "Nouveau total dans la cagnotte",
     backToEqual: "← Retour au partage égal",
     backToSettle: "← Retour au décompte",
+    stepOf: (n: number, t: number) => `étape ${n} sur ${t}`,
+    backToAssign: "← Retour à l'attribution",
+    toStep3: "Vers l'étape 3 · qui a payé →",
+    keepEditing: "Encore modifier",
     fairSplitExplain: "Tu préfères payer selon ce que chacun a bu (Fair Split !) Attribue ici les boissons et les payeurs.",
     payAllSelf: "Tout payer",
     treatHint: "Tu offres une tourn\u00e9e ? Touche-la ci-dessous (elle ne compte pas dans le partage)",
@@ -3315,6 +3323,19 @@ export default function PartyTest() {
 
   // Kaart in het afrekenscherm: tik twee namen aan en ze rekenen samen af.
   const [settlePick, setSettlePick] = useState<string | null>(null)
+  // Drie bolletjes met het stapnummer ernaast: klein genoeg om niet te storen,
+  // duidelijk genoeg om te weten hoeveel er nog komt.
+  const stapBalk = (nu: number) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4 }}>
+      <span style={{ display: "flex", gap: 4 }}>
+        {[1, 2, 3].map((n) => (
+          <span key={n} style={{ width: 7, height: 7, borderRadius: "50%", background: n <= nu ? "#1f8a4c" : "#e8e2d2" }} />
+        ))}
+      </span>
+      <span style={{ fontSize: 11, color: "#a89a6f", fontWeight: 800 }}>{L.stepOf(nu, 3)}</span>
+    </div>
+  )
+
   const renderSettleTogether = () => {
     if (people.length < 2) return null
     return (
@@ -5279,6 +5300,7 @@ export default function PartyTest() {
         })()}
         {settle && unassignedAllRounds > 0 && firstUnassignedIdx >= 0 && (
           <div style={{ ...S.card, background: "rgba(224,104,92,0.08)", border: "1.5px solid rgba(224,104,92,0.45)" }}>
+            {fromQuick && stapBalk(2)}
             <div style={{ fontSize: 15.5, fontWeight: 800, color: "#b0402f", marginBottom: 4 }}>{L.unassignedHub(unassignedAllRounds)}</div>
             <div style={{ fontSize: 14, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 11 }}>{L.unassignedHubWhy}</div>
             <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#e0725c,#c0554a)" }}
@@ -5376,10 +5398,21 @@ export default function PartyTest() {
                     <div style={{ fontSize: 15, fontWeight: 800, color: "#1f6b3a" }}>{naarVolgende ? L.roundDoneNext : nogOpen === 0 ? L.allAssignedDone : L.roundDoneShort}</div>
                   </div>
                 )}
-                <button style={done ? { ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 10 }}
-                  onClick={() => { if (naarVolgende) setAssignIdx(volgende); else { setAssignIdx(null); setAssignAllMode(false); if (fromQuick && done) setView("payers") } }}>
-                  {naarVolgende ? L.nextRoundAssign(volgende + 1) : done ? L.ready : L.ready}
-                </button>
+                {/* Alles rond en je kwam uit de snelle modus? Dan zelf kiezen of je
+                    doorgaat of nog iets bijstelt — geen automatische sprong. */}
+                {done && !naarVolgende && fromQuick ? (
+                  <>
+                    <button style={{ ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }}
+                      onClick={() => { setAssignIdx(null); setAssignAllMode(false); setView("payers") }}>{L.toStep3}</button>
+                    <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14.5, fontWeight: 700, color: "#8a7d55" }}
+                      onClick={() => { setAssignIdx(null); setAssignAllMode(false) }}>{L.keepEditing}</button>
+                  </>
+                ) : (
+                  <button style={done ? { ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 10 }}
+                    onClick={() => { if (naarVolgende) setAssignIdx(volgende); else { setAssignIdx(null); setAssignAllMode(false) } }}>
+                    {naarVolgende ? L.nextRoundAssign(volgende + 1) : L.ready}
+                  </button>
+                )}
               </div>
             </div>
           )
@@ -5754,6 +5787,7 @@ export default function PartyTest() {
         <Header />
         {renderDialogs()}
         <div style={{ marginBottom: 6 }}>
+          {fromQuick && stapBalk(1)}
           <h3 style={{ ...S.h3, margin: 0 }}>{L.fairSetupTitle}</h3>
         </div>
         <div style={{ ...S.card }}>
@@ -6037,13 +6071,15 @@ export default function PartyTest() {
         {showPot && renderPotModal()}
         {renderDialogs()}
 
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6, gap: 8 }}>
-          <h3 style={{ ...S.h3, margin: 0 }}>💶 {L.payersTitle}</h3>
-          {fromQuick && (
-            <button style={{ ...S.btn, fontSize: 13, fontWeight: 700, padding: "7px 11px", flexShrink: 0 }} onClick={backToEqualSplit}>{L.backToEqual}</button>
-          )}
-        </div>
-        <div style={{ fontSize: 14, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>{L.payersIntro}</div>
+        {fromQuick && stapBalk(3)}
+        <h3 style={{ ...S.h3, margin: "0 0 9px" }}>💶 {L.payersTitle}</h3>
+        {/* De melding staat waar de uitleg stond: pas als er iets ontbreekt, en niet
+            als losse regel onderaan waar je er al voorbij gescrold bent. */}
+        {!klaar && (
+          <div style={{ background: "rgba(224,104,92,0.08)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "10px 12px", fontSize: 13.5, color: "#b0402f", fontWeight: 800, marginBottom: 12 }}>
+            {zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit}
+          </div>
+        )}
 
         {/* Meestal haalde dezelfde persoon telkens: dan is dit één tik voor de avond. */}
         {people.length > 0 && rounds.length > 1 && (
@@ -6144,13 +6180,16 @@ export default function PartyTest() {
           </div>
         )}
 
-        {!klaar && (
-          <div style={{ fontSize: 13.5, color: "#b0402f", fontWeight: 800, textAlign: "center", marginBottom: 8 }}>
-            {zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit}
-          </div>
-        )}
         <button style={{ ...S.btnP, width: "100%", opacity: klaar ? 1 : 0.45 }}
-          onClick={() => { if (!klaar) return; setFromQuick(false); setHasSettled(true); setView("final") }}>{L.toFinal}</button>
+          onClick={() => {
+            // Te vroeg getikt? Dan zeggen waarom er niets gebeurt, in plaats van niets doen.
+            if (!klaar) { setNotice(zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit); return }
+            setFromQuick(false); setHasSettled(true); setView("final")
+          }}>{L.toFinal}</button>
+        {fromQuick && (
+          <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 15, fontWeight: 700, color: "#8a7d55" }}
+            onClick={() => setView("hub")}>{L.backToAssign}</button>
+        )}
       </div></div>
     )
   }
