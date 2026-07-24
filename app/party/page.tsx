@@ -2240,16 +2240,19 @@ export default function PartyTest() {
   // ── Testscenario's ──────────────────────────────────────────────────────────
   // Alleen zichtbaar met ?seed in de URL. Zet in één tik een volledige groep klaar
   // zodat je een scherm kan beoordelen zonder eerst een avond na te spelen.
-  // Eén keer ?seed in de URL zetten en het blijft aan staan, ook na een refresh of een
-  // nieuwe build. Uitzetten kan met de link in het kader zelf, of met ?seed=off.
+  // Testknoppen achter een sleutelwoord: ?seed=SEED_SLEUTEL zet ze aan op dit toestel en
+  // ze blijven staan, ook na een refresh of een nieuwe build. Een gast die per ongeluk
+  // een link met ?seed erin krijgt, ziet niets — de waarde moet exact kloppen.
+  // Wijzig het woord hieronder wanneer je wil; wie het oude woord kent, is het dan kwijt.
+  const SEED_SLEUTEL = "rundo2026"
   const [seedMode, setSeedMode] = useState(false)
   useEffect(() => {
     if (typeof window === "undefined") return
     try {
       const q = new URLSearchParams(window.location.search).get("seed")
       if (q === "off") localStorage.removeItem("rundo_seed")
-      else if (q !== null) localStorage.setItem("rundo_seed", "1")
-      setSeedMode(localStorage.getItem("rundo_seed") === "1")
+      else if (q === SEED_SLEUTEL) localStorage.setItem("rundo_seed", SEED_SLEUTEL)
+      setSeedMode(localStorage.getItem("rundo_seed") === SEED_SLEUTEL)
     } catch { /* localStorage niet beschikbaar */ }
   }, [])
 
