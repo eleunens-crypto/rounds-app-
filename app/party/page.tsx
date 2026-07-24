@@ -393,7 +393,7 @@ const T = {
     unassignedHub: (n: number) => `🔴 ${n} drankje${n === 1 ? "" : "s"} nog niet toegewezen`,
     unassignedHubWhy: "Zonder naam worden ze gelijk verdeeld — niet eerlijk. Wijs ze toe zodat elk betaalt wat hij dronk.",
     unassignedHubBtn: "Toewijzen",
-    assignAllBtn: "Alles meteen toewijzen",
+    assignAllBtn: "Naar toewijzen drankjes",
     assignFirstNote: "Wijs eerst alle drankjes toe aan iemand. Daarna kan je verder.",
     assignPerRoundBtn: "Toewijzen per rondje",
     assignTitle: "Toewijzen",
@@ -911,7 +911,7 @@ const T = {
     unassignedHub: (n: number) => `🔴 ${n} boisson${n === 1 ? "" : "s"} pas encore attribuée${n === 1 ? "" : "s"}`,
     unassignedHubWhy: "Sans nom, elles sont partagées également — pas équitable. Attribue-les pour que chacun paie ce qu'il a bu.",
     unassignedHubBtn: "Attribuer",
-    assignAllBtn: "Tout attribuer d\u2019un coup",
+    assignAllBtn: "Vers l'attribution des boissons",
     assignFirstNote: "Attribue d\u2019abord toutes les boissons. Ensuite tu peux continuer.",
     assignPerRoundBtn: "Attribuer par tourn\u00e9e",
     assignTitle: "Attribuer",
@@ -5275,11 +5275,9 @@ export default function PartyTest() {
             <div style={{ fontSize: 14, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 11 }}>{L.unassignedHubWhy}</div>
             <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#e0725c,#c0554a)" }}
               onClick={() => { setAssignAllMode(true); setAssignIdx(firstUnassignedIdx) }}>{L.assignAllBtn}</button>
-            <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14.5, fontWeight: 800 }}
-              onClick={() => { setAssignAllMode(false); setAssignIdx(firstUnassignedIdx) }}>{L.assignPerRoundBtn}</button>
             {fromQuick && (
-              <button style={{ width: "100%", marginTop: 10, padding: "9px 0", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#8a7d55", cursor: "pointer", textDecoration: "underline" }}
-                onClick={backToEqualSplit}>{L.backToEqual}</button>
+              <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 15, fontWeight: 700, color: "#8a7d55" }}
+                onClick={() => setView("fairSetup")}>{L.back}</button>
             )}
           </div>
         )}
@@ -5747,9 +5745,8 @@ export default function PartyTest() {
       <div style={S.page}><div style={S.wrap}>
         <Header />
         {renderDialogs()}
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+        <div style={{ marginBottom: 6 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.fairSetupTitle}</h3>
-          <button style={{ ...S.btn, fontSize: 13.5, fontWeight: 700, padding: "7px 12px" }} onClick={backToEqualSplit}>{L.backToEqual}</button>
         </div>
         <div style={{ ...S.card }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -5770,6 +5767,9 @@ export default function PartyTest() {
           <button onClick={addPerson} style={{ ...S.btn, width: "100%", marginTop: 12, fontWeight: 800, border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.06)", color: "#c98a00" }}>{L.fairAddPerson}</button>
         </div>
         <button style={{ ...S.btnP, width: "100%", marginTop: 6, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={confirmFairSetup}>{L.fairSetupDone}</button>
+        {/* Terug naar het afrekenscherm, met Fair Split nog aangeduid. */}
+        <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 15, fontWeight: 700, color: "#8a7d55" }}
+          onClick={() => { setFromQuick(false); setSettleChoice("fair"); setView("quickSettle") }}>{L.back}</button>
       </div></div>
     )
   }
