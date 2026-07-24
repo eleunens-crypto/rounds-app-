@@ -700,6 +700,7 @@ const T = {
     potSpreadEven: "Gelijk verdelen",
     potNewTotal: "Nieuw totaal in de pot",
     backToEqual: "← Terug naar gelijk verdelen",
+    backToSettle: "← Terug naar afrekenen",
     fairSplitExplain: "Liever eerlijk betalen volgens wat iedereen dronk (Fair Split!) Wijs drankjes en betalers hier toe.",
     payAllSelf: "Alles zelf",
     treatHint: "Rondje trakteren? Tik hieronder aan (telt dan niet mee in de verdeling)",
@@ -1219,6 +1220,7 @@ const T = {
     potSpreadEven: "Répartir également",
     potNewTotal: "Nouveau total dans la cagnotte",
     backToEqual: "← Retour au partage égal",
+    backToSettle: "← Retour au décompte",
     fairSplitExplain: "Tu préfères payer selon ce que chacun a bu (Fair Split !) Attribue ici les boissons et les payeurs.",
     payAllSelf: "Tout payer",
     treatHint: "Tu offres une tourn\u00e9e ? Touche-la ci-dessous (elle ne compte pas dans le partage)",
@@ -3430,7 +3432,11 @@ export default function PartyTest() {
     <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
       <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
         <div style={{ ...S.row, justifyContent: "space-between", margin: "0 0 8px" }}>
-          <h3 style={{ ...S.h3, fontSize: 19, margin: 0 }}>{potIsCard ? L.drinkCard : L.potTitle}</h3>
+          <h3 style={{ ...S.h3, fontSize: 19, margin: 0, display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span>{potIsCard ? L.drinkCard : L.potTitle}</span>
+            {/* Meteen zichtbaar wat er nu in zit — dat is waarom je dit venster opent. */}
+            <span style={{ fontSize: 16, fontWeight: 800, color: potRemaining > 0.005 ? "#1f8a4c" : "#c0554a" }}>{euro(potRemaining)}</span>
+          </h3>
           {!settle && (
             <div style={{ display: "flex", alignItems: "center", gap: 9, background: "#faf4e4", borderRadius: 20, padding: "4px 8px" }}>
               <button style={{ width: 26, height: 26, borderRadius: 8, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 16, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
@@ -3707,7 +3713,7 @@ export default function PartyTest() {
     // Onderweg van gelijk verdelen naar Fair Split is er maar één route: namen,
     // toewijzen, pot, betalers, eindbalans. Instellingen en overzichten zouden je
     // daar alleen uit halen, dus die verbergen we tot de omschakeling rond is.
-    const onboarding = view === "setup" || view === "settings" || fromQuick
+    const onboarding = view === "setup" || view === "settings" || fromQuick || (view === "roundsOverview" && fillMode)
     return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
@@ -5581,12 +5587,7 @@ export default function PartyTest() {
           <div style={{ fontSize: 30, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</div>
           {wisselde && (
             <div style={{ marginTop: 12, paddingTop: 11, borderTop: "1px dashed rgba(120,95,20,0.25)", textAlign: "left" }}>
-              <div style={{ ...S.row, justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
-                <span style={{ fontSize: 13, color: "#8a5e0f", fontWeight: 800 }}>⚠️ {L.headcountVaried}</span>
-                {/* Rechtstreeks naar het overzicht om het aantal per rondje bij te stellen. */}
-                <span onClick={() => { setOverviewBackTo("hub"); setView("roundsOverview") }} title={L.adjustWord}
-                  style={{ flexShrink: 0, fontSize: 13, cursor: "pointer", background: "#fff", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 12, padding: "4px 9px" }}>✏️</span>
-              </div>
+              <div style={{ fontSize: 13, color: "#8a5e0f", fontWeight: 800, marginBottom: 4 }}>⚠️ {L.headcountVaried}</div>
               <div style={{ fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.6 }}>
                 {betaalde.map((r) => `${L.roundWord} ${rounds.indexOf(r) + 1}: ${Math.max(1, r.headcount || 1)} ${L.people}`).join("  ·  ")}
               </div>
@@ -5938,7 +5939,7 @@ export default function PartyTest() {
                             <button onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, usePot: false } : c) }}
                               style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 13.5, fontWeight: 800, border: "none", cursor: "pointer", background: !uitPot ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f7f1e2", color: !uitPot ? "#fff" : "#8a7d55" }}>💶 {L.paidSelf}</button>
                             <button onClick={(e) => { e.stopPropagation(); if (!potLeeg) setEditDraft((c) => c ? { ...c, usePot: true } : c) }}
-                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 13.5, fontWeight: 800, border: "none", cursor: potLeeg ? "not-allowed" : "pointer", opacity: potLeeg ? 0.5 : 1, background: uitPot ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#f7f1e2", color: uitPot ? "#fff" : "#8a7d55" }}>🫙 {L.paidPot}{potLeeg ? ` · ${L.emptyWord}` : ""}</button>
+                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 13.5, fontWeight: 800, border: "none", cursor: potLeeg ? "not-allowed" : "pointer", opacity: potLeeg ? 0.5 : 1, background: uitPot ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#f7f1e2", color: uitPot ? "#fff" : "#8a7d55" }}>🫙 {L.paidPot}<span style={{ fontWeight: 800, opacity: uitPot ? 1 : 0.75 }}> · {potLeeg ? L.emptyWord : euro(Math.max(0, potAvailFor(idx)))}</span></button>
                           </div>
                           {potLeeg && <div style={{ fontSize: 12.5, color: "#c0554a", fontWeight: 700, marginTop: 6 }}>{L.potEmptyFillFirst}</div>}
                           {/* Te weinig in de pot: binair — bijvullen of zelf betalen. */}
@@ -6000,16 +6001,24 @@ export default function PartyTest() {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-          <button style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 15.5, fontWeight: 800 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
-          {laatsteRondjeKlaar() && (
-            <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 15.5 }} onClick={nextRound}>{L.newRound}</button>
-          )}
-        </div>
-        {rounds.length > 0 && laatsteRondjeKlaar() && (
-          <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
-            <button style={{ width: "75%", border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 14, padding: "12px 6px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }} onClick={repeatRound}>{L.repeatRound}</button>
-          </div>
+        {/* Kwam je bedragen aanvullen? Dan is er maar één zinnige volgende stap. */}
+        {fillMode ? (
+          <button style={{ ...S.btnP, width: "100%", marginTop: 16, padding: "14px 6px", fontSize: 15.5 }}
+            onClick={() => { setFillMode(false); setView("quickSettle") }}>{L.backToSettle}</button>
+        ) : (
+          <>
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 15.5, fontWeight: 800 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
+              {laatsteRondjeKlaar() && (
+                <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 15.5 }} onClick={nextRound}>{L.newRound}</button>
+              )}
+            </div>
+            {rounds.length > 0 && laatsteRondjeKlaar() && (
+              <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
+                <button style={{ width: "75%", border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 14, padding: "12px 6px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }} onClick={repeatRound}>{L.repeatRound}</button>
+              </div>
+            )}
+          </>
         )}
       </div></div>
     )
