@@ -4881,9 +4881,7 @@ export default function PartyTest() {
         {roundItems > 0 && (
           <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>
         )}
-        <div style={{ textAlign: "center", marginTop: 16 }}>
-          <span onClick={switchMode} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#b8ac8a" }}>↺ {settle ? L.switchToQuick : L.switchToFair}</span>
-        </div>
+
 
         {showAssignAll && (
           <div style={S.overlay} onClick={() => setShowAssignAll(false)}>
@@ -5228,7 +5226,7 @@ export default function PartyTest() {
               <style>{`@keyframes rundoPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,138,76,0.45)}50%{box-shadow:0 0 0 7px rgba(31,138,76,0)}}.rundo-pulse{animation:rundoPulse 1.4s infinite}`}</style>
               <div style={{ ...S.row, gap: 7 }}>
                 <span style={{ fontSize: 20, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                <input style={{ ...S.input, flex: 1, minWidth: 70, fontSize: 19, fontWeight: 800, padding: "12px 10px", textAlign: "left",
+                <input style={{ ...S.input, flex: 1, minWidth: 60, maxWidth: 118, fontSize: 19, fontWeight: 800, padding: "12px 10px", textAlign: "left",
                   color: "#c88a1a",
                   borderColor: amount > 0.005 ? "#e08a00" : "rgba(120,95,20,0.22)",
                   background: amount > 0.005 ? "#fff" : "#fdfaf2" }}
@@ -5241,7 +5239,7 @@ export default function PartyTest() {
                   color: amount > 0.005 ? "#1f8a4c" : "#b3a988",
                   border: amount > 0.005 ? "2.5px solid #1f8a4c" : "none" }}
                   onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}>✓</button>
-                <button style={{ padding: "0 10px", height: 46, alignSelf: "center", borderRadius: 10, fontSize: 12.5, fontWeight: 700, cursor: "pointer", flexShrink: 0, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", color: "#a89a6f", lineHeight: 1.25, maxWidth: 92 }} onClick={() => closeQuickRound(true)}>{L.skipPayment}</button>
+                <button style={{ padding: "0 14px", height: 56, borderRadius: 13, fontSize: 13.5, fontWeight: 800, cursor: "pointer", flexShrink: 0, background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a7d55", lineHeight: 1.25, maxWidth: 122 }} onClick={() => closeQuickRound(true)}>{L.skipPayment}</button>
               </div>
               {amount > 0.005 && (
                 <div style={{ fontSize: 13.5, color: "#1f8a4c", fontWeight: 800, textAlign: "right", marginTop: 7, paddingRight: 78 }}>{L.tapToConfirm}</div>
@@ -5515,9 +5513,7 @@ export default function PartyTest() {
             <div style={{ marginTop: 10 }}>{renderProposalHost()}</div>
           )}
         </>}
-        <div style={{ textAlign: "center", marginTop: 16 }}>
-          <span onClick={switchMode} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", color: "#b8ac8a" }}>↺ {settle ? L.switchToQuick : L.switchToFair}</span>
-        </div>
+
       </div></div>
     )
   }
@@ -5614,7 +5610,7 @@ export default function PartyTest() {
         {/* Bij het openen staat er nog niets onder: eerst kiezen hoe je verdeelt.
             Wat niet gekozen is, dimt — zoals op het keuzescherm van de app zelf. */}
         <div style={{ display: "flex", alignItems: "stretch", gap: 10, marginTop: 16, marginBottom: 14 }}>
-          <button onClick={() => { setSettleMode("verdelen"); setSettleChoice("equal") }}
+          <button onClick={() => { setSettleMode("verdelen"); setSettleChoice((c) => c === "equal" ? null : "equal") }}
             style={{ flex: 1, position: "relative", background: "#fff", borderRadius: 14, padding: "19px 10px 15px", textAlign: "center", cursor: "pointer",
               border: settleChoice === "fair" ? "1.5px solid rgba(120,95,20,0.2)" : "2px solid rgba(240,165,0,0.55)",
               boxShadow: settleChoice === "fair" ? "none" : "0 4px 14px -8px rgba(240,165,0,0.5)",
@@ -5624,7 +5620,7 @@ export default function PartyTest() {
             <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.3 }}>{L.splitEqually}</div>
           </button>
           <div style={{ display: "flex", alignItems: "center", fontSize: 14, fontWeight: 800, color: "#a89a6f" }}>{L.orWord}</div>
-          <button onClick={() => setSettleChoice("fair")}
+          <button onClick={() => setSettleChoice((c) => c === "fair" ? null : "fair")}
             style={{ flex: 1, background: "#fff", borderRadius: 14, padding: "19px 10px 15px", textAlign: "center", cursor: "pointer",
               border: settleChoice === "equal" ? "1.5px solid rgba(120,95,20,0.2)" : "2px solid rgba(31,138,76,0.5)",
               boxShadow: settleChoice === "equal" ? "none" : "0 4px 14px -8px rgba(31,138,76,0.5)",
@@ -5802,11 +5798,10 @@ export default function PartyTest() {
         </div>
 
         {/* Totaal — de som van alle rondjes. Eén blik op wat de avond kostte. */}
-        <div style={{ ...S.card, background: "rgba(240,165,0,0.06)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
-          <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <span style={{ fontSize: 15.5, fontWeight: 800, color: "#8a5e0f" }}>{L.costTotalLabel}</span>
-            <span style={{ fontSize: 21, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</span>
-          </div>
+        {/* Geen kader: het totaal hoort bij de lijst eronder, niet als losse knop. */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "0 4px 12px", marginBottom: 4, borderBottom: "1px solid rgba(120,95,20,0.18)" }}>
+          <span style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55" }}>{L.quickTotalLabel}</span>
+          <span style={{ fontSize: 24, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</span>
         </div>
 
         {/* Elk rondje, nieuwste bovenaan. Klik de kop om open/dicht te klappen.
@@ -6004,7 +5999,9 @@ export default function PartyTest() {
           )}
         </div>
         {rounds.length > 0 && laatsteRondjeKlaar() && (
-          <button style={{ width: "100%", marginTop: 8, border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 14, padding: "12px 6px", fontSize: 15, fontWeight: 800, cursor: "pointer" }} onClick={repeatRound}>{L.repeatRound}</button>
+          <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
+            <button style={{ width: "75%", border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 14, padding: "12px 6px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }} onClick={repeatRound}>{L.repeatRound}</button>
+          </div>
         )}
       </div></div>
     )
