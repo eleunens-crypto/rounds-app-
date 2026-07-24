@@ -707,6 +707,7 @@ const T = {
     stepOf: (n: number, t: number) => `stap ${n} van ${t}`,
     backToAssign: "← Terug naar toewijzen",
     backToNames: "← Terug naar namen",
+    openAssign: "✏️ Drankjes toewijzen",
     potShort: "In de pot",
     splitEvenShort: (n: number) => `Gelijk over ${n}`,
     perPersonShort: "Per persoon",
@@ -761,7 +762,7 @@ const T = {
     fairSetupIntro: "Voeg de mensen toe. Tik een naam of laat 'm staan (Gast N). Daarna wijs je toe wie wat dronk.",
     guestNamePh: "tik om naam te wijzigen",
     fairAddPerson: "+ Persoon toevoegen",
-    fairSetupDone: "Klaar — nu toewijzen",
+    fairSetupDone: "Naar drankjes toewijzen →",
     roundsOverviewTitle: "🧾 Rondjesoverzicht",
     peopleInRound: "personen in dit rondje",
     showDetails: "Toon details",
@@ -1253,6 +1254,7 @@ const T = {
     stepOf: (n: number, t: number) => `étape ${n} sur ${t}`,
     backToAssign: "← Retour à l'attribution",
     backToNames: "← Retour aux noms",
+    openAssign: "✏️ Attribuer les boissons",
     potShort: "Dans la cagnotte",
     splitEvenShort: (n: number) => `Également sur ${n}`,
     perPersonShort: "Par personne",
@@ -1307,7 +1309,7 @@ const T = {
     fairSetupIntro: "Ajoute les personnes. Tape un nom ou laisse-le (Invit\u00e9 N). Ensuite tu attribues qui a bu quoi.",
     guestNamePh: "touche pour renommer",
     fairAddPerson: "+ Ajouter une personne",
-    fairSetupDone: "Termin\u00e9 — attribuer",
+    fairSetupDone: "Vers l'attribution des boissons →",
     roundsOverviewTitle: "🧾 Aper\u00e7u des tourn\u00e9es",
     peopleInRound: "personnes dans cette tourn\u00e9e",
     showDetails: "Voir les détails",
@@ -5524,8 +5526,13 @@ export default function PartyTest() {
         {/* Alles toegewezen en je kwam uit de snelle modus? Dan is dit de weg vooruit.
             Eén knop, geen kaart: je hebt hier verder niets te beslissen. */}
         {settle && fromQuick && rounds.length > 0 && unassignedAllRounds === 0 && (
-          <button style={{ ...S.btnP, width: "100%", marginBottom: 13, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }}
-            onClick={() => setView("payers")}>{L.toStep3}</button>
+          <div style={{ marginBottom: 13 }}>
+            <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }}
+              onClick={() => setView("payers")}>{L.toStep3}</button>
+            {/* Alles toegewezen betekent niet dat je niets meer wil schuiven. */}
+            <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}
+              onClick={() => { setAssignAllMode(true); setAssignIdx(0) }}>{L.openAssign}</button>
+          </div>
         )}
         {settle && unassignedAllRounds > 0 && firstUnassignedIdx >= 0 && (
           <div style={{ ...S.card, background: "rgba(224,104,92,0.08)", border: "1.5px solid rgba(224,104,92,0.45)" }}>
@@ -5595,7 +5602,7 @@ export default function PartyTest() {
                         const took = roundDrinks.filter((d) => (r.orders[d.id]?.[p.id] ?? 0) > 0)
                         return (
                           <div key={p.id} style={{ marginBottom: 9 }}>
-                            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 5 }}>{p.name}{took.length > 0 && <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}> · {took.reduce((a, d) => a + (r.orders[d.id]?.[p.id] ?? 0), 0)} drankje(s)</span>}</div>
+                            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{took.length > 0 && <span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}> · {took.reduce((a, d) => a + (r.orders[d.id]?.[p.id] ?? 0), 0)} drankje(s)</span>}</div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                               {roundDrinks.filter((d) => (r.orders[d.id]?.[p.id] ?? 0) > 0).map((d) => { const n = r.orders[d.id]?.[p.id] ?? 0; return (
                                 <span key={d.id} style={{ ...S.chip(n), padding: "5px 10px", fontSize: 14.5 }}>{d.emoji} {d.name}<span style={S.badge}>{n}</span><span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 15.5, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>−</span></span>
@@ -6429,12 +6436,12 @@ export default function PartyTest() {
                 <span style={{ position: "absolute", top: -11, left: 13, width: 23, height: 23, borderRadius: "50%", background: "#1f8a4c", color: "#fff", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>✓</span>
               )}
               <div style={{ ...S.row, justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
-                <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", paddingLeft: mist ? 0 : 20 }}>{L.roundSummary(idx + 1, items)}</span>
+                <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", paddingLeft: mist ? 0 : 20, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.roundSummary(idx + 1, items)}</span>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                   <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>€</span>
                   <input type="text" inputMode="decimal" placeholder="0,00"
                     {...bedragVeld(`payer-${r.id}`, r.amount || 0, (v) => rSetAmount(idx, v))}
-                    style={{ ...S.input, width: 88, padding: "8px 10px", fontSize: 16, fontWeight: 800, color: "#c88a1a", textAlign: "right" }} />
+                    style={{ ...S.input, width: 88, flexShrink: 0, padding: "8px 10px", fontSize: 16, fontWeight: 800, color: "#c88a1a", textAlign: "right" }} />
                 </span>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -6451,7 +6458,7 @@ export default function PartyTest() {
                 {people.map((p) => {
                   const on = (r.payers?.[p.id] || 0) > 0.005
                   return (
-                    <span key={p.id} onClick={() => { if (geenBedrag) { setNotice(L.fillAmountFirst); return } rTogglePayer(idx, p.id) }}
+                    <span key={p.id} onClick={() => { if (geenBedrag) { setNotice(L.fillAmountFirst); return } rTogglePayer(idx, p.id) }} title={p.name}
                       style={{ ...S.chip(on ? 1 : 0), fontSize: 14.5, padding: "6px 11px", opacity: geenBedrag ? 0.5 : 1 }}>
                       {p.name}{on && (gekozen.length > 1 || uitPot) && <span style={S.badge}>{euro(r.payers[p.id])}</span>}
                     </span>
