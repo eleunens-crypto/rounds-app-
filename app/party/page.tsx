@@ -530,6 +530,7 @@ const T = {
     fairSplit: "⚖️ Fair Split",
     equalSplit: "iedereen evenveel",
     equalWouldBe: (v: string) => `Gelijk verdelen zou ${v} per persoon zijn.`,
+    equalColHead: "gelijk",
     equalSplitWarn: "⚠️ Dit is een gelijke verdeling, geen Fair Split.",
     fairSplitInfo: "Gelijke verdeling = totaal ÷ aantal personen. Fair Split is eerlijker: wie weinig of niks dronk, betaalt niet mee voor wie veel dronk.",
     unassignedWarn: "Wijs de resterende drankjes toe, dan verdeelt de app eerlijk op wat elk verteerde.",
@@ -548,7 +549,7 @@ const T = {
     paysTo: (v: string, wie: string) => `betaalt ${v} aan ${wie}`,
     getsFrom: (v: string, wie: string) => `krijgt ${v} van ${wie}`,
     severalTransfers: (n: number) => `${n} overschrijvingen`,
-    togetherDrank: "Samen gedronken",
+    togetherDrank: "Totaal",
     potBackToContributors: (v: string) => `Nog ${v} in de pot — gaat terug naar wie inlegde.`,
     settleTogetherInfo: "Voor koppels, huisgenoten, wie samen naar huis rijdt. Iedereen houdt zijn eigen drankjes — enkel het eindbedrag wordt samengeteld.",
     tapWhoWith: (n: string) => `Tik nu op wie samen met ${n} afrekent.`,
@@ -1048,6 +1049,7 @@ const T = {
     fairSplit: "⚖️ Fair Split",
     equalSplit: "part égale",
     equalWouldBe: (v: string) => `Un partage égal ferait ${v} par personne.`,
+    equalColHead: "égal",
     equalSplitWarn: "⚠️ Ceci est une répartition égale, pas un Fair Split.",
     fairSplitInfo: "Répartition égale = total ÷ nombre de personnes. Le Fair Split est plus juste : qui a peu ou rien bu ne paie pas pour ceux qui ont beaucoup bu.",
     unassignedWarn: "Attribue les boissons restantes, puis l'app répartit selon ce que chacun a consommé.",
@@ -1066,7 +1068,7 @@ const T = {
     paysTo: (v: string, wie: string) => `paie ${v} à ${wie}`,
     getsFrom: (v: string, wie: string) => `reçoit ${v} de ${wie}`,
     severalTransfers: (n: number) => `${n} virements`,
-    togetherDrank: "Bu ensemble",
+    togetherDrank: "Total",
     potBackToContributors: (v: string) => `Encore ${v} dans la cagnotte — revient à ceux qui ont misé.`,
     settleTogetherInfo: "Pour les couples, colocataires, ceux qui rentrent ensemble. Chacun garde ses boissons — seul le montant final est additionné.",
     tapWhoWith: (n: string) => `Touche maintenant qui règle avec ${n}.`,
@@ -5579,7 +5581,12 @@ export default function PartyTest() {
           <div style={{ fontSize: 30, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</div>
           {wisselde && (
             <div style={{ marginTop: 12, paddingTop: 11, borderTop: "1px dashed rgba(120,95,20,0.25)", textAlign: "left" }}>
-              <div style={{ fontSize: 13, color: "#8a5e0f", fontWeight: 800, marginBottom: 4 }}>⚠️ {L.headcountVaried}</div>
+              <div style={{ ...S.row, justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 13, color: "#8a5e0f", fontWeight: 800 }}>⚠️ {L.headcountVaried}</span>
+                {/* Rechtstreeks naar het overzicht om het aantal per rondje bij te stellen. */}
+                <span onClick={() => { setOverviewBackTo("hub"); setView("roundsOverview") }} title={L.adjustWord}
+                  style={{ flexShrink: 0, fontSize: 13, cursor: "pointer", background: "#fff", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 12, padding: "4px 9px" }}>✏️</span>
+              </div>
               <div style={{ fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.6 }}>
                 {betaalde.map((r) => `${L.roundWord} ${rounds.indexOf(r) + 1}: ${Math.max(1, r.headcount || 1)} ${L.people}`).join("  ·  ")}
               </div>
@@ -5839,13 +5846,13 @@ export default function PartyTest() {
             const geenBedrag = (r.amount || 0) <= 0.005
             const invulRij = fillMode && geenBedrag && editRoundId !== r.id
             return (
-              <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden", ...(editRoundId === r.id ? { boxShadow: "inset 0 0 0 2px rgba(240,165,0,0.55)", background: "#fffdf3" } : invulRij ? { border: "1.5px solid rgba(240,165,0,0.55)", background: "#fffdf3" } : {}) }}>
-                <div onClick={() => toggle(r.id)} style={{ padding: "12px 14px", cursor: "pointer", background: editRoundId === r.id ? "rgba(240,165,0,0.1)" : open ? "rgba(240,165,0,0.06)" : invulRij ? "rgba(240,165,0,0.09)" : "#fff" }}>
+              <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden", ...(editRoundId === r.id ? { boxShadow: "inset 0 0 0 2px rgba(240,165,0,0.55)", background: "#fffdf3" } : invulRij ? { border: "2px solid rgba(224,104,92,0.65)", background: "rgba(224,104,92,0.05)" } : {}) }}>
+                <div onClick={() => toggle(r.id)} style={{ padding: "12px 14px", cursor: "pointer", background: editRoundId === r.id ? "rgba(240,165,0,0.1)" : open ? "rgba(240,165,0,0.06)" : invulRij ? "rgba(224,104,92,0.07)" : "#fff" }}>
                   <div style={{ ...S.row, justifyContent: "space-between", gap: 8 }}>
                     <div style={{ ...S.row, gap: 8, minWidth: 0 }}>
                       <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{editRoundId === r.id ? L.editRoundHead(nr) : L.roundSummary(nr, items)}</span>
                       {geenBedrag && editRoundId !== r.id && (
-                        <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 800, color: "#8a5e0f", background: "rgba(240,165,0,0.16)", borderRadius: 12, padding: "3px 9px", whiteSpace: "nowrap" }}>{L.noAmountBadge}</span>
+                        <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 800, borderRadius: 12, padding: "3px 9px", whiteSpace: "nowrap", color: invulRij ? "#b0402f" : "#8a5e0f", background: invulRij ? "rgba(224,104,92,0.14)" : "rgba(240,165,0,0.16)" }}>{L.noAmountBadge}</span>
                       )}
                     </div>
                     <div style={{ ...S.row, gap: 9, flexShrink: 0 }}>
@@ -5868,9 +5875,9 @@ export default function PartyTest() {
                   </div>
                   {/* Kwam je aanvullen? Dan hoef je niet eerst open te klappen. */}
                   {invulRij && (
-                    <div style={{ textAlign: "right", marginTop: 9 }}>
+                    <div style={{ textAlign: "right", marginTop: 7 }}>
                       <span onClick={(e) => { e.stopPropagation(); setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r) }}
-                        style={{ display: "inline-block", fontSize: 13, fontWeight: 800, color: "#c98a00", background: "#fff", border: "1px solid rgba(240,165,0,0.6)", borderRadius: 14, padding: "8px 14px", cursor: "pointer", whiteSpace: "nowrap" }}>{L.addAmountBtn}</span>
+                        style={{ fontSize: 13.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textDecoration: "underline", whiteSpace: "nowrap" }}>{L.addAmountBtn}</span>
                     </div>
                   )}
                 </div>
@@ -5904,18 +5911,18 @@ export default function PartyTest() {
                       })}
                     </div>
 
-                    <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
-                      <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>💶 {L.paidLabel}</span>
+                    <div style={{ ...S.row, justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>👤 {L.peopleInRound}</span>
                       {bewerk && dr ? (
-                        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                          <input onClick={(e) => e.stopPropagation()} type="text" inputMode="decimal" placeholder="0,00"
-                            value={dr.amount > 0 ? String(dr.amount).replace(".", ",") : ""}
-                            onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); setEditDraft((c) => c ? { ...c, amount: parseFloat(v) || 0 } : c) }}
-                            style={{ ...S.input, width: 92, padding: "8px 10px", fontSize: 16, fontWeight: 800, color: "#c88a1a", textAlign: "right" }} />
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <button style={{ width: 32, height: 32, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: dr.headcount > 1 ? 1 : 0.4 }}
+                            onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: Math.max(1, c.headcount - 1) } : c) }}>−</button>
+                          <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#4a3f1e" }}>{dr.headcount}</span>
+                          <button style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
+                            onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: c.headcount + 1 } : c) }}>+</button>
+                        </div>
                       ) : (
-                        <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "—"}</span>
+                        <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{r.headcount || 1}</span>
                       )}
                     </div>
 
@@ -5954,18 +5961,18 @@ export default function PartyTest() {
                       )}
                     </div>
 
-                    <div style={{ ...S.row, justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
-                      <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>👤 {L.peopleInRound}</span>
+                    <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>💶 {L.paidLabel}</span>
                       {bewerk && dr ? (
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <button style={{ width: 32, height: 32, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: dr.headcount > 1 ? 1 : 0.4 }}
-                            onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: Math.max(1, c.headcount - 1) } : c) }}>−</button>
-                          <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#4a3f1e" }}>{dr.headcount}</span>
-                          <button style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
-                            onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: c.headcount + 1 } : c) }}>+</button>
-                        </div>
+                        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>€</span>
+                          <input onClick={(e) => e.stopPropagation()} type="text" inputMode="decimal" placeholder="0,00"
+                            value={dr.amount > 0 ? String(dr.amount).replace(".", ",") : ""}
+                            onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."); setEditDraft((c) => c ? { ...c, amount: parseFloat(v) || 0 } : c) }}
+                            style={{ ...S.input, width: 92, padding: "8px 10px", fontSize: 16, fontWeight: 800, color: "#c88a1a", textAlign: "right" }} />
+                        </span>
                       ) : (
-                        <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{r.headcount || 1}</span>
+                        <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "—"}</span>
                       )}
                     </div>
 
@@ -6172,9 +6179,18 @@ export default function PartyTest() {
         <div style={{ ...S.row, gap: 6, marginBottom: 8 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.fairSplit}</h3>
           <span onClick={() => setNotice("⚖️ Fair Split — Eerlijker dan gelijke verdeling. Wie weinig of goedkopere drankjes nam, betaalt niet mee voor wie meer of duurdere drankjes nam.")} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 13, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
+          {/* Koppelen hoort bij het geheel: het verandert zowel de bedragen als de overschrijvingen. */}
+          {people.length >= 2 && (
+            <span onClick={() => setShowTogether((v) => !v)}
+              style={{ marginLeft: "auto", flexShrink: 0, fontSize: 11.5, fontWeight: 800, borderRadius: 14, padding: "4px 9px", cursor: "pointer", whiteSpace: "nowrap",
+                background: showTogether ? "#e08a00" : "#fffdf6", color: showTogether ? "#fff" : "#c98a00", border: "1px solid rgba(240,165,0,0.55)" }}>
+              {showTogether ? `🔗 ${L.closeWord}` : settleGroups.some((g) => g.samen) ? L.settleTogetherCount(settleGroups.filter((g) => g.samen).length) : L.settleTogetherLink}
+            </span>
+          )}
         </div>
-        {/* Eén regel om de twee manieren tegen elkaar te zetten. */}
-        {people.length > 0 && (
+        {showTogether && renderSettleTogether()}
+        {/* Staat de kolom uit? Dan de vergelijking als één regel, zodat ze niet verdwijnt. */}
+        {people.length > 0 && !showEqual && (
           <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.5 }}>👥 {L.equalWouldBe(show(equalShare))}</div>
         )}
         <div style={{ marginBottom: 10 }}>
@@ -6187,12 +6203,16 @@ export default function PartyTest() {
             <button style={{ ...S.btnP, width: "100%", padding: "11px 0", fontSize: 15.5 }} onClick={goAssignUnassigned}>{L.useFairSplit}</button>
           </div>
         )}
-        {showEqual && (
-          <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, fontSize: 12, color: "#8a7d55", fontWeight: 800, paddingBottom: 4, borderBottom: "1px solid rgba(120,95,20,0.12)" }}>
-            <span>gelijke verdeling</span>
-            <span onClick={() => setNotice(L.fairSplitInfo)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 15, height: 15, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 9.5, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
-          </div>
-        )}
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 5, fontSize: 10, color: "#a89a6f", fontWeight: 800, letterSpacing: "0.04em", paddingBottom: 4 }}>
+          {showEqual ? (
+            <>
+              <span onClick={() => setNotice(L.fairSplitInfo)} style={{ cursor: "pointer" }}>{L.equalColHead.toUpperCase()}</span>
+              <span onClick={() => setShowEqual(false)} style={{ cursor: "pointer", fontSize: 12, color: "#c4b896" }}>✕</span>
+            </>
+          ) : (
+            <span onClick={() => setShowEqual(true)} style={{ cursor: "pointer", fontSize: 11, fontWeight: 800, color: "#c98a00", background: "#fffdf6", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 11, padding: "3px 8px", letterSpacing: 0 }}>+ {L.equalColHead}</span>
+          )}
+        </div>
         {people.map((p) => {
           const dronk = consumption(p.id), waarborg = cupOwn(p.id), zelf = paidByPerson(p.id), inpot = contribOf(p.id)
           const owed = dronk + waarborg - zelf - inpot + cardLossPer
@@ -6208,10 +6228,21 @@ export default function PartyTest() {
           return (
             <div key={p.id} style={{ borderBottom: "1px solid rgba(120,95,20,0.06)" }}>
               <div style={{ ...S.row, justifyContent: "space-between", padding: "7px 0", cursor: "pointer" }} onClick={() => setOpenFair((o) => ({ ...o, [p.id]: !open }))}>
-                <span style={{ flex: 1, fontSize: 15.5, fontWeight: 700 }}>{open ? "▾" : "▸"} {p.name} <span style={{ fontSize: 14.5, fontWeight: 800, color: "#1f8a4c" }}>· {show(dronk)}</span>
-                  {Math.abs(owed) > 0.005 && <span style={{ display: "inline-block", marginLeft: 6, fontSize: 12.5, fontWeight: 800, padding: "2px 8px", borderRadius: 20, background: owed > 0 ? "rgba(224,138,0,0.16)" : "rgba(31,138,76,0.14)", color: owed > 0 ? "#b35309" : "#1f8a4c" }}>{tegenpartij ? (owed > 0 ? L.paysTo(show(owed), tegenpartij) : L.getsFrom(show(-owed), tegenpartij)) : `${owed > 0 ? `betaalt ${show(owed)}` : `krijgt ${show(-owed)}`}${mijnTx.length > 1 ? ` · ${L.severalTransfers(mijnTx.length)}` : ""}`}</span>}
-                </span>
-                {showEqual && <span style={{ width: 96, textAlign: "right", fontSize: 14.5, color: "#8a7d55", flexShrink: 0 }}>{show(equalShare)}</span>}
+                <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700 }}>{open ? "▾" : "▸"} {p.name} <span style={{ fontSize: 14, fontWeight: 800, color: "#1f8a4c" }}>· {show(dronk)}</span></span>
+                {/* Elke overschrijving een eigen regel: zo staat er nergens "· 2×" zonder uitleg. */}
+                {mijnTx.length > 0 && (
+                  <span style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 3, alignItems: "flex-end" }}>
+                    {mijnTx.map((t, ti) => {
+                      const ontvangt = t.to === mijnGroep?.label
+                      return (
+                        <span key={ti} style={{ fontSize: 11.5, fontWeight: 800, padding: "3px 8px", borderRadius: 16, whiteSpace: "nowrap", background: ontvangt ? "rgba(31,138,76,0.14)" : "rgba(224,138,0,0.16)", color: ontvangt ? "#1f8a4c" : "#b35309" }}>
+                          {ontvangt ? L.getsFrom(show(t.amount), t.from) : L.paysTo(show(t.amount), t.to)}
+                        </span>
+                      )
+                    })}
+                  </span>
+                )}
+                {showEqual && <span style={{ width: 58, textAlign: "right", paddingLeft: 8, borderLeft: "1px solid rgba(120,95,20,0.18)", fontSize: 12.5, color: "#a89a6f", flexShrink: 0 }}>{show(equalShare)}</span>}
               </div>
               {open && (
                 <div style={{ background: "#faf4e4", borderRadius: 10, padding: "8px 11px", margin: "0 0 8px", fontSize: 14.5 }}>
@@ -6239,46 +6270,19 @@ export default function PartyTest() {
         })}
         <div style={{ ...S.row, justifyContent: "space-between", padding: "9px 0 2px", borderTop: "2px solid rgba(120,95,20,0.25)", marginTop: 2 }}>
           <span style={{ flex: 1, fontSize: 15.5, fontWeight: 800 }}>{L.togetherDrank} <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c" }}>· {show(grandTotal)}</span></span>
-          {showEqual && <span style={{ width: 96, textAlign: "right", fontSize: 14.5, fontWeight: 800, color: "#8a7d55" }}>{show(equalShare * people.length)}</span>}
+          {showEqual && <span style={{ width: 58, textAlign: "right", paddingLeft: 8, borderLeft: "1px solid rgba(120,95,20,0.18)", fontSize: 12.5, fontWeight: 800, color: "#8a7d55", flexShrink: 0 }}>{show(equalShare * people.length)}</span>}
         </div>
         {potRemaining > 0.005 && (
           <div style={{ fontSize: 13, color: "#1f6b3a", background: "rgba(31,138,76,0.08)", borderRadius: 10, padding: "9px 11px", marginTop: 10, lineHeight: 1.5 }}>🫙 {L.potBackToContributors(show(potRemaining))}</div>
         )}
-        <div style={{ fontSize: 13.5, marginTop: 10, textAlign: "right" }}><span onClick={() => setShowEqual((v) => !v)} style={{ color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{showEqual ? "verberg gelijke verdeling" : "toon gelijke verdeling"}</span></div>
-      </div>
-
-      <div style={S.card}>
-        {/* Samen afrekenen is een uitzondering: als link in de kop, niet als eigen sectie. */}
-        <div style={{ ...S.row, justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
-          <h3 style={{ ...S.h3, margin: 0 }}>{L.howYouAllSettle}</h3>
-          {people.length >= 2 && (
-            <span onClick={() => setShowTogether((v) => !v)}
-              style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, borderRadius: 14, padding: "5px 10px", cursor: "pointer", whiteSpace: "nowrap",
-                background: showTogether ? "#e08a00" : "#fffdf6", color: showTogether ? "#fff" : "#c98a00",
-                border: "1px solid rgba(240,165,0,0.55)" }}>
-              {showTogether ? `🔗 ${L.closeWord}` : settleGroups.some((g) => g.samen) ? L.settleTogetherCount(settleGroups.filter((g) => g.samen).length) : L.settleTogetherLink}
-            </span>
-          )}
-        </div>
-        {showTogether && renderSettleTogether()}
         {isSchatting && (
-          <div style={{ background: "#fff8e8", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginBottom: 10 }}>
+          <div style={{ background: "#fff8e8", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10 }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: "#c98a00", marginBottom: 2 }}>⚠️ {L.estimate}</div>
             <div style={{ fontSize: 13.5, color: "#8a7d55", lineHeight: 1.5 }}>{L.estimateWhy}</div>
           </div>
         )}
-        <p style={{ ...S.sub, marginBottom: 8 }}>{L.fewestTransfers}</p>
-        {settlement.tx.length === 0 ? <div style={{ fontSize: 15.5, color: "#1f8a4c", fontWeight: 700 }}>{L.allEven}</div> : settlement.tx.map((t, i) => (
-          <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
-            <span style={{ fontSize: 15.5 }}><b>{t.from}</b> → {t.to}</span><span style={{ fontSize: 16, fontWeight: 800, color: "#b35309" }}>{show(t.amount)}</span>
-          </div>
-        ))}
       </div>
 
-      <div style={{ display: "flex", gap: 10 }}>
-        <button style={{ ...S.btn, flex: 1 }} onClick={() => { setOpenRound(rounds.length - 1); setView("hub") }}>{L.roundsOverview}</button>
-        <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{L.newRound}</button>
-      </div>
     </div></div>
   )
 }
