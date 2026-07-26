@@ -698,7 +698,8 @@ const T = {
     later: "Later",
     back: "Terug",
     quickSettleTitle: "🧾 Afrekenen",
-    quickTotalLabel: "Totaal van alle rondjes",
+    quickTotalLabel: (n: number) => `Totaal van ${n} ${n === 1 ? "rondje" : "rondjes"}`,
+    quickTotalOf: (t: number) => `(van in totaal ${t} ${t === 1 ? "rondje" : "rondjes"})`,
     andWord: "en",
     roundsNoAmountNamed: (lijst: string) => `Rondje ${lijst} zonder bedrag`,
     roundsNoAmountCount: (n: number) => `${n} rondjes zonder bedrag`,
@@ -1252,7 +1253,8 @@ const T = {
     later: "Plus tard",
     back: "Retour",
     quickSettleTitle: "🧾 R\u00e9gler",
-    quickTotalLabel: "Total de toutes les tourn\u00e9es",
+    quickTotalLabel: (n: number) => `Total de ${n} tourn\u00e9e${n === 1 ? "" : "s"}`,
+    quickTotalOf: (t: number) => `(sur ${t} au total)`,
     andWord: "et",
     roundsNoAmountNamed: (lijst: string) => `Tournée ${lijst} sans montant`,
     roundsNoAmountCount: (n: number) => `${n} tournées sans montant`,
@@ -5912,7 +5914,13 @@ export default function PartyTest() {
         </div>
 
         <div style={{ ...S.card, textAlign: "center", background: "rgba(240,165,0,0.06)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
-          <div style={{ fontSize: 14.5, fontWeight: 700, color: "#8a7d55", marginBottom: 4 }}>{L.quickTotalLabel}</div>
+          {/* Het kopje telt alleen de rondjes die meegerekend zijn; het aantal erachter
+              telt álle rondjes. Zie je een verschil, dan zegt de melding eronder welk
+              rondje er nog geen bedrag heeft. */}
+          <div style={{ fontSize: 14.5, fontWeight: 700, color: "#8a7d55", marginBottom: 4 }}>
+            {L.quickTotalLabel(betaalde.length)}
+            {rounds.length > betaalde.length && <span style={{ fontWeight: 600, color: "#a89a6f" }}> {L.quickTotalOf(rounds.length)}</span>}
+          </div>
           <div style={{ fontSize: 30, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</div>
           {wisselde && (
             <div style={{ marginTop: 12, paddingTop: 11, borderTop: "1px dashed rgba(120,95,20,0.25)", textAlign: "left" }}>
@@ -6141,6 +6149,8 @@ export default function PartyTest() {
 
   // ── RONDJESOVERZICHT (alle rondjes + bedragen, totaal of per rondje) ─────────
   if (view === "roundsOverview") {
+    // Hoeveel rondjes tellen echt mee in het totaal: die met een bedrag erop.
+    const metBedrag = rounds.filter((r) => (r.amount || 0) > 0.005).length
     // Nieuwste rondje bovenaan. Open als het in openRounds zit; het laatste rondje
     // staat standaard open (als de gebruiker niks toggelde).
     const laatsteId = rounds.length ? rounds[rounds.length - 1].id : ""
@@ -6166,7 +6176,10 @@ export default function PartyTest() {
         {/* Totaal — de som van alle rondjes. Eén blik op wat de avond kostte. */}
         {/* Geen kader: het totaal hoort bij de lijst eronder, niet als losse knop. */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "0 4px 12px", marginBottom: 4, borderBottom: "1px solid rgba(120,95,20,0.18)" }}>
-          <span style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55" }}>{L.quickTotalLabel}</span>
+          <span style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55" }}>
+            {L.quickTotalLabel(metBedrag)}
+            {rounds.length > metBedrag && <span style={{ fontWeight: 700, color: "#a89a6f" }}> {L.quickTotalOf(rounds.length)}</span>}
+          </span>
           <span style={{ fontSize: 24, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</span>
         </div>
 
