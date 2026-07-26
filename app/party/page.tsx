@@ -60,6 +60,23 @@ const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 // De vaste testgroep herken je aan zijn naam. Die kent het opruimen ook, zodat hij
 // niet vanzelf dichtgaat of verdwijnt.
 const TESTGROEP_NAAM = "🧪 Testgroep"
+
+// Elke modus zijn eigen kleur: paars voor snelle rondjes, groen voor Fair Split. Ze
+// komen terug op het keuzescherm (kader + startknop lichten samen op) en als tint in
+// de groepenlijst. Bewust NIET op knoppen, velden of de pot — die blijven amber, want
+// dat is de kleur van Rundo Party zelf en niet van één van de twee modi.
+const MODUS_SNEL = {
+  rand: "#7a5ea8", vlak: "#f5f1fa", paneel: "#fcfaff",
+  streep: "rgba(122,94,168,0.35)", lijn: "rgba(122,94,168,0.15)", label: "#8a76b3",
+  knop: "linear-gradient(135deg,#9575c4,#7a5ea8)", gloed: "rgba(122,94,168,0.55)",
+  tint: "rgba(122,94,168,0.16)", tekst: "#6b4f92",
+}
+const MODUS_FAIR = {
+  rand: "#1f8a4c", vlak: "#f0f9f4", paneel: "#fbfefc",
+  streep: "rgba(31,138,76,0.35)", lijn: "rgba(31,138,76,0.15)", label: "#5a9a75",
+  knop: "linear-gradient(135deg,#2fae6a,#1f8a4c)", gloed: "rgba(31,138,76,0.55)",
+  tint: "rgba(31,138,76,0.12)", tekst: "#1f6b3a",
+}
 const makeCode = () => Array.from({ length: 6 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("")
 type Cat = "Bier" | "BierAV" | "Frisdrank" | "Wijn" | "Cocktail" | "Mocktail" | "Longdrink" | "Shot" | "Warm" | "Eigen"
 type Drink = { id: string; name: string; emoji: string; cat: Cat; price: number; cup: boolean; fav: boolean; coins: number; custom?: boolean; by?: string }
@@ -315,6 +332,8 @@ const T = {
     tagline: "Rondjes en splitten zonder gedoe!",
     autoName: () => { const d = new Date(); const m = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"]; return `Rondje ${d.getDate()} ${m[d.getMonth()]}` },
     startNow: "Start",
+    startQuickBtn: "Start snelle rondjes",
+    startFairBtn: "Start Fair Split",
     groupNameHint: "NAAM VAN JE GROEP",
     tapToChange: "tik om te wijzigen",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "persoon" : "personen"}`,
@@ -553,7 +572,6 @@ const T = {
     getsFrom: (v: string, wie: string) => `krijgt ${v} van ${wie}`,
     severalTransfers: (n: number) => `${n} overschrijvingen`,
     togetherDrank: "Totaal",
-    potBackToContributors: (v: string) => `Nog ${v} in de pot — gaat terug naar wie inlegde.`,
     settleTogetherInfo: "Voor koppels, huisgenoten, wie samen naar huis rijdt. Iedereen houdt zijn eigen drankjes — enkel het eindbedrag wordt samengeteld.",
     tapWhoWith: (n: string) => `Tik nu op wie samen met ${n} afrekent.`,
     separateAgain: "Weer apart zetten:",
@@ -864,6 +882,8 @@ const T = {
     tagline: "Les tournées et le partage, sans prise de tête !",
     autoName: () => { const d = new Date(); const m = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"]; return `Tournée ${d.getDate()} ${m[d.getMonth()]}` },
     startNow: "Start",
+    startQuickBtn: "Démarrer les tournées rapides",
+    startFairBtn: "Démarrer Fair Split",
     groupNameHint: "NOM DE TON GROUPE",
     tapToChange: "touche pour changer",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "personne" : "personnes"}`,
@@ -1102,7 +1122,6 @@ const T = {
     getsFrom: (v: string, wie: string) => `reçoit ${v} de ${wie}`,
     severalTransfers: (n: number) => `${n} virements`,
     togetherDrank: "Total",
-    potBackToContributors: (v: string) => `Encore ${v} dans la cagnotte — revient à ceux qui ont misé.`,
     settleTogetherInfo: "Pour les couples, colocataires, ceux qui rentrent ensemble. Chacun garde ses boissons — seul le montant final est additionné.",
     tapWhoWith: (n: string) => `Touche maintenant qui règle avec ${n}.`,
     separateAgain: "Séparer à nouveau :",
@@ -2465,9 +2484,12 @@ export default function PartyTest() {
   // Nieuwe start-flow: op het startscherm kies je EERST de aanpak (Fair Split of gewoon
   // rondjes) en de groepsnaam, en "Starten" doet allebei. De modus gaat mee in de insert
   // (createGroup), niet via persistSettings — de groep bestaat op dit punt nog niet.
-  const startWithMode = async (fallbackNaam?: string) => {
-    if (bpSettle === null) return
-    const wilSettle = bpSettle === true
+  // De modus komt nu van de knop zelf mee: elke modus heeft z’n eigen startknop, en
+  // setBpSettle is nog niet doorgevoerd op het moment dat we hier binnenkomen.
+  const startWithMode = async (fallbackNaam?: string, modus?: boolean) => {
+    const keuze = modus ?? bpSettle
+    if (keuze === null || keuze === undefined) return
+    const wilSettle = keuze === true
     // Geen naam of aantal personen meer vragen bij de start: je duikt meteen in de
     // drankjes. De naam valt terug op "Rondje + datum", het aantal leidt de app later
     // zelf af uit de bestelde drankjes (en blijft aanpasbaar in het rondjesoverzicht).
@@ -4368,31 +4390,42 @@ export default function PartyTest() {
           <div>
             {/* Elke keuze is één blok: de rij én z’n voorbeeld zitten binnen dezelfde
                 omlijning, zodat meteen duidelijk is wat bij wat hoort. */}
-            <div style={{ borderRadius: 12, overflow: "hidden", opacity: bpSettle === true ? 0.6 : 1,
-                          border: bpSettle === false ? "2.5px solid #1f8a4c" : "2px solid rgba(120,95,20,0.16)" }}>
+            {/* Elke modus is één geheel: de rij, z’n voorbeeld én de startknop eronder.
+                De gekozen modus licht op in zijn eigen kleur, de andere dimt volledig —
+                kader en knop samen, zodat het één blok blijft en geen losse onderdelen. */}
+            <div style={{ opacity: bpSettle === true ? 0.6 : 1 }}>
+            <div style={{ borderRadius: 12, overflow: "hidden", border: bpSettle === false ? `2.5px solid ${MODUS_SNEL.rand}` : "2px solid rgba(120,95,20,0.16)" }}>
               <button onClick={() => setBpSettle(false)}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", padding: "17px 16px", border: "none", cursor: "pointer", background: bpSettle === false ? "#f0f9f4" : "#fff" }}>
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", padding: "17px 16px", border: "none", cursor: "pointer", background: bpSettle === false ? MODUS_SNEL.vlak : "#fff" }}>
                 <span style={{ fontSize: 31, flexShrink: 0 }}>🍻</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.25 }}>{L.modeQuick}</span>
                   <span style={{ display: "block", fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 2 }}>{L.modeQuickSub}</span>
                 </span>
-                {bpSettle === false && <span style={{ color: "#1f8a4c", fontWeight: 800, fontSize: 24, flexShrink: 0 }}>✓</span>}
+                {bpSettle === false && <span style={{ color: MODUS_SNEL.rand, fontWeight: 800, fontSize: 24, flexShrink: 0 }}>✓</span>}
               </button>
               {bpSettle === false && (
-                <div style={{ background: "#fbfefc", borderTop: "1.5px dashed rgba(31,138,76,0.35)", padding: "14px 15px" }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: "#5a9a75", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 11 }}>↓ {L.howItWorks}</div>
+                <div style={{ background: MODUS_SNEL.paneel, borderTop: `1.5px dashed ${MODUS_SNEL.streep}`, padding: "14px 15px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: MODUS_SNEL.label, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 11 }}>↓ {L.howItWorks}</div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
                     <span style={{ background: "#faf7ec", borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
                     <span style={{ background: "#faf7ec", borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
                     <span style={{ background: "#faf7ec", borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
                   </div>
-                  <div style={{ borderTop: "1px solid rgba(31,138,76,0.15)", paddingTop: 9 }}>
+                  <div style={{ borderTop: `1px solid ${MODUS_SNEL.lijn}`, paddingTop: 9 }}>
                     <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 Bestelling</div>
                     <div style={{ fontSize: 15, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pintje · 2× Cola · 1× Wijn</div>
                   </div>
                 </div>
               )}
+            </div>
+              <button disabled={busy} onClick={() => { setBpSettle(false); startWithMode(undefined, false) }}
+                style={{ ...S.btnP, width: "100%", marginTop: 11, padding: "16px", fontSize: 18,
+                  background: bpSettle === false ? MODUS_SNEL.knop : "#f7f1e2",
+                  color: bpSettle === false ? "#fff" : "#a89a6f",
+                  border: bpSettle === false ? "none" : "1px solid rgba(120,95,20,0.2)",
+                  boxSizing: "border-box",
+                  boxShadow: bpSettle === false ? `0 4px 14px -4px ${MODUS_SNEL.gloed}` : "none" }}>{busy ? L.starting : L.startQuickBtn}</button>
             </div>
 
             {/* Duidelijk dat er een tweede, andere keuze volgt. */}
@@ -4402,20 +4435,20 @@ export default function PartyTest() {
               <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(120,95,20,0.28)" }} />
             </div>
 
-            <div style={{ borderRadius: 12, overflow: "hidden", opacity: bpSettle === false ? 0.6 : 1,
-                          border: bpSettle === true ? "2.5px solid #1f8a4c" : "2px solid rgba(120,95,20,0.16)" }}>
+            <div style={{ opacity: bpSettle === false ? 0.6 : 1 }}>
+            <div style={{ borderRadius: 12, overflow: "hidden", border: bpSettle === true ? `2.5px solid ${MODUS_FAIR.rand}` : "2px solid rgba(120,95,20,0.16)" }}>
               <button onClick={() => setBpSettle(true)}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", padding: "17px 16px", border: "none", cursor: "pointer", background: bpSettle === true ? "#f0f9f4" : "#fff" }}>
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", padding: "17px 16px", border: "none", cursor: "pointer", background: bpSettle === true ? MODUS_FAIR.vlak : "#fff" }}>
                 <span style={{ fontSize: 31, flexShrink: 0 }}>⚖️</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.25 }}>{L.modeTitle}</span>
                   <span style={{ display: "block", fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 2 }}>{L.modeFairSub}</span>
                 </span>
-                {bpSettle === true && <span style={{ color: "#1f8a4c", fontWeight: 800, fontSize: 24, flexShrink: 0 }}>✓</span>}
+                {bpSettle === true && <span style={{ color: MODUS_FAIR.rand, fontWeight: 800, fontSize: 24, flexShrink: 0 }}>✓</span>}
               </button>
               {bpSettle === true && (
-                <div style={{ background: "#fbfefc", borderTop: "1.5px dashed rgba(31,138,76,0.35)", padding: "14px 15px" }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: "#5a9a75", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 11 }}>↓ {L.howItWorks}</div>
+                <div style={{ background: MODUS_FAIR.paneel, borderTop: `1.5px dashed ${MODUS_FAIR.streep}`, padding: "14px 15px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: MODUS_FAIR.label, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 11 }}>↓ {L.howItWorks}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
                     {/* De QR staat vooraan: scannen is de eerste stap, zonder scan geen Fair Split. */}
                     <div>
@@ -4438,15 +4471,19 @@ export default function PartyTest() {
                       </div>
                     ))}
                   </div>
-                  <div style={{ fontSize: 14.5, color: "#6b5f3a", marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(31,138,76,0.15)", lineHeight: 1.5 }}>{L.modeFairLine}</div>
+                  <div style={{ fontSize: 14.5, color: "#6b5f3a", marginTop: 12, paddingTop: 11, borderTop: `1px solid ${MODUS_FAIR.lijn}`, lineHeight: 1.5 }}>{L.modeFairLine}</div>
                 </div>
               )}
             </div>
+              <button disabled={busy} onClick={() => { setBpSettle(true); startWithMode(undefined, true) }}
+                style={{ ...S.btnP, width: "100%", marginTop: 11, padding: "16px", fontSize: 18,
+                  background: bpSettle === true ? MODUS_FAIR.knop : "#f7f1e2",
+                  color: bpSettle === true ? "#fff" : "#a89a6f",
+                  border: bpSettle === true ? "none" : "1px solid rgba(120,95,20,0.2)",
+                  boxSizing: "border-box",
+                  boxShadow: bpSettle === true ? `0 4px 14px -4px ${MODUS_FAIR.gloed}` : "none" }}>{busy ? L.starting : L.startFairBtn}</button>
+            </div>
           </div>
-
-          <button style={{ ...S.btnP, width: "100%", marginTop: 22, padding: "18px", fontSize: 20, opacity: bpSettle === null ? 0.45 : 1 }}
-            disabled={bpSettle === null}
-            onClick={() => startWithMode()}>{busy ? L.starting : L.startNow}</button>
         </div>
 
         {savedGroups.length > 0 && (() => {
@@ -4458,11 +4495,11 @@ export default function PartyTest() {
               <button onClick={() => openSavedGroup(g.id)} disabled={busy}
                 style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 11, textAlign: "left", padding: "12px 14px", borderRadius: 12, background: "#fff", border: "1px solid rgba(120,95,20,0.15)", cursor: "pointer" }}>
                 {/* Aan de kleur en het icoon zie je in één oogopslag welke modus het was. */}
-                <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, background: g.settle ? "rgba(31,138,76,0.12)" : "rgba(240,165,0,0.16)" }}>{g.settle ? "⚖️" : "🍻"}</span>
+                <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, background: g.settle ? MODUS_FAIR.tint : MODUS_SNEL.tint }}>{g.settle ? "⚖️" : "🍻"}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</div>
                   <div style={{ fontSize: 13, color: "#a89a6f", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {g.settle ? L.modeFairShort : L.modeQuickShort} · {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
+                    <span style={{ color: g.settle ? MODUS_FAIR.tekst : MODUS_SNEL.tekst, fontWeight: 800 }}>{g.settle ? L.modeFairShort : L.modeQuickShort}</span> · {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
                   </div>
                 </div>
                 <span style={{ fontSize: 17, color: "#c4b896", flexShrink: 0 }}>›</span>
@@ -4569,13 +4606,13 @@ export default function PartyTest() {
                 {/* Fair Split BOVEN — de voorkeur. Al geselecteerd bij binnenkomst. */}
                 <button onClick={() => setBpSettle(true)}
                   style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
-                           background: bpSettle === true ? "#fff8e8" : "#fff",
-                           boxShadow: bpSettle === true ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
-                           border: bpSettle === true ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
+                           background: bpSettle === true ? MODUS_FAIR.vlak : "#fff",
+                           boxShadow: bpSettle === true ? `0 2px 12px -4px ${MODUS_FAIR.gloed}` : "0 1px 4px rgba(120,95,20,0.06)",
+                           border: bpSettle === true ? `2.5px solid ${MODUS_FAIR.rand}` : "2px solid rgba(120,95,20,0.18)" }}>
                   <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
                     <span style={{ fontSize: 21 }}>⚖️</span>
                     <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>Fair Split</span>
-                    {bpSettle === true && <span style={{ marginLeft: "auto", fontSize: 17, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
+                    {bpSettle === true && <span style={{ marginLeft: "auto", fontSize: 17, color: MODUS_FAIR.rand, fontWeight: 800 }}>✓</span>}
                   </div>
                   <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 13 }}>{L.modeFairSub}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
@@ -4609,13 +4646,13 @@ export default function PartyTest() {
                 {/* Gewoon aantallen ONDER, met bestellijstje. */}
                 <button onClick={() => setBpSettle(false)}
                   style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
-                           background: bpSettle === false ? "#fff8e8" : "#fff",
-                           boxShadow: bpSettle === false ? "0 2px 10px rgba(224,138,0,0.15)" : "0 1px 4px rgba(120,95,20,0.06)",
-                           border: bpSettle === false ? "2.5px solid #e08a00" : "2px solid rgba(120,95,20,0.18)" }}>
+                           background: bpSettle === false ? MODUS_SNEL.vlak : "#fff",
+                           boxShadow: bpSettle === false ? `0 2px 12px -4px ${MODUS_SNEL.gloed}` : "0 1px 4px rgba(120,95,20,0.06)",
+                           border: bpSettle === false ? `2.5px solid ${MODUS_SNEL.rand}` : "2px solid rgba(120,95,20,0.18)" }}>
                   <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
                     <span style={{ fontSize: 21 }}>🍺</span>
                     <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
-                    {bpSettle === false && <span style={{ marginLeft: "auto", fontSize: 17, color: "#1f8a4c", fontWeight: 800 }}>✓</span>}
+                    {bpSettle === false && <span style={{ marginLeft: "auto", fontSize: 17, color: MODUS_SNEL.rand, fontWeight: 800 }}>✓</span>}
                   </div>
                   <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 11 }}>{L.modeQuickSub}</div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
