@@ -428,6 +428,7 @@ const T = {
     allAssignedDone: "Klaar \u2014 alles toegewezen",
     quickStart: "Starten",
     continueRound: (n: number) => `Ga verder met rondje ${n}`,
+    backToRound: (n: number) => `\u2190 Terug naar rondje ${n}`,
 
     // ── instellingen
     groupSettings: "⚙️ Groepsinstellingen",
@@ -981,6 +982,7 @@ const T = {
     allAssignedDone: "Termin\u00e9 \u2014 tout est attribu\u00e9",
     quickStart: "Démarrer",
     continueRound: (n: number) => `Continuer la tournée ${n}`,
+    backToRound: (n: number) => `\u2190 Retour à la tournée ${n}`,
 
     // ── instellingen
     groupSettings: "⚙️ Paramètres",
@@ -1643,6 +1645,9 @@ export default function PartyTest() {
   const [openRounds, setOpenRounds] = useState<Set<string>>(new Set())
   // Onthoud vanwaar je naar het rondjesoverzicht ging, zodat "terug" daarheen keert.
   const [overviewBackTo, setOverviewBackTo] = useState<"hub" | "order">("hub")
+  // Waar je vandaan kwam toen je de instellingen opende. De instellingen hebben geen
+  // kopbalk met navigatie, dus zonder dit weet je er niet meer hoe je terugkeert.
+  const [settingsBackTo, setSettingsBackTo] = useState<"quickSettle" | "order" | "hub">("hub")
   // Welke mode-kaart heeft zijn info-uitleg opengeklapt (via de i-knop).
   const [openInfo, setOpenInfo] = useState<"fair" | "quick" | null>(null)
 
@@ -2609,6 +2614,7 @@ export default function PartyTest() {
     setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setEditPotId(null); setPotBuilderOpen(false); setShowPot(false)
     if (onbPotActive) {
       setOnbPotActive(false)
+      setSettingsBackTo("hub")
       const willHave = potContribTotal + added
       if (potChosen && willHave <= 0.005) {
         setConfirmDlg({ msg: L.potNothingIn(potIsCard), yes: L.anywayWithout(potIsCard), onYes: () => { setConfirmDlg(null); setPotChosen(false); setView("settings") }, onNo: () => { setConfirmDlg(null); setShowPot(true); setOnbPotActive(true) } })
@@ -2676,7 +2682,7 @@ export default function PartyTest() {
     if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); ga() } })
     else ga()
   }
-  const goHome = () => { setFromOnboarding(false); if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("settings") } }); else setView("settings") }
+  const goHome = () => { setFromOnboarding(false); setSettingsBackTo(view === "order" ? "order" : view === "quickSettle" ? "quickSettle" : "hub"); if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("settings") } }); else setView("settings") }
   const potAvailNow = () => { const curPotPart = rounds.length ? (rounds[rounds.length - 1].potPart || 0) : 0; return potContribTotal - (potSpent - curPotPart) }
   // Van aanpak wisselen: je begint helemaal opnieuw in de andere modus. We wissen de
   // rondjes, drankjes en pot van deze groep en sturen je terug naar de kaders met de
@@ -4971,12 +4977,27 @@ export default function PartyTest() {
             // Zolang het bedrag van het vorige rondje niet bevestigd of overgeslagen is,
             // tonen we geen "nieuw rondje" — anders loop je zo van het afronden weg.
             const magNieuw = settle || lastRoundHandled
-            return rounds.length > 0 ? (
+            const naarRondje = () => { setActiveCat(catsPresent[0]); setView("order") }
+            // De instellingen tonen geen kopbalk, dus de weg terug moet hier staan — en
+            // precies naar waar je vandaan kwam, niet naar een algemeen beginpunt.
+            const terug = settingsBackTo === "quickSettle" ? { label: L.backToSettle, ga: () => setView("quickSettle") }
+              : settingsBackTo === "order" ? { label: L.backToRound(roundNr), ga: naarRondje }
+              : null
+            // Afrekenen is vanuit de instellingen altijd bereikbaar zodra er iets te
+            // verdelen valt. Kwam je er net vandaan, dan doet de terugknop hierboven dat al.
+            const kanAfrekenen = (settle ? paidCount > 0 : rounds.length > 0) && settingsBackTo !== "quickSettle"
+            return (
+            <>
+            {terug && (
+              <button style={{ ...S.btnP, width: "100%", marginBottom: 10 }} onClick={terug.ga}>{terug.label}</button>
+            )}
+            {rounds.length > 0 ? (
             // Er zijn afgeronde rondjes: overzicht + nieuw/verder.
             <div style={{ display: "flex", gap: 10 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (!settle) { setOverviewBackTo("hub"); setView("roundsOverview") } else { setOpenRound(rounds.length - 1); setView("hub") } }}>{L.roundsOverview}</button>
+              {/* Kwam je uit het bestelscherm, dan zegt de knop hierboven dit al. */}
               {echtOnafgerond
-                ? <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>
+                ? (settingsBackTo === "order" ? null : <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>)
                 : magNieuw
                 ? <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{L.newRound}</button>
                 : null}
@@ -4985,14 +5006,20 @@ export default function PartyTest() {
             // Nog geen afgerond rondje, maar wel bezig met rondje 1: verder of terug.
             <div style={{ display: "flex", gap: 10 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setNotice(L.noRoundsYet)}>{L.roundsOverview}</button>
-              <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>
+              {settingsBackTo !== "order" && <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>}
             </div>
           ) : (
             // Groep bestaat, nog geen rondjes: kies zelf waar je heen wil.
             <div style={{ display: "flex", gap: 10 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setView("hub")}>{L.roundsOverview}</button>
-              <button style={{ ...S.btnP, flex: 1 }} onClick={() => { setActiveCat(catsPresent[0]); setView("order") }}>{L.toFirstRound}</button>
+              <button style={{ ...S.btnP, flex: 1 }} onClick={naarRondje}>{L.toFirstRound}</button>
             </div>
+          )}
+            {kanAfrekenen && (
+              <button style={{ ...S.btn, width: "100%", marginTop: 10, fontWeight: 800 }}
+                onClick={() => { if (settle) goFinal(); else goQuickSettle() }}>{settle ? L.settleBtn : L.quickSettleTitle}</button>
+            )}
+            </>
           )
           })()}
         </div>
@@ -5402,7 +5429,7 @@ export default function PartyTest() {
           <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.35)" }}>
             <div style={{ ...S.row, justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
               <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{potIsCard ? L.drinkCard : L.potStartTitle}</span>
-              <span onClick={() => setView("settings")} title="⚙️" style={{ fontSize: 19, cursor: "pointer", lineHeight: 1, flexShrink: 0, opacity: 0.7 }}>⚙️</span>
+              <span onClick={() => { setSettingsBackTo("hub"); setView("settings") }} title="⚙️" style={{ fontSize: 19, cursor: "pointer", lineHeight: 1, flexShrink: 0, opacity: 0.7 }}>⚙️</span>
             </div>
             {potContribTotal > 0.005 ? (
               <div style={{ ...S.row, justifyContent: "space-between", marginTop: 4 }}>
