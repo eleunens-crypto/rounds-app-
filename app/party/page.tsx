@@ -682,6 +682,8 @@ const T = {
     roundsNoAmountCount: (n: number) => `${n} rondjes zonder bedrag`,
     roundsNoAmountWhy: "Die tellen niet mee in de verdeling hieronder. Vul ze aan of laat ze zo.",
     fillAmountsBtn: "Bedragen aanvullen ›",
+    nothingToSplit: "Er valt nog niets te verdelen",
+    nothingToSplitWhy: "Geen enkel rondje heeft een bedrag. Vul de openstaande bedragen aan — daarna kan je gelijk verdelen of overstappen naar Fair Split.",
     noAmountBadge: "zonder bedrag",
     addAmountBtn: "€ Bedrag toevoegen",
     splitOverGroup: "Verdelen",
@@ -1229,6 +1231,8 @@ const T = {
     roundsNoAmountCount: (n: number) => `${n} tournées sans montant`,
     roundsNoAmountWhy: "Elles ne comptent pas dans le partage ci-dessous. Complète-les ou laisse-les.",
     fillAmountsBtn: "Compléter les montants ›",
+    nothingToSplit: "Rien à répartir pour l'instant",
+    nothingToSplitWhy: "Aucune tournée n'a de montant. Complète les montants ouverts — ensuite tu pourras partager à parts égales ou passer à Fair Split.",
     noAmountBadge: "sans montant",
     addAmountBtn: "€ Ajouter le montant",
     splitOverGroup: "Partager",
@@ -1902,6 +1906,12 @@ export default function PartyTest() {
 
   // Snelle rondjes: het totaal in de pot volgt uit "iedereen legt X in" × aantal
   // personen. Zo klopt het opgeslagen totaal, of je nu het bedrag of het aantal wijzigt.
+  // Een drankkaart hoort alleen bij Fair Split. In snelle rondjes (en dus ook in het
+  // hele overstaptraject dat daaruit vertrekt) is de pot altijd gewoon geld.
+  useEffect(() => {
+    if (!settle && potIsCard) setPotIsCard(false)
+  }, [settle, potIsCard])
+
   useEffect(() => {
     if (settle) return
     const totaal = potPerMan * Math.max(1, headcount)
@@ -3665,7 +3675,7 @@ export default function PartyTest() {
           {potSpent > 0 && <span style={{ ...S.pill, background: "rgba(224,138,0,0.12)", color: "#c98a00", fontSize: 14, padding: "4px 10px" }}>besteed {euro(potSpent)}</span>}
           <span style={{ ...S.pill, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(224,104,92,0.14)", color: potRemaining > 0 ? "#1f8a4c" : "#c0554a", fontSize: 14, padding: "4px 10px", fontWeight: 800 }}>nog {euro(potRemaining)}</span>
         </div>
-        {settle && (
+        {settle && !fromQuick && (
         <div style={{ ...S.row, gap: 6, marginBottom: 8 }}>
           <div onClick={() => setPotIsCard(false)} style={{ ...S.seg(!potIsCard), padding: "7px 6px", fontSize: 14.5, opacity: !potIsCard ? 1 : 0.5 }}>{L.potMoney}</div>
           <div onClick={() => setPotIsCard(true)} style={{ ...S.seg(potIsCard), padding: "7px 6px", fontSize: 14.5, opacity: potIsCard ? 1 : 0.5 }}>{L.drinkCard}</div>
@@ -5299,7 +5309,7 @@ export default function PartyTest() {
           <>
           <div style={{ fontSize: 14.5, fontWeight: 800, color: "#8a7d55", marginBottom: 7 }}>{L.paidBy} <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.multiplePossible}</span></div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-            <span style={{ ...S.chip(payPot ? 1 : 0), opacity: st.potAvail <= 0.005 ? 0.45 : 1 }} onClick={() => { if (!payPot && st.potAvail <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg (€0). Tik rechtsboven op “${potIsCard ? "drankkaart" : "pot"} + toevoegen” om eerst in te leggen.`); return } const nextPot = !payPot; setPayPot(nextPot); autoSplit(payPersons, nextPot); setPaidConfirmed(false) }}>{potIsCard ? "💳 drankkaart" : "{L.thePot}"}</span>
+            <span style={{ ...S.chip(payPot ? 1 : 0), opacity: st.potAvail <= 0.005 ? 0.45 : 1 }} onClick={() => { if (!payPot && st.potAvail <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg (€0). Tik rechtsboven op “${potIsCard ? "drankkaart" : "pot"} + toevoegen” om eerst in te leggen.`); return } const nextPot = !payPot; setPayPot(nextPot); autoSplit(payPersons, nextPot); setPaidConfirmed(false) }}>{potIsCard ? "💳 drankkaart" : L.thePot}</span>
             {people.map((p) => <span key={p.id} style={S.chip(payPersons.includes(p.id) ? 1 : 0)} onClick={() => togglePayPerson(p.id)}>{p.name}</span>)}
           </div>
 
@@ -5803,6 +5813,9 @@ export default function PartyTest() {
     const getrakteerd = betaalde.filter((r) => treatedRounds.has(r.id))
     const teVerdelen = betaalde.filter((r) => !treatedRounds.has(r.id))
     const traktatieTot = getrakteerd.reduce((s, r) => s + (r.amount || 0), 0)
+    // Staat alles op €0, dan is er geen verdeling — in geen van beide modi. Dan tonen we
+    // geen rekensom van nul, maar zeggen we waar het aan ligt.
+    const nietsTeVerdelen = teVerdelen.reduce((s, r) => s + (r.amount || 0), 0) <= 0.005
     // Wie wanneer meedeed, afgeleid uit het aantal per rondje: gaat het omhoog dan schoof
     // er iemand aan, gaat het omlaag dan ging er iemand weg (de laatst aangekomene eerst).
     // Zo betaalt een laatkomer niet mee voor rondjes van vóór z'n aankomst.
@@ -5898,11 +5911,24 @@ export default function PartyTest() {
         </div>
 
         {/* De uitleg verschijnt waar je tikte, met de overstap eronder. */}
-        {settleChoice === "fair" && (
+        {settleChoice === "fair" && !nietsTeVerdelen && (
           <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
             <div style={{ fontSize: 14.5, color: "#4a6b57", lineHeight: 1.55, marginBottom: 14, textAlign: "center" }}>{L.fairSplitExplain}</div>
             <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={goToFairSplit}>{L.switchToFairBtn}</button>
             <button style={{ width: "100%", marginTop: 8, padding: "9px 0", background: "none", border: "none", fontSize: 14, fontWeight: 700, color: "#a89a6f", cursor: "pointer" }} onClick={() => setSettleChoice(null)}>{L.later}</button>
+          </div>
+        )}
+
+        {/* Op €0 valt er niets te kiezen: geen bedragen, geen verdeling. Eén melding
+            met de knop om ze aan te vullen — voor beide knoppen dezelfde. */}
+        {settleChoice !== null && nietsTeVerdelen && (
+          <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.5)" }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#8a5e0f", marginBottom: 4 }}>€0 — {L.nothingToSplit}</div>
+            <div style={{ fontSize: 13.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 11 }}>{L.nothingToSplitWhy}</div>
+            <button style={{ ...S.btnP, width: "100%" }}
+              onClick={() => { setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview") }}>
+              {L.fillAmountsBtn}
+            </button>
           </div>
         )}
 
@@ -5917,7 +5943,7 @@ export default function PartyTest() {
               return (
                 <>
                   {/* Koos je Fair Split? Dan is de gelijke verdeling niet meer aan de orde. */}
-                  {settleChoice === "equal" && (<>
+                  {settleChoice === "equal" && !nietsTeVerdelen && (<>
                   {/* Gecentreerd tussen de twee knoppen: het getal is hier de hoofdzaak. */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, background: "#faf4e4", borderRadius: 10, padding: "10px 13px", marginBottom: 12 }}>
                     <button style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 9, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: deelAantal > 1 ? 1 : 0.4 }}
@@ -6036,9 +6062,12 @@ export default function PartyTest() {
           <button onClick={addPerson} style={{ ...S.btn, width: "100%", marginTop: 12, fontWeight: 800, border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.06)", color: "#c98a00" }}>{L.fairAddPerson}</button>
         </div>
         <button style={{ ...S.btnP, width: "100%", marginTop: 6, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={confirmFairSetup}>{L.fairSetupDone}</button>
-        {/* Terug naar het afrekenscherm, met Fair Split nog aangeduid. */}
+        {/* Terug. Kwam je hier vanuit snelle rondjes, dan ga je naar het afrekenscherm
+            met Fair Split nog aangeduid — de modus staat dan nog op snelle rondjes.
+            Zat de groep al in Fair Split, dan is het afrekenscherm van snelle rondjes
+            niet de juiste bestemming: dan hoor je terug op het overzicht. */}
         <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 15, fontWeight: 700, color: "#8a7d55" }}
-          onClick={() => { setFromQuick(false); setSettleChoice("fair"); setView("quickSettle") }}>{L.back}</button>
+          onClick={() => { if (fromQuick || !settle) { setFromQuick(false); setSettleChoice("fair"); setView("quickSettle") } else { setOpenRound(rounds.length - 1); setView("hub") } }}>{L.back}</button>
       </div></div>
     )
   }
@@ -6311,7 +6340,9 @@ export default function PartyTest() {
           return (
             <div style={{ ...S.row, justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "0 4px 11px", borderBottom: "1px solid rgba(120,95,20,0.18)", marginBottom: 12 }}>
               <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 800 }}>{L.totalOf(euro(totaalRondjes))}</span>
-              <span style={{ fontSize: 19, fontWeight: 800, color: openstaand > 0.005 ? "#b0402f" : "#1f8a4c" }}>{openstaand > 0.005 ? L.stillOpen(euro(openstaand)) : L.allCovered}</span>
+              {/* Staat er niets meer open, dan zeggen de vinkjes bij de rondjes het al.
+                  Een "alles gedekt" naast een leeg scherm bevestigt niets. */}
+              {openstaand > 0.005 && <span style={{ fontSize: 19, fontWeight: 800, color: "#b0402f" }}>{L.stillOpen(euro(openstaand))}</span>}
             </div>
           )
         })()}
@@ -6623,9 +6654,6 @@ export default function PartyTest() {
           <span style={{ flex: 1, fontSize: 15.5, fontWeight: 800 }}>{L.togetherDrank} <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c" }}>· {show(grandTotal)}</span></span>
           {showEqual && <span style={{ width: 58, textAlign: "right", paddingLeft: 8, borderLeft: "1px solid rgba(120,95,20,0.18)", fontSize: 12.5, fontWeight: 800, color: "#8a7d55", flexShrink: 0 }}>{show(equalShare * people.length)}</span>}
         </div>
-        {potRemaining > 0.005 && (
-          <div style={{ fontSize: 13, color: "#1f6b3a", background: "rgba(31,138,76,0.08)", borderRadius: 10, padding: "9px 11px", marginTop: 10, lineHeight: 1.5 }}>🫙 {L.potBackToContributors(show(potRemaining))}</div>
-        )}
         {isSchatting && (
           <div style={{ background: "#fff8e8", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10 }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: "#c98a00", marginBottom: 2 }}>⚠️ {L.estimate}</div>
