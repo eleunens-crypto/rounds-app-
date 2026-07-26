@@ -703,6 +703,8 @@ const T = {
     roundsNoAmountCount: (n: number) => `${n} rondjes zonder bedrag`,
     roundsNoAmountWhy: "Die tellen niet mee in de verdeling hieronder. Vul ze aan of laat ze zo.",
     fillAmountsBtn: "Bedragen aanvullen ›",
+    fairNeedsAmountsTitle: "Eerst alle bedragen invullen",
+    fairNeedsAmounts: (n: number) => `${n} ${n === 1 ? "rondje heeft" : "rondjes hebben"} nog geen bedrag. Fair Split verdeelt volgens wie wat dronk — en dat kan pas als elk rondje een bedrag heeft.`,
     nothingToSplit: "Er valt nog niets te verdelen",
     nothingToSplitWhy: "Geen enkel rondje heeft een bedrag. Vul de openstaande bedragen aan — daarna kan je gelijk verdelen of overstappen naar Fair Split.",
     noAmountBadge: "zonder bedrag",
@@ -1254,6 +1256,8 @@ const T = {
     roundsNoAmountCount: (n: number) => `${n} tournées sans montant`,
     roundsNoAmountWhy: "Elles ne comptent pas dans le partage ci-dessous. Complète-les ou laisse-les.",
     fillAmountsBtn: "Compléter les montants ›",
+    fairNeedsAmountsTitle: "Complète d’abord tous les montants",
+    fairNeedsAmounts: (n: number) => `${n} tournée${n === 1 ? "" : "s"} n’${n === 1 ? "a" : "ont"} pas encore de montant. Fair Split répartit selon qui a bu quoi — cela demande un montant par tournée.`,
     nothingToSplit: "Rien à répartir pour l'instant",
     nothingToSplitWhy: "Aucune tournée n'a de montant. Complète les montants ouverts — ensuite tu pourras partager à parts égales ou passer à Fair Split.",
     noAmountBadge: "sans montant",
@@ -3075,7 +3079,13 @@ export default function PartyTest() {
     setView("quickSettle")
   }
   // Van niveau 1 naar Fair Split: eerst snel personen + namen, daarna toewijzen.
-  const goToFairSplit = () => { setFromQuick(true); setView("fairSetup") }
+  // Fair Split rekent met de bedragen per rondje. Ontbreekt er één, dan klopt de
+  // verdeling niet — dus tegenhouden en zeggen waarom, in plaats van half doorlaten.
+  const goToFairSplit = () => {
+    const leeg = rounds.filter((r) => (r.amount || 0) <= 0.005).length
+    if (leeg > 0) { setNotice(L.fairNeedsAmounts(leeg)); return }
+    setFromQuick(true); setView("fairSetup")
+  }
   // Terug naar de gelijke verdeling: de modus omzetten en de rondjes ongemoeid laten.
   const backToEqualSplit = (keuze: "equal" | "fair" = "equal") => {
     setSettle(false)
@@ -5930,7 +5940,17 @@ export default function PartyTest() {
         </div>
 
         {/* De uitleg verschijnt waar je tikte, met de overstap eronder. */}
-        {settleChoice === "fair" && !nietsTeVerdelen && (
+        {settleChoice === "fair" && !nietsTeVerdelen && zonderBedrag.length > 0 && (
+          <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.5)" }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#8a5e0f", marginBottom: 4 }}>⚖️ {L.fairNeedsAmountsTitle}</div>
+            <div style={{ fontSize: 13.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 11 }}>{L.fairNeedsAmounts(zonderBedrag.length)}</div>
+            <button style={{ ...S.btnP, width: "100%" }}
+              onClick={() => { setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview") }}>{L.fillAmountsBtn}</button>
+            <button style={{ width: "100%", marginTop: 8, padding: "9px 0", background: "none", border: "none", fontSize: 14, fontWeight: 700, color: "#a89a6f", cursor: "pointer" }} onClick={() => setSettleChoice(null)}>{L.later}</button>
+          </div>
+        )}
+
+        {settleChoice === "fair" && !nietsTeVerdelen && zonderBedrag.length === 0 && (
           <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
             <div style={{ fontSize: 14.5, color: "#4a6b57", lineHeight: 1.55, marginBottom: 14, textAlign: "center" }}>{L.fairSplitExplain}</div>
             <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={goToFairSplit}>{L.switchToFairBtn}</button>
