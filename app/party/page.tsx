@@ -707,9 +707,11 @@ const T = {
     andWord: "en",
     roundsNoAmountNamed: (lijst: string) => `Rondje ${lijst} zonder bedrag`,
     roundsNoAmountCount: (n: number) => `${n} rondjes zonder bedrag`,
-    roundsNoAmountWhy: "Die tellen niet mee in de verdeling hieronder. Vul ze aan of laat ze zo.",
+    roundsNoAmountWhy: (n: number) => n === 1
+      ? "Die telt niet mee in de verdeling hieronder. Vul aan of laat zo."
+      : "Die tellen niet mee in de verdeling hieronder. Vul ze aan of laat ze zo.",
+    roundsNoAmountFair: "Fair Split verdeelt volgens wie wat dronk — daarvoor heeft elk rondje een bedrag nodig. Vul aan om verder te kunnen.",
     fillAmountsBtn: "Bedragen aanvullen ›",
-    fairNeedsAmountsTitle: "Eerst alle bedragen invullen",
     fairNeedsAmounts: (n: number) => `${n} ${n === 1 ? "rondje heeft" : "rondjes hebben"} nog geen bedrag. Fair Split verdeelt volgens wie wat dronk — en dat kan pas als elk rondje een bedrag heeft.`,
     nothingToSplit: "Er valt nog niets te verdelen",
     nothingToSplitWhy: "Geen enkel rondje heeft een bedrag. Vul de openstaande bedragen aan — daarna kan je gelijk verdelen of overstappen naar Fair Split.",
@@ -1264,9 +1266,11 @@ const T = {
     andWord: "et",
     roundsNoAmountNamed: (lijst: string) => `Tournée ${lijst} sans montant`,
     roundsNoAmountCount: (n: number) => `${n} tournées sans montant`,
-    roundsNoAmountWhy: "Elles ne comptent pas dans le partage ci-dessous. Complète-les ou laisse-les.",
+    roundsNoAmountWhy: (n: number) => n === 1
+      ? "Elle ne compte pas dans le partage ci-dessous. Complète-la ou laisse-la."
+      : "Elles ne comptent pas dans le partage ci-dessous. Complète-les ou laisse-les.",
+    roundsNoAmountFair: "Fair Split répartit selon qui a bu quoi — chaque tournée doit donc avoir un montant. Complète pour continuer.",
     fillAmountsBtn: "Compléter les montants ›",
-    fairNeedsAmountsTitle: "Complète d’abord tous les montants",
     fairNeedsAmounts: (n: number) => `${n} tournée${n === 1 ? "" : "s"} n’${n === 1 ? "a" : "ont"} pas encore de montant. Fair Split répartit selon qui a bu quoi — cela demande un montant par tournée.`,
     nothingToSplit: "Rien à répartir pour l'instant",
     nothingToSplitWhy: "Aucune tournée n'a de montant. Complète les montants ouverts — ensuite tu pourras partager à parts égales ou passer à Fair Split.",
@@ -5978,7 +5982,9 @@ export default function PartyTest() {
         {zonderBedrag.length > 0 && (
           <div style={{ ...S.card, background: "rgba(224,104,92,0.08)", border: "1px solid rgba(224,104,92,0.45)", padding: "12px 13px" }}>
             <div style={{ fontSize: 14.5, fontWeight: 800, color: "#b0402f", marginBottom: 3 }}>{zbLabel}</div>
-            <div style={{ fontSize: 13.5, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 10 }}>{L.roundsNoAmountWhy}</div>
+            {/* Bij gelijk verdelen is een leeg rondje een keuze; bij Fair Split een blokkade.
+                Dezelfde melding, maar de tweede zin zegt wat er in jouw geval geldt. */}
+            <div style={{ fontSize: 13.5, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 10 }}>{settleChoice === "fair" ? L.roundsNoAmountFair : L.roundsNoAmountWhy(zonderBedrag.length)}</div>
             <button
               onClick={() => {
                 // Niets openklappen: in het overzicht markeren we de lege rondjes en
@@ -6017,16 +6023,6 @@ export default function PartyTest() {
         </div>
 
         {/* De uitleg verschijnt waar je tikte, met de overstap eronder. */}
-        {settleChoice === "fair" && !nietsTeVerdelen && zonderBedrag.length > 0 && (
-          <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.5)" }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#8a5e0f", marginBottom: 4 }}>⚖️ {L.fairNeedsAmountsTitle}</div>
-            <div style={{ fontSize: 13.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 11 }}>{L.fairNeedsAmounts(zonderBedrag.length)}</div>
-            <button style={{ ...S.btnP, width: "100%" }}
-              onClick={() => { setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview") }}>{L.fillAmountsBtn}</button>
-            <button style={{ width: "100%", marginTop: 8, padding: "9px 0", background: "none", border: "none", fontSize: 14, fontWeight: 700, color: "#a89a6f", cursor: "pointer" }} onClick={() => setSettleChoice(null)}>{L.later}</button>
-          </div>
-        )}
-
         {settleChoice === "fair" && !nietsTeVerdelen && zonderBedrag.length === 0 && (
           <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
             <div style={{ fontSize: 14.5, color: "#4a6b57", lineHeight: 1.55, marginBottom: 14, textAlign: "center" }}>{L.fairSplitExplain}</div>
