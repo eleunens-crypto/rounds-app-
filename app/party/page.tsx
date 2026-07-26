@@ -2277,47 +2277,61 @@ export default function PartyTest() {
 
   // ── Vaste testgroep ────────────────────────────────────────────────
 
-  // Één groep die altijd in de lijst staat: vier namen en twee afgeronde rondjes met
-  // drankjes en bedragen. Geen pot, geen betalers, geen toewijzing — vanaf dat punt bouw
-  // je elk scherm zelf op. Vastgezet, zodat het automatische opruimen hem laat staan.
+  // Één groep die altijd in de lijst staat, met een avond die al iets voorstelt:
+  // vier namen, een pot van €40, en twee afgeronde rondjes van vijf drankjes — het
+  // eerste met een bedrag maar zonder betaler, het tweede volledig uit de pot. Zo heb
+  // je meteen één open en één gedekt rondje om de afreken- en toewijsschermen te testen.
+  // Vastgezet, zodat het automatische opruimen hem laat staan.
   const testGroep = savedGroups.find((g) => g.owned && g.name === TESTGROEP_NAAM) ?? null
 
   const maakTestgroep = async () => {
     if (busy) return
     setBusy(true)
+    const stuk = (waar: string, msg?: string) => { setNotice(`Testgroep — ${waar} mislukt: ${msg ?? "onbekende fout"}`); setBusy(false) }
+
     // Bestond hij al, dan eerst weg: "opnieuw opzetten" moet een schone lei geven.
     if (testGroep) await supabase.from("party_groups").delete().eq("id", testGroep.id)
     const { data: g, error } = await supabase.from("party_groups")
       .insert([{ name: TESTGROEP_NAAM, invite_code: makeCode(), owner_id: me.current, settle: false, pinned: true }])
       .select("id").single()
-    if (error || !g) { setNotice("Testgroep aanmaken mislukt: " + (error?.message ?? "")); setBusy(false); return }
+    if (error || !g) { stuk("groep aanmaken", error?.message); return }
     const gid = g.id as string
 
     // Vier personen met een naam, zodat de schermen niet vol "Gast 3" staan.
     const ids: string[] = []
     for (const naam of ["Erent", "Eva", "Ilke", "Yelte"]) {
-      const { data: pid } = await supabase.rpc("party_add_person", { p_group: gid, p_name: naam })
-      if (pid) ids.push(pid as string)
+      const { data: pid, error: eP } = await supabase.rpc("party_add_person", { p_group: gid, p_name: naam })
+      if (eP || !pid) { stuk(`persoon ${naam}`, eP?.message); return }
+      ids.push(pid as string)
     }
-    if (ids[0]) await supabase.from("party_people").update({ claimed_by: me.current }).eq("id", ids[0])
+    const { error: eClaim } = await supabase.from("party_people").update({ claimed_by: me.current }).eq("id", ids[0])
+    if (eClaim) { stuk("plaats claimen", eClaim.message); return }
 
-    // Twee afgeronde rondjes. De drankjes hangen aan niemand — dat is precies wat
-    // snelle rondjes doet, en het laat je de toewijzing zelf doorlopen.
-    const perRondje: { key: string; n: number }[][] = [
-      [{ key: "pintje", n: 2 }, { key: "duvel", n: 1 }, { key: "gin-tonic", n: 1 }],
-      [{ key: "coca-cola", n: 2 }, { key: "pintje", n: 2 }],
+    // Een pot van €40 op de groep (niet op namen) — dat is hoe snelle rondjes hem kent,
+    // en meteen de toestand waarin het toewijzen op het betaalscherm nog moet gebeuren.
+    const { error: ePot } = await supabase.rpc("party_add_pot", { p_group: gid, p_amounts: { pot: 40 }, p_is_card: false, p_payers: [] })
+    if (ePot) { stuk("pot", ePot.message); return }
+
+    // Twee afgeronde rondjes van vijf drankjes. De drankjes hangen aan niemand — dat is
+    // precies wat snelle rondjes doet, en het laat je de toewijzing zelf doorlopen.
+    // Rondje 1: bedrag ingevuld, niemand betaalde → blijft openstaan.
+    // Rondje 2: volledig uit de pot betaald → staat gedekt.
+    const rondjes: { drankjes: { key: string; n: number }[]; bedrag: number; uitPot: number }[] = [
+      { drankjes: [{ key: "pintje", n: 2 }, { key: "duvel", n: 1 }, { key: "gin-tonic", n: 1 }, { key: "coca-cola", n: 1 }], bedrag: 25.60, uitPot: 0 },
+      { drankjes: [{ key: "pintje", n: 3 }, { key: "coca-cola", n: 2 }], bedrag: 15.60, uitPot: 15.60 },
     ]
-    const bedragen = [16.21, 21]
-    for (let i = 0; i < perRondje.length; i++) {
-      const { data: rid } = await supabase.rpc("party_open_round", { p_group: gid, p_starter: null })
-      if (!rid) continue
-      for (const it of perRondje[i]) {
-        await supabase.rpc("party_bump", { p_group: gid, p_round: rid, p_person: null, p_drink: it.key, p_delta: it.n })
+    for (const r of rondjes) {
+      const { data: rid, error: eR } = await supabase.rpc("party_open_round", { p_group: gid, p_starter: null })
+      if (eR || !rid) { stuk("rondje openen", eR?.message); return }
+      for (const it of r.drankjes) {
+        const { error: eB } = await supabase.rpc("party_bump", { p_group: gid, p_round: rid, p_person: null, p_drink: it.key, p_delta: it.n })
+        if (eB) { stuk(`drankje ${it.key}`, eB.message); return }
       }
-      await supabase.from("party_rounds").update({
+      const { error: eC } = await supabase.from("party_rounds").update({
         status: "closed", closed_at: new Date().toISOString(),
-        amount: bedragen[i], pot_part: 0, payers: {}, headcount: 4, members: [],
+        amount: r.bedrag, pot_part: r.uitPot, payers: {}, headcount: 4, members: ids,
       }).eq("id", rid)
+      if (eC) { stuk("rondje afsluiten", eC.message); return }
     }
 
     await loadSavedGroups()
