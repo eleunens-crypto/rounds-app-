@@ -57,6 +57,9 @@ function deviceId(): string {
 }
 // Uitnodigingscode zonder I/O/0/1 — die worden verkeerd overgetikt vanaf een scherm.
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+// De vaste testgroep herken je aan zijn naam. Die kent het opruimen ook, zodat hij
+// niet vanzelf dichtgaat of verdwijnt.
+const TESTGROEP_NAAM = "🧪 Testgroep"
 const makeCode = () => Array.from({ length: 6 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("")
 type Cat = "Bier" | "BierAV" | "Frisdrank" | "Wijn" | "Cocktail" | "Mocktail" | "Longdrink" | "Shot" | "Warm" | "Eigen"
 type Drink = { id: string; name: string; emoji: string; cat: Cat; price: number; cup: boolean; fav: boolean; coins: number; custom?: boolean; by?: string }
@@ -2219,7 +2222,7 @@ export default function PartyTest() {
     const tijd = (iso: string) => { const d = new Date(iso).getTime(); return isNaN(d) ? nu : d }
 
     // Stilgevallen groepen sluiten zichzelf af, zodat de lijst "Open" kort blijft.
-    const sluiten = lijst.filter((g) => g.owned && !g.finalized && nu - tijd(g.last_active) > AUTO_SLUIT)
+    const sluiten = lijst.filter((g) => g.owned && !g.finalized && g.name !== TESTGROEP_NAAM && nu - tijd(g.last_active) > AUTO_SLUIT)
     if (sluiten.length > 0) {
       await supabase.from("party_groups").update({ finalized: true }).in("id", sluiten.map((g) => g.id))
       sluiten.forEach((g) => { g.finalized = true })
@@ -2233,7 +2236,7 @@ export default function PartyTest() {
     const over = lijst.filter((g) => !wissen.some((w) => w.id === g.id))
 
     // Vastgezet maar een half jaar niet aangeraakt: voorstellen, niet beslissen.
-    const stil = over.filter((g) => g.owned && g.pinned && nu - tijd(g.last_active) > PIN_STIL)
+    const stil = over.filter((g) => g.owned && g.pinned && g.name !== TESTGROEP_NAAM && nu - tijd(g.last_active) > PIN_STIL)
 
     if (mounted.current) { setSavedGroups(over); setStalePins(stil) }
   }, [])
@@ -2253,56 +2256,22 @@ export default function PartyTest() {
     setStalePins((prev) => prev.filter((x) => x.id !== g.id))
   }
 
-  // ── Testscenario's ──────────────────────────────────────────────────────────
-  // Alleen zichtbaar met ?seed in de URL. Zet in één tik een volledige groep klaar
-  // zodat je een scherm kan beoordelen zonder eerst een avond na te spelen.
-  // Testknoppen achter een sleutelwoord: ?seed=SEED_SLEUTEL zet ze aan op dit toestel en
-  // ze blijven staan, ook na een refresh of een nieuwe build. Een gast die per ongeluk
-  // een link met ?seed erin krijgt, ziet niets — de waarde moet exact kloppen.
-  // Wijzig het woord hieronder wanneer je wil; wie het oude woord kent, is het dan kwijt.
-  const SEED_SLEUTEL = "rundo2026"
-  const [seedMode, setSeedMode] = useState(false)
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    try {
-      const q = new URLSearchParams(window.location.search).get("seed")
-      if (q === "off") localStorage.removeItem("rundo_seed")
-      else if (q === SEED_SLEUTEL) localStorage.setItem("rundo_seed", SEED_SLEUTEL)
-      setSeedMode(localStorage.getItem("rundo_seed") === SEED_SLEUTEL)
-    } catch { /* localStorage niet beschikbaar */ }
-  }, [])
+  // ── Vaste testgroep ────────────────────────────────────────────────
 
-  // Zet de huidige groep terug naar het beginpunt van de snelle modus, zodat je de
-  // omschakeling naar Fair Split opnieuw kan doorlopen zonder een nieuwe groep te maken.
-  // De drankjes blijven staan; alleen wat de omschakeling veroorzaakte wordt teruggedraaid.
-  const resetNaarSnel = async () => {
-    if (!groupId || busy) return
-    setBusy(true)
-    await supabase.from("party_groups").update({ settle: false }).eq("id", groupId)
-    // members leeg = "iedereen die er nu is", payers en pot-aandeel terug op nul.
-    await supabase.from("party_rounds").update({ members: [], payers: {}, pot_part: 0 }).eq("group_id", groupId)
-    // De pot terug op de groep in plaats van op namen.
-    const totaal = potRounds.reduce((a, r) => a + Object.values(r.amounts).reduce((x, y) => x + (y || 0), 0), 0)
-    if (potRounds.length > 0) {
-      await supabase.from("party_pot").update({ amounts: { pot: totaal } }).eq("id", potRounds[0].id)
-      if (potRounds.length > 1) await supabase.from("party_pot").delete().in("id", potRounds.slice(1).map((r) => r.id))
-    }
-    setSettle(false); setFromQuick(false); setHasSettled(false)
-    setSettleChoice(null); setPotNames(null); setFillMode(false)
-    await loadParty(groupId)
-    setBusy(false)
-    setView("quickSettle")
-  }
+  // Één groep die altijd in de lijst staat: vier namen en twee afgeronde rondjes met
+  // drankjes en bedragen. Geen pot, geen betalers, geen toewijzing — vanaf dat punt bouw
+  // je elk scherm zelf op. Vastgezet, zodat het automatische opruimen hem laat staan.
+  const testGroep = savedGroups.find((g) => g.owned && g.name === TESTGROEP_NAAM) ?? null
 
-  const seedTest = async (scenario: "quick" | "assign" | "payers" | "final") => {
+  const maakTestgroep = async () => {
     if (busy) return
     setBusy(true)
-    const tijd = new Date().toTimeString().slice(0, 5)
-    const metFair = scenario !== "quick"
+    // Bestond hij al, dan eerst weg: "opnieuw opzetten" moet een schone lei geven.
+    if (testGroep) await supabase.from("party_groups").delete().eq("id", testGroep.id)
     const { data: g, error } = await supabase.from("party_groups")
-      .insert([{ name: `TEST ${scenario} ${tijd}`, invite_code: makeCode(), owner_id: me.current, settle: metFair }])
+      .insert([{ name: TESTGROEP_NAAM, invite_code: makeCode(), owner_id: me.current, settle: false, pinned: true }])
       .select("id").single()
-    if (error || !g) { setNotice("Seed mislukt: " + (error?.message ?? "")); setBusy(false); return }
+    if (error || !g) { setNotice("Testgroep aanmaken mislukt: " + (error?.message ?? "")); setBusy(false); return }
     const gid = g.id as string
 
     // Vier personen met een naam, zodat de schermen niet vol "Gast 3" staan.
@@ -2311,47 +2280,32 @@ export default function PartyTest() {
       const { data: pid } = await supabase.rpc("party_add_person", { p_group: gid, p_name: naam })
       if (pid) ids.push(pid as string)
     }
-    await supabase.from("party_people").update({ claimed_by: me.current }).eq("id", ids[0])
+    if (ids[0]) await supabase.from("party_people").update({ claimed_by: me.current }).eq("id", ids[0])
 
-    // Een pot van 40 euro, in de snelle modus zonder namen ingelegd.
-    await supabase.rpc("party_add_pot", { p_group: gid, p_amounts: metFair && scenario === "final" ? Object.fromEntries(ids.map((i) => [i, 10])) : { pot: 40 }, p_is_card: false, p_payers: [] })
-
-    // Twee rondjes. Bij "assign" blijven de drankjes op onbekend staan.
-    const perRondje: { key: string; n: number; pid: string | null }[][] = [
-      [{ key: "pintje", n: 2, pid: ids[0] }, { key: "duvel", n: 1, pid: ids[1] }, { key: "gin-tonic", n: 1, pid: ids[2] }],
-      [{ key: "coca-cola", n: 2, pid: ids[3] }, { key: "pintje", n: 2, pid: ids[1] }],
+    // Twee afgeronde rondjes. De drankjes hangen aan niemand — dat is precies wat
+    // snelle rondjes doet, en het laat je de toewijzing zelf doorlopen.
+    const perRondje: { key: string; n: number }[][] = [
+      [{ key: "pintje", n: 2 }, { key: "duvel", n: 1 }, { key: "gin-tonic", n: 1 }],
+      [{ key: "coca-cola", n: 2 }, { key: "pintje", n: 2 }],
     ]
     const bedragen = [16.21, 21]
     for (let i = 0; i < perRondje.length; i++) {
       const { data: rid } = await supabase.rpc("party_open_round", { p_group: gid, p_starter: null })
       if (!rid) continue
       for (const it of perRondje[i]) {
-        // In de snelle modus hangen drankjes nooit aan een naam. Alleen de scenario's
-        // die ná het toewijzen beginnen, krijgen ze wél toegewezen.
-        const aanWie = (scenario === "payers" || scenario === "final") ? it.pid : null
-        await supabase.rpc("party_bump", { p_group: gid, p_round: rid, p_person: aanWie, p_drink: it.key, p_delta: it.n })
+        await supabase.rpc("party_bump", { p_group: gid, p_round: rid, p_person: null, p_drink: it.key, p_delta: it.n })
       }
-      // Rondje 2 komt uit de pot; rondje 1 blijft open werk behalve in "final".
-      const uitPot = i === 1 ? bedragen[i] : 0
-      const betalers = scenario === "final" && i === 0 ? { [ids[0]]: bedragen[0] } : {}
       await supabase.from("party_rounds").update({
         status: "closed", closed_at: new Date().toISOString(),
-        // Bedragen en potbetalingen bestaan al vóór de omschakeling: in de snelle modus
-        // vul je die per rondje in. Alleen de namen achter de drankjes ontbreken nog.
-        amount: bedragen[i],
-        pot_part: uitPot,
-        payers: betalers, headcount: 4, members: ids,
+        amount: bedragen[i], pot_part: 0, payers: {}, headcount: 4, members: [],
       }).eq("id", rid)
     }
 
-    localStorage.setItem("rundo_party_group", gid)
-    setGroupId(gid)
-    await loadParty(gid)
-    setFromQuick(scenario === "assign" || scenario === "payers")
-    setHasSettled(scenario === "final")
-    setView(scenario === "quick" ? "quickSettle" : scenario === "assign" ? "hub" : scenario === "payers" ? "payers" : "final")
+    await loadSavedGroups()
     setBusy(false)
+    await openSavedGroup(gid)
   }
+
   // Een opgeslagen groep heropenen vanaf het startscherm.
   const openSavedGroup = async (id: string) => {
     setBusy(true)
@@ -4495,36 +4449,6 @@ export default function PartyTest() {
             onClick={() => startWithMode()}>{busy ? L.starting : L.startNow}</button>
         </div>
 
-        {/* Testknoppen: enkel met ?seed in de URL, dus onzichtbaar voor gebruikers. */}
-        {seedMode && (
-          <div style={{ ...S.card, marginTop: 16, border: "1px dashed rgba(120,95,20,0.35)" }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: "#8a7d55", marginBottom: 2 }}>🧪 Testgroep aanmaken</div>
-            <div style={{ fontSize: 11.5, color: "#b3a988", marginBottom: 9, lineHeight: 1.4 }}>
-              Alleen op dit toestel zichtbaar, voor jouw eigen tests.
-              <span onClick={() => { try { localStorage.removeItem("rundo_seed") } catch { /* niets */ } setSeedMode(false) }}
-                style={{ marginLeft: 6, color: "#c0554a", fontWeight: 800, cursor: "pointer", textDecoration: "underline" }}>verbergen</span>
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {([
-                ["quick", "snelle rondjes"],
-                ["assign", "stap 2 · toewijzen"],
-                ["payers", "stap 3 · wie betaalde"],
-                ["final", "eindbalans"],
-              ] as const).map(([k, label]) => (
-                <button key={k} disabled={busy} onClick={() => seedTest(k)}
-                  style={{ ...S.btn, fontSize: 13, fontWeight: 800, padding: "8px 12px", opacity: busy ? 0.5 : 1 }}>{label}</button>
-              ))}
-            </div>
-            {/* Terugzetten kan alleen bij een groep die je zelf beheert. */}
-            {groupId && isAdmin && (
-              <button disabled={busy} onClick={resetNaarSnel}
-                style={{ ...S.btn, width: "100%", marginTop: 9, fontSize: 13, fontWeight: 800, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)", opacity: busy ? 0.5 : 1 }}>
-                ↺ Deze groep terug naar snelle rondjes
-              </button>
-            )}
-          </div>
-        )}
-
         {savedGroups.length > 0 && (() => {
           const fmt = (iso: string) => { const d = new Date(iso); return isNaN(d.getTime()) ? "" : `${d.getDate()}/${d.getMonth() + 1}` }
           const open = savedGroups.filter((g) => !g.finalized)
@@ -4603,6 +4527,24 @@ export default function PartyTest() {
             </div>
           )
         })()}
+
+        {/* De testgroep zelf staat gewoon in de lijst hierboven en blijft daar staan.
+            Deze regel maakt hem aan, of zet hem in één tik terug op nul. */}
+        <div style={{ textAlign: "center", marginTop: 20 }}>
+          <span
+            onClick={() => {
+              if (busy) return
+              if (!testGroep) { maakTestgroep(); return }
+              setConfirmDlg({
+                msg: "Testgroep opnieuw opzetten? Alles wat er nu in staat gaat weg.",
+                yes: "Opnieuw opzetten", no: L.cancel, variant: "danger",
+                onYes: () => { setConfirmDlg(null); maakTestgroep() },
+              })
+            }}
+            style={{ display: "inline-block", padding: "7px 15px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, cursor: "pointer", background: "#fff", border: "1px dashed rgba(120,95,20,0.3)", color: "#a89a6f", opacity: busy ? 0.5 : 1 }}>
+            {testGroep ? "↺ Testgroep opnieuw opzetten" : "🧪 Testgroep aanmaken"}
+          </span>
+        </div>
       </div></div>
     )
   }
@@ -6350,9 +6292,14 @@ export default function PartyTest() {
         {/* Zolang de pot nog niet op namen staat, is dit een taak — dus bovenaan. Is hij
             verdeeld, dan wordt het informatie en schuift hij als regel naar onderen. */}
         {potContribTotal > 0.005 && (potZonderNamen || potNames !== null) && (
-          <div style={{ margin: "12px 0 13px", position: "relative", background: "#f4faf6", border: "1.5px solid rgba(31,138,76,0.4)", borderRadius: 16, padding: "13px 13px 12px" }}>
+          <div style={{ margin: "12px 0 13px", position: "relative", background: "#f4faf6", border: potZonderNamen ? "1.5px solid rgba(224,104,92,0.55)" : "1.5px solid rgba(31,138,76,0.4)", borderRadius: 16, padding: "13px 13px 12px" }}>
             {/* Een zakje op de hoek en een smaller kader: de pot is geen rondje in de rij. */}
-            <span style={{ position: "absolute", top: -13, left: -11, width: 34, height: 34, borderRadius: "50%", background: "#fff", border: "1.5px solid rgba(31,138,76,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>💰</span>
+            <span style={{ position: "absolute", top: -13, left: -11, width: 34, height: 34, borderRadius: "50%", background: "#fff", border: potZonderNamen ? "1.5px solid rgba(224,104,92,0.55)" : "1.5px solid rgba(31,138,76,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, zIndex: 1 }}>💰</span>
+            {/* Groen leest als "klaar". Zolang de pot op de groep staat is hij dat niet, en
+                dat moet je zien vóór je de bedragen leest — vandaar bovenaan, over de breedte. */}
+            {potZonderNamen && (
+              <div style={{ margin: "-13px -13px 12px", padding: "6px 13px 6px 40px", borderRadius: "14px 14px 0 0", background: "#c0554a", color: "#fff", fontSize: 12.5, fontWeight: 800, lineHeight: 1.4 }}>⚠ {L.potNotSplit}</div>
+            )}
             <div style={{ ...S.row, justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 10, paddingLeft: 20 }}>
               <span style={{ fontSize: 14.5, fontWeight: 800, color: "#1f6b3a", minWidth: 0 }}>{L.potShort}
                 {potSpent > 0.005 && <span style={{ fontSize: 12.5, fontWeight: 600, color: "#5a9a75" }}> · {L.potUsedFree(euro(potSpent), euro(Math.max(0, potRemaining)))}</span>}
@@ -6404,9 +6351,9 @@ export default function PartyTest() {
                 {/* Twee keuzes naast elkaar; dat de pot nog verdeeld moet worden, blijkt
                     uit het feit dat deze knoppen er staan. Een zin erbij is dubbelop. */}
                 <div style={{ display: "flex", gap: 7 }}>
-                  <button style={{ flex: 1, background: "#fff", border: "1px solid rgba(31,138,76,0.35)", borderRadius: 9, padding: "9px 6px", fontSize: 13, fontWeight: 800, color: "#1f6b3a", cursor: "pointer" }}
+                  <button style={{ flex: 1, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", borderRadius: 9, padding: "9px 6px", fontSize: 13, fontWeight: 800, color: "#fff", cursor: "pointer" }}
                     onClick={verdeelPotOverNamen}>{L.splitEvenShort(people.length)}</button>
-                  <button style={{ flex: 1, background: "#fff", border: "1px solid rgba(31,138,76,0.2)", borderRadius: 9, padding: "9px 6px", fontSize: 13, fontWeight: 800, color: "#5a9a75", cursor: "pointer" }}
+                  <button style={{ flex: 1, background: "#fff", border: "1px solid rgba(240,165,0,0.6)", borderRadius: 9, padding: "9px 6px", fontSize: 13, fontWeight: 800, color: "#8a5e0f", cursor: "pointer" }}
                     onClick={() => { const per = potContribTotal / Math.max(1, people.length); const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(per * 100) / 100 }); setPotNames(n) }}>{L.perPersonShort}</button>
                 </div>
               </>
@@ -6514,7 +6461,12 @@ export default function PartyTest() {
           </div>
         )}
 
-        <button style={{ ...S.btnP, width: "100%", opacity: klaar ? 1 : 0.45 }}
+        {/* Groen = alles staat klaar. Zolang er iets ontbreekt blijft de knop grijs, maar
+            wel aantikbaar: de melding eronder zegt dan wat er nog mist. */}
+        <button style={{ ...S.btnP, width: "100%",
+          background: klaar ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#efe8d6",
+          color: klaar ? "#fff" : "#a89a6f",
+          boxShadow: klaar ? "0 4px 12px -4px rgba(31,138,76,0.6)" : "none" }}
           onClick={() => {
             // Te vroeg getikt? Dan zeggen waarom er niets gebeurt, in plaats van niets doen.
             if (!klaar) { setNotice(zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit); return }
