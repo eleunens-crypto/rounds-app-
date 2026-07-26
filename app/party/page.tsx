@@ -347,6 +347,7 @@ const T = {
     pinOn: "Vastzetten",
     pinOff: "Losmaken",
     maxPins: (n: number) => `Je kan maximaal ${n} groepen vastzetten. Maak er eerst een los.`,
+    sleepBanner: "⏸ Live-updates gepauzeerd — tik om te hervatten",
     showAllGroups: "Toon alle groepen",
     showLessGroups: "Toon er minder",
     cleanupNote: "Afgesloten groepen verdwijnen na een maand. Vastgezette groepen blijven.",
@@ -814,6 +815,7 @@ const T = {
     pinOn: "Épingler",
     pinOff: "Détacher",
     maxPins: (n: number) => `Tu peux épingler ${n} groupes au maximum. Détaches-en un d'abord.`,
+    sleepBanner: "⏸ Mises à jour en direct en pause — touche pour reprendre",
     showAllGroups: "Voir tous les groupes",
     showLessGroups: "Voir moins",
     cleanupNote: "Les groupes clôturés disparaissent après un mois. Les groupes épinglés restent.",
@@ -1270,7 +1272,7 @@ export default function PartyTest() {
   const AUTO_SLUIT = DAG
   const AUTO_WIS = 30 * DAG
   const PIN_STIL = 180 * DAG
-  const MAX_PINS = 5
+  const MAX_PINS = 3
   const GROEPEN_ZICHTBAAR = 5
   const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
   const [showAllGroups, setShowAllGroups] = useState(false)
@@ -1495,6 +1497,10 @@ export default function PartyTest() {
   const [paidConfirmed, setPaidConfirmed] = useState(false)
   const [confirmDlg, setConfirmDlg] = useState<{ msg: string; yes: string; onYes: () => void; onNo?: () => void; no?: string; variant?: "danger" } | null>(null)
   const [notice, setNotice] = useState<string>("")
+  // Slaapstand. De telefoon ligt bij een rondje vaak minutenlang open op tafel; zonder dit
+  // blijft het realtime-kanaal die hele tijd verbinding en data verbruiken. Eén tik hervat.
+  const [slaapt, setSlaapt] = useState(false)
+  const laatsteActie = useRef<number>(Date.now())
   // Zachte melding wanneer iemand nieuw aansluit. Vervaagt vanzelf; alleen de admin
   // krijgt een knop om het terug te draaien (voor als een vreemde de link kreeg).
   const [newcomer, setNewcomer] = useState<{ id: string; name: string } | null>(null)
@@ -2239,6 +2245,25 @@ export default function PartyTest() {
   //     Zonder dit blijven acht slapende telefoons de hele avond meeluisteren.
   useEffect(() => {
     if (!groupId) return
+    const SLAAP_MS = 3 * 60 * 1000
+    laatsteActie.current = Date.now()
+    setSlaapt(false)
+    // Een lange setTimeout wordt door de browser gepauzeerd zodra het scherm op slot gaat,
+    // dus meten we met een tijdstempel plus een korte interval. Terugkeren naar het tabblad
+    // hervat bewust niet vanzelf: dan blijft de melding zichtbaar en weet je waarom het stil lag.
+    const kijk = () => { if (Date.now() - laatsteActie.current >= SLAAP_MS) setSlaapt(true) }
+    const actief = () => { laatsteActie.current = Date.now(); setSlaapt((a) => (a ? false : a)) }
+    const evts: (keyof WindowEventMap)[] = ["pointerdown", "keydown", "scroll", "touchstart"]
+    evts.forEach((e) => window.addEventListener(e, actief, { passive: true }))
+    const iv = setInterval(kijk, 20 * 1000)
+    return () => {
+      clearInterval(iv)
+      evts.forEach((e) => window.removeEventListener(e, actief))
+    }
+  }, [groupId])
+
+  useEffect(() => {
+    if (!groupId || slaapt) return
     let active = true, cooling = false, pending = false
     let cool: ReturnType<typeof setTimeout> | null = null
     let slaap: ReturnType<typeof setTimeout> | null = null
@@ -2291,7 +2316,7 @@ export default function PartyTest() {
       document.removeEventListener("visibilitychange", zichtbaar)
       sluit()
     }
-  }, [groupId, loadParty])
+  }, [groupId, loadParty, slaapt])
 
   // ── Groep aanmaken (admin) ──────────────────────────────────────────────────
   const createGroup = async (fallbackNaam?: string, wilSettle: boolean = true) => {
@@ -3679,6 +3704,12 @@ export default function PartyTest() {
               </>
             )}
           </div>
+        </div>
+      )}
+      {slaapt && groupId && (
+        <div onClick={() => { laatsteActie.current = Date.now(); setSlaapt(false) }}
+          style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 3000, background: "rgba(74,63,30,0.92)", color: "#fff", padding: "9px 16px", borderRadius: 999, fontSize: 15, fontWeight: 800, cursor: "pointer", boxShadow: "0 8px 24px rgba(120,95,20,0.35)", whiteSpace: "nowrap" }}>
+          {L.sleepBanner}
         </div>
       )}
       {notice && (
