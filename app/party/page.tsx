@@ -320,7 +320,6 @@ const T = {
     youAreEven: "Je staat gelijk",
     youGetBack: "Je krijgt terug",
     youStillPay: "Je betaalt nog",
-    settlesWith: (n: string) => `🔗 Jij rekent samen af met ${n} — hierboven staat enkel jouw eigen deel.`,
     directionOnly: "Dit is een richting, geen eindafrekening. Zolang er nog rondjes bijkomen, verandert het.",
     howYouSettle: "🔁 Zo verreken jij",
     roundsTitle: "📜 Rondjes",
@@ -574,14 +573,9 @@ const T = {
     total: "Totaal",
     perPerson: "per persoon",
     drank: "dronk",
-    settleTogether: "👥 Rekent er iemand samen af?",
-    settleTogetherLink: "🔗 samen afrekenen?",
-    settleTogetherCount: (n: number) => `🔗 ${n} ${n === 1 ? "koppel" : "koppels"}`,
     closeWord: "sluiten",
     severalTransfers: (n: number) => `${n} overschrijvingen`,
     togetherDrank: "Totaal",
-    settleTogetherInfo: "Voor koppels, huisgenoten, wie samen naar huis rijdt. Iedereen houdt zijn eigen drankjes — enkel het eindbedrag wordt samengeteld.",
-    tapWhoWith: (n: string) => `Tik nu op wie samen met ${n} afrekent.`,
     separateAgain: "Weer apart zetten:",
     depositAdvanced: "waarborg (voorgeschoten)",
     cardLoss: "verlies drankkaart (gedeeld)",
@@ -884,7 +878,6 @@ const T = {
     youAreEven: "Tu es à l'équilibre",
     youGetBack: "Tu récupères",
     youStillPay: "Tu dois encore",
-    settlesWith: (n: string) => `🔗 Tu règles avec ${n} — ci-dessus, seulement ta propre part.`,
     directionOnly: "C'est une estimation, pas le décompte final. Tant qu'il y a des tournées, ça change.",
     howYouSettle: "🔁 Comment tu règles",
     roundsTitle: "📜 Tournées",
@@ -1138,14 +1131,9 @@ const T = {
     total: "Total",
     perPerson: "par personne",
     drank: "a bu",
-    settleTogether: "👥 Quelqu'un règle-t-il ensemble ?",
-    settleTogetherLink: "🔗 régler ensemble ?",
-    settleTogetherCount: (n: number) => `🔗 ${n} ${n === 1 ? "duo" : "duos"}`,
     closeWord: "fermer",
     severalTransfers: (n: number) => `${n} virements`,
     togetherDrank: "Total",
-    settleTogetherInfo: "Pour les couples, colocataires, ceux qui rentrent ensemble. Chacun garde ses boissons — seul le montant final est additionné.",
-    tapWhoWith: (n: string) => `Touche maintenant qui règle avec ${n}.`,
     separateAgain: "Séparer à nouveau :",
     depositAdvanced: "caution (avancée)",
     cardLoss: "perte carte boissons (partagée)",
@@ -1484,7 +1472,6 @@ export default function PartyTest() {
     onBlur: () => setRuweBedragen((c) => { const n = { ...c }; delete n[sleutel]; return n }),
   })
   // Staat de koppel-kiezer open in de verrekening?
-  const [showTogether, setShowTogether] = useState(false)
   // Staat de snelkoppeling "dezelfde betaler voor alles" open?
   const [showSameFor, setShowSameFor] = useState(false)
 
@@ -3546,10 +3533,14 @@ export default function PartyTest() {
   // tweede zijn eigen drankje niet aantikken. Iedereen houdt dus zijn plaats en zijn
   // drankjes; enkel de eindafrekening wordt samengeteld. Halverwege van gedachten
   // veranderen kan, zonder dat er iets aan de bestellingen wijzigt.
-  const settleKey = (pid: string) => people.find((p) => p.id === pid)?.settleWith || pid
+  // Samen afrekenen als koppel is eruit: het bespaarde één overschrijving, maar de
+  // verrekening staat nu per persoon in de eindbalans, dus dat won niets meer. De
+  // groepering blijft als kern bestaan — ze krijgt alleen nooit nog meer dan één
+  // persoon per partij. De kolom settle_with in de databank blijft ongebruikt staan;
+  // ook oude groepen waar nog een koppel in zit vallen daardoor terug op losse personen.
   const settleGroups = useMemo(() => {
     const g: Record<string, Person[]> = {}
-    people.forEach((p) => { (g[p.settleWith || p.id] ??= []).push(p) })
+    people.forEach((p) => { (g[p.id] ??= []).push(p) })
     return Object.entries(g).map(([key, leden]) => ({
       key, leden,
       label: leden.map((p) => p.name).join(" & "),
@@ -3557,29 +3548,6 @@ export default function PartyTest() {
     })).sort((a, b) => Math.min(...a.leden.map((p) => p.seat)) - Math.min(...b.leden.map((p) => p.seat)))
   }, [people])
 
-  const linkSettle = async (a: string, b: string) => {
-    // b sluit aan bij de groep van a. Bestond a al in een groep, dan neemt hij die mee.
-    const kop = settleKey(a)
-    const groepVanB = people.filter((p) => (p.settleWith || p.id) === (people.find((x) => x.id === b)?.settleWith || b))
-    const ids = groepVanB.map((p) => p.id)
-    const { error } = await supabase.from("party_people").update({ settle_with: kop }).in("id", ids)
-    if (error) { setNotice("Koppelen mislukt: " + error.message); return }
-    // de kop van a wijst naar zichzelf, zodat de groepering sluit
-    await supabase.from("party_people").update({ settle_with: kop }).eq("id", kop)
-    if (groupId) loadParty(groupId)
-  }
-  const unlinkSettle = async (pid: string) => {
-    const { error } = await supabase.from("party_people").update({ settle_with: null }).eq("id", pid)
-    if (error) { setNotice("Ontkoppelen mislukt: " + error.message); return }
-    // Blijft er nog één iemand alleen over in de groep, dan heeft die groep geen zin meer.
-    const kop = settleKey(pid)
-    const rest = people.filter((p) => p.id !== pid && (p.settleWith || p.id) === kop)
-    if (rest.length === 1) await supabase.from("party_people").update({ settle_with: null }).eq("id", rest[0].id)
-    if (groupId) loadParty(groupId)
-  }
-
-  // Kaart in het afrekenscherm: tik twee namen aan en ze rekenen samen af.
-  const [settlePick, setSettlePick] = useState<string | null>(null)
   // Drie bolletjes met het stapnummer ernaast: klein genoeg om niet te storen,
   // duidelijk genoeg om te weten hoeveel er nog komt.
   const stapBalk = (nu: number) => (
@@ -3592,55 +3560,6 @@ export default function PartyTest() {
       <span style={{ fontSize: 11, color: "#a89a6f", fontWeight: 800 }}>{L.stepOf(nu, 3)}</span>
     </div>
   )
-
-  const renderSettleTogether = () => {
-    if (people.length < 2) return null
-    return (
-      <div style={{ background: "#faf7ec", borderRadius: 12, padding: 12, marginBottom: 12 }}>
-        <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.5 }}>
-          {L.settleTogetherInfo}
-        </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-          {settleGroups.map((g) => {
-            const gekozen = settlePick === g.key
-            return (
-              <button key={g.key}
-                onClick={() => {
-                  if (g.samen) { setSettleChoice(null); return }              // groepje: enkel ontkoppelen hieronder
-                  if (!settlePick) { setSettlePick(g.key); return }
-                  if (settlePick === g.key) { setSettlePick(null); return }
-                  linkSettle(settlePick, g.key); setSettlePick(null)
-                }}
-                style={{
-                  ...S.chip(gekozen ? 1 : 0), cursor: "pointer",
-                  ...(g.samen ? { background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "1px solid rgba(240,165,0,0.5)" } : {}),
-                }}>
-                {g.samen ? "🔗 " : ""}{g.label}
-              </button>
-            )
-          })}
-        </div>
-        {settlePick && (
-          <div style={{ fontSize: 14, color: "#c98a00", fontWeight: 700, marginTop: 10 }}>
-            {L.tapWhoWith(settleGroups.find((g) => g.key === settlePick)?.label ?? "")}
-          </div>
-        )}
-        {settleGroups.some((g) => g.samen) && (
-          <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.1)" }}>
-            <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 7 }}>{L.separateAgain}</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {settleGroups.filter((g) => g.samen).flatMap((g) => g.leden).map((p) => (
-                <button key={p.id} onClick={() => unlinkSettle(p.id)}
-                  style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)" }}>
-                  ✕ {p.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
 
   const settlement = useMemo(() => {
     const paid: Record<string, number> = {}; people.forEach((p) => (paid[p.id] = 0)); let potPaid = 0
@@ -4289,11 +4208,6 @@ export default function PartyTest() {
                       {euro(Math.abs(mijnSaldo))}
                     </b>
                   </div>
-                  {mijnGroep?.samen && (
-                    <div style={{ fontSize: 13.5, color: "#c98a00", fontWeight: 700, marginTop: 8 }}>
-                      {L.settlesWith(mijnGroep.leden.filter((p) => p.id !== meId).map((p) => p.name).join(" & "))}
-                    </div>
-                  )}
                   <div style={{ fontSize: 13, color: "#8a7d55", marginTop: 10, lineHeight: 1.5 }}>
                     {L.directionOnly}
                   </div>
@@ -6710,16 +6624,7 @@ export default function PartyTest() {
         <div style={{ ...S.row, gap: 6, marginBottom: 8 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.fairSplit}</h3>
           <span onClick={() => setNotice("⚖️ Fair Split — Eerlijker dan gelijke verdeling. Wie weinig of goedkopere drankjes nam, betaalt niet mee voor wie meer of duurdere drankjes nam.")} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 13, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
-          {/* Koppelen hoort bij het geheel: het verandert zowel de bedragen als de overschrijvingen. */}
-          {people.length >= 2 && (
-            <span onClick={() => setShowTogether((v) => !v)}
-              style={{ marginLeft: "auto", flexShrink: 0, fontSize: 11.5, fontWeight: 800, borderRadius: 14, padding: "4px 9px", cursor: "pointer", whiteSpace: "nowrap",
-                background: showTogether ? "#e08a00" : "#fffdf6", color: showTogether ? "#fff" : "#c98a00", border: "1px solid rgba(240,165,0,0.55)" }}>
-              {showTogether ? `🔗 ${L.closeWord}` : settleGroups.some((g) => g.samen) ? L.settleTogetherCount(settleGroups.filter((g) => g.samen).length) : L.settleTogetherLink}
-            </span>
-          )}
         </div>
-        {showTogether && renderSettleTogether()}
         {/* Staat de kolom uit? Dan de vergelijking als één regel, zodat ze niet verdwijnt. */}
         {people.length > 0 && !showEqual && (
           <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.5 }}>👥 {L.equalWouldBe(show(equalShare))}</div>
@@ -6756,7 +6661,6 @@ export default function PartyTest() {
           // Wie betaalt aan wie? Bij één overschrijving noemen we de tegenpartij; bij
           // meer zou dat niet passen, dus tonen we het aantal en staat het detail eronder.
           const mijnGroep = settleGroups.find((g) => g.leden.some((x) => x.id === p.id))
-          const alleen = !mijnGroep?.samen
           const mijnTx = settlement.tx.filter((t) => t.from === mijnGroep?.label || t.to === mijnGroep?.label)
           const tegenpartij = alleen && mijnTx.length === 1 ? (owed > 0 ? mijnTx[0].to : mijnTx[0].from) : ""
           const nettoColor = Math.abs(owed) < 0.005 ? "#8a7d55" : owed > 0 ? "#b35309" : "#1f8a4c"
