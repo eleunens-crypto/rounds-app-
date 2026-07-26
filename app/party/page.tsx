@@ -4427,14 +4427,16 @@ export default function PartyTest() {
                 )}
                 </div>
               </div>
-            </div>
+              {/* De startknop is de voetbalk van de kaart, rand aan rand: zo is elke modus
+                  één blok in plaats van een kaart met een los knopje eronder. */}
               <button disabled={busy} onClick={() => { setBpSettle(false); startWithMode(undefined, false) }}
-                style={{ ...S.btnP, width: "100%", marginTop: 11, padding: "16px", fontSize: 18,
+                style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 17, fontWeight: 800, cursor: "pointer", borderRadius: 0,
+                  borderLeft: "none", borderRight: "none", borderBottom: "none",
+                  borderTop: bpSettle === false ? "none" : `2px solid ${MODUS_SNEL.randZacht}`,
                   background: bpSettle === false ? MODUS_SNEL.knop : MODUS_SNEL.vlak,
                   color: bpSettle === false ? "#fff" : MODUS_SNEL.tekst,
-                  border: bpSettle === false ? "none" : `1.5px solid ${MODUS_SNEL.randZacht}`,
-                  boxSizing: "border-box",
-                  boxShadow: bpSettle === false ? `0 4px 14px -4px ${MODUS_SNEL.gloed}` : "none" }}>{busy ? L.starting : L.startQuickBtn}</button>
+                  boxSizing: "border-box" }}>{busy ? L.starting : L.startQuickBtn} →</button>
+            </div>
             </div>
 
             {/* Duidelijk dat er een tweede, andere keuze volgt. */}
@@ -4496,14 +4498,16 @@ export default function PartyTest() {
                 )}
                 </div>
               </div>
-            </div>
+              {/* De startknop is de voetbalk van de kaart, rand aan rand: zo is elke modus
+                  één blok in plaats van een kaart met een los knopje eronder. */}
               <button disabled={busy} onClick={() => { setBpSettle(true); startWithMode(undefined, true) }}
-                style={{ ...S.btnP, width: "100%", marginTop: 11, padding: "16px", fontSize: 18,
+                style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 17, fontWeight: 800, cursor: "pointer", borderRadius: 0,
+                  borderLeft: "none", borderRight: "none", borderBottom: "none",
+                  borderTop: bpSettle === true ? "none" : `2px solid ${MODUS_FAIR.randZacht}`,
                   background: bpSettle === true ? MODUS_FAIR.knop : MODUS_FAIR.vlak,
                   color: bpSettle === true ? "#fff" : MODUS_FAIR.tekst,
-                  border: bpSettle === true ? "none" : `1.5px solid ${MODUS_FAIR.randZacht}`,
-                  boxSizing: "border-box",
-                  boxShadow: bpSettle === true ? `0 4px 14px -4px ${MODUS_FAIR.gloed}` : "none" }}>{busy ? L.starting : L.startFairBtn}</button>
+                  boxSizing: "border-box" }}>{busy ? L.starting : L.startFairBtn} →</button>
+            </div>
             </div>
           </div>
         </div>
