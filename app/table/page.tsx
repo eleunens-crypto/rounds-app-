@@ -74,7 +74,17 @@ function getLastGroup(): string | null {
   return localStorage.getItem(LAST_GROUP_KEY)
 }
 
-type SavedGroup = { id: string; name: string; invite_code: string; role: "admin" | "gast"; savedAt: number; created_at?: string }
+type SavedGroup = { id: string; name: string; invite_code: string; role: "admin" | "gast"; savedAt: number; created_at?: string; finalized?: boolean | null; pinned?: boolean | null }
+// Bewaarbeleid. Een tafelrekening is één avond, dus created_at is een prima maatstaf —
+// daarvoor is geen extra kolom nodig. De bonfoto verdwijnt véél eerder dan de rekening
+// zelf: zodra alles is afgerekend heeft die scan zijn werk gedaan, en één foto weegt
+// ongeveer even zwaar als tien complete rekeningen.
+const DAG_MS = 24 * 60 * 60 * 1000
+const BEWAAR_AFGESLOTEN = 30 * DAG_MS
+const BEWAAR_OPEN = 60 * DAG_MS
+const BEWAAR_FOTO = 7 * DAG_MS
+const MAX_PINS = 3
+
 function getMyGroups(): SavedGroup[] {
   if (typeof window === "undefined") return []
   try {
@@ -92,6 +102,25 @@ function removeMyGroup(id: string) {
   if (typeof window === "undefined") return
   const list = getMyGroups().filter((x) => x.id !== id)
   localStorage.setItem(`rundo_table_groups_${getOrCreateOwnerId()}`, JSON.stringify(list))
+}
+
+// Alle foto's van een tafel staan in één map (<groep-id>/...), dus opruimen is exact.
+// Faalt de storage even, dan mag dat de rest nooit blokkeren — vandaar overal try/catch.
+async function wisBonfotos(groupId: string) {
+  try {
+    const { data } = await supabase.storage.from("receipts").list(groupId)
+    const paden = (data || []).map((f) => `${groupId}/${f.name}`)
+    if (paden.length > 0) await supabase.storage.from("receipts").remove(paden)
+  } catch { /* opslag onbereikbaar: de rijen ruimen we hoe dan ook op */ }
+}
+
+async function wisGroepVolledig(id: string) {
+  await wisBonfotos(id)
+  await supabase.from("table_claims").delete().eq("group_id", id)
+  await supabase.from("table_confirmations").delete().eq("group_id", id)
+  await supabase.from("table_items").delete().eq("group_id", id)
+  await supabase.from("table_participants").delete().eq("group_id", id)
+  return supabase.from("table_groups").delete().eq("id", id)
 }
 
 function fmtDate(iso: string | number | undefined, lang: "nl" | "fr" = "nl"): string {
@@ -261,27 +290,52 @@ async function fileToScaledBase64(file: File, maxW = 1600, quality = 0.82): Prom
 
 // Verkleinde JPEG-versie van de bon voor opslag (Supabase). Scheelt fors in opslagruimte:
 // een gsm-foto van 3-12 MB wordt zo ~200-400 kB, nog steeds prima leesbaar bij het nakijken.
-async function fileToScaledBlob(file: File, maxW = 1600, quality = 0.82): Promise<Blob> {
+// De foto die we bíjhouden dient een ander doel dan de foto die we laten scannen. De scan
+// heeft resolutie nodig om cijfers te lezen; de bewaarde kopie moet alleen leesbaar zijn
+// voor een mens die achteraf één regel wil nakijken. Vandaar kleiner en zachter.
+//
+// Twee dingen maakten de opgeslagen bestanden veel te groot. Ten eerste stond de bewaarde
+// kopie op scan-kwaliteit. Ten tweede: mislukte het decoderen — wat gebeurt bij HEIC van
+// een iPhone — dan werd stilzwijgend het onbewerkte origineel geüpload, en dat is zo 4 MB.
+// createImageBitmap slikt veel meer formaten dan new Image(), dus dat pad proberen we eerst.
+const OPSLAG_MAX_BYTES = 400 * 1024
+
+async function decodeer(file: File): Promise<{ w: number; h: number; teken: (c: HTMLCanvasElement, w: number, h: number) => void } | null> {
   try {
+    const bmp = await createImageBitmap(file)
+    return { w: bmp.width, h: bmp.height, teken: (c, w, h) => { c.getContext("2d")?.drawImage(bmp, 0, 0, w, h); bmp.close?.() } }
+  } catch { /* valt terug op de klassieke weg */ }
+  try {
+    const url = URL.createObjectURL(file)
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
       const im = new Image()
       im.onload = () => resolve(im)
-      im.onerror = () => reject(new Error("image decode failed"))
-      im.src = URL.createObjectURL(file)
+      im.onerror = () => reject(new Error("decode"))
+      im.src = url
     })
-    const scale = img.naturalWidth > maxW ? maxW / img.naturalWidth : 1
+    return { w: img.naturalWidth, h: img.naturalHeight, teken: (c, w, h) => { c.getContext("2d")?.drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url) } }
+  } catch { return null }
+}
+
+async function fileToStorageBlob(file: File): Promise<Blob> {
+  const bron = await decodeer(file)
+  if (!bron) return file
+  const maak = async (maxW: number, quality: number): Promise<Blob | null> => {
+    const scale = bron.w > maxW ? maxW / bron.w : 1
     const canvas = document.createElement("canvas")
-    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale))
-    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale))
-    const ctx = canvas.getContext("2d")
-    if (!ctx) { URL.revokeObjectURL(img.src); return file }
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-    URL.revokeObjectURL(img.src)
-    const blob = await new Promise<Blob | null>((res) => canvas.toBlob((b) => res(b), "image/jpeg", quality))
-    return blob && blob.size < file.size ? blob : file
-  } catch {
-    return file
+    canvas.width = Math.max(1, Math.round(bron.w * scale))
+    canvas.height = Math.max(1, Math.round(bron.h * scale))
+    if (!canvas.getContext("2d")) return null
+    bron.teken(canvas, canvas.width, canvas.height)
+    return new Promise<Blob | null>((res) => canvas.toBlob((b) => res(b), "image/jpeg", quality))
   }
+  let blob = await maak(1100, 0.6)
+  // Nog te zwaar? Dan is het een brede bon of een druk beeld: nog één slag kleiner.
+  if (blob && blob.size > OPSLAG_MAX_BYTES) {
+    const kleiner = await maak(850, 0.45)
+    if (kleiner && kleiner.size < blob.size) blob = kleiner
+  }
+  return blob && blob.size < file.size ? blob : file
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -438,6 +492,11 @@ const STRINGS = {
     roleAdmin: "beheerder",
     roleGuest: "gast",
     deletePermanently: "definitief verwijderen",
+    pinTitle: "Vastzetten — wordt niet automatisch opgeruimd",
+    unpinTitle: "Losmaken",
+    pinFailed: "Vastzetten mislukt.",
+    maxPins: (n: number) => `Je kan maximaal ${n} rekeningen vastzetten. Maak er eerst een los.`,
+    retentionNote: "📌 Vastgezette rekeningen blijven bewaard. De rest verdwijnt na 30 dagen (60 als ze nooit werd afgesloten), en de bonfoto al na 7 dagen.",
     tabBon: "Bon",
     tabGuests: "Gasten & delen",
     tabAssign: "Toewijzen",
@@ -985,6 +1044,11 @@ const STRINGS = {
     roleAdmin: "hôte",
     roleGuest: "invité",
     deletePermanently: "supprimer définitivement",
+    pinTitle: "Épingler — ne sera pas supprimé automatiquement",
+    unpinTitle: "Détacher",
+    pinFailed: "Épinglage échoué.",
+    maxPins: (n: number) => `Tu peux épingler ${n} additions au maximum. Détaches-en une d’abord.`,
+    retentionNote: "📌 Les additions épinglées sont conservées. Les autres disparaissent après 30 jours (60 si jamais clôturées), et la photo du ticket dès 7 jours.",
     tabBon: "Addition",
     tabGuests: "Invités et partage",
     tabAssign: "Répartir",
@@ -1580,7 +1644,52 @@ export default function RundoTable() {
   const [startError, setStartError] = useState<string | null>(null)
   const [myGroups, setMyGroups] = useState<SavedGroup[]>([])
   const [showSaved, setShowSaved] = useState(false)
-  useEffect(() => { setMyGroups(getMyGroups()) }, [])
+  // De lijst kwam uit localStorage, afgekapt op 50. Wat eraf viel bleef in de databank
+  // staan zonder dat iemand het nog kon vinden — met zijn bonfoto erbij. Nu is de databank
+  // de bron voor je eigen groepen; enkel groepen waar je gást bent blijven lokaal, want
+  // daar staat nergens welk toestel erbij hoort.
+  const laadMijnGroepen = useCallback(async () => {
+    const dev = getOrCreateOwnerId()
+    const lokaal = getMyGroups()
+    const kolommen = "id,name,invite_code,finalized,pinned,created_at,receipt_url"
+    const { data: eigen } = await supabase.from("table_groups").select(kolommen).eq("owner_id", dev)
+    const gastIds = lokaal.filter((x) => x.role === "gast").map((x) => x.id)
+      .filter((id) => !(eigen || []).some((g: { id: string }) => g.id === id))
+    let gasten: Record<string, unknown>[] = []
+    if (gastIds.length > 0) {
+      const { data } = await supabase.from("table_groups").select(kolommen).in("id", gastIds)
+      gasten = (data as Record<string, unknown>[]) || []
+    }
+
+    const nu = Date.now()
+    const ouderdom = (g: Record<string, unknown>) => nu - new Date((g.created_at as string) || 0).getTime()
+
+    // Opruimen — alleen wat van jou is, en nooit wat je vastzette.
+    const wissen = (eigen || []).filter((g: Record<string, unknown>) => !g.pinned &&
+      ouderdom(g) > (g.finalized ? BEWAAR_AFGESLOTEN : BEWAAR_OPEN))
+    for (const g of wissen) { await wisGroepVolledig(g.id as string); removeMyGroup(g.id as string) }
+
+    // De bonfoto gaat er veel eerder uit dan de rekening zelf.
+    const fotoWeg = (eigen || []).filter((g: Record<string, unknown>) =>
+      g.receipt_url && g.finalized && ouderdom(g) > BEWAAR_FOTO && !wissen.some((w: Record<string, unknown>) => w.id === g.id))
+    for (const g of fotoWeg) {
+      await wisBonfotos(g.id as string)
+      await supabase.from("table_groups").update({ receipt_url: null }).eq("id", g.id as string)
+    }
+
+    const maak = (g: Record<string, unknown>, role: "admin" | "gast"): SavedGroup => ({
+      id: g.id as string, name: (g.name as string) || "", invite_code: (g.invite_code as string) || "",
+      role, savedAt: new Date((g.created_at as string) || 0).getTime(),
+      created_at: g.created_at as string, finalized: g.finalized as boolean, pinned: g.pinned as boolean,
+    })
+    const lijst = [
+      ...(eigen || []).filter((g: Record<string, unknown>) => !wissen.some((w: Record<string, unknown>) => w.id === g.id)).map((g: Record<string, unknown>) => maak(g, "admin")),
+      ...gasten.map((g) => maak(g, "gast")),
+    ].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.savedAt - a.savedAt)
+    setMyGroups(lijst)
+  }, [])
+
+  useEffect(() => { setMyGroups(getMyGroups()); void laadMijnGroepen() }, [laadMijnGroepen])
 
   const [participants, setParticipants] = useState<Participant[]>([])
   const [items, setItems] = useState<BillItem[]>([])
@@ -1697,11 +1806,13 @@ export default function RundoTable() {
 
   const loadAll = useCallback(async (groupId: string) => {
     const [{ data: p }, { data: it }, { data: cl }, { data: cf }, { data: g }] = await Promise.all([
-      supabase.from("table_participants").select("*").eq("group_id", groupId),
-      supabase.from("table_items").select("*").eq("group_id", groupId),
-      supabase.from("table_claims").select("*").eq("group_id", groupId),
-      supabase.from("table_confirmations").select("*").eq("group_id", groupId),
-      supabase.from("table_groups").select("*").eq("id", groupId).single(),
+      // Kolommen benoemen in plaats van een sterretje: bij elke herlaadbeurt scheelt dat
+      // alles wat de app toch niet gebruikt, en dat gebeurt vaak.
+      supabase.from("table_participants").select("id,name,group_id,self_joined,seats,created_at").eq("group_id", groupId),
+      supabase.from("table_items").select("id,group_id,name,unit_price,quantity,is_shared,share_expected,created_at").eq("group_id", groupId),
+      supabase.from("table_claims").select("id,group_id,item_id,participant_id,quantity,members").eq("group_id", groupId),
+      supabase.from("table_confirmations").select("id,group_id,participant_id,confirmed").eq("group_id", groupId),
+      supabase.from("table_groups").select("id,name,invite_code,owner_id,receipt_url,party_size,receipt_total,finalized,disputed_by,pinned,created_at").eq("id", groupId).single(),
     ])
     if (!mounted.current) return
     const order = <T extends { created_at?: string; id: string }>(rows: T[]) =>
@@ -1726,6 +1837,7 @@ export default function RundoTable() {
     let cool: ReturnType<typeof setTimeout> | null = null
     let cooling = false
     let pending = false
+    let verbonden = false
 
     // Elk seintje van Supabase haalt de hele rekening opnieuw op. Bij losse acties (iemand
     // duidt een item aan) is dat één seintje: dan halen we meteen op, zodat het instant voelt.
@@ -1752,6 +1864,7 @@ export default function RundoTable() {
         ch!.on("postgres_changes", { event: "*", schema: "public", table, filter }, reload)
       })
       ch!.subscribe((status) => {
+        verbonden = status === "SUBSCRIBED"
         if ((status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") && active) {
           if (retry) clearTimeout(retry)
           retry = setTimeout(() => { if (ch) supabase.removeChannel(ch); connect() }, 2000)
@@ -1766,8 +1879,12 @@ export default function RundoTable() {
     }
     document.addEventListener("visibilitychange", refreshOnReturn)
     window.addEventListener("focus", refreshOnReturn)
-    // Vangnet voor als realtime niet doorkomt. Realtime doet nu het echte werk, dus 60s volstaat.
-    const poll = setInterval(() => { if (typeof document === "undefined" || document.visibilityState === "visible") reload() }, 60000)
+    // Vangnet voor als realtime stilvalt. Zolang het kanaal aangesloten is, hoeft dit niet
+    // te draaien — anders herlaad je elke minuut een rekening die al bijgewerkt is.
+    const poll = setInterval(() => {
+      if (verbonden) return
+      if (typeof document === "undefined" || document.visibilityState === "visible") reload()
+    }, 180000)
 
     return () => {
       active = false
@@ -1861,7 +1978,7 @@ export default function RundoTable() {
       const { data, error } = await supabase.from("table_groups")
         .insert([{ name, invite_code, owner_id, party_size: size }]).select().single()
       if (error || !data) { setStartError(L.errCreateFailed + error?.message); return }
-      saveMyGroup(data, "admin"); setMyGroups(getMyGroups()); rememberLastGroup(data.id)
+      saveMyGroup(data, "admin"); void laadMijnGroepen(); rememberLastGroup(data.id)
       setGroup(data)
       // Zet de beheerder meteen als eerste deelnemer ("Ik") zodat je jezelf niet vergeet (overschrijf- en verwijderbaar).
       let myId = getMeId(data.id)
@@ -1880,11 +1997,11 @@ export default function RundoTable() {
     if (!code || busy) return
     setBusy(true); setStartError(null)
     try {
-      const { data, error } = await supabase.from("table_groups").select("*").eq("invite_code", code).single()
+      const { data, error } = await supabase.from("table_groups").select("id,name,invite_code,owner_id,receipt_url,party_size,receipt_total,finalized,disputed_by,pinned,created_at").eq("invite_code", code).single()
       if (error || !data) { setStartError(L.errNotFound); return }
       const role = data.owner_id === getOrCreateOwnerId() ? "admin" : "gast"
       setViaLink(role === "gast")
-      saveMyGroup(data, role); setMyGroups(getMyGroups()); rememberLastGroup(data.id)
+      saveMyGroup(data, role); void laadMijnGroepen(); rememberLastGroup(data.id)
       setGroup(data); setMeId(getMeId(data.id)); await loadAll(data.id)
       if (initialTab) setAdminTab(initialTab)
     } finally { setBusy(false) }
@@ -1894,23 +2011,30 @@ export default function RundoTable() {
     if (busy) return
     setBusy(true); setStartError(null)
     try {
-      const { data, error } = await supabase.from("table_groups").select("*").eq("id", id).single()
-      if (error || !data) { setStartError(L.errGroupGone); removeMyGroup(id); setMyGroups(getMyGroups()); rememberLastGroup(null); return }
-      saveMyGroup(data, data.owner_id === getOrCreateOwnerId() ? "admin" : "gast"); setMyGroups(getMyGroups()); rememberLastGroup(data.id)
+      const { data, error } = await supabase.from("table_groups").select("id,name,invite_code,owner_id,receipt_url,party_size,receipt_total,finalized,disputed_by,pinned,created_at").eq("id", id).single()
+      if (error || !data) { setStartError(L.errGroupGone); removeMyGroup(id); void laadMijnGroepen(); rememberLastGroup(null); return }
+      saveMyGroup(data, data.owner_id === getOrCreateOwnerId() ? "admin" : "gast"); void laadMijnGroepen(); rememberLastGroup(data.id)
       setGroup(data); setMeId(getMeId(data.id)); await loadAll(data.id); setAdminTab(tab)
     } finally { setBusy(false) }
   }
 
+  // Vastzetten beschermt tegen de automatische opruiming. Beperkt tot MAX_PINS, anders
+  // zet je uit gewoonte alles vast en ruimt er nooit meer iets op.
+  const togglePin = async (g: SavedGroup) => {
+    if (g.role !== "admin") return
+    if (!g.pinned && myGroups.filter((x) => x.pinned).length >= MAX_PINS) { setToast(L.maxPins(MAX_PINS)); return }
+    const { error } = await supabase.from("table_groups").update({ pinned: !g.pinned }).eq("id", g.id)
+    if (error) { setToast(L.pinFailed); return }
+    setMyGroups((prev) => prev.map((x) => x.id === g.id ? { ...x, pinned: !x.pinned } : x))
+  }
+
   const forgetSavedGroup = (id: string) => {
     askConfirm(L.confirmDeleteGroup, L.deleteTitle, async () => {
-      await supabase.from("table_claims").delete().eq("group_id", id)
-      await supabase.from("table_confirmations").delete().eq("group_id", id)
-      await supabase.from("table_items").delete().eq("group_id", id)
-      await supabase.from("table_participants").delete().eq("group_id", id)
-      const { error } = await supabase.from("table_groups").delete().eq("id", id)
+      // De bonfoto's gaan mee: die bleven vroeger achter in de opslag, onvindbaar en voorgoed.
+      const { error } = await wisGroepVolledig(id)
       if (error) { setStartError(L.errDeleteFailed + error.message); return }
       if (getLastGroup() === id) rememberLastGroup(null)
-      removeMyGroup(id); setMyGroups(getMyGroups())
+      removeMyGroup(id); void laadMijnGroepen()
     }, { danger: true })
   }
 
@@ -2137,7 +2261,7 @@ export default function RundoTable() {
   // meer zodra er koppels of verwijderde gasten in het spel waren, dus halen we ze weg.
   const renumberGuests = async (): Promise<boolean> => {
     if (!group) return false
-    const { data } = await supabase.from("table_participants").select("*").eq("group_id", group.id)
+    const { data } = await supabase.from("table_participants").select("id,name,group_id,self_joined,seats,created_at").eq("group_id", group.id)
     const numbered = /^(Gast|Invité)\s+\d+$/i
     let changed = false
     for (const g of ((data as Participant[]) || [])) {
@@ -2305,6 +2429,7 @@ export default function RundoTable() {
         await supabase.from("table_items").delete().eq("group_id", group.id)
       }
       if (group.receipt_url) {
+        await wisBonfotos(group.id)
         await supabase.from("table_groups").update({ receipt_url: null }).eq("id", group.id)
         setGroup((g) => g ? { ...g, receipt_url: null } : g)
       }
@@ -2437,7 +2562,7 @@ export default function RundoTable() {
     if (fileList.length > 0) {
       const urls: string[] = []
       for (const f of fileList) {
-        const uploadBlob = await fileToScaledBlob(f)
+        const uploadBlob = await fileToStorageBlob(f)
         const ext = uploadBlob === (f as Blob) ? ((f.name.split(".").pop() || "jpg").toLowerCase()) : "jpg"
         const path = `${group.id}/${Date.now()}-${urls.length}.${ext}`
         const { error: upErr } = await supabase.storage.from("receipts").upload(path, uploadBlob, { upsert: true })
@@ -3044,9 +3169,14 @@ export default function RundoTable() {
                         <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}</span>
                         <span style={{ fontSize: 15.5, fontWeight: 700, color: g.role === "admin" ? "#1499b0" : "#9aa0ab" }}>{g.role === "admin" ? L.roleAdmin : L.roleGuest}{fmtDate(g.created_at ?? g.savedAt, lang) ? ` · ${fmtDate(g.created_at ?? g.savedAt, lang)}` : ""}</span>
                       </button>
+                      {g.role === "admin" && (
+                        <button onClick={() => togglePin(g)} style={{ ...S.iconBtn, flexShrink: 0, opacity: g.pinned ? 1 : 0.35 }} title={g.pinned ? L.unpinTitle : L.pinTitle}>📌</button>
+                      )}
                       <button onClick={() => forgetSavedGroup(g.id)} style={{ ...S.iconBtn, flexShrink: 0 }} title={L.deletePermanently}>🗑️</button>
                     </div>
                   ))}
+                  {/* Zonder deze zin lijkt het alsof de app rekeningen kwijtspeelt. */}
+                  <div style={{ marginTop: 10, fontSize: 14.5, color: "#9aa0ab", lineHeight: 1.45 }}>{L.retentionNote}</div>
                 </div>
               )}
             </div>
