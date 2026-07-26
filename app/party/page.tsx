@@ -460,6 +460,7 @@ const T = {
     eachOneConfirm: (n: string, meer: boolean) => `${n} ${meer ? "hebben" : "heeft"} er nu al 2 of meer. Met "elk 1" krijgt iedereen er precies één — ${n} ${meer ? "gaan" : "gaat"} dus terug naar 1.`,
     yesEachOne: "Ja, iedereen op 1",
     redistribute: 'Herverdelen: − zet een drankje terug op "onbekend", tik dan een andere naam.',
+    toAssignCount: (n: number) => `${n} toewijzen`,
     closeRound: "✓ Rondje afsluiten",
     cancelRound: "✕ Rondje annuleren",
     cancelRoundConfirm: (n: number) => `Rondje ${n} annuleren? Alle gekozen drankjes van dit rondje gaan verloren. Dit kan niet ongedaan gemaakt worden.`,
@@ -1019,6 +1020,7 @@ const T = {
     eachOneConfirm: (n: string, meer: boolean) => `${n} ${meer ? "en ont" : "en a"} déjà 2 ou plus. Avec « 1 chacun », tout le monde en reçoit exactement un — ${n} ${meer ? "redescendent" : "redescend"} donc à 1.`,
     yesEachOne: "Oui, 1 pour tous",
     redistribute: 'Redistribuer : − remet une boisson sur « inconnu », puis touche un autre nom.',
+    toAssignCount: (n: number) => `${n} à attribuer`,
     closeRound: "✓ Clôturer la tournée",
     cancelRound: "✕ Annuler la tournée",
     cancelRoundConfirm: (n: number) => `Annuler la tournée ${n} ? Toutes les boissons choisies seront perdues. C'est irréversible.`,
@@ -5704,7 +5706,7 @@ export default function PartyTest() {
                         const dun = r.anon[d.id] ?? 0
                         return (
                           <div key={d.id} style={{ marginBottom: 9 }}>
-                            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 5 }}>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}{dun > 0 && <span style={{ color: "#c0554a", fontWeight: 700 }}> · 🔴 {dun} onbekend</span>}</div>
+                            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 5 }}>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}{dun > 0 && <span style={{ color: "#c0554a", fontWeight: 700 }}> · 🔴 {L.toAssignCount(dun)}</span>}</div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                               {people.map((p) => { const n = r.orders[d.id]?.[p.id] ?? 0; return (
                                 <span key={p.id} style={{ ...S.chip(n), padding: "5px 10px", fontSize: 14.5 }} onClick={() => rAssignFromAnon(idx, d.id, p.id)}>{p.name}{n > 0 && <span style={S.badge}>{n}</span>}{n > 0 && <span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 15.5, fontWeight: 800, lineHeight: 1 }}>−</span>}</span>
