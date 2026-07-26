@@ -527,11 +527,8 @@ const STRINGS = {
     theirNamesQ: "Hoe heten ze?",
     addThisGuest: "Toevoegen",
     enterGuestName: "Vul eerst een naam in.",
-    namesBlockTitle: "✍️ Namen gasten alvast invullen",
+    namesBlockTitle: "Namen gasten",
     namesBlockOptional: "(optioneel)",
-    namesBlockSub: "Wie je hier invult, tikt na het scannen gewoon zijn naam aan. Laat leeg wat je niet weet — dat blijft een vrije plaats. Betalen twee samen? Zet ze op één plaats met de knop rechts.",
-    namesRowPlaceholder: "Vrije plaats",
-    seatsChip: (n: number) => `${n}p ›`,
     needMoreSpotsTitle: "Er is een plaats te weinig",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Dit vraagt ${tekort} plaats${tekort === 1 ? "" : "en"} meer dan er vrij ${tekort === 1 ? "is" : "zijn"}. Zal ik het aantal personen op ${totaal} zetten?`,
     raiseTotalBtn: (totaal: number) => `Ja, personen op ${totaal} zetten`,
@@ -1228,11 +1225,8 @@ const STRINGS = {
     theirNamesQ: "Comment s\u2019appellent-ils ?",
     addThisGuest: "Ajouter",
     enterGuestName: "Entre d\u2019abord un nom.",
-    namesBlockTitle: "✍️ Pré-remplir les noms des invités",
+    namesBlockTitle: "Noms des invités",
     namesBlockOptional: "(facultatif)",
-    namesBlockSub: "Ceux que tu indiques ici n’auront qu’à toucher leur nom après le scan. Laisse vide ce que tu ne sais pas — ça reste une place libre. Deux qui paient ensemble ? Mets-les sur une seule place avec le bouton à droite.",
-    namesRowPlaceholder: "Place libre",
-    seatsChip: (n: number) => `${n}p ›`,
     needMoreSpotsTitle: "Il manque une place",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Cela demande ${tekort} place${tekort === 1 ? "" : "s"} de plus qu’il n’y en a de libre. Je mets le nombre de personnes à ${totaal} ?`,
     raiseTotalBtn: (totaal: number) => `Oui, mettre à ${totaal} personnes`,
@@ -3972,30 +3966,29 @@ export default function RundoTable() {
                   </div>
                   {showNamesBlock && (
                     <div style={{ marginTop: 9 }}>
-                      <div style={{ fontSize: 15.5, color: "#5a6680", lineHeight: 1.45, marginBottom: 12 }}>{L.namesBlockSub}</div>
                       {rijen.length === 0 ? (
                         <div style={{ fontSize: 15.5, color: "#9aa0ab", lineHeight: 1.45 }}>{L.noFreeSpots}</div>
-                      ) : rijen.map((q, i) => {
+                      ) : rijen.map((q) => {
                         const leeg = isFreeSpot(q)
                         const zit = Math.max(1, q.seats ?? 1)
+                        // Eerst het aantal personen, dan de namen — dezelfde popup en dezelfde
+                        // volgorde als wanneer een gast via de link een plaats inneemt.
                         return (
-                          <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
-                            <span style={{ width: 20, flexShrink: 0, fontSize: 15, fontWeight: 800, color: "#c3c8d2" }}>{i + 2}</span>
-                            <input key={q.id + q.name} defaultValue={leeg ? "" : q.name} placeholder={L.namesRowPlaceholder}
-                              onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== q.name) renameGuest(q.id, v) }}
-                              onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
-                              style={{ ...S.input, flex: 1, minWidth: 0, fontSize: 17 }} />
-                            <button onClick={() => {
-                              setGuestTarget(q.id)
-                              setGuestSeats(zit)
-                              setGuestNames(leeg ? Array.from({ length: zit }, () => "") : q.name.split(/\s*&\s*/).map((x) => x.trim()))
-                              setShowGuestModal(true)
-                            }}
-                              style={{ flexShrink: 0, cursor: "pointer", borderRadius: 9, padding: "7px 11px", fontSize: 15, fontWeight: 800,
-                                border: zit > 1 ? "1px solid rgba(20,153,176,0.5)" : "1px solid rgba(16,24,40,0.15)",
-                                background: zit > 1 ? "rgba(20,153,176,0.06)" : "#fff",
-                                color: zit > 1 ? "#0f7d91" : "#9aa0ab" }}>{L.seatsChip(zit)}</button>
-                          </div>
+                          <button key={q.id} onClick={() => {
+                            setGuestTarget(q.id)
+                            setGuestSeats(zit)
+                            setGuestNames(leeg ? Array.from({ length: zit }, () => "") : q.name.split(/\s*&\s*/).map((x) => x.trim()))
+                            setShowGuestModal(true)
+                          }}
+                            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, textAlign: "left", marginBottom: 7, cursor: "pointer", borderRadius: 11, padding: "11px 12px",
+                              border: leeg ? "1.5px dashed rgba(20,153,176,0.6)" : "1px solid rgba(16,24,40,0.12)",
+                              background: leeg ? "rgba(20,153,176,0.05)" : "rgba(16,24,40,0.02)" }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                              <span style={{ fontSize: 18, fontWeight: 800, color: leeg ? "#1499b0" : "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{leeg ? L.freeSpotLabel : q.name}</span>
+                              {!leeg && zit > 1 && <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>· {zit}p.</span>}
+                            </span>
+                            <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 700, color: leeg ? "#1499b0" : "#9aa0ab" }}>{leeg ? L.tapToPick : "✏️ ›"}</span>
+                          </button>
                         )
                       })}
                     </div>
