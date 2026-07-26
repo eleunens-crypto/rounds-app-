@@ -493,6 +493,15 @@ const STRINGS = {
     roleAdmin: "beheerder",
     roleGuest: "gast",
     deletePermanently: "definitief verwijderen",
+    addNameBtn: "+ Naam toevoegen",
+    freeSpotsLeft: (vrij: number, totaal: number) => `nog ${vrij} vrije ${vrij === 1 ? "plaats" : "plaatsen"} van de ${totaal}`,
+    allNamesFilled: "Alle plaatsen hebben een naam.",
+    addNameTitle: "Wie voeg je toe?",
+    addNameSub: "Deze naam staat straks klaar in de lijst — die persoon tikt hem na het scannen gewoon aan.",
+    togetherTitle: (n: number) => n === 2 ? "Samen op één plaats" : `Met ${n} op één plaats`,
+    togetherWhat: (n: number) => n === 2
+      ? "Deze twee betalen samen: ze nemen één plaats in aan tafel en krijgen op het einde één bedrag te zien, niet elk apart."
+      : `Deze ${n} betalen samen: ze nemen één plaats in aan tafel en krijgen op het einde één bedrag te zien.`,
     pinTitle: "Vastzetten — wordt niet automatisch opgeruimd",
     unpinTitle: "Losmaken",
     pinFailed: "Vastzetten mislukt.",
@@ -537,8 +546,6 @@ const STRINGS = {
     nowAssignTitle: "Klaar? Ga naar toewijzen",
     nowAssignSub: "Duid aan wie wat nam. Zo weet iedereen wat hij moet betalen.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Naar toewijzen \u2192",
-    addGuestModalTitle: "Voor wie duid je aan?",
-    addGuestModalSub: "Een koppel of gezin dat samen betaalt? Kies met 2 of met 3+.",
     howManyPersonsQ: "Voor hoeveel personen?",
     theirNameQ: "Hoe heet die persoon?",
     theirNamesQ: "Hoe heten ze?",
@@ -1046,6 +1053,15 @@ const STRINGS = {
     roleAdmin: "hôte",
     roleGuest: "invité",
     deletePermanently: "supprimer définitivement",
+    addNameBtn: "+ Ajouter un nom",
+    freeSpotsLeft: (vrij: number, totaal: number) => `encore ${vrij} place${vrij === 1 ? "" : "s"} libre${vrij === 1 ? "" : "s"} sur ${totaal}`,
+    allNamesFilled: "Toutes les places ont un nom.",
+    addNameTitle: "Qui ajoutes-tu ?",
+    addNameSub: "Ce nom apparaîtra dans la liste — cette personne n’aura qu’à le toucher après le scan.",
+    togetherTitle: (n: number) => n === 2 ? "Ensemble sur une place" : `À ${n} sur une place`,
+    togetherWhat: (n: number) => n === 2
+      ? "Ces deux-là paient ensemble : ils occupent une seule place à table et verront un seul montant à la fin, pas chacun le sien."
+      : `Ces ${n} paient ensemble : ils occupent une seule place à table et verront un seul montant à la fin.`,
     pinTitle: "Épingler — ne sera pas supprimé automatiquement",
     unpinTitle: "Détacher",
     pinFailed: "Épinglage échoué.",
@@ -1090,8 +1106,6 @@ const STRINGS = {
     nowAssignTitle: "Prêt ? Va vers l’attribution",
     nowAssignSub: "Indique qui a pris quoi. Ainsi chacun sait ce qu\u2019il doit payer.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Vers l\u2019attribution \u2192",
-    addGuestModalTitle: "Pour qui coches-tu ?",
-    addGuestModalSub: "Un couple ou une famille qui paie ensemble ? Choisis 2 ou 3+.",
     howManyPersonsQ: "Pour combien de personnes ?",
     theirNameQ: "Comment s\u2019appelle cette personne ?",
     theirNamesQ: "Comment s\u2019appellent-ils ?",
@@ -3804,31 +3818,48 @@ export default function RundoTable() {
                   </div>
                   {showNamesBlock && (
                     <div style={{ marginTop: 9 }}>
-                      {rijen.length === 0 ? (
-                        <div style={{ fontSize: 15.5, color: "#9aa0ab", lineHeight: 1.45 }}>{L.noFreeSpots}</div>
-                      ) : rijen.map((q) => {
-                        const leeg = isFreeSpot(q)
-                        const zit = Math.max(1, q.seats ?? 1)
-                        // Eerst het aantal personen, dan de namen — dezelfde popup en dezelfde
-                        // volgorde als wanneer een gast via de link een plaats inneemt.
+                      {(() => {
+                        // De vrije plaatsen zijn onderling identiek, dus er valt niets te
+                        // kiezen. Alleen de namen die er al staan krijgen een tegel; de rest
+                        // is één knop die de eerste vrije plaats inneemt.
+                        const ingevuld = rijen.filter((q) => !isFreeSpot(q))
+                        const vrij = rijen.filter((q) => isFreeSpot(q)).reduce((a, q) => a + Math.max(1, q.seats ?? 1), 0)
+                        const open = (q: Participant | null) => {
+                          const zit = q ? Math.max(1, q.seats ?? 1) : 1
+                          setGuestTarget(q ? q.id : null)
+                          setGuestSeats(zit)
+                          setGuestNames(q ? q.name.split(/\s*&\s*/).map((x) => x.trim()) : [""])
+                          setShowGuestModal(true)
+                        }
                         return (
-                          <button key={q.id} onClick={() => {
-                            setGuestTarget(q.id)
-                            setGuestSeats(zit)
-                            setGuestNames(leeg ? Array.from({ length: zit }, () => "") : q.name.split(/\s*&\s*/).map((x) => x.trim()))
-                            setShowGuestModal(true)
-                          }}
-                            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, textAlign: "left", marginBottom: 7, cursor: "pointer", borderRadius: 11, padding: "11px 12px",
-                              border: leeg ? "1.5px dashed rgba(20,153,176,0.6)" : "1px solid rgba(16,24,40,0.12)",
-                              background: leeg ? "rgba(20,153,176,0.05)" : "rgba(16,24,40,0.02)" }}>
-                            <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                              <span style={{ fontSize: 18, fontWeight: 800, color: leeg ? "#1499b0" : "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{leeg ? L.freeSpotLabel : q.name}</span>
-                              {!leeg && zit > 1 && <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>· {zit}p.</span>}
-                            </span>
-                            <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 700, color: leeg ? "#1499b0" : "#9aa0ab" }}>{leeg ? L.tapToPick : "✏️ ›"}</span>
-                          </button>
+                          <>
+                            {ingevuld.length > 0 && (
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 11 }}>
+                                {ingevuld.map((q) => {
+                                  const zit = Math.max(1, q.seats ?? 1)
+                                  return (
+                                    <button key={q.id} onClick={() => open(q)}
+                                      style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, textAlign: "left", cursor: "pointer", borderRadius: 11, padding: "10px 11px", border: "1px solid rgba(16,24,40,0.12)", background: "rgba(16,24,40,0.02)" }}>
+                                      <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.name}</span>
+                                      {zit > 1 && <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#0f7488", background: "rgba(20,153,176,0.12)", borderRadius: 8, padding: "2px 6px" }}>{zit}p</span>}
+                                      <span style={{ flexShrink: 0, fontSize: 14, color: "#9aa0ab" }}>✏️</span>
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            )}
+                            {vrij > 0 ? (
+                              <button onClick={() => open(null)}
+                                style={{ width: "100%", cursor: "pointer", borderRadius: 12, padding: "13px 12px", textAlign: "center", border: "1.5px dashed rgba(20,153,176,0.6)", background: "rgba(20,153,176,0.06)" }}>
+                                <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: "#0f7d91" }}>{L.addNameBtn}</span>
+                                <span style={{ display: "block", fontSize: 14.5, color: "#5a6680", marginTop: 2 }}>{L.freeSpotsLeft(vrij, totalPersons)}</span>
+                              </button>
+                            ) : (
+                              <div style={{ fontSize: 15, color: "#9aa0ab", textAlign: "center", padding: "4px 0" }}>{L.allNamesFilled}</div>
+                            )}
+                          </>
                         )
-                      })}
+                      })()}
                     </div>
                   )}
                 </div>
@@ -4581,8 +4612,8 @@ export default function RundoTable() {
         return (
           <div style={{ ...S.overlay, zIndex: 3100 }}>
             <div style={{ ...S.modal, width: "min(400px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 3 }}>{L.addGuestModalTitle}</h3>
-              <div style={{ fontSize: 15, color: "#9aa0ab", lineHeight: 1.45, marginBottom: 13 }}>{L.addGuestModalSub}</div>
+              <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 3 }}>{L.addNameTitle}</h3>
+              <div style={{ fontSize: 15, color: "#9aa0ab", lineHeight: 1.45, marginBottom: 13 }}>{L.addNameSub}</div>
               <div style={{ fontSize: 16, fontWeight: 800, color: "#14213a", marginBottom: 7 }}>{L.howManyPersonsQ}</div>
               <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
                 {[1, 2, 3].map((n) => {
@@ -4594,6 +4625,18 @@ export default function RundoTable() {
                   )
                 })}
               </div>
+              {/* De keuze "Met 2" ziet er onschuldig uit maar heeft een gevolg voor de
+                  afrekening: die twee worden één partij. Dat hoort hier te staan, niet
+                  ergens bovenaan waar je het al vergeten bent. */}
+              {guestSeats > 1 && (
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "rgba(20,153,176,0.08)", border: "1.5px solid rgba(20,153,176,0.35)", borderRadius: 12, padding: "11px 12px", marginBottom: 14 }}>
+                  <span style={{ flexShrink: 0, fontSize: 20, lineHeight: 1.2 }}>{guestSeats === 2 ? "👫" : "👥"}</span>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#0f7488", marginBottom: 2 }}>{L.togetherTitle(guestSeats)}</span>
+                    <span style={{ display: "block", fontSize: 14.5, color: "#3b486a", lineHeight: 1.45 }}>{L.togetherWhat(guestSeats)}</span>
+                  </span>
+                </div>
+              )}
               {guestSeats >= 3 && (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginBottom: 12 }}>
                   <button onClick={() => { const v = Math.max(3, guestSeats - 1); setGuestSeats(v); setGuestNames((c) => c.slice(0, v)) }} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 20 }}>−</button>
@@ -4609,7 +4652,9 @@ export default function RundoTable() {
                   style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 7 }} autoFocus={i === 0} />
               ))}
               {guestSeats > 1 && guestNames.filter((n) => n.trim()).length > 0 && (
-                <div style={{ fontSize: 15, color: "#9aa0ab", marginBottom: 10 }}>{L.showsAsOne} <b style={{ color: "#14213a" }}>{guestNames.filter((n) => n.trim()).join(" & ")}</b></div>
+                <div style={{ fontSize: 15, color: "#3b486a", background: "rgba(16,24,40,0.03)", borderRadius: 10, padding: "9px 11px", marginBottom: 10, lineHeight: 1.45 }}>
+                  {L.showsAsOne} <b style={{ color: "#14213a" }}>{guestNames.filter((n) => n.trim()).join(" & ")}</b>
+                </div>
               )}
               <button onClick={bewaar} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{L.addThisGuest}</button>
               <button onClick={() => { setShowGuestModal(false); setGuestTarget(null) }} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>{L.cancel}</button>
