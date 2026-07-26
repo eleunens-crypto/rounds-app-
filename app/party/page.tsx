@@ -4397,19 +4397,20 @@ export default function PartyTest() {
                   <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.25 }}>{L.modeQuick}</span>
                   <span style={{ display: "block", fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 2 }}>{L.modeQuickSub}</span>
                 </span>
-                {bpSettle === false && <span style={{ color: MODUS_SNEL.rand, fontWeight: 800, fontSize: 24, flexShrink: 0 }}>✓</span>}
+                {bpSettle === false && <span style={{ color: MODUS_SNEL.rand, fontWeight: 800, fontSize: 21, flexShrink: 0 }}>✓</span>}
+                {/* De uitleglink hoort bij de titel, niet vlak boven de startbalk — daar
+                    plakte hij tegen de knop. Uitklappen zet de modus ook aan: een kaart die
+                    opengaat maar bleek blijft, oogt stuk. Kiezen is hier louter visueel:
+                    elke modus heeft zijn eigen startknop die zijn eigen keuze meegeeft. */}
+                <span onClick={(e) => { e.stopPropagation(); setBpSettle(false); setModeInfo((m) => m === "quick" ? null : "quick") }}
+                  style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, borderRadius: 14, padding: "6px 10px", cursor: "pointer", whiteSpace: "nowrap",
+                    background: modeInfo === "quick" ? MODUS_SNEL.rand : MODUS_SNEL.tint,
+                    color: modeInfo === "quick" ? "#fff" : MODUS_SNEL.tekst }}>{L.whatIsThis} {modeInfo === "quick" ? "▴" : "▾"}</span>
               </button>
-              {/* De uitleg hangt aan zijn eigen link, niet aan de selectie. Zo kan je lezen
-                  wat een modus is zonder hem al te kiezen — zoals op het startscherm. */}
+              {modeInfo === "quick" && (
               <div style={{ padding: "0 16px 14px", background: bpSettle === false ? MODUS_SNEL.vlak : "#fff" }}>
                 <div style={{ borderTop: `1px solid ${bpSettle === false ? MODUS_SNEL.streep : MODUS_SNEL.lijnZacht}`, paddingTop: 11 }}>
-                  {/* Uitklappen zet de modus ook aan: een kaart die opengaat maar bleek
-                      blijft, oogt stuk. Kiezen is hier trouwens louter visueel — elke
-                      modus heeft zijn eigen startknop die zijn eigen keuze meegeeft. */}
-                  <div onClick={() => { setBpSettle(false); setModeInfo((m) => m === "quick" ? null : "quick") }}
-                    style={{ fontSize: 14, fontWeight: 800, color: MODUS_SNEL.rand, cursor: "pointer" }}>{L.whatIsThis} {modeInfo === "quick" ? "▴" : "▾"}</div>
-                {modeInfo === "quick" && (
-                <div style={{ paddingTop: 11 }}>
+                <div>
                   <div style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
                     <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: MODUS_SNEL.tint, color: MODUS_SNEL.tekst, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, fontStyle: "italic" }}>i</span>
                     <span style={{ fontSize: 14.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeQuickWhat}</span>
@@ -4424,9 +4425,9 @@ export default function PartyTest() {
                     <div style={{ fontSize: 15, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pintje · 2× Cola · 1× Wijn</div>
                   </div>
                 </div>
-                )}
                 </div>
               </div>
+              )}
               {/* De startknop is de voetbalk van de kaart, rand aan rand: zo is elke modus
                   één blok in plaats van een kaart met een los knopje eronder. */}
               <button disabled={busy} onClick={() => { setBpSettle(false); startWithMode(undefined, false) }}
@@ -4459,14 +4460,16 @@ export default function PartyTest() {
                   <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.25 }}>{L.modeTitle}</span>
                   <span style={{ display: "block", fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 2 }}>{L.modeFairSub}</span>
                 </span>
-                {bpSettle === true && <span style={{ color: MODUS_FAIR.rand, fontWeight: 800, fontSize: 24, flexShrink: 0 }}>✓</span>}
+                {bpSettle === true && <span style={{ color: MODUS_FAIR.rand, fontWeight: 800, fontSize: 21, flexShrink: 0 }}>✓</span>}
+                <span onClick={(e) => { e.stopPropagation(); setBpSettle(true); setModeInfo((m) => m === "fair" ? null : "fair") }}
+                  style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, borderRadius: 14, padding: "6px 10px", cursor: "pointer", whiteSpace: "nowrap",
+                    background: modeInfo === "fair" ? MODUS_FAIR.rand : MODUS_FAIR.tint,
+                    color: modeInfo === "fair" ? "#fff" : MODUS_FAIR.tekst }}>{L.whatIsThis} {modeInfo === "fair" ? "▴" : "▾"}</span>
               </button>
+              {modeInfo === "fair" && (
               <div style={{ padding: "0 16px 14px", background: bpSettle === true ? MODUS_FAIR.vlak : "#fff" }}>
                 <div style={{ borderTop: `1px solid ${bpSettle === true ? MODUS_FAIR.streep : MODUS_FAIR.lijnZacht}`, paddingTop: 11 }}>
-                  <div onClick={() => { setBpSettle(true); setModeInfo((m) => m === "fair" ? null : "fair") }}
-                    style={{ fontSize: 14, fontWeight: 800, color: MODUS_FAIR.rand, cursor: "pointer" }}>{L.whatIsThis} {modeInfo === "fair" ? "▴" : "▾"}</div>
-                {modeInfo === "fair" && (
-                <div style={{ paddingTop: 11 }}>
+                <div>
                   <div style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
                     <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: MODUS_FAIR.tint, color: MODUS_FAIR.tekst, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, fontStyle: "italic" }}>i</span>
                     <span style={{ fontSize: 14.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeFairWhat}</span>
@@ -4495,9 +4498,9 @@ export default function PartyTest() {
                   </div>
                   <div style={{ fontSize: 14.5, color: "#6b5f3a", marginTop: 12, paddingTop: 11, borderTop: `1px solid ${MODUS_FAIR.lijn}`, lineHeight: 1.5 }}>{L.modeFairLine}</div>
                 </div>
-                )}
                 </div>
               </div>
+              )}
               {/* De startknop is de voetbalk van de kaart, rand aan rand: zo is elke modus
                   één blok in plaats van een kaart met een los knopje eronder. */}
               <button disabled={busy} onClick={() => { setBpSettle(true); startWithMode(undefined, true) }}
