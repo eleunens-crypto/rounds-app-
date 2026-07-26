@@ -729,6 +729,7 @@ const T = {
     backToSettle: "← Terug naar afrekenen",
     stepOf: (n: number, t: number) => `stap ${n} van ${t}`,
     backToAssign: "← Terug naar toewijzen",
+    backToPayers: "← Terug naar wie betaalde",
     backToNames: "← Terug naar namen",
     openAssign: "✏️ Drankjes toewijzen",
     potShort: "In de pot",
@@ -1279,6 +1280,7 @@ const T = {
     backToSettle: "← Retour au décompte",
     stepOf: (n: number, t: number) => `étape ${n} sur ${t}`,
     backToAssign: "← Retour à l'attribution",
+    backToPayers: "← Retour à qui a payé",
     backToNames: "← Retour aux noms",
     openAssign: "✏️ Attribuer les boissons",
     potShort: "Dans la cagnotte",
@@ -1933,6 +1935,17 @@ export default function PartyTest() {
   useEffect(() => {
     if (!settle && potIsCard) setPotIsCard(false)
   }, [settle, potIsCard])
+
+  // Vangnet. Het afrekenscherm van snelle rondjes bestaat niet in Fair Split. Sta je daar
+  // toch met settle aan (en niet middenin de overstap), dan is de modus ergens blijven
+  // hangen. Zonder deze correctie toont de kopbalk de Fair Split-navigatie en wandel je
+  // via “Overzicht” de echte Fair Split-schermen in, zonder weg terug.
+  useEffect(() => {
+    if (view === "quickSettle" && settle && !fromQuick) {
+      setSettle(false)
+      persistSettings({ settle: false })
+    }
+  }, [view, settle, fromQuick]) // eslint-disable-line
 
   useEffect(() => {
     if (settle) return
@@ -3064,11 +3077,16 @@ export default function PartyTest() {
   // Van niveau 1 naar Fair Split: eerst snel personen + namen, daarna toewijzen.
   const goToFairSplit = () => { setFromQuick(true); setView("fairSetup") }
   // Terug naar de gelijke verdeling: de modus omzetten en de rondjes ongemoeid laten.
-  const backToEqualSplit = () => {
+  const backToEqualSplit = (keuze: "equal" | "fair" = "equal") => {
     setSettle(false)
     persistSettings({ settle: false })
     setFromQuick(false)
-    setSettleChoice("equal")
+    setSettleChoice(keuze)
+    // Alles wat bij het Fair Split-traject hoort sluiten. Bleef daar iets van openstaan,
+    // dan kom je via de gewone navigatie alsnog in een Fair Split-scherm terecht — en
+    // daar hoor je niet zolang de groep in snelle rondjes staat.
+    setAssignIdx(null); setAssignAllMode(false)
+    setPotNames(null); setFillMode(false)
     setView("quickSettle")
   }
   // Eén tik voor het meest voorkomende geval: dezelfde persoon haalde telkens.
@@ -3927,7 +3945,9 @@ export default function PartyTest() {
     // Onderweg van gelijk verdelen naar Fair Split is er maar één route: namen,
     // toewijzen, pot, betalers, eindbalans. Instellingen en overzichten zouden je
     // daar alleen uit halen, dus die verbergen we tot de omschakeling rond is.
-    const onboarding = view === "setup" || view === "settings" || fromQuick || (view === "roundsOverview" && fillMode)
+    // De eindbalans hoort niet meer bij het traject van drie stappen: daar mag de gewone
+    // navigatie weer verschijnen, ook al staat fromQuick nog aan voor de weg terug.
+    const onboarding = view === "setup" || view === "settings" || (fromQuick && view !== "final") || (view === "roundsOverview" && fillMode)
     return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
@@ -5529,12 +5549,18 @@ export default function PartyTest() {
         {/* Alles toegewezen en je kwam uit de snelle modus? Dan is dit de weg vooruit.
             Eén knop, geen kaart: je hebt hier verder niets te beslissen. */}
         {settle && fromQuick && rounds.length > 0 && unassignedAllRounds === 0 && (
-          <div style={{ marginBottom: 13 }}>
+          <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.35)" }}>
+            {/* Ook wanneer alles al toegewezen is blijft dit stap 2: dezelfde balk, dezelfde
+                weg vooruit én achteruit. Anders lijkt het alsof de stap werd overgeslagen. */}
+            {stapBalk(2)}
+            <div style={{ fontSize: 15.5, fontWeight: 800, color: "#1f6b3a", marginBottom: 11 }}>✅ {L.allAssignedDone}</div>
             <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }}
               onClick={() => setView("payers")}>{L.toStep3}</button>
             {/* Alles toegewezen betekent niet dat je niets meer wil schuiven. */}
             <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}
               onClick={() => { setAssignAllMode(true); setAssignIdx(0) }}>{L.openAssign}</button>
+            <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 15, fontWeight: 700, color: "#8a7d55" }}
+              onClick={() => setView("fairSetup")}>{L.backToNames}</button>
           </div>
         )}
         {settle && unassignedAllRounds > 0 && firstUnassignedIdx >= 0 && (
@@ -6055,12 +6081,13 @@ export default function PartyTest() {
           <button onClick={addPerson} style={{ ...S.btn, width: "100%", marginTop: 12, fontWeight: 800, border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.06)", color: "#c98a00" }}>{L.fairAddPerson}</button>
         </div>
         <button style={{ ...S.btnP, width: "100%", marginTop: 6, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" }} onClick={confirmFairSetup}>{L.fairSetupDone}</button>
-        {/* Terug. Kwam je hier vanuit snelle rondjes, dan ga je naar het afrekenscherm
-            met Fair Split nog aangeduid — de modus staat dan nog op snelle rondjes.
-            Zat de groep al in Fair Split, dan is het afrekenscherm van snelle rondjes
-            niet de juiste bestemming: dan hoor je terug op het overzicht. */}
+        {/* Terug uit het traject betekent terug NAAR snelle rondjes — de modus gaat mee.
+            Liet je settle op true staan, dan land je op het afrekenscherm van snelle
+            rondjes terwijl de app in Fair Split staat, en dan brengt de gewone navigatie
+            je in de echte Fair Split-schermen zonder weg terug.
+            Zat de groep al in Fair Split (niet via het traject), dan hoor je op de hub. */}
         <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 15, fontWeight: 700, color: "#8a7d55" }}
-          onClick={() => { if (fromQuick || !settle) { setFromQuick(false); setSettleChoice("fair"); setView("quickSettle") } else { setOpenRound(rounds.length - 1); setView("hub") } }}>{L.back}</button>
+          onClick={() => { if (fromQuick || !settle) backToEqualSplit("fair"); else { setOpenRound(rounds.length - 1); setView("hub") } }}>{L.back}</button>
       </div></div>
     )
   }
@@ -6521,7 +6548,8 @@ export default function PartyTest() {
           onClick={() => {
             // Te vroeg getikt? Dan zeggen waarom er niets gebeurt, in plaats van niets doen.
             if (!klaar) { setNotice(zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit); return }
-            setFromQuick(false); setHasSettled(true); setView("final")
+            // fromQuick blijft staan: zo kan je vanaf de eindbalans nog stap voor stap terug.
+            setHasSettled(true); setView("final")
           }}>{L.toFinal}</button>
         {fromQuick && (
           <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 15, fontWeight: 700, color: "#8a7d55" }}
@@ -6664,6 +6692,13 @@ export default function PartyTest() {
           </div>
         )}
       </div>
+
+      {/* Kwam je hier via de drie stappen, dan moet de weg terug even netjes zijn als de
+          weg heen: van de eindbalans naar stap 3, en van daar verder achteruit. */}
+      {fromQuick && (
+        <button style={{ ...S.btn, width: "100%", marginTop: 12, fontSize: 15, fontWeight: 700, color: "#8a7d55" }}
+          onClick={() => setView("payers")}>{L.backToPayers}</button>
+      )}
 
     </div></div>
   )
