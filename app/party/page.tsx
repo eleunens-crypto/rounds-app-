@@ -619,7 +619,9 @@ const T = {
     modeQuickInfo: "Hou gewoon bij wat er besteld wordt en leg eventueel een pot, verdelen kan later nog.",
     groupNamePlaceholder: "Bv. De Bubbelkes",
     modeQuickSub: "Snel 1 of meerdere rondjes noteren!",
-    howItWorks: "zo werkt dat",
+    whatIsThis: "Wat is dit?",
+    modeQuickWhat: "Noteer per rondje wat er besteld wordt en wat het kostte. Geen namen nodig — op het einde verdeel je gelijk, of stap je alsnog over naar Fair Split.",
+    modeFairWhat: "Iedereen scant de QR en bestelt mee. Op het einde betaalt elk wat hij écht dronk, op basis van richtprijzen per drankje.",
     orWord: "of",
     modeFairSub: "Scan QR, bestel samen & eerlijk afrekenen",
     modeFairLine: "Eerlijk betalen volgens wat je dronk",
@@ -1174,7 +1176,9 @@ const T = {
     modeQuickInfo: "Note simplement ce qui est command\u00e9 et mets \u00e9ventuellement une cagnotte, tu peux partager plus tard.",
     groupNamePlaceholder: "Ex. Les Bulles",
     modeQuickSub: "Note vite une ou plusieurs tournées !",
-    howItWorks: "voici comment",
+    whatIsThis: "C’est quoi ?",
+    modeQuickWhat: "Note par tournée ce qui est commandé et ce que ça a coûté. Sans noms — à la fin tu partages à parts égales, ou tu passes à Fair Split.",
+    modeFairWhat: "Chacun scanne le QR et commande. À la fin, chacun paie ce qu’il a réellement bu, selon les prix indicatifs par boisson.",
     orWord: "ou",
     modeFairSub: "Scanne le QR, commandez ensemble & partagez équitablement",
     modeFairLine: "Payer équitablement selon ce que tu as bu",
@@ -1563,6 +1567,9 @@ export default function PartyTest() {
   const [beginPrompt, setBeginPrompt] = useState(false)
   const [potChosen, setPotChosen] = useState(false)
   const [bpSettle, setBpSettle] = useState<boolean | null>(null)
+  // De uitleg staat los van de keuze: lezen zonder te kiezen, kiezen zonder te lezen.
+  // Eén tegelijk open, anders wordt het keuzescherm meteen twee schermen lang.
+  const [modeInfo, setModeInfo] = useState<"quick" | "fair" | null>(null)
   const [fromOnboarding, setFromOnboarding] = useState(false)
   const [onboardedOnce, setOnboardedOnce] = useState(false)
   // Als je een verse groep (nog geen rondjes) heropent, land je op de kaders om de modus
@@ -4456,9 +4463,18 @@ export default function PartyTest() {
                 </span>
                 {bpSettle === false && <span style={{ color: MODUS_SNEL.rand, fontWeight: 800, fontSize: 24, flexShrink: 0 }}>✓</span>}
               </button>
-              {bpSettle === false && (
-                <div style={{ background: MODUS_SNEL.paneel, borderTop: `1.5px dashed ${MODUS_SNEL.streep}`, padding: "14px 15px" }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: MODUS_SNEL.label, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 11 }}>↓ {L.howItWorks}</div>
+              {/* De uitleg hangt aan zijn eigen link, niet aan de selectie. Zo kan je lezen
+                  wat een modus is zonder hem al te kiezen — zoals op het startscherm. */}
+              <div style={{ padding: "0 16px 14px", background: bpSettle === false ? MODUS_SNEL.vlak : "#fff" }}>
+                <div style={{ borderTop: `1px solid ${bpSettle === false ? MODUS_SNEL.streep : "rgba(120,95,20,0.18)"}`, paddingTop: 11 }}>
+                  <div onClick={() => setModeInfo((m) => m === "quick" ? null : "quick")}
+                    style={{ fontSize: 14, fontWeight: 800, color: MODUS_SNEL.rand, cursor: "pointer" }}>{L.whatIsThis} {modeInfo === "quick" ? "▴" : "▾"}</div>
+                {modeInfo === "quick" && (
+                <div style={{ paddingTop: 11 }}>
+                  <div style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
+                    <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: MODUS_SNEL.tint, color: MODUS_SNEL.tekst, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, fontStyle: "italic" }}>i</span>
+                    <span style={{ fontSize: 14.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeQuickWhat}</span>
+                  </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
                     <span style={{ background: "#faf7ec", borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
                     <span style={{ background: "#faf7ec", borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
@@ -4469,7 +4485,9 @@ export default function PartyTest() {
                     <div style={{ fontSize: 15, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pintje · 2× Cola · 1× Wijn</div>
                   </div>
                 </div>
-              )}
+                )}
+                </div>
+              </div>
             </div>
               <button disabled={busy} onClick={() => { setBpSettle(false); startWithMode(undefined, false) }}
                 style={{ ...S.btnP, width: "100%", marginTop: 11, padding: "16px", fontSize: 18,
@@ -4498,9 +4516,16 @@ export default function PartyTest() {
                 </span>
                 {bpSettle === true && <span style={{ color: MODUS_FAIR.rand, fontWeight: 800, fontSize: 24, flexShrink: 0 }}>✓</span>}
               </button>
-              {bpSettle === true && (
-                <div style={{ background: MODUS_FAIR.paneel, borderTop: `1.5px dashed ${MODUS_FAIR.streep}`, padding: "14px 15px" }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: MODUS_FAIR.label, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 11 }}>↓ {L.howItWorks}</div>
+              <div style={{ padding: "0 16px 14px", background: bpSettle === true ? MODUS_FAIR.vlak : "#fff" }}>
+                <div style={{ borderTop: `1px solid ${bpSettle === true ? MODUS_FAIR.streep : "rgba(120,95,20,0.18)"}`, paddingTop: 11 }}>
+                  <div onClick={() => setModeInfo((m) => m === "fair" ? null : "fair")}
+                    style={{ fontSize: 14, fontWeight: 800, color: MODUS_FAIR.rand, cursor: "pointer" }}>{L.whatIsThis} {modeInfo === "fair" ? "▴" : "▾"}</div>
+                {modeInfo === "fair" && (
+                <div style={{ paddingTop: 11 }}>
+                  <div style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
+                    <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: MODUS_FAIR.tint, color: MODUS_FAIR.tekst, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, fontStyle: "italic" }}>i</span>
+                    <span style={{ fontSize: 14.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeFairWhat}</span>
+                  </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
                     {/* De QR staat vooraan: scannen is de eerste stap, zonder scan geen Fair Split. */}
                     <div>
@@ -4525,7 +4550,9 @@ export default function PartyTest() {
                   </div>
                   <div style={{ fontSize: 14.5, color: "#6b5f3a", marginTop: 12, paddingTop: 11, borderTop: `1px solid ${MODUS_FAIR.lijn}`, lineHeight: 1.5 }}>{L.modeFairLine}</div>
                 </div>
-              )}
+                )}
+                </div>
+              </div>
             </div>
               <button disabled={busy} onClick={() => { setBpSettle(true); startWithMode(undefined, true) }}
                 style={{ ...S.btnP, width: "100%", marginTop: 11, padding: "16px", fontSize: 18,
