@@ -3172,6 +3172,10 @@ export default function PartyTest() {
     setSettle(true)
     persistSettings({ settle: true })
     setOpenRound(rounds.length - 1)
+    // Stap 1 leidt altijd naar stap 2 zélf, niet naar een tussenscherm met een knop
+    // naar stap 3. Ook als alles al toegewezen is: dan zie je gewoon dat het klaar is
+    // en ga je van daar verder. Zo is de volgorde in beide richtingen dezelfde.
+    if (fromQuick && rounds.length > 0) { setAssignAllMode(true); setAssignIdx(0) }
     setView("hub")
   }
   // Nieuw rondje in gewoon-rondjes: eerst vragen of het hetzelfde rondje opnieuw is
@@ -5635,7 +5639,9 @@ export default function PartyTest() {
         })()}
         {/* Alles toegewezen en je kwam uit de snelle modus? Dan is dit de weg vooruit.
             Eén knop, geen kaart: je hebt hier verder niets te beslissen. */}
-        {settle && fromQuick && rounds.length > 0 && unassignedAllRounds === 0 && (
+        {/* Staat het toewijspaneel open, dan draagt dat zélf de knoppen naar stap 3 en
+            terug naar de namen. Dit kaartje erbij zou hetzelfde twee keer zeggen. */}
+        {settle && fromQuick && assignIdx === null && rounds.length > 0 && unassignedAllRounds === 0 && (
           <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.35)" }}>
             {/* Ook wanneer alles al toegewezen is blijft dit stap 2: dezelfde balk, dezelfde
                 weg vooruit én achteruit. Anders lijkt het alsof de stap werd overgeslagen. */}
@@ -5724,7 +5730,11 @@ export default function PartyTest() {
                                 <span key={d.id} style={{ ...S.chip(n), padding: "5px 10px", fontSize: 14.5 }}>{d.emoji} {d.name}<span style={S.badge}>{n}</span><span onClick={(e) => { e.stopPropagation(); rUnassign(idx, d.id, p.id) }} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(200,110,95,0.9)", color: "#fff", fontSize: 15.5, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>−</span></span>
                               )})}
                               {roundDrinks.filter((d) => (r.anon[d.id] ?? 0) > 0).map((d) => (
-                                <span key={"add" + d.id} onClick={() => rAssignFromAnon(idx, d.id, p.id)} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 10px", fontSize: 14.5, borderRadius: 20, background: "#fff", border: "1px dashed rgba(120,95,20,0.4)", color: "#8a7d55", fontWeight: 700, cursor: "pointer" }}>+ {d.emoji} {d.name}</span>
+                                <span key={"add" + d.id} onClick={() => rAssignFromAnon(idx, d.id, p.id)} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 10px", fontSize: 14.5, borderRadius: 20, background: "#fff", border: "1px dashed rgba(120,95,20,0.4)", color: "#8a7d55", fontWeight: 700, cursor: "pointer" }}>+ {d.emoji} {d.name}
+                                  {/* Zonder dit getal zie je per persoon niet hoeveel er nog
+                                      te verdelen valt — per drank staat dat er wél. */}
+                                  <span style={{ marginLeft: 2, display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 18, height: 18, padding: "0 5px", borderRadius: 9, background: "rgba(224,104,92,0.16)", color: "#c0554a", fontSize: 12.5, fontWeight: 800 }}>{r.anon[d.id] ?? 0}</span>
+                                </span>
                               ))}
                             </div>
                           </div>
