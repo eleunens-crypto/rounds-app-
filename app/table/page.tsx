@@ -527,6 +527,14 @@ const STRINGS = {
     theirNamesQ: "Hoe heten ze?",
     addThisGuest: "Toevoegen",
     enterGuestName: "Vul eerst een naam in.",
+    namesBlockTitle: "✍️ Namen gasten alvast invullen",
+    namesBlockOptional: "(optioneel)",
+    namesBlockSub: "Wie je hier invult, tikt na het scannen gewoon zijn naam aan. Laat leeg wat je niet weet — dat blijft een vrije plaats. Betalen twee samen? Zet ze op één plaats met de knop rechts.",
+    namesRowPlaceholder: "Vrije plaats",
+    seatsChip: (n: number) => `${n}p ›`,
+    needMoreSpotsTitle: "Er is een plaats te weinig",
+    needMoreSpotsBody: (tekort: number, totaal: number) => `Dit vraagt ${tekort} plaats${tekort === 1 ? "" : "en"} meer dan er vrij ${tekort === 1 ? "is" : "zijn"}. Zal ik het aantal personen op ${totaal} zetten?`,
+    raiseTotalBtn: (totaal: number) => `Ja, personen op ${totaal} zetten`,
     guestAddedTitle: "\u2713 Toegevoegd",
     guestAddedBody: "Die persoon staat nu in de lijst. Ga naar toewijzen, of voeg nog iemand toe.",
     addAnother: "Nog iemand toevoegen",
@@ -1220,6 +1228,14 @@ const STRINGS = {
     theirNamesQ: "Comment s\u2019appellent-ils ?",
     addThisGuest: "Ajouter",
     enterGuestName: "Entre d\u2019abord un nom.",
+    namesBlockTitle: "✍️ Pré-remplir les noms des invités",
+    namesBlockOptional: "(facultatif)",
+    namesBlockSub: "Ceux que tu indiques ici n’auront qu’à toucher leur nom après le scan. Laisse vide ce que tu ne sais pas — ça reste une place libre. Deux qui paient ensemble ? Mets-les sur une seule place avec le bouton à droite.",
+    namesRowPlaceholder: "Place libre",
+    seatsChip: (n: number) => `${n}p ›`,
+    needMoreSpotsTitle: "Il manque une place",
+    needMoreSpotsBody: (tekort: number, totaal: number) => `Cela demande ${tekort} place${tekort === 1 ? "" : "s"} de plus qu’il n’y en a de libre. Je mets le nombre de personnes à ${totaal} ?`,
+    raiseTotalBtn: (totaal: number) => `Oui, mettre à ${totaal} personnes`,
     guestAddedTitle: "\u2713 Ajout\u00e9",
     guestAddedBody: "Cette personne est maintenant dans la liste. Va vers l\u2019attribution, ou ajoute quelqu\u2019un d\u2019autre.",
     addAnother: "Ajouter quelqu\u2019un d\u2019autre",
@@ -1964,6 +1980,9 @@ export default function RundoTable() {
   const [selfNames, setSelfNames] = useState<string[]>([""])
   // Popup om zelf een gast (koppel/gezin/alleenstaande) toe te voegen — meermaals bruikbaar.
   const [showGuestModal, setShowGuestModal] = useState(false)
+  // Welke plaats de popup bewerkt. null = een nieuwe plaats innemen (de oude werking).
+  const [guestTarget, setGuestTarget] = useState<string | null>(null)
+  const [showNamesBlock, setShowNamesBlock] = useState(false)
   const [guestSeats, setGuestSeats] = useState(1)
   const [guestNames, setGuestNames] = useState<string[]>([""])
   const [showGuestList, setShowGuestList] = useState(false)  // namenlijst op de delen-tab in-/uitklappen
@@ -3942,6 +3961,49 @@ export default function RundoTable() {
             </div>
             )}
 
+            {/* Optioneel: de namen die je al kent alvast invullen, zodat een gast na het
+                scannen enkel zijn naam hoeft aan te tikken. Dicht kost dit één regel. */}
+            {personsSet && adminNamed && (() => {
+              const rijen = participants.filter((q) => q.id !== meId && !q.self_joined)
+              return (
+                <div style={{ marginTop: 13, paddingTop: 12, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
+                  <div onClick={() => setShowNamesBlock((v) => !v)} style={{ fontSize: 16, fontWeight: 800, color: "#1499b0", cursor: "pointer" }}>
+                    {L.namesBlockTitle} <span style={{ color: "#9aa0ab", fontWeight: 700 }}>{L.namesBlockOptional}</span> {showNamesBlock ? "▴" : "▾"}
+                  </div>
+                  {showNamesBlock && (
+                    <div style={{ marginTop: 9 }}>
+                      <div style={{ fontSize: 15.5, color: "#5a6680", lineHeight: 1.45, marginBottom: 12 }}>{L.namesBlockSub}</div>
+                      {rijen.length === 0 ? (
+                        <div style={{ fontSize: 15.5, color: "#9aa0ab", lineHeight: 1.45 }}>{L.noFreeSpots}</div>
+                      ) : rijen.map((q, i) => {
+                        const leeg = isFreeSpot(q)
+                        const zit = Math.max(1, q.seats ?? 1)
+                        return (
+                          <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+                            <span style={{ width: 20, flexShrink: 0, fontSize: 15, fontWeight: 800, color: "#c3c8d2" }}>{i + 2}</span>
+                            <input key={q.id + q.name} defaultValue={leeg ? "" : q.name} placeholder={L.namesRowPlaceholder}
+                              onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== q.name) renameGuest(q.id, v) }}
+                              onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
+                              style={{ ...S.input, flex: 1, minWidth: 0, fontSize: 17 }} />
+                            <button onClick={() => {
+                              setGuestTarget(q.id)
+                              setGuestSeats(zit)
+                              setGuestNames(leeg ? Array.from({ length: zit }, () => "") : q.name.split(/\s*&\s*/).map((x) => x.trim()))
+                              setShowGuestModal(true)
+                            }}
+                              style={{ flexShrink: 0, cursor: "pointer", borderRadius: 9, padding: "7px 11px", fontSize: 15, fontWeight: 800,
+                                border: zit > 1 ? "1px solid rgba(20,153,176,0.5)" : "1px solid rgba(16,24,40,0.15)",
+                                background: zit > 1 ? "rgba(20,153,176,0.06)" : "#fff",
+                                color: zit > 1 ? "#0f7d91" : "#9aa0ab" }}>{L.seatsChip(zit)}</button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
           </div>
 
           <div style={{ ...S.card, order: 2, border: "1.5px solid rgba(20,153,176,0.4)", ...((!personsSet || !adminNamed) ? { opacity: 0.5 } : {}) }}>
@@ -4103,7 +4165,7 @@ export default function RundoTable() {
                         </div>
                       </div>
                     )}
-                    <button onClick={() => { if (!requireName()) return; setGuestSeats(1); setGuestNames([""]); setShowGuestModal(true) }} disabled={!personsSet || !adminNamed}
+                    <button onClick={() => { if (!requireName()) return; setGuestTarget(null); setGuestSeats(1); setGuestNames([""]); setShowGuestModal(true) }} disabled={!personsSet || !adminNamed}
                       style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", marginTop: heeftAl ? 8 : 12, padding: "15px 15px", borderRadius: 12, border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.05)", cursor: (!personsSet || !adminNamed) ? "not-allowed" : "pointer", opacity: (!personsSet || !adminNamed) ? 0.45 : 1 }}>
                       <span style={{ flexShrink: 0, fontSize: 24 }}>✍️</span>
                       <span style={{ minWidth: 0 }}>
@@ -4676,19 +4738,43 @@ export default function RundoTable() {
         const bewaar = async () => {
           const naam = guestNames.slice(0, guestSeats).map((x) => x.trim()).filter(Boolean).join(" & ")
           if (!naam) { setCenterNote({ body: L.enterGuestName }); return }
-          setShowGuestModal(false)
-          // Neem een bestaande vrije plaats in — zo blijft het aantal personen gelijk (de
-          // "extra" persoon is gewoon een van de plaatsen die al geteld waren).
+          // Bewerk je een bestaande plaats uit de namenlijst, of neem je er een nieuwe in?
           const vrij = participants.filter((p) => p.id !== meId && isFreeSpot(p) && !p.self_joined)
-          if (vrij.length === 0) { setCenterNote({ body: L.noFreeSpots }); return }
-          const doel = vrij[0]
-          // Een koppel/gezin zet op één plaats: extra vrije plaatsen worden opgeslokt.
-          const extra = Math.min(guestSeats, vrij.length) - 1
-          for (let i = 0; i < extra; i++) await supabase.from("table_participants").delete().eq("id", vrij[1 + i].id)
-          await supabase.from("table_participants").update({ name: naam, seats: Math.max(1, Math.min(guestSeats, vrij.length)) }).eq("id", doel.id)
-          if (group) await loadAll(group.id)
-          // Klaar? Bied meteen aan om door te gaan naar toewijzen (of nog iemand toe te voegen).
-          setCenterNote({ title: L.guestAddedTitle, body: L.guestAddedBody, actionLabel: L.goAssignBtn, onAction: () => { setAdminTab("overview"); scrollTop() } })
+          const doel = guestTarget ? participants.find((p) => p.id === guestTarget) : vrij[0]
+          if (!doel) { setCenterNote({ body: L.noFreeSpots }); return }
+          const oud = Math.max(1, doel.seats ?? 1)
+          const anderen = participants.filter((p) => p.id !== doel.id && p.id !== meId && isFreeSpot(p) && !p.self_joined)
+          const nodig = guestSeats - oud
+          // Komen we plaatsen tekort? De beheerder mág het aantal aan tafel wijzigen, dus
+          // vragen we het — in tegenstelling tot een gast, die het gewoon niet kan.
+          const tekort = Math.max(0, nodig - anderen.length)
+
+          const opslaan = async () => {
+            setShowGuestModal(false); setGuestTarget(null)
+            // Meer personen op deze plaats: vrije plaatsen worden opgeslokt.
+            for (let i = 0; i < Math.min(Math.max(0, nodig), anderen.length); i++) {
+              await supabase.from("table_participants").delete().eq("id", anderen[i].id)
+            }
+            // Minder personen: de vrijgekomen plaatsen komen terug.
+            for (let i = 0; i < Math.max(0, oud - guestSeats); i++) await addGuest(L.guestWord, false, 1)
+            await supabase.from("table_participants").update({ name: naam, seats: Math.max(1, guestSeats) }).eq("id", doel.id)
+            if (group) await loadAll(group.id)
+            // Alleen bij het toevoegen van iemand doorverwijzen; bij het invullen van de
+            // namenlijst zou dat na elke naam een popup geven.
+            if (!guestTarget) setCenterNote({ title: L.guestAddedTitle, body: L.guestAddedBody, actionLabel: L.goAssignBtn, onAction: () => { setAdminTab("overview"); scrollTop() } })
+          }
+
+          if (tekort > 0) {
+            setCenterNote({
+              title: L.needMoreSpotsTitle,
+              body: L.needMoreSpotsBody(tekort, totalPersons + tekort),
+              actionLabel: L.raiseTotalBtn(totalPersons + tekort),
+              onAction: () => { void opslaan() },
+              dismissLabel: L.cancel,
+            })
+            return
+          }
+          await opslaan()
         }
         return (
           <div style={{ ...S.overlay, zIndex: 3100 }}>
@@ -4724,7 +4810,7 @@ export default function RundoTable() {
                 <div style={{ fontSize: 15, color: "#9aa0ab", marginBottom: 10 }}>{L.showsAsOne} <b style={{ color: "#14213a" }}>{guestNames.filter((n) => n.trim()).join(" & ")}</b></div>
               )}
               <button onClick={bewaar} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{L.addThisGuest}</button>
-              <button onClick={() => setShowGuestModal(false)} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>{L.cancel}</button>
+              <button onClick={() => { setShowGuestModal(false); setGuestTarget(null) }} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>{L.cancel}</button>
             </div>
           </div>
         )
