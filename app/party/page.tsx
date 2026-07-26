@@ -4471,7 +4471,10 @@ export default function PartyTest() {
                   wat een modus is zonder hem al te kiezen — zoals op het startscherm. */}
               <div style={{ padding: "0 16px 14px", background: bpSettle === false ? MODUS_SNEL.vlak : "#fff" }}>
                 <div style={{ borderTop: `1px solid ${bpSettle === false ? MODUS_SNEL.streep : MODUS_SNEL.lijnZacht}`, paddingTop: 11 }}>
-                  <div onClick={() => setModeInfo((m) => m === "quick" ? null : "quick")}
+                  {/* Uitklappen zet de modus ook aan: een kaart die opengaat maar bleek
+                      blijft, oogt stuk. Kiezen is hier trouwens louter visueel — elke
+                      modus heeft zijn eigen startknop die zijn eigen keuze meegeeft. */}
+                  <div onClick={() => { setBpSettle(false); setModeInfo((m) => m === "quick" ? null : "quick") }}
                     style={{ fontSize: 14, fontWeight: 800, color: MODUS_SNEL.rand, cursor: "pointer" }}>{L.whatIsThis} {modeInfo === "quick" ? "▴" : "▾"}</div>
                 {modeInfo === "quick" && (
                 <div style={{ paddingTop: 11 }}>
@@ -4526,7 +4529,7 @@ export default function PartyTest() {
               </button>
               <div style={{ padding: "0 16px 14px", background: bpSettle === true ? MODUS_FAIR.vlak : "#fff" }}>
                 <div style={{ borderTop: `1px solid ${bpSettle === true ? MODUS_FAIR.streep : MODUS_FAIR.lijnZacht}`, paddingTop: 11 }}>
-                  <div onClick={() => setModeInfo((m) => m === "fair" ? null : "fair")}
+                  <div onClick={() => { setBpSettle(true); setModeInfo((m) => m === "fair" ? null : "fair") }}
                     style={{ fontSize: 14, fontWeight: 800, color: MODUS_FAIR.rand, cursor: "pointer" }}>{L.whatIsThis} {modeInfo === "fair" ? "▴" : "▾"}</div>
                 {modeInfo === "fair" && (
                 <div style={{ paddingTop: 11 }}>
