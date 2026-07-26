@@ -556,7 +556,10 @@ const T = {
     fairSplit: "⚖️ Fair Split",
     equalSplit: "iedereen evenveel",
     equalWouldBe: (v: string) => `Gelijk verdelen zou ${v} per persoon zijn.`,
-    equalColHead: "gelijk",
+    equalColHead: "gelijk verdeeld",
+    fairColHead: "Fair Split",
+    participantColHead: "Deelnemer",
+    settleHowTitle: "Zo verrekenen jullie onderling",
     equalSplitWarn: "⚠️ Dit is een gelijke verdeling, geen Fair Split.",
     fairSplitInfo: "Gelijke verdeling = totaal ÷ aantal personen. Fair Split is eerlijker: wie weinig of niks dronk, betaalt niet mee voor wie veel dronk.",
     unassignedWarn: "Wijs de resterende drankjes toe, dan verdeelt de app eerlijk op wat elk verteerde.",
@@ -572,8 +575,6 @@ const T = {
     settleTogetherLink: "🔗 samen afrekenen?",
     settleTogetherCount: (n: number) => `🔗 ${n} ${n === 1 ? "koppel" : "koppels"}`,
     closeWord: "sluiten",
-    paysTo: (v: string, wie: string) => `betaalt ${v} aan ${wie}`,
-    getsFrom: (v: string, wie: string) => `krijgt ${v} van ${wie}`,
     severalTransfers: (n: number) => `${n} overschrijvingen`,
     togetherDrank: "Totaal",
     settleTogetherInfo: "Voor koppels, huisgenoten, wie samen naar huis rijdt. Iedereen houdt zijn eigen drankjes — enkel het eindbedrag wordt samengeteld.",
@@ -1116,7 +1117,10 @@ const T = {
     fairSplit: "⚖️ Fair Split",
     equalSplit: "part égale",
     equalWouldBe: (v: string) => `Un partage égal ferait ${v} par personne.`,
-    equalColHead: "égal",
+    equalColHead: "part égale",
+    fairColHead: "Fair Split",
+    participantColHead: "Participant",
+    settleHowTitle: "Voici comment vous réglez entre vous",
     equalSplitWarn: "⚠️ Ceci est une répartition égale, pas un Fair Split.",
     fairSplitInfo: "Répartition égale = total ÷ nombre de personnes. Le Fair Split est plus juste : qui a peu ou rien bu ne paie pas pour ceux qui ont beaucoup bu.",
     unassignedWarn: "Attribue les boissons restantes, puis l'app répartit selon ce que chacun a consommé.",
@@ -1132,8 +1136,6 @@ const T = {
     settleTogetherLink: "🔗 régler ensemble ?",
     settleTogetherCount: (n: number) => `🔗 ${n} ${n === 1 ? "duo" : "duos"}`,
     closeWord: "fermer",
-    paysTo: (v: string, wie: string) => `paie ${v} à ${wie}`,
-    getsFrom: (v: string, wie: string) => `reçoit ${v} de ${wie}`,
     severalTransfers: (n: number) => `${n} virements`,
     togetherDrank: "Total",
     settleTogetherInfo: "Pour les couples, colocataires, ceux qui rentrent ensemble. Chacun garde ses boissons — seul le montant final est additionné.",
@@ -6726,14 +6728,18 @@ export default function PartyTest() {
             <button style={{ ...S.btnP, width: "100%", padding: "11px 0", fontSize: 15.5 }} onClick={goAssignUnassigned}>{L.useFairSplit}</button>
           </div>
         )}
-        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 5, fontSize: 10, color: "#a89a6f", fontWeight: 800, letterSpacing: "0.04em", paddingBottom: 4 }}>
+        {/* Kolomkoppen: de twee bedragen staan naast elkaar, elk onder zijn eigen naam.
+            Zonder kop moest je raden welk getal welke verdeling was. */}
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 8, paddingBottom: 6, borderBottom: "1.5px solid rgba(120,95,20,0.2)", fontSize: 10, fontWeight: 800, letterSpacing: "0.04em" }}>
+          <span style={{ flex: 1, minWidth: 0, color: "#a89a6f" }}>{L.participantColHead.toUpperCase()}</span>
+          <span style={{ width: 78, textAlign: "right", color: "#1f8a4c", flexShrink: 0 }}>{L.fairColHead.toUpperCase()}</span>
           {showEqual ? (
-            <>
-              <span onClick={() => setNotice(L.fairSplitInfo)} style={{ cursor: "pointer" }}>{L.equalColHead.toUpperCase()}</span>
+            <span style={{ width: 62, flexShrink: 0, display: "flex", alignItems: "flex-end", justifyContent: "flex-end", gap: 4, paddingLeft: 8, borderLeft: "1px solid rgba(120,95,20,0.18)" }}>
+              <span onClick={() => setNotice(L.fairSplitInfo)} style={{ cursor: "pointer", color: "#a89a6f", textAlign: "right", lineHeight: 1.15 }}>{L.equalColHead.toUpperCase()}</span>
               <span onClick={() => setShowEqual(false)} style={{ cursor: "pointer", fontSize: 12, color: "#c4b896" }}>✕</span>
-            </>
+            </span>
           ) : (
-            <span onClick={() => setShowEqual(true)} style={{ cursor: "pointer", fontSize: 11, fontWeight: 800, color: "#c98a00", background: "#fffdf6", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 11, padding: "3px 8px", letterSpacing: 0 }}>+ {L.equalColHead}</span>
+            <span onClick={() => setShowEqual(true)} style={{ flexShrink: 0, cursor: "pointer", fontSize: 11, fontWeight: 800, color: "#c98a00", background: "#fffdf6", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 11, padding: "3px 8px", letterSpacing: 0 }}>+ {L.equalColHead}</span>
           )}
         </div>
         {people.map((p) => {
@@ -6751,21 +6757,21 @@ export default function PartyTest() {
           return (
             <div key={p.id} style={{ borderBottom: "1px solid rgba(120,95,20,0.06)" }}>
               <div style={{ ...S.row, justifyContent: "space-between", padding: "7px 0", cursor: "pointer" }} onClick={() => setOpenFair((o) => ({ ...o, [p.id]: !open }))}>
-                <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700 }}>{open ? "▾" : "▸"} {p.name} <span style={{ fontSize: 14, fontWeight: 800, color: "#1f8a4c" }}>· {show(dronk)}</span></span>
-                {/* Elke overschrijving een eigen regel: zo staat er nergens "· 2×" zonder uitleg. */}
-                {mijnTx.length > 0 && (
-                  <span style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 3, alignItems: "flex-end" }}>
-                    {mijnTx.map((t, ti) => {
-                      const ontvangt = t.to === mijnGroep?.label
-                      return (
-                        <span key={ti} style={{ fontSize: 11.5, fontWeight: 800, padding: "3px 8px", borderRadius: 16, whiteSpace: "nowrap", background: ontvangt ? "rgba(31,138,76,0.14)" : "rgba(224,138,0,0.16)", color: ontvangt ? "#1f8a4c" : "#b35309" }}>
-                          {ontvangt ? L.getsFrom(show(t.amount), t.from) : L.paysTo(show(t.amount), t.to)}
-                        </span>
-                      )
-                    })}
-                  </span>
-                )}
-                {showEqual && <span style={{ width: 58, textAlign: "right", paddingLeft: 8, borderLeft: "1px solid rgba(120,95,20,0.18)", fontSize: 12.5, color: "#a89a6f", flexShrink: 0 }}>{show(equalShare)}</span>}
+                <span style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 5 }}>
+                  <span style={{ fontSize: 14.5, fontWeight: 700 }}>{open ? "▾" : "▸"} {p.name}</span>
+                  {/* Kort merkteken per overschrijving; wie de tegenpartij is staat in het
+                      verrekenblok onderaan, waar elke beweging één keer vermeld wordt. */}
+                  {mijnTx.map((t, ti) => {
+                    const ontvangt = t.to === mijnGroep?.label
+                    return (
+                      <span key={ti} style={{ fontSize: 11.5, fontWeight: 800, padding: "2px 7px", borderRadius: 16, whiteSpace: "nowrap", background: ontvangt ? "rgba(31,138,76,0.14)" : "rgba(224,138,0,0.16)", color: ontvangt ? "#1f8a4c" : "#b35309" }}>
+                        {ontvangt ? "←" : "→"} {show(t.amount)}
+                      </span>
+                    )
+                  })}
+                </span>
+                <span style={{ width: 78, textAlign: "right", fontSize: 15, fontWeight: 800, color: "#1f8a4c", flexShrink: 0 }}>{show(dronk)}</span>
+                {showEqual && <span style={{ width: 62, textAlign: "right", paddingLeft: 8, borderLeft: "1px solid rgba(120,95,20,0.18)", fontSize: 12.5, color: "#a89a6f", flexShrink: 0 }}>{show(equalShare)}</span>}
               </div>
               {open && (
                 <div style={{ background: "#faf4e4", borderRadius: 10, padding: "8px 11px", margin: "0 0 8px", fontSize: 14.5 }}>
@@ -6792,9 +6798,26 @@ export default function PartyTest() {
           )
         })}
         <div style={{ ...S.row, justifyContent: "space-between", padding: "9px 0 2px", borderTop: "2px solid rgba(120,95,20,0.25)", marginTop: 2 }}>
-          <span style={{ flex: 1, fontSize: 15.5, fontWeight: 800 }}>{L.togetherDrank} <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c" }}>· {show(grandTotal)}</span></span>
-          {showEqual && <span style={{ width: 58, textAlign: "right", paddingLeft: 8, borderLeft: "1px solid rgba(120,95,20,0.18)", fontSize: 12.5, fontWeight: 800, color: "#8a7d55", flexShrink: 0 }}>{show(equalShare * people.length)}</span>}
+          <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 800 }}>{L.togetherDrank}</span>
+          <span style={{ width: 78, textAlign: "right", fontSize: 15, fontWeight: 800, color: "#1f8a4c", flexShrink: 0 }}>{show(grandTotal)}</span>
+          {showEqual && <span style={{ width: 62, textAlign: "right", paddingLeft: 8, borderLeft: "1px solid rgba(120,95,20,0.18)", fontSize: 12.5, fontWeight: 800, color: "#8a7d55", flexShrink: 0 }}>{show(equalShare * people.length)}</span>}
         </div>
+        {/* De tabel zegt wie hoeveel dronk; dit zegt wat je nu concreet moet doen. Elke
+            overschrijving staat hier één keer — in de rijen hierboven zag je ze twee keer,
+            één keer bij de betaler en één keer bij de ontvanger. */}
+        {settlement.tx.length > 0 && (
+          <div style={{ background: "#faf7ec", borderRadius: 12, padding: "12px 13px", marginTop: 14 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 8 }}>🔁 {L.settleHowTitle}</div>
+            {settlement.tx.map((t, ti) => (
+              <div key={ti} style={{ ...S.row, justifyContent: "space-between", gap: 10, padding: "6px 0", borderBottom: ti < settlement.tx.length - 1 ? "1px solid rgba(120,95,20,0.1)" : "none" }}>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <b>{t.from}</b> <span style={{ color: "#a89a6f" }}>→</span> <b>{t.to}</b>
+                </span>
+                <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#1f8a4c" }}>{show(t.amount)}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {isSchatting && (
           <div style={{ background: "#fff8e8", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10 }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: "#c98a00", marginBottom: 2 }}>⚠️ {L.estimate}</div>
