@@ -480,6 +480,7 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
 // ═══════════════════════════════════════════════════════════════════════════
 const STRINGS = {
   nl: {
+    errCantReadPhoto: "Kon de foto niet lezen",
     backToRundo: "← naar Rundo startscherm",
     tableTagline: "Scan de rekening en verdeel in groep",
     groupName: "Groepsnaam",
@@ -1032,6 +1033,7 @@ const STRINGS = {
     itemsAddedCheck: (n: number) => `${n} item${n !== 1 ? "s" : ""} toegevoegd — controleer ze op de Bon-tab.`,
   },
   fr: {
+    errCantReadPhoto: "Impossible de lire la photo",
     backToRundo: "← retour à l'accueil Rundo",
     tableTagline: "Scanne l'addition et partage en groupe",
     groupName: "Nom du groupe",
