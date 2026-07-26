@@ -6658,11 +6658,8 @@ export default function PartyTest() {
           const owed = dronk + waarborg - zelf - inpot + cardLossPer
           const open = openFairAll || openFair[p.id]
           const nettoLabel = Math.abs(owed) < 0.005 ? "staat gelijk" : owed > 0 ? `moet ${show(owed)} betalen` : `krijgt ${show(-owed)} terug`
-          // Wie betaalt aan wie? Bij één overschrijving noemen we de tegenpartij; bij
-          // meer zou dat niet passen, dus tonen we het aantal en staat het detail eronder.
           const mijnGroep = settleGroups.find((g) => g.leden.some((x) => x.id === p.id))
           const mijnTx = settlement.tx.filter((t) => t.from === mijnGroep?.label || t.to === mijnGroep?.label)
-          const tegenpartij = alleen && mijnTx.length === 1 ? (owed > 0 ? mijnTx[0].to : mijnTx[0].from) : ""
           const nettoColor = Math.abs(owed) < 0.005 ? "#8a7d55" : owed > 0 ? "#b35309" : "#1f8a4c"
           return (
             <div key={p.id} style={{ borderBottom: "1px solid rgba(120,95,20,0.06)" }}>
