@@ -575,12 +575,18 @@ const STRINGS = {
     meLabel: "jij",
     ownNamePlaceholder: "Zet hier je eigen naam",
     freeSpot: "vrije plaats",
-    pickFreeSpot: "Tik een vrije plaats aan en zet je naam erop.",
+    pickFreeSpotTitle: "👇 Tik hieronder op een vrije plaats",
+    pickFreeSpotTitleOrName: "👇 Tik op een vrije plaats — of op je eigen naam",
+    pickFreeSpot: "Daarna vul je je naam in, en met hoeveel jullie zijn.",
+    freeSpotsHead: "VRIJE PLAATSEN",
+    yourNameHead: "STAAT JE NAAM ER AL BIJ?",
     freeSpotLabel: "👤 Vrije plaats",
+    notEnoughSpotsTitle: "Niet genoeg vrije plaatsen",
+    notEnoughSpotsBody: (n: number) => `Er zijn er nog ${n} beschikbaar op deze plaats. Vraag de beheerder om er een bij te zetten — alleen die kan het aantal personen aan tafel wijzigen.`,
+    askAdminForSpot: "Geen vrije plaats meer? Vraag de beheerder om er een bij te zetten.",
     tapToPick: "tik om te kiezen →",
     takenLabel: "bezet",
     imThisOne: "dit ben ik →",
-    addExtraSpot: "+ Extra plaats toevoegen",
     yourNameQ: "Hoe heet je?",
     yourNamesQ: "Hoe heten jullie?",
     thatsMe: "Dat ben ik →",
@@ -625,6 +631,9 @@ const STRINGS = {
     finalizedAdminNote: "Gasten kunnen niets meer wijzigen.",
     finalizedGuestNote: "Bekijk je deel hieronder.",
     remarksOpen: "⚠️ Opmerkingen — vink af wat je gecheckt hebt:",
+    remarksBlockTitle: "💬 Opmerking van een gast",
+    goToRemarkBtn: "Naar de opmerking →",
+    remarksBlockBody: "Los deze eerst op — daarna kan je de rekening opnieuw afsluiten.",
     newRemarkTitle: "💬 Nieuwe opmerking van een gast",
     remarksDone: "✓ Alle opmerkingen afgehandeld",
     resolved: "opgelost",
@@ -1259,12 +1268,18 @@ const STRINGS = {
     meLabel: "toi",
     ownNamePlaceholder: "Mets ton propre nom ici",
     freeSpot: "place libre",
-    pickFreeSpot: "Touche une place libre et mets ton nom dessus.",
+    pickFreeSpotTitle: "👇 Touche une place libre ci-dessous",
+    pickFreeSpotTitleOrName: "👇 Touche une place libre — ou ton propre nom",
+    pickFreeSpot: "Ensuite tu indiques ton nom et avec combien vous êtes.",
+    freeSpotsHead: "PLACES LIBRES",
+    yourNameHead: "TON NOM Y FIGURE DÉJÀ ?",
     freeSpotLabel: "👤 Place libre",
+    notEnoughSpotsTitle: "Pas assez de places libres",
+    notEnoughSpotsBody: (n: number) => `Il en reste ${n} disponibles sur cette place. Demande à l’hôte d’en ajouter une — lui seul peut changer le nombre de personnes à table.`,
+    askAdminForSpot: "Plus de place libre ? Demande à l’hôte d’en ajouter une.",
     tapToPick: "touche pour choisir →",
     takenLabel: "occupée",
     imThisOne: "c'est moi →",
-    addExtraSpot: "+ Ajouter une place",
     yourNameQ: "Comment t'appelles-tu ?",
     yourNamesQ: "Comment vous appelez-vous ?",
     thatsMe: "C'est moi →",
@@ -1309,6 +1324,9 @@ const STRINGS = {
     finalizedAdminNote: "Les invités ne peuvent plus rien modifier.",
     finalizedGuestNote: "Vois ta part ci-dessous.",
     remarksOpen: "⚠️ Remarques — coche ce que tu as vérifié :",
+    remarksBlockTitle: "💬 Remarque d’un invité",
+    goToRemarkBtn: "Voir la remarque →",
+    remarksBlockBody: "Résous-la d’abord — tu pourras ensuite refermer l’addition.",
     newRemarkTitle: "\ud83d\udcac Nouvelle remarque d\u2019un invit\u00e9",
     remarksDone: "✓ Toutes les remarques traitées",
     resolved: "réglé",
@@ -1868,7 +1886,7 @@ export default function RundoTable() {
   const [showFinalizeWarn, setShowFinalizeWarn] = useState(false) // waarschuwing bij afsluiten terwijl totalen niet kloppen
   // Centrale in-app melding (midden op het scherm, met OK) — vervangt browser-alerts en
   // toont o.a. gast-opmerkingen bij de admin. Titel optioneel.
-  const [centerNote, setCenterNote] = useState<{ title?: string; body: string; actionLabel?: string; onAction?: () => void } | null>(null)
+  const [centerNote, setCenterNote] = useState<{ title?: string; body: string; actionLabel?: string; onAction?: () => void; dismissLabel?: string } | null>(null)
   // In-app ja/nee-bevestiging — vervangt de browser-confirm die op een foutmelding lijkt.
   const [confirmDlg, setConfirmDlg] = useState<{ title?: string; body: string; yes: string; danger?: boolean; onYes: () => void } | null>(null)
   const askConfirm = (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean }) =>
@@ -2291,7 +2309,15 @@ export default function RundoTable() {
     if (on) {
       const openDisputes = parseDisputes(group.disputed_by || "").filter((d) => !d.resolved)
       if (openDisputes.length > 0) {
-        setCenterNote({ title: L.unresolvedRemarkTitle, body: L.unresolvedRemarkBody })
+        // Alleen zeggen dát het niet kan is te weinig — de opmerking staat bovenaan en
+        // die knop brengt je er meteen naartoe, zodat je ze kan lezen of afvinken.
+        setCenterNote({
+          title: L.unresolvedRemarkTitle,
+          body: `“${openDisputes.map((d) => d.comment ? `${d.name}: ${d.comment}` : d.name).join("\n”“")}”\n\n${L.unresolvedRemarkBody}`,
+          actionLabel: L.goToRemarkBtn,
+          onAction: () => { document.getElementById("rundo-remarks")?.scrollIntoView({ behavior: "smooth", block: "center" }) },
+          dismissLabel: L.closeWord,
+        })
         return
       }
     }
@@ -2343,17 +2369,22 @@ export default function RundoTable() {
     const finalName = names.join(" & ")
     // Verlaag je het aantal personen? Dan komen de vrijgekomen plaatsen weer beschikbaar.
     const before = participants.find((p) => p.id === claimSpot)
-    const wasMine = before?.id === meId
     const oldSeats = Math.max(1, before?.seats ?? 1)
-    if (wasMine && claimSeats < oldSeats) {
+    const vrij = participants.filter((p) => p.id !== claimSpot && isFreeSpot(p) && !p.self_joined)
+    // Het aantal personen aan tafel bepaalt de beheerder. Een gast die met meerderen is,
+    // neemt dus vrije plaatsen in — hij maakt er geen bij. Zonder deze controle stond er
+    // achteraf plots één gast meer in de afrekening.
+    if (claimSeats > oldSeats && claimSeats - oldSeats > vrij.length) {
+      setCenterNote({ title: L.notEnoughSpotsTitle, body: L.notEnoughSpotsBody(oldSeats + vrij.length) })
+      return
+    }
+    // Minder personen? Dan komen de vrijgekomen plaatsen weer beschikbaar.
+    if (claimSeats < oldSeats) {
       for (let i = 0; i < oldSeats - claimSeats; i++) await addGuest(L.guestWord, false, 1)
     }
     // Meer personen? Dan neem je vrije plaatsen in, zodat het groepstotaal gelijk blijft.
-    if (wasMine && claimSeats > oldSeats) {
-      const free = participants.filter((p) => p.id !== claimSpot && isFreeSpot(p) && !p.self_joined)
-      for (let i = 0; i < Math.min(claimSeats - oldSeats, free.length); i++) {
-        await supabase.from("table_participants").delete().eq("id", free[i].id)
-      }
+    for (let i = 0; i < claimSeats - oldSeats; i++) {
+      await supabase.from("table_participants").delete().eq("id", vrij[i].id)
     }
     await supabase.from("table_participants").update({ name: finalName, seats: claimSeats, self_joined: true }).eq("id", claimSpot)
     pickMe(claimSpot)
@@ -3320,32 +3351,53 @@ export default function RundoTable() {
             {claimSpot === null ? (
               <>
                 <h3 style={S.h3}>{L.whoAreYou}</h3>
-                <p style={{ fontSize: 16.5, color: "#888", marginTop: -6, marginBottom: 14 }}>{L.pickFreeSpot}</p>
-
-                {participants.map((p) => {
-                  // De admin-plaats is van de organisator: die mag niemand overnemen.
-                  const isAdminSpot = p.id === ownerPid
-                  const free = !isAdminSpot && isFreeSpot(p)
-                  const clickable = !isAdminSpot
-                  return (
-                    <button key={p.id} disabled={!clickable}
-                      onClick={() => { if (!clickable) return; if (free) { setClaimSpot(p.id); setClaimSeats(Math.max(1, p.seats ?? 1)); setClaimNames([""]) } else pickMe(p.id) }}
-                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, textAlign: "left", marginBottom: 7, cursor: clickable ? "pointer" : "default", borderRadius: 11, padding: "11px 12px",
+                {(() => {
+                  // Twee soorten rijen door elkaar in stoelvolgorde maakte niet duidelijk dat
+                  // je óók je eigen naam kan aantikken. Nu twee gelabelde groepjes, waarbij
+                  // een groepje verdwijnt als het leeg is — geen kopje zonder inhoud.
+                  const isAdminSpot = (q: Participant) => q.id === ownerPid
+                  const vrijeLijst = participants.filter((q) => !isAdminSpot(q) && isFreeSpot(q))
+                  const naamLijst = participants.filter((q) => !isAdminSpot(q) && !isFreeSpot(q))
+                  const adminRij = participants.filter(isAdminSpot)
+                  const kop = { fontSize: 13.5, fontWeight: 800 as const, letterSpacing: "0.05em", marginBottom: 7 }
+                  const rij = (q: Participant, free: boolean, adminPlek: boolean) => (
+                    <button key={q.id} disabled={adminPlek}
+                      onClick={() => { if (adminPlek) return; if (free) { setClaimSpot(q.id); setClaimSeats(Math.max(1, q.seats ?? 1)); setClaimNames([""]) } else pickMe(q.id) }}
+                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, textAlign: "left", marginBottom: 7, cursor: adminPlek ? "default" : "pointer", borderRadius: 11, padding: "11px 12px",
                         border: free ? "1.5px dashed rgba(20,153,176,0.6)" : "1px solid rgba(16,24,40,0.12)",
-                        opacity: clickable ? 1 : 0.75,
+                        opacity: adminPlek ? 0.75 : 1,
                         background: free ? "rgba(20,153,176,0.05)" : "rgba(16,24,40,0.02)" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                        <span style={{ fontSize: 18, fontWeight: 800, color: free ? "#1499b0" : "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{free ? L.freeSpotLabel : p.name}</span>
-                        {isAdminSpot && <span style={{ flexShrink: 0, color: "#c0392b", fontWeight: 800, fontSize: 16.5 }}>*</span>}
-                        {!free && !isAdminSpot && (p.seats ?? 1) > 1 && <span style={{ fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>· {p.seats}p.</span>}
+                        <span style={{ fontSize: 18, fontWeight: 800, color: free ? "#1499b0" : "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{free ? L.freeSpotLabel : q.name}</span>
+                        {adminPlek && <span style={{ flexShrink: 0, color: "#c0392b", fontWeight: 800, fontSize: 16.5 }}>*</span>}
+                        {!free && !adminPlek && (q.seats ?? 1) > 1 && <span style={{ fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>· {q.seats}p.</span>}
                       </span>
-                      <span style={{ fontSize: 15.5, fontWeight: 700, color: isAdminSpot ? "#9aa0ab" : free ? "#1499b0" : "#9aa0ab", flexShrink: 0 }}>{isAdminSpot ? L.adminSpotLabel : free ? L.tapToPick : L.imThisOne}</span>
+                      <span style={{ fontSize: 15.5, fontWeight: 700, color: adminPlek ? "#9aa0ab" : free ? "#1499b0" : "#9aa0ab", flexShrink: 0 }}>{adminPlek ? L.adminSpotLabel : free ? L.tapToPick : L.imThisOne}</span>
                     </button>
                   )
-                })}
+                  return (
+                    <>
+                      {/* Staat er nog geen enkele naam, dan is "tik op een vrije plaats" het
+                          hele verhaal — dan hoeft de titel niet over namen te spreken. */}
+                      {vrijeLijst.length > 0 && (
+                        <div style={{ background: "rgba(20,153,176,0.08)", border: "1.5px solid rgba(20,153,176,0.35)", borderRadius: 12, padding: "13px 14px", margin: "2px 0 16px" }}>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: "#0f7d91", lineHeight: 1.35, marginBottom: 4 }}>{naamLijst.length > 0 ? L.pickFreeSpotTitleOrName : L.pickFreeSpotTitle}</div>
+                          <div style={{ fontSize: 16.5, color: "#3b486a", lineHeight: 1.5 }}>{L.pickFreeSpot}</div>
+                        </div>
+                      )}
+                      {vrijeLijst.length > 0 && <div style={{ ...kop, color: "#1499b0" }}>{L.freeSpotsHead}</div>}
+                      {vrijeLijst.map((q) => rij(q, true, false))}
+                      {naamLijst.length > 0 && <div style={{ ...kop, color: "#9aa0ab", marginTop: vrijeLijst.length > 0 ? 16 : 0 }}>{L.yourNameHead}</div>}
+                      {naamLijst.map((q) => rij(q, false, false))}
+                      {adminRij.map((q) => rij(q, false, true))}
+                    </>
+                  )
+                })()}
 
-                <button onClick={async () => { const p = await addGuest(undefined, true, 1); if (p) { setClaimSpot(p.id); setClaimSeats(1); setClaimNames([""]) } }}
-                  style={{ width: "100%", marginTop: 6, background: "none", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 800, color: "#5a6680", textDecoration: "underline", padding: "6px 0" }}>{L.addExtraSpot}</button>
+                {/* Vroeger stond hier "+ Extra plaats toevoegen". Daarmee kon een gast het
+                    aantal personen aan tafel verhogen, en dat hoort alleen de beheerder te
+                    kunnen. Nu een regel die zegt bij wie je moet zijn. */}
+                <div style={{ marginTop: 8, fontSize: 15.5, color: "#9aa0ab", lineHeight: 1.45, textAlign: "center" }}>{L.askAdminForSpot}</div>
               </>
             ) : (
               <>
@@ -3417,6 +3469,33 @@ export default function RundoTable() {
       )}
 
       <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} me={me?.name} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} guestSeats={meId ? seatsOf(meId) : undefined} onGuestSeatsChange={meId ? (n) => setSeats(meId, n) : undefined} onSwitchPerson={meId ? switchPerson : undefined} />
+
+      {/* Heropen je de rekening om nog iets te wijzigen, dan verdween dit blok mee — en
+          bleef er een onopgeloste opmerking die het opnieuw afsluiten tegenhield, zonder
+          dat je ze nog ergens kon afvinken. Daarom staat het er nu ook bij een open
+          rekening, zolang er iets openstaat. */}
+      {!group.finalized && isAdmin && (() => {
+        const disputers = parseDisputes(group.disputed_by || "")
+        const openCount = disputers.filter((d) => !d.resolved).length
+        if (openCount === 0) return null
+        return (
+          <div id="rundo-remarks" style={{ background: "#fff7e6", border: "1.5px solid #f0b840", borderRadius: 14, padding: "12px 14px", marginBottom: 14 }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#a06b00", marginBottom: 2 }}>{L.remarksBlockTitle}</div>
+            <div style={{ fontSize: 15.5, color: "#8a5a00", lineHeight: 1.45, marginBottom: 8 }}>{L.remarksBlockBody}</div>
+            {disputers.map((d, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 7, opacity: d.resolved ? 0.7 : 1, fontSize: 16, color: "#8a5a00" }}>
+                <div style={{ flex: 1, minWidth: 0, textDecoration: d.resolved ? "line-through" : "none" }}>
+                  <b>{d.name}</b>{d.comment ? <span>: “{d.comment}”</span> : ""}
+                  {d.resolved && <span style={{ marginLeft: 6, fontSize: 15.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 6, padding: "3px 6px", textDecoration: "none", display: "inline-block" }}>{L.resolved}</span>}
+                </div>
+                <button onClick={() => resolveDispute(d.name, !d.resolved)} style={{ flexShrink: 0, border: d.resolved ? "1px solid rgba(16,24,40,0.2)" : "none", background: d.resolved ? "#fff" : "linear-gradient(135deg,#1f8a4c,#27ae60)", color: d.resolved ? "#5a6680" : "#fff", borderRadius: 9, padding: "7px 12px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
+                  {d.resolved ? L.reopenRemark : L.markResolved}
+                </button>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
 
       {group.finalized && (() => {
         const disputers = parseDisputes(group.disputed_by || "")
@@ -4586,7 +4665,7 @@ export default function RundoTable() {
             {centerNote.actionLabel && centerNote.onAction && (
               <button onClick={() => { const fn = centerNote.onAction!; setCenterNote(null); fn() }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontWeight: 800, fontSize: 18, marginBottom: 8 }}>{centerNote.actionLabel}</button>
             )}
-            <button onClick={() => setCenterNote(null)} style={centerNote.actionLabel ? { width: "100%", padding: "10px 0", background: "none", border: "none", fontSize: 15.5, fontWeight: 700, color: "#9aa0ab", cursor: "pointer" } : { ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 18 }}>{centerNote.actionLabel ? L.addAnother : "OK"}</button>
+            <button onClick={() => setCenterNote(null)} style={centerNote.actionLabel ? { width: "100%", padding: "10px 0", background: "none", border: "none", fontSize: 15.5, fontWeight: 700, color: "#9aa0ab", cursor: "pointer" } : { ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 18 }}>{centerNote.dismissLabel ?? (centerNote.actionLabel ? L.addAnother : "OK")}</button>
           </div>
         </div>
       )}
