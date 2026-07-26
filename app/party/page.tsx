@@ -4456,6 +4456,8 @@ export default function PartyTest() {
                 kader en knop samen, zodat het één blok blijft en geen losse onderdelen. */}
             <div style={{ opacity: bpSettle === true ? 0.6 : 1 }}>
             <div style={{ borderRadius: 12, overflow: "hidden", border: bpSettle === false ? `2.5px solid ${MODUS_SNEL.rand}` : `2px solid ${MODUS_SNEL.randZacht}`, boxShadow: bpSettle === false ? `0 4px 18px -7px ${MODUS_SNEL.gloed}` : "none" }}>
+              {/* Kleurbalk als vlag: nog vóór je de tekst leest weet je welke modus dit is. */}
+              <div style={{ height: 6, background: MODUS_SNEL.rand }} />
               <button onClick={() => setBpSettle(false)}
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", padding: "17px 16px", border: "none", cursor: "pointer", background: bpSettle === false ? MODUS_SNEL.vlak : "#fff" }}>
                 <span style={{ fontSize: 31, flexShrink: 0 }}>🍻</span>
@@ -4511,6 +4513,8 @@ export default function PartyTest() {
 
             <div style={{ opacity: bpSettle === false ? 0.6 : 1 }}>
             <div style={{ borderRadius: 12, overflow: "hidden", border: bpSettle === true ? `2.5px solid ${MODUS_FAIR.rand}` : `2px solid ${MODUS_FAIR.randZacht}`, boxShadow: bpSettle === true ? `0 4px 18px -7px ${MODUS_FAIR.gloed}` : "none" }}>
+              {/* Kleurbalk als vlag: nog vóór je de tekst leest weet je welke modus dit is. */}
+              <div style={{ height: 6, background: MODUS_FAIR.rand }} />
               <button onClick={() => setBpSettle(true)}
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", padding: "17px 16px", border: "none", cursor: "pointer", background: bpSettle === true ? MODUS_FAIR.vlak : "#fff" }}>
                 <span style={{ fontSize: 31, flexShrink: 0 }}>⚖️</span>
@@ -4688,10 +4692,12 @@ export default function PartyTest() {
               <div style={{ display: "flex", flexDirection: "column" }}>
                 {/* Fair Split BOVEN — de voorkeur. Al geselecteerd bij binnenkomst. */}
                 <button onClick={() => setBpSettle(true)}
-                  style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
+                  style={{ position: "relative", overflow: "hidden", textAlign: "left", padding: "18px 15px 15px", borderRadius: 14, cursor: "pointer",
                            background: bpSettle === true ? MODUS_FAIR.vlak : "#fff",
                            boxShadow: bpSettle === true ? `0 2px 12px -4px ${MODUS_FAIR.gloed}` : "0 1px 4px rgba(120,95,20,0.06)",
-                           border: bpSettle === true ? `2.5px solid ${MODUS_FAIR.rand}` : "2px solid rgba(120,95,20,0.18)" }}>
+                           border: bpSettle === true ? `2.5px solid ${MODUS_FAIR.rand}` : `2px solid ${MODUS_FAIR.randZacht}` }}>
+                  {/* Dezelfde kleurbalk als op het keuzescherm, zodat beide schermen één taal spreken. */}
+                  <span style={{ position: "absolute", top: 0, left: 0, right: 0, height: 5, background: MODUS_FAIR.rand }} />
                   <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
                     <span style={{ fontSize: 21 }}>⚖️</span>
                     <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>Fair Split</span>
@@ -4728,10 +4734,12 @@ export default function PartyTest() {
 
                 {/* Gewoon aantallen ONDER, met bestellijstje. */}
                 <button onClick={() => setBpSettle(false)}
-                  style={{ textAlign: "left", padding: "15px 15px", borderRadius: 14, cursor: "pointer",
+                  style={{ position: "relative", overflow: "hidden", textAlign: "left", padding: "18px 15px 15px", borderRadius: 14, cursor: "pointer",
                            background: bpSettle === false ? MODUS_SNEL.vlak : "#fff",
                            boxShadow: bpSettle === false ? `0 2px 12px -4px ${MODUS_SNEL.gloed}` : "0 1px 4px rgba(120,95,20,0.06)",
-                           border: bpSettle === false ? `2.5px solid ${MODUS_SNEL.rand}` : "2px solid rgba(120,95,20,0.18)" }}>
+                           border: bpSettle === false ? `2.5px solid ${MODUS_SNEL.rand}` : `2px solid ${MODUS_SNEL.randZacht}` }}>
+                  {/* Dezelfde kleurbalk als op het keuzescherm, zodat beide schermen één taal spreken. */}
+                  <span style={{ position: "absolute", top: 0, left: 0, right: 0, height: 5, background: MODUS_SNEL.rand }} />
                   <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
                     <span style={{ fontSize: 21 }}>🍺</span>
                     <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{L.modeQuick}</span>
