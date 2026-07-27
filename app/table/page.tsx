@@ -497,6 +497,7 @@ const STRINGS = {
     roleGuest: "gast",
     deletePermanently: "definitief verwijderen",
     addNameBtn: "+ Naam toevoegen",
+    taxAfterCloseNote: "ℹ️ Deze bedragen worden pas bij het afsluiten over iedereen verdeeld. Tot dan ziet elke gast enkel zijn eigen items — anders schuift zijn bedrag bij elke tik van een ander.",
     clearNameBtn: "🗑️ Naam wissen",
     clearNameTitle: "Naam wissen?",
     clearNameYes: "Wissen",
@@ -896,7 +897,6 @@ const STRINGS = {
     whoPaysTip: "De fooi wordt verdeeld over deze personen",
     whoPaysTipSub: "Tik iemand aan om hem weg te laten.",
     tipItemName: "Fooi",
-    taxLineLabel: "BTW / kosten (verdeeld)",
     explainTooltip: "uitleg",
     tipHeader: "💶 Fooi",
     addTipShort: "Toevoegen",
@@ -1068,6 +1068,7 @@ const STRINGS = {
     roleGuest: "invité",
     deletePermanently: "supprimer définitivement",
     addNameBtn: "+ Ajouter un nom",
+    taxAfterCloseNote: "ℹ️ Ces montants ne sont répartis qu’à la clôture. Jusque-là, chaque invité ne voit que ses propres articles — sinon son montant bouge à chaque clic d’un autre.",
     clearNameBtn: "🗑️ Effacer le nom",
     clearNameTitle: "Effacer le nom ?",
     clearNameYes: "Effacer",
@@ -1467,7 +1468,6 @@ const STRINGS = {
     whoPaysTip: "Le pourboire est r\u00e9parti entre ces personnes",
     whoPaysTipSub: "Touche quelqu\u2019un pour l\u2019exclure.",
     tipItemName: "Pourboire",
-    taxLineLabel: "TVA / frais (répartis)",
     explainTooltip: "explication",
     tipHeader: "💶 Pourboire",
     addTipShort: "Ajouter",
@@ -1844,13 +1844,17 @@ export default function RundoTable() {
 
   const loadAll = useCallback(async (groupId: string) => {
     const [{ data: p }, { data: it }, { data: cl }, { data: cf }, { data: g }] = await Promise.all([
-      // Kolommen benoemen in plaats van een sterretje: bij elke herlaadbeurt scheelt dat
-      // alles wat de app toch niet gebruikt, en dat gebeurt vaak.
-      supabase.from("table_participants").select("id,name,group_id,self_joined,seats,created_at").eq("group_id", groupId),
-      supabase.from("table_items").select("id,group_id,name,unit_price,quantity,is_shared,share_expected,created_at").eq("group_id", groupId),
-      supabase.from("table_claims").select("id,group_id,item_id,participant_id,quantity,members").eq("group_id", groupId),
-      supabase.from("table_confirmations").select("id,group_id,participant_id,confirmed").eq("group_id", groupId),
-      supabase.from("table_groups").select("id,name,invite_code,owner_id,receipt_url,party_size,receipt_total,finalized,disputed_by,pinned,created_at").eq("id", groupId).single(),
+      // Bewust een sterretje. Ik heb hier ooit de kolommen benoemd om bandbreedte te sparen
+      // en daarbij twee fouten gemaakt: een kolom die niet bestaat (confirmed i.p.v.
+      // confirmed_at) waardoor bevestigen stilviel, en vier vergeten kolommen op items
+      // waardoor btw-regels als gewone items in de aantiklijst belandden. Een select die
+      // faalt op één verkeerde naam kost meer dan de kilobytes die je uitspaart, zeker
+      // omdat distribute en tax_rate niet in elke databank bestaan.
+      supabase.from("table_participants").select("*").eq("group_id", groupId),
+      supabase.from("table_items").select("*").eq("group_id", groupId),
+      supabase.from("table_claims").select("*").eq("group_id", groupId),
+      supabase.from("table_confirmations").select("*").eq("group_id", groupId),
+      supabase.from("table_groups").select("*").eq("id", groupId).single(),
     ])
     if (!mounted.current) return
     const order = <T extends { created_at?: string; id: string }>(rows: T[]) =>
@@ -2035,7 +2039,7 @@ export default function RundoTable() {
     if (!code || busy) return
     setBusy(true); setStartError(null)
     try {
-      const { data, error } = await supabase.from("table_groups").select("id,name,invite_code,owner_id,receipt_url,party_size,receipt_total,finalized,disputed_by,pinned,created_at").eq("invite_code", code).single()
+      const { data, error } = await supabase.from("table_groups").select("*").eq("invite_code", code).single()
       if (error || !data) { setStartError(L.errNotFound); return }
       const role = data.owner_id === getOrCreateOwnerId() ? "admin" : "gast"
       setViaLink(role === "gast")
@@ -2049,7 +2053,7 @@ export default function RundoTable() {
     if (busy) return
     setBusy(true); setStartError(null)
     try {
-      const { data, error } = await supabase.from("table_groups").select("id,name,invite_code,owner_id,receipt_url,party_size,receipt_total,finalized,disputed_by,pinned,created_at").eq("id", id).single()
+      const { data, error } = await supabase.from("table_groups").select("*").eq("id", id).single()
       if (error || !data) { setStartError(L.errGroupGone); removeMyGroup(id); void laadMijnGroepen(); rememberLastGroup(null); return }
       saveMyGroup(data, data.owner_id === getOrCreateOwnerId() ? "admin" : "gast"); void laadMijnGroepen(); rememberLastGroup(data.id)
       setGroup(data); setMeId(getMeId(data.id)); await loadAll(data.id); setAdminTab(tab)
@@ -2299,7 +2303,7 @@ export default function RundoTable() {
   // meer zodra er koppels of verwijderde gasten in het spel waren, dus halen we ze weg.
   const renumberGuests = async (): Promise<boolean> => {
     if (!group) return false
-    const { data } = await supabase.from("table_participants").select("id,name,group_id,self_joined,seats,created_at").eq("group_id", group.id)
+    const { data } = await supabase.from("table_participants").select("*").eq("group_id", group.id)
     const numbered = /^(Gast|Invité)\s+\d+$/i
     let changed = false
     for (const g of ((data as Participant[]) || [])) {
@@ -2965,7 +2969,9 @@ export default function RundoTable() {
     if (t.tax_rate && t.tax_rate > 0) {
       const ids = taxTargetIds(t)
       const base = baseItems.filter((i) => ids.has(i.id)).reduce((s, i) => s + i.unit_price * i.quantity, 0)
-      return +(base * (t.tax_rate / 100)).toFixed(2).replace(".", ",")
+      // Was: .toFixed(2).replace(".", ",") en dan een unaire + — dat maakte er "6,00" van
+      // en daarna NaN, waardoor elk totaal met percentage-btw onbruikbaar werd.
+      return Math.round(base * (t.tax_rate / 100) * 100) / 100
     }
     return itemTotal(t)
   }
@@ -3003,15 +3009,18 @@ export default function RundoTable() {
   const baseWithin = (pid: string, ids: Set<string>): number =>
     baseItems.filter((i) => ids.has(i.id)).reduce((s, i) => s + baseAmountForItem(pid, i), 0)
 
-  const taxShare = (pid: string): number => {
-    let total = 0
-    for (const t of taxItems) {
-      const ids = taxTargetIds(t)
-      const denom = participants.reduce((s, q) => s + baseWithin(q.id, ids), 0)
-      if (denom > 0) total += taxAmount(t) * (baseWithin(pid, ids) / denom)
-    }
-    return total
+  // Per toeslag apart, zodat de gast in zijn detail "BTW 6%" en "Korting" los ziet staan
+  // in plaats van één samengevoegde regel waar hij niets aan heeft.
+  const taxShareOf = (pid: string, t: BillItem): number => {
+    const ids = taxTargetIds(t)
+    const denom = participants.reduce((s, q) => s + baseWithin(q.id, ids), 0)
+    return denom > 0 ? taxAmount(t) * (baseWithin(pid, ids) / denom) : 0
   }
+  // BTW, kosten en kortingen worden verdeeld naar rato van wat elk aantikte. Zolang niet
+  // iedereen klaar is, verschuift die verhouding bij elke tik — dan zag je je bedrag
+  // bewegen zonder te begrijpen waarom. Daarom verschijnen ze pas als de rekening dicht is.
+  const toeslagenTonen = !!group?.finalized
+  const taxShare = (pid: string): number => toeslagenTonen ? taxItems.reduce((s, t) => s + taxShareOf(pid, t), 0) : 0
 
   const personTotalNoTip = (pid: string): { settled: number; pendingShared: boolean } => {
     let settled = 0
@@ -3070,8 +3079,12 @@ export default function RundoTable() {
         if (q > 0) out.push({ name: it.name, qty: q, amount: it.unit_price * q, shared: false, revealed: true, sharers: 0, myHeads: 0 })
       }
     }
-    const tax = taxShare(pid)
-    if (tax > 0.005) out.push({ name: L.taxLineLabel, qty: 1, amount: tax, shared: false, revealed: true, sharers: 0, myHeads: 0 })
+    // Elke toeslag zijn eigen regel onder zijn eigen naam. Math.abs, want een korting is
+    // negatief — die verdween vroeger uit het detail terwijl hij wél in het totaal zat.
+    if (toeslagenTonen) for (const t of taxItems) {
+      const deel = taxShareOf(pid, t)
+      if (Math.abs(deel) > 0.005) out.push({ name: `🧮 ${t.name}`, qty: 1, amount: deel, shared: false, revealed: true, sharers: 0, myHeads: 0 })
+    }
     const tip = tipShare(pid)
     if (tip > 0.005) out.push({ name: `💛 ${L.tipItemName}`, qty: 1, amount: tip, shared: false, revealed: true, sharers: 0, myHeads: 0 })
     return out
@@ -3126,8 +3139,10 @@ export default function RundoTable() {
     }
     // De kop toont personTotal (incl. verdeelde kosten en fooi). Zonder deze twee regels
     // tellen de detailregels niet op tot dat bedrag — en lijkt de fooi uit het niets te komen.
-    const tax = taxShare(pid)
-    if (tax > 0.005) out.push({ label: L.taxLineLabel, amount: tax, sharedWith: null })
+    if (toeslagenTonen) for (const t of taxItems) {
+      const deel = taxShareOf(pid, t)
+      if (Math.abs(deel) > 0.005) out.push({ label: `🧮 ${t.name}`, amount: deel, sharedWith: null })
+    }
     const tip = tipShare(pid)
     if (tip > 0.005) out.push({ label: `💛 ${L.tipItemName}`, amount: tip, sharedWith: null })
     return out
@@ -3712,6 +3727,11 @@ export default function RundoTable() {
             taxLines={taxItems.map((t) => ({ name: t.name, amount: taxAmount(t) }))}
             taxNode={
               <div style={{ marginTop: 6 }}>
+                {/* Zonder deze regel lijkt het alsof de toeslagen niet doorkomen bij de
+                    gasten — terwijl ze bewust pas bij het afsluiten verdeeld worden. */}
+                {taxItems.length > 0 && !group?.finalized && (
+                  <div style={{ fontSize: 14.5, color: "#5a6680", lineHeight: 1.45, background: "rgba(90,108,166,0.07)", borderRadius: 10, padding: "9px 11px", marginBottom: 4 }}>{L.taxAfterCloseNote}</div>
+                )}
                 {taxItems.map((t) => {
                   const overAll = t.distribute === "all"
                   const targetCount = taxTargetIds(t).size
