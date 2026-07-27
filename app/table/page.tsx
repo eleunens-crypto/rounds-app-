@@ -564,7 +564,9 @@ const STRINGS = {
     enterGuestName: "Vul eerst een naam in.",
     whoAtTableTitle: "Wie doet mee",
     seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} vrij` : `${totaal}`,
-    addNameRow: "+ naam →",
+    addNameRow: "+ naam",
+    optionalWord: "(optioneel)",
+    freeSpotSub: "scant zelf, of zet jij de naam",
     needMoreSpotsTitle: "Er is een plaats te weinig",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Dit vraagt ${tekort} plaats${tekort === 1 ? "" : "en"} meer dan er vrij ${tekort === 1 ? "is" : "zijn"}. Zal ik het aantal personen op ${totaal} zetten?`,
     raiseTotalBtn: (totaal: number) => `Ja, personen op ${totaal} zetten`,
@@ -657,7 +659,7 @@ const STRINGS = {
     tagByYou: "admin duidt aan",
     tagAdded: "toegevoegd",
     tagFree: "nog niemand",
-    freeSpotName: "Wacht op iemand",
+    freeSpotName: "Nog vrij",
     rescan: "🔄 Bon opnieuw scannen",
     startScan: "Start hier — Scan je rekening 📸",
     scanOk: "Scan gelukt en items herkend",
@@ -1144,7 +1146,9 @@ const STRINGS = {
     enterGuestName: "Entre d\u2019abord un nom.",
     whoAtTableTitle: "Qui participe",
     seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} libre${vrij === 1 ? "" : "s"}` : `${totaal}`,
-    addNameRow: "+ nom →",
+    addNameRow: "+ nom",
+    optionalWord: "(facultatif)",
+    freeSpotSub: "scanne lui-même, ou tu mets le nom",
     needMoreSpotsTitle: "Il manque une place",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Cela demande ${tekort} place${tekort === 1 ? "" : "s"} de plus qu’il n’y en a de libre. Je mets le nombre de personnes à ${totaal} ?`,
     raiseTotalBtn: (totaal: number) => `Oui, mettre à ${totaal} personnes`,
@@ -1237,7 +1241,7 @@ const STRINGS = {
     tagByYou: "l’hôte coche",
     tagAdded: "ajouté",
     tagFree: "personne",
-    freeSpotName: "En attente de quelqu\u2019un",
+    freeSpotName: "Encore libre",
     rescan: "🔄 Rescanner l'addition",
     startScan: "Commence ici — scanne ton addition 📸",
     scanOk: "Scan réussi, articles reconnus",
@@ -3962,7 +3966,9 @@ export default function RundoTable() {
                     <div onClick={() => setShowNamesBlock((v) => !v)} style={{ fontSize: 16, fontWeight: 800, color: "#1499b0", cursor: "pointer" }}>
                       {L.whoAtTableTitle} {showNamesBlock ? "▴" : "▾"}
                     </div>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: vrijeZit > 0 ? "#b5591a" : "#1f8a4c", background: vrijeZit > 0 ? "rgba(243,156,18,0.14)" : "rgba(39,174,96,0.14)", borderRadius: 12, padding: "3px 10px" }}>
+                    {/* Grijs zolang er plaatsen vrij zijn: dat is een stand van zaken, geen
+                        probleem. Groen pas als alles bezet is — daar is het een afvinking. */}
+                    <span style={{ fontSize: 14, fontWeight: 800, color: vrijeZit > 0 ? "#5a6680" : "#1f8a4c", background: vrijeZit > 0 ? "rgba(16,24,40,0.06)" : "rgba(39,174,96,0.14)", borderRadius: 12, padding: "3px 10px" }}>
                       👥 {L.seatsSummary(totalPersons, vrijeZit)}
                     </span>
                   </div>
@@ -3978,14 +3984,22 @@ export default function RundoTable() {
                               borderTop: i === 0 ? "none" : "1px solid rgba(0,0,0,0.06)",
                               background: leeg ? "rgba(20,153,176,0.04)" : "#fff" }}>
                             <span style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-                              <span style={{ flexShrink: 0 }}>{ikZelf ? "👤" : leeg ? "⏳" : q.self_joined ? "📱" : "✓"}</span>
-                              <span style={{ fontSize: 16, fontWeight: 700, color: leeg ? "#9aa0ab" : "#14213a", fontStyle: leeg ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {leeg ? L.freeSpotName : q.name}{!leeg && zit > 1 ? ` · ${zit}p.` : ""}
+                              <span style={{ flexShrink: 0 }}>{ikZelf ? "👤" : leeg ? "📱" : q.self_joined ? "📱" : "✓"}</span>
+                              {/* Een lege plaats raakt op twee manieren ingevuld: de gast scant, of
+                                  jij zet de naam. Beide vermelden, anders belooft één regel iets
+                                  wat misschien nooit gebeurt. */}
+                              <span style={{ minWidth: 0 }}>
+                                <span style={{ display: "block", fontSize: 16, fontWeight: 700, color: leeg ? "#9aa0ab" : "#14213a", fontStyle: leeg ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {leeg ? L.freeSpotName : q.name}{!leeg && zit > 1 ? ` · ${zit}p.` : ""}
+                                </span>
+                                {leeg && <span style={{ display: "block", fontSize: 12.5, color: "#b3bac6", lineHeight: 1.35 }}>{L.freeSpotSub}</span>}
                               </span>
                             </span>
                             {ikZelf
                               ? <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 10px", whiteSpace: "nowrap" }}>{L.tagAdmin}</span>
-                              : <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{leeg ? L.addNameRow : "✏️"}</span>}
+                              : leeg
+                              ? <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{L.addNameRow} <span style={{ fontWeight: 700, color: "#9aa0ab" }}>{L.optionalWord}</span></span>
+                              : <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>✏️</span>}
                           </button>
                         )
                       })}
