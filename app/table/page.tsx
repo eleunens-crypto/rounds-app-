@@ -993,9 +993,12 @@ const STRINGS = {
     forWhomTap: "Voor wie tik je aan?",
     pickPersonHint: "Kies een persoon om voor te claimen (handig als jij voor iemand zonder gsm aantikt).",
     addGuestsInTab2: 'Voeg eerst gasten toe in de tab "Gasten".',
+    closedByAdmin: "✅ Afgesloten — dit is de definitieve verdeling",
+    yourShareWord: "Jouw deel",
+    myDetailsLink: "details →",
+    everyoneLink: "iedereen →",
     adminReviewing: "🔎 De beheerder past de rekening nog aan",
     adminReviewingBody: "Je bedrag kan nog wijzigen. Zodra hij opnieuw afsluit, zie je je definitieve deel.",
-    viewMyShare: "Bekijk mijn verdeling",
     selectItemsPlural: "Selecteer jullie consumpties",
     selectItemsSingular: "Selecteer jouw consumpties",
     noItemsWaitScan: "Nog geen items — wacht tot de bon gescand is.",
@@ -1586,9 +1589,12 @@ const STRINGS = {
     forWhomTap: "Pour qui coches-tu ?",
     pickPersonHint: "Choisis une personne pour cocher à sa place (pratique si tu coches pour quelqu'un sans téléphone).",
     addGuestsInTab2: "Ajoute d'abord des invités dans l'onglet « Invités ».",
+    closedByAdmin: "✅ Clôturé — voici la répartition définitive",
+    yourShareWord: "Ta part",
+    myDetailsLink: "détails →",
+    everyoneLink: "tout le monde →",
     adminReviewing: "🔎 L'hôte modifie encore l'addition",
     adminReviewingBody: "Ton montant peut encore changer. Dès qu'il clôture à nouveau, tu vois ta part définitive.",
-    viewMyShare: "Voir ma part",
     selectItemsPlural: "Sélectionnez vos consommations",
     selectItemsSingular: "Sélectionne tes consommations",
     noItemsWaitScan: "Aucun article — attends que l'addition soit scannée.",
@@ -5933,6 +5939,27 @@ function ClaimScreen(props: {
   // oproepen via het ⓘ naast de knop; de tweede verschijnt één keer vanzelf.
   const [showConfirmInfo, setShowConfirmInfo] = useState(false)
   const [showFinalPopup, setShowFinalPopup] = useState(false)
+  // Dezelfde balk boven én onder het scherm: waar je ook staat in je lijstje, je ziet dat
+  // het definitief is én hoeveel het is, zonder iets te moeten openen. De twee links leiden
+  // naar twee verschillende dingen: jouw eigen detail, en de verdeling van de hele tafel.
+  const afgeslotenBalk = (plek: "boven" | "onder") => {
+    if (!finalized || isAdmin || !meId) return null
+    const mijn = personTotal(meId)
+    return (
+      <div style={{ width: "100%", margin: plek === "boven" ? "0 0 14px" : "14px 0 0", padding: "12px 14px", borderRadius: 14, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 18px -6px rgba(31,138,76,0.55)" }}>
+        <div style={{ fontSize: 16.5, fontWeight: 800, marginBottom: 6, lineHeight: 1.3 }}>{L.closedByAdmin}</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", background: "rgba(255,255,255,0.16)", borderRadius: 10, padding: "8px 11px" }}>
+          <span style={{ fontSize: 15, fontWeight: 700 }}>{L.yourShareWord}</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 20, fontWeight: 800 }}>€{mijn.settled.toFixed(2).replace(".", ",")}{mijn.pendingShared ? "+" : ""}</span>
+            <span onClick={() => setShowFinalPopup(true)} style={{ fontSize: 14, fontWeight: 800, textDecoration: "underline", cursor: "pointer" }}>{L.myDetailsLink}</span>
+            <span onClick={() => { setGastVerdelingOpen(true); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }}
+              style={{ fontSize: 14, fontWeight: 800, textDecoration: "underline", cursor: "pointer" }}>{L.everyoneLink}</span>
+          </span>
+        </div>
+      </div>
+    )
+  }
   const [reviewing, setReviewing] = useState(false)
   const prevFinalizedRef = useRef<boolean | null>(null)
 
@@ -6193,6 +6220,7 @@ function ClaimScreen(props: {
 
   return (
     <div>
+      {afgeslotenBalk("boven")}
       {/* Amber, niet blauw: dit is geen mededeling maar een waarschuwing dat je bedrag nog
           kan schuiven. De balk blijft staan zolang de rekening open is. */}
       {!finalized && reviewing && (
@@ -6515,11 +6543,8 @@ function ClaimScreen(props: {
                 <span style={{ fontSize: 17, fontWeight: 800, color: "#0f7488" }}>{L.yourTotal}</span>
                 <span style={{ fontSize: 28, fontWeight: 800, color: "#14213a" }}>€{personTotal(meId).settled.toFixed(2).replace(".", ",")}</span>
               </div>
-              {/* Deze knop kwam uit de popup die we schrapten: hij brengt je naar de volledige
-                  verdeling van de tafel, verderop op dit scherm. */}
-              <button onClick={() => { setShowFinalPopup(false); setGastVerdelingOpen(true); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }}
-                style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, marginTop: 12 }}>{L.viewMyShare}</button>
-              <button onClick={() => setShowFinalPopup(false)} style={{ width: "100%", marginTop: 9, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>{L.closeWord}</button>
+              {/* Alleen sluiten: de verdeling van de hele tafel bereik je via de balk. */}
+              <button onClick={() => setShowFinalPopup(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, marginTop: 12 }}>{L.closeWord}</button>
             </div>
           </div>
         )}
@@ -6560,6 +6585,7 @@ function ClaimScreen(props: {
           </div>
         )}
       </div>
+      {afgeslotenBalk("onder")}
     </div>
   )
 }
