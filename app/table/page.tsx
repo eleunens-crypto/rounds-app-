@@ -1036,7 +1036,10 @@ const STRINGS = {
     orderedMid: "× besteld · ",
     stillFree: (n: number) => `${n} nog vrij`,
     allClaimedWord: "alles geclaimd",
-    aboutToConfirm: "Dit ga je bevestigen",
+    aboutToConfirmTitle: "Dit ga ik bevestigen",
+    whatIConfirmed: "Wat ik bevestigde",
+    finalSplitTitle: "Definitieve verdeling",
+    everyoneSplitTitle: "Verdeling van iedereen",
     nothingTappedYet: "Je hebt nog niets aangetikt.",
     yourTotal: "Jouw totaal",
     confirmDoneTitle: "Bedankt, je bent klaar",
@@ -1051,7 +1054,6 @@ const STRINGS = {
     finalPopupTitle: "✅ De rekening is afgesloten",
     finalPopupSub: "Dit is je definitieve bedrag, inclusief btw en eventuele kosten.",
     sharingPendingNote: "ℹ️ Je deelt mee in gedeelde items (wijn/water). Het exacte deel kan nog wijzigen tot iedereen heeft aangetikt en bevestigd.",
-    allHandledFinal: "Alles afgehandeld — dit is de definitieve verdeling",
     fullBillInfo: "De volledige rekening ter info — tik een naam aan voor het detail:",
     nothingTapped2: "Niets aangetikt.",
     youSuffix: " (jij)",
@@ -1630,7 +1632,10 @@ const STRINGS = {
     orderedMid: "× commandé · ",
     stillFree: (n: number) => `${n} encore libre${n === 1 ? "" : "s"}`,
     allClaimedWord: "tout attribué",
-    aboutToConfirm: "Voici ce que tu confirmes",
+    aboutToConfirmTitle: "Ce que je vais confirmer",
+    whatIConfirmed: "Ce que j’ai confirmé",
+    finalSplitTitle: "Répartition définitive",
+    everyoneSplitTitle: "Répartition de tout le monde",
     nothingTappedYet: "Tu n'as encore rien coché.",
     yourTotal: "Ton total",
     confirmDoneTitle: "Merci, c’est bon pour toi",
@@ -1645,7 +1650,6 @@ const STRINGS = {
     finalPopupTitle: "✅ L’addition est clôturée",
     finalPopupSub: "Voici ton montant définitif, TVA et frais éventuels compris.",
     sharingPendingNote: "ℹ️ Tu participes à des articles partagés (vin/eau). La part exacte peut encore changer jusqu'à ce que tout le monde ait coché et confirmé.",
-    allHandledFinal: "Tout est réglé — voici la répartition définitive",
     fullBillInfo: "L'addition complète pour info — touche un nom pour le détail :",
     nothingTapped2: "Rien coché.",
     youSuffix: " (toi)",
@@ -3202,7 +3206,9 @@ export default function RundoTable() {
     return { settled: b.settled + tipShare(pid), pendingShared: b.pendingShared }
   }
 
-  const personItems = (pid: string): { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number }[] => {
+  // metToeslagen=false geeft enkel wat de gast zelf aanduidde. Dat is wat er in "Wat ik
+  // bevestigde" hoort te staan — btw en fooi koos hij niet, die komen er achteraf bij.
+  const personItems = (pid: string, metToeslagen = true): { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number }[] => {
     const out: { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number }[] = []
     for (const it of baseItems) {
       if (it.is_shared) {
@@ -3220,11 +3226,11 @@ export default function RundoTable() {
     }
     // Elke toeslag zijn eigen regel onder zijn eigen naam. Math.abs, want een korting is
     // negatief — die verdween vroeger uit het detail terwijl hij wél in het totaal zat.
-    if (toeslagenTonen) for (const t of taxItems) {
+    if (metToeslagen && toeslagenTonen) for (const t of taxItems) {
       const deel = taxShareOf(pid, t)
       if (Math.abs(deel) > 0.005) out.push({ name: `🧮 ${t.name}`, qty: 1, amount: deel, shared: false, revealed: true, sharers: 0, myHeads: 0 })
     }
-    const tip = tipShare(pid)
+    const tip = metToeslagen ? tipShare(pid) : 0
     if (tip > 0.005) out.push({ name: `💛 ${L.tipItemName}`, qty: 1, amount: tip, shared: false, revealed: true, sharers: 0, myHeads: 0 })
     return out
   }
@@ -5908,7 +5914,7 @@ function ClaimScreen(props: {
   onEditMe?: (id: string) => void
   sharedStatus: (it: BillItem) => { heads: number; expected: number | null; warn: null | "none" | "few" | "one" | "many" }
   itemTotal: (it: BillItem) => number; personTotal: (pid: string) => { settled: number; pendingShared: boolean }
-  personItems: (pid: string) => { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number }[]
+  personItems: (pid: string, metToeslagen?: boolean) => { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number }[]
   sharedRevealed: (it: BillItem) => boolean; allConfirmed: boolean; isConfirmed: (pid: string) => boolean; explicitConfirmed: (pid: string) => boolean
   claimMode: "item" | "person"; setClaimMode: (m: "item" | "person") => void
   claimPid: string | null; setClaimPid: (id: string | null) => void
@@ -5928,6 +5934,10 @@ function ClaimScreen(props: {
   // mogen dus dicht; wat híj moet betalen blijft altijd staan.
   const [gastItemsOpen, setGastItemsOpen] = useState(true)
   const [gastVerdelingOpen, setGastVerdelingOpen] = useState(false)
+  // Wat je bevestigde blijft raadpleegbaar, maar hoeft na het afsluiten niet meer open:
+  // dan telt alleen nog de definitieve verdeling.
+  const [gastBevestigdOpen, setGastBevestigdOpen] = useState(true)
+  useEffect(() => { if (finalized) { setGastItemsOpen(false); setGastBevestigdOpen(false) } }, [finalized])
   // Twee momenten waarop een gast uitleg nodig heeft: net na zijn bevestiging (wat nu?)
   // en zodra de rekening dichtgaat (dit is je bedrag). De eerste kan hij altijd opnieuw
   // oproepen via het ⓘ naast de knop; de tweede verschijnt één keer vanzelf.
@@ -6244,7 +6254,7 @@ function ClaimScreen(props: {
       <div style={S.card}>
         <h3 onClick={() => setGastItemsOpen((v) => !v)}
           style={{ ...S.h3, marginBottom: gastItemsOpen ? 14 : 0, cursor: "pointer", justifyContent: "space-between", gap: 10 }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>✅ {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0, color: finalized ? "#9aa0ab" : undefined }}>✅ 1 · {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</span>
           <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{gastItemsOpen ? `${L.hideAll} ▴` : `${L.showAll} ▾`}</span>
         </h3>
         {gastItemsOpen && (<>
@@ -6402,12 +6412,19 @@ function ClaimScreen(props: {
         </>)}
       </div>
 
-      <div style={{ ...S.card, background: "linear-gradient(135deg,#fbfaff,#f1f2fb)", border: "1.5px solid rgba(90,108,166,0.25)" }}>
+      <div style={{ ...S.card, background: "linear-gradient(135deg,#fbfaff,#f1f2fb)", border: finalized ? "1px solid rgba(90,108,166,0.18)" : "1.5px solid rgba(20,153,176,0.35)" }}>
+        {/* Tijdens het bestellen heet dit "dit ga ik bevestigen"; achteraf "wat ik
+            bevestigde", dichtgeklapt maar nog op te vragen. */}
+        <div onClick={() => setGastBevestigdOpen((v) => !v)}
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: gastBevestigdOpen ? 10 : 0 }}>
+          <span style={{ fontSize: 16.5, fontWeight: 800, color: finalized ? "#5a6680" : "#3b486a", minWidth: 0 }}>🧾 2 · {finalized ? L.whatIConfirmed : L.aboutToConfirmTitle}</span>
+          <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{gastBevestigdOpen ? `${L.hideAll} ▴` : `${L.showAll} ▾`}</span>
+        </div>
+        {gastBevestigdOpen && (<>
         {(() => {
-          const mine = personItems(meId)
+          const mine = personItems(meId, false)
           return (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 15.5, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 8 }}>{L.aboutToConfirm}</div>
               {mine.length === 0 && <div style={{ fontSize: 16.5, color: "#aaa" }}>{L.nothingTappedYet}</div>}
               {mine.map((d, k) => (
                 <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 16.5, padding: "3px 0", color: "#3b486a" }}>
@@ -6420,28 +6437,45 @@ function ClaimScreen(props: {
             </div>
           )
         })()}
-        {/* Dit is waarvoor een gast het scherm opent. Het klapt nooit mee dicht en staat
-            in een eigen kader, zodat het niet als sluitregel van een lijstje leest. */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", border: "2px solid rgba(20,153,176,0.45)", borderRadius: 14, padding: "13px 15px", marginTop: 4, boxShadow: "0 4px 14px -8px rgba(20,153,176,0.6)" }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: "#0f7488", minWidth: 0 }}>{L.yourTotal}</span>
-          <span style={{ fontSize: 32, fontWeight: 800, color: "#14213a", flexShrink: 0, letterSpacing: -0.5 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</span>
-        </div>
+        {/* Zolang de rekening open is, is dit waarvoor een gast het scherm opent. Na het
+            afsluiten staat het definitieve bedrag in blok 3 en zou dit dubbel zijn. */}
+        {!finalized && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", border: "2px solid rgba(20,153,176,0.45)", borderRadius: 14, padding: "13px 15px", marginTop: 4, boxShadow: "0 4px 14px -8px rgba(20,153,176,0.6)" }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: "#0f7488", minWidth: 0 }}>{L.yourTotal}</span>
+            <span style={{ fontSize: 32, fontWeight: 800, color: "#14213a", flexShrink: 0, letterSpacing: -0.5 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</span>
+          </div>
+        )}
         {t.pendingShared && (
           <div style={{ marginTop: 8, fontSize: 16, color: "#a06b00", background: "rgba(233,196,95,0.14)", border: "1px solid rgba(233,196,95,0.4)", borderRadius: 10, padding: "8px 11px", lineHeight: 1.4 }}>
             {L.sharingPendingNote}
           </div>
         )}
+        </>)}
+        {/* Blok 3 — alleen wanneer de rekening dicht is. Hier staan de toeslagen wél bij,
+            want dit is het bedrag dat telt. */}
         {finalized && (
-          <div id="gast-eindverdeling" style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(90,108,166,0.18)" }}>
-            {/* De verdeling van de hele tafel is naslagwerk, geen hoofdzaak — dicht dus,
-                tenzij je ze wil nakijken. */}
+          <div id="gast-eindverdeling" style={{ marginTop: 16, paddingTop: 14, borderTop: "2px solid rgba(39,174,96,0.3)" }}>
+            <div style={{ fontSize: 16.5, fontWeight: 800, color: "#1f8a4c", marginBottom: 9 }}>✅ 3 · {L.finalSplitTitle}</div>
+            {personItems(meId).map((r, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "4px 0", borderBottom: "1px solid rgba(16,24,40,0.06)", fontSize: 16, color: "#3b486a" }}>
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{r.qty > 1 ? `${r.qty}× ` : ""}{r.name}</span>
+                <span style={{ flexShrink: 0, fontWeight: 700, color: "#14213a" }}>€{r.amount.toFixed(2).replace(".", ",")}</span>
+              </div>
+            ))}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", border: "2px solid rgba(20,153,176,0.45)", borderRadius: 14, padding: "13px 15px", margin: "11px 0 14px", boxShadow: "0 4px 14px -8px rgba(20,153,176,0.6)" }}>
+              <span style={{ fontSize: 18, fontWeight: 800, color: "#0f7488", minWidth: 0 }}>{L.yourShareWord}</span>
+              <span style={{ fontSize: 32, fontWeight: 800, color: "#14213a", flexShrink: 0, letterSpacing: -0.5 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</span>
+            </div>
+            <div style={{ paddingTop: 12, borderTop: "1px solid rgba(90,108,166,0.18)" }}>
+            {/* De verdeling van de hele tafel is naslagwerk — dicht dus, tenzij je ze wil
+                nakijken. De knop "Iedereen" in de groene balk klapt precies dit open. */}
             <div onClick={() => setGastVerdelingOpen((v) => !v)}
               style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-              <span style={{ fontSize: 18 }}>✅</span>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 17.5, fontWeight: 800, color: "#1f8a4c" }}>{L.allHandledFinal}</span>
+              <span style={{ fontSize: 18 }}>👥</span>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#5a6680" }}>{L.everyoneSplitTitle}</span>
               <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{gastVerdelingOpen ? `${L.hideAll} ▴` : `${L.showAll} ▾`}</span>
             </div>
-            <div style={{ fontSize: 16, color: "#8a93a3", marginTop: 4, marginBottom: 8 }}>{L.fullBillInfo}</div>
+            {gastVerdelingOpen && <div style={{ fontSize: 15.5, color: "#8a93a3", marginTop: 4, marginBottom: 8 }}>{L.fullBillInfo}</div>}
             {gastVerdelingOpen && (<>
             {participants.map((p) => {
               const pt = personTotal(p.id)
@@ -6477,6 +6511,7 @@ function ClaimScreen(props: {
               <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2).replace(".", ",")}</span>
             </div>
             </>)}
+            </div>
           </div>
         )}
         {!(finalized && !isAdmin) && (
