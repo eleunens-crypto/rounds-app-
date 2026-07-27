@@ -562,7 +562,8 @@ const STRINGS = {
     theirNamesQ: "Hoe heten ze?",
     addThisGuest: "Toevoegen",
     enterGuestName: "Vul eerst een naam in.",
-    whoAtTableTitle: "Wie doet mee",
+    whoAtTableTitle: "Wie doet mee?",
+    noNeedUpfront: "hoeft niet vooraf — je kan meteen delen",
     seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} vrij` : `${totaal}`,
     addNameRow: "+ naam",
     optionalWord: "(optioneel)",
@@ -1144,7 +1145,8 @@ const STRINGS = {
     theirNamesQ: "Comment s\u2019appellent-ils ?",
     addThisGuest: "Ajouter",
     enterGuestName: "Entre d\u2019abord un nom.",
-    whoAtTableTitle: "Qui participe",
+    whoAtTableTitle: "Qui participe ?",
+    noNeedUpfront: "pas besoin à l’avance — tu peux partager tout de suite",
     seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} libre${vrij === 1 ? "" : "s"}` : `${totaal}`,
     addNameRow: "+ nom",
     optionalWord: "(facultatif)",
@@ -3961,19 +3963,26 @@ export default function RundoTable() {
                 setShowGuestModal(true)
               }
               return (
-                <div style={{ marginTop: 13, paddingTop: 12, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                    <div onClick={() => setShowNamesBlock((v) => !v)} style={{ fontSize: 16, fontWeight: 800, color: "#1499b0", cursor: "pointer" }}>
-                      {L.whoAtTableTitle} {showNamesBlock ? "▴" : "▾"}
-                    </div>
+                <div style={{ marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
+                  {/* De hele balk klapt open en dicht. Een los pijltje van tien pixels naast
+                      een titel leest niet als "hier zit iets onder"; een omrande balk wel,
+                      en die maakt meteen zichtbaar waar je mag tikken. */}
+                  <button onClick={() => setShowNamesBlock((v) => !v)}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", textAlign: "left",
+                      background: "rgba(20,153,176,0.07)", border: "1px solid rgba(20,153,176,0.25)", borderRadius: 12, padding: "10px 12px" }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#1499b0" }}>{L.whoAtTableTitle}</span>
                     {/* Grijs zolang er plaatsen vrij zijn: dat is een stand van zaken, geen
                         probleem. Groen pas als alles bezet is — daar is het een afvinking. */}
-                    <span style={{ fontSize: 14, fontWeight: 800, color: vrijeZit > 0 ? "#5a6680" : "#1f8a4c", background: vrijeZit > 0 ? "rgba(16,24,40,0.06)" : "rgba(39,174,96,0.14)", borderRadius: 12, padding: "3px 10px" }}>
+                    <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: vrijeZit > 0 ? "#5a6680" : "#1f8a4c", background: vrijeZit > 0 ? "rgba(255,255,255,0.85)" : "rgba(39,174,96,0.16)", borderRadius: 12, padding: "3px 10px" }}>
                       👥 {L.seatsSummary(totalPersons, vrijeZit)}
                     </span>
+                    <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#1499b0", lineHeight: 1 }}>{showNamesBlock ? "▴" : "▾"}</span>
+                  </button>
+                  <div style={{ marginTop: 7 }}>
+                    <span style={{ display: "inline-block", fontSize: 14, fontWeight: 800, color: "#0f7488", background: "rgba(20,153,176,0.13)", borderRadius: 12, padding: "5px 12px", lineHeight: 1.35 }}>{L.noNeedUpfront}</span>
                   </div>
                   {showNamesBlock && (
-                    <div style={{ marginTop: 9, border: "1px solid rgba(16,24,40,0.12)", borderRadius: 12, overflow: "hidden" }}>
+                    <div style={{ marginTop: 8, border: "1px solid rgba(16,24,40,0.12)", borderRadius: 12, overflow: "hidden" }}>
                       {participants.map((q, i) => {
                         const ikZelf = q.id === meId
                         const leeg = isFreeSpot(q) && !q.self_joined
