@@ -1039,6 +1039,7 @@ const STRINGS = {
     aboutToConfirmTitle: "Dit ga ik bevestigen",
     whatIConfirmed: "Wat ik bevestigde",
     helloName: (naam: string) => `Hallo ${naam}`,
+    persShort: (n: number) => `${n} pers.`,
     finalSplitTitle: "Definitieve verdeling",
     everyoneSplitTitle: "Verdeling van iedereen",
     nothingTappedYet: "Je hebt nog niets aangetikt.",
@@ -1636,6 +1637,7 @@ const STRINGS = {
     aboutToConfirmTitle: "Ce que je vais confirmer",
     whatIConfirmed: "Ce que j’ai confirmé",
     helloName: (naam: string) => `Salut ${naam}`,
+    persShort: (n: number) => `${n} pers.`,
     finalSplitTitle: "Répartition définitive",
     everyoneSplitTitle: "Répartition de tout le monde",
     nothingTappedYet: "Tu n'as encore rien coché.",
@@ -5664,21 +5666,24 @@ function TopBar({ group, isAdmin, onHome, totalPersons }: { group: Group; isAdmi
   const L = STRINGS[lang]
   return (
     <div style={{ marginBottom: 14, padding: "6px 2px" }}>
-      {/* Alleen logo, groepsnaam en aantal. De naam van de gast stond hier én in de sectie
-          eronder, en de wissellink hoort thuis waar je je naam ook aanpast — in de popup. */}
-      <div onClick={isAdmin ? onHome : undefined} title={isAdmin ? L.toTableHome : undefined} style={{ display: "flex", alignItems: "center", gap: 7, cursor: isAdmin ? "pointer" : "default", minWidth: 0, marginBottom: 9 }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/rundo-symbol.png" alt="" style={{ height: 30, width: "auto", objectFit: "contain", display: "block" }} />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/rundo-table-logo-dark.png" alt="Rundo Table" style={{ height: 19, width: "auto", objectFit: "contain", display: "block" }} />
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, borderTop: "1px solid rgba(16,24,40,0.08)", paddingTop: 9 }}>
-        <span style={{ minWidth: 0, fontSize: 20, fontWeight: 800, color: "#1b2a4a", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{group.name}</span>
-        <span style={{ flexShrink: 0, fontSize: 14.5, color: "#8a93a3", fontWeight: 700, whiteSpace: "nowrap" }}>
-          {totalPersons != null && totalPersons > 0 ? `👥 ${totalPersons} ${totalPersons === 1 ? L.person : L.persons}` : ""}
-          {totalPersons != null && totalPersons > 0 && fmtDate(group.created_at, lang) ? " · " : ""}
-          {fmtDate(group.created_at, lang)}
-        </span>
+      {/* Logo links, groep rechts op één regel: scheelt een hele regel schermhoogte, en
+          allebei beantwoorden ze dezelfde vraag — waar ben ik. Het aantal personen wordt
+          afgekort tot "4 pers." zodat de datum er nog naast past. */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, borderBottom: "1px solid rgba(16,24,40,0.08)", paddingBottom: 9 }}>
+        <div onClick={isAdmin ? onHome : undefined} title={isAdmin ? L.toTableHome : undefined} style={{ display: "flex", alignItems: "center", gap: 7, cursor: isAdmin ? "pointer" : "default", flexShrink: 0 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/rundo-symbol.png" alt="" style={{ height: 28, width: "auto", objectFit: "contain", display: "block" }} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/rundo-table-logo-dark.png" alt="Rundo Table" style={{ height: 18, width: "auto", objectFit: "contain", display: "block" }} />
+        </div>
+        <div style={{ textAlign: "right", minWidth: 0 }}>
+          <div style={{ fontSize: 16.5, fontWeight: 800, color: "#1b2a4a", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{group.name}</div>
+          <div style={{ fontSize: 12.5, color: "#8a93a3", fontWeight: 700, whiteSpace: "nowrap" }}>
+            {totalPersons != null && totalPersons > 0 ? `👥 ${L.persShort(totalPersons)}` : ""}
+            {totalPersons != null && totalPersons > 0 && fmtDate(group.created_at, lang) ? " · " : ""}
+            {fmtDate(group.created_at, lang)}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -6280,28 +6285,8 @@ function ClaimScreen(props: {
       {meId && onEditMe && (() => {
         const me = participants.find((p) => p.id === meId)
         if (!me) return null
-        const seats = Math.max(1, me.seats ?? 1)
-        // Een cirkel per persoon met zijn beginletter. Ze schuiven 8 pixels over elkaar:
-        // genoeg om als één groepje te lezen, weinig genoeg om elke letter te kunnen zien.
-        const delen = me.name.split(/\s*[&,]\s*/).map((x) => x.trim()).filter(Boolean)
-        const kleuren = [
-          "linear-gradient(135deg,#1499b0,#22b8cf)",
-          "linear-gradient(135deg,#e8b23c,#f0c14b)",
-          "linear-gradient(135deg,#7a5ea8,#9575c4)",
-          "linear-gradient(135deg,#1f8a4c,#27ae60)",
-        ]
-        const bollen = Array.from({ length: Math.max(1, Math.min(seats, 4)) }, (_, i) => ({
-          letter: (delen[i] || me.name || "?").charAt(0).toUpperCase(),
-          kleur: kleuren[i % kleuren.length],
-          donker: i % kleuren.length === 1,
-        }))
         return (
           <div style={{ marginBottom: 12, padding: "2px", display: "flex", alignItems: "center", gap: 11 }}>
-            <span style={{ flexShrink: 0, display: "inline-flex" }}>
-              {bollen.map((b, i) => (
-                <span key={i} style={{ width: 34, height: 34, borderRadius: "50%", background: b.kleur, color: b.donker ? "#14213a" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, border: "2px solid #fff", marginLeft: i === 0 ? 0 : -8 }}>{b.letter}</span>
-              ))}
-            </span>
             <span style={{ flex: 1, minWidth: 0, fontSize: 19, fontWeight: 800, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.helloName(me.name)} 👋</span>
             <button onClick={() => onEditMe(me.id)}
               style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#0f7d90", background: "transparent", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 9, padding: "7px 11px", cursor: "pointer" }}>{L.editMe}</button>
