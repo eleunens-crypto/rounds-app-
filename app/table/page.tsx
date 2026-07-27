@@ -3638,7 +3638,10 @@ export default function RundoTable() {
         )
       })()}
 
-      {group.finalized && (() => {
+      {/* Alleen voor de beheerder: deze balk draagt het opmerkingenblok en de knop om te
+          heropenen. Voor een gast stond er enkel tekst die zijn eigen groene balk — met
+          bedrag en knoppen — al zegt, dus die zag er twee onder elkaar. */}
+      {group.finalized && isAdmin && (() => {
         const disputers = parseDisputes(group.disputed_by || "")
         const openCount = disputers.filter((d) => !d.resolved).length
         return (
