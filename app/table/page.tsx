@@ -1040,6 +1040,10 @@ const STRINGS = {
     whatIConfirmed: "Wat ik bevestigde",
     helloName: (naam: string) => `Hallo ${naam}`,
     persShort: (n: number) => `${n} pers.`,
+    statusBillOk: (bedrag: string) => `✓ Bon klopt · ${bedrag}`,
+    statusBillCheck: "⚠ Bon nakijken",
+    statusAllAssigned: "✓ Alles toegewezen",
+    statusOpenToAssign: (n: number) => `${n} open om toe te wijzen`,
     finalSplitTitle: "Definitieve verdeling",
     everyoneSplitTitle: "Verdeling van iedereen",
     nothingTappedYet: "Je hebt nog niets aangetikt.",
@@ -1086,6 +1090,10 @@ const STRINGS = {
     itemsAddedCheck: (n: number) => `${n} item${n !== 1 ? "s" : ""} toegevoegd — controleer ze op de Bon-tab.`,
   },
   fr: {
+    statusBillOk: (bedrag: string) => `✓ Addition OK · ${bedrag}`,
+    statusBillCheck: "⚠ Vérifier l’addition",
+    statusAllAssigned: "✓ Tout est attribué",
+    statusOpenToAssign: (n: number) => `${n} à attribuer`,
     seatsCappedGuest: (n: number) => n === 1
       ? "Il ne reste qu’une place libre. Demande à l’hôte d’en ajouter une si vous êtes plus nombreux."
       : `Il reste ${n} places libres. Demande à l’hôte d’en ajouter si vous êtes plus nombreux.`,
@@ -3654,7 +3662,13 @@ export default function RundoTable() {
         </div>
       )}
 
-      <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
+      <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)}
+        status={isAdmin && adminTab === "overview" ? {
+          bon: billOk ? L.statusBillOk(`€${billTotal.toFixed(2).replace(".", ",")}`) : L.statusBillCheck,
+          bonOk: billOk,
+          open: (openUnits + undecidedShared.length) === 0 ? L.statusAllAssigned : L.statusOpenToAssign(openUnits + undecidedShared.length),
+          openOk: (openUnits + undecidedShared.length) === 0,
+        } : undefined} />
 
       {/* Heropen je de rekening om nog iets te wijzigen, dan verdween dit blok mee — en
           bleef er een onopgeloste opmerking die het opnieuw afsluiten tegenhield, zonder
@@ -5661,7 +5675,7 @@ export default function RundoTable() {
 // ═══════════════════════════════════════════════════════════════════════════
 // SUB-COMPONENTEN
 // ═══════════════════════════════════════════════════════════════════════════
-function TopBar({ group, isAdmin, onHome, totalPersons }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number }) {
+function TopBar({ group, isAdmin, onHome, totalPersons, status }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number; status?: { bon: string; bonOk: boolean; open: string; openOk: boolean } }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
   return (
@@ -5685,6 +5699,16 @@ function TopBar({ group, isAdmin, onHome, totalPersons }: { group: Group; isAdmi
           </div>
         </div>
       </div>
+      {/* De twee vragen die een beheerder de hele avond heeft: klopt de bon, en staat er nog
+          iets open? Die stonden elk in hun eigen tabblad, dus je moest ernaartoe om te kijken. */}
+      {status && (
+        <div style={{ display: "flex", gap: 6, marginTop: 9 }}>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 800, textAlign: "center", borderRadius: 9, padding: "6px 8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            color: status.bonOk ? "#1f8a4c" : "#b5591a", background: status.bonOk ? "rgba(39,174,96,0.12)" : "rgba(243,156,18,0.14)" }}>{status.bon}</span>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 800, textAlign: "center", borderRadius: 9, padding: "6px 8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            color: status.openOk ? "#1f8a4c" : "#b5591a", background: status.openOk ? "rgba(39,174,96,0.12)" : "rgba(243,156,18,0.14)" }}>{status.open}</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -5904,8 +5928,11 @@ function AssignPicker({ participants, itemId, isShared, confirmedFn, onAssign, o
   const [lang] = useLang()
   const L = STRINGS[lang]
   // Alle namen meteen zichtbaar — niets meer verstopt achter "andere persoon". Wie via de
-  // QR-link binnenkwam krijgt een eigen kleur: die duidt in principe zelf aan.
+  // link binnenkwam staat achteraan en gedimd: die duidt normaal zelf aan. Aantikken kan
+  // nog altijd, want er loopt wel eens iets mis en dan moet jij kunnen bijspringen.
   const heeftZelfAangemeld = participants.some((p) => p.self_joined)
+  const gesorteerd = [...participants].sort((a, b) => Number(!!a.self_joined) - Number(!!b.self_joined))
+  const eersteViaLink = gesorteerd.findIndex((p) => p.self_joined)
   return (
     <div style={{ marginTop: 8, marginLeft: 25, padding: 10, borderRadius: 12, background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.2)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -5913,16 +5940,21 @@ function AssignPicker({ participants, itemId, isShared, confirmedFn, onAssign, o
         <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16.5, color: "#9aa0ab", fontWeight: 800 }}>✕</button>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-        {participants.map((p) => {
+        {gesorteerd.map((p, i) => {
           const klaar = confirmedFn(p.id)
           const viaQr = !!p.self_joined
           return (
-            <button key={p.id} onClick={() => onAssign(p.id, klaar)} style={{
-              fontSize: 16, fontWeight: 700, borderRadius: 10, padding: "7px 11px", cursor: "pointer",
-              border: viaQr ? "2px solid #1499b0" : "1px solid rgba(16,24,40,0.12)",
-              background: viaQr ? "rgba(20,153,176,0.08)" : "#fff",
-              color: viaQr ? "#0f7488" : "#5a6680", opacity: klaar ? 0.75 : 1,
-            }}>{viaQr && "📱 "}{p.name}{klaar && " ✓"}</button>
+            <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+              {i === eersteViaLink && eersteViaLink > 0 && (
+                <span style={{ width: 1, height: 24, background: "rgba(16,24,40,0.12)", marginRight: 2 }} />
+              )}
+              <button onClick={() => onAssign(p.id, klaar)} style={{
+                fontSize: 16, fontWeight: viaQr ? 700 : 800, borderRadius: 10, padding: "7px 11px", cursor: "pointer",
+                border: viaQr ? "1.5px solid rgba(16,24,40,0.12)" : "1.5px solid rgba(20,153,176,0.45)",
+                background: viaQr ? "#fff" : "rgba(20,153,176,0.06)",
+                color: viaQr ? "#9aa0ab" : "#14213a", opacity: klaar ? 0.75 : viaQr ? 0.8 : 1,
+              }}>{viaQr && "📱 "}{p.name}{klaar && " ✓"}</button>
+            </span>
           )
         })}
       </div>
@@ -6052,7 +6084,12 @@ function ClaimScreen(props: {
   useEffect(() => { if (jumpToAssign) setClaimCollapsed(false) }, [jumpToAssign])
   // Vrije plaatsen (nog niemand) horen niet in de toewijslijst: enkel wie een naam heeft.
   const isFreeName = (nm: string) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test((nm || "").trim())
+  // Wie via de link binnenkwam achteraan: die duidt normaal zelf aan. Jij duidt vooral aan
+  // voor jezelf en voor wie niet scande — maar aantikken blijft mogelijk, want er loopt
+  // wel eens iets mis.
   const named = participants.filter((p) => !isFreeName(p.name))
+    .sort((a, b) => Number(!!a.self_joined) - Number(!!b.self_joined))
+  const eersteLinkGast = named.findIndex((p) => p.self_joined)
   // Dezelfde deel-knop als op de bon: hier kan de admin een item alsnog op "gedeeld" zetten.
   const shareBtn = (it: BillItem) => (
     <button onClick={() => onToggleShared(it)} title={it.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}
@@ -6093,6 +6130,11 @@ function ClaimScreen(props: {
             ? <div style={{ fontSize: 16, color: "#aaa", padding: 10 }}>{L.addGuestsInTab1}</div>
             : (
               <>
+                {/* Één legende bovenaan in plaats van onder elk item: bij tien items zou die
+                    regel tien keer terugkomen. */}
+                {named.some((p) => p.self_joined) && (
+                  <div style={{ fontSize: 15, color: "#0f7488", background: "rgba(20,153,176,0.07)", borderRadius: 10, padding: "9px 11px", marginBottom: 10, lineHeight: 1.45 }}>{L.qrJoinedLegend}</div>
+                )}
                 {items.map((it) => {
                   const claimed = claimedQty(it.id)
                   const open = it.quantity - claimed
@@ -6126,25 +6168,29 @@ function ClaimScreen(props: {
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25 }}>
                           {named.length === 0
                             ? <span style={{ fontSize: 15.5, color: "#aaa" }}>{L.addGuestsFirst}</span>
-                            : named.map((p) => {
+                            : named.map((p, i) => {
                                 // Ook oplichten wanneer het kiesvenster openstaat maar er nog
                                 // niemand gekozen is — anders lijkt de knop uit terwijl er
                                 // onderaan een venster van hem hangt dat je niet kwijtraakt.
                                 const on = sh.includes(p.id) || sharePickerOpen(it.id, p.id)
                                 const pSeats = Math.max(1, p.seats ?? 1)
                                 const pHeads = myShareHeads(it.id, p.id)
+                                const viaLink = !!p.self_joined
                                 return (
-                                  <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                  <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                                    {i === eersteLinkGast && eersteLinkGast > 0 && (
+                                      <span style={{ width: 1, height: 22, background: "rgba(16,24,40,0.12)", marginRight: 2 }} />
+                                    )}
                                     <button onClick={() => {
                                       if (!on && explicitConfirmed(p.id)) { askConfirm(L.notSelectedShare(p.name), L.yes, () => toggleShareClaim(it.id, p.id)); return }
                                       toggleShareClaim(it.id, p.id)
                                     }} style={{
                                       fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "5px 10px", cursor: "pointer",
-                                      border: on ? "none" : "1px solid rgba(16,24,40,0.12)",
-                                      background: on ? (p.id === adminPid ? "rgba(233,196,95,0.5)" : "linear-gradient(135deg,#f3d27c,#ecc564)") : "#fff",
-                                      color: on ? "#5a4a1a" : "#8b93a8",
-                                    }}>{on ? "✓ " : ""}{p.name}{on && pSeats > 1 ? ` ×${pHeads}` : ""}</button>
-
+                                      border: on ? "none" : viaLink ? "1px solid rgba(16,24,40,0.12)" : "1.5px solid rgba(20,153,176,0.45)",
+                                      background: on ? (p.id === adminPid ? "rgba(233,196,95,0.5)" : "linear-gradient(135deg,#f3d27c,#ecc564)") : viaLink ? "#fff" : "rgba(20,153,176,0.06)",
+                                      color: on ? "#5a4a1a" : viaLink ? "#9aa0ab" : "#14213a",
+                                      opacity: on ? 1 : viaLink ? 0.8 : 1,
+                                    }}>{on ? "✓ " : ""}{viaLink && !on ? "📱 " : ""}{p.name}{on && pSeats > 1 ? ` ×${pHeads}` : ""}</button>
                                   </span>
                                 )
                               })}
