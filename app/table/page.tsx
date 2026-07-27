@@ -1038,7 +1038,7 @@ const STRINGS = {
     allClaimedWord: "alles geclaimd",
     aboutToConfirmTitle: "Dit ga ik bevestigen",
     whatIConfirmed: "Wat ik bevestigde",
-    togetherWord: "samen",
+    helloName: (naam: string) => `Hallo ${naam}`,
     finalSplitTitle: "Definitieve verdeling",
     everyoneSplitTitle: "Verdeling van iedereen",
     nothingTappedYet: "Je hebt nog niets aangetikt.",
@@ -1635,7 +1635,7 @@ const STRINGS = {
     allClaimedWord: "tout attribué",
     aboutToConfirmTitle: "Ce que je vais confirmer",
     whatIConfirmed: "Ce que j’ai confirmé",
-    togetherWord: "ensemble",
+    helloName: (naam: string) => `Salut ${naam}`,
     finalSplitTitle: "Répartition définitive",
     everyoneSplitTitle: "Répartition de tout le monde",
     nothingTappedYet: "Tu n'as encore rien coché.",
@@ -6296,18 +6296,15 @@ function ClaimScreen(props: {
           donker: i % kleuren.length === 1,
         }))
         return (
-          <div style={{ ...S.card, marginBottom: 12, padding: "11px 13px", display: "flex", alignItems: "center", gap: 11, width: "80%", marginLeft: "auto", marginRight: "auto" }}>
+          <div style={{ marginBottom: 12, padding: "2px", display: "flex", alignItems: "center", gap: 11 }}>
             <span style={{ flexShrink: 0, display: "inline-flex" }}>
               {bollen.map((b, i) => (
                 <span key={i} style={{ width: 34, height: 34, borderRadius: "50%", background: b.kleur, color: b.donker ? "#14213a" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, border: "2px solid #fff", marginLeft: i === 0 ? 0 : -8 }}>{b.letter}</span>
               ))}
             </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{me.name}</span>
-              <span style={{ display: "block", fontSize: 13.5, color: "#9aa0ab" }}>{seats > 1 ? `${L.togetherWord} ${seats} ${L.persons}` : `1 ${L.person}`}</span>
-            </span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 19, fontWeight: 800, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.helloName(me.name)} 👋</span>
             <button onClick={() => onEditMe(me.id)}
-              style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#0f7d90", background: "rgba(20,153,176,0.08)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 9, padding: "8px 11px", cursor: "pointer" }}>{L.editMe}</button>
+              style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#0f7d90", background: "transparent", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 9, padding: "7px 11px", cursor: "pointer" }}>{L.editMe}</button>
           </div>
         )
       })()}
