@@ -562,13 +562,14 @@ const STRINGS = {
     lockedPersons: "🔒 Eerst het aantal personen invullen",
     lockedName: "🔒 Vul eerst je eigen naam in",
     nowAssignTitle: "Wie nam wat?",
-    goAssignBtn: "\ud83c\udf7d\ufe0f Eten & drinken toewijzen \u2192",
+    nowAssignSub: "Ga verder naar toewijzen",
+    goAssignBtn: "\ud83c\udf7d\ufe0f Toewijzen eten & drinken \u2192",
     howManyPersonsQ: "Voor hoeveel personen?",
     theirNameQ: "Hoe heet die persoon?",
     theirNamesQ: "Hoe heten ze?",
     addThisGuest: "Toevoegen",
     enterGuestName: "Vul eerst een naam in.",
-    whoAtTableTitle: "Wie doet mee?",
+    whoAtTableTitle: "Namen personen",
     noNeedUpfront: "Vul alvast namen in, of deel meteen de QR.",
     seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} vrij` : `${totaal}`,
     addNameRow: "+ naam",
@@ -1039,11 +1040,14 @@ const STRINGS = {
     nothingTappedYet: "Je hebt nog niets aangetikt.",
     yourTotal: "Jouw totaal",
     confirmDoneTitle: "Bedankt, je bent klaar",
-    confirmStep1: "Jij hebt aangeduid wat je nam",
-    confirmStep2: "De beheerder wacht tot iedereen klaar is en sluit dan de rekening af",
-    confirmStep3: "Hier verschijnt je definitieve bedrag, met btw en kosten erbij",
-    infoReopenHint: "tik op de ⓘ om dit opnieuw te lezen",
-    waitingForAdmin: "⏳ Wachten op de beheerder — je definitieve bedrag verschijnt zodra de rekening afgesloten is.",
+    confirmStep1: "Je hebt aangeduid wat je nam",
+    confirmStep2: "Wacht tot iedereen klaar is",
+    confirmStep3: "Beheerder sluit dan de rekening af",
+    confirmStep4: "Hier verschijnt je definitieve bedrag",
+    confirmStepNote: "eventuele btw, kortingen, kosten en fooien worden mee verrekend",
+    whatNowBtn: "Wat nu?",
+    showAll: "toon alles",
+    hideAll: "verberg alles",
     finalPopupTitle: "✅ De rekening is afgesloten",
     finalPopupSub: "Dit is je definitieve bedrag, inclusief btw en eventuele kosten.",
     sharingPendingNote: "ℹ️ Je deelt mee in gedeelde items (wijn/water). Het exacte deel kan nog wijzigen tot iedereen heeft aangetikt en bevestigd.",
@@ -1152,13 +1156,14 @@ const STRINGS = {
     lockedPersons: "🔒 Indique d'abord le nombre de personnes",
     lockedName: "🔒 Indique d'abord ton propre nom",
     nowAssignTitle: "Qui a pris quoi ?",
+    nowAssignSub: "Passe à l’attribution",
     goAssignBtn: "\ud83c\udf7d\ufe0f Attribuer plats & boissons \u2192",
     howManyPersonsQ: "Pour combien de personnes ?",
     theirNameQ: "Comment s\u2019appelle cette personne ?",
     theirNamesQ: "Comment s\u2019appellent-ils ?",
     addThisGuest: "Ajouter",
     enterGuestName: "Entre d\u2019abord un nom.",
-    whoAtTableTitle: "Qui participe ?",
+    whoAtTableTitle: "Noms des personnes",
     noNeedUpfront: "Remplis déjà des noms, ou partage tout de suite le QR.",
     seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} libre${vrij === 1 ? "" : "s"}` : `${totaal}`,
     addNameRow: "+ nom",
@@ -1630,10 +1635,13 @@ const STRINGS = {
     yourTotal: "Ton total",
     confirmDoneTitle: "Merci, c’est bon pour toi",
     confirmStep1: "Tu as coché ce que tu as pris",
-    confirmStep2: "L’hôte attend que tout le monde ait fini, puis clôture l’addition",
-    confirmStep3: "Ton montant définitif apparaîtra ici, TVA et frais compris",
-    infoReopenHint: "touche le ⓘ pour relire ceci",
-    waitingForAdmin: "⏳ En attente de l’hôte — ton montant définitif apparaît dès la clôture de l’addition.",
+    confirmStep2: "Attends que tout le monde ait fini",
+    confirmStep3: "L’hôte clôture ensuite l’addition",
+    confirmStep4: "Ton montant définitif apparaît ici",
+    confirmStepNote: "TVA, remises, frais et pourboires éventuels sont aussi répartis",
+    whatNowBtn: "Et maintenant ?",
+    showAll: "tout afficher",
+    hideAll: "tout masquer",
     finalPopupTitle: "✅ L’addition est clôturée",
     finalPopupSub: "Voici ton montant définitif, TVA et frais éventuels compris.",
     sharingPendingNote: "ℹ️ Tu participes à des articles partagés (vin/eau). La part exacte peut encore changer jusqu'à ce que tout le monde ait coché et confirmé.",
@@ -4236,7 +4244,8 @@ export default function RundoTable() {
           <div style={{ order: 3, marginTop: 14, ...S.card, background: "linear-gradient(160deg,#eafaf1,#d9f2e4)", border: "2px solid rgba(31,138,76,0.45)", padding: "18px 16px" }}>
             {/* "Toewijzen" alleen zegt niet wát je toewijst; dat staat nu in de knop.
                 De ondertitel herhaalde wat je een scherm verder toch te zien krijgt. */}
-            <div style={{ fontSize: 21, fontWeight: 800, color: "#15703f", marginBottom: 13, lineHeight: 1.25 }}>{L.nowAssignTitle}</div>
+            <div style={{ fontSize: 21, fontWeight: 800, color: "#15703f", marginBottom: 3, lineHeight: 1.25 }}>{L.nowAssignTitle}</div>
+            <div style={{ fontSize: 15.5, color: "#3c6b51", lineHeight: 1.45, marginBottom: 13 }}>{L.nowAssignSub}</div>
             <button onClick={() => { if (warnMismatch) { setShowShareWarn(true); return } if (!requireName()) return; setAdminTab("overview"); scrollTop() }}
               style={{ width: "100%", padding: "16px 0", fontSize: 19, fontWeight: 800, border: "none", borderRadius: 14, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 8px 20px -8px rgba(31,138,76,0.75)", cursor: "pointer" }}>{L.goAssignBtn}</button>
           </div>
@@ -6133,9 +6142,9 @@ function ClaimScreen(props: {
       })()}
       <div style={S.card}>
         <h3 onClick={() => setGastItemsOpen((v) => !v)}
-          style={{ ...S.h3, marginBottom: gastItemsOpen ? 14 : 0, cursor: "pointer", justifyContent: "space-between" }}>
+          style={{ ...S.h3, marginBottom: gastItemsOpen ? 14 : 0, cursor: "pointer", justifyContent: "space-between", gap: 10 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>✅ {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</span>
-          <span style={{ flexShrink: 0, fontSize: 17, color: "#9aa0ab", fontWeight: 700 }}>{gastItemsOpen ? "▴" : "▾"}</span>
+          <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{gastItemsOpen ? `${L.hideAll} ▴` : `${L.showAll} ▾`}</span>
         </h3>
         {gastItemsOpen && (<>
         {items.length > 0 && (
@@ -6330,10 +6339,10 @@ function ClaimScreen(props: {
             {/* De verdeling van de hele tafel is naslagwerk, geen hoofdzaak — dicht dus,
                 tenzij je ze wil nakijken. */}
             <div onClick={() => setGastVerdelingOpen((v) => !v)}
-              style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer" }}>
+              style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
               <span style={{ fontSize: 18 }}>✅</span>
               <span style={{ flex: 1, minWidth: 0, fontSize: 17.5, fontWeight: 800, color: "#1f8a4c" }}>{L.allHandledFinal}</span>
-              <span style={{ flexShrink: 0, fontSize: 17, color: "#9aa0ab", fontWeight: 700 }}>{gastVerdelingOpen ? "▴" : "▾"}</span>
+              <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{gastVerdelingOpen ? `${L.hideAll} ▴` : `${L.showAll} ▾`}</span>
             </div>
             <div style={{ fontSize: 16, color: "#8a93a3", marginTop: 4, marginBottom: 8 }}>{L.fullBillInfo}</div>
             {gastVerdelingOpen && (<>
@@ -6375,25 +6384,21 @@ function ClaimScreen(props: {
         )}
         {!(finalized && !isAdmin) && (
           <>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
+            {/* "Wat nu?" staat naast de bevestigknop in plaats van als los rondje eronder:
+                een echte knop met een woord erin wordt gelezen, een ⓘ wordt overgeslagen. */}
+            <div style={{ display: "flex", alignItems: "stretch", gap: 8, marginTop: 12 }}>
               <button onClick={async () => {
                 const eerst = !iConfirmed
                 const ok = await confirmMe()
                 if (eerst && ok !== false) setShowConfirmInfo(true)
-              }} style={{ ...S.btn, flex: 1, padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none", ...(iConfirmed ? { background: "rgba(39,174,96,0.12)", color: "#1f8a4c" } : { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a" }) }}>
+              }} style={{ ...S.btn, flex: 3, padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none", ...(iConfirmed ? { background: "rgba(39,174,96,0.12)", color: "#1f8a4c" } : { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a" }) }}>
                 {iConfirmed ? L.confirmedTapEdit : L.confirmMyOrder}
               </button>
               {!isAdmin && (
-                <button onClick={() => setShowConfirmInfo(true)} title={L.infoReopenHint}
-                  style={{ flexShrink: 0, width: 46, height: 46, borderRadius: "50%", cursor: "pointer", background: "#fff", border: "1.5px solid rgba(20,153,176,0.45)", color: "#1499b0", fontSize: 20, fontWeight: 800, fontStyle: "italic" }}>i</button>
+                <button onClick={() => setShowConfirmInfo(true)}
+                  style={{ ...S.btn, flex: 1, minWidth: 0, padding: "14px 4px", fontSize: 16, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(20,153,176,0.45)", color: "#1499b0", whiteSpace: "nowrap" }}>{L.whatNowBtn}</button>
               )}
             </div>
-            {!isAdmin && iConfirmed && !finalized && (
-              <div style={{ marginTop: 9, background: "rgba(20,153,176,0.07)", borderRadius: 10, padding: "9px 11px", fontSize: 14.5, color: "#3b486a", lineHeight: 1.45 }}>{L.waitingForAdmin}</div>
-            )}
-            {!isAdmin && (
-              <div style={{ marginTop: 7, fontSize: 13.5, color: "#9aa0ab", textAlign: "center" }}>{L.infoReopenHint}</div>
-            )}
           </>
         )}
 
@@ -6405,12 +6410,16 @@ function ClaimScreen(props: {
                 <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(39,174,96,0.14)", color: "#1f8a4c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 10px" }}>✓</div>
                 <div style={{ fontSize: 21, fontWeight: 800, color: "#14213a" }}>{L.confirmDoneTitle}</div>
               </div>
-              {[{ n: "✓", t: L.confirmStep1, klaar: true }, { n: "2", t: L.confirmStep2, klaar: false }, { n: "3", t: L.confirmStep3, klaar: false }].map((st, i) => (
-                <div key={i} style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
+              {[{ n: "✓", t: L.confirmStep1, klaar: true }, { n: "2", t: L.confirmStep2, klaar: false }, { n: "3", t: L.confirmStep3, klaar: false }, { n: "4", t: L.confirmStep4, klaar: false, ster: true }].map((st, i) => (
+                <div key={i} style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: st.ster ? 4 : 12 }}>
                   <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, background: st.klaar ? "#1f8a4c" : "rgba(16,24,40,0.08)", color: st.klaar ? "#fff" : "#5a6680" }}>{st.n}</span>
-                  <span style={{ fontSize: 16, lineHeight: 1.45, color: st.klaar ? "#14213a" : "#5a6680", fontWeight: st.klaar ? 700 : 400 }}>{st.t}</span>
+                  <span style={{ fontSize: 16, lineHeight: 1.45, color: st.klaar ? "#14213a" : "#5a6680", fontWeight: st.klaar ? 700 : 400 }}>{st.t}{st.ster && <span style={{ color: "#1499b0", fontWeight: 800 }}>*</span>}</span>
                 </div>
               ))}
+              {/* Wat er nog bij komt bovenop je items — klein, want het is een terzijde. */}
+              <div style={{ fontSize: 13, color: "#9aa0ab", lineHeight: 1.4, margin: "0 0 14px 37px" }}>
+                <span style={{ color: "#1499b0", fontWeight: 800 }}>*</span> {L.confirmStepNote}
+              </div>
               <button onClick={() => setShowConfirmInfo(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, marginTop: 4 }}>{L.closeWord}</button>
             </div>
           </div>
