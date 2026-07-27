@@ -6000,7 +6000,7 @@ function ClaimScreen(props: {
   const [assignItem, setAssignItem] = useState<string | null>(null)
   const [disputeOpen, setDisputeOpen] = useState(false)
   const [disputeText, setDisputeText] = useState("")
-  const [openGuestRows, setOpenGuestRows] = useState<Set<string>>(() => new Set(meId ? [meId] : []))
+  const [openGuestRows, setOpenGuestRows] = useState<Set<string>>(() => new Set())
   // Een gast kijkt op een klein scherm naar een lange bon. De lijst en de eindverdeling
   // mogen dus dicht; wat híj moet betalen blijft altijd staan.
   const [gastItemsOpen, setGastItemsOpen] = useState(true)
@@ -6038,7 +6038,7 @@ function ClaimScreen(props: {
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => setShowFinalPopup(true)}
             style={{ flex: 1, minWidth: 0, cursor: "pointer", border: "none", background: "#fff", color: "#1f8a4c", borderRadius: 11, padding: "13px 6px", fontSize: 15.5, fontWeight: 800 }}>{L.myDetailsBtn}</button>
-          <button onClick={() => { setGastVerdelingOpen(true); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }}
+          <button onClick={() => { setGastVerdelingOpen(true); setOpenGuestRows(new Set(participants.map((q) => q.id))); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }}
             style={{ flex: 1, minWidth: 0, cursor: "pointer", background: "rgba(255,255,255,0.2)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.5)", borderRadius: 11, padding: "13px 6px", fontSize: 15.5, fontWeight: 800 }}>{L.everyoneBtn}</button>
         </div>
       </div>
@@ -6563,7 +6563,13 @@ function ClaimScreen(props: {
             <div style={{ paddingTop: 12, borderTop: "1px solid rgba(90,108,166,0.18)" }}>
             {/* De verdeling van de hele tafel is naslagwerk — dicht dus, tenzij je ze wil
                 nakijken. De knop "Iedereen" in de groene balk klapt precies dit open. */}
-            <div onClick={() => setGastVerdelingOpen((v) => !v)}
+            <div onClick={() => {
+                // Het blok én alle persoonsrijen samen: anders stond er "verberg alles" terwijl
+                // er nog een rij openstond, of "toon alles" terwijl je niets zag.
+                const openen = !gastVerdelingOpen
+                setGastVerdelingOpen(openen)
+                setOpenGuestRows(openen ? new Set(participants.map((q) => q.id)) : new Set())
+              }}
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
                 {blokBol(4, false)}
