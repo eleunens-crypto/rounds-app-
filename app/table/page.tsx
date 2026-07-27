@@ -561,9 +561,8 @@ const STRINGS = {
     personsFirst: "⚠️ Vul eerst in met hoeveel jullie zijn.",
     lockedPersons: "🔒 Eerst het aantal personen invullen",
     lockedName: "🔒 Vul eerst je eigen naam in",
-    nowAssignTitle: "Klaar? Ga naar toewijzen",
-    nowAssignSub: "Duid aan wie wat nam. Zo weet iedereen wat hij moet betalen.",
-    goAssignBtn: "\ud83c\udf7d\ufe0f Naar toewijzen \u2192",
+    nowAssignTitle: "Wie nam wat?",
+    goAssignBtn: "\ud83c\udf7d\ufe0f Eten & drinken toewijzen \u2192",
     howManyPersonsQ: "Voor hoeveel personen?",
     theirNameQ: "Hoe heet die persoon?",
     theirNamesQ: "Hoe heten ze?",
@@ -1150,9 +1149,8 @@ const STRINGS = {
     personsFirst: "⚠️ Indique d'abord combien vous êtes.",
     lockedPersons: "🔒 Indique d'abord le nombre de personnes",
     lockedName: "🔒 Indique d'abord ton propre nom",
-    nowAssignTitle: "Prêt ? Va vers l’attribution",
-    nowAssignSub: "Indique qui a pris quoi. Ainsi chacun sait ce qu\u2019il doit payer.",
-    goAssignBtn: "\ud83c\udf7d\ufe0f Vers l\u2019attribution \u2192",
+    nowAssignTitle: "Qui a pris quoi ?",
+    goAssignBtn: "\ud83c\udf7d\ufe0f Attribuer plats & boissons \u2192",
     howManyPersonsQ: "Pour combien de personnes ?",
     theirNameQ: "Comment s\u2019appelle cette personne ?",
     theirNamesQ: "Comment s\u2019appellent-ils ?",
@@ -4221,8 +4219,9 @@ export default function RundoTable() {
           </div>
           )}
           <div style={{ order: 3, marginTop: 14, ...S.card, background: "linear-gradient(160deg,#eafaf1,#d9f2e4)", border: "2px solid rgba(31,138,76,0.45)", padding: "18px 16px" }}>
-            <div style={{ fontSize: 21, fontWeight: 800, color: "#15703f", marginBottom: 5, lineHeight: 1.25 }}>{L.nowAssignTitle}</div>
-            <div style={{ fontSize: 16.5, color: "#3c6b51", lineHeight: 1.5, marginBottom: 14 }}>{L.nowAssignSub}</div>
+            {/* "Toewijzen" alleen zegt niet wát je toewijst; dat staat nu in de knop.
+                De ondertitel herhaalde wat je een scherm verder toch te zien krijgt. */}
+            <div style={{ fontSize: 21, fontWeight: 800, color: "#15703f", marginBottom: 13, lineHeight: 1.25 }}>{L.nowAssignTitle}</div>
             <button onClick={() => { if (warnMismatch) { setShowShareWarn(true); return } if (!requireName()) return; setAdminTab("overview"); scrollTop() }}
               style={{ width: "100%", padding: "16px 0", fontSize: 19, fontWeight: 800, border: "none", borderRadius: 14, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 8px 20px -8px rgba(31,138,76,0.75)", cursor: "pointer" }}>{L.goAssignBtn}</button>
           </div>
