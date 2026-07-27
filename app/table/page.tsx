@@ -633,6 +633,8 @@ const STRINGS = {
     onePerson: "👤 1 persoon",
     twoPersons: "👫 Met 2",
     threePlus: "👥 Met 3+",
+    aloneSub: "alleen",
+    togetherSub: "samen betalen",
     firstName: "Eerste naam…",
     secondName: "Tweede naam…",
     extraName: (n: number) => `Naam ${n}…`,
@@ -1221,6 +1223,8 @@ const STRINGS = {
     onePerson: "👤 1 personne",
     twoPersons: "👫 À 2",
     threePlus: "👥 À 3+",
+    aloneSub: "seul",
+    togetherSub: "paient ensemble",
     firstName: "Premier prénom…",
     secondName: "Deuxième prénom…",
     extraName: (n: number) => `Prénom ${n}…`,
@@ -3469,7 +3473,12 @@ export default function RundoTable() {
                         if (n > maxClaimSeats) { setToast(L.seatsCappedGuest(maxClaimSeats)); return }
                         const v = n === 3 ? Math.max(3, claimSeats) : n; setClaimSeats(v); setClaimNames((cur) => Array.from({ length: v }, (_, i) => cur[i] ?? ""))
                       }}
-                        style={{ flex: 1, fontSize: 16, fontWeight: 800, padding: "10px 4px", borderRadius: 10, cursor: "pointer", opacity: n <= maxClaimSeats ? 1 : 0.55, color: n <= maxClaimSeats ? "#14213a" : "#b9bfca", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
+                        style={{ flex: 1, padding: "9px 4px", borderRadius: 10, cursor: "pointer", opacity: n <= maxClaimSeats ? 1 : 0.55, color: n <= maxClaimSeats ? "#14213a" : "#b9bfca", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>
+                        <span style={{ display: "block", fontSize: 15, fontWeight: 800 }}>{label}</span>
+                        {/* Zonder dit onderschrift is "Met 2" alleen een aantal; het zegt niet
+                            dat die twee één plaats delen en samen één bedrag krijgen. */}
+                        <span style={{ display: "block", fontSize: 12, fontWeight: 600, marginTop: 2, color: on ? "#6b5a2a" : "#5a6680" }}>{n === 1 ? L.aloneSub : L.togetherSub}</span>
+                      </button>
                     )
                   })}
                 </div>
@@ -4851,7 +4860,10 @@ export default function RundoTable() {
                       const v = n === 3 ? Math.max(3, guestSeats) : n
                       setGuestSeats(v); setGuestNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? ""))
                     }}
-                      style={{ flex: 1, fontSize: 16, fontWeight: 800, padding: "13px 4px", borderRadius: 10, cursor: "pointer", color: kan ? "#14213a" : "#b9bfca", opacity: kan ? 1 : 0.6, background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
+                      style={{ flex: 1, padding: "10px 4px", borderRadius: 10, cursor: "pointer", color: kan ? "#14213a" : "#b9bfca", opacity: kan ? 1 : 0.6, background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>
+                      <span style={{ display: "block", fontSize: 15, fontWeight: 800 }}>{label}</span>
+                      <span style={{ display: "block", fontSize: 12, fontWeight: 600, marginTop: 2, color: !kan ? "#b9bfca" : aan ? "#6b5a2a" : "#5a6680" }}>{n === 1 ? L.aloneSub : L.togetherSub}</span>
+                    </button>
                   )
                 })}
               </div>
@@ -4935,7 +4947,10 @@ export default function RundoTable() {
                   const label = n === 1 ? L.onePerson : n === 2 ? L.twoPersons : L.threePlus
                   return (
                     <button key={n} onClick={() => { const v = n === 3 ? Math.max(3, selfSeats) : n; setSelfSeats(v); setSelfNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? "")) }}
-                      style={{ flex: 1, fontSize: 16, fontWeight: 800, padding: "13px 4px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
+                      style={{ flex: 1, padding: "10px 4px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>
+                      <span style={{ display: "block", fontSize: 15, fontWeight: 800 }}>{label}</span>
+                      <span style={{ display: "block", fontSize: 12, fontWeight: 600, marginTop: 2, color: aan ? "#6b5a2a" : "#5a6680" }}>{n === 1 ? L.aloneSub : L.togetherSub}</span>
+                    </button>
                   )
                 })}
               </div>
