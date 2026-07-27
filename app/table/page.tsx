@@ -982,8 +982,6 @@ const STRINGS = {
     totalLower: "totaal",
     nobodyYet: "nog niemand",
     notSelectedShare: (name: string | undefined) => `${name} had dit zelf niet aangeduid. Toch laten meedelen?`,
-    fewerPersons: "minder personen",
-    morePersons: "meer personen",
     openAssign: "open — wijs toe ▾",
     fullyClaimed: "volledig",
     removeOne: "verwijder er één",
@@ -1578,8 +1576,6 @@ const STRINGS = {
     totalLower: "total",
     nobodyYet: "personne encore",
     notSelectedShare: (name: string | undefined) => `${name} ne l'avait pas coché soi-même. Le faire participer quand même ?`,
-    fewerPersons: "moins de personnes",
-    morePersons: "plus de personnes",
     openAssign: "à prendre — attribuer ▾",
     fullyClaimed: "complet",
     removeOne: "en retirer un",
@@ -6020,12 +6016,7 @@ function ClaimScreen(props: {
                                       background: on ? (p.id === adminPid ? "rgba(233,196,95,0.5)" : "linear-gradient(135deg,#f3d27c,#ecc564)") : "#fff",
                                       color: on ? "#5a4a1a" : "#8b93a8",
                                     }}>{on ? "✓ " : ""}{p.name}{on && pSeats > 1 ? ` ×${pHeads}` : ""}</button>
-                                    {on && pSeats > 1 && !fixed && (
-                                      <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
-                                        <button onClick={() => setClaim(it.id, p.id, pHeads - 1)} title={L.fewerPersons} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: 18, height: 18, cursor: "pointer", fontSize: 16, lineHeight: 1 }}>−</button>
-                                        <button onClick={() => setClaim(it.id, p.id, Math.min(pSeats, pHeads + 1))} title={L.morePersons} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: 18, height: 18, cursor: "pointer", fontSize: 16, lineHeight: 1 }} disabled={pHeads >= pSeats}>+</button>
-                                      </span>
-                                    )}
+
                                   </span>
                                 )
                               })}
@@ -6033,7 +6024,11 @@ function ClaimScreen(props: {
                         {named.map((p) => {
                           const pSeats = Math.max(1, p.seats ?? 1)
                           const key = `${it.id}:${p.id}`
-                          if (pSeats <= 1 || fixed || !sharePicking.has(key)) return null
+                          // Bij een gast blijft dit venster staan zolang hij meedeelt; bij de
+                          // beheerder verdween het zodra er iemand gekozen was. Daarom moest er
+                          // een ±-knopje bij dat het aantal blind ophoogde — langs de grens
+                          // heen én zonder te weten wíé het was. Nu overal hetzelfde venster.
+                          if (pSeats <= 1 || fixed || !(sharePicking.has(key) || sh.includes(p.id))) return null
                           // Zelfde vraag als bij de gasten: wie van dit koppel deelde mee?
                           const parts = (p.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
                           const sel = claimMembers(it.id, p.id)
