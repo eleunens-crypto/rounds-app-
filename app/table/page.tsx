@@ -85,6 +85,14 @@ const BEWAAR_OPEN = 60 * DAG_MS
 const BEWAAR_FOTO = 7 * DAG_MS
 const MAX_PINS = 3
 
+// Beheerder is een rol, geen probleem — dus geen rood. Een cursieve schreefletter naast
+// de schreefloze naam leest als een handgeschreven aantekening: het valt op zonder te
+// schreeuwen, en het neemt weinig breedte in naast lange namen.
+const S_BEHEERDER: React.CSSProperties = {
+  color: "#1499b0", fontFamily: "Georgia, 'Times New Roman', serif",
+  fontStyle: "italic", fontWeight: 600, whiteSpace: "nowrap",
+}
+
 function getMyGroups(): SavedGroup[] {
   if (typeof window === "undefined") return []
   try {
@@ -656,6 +664,9 @@ const STRINGS = {
     groupWord: "Groep",
     nStillFree: (n: number) => `${n} nog vrij`,
     tagAdmin: "jij \u00b7 admin",
+    adminWord: "Beheerder",
+    adminsWord: "Beheerders",
+    adminFootnote: "beheert deze rekening",
     tagViaLink: "via de link",
     tagByYou: "admin duidt aan",
     tagAdded: "toegevoegd",
@@ -1239,6 +1250,9 @@ const STRINGS = {
     groupWord: "Groupe",
     nStillFree: (n: number) => `${n} encore libre${n !== 1 ? "s" : ""}`,
     tagAdmin: "toi \u00b7 admin",
+    adminWord: "Organisateur",
+    adminsWord: "Organisateurs",
+    adminFootnote: "g\u00e8re cette addition",
     tagViaLink: "via le lien",
     tagByYou: "l’hôte coche",
     tagAdded: "ajouté",
@@ -3934,7 +3948,9 @@ export default function RundoTable() {
                     ) : (
                       <div onClick={openPopup} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", borderRadius: 12, border: "1.5px solid rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.05)", padding: "13px 14px" }}>
                         <span style={{ minWidth: 0 }}>
-                          <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{me.name}</span>
+                          <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {me.name} <span style={{ ...S_BEHEERDER, fontSize: 16 }}>*{seats > 1 ? L.adminsWord : L.adminWord}</span>
+                          </span>
                           <span style={{ fontSize: 15, color: "#5a6680" }}>{seats} {seats === 1 ? L.person : L.persons}</span>
                         </span>
                         <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#1499b0" }}>✏️ ›</span>
@@ -4000,6 +4016,7 @@ export default function RundoTable() {
                               <span style={{ minWidth: 0 }}>
                                 <span style={{ display: "block", fontSize: 16, fontWeight: 700, color: leeg ? "#9aa0ab" : "#14213a", fontStyle: leeg ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                   {leeg ? L.freeSpotName : q.name}{!leeg && zit > 1 ? ` · ${zit}p.` : ""}
+                                  {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> *{zit > 1 ? L.adminsWord : L.adminWord}</span>}
                                 </span>
                                 {leeg && <span style={{ display: "block", fontSize: 12.5, color: "#b3bac6", lineHeight: 1.35 }}>{L.freeSpotSub}</span>}
                               </span>
@@ -4012,6 +4029,11 @@ export default function RundoTable() {
                           </button>
                         )
                       })}
+                    </div>
+                  )}
+                  {showNamesBlock && (
+                    <div style={{ marginTop: 7, fontSize: 13.5, color: "#9aa0ab" }}>
+                      <span style={{ ...S_BEHEERDER, fontSize: 14 }}>*</span> {L.adminFootnote}
                     </div>
                   )}
                 </div>
