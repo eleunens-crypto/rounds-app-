@@ -993,10 +993,8 @@ const STRINGS = {
     forWhomTap: "Voor wie tik je aan?",
     pickPersonHint: "Kies een persoon om voor te claimen (handig als jij voor iemand zonder gsm aantikt).",
     addGuestsInTab2: 'Voeg eerst gasten toe in de tab "Gasten".',
-    adminReviewing: "🔎 De beheerder bekijkt de rekening opnieuw",
-    adminReviewingBody: "Even geduld — je krijgt straks opnieuw de definitieve verdeling te zien.",
-    billClosedTitle2: "De rekening is afgesloten",
-    billClosedBody2: "De beheerder rondde de rekening af. Dit is jouw definitieve deel:",
+    adminReviewing: "🔎 De beheerder past de rekening nog aan",
+    adminReviewingBody: "Je bedrag kan nog wijzigen. Zodra hij opnieuw afsluit, zie je je definitieve deel.",
     viewMyShare: "Bekijk mijn verdeling",
     selectItemsPlural: "Selecteer jullie consumpties",
     selectItemsSingular: "Selecteer jouw consumpties",
@@ -1588,10 +1586,8 @@ const STRINGS = {
     forWhomTap: "Pour qui coches-tu ?",
     pickPersonHint: "Choisis une personne pour cocher à sa place (pratique si tu coches pour quelqu'un sans téléphone).",
     addGuestsInTab2: "Ajoute d'abord des invités dans l'onglet « Invités ».",
-    adminReviewing: "🔎 L'hôte revoit l'addition",
-    adminReviewingBody: "Un instant — tu reverras bientôt la répartition définitive.",
-    billClosedTitle2: "L'addition est clôturée",
-    billClosedBody2: "L'hôte a clôturé l'addition. Voici ta part définitive :",
+    adminReviewing: "🔎 L'hôte modifie encore l'addition",
+    adminReviewingBody: "Ton montant peut encore changer. Dès qu'il clôture à nouveau, tu vois ta part définitive.",
     viewMyShare: "Voir ma part",
     selectItemsPlural: "Sélectionnez vos consommations",
     selectItemsSingular: "Sélectionne tes consommations",
@@ -5669,20 +5665,20 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   const L = STRINGS[lang]
   return (
     <div style={S.card}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+      {/* De knop staat buiten de twee kopvarianten. Zat hij binnen de gewone kop, dan
+          verdween hij net wanneer je hem het hardst nodig hebt: bij een bon die niet
+          optelt, want dan toont deze plek de rode variant. */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
         {(billOverBy != null && Math.abs(billOverBy) >= 0.005) ? (
-          <div id="items-op-de-bon" style={{ background: "rgba(224,107,94,0.1)", border: "1.5px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "11px 13px", marginBottom: 4 }}>
+          <div id="items-op-de-bon" style={{ minWidth: 0, background: "rgba(224,107,94,0.1)", border: "1.5px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "11px 13px" }}>
             <h3 style={{ ...S.h3, margin: 0, display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>{L.itemsOnBill}<span style={{ fontSize: 16.5, fontWeight: 800, color: "#c0392b" }}>{L.checkBelow}</span></h3>
             <div style={{ fontSize: 15, fontWeight: 800, color: "#c0392b", marginTop: 4 }}>{billOverBy > 0 ? L.overVsReceipt(`€${billOverBy.toFixed(2).replace(".", ",")}`) : L.underVsReceipt(`€${Math.abs(billOverBy).toFixed(2).replace(".", ",")}`)}</div>
           </div>
         ) : (
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-            <h3 id="items-op-de-bon" style={{ ...S.h3, marginBottom: 0, display: "flex", alignItems: "baseline", gap: 8 }}>{L.itemsOnBill}{!billOk && <span style={{ fontSize: 16.5, fontWeight: 800, color: "#c0392b" }}>{L.checkExcl}</span>}</h3>
-            {/* Bij het nakijken van de regels wil je de foto ernaast, niet bovenaan het scherm. */}
-            {onViewReceipt && (
-              <button onClick={onViewReceipt} style={{ flexShrink: 0, border: "1.5px solid rgba(20,153,176,0.4)", background: "#fff", borderRadius: 10, padding: "7px 11px", cursor: "pointer", fontSize: 14.5, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{L.viewReceipt}</button>
-            )}
-          </div>
+          <h3 id="items-op-de-bon" style={{ ...S.h3, marginBottom: 0, minWidth: 0, display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>{L.itemsOnBill}{!billOk && <span style={{ fontSize: 16.5, fontWeight: 800, color: "#c0392b" }}>{L.checkExcl}</span>}</h3>
+        )}
+        {onViewReceipt && (
+          <button onClick={onViewReceipt} style={{ flexShrink: 0, marginTop: 3, border: "1.5px solid rgba(20,153,176,0.4)", background: "#fff", borderRadius: 10, padding: "7px 11px", cursor: "pointer", fontSize: 14.5, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{L.viewReceipt}</button>
         )}
       </div>
       {items.length > 0 && (
@@ -5937,34 +5933,34 @@ function ClaimScreen(props: {
   // oproepen via het ⓘ naast de knop; de tweede verschijnt één keer vanzelf.
   const [showConfirmInfo, setShowConfirmInfo] = useState(false)
   const [showFinalPopup, setShowFinalPopup] = useState(false)
-  const eindGezien = useRef(false)
-  useEffect(() => {
-    if (isAdmin || !finalized || !meId || eindGezien.current) return
-    eindGezien.current = true
-    try {
-      const sleutel = `rundo_table_eind_${meId}`
-      if (localStorage.getItem(sleutel)) return
-      localStorage.setItem(sleutel, "1")
-    } catch { /* geen opslag: dan toont hij gewoon opnieuw */ }
-    setShowFinalPopup(true)
-  }, [finalized, isAdmin, meId])
-  // Detecteer of de beheerder heropende na een eerdere afsluiting → toon dan één 'bekijkt opnieuw'-melding.
-  const wasFinalizedRef = useRef(false)
-  const prevFinalizedRef = useRef<boolean | null>(null)
   const [reviewing, setReviewing] = useState(false)
-  const [showFinalizedPopup, setShowFinalizedPopup] = useState(false)
+  const prevFinalizedRef = useRef<boolean | null>(null)
+
+  // Er stonden twee popups op hetzelfde moment: de bestaande "rekening afgesloten" en een
+  // tweede met de itemregels. Nu één, met alles erin.
+  //
+  // En hij hangt aan de gébeurtenis, niet aan de persoon. Vroeger onthield de browser
+  // "deze gast zag het al" — voor altijd. Heropende de beheerder daarna om iets te
+  // wijzigen, dan kreeg de gast zijn nieuwe bedrag nooit meer te zien.
+  //
+  // "Was eerder afgesloten" bewaren we bij de groep in plaats van in het geheugen van dit
+  // tabblad: anders verdwijnt de heropend-balk zodra iemand zijn pagina herlaadt — precies
+  // wanneer hij komt kijken waarom zijn bedrag veranderde.
   useEffect(() => {
+    if (isAdmin || !meId) return
+    const sleutel = `rundo_table_afgesloten_${meId}`
+    const ooitAfgesloten = () => { try { return localStorage.getItem(sleutel) === "1" } catch { return false } }
     const prev = prevFinalizedRef.current
     if (finalized) {
-      if (prev !== true) setShowFinalizedPopup(true) // net afgesloten (of net geladen als afgesloten) → één pop-up
-      wasFinalizedRef.current = true
+      if (prev !== true) setShowFinalPopup(true)
+      try { localStorage.setItem(sleutel, "1") } catch { /* geen opslag beschikbaar */ }
       setReviewing(false)
     } else {
-      setShowFinalizedPopup(false)
-      if (prev === true && wasFinalizedRef.current) setReviewing(true) // heropend na afsluiten
+      setShowFinalPopup(false)
+      setReviewing(ooitAfgesloten())
     }
     prevFinalizedRef.current = finalized
-  }, [finalized])
+  }, [finalized, isAdmin, meId])
 
   const _normal = items.filter((i) => !i.is_shared)
   const _shared = items.filter((i) => i.is_shared)
@@ -6197,22 +6193,12 @@ function ClaimScreen(props: {
 
   return (
     <div>
+      {/* Amber, niet blauw: dit is geen mededeling maar een waarschuwing dat je bedrag nog
+          kan schuiven. De balk blijft staan zolang de rekening open is. */}
       {!finalized && reviewing && (
-        <div style={{ width: "100%", marginBottom: 14, padding: "12px 16px", borderRadius: 14, background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff", boxShadow: "0 6px 18px -6px rgba(20,153,176,0.55)" }}>
+        <div style={{ width: "100%", marginBottom: 14, padding: "12px 16px", borderRadius: 14, background: "linear-gradient(135deg,#e08a00,#f0a500)", color: "#fff", boxShadow: "0 6px 18px -6px rgba(224,138,0,0.55)" }}>
           <div style={{ fontSize: 18, fontWeight: 800 }}>{L.adminReviewing}</div>
-          <div style={{ fontSize: 16, opacity: 0.92, marginTop: 2 }}>{L.adminReviewingBody}</div>
-        </div>
-      )}
-      {/* Pop-up zodra de beheerder afsluit: één duidelijke melding + meteen je verdeling zien */}
-      {finalized && showFinalizedPopup && (
-        <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowFinalizedPopup(false)}>
-          <div style={{ ...S.modal, width: "min(340px, 92vw)", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 40, marginBottom: 6 }}>✅</div>
-            <h3 style={{ fontSize: 21, fontWeight: 800, color: "#1f8a4c", margin: "0 0 6px" }}>{L.billClosedTitle2}</h3>
-            <p style={{ fontSize: 17.5, color: "#5a6680", lineHeight: 1.5, margin: "0 0 12px" }}>{L.billClosedBody2}</p>
-            <div style={{ fontSize: 34, fontWeight: 800, color: "#14213a", marginBottom: 16 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</div>
-            <button onClick={() => { setShowFinalizedPopup(false); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>{L.viewMyShare}</button>
-          </div>
+          <div style={{ fontSize: 16, opacity: 0.93, marginTop: 2, lineHeight: 1.4 }}>{L.adminReviewingBody}</div>
         </div>
       )}
       {/* Wie te snel was, kan zijn naam én het aantal personen alsnog rechtzetten. */}
@@ -6529,7 +6515,11 @@ function ClaimScreen(props: {
                 <span style={{ fontSize: 17, fontWeight: 800, color: "#0f7488" }}>{L.yourTotal}</span>
                 <span style={{ fontSize: 28, fontWeight: 800, color: "#14213a" }}>€{personTotal(meId).settled.toFixed(2).replace(".", ",")}</span>
               </div>
-              <button onClick={() => setShowFinalPopup(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, marginTop: 12 }}>{L.closeWord}</button>
+              {/* Deze knop kwam uit de popup die we schrapten: hij brengt je naar de volledige
+                  verdeling van de tafel, verderop op dit scherm. */}
+              <button onClick={() => { setShowFinalPopup(false); setGastVerdelingOpen(true); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }}
+                style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, marginTop: 12 }}>{L.viewMyShare}</button>
+              <button onClick={() => setShowFinalPopup(false)} style={{ width: "100%", marginTop: 9, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>{L.closeWord}</button>
             </div>
           </div>
         )}
