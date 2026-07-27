@@ -948,7 +948,7 @@ const STRINGS = {
     seatsColMsg: "Let op: 'telt voor meerdere personen' werkt nog niet. Voeg in Supabase de kolom seats toe aan table_participants.",
     selfJoinedColMsg: "Let op: het onderscheid 'via link / vooraf toegevoegd' werkt nog niet. Voeg in Supabase de kolom self_joined toe (zie instructies).",
     errGuestAdd: "Gast toevoegen mislukt: ",
-    confirmSeatsChange: "Het aantal personen wijzigen wist wat deze persoon al aantikte (gewone én gedeelde items). Wil je doorgaan?",
+    confirmSeatsChange: "Bij minder personen vallen ze weg uit de gedeelde items die ze mee deelden. De rest van wat ze aantikten blijft staan. Doorgaan?",
     seatsSaveMsg: "Voeg in Supabase de kolom seats toe aan table_participants om dit te bewaren.",
     seatsChanged: "Aantal personen aangepast — eerdere keuzes gewist, tik opnieuw aan",
     finalizeColsMsg: "Voeg in Supabase de kolommen finalized (bool) en disputed_by (text) toe aan table_groups.",
@@ -1545,7 +1545,7 @@ const STRINGS = {
     seatsColMsg: "Attention : « compte pour plusieurs personnes » ne fonctionne pas encore. Ajoute la colonne seats à table_participants dans Supabase.",
     selfJoinedColMsg: "Attention : la distinction « via le lien / ajouté à l'avance » ne fonctionne pas encore. Ajoute la colonne self_joined dans Supabase (voir instructions).",
     errGuestAdd: "Échec de l'ajout de l'invité : ",
-    confirmSeatsChange: "Modifier le nombre de personnes efface ce que cette personne a déjà coché (articles simples et partagés). Continuer ?",
+    confirmSeatsChange: "Avec moins de personnes, elles disparaîtront des articles partagés. Le reste de ce qu’elles ont coché reste. Continuer ?",
     seatsSaveMsg: "Ajoute la colonne seats à table_participants dans Supabase pour l'enregistrer.",
     seatsChanged: "Nombre de personnes modifié — choix précédents effacés, coche à nouveau",
     finalizeColsMsg: "Ajoute les colonnes finalized (bool) et disputed_by (text) à table_groups dans Supabase.",
@@ -2208,8 +2208,26 @@ export default function RundoTable() {
     const hasClaims = claims.some((c) => c.participant_id === pid && c.quantity > 0)
     const doorgaan = async () => {
       setParticipants((cur) => cur.map((p) => p.id === pid ? { ...p, seats: val } : p))
-      if (hasClaims) setClaims((cur) => cur.filter((c) => c.participant_id !== pid))
-      if (hasClaims) await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", pid)
+      // Vroeger gingen híer alle aanduidingen van die persoon weg, ook wanneer je het aantal
+      // verhóógde — terwijl er dan niets ongeldig wordt. Nu blijft alles staan en snoeien we
+      // enkel bij een verlaging de leden die niet meer bestaan. Wat op de plaats zelf staat
+      // (een gewoon item) raakt sowieso niet aan het aantal personen.
+      if (val < current) {
+        const mijne = claims.filter((c) => c.participant_id === pid)
+        for (const c of mijne) {
+          const leden = (c.members ? String(c.members).split(",").map((x) => parseInt(x, 10)) : [])
+            .filter((i) => Number.isFinite(i) && i < val)
+          if (!c.members) continue                       // gewoon item: aantal personen doet er niet toe
+          if (leden.length === 0) {
+            setClaims((cur) => cur.filter((x) => x.id !== c.id))
+            await supabase.from("table_claims").delete().eq("id", c.id)
+          } else if (leden.length !== c.quantity) {
+            const mem = leden.join(",")
+            setClaims((cur) => cur.map((x) => x.id === c.id ? { ...x, quantity: leden.length, members: mem } : x))
+            await supabase.from("table_claims").update({ quantity: leden.length, members: mem }).eq("id", c.id)
+          }
+        }
+      }
       // Daalt het aantal? Dan moeten de overtollige namen ook weg, anders blijft er iemand
       // op de plaats staan die je net verwijderde (en die dook dan weer op bij het toewijzen).
       const huidige = participants.find((p) => p.id === pid)
@@ -2237,7 +2255,11 @@ export default function RundoTable() {
       await loadAll(group.id)
       if (hasClaims) setToast(L.seatsChanged)
     }
-    if (hasClaims) { askConfirm(L.confirmSeatsChange, L.yes, () => { void doorgaan() }, { danger: true }); return }
+    // Alleen bij een verlaging valt er iets weg, en dan enkel bij gedeelde items waar een
+    // van de personen verdwijnt. Verhogen vraagt niets meer.
+    const raaktGedeeld = val < current && claims.some((c) => c.participant_id === pid && c.members
+      && String(c.members).split(",").some((x) => parseInt(x, 10) >= val))
+    if (hasClaims && raaktGedeeld) { askConfirm(L.confirmSeatsChange, L.yes, () => { void doorgaan() }, { danger: true }); return }
     await doorgaan()
   }
 
