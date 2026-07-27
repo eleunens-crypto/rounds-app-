@@ -667,7 +667,7 @@ const STRINGS = {
     tagAdmin: "jij \u00b7 admin",
     adminWord: "Beheerder",
     adminsWord: "Beheerders",
-    adminFootnote: "beheert deze rekening",
+    seatsFilledOf: (ingevuld: number, totaal: number) => `${ingevuld} van de ${totaal} ${totaal === 1 ? "persoon" : "personen"}`,
     tagViaLink: "via de link",
     tagByYou: "admin duidt aan",
     tagAdded: "toegevoegd",
@@ -1255,7 +1255,7 @@ const STRINGS = {
     tagAdmin: "toi \u00b7 admin",
     adminWord: "Organisateur",
     adminsWord: "Organisateurs",
-    adminFootnote: "g\u00e8re cette addition",
+    seatsFilledOf: (ingevuld: number, totaal: number) => `${ingevuld} sur ${totaal} ${totaal === 1 ? "personne" : "personnes"}`,
     tagViaLink: "via le lien",
     tagByYou: "l’hôte coche",
     tagAdded: "ajouté",
@@ -3959,7 +3959,7 @@ export default function RundoTable() {
                       <div onClick={openPopup} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", borderRadius: 12, border: "1.5px solid rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.05)", padding: "13px 14px" }}>
                         <span style={{ minWidth: 0 }}>
                           <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {me.name} <span style={{ ...S_BEHEERDER, fontSize: 16 }}>*{seats > 1 ? L.adminsWord : L.adminWord}</span>
+                            {me.name} <span style={{ ...S_BEHEERDER, fontSize: 16 }}>· {seats > 1 ? L.adminsWord : L.adminWord}</span>
                           </span>
                           <span style={{ fontSize: 15, color: "#5a6680" }}>{seats} {seats === 1 ? L.person : L.persons}</span>
                         </span>
@@ -4024,7 +4024,7 @@ export default function RundoTable() {
                               <span style={{ minWidth: 0 }}>
                                 <span style={{ display: "block", fontSize: 16, fontWeight: 700, color: leeg ? "#9aa0ab" : "#14213a", fontStyle: leeg ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                   {leeg ? L.freeSpotName : q.name}{!leeg && zit > 1 ? ` · ${zit}p.` : ""}
-                                  {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> *{zit > 1 ? L.adminsWord : L.adminWord}</span>}
+                                  {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> · {zit > 1 ? L.adminsWord : L.adminWord}</span>}
                                 </span>
                                 {leeg && <span style={{ display: "block", fontSize: 12.5, color: "#b3bac6", lineHeight: 1.35 }}>{L.freeSpotSub}</span>}
                               </span>
@@ -4039,11 +4039,17 @@ export default function RundoTable() {
                       })}
                     </div>
                   )}
-                  {showNamesBlock && (
-                    <div style={{ marginTop: 7, fontSize: 13.5, color: "#9aa0ab" }}>
-                      <span style={{ ...S_BEHEERDER, fontSize: 14 }}>*</span> {L.adminFootnote}
-                    </div>
-                  )}
+                  {/* Onder de lijst het totaal: hoeveel plaatsen een naam hebben van hoeveel
+                      er zijn. Groen zodra ze allemaal ingevuld zijn. */}
+                  {showNamesBlock && (() => {
+                    const ingevuldZit = totalPersons - vrijeZit
+                    const volledig = vrijeZit === 0
+                    return (
+                      <div style={{ marginTop: 9, fontSize: 14.5, fontWeight: 800, color: volledig ? "#1f8a4c" : "#14213a" }}>
+                        👥 {L.seatsFilledOf(ingevuldZit, totalPersons)}{volledig ? " ✓" : ""}
+                      </div>
+                    )
+                  })()}
                 </div>
               )
             })()}
