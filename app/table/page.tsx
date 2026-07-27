@@ -480,6 +480,9 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
 // ═══════════════════════════════════════════════════════════════════════════
 const STRINGS = {
   nl: {
+    seatsCappedGuest: (n: number) => n === 1
+      ? "Er is nog maar één vrije plaats. Vraag de beheerder om er een bij te zetten als jullie met meer zijn."
+      : `Er zijn nog ${n} vrije plaatsen. Vraag de beheerder om er bij te zetten als jullie met meer zijn.`,
     errCantReadPhoto: "Kon de foto niet lezen",
     backToRundo: "← naar Rundo startscherm",
     tableTagline: "Scan de rekening en verdeel in groep",
@@ -494,6 +497,13 @@ const STRINGS = {
     roleGuest: "gast",
     deletePermanently: "definitief verwijderen",
     addNameBtn: "+ Naam toevoegen",
+    clearNameBtn: "🗑️ Naam wissen",
+    clearNameTitle: "Naam wissen?",
+    clearNameYes: "Wissen",
+    clearNameConfirm: (naam: string) => `${naam} wordt weer een vrije plaats. Wat er voor deze persoon al aangeduid was, gaat mee weg.`,
+    seatsCapped: (n: number) => n === 1
+      ? "Er is nog één vrije plaats, dus dit kan alleen voor één persoon. Verhoog eerst het aantal personen bovenaan."
+      : `Er zijn nog ${n} plaatsen vrij op deze plek. Verhoog eerst het aantal personen bovenaan als je er meer nodig hebt.`,
     freeSpotsLeft: (vrij: number, totaal: number) => `nog ${vrij} vrije ${vrij === 1 ? "plaats" : "plaatsen"} van de ${totaal}`,
     allNamesFilled: "Alle plaatsen hebben een naam.",
     addNameTitle: "Wie voeg je toe?",
@@ -556,8 +566,6 @@ const STRINGS = {
     needMoreSpotsTitle: "Er is een plaats te weinig",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Dit vraagt ${tekort} plaats${tekort === 1 ? "" : "en"} meer dan er vrij ${tekort === 1 ? "is" : "zijn"}. Zal ik het aantal personen op ${totaal} zetten?`,
     raiseTotalBtn: (totaal: number) => `Ja, personen op ${totaal} zetten`,
-    guestAddedTitle: "\u2713 Toegevoegd",
-    guestAddedBody: "Die persoon staat nu in de lijst. Ga naar toewijzen, of voeg nog iemand toe.",
     addAnother: "Nog iemand toevoegen",
     qrJoinedLegend: "\ud83d\udcf1 = kwam via de link binnen en duidt normaal zelf aan.",
     copyLinkLink: "Liever kopiëren en zelf plakken?",
@@ -566,7 +574,7 @@ const STRINGS = {
     howManyGroupSub: "Iedereen aan tafel — jezelf inbegrepen.",
     personsWord: "Aantal personen",
     shareStepTitle: "📱 Deel je groep via de QR-code",
-    shareStepSub: "Laat je tafelgenoten deze code scannen. Iedereen zet dan zelf zijn naam en duidt aan wat hij nam.",
+    shareStepSub: "Laat je tafelgenoten deze code scannen. Wie er al bij staat, tikt gewoon zijn naam aan; de rest neemt een vrije plaats en vult zelf zijn naam in. Daarna duidt iedereen aan wat hij nam.",
     scanThis: "Laat je gasten dit scannen",
     personWord: "Persoon",
     onlyOneShares: "⚠️ Maar 1 persoon deelt mee",
@@ -644,7 +652,8 @@ const STRINGS = {
     nStillFree: (n: number) => `${n} nog vrij`,
     tagAdmin: "jij \u00b7 admin",
     tagViaLink: "via de link",
-    tagByYou: "jij duidt aan",
+    tagByYou: "admin duidt aan",
+    tagAdded: "toegevoegd",
     tagFree: "nog niemand",
     freeSpotName: "Wacht op iemand",
     rescan: "🔄 Bon opnieuw scannen",
@@ -1018,6 +1027,8 @@ const STRINGS = {
     youSuffix: " (jij)",
     confirmedTapEdit: "✓ Bevestigd — tik om te wijzigen",
     confirmMyOrder: "✅ Bevestig mijn bestelling",
+    confirmFailed: (msg: string) => `Bevestigen lukte niet: ${msg}`,
+    confirmNoIdentity: "Kies eerst wie je bent voor je bevestigt.",
     whatWrong: "🤔 Wat klopt er niet? (optioneel)",
     disputePlaceholder: "bv. die wijn nam ik niet",
     send: "Versturen",
@@ -1040,6 +1051,9 @@ const STRINGS = {
     itemsAddedCheck: (n: number) => `${n} item${n !== 1 ? "s" : ""} toegevoegd — controleer ze op de Bon-tab.`,
   },
   fr: {
+    seatsCappedGuest: (n: number) => n === 1
+      ? "Il ne reste qu’une place libre. Demande à l’hôte d’en ajouter une si vous êtes plus nombreux."
+      : `Il reste ${n} places libres. Demande à l’hôte d’en ajouter si vous êtes plus nombreux.`,
     errCantReadPhoto: "Impossible de lire la photo",
     backToRundo: "← retour à l'accueil Rundo",
     tableTagline: "Scanne l'addition et partage en groupe",
@@ -1054,6 +1068,13 @@ const STRINGS = {
     roleGuest: "invité",
     deletePermanently: "supprimer définitivement",
     addNameBtn: "+ Ajouter un nom",
+    clearNameBtn: "🗑️ Effacer le nom",
+    clearNameTitle: "Effacer le nom ?",
+    clearNameYes: "Effacer",
+    clearNameConfirm: (naam: string) => `${naam} redevient une place libre. Ce qui était déjà coché pour cette personne disparaît aussi.`,
+    seatsCapped: (n: number) => n === 1
+      ? "Il ne reste qu’une place libre, donc ceci ne vaut que pour une personne. Augmente d’abord le nombre de personnes en haut."
+      : `Il reste ${n} places disponibles ici. Augmente d’abord le nombre de personnes en haut s’il t’en faut plus.`,
     freeSpotsLeft: (vrij: number, totaal: number) => `encore ${vrij} place${vrij === 1 ? "" : "s"} libre${vrij === 1 ? "" : "s"} sur ${totaal}`,
     allNamesFilled: "Toutes les places ont un nom.",
     addNameTitle: "Qui ajoutes-tu ?",
@@ -1116,8 +1137,6 @@ const STRINGS = {
     needMoreSpotsTitle: "Il manque une place",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Cela demande ${tekort} place${tekort === 1 ? "" : "s"} de plus qu’il n’y en a de libre. Je mets le nombre de personnes à ${totaal} ?`,
     raiseTotalBtn: (totaal: number) => `Oui, mettre à ${totaal} personnes`,
-    guestAddedTitle: "\u2713 Ajout\u00e9",
-    guestAddedBody: "Cette personne est maintenant dans la liste. Va vers l\u2019attribution, ou ajoute quelqu\u2019un d\u2019autre.",
     addAnother: "Ajouter quelqu\u2019un d\u2019autre",
     qrJoinedLegend: "\ud83d\udcf1 = arriv\u00e9 via le lien et attribue normalement lui-m\u00eame.",
     copyLinkLink: "Tu préfères copier et coller toi-même ?",
@@ -1126,7 +1145,7 @@ const STRINGS = {
     howManyGroupSub: "Tout le monde à table — toi compris.",
     personsWord: "Nombre de personnes",
     shareStepTitle: "📱 Partage ton groupe via le QR",
-    shareStepSub: "Fais scanner ce code à tes convives. Chacun met alors son nom et coche ce qu'il a pris.",
+    shareStepSub: "Fais scanner ce code à tes convives. Qui figure déjà dans la liste touche simplement son nom ; les autres prennent une place libre et entrent le leur. Ensuite chacun coche ce qu'il a pris.",
     scanThis: "Fais scanner à tes invités",
     personWord: "Personne",
     onlyOneShares: "⚠️ Une seule personne partage",
@@ -1204,7 +1223,8 @@ const STRINGS = {
     nStillFree: (n: number) => `${n} encore libre${n !== 1 ? "s" : ""}`,
     tagAdmin: "toi \u00b7 admin",
     tagViaLink: "via le lien",
-    tagByYou: "tu coches",
+    tagByYou: "l’hôte coche",
+    tagAdded: "ajouté",
     tagFree: "personne",
     freeSpotName: "En attente de quelqu\u2019un",
     rescan: "🔄 Rescanner l'addition",
@@ -1578,6 +1598,8 @@ const STRINGS = {
     youSuffix: " (toi)",
     confirmedTapEdit: "✓ Confirmé — touche pour modifier",
     confirmMyOrder: "✅ Confirme ma commande",
+    confirmFailed: (msg: string) => `Échec de la confirmation : ${msg}`,
+    confirmNoIdentity: "Choisis d’abord qui tu es avant de confirmer.",
     whatWrong: "🤔 Qu'est-ce qui ne va pas ? (optionnel)",
     disputePlaceholder: "ex. je n'ai pas pris ce vin",
     send: "Envoyer",
@@ -3128,12 +3150,19 @@ export default function RundoTable() {
   const hasTip = !!tipItem
 
   const confirmMe = async () => {
-    if (!group || !meId) return
+    if (!group) return
+    if (!meId) { setToast(L.confirmNoIdentity); return }
+    // Deze knop deed in stilte niets wanneer de databank de rij weigerde — er werd nergens
+    // op een fout gekeken. Nu zegt hij wát er misging in plaats van niets te doen.
     if (iConfirmed) {
       const row = confirmations.find((c) => c.participant_id === meId)
-      if (row) await supabase.from("table_confirmations").delete().eq("id", row.id)
+      if (row) {
+        const { error } = await supabase.from("table_confirmations").delete().eq("id", row.id)
+        if (error) { setToast(L.confirmFailed(error.message)); return }
+      }
     } else {
-      await supabase.from("table_confirmations").insert([{ group_id: group.id, participant_id: meId }])
+      const { error } = await supabase.from("table_confirmations").insert([{ group_id: group.id, participant_id: meId }])
+      if (error) { setToast(L.confirmFailed(error.message)); return }
     }
     await loadAll(group.id)
   }
@@ -3207,6 +3236,11 @@ export default function RundoTable() {
   // ═══════════════════════════════════════════════════════════════════════════
   // Ook zichtbaar wanneer een gast zijn naam of aantal personen komt bijwerken.
   const needIdentity = !meId || (!isAdmin && claimSpot !== null && claimSpot === meId)
+  // Hoeveel personen kan een gast op deze plaats zetten: deze plek plus wat er nog vrij is.
+  // Het aantal aan tafel bepaalt de beheerder, dus hier valt niets te verhogen.
+  const huidigeClaim = participants.find((p) => p.id === claimSpot)
+  const maxClaimSeats = Math.max(1, Math.max(1, huidigeClaim?.seats ?? 1)
+    + participants.filter((p) => p.id !== claimSpot && isFreeSpot(p) && !p.self_joined).length)
   if (needIdentity && !isAdmin) {
     return (
       <div style={S.page}>
@@ -3273,8 +3307,13 @@ export default function RundoTable() {
                     const on = n === 3 ? claimSeats >= 3 : claimSeats === n
                     const label = n === 1 ? L.onePerson : n === 2 ? L.twoPersons : L.threePlus
                     return (
-                      <button key={n} onClick={() => { const v = n === 3 ? Math.max(3, claimSeats) : n; setClaimSeats(v); setClaimNames((cur) => Array.from({ length: v }, (_, i) => cur[i] ?? "")) }}
-                        style={{ flex: 1, fontSize: 16, fontWeight: 800, padding: "10px 4px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
+                      <button key={n} onClick={() => {
+                        // Meer personen dan er plaatsen vrij zijn kan een gast niet: het aantal
+                        // aan tafel bepaalt de beheerder. Meteen zeggen, niet pas bij opslaan.
+                        if (n > maxClaimSeats) { setToast(L.seatsCappedGuest(maxClaimSeats)); return }
+                        const v = n === 3 ? Math.max(3, claimSeats) : n; setClaimSeats(v); setClaimNames((cur) => Array.from({ length: v }, (_, i) => cur[i] ?? ""))
+                      }}
+                        style={{ flex: 1, fontSize: 16, fontWeight: 800, padding: "10px 4px", borderRadius: 10, cursor: "pointer", opacity: n <= maxClaimSeats ? 1 : 0.55, color: n <= maxClaimSeats ? "#14213a" : "#b9bfca", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
                     )
                   })}
                 </div>
@@ -3282,7 +3321,10 @@ export default function RundoTable() {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginBottom: 12 }}>
                     <button onClick={() => { const v = Math.max(3, claimSeats - 1); setClaimSeats(v); setClaimNames((c) => c.slice(0, v)) }} style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 20 }}>−</button>
                     <b style={{ fontSize: 19, color: "#14213a" }}>{claimSeats}</b>
-                    <button onClick={() => { const v = Math.min(8, claimSeats + 1); setClaimSeats(v); setClaimNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? "")) }} style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 20, background: "rgba(27,42,74,0.12)" }}>+</button>
+                    <button onClick={() => {
+                      if (claimSeats >= maxClaimSeats) { setToast(L.seatsCappedGuest(maxClaimSeats)); return }
+                      const v = Math.min(8, claimSeats + 1); setClaimSeats(v); setClaimNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? ""))
+                    }} style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 20, background: "rgba(27,42,74,0.12)", opacity: claimSeats >= maxClaimSeats ? 0.45 : 1 }}>+</button>
                   </div>
                 )}
 
@@ -3459,6 +3501,11 @@ export default function RundoTable() {
               {participants.map((p) => {
                 const isAdminSpot = p.id === ownerPid
                 const vrij = isFreeSpot(p) && !p.self_joined
+                // Drie toestanden voor een naam die jij invulde: gewoon toegevoegd, of de
+                // persoon kwam intussen zelf binnen via de link, of jij bent voor hem
+                // beginnen aantikken. Dat laatste is het enige geval waarin "admin duidt aan"
+                // ook echt klopt — vroeger stond dat er meteen, ook als je niets deed.
+                const ikDuidAan = !isAdminSpot && !p.self_joined && !vrij && claims.some((c) => c.participant_id === p.id)
                 const cat = isAdminSpot
                   ? { icon: "👤", label: L.tagAdmin, color: "#1f8a4c", bg: "rgba(39,174,96,0.14)", brd: "transparent" }
                   : p.self_joined
@@ -3467,7 +3514,9 @@ export default function RundoTable() {
                   ? (iemandIngevuld
                       ? { icon: "⏳", label: L.tagFree, color: "#b5591a", bg: "rgba(243,156,18,0.14)", brd: "rgba(243,156,18,0.45)" }
                       : { icon: "⏳", label: L.tagFree, color: "#8a93a3", bg: "rgba(16,24,40,0.05)", brd: "transparent" })
-                  : { icon: "✍️", label: L.tagByYou, color: "#8a5e0f", bg: "rgba(243,156,18,0.14)", brd: "transparent" }
+                  : ikDuidAan
+                  ? { icon: "✍️", label: L.tagByYou, color: "#8a5e0f", bg: "rgba(243,156,18,0.14)", brd: "transparent" }
+                  : { icon: "✓", label: L.tagAdded, color: "#5a6680", bg: "rgba(16,24,40,0.06)", brd: "transparent" }
                 return (
                   <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: vrij ? "#9aa0ab" : "#14213a", fontStyle: vrij ? "italic" : "normal", display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
@@ -4568,6 +4617,11 @@ export default function RundoTable() {
       {/* Popup om zelf iemand toe te voegen voor wie jij aanduidt — koppel, gezin of
           alleenstaande. Kan je meerdere keren gebruiken (elk voegt een aparte plaats toe). */}
       {showGuestModal && (() => {
+        // Hoeveel personen kan deze plaats maximaal bevatten: zichzelf plus alles wat er
+        // nog vrij is. De beheerder mag het totaal wel verhogen, maar dan vraagt de app het.
+        const doelNu = guestTarget ? participants.find((p) => p.id === guestTarget) : null
+        const vrijNu = participants.filter((p) => p.id !== guestTarget && p.id !== meId && isFreeSpot(p) && !p.self_joined).length
+        const maxZitplaatsen = Math.max(1, (doelNu ? Math.max(1, doelNu.seats ?? 1) : 1) + vrijNu)
         const bewaar = async () => {
           const naam = guestNames.slice(0, guestSeats).map((x) => x.trim()).filter(Boolean).join(" & ")
           if (!naam) { setCenterNote({ body: L.enterGuestName }); return }
@@ -4592,9 +4646,8 @@ export default function RundoTable() {
             for (let i = 0; i < Math.max(0, oud - guestSeats); i++) await addGuest(L.guestWord, false, 1)
             await supabase.from("table_participants").update({ name: naam, seats: Math.max(1, guestSeats) }).eq("id", doel.id)
             if (group) await loadAll(group.id)
-            // Alleen bij het toevoegen van iemand doorverwijzen; bij het invullen van de
-            // namenlijst zou dat na elke naam een popup geven.
-            if (!guestTarget) setCenterNote({ title: L.guestAddedTitle, body: L.guestAddedBody, actionLabel: L.goAssignBtn, onAction: () => { setAdminTab("overview"); scrollTop() } })
+            // Geen bevestigingspopup: je staat weer in de namenlijst en kan meteen door.
+            // Een venster dat je moet wegklikken voor elke naam is puur oponthoud.
           }
 
           if (tekort > 0) {
@@ -4619,9 +4672,17 @@ export default function RundoTable() {
                 {[1, 2, 3].map((n) => {
                   const aan = n === 3 ? guestSeats >= 3 : guestSeats === n
                   const label = n === 1 ? L.onePerson : n === 2 ? L.twoPersons : L.threePlus
+                  // Meer personen dan er plaatsen vrij zijn kan niet. Vroeger merkte je dat
+                  // pas bij het opslaan; nu is de knop meteen zichtbaar geblokkeerd en zegt
+                  // een tik erop waarom — op het moment dat je hem probeert.
+                  const kan = n <= maxZitplaatsen
                   return (
-                    <button key={n} onClick={() => { const v = n === 3 ? Math.max(3, guestSeats) : n; setGuestSeats(v); setGuestNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? "")) }}
-                      style={{ flex: 1, fontSize: 16, fontWeight: 800, padding: "13px 4px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
+                    <button key={n} onClick={() => {
+                      if (!kan) { setToast(L.seatsCapped(maxZitplaatsen)); return }
+                      const v = n === 3 ? Math.max(3, guestSeats) : n
+                      setGuestSeats(v); setGuestNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? ""))
+                    }}
+                      style={{ flex: 1, fontSize: 16, fontWeight: 800, padding: "13px 4px", borderRadius: 10, cursor: "pointer", color: kan ? "#14213a" : "#b9bfca", opacity: kan ? 1 : 0.6, background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>{label}</button>
                   )
                 })}
               </div>
@@ -4641,7 +4702,10 @@ export default function RundoTable() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginBottom: 12 }}>
                   <button onClick={() => { const v = Math.max(3, guestSeats - 1); setGuestSeats(v); setGuestNames((c) => c.slice(0, v)) }} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 20 }}>−</button>
                   <b style={{ fontSize: 19, color: "#14213a" }}>{guestSeats}</b>
-                  <button onClick={() => { const v = Math.min(8, guestSeats + 1); setGuestSeats(v); setGuestNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? "")) }} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 20, background: "rgba(27,42,74,0.12)" }}>+</button>
+                  <button onClick={() => {
+                    if (guestSeats >= maxZitplaatsen) { setToast(L.seatsCapped(maxZitplaatsen)); return }
+                    const v = Math.min(8, guestSeats + 1); setGuestSeats(v); setGuestNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? ""))
+                  }} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 20, background: "rgba(27,42,74,0.12)", opacity: guestSeats >= maxZitplaatsen ? 0.45 : 1 }}>+</button>
                 </div>
               )}
               <div style={{ fontSize: 18, fontWeight: 800, color: "#14213a", marginBottom: 8 }}>{guestSeats > 1 ? L.theirNamesQ : L.theirNameQ}</div>
@@ -4657,6 +4721,22 @@ export default function RundoTable() {
                 </div>
               )}
               <button onClick={bewaar} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{L.addThisGuest}</button>
+              {/* Een naam terugdraaien moest kunnen zonder de hele plaats te verliezen: hij
+                  wordt weer een vrije plaats, en de personen die erop stonden komen vrij. */}
+              {guestTarget && doelNu && !isFreeSpot(doelNu) && (
+                <button onClick={() => {
+                  const doel = doelNu
+                  askConfirm(L.clearNameConfirm(doel.name), L.clearNameYes, async () => {
+                    const zit = Math.max(1, doel.seats ?? 1)
+                    await supabase.from("table_claims").delete().eq("participant_id", doel.id)
+                    await supabase.from("table_participants").update({ name: L.guestWord, seats: 1, self_joined: false }).eq("id", doel.id)
+                    for (let i = 1; i < zit; i++) await addGuest(L.guestWord, false, 1)
+                    setShowGuestModal(false); setGuestTarget(null)
+                    if (group) await loadAll(group.id)
+                  }, { title: L.clearNameTitle, danger: true })
+                }}
+                  style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#c0392b" }}>{L.clearNameBtn}</button>
+              )}
               <button onClick={() => { setShowGuestModal(false); setGuestTarget(null) }} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>{L.cancel}</button>
             </div>
           </div>
