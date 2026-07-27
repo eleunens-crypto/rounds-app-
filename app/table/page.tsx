@@ -6130,11 +6130,8 @@ function ClaimScreen(props: {
             ? <div style={{ fontSize: 16, color: "#aaa", padding: 10 }}>{L.addGuestsInTab1}</div>
             : (
               <>
-                {/* Één legende bovenaan in plaats van onder elk item: bij tien items zou die
-                    regel tien keer terugkomen. */}
-                {named.some((p) => p.self_joined) && (
-                  <div style={{ fontSize: 15, color: "#0f7488", background: "rgba(20,153,176,0.07)", borderRadius: 10, padding: "9px 11px", marginBottom: 10, lineHeight: 1.45 }}>{L.qrJoinedLegend}</div>
-                )}
+                {/* Geen legende bovenaan: ze staat al in de kiezer die opengaat wanneer je
+                    een item toewijst, en daar is ze op het juiste moment. */}
                 {items.map((it) => {
                   const claimed = claimedQty(it.id)
                   const open = it.quantity - claimed
