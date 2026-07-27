@@ -6496,7 +6496,8 @@ function ClaimScreen(props: {
               }} style={{ ...S.btn, flex: 3, padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none", ...(iConfirmed ? { background: "rgba(39,174,96,0.12)", color: "#1f8a4c" } : { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a" }) }}>
                 {iConfirmed ? L.confirmedTapEdit : L.confirmMyOrder}
               </button>
-              {!isAdmin && (
+              {/* Pas na het bevestigen: deze uitleg gaat over wat er dan gebeurt. */}
+              {!isAdmin && iConfirmed && (
                 <button onClick={() => setShowConfirmInfo(true)}
                   style={{ ...S.btn, flex: 1, minWidth: 0, padding: "14px 4px", fontSize: 16, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(20,153,176,0.45)", color: "#1499b0", whiteSpace: "nowrap" }}>{L.whatNowBtn}</button>
               )}
@@ -6507,22 +6508,22 @@ function ClaimScreen(props: {
         {/* Popup 1: net bevestigd — waar sta je nu in het geheel? */}
         {showConfirmInfo && (
           <div style={{ ...S.overlay, zIndex: 3200 }} onClick={() => setShowConfirmInfo(false)}>
-            <div style={{ ...S.modal, width: "min(400px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ textAlign: "center", marginBottom: 16 }}>
-                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(39,174,96,0.14)", color: "#1f8a4c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 10px" }}>✓</div>
-                <div style={{ fontSize: 21, fontWeight: 800, color: "#14213a" }}>{L.confirmDoneTitle}</div>
+            <div style={{ ...S.modal, width: "min(460px, 94vw)", padding: 22 }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ textAlign: "center", marginBottom: 20 }}>
+                <div style={{ width: 62, height: 62, borderRadius: "50%", background: "rgba(39,174,96,0.14)", color: "#1f8a4c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34, margin: "0 auto 12px" }}>✓</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: "#14213a" }}>{L.confirmDoneTitle}</div>
               </div>
               {[{ n: "✓", t: L.confirmStep1, klaar: true }, { n: "2", t: L.confirmStep2, klaar: false }, { n: "3", t: L.confirmStep3, klaar: false }, { n: "4", t: L.confirmStep4, klaar: false, ster: true }].map((st, i) => (
-                <div key={i} style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: st.ster ? 4 : 12 }}>
-                  <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, background: st.klaar ? "#1f8a4c" : "rgba(16,24,40,0.08)", color: st.klaar ? "#fff" : "#5a6680" }}>{st.n}</span>
-                  <span style={{ fontSize: 16, lineHeight: 1.45, color: st.klaar ? "#14213a" : "#5a6680", fontWeight: st.klaar ? 700 : 400 }}>{st.t}{st.ster && <span style={{ color: "#1499b0", fontWeight: 800 }}>*</span>}</span>
+                <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: st.ster ? 5 : 14 }}>
+                  <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15.5, fontWeight: 800, background: st.klaar ? "#1f8a4c" : "rgba(16,24,40,0.08)", color: st.klaar ? "#fff" : "#5a6680" }}>{st.n}</span>
+                  <span style={{ fontSize: 17.5, lineHeight: 1.45, color: st.klaar ? "#14213a" : "#5a6680", fontWeight: st.klaar ? 700 : 400 }}>{st.t}{st.ster && <span style={{ color: "#1499b0", fontWeight: 800 }}>*</span>}</span>
                 </div>
               ))}
               {/* Wat er nog bij komt bovenop je items — klein, want het is een terzijde. */}
-              <div style={{ fontSize: 13, color: "#9aa0ab", lineHeight: 1.4, margin: "0 0 14px 37px" }}>
+              <div style={{ fontSize: 14, color: "#9aa0ab", lineHeight: 1.4, margin: "0 0 18px 42px" }}>
                 <span style={{ color: "#1499b0", fontWeight: 800 }}>*</span> {L.confirmStepNote}
               </div>
-              <button onClick={() => setShowConfirmInfo(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, marginTop: 4 }}>{L.closeWord}</button>
+              <button onClick={() => setShowConfirmInfo(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{L.closeWord}</button>
             </div>
           </div>
         )}
