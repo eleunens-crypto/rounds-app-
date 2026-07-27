@@ -1038,6 +1038,7 @@ const STRINGS = {
     allClaimedWord: "alles geclaimd",
     aboutToConfirmTitle: "Dit ga ik bevestigen",
     whatIConfirmed: "Wat ik bevestigde",
+    togetherWord: "samen",
     finalSplitTitle: "Definitieve verdeling",
     everyoneSplitTitle: "Verdeling van iedereen",
     nothingTappedYet: "Je hebt nog niets aangetikt.",
@@ -1634,6 +1635,7 @@ const STRINGS = {
     allClaimedWord: "tout attribué",
     aboutToConfirmTitle: "Ce que je vais confirmer",
     whatIConfirmed: "Ce que j’ai confirmé",
+    togetherWord: "ensemble",
     finalSplitTitle: "Répartition définitive",
     everyoneSplitTitle: "Répartition de tout le monde",
     nothingTappedYet: "Tu n'as encore rien coché.",
@@ -6247,15 +6249,33 @@ function ClaimScreen(props: {
         const me = participants.find((p) => p.id === meId)
         if (!me) return null
         const seats = Math.max(1, me.seats ?? 1)
+        // Een cirkel per persoon met zijn beginletter. Ze schuiven 8 pixels over elkaar:
+        // genoeg om als één groepje te lezen, weinig genoeg om elke letter te kunnen zien.
+        const delen = me.name.split(/\s*[&,]\s*/).map((x) => x.trim()).filter(Boolean)
+        const kleuren = [
+          "linear-gradient(135deg,#1499b0,#22b8cf)",
+          "linear-gradient(135deg,#e8b23c,#f0c14b)",
+          "linear-gradient(135deg,#7a5ea8,#9575c4)",
+          "linear-gradient(135deg,#1f8a4c,#27ae60)",
+        ]
+        const bollen = Array.from({ length: Math.max(1, Math.min(seats, 4)) }, (_, i) => ({
+          letter: (delen[i] || me.name || "?").charAt(0).toUpperCase(),
+          kleur: kleuren[i % kleuren.length],
+          donker: i % kleuren.length === 1,
+        }))
         return (
-          <div style={{ ...S.card, marginBottom: 12, padding: "10px 13px", display: "flex", alignItems: "center", gap: 9, width: "80%", marginLeft: "auto", marginRight: "auto" }}>
-            <span style={{ flexShrink: 0, fontSize: 18 }}>👤</span>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              <b>{me.name}</b>
-              <span style={{ fontSize: 15.5, color: "#9aa0ab" }}> · {seats} {seats === 1 ? L.person : L.persons}</span>
+          <div style={{ ...S.card, marginBottom: 12, padding: "11px 13px", display: "flex", alignItems: "center", gap: 11, width: "80%", marginLeft: "auto", marginRight: "auto" }}>
+            <span style={{ flexShrink: 0, display: "inline-flex" }}>
+              {bollen.map((b, i) => (
+                <span key={i} style={{ width: 34, height: 34, borderRadius: "50%", background: b.kleur, color: b.donker ? "#14213a" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, border: "2px solid #fff", marginLeft: i === 0 ? 0 : -8 }}>{b.letter}</span>
+              ))}
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{me.name}</span>
+              <span style={{ display: "block", fontSize: 13.5, color: "#9aa0ab" }}>{seats > 1 ? `${L.togetherWord} ${seats} ${L.persons}` : `1 ${L.person}`}</span>
             </span>
             <button onClick={() => onEditMe(me.id)}
-              style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#0f7d90", background: "rgba(20,153,176,0.1)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 9, padding: "8px 10px", cursor: "pointer" }}>{L.editMe}</button>
+              style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#0f7d90", background: "rgba(20,153,176,0.08)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 9, padding: "8px 11px", cursor: "pointer" }}>{L.editMe}</button>
           </div>
         )
       })()}
