@@ -569,7 +569,7 @@ const STRINGS = {
     addThisGuest: "Toevoegen",
     enterGuestName: "Vul eerst een naam in.",
     whoAtTableTitle: "Wie doet mee?",
-    noNeedUpfront: "Hoeft niet vooraf — je kan meteen delen",
+    noNeedUpfront: "Hoeft niet vooraf — je kan ook meteen de QR delen.",
     seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} vrij` : `${totaal}`,
     addNameRow: "+ naam",
     optionalWord: "(optioneel)",
@@ -1159,7 +1159,7 @@ const STRINGS = {
     addThisGuest: "Ajouter",
     enterGuestName: "Entre d\u2019abord un nom.",
     whoAtTableTitle: "Qui participe ?",
-    noNeedUpfront: "Pas besoin à l’avance — tu peux partager tout de suite",
+    noNeedUpfront: "Pas besoin à l’avance — tu peux aussi partager le QR tout de suite.",
     seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} libre${vrij === 1 ? "" : "s"}` : `${totaal}`,
     addNameRow: "+ nom",
     optionalWord: "(facultatif)",
@@ -4005,7 +4005,9 @@ export default function RundoTable() {
                   <button onClick={() => setShowNamesBlock((v) => !v)}
                     style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", textAlign: "left",
                       background: "rgba(20,153,176,0.07)", border: "1px solid rgba(20,153,176,0.25)", borderRadius: 12, padding: "10px 12px" }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#1499b0" }}>{L.whoAtTableTitle}</span>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#1499b0" }}>
+                      {L.whoAtTableTitle} <span style={{ color: "#9aa0ab", fontWeight: 700, fontSize: 14 }}>{L.optionalWord}</span>
+                    </span>
                     {/* Grijs zolang er plaatsen vrij zijn: dat is een stand van zaken, geen
                         probleem. Groen pas als alles bezet is — daar is het een afvinking. */}
                     <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: vrijeZit > 0 ? "#5a6680" : "#1f8a4c", background: vrijeZit > 0 ? "rgba(255,255,255,0.85)" : "rgba(39,174,96,0.16)", borderRadius: 12, padding: "3px 10px" }}>
