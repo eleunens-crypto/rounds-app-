@@ -2327,6 +2327,12 @@ export default function RundoTable() {
   // Neemt de gekozen plaats over: zet de naam (of namen, bij een koppel) en het aantal personen.
   const confirmClaimSpot = async () => {
     if (!group || !claimSpot) return
+    // Wie zich nog moet aanmelden mag dat ook op een afgesloten rekening — anders sluit je
+    // iemand buiten. Maar een bestaande plaats aanpassen kan niet meer.
+    const bestaande = participants.find((p) => p.id === claimSpot)
+    if (group.finalized && bestaande && !isFreeSpot(bestaande)) {
+      setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); setClaimSpot(null); return
+    }
     const names = claimNames.slice(0, claimSeats).map((n) => n.trim()).filter(Boolean)
     if (names.length === 0) { setToast(L.enterYourName); return }
     const finalName = names.join(" & ")
@@ -2372,6 +2378,10 @@ export default function RundoTable() {
   const editMySpot = (pid: string) => {
     const me = participants.find((p) => p.id === pid)
     if (!me) return
+    // Op een afgesloten rekening mag hier niets meer wijzigen: een aanpassing aan het aantal
+    // personen zet er vrije plaatsen bij of haalt ze weg, en dan verschuift de verdeling van
+    // gedeelde items — waardoor alles plots weer open lijkt te staan.
+    if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     const seats = Math.max(1, me.seats ?? 1)
     const parts = (me.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim())
     setClaimSeats(seats)
