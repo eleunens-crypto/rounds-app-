@@ -612,6 +612,7 @@ const STRINGS = {
     sharedProblemAsk: "Toch afsluiten?",
     tipInclLabel: (a: string) => `incl. €${a} fooi`,
     totalsDiff: (d: number) => `⚠️ €${d.toFixed(2).replace(".", ",")} verschil`,
+    taxSplitAtClose: "Toeslagen worden bij het afsluiten over iedereen verdeeld.",
     ownNamePlaceholder: "Zet hier je eigen naam",
     freeSpot: "vrije plaats",
     pickFreeSpotTitle: "👇 Tik hieronder op een vrije plaats",
@@ -1206,6 +1207,7 @@ const STRINGS = {
     sharedProblemAsk: "Clôturer quand même ?",
     tipInclLabel: (a: string) => `pourboire de €${a} inclus`,
     totalsDiff: (d: number) => `⚠️ €${d.toFixed(2).replace(".", ",")} d'écart`,
+    taxSplitAtClose: "Les suppléments sont répartis entre tous à la clôture.",
     ownNamePlaceholder: "Mets ton propre nom ici",
     freeSpot: "place libre",
     pickFreeSpotTitle: "👇 Touche une place libre ci-dessous",
@@ -1852,6 +1854,9 @@ export default function RundoTable() {
   const [scanStep, setScanStep] = useState<{ i: number; n: number } | null>(null)
   const [multiFails, setMultiFails] = useState(0)
   const [sharePicking, setSharePicking] = useState<Set<string>>(new Set())
+  // Welke kiesvensters je met "Klaar" hebt dichtgedaan. Zonder deze verzameling bleef het
+  // venster openstaan zodra er iemand geselecteerd was — en deed die knop dus niets.
+  const [shareClosed, setShareClosed] = useState<Set<string>>(new Set())
   const [jumpToAssign, setJumpToAssign] = useState(0)
   const [personsTouched, setPersonsTouched] = useState(false)
   const [fillingSpots, setFillingSpots] = useState<string[]>([])  // vrije plaatsen die je nu een naam geeft
@@ -2998,26 +3003,43 @@ export default function RundoTable() {
   }
   const shareVerwacht = (itemId: string) => items.find((x) => x.id === itemId)?.share_expected ?? 0
 
-  const sluitSharePicker = (itemId: string, pid: string) =>
-    setSharePicking((cur) => { const n = new Set(cur); n.delete(`${itemId}:${pid}`); return n })
+  const sharePickerOpen = (itemId: string, pid: string) => {
+    const key = `${itemId}:${pid}`
+    if (shareClosed.has(key)) return false
+    return sharePicking.has(key) || myQty(itemId, pid) > 0
+  }
+  const sluitSharePicker = (itemId: string, pid: string) => {
+    const key = `${itemId}:${pid}`
+    setSharePicking((cur) => { const n = new Set(cur); n.delete(key); return n })
+    setShareClosed((cur) => new Set(cur).add(key))
+  }
+  const openSharePicker = (itemId: string, pid: string) => {
+    const key = `${itemId}:${pid}`
+    setShareClosed((cur) => { const n = new Set(cur); n.delete(key); return n })
+    setSharePicking((cur) => new Set(cur).add(key))
+  }
 
   const toggleShareClaim = async (itemId: string, pid: string) => {
     if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     const mine = myQty(itemId, pid)
     const seats = Math.max(1, participants.find((p) => p.id === pid)?.seats ?? 1)
-    const key = `${itemId}:${pid}`
-    if (mine > 0 || sharePicking.has(key)) {
-      setSharePicking((cur) => { const n = new Set(cur); n.delete(key); return n })
-      await setClaim(itemId, pid, 0, [])
+    const vast = !!items.find((x) => x.id === itemId)?.share_fixed
+    const ruimte = shareRuimte(itemId, pid)
+
+    // Meerdere personen op één plaats: deze knop opent en sluit het kiesvenster. Wie
+    // meedeelt kies je daarbinnen per naam, en daar zet "Wis alles" ze ook weer af.
+    // Vroeger wiste deze knop meteen alles, en dan kon je het venster niet meer openen.
+    if (seats > 1 && !vast) {
+      if (sharePickerOpen(itemId, pid)) { sluitSharePicker(itemId, pid); return }
+      if (mine === 0 && ruimte !== null && ruimte <= 0) { setToast(L.shareFull(shareVerwacht(itemId))); return }
+      openSharePicker(itemId, pid)
       return
     }
-    const ruimte = shareRuimte(itemId, pid)
-    if (ruimte !== null && ruimte <= 0) { setToast(L.shareFull(shareVerwacht(itemId))); return }
-    // Alleen op die plaats? Dan is het meteen duidelijk wie meedeelde.
-    if (seats === 1) { await setClaim(itemId, pid, 1, [0]); return }
-    // Meerdere personen op één plaats: vraag wie van hen meedeelde. Dat geldt voor je eigen
-    // plaats én voor een koppel dat jij als admin regelt — zo werkt het overal hetzelfde.
-    setSharePicking((cur) => new Set(cur).add(key))
+
+    // Één persoon, of een item met een vast aandeel: gewoon aan of uit.
+    if (mine > 0) { await setClaim(itemId, pid, 0, []); return }
+    if (ruimte !== null && ruimte < seats) { setToast(L.shareFull(shareVerwacht(itemId))); return }
+    await setClaim(itemId, pid, seats, Array.from({ length: seats }, (_, i) => i))
   }
 
   // Één lid van een meerpersoonsplaats aan- of uitzetten, met dezelfde harde grens.
@@ -4342,7 +4364,7 @@ export default function RundoTable() {
             shareHeads={shareHeads} myShareHeads={myShareHeads} seatsOf={seatsOf} setSeats={setSeats}
             onRename={renameGuest}
             onEditMe={!isAdmin ? editMySpot : undefined}
-            setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} toggleShareAll={toggleShareAll} sluitSharePicker={sluitSharePicker} onToggleShared={toggleShared} claimMembers={claimMembers} sharePicking={sharePicking} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined} onSetExpected={isAdmin ? setShareExpected : undefined}
+            setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} toggleShareAll={toggleShareAll} sluitSharePicker={sluitSharePicker} sharePickerOpen={sharePickerOpen} onToggleShared={toggleShared} claimMembers={claimMembers} sharePicking={sharePicking} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined} onSetExpected={isAdmin ? setShareExpected : undefined}
             itemTotal={itemTotal} personTotal={personTotal} personItems={personItems}
             sharedRevealed={sharedRevealed} allConfirmed={allConfirmed} isConfirmed={isConfirmed} explicitConfirmed={explicitConfirmed}
             claimMode={claimMode} setClaimMode={setClaimMode} claimPid={claimPid} setClaimPid={setClaimPid}
@@ -4462,23 +4484,53 @@ export default function RundoTable() {
                   )}
                   {(() => {
                     const billSum = billTotal + tipTotal
-                    const diff = Math.abs(assignedSum - billSum)
+                    // De toegewezen bedragen bevatten de toeslagen pas na het afsluiten. Zolang
+                    // dat niet gebeurd is, vergeleken we een som zónder btw en korting met een
+                    // bontotaal mèt — dus stond er op elke bon met een korting een waarschuwing,
+                    // ook als alles perfect klopte. Nu vergelijken we gelijk met gelijk en tonen
+                    // we de toeslagen op een eigen regel.
+                    const toeslagSom = toeslagenTonen ? 0 : taxItems.reduce((a, t) => a + taxAmount(t), 0)
+                    const vergelijk = billSum - toeslagSom
+                    const diff = Math.abs(assignedSum - vergelijk)
                     const ok = diff < 0.02
+                    const apart = Math.abs(toeslagSom) > 0.005
                     return (
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8, paddingTop: 8, borderTop: "1px dashed rgba(16,24,40,0.12)" }}>
+                      <>
+                      {apart && (
+                        <>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8, paddingTop: 8, borderTop: "1px dashed rgba(16,24,40,0.12)" }}>
+                            <span style={{ fontSize: 16, fontWeight: 700, color: "#5a6680" }}>{L.itemsOnBill}</span>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
+                              <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a" }}>€{vergelijk.toFixed(2).replace(".", ",")}</span>
+                              {!ok && (
+                                <span style={{ fontSize: 15.5, fontWeight: 800, color: "#b5591a", background: "rgba(243,156,18,0.12)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 7, padding: "4px 7px", whiteSpace: "nowrap" }}>{L.totalsDiff(diff)}</span>
+                              )}
+                            </span>
+                          </div>
+                          {taxItems.map((t) => (
+                            <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 6 }}>
+                              <span style={{ fontSize: 15, color: "#5a6680", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>🧮 {t.name}</span>
+                              <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 700, color: "#5a6680" }}>{taxAmount(t) < 0 ? "−" : ""}€{Math.abs(taxAmount(t)).toFixed(2).replace(".", ",")}</span>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8, paddingTop: 8, borderTop: apart ? "1px solid rgba(16,24,40,0.1)" : "1px dashed rgba(16,24,40,0.12)" }}>
                         <span style={{ minWidth: 0 }}>
-                          <span style={{ display: "block", fontSize: 16, fontWeight: 700, color: "#5a6680" }}>{L.billTotalLabel}</span>
+                          <span style={{ display: "block", fontSize: 16, fontWeight: apart ? 800 : 700, color: apart ? "#14213a" : "#5a6680" }}>{L.billTotalLabel}</span>
                           {tipTotal > 0.005 && (
                             <span style={{ display: "block", fontSize: 15.5, fontWeight: 700, color: "#5a6680", marginTop: 2 }}>{L.tipInclLabel(tipTotal.toFixed(2).replace(".", ","))}</span>
                           )}
                         </span>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
                           <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a" }}>€{billSum.toFixed(2).replace(".", ",")}</span>
-                          {!ok && (
+                          {!ok && !apart && (
                             <span style={{ fontSize: 15.5, fontWeight: 800, color: "#b5591a", background: "rgba(243,156,18,0.12)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 7, padding: "4px 7px", whiteSpace: "nowrap" }}>{L.totalsDiff(diff)}</span>
                           )}
                         </span>
                       </div>
+                      {apart && <div style={{ fontSize: 13.5, color: "#9aa0ab", lineHeight: 1.45, marginTop: 7 }}>{L.taxSplitAtClose}</div>}
+                      </>
                     )
                   })()}
                 </div>
@@ -5848,6 +5900,7 @@ function ClaimScreen(props: {
   toggleShareMember: (itemId: string, pid: string, i: number) => void
   toggleShareAll: (itemId: string, pid: string, seats: number) => void
   sluitSharePicker: (itemId: string, pid: string) => void
+  sharePickerOpen: (itemId: string, pid: string) => boolean
   onToggleShared: (it: BillItem) => void
   claimMembers: (itemId: string, pid: string) => number[]
   sharePicking: Set<string>
@@ -5869,7 +5922,7 @@ function ClaimScreen(props: {
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, sluitSharePicker, onToggleShared, claimMembers, sharePicking, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onSetExpected, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
+  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, sluitSharePicker, sharePickerOpen, onToggleShared, claimMembers, sharePicking, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onSetExpected, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
   const adminPid = props.claimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   const [disputeOpen, setDisputeOpen] = useState(false)
@@ -6002,7 +6055,7 @@ function ClaimScreen(props: {
                                 // Ook oplichten wanneer het kiesvenster openstaat maar er nog
                                 // niemand gekozen is — anders lijkt de knop uit terwijl er
                                 // onderaan een venster van hem hangt dat je niet kwijtraakt.
-                                const on = sh.includes(p.id) || sharePicking.has(`${it.id}:${p.id}`)
+                                const on = sh.includes(p.id) || sharePickerOpen(it.id, p.id)
                                 const pSeats = Math.max(1, p.seats ?? 1)
                                 const pHeads = myShareHeads(it.id, p.id)
                                 return (
@@ -6028,7 +6081,7 @@ function ClaimScreen(props: {
                           // beheerder verdween het zodra er iemand gekozen was. Daarom moest er
                           // een ±-knopje bij dat het aantal blind ophoogde — langs de grens
                           // heen én zonder te weten wíé het was. Nu overal hetzelfde venster.
-                          if (pSeats <= 1 || fixed || !(sharePicking.has(key) || sh.includes(p.id))) return null
+                          if (pSeats <= 1 || fixed || !sharePickerOpen(it.id, p.id)) return null
                           // Zelfde vraag als bij de gasten: wie van dit koppel deelde mee?
                           const parts = (p.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
                           const sel = claimMembers(it.id, p.id)
@@ -6219,9 +6272,9 @@ function ClaimScreen(props: {
                   </div>
                   {/* De sleutel is "item:persoon"; met enkel het item-id stond deze knop soms
                       op "ja" terwijl er niets gekozen was, of omgekeerd. */}
-                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...((iShare || sharePicking.has(`${it.id}:${meId}`)) ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", border: "none" } : {}) }}>{(iShare || sharePicking.has(`${it.id}:${meId}`)) ? L.iShareYes : L.iShareNo}</button>
+                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...((iShare || (meId ? sharePickerOpen(it.id, meId) : false)) ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", border: "none" } : {}) }}>{(iShare || (meId ? sharePickerOpen(it.id, meId) : false)) ? L.iShareYes : L.iShareNo}</button>
                 </div>
-                {(iShare || sharePicking.has(`${it.id}:${meId}`)) && mySeats > 1 && !fixed && (() => {
+                {meId && sharePickerOpen(it.id, meId) && mySeats > 1 && !fixed && (() => {
                   // Geen voorselectie: je tikt gewoon aan wie meedeelde. Eén tik volstaat,
                   // ook als dat enkel de tweede persoon is. "Allemaal" zet iedereen in één keer aan.
                   const raw = participants.find((p) => p.id === meId)?.name ?? ""
