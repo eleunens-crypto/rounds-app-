@@ -995,8 +995,8 @@ const STRINGS = {
     addGuestsInTab2: 'Voeg eerst gasten toe in de tab "Gasten".',
     closedByAdmin: "✅ Afgesloten — dit is de definitieve verdeling",
     yourShareWord: "Jouw deel",
-    myDetailsLink: "details →",
-    everyoneLink: "iedereen →",
+    myDetailsBtn: "🧾 Mijn details",
+    everyoneBtn: "👥 Iedereen",
     adminReviewing: "🔎 De beheerder past de rekening nog aan",
     adminReviewingBody: "Je bedrag kan nog wijzigen. Zodra hij opnieuw afsluit, zie je je definitieve deel.",
     selectItemsPlural: "Selecteer jullie consumpties",
@@ -1591,8 +1591,8 @@ const STRINGS = {
     addGuestsInTab2: "Ajoute d'abord des invités dans l'onglet « Invités ».",
     closedByAdmin: "✅ Clôturé — voici la répartition définitive",
     yourShareWord: "Ta part",
-    myDetailsLink: "détails →",
-    everyoneLink: "tout le monde →",
+    myDetailsBtn: "🧾 Mes détails",
+    everyoneBtn: "👥 Tout le monde",
     adminReviewing: "🔎 L'hôte modifie encore l'addition",
     adminReviewingBody: "Ton montant peut encore changer. Dès qu'il clôture à nouveau, tu vois ta part définitive.",
     selectItemsPlural: "Sélectionnez vos consommations",
@@ -5946,16 +5946,17 @@ function ClaimScreen(props: {
     if (!finalized || isAdmin || !meId) return null
     const mijn = personTotal(meId)
     return (
-      <div style={{ width: "100%", margin: plek === "boven" ? "0 0 14px" : "14px 0 0", padding: "12px 14px", borderRadius: 14, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 18px -6px rgba(31,138,76,0.55)" }}>
-        <div style={{ fontSize: 16.5, fontWeight: 800, marginBottom: 6, lineHeight: 1.3 }}>{L.closedByAdmin}</div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", background: "rgba(255,255,255,0.16)", borderRadius: 10, padding: "8px 11px" }}>
-          <span style={{ fontSize: 15, fontWeight: 700 }}>{L.yourShareWord}</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 20, fontWeight: 800 }}>€{mijn.settled.toFixed(2).replace(".", ",")}{mijn.pendingShared ? "+" : ""}</span>
-            <span onClick={() => setShowFinalPopup(true)} style={{ fontSize: 14, fontWeight: 800, textDecoration: "underline", cursor: "pointer" }}>{L.myDetailsLink}</span>
-            <span onClick={() => { setGastVerdelingOpen(true); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }}
-              style={{ fontSize: 14, fontWeight: 800, textDecoration: "underline", cursor: "pointer" }}>{L.everyoneLink}</span>
-          </span>
+      <div style={{ width: "100%", margin: plek === "boven" ? "0 0 14px" : "14px 0 0", padding: "13px 14px", borderRadius: 14, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 18px -6px rgba(31,138,76,0.55)" }}>
+        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 9, lineHeight: 1.3 }}>{L.closedByAdmin}</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
+          <span style={{ fontSize: 16, fontWeight: 700 }}>{L.yourShareWord}</span>
+          <span style={{ fontSize: 27, fontWeight: 800, whiteSpace: "nowrap" }}>€{mijn.settled.toFixed(2).replace(".", ",")}{mijn.pendingShared ? "+" : ""}</span>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setShowFinalPopup(true)}
+            style={{ flex: 1, minWidth: 0, cursor: "pointer", border: "none", background: "#fff", color: "#1f8a4c", borderRadius: 11, padding: "13px 6px", fontSize: 15.5, fontWeight: 800 }}>{L.myDetailsBtn}</button>
+          <button onClick={() => { setGastVerdelingOpen(true); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }}
+            style={{ flex: 1, minWidth: 0, cursor: "pointer", background: "rgba(255,255,255,0.2)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.5)", borderRadius: 11, padding: "13px 6px", fontSize: 15.5, fontWeight: 800 }}>{L.everyoneBtn}</button>
         </div>
       </div>
     )
