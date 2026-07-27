@@ -561,7 +561,6 @@ const STRINGS = {
     personsFirst: "⚠️ Vul eerst in met hoeveel jullie zijn.",
     lockedPersons: "🔒 Eerst het aantal personen invullen",
     lockedName: "🔒 Vul eerst je eigen naam in",
-    shareLinkBtn: "🔗 Toch link delen",
     nowAssignTitle: "Klaar? Ga naar toewijzen",
     nowAssignSub: "Duid aan wie wat nam. Zo weet iedereen wat hij moet betalen.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Naar toewijzen \u2192",
@@ -581,13 +580,16 @@ const STRINGS = {
     raiseTotalBtn: (totaal: number) => `Ja, personen op ${totaal} zetten`,
     addAnother: "Nog iemand toevoegen",
     qrJoinedLegend: "\ud83d\udcf1 = kwam via de link binnen en duidt normaal zelf aan.",
-    copyLinkLink: "Liever kopiëren en zelf plakken?",
-    shareDeliveryHint: "QR scannen is het snelste. Link delen kan soms 1 of 2 min. duren.",
     seatFreedUp: "Die plaats telt nu voor 2 — er is één vrije plaats minder.",
     howManyGroupSub: "Iedereen aan tafel — jezelf inbegrepen.",
     personsWord: "Aantal personen",
-    shareStepTitle: "📱 Deel je groep via de QR-code",
-    shareStepSub: "Laat je tafelgenoten deze code scannen. Wie er al bij staat, tikt gewoon zijn naam aan; de rest neemt een vrije plaats en vult zelf zijn naam in. Daarna duidt iedereen aan wat hij nam.",
+    shareStepTitle: "📱 Laat je gasten de QR scannen",
+    orSendLinkTitle: "Of stuur de link zelf door",
+    linkWord: "Link",
+    copyWord: "Kopieer",
+    copiedWord: "Gekopieerd",
+    pasteAndShare: "Plak en deel in:",
+    shareStepSub: "Wie scant komt meteen bij deze rekening en duidt zelf aan wat hij nam.",
     scanThis: "Laat je gasten dit scannen",
     personWord: "Persoon",
     onlyOneShares: "⚠️ Maar 1 persoon deelt mee",
@@ -1148,7 +1150,6 @@ const STRINGS = {
     personsFirst: "⚠️ Indique d'abord combien vous êtes.",
     lockedPersons: "🔒 Indique d'abord le nombre de personnes",
     lockedName: "🔒 Indique d'abord ton propre nom",
-    shareLinkBtn: "🔗 Partager quand m\u00eame",
     nowAssignTitle: "Prêt ? Va vers l’attribution",
     nowAssignSub: "Indique qui a pris quoi. Ainsi chacun sait ce qu\u2019il doit payer.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Vers l\u2019attribution \u2192",
@@ -1168,13 +1169,16 @@ const STRINGS = {
     raiseTotalBtn: (totaal: number) => `Oui, mettre à ${totaal} personnes`,
     addAnother: "Ajouter quelqu\u2019un d\u2019autre",
     qrJoinedLegend: "\ud83d\udcf1 = arriv\u00e9 via le lien et attribue normalement lui-m\u00eame.",
-    copyLinkLink: "Tu préfères copier et coller toi-même ?",
-    shareDeliveryHint: "Scanner le QR est le plus rapide. Partager le lien peut prendre 1 \u00e0 2 min.",
     seatFreedUp: "Cette place compte maintenant pour 2 — il y a une place libre en moins.",
     howManyGroupSub: "Tout le monde à table — toi compris.",
     personsWord: "Nombre de personnes",
-    shareStepTitle: "📱 Partage ton groupe via le QR",
-    shareStepSub: "Fais scanner ce code à tes convives. Qui figure déjà dans la liste touche simplement son nom ; les autres prennent une place libre et entrent le leur. Ensuite chacun coche ce qu'il a pris.",
+    shareStepTitle: "📱 Fais scanner le QR à tes invités",
+    orSendLinkTitle: "Ou envoie le lien toi-même",
+    linkWord: "Lien",
+    copyWord: "Copier",
+    copiedWord: "Copié",
+    pasteAndShare: "Colle et partage dans :",
+    shareStepSub: "Qui scanne arrive directement sur cette addition et coche lui-même ce qu'il a pris.",
     scanThis: "Fais scanner à tes invités",
     personWord: "Personne",
     onlyOneShares: "⚠️ Une seule personne partage",
@@ -1865,6 +1869,7 @@ export default function RundoTable() {
   const [guestSeats, setGuestSeats] = useState(1)
   const [guestNames, setGuestNames] = useState<string[]>([""])
   const [showGuestList, setShowGuestList] = useState(false)  // namenlijst op de delen-tab in-/uitklappen
+  const [linkCopied, setLinkCopied] = useState(false)  // terugkoppeling na het kopiëren van de uitnodigingslink
   const [newGuest, setNewGuest] = useState("")
   const [claimSpot, setClaimSpot] = useState<string | null>(null)
   const [claimSeats, setClaimSeats] = useState(1)
@@ -4059,7 +4064,7 @@ export default function RundoTable() {
               return (
                 <>
                   <h3 style={{ ...S.h3, marginBottom: 3 }}>{L.shareStepTitle}</h3>
-                  <div style={{ fontSize: 16, color: "#5a6680", lineHeight: 1.55, marginBottom: 13 }}>{L.shareStepSub}</div>
+                  <div style={{ fontSize: 15.5, color: "#5a6680", lineHeight: 1.5, marginBottom: 13 }}>{L.shareStepSub}</div>
                 </>
               )
             })()}
@@ -4068,12 +4073,14 @@ export default function RundoTable() {
               const _base = (process.env.NEXT_PUBLIC_SITE_URL || (process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}` : "") || (typeof window !== "undefined" ? window.location.origin : "")).replace(/\/$/, "")
               const link = _base && group ? `${_base}/table?code=${group.invite_code}` : ""
               const invite = group ? L.inviteMessage(group.name, link) : ""
-              const doShare = async () => {
-                if (typeof navigator !== "undefined" && navigator.share) {
-                  try { await navigator.share({ text: invite }); return } catch { /* geannuleerd */ }
-                }
-                if (navigator.clipboard) navigator.clipboard.writeText(invite)
-                setInviteModalText(invite); setShowInviteModal(true)
+              // Het systeemdeelvenster is eruit: dat leverde te vaak een bericht op dat niet
+              // aankwam of ergens anders belandde. Kopiëren en zelf plakken is voorspelbaar.
+              const kopieer = async () => {
+                try {
+                  if (navigator.clipboard) await navigator.clipboard.writeText(invite)
+                  else { setInviteModalText(invite); setShowInviteModal(true); return }
+                  setLinkCopied(true)
+                } catch { setInviteModalText(invite); setShowInviteModal(true) }
               }
               return (
                 <>
@@ -4086,22 +4093,43 @@ export default function RundoTable() {
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "rgba(20,153,176,0.08)", border: "1px solid rgba(20,153,176,0.3)", borderRadius: 11, padding: "10px 12px", marginBottom: 11 }}>
-                    <span style={{ fontSize: 18, flexShrink: 0 }}>💡</span>
-                    <span style={{ fontSize: 13.5, color: "#0f6072", lineHeight: 1.45 }}>{L.shareDeliveryHint}</span>
-                  </div>
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (requireName()) doShare() }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800 }}>{L.shareLinkBtn}</button>
-                  <div style={{ textAlign: "center", marginTop: 10 }}>
-                    <span onClick={() => { if (!requireName()) return; if (navigator.clipboard) navigator.clipboard.writeText(invite); setToast(L.toastInviteCopied) }} style={{ fontSize: 14.5, fontWeight: 800, color: "#1499b0", textDecoration: "underline", cursor: "pointer" }}>📋 {L.copyLinkLink}</span>
+                  <div style={{ borderTop: "1px solid rgba(16,24,40,0.08)", paddingTop: 13 }}>
+                    <div style={{ fontSize: 15.5, fontWeight: 800, color: "#14213a", marginBottom: 8 }}>{L.orSendLinkTitle}</div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6, background: "rgba(16,24,40,0.04)", border: "1px solid rgba(16,24,40,0.12)", borderRadius: 10, padding: "11px 12px" }}>
+                        <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#9aa0ab" }}>{L.linkWord}</span>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: "#5a6680", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{link}</span>
+                      </div>
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (requireName()) void kopieer() }}
+                        style={{ flexShrink: 0, border: "none", cursor: "pointer", borderRadius: 10, padding: "11px 15px", fontSize: 15, fontWeight: 800, whiteSpace: "nowrap",
+                          background: linkCopied ? "rgba(39,174,96,0.14)" : "#1499b0", color: linkCopied ? "#1f8a4c" : "#fff" }}>
+                        {linkCopied ? `✓ ${L.copiedWord}` : `📋 ${L.copyWord}`}
+                      </button>
+                    </div>
+                    {/* Kopiëren alleen is niet genoeg: zonder deze regel weet je niet wat er
+                        gebeurd is, laat staan wat je nu moet doen. */}
+                    {linkCopied && (
+                      <div style={{ background: "rgba(39,174,96,0.08)", borderRadius: 10, padding: "11px 12px", marginTop: 9 }}>
+                        <div style={{ fontSize: 14.5, color: "#1f6b3a", fontWeight: 800, marginBottom: 5 }}>{L.pasteAndShare}</div>
+                        <div style={{ fontSize: 14.5, color: "#5a6680", lineHeight: 1.6 }}>
+                          {["WhatsApp", "Messenger", "sms", "e-mail"].map((naam, i) => (
+                            <span key={naam}>{i > 0 && <span style={{ color: "#9aa0ab", fontWeight: 800, margin: "0 9px" }}>•</span>}{naam}</span>
+                          ))}
+                          <span style={{ color: "#9aa0ab", fontWeight: 800, margin: "0 9px" }}>•</span>…
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               )
             })()}
           </div>
 
+          {/* Deze kaart bevat enkel de uitklapbare namenlijst. Stond die dicht, dan bleef er
+              een leeg wit vak op het scherm staan. */}
+          {showGuestList && (
           <div style={{ ...S.card, order: 3 }} id="wie-duid-ik-aan">
-
-            {showGuestList && (() => {
+            {(() => {
               const twoCol = participants.length > 5
               const isPlaceholderName = (p: Participant) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName
               const splitNames = (p: Participant) => {
@@ -4191,6 +4219,7 @@ export default function RundoTable() {
               )
             })()}
           </div>
+          )}
           <div style={{ order: 3, marginTop: 14, ...S.card, background: "linear-gradient(160deg,#eafaf1,#d9f2e4)", border: "2px solid rgba(31,138,76,0.45)", padding: "18px 16px" }}>
             <div style={{ fontSize: 21, fontWeight: 800, color: "#15703f", marginBottom: 5, lineHeight: 1.25 }}>{L.nowAssignTitle}</div>
             <div style={{ fontSize: 16.5, color: "#3c6b51", lineHeight: 1.5, marginBottom: 14 }}>{L.nowAssignSub}</div>
