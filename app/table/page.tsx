@@ -569,7 +569,7 @@ const STRINGS = {
     addThisGuest: "Toevoegen",
     enterGuestName: "Vul eerst een naam in.",
     whoAtTableTitle: "Wie doet mee?",
-    noNeedUpfront: "hoeft niet vooraf — je kan meteen delen",
+    noNeedUpfront: "Hoeft niet vooraf — je kan meteen delen",
     seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} vrij` : `${totaal}`,
     addNameRow: "+ naam",
     optionalWord: "(optioneel)",
@@ -1157,7 +1157,7 @@ const STRINGS = {
     addThisGuest: "Ajouter",
     enterGuestName: "Entre d\u2019abord un nom.",
     whoAtTableTitle: "Qui participe ?",
-    noNeedUpfront: "pas besoin à l’avance — tu peux partager tout de suite",
+    noNeedUpfront: "Pas besoin à l’avance — tu peux partager tout de suite",
     seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} libre${vrij === 1 ? "" : "s"}` : `${totaal}`,
     addNameRow: "+ nom",
     optionalWord: "(facultatif)",
@@ -4004,9 +4004,7 @@ export default function RundoTable() {
                     </span>
                     <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#1499b0", lineHeight: 1 }}>{showNamesBlock ? "▴" : "▾"}</span>
                   </button>
-                  <div style={{ marginTop: 7 }}>
-                    <span style={{ display: "inline-block", fontSize: 14, fontWeight: 800, color: "#0f7488", background: "rgba(20,153,176,0.13)", borderRadius: 12, padding: "5px 12px", lineHeight: 1.35 }}>{L.noNeedUpfront}</span>
-                  </div>
+                  <div style={{ marginTop: 8, borderLeft: "3px solid rgba(20,153,176,0.5)", padding: "2px 0 2px 10px", fontSize: 14.5, fontWeight: 700, color: "#0f7488", lineHeight: 1.4 }}>{L.noNeedUpfront}</div>
                   {showNamesBlock && (
                     <div style={{ marginTop: 8, border: "1px solid rgba(16,24,40,0.12)", borderRadius: 12, overflow: "hidden" }}>
                       {participants.map((q, i) => {
