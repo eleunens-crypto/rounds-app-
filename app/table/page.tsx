@@ -5937,6 +5937,14 @@ function ClaimScreen(props: {
   // Wat je bevestigde blijft raadpleegbaar, maar hoeft na het afsluiten niet meer open:
   // dan telt alleen nog de definitieve verdeling.
   const [gastBevestigdOpen, setGastBevestigdOpen] = useState(true)
+  // Eén vorm voor de vier blokken. Het bolletje vertelt de stand: groen met een vinkje als
+  // die stap gedaan is, grijs met zijn cijfer als hij nog moet of enkel naslagwerk is.
+  const blokBol = (nr: number, klaar: boolean) => (
+    <span style={{ flexShrink: 0, width: 23, height: 23, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, background: klaar ? "#1f8a4c" : "rgba(16,24,40,0.1)", color: klaar ? "#fff" : "#5a6680" }}>{klaar ? "✓" : nr}</span>
+  )
+  const toonKnop = (open: boolean) => (
+    <span style={{ flexShrink: 0, border: "1.5px solid rgba(20,153,176,0.4)", color: "#1499b0", borderRadius: 9, padding: "6px 11px", fontSize: 14, fontWeight: 800, whiteSpace: "nowrap" }}>{open ? `${L.hideAll} ▴` : `${L.showAll} ▾`}</span>
+  )
   useEffect(() => { if (finalized) { setGastItemsOpen(false); setGastBevestigdOpen(false) } }, [finalized])
   // Twee momenten waarop een gast uitleg nodig heeft: net na zijn bevestiging (wat nu?)
   // en zodra de rekening dichtgaat (dit is je bedrag). De eerste kan hij altijd opnieuw
@@ -6240,7 +6248,7 @@ function ClaimScreen(props: {
         if (!me) return null
         const seats = Math.max(1, me.seats ?? 1)
         return (
-          <div style={{ ...S.card, marginBottom: 12, padding: "10px 13px", display: "flex", alignItems: "center", gap: 9 }}>
+          <div style={{ ...S.card, marginBottom: 12, padding: "10px 13px", display: "flex", alignItems: "center", gap: 9, width: "80%", marginLeft: "auto", marginRight: "auto" }}>
             <span style={{ flexShrink: 0, fontSize: 18 }}>👤</span>
             <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               <b>{me.name}</b>
@@ -6254,8 +6262,11 @@ function ClaimScreen(props: {
       <div style={S.card}>
         <h3 onClick={() => setGastItemsOpen((v) => !v)}
           style={{ ...S.h3, marginBottom: gastItemsOpen ? 14 : 0, cursor: "pointer", justifyContent: "space-between", gap: 10 }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0, color: finalized ? "#9aa0ab" : undefined }}>✅ 1 · {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</span>
-          <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{gastItemsOpen ? `${L.hideAll} ▴` : `${L.showAll} ▾`}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+            {blokBol(1, iConfirmed)}
+            <span style={{ fontSize: 16.5, fontWeight: 800, color: iConfirmed ? "#1f8a4c" : "#3b486a" }}>1 · {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</span>
+          </span>
+          {toonKnop(gastItemsOpen)}
         </h3>
         {gastItemsOpen && (<>
         {items.length > 0 && (
@@ -6417,8 +6428,11 @@ function ClaimScreen(props: {
             bevestigde", dichtgeklapt maar nog op te vragen. */}
         <div onClick={() => setGastBevestigdOpen((v) => !v)}
           style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: gastBevestigdOpen ? 10 : 0 }}>
-          <span style={{ fontSize: 16.5, fontWeight: 800, color: finalized ? "#5a6680" : "#3b486a", minWidth: 0 }}>🧾 2 · {finalized ? L.whatIConfirmed : L.aboutToConfirmTitle}</span>
-          <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{gastBevestigdOpen ? `${L.hideAll} ▴` : `${L.showAll} ▾`}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+            {blokBol(2, iConfirmed)}
+            <span style={{ fontSize: 16.5, fontWeight: 800, color: iConfirmed ? "#1f8a4c" : "#3b486a" }}>2 · {iConfirmed ? L.whatIConfirmed : L.aboutToConfirmTitle}</span>
+          </span>
+          {toonKnop(gastBevestigdOpen)}
         </div>
         {gastBevestigdOpen && (<>
         {(() => {
@@ -6455,7 +6469,10 @@ function ClaimScreen(props: {
             want dit is het bedrag dat telt. */}
         {finalized && (
           <div id="gast-eindverdeling" style={{ marginTop: 16, paddingTop: 14, borderTop: "2px solid rgba(39,174,96,0.3)" }}>
-            <div style={{ fontSize: 16.5, fontWeight: 800, color: "#1f8a4c", marginBottom: 9 }}>✅ 3 · {L.finalSplitTitle}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 10 }}>
+              {blokBol(3, true)}
+              <span style={{ fontSize: 16.5, fontWeight: 800, color: "#1f8a4c" }}>3 · {L.finalSplitTitle}</span>
+            </div>
             {personItems(meId).map((r, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "4px 0", borderBottom: "1px solid rgba(16,24,40,0.06)", fontSize: 16, color: "#3b486a" }}>
                 <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{r.qty > 1 ? `${r.qty}× ` : ""}{r.name}</span>
@@ -6470,10 +6487,12 @@ function ClaimScreen(props: {
             {/* De verdeling van de hele tafel is naslagwerk — dicht dus, tenzij je ze wil
                 nakijken. De knop "Iedereen" in de groene balk klapt precies dit open. */}
             <div onClick={() => setGastVerdelingOpen((v) => !v)}
-              style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-              <span style={{ fontSize: 18 }}>👥</span>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#5a6680" }}>{L.everyoneSplitTitle}</span>
-              <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{gastVerdelingOpen ? `${L.hideAll} ▴` : `${L.showAll} ▾`}</span>
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+                {blokBol(4, false)}
+                <span style={{ fontSize: 16.5, fontWeight: 800, color: "#5a6680" }}>👥 {L.everyoneSplitTitle}</span>
+              </span>
+              {toonKnop(gastVerdelingOpen)}
             </div>
             {gastVerdelingOpen && <div style={{ fontSize: 15.5, color: "#8a93a3", marginTop: 4, marginBottom: 8 }}>{L.fullBillInfo}</div>}
             {gastVerdelingOpen && (<>
@@ -6579,44 +6598,44 @@ function ClaimScreen(props: {
             </div>
           </div>
         )}
-        {finalized && !isAdmin && (
-          <div style={{ marginTop: 12 }}>
-            {disputeOpen ? (
-              <div style={{ background: "rgba(90,108,166,0.06)", border: "1px solid rgba(90,108,166,0.2)", borderRadius: 12, padding: 12 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "#5a6680", marginBottom: 7 }}>{L.whatWrong}</div>
-                <textarea value={disputeText} onChange={(e) => setDisputeText(e.target.value)} placeholder={L.disputePlaceholder} rows={2} style={{ ...S.input, width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
-                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                  <button onClick={() => { setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 16.5 }}>{L.cancel}</button>
-                  <button onClick={() => { onToggleDispute(true, disputeText); setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 16.5, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff" }}>{L.send}</button>
-                </div>
-              </div>
-            ) : iResolved ? (
-              <div style={{ fontSize: 16, color: "#1f8a4c", background: "rgba(39,174,96,0.12)", border: "1px solid rgba(39,174,96,0.4)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45, textAlign: "center", fontWeight: 700 }}>
-                {L.remarkResolved}
-                {iComment && <div style={{ marginTop: 6, fontWeight: 600, fontStyle: "italic", color: "#1f8a4c", opacity: 0.85 }}>{L.yourRemark}“{iComment}”</div>}
-                <div style={{ marginTop: 8 }}>
-                  <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "8px 16px", fontSize: 16, fontWeight: 700, background: "#fff", border: "1px solid rgba(20,33,58,0.18)", color: "#5a6680" }}>{L.addAnotherRemark}</button>
-                </div>
-              </div>
-            ) : iDispute ? (
-              <div style={{ fontSize: 16, color: "#a06b00", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45, textAlign: "center" }}>
-                {L.remarkReceived}
-                {iComment && <div style={{ marginTop: 6, fontWeight: 600, fontStyle: "italic", color: "#a06b00", opacity: 0.9 }}>{L.yourRemark}“{iComment}”</div>}
-                <div style={{ marginTop: 6 }}>
-                  <button onClick={() => { onToggleDispute(false); setDisputeOpen(false); setDisputeText("") }} style={{ background: "none", border: "none", padding: 0, color: "#1499b0", fontSize: 16, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>{L.withdraw}</button>
-                </div>
-              </div>
-            ) : (
-              <div style={{ textAlign: "center" }}>
-                <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "10px 18px", fontSize: 16.5, fontWeight: 700, background: "#fff", border: "1px solid rgba(20,33,58,0.18)", color: "#5a6680" }}>
-                  {L.somethingWrong}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
       {afgeslotenBalk("onder")}
+    {finalized && !isAdmin && (
+      <div style={{ marginTop: 14 }}>
+          {disputeOpen ? (
+            <div style={{ background: "rgba(90,108,166,0.06)", border: "1px solid rgba(90,108,166,0.2)", borderRadius: 12, padding: 12 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#5a6680", marginBottom: 7 }}>{L.whatWrong}</div>
+              <textarea value={disputeText} onChange={(e) => setDisputeText(e.target.value)} placeholder={L.disputePlaceholder} rows={2} style={{ ...S.input, width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button onClick={() => { setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 16.5 }}>{L.cancel}</button>
+                <button onClick={() => { onToggleDispute(true, disputeText); setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 16.5, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff" }}>{L.send}</button>
+              </div>
+            </div>
+          ) : iResolved ? (
+            <div style={{ fontSize: 16, color: "#1f8a4c", background: "rgba(39,174,96,0.12)", border: "1px solid rgba(39,174,96,0.4)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45, textAlign: "center", fontWeight: 700 }}>
+              {L.remarkResolved}
+              {iComment && <div style={{ marginTop: 6, fontWeight: 600, fontStyle: "italic", color: "#1f8a4c", opacity: 0.85 }}>{L.yourRemark}“{iComment}”</div>}
+              <div style={{ marginTop: 8 }}>
+                <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "8px 16px", fontSize: 16, fontWeight: 700, background: "#fff", border: "1px solid rgba(20,33,58,0.18)", color: "#5a6680" }}>{L.addAnotherRemark}</button>
+              </div>
+            </div>
+          ) : iDispute ? (
+            <div style={{ fontSize: 16, color: "#a06b00", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45, textAlign: "center" }}>
+              {L.remarkReceived}
+              {iComment && <div style={{ marginTop: 6, fontWeight: 600, fontStyle: "italic", color: "#a06b00", opacity: 0.9 }}>{L.yourRemark}“{iComment}”</div>}
+              <div style={{ marginTop: 6 }}>
+                <button onClick={() => { onToggleDispute(false); setDisputeOpen(false); setDisputeText("") }} style={{ background: "none", border: "none", padding: 0, color: "#1499b0", fontSize: 16, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>{L.withdraw}</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: "center" }}>
+              <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "10px 18px", fontSize: 16.5, fontWeight: 700, background: "#fff", border: "1px solid rgba(20,33,58,0.18)", color: "#5a6680" }}>
+                {L.somethingWrong}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
