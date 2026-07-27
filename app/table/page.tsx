@@ -569,7 +569,7 @@ const STRINGS = {
     addThisGuest: "Toevoegen",
     enterGuestName: "Vul eerst een naam in.",
     whoAtTableTitle: "Wie doet mee?",
-    noNeedUpfront: "Hoeft niet vooraf — je kan ook meteen de QR delen.",
+    noNeedUpfront: "Vul alvast namen in, of deel meteen de QR.",
     seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} vrij` : `${totaal}`,
     addNameRow: "+ naam",
     optionalWord: "(optioneel)",
@@ -1159,7 +1159,7 @@ const STRINGS = {
     addThisGuest: "Ajouter",
     enterGuestName: "Entre d\u2019abord un nom.",
     whoAtTableTitle: "Qui participe ?",
-    noNeedUpfront: "Pas besoin à l’avance — tu peux aussi partager le QR tout de suite.",
+    noNeedUpfront: "Remplis déjà des noms, ou partage tout de suite le QR.",
     seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} libre${vrij === 1 ? "" : "s"}` : `${totaal}`,
     addNameRow: "+ nom",
     optionalWord: "(facultatif)",
@@ -3965,7 +3965,7 @@ export default function RundoTable() {
                       <button onClick={openPopup}
                         style={{ width: "100%", padding: "15px 0", fontSize: 17.5, fontWeight: 800, borderRadius: 12, border: "1.5px solid rgba(192,57,43,0.5)", background: "rgba(192,57,43,0.04)", color: "#c0392b", cursor: "pointer" }}>{L.addYourselfBtn}</button>
                     ) : (
-                      <div onClick={openPopup} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", borderRadius: 12, border: "1.5px solid rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.05)", padding: "13px 14px" }}>
+                      <div onClick={openPopup} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", borderRadius: 12, background: "rgba(90,108,166,0.06)", padding: "13px 14px" }}>
                         <span style={{ minWidth: 0 }}>
                           <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {me.name} <span style={{ ...S_BEHEERDER, fontSize: 16 }}>· {seats > 1 ? L.adminsWord : L.adminWord}</span>
@@ -4004,8 +4004,8 @@ export default function RundoTable() {
                       en die maakt meteen zichtbaar waar je mag tikken. */}
                   <button onClick={() => setShowNamesBlock((v) => !v)}
                     style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", textAlign: "left",
-                      background: "rgba(20,153,176,0.07)", border: "1px solid rgba(20,153,176,0.25)", borderRadius: 12, padding: "10px 12px" }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#1499b0" }}>
+                      background: "rgba(90,108,166,0.06)", border: "none", borderRadius: 12, padding: "10px 12px" }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#14213a" }}>
                       {L.whoAtTableTitle} <span style={{ color: "#9aa0ab", fontWeight: 700, fontSize: 14 }}>{L.optionalWord}</span>
                     </span>
                     {/* Grijs zolang er plaatsen vrij zijn: dat is een stand van zaken, geen
@@ -4013,7 +4013,7 @@ export default function RundoTable() {
                     <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: vrijeZit > 0 ? "#5a6680" : "#1f8a4c", background: vrijeZit > 0 ? "rgba(255,255,255,0.85)" : "rgba(39,174,96,0.16)", borderRadius: 12, padding: "3px 10px" }}>
                       👥 {L.seatsSummary(totalPersons, vrijeZit)}
                     </span>
-                    <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#1499b0", lineHeight: 1 }}>{showNamesBlock ? "▴" : "▾"}</span>
+                    <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#5a6680", lineHeight: 1 }}>{showNamesBlock ? "▴" : "▾"}</span>
                   </button>
                   <div style={{ marginTop: 8, borderLeft: "3px solid rgba(20,153,176,0.5)", padding: "2px 0 2px 10px", fontSize: 14.5, fontWeight: 700, color: "#0f7488", lineHeight: 1.4 }}>{L.noNeedUpfront}</div>
                   {showNamesBlock && (
