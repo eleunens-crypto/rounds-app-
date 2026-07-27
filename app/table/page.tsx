@@ -530,6 +530,9 @@ const STRINGS = {
     roleAdminBadge: "👑 Beheerder",
     roleGuestBadge: "👤 Gast",
     switchPerson: "ik ben iemand anders — wissel van persoon",
+    switchReleaseTitle: "Van persoon wisselen?",
+    switchReleaseYes: "Wisselen",
+    switchReleaseBody: (naam: string) => `De plaats van ${naam} komt weer vrij voor iemand anders. Wat je al aanduidde en bevestigde gaat mee weg.`,
     toTableHome: "Naar het Table-startscherm",
     person: "persoon",
     persons: "personen",
@@ -1109,6 +1112,9 @@ const STRINGS = {
     roleAdminBadge: "👑 Hôte",
     roleGuestBadge: "👤 Invité",
     switchPerson: "je suis quelqu'un d'autre — changer de personne",
+    switchReleaseTitle: "Changer de personne ?",
+    switchReleaseYes: "Changer",
+    switchReleaseBody: (naam: string) => `La place de ${naam} redevient libre pour quelqu'un d'autre. Ce que tu as coché et confirmé disparaît aussi.`,
     toTableHome: "Vers l'accueil Table",
     person: "personne",
     persons: "personnes",
@@ -2311,7 +2317,29 @@ export default function RundoTable() {
 
   const switchPerson = () => {
     if (!group) return
-    setMeIdStored(group.id, null); setMeId(null)
+    const huidig = participants.find((p) => p.id === meId)
+    const wissel = async () => {
+      if (huidig) {
+        if (huidig.self_joined) {
+          // Deze plaats nam je zelf in. Ze komt weer helemaal vrij — ook de extra
+          // zitplaatsen als je met twee was — en wat je aanduidde gaat mee weg.
+          const zit = Math.max(1, huidig.seats ?? 1)
+          await supabase.from("table_claims").delete().eq("participant_id", huidig.id)
+          await supabase.from("table_confirmations").delete().eq("participant_id", huidig.id)
+          await supabase.from("table_participants").update({ name: L.guestWord, seats: 1, self_joined: false }).eq("id", huidig.id)
+          for (let i = 1; i < zit; i++) await addGuest(L.guestWord, false, 1)
+        }
+      }
+      setMeIdStored(group.id, null); setMeId(null)
+      await loadAll(group.id)
+    }
+    // Tikte je een naam aan die de beheerder had ingevuld, dan blijft die naam gewoon staan
+    // — die is niet van jou. Nam je zelf een vrije plaats, dan geef je die terug.
+    if (huidig?.self_joined) {
+      askConfirm(L.switchReleaseBody(huidig.name), L.switchReleaseYes, () => { void wissel() }, { title: L.switchReleaseTitle, danger: true })
+      return
+    }
+    void wissel()
   }
 
 
@@ -3199,6 +3227,63 @@ export default function RundoTable() {
     return true
   }
 
+  // Het groepsoverzichtje ("👥 groep 4") verschijnt op twee plekken: bovenaan de
+  // toewijzen-tab, en bij gasten & delen naast de namenlijst — daar hoort het bij de
+  // namen waar je op dat moment mee bezig bent, niet los bovenaan het scherm.
+  const groepPeekKnop = () => {
+    const vrij = participants.filter((p) => isFreeSpot(p) && !p.self_joined).reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
+    // Iemand anders dan jij al ingevuld? (QR-gast of door jou aangeduid)
+    const iemandIngevuld = participants.some((p) => p.id !== ownerPid && !isFreeSpot(p))
+    // Kleur volgt de fase: compleet = groen, bezig-met-gaten = zacht oranje,
+    // net begonnen = neutraal grijs. Nooit rood — lege plekken zijn normaal.
+    const kleur = vrij === 0 ? "#1f8a4c" : iemandIngevuld ? "#b5591a" : "#5a6680"
+    return (
+      <button onClick={() => setShowGroupPeek((v) => !v)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: kleur, padding: "4px 4px", display: "inline-flex", alignItems: "center", gap: 7 }}>
+        👥 {L.groupWord}{vrij === 0
+          ? <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 12, padding: "2px 9px" }}>✓ {totalPersons}</span>
+          : iemandIngevuld
+          ? <span style={{ fontSize: 13.5, fontWeight: 800, color: "#b5591a", background: "rgba(243,156,18,0.14)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 12, padding: "2px 9px" }}>{L.nStillFree(vrij)}</span>
+          : <span style={{ fontSize: 13.5, fontWeight: 800, color: "#5a6680", background: "rgba(16,24,40,0.06)", borderRadius: 12, padding: "2px 9px" }}>{totalPersons}</span>} {showGroupPeek ? "▴" : "▾"}
+      </button>
+    )
+  }
+  const groepPeekLijst = () => {
+    const iemandIngevuld = participants.some((q) => q.id !== ownerPid && !isFreeSpot(q))
+    return (
+    <div style={{ border: "1px solid rgba(16,24,40,0.12)", borderRadius: 12, padding: "10px 12px", marginTop: 8 }}>
+      {participants.map((p) => {
+        const isAdminSpot = p.id === ownerPid
+        const vrij = isFreeSpot(p) && !p.self_joined
+        // Drie toestanden voor een naam die jij invulde: gewoon toegevoegd, of de
+        // persoon kwam intussen zelf binnen via de link, of jij bent voor hem
+        // beginnen aantikken. Dat laatste is het enige geval waarin "admin duidt aan"
+        // ook echt klopt — vroeger stond dat er meteen, ook als je niets deed.
+        const ikDuidAan = !isAdminSpot && !p.self_joined && !vrij && claims.some((c) => c.participant_id === p.id)
+        const cat = isAdminSpot
+          ? { icon: "👤", label: L.tagAdmin, color: "#1f8a4c", bg: "rgba(39,174,96,0.14)", brd: "transparent" }
+          : p.self_joined
+          ? { icon: "📱", label: L.tagViaLink, color: "#0f7488", bg: "rgba(20,153,176,0.12)", brd: "rgba(20,153,176,0.35)" }
+          : vrij
+          ? (iemandIngevuld
+              ? { icon: "⏳", label: L.tagFree, color: "#b5591a", bg: "rgba(243,156,18,0.14)", brd: "rgba(243,156,18,0.45)" }
+              : { icon: "⏳", label: L.tagFree, color: "#8a93a3", bg: "rgba(16,24,40,0.05)", brd: "transparent" })
+          : ikDuidAan
+          ? { icon: "✍️", label: L.tagByYou, color: "#8a5e0f", bg: "rgba(243,156,18,0.14)", brd: "transparent" }
+          : { icon: "✓", label: L.tagAdded, color: "#5a6680", bg: "rgba(16,24,40,0.06)", brd: "transparent" }
+        return (
+          <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: vrij ? "#9aa0ab" : "#14213a", fontStyle: vrij ? "italic" : "normal", display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+              <span style={{ flexShrink: 0 }}>{cat.icon}</span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{vrij ? L.freeSpotName : p.name}{!vrij && (p.seats ?? 1) > 1 ? ` · ${p.seats}p.` : ""}</span>
+            </span>
+            <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: cat.color, background: cat.bg, border: `1px solid ${cat.brd}`, borderRadius: 14, padding: "4px 10px", whiteSpace: "nowrap" }}>{cat.label}</span>
+          </div>
+        )
+      })}
+    </div>
+          )
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER: start
   // ═══════════════════════════════════════════════════════════════════════════
@@ -3506,62 +3591,12 @@ export default function RundoTable() {
       {adminTab !== "scan" && (
         <div style={{ marginTop: -6, marginBottom: 10 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-            {(() => {
-              const vrij = participants.filter((p) => isFreeSpot(p) && !p.self_joined).reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
-              // Iemand anders dan jij al ingevuld? (QR-gast of door jou aangeduid)
-              const iemandIngevuld = participants.some((p) => p.id !== ownerPid && !isFreeSpot(p))
-              // Kleur volgt de fase: compleet = groen, bezig-met-gaten = zacht oranje,
-              // net begonnen = neutraal grijs. Nooit rood — lege plekken zijn normaal.
-              const kleur = vrij === 0 ? "#1f8a4c" : iemandIngevuld ? "#b5591a" : "#5a6680"
-              return (
-                <button onClick={() => setShowGroupPeek((v) => !v)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: kleur, padding: "4px 4px", display: "inline-flex", alignItems: "center", gap: 7 }}>
-                  👥 {L.groupWord}{vrij === 0
-                    ? <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 12, padding: "2px 9px" }}>✓ {totalPersons}</span>
-                    : iemandIngevuld
-                    ? <span style={{ fontSize: 13.5, fontWeight: 800, color: "#b5591a", background: "rgba(243,156,18,0.14)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 12, padding: "2px 9px" }}>{L.nStillFree(vrij)}</span>
-                    : <span style={{ fontSize: 13.5, fontWeight: 800, color: "#5a6680", background: "rgba(16,24,40,0.06)", borderRadius: 12, padding: "2px 9px" }}>{totalPersons}</span>} {showGroupPeek ? "▴" : "▾"}
-                </button>
-              )
-            })()}
+            {adminTab === "overview" && groepPeekKnop()}
             {group.receipt_url && (
               <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#1499b0", padding: "4px 4px" }}>{L.viewReceipt}{(group.receipt_url!.split(/\s+/).filter(Boolean).length > 1) ? ` (${group.receipt_url!.split(/\s+/).filter(Boolean).length})` : ""}</button>
             )}
           </div>
-          {showGroupPeek && (() => {
-            const iemandIngevuld = participants.some((q) => q.id !== ownerPid && !isFreeSpot(q))
-            return (
-            <div style={{ border: "1px solid rgba(16,24,40,0.12)", borderRadius: 12, padding: "10px 12px", marginTop: 8 }}>
-              {participants.map((p) => {
-                const isAdminSpot = p.id === ownerPid
-                const vrij = isFreeSpot(p) && !p.self_joined
-                // Drie toestanden voor een naam die jij invulde: gewoon toegevoegd, of de
-                // persoon kwam intussen zelf binnen via de link, of jij bent voor hem
-                // beginnen aantikken. Dat laatste is het enige geval waarin "admin duidt aan"
-                // ook echt klopt — vroeger stond dat er meteen, ook als je niets deed.
-                const ikDuidAan = !isAdminSpot && !p.self_joined && !vrij && claims.some((c) => c.participant_id === p.id)
-                const cat = isAdminSpot
-                  ? { icon: "👤", label: L.tagAdmin, color: "#1f8a4c", bg: "rgba(39,174,96,0.14)", brd: "transparent" }
-                  : p.self_joined
-                  ? { icon: "📱", label: L.tagViaLink, color: "#0f7488", bg: "rgba(20,153,176,0.12)", brd: "rgba(20,153,176,0.35)" }
-                  : vrij
-                  ? (iemandIngevuld
-                      ? { icon: "⏳", label: L.tagFree, color: "#b5591a", bg: "rgba(243,156,18,0.14)", brd: "rgba(243,156,18,0.45)" }
-                      : { icon: "⏳", label: L.tagFree, color: "#8a93a3", bg: "rgba(16,24,40,0.05)", brd: "transparent" })
-                  : ikDuidAan
-                  ? { icon: "✍️", label: L.tagByYou, color: "#8a5e0f", bg: "rgba(243,156,18,0.14)", brd: "transparent" }
-                  : { icon: "✓", label: L.tagAdded, color: "#5a6680", bg: "rgba(16,24,40,0.06)", brd: "transparent" }
-                return (
-                  <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: vrij ? "#9aa0ab" : "#14213a", fontStyle: vrij ? "italic" : "normal", display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-                      <span style={{ flexShrink: 0 }}>{cat.icon}</span>
-                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{vrij ? L.freeSpotName : p.name}{!vrij && (p.seats ?? 1) > 1 ? ` · ${p.seats}p.` : ""}</span>
-                    </span>
-                    <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: cat.color, background: cat.bg, border: `1px solid ${cat.brd}`, borderRadius: 14, padding: "4px 10px", whiteSpace: "nowrap" }}>{cat.label}</span>
-                  </div>
-                )
-              })}
-            </div>
-          ); })()}
+          {adminTab === "overview" && showGroupPeek && groepPeekLijst()}
         </div>
       )}
 
@@ -3897,12 +3932,19 @@ export default function RundoTable() {
             {/* Optioneel: de namen die je al kent alvast invullen, zodat een gast na het
                 scannen enkel zijn naam hoeft aan te tikken. Dicht kost dit één regel. */}
             {personsSet && adminNamed && (() => {
-              const rijen = participants.filter((q) => q.id !== meId && !q.self_joined)
+              // Ook wie via de link binnenkwam hoort hier te staan. Tikte iemand zijn naam
+              // verkeerd in, dan was jij als beheerder machteloos — die rijen stonden
+              // nergens waar je ze kon aanpassen.
+              const rijen = participants.filter((q) => q.id !== meId)
               return (
                 <div style={{ marginTop: 13, paddingTop: 12, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
-                  <div onClick={() => setShowNamesBlock((v) => !v)} style={{ fontSize: 16, fontWeight: 800, color: "#1499b0", cursor: "pointer" }}>
-                    {L.namesBlockTitle} <span style={{ color: "#9aa0ab", fontWeight: 700 }}>{L.namesBlockOptional}</span> {showNamesBlock ? "▴" : "▾"}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                    <div onClick={() => setShowNamesBlock((v) => !v)} style={{ fontSize: 16, fontWeight: 800, color: "#1499b0", cursor: "pointer" }}>
+                      {L.namesBlockTitle} <span style={{ color: "#9aa0ab", fontWeight: 700 }}>{L.namesBlockOptional}</span> {showNamesBlock ? "▴" : "▾"}
+                    </div>
+                    {groepPeekKnop()}
                   </div>
+                  {showGroupPeek && groepPeekLijst()}
                   {showNamesBlock && (
                     <div style={{ marginTop: 9 }}>
                       {(() => {
@@ -3928,6 +3970,7 @@ export default function RundoTable() {
                                     <button key={q.id} onClick={() => open(q)}
                                       style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, textAlign: "left", cursor: "pointer", borderRadius: 11, padding: "10px 11px", border: "1px solid rgba(16,24,40,0.12)", background: "rgba(16,24,40,0.02)" }}>
                                       <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.name}</span>
+                                      {q.self_joined && <span style={{ flexShrink: 0, fontSize: 13 }} title={L.tagViaLink}>📱</span>}
                                       {zit > 1 && <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#0f7488", background: "rgba(20,153,176,0.12)", borderRadius: 8, padding: "2px 6px" }}>{zit}p</span>}
                                       <span style={{ flexShrink: 0, fontSize: 14, color: "#9aa0ab" }}>✏️</span>
                                     </button>
