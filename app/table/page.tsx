@@ -1051,6 +1051,7 @@ const STRINGS = {
     confirmedTapEdit: "✓ Bevestigd — tik om te wijzigen",
     confirmMyOrder: "✅ Bevestig mijn bestelling",
     confirmFailed: (msg: string) => `Bevestigen lukte niet: ${msg}`,
+    claimFailed: (msg: string) => `Aanpassen lukte niet: ${msg}`,
     confirmNoIdentity: "Kies eerst wie je bent voor je bevestigt.",
     whatWrong: "🤔 Wat klopt er niet? (optioneel)",
     disputePlaceholder: "bv. die wijn nam ik niet",
@@ -1637,6 +1638,7 @@ const STRINGS = {
     confirmedTapEdit: "✓ Confirmé — touche pour modifier",
     confirmMyOrder: "✅ Confirme ma commande",
     confirmFailed: (msg: string) => `Échec de la confirmation : ${msg}`,
+    claimFailed: (msg: string) => `Modification impossible : ${msg}`,
     confirmNoIdentity: "Choisis d’abord qui tu es avant de confirmer.",
     whatWrong: "🤔 Qu'est-ce qui ne va pas ? (optionnel)",
     disputePlaceholder: "ex. je n'ai pas pris ce vin",
@@ -2955,13 +2957,18 @@ export default function RundoTable() {
     if (group.finalized) { setToast(isAdmin ? L.finalizedReopenFirst : L.finalizedAskAdmin); return }
     const existing = claims.find((c) => c.item_id === itemId && c.participant_id === pid)
     const mem = members && members.length > 0 ? members.slice().sort((a, b) => a - b).join(",") : null
+    // Er werd nergens op een fout gekeken. Weigerde de databank het schrappen — typisch een
+    // regel die gasten wel laat toevoegen maar niet verwijderen — dan gebeurde er gewoon
+    // niets en leek het alsof "delen" niet ongedaan te maken was.
+    let fout: string | null = null
     if (qty <= 0) {
-      if (existing) await supabase.from("table_claims").delete().eq("id", existing.id)
+      if (existing) fout = (await supabase.from("table_claims").delete().eq("id", existing.id)).error?.message ?? null
     } else if (existing) {
-      await supabase.from("table_claims").update({ quantity: qty, members: mem }).eq("id", existing.id)
+      fout = (await supabase.from("table_claims").update({ quantity: qty, members: mem }).eq("id", existing.id)).error?.message ?? null
     } else {
-      await supabase.from("table_claims").insert([{ group_id: group.id, item_id: itemId, participant_id: pid, quantity: qty, members: mem }])
+      fout = (await supabase.from("table_claims").insert([{ group_id: group.id, item_id: itemId, participant_id: pid, quantity: qty, members: mem }])).error?.message ?? null
     }
+    if (fout) { setToast(L.claimFailed(fout)); return }
     await loadAll(group.id)
   }
 
@@ -6113,7 +6120,9 @@ function ClaimScreen(props: {
                     </div>
                     <div style={{ fontSize: 15.5, color: it.unit_price <= 0.0001 ? "#c0392b" : "#999", fontWeight: it.unit_price <= 0.0001 ? 700 : 400 }}>{it.unit_price <= 0.0001 ? `⚠️ ${L.zeroPriceShort}` : `€${itemTotal(it).toFixed(2).replace(".", ",")}${L.totalSharedByDrinkers}${it.share_expected ? ` · ${L.sharedForN(it.share_expected)}` : ""}`}</div>
                   </div>
-                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...((iShare || sharePicking.has(it.id)) ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", border: "none" } : {}) }}>{(iShare || sharePicking.has(it.id)) ? L.iShareYes : L.iShareNo}</button>
+                  {/* De sleutel is "item:persoon"; met enkel het item-id stond deze knop soms
+                      op "ja" terwijl er niets gekozen was, of omgekeerd. */}
+                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...((iShare || sharePicking.has(`${it.id}:${meId}`)) ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", border: "none" } : {}) }}>{(iShare || sharePicking.has(`${it.id}:${meId}`)) ? L.iShareYes : L.iShareNo}</button>
                 </div>
                 {(iShare || sharePicking.has(`${it.id}:${meId}`)) && mySeats > 1 && !fixed && (() => {
                   // Geen voorselectie: je tikt gewoon aan wie meedeelde. Eén tik volstaat,
