@@ -1020,6 +1020,14 @@ const STRINGS = {
     aboutToConfirm: "Dit ga je bevestigen",
     nothingTappedYet: "Je hebt nog niets aangetikt.",
     yourTotal: "Jouw totaal",
+    confirmDoneTitle: "Bedankt, je bent klaar",
+    confirmStep1: "Jij hebt aangeduid wat je nam",
+    confirmStep2: "De beheerder wacht tot iedereen klaar is en sluit dan de rekening af",
+    confirmStep3: "Hier verschijnt je definitieve bedrag, met btw en kosten erbij",
+    infoReopenHint: "tik op de ⓘ om dit opnieuw te lezen",
+    waitingForAdmin: "⏳ Wachten op de beheerder — je definitieve bedrag verschijnt zodra de rekening afgesloten is.",
+    finalPopupTitle: "✅ De rekening is afgesloten",
+    finalPopupSub: "Dit is je definitieve bedrag, inclusief btw en eventuele kosten.",
     sharingPendingNote: "ℹ️ Je deelt mee in gedeelde items (wijn/water). Het exacte deel kan nog wijzigen tot iedereen heeft aangetikt en bevestigd.",
     allHandledFinal: "Alles afgehandeld — dit is de definitieve verdeling",
     fullBillInfo: "De volledige rekening ter info — tik een naam aan voor het detail:",
@@ -1591,6 +1599,14 @@ const STRINGS = {
     aboutToConfirm: "Voici ce que tu confirmes",
     nothingTappedYet: "Tu n'as encore rien coché.",
     yourTotal: "Ton total",
+    confirmDoneTitle: "Merci, c’est bon pour toi",
+    confirmStep1: "Tu as coché ce que tu as pris",
+    confirmStep2: "L’hôte attend que tout le monde ait fini, puis clôture l’addition",
+    confirmStep3: "Ton montant définitif apparaîtra ici, TVA et frais compris",
+    infoReopenHint: "touche le ⓘ pour relire ceci",
+    waitingForAdmin: "⏳ En attente de l’hôte — ton montant définitif apparaît dès la clôture de l’addition.",
+    finalPopupTitle: "✅ L’addition est clôturée",
+    finalPopupSub: "Voici ton montant définitif, TVA et frais éventuels compris.",
     sharingPendingNote: "ℹ️ Tu participes à des articles partagés (vin/eau). La part exacte peut encore changer jusqu'à ce que tout le monde ait coché et confirmé.",
     allHandledFinal: "Tout est réglé — voici la répartition définitive",
     fullBillInfo: "L'addition complète pour info — touche un nom pour le détail :",
@@ -3164,22 +3180,23 @@ export default function RundoTable() {
   const tipItem = items.find((i) => i.name.trim().toLowerCase() === "fooi") || null
   const hasTip = !!tipItem
 
-  const confirmMe = async () => {
-    if (!group) return
-    if (!meId) { setToast(L.confirmNoIdentity); return }
+  const confirmMe = async (): Promise<boolean> => {
+    if (!group) return false
+    if (!meId) { setToast(L.confirmNoIdentity); return false }
     // Deze knop deed in stilte niets wanneer de databank de rij weigerde — er werd nergens
     // op een fout gekeken. Nu zegt hij wát er misging in plaats van niets te doen.
     if (iConfirmed) {
       const row = confirmations.find((c) => c.participant_id === meId)
       if (row) {
         const { error } = await supabase.from("table_confirmations").delete().eq("id", row.id)
-        if (error) { setToast(L.confirmFailed(error.message)); return }
+        if (error) { setToast(L.confirmFailed(error.message)); return false }
       }
     } else {
       const { error } = await supabase.from("table_confirmations").insert([{ group_id: group.id, participant_id: meId }])
-      if (error) { setToast(L.confirmFailed(error.message)); return }
+      if (error) { setToast(L.confirmFailed(error.message)); return false }
     }
     await loadAll(group.id)
+    return true
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -3255,7 +3272,8 @@ export default function RundoTable() {
   // Het aantal aan tafel bepaalt de beheerder, dus hier valt niets te verhogen.
   const huidigeClaim = participants.find((p) => p.id === claimSpot)
   const maxClaimSeats = Math.max(1, Math.max(1, huidigeClaim?.seats ?? 1)
-    + participants.filter((p) => p.id !== claimSpot && isFreeSpot(p) && !p.self_joined).length)
+    + participants.filter((p) => p.id !== claimSpot && isFreeSpot(p) && !p.self_joined)
+      .reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0))
   if (needIdentity && !isAdmin) {
     return (
       <div style={S.page}>
@@ -4640,8 +4658,13 @@ export default function RundoTable() {
         // Hoeveel personen kan deze plaats maximaal bevatten: zichzelf plus alles wat er
         // nog vrij is. De beheerder mag het totaal wel verhogen, maar dan vraagt de app het.
         const doelNu = guestTarget ? participants.find((p) => p.id === guestTarget) : null
-        const vrijNu = participants.filter((p) => p.id !== guestTarget && p.id !== meId && isFreeSpot(p) && !p.self_joined).length
-        const maxZitplaatsen = Math.max(1, (doelNu ? Math.max(1, doelNu.seats ?? 1) : 1) + vrijNu)
+        // In zitplaatsen tellen, niet in rijen: een plaats kan er al meer dan één bevatten.
+        const vrijNu = participants.filter((p) => p.id !== guestTarget && p.id !== meId && isFreeSpot(p) && !p.self_joined)
+          .reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
+        // Voeg je een nieuwe naam toe, dan is de doelplaats zélf al één van die vrije
+        // plaatsen — die mag je er niet nog eens bij optellen. Daardoor stond "Met 2" open
+        // terwijl er maar één plaats vrij was.
+        const maxZitplaatsen = doelNu ? Math.max(1, doelNu.seats ?? 1) + vrijNu : Math.max(1, vrijNu)
         const bewaar = async () => {
           const naam = guestNames.slice(0, guestSeats).map((x) => x.trim()).filter(Boolean).join(" & ")
           if (!naam) { setCenterNote({ body: L.enterGuestName }); return }
@@ -5641,7 +5664,7 @@ function ClaimScreen(props: {
   sharedRevealed: (it: BillItem) => boolean; allConfirmed: boolean; isConfirmed: (pid: string) => boolean; explicitConfirmed: (pid: string) => boolean
   claimMode: "item" | "person"; setClaimMode: (m: "item" | "person") => void
   claimPid: string | null; setClaimPid: (id: string | null) => void
-  iConfirmed: boolean; confirmMe: () => void; onPickMe: (id: string) => void
+  iConfirmed: boolean; confirmMe: () => Promise<boolean> | void; onPickMe: (id: string) => void
   finalized: boolean; iDispute: boolean; iResolved: boolean; iComment: string; onToggleDispute: (on: boolean, comment?: string) => void
   askConfirm: (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean }) => void
 }) {
@@ -5657,6 +5680,22 @@ function ClaimScreen(props: {
   // mogen dus dicht; wat híj moet betalen blijft altijd staan.
   const [gastItemsOpen, setGastItemsOpen] = useState(true)
   const [gastVerdelingOpen, setGastVerdelingOpen] = useState(false)
+  // Twee momenten waarop een gast uitleg nodig heeft: net na zijn bevestiging (wat nu?)
+  // en zodra de rekening dichtgaat (dit is je bedrag). De eerste kan hij altijd opnieuw
+  // oproepen via het ⓘ naast de knop; de tweede verschijnt één keer vanzelf.
+  const [showConfirmInfo, setShowConfirmInfo] = useState(false)
+  const [showFinalPopup, setShowFinalPopup] = useState(false)
+  const eindGezien = useRef(false)
+  useEffect(() => {
+    if (isAdmin || !finalized || !meId || eindGezien.current) return
+    eindGezien.current = true
+    try {
+      const sleutel = `rundo_table_eind_${meId}`
+      if (localStorage.getItem(sleutel)) return
+      localStorage.setItem(sleutel, "1")
+    } catch { /* geen opslag: dan toont hij gewoon opnieuw */ }
+    setShowFinalPopup(true)
+  }, [finalized, isAdmin, meId])
   // Detecteer of de beheerder heropende na een eerdere afsluiting → toon dan één 'bekijkt opnieuw'-melding.
   const wasFinalizedRef = useRef(false)
   const prevFinalizedRef = useRef<boolean | null>(null)
@@ -6183,9 +6222,67 @@ function ClaimScreen(props: {
           </div>
         )}
         {!(finalized && !isAdmin) && (
-          <button onClick={confirmMe} style={{ ...S.btn, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none", ...(iConfirmed ? { background: "rgba(39,174,96,0.12)", color: "#1f8a4c" } : { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a" }) }}>
-            {iConfirmed ? L.confirmedTapEdit : L.confirmMyOrder}
-          </button>
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
+              <button onClick={async () => {
+                const eerst = !iConfirmed
+                const ok = await confirmMe()
+                if (eerst && ok !== false) setShowConfirmInfo(true)
+              }} style={{ ...S.btn, flex: 1, padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none", ...(iConfirmed ? { background: "rgba(39,174,96,0.12)", color: "#1f8a4c" } : { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a" }) }}>
+                {iConfirmed ? L.confirmedTapEdit : L.confirmMyOrder}
+              </button>
+              {!isAdmin && (
+                <button onClick={() => setShowConfirmInfo(true)} title={L.infoReopenHint}
+                  style={{ flexShrink: 0, width: 46, height: 46, borderRadius: "50%", cursor: "pointer", background: "#fff", border: "1.5px solid rgba(20,153,176,0.45)", color: "#1499b0", fontSize: 20, fontWeight: 800, fontStyle: "italic" }}>i</button>
+              )}
+            </div>
+            {!isAdmin && iConfirmed && !finalized && (
+              <div style={{ marginTop: 9, background: "rgba(20,153,176,0.07)", borderRadius: 10, padding: "9px 11px", fontSize: 14.5, color: "#3b486a", lineHeight: 1.45 }}>{L.waitingForAdmin}</div>
+            )}
+            {!isAdmin && (
+              <div style={{ marginTop: 7, fontSize: 13.5, color: "#9aa0ab", textAlign: "center" }}>{L.infoReopenHint}</div>
+            )}
+          </>
+        )}
+
+        {/* Popup 1: net bevestigd — waar sta je nu in het geheel? */}
+        {showConfirmInfo && (
+          <div style={{ ...S.overlay, zIndex: 3200 }} onClick={() => setShowConfirmInfo(false)}>
+            <div style={{ ...S.modal, width: "min(400px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ textAlign: "center", marginBottom: 16 }}>
+                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(39,174,96,0.14)", color: "#1f8a4c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 10px" }}>✓</div>
+                <div style={{ fontSize: 21, fontWeight: 800, color: "#14213a" }}>{L.confirmDoneTitle}</div>
+              </div>
+              {[{ n: "✓", t: L.confirmStep1, klaar: true }, { n: "2", t: L.confirmStep2, klaar: false }, { n: "3", t: L.confirmStep3, klaar: false }].map((st, i) => (
+                <div key={i} style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
+                  <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, background: st.klaar ? "#1f8a4c" : "rgba(16,24,40,0.08)", color: st.klaar ? "#fff" : "#5a6680" }}>{st.n}</span>
+                  <span style={{ fontSize: 16, lineHeight: 1.45, color: st.klaar ? "#14213a" : "#5a6680", fontWeight: st.klaar ? 700 : 400 }}>{st.t}</span>
+                </div>
+              ))}
+              <button onClick={() => setShowConfirmInfo(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, marginTop: 4 }}>{L.closeWord}</button>
+            </div>
+          </div>
+        )}
+
+        {/* Popup 2: de beheerder sloot af — dit is je definitieve bedrag. */}
+        {showFinalPopup && meId && (
+          <div style={{ ...S.overlay, zIndex: 3200 }} onClick={() => setShowFinalPopup(false)}>
+            <div style={{ ...S.modal, width: "min(400px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ fontSize: 21, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.finalPopupTitle}</div>
+              <div style={{ fontSize: 15.5, color: "#9aa0ab", lineHeight: 1.45, marginBottom: 14 }}>{L.finalPopupSub}</div>
+              {personItems(meId).map((r, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "6px 0", borderBottom: "1px solid rgba(16,24,40,0.07)", fontSize: 15.5, color: "#3b486a" }}>
+                  <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{r.qty > 1 ? `${r.qty}× ` : ""}{r.name}</span>
+                  <span style={{ flexShrink: 0, fontWeight: 700, color: "#14213a" }}>€{r.amount.toFixed(2).replace(".", ",")}</span>
+                </div>
+              ))}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", border: "2px solid rgba(20,153,176,0.45)", borderRadius: 14, padding: "13px 15px", marginTop: 12 }}>
+                <span style={{ fontSize: 17, fontWeight: 800, color: "#0f7488" }}>{L.yourTotal}</span>
+                <span style={{ fontSize: 28, fontWeight: 800, color: "#14213a" }}>€{personTotal(meId).settled.toFixed(2).replace(".", ",")}</span>
+              </div>
+              <button onClick={() => setShowFinalPopup(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, marginTop: 12 }}>{L.closeWord}</button>
+            </div>
+          </div>
         )}
         {finalized && !isAdmin && (
           <div style={{ marginTop: 12 }}>
