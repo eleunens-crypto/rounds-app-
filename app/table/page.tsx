@@ -598,6 +598,8 @@ const STRINGS = {
     expectedShort: (n: number) => `verwacht: ${n}`,
     tooFewShared: (have: number, want: number) => `⚠️ Pas ${have} van de ${want} personen duidden dit aan.`,
     tooManySharedAdmin: (have: number, want: number) => `⚠️ ${have} personen duidden dit aan, maar je verwachtte er ${want}.`,
+    pickerDone: "Klaar",
+    shareFull: (exp: number) => `Dit is voor ${exp} ${exp === 1 ? "persoon" : "personen"} gedeeld en die zijn al aangeduid. Verhoog eerst “Met hoeveel gedeeld?” als er meer bij moeten.`,
     tooManySharedGuest: (have: number, want: number) => `${have} personen duidden dit aan, maar het waren er ${want}. Tik opnieuw als jij dit niet deelde.`,
     sharedBy: "Aangeduid door: ",
     expectedFixTo: (n: number) => `Toch met ${n}`,
@@ -1192,6 +1194,8 @@ const STRINGS = {
     expectedShort: (n: number) => `attendu : ${n}`,
     tooFewShared: (have: number, want: number) => `⚠️ Seulement ${have} sur ${want} personnes l'ont indiqué.`,
     tooManySharedAdmin: (have: number, want: number) => `⚠️ ${have} personnes l'ont indiqué, mais tu en attendais ${want}.`,
+    pickerDone: "Terminé",
+    shareFull: (exp: number) => `C'est partagé à ${exp} personne${exp === 1 ? "" : "s"} et elles sont déjà cochées. Augmente d'abord « Partagé à combien ? » s'il en faut plus.`,
     tooManySharedGuest: (have: number, want: number) => `${have} personnes l'ont indiqué, mais vous n'étiez que ${want}. Retire ta sélection si ce n'était pas toi.`,
     sharedBy: "Indiqué par : ",
     expectedFixTo: (n: number) => `Finalement à ${n}`,
@@ -2987,6 +2991,20 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
+  // Hoeveel delers er nog bij mogen. Is "met hoeveel gedeeld" ingevuld, dan is dat een
+  // harde grens: vroeger kon je gerust te veel mensen aanduiden en kleurde het achteraf
+  // rood. Wie er meer bij wil, past dat aantal aan — dat kan de beheerder zelf.
+  const shareRuimte = (itemId: string, pid: string): number | null => {
+    const it = items.find((x) => x.id === itemId)
+    const verwacht = it?.share_expected ?? null
+    if (verwacht == null || verwacht <= 0) return null
+    return Math.max(0, verwacht - (shareHeads(itemId) - myQty(itemId, pid)))
+  }
+  const shareVerwacht = (itemId: string) => items.find((x) => x.id === itemId)?.share_expected ?? 0
+
+  const sluitSharePicker = (itemId: string, pid: string) =>
+    setSharePicking((cur) => { const n = new Set(cur); n.delete(`${itemId}:${pid}`); return n })
+
   const toggleShareClaim = async (itemId: string, pid: string) => {
     if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     const mine = myQty(itemId, pid)
@@ -2997,11 +3015,34 @@ export default function RundoTable() {
       await setClaim(itemId, pid, 0, [])
       return
     }
+    const ruimte = shareRuimte(itemId, pid)
+    if (ruimte !== null && ruimte <= 0) { setToast(L.shareFull(shareVerwacht(itemId))); return }
     // Alleen op die plaats? Dan is het meteen duidelijk wie meedeelde.
     if (seats === 1) { await setClaim(itemId, pid, 1, [0]); return }
     // Meerdere personen op één plaats: vraag wie van hen meedeelde. Dat geldt voor je eigen
     // plaats én voor een koppel dat jij als admin regelt — zo werkt het overal hetzelfde.
     setSharePicking((cur) => new Set(cur).add(key))
+  }
+
+  // Één lid van een meerpersoonsplaats aan- of uitzetten, met dezelfde harde grens.
+  const toggleShareMember = async (itemId: string, pid: string, i: number) => {
+    const sel = claimMembers(itemId, pid)
+    const aan = sel.includes(i)
+    if (!aan) {
+      const ruimte = shareRuimte(itemId, pid)
+      if (ruimte !== null && sel.length + 1 > ruimte) { setToast(L.shareFull(shareVerwacht(itemId))); return }
+    }
+    const next = aan ? sel.filter((x) => x !== i) : [...sel, i]
+    await setClaim(itemId, pid, next.length, next)
+  }
+
+  // Iedereen van een plaats in één keer aan of uit, ook binnen de grens.
+  const toggleShareAll = async (itemId: string, pid: string, seats: number) => {
+    const sel = claimMembers(itemId, pid)
+    if (sel.length === seats) { await setClaim(itemId, pid, 0, []); return }
+    const ruimte = shareRuimte(itemId, pid)
+    if (ruimte !== null && seats > ruimte) { setToast(L.shareFull(shareVerwacht(itemId))); return }
+    await setClaim(itemId, pid, seats, Array.from({ length: seats }, (_, i) => i))
   }
 
   const shareHeads = (itemId: string) =>
@@ -4305,7 +4346,7 @@ export default function RundoTable() {
             shareHeads={shareHeads} myShareHeads={myShareHeads} seatsOf={seatsOf} setSeats={setSeats}
             onRename={renameGuest}
             onEditMe={!isAdmin ? editMySpot : undefined}
-            setClaim={setClaim} toggleShareClaim={toggleShareClaim} onToggleShared={toggleShared} claimMembers={claimMembers} sharePicking={sharePicking} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined} onSetExpected={isAdmin ? setShareExpected : undefined}
+            setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} toggleShareAll={toggleShareAll} sluitSharePicker={sluitSharePicker} onToggleShared={toggleShared} claimMembers={claimMembers} sharePicking={sharePicking} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined} onSetExpected={isAdmin ? setShareExpected : undefined}
             itemTotal={itemTotal} personTotal={personTotal} personItems={personItems}
             sharedRevealed={sharedRevealed} allConfirmed={allConfirmed} isConfirmed={isConfirmed} explicitConfirmed={explicitConfirmed}
             claimMode={claimMode} setClaimMode={setClaimMode} claimPid={claimPid} setClaimPid={setClaimPid}
@@ -5808,6 +5849,9 @@ function ClaimScreen(props: {
   shareHeads: (id: string) => number; myShareHeads: (id: string, pid: string) => number; seatsOf: (pid: string) => number
   setSeats: (pid: string, n: number) => void
   setClaim: (itemId: string, pid: string, qty: number, members?: number[] | null) => void; toggleShareClaim: (itemId: string, pid: string) => void
+  toggleShareMember: (itemId: string, pid: string, i: number) => void
+  toggleShareAll: (itemId: string, pid: string, seats: number) => void
+  sluitSharePicker: (itemId: string, pid: string) => void
   onToggleShared: (it: BillItem) => void
   claimMembers: (itemId: string, pid: string) => number[]
   sharePicking: Set<string>
@@ -5829,7 +5873,7 @@ function ClaimScreen(props: {
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, onToggleShared, claimMembers, sharePicking, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onSetExpected, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
+  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, sluitSharePicker, onToggleShared, claimMembers, sharePicking, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onSetExpected, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
   const adminPid = props.claimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   const [disputeOpen, setDisputeOpen] = useState(false)
@@ -5959,7 +6003,10 @@ function ClaimScreen(props: {
                           {named.length === 0
                             ? <span style={{ fontSize: 15.5, color: "#aaa" }}>{L.addGuestsFirst}</span>
                             : named.map((p) => {
-                                const on = sh.includes(p.id)
+                                // Ook oplichten wanneer het kiesvenster openstaat maar er nog
+                                // niemand gekozen is — anders lijkt de knop uit terwijl er
+                                // onderaan een venster van hem hangt dat je niet kwijtraakt.
+                                const on = sh.includes(p.id) || sharePicking.has(`${it.id}:${p.id}`)
                                 const pSeats = Math.max(1, p.seats ?? 1)
                                 const pHeads = myShareHeads(it.id, p.id)
                                 return (
@@ -5991,21 +6038,18 @@ function ClaimScreen(props: {
                           const parts = (p.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
                           const sel = claimMembers(it.id, p.id)
                           const allOn = sel.length === pSeats
-                          const toggle = (i: number) => {
-                            const next = sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i]
-                            setClaim(it.id, p.id, next.length, next)
-                          }
-                          const setAll = () => {
-                            if (allOn) setClaim(it.id, p.id, 0, [])
-                            else setClaim(it.id, p.id, pSeats, Array.from({ length: pSeats }, (_, i) => i))
-                          }
+                          const toggle = (i: number) => { toggleShareMember(it.id, p.id, i) }
+                          const setAll = () => { toggleShareAll(it.id, p.id, pSeats) }
                           return (
                             <div key={key} style={{ marginTop: 9, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.3)", borderRadius: 12, padding: "11px 12px" }}>
                               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 9 }}>
-                                <span style={{ fontSize: 16.5, fontWeight: 800, color: "#14213a" }}>🍴 {L.whoSharedOf(p.name, pSeats)}</span>
+                                <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#14213a" }}>🍴 {L.whoSharedOf(p.name, pSeats)}</span>
                                 <button onClick={setAll} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#0f7d90", background: "rgba(20,153,176,0.1)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 9, padding: "7px 9px", cursor: "pointer" }}>
                                   {allOn ? L.clearAll : L.allOfThem(pSeats)}
                                 </button>
+                                {/* Zonder deze knop raakte je dit venster niet kwijt: het sloot
+                                    alleen door opnieuw op de naamknop erboven te tikken. */}
+                                <button onClick={() => sluitSharePicker(it.id, p.id)} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#5a6680", background: "#fff", border: "1px solid rgba(16,24,40,0.15)", borderRadius: 9, padding: "7px 10px", cursor: "pointer" }}>{L.pickerDone}</button>
                               </div>
                               <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                                 {Array.from({ length: pSeats }, (_, i) => i).map((i) => {
@@ -6189,23 +6233,19 @@ function ClaimScreen(props: {
                   const parts = raw.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
                   const sel = meId ? claimMembers(it.id, meId) : []
                   const allOn = sel.length === mySeats
-                  const toggle = (i: number) => {
-                    const next = sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i]
-                    if (meId) setClaim(it.id, meId, next.length, next)
-                  }
-                  const setAll = () => {
-                    if (!meId) return
-                    if (allOn) setClaim(it.id, meId, 0, [])
-                    else setClaim(it.id, meId, mySeats, Array.from({ length: mySeats }, (_, i) => i))
-                  }
+                  const toggle = (i: number) => { if (meId) toggleShareMember(it.id, meId, i) }
+                  const setAll = () => { if (meId) toggleShareAll(it.id, meId, mySeats) }
                   const wide = mySeats > 2
                   return (
                     <div style={{ marginTop: 9, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.35)", borderRadius: 12, padding: "10px 11px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 16.5, fontWeight: 800, color: "#14213a" }}>{L.withHowMany(mySeats)}</span>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#14213a" }}>{L.withHowMany(mySeats)}</span>
                         {wide && (
                           <button onClick={setAll} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: allOn ? "#5a6680" : "#0f7d90", background: allOn ? "#fff" : "rgba(20,153,176,0.1)", border: allOn ? "1px solid rgba(16,24,40,0.2)" : "1px solid rgba(20,153,176,0.45)", borderRadius: 8, padding: "6px 9px", cursor: "pointer" }}>{allOn ? L.clearAll : L.allOfThem(mySeats)}</button>
                         )}
+                        {/* Ook hier: zonder sluitknop bleef dit venster staan zodra je niemand
+                            selecteerde, en raakte je het alleen kwijt via de knop erboven. */}
+                        {meId && <button onClick={() => sluitSharePicker(it.id, meId)} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#5a6680", background: "#fff", border: "1px solid rgba(16,24,40,0.15)", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>{L.pickerDone}</button>}
                       </div>
                       <div style={{ display: "flex", gap: wide ? 6 : 7, flexWrap: "wrap" }}>
                         {Array.from({ length: mySeats }, (_, i) => i).map((i) => {
