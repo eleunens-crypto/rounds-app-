@@ -532,9 +532,7 @@ const STRINGS = {
     errGroupGone: "Deze groep bestaat niet meer.",
     errDeleteFailed: "Verwijderen mislukt: ",
     confirmDeleteGroup: "Deze groep definitief verwijderen? Alles (items, gasten en aanduidingen) wordt gewist en de groep is daarna niet meer terug te halen, ook niet via een code.",
-    roleAdminBadge: "👑 Beheerder",
-    roleGuestBadge: "👤 Gast",
-    switchPerson: "ik ben iemand anders — wissel van persoon",
+    switchPersonBtn: "🔄 Ik ben iemand anders",
     switchReleaseTitle: "Van persoon wisselen?",
     switchReleaseYes: "Wisselen",
     switchReleaseBody: (naam: string) => `De plaats van ${naam} komt weer vrij voor iemand anders. Wat je al aanduidde en bevestigde gaat mee weg.`,
@@ -1128,9 +1126,7 @@ const STRINGS = {
     errGroupGone: "Ce groupe n'existe plus.",
     errDeleteFailed: "Échec de la suppression : ",
     confirmDeleteGroup: "Supprimer définitivement ce groupe ? Tout (articles, invités et attributions) sera effacé et le groupe ne pourra plus être récupéré, même avec un code.",
-    roleAdminBadge: "👑 Hôte",
-    roleGuestBadge: "👤 Invité",
-    switchPerson: "je suis quelqu'un d'autre — changer de personne",
+    switchPersonBtn: "🔄 Je suis quelqu’un d’autre",
     switchReleaseTitle: "Changer de personne ?",
     switchReleaseYes: "Changer",
     switchReleaseBody: (naam: string) => `La place de ${naam} redevient libre pour quelqu'un d'autre. Ce que tu as coché et confirmé disparaît aussi.`,
@@ -3574,6 +3570,13 @@ export default function RundoTable() {
                 )}
 
                 <button onClick={confirmClaimSpot} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{claimSeats > 1 ? L.thatsUs : L.thatsMe}</button>
+                {/* Stond vroeger als linkje in de kopbalk. Hier hoort het thuis: je bent net
+                    je eigen naam aan het nakijken, dus dit is het moment waarop je merkt dat
+                    je de verkeerde aantikte. */}
+                {meId && claimSpot === meId && (
+                  <button onClick={() => { setClaimSpot(null); switchPerson() }}
+                    style={{ width: "100%", marginTop: 8, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(20,153,176,0.45)", color: "#1499b0", borderRadius: 11, padding: "11px 0", fontSize: 15.5, fontWeight: 800 }}>{L.switchPersonBtn}</button>
+                )}
                 <button onClick={() => setClaimSpot(null)} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#9aa0ab" }}>{L.backToSpots}</button>
               </>
             )}
@@ -3609,7 +3612,7 @@ export default function RundoTable() {
         </div>
       )}
 
-      <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} me={me?.name} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} guestSeats={meId ? seatsOf(meId) : undefined} onGuestSeatsChange={meId ? (n) => setSeats(meId, n) : undefined} onSwitchPerson={meId ? switchPerson : undefined} />
+      <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
 
       {/* Heropen je de rekening om nog iets te wijzigen, dan verdween dit blok mee — en
           bleef er een onopgeloste opmerking die het opnieuw afsluiten tegenhield, zonder
@@ -5616,38 +5619,26 @@ export default function RundoTable() {
 // ═══════════════════════════════════════════════════════════════════════════
 // SUB-COMPONENTEN
 // ═══════════════════════════════════════════════════════════════════════════
-function TopBar({ group, isAdmin, onHome, me, totalPersons, guestSeats, onGuestSeatsChange, onSwitchPerson }: { group: Group; isAdmin: boolean; onHome: () => void; me?: string; signedUp?: number; totalPersons?: number; guestSeats?: number; onGuestSeatsChange?: (n: number) => void; onSwitchPerson?: () => void }) {
+function TopBar({ group, isAdmin, onHome, totalPersons }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
   return (
     <div style={{ marginBottom: 14, padding: "6px 2px" }}>
-      {/* Rol/naam (en voor de gast: tellertje + wisselen) centraal bovenaan */}
-      <div style={{ textAlign: "center", marginBottom: 8 }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: isAdmin ? "#1499b0" : "#f0a500", letterSpacing: 0.3 }}>
-            {isAdmin ? L.roleAdminBadge : me ? `👤 ${me}` : L.roleGuestBadge}
-          </span>
-          {!isAdmin && guestSeats != null && onGuestSeatsChange && (
-            <SeatsControl n={guestSeats} onChange={onGuestSeatsChange} showLabel size={13} />
-          )}
-        </div>
-        {!isAdmin && onSwitchPerson && (
-          <div>
-            <button onClick={onSwitchPerson} style={{ marginTop: 2, background: "none", border: "none", padding: 0, color: "#9aa0ab", fontSize: 16, fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2 }}>{L.switchPerson}</button>
-          </div>
-        )}
+      {/* Alleen logo, groepsnaam en aantal. De naam van de gast stond hier én in de sectie
+          eronder, en de wissellink hoort thuis waar je je naam ook aanpast — in de popup. */}
+      <div onClick={isAdmin ? onHome : undefined} title={isAdmin ? L.toTableHome : undefined} style={{ display: "flex", alignItems: "center", gap: 7, cursor: isAdmin ? "pointer" : "default", minWidth: 0, marginBottom: 9 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/rundo-symbol.png" alt="" style={{ height: 30, width: "auto", objectFit: "contain", display: "block" }} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/rundo-table-logo-dark.png" alt="Rundo Table" style={{ height: 19, width: "auto", objectFit: "contain", display: "block" }} />
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <div onClick={isAdmin ? onHome : undefined} title={isAdmin ? L.toTableHome : undefined} style={{ display: "flex", alignItems: "center", gap: 7, cursor: isAdmin ? "pointer" : "default", minWidth: 0, flexShrink: 0 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/rundo-symbol.png" alt="" style={{ height: 30, width: "auto", objectFit: "contain", display: "block" }} />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/rundo-table-logo-dark.png" alt="Rundo Table" style={{ height: 19, width: "auto", objectFit: "contain", display: "block" }} />
-        </div>
-        <div style={{ textAlign: "right", minWidth: 0, flexShrink: 1 }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: "#1b2a4a", overflowWrap: "anywhere", lineHeight: 1.15 }}>{group.name}{fmtDate(group.created_at, lang) ? ` (${fmtDate(group.created_at, lang)})` : ""}</div>
-          {totalPersons != null && totalPersons > 0 && <div style={{ fontSize: 15.5, color: "#8a93a3", fontWeight: 700 }}>👤 {totalPersons} {totalPersons === 1 ? L.person : L.persons}</div>}
-        </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, borderTop: "1px solid rgba(16,24,40,0.08)", paddingTop: 9 }}>
+        <span style={{ minWidth: 0, fontSize: 20, fontWeight: 800, color: "#1b2a4a", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{group.name}</span>
+        <span style={{ flexShrink: 0, fontSize: 14.5, color: "#8a93a3", fontWeight: 700, whiteSpace: "nowrap" }}>
+          {totalPersons != null && totalPersons > 0 ? `👥 ${totalPersons} ${totalPersons === 1 ? L.person : L.persons}` : ""}
+          {totalPersons != null && totalPersons > 0 && fmtDate(group.created_at, lang) ? " · " : ""}
+          {fmtDate(group.created_at, lang)}
+        </span>
       </div>
     </div>
   )
