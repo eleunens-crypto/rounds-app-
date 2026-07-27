@@ -496,7 +496,6 @@ const STRINGS = {
     roleAdmin: "beheerder",
     roleGuest: "gast",
     deletePermanently: "definitief verwijderen",
-    addNameBtn: "+ Naam toevoegen",
     taxAfterCloseNote: "ℹ️ Deze bedragen worden pas bij het afsluiten over iedereen verdeeld. Tot dan ziet elke gast enkel zijn eigen items — anders schuift zijn bedrag bij elke tik van een ander.",
     clearNameBtn: "🗑️ Naam wissen",
     clearNameTitle: "Naam wissen?",
@@ -505,8 +504,6 @@ const STRINGS = {
     seatsCapped: (n: number) => n === 1
       ? "Er is nog één vrije plaats, dus dit kan alleen voor één persoon. Verhoog eerst het aantal personen bovenaan."
       : `Er zijn nog ${n} plaatsen vrij op deze plek. Verhoog eerst het aantal personen bovenaan als je er meer nodig hebt.`,
-    freeSpotsLeft: (vrij: number, totaal: number) => `nog ${vrij} vrije ${vrij === 1 ? "plaats" : "plaatsen"} van de ${totaal}`,
-    allNamesFilled: "Alle plaatsen hebben een naam.",
     addNameTitle: "Wie voeg je toe?",
     addNameSub: "Deze naam staat straks klaar in de lijst — die persoon tikt hem na het scannen gewoon aan.",
     togetherTitle: (n: number) => n === 2 ? "Samen op één plaats" : `Met ${n} op één plaats`,
@@ -565,8 +562,9 @@ const STRINGS = {
     theirNamesQ: "Hoe heten ze?",
     addThisGuest: "Toevoegen",
     enterGuestName: "Vul eerst een naam in.",
-    namesBlockTitle: "Namen gasten",
-    namesBlockOptional: "(optioneel)",
+    whoAtTableTitle: "Wie doet mee",
+    seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} vrij` : `${totaal}`,
+    addNameRow: "+ naam →",
     needMoreSpotsTitle: "Er is een plaats te weinig",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Dit vraagt ${tekort} plaats${tekort === 1 ? "" : "en"} meer dan er vrij ${tekort === 1 ? "is" : "zijn"}. Zal ik het aantal personen op ${totaal} zetten?`,
     raiseTotalBtn: (totaal: number) => `Ja, personen op ${totaal} zetten`,
@@ -1078,7 +1076,6 @@ const STRINGS = {
     roleAdmin: "hôte",
     roleGuest: "invité",
     deletePermanently: "supprimer définitivement",
-    addNameBtn: "+ Ajouter un nom",
     taxAfterCloseNote: "ℹ️ Ces montants ne sont répartis qu’à la clôture. Jusque-là, chaque invité ne voit que ses propres articles — sinon son montant bouge à chaque clic d’un autre.",
     clearNameBtn: "🗑️ Effacer le nom",
     clearNameTitle: "Effacer le nom ?",
@@ -1087,8 +1084,6 @@ const STRINGS = {
     seatsCapped: (n: number) => n === 1
       ? "Il ne reste qu’une place libre, donc ceci ne vaut que pour une personne. Augmente d’abord le nombre de personnes en haut."
       : `Il reste ${n} places disponibles ici. Augmente d’abord le nombre de personnes en haut s’il t’en faut plus.`,
-    freeSpotsLeft: (vrij: number, totaal: number) => `encore ${vrij} place${vrij === 1 ? "" : "s"} libre${vrij === 1 ? "" : "s"} sur ${totaal}`,
-    allNamesFilled: "Toutes les places ont un nom.",
     addNameTitle: "Qui ajoutes-tu ?",
     addNameSub: "Ce nom apparaîtra dans la liste — cette personne n’aura qu’à le toucher après le scan.",
     togetherTitle: (n: number) => n === 2 ? "Ensemble sur une place" : `À ${n} sur une place`,
@@ -1147,8 +1142,9 @@ const STRINGS = {
     theirNamesQ: "Comment s\u2019appellent-ils ?",
     addThisGuest: "Ajouter",
     enterGuestName: "Entre d\u2019abord un nom.",
-    namesBlockTitle: "Noms des invités",
-    namesBlockOptional: "(facultatif)",
+    whoAtTableTitle: "Qui participe",
+    seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} libre${vrij === 1 ? "" : "s"}` : `${totaal}`,
+    addNameRow: "+ nom →",
     needMoreSpotsTitle: "Il manque une place",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Cela demande ${tekort} place${tekort === 1 ? "" : "s"} de plus qu’il n’y en a de libre. Je mets le nombre de personnes à ${totaal} ?`,
     raiseTotalBtn: (totaal: number) => `Oui, mettre à ${totaal} personnes`,
@@ -3230,6 +3226,18 @@ export default function RundoTable() {
   // Het groepsoverzichtje ("👥 groep 4") verschijnt op twee plekken: bovenaan de
   // toewijzen-tab, en bij gasten & delen naast de namenlijst — daar hoort het bij de
   // namen waar je op dat moment mee bezig bent, niet los bovenaan het scherm.
+  // Jezelf bewerken kan vanaf twee plekken: het kaartje bovenaan en je eigen rij in de
+  // tafellijst. Daarom hoort deze opener op componentniveau te staan, niet in één blok.
+  const openZelfPopup = () => {
+    const mij = participants.find((x) => x.id === meId) || participants[0]
+    if (!mij) return
+    const leeg = new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(mij.name.trim()) || mij.name.trim() === L.adminName
+    const zit = Math.max(1, mij.seats ?? 1)
+    setSelfNames(leeg ? Array.from({ length: zit }, () => "") : mij.name.split(/\s*&\s*/).map((x) => x.trim()))
+    setSelfSeats(zit)
+    setShowSelfModal(true)
+  }
+
   const groepPeekKnop = () => {
     const vrij = participants.filter((p) => isFreeSpot(p) && !p.self_joined).reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
     // Iemand anders dan jij al ingevuld? (QR-gast of door jou aangeduid)
@@ -3778,6 +3786,7 @@ export default function RundoTable() {
             billOk={billOk}
             billOverBy={(receiptConfirmed && !receiptEditing && group?.receipt_total != null) ? +(billTotal - group.receipt_total).toFixed(2) : null}
             taxLines={taxItems.map((t) => ({ name: t.name, amount: taxAmount(t) }))}
+            onViewReceipt={group.receipt_url ? () => setViewReceipt(group.receipt_url!) : undefined}
             taxNode={
               <div style={{ marginTop: 6 }}>
                 {/* Zonder deze regel lijkt het alsof de toeslagen niet doorkomen bij de
@@ -3902,15 +3911,17 @@ export default function RundoTable() {
                 if (!me) return null
                 const isPh = new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(me.name.trim()) || me.name.trim() === L.adminName
                 const seats = Math.max(1, me.seats ?? 1)
-                const openPopup = () => {
-                  setSelfNames(isPh ? Array.from({ length: seats }, () => "") : me.name.split(/\s*&\s*/).map((x) => x.trim()))
-                  setSelfSeats(seats)
-                  setShowSelfModal(true)
-                }
+                const openPopup = openZelfPopup
                 return (
                   <>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.yourselfStepTitle} <span style={{ color: "#c0392b" }}>*</span></div>
-                    <div style={{ fontSize: 15.5, color: "#5a6680", lineHeight: 1.45, marginBottom: 11 }}>{L.yourselfStepSub}</div>
+                    {/* Een opdracht die al uitgevoerd is, hoort niet te blijven staan — zeker
+                        niet met een rode ster erbij. Klaar is klaar. */}
+                    {isPh && (
+                      <>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.yourselfStepTitle} <span style={{ color: "#c0392b" }}>*</span></div>
+                        <div style={{ fontSize: 15.5, color: "#5a6680", lineHeight: 1.45, marginBottom: 11 }}>{L.yourselfStepSub}</div>
+                      </>
+                    )}
                     {isPh ? (
                       <button onClick={openPopup}
                         style={{ width: "100%", padding: "15px 0", fontSize: 17.5, fontWeight: 800, borderRadius: 12, border: "1.5px solid rgba(192,57,43,0.5)", background: "rgba(192,57,43,0.04)", color: "#c0392b", cursor: "pointer" }}>{L.addYourselfBtn}</button>
@@ -3929,67 +3940,55 @@ export default function RundoTable() {
             </div>
             )}
 
-            {/* Optioneel: de namen die je al kent alvast invullen, zodat een gast na het
-                scannen enkel zijn naam hoeft aan te tikken. Dicht kost dit één regel. */}
+            {/* Eén lijst voor de hele tafel. Vroeger stonden hier twee uitklappen naast
+                elkaar — een namenlijst met een "+ toevoegen"-knop, en daarnaast het
+                groepsoverzichtje dat diezelfde vrije plaatsen nog eens toonde als
+                "wacht op iemand". Twee vormen van hetzelfde feit. Nu is elke stoel één
+                rij, en die rij doet meteen wat je ermee wil. */}
             {personsSet && adminNamed && (() => {
-              // Ook wie via de link binnenkwam hoort hier te staan. Tikte iemand zijn naam
-              // verkeerd in, dan was jij als beheerder machteloos — die rijen stonden
-              // nergens waar je ze kon aanpassen.
-              const rijen = participants.filter((q) => q.id !== meId)
+              const vrijeZit = participants.filter((q) => isFreeSpot(q) && !q.self_joined)
+                .reduce((a, q) => a + Math.max(1, q.seats ?? 1), 0)
+              const openVoor = (q: Participant | null) => {
+                const zit = q ? Math.max(1, q.seats ?? 1) : 1
+                const leeg = !q || isFreeSpot(q)
+                setGuestTarget(q ? q.id : null)
+                setGuestSeats(leeg ? 1 : zit)
+                setGuestNames(leeg ? [""] : q!.name.split(/\s*&\s*/).map((x) => x.trim()))
+                setShowGuestModal(true)
+              }
               return (
                 <div style={{ marginTop: 13, paddingTop: 12, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                     <div onClick={() => setShowNamesBlock((v) => !v)} style={{ fontSize: 16, fontWeight: 800, color: "#1499b0", cursor: "pointer" }}>
-                      {L.namesBlockTitle} <span style={{ color: "#9aa0ab", fontWeight: 700 }}>{L.namesBlockOptional}</span> {showNamesBlock ? "▴" : "▾"}
+                      {L.whoAtTableTitle} {showNamesBlock ? "▴" : "▾"}
                     </div>
-                    {groepPeekKnop()}
+                    <span style={{ fontSize: 14, fontWeight: 800, color: vrijeZit > 0 ? "#b5591a" : "#1f8a4c", background: vrijeZit > 0 ? "rgba(243,156,18,0.14)" : "rgba(39,174,96,0.14)", borderRadius: 12, padding: "3px 10px" }}>
+                      👥 {L.seatsSummary(totalPersons, vrijeZit)}
+                    </span>
                   </div>
-                  {showGroupPeek && groepPeekLijst()}
                   {showNamesBlock && (
-                    <div style={{ marginTop: 9 }}>
-                      {(() => {
-                        // De vrije plaatsen zijn onderling identiek, dus er valt niets te
-                        // kiezen. Alleen de namen die er al staan krijgen een tegel; de rest
-                        // is één knop die de eerste vrije plaats inneemt.
-                        const ingevuld = rijen.filter((q) => !isFreeSpot(q))
-                        const vrij = rijen.filter((q) => isFreeSpot(q)).reduce((a, q) => a + Math.max(1, q.seats ?? 1), 0)
-                        const open = (q: Participant | null) => {
-                          const zit = q ? Math.max(1, q.seats ?? 1) : 1
-                          setGuestTarget(q ? q.id : null)
-                          setGuestSeats(zit)
-                          setGuestNames(q ? q.name.split(/\s*&\s*/).map((x) => x.trim()) : [""])
-                          setShowGuestModal(true)
-                        }
+                    <div style={{ marginTop: 9, border: "1px solid rgba(16,24,40,0.12)", borderRadius: 12, overflow: "hidden" }}>
+                      {participants.map((q, i) => {
+                        const ikZelf = q.id === meId
+                        const leeg = isFreeSpot(q) && !q.self_joined
+                        const zit = Math.max(1, q.seats ?? 1)
                         return (
-                          <>
-                            {ingevuld.length > 0 && (
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 11 }}>
-                                {ingevuld.map((q) => {
-                                  const zit = Math.max(1, q.seats ?? 1)
-                                  return (
-                                    <button key={q.id} onClick={() => open(q)}
-                                      style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, textAlign: "left", cursor: "pointer", borderRadius: 11, padding: "10px 11px", border: "1px solid rgba(16,24,40,0.12)", background: "rgba(16,24,40,0.02)" }}>
-                                      <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.name}</span>
-                                      {q.self_joined && <span style={{ flexShrink: 0, fontSize: 13 }} title={L.tagViaLink}>📱</span>}
-                                      {zit > 1 && <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#0f7488", background: "rgba(20,153,176,0.12)", borderRadius: 8, padding: "2px 6px" }}>{zit}p</span>}
-                                      <span style={{ flexShrink: 0, fontSize: 14, color: "#9aa0ab" }}>✏️</span>
-                                    </button>
-                                  )
-                                })}
-                              </div>
-                            )}
-                            {vrij > 0 ? (
-                              <button onClick={() => open(null)}
-                                style={{ width: "100%", cursor: "pointer", borderRadius: 12, padding: "13px 12px", textAlign: "center", border: "1.5px dashed rgba(20,153,176,0.6)", background: "rgba(20,153,176,0.06)" }}>
-                                <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: "#0f7d91" }}>{L.addNameBtn}</span>
-                                <span style={{ display: "block", fontSize: 14.5, color: "#5a6680", marginTop: 2 }}>{L.freeSpotsLeft(vrij, totalPersons)}</span>
-                              </button>
-                            ) : (
-                              <div style={{ fontSize: 15, color: "#9aa0ab", textAlign: "center", padding: "4px 0" }}>{L.allNamesFilled}</div>
-                            )}
-                          </>
+                          <button key={q.id} onClick={() => ikZelf ? openZelfPopup() : openVoor(q)}
+                            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, textAlign: "left", cursor: "pointer", border: "none", padding: "11px 12px",
+                              borderTop: i === 0 ? "none" : "1px solid rgba(0,0,0,0.06)",
+                              background: leeg ? "rgba(20,153,176,0.04)" : "#fff" }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+                              <span style={{ flexShrink: 0 }}>{ikZelf ? "👤" : leeg ? "⏳" : q.self_joined ? "📱" : "✓"}</span>
+                              <span style={{ fontSize: 16, fontWeight: 700, color: leeg ? "#9aa0ab" : "#14213a", fontStyle: leeg ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {leeg ? L.freeSpotName : q.name}{!leeg && zit > 1 ? ` · ${zit}p.` : ""}
+                              </span>
+                            </span>
+                            {ikZelf
+                              ? <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 10px", whiteSpace: "nowrap" }}>{L.tagAdmin}</span>
+                              : <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{leeg ? L.addNameRow : "✏️"}</span>}
+                          </button>
                         )
-                      })()}
+                      })}
                     </div>
                   )}
                 </div>
@@ -5450,7 +5449,7 @@ function TopBar({ group, isAdmin, onHome, me, totalPersons, guestSeats, onGuestS
   )
 }
 
-function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, shareHeads, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onSetExpected, onAddManual, bareBill, taxLines, taxNode, recentItemId, onGoGuests, billOk, billOverBy, scanFlags }: {
+function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, shareHeads, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onSetExpected, onAddManual, bareBill, taxLines, taxNode, onViewReceipt, recentItemId, onGoGuests, billOk, billOverBy, scanFlags }: {
   items: BillItem[]; claimedQty: (id: string) => number
   participants: Participant[]; claimsForItem: (id: string) => { name: string; qty: number }[]
   sharerIds: (id: string) => string[]; shareHeads: (id: string) => number; toggleShareClaim: (itemId: string, pid: string) => void
@@ -5459,6 +5458,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   bareBill?: boolean
   taxLines?: { name: string; amount: number }[]
   taxNode?: React.ReactNode
+  onViewReceipt?: () => void
   recentItemId?: string | null
   onGoGuests?: () => void
   billOk?: boolean
@@ -5477,7 +5477,13 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
             <div style={{ fontSize: 15, fontWeight: 800, color: "#c0392b", marginTop: 4 }}>{billOverBy > 0 ? L.overVsReceipt(`€${billOverBy.toFixed(2).replace(".", ",")}`) : L.underVsReceipt(`€${Math.abs(billOverBy).toFixed(2).replace(".", ",")}`)}</div>
           </div>
         ) : (
-          <h3 id="items-op-de-bon" style={{ ...S.h3, marginBottom: 0, display: "flex", alignItems: "baseline", gap: 8 }}>{L.itemsOnBill}{!billOk && <span style={{ fontSize: 16.5, fontWeight: 800, color: "#c0392b" }}>{L.checkExcl}</span>}</h3>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+            <h3 id="items-op-de-bon" style={{ ...S.h3, marginBottom: 0, display: "flex", alignItems: "baseline", gap: 8 }}>{L.itemsOnBill}{!billOk && <span style={{ fontSize: 16.5, fontWeight: 800, color: "#c0392b" }}>{L.checkExcl}</span>}</h3>
+            {/* Bij het nakijken van de regels wil je de foto ernaast, niet bovenaan het scherm. */}
+            {onViewReceipt && (
+              <button onClick={onViewReceipt} style={{ flexShrink: 0, border: "1.5px solid rgba(20,153,176,0.4)", background: "#fff", borderRadius: 10, padding: "7px 11px", cursor: "pointer", fontSize: 14.5, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{L.viewReceipt}</button>
+            )}
+          </div>
         )}
       </div>
       {items.length > 0 && (
