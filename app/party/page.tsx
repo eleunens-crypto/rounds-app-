@@ -393,7 +393,7 @@ const T = {
     addThis: "Toevoegen",
     seatNameTitle: "Iemand die niet scant",
     seatNameSub: "Zet zijn naam erbij — scant hij later toch, dan tikt hij die gewoon aan.",
-    tapYourName: "Tik hier je naam",
+    yourNamePh: "Tik hier je naam",
     groupNameEdit: "Naam van deze groep",
     groupNamePh: "Typ je groepsnaam",
     starting: "Bezig…",
@@ -639,7 +639,7 @@ const T = {
     confirmTitle: "Even bevestigen",
     imGoing: "🍻 Ik start een rondje",
     walkTable: "👥 Rondje opnemen",
-    walkIntro: "Ga de tafel rond. Tik per persoon aan wat die wil.",
+    walkIntro: "Tik per persoon aan wat die wil.",
     walkDone: "✓ Klaar",
     walkFor: (n: string) => `Wat wil ${n}?`,
     whoGoes: "Klaar voor een rondje?",
@@ -897,7 +897,7 @@ const T = {
     addThis: "Ajouter",
     seatNameTitle: "Quelqu’un qui ne scanne pas",
     seatNameSub: "Mets son nom — s’il scanne plus tard, il le touchera simplement.",
-    tapYourName: "Tape ton nom ici",
+    yourNamePh: "Tape ton nom ici",
     groupNameEdit: "Nom de ce groupe",
     groupNamePh: "Tape le nom de ton groupe",
     starting: "En cours…",
@@ -1143,7 +1143,7 @@ const T = {
     confirmTitle: "Confirmation",
     imGoing: "🍻 Je lance une tournée",
     walkTable: "👥 Faire le tour",
-    walkIntro: "Fais le tour de la table. Coche pour chacun ce qu'il veut.",
+    walkIntro: "Coche pour chacun ce qu'il veut.",
     walkDone: "✓ Terminé",
     walkFor: (n: string) => `Que veut ${n} ?`,
     whoGoes: "Prêt pour une tournée ?",
@@ -4941,7 +4941,7 @@ export default function PartyTest() {
                     <div style={{ ...S.row, gap: 8 }}>
                       <span style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(31,138,76,0.15)", color: "#1f6b3a", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>⭐</span>
                       <input value={isGuestDefault(mijnPlaats.name) ? "" : mijnPlaats.name}
-                        placeholder={L.tapYourName}
+                        placeholder={L.yourNamePh}
                         onChange={(e) => renamePerson(mijnPlaats.id, e.target.value === "" ? `Gast ${mijnIdx + 1}` : e.target.value)}
                         style={{ ...S.input, flex: 1, minWidth: 0, padding: "9px 11px", fontSize: 15.5, fontWeight: 800, textAlign: "left", background: "#fff" }} />
                     </div>
