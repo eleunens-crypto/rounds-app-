@@ -310,7 +310,7 @@ const T = {
     loading: "Even laden…",
 
     youAre: "Jij bent",
-    notMe: "niet ik",
+    notMe: "dit ben ik niet",
     notMeConfirm: (n: string) => `Ben jij niet ${n}? Dan geef je deze plaats vrij en kies je opnieuw.`,
     releaseSeat: "Plaats vrijgeven",
     tabOrder: "🍺 Bestellen",
@@ -341,6 +341,8 @@ const T = {
     noRoundClosed: "Er is nog geen rondje afgesloten.",
     whatYouDrank: "Wat jij dronk",
     yourShare: "(jouw deel)",
+    provisionalNote: "⏳ Voorlopig — de gastheer sloot nog niet af. Er kunnen nog rondjes bijkomen, dus dit bedrag kan nog wijzigen.",
+    potPaidIn: (bedrag: string) => `💰 ingelegd ${bedrag}`,
     whatYouPaid: "Wat jij betaalde",
     inclPot: "(incl. inleg pot)",
     youAreEven: "Je staat gelijk",
@@ -812,7 +814,7 @@ const T = {
     loading: "Chargement…",
 
     youAre: "Tu es",
-    notMe: "pas moi",
+    notMe: "ce n’est pas moi",
     notMeConfirm: (n: string) => `Tu n'es pas ${n} ? Tu libères cette place et tu choisis à nouveau.`,
     releaseSeat: "Libérer la place",
     tabOrder: "🍺 Commander",
@@ -843,6 +845,8 @@ const T = {
     noRoundClosed: "Aucune tournée n'est encore clôturée.",
     whatYouDrank: "Ce que tu as bu",
     yourShare: "(ta part)",
+    provisionalNote: "⏳ Provisoire — l’hôte n’a pas encore clôturé. D’autres tournées peuvent suivre, ce montant peut donc changer.",
+    potPaidIn: (bedrag: string) => `💰 versé ${bedrag}`,
     whatYouPaid: "Ce que tu as payé",
     inclPot: "(mise au pot incluse)",
     youAreEven: "Tu es à l'équilibre",
@@ -4230,10 +4234,16 @@ export default function PartyTest() {
               {pay === "coin" ? ` · coins (1 = ${euro(coinValue)})` : ""}
             </div>
           </div>
-          <button style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)" }}
-            onClick={() => setConfirmDlg({ msg: L.notMeConfirm(ik.name), yes: L.releaseSeat, onYes: () => { setConfirmDlg(null); releaseSeat(meId) } })}>
-            {L.notMe}
-          </button>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5, flexShrink: 0 }}>
+            {/* Wat je in de pot stopte hoort bovenaan: het is het enige bedrag dat al vaststaat. */}
+            {contribOf(meId) > 0.005 && (
+              <span style={{ background: "rgba(31,138,76,0.1)", border: "1px solid rgba(31,138,76,0.3)", borderRadius: 16, padding: "4px 11px", fontSize: 13, fontWeight: 800, color: "#1f6b3a", whiteSpace: "nowrap" }}>{L.potPaidIn(euro(contribOf(meId)))}</span>
+            )}
+            <button style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)" }}
+              onClick={() => setConfirmDlg({ msg: L.notMeConfirm(ik.name), yes: L.releaseSeat, onYes: () => { setConfirmDlg(null); releaseSeat(meId) } })}>
+              {L.notMe}
+            </button>
+          </div>
         </div>
 
         <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
@@ -4289,6 +4299,12 @@ export default function PartyTest() {
                 </div>
               ) : (
                 <>
+                  {/* Zolang de gastheer niet afsloot kunnen er nog rondjes bijkomen. Het
+                      bedrag klopt met wat er nu staat, maar het is nog niet definitief —
+                      en dat hoort erbij te staan, anders rekent iemand het al af. */}
+                  {!hasSettled && (
+                    <div style={{ background: "rgba(240,165,0,0.1)", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 11, padding: "10px 12px", marginBottom: 11, fontSize: 13.5, color: "#8a5e0f", lineHeight: 1.45 }}>{L.provisionalNote}</div>
+                  )}
                   <div style={{ ...S.row, justifyContent: "space-between", padding: "6px 0" }}>
                     <span style={{ fontSize: 15.5 }}>{L.whatYouDrank} <span style={{ fontSize: 13, color: "#8a7d55" }}>{L.yourShare}</span></span>
                     <b style={{ fontSize: 16 }}>{euro(mijnVerbruik)}</b>
