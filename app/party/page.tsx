@@ -369,9 +369,12 @@ const T = {
     fairStepPay: "betalen",
     startFairBtn: "Start Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "persoon" : "personen"}`,
-    peopleIntro: (n: number) => `Jij bent erbij. De ${n} ${n === 1 ? "andere scant" : "anderen scannen"} de QR en vult zelf zijn naam in.`,
-    stillFreeWord: "nog vrij",
-    scansOrYouFill: "scant zelf, of vul jij de naam in",
+    peopleIntro: () => "Jij staat er al bij. De anderen komen erbij via QR scan.",
+    freeSeatsCount: (n: number) => `${n} vrije ${n === 1 ? "plaats" : "plaatsen"}`,
+    freeSeatsSub: "Ze vullen zichzelf in na de scan.",
+    notScanningQ: "Iemand die niet scant?",
+    fillNameSelf: "Naam zelf invullen",
+    toQrStep: "Naar de QR-code →",
     addNameShort: "+ naam",
     addThis: "Toevoegen",
     seatNameTitle: (n: number) => `Wie zit op plaats ${n}?`,
@@ -862,9 +865,12 @@ const T = {
     fairStepPay: "paiement",
     startFairBtn: "Démarrer Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "personne" : "personnes"}`,
-    peopleIntro: (n: number) => `Tu es là. ${n === 1 ? "L'autre scanne" : `Les ${n} autres scannent`} le QR et met son nom.`,
-    stillFreeWord: "encore libre",
-    scansOrYouFill: "scanne lui-même, ou tu mets le nom",
+    peopleIntro: () => "Tu es déjà là. Les autres arrivent en scannant le QR.",
+    freeSeatsCount: (n: number) => `${n} place${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"}`,
+    freeSeatsSub: "Ils se remplissent eux-mêmes après le scan.",
+    notScanningQ: "Quelqu’un qui ne scanne pas ?",
+    fillNameSelf: "Mettre le nom toi-même",
+    toQrStep: "Vers le QR-code →",
     addNameShort: "+ nom",
     addThis: "Ajouter",
     seatNameTitle: (n: number) => `Qui est à la place ${n} ?`,
@@ -1301,6 +1307,7 @@ export default function PartyTest() {
   // Naam zetten op een plaats die nog op een scan wacht.
   const [zitNaam, setZitNaam] = useState<{ id: string; nr: number } | null>(null)
   const [zitNaamTekst, setZitNaamTekst] = useState("")
+  const [nietScanOpen, setNietScanOpen] = useState(false)
   const [people, setPeople] = useState<Person[]>([])
 
   // ── Supabase-laag ───────────────────────────────────────────────────────────
@@ -2317,15 +2324,17 @@ export default function PartyTest() {
     setGroupId(id)
     const res = await loadParty(id)
     setBusy(false)
+    setResumeGroupId(null)
     if (res && res.rondjes === 0 && !res.heeftOpen) {
-      // Verse groep: nog nooit een rondje. Terug naar de kaders zodat je de modus kan
-      // (her)bevestigen of alsnog wisselen. De al-gekozen modus staat voorgeselecteerd,
-      // en resumeGroupId zorgt dat "Beginnen" DEZE groep voortzet (geen nieuwe maakt).
-      setResumeGroupId(id)
-      setBpSettle(res.settle)
-      setView("start")
+      // Verse groep: nog nooit een rondje. Vroeger stuurden we je terug naar de keuzekaders
+      // om de modus te (her)bevestigen — maar die staat al op de groep, dus dat was een
+      // extra tik om te bevestigen wat je al gekozen had. Nu ga je meteen naar de plek waar
+      // je bij een nieuwe groep ook belandt: de namenstap bij Fair Split, het bestelscherm
+      // bij snelle rondjes. Wisselen van modus kan nog altijd via ⚙️ Groep.
+      setSettle(res.settle)
+      if (res.settle) setView("setup")
+      else { setActiveCat(catsPresent[0]); setView("order") }
     } else {
-      setResumeGroupId(null)
       setView("hub")
     }
   }
@@ -4802,8 +4811,12 @@ export default function PartyTest() {
         )}
 
         <div style={S.card}>
-          <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 3 }}>{L.peopleHeader(people.length)}</div>
-          <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 13, lineHeight: 1.5 }}>{L.peopleIntro(Math.max(0, people.length - 1))}</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", marginBottom: 9 }}>{L.peopleHeader(people.length)}</div>
+          {/* Neutraal grijsbeige, geen oranje: hier is niets mis, dit is gewoon uitleg. */}
+          <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "rgba(120,95,20,0.06)", borderRadius: 11, padding: "11px 12px", marginBottom: 12 }}>
+            <span style={{ flexShrink: 0, fontSize: 17 }}>📱</span>
+            <span style={{ fontSize: 15.5, color: "#5f5432", lineHeight: 1.45 }}>{L.peopleIntro()}</span>
+          </div>
 
           {/* Wie ben JIJ? Alleen relevant als de admin nog nergens zit — normaal is hij
               al Gast 1, dus dit blijft verborgen. Vangnet voor het randgeval. */}
@@ -4869,25 +4882,41 @@ export default function PartyTest() {
                     een éxtra persoon aan — en dus veranderde het aantal, terwijl je alleen
                     een naam wou zetten op een plaats die er al was. Wie later toch scant,
                     tikt zijn naam gewoon aan en houdt alles wat je al voor hem aanduidde. */}
-                {wachtend.map((p) => (
-                  <button key={p.id} onClick={() => setZitNaam({ id: p.id, nr: people.indexOf(p) + 1 })}
+                {/* Twee aparte regels: eerst wat er gewoon gebeurt — zij scannen — en daaronder
+                    de uitzondering. Zo trekt het invullen van namen geen aandacht bij de
+                    meeste groepen, waar iedereen toch scant. Alles in neutraal grijsbeige:
+                    er is hier niets fout, dus geen oranje of rood. */}
+                {wachtend.length > 0 && (<>
+                  <div style={{ border: "1px solid rgba(120,95,20,0.22)", background: "rgba(120,95,20,0.03)", borderRadius: 11, padding: "11px 12px", marginBottom: 7 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: "#7a6d45" }}>{L.freeSeatsCount(wachtend.length)}</span>
+                    <div style={{ fontSize: 12.5, color: "#a89a6f", marginTop: 3, lineHeight: 1.4 }}>{L.freeSeatsSub}</div>
+                  </div>
+                  <button onClick={() => setNietScanOpen((v) => !v)}
                     style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, textAlign: "left", cursor: "pointer",
-                      padding: "10px 12px", borderRadius: 11, marginBottom: 6,
-                      background: MODUS_SNEL.vlak, border: `1px dashed ${MODUS_SNEL.randZacht}` }}>
-                    <span style={{ minWidth: 0 }}>
-                      <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#9c8f6d", fontStyle: "italic" }}>📱 {L.seat(people.indexOf(p) + 1)} — {L.stillFreeWord}</span>
-                      <span style={{ display: "block", fontSize: 12.5, color: "#b3a988" }}>{L.scansOrYouFill}</span>
-                    </span>
-                    <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: MODUS_SNEL.tekst }}>{L.addNameShort}</span>
+                      border: "1px dashed rgba(120,95,20,0.3)", background: "transparent", borderRadius: 11, padding: "11px 12px" }}>
+                    <span style={{ fontSize: 14, color: "#8a7d55", minWidth: 0 }}>{L.notScanningQ}</span>
+                    <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", whiteSpace: "nowrap" }}>{L.fillNameSelf} {nietScanOpen ? "▴" : "▾"}</span>
                   </button>
-                ))}
+                  {nietScanOpen && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 8 }}>
+                      {wachtend.map((p) => (
+                        <button key={p.id} onClick={() => setZitNaam({ id: p.id, nr: people.indexOf(p) + 1 })}
+                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, textAlign: "left", cursor: "pointer",
+                            background: "#fff", border: "1px solid rgba(120,95,20,0.18)", borderRadius: 10, padding: "9px 10px" }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#9c8f6d", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.seat(people.indexOf(p) + 1)}</span>
+                          <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#8a5e0f" }}>{L.addNameShort}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>)}
               </>
             )
           })()}
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", marginTop: 24, marginBottom: 4 }}>
-          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice(L.addPersonFirst); return } if (unfinishedRound) { resumeRound(); return } if (onboardedOnce) { setOpenRound(rounds.length - 1); setView("hub") } else setBeginPrompt(true) }}>{unfinishedRound ? L.continueRound(roundNr) : "Volgende"}</button>
+          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice(L.addPersonFirst); return } if (unfinishedRound) { resumeRound(); return } if (onboardedOnce) { setOpenRound(rounds.length - 1); setView("hub") } else setBeginPrompt(true) }}>{unfinishedRound ? L.continueRound(roundNr) : L.toQrStep}</button>
         </div>
       </div></div>
     )
