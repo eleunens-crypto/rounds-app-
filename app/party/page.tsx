@@ -1453,6 +1453,23 @@ export default function PartyTest() {
   }, [groupId, view, fromQuick, booting])
   useEffect(() => { if (view !== "roundsOverview") setFillMode(false) }, [view])
 
+  // Terug op je telefoon sprong vanuit een groep meteen naar het keuzescherm — twee
+  // niveaus in één tik, en de sessie was daar weg. Nu leggen we bij het openen van een
+  // groep één geschiedenis-item neer: terug brengt je naar het startscherm van déze modus,
+  // met je opgeslagen groepen. Nog eens terug gaat dan wel naar de keuzepagina.
+  // goStart waarschuwt zelf wanneer er een rondje openstaat, dus dat blijft beschermd.
+  // De luisteraar wordt één keer per groep opgehangen, maar goStart wordt bij elke render
+  // opnieuw gemaakt. Zonder deze verwijzing zou terug een oude versie aanroepen — met de
+  // schermnaam van het moment waarop je de groep opende, en dus de verkeerde waarschuwing.
+  const terugActie = useRef<() => void>(() => {})
+  useEffect(() => {
+    if (typeof window === "undefined" || !groupId) return
+    window.history.pushState({ rundo: "groep" }, "")
+    const terug = () => { terugActie.current() }
+    window.addEventListener("popstate", terug)
+    return () => window.removeEventListener("popstate", terug)
+  }, [groupId])
+
   // Pijltjes bij de categorierij: ze tonen dat er links of rechts nog meer staat,
   // want een halve pil aan de rand leest als een afsnijfout en niet als een uitnodiging.
   const catScroll = useRef<HTMLDivElement | null>(null)
@@ -2025,7 +2042,7 @@ export default function PartyTest() {
     if (kaart) setCardPayers(((kaart.card_payers ?? []) as string[]))
     // Geef terug hoe "vol" de groep is, zodat de aanroeper kan beslissen waar je landt:
     // een verse groep zonder rondjes stuur je naar het bestelscherm, niet naar een lege hub.
-    return { rondjes: gedaan.length, heeftOpen: !!open, settle: g ? g.settle !== false : true }
+    return { rondjes: gedaan.length, heeftOpen: !!open, heeftPending: alle.some((r) => r.status === "pending"), settle: g ? g.settle !== false : true }
   }, [])
 
   useEffect(() => {
@@ -2058,12 +2075,17 @@ export default function PartyTest() {
           setGroupId(sessie.g)
           const stand = await loadParty(sessie.g)
           if (sessie.fq) setFromQuick(true)
-          // Staat er een rondje open, dan is het bestelscherm de enige zinvolle plek: daar
-          // ligt je mand. Het opgeslagen scherm kon een hub zijn die op andere toestand
-          // rekende en na een verversing leeg bleef. De afrekenstappen laten we met rust —
-          // daar hoort een open rondje niet meer bij de vraag waar je moet landen.
+          // Waar je landt volgt uit de toestand, niet uit het opgeslagen schermnaam. Dat naam
+          // alleen was te weinig: een hub of overzicht rekent op toestand die na een
+          // verversing weg is, en dan hield je een lege pagina met alleen de kop over.
+          //
+          // Volgorde: een open rondje is je mand → bestelscherm. Een afgesloten maar nog
+          // niet betaald rondje → het betaalscherm. Pas als er niets openstaat, mag het
+          // opgeslagen scherm beslissen. De afrekenstappen blijven waar ze waren.
           const afrekenen = sessie.v === "payers" || sessie.v === "final" || sessie.v === "fairSetup" || sessie.v === "quickSettle" || sessie.v === "settings"
-          if (stand?.heeftOpen && !afrekenen) setView("order")
+          if (afrekenen && sessie.v) setView(sessie.v as typeof view)
+          else if (stand?.heeftOpen) setView("order")
+          else if (stand?.heeftPending) setView("confirmed")
           else if (sessie.v) setView(sessie.v as typeof view)
           setBooting(false)
           return
@@ -2544,6 +2566,7 @@ export default function PartyTest() {
     setOpenRoundId(null)
     setRounds((rs) => (rs.length && !roundIsPaid(rs[rs.length - 1]) ? rs.slice(0, -1) : rs)); setCart({}); setCartAnon({}); setAmountDraft(""); setPayPot(false); setPayPersons([]); setPayAmts({}); setPotAmtDraft(""); setPaidConfirmed(false) }
   const goStart = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("start") } }); else setView("start") }
+  terugActie.current = goStart
   // Naar het echte beginscherm van de site (waar je Rundo Table of Party kiest). Bij een
   // onbevestigd rondje eerst waarschuwen, zodat je geen werk verliest.
   const goSiteHome = () => {
