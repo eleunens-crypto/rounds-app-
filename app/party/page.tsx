@@ -370,7 +370,12 @@ const T = {
     startFairBtn: "Start Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "persoon" : "personen"}`,
     peopleIntro: () => "Jij staat er al bij. De anderen komen erbij via QR scan.",
-    addNonScanner: "+ Iemand toevoegen die niet scant",
+    addNonScanner: "Iemand die niet scant?",
+    linkCopiedShort: "✓ Gekopieerd",
+    pasteAndShare: "Plak en deel in: WhatsApp · Messenger · sms · e-mail · …",
+    freeSeatsLine: (n: number) => `Nog ${n} vrije ${n === 1 ? "plaats" : "plaatsen"}. Wie scant, komt er meteen bij.`,
+    addPersonBtn: "+ persoon",
+    removeLastPerson: "Laatste persoon weghalen",
     showQr: "📱 QR-code tonen",
     toQrStep: "Naar de QR-code →",
     addThis: "Toevoegen",
@@ -427,12 +432,8 @@ const T = {
 
     // ── delen
     letGuestsScan: "📲 Laat je gasten scannen",
-    freeSeats: (n: number) => `Nog ${n} vrije ${n === 1 ? "plaats" : "plaatsen"}. Wie scant, kiest er een en tikt zelf zijn drankjes aan.`,
     allTakenAdmin: "Alle plaatsen zijn ingenomen. Zet er een bij als er nog iemand aansluit.",
-    shareLink: "Link delen",
     copyLink: "Kopieer link",
-    linkCopied: "Link gekopieerd.",
-    joinInvite: (g: string, l: string) => `Doe mee met ${g} op Rundo Party: ${l}`,
 
     // ── startvragen
     beforeWeStart: "Kies je aanpak",
@@ -450,7 +451,6 @@ const T = {
     addToPot: "Toevoegen aan de pot",
     potFillAmount: "Vul eerst een bedrag in.",
     setPotTo: (v: string) => `Pot op ${v} zetten`,
-    potStartWhy: "Iedereen legt vooraf iets in. Rondjes gaan er dan uit — niemand hoeft telkens te betalen.",
     potStartIn: (b: string) => `In de pot: ${b}`,
     potStartAdd: "+ Inleggen",
     potStartMore: "Bijleggen",
@@ -864,7 +864,12 @@ const T = {
     startFairBtn: "Démarrer Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "personne" : "personnes"}`,
     peopleIntro: () => "Tu es déjà là. Les autres arrivent en scannant le QR.",
-    addNonScanner: "+ Ajouter quelqu’un qui ne scanne pas",
+    addNonScanner: "Quelqu’un qui ne scanne pas ?",
+    linkCopiedShort: "✓ Copié",
+    pasteAndShare: "Colle et partage dans : WhatsApp · Messenger · sms · e-mail · …",
+    freeSeatsLine: (n: number) => `Encore ${n} place${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"}. Qui scanne, arrive directement.`,
+    addPersonBtn: "+ personne",
+    removeLastPerson: "Retirer la dernière personne",
     showQr: "📱 Afficher le QR",
     toQrStep: "Vers le QR-code →",
     addThis: "Ajouter",
@@ -921,12 +926,8 @@ const T = {
 
     // ── delen
     letGuestsScan: "📲 Fais scanner tes invités",
-    freeSeats: (n: number) => `Encore ${n} place${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"}. Qui scanne en choisit une et coche ses boissons.`,
     allTakenAdmin: "Toutes les places sont prises. Ajoutes-en une si quelqu'un arrive.",
-    shareLink: "Partager le lien",
     copyLink: "Copier le lien",
-    linkCopied: "Lien copié.",
-    joinInvite: (g: string, l: string) => `Rejoins ${g} sur Rundo Party : ${l}`,
 
     // ── startvragen
     beforeWeStart: "Choisis ta formule",
@@ -944,7 +945,6 @@ const T = {
     addToPot: "Ajouter \u00e0 la cagnotte",
     potFillAmount: "Entre d\u2019abord un montant.",
     setPotTo: (v: string) => `Mettre la cagnotte \u00e0 ${v}`,
-    potStartWhy: "Chacun met quelque chose d'avance. Les tournées sortent de là — personne ne paie à chaque fois.",
     potStartIn: (b: string) => `Dans la cagnotte : ${b}`,
     potStartAdd: "+ Mettre",
     potStartMore: "Ajouter",
@@ -1303,6 +1303,7 @@ export default function PartyTest() {
   // Naam zetten op een plaats die nog op een scan wacht.
   const [zitNaam, setZitNaam] = useState<{ id: string; nr: number } | null>(null)
   const [zitNaamTekst, setZitNaamTekst] = useState("")
+  const [linkGekopieerd, setLinkGekopieerd] = useState(false)
   const [people, setPeople] = useState<Person[]>([])
 
   // ── Supabase-laag ───────────────────────────────────────────────────────────
@@ -2781,31 +2782,44 @@ export default function PartyTest() {
       <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.45)" }}>
         <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.letGuestsScan}</h3>
         <div style={{ fontSize: 14, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
-          {vrij > 0 ? L.freeSeats(vrij) : L.allTakenAdmin}
+          {vrij > 0 ? L.freeSeatsLine(vrij) : L.allTakenAdmin}
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ display: "inline-block", background: "#fff", padding: 10, borderRadius: 14, border: "1px solid rgba(120,95,20,0.15)" }}>
             <QRCodeSVG value={inviteLink} size={132} bgColor="#ffffff" fgColor="#4a3f1e" />
           </div>
-          <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: "0.18em", color: "#4a3f1e", marginTop: 10 }}>{inviteCode}</div>
         </div>
+        {/* Één knop: de systeem-deelknop gaf op veel toestellen toch alleen de link door.
+            Wat je kopieert staat eronder, zodat je ziet wát er op je klembord komt. */}
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <button style={{ ...S.btn, flex: 1, fontWeight: 800 }}
-            onClick={async () => {
-              const txt = L.joinInvite(groupName, inviteLink)
-              if (typeof navigator !== "undefined" && navigator.share) {
-                try { await navigator.share({ text: txt }); return } catch { /* geannuleerd */ }
-              }
-              if (navigator.clipboard) { navigator.clipboard.writeText(txt); setNotice(L.linkCopied) }
-            }}>{L.shareLink}</button>
-          <button style={{ ...S.btn, flex: 1, fontWeight: 800 }}
-            onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(inviteLink); setNotice(L.linkCopied) } }}>{L.copyLink}</button>
+          <button style={{ ...S.btn, flex: 1, fontWeight: 800, padding: "12px 8px" }}
+            onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(inviteLink); setLinkGekopieerd(true); setTimeout(() => setLinkGekopieerd(false), 4000) } }}>
+            {linkGekopieerd ? L.linkCopiedShort : L.copyLink}</button>
+          {people.some((p) => !p.claimedBy) && (
+            <button onClick={() => { const vrij = people.find((p) => !p.claimedBy); if (vrij) setZitNaam({ id: vrij.id, nr: people.indexOf(vrij) + 1 }) }}
+              style={{ ...S.btn, flex: 1, fontWeight: 800, padding: "12px 8px" }}>{L.addNonScanner}</button>
+          )}
         </div>
+        <div style={{ marginTop: 8, background: "#faf7ec", border: "1px solid rgba(120,95,20,0.18)", borderRadius: 10, padding: "9px 11px", fontSize: 13, color: "#8a7d55", wordBreak: "break-all", lineHeight: 1.4 }}>{inviteLink}</div>
+        {linkGekopieerd && (
+          <div style={{ marginTop: 7, background: "rgba(31,138,76,0.1)", border: "1px solid rgba(31,138,76,0.3)", borderRadius: 10, padding: "9px 11px", fontSize: 13.5, color: "#1f6b3a", lineHeight: 1.45 }}>{L.pasteAndShare}</div>
+        )}
         {/* Wie scande al? Zo ziet de admin de groep vollopen zonder te moeten raden.
             De vrije plaatsen staan hier — niet meer bij de namenstap — want dit is het
             scherm waar je staat te wachten tot ze binnenkomen. */}
         <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 14, paddingTop: 12 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", marginBottom: 8 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", minWidth: 0 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</span>
+            {/* Er komt er nog eentje bij: hier hoog je het aantal op, en dat maakt meteen
+                een vrije plaats die iemand kan scannen. */}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+              <button onClick={removeLastPerson} disabled={busy || people.length <= 1} title={L.removeLastPerson}
+                style={{ ...S.step, width: 30, height: 30, fontSize: 18, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
+              <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", minWidth: 18, textAlign: "center" }}>{people.length}</span>
+              <button onClick={addPerson} disabled={busy} title={L.addPersonBtn}
+                style={{ ...S.step, width: 30, height: 30, fontSize: 18, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }}>+</button>
+            </span>
+          </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
             {people.map((p, idx) => {
               const leeg = !p.claimedBy && !p.named
@@ -2819,12 +2833,7 @@ export default function PartyTest() {
               )
             })}
           </div>
-          {/* De uitzondering, als losse knop: iemand die niet gaat scannen krijgt hier zijn
-              naam. Daarna kan jij voor hem aanduiden alsof hij wel gescand had. */}
-          {people.some((p) => !p.claimedBy) && (
-            <button onClick={() => { const vrij = people.find((p) => !p.claimedBy); if (vrij) setZitNaam({ id: vrij.id, nr: people.indexOf(vrij) + 1 }) }}
-              style={{ width: "100%", cursor: "pointer", border: "1px solid rgba(120,95,20,0.25)", background: "rgba(120,95,20,0.03)", borderRadius: 11, padding: "12px 10px", fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>{L.addNonScanner}</button>
-          )}
+
         </div>
       </div>
     )
@@ -5509,7 +5518,10 @@ export default function PartyTest() {
         {!fromQuick && settle && rounds.length === 0 && (
           <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.35)" }}>
             <div style={{ ...S.row, justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-              <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{potIsCard ? L.drinkCard : L.potStartTitle}</span>
+              <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", display: "inline-flex", alignItems: "center", gap: 7 }}>
+                <span style={{ fontSize: 19, lineHeight: 1 }}>{potIsCard ? "💳" : "💰"}</span>
+                {potIsCard ? L.drinkCard : L.potStartTitle}
+              </span>
               <span onClick={() => { setSettingsBackTo("hub"); setView("settings") }} title="⚙️" style={{ fontSize: 19, cursor: "pointer", lineHeight: 1, flexShrink: 0, opacity: 0.7 }}>⚙️</span>
             </div>
             {potContribTotal > 0.005 ? (
@@ -5519,8 +5531,7 @@ export default function PartyTest() {
               </div>
             ) : (
               <>
-                <div style={{ fontSize: 14, color: "#8a7d55", lineHeight: 1.5, marginBottom: 11 }}>{L.potStartWhy}</div>
-                <button style={{ ...S.btn, width: "100%", fontWeight: 800 }} onClick={() => setShowPot(true)}>{L.potStartAdd}</button>
+                <button style={{ ...S.btn, width: "100%", fontWeight: 800, marginTop: 4 }} onClick={() => setShowPot(true)}>{L.potStartAdd}</button>
               </>
             )}
           </div>
@@ -5797,13 +5808,16 @@ export default function PartyTest() {
             </div>
           )
         })()}
-        {!fromQuick && settle && unassignedAllRounds === 0 && (
+        {!fromQuick && settle && rounds.length > 0 && unassignedAllRounds === 0 && (
         <div style={{ ...S.row, justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.roundsOverview}</h3>
           {potTag}
         </div>
         )}
-        {fromQuick ? null : settle && paidCount === 0 ? (
+        {/* Zolang er nog geen rondje is, is dit het QR-scherm: alleen delen en de pot.
+            Een leeg rondjesoverzicht of een "start je eerste rondje"-blok hoort hier niet;
+            dat komt vanzelf zodra de eerste bestelling er is. */}
+        {fromQuick || (settle && rounds.length === 0) ? null : settle && paidCount === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
             <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{L.noRoundsDone}</div>
