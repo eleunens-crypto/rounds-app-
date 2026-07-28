@@ -370,6 +370,7 @@ const T = {
     fairStepNames: "namen",
     fairStepAssign: "toewijzen",
     fairStepPay: "betalen",
+    persShort: (n: number) => `${n} pers.`,
     startFairBtn: "Start Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "persoon" : "personen"}`,
     peopleIntro: () => "Jij staat er al bij. De anderen komen erbij via QR scan.",
@@ -480,7 +481,7 @@ const T = {
     backToRound: (n: number) => `\u2190 Terug naar rondje ${n}`,
 
     // ── instellingen
-    groupSettings: "⚙️ Groepsinstellingen",
+    groupShort: "⚙️ Groep",
     cupsTitle: "♻️ Herbruikbare bekers",
     cupsInfo: "Voor events met waarborg per beker die je terugkrijgt bij inleveren. Zet aan om de borg mee te verrekenen.",
     depositPerCup: "Waarborg/beker",
@@ -637,11 +638,11 @@ const T = {
     drinkInUse: (n: string) => `${n} is al besteld en kan niet meer verwijderd worden.`,
 
     confirmTitle: "Even bevestigen",
-    imGoing: "🍻 Ik start een rondje",
     walkTable: "👥 Rondje opnemen",
-    walkIntro: "Tik per persoon aan wat die wil.",
-    everyoneTapsOwn: "📱 Iedereen tikt op zijn eigen telefoon aan wat hij wil",
-    youTapForAll: "✍️ Jij gaat rond en tikt voor iedereen aan",
+    roundTogether: "🍻 Samen een rondje",
+    roundWalkSelf: "✍️ Rondje zelf opnemen",
+    everyoneTapsOwn: "📱 Iedereen tikt zelf aan op zijn gsm",
+    youTapForAll: "Jij gaat rond en tikt aan voor iedereen",
     everyoneTapsNow: "Iedereen tikt nu op zijn eigen telefoon aan wat hij wil.",
     readyOf: (n: number, totaal: number) => `${n} van ${totaal} deden dat al.`,
     walkDone: "✓ Klaar",
@@ -877,6 +878,7 @@ const T = {
     fairStepNames: "noms",
     fairStepAssign: "attribution",
     fairStepPay: "paiement",
+    persShort: (n: number) => `${n} pers.`,
     startFairBtn: "Démarrer Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "personne" : "personnes"}`,
     peopleIntro: () => "Tu es déjà là. Les autres arrivent en scannant le QR.",
@@ -987,7 +989,7 @@ const T = {
     backToRound: (n: number) => `\u2190 Retour à la tournée ${n}`,
 
     // ── instellingen
-    groupSettings: "⚙️ Paramètres",
+    groupShort: "⚙️ Groupe",
     cupsTitle: "♻️ Gobelets réutilisables",
     cupsInfo: "Pour les events avec caution par gobelet, remboursée au retour. Active pour l'inclure dans le décompte.",
     depositPerCup: "Caution/gobelet",
@@ -1144,11 +1146,11 @@ const T = {
     drinkInUse: (n: string) => `${n} a déjà été commandé et ne peut plus être supprimé.`,
 
     confirmTitle: "Confirmation",
-    imGoing: "🍻 Je lance une tournée",
     walkTable: "👥 Faire le tour",
-    walkIntro: "Coche pour chacun ce qu'il veut.",
-    everyoneTapsOwn: "📱 Chacun coche sur son propre téléphone ce qu’il veut",
-    youTapForAll: "✍️ Tu fais le tour et tu coches pour tout le monde",
+    roundTogether: "🍻 Une tournée ensemble",
+    roundWalkSelf: "✍️ Prendre la tournée toi-même",
+    everyoneTapsOwn: "📱 Chacun coche sur son propre gsm",
+    youTapForAll: "Tu fais le tour et tu coches pour tout le monde",
     everyoneTapsNow: "Chacun coche maintenant sur son propre téléphone.",
     readyOf: (n: number, totaal: number) => `${n} sur ${totaal} l’ont déjà fait.`,
     walkDone: "✓ Terminé",
@@ -1807,12 +1809,18 @@ export default function PartyTest() {
     const ikHaal = !!meId && startedBy === meId
     if (!openRoundId && !startedBy) {
       // Nog geen rondje. Wie start, haalt — één handeling.
+      // Twee wegen, elk met de uitleg in de knop zelf: de keuze gaat niet over "welke
+      // knop" maar over wie er aantikt.
       return (
         <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
-          <button style={{ ...S.btnP, width: "100%" }} onClick={startAsRunner}>{L.imGoing}</button>
-          <div style={{ fontSize: 12.5, color: "#8a7d55", textAlign: "center", lineHeight: 1.45, margin: "6px 0 11px" }}>{L.everyoneTapsOwn}</div>
-          <button style={{ ...S.btn, width: "100%", fontSize: 15, fontWeight: 800, padding: "12px 8px" }} onClick={() => setWalkIdx(0)}>{L.walkTable}</button>
-          <div style={{ fontSize: 12.5, color: "#8a7d55", textAlign: "center", lineHeight: 1.45, marginTop: 6 }}>{L.youTapForAll}</div>
+          <button style={{ ...S.btnP, width: "100%", padding: "13px 10px", marginBottom: 9 }} onClick={startAsRunner}>
+            <span style={{ display: "block", fontSize: 17, fontWeight: 800 }}>{L.roundTogether}</span>
+            <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, opacity: 0.93, marginTop: 2 }}>{L.everyoneTapsOwn}</span>
+          </button>
+          <button style={{ ...S.btn, width: "100%", padding: "13px 10px", cursor: "pointer" }} onClick={() => setWalkIdx(0)}>
+            <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{L.roundWalkSelf}</span>
+            <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#8a7d55", marginTop: 2 }}>{L.youTapForAll}</span>
+          </button>
         </div>
       )
     }
@@ -4047,13 +4055,17 @@ export default function PartyTest() {
           {stap && <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.92)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{stap}</span>}
         </div>
       )}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+      {/* Logo met de pot eronder aan de linkerkant; de groepsnaam en het aantal personen
+          rechtsboven. Zo staan "waar ben ik" en "hoeveel zit er nog in" naast elkaar in
+          plaats van elkaar te verdringen op één regel. */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+        <div style={{ minWidth: 0 }}>
         <div onClick={goSiteHome} style={{ cursor: "pointer", ...S.row, gap: 10 }}>
           <RundoLogo size={40} />
           <div style={{ ...S.h1, fontSize: 21, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
         </div>
         {!!groupId && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginTop: 9 }}>
             {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. */}
             <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 9px", borderRadius: 22, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#fff", border: potRemaining > 0.005 ? "1px solid rgba(200,138,26,0.55)" : "0.5px solid rgba(120,95,20,0.3)" }}>
               {potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️</span>}
@@ -4071,11 +4083,20 @@ export default function PartyTest() {
             </span>
           </div>
         )}
+        </div>
+        {!!groupId && groupName.trim() && !editName && (
+          <div style={{ textAlign: "right", minWidth: 0, flexShrink: 0, maxWidth: "52%" }}>
+            <div onClick={() => { if (!onboarding) setEditName(true) }} style={{ cursor: onboarding ? "default" : "pointer", fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {groupName.trim()}{!onboarding && <span style={{ fontSize: 12.5 }}> ✏️</span>}
+            </div>
+            {settle && <div style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700, marginTop: 1, whiteSpace: "nowrap" }}>👥 {L.persShort(people.length)}</div>}
+          </div>
+        )}
       </div>
       {/* Groepsnaam + aantal personen — gecentreerd onder de logobalk. Bij snelle rondjes
           is het aantal klikbaar naar de instellingen. */}
       {groupName.trim() && (
-        <div style={{ marginTop: 9, borderTop: "1px solid rgba(120,95,20,0.1)", paddingTop: 9 }}>
+        <div style={{ marginTop: editName && !onboarding ? 9 : 0 }}>
           {/* De naam is aanpasbaar: potlood + omkadering maken dat zichtbaar. Op het
               instellingenscherm staat het naamveld al open, dus daar geen tweede ingang. */}
           {/* Geen pilvorm meer: gewone tekst met een potlood, links uitgelijnd op een eigen
@@ -4087,22 +4108,16 @@ export default function PartyTest() {
               onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
               style={{ ...S.input, width: "auto", minWidth: 180, maxWidth: "88%", textAlign: "center", fontSize: 17, fontWeight: 800, padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.8)" }} />
           ) : (
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-              <span onClick={() => { if (!onboarding) setEditName(true) }} style={{ display: "inline-flex", alignItems: "baseline", gap: 8, cursor: onboarding ? "default" : "pointer", minWidth: 0 }}>
-                <span style={{ fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()}</span>
-                {!onboarding && <span style={{ fontSize: 13, flexShrink: 0 }}>✏️</span>}
-              </span>
-              {settle && <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 700, color: "#8a7d55", whiteSpace: "nowrap" }}>👥 {people.length}</span>}
-            </div>
+
           )}
 
         </div>
       )}
       {!onboarding && (
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-          <button style={{ ...S.btn, flex: 1.5, padding: "11px 4px", fontSize: 14, fontWeight: 700, lineHeight: 1.15 }} onClick={() => { if (settle && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupSettings}</button>
+          <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 14.5, fontWeight: 800, lineHeight: 1.15, borderRadius: 13 }} onClick={() => { if (settle && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupShort}</button>
           {settle ? (
-            <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 700, opacity: (view === "hub" || (settle && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if (settle && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goHub() }}>{L.overview}</button>
+            <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 14.5, fontWeight: 800, borderRadius: 13, opacity: (view === "hub" || (settle && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if (settle && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goHub() }}>{L.overview}</button>
           ) : (
             <button style={{ flex: 1.2, padding: "11px 4px", fontSize: 15, fontWeight: 800, borderRadius: 10, cursor: "pointer",
               border: view === "roundsOverview" ? "none" : "1px solid rgba(120,95,20,0.25)",
@@ -5221,18 +5236,15 @@ export default function PartyTest() {
         {renderDialogs()}
         {renderAddDrink()}
         {renderVoice()}
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
-          <h3 style={{ ...S.h3, margin: 0 }}>{L.roundWord} {roundNr} <span style={{ fontSize: 15, fontWeight: 600, color: "#8a7d55" }}>— {L.drinksCount(roundItems)}</span>{repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}</h3>
+        {/* Het rondje als echte titel: groot links, het aantal drankjes rechts, met een
+            gouden lijn eronder. Zo leest het als kop van wat volgt. */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, borderBottom: "2px solid rgba(240,165,0,0.5)", paddingBottom: 7, marginBottom: 12 }}>
+          <span style={{ fontSize: 23, fontWeight: 800, color: "#4a3f1e", letterSpacing: -0.3, minWidth: 0 }}>{L.roundWord} {roundNr}{repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}</span>
+          <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 700, color: "#a89a6f", whiteSpace: "nowrap" }}>{L.drinksCount(roundItems)}</span>
         </div>
         {settle && renderRunnerBar()}
         {settle && renderWalk()}
-        {settle && people.length > 0 && (
-          <button onClick={walkStart}
-            style={{ width: "100%", marginBottom: 4, border: "1.5px solid rgba(240,165,0,0.5)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 12, padding: "11px 8px", fontSize: 15.5, fontWeight: 800, cursor: "pointer" }}>
-            {L.walkTable}
-          </button>
-        )}
-        {settle && people.length > 0 && <div style={{ fontSize: 12, color: "#8a7d55", textAlign: "center", marginBottom: 10, lineHeight: 1.4 }}>{L.walkIntro}</div>}
+
         <div style={{ display: zoekt ? "none" : "block", position: "relative", marginBottom: 10 }}>
           <div ref={catScroll} onScroll={updateCatArrows} className="rundo-catscroll" style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", padding: "0 8px 9px 0", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
           <style>{`.rundo-catscroll::-webkit-scrollbar{display:none}`}</style>
