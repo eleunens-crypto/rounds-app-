@@ -3514,12 +3514,13 @@ export default function PartyTest() {
             {/* Meteen zichtbaar wat er nu in zit — dat is waarom je dit venster opent. */}
             <span style={{ fontSize: 16, fontWeight: 800, color: potRemaining > 0.005 ? "#1f8a4c" : "#c0554a" }}>{euro(potRemaining)}</span>
           </h3>
-          {!settle && (
-            <div style={{ display: "flex", alignItems: "center", gap: 9, background: "#faf4e4", borderRadius: 20, padding: "4px 8px" }}>
-              <button style={{ width: 26, height: 26, borderRadius: 8, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 16, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
-              <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", minWidth: 34, textAlign: "center" }}>👤 {headcount < 1 ? "—" : headcount}</span>
-              <button style={{ width: 26, height: 26, borderRadius: 8, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 16, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 1 : n + 1)}>+</button>
-            </div>
+          {/* Hier stond een tweede teller voor hetzelfde aantal personen. Die van het
+              inlegblok hieronder is groter, heeft een label en staat waar je hem nodig hebt —
+              twee knopjes voor dezelfde waarde vlak boven elkaar is alleen verwarrend.
+              Staat het inlegblok dicht (er is al ingelegd), dan pas je het aantal aan door
+              die inleg te bewerken; het aantal hoorde bij díé inleg. */}
+          {!settle && potRounds.length > 0 && !potBuilderOpen && editPotId === null && (
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#8a7d55", whiteSpace: "nowrap" }}>👤 {headcount < 1 ? "—" : headcount}</span>
           )}
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
