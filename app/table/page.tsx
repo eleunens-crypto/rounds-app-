@@ -89,8 +89,8 @@ function BewaarIcoon({ aan, size = 19 }: { aan: boolean; size?: number }) {
       <path d="M9.2 5.4v3.2h5.6V5.4z" fill="#fff" />
       <path d="M8.4 13.4h7.2v5.2H8.4z" fill="#fff" />
       {!aan && (<>
-        <path d="M3.4 20.6L20.6 3.4" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" />
-        <path d="M3.4 20.6L20.6 3.4" stroke="#9aa0ab" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M3.4 20.6L20.6 3.4" stroke="#fff" strokeWidth="3.6" strokeLinecap="round" />
+        <path d="M3.4 20.6L20.6 3.4" stroke="#5a6680" strokeWidth="1.7" strokeLinecap="round" />
       </>)}
     </svg>
   )
@@ -3582,7 +3582,7 @@ export default function RundoTable() {
                     </button>
                     {g.role === "admin" && (
                       <button onClick={() => togglePin(g)} title={g.pinned ? L.unpinTitle : L.pinTitle}
-                        style={{ ...S.iconBtn, flexShrink: 0, color: g.pinned ? "#0f7488" : "#c3c8d2", background: g.pinned ? "rgba(20,153,176,0.12)" : "#fff", border: g.pinned ? "1px solid rgba(20,153,176,0.45)" : "1px solid rgba(16,24,40,0.14)" }}><BewaarIcoon aan={!!g.pinned} /></button>
+                        style={{ ...S.iconBtn, flexShrink: 0, color: g.pinned ? "#0f7488" : "#8a93a3", background: g.pinned ? "rgba(20,153,176,0.12)" : "#fff", border: g.pinned ? "1px solid rgba(20,153,176,0.45)" : "1px solid rgba(16,24,40,0.2)" }}><BewaarIcoon aan={!!g.pinned} /></button>
                     )}
                     <button onClick={() => forgetSavedGroup(g.id)} title={L.deletePermanently}
                       style={{ ...S.iconBtn, flexShrink: 0, color: "#5a6680" }}><WisIcoon /></button>
