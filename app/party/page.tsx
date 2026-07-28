@@ -4053,16 +4053,17 @@ export default function PartyTest() {
               onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
               style={{ ...S.input, width: "auto", minWidth: 180, maxWidth: "88%", textAlign: "center", fontSize: 17, fontWeight: 800, padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.8)" }} />
           ) : (
-            <div onClick={() => { if (!onboarding) setEditName(true) }} style={{ display: "inline-flex", alignItems: "center", gap: 7, cursor: onboarding ? "default" : "pointer", padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px dashed rgba(240,165,0,0.55)" }}>
-              <span style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2 }}>{groupName.trim()}</span>
-              {!onboarding && <span style={{ fontSize: 13 }}>✏️</span>}
-            </div>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
+              <span onClick={() => { if (!onboarding) setEditName(true) }} style={{ display: "inline-flex", alignItems: "center", gap: 7, cursor: onboarding ? "default" : "pointer", padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px dashed rgba(240,165,0,0.55)" }}>
+                <span style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2 }}>{groupName.trim()}</span>
+                {!onboarding && <span style={{ fontSize: 13 }}>✏️</span>}
+              </span>
+              {/* Naast de naam in plaats van eronder: samen zeggen ze welke groep dit is. */}
+              {settle && <span style={{ fontSize: 14, fontWeight: 700, color: "#8a7d55", whiteSpace: "nowrap" }}>👥 {people.length}</span>}
+            </span>
           )}
           {!onboarding && (
             <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 3 }}>{L.tapToRename}</div>
-          )}
-          {settle && (
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#8a7d55", marginTop: 2 }}>👥 {people.length}</div>
           )}
         </div>
       )}
