@@ -371,6 +371,7 @@ const T = {
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "persoon" : "personen"}`,
     peopleIntro: () => "Jij staat er al bij. De anderen komen erbij via QR scan.",
     addNonScanner: "+ Iemand toevoegen die niet scant",
+    showQr: "📱 QR-code tonen",
     toQrStep: "Naar de QR-code →",
     addThis: "Toevoegen",
     seatNameTitle: (n: number) => `Wie zit op plaats ${n}?`,
@@ -864,6 +865,7 @@ const T = {
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "personne" : "personnes"}`,
     peopleIntro: () => "Tu es déjà là. Les autres arrivent en scannant le QR.",
     addNonScanner: "+ Ajouter quelqu’un qui ne scanne pas",
+    showQr: "📱 Afficher le QR",
     toQrStep: "Vers le QR-code →",
     addThis: "Ajouter",
     seatNameTitle: (n: number) => `Qui est à la place ${n} ?`,
@@ -5076,7 +5078,7 @@ export default function PartyTest() {
           ) : echtOnafgerond ? (
             // Nog geen afgerond rondje, maar wel bezig met rondje 1: verder of terug.
             <div style={{ display: "flex", gap: 10 }}>
-              <button style={{ ...S.btn, flex: 1 }} onClick={() => setNotice(L.noRoundsYet)}>{L.roundsOverview}</button>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => settle ? setView("hub") : setNotice(L.noRoundsYet)}>{settle ? L.showQr : L.roundsOverview}</button>
               {settingsBackTo !== "order" && <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>}
             </div>
           ) : (
@@ -5085,10 +5087,15 @@ export default function PartyTest() {
             // hetzelfde scherm, waarvan één "terug naar rondje 1" en één "naar 1e rondje".
             // De andere twee takken vingen dat al af; deze was vergeten.
             <div style={{ display: "flex", gap: 10 }}>
-              <button style={{ ...S.btn, flex: 1 }} onClick={() => setView("hub")}>{L.roundsOverview}</button>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => setView("hub")}>{settle ? L.showQr : L.roundsOverview}</button>
               {settingsBackTo !== "order" && <button style={{ ...S.btnP, flex: 1 }} onClick={naarRondje}>{L.toFirstRound}</button>}
             </div>
           )}
+            {/* Laatkomer? Dan wil je de QR ook kunnen tonen wanneer er al rondjes zijn. */}
+            {settle && rounds.length > 0 && people.some((p) => !p.claimedBy) && (
+              <button style={{ ...S.btn, width: "100%", marginTop: 10, fontWeight: 800 }}
+                onClick={() => setView("hub")}>{L.showQr}</button>
+            )}
             {kanAfrekenen && (
               <button style={{ ...S.btn, width: "100%", marginTop: 10, fontWeight: 800 }}
                 onClick={() => { if (settle) goFinal(); else goQuickSettle() }}>{settle ? L.settleBtn : L.quickSettleTitle}</button>
@@ -5495,7 +5502,7 @@ export default function PartyTest() {
         {/* Tijdens de omschakeling van snel naar Fair Split is de hub enkel het
             toewijsscherm. Rondjesoverzicht, nieuwe rondjes en afrekenen horen daar
             niet: die leiden je weg uit een traject van drie stappen. */}
-        {!fromQuick && rounds.length === 0 && renderShare()}
+        {!fromQuick && (rounds.length === 0 || people.some((p) => !p.claimedBy)) && renderShare()}
         {/* De pot is een handeling aan het BEGIN van de avond: iedereen legt vooraf in.
             Daarom staat hij hier, zichtbaar, vóór het eerste rondje — niet weggestopt
             in de instellingen. Het ⚙️-wieltje leidt naar pot + bekers + coins samen. */}
