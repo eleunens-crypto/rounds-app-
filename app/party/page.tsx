@@ -4359,7 +4359,7 @@ export default function PartyTest() {
               boxShadow: bpSettle === false ? `0 16px 34px -20px ${MODUS_SNEL.gloed}` : "0 8px 22px -18px rgba(120,95,20,0.5)" }}>
               {/* Kleurbalk als vlag: nog vóór je de tekst leest weet je welke modus dit is. */}
               <div style={{ height: 6, background: MODUS_SNEL.rand }} />
-              <button onClick={() => setBpSettle(false)}
+              <button onClick={() => { setBpSettle(false); setModeInfo((m) => m === "quick" ? m : null) }}
                 style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "16px 14px 14px", border: "none", cursor: "pointer",
                   borderBottom: `1px solid ${MODUS_SNEL.lijnZacht}`,
                   background: bpSettle === false ? MODUS_SNEL.vlak : "linear-gradient(180deg,#fdfcfa,#fff)" }}>
@@ -4421,7 +4421,7 @@ export default function PartyTest() {
               boxShadow: bpSettle === true ? `0 16px 34px -20px ${MODUS_FAIR.gloed}` : "0 8px 22px -18px rgba(120,95,20,0.5)" }}>
               {/* Kleurbalk als vlag: nog vóór je de tekst leest weet je welke modus dit is. */}
               <div style={{ height: 6, background: MODUS_FAIR.rand }} />
-              <button onClick={() => setBpSettle(true)}
+              <button onClick={() => { setBpSettle(true); setModeInfo((m) => m === "fair" ? m : null) }}
                 style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "16px 14px 14px", border: "none", cursor: "pointer",
                   borderBottom: `1px solid ${MODUS_FAIR.lijnZacht}`,
                   background: bpSettle === true ? MODUS_FAIR.vlak : "linear-gradient(180deg,#fdfcfa,#fff)" }}>
