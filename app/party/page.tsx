@@ -4095,22 +4095,15 @@ export default function PartyTest() {
       </div>
       {/* Groepsnaam + aantal personen — gecentreerd onder de logobalk. Bij snelle rondjes
           is het aantal klikbaar naar de instellingen. */}
-      {groupName.trim() && (
-        <div style={{ marginTop: editName && !onboarding ? 9 : 0 }}>
-          {/* De naam is aanpasbaar: potlood + omkadering maken dat zichtbaar. Op het
-              instellingenscherm staat het naamveld al open, dus daar geen tweede ingang. */}
-          {/* Geen pilvorm meer: gewone tekst met een potlood, links uitgelijnd op een eigen
-              regel. Dat maakt de kop rustiger en geeft de naam de volle breedte. */}
-          {editName && !onboarding ? (
-            <input autoFocus value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              onBlur={() => { setEditName(false); persistSettings() }}
-              onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
-              style={{ ...S.input, width: "auto", minWidth: 180, maxWidth: "88%", textAlign: "center", fontSize: 17, fontWeight: 800, padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.8)" }} />
-          ) : (
-
-          )}
-
+      {/* De naam zelf staat in de kop rechtsboven. Hier blijft enkel het invulveld over
+          voor wanneer je op die naam tikt om hem te wijzigen. */}
+      {groupName.trim() && editName && !onboarding && (
+        <div style={{ marginTop: 9, textAlign: "center" }}>
+          <input autoFocus value={groupName}
+            onChange={(e) => setGroupName(e.target.value)}
+            onBlur={() => { setEditName(false); persistSettings() }}
+            onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
+            style={{ ...S.input, width: "auto", minWidth: 180, maxWidth: "88%", textAlign: "center", fontSize: 17, fontWeight: 800, padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.8)" }} />
         </div>
       )}
       {!onboarding && (
