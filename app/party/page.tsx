@@ -66,11 +66,11 @@ const TESTGROEP_NAAM = "🧪 Testgroep"
 // de groepenlijst. Bewust NIET op knoppen, velden of de pot — die blijven amber, want
 // dat is de kleur van Rundo Party zelf en niet van één van de twee modi.
 const MODUS_SNEL = {
-  rand: "#7a5ea8", vlak: "#f5f1fa", paneel: "#fcfaff",
-  streep: "rgba(122,94,168,0.35)", lijn: "rgba(122,94,168,0.15)", label: "#8a76b3",
-  knop: "linear-gradient(135deg,#9575c4,#7a5ea8)", gloed: "rgba(122,94,168,0.55)",
-  tint: "rgba(122,94,168,0.16)", tekst: "#6b4f92",
-  randZacht: "rgba(122,94,168,0.55)", lijnZacht: "rgba(122,94,168,0.25)",
+  rand: "#e07a2f", vlak: "#fdf1e8", paneel: "#fffaf5",
+  streep: "rgba(224,122,47,0.35)", lijn: "rgba(224,122,47,0.15)", label: "#c26a1e",
+  knop: "linear-gradient(135deg,#f0954a,#e07a2f)", gloed: "rgba(224,122,47,0.55)",
+  tint: "rgba(224,122,47,0.16)", tekst: "#9c4f16",
+  randZacht: "rgba(224,122,47,0.55)", lijnZacht: "rgba(224,122,47,0.25)",
 }
 const MODUS_FAIR = {
   rand: "#1f8a4c", vlak: "#f0f9f4", paneel: "#fbfefc",
@@ -330,7 +330,11 @@ const T = {
 
     // ── start & setup
     autoName: () => { const d = new Date(); const m = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"]; return `Rondje ${d.getDate()} ${m[d.getMonth()]}` },
-    startQuickBtn: "Start snelle rondjes",
+    startQuickBtn: "Start",
+    fairStep: (n: number, wat: string) => `stap ${n} van 3 · ${wat}`,
+    fairStepNames: "namen",
+    fairStepAssign: "toewijzen",
+    fairStepPay: "betalen",
     startFairBtn: "Start Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "persoon" : "personen"}`,
     peopleIntro: (n: number) => `Jij bent erbij. De ${n} ${n === 1 ? "andere scant" : "anderen scannen"} de QR en vult zelf zijn naam in.`,
@@ -798,7 +802,11 @@ const T = {
 
     // ── start & setup
     autoName: () => { const d = new Date(); const m = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"]; return `Tournée ${d.getDate()} ${m[d.getMonth()]}` },
-    startQuickBtn: "Démarrer les tournées rapides",
+    startQuickBtn: "Démarrer",
+    fairStep: (n: number, wat: string) => `étape ${n} sur 3 · ${wat}`,
+    fairStepNames: "noms",
+    fairStepAssign: "attribution",
+    fairStepPay: "paiement",
     startFairBtn: "Démarrer Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "personne" : "personnes"}`,
     peopleIntro: (n: number) => `Tu es là. ${n === 1 ? "L'autre scanne" : `Les ${n} autres scannent`} le QR et met son nom.`,
@@ -3761,8 +3769,23 @@ export default function PartyTest() {
     // De eindbalans hoort niet meer bij het traject van drie stappen: daar mag de gewone
     // navigatie weer verschijnen, ook al staat fromQuick nog aan voor de weg terug.
     const onboarding = view === "setup" || view === "settings" || (fromQuick && view !== "final") || (view === "roundsOverview" && fillMode)
+    // Eenmaal binnen stond nergens in welke modus je zit. Een gekleurde balk bovenaan zegt
+    // dat zonder plaats te kosten, en bij Fair Split kan er rechts bij waar je zit in het
+    // traject — die modus loopt door drie stappen, snelle rondjes niet.
+    const modus = settle ? MODUS_FAIR : MODUS_SNEL
+    const stap = !settle ? null
+      : view === "fairSetup" ? L.fairStep(1, L.fairStepNames)
+      : view === "order" || view === "roundsOverview" ? L.fairStep(2, L.fairStepAssign)
+      : view === "payers" ? L.fairStep(3, L.fairStepPay)
+      : null
     return (
     <div style={{ marginBottom: 12 }}>
+      {!!groupId && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: modus.knop, borderRadius: "12px 12px 0 0", padding: "6px 13px", marginBottom: 10 }}>
+          <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>{settle ? `⚖️ ${L.modeFairShort}` : `🍻 ${L.modeQuickShort}`}</span>
+          {stap && <span style={{ fontSize: 11.5, fontWeight: 700, color: "rgba(255,255,255,0.9)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{stap}</span>}
+        </div>
+      )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
         <div onClick={goSiteHome} style={{ cursor: "pointer", ...S.row, gap: 10 }}>
           <RundoLogo size={40} />
@@ -4236,25 +4259,25 @@ export default function PartyTest() {
                 De gekozen modus licht op in zijn eigen kleur, de andere dimt volledig —
                 kader en knop samen, zodat het één blok blijft en geen losse onderdelen. */}
             <div style={{ opacity: bpSettle === true ? 0.6 : 1 }}>
-            <div style={{ borderRadius: 12, overflow: "hidden", border: bpSettle === false ? `2.5px solid ${MODUS_SNEL.rand}` : `2px solid ${MODUS_SNEL.randZacht}`, boxShadow: bpSettle === false ? `0 4px 18px -7px ${MODUS_SNEL.gloed}` : "none" }}>
+            <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", border: bpSettle === false ? `2px solid ${MODUS_SNEL.rand}` : `1.5px solid ${MODUS_SNEL.randZacht}`,
+              boxShadow: bpSettle === false ? `0 16px 34px -20px ${MODUS_SNEL.gloed}` : "0 8px 22px -18px rgba(120,95,20,0.5)" }}>
               {/* Kleurbalk als vlag: nog vóór je de tekst leest weet je welke modus dit is. */}
               <div style={{ height: 6, background: MODUS_SNEL.rand }} />
               <button onClick={() => setBpSettle(false)}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", padding: "17px 16px", border: "none", cursor: "pointer", background: bpSettle === false ? MODUS_SNEL.vlak : "#fff" }}>
-                <span style={{ fontSize: 31, flexShrink: 0 }}>🍻</span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.25 }}>{L.modeQuick}</span>
-                  <span style={{ display: "block", fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 2 }}>{L.modeQuickSub}</span>
-                </span>
-                {bpSettle === false && <span style={{ color: MODUS_SNEL.rand, fontWeight: 800, fontSize: 21, flexShrink: 0 }}>✓</span>}
-                {/* De uitleglink hoort bij de titel, niet vlak boven de startbalk — daar
-                    plakte hij tegen de knop. Uitklappen zet de modus ook aan: een kaart die
-                    opengaat maar bleek blijft, oogt stuk. Kiezen is hier louter visueel:
-                    elke modus heeft zijn eigen startknop die zijn eigen keuze meegeeft. */}
+                style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "16px 14px 14px", border: "none", cursor: "pointer",
+                  borderBottom: `1px solid ${MODUS_SNEL.lijnZacht}`,
+                  background: bpSettle === false ? MODUS_SNEL.vlak : "linear-gradient(180deg,#fdfcfa,#fff)" }}>
+                {/* De uitleg zit in de hoek van de kaart in plaats van naast de titel. Zo heeft
+                    de titel de volle breedte en staat hij echt gecentreerd. Uitklappen zet de
+                    modus ook aan: een kaart die opengaat maar bleek blijft, oogt stuk. */}
                 <span onClick={(e) => { e.stopPropagation(); setBpSettle(false); setModeInfo((m) => m === "quick" ? null : "quick") }}
-                  style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, borderRadius: 14, padding: "6px 10px", cursor: "pointer", whiteSpace: "nowrap",
+                  style={{ position: "absolute", top: 0, right: 0, borderRadius: "0 0 0 14px", padding: "7px 12px 8px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap",
                     background: modeInfo === "quick" ? MODUS_SNEL.rand : MODUS_SNEL.tint,
                     color: modeInfo === "quick" ? "#fff" : MODUS_SNEL.tekst }}>{L.whatIsThis} {modeInfo === "quick" ? "▴" : "▾"}</span>
+                <span style={{ display: "block", fontSize: 36, lineHeight: 1, marginTop: 6, marginBottom: 7 }}>🍻</span>
+                <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: "#3d3418", lineHeight: 1.14, letterSpacing: -0.4 }}>{L.modeQuick}</span>
+                <span style={{ display: "block", fontSize: 16, color: "#7a6d45", lineHeight: 1.4, marginTop: 7 }}>{L.modeQuickSub}</span>
+                {bpSettle === false && <span style={{ display: "block", color: MODUS_SNEL.rand, fontWeight: 800, fontSize: 20, marginTop: 6 }}>✓</span>}
               </button>
               {modeInfo === "quick" && (
               <div style={{ padding: "0 16px 14px", background: bpSettle === false ? MODUS_SNEL.vlak : "#fff" }}>
@@ -4277,15 +4300,14 @@ export default function PartyTest() {
                 </div>
               </div>
               )}
-              {/* De startknop is de voetbalk van de kaart, rand aan rand: zo is elke modus
-                  één blok in plaats van een kaart met een los knopje eronder. */}
-              <button disabled={busy} onClick={() => { setBpSettle(false); startWithMode(undefined, false) }}
-                style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 17, fontWeight: 800, cursor: "pointer", borderRadius: 0,
-                  borderLeft: "none", borderRight: "none", borderBottom: "none",
-                  borderTop: bpSettle === false ? "none" : `2px solid ${MODUS_SNEL.randZacht}`,
-                  background: bpSettle === false ? MODUS_SNEL.knop : MODUS_SNEL.vlak,
-                  color: bpSettle === false ? "#fff" : MODUS_SNEL.tekst,
-                  boxSizing: "border-box" }}>{busy ? L.starting : L.startQuickBtn} →</button>
+              {/* Een losse knop met eigen ronding en schaduw leest onmiskenbaar als knop;
+                  een voetbalk rand-aan-rand deed dat minder. */}
+              <div style={{ padding: "12px 12px 14px", background: bpSettle === false ? MODUS_SNEL.vlak : "#fff" }}>
+                <button disabled={busy} onClick={() => { setBpSettle(false); startWithMode(undefined, false) }}
+                  style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 17.5, fontWeight: 800, cursor: "pointer", borderRadius: 14, border: "none",
+                    background: MODUS_SNEL.knop, color: "#fff", boxSizing: "border-box",
+                    boxShadow: `0 10px 22px -10px ${MODUS_SNEL.gloed}` }}>{busy ? L.starting : L.startQuickBtn} →</button>
+              </div>
             </div>
             </div>
 
@@ -4299,21 +4321,22 @@ export default function PartyTest() {
             </div>
 
             <div style={{ opacity: bpSettle === false ? 0.6 : 1 }}>
-            <div style={{ borderRadius: 12, overflow: "hidden", border: bpSettle === true ? `2.5px solid ${MODUS_FAIR.rand}` : `2px solid ${MODUS_FAIR.randZacht}`, boxShadow: bpSettle === true ? `0 4px 18px -7px ${MODUS_FAIR.gloed}` : "none" }}>
+            <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", border: bpSettle === true ? `2px solid ${MODUS_FAIR.rand}` : `1.5px solid ${MODUS_FAIR.randZacht}`,
+              boxShadow: bpSettle === true ? `0 16px 34px -20px ${MODUS_FAIR.gloed}` : "0 8px 22px -18px rgba(120,95,20,0.5)" }}>
               {/* Kleurbalk als vlag: nog vóór je de tekst leest weet je welke modus dit is. */}
               <div style={{ height: 6, background: MODUS_FAIR.rand }} />
               <button onClick={() => setBpSettle(true)}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, textAlign: "left", padding: "17px 16px", border: "none", cursor: "pointer", background: bpSettle === true ? MODUS_FAIR.vlak : "#fff" }}>
-                <span style={{ fontSize: 31, flexShrink: 0 }}>⚖️</span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.25 }}>{L.modeTitle}</span>
-                  <span style={{ display: "block", fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 2 }}>{L.modeFairSub}</span>
-                </span>
-                {bpSettle === true && <span style={{ color: MODUS_FAIR.rand, fontWeight: 800, fontSize: 21, flexShrink: 0 }}>✓</span>}
+                style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "16px 14px 14px", border: "none", cursor: "pointer",
+                  borderBottom: `1px solid ${MODUS_FAIR.lijnZacht}`,
+                  background: bpSettle === true ? MODUS_FAIR.vlak : "linear-gradient(180deg,#fdfcfa,#fff)" }}>
                 <span onClick={(e) => { e.stopPropagation(); setBpSettle(true); setModeInfo((m) => m === "fair" ? null : "fair") }}
-                  style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, borderRadius: 14, padding: "6px 10px", cursor: "pointer", whiteSpace: "nowrap",
+                  style={{ position: "absolute", top: 0, right: 0, borderRadius: "0 0 0 14px", padding: "7px 12px 8px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap",
                     background: modeInfo === "fair" ? MODUS_FAIR.rand : MODUS_FAIR.tint,
                     color: modeInfo === "fair" ? "#fff" : MODUS_FAIR.tekst }}>{L.whatIsThis} {modeInfo === "fair" ? "▴" : "▾"}</span>
+                <span style={{ display: "block", fontSize: 36, lineHeight: 1, marginTop: 6, marginBottom: 7 }}>⚖️</span>
+                <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: "#3d3418", lineHeight: 1.14, letterSpacing: -0.4 }}>{L.modeTitle}</span>
+                <span style={{ display: "block", fontSize: 16, color: "#7a6d45", lineHeight: 1.4, marginTop: 7 }}>{L.modeFairSub}</span>
+                {bpSettle === true && <span style={{ display: "block", color: MODUS_FAIR.rand, fontWeight: 800, fontSize: 20, marginTop: 6 }}>✓</span>}
               </button>
               {modeInfo === "fair" && (
               <div style={{ padding: "0 16px 14px", background: bpSettle === true ? MODUS_FAIR.vlak : "#fff" }}>
@@ -4350,15 +4373,12 @@ export default function PartyTest() {
                 </div>
               </div>
               )}
-              {/* De startknop is de voetbalk van de kaart, rand aan rand: zo is elke modus
-                  één blok in plaats van een kaart met een los knopje eronder. */}
-              <button disabled={busy} onClick={() => { setBpSettle(true); startWithMode(undefined, true) }}
-                style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 17, fontWeight: 800, cursor: "pointer", borderRadius: 0,
-                  borderLeft: "none", borderRight: "none", borderBottom: "none",
-                  borderTop: bpSettle === true ? "none" : `2px solid ${MODUS_FAIR.randZacht}`,
-                  background: bpSettle === true ? MODUS_FAIR.knop : MODUS_FAIR.vlak,
-                  color: bpSettle === true ? "#fff" : MODUS_FAIR.tekst,
-                  boxSizing: "border-box" }}>{busy ? L.starting : L.startFairBtn} →</button>
+              <div style={{ padding: "12px 12px 14px", background: bpSettle === true ? MODUS_FAIR.vlak : "#fff" }}>
+                <button disabled={busy} onClick={() => { setBpSettle(true); startWithMode(undefined, true) }}
+                  style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 17.5, fontWeight: 800, cursor: "pointer", borderRadius: 14, border: "none",
+                    background: MODUS_FAIR.knop, color: "#fff", boxSizing: "border-box",
+                    boxShadow: `0 10px 22px -10px ${MODUS_FAIR.gloed}` }}>{busy ? L.starting : L.startFairBtn} →</button>
+              </div>
             </div>
             </div>
           </div>
