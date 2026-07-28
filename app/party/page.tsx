@@ -640,9 +640,12 @@ const T = {
     imGoing: "🍻 Ik start een rondje",
     walkTable: "👥 Rondje opnemen",
     walkIntro: "Tik per persoon aan wat die wil.",
+    everyoneTapsOwn: "📱 Iedereen tikt op zijn eigen telefoon aan wat hij wil",
+    youTapForAll: "✍️ Jij gaat rond en tikt voor iedereen aan",
+    everyoneTapsNow: "Iedereen tikt nu op zijn eigen telefoon aan wat hij wil.",
+    readyOf: (n: number, totaal: number) => `${n} van ${totaal} deden dat al.`,
     walkDone: "✓ Klaar",
     walkFor: (n: string) => `Wat wil ${n}?`,
-    whoGoes: "Klaar voor een rondje?",
     xIsGoing: (n: string) => `🍻 ${n} haalt dit rondje`,
     youAreGoing: "🍻 Jij haalt dit rondje",
     iGoInstead: "ik neem het over",
@@ -1144,9 +1147,12 @@ const T = {
     imGoing: "🍻 Je lance une tournée",
     walkTable: "👥 Faire le tour",
     walkIntro: "Coche pour chacun ce qu'il veut.",
+    everyoneTapsOwn: "📱 Chacun coche sur son propre téléphone ce qu’il veut",
+    youTapForAll: "✍️ Tu fais le tour et tu coches pour tout le monde",
+    everyoneTapsNow: "Chacun coche maintenant sur son propre téléphone.",
+    readyOf: (n: number, totaal: number) => `${n} sur ${totaal} l’ont déjà fait.`,
     walkDone: "✓ Terminé",
     walkFor: (n: string) => `Que veut ${n} ?`,
-    whoGoes: "Prêt pour une tournée ?",
     xIsGoing: (n: string) => `🍻 ${n} s'en occupe`,
     youAreGoing: "🍻 Tu t'occupes de cette tournée",
     iGoInstead: "je reprends",
@@ -1802,18 +1808,27 @@ export default function PartyTest() {
     if (!openRoundId && !startedBy) {
       // Nog geen rondje. Wie start, haalt — één handeling.
       return (
-        <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)", textAlign: "center" }}>
-          <div style={{ fontSize: 15.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 10 }}>{L.whoGoes}</div>
+        <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
           <button style={{ ...S.btnP, width: "100%" }} onClick={startAsRunner}>{L.imGoing}</button>
+          <div style={{ fontSize: 12.5, color: "#8a7d55", textAlign: "center", lineHeight: 1.45, margin: "6px 0 11px" }}>{L.everyoneTapsOwn}</div>
+          <button style={{ ...S.btn, width: "100%", fontSize: 15, fontWeight: 800, padding: "12px 8px" }} onClick={() => setWalkIdx(0)}>{L.walkTable}</button>
+          <div style={{ fontSize: 12.5, color: "#8a7d55", textAlign: "center", lineHeight: 1.45, marginTop: 6 }}>{L.youTapForAll}</div>
         </div>
       )
     }
     if (ikHaal) {
+      // Hoeveel mensen tikten al iets aan? Zonder dat cijfer weet je niet of je nog moet
+      // wachten — en dat is précies de vraag terwijl je klaarstaat om te gaan.
+      const klaar = people.filter((pp) => drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)).length
       return (
         <div style={{ ...S.card, background: "rgba(31,138,76,0.08)", border: "1.5px solid rgba(31,138,76,0.35)" }}>
-          <div style={{ ...S.row, justifyContent: "space-between" }}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9 }}>
             <span style={{ fontSize: 15.5, fontWeight: 800, color: "#1f6b3a" }}>{L.youAreGoing}</span>
             <button style={{ ...S.btn, fontSize: 13.5, fontWeight: 700, padding: "6px 11px" }} onClick={releaseRunner}>{L.notMeRunner}</button>
+          </div>
+          <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "#fff", borderRadius: 11, padding: "11px 12px" }}>
+            <span style={{ flexShrink: 0, fontSize: 17 }}>📱</span>
+            <span style={{ fontSize: 14.5, color: "#4a3f1e", lineHeight: 1.45 }}>{L.everyoneTapsNow} <b>{L.readyOf(klaar, people.length)}</b></span>
           </div>
         </div>
       )
@@ -4060,9 +4075,11 @@ export default function PartyTest() {
       {/* Groepsnaam + aantal personen — gecentreerd onder de logobalk. Bij snelle rondjes
           is het aantal klikbaar naar de instellingen. */}
       {groupName.trim() && (
-        <div style={{ textAlign: "center", marginTop: 9 }}>
+        <div style={{ marginTop: 9, borderTop: "1px solid rgba(120,95,20,0.1)", paddingTop: 9 }}>
           {/* De naam is aanpasbaar: potlood + omkadering maken dat zichtbaar. Op het
               instellingenscherm staat het naamveld al open, dus daar geen tweede ingang. */}
+          {/* Geen pilvorm meer: gewone tekst met een potlood, links uitgelijnd op een eigen
+              regel. Dat maakt de kop rustiger en geeft de naam de volle breedte. */}
           {editName && !onboarding ? (
             <input autoFocus value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
@@ -4070,18 +4087,15 @@ export default function PartyTest() {
               onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
               style={{ ...S.input, width: "auto", minWidth: 180, maxWidth: "88%", textAlign: "center", fontSize: 17, fontWeight: 800, padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.8)" }} />
           ) : (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
-              <span onClick={() => { if (!onboarding) setEditName(true) }} style={{ display: "inline-flex", alignItems: "center", gap: 7, cursor: onboarding ? "default" : "pointer", padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px dashed rgba(240,165,0,0.55)" }}>
-                <span style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2 }}>{groupName.trim()}</span>
-                {!onboarding && <span style={{ fontSize: 13 }}>✏️</span>}
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+              <span onClick={() => { if (!onboarding) setEditName(true) }} style={{ display: "inline-flex", alignItems: "baseline", gap: 8, cursor: onboarding ? "default" : "pointer", minWidth: 0 }}>
+                <span style={{ fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim()}</span>
+                {!onboarding && <span style={{ fontSize: 13, flexShrink: 0 }}>✏️</span>}
               </span>
-              {/* Naast de naam in plaats van eronder: samen zeggen ze welke groep dit is. */}
-              {settle && <span style={{ fontSize: 14, fontWeight: 700, color: "#8a7d55", whiteSpace: "nowrap" }}>👥 {people.length}</span>}
-            </span>
+              {settle && <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 700, color: "#8a7d55", whiteSpace: "nowrap" }}>👥 {people.length}</span>}
+            </div>
           )}
-          {!onboarding && (
-            <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 3 }}>{L.tapToRename}</div>
-          )}
+
         </div>
       )}
       {!onboarding && (
