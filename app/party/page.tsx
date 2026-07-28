@@ -370,9 +370,12 @@ const T = {
     startFairBtn: "Start Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "persoon" : "personen"}`,
     peopleIntro: (n: number) => `Jij bent erbij. De ${n} ${n === 1 ? "andere scant" : "anderen scannen"} de QR en vult zelf zijn naam in.`,
-    waitingSeats: (names: string) => `${names} — wachten op scan…`,
-    noPhoneAdd: "Iemand zonder telefoon?",
-    addSelf: "+ zelf toevoegen",
+    stillFreeWord: "nog vrij",
+    scansOrYouFill: "scant zelf, of vul jij de naam in",
+    addNameShort: "+ naam",
+    addThis: "Toevoegen",
+    seatNameTitle: (n: number) => `Wie zit op plaats ${n}?`,
+    seatNameSub: "Scant deze persoon later toch zelf, dan tikt hij gewoon zijn naam aan.",
     yourSeat: "Jij",
     groupNameEdit: "Naam van deze groep",
     groupNamePh: "Typ je groepsnaam",
@@ -860,9 +863,12 @@ const T = {
     startFairBtn: "Démarrer Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "personne" : "personnes"}`,
     peopleIntro: (n: number) => `Tu es là. ${n === 1 ? "L'autre scanne" : `Les ${n} autres scannent`} le QR et met son nom.`,
-    waitingSeats: (names: string) => `${names} — en attente de scan…`,
-    noPhoneAdd: "Quelqu'un sans téléphone ?",
-    addSelf: "+ ajouter moi-même",
+    stillFreeWord: "encore libre",
+    scansOrYouFill: "scanne lui-même, ou tu mets le nom",
+    addNameShort: "+ nom",
+    addThis: "Ajouter",
+    seatNameTitle: (n: number) => `Qui est à la place ${n} ?`,
+    seatNameSub: "S’il scanne quand même plus tard, il touchera simplement son nom.",
     yourSeat: "Toi",
     groupNameEdit: "Nom de ce groupe",
     groupNamePh: "Tape le nom de ton groupe",
@@ -1292,6 +1298,9 @@ export default function PartyTest() {
   // Kies je "nieuwe met eigen naam", dan vraagt dit venster om die naam. Het keuzescherm
   // heeft zelf geen naamveld — daar duik je normaal meteen in de drankjes.
   const [naamPrompt, setNaamPrompt] = useState<boolean | null>(null)
+  // Naam zetten op een plaats die nog op een scan wacht.
+  const [zitNaam, setZitNaam] = useState<{ id: string; nr: number } | null>(null)
+  const [zitNaamTekst, setZitNaamTekst] = useState("")
   const [people, setPeople] = useState<Person[]>([])
 
   // ── Supabase-laag ───────────────────────────────────────────────────────────
@@ -3842,6 +3851,22 @@ export default function PartyTest() {
           {L.sleepBanner}
         </div>
       )}
+      {zitNaam && (
+        <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setZitNaam(null)}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", marginBottom: 4 }}>{L.seatNameTitle(zitNaam.nr)}</div>
+            <div style={{ fontSize: 14.5, color: "#8a7d55", lineHeight: 1.45, marginBottom: 13 }}>{L.seatNameSub}</div>
+            <input autoFocus value={zitNaamTekst} onChange={(e) => setZitNaamTekst(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && zitNaamTekst.trim()) { renamePerson(zitNaam.id, zitNaamTekst.trim()); setZitNaam(null); setZitNaamTekst("") } }}
+              placeholder={L.yourName}
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, marginBottom: 13 }} />
+            <button disabled={!zitNaamTekst.trim()}
+              onClick={() => { renamePerson(zitNaam.id, zitNaamTekst.trim()); setZitNaam(null); setZitNaamTekst("") }}
+              style={{ ...S.btnP, width: "100%", opacity: zitNaamTekst.trim() ? 1 : 0.5, cursor: zitNaamTekst.trim() ? "pointer" : "default" }}>{L.addThis}</button>
+            <button onClick={() => { setZitNaam(null); setZitNaamTekst("") }} style={{ width: "100%", marginTop: 9, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#a89a6f" }}>{L.cancel}</button>
+          </div>
+        </div>
+      )}
       {naamPrompt !== null && (
         <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setNaamPrompt(null)}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
@@ -4839,19 +4864,23 @@ export default function PartyTest() {
                   )
                 })}
 
-                {/* De rest samengevat — géén zes lege velden, dus geen reflex om alles in
-                    te vullen. Ze wachten op de scan. */}
-                {wachtend.length > 0 && (
-                  <div style={{ ...S.row, justifyContent: "space-between", padding: "9px 11px", borderRadius: 10, background: "#fff", border: "1px dashed rgba(120,95,20,0.25)" }}>
-                    <span style={{ fontSize: 14, color: "#a89a6f" }}>{L.waitingSeats(wachtend.map((p) => people.indexOf(p) + 1).join(" · "))}</span>
-                  </div>
-                )}
-
-                {/* De uitzondering: iemand zonder telefoon. Bewust een aparte tik. */}
-                <div style={{ borderTop: "1px solid rgba(120,95,20,0.1)", marginTop: 12, paddingTop: 11, textAlign: "center" }}>
-                  <span style={{ fontSize: 13, color: "#8a7d55" }}>{L.noPhoneAdd} </span>
-                  <span onClick={addPerson} style={{ fontSize: 13.5, color: "#8a5e0f", fontWeight: 800, cursor: "pointer" }}>{L.addSelf}</span>
-                </div>
+                {/* Elke wachtende plaats is aantikbaar: wie niet gaat scannen, geef je hier
+                    gewoon een naam. Vroeger stond daar "+ zelf toevoegen", maar dat maakte
+                    een éxtra persoon aan — en dus veranderde het aantal, terwijl je alleen
+                    een naam wou zetten op een plaats die er al was. Wie later toch scant,
+                    tikt zijn naam gewoon aan en houdt alles wat je al voor hem aanduidde. */}
+                {wachtend.map((p) => (
+                  <button key={p.id} onClick={() => setZitNaam({ id: p.id, nr: people.indexOf(p) + 1 })}
+                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, textAlign: "left", cursor: "pointer",
+                      padding: "10px 12px", borderRadius: 11, marginBottom: 6,
+                      background: MODUS_SNEL.vlak, border: `1px dashed ${MODUS_SNEL.randZacht}` }}>
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#9c8f6d", fontStyle: "italic" }}>📱 {L.seat(people.indexOf(p) + 1)} — {L.stillFreeWord}</span>
+                      <span style={{ display: "block", fontSize: 12.5, color: "#b3a988" }}>{L.scansOrYouFill}</span>
+                    </span>
+                    <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: MODUS_SNEL.tekst }}>{L.addNameShort}</span>
+                  </button>
+                ))}
               </>
             )
           })()}
