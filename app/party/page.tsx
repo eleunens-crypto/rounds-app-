@@ -4890,10 +4890,13 @@ export default function PartyTest() {
               {settingsBackTo !== "order" && <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>}
             </div>
           ) : (
-            // Groep bestaat, nog geen rondjes: kies zelf waar je heen wil.
+            // Groep bestaat, nog geen rondjes: kies zelf waar je heen wil. Kwam je uit het
+            // bestelscherm, dan zegt de terugknop bovenaan dit al — twee knoppen naar
+            // hetzelfde scherm, waarvan één "terug naar rondje 1" en één "naar 1e rondje".
+            // De andere twee takken vingen dat al af; deze was vergeten.
             <div style={{ display: "flex", gap: 10 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setView("hub")}>{L.roundsOverview}</button>
-              <button style={{ ...S.btnP, flex: 1 }} onClick={naarRondje}>{L.toFirstRound}</button>
+              {settingsBackTo !== "order" && <button style={{ ...S.btnP, flex: 1 }} onClick={naarRondje}>{L.toFirstRound}</button>}
             </div>
           )}
             {kanAfrekenen && (
