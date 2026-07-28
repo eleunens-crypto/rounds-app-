@@ -75,8 +75,8 @@ function BewaarIcoon({ aan, size = 20 }: { aan: boolean; size?: number }) {
       <path d="M9.2 5.4v3.2h5.6V5.4z" fill="#fff" />
       <path d="M8.4 13.4h7.2v5.2H8.4z" fill="#fff" />
       {!aan && (<>
-        <path d="M3.4 20.6L20.6 3.4" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" />
-        <path d="M3.4 20.6L20.6 3.4" stroke="#a89a6f" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M3.4 20.6L20.6 3.4" stroke="#fff" strokeWidth="3.6" strokeLinecap="round" />
+        <path d="M3.4 20.6L20.6 3.4" stroke="#6b5f3a" strokeWidth="1.7" strokeLinecap="round" />
       </>)}
     </svg>
   )
@@ -356,6 +356,12 @@ const T = {
 
     // ── start & setup
     autoName: () => { const d = new Date(); const m = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"]; return `Rondje ${d.getDate()} ${m[d.getMonth()]}` },
+    sameDayGroup: (naam: string) => `Je hebt vandaag al een groep die "${naam}" heet.\n\nWil je daarin verder, of maak je een nieuwe met een eigen naam?`,
+    sameDayContinue: "Verder in die groep",
+    sameDayNew: "Nieuwe met eigen naam",
+    newGroupNameTitle: "Naam voor je nieuwe groep",
+    newGroupNameSub: "Zo herken je hem straks tussen je andere groepen.",
+    startWord: "Starten",
     startQuickBtn: "Start",
     fairStep: (n: number, wat: string) => `stap ${n} van 3 · ${wat}`,
     fairStepNames: "namen",
@@ -840,6 +846,12 @@ const T = {
 
     // ── start & setup
     autoName: () => { const d = new Date(); const m = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"]; return `Tournée ${d.getDate()} ${m[d.getMonth()]}` },
+    sameDayGroup: (naam: string) => `Tu as déjà un groupe « ${naam} » aujourd’hui.\n\nTu veux continuer dedans, ou en créer un nouveau avec son propre nom ?`,
+    sameDayContinue: "Continuer dans ce groupe",
+    sameDayNew: "Nouveau, avec un nom",
+    newGroupNameTitle: "Nom de ton nouveau groupe",
+    newGroupNameSub: "Ainsi tu le reconnais parmi tes autres groupes.",
+    startWord: "Démarrer",
     startQuickBtn: "Démarrer",
     fairStep: (n: number, wat: string) => `étape ${n} sur 3 · ${wat}`,
     fairStepNames: "noms",
@@ -1276,6 +1288,10 @@ export default function PartyTest() {
   const [depositInfo, setDepositInfo] = useState(false)
 
   const [groupName, setGroupName] = useState("")
+  const groepNaamVeld = useRef<HTMLInputElement | null>(null)
+  // Kies je "nieuwe met eigen naam", dan vraagt dit venster om die naam. Het keuzescherm
+  // heeft zelf geen naamveld — daar duik je normaal meteen in de drankjes.
+  const [naamPrompt, setNaamPrompt] = useState<boolean | null>(null)
   const [people, setPeople] = useState<Person[]>([])
 
   // ── Supabase-laag ───────────────────────────────────────────────────────────
@@ -2432,8 +2448,18 @@ export default function PartyTest() {
       const dubbel = savedGroups.find((g) => !g.finalized && g.name.trim().toLowerCase() === naam.toLowerCase())
       if (dubbel) { setNotice(L.dupGroupName(naam)); return }
     } else {
-      const bestaat = (n: string) => savedGroups.some((g) => !g.finalized && g.name.trim().toLowerCase() === n.toLowerCase())
-      if (bestaat(naam)) { let i = 2; while (bestaat(`${naam} ${i}`)) i++; naam = `${naam} ${i}` }
+      // Vroeger telde de app gewoon door: "Rondje 28 juli 2, 3 …". Dat levert namen op die
+      // niets zeggen, en meestal wou je gewoon je bestaande groep terug. Dus vragen we het.
+      const zelfde = savedGroups.find((g) => !g.finalized && g.owned && g.name.trim().toLowerCase() === naam.toLowerCase())
+      if (zelfde) {
+        setConfirmDlg({
+          msg: L.sameDayGroup(zelfde.name),
+          yes: L.sameDayContinue, no: L.sameDayNew,
+          onYes: () => { setConfirmDlg(null); void openSavedGroup(zelfde.id) },
+          onNo: () => { setConfirmDlg(null); setGroupName(""); setNaamPrompt(wilSettle) },
+        })
+        return
+      }
     }
     if (busy) return
     setBusy(true)
@@ -3816,6 +3842,22 @@ export default function PartyTest() {
           {L.sleepBanner}
         </div>
       )}
+      {naamPrompt !== null && (
+        <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setNaamPrompt(null)}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", marginBottom: 4 }}>{L.newGroupNameTitle}</div>
+            <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginBottom: 13 }}>{L.newGroupNameSub}</div>
+            <input ref={groepNaamVeld} autoFocus value={groupName} onChange={(e) => setGroupName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && groupName.trim()) { const m = naamPrompt; setNaamPrompt(null); void startWithMode(undefined, m) } }}
+              placeholder={L.groupNamePh}
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, marginBottom: 13 }} />
+            <button disabled={!groupName.trim() || busy}
+              onClick={() => { const m = naamPrompt; setNaamPrompt(null); void startWithMode(undefined, m) }}
+              style={{ ...S.btnP, width: "100%", opacity: groupName.trim() ? 1 : 0.5, cursor: groupName.trim() ? "pointer" : "default" }}>{L.startWord}</button>
+            <button onClick={() => setNaamPrompt(null)} style={{ width: "100%", marginTop: 9, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#a89a6f" }}>{L.cancel}</button>
+          </div>
+        </div>
+      )}
       {notice && (
         <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setNotice("")}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
@@ -4402,7 +4444,7 @@ export default function PartyTest() {
                 <button disabled={busy} onClick={() => { setBpSettle(false); startWithMode(undefined, false) }}
                   style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 17.5, fontWeight: 800, cursor: "pointer", borderRadius: 14, border: "none",
                     background: MODUS_SNEL.knop, color: "#fff", boxSizing: "border-box",
-                    boxShadow: `0 10px 22px -10px ${MODUS_SNEL.gloed}` }}>{busy ? L.starting : L.startQuickBtn} →</button>
+                    boxShadow: `0 12px 28px -8px ${MODUS_SNEL.gloed}, 0 0 0 4px ${MODUS_SNEL.tint}` }}>{busy ? L.starting : L.startQuickBtn} →</button>
               </div>
             </div>
             </div>
@@ -4473,7 +4515,7 @@ export default function PartyTest() {
                 <button disabled={busy} onClick={() => { setBpSettle(true); startWithMode(undefined, true) }}
                   style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 17.5, fontWeight: 800, cursor: "pointer", borderRadius: 14, border: "none",
                     background: MODUS_FAIR.knop, color: "#fff", boxSizing: "border-box",
-                    boxShadow: `0 10px 22px -10px ${MODUS_FAIR.gloed}` }}>{busy ? L.starting : L.startFairBtn} →</button>
+                    boxShadow: `0 12px 28px -8px ${MODUS_FAIR.gloed}, 0 0 0 4px ${MODUS_FAIR.tint}` }}>{busy ? L.starting : L.startFairBtn} →</button>
               </div>
             </div>
             </div>
@@ -4506,8 +4548,8 @@ export default function PartyTest() {
                 <button onClick={() => togglePin(g)} disabled={busy} aria-label={g.pinned ? L.pinOff : L.pinOn} title={g.pinned ? L.pinOff : L.pinOn}
                   style={{ flexShrink: 0, width: 44, borderRadius: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                     background: g.pinned ? "rgba(240,165,0,0.16)" : "#fff",
-                    border: g.pinned ? "1px solid rgba(240,165,0,0.6)" : "1px solid rgba(120,95,20,0.2)",
-                    color: g.pinned ? "#c88a1a" : "#cfc6ad" }}><BewaarIcoon aan={!!g.pinned} /></button>
+                    border: g.pinned ? "1px solid rgba(240,165,0,0.6)" : "1px solid rgba(120,95,20,0.28)",
+                    color: g.pinned ? "#c88a1a" : "#9c8f6d" }}><BewaarIcoon aan={!!g.pinned} /></button>
               )}
               {g.owned && (
                 <button onClick={() => deleteSavedGroup(g)} disabled={busy} aria-label={L.delGroupYes}
