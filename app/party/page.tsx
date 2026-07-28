@@ -366,10 +366,6 @@ const T = {
     newGroupNameSub: "Zo herken je hem straks tussen je andere groepen.",
     startWord: "Starten",
     startQuickBtn: "Start",
-    fairStep: (n: number, wat: string) => `stap ${n} van 3 · ${wat}`,
-    fairStepNames: "namen",
-    fairStepAssign: "toewijzen",
-    fairStepPay: "betalen",
     persShort: (n: number) => `${n} pers.`,
     startFairBtn: "Start Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "persoon" : "personen"}`,
@@ -874,10 +870,6 @@ const T = {
     newGroupNameSub: "Ainsi tu le reconnais parmi tes autres groupes.",
     startWord: "Démarrer",
     startQuickBtn: "Démarrer",
-    fairStep: (n: number, wat: string) => `étape ${n} sur 3 · ${wat}`,
-    fairStepNames: "noms",
-    fairStepAssign: "attribution",
-    fairStepPay: "paiement",
     persShort: (n: number) => `${n} pers.`,
     startFairBtn: "Démarrer Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "personne" : "personnes"}`,
@@ -2126,6 +2118,9 @@ export default function PartyTest() {
       setDepositUnit(g.deposit_unit as "eur" | "coin")
       setPotIsCard(!!g.pot_is_card)
       setSettle(g.settle !== false)
+    // Ook de keuzevlag meezetten: staat die op null, dan duikt "Kies je aanpak" opnieuw op
+    // — bijvoorbeeld wanneer je een opgeslagen groep opent en daarna de QR opvraagt.
+    setBpSettle(g.settle !== false)
       setCustomDrinks(((g.custom_drinks ?? []) as Custom[]))
       setCoinPrices(((g.coin_prices ?? {}) as Record<string, number>))
     }
@@ -2387,6 +2382,9 @@ export default function PartyTest() {
     const res = await loadParty(id)
     setBusy(false)
     setResumeGroupId(null)
+    // Deze groep bestaat al: de aanpak is ooit gekozen en de startinstellingen staan erop.
+    // Zonder dit dook "Kies je aanpak" opnieuw op zodra je iets deed dat dat venster opent.
+    setOnboardedOnce(true)
     if (res && res.rondjes === 0 && !res.heeftOpen) {
       // Verse groep: nog nooit een rondje. Vroeger stuurden we je terug naar de keuzekaders
       // om de modus te (her)bevestigen — maar die staat al op de groep, dus dat was een
@@ -4042,17 +4040,11 @@ export default function PartyTest() {
     // dat zonder plaats te kosten, en bij Fair Split kan er rechts bij waar je zit in het
     // traject — die modus loopt door drie stappen, snelle rondjes niet.
     const modus = settle ? MODUS_FAIR : MODUS_SNEL
-    const stap = !settle ? null
-      : view === "fairSetup" ? L.fairStep(1, L.fairStepNames)
-      : view === "order" || view === "roundsOverview" ? L.fairStep(2, L.fairStepAssign)
-      : view === "payers" ? L.fairStep(3, L.fairStepPay)
-      : null
     return (
     <div style={{ marginBottom: 12 }}>
       {!!groupId && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: modus.knop, borderRadius: "14px 14px 0 0", padding: "10px 15px", marginBottom: 10 }}>
           <span style={{ fontSize: 15.5, fontWeight: 800, color: "#fff", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? `⚖️ ${L.modeFairShort}` : `🍻 ${L.modeQuickShort}`}</span>
-          {stap && <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.92)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{stap}</span>}
         </div>
       )}
       {/* Logo met de pot eronder aan de linkerkant; de groepsnaam en het aantal personen
