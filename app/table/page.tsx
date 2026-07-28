@@ -79,9 +79,35 @@ type SavedGroup = { id: string; name: string; invite_code: string; role: "admin"
 // daarvoor is geen extra kolom nodig. De bonfoto verdwijnt véél eerder dan de rekening
 // zelf: zodra alles is afgerekend heeft die scan zijn werk gedaan, en één foto weegt
 // ongeveer even zwaar als tien complete rekeningen.
+// Dezelfde getekende iconen als in Party: gelijk op elk toestel, en ze nemen de kleur van
+// de knop over. De streep bij "niet bewaard" krijgt een witte lijn eronder, anders
+// verdwijnt hij half in de gevulde vorm.
+function BewaarIcoon({ aan, size = 19 }: { aan: boolean; size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} style={{ display: "block" }}>
+      <path d="M4.5 6A1.5 1.5 0 0 1 6 4.5h9.6L19.5 8.4V18a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 18z" fill="currentColor" />
+      <path d="M9.2 5.4v3.2h5.6V5.4z" fill="#fff" />
+      <path d="M8.4 13.4h7.2v5.2H8.4z" fill="#fff" />
+      {!aan && (<>
+        <path d="M3.4 20.6L20.6 3.4" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" />
+        <path d="M3.4 20.6L20.6 3.4" stroke="#9aa0ab" strokeWidth="1.6" strokeLinecap="round" />
+      </>)}
+    </svg>
+  )
+}
+function WisIcoon({ size = 18 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+      <path d="M4 6.5h16" /><path d="M9.5 6.5V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1.5" />
+      <path d="M6.5 6.5l.9 12a1.5 1.5 0 0 0 1.5 1.4h6.2a1.5 1.5 0 0 0 1.5-1.4l.9-12" />
+      <path d="M10.5 10v6" /><path d="M13.5 10v6" />
+    </svg>
+  )
+}
+
 const DAG_MS = 24 * 60 * 60 * 1000
-const BEWAAR_AFGESLOTEN = 30 * DAG_MS
-const BEWAAR_OPEN = 60 * DAG_MS
+const BEWAAR_AFGESLOTEN = 7 * DAG_MS
+const BEWAAR_OPEN = 14 * DAG_MS
 const BEWAAR_FOTO = 7 * DAG_MS
 const MAX_PINS = 3
 
@@ -518,11 +544,23 @@ const STRINGS = {
     togetherWhat: (n: number) => n === 2
       ? "Deze twee betalen samen: ze nemen één plaats in aan tafel en krijgen op het einde één bedrag te zien, niet elk apart."
       : `Deze ${n} betalen samen: ze nemen één plaats in aan tafel en krijgen op het einde één bedrag te zien.`,
-    pinTitle: "Vastzetten — wordt niet automatisch opgeruimd",
-    unpinTitle: "Losmaken",
+    pinTitle: "Bewaren — wordt niet automatisch opgeruimd",
+    unpinTitle: "Niet meer bewaren",
     pinFailed: "Vastzetten mislukt.",
     maxPins: (n: number) => `Je kan maximaal ${n} rekeningen vastzetten. Maak er eerst een los.`,
-    retentionNote: "📌 Vastgezette rekeningen blijven bewaard. De rest verdwijnt na 30 dagen (60 als ze nooit werd afgesloten), en de bonfoto al na 7 dagen.",
+    retentionNote: "Bewaarde rekeningen blijven staan. De rest verdwijnt na 7 dagen — net als de bonfoto.",
+    searchGroups: "Zoek een rekening…",
+    groupsSaved: "Bewaard",
+    groupsRecent: "Recent · verdwijnt vanzelf",
+    daysLeft: (n: number) => n <= 0 ? "vandaag weg" : n === 1 ? "nog 1 dag" : `nog ${n} dagen`,
+    noSearchHit: "Geen rekening gevonden.",
+    wipeAll: "Alles wissen",
+    wipeAllTitle: "Alles wissen?",
+    wipeAllBody: (weg: number, blijft: number) => blijft > 0
+      ? `Je verwijdert ${weg} ${weg === 1 ? "rekening" : "rekeningen"} definitief, met alle items en bedragen erin. Je ${blijft} bewaarde ${blijft === 1 ? "rekening blijft" : "rekeningen blijven"} staan.`
+      : `Je verwijdert ${weg} ${weg === 1 ? "rekening" : "rekeningen"} definitief, met alle items en bedragen erin.`,
+    wipeAllYes: (n: number) => `Ja, wis ${n === 1 ? "die ene" : `die ${n}`}`,
+    wipeSomeFailed: (n: number) => `${n} ${n === 1 ? "rekening kon" : "rekeningen konden"} niet verwijderd worden. Probeer het opnieuw.`,
     tabBon: "Bon",
     tabGuests: "Gasten & delen",
     tabAssign: "Toewijzen",
@@ -727,7 +765,7 @@ const STRINGS = {
     quotaDayQuickScan: "⚡ Gebruik de snelle scan",
     quotaDayOrManual: "Of voeg de items handmatig toe via “+ Item toevoegen”.",
     scanFailUnavailTitle: "😕 De slimme scan is even niet beschikbaar",
-    scanFailUnavailBody: "De AI-herkenning is momenteel overbelast of tijdelijk offline. Wacht heel even en probeer opnieuw — meestal is ze na een halve minuut terug. Je foto blijft bewaard.",
+    scanFailUnavailBody: "De AI-herkenning is overbelast of tijdelijk offline. De knop hieronder telt af tot je opnieuw kan proberen. Je foto blijft bewaard.",
     retryIn: (s: number) => `🔄 Opnieuw proberen over ${s}s`,
     retryNow: "🔄 Opnieuw proberen",
     scanFailEmptyTitle: "📷 Niets herkend op de foto",
@@ -1124,11 +1162,23 @@ const STRINGS = {
     togetherWhat: (n: number) => n === 2
       ? "Ces deux-là paient ensemble : ils occupent une seule place à table et verront un seul montant à la fin, pas chacun le sien."
       : `Ces ${n} paient ensemble : ils occupent une seule place à table et verront un seul montant à la fin.`,
-    pinTitle: "Épingler — ne sera pas supprimé automatiquement",
-    unpinTitle: "Détacher",
+    pinTitle: "Enregistrer — ne sera pas supprimé automatiquement",
+    unpinTitle: "Ne plus enregistrer",
     pinFailed: "Épinglage échoué.",
     maxPins: (n: number) => `Tu peux épingler ${n} additions au maximum. Détaches-en une d’abord.`,
-    retentionNote: "📌 Les additions épinglées sont conservées. Les autres disparaissent après 30 jours (60 si jamais clôturées), et la photo du ticket dès 7 jours.",
+    retentionNote: "Les additions enregistrées restent. Le reste disparaît après 7 jours — comme la photo du ticket.",
+    searchGroups: "Chercher une addition…",
+    groupsSaved: "Enregistré",
+    groupsRecent: "Récent · disparaît tout seul",
+    daysLeft: (n: number) => n <= 0 ? "part aujourd’hui" : n === 1 ? "encore 1 jour" : `encore ${n} jours`,
+    noSearchHit: "Aucune addition trouvée.",
+    wipeAll: "Tout effacer",
+    wipeAllTitle: "Tout effacer ?",
+    wipeAllBody: (weg: number, blijft: number) => blijft > 0
+      ? `Tu supprimes définitivement ${weg} addition${weg === 1 ? "" : "s"}, avec tous les articles et montants. Tes ${blijft} addition${blijft === 1 ? "" : "s"} enregistrée${blijft === 1 ? "" : "s"} reste${blijft === 1 ? "" : "nt"}.`
+      : `Tu supprimes définitivement ${weg} addition${weg === 1 ? "" : "s"}, avec tous les articles et montants.`,
+    wipeAllYes: (n: number) => `Oui, efface ${n === 1 ? "celle-là" : `ces ${n}`}`,
+    wipeSomeFailed: (n: number) => `${n} addition${n === 1 ? "" : "s"} n’${n === 1 ? "a" : "ont"} pas pu être supprimée${n === 1 ? "" : "s"}. Réessaie.`,
     tabBon: "Addition",
     tabGuests: "Invités et partage",
     tabAssign: "Répartir",
@@ -1333,7 +1383,7 @@ const STRINGS = {
     quotaDayQuickScan: "⚡ Utiliser le scan rapide",
     quotaDayOrManual: "Ou ajoute les articles à la main via « + Ajouter un article ».",
     scanFailUnavailTitle: "😕 Le scan intelligent est momentanément indisponible",
-    scanFailUnavailBody: "La reconnaissance IA est surchargée ou temporairement hors ligne. Attends un instant et réessaie — elle revient généralement après une demi-minute. Ta photo est conservée.",
+    scanFailUnavailBody: "La reconnaissance IA est surchargée ou temporairement hors ligne. Le bouton ci-dessous décompte jusqu’à ce que tu puisses réessayer. Ta photo est conservée.",
     retryIn: (s: number) => `🔄 Réessayer dans ${s}s`,
     retryNow: "🔄 Réessayer",
     scanFailEmptyTitle: "📷 Rien reconnu sur la photo",
@@ -1752,6 +1802,7 @@ export default function RundoTable() {
   const [startError, setStartError] = useState<string | null>(null)
   const [myGroups, setMyGroups] = useState<SavedGroup[]>([])
   const [showSaved, setShowSaved] = useState(false)
+  const [groepZoek, setGroepZoek] = useState("")
   // De lijst kwam uit localStorage, afgekapt op 50. Wat eraf viel bleef in de databank
   // staan zonder dat iemand het nog kon vinden — met zijn bonfoto erbij. Nu is de databank
   // de bron voor je eigen groepen; enkel groepen waar je gást bent blijven lokaal, want
@@ -2142,6 +2193,20 @@ export default function RundoTable() {
     const { error } = await supabase.from("table_groups").update({ pinned: !g.pinned }).eq("id", g.id)
     if (error) { setToast(L.pinFailed); return }
     setMyGroups((prev) => prev.map((x) => x.id === g.id ? { ...x, pinned: !x.pinned } : x))
+  }
+
+  // Alles wissen in één keer. Bewaarde rekeningen zitten er niet bij, en een mislukking
+  // op één rekening mag de rest niet tegenhouden.
+  const wisAlleGroepen = async (lijst: SavedGroup[]) => {
+    let mislukt = 0
+    for (const g of lijst) {
+      const { error } = await wisGroepVolledig(g.id)
+      if (error) { mislukt++; continue }
+      if (getLastGroup() === g.id) rememberLastGroup(null)
+      removeMyGroup(g.id)
+    }
+    await laadMijnGroepen()
+    if (mislukt > 0) setToast(L.wipeSomeFailed(mislukt))
   }
 
   const forgetSavedGroup = (id: string) => {
@@ -3480,24 +3545,72 @@ export default function RundoTable() {
                 <span style={{ fontSize: 16.5, fontWeight: 800, color: "#3b486a" }}>{L.savedGroups} <span style={{ color: "#9aa0ab", fontWeight: 700 }}>({myGroups.length})</span></span>
                 <span style={{ fontSize: 16, color: "#9aa0ab", fontWeight: 700 }}>{showSaved ? L.hide : L.show}</span>
               </div>
-              {showSaved && (
+              {showSaved && (() => {
+                const zoek = groepZoek.trim().toLowerCase()
+                const past = (g: SavedGroup) => !zoek || (g.name || "").toLowerCase().includes(zoek)
+                const bewaard = myGroups.filter((g) => g.pinned && past(g))
+                const recent = myGroups.filter((g) => !g.pinned && past(g))
+                const wisbaar = myGroups.filter((g) => g.role === "admin" && !g.pinned)
+                const bewaardTotaal = myGroups.filter((g) => g.pinned).length
+                const dagenOver = (g: SavedGroup) => {
+                  const basis = new Date(g.created_at ?? g.savedAt).getTime()
+                  const grens = g.finalized ? BEWAAR_AFGESLOTEN : BEWAAR_OPEN
+                  return Math.ceil((grens - (Date.now() - basis)) / DAG_MS)
+                }
+                const rij = (g: SavedGroup) => (
+                  <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <button onClick={() => openSavedGroup(g.id)} disabled={busy} style={{ ...S.btn, flex: 1, minWidth: 0, textAlign: "left", padding: "11px 13px", fontWeight: 700 }}>
+                      <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}</span>
+                      <span style={{ fontSize: 15.5, fontWeight: 700, color: g.role === "admin" ? "#1499b0" : "#9aa0ab" }}>
+                        {g.role === "admin" ? L.roleAdmin : L.roleGuest}{fmtDate(g.created_at ?? g.savedAt, lang) ? ` · ${fmtDate(g.created_at ?? g.savedAt, lang)}` : ""}
+                        {g.role === "admin" && !g.pinned && <span style={{ color: "#c0392b" }}> · {L.daysLeft(dagenOver(g))}</span>}
+                      </span>
+                    </button>
+                    {g.role === "admin" && (
+                      <button onClick={() => togglePin(g)} title={g.pinned ? L.unpinTitle : L.pinTitle}
+                        style={{ ...S.iconBtn, flexShrink: 0, color: g.pinned ? "#0f7488" : "#c3c8d2", background: g.pinned ? "rgba(20,153,176,0.12)" : "#fff", border: g.pinned ? "1px solid rgba(20,153,176,0.45)" : "1px solid rgba(16,24,40,0.14)" }}><BewaarIcoon aan={!!g.pinned} /></button>
+                    )}
+                    <button onClick={() => forgetSavedGroup(g.id)} title={L.deletePermanently}
+                      style={{ ...S.iconBtn, flexShrink: 0, color: "#5a6680" }}><WisIcoon /></button>
+                  </div>
+                )
+                return (
                 <div style={{ marginTop: 10 }}>
-                  {myGroups.map((g) => (
-                    <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <button onClick={() => openSavedGroup(g.id)} disabled={busy} style={{ ...S.btn, flex: 1, minWidth: 0, textAlign: "left", padding: "11px 13px", fontWeight: 700 }}>
-                        <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}</span>
-                        <span style={{ fontSize: 15.5, fontWeight: 700, color: g.role === "admin" ? "#1499b0" : "#9aa0ab" }}>{g.role === "admin" ? L.roleAdmin : L.roleGuest}{fmtDate(g.created_at ?? g.savedAt, lang) ? ` · ${fmtDate(g.created_at ?? g.savedAt, lang)}` : ""}</span>
-                      </button>
-                      {g.role === "admin" && (
-                        <button onClick={() => togglePin(g)} style={{ ...S.iconBtn, flexShrink: 0, opacity: g.pinned ? 1 : 0.35 }} title={g.pinned ? L.unpinTitle : L.pinTitle}>📌</button>
-                      )}
-                      <button onClick={() => forgetSavedGroup(g.id)} style={{ ...S.iconBtn, flexShrink: 0 }} title={L.deletePermanently}>🗑️</button>
+                  {myGroups.length > 4 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(16,24,40,0.03)", border: "1px solid rgba(16,24,40,0.12)", borderRadius: 11, padding: "8px 12px", marginBottom: 10 }}>
+                      <span style={{ fontSize: 15, color: "#9aa0ab" }}>🔍</span>
+                      <input value={groepZoek} onChange={(e) => setGroepZoek(e.target.value)} placeholder={L.searchGroups}
+                        style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: 15.5, fontFamily: "inherit", color: "#14213a" }} />
+                      {groepZoek && <span onClick={() => setGroepZoek("")} style={{ cursor: "pointer", fontSize: 15, color: "#9aa0ab", padding: "0 2px" }}>✕</span>}
                     </div>
-                  ))}
-                  {/* Zonder deze zin lijkt het alsof de app rekeningen kwijtspeelt. */}
-                  <div style={{ marginTop: 10, fontSize: 14.5, color: "#9aa0ab", lineHeight: 1.45 }}>{L.retentionNote}</div>
+                  )}
+                  {bewaard.length > 0 && (
+                    <div style={{ marginBottom: recent.length > 0 ? 12 : 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#0f7488", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>{L.groupsSaved}</div>
+                      {bewaard.map(rij)}
+                    </div>
+                  )}
+                  {recent.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#9aa0ab", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>{L.groupsRecent}</div>
+                      {recent.map(rij)}
+                    </div>
+                  )}
+                  {bewaard.length + recent.length === 0 && (
+                    <div style={{ fontSize: 15, color: "#9aa0ab", textAlign: "center", padding: "14px 0" }}>{L.noSearchHit}</div>
+                  )}
+                  {/* Opruimen in één keer. Bewaarde rekeningen blijven staan — anders is die
+                      bewaarknop zinloos — en de bevestiging zegt hoeveel er weggaat. */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, borderTop: "1px solid rgba(16,24,40,0.08)", marginTop: 12, paddingTop: 11 }}>
+                    <span style={{ fontSize: 14, color: "#9aa0ab", lineHeight: 1.45, minWidth: 0 }}>{L.retentionNote}</span>
+                    {wisbaar.length > 0 && (
+                      <button onClick={() => askConfirm(L.wipeAllBody(wisbaar.length, bewaardTotaal), L.wipeAllYes(wisbaar.length), () => { void wisAlleGroepen(wisbaar) }, { title: L.wipeAllTitle, danger: true })}
+                        style={{ flexShrink: 0, border: "1px solid rgba(224,107,94,0.4)", color: "#c0392b", background: "#fff", borderRadius: 10, padding: "7px 11px", fontSize: 13.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{L.wipeAll}</button>
+                    )}
+                  </div>
                 </div>
-              )}
+                )
+              })()}
             </div>
           )}
         </div>
