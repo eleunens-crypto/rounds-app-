@@ -1896,6 +1896,10 @@ export default function RundoTable() {
   const [inviteModalText, setInviteModalText] = useState("")
   const [showTipReminder, setShowTipReminder] = useState(false)
   // De beheerder bevestigde dat het ingevulde bon-totaal correct is, ook al verschilt het van de items.
+  // Of het bontotaal bevestigd is, staat in de databank: receipt_total is ingevuld. Deze
+  // vlag stond alleen in het geheugen van dit tabblad, dus na een verversing, een
+  // tabwissel of het heropenen van een groep moest je alles opnieuw bevestigen terwijl
+  // het al groen stond. Nu herstelt hij zichzelf uit de groep.
   const [receiptConfirmed, setReceiptConfirmed] = useState(false)
   // De beheerder klikte "Neen" en past het rekeningtotaal aan.
   const [receiptEditing, setReceiptEditing] = useState(false)
@@ -1930,6 +1934,16 @@ export default function RundoTable() {
   const [totalDraft, setTotalDraft] = useState<string | null>(null)  // wat je intikt bij "regeltotaal"
   const [priceDraft, setPriceDraft] = useState<string | null>(null)  // idem voor de stukprijs
   const [billMismatchAck, setBillMismatchAck] = useState(false)  // bewust doorgegaan ondanks verschil
+  // Zodra een groep geladen is met een ingevuld bontotaal, is dat totaal bevestigd — je
+  // hebt het immers ooit zelf ingegeven of nagekeken. Alleen tijdens het bewerken zetten
+  // we hem los, en dat gebeurt hieronder waar het bedrag gewijzigd wordt.
+  const geladenBonId = useRef<string | null>(null)
+  useEffect(() => {
+    if (!group) { geladenBonId.current = null; return }
+    if (geladenBonId.current === group.id) return
+    geladenBonId.current = group.id
+    if (group.receipt_total != null) { setReceiptConfirmed(true); setReceiptEditing(false) }
+  }, [group])
   const [showJoined, setShowJoined] = useState(false)
   // Bewaarde foto van de laatste scan, zodat je een mislukte AI-scan opnieuw kan proberen.
   const [retryFile, setRetryFile] = useState<File | null>(null)
