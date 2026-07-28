@@ -372,15 +372,24 @@ const T = {
     peopleIntro: () => "Jij staat er al bij. De anderen komen erbij via QR scan.",
     addNonScanner: "Iemand die niet scant?",
     linkCopiedShort: "✓ Gekopieerd",
+    linkLabel: "Link:",
+    youPaste: "Je plakt dit:",
+    joinInviteShort: (naam: string) => `Doe je mee met ${naam || "ons rondje"}? Scan of tik:`,
     pasteAndShare: "Plak en deel in: WhatsApp · Messenger · sms · e-mail · …",
     freeSeatsLine: (n: number) => `Nog ${n} vrije ${n === 1 ? "plaats" : "plaatsen"}. Wie scant, komt er meteen bij.`,
     addPersonBtn: "+ persoon",
+    personsWord: "personen",
+    sectionGroup: "DE GROEP",
+    sectionExtras: "EXTRA’S",
+    allTakenAddOne: "Iedereen is er. Komt er nog iemand bij? Zet het aantal één hoger — dan is er weer een plaats vrij.",
+    startOrdering: "🍻 Beginnen met bestellen →",
+    startOrderingSub: "Wie later scant, kan nog aansluiten",
     removeLastPerson: "Laatste persoon weghalen",
     showQr: "📱 QR-code tonen",
     toQrStep: "Naar de QR-code →",
     addThis: "Toevoegen",
-    seatNameTitle: (n: number) => `Wie zit op plaats ${n}?`,
-    seatNameSub: "Scant deze persoon later toch zelf, dan tikt hij gewoon zijn naam aan.",
+    seatNameTitle: "Iemand die niet scant",
+    seatNameSub: "Zet zijn naam erbij — scant hij later toch, dan tikt hij die gewoon aan.",
     yourSeat: "Jij",
     groupNameEdit: "Naam van deze groep",
     groupNamePh: "Typ je groepsnaam",
@@ -432,7 +441,6 @@ const T = {
 
     // ── delen
     letGuestsScan: "📲 Laat je gasten scannen",
-    allTakenAdmin: "Alle plaatsen zijn ingenomen. Zet er een bij als er nog iemand aansluit.",
     copyLink: "Kopieer link",
 
     // ── startvragen
@@ -866,15 +874,24 @@ const T = {
     peopleIntro: () => "Tu es déjà là. Les autres arrivent en scannant le QR.",
     addNonScanner: "Quelqu’un qui ne scanne pas ?",
     linkCopiedShort: "✓ Copié",
+    linkLabel: "Lien :",
+    youPaste: "Tu colles ceci :",
+    joinInviteShort: (naam: string) => `Tu viens à ${naam || "notre tournée"} ? Scanne ou touche :`,
     pasteAndShare: "Colle et partage dans : WhatsApp · Messenger · sms · e-mail · …",
     freeSeatsLine: (n: number) => `Encore ${n} place${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"}. Qui scanne, arrive directement.`,
     addPersonBtn: "+ personne",
+    personsWord: "personnes",
+    sectionGroup: "LE GROUPE",
+    sectionExtras: "EXTRAS",
+    allTakenAddOne: "Tout le monde est là. Quelqu’un arrive encore ? Augmente le nombre d’un — une place se libère.",
+    startOrdering: "🍻 Commencer à commander →",
+    startOrderingSub: "Ceux qui scannent plus tard peuvent encore rejoindre",
     removeLastPerson: "Retirer la dernière personne",
     showQr: "📱 Afficher le QR",
     toQrStep: "Vers le QR-code →",
     addThis: "Ajouter",
-    seatNameTitle: (n: number) => `Qui est à la place ${n} ?`,
-    seatNameSub: "S’il scanne quand même plus tard, il touchera simplement son nom.",
+    seatNameTitle: "Quelqu’un qui ne scanne pas",
+    seatNameSub: "Mets son nom — s’il scanne plus tard, il le touchera simplement.",
     yourSeat: "Toi",
     groupNameEdit: "Nom de ce groupe",
     groupNamePh: "Tape le nom de ton groupe",
@@ -926,7 +943,6 @@ const T = {
 
     // ── delen
     letGuestsScan: "📲 Fais scanner tes invités",
-    allTakenAdmin: "Toutes les places sont prises. Ajoutes-en une si quelqu'un arrive.",
     copyLink: "Copier le lien",
 
     // ── startvragen
@@ -1304,6 +1320,10 @@ export default function PartyTest() {
   const [zitNaam, setZitNaam] = useState<{ id: string; nr: number } | null>(null)
   const [zitNaamTekst, setZitNaamTekst] = useState("")
   const [linkGekopieerd, setLinkGekopieerd] = useState(false)
+  // Vroeg je de QR op terwijl de tafel vol zat, dan verscheen er niets — terwijl er
+  // altijd iemand kan bijkomen. Deze vlag laat de kaart hoe dan ook zien; met het
+  // tellertje erin zet je meteen een plaats bij.
+  const [qrGevraagd, setQrGevraagd] = useState(false)
   const [people, setPeople] = useState<Person[]>([])
 
   // ── Supabase-laag ───────────────────────────────────────────────────────────
@@ -2782,7 +2802,7 @@ export default function PartyTest() {
       <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.45)" }}>
         <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.letGuestsScan}</h3>
         <div style={{ fontSize: 14, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
-          {vrij > 0 ? L.freeSeatsLine(vrij) : L.allTakenAdmin}
+          {vrij > 0 ? L.freeSeatsLine(vrij) : L.allTakenAddOne}
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ display: "inline-block", background: "#fff", padding: 10, borderRadius: 14, border: "1px solid rgba(120,95,20,0.15)" }}>
@@ -2793,17 +2813,23 @@ export default function PartyTest() {
             Wat je kopieert staat eronder, zodat je ziet wát er op je klembord komt. */}
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
           <button style={{ ...S.btn, flex: 1, fontWeight: 800, padding: "12px 8px" }}
-            onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(inviteLink); setLinkGekopieerd(true); setTimeout(() => setLinkGekopieerd(false), 4000) } }}>
+            onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(`${L.joinInviteShort(groupName)} ${inviteLink}`); setLinkGekopieerd(true); setTimeout(() => setLinkGekopieerd(false), 4000) } }}>
             {linkGekopieerd ? L.linkCopiedShort : L.copyLink}</button>
           {people.some((p) => !p.claimedBy) && (
             <button onClick={() => { const vrij = people.find((p) => !p.claimedBy); if (vrij) setZitNaam({ id: vrij.id, nr: people.indexOf(vrij) + 1 }) }}
               style={{ ...S.btn, flex: 1, fontWeight: 800, padding: "12px 8px" }}>{L.addNonScanner}</button>
           )}
         </div>
-        <div style={{ marginTop: 8, background: "#faf7ec", border: "1px solid rgba(120,95,20,0.18)", borderRadius: 10, padding: "9px 11px", fontSize: 13, color: "#8a7d55", wordBreak: "break-all", lineHeight: 1.4 }}>{inviteLink}</div>
+        <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "flex-start", background: "#faf7ec", border: "1px solid rgba(120,95,20,0.18)", borderRadius: 10, padding: "9px 11px" }}>
+          <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#8a7d55" }}>{L.linkLabel}</span>
+          <span style={{ fontSize: 12.5, color: "#8a7d55", wordBreak: "break-all", lineHeight: 1.4 }}>{inviteLink}</span>
+        </div>
         {linkGekopieerd && (
           <div style={{ marginTop: 7, background: "rgba(31,138,76,0.1)", border: "1px solid rgba(31,138,76,0.3)", borderRadius: 10, padding: "9px 11px", fontSize: 13.5, color: "#1f6b3a", lineHeight: 1.45 }}>{L.pasteAndShare}</div>
         )}
+        {/* Wat er precies op je klembord komt — niet alleen de kale link, maar een zin die
+            in een berichtenapp leesbaar is. */}
+        <div style={{ marginTop: 8, fontSize: 12, color: "#b3a988", lineHeight: 1.5 }}>{L.youPaste} <i>“{L.joinInviteShort(groupName)}”</i></div>
         {/* Wie scande al? Zo ziet de admin de groep vollopen zonder te moeten raden.
             De vrije plaatsen staan hier — niet meer bij de namenstap — want dit is het
             scherm waar je staat te wachten tot ze binnenkomen. */}
@@ -2812,7 +2838,8 @@ export default function PartyTest() {
             <span style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", minWidth: 0 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</span>
             {/* Er komt er nog eentje bij: hier hoog je het aantal op, en dat maakt meteen
                 een vrije plaats die iemand kan scannen. */}
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
+              <span style={{ fontSize: 12.5, color: "#8a7d55", fontWeight: 700 }}>{L.personsWord}</span>
               <button onClick={removeLastPerson} disabled={busy || people.length <= 1} title={L.removeLastPerson}
                 style={{ ...S.step, width: 30, height: 30, fontSize: 18, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
               <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", minWidth: 18, textAlign: "center" }}>{people.length}</span>
@@ -2833,8 +2860,15 @@ export default function PartyTest() {
               )
             })}
           </div>
-
         </div>
+        {/* De vraag op dit scherm is "mag ik al beginnen?" — vandaar het antwoord in de knop
+            zelf. Wie later scant sluit gewoon aan, want de QR blijft bereikbaar. */}
+        <button onClick={() => { setActiveCat(catsPresent[0]); setView("order") }}
+          style={{ width: "100%", marginTop: 14, cursor: "pointer", border: "none", borderRadius: 14, padding: "13px 12px", color: "#fff",
+            background: "linear-gradient(135deg,#27ae60,#1f8a4c)", boxShadow: `0 12px 28px -8px ${MODUS_FAIR.gloed}, 0 0 0 4px ${MODUS_FAIR.tint}` }}>
+          <span style={{ display: "block", fontSize: 17.5, fontWeight: 800 }}>{L.startOrdering}</span>
+          <span style={{ display: "block", fontSize: 12.5, opacity: 0.92, marginTop: 2 }}>{L.startOrderingSub}</span>
+        </button>
       </div>
     )
   }
@@ -3882,7 +3916,7 @@ export default function PartyTest() {
       {zitNaam && (
         <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setZitNaam(null)}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", marginBottom: 4 }}>{L.seatNameTitle(zitNaam.nr)}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", marginBottom: 4 }}>{L.seatNameTitle}</div>
             <div style={{ fontSize: 14.5, color: "#8a7d55", lineHeight: 1.45, marginBottom: 13 }}>{L.seatNameSub}</div>
             <input autoFocus value={zitNaamTekst} onChange={(e) => setZitNaamTekst(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && zitNaamTekst.trim()) { renamePerson(zitNaam.id, zitNaamTekst.trim()); setZitNaam(null); setZitNaamTekst("") } }}
@@ -4925,16 +4959,18 @@ export default function PartyTest() {
         {showPot && renderPotModal()}
         {renderDialogs()}
         <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10 }}>⚙️ Groepsinstellingen</h3>
+        {/* Naam en personen horen bij elkaar — ze zeggen allebei "welke groep is dit".
+            De pot, bekers en coins zijn extra's en staan in een eigen kaart eronder. */}
         <div style={{ ...S.card, marginBottom: 10 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 800, color: "#a89a6f", letterSpacing: "0.05em", marginBottom: 8 }}>{L.sectionGroup}</div>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
             <span style={{ fontSize: 15.5, fontWeight: 800 }}>Groepsnaam</span>
             {hasSettled && <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>🔒 vast na afrekenen</span>}
           </div>
           <input disabled={hasSettled} value={groupName} onChange={(e) => setGroupName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : "#fdfaf2", color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
           {!hasSettled && <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 6 }}>{L.tapToRename}</div>}
-        </div>
         {settle && !fromOnboarding && (
-        <div style={{ ...S.card, marginBottom: 10 }}>
+        <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 12, paddingTop: 11 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: people.length > 0 ? 10 : 0 }}>
             <span style={{ fontSize: 15.5, fontWeight: 800 }}>{L.peopleTitle}</span>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -4952,7 +4988,9 @@ export default function PartyTest() {
           )}
         </div>
         )}
+        </div>
         <div style={{ ...S.card, marginBottom: 10 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 800, color: "#a89a6f", letterSpacing: "0.05em", marginBottom: 10 }}>{L.sectionExtras}</div>
           <div style={{ ...S.row, justifyContent: "space-between", gap: 10 }}>
             <span style={{ fontSize: 15.5, fontWeight: 700 }}>{potIsCard ? L.drinkCard : L.potTitle} <span style={{ fontSize: 14, fontWeight: 600, color: "#8a7d55" }}>— optioneel</span></span>
             {potContribTotal > 0.005 ? (
@@ -4966,12 +5004,11 @@ export default function PartyTest() {
             )}
           </div>
           {potChosen && potContribTotal <= 0.005 && <div style={{ marginTop: 8, textAlign: "right" }}><span onClick={() => setPotChosen(false)} style={{ fontSize: 14, color: "#c0554a", fontWeight: 700, cursor: "pointer" }}>✕ toch niet</span></div>}
-        </div>
 
         {settle && (
-        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 0 }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ ...S.card, marginBottom: 0 }}>
+        <div style={{ marginBottom: 0 }}>
           <h3 style={{ ...S.h3, margin: 0, fontSize: 15.5, lineHeight: 1.3, textAlign: "center" }}>{L.cupsTitle} <span onClick={(e) => { e.stopPropagation(); setDepositInfo((v) => !v); setCoinInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
           <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "center" }}>
             <div style={{ ...S.seg(!depositOn), padding: "6px 8px" }} onClick={() => setDepositOn(false)}>uit</div>
@@ -5002,7 +5039,7 @@ export default function PartyTest() {
         </div>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ ...S.card, marginBottom: 0 }}>
+        <div style={{ marginBottom: 0 }}>
           <h3 style={{ ...S.h3, margin: 0, fontSize: 15.5, lineHeight: 1.3, textAlign: "center" }}>{L.coinsTitle} <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
           <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "center" }}>
             <div onClick={() => { const on = pay !== "coin"; setPay(on ? "coin" : "eur"); setDepositUnit(on ? "coin" : "eur") }} style={{ width: 44, height: 26, borderRadius: 20, background: pay === "coin" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#d9cdb0", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
@@ -5051,6 +5088,7 @@ export default function PartyTest() {
           </div>
         </div>
         )}
+        </div>
         <div style={{ marginTop: 24 }}>
           {(() => {
             // In snelle rondjes telt een rondje als "afgehandeld" zodra het bevestigd of
@@ -5087,7 +5125,7 @@ export default function PartyTest() {
           ) : echtOnafgerond ? (
             // Nog geen afgerond rondje, maar wel bezig met rondje 1: verder of terug.
             <div style={{ display: "flex", gap: 10 }}>
-              <button style={{ ...S.btn, flex: 1 }} onClick={() => settle ? setView("hub") : setNotice(L.noRoundsYet)}>{settle ? L.showQr : L.roundsOverview}</button>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (!settle) { setNotice(L.noRoundsYet); return } setQrGevraagd(true); setView("hub") }}>{settle ? L.showQr : L.roundsOverview}</button>
               {settingsBackTo !== "order" && <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>}
             </div>
           ) : (
@@ -5096,14 +5134,15 @@ export default function PartyTest() {
             // hetzelfde scherm, waarvan één "terug naar rondje 1" en één "naar 1e rondje".
             // De andere twee takken vingen dat al af; deze was vergeten.
             <div style={{ display: "flex", gap: 10 }}>
-              <button style={{ ...S.btn, flex: 1 }} onClick={() => setView("hub")}>{settle ? L.showQr : L.roundsOverview}</button>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (settle) setQrGevraagd(true); setView("hub") }}>{settle ? L.showQr : L.roundsOverview}</button>
               {settingsBackTo !== "order" && <button style={{ ...S.btnP, flex: 1 }} onClick={naarRondje}>{L.toFirstRound}</button>}
             </div>
           )}
-            {/* Laatkomer? Dan wil je de QR ook kunnen tonen wanneer er al rondjes zijn. */}
-            {settle && rounds.length > 0 && people.some((p) => !p.claimedBy) && (
+            {/* Laatkomer? Ook als iedereen gescand heeft: je zet er een plaats bij en de
+                nieuwe scant alsnog. Daarom geen voorwaarde op vrije plaatsen. */}
+            {settle && rounds.length > 0 && (
               <button style={{ ...S.btn, width: "100%", marginTop: 10, fontWeight: 800 }}
-                onClick={() => setView("hub")}>{L.showQr}</button>
+                onClick={() => { setQrGevraagd(true); setView("hub") }}>{L.showQr}</button>
             )}
             {kanAfrekenen && (
               <button style={{ ...S.btn, width: "100%", marginTop: 10, fontWeight: 800 }}
@@ -5511,7 +5550,7 @@ export default function PartyTest() {
         {/* Tijdens de omschakeling van snel naar Fair Split is de hub enkel het
             toewijsscherm. Rondjesoverzicht, nieuwe rondjes en afrekenen horen daar
             niet: die leiden je weg uit een traject van drie stappen. */}
-        {!fromQuick && (rounds.length === 0 || people.some((p) => !p.claimedBy)) && renderShare()}
+        {!fromQuick && (rounds.length === 0 || qrGevraagd || people.some((p) => !p.claimedBy)) && renderShare()}
         {/* De pot is een handeling aan het BEGIN van de avond: iedereen legt vooraf in.
             Daarom staat hij hier, zichtbaar, vóór het eerste rondje — niet weggestopt
             in de instellingen. Het ⚙️-wieltje leidt naar pot + bekers + coins samen. */}
