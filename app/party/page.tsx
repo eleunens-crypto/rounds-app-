@@ -393,7 +393,7 @@ const T = {
     addThis: "Toevoegen",
     seatNameTitle: "Iemand die niet scant",
     seatNameSub: "Zet zijn naam erbij — scant hij later toch, dan tikt hij die gewoon aan.",
-    yourNamePh: "Tik hier je naam",
+    yourNamePh: "Jij (beheerder) — tik hier je naam",
     groupNameEdit: "Naam van deze groep",
     groupNamePh: "Typ je groepsnaam",
     starting: "Bezig…",
@@ -900,7 +900,7 @@ const T = {
     addThis: "Ajouter",
     seatNameTitle: "Quelqu’un qui ne scanne pas",
     seatNameSub: "Mets son nom — s’il scanne plus tard, il le touchera simplement.",
-    yourNamePh: "Tape ton nom ici",
+    yourNamePh: "Toi (hôte) — tape ton nom ici",
     groupNameEdit: "Nom de ce groupe",
     groupNamePh: "Tape le nom de ton groupe",
     starting: "En cours…",
@@ -4915,9 +4915,9 @@ export default function PartyTest() {
         <div style={S.card}>
           <div style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", marginBottom: 9 }}>{L.peopleHeader(people.length)}</div>
           {/* Neutraal grijsbeige, geen oranje: hier is niets mis, dit is gewoon uitleg. */}
-          <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "rgba(120,95,20,0.06)", borderRadius: 11, padding: "11px 12px", marginBottom: 12 }}>
-            <span style={{ flexShrink: 0, fontSize: 17 }}>📱</span>
-            <span style={{ fontSize: 15.5, color: "#5f5432", lineHeight: 1.45 }}>{L.peopleIntro()}</span>
+          <div style={{ display: "flex", gap: 11, alignItems: "flex-start", background: "rgba(120,95,20,0.07)", borderRadius: 12, padding: "13px 14px", marginBottom: 13 }}>
+            <span style={{ flexShrink: 0, fontSize: 21, lineHeight: 1.3 }}>📱</span>
+            <span style={{ fontSize: 17, fontWeight: 700, color: "#4a3f1e", lineHeight: 1.45 }}>{L.peopleIntro()}</span>
           </div>
 
           {/* Wie ben JIJ? Alleen relevant als de admin nog nergens zit — normaal is hij
