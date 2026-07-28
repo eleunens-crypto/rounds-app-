@@ -370,12 +370,8 @@ const T = {
     startFairBtn: "Start Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "persoon" : "personen"}`,
     peopleIntro: () => "Jij staat er al bij. De anderen komen erbij via QR scan.",
-    freeSeatsCount: (n: number) => `${n} vrije ${n === 1 ? "plaats" : "plaatsen"}`,
-    freeSeatsSub: "Ze vullen zichzelf in na de scan.",
-    notScanningQ: "Iemand die niet scant?",
-    fillNameSelf: "Naam zelf invullen",
+    addNonScanner: "+ Iemand toevoegen die niet scant",
     toQrStep: "Naar de QR-code →",
-    addNameShort: "+ naam",
     addThis: "Toevoegen",
     seatNameTitle: (n: number) => `Wie zit op plaats ${n}?`,
     seatNameSub: "Scant deze persoon later toch zelf, dan tikt hij gewoon zijn naam aan.",
@@ -867,12 +863,8 @@ const T = {
     startFairBtn: "Démarrer Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "personne" : "personnes"}`,
     peopleIntro: () => "Tu es déjà là. Les autres arrivent en scannant le QR.",
-    freeSeatsCount: (n: number) => `${n} place${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"}`,
-    freeSeatsSub: "Ils se remplissent eux-mêmes après le scan.",
-    notScanningQ: "Quelqu’un qui ne scanne pas ?",
-    fillNameSelf: "Mettre le nom toi-même",
+    addNonScanner: "+ Ajouter quelqu’un qui ne scanne pas",
     toQrStep: "Vers le QR-code →",
-    addNameShort: "+ nom",
     addThis: "Ajouter",
     seatNameTitle: (n: number) => `Qui est à la place ${n} ?`,
     seatNameSub: "S’il scanne quand même plus tard, il touchera simplement son nom.",
@@ -1309,7 +1301,6 @@ export default function PartyTest() {
   // Naam zetten op een plaats die nog op een scan wacht.
   const [zitNaam, setZitNaam] = useState<{ id: string; nr: number } | null>(null)
   const [zitNaamTekst, setZitNaamTekst] = useState("")
-  const [nietScanOpen, setNietScanOpen] = useState(false)
   const [people, setPeople] = useState<Person[]>([])
 
   // ── Supabase-laag ───────────────────────────────────────────────────────────
@@ -2808,19 +2799,30 @@ export default function PartyTest() {
           <button style={{ ...S.btn, flex: 1, fontWeight: 800 }}
             onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(inviteLink); setNotice(L.linkCopied) } }}>{L.copyLink}</button>
         </div>
-        {/* Wie scande al? Zo ziet de admin de groep vollopen zonder te moeten raden. */}
+        {/* Wie scande al? Zo ziet de admin de groep vollopen zonder te moeten raden.
+            De vrije plaatsen staan hier — niet meer bij de namenstap — want dit is het
+            scherm waar je staat te wachten tot ze binnenkomen. */}
         <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 14, paddingTop: 12 }}>
           <div style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", marginBottom: 8 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {people.map((p) => (
-              <span key={p.id} style={{ fontSize: 14, fontWeight: 700, padding: "4px 10px", borderRadius: 16,
-                background: p.claimedBy ? "rgba(31,138,76,0.12)" : "#faf7ec",
-                color: p.claimedBy ? "#1f6b3a" : "#b3a988",
-                border: p.claimedBy ? "1px solid rgba(31,138,76,0.25)" : "1px dashed rgba(120,95,20,0.25)" }}>
-                {p.claimedBy ? "📱 " : ""}{p.name}
-              </span>
-            ))}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+            {people.map((p, idx) => {
+              const leeg = !p.claimedBy && !p.named
+              return (
+                <span key={p.id} style={{ fontSize: 14, fontWeight: 700, padding: "4px 10px", borderRadius: 16,
+                  background: p.claimedBy ? "rgba(31,138,76,0.12)" : "rgba(120,95,20,0.05)",
+                  color: p.claimedBy ? "#1f6b3a" : "#a89a6f",
+                  border: p.claimedBy ? "1px solid rgba(31,138,76,0.25)" : "1px dashed rgba(120,95,20,0.28)" }}>
+                  {p.claimedBy ? "📱 " : ""}{leeg ? L.seat(idx + 1) : p.name}
+                </span>
+              )
+            })}
           </div>
+          {/* De uitzondering, als losse knop: iemand die niet gaat scannen krijgt hier zijn
+              naam. Daarna kan jij voor hem aanduiden alsof hij wel gescand had. */}
+          {people.some((p) => !p.claimedBy) && (
+            <button onClick={() => { const vrij = people.find((p) => !p.claimedBy); if (vrij) setZitNaam({ id: vrij.id, nr: people.indexOf(vrij) + 1 }) }}
+              style={{ width: "100%", cursor: "pointer", border: "1px solid rgba(120,95,20,0.25)", background: "rgba(120,95,20,0.03)", borderRadius: 11, padding: "12px 10px", fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>{L.addNonScanner}</button>
+          )}
         </div>
       </div>
     )
@@ -4889,34 +4891,9 @@ export default function PartyTest() {
                     een éxtra persoon aan — en dus veranderde het aantal, terwijl je alleen
                     een naam wou zetten op een plaats die er al was. Wie later toch scant,
                     tikt zijn naam gewoon aan en houdt alles wat je al voor hem aanduidde. */}
-                {/* Twee aparte regels: eerst wat er gewoon gebeurt — zij scannen — en daaronder
-                    de uitzondering. Zo trekt het invullen van namen geen aandacht bij de
-                    meeste groepen, waar iedereen toch scant. Alles in neutraal grijsbeige:
-                    er is hier niets fout, dus geen oranje of rood. */}
-                {wachtend.length > 0 && (<>
-                  <div style={{ border: "1px solid rgba(120,95,20,0.22)", background: "rgba(120,95,20,0.03)", borderRadius: 11, padding: "11px 12px", marginBottom: 7 }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: "#7a6d45" }}>{L.freeSeatsCount(wachtend.length)}</span>
-                    <div style={{ fontSize: 12.5, color: "#a89a6f", marginTop: 3, lineHeight: 1.4 }}>{L.freeSeatsSub}</div>
-                  </div>
-                  <button onClick={() => setNietScanOpen((v) => !v)}
-                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, textAlign: "left", cursor: "pointer",
-                      border: "1px dashed rgba(120,95,20,0.3)", background: "transparent", borderRadius: 11, padding: "11px 12px" }}>
-                    <span style={{ fontSize: 14, color: "#8a7d55", minWidth: 0 }}>{L.notScanningQ}</span>
-                    <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", whiteSpace: "nowrap" }}>{L.fillNameSelf} {nietScanOpen ? "▴" : "▾"}</span>
-                  </button>
-                  {nietScanOpen && (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 8 }}>
-                      {wachtend.map((p) => (
-                        <button key={p.id} onClick={() => setZitNaam({ id: p.id, nr: people.indexOf(p) + 1 })}
-                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, textAlign: "left", cursor: "pointer",
-                            background: "#fff", border: "1px solid rgba(120,95,20,0.18)", borderRadius: 10, padding: "9px 10px" }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: "#9c8f6d", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.seat(people.indexOf(p) + 1)}</span>
-                          <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#8a5e0f" }}>{L.addNameShort}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>)}
+                {/* De vrije plaatsen stonden hier, maar op dit scherm valt er niets over te
+                    beslissen: iedereen scant straks. Ze horen bij de QR-stap, waar je ook ziet
+                    wie er al is en waar je iemand kan toevoegen die niet scant. */}
               </>
             )
           })()}
