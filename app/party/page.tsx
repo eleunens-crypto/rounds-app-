@@ -65,6 +65,32 @@ const TESTGROEP_NAAM = "🧪 Testgroep"
 // komen terug op het keuzescherm (kader + startknop lichten samen op) en als tint in
 // de groepenlijst. Bewust NIET op knoppen, velden of de pot — die blijven amber, want
 // dat is de kleur van Rundo Party zelf en niet van één van de twee modi.
+// Getekende iconen in plaats van emoji: die zien er op elk toestel hetzelfde uit en
+// nemen de kleur van de knop over. De streep bij "niet bewaard" krijgt een witte lijn
+// eronder, anders verdwijnt hij half in de gevulde vorm.
+function BewaarIcoon({ aan, size = 20 }: { aan: boolean; size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} style={{ display: "block" }}>
+      <path d="M4.5 6A1.5 1.5 0 0 1 6 4.5h9.6L19.5 8.4V18a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 18z" fill="currentColor" />
+      <path d="M9.2 5.4v3.2h5.6V5.4z" fill="#fff" />
+      <path d="M8.4 13.4h7.2v5.2H8.4z" fill="#fff" />
+      {!aan && (<>
+        <path d="M3.4 20.6L20.6 3.4" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" />
+        <path d="M3.4 20.6L20.6 3.4" stroke="#a89a6f" strokeWidth="1.6" strokeLinecap="round" />
+      </>)}
+    </svg>
+  )
+}
+function WisIcoon({ size = 19 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+      <path d="M4 6.5h16" /><path d="M9.5 6.5V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1.5" />
+      <path d="M6.5 6.5l.9 12a1.5 1.5 0 0 0 1.5 1.4h6.2a1.5 1.5 0 0 0 1.5-1.4l.9-12" />
+      <path d="M10.5 10v6" /><path d="M13.5 10v6" />
+    </svg>
+  )
+}
+
 const MODUS_SNEL = {
   rand: "#e07a2f", vlak: "#fdf1e8", paneel: "#fffaf5",
   streep: "rgba(224,122,47,0.35)", lijn: "rgba(224,122,47,0.15)", label: "#c26a1e",
@@ -348,19 +374,31 @@ const T = {
     savedGroups: "Opgeslagen groepen",
     modeFairShort: "Fair Split",
     modeQuickShort: "Snelle rondjes",
-    pinOn: "Vastzetten",
-    pinOff: "Losmaken",
+    pinOn: "Bewaren",
+    pinOff: "Niet meer bewaren",
     maxPins: (n: number) => `Je kan maximaal ${n} groepen vastzetten. Maak er eerst een los.`,
     sleepBanner: "⏸ Live-updates gepauzeerd — tik om te hervatten",
     showAllGroups: "Toon alle groepen",
     showLessGroups: "Toon er minder",
-    cleanupNote: "Afgesloten groepen verdwijnen na een maand. Vastgezette groepen blijven.",
+    cleanupNote: "Bewaarde groepen blijven staan. De rest verdwijnt na 7 dagen.",
+    searchGroups: "Zoek een groep…",
+    showWord: "Tonen",
+    hideWord: "Verbergen",
+    groupsSaved: "Bewaard",
+    groupsRecent: "Recent · verdwijnt vanzelf",
+    daysLeft: (n: number) => n <= 0 ? "vandaag weg" : n === 1 ? "nog 1 dag" : `nog ${n} dagen`,
+    wipeAll: "Alles wissen",
+    wipeAllTitle: "Alles wissen?",
+    wipeAllBody: (weg: number, blijft: number) => blijft > 0
+      ? `Je verwijdert ${weg} ${weg === 1 ? "groep" : "groepen"} definitief, met alle rondjes en bedragen erin. Je ${blijft} bewaarde ${blijft === 1 ? "groep blijft" : "groepen blijven"} staan.`
+      : `Je verwijdert ${weg} ${weg === 1 ? "groep" : "groepen"} definitief, met alle rondjes en bedragen erin.`,
+    wipeAllYes: (n: number) => `Ja, wis ${n === 1 ? "die ene" : `die ${n}`}`,
+    noSearchHit: "Geen groep gevonden.",
+    wipeSomeFailed: (n: number) => `${n} ${n === 1 ? "groep kon" : "groepen konden"} niet verwijderd worden. Probeer het opnieuw.`,
     stalePins: (n: number) => `${n} vastgezette ${n === 1 ? "groep is" : "groepen zijn"} al lang niet gebruikt`,
     stalePinsWhy: "Losmaken? Dan worden ze na een maand opgeruimd, net als de andere afgesloten groepen.",
     stalePinsKeep: "Houden",
     asGuest: "als gast",
-    groupsOpen: "Open",
-    groupsClosed: "Afgesloten",
     dupGroupName: (n: string) => `"${n}" bestaat al en staat nog open. Geef deze groep een andere naam, of sluit de vorige eerst af.`,
     delGroupConfirm: (n: string) => `"${n}" verwijderen? Dit kan niet ongedaan worden — alle rondjes en gegevens van deze groep gaan weg.`,
     delGroupYes: "Verwijderen",
@@ -820,19 +858,31 @@ const T = {
     savedGroups: "Groupes enregistrés",
     modeFairShort: "Fair Split",
     modeQuickShort: "Tournées rapides",
-    pinOn: "Épingler",
-    pinOff: "Détacher",
+    pinOn: "Enregistrer",
+    pinOff: "Ne plus enregistrer",
     maxPins: (n: number) => `Tu peux épingler ${n} groupes au maximum. Détaches-en un d'abord.`,
     sleepBanner: "⏸ Mises à jour en direct en pause — touche pour reprendre",
     showAllGroups: "Voir tous les groupes",
     showLessGroups: "Voir moins",
-    cleanupNote: "Les groupes clôturés disparaissent après un mois. Les groupes épinglés restent.",
+    cleanupNote: "Les groupes enregistrés restent. Le reste disparaît après 7 jours.",
+    searchGroups: "Chercher un groupe…",
+    showWord: "Afficher",
+    hideWord: "Masquer",
+    groupsSaved: "Enregistré",
+    groupsRecent: "Récent · disparaît tout seul",
+    daysLeft: (n: number) => n <= 0 ? "part aujourd’hui" : n === 1 ? "encore 1 jour" : `encore ${n} jours`,
+    wipeAll: "Tout effacer",
+    wipeAllTitle: "Tout effacer ?",
+    wipeAllBody: (weg: number, blijft: number) => blijft > 0
+      ? `Tu supprimes définitivement ${weg} groupe${weg === 1 ? "" : "s"}, avec toutes les tournées et montants. Tes ${blijft} groupe${blijft === 1 ? "" : "s"} enregistré${blijft === 1 ? "" : "s"} reste${blijft === 1 ? "" : "nt"}.`
+      : `Tu supprimes définitivement ${weg} groupe${weg === 1 ? "" : "s"}, avec toutes les tournées et montants.`,
+    wipeAllYes: (n: number) => `Oui, efface ${n === 1 ? "celui-là" : `ces ${n}`}`,
+    noSearchHit: "Aucun groupe trouvé.",
+    wipeSomeFailed: (n: number) => `${n} groupe${n === 1 ? "" : "s"} n’${n === 1 ? "a" : "ont"} pas pu être supprimé${n === 1 ? "" : "s"}. Réessaie.`,
     stalePins: (n: number) => `${n} groupe${n === 1 ? "" : "s"} épinglé${n === 1 ? "" : "s"} depuis longtemps inutilisé${n === 1 ? "" : "s"}`,
     stalePinsWhy: "Les détacher ? Ils seront alors supprimés après un mois, comme les autres groupes clôturés.",
     stalePinsKeep: "Garder",
     asGuest: "en tant qu'invit\u00e9",
-    groupsOpen: "Ouvert",
-    groupsClosed: "Cl\u00f4tur\u00e9",
     dupGroupName: (n: string) => `"${n}" existe déjà et est encore ouvert. Donne un autre nom à ce groupe, ou clôture d'abord le précédent.`,
     delGroupConfirm: (n: string) => `Supprimer "${n}" ? C'est d\u00e9finitif — toutes les tourn\u00e9es et donn\u00e9es de ce groupe seront perdues.`,
     delGroupYes: "Supprimer",
@@ -1278,10 +1328,12 @@ export default function PartyTest() {
   // wanneer de gebruiker er is, want een waarschuwing die niemand ziet beschermt niemand.
   const DAG = 86400000
   const AUTO_SLUIT = DAG
-  const AUTO_WIS = 30 * DAG
+  const AUTO_WIS = 7 * DAG
   const PIN_STIL = 180 * DAG
   const MAX_PINS = 3
   const GROEPEN_ZICHTBAAR = 5
+  const [groepZoek, setGroepZoek] = useState("")
+  const [groepenOpen, setGroepenOpen] = useState(true)
   const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
   const [showAllGroups, setShowAllGroups] = useState(false)
   // Werkblad voor het verdelen van de pot over namen; null = niet in bewerkmodus.
@@ -2255,6 +2307,20 @@ export default function PartyTest() {
 
   // Een eigen opgeslagen groep verwijderen (met bevestiging). Cascade in de database
   // ruimt de rondjes, drankjes, personen en pot mee op.
+  // Alles wissen in één keer. Bewaarde groepen zitten er niet bij — die selectie gebeurt
+  // in de lijst — en een mislukking op één groep mag de rest niet tegenhouden.
+  const wisAlleGroepen = async (lijst: SavedGroup[]) => {
+    let mislukt = 0
+    for (const g of lijst) {
+      const { error } = await supabase.from("party_groups").delete().eq("id", g.id)
+      if (error) { mislukt++; continue }
+      if (localStorage.getItem("rundo_party_group") === g.id) localStorage.removeItem("rundo_party_group")
+    }
+    setSavedGroups((prev) => prev.filter((x) => !lijst.some((g) => g.id === x.id && !mislukt)))
+    await loadSavedGroups()
+    if (mislukt > 0) setNotice(L.wipeSomeFailed(mislukt))
+  }
+
   const deleteSavedGroup = (g: SavedGroup) => {
     setConfirmDlg({
       msg: L.delGroupConfirm(g.name || L.autoName()),
@@ -4428,26 +4494,49 @@ export default function PartyTest() {
                   <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</div>
                   <div style={{ fontSize: 13, color: "#a89a6f", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     <span style={{ color: g.settle ? MODUS_FAIR.tekst : MODUS_SNEL.tekst, fontWeight: 800 }}>{g.settle ? L.modeFairShort : L.modeQuickShort}</span> · {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
+                    {/* Alleen bij wat vanzelf verdwijnt: dan weet je hoeveel tijd je nog hebt. */}
+                    {g.owned && !g.pinned && g.finalized && (
+                      <span style={{ color: "#c0554a", fontWeight: 700 }}> · {L.daysLeft(Math.ceil((AUTO_WIS - (Date.now() - new Date(g.last_active).getTime())) / DAG))}</span>
+                    )}
                   </div>
                 </div>
                 <span style={{ fontSize: 17, color: "#c4b896", flexShrink: 0 }}>›</span>
               </button>
               {g.owned && (
                 <button onClick={() => togglePin(g)} disabled={busy} aria-label={g.pinned ? L.pinOff : L.pinOn} title={g.pinned ? L.pinOff : L.pinOn}
-                  style={{ flexShrink: 0, width: 44, borderRadius: 12, fontSize: 17, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  style={{ flexShrink: 0, width: 44, borderRadius: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                     background: g.pinned ? "rgba(240,165,0,0.16)" : "#fff",
                     border: g.pinned ? "1px solid rgba(240,165,0,0.6)" : "1px solid rgba(120,95,20,0.2)",
-                    opacity: g.pinned ? 1 : 0.55 }}>📌</button>
+                    color: g.pinned ? "#c88a1a" : "#cfc6ad" }}><BewaarIcoon aan={!!g.pinned} /></button>
               )}
               {g.owned && (
                 <button onClick={() => deleteSavedGroup(g)} disabled={busy} aria-label={L.delGroupYes}
-                  style={{ flexShrink: 0, width: 44, borderRadius: 12, background: "#fff", border: "1px solid rgba(224,104,92,0.35)", color: "#c0554a", fontSize: 17, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>🗑️</button>
+                  style={{ flexShrink: 0, width: 44, borderRadius: 12, background: "#fff", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><WisIcoon /></button>
               )}
             </div>
           )
+          // Zoeken op naam; bij weinig groepen heeft een zoekveld geen zin.
+          const zoek = normText(groepZoek)
+          const past = (g: SavedGroup) => !zoek || normText(g.name || L.autoName()).includes(zoek)
+          const bewaard = savedGroups.filter((g) => g.pinned && past(g))
+          const recent = savedGroups.filter((g) => !g.pinned && past(g))
+          const wisbaar = savedGroups.filter((g) => g.owned && !g.pinned)
+          const bewaardTotaal = savedGroups.filter((g) => g.pinned).length
           return (
             <div style={{ marginTop: 18 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 9, letterSpacing: "0.02em" }}>{L.savedGroups}</div>
+              <div onClick={() => setGroepenOpen((v) => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: groepenOpen ? 10 : 0 }}>
+                <span style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", letterSpacing: "0.02em" }}>{L.savedGroups} <span style={{ color: "#b3a988", fontWeight: 700 }}>({savedGroups.length})</span></span>
+                <span style={{ flexShrink: 0, border: "1.5px solid rgba(120,95,20,0.3)", color: "#8a7d55", borderRadius: 9, padding: "6px 11px", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap" }}>{groepenOpen ? `${L.hideWord} ▴` : `${L.showWord} ▾`}</span>
+              </div>
+              {groepenOpen && (<>
+              {savedGroups.length > 4 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#faf7ec", border: "1px solid rgba(120,95,20,0.18)", borderRadius: 11, padding: "8px 12px", marginBottom: 12 }}>
+                  <span style={{ fontSize: 15, color: "#a89a6f" }}>🔍</span>
+                  <input value={groepZoek} onChange={(e) => setGroepZoek(e.target.value)} placeholder={L.searchGroups}
+                    style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: 15.5, fontFamily: "inherit", color: "#4a3f1e" }} />
+                  {groepZoek && <span onClick={() => setGroepZoek("")} style={{ cursor: "pointer", fontSize: 15, color: "#a89a6f", padding: "0 2px" }}>✕</span>}
+                </div>
+              )}
 
               {/* Opruimen voorstellen op het moment dat de gebruiker er is. */}
               {stalePins.length > 0 && (
@@ -4469,26 +4558,42 @@ export default function PartyTest() {
                 </div>
               )}
 
-              {open.length > 0 && (
-                <div style={{ marginBottom: dicht.length > 0 ? 14 : 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: "#1f8a4c", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>● {L.groupsOpen}</div>
-                  {(showAllGroups ? open : open.slice(0, GROEPEN_ZICHTBAAR)).map(rij)}
+              {bewaard.length > 0 && (
+                <div style={{ marginBottom: recent.length > 0 ? 14 : 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#c88a1a", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>{L.groupsSaved}</div>
+                  {bewaard.map(rij)}
                 </div>
               )}
-              {dicht.length > 0 && (
+              {recent.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: "#a89a6f", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>✓ {L.groupsClosed}</div>
-                  {(showAllGroups ? dicht : dicht.slice(0, GROEPEN_ZICHTBAAR)).map(rij)}
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#a89a6f", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>{L.groupsRecent}</div>
+                  {(showAllGroups ? recent : recent.slice(0, GROEPEN_ZICHTBAAR)).map(rij)}
                 </div>
               )}
-              {open.length + dicht.length > GROEPEN_ZICHTBAAR && (
+              {recent.length > GROEPEN_ZICHTBAAR && (
                 <div style={{ textAlign: "center", marginTop: 4 }}>
                   <span onClick={() => setShowAllGroups((v) => !v)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 13, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a7d55" }}>
                     {showAllGroups ? `▴ ${L.showLessGroups}` : `▾ ${L.showAllGroups}`}
                   </span>
                 </div>
               )}
-              <div style={{ fontSize: 12, color: "#b3a988", textAlign: "center", marginTop: 12, lineHeight: 1.5 }}>{L.cleanupNote}</div>
+              {bewaard.length + recent.length === 0 && (
+                <div style={{ fontSize: 14, color: "#b3a988", textAlign: "center", padding: "14px 0" }}>{L.noSearchHit}</div>
+              )}
+              {/* Opruimen in één keer. Bewaarde groepen blijven staan — anders is die
+                  bewaarknop zinloos — en de bevestiging zegt hoeveel er weggaat. */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 12, paddingTop: 11 }}>
+                <span style={{ fontSize: 12, color: "#b3a988", lineHeight: 1.45, minWidth: 0 }}>{L.cleanupNote}</span>
+                {wisbaar.length > 0 && (
+                  <button disabled={busy} onClick={() => setConfirmDlg({
+                    variant: "danger", msg: `${L.wipeAllTitle}\n\n${L.wipeAllBody(wisbaar.length, bewaardTotaal)}`,
+                    yes: L.wipeAllYes(wisbaar.length), no: L.cancel,
+                    onYes: async () => { setConfirmDlg(null); await wisAlleGroepen(wisbaar) },
+                  })}
+                    style={{ flexShrink: 0, border: "1px solid rgba(224,104,92,0.4)", color: "#c0554a", background: "#fff", borderRadius: 10, padding: "7px 11px", fontSize: 13, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{L.wipeAll}</button>
+                )}
+              </div>
+              </>)}
             </div>
           )
         })()}
