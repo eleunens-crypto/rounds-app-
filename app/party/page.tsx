@@ -439,6 +439,7 @@ const T = {
 
     // ── startvragen
     beforeWeStart: "Kies je aanpak",
+    beforeQrTitle: "Nog even dit",
     settingsLater: "Pot, bekers of coins nodig? Die zet je aan via ⚙️ Groep — hoeft nu niet.",
     potStartTitle: "🧪 Samen een pot?",
     perManShort: "p.p.",
@@ -935,6 +936,7 @@ const T = {
 
     // ── startvragen
     beforeWeStart: "Choisis ta formule",
+    beforeQrTitle: "Encore ceci",
     settingsLater: "Besoin d'un pot, de gobelets ou de jetons ? Ça s'active via ⚙️ Groupe — pas maintenant.",
     potStartTitle: "🧪 Une cagnotte commune ?",
     perManShort: "p.p.",
@@ -1363,7 +1365,9 @@ export default function PartyTest() {
   const AUTO_WIS = 7 * DAG
   const PIN_STIL = 180 * DAG
   const MAX_PINS = 3
-  const GROEPEN_ZICHTBAAR = 5
+  // Één recente groep volstaat: de rest staat achter "toon alle groepen". Bij vijf werd
+  // dat blok op een telefoon langer dan het keuzescherm zelf.
+  const GROEPEN_ZICHTBAAR = 1
   const [groepZoek, setGroepZoek] = useState("")
   const [groepenOpen, setGroepenOpen] = useState(true)
   const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
@@ -2463,12 +2467,14 @@ export default function PartyTest() {
     // Zelf getypt en al in gebruik? Dan waarschuwen. Automatisch gekozen? Dan tellen we
     // gewoon door (Rondje 20 juli 2, 3 …) zodat je nooit vastloopt op de startknop.
     if (getypt) {
-      const dubbel = savedGroups.find((g) => !g.finalized && g.name.trim().toLowerCase() === naam.toLowerCase())
+      // Ook afgesloten groepen tellen mee: twee keer dezelfde naam in je lijst is
+      // verwarrend, ook al is de ene al afgerond.
+      const dubbel = savedGroups.find((g) => g.name.trim().toLowerCase() === naam.toLowerCase())
       if (dubbel) { setNotice(L.dupGroupName(naam)); return }
     } else {
       // Vroeger telde de app gewoon door: "Rondje 28 juli 2, 3 …". Dat levert namen op die
       // niets zeggen, en meestal wou je gewoon je bestaande groep terug. Dus vragen we het.
-      const zelfde = savedGroups.find((g) => !g.finalized && g.owned && g.name.trim().toLowerCase() === naam.toLowerCase())
+      const zelfde = savedGroups.find((g) => g.owned && g.name.trim().toLowerCase() === naam.toLowerCase())
       if (zelfde) {
         setConfirmDlg({
           msg: L.sameDayGroup(zelfde.name),
@@ -4705,13 +4711,14 @@ export default function PartyTest() {
         {beginPrompt && (
           <div style={{ ...S.overlay, zIndex: 65 }} onClick={() => setBeginPrompt(false)}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ ...S.h3, fontSize: 19, marginTop: 0, marginBottom: 4 }}>{L.beforeWeStart}</h3>
+              <h3 style={{ ...S.h3, fontSize: 19, marginTop: 0, marginBottom: 4 }}>{bpSettle === null ? L.beforeWeStart : L.beforeQrTitle}</h3>
 
-              {/* De modus komt EERST — hij bepaalt of de rest nog relevant is. Bekers,
-                  coins en pot bestaan alleen als je afrekent. Kies je "gewoon rondjes",
-                  dan is dit scherm hiermee klaar. */}
-              <p style={{ fontSize: 16, fontWeight: 700, color: "#4a3f1e", marginBottom: 10 }}>{L.modeTitle}</p>
-              <div style={{ display: "flex", flexDirection: "column" }}>
+              {/* De modus koos je al op het keuzescherm en staat op de groep. Hem hier
+                  opnieuw vragen liet dit venster als een tweede keuzescherm lezen — precies
+                  wat je niet verwacht na een knop die "Naar de QR-code" heet. Alleen wanneer
+                  er nog niets gekozen is, tonen we de kaders. */}
+              {bpSettle === null && <p style={{ fontSize: 16, fontWeight: 700, color: "#4a3f1e", marginBottom: 10 }}>{L.modeTitle}</p>}
+              <div style={{ display: bpSettle === null ? "flex" : "none", flexDirection: "column" }}>
                 {/* Fair Split BOVEN — de voorkeur. Al geselecteerd bij binnenkomst. */}
                 <button onClick={() => setBpSettle(true)}
                   style={{ position: "relative", overflow: "hidden", textAlign: "left", padding: "18px 15px 15px", borderRadius: 14, cursor: "pointer",
@@ -4788,7 +4795,7 @@ export default function PartyTest() {
               <button style={{ ...S.btnP, width: "100%", marginTop: 14, opacity: bpSettle === null ? 0.45 : 1 }}
                 disabled={bpSettle === null}
                 onClick={applyBeginChoices}>
-                {L.quickStart}
+                {bpSettle === true ? L.toQrStep : L.quickStart}
               </button>
             </div>
           </div>
