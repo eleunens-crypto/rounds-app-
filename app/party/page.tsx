@@ -355,6 +355,7 @@ const T = {
     nothingThisRound: "jij had niets in dit rondje",
 
     newDrinkTile: "Eigen drankje?",
+    shortListBtn: "🔼 Korte lijst",
 
     // ── start & setup
     autoName: () => { const d = new Date(); const m = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"]; return `Rondje ${d.getDate()} ${m[d.getMonth()]}` },
@@ -392,7 +393,7 @@ const T = {
     addThis: "Toevoegen",
     seatNameTitle: "Iemand die niet scant",
     seatNameSub: "Zet zijn naam erbij — scant hij later toch, dan tikt hij die gewoon aan.",
-    yourSeat: "Jij",
+    tapYourName: "Tik hier je naam",
     groupNameEdit: "Naam van deze groep",
     groupNamePh: "Typ je groepsnaam",
     starting: "Bezig…",
@@ -431,7 +432,6 @@ const T = {
     createFailed: "Groep aanmaken mislukt. Probeer opnieuw.",
 
     peopleCount: "👥 Aantal personen",
-    namesOptional: "Namen zijn optioneel — pas ze aan wanneer je wil.",
     peopleTitle: "Personen",
     addPersonFirst: "Voeg eerst minstens één persoon toe.",
     whichAreYou: "Welke ben jij?",
@@ -859,6 +859,7 @@ const T = {
     nothingThisRound: "tu n'avais rien dans cette tournée",
 
     newDrinkTile: "Boisson perso ?",
+    shortListBtn: "🔼 Liste courte",
 
     // ── start & setup
     autoName: () => { const d = new Date(); const m = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"]; return `Tournée ${d.getDate()} ${m[d.getMonth()]}` },
@@ -896,7 +897,7 @@ const T = {
     addThis: "Ajouter",
     seatNameTitle: "Quelqu’un qui ne scanne pas",
     seatNameSub: "Mets son nom — s’il scanne plus tard, il le touchera simplement.",
-    yourSeat: "Toi",
+    tapYourName: "Tape ton nom ici",
     groupNameEdit: "Nom de ce groupe",
     groupNamePh: "Tape le nom de ton groupe",
     starting: "En cours…",
@@ -935,7 +936,6 @@ const T = {
     createFailed: "Échec de la création du groupe. Réessaie.",
 
     peopleCount: "👥 Nombre de personnes",
-    namesOptional: "Les noms sont facultatifs — modifie-les quand tu veux.",
     peopleTitle: "Personnes",
     addPersonFirst: "Ajoute d'abord au moins une personne.",
     whichAreYou: "Lequel es-tu ?",
@@ -1711,12 +1711,18 @@ export default function PartyTest() {
   // geen omweg via toewijzen. Zo blijft de toewijzing die al in je hoofd zit ("Tom?
   // pils") ook in de app staan — en werkt Fair Split achteraf zonder extra werk.
   const walkStart = () => { setWalkIdx(people[0] ? 0 : null) }
+  const [walkVol, setWalkVol] = useState(false)
   const renderWalk = () => {
     if (walkIdx === null) return null
     const p = people[walkIdx]
     if (!p) { setWalkIdx(null); return null }
     const zijne = drinks.filter((d) => (cart[d.id]?.[p.id] ?? 0) > 0)
-    const lijst = drinks.filter((d) => d.fav)
+    // Zelfde opbouw als het bestelscherm: categorieën bovenaan, en de volledige lijst
+    // achter "toon alles". Vroeger zag je hier enkel de favorieten, dus een gast die iets
+    // anders wou moest je afwimpelen of het achteraf toevoegen.
+    const walkZoekt = normText(drinkSearch).length > 0
+    const walkCat = walkZoekt ? drinks.filter((d) => drinkMatches(d.name, drinkSearch)) : drinks.filter((d) => d.cat === activeCat)
+    const lijst = walkZoekt ? walkCat : walkCat.filter((d) => walkVol || d.fav || (cart[d.id]?.[p.id] ?? 0) > 0)
     // Hoeveel elke persoon al aantikte in dit rondje (voor de teller op de pill).
     const aantalVan = (pid: string) => drinks.reduce((a, d) => a + (cart[d.id]?.[pid] ?? 0), 0)
     return (
@@ -1748,6 +1754,11 @@ export default function PartyTest() {
           </div>
 
           <div style={{ fontSize: 14.5, color: "#8a7d55", marginBottom: 10, fontWeight: 700 }}>{L.walkFor(p.name)}</div>
+          <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 10, paddingBottom: 2 }}>
+            {catsPresent.map((c) => (
+              <span key={c} style={{ ...S.tab(activeCat === c && !walkZoekt), flexShrink: 0 }} onClick={() => { setActiveCat(c); setDrinkSearch("") }}>{CAT_LABEL[c]}</span>
+            ))}
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 12 }}>
             {lijst.map((d) => {
               const n = cart[d.id]?.[p.id] ?? 0
@@ -1767,6 +1778,12 @@ export default function PartyTest() {
                 </button>
               )
             })}
+          </div>
+          <div style={{ display: "flex", gap: 7, marginBottom: 12 }}>
+            <button onClick={() => setWalkVol((v) => !v)}
+              style={{ ...S.btn, flex: 1, fontSize: 14, fontWeight: 800, padding: "10px 6px" }}>{walkVol ? L.shortListBtn : L.fullListBtn}</button>
+            <button onClick={() => setShowAddDrink(true)}
+              style={{ ...S.btn, flex: 1, fontSize: 14, fontWeight: 800, padding: "10px 6px" }}>{L.newDrinkTile}</button>
           </div>
           {zijne.length > 0 && (
             <div style={{ fontSize: 14, color: "#6b5f3a", marginBottom: 12, lineHeight: 1.5 }}>
@@ -4877,7 +4894,7 @@ export default function PartyTest() {
             <span style={{ fontSize: 26, fontWeight: 800, minWidth: 34, textAlign: "center" }}>{people.length}</span>
             <button style={{ ...S.step, width: 42, height: 42, fontSize: 23, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={addPerson}>+</button>
           </div>
-          <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", marginTop: 10 }}>{L.namesOptional}</div>
+
         </div>
         )}
 
@@ -4924,10 +4941,9 @@ export default function PartyTest() {
                     <div style={{ ...S.row, gap: 8 }}>
                       <span style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(31,138,76,0.15)", color: "#1f6b3a", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>⭐</span>
                       <input value={isGuestDefault(mijnPlaats.name) ? "" : mijnPlaats.name}
-                        placeholder={L.yourSeat}
+                        placeholder={L.tapYourName}
                         onChange={(e) => renamePerson(mijnPlaats.id, e.target.value === "" ? `Gast ${mijnIdx + 1}` : e.target.value)}
-                        style={{ ...S.input, flex: 1, minWidth: 0, padding: "7px 9px", fontSize: 15.5, fontWeight: 800, textAlign: "left", background: "#fff" }} />
-                      <span style={{ fontSize: 12, color: "#8a5e0f", background: "#f3e4c4", padding: "3px 9px", borderRadius: 10, fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0 }}>✏️ {L.nameLabel}</span>
+                        style={{ ...S.input, flex: 1, minWidth: 0, padding: "9px 11px", fontSize: 15.5, fontWeight: 800, textAlign: "left", background: "#fff" }} />
                     </div>
                   </div>
                 )}
