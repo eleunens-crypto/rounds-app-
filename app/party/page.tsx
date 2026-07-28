@@ -2056,9 +2056,15 @@ export default function PartyTest() {
         const { data } = await supabase.from("party_groups").select("id").eq("id", sessie.g).maybeSingle()
         if (data) {
           setGroupId(sessie.g)
-          await loadParty(sessie.g)
+          const stand = await loadParty(sessie.g)
           if (sessie.fq) setFromQuick(true)
-          if (sessie.v) setView(sessie.v as typeof view)
+          // Staat er een rondje open, dan is het bestelscherm de enige zinvolle plek: daar
+          // ligt je mand. Het opgeslagen scherm kon een hub zijn die op andere toestand
+          // rekende en na een verversing leeg bleef. De afrekenstappen laten we met rust —
+          // daar hoort een open rondje niet meer bij de vraag waar je moet landen.
+          const afrekenen = sessie.v === "payers" || sessie.v === "final" || sessie.v === "fairSetup" || sessie.v === "quickSettle" || sessie.v === "settings"
+          if (stand?.heeftOpen && !afrekenen) setView("order")
+          else if (sessie.v) setView(sessie.v as typeof view)
           setBooting(false)
           return
         }
@@ -3781,9 +3787,9 @@ export default function PartyTest() {
     return (
     <div style={{ marginBottom: 12 }}>
       {!!groupId && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: modus.knop, borderRadius: "12px 12px 0 0", padding: "6px 13px", marginBottom: 10 }}>
-          <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>{settle ? `⚖️ ${L.modeFairShort}` : `🍻 ${L.modeQuickShort}`}</span>
-          {stap && <span style={{ fontSize: 11.5, fontWeight: 700, color: "rgba(255,255,255,0.9)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{stap}</span>}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: modus.knop, borderRadius: "14px 14px 0 0", padding: "10px 15px", marginBottom: 10 }}>
+          <span style={{ fontSize: 15.5, fontWeight: 800, color: "#fff", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? `⚖️ ${L.modeFairShort}` : `🍻 ${L.modeQuickShort}`}</span>
+          {stap && <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.92)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{stap}</span>}
         </div>
       )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
