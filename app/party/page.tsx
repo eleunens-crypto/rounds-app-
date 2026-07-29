@@ -138,14 +138,16 @@ const MODUS_SNEL = {
   knopTekst: "#4a3f1e",
   tint: "rgba(232,168,18,0.18)", tekst: "#8a5e0f",
   randZacht: "rgba(232,168,18,0.6)", lijnZacht: "rgba(232,168,18,0.28)",
+  bladzij: "#fdf6e3",
 }
 const MODUS_FAIR = {
-  rand: "#1f8a4c", vlak: "#f0f9f4", paneel: "#fbfefc",
-  streep: "rgba(31,138,76,0.35)", lijn: "rgba(31,138,76,0.15)", label: "#5a9a75",
-  knop: "linear-gradient(135deg,#2fae6a,#1f8a4c)", gloed: "rgba(31,138,76,0.55)",
+  rand: "#0d7c8c", vlak: "#eef8fa", paneel: "#f9fdfe",
+  streep: "rgba(13,124,140,0.35)", lijn: "rgba(13,124,140,0.15)", label: "#4e94a0",
+  knop: "linear-gradient(135deg,#159cb0,#0d7c8c)", gloed: "rgba(13,124,140,0.55)",
   knopTekst: "#fff",
-  tint: "rgba(31,138,76,0.12)", tekst: "#1f6b3a",
-  randZacht: "rgba(31,138,76,0.5)", lijnZacht: "rgba(31,138,76,0.22)",
+  tint: "rgba(13,124,140,0.12)", tekst: "#0a6070",
+  randZacht: "rgba(13,124,140,0.5)", lijnZacht: "rgba(13,124,140,0.22)",
+  bladzij: "#f0f8fa",
 }
 const makeCode = () => Array.from({ length: 6 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("")
 type Cat = "Bier" | "BierAV" | "Frisdrank" | "Wijn" | "Cocktail" | "Mocktail" | "Longdrink" | "Shot" | "Warm" | "Eigen"
@@ -739,6 +741,8 @@ const T = {
     modeQuickSub: "Jij tikt zelf alle drankjes aan.",
     modeQuickSub2: "Meteen een handig bestellijstje",
     whatIsThis: "Wat is dit?",
+    modeQuickLead: "DE SNELSTE",
+    modeFairLead: "DE EERLIJKSTE",
     modeQuickWhat: "Geen namen nodig: je tikt gewoon aan wat er besteld wordt en je krijgt een barlijstje. Achteraf verdeel je gelijk, of alsnog eerlijk per persoon.",
     modeFairWhat: "Jouw drankjes, jouw bedrag. Geen oneerlijke gelijke verdeling maar betalen volgens wat je dronk — de app rekent het uit.",
     orWord: "of",
@@ -1290,6 +1294,8 @@ const T = {
     modeQuickSub: "Tu coches toutes les boissons toi-même.",
     modeQuickSub2: "Direct une liste pratique pour le bar",
     whatIsThis: "C’est quoi ?",
+    modeQuickLead: "LE PLUS RAPIDE",
+    modeFairLead: "LE PLUS ÉQUITABLE",
     modeQuickWhat: "Pas besoin de noms : tu coches simplement ce qui est commandé et tu reçois une liste pour le bar. Ensuite tu partages à parts égales, ou équitablement par personne.",
     modeFairWhat: "Tes boissons, ton montant. Pas de partage égal injuste mais payer selon ce que tu as bu — l’appli le calcule.",
     orWord: "ou",
@@ -3210,7 +3216,7 @@ export default function PartyTest() {
             zelf. Wie later scant sluit gewoon aan, want de QR blijft bereikbaar. */}
         <button onClick={() => { void openBestellen(); setActiveCat(catsPresent[0]); setView("order") }}
           style={{ width: "100%", marginTop: 14, cursor: "pointer", border: "none", borderRadius: 14, padding: "13px 12px", color: "#fff",
-            background: "linear-gradient(135deg,#27ae60,#1f8a4c)", boxShadow: `0 12px 28px -8px ${MODUS_FAIR.gloed}, 0 0 0 4px ${MODUS_FAIR.tint}` }}>
+            background: MODUS_FAIR.knop, boxShadow: `0 12px 28px -8px ${MODUS_FAIR.gloed}, 0 0 0 4px ${MODUS_FAIR.tint}` }}>
           <span style={{ display: "block", fontSize: 17.5, fontWeight: 800 }}>{L.startOrdering}</span>
           <span style={{ display: "block", fontSize: 12.5, opacity: 0.92, marginTop: 2 }}>{L.startOrderingSub}</span>
         </button>
@@ -4065,9 +4071,9 @@ export default function PartyTest() {
   }
 
   const S = {
-    page: { minHeight: "100vh", background: "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
+    page: { minHeight: "100vh", background: groupId ? (settle ? MODUS_FAIR.bladzij : MODUS_SNEL.bladzij) : "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
     wrap: { maxWidth: 560, margin: "0 auto", padding: "16px 16px" } as React.CSSProperties,
-    card: { background: "#fff", border: "1px solid rgba(120,95,20,0.14)", borderRadius: 18, padding: 16, marginBottom: 13, boxShadow: "0 4px 16px -8px rgba(120,95,20,0.25)" } as React.CSSProperties,
+    card: { background: "#fff", border: `1px solid ${groupId && settle ? "rgba(13,124,140,0.16)" : "rgba(120,95,20,0.14)"}`, borderRadius: 18, padding: 16, marginBottom: 13, boxShadow: groupId && settle ? "0 4px 16px -8px rgba(13,124,140,0.22)" : "0 4px 16px -8px rgba(120,95,20,0.25)" } as React.CSSProperties,
     h1: { fontSize: 23, fontWeight: 800, margin: "0 0 2px" } as React.CSSProperties,
     h3: { fontSize: 17.5, fontWeight: 800, margin: "0 0 10px" } as React.CSSProperties,
     sub: { fontSize: 15.5, color: "#8a7d55", margin: "0 0 12px", lineHeight: 1.55 } as React.CSSProperties,
@@ -4649,12 +4655,12 @@ export default function PartyTest() {
                   </div>
                   <input id="guest-name" value={gastNaam} onChange={(e) => setGastNaam(e.target.value)}
                     style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 17, marginBottom: 10,
-                      border: gastNaam.trim() ? "1.5px solid rgba(31,138,76,0.5)" : undefined }}
+                      border: gastNaam.trim() ? `1.5px solid ${MODUS_FAIR.randZacht}` : undefined }}
                     placeholder={L.yourName} autoComplete="name" />
                   {/* Zolang er geen naam staat zijn deze knoppen bleek: er valt nog niets te
                       kiezen. Zodra je typt worden ze groen met een gloed, en staat erboven
                       wat je nu moet doen. */}
-                  {gastNaam.trim() && <div style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", marginBottom: 8 }}>{L.tapYourSeatNow}</div>}
+                  {gastNaam.trim() && <div style={{ fontSize: 14, fontWeight: 800, color: MODUS_FAIR.tekst, marginBottom: 8 }}>{L.tapYourSeatNow}</div>}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
                     {leeg.map((p) => {
                       const klaar = gastNaam.trim().length > 0
@@ -4662,10 +4668,10 @@ export default function PartyTest() {
                         <button key={p.id} disabled={busy || !klaar}
                           onClick={() => { if (!klaar) { setNotice(L.fillNameFirst); return } claimSeat(p.id, gastNaam.trim()) }}
                           style={{ ...S.btn, padding: "13px 8px", fontWeight: 800, cursor: klaar ? "pointer" : "default",
-                            background: klaar ? "linear-gradient(135deg,#27ae60,#1f8a4c)" : "#faf7ec",
+                            background: klaar ? MODUS_FAIR.knop : "#faf7ec",
                             border: klaar ? "none" : "1px solid rgba(120,95,20,0.18)",
                             color: klaar ? "#fff" : "#c4b896",
-                            boxShadow: klaar ? "0 10px 24px -8px rgba(31,138,76,0.85), 0 0 0 4px rgba(31,138,76,0.16)" : "none",
+                            boxShadow: klaar ? `0 10px 24px -8px ${MODUS_FAIR.gloed}, 0 0 0 4px ${MODUS_FAIR.tint}` : "none",
                             opacity: busy ? 0.5 : 1 }}>
                           {L.seat(p.seat)}{klaar ? " →" : ""}
                         </button>
@@ -5100,6 +5106,7 @@ export default function PartyTest() {
               <div style={{ padding: "0 16px 14px", background: bpSettle === false ? MODUS_SNEL.vlak : "#fff" }}>
                 <div style={{ borderTop: `1px solid ${bpSettle === false ? MODUS_SNEL.streep : MODUS_SNEL.lijnZacht}`, paddingTop: 11 }}>
                 <div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: MODUS_SNEL.tekst, letterSpacing: "0.08em", marginBottom: 7 }}>⚡ {L.modeQuickLead}</div>
                   <div style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
                     <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: MODUS_SNEL.tint, color: MODUS_SNEL.tekst, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, fontStyle: "italic" }}>i</span>
                     <span style={{ fontSize: 14.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeQuickWhat}</span>
@@ -5170,6 +5177,7 @@ export default function PartyTest() {
               <div style={{ padding: "0 16px 14px", background: bpSettle === true ? MODUS_FAIR.vlak : "#fff" }}>
                 <div style={{ borderTop: `1px solid ${bpSettle === true ? MODUS_FAIR.streep : MODUS_FAIR.lijnZacht}`, paddingTop: 11 }}>
                 <div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: MODUS_FAIR.tekst, letterSpacing: "0.08em", marginBottom: 7 }}>⚖️ {L.modeFairLead}</div>
                   <div style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
                     <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: MODUS_FAIR.tint, color: MODUS_FAIR.tekst, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, fontStyle: "italic" }}>i</span>
                     <span style={{ fontSize: 14.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeFairWhat}</span>
