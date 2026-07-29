@@ -637,6 +637,20 @@ const T = {
     walkTable: "👥 Rondje opnemen",
     roundTogether: "🍻 Ik ga drankjes halen",
     roundWalkSelf: "✍️ Rondje zelf opnemen",
+    youFetchTitle: "Jij gaat drankjes halen",
+    fetchStep1: "Iedereen krijgt nu de melding",
+    fetchStep2: "Ieder tikt op zijn eigen gsm aan wat hij wil",
+    fetchStep3: "Jij krijgt het barlijstje zodra ze klaar zijn",
+    yesIFetch: "Ja, ik ga halen →",
+    ratherNot: "Toch niet",
+    someoneFetches: (naam: string) => `${naam} gaat drankjes halen`,
+    gFetchStep1: "Tik aan wat jij wil drinken",
+    gFetchStep2: "Iedereen tikt aan op eigen gsm",
+    gFetchStep3: (naam: string) => `${naam} krijgt het barlijstje`,
+    letsChoose: "Kiezen maar →",
+    showStand: "👥 Wie doet al mee?",
+    hideStand: "👥 Verbergen",
+    stillBusy: "nog bezig…",
     everyoneTapsOwn: "📱 Iedereen tikt zelf aan op zijn gsm",
     youTapForAll: "Jij gaat rond en tikt alle drankjes zelf aan voor iedereen",
     everyoneTapsNow: "Iedereen tikt nu op zijn eigen telefoon aan wat hij wil.",
@@ -1141,6 +1155,20 @@ const T = {
     walkTable: "👥 Faire le tour",
     roundTogether: "🍻 Je vais chercher les boissons",
     roundWalkSelf: "✍️ Prendre la tournée toi-même",
+    youFetchTitle: "Tu vas chercher les boissons",
+    fetchStep1: "Tout le monde reçoit l’info maintenant",
+    fetchStep2: "Chacun coche sur son propre gsm ce qu’il veut",
+    fetchStep3: "Tu reçois la liste pour le bar dès qu’ils ont fini",
+    yesIFetch: "Oui, j’y vais →",
+    ratherNot: "Finalement non",
+    someoneFetches: (naam: string) => `${naam} va chercher les boissons`,
+    gFetchStep1: "Coche ce que tu veux boire",
+    gFetchStep2: "Chacun coche sur son propre gsm",
+    gFetchStep3: (naam: string) => `${naam} reçoit la liste pour le bar`,
+    letsChoose: "C’est parti →",
+    showStand: "👥 Qui a déjà choisi ?",
+    hideStand: "👥 Masquer",
+    stillBusy: "en cours…",
     everyoneTapsOwn: "📱 Chacun coche sur son propre gsm",
     youTapForAll: "Tu fais le tour et tu coches toutes les boissons toi-même",
     everyoneTapsNow: "Chacun coche maintenant sur son propre téléphone.",
@@ -1567,6 +1595,19 @@ export default function PartyTest() {
   // De luisteraar wordt één keer per groep opgehangen, maar goStart wordt bij elke render
   // opnieuw gemaakt. Zonder deze verwijzing zou terug een oude versie aanroepen — met de
   // schermnaam van het moment waarop je de groep opende, en dus de verkeerde waarschuwing.
+  // Zodra er een rondje opengaat dat iemand ánders startte, krijg je het één keer te zien.
+  // We onthouden welk rondje al aangekondigd is, anders komt de melding bij elke
+  // verversing terug.
+  useEffect(() => {
+    if (!openRoundId || !meId) return
+    if (rondjeGemeld === openRoundId) return
+    setRondjeGemeld(openRoundId)
+    if (!startedBy || startedBy === meId) return
+    const haler = people.find((p) => p.id === startedBy)
+    if (haler) setRondjeMelding(haler.name)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openRoundId, startedBy, meId])
+
   const terugActie = useRef<() => void>(() => {})
   useEffect(() => {
     if (typeof window === "undefined" || !groupId) return
@@ -1712,6 +1753,13 @@ export default function PartyTest() {
   // pils") ook in de app staan — en werkt Fair Split achteraf zonder extra werk.
   const walkStart = () => { setWalkIdx(people[0] ? 0 : null) }
   const [walkVol, setWalkVol] = useState(false)
+  // Bevestigen vóór het starten: wie op "ik ga halen" tikt, zet daarmee de hele tafel in
+  // beweging. Eén scherm met wat er gaat gebeuren, en een uitweg.
+  const [startCheck, setStartCheck] = useState(false)
+  // De melding voor de anderen. We tonen ze één keer per rondje, aan iedereen behalve de
+  // haler zelf — vandaar dat we onthouden welk rondje we al aankondigden.
+  const [rondjeGemeld, setRondjeGemeld] = useState<string | null>(null)
+  const [rondjeMelding, setRondjeMelding] = useState<string | null>(null)
   const renderWalk = () => {
     if (walkIdx === null) return null
     const p = people[walkIdx]
@@ -1797,6 +1845,29 @@ export default function PartyTest() {
   }
 
   // De haler-strook. Drie toestanden: niemand haalt, iemand anders haalt, jij haalt.
+  // Wie tikte al iets aan, en wat? Iedereen mag dit zien — alleen de haler krijgt er
+  // knoppen bij. Alles komt uit de mand, dus er is geen aparte toestand te bewaren.
+  const [standOpen, setStandOpen] = useState(false)
+  const renderStandLijst = () => (
+    <div style={{ marginTop: 9, display: "flex", flexDirection: "column", gap: 5 }}>
+      {people.map((pp) => {
+        const zijne = drinks.filter((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)
+        const klaar = zijne.length > 0
+        return (
+          <div key={pp.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 9,
+            background: klaar ? "rgba(31,138,76,0.07)" : "#fff", border: klaar ? "none" : "1px dashed rgba(120,95,20,0.3)" }}>
+            <span style={{ fontSize: 14.5, fontWeight: klaar ? 700 : 400, color: klaar ? "#1f6b3a" : "#a89a6f", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {klaar ? "✓ " : ""}{pp.id === meId ? "⭐ " : ""}{pp.name}
+            </span>
+            <span style={{ flexShrink: 0, fontSize: 13, color: klaar ? "#4a7a5c" : "#b3a988", textAlign: "right" }}>
+              {klaar ? zijne.map((d) => `${cart[d.id][pp.id]}× ${d.name}`).join(" · ") : L.stillBusy}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+
   const renderRunnerBar = () => {
     const ikHaal = !!meId && startedBy === meId
     if (!openRoundId && !startedBy) {
@@ -1805,7 +1876,7 @@ export default function PartyTest() {
       // knop" maar over wie er aantikt.
       return (
         <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
-          <button style={{ ...S.btnP, width: "100%", padding: "13px 10px", marginBottom: 9 }} onClick={startAsRunner}>
+          <button style={{ ...S.btnP, width: "100%", padding: "13px 10px", marginBottom: 9 }} onClick={() => setStartCheck(true)}>
             <span style={{ display: "block", fontSize: 17, fontWeight: 800 }}>{L.roundTogether}</span>
             <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, opacity: 0.93, marginTop: 2 }}>{L.everyoneTapsOwn}</span>
           </button>
@@ -1817,19 +1888,20 @@ export default function PartyTest() {
       )
     }
     if (ikHaal) {
-      // Hoeveel mensen tikten al iets aan? Zonder dat cijfer weet je niet of je nog moet
-      // wachten — en dat is précies de vraag terwijl je klaarstaat om te gaan.
-      const klaar = people.filter((pp) => drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)).length
+      const klaar = people.filter((pp) => drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0))
       return (
         <div style={{ ...S.card, background: "rgba(31,138,76,0.08)", border: "1.5px solid rgba(31,138,76,0.35)" }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9 }}>
             <span style={{ fontSize: 15.5, fontWeight: 800, color: "#1f6b3a" }}>{L.youAreGoing}</span>
             <button style={{ ...S.btn, fontSize: 13.5, fontWeight: 700, padding: "6px 11px" }} onClick={releaseRunner}>{L.notMeRunner}</button>
           </div>
-          <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "#fff", borderRadius: 11, padding: "11px 12px" }}>
+          <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "#fff", borderRadius: 11, padding: "11px 12px", marginBottom: 9 }}>
             <span style={{ flexShrink: 0, fontSize: 17 }}>📱</span>
-            <span style={{ fontSize: 14.5, color: "#4a3f1e", lineHeight: 1.45 }}>{L.everyoneTapsNow} <b>{L.readyOf(klaar, people.length)}</b></span>
+            <span style={{ fontSize: 14.5, color: "#4a3f1e", lineHeight: 1.45 }}>{L.everyoneTapsNow} <b>{L.readyOf(klaar.length, people.length)}</b></span>
           </div>
+          {/* Wie is al klaar en wie nog niet? Dat bepaalt of je blijft zitten of vertrekt. */}
+          <button onClick={() => setStandOpen((v) => !v)} style={{ ...S.btn, width: "100%", fontSize: 14.5, fontWeight: 800, padding: "10px 8px" }}>{standOpen ? `${L.hideStand} ▴` : `${L.showStand} ▾`}</button>
+          {standOpen && renderStandLijst()}
         </div>
       )
     }
@@ -1837,10 +1909,14 @@ export default function PartyTest() {
       // Iemand anders haalt. Informatie — overnemen mag, maar rustig.
       return (
         <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
-          <div style={{ ...S.row, justifyContent: "space-between" }}>
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9 }}>
             <span style={{ fontSize: 15.5, fontWeight: 800, color: "#8a5e0f" }}>{L.xIsGoing(runnerName())}</span>
             <button style={{ ...S.btn, fontSize: 13.5, fontWeight: 700, padding: "6px 11px" }} onClick={takeOverRound}>{L.iGoInstead}</button>
           </div>
+          {/* Dezelfde stand als de haler ziet, zonder zijn knoppen: ook jij wil weten of
+              iedereen al gekozen heeft. */}
+          <button onClick={() => setStandOpen((v) => !v)} style={{ ...S.btn, width: "100%", fontSize: 14.5, fontWeight: 800, padding: "10px 8px" }}>{standOpen ? `${L.hideStand} ▴` : `${L.showStand} ▾`}</button>
+          {standOpen && renderStandLijst()}
         </div>
       )
     }
@@ -3968,6 +4044,43 @@ export default function PartyTest() {
               onClick={() => { renamePerson(zitNaam.id, zitNaamTekst.trim()); setZitNaam(null); setZitNaamTekst("") }}
               style={{ ...S.btnP, width: "100%", opacity: zitNaamTekst.trim() ? 1 : 0.5, cursor: zitNaamTekst.trim() ? "pointer" : "default" }}>{L.addThis}</button>
             <button onClick={() => { setZitNaam(null); setZitNaamTekst("") }} style={{ width: "100%", marginTop: 9, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#a89a6f" }}>{L.cancel}</button>
+          </div>
+        </div>
+      )}
+      {/* Wie gaat halen bevestigt eerst; pas daarna weet de rest ervan. */}
+      {startCheck && (
+        <div style={{ ...S.overlay, zIndex: 74 }} onClick={() => setStartCheck(false)}>
+          <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 32, marginBottom: 5 }}>🍻</div>
+            <div style={{ fontSize: 18.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 12 }}>{L.youFetchTitle}</div>
+            <div style={{ textAlign: "left", marginBottom: 14 }}>
+              {[L.fetchStep1, L.fetchStep2, L.fetchStep3].map((t, i) => (
+                <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", marginBottom: i < 2 ? 7 : 0 }}>
+                  <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>
+                  <span style={{ fontSize: 14.5, color: "#4a3f1e", lineHeight: 1.45 }}>{t}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => { setStartCheck(false); startAsRunner() }} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 16.5, fontWeight: 800 }}>{L.yesIFetch}</button>
+            <button onClick={() => setStartCheck(false)} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15, fontWeight: 700, color: "#a89a6f" }}>{L.ratherNot}</button>
+          </div>
+        </div>
+      )}
+      {/* En de anderen krijgen te horen wie gaat en wat er van hen verwacht wordt. */}
+      {rondjeMelding && (
+        <div style={{ ...S.overlay, zIndex: 74 }} onClick={() => setRondjeMelding(null)}>
+          <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 32, marginBottom: 5 }}>🍻</div>
+            <div style={{ fontSize: 18.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 12 }}>{L.someoneFetches(rondjeMelding)}</div>
+            <div style={{ textAlign: "left", marginBottom: 14 }}>
+              {[L.gFetchStep1, L.gFetchStep2, L.gFetchStep3(rondjeMelding)].map((t, i) => (
+                <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", marginBottom: i < 2 ? 7 : 0 }}>
+                  <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>
+                  <span style={{ fontSize: 14.5, color: "#4a3f1e", lineHeight: 1.45 }}>{t}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setRondjeMelding(null)} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 16.5, fontWeight: 800 }}>{L.letsChoose}</button>
           </div>
         </div>
       )}
