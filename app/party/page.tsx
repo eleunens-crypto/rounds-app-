@@ -331,8 +331,6 @@ const T = {
     notScannedYet: "nog niet aangemeld",
     inviteMore: "Nodig meer mensen uit — laat ze de code scannen.",
     roundWhatYouWant: (n: number) => `🛒 Ronde ${n} — wat jij wil`,
-    noRoundYet: "🛒 Nog geen rondje bezig",
-    tapBelow: "Tik hieronder aan wat je wil. Wie naar de toog gaat, ziet het meteen op zijn scherm.",
     searchDrink: "Zoek een drankje…",
     shortList: "⚡ Korte lijst",
     fullListBtn: "📖 Volledige lijst",
@@ -652,6 +650,12 @@ const T = {
     gFetchStep3: (naam: string) => `${naam} krijgt het barlijstje`,
     letsChoose: "Kiezen maar →",
     orderingOpen: "Het bestellen is open",
+    noRoundBusy: "Geen rondje bezig",
+    roundRunning: "Rondje bezig",
+    roundBusyBy: (naam: string) => `Rondje bezig — ${naam} haalt`,
+    browseOnly: "Je kan de kaart bekijken. Start een rondje om te bestellen.",
+    noRoundTitle: "Er loopt nog geen rondje",
+    noRoundBody: "Start er eentje, dan kan iedereen aantikken wat hij wil.",
     potInPot: "💰 In de pot",
     waitForHost: (naam: string) => `Je zit erbij. Zodra ${naam || "de gastheer"} het bestellen opent, kan je aantikken wat je wil.`,
     gFetchStep3Any: "Wie gaat halen krijgt het barlijstje",
@@ -874,8 +878,6 @@ const T = {
     notScannedYet: "pas encore inscrit",
     inviteMore: "Invite plus de monde — fais scanner le code.",
     roundWhatYouWant: (n: number) => `🛒 Tournée ${n} — ce que tu veux`,
-    noRoundYet: "🛒 Aucune tournée en cours",
-    tapBelow: "Touche ci-dessous ce que tu veux. Celui qui va au bar le voit tout de suite.",
     searchDrink: "Chercher une boisson…",
     shortList: "⚡ Liste courte",
     fullListBtn: "📖 Liste complète",
@@ -1195,6 +1197,12 @@ const T = {
     gFetchStep3: (naam: string) => `${naam} reçoit la liste pour le bar`,
     letsChoose: "C’est parti →",
     orderingOpen: "Les commandes sont ouvertes",
+    noRoundBusy: "Aucune tournée en cours",
+    roundRunning: "Tournée en cours",
+    roundBusyBy: (naam: string) => `Tournée en cours — ${naam} y va`,
+    browseOnly: "Tu peux consulter la carte. Lance une tournée pour commander.",
+    noRoundTitle: "Aucune tournée en cours",
+    noRoundBody: "Lances-en une, et chacun pourra cocher ce qu’il veut.",
     potInPot: "💰 Dans la cagnotte",
     waitForHost: (naam: string) => `Tu es dans le groupe. Dès que ${naam || "l’hôte"} ouvre les commandes, tu peux cocher ce que tu veux.`,
     gFetchStep3Any: "Celui qui y va reçoit la liste pour le bar",
@@ -1399,6 +1407,7 @@ export default function PartyTest() {
   // heeft zelf geen naamveld — daar duik je normaal meteen in de drankjes.
   const [naamPrompt, setNaamPrompt] = useState<boolean | null>(null)
   const [gastNaam, setGastNaam] = useState("")
+  const [geenRondje, setGeenRondje] = useState(false)
   // Naam zetten op een plaats die nog op een scan wacht.
   const [zitNaam, setZitNaam] = useState<{ id: string; nr: number } | null>(null)
   const [zitNaamTekst, setZitNaamTekst] = useState("")
@@ -4265,6 +4274,19 @@ export default function PartyTest() {
         </div>
       )}
       {/* Wie gaat halen bevestigt eerst; pas daarna weet de rest ervan. */}
+      {/* Tikte je op een drankje terwijl er geen rondje loopt? Dan legt dit uit waarom er
+          niets gebeurt, en staat de weg vooruit meteen in hetzelfde venster. */}
+      {geenRondje && (
+        <div style={{ ...S.overlay, zIndex: 75 }} onClick={() => setGeenRondje(false)}>
+          <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 30, marginBottom: 5 }}>🍻</div>
+            <div style={{ fontSize: 17.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>{L.noRoundTitle}</div>
+            <div style={{ fontSize: 14.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>{L.noRoundBody}</div>
+            <button onClick={() => { setGeenRondje(false); setStartCheck(true) }} style={{ ...S.btnP, width: "100%", padding: "12px 0", fontSize: 15.5, fontWeight: 800, marginBottom: 8 }}>{L.roundTogether}</button>
+            <button onClick={() => { setGeenRondje(false); setWalkIdx(0) }} style={{ ...S.btn, width: "100%", padding: "12px 0", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>{L.roundWalkSelf}</button>
+          </div>
+        </div>
+      )}
       {/* Kreeg je een duwtje terwijl je nog niets koos? Eén venster, met beide uitwegen. */}
       {herinnering && (
         <div style={{ ...S.overlay, zIndex: 75 }} onClick={() => setHerinnering(false)}>
@@ -4826,19 +4848,23 @@ export default function PartyTest() {
           ) : null
         )}
         {renderProposalGuest()}
-        {/* Wat je al aantikte in dit rondje. Bovenaan, want dat is wat je wil zien. */}
-        <div style={{ ...S.card, background: mijnAantal > 0 ? "rgba(31,138,76,0.06)" : "#fff" }}>
-          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: mijnAantal > 0 ? 10 : 0 }}>
-            <span style={{ fontSize: 15.5, fontWeight: 800 }}>
-              {bezig ? L.roundWhatYouWant(roundNr) : L.noRoundYet}
+        {/* Eén dunne balk in plaats van een kaart met uitleg: loopt er iets, en wie haalt.
+            Groen als er een rondje bezig is, grijs als je op de kaart zit te kijken. */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, borderRadius: 11, padding: "10px 12px", marginBottom: 10,
+          background: bezig ? "rgba(31,138,76,0.09)" : "rgba(120,95,20,0.07)" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+            <span style={{ width: 9, height: 9, borderRadius: "50%", flexShrink: 0, background: bezig ? "#27ae60" : "#c4b896" }} />
+            <span style={{ fontSize: 14.5, fontWeight: 800, color: bezig ? "#1f6b3a" : "#8a7d55", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {bezig ? (startedBy ? L.roundBusyBy(runnerName()) : L.roundRunning) : L.noRoundBusy}
             </span>
-            {mijnAantal > 0 && <span style={{ ...S.pill, background: "#1f8a4c", color: "#fff" }}>{mijnAantal}</span>}
-          </div>
-          {mijnAantal === 0 ? (
-            <div style={{ fontSize: 14.5, color: "#8a7d55", lineHeight: 1.5, marginTop: 6 }}>
-              {L.tapBelow}
+          </span>
+          {bezig && mijnAantal > 0 && <span style={{ ...S.pill, flexShrink: 0, background: "#1f8a4c", color: "#fff" }}>{mijnAantal}</span>}
+        </div>
+        {mijnAantal > 0 && (
+          <div style={{ ...S.card, background: "rgba(31,138,76,0.06)" }}>
+            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
+              <span style={{ fontSize: 15.5, fontWeight: 800 }}>{L.roundWhatYouWant(roundNr)}</span>
             </div>
-          ) : (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {mijn.map((d) => (
                 <button key={d.id} onClick={() => bump(d.id, meId, -1)}
@@ -4847,8 +4873,8 @@ export default function PartyTest() {
                 </button>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: 10 }}>
           <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
@@ -4890,16 +4916,21 @@ export default function PartyTest() {
             {lijst.map((d) => {
               const n = aQty(d.id, meId)
               return (
-                <div key={d.id} style={{ padding: "10px", borderRadius: 12, background: n > 0 ? "rgba(31,138,76,0.08)" : "#faf7ec", border: n > 0 ? "1px solid rgba(31,138,76,0.3)" : "1px solid rgba(120,95,20,0.1)" }}>
+                <div key={d.id} onClick={() => { if (!bezig) setGeenRondje(true) }}
+                  style={{ padding: "10px", borderRadius: 12, cursor: bezig ? "default" : "pointer", opacity: bezig ? 1 : 0.55,
+                    background: n > 0 ? "rgba(31,138,76,0.08)" : "#faf7ec", border: n > 0 ? "1px solid rgba(31,138,76,0.3)" : "1px solid rgba(120,95,20,0.1)" }}>
                   <div style={{ fontSize: 15.5, fontWeight: n > 0 ? 800 : 600, color: n > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
-                  <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
-                    <button style={{ ...S.step, opacity: n > 0 ? 1 : 0.4 }} onClick={() => n > 0 && bump(d.id, meId, -1)}>−</button>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: n > 0 ? "#1f8a4c" : "#b3a988" }}>{n}</span>
-                    <button style={S.step} onClick={() => bump(d.id, meId, 1)}>+</button>
-                  </div>
+                  {bezig && (
+                    <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
+                      <button style={{ ...S.step, opacity: n > 0 ? 1 : 0.4 }} onClick={() => n > 0 && bump(d.id, meId, -1)}>−</button>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: n > 0 ? "#1f8a4c" : "#b3a988" }}>{n}</span>
+                      <button style={S.step} onClick={() => bump(d.id, meId, 1)}>+</button>
+                    </div>
+                  )}
                 </div>
               )
             })}
+            {!bezig && <div style={{ gridColumn: "1 / -1", fontSize: 12.5, color: "#a89a6f", textAlign: "center", marginTop: 4, lineHeight: 1.45 }}>{L.browseOnly}</div>}
             {!zoekt && (
               <div onClick={() => { setShowAddDrink(true); setNdName("") }}
                 style={{ padding: "10px", borderRadius: 12, background: "#fffdf6", border: "1.5px dashed rgba(240,165,0,0.6)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 74, cursor: "pointer", color: "#c98a00" }}>
