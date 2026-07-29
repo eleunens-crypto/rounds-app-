@@ -4423,7 +4423,7 @@ export default function PartyTest() {
           <RundoLogo size={40} />
           <div style={{ ...S.h1, fontSize: 21, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
         </div>
-        {!!groupId && (
+        {!!groupId && !(settle && potContribTotal <= 0.005) && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginTop: 9 }}>
             {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. */}
             <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 9px", borderRadius: 22, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#fff", border: potRemaining > 0.005 ? "1px solid rgba(200,138,26,0.55)" : "0.5px solid rgba(120,95,20,0.3)" }}>
@@ -4455,7 +4455,7 @@ export default function PartyTest() {
       {/* De pot als brede balk onder de kop, zolang er nog niets in zit. Hij stond als
           eigen kaart onderaan het QR-scherm, ver van de geldzak waar je hem zoekt.
           Zodra er ingelegd is, spreekt die geldzak voor zich en verdwijnt deze balk. */}
-      {!!groupId && settle && potChosen && potContribTotal <= 0.005 && (
+      {!!groupId && settle && potContribTotal <= 0.005 && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "rgba(240,165,0,0.1)", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 11, padding: "10px 12px", marginTop: 10 }}>
           <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f", minWidth: 0 }}>{potIsCard ? `💳 ${L.drinkCard}` : L.potTogetherQ}</span>
           <button onClick={() => setShowPot(true)} style={{ flexShrink: 0, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 9, padding: "7px 13px", fontSize: 13.5, fontWeight: 800 }}>{L.potAddBtn}</button>
