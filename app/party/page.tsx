@@ -3622,10 +3622,36 @@ export default function PartyTest() {
   }
   // De haler sluit het voorstel af. Enkel wie "same" of "different" antwoordde, telt.
   const closeProposal = async () => {
-    if (!proposalRoundId) return
+    if (!proposalRoundId || !lastRound) return
+    const antwoorden = activeProposal?.answers || {}
     const { error } = await supabase.rpc("party_close_proposal", { p_round: proposalRoundId })
     if (error) { setNotice("Afsluiten mislukt: " + error.message); return }
+
+    // Wie "hetzelfde" antwoordde, krijgt zijn eigen vorige bestelling in het nieuwe rondje.
+    // Wie "iets anders" koos tikt zelf aan, wie oversloeg krijgt niets.
+    const rid = await ensureRound(meId ?? null)
+    if (rid && groupId) {
+      const items: { person: string | null; drink: string; delta: number }[] = []
+      for (const [did, per] of Object.entries(lastRound.orders || {})) {
+        for (const [pid, q] of Object.entries(per || {})) {
+          if (antwoorden[pid] === "same" && (q || 0) > 0 && people.some((pp) => pp.id === pid)) {
+            items.push({ person: pid, drink: did, delta: q })
+          }
+        }
+      }
+      if (items.length > 0) {
+        const { error: e2 } = await supabase.rpc("party_bump_many", { p_group: groupId, p_round: rid, p_items: items })
+        if (e2) {
+          for (const it of items) {
+            await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: it.person, p_drink: it.drink, p_delta: it.delta })
+          }
+        }
+      }
+      await openAntwoordveld(rid)
+    }
     if (groupId) loadParty(groupId)
+    setActiveCat(catsPresent[0])
+    setView("order")
   }
 
   // Het overzicht dat de HALER ziet zolang een voorstel loopt: wie antwoordde wat,
