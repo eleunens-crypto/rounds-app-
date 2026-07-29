@@ -653,6 +653,9 @@ const T = {
     stillBusy: "nog bezig…",
     toTheBar: "🍻 Naar de bar",
     youTapFor: "Je tikt aan voor:",
+    nowTappingFor: (naam: string) => `Nu tik je voor ${naam} aan`,
+    tapForQrGuest: (naam: string) => `${naam} kwam via de QR binnen en tikt normaal zelf aan op zijn gsm.\n\nWil je toch voor ${naam} aantikken? Doe dat alleen als het echt nodig is — bijvoorbeeld bij een lege batterij.`,
+    tapForQrYes: "Ja, ik tik voor hem aan",
     qrTapsSelf: "📱 tikt zelf aan op zijn gsm — je hoeft niets te doen.",
     showBarList: "🍻 Barlijstje",
     hideBarList: "🍻 Verbergen",
@@ -1186,6 +1189,9 @@ const T = {
     stillBusy: "en cours…",
     toTheBar: "🍻 Au bar",
     youTapFor: "Tu coches pour :",
+    nowTappingFor: (naam: string) => `Tu coches maintenant pour ${naam}`,
+    tapForQrGuest: (naam: string) => `${naam} est arrivé via le QR et coche normalement lui-même sur son gsm.\n\nTu veux quand même cocher pour ${naam} ? À faire seulement si c’est vraiment nécessaire — batterie vide, par exemple.`,
+    tapForQrYes: "Oui, je coche pour lui",
     qrTapsSelf: "📱 coche lui-même sur son gsm — tu n’as rien à faire.",
     showBarList: "🍻 Liste pour le bar",
     hideBarList: "🍻 Masquer",
@@ -5636,13 +5642,20 @@ export default function PartyTest() {
                 die duidt normaal zelf aan. Aantikken kan wel, voor als er iets misloopt. */}
             {settle && people.length > 0 && (
               <div style={{ ...S.card, padding: "11px 12px", marginBottom: 8 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "#8a7d55", marginBottom: 7 }}>{L.youTapFor}</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: voorWie && voorWie !== meId ? "#8a5e0f" : "#8a7d55", marginBottom: 7 }}>
+                  {voorWie && voorWie !== meId ? L.nowTappingFor(people.find((pp) => pp.id === voorWie)?.name ?? "") : L.youTapFor}
+                </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {[...people].sort((a, b) => Number(!!a.claimedBy) - Number(!!b.claimedBy)).map((pp) => {
                     const aan = voorWie === pp.id
                     const viaLink = !!pp.claimedBy && pp.id !== meId
                     return (
-                      <button key={pp.id} onClick={() => setVoorWieRaw(pp.id)}
+                      <button key={pp.id} onClick={() => {
+                        // Iemand die scande tikt normaal zelf aan. Overnemen mag — platte
+                        // batterij, gsm in de jas — maar niet per ongeluk.
+                        if (viaLink) { setConfirmDlg({ msg: L.tapForQrGuest(pp.name), yes: L.tapForQrYes, no: L.cancel, onYes: () => { setConfirmDlg(null); setVoorWieRaw(pp.id) } }); return }
+                        setVoorWieRaw(pp.id)
+                      }}
                         style={{ borderRadius: 11, padding: "8px 12px", fontSize: 14.5, cursor: "pointer",
                           fontWeight: aan ? 800 : 700,
                           background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
