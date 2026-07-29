@@ -1615,31 +1615,6 @@ export default function PartyTest() {
   // De luisteraar wordt één keer per groep opgehangen, maar goStart wordt bij elke render
   // opnieuw gemaakt. Zonder deze verwijzing zou terug een oude versie aanroepen — met de
   // schermnaam van het moment waarop je de groep opende, en dus de verkeerde waarschuwing.
-  // Zodra er een rondje opengaat dat iemand ánders startte, krijg je het één keer te zien.
-  // We onthouden welk rondje al aangekondigd is, anders komt de melding bij elke
-  // verversing terug.
-  // Kwam er een duwtje binnen terwijl jij nog niets koos? Dan één keer tonen.
-  useEffect(() => {
-    if (!openRoundId || !meId) return
-    const merk = Object.keys(openAnswers).find((k) => k.startsWith("poke:"))
-    if (!merk) return
-    if (herinneringGezien === merk) return
-    setHerinneringGezien(merk)
-    const ikKoos = drinks.some((d) => (cart[d.id]?.[meId] ?? 0) > 0) || openAnswers[meId] === "skip"
-    if (!ikKoos && startedBy !== meId) setHerinnering(true)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openAnswers, openRoundId, meId])
-
-  useEffect(() => {
-    if (!openRoundId || !meId) return
-    if (rondjeGemeld === openRoundId) return
-    setRondjeGemeld(openRoundId)
-    if (!startedBy || startedBy === meId) return
-    const haler = people.find((p) => p.id === startedBy)
-    if (haler) setRondjeMelding(haler.name)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openRoundId, startedBy, meId])
-
   const terugActie = useRef<() => void>(() => {})
   useEffect(() => {
     if (typeof window === "undefined" || !groupId) return
@@ -1671,7 +1646,6 @@ export default function PartyTest() {
   const [openRound, setOpenRound] = useState<number | null>(null)
   const [allRoundsOpen, setAllRoundsOpen] = useState(false)
   const [repeated, setRepeated] = useState(false)
-  const [openAnswers, setOpenAnswers] = useState<Record<string, "same" | "different" | "skip">>({})
   const [hasSettled, setHasSettled] = useState(false)
   // Gewoon rondjes: het bedrag dat verdeeld wordt is de som van alle r.amount — één
   // bron van waarheid. In het aparte rondjesoverzicht kies je totaal of per rondje.
@@ -1800,6 +1774,37 @@ export default function PartyTest() {
   // De melding voor de anderen. We tonen ze één keer per rondje, aan iedereen behalve de
   // haler zelf — vandaar dat we onthouden welk rondje we al aankondigden.
   const [rondjeGemeld, setRondjeGemeld] = useState<string | null>(null)
+  // De antwoorden op het lópende rondje: wie koos niets, en het merkje van een
+  // herinnering. Staat hier bovenaan omdat de effecten eronder ernaar kijken.
+  const [openAnswers, setOpenAnswers] = useState<Record<string, "same" | "different" | "skip">>({})
+
+  // Deze twee effecten stonden hoger in het bestand, vóór de toestand die ze aflezen.
+  // JavaScript staat dat niet toe voor const-verklaringen, dus ze staan nu hier.
+  //
+  // Kwam er een duwtje binnen terwijl jij nog niets koos? Dan één keer tonen.
+  useEffect(() => {
+    if (!openRoundId || !meId) return
+    const merk = Object.keys(openAnswers).find((k) => k.startsWith("poke:"))
+    if (!merk) return
+    if (herinneringGezien === merk) return
+    setHerinneringGezien(merk)
+    const ikKoos = drinks.some((d) => (cart[d.id]?.[meId] ?? 0) > 0) || openAnswers[meId] === "skip"
+    if (!ikKoos && startedBy !== meId) setHerinnering(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openAnswers, openRoundId, meId])
+
+  // En zodra er een rondje opengaat dat iemand ánders startte, krijg je de melding één
+  // keer te zien. We onthouden welk rondje al aangekondigd is, anders komt ze bij elke
+  // verversing terug.
+  useEffect(() => {
+    if (!openRoundId || !meId) return
+    if (rondjeGemeld === openRoundId) return
+    setRondjeGemeld(openRoundId)
+    if (!startedBy || startedBy === meId) return
+    const haler = people.find((p) => p.id === startedBy)
+    if (haler) setRondjeMelding(haler.name)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openRoundId, startedBy, meId])
   const [rondjeMelding, setRondjeMelding] = useState<string | null>(null)
   const renderWalk = () => {
     if (walkIdx === null) return null
