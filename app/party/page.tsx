@@ -118,7 +118,8 @@ function WisIcoon({ size = 19 }: { size?: number }) {
 const MODUS_SNEL = {
   rand: "#e07a2f", vlak: "#fdf1e8", paneel: "#fffaf5",
   streep: "rgba(224,122,47,0.35)", lijn: "rgba(224,122,47,0.15)", label: "#c26a1e",
-  knop: "linear-gradient(135deg,#f0954a,#e07a2f)", gloed: "rgba(224,122,47,0.55)",
+  knop: "linear-gradient(135deg,#f7cb5c,#eab117)", gloed: "rgba(234,177,23,0.55)",
+  knopTekst: "#4a3f1e",
   tint: "rgba(224,122,47,0.16)", tekst: "#9c4f16",
   randZacht: "rgba(224,122,47,0.55)", lijnZacht: "rgba(224,122,47,0.25)",
 }
@@ -126,6 +127,7 @@ const MODUS_FAIR = {
   rand: "#1f8a4c", vlak: "#f0f9f4", paneel: "#fbfefc",
   streep: "rgba(31,138,76,0.35)", lijn: "rgba(31,138,76,0.15)", label: "#5a9a75",
   knop: "linear-gradient(135deg,#2fae6a,#1f8a4c)", gloed: "rgba(31,138,76,0.55)",
+  knopTekst: "#fff",
   tint: "rgba(31,138,76,0.12)", tekst: "#1f6b3a",
   randZacht: "rgba(31,138,76,0.5)", lijnZacht: "rgba(31,138,76,0.22)",
 }
@@ -392,7 +394,6 @@ const T = {
     startWord: "Starten",
     startQuickBtn: "Start",
     persShort: (n: number) => `${n} pers.`,
-    startFairBtn: "Start Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "persoon" : "personen"}`,
     peopleIntro: () => "Jij staat er al bij. De anderen komen erbij via QR scan.",
     addNonScanner: "Iemand die niet scant?",
@@ -722,8 +723,10 @@ const T = {
     modeQuickSub: "Jij tikt zelf alle drankjes aan",
     modeQuickSub2: "Gelijk of eerlijk verdelen achteraf",
     whatIsThis: "Wat is dit?",
-    modeQuickWhat: "Noteer per rondje wat er besteld wordt en wat het kostte. Geen namen nodig — op het einde verdeel je gelijk, of stap je alsnog over naar Fair Split.",
-    modeFairWhat: "Iedereen scant de QR en bestelt mee. Op het einde betaalt elk wat hij écht dronk, op basis van richtprijzen per drankje.",
+    modeQuickWhat: "Jij tikt de drankjes aan voor de hele tafel. Je krijgt een lijstje om mee naar de toog te gaan — geen namen nodig.",
+    modeFairWhat: "Iedereen scant de QR en duidt zelf aan wat hij wil drinken per rondje. Achteraf betaalt iedereen eerlijk volgens wat hij dronk.",
+    modeFairWhen: "Handig als:",
+    modeFairWhenTxt: "de een water drinkt en de ander cocktails.",
     orWord: "of",
     modeFairSub: "Elk op zijn eigen gsm, via een QR-code",
     modeFairLine: "Eerlijk betalen volgens wat je dronk",
@@ -942,7 +945,6 @@ const T = {
     startWord: "Démarrer",
     startQuickBtn: "Démarrer",
     persShort: (n: number) => `${n} pers.`,
-    startFairBtn: "Démarrer Fair Split",
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "personne" : "personnes"}`,
     peopleIntro: () => "Tu es déjà là. Les autres arrivent en scannant le QR.",
     addNonScanner: "Quelqu’un qui ne scanne pas ?",
@@ -1272,8 +1274,10 @@ const T = {
     modeQuickSub: "Tu coches toutes les boissons toi-même",
     modeQuickSub2: "À parts égales ou équitable ensuite",
     whatIsThis: "C’est quoi ?",
-    modeQuickWhat: "Note par tournée ce qui est commandé et ce que ça a coûté. Sans noms — à la fin tu partages à parts égales, ou tu passes à Fair Split.",
-    modeFairWhat: "Chacun scanne le QR et commande. À la fin, chacun paie ce qu’il a réellement bu, selon les prix indicatifs par boisson.",
+    modeQuickWhat: "Tu coches les boissons pour toute la tablée. Tu reçois une liste à emporter au bar — sans noms.",
+    modeFairWhat: "Chacun scanne le QR et coche lui-même ce qu’il veut boire par tournée. Ensuite chacun paie équitablement selon ce qu’il a bu.",
+    modeFairWhen: "Pratique quand :",
+    modeFairWhenTxt: "l’un boit de l’eau et l’autre des cocktails.",
     orWord: "ou",
     modeFairSub: "Chacun sur son propre gsm, via un QR-code",
     modeFairLine: "Payer équitablement selon ce que tu as bu",
@@ -5058,9 +5062,9 @@ export default function PartyTest() {
                     de titel de volle breedte en staat hij echt gecentreerd. Uitklappen zet de
                     modus ook aan: een kaart die opengaat maar bleek blijft, oogt stuk. */}
                 <span onClick={(e) => { e.stopPropagation(); setBpSettle(false); setModeInfo((m) => m === "quick" ? null : "quick") }}
-                  style={{ position: "absolute", top: 0, right: 0, borderRadius: "0 0 0 14px", padding: "7px 12px 8px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap",
+                  style={{ position: "absolute", top: 0, right: 0, borderRadius: "0 0 0 16px", padding: "10px 15px 11px 17px", fontSize: 15, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap",
                     background: modeInfo === "quick" ? MODUS_SNEL.rand : MODUS_SNEL.tint,
-                    color: modeInfo === "quick" ? "#fff" : MODUS_SNEL.tekst }}>{L.whatIsThis} {modeInfo === "quick" ? "▴" : "▾"}</span>
+                    color: modeInfo === "quick" ? "#fff" : MODUS_SNEL.tekst }}>{L.whatIsThis} <span style={{ fontSize: 16 }}>{modeInfo === "quick" ? "▴" : "▾"}</span></span>
                 {/* Eén toestel met notitieregels: jij houdt het bij. */}
                 <span style={{ display: "flex", justifyContent: "center", marginTop: 10, marginBottom: 8 }}>
                   <GsmIcoon size={46} kleur={MODUS_SNEL.rand} lijnen />
@@ -5096,7 +5100,7 @@ export default function PartyTest() {
               <div style={{ padding: "12px 12px 14px", background: bpSettle === false ? MODUS_SNEL.vlak : "#fff" }}>
                 <button disabled={busy} onClick={() => { setBpSettle(false); startWithMode(undefined, false) }}
                   style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 17.5, fontWeight: 800, cursor: "pointer", borderRadius: 14, border: "none",
-                    background: MODUS_SNEL.knop, color: "#fff", boxSizing: "border-box",
+                    background: MODUS_SNEL.knop, color: MODUS_SNEL.knopTekst, boxSizing: "border-box",
                     boxShadow: `0 12px 28px -8px ${MODUS_SNEL.gloed}, 0 0 0 4px ${MODUS_SNEL.tint}` }}>{busy ? L.starting : L.startQuickBtn} →</button>
               </div>
             </div>
@@ -5121,14 +5125,17 @@ export default function PartyTest() {
                   borderBottom: `1px solid ${MODUS_FAIR.lijnZacht}`,
                   background: bpSettle === true ? MODUS_FAIR.vlak : "linear-gradient(180deg,#fdfcfa,#fff)" }}>
                 <span onClick={(e) => { e.stopPropagation(); setBpSettle(true); setModeInfo((m) => m === "fair" ? null : "fair") }}
-                  style={{ position: "absolute", top: 0, right: 0, borderRadius: "0 0 0 14px", padding: "7px 12px 8px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap",
+                  style={{ position: "absolute", top: 0, right: 0, borderRadius: "0 0 0 16px", padding: "10px 15px 11px 17px", fontSize: 15, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap",
                     background: modeInfo === "fair" ? MODUS_FAIR.rand : MODUS_FAIR.tint,
-                    color: modeInfo === "fair" ? "#fff" : MODUS_FAIR.tekst }}>{L.whatIsThis} {modeInfo === "fair" ? "▴" : "▾"}</span>
+                    color: modeInfo === "fair" ? "#fff" : MODUS_FAIR.tekst }}>{L.whatIsThis} <span style={{ fontSize: 16 }}>{modeInfo === "fair" ? "▴" : "▾"}</span></span>
                 {/* Drie toestellen, de middelste met een QR: het verschil met de andere
                     kaart is dat er méér telefoons in het spel zijn. */}
                 <span style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 4, marginTop: 10, marginBottom: 8 }}>
                   <GsmIcoon size={29} kleur={MODUS_FAIR.rand} dof />
-                  <GsmIcoon size={46} kleur={MODUS_FAIR.rand} qr />
+                  <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center" }}>
+                    <GsmIcoon size={46} kleur={MODUS_FAIR.rand} qr />
+                    <span style={{ fontSize: 11.5, fontWeight: 800, color: MODUS_FAIR.rand, letterSpacing: "0.08em", marginTop: 2 }}>QR</span>
+                  </span>
                   <GsmIcoon size={29} kleur={MODUS_FAIR.rand} dof />
                 </span>
                 <span style={{ display: "block", fontSize: 24, fontWeight: 800, color: "#3d3418", lineHeight: 1.14, letterSpacing: -0.4 }}>{L.modeTitle}</span>
@@ -5143,6 +5150,11 @@ export default function PartyTest() {
                   <div style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
                     <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: MODUS_FAIR.tint, color: MODUS_FAIR.tekst, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, fontStyle: "italic" }}>i</span>
                     <span style={{ fontSize: 14.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeFairWhat}</span>
+                  </div>
+                  {/* Niet hoe het werkt, maar wanneer je het kiest — dat is wat iemand die
+                      twijfelt eigenlijk wil weten. */}
+                  <div style={{ fontSize: 13.5, color: "#a89a6f", lineHeight: 1.45, marginBottom: 12, paddingLeft: 35 }}>
+                    <b style={{ color: MODUS_FAIR.tekst }}>{L.modeFairWhen}</b> {L.modeFairWhenTxt}
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
                     {/* De QR staat vooraan: scannen is de eerste stap, zonder scan geen Fair Split. */}
@@ -5175,7 +5187,7 @@ export default function PartyTest() {
                 <button disabled={busy} onClick={() => { setBpSettle(true); startWithMode(undefined, true) }}
                   style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 17.5, fontWeight: 800, cursor: "pointer", borderRadius: 14, border: "none",
                     background: MODUS_FAIR.knop, color: "#fff", boxSizing: "border-box",
-                    boxShadow: `0 12px 28px -8px ${MODUS_FAIR.gloed}, 0 0 0 4px ${MODUS_FAIR.tint}` }}>{busy ? L.starting : L.startFairBtn} →</button>
+                    boxShadow: `0 12px 28px -8px ${MODUS_FAIR.gloed}, 0 0 0 4px ${MODUS_FAIR.tint}` }}>{busy ? L.starting : L.startQuickBtn} →</button>
               </div>
             </div>
             </div>
