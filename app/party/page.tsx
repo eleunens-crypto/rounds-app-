@@ -470,7 +470,6 @@ const T = {
     beforeWeStart: "Kies je aanpak",
     beforeQrTitle: "Nog even dit",
     settingsLater: "Pot, bekers of coins nodig? Die zet je aan via ⚙️ Groep — hoeft nu niet.",
-    potStartTitle: "🧪 Samen een pot?",
     perManShort: "p.p.",
     potTotalIn: "Totaal in de pot:",
     potInShort: "ingelegd",
@@ -482,9 +481,6 @@ const T = {
     addToPot: "Toevoegen aan de pot",
     potFillAmount: "Vul eerst een bedrag in.",
     setPotTo: (v: string) => `Pot op ${v} zetten`,
-    potStartIn: (b: string) => `In de pot: ${b}`,
-    potStartAdd: "+ Inleggen",
-    potStartMore: "Bijleggen",
     unassignedHub: (n: number) => `🔴 ${n} drankje${n === 1 ? "" : "s"} nog niet toegewezen`,
     unassignedHubWhy: "Zonder naam worden ze gelijk verdeeld — niet eerlijk. Wijs ze toe zodat elk betaalt wat hij dronk.",
     assignAllBtn: "Naar toewijzen drankjes",
@@ -1024,7 +1020,6 @@ const T = {
     beforeWeStart: "Choisis ta formule",
     beforeQrTitle: "Encore ceci",
     settingsLater: "Besoin d'un pot, de gobelets ou de jetons ? Ça s'active via ⚙️ Groupe — pas maintenant.",
-    potStartTitle: "🧪 Une cagnotte commune ?",
     perManShort: "p.p.",
     potTotalIn: "Total dans la cagnotte :",
     potInShort: "vers\u00e9",
@@ -1036,9 +1031,6 @@ const T = {
     addToPot: "Ajouter \u00e0 la cagnotte",
     potFillAmount: "Entre d\u2019abord un montant.",
     setPotTo: (v: string) => `Mettre la cagnotte \u00e0 ${v}`,
-    potStartIn: (b: string) => `Dans la cagnotte : ${b}`,
-    potStartAdd: "+ Mettre",
-    potStartMore: "Ajouter",
     unassignedHub: (n: number) => `🔴 ${n} boisson${n === 1 ? "" : "s"} pas encore attribuée${n === 1 ? "" : "s"}`,
     unassignedHubWhy: "Sans nom, elles sont partagées également — pas équitable. Attribue-les pour que chacun paie ce qu'il a bu.",
     assignAllBtn: "Vers l'attribution des boissons",
@@ -5644,8 +5636,8 @@ export default function PartyTest() {
           {potChosen && potContribTotal <= 0.005 && <div style={{ marginTop: 8, textAlign: "right" }}><span onClick={() => setPotChosen(false)} style={{ fontSize: 14, color: "#c0554a", fontWeight: 700, cursor: "pointer" }}>✕ toch niet</span></div>}
 
         {settle && (
-        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
+          <div style={{ minWidth: 0 }}>
         <div style={{ marginBottom: 0 }}>
           <h3 style={{ ...S.h3, margin: 0, fontSize: 15.5, lineHeight: 1.3, textAlign: "center" }}>{L.cupsTitle} <span onClick={(e) => { e.stopPropagation(); setDepositInfo((v) => !v); setCoinInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
           <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "center" }}>
@@ -5676,7 +5668,7 @@ export default function PartyTest() {
           )}
         </div>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ minWidth: 0, borderTop: "1px solid rgba(120,95,20,0.1)", paddingTop: 13 }}>
         <div style={{ marginBottom: 0 }}>
           <h3 style={{ ...S.h3, margin: 0, fontSize: 15.5, lineHeight: 1.3, textAlign: "center" }}>{L.coinsTitle} <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
           <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "center" }}>
@@ -6219,31 +6211,9 @@ export default function PartyTest() {
             niet: die leiden je weg uit een traject van drie stappen. */}
         {/* Het potblok stond hier als eigen kaart onderaan. Het staat nu als brede balk
             onder de kop — dichter bij de geldzak, en dit scherm gaat over de QR. */}
-        {!fromQuick && (rounds.length === 0 || qrGevraagd || people.some((p) => !p.claimedBy)) && renderShare()}
-        {/* De pot is een handeling aan het BEGIN van de avond: iedereen legt vooraf in.
-            Daarom staat hij hier, zichtbaar, vóór het eerste rondje — niet weggestopt
-            in de instellingen. Het ⚙️-wieltje leidt naar pot + bekers + coins samen. */}
-        {!fromQuick && settle && rounds.length === 0 && (
-          <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.35)" }}>
-            <div style={{ ...S.row, justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-              <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", display: "inline-flex", alignItems: "center", gap: 7 }}>
-                <span style={{ fontSize: 19, lineHeight: 1 }}>{potIsCard ? "💳" : "💰"}</span>
-                {potIsCard ? L.drinkCard : L.potStartTitle}
-              </span>
-              <span onClick={() => { setSettingsBackTo("hub"); setView("settings") }} title="⚙️" style={{ fontSize: 19, cursor: "pointer", lineHeight: 1, flexShrink: 0, opacity: 0.7 }}>⚙️</span>
-            </div>
-            {potContribTotal > 0.005 ? (
-              <div style={{ ...S.row, justifyContent: "space-between", marginTop: 4 }}>
-                <span style={{ fontSize: 15.5, fontWeight: 700, color: "#1f6b3a" }}>{L.potStartIn(euro(potContribTotal))}</span>
-                <button style={{ ...S.btn, padding: "7px 13px", fontSize: 15 }} onClick={() => setShowPot(true)}>{L.potStartMore}</button>
-              </div>
-            ) : (
-              <>
-                <button style={{ ...S.btn, width: "100%", fontWeight: 800, marginTop: 4 }} onClick={() => setShowPot(true)}>{L.potStartAdd}</button>
-              </>
-            )}
-          </div>
-        )}
+        {!fromQuick && (rounds.length === 0 || qrGevraagd) && renderShare()}
+        {/* Het potblok stond hier onderaan het QR-scherm. Het staat nu als brede balk
+            onder de kop, dichter bij de geldzak waar je het zoekt. */}
         {!settle && rounds.length === 0 && !openRoundId && (
           <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
             <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
