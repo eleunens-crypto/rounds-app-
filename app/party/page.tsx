@@ -13,6 +13,22 @@ import { supabase } from "@/lib/supabase"
 import { QRCodeSVG } from "qrcode.react"
 import { useLang, LanguageToggle } from "@/lib/i18n"
 
+// Klinkende glazen — hetzelfde beeld als op het keuzescherm tussen Table en Party, maar
+// getekend in plaats van een emoji: zo neemt het de goudkleur over en oogt het op elk
+// toestel hetzelfde.
+function KlinkIcoon({ size = 32, kleur = "#eab117" }: { size?: number; kleur?: string }) {
+  return (
+    <svg viewBox="0 0 30 24" width={size} height={size * 0.86} fill="none" stroke={kleur}
+      strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path d="M7.5 4.5h9l-1.1 5.4a3.4 3.4 0 0 1-6.8 0z" />
+      <path d="M12 13.4v5.2M9.4 19.2h5.2" />
+      <path d="M19.5 6.2l7.8 2.2-2.6 4.9a3.4 3.4 0 0 1-6.3-1.8z" />
+      <path d="M22.4 15.1l-1.4 5M18.6 21.2l5-1.4" />
+      <path d="M16.4 2.2l.7-1.6M19.6 3.1l1.4-1M13.4 2.6l-.4-1.7" strokeWidth={1.5} />
+    </svg>
+  )
+}
+
 // Een getekende gsm. Drie varianten: met notitieregels (jij noteert), met een QR op het
 // scherm (de gast scant), of leeg en doorschijnend voor de twee kleintjes ernaast.
 // Getekend in plaats van een emoji, zodat hij de kleur van de modus overneemt en op elk
@@ -5038,16 +5054,16 @@ export default function PartyTest() {
             <RundoLogo size={58} />
             <div style={{ ...S.h1, fontSize: 32, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
           </div>
+          {/* De glazen horen bij de belofte, niet bij de naam: samen zeggen ze wat de app
+              voor je doet. */}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 9, marginTop: 9 }}>
+            <KlinkIcoon size={34} />
+            <span style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.4 }}>{L.tagline}</span>
+          </div>
         </div>
 
         <div style={{ ...S.card, padding: "22px 18px" }}>
-          {/* Hetzelfde beeld en dezelfde belofte als op het keuzescherm tussen Table en
-              Party, zodat je weet dat je nog in dezelfde app zit. */}
-          <div style={{ textAlign: "center", marginBottom: 18 }}>
-            <div style={{ fontSize: 40, lineHeight: 1, marginBottom: 6 }}>🥂</div>
-            <div style={{ fontSize: 15.5, color: "#8a7d55", lineHeight: 1.4, marginBottom: 14 }}>{L.tagline}</div>
-            <div style={{ fontSize: 23, fontWeight: 800, color: "#3d3418" }}>{L.chooseHow}</div>
-          </div>
+          <div style={{ textAlign: "center", fontSize: 23, fontWeight: 800, color: "#3d3418", marginBottom: 18 }}>{L.chooseHow}</div>
 
           <div>
             {/* Elke keuze is één blok: de rij én z’n voorbeeld zitten binnen dezelfde
