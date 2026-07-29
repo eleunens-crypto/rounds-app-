@@ -655,6 +655,7 @@ const T = {
     roundBusyBy: (naam: string) => `Rondje bezig — ${naam} haalt`,
     browseOnly: "Je kan de kaart bekijken. Start een rondje om te bestellen.",
     noRoundTitle: "Er loopt nog geen rondje",
+    yourNameFirst: "Vul eerst je eigen naam in — anders weet niemand wie jij bent in de lijst.",
     noRoundBody: "Start er eentje, dan kan iedereen aantikken wat hij wil.",
     potInPot: "💰 In de pot",
     waitForHost: (naam: string) => `Je zit erbij. Zodra ${naam || "de gastheer"} het bestellen opent, kan je aantikken wat je wil.`,
@@ -1202,6 +1203,7 @@ const T = {
     roundBusyBy: (naam: string) => `Tournée en cours — ${naam} y va`,
     browseOnly: "Tu peux consulter la carte. Lance une tournée pour commander.",
     noRoundTitle: "Aucune tournée en cours",
+    yourNameFirst: "Entre d’abord ton propre nom — sinon personne ne sait qui tu es dans la liste.",
     noRoundBody: "Lances-en une, et chacun pourra cocher ce qu’il veut.",
     potInPot: "💰 Dans la cagnotte",
     waitForHost: (naam: string) => `Tu es dans le groupe. Dès que ${naam || "l’hôte"} ouvre les commandes, tu peux cocher ce que tu veux.`,
@@ -5449,7 +5451,15 @@ export default function PartyTest() {
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", marginTop: 24, marginBottom: 4 }}>
-          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice(L.addPersonFirst); return } if (unfinishedRound) { resumeRound(); return } if (onboardedOnce) { setOpenRound(rounds.length - 1); setView("hub") } else if (bpSettle !== null) { applyBeginChoices() } else setBeginPrompt(true) }}>{unfinishedRound ? L.continueRound(roundNr) : L.toQrStep}</button>
+          <button style={{ ...S.btnP, width: "80%" }} onClick={() => {
+              if (people.length === 0) { setNotice(L.addPersonFirst); return }
+              // Vul je eigen naam in vóór je deelt: anders sta jij als "Gast 1" tussen de
+              // anderen en weet niemand — jijzelf incluis — welke rij van jou is.
+              const mij = meId ? people.find((pp) => pp.id === meId) : null
+              if (settle && (!mij || isGuestDefault(mij.name) || !mij.name.trim())) { setNotice(L.yourNameFirst); return }
+              if (unfinishedRound) { resumeRound(); return }
+              if (onboardedOnce) { setOpenRound(rounds.length - 1); setView("hub") } else if (bpSettle !== null) { applyBeginChoices() } else setBeginPrompt(true)
+            }}>{unfinishedRound ? L.continueRound(roundNr) : L.toQrStep}</button>
         </div>
       </div></div>
     )
