@@ -1746,7 +1746,7 @@ export default function PartyTest() {
                     background: geselecteerd ? "#e08a00" : "#faf7ec",
                     color: geselecteerd ? "#fff" : "#4a3f1e",
                     border: geselecteerd ? "2px solid #e08a00" : "1.5px solid rgba(120,95,20,0.18)" }}>
-                  {pp.name}
+                  {pp.id === meId ? "⭐ " : ""}{pp.name}
                   {n > 0 && <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 18, height: 18, borderRadius: 9, fontSize: 13, background: geselecteerd ? "rgba(255,255,255,0.3)" : "#1f8a4c", color: "#fff" }}>{n}</span>}
                 </button>
               )
@@ -4257,7 +4257,11 @@ export default function PartyTest() {
         {renderAddDrink()}
         {renderVoice()}
 
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}><LanguageToggle compact /></div>
+        {/* Dezelfde modusbalk als de beheerder ziet: ook een gast mag weten waar hij zit. */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: (settle ? MODUS_FAIR : MODUS_SNEL).knop, borderRadius: "14px 14px 0 0", padding: "10px 15px", marginBottom: 10 }}>
+          <span style={{ fontSize: 15.5, fontWeight: 800, color: "#fff", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? `⚖️ ${L.modeFairShort}` : `🍻 ${L.modeQuickShort}`}</span>
+          <LanguageToggle compact />
+        </div>
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
           <div>
             <div style={{ fontSize: 19, fontWeight: 800 }}>🍻 {groupName}</div>
@@ -4992,7 +4996,7 @@ export default function PartyTest() {
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", marginTop: 24, marginBottom: 4 }}>
-          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice(L.addPersonFirst); return } if (unfinishedRound) { resumeRound(); return } if (onboardedOnce) { setOpenRound(rounds.length - 1); setView("hub") } else setBeginPrompt(true) }}>{unfinishedRound ? L.continueRound(roundNr) : L.toQrStep}</button>
+          <button style={{ ...S.btnP, width: "80%" }} onClick={() => { if (people.length === 0) { setNotice(L.addPersonFirst); return } if (unfinishedRound) { resumeRound(); return } if (onboardedOnce) { setOpenRound(rounds.length - 1); setView("hub") } else if (bpSettle !== null) { applyBeginChoices() } else setBeginPrompt(true) }}>{unfinishedRound ? L.continueRound(roundNr) : L.toQrStep}</button>
         </div>
       </div></div>
     )
@@ -5028,9 +5032,19 @@ export default function PartyTest() {
           </div>
           {people.length > 0 && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(108px, 1fr))", gap: 6 }}>
-              {people.map((p, idx) => (
-                <input key={p.id} value={isGuestDefault(p.name) ? "" : p.name} placeholder={isGuestDefault(p.name) ? p.name : `Gast ${idx + 1}`} onChange={(e) => renamePerson(p.id, e.target.value === "" ? `Gast ${idx + 1}` : e.target.value)} style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "6px 8px", fontSize: 14.5, textAlign: "left" }} />
-              ))}
+              {people.map((p, idx) => {
+                // Welke van deze namen ben jij? Zonder markering zoek je dat elke keer
+                // opnieuw uit — zeker wanneer je zelf een gewone voornaam invulde.
+                const ikZelf = p.id === meId
+                return (
+                  <div key={p.id} style={{ position: "relative" }}>
+                    <input value={isGuestDefault(p.name) ? "" : p.name} placeholder={isGuestDefault(p.name) ? p.name : `Gast ${idx + 1}`} onChange={(e) => renamePerson(p.id, e.target.value === "" ? `Gast ${idx + 1}` : e.target.value)}
+                      style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: ikZelf ? "6px 26px 6px 8px" : "6px 8px", fontSize: 14.5, textAlign: "left",
+                        background: ikZelf ? "rgba(240,165,0,0.1)" : undefined, border: ikZelf ? "1.5px solid rgba(240,165,0,0.6)" : undefined }} />
+                    {ikZelf && <span title={L.youMark} style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", fontSize: 13, pointerEvents: "none" }}>⭐</span>}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
