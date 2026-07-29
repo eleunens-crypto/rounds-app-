@@ -116,12 +116,12 @@ function WisIcoon({ size = 19 }: { size?: number }) {
 }
 
 const MODUS_SNEL = {
-  rand: "#e07a2f", vlak: "#fdf1e8", paneel: "#fffaf5",
-  streep: "rgba(224,122,47,0.35)", lijn: "rgba(224,122,47,0.15)", label: "#c26a1e",
+  rand: "#e8a812", vlak: "#fdf6e6", paneel: "#fffdf7",
+  streep: "rgba(232,168,18,0.35)", lijn: "rgba(232,168,18,0.15)", label: "#b98a10",
   knop: "linear-gradient(135deg,#f7cb5c,#eab117)", gloed: "rgba(234,177,23,0.55)",
   knopTekst: "#4a3f1e",
-  tint: "rgba(224,122,47,0.16)", tekst: "#9c4f16",
-  randZacht: "rgba(224,122,47,0.55)", lijnZacht: "rgba(224,122,47,0.25)",
+  tint: "rgba(232,168,18,0.18)", tekst: "#8a5e0f",
+  randZacht: "rgba(232,168,18,0.6)", lijnZacht: "rgba(232,168,18,0.28)",
 }
 const MODUS_FAIR = {
   rand: "#1f8a4c", vlak: "#f0f9f4", paneel: "#fbfefc",
@@ -718,20 +718,21 @@ const T = {
     notMeRunner: "geef door",
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
     modeTitle: "Iedereen tikt zelf aan",
-    modeTitleSub2: "Achteraf betaalt ieder wat hij dronk",
+    modeTitleSub2: "Achteraf betaalt ieder volgens wat hij dronk",
     modeQuick: "Ik bestel voor de groep",
-    modeQuickSub: "Jij tikt zelf alle drankjes aan",
-    modeQuickSub2: "Gelijk of eerlijk verdelen achteraf",
+    modeQuickSub: "Jij tikt zelf alle drankjes aan.",
+    modeQuickSub2: "Meteen een handig bestellijstje",
     whatIsThis: "Wat is dit?",
     modeQuickWhat: "Jij tikt de drankjes aan voor de hele tafel. Je krijgt een lijstje om mee naar de toog te gaan — geen namen nodig.",
     modeFairWhat: "Iedereen scant de QR en duidt zelf aan wat hij wil drinken per rondje. Achteraf betaalt iedereen eerlijk volgens wat hij dronk.",
     modeFairWhen: "Handig als:",
     modeFairWhenTxt: "de een water drinkt en de ander cocktails.",
     orWord: "of",
-    modeFairSub: "Elk op zijn eigen gsm, via een QR-code",
+    modeFairSub: "Iedereen scant de QR en duidt aan wat hij drinkt.",
     modeFairLine: "Eerlijk betalen volgens wat je dronk",
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe je wil bestellen",
+    tagline: "Rondjes opnemen en splitten zonder gedoe",
     howManyPeople: "Met hoeveel zijn jullie?",
     people: "pers.",
     headcountForward: "Dit geldt vanaf het volgende rondje. Eerdere rondjes houden hun aantal — corrigeer die desnoods in het rondjesoverzicht.",
@@ -1269,20 +1270,21 @@ const T = {
     notMeRunner: "passer",
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
     modeTitle: "Chacun coche lui-même",
-    modeTitleSub2: "Ensuite chacun paie ce qu’il a bu",
+    modeTitleSub2: "Ensuite chacun paie selon ce qu’il a bu",
     modeQuick: "Je commande pour le groupe",
-    modeQuickSub: "Tu coches toutes les boissons toi-même",
-    modeQuickSub2: "À parts égales ou équitable ensuite",
+    modeQuickSub: "Tu coches toutes les boissons toi-même.",
+    modeQuickSub2: "Direct une liste pratique pour le bar",
     whatIsThis: "C’est quoi ?",
     modeQuickWhat: "Tu coches les boissons pour toute la tablée. Tu reçois une liste à emporter au bar — sans noms.",
     modeFairWhat: "Chacun scanne le QR et coche lui-même ce qu’il veut boire par tournée. Ensuite chacun paie équitablement selon ce qu’il a bu.",
     modeFairWhen: "Pratique quand :",
     modeFairWhenTxt: "l’un boit de l’eau et l’autre des cocktails.",
     orWord: "ou",
-    modeFairSub: "Chacun sur son propre gsm, via un QR-code",
+    modeFairSub: "Chacun scanne le QR et coche ce qu’il boit.",
     modeFairLine: "Payer équitablement selon ce que tu as bu",
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
+    tagline: "Prendre les tournées et partager sans tracas",
     howManyPeople: "Vous \u00eates combien ?",
     people: "pers.",
     headcountForward: "Valable \u00e0 partir de la prochaine tourn\u00e9e. Les tourn\u00e9es pr\u00e9c\u00e9dentes gardent leur nombre \u2014 corrige-les au besoin dans l\u2019aper\u00e7u.",
@@ -5041,7 +5043,13 @@ export default function PartyTest() {
         </div>
 
         <div style={{ ...S.card, padding: "22px 18px" }}>
-          <div style={{ textAlign: "center", fontSize: 23, fontWeight: 800, color: "#3d3418", marginBottom: 16 }}>{L.chooseHow}</div>
+          {/* Hetzelfde beeld en dezelfde belofte als op het keuzescherm tussen Table en
+              Party, zodat je weet dat je nog in dezelfde app zit. */}
+          <div style={{ textAlign: "center", marginBottom: 18 }}>
+            <div style={{ fontSize: 40, lineHeight: 1, marginBottom: 6 }}>🥂</div>
+            <div style={{ fontSize: 15.5, color: "#8a7d55", lineHeight: 1.4, marginBottom: 14 }}>{L.tagline}</div>
+            <div style={{ fontSize: 23, fontWeight: 800, color: "#3d3418" }}>{L.chooseHow}</div>
+          </div>
 
           <div>
             {/* Elke keuze is één blok: de rij én z’n voorbeeld zitten binnen dezelfde
