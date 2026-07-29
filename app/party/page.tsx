@@ -6103,7 +6103,6 @@ export default function PartyTest() {
         {/* Tijdens de omschakeling van snel naar Fair Split is de hub enkel het
             toewijsscherm. Rondjesoverzicht, nieuwe rondjes en afrekenen horen daar
             niet: die leiden je weg uit een traject van drie stappen. */}
-        {!fromQuick && (rounds.length === 0 || qrGevraagd || people.some((p) => !p.claimedBy)) && renderShare()}
         {/* Het potblok stond hier als eigen kaart onderaan. Het staat nu als brede balk
             onder de kop — dichter bij de geldzak, en dit scherm gaat over de QR. */}
         {!fromQuick && (rounds.length === 0 || qrGevraagd || people.some((p) => !p.claimedBy)) && renderShare()}
