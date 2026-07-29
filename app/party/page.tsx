@@ -655,6 +655,12 @@ const T = {
     nothingForMeBtn: "— Niets voor mij",
     youTakeNothing: "Je neemt niets deze ronde.",
     chooseAnyway: "toch iets kiezen",
+    remindBtn: "🔔 Herinner wie nog niet koos",
+    reminderSent: "Herinnering verstuurd.",
+    reminderFailed: "Herinnering versturen mislukt.",
+    reminderTitle: "⏰ Nog even jouw keuze",
+    reminderBody: (naam: string) => `${naam} klaar om drankjes te halen. Tik aan wat je wil — of laat weten dat je niets neemt.`,
+    reminderChoose: "Ik kies iets →",
     everyoneTapsOwn: "📱 Iedereen tikt zelf aan op zijn gsm",
     youTapForAll: "Jij gaat rond en tikt alle drankjes zelf aan voor iedereen",
     everyoneTapsNow: "Iedereen tikt nu op zijn eigen telefoon aan wat hij wil.",
@@ -1177,6 +1183,12 @@ const T = {
     nothingForMeBtn: "— Rien pour moi",
     youTakeNothing: "Tu ne prends rien ce tour-ci.",
     chooseAnyway: "choisir quand même",
+    remindBtn: "🔔 Rappeler ceux qui n’ont pas choisi",
+    reminderSent: "Rappel envoyé.",
+    reminderFailed: "Envoi du rappel échoué.",
+    reminderTitle: "⏰ Ton choix, vite",
+    reminderBody: (naam: string) => `${naam} est prêt à aller chercher les boissons. Coche ce que tu veux — ou dis que tu ne prends rien.`,
+    reminderChoose: "Je choisis →",
     everyoneTapsOwn: "📱 Chacun coche sur son propre gsm",
     youTapForAll: "Tu fais le tour et tu coches toutes les boissons toi-même",
     everyoneTapsNow: "Chacun coche maintenant sur son propre téléphone.",
@@ -1606,6 +1618,18 @@ export default function PartyTest() {
   // Zodra er een rondje opengaat dat iemand ánders startte, krijg je het één keer te zien.
   // We onthouden welk rondje al aangekondigd is, anders komt de melding bij elke
   // verversing terug.
+  // Kwam er een duwtje binnen terwijl jij nog niets koos? Dan één keer tonen.
+  useEffect(() => {
+    if (!openRoundId || !meId) return
+    const merk = Object.keys(openAnswers).find((k) => k.startsWith("poke:"))
+    if (!merk) return
+    if (herinneringGezien === merk) return
+    setHerinneringGezien(merk)
+    const ikKoos = drinks.some((d) => (cart[d.id]?.[meId] ?? 0) > 0) || openAnswers[meId] === "skip"
+    if (!ikKoos && startedBy !== meId) setHerinnering(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openAnswers, openRoundId, meId])
+
   useEffect(() => {
     if (!openRoundId || !meId) return
     if (rondjeGemeld === openRoundId) return
@@ -1922,6 +1946,10 @@ export default function PartyTest() {
           {/* Wie is al klaar en wie nog niet? Dat bepaalt of je blijft zitten of vertrekt. */}
           <button onClick={() => setStandOpen((v) => !v)} style={{ ...S.btn, width: "100%", fontSize: 14.5, fontWeight: 800, padding: "10px 8px" }}>{standOpen ? `${L.hideStand} ▴` : `${L.showStand} ▾`}</button>
           {standOpen && renderStandLijst()}
+          {/* Duwtje voor wie nog niet koos. Alleen zinvol zolang er iemand ontbreekt. */}
+          {klaar.length < people.length && (
+            <button onClick={stuurHerinnering} style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14.5, fontWeight: 800, padding: "10px 8px", color: "#8a5e0f" }}>{L.remindBtn}</button>
+          )}
         </div>
       )
     }
@@ -3559,6 +3587,21 @@ export default function PartyTest() {
     if (groupId) loadParty(groupId)
   }
   // Een gast antwoordt: hetzelfde, iets anders, of bewust niks deze ronde.
+  // "Wie nog niet koos" een duwtje geven. We schrijven een antwoord met de waarde
+  // "same" weg op naam van de haler zelf — die waarde gebruikt dit rondje verder niet —
+  // en gebruiken de tijdstempel eromheen als sein. Simpeler: we zetten een merkje in het
+  // antwoordveld dat de andere toestellen bij hun volgende verversing oppikken.
+  const [herinneringGezien, setHerinneringGezien] = useState<string | null>(null)
+  const [herinnering, setHerinnering] = useState(false)
+  const stuurHerinnering = async () => {
+    if (!openRoundId || !groupId) return
+    const merk = `poke:${Date.now()}`
+    const { error } = await supabase.rpc("party_answer_repeat", { p_round: openRoundId, p_person: merk, p_answer: "same" })
+    if (error) { setNotice(L.reminderFailed); return }
+    setNotice(L.reminderSent)
+    loadParty(groupId)
+  }
+
   const antwoordRondje = async (answer: "different" | "skip") => {
     if (!openRoundId || !meId) return
     setOpenAnswers((cur) => ({ ...cur, [meId]: answer }))
@@ -3687,13 +3730,21 @@ export default function PartyTest() {
     void (async () => {
       const rid = await ensureRound(meId ?? null)
       if (!rid || !groupId) return
+      const items: { person: string | null; drink: string; delta: number }[] = []
       for (const [did, per] of Object.entries(orders)) {
-        for (const [pid, q] of Object.entries(per)) {
-          if ((q || 0) > 0) await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: pid, p_drink: did, p_delta: q })
-        }
+        for (const [pid, q] of Object.entries(per)) if ((q || 0) > 0) items.push({ person: pid, drink: did, delta: q })
       }
-      for (const [did, q] of Object.entries(anon)) {
-        if ((q || 0) > 0) await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: null, p_drink: did, p_delta: q })
+      for (const [did, q] of Object.entries(anon)) if ((q || 0) > 0) items.push({ person: null, drink: did, delta: q })
+      if (items.length > 0) {
+        // In één keer wegschrijven: bij tien personen scheelt dat tien aparte verzoeken en
+        // één vergrendeling in plaats van tien. Bestaat die functie nog niet in de databank,
+        // dan vallen we terug op het oude gedrag zodat een oudere installatie blijft werken.
+        const { error } = await supabase.rpc("party_bump_many", { p_group: groupId, p_round: rid, p_items: items })
+        if (error) {
+          for (const it of items) {
+            await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: it.person, p_drink: it.drink, p_delta: it.delta })
+          }
+        }
       }
       await openAntwoordveld(rid)
       loadParty(groupId)
@@ -4097,6 +4148,17 @@ export default function PartyTest() {
         </div>
       )}
       {/* Wie gaat halen bevestigt eerst; pas daarna weet de rest ervan. */}
+      {/* Kreeg je een duwtje terwijl je nog niets koos? Eén venster, met beide uitwegen. */}
+      {herinnering && (
+        <div style={{ ...S.overlay, zIndex: 75 }} onClick={() => setHerinnering(false)}>
+          <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 19, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>{L.reminderTitle}</div>
+            <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.5, marginBottom: 15 }}>{L.reminderBody(runnerName())}</div>
+            <button onClick={() => { setHerinnering(false); setGuestTab("order"); setActiveCat(catsPresent[0]) }} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 16.5, fontWeight: 800 }}>{L.reminderChoose}</button>
+            <button onClick={() => { setHerinnering(false); void antwoordRondje("skip") }} style={{ width: "100%", marginTop: 9, background: "none", border: "none", cursor: "pointer", fontSize: 15, fontWeight: 700, color: "#a89a6f" }}>{L.nothingForMeBtn}</button>
+          </div>
+        </div>
+      )}
       {startCheck && (
         <div style={{ ...S.overlay, zIndex: 74 }} onClick={() => setStartCheck(false)}>
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
