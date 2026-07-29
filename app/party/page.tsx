@@ -421,8 +421,8 @@ const T = {
     groupNamePh: "Typ je groepsnaam",
     starting: "Bezig…",
     savedGroups: "Opgeslagen groepen",
-    modeFairShort: "Fair Split",
-    modeQuickShort: "Snelle rondjes",
+    modeFairShort: "Iedereen tikt zelf aan",
+    modeQuickShort: "Ik bestel voor de groep",
     pinOn: "Bewaren",
     pinOff: "Niet meer bewaren",
     maxPins: (n: number) => `Je kan maximaal ${n} groepen vastzetten. Maak er eerst een los.`,
@@ -719,7 +719,7 @@ const T = {
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
     modeTitle: "Iedereen tikt zelf aan",
     modeTitleSub2: "Achteraf betaalt ieder wat hij dronk",
-    modeQuick: "Ik noteer voor iedereen",
+    modeQuick: "Ik bestel voor de groep",
     modeQuickSub: "Jij tikt zelf alle drankjes aan",
     modeQuickSub2: "Gelijk of eerlijk verdelen achteraf",
     whatIsThis: "Wat is dit?",
@@ -972,8 +972,8 @@ const T = {
     groupNamePh: "Tape le nom de ton groupe",
     starting: "En cours…",
     savedGroups: "Groupes enregistrés",
-    modeFairShort: "Fair Split",
-    modeQuickShort: "Tournées rapides",
+    modeFairShort: "Chacun coche lui-même",
+    modeQuickShort: "Je commande pour le groupe",
     pinOn: "Enregistrer",
     pinOff: "Ne plus enregistrer",
     maxPins: (n: number) => `Tu peux épingler ${n} groupes au maximum. Détaches-en un d'abord.`,
@@ -1270,7 +1270,7 @@ const T = {
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
     modeTitle: "Chacun coche lui-même",
     modeTitleSub2: "Ensuite chacun paie ce qu’il a bu",
-    modeQuick: "Je note pour tout le monde",
+    modeQuick: "Je commande pour le groupe",
     modeQuickSub: "Tu coches toutes les boissons toi-même",
     modeQuickSub2: "À parts égales ou équitable ensuite",
     whatIsThis: "C’est quoi ?",
@@ -4472,7 +4472,7 @@ export default function PartyTest() {
     <div style={{ marginBottom: 12 }}>
       {!!groupId && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: modus.knop, borderRadius: "14px 14px 0 0", padding: "10px 15px", marginBottom: 10 }}>
-          <span style={{ fontSize: 15.5, fontWeight: 800, color: "#fff", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? `⚖️ ${L.modeFairShort}` : `🍻 ${L.modeQuickShort}`}</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? `⚖️ ${L.modeFairShort}` : `🍻 ${L.modeQuickShort}`}</span>
         </div>
       )}
       {/* Logo met de pot eronder aan de linkerkant; de groepsnaam en het aantal personen
@@ -4752,7 +4752,7 @@ export default function PartyTest() {
 
         {/* Dezelfde modusbalk als de beheerder ziet: ook een gast mag weten waar hij zit. */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: (settle ? MODUS_FAIR : MODUS_SNEL).knop, borderRadius: "14px 14px 0 0", padding: "10px 15px", marginBottom: 10 }}>
-          <span style={{ fontSize: 15.5, fontWeight: 800, color: "#fff", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? `⚖️ ${L.modeFairShort}` : `🍻 ${L.modeQuickShort}`}</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? `⚖️ ${L.modeFairShort}` : `🍻 ${L.modeQuickShort}`}</span>
           <LanguageToggle compact />
         </div>
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
