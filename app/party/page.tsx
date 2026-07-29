@@ -651,6 +651,10 @@ const T = {
     showStand: "👥 Wie doet al mee?",
     hideStand: "👥 Verbergen",
     stillBusy: "nog bezig…",
+    nothingForMe: "niets deze ronde",
+    nothingForMeBtn: "— Niets voor mij",
+    youTakeNothing: "Je neemt niets deze ronde.",
+    chooseAnyway: "toch iets kiezen",
     everyoneTapsOwn: "📱 Iedereen tikt zelf aan op zijn gsm",
     youTapForAll: "Jij gaat rond en tikt alle drankjes zelf aan voor iedereen",
     everyoneTapsNow: "Iedereen tikt nu op zijn eigen telefoon aan wat hij wil.",
@@ -1169,6 +1173,10 @@ const T = {
     showStand: "👥 Qui a déjà choisi ?",
     hideStand: "👥 Masquer",
     stillBusy: "en cours…",
+    nothingForMe: "rien ce tour-ci",
+    nothingForMeBtn: "— Rien pour moi",
+    youTakeNothing: "Tu ne prends rien ce tour-ci.",
+    chooseAnyway: "choisir quand même",
     everyoneTapsOwn: "📱 Chacun coche sur son propre gsm",
     youTapForAll: "Tu fais le tour et tu coches toutes les boissons toi-même",
     everyoneTapsNow: "Chacun coche maintenant sur son propre téléphone.",
@@ -1639,6 +1647,7 @@ export default function PartyTest() {
   const [openRound, setOpenRound] = useState<number | null>(null)
   const [allRoundsOpen, setAllRoundsOpen] = useState(false)
   const [repeated, setRepeated] = useState(false)
+  const [openAnswers, setOpenAnswers] = useState<Record<string, "same" | "different" | "skip">>({})
   const [hasSettled, setHasSettled] = useState(false)
   // Gewoon rondjes: het bedrag dat verdeeld wordt is de som van alle r.amount — één
   // bron van waarheid. In het aparte rondjesoverzicht kies je totaal of per rondje.
@@ -1722,10 +1731,18 @@ export default function PartyTest() {
 
   // "Ik ga halen": open het rondje met mezelf als haler. Iedereen die gescand heeft
   // ziet dan "X gaat halen" en kan zijn drankje aantikken.
+  // Zet het antwoordveld open op het lópende rondje. Zonder dit weigert de databank
+  // antwoorden, want die schrijft alleen wanneer "active" aanstaat.
+  const openAntwoordveld = async (rid: string) => {
+    if (!rid) return
+    const { error } = await supabase.rpc("party_propose_repeat", { p_round: rid, p_by: meId ?? null })
+    if (error) { /* niet erg: dan blijft "niets voor mij" gewoon uit */ }
+  }
   const startAsRunner = async () => {
     if (!meId) { setNotice(L.claimSeatFirst); return }
-    await ensureRound(meId)
+    const rid = await ensureRound(meId)
     setStartedBy(meId)
+    if (rid) await openAntwoordveld(rid)
   }
 
   // "Ik haal het toch": neem een lopend rondje over. Het rondje en alle drankjes
@@ -1852,15 +1869,18 @@ export default function PartyTest() {
     <div style={{ marginTop: 9, display: "flex", flexDirection: "column", gap: 5 }}>
       {people.map((pp) => {
         const zijne = drinks.filter((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)
-        const klaar = zijne.length > 0
+        const slaOver = openAnswers[pp.id] === "skip" && zijne.length === 0
+        const klaar = zijne.length > 0 || slaOver
+        const kleur = zijne.length > 0 ? "#1f6b3a" : slaOver ? "#8a7d55" : "#a89a6f"
         return (
           <div key={pp.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 9,
-            background: klaar ? "rgba(31,138,76,0.07)" : "#fff", border: klaar ? "none" : "1px dashed rgba(120,95,20,0.3)" }}>
-            <span style={{ fontSize: 14.5, fontWeight: klaar ? 700 : 400, color: klaar ? "#1f6b3a" : "#a89a6f", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {klaar ? "✓ " : ""}{pp.id === meId ? "⭐ " : ""}{pp.name}
+            background: zijne.length > 0 ? "rgba(31,138,76,0.07)" : slaOver ? "rgba(120,95,20,0.05)" : "#fff",
+            border: klaar ? "none" : "1px dashed rgba(120,95,20,0.3)" }}>
+            <span style={{ fontSize: 14.5, fontWeight: klaar ? 700 : 400, color: kleur, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {zijne.length > 0 ? "✓ " : slaOver ? "— " : ""}{pp.id === meId ? "⭐ " : ""}{pp.name}
             </span>
-            <span style={{ flexShrink: 0, fontSize: 13, color: klaar ? "#4a7a5c" : "#b3a988", textAlign: "right" }}>
-              {klaar ? zijne.map((d) => `${cart[d.id][pp.id]}× ${d.name}`).join(" · ") : L.stillBusy}
+            <span style={{ flexShrink: 0, fontSize: 13, color: zijne.length > 0 ? "#4a7a5c" : "#b3a988", textAlign: "right" }}>
+              {zijne.length > 0 ? zijne.map((d) => `${cart[d.id][pp.id]}× ${d.name}`).join(" · ") : slaOver ? L.nothingForMe : L.stillBusy}
             </span>
           </div>
         )
@@ -1888,7 +1908,7 @@ export default function PartyTest() {
       )
     }
     if (ikHaal) {
-      const klaar = people.filter((pp) => drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0))
+      const klaar = people.filter((pp) => drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0) || openAnswers[pp.id] === "skip")
       return (
         <div style={{ ...S.card, background: "rgba(31,138,76,0.08)", border: "1.5px solid rgba(31,138,76,0.35)" }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9 }}>
@@ -2238,6 +2258,11 @@ export default function PartyTest() {
     // Het OPEN rondje is de mand; de rest is historiek.
     const open = alle.find((r) => r.status === "open") ?? null
     setOpenRoundId(open?.id ?? null)
+    // De antwoorden van het lópende rondje. Dezelfde databankfuncties als het
+    // herhaal-voorstel, maar dan op het open rondje — zo weet iedereen wie er niets wil
+    // zonder dat we de bestaande herhaalstroom aanraken, want die kijkt naar het vórige
+    // rondje en die twee botsen dus nooit.
+    setOpenAnswers((open?.proposal?.answers ?? {}) as Record<string, "same" | "different" | "skip">)
     setStartedBy(open?.startedBy ?? null)
     setCart(open?.orders ?? {})
     setCartAnon(open?.anon ?? {})
@@ -3534,6 +3559,13 @@ export default function PartyTest() {
     if (groupId) loadParty(groupId)
   }
   // Een gast antwoordt: hetzelfde, iets anders, of bewust niks deze ronde.
+  const antwoordRondje = async (answer: "different" | "skip") => {
+    if (!openRoundId || !meId) return
+    setOpenAnswers((cur) => ({ ...cur, [meId]: answer }))
+    const { error } = await supabase.rpc("party_answer_repeat", { p_round: openRoundId, p_person: meId, p_answer: answer })
+    if (error) { setNotice("Antwoord mislukt: " + error.message); if (groupId) loadParty(groupId) }
+  }
+
   const answerProposal = async (answer: "same" | "different" | "skip") => {
     if (!proposalRoundId || !meId) return
     const { error } = await supabase.rpc("party_answer_repeat", { p_round: proposalRoundId, p_person: meId, p_answer: answer })
@@ -4061,7 +4093,7 @@ export default function PartyTest() {
                 </div>
               ))}
             </div>
-            <button onClick={() => { setStartCheck(false); startAsRunner() }} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 16.5, fontWeight: 800 }}>{L.yesIFetch}</button>
+            <button onClick={() => { setStartCheck(false); void startAsRunner() }} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 16.5, fontWeight: 800 }}>{L.yesIFetch}</button>
             <button onClick={() => setStartCheck(false)} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15, fontWeight: 700, color: "#a89a6f" }}>{L.ratherNot}</button>
           </div>
         </div>
@@ -4516,6 +4548,18 @@ export default function PartyTest() {
         {guestTab === "order" && (
         <>
         {settle && renderRunnerBar()}
+        {/* Wie niets wil, hoeft niet te doen alsof. Zonder deze knop blijft hij eeuwig
+            "nog bezig" staan en wacht de haler op iemand die niets komt halen. */}
+        {settle && !!openRoundId && meId && (
+          openAnswers[meId] === "skip" && mijnAantal === 0 ? (
+            <div style={{ ...S.card, background: "rgba(120,95,20,0.05)", textAlign: "center", padding: "12px 14px" }}>
+              <span style={{ fontSize: 14.5, color: "#8a7d55" }}>{L.youTakeNothing} </span>
+              <span onClick={() => antwoordRondje("different")} style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", textDecoration: "underline" }}>{L.chooseAnyway}</span>
+            </div>
+          ) : mijnAantal === 0 ? (
+            <button onClick={() => antwoordRondje("skip")} style={{ ...S.btn, width: "100%", marginBottom: 10, fontSize: 15, fontWeight: 800, padding: "11px 8px", color: "#8a7d55" }}>{L.nothingForMeBtn}</button>
+          ) : null
+        )}
         {renderProposalGuest()}
         {/* Wat je al aantikte in dit rondje. Bovenaan, want dat is wat je wil zien. */}
         <div style={{ ...S.card, background: mijnAantal > 0 ? "rgba(31,138,76,0.06)" : "#fff" }}>
