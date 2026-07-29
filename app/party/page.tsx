@@ -651,6 +651,9 @@ const T = {
     showStand: "👥 Wie doet al mee?",
     hideStand: "👥 Verbergen",
     stillBusy: "nog bezig…",
+    toTheBar: "🍻 Naar de bar",
+    showBarList: "🍻 Barlijstje",
+    hideBarList: "🍻 Verbergen",
     nothingForMe: "niets deze ronde",
     nothingForMeBtn: "— Niets voor mij",
     youTakeNothing: "Je neemt niets deze ronde.",
@@ -1179,6 +1182,9 @@ const T = {
     showStand: "👥 Qui a déjà choisi ?",
     hideStand: "👥 Masquer",
     stillBusy: "en cours…",
+    toTheBar: "🍻 Au bar",
+    showBarList: "🍻 Liste pour le bar",
+    hideBarList: "🍻 Masquer",
     nothingForMe: "rien ce tour-ci",
     nothingForMeBtn: "— Rien pour moi",
     youTakeNothing: "Tu ne prends rien ce tour-ci.",
@@ -1894,6 +1900,7 @@ export default function PartyTest() {
   // Wie tikte al iets aan, en wat? Iedereen mag dit zien — alleen de haler krijgt er
   // knoppen bij. Alles komt uit de mand, dus er is geen aparte toestand te bewaren.
   const [standOpen, setStandOpen] = useState(false)
+  const [barOpen, setBarOpen] = useState(false)
   const renderStandLijst = () => (
     <div style={{ marginTop: 9, display: "flex", flexDirection: "column", gap: 5 }}>
       {people.map((pp) => {
@@ -1916,6 +1923,31 @@ export default function PartyTest() {
       })}
     </div>
   )
+
+  const renderBarLijst = () => {
+    const regels = drinks.map((d) => {
+      const per = cart[d.id] || {}
+      const namen = people.filter((pp) => (per[pp.id] ?? 0) > 0)
+      const aantal = Object.values(per).reduce((a, b) => a + (b || 0), 0) + (cartAnon[d.id] ?? 0)
+      return { d, aantal, namen }
+    }).filter((r) => r.aantal > 0)
+    if (regels.length === 0) return null
+    const totaal = regels.reduce((a, r) => a + r.aantal, 0)
+    return (
+      <div style={{ marginTop: 9, background: "#fff", borderRadius: 12, padding: "12px 13px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, borderBottom: "2px solid rgba(240,165,0,0.5)", paddingBottom: 7, marginBottom: 9 }}>
+          <span style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e" }}>{L.toTheBar}</span>
+          <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 700, color: "#a89a6f" }}>{L.drinksCount(totaal)}</span>
+        </div>
+        {regels.map((r, i) => (
+          <div key={r.d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < regels.length - 1 ? "1px solid rgba(120,95,20,0.1)" : "none" }}>
+            <span style={{ fontSize: 16.5, fontWeight: 800, color: "#4a3f1e", minWidth: 0 }}>{r.aantal}× {r.d.name}</span>
+            <span style={{ flexShrink: 0, fontSize: 12.5, color: "#a89a6f", textAlign: "right", maxWidth: "52%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.namen.map((pp) => pp.name).join(", ")}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   const renderRunnerBar = () => {
     const ikHaal = !!meId && startedBy === meId
@@ -1951,6 +1983,10 @@ export default function PartyTest() {
           {/* Wie is al klaar en wie nog niet? Dat bepaalt of je blijft zitten of vertrekt. */}
           <button onClick={() => setStandOpen((v) => !v)} style={{ ...S.btn, width: "100%", fontSize: 14.5, fontWeight: 800, padding: "10px 8px" }}>{standOpen ? `${L.hideStand} ▴` : `${L.showStand} ▾`}</button>
           {standOpen && renderStandLijst()}
+          {/* Wat je straks aan de toog moet vragen — per drankje samengeteld, met de namen
+              erachter zodat je weet voor wie het is. */}
+          <button onClick={() => setBarOpen((v) => !v)} style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14.5, fontWeight: 800, padding: "10px 8px" }}>{barOpen ? `${L.hideBarList} ▴` : `${L.showBarList} ▾`}</button>
+          {barOpen && renderBarLijst()}
           {/* Duwtje voor wie nog niet koos. Alleen zinvol zolang er iemand ontbreekt. */}
           {klaar.length < people.length && (
             <button onClick={stuurHerinnering} style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14.5, fontWeight: 800, padding: "10px 8px", color: "#8a5e0f" }}>{L.remindBtn}</button>
@@ -1970,6 +2006,8 @@ export default function PartyTest() {
               iedereen al gekozen heeft. */}
           <button onClick={() => setStandOpen((v) => !v)} style={{ ...S.btn, width: "100%", fontSize: 14.5, fontWeight: 800, padding: "10px 8px" }}>{standOpen ? `${L.hideStand} ▴` : `${L.showStand} ▾`}</button>
           {standOpen && renderStandLijst()}
+          <button onClick={() => setBarOpen((v) => !v)} style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14.5, fontWeight: 800, padding: "10px 8px" }}>{barOpen ? `${L.hideBarList} ▴` : `${L.showBarList} ▾`}</button>
+          {barOpen && renderBarLijst()}
         </div>
       )
     }
