@@ -723,16 +723,15 @@ const T = {
     modeQuickSub: "Jij tikt zelf alle drankjes aan.",
     modeQuickSub2: "Meteen een handig bestellijstje",
     whatIsThis: "Wat is dit?",
-    modeQuickWhat: "Jij tikt de drankjes aan voor de hele tafel. Je krijgt een lijstje om mee naar de toog te gaan — geen namen nodig.",
-    modeFairWhat: "Iedereen scant de QR en duidt zelf aan wat hij wil drinken per rondje. Achteraf betaalt iedereen eerlijk volgens wat hij dronk.",
-    modeFairWhen: "Handig als:",
-    modeFairWhenTxt: "de een water drinkt en de ander cocktails.",
+    modeQuickWhat: "Geen namen nodig: je tikt gewoon aan wat er besteld wordt en je krijgt een barlijstje. Achteraf verdeel je gelijk, of alsnog eerlijk per persoon.",
+    modeFairWhat: "Jouw drankjes, jouw bedrag. Geen oneerlijke gelijke verdeling maar betalen volgens wat je dronk — de app rekent het uit.",
     orWord: "of",
     modeFairSub: "Iedereen scant de QR en duidt aan wat hij drinkt.",
     modeFairLine: "Eerlijk betalen volgens wat je dronk",
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe je wil bestellen",
     tagline: "Rondjes opnemen en splitten zonder gedoe",
+    orderWord: "Bestelling",
     howManyPeople: "Met hoeveel zijn jullie?",
     people: "pers.",
     headcountForward: "Dit geldt vanaf het volgende rondje. Eerdere rondjes houden hun aantal — corrigeer die desnoods in het rondjesoverzicht.",
@@ -1275,16 +1274,15 @@ const T = {
     modeQuickSub: "Tu coches toutes les boissons toi-même.",
     modeQuickSub2: "Direct une liste pratique pour le bar",
     whatIsThis: "C’est quoi ?",
-    modeQuickWhat: "Tu coches les boissons pour toute la tablée. Tu reçois une liste à emporter au bar — sans noms.",
-    modeFairWhat: "Chacun scanne le QR et coche lui-même ce qu’il veut boire par tournée. Ensuite chacun paie équitablement selon ce qu’il a bu.",
-    modeFairWhen: "Pratique quand :",
-    modeFairWhenTxt: "l’un boit de l’eau et l’autre des cocktails.",
+    modeQuickWhat: "Pas besoin de noms : tu coches simplement ce qui est commandé et tu reçois une liste pour le bar. Ensuite tu partages à parts égales, ou équitablement par personne.",
+    modeFairWhat: "Tes boissons, ton montant. Pas de partage égal injuste mais payer selon ce que tu as bu — l’appli le calcule.",
     orWord: "ou",
     modeFairSub: "Chacun scanne le QR et coche ce qu’il boit.",
     modeFairLine: "Payer équitablement selon ce que tu as bu",
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
     tagline: "Prendre les tournées et partager sans tracas",
+    orderWord: "Commande",
     howManyPeople: "Vous \u00eates combien ?",
     people: "pers.",
     headcountForward: "Valable \u00e0 partir de la prochaine tourn\u00e9e. Les tourn\u00e9es pr\u00e9c\u00e9dentes gardent leur nombre \u2014 corrige-les au besoin dans l\u2019aper\u00e7u.",
@@ -5096,9 +5094,10 @@ export default function PartyTest() {
                     <span style={{ background: "#faf7ec", borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
                   </div>
                   <div style={{ borderTop: `1px solid ${MODUS_SNEL.lijn}`, paddingTop: 9 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 Bestelling</div>
+                    <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 {L.orderWord}</div>
                     <div style={{ fontSize: 15, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pintje · 2× Cola · 1× Wijn</div>
                   </div>
+
                 </div>
                 </div>
               </div>
@@ -5159,11 +5158,7 @@ export default function PartyTest() {
                     <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: MODUS_FAIR.tint, color: MODUS_FAIR.tekst, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, fontStyle: "italic" }}>i</span>
                     <span style={{ fontSize: 14.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeFairWhat}</span>
                   </div>
-                  {/* Niet hoe het werkt, maar wanneer je het kiest — dat is wat iemand die
-                      twijfelt eigenlijk wil weten. */}
-                  <div style={{ fontSize: 13.5, color: "#a89a6f", lineHeight: 1.45, marginBottom: 12, paddingLeft: 35 }}>
-                    <b style={{ color: MODUS_FAIR.tekst }}>{L.modeFairWhen}</b> {L.modeFairWhenTxt}
-                  </div>
+
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
                     {/* De QR staat vooraan: scannen is de eerste stap, zonder scan geen Fair Split. */}
                     <div>
@@ -5186,7 +5181,7 @@ export default function PartyTest() {
                       </div>
                     ))}
                   </div>
-                  <div style={{ fontSize: 14.5, color: "#6b5f3a", marginTop: 12, paddingTop: 11, borderTop: `1px solid ${MODUS_FAIR.lijn}`, lineHeight: 1.5 }}>{L.modeFairLine}</div>
+
                 </div>
                 </div>
               </div>
