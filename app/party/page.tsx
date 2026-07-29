@@ -429,7 +429,6 @@ const T = {
     cancel: "Annuleren",
     createFailed: "Groep aanmaken mislukt. Probeer opnieuw.",
 
-    peopleCount: "👥 Aantal personen",
     peopleTitle: "Personen",
     addPersonFirst: "Voeg eerst minstens één persoon toe.",
     whichAreYou: "Welke ben jij?",
@@ -655,6 +654,7 @@ const T = {
     roundBusyBy: (naam: string) => `Rondje bezig — ${naam} haalt`,
     browseOnly: "Je kan de kaart bekijken. Start een rondje om te bestellen.",
     noRoundTitle: "Er loopt nog geen rondje",
+    extrasLine: "⚙️ Extra’s — bekers, coins",
     yourNameFirst: "Vul eerst je eigen naam in — anders weet niemand wie jij bent in de lijst.",
     noRoundBody: "Start er eentje, dan kan iedereen aantikken wat hij wil.",
     potInPot: "💰 In de pot",
@@ -980,7 +980,6 @@ const T = {
     cancel: "Annuler",
     createFailed: "Échec de la création du groupe. Réessaie.",
 
-    peopleCount: "👥 Nombre de personnes",
     peopleTitle: "Personnes",
     addPersonFirst: "Ajoute d'abord au moins une personne.",
     whichAreYou: "Lequel es-tu ?",
@@ -1206,6 +1205,7 @@ const T = {
     roundBusyBy: (naam: string) => `Tournée en cours — ${naam} y va`,
     browseOnly: "Tu peux consulter la carte. Lance une tournée pour commander.",
     noRoundTitle: "Aucune tournée en cours",
+    extrasLine: "⚙️ Extras — gobelets, coins",
     yourNameFirst: "Entre d’abord ton propre nom — sinon personne ne sait qui tu es dans la liste.",
     noRoundBody: "Lances-en une, et chacun pourra cocher ce qu’il veut.",
     potInPot: "💰 Dans la cagnotte",
@@ -1416,6 +1416,7 @@ export default function PartyTest() {
   const [naamPrompt, setNaamPrompt] = useState<boolean | null>(null)
   const [gastNaam, setGastNaam] = useState("")
   const [geenRondje, setGeenRondje] = useState(false)
+  const [extrasOpen, setExtrasOpen] = useState(false)
   // Naam zetten op een plaats die nog op een scan wacht.
   const [zitNaam, setZitNaam] = useState<{ id: string; nr: number } | null>(null)
   const [zitNaamTekst, setZitNaamTekst] = useState("")
@@ -5390,26 +5391,43 @@ export default function PartyTest() {
           <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{L.groupNameEdit}</div>
           <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
             style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: "#fdfaf2" }} />
+          {settle && (<>
+            <div onClick={() => setExtrasOpen((v) => !v)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, cursor: "pointer", borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 12, paddingTop: 11 }}>
+              <span style={{ fontSize: 14.5, fontWeight: 700, color: "#8a7d55" }}>{L.extrasLine}</span>
+              <span style={{ flexShrink: 0, border: "1.5px solid rgba(120,95,20,0.3)", color: "#8a7d55", borderRadius: 9, padding: "6px 11px", fontSize: 13, fontWeight: 800, whiteSpace: "nowrap" }}>{extrasOpen ? `${L.hideWord} ▴` : `${L.showWord} ▾`}</span>
+            </div>
+            {extrasOpen && (
+              <div style={{ marginTop: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.cupsTitle} <span onClick={(e) => { e.stopPropagation(); setDepositInfo((v) => !v); setCoinInfo(false) }} style={{ color: "#c98a00", cursor: "pointer" }}>ⓘ</span></span>
+                  <button onClick={() => { const n = !depositOn; setDepositOn(n); persistSettings({ deposit_on: n }) }}
+                    style={{ flexShrink: 0, width: 46, height: 26, borderRadius: 14, border: "none", cursor: "pointer", padding: "0 3px", display: "flex", alignItems: "center", justifyContent: depositOn ? "flex-end" : "flex-start", background: depositOn ? "#1f8a4c" : "rgba(16,24,40,0.14)" }}>
+                    <span style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", display: "block" }} />
+                  </button>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 0" }}>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.coinsTitle} <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ color: "#c98a00", cursor: "pointer" }}>ⓘ</span></span>
+                  <button onClick={() => { const n = pay === "coin" ? "eur" : "coin"; setPay(n); persistSettings({ pay: n }) }}
+                    style={{ flexShrink: 0, width: 46, height: 26, borderRadius: 14, border: "none", cursor: "pointer", padding: "0 3px", display: "flex", alignItems: "center", justifyContent: pay === "coin" ? "flex-end" : "flex-start", background: pay === "coin" ? "#1f8a4c" : "rgba(16,24,40,0.14)" }}>
+                    <span style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", display: "block" }} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>)}
         </div>
-        {settle && (
+        {/* Teller en personen stonden in twee kaarten met bijna dezelfde kop. Nu één
+            sectie: het aantal links, de knoppen rechts, en de uitleg als gewone tekst. */}
         <div style={S.card}>
-          <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 14 }}>{L.peopleCount}</h3>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
-            <button style={{ ...S.step, width: 42, height: 42, fontSize: 23, opacity: people.length > 0 ? 1 : 0.4 }} onClick={removeLastPerson}>−</button>
-            <span style={{ fontSize: 26, fontWeight: 800, minWidth: 34, textAlign: "center" }}>{people.length}</span>
-            <button style={{ ...S.step, width: 42, height: 42, fontSize: 23, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={addPerson}>+</button>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <span style={{ fontSize: 16.5, fontWeight: 800, color: "#4a3f1e" }}>{L.peopleHeader(people.length)}</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 11, flexShrink: 0 }}>
+              <button style={{ ...S.step, width: 32, height: 32, fontSize: 18, opacity: people.length > 0 ? 1 : 0.4 }} onClick={removeLastPerson}>−</button>
+              <span style={{ fontSize: 19, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#4a3f1e" }}>{people.length}</span>
+              <button style={{ ...S.step, width: 32, height: 32, fontSize: 18, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={addPerson}>+</button>
+            </span>
           </div>
-
-        </div>
-        )}
-
-        <div style={S.card}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", marginBottom: 9 }}>{L.peopleHeader(people.length)}</div>
-          {/* Neutraal grijsbeige, geen oranje: hier is niets mis, dit is gewoon uitleg. */}
-          <div style={{ display: "flex", gap: 11, alignItems: "flex-start", background: "rgba(120,95,20,0.07)", borderRadius: 12, padding: "13px 14px", marginBottom: 13 }}>
-            <span style={{ flexShrink: 0, fontSize: 21, lineHeight: 1.3 }}>📱</span>
-            <span style={{ fontSize: 17, fontWeight: 700, color: "#4a3f1e", lineHeight: 1.45 }}>{L.peopleIntro()}</span>
-          </div>
+          <div style={{ fontSize: 14.5, color: "#5f5432", lineHeight: 1.45, marginBottom: 11 }}>📱 {L.peopleIntro()}</div>
 
           {/* Wie ben JIJ? Alleen relevant als de admin nog nergens zit — normaal is hij
               al Gast 1, dus dit blijft verborgen. Vangnet voor het randgeval. */}
