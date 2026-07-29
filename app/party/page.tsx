@@ -2081,14 +2081,14 @@ export default function PartyTest() {
     if (ikHaal) {
       const klaar = people.filter((pp) => drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0) || openAnswers[pp.id] === "skip")
       return (
-        <div style={{ ...S.card, background: "rgba(31,138,76,0.08)", border: "1.5px solid rgba(31,138,76,0.35)" }}>
+        <div style={{ ...S.card, background: `${MODUS_FAIR.tint}`, border: `1.5px solid ${MODUS_FAIR.randZacht}` }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9 }}>
-            <span style={{ fontSize: 15.5, fontWeight: 800, color: "#1f6b3a" }}>{L.youAreGoing}</span>
+            <span style={{ fontSize: 15.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.youAreGoing}</span>
             <button style={{ ...S.btn, fontSize: 13.5, fontWeight: 700, padding: "6px 11px" }} onClick={releaseRunner}>{L.notMeRunner}</button>
           </div>
           <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "#fff", borderRadius: 11, padding: "11px 12px", marginBottom: 9 }}>
             <span style={{ flexShrink: 0, fontSize: 17 }}>📱</span>
-            <span style={{ fontSize: 14.5, color: "#4a3f1e", lineHeight: 1.45 }}>{L.everyoneTapsNow} <b>{L.readyOf(klaar.length, people.length)}</b></span>
+            <span style={{ fontSize: 14.5, color: MODUS_FAIR.tekst, lineHeight: 1.45 }}>{L.everyoneTapsNow} <b>{L.readyOf(klaar.length, people.length)}</b></span>
           </div>
           {/* Wie is al klaar en wie nog niet? Dat bepaalt of je blijft zitten of vertrekt. */}
           <button onClick={() => setStandOpen((v) => !v)} style={{ ...S.btn, width: "100%", fontSize: 14.5, fontWeight: 800, padding: "10px 8px" }}>{standOpen ? `${L.hideStand} ▴` : `${L.showStand} ▾`}</button>
@@ -4078,10 +4078,10 @@ export default function PartyTest() {
     h3: { fontSize: 17.5, fontWeight: 800, margin: "0 0 10px" } as React.CSSProperties,
     sub: { fontSize: 15.5, color: "#8a7d55", margin: "0 0 12px", lineHeight: 1.55 } as React.CSSProperties,
     btn: { border: "1px solid rgba(120,95,20,0.18)", background: "#fff", color: "#4a3f1e", borderRadius: 12, padding: "12px 16px", fontSize: 16, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
-    btnP: { border: "none", background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 14, padding: "16px 18px", fontSize: 18, fontWeight: 800, cursor: "pointer", width: "100%", boxShadow: "0 4px 12px -4px rgba(224,138,0,0.6)" } as React.CSSProperties,
+    btnP: { border: "none", background: groupId && settle ? MODUS_FAIR.knop : "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 14, padding: "16px 18px", fontSize: 18, fontWeight: 800, cursor: "pointer", width: "100%", boxShadow: groupId && settle ? `0 4px 12px -4px ${MODUS_FAIR.gloed}` : "0 4px 12px -4px rgba(224,138,0,0.6)" } as React.CSSProperties,
     input: { border: "1px solid rgba(120,95,20,0.22)", borderRadius: 10, padding: "11px 12px", fontSize: 17, color: "#4a3f1e", outline: "none", width: 84, textAlign: "right" } as React.CSSProperties,
     seg: (on: boolean) => ({ flex: 1, textAlign: "center", padding: "11px 6px", borderRadius: 10, fontSize: 15.5, fontWeight: 800, cursor: "pointer", background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f3ead2", color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
-    step: { width: 38, height: 38, borderRadius: 10, border: "1px solid rgba(120,95,20,0.18)", background: "#f3ead2", color: "#8a5e0f", fontSize: 22, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
+    step: { width: 38, height: 38, borderRadius: 10, border: `1px solid ${groupId && settle ? "rgba(13,124,140,0.22)" : "rgba(120,95,20,0.18)"}`, background: groupId && settle ? "#e4f2f5" : "#f3ead2", color: groupId && settle ? MODUS_FAIR.tekst : "#8a5e0f", fontSize: 22, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
     chip: (n: number) => ({ position: "relative", padding: "10px 14px", borderRadius: 20, fontSize: 16, fontWeight: 700, cursor: "pointer", userSelect: "none", border: n > 0 ? "1px solid rgba(240,165,0,0.5)" : "1px solid rgba(120,95,20,0.15)", background: n > 0 ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#faf4e4", color: n > 0 ? "#fff" : "#8a7d55" } as React.CSSProperties),
     badge: { marginLeft: 5, background: "rgba(0,0,0,0.22)", borderRadius: 20, padding: "0 6px", fontSize: 13, fontWeight: 800 } as React.CSSProperties,
     pill: { fontSize: 13.5, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: "rgba(120,95,20,0.08)", color: "#8a7d55" } as React.CSSProperties,
@@ -4539,9 +4539,9 @@ export default function PartyTest() {
           eigen kaart onderaan het QR-scherm, ver van de geldzak waar je hem zoekt.
           Zodra er ingelegd is, spreekt die geldzak voor zich en verdwijnt deze balk. */}
       {!!groupId && settle && potContribTotal <= 0.005 && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "rgba(240,165,0,0.1)", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 11, padding: "10px 12px", marginTop: 10 }}>
-          <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f", minWidth: 0 }}>{potIsCard ? `💳 ${L.drinkCard}` : L.potTogetherQ}</span>
-          <button onClick={() => setShowPot(true)} style={{ flexShrink: 0, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 9, padding: "7px 13px", fontSize: 13.5, fontWeight: 800 }}>{L.potAddBtn}</button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: settle ? MODUS_FAIR.tint : "rgba(240,165,0,0.1)", border: `1px solid ${settle ? MODUS_FAIR.randZacht : "rgba(240,165,0,0.45)"}`, borderRadius: 11, padding: "10px 12px", marginTop: 10 }}>
+          <span style={{ fontSize: 14.5, fontWeight: 800, color: settle ? MODUS_FAIR.tekst : "#8a5e0f", minWidth: 0 }}>{potIsCard ? `💳 ${L.drinkCard}` : L.potTogetherQ}</span>
+          <button onClick={() => setShowPot(true)} style={{ flexShrink: 0, border: "none", cursor: "pointer", background: settle ? MODUS_FAIR.knop : "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 9, padding: "7px 13px", fontSize: 13.5, fontWeight: 800 }}>{L.potAddBtn}</button>
         </div>
       )}
       {/* De naam zelf staat in de kop rechtsboven. Hier blijft enkel het invulveld over
@@ -4714,12 +4714,12 @@ export default function PartyTest() {
         </div>
         <div style={{ ...S.card }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, marginBottom: 11 }}>
-            <span style={{ fontSize: 20, fontWeight: 800, color: "#4a3f1e", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName}</span>
+            <span style={{ fontSize: 20, fontWeight: 800, color: MODUS_FAIR.tekst, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName}</span>
             <span style={{ flexShrink: 0, fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>👥 {people.length}</span>
           </div>
           {potContribTotal > 0.005 && (
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "rgba(240,165,0,0.1)", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 11, padding: "9px 12px", marginBottom: 12 }}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: "#8a5e0f" }}>{L.potInPot}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: MODUS_FAIR.tint, border: `1px solid ${MODUS_FAIR.randZacht}`, borderRadius: 11, padding: "9px 12px", marginBottom: 12 }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.potInPot}</span>
               <b style={{ fontSize: 16, color: "#4a3f1e" }}>{euro(potContribTotal)}</b>
             </div>
           )}
@@ -4739,9 +4739,9 @@ export default function PartyTest() {
               )
             })}
           </div>
-          <div style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "rgba(120,95,20,0.06)", borderRadius: 12, padding: 12 }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-start", background: MODUS_FAIR.tint, borderRadius: 12, padding: 12 }}>
             <span style={{ flexShrink: 0, fontSize: 18 }}>⏳</span>
-            <span style={{ fontSize: 14.5, color: "#5f5432", lineHeight: 1.45 }}>{L.waitForHost(gastheer?.name ?? "")}</span>
+            <span style={{ fontSize: 14.5, color: MODUS_FAIR.tekst, lineHeight: 1.45 }}>{L.waitForHost(gastheer?.name ?? "")}</span>
           </div>
         </div>
       </div>
@@ -4934,24 +4934,24 @@ export default function PartyTest() {
         {/* Eén dunne balk in plaats van een kaart met uitleg: loopt er iets, en wie haalt.
             Groen als er een rondje bezig is, grijs als je op de kaart zit te kijken. */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, borderRadius: 11, padding: "10px 12px", marginBottom: 10,
-          background: bezig ? "rgba(31,138,76,0.09)" : "rgba(120,95,20,0.07)" }}>
+          background: bezig ? MODUS_FAIR.tint : "rgba(120,95,20,0.07)" }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 9, minWidth: 0 }}>
-            <span style={{ width: 9, height: 9, borderRadius: "50%", flexShrink: 0, background: bezig ? "#27ae60" : "#c4b896" }} />
-            <span style={{ fontSize: 14.5, fontWeight: 800, color: bezig ? "#1f6b3a" : "#8a7d55", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ width: 9, height: 9, borderRadius: "50%", flexShrink: 0, background: bezig ? MODUS_FAIR.rand : "#c4b896" }} />
+            <span style={{ fontSize: 14.5, fontWeight: 800, color: bezig ? MODUS_FAIR.tekst : "#8a7d55", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {bezig ? (startedBy ? L.roundBusyBy(runnerName()) : L.roundRunning) : L.noRoundBusy}
             </span>
           </span>
           {bezig && mijnAantal > 0 && <span style={{ ...S.pill, flexShrink: 0, background: "#1f8a4c", color: "#fff" }}>{mijnAantal}</span>}
         </div>
         {mijnAantal > 0 && (
-          <div style={{ ...S.card, background: "rgba(31,138,76,0.06)" }}>
+          <div style={{ ...S.card, background: MODUS_FAIR.vlak }}>
             <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
-              <span style={{ fontSize: 15.5, fontWeight: 800 }}>{L.roundWhatYouWant(roundNr)}</span>
+              <span style={{ fontSize: 15.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.roundWhatYouWant(roundNr)}</span>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {mijn.map((d) => (
                 <button key={d.id} onClick={() => bump(d.id, meId, -1)}
-                  style={{ ...S.pill, cursor: "pointer", background: "#fff", border: "1px solid rgba(31,138,76,0.35)", color: "#1f6b3a", fontSize: 14 }}>
+                  style={{ ...S.pill, cursor: "pointer", background: "#fff", border: `1px solid ${MODUS_FAIR.randZacht}`, color: MODUS_FAIR.tekst, fontSize: 14 }}>
                   {aQty(d.id, meId)}× {d.name} ✕
                 </button>
               ))}
@@ -5001,12 +5001,12 @@ export default function PartyTest() {
               return (
                 <div key={d.id} onClick={() => { if (!bezig) setGeenRondje(true) }}
                   style={{ padding: "10px", borderRadius: 12, cursor: bezig ? "default" : "pointer", opacity: bezig ? 1 : 0.55,
-                    background: n > 0 ? "rgba(31,138,76,0.08)" : "#faf7ec", border: n > 0 ? "1px solid rgba(31,138,76,0.3)" : "1px solid rgba(120,95,20,0.1)" }}>
-                  <div style={{ fontSize: 15.5, fontWeight: n > 0 ? 800 : 600, color: n > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
+                    background: n > 0 ? MODUS_FAIR.tint : "#faf7ec", border: n > 0 ? `1.5px solid ${MODUS_FAIR.randZacht}` : "1px solid rgba(120,95,20,0.1)" }}>
+                  <div style={{ fontSize: 15.5, fontWeight: n > 0 ? 800 : 600, color: n > 0 ? MODUS_FAIR.tekst : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
                   {bezig && (
                     <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
                       <button style={{ ...S.step, opacity: n > 0 ? 1 : 0.4 }} onClick={() => n > 0 && bump(d.id, meId, -1)}>−</button>
-                      <span style={{ fontSize: 18, fontWeight: 800, color: n > 0 ? "#1f8a4c" : "#b3a988" }}>{n}</span>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: n > 0 ? MODUS_FAIR.rand : "#b3a988" }}>{n}</span>
                       <button style={S.step} onClick={() => bump(d.id, meId, 1)}>+</button>
                     </div>
                   )}
@@ -6117,7 +6117,7 @@ export default function PartyTest() {
                   <div onClick={() => setDepositOn(false)} style={{ fontSize: 13.5, color: "#8a7d55", cursor: "pointer", marginTop: 6 }}>… of <u>ga verder zonder bekers/waarborg</u> (uitschakelen).</div>
                 </div>
               ) : (
-                <div style={{ ...S.row, justifyContent: "space-between", background: "rgba(31,138,76,0.1)", borderRadius: 12, padding: "9px 12px", marginBottom: 12 }}>
+                <div style={{ ...S.row, justifyContent: "space-between", background: settle ? MODUS_FAIR.tint : "rgba(31,138,76,0.1)", borderRadius: 12, padding: "9px 12px", marginBottom: 12 }}>
                   <span style={{ fontSize: 14.5, color: "#1f8a4c", fontWeight: 700 }}>🫙 {gaveBackTotal > 0 ? `${gaveBackTotal} beker${gaveBackTotal === 1 ? "" : "s"} teruggegeven ✓` : "0 bekers meegegeven ✓"}</span>
                   <button style={{ ...S.btn, padding: "4px 10px", fontSize: 13.5 }} onClick={() => setShowCups(true)}>aanpassen</button>
                 </div>
@@ -6455,9 +6455,9 @@ export default function PartyTest() {
                   return (
                     <div key={r.id} style={{ marginBottom: toonIdx.length > 1 ? 16 : 0 }}>
                       {toonIdx.length > 1 && (
-                        <div style={{ ...S.row, justifyContent: "space-between", background: un > 0 ? "rgba(224,104,92,0.1)" : "rgba(31,138,76,0.1)", borderRadius: 9, padding: "7px 11px", marginBottom: 8 }}>
-                          <span style={{ fontSize: 14.5, fontWeight: 800, color: un > 0 ? "#b0402f" : "#1f6b3a" }}>{L.roundWord} {idx + 1} <span style={{ fontWeight: 600, opacity: 0.75 }}>· {L.drinksCount(roundDrinks.reduce((a, d) => a + drinkTotalRound(r, d.id), 0))}</span></span>
-                          <span style={{ fontSize: 13.5, fontWeight: 800, color: un > 0 ? "#b0402f" : "#1f8a4c" }}>{un > 0 ? `🔴 ${un}` : "✓"}</span>
+                        <div style={{ ...S.row, justifyContent: "space-between", background: un > 0 ? "rgba(224,104,92,0.1)" : MODUS_FAIR.tint, borderRadius: 9, padding: "7px 11px", marginBottom: 8 }}>
+                          <span style={{ fontSize: 14.5, fontWeight: 800, color: un > 0 ? "#b0402f" : MODUS_FAIR.tekst }}>{L.roundWord} {idx + 1} <span style={{ fontWeight: 600, opacity: 0.75 }}>· {L.drinksCount(roundDrinks.reduce((a, d) => a + drinkTotalRound(r, d.id), 0))}</span></span>
+                          <span style={{ fontSize: 13.5, fontWeight: 800, color: un > 0 ? "#b0402f" : MODUS_FAIR.rand }}>{un > 0 ? `🔴 ${un}` : "✓"}</span>
                         </div>
                       )}
                       {toonIdx.length === 1 && un > 0 && editAssignMode === "person" && (
@@ -6501,7 +6501,7 @@ export default function PartyTest() {
 
                 {/* Alles rond? Dan een duidelijk groen vinkje in plaats van een gewone knop. */}
                 {done && (
-                  <div style={{ background: "rgba(31,138,76,0.1)", border: "1.5px solid rgba(31,138,76,0.45)", borderRadius: 11, padding: "12px 13px", marginTop: 12, textAlign: "center" }}>
+                  <div style={{ background: settle ? MODUS_FAIR.tint : "rgba(31,138,76,0.1)", border: `1.5px solid ${settle ? MODUS_FAIR.randZacht : "rgba(31,138,76,0.45)"}`, borderRadius: 11, padding: "12px 13px", marginTop: 12, textAlign: "center" }}>
                     <div style={{ fontSize: 22, marginBottom: 2 }}>✅</div>
                     <div style={{ fontSize: 15, fontWeight: 800, color: "#1f6b3a" }}>{naarVolgende ? L.roundDoneNext : nogOpen === 0 ? L.allAssignedDone : L.roundDoneShort}</div>
                   </div>
