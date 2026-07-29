@@ -659,7 +659,10 @@ const T = {
     noRoundBody: "Start er eentje, dan kan iedereen aantikken wat hij wil.",
     potInPot: "💰 In de pot",
     waitForHost: (naam: string) => `Je zit erbij. Zodra ${naam || "de gastheer"} het bestellen opent, kan je aantikken wat je wil.`,
-    gFetchStep3Any: "Wie gaat halen krijgt het barlijstje",
+    openStep1: "Vanaf nu kan er besteld worden",
+    openStep2: "Wie gaat halen, tikt dat aan boven de drankjes",
+    openStep3: "Daarna tikt iedereen aan wat hij wil",
+    okWord: "Begrepen",
     showStand: "👥 Wie doet al mee?",
     hideStand: "👥 Verbergen",
     stillBusy: "nog bezig…",
@@ -1207,7 +1210,10 @@ const T = {
     noRoundBody: "Lances-en une, et chacun pourra cocher ce qu’il veut.",
     potInPot: "💰 Dans la cagnotte",
     waitForHost: (naam: string) => `Tu es dans le groupe. Dès que ${naam || "l’hôte"} ouvre les commandes, tu peux cocher ce que tu veux.`,
-    gFetchStep3Any: "Celui qui y va reçoit la liste pour le bar",
+    openStep1: "À partir de maintenant on peut commander",
+    openStep2: "Celui qui y va le signale au-dessus des boissons",
+    openStep3: "Ensuite chacun coche ce qu’il veut",
+    okWord: "Compris",
     showStand: "👥 Qui a déjà choisi ?",
     hideStand: "👥 Masquer",
     stillBusy: "en cours…",
@@ -1818,9 +1824,13 @@ export default function PartyTest() {
   // De melding voor de anderen. We tonen ze één keer per rondje, aan iedereen behalve de
   // haler zelf — vandaar dat we onthouden welk rondje we al aankondigden.
   const [rondjeGemeld, setRondjeGemeld] = useState<string | null>(null)
+  const [halerGemeld, setHalerGemeld] = useState<string | null>(null)
   // De antwoorden op het lópende rondje: wie koos niets, en het merkje van een
   // herinnering. Staat hier bovenaan omdat de effecten eronder ernaar kijken.
   const [openAnswers, setOpenAnswers] = useState<Record<string, "same" | "different" | "skip">>({})
+  // Staat het bestellen open? Dat is een fase, geen rondje: iedereen mag vanaf dan een
+  // rondje starten, maar er loopt er nog geen.
+  const [orderingOpen, setOrderingOpen] = useState(false)
 
   // Deze twee effecten stonden hoger in het bestand, vóór de toestand die ze aflezen.
   // JavaScript staat dat niet toe voor const-verklaringen, dus ze staan nu hier.
@@ -1840,15 +1850,23 @@ export default function PartyTest() {
   // En zodra er een rondje opengaat dat iemand ánders startte, krijg je de melding één
   // keer te zien. We onthouden welk rondje al aangekondigd is, anders komt ze bij elke
   // verversing terug.
+  // Ging het bestellen net open? Één melding, voor iedereen behalve wie het zelf deed.
   useEffect(() => {
-    if (!openRoundId || !meId) return
-    if (rondjeGemeld === openRoundId) return
-    setRondjeGemeld(openRoundId)
-    if (startedBy === meId) return
-    // Zonder haler betekent het dat de beheerder het bestellen opende; met haler weet je
-    // meteen wie er gaat.
-    const haler = startedBy ? people.find((p) => p.id === startedBy) : null
-    setRondjeMelding(haler ? haler.name : "")
+    if (!orderingOpen || !meId || !groupId) return
+    if (rondjeGemeld === `open:${groupId}`) return
+    setRondjeGemeld(`open:${groupId}`)
+    if (isAdmin) return
+    setRondjeMelding("")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderingOpen, meId, groupId])
+
+  // En zodra iemand zegt dat hij gaat halen, weet de rest wie.
+  useEffect(() => {
+    if (!openRoundId || !meId || !startedBy || startedBy === meId) return
+    if (halerGemeld === openRoundId) return
+    setHalerGemeld(openRoundId)
+    const haler = people.find((p) => p.id === startedBy)
+    if (haler) setRondjeMelding(haler.name)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRoundId, startedBy, meId])
   const [rondjeMelding, setRondjeMelding] = useState<string | null>(null)
@@ -2310,7 +2328,7 @@ export default function PartyTest() {
   // (iedereen bestelt tegelijk) niet tientallen herladingen uitlokt.
   const loadParty = useCallback(async (gid: string) => {
     const [{ data: g }, { data: pp }, { data: rr }, { data: ii }, { data: pt }] = await Promise.all([
-      supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices,settle").eq("id", gid).single(),
+      supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices,settle,ordering_open").eq("id", gid).single(),
       supabase.from("party_people").select("id,seat,name,claimed_by,self_joined,settle_with").eq("group_id", gid).order("seat"),
       supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back,members,started_by,proposal,headcount").eq("group_id", gid).order("seq"),
       supabase.from("party_round_items").select("round_id,person_id,drink_key,qty").eq("group_id", gid),
@@ -2370,6 +2388,9 @@ export default function PartyTest() {
     }))
 
     // Het OPEN rondje is de mand; de rest is historiek.
+    // Bestaat de kolom nog niet, dan gaat het bestellen open zodra er een rondje is — zo
+    // blijft een installatie zonder die kolom gewoon werken.
+    setOrderingOpen(g?.ordering_open === true || alle.length > 0)
     const open = alle.find((r) => r.status === "open") ?? null
     setOpenRoundId(open?.id ?? null)
     // De antwoorden van het lópende rondje. Dezelfde databankfuncties als het
@@ -3064,6 +3085,15 @@ export default function PartyTest() {
   // Delen kan pas als de groep vaststaat: naam, aantal personen én de startvragen.
   // Zo kan er niemand ongevraagd bijkomen en blijft de groep even groot als de admin
   // aangaf — gasten claimen enkel een vrije plaats, ze maken er geen bij.
+  // Het bestellen openzetten voor iedereen. Zonder rondje: wie wil halen drukt daarna
+  // zelf op één van de twee knoppen.
+  const openBestellen = async () => {
+    if (!groupId) return
+    setOrderingOpen(true)
+    const { error } = await supabase.from("party_groups").update({ ordering_open: true }).eq("id", groupId)
+    if (error) { setNotice("Openen mislukt: " + error.message); loadParty(groupId) }
+  }
+
   const canShare = settle && isAdmin && !!inviteCode && people.length > 0 && onboardedOnce
   // Staat de QR in beeld en is er nog een plaats vrij, dan wacht dit scherm op scans.
   wachtOpScans.current = canShare && view === "hub" && people.some((p) => !p.claimedBy)
@@ -3135,7 +3165,7 @@ export default function PartyTest() {
         </div>
         {/* De vraag op dit scherm is "mag ik al beginnen?" — vandaar het antwoord in de knop
             zelf. Wie later scant sluit gewoon aan, want de QR blijft bereikbaar. */}
-        <button onClick={() => { void ensureRound(null); setActiveCat(catsPresent[0]); setView("order") }}
+        <button onClick={() => { void openBestellen(); setActiveCat(catsPresent[0]); setView("order") }}
           style={{ width: "100%", marginTop: 14, cursor: "pointer", border: "none", borderRadius: 14, padding: "13px 12px", color: "#fff",
             background: "linear-gradient(135deg,#27ae60,#1f8a4c)", boxShadow: `0 12px 28px -8px ${MODUS_FAIR.gloed}, 0 0 0 4px ${MODUS_FAIR.tint}` }}>
           <span style={{ display: "block", fontSize: 17.5, fontWeight: 800 }}>{L.startOrdering}</span>
@@ -4329,14 +4359,16 @@ export default function PartyTest() {
             <div style={{ fontSize: 32, marginBottom: 5 }}>🍻</div>
             <div style={{ fontSize: 18.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 12 }}>{rondjeMelding ? L.someoneFetches(rondjeMelding) : L.orderingOpen}</div>
             <div style={{ textAlign: "left", marginBottom: 14 }}>
-              {[L.gFetchStep1, L.gFetchStep2, rondjeMelding ? L.gFetchStep3(rondjeMelding) : L.gFetchStep3Any].map((t, i) => (
+              {(rondjeMelding
+                ? [L.gFetchStep1, L.gFetchStep2, L.gFetchStep3(rondjeMelding)]
+                : [L.openStep1, L.openStep2, L.openStep3]).map((t, i) => (
                 <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", marginBottom: i < 2 ? 7 : 0 }}>
                   <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>
                   <span style={{ fontSize: 14.5, color: "#4a3f1e", lineHeight: 1.45 }}>{t}</span>
                 </div>
               ))}
             </div>
-            <button onClick={() => setRondjeMelding(null)} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 16.5, fontWeight: 800 }}>{L.letsChoose}</button>
+            <button onClick={() => setRondjeMelding(null)} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 16.5, fontWeight: 800 }}>{rondjeMelding ? L.letsChoose : L.okWord}</button>
           </div>
         </div>
       )}
@@ -4620,7 +4652,7 @@ export default function PartyTest() {
   // geen pot — dat is werk voor wie naar de toog gaat. De gast ziet enkel zichzelf.
   // Zolang er nog geen rondje is, kan een gast niets bestellen. Dan tonen we de tafel:
   // wie er is, wie nog moet scannen, en wat er in de pot zit.
-  if (groupId && !isAdmin && meId && settle && !openRoundId && rounds.length === 0) {
+  if (groupId && !isAdmin && meId && settle && !orderingOpen) {
     const ik = people.find((p) => p.id === meId)
     const aangemeld = people.filter((p) => p.claimedBy).length
     const gastheer = people.find((p) => !!ownerDevice && p.claimedBy === ownerDevice)
