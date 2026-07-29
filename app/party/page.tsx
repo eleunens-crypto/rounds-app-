@@ -305,6 +305,9 @@ const T = {
     notRight: "klopt niet",
     alreadyJoined: "Al aangemeld",
     fillNameFirst: "Vul eerst je naam in.",
+    tapYourSeatNow: "👇 Tik nu je plaats aan",
+    potTogetherQ: "💰 Samen een pot leggen?",
+    potAddBtn: "+ inleggen",
     seatTaken: "Die plaats is net door iemand anders genomen. Kies een andere.",
     badCode: "Deze uitnodigingscode bestaat niet (meer).",
     loading: "Even laden…",
@@ -648,6 +651,10 @@ const T = {
     gFetchStep2: "Iedereen tikt aan op eigen gsm",
     gFetchStep3: (naam: string) => `${naam} krijgt het barlijstje`,
     letsChoose: "Kiezen maar →",
+    orderingOpen: "Het bestellen is open",
+    potInPot: "💰 In de pot",
+    waitForHost: (naam: string) => `Je zit erbij. Zodra ${naam || "de gastheer"} het bestellen opent, kan je aantikken wat je wil.`,
+    gFetchStep3Any: "Wie gaat halen krijgt het barlijstje",
     showStand: "👥 Wie doet al mee?",
     hideStand: "👥 Verbergen",
     stillBusy: "nog bezig…",
@@ -841,6 +848,9 @@ const T = {
     notRight: "pas correct",
     alreadyJoined: "Déjà inscrits",
     fillNameFirst: "Entre d'abord ton nom.",
+    tapYourSeatNow: "👇 Touche maintenant ta place",
+    potTogetherQ: "💰 Faire une cagnotte commune ?",
+    potAddBtn: "+ verser",
     seatTaken: "Cette place vient d'être prise. Choisis-en une autre.",
     badCode: "Ce code d'invitation n'existe pas (plus).",
     loading: "Chargement…",
@@ -1184,6 +1194,10 @@ const T = {
     gFetchStep2: "Chacun coche sur son propre gsm",
     gFetchStep3: (naam: string) => `${naam} reçoit la liste pour le bar`,
     letsChoose: "C’est parti →",
+    orderingOpen: "Les commandes sont ouvertes",
+    potInPot: "💰 Dans la cagnotte",
+    waitForHost: (naam: string) => `Tu es dans le groupe. Dès que ${naam || "l’hôte"} ouvre les commandes, tu peux cocher ce que tu veux.`,
+    gFetchStep3Any: "Celui qui y va reçoit la liste pour le bar",
     showStand: "👥 Qui a déjà choisi ?",
     hideStand: "👥 Masquer",
     stillBusy: "en cours…",
@@ -1384,6 +1398,7 @@ export default function PartyTest() {
   // Kies je "nieuwe met eigen naam", dan vraagt dit venster om die naam. Het keuzescherm
   // heeft zelf geen naamveld — daar duik je normaal meteen in de drankjes.
   const [naamPrompt, setNaamPrompt] = useState<boolean | null>(null)
+  const [gastNaam, setGastNaam] = useState("")
   // Naam zetten op een plaats die nog op een scan wacht.
   const [zitNaam, setZitNaam] = useState<{ id: string; nr: number } | null>(null)
   const [zitNaamTekst, setZitNaamTekst] = useState("")
@@ -1695,6 +1710,8 @@ export default function PartyTest() {
   // Slaapstand. De telefoon ligt bij een rondje vaak minutenlang open op tafel; zonder dit
   // blijft het realtime-kanaal die hele tijd verbinding en data verbruiken. Eén tik hervat.
   const [slaapt, setSlaapt] = useState(false)
+  // Wacht dit scherm op gasten die nog moeten scannen? Dan niet in slaap vallen.
+  const wachtOpScans = useRef(false)
   const laatsteActie = useRef<number>(Date.now())
   // Zachte melding wanneer iemand nieuw aansluit. Vervaagt vanzelf; alleen de admin
   // krijgt een knop om het terug te draaien (voor als een vreemde de link kreeg).
@@ -1816,9 +1833,11 @@ export default function PartyTest() {
     if (!openRoundId || !meId) return
     if (rondjeGemeld === openRoundId) return
     setRondjeGemeld(openRoundId)
-    if (!startedBy || startedBy === meId) return
-    const haler = people.find((p) => p.id === startedBy)
-    if (haler) setRondjeMelding(haler.name)
+    if (startedBy === meId) return
+    // Zonder haler betekent het dat de beheerder het bestellen opende; met haler weet je
+    // meteen wie er gaat.
+    const haler = startedBy ? people.find((p) => p.id === startedBy) : null
+    setRondjeMelding(haler ? haler.name : "")
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRoundId, startedBy, meId])
   const [rondjeMelding, setRondjeMelding] = useState<string | null>(null)
@@ -2632,7 +2651,10 @@ export default function PartyTest() {
     // Een lange setTimeout wordt door de browser gepauzeerd zodra het scherm op slot gaat,
     // dus meten we met een tijdstempel plus een korte interval. Terugkeren naar het tabblad
     // hervat bewust niet vanzelf: dan blijft de melding zichtbaar en weet je waarom het stil lag.
-    const kijk = () => { if (Date.now() - laatsteActie.current >= SLAAP_MS) setSlaapt(true) }
+    const kijk = () => {
+      if (wachtOpScans.current) { laatsteActie.current = Date.now(); return }
+      if (Date.now() - laatsteActie.current >= SLAAP_MS) setSlaapt(true)
+    }
     const actief = () => { laatsteActie.current = Date.now(); setSlaapt((a) => (a ? false : a)) }
     const evts: (keyof WindowEventMap)[] = ["pointerdown", "keydown", "scroll", "touchstart"]
     evts.forEach((e) => window.addEventListener(e, actief, { passive: true }))
@@ -3032,6 +3054,8 @@ export default function PartyTest() {
   // Zo kan er niemand ongevraagd bijkomen en blijft de groep even groot als de admin
   // aangaf — gasten claimen enkel een vrije plaats, ze maken er geen bij.
   const canShare = settle && isAdmin && !!inviteCode && people.length > 0 && onboardedOnce
+  // Staat de QR in beeld en is er nog een plaats vrij, dan wacht dit scherm op scans.
+  wachtOpScans.current = canShare && view === "hub" && people.some((p) => !p.claimedBy)
   const renderShare = () => {
     if (!canShare) return null
     const vrij = people.filter((p) => !p.claimedBy).length
@@ -3100,7 +3124,7 @@ export default function PartyTest() {
         </div>
         {/* De vraag op dit scherm is "mag ik al beginnen?" — vandaar het antwoord in de knop
             zelf. Wie later scant sluit gewoon aan, want de QR blijft bereikbaar. */}
-        <button onClick={() => { setActiveCat(catsPresent[0]); setView("order") }}
+        <button onClick={() => { void ensureRound(null); setActiveCat(catsPresent[0]); setView("order") }}
           style={{ width: "100%", marginTop: 14, cursor: "pointer", border: "none", borderRadius: 14, padding: "13px 12px", color: "#fff",
             background: "linear-gradient(135deg,#27ae60,#1f8a4c)", boxShadow: `0 12px 28px -8px ${MODUS_FAIR.gloed}, 0 0 0 4px ${MODUS_FAIR.tint}` }}>
           <span style={{ display: "block", fontSize: 17.5, fontWeight: 800 }}>{L.startOrdering}</span>
@@ -4265,8 +4289,12 @@ export default function PartyTest() {
                 </div>
               ))}
             </div>
-            <button onClick={() => { setStartCheck(false); void startAsRunner() }} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 16.5, fontWeight: 800 }}>{L.yesIFetch}</button>
-            <button onClick={() => setStartCheck(false)} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15, fontWeight: 700, color: "#a89a6f" }}>{L.ratherNot}</button>
+            <div style={{ display: "flex", gap: 9 }}>
+              <button onClick={() => setStartCheck(false)}
+                style={{ flex: 1, minWidth: 0, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(120,95,20,0.3)", color: "#8a7d55", borderRadius: 12, padding: "13px 6px", fontSize: 15, fontWeight: 800 }}>{L.ratherNot}</button>
+              <button onClick={() => { setStartCheck(false); void startAsRunner() }}
+                style={{ ...S.btnP, flex: 1.6, minWidth: 0, padding: "13px 6px", fontSize: 15.5, fontWeight: 800 }}>{L.yesIFetch}</button>
+            </div>
           </div>
         </div>
       )}
@@ -4275,9 +4303,9 @@ export default function PartyTest() {
         <div style={{ ...S.overlay, zIndex: 74 }} onClick={() => setRondjeMelding(null)}>
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 32, marginBottom: 5 }}>🍻</div>
-            <div style={{ fontSize: 18.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 12 }}>{L.someoneFetches(rondjeMelding)}</div>
+            <div style={{ fontSize: 18.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 12 }}>{rondjeMelding ? L.someoneFetches(rondjeMelding) : L.orderingOpen}</div>
             <div style={{ textAlign: "left", marginBottom: 14 }}>
-              {[L.gFetchStep1, L.gFetchStep2, L.gFetchStep3(rondjeMelding)].map((t, i) => (
+              {[L.gFetchStep1, L.gFetchStep2, rondjeMelding ? L.gFetchStep3(rondjeMelding) : L.gFetchStep3Any].map((t, i) => (
                 <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", marginBottom: i < 2 ? 7 : 0 }}>
                   <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>
                   <span style={{ fontSize: 14.5, color: "#4a3f1e", lineHeight: 1.45 }}>{t}</span>
@@ -4402,8 +4430,15 @@ export default function PartyTest() {
           </div>
         )}
       </div>
-      {/* Groepsnaam + aantal personen — gecentreerd onder de logobalk. Bij snelle rondjes
-          is het aantal klikbaar naar de instellingen. */}
+      {/* De pot als brede balk onder de kop, zolang er nog niets in zit. Hij stond als
+          eigen kaart onderaan het QR-scherm, ver van de geldzak waar je hem zoekt.
+          Zodra er ingelegd is, spreekt die geldzak voor zich en verdwijnt deze balk. */}
+      {!!groupId && settle && potChosen && potContribTotal <= 0.005 && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "rgba(240,165,0,0.1)", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 11, padding: "10px 12px", marginTop: 10 }}>
+          <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f", minWidth: 0 }}>{potIsCard ? `💳 ${L.drinkCard}` : L.potTogetherQ}</span>
+          <button onClick={() => setShowPot(true)} style={{ flexShrink: 0, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 9, padding: "7px 13px", fontSize: 13.5, fontWeight: 800 }}>{L.potAddBtn}</button>
+        </div>
+      )}
       {/* De naam zelf staat in de kop rechtsboven. Hier blijft enkel het invulveld over
           voor wanneer je op die naam tikt om hem te wijzigen. */}
       {groupName.trim() && editName && !onboarding && (
@@ -4513,21 +4548,30 @@ export default function PartyTest() {
                   <div style={{ fontSize: 14.5, color: "#8a7d55", marginBottom: 8, lineHeight: 1.5 }}>
                     {metNaam.length > 0 ? L.notThere : L.fillNameSeat}
                   </div>
-                  <input id="guest-name" style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 17, marginBottom: 10 }}
+                  <input id="guest-name" value={gastNaam} onChange={(e) => setGastNaam(e.target.value)}
+                    style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 17, marginBottom: 10,
+                      border: gastNaam.trim() ? "1.5px solid rgba(31,138,76,0.5)" : undefined }}
                     placeholder={L.yourName} autoComplete="name" />
+                  {/* Zolang er geen naam staat zijn deze knoppen bleek: er valt nog niets te
+                      kiezen. Zodra je typt worden ze groen met een gloed, en staat erboven
+                      wat je nu moet doen. */}
+                  {gastNaam.trim() && <div style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", marginBottom: 8 }}>{L.tapYourSeatNow}</div>}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
-                    {leeg.map((p) => (
-                      <button key={p.id} disabled={busy}
-                        onClick={() => {
-                          const el = document.getElementById("guest-name") as HTMLInputElement | null
-                          const naam = (el?.value || "").trim()
-                          if (!naam) { setNotice(L.fillNameFirst); return }
-                          claimSeat(p.id, naam)
-                        }}
-                        style={{ ...S.btn, padding: "13px 8px", fontWeight: 800, opacity: busy ? 0.5 : 1 }}>
-                        {L.seat(p.seat)}
-                      </button>
-                    ))}
+                    {leeg.map((p) => {
+                      const klaar = gastNaam.trim().length > 0
+                      return (
+                        <button key={p.id} disabled={busy || !klaar}
+                          onClick={() => { if (!klaar) { setNotice(L.fillNameFirst); return } claimSeat(p.id, gastNaam.trim()) }}
+                          style={{ ...S.btn, padding: "13px 8px", fontWeight: 800, cursor: klaar ? "pointer" : "default",
+                            background: klaar ? "linear-gradient(135deg,#27ae60,#1f8a4c)" : "#faf7ec",
+                            border: klaar ? "none" : "1px solid rgba(120,95,20,0.18)",
+                            color: klaar ? "#fff" : "#c4b896",
+                            boxShadow: klaar ? "0 10px 24px -8px rgba(31,138,76,0.85), 0 0 0 4px rgba(31,138,76,0.16)" : "none",
+                            opacity: busy ? 0.5 : 1 }}>
+                          {L.seat(p.seat)}{klaar ? " →" : ""}
+                        </button>
+                      )
+                    })}
                   </div>
                 </>
               )}
@@ -4550,6 +4594,55 @@ export default function PartyTest() {
   // ── GAST: bestellen ────────────────────────────────────────────────────────
   // Eén taak, één scherm: tik aan wat JIJ wil. Geen personen kiezen, geen bedragen,
   // geen pot — dat is werk voor wie naar de toog gaat. De gast ziet enkel zichzelf.
+  // Zolang er nog geen rondje is, kan een gast niets bestellen. Dan tonen we de tafel:
+  // wie er is, wie nog moet scannen, en wat er in de pot zit.
+  if (groupId && !isAdmin && meId && settle && !openRoundId && rounds.length === 0) {
+    const ik = people.find((p) => p.id === meId)
+    const aangemeld = people.filter((p) => p.claimedBy).length
+    const gastheer = people.find((p) => !!ownerDevice && p.claimedBy === ownerDevice)
+    return (
+      <div style={{ ...S.wrap, maxWidth: 430 }}>
+        {renderDialogs()}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: MODUS_FAIR.knop, borderRadius: "14px 14px 0 0", padding: "9px 13px", marginBottom: 12 }}>
+          <span style={{ fontSize: 14.5, fontWeight: 800, color: "#fff" }}>⚖️ {L.modeFairShort}</span>
+          <span style={{ fontSize: 12.5, color: "rgba(255,255,255,0.92)" }}>{L.youAre} {ik?.name}</span>
+        </div>
+        <div style={{ ...S.card }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, marginBottom: 11 }}>
+            <span style={{ fontSize: 20, fontWeight: 800, color: "#4a3f1e", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName}</span>
+            <span style={{ flexShrink: 0, fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>👥 {people.length}</span>
+          </div>
+          {potContribTotal > 0.005 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "rgba(240,165,0,0.1)", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 11, padding: "9px 12px", marginBottom: 12 }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#8a5e0f" }}>{L.potInPot}</span>
+              <b style={{ fontSize: 16, color: "#4a3f1e" }}>{euro(potContribTotal)}</b>
+            </div>
+          )}
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: "#1f6b3a", marginBottom: 7 }}>📱 {L.joinedOfTotal(aangemeld, people.length)}</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 13 }}>
+            {people.map((p) => {
+              const leeg = !p.claimedBy && !p.named
+              const isIk = p.id === meId
+              const isHost = !!ownerDevice && p.claimedBy === ownerDevice
+              return (
+                <span key={p.id} style={{ borderRadius: 16, padding: "5px 11px", fontSize: 13.5, fontWeight: isIk || isHost ? 800 : 700,
+                  background: isHost ? "rgba(240,165,0,0.14)" : isIk ? "rgba(31,138,76,0.14)" : p.claimedBy ? "rgba(31,138,76,0.08)" : "transparent",
+                  border: leeg ? "1px dashed rgba(120,95,20,0.28)" : "none",
+                  color: isHost ? "#8a5e0f" : p.claimedBy || p.named ? "#1f6b3a" : "#a89a6f" }}>
+                  {isHost ? "👑 " : isIk ? "⭐ " : p.claimedBy ? "📱 " : ""}{leeg ? L.seat(p.seat) : p.name}
+                </span>
+              )
+            })}
+          </div>
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "rgba(120,95,20,0.06)", borderRadius: 12, padding: 12 }}>
+            <span style={{ flexShrink: 0, fontSize: 18 }}>⏳</span>
+            <span style={{ fontSize: 14.5, color: "#5f5432", lineHeight: 1.45 }}>{L.waitForHost(gastheer?.name ?? "")}</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (groupId && !isAdmin && meId) {
     const ik = people.find((p) => p.id === meId)!
     const zoekt = normText(drinkSearch).length > 0
@@ -5969,6 +6062,9 @@ export default function PartyTest() {
         {/* Tijdens de omschakeling van snel naar Fair Split is de hub enkel het
             toewijsscherm. Rondjesoverzicht, nieuwe rondjes en afrekenen horen daar
             niet: die leiden je weg uit een traject van drie stappen. */}
+        {!fromQuick && (rounds.length === 0 || qrGevraagd || people.some((p) => !p.claimedBy)) && renderShare()}
+        {/* Het potblok stond hier als eigen kaart onderaan. Het staat nu als brede balk
+            onder de kop — dichter bij de geldzak, en dit scherm gaat over de QR. */}
         {!fromQuick && (rounds.length === 0 || qrGevraagd || people.some((p) => !p.claimedBy)) && renderShare()}
         {/* De pot is een handeling aan het BEGIN van de avond: iedereen legt vooraf in.
             Daarom staat hij hier, zichtbaar, vóór het eerste rondje — niet weggestopt
