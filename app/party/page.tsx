@@ -652,6 +652,8 @@ const T = {
     hideStand: "👥 Verbergen",
     stillBusy: "nog bezig…",
     toTheBar: "🍻 Naar de bar",
+    youTapFor: "Je tikt aan voor:",
+    qrTapsSelf: "📱 tikt zelf aan op zijn gsm — je hoeft niets te doen.",
     showBarList: "🍻 Barlijstje",
     hideBarList: "🍻 Verbergen",
     nothingForMe: "niets deze ronde",
@@ -1183,6 +1185,8 @@ const T = {
     hideStand: "👥 Masquer",
     stillBusy: "en cours…",
     toTheBar: "🍻 Au bar",
+    youTapFor: "Tu coches pour :",
+    qrTapsSelf: "📱 coche lui-même sur son gsm — tu n’as rien à faire.",
     showBarList: "🍻 Liste pour le bar",
     hideBarList: "🍻 Masquer",
     nothingForMe: "rien ce tour-ci",
@@ -1901,6 +1905,9 @@ export default function PartyTest() {
   // knoppen bij. Alles komt uit de mand, dus er is geen aparte toestand te bewaren.
   const [standOpen, setStandOpen] = useState(false)
   const [barOpen, setBarOpen] = useState(false)
+  // Voor wie tik jij aan? Standaard jezelf; je kan wisselen naar iemand zonder gsm.
+  const [voorWieRaw, setVoorWieRaw] = useState<string | null>(null)
+  const voorWie = voorWieRaw && people.some((p) => p.id === voorWieRaw) ? voorWieRaw : meId
   const renderStandLijst = () => (
     <div style={{ marginTop: 9, display: "flex", flexDirection: "column", gap: 5 }}>
       {people.map((pp) => {
@@ -2885,7 +2892,10 @@ export default function PartyTest() {
   const heeftEigen = drinks.some((d) => d.cat === "Eigen")
   const catOrde: Cat[] = heeftEigen ? ["Eigen", ...CATS.filter((c) => c !== "Eigen")] : CATS
   const catsPresent = catOrde.filter((c) => c === "Eigen" || drinks.some((d) => d.cat === c))
-  const bump1 = (did: string) => bumpAnon(did, 1)
+  const bump1 = (did: string) => {
+    if (settle && voorWie) return bump(did, voorWie, 1)
+    return bumpAnon(did, 1)
+  }
   // Een drankje in één tik volledig uit de lopende bestelling halen — zowel de nog niet
   // toegewezen exemplaren als die al aan iemand hingen.
   const clearDrink = async (did: string) => {
@@ -2900,7 +2910,14 @@ export default function PartyTest() {
       await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: pid, p_drink: did, p_delta: -(n || 0) })
     }
   }
-  const bumpDown = (did: string) => { if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); return } const entry = cart[did]; if (!entry) return; const pid = Object.keys(entry).find((k) => (entry[k] ?? 0) > 0); if (pid) bump(did, pid, -1) }
+  const bumpDown = (did: string) => {
+    // In Fair Split haal je weg bij wie je op dat moment aantikt; anders eerst de nog
+    // niet toegewezen exemplaren, dan de rest.
+    if (settle && voorWie) { if ((cart[did]?.[voorWie] ?? 0) > 0) bump(did, voorWie, -1); return }
+    if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); return }
+    const entry = cart[did]; if (!entry) return
+    const pid = Object.keys(entry).find((k) => (entry[k] ?? 0) > 0); if (pid) bump(did, pid, -1)
+  }
   const firstUnassigned = () => drinks.find((d) => (cartAnon[d.id] ?? 0) > 0)
 
   const dropUnpaidRound = () => {
@@ -3227,7 +3244,8 @@ export default function PartyTest() {
   // ze onbekend, want hij spreekt voor de hele groep en wijst daarna toe.
   const applyVoice = async () => {
     for (const h of voiceHits) {
-      if (!isAdmin && meId) await bump(h.id, meId, h.qty)
+      const doel = (!isAdmin && meId) ? meId : (settle ? voorWie : null)
+      if (doel) await bump(h.id, doel, h.qty)
       else await bumpAnon(h.id, h.qty)
     }
     setVoiceOpen(false); setVoiceHits([]); setVoiceText("")
@@ -5612,6 +5630,31 @@ export default function PartyTest() {
                 <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
                   ▴ minder tonen
                 </span>
+              </div>
+            )}
+            {/* Voor wie tik je aan? Wie via de QR binnenkwam staat achteraan en gedimd:
+                die duidt normaal zelf aan. Aantikken kan wel, voor als er iets misloopt. */}
+            {settle && people.length > 0 && (
+              <div style={{ ...S.card, padding: "11px 12px", marginBottom: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "#8a7d55", marginBottom: 7 }}>{L.youTapFor}</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {[...people].sort((a, b) => Number(!!a.claimedBy) - Number(!!b.claimedBy)).map((pp) => {
+                    const aan = voorWie === pp.id
+                    const viaLink = !!pp.claimedBy && pp.id !== meId
+                    return (
+                      <button key={pp.id} onClick={() => setVoorWieRaw(pp.id)}
+                        style={{ borderRadius: 11, padding: "8px 12px", fontSize: 14.5, cursor: "pointer",
+                          fontWeight: aan ? 800 : 700,
+                          background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
+                          border: aan ? "none" : viaLink ? "1px solid rgba(120,95,20,0.18)" : "1.5px solid rgba(240,165,0,0.45)",
+                          color: aan ? "#4a3f1e" : viaLink ? "#a89a6f" : "#4a3f1e",
+                          opacity: aan ? 1 : viaLink ? 0.8 : 1 }}>
+                        {pp.id === meId ? "🙋 " : viaLink ? "📱 " : ""}{pp.name}
+                      </button>
+                    )
+                  })}
+                </div>
+                <div style={{ fontSize: 12, color: "#a89a6f", marginTop: 7, lineHeight: 1.45 }}>{L.qrTapsSelf}</div>
               </div>
             )}
             <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12 }}>
