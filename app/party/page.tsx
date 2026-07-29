@@ -3681,6 +3681,23 @@ export default function PartyTest() {
     setRepeated(true)
     setActiveCat(catsPresent[0])
     setView("order")
+    // En wegschrijven, want anders staat dit rondje alleen op jouw scherm: een gast zag
+    // een leeg rondje en kon dus niets bijsturen, en zijn eerste tik overschreef jouw
+    // kopie bij het volgende laden.
+    void (async () => {
+      const rid = await ensureRound(meId ?? null)
+      if (!rid || !groupId) return
+      for (const [did, per] of Object.entries(orders)) {
+        for (const [pid, q] of Object.entries(per)) {
+          if ((q || 0) > 0) await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: pid, p_drink: did, p_delta: q })
+        }
+      }
+      for (const [did, q] of Object.entries(anon)) {
+        if ((q || 0) > 0) await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: null, p_drink: did, p_delta: q })
+      }
+      await openAntwoordveld(rid)
+      loadParty(groupId)
+    })()
   }
 
   const roundKeyTotal = (r: Round) => drinks.reduce((s, d) => s + (Object.values(r.orders[d.id] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[d.id] ?? 0)) * priceOf(d), 0)
