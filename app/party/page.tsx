@@ -705,9 +705,13 @@ const T = {
     extrasLine: "⚙️ Extra’s — bekers, coins",
     oneCoinIs: "1 coin =",
     yourNameFirst: "Vul eerst je eigen naam in — anders weet niemand wie jij bent in de lijst.",
-    noRoundBody: "Wie een rondje start, gaat het ook halen.",
     laterLooking: "Later, ik kijk nog even",
-    bothYouFetch: "Bij allebei ga jij halen — en betaal jij dit rondje voor.",
+    youAdvance: "Jij schiet voor (of via de pot) — wordt achteraf verrekend in deze app",
+    youWalkTitle: "Jij neemt het rondje op",
+    walkStep1: "Je gaat de tafel rond, persoon per persoon",
+    walkStep2: "Jij tikt alle drankjes zelf aan",
+    walkStep3: "Daarna krijg je het barlijstje",
+    yesIWalk: "Ja, ik neem op →",
     potInPot: "💰 In de pot",
     waitTitle: "Je zit erbij — even wachten",
     waitForHost: (naam: string) => `Zodra ${naam || "de gastheer"} het bestellen opent, tik jij je eigen drankjes aan.`,
@@ -1263,9 +1267,13 @@ const T = {
     extrasLine: "⚙️ Extras — gobelets, coins",
     oneCoinIs: "1 coin =",
     yourNameFirst: "Entre d’abord ton propre nom — sinon personne ne sait qui tu es dans la liste.",
-    noRoundBody: "Celui qui lance une tournée va aussi la chercher.",
     laterLooking: "Plus tard, je regarde encore",
-    bothYouFetch: "Dans les deux cas c’est toi qui y vas — et qui avances cette tournée.",
+    youAdvance: "Tu avances (ou via la cagnotte) — tout est réglé ensuite dans l’appli",
+    youWalkTitle: "Tu prends la tournée",
+    walkStep1: "Tu fais le tour de la table, personne par personne",
+    walkStep2: "Tu coches toutes les boissons toi-même",
+    walkStep3: "Ensuite tu reçois la liste pour le bar",
+    yesIWalk: "Oui, je prends →",
     potInPot: "💰 Dans la cagnotte",
     waitTitle: "Tu es dans le groupe — un instant",
     waitForHost: (naam: string) => `Dès que ${naam || "l’hôte"} ouvre les commandes, tu coches tes propres boissons.`,
@@ -1890,6 +1898,7 @@ export default function PartyTest() {
   // Bevestigen vóór het starten: wie op "ik ga halen" tikt, zet daarmee de hele tafel in
   // beweging. Eén scherm met wat er gaat gebeuren, en een uitweg.
   const [startCheck, setStartCheck] = useState(false)
+  const [walkCheck, setWalkCheck] = useState(false)
   // De melding voor de anderen. We tonen ze één keer per rondje, aan iedereen behalve de
   // haler zelf — vandaar dat we onthouden welk rondje we al aankondigden.
   const [rondjeGemeld, setRondjeGemeld] = useState<string | null>(null)
@@ -2093,7 +2102,7 @@ export default function PartyTest() {
             <span style={{ display: "block", fontSize: 17, fontWeight: 800 }}>{L.roundTogether}</span>
             <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, opacity: 0.93, marginTop: 2 }}>{L.everyoneTapsOwn}</span>
           </button>
-          <button style={{ ...S.btn, width: "100%", padding: "13px 10px", cursor: "pointer" }} onClick={() => { void startAsRunner(); setWalkIdx(0) }}>
+          <button style={{ ...S.btn, width: "100%", padding: "13px 10px", cursor: "pointer" }} onClick={() => setWalkCheck(true)}>
             <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{L.roundWalkSelf}</span>
             <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#8a7d55", marginTop: 2 }}>{L.youTapForAll}</span>
           </button>
@@ -4447,15 +4456,13 @@ export default function PartyTest() {
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 30, marginBottom: 5 }}>🍻</div>
             <div style={{ fontSize: 17.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>{L.noRoundTitle}</div>
-            <div style={{ fontSize: 14.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>{L.noRoundBody}</div>
-            <button onClick={() => { setGeenRondje(false); setStartCheck(true) }} style={{ ...S.btnP, width: "100%", padding: "12px 0", fontSize: 15.5, fontWeight: 800, marginBottom: 8 }}>{L.roundTogether}</button>
-            <button onClick={() => { setGeenRondje(false); void startAsRunner(); setWalkIdx(0) }} style={{ ...S.btn, width: "100%", padding: "12px 0", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>{L.roundWalkSelf}</button>
-            {/* Wat er werkelijk op het spel staat: wie haalt, schiet ook voor. */}
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", background: "rgba(240,165,0,0.12)", borderRadius: 10, padding: "9px 11px", marginTop: 9, textAlign: "left" }}>
-              <span style={{ flexShrink: 0 }}>💡</span>
-              <span style={{ fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.45 }}>{L.bothYouFetch}</span>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", background: "rgba(240,165,0,0.13)", borderRadius: 11, padding: "10px 12px", marginBottom: 13, textAlign: "left" }}>
+              <span style={{ flexShrink: 0 }}>💰</span>
+              <span style={{ fontSize: 13.5, color: "#8a5e0f", lineHeight: 1.45 }}>{L.youAdvance}</span>
             </div>
-            <button onClick={() => setGeenRondje(false)} style={{ width: "100%", marginTop: 8, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(120,95,20,0.25)", color: "#8a7d55", borderRadius: 12, padding: "11px 0", fontSize: 14.5, fontWeight: 800 }}>{L.laterLooking}</button>
+            <button onClick={() => { setGeenRondje(false); setStartCheck(true) }} style={{ ...S.btnP, width: "100%", boxSizing: "border-box", padding: "13px 10px", fontSize: 15.5, fontWeight: 800, marginBottom: 8 }}>{L.roundTogether}</button>
+            <button onClick={() => { setGeenRondje(false); setWalkCheck(true) }} style={{ ...S.btn, width: "100%", boxSizing: "border-box", padding: "13px 10px", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>{L.roundWalkSelf}</button>
+            <button onClick={() => setGeenRondje(false)} style={{ width: "100%", boxSizing: "border-box", marginTop: 8, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(120,95,20,0.25)", color: "#8a7d55", borderRadius: 12, padding: "12px 10px", fontSize: 14.5, fontWeight: 800 }}>{L.laterLooking}</button>
           </div>
         </div>
       )}
@@ -4467,6 +4474,32 @@ export default function PartyTest() {
             <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.5, marginBottom: 15 }}>{L.reminderBody(runnerName())}</div>
             <button onClick={() => { setHerinnering(false); setGuestTab("order"); setActiveCat(catsPresent[0]) }} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 16.5, fontWeight: 800 }}>{L.reminderChoose}</button>
             <button onClick={() => { setHerinnering(false); void antwoordRondje("skip") }} style={{ width: "100%", marginTop: 9, background: "none", border: "none", cursor: "pointer", fontSize: 15, fontWeight: 700, color: "#a89a6f" }}>{L.nothingForMeBtn}</button>
+          </div>
+        </div>
+      )}
+      {walkCheck && (
+        <div style={{ ...S.overlay, zIndex: 74 }} onClick={() => setWalkCheck(false)}>
+          <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 30, marginBottom: 5 }}>✍️</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", marginBottom: 12 }}>{L.youWalkTitle}</div>
+            <div style={{ textAlign: "left", marginBottom: 13 }}>
+              {[L.walkStep1, L.walkStep2, L.walkStep3].map((t, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: i < 2 ? 9 : 0 }}>
+                  <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 17 }}>✓</span>
+                  <span style={{ fontSize: 16, color: "#4a3f1e", lineHeight: 1.45 }}>{t}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", background: "rgba(240,165,0,0.13)", borderRadius: 11, padding: "10px 12px", marginBottom: 13, textAlign: "left" }}>
+              <span style={{ flexShrink: 0 }}>💰</span>
+              <span style={{ fontSize: 13.5, color: "#8a5e0f", lineHeight: 1.45 }}>{L.youAdvance}</span>
+            </div>
+            <div style={{ display: "flex", gap: 9 }}>
+              <button onClick={() => setWalkCheck(false)}
+                style={{ flex: 1, minWidth: 0, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(120,95,20,0.3)", color: "#8a7d55", borderRadius: 12, padding: "13px 6px", fontSize: 15, fontWeight: 800 }}>{L.ratherNot}</button>
+              <button onClick={() => { setWalkCheck(false); void startAsRunner(); setWalkIdx(0) }}
+                style={{ ...S.btnP, flex: 1.6, minWidth: 0, padding: "13px 6px", fontSize: 15.5, fontWeight: 800 }}>{L.yesIWalk}</button>
+            </div>
           </div>
         </div>
       )}
@@ -4482,6 +4515,10 @@ export default function PartyTest() {
                   <span style={{ fontSize: 16, color: "#4a3f1e", lineHeight: 1.45 }}>{t}</span>
                 </div>
               ))}
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", background: "rgba(240,165,0,0.13)", borderRadius: 11, padding: "10px 12px", marginBottom: 13, textAlign: "left" }}>
+              <span style={{ flexShrink: 0 }}>💰</span>
+              <span style={{ fontSize: 13.5, color: "#8a5e0f", lineHeight: 1.45 }}>{L.youAdvance}</span>
             </div>
             <div style={{ display: "flex", gap: 9 }}>
               <button onClick={() => setStartCheck(false)}
