@@ -685,13 +685,11 @@ const T = {
     gFetchStep3: (naam: string) => `${naam} krijgt het barlijstje`,
     letsChoose: "Kiezen maar →",
     orderingOpen: "Het bestellen is open",
-    noRoundBusy: "Geen rondje bezig",
-    roundRunning: "Rondje bezig",
-    roundBusyBy: (naam: string) => `Rondje bezig — ${naam} haalt`,
     roundBusyYou: "Rondje bezig — jij gaat halen",
     roundBusyX: (naam: string) => `Rondje bezig — ${naam} gaat halen`,
     someChose: (n: number, t: number) => `${n} van ${t} pers. kozen al`,
     allChose: "Iedereen heeft gekozen",
+    pickBelow: "👇 Selecteer je drankjes",
     browseOnly: "Je kan de kaart bekijken. Start een rondje om te bestellen.",
     noRoundTitle: "Er loopt nog geen rondje",
     extrasLine: "⚙️ Extra’s — bekers, coins",
@@ -1245,13 +1243,11 @@ const T = {
     gFetchStep3: (naam: string) => `${naam} reçoit la liste pour le bar`,
     letsChoose: "C’est parti →",
     orderingOpen: "Les commandes sont ouvertes",
-    noRoundBusy: "Aucune tournée en cours",
-    roundRunning: "Tournée en cours",
-    roundBusyBy: (naam: string) => `Tournée en cours — ${naam} y va`,
     roundBusyYou: "Tournée en cours — tu y vas",
     roundBusyX: (naam: string) => `Tournée en cours — ${naam} y va`,
     someChose: (n: number, t: number) => `${n} sur ${t} pers. ont choisi`,
     allChose: "Tout le monde a choisi",
+    pickBelow: "👇 Choisis tes boissons",
     browseOnly: "Tu peux consulter la carte. Lance une tournée pour commander.",
     noRoundTitle: "Aucune tournée en cours",
     extrasLine: "⚙️ Extras — gobelets, coins",
@@ -2073,6 +2069,7 @@ export default function PartyTest() {
     )
   }
 
+  const mijnKeuze = meId ? drinks.reduce((a, d) => a + (cart[d.id]?.[meId] ?? 0), 0) : 0
   const alGekozen = people.filter((pp) => drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0) || openAnswers[pp.id] === "skip").length
   const renderRunnerBar = () => {
     const ikHaal = !!meId && startedBy === meId
@@ -2127,19 +2124,30 @@ export default function PartyTest() {
       // Iemand anders haalt. Informatie — overnemen mag, maar rustig.
       return (
         <div style={{ ...S.card, background: "#fff", border: `2px solid ${MODUS_FAIR.rand}`, boxShadow: `0 6px 18px -12px ${MODUS_FAIR.gloed}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 9 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 10 }}>
             <span style={{ flexShrink: 0, width: 38, height: 38, borderRadius: "50%", background: MODUS_FAIR.knop, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>{(runnerName() || "?").charAt(0).toUpperCase()}</span>
             <span style={{ minWidth: 0 }}>
               <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.roundBusyX(runnerName())}</span>
               <span style={{ display: "block", fontSize: 12.5, color: alGekozen >= people.length ? "#1f6b3a" : "#5a8f99", fontWeight: alGekozen >= people.length ? 800 : 400, marginTop: 1 }}>{alGekozen >= people.length ? `✓ ${L.allChose}` : L.someChose(alGekozen, people.length)}</span>
             </span>
           </div>
+          {/* Wat er van jou verwacht wordt, met de uitweg ernaast. Koos je al iets, dan is
+              die uitweg niet meer nodig. */}
+          {meId && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, paddingTop: 10 }}>
+              {openAnswers[meId] === "skip" && mijnKeuze === 0 ? (<>
+                <span style={{ fontSize: 14, color: "#8a7d55", minWidth: 0 }}>{L.youTakeNothing}</span>
+                <span onClick={() => antwoordRondje("different")} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", textDecoration: "underline" }}>{L.chooseAnyway}</span>
+              </>) : (<>
+                <span style={{ fontSize: 14, color: MODUS_FAIR.tekst, fontWeight: 700, minWidth: 0 }}>{L.pickBelow}</span>
+                {mijnKeuze === 0 && (
+                  <button onClick={() => antwoordRondje("skip")} style={{ flexShrink: 0, cursor: "pointer", border: "1.5px solid rgba(120,95,20,0.28)", background: "#fff", color: "#8a7d55", borderRadius: 9, padding: "7px 11px", fontSize: 13, fontWeight: 800, whiteSpace: "nowrap" }}>{L.nothingForMeBtn}</button>
+                )}
+              </>)}
+            </div>
+          )}
           {/* Dezelfde stand als de haler ziet, zonder zijn knoppen: ook jij wil weten of
               iedereen al gekozen heeft. */}
-          <button onClick={() => setStandOpen((v) => !v)} style={{ ...S.btn, width: "100%", fontSize: 14.5, fontWeight: 800, padding: "10px 8px" }}>{standOpen ? `${L.hideStand} ▴` : `${L.showStand} ▾`}</button>
-          {standOpen && renderStandLijst()}
-          <button onClick={() => setBarOpen((v) => !v)} style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14.5, fontWeight: 800, padding: "10px 8px" }}>{barOpen ? `${L.hideBarList} ▴` : `${L.showBarList} ▾`}</button>
-          {barOpen && renderBarLijst()}
         </div>
       )
     }
@@ -5051,31 +5059,9 @@ export default function PartyTest() {
         {guestTab === "order" && (
         <>
         {settle && renderRunnerBar()}
-        {/* Wie niets wil, hoeft niet te doen alsof. Zonder deze knop blijft hij eeuwig
-            "nog bezig" staan en wacht de haler op iemand die niets komt halen. */}
-        {settle && !!openRoundId && meId && (
-          openAnswers[meId] === "skip" && mijnAantal === 0 ? (
-            <div style={{ ...S.card, background: "rgba(120,95,20,0.05)", textAlign: "center", padding: "12px 14px" }}>
-              <span style={{ fontSize: 14.5, color: "#8a7d55" }}>{L.youTakeNothing} </span>
-              <span onClick={() => antwoordRondje("different")} style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", textDecoration: "underline" }}>{L.chooseAnyway}</span>
-            </div>
-          ) : mijnAantal === 0 ? (
-            <button onClick={() => antwoordRondje("skip")} style={{ ...S.btn, width: "100%", marginBottom: 10, fontSize: 15, fontWeight: 800, padding: "11px 8px", color: "#8a7d55" }}>{L.nothingForMeBtn}</button>
-          ) : null
-        )}
-        {renderProposalGuest()}
-        {/* Eén dunne balk in plaats van een kaart met uitleg: loopt er iets, en wie haalt.
-            Groen als er een rondje bezig is, grijs als je op de kaart zit te kijken. */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, borderRadius: 11, padding: "10px 12px", marginBottom: 10,
-          background: bezig ? MODUS_FAIR.tint : "rgba(240,165,0,0.13)", border: bezig ? "none" : "1px solid rgba(240,165,0,0.4)" }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 9, minWidth: 0 }}>
-            <span style={{ width: 9, height: 9, borderRadius: "50%", flexShrink: 0, background: bezig ? MODUS_FAIR.rand : "#c98a00" }} />
-            <span style={{ fontSize: 14.5, fontWeight: 800, color: bezig ? MODUS_FAIR.tekst : "#8a5e0f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {bezig ? (startedBy ? L.roundBusyBy(runnerName()) : L.roundRunning) : L.noRoundBusy}
-            </span>
-          </span>
-          {bezig && mijnAantal > 0 && <span style={{ ...S.pill, flexShrink: 0, background: "#1f8a4c", color: "#fff" }}>{mijnAantal}</span>}
-        </div>
+        {/* De losse "niets voor mij"-knop en de statusbalk stonden hier. Ze zitten nu in
+            de strook zelf: één kader met alles over dit rondje. */}
+
         {mijnAantal > 0 && (
           <div style={{ ...S.card, background: MODUS_FAIR.vlak }}>
             <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
