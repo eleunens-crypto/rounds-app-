@@ -420,12 +420,9 @@ const T = {
     youPaste: "Je plakt dit:",
     joinInviteShort: (naam: string) => `Doe je mee met ${naam || "ons rondje"}? Scan of tik:`,
     pasteAndShare: "Plak en deel in: WhatsApp · Messenger · sms · e-mail · …",
-    freeSeatsLine: (n: number) => `Nog ${n} vrije ${n === 1 ? "plaats" : "plaatsen"}. Wie scant, komt er meteen bij.`,
     addPersonBtn: "+ persoon",
-    personsWord: "personen",
     sectionGroup: "DE GROEP",
     sectionExtras: "EXTRA’S",
-    allTakenAddOne: "Iedereen is er. Komt er nog iemand bij? Zet het aantal één hoger — dan is er weer een plaats vrij.",
     startOrdering: "🍻 Beginnen met bestellen →",
     startOrderingSub: "Wie later scant, kan nog aansluiten",
     removeLastPerson: "Laatste persoon weghalen",
@@ -751,6 +748,10 @@ const T = {
     chooseHow: "Kies hoe je wil bestellen",
     tagline: "Rondjes opnemen en splitten zonder gedoe",
     youBadge: "JIJ",
+    howManyAreYou: "👥 Met hoeveel zijn jullie?",
+    freeToScan: (n: number) => `${n} ${n === 1 ? "plaats" : "plaatsen"} vrij om te scannen`,
+    nobodyCanScan: "Niemand kan nog scannen.",
+    nobodyCanScanSub: "Jij bent de enige plaats. Zet het aantal hoger.",
     orderWord: "Bestelling",
     howManyPeople: "Met hoeveel zijn jullie?",
     people: "pers.",
@@ -973,12 +974,9 @@ const T = {
     youPaste: "Tu colles ceci :",
     joinInviteShort: (naam: string) => `Tu viens à ${naam || "notre tournée"} ? Scanne ou touche :`,
     pasteAndShare: "Colle et partage dans : WhatsApp · Messenger · sms · e-mail · …",
-    freeSeatsLine: (n: number) => `Encore ${n} place${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"}. Qui scanne, arrive directement.`,
     addPersonBtn: "+ personne",
-    personsWord: "personnes",
     sectionGroup: "LE GROUPE",
     sectionExtras: "EXTRAS",
-    allTakenAddOne: "Tout le monde est là. Quelqu’un arrive encore ? Augmente le nombre d’un — une place se libère.",
     startOrdering: "🍻 Commencer à commander →",
     startOrderingSub: "Ceux qui scannent plus tard peuvent encore rejoindre",
     removeLastPerson: "Retirer la dernière personne",
@@ -1304,6 +1302,10 @@ const T = {
     chooseHow: "Choisissez comment commander",
     tagline: "Prendre les tournées et partager sans tracas",
     youBadge: "TOI",
+    howManyAreYou: "👥 Vous êtes combien ?",
+    freeToScan: (n: number) => `${n} place${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"} à scanner`,
+    nobodyCanScan: "Personne ne peut encore scanner.",
+    nobodyCanScanSub: "Tu es la seule place. Augmente le nombre.",
     orderWord: "Commande",
     howManyPeople: "Vous \u00eates combien ?",
     people: "pers.",
@@ -3149,11 +3151,31 @@ export default function PartyTest() {
   const renderShare = () => {
     if (!canShare) return null
     const vrij = people.filter((p) => !p.claimedBy).length
+    // Sta je er alleen op, dan is er geen plaats om te scannen — en dat merk je pas als
+    // niemand erbij raakt.
+    const alleen = people.length <= 1
     return (
-      <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.45)" }}>
-        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.letGuestsScan}</h3>
-        <div style={{ fontSize: 14, color: "#8a7d55", marginBottom: 12, lineHeight: 1.5 }}>
-          {vrij > 0 ? L.freeSeatsLine(vrij) : L.allTakenAddOne}
+      <div style={{ ...S.card, border: `1.5px solid ${MODUS_FAIR.randZacht}` }}>
+        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 11 }}>{L.letGuestsScan}</h3>
+        <div style={{ background: MODUS_FAIR.vlak, border: `1.5px solid ${alleen ? "rgba(224,104,92,0.5)" : MODUS_FAIR.randZacht}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 15, fontWeight: 800, color: MODUS_FAIR.tekst, minWidth: 0 }}>{L.howManyAreYou}</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 11, flexShrink: 0 }}>
+              <button onClick={removeLastPerson} disabled={busy || people.length <= 1} title={L.removeLastPerson}
+                style={{ ...S.step, width: 32, height: 32, fontSize: 18, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
+              <span style={{ fontSize: 19, fontWeight: 800, color: MODUS_FAIR.tekst, minWidth: 20, textAlign: "center" }}>{people.length}</span>
+              <button onClick={addPerson} disabled={busy} title={L.addPersonBtn}
+                style={{ ...S.step, width: 32, height: 32, fontSize: 18, background: MODUS_FAIR.knop, color: "#fff", border: "none" }}>+</button>
+            </span>
+          </div>
+          {alleen ? (
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(224,104,92,0.25)" }}>
+              <span style={{ flexShrink: 0 }}>⚠️</span>
+              <span style={{ fontSize: 13.5, color: "#b0402f", lineHeight: 1.45 }}><b>{L.nobodyCanScan}</b> {L.nobodyCanScanSub}</span>
+            </div>
+          ) : vrij > 0 ? (
+            <div style={{ fontSize: 13, color: "#1f6b3a", fontWeight: 800, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${MODUS_FAIR.lijnZacht}` }}>✓ {L.freeToScan(vrij)}</div>
+          ) : null}
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ display: "inline-block", background: "#fff", padding: 10, borderRadius: 14, border: "1px solid rgba(120,95,20,0.15)" }}>
@@ -3187,16 +3209,6 @@ export default function PartyTest() {
         <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 14, paddingTop: 12 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
             <span style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", minWidth: 0 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</span>
-            {/* Er komt er nog eentje bij: hier hoog je het aantal op, en dat maakt meteen
-                een vrije plaats die iemand kan scannen. */}
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
-              <span style={{ fontSize: 12.5, color: "#8a7d55", fontWeight: 700 }}>{L.personsWord}</span>
-              <button onClick={removeLastPerson} disabled={busy || people.length <= 1} title={L.removeLastPerson}
-                style={{ ...S.step, width: 30, height: 30, fontSize: 18, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
-              <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", minWidth: 18, textAlign: "center" }}>{people.length}</span>
-              <button onClick={addPerson} disabled={busy} title={L.addPersonBtn}
-                style={{ ...S.step, width: 30, height: 30, fontSize: 18, background: AAN, color: "#fff", border: "none" }}>+</button>
-            </span>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
             {people.map((p, idx) => {
