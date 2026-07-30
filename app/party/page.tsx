@@ -3197,7 +3197,7 @@ export default function PartyTest() {
                 style={{ ...S.step, width: 30, height: 30, fontSize: 18, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
               <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", minWidth: 18, textAlign: "center" }}>{people.length}</span>
               <button onClick={addPerson} disabled={busy} title={L.addPersonBtn}
-                style={{ ...S.step, width: 30, height: 30, fontSize: 18, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }}>+</button>
+                style={{ ...S.step, width: 30, height: 30, fontSize: 18, background: AAN, color: "#fff", border: "none" }}>+</button>
             </span>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
@@ -4075,6 +4075,9 @@ export default function PartyTest() {
   // De crèmekleurige vlakken van tegels, velden en pillen. In de QR-modus horen die koel
   // te zijn, anders blijft het scherm geel ogen ondanks alle randen.
   const koel = !!groupId && settle
+  // De kleur van alles wat "aan" of "gekozen" is. Stond overal los in de code op goud,
+  // waardoor vensters en tellers geel bleven in de QR-modus.
+  const AAN = koel ? MODUS_FAIR.knop : "linear-gradient(135deg,#f0a500,#e08a00)"
   const VLAK1 = koel ? "#f2fafb" : "#faf7ec"
   const VLAK2 = koel ? "#f7fcfd" : "#fdfaf2"
   const VLAK3 = koel ? "#e4f2f5" : "#f3ead2"
@@ -4090,7 +4093,7 @@ export default function PartyTest() {
     input: { border: "1px solid rgba(120,95,20,0.22)", borderRadius: 10, padding: "11px 12px", fontSize: 17, color: "#4a3f1e", outline: "none", width: 84, textAlign: "right" } as React.CSSProperties,
     seg: (on: boolean) => ({ flex: 1, textAlign: "center", padding: "11px 6px", borderRadius: 10, fontSize: 15.5, fontWeight: 800, cursor: "pointer", background: on ? (groupId && settle ? MODUS_FAIR.knop : "linear-gradient(135deg,#f0a500,#e08a00)") : (groupId && settle ? "#e4f2f5" : VLAK3), color: on ? "#fff" : (groupId && settle ? "#5a8f99" : "#8a7d55") } as React.CSSProperties),
     step: { width: 38, height: 38, borderRadius: 10, border: `1px solid ${groupId && settle ? "rgba(13,124,140,0.22)" : "rgba(120,95,20,0.18)"}`, background: groupId && settle ? "#e4f2f5" : VLAK3, color: groupId && settle ? MODUS_FAIR.tekst : "#8a5e0f", fontSize: 22, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
-    chip: (n: number) => ({ position: "relative", padding: "10px 14px", borderRadius: 20, fontSize: 16, fontWeight: 700, cursor: "pointer", userSelect: "none", border: n > 0 ? "1px solid rgba(240,165,0,0.5)" : "1px solid rgba(120,95,20,0.15)", background: n > 0 ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#faf4e4", color: n > 0 ? "#fff" : "#8a7d55" } as React.CSSProperties),
+    chip: (n: number) => ({ position: "relative", padding: "10px 14px", borderRadius: 20, fontSize: 16, fontWeight: 700, cursor: "pointer", userSelect: "none", border: n > 0 ? "1px solid rgba(240,165,0,0.5)" : "1px solid rgba(120,95,20,0.15)", background: n > 0 ? AAN : "#faf4e4", color: n > 0 ? "#fff" : "#8a7d55" } as React.CSSProperties),
     badge: { marginLeft: 5, background: "rgba(0,0,0,0.22)", borderRadius: 20, padding: "0 6px", fontSize: 13, fontWeight: 800 } as React.CSSProperties,
     pill: { fontSize: 13.5, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: "rgba(120,95,20,0.08)", color: "#8a7d55" } as React.CSSProperties,
     row: { display: "flex", alignItems: "center", gap: 10 } as React.CSSProperties,
@@ -4179,7 +4182,7 @@ export default function PartyTest() {
           <div style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700, marginBottom: 6 }}>{L.whoBoughtCard}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 10 }}>
             <span onClick={cardSelectAll} style={{ ...S.pill, cursor: "pointer", fontSize: 14.5, padding: "6px 12px", background: "rgba(31,138,76,0.14)", color: "#1f8a4c", fontWeight: 800, border: "1px dashed rgba(31,138,76,0.5)" }}>{L.everyone}</span>
-            {people.map((p) => { const on = cardPayers.includes(p.id); const amt = potDraft[p.id] || 0; return <span key={p.id} onClick={() => toggleCardPayer(p.id)} style={{ ...S.pill, cursor: "pointer", fontSize: 14.5, padding: "6px 12px", background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "rgba(240,165,0,0.1)", color: on ? "#fff" : "#8a5e0f", fontWeight: 700 }}>{p.name} {on ? euro(amt) : "€0"}</span> })}
+            {people.map((p) => { const on = cardPayers.includes(p.id); const amt = potDraft[p.id] || 0; return <span key={p.id} onClick={() => toggleCardPayer(p.id)} style={{ ...S.pill, cursor: "pointer", fontSize: 14.5, padding: "6px 12px", background: on ? AAN : "rgba(240,165,0,0.1)", color: on ? "#fff" : "#8a5e0f", fontWeight: 700 }}>{p.name} {on ? euro(amt) : "€0"}</span> })}
           </div>
           </>}
         </div>
@@ -4198,7 +4201,7 @@ export default function PartyTest() {
           <div style={{ ...S.row, gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
             {[5, 10, 20, 30].map((v) => {
               const on = everyoneChoice === v
-              return <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 15, background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: on ? "#fff" : "#4a3f1e", border: on ? "none" : "1px solid rgba(120,95,20,0.18)" }} onClick={() => { setEveryoneChoice(v); setEveryoneDraft(""); setEveryoneAmt(v) }}>€{v}</button>
+              return <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 15, background: on ? AAN : "#fff", color: on ? "#fff" : "#4a3f1e", border: on ? "none" : "1px solid rgba(120,95,20,0.18)" }} onClick={() => { setEveryoneChoice(v); setEveryoneDraft(""); setEveryoneAmt(v) }}>€{v}</button>
             })}
           </div>
           <div style={{ ...S.row, gap: 6, marginBottom: 10 }}>
@@ -4224,7 +4227,7 @@ export default function PartyTest() {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <button style={{ width: 34, height: 34, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 18, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
               <span style={{ fontSize: 20, fontWeight: 800, minWidth: 26, textAlign: "center", color: "#4a3f1e" }}>{headcount < 1 ? 1 : headcount}</span>
-              <button style={{ width: 34, height: 34, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 18, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 2 : n + 1)}>+</button>
+              <button style={{ width: 34, height: 34, borderRadius: 9, background: AAN, border: "none", fontSize: 18, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 2 : n + 1)}>+</button>
             </div>
           </div>
           <div style={{ ...S.row, gap: 8, marginBottom: 10 }}>
@@ -4235,7 +4238,7 @@ export default function PartyTest() {
           </div>
           <div style={{ ...S.row, gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
             {[5, 10, 20].map((v) => (
-              <button key={v} style={{ ...S.btn, flex: 1, padding: "8px 6px", fontSize: 15, fontWeight: 800, background: potPerMan === v ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff", color: potPerMan === v ? "#fff" : "#4a3f1e", border: potPerMan === v ? "none" : "1px solid rgba(120,95,20,0.18)" }} onClick={() => setPotPerMan(v)}>€{v}</button>
+              <button key={v} style={{ ...S.btn, flex: 1, padding: "8px 6px", fontSize: 15, fontWeight: 800, background: potPerMan === v ? AAN : "#fff", color: potPerMan === v ? "#fff" : "#4a3f1e", border: potPerMan === v ? "none" : "1px solid rgba(120,95,20,0.18)" }} onClick={() => setPotPerMan(v)}>€{v}</button>
             ))}
             <button style={{ ...S.btn, padding: "8px 11px", fontSize: 14, color: "#c0554a" }} onClick={() => setPotPerMan(0)}>↺</button>
           </div>
@@ -4461,7 +4464,7 @@ export default function PartyTest() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 22, marginBottom: 18 }}>
               <button style={{ width: 44, height: 44, borderRadius: 12, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 23, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
               <span style={{ fontSize: 30, fontWeight: 800, minWidth: 44, textAlign: "center", color: headcount < 1 ? "#c4b896" : "#4a3f1e" }}>{headcount < 1 ? "—" : headcount}</span>
-              <button style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 23, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 1 : n + 1)}>+</button>
+              <button style={{ width: 44, height: 44, borderRadius: 12, background: AAN, border: "none", fontSize: 23, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 1 : n + 1)}>+</button>
             </div>
             <button style={S.btnP} onClick={() => setShowPeoplePop(false)}>{L.ready}</button>
           </div>
@@ -4571,7 +4574,7 @@ export default function PartyTest() {
           ) : (
             <button style={{ flex: 1.2, padding: "11px 4px", fontSize: 15, fontWeight: 800, borderRadius: 10, cursor: "pointer",
               border: view === "roundsOverview" ? "none" : "1px solid rgba(120,95,20,0.25)",
-              background: view === "roundsOverview" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff",
+              background: view === "roundsOverview" ? AAN : "#fff",
               color: view === "roundsOverview" ? "#fff" : "#8a7d55" }}
               onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } if (rounds.length >= 1) { setOverviewBackTo(view === "order" ? "order" : "hub"); setView("roundsOverview") } else setNotice(L.noRoundsYet) }}>{L.roundsOverviewBtn}</button>
           )}
@@ -4584,7 +4587,7 @@ export default function PartyTest() {
             ) : (
               <button style={{ flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 700, borderRadius: 10, cursor: "pointer",
                 border: view === "quickSettle" ? "none" : "1px solid rgba(120,95,20,0.25)",
-                background: view === "quickSettle" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff",
+                background: view === "quickSettle" ? AAN : "#fff",
                 color: view === "quickSettle" ? "#fff" : "#8a7d55" }}
                 onClick={goQuickSettle}>{L.quickSettleTitle}</button>
             )
@@ -5527,7 +5530,7 @@ export default function PartyTest() {
             <span style={{ display: "inline-flex", alignItems: "center", gap: 11, flexShrink: 0 }}>
               <button style={{ ...S.step, width: 32, height: 32, fontSize: 18, opacity: people.length > 0 ? 1 : 0.4 }} onClick={removeLastPerson}>−</button>
               <span style={{ fontSize: 19, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#4a3f1e" }}>{people.length}</span>
-              <button style={{ ...S.step, width: 32, height: 32, fontSize: 18, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={addPerson}>+</button>
+              <button style={{ ...S.step, width: 32, height: 32, fontSize: 18, background: AAN, color: "#fff", border: "none" }} onClick={addPerson}>+</button>
             </span>
           </div>
           <div style={{ fontSize: 14.5, color: "#5f5432", lineHeight: 1.45, marginBottom: 11 }}>📱 {L.peopleIntro()}</div>
@@ -5643,7 +5646,7 @@ export default function PartyTest() {
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <button style={{ ...S.step, opacity: people.length > 0 ? 1 : 0.4 }} onClick={removeLastPerson}>−</button>
               <span style={{ fontSize: 19, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{people.length}</span>
-              <button style={{ ...S.step, background: "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", border: "none" }} onClick={addPerson}>+</button>
+              <button style={{ ...S.step, background: AAN, color: "#fff", border: "none" }} onClick={addPerson}>+</button>
             </div>
           </div>
           {people.length > 0 && (
@@ -5719,7 +5722,7 @@ export default function PartyTest() {
         <div style={{ marginBottom: 0 }}>
           <h3 style={{ ...S.h3, margin: 0, fontSize: 15.5, lineHeight: 1.3, textAlign: "center" }}>{L.coinsTitle} <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
           <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "center" }}>
-            <div onClick={() => { const on = pay !== "coin"; setPay(on ? "coin" : "eur"); setDepositUnit(on ? "coin" : "eur") }} style={{ width: 44, height: 26, borderRadius: 20, background: pay === "coin" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#d9cdb0", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
+            <div onClick={() => { const on = pay !== "coin"; setPay(on ? "coin" : "eur"); setDepositUnit(on ? "coin" : "eur") }} style={{ width: 44, height: 26, borderRadius: 20, background: pay === "coin" ? AAN : "#d9cdb0", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
               <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: pay === "coin" ? 21 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
             </div>
           </div>
@@ -6325,7 +6328,7 @@ export default function PartyTest() {
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <button style={{ width: 30, height: 30, borderRadius: 8, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", fontSize: 16, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: (r?.headcount || 1) > 1 ? 1 : 0.4 }}
                     onClick={() => r && setRoundHeadcount(r.id, Math.max(1, (r.headcount || 1) - 1))}>−</button>
-                  <button style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 16, color: "#fff", fontWeight: 800, cursor: "pointer" }}
+                  <button style={{ width: 30, height: 30, borderRadius: 8, background: AAN, border: "none", fontSize: 16, color: "#fff", fontWeight: 800, cursor: "pointer" }}
                     onClick={() => r && setRoundHeadcount(r.id, (r.headcount || 1) + 1)}>+</button>
                 </div>
               </div>
@@ -6345,7 +6348,7 @@ export default function PartyTest() {
               )}
               <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
                 <button style={{ flex: 1, padding: "10px 6px", fontSize: 14.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
-                  background: payVia === "self" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f7f1e2",
+                  background: payVia === "self" ? AAN : "#f7f1e2",
                   color: payVia === "self" ? "#fff" : "#8a7d55", border: "none" }}
                   onClick={() => setPayVia("self")}>💶 {L.paidSelf}</button>
                 <button style={{ flex: 1, padding: "10px 6px", fontSize: 14.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
@@ -6839,7 +6842,7 @@ export default function PartyTest() {
                     <button style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 9, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: deelAantal > 1 ? 1 : 0.4 }}
                       onClick={() => setSplitPeople(Math.max(1, deelAantal - 1))}>−</button>
                     <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f", textAlign: "center" }}>{L.splitOver} 👤 {deelAantal} {L.people}</span>
-                    <button style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
+                    <button style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 9, background: AAN, border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
                       onClick={() => setSplitPeople(deelAantal + 1)}>+</button>
                   </div>
                   <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)", textAlign: "center" }}>
@@ -7087,7 +7090,7 @@ export default function PartyTest() {
                               <button style={{ width: 30, height: 30, borderRadius: 8, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 16, color: "#8a7d55", fontWeight: 800, cursor: "pointer" }}
                                 onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, drinks: { ...c.drinks, [d.id]: Math.max(0, (c.drinks[d.id] ?? n) - 1) } } : c) }}>−</button>
                               <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00", minWidth: 28, textAlign: "center" }}>{val}×</span>
-                              <button style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 16, color: "#fff", fontWeight: 800, cursor: "pointer" }}
+                              <button style={{ width: 30, height: 30, borderRadius: 8, background: AAN, border: "none", fontSize: 16, color: "#fff", fontWeight: 800, cursor: "pointer" }}
                                 onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, drinks: { ...c.drinks, [d.id]: (c.drinks[d.id] ?? n) + 1 } } : c) }}>+</button>
                             </span>
                           ) : (
@@ -7105,7 +7108,7 @@ export default function PartyTest() {
                           <button style={{ width: 32, height: 32, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 17, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: dr.headcount > 1 ? 1 : 0.4 }}
                             onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: Math.max(1, c.headcount - 1) } : c) }}>−</button>
                           <span style={{ fontSize: 18, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#4a3f1e" }}>{dr.headcount}</span>
-                          <button style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
+                          <button style={{ width: 32, height: 32, borderRadius: 9, background: AAN, border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
                             onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: c.headcount + 1 } : c) }}>+</button>
                         </div>
                       ) : (
@@ -7123,7 +7126,7 @@ export default function PartyTest() {
                           </div>
                           <div style={{ display: "flex", gap: 6 }}>
                             <button onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, usePot: false } : c) }}
-                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 13.5, fontWeight: 800, border: "none", cursor: "pointer", background: !uitPot ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f7f1e2", color: !uitPot ? "#fff" : "#8a7d55" }}>💶 {L.paidSelf}</button>
+                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 13.5, fontWeight: 800, border: "none", cursor: "pointer", background: !uitPot ? AAN : "#f7f1e2", color: !uitPot ? "#fff" : "#8a7d55" }}>💶 {L.paidSelf}</button>
                             <button onClick={(e) => { e.stopPropagation(); if (!potLeeg) setEditDraft((c) => c ? { ...c, usePot: true } : c) }}
                               style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 13.5, fontWeight: 800, border: "none", cursor: potLeeg ? "not-allowed" : "pointer", opacity: potLeeg ? 0.5 : 1, background: uitPot ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#f7f1e2", color: uitPot ? "#fff" : "#8a7d55" }}>🫙 {L.paidPot}<span style={{ fontWeight: 800, opacity: uitPot ? 1 : 0.75 }}> · {potLeeg ? L.emptyWord : euro(Math.max(0, potAvailFor(idx)))}</span></button>
                           </div>
@@ -7305,7 +7308,7 @@ export default function PartyTest() {
                 {/* Twee keuzes naast elkaar; dat de pot nog verdeeld moet worden, blijkt
                     uit het feit dat deze knoppen er staan. Een zin erbij is dubbelop. */}
                 <div style={{ display: "flex", gap: 7 }}>
-                  <button style={{ flex: 1, background: "linear-gradient(135deg,#f0a500,#e08a00)", border: "none", borderRadius: 9, padding: "9px 6px", fontSize: 13, fontWeight: 800, color: "#fff", cursor: "pointer" }}
+                  <button style={{ flex: 1, background: AAN, border: "none", borderRadius: 9, padding: "9px 6px", fontSize: 13, fontWeight: 800, color: "#fff", cursor: "pointer" }}
                     onClick={verdeelPotOverNamen}>{L.splitEvenShort(people.length)}</button>
                   <button style={{ flex: 1, background: "#fff", border: "1px solid rgba(240,165,0,0.6)", borderRadius: 9, padding: "9px 6px", fontSize: 13, fontWeight: 800, color: "#8a5e0f", cursor: "pointer" }}
                     onClick={() => { const per = potContribTotal / Math.max(1, people.length); const n: Record<string, number> = {}; people.forEach((p) => { n[p.id] = Math.round(per * 100) / 100 }); setPotNames(n) }}>{L.perPersonShort}</button>
