@@ -697,9 +697,12 @@ const T = {
     extrasLine: "⚙️ Extra’s — bekers, coins",
     oneCoinIs: "1 coin =",
     yourNameFirst: "Vul eerst je eigen naam in — anders weet niemand wie jij bent in de lijst.",
-    noRoundBody: "Start er eentje, dan kan iedereen aantikken wat hij wil.",
+    noRoundBody: "Wie een rondje start, gaat het ook halen.",
+    laterLooking: "Later, ik kijk nog even",
+    bothYouFetch: "Bij allebei ga jij halen — en betaal jij dit rondje voor.",
     potInPot: "💰 In de pot",
-    waitForHost: (naam: string) => `Je zit erbij. Zodra ${naam || "de gastheer"} het bestellen opent, kan je aantikken wat je wil.`,
+    waitTitle: "Je zit erbij — even wachten",
+    waitForHost: (naam: string) => `Zodra ${naam || "de gastheer"} het bestellen opent, tik jij je eigen drankjes aan.`,
     openStep1: "Vanaf nu kan er besteld worden",
     openStep2: "Wie gaat halen, tikt dat aan boven de drankjes",
     openStep3: "Daarna tikt iedereen aan wat hij wil",
@@ -747,7 +750,8 @@ const T = {
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe je wil bestellen",
     tagline: "Rondjes opnemen en splitten zonder gedoe",
-    showToFriend: "📱 Komt er nog iemand? Laat deze scannen",
+    showToFriend: "📱 QR-code van de groep",
+    shareWithMore: "Deel gerust met wie er nog wil bijkomen",
     youBadge: "JIJ",
     howManyAreYou: "👥 Met hoeveel zijn jullie?",
     freeToScan: (n: number) => `${n} ${n === 1 ? "plaats" : "plaatsen"} vrij om te scannen`,
@@ -1252,9 +1256,12 @@ const T = {
     extrasLine: "⚙️ Extras — gobelets, coins",
     oneCoinIs: "1 coin =",
     yourNameFirst: "Entre d’abord ton propre nom — sinon personne ne sait qui tu es dans la liste.",
-    noRoundBody: "Lances-en une, et chacun pourra cocher ce qu’il veut.",
+    noRoundBody: "Celui qui lance une tournée va aussi la chercher.",
+    laterLooking: "Plus tard, je regarde encore",
+    bothYouFetch: "Dans les deux cas c’est toi qui y vas — et qui avances cette tournée.",
     potInPot: "💰 Dans la cagnotte",
-    waitForHost: (naam: string) => `Tu es dans le groupe. Dès que ${naam || "l’hôte"} ouvre les commandes, tu peux cocher ce que tu veux.`,
+    waitTitle: "Tu es dans le groupe — un instant",
+    waitForHost: (naam: string) => `Dès que ${naam || "l’hôte"} ouvre les commandes, tu coches tes propres boissons.`,
     openStep1: "À partir de maintenant on peut commander",
     openStep2: "Celui qui y va le signale au-dessus des boissons",
     openStep3: "Ensuite chacun coche ce qu’il veut",
@@ -1302,7 +1309,8 @@ const T = {
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
     tagline: "Prendre les tournées et partager sans tracas",
-    showToFriend: "📱 Quelqu’un arrive encore ? Fais scanner ceci",
+    showToFriend: "📱 QR-code du groupe",
+    shareWithMore: "Partage-le avec qui veut encore se joindre",
     youBadge: "TOI",
     howManyAreYou: "👥 Vous êtes combien ?",
     freeToScan: (n: number) => `${n} place${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"} à scanner`,
@@ -2748,12 +2756,26 @@ export default function PartyTest() {
       if (wachtOpScans.current) { laatsteActie.current = Date.now(); return }
       if (Date.now() - laatsteActie.current >= SLAAP_MS) setSlaapt(true)
     }
-    const actief = () => { laatsteActie.current = Date.now(); setSlaapt((a) => (a ? false : a)) }
+    const wakker = () => {
+      // Bijwerken zodra je terug bent: tijdens de slaapstand luistert de app niet mee,
+      // dus je zou anders op het beeld van minuten geleden blijven staan.
+      if (groupId) loadParty(groupId)
+      setSlaapt(false)
+    }
+    const actief = () => {
+      const sliep = Date.now() - laatsteActie.current >= SLAAP_MS
+      laatsteActie.current = Date.now()
+      if (sliep) wakker()
+      else setSlaapt((a) => (a ? false : a))
+    }
+    const zichtbaar = () => { if (document.visibilityState === "visible") { laatsteActie.current = Date.now(); wakker() } }
+    document.addEventListener("visibilitychange", zichtbaar)
     const evts: (keyof WindowEventMap)[] = ["pointerdown", "keydown", "scroll", "touchstart"]
     evts.forEach((e) => window.addEventListener(e, actief, { passive: true }))
     const iv = setInterval(kijk, 20 * 1000)
     return () => {
       clearInterval(iv)
+      document.removeEventListener("visibilitychange", zichtbaar)
       evts.forEach((e) => window.removeEventListener(e, actief))
     }
   }, [groupId])
@@ -4405,7 +4427,13 @@ export default function PartyTest() {
             <div style={{ fontSize: 17.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>{L.noRoundTitle}</div>
             <div style={{ fontSize: 14.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 14 }}>{L.noRoundBody}</div>
             <button onClick={() => { setGeenRondje(false); setStartCheck(true) }} style={{ ...S.btnP, width: "100%", padding: "12px 0", fontSize: 15.5, fontWeight: 800, marginBottom: 8 }}>{L.roundTogether}</button>
-            <button onClick={() => { setGeenRondje(false); setWalkIdx(0) }} style={{ ...S.btn, width: "100%", padding: "12px 0", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>{L.roundWalkSelf}</button>
+            <button onClick={() => { setGeenRondje(false); void startAsRunner(); setWalkIdx(0) }} style={{ ...S.btn, width: "100%", padding: "12px 0", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>{L.roundWalkSelf}</button>
+            {/* Wat er werkelijk op het spel staat: wie haalt, schiet ook voor. */}
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", background: "rgba(240,165,0,0.12)", borderRadius: 10, padding: "9px 11px", marginTop: 9, textAlign: "left" }}>
+              <span style={{ flexShrink: 0 }}>💡</span>
+              <span style={{ fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.45 }}>{L.bothYouFetch}</span>
+            </div>
+            <button onClick={() => setGeenRondje(false)} style={{ width: "100%", marginTop: 8, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(120,95,20,0.25)", color: "#8a7d55", borderRadius: 12, padding: "11px 0", fontSize: 14.5, fontWeight: 800 }}>{L.laterLooking}</button>
           </div>
         </div>
       )}
@@ -4427,9 +4455,9 @@ export default function PartyTest() {
             <div style={{ fontSize: 18.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 12 }}>{L.youFetchTitle}</div>
             <div style={{ textAlign: "left", marginBottom: 14 }}>
               {[L.fetchStep1, L.fetchStep2, L.fetchStep3].map((t, i) => (
-                <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", marginBottom: i < 2 ? 7 : 0 }}>
-                  <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>
-                  <span style={{ fontSize: 14.5, color: "#4a3f1e", lineHeight: 1.45 }}>{t}</span>
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: i < 2 ? 9 : 0 }}>
+                  <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 17 }}>✓</span>
+                  <span style={{ fontSize: 16, color: "#4a3f1e", lineHeight: 1.45 }}>{t}</span>
                 </div>
               ))}
             </div>
@@ -4452,9 +4480,9 @@ export default function PartyTest() {
               {(rondjeMelding
                 ? [L.gFetchStep1, L.gFetchStep2, L.gFetchStep3(rondjeMelding)]
                 : [L.openStep1, L.openStep2, L.openStep3]).map((t, i) => (
-                <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", marginBottom: i < 2 ? 7 : 0 }}>
-                  <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>
-                  <span style={{ fontSize: 14.5, color: "#4a3f1e", lineHeight: 1.45 }}>{t}</span>
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: i < 2 ? 9 : 0 }}>
+                  <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 17 }}>✓</span>
+                  <span style={{ fontSize: 16, color: "#4a3f1e", lineHeight: 1.45 }}>{t}</span>
                 </div>
               ))}
             </div>
@@ -4802,15 +4830,19 @@ export default function PartyTest() {
               )
             })}
           </div>
-          <div style={{ display: "flex", gap: 10, alignItems: "flex-start", background: MODUS_FAIR.tint, borderRadius: 12, padding: 12 }}>
-            <span style={{ flexShrink: 0, fontSize: 18 }}>⏳</span>
-            <span style={{ fontSize: 14.5, color: MODUS_FAIR.tekst, lineHeight: 1.45 }}>{L.waitForHost(gastheer?.name ?? "")}</span>
+          <div style={{ display: "flex", gap: 11, alignItems: "flex-start", background: MODUS_FAIR.tint, borderRadius: 13, padding: 14 }}>
+            <span style={{ flexShrink: 0, fontSize: 22 }}>⏳</span>
+            <span style={{ minWidth: 0 }}>
+              <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: MODUS_FAIR.tekst, lineHeight: 1.3 }}>{L.waitTitle}</span>
+              <span style={{ display: "block", fontSize: 15, color: MODUS_FAIR.tekst, lineHeight: 1.45, marginTop: 4 }}>{L.waitForHost(gastheer?.name ?? "")}</span>
+            </span>
           </div>
           {/* Is er nog plaats, toon dan de QR ook hier: dan kan jij een vriend laten
               scannen zonder dat de gastheer met zijn toestel moet rondgaan. */}
           {inviteLink && people.some((p) => !p.claimedBy) && (
             <div style={{ borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, marginTop: 13, paddingTop: 12, textAlign: "center" }}>
-              <div style={{ fontSize: 13.5, fontWeight: 800, color: MODUS_FAIR.tekst, marginBottom: 8 }}>{L.showToFriend}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: MODUS_FAIR.tekst, marginBottom: 2 }}>{L.showToFriend}</div>
+              <div style={{ fontSize: 12.5, color: "#5a8f99", marginBottom: 9 }}>{L.shareWithMore}</div>
               <div style={{ display: "inline-block", background: "#fff", padding: 9, borderRadius: 13, border: `1px solid ${MODUS_FAIR.lijnZacht}` }}>
                 <QRCodeSVG value={inviteLink} size={112} bgColor="#ffffff" fgColor={MODUS_FAIR.tekst} />
               </div>
@@ -4915,6 +4947,17 @@ export default function PartyTest() {
               })}
             </div>
             <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", marginTop: 12, lineHeight: 1.5 }}>{L.inviteMore}</div>
+            {/* Ook hier de QR, zolang er plaats is: dan kan een gast zelf iemand laten
+                aansluiten zonder de gastheer erbij te halen. */}
+            {inviteLink && people.some((p) => !p.claimedBy) && (
+              <div style={{ borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, marginTop: 13, paddingTop: 12, textAlign: "center" }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: MODUS_FAIR.tekst, marginBottom: 2 }}>{L.showToFriend}</div>
+                <div style={{ fontSize: 12.5, color: "#5a8f99", marginBottom: 9 }}>{L.shareWithMore}</div>
+                <div style={{ display: "inline-block", background: "#fff", padding: 9, borderRadius: 13, border: `1px solid ${MODUS_FAIR.lijnZacht}` }}>
+                  <QRCodeSVG value={inviteLink} size={112} bgColor="#ffffff" fgColor={MODUS_FAIR.tekst} />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -6045,9 +6088,9 @@ export default function PartyTest() {
                     style={{ opacity: settle && !bezig ? 0.55 : 1, cursor: settle && !bezig ? "pointer" : "default", padding: "10px 10px", borderRadius: 12, background: tot > 0 ? "rgba(31,138,76,0.08)" : "#faf4e4", border: tot > 0 ? "1.5px solid rgba(31,138,76,0.5)" : "1px solid rgba(120,95,20,0.1)", boxShadow: tot > 0 ? "0 0 0 3px rgba(31,138,76,0.1)" : "none" }}>
                     <div style={{ fontSize: 15.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
                     <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
-                      <button style={{ ...S.step, opacity: tot > 0 ? 1 : 0.4 }} disabled={settle && !bezig} onClick={() => bumpDown(d.id)}>−</button>
+                      <button style={{ ...S.step, opacity: tot > 0 ? 1 : 0.4 }} onClick={() => { if (settle && !bezig) { setGeenRondje(true); return } bumpDown(d.id) }}>−</button>
                       <span style={{ fontSize: 18, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}{settle && voorWie && tafel > tot ? <span style={{ fontSize: 12, color: "#a89a6f", fontWeight: 700 }}>/{tafel}</span> : null}</span>
-                      <button style={S.step} disabled={settle && !bezig} onClick={() => bump1(d.id)}>+</button>
+                      <button style={S.step} onClick={() => { if (settle && !bezig) { setGeenRondje(true); return } bump1(d.id) }}>+</button>
                     </div>
                   </div>
                 )
