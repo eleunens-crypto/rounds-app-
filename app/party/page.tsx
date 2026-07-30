@@ -747,6 +747,7 @@ const T = {
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe je wil bestellen",
     tagline: "Rondjes opnemen en splitten zonder gedoe",
+    showToFriend: "📱 Komt er nog iemand? Laat deze scannen",
     youBadge: "JIJ",
     howManyAreYou: "👥 Met hoeveel zijn jullie?",
     freeToScan: (n: number) => `${n} ${n === 1 ? "plaats" : "plaatsen"} vrij om te scannen`,
@@ -1301,6 +1302,7 @@ const T = {
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
     tagline: "Prendre les tournées et partager sans tracas",
+    showToFriend: "📱 Quelqu’un arrive encore ? Fais scanner ceci",
     youBadge: "TOI",
     howManyAreYou: "👥 Vous êtes combien ?",
     freeToScan: (n: number) => `${n} place${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"} à scanner`,
@@ -4754,8 +4756,24 @@ export default function PartyTest() {
       <div style={{ ...S.wrap, maxWidth: 430 }}>
         {renderDialogs()}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: MODUS_FAIR.knop, borderRadius: "14px 14px 0 0", padding: "9px 13px", marginBottom: 12 }}>
-          <span style={{ fontSize: 14.5, fontWeight: 800, color: "#fff" }}>⚖️ {L.modeFairShort}</span>
-          <span style={{ fontSize: 12.5, color: "rgba(255,255,255,0.92)" }}>{L.youAre} {ik?.name}</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+            <GsmIcoon size={18} kleur="#fff" dof />
+            <GsmIcoon size={22} kleur="#fff" qr />
+            <span style={{ fontSize: 14.5, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.modeFairShort}</span>
+          </span>
+          <span style={{ flexShrink: 0, fontSize: 12.5, color: "rgba(255,255,255,0.92)" }}>{L.youAre} {ik?.name}</span>
+        </div>
+        {/* Dezelfde kop als op het startscherm: zo weet je dat je in Rundo zit en niet op
+            een of andere losse pagina. */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 14 }}>
+          <div style={{ ...S.row, gap: 10 }}>
+            <RundoLogo size={40} />
+            <div style={{ ...S.h1, fontSize: 23, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
+          </div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 7 }}>
+            <KlinkIcoon size={24} />
+            <span style={{ fontSize: 13.5, color: "#5a8f99", lineHeight: 1.4 }}>{L.tagline}</span>
+          </div>
         </div>
         <div style={{ ...S.card }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, marginBottom: 11 }}>
@@ -4788,6 +4806,16 @@ export default function PartyTest() {
             <span style={{ flexShrink: 0, fontSize: 18 }}>⏳</span>
             <span style={{ fontSize: 14.5, color: MODUS_FAIR.tekst, lineHeight: 1.45 }}>{L.waitForHost(gastheer?.name ?? "")}</span>
           </div>
+          {/* Is er nog plaats, toon dan de QR ook hier: dan kan jij een vriend laten
+              scannen zonder dat de gastheer met zijn toestel moet rondgaan. */}
+          {inviteLink && people.some((p) => !p.claimedBy) && (
+            <div style={{ borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, marginTop: 13, paddingTop: 12, textAlign: "center" }}>
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: MODUS_FAIR.tekst, marginBottom: 8 }}>{L.showToFriend}</div>
+              <div style={{ display: "inline-block", background: "#fff", padding: 9, borderRadius: 13, border: `1px solid ${MODUS_FAIR.lijnZacht}` }}>
+                <QRCodeSVG value={inviteLink} size={112} bgColor="#ffffff" fgColor={MODUS_FAIR.tekst} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
