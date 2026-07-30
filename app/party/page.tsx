@@ -33,6 +33,16 @@ function KlinkIcoon({ size = 32, kleur = "#eab117" }: { size?: number; kleur?: s
 // scherm (de gast scant), of leeg en doorschijnend voor de twee kleintjes ernaast.
 // Getekend in plaats van een emoji, zodat hij de kleur van de modus overneemt en op elk
 // toestel hetzelfde oogt.
+function KroonIcoon({ size = 15, kleur = "#0a6070" }: { size?: number; kleur?: string }) {
+  return (
+    <svg viewBox="0 0 24 20" width={size} height={size * 0.83} fill="none" stroke={kleur}
+      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path d="M3 15.5 2 5.5l5.5 4L12 3l4.5 6.5L22 5.5l-1 10z" />
+      <path d="M3 18.5h18" />
+    </svg>
+  )
+}
+
 function GsmIcoon({ size = 44, kleur = "#4a3f1e", lijnen = false, qr = false, dof = false }:
   { size?: number; kleur?: string; lijnen?: boolean; qr?: boolean; dof?: boolean }) {
   return (
@@ -366,12 +376,12 @@ const T = {
     groupTitle: "👥 In deze groep",
     peopleN: (n: number) => `${n} ${n === 1 ? "persoon" : "personen"}`,
     joinedOfTotal: (a: number, b: number) => `${a} van ${b} aangemeld`,
-    hostMark: "👑 organisator",
+    hostMark: "organisator",
     startNotAll: (n: number, t: number) => `${n} van ${t} nog niet aangemeld. Toch beginnen?`,
     startWait: "Nog even wachten",
     startAnyway: "Toch beginnen",
     scannedSelf: "📱 zelf aangemeld",
-    youMark: "⭐ jij",
+    youMark: "jij",
     notScannedYet: "nog niet aangemeld",
     inviteMore: "Nodig meer mensen uit — laat ze de code scannen.",
     roundWhatYouWant: (n: number) => `🛒 Ronde ${n} — wat jij wil`,
@@ -924,12 +934,12 @@ const T = {
     groupTitle: "👥 Dans ce groupe",
     peopleN: (n: number) => `${n} ${n === 1 ? "personne" : "personnes"}`,
     joinedOfTotal: (a: number, b: number) => `${a} sur ${b} inscrits`,
-    hostMark: "👑 organisateur",
+    hostMark: "organisateur",
     startNotAll: (n: number, t: number) => `${n} sur ${t} pas encore inscrits. Commencer quand même ?`,
     startWait: "Attendre encore",
     startAnyway: "Commencer",
     scannedSelf: "📱 inscrit",
-    youMark: "⭐ toi",
+    youMark: "toi",
     notScannedYet: "pas encore inscrit",
     inviteMore: "Invite plus de monde — fais scanner le code.",
     roundWhatYouWant: (n: number) => `🛒 Tournée ${n} — ce que tu veux`,
@@ -2734,6 +2744,8 @@ export default function PartyTest() {
     setConfirmDlg({
       msg: L.delGroupConfirm(g.name || L.autoName()),
       yes: L.delGroupYes, no: L.cancel, variant: "danger",
+      // Zonder eigen tekst zou hier "Terug, rondje afmaken" staan — dat slaat nergens op
+      // wanneer je een groep wist.
       onYes: async () => {
         setConfirmDlg(null)
         const { error } = await supabase.from("party_groups").delete().eq("id", g.id)
@@ -4381,7 +4393,7 @@ export default function PartyTest() {
             <p style={{ fontSize: 15.5, color: "#4a3f1e", lineHeight: 1.55, marginBottom: 16, whiteSpace: "pre-line" }}>{confirmDlg.msg}</p>
             {confirmDlg.variant === "danger" ? (
               <>
-                <button style={{ ...S.btnP, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", boxShadow: "none" }} onClick={() => setConfirmDlg(null)}>{L.backFinish}</button>
+                <button style={{ ...S.btnP, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", boxShadow: "none" }} onClick={() => setConfirmDlg(null)}>{confirmDlg.no ?? L.backFinish}</button>
                 <button style={{ background: "none", border: "none", width: "100%", marginTop: 10, fontSize: 14.5, color: "#c0554a", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
               </>
             ) : (
@@ -4835,7 +4847,7 @@ export default function PartyTest() {
                   background: isHost ? "rgba(240,165,0,0.14)" : isIk ? "rgba(31,138,76,0.14)" : p.claimedBy ? "rgba(31,138,76,0.08)" : "transparent",
                   border: leeg ? "1px dashed rgba(120,95,20,0.28)" : "none",
                   color: isHost ? "#8a5e0f" : p.claimedBy || p.named ? "#1f6b3a" : "#a89a6f" }}>
-                  {isHost ? "👑 " : isIk ? "⭐ " : p.claimedBy ? "📱 " : ""}{leeg ? L.seat(p.seat) : p.name}
+                  {isHost ? <><KroonIcoon size={12} kleur="#8a5e0f" />{" "}</> : isIk ? "● " : p.claimedBy ? "📱 " : ""}{leeg ? L.seat(p.seat) : p.name}
                 </span>
               )
             })}
@@ -5698,7 +5710,7 @@ export default function PartyTest() {
                 {mijnPlaats && (
                   <div style={{ background: VLAK1, borderRadius: 10, padding: "10px 11px", marginBottom: geclaimd.length || wachtend.length ? 8 : 0, border: "1px solid rgba(31,138,76,0.25)" }}>
                     <div style={{ ...S.row, gap: 8 }}>
-                      <span style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(31,138,76,0.15)", color: "#1f6b3a", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>⭐</span>
+                      <span style={{ width: 26, height: 26, borderRadius: "50%", background: MODUS_FAIR.tint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><KroonIcoon size={14} kleur={MODUS_FAIR.tekst} /></span>
                       <input value={isGuestDefault(mijnPlaats.name) ? "" : mijnPlaats.name}
                         placeholder={L.yourNamePh}
                         onChange={(e) => renamePerson(mijnPlaats.id, e.target.value === "" ? `Gast ${mijnIdx + 1}` : e.target.value)}
@@ -6019,7 +6031,7 @@ export default function PartyTest() {
                           border: aan ? "none" : viaLink ? "1px solid rgba(120,95,20,0.18)" : "1.5px solid rgba(240,165,0,0.45)",
                           color: aan ? "#4a3f1e" : viaLink ? "#a89a6f" : "#4a3f1e",
                           opacity: aan ? 1 : viaLink ? 0.8 : 1 }}>
-                        {pp.id === meId ? "👑 " : viaLink ? "📱 " : ""}{pp.name}{pp.id === meId ? <span style={{ opacity: 0.75, fontSize: 11, marginLeft: 4 }}>{L.youBadge}</span> : null}
+                        {pp.id === meId ? <KroonIcoon size={13} kleur={aan ? "#4a3f1e" : MODUS_FAIR.tekst} /> : viaLink ? "📱 " : ""}{pp.id === meId ? " " : ""}{pp.name}{pp.id === meId ? <span style={{ opacity: 0.75, fontSize: 11, marginLeft: 4 }}>{L.youBadge}</span> : null}
                       </button>
                     )
                   })}
