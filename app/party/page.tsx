@@ -736,17 +736,16 @@ const T = {
     notMeRunner: "geef door",
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
     modeTitle: "Iedereen tikt zelf aan",
-    modeTitleSub2: "Achteraf betaalt ieder volgens wat hij dronk",
+    modeTitleSub2: "Betaalt eerlijk volgens wat hij of zij dronk",
     modeQuick: "Ik bestel voor de groep",
     modeQuickSub: "Jij tikt zelf alle drankjes aan.",
     modeQuickSub2: "Meteen een handig bestellijstje",
     whatIsThis: "Wat is dit?",
-    modeQuickLead: "DE SNELSTE",
-    modeFairLead: "DE EERLIJKSTE",
     modeQuickWhat: "Geen namen nodig: je tikt gewoon aan wat er besteld wordt en je krijgt een barlijstje. Achteraf verdeel je gelijk, of alsnog eerlijk per persoon.",
     modeFairWhat: "Jouw drankjes, jouw bedrag. Geen oneerlijke gelijke verdeling maar betalen volgens wat je dronk — de app rekent het uit.",
     orWord: "of",
-    modeFairSub: "Iedereen scant de QR en duidt aan wat hij drinkt.",
+    modeFairSub: "Iedereen scant de QR",
+    modeFairSub2: "Duidt aan wat hij of zij drinkt",
     modeFairLine: "Eerlijk betalen volgens wat je dronk",
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe je wil bestellen",
@@ -1290,17 +1289,16 @@ const T = {
     notMeRunner: "passer",
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
     modeTitle: "Chacun coche lui-même",
-    modeTitleSub2: "Ensuite chacun paie selon ce qu’il a bu",
+    modeTitleSub2: "Paie équitablement selon ce qu’il ou elle a bu",
     modeQuick: "Je commande pour le groupe",
     modeQuickSub: "Tu coches toutes les boissons toi-même.",
     modeQuickSub2: "Direct une liste pratique pour le bar",
     whatIsThis: "C’est quoi ?",
-    modeQuickLead: "LE PLUS RAPIDE",
-    modeFairLead: "LE PLUS ÉQUITABLE",
     modeQuickWhat: "Pas besoin de noms : tu coches simplement ce qui est commandé et tu reçois une liste pour le bar. Ensuite tu partages à parts égales, ou équitablement par personne.",
     modeFairWhat: "Tes boissons, ton montant. Pas de partage égal injuste mais payer selon ce que tu as bu — l’appli le calcule.",
     orWord: "ou",
-    modeFairSub: "Chacun scanne le QR et coche ce qu’il boit.",
+    modeFairSub: "Chacun scanne le QR",
+    modeFairSub2: "Coche ce qu’il ou elle boit",
     modeFairLine: "Payer équitablement selon ce que tu as bu",
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
@@ -5097,6 +5095,12 @@ export default function PartyTest() {
                 style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "16px 14px 14px", border: "none", cursor: "pointer",
                   borderBottom: `1px solid ${MODUS_SNEL.lijnZacht}`,
                   background: bpSettle === false ? MODUS_SNEL.vlak : "linear-gradient(180deg,#fdfcfa,#fff)" }}>
+                {/* Gekozen of niet: een gevuld rondje met vinkje tegenover een leeg rondje.
+                    Samen lezen de twee kaarten zo als één keuze. */}
+                <span style={{ position: "absolute", top: 9, left: 9, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, pointerEvents: "none",
+                  background: bpSettle === false ? MODUS_SNEL.rand : "transparent",
+                  border: bpSettle === false ? "none" : `2px solid ${MODUS_SNEL.lijnZacht}`,
+                  color: "#fff" }}>{bpSettle === false ? "✓" : ""}</span>
                 {/* De uitleg zit in de hoek van de kaart in plaats van naast de titel. Zo heeft
                     de titel de volle breedte en staat hij echt gecentreerd. Uitklappen zet de
                     modus ook aan: een kaart die opengaat maar bleek blijft, oogt stuk. */}
@@ -5109,15 +5113,27 @@ export default function PartyTest() {
                   <GsmIcoon size={46} kleur={MODUS_SNEL.rand} lijnen />
                 </span>
                 <span style={{ display: "block", fontSize: 24, fontWeight: 800, color: "#3d3418", lineHeight: 1.14, letterSpacing: -0.4 }}>{L.modeQuick}</span>
-                <span style={{ display: "block", fontSize: 17, color: "#6b5f3a", lineHeight: 1.4, marginTop: 9 }}>{L.modeQuickSub}</span>
-                <span style={{ display: "block", fontSize: 17, color: "#7a6d45", lineHeight: 1.4, marginTop: 4 }}>{L.modeQuickSub2}</span>
-                {bpSettle === false && <span style={{ display: "block", color: MODUS_SNEL.rand, fontWeight: 800, fontSize: 20, marginTop: 6 }}>✓</span>}
+                {/* Gekozen of niet: een gevuld rondje met vinkje tegenover een leeg rondje.
+                    Samen lezen de twee kaarten zo als één keuze. */}
+                <span style={{ position: "absolute", top: 9, left: 9, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, pointerEvents: "none",
+                  background: bpSettle === true ? MODUS_FAIR.rand : "transparent",
+                  border: bpSettle === true ? "none" : `2px solid ${MODUS_FAIR.lijnZacht}`,
+                  color: "#fff" }}>{bpSettle === true ? "✓" : ""}</span>
+                {/* Een lijstje met vinkjes leest sneller dan twee losse zinnen: je ziet in
+                    één oogopslag hoeveel stappen erbij komen kijken. */}
+                <span style={{ display: "block", textAlign: "left", marginTop: 11, paddingLeft: 6 }}>
+                  {[L.modeQuickSub, L.modeQuickSub2].map((t, i) => (
+                    <span key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i === 0 ? 5 : 0 }}>
+                      <span style={{ flexShrink: 0, color: MODUS_SNEL.rand, fontWeight: 800, fontSize: 15 }}>✓</span>
+                      <span style={{ fontSize: 16, color: "#6b5f3a", lineHeight: 1.4 }}>{t}</span>
+                    </span>
+                  ))}
+                </span>
               </button>
               {modeInfo === "quick" && (
               <div style={{ padding: "0 16px 14px", background: bpSettle === false ? MODUS_SNEL.vlak : "#fff" }}>
                 <div style={{ borderTop: `1px solid ${bpSettle === false ? MODUS_SNEL.streep : MODUS_SNEL.lijnZacht}`, paddingTop: 11 }}>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: MODUS_SNEL.tekst, letterSpacing: "0.08em", marginBottom: 7 }}>⚡ {L.modeQuickLead}</div>
                   <div style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
                     <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: MODUS_SNEL.tint, color: MODUS_SNEL.tekst, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, fontStyle: "italic" }}>i</span>
                     <span style={{ fontSize: 14.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeQuickWhat}</span>
@@ -5180,15 +5196,19 @@ export default function PartyTest() {
                   <GsmIcoon size={29} kleur={MODUS_FAIR.rand} dof />
                 </span>
                 <span style={{ display: "block", fontSize: 24, fontWeight: 800, color: "#3d3418", lineHeight: 1.14, letterSpacing: -0.4 }}>{L.modeTitle}</span>
-                <span style={{ display: "block", fontSize: 17, color: "#6b5f3a", lineHeight: 1.4, marginTop: 9 }}>{L.modeFairSub}</span>
-                <span style={{ display: "block", fontSize: 17, color: "#7a6d45", lineHeight: 1.4, marginTop: 4 }}>{L.modeTitleSub2}</span>
-                {bpSettle === true && <span style={{ display: "block", color: MODUS_FAIR.rand, fontWeight: 800, fontSize: 20, marginTop: 6 }}>✓</span>}
+                <span style={{ display: "block", textAlign: "left", marginTop: 11, paddingLeft: 6 }}>
+                  {[L.modeFairSub, L.modeFairSub2, L.modeTitleSub2].map((t, i) => (
+                    <span key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i < 2 ? 5 : 0 }}>
+                      <span style={{ flexShrink: 0, color: MODUS_FAIR.rand, fontWeight: 800, fontSize: 15 }}>✓</span>
+                      <span style={{ fontSize: 16, color: "#6b5f3a", lineHeight: 1.4 }}>{t}</span>
+                    </span>
+                  ))}
+                </span>
               </button>
               {modeInfo === "fair" && (
               <div style={{ padding: "0 16px 14px", background: bpSettle === true ? MODUS_FAIR.vlak : "#fff" }}>
                 <div style={{ borderTop: `1px solid ${bpSettle === true ? MODUS_FAIR.streep : MODUS_FAIR.lijnZacht}`, paddingTop: 11 }}>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: MODUS_FAIR.tekst, letterSpacing: "0.08em", marginBottom: 7 }}>⚖️ {L.modeFairLead}</div>
                   <div style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
                     <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: MODUS_FAIR.tint, color: MODUS_FAIR.tekst, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, fontStyle: "italic" }}>i</span>
                     <span style={{ fontSize: 14.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeFairWhat}</span>
