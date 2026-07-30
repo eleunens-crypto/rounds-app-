@@ -752,6 +752,7 @@ const T = {
     tagline: "Rondjes opnemen en splitten zonder gedoe",
     showToFriend: "📱 QR-code van de groep",
     shareWithMore: "Deel gerust met wie er nog wil bijkomen",
+    seatsFullGuest: "Alle plaatsen zijn bezet — de gastheer kan er eentje bijzetten.",
     youBadge: "JIJ",
     howManyAreYou: "👥 Met hoeveel zijn jullie?",
     freeToScan: (n: number) => `${n} ${n === 1 ? "plaats" : "plaatsen"} vrij om te scannen`,
@@ -1311,6 +1312,7 @@ const T = {
     tagline: "Prendre les tournées et partager sans tracas",
     showToFriend: "📱 QR-code du groupe",
     shareWithMore: "Partage-le avec qui veut encore se joindre",
+    seatsFullGuest: "Toutes les places sont prises — l’hôte peut en ajouter une.",
     youBadge: "TOI",
     howManyAreYou: "👥 Vous êtes combien ?",
     freeToScan: (n: number) => `${n} place${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"} à scanner`,
@@ -4839,13 +4841,18 @@ export default function PartyTest() {
           </div>
           {/* Is er nog plaats, toon dan de QR ook hier: dan kan jij een vriend laten
               scannen zonder dat de gastheer met zijn toestel moet rondgaan. */}
-          {inviteLink && people.some((p) => !p.claimedBy) && (
+          {inviteLink && (
             <div style={{ borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, marginTop: 13, paddingTop: 12, textAlign: "center" }}>
               <div style={{ fontSize: 14, fontWeight: 800, color: MODUS_FAIR.tekst, marginBottom: 2 }}>{L.showToFriend}</div>
               <div style={{ fontSize: 12.5, color: "#5a8f99", marginBottom: 9 }}>{L.shareWithMore}</div>
               <div style={{ display: "inline-block", background: "#fff", padding: 9, borderRadius: 13, border: `1px solid ${MODUS_FAIR.lijnZacht}` }}>
                 <QRCodeSVG value={inviteLink} size={112} bgColor="#ffffff" fgColor={MODUS_FAIR.tekst} />
               </div>
+              {/* Zit alles vol, dan levert scannen niets op — maar de code verbergen laat je
+                  in het ongewisse. Beter zeggen wat er moet gebeuren. */}
+              {!people.some((p) => !p.claimedBy) && (
+                <div style={{ fontSize: 12.5, color: "#8a5e0f", background: "rgba(240,165,0,0.12)", borderRadius: 10, padding: "8px 11px", marginTop: 9, lineHeight: 1.45 }}>{L.seatsFullGuest}</div>
+              )}
             </div>
           )}
         </div>
@@ -4949,13 +4956,18 @@ export default function PartyTest() {
             <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", marginTop: 12, lineHeight: 1.5 }}>{L.inviteMore}</div>
             {/* Ook hier de QR, zolang er plaats is: dan kan een gast zelf iemand laten
                 aansluiten zonder de gastheer erbij te halen. */}
-            {inviteLink && people.some((p) => !p.claimedBy) && (
+            {inviteLink && (
               <div style={{ borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, marginTop: 13, paddingTop: 12, textAlign: "center" }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: MODUS_FAIR.tekst, marginBottom: 2 }}>{L.showToFriend}</div>
                 <div style={{ fontSize: 12.5, color: "#5a8f99", marginBottom: 9 }}>{L.shareWithMore}</div>
                 <div style={{ display: "inline-block", background: "#fff", padding: 9, borderRadius: 13, border: `1px solid ${MODUS_FAIR.lijnZacht}` }}>
                   <QRCodeSVG value={inviteLink} size={112} bgColor="#ffffff" fgColor={MODUS_FAIR.tekst} />
                 </div>
+                {/* Zit alles vol, dan levert scannen niets op — maar de code verbergen laat je
+                    in het ongewisse. Beter zeggen wat er moet gebeuren. */}
+                {!people.some((p) => !p.claimedBy) && (
+                  <div style={{ fontSize: 12.5, color: "#8a5e0f", background: "rgba(240,165,0,0.12)", borderRadius: 10, padding: "8px 11px", marginTop: 9, lineHeight: 1.45 }}>{L.seatsFullGuest}</div>
+                )}
               </div>
             )}
           </div>
