@@ -751,6 +751,7 @@ const T = {
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe je wil bestellen",
     tagline: "Rondjes opnemen en splitten zonder gedoe",
+    youBadge: "JIJ",
     orderWord: "Bestelling",
     howManyPeople: "Met hoeveel zijn jullie?",
     people: "pers.",
@@ -1304,6 +1305,7 @@ const T = {
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
     tagline: "Prendre les tournées et partager sans tracas",
+    youBadge: "TOI",
     orderWord: "Commande",
     howManyPeople: "Vous \u00eates combien ?",
     people: "pers.",
@@ -1950,7 +1952,7 @@ export default function PartyTest() {
                 <button key={pp.id} onClick={() => setWalkIdx(i)}
                   style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 13px", borderRadius: 20, cursor: "pointer",
                     fontSize: 15, fontWeight: 800,
-                    background: geselecteerd ? "#e08a00" : "#faf7ec",
+                    background: geselecteerd ? "#e08a00" : VLAK1,
                     color: geselecteerd ? "#fff" : "#4a3f1e",
                     border: geselecteerd ? "2px solid #e08a00" : "1.5px solid rgba(120,95,20,0.18)" }}>
                   {pp.id === meId ? "⭐ " : ""}{pp.name}
@@ -1972,7 +1974,7 @@ export default function PartyTest() {
               return (
                 <button key={d.id} onClick={() => bump(d.id, p.id, 1)}
                   style={{ position: "relative", textAlign: "left", padding: "11px 12px", borderRadius: 10, cursor: "pointer",
-                    background: n > 0 ? "rgba(31,138,76,0.1)" : "#faf7ec",
+                    background: n > 0 ? "rgba(31,138,76,0.1)" : VLAK1,
                     border: n > 0 ? "1.5px solid rgba(31,138,76,0.4)" : "1px solid rgba(120,95,20,0.12)" }}>
                   <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a3f1e" }}>{d.emoji} {d.name}</span>
                   {n > 0 && (
@@ -3171,7 +3173,7 @@ export default function PartyTest() {
               style={{ ...S.btn, flex: 1, fontWeight: 800, padding: "12px 8px" }}>{L.addNonScanner}</button>
           )}
         </div>
-        <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "flex-start", background: "#faf7ec", border: "1px solid rgba(120,95,20,0.18)", borderRadius: 10, padding: "9px 11px" }}>
+        <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "flex-start", background: VLAK1, border: "1px solid rgba(120,95,20,0.18)", borderRadius: 10, padding: "9px 11px" }}>
           <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#8a7d55" }}>{L.linkLabel}</span>
           <span style={{ fontSize: 12.5, color: "#8a7d55", wordBreak: "break-all", lineHeight: 1.4 }}>{inviteLink}</span>
         </div>
@@ -3315,7 +3317,7 @@ export default function PartyTest() {
               <div style={{ fontSize: 13, color: "#8a7d55", marginBottom: 9, lineHeight: 1.45 }}>{L.removeHint}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {mijne.map((c) => (
-                  <div key={c.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 11px", borderRadius: 10, background: "#faf7ec", border: "1px solid rgba(120,95,20,0.12)" }}>
+                  <div key={c.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 11px", borderRadius: 10, background: VLAK1, border: "1px solid rgba(120,95,20,0.12)" }}>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>⭐ {c.name}</span>
                     <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700, flexShrink: 0 }}>{euro(Number(c.price))}</span>
                     <button onClick={() => removeCustomDrink(c.key, c.name)} aria-label={L.removeWord}
@@ -3392,7 +3394,7 @@ export default function PartyTest() {
           ) : (
             <>
               {voiceText && (
-                <div style={{ background: "#faf7ec", border: "1px solid rgba(120,95,20,0.12)", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+                <div style={{ background: VLAK1, border: "1px solid rgba(120,95,20,0.12)", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
                   <div style={{ fontSize: 13, color: "#8a7d55", marginBottom: 3 }}>{L.voiceHeard}</div>
                   <div style={{ fontSize: 15.5, fontStyle: "italic", color: "#6b5f3a" }}>&ldquo;{voiceText}&rdquo;</div>
                 </div>
@@ -3846,7 +3848,7 @@ export default function PartyTest() {
             const a = answers[p.id]
             const label = a === "same" ? L.ansSame : a === "different" ? L.ansDiff : a === "skip" ? L.ansSkip : L.ansWaiting
             const kleur = a === "same" ? "#1f6b3a" : a === "different" ? "#8a5e0f" : a === "skip" ? "#a89a6f" : "#b3a988"
-            const bg = a ? "#faf7ec" : "#fff"
+            const bg = a ? VLAK1 : "#fff"
             return (
               <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, background: bg, border: "1px solid rgba(120,95,20,0.12)" }}>
                 <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a3f1e" }}>{p.name}</span>
@@ -4070,6 +4072,12 @@ export default function PartyTest() {
     return parts.join(" + ")
   }
 
+  // De crèmekleurige vlakken van tegels, velden en pillen. In de QR-modus horen die koel
+  // te zijn, anders blijft het scherm geel ogen ondanks alle randen.
+  const koel = !!groupId && settle
+  const VLAK1 = koel ? "#f2fafb" : "#faf7ec"
+  const VLAK2 = koel ? "#f7fcfd" : "#fdfaf2"
+  const VLAK3 = koel ? "#e4f2f5" : "#f3ead2"
   const S = {
     page: { minHeight: "100vh", background: groupId ? (settle ? MODUS_FAIR.bladzij : MODUS_SNEL.bladzij) : "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
     wrap: { maxWidth: 560, margin: "0 auto", padding: "16px 16px" } as React.CSSProperties,
@@ -4077,16 +4085,16 @@ export default function PartyTest() {
     h1: { fontSize: 23, fontWeight: 800, margin: "0 0 2px" } as React.CSSProperties,
     h3: { fontSize: 17.5, fontWeight: 800, margin: "0 0 10px" } as React.CSSProperties,
     sub: { fontSize: 15.5, color: "#8a7d55", margin: "0 0 12px", lineHeight: 1.55 } as React.CSSProperties,
-    btn: { border: "1px solid rgba(120,95,20,0.18)", background: "#fff", color: "#4a3f1e", borderRadius: 12, padding: "12px 16px", fontSize: 16, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
+    btn: { border: `1px solid ${groupId && settle ? "rgba(13,124,140,0.24)" : "rgba(120,95,20,0.18)"}`, background: "#fff", color: groupId && settle ? MODUS_FAIR.tekst : "#4a3f1e", borderRadius: 12, padding: "12px 16px", fontSize: 16, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
     btnP: { border: "none", background: groupId && settle ? MODUS_FAIR.knop : "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 14, padding: "16px 18px", fontSize: 18, fontWeight: 800, cursor: "pointer", width: "100%", boxShadow: groupId && settle ? `0 4px 12px -4px ${MODUS_FAIR.gloed}` : "0 4px 12px -4px rgba(224,138,0,0.6)" } as React.CSSProperties,
     input: { border: "1px solid rgba(120,95,20,0.22)", borderRadius: 10, padding: "11px 12px", fontSize: 17, color: "#4a3f1e", outline: "none", width: 84, textAlign: "right" } as React.CSSProperties,
-    seg: (on: boolean) => ({ flex: 1, textAlign: "center", padding: "11px 6px", borderRadius: 10, fontSize: 15.5, fontWeight: 800, cursor: "pointer", background: on ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f3ead2", color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
-    step: { width: 38, height: 38, borderRadius: 10, border: `1px solid ${groupId && settle ? "rgba(13,124,140,0.22)" : "rgba(120,95,20,0.18)"}`, background: groupId && settle ? "#e4f2f5" : "#f3ead2", color: groupId && settle ? MODUS_FAIR.tekst : "#8a5e0f", fontSize: 22, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
+    seg: (on: boolean) => ({ flex: 1, textAlign: "center", padding: "11px 6px", borderRadius: 10, fontSize: 15.5, fontWeight: 800, cursor: "pointer", background: on ? (groupId && settle ? MODUS_FAIR.knop : "linear-gradient(135deg,#f0a500,#e08a00)") : (groupId && settle ? "#e4f2f5" : VLAK3), color: on ? "#fff" : (groupId && settle ? "#5a8f99" : "#8a7d55") } as React.CSSProperties),
+    step: { width: 38, height: 38, borderRadius: 10, border: `1px solid ${groupId && settle ? "rgba(13,124,140,0.22)" : "rgba(120,95,20,0.18)"}`, background: groupId && settle ? "#e4f2f5" : VLAK3, color: groupId && settle ? MODUS_FAIR.tekst : "#8a5e0f", fontSize: 22, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
     chip: (n: number) => ({ position: "relative", padding: "10px 14px", borderRadius: 20, fontSize: 16, fontWeight: 700, cursor: "pointer", userSelect: "none", border: n > 0 ? "1px solid rgba(240,165,0,0.5)" : "1px solid rgba(120,95,20,0.15)", background: n > 0 ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#faf4e4", color: n > 0 ? "#fff" : "#8a7d55" } as React.CSSProperties),
     badge: { marginLeft: 5, background: "rgba(0,0,0,0.22)", borderRadius: 20, padding: "0 6px", fontSize: 13, fontWeight: 800 } as React.CSSProperties,
     pill: { fontSize: 13.5, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: "rgba(120,95,20,0.08)", color: "#8a7d55" } as React.CSSProperties,
     row: { display: "flex", alignItems: "center", gap: 10 } as React.CSSProperties,
-    tab: (on: boolean) => ({ padding: "9px 14px", borderRadius: 20, fontSize: 15.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", background: on ? "#4a3f1e" : "#f3ead2", color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
+    tab: (on: boolean) => ({ padding: "9px 14px", borderRadius: 20, fontSize: 15.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", background: on ? "#4a3f1e" : VLAK3, color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
     overlay: { position: "fixed", inset: 0, background: "rgba(40,30,5,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 14 } as React.CSSProperties,
     sheet: { background: "#fff", borderRadius: 20, padding: 20, width: "100%", maxWidth: 460, maxHeight: "86vh", overflowY: "auto", boxShadow: "0 10px 40px rgba(0,0,0,0.25)" } as React.CSSProperties,
   }
@@ -4668,7 +4676,7 @@ export default function PartyTest() {
                         <button key={p.id} disabled={busy || !klaar}
                           onClick={() => { if (!klaar) { setNotice(L.fillNameFirst); return } claimSeat(p.id, gastNaam.trim()) }}
                           style={{ ...S.btn, padding: "13px 8px", fontWeight: 800, cursor: klaar ? "pointer" : "default",
-                            background: klaar ? MODUS_FAIR.knop : "#faf7ec",
+                            background: klaar ? MODUS_FAIR.knop : VLAK1,
                             border: klaar ? "none" : "1px solid rgba(120,95,20,0.18)",
                             color: klaar ? "#fff" : "#c4b896",
                             boxShadow: klaar ? `0 10px 24px -8px ${MODUS_FAIR.gloed}, 0 0 0 4px ${MODUS_FAIR.tint}` : "none",
@@ -4822,7 +4830,7 @@ export default function PartyTest() {
                 const isHost = !!ownerDevice && p.claimedBy === ownerDevice
                 return (
                   <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10,
-                    background: benIkHet ? "rgba(31,138,76,0.08)" : "#faf7ec",
+                    background: benIkHet ? "rgba(31,138,76,0.08)" : VLAK1,
                     border: benIkHet ? "1px solid rgba(31,138,76,0.3)" : "1px solid rgba(120,95,20,0.1)" }}>
                     <span style={{ fontSize: 15.5, fontWeight: benIkHet ? 800 : 700, color: p.named ? "#4a3f1e" : "#b3a988" }}>
                       {p.name}
@@ -5001,7 +5009,7 @@ export default function PartyTest() {
               return (
                 <div key={d.id} onClick={() => { if (!bezig) setGeenRondje(true) }}
                   style={{ padding: "10px", borderRadius: 12, cursor: bezig ? "default" : "pointer", opacity: bezig ? 1 : 0.55,
-                    background: n > 0 ? MODUS_FAIR.tint : "#faf7ec", border: n > 0 ? `1.5px solid ${MODUS_FAIR.randZacht}` : "1px solid rgba(120,95,20,0.1)" }}>
+                    background: n > 0 ? MODUS_FAIR.tint : VLAK1, border: n > 0 ? `1.5px solid ${MODUS_FAIR.randZacht}` : "1px solid rgba(120,95,20,0.1)" }}>
                   <div style={{ fontSize: 15.5, fontWeight: n > 0 ? 800 : 600, color: n > 0 ? MODUS_FAIR.tekst : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
                   {bezig && (
                     <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
@@ -5112,9 +5120,9 @@ export default function PartyTest() {
                     <span style={{ fontSize: 14.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeQuickWhat}</span>
                   </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                    <span style={{ background: "#faf7ec", borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
-                    <span style={{ background: "#faf7ec", borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
-                    <span style={{ background: "#faf7ec", borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
+                    <span style={{ background: VLAK1, borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
+                    <span style={{ background: VLAK1, borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
+                    <span style={{ background: VLAK1, borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
                   </div>
                   <div style={{ borderTop: `1px solid ${MODUS_SNEL.lijn}`, paddingTop: 9 }}>
                     <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 {L.orderWord}</div>
@@ -5271,7 +5279,7 @@ export default function PartyTest() {
               </div>
               {groepenOpen && (<>
               {savedGroups.length > 4 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#faf7ec", border: "1px solid rgba(120,95,20,0.18)", borderRadius: 11, padding: "8px 12px", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: VLAK1, border: "1px solid rgba(120,95,20,0.18)", borderRadius: 11, padding: "8px 12px", marginBottom: 12 }}>
                   <span style={{ fontSize: 15, color: "#a89a6f" }}>🔍</span>
                   <input value={groepZoek} onChange={(e) => setGroepZoek(e.target.value)} placeholder={L.searchGroups}
                     style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: 15.5, fontFamily: "inherit", color: "#4a3f1e" }} />
@@ -5435,9 +5443,9 @@ export default function PartyTest() {
                   </div>
                   <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 11 }}>{L.modeQuickSub}</div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 14.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
-                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 14.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
-                    <span style={{ background: "#faf7ec", borderRadius: 16, padding: "5px 12px", fontSize: 14.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
+                    <span style={{ background: VLAK1, borderRadius: 16, padding: "5px 12px", fontSize: 14.5, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
+                    <span style={{ background: VLAK1, borderRadius: 16, padding: "5px 12px", fontSize: 14.5, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
+                    <span style={{ background: VLAK1, borderRadius: 16, padding: "5px 12px", fontSize: 14.5, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
                   </div>
                   {/* Bestellijstje: wat er aan de toog moet komen. */}
                   <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", paddingTop: 10 }}>
@@ -5462,7 +5470,7 @@ export default function PartyTest() {
         <div style={S.card}>
           <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{L.groupNameEdit}</div>
           <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: "#fdfaf2" }} />
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: VLAK2 }} />
           {settle && (<>
             <div onClick={() => setExtrasOpen((v) => !v)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, cursor: "pointer", borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 12, paddingTop: 11 }}>
               <span style={{ fontSize: 14.5, fontWeight: 700, color: "#8a7d55" }}>{L.extrasLine}</span>
@@ -5555,7 +5563,7 @@ export default function PartyTest() {
               <>
                 {/* JOUW plaats — de enige die de admin standaard invult. */}
                 {mijnPlaats && (
-                  <div style={{ background: "#faf7ec", borderRadius: 10, padding: "10px 11px", marginBottom: geclaimd.length || wachtend.length ? 8 : 0, border: "1px solid rgba(31,138,76,0.25)" }}>
+                  <div style={{ background: VLAK1, borderRadius: 10, padding: "10px 11px", marginBottom: geclaimd.length || wachtend.length ? 8 : 0, border: "1px solid rgba(31,138,76,0.25)" }}>
                     <div style={{ ...S.row, gap: 8 }}>
                       <span style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(31,138,76,0.15)", color: "#1f6b3a", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>⭐</span>
                       <input value={isGuestDefault(mijnPlaats.name) ? "" : mijnPlaats.name}
@@ -5570,7 +5578,7 @@ export default function PartyTest() {
                 {geclaimd.map((p) => {
                   const bezet = true
                   return (
-                    <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: "#faf7ec", border: "1px solid rgba(120,95,20,0.1)" }}>
+                    <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: VLAK1, border: "1px solid rgba(120,95,20,0.1)" }}>
                       <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a3f1e" }}>📱 {p.name}</span>
                       {bezet && (
                         <button onClick={() => releaseSeat(p.id)}
@@ -5626,7 +5634,7 @@ export default function PartyTest() {
             <span style={{ fontSize: 15.5, fontWeight: 800 }}>Groepsnaam</span>
             {hasSettled && <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>🔒 vast na afrekenen</span>}
           </div>
-          <input disabled={hasSettled} value={groupName} onChange={(e) => setGroupName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : "#fdfaf2", color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
+          <input disabled={hasSettled} value={groupName} onChange={(e) => setGroupName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : VLAK2, color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
           {!hasSettled && <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 6 }}>{L.tapToRename}</div>}
         {settle && !fromOnboarding && (
         <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 12, paddingTop: 11 }}>
@@ -5647,9 +5655,9 @@ export default function PartyTest() {
                 return (
                   <div key={p.id} style={{ position: "relative" }}>
                     <input value={isGuestDefault(p.name) ? "" : p.name} placeholder={isGuestDefault(p.name) ? p.name : `Gast ${idx + 1}`} onChange={(e) => renamePerson(p.id, e.target.value === "" ? `Gast ${idx + 1}` : e.target.value)}
-                      style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: ikZelf ? "6px 26px 6px 8px" : "6px 8px", fontSize: 14.5, textAlign: "left",
-                        background: ikZelf ? "rgba(240,165,0,0.1)" : undefined, border: ikZelf ? "1.5px solid rgba(240,165,0,0.6)" : undefined }} />
-                    {ikZelf && <span title={L.youMark} style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", fontSize: 13, pointerEvents: "none" }}>⭐</span>}
+                      style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: ikZelf ? "6px 42px 6px 9px" : "6px 8px", fontSize: 14.5, textAlign: "left", fontWeight: ikZelf ? 700 : 400,
+                        background: ikZelf ? MODUS_FAIR.vlak : undefined, border: ikZelf ? `1.5px solid ${MODUS_FAIR.rand}` : undefined, color: ikZelf ? MODUS_FAIR.tekst : undefined }} />
+                    {ikZelf && <span style={{ position: "absolute", right: 5, top: "50%", transform: "translateY(-50%)", background: MODUS_FAIR.rand, color: "#fff", borderRadius: 9, padding: "2px 7px", fontSize: 10.5, fontWeight: 800, letterSpacing: "0.04em", pointerEvents: "none" }}>{L.youBadge}</span>}
                   </div>
                 )
               })}
@@ -5941,7 +5949,7 @@ export default function PartyTest() {
                           border: aan ? "none" : viaLink ? "1px solid rgba(120,95,20,0.18)" : "1.5px solid rgba(240,165,0,0.45)",
                           color: aan ? "#4a3f1e" : viaLink ? "#a89a6f" : "#4a3f1e",
                           opacity: aan ? 1 : viaLink ? 0.8 : 1 }}>
-                        {pp.id === meId ? "🙋 " : viaLink ? "📱 " : ""}{pp.name}
+                        {pp.id === meId ? "👑 " : viaLink ? "📱 " : ""}{pp.name}{pp.id === meId ? <span style={{ opacity: 0.75, fontSize: 11, marginLeft: 4 }}>{L.youBadge}</span> : null}
                       </button>
                     )
                   })}
@@ -6354,7 +6362,7 @@ export default function PartyTest() {
                 <input style={{ ...S.input, flex: 1, minWidth: 60, fontSize: 19, fontWeight: 800, padding: "12px 10px", textAlign: "left",
                   color: "#c88a1a",
                   borderColor: amount > 0.005 ? "#e08a00" : "rgba(120,95,20,0.22)",
-                  background: amount > 0.005 ? "#fff" : "#fdfaf2" }}
+                  background: amount > 0.005 ? "#fff" : VLAK2 }}
                   type="text" inputMode="decimal" placeholder="0,00"
                   {...bedragVeld(`hub-${idx}`, amount, (v) => qSetAmount(idx, v))}
                   onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); if ((rounds[idx]?.amount || 0) > 0.005) confirmQuickPay() } }} />
@@ -6888,7 +6896,7 @@ export default function PartyTest() {
                     return (
                       <div key={r.id} onClick={() => setTreatedRounds((prev) => { const n = new Set(prev); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n })}
                         style={{ ...S.row, justifyContent: "space-between", padding: "10px 12px", borderRadius: 9, cursor: "pointer",
-                          background: on ? "rgba(31,138,76,0.08)" : "#faf7ec", border: on ? "1px solid rgba(31,138,76,0.4)" : "1px solid transparent" }}>
+                          background: on ? "rgba(31,138,76,0.08)" : VLAK1, border: on ? "1px solid rgba(31,138,76,0.4)" : "1px solid transparent" }}>
                         <span style={{ fontSize: 15, fontWeight: on ? 800 : 700, color: on ? "#1f6b3a" : "#4a3f1e" }}>
                           {L.roundWord} {nr} · 👤{r.headcount || 1}{on && <span style={{ fontWeight: 700, color: "#8a7d55" }}> · 🎁 {L.yourTreat}</span>}
                         </span>
@@ -6933,7 +6941,7 @@ export default function PartyTest() {
                 <div key={p.id} style={{ ...S.row, gap: 8 }}>
                   <span style={{ fontSize: 15, fontWeight: 800, color: "#b3a988", width: 20, textAlign: "center", flexShrink: 0 }}>{i + 1}</span>
                   <input value={leeg ? "" : p.name} onChange={(e) => renamePerson(p.id, e.target.value)} placeholder={`${p.name} · ${L.guestNamePh}`}
-                    style={{ ...S.input, flex: 1, textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: "#fdfaf2", color: leeg ? "#b3a988" : "#4a3f1e" }} />
+                    style={{ ...S.input, flex: 1, textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: VLAK2, color: leeg ? "#b3a988" : "#4a3f1e" }} />
                   {people.length > 1 && (
                     <button onClick={() => removePerson(p.id)} style={{ ...S.btn, padding: "8px 11px", fontSize: 16, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)", flexShrink: 0 }}>✕</button>
                   )}
