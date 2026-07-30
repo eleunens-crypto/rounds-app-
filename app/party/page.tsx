@@ -4503,7 +4503,13 @@ export default function PartyTest() {
     <div style={{ marginBottom: 12 }}>
       {!!groupId && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: modus.knop, borderRadius: "14px 14px 0 0", padding: "10px 15px", marginBottom: 10 }}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? `⚖️ ${L.modeFairShort}` : `🍻 ${L.modeQuickShort}`}</span>
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, flex: 1, minWidth: 0 }}>
+            {settle ? (<>
+              <GsmIcoon size={18} kleur="#fff" dof />
+              <GsmIcoon size={22} kleur="#fff" qr />
+            </>) : <GsmIcoon size={22} kleur="#fff" lijnen />}
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? L.modeFairShort : L.modeQuickShort}</span>
+          </span>
         </div>
       )}
       {/* Logo met de pot eronder aan de linkerkant; de groepsnaam en het aantal personen
@@ -4783,7 +4789,13 @@ export default function PartyTest() {
 
         {/* Dezelfde modusbalk als de beheerder ziet: ook een gast mag weten waar hij zit. */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: (settle ? MODUS_FAIR : MODUS_SNEL).knop, borderRadius: "14px 14px 0 0", padding: "10px 15px", marginBottom: 10 }}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? `⚖️ ${L.modeFairShort}` : `🍻 ${L.modeQuickShort}`}</span>
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, flex: 1, minWidth: 0 }}>
+            {settle ? (<>
+              <GsmIcoon size={18} kleur="#fff" dof />
+              <GsmIcoon size={22} kleur="#fff" qr />
+            </>) : <GsmIcoon size={22} kleur="#fff" lijnen />}
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? L.modeFairShort : L.modeQuickShort}</span>
+          </span>
           <LanguageToggle compact />
         </div>
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
@@ -5099,7 +5111,7 @@ export default function PartyTest() {
                     Samen lezen de twee kaarten zo als één keuze. */}
                 <span style={{ position: "absolute", top: 9, left: 9, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, pointerEvents: "none",
                   background: bpSettle === false ? MODUS_SNEL.rand : "transparent",
-                  border: bpSettle === false ? "none" : `2px solid ${MODUS_SNEL.lijnZacht}`,
+                  border: bpSettle === false ? "none" : `2.5px solid ${MODUS_SNEL.randZacht}`,
                   color: "#fff" }}>{bpSettle === false ? "✓" : ""}</span>
                 {/* De uitleg zit in de hoek van de kaart in plaats van naast de titel. Zo heeft
                     de titel de volle breedte en staat hij echt gecentreerd. Uitklappen zet de
@@ -5113,12 +5125,6 @@ export default function PartyTest() {
                   <GsmIcoon size={46} kleur={MODUS_SNEL.rand} lijnen />
                 </span>
                 <span style={{ display: "block", fontSize: 24, fontWeight: 800, color: "#3d3418", lineHeight: 1.14, letterSpacing: -0.4 }}>{L.modeQuick}</span>
-                {/* Gekozen of niet: een gevuld rondje met vinkje tegenover een leeg rondje.
-                    Samen lezen de twee kaarten zo als één keuze. */}
-                <span style={{ position: "absolute", top: 9, left: 9, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, pointerEvents: "none",
-                  background: bpSettle === true ? MODUS_FAIR.rand : "transparent",
-                  border: bpSettle === true ? "none" : `2px solid ${MODUS_FAIR.lijnZacht}`,
-                  color: "#fff" }}>{bpSettle === true ? "✓" : ""}</span>
                 {/* Een lijstje met vinkjes leest sneller dan twee losse zinnen: je ziet in
                     één oogopslag hoeveel stappen erbij komen kijken. */}
                 <span style={{ display: "block", textAlign: "left", marginTop: 11, paddingLeft: 6 }}>
@@ -5181,6 +5187,12 @@ export default function PartyTest() {
                 style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "16px 14px 14px", border: "none", cursor: "pointer",
                   borderBottom: `1px solid ${MODUS_FAIR.lijnZacht}`,
                   background: bpSettle === true ? MODUS_FAIR.vlak : "linear-gradient(180deg,#fdfcfa,#fff)" }}>
+                {/* Gekozen of niet: een gevuld rondje met vinkje tegenover een leeg rondje.
+                    Samen lezen de twee kaarten zo als één keuze. */}
+                <span style={{ position: "absolute", top: 9, left: 9, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, pointerEvents: "none",
+                  background: bpSettle === true ? MODUS_FAIR.rand : "transparent",
+                  border: bpSettle === true ? "none" : `2.5px solid ${MODUS_FAIR.randZacht}`,
+                  color: "#fff" }}>{bpSettle === true ? "✓" : ""}</span>
                 <span onClick={(e) => { e.stopPropagation(); setBpSettle(true); setModeInfo((m) => m === "fair" ? null : "fair") }}
                   style={{ position: "absolute", top: 0, right: 0, borderRadius: "0 0 0 16px", padding: "10px 15px 11px 17px", fontSize: 15, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap",
                     background: modeInfo === "fair" ? MODUS_FAIR.rand : MODUS_FAIR.tint,
