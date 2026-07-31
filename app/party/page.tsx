@@ -637,6 +637,7 @@ const T = {
     changeNameTitle: "Jouw naam wijzigen",
     changeNameSub: "Zo herkent de rest je in de lijst en op de afrekening.",
     saveName: "Bewaren",
+    pricePh: "prijs per stuk",
     tapToChange: "✏️ tik om te wijzigen",
     collapseAll: "Alles verbergen",
     settleBtn: "🧾 Afrekenen",
@@ -1229,6 +1230,7 @@ const T = {
     changeNameTitle: "Modifier ton nom",
     changeNameSub: "C’est ainsi que les autres te reconnaissent dans la liste et au décompte.",
     saveName: "Enregistrer",
+    pricePh: "prix à la pièce",
     tapToChange: "✏️ touche pour modifier",
     collapseAll: "Tout masquer",
     settleBtn: "🧾 Régler",
@@ -3497,7 +3499,7 @@ export default function PartyTest() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <span style={{ fontSize: 19, fontWeight: 700, color: "#8a7d55", flexShrink: 0 }}>€</span>
-            <input value={ndPrice} onChange={(e) => setNdPrice(e.target.value)} inputMode="decimal" placeholder="4,50"
+            <input value={ndPrice} onChange={(e) => setNdPrice(e.target.value)} inputMode="decimal" placeholder={L.pricePh}
               style={{ ...S.input, flex: 1, minWidth: 0, boxSizing: "border-box", fontSize: 16, textAlign: "left" }} />
           </div>
 
