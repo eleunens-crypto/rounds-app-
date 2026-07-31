@@ -638,6 +638,7 @@ const T = {
     changeNameTitle: "Jouw naam wijzigen",
     changeNameSub: "Zo herkent de rest je in de lijst en op de afrekening.",
     saveName: "Bewaren",
+    tapToChange: "✏️ tik om te wijzigen",
     collapseAll: "Alles verbergen",
     settleBtn: "🧾 Afrekenen",
     nothingToSettle: "Er zijn nog geen afgeronde rondjes om af te rekenen.",
@@ -801,8 +802,8 @@ const T = {
     youBadge: "JIJ",
     howManyAreYou: "👥 Met hoeveel zijn jullie?",
     freeToScan: (n: number) => `${n} ${n === 1 ? "plaats" : "plaatsen"} vrij om te scannen`,
-    nobodyCanScan: "Niemand kan nog scannen.",
-    nobodyCanScanSub: "Jij bent de enige plaats. Zet het aantal hoger.",
+    noFreeSeatYet: "Er is nog geen vrije plaats.",
+    scanNoUseAlone: "Scannen levert niets op zolang jij de enige bent.",
     orderWord: "Bestelling",
     howManyPeople: "Met hoeveel zijn jullie?",
     people: "pers.",
@@ -1230,6 +1231,7 @@ const T = {
     changeNameTitle: "Modifier ton nom",
     changeNameSub: "C’est ainsi que les autres te reconnaissent dans la liste et au décompte.",
     saveName: "Enregistrer",
+    tapToChange: "✏️ touche pour modifier",
     collapseAll: "Tout masquer",
     settleBtn: "🧾 Régler",
     nothingToSettle: "Aucune tournée terminée à régler.",
@@ -1393,8 +1395,8 @@ const T = {
     youBadge: "TOI",
     howManyAreYou: "👥 Vous êtes combien ?",
     freeToScan: (n: number) => `${n} place${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"} à scanner`,
-    nobodyCanScan: "Personne ne peut encore scanner.",
-    nobodyCanScanSub: "Tu es la seule place. Augmente le nombre.",
+    noFreeSeatYet: "Il n’y a pas encore de place libre.",
+    scanNoUseAlone: "Scanner ne sert à rien tant que tu es seul.",
     orderWord: "Commande",
     howManyPeople: "Vous \u00eates combien ?",
     people: "pers.",
@@ -3334,9 +3336,9 @@ export default function PartyTest() {
             </span>
           </div>
           {alleen ? (
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(224,104,92,0.25)" }}>
-              <span style={{ flexShrink: 0 }}>⚠️</span>
-              <span style={{ fontSize: 13.5, color: "#b0402f", lineHeight: 1.45 }}><b>{L.nobodyCanScan}</b> {L.nobodyCanScanSub}</span>
+            <div style={{ display: "flex", gap: 9, alignItems: "flex-start", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(224,104,92,0.25)" }}>
+              <span style={{ flexShrink: 0, fontSize: 18 }}>⚠️</span>
+              <span style={{ fontSize: 15, color: "#b0402f", lineHeight: 1.45 }}><b>{L.noFreeSeatYet}</b> {L.scanNoUseAlone}</span>
             </div>
           ) : vrij > 0 ? (
             <div style={{ fontSize: 13, color: "#1f6b3a", fontWeight: 800, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${MODUS_FAIR.lijnZacht}` }}>✓ {L.freeToScan(vrij)}</div>
@@ -5826,6 +5828,7 @@ export default function PartyTest() {
           <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{L.groupNameEdit}</div>
           <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
             style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: VLAK2 }} />
+          {groupName.trim() && <div style={{ fontSize: 12.5, color: "#8aa5aa", marginTop: 5, paddingLeft: 2 }}>{L.tapToChange}</div>}
           {settle && (<>
             <div onClick={() => setExtrasOpen((v) => !v)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, cursor: "pointer", borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 12, paddingTop: 11 }}>
               <span style={{ fontSize: 14.5, fontWeight: 700, color: "#8a7d55" }}>{L.extrasLine}</span>
