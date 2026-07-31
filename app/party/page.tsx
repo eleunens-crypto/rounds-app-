@@ -388,8 +388,6 @@ const T = {
     shortList: "⚡ Korte lijst",
     fullListBtn: "📖 Volledige lijst",
     nothingFound: "Niets gevonden — probeer een ander woord.",
-    barFootnote1: "Wie naar de toog gaat, sluit het rondje af en vult het bedrag in.",
-    barFootnote2: "Jouw deel wordt op het einde eerlijk verrekend.",
 
     myTab: "🧾 Mijn stand",
     noRoundClosed: "Er is nog geen rondje afgesloten.",
@@ -638,6 +636,10 @@ const T = {
     changeNameSub: "Zo herkent de rest je in de lijst en op de afrekening.",
     saveName: "Bewaren",
     pricePh: "prijs per stuk",
+    notOnList: "staat er niet bij?",
+    orderingOpenTitle: "Het bestellen is open!",
+    orderingOpenBody: (naam: string) => `${naam || "De gastheer"} heeft de kaart geopend.`,
+    goingToDrinks: "je gaat vanzelf naar de drankjes…",
     tapToChange: "✏️ tik om te wijzigen",
     collapseAll: "Alles verbergen",
     settleBtn: "🧾 Afrekenen",
@@ -718,7 +720,6 @@ const T = {
     someChose: (n: number, t: number) => `${n} van ${t} pers. kozen al`,
     allChose: "Iedereen heeft gekozen",
     pickBelow: "👇 Selecteer je drankjes",
-    browseOnly: "Je kan de kaart bekijken. Start een rondje om te bestellen.",
     noRoundTitle: "Er loopt nog geen rondje",
     extrasLine: "⚙️ Extra’s — bekers, coins",
     oneCoinIs: "1 coin =",
@@ -981,8 +982,6 @@ const T = {
     shortList: "⚡ Liste courte",
     fullListBtn: "📖 Liste complète",
     nothingFound: "Rien trouvé — essaie un autre mot.",
-    barFootnote1: "Celui qui va au bar clôture la tournée et entre le montant.",
-    barFootnote2: "Ta part sera répartie équitablement à la fin.",
 
     myTab: "🧾 Mon compte",
     noRoundClosed: "Aucune tournée n'est encore clôturée.",
@@ -1231,6 +1230,10 @@ const T = {
     changeNameSub: "C’est ainsi que les autres te reconnaissent dans la liste et au décompte.",
     saveName: "Enregistrer",
     pricePh: "prix à la pièce",
+    notOnList: "pas dans la liste ?",
+    orderingOpenTitle: "Les commandes sont ouvertes !",
+    orderingOpenBody: (naam: string) => `${naam || "L’hôte"} a ouvert la carte.`,
+    goingToDrinks: "tu arrives aux boissons…",
     tapToChange: "✏️ touche pour modifier",
     collapseAll: "Tout masquer",
     settleBtn: "🧾 Régler",
@@ -1311,7 +1314,6 @@ const T = {
     someChose: (n: number, t: number) => `${n} sur ${t} pers. ont choisi`,
     allChose: "Tout le monde a choisi",
     pickBelow: "👇 Choisis tes boissons",
-    browseOnly: "Tu peux consulter la carte. Lance une tournée pour commander.",
     noRoundTitle: "Aucune tournée en cours",
     extrasLine: "⚙️ Extras — gobelets, coins",
     oneCoinIs: "1 coin =",
@@ -2061,6 +2063,20 @@ export default function PartyTest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRoundId, startedBy, meId])
   const [rondjeMelding, setRondjeMelding] = useState<string | null>(null)
+  const [openMelding, setOpenMelding] = useState(false)
+  const wasOpen = useRef<boolean | null>(null)
+  // Sloeg de gastheer het bestellen open? Dat is iets anders dan een rondje starten:
+  // dit gebeurt één keer per avond, vlak na de QR.
+  useEffect(() => {
+    const eerder = wasOpen.current
+    wasOpen.current = orderingOpen
+    if (eerder === false && orderingOpen && meId && !isAdmin) setOpenMelding(true)
+  }, [orderingOpen, meId, isAdmin])
+  useEffect(() => {
+    if (!openMelding) return
+    const t = setTimeout(() => setOpenMelding(false), 4000)
+    return () => clearTimeout(t)
+  }, [openMelding])
   const renderWalk = () => {
     if (walkIdx === null) return null
     const p = people[walkIdx]
@@ -4646,6 +4662,19 @@ export default function PartyTest() {
           </div>
         </div>
       )}
+      {openMelding && (
+        <div style={{ ...S.overlay, zIndex: 77 }} onClick={() => setOpenMelding(false)}>
+          <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 30, marginBottom: 5 }}>🍻</div>
+            <div style={{ fontSize: 18.5, fontWeight: 800, color: MODUS_FAIR.tekst, marginBottom: 6 }}>{L.orderingOpenTitle}</div>
+            <div style={{ fontSize: 14.5, color: "#5a8f99", lineHeight: 1.5, marginBottom: 13 }}>{L.orderingOpenBody(people.find((p) => !!ownerDevice && p.claimedBy === ownerDevice)?.name ?? "")}</div>
+            <div style={{ height: 4, borderRadius: 3, background: MODUS_FAIR.lijnZacht, overflow: "hidden", marginBottom: 8 }}>
+              <div style={{ height: "100%", background: MODUS_FAIR.knop, animation: "rundoLoop 4s linear forwards" }} />
+            </div>
+            <div style={{ fontSize: 12.5, color: "#8aa5aa" }}>{L.goingToDrinks}</div>
+          </div>
+        </div>
+      )}
       {allenKlaar && (
         <div style={{ ...S.overlay, zIndex: 75 }} onClick={() => setAllenKlaar(false)}>
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
@@ -5380,12 +5409,11 @@ export default function PartyTest() {
                 </div>
               )
             })}
-            {!bezig && <div style={{ gridColumn: "1 / -1", fontSize: 12.5, color: "#a89a6f", textAlign: "center", marginTop: 4, lineHeight: 1.45 }}>{L.browseOnly}</div>}
             {!zoekt && (
               <div onClick={() => { setShowAddDrink(true); setNdName("") }}
-                style={{ padding: "9px 8px", borderRadius: 11, background: "#fffdf6", border: "1.5px dashed rgba(240,165,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", color: "#c98a00" }}>
-                <div style={{ fontSize: 16, lineHeight: 1 }}>＋</div>
-                <div style={{ fontSize: 12.5, fontWeight: 800 }}>{L.newDrinkTile}</div>
+                style={{ padding: "10px", borderRadius: 12, background: "#fffdf6", border: `1.5px dashed ${settle ? MODUS_FAIR.randZacht : "rgba(240,165,0,0.6)"}`, display: "flex", flexDirection: "column", justifyContent: "space-between", cursor: "pointer", color: settle ? MODUS_FAIR.tekst : "#c98a00" }}>
+                <div style={{ fontSize: 15.5, fontWeight: 800, lineHeight: 1.25 }}>＋ {L.newDrinkTile}</div>
+                <div style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.8, marginTop: 7 }}>{L.notOnList}</div>
               </div>
             )}
             </div>
@@ -5407,10 +5435,6 @@ export default function PartyTest() {
           </div>
         )}
 
-        <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", padding: "6px 0 20px", lineHeight: 1.5 }}>
-          {L.barFootnote1}<br />
-          {L.barFootnote2}
-        </div>
         </>
         )}
       </div></div>
@@ -5422,6 +5446,7 @@ export default function PartyTest() {
       <div style={{ ...S.page, display: "flex", flexDirection: "column", justifyContent: "flex-start", padding: "0 0 40px" }}><div style={{ ...S.wrap, paddingTop: 26 }}>
         {renderDialogs()}
         <style>{`@keyframes rundoWenk{0%,100%{transform:translateX(0);opacity:.6}50%{transform:translateX(3px);opacity:1}}
+          @keyframes rundoLoop{from{width:0}to{width:100%}}
           input::placeholder,textarea::placeholder{color:#c4b896;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 22 }}>
           <div style={{ ...S.row, gap: 13 }}>
@@ -6335,9 +6360,9 @@ export default function PartyTest() {
               })}
               {!zoekt && (
                 <div onClick={() => { setShowAddDrink(true); setNdName("") }}
-                  style={{ padding: "9px 8px", borderRadius: 11, background: "#fffdf6", border: "1.5px dashed rgba(240,165,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", color: "#c98a00" }}>
-                  <div style={{ fontSize: 16, lineHeight: 1 }}>＋</div>
-                  <div style={{ fontSize: 12.5, fontWeight: 800 }}>{L.newDrinkTile}</div>
+                  style={{ padding: "10px", borderRadius: 12, background: "#fffdf6", border: `1.5px dashed ${settle ? MODUS_FAIR.randZacht : "rgba(240,165,0,0.6)"}`, display: "flex", flexDirection: "column", justifyContent: "space-between", cursor: "pointer", color: settle ? MODUS_FAIR.tekst : "#c98a00" }}>
+                  <div style={{ fontSize: 15.5, fontWeight: 800, lineHeight: 1.25 }}>＋ {L.newDrinkTile}</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.8, marginTop: 7 }}>{L.notOnList}</div>
                 </div>
               )}
             </div>
