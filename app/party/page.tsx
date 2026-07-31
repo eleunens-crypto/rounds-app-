@@ -632,7 +632,13 @@ const T = {
     toFirstRound: "Naar 1e rondje",
     noRoundsHintQuick: "Noteer wat er besteld wordt. Je afgeronde rondjes verschijnen hier.",
     roundBusy: (n: number) => `Je bent bezig met rondje ${n}`,
-    tapRoundToEdit: "Tik een ronde open om aan te passen.",
+    tapRoundToEdit: "Tik een rondje open om de details te zien of aan te passen.",
+    roundsSoFar: (n: number) => `🧾 ${n} ${n === 1 ? "rondje" : "rondjes"} tot nu toe`,
+    expandAll: "Alles tonen",
+    changeNameTitle: "Jouw naam wijzigen",
+    changeNameSub: "Zo herkent de rest je in de lijst en op de afrekening.",
+    saveName: "Bewaren",
+    collapseAll: "Alles verbergen",
     settleBtn: "🧾 Afrekenen",
     nothingToSettle: "Er zijn nog geen afgeronde rondjes om af te rekenen.",
     roundUnfinished: (n: number) => `Rondje ${n} is nog bezig — bevestig en betaal het eerst voor je afrekent.`,
@@ -1218,7 +1224,13 @@ const T = {
     toFirstRound: "1re tourn\u00e9e",
     noRoundsHintQuick: "Note ce qui est command\u00e9. Tes tourn\u00e9es termin\u00e9es appara\u00eetront ici.",
     roundBusy: (n: number) => `Tourn\u00e9e ${n} en cours`,
-    tapRoundToEdit: "Touche une tournée pour la modifier.",
+    tapRoundToEdit: "Touche une tournée pour voir les détails ou la modifier.",
+    roundsSoFar: (n: number) => `🧾 ${n} tournée${n === 1 ? "" : "s"} jusqu’ici`,
+    expandAll: "Tout afficher",
+    changeNameTitle: "Modifier ton nom",
+    changeNameSub: "C’est ainsi que les autres te reconnaissent dans la liste et au décompte.",
+    saveName: "Enregistrer",
+    collapseAll: "Tout masquer",
     settleBtn: "🧾 Régler",
     nothingToSettle: "Aucune tournée terminée à régler.",
     roundUnfinished: (n: number) => `La tournée ${n} est en cours — confirme et paie-la avant de régler.`,
@@ -1947,6 +1959,7 @@ export default function PartyTest() {
   // beweging. Eén scherm met wat er gaat gebeuren, en een uitweg.
   const [startCheck, setStartCheck] = useState(false)
   const [walkCheck, setWalkCheck] = useState(false)
+  const [naamWijzig, setNaamWijzig] = useState<string | null>(null)
   // De melding voor de anderen. We tonen ze één keer per rondje, aan iedereen behalve de
   // haler zelf — vandaar dat we onthouden welk rondje we al aankondigden.
   const [rondjeGemeld, setRondjeGemeld] = useState<string | null>(null)
@@ -4619,6 +4632,23 @@ export default function PartyTest() {
           </div>
         </div>
       )}
+      {naamWijzig !== null && (
+        <div style={{ ...S.overlay, zIndex: 76 }} onClick={() => setNaamWijzig(null)}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", marginBottom: 4 }}>{L.changeNameTitle}</div>
+            <div style={{ fontSize: 14, color: "#8a7d55", lineHeight: 1.5, marginBottom: 12 }}>{L.changeNameSub}</div>
+            <input autoFocus value={naamWijzig} onChange={(e) => setNaamWijzig(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { const n = naamWijzig.trim(); if (n && meId) renamePerson(meId, n); setNaamWijzig(null) } }}
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 17, fontWeight: 700, marginBottom: 12 }} />
+            <div style={{ display: "flex", gap: 9 }}>
+              <button onClick={() => setNaamWijzig(null)}
+                style={{ flex: 1, minWidth: 0, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(120,95,20,0.3)", color: "#8a7d55", borderRadius: 12, padding: "12px 6px", fontSize: 15, fontWeight: 800 }}>{L.cancel}</button>
+              <button onClick={() => { const n = naamWijzig.trim(); if (n && meId) renamePerson(meId, n); setNaamWijzig(null) }}
+                style={{ ...S.btnP, flex: 1.4, minWidth: 0, padding: "12px 6px", fontSize: 15.5, fontWeight: 800, opacity: naamWijzig.trim() ? 1 : 0.45 }}>{L.saveName}</button>
+            </div>
+          </div>
+        </div>
+      )}
       {walkCheck && (
         <div style={{ ...S.overlay, zIndex: 74 }} onClick={() => setWalkCheck(false)}>
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
@@ -5097,7 +5127,8 @@ export default function PartyTest() {
           <div>
             <div style={{ fontSize: 19, fontWeight: 800 }}>🍻 {groupName}</div>
             <div style={{ fontSize: 14, color: "#8a7d55" }}>
-              {L.youAre} <b style={{ color: "#4a3f1e" }}>{ik.name}</b>
+              {L.youAre}{" "}
+              <b onClick={() => setNaamWijzig(ik.name)} style={{ color: MODUS_FAIR.tekst, cursor: "pointer", textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: 3 }}>{ik.name} ✏️</b>
               {pay === "coin" ? ` · coins (1 = ${euro(coinValue)})` : ""}
             </div>
           </div>
@@ -6900,9 +6931,19 @@ export default function PartyTest() {
             </div>
           </div>
         ) : (!settle || unassignedAllRounds > 0) ? null : (<>
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 4 }}>
-          <p style={{ ...S.sub, margin: 0 }}>{L.tapRoundToEdit}</p>
-          {paidCount > 1 && <span onClick={() => setAllRoundsOpen((v) => !v)} style={{ fontSize: 14, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", flexShrink: 0 }}>{allRoundsOpen ? "alles dichtklappen" : "alles openklappen"}</span>}
+        <div style={{ marginTop: 22, marginBottom: 10, borderTop: `2px solid ${settle ? MODUS_FAIR.randZacht : "rgba(240,165,0,0.5)"}`, paddingTop: 13 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 10 }}>
+            <span style={{ minWidth: 0 }}>
+              <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.25 }}>{L.roundsSoFar(paidCount)}</span>
+              <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", marginTop: 2 }}>{L.tapRoundToEdit}</span>
+            </span>
+            {paidCount > 1 && (
+              <button onClick={() => setAllRoundsOpen((v) => !v)}
+                style={{ flexShrink: 0, cursor: "pointer", background: "#fff", border: `1.5px solid ${settle ? MODUS_FAIR.randZacht : "rgba(240,165,0,0.5)"}`, color: settle ? MODUS_FAIR.tekst : "#8a5e0f", borderRadius: 10, padding: "8px 12px", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap" }}>
+                {allRoundsOpen ? `${L.collapseAll} ▴` : `${L.expandAll} ▾`}
+              </button>
+            )}
+          </div>
         </div>
 
         {rounds.map((r, idx) => ({ r, idx })).reverse().map(({ r, idx }) => {
@@ -6914,8 +6955,11 @@ export default function PartyTest() {
             <div key={idx} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
               <div style={{ cursor: "pointer", padding: 14 }} onClick={() => { if (allRoundsOpen) { setAllRoundsOpen(false); setOpenRound(idx) } else { setOpenRound(open ? null : idx) } setEditOpen(false); setEditCups(false); setEditPay(false) }}>
                 <div style={{ ...S.row, justifyContent: "space-between" }}>
-                  <span style={{ fontSize: 16, fontWeight: 800 }}>{L.roundWord} {idx + 1} <span style={{ fontSize: 14, fontWeight: 600, color: "#8a7d55" }}>· {L.drinksCount(items)} · {euro(r.amount)}</span>{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", marginLeft: 6 }}>{L.assigned}</span>}</span>
-                  <span style={{ fontSize: 15.5, color: "#8a7d55" }}>{open ? "▴" : "▾"}</span>
+                  <span style={{ fontSize: 17, fontWeight: 800 }}>{L.roundWord} {idx + 1} <span style={{ fontSize: 14, fontWeight: 600, color: "#8a7d55" }}>· {L.drinksCount(items)} · {euro(r.amount)}</span>{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", marginLeft: 6 }}>{L.assigned}</span>}</span>
+                  <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 8, fontSize: 14, fontWeight: 800,
+                    background: open ? (settle ? MODUS_FAIR.tint : "rgba(240,165,0,0.15)") : "transparent",
+                    border: `1.5px solid ${settle ? MODUS_FAIR.lijnZacht : "rgba(240,165,0,0.4)"}`,
+                    color: settle ? MODUS_FAIR.tekst : "#8a5e0f" }}>{open ? "▴" : "▾"}</span>
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "#1f8a4c", marginTop: 3 }}>✓ betaald: {paidLabel(r)}</div>
               </div>
