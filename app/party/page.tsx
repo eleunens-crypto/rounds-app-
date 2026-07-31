@@ -4771,7 +4771,7 @@ export default function PartyTest() {
                 </div>
               ))}
             </div>
-            <button onClick={() => setRondjeMelding(null)} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 16.5, fontWeight: 800 }}>{rondjeMelding ? L.letsChoose : L.okWord}</button>
+            <button onClick={() => { setRondjeMelding(null); setGuestTab("order"); setActiveCat(catsPresent[0]); if (view !== "order") setView("order") }} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 16.5, fontWeight: 800 }}>{rondjeMelding ? L.letsChoose : L.okWord}</button>
           </div>
         </div>
       )}
@@ -5196,11 +5196,23 @@ export default function PartyTest() {
 
         <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
           <button onClick={() => setGuestTab("order")}
-            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 14, fontWeight: 800, opacity: guestTab === "order" ? 1 : 0.55 }}>{L.tabOrder}</button>
+            style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 15.5, fontWeight: 800, opacity: guestTab === "order" ? 1 : 0.6,
+              background: guestTab === "order" ? MODUS_FAIR.vlak : "#fff",
+              borderColor: guestTab === "order" ? MODUS_FAIR.rand : undefined,
+              borderWidth: guestTab === "order" ? 1.5 : 1,
+              color: guestTab === "order" ? MODUS_FAIR.tekst : "#8a7d55" }}>{L.tabOrder}</button>
           <button onClick={() => setGuestTab("me")}
-            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 14, fontWeight: 800, opacity: guestTab === "me" ? 1 : 0.55 }}>{L.tabMe}</button>
+            style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 15.5, fontWeight: 800, opacity: guestTab === "me" ? 1 : 0.6,
+              background: guestTab === "me" ? MODUS_FAIR.vlak : "#fff",
+              borderColor: guestTab === "me" ? MODUS_FAIR.rand : undefined,
+              borderWidth: guestTab === "me" ? 1.5 : 1,
+              color: guestTab === "me" ? MODUS_FAIR.tekst : "#8a7d55" }}>{L.tabMe}</button>
           <button onClick={() => setGuestTab("group")}
-            style={{ ...S.btn, flex: 1, padding: "9px 4px", fontSize: 14, fontWeight: 800, opacity: guestTab === "group" ? 1 : 0.55 }}>{L.tabGroup}</button>
+            style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 15.5, fontWeight: 800, opacity: guestTab === "group" ? 1 : 0.6,
+              background: guestTab === "group" ? MODUS_FAIR.vlak : "#fff",
+              borderColor: guestTab === "group" ? MODUS_FAIR.rand : undefined,
+              borderWidth: guestTab === "group" ? 1.5 : 1,
+              color: guestTab === "group" ? MODUS_FAIR.tekst : "#8a7d55" }}>{L.tabGroup}</button>
         </div>
 
         {guestTab === "group" && (
