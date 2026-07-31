@@ -4842,6 +4842,35 @@ export default function PartyTest() {
       )}
     </>
   )
+  // De drie tabbladen van de beheerder. Ze wijzen naar bestaande schermen, dus de
+  // navigatie eronder verandert niet — alleen de vorm is nu gelijk aan die van de gast.
+  const AdminTabs = () => {
+    if (!groupId || !isAdmin) return null
+    const hier: "order" | "me" | "group" =
+      view === "settings" ? "group" : (view === "hub" || view === "roundsOverview" || view === "confirmed") ? "me" : "order"
+    const naar = (t: "order" | "me" | "group") => {
+      if (t === "order") { setActiveCat(catsPresent[0]); setView("order"); return }
+      if (t === "group") { setSettingsBackTo(view === "order" ? "order" : "hub"); setView("settings"); return }
+      if (settle) { setOpenRound(Math.max(0, rounds.length - 1)); setView("hub") }
+      else { setOverviewBackTo("hub"); setView("roundsOverview") }
+    }
+    const knop = (t: "order" | "me" | "group", tekst: string) => (
+      <button onClick={() => naar(t)}
+        style={{ ...S.btn, flex: 1, minWidth: 0, padding: "13px 4px", fontSize: 15.5, fontWeight: 800, opacity: hier === t ? 1 : 0.6,
+          background: hier === t ? (settle ? MODUS_FAIR.vlak : "rgba(240,165,0,0.1)") : "#fff",
+          borderColor: hier === t ? (settle ? MODUS_FAIR.rand : "#e08a00") : undefined,
+          borderWidth: hier === t ? 1.5 : 1,
+          color: hier === t ? (settle ? MODUS_FAIR.tekst : "#8a5e0f") : "#8a7d55" }}>{tekst}</button>
+    )
+    return (
+      <div style={{ display: "flex", gap: 7, marginBottom: 12 }}>
+        {knop("order", L.tabOrder)}
+        {knop("me", L.tabMe)}
+        {knop("group", L.tabGroup)}
+      </div>
+    )
+  }
+
   const Header = () => {
     // Onderweg van gelijk verdelen naar Fair Split is er maar één route: namen,
     // toewijzen, pot, betalers, eindbalans. Instellingen en overzichten zouden je
@@ -4978,6 +5007,7 @@ export default function PartyTest() {
     return (
       <div style={S.page}><div style={S.wrap}>
         {renderDialogs()}
+        <AdminTabs />
         <div style={{ display: "flex", justifyContent: "flex-end" }}><LanguageToggle compact /></div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24, marginTop: 8 }}>
           <div style={{ ...S.row, gap: 13 }}>
@@ -6282,6 +6312,7 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
+        <AdminTabs />
         {renderAddDrink()}
         {renderVoice()}
         {/* Het rondje als echte titel: groot links, het aantal drankjes rechts, met een
@@ -6700,6 +6731,7 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
+        <AdminTabs />
         {/* Tijdens de omschakeling van snel naar Fair Split is de hub enkel het
             toewijsscherm. Rondjesoverzicht, nieuwe rondjes en afrekenen horen daar
             niet: die leiden je weg uit een traject van drie stappen. */}
@@ -7193,6 +7225,7 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
+        <AdminTabs />
         <div style={{ marginBottom: 12 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.quickSettleTitle}</h3>
         </div>
