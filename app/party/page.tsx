@@ -601,7 +601,6 @@ const T = {
     // ── overzicht
     roundsOverview: "📋 Rondjesoverzicht",
     overview: "📋 Overzicht",
-    newRound: "➕ Nieuw rondje",
     repeatRound: "🔁 Zelfde rondje opnieuw (aanpasbaar)",
     proposalTitle: "🗳️ Weer hetzelfde rondje?",
     proposalWaiting: "Iedereen antwoordt op zijn scherm. Jij sluit af wanneer je wil.",
@@ -707,6 +706,7 @@ const T = {
     yourNameFirst: "Vul eerst je eigen naam in — anders weet niemand wie jij bent in de lijst.",
     laterLooking: "Later, ik kijk nog even",
     youAdvance: "Jij schiet voor (of via de pot) — wordt achteraf verrekend in deze app",
+    toDrinks: "🍺 Naar drankjes",
     youWalkTitle: "Jij neemt het rondje op",
     walkStep1: "Je gaat de tafel rond, persoon per persoon",
     walkStep2: "Jij tikt alle drankjes zelf aan",
@@ -735,13 +735,21 @@ const T = {
     youTakeNothing: "Je neemt niets deze ronde.",
     chooseAnyway: "toch iets kiezen",
     remindBtn: "🔔 Herinner wie nog niet koos",
-    reminderSent: "Herinnering verstuurd.",
+    remindTitle: "🔔 Een duwtje geven?",
+    remindBody: (namen: string) => `${namen} ${namen.includes(",") ? "kozen" : "koos"} nog niets. Zij krijgen meteen een melding op hun scherm.`,
+    remindYes: "Ja, stuur →",
+    reminderSentTo: (namen: string) => `✓ Herinnering verstuurd naar ${namen}.`,
+    everyoneChoseAlready: "Iedereen heeft al gekozen — je kan vertrekken.",
+    allChoseTitle: "Iedereen heeft gekozen",
+    allChoseYou: "Je kan gaan halen. Dit heb je nodig:",
+    allChoseGuest: (naam: string) => `${naam || "De haler"} kan vertrekken — je drankje komt eraan.`,
+    toTheBarBtn: "🍻 Op naar de bar →",
     reminderFailed: "Herinnering versturen mislukt.",
     reminderTitle: "⏰ Nog even jouw keuze",
     reminderBody: (naam: string) => `${naam} klaar om drankjes te halen. Tik aan wat je wil — of laat weten dat je niets neemt.`,
     reminderChoose: "Ik kies iets →",
     everyoneTapsOwn: "📱 Iedereen tikt zelf aan op zijn gsm",
-    youTapForAll: "Jij gaat rond en tikt alle drankjes zelf aan voor iedereen",
+    youTapForAll: "✍️ Jij gaat rond en tikt alles aan",
     everyoneTapsNow: "Iedereen tikt nu op zijn eigen telefoon aan wat hij wil.",
     readyOf: (n: number, totaal: number) => `${n} van ${totaal} deden dat al.`,
     walkDone: "✓ Klaar",
@@ -891,9 +899,6 @@ const T = {
     roundsOverviewBtn: "Rondjesoverzicht",
     noRoundsYet: "Nog geen afgeronde bestellingen. Bevestig eerst een rondje.",
     roundSummary: (n: number, items: number) => `Rondje ${n} · ${items} drankje${items === 1 ? "" : "s"}`,
-    sameRoundAgainQ: "Zelfde rondje opnieuw (aanpasbaar) of een nieuw rondje?",
-    sameRoundYes: "🔁 Zelfde opnieuw",
-    newRoundFresh: "✨ Nieuw rondje",
     estimate: "schatting op richtprijzen",
     estimateWhy: "Niemand vulde bedragen in, dus rekenen we met de richtprijzen uit de lijst. Bij benadering, maar eerlijk.",
     voiceBtn: "🎤 Inspreken",
@@ -1163,7 +1168,6 @@ const T = {
     // ── overzicht
     roundsOverview: "📋 Aperçu des tournées",
     overview: "📋 Aperçu",
-    newRound: "➕ Nouvelle tournée",
     repeatRound: "🔁 Refaire la même tournée (modifiable)",
     proposalTitle: "🗳️ La même tournée ?",
     proposalWaiting: "Chacun répond sur son écran. Tu clôtures quand tu veux.",
@@ -1269,6 +1273,7 @@ const T = {
     yourNameFirst: "Entre d’abord ton propre nom — sinon personne ne sait qui tu es dans la liste.",
     laterLooking: "Plus tard, je regarde encore",
     youAdvance: "Tu avances (ou via la cagnotte) — tout est réglé ensuite dans l’appli",
+    toDrinks: "🍺 Vers les boissons",
     youWalkTitle: "Tu prends la tournée",
     walkStep1: "Tu fais le tour de la table, personne par personne",
     walkStep2: "Tu coches toutes les boissons toi-même",
@@ -1297,13 +1302,21 @@ const T = {
     youTakeNothing: "Tu ne prends rien ce tour-ci.",
     chooseAnyway: "choisir quand même",
     remindBtn: "🔔 Rappeler ceux qui n’ont pas choisi",
-    reminderSent: "Rappel envoyé.",
+    remindTitle: "🔔 Donner un petit coup de pouce ?",
+    remindBody: (namen: string) => `${namen} n’${namen.includes(",") ? "ont" : "a"} encore rien choisi. Un message apparaît aussitôt sur leur écran.`,
+    remindYes: "Oui, envoie →",
+    reminderSentTo: (namen: string) => `✓ Rappel envoyé à ${namen}.`,
+    everyoneChoseAlready: "Tout le monde a déjà choisi — tu peux y aller.",
+    allChoseTitle: "Tout le monde a choisi",
+    allChoseYou: "Tu peux y aller. Voici ce qu’il te faut :",
+    allChoseGuest: (naam: string) => `${naam || "Celui qui y va"} peut partir — ta boisson arrive.`,
+    toTheBarBtn: "🍻 Direction le bar →",
     reminderFailed: "Envoi du rappel échoué.",
     reminderTitle: "⏰ Ton choix, vite",
     reminderBody: (naam: string) => `${naam} est prêt à aller chercher les boissons. Coche ce que tu veux — ou dis que tu ne prends rien.`,
     reminderChoose: "Je choisis →",
     everyoneTapsOwn: "📱 Chacun coche sur son propre gsm",
-    youTapForAll: "Tu fais le tour et tu coches toutes les boissons toi-même",
+    youTapForAll: "✍️ Tu fais le tour et tu coches tout",
     everyoneTapsNow: "Chacun coche maintenant sur son propre téléphone.",
     readyOf: (n: number, totaal: number) => `${n} sur ${totaal} l’ont déjà fait.`,
     walkDone: "✓ Terminé",
@@ -1453,9 +1466,6 @@ const T = {
     roundsOverviewBtn: "Aper\u00e7u",
     noRoundsYet: "Aucune commande termin\u00e9e. Confirme d'abord une tourn\u00e9e.",
     roundSummary: (n: number, items: number) => `Tourn\u00e9e ${n} \u00b7 ${items} boisson${items === 1 ? "" : "s"}`,
-    sameRoundAgainQ: "Refaire la m\u00eame tourn\u00e9e (modifiable) ou une nouvelle ?",
-    sameRoundYes: "🔁 Refaire pareil",
-    newRoundFresh: "✨ Nouvelle tourn\u00e9e",
     estimate: "estimation sur prix indicatifs",
     estimateWhy: "Personne n'a entré de montants, donc on calcule avec les prix indicatifs de la liste. Approximatif, mais équitable.",
     voiceBtn: "🎤 Dicter",
@@ -1903,6 +1913,12 @@ export default function PartyTest() {
   // haler zelf — vandaar dat we onthouden welk rondje we al aankondigden.
   const [rondjeGemeld, setRondjeGemeld] = useState<string | null>(null)
   const [halerGemeld, setHalerGemeld] = useState<string | null>(null)
+  const [allenKlaar, setAllenKlaar] = useState(false)
+  const [allenGemeld, setAllenGemeld] = useState<string | null>(null)
+  // Hoeveel mensen maakten een keuze — een drankje óf "niets voor mij". Staat hier omdat
+  // de effecten eronder het aflezen.
+  const ikHaalNu = !!meId && startedBy === meId
+  const alGekozen = people.filter((pp) => drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0) || openAnswers[pp.id] === "skip").length
   // De antwoorden op het lópende rondje: wie koos niets, en het merkje van een
   // herinnering. Staat hier bovenaan omdat de effecten eronder ernaar kijken.
   const [openAnswers, setOpenAnswers] = useState<Record<string, "same" | "different" | "skip">>({})
@@ -1937,6 +1953,17 @@ export default function PartyTest() {
     setRondjeMelding("")
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderingOpen, meId, groupId])
+
+  // Koos iedereen? Dan één keer een venster — voor de haler het sein om te vertrekken,
+  // voor de rest dat hun drankje eraan komt.
+  useEffect(() => {
+    if (!openRoundId || !meId || people.length === 0) return
+    if (allenGemeld === openRoundId) return
+    if (alGekozen < people.length) return
+    setAllenGemeld(openRoundId)
+    setAllenKlaar(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alGekozen, openRoundId, meId, people.length])
 
   // En zodra iemand zegt dat hij gaat halen, weet de rest wie.
   useEffect(() => {
@@ -2089,7 +2116,6 @@ export default function PartyTest() {
   }
 
   const mijnKeuze = meId ? drinks.reduce((a, d) => a + (cart[d.id]?.[meId] ?? 0), 0) : 0
-  const alGekozen = people.filter((pp) => drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0) || openAnswers[pp.id] === "skip").length
   const renderRunnerBar = () => {
     const ikHaal = !!meId && startedBy === meId
     if (!openRoundId && !startedBy) {
@@ -2100,11 +2126,11 @@ export default function PartyTest() {
         <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
           <button style={{ ...S.btnP, width: "100%", padding: "13px 10px", marginBottom: 9 }} onClick={() => setStartCheck(true)}>
             <span style={{ display: "block", fontSize: 17, fontWeight: 800 }}>{L.roundTogether}</span>
-            <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, opacity: 0.93, marginTop: 2 }}>{L.everyoneTapsOwn}</span>
+            <span style={{ display: "block", fontSize: 14, fontWeight: 600, opacity: 0.95, marginTop: 3 }}>{L.everyoneTapsOwn}</span>
           </button>
           <button style={{ ...S.btn, width: "100%", padding: "13px 10px", cursor: "pointer" }} onClick={() => setWalkCheck(true)}>
             <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{L.roundWalkSelf}</span>
-            <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#8a7d55", marginTop: 2 }}>{L.youTapForAll}</span>
+            <span style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#8a7d55", marginTop: 3 }}>{L.youTapForAll}</span>
           </button>
         </div>
       )
@@ -2134,7 +2160,7 @@ export default function PartyTest() {
           {barOpen && renderBarLijst()}
           {/* Duwtje voor wie nog niet koos. Alleen zinvol zolang er iemand ontbreekt. */}
           {klaar.length < people.length && (
-            <button onClick={stuurHerinnering} style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14.5, fontWeight: 800, padding: "10px 8px", color: "#8a5e0f" }}>{L.remindBtn}</button>
+            <button onClick={vraagHerinnering} style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14.5, fontWeight: 800, padding: "10px 8px", color: "#8a5e0f" }}>{L.remindBtn}</button>
           )}
         </div>
       )
@@ -3655,16 +3681,9 @@ export default function PartyTest() {
   }
   // Nieuw rondje in gewoon-rondjes: eerst vragen of het hetzelfde rondje opnieuw is
   // (bestelling overgenomen, aanpasbaar) of een vers rondje.
-  const askNewRound = () => {
-    if (rounds.length === 0) { nextRound(); return }
-    setConfirmDlg({
-      msg: L.sameRoundAgainQ,
-      yes: L.sameRoundYes,
-      onYes: () => { setConfirmDlg(null); repeatRound() },
-      no: L.newRoundFresh,
-      onNo: () => { setConfirmDlg(null); nextRound() },
-    })
-  }
+  // "Weer hetzelfde rondje?" hoorde hier niet thuis: op het overzicht kijk je terug,
+  // je bestelt er niet. De vraag staat op het bestelscherm zelf.
+  const askNewRound = () => { nextRound() }
 
   // Het aantal personen van één rondje bijstellen. De app leidt dit af uit het aantal
   // drankjes, maar soms nam iemand twee glazen of dronk er iemand niets mee.
@@ -3827,7 +3846,16 @@ export default function PartyTest() {
     },
   })
   const cancelRound = () => setConfirmDlg({ msg: `Het volledige rondje ${roundNr} annuleren? Alle drankjes en bekers van dit rondje worden verwijderd. Dit kan niet ongedaan gemaakt worden.`, yes: L.yesCancel, onYes: () => { const remaining = rounds.length - 1; setRounds((rs) => rs.slice(0, -1)); setPaidConfirmed(false); setConfirmDlg(null); if (remaining > 0) { setOpenRound(remaining - 1); setView("hub") } else setView("order") } })
-  const nextRound = () => { if (blockIfUnpaid()) return; setRoundNr((n) => n + 1); setActiveCat(catsPresent[0]); setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setRepeated(false); setView("order") }
+  const nextRound = () => {
+    if (blockIfUnpaid()) return
+    setActiveCat(catsPresent[0])
+    // Loopt er nog een rondje? Dan is dit geen nieuw rondje maar gewoon terugkeren.
+    // Vroeger telde het nummer bij elk bezoek op, ook zonder één bestelling.
+    if (openRoundId) { setView("order"); return }
+    setRoundNr(rounds.length + 1)
+    setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setRepeated(false)
+    setView("order")
+  }
   // Neemt de drankjes én de toewijzing van het laatste rondje over. Daarna nog gewoon aanpasbaar.
   // Wie deed mee aan dit rondje? Wie het rondje niet meemaakte, betaalt niet mee.
   // Oude rondjes zonder members vallen terug op de hele groep.
@@ -3859,12 +3887,27 @@ export default function PartyTest() {
   // antwoordveld dat de andere toestellen bij hun volgende verversing oppikken.
   const [herinneringGezien, setHerinneringGezien] = useState<string | null>(null)
   const [herinnering, setHerinnering] = useState(false)
-  const stuurHerinnering = async () => {
+  // Wie koos er nog niets? Die namen staan in de vraag, zodat je weet wie je wakker
+  // schudt — en of dat wel nodig is.
+  const nogNietGekozen = () => people.filter((pp) =>
+    !drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0) && openAnswers[pp.id] !== "skip" && pp.id !== startedBy)
+
+  const vraagHerinnering = () => {
+    const wachten = nogNietGekozen()
+    if (wachten.length === 0) { setNotice(L.everyoneChoseAlready); return }
+    setConfirmDlg({
+      msg: `${L.remindTitle}\n\n${L.remindBody(wachten.map((pp) => pp.name).join(", "))}`,
+      yes: L.remindYes, no: L.ratherNot,
+      onYes: () => { setConfirmDlg(null); void stuurHerinnering(wachten.map((pp) => pp.name).join(", ")) },
+    })
+  }
+
+  const stuurHerinnering = async (namen: string) => {
     if (!openRoundId || !groupId) return
     const merk = `poke:${Date.now()}`
     const { error } = await supabase.rpc("party_answer_repeat", { p_round: openRoundId, p_person: merk, p_answer: "same" })
     if (error) { setNotice(L.reminderFailed); return }
-    setNotice(L.reminderSent)
+    setNotice(L.reminderSentTo(namen))
     loadParty(groupId)
   }
 
@@ -4474,6 +4517,17 @@ export default function PartyTest() {
             <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.5, marginBottom: 15 }}>{L.reminderBody(runnerName())}</div>
             <button onClick={() => { setHerinnering(false); setGuestTab("order"); setActiveCat(catsPresent[0]) }} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 16.5, fontWeight: 800 }}>{L.reminderChoose}</button>
             <button onClick={() => { setHerinnering(false); void antwoordRondje("skip") }} style={{ width: "100%", marginTop: 9, background: "none", border: "none", cursor: "pointer", fontSize: 15, fontWeight: 700, color: "#a89a6f" }}>{L.nothingForMeBtn}</button>
+          </div>
+        </div>
+      )}
+      {allenKlaar && (
+        <div style={{ ...S.overlay, zIndex: 75 }} onClick={() => setAllenKlaar(false)}>
+          <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 30, marginBottom: 5 }}>✅</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#1f6b3a", marginBottom: 6 }}>{L.allChoseTitle}</div>
+            <div style={{ fontSize: 14.5, color: "#5a8f99", lineHeight: 1.5, marginBottom: 13 }}>{ikHaalNu ? L.allChoseYou : L.allChoseGuest(runnerName())}</div>
+            {ikHaalNu && <div style={{ textAlign: "left", marginBottom: 13 }}>{renderBarLijst()}</div>}
+            <button onClick={() => setAllenKlaar(false)} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 16, fontWeight: 800 }}>{ikHaalNu ? L.toTheBarBtn : L.okWord}</button>
           </div>
         </div>
       )}
@@ -5978,7 +6032,7 @@ export default function PartyTest() {
               {echtOnafgerond
                 ? (settingsBackTo === "order" ? null : <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>)
                 : magNieuw
-                ? <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{L.newRound}</button>
+                ? <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{openRoundId ? L.continueRound(roundNr) : L.toDrinks}</button>
                 : null}
             </div>
           ) : echtOnafgerond ? (
@@ -7383,7 +7437,7 @@ export default function PartyTest() {
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
               <button style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 15.5, fontWeight: 800 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
               {laatsteRondjeKlaar() && (
-                <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 15.5 }} onClick={nextRound}>{L.newRound}</button>
+                <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 15.5 }} onClick={nextRound}>{openRoundId ? L.continueRound(roundNr) : L.toDrinks}</button>
               )}
             </div>
             {rounds.length > 0 && laatsteRondjeKlaar() && (
