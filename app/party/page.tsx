@@ -5330,7 +5330,6 @@ export default function PartyTest() {
           {catMore.right && <CatPijl kant="rechts" />}
         </div>
 
-        {(lijst.length === 0 && (zoekt || activeCat !== "Eigen")) ? (
         <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: 10 }}>
           <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
             <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🔍</span>
@@ -5346,6 +5345,7 @@ export default function PartyTest() {
           </button>
         </div>
 
+        {(lijst.length === 0 && (zoekt || activeCat !== "Eigen")) ? (
           <div style={{ ...S.card, textAlign: "center", color: "#b3a988", fontSize: 15, padding: "20px 0" }}>
             {!zoekt && !fullList ? (
               <span onClick={() => setFullList(true)} style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }}>{L.showAll}</span>
