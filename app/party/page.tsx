@@ -1814,6 +1814,21 @@ export default function PartyTest() {
   // Pijltjes bij de categorierij: ze tonen dat er links of rechts nog meer staat,
   // want een halve pil aan de rand leest als een afsnijfout en niet als een uitnodiging.
   const catScroll = useRef<HTMLDivElement | null>(null)
+  // Het pijltje aan de rand van de categorieën. Zonder teken weet niemand dat de rij
+  // verder loopt; het wenkt daarom zachtjes naar de kant waar meer staat.
+  const CatPijl = ({ kant }: { kant: "links" | "rechts" }) => {
+    const rechts = kant === "rechts"
+    return (
+      <div onClick={() => catScroll.current?.scrollBy({ left: rechts ? 170 : -170, behavior: "smooth" })}
+        style={{ position: "absolute", [rechts ? "right" : "left"]: 0, top: 0, bottom: 4, width: 42, display: "flex", alignItems: "center",
+          justifyContent: rechts ? "flex-end" : "flex-start", cursor: "pointer",
+          background: `linear-gradient(${rechts ? "90deg" : "270deg"}, rgba(253,246,227,0), ${settle ? MODUS_FAIR.bladzij : "#fdf6e3"} 55%)` }}>
+        <span style={{ width: 26, height: 26, borderRadius: "50%", background: settle ? MODUS_FAIR.rand : "#e08a00", color: "#fff",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, lineHeight: 1,
+          animation: "rundoWenk 1.6s ease-in-out infinite" }}>{rechts ? "›" : "‹"}</span>
+      </div>
+    )
+  }
   const [catMore, setCatMore] = useState({ left: false, right: false })
   const updateCatArrows = () => {
     const el = catScroll.current
@@ -5304,6 +5319,18 @@ export default function PartyTest() {
           </div>
         )}
 
+        <div style={{ display: zoekt ? "none" : "block", position: "relative", marginBottom: 8 }}>
+          <div ref={catScroll} onScroll={updateCatArrows} className="rundo-catscroll"
+            style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", padding: "0 8px 4px 0", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+            {catsPresent.map((c) => (
+              <span key={c} style={{ ...S.tab(activeCat === c), flexShrink: 0 }} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}</span>
+            ))}
+          </div>
+          {catMore.left && <CatPijl kant="links" />}
+          {catMore.right && <CatPijl kant="rechts" />}
+        </div>
+
+        {(lijst.length === 0 && (zoekt || activeCat !== "Eigen")) ? (
         <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: 10 }}>
           <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
             <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🔍</span>
@@ -5319,13 +5346,6 @@ export default function PartyTest() {
           </button>
         </div>
 
-        <div style={{ display: zoekt ? "none" : "flex", gap: 7, flexWrap: "wrap", marginBottom: 8 }}>
-          {catsPresent.map((c) => (
-            <span key={c} style={S.tab(activeCat === c)} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}</span>
-          ))}
-        </div>
-
-        {(lijst.length === 0 && (zoekt || activeCat !== "Eigen")) ? (
           <div style={{ ...S.card, textAlign: "center", color: "#b3a988", fontSize: 15, padding: "20px 0" }}>
             {!zoekt && !fullList ? (
               <span onClick={() => setFullList(true)} style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }}>{L.showAll}</span>
@@ -5361,9 +5381,9 @@ export default function PartyTest() {
             {!bezig && <div style={{ gridColumn: "1 / -1", fontSize: 12.5, color: "#a89a6f", textAlign: "center", marginTop: 4, lineHeight: 1.45 }}>{L.browseOnly}</div>}
             {!zoekt && (
               <div onClick={() => { setShowAddDrink(true); setNdName("") }}
-                style={{ padding: "10px", borderRadius: 12, background: "#fffdf6", border: "1.5px dashed rgba(240,165,0,0.6)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 74, cursor: "pointer", color: "#c98a00" }}>
-                <div style={{ fontSize: 20, lineHeight: 1 }}>＋</div>
-                <div style={{ fontSize: 13, fontWeight: 800, marginTop: 5 }}>{L.newDrinkTile}</div>
+                style={{ padding: "9px 8px", borderRadius: 11, background: "#fffdf6", border: "1.5px dashed rgba(240,165,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", color: "#c98a00" }}>
+                <div style={{ fontSize: 16, lineHeight: 1 }}>＋</div>
+                <div style={{ fontSize: 12.5, fontWeight: 800 }}>{L.newDrinkTile}</div>
               </div>
             )}
             </div>
@@ -5399,7 +5419,8 @@ export default function PartyTest() {
     return (
       <div style={{ ...S.page, display: "flex", flexDirection: "column", justifyContent: "flex-start", padding: "0 0 40px" }}><div style={{ ...S.wrap, paddingTop: 26 }}>
         {renderDialogs()}
-        <style>{`input::placeholder,textarea::placeholder{color:#c4b896;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
+        <style>{`@keyframes rundoWenk{0%,100%{transform:translateX(0);opacity:.6}50%{transform:translateX(3px);opacity:1}}
+          input::placeholder,textarea::placeholder{color:#c4b896;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 22 }}>
           <div style={{ ...S.row, gap: 13 }}>
             <RundoLogo size={58} />
@@ -6268,18 +6289,8 @@ export default function PartyTest() {
             </span>
           })}
           </div>
-          {catMore.left && (
-            <div onClick={() => catScroll.current?.scrollBy({ left: -170, behavior: "smooth" })}
-              style={{ position: "absolute", left: 0, top: 0, bottom: 9, width: 46, display: "flex", alignItems: "center", justifyContent: "flex-start", cursor: "pointer", background: "linear-gradient(to left, rgba(253,246,227,0), #fdf6e3 60%)" }}>
-              <span style={{ width: 30, height: 30, borderRadius: "50%", background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a5e0f", fontSize: 17, fontWeight: 800, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>‹</span>
-            </div>
-          )}
-          {catMore.right && (
-            <div onClick={() => catScroll.current?.scrollBy({ left: 170, behavior: "smooth" })}
-              style={{ position: "absolute", right: 0, top: 0, bottom: 9, width: 46, display: "flex", alignItems: "center", justifyContent: "flex-end", cursor: "pointer", background: "linear-gradient(to right, rgba(253,246,227,0), #fdf6e3 60%)" }}>
-              <span style={{ width: 30, height: 30, borderRadius: "50%", background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a5e0f", fontSize: 17, fontWeight: 800, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>›</span>
-            </div>
-          )}
+          {catMore.left && <CatPijl kant="links" />}
+          {catMore.right && <CatPijl kant="rechts" />}
         </div>
 
         {zoekt && (
@@ -6322,9 +6333,9 @@ export default function PartyTest() {
               })}
               {!zoekt && (
                 <div onClick={() => { setShowAddDrink(true); setNdName("") }}
-                  style={{ padding: "10px", borderRadius: 12, background: "#fffdf6", border: "1.5px dashed rgba(240,165,0,0.6)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 74, cursor: "pointer", color: "#c98a00" }}>
-                  <div style={{ fontSize: 20, lineHeight: 1 }}>＋</div>
-                  <div style={{ fontSize: 13, fontWeight: 800, marginTop: 5 }}>{L.newDrinkTile}</div>
+                  style={{ padding: "9px 8px", borderRadius: 11, background: "#fffdf6", border: "1.5px dashed rgba(240,165,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", color: "#c98a00" }}>
+                  <div style={{ fontSize: 16, lineHeight: 1 }}>＋</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 800 }}>{L.newDrinkTile}</div>
                 </div>
               )}
             </div>
