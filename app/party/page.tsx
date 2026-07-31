@@ -733,7 +733,7 @@ const T = {
     yesIWalk: "Ja, ik neem op →",
     potInPot: "💰 In de pot",
     waitTitle: "Je zit erbij — even wachten",
-    waitForHost: (naam: string) => `Zodra ${naam || "de gastheer"} het bestellen opent, tik jij je eigen drankjes aan.`,
+    waitForHost: (naam: string) => `Zodra ${naam || "de gastheer"} het bestellen opent, kunnen we starten.`,
     openStep1: "Vanaf nu kan er besteld worden",
     openStep2: "Wie gaat halen, tikt dat aan boven de drankjes",
     openStep3: "Daarna tikt iedereen aan wat hij wil",
@@ -1326,7 +1326,7 @@ const T = {
     yesIWalk: "Oui, je prends →",
     potInPot: "💰 Dans la cagnotte",
     waitTitle: "Tu es dans le groupe — un instant",
-    waitForHost: (naam: string) => `Dès que ${naam || "l’hôte"} ouvre les commandes, tu coches tes propres boissons.`,
+    waitForHost: (naam: string) => `Dès que ${naam || "l’hôte"} ouvre les commandes, on peut commencer.`,
     openStep1: "À partir de maintenant on peut commander",
     openStep2: "Celui qui y va le signale au-dessus des boissons",
     openStep3: "Ensuite chacun coche ce qu’il veut",
@@ -2143,8 +2143,10 @@ export default function PartyTest() {
           <div key={pp.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 9,
             background: zijne.length > 0 ? "rgba(31,138,76,0.07)" : slaOver ? "rgba(120,95,20,0.05)" : "#fff",
             border: klaar ? "none" : "1px dashed rgba(120,95,20,0.3)" }}>
-            <span style={{ fontSize: 14.5, fontWeight: klaar ? 700 : 400, color: kleur, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {zijne.length > 0 ? "✓ " : slaOver ? "— " : ""}{pp.id === meId ? "⭐ " : ""}{pp.name}
+            <span style={{ fontSize: 14.5, fontWeight: klaar ? 700 : 400, color: kleur, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}>
+              {zijne.length > 0 ? "✓" : slaOver ? "—" : ""}
+              {!!ownerDevice && pp.claimedBy === ownerDevice && <KroonIcoon size={11} kleur={kleur} />}
+              {pp.name}
             </span>
             <span style={{ flexShrink: 0, fontSize: 13, color: zijne.length > 0 ? "#4a7a5c" : "#b3a988", textAlign: "right" }}>
               {zijne.length > 0 ? zijne.map((d) => `${cart[d.id][pp.id]}× ${d.name}`).join(" · ") : slaOver ? L.nothingForMe : L.stillBusy}
@@ -3385,7 +3387,7 @@ export default function PartyTest() {
                   background: p.claimedBy ? "rgba(31,138,76,0.12)" : "rgba(120,95,20,0.05)",
                   color: p.claimedBy ? "#1f6b3a" : "#a89a6f",
                   border: p.claimedBy ? "1px solid rgba(31,138,76,0.25)" : "1px dashed rgba(120,95,20,0.28)" }}>
-                  {p.claimedBy ? "📱 " : ""}{leeg ? L.seat(idx + 1) : p.name}
+                  {!!ownerDevice && p.claimedBy === ownerDevice ? <><KroonIcoon size={11} kleur={p.claimedBy ? "#1f6b3a" : "#a89a6f"} />{" "}</> : p.claimedBy ? "📱 " : ""}{leeg ? L.seat(idx + 1) : p.name}
                 </span>
               )
             })}
@@ -4927,7 +4929,7 @@ export default function PartyTest() {
         </div>
 
         <div style={S.card}>
-          <h3 style={{ ...S.h3, marginTop: 0 }}>{L.whoAreYou}</h3>
+          <h3 style={{ ...S.h3, marginTop: 0, fontSize: 22 }}>{L.whoAreYou}</h3>
 
           {vrij.length === 0 ? (
             <>
@@ -4944,11 +4946,11 @@ export default function PartyTest() {
             <>
               {metNaam.length > 0 && (
                 <>
-                  <div style={{ fontSize: 14.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.5 }}>{L.tapYourName}</div>
+                  <div style={{ fontSize: 16.5, color: "#6b5f3a", marginBottom: 12, lineHeight: 1.5 }}>{L.tapYourName}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8, marginBottom: leeg.length ? 16 : 0 }}>
                     {metNaam.map((p) => (
                       <button key={p.id} disabled={busy} onClick={() => claimSeat(p.id, p.name)}
-                        style={{ ...S.btn, padding: "13px 8px", fontWeight: 800, fontSize: 15.5, opacity: busy ? 0.5 : 1 }}>
+                        style={{ ...S.btn, padding: "16px 8px", fontWeight: 800, fontSize: 17, opacity: busy ? 0.5 : 1 }}>
                         {p.name}
                       </button>
                     ))}
@@ -4958,24 +4960,24 @@ export default function PartyTest() {
 
               {leeg.length > 0 && (
                 <>
-                  <div style={{ fontSize: 14.5, color: "#8a7d55", marginBottom: 8, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 16.5, color: "#6b5f3a", marginBottom: 10, lineHeight: 1.5 }}>
                     {metNaam.length > 0 ? L.notThere : L.fillNameSeat}
                   </div>
                   <input id="guest-name" value={gastNaam} onChange={(e) => setGastNaam(e.target.value)}
-                    style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 17, marginBottom: 10,
+                    style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 18, padding: "13px 14px", textAlign: "left", marginBottom: 12,
                       border: gastNaam.trim() ? `1.5px solid ${MODUS_FAIR.randZacht}` : undefined }}
                     placeholder={L.yourName} autoComplete="name" />
                   {/* Zolang er geen naam staat zijn deze knoppen bleek: er valt nog niets te
                       kiezen. Zodra je typt worden ze groen met een gloed, en staat erboven
                       wat je nu moet doen. */}
-                  {gastNaam.trim() && <div style={{ fontSize: 14, fontWeight: 800, color: MODUS_FAIR.tekst, marginBottom: 8 }}>{L.tapYourSeatNow}</div>}
+                  {gastNaam.trim() && <div style={{ fontSize: 16.5, fontWeight: 800, color: MODUS_FAIR.tekst, marginBottom: 9 }}>{L.tapYourSeatNow}</div>}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
                     {leeg.map((p) => {
                       const klaar = gastNaam.trim().length > 0
                       return (
                         <button key={p.id} disabled={busy || !klaar}
                           onClick={() => { if (!klaar) { setNotice(L.fillNameFirst); return } claimSeat(p.id, gastNaam.trim()) }}
-                          style={{ ...S.btn, padding: "13px 8px", fontWeight: 800, cursor: klaar ? "pointer" : "default",
+                          style={{ ...S.btn, padding: "16px 8px", fontSize: 16.5, fontWeight: 800, cursor: klaar ? "pointer" : "default",
                             background: klaar ? MODUS_FAIR.knop : VLAK1,
                             border: klaar ? "none" : "1px solid rgba(120,95,20,0.18)",
                             color: klaar ? "#fff" : "#c4b896",
@@ -5826,7 +5828,7 @@ export default function PartyTest() {
         )}
         <div style={S.card}>
           <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{L.groupNameEdit}</div>
-          <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
+          <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
             style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: VLAK2 }} />
           {groupName.trim() && <div style={{ fontSize: 12.5, color: "#8aa5aa", marginTop: 5, paddingLeft: 2 }}>{L.tapToChange}</div>}
           {settle && (<>
