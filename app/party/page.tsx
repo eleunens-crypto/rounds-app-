@@ -744,6 +744,13 @@ const T = {
     allChoseYou: "Je kan gaan halen. Dit heb je nodig:",
     allChoseGuest: (naam: string) => `${naam || "De haler"} kan vertrekken — je drankje komt eraan.`,
     toTheBarBtn: "🍻 Op naar de bar →",
+    cancelRoundBtn: "✕ Rondje annuleren",
+    cancelRoundTitle: "Dit rondje annuleren?",
+    cancelRoundBody: "Alles wat al aangetikt is gaat weg, ook bij de anderen. Dit kan niet ongedaan worden.",
+    cancelRoundYes: "Ja, annuleren",
+    cancelRoundDone: "Het rondje is geannuleerd.",
+    cancelRoundFailed: "Annuleren mislukt.",
+    roundCancelled: (naam: string) => `${naam || "De haler"} heeft het rondje geannuleerd. Alles van dat rondje is weg.`,
     reminderFailed: "Herinnering versturen mislukt.",
     reminderTitle: "⏰ Nog even jouw keuze",
     reminderBody: (naam: string) => `${naam} klaar om drankjes te halen. Tik aan wat je wil — of laat weten dat je niets neemt.`,
@@ -1311,6 +1318,13 @@ const T = {
     allChoseYou: "Tu peux y aller. Voici ce qu’il te faut :",
     allChoseGuest: (naam: string) => `${naam || "Celui qui y va"} peut partir — ta boisson arrive.`,
     toTheBarBtn: "🍻 Direction le bar →",
+    cancelRoundBtn: "✕ Annuler la tournée",
+    cancelRoundTitle: "Annuler cette tournée ?",
+    cancelRoundBody: "Tout ce qui est déjà coché disparaît, aussi chez les autres. C’est définitif.",
+    cancelRoundYes: "Oui, annuler",
+    cancelRoundDone: "La tournée est annulée.",
+    cancelRoundFailed: "Échec de l’annulation.",
+    roundCancelled: (naam: string) => `${naam || "Celui qui y allait"} a annulé la tournée. Tout est effacé.`,
     reminderFailed: "Envoi du rappel échoué.",
     reminderTitle: "⏰ Ton choix, vite",
     reminderBody: (naam: string) => `${naam} est prêt à aller chercher les boissons. Coche ce que tu veux — ou dis que tu ne prends rien.`,
@@ -1954,6 +1968,18 @@ export default function PartyTest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderingOpen, meId, groupId])
 
+  // Verdween er een rondje dat je aan het invullen was? Dan heeft iemand geannuleerd.
+  // We onthouden het laatste open rondje en zijn haler, want die gegevens zijn weg zodra
+  // het rondje verdwijnt.
+  const vorigOpen = useRef<{ id: string; door: string } | null>(null)
+  useEffect(() => {
+    if (openRoundId) { vorigOpen.current = { id: openRoundId, door: runnerName() }; return }
+    const weg = vorigOpen.current
+    vorigOpen.current = null
+    if (weg && meId && rounds.every((r) => r.id !== weg.id)) setNotice(L.roundCancelled(weg.door))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openRoundId])
+
   // Koos iedereen? Dan één keer een venster — voor de haler het sein om te vertrekken,
   // voor de rest dat hun drankje eraan komt.
   useEffect(() => {
@@ -2191,8 +2217,11 @@ export default function PartyTest() {
               </>)}
             </div>
           )}
-          {/* Dezelfde stand als de haler ziet, zonder zijn knoppen: ook jij wil weten of
-              iedereen al gekozen heeft. */}
+          {/* Ook wie niet haalt kan annuleren, maar alleen de beheerder — nodig wanneer
+              de haler zijn gsm wegstak en het rondje eeuwig zou blijven openstaan. */}
+          {magAnnuleren && (
+            <button onClick={annuleerRondje} style={{ width: "100%", marginTop: 9, cursor: "pointer", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#b0402f" }}>{L.cancelRoundBtn}</button>
+          )}
         </div>
       )
     }
@@ -3891,6 +3920,29 @@ export default function PartyTest() {
   // schudt — en of dat wel nodig is.
   const nogNietGekozen = () => people.filter((pp) =>
     !drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0) && openAnswers[pp.id] !== "skip" && pp.id !== startedBy)
+
+  // Alleen wie het rondje startte en de beheerder mogen annuleren — anders blijft een
+  // rondje eeuwig openstaan wanneer de haler zijn gsm wegstak.
+  const magAnnuleren = !!openRoundId && (isAdmin || (!!meId && startedBy === meId))
+  const annuleerRondje = () => {
+    if (!openRoundId || !groupId) return
+    setConfirmDlg({
+      variant: "danger",
+      msg: `${L.cancelRoundTitle}\n\n${L.cancelRoundBody}`,
+      yes: L.cancelRoundYes, no: L.ratherNot,
+      onYes: async () => {
+        setConfirmDlg(null)
+        const rid = openRoundId
+        // De drankjes hangen aan het rondje: die gaan mee weg. Half bewaren levert een
+        // rondje op waarvan niemand nog weet wat het was.
+        const { error } = await supabase.from("party_rounds").delete().eq("id", rid)
+        if (error) { setNotice(L.cancelRoundFailed); return }
+        setCart({}); setCartAnon({}); setOpenRoundId(null); setStartedBy(null); setOpenAnswers({})
+        setNotice(L.cancelRoundDone)
+        loadParty(groupId)
+      },
+    })
+  }
 
   const vraagHerinnering = () => {
     const wachten = nogNietGekozen()
