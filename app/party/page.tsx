@@ -565,6 +565,7 @@ const T = {
     // ── betalen
     exactAmount: "💰 Exact bedrag betaald voor dit rondje?",
     whoPaidThis: "Wie betaalde dit rondje?",
+    roundsMissingAmount: (nrs: string) => `Rondje ${nrs} heeft nog geen bedrag of betaler. Vul dat eerst in — anders klopt de verdeling niet.`,
     iPaidBtn: "🙋 Jij",
     fromPotBtn: "💰 Uit de pot",
     fromCardBtn: "💳 Van de kaart",
@@ -1146,6 +1147,7 @@ const T = {
     // ── betalen
     exactAmount: "💰 Montant exact payé pour cette tournée ?",
     whoPaidThis: "Qui a payé cette tournée ?",
+    roundsMissingAmount: (nrs: string) => `La tournée ${nrs} n’a pas encore de montant ou de payeur. Complète d’abord — sinon le partage ne tient pas.`,
     iPaidBtn: "🙋 Toi",
     fromPotBtn: "💰 La cagnotte",
     fromCardBtn: "💳 La carte",
@@ -3784,8 +3786,20 @@ export default function PartyTest() {
     if (fr < 0) return
     setOpenRound(fr); setAllRoundsOpen(false); setEditCups(false); setEditPay(false); setView("hub"); setAssignIdx(fr)
   }
+  // Welke rondjes missen een bedrag of een betaler? Zonder die twee klopt de verdeling
+  // niet, en dan mag de eindafrekening niet.
+  const rondjesZonderBedrag = () => rounds
+    .map((r, i) => ({ nr: i + 1, ok: (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005)) }))
+    .filter((x) => !x.ok).map((x) => x.nr)
+
   const goFinal = () => {
     if (unfinishedRound) { setNotice(L.roundUnfinished(roundNr)); setActiveCat(catsPresent[0]); setView("order"); return }
+    const zonder = rondjesZonderBedrag()
+    if (settle && zonder.length > 0) {
+      setNotice(L.roundsMissingAmount(zonder.join(", ")))
+      setOpenRound(zonder[0] - 1); setView("confirmed")
+      return
+    }
     if (view === "confirmed") { setNotice(`Rondje ${roundNr} is nog niet betaald. Rond die betaling eerst af.`); return }
     if (paidCount === 0) { setNotice(L.nothingToSettle); return }
     if (blockIfUnpaid()) return
