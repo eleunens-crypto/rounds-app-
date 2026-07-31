@@ -356,7 +356,6 @@ const T = {
     allSeatsTaken: "Alle plaatsen zijn ingenomen — maar je kan er zelf een bijzetten.",
     joinAddSeat: "Erbij komen",
     someoneJoined: (n: string) => `${n} is erbij gekomen`,
-    notRight: "klopt niet",
     alreadyJoined: "Al aangemeld",
     fillNameFirst: "Vul eerst je naam in.",
     tapYourSeatNow: "👇 Tik nu je plaats aan",
@@ -803,7 +802,7 @@ const T = {
     howManyAreYou: "👥 Met hoeveel zijn jullie?",
     freeToScan: (n: number) => `${n} ${n === 1 ? "plaats" : "plaatsen"} vrij om te scannen`,
     noFreeSeatYet: "Er is nog geen vrije plaats.",
-    scanNoUseAlone: "Scannen levert niets op zolang jij de enige bent.",
+    scanNoUseAlone: "Tik op + tot het klopt met hoeveel jullie zijn.",
     orderWord: "Bestelling",
     howManyPeople: "Met hoeveel zijn jullie?",
     people: "pers.",
@@ -949,7 +948,6 @@ const T = {
     allSeatsTaken: "Toutes les places sont prises — mais tu peux en ajouter une.",
     joinAddSeat: "Me joindre",
     someoneJoined: (n: string) => `${n} a rejoint`,
-    notRight: "pas correct",
     alreadyJoined: "Déjà inscrits",
     fillNameFirst: "Entre d'abord ton nom.",
     tapYourSeatNow: "👇 Touche maintenant ta place",
@@ -1396,7 +1394,7 @@ const T = {
     howManyAreYou: "👥 Vous êtes combien ?",
     freeToScan: (n: number) => `${n} place${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"} à scanner`,
     noFreeSeatYet: "Il n’y a pas encore de place libre.",
-    scanNoUseAlone: "Scanner ne sert à rien tant que tu es seul.",
+    scanNoUseAlone: "Touche + jusqu’au nombre que vous êtes.",
     orderWord: "Commande",
     howManyPeople: "Vous \u00eates combien ?",
     people: "pers.",
@@ -1887,6 +1885,12 @@ export default function PartyTest() {
   // Zachte melding wanneer iemand nieuw aansluit. Vervaagt vanzelf; alleen de admin
   // krijgt een knop om het terug te draaien (voor als een vreemde de link kreeg).
   const [newcomer, setNewcomer] = useState<{ id: string; name: string } | null>(null)
+  // Puur ter info: na een paar tellen weg, zodat niemand hem hoeft weg te tikken.
+  useEffect(() => {
+    if (!newcomer) return
+    const t = setTimeout(() => setNewcomer(null), 5000)
+    return () => clearTimeout(t)
+  }, [newcomer])
   const knownPeople = useRef<Set<string>>(new Set())
 
   // edit-in-hub
@@ -4789,10 +4793,6 @@ export default function PartyTest() {
             <div style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", fontWeight: 700, marginTop: 3 }}>
               📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}
             </div>
-            {isAdmin && (
-              <button onClick={() => { removePerson(newcomer.id); setNewcomer(null) }}
-                style={{ marginTop: 9, width: "100%", border: "1px solid rgba(255,255,255,0.5)", background: "transparent", color: "#fff", borderRadius: 10, padding: "7px 9px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>{L.notRight}</button>
-            )}
           </div>
         </div>
       )}
