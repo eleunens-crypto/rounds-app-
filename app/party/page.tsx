@@ -1953,13 +1953,13 @@ export default function PartyTest() {
   const [halerGemeld, setHalerGemeld] = useState<string | null>(null)
   const [allenKlaar, setAllenKlaar] = useState(false)
   const [allenGemeld, setAllenGemeld] = useState<string | null>(null)
-  // Hoeveel mensen maakten een keuze — een drankje óf "niets voor mij". Staat hier omdat
-  // de effecten eronder het aflezen.
-  const ikHaalNu = !!meId && startedBy === meId
-  const alGekozen = people.filter((pp) => drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0) || openAnswers[pp.id] === "skip").length
   // De antwoorden op het lópende rondje: wie koos niets, en het merkje van een
   // herinnering. Staat hier bovenaan omdat de effecten eronder ernaar kijken.
   const [openAnswers, setOpenAnswers] = useState<Record<string, "same" | "different" | "skip">>({})
+  // Hoeveel mensen maakten een keuze — een drankje óf "niets voor mij". Moet ná
+  // openAnswers staan, want het leest dat.
+  const ikHaalNu = !!meId && startedBy === meId
+  const alGekozen = people.filter((pp) => drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0) || openAnswers[pp.id] === "skip").length
   // Staat het bestellen open? Dat is een fase, geen rondje: iedereen mag vanaf dan een
   // rondje starten, maar er loopt er nog geen.
   const [orderingOpen, setOrderingOpen] = useState(false)
