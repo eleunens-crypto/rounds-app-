@@ -564,6 +564,13 @@ const T = {
 
     // ── betalen
     exactAmount: "💰 Exact bedrag betaald voor dit rondje?",
+    whoPaidThis: "Wie betaalde dit rondje?",
+    iPaidBtn: "🙋 Jij",
+    fromPotBtn: "💰 Uit de pot",
+    fromCardBtn: "💳 Van de kaart",
+    howMuchYou: "💰 Hoeveel betaalde je zelf voor dit rondje?",
+    howMuchPot: "💰 Hoeveel betaalde je uit de pot voor dit rondje?",
+    potEmptyPay: (kaart: boolean) => `De ${kaart ? "drankkaart" : "pot"} is leeg — leg eerst iets in of kies "Jij".`,
     amountAndPayer: "bedrag & betaler",
     whoPaid: "Kies wie betaalde.",
     multiplePossible: "(meerdere mogelijk)",
@@ -1138,6 +1145,13 @@ const T = {
 
     // ── betalen
     exactAmount: "💰 Montant exact payé pour cette tournée ?",
+    whoPaidThis: "Qui a payé cette tournée ?",
+    iPaidBtn: "🙋 Toi",
+    fromPotBtn: "💰 La cagnotte",
+    fromCardBtn: "💳 La carte",
+    howMuchYou: "💰 Combien as-tu payé toi-même pour cette tournée ?",
+    howMuchPot: "💰 Combien as-tu payé avec la cagnotte ?",
+    potEmptyPay: (kaart: boolean) => `${kaart ? "La carte" : "La cagnotte"} est vide — remplis-la d’abord ou choisis « Toi ».`,
     amountAndPayer: "montant & payeur",
     whoPaid: "Choisis qui a payé.",
     multiplePossible: "(plusieurs possibles)",
@@ -6477,8 +6491,26 @@ export default function PartyTest() {
         </div>
 
         <div style={S.card}>
-          <div style={{ fontSize: 16, fontWeight: 800, textAlign: "center", marginBottom: 8 }}>{L.exactAmount}</div>
-          <div style={{ ...S.row, gap: 8, justifyContent: "center", margin: "2px 0" }}>
+          {settle && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 800, color: "#8a7d55", marginBottom: 8, textAlign: "center" }}>{L.whoPaidThis}</div>
+              <div style={{ display: "flex", gap: 9 }}>
+                <button onClick={() => { setPayPot(false); if (meId) { setPayPersons([meId]); autoSplit([meId], false) } }}
+                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 13, padding: "15px 8px", fontSize: 15.5, fontWeight: 800,
+                    background: !payPot && payPersons.length > 0 ? MODUS_FAIR.knop : "#fff",
+                    color: !payPot && payPersons.length > 0 ? "#fff" : MODUS_FAIR.tekst,
+                    border: !payPot && payPersons.length > 0 ? "none" : `1.5px solid ${MODUS_FAIR.randZacht}` }}>{L.iPaidBtn}</button>
+                <button onClick={() => { if (st.potAvail <= 0.005) { setNotice(L.potEmptyPay(potIsCard)); return } setPayPersons([]); setPayPot(true); autoSplit([], true) }}
+                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 13, padding: "15px 8px", fontSize: 15.5, fontWeight: 800,
+                    opacity: st.potAvail <= 0.005 ? 0.5 : 1,
+                    background: payPot ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff",
+                    color: payPot ? "#fff" : "#8a5e0f",
+                    border: payPot ? "none" : "1.5px solid rgba(240,165,0,0.5)" }}>{potIsCard ? L.fromCardBtn : L.fromPotBtn}</button>
+              </div>
+            </div>
+          )}
+          <div style={{ fontSize: 16, fontWeight: 800, textAlign: "center", marginBottom: 8, opacity: settle && payPersons.length === 0 && !payPot ? 0.4 : 1 }}>{!settle ? L.exactAmount : payPot ? L.howMuchPot : L.howMuchYou}</div>
+          <div style={{ ...S.row, gap: 8, justifyContent: "center", margin: "2px 0", opacity: settle && payPersons.length === 0 && !payPot ? 0.4 : 1, pointerEvents: settle && payPersons.length === 0 && !payPot ? "none" : "auto" }}>
             <span style={{ fontSize: 21, fontWeight: 800 }}>€</span>
             <input style={{ ...S.input, width: 120, fontSize: 23, textAlign: "center", fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00" value={amountDraft} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setAmountDraft(v); autoSplit(payPersons, payPot, v); setPaidConfirmed(false) }} />
           </div>
