@@ -717,7 +717,10 @@ const T = {
     orderingOpen: "Het bestellen is open",
     roundBusyYou: "Rondje bezig — jij gaat halen",
     roundBusyX: (naam: string) => `Rondje bezig — ${naam} gaat halen`,
-    someChose: (n: number, t: number) => `${n} van ${t} pers. kozen al`,
+    someChose: (n: number, t: number) => `${n} van ${t} pers. zijn klaar`,
+    chosenCount: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} gekozen`,
+    imDoneBtn: "Ik ben klaar ✓",
+    youAreDone: (n: number) => `✓ Jij bent klaar — ${n} ${n === 1 ? "drankje" : "drankjes"}`,
     allChose: "Iedereen heeft gekozen",
     pickBelow: "👇 Selecteer je drankjes",
     noRoundTitle: "Er loopt nog geen rondje",
@@ -1311,7 +1314,10 @@ const T = {
     orderingOpen: "Les commandes sont ouvertes",
     roundBusyYou: "Tournée en cours — tu y vas",
     roundBusyX: (naam: string) => `Tournée en cours — ${naam} y va`,
-    someChose: (n: number, t: number) => `${n} sur ${t} pers. ont choisi`,
+    someChose: (n: number, t: number) => `${n} sur ${t} pers. sont prêts`,
+    chosenCount: (n: number) => `${n} boisson${n === 1 ? "" : "s"} choisie${n === 1 ? "" : "s"}`,
+    imDoneBtn: "J’ai fini ✓",
+    youAreDone: (n: number) => `✓ Tu as fini — ${n} boisson${n === 1 ? "" : "s"}`,
     allChose: "Tout le monde a choisi",
     pickBelow: "👇 Choisis tes boissons",
     noRoundTitle: "Aucune tournée en cours",
@@ -1997,7 +2003,10 @@ export default function PartyTest() {
   // Hoeveel mensen maakten een keuze — een drankje óf "niets voor mij". Moet ná
   // openAnswers staan, want het leest dat.
   const ikHaalNu = !!meId && startedBy === meId
-  const alGekozen = people.filter((pp) => drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0) || openAnswers[pp.id] === "skip").length
+  // Klaar is niet hetzelfde als "heeft iets aangetikt": je bent klaar wanneer je dat
+  // zelf zegt, of wanneer je liet weten dat je niets neemt.
+  const isKlaar = (pid: string) => openAnswers[pid] === "same" || openAnswers[pid] === "skip"
+  const alGekozen = people.filter((pp) => isKlaar(pp.id)).length
   // Staat het bestellen open? Dat is een fase, geen rondje: iedereen mag vanaf dan een
   // rondje starten, maar er loopt er nog geen.
   const [orderingOpen, setOrderingOpen] = useState(false)
@@ -2287,11 +2296,15 @@ export default function PartyTest() {
               {openAnswers[meId] === "skip" && mijnKeuze === 0 ? (<>
                 <span style={{ fontSize: 14, color: "#8a7d55", minWidth: 0 }}>{L.youTakeNothing}</span>
                 <span onClick={() => antwoordRondje("different")} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", textDecoration: "underline" }}>{L.chooseAnyway}</span>
+              </>) : openAnswers[meId] === "same" ? (<>
+                <span style={{ fontSize: 13.5, color: "#1f6b3a", fontWeight: 700, minWidth: 0 }}>{L.youAreDone(mijnKeuze)}</span>
+                <button onClick={() => antwoordRondje("different")} style={{ flexShrink: 0, cursor: "pointer", border: "1px solid rgba(120,95,20,0.3)", background: "#fff", color: "#8a7d55", borderRadius: 9, padding: "7px 11px", fontSize: 12.5, fontWeight: 800, whiteSpace: "nowrap" }}>{L.changeWord}</button>
+              </>) : mijnKeuze > 0 ? (<>
+                <span style={{ fontSize: 13.5, color: MODUS_FAIR.tekst, minWidth: 0 }}>{L.chosenCount(mijnKeuze)}</span>
+                <button onClick={() => antwoordRondje("same")} style={{ flexShrink: 0, cursor: "pointer", border: "none", background: MODUS_FAIR.knop, color: "#fff", borderRadius: 9, padding: "8px 13px", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap" }}>{L.imDoneBtn}</button>
               </>) : (<>
                 <span style={{ fontSize: 14, color: MODUS_FAIR.tekst, fontWeight: 700, minWidth: 0 }}>{L.pickBelow}</span>
-                {mijnKeuze === 0 && (
-                  <button onClick={() => antwoordRondje("skip")} style={{ flexShrink: 0, cursor: "pointer", border: "1.5px solid rgba(120,95,20,0.28)", background: "#fff", color: "#8a7d55", borderRadius: 9, padding: "7px 11px", fontSize: 13, fontWeight: 800, whiteSpace: "nowrap" }}>{L.nothingForMeBtn}</button>
-                )}
+                <button onClick={() => antwoordRondje("skip")} style={{ flexShrink: 0, cursor: "pointer", border: "1.5px solid rgba(120,95,20,0.28)", background: "#fff", color: "#8a7d55", borderRadius: 9, padding: "7px 11px", fontSize: 13, fontWeight: 800, whiteSpace: "nowrap" }}>{L.nothingForMeBtn}</button>
               </>)}
             </div>
           )}
@@ -4053,7 +4066,7 @@ export default function PartyTest() {
     loadParty(groupId)
   }
 
-  const antwoordRondje = async (answer: "different" | "skip") => {
+  const antwoordRondje = async (answer: "different" | "skip" | "same") => {
     if (!openRoundId || !meId) return
     setOpenAnswers((cur) => ({ ...cur, [meId]: answer }))
     const { error } = await supabase.rpc("party_answer_repeat", { p_round: openRoundId, p_person: meId, p_answer: answer })
