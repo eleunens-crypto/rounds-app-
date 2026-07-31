@@ -643,8 +643,12 @@ const T = {
 
     // ── afrekenen
     finalBalance: "🧾 Eindbalans",
-    totalOrdered: "💰 Totaal besteld",
-    fairSplit: "⚖️ Fair Split",
+    totalPaid: "💰 Totaal betaald",
+    fairVsEqual: "⚖️ Fair Split vs Gelijk verdelen",
+    fairIsFairest: "Fair Split is het eerlijkst!",
+    whoPaysWho: "🤝 Wie betaalt aan wie?",
+    shortestWay: "Zo min mogelijk overschrijvingen — de app zoekt de kortste weg.",
+    fairInfo: "⚖️ Fair Split — Eerlijker dan gelijke verdeling. Wie weinig of goedkopere drankjes nam, betaalt niet mee voor de rest.",
     equalSplit: "iedereen evenveel",
     equalWouldBe: (v: string) => `Gelijk verdelen zou ${v} per persoon zijn.`,
     equalColHead: "gelijk verdeeld",
@@ -1225,8 +1229,12 @@ const T = {
 
     // ── afrekenen
     finalBalance: "🧾 Bilan final",
-    totalOrdered: "💰 Total commandé",
-    fairSplit: "⚖️ Fair Split",
+    totalPaid: "💰 Total payé",
+    fairVsEqual: "⚖️ Fair Split vs partage égal",
+    fairIsFairest: "Le Fair Split est le plus équitable !",
+    whoPaysWho: "🤝 Qui paie à qui ?",
+    shortestWay: "Le moins de virements possible — l’appli cherche le chemin le plus court.",
+    fairInfo: "⚖️ Fair Split — Plus équitable qu’un partage égal. Qui a bu peu ou moins cher ne paie pas pour les autres.",
     equalSplit: "part égale",
     equalWouldBe: (v: string) => `Un partage égal ferait ${v} par personne.`,
     equalColHead: "part égale",
@@ -7792,22 +7800,27 @@ export default function PartyTest() {
       </div>
 
       <div style={{ ...S.card, background: "linear-gradient(135deg,#fff7e6,#fdefc9)" }}>
-        <div style={{ ...S.row, justifyContent: "space-between", fontSize: 15.5 }}>
-          <span style={{ fontWeight: 800 }}>{L.totalOrdered}</span>
-          <span style={{ fontWeight: 800, fontSize: 19 }}>{show(grandTotal)}</span>
+        <div style={{ ...S.row, justifyContent: "space-between", fontSize: 18 }}>
+          <span style={{ fontWeight: 800 }}>{L.totalPaid}</span>
+          <span style={{ fontWeight: 800, fontSize: 23 }}>{show(grandTotal)}</span>
         </div>
         {potSpent > 0 && (
           <div style={{ marginTop: 6, borderTop: "1px dashed rgba(120,95,20,0.2)", paddingTop: 6 }}>
-            <div style={{ ...S.row, justifyContent: "space-between", fontSize: 14.5, color: "#8a7d55" }}><span>🫙 waarvan uit de pot</span><span style={{ fontWeight: 700, color: "#1f8a4c" }}>−{show(potSpent)}</span></div>
-            <div style={{ ...S.row, justifyContent: "space-between", fontSize: 14.5, color: "#8a7d55" }}><span>door personen betaald</span><span style={{ fontWeight: 700 }}>{show(grandTotal - potSpent)}</span></div>
+            <div style={{ ...S.row, justifyContent: "space-between", fontSize: 16, color: "#6b5f3a", fontWeight: 700 }}><span>🫙 waarvan uit de pot</span><span style={{ fontWeight: 700, color: "#1f8a4c" }}>−{show(potSpent)}</span></div>
+            <div style={{ ...S.row, justifyContent: "space-between", fontSize: 16, color: "#6b5f3a", fontWeight: 700 }}><span>door personen betaald</span><span style={{ fontWeight: 700 }}>{show(grandTotal - potSpent)}</span></div>
           </div>
         )}
       </div>
 
       <div style={S.card}>
         <div style={{ ...S.row, gap: 6, marginBottom: 8 }}>
-          <h3 style={{ ...S.h3, margin: 0 }}>{L.fairSplit}</h3>
-          <span onClick={() => setNotice("⚖️ Fair Split — Eerlijker dan gelijke verdeling. Wie weinig of goedkopere drankjes nam, betaalt niet mee voor wie meer of duurdere drankjes nam.")} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 13, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>i</span>
+          <span style={{ minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.25 }}>{L.fairVsEqual}</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 3 }}>
+              <span style={{ fontSize: 15, color: "#6b5f3a", lineHeight: 1.4 }}>{L.fairIsFairest}</span>
+              <span onClick={() => setNotice(L.fairInfo)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 19, height: 19, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 12.5, fontWeight: 800, cursor: "pointer", flexShrink: 0, lineHeight: 1 }}>i</span>
+            </span>
+          </span>
         </div>
         {/* Staat de kolom uit? Dan de vergelijking als één regel, zodat ze niet verdwijnt. */}
         {people.length > 0 && !showEqual && (
@@ -7825,9 +7838,9 @@ export default function PartyTest() {
         )}
         {/* Kolomkoppen: de twee bedragen staan naast elkaar, elk onder zijn eigen naam.
             Zonder kop moest je raden welk getal welke verdeling was. */}
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 8, paddingBottom: 6, borderBottom: "1.5px solid rgba(120,95,20,0.2)", fontSize: 10, fontWeight: 800, letterSpacing: "0.04em" }}>
-          <span style={{ flex: 1, minWidth: 0, color: "#a89a6f" }}>{L.participantColHead.toUpperCase()}</span>
-          <span style={{ width: 78, textAlign: "right", color: "#1f8a4c", flexShrink: 0 }}>{L.fairColHead.toUpperCase()}</span>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 8, paddingBottom: 6, borderBottom: "1.5px solid rgba(120,95,20,0.2)", fontSize: 12.5, fontWeight: 800, letterSpacing: "0.04em" }}>
+          <span style={{ flex: 1, minWidth: 0, color: "#8a7d55" }}>{L.participantColHead.toUpperCase()}</span>
+          <span style={{ width: 82, textAlign: "right", color: "#1f8a4c", flexShrink: 0 }}>{L.fairColHead.toUpperCase()}</span>
           {showEqual ? (
             <span style={{ width: 62, flexShrink: 0, display: "flex", alignItems: "flex-end", justifyContent: "flex-end", gap: 4, paddingLeft: 8, borderLeft: "1px solid rgba(120,95,20,0.18)" }}>
               <span onClick={() => setNotice(L.fairSplitInfo)} style={{ cursor: "pointer", color: "#a89a6f", textAlign: "right", lineHeight: 1.15 }}>{L.equalColHead.toUpperCase()}</span>
@@ -7910,6 +7923,19 @@ export default function PartyTest() {
           </div>
         )}
       </div>
+
+      {settlement.tx.length > 0 && (
+        <div style={S.card}>
+          <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 3, fontSize: 19 }}>{L.whoPaysWho}</h3>
+          <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 11, lineHeight: 1.45 }}>{L.shortestWay}</div>
+          {settlement.tx.map((t, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < settlement.tx.length - 1 ? "1px solid rgba(120,95,20,0.1)" : "none" }}>
+              <span style={{ fontSize: 16, color: "#4a3f1e", minWidth: 0 }}><b>{t.from}</b> <span style={{ color: "#a89a6f" }}>→</span> <b>{t.to}</b></span>
+              <b style={{ flexShrink: 0, fontSize: 18, color: "#1f8a4c" }}>{show(t.amount)}</b>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Kwam je hier via de drie stappen, dan moet de weg terug even netjes zijn als de
           weg heen: van de eindbalans naar stap 3, en van daar verder achteruit. */}
