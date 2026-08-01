@@ -442,6 +442,8 @@ const T = {
     groupNameEdit: "Naam van deze groep",
     groupNamePh: "Typ je groepsnaam",
     groupNameShortPh: "Groepsnaam",
+    giveNameQ: "Naam geven?",
+    nowWord: "nu:",
     starting: "Bezig…",
     savedGroups: "Opgeslagen groepen",
     modeFairShort: "Iedereen tikt zelf aan",
@@ -1047,6 +1049,8 @@ const T = {
     groupNameEdit: "Nom de ce groupe",
     groupNamePh: "Tape le nom de ton groupe",
     groupNameShortPh: "Nom du groupe",
+    giveNameQ: "Donner un nom ?",
+    nowWord: "actuel :",
     starting: "En cours…",
     savedGroups: "Groupes enregistrés",
     modeFairShort: "Chacun coche lui-même",
@@ -5013,7 +5017,12 @@ export default function PartyTest() {
         {!!groupId && groupName.trim() && !editName && (
           <div style={{ textAlign: "right", minWidth: 0, flexShrink: 0, maxWidth: "52%" }}>
             <div onClick={() => { if (!onboarding) setEditName(true) }} style={{ cursor: onboarding ? "default" : "pointer", fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {groupName.trim()}{!onboarding && <span style={{ fontSize: 12.5 }}> ✏️</span>}
+              {!settle && isAutoNaam(groupName) ? (
+                <span style={{ display: "block" }}>
+                  <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#c98a00" }}>✏️ {L.giveNameQ}</span>
+                  <span style={{ display: "block", fontSize: 12.5, fontWeight: 400, color: "#a89a6f", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.nowWord} {groupName.trim()}</span>
+                </span>
+              ) : <>{groupName.trim()}{!onboarding && <span style={{ fontSize: 12.5 }}> ✏️</span>}</>}
             </div>
             {settle && <div style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700, marginTop: 1, whiteSpace: "nowrap" }}>👥 {L.persShort(people.length)}</div>}
           </div>
@@ -6570,7 +6579,9 @@ export default function PartyTest() {
             <button style={{ ...S.btn, width: "100%" }} onClick={() => setShowCups(true)}>{L.cups}</button>
           </div>
         )}
+        {(settle || roundItems > 0) && (
         <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => { if (roundItems === 0) return; if (settle) openClose(); else commitRound() }}>{settle ? L.confirmRoundTitle(roundNr) : L.doneWithRound}{roundItems > 0 && <span style={{ fontSize: 14.5, fontWeight: 600, opacity: 0.85 }}> — {L.drinksCount(roundItems)}</span>}</button>
+        )}
         {settle
           ? (roundItems > 0 && <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>)
           : <button style={{ width: "100%", marginTop: 11, cursor: "pointer", background: "none", border: "none", fontSize: 15, fontWeight: 700, color: "#b0402f", padding: "8px 0" }}
