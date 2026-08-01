@@ -894,6 +894,8 @@ const T = {
     showBig: "⛶ groot tonen",
     forTheBar: "VOOR DE TOOG",
     closeWord: "Sluiten",
+    togetherWord: "Samen",
+    provisionalStand: "Voorlopig. Wat je uiteindelijk betaalt of terugkrijgt, hangt af van wie wat voorschoot en van de pot — dat komt bij het afrekenen.",
     nothingYet: "nog niets aangetikt",
     nothingWord: "neemt niets",
     busyWord: "bezig…",
@@ -1493,6 +1495,8 @@ const T = {
     showBig: "⛶ en grand",
     forTheBar: "POUR LE BAR",
     closeWord: "Fermer",
+    togetherWord: "Total",
+    provisionalStand: "Provisoire. Ce que tu paieras ou récupéreras dépend de qui a avancé et de la cagnotte — tout se règle au décompte.",
     nothingYet: "rien de coché",
     nothingWord: "ne prend rien",
     busyWord: "en cours…",
@@ -6793,6 +6797,29 @@ export default function PartyTest() {
         {showPot && renderPotModal()}
         {renderDialogs()}
         <AdminTabs />
+        {settle && meId && rounds.length > 0 && (
+          <div style={S.card}>
+            <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 9, fontSize: 17 }}>{L.whatYouDrank}</h3>
+            {rounds.map((r, i) => {
+              const mijne = drinks.map((d) => ({ d, n: r.orders[d.id]?.[meId] ?? 0 })).filter((x) => x.n > 0)
+              if (mijne.length === 0) return null
+              return (
+                <div key={r.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "7px 0", borderBottom: "1px solid rgba(120,95,20,0.1)" }}>
+                  <span style={{ fontSize: 14.5, color: "#4a3f1e", minWidth: 0 }}>{L.roundWord} {i + 1} · {mijne.map((x) => `${x.n}× ${x.d.name}`).join(", ")}</span>
+                  <span style={{ flexShrink: 0, fontSize: 14.5, color: "#8a7d55" }}>{show(personRoundShare(r, meId))}</span>
+                </div>
+              )
+            })}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "10px 0 4px" }}>
+              <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.togetherWord}</span>
+              <span style={{ fontSize: 17, fontWeight: 800, color: MODUS_FAIR.tekst }}>{show(consumption(meId))}</span>
+            </div>
+            <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "rgba(240,165,0,0.12)", borderRadius: 10, padding: "10px 11px", marginTop: 6 }}>
+              <span style={{ flexShrink: 0 }}>⏳</span>
+              <span style={{ fontSize: 13, color: "#8a5e0f", lineHeight: 1.45 }}>{L.provisionalStand}</span>
+            </div>
+          </div>
+        )}
         {/* Tijdens de omschakeling van snel naar Fair Split is de hub enkel het
             toewijsscherm. Rondjesoverzicht, nieuwe rondjes en afrekenen horen daar
             niet: die leiden je weg uit een traject van drie stappen. */}
