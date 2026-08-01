@@ -895,6 +895,9 @@ const T = {
     forTheBar: "VOOR DE TOOG",
     closeWord: "Sluiten",
     togetherWord: "Samen",
+    newRoundBtn: "🍺 Nieuw rondje",
+    doneWithRound: "✓ Klaar met dit rondje",
+    trashRound: "✕ Dit rondje weggooien",
     provisionalStand: "Voorlopig. Wat je uiteindelijk betaalt of terugkrijgt, hangt af van wie wat voorschoot en van de pot — dat komt bij het afrekenen.",
     nothingYet: "nog niets aangetikt",
     nothingWord: "neemt niets",
@@ -1496,6 +1499,9 @@ const T = {
     forTheBar: "POUR LE BAR",
     closeWord: "Fermer",
     togetherWord: "Total",
+    newRoundBtn: "🍺 Nouvelle tournée",
+    doneWithRound: "✓ Terminé pour cette tournée",
+    trashRound: "✕ Jeter cette tournée",
     provisionalStand: "Provisoire. Ce que tu paieras ou récupéreras dépend de qui a avancé et de la cagnotte — tout se règle au décompte.",
     nothingYet: "rien de coché",
     nothingWord: "ne prend rien",
@@ -6552,9 +6558,9 @@ export default function PartyTest() {
             <button style={{ ...S.btn, width: "100%" }} onClick={() => setShowCups(true)}>{L.cups}</button>
           </div>
         )}
-        <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => { if (roundItems === 0) return; if (settle) openClose(); else commitRound() }}>{L.confirmRoundTitle(roundNr)}{roundItems > 0 && <span style={{ fontSize: 14.5, fontWeight: 600, opacity: 0.85 }}> — {L.drinksCount(roundItems)}</span>}</button>
+        <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => { if (roundItems === 0) return; if (settle) openClose(); else commitRound() }}>{L.doneWithRound}{roundItems > 0 && <span style={{ fontSize: 14.5, fontWeight: 600, opacity: 0.85 }}> — {L.drinksCount(roundItems)}</span>}</button>
         {roundItems > 0 && (
-          <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>
+          <button style={{ width: "100%", marginTop: 10, cursor: "pointer", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#b0402f" }} onClick={cancelOrder}>{L.trashRound}</button>
         )}
 
 
@@ -7776,11 +7782,19 @@ export default function PartyTest() {
             onClick={() => { setFillMode(false); setView("quickSettle") }}>{L.backToSettle}</button>
         ) : (
           <>
+            {/* Gelijkwaardig: doorgaan of stoppen. Goud voor het rondje, inktblauw voor
+                de afrekening — rood en oranje zouden als waarschuwing lezen. */}
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-              <button style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 15.5, fontWeight: 800 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
               {laatsteRondjeKlaar() && (
-                <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 15.5 }} onClick={nextRound}>{settle && openRoundId ? L.continueRound(roundNr) : L.toDrinks}</button>
+                <button onClick={nextRound}
+                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 11, padding: "13px 6px", fontSize: 15, fontWeight: 800,
+                    background: "rgba(240,165,0,0.07)", color: "#8a5e0f",
+                    border: "1.5px solid rgba(232,168,18,0.5)", borderTop: "3px solid #e8a812" }}>{settle && openRoundId ? L.continueRound(roundNr) : L.newRoundBtn}</button>
               )}
+              <button onClick={goQuickSettle}
+                style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 11, padding: "13px 6px", fontSize: 15, fontWeight: 800,
+                  background: "rgba(59,72,106,0.06)", color: "#3b486a",
+                  border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a" }}>{L.quickSettleTitle}</button>
             </div>
             {rounds.length > 0 && laatsteRondjeKlaar() && (
               <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
