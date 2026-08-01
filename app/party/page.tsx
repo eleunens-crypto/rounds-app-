@@ -4913,7 +4913,7 @@ export default function PartyTest() {
   // De drie tabbladen van de beheerder. Ze wijzen naar bestaande schermen, dus de
   // navigatie eronder verandert niet — alleen de vorm is nu gelijk aan die van de gast.
   const AdminTabs = () => {
-    if (!groupId || !isAdmin) return null
+    if (!groupId || !isAdmin || !settle) return null
     const hier: "order" | "me" | "group" =
       view === "settings" ? "group" : (view === "hub" || view === "roundsOverview" || view === "confirmed") ? "me" : "order"
     const naar = (t: "order" | "me" | "group") => {
