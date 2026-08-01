@@ -440,7 +440,8 @@ const T = {
     seatNameSub: "Zet zijn naam erbij — scant hij later toch, dan tikt hij die gewoon aan.",
     yourNamePh: "Jij (beheerder) — tik hier je naam",
     groupNameEdit: "Naam van deze groep",
-    groupNamePh: "Groepsnaam",
+    groupNamePh: "Typ je groepsnaam",
+    groupNameShortPh: "Groepsnaam",
     starting: "Bezig…",
     savedGroups: "Opgeslagen groepen",
     modeFairShort: "Iedereen tikt zelf aan",
@@ -1044,7 +1045,8 @@ const T = {
     seatNameSub: "Mets son nom — s’il scanne plus tard, il le touchera simplement.",
     yourNamePh: "Toi (hôte) — tape ton nom ici",
     groupNameEdit: "Nom de ce groupe",
-    groupNamePh: "Nom du groupe",
+    groupNamePh: "Tape le nom de ton groupe",
+    groupNameShortPh: "Nom du groupe",
     starting: "En cours…",
     savedGroups: "Groupes enregistrés",
     modeFairShort: "Chacun coche lui-même",
@@ -6005,7 +6007,7 @@ export default function PartyTest() {
         )}
         <div style={S.card}>
           <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{L.groupNameEdit}</div>
-          <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.autoName() : L.groupNamePh}
+          <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.autoName() : L.groupNameShortPh}
             style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: VLAK2 }} />
           {groupName.trim() && <div style={{ fontSize: 12.5, color: "#8aa5aa", marginTop: 5, paddingLeft: 2 }}>{L.tapToChange}</div>}
           {settle && (<>
