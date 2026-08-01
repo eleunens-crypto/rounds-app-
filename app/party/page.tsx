@@ -898,7 +898,7 @@ const T = {
     togetherWord: "Samen",
     newRoundBtn: "🍺 Nieuw rondje",
     doneWithRound: "✓ Klaar met dit rondje",
-    trashRound: "✕ Dit rondje weggooien",
+    cancelRoundShort: "✕ Rondje annuleren",
     provisionalStand: "Voorlopig. Wat je uiteindelijk betaalt of terugkrijgt, hangt af van wie wat voorschoot en van de pot — dat komt bij het afrekenen.",
     nothingYet: "nog niets aangetikt",
     nothingWord: "neemt niets",
@@ -1503,7 +1503,7 @@ const T = {
     togetherWord: "Total",
     newRoundBtn: "🍺 Nouvelle tournée",
     doneWithRound: "✓ Terminé pour cette tournée",
-    trashRound: "✕ Jeter cette tournée",
+    cancelRoundShort: "✕ Annuler la tournée",
     provisionalStand: "Provisoire. Ce que tu paieras ou récupéreras dépend de qui a avancé et de la cagnotte — tout se règle au décompte.",
     nothingYet: "rien de coché",
     nothingWord: "ne prend rien",
@@ -6564,11 +6564,10 @@ export default function PartyTest() {
           </div>
         )}
         <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => { if (roundItems === 0) return; if (settle) openClose(); else commitRound() }}>{settle ? L.confirmRoundTitle(roundNr) : L.doneWithRound}{roundItems > 0 && <span style={{ fontSize: 14.5, fontWeight: 600, opacity: 0.85 }}> — {L.drinksCount(roundItems)}</span>}</button>
-        {roundItems > 0 && (
-          settle
-            ? <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>
-            : <button style={{ width: "100%", marginTop: 11, cursor: "pointer", background: "none", border: "none", fontSize: 15, fontWeight: 700, color: "#b0402f", padding: "8px 0" }} onClick={cancelOrder}>{L.trashRound}</button>
-        )}
+        {settle
+          ? (roundItems > 0 && <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>)
+          : <button style={{ width: "100%", marginTop: 11, cursor: "pointer", background: "none", border: "none", fontSize: 15, fontWeight: 700, color: "#b0402f", padding: "8px 0" }}
+              onClick={() => { if (roundItems === 0) { setOverviewBackTo("hub"); setView("roundsOverview"); return } cancelOrder() }}>{L.cancelRoundShort}</button>}
 
 
         {showAssignAll && (
@@ -6892,7 +6891,7 @@ export default function PartyTest() {
                 </div>
                 {/* Aanpassen hoort bij de lijst zelf: rechtsonder, na de drankjes. */}
                 <div style={{ textAlign: "right", marginTop: 11, paddingTop: 9, borderTop: "1px solid rgba(120,95,20,0.1)" }}>
-                  <span onClick={editOrder} style={{ fontSize: settle ? 13.5 : 15.5, color: "#c98a00", fontWeight: 800, padding: settle ? "6px 12px" : "10px 16px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>✏️ {settle ? L.editRoundBtn : L.editOrderBtn}</span>
+                  <span onClick={editOrder} style={{ fontSize: settle ? 13.5 : 15.5, color: "#c98a00", fontWeight: 800, padding: settle ? "6px 12px" : "10px 16px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>{settle ? `✏️ ${L.editRoundBtn}` : L.editOrderBtn}</span>
                 </div>
               </div>
             ) })()}
@@ -7450,6 +7449,7 @@ export default function PartyTest() {
                   </div>
                   {/* Twee rustige keuzes onder het bedrag: detail per rondje, of iemand
                       die een rondje trakteert. */}
+            {betaalde.length > 1 && (
                   <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                     <button onClick={(e) => { e.stopPropagation(); setShowPerRound((v) => !v); setShowTreat(false) }}
                       style={{ flex: 1, padding: "10px 8px", borderRadius: 11, fontSize: 13, fontWeight: 800, cursor: "pointer", lineHeight: 1.3,
@@ -7462,6 +7462,7 @@ export default function PartyTest() {
                       🎁 {L.treatShort}
                     </button>
                   </div>
+            )}
                   {showPerRound && (
                     <div onClick={(e) => e.stopPropagation()} style={{ ...S.card, marginTop: 10 }}>
                       <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 9 }}>{L.perRoundTitle}</div>
