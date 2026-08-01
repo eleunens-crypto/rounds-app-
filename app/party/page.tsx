@@ -623,6 +623,7 @@ const T = {
     noOrderFor: (names: string) => `Geen bestellingen voor ${names}`,
     proposalNobody: "Nog niemand antwoordde. Toch afsluiten?",
     editOrderBtn: "✏️ Bestelling aanpassen?",
+    editOrderOld: "✏️ Bestelling wijzigen",
     noRoundsDone: "Nog geen afgeronde rondjes",
     noRoundsHint: "Zodra een rondje bevestigd én betaald is, verschijnt het hier — dan kan je het nog aanpassen.",
     startFirstRoundBtn: "Start 1e rondje",
@@ -1226,6 +1227,7 @@ const T = {
     noOrderFor: (names: string) => `Pas de commande pour ${names}`,
     proposalNobody: "Personne n'a encore répondu. Clôturer quand même ?",
     editOrderBtn: "✏️ Modifier la commande ?",
+    editOrderOld: "✏️ Modifier la commande",
     noRoundsDone: "Aucune tournée terminée",
     noRoundsHint: "Dès qu'une tournée est confirmée et payée, elle apparaît ici — tu peux encore la modifier.",
     startFirstRoundBtn: "1re tourn\u00e9e",
@@ -6003,7 +6005,7 @@ export default function PartyTest() {
         )}
         <div style={S.card}>
           <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{L.groupNameEdit}</div>
-          <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.groupNamePh}
+          <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.autoName() : L.groupNamePh}
             style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: VLAK2 }} />
           {groupName.trim() && <div style={{ fontSize: 12.5, color: "#8aa5aa", marginTop: 5, paddingLeft: 2 }}>{L.tapToChange}</div>}
           {settle && (<>
@@ -6556,9 +6558,11 @@ export default function PartyTest() {
             <button style={{ ...S.btn, width: "100%" }} onClick={() => setShowCups(true)}>{L.cups}</button>
           </div>
         )}
-        <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => { if (roundItems === 0) return; if (settle) openClose(); else commitRound() }}>{L.doneWithRound}{roundItems > 0 && <span style={{ fontSize: 14.5, fontWeight: 600, opacity: 0.85 }}> — {L.drinksCount(roundItems)}</span>}</button>
+        <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => { if (roundItems === 0) return; if (settle) openClose(); else commitRound() }}>{settle ? L.confirmRoundTitle(roundNr) : L.doneWithRound}{roundItems > 0 && <span style={{ fontSize: 14.5, fontWeight: 600, opacity: 0.85 }}> — {L.drinksCount(roundItems)}</span>}</button>
         {roundItems > 0 && (
-          <button style={{ width: "100%", marginTop: 11, cursor: "pointer", background: "none", border: "none", fontSize: 15, fontWeight: 700, color: "#b0402f", padding: "8px 0" }} onClick={cancelOrder}>{L.trashRound}</button>
+          settle
+            ? <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>
+            : <button style={{ width: "100%", marginTop: 11, cursor: "pointer", background: "none", border: "none", fontSize: 15, fontWeight: 700, color: "#b0402f", padding: "8px 0" }} onClick={cancelOrder}>{L.trashRound}</button>
         )}
 
 
@@ -6790,7 +6794,7 @@ export default function PartyTest() {
         {paidConfirmed && st.valid && <button style={S.btnP} onClick={closeRound}>{L.closeRound}</button>}
         <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
           <button style={{ ...S.btn, flex: 1, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelRound}>{L.cancelRound}</button>
-          <button style={{ ...S.btn, flex: 1, padding: "14px 8px", fontSize: 15.5, fontWeight: 800 }} onClick={editOrder}>{L.editOrderBtn}</button>
+          <button style={{ ...S.btn, flex: 1, ...(settle ? {} : { padding: "14px 8px", fontSize: 15.5, fontWeight: 800 }) }} onClick={editOrder}>{settle ? L.editOrderOld : L.editOrderBtn}</button>
         </div>
       </div></div>
     )
