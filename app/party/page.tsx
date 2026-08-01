@@ -2325,6 +2325,8 @@ export default function PartyTest() {
   // hetzelfde drankje aantikken zouden elkaar anders overschrijven.
   const bump = async (did: string, pid: string, delta: number) => {
     setCart((c) => ({ ...c, [did]: { ...(c[did] ?? {}), [pid]: Math.max(0, (c[did]?.[pid] ?? 0) + delta) } }))
+    // Je was klaar en wijzigt toch nog: dan tel je weer als "bezig".
+    if (pid === meId && (openAnswers[pid] === "same" || openAnswers[pid] === "skip")) void antwoordRondje("different")
     const rid = await ensureRound()
     if (!rid || !groupId) return
     const { error } = await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: pid, p_drink: did, p_delta: delta })
@@ -3242,8 +3244,12 @@ export default function PartyTest() {
 
   const dropUnpaidRound = () => {
     const last = rounds[rounds.length - 1]
-    if (last && !roundIsPaid(last)) supabase.from("party_rounds").delete().eq("id", last.id).then(() => { if (groupId) loadParty(groupId) })
-    if (openRoundId) supabase.from("party_rounds").delete().eq("id", openRoundId).then(() => { if (groupId) loadParty(groupId) })
+    // Alleen een rondje dat nóg niemand aanging: zodra er drankjes in staan of iemand
+    // anders het startte, blijft het. Anders verdween andermans werk bij het weglopen.
+    const vanMij = !startedBy || startedBy === meId
+    const leeg = drinks.every((d) => Object.values(cart[d.id] || {}).every((q) => (q || 0) === 0) && (cartAnon[d.id] ?? 0) === 0)
+    if (last && !roundIsPaid(last) && vanMij && leeg) supabase.from("party_rounds").delete().eq("id", last.id).then(() => { if (groupId) loadParty(groupId) })
+    if (openRoundId && vanMij && leeg) supabase.from("party_rounds").delete().eq("id", openRoundId).then(() => { if (groupId) loadParty(groupId) })
     setOpenRoundId(null)
     setRounds((rs) => (rs.length && !roundIsPaid(rs[rs.length - 1]) ? rs.slice(0, -1) : rs)); setCart({}); setCartAnon({}); setAmountDraft(""); setPayPot(false); setPayPersons([]); setPayAmts({}); setPotAmtDraft(""); setPaidConfirmed(false) }
   const goStart = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("start") } }); else setView("start") }
