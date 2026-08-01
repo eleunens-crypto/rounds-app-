@@ -5025,7 +5025,7 @@ export default function PartyTest() {
             style={{ ...S.input, width: "auto", minWidth: 180, maxWidth: "88%", textAlign: "center", fontSize: 17, fontWeight: 800, padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.8)" }} />
         </div>
       )}
-      {!onboarding && !(settle && isAdmin) && !(view === "order" && roundItems > 0) && (
+      {!onboarding && !(settle && isAdmin) && !(!settle && view === "order" && roundItems > 0) && (
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
           <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 14.5, fontWeight: 800, lineHeight: 1.15, borderRadius: 13 }} onClick={() => { if (settle && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupShort}</button>
           {settle ? (
@@ -6384,8 +6384,7 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
-        {/* Geen tabbladen tijdens een rondje: je komt eruit via klaar of weggooien. */}
-        {!(roundItems > 0) && <AdminTabs />}
+        <AdminTabs />
         {renderAddDrink()}
         {renderVoice()}
         {/* Het rondje als echte titel: groot links, het aantal drankjes rechts, met een
