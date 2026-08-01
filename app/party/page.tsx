@@ -742,17 +742,12 @@ const T = {
     openStep2: "Wie gaat halen, tikt dat aan boven de drankjes",
     openStep3: "Daarna tikt iedereen aan wat hij wil",
     okWord: "Begrepen",
-    showStand: "👥 Wie doet al mee?",
-    hideStand: "👥 Verbergen",
     stillBusy: "nog bezig…",
-    toTheBar: "🍻 Naar de bar",
     youTapFor: "Je tikt aan voor:",
     nowTappingFor: (naam: string) => `Nu tik je voor ${naam} aan`,
     tapForQrGuest: (naam: string) => `${naam} kwam via de QR binnen en tikt normaal zelf aan op zijn gsm.\n\nWil je toch voor ${naam} aantikken? Doe dat alleen als het echt nodig is — bijvoorbeeld bij een lege batterij.`,
     tapForQrYes: "Ja, ik tik voor hem aan",
     qrTapsSelf: "📱 tikt zelf aan op zijn gsm — je hoeft niets te doen.",
-    showBarList: "🍻 Barlijstje",
-    hideBarList: "🍻 Verbergen",
     nothingForMe: "niets deze ronde",
     nothingForMeBtn: "— Niets voor mij",
     youTakeNothing: "Je neemt niets deze ronde.",
@@ -780,8 +775,6 @@ const T = {
     reminderChoose: "Ik kies iets →",
     everyoneTapsOwn: "📱 Iedereen tikt zelf aan op zijn gsm",
     youTapForAll: "✍️ Jij gaat rond en tikt alles aan",
-    everyoneTapsNow: "Iedereen tikt nu op zijn eigen telefoon aan wat hij wil.",
-    readyOf: (n: number, totaal: number) => `${n} van ${totaal} deden dat al.`,
     walkDone: "✓ Klaar",
     walkFor: (n: string) => `Wat wil ${n}?`,
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
@@ -895,6 +888,15 @@ const T = {
     potUsedFree: (g: string, v: string) => `${g} gebruikt · ${v} vrij`,
     potShared: (tot: string, n: number) => `Pot ${tot} · verdeeld over ${n}`,
     changeWord: "wijzig",
+    whoIsIn: "WIE DOET MEE",
+    remindInfo: "🔔 Een duwtje geven — wie nog niets koos, krijgt meteen een melding op zijn scherm. Handig als je klaar bent om te vertrekken.",
+    toTheBar: "🍻 Naar de bar",
+    showBig: "⛶ groot tonen",
+    forTheBar: "VOOR DE TOOG",
+    closeWord: "Sluiten",
+    nothingYet: "nog niets aangetikt",
+    nothingWord: "neemt niets",
+    busyWord: "bezig…",
     totalOf: (v: string) => `${v} totaal`,
     stillOpen: (v: string) => `${v} open`,
     fairSplitExplain: "Liever eerlijk betalen volgens wat iedereen dronk (Fair Split!) Wijs drankjes en betalers hier toe.",
@@ -1339,8 +1341,6 @@ const T = {
     openStep2: "Celui qui y va le signale au-dessus des boissons",
     openStep3: "Ensuite chacun coche ce qu’il veut",
     okWord: "Compris",
-    showStand: "👥 Qui a déjà choisi ?",
-    hideStand: "👥 Masquer",
     stillBusy: "en cours…",
     toTheBar: "🍻 Au bar",
     youTapFor: "Tu coches pour :",
@@ -1348,8 +1348,6 @@ const T = {
     tapForQrGuest: (naam: string) => `${naam} est arrivé via le QR et coche normalement lui-même sur son gsm.\n\nTu veux quand même cocher pour ${naam} ? À faire seulement si c’est vraiment nécessaire — batterie vide, par exemple.`,
     tapForQrYes: "Oui, je coche pour lui",
     qrTapsSelf: "📱 coche lui-même sur son gsm — tu n’as rien à faire.",
-    showBarList: "🍻 Liste pour le bar",
-    hideBarList: "🍻 Masquer",
     nothingForMe: "rien ce tour-ci",
     nothingForMeBtn: "— Rien pour moi",
     youTakeNothing: "Tu ne prends rien ce tour-ci.",
@@ -1377,8 +1375,6 @@ const T = {
     reminderChoose: "Je choisis →",
     everyoneTapsOwn: "📱 Chacun coche sur son propre gsm",
     youTapForAll: "✍️ Tu fais le tour et tu coches tout",
-    everyoneTapsNow: "Chacun coche maintenant sur son propre téléphone.",
-    readyOf: (n: number, totaal: number) => `${n} sur ${totaal} l’ont déjà fait.`,
     walkDone: "✓ Terminé",
     walkFor: (n: string) => `Que veut ${n} ?`,
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
@@ -1492,6 +1488,14 @@ const T = {
     potUsedFree: (g: string, v: string) => `${g} utilisé · ${v} libre`,
     potShared: (tot: string, n: number) => `Cagnotte ${tot} · répartie sur ${n}`,
     changeWord: "modifier",
+    whoIsIn: "QUI PARTICIPE",
+    remindInfo: "🔔 Un petit coup de pouce — ceux qui n’ont rien choisi reçoivent aussitôt un message. Pratique quand tu es prêt à partir.",
+    showBig: "⛶ en grand",
+    forTheBar: "POUR LE BAR",
+    closeWord: "Fermer",
+    nothingYet: "rien de coché",
+    nothingWord: "ne prend rien",
+    busyWord: "en cours…",
     totalOf: (v: string) => `${v} au total`,
     stillOpen: (v: string) => `${v} ouvert`,
     fairSplitExplain: "Tu préfères payer selon ce que chacun a bu (Fair Split !) Attribue ici les boissons et les payeurs.",
@@ -1991,6 +1995,7 @@ export default function PartyTest() {
   const [startCheck, setStartCheck] = useState(false)
   const [walkCheck, setWalkCheck] = useState(false)
   const [naamWijzig, setNaamWijzig] = useState<string | null>(null)
+  const [barFull, setBarFull] = useState(false)
   // De melding voor de anderen. We tonen ze één keer per rondje, aan iedereen behalve de
   // haler zelf — vandaar dat we onthouden welk rondje we al aankondigden.
   const [rondjeGemeld, setRondjeGemeld] = useState<string | null>(null)
@@ -2264,21 +2269,43 @@ export default function PartyTest() {
               <span style={{ display: "block", fontSize: 12.5, color: allen ? "#1f6b3a" : "#5a8f99", fontWeight: allen ? 800 : 400, marginTop: 1 }}>{allen ? `✓ ${L.allChose}` : L.someChose(klaar.length, people.length)}</span>
             </span>
           </div>
-          <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "#fff", borderRadius: 11, padding: "11px 12px", marginBottom: 9 }}>
-            <span style={{ flexShrink: 0, fontSize: 17 }}>📱</span>
-            <span style={{ fontSize: 14.5, color: MODUS_FAIR.tekst, lineHeight: 1.45 }}>{L.everyoneTapsNow} <b>{L.readyOf(klaar.length, people.length)}</b></span>
+          {/* Alles over dit rondje in één kader: wie klaar is, wat je moet halen, en de
+              twee handelingen. Ingeklapt moest je te veel tikken om te zien waar je aan
+              toe was. */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 9, borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, paddingTop: 10, marginBottom: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: "#8a7d55", letterSpacing: "0.04em" }}>{L.whoIsIn}</span>
+            {klaar.length < people.length && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                <button onClick={vraagHerinnering} style={{ ...S.btn, padding: "6px 10px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.remindBtn}</button>
+                <span onClick={() => setNotice(L.remindInfo)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 19, height: 19, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 12, fontWeight: 800, cursor: "pointer", flexShrink: 0, lineHeight: 1 }}>i</span>
+              </span>
+            )}
           </div>
-          {/* Wie is al klaar en wie nog niet? Dat bepaalt of je blijft zitten of vertrekt. */}
-          <button onClick={() => setStandOpen((v) => !v)} style={{ ...S.btn, width: "100%", fontSize: 14.5, fontWeight: 800, padding: "10px 8px" }}>{standOpen ? `${L.hideStand} ▴` : `${L.showStand} ▾`}</button>
-          {standOpen && renderStandLijst()}
-          {/* Wat je straks aan de toog moet vragen — per drankje samengeteld, met de namen
-              erachter zodat je weet voor wie het is. */}
-          <button onClick={() => setBarOpen((v) => !v)} style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14.5, fontWeight: 800, padding: "10px 8px" }}>{barOpen ? `${L.hideBarList} ▴` : `${L.showBarList} ▾`}</button>
-          {barOpen && renderBarLijst()}
-          {/* Duwtje voor wie nog niet koos. Alleen zinvol zolang er iemand ontbreekt. */}
-          {klaar.length < people.length && (
-            <button onClick={vraagHerinnering} style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14.5, fontWeight: 800, padding: "10px 8px", color: "#8a5e0f" }}>{L.remindBtn}</button>
-          )}
+          <div style={{ display: "grid", gridTemplateColumns: people.length > 4 ? "1fr 1fr" : "1fr", gap: "5px 10px", marginBottom: 11 }}>
+            {people.map((pp) => {
+              const zijne = drinks.filter((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)
+              const slaOver = openAnswers[pp.id] === "skip"
+              const isOk = isKlaar(pp.id)
+              return (
+                <span key={pp.id} style={{ fontSize: 13.5, color: isOk ? "#1f6b3a" : "#a8c4c9", fontWeight: isOk ? 700 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {isOk ? "✓ " : ""}{pp.name}{" "}
+                  <span style={{ color: isOk ? "#5a8f99" : "#a8c4c9", fontWeight: 400, fontStyle: slaOver || !isOk ? "italic" : "normal" }}>
+                    {slaOver ? L.nothingWord : zijne.length > 0 ? zijne.map((d) => `${aQty(d.id, pp.id)}× ${d.name}`).join(", ") : L.busyWord}
+                  </span>
+                </span>
+              )
+            })}
+          </div>
+          <div style={{ background: MODUS_FAIR.vlak, borderRadius: 11, padding: "10px 11px", marginBottom: 11 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 7 }}>
+              <span style={{ fontSize: 13, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.toTheBar}</span>
+              <button onClick={() => setBarFull(true)} style={{ ...S.btn, flexShrink: 0, padding: "5px 10px", fontSize: 12, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.showBig}</button>
+            </div>
+            <div style={{ fontSize: 14.5, color: "#4a3f1e", lineHeight: 1.6 }}>
+              {barTotalen().length === 0 ? <span style={{ color: "#a8c4c9" }}>{L.nothingYet}</span>
+                : barTotalen().map((x, i) => <span key={x.id}>{i > 0 ? " · " : ""}<b>{x.n}×</b> {x.naam}</span>)}
+            </div>
+          </div>
         </div>
       )
     }
@@ -4081,6 +4108,10 @@ export default function PartyTest() {
     loadParty(groupId)
   }
 
+  const barTotalen = () => drinks
+    .map((d) => ({ id: d.id, naam: d.name, emoji: d.emoji, n: Object.values(cart[d.id] || {}).reduce((a, b) => a + (b || 0), 0) + (cartAnon[d.id] ?? 0) }))
+    .filter((x) => x.n > 0)
+
   const antwoordRondje = async (answer: "different" | "skip" | "same") => {
     if (!openRoundId || !meId) return
     setOpenAnswers((cur) => ({ ...cur, [meId]: answer }))
@@ -4690,6 +4721,21 @@ export default function PartyTest() {
           </div>
         </div>
       )}
+      {barFull && (
+        <div style={{ ...S.overlay, zIndex: 80 }} onClick={() => setBarFull(false)}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: 420, background: MODUS_FAIR.tekst, borderRadius: 18, padding: "22px 18px", textAlign: "center" }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.7)", letterSpacing: "0.08em", marginBottom: 14 }}>{L.roundWord} {roundNr} · {L.forTheBar}</div>
+            {barTotalen().map((x, i, arr) => (
+              <div key={x.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "11px 4px", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.2)" : "none" }}>
+                <span style={{ fontSize: 26, fontWeight: 800, color: "#fff" }}>{x.n}×</span>
+                <span style={{ fontSize: 22, color: "#fff" }}>{x.emoji} {x.naam}</span>
+              </div>
+            ))}
+            <button onClick={() => setBarFull(false)} style={{ width: "100%", marginTop: 16, cursor: "pointer", border: "none", background: "#fff", color: MODUS_FAIR.tekst, borderRadius: 11, padding: "12px 0", fontSize: 15, fontWeight: 800 }}>{L.closeWord}</button>
+          </div>
+        </div>
+      )}
       {openMelding && (
         <div style={{ ...S.overlay, zIndex: 77 }} onClick={() => setOpenMelding(false)}>
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
@@ -4968,7 +5014,7 @@ export default function PartyTest() {
             style={{ ...S.input, width: "auto", minWidth: 180, maxWidth: "88%", textAlign: "center", fontSize: 17, fontWeight: 800, padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.8)" }} />
         </div>
       )}
-      {!onboarding && (
+      {!onboarding && !(settle && isAdmin) && (
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
           <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 14.5, fontWeight: 800, lineHeight: 1.15, borderRadius: 13 }} onClick={() => { if (settle && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupShort}</button>
           {settle ? (
@@ -6269,7 +6315,7 @@ export default function PartyTest() {
             {rounds.length > 0 ? (
             // Er zijn afgeronde rondjes: overzicht + nieuw/verder.
             <div style={{ display: "flex", gap: 10 }}>
-              <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (!settle) { setOverviewBackTo("hub"); setView("roundsOverview") } else { setOpenRound(rounds.length - 1); setView("hub") } }}>{L.roundsOverview}</button>
+              {!(settle && isAdmin) && <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (!settle) { setOverviewBackTo("hub"); setView("roundsOverview") } else { setOpenRound(rounds.length - 1); setView("hub") } }}>{L.roundsOverview}</button>}
               {/* Kwam je uit het bestelscherm, dan zegt de knop hierboven dit al. */}
               {echtOnafgerond
                 ? (settingsBackTo === "order" ? null : <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>)
