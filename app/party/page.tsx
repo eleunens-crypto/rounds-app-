@@ -4030,9 +4030,16 @@ export default function PartyTest() {
     onYes: () => {
       setConfirmDlg(null)
       setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setRepeated(false)
+      // Ook het rondje zelf weg: anders blijft het openstaan en biedt het overzicht aan
+      // om "verder te gaan" met iets wat je net annuleerde.
+      if (openRoundId) {
+        const rid = openRoundId
+        setOpenRoundId(null); setStartedBy(null); setOpenAnswers({})
+        supabase.from("party_rounds").delete().eq("id", rid).then(() => { if (groupId) loadParty(groupId) })
+      }
       // Een afgerond rondje blijft afgerond: we openen het niet opnieuw. Aanpassen kan
       // enkel via het rondjesoverzicht.
-      setRoundNr(rounds.length > 0 ? rounds.length : 1)
+      setRoundNr(rounds.length + 1)
       setLastRoundHandled(true)
       setView("hub")
     },
