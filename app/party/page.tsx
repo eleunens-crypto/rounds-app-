@@ -2031,7 +2031,7 @@ export default function PartyTest() {
     if (herinneringGezien === merk) return
     setHerinneringGezien(merk)
     const ikKoos = drinks.some((d) => (cart[d.id]?.[meId] ?? 0) > 0) || openAnswers[meId] === "skip"
-    if (!ikKoos && startedBy !== meId) setHerinnering(true)
+    if (settle && !ikKoos && startedBy !== meId) setHerinnering(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openAnswers, openRoundId, meId])
 
@@ -2060,6 +2060,7 @@ export default function PartyTest() {
     // Afgesloten rondjes blijven in de lijst staan; alleen een echt gewist rondje is
     // geannuleerd. En wie zelf net afsloot, krijgt sowieso geen melding.
     if (netAfgesloten.current) { netAfgesloten.current = false; return }
+    if (!settle) return
     if (weg && meId && rounds.every((r) => r.id !== weg.id)) setNotice(L.roundCancelled(weg.door))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRoundId])
@@ -2067,6 +2068,7 @@ export default function PartyTest() {
   // Koos iedereen? Dan één keer een venster — voor de haler het sein om te vertrekken,
   // voor de rest dat hun drankje eraan komt.
   useEffect(() => {
+    if (!settle) return
     if (!openRoundId || !meId || people.length === 0) return
     if (allenGemeld === openRoundId) return
     if (alGekozen < people.length) return
@@ -2077,6 +2079,7 @@ export default function PartyTest() {
 
   // En zodra iemand zegt dat hij gaat halen, weet de rest wie.
   useEffect(() => {
+    if (!settle) return
     if (!openRoundId || !meId || !startedBy || startedBy === meId) return
     if (halerGemeld === openRoundId) return
     setHalerGemeld(openRoundId)
@@ -2092,7 +2095,7 @@ export default function PartyTest() {
   useEffect(() => {
     const eerder = wasOpen.current
     wasOpen.current = orderingOpen
-    if (eerder === false && orderingOpen && meId && !isAdmin) setOpenMelding(true)
+    if (settle && eerder === false && orderingOpen && meId && !isAdmin) setOpenMelding(true)
   }, [orderingOpen, meId, isAdmin])
   useEffect(() => {
     if (!openMelding) return
@@ -2361,7 +2364,7 @@ export default function PartyTest() {
   const bump = async (did: string, pid: string, delta: number) => {
     setCart((c) => ({ ...c, [did]: { ...(c[did] ?? {}), [pid]: Math.max(0, (c[did]?.[pid] ?? 0) + delta) } }))
     // Je was klaar en wijzigt toch nog: dan tel je weer als "bezig".
-    if (pid === meId && (openAnswers[pid] === "same" || openAnswers[pid] === "skip")) void antwoordRondje("different")
+    if (settle && pid === meId && (openAnswers[pid] === "same" || openAnswers[pid] === "skip")) void antwoordRondje("different")
     const rid = await ensureRound()
     if (!rid || !groupId) return
     const { error } = await supabase.rpc("party_bump", { p_group: groupId, p_round: rid, p_person: pid, p_drink: did, p_delta: delta })
@@ -3281,8 +3284,8 @@ export default function PartyTest() {
     const last = rounds[rounds.length - 1]
     // Alleen een rondje dat nóg niemand aanging: zodra er drankjes in staan of iemand
     // anders het startte, blijft het. Anders verdween andermans werk bij het weglopen.
-    const vanMij = !startedBy || startedBy === meId
-    const leeg = drinks.every((d) => Object.values(cart[d.id] || {}).every((q) => (q || 0) === 0) && (cartAnon[d.id] ?? 0) === 0)
+    const vanMij = !settle || !startedBy || startedBy === meId
+    const leeg = !settle || drinks.every((d) => Object.values(cart[d.id] || {}).every((q) => (q || 0) === 0) && (cartAnon[d.id] ?? 0) === 0)
     if (last && !roundIsPaid(last) && vanMij && leeg) supabase.from("party_rounds").delete().eq("id", last.id).then(() => { if (groupId) loadParty(groupId) })
     if (openRoundId && vanMij && leeg) supabase.from("party_rounds").delete().eq("id", openRoundId).then(() => { if (groupId) loadParty(groupId) })
     setOpenRoundId(null)
@@ -4029,7 +4032,7 @@ export default function PartyTest() {
     setActiveCat(catsPresent[0])
     // Loopt er nog een rondje? Dan is dit geen nieuw rondje maar gewoon terugkeren.
     // Vroeger telde het nummer bij elk bezoek op, ook zonder één bestelling.
-    if (openRoundId) { setView("order"); return }
+    if (settle && openRoundId) { setView("order"); return }
     setRoundNr(rounds.length + 1)
     setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setRepeated(false)
     setView("order")
@@ -6324,7 +6327,7 @@ export default function PartyTest() {
               {echtOnafgerond
                 ? (settingsBackTo === "order" ? null : <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>)
                 : magNieuw
-                ? <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{openRoundId ? L.continueRound(roundNr) : L.toDrinks}</button>
+                ? <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{settle && openRoundId ? L.continueRound(roundNr) : L.toDrinks}</button>
                 : null}
             </div>
           ) : echtOnafgerond ? (
@@ -7776,7 +7779,7 @@ export default function PartyTest() {
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
               <button style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 15.5, fontWeight: 800 }} onClick={goQuickSettle}>{L.quickSettleTitle}</button>
               {laatsteRondjeKlaar() && (
-                <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 15.5 }} onClick={nextRound}>{openRoundId ? L.continueRound(roundNr) : L.toDrinks}</button>
+                <button style={{ ...S.btnP, flex: 1.3, padding: "14px 6px", fontSize: 15.5 }} onClick={nextRound}>{settle && openRoundId ? L.continueRound(roundNr) : L.toDrinks}</button>
               )}
             </div>
             {rounds.length > 0 && laatsteRondjeKlaar() && (
