@@ -1673,6 +1673,9 @@ export default function PartyTest() {
   // Mijn eigen plaats: die waarop dit toestel zit. Nodig zodra gasten hun eigen
   // drankjes aantikken (blok 3).
   const meId = people.find((p) => p.claimedBy === me.current)?.id ?? null
+  // Herkent "Rondje 2 augustus" en "Tournée 2 août": de vorm die de app zelf verzint.
+  const isAutoNaam = (naam: string) => /^(Rondje|Tournée)\s+\d{1,2}\s+\p{L}+(\s+\d+)?$/u.test(naam.trim())
+
   const inviteLink = typeof window !== "undefined" && inviteCode
     ? `${window.location.origin}${window.location.pathname}?code=${inviteCode}` : ""
   // De vaste catalogus staat in de code (nul queries per gast). Eigen drankjes komen
@@ -6007,7 +6010,7 @@ export default function PartyTest() {
         )}
         <div style={S.card}>
           <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{L.groupNameEdit}</div>
-          <input value={groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.autoName() : L.groupNameShortPh}
+          <input value={!settle && isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={(e) => { if (!e.target.value.trim()) setGroupName(L.autoName()); persistSettings() }} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.autoName() : L.groupNameShortPh}
             style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: VLAK2 }} />
           {groupName.trim() && <div style={{ fontSize: 12.5, color: "#8aa5aa", marginTop: 5, paddingLeft: 2 }}>{L.tapToChange}</div>}
           {settle && (<>
@@ -6872,9 +6875,9 @@ export default function PartyTest() {
           <>
             {/* Kop met het rondje-nummer: bij rondje 2, 3, … is meteen duidelijk waar je mee
                 bezig bent. De flow zelf is voor elk rondje identiek. */}
-            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9 }}>
+        {settle && <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9 }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 16.5, fontWeight: 800, color: "#8a5e0f", background: "linear-gradient(135deg,#fdf3dc,#fae9c2)", border: "1.5px solid rgba(240,165,0,0.45)", borderRadius: 18, padding: "7px 16px" }}>🍻 {L.roundWord} {idx + 1}</span>
-            </div>
+        </div>}
             {/* Drankjes van dit net-bevestigde rondje, met de aanpas-knop erin verwerkt. */}
             {(() => { const laatste = rounds[idx]; const lijst = laatste ? drinksOf(laatste) : []; return lijst.length > 0 && (
               <div style={{ ...S.card, padding: "12px 14px", background: "#fffdf6" }}>
@@ -6889,7 +6892,7 @@ export default function PartyTest() {
                 </div>
                 {/* Aanpassen hoort bij de lijst zelf: rechtsonder, na de drankjes. */}
                 <div style={{ textAlign: "right", marginTop: 11, paddingTop: 9, borderTop: "1px solid rgba(120,95,20,0.1)" }}>
-                  <span onClick={editOrder} style={{ fontSize: 13.5, color: "#c98a00", fontWeight: 800, padding: "6px 12px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
+                  <span onClick={editOrder} style={{ fontSize: settle ? 13.5 : 15.5, color: "#c98a00", fontWeight: 800, padding: settle ? "6px 12px" : "10px 16px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>✏️ {settle ? L.editRoundBtn : L.editOrderBtn}</span>
                 </div>
               </div>
             ) })()}
