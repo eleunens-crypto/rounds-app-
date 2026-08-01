@@ -3973,7 +3973,7 @@ export default function PartyTest() {
     // krijgt de toog-lijst in de hub te zien.
     if (!settle) setLastRoundHandled(false)
     setView(settle ? "confirmed" : "hub")
-    setRoundNr((n) => n + 1)
+    setRoundNr(rounds.length + 1)
   }
   const persistPayment = (roundId: string, payers: Record<string, number>, potPart: number, total: number) => {
     supabase.from("party_rounds")
@@ -4261,7 +4261,7 @@ export default function PartyTest() {
     })
     const anon: Anon = {}
     Object.entries(last.anon || {}).forEach(([did, q]) => { if ((q || 0) > 0) anon[did] = q })
-    setRoundNr((n) => n + 1)
+    setRoundNr(rounds.length + 1)
     setCart(orders); setCartAnon(anon)
     setCupsChecked(false); setCupsTouched(false)
     setRepeated(true)
