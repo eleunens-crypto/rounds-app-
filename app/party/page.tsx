@@ -2043,10 +2043,14 @@ export default function PartyTest() {
   // We onthouden het laatste open rondje en zijn haler, want die gegevens zijn weg zodra
   // het rondje verdwijnt.
   const vorigOpen = useRef<{ id: string; door: string } | null>(null)
+  const netAfgesloten = useRef(false)
   useEffect(() => {
     if (openRoundId) { vorigOpen.current = { id: openRoundId, door: runnerName() }; return }
     const weg = vorigOpen.current
     vorigOpen.current = null
+    // Afgesloten rondjes blijven in de lijst staan; alleen een echt gewist rondje is
+    // geannuleerd. En wie zelf net afsloot, krijgt sowieso geen melding.
+    if (netAfgesloten.current) { netAfgesloten.current = false; return }
     if (weg && meId && rounds.every((r) => r.id !== weg.id)) setNotice(L.roundCancelled(weg.door))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRoundId])
@@ -3870,8 +3874,9 @@ export default function PartyTest() {
   // Welke rondjes missen een bedrag of een betaler? Zonder die twee klopt de verdeling
   // niet, en dan mag de eindafrekening niet.
   const rondjesZonderBedrag = () => rounds
-    .map((r, i) => ({ nr: i + 1, ok: (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005)) }))
-    .filter((x) => !x.ok).map((x) => x.nr)
+    .map((r, i) => ({ nr: i + 1, open: r.id === openRoundId || r.status === "open",
+      ok: (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005)) }))
+    .filter((x) => !x.ok && !x.open).map((x) => x.nr)
 
   const goFinal = () => {
     if (unfinishedRound) { setNotice(L.roundUnfinished(roundNr)); setActiveCat(catsPresent[0]); setView("order"); return }
@@ -3965,11 +3970,15 @@ export default function PartyTest() {
       else potPart = Math.round((potPart + diff) * 100) / 100
     }
     const laatste = rounds[rounds.length - 1]
+    netAfgesloten.current = true
     if (laatste) persistPayment(laatste.id, payers, potPart, st.total)
     applyPayment(payers, potPart, st.total)
     setPaidConfirmed(true)
   }
-  const closeRound = () => { if (!paidConfirmed || !paymentState().valid) { setNotice(L.confirmPaymentFirst); return } setOpenRound(rounds.length - 1); setEditCups(false); setEditPay(false); setView("hub") }
+  const closeRound = () => {
+    const st = paymentState()
+    if (!st.valid) { setNotice(st.reason || L.confirmPaymentFirst); return }
+    if (!paidConfirmed) { setNotice(L.confirmPaymentFirst); return } setOpenRound(rounds.length - 1); setEditCups(false); setEditPay(false); setView("hub") }
   const cancelOrder = () => setConfirmDlg({
     msg: L.cancelRoundConfirm(roundNr),
     yes: L.yesCancel,
