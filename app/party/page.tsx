@@ -5921,9 +5921,9 @@ export default function PartyTest() {
                 kader en knop samen, zodat het één blok blijft en geen losse onderdelen. */}
             {/* Twee kolommen: de manieren waarop jij noteert staan naast elkaar en zijn
                 zo direct te vergelijken. */}
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-            <div style={{ flex: 1, minWidth: 0, opacity: bpSettle !== false || bpNaam ? 0.6 : 1 }}>
-            <div style={{ borderRadius: 15, overflow: "hidden", background: "#fff", border: (bpSettle === false && !bpNaam) ? `2px solid ${MODUS_SNEL.rand}` : `1.5px solid ${MODUS_SNEL.randZacht}`,
+            <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+            <div style={{ flex: 1, minWidth: 0, display: "flex", opacity: bpSettle !== false || bpNaam ? 0.6 : 1 }}>
+            <div style={{ width: "100%", display: "flex", flexDirection: "column", borderRadius: 15, overflow: "hidden", background: "#fff", border: (bpSettle === false && !bpNaam) ? `2px solid ${MODUS_SNEL.rand}` : `1.5px solid ${MODUS_SNEL.randZacht}`,
               boxShadow: (bpSettle === false && !bpNaam) ? `0 16px 34px -20px ${MODUS_SNEL.gloed}` : "0 8px 22px -18px rgba(120,95,20,0.5)" }}>
               {/* Kleurbalk als vlag: nog vóór je de tekst leest weet je welke modus dit is. */}
               <div style={{ height: 6, background: MODUS_SNEL.rand }} />
@@ -5959,7 +5959,7 @@ export default function PartyTest() {
               
               {/* Een losse knop met eigen ronding en schaduw leest onmiskenbaar als knop;
                   een voetbalk rand-aan-rand deed dat minder. */}
-              <div style={{ padding: "12px 12px 14px", background: (bpSettle === false && !bpNaam) ? MODUS_SNEL.vlak : "#fff" }}>
+              <div style={{ marginTop: "auto", padding: "12px 12px 14px", background: (bpSettle === false && !bpNaam) ? MODUS_SNEL.vlak : "#fff" }}>
                 <button disabled={busy} onClick={() => { setBpSettle(false); setBpNaam(false); startWithMode(undefined, false) }}
                   style={{ display: "block", width: "100%", padding: "12px 6px", fontSize: 14.5, fontWeight: 800, cursor: "pointer", borderRadius: 14, border: "none",
                     background: MODUS_SNEL.knop, color: MODUS_SNEL.knopTekst, boxSizing: "border-box",
@@ -5971,8 +5971,8 @@ export default function PartyTest() {
             
             {/* Zelfde manier van noteren, maar elk drankje krijgt een naam. Pruim, zodat
                 hij niet verward wordt met de teal van de QR-modus eronder. */}
-            <div style={{ flex: 1, minWidth: 0, opacity: bpSettle === false && bpNaam ? 1 : 0.6 }}>
-            <div style={{ borderRadius: 15, overflow: "hidden", background: "#fff", border: bpSettle === false && bpNaam ? "2px solid #7a3f6d" : "1px solid rgba(120,95,20,0.16)",
+            <div style={{ flex: 1, minWidth: 0, display: "flex", opacity: bpSettle === false && bpNaam ? 1 : 0.6 }}>
+            <div style={{ width: "100%", display: "flex", flexDirection: "column", borderRadius: 15, overflow: "hidden", background: "#fff", border: bpSettle === false && bpNaam ? "2px solid #7a3f6d" : "1px solid rgba(120,95,20,0.16)",
               boxShadow: bpSettle === false && bpNaam ? "0 16px 34px -20px rgba(122,63,109,0.5)" : "0 8px 22px -18px rgba(120,95,20,0.5)" }}>
               <div style={{ height: 6, background: "#7a3f6d" }} />
               <button onClick={() => { setBpSettle(false); setBpNaam(true); setModeInfo((m) => m === "naam" ? m : null) }}
@@ -5997,7 +5997,7 @@ export default function PartyTest() {
                 </span>
               </button>
               
-              <div style={{ padding: "12px 12px 14px", background: bpSettle === false && bpNaam ? "rgba(122,63,109,0.07)" : "#fff" }}>
+              <div style={{ marginTop: "auto", padding: "12px 12px 14px", background: bpSettle === false && bpNaam ? "rgba(122,63,109,0.07)" : "#fff" }}>
                 <button disabled={busy} onClick={() => { setBpSettle(false); setBpNaam(true); startWithMode(undefined, false) }}
                   style={{ display: "block", width: "100%", padding: "12px 6px", fontSize: 14.5, fontWeight: 800, cursor: "pointer", border: "none", borderRadius: 15,
                     background: "linear-gradient(135deg,#8d5080,#7a3f6d)", color: "#fff", boxSizing: "border-box",
