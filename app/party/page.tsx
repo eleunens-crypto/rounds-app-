@@ -460,12 +460,14 @@ const T = {
     howNoteTitle: "Hoe wil je noteren?",
     howNoteSub: "Je kan later nog wisselen.",
     noteQuickTitle: "⚡ Gewoon snel",
-    noteQuickSub: "Tik drankjes aan zonder namen. Je krijgt een barlijstje en verdeelt achteraf gelijk.",
-    noteNamedTitle: "⚖️ Meteen op naam",
-    noteNamedSub: "Je duidt per drankje aan voor wie het is. Achteraf betaalt ieder wat hij dronk.",
+    noteQuickSub: "Tik drankjes aan zonder namen. Je krijgt een handig barlijstje — verrekenen achteraf is optioneel.",
+    noteNamedTitle2: "⚖️ Op naam noteren",
+    noteNamedSub2: "Je zet eerst de namen, daarna tik je per persoon de drankjes aan. Achteraf betaalt ieder wat hij dronk — of verdeel je alsnog gelijk.",
     noNamesBtn: "✕ zonder namen",
     withNamesBtn: "⚖️ op naam noteren",
-    needNamesFirst: "Voeg eerst de namen toe — dan kan je per persoon noteren.",
+    addNameBtn: "+ naam",
+    namesLaterToo: "Of tik gewoon aan — namen toewijzen kan ook bij het afsluiten.",
+    someUnassigned: (n: number) => `🔴 ${n} ${n === 1 ? "drankje" : "drankjes"} nog zonder naam`,
     nowWord: "nu:",
     starting: "Bezig…",
     savedGroups: "Opgeslagen groepen",
@@ -1078,12 +1080,14 @@ const T = {
     howNoteTitle: "Comment veux-tu noter ?",
     howNoteSub: "Tu peux changer plus tard.",
     noteQuickTitle: "⚡ Simplement vite",
-    noteQuickSub: "Coche les boissons sans noms. Tu reçois une liste et tu partages à parts égales.",
-    noteNamedTitle: "⚖️ Directement au nom",
-    noteNamedSub: "Tu indiques pour qui est chaque boisson. Ensuite chacun paie ce qu’il a bu.",
+    noteQuickSub: "Coche les boissons sans noms. Tu reçois une liste pratique — le décompte ensuite est optionnel.",
+    noteNamedTitle2: "⚖️ Noter au nom",
+    noteNamedSub2: "Tu ajoutes d’abord les noms, puis tu coches les boissons par personne. Ensuite chacun paie ce qu’il a bu — ou tu partages quand même à parts égales.",
     noNamesBtn: "✕ sans noms",
     withNamesBtn: "⚖️ noter au nom",
-    needNamesFirst: "Ajoute d’abord les noms — ensuite tu peux noter par personne.",
+    addNameBtn: "+ nom",
+    namesLaterToo: "Ou coche simplement — tu peux attribuer les noms à la clôture.",
+    someUnassigned: (n: number) => `🔴 ${n} boisson${n === 1 ? "" : "s"} sans nom`,
     nowWord: "actuel :",
     starting: "En cours…",
     savedGroups: "Groupes enregistrés",
@@ -4012,6 +4016,9 @@ export default function PartyTest() {
   }
   const goAssignFromWarning = () => { setShowClose(false); setShowAssignAll(true) }
   const commitRound = () => {
+    // Op naam noteren en nog iets zonder naam? Eerst toewijzen, anders weet de
+    // afrekening niet wie wat dronk.
+    if (!settle && opNaam && unassignedTotal > 0) { setShowAssignAll(true); return }
     const effGb: Record<string, number> = {}
     people.forEach((p) => { effGb[p.id] = gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id)) })
     // De haler heeft de mensen op de plaats vastgezet — reset de haler-strook voor het
@@ -4867,10 +4874,10 @@ export default function PartyTest() {
               <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#8a5e0f", marginBottom: 3 }}>{L.noteQuickTitle}</span>
               <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.45 }}>{L.noteQuickSub}</span>
             </button>
-            <button onClick={() => { setNoteerKeuze(false); if (people.length < 2) { setNotice(L.needNamesFirst); setSettingsBackTo("order"); setView("settings"); return } setOpNaam(true) }}
+            <button onClick={() => { setOpNaam(true); setNoteerKeuze(false) }}
               style={{ width: "100%", boxSizing: "border-box", textAlign: "left", cursor: "pointer", border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a", background: "rgba(59,72,106,0.06)", borderRadius: 12, padding: 12 }}>
-              <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#3b486a", marginBottom: 3 }}>{L.noteNamedTitle}</span>
-              <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.45 }}>{L.noteNamedSub}</span>
+              <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#3b486a", marginBottom: 3 }}>{L.noteNamedTitle2}</span>
+              <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.45 }}>{L.noteNamedSub2}</span>
             </button>
           </div>
         </div>
@@ -6494,8 +6501,7 @@ export default function PartyTest() {
 
         {!settle && !opNaam && (
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-            <button onClick={() => { if (people.length < 2) { setNotice(L.needNamesFirst); setSettingsBackTo("order"); setView("settings"); return } setOpNaam(true) }}
-              style={{ ...S.btn, padding: "7px 12px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.withNamesBtn}</button>
+            <button onClick={() => setOpNaam(true)} style={{ ...S.btn, padding: "7px 12px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.withNamesBtn}</button>
           </div>
         )}
         {/* Eerst voor wie je aantikt, dan de categorieën vlak boven de lijst. Zoeken en
@@ -6533,7 +6539,12 @@ export default function PartyTest() {
                       </button>
                     )
                   })}
+                  {!settle && (
+                    <button onClick={() => { void addPerson(); setSettingsBackTo("order") }}
+                      style={{ border: "1.5px dashed rgba(240,165,0,0.6)", background: "none", color: "#c98a00", borderRadius: 9, padding: "6px 11px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>{L.addNameBtn}</button>
+                  )}
                 </div>
+                {!settle && <div style={{ fontSize: 12, color: "#a89a6f", marginTop: 6, lineHeight: 1.4 }}>{L.namesLaterToo}</div>}
                 <div style={{ fontSize: 12, color: "#a89a6f", marginTop: 7, lineHeight: 1.45 }}>{L.qrTapsSelf}</div>
               </div>
             )}
@@ -6664,12 +6675,20 @@ export default function PartyTest() {
           /* In "ik bestel voor de groep" was dit een vijfde wit kader op één scherm.
              Als smalle regel zie je hetzelfde in een derde van de hoogte; weghalen doe
              je op de tegel zelf. */
+          <>
+          {opNaam && unassignedTotal > 0 && (
+            <div onClick={() => setShowAssignAll(true)}
+              style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.4)", borderRadius: 10, padding: "9px 11px", marginBottom: 9, fontSize: 13.5, fontWeight: 800, color: "#b0402f", textAlign: "center", cursor: "pointer" }}>
+              {L.someUnassigned(unassignedTotal)} — <u>{L.tapToAssign}</u>
+            </div>
+          )}
           <div style={{ background: "#fdf3dd", borderRadius: 11, padding: "9px 12px", marginBottom: 11, fontSize: 13.5, color: "#6b5f3a", lineHeight: 1.5 }}>
             <b style={{ color: "#8a5e0f" }}>{L.inRoundShort}</b>{" "}
             {drinks.filter((d) => drinkTotal(d.id) > 0).map((d, n) => (
               <span key={d.id}>{n > 0 ? " · " : ""}{drinkTotal(d.id)}× {d.name}</span>
             ))}
           </div>
+          </>
           )
         )}
         {depositOn && (
