@@ -1876,7 +1876,7 @@ export default function PartyTest() {
   const [bpNaam, setBpNaam] = useState(false)
   // De uitleg staat los van de keuze: lezen zonder te kiezen, kiezen zonder te lezen.
   // Eén tegelijk open, anders wordt het keuzescherm meteen twee schermen lang.
-  const [modeInfo, setModeInfo] = useState<"quick" | "fair" | null>(null)
+  const [modeInfo, setModeInfo] = useState<"quick" | "naam" | "fair" | null>(null)
   const [fromOnboarding, setFromOnboarding] = useState(false)
   const [onboardedOnce, setOnboardedOnce] = useState(false)
   // Als je een verse groep (nog geen rondjes) heropent, land je op de kaders om de modus
