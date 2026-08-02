@@ -33,6 +33,19 @@ function KlinkIcoon({ size = 32, kleur = "#eab117" }: { size?: number; kleur?: s
 // scherm (de gast scant), of leeg en doorschijnend voor de twee kleintjes ernaast.
 // Getekend in plaats van een emoji, zodat hij de kleur van de modus overneemt en op elk
 // toestel hetzelfde oogt.
+function NamenIcoon({ size = 46, kleur = "#7a3f6d" }: { size?: number; kleur?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <circle cx="5.5" cy="5.5" r="3.2" stroke={kleur} strokeWidth={1.5} />
+      <circle cx="5.5" cy="17" r="3.2" stroke={kleur} strokeWidth={1.5} />
+      <path d="M10.5 5.5h3M10.5 17h3" stroke={kleur} strokeWidth={1.5} strokeLinecap="round" />
+      <circle cx="17.5" cy="5.5" r="3.4" fill="#f3d27c" stroke="#d9a83c" strokeWidth={1} />
+      <circle cx="16" cy="17" r="3.4" fill="#f3d27c" stroke="#d9a83c" strokeWidth={1} />
+      <circle cx="21" cy="17" r="3.4" fill="#f3d27c" stroke="#d9a83c" strokeWidth={1} />
+    </svg>
+  )
+}
+
 function MicroIcoon({ size = 18, kleur = "#8a5e0f" }: { size?: number; kleur?: string }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={kleur}
@@ -838,6 +851,10 @@ const T = {
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe je wil bestellen",
     youNoteTitle: "Jij noteert voor iedereen",
+    modeNaamTitle: "Op naam noteren",
+    modeNaamSub: "Jij tikt aan én duidt aan voor wie",
+    modeNaamSub2: "Ieder betaalt wat hij dronk",
+    modeNaamWhat: "Je zet de namen erbij en tikt per persoon aan. Op het einde ziet iedereen precies wat hij dronk — en wie aan wie moet betalen.",
     youNoteSub: "niemand anders hoeft iets te doen",
     theyTapTitle: "Iedereen op zijn eigen gsm",
     theyTapSub: "ze scannen een QR-code",
@@ -1481,6 +1498,10 @@ const T = {
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
     youNoteTitle: "Tu notes pour tout le monde",
+    modeNaamTitle: "Noter au nom",
+    modeNaamSub: "Tu coches et indiques pour qui",
+    modeNaamSub2: "Chacun paie ce qu’il a bu",
+    modeNaamWhat: "Tu ajoutes les noms et coches par personne. À la fin, chacun voit exactement ce qu’il a bu — et qui doit payer à qui.",
     youNoteSub: "personne d’autre ne doit rien faire",
     theyTapTitle: "Chacun sur son propre gsm",
     theyTapSub: "ils scannent un QR-code",
@@ -1851,6 +1872,8 @@ export default function PartyTest() {
   const [beginPrompt, setBeginPrompt] = useState(false)
   const [potChosen, setPotChosen] = useState(false)
   const [bpSettle, setBpSettle] = useState<boolean | null>(null)
+  // Binnen "jij noteert" zijn er twee kaarten. Deze zegt welke van de twee gekozen is.
+  const [bpNaam, setBpNaam] = useState(false)
   // De uitleg staat los van de keuze: lezen zonder te kiezen, kiezen zonder te lezen.
   // Eén tegelijk open, anders wordt het keuzescherm meteen twee schermen lang.
   const [modeInfo, setModeInfo] = useState<"quick" | "fair" | null>(null)
@@ -3240,6 +3263,9 @@ export default function PartyTest() {
   // De modus komt nu van de knop zelf mee: elke modus heeft z’n eigen startknop, en
   // setBpSettle is nog niet doorgevoerd op het moment dat we hier binnenkomen.
   const startWithMode = async (fallbackNaam?: string, modus?: boolean) => {
+    // De keuze snel-of-op-naam staat al op het keuzescherm; het losse venster erna is
+    // daardoor overbodig geworden.
+    if (modus === false) { setOpNaam(bpNaam); setNamenSetup(bpNaam); noteerGevraagd.current = "gekozen" }
     const keuze = modus ?? bpSettle
     if (keuze === null || keuze === undefined) return
     const wilSettle = keuze === true
@@ -3514,16 +3540,7 @@ export default function PartyTest() {
   // aangaf — gasten claimen enkel een vrije plaats, ze maken er geen bij.
   // Het bestellen openzetten voor iedereen. Zonder rondje: wie wil halen drukt daarna
   // zelf op één van de twee knoppen.
-  // Één keer per groep vragen hoe je wil noteren — daarna is de namenrij de schakelaar.
   const noteerGevraagd = useRef<string | null>(null)
-  useEffect(() => {
-    if (settle || !groupId || !isAdmin) return
-    if (noteerGevraagd.current === groupId) return
-    if (rounds.length > 0 || roundItems > 0) { noteerGevraagd.current = groupId; return }
-    noteerGevraagd.current = groupId
-    setNoteerKeuze(true)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId, settle, isAdmin])
 
   const openBestellen = async () => {
     if (!groupId) return
@@ -5854,25 +5871,25 @@ export default function PartyTest() {
             {/* Elke modus is één geheel: de rij, z’n voorbeeld én de startknop eronder.
                 De gekozen modus licht op in zijn eigen kleur, de andere dimt volledig —
                 kader en knop samen, zodat het één blok blijft en geen losse onderdelen. */}
-            <div style={{ opacity: bpSettle === true ? 0.6 : 1 }}>
-            <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", border: bpSettle === false ? `2px solid ${MODUS_SNEL.rand}` : `1.5px solid ${MODUS_SNEL.randZacht}`,
-              boxShadow: bpSettle === false ? `0 16px 34px -20px ${MODUS_SNEL.gloed}` : "0 8px 22px -18px rgba(120,95,20,0.5)" }}>
+            <div style={{ opacity: bpSettle !== false || bpNaam ? 0.6 : 1 }}>
+            <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", border: (bpSettle === false && !bpNaam) ? `2px solid ${MODUS_SNEL.rand}` : `1.5px solid ${MODUS_SNEL.randZacht}`,
+              boxShadow: (bpSettle === false && !bpNaam) ? `0 16px 34px -20px ${MODUS_SNEL.gloed}` : "0 8px 22px -18px rgba(120,95,20,0.5)" }}>
               {/* Kleurbalk als vlag: nog vóór je de tekst leest weet je welke modus dit is. */}
               <div style={{ height: 6, background: MODUS_SNEL.rand }} />
-              <button onClick={() => { setBpSettle(false); setModeInfo((m) => m === "quick" ? m : null) }}
+              <button onClick={() => { setBpSettle(false); setBpNaam(false); setModeInfo((m) => m === "quick" ? m : null) }}
                 style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "16px 14px 14px", border: "none", cursor: "pointer",
                   borderBottom: `1px solid ${MODUS_SNEL.lijnZacht}`,
-                  background: bpSettle === false ? MODUS_SNEL.vlak : "linear-gradient(180deg,#fdfcfa,#fff)" }}>
+                  background: (bpSettle === false && !bpNaam) ? MODUS_SNEL.vlak : "linear-gradient(180deg,#fdfcfa,#fff)" }}>
                 {/* Gekozen of niet: een gevuld rondje met vinkje tegenover een leeg rondje.
                     Samen lezen de twee kaarten zo als één keuze. */}
                 <span style={{ position: "absolute", top: 9, left: 9, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, pointerEvents: "none",
-                  background: bpSettle === false ? MODUS_SNEL.rand : "transparent",
-                  border: bpSettle === false ? "none" : `2.5px solid ${MODUS_SNEL.randZacht}`,
-                  color: "#fff" }}>{bpSettle === false ? "✓" : ""}</span>
+                  background: (bpSettle === false && !bpNaam) ? MODUS_SNEL.rand : "transparent",
+                  border: (bpSettle === false && !bpNaam) ? "none" : `2.5px solid ${MODUS_SNEL.randZacht}`,
+                  color: "#fff" }}>{(bpSettle === false && !bpNaam) ? "✓" : ""}</span>
                 {/* De uitleg zit in de hoek van de kaart in plaats van naast de titel. Zo heeft
                     de titel de volle breedte en staat hij echt gecentreerd. Uitklappen zet de
                     modus ook aan: een kaart die opengaat maar bleek blijft, oogt stuk. */}
-                <span onClick={(e) => { e.stopPropagation(); setBpSettle(false); setModeInfo((m) => m === "quick" ? null : "quick") }}
+                <span onClick={(e) => { e.stopPropagation(); setBpSettle(false); setBpNaam(false); setModeInfo((m) => m === "quick" ? null : "quick") }}
                   style={{ position: "absolute", top: 0, right: 0, borderRadius: "0 0 0 16px", padding: "10px 15px 11px 17px", fontSize: 15, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap",
                     background: modeInfo === "quick" ? MODUS_SNEL.rand : MODUS_SNEL.tint,
                     color: modeInfo === "quick" ? "#fff" : MODUS_SNEL.tekst }}>{L.whatIsThis} <span style={{ fontSize: 16 }}>{modeInfo === "quick" ? "▴" : "▾"}</span></span>
@@ -5893,8 +5910,8 @@ export default function PartyTest() {
                 </span>
               </button>
               {modeInfo === "quick" && (
-              <div style={{ padding: "0 16px 14px", background: bpSettle === false ? MODUS_SNEL.vlak : "#fff" }}>
-                <div style={{ borderTop: `1px solid ${bpSettle === false ? MODUS_SNEL.streep : MODUS_SNEL.lijnZacht}`, paddingTop: 11 }}>
+              <div style={{ padding: "0 16px 14px", background: (bpSettle === false && !bpNaam) ? MODUS_SNEL.vlak : "#fff" }}>
+                <div style={{ borderTop: `1px solid ${(bpSettle === false && !bpNaam) ? MODUS_SNEL.streep : MODUS_SNEL.lijnZacht}`, paddingTop: 11 }}>
                 <div>
                   <div style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
                     <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: MODUS_SNEL.tint, color: MODUS_SNEL.tekst, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, fontStyle: "italic" }}>i</span>
@@ -5916,11 +5933,75 @@ export default function PartyTest() {
               )}
               {/* Een losse knop met eigen ronding en schaduw leest onmiskenbaar als knop;
                   een voetbalk rand-aan-rand deed dat minder. */}
-              <div style={{ padding: "12px 12px 14px", background: bpSettle === false ? MODUS_SNEL.vlak : "#fff" }}>
-                <button disabled={busy} onClick={() => { setBpSettle(false); startWithMode(undefined, false) }}
+              <div style={{ padding: "12px 12px 14px", background: (bpSettle === false && !bpNaam) ? MODUS_SNEL.vlak : "#fff" }}>
+                <button disabled={busy} onClick={() => { setBpSettle(false); setBpNaam(false); startWithMode(undefined, false) }}
                   style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 17.5, fontWeight: 800, cursor: "pointer", borderRadius: 14, border: "none",
                     background: MODUS_SNEL.knop, color: MODUS_SNEL.knopTekst, boxSizing: "border-box",
                     boxShadow: `0 12px 28px -8px ${MODUS_SNEL.gloed}, 0 0 0 4px ${MODUS_SNEL.tint}` }}>{busy ? L.starting : L.startQuickBtn} →</button>
+              </div>
+            </div>
+            </div>
+
+            <div style={{ height: 12 }} />
+            {/* Zelfde manier van noteren, maar elk drankje krijgt een naam. Pruim, zodat
+                hij niet verward wordt met de teal van de QR-modus eronder. */}
+            <div style={{ opacity: bpSettle === false && bpNaam ? 1 : 0.6 }}>
+            <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", border: bpSettle === false && bpNaam ? "2px solid #7a3f6d" : "1px solid rgba(120,95,20,0.16)",
+              boxShadow: bpSettle === false && bpNaam ? "0 16px 34px -20px rgba(122,63,109,0.5)" : "0 8px 22px -18px rgba(120,95,20,0.5)" }}>
+              <div style={{ height: 6, background: "#7a3f6d" }} />
+              <button onClick={() => { setBpSettle(false); setBpNaam(true); setModeInfo((m) => m === "naam" ? m : null) }}
+                style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "16px 14px 14px", cursor: "pointer", border: "none",
+                  borderBottom: "1px solid rgba(122,63,109,0.18)",
+                  background: bpSettle === false && bpNaam ? "rgba(122,63,109,0.07)" : "linear-gradient(180deg,#fdfcfa,#fff)" }}>
+                <span style={{ position: "absolute", top: 9, left: 9, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
+                  background: bpSettle === false && bpNaam ? "#7a3f6d" : "transparent",
+                  border: bpSettle === false && bpNaam ? "none" : "2.5px solid rgba(122,63,109,0.4)",
+                  color: "#fff" }}>{bpSettle === false && bpNaam ? "✓" : ""}</span>
+                <span onClick={(e) => { e.stopPropagation(); setBpSettle(false); setBpNaam(true); setModeInfo((m) => m === "naam" ? null : "naam") }}
+                  style={{ position: "absolute", top: 0, right: 0, borderRadius: "0 0 0 16px", padding: "10px 15px 11px 17px", fontSize: 15, fontWeight: 800, cursor: "pointer",
+                    background: modeInfo === "naam" ? "#7a3f6d" : "rgba(122,63,109,0.13)",
+                    color: modeInfo === "naam" ? "#fff" : "#7a3f6d" }}>{L.whatIsThis} <span style={{ fontSize: 16 }}>{modeInfo === "naam" ? "▴" : "▾"}</span></span>
+                <span style={{ display: "flex", justifyContent: "center", marginTop: 10, marginBottom: 8 }}>
+                  <NamenIcoon size={46} kleur="#7a3f6d" />
+                </span>
+                <span style={{ display: "block", fontSize: 24, fontWeight: 800, color: "#3d3418", lineHeight: 1.14, letterSpacing: -0.4 }}>{L.modeNaamTitle}</span>
+                <span style={{ display: "block", textAlign: "left", marginTop: 11, paddingLeft: 6 }}>
+                  {[L.modeNaamSub, L.modeNaamSub2].map((t, i) => (
+                    <span key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i === 0 ? 5 : 0 }}>
+                      <span style={{ flexShrink: 0, color: "#7a3f6d", fontWeight: 800, fontSize: 15 }}>✓</span>
+                      <span style={{ fontSize: 16, color: "#6b5f3a", lineHeight: 1.4 }}>{t}</span>
+                    </span>
+                  ))}
+                </span>
+              </button>
+              {modeInfo === "naam" && (
+                <div style={{ padding: "0 16px 14px", background: bpSettle === false && bpNaam ? "rgba(122,63,109,0.07)" : "#fff" }}>
+                  <div style={{ borderTop: "1px solid rgba(122,63,109,0.2)", paddingTop: 13 }}>
+                    <div style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
+                      <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: "rgba(122,63,109,0.13)", color: "#7a3f6d", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800 }}>i</span>
+                      <span style={{ fontSize: 14.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeNaamWhat}</span>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 5, textAlign: "center" }}>
+                      {[{ d: "🍺", m: 1, n: "Tom" }, { d: "🍷🍷", m: 3, n: "Els" }, { d: "🍻", m: 2, n: "Bart" }].map((x) => (
+                        <div key={x.n}>
+                          <div style={{ fontSize: 23, height: 30, whiteSpace: "nowrap", letterSpacing: -3 }}>{x.d}</div>
+                          <div style={{ height: 24, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                            {Array.from({ length: x.m }).map((_, k) => (
+                              <span key={k} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#f3d27c", border: "1px solid #d9a83c", fontSize: 10, fontWeight: 800, color: "#7a5a12" }}>€</span>
+                            ))}
+                          </div>
+                          <div style={{ fontSize: 13, marginTop: 4, color: "#8a7d55", fontWeight: 700 }}>{x.n}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div style={{ padding: "12px 12px 14px", background: bpSettle === false && bpNaam ? "rgba(122,63,109,0.07)" : "#fff" }}>
+                <button disabled={busy} onClick={() => { setBpSettle(false); setBpNaam(true); startWithMode(undefined, false) }}
+                  style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 17.5, fontWeight: 800, cursor: "pointer", border: "none", borderRadius: 15,
+                    background: "linear-gradient(135deg,#8d5080,#7a3f6d)", color: "#fff", boxSizing: "border-box",
+                    boxShadow: "0 12px 28px -8px rgba(122,63,109,0.45), 0 0 0 4px rgba(122,63,109,0.1)" }}>{busy ? L.starting : L.startQuickBtn} →</button>
               </div>
             </div>
             </div>
