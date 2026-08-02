@@ -443,6 +443,7 @@ const T = {
     groupNamePh: "Typ je groepsnaam",
     groupNameShortPh: "Groepsnaam",
     giveNameQ: "Naam geven?",
+    groupNamePlain: "Groepsnaam",
     nowWord: "nu:",
     starting: "Bezig…",
     savedGroups: "Opgeslagen groepen",
@@ -1050,6 +1051,7 @@ const T = {
     groupNamePh: "Tape le nom de ton groupe",
     groupNameShortPh: "Nom du groupe",
     giveNameQ: "Donner un nom ?",
+    groupNamePlain: "Nom du groupe",
     nowWord: "actuel :",
     starting: "En cours…",
     savedGroups: "Groupes enregistrés",
@@ -6025,10 +6027,12 @@ export default function PartyTest() {
           </div>
         )}
         <div style={S.card}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{L.groupNameEdit}</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{!settle && isAutoNaam(groupName) ? L.giveNameQ : L.groupNameEdit}</div>
           <input value={!settle && isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={(e) => { if (!e.target.value.trim()) setGroupName(L.autoName()); persistSettings() }} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.autoName() : L.groupNameShortPh}
             style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: VLAK2 }} />
-          {groupName.trim() && <div style={{ fontSize: 12.5, color: "#8aa5aa", marginTop: 5, paddingLeft: 2 }}>{L.tapToChange}</div>}
+          {!settle && isAutoNaam(groupName)
+            ? <div style={{ fontSize: 12.5, color: "#a89a6f", marginTop: 5, paddingLeft: 2 }}>{L.nowWord} {groupName.trim()}</div>
+            : groupName.trim() ? <div style={{ fontSize: 12.5, color: "#8aa5aa", marginTop: 5, paddingLeft: 2 }}>{L.tapToChange}</div> : null}
           {settle && (<>
             <div onClick={() => setExtrasOpen((v) => !v)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, cursor: "pointer", borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 12, paddingTop: 11 }}>
               <span style={{ fontSize: 14.5, fontWeight: 700, color: "#8a7d55" }}>{L.extrasLine}</span>
@@ -6189,11 +6193,13 @@ export default function PartyTest() {
         <div style={{ ...S.card, marginBottom: 10 }}>
           <div style={{ fontSize: 11.5, fontWeight: 800, color: "#a89a6f", letterSpacing: "0.05em", marginBottom: 8 }}>{L.sectionGroup}</div>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-            <span style={{ fontSize: 15.5, fontWeight: 800 }}>Groepsnaam</span>
+                <span style={{ fontSize: 15.5, fontWeight: 800 }}>{!settle && isAutoNaam(groupName) ? L.giveNameQ : L.groupNamePlain}</span>
             {hasSettled && <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>🔒 vast na afrekenen</span>}
           </div>
-          <input disabled={hasSettled} value={groupName} onChange={(e) => setGroupName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : VLAK2, color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
-          {!hasSettled && <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 6 }}>{L.tapToRename}</div>}
+          <input disabled={hasSettled} value={!settle && isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.groupNamePh : L.groupNameShortPh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : VLAK2, color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
+              {!hasSettled && (!settle && isAutoNaam(groupName)
+                ? <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 6 }}>{L.nowWord} {groupName.trim()}</div>
+                : <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 6 }}>{L.tapToRename}</div>)}
         {settle && !fromOnboarding && (
         <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 12, paddingTop: 11 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: people.length > 0 ? 10 : 0 }}>
