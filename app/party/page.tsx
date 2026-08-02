@@ -609,7 +609,7 @@ const T = {
     // ── overzicht
     roundsOverview: "📋 Rondjesoverzicht",
     overview: "📋 Overzicht",
-    repeatRound: "🔁 Zelfde rondje opnieuw (aanpasbaar)",
+    repeatRound: "🔁 Zelfde rondje opnieuw?",
     proposalTitle: "🗳️ Weer hetzelfde rondje?",
     proposalWaiting: "Iedereen antwoordt op zijn scherm. Jij sluit af wanneer je wil.",
     ansSame: "✅ hetzelfde",
@@ -1216,7 +1216,7 @@ const T = {
     // ── overzicht
     roundsOverview: "📋 Aperçu des tournées",
     overview: "📋 Aperçu",
-    repeatRound: "🔁 Refaire la même tournée (modifiable)",
+    repeatRound: "🔁 Refaire la même tournée ?",
     proposalTitle: "🗳️ La même tournée ?",
     proposalWaiting: "Chacun répond sur son écran. Tu clôtures quand tu veux.",
     ansSame: "✅ pareil",
@@ -6584,7 +6584,7 @@ export default function PartyTest() {
         )}
         {settle
           ? (roundItems > 0 && <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>)
-          : <button style={{ width: "100%", marginTop: 11, cursor: "pointer", background: "none", border: "none", fontSize: 15, fontWeight: 700, color: "#b0402f", padding: "8px 0" }}
+          : <button style={{ width: "100%", boxSizing: "border-box", marginTop: 11, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(120,95,20,0.28)", borderRadius: 12, fontSize: 15, fontWeight: 800, color: "#b0402f", padding: "12px 8px" }}
               onClick={() => { if (roundItems === 0) { setOverviewBackTo("hub"); setView("roundsOverview"); return } cancelOrder() }}>{L.cancelRoundShort}</button>}
 
 
@@ -7810,17 +7810,19 @@ export default function PartyTest() {
           <>
             {/* Gelijkwaardig: doorgaan of stoppen. Goud voor het rondje, inktblauw voor
                 de afrekening — rood en oranje zouden als waarschuwing lezen. */}
+            {/* Afrekenen links, nieuw rondje rechts: doorgaan staat aan de kant waar je
+                duim zit. */}
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button onClick={goQuickSettle}
+                style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 11, padding: "13px 6px", fontSize: 15, fontWeight: 800,
+                  background: "rgba(59,72,106,0.06)", color: "#3b486a",
+                  border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a" }}>{L.quickSettleTitle}</button>
               {laatsteRondjeKlaar() && (
                 <button onClick={nextRound}
                   style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 11, padding: "13px 6px", fontSize: 15, fontWeight: 800,
                     background: "rgba(240,165,0,0.07)", color: "#8a5e0f",
                     border: "1.5px solid rgba(232,168,18,0.5)", borderTop: "3px solid #e8a812" }}>{settle && openRoundId ? L.continueRound(roundNr) : L.newRoundBtn}</button>
               )}
-              <button onClick={goQuickSettle}
-                style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 11, padding: "13px 6px", fontSize: 15, fontWeight: 800,
-                  background: "rgba(59,72,106,0.06)", color: "#3b486a",
-                  border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a" }}>{L.quickSettleTitle}</button>
             </div>
             {rounds.length > 0 && laatsteRondjeKlaar() && (
               <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
@@ -8116,9 +8118,9 @@ export default function PartyTest() {
             Zonder kop moest je raden welk getal welke verdeling was. */}
         <div style={{ display: "flex", alignItems: "flex-end", gap: 8, paddingBottom: 6, borderBottom: "1.5px solid rgba(120,95,20,0.2)", fontSize: 12.5, fontWeight: 800, letterSpacing: "0.04em" }}>
           <span style={{ flex: 1, minWidth: 0, color: "#8a7d55" }}>{L.participantColHead.toUpperCase()}</span>
-          <span style={{ width: 82, textAlign: "right", color: "#1f8a4c", flexShrink: 0 }}>{L.fairColHead.toUpperCase()}</span>
+          <span style={{ width: 82, textAlign: "right", color: "#1f8a4c", flexShrink: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{L.fairColHead.toUpperCase()}</span>
           {showEqual ? (
-            <span style={{ width: 62, flexShrink: 0, display: "flex", alignItems: "flex-end", justifyContent: "flex-end", gap: 4, paddingLeft: 8, borderLeft: "1px solid rgba(120,95,20,0.18)" }}>
+            <span style={{ width: 80, flexShrink: 0, display: "flex", alignItems: "flex-end", justifyContent: "flex-end", gap: 4, paddingLeft: 8, borderLeft: "1px solid rgba(120,95,20,0.18)" }}>
               <span onClick={() => setNotice(L.fairSplitInfo)} style={{ cursor: "pointer", color: "#a89a6f", textAlign: "right", lineHeight: 1.15 }}>{L.equalColHead.toUpperCase()}</span>
               <span onClick={() => setShowEqual(false)} style={{ cursor: "pointer", fontSize: 12, color: "#c4b896" }}>✕</span>
             </span>
@@ -8161,7 +8163,7 @@ export default function PartyTest() {
                   })()}
                 </span>
                 <span style={{ width: 78, textAlign: "right", fontSize: 15, fontWeight: 800, color: "#1f8a4c", flexShrink: 0 }}>{show(dronk)}</span>
-                {showEqual && <span style={{ width: 62, textAlign: "right", paddingLeft: 8, borderLeft: "1px solid rgba(120,95,20,0.18)", fontSize: 12.5, color: "#a89a6f", flexShrink: 0 }}>{show(equalShare)}</span>}
+                {showEqual && <span style={{ width: 80, textAlign: "right", paddingLeft: 8, borderLeft: "1px solid rgba(120,95,20,0.18)", fontSize: 12.5, color: "#a89a6f", flexShrink: 0 }}>{show(equalShare)}</span>}
               </div>
               {open && (
                 <div style={{ background: "#faf4e4", borderRadius: 10, padding: "8px 11px", margin: "0 0 8px", fontSize: 14.5 }}>
@@ -8190,7 +8192,7 @@ export default function PartyTest() {
         <div style={{ ...S.row, justifyContent: "space-between", padding: "9px 0 2px", borderTop: "2px solid rgba(120,95,20,0.25)", marginTop: 2 }}>
           <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 800 }}>{L.togetherDrank}</span>
           <span style={{ width: 78, textAlign: "right", fontSize: 15, fontWeight: 800, color: "#1f8a4c", flexShrink: 0 }}>{show(grandTotal)}</span>
-          {showEqual && <span style={{ width: 62, textAlign: "right", paddingLeft: 8, borderLeft: "1px solid rgba(120,95,20,0.18)", fontSize: 12.5, fontWeight: 800, color: "#8a7d55", flexShrink: 0 }}>{show(equalShare * people.length)}</span>}
+          {showEqual && <span style={{ width: 80, textAlign: "right", paddingLeft: 8, borderLeft: "1px solid rgba(120,95,20,0.18)", fontSize: 12.5, fontWeight: 800, color: "#8a7d55", flexShrink: 0 }}>{show(equalShare * people.length)}</span>}
         </div>
         {isSchatting && (
           <div style={{ background: "#fff8e8", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10 }}>
