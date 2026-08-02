@@ -461,10 +461,16 @@ const T = {
     howNoteSub: "Je kan later nog wisselen.",
     noteQuickTitle: "⚡ Snel noteren",
     noteQuickExample: "3× Pintje · 2× Cola",
-    noteQuickSub: "drankjes tellen → barlijstje → verrekenen optioneel",
+    fastestTag: "SNELSTE",
+    fairestTag: "EERLIJKSTE",
+    qStep1: "Drankjes opnemen",
+    qStep2: "Handig barlijstje",
+    qStep3: "Verrekenen optioneel",
+    nStep1: "Drankjes opnemen en toewijzen",
+    nStep2: "Handig barlijstje",
+    nStep3: "Ieder betaalt wat hij dronk",
     noteNamedTitle2: "👤 Op naam noteren",
     noteNamedExample: "Erent 2× Pintje · Oma 1× Cola",
-    noteNamedSub2: "drankjes toewijzen → barlijstje → ieder betaalt wat hij dronk",
     withNamesBtn: "⚖️ op naam noteren",
     addNameBtn: "+ naam",
     whoJoinsTitle: "Wie doet er mee?",
@@ -1092,10 +1098,16 @@ const T = {
     howNoteSub: "Tu peux changer plus tard.",
     noteQuickTitle: "⚡ Noter vite",
     noteQuickExample: "3× Pintje · 2× Cola",
-    noteQuickSub: "compter les boissons → liste pour le bar → décompte optionnel",
+    fastestTag: "LE PLUS RAPIDE",
+    fairestTag: "LE PLUS ÉQUITABLE",
+    qStep1: "Noter les boissons",
+    qStep2: "Liste pratique pour le bar",
+    qStep3: "Décompte optionnel",
+    nStep1: "Noter et attribuer les boissons",
+    nStep2: "Liste pratique pour le bar",
+    nStep3: "Chacun paie ce qu’il a bu",
     noteNamedTitle2: "👤 Noter au nom",
     noteNamedExample: "Erent 2× Pintje · Oma 1× Cola",
-    noteNamedSub2: "attribuer les boissons → liste pour le bar → chacun paie ce qu’il a bu",
     withNamesBtn: "⚖️ noter au nom",
     addNameBtn: "+ nom",
     whoJoinsTitle: "Qui participe ?",
@@ -4920,16 +4932,28 @@ export default function PartyTest() {
             <div style={{ fontSize: 17.5, fontWeight: 800, color: "#3d3418", textAlign: "center", marginBottom: 4 }}>{L.howNoteTitle}</div>
             <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", lineHeight: 1.5, marginBottom: 14 }}>{L.howNoteSub}</div>
             <button onClick={() => { setOpNaam(false); setNoteerKeuze(false) }}
-              style={{ width: "100%", boxSizing: "border-box", textAlign: "left", cursor: "pointer", border: "1.5px solid rgba(232,168,18,0.5)", borderTop: "3px solid #e8a812", background: "rgba(240,165,0,0.07)", borderRadius: 12, padding: 12, marginBottom: 9 }}>
-              <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#8a5e0f", marginBottom: 6 }}>{L.noteQuickTitle}</span>
-              <span style={{ display: "block", background: "#fffdf6", border: "1px solid rgba(240,165,0,0.3)", borderRadius: 8, padding: "7px 9px", fontSize: 12.5, color: "#6b5f3a", marginBottom: 5 }}>{L.noteQuickExample}</span>
-              <span style={{ display: "block", fontSize: 13, color: "#6b5f3a", lineHeight: 1.5 }}>{L.noteQuickSub}</span>
+              style={{ position: "relative", overflow: "hidden", width: "100%", boxSizing: "border-box", textAlign: "left", cursor: "pointer", border: "1.5px solid rgba(232,168,18,0.5)", borderTop: "3px solid #e8a812", background: "rgba(240,165,0,0.07)", borderRadius: 12, padding: 12, marginBottom: 9 }}>
+              <span style={{ position: "absolute", top: 0, right: 0, background: "#e8a812", color: "#fff", borderRadius: "0 0 0 10px", padding: "4px 10px 5px 12px", fontSize: 10.5, fontWeight: 800, letterSpacing: "0.04em" }}>{L.fastestTag}</span>
+              <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 8 }}>{L.noteQuickTitle}</span>
+              <span style={{ display: "block", background: "#fffdf6", border: "1px solid rgba(240,165,0,0.3)", borderRadius: 8, padding: "8px 10px", fontSize: 13.5, color: "#6b5f3a", marginBottom: 9 }}>{L.noteQuickExample}</span>
+              {[L.qStep1, L.qStep2, L.qStep3].map((t, i) => (
+                <span key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i < 2 ? 5 : 0 }}>
+                  <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 14 }}>✓</span>
+                  <span style={{ fontSize: 14, color: "#6b5f3a", lineHeight: 1.4 }}>{t}</span>
+                </span>
+              ))}
             </button>
             <button onClick={() => { setOpNaam(true); setNamenSetup(true); setNoteerKeuze(false) }}
-              style={{ width: "100%", boxSizing: "border-box", textAlign: "left", cursor: "pointer", border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a", background: "rgba(59,72,106,0.06)", borderRadius: 12, padding: 12 }}>
-              <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#3b486a", marginBottom: 6 }}>{L.noteNamedTitle2}</span>
-              <span style={{ display: "block", background: "#fbfcfe", border: "1px solid rgba(59,72,106,0.25)", borderRadius: 8, padding: "7px 9px", fontSize: 12.5, color: "#6b5f3a", marginBottom: 5 }}>{L.noteNamedExample}</span>
-              <span style={{ display: "block", fontSize: 13, color: "#6b5f3a", lineHeight: 1.5 }}>{L.noteNamedSub2}</span>
+              style={{ position: "relative", overflow: "hidden", width: "100%", boxSizing: "border-box", textAlign: "left", cursor: "pointer", border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a", background: "rgba(59,72,106,0.06)", borderRadius: 12, padding: 12 }}>
+              <span style={{ position: "absolute", top: 0, right: 0, background: "#3b486a", color: "#fff", borderRadius: "0 0 0 10px", padding: "4px 10px 5px 12px", fontSize: 10.5, fontWeight: 800, letterSpacing: "0.04em" }}>{L.fairestTag}</span>
+              <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#3b486a", marginBottom: 8 }}>{L.noteNamedTitle2}</span>
+              <span style={{ display: "block", background: "#fbfcfe", border: "1px solid rgba(59,72,106,0.25)", borderRadius: 8, padding: "8px 10px", fontSize: 13.5, color: "#6b5f3a", marginBottom: 9 }}>{L.noteNamedExample}</span>
+              {[L.nStep1, L.nStep2, L.nStep3].map((t, i) => (
+                <span key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i < 2 ? 5 : 0 }}>
+                  <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 14 }}>✓</span>
+                  <span style={{ fontSize: 14, color: "#6b5f3a", lineHeight: 1.4 }}>{t}</span>
+                </span>
+              ))}
             </button>
           </div>
         </div>
