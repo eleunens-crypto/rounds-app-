@@ -58,7 +58,7 @@ function NamenIcoon({ size = 46, kleur = "#7a3f6d" }: { size?: number; kleur?: s
   // Drie namen met hun drankjes en wat ze kosten. De munten staan overal even ver uit
   // elkaar, zodat de rijen van Tom, Els en Bart onderling te vergelijken zijn.
   const R = 4.3
-  const START = 44
+  const START = 48
   const STAP = 9.6
   const munt = (n: number, cy: number) => (
     Array.from({ length: n }).map((_, k) => {
@@ -66,13 +66,13 @@ function NamenIcoon({ size = 46, kleur = "#7a3f6d" }: { size?: number; kleur?: s
       return (
         <g key={`${cy}-${k}`}>
           <circle cx={cx} cy={cy} r={R} fill="#f3d27c" stroke="#d9a83c" strokeWidth={1.2} />
-          <text x={cx - 2.1} y={cy + 2.6} fontSize={6} fontWeight={800} fill="#7a5a12" fontFamily="system-ui">\u20ac</text>
+          <text x={cx} y={cy + 2.4} fontSize={5.6} fontWeight={800} fill="#7a5a12" fontFamily="system-ui" textAnchor="middle">€</text>
         </g>
       )
     })
   )
   return (
-    <svg viewBox="0 0 68 48" width={size} height={size * 48 / 68} aria-hidden="true" style={{ flexShrink: 0 }}>
+    <svg viewBox="0 0 74 48" width={size} height={size * 48 / 74} aria-hidden="true" style={{ flexShrink: 0 }}>
       {/* Namen rechts uitgelijnd: dan houdt elk glas dezelfde afstand, hoe lang de naam ook is. */}
       <text x={19} y={11.5} fontSize={7} fontWeight={800} fill={kleur} fontFamily="system-ui" textAnchor="end">Tom</text>
       <text x={19} y={27.5} fontSize={7} fontWeight={800} fill={kleur} fontFamily="system-ui" textAnchor="end">Els</text>
