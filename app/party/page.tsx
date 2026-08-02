@@ -456,6 +456,7 @@ const T = {
     giveNameQ: "Naam geven?",
     groupNamePlain: "Groepsnaam",
     voiceNotPerfect: "werkt nog niet altijd perfect",
+    inRoundShort: "In dit rondje:",
     nowWord: "nu:",
     starting: "Bezig…",
     savedGroups: "Opgeslagen groepen",
@@ -1065,6 +1066,7 @@ const T = {
     giveNameQ: "Donner un nom ?",
     groupNamePlain: "Nom du groupe",
     voiceNotPerfect: "ne marche pas encore à tous les coups",
+    inRoundShort: "Dans cette tournée :",
     nowWord: "actuel :",
     starting: "En cours…",
     savedGroups: "Groupes enregistrés",
@@ -5542,9 +5544,6 @@ export default function PartyTest() {
                 style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8a7d55", padding: 4 }}>✕</button>
             )}
           </div>
-          <button onClick={startVoice} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, padding: "0 13px", borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(240,165,0,0.6)", color: "#c98a00", whiteSpace: "nowrap" }}>
-            {L.voiceBtn} <span style={{ fontSize: 8.5, fontWeight: 800, border: "1px solid rgba(240,165,0,0.6)", borderRadius: 4, padding: "0 3px", letterSpacing: "0.03em" }}>{L.voiceBeta}</span>
-          </button>
         </div>
 
         {(lijst.length === 0 && (zoekt || activeCat !== "Eigen")) ? (
@@ -6560,7 +6559,7 @@ export default function PartyTest() {
           </div>
         )}
         {/* Zoeken en inspreken onderaan: minder gebruikt dan de tegels erboven. */}
-        <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: 10, marginLeft: "auto", maxWidth: 300 }}>
+        <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: 10 }}>
           <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
             <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🔍</span>
             <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)}
@@ -6571,12 +6570,15 @@ export default function PartyTest() {
                 style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8a7d55", padding: 4 }}>✕</button>
             )}
           </div>
-            <button onClick={startVoice} title={L.voiceBtn} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 13px", borderRadius: 10, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(240,165,0,0.5)" }}>
-              <MicroIcoon size={18} kleur="#8a5e0f" />
-          </button>
+            {(!settle || walkIdx !== null) && (
+            <button onClick={startVoice} title={L.voiceBtn} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 13px", borderRadius: 10, cursor: "pointer", background: "#fffdf6", border: `1px solid ${settle ? MODUS_FAIR.randZacht : "rgba(240,165,0,0.5)"}` }}>
+              <MicroIcoon size={18} kleur={settle ? MODUS_FAIR.tekst : "#8a5e0f"} />
+            </button>
+            )}
         </div>
 
         {roundItems > 0 && (
+          settle ? (
           <div style={{ ...S.card, padding: "10px 12px", background: "#fffdf6" }}>
             <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
               <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>{settle ? L.inThisRound : `📋 ${L.orderWord}`} {settle && Object.values(cartAnon).some((q) => (q || 0) > 0) && <span style={{ fontWeight: 600, color: "#b3a988" }}>{L.assignHint}</span>}</span>
@@ -6598,6 +6600,17 @@ export default function PartyTest() {
               })}
             </div>
           </div>
+          ) : (
+          /* In "ik bestel voor de groep" was dit een vijfde wit kader op één scherm.
+             Als smalle regel zie je hetzelfde in een derde van de hoogte; weghalen doe
+             je op de tegel zelf. */
+          <div style={{ background: "#fdf3dd", borderRadius: 11, padding: "9px 12px", marginBottom: 11, fontSize: 13.5, color: "#6b5f3a", lineHeight: 1.5 }}>
+            <b style={{ color: "#8a5e0f" }}>{L.inRoundShort}</b>{" "}
+            {drinks.filter((d) => drinkTotal(d.id) > 0).map((d, n) => (
+              <span key={d.id}>{n > 0 ? " · " : ""}{drinkTotal(d.id)}× {d.name}</span>
+            ))}
+          </div>
+          )
         )}
         {depositOn && (
           <div style={{ marginBottom: 12 }}>
