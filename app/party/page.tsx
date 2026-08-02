@@ -34,14 +34,43 @@ function KlinkIcoon({ size = 32, kleur = "#eab117" }: { size?: number; kleur?: s
 // Getekend in plaats van een emoji, zodat hij de kleur van de modus overneemt en op elk
 // toestel hetzelfde oogt.
 function NamenIcoon({ size = 46, kleur = "#7a3f6d" }: { size?: number; kleur?: string }) {
+  // Drie namen met hun drankjes en wat ze kosten. De munten staan overal even ver uit
+  // elkaar, zodat de rijen van Tom, Els en Bart onderling te vergelijken zijn.
+  const R = 4.3
+  const START = 44
+  const STAP = 9.6
+  const munt = (n: number, cy: number) => (
+    Array.from({ length: n }).map((_, k) => {
+      const cx = START + k * STAP
+      return (
+        <g key={`${cy}-${k}`}>
+          <circle cx={cx} cy={cy} r={R} fill="#f3d27c" stroke="#d9a83c" strokeWidth={1.2} />
+          <text x={cx - 2.1} y={cy + 2.6} fontSize={6} fontWeight={800} fill="#7a5a12" fontFamily="system-ui">\u20ac</text>
+        </g>
+      )
+    })
+  )
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
-      <circle cx="5.5" cy="5.5" r="3.2" stroke={kleur} strokeWidth={1.5} />
-      <circle cx="5.5" cy="17" r="3.2" stroke={kleur} strokeWidth={1.5} />
-      <path d="M10.5 5.5h3M10.5 17h3" stroke={kleur} strokeWidth={1.5} strokeLinecap="round" />
-      <circle cx="17.5" cy="5.5" r="3.4" fill="#f3d27c" stroke="#d9a83c" strokeWidth={1} />
-      <circle cx="16" cy="17" r="3.4" fill="#f3d27c" stroke="#d9a83c" strokeWidth={1} />
-      <circle cx="21" cy="17" r="3.4" fill="#f3d27c" stroke="#d9a83c" strokeWidth={1} />
+    <svg viewBox="0 0 68 48" width={size} height={size * 48 / 68} aria-hidden="true" style={{ flexShrink: 0 }}>
+      {/* Namen rechts uitgelijnd: dan houdt elk glas dezelfde afstand, hoe lang de naam ook is. */}
+      <text x={19} y={11.5} fontSize={7} fontWeight={800} fill={kleur} fontFamily="system-ui" textAnchor="end">Tom</text>
+      <text x={19} y={27.5} fontSize={7} fontWeight={800} fill={kleur} fontFamily="system-ui" textAnchor="end">Els</text>
+      <text x={19} y={43.5} fontSize={7} fontWeight={800} fill={kleur} fontFamily="system-ui" textAnchor="end">Bart</text>
+
+      <path d="M24.6 6.4c-.7 0-1.27-.57-1.27-1.27 0-.6.42-1.12 1.03-1.24.09-1.1.7-1.6 1.4-1.6.3 0 .58.1.81.27.27-.55.88-.91 1.58-.91.76 0 1.41.44 1.72 1.09.17-.9.36-.13.57-.13.74 0 1.33.6 1.33 1.33 0 .09 0 .17-.2.26.48.19.8.65.8 1.19 0 .7-.57 1.27-1.27 1.27" fill="none" stroke={kleur} strokeWidth={1} strokeLinejoin="round" strokeLinecap="round" />
+      <path d="M24.1 6.1h6.6v6a1 1 0 0 1-1 1h-4.6a1 1 0 0 1-1-1z" fill="none" stroke={kleur} strokeWidth={1.1} strokeLinejoin="round" />
+      <path d="M30.7 7.6h1.2a1.05 1.05 0 0 1 1.05 1.05v1.55a1.05 1.05 0 0 1-1.05 1.05h-1.2" fill="none" stroke={kleur} strokeWidth={1.1} strokeLinejoin="round" />
+      <path d="M25.8 8v3.2M27.4 8v3.2M29 8v3.2" stroke={kleur} strokeWidth={0.95} strokeLinecap="round" />
+      {munt(2, 9)}
+
+      <path d="M24 22h6.8l-3.4 4zM27.4 26v3.1M25.6 29.1h3.6" fill="none" stroke={kleur} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
+      <path d="M32 22h6.8l-3.4 4zM35.4 26v3.1M33.6 29.1h3.6" fill="none" stroke={kleur} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
+      {munt(3, 25)}
+
+      <path d="M24.6 37h6.3l-.67 6.9a1 1 0 0 1-1 .9h-3a1 1 0 0 1-1-.9z" fill="none" stroke={kleur} strokeWidth={1.1} strokeLinejoin="round" />
+      <path d="M24.9 39.9c1 .62 1.8-.5 2.8 0 1 .5 1.9-.45 2.95-.05" fill="none" stroke={kleur} strokeWidth={0.95} strokeLinecap="round" />
+      <path d="M29.2 37l.85-2.3 1.5.6" fill="none" stroke={kleur} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
+      {munt(1, 41)}
     </svg>
   )
 }
