@@ -461,6 +461,7 @@ const T = {
     howNoteSub: "✏️ Van snel naar op naam kan later nog.",
     noteQuickTitle: "⚡ Snel noteren",
     noteQuickExample: "3× Pintje · 2× Cola",
+    nextBtn: "Verder →",
     fastestTag: "SNELSTE",
     fairestTag: "EERLIJKSTE",
     qStep1: "Drankjes opnemen",
@@ -470,7 +471,6 @@ const T = {
     nStep2: "Handig barlijstje",
     nStep3: "Ieder betaalt wat hij dronk",
     noteNamedTitle2: "👤 Op naam noteren",
-    noteNamedExample: "Erent 2× Pintje · Oma 1× Cola",
     withNamesBtn: "⚖️ op naam noteren",
     addNameBtn: "+ naam",
     whoJoinsTitle: "Wie doet er mee?",
@@ -1098,6 +1098,7 @@ const T = {
     howNoteSub: "✏️ Passer de rapide à au nom reste possible plus tard.",
     noteQuickTitle: "⚡ Noter vite",
     noteQuickExample: "3× Pintje · 2× Cola",
+    nextBtn: "Continuer →",
     fastestTag: "LE PLUS RAPIDE",
     fairestTag: "LE PLUS ÉQUITABLE",
     qStep1: "Noter les boissons",
@@ -1107,7 +1108,6 @@ const T = {
     nStep2: "Liste pratique pour le bar",
     nStep3: "Chacun paie ce qu’il a bu",
     noteNamedTitle2: "👤 Noter au nom",
-    noteNamedExample: "Erent 2× Pintje · Oma 1× Cola",
     withNamesBtn: "⚖️ noter au nom",
     addNameBtn: "+ nom",
     whoJoinsTitle: "Qui participe ?",
@@ -2290,6 +2290,8 @@ export default function PartyTest() {
   const [noteerKeuze, setNoteerKeuze] = useState(false)
   // Koos je "op naam", dan zet je eerst de namen. Daarna verdwijnt dit scherm.
   const [namenSetup, setNamenSetup] = useState(false)
+  const [noteerPick, setNoteerPick] = useState<"quick" | "named" | null>(null)
+  const [noteerInfo, setNoteerInfo] = useState<"quick" | "named" | null>(null)
   const voorWie = voorWieRaw && people.some((p) => p.id === voorWieRaw) ? voorWieRaw : meId
   const renderStandLijst = () => (
     <div style={{ marginTop: 9, display: "flex", flexDirection: "column", gap: 5 }}>
@@ -4927,39 +4929,94 @@ export default function PartyTest() {
         </div>
       )}
       {noteerKeuze && (
-        <div style={{ ...S.overlay, zIndex: 78 }} onClick={() => setNoteerKeuze(false)}>
-          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 17.5, fontWeight: 800, color: "#3d3418", textAlign: "center", marginBottom: 4 }}>{L.howNoteTitle}</div>
-            <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", lineHeight: 1.5, marginBottom: 14 }}>{L.howNoteSub}</div>
-            <button onClick={() => { setOpNaam(false); setNoteerKeuze(false) }}
-              style={{ position: "relative", overflow: "hidden", width: "100%", boxSizing: "border-box", textAlign: "left", cursor: "pointer", border: "1.5px solid rgba(232,168,18,0.5)", borderTop: "3px solid #e8a812", background: "rgba(240,165,0,0.07)", borderRadius: 12, padding: 12 }}>
-              <span style={{ position: "absolute", top: 0, right: 0, background: "#e8a812", color: "#fff", borderRadius: "0 0 0 10px", padding: "4px 10px 5px 12px", fontSize: 10.5, fontWeight: 800, letterSpacing: "0.04em" }}>{L.fastestTag}</span>
-              <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 8 }}>{L.noteQuickTitle}</span>
-              <span style={{ display: "block", background: "#fffdf6", border: "1px solid rgba(240,165,0,0.3)", borderRadius: 8, padding: "8px 10px", fontSize: 13.5, color: "#6b5f3a", marginBottom: 9 }}>{L.noteQuickExample}</span>
-              {[L.qStep1, L.qStep2, L.qStep3].map((t, i) => (
-                <span key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i < 2 ? 5 : 0 }}>
-                  <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 14 }}>✓</span>
-                  <span style={{ fontSize: 14, color: "#6b5f3a", lineHeight: 1.4 }}>{t}</span>
-                </span>
-              ))}
-            </button>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "13px 0" }}>
-              <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.18)" }} />
-              <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: "#fff", border: "1.5px solid rgba(120,95,20,0.22)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12.5, fontWeight: 800, color: "#a89a6f" }}>{L.orWord}</span>
-              <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.18)" }} />
-            </div>
-            <button onClick={() => { setOpNaam(true); setNamenSetup(true); setNoteerKeuze(false) }}
-              style={{ position: "relative", overflow: "hidden", width: "100%", boxSizing: "border-box", textAlign: "left", cursor: "pointer", border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a", background: "rgba(59,72,106,0.06)", borderRadius: 12, padding: 12 }}>
-              <span style={{ position: "absolute", top: 0, right: 0, background: "#3b486a", color: "#fff", borderRadius: "0 0 0 10px", padding: "4px 10px 5px 12px", fontSize: 10.5, fontWeight: 800, letterSpacing: "0.04em" }}>{L.fairestTag}</span>
-              <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#3b486a", marginBottom: 8 }}>{L.noteNamedTitle2}</span>
-              <span style={{ display: "block", background: "#fbfcfe", border: "1px solid rgba(59,72,106,0.25)", borderRadius: 8, padding: "8px 10px", fontSize: 13.5, color: "#6b5f3a", marginBottom: 9 }}>{L.noteNamedExample}</span>
-              {[L.nStep1, L.nStep2, L.nStep3].map((t, i) => (
-                <span key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i < 2 ? 5 : 0 }}>
-                  <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 14 }}>✓</span>
-                  <span style={{ fontSize: 14, color: "#6b5f3a", lineHeight: 1.4 }}>{t}</span>
-                </span>
-              ))}
-            </button>
+        <div style={{ ...S.overlay, zIndex: 78 }} onClick={() => { setNoteerKeuze(false); setNoteerPick(null); setNoteerInfo(null) }}>
+          <div style={{ ...S.sheet, maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 17.5, fontWeight: 800, color: "#3d3418", textAlign: "center", marginBottom: 2 }}>{L.howNoteTitle}</div>
+            <div style={{ fontSize: 12.5, color: "#a89a6f", textAlign: "center", lineHeight: 1.5, marginBottom: 13 }}>{L.howNoteSub}</div>
+
+            {/* Kiezen licht de kaart op; het vraagteken opent de uitleg. Twee aparte
+                handelingen, zodat een tik naast het vraagteken geen keuze maakt. */}
+            {([
+              { id: "quick" as const, tag: L.fastestTag, titel: L.noteQuickTitle, stappen: [L.qStep1, L.qStep2, L.qStep3],
+                rand: "rgba(232,168,18,0.5)", top: "#e8a812", vlak: "rgba(240,165,0,0.07)", tekst: "#8a5e0f" },
+              { id: "named" as const, tag: L.fairestTag, titel: L.noteNamedTitle2, stappen: [L.nStep1, L.nStep2, L.nStep3],
+                rand: "rgba(59,72,106,0.4)", top: "#3b486a", vlak: "rgba(59,72,106,0.06)", tekst: "#3b486a" },
+            ]).map((k, idx) => {
+              const gekozen = noteerPick === k.id
+              const open = noteerInfo === k.id
+              return (
+                <div key={k.id}>
+                  {idx === 1 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "13px 0" }}>
+                      <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.18)" }} />
+                      <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: "#fff", border: "1.5px solid rgba(120,95,20,0.22)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12.5, fontWeight: 800, color: "#a89a6f" }}>{L.orWord}</span>
+                      <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.18)" }} />
+                    </div>
+                  )}
+                  <div onClick={() => setNoteerPick(k.id)}
+                    style={{ position: "relative", overflow: "hidden", cursor: "pointer", borderRadius: 12, padding: 12,
+                      background: k.vlak, border: `${gekozen ? 2.5 : 1.5}px solid ${gekozen ? k.top : k.rand}`,
+                      borderTop: `3px solid ${k.top}`, boxShadow: gekozen ? `0 0 0 3px ${k.vlak}` : "none" }}>
+                    <span style={{ position: "absolute", top: 0, right: 0, background: k.top, color: "#fff", borderRadius: "0 0 0 10px", padding: "4px 10px 5px 12px", fontSize: 10.5, fontWeight: 800, letterSpacing: "0.04em" }}>{k.tag}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800,
+                        background: gekozen ? k.top : "transparent", border: gekozen ? "none" : `2px solid ${k.rand}`, color: "#fff" }}>{gekozen ? "✓" : ""}</span>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: k.tekst }}>{k.titel}</span>
+                    </div>
+                    {k.stappen.map((t, n) => (
+                      <div key={n} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 10, marginBottom: n < 2 ? 4 : 0 }}>
+                        <span style={{ display: "flex", gap: 8, alignItems: "flex-start", minWidth: 0 }}>
+                          <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 13.5 }}>✓</span>
+                          <span style={{ fontSize: 13.5, color: "#6b5f3a", lineHeight: 1.4 }}>{t}</span>
+                        </span>
+                        {n === 2 && (
+                          <span onClick={(e) => { e.stopPropagation(); setNoteerInfo(open ? null : k.id) }}
+                            style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, cursor: "pointer",
+                              background: open ? k.top : "transparent", color: open ? "#fff" : k.tekst, border: `1.5px solid ${k.top}` }}>?</span>
+                        )}
+                      </div>
+                    ))}
+                    {open && (
+                      <div style={{ borderTop: `1px solid ${k.rand}`, marginTop: 11, paddingTop: 11 }}>
+                        {k.id === "quick" ? (<>
+                          <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap", marginBottom: 9 }}>
+                            {[["3", "🍺"], ["2", "🥤"], ["1", "🍷"]].map(([n2, e2]) => (
+                              <span key={e2} style={{ background: "#fff", border: "1px solid rgba(120,95,20,0.18)", borderRadius: 16, padding: "6px 11px", fontSize: 15, color: "#6b5f3a" }}><b>{n2}×</b> {e2}</span>
+                            ))}
+                          </div>
+                          <div style={{ borderTop: "1px solid rgba(240,165,0,0.25)", paddingTop: 9 }}>
+                            <div style={{ fontSize: 11.5, fontWeight: 800, color: "#a89a6f", marginBottom: 3 }}>📋 {L.orderWord.toUpperCase()}</div>
+                            <div style={{ fontSize: 14, color: "#4a3f1e" }}>{L.noteQuickExample}</div>
+                          </div>
+                        </>) : (<>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 5, textAlign: "center" }}>
+                            {[{ d: "🍺", m: 1, n3: "Tom" }, { d: "🍷🍷", m: 3, n3: "Els" }, { d: "🍻", m: 2, n3: "Bart" }].map((x) => (
+                              <div key={x.n3}>
+                                <div style={{ fontSize: 21, height: 26, whiteSpace: "nowrap", letterSpacing: -3 }}>{x.d}</div>
+                                <div style={{ height: 21, marginTop: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                                  {Array.from({ length: x.m }).map((_, q) => (
+                                    <span key={q} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 16, height: 16, borderRadius: "50%", background: "#f3d27c", border: "1px solid #d9a83c", fontSize: 9, fontWeight: 800, color: "#7a5a12" }}>€</span>
+                                  ))}
+                                </div>
+                                <div style={{ fontSize: 12.5, marginTop: 3, color: "#8a7d55", fontWeight: 700 }}>{x.n3}</div>
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{ textAlign: "center", fontSize: 12.5, color: "#8a7d55", marginTop: 9 }}>{L.nStep3.toLowerCase()}</div>
+                        </>)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+
+            <button disabled={!noteerPick}
+              onClick={() => {
+                if (noteerPick === "named") { setOpNaam(true); setNamenSetup(true) } else setOpNaam(false)
+                setNoteerKeuze(false); setNoteerPick(null); setNoteerInfo(null)
+              }}
+              style={{ ...S.btnP, width: "100%", marginTop: 14, padding: "14px 0", fontSize: 16.5, fontWeight: 800, opacity: noteerPick ? 1 : 0.45 }}>{L.nextBtn}</button>
           </div>
         </div>
       )}
