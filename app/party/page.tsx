@@ -462,6 +462,7 @@ const T = {
     noteQuickTitle: "⚡ Snel noteren",
     noteQuickExample: "3× Pintje · 2× Cola",
     nextBtn: "Verder →",
+    assignLaterNote: (n: number) => `${n} ${n === 1 ? "drankje staat" : "drankjes staan"} nog zonder naam. Je kan ze later toewijzen via het rondjesoverzicht — vóór het afrekenen.`,
     fastestTag: "SNELSTE",
     fairestTag: "EERLIJKSTE",
     qStep1: "Drankjes opnemen",
@@ -1099,6 +1100,7 @@ const T = {
     noteQuickTitle: "⚡ Noter vite",
     noteQuickExample: "3× Pintje · 2× Cola",
     nextBtn: "Continuer →",
+    assignLaterNote: (n: number) => `${n} boisson${n === 1 ? "" : "s"} sans nom. Tu peux les attribuer plus tard via l’aperçu des tournées — avant le décompte.`,
     fastestTag: "LE PLUS RAPIDE",
     fairestTag: "LE PLUS ÉQUITABLE",
     qStep1: "Noter les boissons",
@@ -4080,9 +4082,9 @@ export default function PartyTest() {
   }
   const goAssignFromWarning = () => { setShowClose(false); setShowAssignAll(true) }
   const commitRound = () => {
-    // Op naam noteren en nog iets zonder naam? Eerst toewijzen, anders weet de
-    // afrekening niet wie wat dronk.
-    if (!settle && opNaam && unassignedTotal > 0) { setShowAssignAll(true); return }
+    // Nog drankjes zonder naam? Dat mag: toewijzen kan ook later, via het rondje in het
+    // overzicht of bij het afrekenen. We zeggen het wel even.
+    if (!settle && opNaam && unassignedTotal > 0) setNotice(L.assignLaterNote(unassignedTotal))
     const effGb: Record<string, number> = {}
     people.forEach((p) => { effGb[p.id] = gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id)) })
     // De haler heeft de mensen op de plaats vastgezet — reset de haler-strook voor het
@@ -4953,7 +4955,7 @@ export default function PartyTest() {
                       <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.18)" }} />
                     </div>
                   )}
-                  <div onClick={() => setNoteerPick(k.id)}
+                  <div onClick={() => { setNoteerPick(k.id); if (noteerInfo && noteerInfo !== k.id) setNoteerInfo(null) }}
                     style={{ position: "relative", overflow: "hidden", cursor: "pointer", borderRadius: 12, padding: 12,
                       background: k.vlak, border: `${gekozen ? 2.5 : 1.5}px solid ${gekozen ? k.top : k.rand}`,
                       borderTop: `3px solid ${k.top}`, boxShadow: gekozen ? `0 0 0 3px ${k.vlak}` : "none",
