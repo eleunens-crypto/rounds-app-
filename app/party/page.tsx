@@ -6437,8 +6437,11 @@ export default function PartyTest() {
         {/* Het rondje als echte titel: groot links, het aantal drankjes rechts, met een
             gouden lijn eronder. Zo leest het als kop van wat volgt. */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, borderBottom: "2px solid rgba(240,165,0,0.5)", paddingBottom: 7, marginBottom: 12 }}>
-          <span style={{ fontSize: 23, fontWeight: 800, color: "#4a3f1e", letterSpacing: -0.3, minWidth: 0 }}>{L.roundWord} {roundNr}{repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}</span>
-          <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 700, color: "#a89a6f", whiteSpace: "nowrap" }}>{L.drinksCount(roundItems)}</span>
+          <span style={{ fontSize: 23, fontWeight: 800, color: "#4a3f1e", letterSpacing: -0.3, minWidth: 0 }}>
+            {L.roundWord} {roundNr}
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#a89a6f", letterSpacing: 0 }}> · {L.drinksCount(roundItems)}</span>
+            {repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}
+          </span>
         </div>
         {settle && renderRunnerBar()}
         {settle && renderWalk()}
