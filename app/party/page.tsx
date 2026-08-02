@@ -457,6 +457,15 @@ const T = {
     groupNamePlain: "Groepsnaam",
     voiceNotPerfect: "werkt nog niet altijd perfect",
     inRoundShort: "In dit rondje:",
+    howNoteTitle: "Hoe wil je noteren?",
+    howNoteSub: "Je kan later nog wisselen.",
+    noteQuickTitle: "⚡ Gewoon snel",
+    noteQuickSub: "Tik drankjes aan zonder namen. Je krijgt een barlijstje en verdeelt achteraf gelijk.",
+    noteNamedTitle: "⚖️ Meteen op naam",
+    noteNamedSub: "Je duidt per drankje aan voor wie het is. Achteraf betaalt ieder wat hij dronk.",
+    noNamesBtn: "✕ zonder namen",
+    withNamesBtn: "⚖️ op naam noteren",
+    needNamesFirst: "Voeg eerst de namen toe — dan kan je per persoon noteren.",
     nowWord: "nu:",
     starting: "Bezig…",
     savedGroups: "Opgeslagen groepen",
@@ -1066,6 +1075,15 @@ const T = {
     groupNamePlain: "Nom du groupe",
     voiceNotPerfect: "ne marche pas encore à tous les coups",
     inRoundShort: "Dans cette tournée :",
+    howNoteTitle: "Comment veux-tu noter ?",
+    howNoteSub: "Tu peux changer plus tard.",
+    noteQuickTitle: "⚡ Simplement vite",
+    noteQuickSub: "Coche les boissons sans noms. Tu reçois une liste et tu partages à parts égales.",
+    noteNamedTitle: "⚖️ Directement au nom",
+    noteNamedSub: "Tu indiques pour qui est chaque boisson. Ensuite chacun paie ce qu’il a bu.",
+    noNamesBtn: "✕ sans noms",
+    withNamesBtn: "⚖️ noter au nom",
+    needNamesFirst: "Ajoute d’abord les noms — ensuite tu peux noter par personne.",
     nowWord: "actuel :",
     starting: "En cours…",
     savedGroups: "Groupes enregistrés",
@@ -2223,6 +2241,10 @@ export default function PartyTest() {
   const [barOpen, setBarOpen] = useState(false)
   // Voor wie tik jij aan? Standaard jezelf; je kan wisselen naar iemand zonder gsm.
   const [voorWieRaw, setVoorWieRaw] = useState<string | null>(null)
+  // Noteer je op naam? In Fair Split altijd; in "ik bestel voor de groep" is het een
+  // keuze die je bij de start maakt en daarna kan omzetten.
+  const [opNaam, setOpNaam] = useState(false)
+  const [noteerKeuze, setNoteerKeuze] = useState(false)
   const voorWie = voorWieRaw && people.some((p) => p.id === voorWieRaw) ? voorWieRaw : meId
   const renderStandLijst = () => (
     <div style={{ marginTop: 9, display: "flex", flexDirection: "column", gap: 5 }}>
@@ -3280,7 +3302,7 @@ export default function PartyTest() {
   const catOrde: Cat[] = heeftEigen ? ["Eigen", ...CATS.filter((c) => c !== "Eigen")] : CATS
   const catsPresent = catOrde.filter((c) => c === "Eigen" || drinks.some((d) => d.cat === c))
   const bump1 = (did: string) => {
-    if (settle && voorWie) return bump(did, voorWie, 1)
+    if ((settle || opNaam) && voorWie) return bump(did, voorWie, 1)
     return bumpAnon(did, 1)
   }
   // Een drankje in één tik volledig uit de lopende bestelling halen — zowel de nog niet
@@ -3300,7 +3322,7 @@ export default function PartyTest() {
   const bumpDown = (did: string) => {
     // In Fair Split haal je weg bij wie je op dat moment aantikt; anders eerst de nog
     // niet toegewezen exemplaren, dan de rest.
-    if (settle && voorWie) { if ((cart[did]?.[voorWie] ?? 0) > 0) bump(did, voorWie, -1); return }
+    if ((settle || opNaam) && voorWie) { if ((cart[did]?.[voorWie] ?? 0) > 0) bump(did, voorWie, -1); return }
     if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); return }
     const entry = cart[did]; if (!entry) return
     const pid = Object.keys(entry).find((k) => (entry[k] ?? 0) > 0); if (pid) bump(did, pid, -1)
@@ -3418,6 +3440,17 @@ export default function PartyTest() {
   // aangaf — gasten claimen enkel een vrije plaats, ze maken er geen bij.
   // Het bestellen openzetten voor iedereen. Zonder rondje: wie wil halen drukt daarna
   // zelf op één van de twee knoppen.
+  // Één keer per groep vragen hoe je wil noteren — daarna is de namenrij de schakelaar.
+  const noteerGevraagd = useRef<string | null>(null)
+  useEffect(() => {
+    if (settle || !groupId || !isAdmin) return
+    if (noteerGevraagd.current === groupId) return
+    if (rounds.length > 0 || roundItems > 0) { noteerGevraagd.current = groupId; return }
+    noteerGevraagd.current = groupId
+    setNoteerKeuze(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId, settle, isAdmin])
+
   const openBestellen = async () => {
     if (!groupId) return
     setOrderingOpen(true)
@@ -4821,6 +4854,24 @@ export default function PartyTest() {
               <button onClick={() => { const n = naamWijzig.trim(); if (n && meId) renamePerson(meId, n); setNaamWijzig(null) }}
                 style={{ ...S.btnP, flex: 1.4, minWidth: 0, padding: "12px 6px", fontSize: 15.5, fontWeight: 800, opacity: naamWijzig.trim() ? 1 : 0.45 }}>{L.saveName}</button>
             </div>
+          </div>
+        </div>
+      )}
+      {noteerKeuze && (
+        <div style={{ ...S.overlay, zIndex: 78 }} onClick={() => setNoteerKeuze(false)}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 17.5, fontWeight: 800, color: "#3d3418", textAlign: "center", marginBottom: 4 }}>{L.howNoteTitle}</div>
+            <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", lineHeight: 1.5, marginBottom: 14 }}>{L.howNoteSub}</div>
+            <button onClick={() => { setOpNaam(false); setNoteerKeuze(false) }}
+              style={{ width: "100%", boxSizing: "border-box", textAlign: "left", cursor: "pointer", border: "1.5px solid rgba(232,168,18,0.5)", borderTop: "3px solid #e8a812", background: "rgba(240,165,0,0.07)", borderRadius: 12, padding: 12, marginBottom: 9 }}>
+              <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#8a5e0f", marginBottom: 3 }}>{L.noteQuickTitle}</span>
+              <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.45 }}>{L.noteQuickSub}</span>
+            </button>
+            <button onClick={() => { setNoteerKeuze(false); if (people.length < 2) { setNotice(L.needNamesFirst); setSettingsBackTo("order"); setView("settings"); return } setOpNaam(true) }}
+              style={{ width: "100%", boxSizing: "border-box", textAlign: "left", cursor: "pointer", border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a", background: "rgba(59,72,106,0.06)", borderRadius: 12, padding: 12 }}>
+              <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#3b486a", marginBottom: 3 }}>{L.noteNamedTitle}</span>
+              <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.45 }}>{L.noteNamedSub}</span>
+            </button>
           </div>
         </div>
       )}
@@ -6441,14 +6492,23 @@ export default function PartyTest() {
         {settle && renderRunnerBar()}
         {settle && renderWalk()}
 
+        {!settle && !opNaam && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+            <button onClick={() => { if (people.length < 2) { setNotice(L.needNamesFirst); setSettingsBackTo("order"); setView("settings"); return } setOpNaam(true) }}
+              style={{ ...S.btn, padding: "7px 12px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.withNamesBtn}</button>
+          </div>
+        )}
         {/* Eerst voor wie je aantikt, dan de categorieën vlak boven de lijst. Zoeken en
             inspreken staan onderaan: die gebruik je zelden en ze duwden de drankjes weg. */}
             {/* Voor wie tik je aan? Wie via de QR binnenkwam staat achteraan en gedimd:
                 die duidt normaal zelf aan. Aantikken kan wel, voor als er iets misloopt. */}
-            {settle && people.length > 0 && (
+            {(settle || opNaam) && people.length > 0 && (
               <div style={{ ...S.card, padding: "11px 12px", marginBottom: 8 }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: voorWie && voorWie !== meId ? "#8a5e0f" : "#8a7d55", marginBottom: 7 }}>
-                  {voorWie && voorWie !== meId ? L.nowTappingFor(people.find((pp) => pp.id === voorWie)?.name ?? "") : L.youTapFor}
+                  <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                    <span style={{ minWidth: 0 }}>{voorWie && voorWie !== meId ? L.nowTappingFor(people.find((pp) => pp.id === voorWie)?.name ?? "") : L.youTapFor}</span>
+                    {!settle && <span onClick={() => setOpNaam(false)} style={{ flexShrink: 0, fontSize: 12, fontWeight: 800, color: "#c98a00", cursor: "pointer", whiteSpace: "nowrap" }}>{L.noNamesBtn}</span>}
+                  </span>
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {[...people].sort((a, b) =>
@@ -6518,7 +6578,7 @@ export default function PartyTest() {
             )}
             <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12 }}>
               {catVisible.map((d) => {
-                const tot = (settle && voorWie) ? (cart[d.id]?.[voorWie] ?? 0) : drinkTotal(d.id)
+                const tot = ((settle || opNaam) && voorWie) ? (cart[d.id]?.[voorWie] ?? 0) : drinkTotal(d.id)
                 const tafel = drinkTotal(d.id)
                 const un = cartAnon[d.id] ?? 0
                 return (
@@ -6527,7 +6587,7 @@ export default function PartyTest() {
                     <div style={{ fontSize: 15.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
                     <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
                       <button style={{ ...S.step, opacity: tot > 0 ? 1 : 0.4 }} onClick={() => { if (settle && !bezig) { setGeenRondje(true); return } bumpDown(d.id) }}>−</button>
-                      <span style={{ fontSize: 18, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}{settle && voorWie && tafel > tot ? <span style={{ fontSize: 12, color: "#a89a6f", fontWeight: 700 }}>/{tafel}</span> : null}</span>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}{(settle || opNaam) && voorWie && tafel > tot ? <span style={{ fontSize: 12, color: "#a89a6f", fontWeight: 700 }}>/{tafel}</span> : null}</span>
                       <button style={S.step} onClick={() => { if (settle && !bezig) { setGeenRondje(true); return } bump1(d.id) }}>+</button>
                     </div>
                   </div>
