@@ -837,6 +837,10 @@ const T = {
     modeFairLine: "Eerlijk betalen volgens wat je dronk",
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe je wil bestellen",
+    youNoteTitle: "Jij noteert voor iedereen",
+    youNoteSub: "niemand anders hoeft iets te doen",
+    theyTapTitle: "Iedereen op zijn eigen gsm",
+    theyTapSub: "ze scannen een QR-code",
     tagline: "Rondjes opnemen en splitten zonder gedoe",
     showToFriend: "📱 QR-code van de groep",
     shareWithMore: "Deel gerust met wie er nog wil bijkomen",
@@ -1476,6 +1480,10 @@ const T = {
     modeFairLine: "Payer équitablement selon ce que tu as bu",
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
+    youNoteTitle: "Tu notes pour tout le monde",
+    youNoteSub: "personne d’autre ne doit rien faire",
+    theyTapTitle: "Chacun sur son propre gsm",
+    theyTapSub: "ils scannent un QR-code",
     tagline: "Prendre les tournées et partager sans tracas",
     showToFriend: "📱 QR-code du groupe",
     shareWithMore: "Partage-le avec qui veut encore se joindre",
@@ -5834,6 +5842,13 @@ export default function PartyTest() {
           <div style={{ textAlign: "center", fontSize: 23, fontWeight: 800, color: "#3d3418", marginBottom: 18 }}>{L.chooseHow}</div>
 
           <div>
+            {/* Twee groepen: waar jij noteert, en waar iedereen zelf aantikt. Zonder die
+                kopjes lezen de kaarten als gelijken, en dan verdwijnt het verschil dat
+                het belangrijkst is. */}
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 16.5, fontWeight: 800, color: MODUS_SNEL.tekst }}>✍️ {L.youNoteTitle}</div>
+              <div style={{ fontSize: 14, color: "#8a7d55", marginTop: 2, lineHeight: 1.4 }}>{L.youNoteSub}</div>
+            </div>
             {/* Elke keuze is één blok: de rij én z’n voorbeeld zitten binnen dezelfde
                 omlijning, zodat meteen duidelijk is wat bij wat hoort. */}
             {/* Elke modus is één geheel: de rij, z’n voorbeeld én de startknop eronder.
@@ -5919,6 +5934,10 @@ export default function PartyTest() {
               <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(120,95,20,0.28)" }} />
             </div>
 
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 16.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>📱 {L.theyTapTitle}</div>
+              <div style={{ fontSize: 14, color: "#8a7d55", marginTop: 2, lineHeight: 1.4 }}>{L.theyTapSub}</div>
+            </div>
             <div style={{ opacity: bpSettle === false ? 0.6 : 1 }}>
             <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", border: bpSettle === true ? `2px solid ${MODUS_FAIR.rand}` : `1.5px solid ${MODUS_FAIR.randZacht}`,
               boxShadow: bpSettle === true ? `0 16px 34px -20px ${MODUS_FAIR.gloed}` : "0 8px 22px -18px rgba(120,95,20,0.5)" }}>
