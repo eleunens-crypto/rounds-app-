@@ -469,6 +469,7 @@ const T = {
     whoJoinsSub: "Zet de namen van wie meedrinkt. Je kan er later altijd bij zetten of ze aanpassen.",
     toDrinksBtn: "Naar de drankjes →",
     adminNamePh: "Jouw naam (beheerder)",
+    guestN: (n: number) => `Gast ${n}`,
     yourNameRequired: "Vul eerst je eigen naam in — anders weet niemand van wie de drankjes zijn.",
     perPersonBtn: "👥 Per persoon aantikken",
     busyLabel: "BEZIG",
@@ -1097,6 +1098,7 @@ const T = {
     whoJoinsSub: "Indique les noms de ceux qui boivent. Tu peux en ajouter ou les modifier plus tard.",
     toDrinksBtn: "Vers les boissons →",
     adminNamePh: "Ton nom (hôte)",
+    guestN: (n: number) => `Invité ${n}`,
     yourNameRequired: "Indique d’abord ton nom — sinon on ne sait pas à qui sont les boissons.",
     perPersonBtn: "👥 Coche par personne",
     busyLabel: "EN COURS",
@@ -6560,7 +6562,7 @@ export default function PartyTest() {
                   {ikZelf && <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><KroonIcoon size={12} kleur="#8a5e0f" /></span>}
                   <input value={isGuestDefault(pp.name) ? "" : pp.name}
                     onChange={(e) => renamePerson(pp.id, e.target.value)}
-                    placeholder={ikZelf ? L.adminNamePh : L.seat(idx + 1)}
+                    placeholder={ikZelf ? L.adminNamePh : `✏️ ${L.guestN(idx + 1)}`}
                     style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: ikZelf ? "9px 40px 9px 26px" : "9px 10px", fontSize: 14.5, textAlign: "left", fontWeight: ikZelf ? 700 : 400,
                       background: ikZelf ? "rgba(240,165,0,0.08)" : undefined, border: ikZelf ? `1.5px solid ${eigenNaamLeeg ? "#c0554a" : "#e8a812"}` : undefined, color: ikZelf ? "#8a5e0f" : undefined }} />
                   {ikZelf && <span style={{ position: "absolute", right: 5, top: "50%", transform: "translateY(-50%)", background: "#e8a812", color: "#fff", borderRadius: 8, padding: "2px 6px", fontSize: 10, fontWeight: 800, pointerEvents: "none" }}>{L.youBadge}</span>}
