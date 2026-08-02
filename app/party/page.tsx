@@ -41,15 +41,15 @@ function BonIcoon({ size = 46, kleur = "#e8a812" }: { size?: number; kleur?: str
       <path d="M8.6 8.6h7.2v6.6a1.1 1.1 0 0 1-1.1 1.1H9.7a1.1 1.1 0 0 1-1.1-1.1z" fill="none" stroke={kleur} strokeWidth={1.15} strokeLinejoin="round" />
       <path d="M15.8 10.2h1.3a1.15 1.15 0 0 1 1.15 1.15v1.7a1.15 1.15 0 0 1-1.15 1.15h-1.3" fill="none" stroke={kleur} strokeWidth={1.15} strokeLinejoin="round" />
       <path d="M10.4 10.6v3.6M12.2 10.6v3.6M14 10.6v3.6" stroke={kleur} strokeWidth={1} strokeLinecap="round" />
-      <text x={26} y={13.6} fontSize={7.5} fontWeight={800} fill="#8a5e0f" fontFamily="system-ui">\u00d71</text>
+      <text x={26} y={13.6} fontSize={7.5} fontWeight={800} fill="#8a5e0f" fontFamily="system-ui">×1</text>
       <path d="M8 21.5h7.4l-3.7 4.4zM11.7 25.9v3.4M9.7 29.3h4" fill="none" stroke={kleur} strokeWidth={1.15} strokeLinejoin="round" strokeLinecap="round" />
-      <text x={26} y={27} fontSize={7.5} fontWeight={800} fill="#8a5e0f" fontFamily="system-ui">\u00d72</text>
+      <text x={26} y={27} fontSize={7.5} fontWeight={800} fill="#8a5e0f" fontFamily="system-ui">×2</text>
       <path d="M8.6 33.6h6.9l-.73 7.5a1.05 1.05 0 0 1-1.05.95h-3.34a1.05 1.05 0 0 1-1.05-.95z" fill="none" stroke={kleur} strokeWidth={1.15} strokeLinejoin="round" />
       <path d="M8.9 36.8c1.1.68 1.95-.55 3.05 0 1.1.55 2.05-.5 3.2-.05" fill="none" stroke={kleur} strokeWidth={1} strokeLinecap="round" />
       <path d="M13.6 33.6l.9-2.5 1.6.65" fill="none" stroke={kleur} strokeWidth={1.15} strokeLinejoin="round" strokeLinecap="round" />
-      <text x={26} y={39} fontSize={7.5} fontWeight={800} fill="#8a5e0f" fontFamily="system-ui">\u00d73</text>
+      <text x={26} y={39} fontSize={7.5} fontWeight={800} fill="#8a5e0f" fontFamily="system-ui">×3</text>
       <path d="M7 46h36" stroke={kleur} strokeWidth={1.1} strokeLinecap="round" opacity={0.55} />
-      <text x={25.5} y={53.5} fontSize={8.5} fontWeight={800} fill="#8a5e0f" fontFamily="system-ui">\u00d76</text>
+      <text x={25.5} y={53.5} fontSize={8.5} fontWeight={800} fill="#8a5e0f" fontFamily="system-ui">×6</text>
     </svg>
   )
 }
@@ -892,7 +892,6 @@ const T = {
     modeQuickSub: "Jij tikt zelf alle drankjes aan.",
     modeQuickSub2: "Meteen een handig bestellijstje",
     whatIsThis: "Wat is dit?",
-    modeQuickWhat: "Geen namen nodig: je tikt gewoon aan wat er besteld wordt en je krijgt een barlijstje. Achteraf verdeel je gelijk, of alsnog eerlijk per persoon.",
     modeFairWhat: "Jouw drankjes, jouw bedrag. Geen oneerlijke gelijke verdeling maar betalen volgens wat je dronk — de app rekent het uit.",
     orWord: "of",
     modeFairSub: "Iedereen scant de QR",
@@ -901,10 +900,10 @@ const T = {
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe je wil bestellen",
     youNoteTitle: "Jij noteert voor iedereen",
-    modeNaamTitle: "Op naam noteren",
-    modeNaamSub: "Jij tikt aan én duidt aan voor wie",
+    modeSnelTitle: "Snel opnemen",
+    modeNaamTitle: "Uitgebreid opnemen",
+    modeNaamSub: "Alles van snel opnemen",
     modeNaamSub2: "Ieder betaalt wat hij dronk",
-    modeNaamWhat: "Je zet de namen erbij en tikt per persoon aan. Op het einde ziet iedereen precies wat hij dronk — en wie aan wie moet betalen.",
     youNoteSub: "niemand anders hoeft iets te doen",
     theyTapTitle: "Iedereen op zijn eigen gsm",
     theyTapSub: "ze scannen een QR-code",
@@ -1539,7 +1538,6 @@ const T = {
     modeQuickSub: "Tu coches toutes les boissons toi-même.",
     modeQuickSub2: "Direct une liste pratique pour le bar",
     whatIsThis: "C’est quoi ?",
-    modeQuickWhat: "Pas besoin de noms : tu coches simplement ce qui est commandé et tu reçois une liste pour le bar. Ensuite tu partages à parts égales, ou équitablement par personne.",
     modeFairWhat: "Tes boissons, ton montant. Pas de partage égal injuste mais payer selon ce que tu as bu — l’appli le calcule.",
     orWord: "ou",
     modeFairSub: "Chacun scanne le QR",
@@ -1548,10 +1546,10 @@ const T = {
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
     youNoteTitle: "Tu notes pour tout le monde",
-    modeNaamTitle: "Noter au nom",
-    modeNaamSub: "Tu coches et indiques pour qui",
+    modeSnelTitle: "Noter vite",
+    modeNaamTitle: "Noter en détail",
+    modeNaamSub: "Tout de « noter vite »",
     modeNaamSub2: "Chacun paie ce qu’il a bu",
-    modeNaamWhat: "Tu ajoutes les noms et coches par personne. À la fin, chacun voit exactement ce qu’il a bu — et qui doit payer à qui.",
     youNoteSub: "personne d’autre ne doit rien faire",
     theyTapTitle: "Chacun sur son propre gsm",
     theyTapSub: "ils scannent un QR-code",
@@ -5942,15 +5940,11 @@ export default function PartyTest() {
                 {/* De uitleg zit in de hoek van de kaart in plaats van naast de titel. Zo heeft
                     de titel de volle breedte en staat hij echt gecentreerd. Uitklappen zet de
                     modus ook aan: een kaart die opengaat maar bleek blijft, oogt stuk. */}
-                <span onClick={(e) => { e.stopPropagation(); setBpSettle(false); setBpNaam(false); setModeInfo((m) => m === "quick" ? null : "quick") }}
-                  style={{ position: "absolute", top: 0, right: 0, borderRadius: "0 0 0 16px", padding: "7px 9px 8px 11px", fontSize: 11, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap",
-                    background: modeInfo === "quick" ? MODUS_SNEL.rand : MODUS_SNEL.tint,
-                    color: modeInfo === "quick" ? "#fff" : MODUS_SNEL.tekst }}>{L.whatIsThis} <span style={{ fontSize: 16 }}>{modeInfo === "quick" ? "▴" : "▾"}</span></span>
                 {/* Een bon met drie soorten en hun aantallen: dat krijg je hier. */}
                 <span style={{ display: "flex", justifyContent: "center", marginTop: 8, marginBottom: 7 }}>
                   <BonIcoon size={44} kleur={MODUS_SNEL.rand} />
                 </span>
-                <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#3d3418", lineHeight: 1.14, letterSpacing: -0.4 }}>{L.modeQuick}</span>
+                <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#3d3418", lineHeight: 1.14, letterSpacing: -0.4 }}>{L.modeSnelTitle}</span>
                 {/* Een lijstje met vinkjes leest sneller dan twee losse zinnen: je ziet in
                     één oogopslag hoeveel stappen erbij komen kijken. */}
                 <span style={{ display: "block", textAlign: "left", marginTop: 11, paddingLeft: 6 }}>
@@ -5962,28 +5956,7 @@ export default function PartyTest() {
                   ))}
                 </span>
               </button>
-              {modeInfo === "quick" && (
-              <div style={{ padding: "0 16px 14px", background: (bpSettle === false && !bpNaam) ? MODUS_SNEL.vlak : "#fff" }}>
-                <div style={{ borderTop: `1px solid ${(bpSettle === false && !bpNaam) ? MODUS_SNEL.streep : MODUS_SNEL.lijnZacht}`, paddingTop: 11 }}>
-                <div>
-                  <div style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
-                    <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: MODUS_SNEL.tint, color: MODUS_SNEL.tekst, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, fontStyle: "italic" }}>i</span>
-                    <span style={{ fontSize: 14.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeQuickWhat}</span>
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                    <span style={{ background: VLAK1, borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>3×</b> 🍺</span>
-                    <span style={{ background: VLAK1, borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>2×</b> 🥤</span>
-                    <span style={{ background: VLAK1, borderRadius: 18, padding: "7px 15px", fontSize: 16, color: "#6b5f3a" }}><b>1×</b> 🍷</span>
-                  </div>
-                  <div style={{ borderTop: `1px solid ${MODUS_SNEL.lijn}`, paddingTop: 9 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 800, color: "#8a7d55", marginBottom: 5 }}>📋 {L.orderWord}</div>
-                    <div style={{ fontSize: 15, color: "#4a3f1e", lineHeight: 1.6 }}>3× Pintje · 2× Cola · 1× Wijn</div>
-                  </div>
-
-                </div>
-                </div>
-              </div>
-              )}
+              
               {/* Een losse knop met eigen ronding en schaduw leest onmiskenbaar als knop;
                   een voetbalk rand-aan-rand deed dat minder. */}
               <div style={{ padding: "12px 12px 14px", background: (bpSettle === false && !bpNaam) ? MODUS_SNEL.vlak : "#fff" }}>
@@ -6010,10 +5983,6 @@ export default function PartyTest() {
                   background: bpSettle === false && bpNaam ? "#7a3f6d" : "transparent",
                   border: bpSettle === false && bpNaam ? "none" : "2.5px solid rgba(122,63,109,0.4)",
                   color: "#fff" }}>{bpSettle === false && bpNaam ? "✓" : ""}</span>
-                <span onClick={(e) => { e.stopPropagation(); setBpSettle(false); setBpNaam(true); setModeInfo((m) => m === "naam" ? null : "naam") }}
-                  style={{ position: "absolute", top: 0, right: 0, borderRadius: "0 0 0 16px", padding: "7px 9px 8px 11px", fontSize: 11, fontWeight: 800, cursor: "pointer",
-                    background: modeInfo === "naam" ? "#7a3f6d" : "rgba(122,63,109,0.13)",
-                    color: modeInfo === "naam" ? "#fff" : "#7a3f6d" }}>{L.whatIsThis} <span style={{ fontSize: 16 }}>{modeInfo === "naam" ? "▴" : "▾"}</span></span>
                 <span style={{ display: "flex", justifyContent: "center", marginTop: 8, marginBottom: 7 }}>
                   <NamenIcoon size={70} kleur="#7a3f6d" />
                 </span>
@@ -6027,29 +5996,7 @@ export default function PartyTest() {
                   ))}
                 </span>
               </button>
-              {modeInfo === "naam" && (
-                <div style={{ padding: "0 16px 14px", background: bpSettle === false && bpNaam ? "rgba(122,63,109,0.07)" : "#fff" }}>
-                  <div style={{ borderTop: "1px solid rgba(122,63,109,0.2)", paddingTop: 13 }}>
-                    <div style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
-                      <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: "rgba(122,63,109,0.13)", color: "#7a3f6d", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800 }}>i</span>
-                      <span style={{ fontSize: 14.5, color: "#6b5f3a", lineHeight: 1.5 }}>{L.modeNaamWhat}</span>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 5, textAlign: "center" }}>
-                      {[{ d: "🍺", m: 1, n: "Tom" }, { d: "🍷🍷", m: 3, n: "Els" }, { d: "🍻", m: 2, n: "Bart" }].map((x) => (
-                        <div key={x.n}>
-                          <div style={{ fontSize: 23, height: 30, whiteSpace: "nowrap", letterSpacing: -3 }}>{x.d}</div>
-                          <div style={{ height: 24, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
-                            {Array.from({ length: x.m }).map((_, k) => (
-                              <span key={k} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#f3d27c", border: "1px solid #d9a83c", fontSize: 10, fontWeight: 800, color: "#7a5a12" }}>€</span>
-                            ))}
-                          </div>
-                          <div style={{ fontSize: 13, marginTop: 4, color: "#8a7d55", fontWeight: 700 }}>{x.n}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+              
               <div style={{ padding: "12px 12px 14px", background: bpSettle === false && bpNaam ? "rgba(122,63,109,0.07)" : "#fff" }}>
                 <button disabled={busy} onClick={() => { setBpSettle(false); setBpNaam(true); startWithMode(undefined, false) }}
                   style={{ display: "block", width: "100%", padding: "12px 6px", fontSize: 14.5, fontWeight: 800, cursor: "pointer", border: "none", borderRadius: 15,
