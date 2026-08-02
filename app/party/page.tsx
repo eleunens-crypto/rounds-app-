@@ -449,7 +449,7 @@ const T = {
     addThis: "Toevoegen",
     seatNameTitle: "Iemand die niet scant",
     seatNameSub: "Zet zijn naam erbij — scant hij later toch, dan tikt hij die gewoon aan.",
-    yourNamePh: "Jij (beheerder) — tik hier je naam",
+    yourNamePh: "Jouw naam",
     groupNameEdit: "Naam van deze groep",
     groupNamePh: "Typ je groepsnaam",
     groupNameShortPh: "Groepsnaam",
@@ -469,6 +469,10 @@ const T = {
     whoJoinsSub: "Zet de namen van wie meedrinkt. Je kan er later altijd bij zetten of ze aanpassen.",
     toDrinksBtn: "Naar de drankjes →",
     fillNamesLater: "later invullen",
+    adminNamePh: "Jouw naam (beheerder)",
+    yourNameRequired: "Vul eerst je eigen naam in — anders weet niemand van wie de drankjes zijn.",
+    perPersonBtn: "👥 Per persoon aantikken",
+    namesMissing: (n: number) => `${n} ${n === 1 ? "persoon heeft" : "personen hebben"} nog geen naam. Vul die aan via ⚙️ Groep, anders staat er straks "Plaats 3" op de afrekening.`,
     namesLaterToo: "Of tik gewoon aan — namen toewijzen kan ook bij het afsluiten.",
     someUnassigned: (n: number) => `🔴 ${n} ${n === 1 ? "drankje" : "drankjes"} nog zonder naam`,
     nowWord: "nu:",
@@ -1072,7 +1076,7 @@ const T = {
     addThis: "Ajouter",
     seatNameTitle: "Quelqu’un qui ne scanne pas",
     seatNameSub: "Mets son nom — s’il scanne plus tard, il le touchera simplement.",
-    yourNamePh: "Toi (hôte) — tape ton nom ici",
+    yourNamePh: "Ton nom",
     groupNameEdit: "Nom de ce groupe",
     groupNamePh: "Tape le nom de ton groupe",
     groupNameShortPh: "Nom du groupe",
@@ -1092,6 +1096,10 @@ const T = {
     whoJoinsSub: "Indique les noms de ceux qui boivent. Tu peux en ajouter ou les modifier plus tard.",
     toDrinksBtn: "Vers les boissons →",
     fillNamesLater: "remplir plus tard",
+    adminNamePh: "Ton nom (hôte)",
+    yourNameRequired: "Indique d’abord ton nom — sinon on ne sait pas à qui sont les boissons.",
+    perPersonBtn: "👥 Coche par personne",
+    namesMissing: (n: number) => `${n} personne${n === 1 ? "" : "s"} sans nom. Complète via ⚙️ Groupe, sinon le décompte affichera « Place 3 ».`,
     namesLaterToo: "Ou coche simplement — tu peux attribuer les noms à la clôture.",
     someUnassigned: (n: number) => `🔴 ${n} boisson${n === 1 ? "" : "s"} sans nom`,
     nowWord: "actuel :",
@@ -3314,7 +3322,7 @@ export default function PartyTest() {
   const catOrde: Cat[] = heeftEigen ? ["Eigen", ...CATS.filter((c) => c !== "Eigen")] : CATS
   const catsPresent = catOrde.filter((c) => c === "Eigen" || drinks.some((d) => d.cat === c))
   const bump1 = (did: string) => {
-    if ((settle || opNaam) && voorWie) return bump(did, voorWie, 1)
+    if (settle && voorWie) return bump(did, voorWie, 1)
     return bumpAnon(did, 1)
   }
   // Een drankje in één tik volledig uit de lopende bestelling halen — zowel de nog niet
@@ -3334,7 +3342,7 @@ export default function PartyTest() {
   const bumpDown = (did: string) => {
     // In Fair Split haal je weg bij wie je op dat moment aantikt; anders eerst de nog
     // niet toegewezen exemplaren, dan de rest.
-    if ((settle || opNaam) && voorWie) { if ((cart[did]?.[voorWie] ?? 0) > 0) bump(did, voorWie, -1); return }
+    if (settle && voorWie) { if ((cart[did]?.[voorWie] ?? 0) > 0) bump(did, voorWie, -1); return }
     if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); return }
     const entry = cart[did]; if (!entry) return
     const pid = Object.keys(entry).find((k) => (entry[k] ?? 0) > 0); if (pid) bump(did, pid, -1)
@@ -3992,6 +4000,10 @@ export default function PartyTest() {
 
   const goFinal = () => {
     if (unfinishedRound) { setNotice(L.roundUnfinished(roundNr)); setActiveCat(catsPresent[0]); setView("order"); return }
+    // Naamloze plaatsen maken de verdeling onbetrouwbaar: je ziet dan "Plaats 3" op de
+    // afrekening en niemand weet wie dat was.
+    const naamloos = people.filter((p) => isGuestDefault(p.name) || !p.name.trim())
+    if (settle && naamloos.length > 0) setNotice(L.namesMissing(naamloos.length))
     const zonder = rondjesZonderBedrag()
     if (settle && zonder.length > 0) {
       setNotice(L.roundsMissingAmount(zonder.join(", ")))
@@ -6279,7 +6291,7 @@ export default function PartyTest() {
               {!hasSettled && (!settle && isAutoNaam(groupName)
                 ? <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 6 }}>{L.nowWord} {groupName.trim()}</div>
                 : <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 6 }}>{L.tapToRename}</div>)}
-        {settle && !fromOnboarding && (
+        {(settle || opNaam) && !fromOnboarding && (
         <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 12, paddingTop: 11 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: people.length > 0 ? 10 : 0 }}>
             <span style={{ fontSize: 15.5, fontWeight: 800 }}>{L.peopleTitle}</span>
@@ -6479,6 +6491,9 @@ export default function PartyTest() {
   // ── ORDER ───────────────────────────────────────────────────────────────────
   // Namen zetten voor je op naam gaat noteren. Overslaan kan: dan wijs je later toe.
   if (view === "order" && !settle && opNaam && namenSetup) {
+    // Zonder jouw naam weet niemand van wie de drankjes zijn; die is dus verplicht.
+    const ik = people.find((p) => p.id === meId)
+    const eigenNaamLeeg = !ik || isGuestDefault(ik.name) || !ik.name.trim()
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header />
@@ -6503,19 +6518,23 @@ export default function PartyTest() {
               const ikZelf = pp.id === meId
               return (
                 <div key={pp.id} style={{ position: "relative" }}>
+                  {ikZelf && <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><KroonIcoon size={12} kleur="#8a5e0f" /></span>}
                   <input value={isGuestDefault(pp.name) ? "" : pp.name}
                     onChange={(e) => renamePerson(pp.id, e.target.value)}
-                    placeholder={ikZelf ? L.yourNamePh : L.seat(idx + 1)}
-                    style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: ikZelf ? "9px 40px 9px 10px" : "9px 10px", fontSize: 14.5, textAlign: "left", fontWeight: ikZelf ? 700 : 400,
-                      background: ikZelf ? "rgba(240,165,0,0.08)" : undefined, border: ikZelf ? "1.5px solid #e8a812" : undefined, color: ikZelf ? "#8a5e0f" : undefined }} />
+                    placeholder={ikZelf ? L.adminNamePh : L.seat(idx + 1)}
+                    style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: ikZelf ? "9px 40px 9px 26px" : "9px 10px", fontSize: 14.5, textAlign: "left", fontWeight: ikZelf ? 700 : 400,
+                      background: ikZelf ? "rgba(240,165,0,0.08)" : undefined, border: ikZelf ? `1.5px solid ${eigenNaamLeeg ? "#c0554a" : "#e8a812"}` : undefined, color: ikZelf ? "#8a5e0f" : undefined }} />
                   {ikZelf && <span style={{ position: "absolute", right: 5, top: "50%", transform: "translateY(-50%)", background: "#e8a812", color: "#fff", borderRadius: 8, padding: "2px 6px", fontSize: 10, fontWeight: 800, pointerEvents: "none" }}>{L.youBadge}</span>}
                 </div>
               )
             })}
           </div>
 
-          <button onClick={() => setNamenSetup(false)} style={{ ...S.btnP, width: "100%", padding: "14px 0", fontSize: 16.5, fontWeight: 800 }}>{L.toDrinksBtn}</button>
-          <button onClick={() => setNamenSetup(false)} style={{ width: "100%", marginTop: 9, cursor: "pointer", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#a89a6f" }}>{L.fillNamesLater}</button>
+          {eigenNaamLeeg && <div style={{ fontSize: 13, color: "#b0402f", fontWeight: 700, marginBottom: 9, lineHeight: 1.45 }}>{L.yourNameRequired}</div>}
+          <button onClick={() => { if (eigenNaamLeeg) { setNotice(L.yourNameRequired); return } setNamenSetup(false) }}
+            style={{ ...S.btnP, width: "100%", padding: "14px 0", fontSize: 16.5, fontWeight: 800, opacity: eigenNaamLeeg ? 0.5 : 1 }}>{L.toDrinksBtn}</button>
+          <button onClick={() => { if (eigenNaamLeeg) { setNotice(L.yourNameRequired); return } setNamenSetup(false) }}
+            style={{ width: "100%", marginTop: 9, cursor: "pointer", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#a89a6f" }}>{L.fillNamesLater}</button>
         </div>
       </div></div>
     )
@@ -6549,18 +6568,20 @@ export default function PartyTest() {
           </span>
         </div>
         {settle && renderRunnerBar()}
-        {settle && renderWalk()}
+        {(settle || opNaam) && renderWalk()}
 
-        {!settle && !opNaam && (
+        {!settle && (
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-            <button onClick={() => { setOpNaam(true); setNamenSetup(true) }} style={{ ...S.btn, padding: "7px 12px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.withNamesBtn}</button>
+            {opNaam
+              ? <button onClick={() => { setActiveCat(catsPresent[0]); setWalkIdx(0) }} style={{ ...S.btn, padding: "7px 12px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.perPersonBtn}</button>
+              : <button onClick={() => { setOpNaam(true); setNamenSetup(true) }} style={{ ...S.btn, padding: "7px 12px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.withNamesBtn}</button>}
           </div>
         )}
         {/* Eerst voor wie je aantikt, dan de categorieën vlak boven de lijst. Zoeken en
             inspreken staan onderaan: die gebruik je zelden en ze duwden de drankjes weg. */}
             {/* Voor wie tik je aan? Wie via de QR binnenkwam staat achteraan en gedimd:
                 die duidt normaal zelf aan. Aantikken kan wel, voor als er iets misloopt. */}
-            {(settle || opNaam) && people.length > 0 && (
+            {settle && people.length > 0 && (
               <div style={{ ...S.card, padding: "11px 12px", marginBottom: 8 }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: voorWie && voorWie !== meId ? "#8a5e0f" : "#8a7d55", marginBottom: 7 }}>
                   <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
@@ -6641,7 +6662,7 @@ export default function PartyTest() {
             )}
             <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12 }}>
               {catVisible.map((d) => {
-                const tot = ((settle || opNaam) && voorWie) ? (cart[d.id]?.[voorWie] ?? 0) : drinkTotal(d.id)
+                const tot = (settle && voorWie) ? (cart[d.id]?.[voorWie] ?? 0) : drinkTotal(d.id)
                 const tafel = drinkTotal(d.id)
                 const un = cartAnon[d.id] ?? 0
                 return (
@@ -6650,7 +6671,7 @@ export default function PartyTest() {
                     <div style={{ fontSize: 15.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
                     <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
                       <button style={{ ...S.step, opacity: tot > 0 ? 1 : 0.4 }} onClick={() => { if (settle && !bezig) { setGeenRondje(true); return } bumpDown(d.id) }}>−</button>
-                      <span style={{ fontSize: 18, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}{(settle || opNaam) && voorWie && tafel > tot ? <span style={{ fontSize: 12, color: "#a89a6f", fontWeight: 700 }}>/{tafel}</span> : null}</span>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}{settle && voorWie && tafel > tot ? <span style={{ fontSize: 12, color: "#a89a6f", fontWeight: 700 }}>/{tafel}</span> : null}</span>
                       <button style={S.step} onClick={() => { if (settle && !bezig) { setGeenRondje(true); return } bump1(d.id) }}>+</button>
                     </div>
                   </div>
