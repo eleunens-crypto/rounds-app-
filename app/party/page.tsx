@@ -791,7 +791,6 @@ const T = {
     reminderBody: (naam: string) => `${naam} klaar om drankjes te halen. Tik aan wat je wil — of laat weten dat je niets neemt.`,
     reminderChoose: "Ik kies iets →",
     everyoneTapsOwn: "📱 Iedereen tikt zelf aan op zijn gsm",
-    youTapForAll: "✍️ Jij gaat rond en tikt alles aan",
     walkDone: "✓ Klaar",
     walkFor: (n: string) => `Wat wil ${n}?`,
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
@@ -1402,7 +1401,6 @@ const T = {
     reminderBody: (naam: string) => `${naam} est prêt à aller chercher les boissons. Coche ce que tu veux — ou dis que tu ne prends rien.`,
     reminderChoose: "Je choisis →",
     everyoneTapsOwn: "📱 Chacun coche sur son propre gsm",
-    youTapForAll: "✍️ Tu fais le tour et tu coches tout",
     walkDone: "✓ Terminé",
     walkFor: (n: string) => `Que veut ${n} ?`,
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
@@ -2289,10 +2287,7 @@ export default function PartyTest() {
             <span style={{ display: "block", fontSize: 17, fontWeight: 800 }}>{L.roundTogether}</span>
             <span style={{ display: "block", fontSize: 14, fontWeight: 600, opacity: 0.95, marginTop: 3 }}>{L.everyoneTapsOwn}</span>
           </button>
-          <button style={{ ...S.btn, width: "100%", padding: "13px 10px", cursor: "pointer" }} onClick={() => setWalkCheck(true)}>
-            <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{L.roundWalkSelf}</span>
-            <span style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#8a7d55", marginTop: 3 }}>{L.youTapForAll}</span>
-          </button>
+
         </div>
       )
     }
@@ -4757,7 +4752,7 @@ export default function PartyTest() {
               <span style={{ fontSize: 13.5, color: "#8a5e0f", lineHeight: 1.45 }}>{L.youAdvance}</span>
             </div>
             <button onClick={() => { setGeenRondje(false); setStartCheck(true) }} style={{ ...S.btnP, width: "100%", boxSizing: "border-box", padding: "13px 10px", fontSize: 15.5, fontWeight: 800, marginBottom: 8 }}>{L.roundTogether}</button>
-            <button onClick={() => { setGeenRondje(false); setWalkCheck(true) }} style={{ ...S.btn, width: "100%", boxSizing: "border-box", padding: "13px 10px", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>{L.roundWalkSelf}</button>
+            {!settle && <button onClick={() => { setGeenRondje(false); setWalkCheck(true) }} style={{ ...S.btn, width: "100%", boxSizing: "border-box", padding: "13px 10px", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>{L.roundWalkSelf}</button>}
             <button onClick={() => setGeenRondje(false)} style={{ width: "100%", boxSizing: "border-box", marginTop: 8, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(120,95,20,0.25)", color: "#8a7d55", borderRadius: 12, padding: "12px 10px", fontSize: 14.5, fontWeight: 800 }}>{L.laterLooking}</button>
           </div>
         </div>
@@ -6456,7 +6451,9 @@ export default function PartyTest() {
                   {voorWie && voorWie !== meId ? L.nowTappingFor(people.find((pp) => pp.id === voorWie)?.name ?? "") : L.youTapFor}
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {[...people].sort((a, b) => Number(!!a.claimedBy) - Number(!!b.claimedBy)).map((pp) => {
+                  {[...people].sort((a, b) =>
+                    (a.id === meId ? -1 : b.id === meId ? 1 : 0) || Number(!!a.claimedBy) - Number(!!b.claimedBy)
+                  ).map((pp) => {
                     const aan = voorWie === pp.id
                     const viaLink = !!pp.claimedBy && pp.id !== meId
                     return (
