@@ -4956,7 +4956,10 @@ export default function PartyTest() {
                   <div onClick={() => setNoteerPick(k.id)}
                     style={{ position: "relative", overflow: "hidden", cursor: "pointer", borderRadius: 12, padding: 12,
                       background: k.vlak, border: `${gekozen ? 2.5 : 1.5}px solid ${gekozen ? k.top : k.rand}`,
-                      borderTop: `3px solid ${k.top}`, boxShadow: gekozen ? `0 0 0 3px ${k.vlak}` : "none" }}>
+                      borderTop: `3px solid ${k.top}`, boxShadow: gekozen ? `0 0 0 3px ${k.vlak}` : "none",
+                      // Niet gekozen terwijl de ander dat wel is: licht gedempt, zodat je
+                      // keuze eruit springt zonder dat de andere onleesbaar wordt.
+                      opacity: noteerPick && !gekozen ? 0.62 : 1, transition: "opacity .15s" }}>
                     <span style={{ position: "absolute", top: 0, right: 0, background: k.top, color: "#fff", borderRadius: "0 0 0 10px", padding: "4px 10px 5px 12px", fontSize: 10.5, fontWeight: 800, letterSpacing: "0.04em" }}>{k.tag}</span>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                       <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800,
@@ -5016,7 +5019,10 @@ export default function PartyTest() {
                 if (noteerPick === "named") { setOpNaam(true); setNamenSetup(true) } else setOpNaam(false)
                 setNoteerKeuze(false); setNoteerPick(null); setNoteerInfo(null)
               }}
-              style={{ ...S.btnP, width: "100%", marginTop: 14, padding: "14px 0", fontSize: 16.5, fontWeight: 800, opacity: noteerPick ? 1 : 0.45 }}>{L.nextBtn}</button>
+              style={{ ...S.btnP, width: "100%", marginTop: 14, padding: "14px 0", fontSize: 16.5, fontWeight: 800, opacity: noteerPick ? 1 : 0.45,
+                background: noteerPick === "named" ? "linear-gradient(135deg,#5a6a94,#3b486a)" : noteerPick === "quick" ? "linear-gradient(135deg,#f7cb5c,#eab117)" : "linear-gradient(135deg,#e3d9c2,#cfc3a6)",
+                color: noteerPick === "named" ? "#fff" : noteerPick === "quick" ? "#4a3f1e" : "#8a7d55",
+                boxShadow: "none" }}>{L.nextBtn}</button>
           </div>
         </div>
       )}
