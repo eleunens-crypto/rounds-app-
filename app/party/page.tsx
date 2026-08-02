@@ -468,10 +468,11 @@ const T = {
     whoJoinsTitle: "Wie doet er mee?",
     whoJoinsSub: "Zet de namen van wie meedrinkt. Je kan er later altijd bij zetten of ze aanpassen.",
     toDrinksBtn: "Naar de drankjes →",
-    fillNamesLater: "later invullen",
     adminNamePh: "Jouw naam (beheerder)",
     yourNameRequired: "Vul eerst je eigen naam in — anders weet niemand van wie de drankjes zijn.",
     perPersonBtn: "👥 Per persoon aantikken",
+    busyLabel: "BEZIG",
+    continueWhereYouWere: "verder waar je gebleven was →",
     namesMissing: (n: number) => `${n} ${n === 1 ? "persoon heeft" : "personen hebben"} nog geen naam. Vul die aan via ⚙️ Groep, anders staat er straks "Plaats 3" op de afrekening.`,
     namesLaterToo: "Of tik gewoon aan — namen toewijzen kan ook bij het afsluiten.",
     someUnassigned: (n: number) => `🔴 ${n} ${n === 1 ? "drankje" : "drankjes"} nog zonder naam`,
@@ -1095,10 +1096,11 @@ const T = {
     whoJoinsTitle: "Qui participe ?",
     whoJoinsSub: "Indique les noms de ceux qui boivent. Tu peux en ajouter ou les modifier plus tard.",
     toDrinksBtn: "Vers les boissons →",
-    fillNamesLater: "remplir plus tard",
     adminNamePh: "Ton nom (hôte)",
     yourNameRequired: "Indique d’abord ton nom — sinon on ne sait pas à qui sont les boissons.",
     perPersonBtn: "👥 Coche par personne",
+    busyLabel: "EN COURS",
+    continueWhereYouWere: "reprendre où tu t’es arrêté →",
     namesMissing: (n: number) => `${n} personne${n === 1 ? "" : "s"} sans nom. Complète via ⚙️ Groupe, sinon le décompte affichera « Place 3 ».`,
     namesLaterToo: "Ou coche simplement — tu peux attribuer les noms à la clôture.",
     someUnassigned: (n: number) => `🔴 ${n} boisson${n === 1 ? "" : "s"} sans nom`,
@@ -1888,7 +1890,12 @@ export default function PartyTest() {
   useEffect(() => {
     if (typeof window === "undefined" || !groupId) return
     window.history.pushState({ rundo: "groep" }, "")
-    const terug = () => { terugActie.current() }
+    const terug = () => {
+      terugActie.current()
+      // Meteen een nieuw item neerleggen: anders werkt terug maar één keer en verlaat de
+      // volgende tik de app.
+      window.history.pushState({ rundo: "groep" }, "")
+    }
     window.addEventListener("popstate", terug)
     return () => window.removeEventListener("popstate", terug)
   }, [groupId])
@@ -3144,7 +3151,16 @@ export default function PartyTest() {
           msg: L.sameDayGroup(zelfde.name),
           yes: L.sameDayContinue, no: L.sameDayNew,
           onYes: () => { setConfirmDlg(null); void openSavedGroup(zelfde.id) },
-          onNo: () => { setConfirmDlg(null); setGroupName(""); setNaamPrompt(wilSettle) },
+          onNo: () => {
+            setConfirmDlg(null)
+            // Doortellen tot een vrije naam: "Rondje 2 augustus (2)", "(3)" … Zo hoef je
+            // niets te verzinnen om opnieuw te kunnen beginnen.
+            let n = 2
+            let vrij = `${naam} (${n})`
+            while (savedGroups.some((g) => g.name.trim().toLowerCase() === vrij.toLowerCase())) { n += 1; vrij = `${naam} (${n})` }
+            setGroupName(vrij)
+            void createGroup(vrij, wilSettle)
+          },
         })
         return
       }
@@ -3360,7 +3376,15 @@ export default function PartyTest() {
     setOpenRoundId(null)
     setRounds((rs) => (rs.length && !roundIsPaid(rs[rs.length - 1]) ? rs.slice(0, -1) : rs)); setCart({}); setCartAnon({}); setAmountDraft(""); setPayPot(false); setPayPersons([]); setPayAmts({}); setPotAmtDraft(""); setPaidConfirmed(false) }
   const goStart = () => { if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("start") } }); else setView("start") }
-  terugActie.current = goStart
+  terugActie.current = () => {
+    // Eerst één stap terug binnen de groep. Sta je al op het bestelscherm, dan pas naar
+    // het startscherm — anders sprong je vanuit elke tussenpagina meteen naar buiten.
+    if (view === "order" && !settle && opNaam && namenSetup) { setNamenSetup(false); setOpNaam(false); return }
+    if (view === "settings") { setView(settingsBackTo === "order" ? "order" : "hub"); return }
+    if (view === "roundsOverview") { setView(overviewBackTo === "hub" ? "hub" : "order"); return }
+    if (view === "confirmed" || view === "quickSettle" || view === "payers" || view === "final") { setView("hub"); return }
+    goStart()
+  }
   // Naar het echte beginscherm van de site (waar je Rundo Table of Party kiest). Bij een
   // onbevestigd rondje eerst waarschuwen, zodat je geen werk verliest.
   const goSiteHome = () => {
@@ -5057,7 +5081,7 @@ export default function PartyTest() {
     )
   }
 
-  const Header = () => {
+  const Header = ({ verbergNav = false }: { verbergNav?: boolean }) => {
     // Onderweg van gelijk verdelen naar Fair Split is er maar één route: namen,
     // toewijzen, pot, betalers, eindbalans. Instellingen en overzichten zouden je
     // daar alleen uit halen, dus die verbergen we tot de omschakeling rond is.
@@ -5144,7 +5168,7 @@ export default function PartyTest() {
             style={{ ...S.input, width: "auto", minWidth: 180, maxWidth: "88%", textAlign: "center", fontSize: 17, fontWeight: 800, padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.8)" }} />
         </div>
       )}
-      {!onboarding && !(settle && isAdmin) && !(!settle && view === "order" && roundItems > 0) && !(!settle && view === "confirmed") && (
+      {!verbergNav && !onboarding && !(settle && isAdmin) && !(!settle && view === "order" && roundItems > 0) && !(!settle && view === "confirmed") && (
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
           <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 14.5, fontWeight: 800, lineHeight: 1.15, borderRadius: 13 }} onClick={() => { if (settle && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupShort}</button>
           {settle ? (
@@ -5917,12 +5941,27 @@ export default function PartyTest() {
           // Zoeken op naam; bij weinig groepen heeft een zoekveld geen zin.
           const zoek = normText(groepZoek)
           const past = (g: SavedGroup) => !zoek || normText(g.name || L.autoName()).includes(zoek)
-          const bewaard = savedGroups.filter((g) => g.pinned && past(g))
-          const recent = savedGroups.filter((g) => !g.pinned && past(g))
+          // Bezig = jouw groep die nog niet afgerekend is. Die hoort bovenaan, los van
+          // wat al afgehandeld is.
+          const bezigGroepen = savedGroups.filter((g) => g.owned && !g.finalized && past(g))
+          const bewaard = savedGroups.filter((g) => g.pinned && !bezigGroepen.includes(g) && past(g))
+          const recent = savedGroups.filter((g) => !g.pinned && !bezigGroepen.includes(g) && past(g))
           const wisbaar = savedGroups.filter((g) => g.owned && !g.pinned)
           const bewaardTotaal = savedGroups.filter((g) => g.pinned).length
           return (
             <div style={{ marginTop: 18 }}>
+              {bezigGroepen.length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a5e0f", letterSpacing: "0.06em", marginBottom: 6 }}>{L.busyLabel}</div>
+                  {bezigGroepen.map((g) => (
+                    <div key={g.id} onClick={() => void openSavedGroup(g.id)}
+                      style={{ cursor: "pointer", border: "1.5px solid rgba(232,168,18,0.6)", background: "rgba(240,165,0,0.08)", borderRadius: 12, padding: "12px 13px", marginBottom: 7 }}>
+                      <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</div>
+                      <div style={{ fontSize: 12.5, color: "#8a7d55", marginTop: 2 }}>{L.continueWhereYouWere}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div onClick={() => setGroepenOpen((v) => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: groepenOpen ? 10 : 0 }}>
                 <span style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", letterSpacing: "0.02em" }}>{L.savedGroups} <span style={{ color: "#b3a988", fontWeight: 700 }}>({savedGroups.length})</span></span>
                 <span style={{ flexShrink: 0, border: "1.5px solid rgba(120,95,20,0.3)", color: "#8a7d55", borderRadius: 9, padding: "6px 11px", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap" }}>{groepenOpen ? `${L.hideWord} ▴` : `${L.showWord} ▾`}</span>
@@ -6496,7 +6535,7 @@ export default function PartyTest() {
     const eigenNaamLeeg = !ik || isGuestDefault(ik.name) || !ik.name.trim()
     return (
       <div style={S.page}><div style={S.wrap}>
-        <Header />
+        <Header verbergNav />
         {showPot && renderPotModal()}
         {renderDialogs()}
         <div style={S.card}>
@@ -6533,8 +6572,7 @@ export default function PartyTest() {
           {eigenNaamLeeg && <div style={{ fontSize: 13, color: "#b0402f", fontWeight: 700, marginBottom: 9, lineHeight: 1.45 }}>{L.yourNameRequired}</div>}
           <button onClick={() => { if (eigenNaamLeeg) { setNotice(L.yourNameRequired); return } setNamenSetup(false) }}
             style={{ ...S.btnP, width: "100%", padding: "14px 0", fontSize: 16.5, fontWeight: 800, opacity: eigenNaamLeeg ? 0.5 : 1 }}>{L.toDrinksBtn}</button>
-          <button onClick={() => { if (eigenNaamLeeg) { setNotice(L.yourNameRequired); return } setNamenSetup(false) }}
-            style={{ width: "100%", marginTop: 9, cursor: "pointer", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#a89a6f" }}>{L.fillNamesLater}</button>
+
         </div>
       </div></div>
     )
