@@ -458,7 +458,7 @@ const T = {
     voiceNotPerfect: "werkt nog niet altijd perfect",
     inRoundShort: "In dit rondje:",
     howNoteTitle: "Hoe drankjes noteren?",
-    howNoteSub: "Je kan later nog wisselen.",
+    howNoteSub: "✏️ Van snel naar op naam kan later nog.",
     noteQuickTitle: "⚡ Snel noteren",
     noteQuickExample: "3× Pintje · 2× Cola",
     fastestTag: "SNELSTE",
@@ -1095,7 +1095,7 @@ const T = {
     voiceNotPerfect: "ne marche pas encore à tous les coups",
     inRoundShort: "Dans cette tournée :",
     howNoteTitle: "Comment noter les boissons ?",
-    howNoteSub: "Tu peux changer plus tard.",
+    howNoteSub: "✏️ Passer de rapide à au nom reste possible plus tard.",
     noteQuickTitle: "⚡ Noter vite",
     noteQuickExample: "3× Pintje · 2× Cola",
     fastestTag: "LE PLUS RAPIDE",
@@ -4932,7 +4932,7 @@ export default function PartyTest() {
             <div style={{ fontSize: 17.5, fontWeight: 800, color: "#3d3418", textAlign: "center", marginBottom: 4 }}>{L.howNoteTitle}</div>
             <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", lineHeight: 1.5, marginBottom: 14 }}>{L.howNoteSub}</div>
             <button onClick={() => { setOpNaam(false); setNoteerKeuze(false) }}
-              style={{ position: "relative", overflow: "hidden", width: "100%", boxSizing: "border-box", textAlign: "left", cursor: "pointer", border: "1.5px solid rgba(232,168,18,0.5)", borderTop: "3px solid #e8a812", background: "rgba(240,165,0,0.07)", borderRadius: 12, padding: 12, marginBottom: 9 }}>
+              style={{ position: "relative", overflow: "hidden", width: "100%", boxSizing: "border-box", textAlign: "left", cursor: "pointer", border: "1.5px solid rgba(232,168,18,0.5)", borderTop: "3px solid #e8a812", background: "rgba(240,165,0,0.07)", borderRadius: 12, padding: 12 }}>
               <span style={{ position: "absolute", top: 0, right: 0, background: "#e8a812", color: "#fff", borderRadius: "0 0 0 10px", padding: "4px 10px 5px 12px", fontSize: 10.5, fontWeight: 800, letterSpacing: "0.04em" }}>{L.fastestTag}</span>
               <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 8 }}>{L.noteQuickTitle}</span>
               <span style={{ display: "block", background: "#fffdf6", border: "1px solid rgba(240,165,0,0.3)", borderRadius: 8, padding: "8px 10px", fontSize: 13.5, color: "#6b5f3a", marginBottom: 9 }}>{L.noteQuickExample}</span>
@@ -4943,6 +4943,11 @@ export default function PartyTest() {
                 </span>
               ))}
             </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "13px 0" }}>
+              <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.18)" }} />
+              <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: "#fff", border: "1.5px solid rgba(120,95,20,0.22)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12.5, fontWeight: 800, color: "#a89a6f" }}>{L.orWord}</span>
+              <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.18)" }} />
+            </div>
             <button onClick={() => { setOpNaam(true); setNamenSetup(true); setNoteerKeuze(false) }}
               style={{ position: "relative", overflow: "hidden", width: "100%", boxSizing: "border-box", textAlign: "left", cursor: "pointer", border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a", background: "rgba(59,72,106,0.06)", borderRadius: 12, padding: 12 }}>
               <span style={{ position: "absolute", top: 0, right: 0, background: "#3b486a", color: "#fff", borderRadius: "0 0 0 10px", padding: "4px 10px 5px 12px", fontSize: 10.5, fontWeight: 800, letterSpacing: "0.04em" }}>{L.fairestTag}</span>
