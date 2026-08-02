@@ -463,9 +463,12 @@ const T = {
     noteQuickSub: "Tik drankjes aan zonder namen. Je krijgt een handig barlijstje — verrekenen achteraf is optioneel.",
     noteNamedTitle2: "⚖️ Op naam noteren",
     noteNamedSub2: "Je zet eerst de namen, daarna tik je per persoon de drankjes aan. Achteraf betaalt ieder wat hij dronk — of verdeel je alsnog gelijk.",
-    noNamesBtn: "✕ zonder namen",
     withNamesBtn: "⚖️ op naam noteren",
     addNameBtn: "+ naam",
+    whoJoinsTitle: "Wie doet er mee?",
+    whoJoinsSub: "Zet de namen van wie meedrinkt. Je kan er later altijd bij zetten of ze aanpassen.",
+    toDrinksBtn: "Naar de drankjes →",
+    fillNamesLater: "later invullen",
     namesLaterToo: "Of tik gewoon aan — namen toewijzen kan ook bij het afsluiten.",
     someUnassigned: (n: number) => `🔴 ${n} ${n === 1 ? "drankje" : "drankjes"} nog zonder naam`,
     nowWord: "nu:",
@@ -1083,9 +1086,12 @@ const T = {
     noteQuickSub: "Coche les boissons sans noms. Tu reçois une liste pratique — le décompte ensuite est optionnel.",
     noteNamedTitle2: "⚖️ Noter au nom",
     noteNamedSub2: "Tu ajoutes d’abord les noms, puis tu coches les boissons par personne. Ensuite chacun paie ce qu’il a bu — ou tu partages quand même à parts égales.",
-    noNamesBtn: "✕ sans noms",
     withNamesBtn: "⚖️ noter au nom",
     addNameBtn: "+ nom",
+    whoJoinsTitle: "Qui participe ?",
+    whoJoinsSub: "Indique les noms de ceux qui boivent. Tu peux en ajouter ou les modifier plus tard.",
+    toDrinksBtn: "Vers les boissons →",
+    fillNamesLater: "remplir plus tard",
     namesLaterToo: "Ou coche simplement — tu peux attribuer les noms à la clôture.",
     someUnassigned: (n: number) => `🔴 ${n} boisson${n === 1 ? "" : "s"} sans nom`,
     nowWord: "actuel :",
@@ -2249,6 +2255,8 @@ export default function PartyTest() {
   // keuze die je bij de start maakt en daarna kan omzetten.
   const [opNaam, setOpNaam] = useState(false)
   const [noteerKeuze, setNoteerKeuze] = useState(false)
+  // Koos je "op naam", dan zet je eerst de namen. Daarna verdwijnt dit scherm.
+  const [namenSetup, setNamenSetup] = useState(false)
   const voorWie = voorWieRaw && people.some((p) => p.id === voorWieRaw) ? voorWieRaw : meId
   const renderStandLijst = () => (
     <div style={{ marginTop: 9, display: "flex", flexDirection: "column", gap: 5 }}>
@@ -4874,7 +4882,7 @@ export default function PartyTest() {
               <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#8a5e0f", marginBottom: 3 }}>{L.noteQuickTitle}</span>
               <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.45 }}>{L.noteQuickSub}</span>
             </button>
-            <button onClick={() => { setOpNaam(true); setNoteerKeuze(false) }}
+            <button onClick={() => { setOpNaam(true); setNamenSetup(true); setNoteerKeuze(false) }}
               style={{ width: "100%", boxSizing: "border-box", textAlign: "left", cursor: "pointer", border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a", background: "rgba(59,72,106,0.06)", borderRadius: 12, padding: 12 }}>
               <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#3b486a", marginBottom: 3 }}>{L.noteNamedTitle2}</span>
               <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.45 }}>{L.noteNamedSub2}</span>
@@ -6469,6 +6477,50 @@ export default function PartyTest() {
   }
 
   // ── ORDER ───────────────────────────────────────────────────────────────────
+  // Namen zetten voor je op naam gaat noteren. Overslaan kan: dan wijs je later toe.
+  if (view === "order" && !settle && opNaam && namenSetup) {
+    return (
+      <div style={S.page}><div style={S.wrap}>
+        <Header />
+        {showPot && renderPotModal()}
+        {renderDialogs()}
+        <div style={S.card}>
+          <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 3, fontSize: 21 }}>{L.whoJoinsTitle}</h3>
+          <div style={{ fontSize: 13.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 13 }}>{L.whoJoinsSub}</div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fdf3dd", borderRadius: 11, padding: "10px 12px", marginBottom: 12 }}>
+            <span style={{ fontSize: 15, fontWeight: 800, color: "#8a5e0f" }}>{L.howManyAreYou}</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+              <button onClick={removeLastPerson} disabled={busy || people.length <= 1}
+                style={{ ...S.step, width: 32, height: 32, fontSize: 18, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
+              <span style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", minWidth: 20, textAlign: "center" }}>{people.length}</span>
+              <button onClick={addPerson} disabled={busy} style={{ ...S.step, width: 32, height: 32, fontSize: 18, background: AAN, color: "#fff", border: "none" }}>+</button>
+            </span>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 14 }}>
+            {[...people].sort((a, b) => (a.id === meId ? -1 : b.id === meId ? 1 : 0)).map((pp, idx) => {
+              const ikZelf = pp.id === meId
+              return (
+                <div key={pp.id} style={{ position: "relative" }}>
+                  <input value={isGuestDefault(pp.name) ? "" : pp.name}
+                    onChange={(e) => renamePerson(pp.id, e.target.value)}
+                    placeholder={ikZelf ? L.yourNamePh : L.seat(idx + 1)}
+                    style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: ikZelf ? "9px 40px 9px 10px" : "9px 10px", fontSize: 14.5, textAlign: "left", fontWeight: ikZelf ? 700 : 400,
+                      background: ikZelf ? "rgba(240,165,0,0.08)" : undefined, border: ikZelf ? "1.5px solid #e8a812" : undefined, color: ikZelf ? "#8a5e0f" : undefined }} />
+                  {ikZelf && <span style={{ position: "absolute", right: 5, top: "50%", transform: "translateY(-50%)", background: "#e8a812", color: "#fff", borderRadius: 8, padding: "2px 6px", fontSize: 10, fontWeight: 800, pointerEvents: "none" }}>{L.youBadge}</span>}
+                </div>
+              )
+            })}
+          </div>
+
+          <button onClick={() => setNamenSetup(false)} style={{ ...S.btnP, width: "100%", padding: "14px 0", fontSize: 16.5, fontWeight: 800 }}>{L.toDrinksBtn}</button>
+          <button onClick={() => setNamenSetup(false)} style={{ width: "100%", marginTop: 9, cursor: "pointer", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#a89a6f" }}>{L.fillNamesLater}</button>
+        </div>
+      </div></div>
+    )
+  }
+
   if (view === "order") {
     // Zoeken gaat OVER de categorieën heen en negeert de korte lijst — anders zoek je
     // naar iets wat bestaat en krijg je "niets gevonden" omdat het toevallig niet in de
@@ -6501,7 +6553,7 @@ export default function PartyTest() {
 
         {!settle && !opNaam && (
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-            <button onClick={() => setOpNaam(true)} style={{ ...S.btn, padding: "7px 12px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.withNamesBtn}</button>
+            <button onClick={() => { setOpNaam(true); setNamenSetup(true) }} style={{ ...S.btn, padding: "7px 12px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.withNamesBtn}</button>
           </div>
         )}
         {/* Eerst voor wie je aantikt, dan de categorieën vlak boven de lijst. Zoeken en
@@ -6513,7 +6565,7 @@ export default function PartyTest() {
                 <div style={{ fontSize: 13, fontWeight: 800, color: voorWie && voorWie !== meId ? "#8a5e0f" : "#8a7d55", marginBottom: 7 }}>
                   <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                     <span style={{ minWidth: 0 }}>{voorWie && voorWie !== meId ? L.nowTappingFor(people.find((pp) => pp.id === voorWie)?.name ?? "") : L.youTapFor}</span>
-                    {!settle && <span onClick={() => setOpNaam(false)} style={{ flexShrink: 0, fontSize: 12, fontWeight: 800, color: "#c98a00", cursor: "pointer", whiteSpace: "nowrap" }}>{L.noNamesBtn}</span>}
+
                   </span>
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
