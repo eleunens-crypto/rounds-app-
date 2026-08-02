@@ -457,12 +457,14 @@ const T = {
     groupNamePlain: "Groepsnaam",
     voiceNotPerfect: "werkt nog niet altijd perfect",
     inRoundShort: "In dit rondje:",
-    howNoteTitle: "Hoe wil je noteren?",
+    howNoteTitle: "Hoe drankjes noteren?",
     howNoteSub: "Je kan later nog wisselen.",
-    noteQuickTitle: "⚡ Gewoon snel",
-    noteQuickSub: "Tik drankjes aan zonder namen. Je krijgt een handig barlijstje — verrekenen achteraf is optioneel.",
-    noteNamedTitle2: "⚖️ Op naam noteren",
-    noteNamedSub2: "Je zet eerst de namen, daarna tik je per persoon de drankjes aan. Achteraf betaalt ieder wat hij dronk — of verdeel je alsnog gelijk.",
+    noteQuickTitle: "⚡ Snel noteren",
+    noteQuickExample: "3× Pintje · 2× Cola",
+    noteQuickSub: "drankjes tellen → barlijstje → verrekenen optioneel",
+    noteNamedTitle2: "👤 Op naam noteren",
+    noteNamedExample: "Erent 2× Pintje · Oma 1× Cola",
+    noteNamedSub2: "drankjes toewijzen → barlijstje → ieder betaalt wat hij dronk",
     withNamesBtn: "⚖️ op naam noteren",
     addNameBtn: "+ naam",
     whoJoinsTitle: "Wie doet er mee?",
@@ -1086,12 +1088,14 @@ const T = {
     groupNamePlain: "Nom du groupe",
     voiceNotPerfect: "ne marche pas encore à tous les coups",
     inRoundShort: "Dans cette tournée :",
-    howNoteTitle: "Comment veux-tu noter ?",
+    howNoteTitle: "Comment noter les boissons ?",
     howNoteSub: "Tu peux changer plus tard.",
-    noteQuickTitle: "⚡ Simplement vite",
-    noteQuickSub: "Coche les boissons sans noms. Tu reçois une liste pratique — le décompte ensuite est optionnel.",
-    noteNamedTitle2: "⚖️ Noter au nom",
-    noteNamedSub2: "Tu ajoutes d’abord les noms, puis tu coches les boissons par personne. Ensuite chacun paie ce qu’il a bu — ou tu partages quand même à parts égales.",
+    noteQuickTitle: "⚡ Noter vite",
+    noteQuickExample: "3× Pintje · 2× Cola",
+    noteQuickSub: "compter les boissons → liste pour le bar → décompte optionnel",
+    noteNamedTitle2: "👤 Noter au nom",
+    noteNamedExample: "Erent 2× Pintje · Oma 1× Cola",
+    noteNamedSub2: "attribuer les boissons → liste pour le bar → chacun paie ce qu’il a bu",
     withNamesBtn: "⚖️ noter au nom",
     addNameBtn: "+ nom",
     whoJoinsTitle: "Qui participe ?",
@@ -4558,7 +4562,7 @@ export default function PartyTest() {
     pill: { fontSize: 13.5, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: "rgba(120,95,20,0.08)", color: "#8a7d55" } as React.CSSProperties,
     row: { display: "flex", alignItems: "center", gap: 10 } as React.CSSProperties,
     tab: (on: boolean) => ({ padding: "9px 14px", borderRadius: 20, fontSize: 15.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", background: on ? "#4a3f1e" : VLAK3, color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
-    overlay: { position: "fixed", inset: 0, background: "rgba(40,30,5,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 14 } as React.CSSProperties,
+    overlay: { position: "fixed", inset: 0, background: "rgba(38,32,14,0.62)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 14 } as React.CSSProperties,
     sheet: { background: "#fff", borderRadius: 20, padding: 20, width: "100%", maxWidth: 460, maxHeight: "86vh", overflowY: "auto", boxShadow: "0 10px 40px rgba(0,0,0,0.25)" } as React.CSSProperties,
   }
   const potTag = (
@@ -4917,13 +4921,15 @@ export default function PartyTest() {
             <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", lineHeight: 1.5, marginBottom: 14 }}>{L.howNoteSub}</div>
             <button onClick={() => { setOpNaam(false); setNoteerKeuze(false) }}
               style={{ width: "100%", boxSizing: "border-box", textAlign: "left", cursor: "pointer", border: "1.5px solid rgba(232,168,18,0.5)", borderTop: "3px solid #e8a812", background: "rgba(240,165,0,0.07)", borderRadius: 12, padding: 12, marginBottom: 9 }}>
-              <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#8a5e0f", marginBottom: 3 }}>{L.noteQuickTitle}</span>
-              <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.45 }}>{L.noteQuickSub}</span>
+              <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#8a5e0f", marginBottom: 6 }}>{L.noteQuickTitle}</span>
+              <span style={{ display: "block", background: "#fffdf6", border: "1px solid rgba(240,165,0,0.3)", borderRadius: 8, padding: "7px 9px", fontSize: 12.5, color: "#6b5f3a", marginBottom: 5 }}>{L.noteQuickExample}</span>
+              <span style={{ display: "block", fontSize: 13, color: "#6b5f3a", lineHeight: 1.5 }}>{L.noteQuickSub}</span>
             </button>
             <button onClick={() => { setOpNaam(true); setNamenSetup(true); setNoteerKeuze(false) }}
               style={{ width: "100%", boxSizing: "border-box", textAlign: "left", cursor: "pointer", border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a", background: "rgba(59,72,106,0.06)", borderRadius: 12, padding: 12 }}>
-              <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#3b486a", marginBottom: 3 }}>{L.noteNamedTitle2}</span>
-              <span style={{ display: "block", fontSize: 13.5, color: "#8a7d55", lineHeight: 1.45 }}>{L.noteNamedSub2}</span>
+              <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#3b486a", marginBottom: 6 }}>{L.noteNamedTitle2}</span>
+              <span style={{ display: "block", background: "#fbfcfe", border: "1px solid rgba(59,72,106,0.25)", borderRadius: 8, padding: "7px 9px", fontSize: 12.5, color: "#6b5f3a", marginBottom: 5 }}>{L.noteNamedExample}</span>
+              <span style={{ display: "block", fontSize: 13, color: "#6b5f3a", lineHeight: 1.5 }}>{L.noteNamedSub2}</span>
             </button>
           </div>
         </div>
