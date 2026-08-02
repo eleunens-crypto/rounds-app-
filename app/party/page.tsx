@@ -33,6 +33,17 @@ function KlinkIcoon({ size = 32, kleur = "#eab117" }: { size?: number; kleur?: s
 // scherm (de gast scant), of leeg en doorschijnend voor de twee kleintjes ernaast.
 // Getekend in plaats van een emoji, zodat hij de kleur van de modus overneemt en op elk
 // toestel hetzelfde oogt.
+function MicroIcoon({ size = 18, kleur = "#8a5e0f" }: { size?: number; kleur?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={kleur}
+      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <rect x="9" y="2" width="6" height="11" rx="3" />
+      <path d="M5 10a7 7 0 0 0 14 0" />
+      <path d="M12 17v4M9 21h6" />
+    </svg>
+  )
+}
+
 function KroonIcoon({ size = 15, kleur = "#0a6070" }: { size?: number; kleur?: string }) {
   return (
     <svg viewBox="0 0 24 20" width={size} height={size * 0.83} fill="none" stroke={kleur}
@@ -444,6 +455,7 @@ const T = {
     groupNameShortPh: "Groepsnaam",
     giveNameQ: "Naam geven?",
     groupNamePlain: "Groepsnaam",
+    voiceNotPerfect: "werkt nog niet altijd perfect",
     nowWord: "nu:",
     starting: "Bezig…",
     savedGroups: "Opgeslagen groepen",
@@ -1052,6 +1064,7 @@ const T = {
     groupNameShortPh: "Nom du groupe",
     giveNameQ: "Donner un nom ?",
     groupNamePlain: "Nom du groupe",
+    voiceNotPerfect: "ne marche pas encore à tous les coups",
     nowWord: "actuel :",
     starting: "En cours…",
     savedGroups: "Groupes enregistrés",
@@ -3670,14 +3683,20 @@ export default function PartyTest() {
         <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
             <h3 style={{ ...S.h3, margin: 0 }}>
-              {L.voiceBtn} <span style={{ fontSize: 10, fontWeight: 800, color: "#c98a00", border: "1px solid #e08a00", borderRadius: 5, padding: "1px 5px", verticalAlign: "middle" }}>{L.voiceBeta}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><MicroIcoon size={19} kleur="#c98a00" /> {L.voiceBtn}</span>
             </h3>
             {!voiceOn && <button onClick={() => setVoiceOpen(false)} style={{ border: "none", background: "none", fontSize: 21, cursor: "pointer", color: "#8a7d55" }}>✕</button>}
           </div>
 
+          {/* Beta staat hier in plaats van als label op de knop: je leest het op het
+              moment dat het ertoe doet. */}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(240,165,0,0.13)", borderRadius: 9, padding: "7px 11px", fontSize: 12.5, color: "#8a5e0f", fontWeight: 700, marginBottom: 12 }}>
+            <span style={{ background: "#c98a00", color: "#fff", borderRadius: 5, padding: "1px 5px", fontSize: 9, fontWeight: 800 }}>{L.voiceBeta.toUpperCase()}</span>
+            {L.voiceNotPerfect}
+          </div>
           {voiceOn ? (
             <div style={{ textAlign: "center", padding: "24px 0" }}>
-              <div style={{ fontSize: 40, marginBottom: 10 }}>🎤</div>
+                <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 64, height: 64, borderRadius: "50%", background: "rgba(240,165,0,0.15)", marginBottom: 10 }}><MicroIcoon size={30} kleur="#c98a00" /></div>
               <div style={{ fontSize: 16, fontWeight: 800, color: "#c98a00" }}>{L.voiceListening}</div>
               <div style={{ fontSize: 14, color: "#8a7d55", marginTop: 8 }}>{L.voiceSay}</div>
             </div>
@@ -6541,7 +6560,7 @@ export default function PartyTest() {
           </div>
         )}
         {/* Zoeken en inspreken onderaan: minder gebruikt dan de tegels erboven. */}
-        <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: 10, marginLeft: "auto", maxWidth: 300 }}>
           <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
             <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🔍</span>
             <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)}
@@ -6552,8 +6571,8 @@ export default function PartyTest() {
                 style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8a7d55", padding: 4 }}>✕</button>
             )}
           </div>
-          <button onClick={startVoice} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, padding: "0 13px", borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(240,165,0,0.6)", color: "#c98a00", whiteSpace: "nowrap" }}>
-            {L.voiceBtn} <span style={{ fontSize: 8.5, fontWeight: 800, border: "1px solid rgba(240,165,0,0.6)", borderRadius: 4, padding: "0 3px", letterSpacing: "0.03em" }}>{L.voiceBeta}</span>
+            <button onClick={startVoice} title={L.voiceBtn} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 13px", borderRadius: 10, cursor: "pointer", background: "#fffdf6", border: "1px solid rgba(240,165,0,0.5)" }}>
+              <MicroIcoon size={18} kleur="#8a5e0f" />
           </button>
         </div>
 
