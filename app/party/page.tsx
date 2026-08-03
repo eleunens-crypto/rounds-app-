@@ -33,6 +33,32 @@ function KlinkIcoon({ size = 32, kleur = "#eab117" }: { size?: number; kleur?: s
 // scherm (de gast scant), of leeg en doorschijnend voor de twee kleintjes ernaast.
 // Getekend in plaats van een emoji, zodat hij de kleur van de modus overneemt en op elk
 // toestel hetzelfde oogt.
+function NoteerIcoon({ size = 84, kleur = "#e8a812" }: { size?: number; kleur?: string }) {
+  return (
+    <svg viewBox="0 0 84 62" width={size} height={size * 62 / 84} aria-hidden="true" style={{ flexShrink: 0 }}>
+      <circle cx={14} cy={20} r={6.5} fill="none" stroke={kleur} strokeWidth={1.8} />
+      <path d="M3.5 42c0-5.8 4.7-10.5 10.5-10.5S24.5 36.2 24.5 42" fill="none" stroke={kleur} strokeWidth={1.8} strokeLinecap="round" />
+      <path d="M23.5 35.5c6-2.6 10.5-4.6 13-5.7" stroke={kleur} strokeWidth={1.8} strokeLinecap="round" />
+      <g transform="rotate(-4 58 30)">
+        <rect x={34.5} y={1.5} width={47} height={55} rx={3.5} fill="#fffdf6" stroke={kleur} strokeWidth={1.6} />
+        <path d="M42.1 8.9c-.7 0-1.27-.57-1.27-1.27 0-.6.42-1.12 1.03-1.24.09-1.1.7-1.6 1.4-1.6.3 0 .58.1.81.27.27-.55.88-.91 1.58-.91.76 0 1.41.44 1.72 1.09.17-.9.36-.13.57-.13.74 0 1.33.6 1.33 1.33 0 .09 0 .17-.2.26.48.19.8.65.8 1.19 0 .7-.57 1.27-1.27 1.27" fill="none" stroke={kleur} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
+        <path d="M41.6 8.6h7.2v6.6a1.1 1.1 0 0 1-1.1 1.1h-5a1.1 1.1 0 0 1-1.1-1.1z" fill="none" stroke={kleur} strokeWidth={1.15} strokeLinejoin="round" />
+        <path d="M48.8 10.2h1.3a1.15 1.15 0 0 1 1.15 1.15v1.7a1.15 1.15 0 0 1-1.15 1.15h-1.3" fill="none" stroke={kleur} strokeWidth={1.15} strokeLinejoin="round" />
+        <path d="M43.4 10.6v3.6M45.2 10.6v3.6M47 10.6v3.6" stroke={kleur} strokeWidth={1} strokeLinecap="round" />
+        <text x={59} y={13.6} fontSize={7.5} fontWeight={800} fill="#8a5e0f" fontFamily="system-ui">×1</text>
+        <path d="M41 21.5h7.4l-3.7 4.4zM44.7 25.9v3.4M42.7 29.3h4" fill="none" stroke={kleur} strokeWidth={1.15} strokeLinejoin="round" strokeLinecap="round" />
+        <text x={59} y={27} fontSize={7.5} fontWeight={800} fill="#8a5e0f" fontFamily="system-ui">×2</text>
+        <path d="M41.6 33.6h6.9l-.73 7.5a1.05 1.05 0 0 1-1.05.95h-3.34a1.05 1.05 0 0 1-1.05-.95z" fill="none" stroke={kleur} strokeWidth={1.15} strokeLinejoin="round" />
+        <path d="M41.9 36.8c1.1.68 1.95-.55 3.05 0 1.1.55 2.05-.5 3.2-.05" fill="none" stroke={kleur} strokeWidth={1} strokeLinecap="round" />
+        <path d="M46.6 33.6l.9-2.5 1.6.65" fill="none" stroke={kleur} strokeWidth={1.15} strokeLinejoin="round" strokeLinecap="round" />
+        <text x={59} y={39} fontSize={7.5} fontWeight={800} fill="#8a5e0f" fontFamily="system-ui">×3</text>
+        <path d="M40 46h36" stroke={kleur} strokeWidth={1.1} strokeLinecap="round" opacity={0.55} />
+        <text x={58.5} y={53.5} fontSize={8.5} fontWeight={800} fill="#8a5e0f" fontFamily="system-ui">×6</text>
+      </g>
+    </svg>
+  )
+}
+
 function BonIcoon({ size = 46, kleur = "#e8a812" }: { size?: number; kleur?: string }) {
   return (
     <svg viewBox="0 0 50 58" width={size} height={size * 58 / 50} aria-hidden="true" style={{ flexShrink: 0 }}>
@@ -538,7 +564,6 @@ const T = {
     withNamesBtn: "⚖️ op naam noteren",
     addNameBtn: "+ naam",
     whoJoinsTitle: "Wie doet er mee?",
-    whoJoinsSub: "Zet de namen van wie meedrinkt. Je kan er later altijd bij zetten of ze aanpassen.",
     toDrinksBtn: "Naar de drankjes →",
     adminNamePh: "Jouw naam (beheerder)",
     guestN: (n: number) => `Gast ${n}`,
@@ -890,7 +915,6 @@ const T = {
     modeTitleSub2: "Betaalt eerlijk volgens wat hij of zij dronk",
     modeQuick: "Ik bestel voor de groep",
     modeQuickSub: "Jij tikt zelf alle drankjes aan.",
-    modeQuickSub2: "Meteen een handig bestellijstje",
     whatIsThis: "Wat is dit?",
     modeFairWhat: "Jouw drankjes, jouw bedrag. Geen oneerlijke gelijke verdeling maar betalen volgens wat je dronk — de app rekent het uit.",
     orWord: "of",
@@ -900,10 +924,18 @@ const T = {
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe je wil bestellen",
     youNoteTitle: "Jij noteert voor iedereen",
+    youNoteSelf: "Jij noteert zelf voor iedereen",
+    fairShareTag: "EERLIJK VERDELEN",
+    fairLaterToo: "Ook vanuit snel opnemen kan je achteraf nog eerlijk verdelen.",
+    tapToChangePh: "✏️ Tik om te wijzigen",
+    groupNameRequired: "Geef de groep eerst een naam.",
+    needOneMore: "Zet er minstens één persoon bij — anders valt er niets te verdelen.",
+    youNote1: "Jij tikt alle drankjes zelf aan",
+    youNote2: "Handig barlijstje",
+    youNote3: "Snel of eerlijk verdelen — jij kiest",
     modeSnelTitle: "Snel opnemen",
     modeNaamTitle: "Uitgebreid opnemen",
     modeNaamSub: "Alles van snel opnemen",
-    modeNaamSub2: "Ieder betaalt wat hij dronk",
     youNoteSub: "niemand anders hoeft iets te doen",
     theyTapTitle: "Iedereen op zijn eigen gsm",
     theyTapSub: "ze scannen een QR-code",
@@ -1183,7 +1215,6 @@ const T = {
     withNamesBtn: "⚖️ noter au nom",
     addNameBtn: "+ nom",
     whoJoinsTitle: "Qui participe ?",
-    whoJoinsSub: "Indique les noms de ceux qui boivent. Tu peux en ajouter ou les modifier plus tard.",
     toDrinksBtn: "Vers les boissons →",
     adminNamePh: "Ton nom (hôte)",
     guestN: (n: number) => `Invité ${n}`,
@@ -1536,7 +1567,6 @@ const T = {
     modeTitleSub2: "Paie équitablement selon ce qu’il ou elle a bu",
     modeQuick: "Je commande pour le groupe",
     modeQuickSub: "Tu coches toutes les boissons toi-même.",
-    modeQuickSub2: "Direct une liste pratique pour le bar",
     whatIsThis: "C’est quoi ?",
     modeFairWhat: "Tes boissons, ton montant. Pas de partage égal injuste mais payer selon ce que tu as bu — l’appli le calcule.",
     orWord: "ou",
@@ -1546,10 +1576,18 @@ const T = {
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
     youNoteTitle: "Tu notes pour tout le monde",
+    youNoteSelf: "Tu notes toi-même pour tous",
+    fairShareTag: "PARTAGE ÉQUITABLE",
+    fairLaterToo: "Même en notant vite, tu peux encore partager équitablement plus tard.",
+    tapToChangePh: "✏️ Touche pour modifier",
+    groupNameRequired: "Donne d’abord un nom au groupe.",
+    needOneMore: "Ajoute au moins une personne — sinon il n’y a rien à partager.",
+    youNote1: "Tu coches toutes les boissons",
+    youNote2: "Liste pratique pour le bar",
+    youNote3: "Vite ou équitable — à toi de choisir",
     modeSnelTitle: "Noter vite",
     modeNaamTitle: "Noter en détail",
     modeNaamSub: "Tout de « noter vite »",
-    modeNaamSub2: "Chacun paie ce qu’il a bu",
     youNoteSub: "personne d’autre ne doit rien faire",
     theyTapTitle: "Chacun sur son propre gsm",
     theyTapSub: "ils scannent un QR-code",
@@ -1920,8 +1958,6 @@ export default function PartyTest() {
   const [beginPrompt, setBeginPrompt] = useState(false)
   const [potChosen, setPotChosen] = useState(false)
   const [bpSettle, setBpSettle] = useState<boolean | null>(null)
-  // Binnen "jij noteert" zijn er twee kaarten. Deze zegt welke van de twee gekozen is.
-  const [bpNaam, setBpNaam] = useState(false)
   // De uitleg staat los van de keuze: lezen zonder te kiezen, kiezen zonder te lezen.
   // Eén tegelijk open, anders wordt het keuzescherm meteen twee schermen lang.
   const [modeInfo, setModeInfo] = useState<"quick" | "naam" | "fair" | null>(null)
@@ -3313,7 +3349,7 @@ export default function PartyTest() {
   const startWithMode = async (fallbackNaam?: string, modus?: boolean) => {
     // De keuze snel-of-op-naam staat al op het keuzescherm; het losse venster erna is
     // daardoor overbodig geworden.
-    if (modus === false) { setOpNaam(bpNaam); setNamenSetup(bpNaam); noteerGevraagd.current = "gekozen" }
+    if (modus === false) { setOpNaam(false); setNamenSetup(true) }
     const keuze = modus ?? bpSettle
     if (keuze === null || keuze === undefined) return
     const wilSettle = keuze === true
@@ -3969,6 +4005,9 @@ export default function PartyTest() {
     // zijn en biedt de knop om ze aan te vullen. Een pop-up ervoor is een drempel die
     // hetzelfde vertelt, maar zonder de knop.
     if (rounds.length === 0) { setNotice(L.nothingToSettle); return }
+    // Uitgebreid opnemen belooft "ieder betaalt wat hij dronk"; dat kan niet zolang er
+    // drankjes zonder naam zijn.
+    if (!settle && opNaam && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); setShowAssignAll(true); return }
     setView("quickSettle")
   }
   // Van niveau 1 naar Fair Split: eerst snel personen + namen, daarna toewijzen.
@@ -5276,7 +5315,7 @@ export default function PartyTest() {
               <GsmIcoon size={18} kleur="#fff" dof />
               <GsmIcoon size={22} kleur="#fff" qr />
             </>) : <GsmIcoon size={22} kleur="#fff" lijnen />}
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? L.modeFairShort : L.modeQuickShort}</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? L.modeFairShort : `${L.modeQuickShort} · ${opNaam ? L.modeNaamTitle : L.modeSnelTitle}`}</span>
           </span>
         </div>
       )}
@@ -5345,9 +5384,9 @@ export default function PartyTest() {
       )}
       {!verbergNav && !onboarding && !(settle && isAdmin) && !(!settle && view === "order" && roundItems > 0) && !(!settle && view === "confirmed") && (
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-          <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 14.5, fontWeight: 800, lineHeight: 1.15, borderRadius: 13 }} onClick={() => { if (settle && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupShort}</button>
+          <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 14.5, fontWeight: 800, lineHeight: 1.15, borderRadius: 13 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupShort}</button>
           {settle ? (
-            <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 14.5, fontWeight: 800, borderRadius: 13, opacity: (view === "hub" || (settle && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if (settle && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goHub() }}>{L.overview}</button>
+            <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 14.5, fontWeight: 800, borderRadius: 13, opacity: (view === "hub" || ((settle || opNaam) && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goHub() }}>{L.overview}</button>
           ) : (
             <button style={{ flex: 1.2, padding: "11px 4px", fontSize: 15, fontWeight: 800, borderRadius: 10, cursor: "pointer",
               border: view === "roundsOverview" ? "none" : "1px solid rgba(120,95,20,0.25)",
@@ -5355,7 +5394,7 @@ export default function PartyTest() {
               color: view === "roundsOverview" ? "#fff" : "#8a7d55" }}
               onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } if (rounds.length >= 1) { setOverviewBackTo(view === "order" ? "order" : "hub"); setView("roundsOverview") } else setNotice(L.noRoundsYet) }}>{L.roundsOverviewBtn}</button>
           )}
-          {settle && <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 700, opacity: (view === "final" || (settle && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if (settle && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goFinal() }}>{L.settleBtn}</button>}
+          {settle && <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 700, opacity: (view === "final" || ((settle || opNaam) && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goFinal() }}>{L.settleBtn}</button>}
           {!settle && rounds.length >= 1 && (
             !lastRoundHandled ? (
               // Bezig een rondje af te ronden op de hub: geen afreken-knop maar een rustig
@@ -5602,7 +5641,7 @@ export default function PartyTest() {
               <GsmIcoon size={18} kleur="#fff" dof />
               <GsmIcoon size={22} kleur="#fff" qr />
             </>) : <GsmIcoon size={22} kleur="#fff" lijnen />}
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? L.modeFairShort : L.modeQuickShort}</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? L.modeFairShort : `${L.modeQuickShort} · ${opNaam ? L.modeNaamTitle : L.modeSnelTitle}`}</span>
           </span>
           <LanguageToggle compact />
         </div>
@@ -5914,98 +5953,41 @@ export default function PartyTest() {
               <div style={{ fontSize: 16.5, fontWeight: 800, color: MODUS_SNEL.tekst }}>✍️ {L.youNoteTitle}</div>
               <div style={{ fontSize: 14, color: "#8a7d55", marginTop: 2, lineHeight: 1.4 }}>{L.youNoteSub}</div>
             </div>
-            {/* Elke keuze is één blok: de rij én z’n voorbeeld zitten binnen dezelfde
-                omlijning, zodat meteen duidelijk is wat bij wat hoort. */}
-            {/* Elke modus is één geheel: de rij, z’n voorbeeld én de startknop eronder.
-                De gekozen modus licht op in zijn eigen kleur, de andere dimt volledig —
-                kader en knop samen, zodat het één blok blijft en geen losse onderdelen. */}
-            {/* Twee kolommen: de manieren waarop jij noteert staan naast elkaar en zijn
-                zo direct te vergelijken. */}
-            <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
-            <div style={{ flex: 1, minWidth: 0, display: "flex", opacity: bpSettle !== false || bpNaam ? 0.6 : 1 }}>
-            <div style={{ width: "100%", display: "flex", flexDirection: "column", borderRadius: 15, overflow: "hidden", background: "#fff", border: (bpSettle === false && !bpNaam) ? `2px solid ${MODUS_SNEL.rand}` : `1.5px solid ${MODUS_SNEL.randZacht}`,
-              boxShadow: (bpSettle === false && !bpNaam) ? `0 16px 34px -20px ${MODUS_SNEL.gloed}` : "0 8px 22px -18px rgba(120,95,20,0.5)" }}>
-              {/* Kleurbalk als vlag: nog vóór je de tekst leest weet je welke modus dit is. */}
+            {/* Eén kaart: de eerste vraag gaat over wíe aantikt, niet over hoe. Snel of
+                uitgebreid kies je pas op het instelscherm erna. */}
+            <div style={{ opacity: bpSettle === true ? 0.6 : 1 }}>
+            <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", border: bpSettle === false ? `2px solid ${MODUS_SNEL.rand}` : `1px solid rgba(120,95,20,0.16)`,
+              boxShadow: bpSettle === false ? `0 16px 34px -20px ${MODUS_SNEL.gloed}` : "0 8px 22px -18px rgba(120,95,20,0.5)" }}>
               <div style={{ height: 6, background: MODUS_SNEL.rand }} />
-              <button onClick={() => { setBpSettle(false); setBpNaam(false); setModeInfo((m) => m === "quick" ? m : null) }}
-                style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "14px 9px 12px", border: "none", cursor: "pointer",
-                  borderBottom: `1px solid ${MODUS_SNEL.lijnZacht}`,
-                  background: (bpSettle === false && !bpNaam) ? MODUS_SNEL.vlak : "linear-gradient(180deg,#fdfcfa,#fff)" }}>
-                {/* Gekozen of niet: een gevuld rondje met vinkje tegenover een leeg rondje.
-                    Samen lezen de twee kaarten zo als één keuze. */}
-                <span style={{ position: "absolute", top: 7, left: 7, width: 20, height: 20, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, pointerEvents: "none",
-                  background: (bpSettle === false && !bpNaam) ? MODUS_SNEL.rand : "transparent",
-                  border: (bpSettle === false && !bpNaam) ? "none" : `2.5px solid ${MODUS_SNEL.randZacht}`,
-                  color: "#fff" }}>{(bpSettle === false && !bpNaam) ? "✓" : ""}</span>
-                {/* De uitleg zit in de hoek van de kaart in plaats van naast de titel. Zo heeft
-                    de titel de volle breedte en staat hij echt gecentreerd. Uitklappen zet de
-                    modus ook aan: een kaart die opengaat maar bleek blijft, oogt stuk. */}
-                {/* Een bon met drie soorten en hun aantallen: dat krijg je hier. */}
-                <span style={{ display: "flex", justifyContent: "center", marginTop: 8, marginBottom: 7 }}>
-                  <BonIcoon size={44} kleur={MODUS_SNEL.rand} />
+              <button onClick={() => setBpSettle(false)}
+                style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "16px 14px 14px", cursor: "pointer", border: "none",
+                  borderBottom: `1px solid ${MODUS_SNEL.randZacht}`,
+                  background: bpSettle === false ? MODUS_SNEL.vlak : "linear-gradient(180deg,#fffdf6,#fff)" }}>
+                <span style={{ position: "absolute", top: 9, left: 9, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
+                  background: bpSettle === false ? MODUS_SNEL.rand : "transparent",
+                  border: bpSettle === false ? "none" : `2.5px solid ${MODUS_SNEL.randZacht}`, color: "#fff" }}>{bpSettle === false ? "✓" : ""}</span>
+                <span style={{ display: "flex", justifyContent: "center", marginTop: 12, marginBottom: 10 }}>
+                  <NoteerIcoon size={92} kleur={MODUS_SNEL.rand} />
                 </span>
-                <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#3d3418", lineHeight: 1.14, letterSpacing: -0.4 }}>{L.modeSnelTitle}</span>
-                {/* Een lijstje met vinkjes leest sneller dan twee losse zinnen: je ziet in
-                    één oogopslag hoeveel stappen erbij komen kijken. */}
-                <span style={{ display: "block", textAlign: "left", marginTop: 11, paddingLeft: 6 }}>
-                  {[L.modeQuickSub, L.modeQuickSub2].map((t, i) => (
-                    <span key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i === 0 ? 5 : 0 }}>
-                      <span style={{ flexShrink: 0, color: MODUS_SNEL.rand, fontWeight: 800, fontSize: 12.5 }}>✓</span>
-                      <span style={{ fontSize: 12.5, color: "#6b5f3a", lineHeight: 1.35 }}>{t}</span>
+                <span style={{ display: "block", fontSize: 21, fontWeight: 800, color: "#3d3418", lineHeight: 1.18, letterSpacing: -0.3 }}>{L.youNoteSelf}</span>
+                <span style={{ display: "block", textAlign: "left", marginTop: 12, paddingLeft: 6 }}>
+                  {[L.youNote1, L.youNote2, L.youNote3].map((t, i2) => (
+                    <span key={i2} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i2 < 2 ? 5 : 0 }}>
+                      <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 15 }}>✓</span>
+                      <span style={{ fontSize: 16, color: "#6b5f3a", lineHeight: 1.4 }}>{t}</span>
                     </span>
                   ))}
                 </span>
               </button>
-              
-              {/* Een losse knop met eigen ronding en schaduw leest onmiskenbaar als knop;
-                  een voetbalk rand-aan-rand deed dat minder. */}
-              <div style={{ marginTop: "auto", padding: "12px 12px 14px", background: (bpSettle === false && !bpNaam) ? MODUS_SNEL.vlak : "#fff" }}>
-                <button disabled={busy} onClick={() => { setBpSettle(false); setBpNaam(false); startWithMode(undefined, false) }}
-                  style={{ display: "block", width: "100%", padding: "12px 6px", fontSize: 14.5, fontWeight: 800, cursor: "pointer", borderRadius: 14, border: "none",
+              <div style={{ padding: "12px 12px 14px", background: bpSettle === false ? MODUS_SNEL.vlak : "#fff" }}>
+                <button disabled={busy} onClick={() => { setBpSettle(false); startWithMode(undefined, false) }}
+                  style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 17.5, fontWeight: 800, cursor: "pointer", border: "none", borderRadius: 15,
                     background: MODUS_SNEL.knop, color: MODUS_SNEL.knopTekst, boxSizing: "border-box",
-                    boxShadow: `0 12px 28px -8px ${MODUS_SNEL.gloed}, 0 0 0 4px ${MODUS_SNEL.tint}` }}>{busy ? L.starting : L.startQuickBtn} →</button>
+                    boxShadow: `0 12px 28px -8px ${MODUS_SNEL.gloed}, 0 0 0 4px ${MODUS_SNEL.tint}` }}>{busy ? L.starting : L.startQuickBtn} \u2192</button>
               </div>
             </div>
             </div>
 
-            
-            {/* Zelfde manier van noteren, maar elk drankje krijgt een naam. Pruim, zodat
-                hij niet verward wordt met de teal van de QR-modus eronder. */}
-            <div style={{ flex: 1, minWidth: 0, display: "flex", opacity: bpSettle === false && bpNaam ? 1 : 0.6 }}>
-            <div style={{ width: "100%", display: "flex", flexDirection: "column", borderRadius: 15, overflow: "hidden", background: "#fff", border: bpSettle === false && bpNaam ? "2px solid #7a3f6d" : "1px solid rgba(120,95,20,0.16)",
-              boxShadow: bpSettle === false && bpNaam ? "0 16px 34px -20px rgba(122,63,109,0.5)" : "0 8px 22px -18px rgba(120,95,20,0.5)" }}>
-              <div style={{ height: 6, background: "#7a3f6d" }} />
-              <button onClick={() => { setBpSettle(false); setBpNaam(true); setModeInfo((m) => m === "naam" ? m : null) }}
-                style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "14px 9px 12px", cursor: "pointer", border: "none",
-                  borderBottom: "1px solid rgba(122,63,109,0.18)",
-                  background: bpSettle === false && bpNaam ? "rgba(122,63,109,0.07)" : "linear-gradient(180deg,#fdfcfa,#fff)" }}>
-                <span style={{ position: "absolute", top: 7, left: 7, width: 20, height: 20, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
-                  background: bpSettle === false && bpNaam ? "#7a3f6d" : "transparent",
-                  border: bpSettle === false && bpNaam ? "none" : "2.5px solid rgba(122,63,109,0.4)",
-                  color: "#fff" }}>{bpSettle === false && bpNaam ? "✓" : ""}</span>
-                <span style={{ display: "flex", justifyContent: "center", marginTop: 8, marginBottom: 7 }}>
-                  <NamenIcoon size={70} kleur="#7a3f6d" />
-                </span>
-                <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#3d3418", lineHeight: 1.14, letterSpacing: -0.4 }}>{L.modeNaamTitle}</span>
-                <span style={{ display: "block", textAlign: "left", marginTop: 11, paddingLeft: 6 }}>
-                  {[L.modeNaamSub, L.modeNaamSub2].map((t, i) => (
-                    <span key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i === 0 ? 5 : 0 }}>
-                      <span style={{ flexShrink: 0, color: "#7a3f6d", fontWeight: 800, fontSize: 12.5 }}>✓</span>
-                      <span style={{ fontSize: 12.5, color: "#6b5f3a", lineHeight: 1.35 }}>{t}</span>
-                    </span>
-                  ))}
-                </span>
-              </button>
-              
-              <div style={{ marginTop: "auto", padding: "12px 12px 14px", background: bpSettle === false && bpNaam ? "rgba(122,63,109,0.07)" : "#fff" }}>
-                <button disabled={busy} onClick={() => { setBpSettle(false); setBpNaam(true); startWithMode(undefined, false) }}
-                  style={{ display: "block", width: "100%", padding: "12px 6px", fontSize: 14.5, fontWeight: 800, cursor: "pointer", border: "none", borderRadius: 15,
-                    background: "linear-gradient(135deg,#8d5080,#7a3f6d)", color: "#fff", boxSizing: "border-box",
-                    boxShadow: "0 12px 28px -8px rgba(122,63,109,0.45), 0 0 0 4px rgba(122,63,109,0.1)" }}>{busy ? L.starting : L.startQuickBtn} →</button>
-              </div>
-            </div>
-            </div>
-            </div>
 
             {/* Duidelijk dat er een tweede, andere keuze volgt. */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "26px 0" }}>
@@ -6732,54 +6714,103 @@ export default function PartyTest() {
 
   // ── ORDER ───────────────────────────────────────────────────────────────────
   // Namen zetten voor je op naam gaat noteren. Overslaan kan: dan wijs je later toe.
-  if (view === "order" && !settle && opNaam && namenSetup) {
-    // Zonder jouw naam weet niemand van wie de drankjes zijn; die is dus verplicht.
+  // Instelscherm na "jij noteert": groepsnaam en jouw naam zijn altijd nodig. Daaronder
+  // kies je snel of uitgebreid; bij uitgebreid klappen de namen open en zijn die ook
+  // verplicht, want anders kan de eerlijke verdeling niet kloppen.
+  if (view === "order" && !settle && namenSetup) {
     const ik = people.find((p) => p.id === meId)
     const eigenNaamLeeg = !ik || isGuestDefault(ik.name) || !ik.name.trim()
+    const naamLeeg = isAutoNaam(groupName) || !groupName.trim()
+    const klaarOmDoor = !eigenNaamLeeg && !naamLeeg && (!opNaam || people.length > 1)
+    const ster = <span style={{ color: "#c0554a" }}>*</span>
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header verbergNav />
         {showPot && renderPotModal()}
         {renderDialogs()}
         <div style={S.card}>
-          <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 3, fontSize: 21 }}>{L.whoJoinsTitle}</h3>
-          <div style={{ fontSize: 13.5, color: "#8a7d55", lineHeight: 1.5, marginBottom: 13 }}>{L.whoJoinsSub}</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", letterSpacing: "0.04em", marginBottom: 5 }}>{L.groupNamePlain.toUpperCase()} {ster}</div>
+          <input value={isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()}
+            placeholder={L.tapToChangePh}
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "11px 12px", fontSize: 15, textAlign: "left" }} />
+          <div style={{ fontSize: 11.5, color: "#a89a6f", marginTop: 4, marginBottom: 12 }}>{L.nowWord} {isAutoNaam(groupName) ? groupName.trim() : L.autoName()}</div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fdf3dd", borderRadius: 11, padding: "10px 12px", marginBottom: 12 }}>
-            <span style={{ fontSize: 15, fontWeight: 800, color: "#8a5e0f" }}>{L.howManyAreYou}</span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-              <button onClick={removeLastPerson} disabled={busy || people.length <= 1}
-                style={{ ...S.step, width: 32, height: 32, fontSize: 18, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
-              <span style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", minWidth: 20, textAlign: "center" }}>{people.length}</span>
-              <button onClick={addPerson} disabled={busy} style={{ ...S.step, width: 32, height: 32, fontSize: 18, background: AAN, color: "#fff", border: "none" }}>+</button>
-            </span>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", letterSpacing: "0.04em", marginBottom: 5 }}>{L.adminNamePh.toUpperCase()} {ster}</div>
+          <div style={{ position: "relative", marginBottom: 16 }}>
+            <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><KroonIcoon size={12} kleur="#8a5e0f" /></span>
+            <input value={ik && !isGuestDefault(ik.name) ? ik.name : ""} onChange={(e) => { if (meId) renamePerson(meId, e.target.value) }}
+              placeholder={L.yourNamePh}
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "11px 40px 11px 26px", fontSize: 15, textAlign: "left", fontWeight: 700,
+                background: "rgba(240,165,0,0.08)", border: `1.5px solid ${eigenNaamLeeg ? "#c0554a" : "#e8a812"}`, color: "#8a5e0f" }} />
+            <span style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "#e8a812", color: "#fff", borderRadius: 8, padding: "2px 6px", fontSize: 10, fontWeight: 800, pointerEvents: "none" }}>{L.youBadge}</span>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 14 }}>
-            {[...people].sort((a, b) => (a.id === meId ? -1 : b.id === meId ? 1 : 0)).map((pp, idx) => {
-              const ikZelf = pp.id === meId
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#3d3418", marginBottom: 9 }}>{L.howNoteTitle}</div>
+          <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: 11 }}>
+            {([
+              { id: true, tag: L.fairShareTag, titel: L.modeNaamTitle, punten: [L.modeNaamSub, L.nStep3], top: "#7a3f6d", rand: "rgba(122,63,109,0.42)", vlak: "rgba(122,63,109,0.07)" },
+              { id: false, tag: L.fastestTag, titel: L.modeSnelTitle, punten: [L.qStep1, L.qStep2], top: "#e8a812", rand: "rgba(232,168,18,0.5)", vlak: "rgba(240,165,0,0.07)" },
+            ]).map((k) => {
+              const aan = opNaam === k.id
               return (
-                <div key={pp.id} style={{ position: "relative" }}>
-                  {ikZelf && <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><KroonIcoon size={12} kleur="#8a5e0f" /></span>}
-                  <input value={isGuestDefault(pp.name) ? "" : pp.name}
-                    onChange={(e) => renamePerson(pp.id, e.target.value)}
-                    placeholder={ikZelf ? L.adminNamePh : `✏️ ${L.guestN(idx + 1)}`}
-                    style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: ikZelf ? "9px 40px 9px 26px" : "9px 10px", fontSize: 14.5, textAlign: "left", fontWeight: ikZelf ? 700 : 400,
-                      background: ikZelf ? "rgba(240,165,0,0.08)" : undefined, border: ikZelf ? `1.5px solid ${eigenNaamLeeg ? "#c0554a" : "#e8a812"}` : undefined, color: ikZelf ? "#8a5e0f" : undefined }} />
-                  {ikZelf && <span style={{ position: "absolute", right: 5, top: "50%", transform: "translateY(-50%)", background: "#e8a812", color: "#fff", borderRadius: 8, padding: "2px 6px", fontSize: 10, fontWeight: 800, pointerEvents: "none" }}>{L.youBadge}</span>}
+                <div key={String(k.id)} onClick={() => setOpNaam(k.id)}
+                  style={{ flex: 1, minWidth: 0, position: "relative", overflow: "hidden", cursor: "pointer", borderRadius: 12, padding: "10px 8px",
+                    background: aan ? k.vlak : "#fff", border: `${aan ? 2.5 : 1.5}px solid ${aan ? k.top : k.rand}`, borderTop: `3px solid ${k.top}`,
+                    opacity: aan ? 1 : 0.72 }}>
+                  <span style={{ position: "absolute", top: 0, right: 0, background: k.top, color: "#fff", borderRadius: "0 0 0 10px", padding: "3px 7px 4px 9px", fontSize: 9, fontWeight: 800 }}>{k.tag}</span>
+                  <span style={{ position: "absolute", top: 6, left: 6, width: 17, height: 17, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800,
+                    background: aan ? k.top : "transparent", border: aan ? "none" : `2.5px solid ${k.rand}`, color: "#fff" }}>{aan ? "✓" : ""}</span>
+                  <span style={{ display: "flex", justifyContent: "center", margin: "23px 0 7px" }}>
+                    {k.id ? <NamenIcoon size={66} kleur="#7a3f6d" /> : <BonIcoon size={37} kleur="#e8a812" />}
+                  </span>
+                  <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, color: k.top, textAlign: "center", lineHeight: 1.15, marginBottom: 7 }}>{k.titel}</span>
+                  {k.punten.map((t, n2) => (
+                    <span key={n2} style={{ display: "flex", gap: 5, alignItems: "flex-start", marginBottom: n2 === 0 ? 3 : 0 }}>
+                      <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 11 }}>✓</span>
+                      <span style={{ fontSize: 11, color: "#6b5f3a", lineHeight: 1.4 }}>{t}</span>
+                    </span>
+                  ))}
                 </div>
               )
             })}
           </div>
 
-          {eigenNaamLeeg && <div style={{ fontSize: 13, color: "#b0402f", fontWeight: 700, marginBottom: 9, lineHeight: 1.45 }}>{L.yourNameRequired}</div>}
-          <button onClick={() => { if (eigenNaamLeeg) { setNotice(L.yourNameRequired); return } setNamenSetup(false) }}
-            style={{ ...S.btnP, width: "100%", padding: "14px 0", fontSize: 16.5, fontWeight: 800, opacity: eigenNaamLeeg ? 0.5 : 1 }}>{L.toDrinksBtn}</button>
+          {opNaam ? (
+            <div style={{ border: "1.5px solid rgba(122,63,109,0.3)", background: "rgba(122,63,109,0.05)", borderRadius: 12, padding: 12, marginBottom: 13 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#7a3f6d", marginBottom: 9 }}>{L.whoJoinsTitle.toUpperCase()} {ster}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", borderRadius: 10, padding: "9px 11px", marginBottom: 10 }}>
+                <span style={{ fontSize: 13.5, fontWeight: 800, color: "#7a3f6d" }}>{L.howManyAreYou}</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  <button onClick={removeLastPerson} disabled={busy || people.length <= 1} style={{ ...S.step, width: 28, height: 28, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", minWidth: 18, textAlign: "center" }}>{people.length}</span>
+                  <button onClick={addPerson} disabled={busy} style={{ ...S.step, width: 28, height: 28, background: "#7a3f6d", color: "#fff", border: "none" }}>+</button>
+                </span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                {people.filter((pp) => pp.id !== meId).map((pp, idx) => (
+                  <input key={pp.id} value={isGuestDefault(pp.name) ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)}
+                    placeholder={`✏️ ${L.guestN(idx + 2)}`}
+                    style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: "9px 10px", fontSize: 13.5, textAlign: "left" }} />
+                ))}
+              </div>
+              {people.length < 2 && <div style={{ fontSize: 12.5, color: "#b0402f", fontWeight: 700, marginTop: 8 }}>{L.needOneMore}</div>}
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", background: "rgba(240,165,0,0.12)", borderRadius: 10, padding: "9px 11px", marginBottom: 13 }}>
+              <span style={{ flexShrink: 0 }}>💡</span>
+              <span style={{ fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.45 }}>{L.fairLaterToo}</span>
+            </div>
+          )}
 
+          {eigenNaamLeeg && <div style={{ fontSize: 13, color: "#b0402f", fontWeight: 700, marginBottom: 9, lineHeight: 1.45 }}>{L.yourNameRequired}</div>}
+          <button onClick={() => { if (!klaarOmDoor) { setNotice(eigenNaamLeeg ? L.yourNameRequired : naamLeeg ? L.groupNameRequired : L.needOneMore); return } setNamenSetup(false) }}
+            style={{ ...S.btnP, width: "100%", padding: "14px 0", fontSize: 16.5, fontWeight: 800, opacity: klaarOmDoor ? 1 : 0.5,
+              background: opNaam ? "linear-gradient(135deg,#8d5080,#7a3f6d)" : MODUS_SNEL.knop, color: opNaam ? "#fff" : MODUS_SNEL.knopTekst, boxShadow: "none" }}>{L.toDrinksBtn}</button>
         </div>
       </div></div>
     )
   }
+
 
   if (view === "order") {
     // Zoeken gaat OVER de categorieën heen en negeert de korte lijst — anders zoek je
@@ -7450,7 +7481,7 @@ export default function PartyTest() {
               onClick={() => setView("fairSetup")}>{L.backToNames}</button>
           </div>
         )}
-        {settle && unassignedAllRounds > 0 && firstUnassignedIdx >= 0 && (
+        {(settle || opNaam) && unassignedAllRounds > 0 && firstUnassignedIdx >= 0 && (
           <div style={{ ...S.card, background: "rgba(224,104,92,0.08)", border: "1.5px solid rgba(224,104,92,0.45)" }}>
             {fromQuick && stapBalk(2)}
             <div style={{ fontSize: 15.5, fontWeight: 800, color: "#b0402f", marginBottom: 4 }}>{L.unassignedHub(unassignedAllRounds)}</div>
@@ -7707,7 +7738,7 @@ export default function PartyTest() {
         })}
 
         </>)}
-        {!fromQuick && paidCount > 0 && laatsteRondjeKlaar() && !(settle && unassignedAllRounds > 0) && <>
+        {!fromQuick && paidCount > 0 && laatsteRondjeKlaar() && !((settle || opNaam) && unassignedAllRounds > 0) && <>
           <div style={{ display: "flex", gap: 10 }}>
             <button style={{ ...S.btn, flex: 1 }} onClick={goFinal}>{L.settleBtn}</button>
             <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (unfinishedRound) resumeRound(); else nextRound() }}>{unfinishedRound ? L.continueRound(roundNr) : "➕ Nieuw rondje"}</button>
@@ -8241,6 +8272,12 @@ export default function PartyTest() {
           <>
             {/* Gelijkwaardig: doorgaan of stoppen. Goud voor het rondje, inktblauw voor
                 de afrekening — rood en oranje zouden als waarschuwing lezen. */}
+            {!settle && opNaam && unassignedAllRounds > 0 && (
+              <div onClick={() => setShowAssignAll(true)}
+                style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.4)", borderRadius: 10, padding: "10px 12px", marginTop: 14, fontSize: 13.5, fontWeight: 800, color: "#b0402f", textAlign: "center", cursor: "pointer" }}>
+                {L.someUnassigned(unassignedAllRounds)} — <u>{L.tapToAssign}</u>
+              </div>
+            )}
             {/* Afrekenen links, nieuw rondje rechts: doorgaan staat aan de kant waar je
                 duim zit. */}
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
