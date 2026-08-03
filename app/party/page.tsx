@@ -4346,6 +4346,12 @@ export default function PartyTest() {
     },
   })
   const cancelRound = () => setConfirmDlg({ msg: `Het volledige rondje ${roundNr} annuleren? Alle drankjes en bekers van dit rondje worden verwijderd. Dit kan niet ongedaan gemaakt worden.`, yes: L.yesCancel, onYes: () => { const remaining = rounds.length - 1; setRounds((rs) => rs.slice(0, -1)); setPaidConfirmed(false); setConfirmDlg(null); if (remaining > 0) { setOpenRound(remaining - 1); setView("hub") } else setView("order") } })
+  // Na de eindbalans verder als uitgebreid: kwam je via de Fair Split-stappen (settle
+  // aan), dan gaat de schakelaar terug — de rondjes zijn in beide modi identiek.
+  const terugNaarUitgebreid = () => {
+    if (settle) { setSettle(false); persistSettings({ settle: false }) }
+    setFromQuick(false)
+  }
   const nextRound = () => {
     if (blockIfUnpaid()) return
     setActiveCat(catsPresent[0])
@@ -5406,11 +5412,15 @@ export default function PartyTest() {
     // dat zonder plaats te kosten, en bij Fair Split kan er rechts bij waar je zit in het
     // traject — die modus loopt door drie stappen, snelle rondjes niet.
     const modus = settle ? MODUS_FAIR : MODUS_SNEL
+    // De eindbalans van een uitgebreid-sessie draagt de uitgebreid-kop, óók als de route
+    // via de Fair Split-stappen liep en settle daardoor aanstond: qua beleving blijft
+    // het "ik bestel voor de groep".
+    const alsUitgebreid = opNaam === true && (!settle || view === "final")
     return (
     <div style={{ marginBottom: 12 }}>
       {/* Bij uitgebreid opnemen geen aparte statusbalk: de tekst staat rechts op de
           Rundo Party-regel. */}
-      {!!groupId && !kaal && !(opNaam === true && !settle) && (
+      {!!groupId && !kaal && !alsUitgebreid && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: modus.knop, borderRadius: "14px 14px 0 0", padding: "10px 15px", marginBottom: 10 }}>
           <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, flex: 1, minWidth: 0 }}>
             {settle ? (<>
@@ -5432,7 +5442,7 @@ export default function PartyTest() {
         </div>
         {/* Op het instelscherm staat geen ondertitel: de tagline staat al op het
             startscherm, en hier telt elke pixel voor de twee keuzekaarten. */}
-        {!!groupId && !kaal && !(settle && potContribTotal <= 0.005) && !(opNaam === true && !settle) && (
+        {!!groupId && !kaal && !(settle && potContribTotal <= 0.005) && !alsUitgebreid && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginTop: 9 }}>
             {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. */}
             {potKnopje()}
@@ -5441,13 +5451,13 @@ export default function PartyTest() {
         </div>
         {/* Uitgebreid opnemen: rechts naast Rundo Party staat gewoon leesbaar wat je
             aan het doen bent — geen aparte balk, geen fade. */}
-        {opNaam === true && !settle && !!groupId && !kaal && (
+        {alsUitgebreid && !!groupId && !kaal && (
           <div style={{ flexShrink: 1, minWidth: 0, marginTop: 11, display: "inline-flex", alignItems: "center", gap: 6, color: "#c98a00", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden" }}>
             <GsmIcoon size={17} kleur="#c98a00" lijnen />
             <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{L.modeQuickShort}</span>
           </div>
         )}
-        {!(opNaam === true && !settle) && !!groupId && !kaal && groupName.trim() && !editName && (
+        {!alsUitgebreid && !!groupId && !kaal && groupName.trim() && !editName && (
           <div style={{ textAlign: "right", minWidth: 0, flexShrink: 0, maxWidth: "52%" }}>
             <div onClick={() => { if (!onboarding) setEditName(true) }} style={{ cursor: onboarding ? "default" : "pointer", fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {!settle && isAutoNaam(groupName) ? (
@@ -5465,7 +5475,7 @@ export default function PartyTest() {
           en de navigatieknoppen, met de pot-geldzak rechts op dezelfde hoogte — één vaste
           plek op elk scherm. Het plaatje blijft optisch gecentreerd; 55% breedte houdt
           lange namen van de geldzak weg. */}
-      {opNaam === true && !settle && !!groupId && !kaal && (
+      {alsUitgebreid && !!groupId && !kaal && (
         <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", margin: "10px 0", minHeight: 38 }}>
           {groupName.trim() && !editName && (
             <span onClick={() => { if (!onboarding) setEditName(true) }}
@@ -8921,15 +8931,20 @@ export default function PartyTest() {
 
       {/* Kwam je hier via de drie stappen, dan moet de weg terug even netjes zijn als de
           weg heen: van de eindbalans naar stap 3, en van daar verder achteruit. */}
-      {fromQuick && (
+      {fromQuick && opNaam !== true && (
         <button style={{ ...S.btn, width: "100%", marginTop: 12, fontSize: 15, fontWeight: 700, color: "#8a7d55" }}
           onClick={() => setView("payers")}>{L.backToPayers}</button>
       )}
-      {/* Kwam je hier rechtstreeks vanuit uitgebreid opnemen, dan is het overzicht de
-          logische weg terug — niet de Fair Split-stappen. */}
-      {!settle && opNaam === true && (
-        <button style={{ ...S.btn, width: "100%", marginTop: 12, fontSize: 15, fontWeight: 700, color: "#8a7d55" }}
-          onClick={() => { setOverviewBackTo("hub"); setView("roundsOverview") }}>{L.backToOverview}</button>
+      {/* Vanuit uitgebreid opnemen zijn er maar twee logische vervolgstappen: terugkijken
+          in het overzicht, of doordrinken met een nieuw rondje. Liep de route via de
+          Fair Split-stappen, dan gaat de modus eerst stilletjes terug. */}
+      {opNaam === true && (
+        <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+          <button style={{ ...S.btn, flex: 1, fontSize: 15, fontWeight: 800 }}
+            onClick={() => { terugNaarUitgebreid(); setOverviewBackTo("hub"); setView("roundsOverview") }}>{L.roundsOverview}</button>
+          <button style={{ ...S.btnP, flex: 1, fontSize: 15, fontWeight: 800 }}
+            onClick={() => { terugNaarUitgebreid(); nextRound() }}>{L.newRoundBtn}</button>
+        </div>
       )}
 
     </div></div>
