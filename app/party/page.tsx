@@ -6767,6 +6767,10 @@ export default function PartyTest() {
               <span style={{ fontSize: 14, color: "#8a5e0f", lineHeight: 1.45 }}>{L.fillInLater}</span>
             </div>
           )}
+          {/* De startknop hoort bij de gekozen snel-kaart en staat er daarom binnenin:
+              zo grenst de kaartrand altijd direct aan de "of" en landt die cirkel netjes
+              op de twee kaartranden in plaats van half over de knop. */}
+          {aan && id === false && doorKnop()}
           {!aan && (
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               {teken}
@@ -6791,7 +6795,6 @@ export default function PartyTest() {
 
           {kaart(false, L.fastestTag, L.modeSnelTitle, [L.qNoNames, L.qStep2, L.qStep3], "#e8a812", "rgba(232,168,18,0.5)", "rgba(240,165,0,0.09)",
             <BonIcoon size={58} kleur="#e8a812" />, <BonIcoon size={44} kleur="#e8a812" />)}
-          {opNaam === false && doorKnop()}
 
           {/* De "of" hangt half over de kaartranden in plaats van op een eigen regel:
               dat spaart ruim dertig pixels en versterkt juist het keuzegevoel. */}
