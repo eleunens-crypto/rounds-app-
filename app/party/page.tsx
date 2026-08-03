@@ -5339,14 +5339,8 @@ export default function PartyTest() {
           <RundoLogo size={40} />
           <div style={{ ...S.h1, fontSize: 21, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
         </div>
-        {/* Op het instelscherm ligt de modus nog niet vast; dan vertelt de ondertitel
-            waar je bent, in plaats van een groepsnaam die nog niets voorstelt. */}
-        {kaal && (
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 7 }}>
-            <KlinkIcoon size={26} />
-            <span style={{ fontSize: 13.5, color: "#8a7d55", lineHeight: 1.35 }}>{L.tagline}</span>
-          </div>
-        )}
+        {/* Op het instelscherm staat geen ondertitel: de tagline staat al op het
+            startscherm, en hier telt elke pixel voor de twee keuzekaarten. */}
         {!!groupId && !kaal && !(settle && potContribTotal <= 0.005) && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginTop: 9 }}>
             {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. */}
@@ -6758,7 +6752,7 @@ export default function PartyTest() {
           {aan && (
             <div style={{ display: "flex", gap: 11, alignItems: "center", background: "rgba(255,255,255,0.72)", borderRadius: 10, padding: "8px 11px", marginBottom: id === false ? 9 : 0 }}>
               <span style={{ flexShrink: 0, display: "flex" }}>{tekenKlein}</span>
-              <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#6b5f3a", lineHeight: 1.4 }}>
+              <div style={{ flex: 1, minWidth: 0, fontSize: 14, color: "#6b5f3a", lineHeight: 1.4 }}>
                 {punten.map((t, n2) => (
                   <div key={n2} style={{ display: "flex", gap: 6, marginBottom: n2 < punten.length - 1 ? 3 : 0 }}>
                     <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>{t}
@@ -6770,13 +6764,13 @@ export default function PartyTest() {
           {aan && id === false && (
             <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "rgba(255,255,255,0.78)", borderRadius: 10, padding: "9px 11px" }}>
               <span style={{ flexShrink: 0 }}>💡</span>
-              <span style={{ fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.45 }}>{L.fillInLater}</span>
+              <span style={{ fontSize: 14, color: "#8a5e0f", lineHeight: 1.45 }}>{L.fillInLater}</span>
             </div>
           )}
           {!aan && (
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               {teken}
-              <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: "#6b5f3a", lineHeight: 1.4 }}>
+              <div style={{ flex: 1, minWidth: 0, fontSize: 15, color: "#6b5f3a", lineHeight: 1.4 }}>
                 {punten.map((t, n2) => (
                   <div key={n2} style={{ display: "flex", gap: 7, marginBottom: n2 < punten.length - 1 ? 4 : 0 }}>
                     <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>{t}
@@ -6799,10 +6793,10 @@ export default function PartyTest() {
             <BonIcoon size={58} kleur="#e8a812" />, <BonIcoon size={44} kleur="#e8a812" />)}
           {opNaam === false && doorKnop()}
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "11px 0" }}>
-            <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(120,95,20,0.25)" }} />
-            <span style={{ flexShrink: 0, width: 38, height: 38, borderRadius: "50%", background: "#6b5f3a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff", boxShadow: "0 4px 12px -5px rgba(107,95,58,0.7)" }}>{L.orWord}</span>
-            <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(120,95,20,0.25)" }} />
+          {/* De "of" hangt half over de kaartranden in plaats van op een eigen regel:
+              dat spaart ruim dertig pixels en versterkt juist het keuzegevoel. */}
+          <div style={{ display: "flex", justifyContent: "center", margin: "-12px 0", position: "relative", zIndex: 2 }}>
+            <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: "50%", background: "#6b5f3a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff", border: "3px solid #fff", boxSizing: "content-box", boxShadow: "0 4px 12px -5px rgba(107,95,58,0.7)" }}>{L.orWord}</span>
           </div>
 
           {kaart(true, L.fairShareTag, L.modeNaamTitle, [L.modeNaamSub, L.nOnName, L.nStep3], "#7a3f6d", "rgba(122,63,109,0.42)", "rgba(122,63,109,0.09)",
@@ -6810,15 +6804,15 @@ export default function PartyTest() {
 
           {opNaam === true && (
             <div style={{ border: "1.5px solid rgba(122,63,109,0.3)", background: "rgba(122,63,109,0.05)", borderRadius: 12, padding: 12, marginTop: 11 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 800, color: "#7a3f6d", marginBottom: 5 }}>{L.groupNamePlain.toUpperCase()} {ster}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#7a3f6d", marginBottom: 5 }}>{L.groupNamePlain.toUpperCase()} {ster}</div>
               <input value={isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()}
                 placeholder={L.tapToChangePh}
-                style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: "9px 11px", fontSize: 14, textAlign: "left" }} />
-              <div style={{ fontSize: 11, color: "#a89a6f", margin: "3px 0 11px" }}>{L.nowWord} {isAutoNaam(groupName) ? groupName.trim() : L.autoName()}</div>
+                style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: "9px 11px", fontSize: 15.5, textAlign: "left" }} />
+              <div style={{ fontSize: 12.5, color: "#a89a6f", margin: "3px 0 11px" }}>{L.nowWord} {isAutoNaam(groupName) ? groupName.trim() : L.autoName()}</div>
 
-              <div style={{ fontSize: 11.5, fontWeight: 800, color: "#7a3f6d", marginBottom: 5 }}>{L.howManyLabel.toUpperCase()} {ster}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#7a3f6d", marginBottom: 5 }}>{L.howManyLabel.toUpperCase()} {ster}</div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", borderRadius: 10, padding: "8px 11px", marginBottom: 11 }}>
-                <span style={{ fontSize: 13.5, fontWeight: 800, color: "#7a3f6d" }}>{L.howManyAreYou}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: "#7a3f6d" }}>{L.howManyAreYou}</span>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                   <button onClick={removeLastPerson} disabled={busy || people.length <= 1} style={{ ...S.step, width: 26, height: 26, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
                   <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", minWidth: 18, textAlign: "center" }}>{people.length}</span>
@@ -6826,23 +6820,23 @@ export default function PartyTest() {
                 </span>
               </div>
 
-              <div style={{ fontSize: 11.5, fontWeight: 800, color: "#7a3f6d", marginBottom: 6 }}>{L.namesLabel.toUpperCase()} {ster}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#7a3f6d", marginBottom: 6 }}>{L.namesLabel.toUpperCase()} {ster}</div>
               <div style={{ position: "relative", marginBottom: 4 }}>
                 <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><KroonIcoon size={19} kleur="#8a5e0f" gevuld /></span>
                 <input value={ik && !isGuestDefault(ik.name) ? ik.name : ""} onChange={(e) => { if (meId) renamePerson(meId, e.target.value) }}
                   placeholder={L.yourNamePh}
-                  style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "10px 12px 10px 40px", fontSize: 14.5, textAlign: "left", fontWeight: 700,
+                  style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "10px 12px 10px 40px", fontSize: 15.5, textAlign: "left", fontWeight: 700,
                     background: "rgba(240,165,0,0.12)", border: `2px solid ${eigenNaamLeeg ? "#c0554a" : "#e8a812"}`, color: "#8a5e0f" }} />
               </div>
-              <div style={{ fontSize: 11.5, color: "#8a5e0f", fontWeight: 700, margin: "0 0 9px 4px" }}>{L.youAreAdmin}</div>
+              <div style={{ fontSize: 13, color: "#8a5e0f", fontWeight: 700, margin: "0 0 9px 4px" }}>{L.youAreAdmin}</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 {people.filter((pp) => pp.id !== meId).map((pp, idx) => (
                   <input key={pp.id} value={isGuestDefault(pp.name) ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)}
                     placeholder={`✏️ ${L.guestN(idx + 2)}`}
-                    style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: "8px 10px", fontSize: 13.5, textAlign: "left" }} />
+                    style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: "8px 10px", fontSize: 15, textAlign: "left" }} />
                 ))}
               </div>
-              {people.length < 2 && <div style={{ fontSize: 12.5, color: "#b0402f", fontWeight: 700, marginTop: 8 }}>{L.needOneMore}</div>}
+              {people.length < 2 && <div style={{ fontSize: 14, color: "#b0402f", fontWeight: 700, marginTop: 8 }}>{L.needOneMore}</div>}
             </div>
           )}
           {opNaam === true && doorKnop()}
