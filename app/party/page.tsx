@@ -133,12 +133,17 @@ function MicroIcoon({ size = 18, kleur = "#8a5e0f" }: { size?: number; kleur?: s
   )
 }
 
-function KroonIcoon({ size = 15, kleur = "#0a6070" }: { size?: number; kleur?: string }) {
+function KroonIcoon({ size = 15, kleur = "#0a6070", gevuld = false }: { size?: number; kleur?: string; gevuld?: boolean }) {
+  // Strakke kroon met ronde punten en losse stippen: moderner dan de klassieke
+  // gekartelde vorm, en op klein formaat nog steeds herkenbaar.
   return (
     <svg viewBox="0 0 24 20" width={size} height={size * 0.83} fill="none" stroke={kleur}
-      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
-      <path d="M3 15.5 2 5.5l5.5 4L12 3l4.5 6.5L22 5.5l-1 10z" />
-      <path d="M3 18.5h18" />
+      strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path d="M3.4 15.6 2.6 7.4l5 3.4 4.4-6 4.4 6 5-3.4-.8 8.2z" fill={gevuld ? kleur : "none"} opacity={gevuld ? 0.18 : 1} stroke={kleur} />
+      <circle cx="2.6" cy="5.6" r="1.5" fill={kleur} stroke="none" />
+      <circle cx="12" cy="3.4" r="1.6" fill={kleur} stroke="none" />
+      <circle cx="21.4" cy="5.6" r="1.5" fill={kleur} stroke="none" />
+      <path d="M4 18.6h16" />
     </svg>
   )
 }
@@ -563,9 +568,7 @@ const T = {
     noteNamedTitle2: "👤 Op naam noteren",
     withNamesBtn: "⚖️ op naam noteren",
     addNameBtn: "+ naam",
-    whoJoinsTitle: "Wie doet er mee?",
     toDrinksBtn: "Naar de drankjes →",
-    adminNamePh: "Jouw naam (beheerder)",
     guestN: (n: number) => `Gast ${n}`,
     yourNameRequired: "Vul eerst je eigen naam in — anders weet niemand van wie de drankjes zijn.",
     perPersonBtn: "👥 Per persoon aantikken",
@@ -925,7 +928,13 @@ const T = {
     chooseHow: "Kies hoe je wil bestellen",
     youNoteSelf: "Jij noteert zelf voor iedereen",
     fairShareTag: "EERLIJK VERDELEN",
-    fairLaterToo: "Ook vanuit snel opnemen kan je achteraf nog eerlijk verdelen.",
+    qNoNames: "Geen namen nodig",
+    nOnName: "Drankjes op naam noteren",
+    howManyLabel: "Aantal personen",
+    namesLabel: "Namen",
+    youAreAdmin: "jij bent de beheerder van deze groep",
+    pickOneFirst: "Kies er één om verder te gaan",
+    fillInLater: "Groepsnaam en personen kan je later nog aanvullen — ook eerlijk verdelen kan achteraf.",
     tapToChangePh: "✏️ Tik om te wijzigen",
     groupNameRequired: "Geef de groep eerst een naam.",
     needOneMore: "Zet er minstens één persoon bij — anders valt er niets te verdelen.",
@@ -1210,9 +1219,7 @@ const T = {
     noteNamedTitle2: "👤 Noter au nom",
     withNamesBtn: "⚖️ noter au nom",
     addNameBtn: "+ nom",
-    whoJoinsTitle: "Qui participe ?",
     toDrinksBtn: "Vers les boissons →",
-    adminNamePh: "Ton nom (hôte)",
     guestN: (n: number) => `Invité ${n}`,
     yourNameRequired: "Indique d’abord ton nom — sinon on ne sait pas à qui sont les boissons.",
     perPersonBtn: "👥 Coche par personne",
@@ -1573,7 +1580,13 @@ const T = {
     chooseHow: "Choisissez comment commander",
     youNoteSelf: "Tu notes toi-même pour tous",
     fairShareTag: "PARTAGE ÉQUITABLE",
-    fairLaterToo: "Même en notant vite, tu peux encore partager équitablement plus tard.",
+    qNoNames: "Pas besoin de noms",
+    nOnName: "Noter les boissons au nom",
+    howManyLabel: "Nombre de personnes",
+    namesLabel: "Noms",
+    youAreAdmin: "tu es le gestionnaire de ce groupe",
+    pickOneFirst: "Choisis-en un pour continuer",
+    fillInLater: "Le nom du groupe et les personnes, tu peux les ajouter plus tard — le partage équitable aussi.",
     tapToChangePh: "✏️ Touche pour modifier",
     groupNameRequired: "Donne d’abord un nom au groupe.",
     needOneMore: "Ajoute au moins une personne — sinon il n’y a rien à partager.",
@@ -2395,7 +2408,8 @@ export default function PartyTest() {
   const [voorWieRaw, setVoorWieRaw] = useState<string | null>(null)
   // Noteer je op naam? In Fair Split altijd; in "ik bestel voor de groep" is het een
   // keuze die je bij de start maakt en daarna kan omzetten.
-  const [opNaam, setOpNaam] = useState(false)
+  // null = nog niets gekozen, false = snel, true = uitgebreid.
+  const [opNaam, setOpNaam] = useState<boolean | null>(false)
   const [noteerKeuze, setNoteerKeuze] = useState(false)
   // Koos je "op naam", dan zet je eerst de namen. Daarna verdwijnt dit scherm.
   const [namenSetup, setNamenSetup] = useState(false)
@@ -3341,7 +3355,7 @@ export default function PartyTest() {
   const startWithMode = async (fallbackNaam?: string, modus?: boolean) => {
     // De keuze snel-of-op-naam staat al op het keuzescherm; het losse venster erna is
     // daardoor overbodig geworden.
-    if (modus === false) { setOpNaam(false); setNamenSetup(true) }
+    if (modus === false) { setOpNaam(null); setNamenSetup(true) }
     const keuze = modus ?? bpSettle
     if (keuze === null || keuze === undefined) return
     const wilSettle = keuze === true
@@ -6695,98 +6709,113 @@ export default function PartyTest() {
 
   // ── ORDER ───────────────────────────────────────────────────────────────────
   // Namen zetten voor je op naam gaat noteren. Overslaan kan: dan wijs je later toe.
-  // Instelscherm na "jij noteert": groepsnaam en jouw naam zijn altijd nodig. Daaronder
-  // kies je snel of uitgebreid; bij uitgebreid klappen de namen open en zijn die ook
-  // verplicht, want anders kan de eerlijke verdeling niet kloppen.
+  // Instelscherm na "jij noteert". Snel opnemen staat bovenaan en vraagt niets: dat is
+  // de belofte van die kaart. Bij uitgebreid klappen groepsnaam, aantal en namen open,
+  // want zonder die drie kan de eerlijke verdeling niet kloppen.
   if (view === "order" && !settle && namenSetup) {
     const ik = people.find((p) => p.id === meId)
     const eigenNaamLeeg = !ik || isGuestDefault(ik.name) || !ik.name.trim()
     const naamLeeg = isAutoNaam(groupName) || !groupName.trim()
-    const klaarOmDoor = !eigenNaamLeeg && !naamLeeg && (!opNaam || people.length > 1)
+    const gekozen = opNaam !== null
+    const klaarOmDoor = gekozen && (opNaam === false || (!eigenNaamLeeg && !naamLeeg && people.length > 1))
     const ster = <span style={{ color: "#c0554a" }}>*</span>
+    const kaart = (id: boolean, tag: string, titel: string, punten: string[], top: string, rand: string, vlak: string, teken: React.ReactNode) => {
+      const aan = opNaam === id
+      // De gekozen kaart klapt zijn tekening en vinkjes weg: die heeft z'n werk gedaan,
+      // en zo blijft er ruimte voor wat er onder verschijnt.
+      return (
+        <div onClick={() => setOpNaam(id)}
+          style={{ position: "relative", overflow: "hidden", cursor: "pointer", borderRadius: 12, padding: aan ? 11 : "11px 11px 12px",
+            background: aan ? vlak : "#fff", border: `${aan ? 2.5 : 1.5}px solid ${aan ? top : rand}`, borderTop: `3px solid ${top}`,
+            opacity: gekozen && !aan ? 0.62 : 1 }}>
+          <span style={{ position: "absolute", top: 0, right: 0, background: top, color: "#fff", borderRadius: "0 0 0 10px", padding: "3px 8px 4px 10px", fontSize: 9.5, fontWeight: 800 }}>{tag}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: aan ? 0 : 8 }}>
+            <span style={{ flexShrink: 0, width: 19, height: 19, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800,
+              background: aan ? top : "transparent", border: aan ? "none" : `2.5px solid ${rand}`, color: "#fff" }}>{aan ? "✓" : ""}</span>
+            {!aan && teken}
+            <span style={{ fontSize: 16, fontWeight: 800, color: top, lineHeight: 1.15 }}>{titel}</span>
+          </div>
+          {!aan && (
+            <div style={{ fontSize: 12.5, color: "#6b5f3a", lineHeight: 1.4, paddingLeft: 29 }}>
+              {punten.map((t, n2) => (
+                <div key={n2} style={{ display: "flex", gap: 6, marginBottom: n2 < punten.length - 1 ? 2 : 0 }}>
+                  <span style={{ color: "#1f8a4c", fontWeight: 800 }}>✓</span>{t}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )
+    }
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header verbergNav />
         {showPot && renderPotModal()}
         {renderDialogs()}
         <div style={S.card}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", letterSpacing: "0.04em", marginBottom: 5 }}>{L.groupNamePlain.toUpperCase()} {ster}</div>
-          <input value={isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()}
-            placeholder={L.tapToChangePh}
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "11px 12px", fontSize: 15, textAlign: "left" }} />
-          <div style={{ fontSize: 11.5, color: "#a89a6f", marginTop: 4, marginBottom: 12 }}>{L.nowWord} {isAutoNaam(groupName) ? groupName.trim() : L.autoName()}</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: "#3d3418", marginBottom: 12 }}>{L.howNoteTitle}</div>
 
-          <div style={{ fontSize: 12, fontWeight: 800, color: "#8a7d55", letterSpacing: "0.04em", marginBottom: 5 }}>{L.adminNamePh.toUpperCase()} {ster}</div>
-          <div style={{ position: "relative", marginBottom: 16 }}>
-            <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><KroonIcoon size={12} kleur="#8a5e0f" /></span>
-            <input value={ik && !isGuestDefault(ik.name) ? ik.name : ""} onChange={(e) => { if (meId) renamePerson(meId, e.target.value) }}
-              placeholder={L.yourNamePh}
-              style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "11px 40px 11px 26px", fontSize: 15, textAlign: "left", fontWeight: 700,
-                background: "rgba(240,165,0,0.08)", border: `1.5px solid ${eigenNaamLeeg ? "#c0554a" : "#e8a812"}`, color: "#8a5e0f" }} />
-            <span style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "#e8a812", color: "#fff", borderRadius: 8, padding: "2px 6px", fontSize: 10, fontWeight: 800, pointerEvents: "none" }}>{L.youBadge}</span>
+          {kaart(false, L.fastestTag, L.modeSnelTitle, [L.qNoNames, L.qStep2, L.qStep3], "#e8a812", "rgba(232,168,18,0.5)", "rgba(240,165,0,0.09)",
+            <BonIcoon size={33} kleur="#e8a812" />)}
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "11px 0" }}>
+            <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(120,95,20,0.25)" }} />
+            <span style={{ flexShrink: 0, width: 38, height: 38, borderRadius: "50%", background: "#6b5f3a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff", boxShadow: "0 4px 12px -5px rgba(107,95,58,0.7)" }}>{L.orWord}</span>
+            <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(120,95,20,0.25)" }} />
           </div>
 
-          <div style={{ fontSize: 15, fontWeight: 800, color: "#3d3418", marginBottom: 9 }}>{L.howNoteTitle}</div>
-          <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: 11 }}>
-            {([
-              { id: true, tag: L.fairShareTag, titel: L.modeNaamTitle, punten: [L.modeNaamSub, L.nStep3], top: "#7a3f6d", rand: "rgba(122,63,109,0.42)", vlak: "rgba(122,63,109,0.07)" },
-              { id: false, tag: L.fastestTag, titel: L.modeSnelTitle, punten: [L.qStep1, L.qStep2], top: "#e8a812", rand: "rgba(232,168,18,0.5)", vlak: "rgba(240,165,0,0.07)" },
-            ]).map((k) => {
-              const aan = opNaam === k.id
-              return (
-                <div key={String(k.id)} onClick={() => setOpNaam(k.id)}
-                  style={{ flex: 1, minWidth: 0, position: "relative", overflow: "hidden", cursor: "pointer", borderRadius: 12, padding: "10px 8px",
-                    background: aan ? k.vlak : "#fff", border: `${aan ? 2.5 : 1.5}px solid ${aan ? k.top : k.rand}`, borderTop: `3px solid ${k.top}`,
-                    opacity: aan ? 1 : 0.72 }}>
-                  <span style={{ position: "absolute", top: 0, right: 0, background: k.top, color: "#fff", borderRadius: "0 0 0 10px", padding: "3px 7px 4px 9px", fontSize: 9, fontWeight: 800 }}>{k.tag}</span>
-                  <span style={{ position: "absolute", top: 6, left: 6, width: 17, height: 17, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800,
-                    background: aan ? k.top : "transparent", border: aan ? "none" : `2.5px solid ${k.rand}`, color: "#fff" }}>{aan ? "✓" : ""}</span>
-                  <span style={{ display: "flex", justifyContent: "center", margin: "23px 0 7px" }}>
-                    {k.id ? <NamenIcoon size={66} kleur="#7a3f6d" /> : <BonIcoon size={37} kleur="#e8a812" />}
-                  </span>
-                  <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, color: k.top, textAlign: "center", lineHeight: 1.15, marginBottom: 7 }}>{k.titel}</span>
-                  {k.punten.map((t, n2) => (
-                    <span key={n2} style={{ display: "flex", gap: 5, alignItems: "flex-start", marginBottom: n2 === 0 ? 3 : 0 }}>
-                      <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 11 }}>✓</span>
-                      <span style={{ fontSize: 11, color: "#6b5f3a", lineHeight: 1.4 }}>{t}</span>
-                    </span>
-                  ))}
-                </div>
-              )
-            })}
-          </div>
+          {kaart(true, L.fairShareTag, L.modeNaamTitle, [L.modeNaamSub, L.nOnName, L.nStep3], "#7a3f6d", "rgba(122,63,109,0.42)", "rgba(122,63,109,0.09)",
+            <NamenIcoon size={60} kleur="#7a3f6d" />)}
 
-          {opNaam ? (
-            <div style={{ border: "1.5px solid rgba(122,63,109,0.3)", background: "rgba(122,63,109,0.05)", borderRadius: 12, padding: 12, marginBottom: 13 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#7a3f6d", marginBottom: 9 }}>{L.whoJoinsTitle.toUpperCase()} {ster}</div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", borderRadius: 10, padding: "9px 11px", marginBottom: 10 }}>
+          {opNaam === true && (
+            <div style={{ border: "1.5px solid rgba(122,63,109,0.3)", background: "rgba(122,63,109,0.05)", borderRadius: 12, padding: 12, marginTop: 11 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 800, color: "#7a3f6d", marginBottom: 5 }}>{L.groupNamePlain.toUpperCase()} {ster}</div>
+              <input value={isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()}
+                placeholder={L.tapToChangePh}
+                style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: "9px 11px", fontSize: 14, textAlign: "left" }} />
+              <div style={{ fontSize: 11, color: "#a89a6f", margin: "3px 0 11px" }}>{L.nowWord} {isAutoNaam(groupName) ? groupName.trim() : L.autoName()}</div>
+
+              <div style={{ fontSize: 11.5, fontWeight: 800, color: "#7a3f6d", marginBottom: 5 }}>{L.howManyLabel.toUpperCase()} {ster}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", borderRadius: 10, padding: "8px 11px", marginBottom: 11 }}>
                 <span style={{ fontSize: 13.5, fontWeight: 800, color: "#7a3f6d" }}>{L.howManyAreYou}</span>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                  <button onClick={removeLastPerson} disabled={busy || people.length <= 1} style={{ ...S.step, width: 28, height: 28, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
+                  <button onClick={removeLastPerson} disabled={busy || people.length <= 1} style={{ ...S.step, width: 26, height: 26, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
                   <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", minWidth: 18, textAlign: "center" }}>{people.length}</span>
-                  <button onClick={addPerson} disabled={busy} style={{ ...S.step, width: 28, height: 28, background: "#7a3f6d", color: "#fff", border: "none" }}>+</button>
+                  <button onClick={addPerson} disabled={busy} style={{ ...S.step, width: 26, height: 26, background: "#7a3f6d", color: "#fff", border: "none" }}>+</button>
                 </span>
               </div>
+
+              <div style={{ fontSize: 11.5, fontWeight: 800, color: "#7a3f6d", marginBottom: 6 }}>{L.namesLabel.toUpperCase()} {ster}</div>
+              <div style={{ position: "relative", marginBottom: 4 }}>
+                <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><KroonIcoon size={19} kleur="#8a5e0f" gevuld /></span>
+                <input value={ik && !isGuestDefault(ik.name) ? ik.name : ""} onChange={(e) => { if (meId) renamePerson(meId, e.target.value) }}
+                  placeholder={L.yourNamePh}
+                  style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "10px 12px 10px 40px", fontSize: 14.5, textAlign: "left", fontWeight: 700,
+                    background: "rgba(240,165,0,0.12)", border: `2px solid ${eigenNaamLeeg ? "#c0554a" : "#e8a812"}`, color: "#8a5e0f" }} />
+              </div>
+              <div style={{ fontSize: 11.5, color: "#8a5e0f", fontWeight: 700, margin: "0 0 9px 4px" }}>{L.youAreAdmin}</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 {people.filter((pp) => pp.id !== meId).map((pp, idx) => (
                   <input key={pp.id} value={isGuestDefault(pp.name) ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)}
                     placeholder={`✏️ ${L.guestN(idx + 2)}`}
-                    style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: "9px 10px", fontSize: 13.5, textAlign: "left" }} />
+                    style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: "8px 10px", fontSize: 13.5, textAlign: "left" }} />
                 ))}
               </div>
               {people.length < 2 && <div style={{ fontSize: 12.5, color: "#b0402f", fontWeight: 700, marginTop: 8 }}>{L.needOneMore}</div>}
             </div>
-          ) : (
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", background: "rgba(240,165,0,0.12)", borderRadius: 10, padding: "9px 11px", marginBottom: 13 }}>
+          )}
+
+          {opNaam === false && (
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", background: "rgba(240,165,0,0.12)", borderRadius: 10, padding: "9px 11px", marginTop: 11 }}>
               <span style={{ flexShrink: 0 }}>💡</span>
-              <span style={{ fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.45 }}>{L.fairLaterToo}</span>
+              <span style={{ fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.45 }}>{L.fillInLater}</span>
             </div>
           )}
 
-          {eigenNaamLeeg && <div style={{ fontSize: 13, color: "#b0402f", fontWeight: 700, marginBottom: 9, lineHeight: 1.45 }}>{L.yourNameRequired}</div>}
-          <button onClick={() => { if (!klaarOmDoor) { setNotice(eigenNaamLeeg ? L.yourNameRequired : naamLeeg ? L.groupNameRequired : L.needOneMore); return } setNamenSetup(false) }}
-            style={{ ...S.btnP, width: "100%", padding: "14px 0", fontSize: 16.5, fontWeight: 800, opacity: klaarOmDoor ? 1 : 0.5,
-              background: opNaam ? "linear-gradient(135deg,#8d5080,#7a3f6d)" : MODUS_SNEL.knop, color: opNaam ? "#fff" : MODUS_SNEL.knopTekst, boxShadow: "none" }}>{L.toDrinksBtn}</button>
+          <button onClick={() => { if (!klaarOmDoor) { setNotice(!gekozen ? L.pickOneFirst : eigenNaamLeeg ? L.yourNameRequired : naamLeeg ? L.groupNameRequired : L.needOneMore); return } setNamenSetup(false) }}
+            style={{ ...S.btnP, width: "100%", padding: "14px 0", fontSize: 16, fontWeight: 800, marginTop: 12, boxShadow: "none",
+              background: !gekozen ? "#f0ebdc" : opNaam ? "linear-gradient(135deg,#8d5080,#7a3f6d)" : MODUS_SNEL.knop,
+              color: !gekozen ? "#a89a6f" : opNaam ? "#fff" : MODUS_SNEL.knopTekst }}>{gekozen ? L.toDrinksBtn : L.pickOneFirst}</button>
         </div>
       </div></div>
     )
