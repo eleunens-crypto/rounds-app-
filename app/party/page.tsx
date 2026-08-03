@@ -577,6 +577,7 @@ const T = {
     stillNoName: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} nog zonder naam`,
     assignWhoSub: "Wijs toe wie wat dronk",
     inRoundTitle: "In dit rondje",
+    backToOverview: "← Terug naar rondjesoverzicht",
     busyLabel: "BEZIG",
     continueWhereYouWere: "verder waar je gebleven was →",
     namesMissing: (n: number) => `${n} ${n === 1 ? "persoon heeft" : "personen hebben"} nog geen naam. Vul die aan via ⚙️ Groep, anders staat er straks "Plaats 3" op de afrekening.`,
@@ -1234,6 +1235,7 @@ const T = {
     stillNoName: (n: number) => `${n} boisson${n === 1 ? "" : "s"} encore sans nom`,
     assignWhoSub: "Attribue qui a bu quoi",
     inRoundTitle: "Dans cette tournée",
+    backToOverview: "← Retour à l’aperçu des tournées",
     busyLabel: "EN COURS",
     continueWhereYouWere: "reprendre où tu t’es arrêté →",
     namesMissing: (n: number) => `${n} personne${n === 1 ? "" : "s"} sans nom. Complète via ⚙️ Groupe, sinon le décompte affichera « Place 3 ».`,
@@ -3548,6 +3550,7 @@ export default function PartyTest() {
     if (view === "order" && !settle && opNaam && namenSetup) { setNamenSetup(false); setOpNaam(false); return }
     if (view === "settings") { setView(settingsBackTo === "order" ? "order" : "hub"); return }
     if (view === "roundsOverview") { setView(overviewBackTo === "hub" ? "hub" : "order"); return }
+    if (view === "final" && !settle && opNaam === true) { setOverviewBackTo("hub"); setView("roundsOverview"); return }
     if (view === "confirmed" || view === "quickSettle" || view === "payers" || view === "final") { setView("hub"); return }
     goStart()
   }
@@ -4051,8 +4054,18 @@ export default function PartyTest() {
       const zonderBedrag = rounds.filter((rr) => (rr.amount || 0) <= 0.005).length
       if (paidCount > 0 && !unfinishedRound && unassignedAllRounds === 0 && naamloos === 0 && zonderBedrag === 0) {
         if (blockIfUnpaid()) return
+        // "Zelf betaald" registreerde tot nu enkel het bedrag, niet wíe betaalde. Voor
+        // een kloppende eindbalans (wie krijgt terug, wie moet bijleggen) zetten we de
+        // noteerder als betaler van het niet-pot-deel — dat is wat "zelf betaald" zegt.
+        if (meId) setRounds((rs) => rs.map((rr) => {
+          if ((rr.amount || 0) <= 0.005 || Object.keys(rr.payers || {}).length > 0) return rr
+          const rest = Math.max(0, (rr.amount || 0) - (rr.potPart || 0))
+          return rest > 0.005 ? { ...rr, payers: { [meId]: rest } } : rr
+        }))
         setHasSettled(true)
-        switchToSettle()
+        // De modus blijft uitgebreid: de eindbalans rendert dan gewoon in de eigen
+        // amber-stijl met het eigen kopje, in plaats van in Fair Split-teal.
+        setView("final")
         return
       }
     }
@@ -8911,6 +8924,12 @@ export default function PartyTest() {
       {fromQuick && (
         <button style={{ ...S.btn, width: "100%", marginTop: 12, fontSize: 15, fontWeight: 700, color: "#8a7d55" }}
           onClick={() => setView("payers")}>{L.backToPayers}</button>
+      )}
+      {/* Kwam je hier rechtstreeks vanuit uitgebreid opnemen, dan is het overzicht de
+          logische weg terug — niet de Fair Split-stappen. */}
+      {!settle && opNaam === true && (
+        <button style={{ ...S.btn, width: "100%", marginTop: 12, fontSize: 15, fontWeight: 700, color: "#8a7d55" }}
+          onClick={() => { setOverviewBackTo("hub"); setView("roundsOverview") }}>{L.backToOverview}</button>
       )}
 
     </div></div>
