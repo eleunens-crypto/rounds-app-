@@ -4205,9 +4205,9 @@ export default function PartyTest() {
   }
   const goAssignFromWarning = () => { setShowClose(false); setShowAssignAll(true) }
   const commitRound = () => {
-    // Nog drankjes zonder naam? Dat mag: toewijzen kan ook later, via het rondje in het
-    // overzicht of bij het afrekenen. We zeggen het wel even.
-    if (!settle && opNaam && unassignedTotal > 0) setNotice(L.assignLaterNote(unassignedTotal))
+    // Nog drankjes zonder naam bij uitgebreid opnemen? Geen popup meer: we sturen meteen
+    // door naar het rondjesoverzicht, waar de toewijs-melding al duidelijk staat.
+    const naarOverzicht = !settle && opNaam === true && unassignedTotal > 0
     const effGb: Record<string, number> = {}
     people.forEach((p) => { effGb[p.id] = gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id)) })
     // De haler heeft de mensen op de plaats vastgezet — reset de haler-strook voor het
@@ -4225,7 +4225,7 @@ export default function PartyTest() {
       // Per rondje bijstellen kan altijd in het rondjesoverzicht.
       const vorige = rounds.length > 0 ? Math.max(1, rounds[rounds.length - 1].headcount || 1) : 0
       const drankjesNu = drinks.reduce((s, d) => s + drinkTotal(d.id), 0)
-      const effHeadcount = settle ? headcount : (vorige > 0 ? vorige : Math.max(1, drankjesNu || headcount || 1))
+      const effHeadcount = settle ? headcount : opNaam === true ? leden.length : (vorige > 0 ? vorige : Math.max(1, drankjesNu || headcount || 1))
       supabase.from("party_rounds").update({ status: nieuweStatus, gave_back: effGb, members: leden, headcount: effHeadcount, ...(settle ? {} : { closed_at: new Date().toISOString() }) }).eq("id", openRoundId)
         .then(({ error }) => { if (error) setNotice("Rondje bevestigen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
       setOpenRoundId(null)
@@ -4234,7 +4234,7 @@ export default function PartyTest() {
     // "Gewoon rondjes" kent geen betaalscherm: het rondje is klaar, en wie gaat halen
     // krijgt de toog-lijst in de hub te zien.
     if (!settle) setLastRoundHandled(false)
-    setView(settle ? "confirmed" : "hub")
+    if (naarOverzicht) { setOverviewBackTo("hub"); setView("roundsOverview") } else setView(settle ? "confirmed" : "hub")
     setRoundNr(rounds.length + 1)
   }
   const persistPayment = (roundId: string, payers: Record<string, number>, potPart: number, total: number) => {
@@ -7422,6 +7422,9 @@ export default function PartyTest() {
             <div style={{ ...S.card }}>
               {/* Aantal personen staat er gewoon bij: geen vraag, maar wel zichtbaar zodat
                   een verandering meteen opvalt in plaats van pas bij het afrekenen. */}
+              {/* Bij uitgebreid opnemen liggen de gasten vast — dan is deze vraag zinloos
+                  en staat het aantal automatisch juist. Enkel tonen bij snel opnemen. */}
+              {opNaam !== true && (<>
               <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>{L.withHowManyQ}</div>
               <div style={{ ...S.row, justifyContent: "space-between", background: "#faf4e4", borderRadius: 10, padding: "8px 12px", marginBottom: 13 }}>
                 <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>👤 {r?.headcount || 1} {L.people}</span>
@@ -7432,6 +7435,7 @@ export default function PartyTest() {
                     onClick={() => r && setRoundHeadcount(r.id, (r.headcount || 1) + 1)}>+</button>
                 </div>
               </div>
+              </>)}
 
               {/* Staat vlak boven de knop "uit de pot", rechts uitgelijnd zodat de link
                   duidelijk bij die knop hoort. */}
@@ -8217,7 +8221,9 @@ export default function PartyTest() {
                       })}
                     </div>
 
-                    <div style={{ ...S.row, justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
+                    {/* Bij uitgebreid opnemen liggen de gasten vast; het aantal staat dan
+                        automatisch juist en hoeft hier niet getoond of bewerkt. */}
+                    {opNaam !== true && <div style={{ ...S.row, justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
                       <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>👤 {L.peopleInRound}</span>
                       {bewerk && dr ? (
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -8230,7 +8236,7 @@ export default function PartyTest() {
                       ) : (
                         <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{r.headcount || 1}</span>
                       )}
-                    </div>
+                    </div>}
 
                     {/* Waarmee betaald? Ook achteraf nog te corrigeren. */}
                     <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
