@@ -5419,7 +5419,7 @@ export default function PartyTest() {
         </div>
         {/* Op het instelscherm staat geen ondertitel: de tagline staat al op het
             startscherm, en hier telt elke pixel voor de twee keuzekaarten. */}
-        {!!groupId && !kaal && !(settle && potContribTotal <= 0.005) && !(opNaam === true && !settle && view === "order") && (
+        {!!groupId && !kaal && !(settle && potContribTotal <= 0.005) && !(opNaam === true && !settle) && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginTop: 9 }}>
             {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. */}
             {potKnopje()}
@@ -5449,15 +5449,20 @@ export default function PartyTest() {
         )}
       </div>
       {/* Uitgebreid opnemen: de groepsnaam als zwevend naamplaatje tussen de kopregel
-          en de navigatieknoppen — exact evenveel lucht erboven als eronder. */}
-      {opNaam === true && !settle && !!groupId && !kaal && groupName.trim() && !editName && (
-        <div style={{ display: "flex", justifyContent: "center", margin: "10px 0" }}>
-          <span onClick={() => { if (!onboarding) setEditName(true) }}
-            style={{ maxWidth: "72%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", cursor: onboarding ? "default" : "pointer", background: "#fff", border: "1.5px solid rgba(240,165,0,0.55)", borderRadius: 18, padding: "7px 16px", fontSize: 15, fontWeight: 800, color: "#4a3f1e", boxShadow: "0 2px 5px rgba(90,64,10,0.12)" }}>
-            {isAutoNaam(groupName) ? (
-              <span style={{ color: "#c98a00", fontWeight: 700, fontSize: 14 }}>✏️ {L.giveNameQ}</span>
-            ) : (<>{groupName.trim()}{!onboarding && <span style={{ fontSize: 12 }}> ✏️</span>}</>)}
-          </span>
+          en de navigatieknoppen, met de pot-geldzak rechts op dezelfde hoogte — één vaste
+          plek op elk scherm. Het plaatje blijft optisch gecentreerd; 55% breedte houdt
+          lange namen van de geldzak weg. */}
+      {opNaam === true && !settle && !!groupId && !kaal && (
+        <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", margin: "10px 0", minHeight: 38 }}>
+          {groupName.trim() && !editName && (
+            <span onClick={() => { if (!onboarding) setEditName(true) }}
+              style={{ maxWidth: "55%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", cursor: onboarding ? "default" : "pointer", background: "#fff", border: "1.5px solid rgba(240,165,0,0.55)", borderRadius: 18, padding: "7px 16px", fontSize: 15, fontWeight: 800, color: "#4a3f1e", boxShadow: "0 2px 5px rgba(90,64,10,0.12)" }}>
+              {isAutoNaam(groupName) ? (
+                <span style={{ color: "#c98a00", fontWeight: 700, fontSize: 14 }}>✏️ {L.giveNameQ}</span>
+              ) : (<>{groupName.trim()}{!onboarding && <span style={{ fontSize: 12 }}> ✏️</span>}</>)}
+            </span>
+          )}
+          <span style={{ position: "absolute", right: 0 }}>{potKnopje()}</span>
         </div>
       )}
       {/* De pot als brede balk onder de kop, zolang er nog niets in zit. Hij stond als
@@ -6968,8 +6973,6 @@ export default function PartyTest() {
             <span style={{ fontSize: 14, fontWeight: 600, color: "#a89a6f", letterSpacing: 0 }}> · {L.drinksCount(roundItems)}</span>
             {repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}
           </span>
-          {/* De geldzak verhuisde uit de kop naar hier: rechts van het rondje. */}
-          {opNaam === true && !settle && !!groupId && potKnopje()}
         </div>
         {settle && renderRunnerBar()}
         {(settle || opNaam) && renderWalk()}
