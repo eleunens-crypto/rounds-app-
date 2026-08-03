@@ -4205,9 +4205,9 @@ export default function PartyTest() {
   }
   const goAssignFromWarning = () => { setShowClose(false); setShowAssignAll(true) }
   const commitRound = () => {
-    // Nog drankjes zonder naam bij uitgebreid opnemen? Geen popup meer: we sturen meteen
-    // door naar het rondjesoverzicht, waar de toewijs-melding al duidelijk staat.
-    const naarOverzicht = !settle && opNaam === true && unassignedTotal > 0
+    // Nog drankjes zonder naam bij uitgebreid opnemen? Geen popup: de afsluiting met
+    // betaalstap in de hub komt eerst, en daarna land je vanzelf in het rondjesoverzicht
+    // waar de toewijs-melding al duidelijk staat.
     const effGb: Record<string, number> = {}
     people.forEach((p) => { effGb[p.id] = gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id)) })
     // De haler heeft de mensen op de plaats vastgezet — reset de haler-strook voor het
@@ -4234,7 +4234,7 @@ export default function PartyTest() {
     // "Gewoon rondjes" kent geen betaalscherm: het rondje is klaar, en wie gaat halen
     // krijgt de toog-lijst in de hub te zien.
     if (!settle) setLastRoundHandled(false)
-    if (naarOverzicht) { setOverviewBackTo("hub"); setView("roundsOverview") } else setView(settle ? "confirmed" : "hub")
+    setView(settle ? "confirmed" : "hub")
     setRoundNr(rounds.length + 1)
   }
   const persistPayment = (roundId: string, payers: Record<string, number>, potPart: number, total: number) => {
@@ -5408,7 +5408,9 @@ export default function PartyTest() {
               onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } if (rounds.length >= 1) { setOverviewBackTo(view === "order" ? "order" : "hub"); setView("roundsOverview") } else setNotice(L.noRoundsYet) }}>{L.roundsOverviewBtn}</button>
           )}
           {settle && <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 700, opacity: (view === "final" || ((settle || opNaam) && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goFinal() }}>{L.settleBtn}</button>}
-          {!settle && rounds.length >= 1 && (
+          {/* Op het rondjesoverzicht is de derde tab overbodig: het rondje is bevestigd
+              en de afreken-knop staat daar al onderaan naast "Nieuw rondje". */}
+          {!settle && rounds.length >= 1 && view !== "roundsOverview" && (
             !lastRoundHandled ? (
               // Bezig een rondje af te ronden op de hub: geen afreken-knop maar een rustig
               // label dat toont waar je bent. Niet klikbaar, niet opgelicht.
@@ -7394,9 +7396,11 @@ export default function PartyTest() {
           return (
           <>
             {/* Kop met het rondje-nummer: bij rondje 2, 3, … is meteen duidelijk waar je mee
-                bezig bent. De flow zelf is voor elk rondje identiek. */}
-        {settle && <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 9 }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 16.5, fontWeight: 800, color: "#8a5e0f", background: "linear-gradient(135deg,#fdf3dc,#fae9c2)", border: "1.5px solid rgba(240,165,0,0.45)", borderRadius: 18, padding: "7px 16px" }}>🍻 {L.roundWord} {idx + 1}</span>
+                bezig bent. De flow zelf is voor elk rondje identiek. Bij uitgebreid opnemen
+                is dit de duidelijke afsluiting in de stijl van de Fair Split-flow — zónder
+                "iemand mag gaan halen", want jij noteert zelf. */}
+        {opNaam === true && r && <div style={{ ...S.row, justifyContent: "center", marginBottom: 9 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 16.5, fontWeight: 800, color: "#8a5e0f", background: "linear-gradient(135deg,#fdf3dc,#fae9c2)", border: "1.5px solid rgba(240,165,0,0.45)", borderRadius: 18, padding: "7px 16px" }}>🍻 {L.roundConfirmed(idx + 1, drinksOf(r).reduce((a, x) => a + x.n, 0))}</span>
         </div>}
             {/* Drankjes van dit net-bevestigde rondje, met de aanpas-knop erin verwerkt. */}
             {(() => { const laatste = rounds[idx]; const lijst = laatste ? drinksOf(laatste) : []; return lijst.length > 0 && (
@@ -7404,12 +7408,24 @@ export default function PartyTest() {
                 <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 9, paddingBottom: 9, borderBottom: "1px solid rgba(120,95,20,0.1)" }}>📋 {L.orderedLabel} <span style={{ fontWeight: 600, color: "#b3a988" }}>— {L.drinksCount(lijst.reduce((a, x) => a + x.n, 0))}</span></div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                   {lijst.map(({ d, n }) => (
-                    <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "4px 0" }}>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{d.emoji} {d.name}</span>
-                      <span style={{ fontSize: 19, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
+                    <div key={d.id} style={{ padding: "4px 0" }}>
+                      <div style={{ ...S.row, justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{d.emoji} {d.name}</span>
+                        <span style={{ fontSize: 19, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
+                      </div>
+                      {/* Bij uitgebreid opnemen hoort erbij wíe het dronk — dat is de kern
+                          van deze modus, net als op het oude Fair Split-afsluitscherm. */}
+                      {opNaam === true && (() => {
+                        const who = people.filter((p) => (laatste!.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = laatste!.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
+                        return who.length > 0 && <div style={{ fontSize: 13.5, color: "#8a7d55", marginTop: 1 }}>→ {who.join(", ")}</div>
+                      })()}
                     </div>
                   ))}
                 </div>
+                {opNaam === true && (() => {
+                  const anonTot = laatste ? drinks.reduce((s2, d) => s2 + (laatste.anon?.[d.id] ?? 0), 0) : 0
+                  return anonTot > 0 && <div style={{ fontSize: 13.5, fontWeight: 700, color: "#b0402f", marginTop: 8 }}>🔴 {L.notAssignedYet(anonTot)}</div>
+                })()}
                 {/* Aanpassen hoort bij de lijst zelf: rechtsonder, na de drankjes. */}
                 <div style={{ textAlign: "right", marginTop: 11, paddingTop: 9, borderTop: "1px solid rgba(120,95,20,0.1)" }}>
                   <span onClick={editOrder} style={{ fontSize: settle ? 13.5 : 15.5, color: "#c98a00", fontWeight: 800, padding: settle ? "6px 12px" : "10px 16px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>{settle ? `✏️ ${L.editRoundBtn}` : L.editOrderBtn}</span>
@@ -8320,7 +8336,7 @@ export default function PartyTest() {
             {/* Gelijkwaardig: doorgaan of stoppen. Goud voor het rondje, inktblauw voor
                 de afrekening — rood en oranje zouden als waarschuwing lezen. */}
             {!settle && opNaam && unassignedAllRounds > 0 && (
-              <div onClick={() => setShowAssignAll(true)}
+              <div onClick={goAssignUnassigned}
                 style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.4)", borderRadius: 10, padding: "10px 12px", marginTop: 14, fontSize: 13.5, fontWeight: 800, color: "#b0402f", textAlign: "center", cursor: "pointer" }}>
                 {L.someUnassigned(unassignedAllRounds)} — <u>{L.tapToAssign}</u>
               </div>
