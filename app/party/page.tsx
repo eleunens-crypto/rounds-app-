@@ -5448,12 +5448,16 @@ export default function PartyTest() {
           </div>
         )}
       </div>
-      {/* Uitgebreid opnemen: de groepsnaam groter en centraal op de regel onder de kop. */}
+      {/* Uitgebreid opnemen: de groepsnaam als zwevend naamplaatje tussen de kopregel
+          en de navigatieknoppen — exact evenveel lucht erboven als eronder. */}
       {opNaam === true && !settle && !!groupId && !kaal && groupName.trim() && !editName && (
-        <div onClick={() => { if (!onboarding) setEditName(true) }} style={{ textAlign: "center", marginTop: 6, cursor: onboarding ? "default" : "pointer", fontSize: 16.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {isAutoNaam(groupName) ? (
-            <span style={{ fontSize: 15, color: "#c98a00", fontWeight: 700 }}>✏️ {L.giveNameQ}</span>
-          ) : (<>{groupName.trim()}{!onboarding && <span style={{ fontSize: 12.5 }}> ✏️</span>}</>)}
+        <div style={{ display: "flex", justifyContent: "center", margin: "10px 0" }}>
+          <span onClick={() => { if (!onboarding) setEditName(true) }}
+            style={{ maxWidth: "72%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", cursor: onboarding ? "default" : "pointer", background: "#fff", border: "1.5px solid rgba(240,165,0,0.55)", borderRadius: 18, padding: "7px 16px", fontSize: 15, fontWeight: 800, color: "#4a3f1e", boxShadow: "0 2px 5px rgba(90,64,10,0.12)" }}>
+            {isAutoNaam(groupName) ? (
+              <span style={{ color: "#c98a00", fontWeight: 700, fontSize: 14 }}>✏️ {L.giveNameQ}</span>
+            ) : (<>{groupName.trim()}{!onboarding && <span style={{ fontSize: 12 }}> ✏️</span>}</>)}
+          </span>
         </div>
       )}
       {/* De pot als brede balk onder de kop, zolang er nog niets in zit. Hij stond als
@@ -7164,7 +7168,13 @@ export default function PartyTest() {
               <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 8 }}>📋 {L.inRoundTitle} <span style={{ color: "#c98a00" }}>· {L.drinksCount(roundItems)}</span></div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                 {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => (
-                  <span key={d.id} style={{ background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 16, padding: "6px 12px", fontSize: 14, fontWeight: 700, color: "#4a3f1e" }}>{d.emoji} {drinkTotal(d.id)}× {d.name}</span>
+                  <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 16, padding: "6px 8px 6px 12px", fontSize: 14, fontWeight: 700, color: "#4a3f1e" }}>
+                    {d.emoji} {drinkTotal(d.id)}× {d.name}
+                    {/* Verwijderen zonder te zoeken in het rooster — ingetogen knopje,
+                        gedempt amber-grijs in plaats van waarschuwingsrood. */}
+                    <button title={L.removeWord} onClick={() => clearDrink(d.id)}
+                      style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0, border: "none", background: "rgba(120,95,20,0.1)", color: "#8a7d55", fontSize: 11, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: 0 }}>✕</button>
+                  </span>
                 ))}
               </div>
             </div>
