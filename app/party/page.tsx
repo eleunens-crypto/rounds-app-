@@ -1011,6 +1011,7 @@ const T = {
     nothingToSplit: "Er valt nog niets te verdelen",
     nothingToSplitWhy: "Geen enkel rondje heeft een bedrag. Vul de openstaande bedragen aan — daarna kan je gelijk verdelen of overstappen naar Fair Split.",
     noAmountBadge: "zonder bedrag",
+    addPaymentBang: "Betaling toevoegen!",
     addAmountBtn: "€ Bedrag toevoegen",
     splitEqually: "Gelijk verdelen",
     splitWithFair: "Verdeel met Fair Split",
@@ -1663,6 +1664,7 @@ const T = {
     nothingToSplit: "Rien à répartir pour l'instant",
     nothingToSplitWhy: "Aucune tournée n'a de montant. Complète les montants ouverts — ensuite tu pourras partager à parts égales ou passer à Fair Split.",
     noAmountBadge: "sans montant",
+    addPaymentBang: "Ajouter le paiement !",
     addAmountBtn: "€ Ajouter le montant",
     splitEqually: "R\u00e9partir \u00e9galement",
     splitWithFair: "Partager avec Fair Split",
@@ -8214,7 +8216,7 @@ export default function PartyTest() {
                     <div style={{ ...S.row, gap: 8, minWidth: 0 }}>
                       <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{editRoundId === r.id ? L.editRoundHead(nr) : L.roundSummary(nr, items)}</span>
                       {geenBedrag && editRoundId !== r.id && (
-                        <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 800, borderRadius: 12, padding: "3px 9px", whiteSpace: "nowrap", color: invulRij ? "#b0402f" : "#8a5e0f", background: invulRij ? "rgba(224,104,92,0.14)" : "rgba(240,165,0,0.16)" }}>{L.noAmountBadge}</span>
+                        <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 800, borderRadius: 12, padding: "3px 9px", whiteSpace: "nowrap", color: (invulRij || opNaam === true) ? "#b0402f" : "#8a5e0f", background: (invulRij || opNaam === true) ? "rgba(224,104,92,0.14)" : "rgba(240,165,0,0.16)" }}>{opNaam === true ? L.addPaymentBang : L.noAmountBadge}</span>
                       )}
                     </div>
                     <div style={{ ...S.row, gap: 9, flexShrink: 0 }}>
@@ -8223,7 +8225,7 @@ export default function PartyTest() {
                       ) : (
                         <>
                           <span style={{ fontSize: 15.5, fontWeight: 800, color: (r.amount || 0) > 0 ? "#c98a00" : "#c4b896" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "€ —"}</span>
-                          <span style={{ fontSize: 15, color: "#8a7d55", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
+                          <span style={{ fontSize: opNaam === true ? 20 : 15, fontWeight: opNaam === true ? 800 : undefined, color: opNaam === true ? "#8a5e0f" : "#8a7d55", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
                         </>
                       )}
                     </div>
@@ -8256,7 +8258,13 @@ export default function PartyTest() {
                         const val = bewerk && dr ? (dr.drinks[d.id] ?? n) : n
                         return (
                         <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "3px 0" }}>
-                          <span style={{ fontSize: 15.5, fontWeight: 700 }}>{d.emoji} {d.name}</span>
+                          <span style={{ fontSize: 15.5, fontWeight: 700, minWidth: 0 }}>{d.emoji} {d.name}{opNaam === true && !bewerk && (() => {
+                            // De kern van uitgebreid opnemen: wíe dronk het. Amber, met het
+                            // kroontje bij je eigen naam; onbenoemde aantallen in het rood.
+                            const wie = people.filter((p) => (r.orders[d.id]?.[p.id] ?? 0) > 0)
+                            const anon2 = r.anon?.[d.id] ?? 0
+                            return (wie.length > 0 || anon2 > 0) ? <span style={{ fontSize: 13.5, fontWeight: 700, color: "#8a5e0f" }}> → {wie.map((p, i2) => { const q = r.orders[d.id][p.id]; return <span key={p.id}>{i2 > 0 ? ", " : ""}{p.id === meId && <span style={{ display: "inline-flex", verticalAlign: "middle", marginRight: 3 }}><KroonIcoon size={12} kleur="#8a5e0f" gevuld /></span>}{p.name}{q > 1 ? ` (${q})` : ""}</span> })}{anon2 > 0 && <span style={{ color: "#b0402f" }}>{wie.length > 0 ? " · " : ""}{anon2}× ?</span>}</span> : null
+                          })()}</span>
                           {bewerk ? (
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
                               <button style={{ width: 30, height: 30, borderRadius: 8, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 16, color: "#8a7d55", fontWeight: 800, cursor: "pointer" }}
@@ -8320,7 +8328,12 @@ export default function PartyTest() {
                       ) : (
                         <div style={{ ...S.row, justifyContent: "space-between" }}>
                           <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>🫙 {L.paidWithQ}</span>
+                          {opNaam === true && !uitPot && geenBedrag ? (
+                            <span onClick={(e) => { e.stopPropagation(); startEditRound(r) }}
+                              style={{ fontSize: 15.5, fontWeight: 800, color: "#b0402f", textDecoration: "underline", cursor: "pointer" }}>{L.addPaymentBang}</span>
+                          ) : (
                           <span style={{ fontSize: 15.5, fontWeight: 800, color: uitPot ? "#1f8a4c" : "#8a7d55" }}>{uitPot ? L.paidFromPot(euro(r.potPart || 0)) : L.paidSelf}</span>
+                          )}
                         </div>
                       )}
                     </div>
