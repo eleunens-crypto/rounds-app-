@@ -572,6 +572,9 @@ const T = {
     guestN: (n: number) => `Gast ${n}`,
     yourNameRequired: "Vul eerst je eigen naam in — anders weet niemand van wie de drankjes zijn.",
     perPersonBtn: "👥 Per persoon aantikken",
+    quickTapBtn: "👆 Snel aantikken",
+    stillNoName: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} nog zonder naam`,
+    assignWhoSub: "Wijs toe wie wat dronk",
     busyLabel: "BEZIG",
     continueWhereYouWere: "verder waar je gebleven was →",
     namesMissing: (n: number) => `${n} ${n === 1 ? "persoon heeft" : "personen hebben"} nog geen naam. Vul die aan via ⚙️ Groep, anders staat er straks "Plaats 3" op de afrekening.`,
@@ -1224,6 +1227,9 @@ const T = {
     guestN: (n: number) => `Invité ${n}`,
     yourNameRequired: "Indique d’abord ton nom — sinon on ne sait pas à qui sont les boissons.",
     perPersonBtn: "👥 Coche par personne",
+    quickTapBtn: "👆 Coche rapide",
+    stillNoName: (n: number) => `${n} boisson${n === 1 ? "" : "s"} encore sans nom`,
+    assignWhoSub: "Attribue qui a bu quoi",
     busyLabel: "EN COURS",
     continueWhereYouWere: "reprendre où tu t’es arrêté →",
     namesMissing: (n: number) => `${n} personne${n === 1 ? "" : "s"} sans nom. Complète via ⚙️ Groupe, sinon le décompte affichera « Place 3 ».`,
@@ -6900,11 +6906,20 @@ export default function PartyTest() {
         {(settle || opNaam) && renderWalk()}
 
         {!settle && (
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-            {opNaam
-              ? <button onClick={() => { setActiveCat(catsPresent[0]); setWalkIdx(0) }} style={{ ...S.btn, padding: "7px 12px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.perPersonBtn}</button>
-              : <button onClick={() => { setOpNaam(true); setNamenSetup(true) }} style={{ ...S.btn, padding: "7px 12px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.withNamesBtn}</button>}
-          </div>
+          opNaam ? (
+            /* Twee gelijke, gecentreerde keuzes: snel aantikken (dit scherm — actief) of
+               per persoon aantikken (opent de doorloop). Zo zie je meteen wat kan. */
+            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 8 }}>
+              <button onClick={() => setWalkIdx(null)}
+                style={{ flex: "0 1 178px", minWidth: 0, padding: "9px 6px", fontSize: 12.5, fontWeight: 800, borderRadius: 10, border: "none", cursor: "default", background: AAN, color: "#fff" }}>{L.quickTapBtn}</button>
+              <button onClick={() => { setActiveCat(catsPresent[0]); setWalkIdx(0) }}
+                style={{ ...S.btn, flex: "0 1 178px", minWidth: 0, padding: "9px 6px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.perPersonBtn}</button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+              <button onClick={() => { setOpNaam(true); setNamenSetup(true) }} style={{ ...S.btn, padding: "7px 12px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.withNamesBtn}</button>
+            </div>
+          )
         )}
         {/* Eerst voor wie je aantikt, dan de categorieën vlak boven de lijst. Zoeken en
             inspreken staan onderaan: die gebruik je zelden en ze duwden de drankjes weg. */}
@@ -7079,9 +7094,16 @@ export default function PartyTest() {
              je op de tegel zelf. */
           <>
           {opNaam && unassignedTotal > 0 && (
+            /* Geen foutmelding-look meer: een gewoon kaartje met teller, uitleg en een
+               echte knop. Rood blijft de signaalkleur, maar zonder onderstreepte link. */
             <div onClick={() => setShowAssignAll(true)}
-              style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.4)", borderRadius: 10, padding: "9px 11px", marginBottom: 9, fontSize: 13.5, fontWeight: 800, color: "#b0402f", textAlign: "center", cursor: "pointer" }}>
-              {L.someUnassigned(unassignedTotal)} — <u>{L.tapToAssign}</u>
+              style={{ display: "flex", alignItems: "center", gap: 11, background: "rgba(224,104,92,0.09)", border: "1px solid rgba(224,104,92,0.4)", borderRadius: 12, padding: "10px 12px", marginBottom: 9, cursor: "pointer" }}>
+              <span style={{ flexShrink: 0, width: 34, height: 34, borderRadius: "50%", background: "rgba(224,104,92,0.22)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15.5, fontWeight: 800, color: "#8f2320" }}>{unassignedTotal}</span>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: "#8f2320", lineHeight: 1.35 }}>
+                <b>{L.stillNoName(unassignedTotal)}</b><br />{L.assignWhoSub}
+              </span>
+              <button onClick={(e) => { e.stopPropagation(); setShowAssignAll(true) }}
+                style={{ flexShrink: 0, background: "#b0402f", color: "#fff", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }}>{L.assign}</button>
             </div>
           )}
           <div style={{ background: "#fdf3dd", borderRadius: 11, padding: "9px 12px", marginBottom: 11, fontSize: 13.5, color: "#6b5f3a", lineHeight: 1.5 }}>
