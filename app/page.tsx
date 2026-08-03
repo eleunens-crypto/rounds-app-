@@ -7,24 +7,24 @@ import { useLang, LanguageToggle } from "@/lib/i18n"
 const T = {
   nl: {
     tagline: "Rondjes en rekeningen zonder gedoe!",
-    chooseMode: "Kies je mode om te starten",
     partySub: "Rondjes opnemen en splitten zonder gedoe",
-    partyDesc: "Groepsbestellingen opnemen op café of andere events (fuif, festival, afterwork..)",
+    partyDesc: "Voor groepsbestellingen, barlijstjes, rondjes bijhouden en eerlijk verdelen achteraf.",
+    partySteps: ["neem op", "tik aan", "barlijstje", "afrekenen"],
+    tableSteps: ["scan bon", "QR groep", "duid aan", "ieders deel"],
     tableSub: "Scan de rekening en verdeel in groep",
     tableDesc: "Voor het delen van de rekening op restaurant, café of na een activiteit.",
-    whenChoose: "Wanneer kies ik dit?",
     start: "Starten",
     pickFirst: "Kies eerst een mode",
     footer: "Gratis · geen registratie · eerlijk splitten",
   },
   fr: {
     tagline: "Tournées et additions, sans prise de tête !",
-    chooseMode: "Choisis ton mode pour démarrer",
     partySub: "Prendre les tournées et partager, sans prise de tête",
-    partyDesc: "Prendre les commandes de groupe au café ou autres events (soirée, festival, afterwork..)",
+    partyDesc: "Pour les commandes de groupe, les listes au bar, suivre les tournées et partager équitablement après.",
+    partySteps: ["note", "coche", "liste bar", "régler"],
+    tableSteps: ["scan", "QR groupe", "coche", "part de chacun"],
     tableSub: "Scanne l'addition et partage en groupe",
     tableDesc: "Pour partager l'addition au resto, au café ou après une activité.",
-    whenChoose: "Quand choisir ceci ?",
     start: "Démarrer",
     pickFirst: "Choisis d'abord un mode",
     footer: "Gratuit · sans inscription · partage équitable",
@@ -40,7 +40,6 @@ export default function Home() {
   // Kiezen en starten zijn hier twee stappen: je duidt een kaart aan, leest desgewenst
   // eerst de uitleg, en start dan pas. Zo tik je nooit ongewild een modus binnen.
   const [pick, setPick] = useState<Mode | null>(null)
-  const [openInfo, setOpenInfo] = useState<Mode | null>(null)
 
   // Op het keuzescherm: wis de actieve mode-sessies, zodat je vanaf hier altijd op het
   // startscherm van een modus binnenkomt (nooit meteen in een opgeslagen groep).
@@ -66,26 +65,25 @@ export default function Home() {
       : `0 12px 34px -18px ${m === "party" ? "rgba(240,193,75,0.25)" : "rgba(91,159,214,0.25)"}`,
   })
 
-  const infoRow = (m: Mode, tekst: string, kleur: string, badge: React.CSSProperties) => (
-    <>
-      <button
-        onClick={(e) => { e.stopPropagation(); setOpenInfo(openInfo === m ? null : m) }}
-        style={{
-          display: "block", width: "100%", textAlign: "left", marginTop: 14, paddingTop: 12,
-          borderTop: "1px solid rgba(255,255,255,0.13)", border: "none", borderTopWidth: 1,
-          borderTopStyle: "solid", borderTopColor: "rgba(255,255,255,0.13)",
-          background: "none", cursor: "pointer", color: kleur, fontSize: 13.5, fontWeight: 800,
-          fontFamily: "inherit", padding: "12px 0 0",
-        }}>
-        {t.whenChoose} {openInfo === m ? "▴" : "▾"}
-      </button>
-      {openInfo === m && (
-        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: 11 }}>
+  // De uitleg zelf: alleen zichtbaar voor de gekozen kaart. Hij loopt door tot de
+  // rechterrand, zodat de foto er als achtergrond doorheen blijft schemeren.
+  const infoRow = (m: Mode, tekst: string, stappen: string[], iconen: string[], badge: React.CSSProperties) => (
+    pick !== m ? null : (
+      <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 13 }}>
           <span style={badge}>i</span>
-          <p style={{ fontSize: 13.5, color: "#d8dced", lineHeight: 1.5, margin: 0 }}>{tekst}</p>
+          <p style={{ fontSize: 14.5, color: "#e6eaf6", lineHeight: 1.5, margin: 0 }}>{tekst}</p>
         </div>
-      )}
-    </>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 7, textAlign: "center" }}>
+          {stappen.map((st, i) => (
+            <span key={st} style={{ display: "block" }}>
+              <span style={{ display: "block", fontSize: 21, lineHeight: 1.1 }}>{iconen[i]}</span>
+              <span style={{ display: "block", fontSize: 11, color: "#b9c1d6", marginTop: 4, lineHeight: 1.3 }}>{st}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+    )
   )
 
   const vinkje = (m: Mode) => (
@@ -116,17 +114,16 @@ export default function Home() {
           </p>
         </div>
 
-        <p style={{ textAlign: "right", color: "#7e879c", fontSize: 12.5, fontWeight: 600, margin: "0 4px 8px 0" }}>
-          {t.chooseMode}
-        </p>
-
         {/* TABLE-kaart — koel blauw */}
         <div onClick={() => setPick("table")} style={{ ...S.modeCard, ...S.tableCard, ...cardState("table") }} className="rundo-card rundo-card-table">
           {vinkje("table")}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/table-image.png" alt="" style={S.cardPhoto} />
-          <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #131e2b 0%, #131e2b 42%, rgba(19,30,43,0.85) 56%, rgba(19,30,43,0.35) 72%, rgba(19,30,43,0) 100%)" }} />
-          <div style={S.cardBody}>
+          <div style={{ position: "absolute", inset: 0, zIndex: 1, transition: "background .2s ease",
+            background: pick === "table"
+              ? "linear-gradient(90deg, #131e2b 0%, #131e2b 46%, rgba(19,30,43,0.94) 62%, rgba(19,30,43,0.78) 82%, rgba(19,30,43,0.6) 100%)"
+              : "linear-gradient(90deg, #131e2b 0%, #131e2b 42%, rgba(19,30,43,0.85) 56%, rgba(19,30,43,0.35) 72%, rgba(19,30,43,0) 100%)" }} />
+          <div style={{ ...S.cardBody, maxWidth: pick === "table" ? "100%" : "74%" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/rundo-table-logo.png" alt="Rundo Table" style={{ display: "block", height: 46, width: "auto", maxWidth: "100%", objectFit: "contain", marginBottom: 6 }} />
             <div style={{ ...S.logoSub, color: "#3bbfc4", display: "flex", alignItems: "center", gap: 8 }}>
@@ -134,7 +131,7 @@ export default function Home() {
               <img src="/icon-table.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
               <span>{t.tableSub}</span>
             </div>
-            {infoRow("table", t.tableDesc, "#3bbfc4", { ...S.infoBadge, background: "rgba(91,159,214,0.22)", color: "#9cc6ec" })}
+            {infoRow("table", t.tableDesc, t.tableSteps, ["📷", "📱", "👆", "💶"], { ...S.infoBadge, background: "rgba(91,159,214,0.22)", color: "#9cc6ec" })}
           </div>
         </div>
 
@@ -145,8 +142,11 @@ export default function Home() {
           <img src="/party-image.png" alt="" style={S.cardPhoto} />
           {/* Warme gloed die de foto iets verlicht */}
           <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "62%", zIndex: 1, background: "radial-gradient(120% 90% at 88% 32%, rgba(255,214,130,0.42) 0%, rgba(255,190,90,0.16) 42%, rgba(255,190,90,0) 72%)", mixBlendMode: "screen", pointerEvents: "none" }} />
-          <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #211c14 0%, #211c14 42%, rgba(33,28,20,0.85) 56%, rgba(33,28,20,0.35) 72%, rgba(33,28,20,0) 100%)" }} />
-          <div style={S.cardBody}>
+          <div style={{ position: "absolute", inset: 0, zIndex: 1, transition: "background .2s ease",
+            background: pick === "party"
+              ? "linear-gradient(90deg, #211c14 0%, #211c14 46%, rgba(33,28,20,0.94) 62%, rgba(33,28,20,0.78) 82%, rgba(33,28,20,0.6) 100%)"
+              : "linear-gradient(90deg, #211c14 0%, #211c14 42%, rgba(33,28,20,0.85) 56%, rgba(33,28,20,0.35) 72%, rgba(33,28,20,0) 100%)" }} />
+          <div style={{ ...S.cardBody, maxWidth: pick === "party" ? "100%" : "74%" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/rundo-party-logo.png" alt="Rundo Party" style={{ display: "block", height: 46, width: "auto", maxWidth: "100%", objectFit: "contain", marginBottom: 6 }} />
             <div style={{ ...S.logoSub, color: "#f0a500", display: "flex", alignItems: "center", gap: 8 }}>
@@ -154,7 +154,7 @@ export default function Home() {
               <img src="/icon-party.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
               <span>{t.partySub}</span>
             </div>
-            {infoRow("party", t.partyDesc, "#f0a500", S.infoBadge)}
+            {infoRow("party", t.partyDesc, t.partySteps, ["✍️", "🍺", "🧾", "💶"], S.infoBadge)}
           </div>
         </div>
 
@@ -215,7 +215,6 @@ const S: Record<string, React.CSSProperties> = {
     position: "relative",
     zIndex: 2,
     padding: "20px 22px 20px",
-    maxWidth: "74%",
   },
   cardPhoto: {
     position: "absolute",
