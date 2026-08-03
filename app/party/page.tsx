@@ -647,7 +647,7 @@ const T = {
     assignAllSub: (n: number) => `Alle ${n} rondjes in \u00e9\u00e9n keer`,
     roundDoneNext: "Dit rondje is rond",
     roundDoneShort: "Rondje toegewezen",
-    nextRoundAssign: (n: number) => `Volgende: rondje ${n} \u2192`,
+    nextRoundAssign: (n: number) => `Volgende: rondje ${n} →`,
     allAssignedDone: "Klaar \u2014 alles toegewezen",
     quickStart: "Starten",
     continueRound: (n: number) => `Ga verder met rondje ${n}`,
@@ -918,12 +918,11 @@ const T = {
     whatIsThis: "Wat is dit?",
     modeFairWhat: "Jouw drankjes, jouw bedrag. Geen oneerlijke gelijke verdeling maar betalen volgens wat je dronk — de app rekent het uit.",
     orWord: "of",
-    modeFairSub: "Iedereen scant de QR",
+    modeFairSub: "Iedereen scant QR met eigen gsm",
     modeFairSub2: "Duidt aan wat hij of zij drinkt",
     modeFairLine: "Eerlijk betalen volgens wat je dronk",
     modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
     chooseHow: "Kies hoe je wil bestellen",
-    youNoteTitle: "Jij noteert voor iedereen",
     youNoteSelf: "Jij noteert zelf voor iedereen",
     fairShareTag: "EERLIJK VERDELEN",
     fairLaterToo: "Ook vanuit snel opnemen kan je achteraf nog eerlijk verdelen.",
@@ -936,9 +935,6 @@ const T = {
     modeSnelTitle: "Snel opnemen",
     modeNaamTitle: "Uitgebreid opnemen",
     modeNaamSub: "Alles van snel opnemen",
-    youNoteSub: "niemand anders hoeft iets te doen",
-    theyTapTitle: "Iedereen op zijn eigen gsm",
-    theyTapSub: "ze scannen een QR-code",
     tagline: "Rondjes opnemen en splitten zonder gedoe",
     showToFriend: "📱 QR-code van de groep",
     shareWithMore: "Deel gerust met wie er nog wil bijkomen",
@@ -981,7 +977,7 @@ const T = {
     paidSelf: "Zelf betaald",
     paidPot: "Uit de pot",
     potEmptyNote: "De pot is nog leeg — vul eerst iets in.",
-    potPayLeft: (bedrag: string, over: string) => `${bedrag} uit de pot \u2192 ${over} over na dit rondje`,
+    potPayLeft: (bedrag: string, over: string) => `${bedrag} uit de pot → ${over} over na dit rondje`,
     potShortTitle: "Niet genoeg in de pot",
     potShortSimple: (inPot: string, kost: string) => `Nog ${inPot} in de pot, dit rondje kost ${kost}.`,
     potChoiceTopUp: "\ud83e\uded9 Toevoegen aan de pot",
@@ -1298,7 +1294,7 @@ const T = {
     assignAllSub: (n: number) => `Les ${n} tourn\u00e9es d\u2019un coup`,
     roundDoneNext: "Cette tourn\u00e9e est compl\u00e8te",
     roundDoneShort: "Tourn\u00e9e attribu\u00e9e",
-    nextRoundAssign: (n: number) => `Suivante : tourn\u00e9e ${n} \u2192`,
+    nextRoundAssign: (n: number) => `Suivante : tourn\u00e9e ${n} →`,
     allAssignedDone: "Termin\u00e9 \u2014 tout est attribu\u00e9",
     quickStart: "Démarrer",
     continueRound: (n: number) => `Continuer la tournée ${n}`,
@@ -1570,12 +1566,11 @@ const T = {
     whatIsThis: "C’est quoi ?",
     modeFairWhat: "Tes boissons, ton montant. Pas de partage égal injuste mais payer selon ce que tu as bu — l’appli le calcule.",
     orWord: "ou",
-    modeFairSub: "Chacun scanne le QR",
+    modeFairSub: "Chacun scanne le QR sur son téléphone",
     modeFairSub2: "Coche ce qu’il ou elle boit",
     modeFairLine: "Payer équitablement selon ce que tu as bu",
     modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
     chooseHow: "Choisissez comment commander",
-    youNoteTitle: "Tu notes pour tout le monde",
     youNoteSelf: "Tu notes toi-même pour tous",
     fairShareTag: "PARTAGE ÉQUITABLE",
     fairLaterToo: "Même en notant vite, tu peux encore partager équitablement plus tard.",
@@ -1588,9 +1583,6 @@ const T = {
     modeSnelTitle: "Noter vite",
     modeNaamTitle: "Noter en détail",
     modeNaamSub: "Tout de « noter vite »",
-    youNoteSub: "personne d’autre ne doit rien faire",
-    theyTapTitle: "Chacun sur son propre gsm",
-    theyTapSub: "ils scannent un QR-code",
     tagline: "Prendre les tournées et partager sans tracas",
     showToFriend: "📱 QR-code du groupe",
     shareWithMore: "Partage-le avec qui veut encore se joindre",
@@ -1633,7 +1625,7 @@ const T = {
     paidSelf: "Pay\u00e9 soi-m\u00eame",
     paidPot: "De la cagnotte",
     potEmptyNote: "La cagnotte est vide — ajoute d\u2019abord un montant.",
-    potPayLeft: (bedrag: string, over: string) => `${bedrag} de la cagnotte \u2192 ${over} restant apr\u00e8s`,
+    potPayLeft: (bedrag: string, over: string) => `${bedrag} de la cagnotte → ${over} restant apr\u00e8s`,
     potShortTitle: "Pas assez dans la cagnotte",
     potShortSimple: (inPot: string, kost: string) => `Il reste ${inPot} dans la cagnotte, cette tourn\u00e9e co\u00fbte ${kost}.`,
     potChoiceTopUp: "\ud83e\uded9 Ajouter \u00e0 la cagnotte",
@@ -5946,13 +5938,6 @@ export default function PartyTest() {
           <div style={{ textAlign: "center", fontSize: 23, fontWeight: 800, color: "#3d3418", marginBottom: 18 }}>{L.chooseHow}</div>
 
           <div>
-            {/* Twee groepen: waar jij noteert, en waar iedereen zelf aantikt. Zonder die
-                kopjes lezen de kaarten als gelijken, en dan verdwijnt het verschil dat
-                het belangrijkst is. */}
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 16.5, fontWeight: 800, color: MODUS_SNEL.tekst }}>✍️ {L.youNoteTitle}</div>
-              <div style={{ fontSize: 14, color: "#8a7d55", marginTop: 2, lineHeight: 1.4 }}>{L.youNoteSub}</div>
-            </div>
             {/* Eén kaart: de eerste vraag gaat over wíe aantikt, niet over hoe. Snel of
                 uitgebreid kies je pas op het instelscherm erna. */}
             <div style={{ opacity: bpSettle === true ? 0.6 : 1 }}>
@@ -5983,25 +5968,21 @@ export default function PartyTest() {
                 <button disabled={busy} onClick={() => { setBpSettle(false); startWithMode(undefined, false) }}
                   style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 17.5, fontWeight: 800, cursor: "pointer", border: "none", borderRadius: 15,
                     background: MODUS_SNEL.knop, color: MODUS_SNEL.knopTekst, boxSizing: "border-box",
-                    boxShadow: `0 12px 28px -8px ${MODUS_SNEL.gloed}, 0 0 0 4px ${MODUS_SNEL.tint}` }}>{busy ? L.starting : L.startQuickBtn} \u2192</button>
+                    boxShadow: `0 12px 28px -8px ${MODUS_SNEL.gloed}, 0 0 0 4px ${MODUS_SNEL.tint}` }}>{busy ? L.starting : L.startQuickBtn} →</button>
               </div>
             </div>
             </div>
 
 
             {/* Duidelijk dat er een tweede, andere keuze volgt. */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "26px 0" }}>
-              <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(120,95,20,0.28)" }} />
-              {/* Een rondje in plaats van los tekstje: nu is het echt een scheiding tussen
-                  twee gelijkwaardige keuzes, en niet een woordje dat ertussen zweeft. */}
-              <span style={{ flexShrink: 0, width: 46, height: 46, borderRadius: "50%", background: "#fff", border: "2px solid rgba(120,95,20,0.28)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, color: "#8a7d55", letterSpacing: "0.04em" }}>{L.orWord}</span>
-              <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(120,95,20,0.28)" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 11, margin: "15px 0" }}>
+              <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(120,95,20,0.25)" }} />
+              {/* Donkerbruin: het rondje hoort bij geen van beide kaarten, en leest daardoor
+                  als het scharnierpunt tussen twee keuzes. */}
+              <span style={{ flexShrink: 0, width: 46, height: 46, borderRadius: "50%", background: "#6b5f3a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#fff", boxShadow: "0 4px 12px -5px rgba(107,95,58,0.7)" }}>{L.orWord}</span>
+              <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(120,95,20,0.25)" }} />
             </div>
 
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 16.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>📱 {L.theyTapTitle}</div>
-              <div style={{ fontSize: 14, color: "#8a7d55", marginTop: 2, lineHeight: 1.4 }}>{L.theyTapSub}</div>
-            </div>
             <div style={{ opacity: bpSettle === false ? 0.6 : 1 }}>
             <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", border: bpSettle === true ? `2px solid ${MODUS_FAIR.rand}` : `1.5px solid ${MODUS_FAIR.randZacht}`,
               boxShadow: bpSettle === true ? `0 16px 34px -20px ${MODUS_FAIR.gloed}` : "0 8px 22px -18px rgba(120,95,20,0.5)" }}>
