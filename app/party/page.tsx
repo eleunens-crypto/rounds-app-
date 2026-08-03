@@ -6738,10 +6738,11 @@ export default function PartyTest() {
           background: opNaam ? "linear-gradient(135deg,#8d5080,#7a3f6d)" : MODUS_SNEL.knop,
           color: opNaam ? "#fff" : MODUS_SNEL.knopTekst }}>{L.toDrinksBtn}</button>
     )
-    const kaart = (id: boolean, tag: string, titel: string, punten: string[], top: string, rand: string, vlak: string, teken: React.ReactNode) => {
+    const kaart = (id: boolean, tag: string, titel: string, punten: string[], top: string, rand: string, vlak: string, teken: React.ReactNode, tekenKlein: React.ReactNode) => {
       const aan = opNaam === id
-      // De gekozen kaart klapt zijn tekening en vinkjes weg: die heeft z'n werk gedaan,
-      // en zo blijft er ruimte voor wat er onder verschijnt.
+      // De gekozen kaart houdt zijn tekening en vinkjes zichtbaar, maar samengeperst tot
+      // een compact strookje — zo zie je nog steeds waarvoor je koos, terwijl er ruimte
+      // blijft voor de tip of het formulier eronder.
       return (
         <div onClick={() => setOpNaam(id)}
           style={{ position: "relative", overflow: "hidden", cursor: "pointer", borderRadius: 14, padding: aan ? "14px 13px" : "14px 13px 15px",
@@ -6754,6 +6755,18 @@ export default function PartyTest() {
               background: aan ? top : "transparent", border: aan ? "none" : `2.5px solid ${rand}`, color: "#fff" }}>{aan ? "✓" : ""}</span>
             <span style={{ fontSize: 19, fontWeight: 800, color: top, lineHeight: 1.15, letterSpacing: -0.2 }}>{titel}</span>
           </div>
+          {aan && (
+            <div style={{ display: "flex", gap: 11, alignItems: "center", background: "rgba(255,255,255,0.72)", borderRadius: 10, padding: "8px 11px", marginBottom: id === false ? 9 : 0 }}>
+              <span style={{ flexShrink: 0, display: "flex" }}>{tekenKlein}</span>
+              <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#6b5f3a", lineHeight: 1.4 }}>
+                {punten.map((t, n2) => (
+                  <div key={n2} style={{ display: "flex", gap: 6, marginBottom: n2 < punten.length - 1 ? 3 : 0 }}>
+                    <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>{t}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {aan && id === false && (
             <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "rgba(255,255,255,0.78)", borderRadius: 10, padding: "9px 11px" }}>
               <span style={{ flexShrink: 0 }}>💡</span>
@@ -6783,7 +6796,7 @@ export default function PartyTest() {
           <div style={{ fontSize: 19, fontWeight: 800, color: "#3d3418", marginBottom: 13 }}>{L.howNoteTitle}</div>
 
           {kaart(false, L.fastestTag, L.modeSnelTitle, [L.qNoNames, L.qStep2, L.qStep3], "#e8a812", "rgba(232,168,18,0.5)", "rgba(240,165,0,0.09)",
-            <BonIcoon size={58} kleur="#e8a812" />)}
+            <BonIcoon size={58} kleur="#e8a812" />, <BonIcoon size={44} kleur="#e8a812" />)}
           {opNaam === false && doorKnop()}
 
           <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "11px 0" }}>
@@ -6793,7 +6806,7 @@ export default function PartyTest() {
           </div>
 
           {kaart(true, L.fairShareTag, L.modeNaamTitle, [L.modeNaamSub, L.nOnName, L.nStep3], "#7a3f6d", "rgba(122,63,109,0.42)", "rgba(122,63,109,0.09)",
-            <NamenIcoon size={104} kleur="#7a3f6d" />)}
+            <NamenIcoon size={104} kleur="#7a3f6d" />, <NamenIcoon size={76} kleur="#7a3f6d" />)}
 
           {opNaam === true && (
             <div style={{ border: "1.5px solid rgba(122,63,109,0.3)", background: "rgba(122,63,109,0.05)", borderRadius: 12, padding: 12, marginTop: 11 }}>
