@@ -110,13 +110,13 @@ function NamenIcoon({ size = 46, kleur = "#7a3f6d" }: { size?: number; kleur?: s
       <path d="M25.8 8v3.2M27.4 8v3.2M29 8v3.2" stroke={kleur} strokeWidth={0.95} strokeLinecap="round" />
       {munt(2, 9)}
 
-      <path d="M24 22h6.8l-3.4 4zM27.4 26v3.1M25.6 29.1h3.6" fill="none" stroke={kleur} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
-      <path d="M32 22h6.8l-3.4 4zM35.4 26v3.1M33.6 29.1h3.6" fill="none" stroke={kleur} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
+      <path d="M24.1 22h4.6l-2.3 4zM26.4 26v3.1M25.1 29.1h2.6" fill="none" stroke={kleur} strokeWidth={1.05} strokeLinejoin="round" strokeLinecap="round" />
+      <path d="M28.7 22h4.6l-2.3 4zM31 26v3.1M29.7 29.1h2.6" fill="none" stroke={kleur} strokeWidth={1.05} strokeLinejoin="round" strokeLinecap="round" />
       {munt(3, 25)}
 
-      <path d="M24.6 37h6.3l-.67 6.9a1 1 0 0 1-1 .9h-3a1 1 0 0 1-1-.9z" fill="none" stroke={kleur} strokeWidth={1.1} strokeLinejoin="round" />
-      <path d="M24.9 39.9c1 .62 1.8-.5 2.8 0 1 .5 1.9-.45 2.95-.05" fill="none" stroke={kleur} strokeWidth={0.95} strokeLinecap="round" />
-      <path d="M29.2 37l.85-2.3 1.5.6" fill="none" stroke={kleur} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
+      <path d="M26.8 37h6.3l-.67 6.9a1 1 0 0 1-1 .9h-3a1 1 0 0 1-1-.9z" fill="none" stroke={kleur} strokeWidth={1.1} strokeLinejoin="round" />
+      <path d="M27.1 39.9c1 .62 1.8-.5 2.8 0 1 .5 1.9-.45 2.95-.05" fill="none" stroke={kleur} strokeWidth={0.95} strokeLinecap="round" />
+      <path d="M31.4 37l.85-2.3 1.5.6" fill="none" stroke={kleur} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
       {munt(1, 41)}
     </svg>
   )
@@ -2413,6 +2413,11 @@ export default function PartyTest() {
   const [noteerKeuze, setNoteerKeuze] = useState(false)
   // Koos je "op naam", dan zet je eerst de namen. Daarna verdwijnt dit scherm.
   const [namenSetup, setNamenSetup] = useState(false)
+  // Elk nieuw scherm begint bovenaan; zonder dit erf je de scrollstand van het vorige
+  // en land je halverwege de pagina.
+  useEffect(() => {
+    if (typeof window !== "undefined") window.scrollTo(0, 0)
+  }, [view, namenSetup])
   const [noteerPick, setNoteerPick] = useState<"quick" | "named" | null>(null)
   const [noteerInfo, setNoteerInfo] = useState<"quick" | "named" | null>(null)
   const voorWie = voorWieRaw && people.some((p) => p.id === voorWieRaw) ? voorWieRaw : meId
@@ -6727,6 +6732,12 @@ export default function PartyTest() {
     const gekozen = opNaam !== null
     const klaarOmDoor = gekozen && (opNaam === false || (!eigenNaamLeeg && !naamLeeg && people.length > 1))
     const ster = <span style={{ color: "#c0554a" }}>*</span>
+    const doorKnop = () => (
+      <button onClick={() => { if (!klaarOmDoor) { setNotice(eigenNaamLeeg ? L.yourNameRequired : naamLeeg ? L.groupNameRequired : L.needOneMore); return } setNamenSetup(false) }}
+        style={{ ...S.btnP, width: "100%", padding: "14px 0", fontSize: 16, fontWeight: 800, marginTop: 9, boxShadow: "none",
+          background: opNaam ? "linear-gradient(135deg,#8d5080,#7a3f6d)" : MODUS_SNEL.knop,
+          color: opNaam ? "#fff" : MODUS_SNEL.knopTekst }}>{L.toDrinksBtn}</button>
+    )
     const kaart = (id: boolean, tag: string, titel: string, punten: string[], top: string, rand: string, vlak: string, teken: React.ReactNode) => {
       const aan = opNaam === id
       // De gekozen kaart klapt zijn tekening en vinkjes weg: die heeft z'n werk gedaan,
@@ -6737,19 +6748,28 @@ export default function PartyTest() {
             background: aan ? vlak : "#fff", border: `${aan ? 2.5 : 1.5}px solid ${aan ? top : rand}`, borderTop: `4px solid ${top}`,
             opacity: gekozen && !aan ? 0.62 : 1 }}>
           <span style={{ position: "absolute", top: 0, right: 0, background: top, color: "#fff", borderRadius: "0 0 0 12px", padding: "5px 11px 6px 13px", fontSize: 11, fontWeight: 800 }}>{tag}</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: aan ? 0 : 11 }}>
+          {/* Het hoekvlag-label heeft ruimte nodig: vinkje en titel beginnen daarom lager. */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14, marginBottom: 12 }}>
             <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
               background: aan ? top : "transparent", border: aan ? "none" : `2.5px solid ${rand}`, color: "#fff" }}>{aan ? "✓" : ""}</span>
-            {!aan && teken}
             <span style={{ fontSize: 19, fontWeight: 800, color: top, lineHeight: 1.15, letterSpacing: -0.2 }}>{titel}</span>
           </div>
+          {aan && id === false && (
+            <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "rgba(255,255,255,0.78)", borderRadius: 10, padding: "9px 11px" }}>
+              <span style={{ flexShrink: 0 }}>💡</span>
+              <span style={{ fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.45 }}>{L.fillInLater}</span>
+            </div>
+          )}
           {!aan && (
-            <div style={{ fontSize: 15, color: "#6b5f3a", lineHeight: 1.4, paddingLeft: 36 }}>
-              {punten.map((t, n2) => (
-                <div key={n2} style={{ display: "flex", gap: 8, marginBottom: n2 < punten.length - 1 ? 4 : 0 }}>
-                  <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>{t}
-                </div>
-              ))}
+            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+              {teken}
+              <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: "#6b5f3a", lineHeight: 1.4 }}>
+                {punten.map((t, n2) => (
+                  <div key={n2} style={{ display: "flex", gap: 7, marginBottom: n2 < punten.length - 1 ? 4 : 0 }}>
+                    <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>{t}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -6763,7 +6783,8 @@ export default function PartyTest() {
           <div style={{ fontSize: 19, fontWeight: 800, color: "#3d3418", marginBottom: 13 }}>{L.howNoteTitle}</div>
 
           {kaart(false, L.fastestTag, L.modeSnelTitle, [L.qNoNames, L.qStep2, L.qStep3], "#e8a812", "rgba(232,168,18,0.5)", "rgba(240,165,0,0.09)",
-            <BonIcoon size={44} kleur="#e8a812" />)}
+            <BonIcoon size={58} kleur="#e8a812" />)}
+          {opNaam === false && doorKnop()}
 
           <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "11px 0" }}>
             <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(120,95,20,0.25)" }} />
@@ -6772,7 +6793,7 @@ export default function PartyTest() {
           </div>
 
           {kaart(true, L.fairShareTag, L.modeNaamTitle, [L.modeNaamSub, L.nOnName, L.nStep3], "#7a3f6d", "rgba(122,63,109,0.42)", "rgba(122,63,109,0.09)",
-            <NamenIcoon size={82} kleur="#7a3f6d" />)}
+            <NamenIcoon size={104} kleur="#7a3f6d" />)}
 
           {opNaam === true && (
             <div style={{ border: "1.5px solid rgba(122,63,109,0.3)", background: "rgba(122,63,109,0.05)", borderRadius: 12, padding: 12, marginTop: 11 }}>
@@ -6811,18 +6832,11 @@ export default function PartyTest() {
               {people.length < 2 && <div style={{ fontSize: 12.5, color: "#b0402f", fontWeight: 700, marginTop: 8 }}>{L.needOneMore}</div>}
             </div>
           )}
+          {opNaam === true && doorKnop()}
 
-          {opNaam === false && (
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", background: "rgba(240,165,0,0.12)", borderRadius: 10, padding: "9px 11px", marginTop: 11 }}>
-              <span style={{ flexShrink: 0 }}>💡</span>
-              <span style={{ fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.45 }}>{L.fillInLater}</span>
-            </div>
+          {!gekozen && (
+            <div style={{ background: "#f0ebdc", color: "#a89a6f", borderRadius: 12, padding: "14px 0", textAlign: "center", fontSize: 16, fontWeight: 800, marginTop: 12 }}>{L.pickOneFirst}</div>
           )}
-
-          <button onClick={() => { if (!klaarOmDoor) { setNotice(!gekozen ? L.pickOneFirst : eigenNaamLeeg ? L.yourNameRequired : naamLeeg ? L.groupNameRequired : L.needOneMore); return } setNamenSetup(false) }}
-            style={{ ...S.btnP, width: "100%", padding: "14px 0", fontSize: 16, fontWeight: 800, marginTop: 12, boxShadow: "none",
-              background: !gekozen ? "#f0ebdc" : opNaam ? "linear-gradient(135deg,#8d5080,#7a3f6d)" : MODUS_SNEL.knop,
-              color: !gekozen ? "#a89a6f" : opNaam ? "#fff" : MODUS_SNEL.knopTekst }}>{gekozen ? L.toDrinksBtn : L.pickOneFirst}</button>
         </div>
       </div></div>
     )
