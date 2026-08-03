@@ -5301,7 +5301,7 @@ export default function PartyTest() {
     )
   }
 
-  const Header = ({ verbergNav = false }: { verbergNav?: boolean }) => {
+  const Header = ({ verbergNav = false, kaal = false }: { verbergNav?: boolean; kaal?: boolean }) => {
     // Onderweg van gelijk verdelen naar Fair Split is er maar één route: namen,
     // toewijzen, pot, betalers, eindbalans. Instellingen en overzichten zouden je
     // daar alleen uit halen, dus die verbergen we tot de omschakeling rond is.
@@ -5314,7 +5314,7 @@ export default function PartyTest() {
     const modus = settle ? MODUS_FAIR : MODUS_SNEL
     return (
     <div style={{ marginBottom: 12 }}>
-      {!!groupId && (
+      {!!groupId && !kaal && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: modus.knop, borderRadius: "14px 14px 0 0", padding: "10px 15px", marginBottom: 10 }}>
           <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, flex: 1, minWidth: 0 }}>
             {settle ? (<>
@@ -5334,7 +5334,15 @@ export default function PartyTest() {
           <RundoLogo size={40} />
           <div style={{ ...S.h1, fontSize: 21, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
         </div>
-        {!!groupId && !(settle && potContribTotal <= 0.005) && (
+        {/* Op het instelscherm ligt de modus nog niet vast; dan vertelt de ondertitel
+            waar je bent, in plaats van een groepsnaam die nog niets voorstelt. */}
+        {kaal && (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 7 }}>
+            <KlinkIcoon size={26} />
+            <span style={{ fontSize: 13.5, color: "#8a7d55", lineHeight: 1.35 }}>{L.tagline}</span>
+          </div>
+        )}
+        {!!groupId && !kaal && !(settle && potContribTotal <= 0.005) && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginTop: 9 }}>
             {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. */}
             <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 9px", borderRadius: 22, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#fff", border: potRemaining > 0.005 ? "1px solid rgba(200,138,26,0.55)" : "0.5px solid rgba(120,95,20,0.3)" }}>
@@ -5354,7 +5362,7 @@ export default function PartyTest() {
           </div>
         )}
         </div>
-        {!!groupId && groupName.trim() && !editName && (
+        {!!groupId && !kaal && groupName.trim() && !editName && (
           <div style={{ textAlign: "right", minWidth: 0, flexShrink: 0, maxWidth: "52%" }}>
             <div onClick={() => { if (!onboarding) setEditName(true) }} style={{ cursor: onboarding ? "default" : "pointer", fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {!settle && isAutoNaam(groupName) ? (
@@ -6725,21 +6733,21 @@ export default function PartyTest() {
       // en zo blijft er ruimte voor wat er onder verschijnt.
       return (
         <div onClick={() => setOpNaam(id)}
-          style={{ position: "relative", overflow: "hidden", cursor: "pointer", borderRadius: 12, padding: aan ? 11 : "11px 11px 12px",
-            background: aan ? vlak : "#fff", border: `${aan ? 2.5 : 1.5}px solid ${aan ? top : rand}`, borderTop: `3px solid ${top}`,
+          style={{ position: "relative", overflow: "hidden", cursor: "pointer", borderRadius: 14, padding: aan ? "14px 13px" : "14px 13px 15px",
+            background: aan ? vlak : "#fff", border: `${aan ? 2.5 : 1.5}px solid ${aan ? top : rand}`, borderTop: `4px solid ${top}`,
             opacity: gekozen && !aan ? 0.62 : 1 }}>
-          <span style={{ position: "absolute", top: 0, right: 0, background: top, color: "#fff", borderRadius: "0 0 0 10px", padding: "3px 8px 4px 10px", fontSize: 9.5, fontWeight: 800 }}>{tag}</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: aan ? 0 : 8 }}>
-            <span style={{ flexShrink: 0, width: 19, height: 19, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800,
+          <span style={{ position: "absolute", top: 0, right: 0, background: top, color: "#fff", borderRadius: "0 0 0 12px", padding: "5px 11px 6px 13px", fontSize: 11, fontWeight: 800 }}>{tag}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: aan ? 0 : 11 }}>
+            <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
               background: aan ? top : "transparent", border: aan ? "none" : `2.5px solid ${rand}`, color: "#fff" }}>{aan ? "✓" : ""}</span>
             {!aan && teken}
-            <span style={{ fontSize: 16, fontWeight: 800, color: top, lineHeight: 1.15 }}>{titel}</span>
+            <span style={{ fontSize: 19, fontWeight: 800, color: top, lineHeight: 1.15, letterSpacing: -0.2 }}>{titel}</span>
           </div>
           {!aan && (
-            <div style={{ fontSize: 12.5, color: "#6b5f3a", lineHeight: 1.4, paddingLeft: 29 }}>
+            <div style={{ fontSize: 15, color: "#6b5f3a", lineHeight: 1.4, paddingLeft: 36 }}>
               {punten.map((t, n2) => (
-                <div key={n2} style={{ display: "flex", gap: 6, marginBottom: n2 < punten.length - 1 ? 2 : 0 }}>
-                  <span style={{ color: "#1f8a4c", fontWeight: 800 }}>✓</span>{t}
+                <div key={n2} style={{ display: "flex", gap: 8, marginBottom: n2 < punten.length - 1 ? 4 : 0 }}>
+                  <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>{t}
                 </div>
               ))}
             </div>
@@ -6749,14 +6757,13 @@ export default function PartyTest() {
     }
     return (
       <div style={S.page}><div style={S.wrap}>
-        <Header verbergNav />
-        {showPot && renderPotModal()}
+        <Header verbergNav kaal />
         {renderDialogs()}
         <div style={S.card}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: "#3d3418", marginBottom: 12 }}>{L.howNoteTitle}</div>
+          <div style={{ fontSize: 19, fontWeight: 800, color: "#3d3418", marginBottom: 13 }}>{L.howNoteTitle}</div>
 
           {kaart(false, L.fastestTag, L.modeSnelTitle, [L.qNoNames, L.qStep2, L.qStep3], "#e8a812", "rgba(232,168,18,0.5)", "rgba(240,165,0,0.09)",
-            <BonIcoon size={33} kleur="#e8a812" />)}
+            <BonIcoon size={44} kleur="#e8a812" />)}
 
           <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "11px 0" }}>
             <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(120,95,20,0.25)" }} />
@@ -6765,7 +6772,7 @@ export default function PartyTest() {
           </div>
 
           {kaart(true, L.fairShareTag, L.modeNaamTitle, [L.modeNaamSub, L.nOnName, L.nStep3], "#7a3f6d", "rgba(122,63,109,0.42)", "rgba(122,63,109,0.09)",
-            <NamenIcoon size={60} kleur="#7a3f6d" />)}
+            <NamenIcoon size={82} kleur="#7a3f6d" />)}
 
           {opNaam === true && (
             <div style={{ border: "1.5px solid rgba(122,63,109,0.3)", background: "rgba(122,63,109,0.05)", borderRadius: 12, padding: 12, marginTop: 11 }}>
