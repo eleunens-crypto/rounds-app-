@@ -573,6 +573,7 @@ const T = {
     yourNameRequired: "Vul eerst je eigen naam in — anders weet niemand van wie de drankjes zijn.",
     perPersonBtn: "👥 Per persoon aantikken",
     quickTapBtn: "👆 Snel aantikken",
+    perPersonPrompt: "👥 Liever per persoon aantikken?",
     stillNoName: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} nog zonder naam`,
     assignWhoSub: "Wijs toe wie wat dronk",
     inRoundTitle: "In dit rondje",
@@ -1229,6 +1230,7 @@ const T = {
     yourNameRequired: "Indique d’abord ton nom — sinon on ne sait pas à qui sont les boissons.",
     perPersonBtn: "👥 Coche par personne",
     quickTapBtn: "👆 Coche rapide",
+    perPersonPrompt: "👥 Plutôt cocher par personne ?",
     stillNoName: (n: number) => `${n} boisson${n === 1 ? "" : "s"} encore sans nom`,
     assignWhoSub: "Attribue qui a bu quoi",
     inRoundTitle: "Dans cette tournée",
@@ -6956,7 +6958,7 @@ export default function PartyTest() {
         {renderVoice()}
         {/* Het rondje als echte titel: groot links, het aantal drankjes rechts, met een
             gouden lijn eronder. Zo leest het als kop van wat volgt. */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, borderBottom: "2px solid rgba(240,165,0,0.5)", paddingBottom: 7, marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, borderBottom: "2px solid rgba(240,165,0,0.5)", paddingBottom: 7, marginBottom: opNaam === true && !settle ? 0 : 12 }}>
           <span style={{ fontSize: 23, fontWeight: 800, color: "#4a3f1e", letterSpacing: -0.3, minWidth: 0 }}>
             {L.roundWord} {roundNr}
             <span style={{ fontSize: 14, fontWeight: 600, color: "#a89a6f", letterSpacing: 0 }}> · {L.drinksCount(roundItems)}</span>
@@ -6972,11 +6974,12 @@ export default function PartyTest() {
           opNaam ? (
             /* Twee gelijke, gecentreerde keuzes: snel aantikken (dit scherm — actief) of
                per persoon aantikken (opent de doorloop). Zo zie je meteen wat kan. */
-            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-              <button onClick={() => setWalkIdx(null)}
-                style={{ flex: 1, minWidth: 0, padding: "11px 4px 9px", fontSize: 15, fontWeight: 800, border: "none", background: "none", borderRadius: 0, cursor: "default", color: "#4a3f1e", borderBottom: "3.5px solid #e8a812" }}>{L.quickTapBtn}</button>
+            /* Het scherm zelf ís snel aantikken; er blijft één zachte uitnodiging over
+               voor wie liever per persoon werkt. Het label hangt aan de gouden lijn van
+               de titel, en het ▸ zegt eerlijk dat er een venster opent. */
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 11 }}>
               <button onClick={() => { setActiveCat(catsPresent[0]); setWalkIdx(0) }}
-                style={{ flex: 1, minWidth: 0, padding: "11px 4px 9px", fontSize: 15, fontWeight: 800, border: "none", background: "none", borderRadius: 0, cursor: "pointer", color: "#a89a6f", borderBottom: "3.5px solid transparent" }}>{L.perPersonBtn}</button>
+                style={{ background: "#fffdf6", border: "1px solid rgba(240,165,0,0.5)", borderTop: "none", borderRadius: "0 0 12px 12px", padding: "8px 16px", fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", cursor: "pointer" }}>{L.perPersonPrompt} ▸</button>
             </div>
           ) : (
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
