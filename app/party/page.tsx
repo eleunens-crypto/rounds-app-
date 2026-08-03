@@ -575,6 +575,7 @@ const T = {
     quickTapBtn: "👆 Snel aantikken",
     stillNoName: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} nog zonder naam`,
     assignWhoSub: "Wijs toe wie wat dronk",
+    inRoundTitle: "In dit rondje",
     busyLabel: "BEZIG",
     continueWhereYouWere: "verder waar je gebleven was →",
     namesMissing: (n: number) => `${n} ${n === 1 ? "persoon heeft" : "personen hebben"} nog geen naam. Vul die aan via ⚙️ Groep, anders staat er straks "Plaats 3" op de afrekening.`,
@@ -1230,6 +1231,7 @@ const T = {
     quickTapBtn: "👆 Coche rapide",
     stillNoName: (n: number) => `${n} boisson${n === 1 ? "" : "s"} encore sans nom`,
     assignWhoSub: "Attribue qui a bu quoi",
+    inRoundTitle: "Dans cette tournée",
     busyLabel: "EN COURS",
     continueWhereYouWere: "reprendre où tu t’es arrêté →",
     namesMissing: (n: number) => `${n} personne${n === 1 ? "" : "s"} sans nom. Complète via ⚙️ Groupe, sinon le décompte affichera « Place 3 ».`,
@@ -5325,6 +5327,45 @@ export default function PartyTest() {
     )
   }
 
+  // De pot-geldzak als losse functie: hij staat in de kop, en bij uitgebreid opnemen
+  // op het bestelscherm verhuist hij naar de rondje-titelregel.
+  const potKnopje = () => (
+    <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 9px", borderRadius: 22, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#fff", border: potRemaining > 0.005 ? "1px solid rgba(200,138,26,0.55)" : "0.5px solid rgba(120,95,20,0.3)" }}>
+      {potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️</span>}
+      {potIsCard ? (
+        <span style={{ fontSize: 20 }}>💳</span>
+      ) : (
+        <svg width="27" height="27" viewBox="0 0 40 40" style={{ display: "block" }}>
+          <path d="M16 13 L14 7 Q20 5 26 7 L24 13 Z" fill="#d99616" stroke="#b9821a" strokeWidth="1.2" strokeLinejoin="round"/>
+          <path d="M13 14 Q20 11 27 14 Q33 19 32 27 Q31 35 20 35 Q9 35 8 27 Q7 19 13 14 Z" fill="#e8a821" stroke="#b9821a" strokeWidth="1.5"/>
+          <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
+        </svg>
+      )}
+      <span style={{ color: "#c88a1a" }}>{euro(potRemaining)}</span>
+      <span style={{ color: "#c98a00", fontWeight: 800 }}>+</span>
+    </span>
+  )
+  // Zoekveld met microfoon: bij uitgebreid opnemen ingebouwd bovenin de drankjeskaart
+  // (inKaart), bij de andere modi op zijn vertrouwde plek onder de lijst.
+  const renderZoekBlok = (inKaart = false) => (
+    <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: inKaart ? 2 : 10 }}>
+      <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🔍</span>
+        <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)}
+          placeholder={L.searchDrink}
+          style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 36, paddingRight: drinkSearch ? 34 : 12, fontSize: 16, textAlign: "left" }} />
+        {drinkSearch && (
+          <button onClick={() => setDrinkSearch("")}
+            style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8a7d55", padding: 4 }}>✕</button>
+        )}
+      </div>
+        {(!settle || walkIdx !== null) && (
+        <button onClick={startVoice} title={L.voiceBtn} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 13px", borderRadius: 10, cursor: "pointer", background: "#fffdf6", border: `1px solid ${settle ? MODUS_FAIR.randZacht : "rgba(240,165,0,0.5)"}` }}>
+          <MicroIcoon size={18} kleur={settle ? MODUS_FAIR.tekst : "#8a5e0f"} />
+        </button>
+        )}
+    </div>
+  )
   const Header = ({ verbergNav = false, kaal = false }: { verbergNav?: boolean; kaal?: boolean }) => {
     // Onderweg van gelijk verdelen naar Fair Split is er maar één route: namen,
     // toewijzen, pot, betalers, eindbalans. Instellingen en overzichten zouden je
@@ -5338,7 +5379,9 @@ export default function PartyTest() {
     const modus = settle ? MODUS_FAIR : MODUS_SNEL
     return (
     <div style={{ marginBottom: 12 }}>
-      {!!groupId && !kaal && (
+      {/* Bij uitgebreid opnemen geen aparte statusbalk: de tekst staat rechts op de
+          Rundo Party-regel. */}
+      {!!groupId && !kaal && !(opNaam === true && !settle) && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: modus.knop, borderRadius: "14px 14px 0 0", padding: "10px 15px", marginBottom: 10 }}>
           <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, flex: 1, minWidth: 0 }}>
             {settle ? (<>
@@ -5360,27 +5403,22 @@ export default function PartyTest() {
         </div>
         {/* Op het instelscherm staat geen ondertitel: de tagline staat al op het
             startscherm, en hier telt elke pixel voor de twee keuzekaarten. */}
-        {!!groupId && !kaal && !(settle && potContribTotal <= 0.005) && (
+        {!!groupId && !kaal && !(settle && potContribTotal <= 0.005) && !(opNaam === true && !settle && view === "order") && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginTop: 9 }}>
             {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. */}
-            <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 9px", borderRadius: 22, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#fff", border: potRemaining > 0.005 ? "1px solid rgba(200,138,26,0.55)" : "0.5px solid rgba(120,95,20,0.3)" }}>
-              {potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️</span>}
-              {potIsCard ? (
-                <span style={{ fontSize: 20 }}>💳</span>
-              ) : (
-                <svg width="27" height="27" viewBox="0 0 40 40" style={{ display: "block" }}>
-                  <path d="M16 13 L14 7 Q20 5 26 7 L24 13 Z" fill="#d99616" stroke="#b9821a" strokeWidth="1.2" strokeLinejoin="round"/>
-                  <path d="M13 14 Q20 11 27 14 Q33 19 32 27 Q31 35 20 35 Q9 35 8 27 Q7 19 13 14 Z" fill="#e8a821" stroke="#b9821a" strokeWidth="1.5"/>
-                  <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
-                </svg>
-              )}
-              <span style={{ color: "#c88a1a" }}>{euro(potRemaining)}</span>
-              <span style={{ color: "#c98a00", fontWeight: 800 }}>+</span>
-            </span>
+            {potKnopje()}
           </div>
         )}
         </div>
-        {!!groupId && !kaal && groupName.trim() && !editName && (
+        {/* Uitgebreid opnemen: rechts naast Rundo Party staat gewoon leesbaar wat je
+            aan het doen bent — geen aparte balk, geen fade. */}
+        {opNaam === true && !settle && !!groupId && !kaal && (
+          <div style={{ flexShrink: 1, minWidth: 0, marginTop: 11, display: "inline-flex", alignItems: "center", gap: 6, color: "#c98a00", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden" }}>
+            <GsmIcoon size={17} kleur="#c98a00" lijnen />
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{L.modeQuickShort}</span>
+          </div>
+        )}
+        {!(opNaam === true && !settle) && !!groupId && !kaal && groupName.trim() && !editName && (
           <div style={{ textAlign: "right", minWidth: 0, flexShrink: 0, maxWidth: "52%" }}>
             <div onClick={() => { if (!onboarding) setEditName(true) }} style={{ cursor: onboarding ? "default" : "pointer", fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {!settle && isAutoNaam(groupName) ? (
@@ -5394,6 +5432,14 @@ export default function PartyTest() {
           </div>
         )}
       </div>
+      {/* Uitgebreid opnemen: de groepsnaam groter en centraal op de regel onder de kop. */}
+      {opNaam === true && !settle && !!groupId && !kaal && groupName.trim() && !editName && (
+        <div onClick={() => { if (!onboarding) setEditName(true) }} style={{ textAlign: "center", marginTop: 6, cursor: onboarding ? "default" : "pointer", fontSize: 16.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {isAutoNaam(groupName) ? (
+            <span style={{ fontSize: 15, color: "#c98a00", fontWeight: 700 }}>✏️ {L.giveNameQ}</span>
+          ) : (<>{groupName.trim()}{!onboarding && <span style={{ fontSize: 12.5 }}> ✏️</span>}</>)}
+        </div>
+      )}
       {/* De pot als brede balk onder de kop, zolang er nog niets in zit. Hij stond als
           eigen kaart onderaan het QR-scherm, ver van de geldzak waar je hem zoekt.
           Zodra er ingelegd is, spreekt die geldzak voor zich en verdwijnt deze balk. */}
@@ -5892,13 +5938,14 @@ export default function PartyTest() {
           </div>
         </div>
 
-        {(lijst.length === 0 && (zoekt || activeCat !== "Eigen")) ? (
+        {(lijst.length === 0 && (zoekt || activeCat !== "Eigen")) ? (<>
+          {opNaam === true && !settle && renderZoekBlok()}
           <div style={{ ...S.card, textAlign: "center", color: "#b3a988", fontSize: 15, padding: "20px 0" }}>
             {!zoekt && !fullList ? (
               <span onClick={() => setFullList(true)} style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }}>{L.showAll}</span>
             ) : L.nothingFound}
           </div>
-        ) : (
+        </>) : (
           <div style={{ position: "relative" }}>
             {!zoekt && fullList && (
               <div style={{ position: "absolute", left: "50%", top: -13, transform: "translateX(-50%)", whiteSpace: "nowrap", zIndex: 2 }}>
@@ -6895,12 +6942,14 @@ export default function PartyTest() {
         {renderVoice()}
         {/* Het rondje als echte titel: groot links, het aantal drankjes rechts, met een
             gouden lijn eronder. Zo leest het als kop van wat volgt. */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, borderBottom: "2px solid rgba(240,165,0,0.5)", paddingBottom: 7, marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, borderBottom: "2px solid rgba(240,165,0,0.5)", paddingBottom: 7, marginBottom: 12 }}>
           <span style={{ fontSize: 23, fontWeight: 800, color: "#4a3f1e", letterSpacing: -0.3, minWidth: 0 }}>
             {L.roundWord} {roundNr}
             <span style={{ fontSize: 14, fontWeight: 600, color: "#a89a6f", letterSpacing: 0 }}> · {L.drinksCount(roundItems)}</span>
             {repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}
           </span>
+          {/* De geldzak verhuisde uit de kop naar hier: rechts van het rondje. */}
+          {opNaam === true && !settle && !!groupId && potKnopje()}
         </div>
         {settle && renderRunnerBar()}
         {(settle || opNaam) && renderWalk()}
@@ -6909,11 +6958,11 @@ export default function PartyTest() {
           opNaam ? (
             /* Twee gelijke, gecentreerde keuzes: snel aantikken (dit scherm — actief) of
                per persoon aantikken (opent de doorloop). Zo zie je meteen wat kan. */
-            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 8 }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
               <button onClick={() => setWalkIdx(null)}
-                style={{ flex: "0 1 178px", minWidth: 0, padding: "9px 6px", fontSize: 12.5, fontWeight: 800, borderRadius: 10, border: "none", cursor: "default", background: AAN, color: "#fff" }}>{L.quickTapBtn}</button>
+                style={{ flex: 1, minWidth: 0, padding: "11px 4px 9px", fontSize: 15, fontWeight: 800, border: "none", background: "none", borderRadius: 0, cursor: "default", color: "#4a3f1e", borderBottom: "3.5px solid #e8a812" }}>{L.quickTapBtn}</button>
               <button onClick={() => { setActiveCat(catsPresent[0]); setWalkIdx(0) }}
-                style={{ ...S.btn, flex: "0 1 178px", minWidth: 0, padding: "9px 6px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.perPersonBtn}</button>
+                style={{ flex: 1, minWidth: 0, padding: "11px 4px 9px", fontSize: 15, fontWeight: 800, border: "none", background: "none", borderRadius: 0, cursor: "pointer", color: "#a89a6f", borderBottom: "3.5px solid transparent" }}>{L.perPersonBtn}</button>
             </div>
           ) : (
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
@@ -7005,6 +7054,7 @@ export default function PartyTest() {
               </div>
             )}
             <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12 }}>
+              {opNaam === true && !settle && <div style={{ gridColumn: "1 / -1" }}>{renderZoekBlok(true)}</div>}
               {catVisible.map((d) => {
                 const tot = (settle && voorWie) ? (cart[d.id]?.[voorWie] ?? 0) : drinkTotal(d.id)
                 const tafel = drinkTotal(d.id)
@@ -7046,24 +7096,9 @@ export default function PartyTest() {
             )}
           </div>
         )}
-        {/* Zoeken en inspreken onderaan: minder gebruikt dan de tegels erboven. */}
-        <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: 10 }}>
-          <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
-            <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🔍</span>
-            <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)}
-              placeholder={L.searchDrink}
-              style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingLeft: 36, paddingRight: drinkSearch ? 34 : 12, fontSize: 16, textAlign: "left" }} />
-            {drinkSearch && (
-              <button onClick={() => setDrinkSearch("")}
-                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8a7d55", padding: 4 }}>✕</button>
-            )}
-          </div>
-            {(!settle || walkIdx !== null) && (
-            <button onClick={startVoice} title={L.voiceBtn} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 13px", borderRadius: 10, cursor: "pointer", background: "#fffdf6", border: `1px solid ${settle ? MODUS_FAIR.randZacht : "rgba(240,165,0,0.5)"}` }}>
-              <MicroIcoon size={18} kleur={settle ? MODUS_FAIR.tekst : "#8a5e0f"} />
-            </button>
-            )}
-        </div>
+        {/* Zoeken en inspreken: bij uitgebreid opnemen staat dit bovenin de
+            drankjeskaart; hier enkel nog voor de andere modi. */}
+        {!(opNaam === true && !settle) && renderZoekBlok()}
 
         {roundItems > 0 && (
           settle ? (
@@ -7106,12 +7141,24 @@ export default function PartyTest() {
                 style={{ flexShrink: 0, background: "#b0402f", color: "#fff", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }}>{L.assign}</button>
             </div>
           )}
+          {opNaam === true ? (
+            /* Variant 1: een eigen kaart met duidelijke titel en chips per drankje. */
+            <div style={{ ...S.card, padding: "11px 13px", marginBottom: 11, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.5)" }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 8 }}>📋 {L.inRoundTitle} <span style={{ color: "#c98a00" }}>· {L.drinksCount(roundItems)}</span></div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => (
+                  <span key={d.id} style={{ background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 16, padding: "6px 12px", fontSize: 14, fontWeight: 700, color: "#4a3f1e" }}>{d.emoji} {drinkTotal(d.id)}× {d.name}</span>
+                ))}
+              </div>
+            </div>
+          ) : (
           <div style={{ background: "#fdf3dd", borderRadius: 11, padding: "9px 12px", marginBottom: 11, fontSize: 13.5, color: "#6b5f3a", lineHeight: 1.5 }}>
             <b style={{ color: "#8a5e0f" }}>{L.inRoundShort}</b>{" "}
             {drinks.filter((d) => drinkTotal(d.id) > 0).map((d, n) => (
               <span key={d.id}>{n > 0 ? " · " : ""}{drinkTotal(d.id)}× {d.name}</span>
             ))}
           </div>
+          )}
           </>
           )
         )}
@@ -7469,7 +7516,9 @@ export default function PartyTest() {
                 })()}
                 {/* Aanpassen hoort bij de lijst zelf: rechtsonder, na de drankjes. */}
                 <div style={{ textAlign: "right", marginTop: 11, paddingTop: 9, borderTop: "1px solid rgba(120,95,20,0.1)" }}>
-                  <span onClick={editOrder} style={{ fontSize: settle ? 13.5 : 15.5, color: "#c98a00", fontWeight: 800, padding: settle ? "6px 12px" : "10px 16px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>{settle ? `✏️ ${L.editRoundBtn}` : L.editOrderBtn}</span>
+                  <span onClick={editOrder} style={opNaam === true && !settle
+                    ? { fontSize: 14.5, color: "#c98a00", fontWeight: 800, cursor: "pointer" }
+                    : { fontSize: settle ? 13.5 : 15.5, color: "#c98a00", fontWeight: 800, padding: settle ? "6px 12px" : "10px 16px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>{settle ? `✏️ ${L.editRoundBtn}` : L.editOrderBtn}</span>
                 </div>
               </div>
             ) })()}
