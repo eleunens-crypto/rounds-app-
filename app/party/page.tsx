@@ -6747,12 +6747,12 @@ export default function PartyTest() {
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14, marginBottom: 12 }}>
             <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
               background: aan ? top : "transparent", border: aan ? "none" : `2.5px solid ${rand}`, color: "#fff" }}>{aan ? "✓" : ""}</span>
-            <span style={{ fontSize: 19, fontWeight: 800, color: top, lineHeight: 1.15, letterSpacing: -0.2 }}>{titel}</span>
+            <span style={{ fontSize: 20, fontWeight: 800, color: top, lineHeight: 1.15, letterSpacing: -0.2 }}>{titel}</span>
           </div>
           {aan && (
             <div style={{ display: "flex", gap: 11, alignItems: "center", background: "rgba(255,255,255,0.72)", borderRadius: 10, padding: "8px 11px", marginBottom: id === false ? 9 : 0 }}>
               <span style={{ flexShrink: 0, display: "flex" }}>{tekenKlein}</span>
-              <div style={{ flex: 1, minWidth: 0, fontSize: 14, color: "#6b5f3a", lineHeight: 1.4 }}>
+              <div style={{ flex: 1, minWidth: 0, fontSize: 15.5, color: "#6b5f3a", lineHeight: 1.4 }}>
                 {punten.map((t, n2) => (
                   <div key={n2} style={{ display: "flex", gap: 6, marginBottom: n2 < punten.length - 1 ? 3 : 0 }}>
                     <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>{t}
@@ -6764,7 +6764,7 @@ export default function PartyTest() {
           {aan && id === false && (
             <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "rgba(255,255,255,0.78)", borderRadius: 10, padding: "9px 11px" }}>
               <span style={{ flexShrink: 0 }}>💡</span>
-              <span style={{ fontSize: 14, color: "#8a5e0f", lineHeight: 1.45 }}>{L.fillInLater}</span>
+              <span style={{ fontSize: 15, color: "#8a5e0f", lineHeight: 1.45 }}>{L.fillInLater}</span>
             </div>
           )}
           {/* De startknop hoort bij de gekozen snel-kaart en staat er daarom binnenin:
@@ -6774,7 +6774,7 @@ export default function PartyTest() {
           {!aan && (
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               {teken}
-              <div style={{ flex: 1, minWidth: 0, fontSize: 15, color: "#6b5f3a", lineHeight: 1.4 }}>
+              <div style={{ flex: 1, minWidth: 0, fontSize: 16.5, color: "#6b5f3a", lineHeight: 1.4 }}>
                 {punten.map((t, n2) => (
                   <div key={n2} style={{ display: "flex", gap: 7, marginBottom: n2 < punten.length - 1 ? 4 : 0 }}>
                     <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>{t}
@@ -6807,39 +6807,39 @@ export default function PartyTest() {
 
           {opNaam === true && (
             <div style={{ border: "1.5px solid rgba(122,63,109,0.3)", background: "rgba(122,63,109,0.05)", borderRadius: 12, padding: 12, marginTop: 11 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#7a3f6d", marginBottom: 5 }}>{L.groupNamePlain.toUpperCase()} {ster}</div>
-              <input value={isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()}
-                placeholder={L.tapToChangePh}
-                style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: "9px 11px", fontSize: 15.5, textAlign: "left" }} />
-              <div style={{ fontSize: 12.5, color: "#a89a6f", margin: "3px 0 11px" }}>{L.nowWord} {isAutoNaam(groupName) ? groupName.trim() : L.autoName()}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 11 }}>
+                <div style={{ flexShrink: 0, fontSize: 15, fontWeight: 800, color: "#7a3f6d" }}>{L.groupNamePlain.toUpperCase()} {ster}</div>
+                <input value={isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()}
+                  placeholder={L.tapToChangePh}
+                  style={{ ...S.input, flex: 1, minWidth: 0, boxSizing: "border-box", background: "#fff", padding: "10px 11px", fontSize: 17, textAlign: "left" }} />
+              </div>
 
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#7a3f6d", marginBottom: 5 }}>{L.howManyLabel.toUpperCase()} {ster}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#7a3f6d", marginBottom: 5 }}>{L.howManyLabel.toUpperCase()} {ster}</div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", borderRadius: 10, padding: "8px 11px", marginBottom: 11 }}>
-                <span style={{ fontSize: 15, fontWeight: 800, color: "#7a3f6d" }}>{L.howManyAreYou}</span>
+                <span style={{ fontSize: 16.5, fontWeight: 800, color: "#7a3f6d" }}>{L.howManyAreYou}</span>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                  <button onClick={removeLastPerson} disabled={busy || people.length <= 1} style={{ ...S.step, width: 26, height: 26, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e", minWidth: 18, textAlign: "center" }}>{people.length}</span>
-                  <button onClick={addPerson} disabled={busy} style={{ ...S.step, width: 26, height: 26, background: "#7a3f6d", color: "#fff", border: "none" }}>+</button>
+                  <button onClick={removeLastPerson} disabled={busy || people.length <= 1} style={{ ...S.step, width: 30, height: 30, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", minWidth: 20, textAlign: "center" }}>{people.length}</span>
+                  <button onClick={addPerson} disabled={busy} style={{ ...S.step, width: 30, height: 30, background: "#7a3f6d", color: "#fff", border: "none" }}>+</button>
                 </span>
               </div>
 
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#7a3f6d", marginBottom: 6 }}>{L.namesLabel.toUpperCase()} {ster}</div>
-              <div style={{ position: "relative", marginBottom: 4 }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#7a3f6d", marginBottom: 6 }}>{L.yourNamePh.toUpperCase()} {ster}</div>
+              <div style={{ position: "relative", marginBottom: 9 }}>
                 <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><KroonIcoon size={19} kleur="#8a5e0f" gevuld /></span>
                 <input value={ik && !isGuestDefault(ik.name) ? ik.name : ""} onChange={(e) => { if (meId) renamePerson(meId, e.target.value) }}
                   placeholder={L.yourNamePh}
-                  style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "10px 12px 10px 40px", fontSize: 15.5, textAlign: "left", fontWeight: 700,
+                  style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "11px 12px 11px 40px", fontSize: 17, textAlign: "left", fontWeight: 700,
                     background: "rgba(240,165,0,0.12)", border: `2px solid ${eigenNaamLeeg ? "#c0554a" : "#e8a812"}`, color: "#8a5e0f" }} />
               </div>
-              <div style={{ fontSize: 13, color: "#8a5e0f", fontWeight: 700, margin: "0 0 9px 4px" }}>{L.youAreAdmin}</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 {people.filter((pp) => pp.id !== meId).map((pp, idx) => (
                   <input key={pp.id} value={isGuestDefault(pp.name) ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)}
                     placeholder={`✏️ ${L.guestN(idx + 2)}`}
-                    style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: "8px 10px", fontSize: 15, textAlign: "left" }} />
+                    style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: "9px 10px", fontSize: 16.5, textAlign: "left" }} />
                 ))}
               </div>
-              {people.length < 2 && <div style={{ fontSize: 14, color: "#b0402f", fontWeight: 700, marginTop: 8 }}>{L.needOneMore}</div>}
+              {people.length < 2 && <div style={{ fontSize: 15.5, color: "#b0402f", fontWeight: 700, marginTop: 8 }}>{L.needOneMore}</div>}
             </div>
           )}
           {opNaam === true && doorKnop()}
