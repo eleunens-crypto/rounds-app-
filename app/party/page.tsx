@@ -4040,6 +4040,20 @@ export default function PartyTest() {
       if (fr >= 0) { settleNaToewijzen.current = true; setOpenRound(fr); setAllRoundsOpen(false); setEditCups(false); setEditPay(false); setAssignAllMode(true); setAssignIdx(fr); setView("hub") }
       return
     }
+    // Uitgebreid opnemen met alles in orde — iedereen benoemd, alles toegewezen, elk
+    // rondje een bedrag én afgehandeld? Dan is de keuze al gemaakt ("ieder betaalt wat
+    // hij dronk") en zijn keuzescherm en tussenstappen zinloos: meteen naar de Fair
+    // Split-eindbalans. Ontbreekt er iets, dan volgt gewoon de bestaande route.
+    if (opNaam === true) {
+      const naamloos = people.filter((pp) => isGuestDefault(pp.name) || !pp.name.trim()).length
+      const zonderBedrag = rounds.filter((rr) => (rr.amount || 0) <= 0.005).length
+      if (paidCount > 0 && !unfinishedRound && unassignedAllRounds === 0 && naamloos === 0 && zonderBedrag === 0) {
+        if (blockIfUnpaid()) return
+        setHasSettled(true)
+        switchToSettle()
+        return
+      }
+    }
     setView("quickSettle")
   }
   // Van niveau 1 naar Fair Split: eerst snel personen + namen, daarna toewijzen.
