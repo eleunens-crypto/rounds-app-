@@ -1811,6 +1811,9 @@ export default function PartyTest() {
   const [showTreat, setShowTreat] = useState(false)
   // Loopt de beheerder alle rondjes in één keer af, of wijst hij er één toe?
   const [assignAllMode, setAssignAllMode] = useState(false)
+  // Kwam je bij het toewijzen via de Afrekenen-knop (uitgebreid opnemen)? Dan willen we
+  // na "Klaar" meteen door naar het afrekenscherm in plaats van in de hub te blijven.
+  const settleNaToewijzen = useRef(false)
   const [treatedRounds, setTreatedRounds] = useState<Set<string>>(new Set())
   // Kleine pop-up om het aantal personen aan te passen (vanaf het afreken-scherm van een rondje).
   const [showPeoplePop, setShowPeoplePop] = useState(false)
@@ -4018,7 +4021,15 @@ export default function PartyTest() {
     if (rounds.length === 0) { setNotice(L.nothingToSettle); return }
     // Uitgebreid opnemen belooft "ieder betaalt wat hij dronk"; dat kan niet zolang er
     // drankjes zonder naam zijn.
-    if (!settle && opNaam && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); setShowAssignAll(true); return }
+    if (!settle && opNaam && unassignedAllRounds > 0) {
+      setNotice(L.assignFirstNote)
+      // Open meteen de toewijs-flow over alle rondjes, en onthoud dat we daarna naar
+      // het afrekenscherm willen. (setShowAssignAll werkte hier niet: dat venster
+      // bestaat alleen op het bestelscherm.)
+      const fr = rounds.findIndex((rr) => drinks.some((d) => (rr.anon[d.id] ?? 0) > 0))
+      if (fr >= 0) { settleNaToewijzen.current = true; setOpenRound(fr); setAllRoundsOpen(false); setEditCups(false); setEditPay(false); setAssignAllMode(true); setAssignIdx(fr); setView("hub") }
+      return
+    }
     setView("quickSettle")
   }
   // Van niveau 1 naar Fair Split: eerst snel personen + namen, daarna toewijzen.
@@ -5411,7 +5422,7 @@ export default function PartyTest() {
           {/* Op het rondjesoverzicht is de derde tab overbodig: het rondje is bevestigd
               en de afreken-knop staat daar al onderaan naast "Nieuw rondje" — dat geldt
               voor snel én uitgebreid, want die knoppenrij staat er in beide modi. */}
-          {!settle && rounds.length >= 1 && view !== "roundsOverview" && (
+          {!settle && rounds.length >= 1 && view !== "roundsOverview" && !(opNaam === true && view === "hub" && paidCount > 0 && laatsteRondjeKlaar() && unassignedAllRounds === 0) && (
             !lastRoundHandled ? (
               // Bezig een rondje af te ronden op de hub: geen afreken-knop maar een rustig
               // label dat toont waar je bent. Niet klikbaar, niet opgelicht.
@@ -7586,7 +7597,7 @@ export default function PartyTest() {
           const naarVolgende = done && volgende >= 0
           const nogOpen = rounds.filter((rr) => drinks.some((d) => (rr.anon[d.id] ?? 0) > 0)).length
           return (
-            <div style={S.overlay} onClick={() => { setAssignIdx(null); setAssignAllMode(false) }}>
+            <div style={S.overlay} onClick={() => { settleNaToewijzen.current = false; setAssignIdx(null); setAssignAllMode(false) }}>
               <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                 <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.assignTitle}</h3>
                 <div style={{ fontSize: 13.5, color: "#8a7d55", fontWeight: 700, marginBottom: 10 }}>
@@ -7667,7 +7678,7 @@ export default function PartyTest() {
                   </>
                 ) : (
                   <button style={done ? { ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 10 }}
-                    onClick={() => { if (naarVolgende) setAssignIdx(volgende); else { setAssignIdx(null); setAssignAllMode(false) } }}>
+                    onClick={() => { if (naarVolgende) setAssignIdx(volgende); else { setAssignIdx(null); setAssignAllMode(false); if (settleNaToewijzen.current) { settleNaToewijzen.current = false; if (done) setView("quickSettle") } } }}>
                     {naarVolgende ? L.nextRoundAssign(volgende + 1) : L.ready}
                   </button>
                 )}
@@ -7719,10 +7730,14 @@ export default function PartyTest() {
               <div style={{ cursor: "pointer", padding: 14 }} onClick={() => { if (allRoundsOpen) { setAllRoundsOpen(false); setOpenRound(idx) } else { setOpenRound(open ? null : idx) } setEditOpen(false); setEditCups(false); setEditPay(false) }}>
                 <div style={{ ...S.row, justifyContent: "space-between" }}>
                   <span style={{ fontSize: 17, fontWeight: 800 }}>{L.roundWord} {idx + 1} <span style={{ fontSize: 14, fontWeight: 600, color: "#8a7d55" }}>· {L.drinksCount(items)} · {euro(r.amount)}</span>{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", marginLeft: 6 }}>{L.assigned}</span>}</span>
+                  {opNaam === true ? (
+                    <span style={{ flexShrink: 0, fontSize: 20, fontWeight: 800, color: "#8a5e0f", lineHeight: 1 }}>{open ? "▲" : "▼"}</span>
+                  ) : (
                   <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 8, fontSize: 14, fontWeight: 800,
                     background: open ? (settle ? MODUS_FAIR.tint : "rgba(240,165,0,0.15)") : "transparent",
                     border: `1.5px solid ${settle ? MODUS_FAIR.lijnZacht : "rgba(240,165,0,0.4)"}`,
                     color: settle ? MODUS_FAIR.tekst : "#8a5e0f" }}>{open ? "▴" : "▾"}</span>
+                  )}
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "#1f8a4c", marginTop: 3 }}>✓ betaald: {paidLabel(r)}</div>
               </div>
@@ -7738,8 +7753,10 @@ export default function PartyTest() {
               {open && (
                 <div style={{ padding: "0 14px 14px" }}>
                   {roundDrinks.map((d) => {
-                    const who = people.filter((p) => (r.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = r.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
-                    return <div key={d.id} style={{ fontSize: 15.5, marginBottom: 3 }}><b>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}</b>{who.length > 0 && <span style={{ color: "#8a7d55" }}> → {who.join(", ")}</span>}</div>
+                    const wie = people.filter((p) => (r.orders[d.id]?.[p.id] ?? 0) > 0)
+                    // Bij uitgebreid opnemen zijn de namen de kern: amber en met het
+                    // kroontje bij je eigen naam, net als in de toewijs-schermen.
+                    return <div key={d.id} style={{ fontSize: 15.5, marginBottom: 3 }}><b>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}</b>{wie.length > 0 && <span style={{ color: opNaam === true ? "#8a5e0f" : "#8a7d55", fontWeight: opNaam === true ? 700 : undefined }}> → {wie.map((p, i2) => { const q = r.orders[d.id][p.id]; return <span key={p.id}>{i2 > 0 ? ", " : ""}{opNaam === true && p.id === meId && <span style={{ display: "inline-flex", verticalAlign: "middle", marginRight: 3 }}><KroonIcoon size={13} kleur="#8a5e0f" gevuld /></span>}{p.name}{q > 1 ? ` (${q})` : ""}</span> })}</span>}</div>
                   })}
 
                   <div style={{ ...S.row, justifyContent: "flex-end", marginTop: 10 }}>
@@ -8374,11 +8391,21 @@ export default function PartyTest() {
                     border: "1.5px solid rgba(232,168,18,0.5)", borderTop: "3px solid #e8a812" }}>{settle && openRoundId ? L.continueRound(roundNr) : L.newRoundBtn}</button>
               )}
             </div>
-            {rounds.length > 0 && laatsteRondjeKlaar() && (
+            {rounds.length > 0 && laatsteRondjeKlaar() && (opNaam === true ? (
+              // Recht onder "Nieuw rondje", even groot, met dezelfde oranje balk erboven —
+              // maar met stippellijn zodat het als variant leest, niet als hoofdactie.
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <span style={{ flex: 1, minWidth: 0 }} />
+                <button onClick={repeatRound}
+                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 11, padding: "13px 6px", fontSize: 15, fontWeight: 800,
+                    background: "rgba(240,165,0,0.07)", color: "#8a5e0f",
+                    border: "1.5px dashed rgba(232,168,18,0.75)", borderTop: "3px solid #e8a812" }}>{L.repeatRound}</button>
+              </div>
+            ) : (
               <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
                 <button style={{ width: "75%", border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 14, padding: "12px 6px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }} onClick={repeatRound}>{L.repeatRound}</button>
               </div>
-            )}
+            ))}
           </>
         )}
       </div></div>
