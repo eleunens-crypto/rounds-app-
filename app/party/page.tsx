@@ -578,7 +578,7 @@ const T = {
     assignWhoSub: "Wijs toe wie wat dronk",
     inRoundTitle: "In dit rondje",
     backToOverview: "← Terug naar rondjesoverzicht",
-    potWord: "Pot",
+    potTitel: "Pot",
     potEvenIn: "gelijk ingelegd",
     potIn: "ingelegd",
     potOtherBtn: "Anders verdeeld?",
@@ -1249,7 +1249,7 @@ const T = {
     assignWhoSub: "Attribue qui a bu quoi",
     inRoundTitle: "Dans cette tournée",
     backToOverview: "← Retour à l’aperçu des tournées",
-    potWord: "Cagnotte",
+    potTitel: "Cagnotte",
     potEvenIn: "mise égale",
     potIn: "mise",
     potOtherBtn: "Réparti autrement ?",
@@ -8890,7 +8890,7 @@ export default function PartyTest() {
         <div style={{ ...S.card, background: "#f4faf6", border: potEdit !== null ? "1.5px solid rgba(31,138,76,0.5)" : "1px solid rgba(31,138,76,0.35)" }}>
           {potEdit === null ? (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-              <span style={{ fontSize: 14, color: "#1f6b3a", minWidth: 0 }}>💰 <b>{L.potWord} {euro(potContribTotal)}</b> · {potZonderNamen ? L.potEvenIn : L.potIn}: {people.map((p) => `${p.name} ${euro(contribOf(p.id))}`).join(" · ")}</span>
+              <span style={{ fontSize: 14, color: "#1f6b3a", minWidth: 0 }}>💰 <b>{L.potTitel} {euro(potContribTotal)}</b> · {potZonderNamen ? L.potEvenIn : L.potIn}: {people.map((p) => `${p.name} ${euro(contribOf(p.id))}`).join(" · ")}</span>
               <button onClick={() => setPotEdit(Object.fromEntries(people.map((p) => [p.id, Math.round(contribOf(p.id) * 100) / 100])))}
                 style={{ flexShrink: 0, background: "#fff", border: "1.5px solid rgba(31,138,76,0.55)", color: "#1f6b3a", borderRadius: 9, padding: "7px 12px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>{potZonderNamen ? L.potOtherBtn : `✏️ ${L.adjustWord}`}</button>
             </div>
