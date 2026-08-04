@@ -2199,8 +2199,6 @@ export default function PartyTest() {
   const potContribTotal = potRounds.reduce((s, r) => s + Object.values(r.amounts).reduce((a, b) => a + (b || 0), 0), 0)
   const potDraftTotal = Object.values(potDraft).reduce((a, b) => a + (b || 0), 0)
   const potSpent = rounds.reduce((s, r) => s + (r.potPart || 0), 0)
-  // "Per man × hoeveel man": bij uitgebreid is dat het vaste aantal gasten.
-  const potHoofden = opNaam === true && !settle ? Math.max(1, people.length) : Math.max(1, headcount)
   const potRemaining = potContribTotal - potSpent
   const cardLossPer = potIsCard && potRemaining > 0.005 && people.length > 0 ? potRemaining / people.length : 0
 
@@ -2471,6 +2469,10 @@ export default function PartyTest() {
   // keuze die je bij de start maakt en daarna kan omzetten.
   // null = nog niets gekozen, false = snel, true = uitgebreid.
   const [opNaam, setOpNaam] = useState<boolean | null>(false)
+  // "Per man × hoeveel man": bij uitgebreid is dat het vaste aantal gasten. (Staat hier
+  // omdat de const pas ná de opNaam-declaratie mag rekenen — functies mogen dat wel
+  // eerder, directe expressies niet.)
+  const potHoofden = opNaam === true && !settle ? Math.max(1, people.length) : Math.max(1, headcount)
   const [noteerKeuze, setNoteerKeuze] = useState(false)
   // Koos je "op naam", dan zet je eerst de namen. Daarna verdwijnt dit scherm.
   const [namenSetup, setNamenSetup] = useState(false)
