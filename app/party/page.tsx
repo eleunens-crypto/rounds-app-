@@ -516,9 +516,11 @@ const T = {
 
     // ── start & setup
     autoName: () => { const d = new Date(); const m = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"]; return `Rondje ${d.getDate()} ${m[d.getMonth()]}` },
-    sameDayGroup: (naam: string) => `Je hebt vandaag al een groep die "${naam}" heet.\n\nWil je daarin verder, of maak je een nieuwe met een eigen naam?`,
-    sameDayContinue: "Verder in die groep",
-    sameDayNew: "Nieuwe met eigen naam",
+    nameClashMsg: (naam: string) => `Er staat nog een avond open die "${naam}" heet.`,
+    nameClashMsgGuest: (naam: string) => `Er is al een open avond "${naam}" — daar zit je als gast in.`,
+    nameClashContinue: "Verder in die avond",
+    newGroupPh: "Nieuwe groep…",
+    startNewA11y: "Nieuwe avond starten",
     newGroupNameTitle: "Naam voor je nieuwe groep",
     newGroupNameSub: "Zo herken je hem straks tussen je andere groepen.",
     startWord: "Starten",
@@ -639,7 +641,6 @@ const T = {
     stalePinsWhy: "Losmaken? Dan worden ze na een maand opgeruimd, net als de andere afgesloten groepen.",
     stalePinsKeep: "Houden",
     asGuest: "als gast",
-    dupGroupName: (n: string) => `"${n}" bestaat al en staat nog open. Geef deze groep een andere naam, of sluit de vorige eerst af.`,
     delGroupConfirm: (n: string) => `"${n}" verwijderen? Dit kan niet ongedaan worden — alle rondjes en gegevens van deze groep gaan weg.`,
     delGroupYes: "Verwijderen",
     cancel: "Annuleren",
@@ -1200,9 +1201,11 @@ const T = {
 
     // ── start & setup
     autoName: () => { const d = new Date(); const m = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"]; return `Tournée ${d.getDate()} ${m[d.getMonth()]}` },
-    sameDayGroup: (naam: string) => `Tu as déjà un groupe « ${naam} » aujourd’hui.\n\nTu veux continuer dedans, ou en créer un nouveau avec son propre nom ?`,
-    sameDayContinue: "Continuer dans ce groupe",
-    sameDayNew: "Nouveau, avec un nom",
+    nameClashMsg: (naam: string) => `Une soirée « ${naam} » est encore ouverte.`,
+    nameClashMsgGuest: (naam: string) => `Une soirée ouverte « ${naam} » existe déjà — tu y es invité.`,
+    nameClashContinue: "Continuer cette soirée",
+    newGroupPh: "Nouveau groupe…",
+    startNewA11y: "Démarrer une nouvelle soirée",
     newGroupNameTitle: "Nom de ton nouveau groupe",
     newGroupNameSub: "Ainsi tu le reconnais parmi tes autres groupes.",
     startWord: "Démarrer",
@@ -1323,7 +1326,6 @@ const T = {
     stalePinsWhy: "Les détacher ? Ils seront alors supprimés après un mois, comme les autres groupes clôturés.",
     stalePinsKeep: "Garder",
     asGuest: "en tant qu'invit\u00e9",
-    dupGroupName: (n: string) => `"${n}" existe déjà et est encore ouvert. Donne un autre nom à ce groupe, ou clôture d'abord le précédent.`,
     delGroupConfirm: (n: string) => `Supprimer "${n}" ? C'est d\u00e9finitif — toutes les tourn\u00e9es et donn\u00e9es de ce groupe seront perdues.`,
     delGroupYes: "Supprimer",
     cancel: "Annuler",
@@ -2181,6 +2183,11 @@ export default function PartyTest() {
   const [potAmtDraft, setPotAmtDraft] = useState<string>("")
   const [paidConfirmed, setPaidConfirmed] = useState(false)
   const [confirmDlg, setConfirmDlg] = useState<{ msg: string; yes: string; onYes: () => void; onNo?: () => void; no?: string; variant?: "danger" } | null>(null)
+  // Naam-botsing bij het starten: er bestaat al een OPEN avond met deze naam (eigen of
+  // als gast). Eén venster voor alle gevallen — verder in die avond, of hier meteen een
+  // nieuwe naam typen en met het groene vinkje starten.
+  const [naamBotsing, setNaamBotsing] = useState<{ groep: { id: string; name: string; owned: boolean }; basis: string; wilSettle: boolean } | null>(null)
+  const [botsNaam, setBotsNaam] = useState("")
   const [notice, setNotice] = useState<string>("")
   // Slaapstand. De telefoon ligt bij een rondje vaak minutenlang open op tafel; zonder dit
   // blijft het realtime-kanaal die hele tijd verbinding en data verbruiken. Eén tik hervat.
@@ -3277,8 +3284,12 @@ export default function PartyTest() {
       // extra tik om te bevestigen wat je al gekozen had. Nu ga je meteen naar de plek waar
       // je bij een nieuwe groep ook belandt: de namenstap bij Fair Split, het bestelscherm
       // bij snelle rondjes. Wisselen van modus kan nog altijd via ⚙️ Groep.
+      // Behalve als je gast bent: de setup is het inrichtscherm van de admin. Een gast
+      // hoort in de hub — die past zich vanzelf aan de rol aan.
+      const eigen = savedGroups.find((x) => x.id === id)?.owned ?? true
       setSettle(res.settle)
-      if (res.settle) setView("setup")
+      if (!eigen) setView("hub")
+      else if (res.settle) setView("setup")
       else { setActiveCat(catsPresent[0]); setView("order") }
     } else {
       setView("hub")
@@ -3419,41 +3430,60 @@ export default function PartyTest() {
     }
   }, [groupId, loadParty, slaapt])
 
+  // Doortellen tot een naam die nog nergens in de lijst staat (open én afgesloten
+  // tellen mee): "Rondje 4 augustus (2)", "(3)" … Zo hoef je niets te verzinnen.
+  const vrijeNaam = (basis: string) => {
+    const bezet = (n: string) => savedGroups.some((g) => g.name.trim().toLowerCase() === n.toLowerCase())
+    if (!bezet(basis)) return basis
+    let n = 2
+    let vrij = `${basis} (${n})`
+    while (bezet(vrij)) { n += 1; vrij = `${basis} (${n})` }
+    return vrij
+  }
+
+  // "Verder in die avond" uit het botsingsvenster — voor een gastbotsing open je de
+  // avond gewoon als gast (openSavedGroup routeert dan naar de gastweergave).
+  const botsingVerder = () => {
+    const id = naamBotsing?.groep.id
+    setNaamBotsing(null)
+    if (id) void openSavedGroup(id)
+  }
+
+  // Het groene vinkje: starten met de getypte naam, of — bleef het veld leeg — met de
+  // doorgetelde "(2)"-naam. Botst de getypte naam zélf ook nog met iets in de lijst,
+  // dan tellen we stil door: venster-op-venster bestaat niet, de start lukt altijd.
+  const botsingStart = () => {
+    if (!naamBotsing) return
+    const basis = botsNaam.trim() || naamBotsing.basis
+    const naam = vrijeNaam(basis)
+    const wilSettle = naamBotsing.wilSettle
+    setNaamBotsing(null)
+    setGroupName(naam)
+    void createGroup(naam, wilSettle, true)
+  }
+
   // ── Groep aanmaken (admin) ──────────────────────────────────────────────────
-  const createGroup = async (fallbackNaam?: string, wilSettle: boolean = true) => {
+  const createGroup = async (fallbackNaam?: string, wilSettle: boolean = true, skipClash = false) => {
     // Geen naam meer nodig bij de start: leeg laten valt terug op "Rondje + datum".
     // De naam blijft achteraf aanpasbaar via ⚙️ Groep.
     const getypt = groupName.trim() || fallbackNaam?.trim() || ""
     let naam = getypt || L.autoName()
-    // Zelf getypt en al in gebruik? Dan waarschuwen. Automatisch gekozen? Dan tellen we
-    // gewoon door (Rondje 20 juli 2, 3 …) zodat je nooit vastloopt op de startknop.
-    if (getypt) {
-      // Ook afgesloten groepen tellen mee: twee keer dezelfde naam in je lijst is
-      // verwarrend, ook al is de ene al afgerond.
-      const dubbel = savedGroups.find((g) => g.name.trim().toLowerCase() === naam.toLowerCase())
-      if (dubbel) { setNotice(L.dupGroupName(naam)); return }
-    } else {
-      // Vroeger telde de app gewoon door: "Rondje 28 juli 2, 3 …". Dat levert namen op die
-      // niets zeggen, en meestal wou je gewoon je bestaande groep terug. Dus vragen we het.
-      const zelfde = savedGroups.find((g) => g.owned && g.name.trim().toLowerCase() === naam.toLowerCase())
-      if (zelfde) {
-        setConfirmDlg({
-          msg: L.sameDayGroup(zelfde.name),
-          yes: L.sameDayContinue, no: L.sameDayNew,
-          onYes: () => { setConfirmDlg(null); void openSavedGroup(zelfde.id) },
-          onNo: () => {
-            setConfirmDlg(null)
-            // Doortellen tot een vrije naam: "Rondje 2 augustus (2)", "(3)" … Zo hoef je
-            // niets te verzinnen om opnieuw te kunnen beginnen.
-            let n = 2
-            let vrij = `${naam} (${n})`
-            while (savedGroups.some((g) => g.name.trim().toLowerCase() === vrij.toLowerCase())) { n += 1; vrij = `${naam} (${n})` }
-            setGroupName(vrij)
-            void createGroup(vrij, wilSettle)
-          },
-        })
+    // Eén regel voor alle naam-botsingen, getypt of automatisch gekozen:
+    //   - botst de naam met een OPEN avond in je lijst (eigen óf als gast) → het
+    //     keuzevenster: verder in die avond, of meteen een nieuwe naam typen;
+    //   - botst hij alleen met AFGESLOTEN avonden → stil doortellen naar "(2)" en
+    //     gewoon starten, zodat de lijst nooit twee keer dezelfde naam toont.
+    // De oude harde foutmelding is daarmee weg: je loopt nooit meer dood op de start.
+    // De gastbotsing zit er bewust bij: de admin maakte vanavond vaak al de groep aan —
+    // "verder" opent hem dan als gast, in plaats van ongemerkt een tweede lege groep.
+    if (!skipClash) {
+      const open = savedGroups.find((g) => !g.finalized && g.name.trim().toLowerCase() === naam.toLowerCase())
+      if (open) {
+        setBotsNaam("")
+        setNaamBotsing({ groep: { id: open.id, name: open.name, owned: open.owned }, basis: naam, wilSettle })
         return
       }
+      if (savedGroups.some((g) => g.name.trim().toLowerCase() === naam.toLowerCase())) naam = vrijeNaam(naam)
     }
     if (busy) return
     setBusy(true)
@@ -5175,6 +5205,40 @@ export default function PartyTest() {
           </div>
         </div>
       )}
+      {naamBotsing && (
+        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setNaamBotsing(null)}>
+          <div style={{ ...S.sheet, maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+            <style>{`@keyframes rundoBotsPuls{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}`}</style>
+            <p style={{ fontSize: 15.5, color: "#4a3f1e", lineHeight: 1.55, margin: "0 0 14px" }}>
+              {naamBotsing.groep.owned ? L.nameClashMsg(naamBotsing.groep.name || L.autoName()) : L.nameClashMsgGuest(naamBotsing.groep.name || L.autoName())}
+            </p>
+            <button style={{ ...S.btnP, fontSize: 16.5, padding: "13px 14px" }} onClick={botsingVerder}>{L.nameClashContinue}</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 0 10px" }}>
+              <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.14)" }} />
+              <span style={{ fontSize: 13, color: "#a89a6f", fontWeight: 700 }}>{L.orWord}</span>
+              <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.14)" }} />
+            </div>
+            {/* Geen aparte startknop: het veld nodigt uit tot een échte naam, en zodra je
+                typt wordt het vinkje de groene, pulserende start. Vinkje zonder te typen
+                werkt ook nog — dan pakt de app stil de doorgetelde "(2)"-naam. */}
+            <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8, height: 46, padding: "0 12px", borderRadius: 11, border: botsNaam.trim() ? "1.5px solid rgba(240,165,0,0.75)" : "1px solid rgba(120,95,20,0.22)" }}>
+                <span aria-hidden style={{ fontSize: 15, flexShrink: 0 }}>✏️</span>
+                <input autoFocus value={botsNaam} onChange={(e) => setBotsNaam(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") botsingStart() }}
+                  placeholder={L.newGroupPh} maxLength={40}
+                  style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 16.5, color: "#4a3f1e", fontFamily: "inherit" }} />
+              </div>
+              <button aria-label={L.startNewA11y} onClick={botsingStart}
+                style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 11, cursor: "pointer", fontSize: 21, fontWeight: 800, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center",
+                  border: botsNaam.trim() ? "none" : "1px solid rgba(120,95,20,0.22)",
+                  background: botsNaam.trim() ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#fff",
+                  color: botsNaam.trim() ? "#fff" : "#b3a988",
+                  animation: botsNaam.trim() ? "rundoBotsPuls 1.1s ease-in-out infinite" : "none" }}>✓</button>
+            </div>
+          </div>
+        </div>
+      )}
       {confirmDlg && (
         <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setConfirmDlg(null)}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
@@ -6451,9 +6515,12 @@ export default function PartyTest() {
           // Zoeken op naam; bij weinig groepen heeft een zoekveld geen zin.
           const zoek = normText(groepZoek)
           const past = (g: SavedGroup) => !zoek || normText(g.name || L.autoName()).includes(zoek)
-          // Bezig = jouw groep die nog niet afgerekend is. Die hoort bovenaan, los van
-          // wat al afgehandeld is.
-          const bezigGroepen = savedGroups.filter((g) => g.owned && !g.finalized && past(g))
+          // Bezig = een open avond waar jij bij hoort: eigen groepen altijd, gastgroepen
+          // alleen als er de laatste 24 uur nog iets gebeurde. Die klep spiegelt de
+          // automatische afsluiting aan admin-kant — een gast kan andermans avond niet
+          // dichtzetten, en zonder de klep bleef een verlaten avond hier eeuwig hangen.
+          const versGenoeg = (g: SavedGroup) => Date.now() - new Date(g.last_active).getTime() < 24 * 3600 * 1000
+          const bezigGroepen = savedGroups.filter((g) => !g.finalized && past(g) && (g.owned || versGenoeg(g)))
           const bewaard = savedGroups.filter((g) => g.pinned && !bezigGroepen.includes(g) && past(g))
           const recent = savedGroups.filter((g) => !g.pinned && !bezigGroepen.includes(g) && past(g))
           const wisbaar = savedGroups.filter((g) => g.owned && !g.pinned)
@@ -6466,7 +6533,10 @@ export default function PartyTest() {
                   {bezigGroepen.map((g) => (
                     <div key={g.id} onClick={() => void openSavedGroup(g.id)}
                       style={{ cursor: "pointer", border: "1.5px solid rgba(232,168,18,0.6)", background: "rgba(240,165,0,0.08)", borderRadius: 12, padding: "12px 13px", marginBottom: 7 }}>
-                      <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</div>
+                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</div>
+                        {!g.owned && <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, color: "#854f0b", background: "#faeeda", borderRadius: 7, padding: "2px 7px" }}>{L.asGuest}</span>}
+                      </div>
                       <div style={{ fontSize: 12.5, color: "#8a7d55", marginTop: 2 }}>{L.continueWhereYouWere}</div>
                     </div>
                   ))}
