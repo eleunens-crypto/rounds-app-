@@ -957,7 +957,7 @@ const T = {
     modeFairSub: "Iedereen scant QR met eigen gsm",
     modeFairSub2: "Duidt aan wat hij of zij drinkt",
     modeFairLine: "Eerlijk betalen volgens wat je dronk",
-    modeSwitchLater: "Je kan later nog wisselen — je rondjes blijven bewaard.",
+    modeSwitchLater: "Kies je snel noteren, dan kan je op het einde alsnog eerlijk per persoon verdelen via Fair Split.",
     chooseHow: "Kies hoe je wil bestellen",
     youNoteSelf: "Jij noteert zelf voor iedereen",
     fairShareTag: "EERLIJK VERDELEN",
@@ -991,8 +991,6 @@ const T = {
     people: "pers.",
     headcountForward: "Dit geldt vanaf het volgende rondje. Eerdere rondjes houden hun aantal — corrigeer die desnoods in het rondjesoverzicht.",
     headcountNotRetro: "Dit verandert de bedragen hieronder niet: elk rondje houdt het aantal dat toen gold. Wil je een eerder rondje corrigeren, doe dat in het rondjesoverzicht.",
-    switchModeWarn: "Van aanpak wisselen? Je begint helemaal opnieuw — wat je tot nu toe noteerde, verdwijnt.\n\nTip: kies de volgende keer meteen de juiste aanpak bij de start, dan hoef je niets over te doen.",
-    switchModeYes: "Wisselen en opnieuw",
     barList: "📋 Bestelling",
     tapToRename: "tik om de naam te wijzigen",
     removeWord: "Weghalen",
@@ -1643,7 +1641,7 @@ const T = {
     modeFairSub: "Chacun scanne le QR sur son téléphone",
     modeFairSub2: "Coche ce qu’il ou elle boit",
     modeFairLine: "Payer équitablement selon ce que tu as bu",
-    modeSwitchLater: "Tu peux changer plus tard — tes tournées sont gardées.",
+    modeSwitchLater: "Si tu notes en vitesse, tu peux encore répartir équitablement à la fin via Fair Split.",
     chooseHow: "Choisissez comment commander",
     youNoteSelf: "Tu notes toi-même pour tous",
     fairShareTag: "PARTAGE ÉQUITABLE",
@@ -1677,8 +1675,6 @@ const T = {
     people: "pers.",
     headcountForward: "Valable \u00e0 partir de la prochaine tourn\u00e9e. Les tourn\u00e9es pr\u00e9c\u00e9dentes gardent leur nombre \u2014 corrige-les au besoin dans l\u2019aper\u00e7u.",
     headcountNotRetro: "Cela ne change pas les montants ci-dessous : chaque tourn\u00e9e garde le nombre du moment. Pour corriger une tourn\u00e9e pass\u00e9e, va dans l\u2019aper\u00e7u.",
-    switchModeWarn: "Changer de formule ? Tu recommences \u00e0 z\u00e9ro — ce que tu as not\u00e9 jusqu'ici dispara\u00eet.\n\nAstuce : choisis directement la bonne formule au d\u00e9part la prochaine fois.",
-    switchModeYes: "Changer et recommencer",
     barList: "📋 Commande",
     tapToRename: "touche pour renommer",
     removeWord: "Retirer",
@@ -3736,33 +3732,6 @@ export default function PartyTest() {
   }
   const goHome = () => { setFromOnboarding(false); setSettingsBackTo(view === "order" ? "order" : view === "quickSettle" ? "quickSettle" : "hub"); if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); setView("settings") } }); else setView("settings") }
   const potAvailNow = () => { const curPotPart = rounds.length ? (rounds[rounds.length - 1].potPart || 0) : 0; return potContribTotal - (potSpent - curPotPart) }
-  // Van aanpak wisselen: je begint helemaal opnieuw in de andere modus. We wissen de
-  // rondjes, drankjes en pot van deze groep en sturen je terug naar de kaders met de
-  // andere modus voorgeselecteerd. De groep zelf (naam, id) blijft — geen dubbels.
-  const switchMode = () => {
-    if (!groupId) return
-    setConfirmDlg({
-      variant: "danger", msg: L.switchModeWarn, yes: L.switchModeYes, no: L.cancel,
-      onYes: async () => {
-        setConfirmDlg(null)
-        // Child-data weg (rondjes, items, pot). CASCADE zit op de groep, niet hiertussen,
-        // dus we wissen expliciet per tabel.
-        await Promise.all([
-          supabase.from("party_round_items").delete().eq("group_id", groupId),
-          supabase.from("party_rounds").delete().eq("group_id", groupId),
-          supabase.from("party_pot").delete().eq("group_id", groupId),
-        ])
-        // Lokale staat leegmaken zodat er niets blijft hangen.
-        setRounds([]); setCart({}); setCartAnon({}); setPotRounds([]); setOpenRoundId(null); setStartedBy(null)
-        setRoundNr(1); setHasSettled(false)
-        // Terug naar de kaders met de ándere modus voorgeselecteerd, deze groep hervatten.
-        setResumeGroupId(groupId)
-        setBpSettle(!settle)
-        setOpenInfo(null)
-        setView("start")
-      },
-    })
-  }
   const paymentState = () => {
     const total = parseFloat(amountDraft.replace(",", ".")) || 0
     const potAvail = potAvailNow()
@@ -7318,8 +7287,9 @@ export default function PartyTest() {
           /* Snel opnemen toont hier bewust níets meer. De oude "⚖️ op naam noteren"-knop
              zette je met één (mis)tik in de uitgebreid-flow — met toewijzingsmeldingen en
              betaalstappen die snel opnemen niet kent — en eenmaal er personen bestonden,
-             herkende ook het herladen de groep als uitgebreid. Wisselen van modus kan
-             bewust via ⚙️ Groep; op naam verdelen kan op het einde nog via Fair Split. */
+             herkende ook het herladen de groep als uitgebreid. Een moduswissel midden in
+             de avond bestaat bewust niet; op naam verdelen kan op het einde via de
+             Fair Split-overstap op het afrekenscherm. */
         )}
         {/* Eerst voor wie je aantikt, dan de categorieën vlak boven de lijst. Zoeken en
             inspreken staan onderaan: die gebruik je zelden en ze duwden de drankjes weg. */}
