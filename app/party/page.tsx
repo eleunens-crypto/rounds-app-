@@ -591,6 +591,7 @@ const T = {
     leaveAsIs: "Zo laten",
     toBalanceBtn: "Naar de eindbalans →",
     namePh2: "Naam…",
+    amountsStillMissing: (n: number) => `Nog ${n} ${n === 1 ? "rondje" : "rondjes"} zonder bedrag — vul in, of tik ✏️ om aan te passen.`,
     busyLabel: "BEZIG",
     continueWhereYouWere: "verder waar je gebleven was →",
     namesMissing: (n: number) => `${n} ${n === 1 ? "persoon heeft" : "personen hebben"} nog geen naam. Vul die aan via ⚙️ Groep, anders staat er straks "Plaats 3" op de afrekening.`,
@@ -1262,6 +1263,7 @@ const T = {
     leaveAsIs: "Laisser ainsi",
     toBalanceBtn: "Vers le décompte final →",
     namePh2: "Nom…",
+    amountsStillMissing: (n: number) => `Encore ${n} tournée${n === 1 ? "" : "s"} sans montant — remplis, ou tape ✏️ pour ajuster.`,
     busyLabel: "EN COURS",
     continueWhereYouWere: "reprendre où tu t’es arrêté →",
     namesMissing: (n: number) => `${n} personne${n === 1 ? "" : "s"} sans nom. Complète via ⚙️ Groupe, sinon le décompte affichera « Place 3 ».`,
@@ -2921,6 +2923,11 @@ export default function PartyTest() {
     }
     // Lege naam = vrije plaats. In de UI heet die "Gast N", zodat de bestaande
     // placeholder-logica ongemoeid blijft.
+    // De modus "uitgebreid opnemen" stond nergens bewaard en verdampte bij elke
+    // herlaadbeurt — terwijl hij uit de data zelf af te lezen valt: gewone rondjes
+    // mét personen = op naam noteren (snel opnemen kent geen personen). Enkel
+    // opwaarderen, nooit terugduwen: een bewuste keuze in de sessie blijft staan.
+    if (g && g.settle === false && (pp || []).length > 0) setOpNaam(true)
     setPeople((pp || []).map((r) => ({
       id: r.id, seat: r.seat,
       // named = de admin (of de gast zelf) gaf een echte naam. Een naamloze plaats
@@ -3029,7 +3036,13 @@ export default function PartyTest() {
           const afrekenen = sessie.v === "payers" || sessie.v === "final" || sessie.v === "fairSetup" || sessie.v === "quickSettle" || sessie.v === "settings"
           if (afrekenen && sessie.v) setView(sessie.v as typeof view)
           else if (stand?.heeftOpen) setView("order")
-          else if (stand?.heeftPending) setView("confirmed")
+          else if (stand?.heeftPending) {
+            // Een bevestigd-maar-onbetaald rondje: bij Fair Split is "confirmed" het
+            // juiste scherm, bij gewone rondjes (snel én uitgebreid) is dat de hub met
+            // de betaalkaart — en die verschijnt enkel als het rondje "onafgehandeld" staat.
+            if (stand.settle) setView("confirmed")
+            else { setLastRoundHandled(false); setView("hub") }
+          }
           else if (sessie.v) setView(sessie.v as typeof view)
           setBooting(false)
           return
@@ -3594,7 +3607,7 @@ export default function PartyTest() {
     if (view === "order" && !settle && opNaam && namenSetup) { setNamenSetup(false); setOpNaam(false); return }
     if (view === "settings") { setView(settingsBackTo === "order" ? "order" : "hub"); return }
     if (view === "roundsOverview") { setView(overviewBackTo === "hub" ? "hub" : "order"); return }
-    if (view === "final" && !settle && opNaam === true) { setOverviewBackTo("hub"); setView("roundsOverview"); return }
+    if (view === "final" && opNaam === true) { terugNaarUitgebreid(); setOverviewBackTo("hub"); setView("roundsOverview"); return }
     if (view === "confirmed" || view === "quickSettle" || view === "payers" || view === "final") { setView("hub"); return }
     goStart()
   }
@@ -4076,12 +4089,19 @@ export default function PartyTest() {
   // eigen amber-stijl (de modus blijft uitgebreid).
   const naarEindbalans = () => {
     // "Zelf betaald" registreerde tot nu enkel het bedrag, niet wíe betaalde. Voor een
-    // kloppende eindbalans zetten we de noteerder als betaler van het niet-pot-deel.
-    if (meId) setRounds((rs) => rs.map((rr) => {
-      if ((rr.amount || 0) <= 0.005 || Object.keys(rr.payers || {}).length > 0) return rr
-      const rest = Math.max(0, (rr.amount || 0) - (rr.potPart || 0))
-      return rest > 0.005 ? { ...rr, payers: { [meId]: rest } } : rr
-    }))
+    // kloppende eindbalans zetten we de noteerder als betaler van het niet-pot-deel —
+    // en we bewaren dat ook echt, anders verdampt het bij een herlaadbeurt.
+    if (meId) {
+      const nieuw = rounds.flatMap((rr) => {
+        if ((rr.amount || 0) <= 0.005 || Object.keys(rr.payers || {}).length > 0) return []
+        const rest = Math.max(0, (rr.amount || 0) - (rr.potPart || 0))
+        return rest > 0.005 ? [{ ...rr, payers: { [meId]: rest } }] : []
+      })
+      if (nieuw.length > 0) {
+        setRounds((rs) => rs.map((rr) => nieuw.find((w) => w.id === rr.id) ?? rr))
+        nieuw.forEach((w) => persistRound(w))
+      }
+    }
     setHasSettled(true)
     setView("final")
   }
@@ -8582,7 +8602,15 @@ export default function PartyTest() {
         {/* Kwam je bedragen aanvullen? Dan is er maar één zinnige volgende stap. */}
         {fillMode ? (
           <button style={{ ...S.btnP, width: "100%", marginTop: 16, padding: "14px 6px", fontSize: 15.5 }}
-            onClick={() => { setFillMode(false); if (opNaam === true && !settle) goQuickSettle(); else setView("quickSettle") }}>{L.backToSettle}</button>
+            onClick={() => {
+              if (opNaam === true && !settle) {
+                // Stil terugspringen naar dezelfde invulstand zou als "er gebeurt niets"
+                // aanvoelen — dus eerst zeggen wát er nog ontbreekt.
+                const nog = rounds.filter((rr) => (rr.amount || 0) <= 0.005).length
+                if (nog > 0) { setNotice(L.amountsStillMissing(nog)); return }
+                setFillMode(false); goQuickSettle()
+              } else { setFillMode(false); setView("quickSettle") }
+            }}>{L.backToSettle}</button>
         ) : (
           <>
             {/* Gelijkwaardig: doorgaan of stoppen. Goud voor het rondje, inktblauw voor
