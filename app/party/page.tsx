@@ -578,6 +578,19 @@ const T = {
     assignWhoSub: "Wijs toe wie wat dronk",
     inRoundTitle: "In dit rondje",
     backToOverview: "← Terug naar rondjesoverzicht",
+    potWord: "Pot",
+    potEvenIn: "gelijk ingelegd",
+    potIn: "ingelegd",
+    potOtherBtn: "Anders verdeeld?",
+    potWhoFrom: (b: string) => `Van wie komt de ${b} in de pot?`,
+    mustBeTot: (b: string) => `moet ${b} zijn`,
+    potStayEqual: "Toch gelijk",
+    cancelEdit: "Annuleer",
+    guestsWhoTitle: "Wie waren de gasten?",
+    guestsWhoSub: "Alles klopt al — alleen deze namen ontbreken nog voor een leesbare afrekening.",
+    leaveAsIs: "Zo laten",
+    toBalanceBtn: "Naar de eindbalans →",
+    namePh2: "Naam…",
     busyLabel: "BEZIG",
     continueWhereYouWere: "verder waar je gebleven was →",
     namesMissing: (n: number) => `${n} ${n === 1 ? "persoon heeft" : "personen hebben"} nog geen naam. Vul die aan via ⚙️ Groep, anders staat er straks "Plaats 3" op de afrekening.`,
@@ -1236,6 +1249,19 @@ const T = {
     assignWhoSub: "Attribue qui a bu quoi",
     inRoundTitle: "Dans cette tournée",
     backToOverview: "← Retour à l’aperçu des tournées",
+    potWord: "Cagnotte",
+    potEvenIn: "mise égale",
+    potIn: "mise",
+    potOtherBtn: "Réparti autrement ?",
+    potWhoFrom: (b: string) => `Qui a mis les ${b} dans la cagnotte ?`,
+    mustBeTot: (b: string) => `doit être ${b}`,
+    potStayEqual: "Rester égal",
+    cancelEdit: "Annuler",
+    guestsWhoTitle: "Qui étaient les invités ?",
+    guestsWhoSub: "Tout est déjà bon — seuls ces noms manquent pour un décompte lisible.",
+    leaveAsIs: "Laisser ainsi",
+    toBalanceBtn: "Vers le décompte final →",
+    namePh2: "Nom…",
     busyLabel: "EN COURS",
     continueWhereYouWere: "reprendre où tu t’es arrêté →",
     namesMissing: (n: number) => `${n} personne${n === 1 ? "" : "s"} sans nom. Complète via ⚙️ Groupe, sinon le décompte affichera « Place 3 ».`,
@@ -1865,6 +1891,10 @@ export default function PartyTest() {
   const [showAllGroups, setShowAllGroups] = useState(false)
   // Werkblad voor het verdelen van de pot over namen; null = niet in bewerkmodus.
   const [potNames, setPotNames] = useState<Record<string, number> | null>(null)
+  // Bewerkblad voor de pot-inleg op de eindbalans van uitgebreid; null = dicht.
+  const [potEdit, setPotEdit] = useState<Record<string, number> | null>(null)
+  // Namenvenster bij het afrekenen: enkel de nog-onbenoemde gasten; null = dicht.
+  const [naamVenster, setNaamVenster] = useState<Record<string, string> | null>(null)
   // Bedragvelden: zolang je typt houden we jouw tekst aan, ook halve invoer als "18,"
   // of "0,5". Zetten we elke toetsaanslag meteen om naar een getal, dan verdwijnt de
   // komma weer voor je het cijfer erna kan intikken en kan je enkel ronde bedragen.
@@ -2153,10 +2183,22 @@ export default function PartyTest() {
   const depositPerCupEur = effDepositUnit === "eur" ? depositValue : depositValue * coinValue
   const show = (eur: number) => (pay === "coin" && displayUnit === "coin" ? (eur / coinValue).toFixed(2).replace(".", ",") + " coins" : euro(eur))
 
-  const contribOf = (pid: string) => potRounds.reduce((s, r) => s + (r.amounts[pid] || 0), 0)
+  // Bij uitgebreid opnemen zegt het inlegvenster letterlijk "per man": een naamloos
+  // bewaarde inleg (sleutel "pot") verdelen we daarom gelijk over de vaste gasten —
+  // zo krijgt restgeld uit de pot bij het afrekenen gewoon zijn eigenaars terug.
+  const contribOf = (pid: string) => potRounds.reduce((s, r) => {
+    let a = r.amounts[pid] || 0
+    if (opNaam === true && !settle && people.length > 0) {
+      const anoniem = Object.entries(r.amounts).reduce((t, [k, v]) => t + (people.some((pp) => pp.id === k) ? 0 : (v || 0)), 0)
+      a += anoniem / people.length
+    }
+    return s + a
+  }, 0)
   const potContribTotal = potRounds.reduce((s, r) => s + Object.values(r.amounts).reduce((a, b) => a + (b || 0), 0), 0)
   const potDraftTotal = Object.values(potDraft).reduce((a, b) => a + (b || 0), 0)
   const potSpent = rounds.reduce((s, r) => s + (r.potPart || 0), 0)
+  // "Per man × hoeveel man": bij uitgebreid is dat het vaste aantal gasten.
+  const potHoofden = opNaam === true && !settle ? Math.max(1, people.length) : Math.max(1, headcount)
   const potRemaining = potContribTotal - potSpent
   const cardLossPer = potIsCard && potRemaining > 0.005 && people.length > 0 ? potRemaining / people.length : 0
 
@@ -2710,7 +2752,7 @@ export default function PartyTest() {
 
   useEffect(() => {
     if (settle) return
-    const totaal = potPerMan * Math.max(1, headcount)
+    const totaal = potPerMan * potHoofden
     setPotDraft((c) => (c.pot === totaal ? c : { pot: totaal }))
   }, [settle, potPerMan, headcount])
 
@@ -3449,10 +3491,12 @@ export default function PartyTest() {
   // Een inleg meteen wegschrijven en de pot herladen. Apart van closePot, zodat het
   // opslaan niet afhangt van het sluiten van het venster.
   const saveQuickPot = async () => {
-    const totaal = settle ? potDraftTotal : potPerMan * Math.max(1, headcount)
+    const totaal = settle ? potDraftTotal : potPerMan * potHoofden
     if (totaal <= 0.001) { setNotice(L.potFillAmount); return }
     if (!groupId) return
-    const bedragen = settle ? potDraft : { pot: totaal }
+    const bedragen = settle ? potDraft
+      : opNaam === true ? Object.fromEntries(people.map((pp) => [pp.id, potPerMan]))
+      : { pot: totaal }
     const { error } = await supabase.rpc("party_add_pot", { p_group: groupId, p_amounts: bedragen, p_is_card: potIsCard, p_payers: cardPayers })
     if (error) { setNotice("Inleg opslaan mislukt: " + error.message); return }
     setPotDraft({}); setPotPerMan(0); setEveryoneChoice(null); setEveryoneDraft("")
@@ -4028,6 +4072,19 @@ export default function PartyTest() {
 
   // Gewoon rondjes → afrekenen. Altijd bereikbaar. Zonder bedragen valt er niets te
   // verdelen: dan een melding met een duw naar het rondjesoverzicht.
+  // De eindsprong van uitgebreid: betalers registreren en naar de eindbalans, in de
+  // eigen amber-stijl (de modus blijft uitgebreid).
+  const naarEindbalans = () => {
+    // "Zelf betaald" registreerde tot nu enkel het bedrag, niet wíe betaalde. Voor een
+    // kloppende eindbalans zetten we de noteerder als betaler van het niet-pot-deel.
+    if (meId) setRounds((rs) => rs.map((rr) => {
+      if ((rr.amount || 0) <= 0.005 || Object.keys(rr.payers || {}).length > 0) return rr
+      const rest = Math.max(0, (rr.amount || 0) - (rr.potPart || 0))
+      return rest > 0.005 ? { ...rr, payers: { [meId]: rest } } : rr
+    }))
+    setHasSettled(true)
+    setView("final")
+  }
   const goQuickSettle = () => {
     // Geen enkel rondje? Dan valt er niets te verdelen. Wél rondjes maar (nog) geen
     // bedragen? Dan gewoon doorlaten: het afrekenscherm zegt zelf welke rondjes leeg
@@ -4045,29 +4102,24 @@ export default function PartyTest() {
       if (fr >= 0) { settleNaToewijzen.current = true; setOpenRound(fr); setAllRoundsOpen(false); setEditCups(false); setEditPay(false); setAssignAllMode(true); setAssignIdx(fr); setView("hub") }
       return
     }
-    // Uitgebreid opnemen met alles in orde — iedereen benoemd, alles toegewezen, elk
-    // rondje een bedrag én afgehandeld? Dan is de keuze al gemaakt ("ieder betaalt wat
-    // hij dronk") en zijn keuzescherm en tussenstappen zinloos: meteen naar de Fair
-    // Split-eindbalans. Ontbreekt er iets, dan volgt gewoon de bestaande route.
+    // Uitgebreid opnemen loopt nooit meer door de drie Fair Split-stappen: elk gat
+    // krijgt zijn eigen kleinste oplossing, in volgorde — bedragen aanvullen in het
+    // overzicht, gast-namen in een venstertje — en daarna land je op de eindbalans.
     if (opNaam === true) {
-      const naamloos = people.filter((pp) => isGuestDefault(pp.name) || !pp.name.trim()).length
+      if (unfinishedRound) { setNotice(L.finishRoundFirst); return }
+      if (blockIfUnpaid()) return
       const zonderBedrag = rounds.filter((rr) => (rr.amount || 0) <= 0.005).length
-      if (paidCount > 0 && !unfinishedRound && unassignedAllRounds === 0 && naamloos === 0 && zonderBedrag === 0) {
-        if (blockIfUnpaid()) return
-        // "Zelf betaald" registreerde tot nu enkel het bedrag, niet wíe betaalde. Voor
-        // een kloppende eindbalans (wie krijgt terug, wie moet bijleggen) zetten we de
-        // noteerder als betaler van het niet-pot-deel — dat is wat "zelf betaald" zegt.
-        if (meId) setRounds((rs) => rs.map((rr) => {
-          if ((rr.amount || 0) <= 0.005 || Object.keys(rr.payers || {}).length > 0) return rr
-          const rest = Math.max(0, (rr.amount || 0) - (rr.potPart || 0))
-          return rest > 0.005 ? { ...rr, payers: { [meId]: rest } } : rr
-        }))
-        setHasSettled(true)
-        // De modus blijft uitgebreid: de eindbalans rendert dan gewoon in de eigen
-        // amber-stijl met het eigen kopje, in plaats van in Fair Split-teal.
-        setView("final")
+      if (zonderBedrag > 0) {
+        setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview")
         return
       }
+      const gasten = people.filter((pp) => isGuestDefault(pp.name) || !pp.name.trim())
+      if (gasten.length > 0) {
+        setNaamVenster(Object.fromEntries(gasten.map((g) => [g.id, ""])))
+        return
+      }
+      naarEindbalans()
+      return
     }
     setView("quickSettle")
   }
@@ -4902,7 +4954,7 @@ export default function PartyTest() {
             <button style={{ ...S.btn, padding: "8px 11px", fontSize: 14, color: "#c0554a" }} onClick={() => setPotPerMan(0)}>↺</button>
           </div>
           {(() => {
-            const nieuweInleg = potPerMan * Math.max(1, headcount)
+            const nieuweInleg = potPerMan * potHoofden
             const alIn = potRemaining // wat er NU nog in zit (na eerder uitgeven)
             const heeftPot = potContribTotal > 0.005
             return heeftPot ? (
@@ -4971,6 +5023,33 @@ export default function PartyTest() {
   )
   const renderDialogs = () => (
     <>
+      {/* Namenvenster bij het afrekenen (uitgebreid): enkel de gast-namen die nog
+          openstaan. Invullen is welkom maar nooit verplicht — de eindbalans rekent
+          even goed met "Gast 2" als etiket. */}
+      {naamVenster !== null && (
+        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setNaamVenster(null)}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.guestsWhoTitle}</h3>
+            <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 12, lineHeight: 1.45 }}>{L.guestsWhoSub}</div>
+            {Object.keys(naamVenster).map((pid) => { const pp = people.find((x) => x.id === pid); return pp ? (
+              <div key={pid} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                <span style={{ flexShrink: 0, width: 62, fontSize: 13.5, color: "#a89a6f", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pp.name || "?"}</span>
+                <input value={naamVenster[pid]} onChange={(e) => setNaamVenster((c) => ({ ...(c || {}), [pid]: e.target.value }))}
+                  placeholder={L.namePh2} style={{ ...S.input, flex: 1, minWidth: 0, boxSizing: "border-box", background: "#fff", padding: "9px 11px", fontSize: 15.5, textAlign: "left" }} />
+              </div>
+            ) : null })}
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button style={{ ...S.btn, flex: 1, fontSize: 14, fontWeight: 800 }}
+                onClick={() => { setNaamVenster(null); naarEindbalans() }}>{L.leaveAsIs}</button>
+              <button style={{ ...S.btnP, flex: 1, fontSize: 14, fontWeight: 800 }}
+                onClick={() => {
+                  Object.entries(naamVenster).forEach(([pid, nm]) => { if (nm.trim()) renamePerson(pid, nm.trim()) })
+                  setNaamVenster(null); naarEindbalans()
+                }}>{L.toBalanceBtn}</button>
+            </div>
+          </div>
+        </div>
+      )}
       {confirmDlg && (
         <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setConfirmDlg(null)}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
@@ -7804,7 +7883,7 @@ export default function PartyTest() {
                   </>
                 ) : (
                   <button style={done ? { ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 10 }}
-                    onClick={() => { if (naarVolgende) setAssignIdx(volgende); else { setAssignIdx(null); setAssignAllMode(false); if (settleNaToewijzen.current) { settleNaToewijzen.current = false; if (done) setView("quickSettle") } } }}>
+                    onClick={() => { if (naarVolgende) setAssignIdx(volgende); else { setAssignIdx(null); setAssignAllMode(false); if (settleNaToewijzen.current) { settleNaToewijzen.current = false; if (done) goQuickSettle() } } }}>
                     {naarVolgende ? L.nextRoundAssign(volgende + 1) : L.ready}
                   </button>
                 )}
@@ -8503,7 +8582,7 @@ export default function PartyTest() {
         {/* Kwam je bedragen aanvullen? Dan is er maar één zinnige volgende stap. */}
         {fillMode ? (
           <button style={{ ...S.btnP, width: "100%", marginTop: 16, padding: "14px 6px", fontSize: 15.5 }}
-            onClick={() => { setFillMode(false); setView("quickSettle") }}>{L.backToSettle}</button>
+            onClick={() => { setFillMode(false); if (opNaam === true && !settle) goQuickSettle(); else setView("quickSettle") }}>{L.backToSettle}</button>
         ) : (
           <>
             {/* Gelijkwaardig: doorgaan of stoppen. Goud voor het rondje, inktblauw voor
@@ -8803,6 +8882,45 @@ export default function PartyTest() {
           </div>
         )}
       </div>
+
+      {/* De pot-inleg is invoer voor de balans, geen resultaat — daarom staat hij vóór
+          de tabel. Standaard gelijk verdeeld (dat belooft het "per man"-inlegvenster);
+          wie het anders deed, past het hier in één beweging aan. Enkel uitgebreid. */}
+      {opNaam === true && potContribTotal > 0.005 && (
+        <div style={{ ...S.card, background: "#f4faf6", border: potEdit !== null ? "1.5px solid rgba(31,138,76,0.5)" : "1px solid rgba(31,138,76,0.35)" }}>
+          {potEdit === null ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <span style={{ fontSize: 14, color: "#1f6b3a", minWidth: 0 }}>💰 <b>{L.potWord} {euro(potContribTotal)}</b> · {potZonderNamen ? L.potEvenIn : L.potIn}: {people.map((p) => `${p.name} ${euro(contribOf(p.id))}`).join(" · ")}</span>
+              <button onClick={() => setPotEdit(Object.fromEntries(people.map((p) => [p.id, Math.round(contribOf(p.id) * 100) / 100])))}
+                style={{ flexShrink: 0, background: "#fff", border: "1.5px solid rgba(31,138,76,0.55)", color: "#1f6b3a", borderRadius: 9, padding: "7px 12px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>{potZonderNamen ? L.potOtherBtn : `✏️ ${L.adjustWord}`}</button>
+            </div>
+          ) : (() => {
+            const som = Object.values(potEdit).reduce((a, b) => a + (b || 0), 0)
+            const klopt = Math.abs(som - potContribTotal) <= 0.005
+            return (
+              <div>
+                <div style={{ fontSize: 14.5, fontWeight: 800, color: "#1f6b3a", marginBottom: 10 }}>💰 {L.potWhoFrom(euro(potContribTotal))}</div>
+                {people.map((p) => (
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 7 }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.id === meId && <span style={{ display: "inline-flex", verticalAlign: "middle", marginRight: 4 }}><KroonIcoon size={13} kleur="#8a5e0f" gevuld /></span>}{p.name}</span>
+                    <input inputMode="decimal" {...bedragVeld(`potedit-${p.id}`, potEdit[p.id] || 0, (v) => setPotEdit((c) => ({ ...(c || {}), [p.id]: v })))}
+                      style={{ ...S.input, width: 92, boxSizing: "border-box", background: "#fff", padding: "8px 10px", fontSize: 15.5, textAlign: "right", borderColor: "rgba(31,138,76,0.45)" }} />
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed rgba(31,138,76,0.35)", paddingTop: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 13.5, color: "#1f6b3a", fontWeight: 700 }}>{L.togetherWord}</span>
+                  <span style={{ fontSize: 14.5, fontWeight: 800, color: klopt ? "#1f8a4c" : "#b0402f" }}>{euro(som)}{klopt ? " ✓" : ` — ${L.mustBeTot(euro(potContribTotal))}`}</span>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button style={{ ...S.btn, flex: 1, fontSize: 14, fontWeight: 800 }} onClick={() => setPotEdit(null)}>{potZonderNamen ? L.potStayEqual : L.cancelEdit}</button>
+                  <button disabled={!klopt} style={{ flex: 1, border: "none", borderRadius: 11, padding: "10px 6px", fontSize: 14, fontWeight: 800, cursor: klopt ? "pointer" : "default", background: klopt ? "#1f8a4c" : "#c9d8cc", color: "#fff" }}
+                    onClick={() => { if (!klopt || !potEdit) return; bewaarPotPerPersoon(potEdit); setPotEdit(null) }}>{L.saveName}</button>
+                </div>
+              </div>
+            )
+          })()}
+        </div>
+      )}
 
       <div style={S.card}>
         <div style={{ ...S.row, gap: 6, marginBottom: 8 }}>
