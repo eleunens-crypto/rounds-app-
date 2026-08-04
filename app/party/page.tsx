@@ -2926,10 +2926,12 @@ export default function PartyTest() {
     // Lege naam = vrije plaats. In de UI heet die "Gast N", zodat de bestaande
     // placeholder-logica ongemoeid blijft.
     // De modus "uitgebreid opnemen" stond nergens bewaard en verdampte bij elke
-    // herlaadbeurt — terwijl hij uit de data zelf af te lezen valt: gewone rondjes
-    // mét personen = op naam noteren (snel opnemen kent geen personen). Enkel
-    // opwaarderen, nooit terugduwen: een bewuste keuze in de sessie blijft staan.
-    if (g && g.settle === false && (pp || []).length > 0) setOpNaam(true)
+    // herlaadbeurt — terwijl hij uit de data zelf af te lezen valt. Let op: óók snel
+    // opnemen heeft één persoon (de admin als stille "Gast 1"), dus het criterium is
+    // niet "personen aanwezig" maar "meer dan de admin, of een echte naam" — uitgebreid
+    // eist bij de start minstens twee personen én jouw naam. Enkel opwaarderen, nooit
+    // terugduwen: een bewuste keuze in de sessie blijft staan.
+    if (g && g.settle === false && ((pp || []).length >= 2 || (pp || []).some((r) => !!(r.name || "").trim()))) setOpNaam(true)
     setPeople((pp || []).map((r) => ({
       id: r.id, seat: r.seat,
       // named = de admin (of de gast zelf) gaf een echte naam. Een naamloze plaats
