@@ -568,7 +568,6 @@ const T = {
     nStep2: "Handig barlijstje",
     nStep3: "Ieder betaalt wat hij dronk",
     noteNamedTitle2: "👤 Op naam noteren",
-    withNamesBtn: "⚖️ op naam noteren",
     addNameBtn: "+ naam",
     toDrinksBtn: "Naar de drankjes →",
     guestN: (n: number) => `Gast ${n}`,
@@ -815,6 +814,7 @@ const T = {
     collapseAll: "Alles verbergen",
     settleBtn: "🧾 Afrekenen",
     nothingToSettle: "Er zijn nog geen afgeronde rondjes om af te rekenen.",
+    fillAmountsFirst: "€0 — vul eerst het bedrag van je rondjes in. Daarna kan je afrekenen.",
     roundUnfinished: (n: number) => `Rondje ${n} is nog bezig — bevestig en betaal het eerst voor je afrekent.`,
     roundUnpaid: (n: number) => `Ronde ${n} is nog niet betaald. Rond die betaling eerst af.`,
     leaveAnyway: "Toch verlaten — bestelling kwijt",
@@ -1253,7 +1253,6 @@ const T = {
     nStep2: "Liste pratique pour le bar",
     nStep3: "Chacun paie ce qu’il a bu",
     noteNamedTitle2: "👤 Noter au nom",
-    withNamesBtn: "⚖️ noter au nom",
     addNameBtn: "+ nom",
     toDrinksBtn: "Vers les boissons →",
     guestN: (n: number) => `Invité ${n}`,
@@ -1500,6 +1499,7 @@ const T = {
     collapseAll: "Tout masquer",
     settleBtn: "🧾 Régler",
     nothingToSettle: "Aucune tournée terminée à régler.",
+    fillAmountsFirst: "0 € — indique d'abord le montant de tes tournées. Ensuite tu peux régler.",
     roundUnfinished: (n: number) => `La tournée ${n} est en cours — confirme et paie-la avant de régler.`,
     roundUnpaid: (n: number) => `La tournée ${n} n'est pas payée. Règle d'abord ce paiement.`,
     leaveAnyway: "Quitter quand même — commande perdue",
@@ -2029,9 +2029,21 @@ export default function PartyTest() {
     const beschikbaar = Math.max(0, potAvailFor(idx))
     // Komt de pot tekort, dan moet je eerst kiezen — net als bij het bestellen.
     if (editDraft.usePot && editDraft.amount > beschikbaar + 0.005) { setNotice(L.potShortTitle); return }
-    if (Math.abs((r.amount || 0) - editDraft.amount) > 0.001) qSetAmount(idx, editDraft.amount)
+    // Heeft dit rondje al betalers (via het betalers-scherm van de Fair Split-overstap,
+    // of uitgebreid opnemen)? Dan moet hun verdeling mee met het nieuwe bedrag. Vroeger
+    // bleef `payers` op de oude bedragen staan: de eindbalans toonde "al betaald in
+    // ronde x" met het vórige bedrag, en "krijgt terug" en de overschrijvingen rekenden
+    // met geld dat niet meer bestond. Zelfde betalers, nieuw bedrag, gelijk herverdeeld
+    // en het pot-aandeel geklemd — precies zoals het betalers-scherm zelf rekent.
+    const betalers = Object.keys(r.payers || {}).filter((pid) => (r.payers[pid] || 0) > 0.005)
+    if (betalers.length > 0) {
+      setRounds((rs) => rs.map((rr, i) => i === idx ? rRedistribute(rr, idx, editDraft.usePot, betalers, editDraft.amount) : rr))
+      setDirtyRound(idx)
+    } else {
+      if (Math.abs((r.amount || 0) - editDraft.amount) > 0.001) qSetAmount(idx, editDraft.amount)
+      rSetPotAmt(idx, editDraft.usePot ? editDraft.amount : 0)
+    }
     if (Math.max(1, r.headcount || 1) !== editDraft.headcount) await setRoundHeadcount(r.id, editDraft.headcount)
-    rSetPotAmt(idx, editDraft.usePot ? editDraft.amount : 0)
     cancelEditRound()
   }
   const [potIsCard, setPotIsCard] = useState(false)
@@ -3705,6 +3717,10 @@ export default function PartyTest() {
     // Eerst één stap terug binnen de groep. Sta je al op het bestelscherm, dan pas naar
     // het startscherm — anders sprong je vanuit elke tussenpagina meteen naar buiten.
     if (view === "order" && !settle && opNaam && namenSetup) { setNamenSetup(false); setOpNaam(false); return }
+    // Snel opnemen: sta je op het bestelscherm terwijl er al rondjes zijn — bv. na
+    // "Bestelling aanpassen" vanuit de hub — dan is één stap terug de hub. Vroeger viel
+    // je hier door naar het startscherm met de keuzekaders, midden in je avond.
+    if (view === "order" && !settle && rounds.length > 0) { setOpenRound(rounds.length - 1); setEditCups(false); setEditPay(false); setView("hub"); return }
     if (view === "settings") { setView(settingsBackTo === "order" ? "order" : "hub"); return }
     if (view === "roundsOverview") { setView(overviewBackTo === "hub" ? "hub" : "order"); return }
     if (view === "final" && opNaam === true) { terugNaarUitgebreid(); setOverviewBackTo("hub"); setView("roundsOverview"); return }
@@ -4232,6 +4248,14 @@ export default function PartyTest() {
     // zijn en biedt de knop om ze aan te vullen. Een pop-up ervoor is een drempel die
     // hetzelfde vertelt, maar zonder de knop.
     if (rounds.length === 0) { setNotice(L.nothingToSettle); return }
+    // Snel opnemen met enkel lege rondjes: op €0 valt er niets te verdelen én niets te
+    // kiezen. In plaats van een afrekenscherm vol nullen: zeggen wat er moet gebeuren en
+    // meteen de invul-stand van het rondjesoverzicht openen, met de knop per leeg rondje.
+    if (!opNaam && !rounds.some((r) => (r.amount || 0) > 0.005)) {
+      setNotice(L.fillAmountsFirst)
+      setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview")
+      return
+    }
     // Uitgebreid opnemen belooft "ieder betaalt wat hij dronk"; dat kan niet zolang er
     // drankjes zonder naam zijn.
     if (!settle && opNaam && unassignedAllRounds > 0) {
@@ -7290,11 +7314,12 @@ export default function PartyTest() {
               <button onClick={() => { setActiveCat(catsPresent[0]); setWalkIdx(0) }}
                 style={{ background: "#fffdf6", border: "1px solid rgba(240,165,0,0.5)", borderTop: "none", borderRadius: "0 0 12px 12px", padding: "8px 16px", fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", cursor: "pointer" }}>{L.perPersonPrompt} ▸</button>
             </div>
-          ) : (
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-              <button onClick={() => { setOpNaam(true); setNamenSetup(true) }} style={{ ...S.btn, padding: "7px 12px", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f" }}>{L.withNamesBtn}</button>
-            </div>
-          )
+          ) : null
+          /* Snel opnemen toont hier bewust níets meer. De oude "⚖️ op naam noteren"-knop
+             zette je met één (mis)tik in de uitgebreid-flow — met toewijzingsmeldingen en
+             betaalstappen die snel opnemen niet kent — en eenmaal er personen bestonden,
+             herkende ook het herladen de groep als uitgebreid. Wisselen van modus kan
+             bewust via ⚙️ Groep; op naam verdelen kan op het einde nog via Fair Split. */
         )}
         {/* Eerst voor wie je aantikt, dan de categorieën vlak boven de lijst. Zoeken en
             inspreken staan onderaan: die gebruik je zelden en ze duwden de drankjes weg. */}
