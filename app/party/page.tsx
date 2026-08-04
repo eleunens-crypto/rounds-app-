@@ -2897,6 +2897,9 @@ export default function PartyTest() {
   // Eén select per tabel, enkel de kolommen die we tonen. Zelfde aanpak als Table:
   // realtime doet het echte werk, met een afkoelperiode zodat een reeks tikken
   // (iedereen bestelt tegelijk) niet tientallen herladingen uitlokt.
+  // Welke groep laadden we het laatst? Nodig om bij een échte groepswissel de modus
+  // strikt opnieuw af te leiden — anders "plakt" uitgebreid aan de volgende groep.
+  const laatsteGeladenGid = useRef<string | null>(null)
   const loadParty = useCallback(async (gid: string) => {
     const [{ data: g }, { data: pp }, { data: rr }, { data: ii }, { data: pt }] = await Promise.all([
       supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices,settle,ordering_open").eq("id", gid).single(),
@@ -2925,13 +2928,17 @@ export default function PartyTest() {
     }
     // Lege naam = vrije plaats. In de UI heet die "Gast N", zodat de bestaande
     // placeholder-logica ongemoeid blijft.
-    // De modus "uitgebreid opnemen" stond nergens bewaard en verdampte bij elke
-    // herlaadbeurt — terwijl hij uit de data zelf af te lezen valt. Let op: óók snel
-    // opnemen heeft één persoon (de admin als stille "Gast 1"), dus het criterium is
-    // niet "personen aanwezig" maar "meer dan de admin, of een echte naam" — uitgebreid
-    // eist bij de start minstens twee personen én jouw naam. Enkel opwaarderen, nooit
-    // terugduwen: een bewuste keuze in de sessie blijft staan.
-    if (g && g.settle === false && ((pp || []).length >= 2 || (pp || []).some((r) => !!(r.name || "").trim()))) setOpNaam(true)
+    // De modus "uitgebreid opnemen" stond nergens bewaard. Hij is uit de data af te
+    // lezen — maar let op: óók snel opnemen heeft één persoon (de admin als stille
+    // "Gast 1"), dus het criterium is "meer dan de admin, of een echte naam".
+    // Binnen dezelfde groep (en na een refresh) enkel opwaarderen, zodat een verse
+    // uitgebreid-setup nooit teruggeduwd wordt; bij een échte groepswissel strikt
+    // afleiden, zodat de vlag niet aan de volgende (snel- of QR-)groep blijft plakken.
+    const uitgebreidData = !!g && g.settle === false && ((pp || []).length >= 2 || (pp || []).some((r) => !!(r.name || "").trim()))
+    const vorigeGid = laatsteGeladenGid.current
+    laatsteGeladenGid.current = gid
+    if (vorigeGid !== null && vorigeGid !== gid) setOpNaam(uitgebreidData ? true : false)
+    else if (uitgebreidData) setOpNaam(true)
     setPeople((pp || []).map((r) => ({
       id: r.id, seat: r.seat,
       // named = de admin (of de gast zelf) gaf een echte naam. Een naamloze plaats
