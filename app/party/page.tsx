@@ -516,11 +516,11 @@ const T = {
 
     // ── start & setup
     autoName: () => { const d = new Date(); const m = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"]; return `Rondje ${d.getDate()} ${m[d.getMonth()]}` },
-    nameClashMsg: (naam: string) => `Er staat nog een avond open die "${naam}" heet.`,
-    nameClashMsgGuest: (naam: string) => `Er is al een open avond "${naam}" — daar zit je als gast in.`,
-    nameClashContinue: "Verder in die avond",
+    nameClashMsg: (naam: string) => `Er staat nog een groep open die "${naam}" heet.`,
+    nameClashMsgGuest: (naam: string) => `Er is al een open groep "${naam}" — daar zit je als gast in.`,
+    nameClashContinue: "Verder in die groep",
     newGroupPh: "Nieuwe groep…",
-    startNewA11y: "Nieuwe avond starten",
+    startNewA11y: "Nieuwe groep starten",
     newGroupNameTitle: "Naam voor je nieuwe groep",
     newGroupNameSub: "Zo herken je hem straks tussen je andere groepen.",
     startWord: "Starten",
@@ -552,7 +552,6 @@ const T = {
     giveNameQ: "Naam geven?",
     groupNamePlain: "Groepsnaam",
     voiceNotPerfect: "werkt nog niet altijd perfect",
-    inRoundShort: "In dit rondje:",
     howNoteTitle: "Hoe drankjes noteren?",
     howNoteSub: "✏️ Van snel naar op naam kan later nog.",
     noteQuickTitle: "⚡ Snel noteren",
@@ -592,7 +591,6 @@ const T = {
     leaveAsIs: "Zo laten",
     toBalanceBtn: "Naar de eindbalans →",
     namePh2: "Naam…",
-    amountsStillMissing: (n: number) => `Nog ${n} ${n === 1 ? "rondje" : "rondjes"} zonder bedrag — vul in, of tik ✏️ om aan te passen.`,
     autoSavedNote: "✓ alles wordt automatisch bewaard",
     listLifeHint: "Bezige avonden blijven staan · afgesloten avonden verdwijnen na een tijdje, tenzij je ze langer bewaart.",
     chipDays: (n: number) => `nog ${n} ${n === 1 ? "dag" : "dagen"}`,
@@ -815,6 +813,7 @@ const T = {
     settleBtn: "🧾 Afrekenen",
     nothingToSettle: "Er zijn nog geen afgeronde rondjes om af te rekenen.",
     fillAmountsFirst: "€0 — vul eerst het bedrag van je rondjes in. Daarna kan je afrekenen.",
+    zeroRoundsNote: (n: number) => `${n} rondje${n === 1 ? "" : "s"} zonder bedrag — telt als €0 (bv. getrakteerd). Klopt dat niet?`,
     roundUnfinished: (n: number) => `Rondje ${n} is nog bezig — bevestig en betaal het eerst voor je afrekent.`,
     roundUnpaid: (n: number) => `Ronde ${n} is nog niet betaald. Rond die betaling eerst af.`,
     leaveAnyway: "Toch verlaten — bestelling kwijt",
@@ -1038,7 +1037,6 @@ const T = {
       : "Die tellen niet mee in de verdeling hieronder. Vul ze aan of laat ze zo.",
     roundsNoAmountFair: "Fair Split verdeelt volgens wie wat dronk — daarvoor heeft elk rondje een bedrag nodig. Vul aan om verder te kunnen.",
     fillAmountsBtn: "Bedragen aanvullen ›",
-    fairNeedsAmounts: (n: number) => `${n} ${n === 1 ? "rondje heeft" : "rondjes hebben"} nog geen bedrag. Fair Split verdeelt volgens wie wat dronk — en dat kan pas als elk rondje een bedrag heeft.`,
     nothingToSplit: "Er valt nog niets te verdelen",
     nothingToSplitWhy: "Geen enkel rondje heeft een bedrag. Vul de openstaande bedragen aan — daarna kan je gelijk verdelen of overstappen naar Fair Split.",
     noAmountBadge: "zonder bedrag",
@@ -1199,11 +1197,11 @@ const T = {
 
     // ── start & setup
     autoName: () => { const d = new Date(); const m = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"]; return `Tournée ${d.getDate()} ${m[d.getMonth()]}` },
-    nameClashMsg: (naam: string) => `Une soirée « ${naam} » est encore ouverte.`,
-    nameClashMsgGuest: (naam: string) => `Une soirée ouverte « ${naam} » existe déjà — tu y es invité.`,
-    nameClashContinue: "Continuer cette soirée",
+    nameClashMsg: (naam: string) => `Un groupe « ${naam} » est encore ouvert.`,
+    nameClashMsgGuest: (naam: string) => `Un groupe ouvert « ${naam} » existe déjà — tu y es invité.`,
+    nameClashContinue: "Continuer ce groupe",
     newGroupPh: "Nouveau groupe…",
-    startNewA11y: "Démarrer une nouvelle soirée",
+    startNewA11y: "Démarrer un nouveau groupe",
     newGroupNameTitle: "Nom de ton nouveau groupe",
     newGroupNameSub: "Ainsi tu le reconnais parmi tes autres groupes.",
     startWord: "Démarrer",
@@ -1235,7 +1233,6 @@ const T = {
     giveNameQ: "Donner un nom ?",
     groupNamePlain: "Nom du groupe",
     voiceNotPerfect: "ne marche pas encore à tous les coups",
-    inRoundShort: "Dans cette tournée :",
     howNoteTitle: "Comment noter les boissons ?",
     howNoteSub: "✏️ Passer de rapide à au nom reste possible plus tard.",
     noteQuickTitle: "⚡ Noter vite",
@@ -1275,7 +1272,6 @@ const T = {
     leaveAsIs: "Laisser ainsi",
     toBalanceBtn: "Vers le décompte final →",
     namePh2: "Nom…",
-    amountsStillMissing: (n: number) => `Encore ${n} tournée${n === 1 ? "" : "s"} sans montant — remplis, ou tape ✏️ pour ajuster.`,
     autoSavedNote: "✓ tout est enregistré automatiquement",
     listLifeHint: "Les soirées en cours restent · les soirées clôturées disparaissent après un temps, sauf si tu les gardes plus longtemps.",
     chipDays: (n: number) => `encore ${n} jour${n === 1 ? "" : "s"}`,
@@ -1498,6 +1494,7 @@ const T = {
     settleBtn: "🧾 Régler",
     nothingToSettle: "Aucune tournée terminée à régler.",
     fillAmountsFirst: "0 € — indique d'abord le montant de tes tournées. Ensuite tu peux régler.",
+    zeroRoundsNote: (n: number) => `${n} tournée${n === 1 ? "" : "s"} sans montant — compte comme 0 € (p.ex. offerte). Ce n'est pas ça ?`,
     roundUnfinished: (n: number) => `La tournée ${n} est en cours — confirme et paie-la avant de régler.`,
     roundUnpaid: (n: number) => `La tournée ${n} n'est pas payée. Règle d'abord ce paiement.`,
     leaveAnyway: "Quitter quand même — commande perdue",
@@ -1722,7 +1719,6 @@ const T = {
       : "Elles ne comptent pas dans le partage ci-dessous. Complète-les ou laisse-les.",
     roundsNoAmountFair: "Fair Split répartit selon qui a bu quoi — chaque tournée doit donc avoir un montant. Complète pour continuer.",
     fillAmountsBtn: "Compléter les montants ›",
-    fairNeedsAmounts: (n: number) => `${n} tournée${n === 1 ? "" : "s"} n’${n === 1 ? "a" : "ont"} pas encore de montant. Fair Split répartit selon qui a bu quoi — cela demande un montant par tournée.`,
     nothingToSplit: "Rien à répartir pour l'instant",
     nothingToSplitWhy: "Aucune tournée n'a de montant. Complète les montants ouverts — ensuite tu pourras partager à parts égales ou passer à Fair Split.",
     noAmountBadge: "sans montant",
@@ -2171,7 +2167,7 @@ export default function PartyTest() {
   // Rondjesoverzicht (scherm 2): welke rondjes staan open. Standaard alleen het laatste.
   const [openRounds, setOpenRounds] = useState<Set<string>>(new Set())
   // Onthoud vanwaar je naar het rondjesoverzicht ging, zodat "terug" daarheen keert.
-  const [overviewBackTo, setOverviewBackTo] = useState<"hub" | "order">("hub")
+  const [overviewBackTo, setOverviewBackTo] = useState<"hub" | "order" | "final">("hub")
   // Waar je vandaan kwam toen je de instellingen opende. De instellingen hebben geen
   // kopbalk met navigatie, dus zonder dit weet je er niet meer hoe je terugkeert.
   const [settingsBackTo, setSettingsBackTo] = useState<"quickSettle" | "order" | "hub">("hub")
@@ -2194,7 +2190,7 @@ export default function PartyTest() {
   // Naam-botsing bij het starten: er bestaat al een OPEN avond met deze naam (eigen of
   // als gast). Eén venster voor alle gevallen — verder in die avond, of hier meteen een
   // nieuwe naam typen en met het groene vinkje starten.
-  const [naamBotsing, setNaamBotsing] = useState<{ groep: { id: string; name: string; owned: boolean }; basis: string; wilSettle: boolean } | null>(null)
+  const [naamBotsing, setNaamBotsing] = useState<{ groep: { id: string; name: string; owned: boolean; settle: boolean; uitgebreid: boolean }; basis: string; wilSettle: boolean } | null>(null)
   const [botsNaam, setBotsNaam] = useState("")
   const [notice, setNotice] = useState<string>("")
   // Slaapstand. De telefoon ligt bij een rondje vaak minutenlang open op tafel; zonder dit
@@ -2881,6 +2877,9 @@ export default function PartyTest() {
   const cupsBal = (pid: string) => rounds.reduce((s, r) => s + (roundPicked(r, pid) - (r.gaveBack[pid] || 0)), 0)
 
   const isGuestDefault = (name: string) => /^Gast \d+$/.test(name.trim())
+  // Heeft deze persoon ergens in de avond drankjes op zijn naam? Een plaats zonder
+  // drankjes doet niet mee in de verdeling en hoeft dus ook geen echte naam.
+  const dronkIets = (pid: string) => rounds.some((r) => drinks.some((d) => (r.orders[d.id]?.[pid] ?? 0) > 0))
   // Een plaats bijzetten = een rij in party_people. Leeg van naam: vrij tot iemand
   // ze claimt (de admin door ze te benoemen, een gast door de link te openen).
   // Het plaatsnummer wordt in Postgres bepaald, niet hier. Berekende je het in de
@@ -3488,7 +3487,7 @@ export default function PartyTest() {
       const open = savedGroups.find((g) => !g.finalized && g.name.trim().toLowerCase() === naam.toLowerCase())
       if (open) {
         setBotsNaam("")
-        setNaamBotsing({ groep: { id: open.id, name: open.name, owned: open.owned }, basis: naam, wilSettle })
+        setNaamBotsing({ groep: { id: open.id, name: open.name, owned: open.owned, settle: open.settle, uitgebreid: open.uitgebreid }, basis: naam, wilSettle })
         return
       }
       if (savedGroups.some((g) => g.name.trim().toLowerCase() === naam.toLowerCase())) naam = vrijeNaam(naam)
@@ -3718,7 +3717,7 @@ export default function PartyTest() {
     // je hier door naar het startscherm met de keuzekaders, midden in je avond.
     if (view === "order" && !settle && rounds.length > 0) { setOpenRound(rounds.length - 1); setEditCups(false); setEditPay(false); setView("hub"); return }
     if (view === "settings") { setView(settingsBackTo === "order" ? "order" : "hub"); return }
-    if (view === "roundsOverview") { setView(overviewBackTo === "hub" ? "hub" : "order"); return }
+    if (view === "roundsOverview") { setView(overviewBackTo === "order" ? "order" : overviewBackTo); return }
     if (view === "final" && opNaam === true) { terugNaarUitgebreid(); setOverviewBackTo("hub"); setView("roundsOverview"); return }
     if (view === "confirmed" || view === "quickSettle" || view === "payers" || view === "final") { setView("hub"); return }
     goStart()
@@ -4242,12 +4241,20 @@ export default function PartyTest() {
     if (opNaam === true) {
       if (unfinishedRound) { setNotice(L.finishRoundFirst); return }
       if (blockIfUnpaid()) return
+      // Een rondje zonder bedrag is bij het afsluiten een bewuste keuze geweest
+      // ("overslaan" — getrakteerd, niets te betalen) en telt gewoon als €0 in de
+      // eindbalans. Alleen als ÁLLE rondjes leeg zijn valt er niets te verdelen:
+      // dan eerst de bedragen, met de invul-stand van het overzicht erbij.
+      // De eindbalans zelf toont een regel voor €0-rondjes, met de aanvul-knop.
       const zonderBedrag = rounds.filter((rr) => (rr.amount || 0) <= 0.005).length
-      if (zonderBedrag > 0) {
+      if (zonderBedrag === rounds.length) {
+        setNotice(L.fillAmountsFirst)
         setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview")
         return
       }
-      const gasten = people.filter((pp) => isGuestDefault(pp.name) || !pp.name.trim())
+      // Enkel naamloze plaatsen die ook écht meedronken hebben een naam nodig — een
+      // ongebruikte "Gast 3" zonder drankjes staat toch niet in de verdeling.
+      const gasten = people.filter((pp) => (isGuestDefault(pp.name) || !pp.name.trim()) && dronkIets(pp.id))
       if (gasten.length > 0) {
         setNaamVenster(Object.fromEntries(gasten.map((g) => [g.id, ""])))
         return
@@ -4261,8 +4268,27 @@ export default function PartyTest() {
   // Fair Split rekent met de bedragen per rondje. Ontbreekt er één, dan klopt de
   // verdeling niet — dus tegenhouden en zeggen waarom, in plaats van half doorlaten.
   const goToFairSplit = () => {
+    // Losse rondjes zonder bedrag (overgeslagen — getrakteerd) tellen als €0 en houden
+    // de overstap niet meer tegen; alleen als álle rondjes leeg zijn valt er niets te
+    // verdelen. De eindbalans toont voor €0-rondjes een eigen regel met aanvul-knop.
     const leeg = rounds.filter((r) => (r.amount || 0) <= 0.005).length
-    if (leeg > 0) { setNotice(L.fairNeedsAmounts(leeg)); return }
+    if (leeg === rounds.length) { setNotice(L.fillAmountsFirst); setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview"); return }
+    // Staat alles al ingevuld van een vorige keer — echte namen voor wie meedronk,
+    // alle drankjes toegewezen én elk rondje met bedrag heeft een betaler of
+    // pot-aandeel — dan valt er niets meer te vragen: meteen door naar de eindbalans.
+    // Dat gebeurt typisch de twééde keer: je paste een bedrag aan in het
+    // rondjesoverzicht en tikt opnieuw op afrekenen; de drie stappen nóg eens lopen
+    // voegt dan niets toe. Ontbreekt er wél iets, dan begint de flow gewoon bij stap 1.
+    const namenOk = people.length > 0 && people.every((pp) => (pp.name.trim() && !isGuestDefault(pp.name)) || !dronkIets(pp.id))
+    const betalersOk = rounds.every((r) => (r.amount || 0) <= 0.005 || (r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))
+    if (namenOk && unassignedAllRounds === 0 && betalersOk) {
+      setSettle(true)
+      persistSettings({ settle: true })
+      setFromQuick(true)
+      setHasSettled(true)
+      setView("final")
+      return
+    }
     setFromQuick(true); setView("fairSetup")
   }
   // Terug naar de gelijke verdeling: de modus omzetten en de rondjes ongemoeid laten.
@@ -5202,9 +5228,16 @@ export default function PartyTest() {
         <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setNaamBotsing(null)}>
           <div style={{ ...S.sheet, maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
             <style>{`@keyframes rundoBotsPuls{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}`}</style>
-            <p style={{ fontSize: 15.5, color: "#4a3f1e", lineHeight: 1.55, margin: "0 0 14px" }}>
+            <p style={{ fontSize: 15.5, color: "#4a3f1e", lineHeight: 1.55, margin: "0 0 10px" }}>
               {naamBotsing.groep.owned ? L.nameClashMsg(naamBotsing.groep.name || L.autoName()) : L.nameClashMsgGuest(naamBotsing.groep.name || L.autoName())}
             </p>
+            {/* In welke modus die groep staat, zie je pas ná "verder" — te laat om te
+                beslissen. Dus hier alvast, als klein plaatje onder de melding. */}
+            <div style={{ margin: "0 0 14px" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(240,165,0,0.1)", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 14, padding: "5px 12px", fontSize: 13, fontWeight: 800, color: "#8a5e0f" }}>
+                {naamBotsing.groep.settle ? "📱" : "🍻"} {naamBotsing.groep.settle ? L.modeFairShort : (naamBotsing.groep.uitgebreid ? L.modeNaamTitle : L.modeSnelTitle)}
+              </span>
+            </div>
             <button style={{ ...S.btnP, fontSize: 16.5, padding: "13px 14px" }} onClick={botsingVerder}>{L.nameClashContinue}</button>
             <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 0 10px" }}>
               <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.14)" }} />
@@ -5677,11 +5710,17 @@ export default function PartyTest() {
     // via de Fair Split-stappen liep en settle daardoor aanstond: qua beleving blijft
     // het "ik bestel voor de groep".
     const alsUitgebreid = opNaam === true && (!settle || view === "final")
+    // Snel opnemen kreeg een eigen kop met statusbalk, pot onder het logo en de naam
+    // rechtsboven. Sinds het bestelscherm zelf gelijkgetrokken is, hoort de kop dat ook
+    // te zijn: beide gewone-rondjes-modi dragen de uitgebreid-look — modus-regeltje
+    // rechts naast het logo, naamplaatje gecentreerd, pot-geldzak rechts ernaast.
+    // Alleen Fair Split (QR) houdt zijn eigen kop met de gekleurde balk.
+    const uitgebreidLook = alsUitgebreid || !settle
     return (
     <div style={{ marginBottom: 12 }}>
       {/* Bij uitgebreid opnemen geen aparte statusbalk: de tekst staat rechts op de
           Rundo Party-regel. */}
-      {!!groupId && !kaal && !alsUitgebreid && (
+      {!!groupId && !kaal && !uitgebreidLook && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: modus.knop, borderRadius: "14px 14px 0 0", padding: "10px 15px", marginBottom: 10 }}>
           <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, flex: 1, minWidth: 0 }}>
             {settle ? (<>
@@ -5703,7 +5742,7 @@ export default function PartyTest() {
         </div>
         {/* Op het instelscherm staat geen ondertitel: de tagline staat al op het
             startscherm, en hier telt elke pixel voor de twee keuzekaarten. */}
-        {!!groupId && !kaal && !(settle && potContribTotal <= 0.005) && !alsUitgebreid && (
+        {!!groupId && !kaal && !(settle && potContribTotal <= 0.005) && !uitgebreidLook && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginTop: 9 }}>
             {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. */}
             {potKnopje()}
@@ -5712,13 +5751,16 @@ export default function PartyTest() {
         </div>
         {/* Uitgebreid opnemen: rechts naast Rundo Party staat gewoon leesbaar wat je
             aan het doen bent — geen aparte balk, geen fade. */}
-        {alsUitgebreid && !!groupId && !kaal && (
+        {uitgebreidLook && !!groupId && !kaal && (
           <div style={{ flexShrink: 1, minWidth: 0, marginTop: 11, display: "inline-flex", alignItems: "center", gap: 6, color: "#c98a00", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden" }}>
             <GsmIcoon size={17} kleur="#c98a00" lijnen />
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{L.modeQuickShort}</span>
+            {/* De submodus-titel in plaats van het algemene "Ik bestel voor de groep":
+                zelfde plek, zelfde stijl, maar je ziet meteen óf je snel óf uitgebreid
+                aan het noteren bent. */}
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{opNaam ? L.modeNaamTitle : L.modeSnelTitle}</span>
           </div>
         )}
-        {!alsUitgebreid && !!groupId && !kaal && groupName.trim() && !editName && (
+        {!uitgebreidLook && !!groupId && !kaal && groupName.trim() && !editName && (
           <div style={{ textAlign: "right", minWidth: 0, flexShrink: 0, maxWidth: "52%" }}>
             <div onClick={() => { if (!onboarding) setEditName(true) }} style={{ cursor: onboarding ? "default" : "pointer", fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {!settle && isAutoNaam(groupName) ? (
@@ -5736,7 +5778,7 @@ export default function PartyTest() {
           en de navigatieknoppen, met de pot-geldzak rechts op dezelfde hoogte — één vaste
           plek op elk scherm. Het plaatje blijft optisch gecentreerd; 55% breedte houdt
           lange namen van de geldzak weg. */}
-      {alsUitgebreid && !!groupId && !kaal && (
+      {uitgebreidLook && !!groupId && !kaal && (
         <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", margin: "10px 0", minHeight: 38 }}>
           {groupName.trim() && !editName && (
             <span onClick={() => { if (!onboarding) setEditName(true) }}
@@ -7375,7 +7417,9 @@ export default function PartyTest() {
               </div>
             )}
             <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12 }}>
-              {opNaam === true && !settle && <div style={{ gridColumn: "1 / -1" }}>{renderZoekBlok(true)}</div>}
+              {/* Zoeken + inspreken bovenin de kaart, onder de categorieën — zelfde plek
+                  en zelfde blok voor snel én uitgebreid opnemen. */}
+              {!settle && <div style={{ gridColumn: "1 / -1" }}>{renderZoekBlok(true)}</div>}
               {catVisible.map((d) => {
                 const tot = (settle && voorWie) ? (cart[d.id]?.[voorWie] ?? 0) : drinkTotal(d.id)
                 const tafel = drinkTotal(d.id)
@@ -7417,9 +7461,9 @@ export default function PartyTest() {
             )}
           </div>
         )}
-        {/* Zoeken en inspreken: bij uitgebreid opnemen staat dit bovenin de
-            drankjeskaart; hier enkel nog voor de andere modi. */}
-        {!(opNaam === true && !settle) && renderZoekBlok()}
+        {/* Zoeken en inspreken: bij de gewone-rondjes-modi staat dit bovenin de
+            drankjeskaart; hier enkel nog voor Fair Split (QR). */}
+        {settle && renderZoekBlok()}
 
         {roundItems > 0 && (
           settle ? (
@@ -7462,9 +7506,11 @@ export default function PartyTest() {
                 style={{ flexShrink: 0, background: "#b0402f", color: "#fff", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }}>{L.assign}</button>
             </div>
           )}
-          {opNaam === true ? (
-            /* Variant 1: een eigen kaart met duidelijke titel en chips per drankje. */
-            <div style={{ ...S.card, padding: "11px 13px", marginBottom: 11, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.5)" }}>
+          {/* Hetzelfde kaartje voor snel én uitgebreid: duidelijke titel met teller en
+              chips per drankje, elk met een ingetogen ✕ om het meteen weg te halen.
+              De oude platte tekstregel van snel (zonder teller, zonder verwijderen)
+              is daarmee weg — één look voor de gewone-rondjes-modi. */}
+          <div style={{ ...S.card, padding: "11px 13px", marginBottom: 11, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.5)" }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 8 }}>📋 {L.inRoundTitle} <span style={{ color: "#c98a00" }}>· {L.drinksCount(roundItems)}</span></div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                 {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => (
@@ -7478,14 +7524,6 @@ export default function PartyTest() {
                 ))}
               </div>
             </div>
-          ) : (
-          <div style={{ background: "#fdf3dd", borderRadius: 11, padding: "9px 12px", marginBottom: 11, fontSize: 13.5, color: "#6b5f3a", lineHeight: 1.5 }}>
-            <b style={{ color: "#8a5e0f" }}>{L.inRoundShort}</b>{" "}
-            {drinks.filter((d) => drinkTotal(d.id) > 0).map((d, n) => (
-              <span key={d.id}>{n > 0 ? " · " : ""}{drinkTotal(d.id)}× {d.name}</span>
-            ))}
-          </div>
-          )}
           </>
           )
         )}
@@ -8560,7 +8598,7 @@ export default function PartyTest() {
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6, gap: 8 }}>
           <h3 style={{ ...S.h3, margin: 0 }}>{L.roundsOverviewTitle}</h3>
           <div style={{ display: "flex", gap: 7, flexShrink: 0 }}>
-            {settle && <button style={{ ...S.btn, fontSize: 14, fontWeight: 700, padding: "7px 12px" }} onClick={() => { if (overviewBackTo === "order") { setActiveCat(catsPresent[0]); setView("order") } else setView("hub") }}>← {L.back}</button>}
+            {settle && <button style={{ ...S.btn, fontSize: 14, fontWeight: 700, padding: "7px 12px" }} onClick={() => { if (overviewBackTo === "order") { setActiveCat(catsPresent[0]); setView("order") } else setView(overviewBackTo) }}>← {L.back}</button>}
           </div>
         </div>
 
@@ -8778,13 +8816,14 @@ export default function PartyTest() {
         {fillMode ? (
           <button style={{ ...S.btnP, width: "100%", marginTop: 16, padding: "14px 6px", fontSize: 15.5 }}
             onClick={() => {
-              if (opNaam === true && !settle) {
-                // Stil terugspringen naar dezelfde invulstand zou als "er gebeurt niets"
-                // aanvoelen — dus eerst zeggen wát er nog ontbreekt.
-                const nog = rounds.filter((rr) => (rr.amount || 0) <= 0.005).length
-                if (nog > 0) { setNotice(L.amountsStillMissing(nog)); return }
-                setFillMode(false); goQuickSettle()
-              } else { setFillMode(false); setView("quickSettle") }
+              // Bewust een rondje op €0 laten (getrakteerd) mag; alleen als er nog
+              // helemaal níks ingevuld staat valt er niets af te rekenen.
+              if (!rounds.some((rr) => (rr.amount || 0) > 0.005)) { setNotice(L.fillAmountsFirst); return }
+              // Vanaf de eindbalans komen aanvullen? Dan ook daarheen terug — de
+              // balans rekent meteen met de nieuwe bedragen.
+              if (overviewBackTo === "final") { setFillMode(false); setView("final"); return }
+              if (opNaam === true && !settle) { setFillMode(false); goQuickSettle() }
+              else { setFillMode(false); setView("quickSettle") }
             }}>{L.backToSettle}</button>
         ) : (
           <>
@@ -9072,6 +9111,17 @@ export default function PartyTest() {
           </div>
         )}
       </div>
+
+      {/* Rondjes zonder bedrag blokkeren de eindbalans niet meer (overslaan is een
+          bewuste keuze — getrakteerd telt als €0), maar ze blijven wel benoemd: was het
+          tóch vergeten, dan is aanvullen één tik en rekent de balans meteen opnieuw. */}
+      {rounds.some((r) => (r.amount || 0) <= 0.005) && (
+        <div style={{ display: "flex", alignItems: "center", gap: 9, background: "rgba(240,165,0,0.1)", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 11, padding: "9px 11px", marginBottom: 10 }}>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: "#8a5e0f", lineHeight: 1.4 }}>💶 {L.zeroRoundsNote(rounds.filter((r) => (r.amount || 0) <= 0.005).length)}</span>
+          <button onClick={() => { setFillMode(true); setOverviewBackTo("final"); setView("roundsOverview") }}
+            style={{ flexShrink: 0, background: "#fff", border: "1px solid rgba(240,165,0,0.6)", color: "#c98a00", borderRadius: 9, padding: "8px 11px", fontSize: 13, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{L.fillAmountsBtn}</button>
+        </div>
+      )}
 
       <div style={{ ...S.card, background: "linear-gradient(135deg,#fff7e6,#fdefc9)" }}>
         <div style={{ ...S.row, justifyContent: "space-between", fontSize: 18 }}>
