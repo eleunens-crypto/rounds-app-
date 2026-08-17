@@ -8,7 +8,10 @@ const T = {
   nl: {
     tagline: "Rondjes en rekeningen zonder gedoe!",
     partySub: "Rondjes opnemen en splitten zonder gedoe",
-    // De ℹ️-uitleg en de vier losse iconen zijn samengevoegd tot één stappenflow:
+    // Eén inforegel boven de stappenflow: de flow zegt hóe het werkt, deze regel zegt
+    // in één zin wát je ermee kan (zelf noteren of iedereen via QR).
+    partyDesc: "Neem zelf op, of deel de QR en iedereen bestelt zelf.",
+    // De vier losse iconen zijn samengevoegd tot één stappenflow:
     // stap 1 heeft twee manieren (zelf opnemen óf QR scannen), vandaar twee iconen.
     partyFlow: [
       { iconen: ["✍️", "📱"], label: "neem op\nof scan QR" },
@@ -26,6 +29,7 @@ const T = {
   fr: {
     tagline: "Tournées et additions, sans prise de tête !",
     partySub: "Prendre les tournées et partager, sans prise de tête",
+    partyDesc: "Note toi-même, ou partage le QR et chacun commande.",
     partyFlow: [
       { iconen: ["✍️", "📱"], label: "note toi-même\nou scanne le QR" },
       { iconen: ["📋"], label: "liste bar" },
@@ -192,6 +196,12 @@ export default function Home() {
               <img src="/icon-party.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
               <span>{t.partySub}</span>
             </div>
+            {pick === "party" && (
+              <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: 14 }}>
+                <span style={S.infoBadge}>i</span>
+                <p style={{ fontSize: 14.5, color: "#e6eaf6", lineHeight: 1.5, margin: 0 }}>{t.partyDesc}</p>
+              </div>
+            )}
             {flowRow("party", t.partyFlow)}
           </div>
         </div>
