@@ -8,8 +8,14 @@ const T = {
   nl: {
     tagline: "Rondjes en rekeningen zonder gedoe!",
     partySub: "Rondjes opnemen en splitten zonder gedoe",
-    partyDesc: "Voor groepsbestellingen, barlijstjes, rondjes bijhouden en eerlijk verdelen achteraf.",
-    partySteps: ["neem op", "tik aan", "barlijstje", "afrekenen"],
+    // De ℹ️-uitleg en de vier losse iconen zijn samengevoegd tot één stappenflow:
+    // stap 1 heeft twee manieren (zelf opnemen óf QR scannen), vandaar twee iconen.
+    partyFlow: [
+      { iconen: ["✍️", "📱"], label: "neem op\nof scan QR" },
+      { iconen: ["📋"], label: "barlijstje" },
+      { iconen: ["⚖️"], label: "eerlijk\nafrekenen" },
+    ],
+    orWord: "of",
     tableSteps: ["scan bon", "QR groep", "duid aan", "ieders deel"],
     tableSub: "Scan de rekening en verdeel in groep",
     tableDesc: "Voor het delen van de rekening op restaurant, café of na een activiteit.",
@@ -20,8 +26,12 @@ const T = {
   fr: {
     tagline: "Tournées et additions, sans prise de tête !",
     partySub: "Prendre les tournées et partager, sans prise de tête",
-    partyDesc: "Pour les commandes de groupe, les listes au bar, suivre les tournées et partager équitablement après.",
-    partySteps: ["note", "coche", "liste bar", "régler"],
+    partyFlow: [
+      { iconen: ["✍️", "📱"], label: "note toi-même\nou scanne le QR" },
+      { iconen: ["📋"], label: "liste bar" },
+      { iconen: ["⚖️"], label: "règle\néquitable" },
+    ],
+    orWord: "ou",
     tableSteps: ["scan", "QR groupe", "coche", "part de chacun"],
     tableSub: "Scanne l'addition et partage en groupe",
     tableDesc: "Pour partager l'addition au resto, au café ou après une activité.",
@@ -85,6 +95,34 @@ export default function Home() {
       </div>
     )
   )
+
+  // De stappenflow (Party): genummerde bolletjes in plaats van infotekst + iconenrij.
+  // Een stap kan twee iconen dragen — dan staat er een klein "of" tussen en delen ze
+  // één nummer, zodat duidelijk is dat het twee manieren voor dezelfde stap zijn.
+  const flowRow = (m: Mode, stappen: { iconen: string[]; label: string }[]) => {
+    const bolBg = m === "party" ? "rgba(240,193,75,0.14)" : "rgba(91,159,214,0.14)"
+    const bolRand = m === "party" ? "rgba(240,193,75,0.45)" : "rgba(91,159,214,0.45)"
+    return pick !== m ? null : (
+      <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+        <div style={{ display: "flex", gap: 6 }}>
+          {stappen.map((st, i) => (
+            <div key={i} style={{ flex: st.iconen.length > 1 ? 1.6 : 1, minWidth: 0, textAlign: "center" }}>
+              <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", gap: 5, width: "max-content", margin: "0 auto" }}>
+                {st.iconen.map((ic, k) => (
+                  <span key={k} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    {k > 0 && <span style={{ fontSize: 10.5, fontWeight: 800, color: "#b9a67c" }}>{t.orWord}</span>}
+                    <span style={{ width: 34, height: 34, borderRadius: "50%", background: bolBg, border: `1px solid ${bolRand}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>{ic}</span>
+                  </span>
+                ))}
+                <span style={{ position: "absolute", top: -5, right: -7, width: 15, height: 15, borderRadius: "50%", background: accent[m], color: "#131826", fontSize: 9.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+              </div>
+              <div style={{ marginTop: 5, fontSize: 11, fontWeight: 700, color: "#d9d2bd", lineHeight: 1.3, whiteSpace: "pre-line" }}>{st.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   const vinkje = (m: Mode) => (
     pick === m ? (
@@ -154,7 +192,7 @@ export default function Home() {
               <img src="/icon-party.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
               <span>{t.partySub}</span>
             </div>
-            {infoRow("party", t.partyDesc, t.partySteps, ["✍️", "🍺", "🧾", "💶"], S.infoBadge)}
+            {flowRow("party", t.partyFlow)}
           </div>
         </div>
 
