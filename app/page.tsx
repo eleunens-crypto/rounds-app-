@@ -8,20 +8,24 @@ const T = {
   nl: {
     tagline: "Rondjes en rekeningen zonder gedoe!",
     partySub: "Rondjes opnemen en splitten zonder gedoe",
-    // Eén inforegel boven de stappenflow: de flow zegt hóe het werkt, deze regel zegt
-    // in één zin wát je ermee kan (zelf noteren of iedereen via QR).
+    // De infozin staat zonder i-badge gecentreerd bóven de stappenflow — één blok:
+    // de zin zegt wát je ermee kan, de bolletjes eronder hóe het loopt.
     partyDesc: "Neem zelf op, of deel de QR en iedereen bestelt zelf.",
-    // De vier losse iconen zijn samengevoegd tot één stappenflow:
-    // stap 1 heeft twee manieren (zelf opnemen óf QR scannen), vandaar twee iconen.
+    // Stap 1 heeft twee manieren (zelf opnemen óf QR scannen), vandaar twee iconen.
     partyFlow: [
       { iconen: ["✍️", "📱"], label: "neem op\nof scan QR" },
       { iconen: ["📋"], label: "barlijstje" },
       { iconen: ["⚖️"], label: "eerlijk\nafrekenen" },
     ],
     orWord: "of",
-    tableSteps: ["scan bon", "QR groep", "duid aan", "ieders deel"],
     tableSub: "Scan de rekening en verdeel in groep",
-    tableDesc: "Voor het delen van de rekening op restaurant, café of na een activiteit.",
+    tableDesc: "Scan de bon op restaurant of café — ieder betaalt z'n deel.",
+    tableFlow: [
+      { iconen: ["📷"], label: "scan bon" },
+      { iconen: ["📱"], label: "QR groep" },
+      { iconen: ["👆"], label: "duid aan" },
+      { iconen: ["💶"], label: "ieders deel" },
+    ],
     start: "Starten",
     pickFirst: "Kies eerst een mode",
     footer: "Gratis · geen registratie · eerlijk splitten",
@@ -36,9 +40,14 @@ const T = {
       { iconen: ["⚖️"], label: "règle\néquitable" },
     ],
     orWord: "ou",
-    tableSteps: ["scan", "QR groupe", "coche", "part de chacun"],
     tableSub: "Scanne l'addition et partage en groupe",
-    tableDesc: "Pour partager l'addition au resto, au café ou après une activité.",
+    tableDesc: "Scanne l'addition au resto ou au café — chacun paie sa part.",
+    tableFlow: [
+      { iconen: ["📷"], label: "scan" },
+      { iconen: ["📱"], label: "QR groupe" },
+      { iconen: ["👆"], label: "coche" },
+      { iconen: ["💶"], label: "part de chacun" },
+    ],
     start: "Démarrer",
     pickFirst: "Choisis d'abord un mode",
     footer: "Gratuit · sans inscription · partage équitable",
@@ -79,36 +88,17 @@ export default function Home() {
       : `0 12px 34px -18px ${m === "party" ? "rgba(240,193,75,0.25)" : "rgba(91,159,214,0.25)"}`,
   })
 
-  // De uitleg zelf: alleen zichtbaar voor de gekozen kaart. Hij loopt door tot de
-  // rechterrand, zodat de foto er als achtergrond doorheen blijft schemeren.
-  const infoRow = (m: Mode, tekst: string, stappen: string[], iconen: string[], badge: React.CSSProperties) => (
-    pick !== m ? null : (
-      <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
-        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 13 }}>
-          <span style={badge}>i</span>
-          <p style={{ fontSize: 14.5, color: "#e6eaf6", lineHeight: 1.5, margin: 0 }}>{tekst}</p>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 7, textAlign: "center" }}>
-          {stappen.map((st, i) => (
-            <span key={st} style={{ display: "block" }}>
-              <span style={{ display: "block", fontSize: 21, lineHeight: 1.1 }}>{iconen[i]}</span>
-              <span style={{ display: "block", fontSize: 11, color: "#b9c1d6", marginTop: 4, lineHeight: 1.3 }}>{st}</span>
-            </span>
-          ))}
-        </div>
-      </div>
-    )
-  )
-
-  // De stappenflow (Party): genummerde bolletjes in plaats van infotekst + iconenrij.
+  // De stappenflow: genummerde bolletjes met de infozin als rustige kopregel erboven —
+  // zonder i-badge, in hetzelfde blok, zodat zin en tekeningen als één geheel lezen.
   // Een stap kan twee iconen dragen — dan staat er een klein "of" tussen en delen ze
   // één nummer, zodat duidelijk is dat het twee manieren voor dezelfde stap zijn.
-  const flowRow = (m: Mode, stappen: { iconen: string[]; label: string }[]) => {
+  const flowRow = (m: Mode, zin: string, stappen: { iconen: string[]; label: string }[]) => {
     const bolBg = m === "party" ? "rgba(240,193,75,0.14)" : "rgba(91,159,214,0.14)"
     const bolRand = m === "party" ? "rgba(240,193,75,0.45)" : "rgba(91,159,214,0.45)"
     return pick !== m ? null : (
       <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
-        <div style={{ display: "flex", gap: 6 }}>
+        <p style={{ textAlign: "center", fontSize: 13, color: "#cfd6e6", lineHeight: 1.45, margin: 0, fontWeight: 600 }}>{zin}</p>
+        <div style={{ display: "flex", gap: 6, marginTop: 11 }}>
           {stappen.map((st, i) => (
             <div key={i} style={{ flex: st.iconen.length > 1 ? 1.6 : 1, minWidth: 0, textAlign: "center" }}>
               <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", gap: 5, width: "max-content", margin: "0 auto" }}>
@@ -173,7 +163,7 @@ export default function Home() {
               <img src="/icon-table.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
               <span>{t.tableSub}</span>
             </div>
-            {infoRow("table", t.tableDesc, t.tableSteps, ["📷", "📱", "👆", "💶"], { ...S.infoBadge, background: "rgba(91,159,214,0.22)", color: "#9cc6ec" })}
+            {flowRow("table", t.tableDesc, t.tableFlow)}
           </div>
         </div>
 
@@ -196,13 +186,7 @@ export default function Home() {
               <img src="/icon-party.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
               <span>{t.partySub}</span>
             </div>
-            {pick === "party" && (
-              <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: 14 }}>
-                <span style={S.infoBadge}>i</span>
-                <p style={{ fontSize: 14.5, color: "#e6eaf6", lineHeight: 1.5, margin: 0 }}>{t.partyDesc}</p>
-              </div>
-            )}
-            {flowRow("party", t.partyFlow)}
+            {flowRow("party", t.partyDesc, t.partyFlow)}
           </div>
         </div>
 
@@ -289,22 +273,6 @@ const S: Record<string, React.CSSProperties> = {
     letterSpacing: -0.2,
     lineHeight: 1.2,
     fontFamily: "'Nunito', 'Baloo 2', 'DM Sans', -apple-system, 'Segoe UI', sans-serif",
-  },
-  infoBadge: {
-    flexShrink: 0,
-    width: 22,
-    height: 22,
-    borderRadius: "50%",
-    background: "rgba(240,193,75,0.22)",
-    color: "#f0c14b",
-    fontSize: 13,
-    fontWeight: 800,
-    fontStyle: "italic",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 1,
-    fontFamily: "Georgia, serif",
   },
   goRow: {
     display: "flex",
