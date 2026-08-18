@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useLang, LanguageToggle } from "@/lib/i18n"
+import { supabase } from "@/lib/supabase"
 
 const T = {
   nl: {
@@ -18,6 +19,8 @@ const T = {
       { iconen: ["📋"], label: "handig barlijstje\nen afrekenen" },
     ],
     orWord: "of",
+    yourGroups: "Jouw groepen",
+    guestChip: "als gast",
     tableSub: "Scan de rekening en verdeel in groep",
     tableDesc: "Scan de bon op restaurant of café — ieder betaalt z'n deel.",
     tableFlow: [
@@ -40,6 +43,8 @@ const T = {
       { iconen: ["📋"], label: "liste bar pratique\net règlement" },
     ],
     orWord: "ou",
+    yourGroups: "Tes groupes",
+    guestChip: "invité",
     tableSub: "Scanne l'addition et partage en groupe",
     tableDesc: "Scanne l'addition au resto ou au café — chacun paie sa part.",
     tableFlow: [
@@ -63,6 +68,39 @@ export default function Home() {
   // Kiezen en starten zijn hier twee stappen: je duidt een kaart aan, leest desgewenst
   // eerst de uitleg, en start dan pas. Zo tik je nooit ongewild een modus binnen.
   const [pick, setPick] = useState<Mode | null>(null)
+  // Je opgeslagen Party-groepen, rechtstreeks uit dezelfde bron als de app zelf: het
+  // toestel-id in localStorage plus de twee groepsqueries (eigen + als gast). Alleen
+  // open groepen — vanaf een startscherm wil je ergens naartoe, niet terugkijken.
+  // (Zelfde structuur staat klaar voor Table-groepen zodra die bron gekoppeld is.)
+  type MiniGroep = { id: string; name: string; settle: boolean; gast: boolean; last: string; app: "party" }
+  const [groepen, setGroepen] = useState<MiniGroep[]>([])
+  useEffect(() => {
+    const dev = typeof window !== "undefined" ? localStorage.getItem("rundo_device_id") : null
+    if (!dev) return
+    ;(async () => {
+      try {
+        const [eigen, gast] = await Promise.all([
+          supabase.from("party_groups").select("id,name,last_active,finalized,settle").eq("owner_id", dev),
+          supabase.from("party_people").select("group_id").eq("claimed_by", dev),
+        ])
+        const map = new Map<string, MiniGroep>()
+        for (const g of eigen.data ?? []) {
+          if (g.finalized) continue
+          map.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", settle: !!g.settle, gast: false, last: (g.last_active as string) || "", app: "party" })
+        }
+        const gastIds = [...new Set((gast.data ?? []).map((r) => r.group_id as string))].filter((id) => !map.has(id))
+        if (gastIds.length > 0) {
+          const { data } = await supabase.from("party_groups").select("id,name,last_active,finalized,settle").in("id", gastIds)
+          for (const g of data ?? []) {
+            if (g.finalized) continue
+            map.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", settle: !!g.settle, gast: true, last: (g.last_active as string) || "", app: "party" })
+          }
+        }
+        const lijst = [...map.values()].sort((a, b) => b.last.localeCompare(a.last)).slice(0, 4)
+        setGroepen(lijst)
+      } catch { /* stil: geen sectie is prima */ }
+    })()
+  }, [])
 
   // Op het keuzescherm: wis de actieve mode-sessies, zodat je vanaf hier altijd op het
   // startscherm van een modus binnenkomt (nooit meteen in een opgeslagen groep).
@@ -206,6 +244,25 @@ export default function Home() {
           }}>
           {pick === null ? t.pickFirst : t.start}
         </button>
+
+        {/* Jouw open groepen, gesplitst per app — één tik en je zit erin. De Party-rij
+            linkt met ?g=, waar de app de groep meteen opent. De Table-kolom volgt
+            zodra die bron gekoppeld is. */}
+        {groepen.length > 0 && (
+          <div style={{ marginTop: 26 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#9aa2b8", letterSpacing: "0.05em", marginBottom: 9 }}>📂 {t.yourGroups}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 800, color: accent.party, marginBottom: 6 }}>🍻 Rundo Party</div>
+            {groepen.map((g) => (
+              <div key={g.id} onClick={() => router.push(`/party?g=${g.id}`)}
+                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(240,193,75,0.3)", borderRadius: 12, padding: "10px 12px", marginBottom: 6 }}>
+                <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(240,193,75,0.12)" }}>{g.settle ? "⚖️" : "🍻"}</span>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: "#e8e4d8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || "Rundo Party"}</span>
+                {g.gast && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#d9c58a", background: "rgba(240,193,75,0.14)", borderRadius: 7, padding: "2px 7px" }}>{t.guestChip}</span>}
+                <span style={{ flexShrink: 0, color: accent.party, fontWeight: 800 }}>›</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Voetregel */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 28 }}>
