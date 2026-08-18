@@ -72,8 +72,9 @@ export default function Home() {
   // toestel-id in localStorage plus de twee groepsqueries (eigen + als gast). Alleen
   // open groepen — vanaf een startscherm wil je ergens naartoe, niet terugkijken.
   // (Zelfde structuur staat klaar voor Table-groepen zodra die bron gekoppeld is.)
-  type MiniGroep = { id: string; name: string; settle: boolean; gast: boolean; last: string; app: "party" }
+  type MiniGroep = { id: string; name: string; settle?: boolean; gast: boolean; last: string; app: "party" | "table"; code?: string }
   const [groepen, setGroepen] = useState<MiniGroep[]>([])
+  const [tafels, setTafels] = useState<MiniGroep[]>([])
   useEffect(() => {
     const dev = typeof window !== "undefined" ? localStorage.getItem("rundo_device_id") : null
     if (!dev) return
@@ -99,6 +100,31 @@ export default function Home() {
         const lijst = [...map.values()].sort((a, b) => b.last.localeCompare(a.last)).slice(0, 4)
         setGroepen(lijst)
       } catch { /* stil: geen sectie is prima */ }
+      // Table: eigen groepen uit de databank (rundo_owner_id), gastgroepen uit de
+      // lokale lijst — exact de bronnen die de Table-app zelf gebruikt. De link loopt
+      // via de uitnodigingscode, die Table al kent (?code=): daar wijzigt dus niets.
+      try {
+        const ownerId = localStorage.getItem("rundo_owner_id")
+        if (!ownerId) return
+        let lokaal: { id: string; name: string; invite_code: string; role: string }[] = []
+        try { const raw = localStorage.getItem(`rundo_table_groups_${ownerId}`); if (raw) lokaal = JSON.parse(raw) } catch { /* niets */ }
+        const tafelMap = new Map<string, MiniGroep>()
+        const { data: eigenT } = await supabase.from("table_groups").select("id,name,invite_code,finalized,created_at").eq("owner_id", ownerId)
+        for (const g of eigenT ?? []) {
+          if (g.finalized) continue
+          tafelMap.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", gast: false, last: (g.created_at as string) || "", app: "table", code: (g.invite_code as string) || "" })
+        }
+        const gastIds = lokaal.filter((x) => x.role === "gast" && !tafelMap.has(x.id)).map((x) => x.id)
+        if (gastIds.length > 0) {
+          const { data: gastT } = await supabase.from("table_groups").select("id,name,invite_code,finalized,created_at").in("id", gastIds)
+          for (const g of gastT ?? []) {
+            if (g.finalized) continue
+            tafelMap.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", gast: true, last: (g.created_at as string) || "", app: "table", code: (g.invite_code as string) || "" })
+          }
+        }
+        const tafelLijst = [...tafelMap.values()].sort((a, b) => b.last.localeCompare(a.last)).slice(0, 4)
+        setTafels(tafelLijst)
+      } catch { /* stil */ }
     })()
   }, [])
 
@@ -248,19 +274,33 @@ export default function Home() {
         {/* Jouw open groepen, gesplitst per app — één tik en je zit erin. De Party-rij
             linkt met ?g=, waar de app de groep meteen opent. De Table-kolom volgt
             zodra die bron gekoppeld is. */}
-        {groepen.length > 0 && (
+        {(groepen.length > 0 || tafels.length > 0) && (
           <div style={{ marginTop: 26 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: "#9aa2b8", letterSpacing: "0.05em", marginBottom: 9 }}>📂 {t.yourGroups}</div>
-            <div style={{ fontSize: 12.5, fontWeight: 800, color: accent.party, marginBottom: 6 }}>🍻 Rundo Party</div>
-            {groepen.map((g) => (
-              <div key={g.id} onClick={() => router.push(`/party?g=${g.id}`)}
-                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(240,193,75,0.3)", borderRadius: 12, padding: "10px 12px", marginBottom: 6 }}>
-                <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(240,193,75,0.12)" }}>{g.settle ? "⚖️" : "🍻"}</span>
-                <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: "#e8e4d8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || "Rundo Party"}</span>
-                {g.gast && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#d9c58a", background: "rgba(240,193,75,0.14)", borderRadius: 7, padding: "2px 7px" }}>{t.guestChip}</span>}
-                <span style={{ flexShrink: 0, color: accent.party, fontWeight: 800 }}>›</span>
-              </div>
-            ))}
+            {groepen.length > 0 && (<>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: accent.party, marginBottom: 6 }}>🍻 Rundo Party</div>
+              {groepen.map((g) => (
+                <div key={g.id} onClick={() => router.push(`/party?g=${g.id}`)}
+                  style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(240,193,75,0.3)", borderRadius: 12, padding: "10px 12px", marginBottom: 6 }}>
+                  <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(240,193,75,0.12)" }}>{g.settle ? "⚖️" : "🍻"}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: "#e8e4d8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || "Rundo Party"}</span>
+                  {g.gast && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#d9c58a", background: "rgba(240,193,75,0.14)", borderRadius: 7, padding: "2px 7px" }}>{t.guestChip}</span>}
+                  <span style={{ flexShrink: 0, color: accent.party, fontWeight: 800 }}>›</span>
+                </div>
+              ))}
+            </>)}
+            {tafels.length > 0 && (<>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: accent.table, margin: "10px 0 6px" }}>🧾 Rundo Table</div>
+              {tafels.map((g) => (
+                <div key={g.id} onClick={() => { if (g.code) router.push(`/table?code=${g.code}`) }}
+                  style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(91,159,214,0.35)", borderRadius: 12, padding: "10px 12px", marginBottom: 6 }}>
+                  <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(91,159,214,0.14)" }}>🧾</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: "#dfe7f2", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || "Rundo Table"}</span>
+                  {g.gast && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#9cc6ec", background: "rgba(91,159,214,0.16)", borderRadius: 7, padding: "2px 7px" }}>{t.guestChip}</span>}
+                  <span style={{ flexShrink: 0, color: accent.table, fontWeight: 800 }}>›</span>
+                </div>
+              ))}
+            </>)}
           </div>
         )}
 
