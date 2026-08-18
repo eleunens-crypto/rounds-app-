@@ -998,6 +998,11 @@ const T = {
     withHowManyQ: "Met hoeveel personen was dit rondje?",
     orderedLabel: "Besteld",
     barlistBtn: "handige barlijst",
+    potClamped: (b: string) => `De pot kon maar ${b} dekken — de rest van het rondje telt als zelf betaald.`,
+    thanksClosed: "🍻 Bedankt en tot de volgende! Je avond blijft bewaard bij Opgeslagen groepen.",
+    cancelledBy: (naam: string) => `✕ ${naam} annuleerde het rondje.`,
+    txPayTo: (bedrag: string, wie: string) => `→ betaal ${bedrag} aan ${wie}`,
+    txGetFrom: (bedrag: string, wie: string) => `← krijg ${bedrag} van ${wie}`,
     editOrderPlain: "bestelling aanpassen",
     barlistTitle: "Barlijst",
     paidLabel: "Betaald",
@@ -1683,6 +1688,11 @@ const T = {
     withHowManyQ: "\u00c0 combien \u00e9tiez-vous pour cette tourn\u00e9e ?",
     orderedLabel: "Command\u00e9",
     barlistBtn: "liste bar pratique",
+    potClamped: (b: string) => `La cagnotte n'a pu couvrir que ${b} — le reste de la tournée compte comme payé soi-même.`,
+    thanksClosed: "🍻 Merci et à la prochaine ! Ta soirée reste dans Groupes enregistrés.",
+    cancelledBy: (naam: string) => `✕ ${naam} a annulé la tournée.`,
+    txPayTo: (bedrag: string, wie: string) => `→ paie ${bedrag} à ${wie}`,
+    txGetFrom: (bedrag: string, wie: string) => `← reçois ${bedrag} de ${wie}`,
     editOrderPlain: "modifier la commande",
     barlistTitle: "Liste bar",
     paidLabel: "Pay\u00e9",
@@ -1925,6 +1935,9 @@ export default function PartyTest() {
   const [naamVenster, setNaamVenster] = useState<Record<string, string> | null>(null)
   // Kaartje na "Avond afsluiten": bevestiging + delen; null-boolean is genoeg.
   const [afsluitKaart, setAfsluitKaart] = useState(false)
+  // Het live-kanaal van de groep, ook bruikbaar om korte meldingen naar iedereen te
+  // sturen (bv. "X annuleerde het rondje") — data-wijzigingen gaan via postgres_changes.
+  const kanaalRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   // Bedragvelden: zolang je typt houden we jouw tekst aan, ook halve invoer als "18,"
   // of "0,5". Zetten we elke toetsaanslag meteen om naar een getal, dan verdwijnt de
   // komma weer voor je het cijfer erna kan intikken en kan je enkel ronde bedragen.
@@ -2027,8 +2040,11 @@ export default function PartyTest() {
       if (delta !== 0) rBumpAnon(idx, did, delta)
     })
     const beschikbaar = Math.max(0, potAvailFor(idx))
-    // Komt de pot tekort, dan moet je eerst kiezen — net als bij het bestellen.
-    if (editDraft.usePot && editDraft.amount > beschikbaar + 0.005) { setNotice(L.potShortTitle); return }
+    // Pot te kort voor het nieuwe bedrag? Niet meer blokkeren: de pot dekt wat hij kan,
+    // de rest telt als zelf betaald. Vroeger werd de hele wijziging stil geweigerd — het
+    // veld sprong terug naar het oude bedrag en het totaal bovenaan bewoog niet mee.
+    const potDeel = editDraft.usePot ? Math.min(editDraft.amount, beschikbaar) : 0
+    const potTekort = editDraft.usePot && editDraft.amount > beschikbaar + 0.005
     // Heeft dit rondje al betalers (via het betalers-scherm van de Fair Split-overstap,
     // of uitgebreid opnemen)? Dan moet hun verdeling mee met het nieuwe bedrag. Vroeger
     // bleef `payers` op de oude bedragen staan: de eindbalans toonde "al betaald in
@@ -2041,9 +2057,10 @@ export default function PartyTest() {
       setDirtyRound(idx)
     } else {
       if (Math.abs((r.amount || 0) - editDraft.amount) > 0.001) qSetAmount(idx, editDraft.amount)
-      rSetPotAmt(idx, editDraft.usePot ? editDraft.amount : 0)
+      rSetPotAmt(idx, potDeel)
     }
     if (Math.max(1, r.headcount || 1) !== editDraft.headcount) await setRoundHeadcount(r.id, editDraft.headcount)
+    if (potTekort) setNotice(L.potClamped(euro(beschikbaar)))
     cancelEditRound()
   }
   const [potIsCard, setPotIsCard] = useState(false)
@@ -2645,6 +2662,9 @@ export default function PartyTest() {
                 : barTotalen().map((x, i) => <span key={x.id}>{i > 0 ? " · " : ""}<b>{x.n}×</b> {x.naam}</span>)}
             </div>
           </div>
+          {/* Wie het rondje startte moet er ook makkelijk weer vanaf kunnen — óók na de
+              waarschuwing van daarnet. Iedereen krijgt dan de melding met de naam erbij. */}
+          <button onClick={annuleerRondje} style={{ width: "100%", cursor: "pointer", background: "none", border: "none", fontSize: 13.5, fontWeight: 700, color: "#b0402f" }}>{L.cancelRoundBtn}</button>
         </div>
       )
     }
@@ -3448,12 +3468,15 @@ export default function PartyTest() {
 
     const maakKanaal = () => {
       const c = supabase.channel(`party-${groupId}`)
+      // Korte tekstmeldingen van andere deelnemers (annulaties e.d.).
+      c.on("broadcast", { event: "melding" }, (msg) => { const t = (msg as { payload?: { tekst?: string } }).payload?.tekst; if (t) setNotice(t) })
       c.on("postgres_changes", { event: "*", schema: "public", table: "party_groups", filter: `id=eq.${groupId}` }, reload)
       c.on("postgres_changes", { event: "*", schema: "public", table: "party_people", filter: `group_id=eq.${groupId}` }, reload)
       c.on("postgres_changes", { event: "*", schema: "public", table: "party_rounds", filter: `group_id=eq.${groupId}` }, reload)
       c.on("postgres_changes", { event: "*", schema: "public", table: "party_round_items", filter: `group_id=eq.${groupId}` }, reload)
       c.on("postgres_changes", { event: "*", schema: "public", table: "party_pot", filter: `group_id=eq.${groupId}` }, reload)
       c.subscribe()
+      kanaalRef.current = c
       return c
     }
 
@@ -3755,7 +3778,11 @@ export default function PartyTest() {
   // Naar het echte beginscherm van de site (waar je Rundo Table of Party kiest). Bij een
   // onbevestigd rondje eerst waarschuwen, zodat je geen werk verliest.
   const goSiteHome = () => {
-    const ga = () => { window.location.href = "/" }
+    // Het logo brengt je naar het Party-startscherm — de keuzekaders plus je opgeslagen
+    // groepen. Vroeger herlaadde dit de hele site-root: een lege pagina met alleen
+    // koppen tot de chooser geladen was, en je was de app uit. Het startscherm wist de
+    // sessie vanzelf (zie het sessie-effect), dus netjes uitstappen is gewoon: erheen.
+    const ga = () => setView("start")
     if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); ga() } })
     else ga()
   }
@@ -4204,6 +4231,9 @@ export default function PartyTest() {
   const sluitAvondAf = async () => {
     if (!groupId) return
     await supabase.from("party_groups").update({ finalized: true, last_active: new Date().toISOString() }).eq("id", groupId)
+    // Ook meteen in de lokale lijst: anders stond de nét afgesloten avond nog even in
+    // het oranje bezig-blok ("verder waar je gebleven was") én onderaan bij afgesloten.
+    setSavedGroups((gs) => gs.map((g) => (g.id === groupId ? { ...g, finalized: true } : g)))
     setAfsluitKaart(true)
   }
   // De eindafrekening als deelbaar tekstje: per persoon het eerlijke bedrag, plus wie
@@ -4652,6 +4682,10 @@ export default function PartyTest() {
       onYes: async () => {
         setConfirmDlg(null)
         const rid = openRoundId
+        // Iedereen hoort wíe annuleerde — de rij verdwijnt zo meteen, dus de melding
+        // gaat via het live-kanaal, vóór het verwijderen.
+        const naam = people.find((pp) => pp.id === meId)?.name || "de admin"
+        try { void kanaalRef.current?.send({ type: "broadcast", event: "melding", payload: { tekst: L.cancelledBy(naam) } }) } catch { /* niets */ }
         // De drankjes hangen aan het rondje: die gaan mee weg. Half bewaren levert een
         // rondje op waarvan niemand nog weet wat het was.
         const { error } = await supabase.from("party_rounds").delete().eq("id", rid)
@@ -4677,7 +4711,16 @@ export default function PartyTest() {
     if (!openRoundId || !groupId) return
     const merk = `poke:${Date.now()}`
     const { error } = await supabase.rpc("party_answer_repeat", { p_round: openRoundId, p_person: merk, p_answer: "same" })
-    if (error) { setNotice(L.reminderFailed); return }
+    if (error) {
+      // De RPC verwacht een échte deelnemer en weigert het duwtje-merk. Val dan terug
+      // op een rechtstreekse merge in het voorstel — duwtjes zijn zeldzaam genoeg dat
+      // dit racevrij genoeg is, en de ontvangst leest tóch alleen de "poke:"-sleutel.
+      const { data: rij } = await supabase.from("party_rounds").select("proposal").eq("id", openRoundId).single()
+      const prop = ((rij?.proposal as Proposal | null) ?? {})
+      const nieuwProp = { ...prop, answers: { ...(prop.answers || {}), [merk]: "same" as const } }
+      const { error: e2 } = await supabase.from("party_rounds").update({ proposal: nieuwProp }).eq("id", openRoundId)
+      if (e2) { setNotice(L.reminderFailed); return }
+    }
     setNotice(L.reminderSentTo(namen))
     loadParty(groupId)
   }
@@ -5222,7 +5265,7 @@ export default function PartyTest() {
             <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 14, lineHeight: 1.5 }}>{L.eveClosedSub}</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1, fontSize: 14, fontWeight: 800 }} onClick={() => { void deelAfrekening() }}>{L.shareBillBtn}</button>
-              <button style={{ ...S.btnP, flex: 1, fontSize: 14, fontWeight: 800 }} onClick={() => { setAfsluitKaart(false); goSiteHome() }}>{L.ready}</button>
+              <button style={{ ...S.btnP, flex: 1, fontSize: 14, fontWeight: 800 }} onClick={() => { setAfsluitKaart(false); setNotice(L.thanksClosed); goSiteHome() }}>{L.ready}</button>
             </div>
           </div>
         </div>
@@ -5268,7 +5311,7 @@ export default function PartyTest() {
                 <div style={{ fontSize: 22, fontWeight: 800, color: "#4a3f1e" }}>🔍 {L.barlistTitle}</div>
                 <button onClick={() => setShowBarlijst(false)} style={{ border: "none", background: "rgba(120,95,20,0.08)", color: "#8a7d55", width: 36, height: 36, borderRadius: "50%", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>✕</button>
               </div>
-              <div style={{ fontSize: 13.5, color: "#8a7d55", fontWeight: 700, margin: "2px 0 14px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim() || L.autoName()} · {rounds.length}\u00a0{L.roundWord.toLowerCase()}{rounds.length === 1 ? "" : "s"} · {L.drinksCount(som)}</div>
+              <div style={{ fontSize: 13.5, color: "#8a7d55", fontWeight: 700, margin: "2px 0 14px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim() || L.autoName()} · {rounds.length} {L.roundWord.toLowerCase()}{rounds.length === 1 ? "" : "s"} · {L.drinksCount(som)}</div>
               <div style={{ ...S.card, padding: "6px 16px", background: "#fffdf6" }}>
                 {lijst.map(({ d, n }, i) => (
                   <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "12px 0", borderBottom: i < lijst.length - 1 ? "1px solid rgba(120,95,20,0.1)" : "none" }}>
@@ -5772,7 +5815,7 @@ export default function PartyTest() {
     // te zijn: beide gewone-rondjes-modi dragen de uitgebreid-look — modus-regeltje
     // rechts naast het logo, naamplaatje gecentreerd, pot-geldzak rechts ernaast.
     // Alleen Fair Split (QR) houdt zijn eigen kop met de gekleurde balk.
-    const uitgebreidLook = alsUitgebreid || !settle
+    const uitgebreidLook = alsUitgebreid || !settle || fromQuick
     return (
     <div style={{ marginBottom: 12 }}>
       {/* Bij uitgebreid opnemen geen aparte statusbalk: de tekst staat rechts op de
@@ -5814,7 +5857,7 @@ export default function PartyTest() {
             {/* De submodus-titel in plaats van het algemene "Ik bestel voor de groep":
                 zelfde plek, zelfde stijl, maar je ziet meteen óf je snel óf uitgebreid
                 aan het noteren bent. */}
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{opNaam ? L.modeNaamTitle : L.modeSnelTitle}</span>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{(opNaam || fromQuick) ? L.modeNaamTitle : L.modeSnelTitle}</span>
           </div>
         )}
         {!uitgebreidLook && !!groupId && !kaal && groupName.trim() && !editName && (
@@ -7003,7 +7046,7 @@ export default function PartyTest() {
                 <span style={{ fontSize: 15.5, fontWeight: 800 }}>{!settle && isAutoNaam(groupName) ? L.giveNameQ : L.groupNamePlain}</span>
             {hasSettled && <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>🔒 vast na afrekenen</span>}
           </div>
-          <input disabled={hasSettled} value={!settle && isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.groupNamePh : L.groupNameShortPh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : VLAK2, color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
+          <input disabled={hasSettled} value={!settle && isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.groupNamePh : L.groupNameShortPh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : VLAK2, color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
               {!hasSettled && (!settle && isAutoNaam(groupName)
                 ? <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 6 }}>{L.nowWord} {groupName.trim()}</div>
                 : <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 6 }}>{L.tapToRename}</div>)}
@@ -7922,7 +7965,7 @@ export default function PartyTest() {
                     twee links samen naar een tweede regel, rechts uitgelijnd. */}
                 <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "baseline", columnGap: 8, rowGap: 3, marginBottom: 9, paddingBottom: 9, borderBottom: "1px solid rgba(120,95,20,0.1)" }}>
                   <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 14, fontWeight: 800, color: "#8a7d55" }}>📋 {L.orderedLabel} <span style={{ fontWeight: 600, color: "#b3a988" }}>— {L.drinksCount(lijst.reduce((a, x) => a + x.n, 0))}</span></span>
-                  <span style={{ marginLeft: "auto", display: "inline-flex", gap: 14, flexShrink: 0 }}>
+                  <span style={{ marginLeft: "auto", display: "inline-flex", gap: 20, flexShrink: 0 }}>
                     {/* De hele avond in één oogopslag: opent de schermvullende barlijst. */}
                     <span onClick={() => setShowBarlijst(true)} style={{ fontSize: 13, fontWeight: 800, color: "#c98a00", cursor: "pointer", whiteSpace: "nowrap" }}>🔍 {L.barlistBtn}</span>
                     <span onClick={editOrder} style={{ fontSize: 13, fontWeight: 800, color: "#c98a00", cursor: "pointer", whiteSpace: "nowrap" }}>✏️ {L.editOrderPlain}</span>
@@ -9339,6 +9382,18 @@ export default function PartyTest() {
                   {inpot > 0.005 && <div style={{ color: "#6b5f3a", padding: "2px 0" }}>{L.inPot} <b style={{ color: "#1f8a4c" }}>{show(inpot)}</b></div>}
                   {cardLossPer > 0.005 && <div style={{ color: "#6b5f3a", padding: "2px 0" }}>{L.cardLoss} <b style={{ color: "#4a3f1e" }}>{show(cardLossPer)}</b></div>}
                   <div style={{ padding: "6px 0 0", marginTop: 4, borderTop: "1px dashed rgba(120,95,20,0.25)", fontWeight: 800, color: nettoColor }}>{nettoLabel}</div>
+                  {/* Niet alleen hoevéél, ook aan wíe: de overschrijvingen van deze persoon
+                      meteen bij zijn saldo, zodat je het kader onderaan niet hoeft te zoeken. */}
+                  {(() => {
+                    const lbl = settleGroups.find((g) => g.leden.some((x) => x.id === p.id))?.label
+                    if (!lbl) return null
+                    const mijn = settlement.tx.filter((t) => t.from === lbl || t.to === lbl)
+                    return mijn.map((t, k) => (
+                      <div key={k} style={{ fontSize: 13.5, fontWeight: 700, color: t.from === lbl ? "#b0402f" : "#1f8a4c", padding: "3px 0 0" }}>
+                        {t.from === lbl ? L.txPayTo(euro(t.amount), t.to) : L.txGetFrom(euro(t.amount), t.from)}
+                      </div>
+                    ))
+                  })()}
                 </div>
               )}
             </div>
