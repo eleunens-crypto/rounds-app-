@@ -13,9 +13,9 @@ const T = {
     partyDesc: "Neem zelf op, of deel de QR en iedereen bestelt zelf.",
     // Stap 1 heeft twee manieren (zelf opnemen óf QR scannen), vandaar twee iconen.
     partyFlow: [
-      { iconen: ["✍️", "📱"], label: "neem op\nof scan QR" },
-      { iconen: ["📋"], label: "handig\nbarlijstje" },
-      { iconen: ["⚖️"], label: "eerlijk\nafgerekend!" },
+      { iconen: ["✍️", "📱"], label: "neem zelf op\nof deel QR" },
+      { iconen: ["👆"], label: "tik drankjes\naan" },
+      { iconen: ["📋"], label: "handig barlijstje\nen afrekenen" },
     ],
     orWord: "of",
     tableSub: "Scan de rekening en verdeel in groep",
@@ -23,7 +23,7 @@ const T = {
     tableFlow: [
       { iconen: ["📷"], label: "scan\nrekening" },
       { iconen: ["📱"], label: "deel QR" },
-      { iconen: ["👆"], label: "wijs toe" },
+      { iconen: ["👆"], label: "tik aan\nwat je nam" },
       { iconen: ["💶"], label: "eerlijk\nverdeeld!" },
     ],
     start: "Starten",
@@ -35,9 +35,9 @@ const T = {
     partySub: "Prendre les tournées et partager, sans prise de tête",
     partyDesc: "Note toi-même, ou partage le QR et chacun commande.",
     partyFlow: [
-      { iconen: ["✍️", "📱"], label: "note toi-même\nou scanne le QR" },
-      { iconen: ["📋"], label: "liste bar\npratique" },
-      { iconen: ["⚖️"], label: "réglé\néquitablement !" },
+      { iconen: ["✍️", "📱"], label: "note toi-même\nou partage le QR" },
+      { iconen: ["👆"], label: "coche les\nboissons" },
+      { iconen: ["📋"], label: "liste bar pratique\net règlement" },
     ],
     orWord: "ou",
     tableSub: "Scanne l'addition et partage en groupe",
@@ -45,7 +45,7 @@ const T = {
     tableFlow: [
       { iconen: ["📷"], label: "scanne\nl'addition" },
       { iconen: ["📱"], label: "partage\nle QR" },
-      { iconen: ["👆"], label: "attribue" },
+      { iconen: ["👆"], label: "coche ce que\ntu as pris" },
       { iconen: ["💶"], label: "partagé\néquitablement !" },
     ],
     start: "Démarrer",
