@@ -913,6 +913,7 @@ const T = {
     okWord: "Begrepen",
     stillBusy: "nog bezig…",
     youTapFor: "Je tikt aan voor:",
+    youWord: "jij",
     nowTappingFor: (naam: string) => `Nu tik je voor ${naam} aan`,
     tapForQrGuest: (naam: string) => `${naam} kwam via de QR binnen en tikt normaal zelf aan op zijn gsm.\n\nWil je toch voor ${naam} aantikken? Doe dat alleen als het echt nodig is — bijvoorbeeld bij een lege batterij.`,
     tapForQrYes: "Ja, ik tik voor hem aan",
@@ -1007,6 +1008,7 @@ const T = {
     runnerCloseFailed: "Afronden mislukt.",
     adminRoundOf: (naam: string) => `rondje van ${naam}`,
     fillPayBtn: "💶 Bedrag & betaling invullen",
+    tappedForYou: (naam: string) => `🍺 ${naam} duidt drankjes voor je aan — kijk even op je lijstje.`,
     txPayTo: (bedrag: string, wie: string) => `→ betaal ${bedrag} aan ${wie}`,
     txGetFrom: (bedrag: string, wie: string) => `← krijg ${bedrag} van ${wie}`,
     editOrderPlain: "bestelling aanpassen",
@@ -1609,6 +1611,7 @@ const T = {
     stillBusy: "en cours…",
     toTheBar: "🍻 Au bar",
     youTapFor: "Tu coches pour :",
+    youWord: "toi",
     nowTappingFor: (naam: string) => `Tu coches maintenant pour ${naam}`,
     tapForQrGuest: (naam: string) => `${naam} est arrivé via le QR et coche normalement lui-même sur son gsm.\n\nTu veux quand même cocher pour ${naam} ? À faire seulement si c’est vraiment nécessaire — batterie vide, par exemple.`,
     tapForQrYes: "Oui, je coche pour lui",
@@ -1703,6 +1706,7 @@ const T = {
     runnerCloseFailed: "Échec de la clôture.",
     adminRoundOf: (naam: string) => `tournée de ${naam}`,
     fillPayBtn: "💶 Montant & paiement",
+    tappedForYou: (naam: string) => `🍺 ${naam} coche des boissons pour toi — jette un œil à ta liste.`,
     txPayTo: (bedrag: string, wie: string) => `→ paie ${bedrag} à ${wie}`,
     txGetFrom: (bedrag: string, wie: string) => `← reçois ${bedrag} de ${wie}`,
     editOrderPlain: "modifier la commande",
@@ -1950,6 +1954,8 @@ export default function PartyTest() {
   // Het live-kanaal van de groep, ook bruikbaar om korte meldingen naar iedereen te
   // sturen (bv. "X annuleerde het rondje") — data-wijzigingen gaan via postgres_changes.
   const kanaalRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  // De kanaal-closure leeft langer dan de state: dit ref geeft hem altijd het actuele meId.
+  const meIdRef = useRef<string | null>(null)
   // Bedragvelden: zolang je typt houden we jouw tekst aan, ook halve invoer als "18,"
   // of "0,5". Zetten we elke toetsaanslag meteen om naar een getal, dan verdwijnt de
   // komma weer voor je het cijfer erna kan intikken en kan je enkel ronde bedragen.
@@ -2096,6 +2102,11 @@ export default function PartyTest() {
   const [activeCat, setActiveCat] = useState<Cat>("Bier")
   const [drinkSearch, setDrinkSearch] = useState("")
   const [guestTab, setGuestTab] = useState<"order" | "me" | "group">("order")
+  // De haler mag tijdens zíjn rondje ook voor anderen aantikken ("doe mij ook eentje"
+  // aan de toog). Gewone gasten blijven enkel zichzelf aantikken.
+  const [halerVoor, setHalerVoor] = useState<string | null>(null)
+  // Wie al een "X duidt drankjes voor je aan"-melding kreeg dit rondje — één keer volstaat.
+  const gemeldVoor = useRef<Set<string>>(new Set())
   // "Rondje opnemen": de tafel rondgaan, persoon per persoon. walkIdx = wie er nu aan
   // de beurt is (index in people). null = het scherm is niet open.
   const [walkIdx, setWalkIdx] = useState<number | null>(null)
@@ -2135,6 +2146,8 @@ export default function PartyTest() {
     } catch { /* sessionStorage niet beschikbaar */ }
   }, [groupId, view, fromQuick, booting])
   useEffect(() => { if (view !== "roundsOverview") setFillMode(false) }, [view])
+  useEffect(() => { setHalerVoor(null); gemeldVoor.current = new Set() }, [openRoundId])
+  useEffect(() => { meIdRef.current = meId }, [meId])
 
   // Terug op je telefoon sprong vanuit een groep meteen naar het keuzescherm — twee
   // niveaus in één tik, en de sessie was daar weg. Nu leggen we bij het openen van een
@@ -2731,6 +2744,13 @@ export default function PartyTest() {
   // hetzelfde drankje aantikken zouden elkaar anders overschrijven.
   const bump = async (did: string, pid: string, delta: number) => {
     setCart((c) => ({ ...c, [did]: { ...(c[did] ?? {}), [pid]: Math.max(0, (c[did]?.[pid] ?? 0) + delta) } }))
+    // Duidt iemand (haler of admin) iets aan voor een ánder? Die persoon hoort dat te
+    // weten — één persoonlijke melding per rondje, bij de eerste tik.
+    if (settle && delta > 0 && pid !== meId && !gemeldVoor.current.has(pid)) {
+      gemeldVoor.current.add(pid)
+      const naam = (meId ? people.find((pp) => pp.id === meId)?.name : null) || "de admin"
+      try { void kanaalRef.current?.send({ type: "broadcast", event: "voorJou", payload: { voor: pid, tekst: L.tappedForYou(naam) } }) } catch { /* niets */ }
+    }
     // Je was klaar en wijzigt toch nog: dan tel je weer als "bezig".
     if (settle && pid === meId && (openAnswers[pid] === "same" || openAnswers[pid] === "skip")) void antwoordRondje("different")
     const rid = await ensureRound()
@@ -3486,6 +3506,10 @@ export default function PartyTest() {
       const c = supabase.channel(`party-${groupId}`)
       // Korte tekstmeldingen van andere deelnemers (annulaties e.d.).
       c.on("broadcast", { event: "melding" }, (msg) => { const t = (msg as { payload?: { tekst?: string } }).payload?.tekst; if (t) setNotice(t) })
+      c.on("broadcast", { event: "voorJou" }, (msg) => {
+        const p = (msg as { payload?: { voor?: string; tekst?: string } }).payload
+        if (p?.tekst && p.voor && p.voor === meIdRef.current) setNotice(p.tekst)
+      })
       c.on("postgres_changes", { event: "*", schema: "public", table: "party_groups", filter: `id=eq.${groupId}` }, reload)
       c.on("postgres_changes", { event: "*", schema: "public", table: "party_people", filter: `group_id=eq.${groupId}` }, reload)
       c.on("postgres_changes", { event: "*", schema: "public", table: "party_rounds", filter: `group_id=eq.${groupId}` }, reload)
@@ -6181,6 +6205,9 @@ export default function PartyTest() {
 
   if (groupId && !isAdmin && meId) {
     const ik = people.find((p) => p.id === meId)!
+    // De haler mag voor anderen aantikken; iedereen anders tikt vast voor zichzelf.
+    const ikHaalNu = !!openRoundId && startedBy === meId
+    const doelG = ikHaalNu && halerVoor && people.some((pp) => pp.id === halerVoor) ? halerVoor : meId
     const zoekt = normText(drinkSearch).length > 0
     const catDrinks = zoekt ? drinks.filter((d) => drinkMatches(d.name, drinkSearch)) : drinks.filter((d) => d.cat === activeCat)
     const lijst = zoekt ? catDrinks : catDrinks.filter((d) => fullList || d.fav || aQty(d.id, meId) > 0)
@@ -6441,9 +6468,29 @@ export default function PartyTest() {
                 </span>
               </div>
             )}
+            {ikHaalNu && people.length > 1 && (
+              /* Jij haalt: dan mag je ook voor de anderen aantikken — "doe mij ook
+                 eentje" aan de toog. Wie je kiest krijgt eenmalig een melding. */
+              <div style={{ ...S.card, padding: "9px 12px", marginBottom: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: doelG !== meId ? MODUS_FAIR.tekst : "#8a7d55", marginBottom: 7 }}>
+                  {doelG !== meId ? L.nowTappingFor(people.find((pp) => pp.id === doelG)?.name ?? "") : L.youTapFor}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {[people.find((pp) => pp.id === meId), ...people.filter((pp) => pp.id !== meId)].map((pp) => pp && (
+                    <span key={pp.id} onClick={() => setHalerVoor(pp.id === meId ? null : pp.id)}
+                      style={{ cursor: "pointer", borderRadius: 15, padding: "6px 12px", fontSize: 13.5, fontWeight: 800,
+                        background: doelG === pp.id ? MODUS_FAIR.knop : "#fff",
+                        color: doelG === pp.id ? "#fff" : "#8a7d55",
+                        border: doelG === pp.id ? "none" : "1px solid rgba(120,95,20,0.25)" }}>
+                      {pp.id === meId ? `${pp.name} (${L.youWord})` : pp.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > lijst.length || fullList)) ? 26 : 12 }}>
             {lijst.map((d) => {
-              const n = aQty(d.id, meId)
+              const n = aQty(d.id, doelG)
               return (
                 <div key={d.id} onClick={() => { if (!bezig) setGeenRondje(true) }}
                   style={{ padding: "10px", borderRadius: 12, cursor: bezig ? "default" : "pointer", opacity: bezig ? 1 : 0.55,
@@ -6451,9 +6498,9 @@ export default function PartyTest() {
                   <div style={{ fontSize: 15.5, fontWeight: n > 0 ? 800 : 600, color: n > 0 ? MODUS_FAIR.tekst : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
                   {bezig && (
                     <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
-                      <button style={{ ...S.step, opacity: n > 0 ? 1 : 0.4 }} onClick={() => n > 0 && bump(d.id, meId, -1)}>−</button>
+                      <button style={{ ...S.step, opacity: n > 0 ? 1 : 0.4 }} onClick={() => n > 0 && bump(d.id, doelG, -1)}>−</button>
                       <span style={{ fontSize: 18, fontWeight: 800, color: n > 0 ? MODUS_FAIR.rand : "#b3a988" }}>{n}</span>
-                      <button style={S.step} onClick={() => bump(d.id, meId, 1)}>+</button>
+                      <button style={S.step} onClick={() => bump(d.id, doelG, 1)}>+</button>
                     </div>
                   )}
                 </div>
