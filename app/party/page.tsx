@@ -997,6 +997,9 @@ const T = {
     roundCostFor: (n: number) => `Hoeveel betaald voor rondje ${n}?`,
     withHowManyQ: "Met hoeveel personen was dit rondje?",
     orderedLabel: "Besteld",
+    barlistBtn: "handige barlijst",
+    editOrderPlain: "bestelling aanpassen",
+    barlistTitle: "Barlijst",
     paidLabel: "Betaald",
     adjustWord: "Aanpassen",
     notSavedYet: "niet opgeslagen",
@@ -1679,6 +1682,9 @@ const T = {
     roundCostFor: (n: number) => `Combien pay\u00e9 pour la tourn\u00e9e ${n} ?`,
     withHowManyQ: "\u00c0 combien \u00e9tiez-vous pour cette tourn\u00e9e ?",
     orderedLabel: "Command\u00e9",
+    barlistBtn: "liste bar pratique",
+    editOrderPlain: "modifier la commande",
+    barlistTitle: "Liste bar",
     paidLabel: "Pay\u00e9",
     adjustWord: "Modifier",
     notSavedYet: "non enregistr\u00e9",
@@ -1824,6 +1830,8 @@ export default function PartyTest() {
   const [depositValue, setDepositValue] = useState(1)
   const [depositUnit, setDepositUnit] = useState<"eur" | "coin">("eur")
   const [showPot, setShowPot] = useState(false)
+  // De volledige barlijst van de avond, schermvullend — leesbaar aan de toog.
+  const [showBarlijst, setShowBarlijst] = useState(false)
   const [showCoins, setShowCoins] = useState(false)
   const [coinInfo, setCoinInfo] = useState(false)
   const [depositInfo, setDepositInfo] = useState(false)
@@ -3290,7 +3298,7 @@ export default function PartyTest() {
       // om de modus te (her)bevestigen — maar die staat al op de groep, dus dat was een
       // extra tik om te bevestigen wat je al gekozen had. Nu ga je meteen naar de plek waar
       // je bij een nieuwe groep ook belandt: de namenstap bij Fair Split, het bestelscherm
-      // bij snelle rondjes. Wisselen van modus kan nog altijd via ⚙️ Groep.
+      // bij snelle rondjes.
       // Behalve als je gast bent: de setup is het inrichtscherm van de admin. Een gast
       // hoort in de hub — die past zich vanzelf aan de rol aan.
       const eigen = savedGroups.find((x) => x.id === id)?.owned ?? true
@@ -3298,6 +3306,28 @@ export default function PartyTest() {
       if (!eigen) setView("hub")
       else if (res.settle) setView("setup")
       else { setActiveCat(catsPresent[0]); setView("order") }
+    } else if (res) {
+      const sg = savedGroups.find((x) => x.id === id)
+      const eigen = sg?.owned ?? true
+      // Gewone rondjes (snel én uitgebreid), eigen groep met geschiedenis: land waar
+      // de avond staat.
+      //  - Staat er nog een rondje open → gewoon verder bestellen.
+      //  - Zijn er afgesloten rondjes → het rondjesoverzicht: dat toont in één blik wat
+      //    er al genoteerd is — beter dan een kale hub met alleen knoppen. De hub had
+      //    hier toch niets te melden: zijn betaalkaart hoort bij het nét afgesloten
+      //    rondje, en toewijzen komt pas bij het afrekenen.
+      // Fair Split houdt de hub (gasten, QR, plaatsen leven daar), en een gast landt
+      // altijd in de hub — die past zich aan de rol aan.
+      if (eigen && !res.settle) {
+        if (res.heeftOpen) { setActiveCat(catsPresent[0]); setView("order") }
+        else { setFillMode(false); setOverviewBackTo("hub"); setView("roundsOverview") }
+      } else {
+        // De hub toont de kaart van het laatste rondje — maar alleen als dat rondje ook
+        // aangewezen is. Elke andere weg naar de hub doet dat al; deze landing vergat
+        // het, en dat gaf de kale hub zonder besteld-kaart.
+        if (res.rondjes > 0) setOpenRound(res.rondjes - 1)
+        setView("hub")
+      }
     } else {
       setView("hub")
     }
@@ -5224,6 +5254,33 @@ export default function PartyTest() {
           </div>
         </div>
       )}
+      {showBarlijst && (() => {
+        // Tel de hele avond op: alle afgesloten rondjes samen, per drankje, grootste
+        // eerst. Grote letters — dit is de lijst die je aan de toog wil aflezen.
+        const totalen: Record<string, number> = {}
+        rounds.forEach((rr) => drinksOf(rr).forEach(({ d, n }) => { totalen[d.id] = (totalen[d.id] || 0) + n }))
+        const lijst = drinks.filter((d) => (totalen[d.id] || 0) > 0).map((d) => ({ d, n: totalen[d.id] })).sort((a, b) => b.n - a.n || a.d.name.localeCompare(b.d.name))
+        const som = lijst.reduce((a, x) => a + x.n, 0)
+        return (
+          <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "#fbf3e4", overflowY: "auto", padding: "18px 16px 28px" }} onClick={() => setShowBarlijst(false)}>
+            <div style={{ maxWidth: 430, margin: "0 auto" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#4a3f1e" }}>🔍 {L.barlistTitle}</div>
+                <button onClick={() => setShowBarlijst(false)} style={{ border: "none", background: "rgba(120,95,20,0.08)", color: "#8a7d55", width: 36, height: 36, borderRadius: "50%", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>✕</button>
+              </div>
+              <div style={{ fontSize: 13.5, color: "#8a7d55", fontWeight: 700, margin: "2px 0 14px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim() || L.autoName()} · {rounds.length}\u00a0{L.roundWord.toLowerCase()}{rounds.length === 1 ? "" : "s"} · {L.drinksCount(som)}</div>
+              <div style={{ ...S.card, padding: "6px 16px", background: "#fffdf6" }}>
+                {lijst.map(({ d, n }, i) => (
+                  <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "12px 0", borderBottom: i < lijst.length - 1 ? "1px solid rgba(120,95,20,0.1)" : "none" }}>
+                    <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 18, fontWeight: 800, color: "#4a3f1e" }}>{d.emoji} {d.name}</span>
+                    <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
       {naamBotsing && (
         <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setNaamBotsing(null)}>
           <div style={{ ...S.sheet, maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
@@ -5782,9 +5839,11 @@ export default function PartyTest() {
         <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", margin: "10px 0", minHeight: 38 }}>
           {groupName.trim() && !editName && (
             <span onClick={() => { if (!onboarding) setEditName(true) }}
-              style={{ maxWidth: "55%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", cursor: onboarding ? "default" : "pointer", background: "#fff", border: "1.5px solid rgba(240,165,0,0.55)", borderRadius: 18, padding: "7px 16px", fontSize: 15, fontWeight: 800, color: "#4a3f1e", boxShadow: "0 2px 5px rgba(90,64,10,0.12)" }}>
+              style={{ maxWidth: "62%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", cursor: onboarding ? "default" : "pointer", background: "#fff", border: "1.5px solid rgba(240,165,0,0.55)", borderRadius: 18, padding: "7px 16px", fontSize: 15, fontWeight: 800, color: "#4a3f1e", boxShadow: "0 2px 5px rgba(90,64,10,0.12)" }}>
               {isAutoNaam(groupName) ? (
-                <span style={{ color: "#c98a00", fontWeight: 700, fontSize: 14 }}>✏️ {L.giveNameQ}</span>
+                /* Niet alleen de uitnodiging, ook wat de naam nú is — anders weet je
+                   niet onder welke naam de groep straks in je lijst staat. */
+                <span style={{ color: "#c98a00", fontWeight: 700, fontSize: 14 }}>✏️ {L.giveNameQ} <span style={{ color: "#a89a6f", fontWeight: 400, fontSize: 12.5 }}>· {L.nowWord} {groupName.trim()}</span></span>
               ) : (<>{groupName.trim()}{!onboarding && <span style={{ fontSize: 12 }}> ✏️</span>}</>)}
             </span>
           )}
@@ -7858,7 +7917,17 @@ export default function PartyTest() {
             {/* Drankjes van dit net-bevestigde rondje, met de aanpas-knop erin verwerkt. */}
             {(() => { const laatste = rounds[idx]; const lijst = laatste ? drinksOf(laatste) : []; return lijst.length > 0 && (
               <div style={{ ...S.card, padding: "12px 14px", background: "#fffdf6" }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 9, paddingBottom: 9, borderBottom: "1px solid rgba(120,95,20,0.1)" }}>📋 {L.orderedLabel} <span style={{ fontWeight: 600, color: "#b3a988" }}>— {L.drinksCount(lijst.reduce((a, x) => a + x.n, 0))}</span></div>
+                {/* Variant C: beide acties in de titelregel — barlijst én aanpassen —
+                    en de aparte voetregel eronder is weg. Op een smal scherm wrappen de
+                    twee links samen naar een tweede regel, rechts uitgelijnd. */}
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "baseline", columnGap: 8, rowGap: 3, marginBottom: 9, paddingBottom: 9, borderBottom: "1px solid rgba(120,95,20,0.1)" }}>
+                  <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 14, fontWeight: 800, color: "#8a7d55" }}>📋 {L.orderedLabel} <span style={{ fontWeight: 600, color: "#b3a988" }}>— {L.drinksCount(lijst.reduce((a, x) => a + x.n, 0))}</span></span>
+                  <span style={{ marginLeft: "auto", display: "inline-flex", gap: 14, flexShrink: 0 }}>
+                    {/* De hele avond in één oogopslag: opent de schermvullende barlijst. */}
+                    <span onClick={() => setShowBarlijst(true)} style={{ fontSize: 13, fontWeight: 800, color: "#c98a00", cursor: "pointer", whiteSpace: "nowrap" }}>🔍 {L.barlistBtn}</span>
+                    <span onClick={editOrder} style={{ fontSize: 13, fontWeight: 800, color: "#c98a00", cursor: "pointer", whiteSpace: "nowrap" }}>✏️ {L.editOrderPlain}</span>
+                  </span>
+                </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                   {lijst.map(({ d, n }) => (
                     <div key={d.id} style={{ padding: "4px 0" }}>
@@ -7879,12 +7948,13 @@ export default function PartyTest() {
                   const anonTot = laatste ? drinks.reduce((s2, d) => s2 + (laatste.anon?.[d.id] ?? 0), 0) : 0
                   return anonTot > 0 && <div style={{ fontSize: 13.5, fontWeight: 700, color: "#b0402f", marginTop: 8 }}>🔴 {L.notAssignedYet(anonTot)}</div>
                 })()}
-                {/* Aanpassen hoort bij de lijst zelf: rechtsonder, na de drankjes. */}
-                <div style={{ textAlign: "right", marginTop: 11, paddingTop: 9, borderTop: "1px solid rgba(120,95,20,0.1)" }}>
-                  <span onClick={editOrder} style={opNaam === true && !settle
-                    ? { fontSize: 14.5, color: "#c98a00", fontWeight: 800, cursor: "pointer" }
-                    : { fontSize: settle ? 13.5 : 15.5, color: "#c98a00", fontWeight: 800, padding: settle ? "6px 12px" : "10px 16px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>{settle ? `✏️ ${L.editRoundBtn}` : L.editOrderBtn}</span>
-                </div>
+                {/* Fair Split houdt zijn eigen kleine aanpas-pil onderaan; bij de
+                    gewone-rondjes-modi zit aanpassen nu in de titelregel (variant C). */}
+                {settle && (
+                  <div style={{ textAlign: "right", marginTop: 11, paddingTop: 9, borderTop: "1px solid rgba(120,95,20,0.1)" }}>
+                    <span onClick={editOrder} style={{ fontSize: 13.5, color: "#c98a00", fontWeight: 800, padding: "6px 12px", borderRadius: 14, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", cursor: "pointer" }}>✏️ {L.editRoundBtn}</span>
+                  </div>
+                )}
               </div>
             ) })()}
 
