@@ -23,6 +23,7 @@ const T = {
     guestChip: "als gast",
     modeZelf: "Zelf opnemen",
     modeQr: "Via QR",
+    closedChip: "afgesloten ✓",
     tableSub: "Scan de rekening en verdeel in groep",
     tableDesc: "Scan de bon op restaurant of café — ieder betaalt z'n deel.",
     tableFlow: [
@@ -49,6 +50,7 @@ const T = {
     guestChip: "invité",
     modeZelf: "Noter soi-même",
     modeQr: "Via QR",
+    closedChip: "clôturé ✓",
     tableSub: "Scanne l'addition et partage en groupe",
     tableDesc: "Scanne l'addition au resto ou au café — chacun paie sa part.",
     tableFlow: [
@@ -76,7 +78,7 @@ export default function Home() {
   // toestel-id in localStorage plus de twee groepsqueries (eigen + als gast). Alleen
   // open groepen — vanaf een startscherm wil je ergens naartoe, niet terugkijken.
   // (Zelfde structuur staat klaar voor Table-groepen zodra die bron gekoppeld is.)
-  type MiniGroep = { id: string; name: string; settle?: boolean; gast: boolean; last: string; app: "party" | "table"; code?: string }
+  type MiniGroep = { id: string; name: string; settle?: boolean; gast: boolean; af: boolean; last: string; app: "party" | "table"; code?: string }
   const [groepen, setGroepen] = useState<MiniGroep[]>([])
   const [tafels, setTafels] = useState<MiniGroep[]>([])
   useEffect(() => {
@@ -94,18 +96,19 @@ export default function Home() {
         ])
         const map = new Map<string, MiniGroep>()
         for (const g of eigen.data ?? []) {
-          if (g.finalized) continue
-          map.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", settle: !!g.settle, gast: false, last: (g.last_active as string) || "", app: "party" })
+          map.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", settle: !!g.settle, gast: false, af: !!g.finalized, last: (g.last_active as string) || "", app: "party" })
         }
         const gastIds = [...new Set((gast.data ?? []).map((r) => r.group_id as string))].filter((id) => !map.has(id))
         if (gastIds.length > 0) {
           const { data } = await supabase.from("party_groups").select("id,name,last_active,finalized,settle").in("id", gastIds)
           for (const g of data ?? []) {
-            if (g.finalized) continue
-            map.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", settle: !!g.settle, gast: true, last: (g.last_active as string) || "", app: "party" })
+            map.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", settle: !!g.settle, gast: true, af: !!g.finalized, last: (g.last_active as string) || "", app: "party" })
           }
         }
-        const lijst = [...map.values()].sort((a, b) => b.last.localeCompare(a.last)).slice(0, 4)
+        // Open groepen eerst — daar wil je naartoe. Afgesloten avonden blijven
+        // raadpleegbaar (afrekening delen, terugkijken) en volgen gedimd eronder.
+        const alles = [...map.values()].sort((a, b) => b.last.localeCompare(a.last))
+        const lijst = [...alles.filter((g) => !g.af).slice(0, 4), ...alles.filter((g) => g.af).slice(0, 3)]
         setGroepen(lijst)
       } catch { /* stil: geen sectie is prima */ }
       // Table: eigen groepen uit de databank (rundo_owner_id), gastgroepen uit de
@@ -119,18 +122,17 @@ export default function Home() {
         const tafelMap = new Map<string, MiniGroep>()
         const { data: eigenT } = await supabase.from("table_groups").select("id,name,invite_code,finalized,created_at").eq("owner_id", ownerId)
         for (const g of eigenT ?? []) {
-          if (g.finalized) continue
-          tafelMap.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", gast: false, last: (g.created_at as string) || "", app: "table", code: (g.invite_code as string) || "" })
+          tafelMap.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", gast: false, af: !!g.finalized, last: (g.created_at as string) || "", app: "table", code: (g.invite_code as string) || "" })
         }
         const gastIds = lokaal.filter((x) => x.role === "gast" && !tafelMap.has(x.id)).map((x) => x.id)
         if (gastIds.length > 0) {
           const { data: gastT } = await supabase.from("table_groups").select("id,name,invite_code,finalized,created_at").in("id", gastIds)
           for (const g of gastT ?? []) {
-            if (g.finalized) continue
-            tafelMap.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", gast: true, last: (g.created_at as string) || "", app: "table", code: (g.invite_code as string) || "" })
+            tafelMap.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", gast: true, af: !!g.finalized, last: (g.created_at as string) || "", app: "table", code: (g.invite_code as string) || "" })
           }
         }
-        const tafelLijst = [...tafelMap.values()].sort((a, b) => b.last.localeCompare(a.last)).slice(0, 4)
+        const allesT = [...tafelMap.values()].sort((a, b) => b.last.localeCompare(a.last))
+        const tafelLijst = [...allesT.filter((g) => !g.af).slice(0, 4), ...allesT.filter((g) => g.af).slice(0, 3)]
         setTafels(tafelLijst)
       } catch { /* stil */ }
     })()
@@ -289,7 +291,7 @@ export default function Home() {
               <div style={{ fontSize: 12.5, fontWeight: 800, color: accent.party, marginBottom: 6 }}>🍻 Rundo Party</div>
               {groepen.map((g) => (
                 <div key={g.id} onClick={() => router.push(`/party?g=${g.id}`)}
-                  style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(240,193,75,0.3)", borderRadius: 12, padding: "10px 12px", marginBottom: 6 }}>
+                  style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(240,193,75,0.3)", borderRadius: 12, padding: "10px 12px", marginBottom: 6, opacity: g.af ? 0.6 : 1 }}>
                   <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(240,193,75,0.12)" }}>{g.settle ? "📱" : "✍️"}</span>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "#e8e4d8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || "Rundo Party"}</span>
@@ -298,6 +300,7 @@ export default function Home() {
                     <span style={{ display: "block", fontSize: 11, fontWeight: 800, color: "#d9c58a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.settle ? t.modeQr : t.modeZelf}</span>
                   </span>
                   {g.gast && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#d9c58a", background: "rgba(240,193,75,0.14)", borderRadius: 7, padding: "2px 7px" }}>{t.guestChip}</span>}
+                  {g.af && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#9fd6ae", background: "rgba(63,158,96,0.16)", borderRadius: 7, padding: "2px 7px", whiteSpace: "nowrap" }}>{t.closedChip}</span>}
                   <span style={{ flexShrink: 0, color: accent.party, fontWeight: 800 }}>›</span>
                 </div>
               ))}
@@ -306,10 +309,11 @@ export default function Home() {
               <div style={{ fontSize: 12.5, fontWeight: 800, color: accent.table, margin: "10px 0 6px" }}>🧾 Rundo Table</div>
               {tafels.map((g) => (
                 <div key={g.id} onClick={() => { if (g.code) router.push(`/table?code=${g.code}`) }}
-                  style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(91,159,214,0.35)", borderRadius: 12, padding: "10px 12px", marginBottom: 6 }}>
+                  style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(91,159,214,0.35)", borderRadius: 12, padding: "10px 12px", marginBottom: 6, opacity: g.af ? 0.6 : 1 }}>
                   <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(91,159,214,0.14)" }}>🧾</span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: "#dfe7f2", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || "Rundo Table"}</span>
                   {g.gast && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#9cc6ec", background: "rgba(91,159,214,0.16)", borderRadius: 7, padding: "2px 7px" }}>{t.guestChip}</span>}
+                  {g.af && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#9fd6ae", background: "rgba(63,158,96,0.16)", borderRadius: 7, padding: "2px 7px", whiteSpace: "nowrap" }}>{t.closedChip}</span>}
                   <span style={{ flexShrink: 0, color: accent.table, fontWeight: 800 }}>›</span>
                 </div>
               ))}
