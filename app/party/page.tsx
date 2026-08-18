@@ -517,11 +517,10 @@ const T = {
     // ── start & setup
     autoName: () => { const d = new Date(); const m = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"]; return `Rondje ${d.getDate()} ${m[d.getMonth()]}` },
     autoNameQr: () => { const d = new Date(); const m = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"]; return `QR-rondje ${d.getDate()} ${m[d.getMonth()]}` },
-    nameClashMsg: (naam: string) => `Er staat nog een groep open die "${naam}" heet.`,
-    nameClashMsgGuest: (naam: string) => `Er is al een open groep "${naam}" — daar zit je als gast in.`,
-    nameClashContinue: "Verder in die groep",
-    newGroupPh: "Nieuwe groep…",
-    startNewA11y: "Nieuwe groep starten",
+    whereLeftTitle: "⏳ Waar was je gebleven?",
+    whereLeftSub: "Deze groepen staan hier nog open:",
+    whereLeftNew: "🆕 Nieuwe groep starten",
+    whereLeftGo: "verder",
     newGroupNameTitle: "Naam voor je nieuwe groep",
     newGroupNameSub: "Zo herken je hem straks tussen je andere groepen.",
     startWord: "Starten",
@@ -592,10 +591,15 @@ const T = {
     leaveAsIs: "Zo laten",
     toBalanceBtn: "Naar de eindbalans →",
     namePh2: "Naam…",
-    autoSavedNote: "✓ alles wordt automatisch bewaard",
-    listLifeHint: "Bezige avonden blijven staan · afgesloten avonden verdwijnen na een tijdje, tenzij je ze langer bewaart.",
+    retentionInfoLink: "ⓘ hoe lang blijft alles staan?",
+    retentionInfo: "Alles wordt automatisch bewaard. Open groepen blijven staan zolang je bezig bent en sluiten zichzelf na 24 uur stilte; afgesloten groepen verdwijnen na de dagen op hun chip — tenzij je ze vastpint (📌 blijft staan) of verlengt.",
     chipDays: (n: number) => `nog ${n} ${n === 1 ? "dag" : "dagen"}`,
-    keptChip: "bewaard",
+    keptChip: "📌 blijft staan",
+    statusOpen: "🟡 open",
+    statusClosed: "✓ afgesloten",
+    filterAll: "Alle",
+    moreGroups: (n: number) => `meer groepen (${n}) ▾`,
+    lessGroups: "▴ minder tonen",
     extendMsg: (naam: string, datum: string) => `"${naam}" 30 dagen langer bewaren? De avond blijft dan staan tot ${datum}.`,
     extendYes: "+30 dagen",
     unpinMsg: (naam: string) => `"${naam}" staat voor onbepaalde tijd bewaard. Losmaken? Dan verdwijnt hij na een tijdje vanzelf.`,
@@ -604,8 +608,6 @@ const T = {
     eveClosedSub: "Alles staat veilig bewaard — je vindt deze avond terug bij Opgeslagen groepen.",
     shareBillBtn: "📤 Afrekening delen",
     copiedNote: "Afrekening gekopieerd — plak ze in jullie groepschat.",
-    busyLabel: "BEZIG",
-    continueWhereYouWere: "verder waar je gebleven was →",
     namesMissing: (n: number) => `${n} ${n === 1 ? "persoon heeft" : "personen hebben"} nog geen naam. Vul die aan via ⚙️ Groep, anders staat er straks "Plaats 3" op de afrekening.`,
     namesLaterToo: "Of tik gewoon aan — namen toewijzen kan ook bij het afsluiten.",
     someUnassigned: (n: number) => `🔴 ${n} ${n === 1 ? "drankje" : "drankjes"} nog zonder naam`,
@@ -618,14 +620,9 @@ const T = {
     pinOff: "Niet meer bewaren",
     maxPins: (n: number) => `Je kan maximaal ${n} groepen vastzetten. Maak er eerst een los.`,
     sleepBanner: "⏸ Live-updates gepauzeerd — tik om te hervatten",
-    showAllGroups: "Toon alle groepen",
-    showLessGroups: "Toon er minder",
-    cleanupNote: "Bewaarde groepen blijven staan. De rest verdwijnt na 7 dagen.",
     searchGroups: "Zoek een groep…",
     showWord: "Tonen",
     hideWord: "Verbergen",
-    groupsSaved: "Bewaard",
-    groupsRecent: "Recent · verdwijnt vanzelf",
     daysLeft: (n: number) => n <= 0 ? "vandaag weg" : n === 1 ? "nog 1 dag" : `nog ${n} dagen`,
     wipeAll: "Alles wissen",
     wipeAllTitle: "Alles wissen?",
@@ -1215,11 +1212,10 @@ const T = {
     // ── start & setup
     autoName: () => { const d = new Date(); const m = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"]; return `Tournée ${d.getDate()} ${m[d.getMonth()]}` },
     autoNameQr: () => { const d = new Date(); const m = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"]; return `Tournée QR ${d.getDate()} ${m[d.getMonth()]}` },
-    nameClashMsg: (naam: string) => `Un groupe « ${naam} » est encore ouvert.`,
-    nameClashMsgGuest: (naam: string) => `Un groupe ouvert « ${naam} » existe déjà — tu y es invité.`,
-    nameClashContinue: "Continuer ce groupe",
-    newGroupPh: "Nouveau groupe…",
-    startNewA11y: "Démarrer un nouveau groupe",
+    whereLeftTitle: "⏳ Où en étais-tu ?",
+    whereLeftSub: "Ces groupes sont encore ouverts ici :",
+    whereLeftNew: "🆕 Démarrer un nouveau groupe",
+    whereLeftGo: "continuer",
     newGroupNameTitle: "Nom de ton nouveau groupe",
     newGroupNameSub: "Ainsi tu le reconnais parmi tes autres groupes.",
     startWord: "Démarrer",
@@ -1290,10 +1286,15 @@ const T = {
     leaveAsIs: "Laisser ainsi",
     toBalanceBtn: "Vers le décompte final →",
     namePh2: "Nom…",
-    autoSavedNote: "✓ tout est enregistré automatiquement",
-    listLifeHint: "Les soirées en cours restent · les soirées clôturées disparaissent après un temps, sauf si tu les gardes plus longtemps.",
+    retentionInfoLink: "ⓘ combien de temps tout reste-t-il ?",
+    retentionInfo: "Tout est enregistré automatiquement. Les groupes ouverts restent tant que tu es actif et se clôturent après 24 h de silence ; les groupes clôturés disparaissent après les jours sur leur puce — sauf si tu les épingles (📌) ou les prolonges.",
     chipDays: (n: number) => `encore ${n} jour${n === 1 ? "" : "s"}`,
-    keptChip: "gardé",
+    keptChip: "📌 reste gardé",
+    statusOpen: "🟡 ouvert",
+    statusClosed: "✓ clôturé",
+    filterAll: "Tous",
+    moreGroups: (n: number) => `plus de groupes (${n}) ▾`,
+    lessGroups: "▴ en voir moins",
     extendMsg: (naam: string, datum: string) => `Garder "${naam}" 30 jours de plus ? La soirée restera jusqu’au ${datum}.`,
     extendYes: "+30 jours",
     unpinMsg: (naam: string) => `"${naam}" est gardé pour une durée indéterminée. Détacher ? Il disparaîtra alors après un temps.`,
@@ -1302,8 +1303,6 @@ const T = {
     eveClosedSub: "Tout est bien enregistré — tu retrouves cette soirée dans Groupes enregistrés.",
     shareBillBtn: "📤 Partager le décompte",
     copiedNote: "Décompte copié — colle-le dans votre chat de groupe.",
-    busyLabel: "EN COURS",
-    continueWhereYouWere: "reprendre où tu t’es arrêté →",
     namesMissing: (n: number) => `${n} personne${n === 1 ? "" : "s"} sans nom. Complète via ⚙️ Groupe, sinon le décompte affichera « Place 3 ».`,
     namesLaterToo: "Ou coche simplement — tu peux attribuer les noms à la clôture.",
     someUnassigned: (n: number) => `🔴 ${n} boisson${n === 1 ? "" : "s"} sans nom`,
@@ -1316,14 +1315,9 @@ const T = {
     pinOff: "Ne plus enregistrer",
     maxPins: (n: number) => `Tu peux épingler ${n} groupes au maximum. Détaches-en un d'abord.`,
     sleepBanner: "⏸ Mises à jour en direct en pause — touche pour reprendre",
-    showAllGroups: "Voir tous les groupes",
-    showLessGroups: "Voir moins",
-    cleanupNote: "Les groupes enregistrés restent. Le reste disparaît après 7 jours.",
     searchGroups: "Chercher un groupe…",
     showWord: "Afficher",
     hideWord: "Masquer",
-    groupsSaved: "Enregistré",
-    groupsRecent: "Récent · disparaît tout seul",
     daysLeft: (n: number) => n <= 0 ? "part aujourd’hui" : n === 1 ? "encore 1 jour" : `encore ${n} jours`,
     wipeAll: "Tout effacer",
     wipeAllTitle: "Tout effacer ?",
@@ -1940,11 +1934,11 @@ export default function PartyTest() {
   const MAX_PINS = 3
   // Één recente groep volstaat: de rest staat achter "toon alle groepen". Bij vijf werd
   // dat blok op een telefoon langer dan het keuzescherm zelf.
-  const GROEPEN_ZICHTBAAR = 1
   const [groepZoek, setGroepZoek] = useState("")
   const [groepenOpen, setGroepenOpen] = useState(true)
   const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
   const [showAllGroups, setShowAllGroups] = useState(false)
+  const [groepFilter, setGroepFilter] = useState<"alle" | "open" | "af" | "pin">("alle")
   // Werkblad voor het verdelen van de pot over namen; null = niet in bewerkmodus.
   const [potNames, setPotNames] = useState<Record<string, number> | null>(null)
   // Bewerkblad voor de pot-inleg op de eindbalans van uitgebreid; null = dicht.
@@ -2239,11 +2233,9 @@ export default function PartyTest() {
   const [potAmtDraft, setPotAmtDraft] = useState<string>("")
   const [paidConfirmed, setPaidConfirmed] = useState(false)
   const [confirmDlg, setConfirmDlg] = useState<{ msg: string; yes: string; onYes: () => void; onNo?: () => void; no?: string; variant?: "danger" } | null>(null)
-  // Naam-botsing bij het starten: er bestaat al een OPEN avond met deze naam (eigen of
-  // als gast). Eén venster voor alle gevallen — verder in die avond, of hier meteen een
-  // nieuwe naam typen en met het groene vinkje starten.
-  const [naamBotsing, setNaamBotsing] = useState<{ groep: { id: string; name: string; owned: boolean; settle: boolean; uitgebreid: boolean }; basis: string; wilSettle: boolean } | null>(null)
-  const [botsNaam, setBotsNaam] = useState("")
+  // "Waar was je gebleven?" bij het naamloos starten van een modus waarin nog groepen
+  // openstaan: een lijstje om verder te gaan, of gewoon een nieuwe groep beginnen.
+  const [waarGebleven, setWaarGebleven] = useState<{ groepen: SavedGroup[]; wilSettle: boolean } | null>(null)
   const [notice, setNotice] = useState<string>("")
   // Slaapstand. De telefoon ligt bij een rondje vaak minutenlang open op tafel; zonder dit
   // blijft het realtime-kanaal die hele tijd verbinding en data verbruiken. Eén tik hervat.
@@ -3556,25 +3548,20 @@ export default function PartyTest() {
     return vrij
   }
 
-  // "Verder in die avond" uit het botsingsvenster — voor een gastbotsing open je de
-  // avond gewoon als gast (openSavedGroup routeert dan naar de gastweergave).
-  const botsingVerder = () => {
-    const id = naamBotsing?.groep.id
-    setNaamBotsing(null)
-    if (id) void openSavedGroup(id)
+  // "verder" in het waar-was-je-gebleven-venster: gewoon die groep openen — een
+  // gastgroep opent als gast (openSavedGroup routeert naar de juiste weergave).
+  const geblevenVerder = (id: string) => {
+    setWaarGebleven(null)
+    void openSavedGroup(id)
   }
 
-  // Het groene vinkje: starten met de getypte naam, of — bleef het veld leeg — met de
-  // doorgetelde "(2)"-naam. Botst de getypte naam zélf ook nog met iets in de lijst,
-  // dan tellen we stil door: venster-op-venster bestaat niet, de start lukt altijd.
-  const botsingStart = () => {
-    if (!naamBotsing) return
-    const basis = botsNaam.trim() || naamBotsing.basis
-    const naam = vrijeNaam(basis)
-    const wilSettle = naamBotsing.wilSettle
-    setNaamBotsing(null)
-    setGroupName(naam)
-    void createGroup(naam, wilSettle, true)
+  // "Nieuwe groep starten": doorstarten in de gekozen modus, met de automatische
+  // naam stil doorgeteld als die al bestaat.
+  const geblevenNieuw = () => {
+    if (!waarGebleven) return
+    const wilSettle = waarGebleven.wilSettle
+    setWaarGebleven(null)
+    void createGroup(undefined, wilSettle, true)
   }
 
   // ── Groep aanmaken (admin) ──────────────────────────────────────────────────
@@ -3586,28 +3573,21 @@ export default function PartyTest() {
     // "QR-rondje …" voor Fair Split. Zo botsen naamloze groepen van verschillende
     // modi op dezelfde dag nooit — en verschijnt er dus ook geen "(2)" in je lijst.
     let naam = getypt || (wilSettle ? L.autoNameQr() : L.autoName())
-    // Eén regel voor alle naam-botsingen, getypt of automatisch gekozen:
-    //   - botst de naam met een OPEN groep in je lijst (eigen óf als gast) én koos je
-    //     dezelfde modus → het keuzevenster: verder in die groep, of een nieuwe naam;
-    //   - botst hij alleen met AFGESLOTEN avonden → stil doortellen naar "(2)" en
-    //     gewoon starten, zodat de lijst nooit twee keer dezelfde naam toont.
-    // De oude harde foutmelding is daarmee weg: je loopt nooit meer dood op de start.
-    // De gastbotsing zit er bewust bij: de admin maakte vanavond vaak al de groep aan —
-    // "verder" opent hem dan als gast, in plaats van ongemerkt een tweede lege groep.
-    if (!skipClash) {
-      // Het venster verschijnt alleen als de open naamgenoot óók de modus is die je nu
-      // koos: dan is "verder in die groep" een zinnige optie. Koos je een ándere modus
-      // (bv. QR terwijl er een snelle groep openstaat), dan is die keuze zelf al het
-      // antwoord — en "verder" zou je bovendien in de verkeerde modus droppen, want de
-      // modus zit aan de groep vast. De naam telt dan gewoon stil door naar "(2)".
-      const open = savedGroups.find((g) => !g.finalized && g.settle === wilSettle && g.name.trim().toLowerCase() === naam.toLowerCase())
-      if (open) {
-        setBotsNaam("")
-        setNaamBotsing({ groep: { id: open.id, name: open.name, owned: open.owned, settle: open.settle, uitgebreid: open.uitgebreid }, basis: naam, wilSettle })
+    // Naamloos starten terwijl er in déze modus nog groepen openstaan? Dan eerst het
+    // "waar was je gebleven?"-venster: een lijstje om verder te gaan, of bewust een
+    // nieuwe groep beginnen. Wie zelf een naam typte wil duidelijk iets nieuws en
+    // start meteen. De andere modus telt nooit mee — die keuze is zelf al het antwoord.
+    if (!skipClash && !getypt) {
+      const open = savedGroups.filter((g) => !g.finalized && g.settle === wilSettle)
+        .sort((a, b) => (b.last_active || "").localeCompare(a.last_active || ""))
+      if (open.length > 0) {
+        setWaarGebleven({ groepen: open, wilSettle })
         return
       }
-      if (savedGroups.some((g) => g.name.trim().toLowerCase() === naam.toLowerCase())) naam = vrijeNaam(naam)
     }
+    // Namen blijven uniek in de lijst: bestaat de (auto)naam al — open of afgesloten,
+    // eender welke modus — dan telt hij stil door naar "(2)".
+    if (savedGroups.some((g) => g.name.trim().toLowerCase() === naam.toLowerCase())) naam = vrijeNaam(naam)
     if (busy) return
     setBusy(true)
     // Botsende codes zijn zeldzaam, maar niet onmogelijk (unique index vangt ze).
@@ -5410,44 +5390,34 @@ export default function PartyTest() {
           </div>
         )
       })()}
-      {naamBotsing && (
-        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setNaamBotsing(null)}>
+      {waarGebleven && (
+        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setWaarGebleven(null)}>
           <div style={{ ...S.sheet, maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
-            <style>{`@keyframes rundoBotsPuls{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}`}</style>
-            <p style={{ fontSize: 15.5, color: "#4a3f1e", lineHeight: 1.55, margin: "0 0 10px" }}>
-              {naamBotsing.groep.owned ? L.nameClashMsg(naamBotsing.groep.name || L.autoName()) : L.nameClashMsgGuest(naamBotsing.groep.name || L.autoName())}
-            </p>
-            {/* In welke modus die groep staat, zie je pas ná "verder" — te laat om te
-                beslissen. Dus hier alvast, als klein plaatje onder de melding. */}
-            <div style={{ margin: "0 0 14px" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(240,165,0,0.1)", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 14, padding: "5px 12px", fontSize: 13, fontWeight: 800, color: "#8a5e0f" }}>
-                {naamBotsing.groep.settle ? "📱" : "🍻"} {naamBotsing.groep.settle ? L.modeFairShort : (naamBotsing.groep.uitgebreid ? L.modeNaamTitle : L.modeSnelTitle)}
-              </span>
+            <button aria-label="✕" onClick={() => setWaarGebleven(null)}
+              style={{ float: "right", margin: "-4px -4px 0 0", width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(120,95,20,0.08)", color: "#8a7d55", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>✕</button>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", marginBottom: 2 }}>{L.whereLeftTitle}</div>
+            <div style={{ fontSize: 13, color: "#8a7d55", marginBottom: 11 }}>{L.whereLeftSub}</div>
+            {/* Alleen groepen van de gekozen modus, recentste eerst. Verder is één tik;
+                het venster wegdoen (✕, ernaast tikken of gewoon nieuw starten) ook. */}
+            <div style={{ maxHeight: 260, overflowY: "auto" }}>
+              {waarGebleven.groepen.map((g) => (
+                <div key={g.id} onClick={() => geblevenVerder(g.id)}
+                  style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", border: "1.5px solid rgba(232,168,18,0.55)", background: "rgba(240,165,0,0.07)", borderRadius: 11, padding: "10px 11px", marginBottom: 7 }}>
+                  <span style={{ flexShrink: 0, fontSize: 16 }}>{g.settle ? "📱" : "✍️"}</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</span>
+                    <span style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: "#a89a6f" }}>{(() => { const d = new Date(g.last_active); return isNaN(d.getTime()) ? "" : `${d.getDate()}/${d.getMonth() + 1}` })()}{g.owned ? "" : ` · ${L.asGuest}`}</span>
+                  </span>
+                  <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#c98a00", whiteSpace: "nowrap" }}>{L.whereLeftGo} ›</span>
+                </div>
+              ))}
             </div>
-            <button style={{ ...S.btnP, fontSize: 16.5, padding: "13px 14px" }} onClick={botsingVerder}>{L.nameClashContinue}</button>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 0 10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "12px 0 10px" }}>
               <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.14)" }} />
               <span style={{ fontSize: 13, color: "#a89a6f", fontWeight: 700 }}>{L.orWord}</span>
               <span style={{ flex: 1, height: 1, background: "rgba(120,95,20,0.14)" }} />
             </div>
-            {/* Geen aparte startknop: het veld nodigt uit tot een échte naam, en zodra je
-                typt wordt het vinkje de groene, pulserende start. Vinkje zonder te typen
-                werkt ook nog — dan pakt de app stil de doorgetelde "(2)"-naam. */}
-            <div style={{ display: "flex", gap: 8 }}>
-              <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8, height: 46, padding: "0 12px", borderRadius: 11, border: botsNaam.trim() ? "1.5px solid rgba(240,165,0,0.75)" : "1px solid rgba(120,95,20,0.22)" }}>
-                <span aria-hidden style={{ fontSize: 15, flexShrink: 0 }}>✏️</span>
-                <input autoFocus value={botsNaam} onChange={(e) => setBotsNaam(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") botsingStart() }}
-                  placeholder={L.newGroupPh} maxLength={40}
-                  style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 16.5, color: "#4a3f1e", fontFamily: "inherit" }} />
-              </div>
-              <button aria-label={L.startNewA11y} onClick={botsingStart}
-                style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 11, cursor: "pointer", fontSize: 21, fontWeight: 800, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center",
-                  border: botsNaam.trim() ? "none" : "1px solid rgba(120,95,20,0.22)",
-                  background: botsNaam.trim() ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#fff",
-                  color: botsNaam.trim() ? "#fff" : "#b3a988",
-                  animation: botsNaam.trim() ? "rundoBotsPuls 1.1s ease-in-out infinite" : "none" }}>✓</button>
-            </div>
+            <button style={{ ...S.btnP, width: "100%", fontSize: 15.5, padding: "13px 14px" }} onClick={geblevenNieuw}>{L.whereLeftNew}</button>
           </div>
         </div>
       )}
@@ -6728,7 +6698,12 @@ export default function PartyTest() {
           const rij = (g: SavedGroup) => (
             <div key={g.id} style={{ display: "flex", alignItems: "stretch", gap: 7, marginBottom: 7 }}>
               <button onClick={() => openSavedGroup(g.id)} disabled={busy}
-                style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 11, textAlign: "left", padding: "12px 14px", borderRadius: 12, background: "#fff", border: "1px solid rgba(120,95,20,0.15)", cursor: "pointer" }}>
+                style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 11, textAlign: "left", padding: "12px 14px", borderRadius: 12, cursor: "pointer",
+                  /* De linkerrand draagt de status: amber = open, goud = blijft staan,
+                     groen-grijs = afgesloten. Herkenbaar nog vóór je de chip leest. */
+                  background: g.pinned ? "#fffdf6" : "#fff",
+                  border: "1px solid rgba(120,95,20,0.15)",
+                  borderLeft: `4px solid ${!g.finalized ? "#e8a812" : g.pinned ? "#c98a00" : "#9db8a4"}` }}>
                 {/* Aan de kleur en het icoon zie je in één oogopslag welke modus het was. */}
                 <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, background: g.settle ? MODUS_FAIR.tint : MODUS_SNEL.tint }}>{g.settle ? "⚖️" : g.uitgebreid ? "👥" : "🍻"}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -6737,6 +6712,10 @@ export default function PartyTest() {
                     <span style={{ color: g.settle ? MODUS_FAIR.tekst : MODUS_SNEL.tekst, fontWeight: 800 }}>{g.settle ? L.modeFairShort : g.uitgebreid ? L.modeNaamTitle : L.modeSnelTitle}</span> · {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
                   </div>
                 </div>
+                <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, borderRadius: 9, padding: "3px 8px", whiteSpace: "nowrap",
+                  color: !g.finalized ? "#8a5e0f" : "#5d7a66",
+                  background: !g.finalized ? "rgba(240,165,0,0.14)" : "rgba(157,184,164,0.18)",
+                  border: !g.finalized ? "1px solid rgba(240,165,0,0.55)" : "1px solid rgba(157,184,164,0.6)" }}>{!g.finalized ? L.statusOpen : L.statusClosed}</span>
                 <span style={{ fontSize: 17, color: "#c4b896", flexShrink: 0 }}>›</span>
               </button>
               {/* De dagenteller ís de knop: je ziet dat de avond afloopt en verlengt met
@@ -6766,39 +6745,38 @@ export default function PartyTest() {
           // automatische afsluiting aan admin-kant — een gast kan andermans avond niet
           // dichtzetten, en zonder de klep bleef een verlaten avond hier eeuwig hangen.
           const versGenoeg = (g: SavedGroup) => Date.now() - new Date(g.last_active).getTime() < 24 * 3600 * 1000
-          const bezigGroepen = savedGroups.filter((g) => !g.finalized && past(g) && (g.owned || versGenoeg(g)))
-          const bewaard = savedGroups.filter((g) => g.pinned && !bezigGroepen.includes(g) && past(g))
-          const recent = savedGroups.filter((g) => !g.pinned && !bezigGroepen.includes(g) && past(g))
+          // Eén lijst voor alles: open groepen eerst (waar je gebleven was — voor gasten
+          // met de 24-uursklep), dan wat blijft staan, dan de rest op recentheid. Het
+          // filter erboven snijdt op status; de meer-knop houdt het startscherm kort.
+          const openLijst = savedGroups.filter((g) => !g.finalized && past(g) && (g.owned || versGenoeg(g)))
+          const dichtLijst = savedGroups.filter((g) => g.finalized && past(g))
+          const alles = [...openLijst, ...dichtLijst.filter((g) => g.pinned), ...dichtLijst.filter((g) => !g.pinned)]
+          // "Afgesloten" toont álles wat dicht is — bewaard is daar een deelverzameling
+          // van (vastgepind = geen vervaldatum), met zijn eigen pill voor wie enkel
+          // de blijvers wil zien.
+          const gefilterd = groepFilter === "open" ? alles.filter((g) => !g.finalized)
+            : groepFilter === "af" ? alles.filter((g) => g.finalized)
+            : groepFilter === "pin" ? alles.filter((g) => g.pinned)
+            : alles
+          const zichtbaarN = 3
+          const zichtbaar = showAllGroups ? gefilterd : gefilterd.slice(0, zichtbaarN)
           const wisbaar = savedGroups.filter((g) => g.owned && !g.pinned)
           const bewaardTotaal = savedGroups.filter((g) => g.pinned).length
           return (
             <div style={{ marginTop: 18 }}>
-              {bezigGroepen.length > 0 && (
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 800, color: "#8a5e0f", letterSpacing: "0.06em", marginBottom: 6 }}>{L.busyLabel}</div>
-                  {bezigGroepen.map((g) => (
-                    <div key={g.id} onClick={() => void openSavedGroup(g.id)}
-                      style={{ cursor: "pointer", border: "1.5px solid rgba(232,168,18,0.6)", background: "rgba(240,165,0,0.08)", borderRadius: 12, padding: "12px 13px", marginBottom: 7 }}>
-                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-                        <div style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</div>
-                        {!g.owned && <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, color: "#854f0b", background: "#faeeda", borderRadius: 7, padding: "2px 7px" }}>{L.asGuest}</span>}
-                      </div>
-                      <div style={{ fontSize: 12.5, color: "#8a7d55", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {/* Vlak voor je instapt wil je weten wat voor avond dit is —
-                            zelfde icoontjes en namen als de lijst eronder. */}
-                        <b style={{ color: g.settle ? MODUS_FAIR.tekst : MODUS_SNEL.tekst, fontWeight: 800 }}>{g.settle ? "⚖️" : g.uitgebreid ? "👥" : "🍻"} {g.settle ? L.modeFairShort : g.uitgebreid ? L.modeNaamTitle : L.modeSnelTitle}</b> · {L.continueWhereYouWere}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
               <div onClick={() => setGroepenOpen((v) => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: groepenOpen ? 10 : 0 }}>
-                <span style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", letterSpacing: "0.02em" }}>{L.savedGroups} <span style={{ color: "#b3a988", fontWeight: 700 }}>({savedGroups.length})</span></span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", letterSpacing: "0.02em" }}>📂 {L.savedGroups} <span style={{ color: "#b3a988", fontWeight: 700 }}>({savedGroups.length})</span></span>
                 <span style={{ flexShrink: 0, border: "1.5px solid rgba(120,95,20,0.3)", color: "#8a7d55", borderRadius: 9, padding: "6px 11px", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap" }}>{groepenOpen ? `${L.hideWord} ▴` : `${L.showWord} ▾`}</span>
               </div>
               {groepenOpen && (<>
-              <div style={{ fontSize: 11.5, color: "#a89a6f", margin: "0 0 10px", lineHeight: 1.5 }}>
-                <span style={{ color: "#1f8a4c", fontWeight: 800 }}>{L.autoSavedNote}</span> · {L.listLifeHint}
+              <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                {([["alle", L.filterAll], ["open", L.statusOpen], ["af", L.statusClosed], ["pin", "📌"]] as const).map(([f, tekst]) => (
+                  <span key={f} onClick={() => { setGroepFilter(f); setShowAllGroups(false) }}
+                    style={{ borderRadius: 16, padding: "7px 13px", fontSize: 12.5, fontWeight: 800, cursor: "pointer",
+                      background: groepFilter === f ? "#ef9f27" : "#fff",
+                      border: groepFilter === f ? "1px solid #ef9f27" : "1px solid rgba(120,95,20,0.2)",
+                      color: groepFilter === f ? "#412402" : "#8a7d55" }}>{tekst}</span>
+                ))}
               </div>
               {savedGroups.length > 4 && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, background: VLAK1, border: "1px solid rgba(120,95,20,0.18)", borderRadius: 11, padding: "8px 12px", marginBottom: 12 }}>
@@ -6829,32 +6807,21 @@ export default function PartyTest() {
                 </div>
               )}
 
-              {bewaard.length > 0 && (
-                <div style={{ marginBottom: recent.length > 0 ? 14 : 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: "#c88a1a", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>{L.groupsSaved}</div>
-                  {bewaard.map(rij)}
-                </div>
-              )}
-              {recent.length > 0 && (
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: "#a89a6f", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>{L.groupsRecent}</div>
-                  {(showAllGroups ? recent : recent.slice(0, GROEPEN_ZICHTBAAR)).map(rij)}
-                </div>
-              )}
-              {recent.length > GROEPEN_ZICHTBAAR && (
+              {zichtbaar.map(rij)}
+              {gefilterd.length > zichtbaarN && (
                 <div style={{ textAlign: "center", marginTop: 4 }}>
                   <span onClick={() => setShowAllGroups((v) => !v)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 13, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a7d55" }}>
-                    {showAllGroups ? `▴ ${L.showLessGroups}` : `▾ ${L.showAllGroups}`}
+                    {showAllGroups ? L.lessGroups : L.moreGroups(gefilterd.length - zichtbaarN)}
                   </span>
                 </div>
               )}
-              {bewaard.length + recent.length === 0 && (
+              {gefilterd.length === 0 && (
                 <div style={{ fontSize: 14, color: "#b3a988", textAlign: "center", padding: "14px 0" }}>{L.noSearchHit}</div>
               )}
               {/* Opruimen in één keer. Bewaarde groepen blijven staan — anders is die
                   bewaarknop zinloos — en de bevestiging zegt hoeveel er weggaat. */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 12, paddingTop: 11 }}>
-                <span style={{ fontSize: 12, color: "#b3a988", lineHeight: 1.45, minWidth: 0 }}>{L.cleanupNote}</span>
+                <span onClick={() => setNotice(L.retentionInfo)} style={{ fontSize: 12.5, fontWeight: 700, color: "#8a7d55", cursor: "pointer", minWidth: 0 }}>{L.retentionInfoLink}</span>
                 {wisbaar.length > 0 && (
                   <button disabled={busy} onClick={() => setConfirmDlg({
                     variant: "danger", msg: `${L.wipeAllTitle}\n\n${L.wipeAllBody(wisbaar.length, bewaardTotaal)}`,
@@ -6872,6 +6839,7 @@ export default function PartyTest() {
         {/* De testgroep zelf staat gewoon in de lijst hierboven en blijft daar staan.
             Deze regel maakt hem aan, of zet hem in één tik terug op nul. */}
         <div style={{ textAlign: "center", marginTop: 20 }}>
+          {typeof window !== "undefined" && window.location.hostname === "localhost" && (
           <span
             onClick={() => {
               if (busy) return
@@ -6885,6 +6853,7 @@ export default function PartyTest() {
             style={{ display: "inline-block", padding: "7px 15px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, cursor: "pointer", background: "#fff", border: "1px dashed rgba(120,95,20,0.3)", color: "#a89a6f", opacity: busy ? 0.5 : 1 }}>
             {testGroep ? "↺ Testgroep opnieuw opzetten" : "🧪 Testgroep aanmaken"}
           </span>
+          )}
         </div>
       </div></div>
     )
