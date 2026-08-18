@@ -516,6 +516,7 @@ const T = {
 
     // ── start & setup
     autoName: () => { const d = new Date(); const m = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"]; return `Rondje ${d.getDate()} ${m[d.getMonth()]}` },
+    autoNameQr: () => { const d = new Date(); const m = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"]; return `QR-rondje ${d.getDate()} ${m[d.getMonth()]}` },
     nameClashMsg: (naam: string) => `Er staat nog een groep open die "${naam}" heet.`,
     nameClashMsgGuest: (naam: string) => `Er is al een open groep "${naam}" — daar zit je als gast in.`,
     nameClashContinue: "Verder in die groep",
@@ -1213,6 +1214,7 @@ const T = {
 
     // ── start & setup
     autoName: () => { const d = new Date(); const m = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"]; return `Tournée ${d.getDate()} ${m[d.getMonth()]}` },
+    autoNameQr: () => { const d = new Date(); const m = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"]; return `Tournée QR ${d.getDate()} ${m[d.getMonth()]}` },
     nameClashMsg: (naam: string) => `Un groupe « ${naam} » est encore ouvert.`,
     nameClashMsgGuest: (naam: string) => `Un groupe ouvert « ${naam} » existe déjà — tu y es invité.`,
     nameClashContinue: "Continuer ce groupe",
@@ -1979,7 +1981,7 @@ export default function PartyTest() {
   // drankjes aantikken (blok 3).
   const meId = people.find((p) => p.claimedBy === me.current)?.id ?? null
   // Herkent "Rondje 2 augustus" en "Tournée 2 août": de vorm die de app zelf verzint.
-  const isAutoNaam = (naam: string) => /^(Rondje|Tournée)\s+\d{1,2}\s+\p{L}+(\s+\d+)?$/u.test(naam.trim())
+  const isAutoNaam = (naam: string) => /^(QR-rondje|Rondje|Tournée(?:\s+QR)?)\s+\d{1,2}\s+\p{L}+(\s+\d+)?(\s+\(\d+\))?$/u.test(naam.trim())
 
   const inviteLink = typeof window !== "undefined" && inviteCode
     ? `${window.location.origin}${window.location.pathname}?code=${inviteCode}` : ""
@@ -3567,17 +3569,25 @@ export default function PartyTest() {
     // Geen naam meer nodig bij de start: leeg laten valt terug op "Rondje + datum".
     // De naam blijft achteraf aanpasbaar via ⚙️ Groep.
     const getypt = groupName.trim() || fallbackNaam?.trim() || ""
-    let naam = getypt || L.autoName()
+    // De automatische naam draagt de modus mee: "Rondje …" voor gewone rondjes,
+    // "QR-rondje …" voor Fair Split. Zo botsen naamloze groepen van verschillende
+    // modi op dezelfde dag nooit — en verschijnt er dus ook geen "(2)" in je lijst.
+    let naam = getypt || (wilSettle ? L.autoNameQr() : L.autoName())
     // Eén regel voor alle naam-botsingen, getypt of automatisch gekozen:
-    //   - botst de naam met een OPEN avond in je lijst (eigen óf als gast) → het
-    //     keuzevenster: verder in die avond, of meteen een nieuwe naam typen;
+    //   - botst de naam met een OPEN groep in je lijst (eigen óf als gast) én koos je
+    //     dezelfde modus → het keuzevenster: verder in die groep, of een nieuwe naam;
     //   - botst hij alleen met AFGESLOTEN avonden → stil doortellen naar "(2)" en
     //     gewoon starten, zodat de lijst nooit twee keer dezelfde naam toont.
     // De oude harde foutmelding is daarmee weg: je loopt nooit meer dood op de start.
     // De gastbotsing zit er bewust bij: de admin maakte vanavond vaak al de groep aan —
     // "verder" opent hem dan als gast, in plaats van ongemerkt een tweede lege groep.
     if (!skipClash) {
-      const open = savedGroups.find((g) => !g.finalized && g.name.trim().toLowerCase() === naam.toLowerCase())
+      // Het venster verschijnt alleen als de open naamgenoot óók de modus is die je nu
+      // koos: dan is "verder in die groep" een zinnige optie. Koos je een ándere modus
+      // (bv. QR terwijl er een snelle groep openstaat), dan is die keuze zelf al het
+      // antwoord — en "verder" zou je bovendien in de verkeerde modus droppen, want de
+      // modus zit aan de groep vast. De naam telt dan gewoon stil door naar "(2)".
+      const open = savedGroups.find((g) => !g.finalized && g.settle === wilSettle && g.name.trim().toLowerCase() === naam.toLowerCase())
       if (open) {
         setBotsNaam("")
         setNaamBotsing({ groep: { id: open.id, name: open.name, owned: open.owned, settle: open.settle, uitgebreid: open.uitgebreid }, basis: naam, wilSettle })
@@ -6755,7 +6765,11 @@ export default function PartyTest() {
                         <div style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</div>
                         {!g.owned && <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, color: "#854f0b", background: "#faeeda", borderRadius: 7, padding: "2px 7px" }}>{L.asGuest}</span>}
                       </div>
-                      <div style={{ fontSize: 12.5, color: "#8a7d55", marginTop: 2 }}>{L.continueWhereYouWere}</div>
+                      <div style={{ fontSize: 12.5, color: "#8a7d55", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {/* Vlak voor je instapt wil je weten wat voor avond dit is —
+                            zelfde icoontjes en namen als de lijst eronder. */}
+                        <b style={{ color: g.settle ? MODUS_FAIR.tekst : MODUS_SNEL.tekst, fontWeight: 800 }}>{g.settle ? "⚖️" : g.uitgebreid ? "👥" : "🍻"} {g.settle ? L.modeFairShort : g.uitgebreid ? L.modeNaamTitle : L.modeSnelTitle}</b> · {L.continueWhereYouWere}
+                      </div>
                     </div>
                   ))}
                 </div>
