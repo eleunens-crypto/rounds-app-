@@ -3134,6 +3134,18 @@ export default function PartyTest() {
         setBooting(false)
         return
       }
+      // Derde weg: ?g=<groepsid> — het keuzescherm toont je opgeslagen groepen en
+      // linkt hierheen. Eerst de lijst vers laden zodat rol (eigen/gast) en modus
+      // kloppen vóór de routering; daarna de parameter uit de adresbalk halen, zodat
+      // een refresh via het gewone sessieherstel loopt en niet blijft herspringen.
+      const gLink = new URLSearchParams(window.location.search).get("g")
+      if (gLink) {
+        const lijst = await loadSavedGroups()
+        try { window.history.replaceState(null, "", window.location.pathname) } catch { /* niets */ }
+        await openSavedGroup(gLink, lijst)
+        setBooting(false)
+        return
+      }
       // Verversen midden in een groep: terug naar waar je was.
       let sessie: { g?: string; v?: string; fq?: boolean } | null = null
       try { const rauw = sessionStorage.getItem("rundo_party_session"); if (rauw) sessie = JSON.parse(rauw) } catch { /* niets */ }
@@ -3240,6 +3252,7 @@ export default function PartyTest() {
     const stil = over.filter((g) => g.owned && g.pinned && g.name !== TESTGROEP_NAAM && nu - tijd(g.last_active) > PIN_STIL)
 
     if (mounted.current) { setSavedGroups(over); setStalePins(stil) }
+    return over
   }, [])
 
   // Bij het openen (als je op het startscherm bent) de opgeslagen groepen laden.
@@ -3341,7 +3354,7 @@ export default function PartyTest() {
   }
 
   // Een opgeslagen groep heropenen vanaf het startscherm.
-  const openSavedGroup = async (id: string) => {
+  const openSavedGroup = async (id: string, bron?: SavedGroup[]) => {
     setBusy(true)
     localStorage.setItem("rundo_party_group", id)
     setGroupId(id)
@@ -3359,13 +3372,13 @@ export default function PartyTest() {
       // bij snelle rondjes.
       // Behalve als je gast bent: de setup is het inrichtscherm van de admin. Een gast
       // hoort in de hub — die past zich vanzelf aan de rol aan.
-      const eigen = savedGroups.find((x) => x.id === id)?.owned ?? true
+      const eigen = (bron ?? savedGroups).find((x) => x.id === id)?.owned ?? true
       setSettle(res.settle)
       if (!eigen) setView("hub")
       else if (res.settle) setView("setup")
       else { setActiveCat(catsPresent[0]); setView("order") }
     } else if (res) {
-      const sg = savedGroups.find((x) => x.id === id)
+      const sg = (bron ?? savedGroups).find((x) => x.id === id)
       const eigen = sg?.owned ?? true
       // Gewone rondjes (snel én uitgebreid), eigen groep met geschiedenis: land waar
       // de avond staat.
