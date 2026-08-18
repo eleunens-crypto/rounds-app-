@@ -4293,10 +4293,15 @@ export default function PartyTest() {
   // zichzelf later op (tenzij verlengd). Idempotent — nogmaals tikken kan geen kwaad.
   const sluitAvondAf = async () => {
     if (!groupId) return
-    await supabase.from("party_groups").update({ finalized: true, last_active: new Date().toISOString() }).eq("id", groupId)
+    // Kwam de Fair Split hier via de overstap vanuit zelf opnemen (fromQuick), dan is
+    // "settle" enkel geleend geweest voor de afrekening — de groep wás en blijft een
+    // zelf-opgenomen avond. Zonder deze terugzetting bestempelden de lijsten hem
+    // achteraf als "iedereen tikt zelf aan", wat nooit gebeurd is.
+    const terugNaarZelf = fromQuick && settle
+    await supabase.from("party_groups").update({ finalized: true, last_active: new Date().toISOString(), ...(terugNaarZelf ? { settle: false } : {}) }).eq("id", groupId)
     // Ook meteen in de lokale lijst: anders stond de nét afgesloten avond nog even in
     // het oranje bezig-blok ("verder waar je gebleven was") én onderaan bij afgesloten.
-    setSavedGroups((gs) => gs.map((g) => (g.id === groupId ? { ...g, finalized: true } : g)))
+    setSavedGroups((gs) => gs.map((g) => (g.id === groupId ? { ...g, finalized: true, ...(terugNaarZelf ? { settle: false, uitgebreid: true } : {}) } : g)))
     setAfsluitKaart(true)
   }
   // De eindafrekening als deelbaar tekstje: per persoon het eerlijke bedrag, plus wie
