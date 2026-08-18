@@ -3600,7 +3600,9 @@ export default function RundoTable() {
                   )}
                   {bewaard.length > 0 && (
                     <div style={{ marginBottom: recent.length > 0 ? 12 : 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: "#0f7488", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>{L.groupsSaved}</div>
+                      {/* Zelfde diskette als op de rijknoppen, zodat kop en knop
+                          zichtbaar over hetzelfde gaan — net als de bewaard-pill in Party. */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 800, color: "#0f7488", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}><BewaarIcoon aan size={13} /> {L.groupsSaved}</div>
                       {bewaard.map(rij)}
                     </div>
                   )}
