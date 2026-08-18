@@ -592,9 +592,9 @@ const T = {
     toBalanceBtn: "Naar de eindbalans →",
     namePh2: "Naam…",
     retentionInfoLink: "ⓘ hoe lang blijft alles staan?",
-    retentionInfo: "Alles wordt automatisch bewaard. Open groepen blijven staan zolang je bezig bent en sluiten zichzelf na 24 uur stilte; afgesloten groepen verdwijnen na de dagen op hun chip — tenzij je ze vastpint (📌 blijft staan) of verlengt.",
+    retentionInfo: "Alles wordt automatisch bewaard. Open groepen blijven staan zolang je bezig bent en sluiten zichzelf na 24 uur stilte; afgesloten groepen verdwijnen na de dagen op hun chip — tenzij je ze bewaart met het diskette-knopje of verlengt.",
     chipDays: (n: number) => `nog ${n} ${n === 1 ? "dag" : "dagen"}`,
-    keptChip: "📌 blijft staan",
+    filterSaved: "bewaard",
     statusOpen: "🟡 open",
     statusClosed: "✓ afgesloten",
     filterAll: "Alle",
@@ -1287,9 +1287,9 @@ const T = {
     toBalanceBtn: "Vers le décompte final →",
     namePh2: "Nom…",
     retentionInfoLink: "ⓘ combien de temps tout reste-t-il ?",
-    retentionInfo: "Tout est enregistré automatiquement. Les groupes ouverts restent tant que tu es actif et se clôturent après 24 h de silence ; les groupes clôturés disparaissent après les jours sur leur puce — sauf si tu les épingles (📌) ou les prolonges.",
+    retentionInfo: "Tout est enregistré automatiquement. Les groupes ouverts restent tant que tu es actif et se clôturent après 24 h de silence ; les groupes clôturés disparaissent après les jours sur leur puce — sauf si tu les gardes avec le bouton disquette ou les prolonges.",
     chipDays: (n: number) => `encore ${n} jour${n === 1 ? "" : "s"}`,
-    keptChip: "📌 reste gardé",
+    filterSaved: "gardés",
     statusOpen: "🟡 ouvert",
     statusClosed: "✓ clôturé",
     filterAll: "Tous",
@@ -6720,17 +6720,30 @@ export default function PartyTest() {
               </button>
               {/* De dagenteller ís de knop: je ziet dat de avond afloopt en verlengt met
                   dezelfde tik — via een bevestiging, zodat een mistik niets verandert. */}
-              {g.owned && g.finalized && (() => {
+              {/* De dagenteller ís de verlengknop; bij bewaarde groepen is er niets
+                  om te verlengen en zegt de gouden diskette ernaast al alles. */}
+              {g.owned && g.finalized && !g.pinned && (() => {
                 const rest = Math.max(0, Math.ceil((Math.max(new Date(g.last_active).getTime() + AUTO_WIS, keepUntil(g.id)) - Date.now()) / DAG))
-                const verlengd = g.pinned || keepUntil(g.id) > Date.now()
+                const verlengd = keepUntil(g.id) > Date.now()
                 return (
-                  <button onClick={() => vraagVerlenging(g)} disabled={busy} title={L.pinOn}
+                  <button onClick={() => vraagVerlenging(g)} disabled={busy} title={L.extendYes}
                     style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 14, cursor: "pointer", padding: "0 10px", fontSize: 12, fontWeight: 800, whiteSpace: "nowrap",
                       background: verlengd ? "rgba(240,165,0,0.14)" : "#fcf0ef",
                       border: verlengd ? "1px solid rgba(240,165,0,0.6)" : "1px solid rgba(224,104,92,0.5)",
-                      color: verlengd ? "#c88a1a" : "#b0402f" }}>{g.pinned ? L.keptChip : L.chipDays(rest)} 🕑</button>
+                      color: verlengd ? "#c88a1a" : "#b0402f" }}>{L.chipDays(rest)} 🕑</button>
                 )
               })()}
+              {/* Bewaren of losmaken zonder de groep te openen: goud gevuld = blijft
+                  staan, grijs met streep = verdwijnt na de termijn. Losmaken loopt via
+                  een bevestiging (in vraagVerlenging), want dat stelt de groep weer
+                  bloot aan het automatische opruimen. */}
+              {g.owned && (
+                <button onClick={() => { if (g.pinned) { vraagVerlenging(g) } else { void togglePin(g) } }} disabled={busy} title={g.pinned ? L.pinOff : L.pinOn}
+                  style={{ flexShrink: 0, width: 44, borderRadius: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                    background: g.pinned ? "rgba(240,165,0,0.14)" : "#fff",
+                    border: g.pinned ? "1px solid rgba(240,165,0,0.6)" : "1px solid rgba(120,95,20,0.25)",
+                    color: g.pinned ? "#c88a1a" : "#8a7d55" }}><BewaarIcoon aan={!!g.pinned} /></button>
+              )}
               {g.owned && (
                 <button onClick={() => deleteSavedGroup(g)} disabled={busy} aria-label={L.delGroupYes}
                   style={{ flexShrink: 0, width: 44, borderRadius: 12, background: "#fff", border: "1px solid rgba(120,95,20,0.2)", color: "#8a7d55", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><WisIcoon /></button>
@@ -6770,12 +6783,15 @@ export default function PartyTest() {
               </div>
               {groepenOpen && (<>
               <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-                {([["alle", L.filterAll], ["open", L.statusOpen], ["af", L.statusClosed], ["pin", "📌"]] as const).map(([f, tekst]) => (
+                {([["alle", L.filterAll], ["open", L.statusOpen], ["af", L.statusClosed], ["pin", L.filterSaved]] as const).map(([f, tekst]) => (
                   <span key={f} onClick={() => { setGroepFilter(f); setShowAllGroups(false) }}
-                    style={{ borderRadius: 16, padding: "7px 13px", fontSize: 12.5, fontWeight: 800, cursor: "pointer",
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 16, padding: "7px 13px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap",
                       background: groepFilter === f ? "#ef9f27" : "#fff",
                       border: groepFilter === f ? "1px solid #ef9f27" : "1px solid rgba(120,95,20,0.2)",
-                      color: groepFilter === f ? "#412402" : "#8a7d55" }}>{tekst}</span>
+                      color: groepFilter === f ? "#412402" : "#8a7d55" }}>
+                    {/* De bewaard-pill draagt de diskette: hetzelfde icoon als de knop op de
+                        rijen, zodat pill en knop zichtbaar over hetzelfde gaan. */}
+                    {f === "pin" && <BewaarIcoon aan size={13} />}{tekst}</span>
                 ))}
               </div>
               {savedGroups.length > 4 && (
@@ -6790,7 +6806,7 @@ export default function PartyTest() {
               {/* Opruimen voorstellen op het moment dat de gebruiker er is. */}
               {stalePins.length > 0 && (
                 <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.45)", padding: "12px 13px" }}>
-                  <div style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 3 }}>📌 {L.stalePins(stalePins.length)}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 3 }}><BewaarIcoon aan size={15} /> {L.stalePins(stalePins.length)}</div>
                   <div style={{ fontSize: 13, color: "#8a7d55", lineHeight: 1.5, marginBottom: 9 }}>{stalePins.map((g) => g.name || L.autoName()).join(" · ")}</div>
                   <div style={{ fontSize: 13, color: "#8a7d55", lineHeight: 1.5, marginBottom: 10 }}>{L.stalePinsWhy}</div>
                   <div style={{ display: "flex", gap: 8 }}>
