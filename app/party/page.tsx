@@ -1001,6 +1001,12 @@ const T = {
     potClamped: (b: string) => `De pot kon maar ${b} dekken — de rest van het rondje telt als zelf betaald.`,
     thanksClosed: "🍻 Bedankt en tot de volgende! Je avond blijft bewaard bij Opgeslagen groepen.",
     cancelledBy: (naam: string) => `✕ ${naam} annuleerde het rondje.`,
+    runnerDoneBtn: "🍻 Gehaald — rondje afronden",
+    runnerDoneNote: (naam: string) => `🍻 ${naam} heeft het rondje gehaald — proost!`,
+    runnerDoneOwn: "🍻 Rondje afgerond — de admin vult straks het bedrag in.",
+    runnerCloseFailed: "Afronden mislukt.",
+    adminRoundOf: (naam: string) => `rondje van ${naam}`,
+    fillPayBtn: "💶 Bedrag & betaling invullen",
     txPayTo: (bedrag: string, wie: string) => `→ betaal ${bedrag} aan ${wie}`,
     txGetFrom: (bedrag: string, wie: string) => `← krijg ${bedrag} van ${wie}`,
     editOrderPlain: "bestelling aanpassen",
@@ -1691,6 +1697,12 @@ const T = {
     potClamped: (b: string) => `La cagnotte n'a pu couvrir que ${b} — le reste de la tournée compte comme payé soi-même.`,
     thanksClosed: "🍻 Merci et à la prochaine ! Ta soirée reste dans Groupes enregistrés.",
     cancelledBy: (naam: string) => `✕ ${naam} a annulé la tournée.`,
+    runnerDoneBtn: "🍻 C'est ramené — clôturer la tournée",
+    runnerDoneNote: (naam: string) => `🍻 ${naam} a ramené la tournée — santé !`,
+    runnerDoneOwn: "🍻 Tournée clôturée — l'admin remplira le montant.",
+    runnerCloseFailed: "Échec de la clôture.",
+    adminRoundOf: (naam: string) => `tournée de ${naam}`,
+    fillPayBtn: "💶 Montant & paiement",
     txPayTo: (bedrag: string, wie: string) => `→ paie ${bedrag} à ${wie}`,
     txGetFrom: (bedrag: string, wie: string) => `← reçois ${bedrag} de ${wie}`,
     editOrderPlain: "modifier la commande",
@@ -2625,6 +2637,10 @@ export default function PartyTest() {
               <span style={{ display: "block", fontSize: 12.5, color: allen ? "#1f6b3a" : "#5a8f99", fontWeight: allen ? 800 : 400, marginTop: 1 }}>{allen ? `✓ ${L.allChose}` : L.someChose(klaar.length, people.length)}</span>
             </span>
           </div>
+          {/* Bovenaan en duidelijk: de haler rondt zelf af zodra hij terug is van de
+              toog. Het bedrag is niet zijn zorg — dat vult de admin straks in. */}
+          <button onClick={() => { void runnerRondtAf() }} disabled={barTotalen().length === 0}
+            style={{ width: "100%", marginBottom: 11, cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 8px", fontSize: 15.5, fontWeight: 800, color: "#fff", background: MODUS_FAIR.knop, opacity: barTotalen().length === 0 ? 0.45 : 1 }}>{L.runnerDoneBtn}</button>
           {/* Alles over dit rondje in één kader: wie klaar is, wat je moet halen, en de
               twee handelingen. Ingeklapt moest je te veel tikken om te zien waar je aan
               toe was. */}
@@ -4673,6 +4689,24 @@ export default function PartyTest() {
   // Alleen wie het rondje startte en de beheerder mogen annuleren — anders blijft een
   // rondje eeuwig openstaan wanneer de haler zijn gsm wegstak.
   const magAnnuleren = !!openRoundId && (isAdmin || (!!meId && startedBy === meId))
+  // De haler rondt zelf af: status naar "pending" (bevestigd, bedrag volgt), leden
+  // bevroren — exact wat de admin-bevestiging ook doet, zonder de betaalstap. Die
+  // betaalstap blijft van de admin: bij het afrekenen leidt de bestaande
+  // bevestigd-maar-onbetaald-flow hem er vanzelf naartoe.
+  const runnerRondtAf = async () => {
+    if (!openRoundId || !groupId) return
+    const leden = people.map((pp) => pp.id)
+    const { error } = await supabase.from("party_rounds")
+      .update({ status: "pending", members: leden, headcount: Math.max(1, headcount || people.length || 1) })
+      .eq("id", openRoundId)
+    if (error) { setNotice(L.runnerCloseFailed); return }
+    const naam = people.find((pp) => pp.id === meId)?.name || "?"
+    try { void kanaalRef.current?.send({ type: "broadcast", event: "melding", payload: { tekst: L.runnerDoneNote(naam) } }) } catch { /* niets */ }
+    setNotice(L.runnerDoneOwn)
+    setCart({}); setCartAnon({}); setOpenRoundId(null); setStartedBy(null); setOpenAnswers({})
+    loadParty(groupId)
+  }
+
   const annuleerRondje = () => {
     if (!openRoundId || !groupId) return
     setConfirmDlg({
@@ -7634,11 +7668,22 @@ export default function PartyTest() {
             <button style={{ ...S.btn, width: "100%" }} onClick={() => setShowCups(true)}>{L.cups}</button>
           </div>
         )}
-        {(settle || roundItems > 0) && (
+        {settle && startedBy && meId && startedBy !== meId ? (
+          /* Iemand anders haalt dit rondje: de haler rondt zelf af, dus de admin heeft
+             hier geen grote bevestigknop nodig. Wat overblijft is de noodingang — het
+             bedrag alvast invullen of het rondje annuleren als de haler verdween. */
+          <div style={{ border: "1.5px dashed rgba(90,143,153,0.5)", borderRadius: 12, padding: "10px 13px" }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#5a8f99", marginBottom: 8 }}>⚙️ {L.adminRoundOf(runnerName() || "?")}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 18px" }}>
+              <span onClick={openClose} style={{ fontSize: 13.5, fontWeight: 800, color: "#3d7b86", cursor: "pointer" }}>{L.fillPayBtn}</span>
+              <span onClick={annuleerRondje} style={{ fontSize: 13.5, fontWeight: 800, color: "#b0402f", cursor: "pointer" }}>{L.cancelRoundBtn}</span>
+            </div>
+          </div>
+        ) : (settle || roundItems > 0) && (
         <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => { if (roundItems === 0) return; if (settle) openClose(); else commitRound() }}>{settle ? L.confirmRoundTitle(roundNr) : L.doneWithRound}{roundItems > 0 && <span style={{ fontSize: 14.5, fontWeight: 600, opacity: 0.85 }}> — {L.drinksCount(roundItems)}</span>}</button>
         )}
         {settle
-          ? (roundItems > 0 && <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>)
+          ? (roundItems > 0 && !(startedBy && meId && startedBy !== meId) && <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>)
           : <button style={{ width: "100%", boxSizing: "border-box", marginTop: 11, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(120,95,20,0.28)", borderRadius: 12, fontSize: 15, fontWeight: 800, color: "#b0402f", padding: "12px 8px" }}
               onClick={() => { if (roundItems === 0) { setOverviewBackTo("hub"); setView("roundsOverview"); return } cancelOrder() }}>{L.cancelRoundShort}</button>}
 
