@@ -76,10 +76,14 @@ export default function Home() {
   const [groepen, setGroepen] = useState<MiniGroep[]>([])
   const [tafels, setTafels] = useState<MiniGroep[]>([])
   useEffect(() => {
-    const dev = typeof window !== "undefined" ? localStorage.getItem("rundo_device_id") : null
-    if (!dev) return
+    if (typeof window === "undefined") return
     ;(async () => {
+      // Twee aparte poortjes: het Party-toestel-id en het Table-id zijn verschillende
+      // sleutels. Vroeger blokkeerde een ontbrekend Party-id óók de Table-lijst —
+      // op een browser waar je alleen Table gebruikte bleef de sectie dan leeg.
       try {
+        const dev = localStorage.getItem("rundo_device_id")
+        if (!dev) throw new Error("geen party-id")
         const [eigen, gast] = await Promise.all([
           supabase.from("party_groups").select("id,name,last_active,finalized,settle").eq("owner_id", dev),
           supabase.from("party_people").select("group_id").eq("claimed_by", dev),
@@ -105,7 +109,7 @@ export default function Home() {
       // via de uitnodigingscode, die Table al kent (?code=): daar wijzigt dus niets.
       try {
         const ownerId = localStorage.getItem("rundo_owner_id")
-        if (!ownerId) return
+        if (!ownerId) throw new Error("geen table-id")
         let lokaal: { id: string; name: string; invite_code: string; role: string }[] = []
         try { const raw = localStorage.getItem(`rundo_table_groups_${ownerId}`); if (raw) lokaal = JSON.parse(raw) } catch { /* niets */ }
         const tafelMap = new Map<string, MiniGroep>()
