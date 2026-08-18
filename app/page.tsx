@@ -21,6 +21,8 @@ const T = {
     orWord: "of",
     yourGroups: "Jouw groepen",
     guestChip: "als gast",
+    modeZelf: "Zelf opnemen",
+    modeQr: "Via QR",
     tableSub: "Scan de rekening en verdeel in groep",
     tableDesc: "Scan de bon op restaurant of café — ieder betaalt z'n deel.",
     tableFlow: [
@@ -45,6 +47,8 @@ const T = {
     orWord: "ou",
     yourGroups: "Tes groupes",
     guestChip: "invité",
+    modeZelf: "Noter soi-même",
+    modeQr: "Via QR",
     tableSub: "Scanne l'addition et partage en groupe",
     tableDesc: "Scanne l'addition au resto ou au café — chacun paie sa part.",
     tableFlow: [
@@ -286,8 +290,13 @@ export default function Home() {
               {groepen.map((g) => (
                 <div key={g.id} onClick={() => router.push(`/party?g=${g.id}`)}
                   style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(240,193,75,0.3)", borderRadius: 12, padding: "10px 12px", marginBottom: 6 }}>
-                  <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(240,193,75,0.12)" }}>{g.settle ? "⚖️" : "🍻"}</span>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: "#e8e4d8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || "Rundo Party"}</span>
+                  <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(240,193,75,0.12)" }}>{g.settle ? "📱" : "✍️"}</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "#e8e4d8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || "Rundo Party"}</span>
+                    {/* Alleen de hoofdsplitsing telt hier: zelf opnemen of via QR —
+                        dezelfde keuze als op het Party-startscherm. */}
+                    <span style={{ display: "block", fontSize: 11, fontWeight: 800, color: "#d9c58a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.settle ? t.modeQr : t.modeZelf}</span>
+                  </span>
                   {g.gast && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#d9c58a", background: "rgba(240,193,75,0.14)", borderRadius: 7, padding: "2px 7px" }}>{t.guestChip}</span>}
                   <span style={{ flexShrink: 0, color: accent.party, fontWeight: 800 }}>›</span>
                 </div>
