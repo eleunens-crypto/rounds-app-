@@ -1046,6 +1046,8 @@ const T = {
     whoPaidWhat: "wie betaalde wat",
     totalPaidShort: "Totaal betaald",
     potShare: "waarvan uit de pot",
+    potSpentWord: "besteed",
+    potLeftLong: "nog in de pot",
     potShareAll: "volledig uit de pot",
     inRounds: (t: string) => `rondje ${t}`,
     mixSamen: (b: string) => `samen ${b}`,
@@ -1752,6 +1754,8 @@ const T = {
     whoPaidWhat: "qui a pay\u00e9 quoi",
     totalPaidShort: "Total pay\u00e9",
     potShare: "dont du pot",
+    potSpentWord: "d\u00e9pens\u00e9",
+    potLeftLong: "encore dans le pot",
     potShareAll: "enti\u00e8rement du pot",
     inRounds: (t: string) => `tourn\u00e9e ${t}`,
     mixSamen: (b: string) => `ensemble ${b}`,
@@ -5401,12 +5405,12 @@ export default function PartyTest() {
             {potJustAdded ? (
               // Net iets ingelegd: afronden is nu de logische stap.
               <>
-                <button style={{ ...S.btnP, width: "100%", marginTop: 4 }} onClick={closePot}>{L.ready}</button>
-                <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14, padding: "9px 6px" }} onClick={() => setPotBuilderOpen(true)}>{L.addMoreToPot}</button>
+                <button style={{ ...S.btnP, width: "100%", marginTop: 4, background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", boxShadow: "0 4px 12px -4px rgba(47,111,181,0.55)" }} onClick={closePot}>{L.ready}</button>
+                <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14, padding: "9px 6px", color: "#2f5693", border: "1px solid rgba(47,111,181,0.4)" }} onClick={() => setPotBuilderOpen(true)}>{L.addMoreToPot}</button>
               </>
             ) : (
               <>
-                <button style={{ ...S.btnP, width: "100%", marginTop: 4 }} onClick={() => setPotBuilderOpen(true)}>{L.addPotContrib}</button>
+                <button style={{ ...S.btnP, width: "100%", marginTop: 4, background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", boxShadow: "0 4px 12px -4px rgba(47,111,181,0.55)" }} onClick={() => setPotBuilderOpen(true)}>{L.addPotContrib}</button>
                 <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14, padding: "9px 6px" }} onClick={closePot}>{L.ready}</button>
               </>
             )}
@@ -9564,33 +9568,41 @@ export default function PartyTest() {
           de tabel. Standaard gelijk verdeeld (dat belooft het "per man"-inlegvenster);
           wie het anders deed, past het hier in één beweging aan. Enkel uitgebreid. */}
       {opNaam === true && potContribTotal > 0.005 && (
-        <div style={{ ...S.card, background: "#f4faf6", border: potEdit !== null ? "1.5px solid rgba(31,138,76,0.5)" : "1px solid rgba(31,138,76,0.35)" }}>
+        <div style={{ ...S.card, background: "#f2f6fc", border: potEdit !== null ? "1.5px solid rgba(47,111,181,0.5)" : "1px solid rgba(47,111,181,0.35)" }}>
           {potEdit === null ? (
+            <>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-              <span style={{ fontSize: 14, color: "#1f6b3a", minWidth: 0 }}>💰 <b>{L.potTitel} {euro(potContribTotal)}</b> · {potZonderNamen ? L.potEvenIn : L.potIn}: {people.map((p) => `${p.name} ${euro(contribOf(p.id))}`).join(" · ")}</span>
+              <span style={{ fontSize: 14, color: "#2f5693", minWidth: 0 }}>🫙 <b>{L.potTitel} {euro(potContribTotal)}</b> · {potZonderNamen ? L.potEvenIn : L.potIn}: {people.map((p) => `${p.name} ${euro(contribOf(p.id))}`).join(" · ")}</span>
               <button onClick={() => setPotEdit(Object.fromEntries(people.map((p) => [p.id, Math.round(contribOf(p.id) * 100) / 100])))}
-                style={{ flexShrink: 0, background: "#fff", border: "1.5px solid rgba(31,138,76,0.55)", color: "#1f6b3a", borderRadius: 9, padding: "7px 12px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>{potZonderNamen ? L.potOtherBtn : `✏️ ${L.adjustWord}`}</button>
+                style={{ flexShrink: 0, background: "#fff", border: "1.5px solid rgba(47,111,181,0.55)", color: "#2f5693", borderRadius: 9, padding: "7px 12px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>{potZonderNamen ? L.potOtherBtn : `✏️ ${L.adjustWord}`}</button>
             </div>
+            {/* Wat je hier vooral wil weten naast de inleg: hoeveel er al uitging en
+                hoeveel er dus nog in zit. Leeg = grijs, niets besteed = enkel het saldo. */}
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginTop: 7, paddingTop: 7, borderTop: "1px dashed rgba(47,111,181,0.28)" }}>
+              {potSpent > 0.005 && <span style={{ fontSize: 13, fontWeight: 700, color: "#5b84b8" }}>{L.potSpentWord} {euro(potSpent)}</span>}
+              <span style={{ marginLeft: "auto", fontSize: 13.5, fontWeight: 800, color: potRemaining > 0.005 ? "#2f6fb5" : "#8a93ad" }}>{L.potLeftLong} {euro(Math.max(0, potRemaining))}</span>
+            </div>
+            </>
           ) : (() => {
             const som = Object.values(potEdit).reduce((a, b) => a + (b || 0), 0)
             const klopt = Math.abs(som - potContribTotal) <= 0.005
             return (
               <div>
-                <div style={{ fontSize: 14.5, fontWeight: 800, color: "#1f6b3a", marginBottom: 10 }}>💰 {L.potWhoFrom(euro(potContribTotal))}</div>
+                <div style={{ fontSize: 14.5, fontWeight: 800, color: "#2f5693", marginBottom: 10 }}>🫙 {L.potWhoFrom(euro(potContribTotal))}</div>
                 {people.map((p) => (
                   <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 7 }}>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.id === meId && <span style={{ display: "inline-flex", verticalAlign: "middle", marginRight: 4 }}><KroonIcoon size={13} kleur="#8a5e0f" gevuld /></span>}{p.name}</span>
                     <input inputMode="decimal" {...bedragVeld(`potedit-${p.id}`, potEdit[p.id] || 0, (v) => setPotEdit((c) => ({ ...(c || {}), [p.id]: v })))}
-                      style={{ ...S.input, width: 92, boxSizing: "border-box", background: "#fff", padding: "8px 10px", fontSize: 15.5, textAlign: "right", borderColor: "rgba(31,138,76,0.45)" }} />
+                      style={{ ...S.input, width: 92, boxSizing: "border-box", background: "#fff", padding: "8px 10px", fontSize: 15.5, textAlign: "right", borderColor: "rgba(47,111,181,0.45)" }} />
                   </div>
                 ))}
-                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed rgba(31,138,76,0.35)", paddingTop: 8, marginBottom: 10 }}>
-                  <span style={{ fontSize: 13.5, color: "#1f6b3a", fontWeight: 700 }}>{L.togetherWord}</span>
-                  <span style={{ fontSize: 14.5, fontWeight: 800, color: klopt ? "#1f8a4c" : "#b0402f" }}>{euro(som)}{klopt ? " ✓" : ` — ${L.mustBeTot(euro(potContribTotal))}`}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed rgba(47,111,181,0.35)", paddingTop: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 13.5, color: "#2f5693", fontWeight: 700 }}>{L.togetherWord}</span>
+                  <span style={{ fontSize: 14.5, fontWeight: 800, color: klopt ? "#2f6fb5" : "#b0402f" }}>{euro(som)}{klopt ? " ✓" : ` — ${L.mustBeTot(euro(potContribTotal))}`}</span>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button style={{ ...S.btn, flex: 1, fontSize: 14, fontWeight: 800 }} onClick={() => setPotEdit(null)}>{potZonderNamen ? L.potStayEqual : L.cancelEdit}</button>
-                  <button disabled={!klopt} style={{ flex: 1, border: "none", borderRadius: 11, padding: "10px 6px", fontSize: 14, fontWeight: 800, cursor: klopt ? "pointer" : "default", background: klopt ? "#1f8a4c" : "#c9d8cc", color: "#fff" }}
+                  <button disabled={!klopt} style={{ flex: 1, border: "none", borderRadius: 11, padding: "10px 6px", fontSize: 14, fontWeight: 800, cursor: klopt ? "pointer" : "default", background: klopt ? "linear-gradient(135deg,#3f7fc4,#2f6fb5)" : "#c3cede", color: "#fff" }}
                     onClick={() => { if (!klopt || !potEdit) return; bewaarPotPerPersoon(potEdit); setPotEdit(null) }}>{L.saveName}</button>
                 </div>
               </div>
