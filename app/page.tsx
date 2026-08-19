@@ -231,13 +231,14 @@ export default function Home() {
   // zonder i-badge, in hetzelfde blok, zodat zin en tekeningen als één geheel lezen.
   // Een stap kan twee iconen dragen — dan staat er een klein "of" tussen en delen ze
   // één nummer, zodat duidelijk is dat het twee manieren voor dezelfde stap zijn.
-  const flowRow = (m: Mode, zin: string, stappen: { iconen: string[]; label: string }[]) => {
+  // De uitlegzin bij het openklappen is weg: de ondertitel in de banner zegt het al,
+  // en de stappenrij hieronder toont de rest. Twee keer hetzelfde vertellen hoeft niet.
+  const flowRow = (m: Mode, stappen: { iconen: string[]; label: string }[]) => {
     const bolBg = m === "party" ? "rgba(240,193,75,0.14)" : "rgba(91,159,214,0.14)"
     const bolRand = m === "party" ? "rgba(240,193,75,0.45)" : "rgba(91,159,214,0.45)"
     return pick !== m ? null : (
       <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
-        <p style={{ textAlign: "center", fontSize: 13, color: "#cfd6e6", lineHeight: 1.45, margin: 0, fontWeight: 600 }}>{zin}</p>
-        <div style={{ display: "flex", gap: 6, marginTop: 11 }}>
+        <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
           {stappen.map((st, i) => (
             <div key={i} style={{ flex: st.iconen.length > 1 ? 1.6 : 1, minWidth: 0, textAlign: "center" }}>
               <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", gap: 5, width: "max-content", margin: "0 auto" }}>
@@ -300,8 +301,9 @@ export default function Home() {
             <div style={{ ...S.logoSub, color: "#3bbfc4", display: "flex", alignItems: "center", gap: 8 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/icon-table.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
+              <span>{t.tableSub}</span>
             </div>
-            {flowRow("table", t.tableDesc, t.tableFlow)}
+            {flowRow("table", t.tableFlow)}
           </div>
         </div>
 
@@ -322,8 +324,9 @@ export default function Home() {
             <div style={{ ...S.logoSub, color: "#f0a500", display: "flex", alignItems: "center", gap: 8 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/icon-party.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
+              <span>{t.partySub}</span>
             </div>
-            {flowRow("party", t.partyDesc, t.partyFlow)}
+            {flowRow("party", t.partyFlow)}
           </div>
         </div>
 
