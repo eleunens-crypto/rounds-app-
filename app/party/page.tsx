@@ -8363,19 +8363,19 @@ export default function PartyTest() {
                         type="text" inputMode="decimal" placeholder="0,00"
                         onFocus={() => setMixFocus("pot")}
                         {...bedragVeld(`hub-pot-${idx}`, mixPot, (v) => { setMixFocus("pot"); setMixPot(v); qSetAmount(idx, Math.round((mixZelf + v) * 100) / 100) })} />
-                      <button className={som > 0.005 && !potOver ? vinkKleur.pulse : undefined} style={{ width: 54, height: 52, borderRadius: 13, fontSize: 25, fontWeight: 800, cursor: "pointer", flexShrink: 0,
+                      <button className={som > 0.005 && !potOver ? vinkKleur.pulse : undefined} style={{ padding: "0 15px", height: 52, borderRadius: 13, fontSize: 16.5, fontWeight: 800, cursor: "pointer", flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap",
                         background: som > 0.005 && !potOver ? "#fff" : "#e8e2d2",
                         color: som > 0.005 && !potOver ? vinkKleur.hoofd : "#b3a988",
                         border: som > 0.005 && !potOver ? `2.5px solid ${vinkKleur.hoofd}` : "none" }}
-                        onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (som > 0.005 && !potOver) confirmQuickPay() }}>✓</button>
+                        onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (som > 0.005 && !potOver) confirmQuickPay() }}><span style={{ fontSize: 21 }}>✓</span> ok</button>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 7 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: potOver ? "#c0554a" : "#2f5693", minWidth: 0 }}>🫙 {potOver ? L.mixPotShort(euro(Math.max(0, potAvail))) : L.mixPotAvail(euro(Math.max(0, potAvail)))}</span>
                       <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#4a3f1e" }}>{L.mixSamen(euro(som))}</span>
                     </div>
                     {/* Ook combineren moet over te slaan zijn (getrakteerd, later invullen…):
-                        dezelfde knop als in de enkel-veld-stand, iets compacter. */}
-                    <div style={{ textAlign: "right", marginTop: 9 }}>
+                        dezelfde knop als in de enkel-veld-stand, gecentreerd onder het blok. */}
+                    <div style={{ textAlign: "center", marginTop: 10 }}>
                       <button style={{ padding: "9px 14px", borderRadius: 11, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a7d55" }} onClick={() => closeQuickRound(true)}>{L.skipPayment}</button>
                     </div>
                   </>
