@@ -5210,7 +5210,7 @@ export default function PartyTest() {
           <h3 style={{ ...S.h3, fontSize: 19, margin: 0, display: "flex", alignItems: "baseline", gap: 8 }}>
             <span>{potIsCard ? L.drinkCard : L.potTitle}</span>
             {/* Meteen zichtbaar wat er nu in zit — dat is waarom je dit venster opent. */}
-            <span style={{ fontSize: 16, fontWeight: 800, color: potRemaining > 0.005 ? "#1f8a4c" : "#c0554a" }}>{euro(potRemaining)}</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: potRemaining > 0.005 ? "#2f6fb5" : "#c0554a" }}>{euro(potRemaining)}</span>
           </h3>
           {/* Hier stond een tweede teller voor hetzelfde aantal personen. Die van het
               inlegblok hieronder is groter, heeft een label en staat waar je hem nodig hebt —
@@ -5223,8 +5223,8 @@ export default function PartyTest() {
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
           <span style={{ ...S.pill, background: "rgba(120,95,20,0.08)", color: "#8a5e0f", fontSize: 14, padding: "4px 10px" }}>ingelegd {euro(potContribTotal)}</span>
-          {potSpent > 0 && <span style={{ ...S.pill, background: "rgba(224,138,0,0.12)", color: "#c98a00", fontSize: 14, padding: "4px 10px" }}>besteed {euro(potSpent)}</span>}
-          <span style={{ ...S.pill, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(224,104,92,0.14)", color: potRemaining > 0 ? "#1f8a4c" : "#c0554a", fontSize: 14, padding: "4px 10px", fontWeight: 800 }}>nog {euro(potRemaining)}</span>
+          {potSpent > 0 && <span style={{ ...S.pill, background: "rgba(47,111,181,0.12)", color: "#2f6fb5", fontSize: 14, padding: "4px 10px" }}>besteed {euro(potSpent)}</span>}
+          <span style={{ ...S.pill, background: potRemaining > 0 ? "rgba(47,111,181,0.14)" : "rgba(224,104,92,0.14)", color: potRemaining > 0 ? "#2f6fb5" : "#c0554a", fontSize: 14, padding: "4px 10px", fontWeight: 800 }}>nog {euro(potRemaining)}</span>
         </div>
         {settle && !fromQuick && (
         <div style={{ ...S.row, gap: 6, marginBottom: 8 }}>
@@ -5239,16 +5239,16 @@ export default function PartyTest() {
           const tot = Object.values(r.amounts).reduce((a, b) => a + (b || 0), 0)
           const who = people.filter((pp) => (r.amounts[pp.id] || 0) > 0)
           return (
-            <div key={r.id} style={{ background: editPotId === r.id ? "rgba(240,165,0,0.18)" : "#faf4e4", borderRadius: 12, padding: "11px 13px", marginBottom: 8, border: editPotId === r.id ? "1px solid rgba(240,165,0,0.6)" : "1px solid transparent" }}>
+            <div key={r.id} style={{ background: editPotId === r.id ? "rgba(47,111,181,0.16)" : "#eef4fb", borderRadius: 12, padding: "11px 13px", marginBottom: 8, border: editPotId === r.id ? "1px solid rgba(47,111,181,0.55)" : "1px solid transparent" }}>
               <div style={{ ...S.row, justifyContent: "space-between" }}>
                 <div style={{ ...S.row, gap: 8 }}>
-                  <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#e8a821", color: "#fff", fontSize: 14, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</span>
+                  <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#3f7fc4", color: "#fff", fontSize: 14, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</span>
                   <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.nthDeposit(i + 1)}</span>
                 </div>
                 <div style={{ ...S.row, gap: 10 }}>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: "#1f8a4c" }}>{euro(tot)}</span>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: "#2f6fb5" }}>{euro(tot)}</span>
                   {editPotId === r.id ? (
-                    <span style={{ fontSize: 14, color: "#c98a00", fontWeight: 800 }}>{L.beingEdited}</span>
+                    <span style={{ fontSize: 14, color: "#2f6fb5", fontWeight: 800 }}>{L.beingEdited}</span>
                   ) : (settle ? rounds.length === 0 : potSpent < 0.005) ? (
                     <div style={{ ...S.row, gap: 8 }}>
                       <span style={{ fontSize: 15, color: "#c0554a", cursor: "pointer", fontWeight: 700 }} onClick={() => removePotRound(r.id, `${i + 1}e inleg`)}>🗑️</span>
@@ -5268,10 +5268,10 @@ export default function PartyTest() {
         {(potRounds.length === 0 || potBuilderOpen || editPotId !== null) ? (
         <>
         {potIsCard ? (
-        <div style={{ background: "rgba(240,165,0,0.08)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 12, padding: 11, marginTop: 4 }}>
+        <div style={{ background: "rgba(47,111,181,0.06)", border: "1px dashed rgba(47,111,181,0.45)", borderRadius: 12, padding: 11, marginTop: 4 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 15, fontWeight: 800, color: "#8a5e0f" }}>{editPotId !== null ? "✏️ kaart wijzigen" : "➕ Drankkaart inleggen"}</span>
-            {potDraftTotal > 0 && <span style={{ fontSize: 14.5, fontWeight: 800, color: "#1f8a4c" }}>+{euro(potDraftTotal)}</span>}
+            <span style={{ fontSize: 15, fontWeight: 800, color: "#2f5693" }}>{editPotId !== null ? "✏️ kaart wijzigen" : "➕ Drankkaart inleggen"}</span>
+            {potDraftTotal > 0 && <span style={{ fontSize: 14.5, fontWeight: 800, color: "#2f6fb5" }}>+{euro(potDraftTotal)}</span>}
           </div>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
             <span style={{ fontSize: 15, fontWeight: 700 }}>{L.cardValue}</span>
@@ -5280,16 +5280,16 @@ export default function PartyTest() {
           {settle && <>
           <div style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700, marginBottom: 6 }}>{L.whoBoughtCard}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 10 }}>
-            <span onClick={cardSelectAll} style={{ ...S.pill, cursor: "pointer", fontSize: 14.5, padding: "6px 12px", background: "rgba(31,138,76,0.14)", color: "#1f8a4c", fontWeight: 800, border: "1px dashed rgba(31,138,76,0.5)" }}>{L.everyone}</span>
-            {people.map((p) => { const on = cardPayers.includes(p.id); const amt = potDraft[p.id] || 0; return <span key={p.id} onClick={() => toggleCardPayer(p.id)} style={{ ...S.pill, cursor: "pointer", fontSize: 14.5, padding: "6px 12px", background: on ? AAN : "rgba(240,165,0,0.1)", color: on ? "#fff" : "#8a5e0f", fontWeight: 700 }}>{p.name} {on ? euro(amt) : "€0"}</span> })}
+            <span onClick={cardSelectAll} style={{ ...S.pill, cursor: "pointer", fontSize: 14.5, padding: "6px 12px", background: "rgba(47,111,181,0.14)", color: "#2f6fb5", fontWeight: 800, border: "1px dashed rgba(47,111,181,0.5)" }}>{L.everyone}</span>
+            {people.map((p) => { const on = cardPayers.includes(p.id); const amt = potDraft[p.id] || 0; return <span key={p.id} onClick={() => toggleCardPayer(p.id)} style={{ ...S.pill, cursor: "pointer", fontSize: 14.5, padding: "6px 12px", background: on ? "linear-gradient(135deg,#3f7fc4,#2f6fb5)" : "rgba(240,165,0,0.1)", color: on ? "#fff" : "#8a5e0f", fontWeight: 700 }}>{p.name} {on ? euro(amt) : "€0"}</span> })}
           </div>
           </>}
         </div>
         ) : (
-        <div style={{ background: "rgba(240,165,0,0.08)", border: "1px dashed rgba(240,165,0,0.5)", borderRadius: 12, padding: 11, marginTop: 4 }}>
+        <div style={{ background: "rgba(47,111,181,0.06)", border: "1px dashed rgba(47,111,181,0.45)", borderRadius: 12, padding: 11, marginTop: 4 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 15, fontWeight: 800, color: "#8a5e0f" }}>{editPotId !== null ? "✏️ inleg wijzigen" : (potRounds.length === 0 ? `➕ ${L.firstDeposit}` : `➕ ${L.addToPot}`)}</span>
-            {potDraftTotal > 0 && <span style={{ fontSize: 14.5, fontWeight: 800, color: "#1f8a4c" }}>+{euro(potDraftTotal)}</span>}
+            <span style={{ fontSize: 15, fontWeight: 800, color: "#2f5693" }}>{editPotId !== null ? "✏️ inleg wijzigen" : (potRounds.length === 0 ? `➕ ${L.firstDeposit}` : `➕ ${L.addToPot}`)}</span>
+            {potDraftTotal > 0 && <span style={{ fontSize: 14.5, fontWeight: 800, color: "#2f6fb5" }}>+{euro(potDraftTotal)}</span>}
           </div>
           {settle ? (
           <>
@@ -5300,12 +5300,12 @@ export default function PartyTest() {
           <div style={{ ...S.row, gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
             {[5, 10, 20, 30].map((v) => {
               const on = everyoneChoice === v
-              return <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 15, background: on ? AAN : "#fff", color: on ? "#fff" : "#4a3f1e", border: on ? "none" : "1px solid rgba(120,95,20,0.18)" }} onClick={() => { setEveryoneChoice(v); setEveryoneDraft(""); setEveryoneAmt(v) }}>€{v}</button>
+              return <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 15, background: on ? "linear-gradient(135deg,#3f7fc4,#2f6fb5)" : "#fff", color: on ? "#fff" : "#4a3f1e", border: on ? "none" : "1px solid rgba(120,95,20,0.18)" }} onClick={() => { setEveryoneChoice(v); setEveryoneDraft(""); setEveryoneAmt(v) }}>€{v}</button>
             })}
           </div>
           <div style={{ ...S.row, gap: 6, marginBottom: 10 }}>
             <span style={{ fontSize: 14, color: "#8a7d55" }}>{L.ownAmount}</span>
-            <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 14, borderColor: everyoneChoice === "custom" ? "#e08a00" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="€" value={everyoneDraft} onChange={(e) => setEveryoneDraft(e.target.value.replace(/[^0-9.,]/g, ""))} />
+            <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 14, borderColor: everyoneChoice === "custom" ? "#2f6fb5" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="€" value={everyoneDraft} onChange={(e) => setEveryoneDraft(e.target.value.replace(/[^0-9.,]/g, ""))} />
             <button style={{ ...S.btn, padding: "5px 11px", fontSize: 14, opacity: (parseFloat(everyoneDraft.replace(",", ".")) || 0) > 0 ? 1 : 0.5 }} onClick={() => { const v = parseFloat(everyoneDraft.replace(",", ".")) || 0; if (v > 0) { setEveryoneChoice("custom"); setEveryoneAmt(v) } }}>toepassen</button>
           </div>
           {people.map((p) => (
@@ -5313,7 +5313,7 @@ export default function PartyTest() {
               <span style={{ fontSize: 15.5, fontWeight: 800, width: 112, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{contribOf(p.id) > 0 && <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}> · {euro(contribOf(p.id))}</span>}</span>
               <input style={{ ...S.input, width: 58, padding: "5px 8px", fontSize: 14.5, flexShrink: 0 }} type="text" inputMode="decimal" placeholder="€" value={potDraft[p.id] ?? ""} onChange={(e) => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 })) }} />
               <button style={{ ...S.btn, padding: "5px 9px", fontSize: 14, color: "#c0554a", flexShrink: 0 }} onClick={() => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: 0 })) }}>↺</button>
-              <span style={{ fontSize: 15, fontWeight: 800, marginLeft: "auto", textAlign: "right", color: (potDraft[p.id] || 0) > 0 ? "#1f8a4c" : "#b3a988" }}>{(potDraft[p.id] || 0) > 0 ? "+" + euro(potDraft[p.id] || 0) : "+€0"}</span>
+              <span style={{ fontSize: 15, fontWeight: 800, marginLeft: "auto", textAlign: "right", color: (potDraft[p.id] || 0) > 0 ? "#2f6fb5" : "#b3a988" }}>{(potDraft[p.id] || 0) > 0 ? "+" + euro(potDraft[p.id] || 0) : "+€0"}</span>
             </div>
           ))}
           </>
@@ -5326,18 +5326,18 @@ export default function PartyTest() {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <button style={{ width: 34, height: 34, borderRadius: 9, background: "#f7f1e2", border: "1px solid rgba(120,95,20,0.2)", fontSize: 18, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
               <span style={{ fontSize: 20, fontWeight: 800, minWidth: 26, textAlign: "center", color: "#4a3f1e" }}>{headcount < 1 ? 1 : headcount}</span>
-              <button style={{ width: 34, height: 34, borderRadius: 9, background: AAN, border: "none", fontSize: 18, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 2 : n + 1)}>+</button>
+              <button style={{ width: 34, height: 34, borderRadius: 9, background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", border: "none", fontSize: 18, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 2 : n + 1)}>+</button>
             </div>
           </div>
           <div style={{ ...S.row, gap: 8, marginBottom: 10 }}>
             <span style={{ fontSize: 21, color: "#8a7d55", fontWeight: 700 }}>€</span>
-            <input style={{ ...S.input, flex: 1, fontSize: 21, fontWeight: 800, padding: "10px 12px", color: "#c88a1a", textAlign: "right" }} type="text" inputMode="decimal" placeholder="0,00"
+            <input style={{ ...S.input, flex: 1, fontSize: 21, fontWeight: 800, padding: "10px 12px", color: "#2f5693", textAlign: "right" }} type="text" inputMode="decimal" placeholder="0,00"
               {...bedragVeld("potPerMan", potPerMan, setPotPerMan)} />
             <span style={{ fontSize: 15, color: "#8a7d55", fontWeight: 700, whiteSpace: "nowrap" }}>{L.perManShort}</span>
           </div>
           <div style={{ ...S.row, gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
             {[5, 10, 20].map((v) => (
-              <button key={v} style={{ ...S.btn, flex: 1, padding: "8px 6px", fontSize: 15, fontWeight: 800, background: potPerMan === v ? AAN : "#fff", color: potPerMan === v ? "#fff" : "#4a3f1e", border: potPerMan === v ? "none" : "1px solid rgba(120,95,20,0.18)" }} onClick={() => setPotPerMan(v)}>€{v}</button>
+              <button key={v} style={{ ...S.btn, flex: 1, padding: "8px 6px", fontSize: 15, fontWeight: 800, background: potPerMan === v ? "linear-gradient(135deg,#3f7fc4,#2f6fb5)" : "#fff", color: potPerMan === v ? "#fff" : "#4a3f1e", border: potPerMan === v ? "none" : "1px solid rgba(120,95,20,0.18)" }} onClick={() => setPotPerMan(v)}>€{v}</button>
             ))}
             <button style={{ ...S.btn, padding: "8px 11px", fontSize: 14, color: "#c0554a" }} onClick={() => setPotPerMan(0)}>↺</button>
           </div>
@@ -5346,22 +5346,22 @@ export default function PartyTest() {
             const alIn = potRemaining // wat er NU nog in zit (na eerder uitgeven)
             const heeftPot = potContribTotal > 0.005
             return heeftPot ? (
-              <div style={{ background: "rgba(31,138,76,0.08)", borderRadius: 12, padding: "11px 13px" }}>
+              <div style={{ background: "rgba(47,111,181,0.07)", borderRadius: 12, padding: "11px 13px" }}>
                 <div style={{ ...S.row, justifyContent: "space-between", fontSize: 14.5, color: "#6b5f3a", marginBottom: 4 }}>
                   <span>{L.alreadyInPot}</span><span style={{ fontWeight: 700 }}>{euro(alIn)}</span>
                 </div>
-                <div style={{ ...S.row, justifyContent: "space-between", fontSize: 14.5, color: "#1f6b3a", marginBottom: 7 }}>
+                <div style={{ ...S.row, justifyContent: "space-between", fontSize: 14.5, color: "#2f5693", marginBottom: 7 }}>
                   <span>{L.nowAdding}</span><span style={{ fontWeight: 700 }}>+ {euro(nieuweInleg)}</span>
                 </div>
-                <div style={{ ...S.row, justifyContent: "space-between", alignItems: "baseline", borderTop: "1px solid rgba(31,138,76,0.2)", paddingTop: 7 }}>
-                  <span style={{ fontSize: 15, color: "#1f6b3a", fontWeight: 800 }}>{L.newPotTotal}</span>
-                  <span style={{ fontSize: 21, color: "#1f8a4c", fontWeight: 800 }}>{euro(alIn + nieuweInleg)}</span>
+                <div style={{ ...S.row, justifyContent: "space-between", alignItems: "baseline", borderTop: "1px solid rgba(47,111,181,0.22)", paddingTop: 7 }}>
+                  <span style={{ fontSize: 15, color: "#2f5693", fontWeight: 800 }}>{L.newPotTotal}</span>
+                  <span style={{ fontSize: 21, color: "#2f6fb5", fontWeight: 800 }}>{euro(alIn + nieuweInleg)}</span>
                 </div>
               </div>
             ) : (
-              <div style={{ ...S.row, justifyContent: "center", alignItems: "baseline", gap: 8, padding: "11px", background: "rgba(31,138,76,0.09)", borderRadius: 12 }}>
-                <span style={{ fontSize: 15, color: "#1f6b3a", fontWeight: 700 }}>{L.potTotalIn}</span>
-                <span style={{ fontSize: 23, fontWeight: 800, color: "#1f8a4c" }}>{euro(nieuweInleg)}</span>
+              <div style={{ ...S.row, justifyContent: "center", alignItems: "baseline", gap: 8, padding: "11px", background: "rgba(47,111,181,0.08)", borderRadius: 12 }}>
+                <span style={{ fontSize: 15, color: "#2f5693", fontWeight: 700 }}>{L.potTotalIn}</span>
+                <span style={{ fontSize: 23, fontWeight: 800, color: "#2f6fb5" }}>{euro(nieuweInleg)}</span>
               </div>
             )
           })()}
@@ -5372,11 +5372,11 @@ export default function PartyTest() {
         {editPotId !== null ? (
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
             <button style={{ ...S.btn, flex: 1 }} onClick={cancelEditPot}>✕ annuleer</button>
-            <button style={{ ...S.btnP, flex: 2 }} onClick={saveEditPot}>{potDraftTotal > 0 ? L.addContrib(euro(potDraftTotal)) : L.removeContrib}</button>
+            <button style={{ ...S.btnP, flex: 2, background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", boxShadow: "0 4px 12px -4px rgba(47,111,181,0.55)" }} onClick={saveEditPot}>{potDraftTotal > 0 ? L.addContrib(euro(potDraftTotal)) : L.removeContrib}</button>
           </div>
         ) : (
           <div style={{ marginTop: 14 }}>
-            <button style={{ ...S.btnP, width: "100%" }} onClick={saveQuickPot}>{potDraftTotal > 0
+            <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", boxShadow: "0 4px 12px -4px rgba(47,111,181,0.55)" }} onClick={saveQuickPot}>{potDraftTotal > 0
               ? (!settle && potContribTotal > 0.005 ? L.setPotTo(euro(potRemaining + potDraftTotal)) : L.addContrib(euro(potDraftTotal)))
               : L.ready}</button>
             <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 14, padding: "9px 6px", color: "#a89a6f" }}
@@ -5387,9 +5387,9 @@ export default function PartyTest() {
         ) : (
           <div>
             {potRounds.length > 0 && (
-              <div style={{ ...S.row, justifyContent: "space-between", padding: "10px 13px", background: "rgba(31,138,76,0.09)", borderRadius: 12, marginBottom: 8 }}>
-                <span style={{ fontSize: 15, fontWeight: 800, color: "#1f6b3a" }}>{L.potTotalIn}</span>
-                <span style={{ fontSize: 19, fontWeight: 800, color: "#1f8a4c" }}>{euro(potContribTotal)}</span>
+              <div style={{ ...S.row, justifyContent: "space-between", padding: "10px 13px", background: "rgba(47,111,181,0.08)", borderRadius: 12, marginBottom: 8 }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: "#2f5693" }}>{L.potTotalIn}</span>
+                <span style={{ fontSize: 19, fontWeight: 800, color: "#2f6fb5" }}>{euro(potContribTotal)}</span>
               </div>
             )}
             {potJustAdded ? (
@@ -6044,7 +6044,7 @@ export default function PartyTest() {
       {!!groupId && settle && potContribTotal <= 0.005 && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: settle ? MODUS_FAIR.tint : "rgba(240,165,0,0.1)", border: `1px solid ${settle ? MODUS_FAIR.randZacht : "rgba(240,165,0,0.45)"}`, borderRadius: 11, padding: "10px 12px", marginTop: 10 }}>
           <span style={{ fontSize: 14.5, fontWeight: 800, color: settle ? MODUS_FAIR.tekst : "#8a5e0f", minWidth: 0 }}>{potIsCard ? `💳 ${L.drinkCard}` : L.potTogetherQ}</span>
-          <button onClick={() => setShowPot(true)} style={{ flexShrink: 0, border: "none", cursor: "pointer", background: settle ? MODUS_FAIR.knop : "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 9, padding: "7px 13px", fontSize: 13.5, fontWeight: 800 }}>{L.potAddBtn}</button>
+          <button onClick={() => setShowPot(true)} style={{ flexShrink: 0, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", color: "#fff", borderRadius: 9, padding: "7px 13px", fontSize: 13.5, fontWeight: 800 }}>{L.potAddBtn}</button>
         </div>
       )}
       {/* De naam zelf staat in de kop rechtsboven. Hier blijft enkel het invulveld over
@@ -8241,7 +8241,7 @@ export default function PartyTest() {
                 <div style={{ display: "flex", marginBottom: 7 }}>
                   <span style={{ flex: 1 }} />
                   <span style={{ flex: 1, textAlign: "center" }}>
-                    <span onClick={() => setShowPot(true)} style={{ display: "inline-block", fontSize: 13, fontWeight: 800, color: "#c98a00", cursor: "pointer", textDecoration: "underline", lineHeight: 1.2 }}>{L.addToPot}</span>
+                    <span onClick={() => setShowPot(true)} style={{ display: "inline-block", fontSize: 13, fontWeight: 800, color: "#2f6fb5", cursor: "pointer", textDecoration: "underline", lineHeight: 1.2 }}>{L.addToPot}</span>
                   </span>
                 </div>
               )}
@@ -8255,7 +8255,9 @@ export default function PartyTest() {
                   onClick={() => {
                     const r0 = rounds[idx]
                     if (payVia === "pot") { setMixZelf(0); setMixPot(r0?.amount || 0); setMixFocus("zelf"); setPayVia("mix") }
-                    else if (payVia === "mix") { qSetAmount(idx, Math.round(mixPot * 100) / 100); setPayVia("pot") }
+                    // In de combinatiestand wint de knop waar je op tikt: tik "zelf
+                    // betaald" en de pot valt weg — het zelf-bedrag blijft staan.
+                    else if (payVia === "mix") { qSetAmount(idx, Math.round(mixZelf * 100) / 100); setPayVia("self") }
                   }}>💶 {L.paidSelf}</button>
                 <button style={{ flex: 1, padding: "10px 6px", fontSize: 14.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
                   background: payVia !== "self" ? "linear-gradient(135deg,#3f7fc4,#2f6fb5)" : "#f7f1e2",
@@ -8264,7 +8266,8 @@ export default function PartyTest() {
                     if (potAvail <= 0.005 && payVia === "self") { setNotice(L.potEmptyNote); setShowPot(true); return }
                     const r0 = rounds[idx]
                     if (payVia === "self") { setMixZelf(r0?.amount || 0); setMixPot(0); setMixFocus("pot"); setPayVia("mix") }
-                    else if (payVia === "mix") { qSetAmount(idx, Math.round(mixZelf * 100) / 100); setPayVia("self") }
+                    // Omgekeerd idem: tik "uit de pot" en zelf valt weg, potbedrag blijft.
+                    else if (payVia === "mix") { qSetAmount(idx, Math.round(mixPot * 100) / 100); setPayVia("pot") }
                   }}>🫙 {L.paidPot}{potAvail > 0.005 && <span style={{ fontWeight: 800, opacity: payVia !== "self" ? 1 : 0.75 }}> · {euro(potAvail)}</span>}</button>
               </div>
 
@@ -9115,7 +9118,7 @@ export default function PartyTest() {
                         <>
                           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
                             <span style={{ fontSize: 13.5, color: "#8a7d55", fontWeight: 800 }}>🫙 {L.paidWithQ}</span>
-                            <span onClick={(e) => { e.stopPropagation(); setShowPot(true) }} style={{ fontSize: 13, fontWeight: 800, color: "#c98a00", textDecoration: "underline", cursor: "pointer" }}>{L.potTopUp}</span>
+                            <span onClick={(e) => { e.stopPropagation(); setShowPot(true) }} style={{ fontSize: 13, fontWeight: 800, color: "#2f6fb5", textDecoration: "underline", cursor: "pointer" }}>{L.potTopUp}</span>
                           </div>
                           <div style={{ display: "flex", gap: 6 }}>
                             <button onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, usePot: false } : c) }}
