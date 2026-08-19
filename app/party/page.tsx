@@ -1083,6 +1083,7 @@ const T = {
     splitEqually: "Gelijk verdelen",
     splitWithFair: "Verdeel met Fair Split",
     fastest: "snelste",
+    fairest: "eerlijkste",
     payersTitle: "Wie betaalde?",
     sameForAll: "Dezelfde betaler voor alle rondjes",
     toFinal: "Fair Split Eindbalans",
@@ -1792,6 +1793,7 @@ const T = {
     splitEqually: "R\u00e9partir \u00e9galement",
     splitWithFair: "Partager avec Fair Split",
     fastest: "le plus rapide",
+    fairest: "le plus juste",
     payersTitle: "Qui a payé ?",
     sameForAll: "Le même payeur pour toutes les tournées",
     toFinal: "Bilan final Fair Split",
@@ -1937,6 +1939,9 @@ export default function PartyTest() {
   const potVulIntent = useRef<number | null>(null)
   // Het lijstje "wie betaalde wat" op de eindbalans: standaard dicht, één tik open.
   const [toonBetalers, setToonBetalers] = useState(false)
+  // Pot-meldingen krijgen een potblauwe OK-knop; alle andere houden de themakleur.
+  const [noticePot, setNoticePot] = useState(false)
+  const meldPot = (tekst: string) => { setNoticePot(true); setNotice(tekst) }
   // Huidig aantal aanwezigen (snelle rondjes). Start op 0 = "nog niet gekozen": de
   // gebruiker moet het bewust instellen (naam én aantal verplicht). Elk afgesloten rondje
   // krijgt dit getal mee; wijzig je het later, dan geldt het vanaf het volgende rondje.
@@ -2139,7 +2144,7 @@ export default function PartyTest() {
       rSetPotAmt(idx, potDeel)
     }
     if (Math.max(1, r.headcount || 1) !== editDraft.headcount) await setRoundHeadcount(r.id, editDraft.headcount)
-    if (potTekort) setNotice(L.potClamped(euro(beschikbaar)))
+    if (potTekort) meldPot(L.potClamped(euro(beschikbaar)))
     cancelEditRound()
   }
   const [potIsCard, setPotIsCard] = useState(false)
@@ -3021,12 +3026,12 @@ export default function PartyTest() {
     if (payVia === "pot") {
       const beschikbaar = Math.max(0, potAvailFor(idx))
       // Volledig uit de pot: het hele bedrag moet erin zitten.
-      if (bedrag > beschikbaar + 0.005) { setNotice(L.potShortTitle); return }
+      if (bedrag > beschikbaar + 0.005) { meldPot(L.potShortTitle); return }
       rSetPotAmt(idx, bedrag)
     } else if (payVia === "mix") {
       const beschikbaar = Math.max(0, potAvailFor(idx))
       const potdeel = Math.max(0, Math.min(mixPot, bedrag))
-      if (potdeel > beschikbaar + 0.005) { setNotice(L.potShortTitle); return }
+      if (potdeel > beschikbaar + 0.005) { meldPot(L.potShortTitle); return }
       rSetPotAmt(idx, potdeel)
     } else {
       rSetPotAmt(idx, 0)
@@ -3817,13 +3822,13 @@ export default function PartyTest() {
   // opslaan niet afhangt van het sluiten van het venster.
   const saveQuickPot = async () => {
     const totaal = settle ? potDraftTotal : potPerMan * potHoofden
-    if (totaal <= 0.001) { setNotice(L.potFillAmount); return }
+    if (totaal <= 0.001) { meldPot(L.potFillAmount); return }
     if (!groupId) return
     const bedragen = settle ? potDraft
       : opNaam === true ? Object.fromEntries(people.map((pp) => [pp.id, potPerMan]))
       : { pot: totaal }
     const { error } = await supabase.rpc("party_add_pot", { p_group: groupId, p_amounts: bedragen, p_is_card: potIsCard, p_payers: cardPayers })
-    if (error) { setNotice("Inleg opslaan mislukt: " + error.message); return }
+    if (error) { meldPot("Inleg opslaan mislukt: " + error.message); return }
     setPotDraft({}); setPotPerMan(0); setEveryoneChoice(null); setEveryoneDraft("")
     setPotBuilderOpen(false)
     setPotJustAdded(true)
@@ -3833,7 +3838,7 @@ export default function PartyTest() {
     const added = (editPotId === null && potDraftTotal > 0.001) ? potDraftTotal : 0
     if (added > 0 && groupId) {
       supabase.rpc("party_add_pot", { p_group: groupId, p_amounts: potDraft, p_is_card: potIsCard, p_payers: cardPayers })
-        .then(({ error }) => { if (error) setNotice("Inleg opslaan mislukt: " + error.message); else loadParty(groupId) })
+        .then(({ error }) => { if (error) meldPot("Inleg opslaan mislukt: " + error.message); else loadParty(groupId) })
     }
     setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setEditPotId(null); setPotBuilderOpen(false); setShowPot(false)
     if (onbPotActive) {
@@ -5865,10 +5870,10 @@ export default function PartyTest() {
         </div>
       )}
       {notice && (
-        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setNotice("")}>
+        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => { setNotice(""); setNoticePot(false) }}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <p style={{ fontSize: 16, color: "#4a3f1e", lineHeight: 1.55, marginBottom: 18, fontWeight: 600 }}>{notice}</p>
-            <button style={S.btnP} onClick={() => setNotice("")}>OK</button>
+            <button style={{ ...S.btnP, ...(noticePot ? { background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", boxShadow: "0 4px 12px -4px rgba(47,111,181,0.55)" } : {}) }} onClick={() => { setNotice(""); setNoticePot(false) }}>OK</button>
           </div>
         </div>
       )}
@@ -5934,7 +5939,7 @@ export default function PartyTest() {
   // De pot-geldzak als losse functie: hij staat in de kop, en bij uitgebreid opnemen
   // op het bestelscherm verhuist hij naar de rondje-titelregel.
   const potKnopje = () => (
-    <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 9px", borderRadius: 22, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#fff", border: potRemaining > 0.005 ? "1px solid rgba(200,138,26,0.55)" : "0.5px solid rgba(120,95,20,0.3)" }}>
+    <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 9px", borderRadius: 22, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: potRemaining > 0.005 ? "1px solid rgba(47,111,181,0.5)" : "0.5px solid rgba(47,111,181,0.35)" }}>
       {potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️</span>}
       {potIsCard ? (
         <span style={{ fontSize: 20 }}>💳</span>
@@ -5945,8 +5950,8 @@ export default function PartyTest() {
           <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
         </svg>
       )}
-      <span style={{ color: "#c88a1a" }}>{euro(potRemaining)}</span>
-      <span style={{ color: "#c98a00", fontWeight: 800 }}>+</span>
+      <span style={{ color: "#2f5693" }}>{euro(potRemaining)}</span>
+      <span style={{ color: "#2f6fb5", fontWeight: 800 }}>+</span>
     </span>
   )
   // Zoekveld met microfoon: bij uitgebreid opnemen ingebouwd bovenin de drankjeskaart
@@ -8293,7 +8298,7 @@ export default function PartyTest() {
                   background: payVia !== "self" ? "linear-gradient(135deg,#3f7fc4,#2f6fb5)" : "#f7f1e2",
                   color: payVia !== "self" ? "#fff" : "#8a7d55", border: "none" }}
                   onClick={() => {
-                    if (potAvail <= 0.005 && payVia === "self") { potVulIntent.current = idx; setNotice(L.potEmptyNote); setShowPot(true); return }
+                    if (potAvail <= 0.005 && payVia === "self") { potVulIntent.current = idx; meldPot(L.potEmptyNote); setShowPot(true); return }
                     const r0 = rounds[idx]
                     if (payVia === "self") { setMixZelf(r0?.amount || 0); setMixPot(0); setMixFocus("pot"); setPayVia("mix") }
                     // Omgekeerd idem: tik "uit de pot" en zelf valt weg, potbedrag blijft.
@@ -8369,6 +8374,11 @@ export default function PartyTest() {
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 7 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: potOver ? "#c0554a" : "#2f5693", minWidth: 0 }}>🫙 {potOver ? L.mixPotShort(euro(Math.max(0, potAvail))) : L.mixPotAvail(euro(Math.max(0, potAvail)))}</span>
                       <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#4a3f1e" }}>{L.mixSamen(euro(som))}</span>
+                    </div>
+                    {/* Ook combineren moet over te slaan zijn (getrakteerd, later invullen…):
+                        dezelfde knop als in de enkel-veld-stand, iets compacter. */}
+                    <div style={{ textAlign: "right", marginTop: 9 }}>
+                      <button style={{ padding: "9px 14px", borderRadius: 11, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a7d55" }} onClick={() => closeQuickRound(true)}>{L.skipPayment}</button>
                     </div>
                   </>
                 )
@@ -8810,10 +8820,11 @@ export default function PartyTest() {
           </button>
           <div style={{ display: "flex", alignItems: "center", fontSize: 14, fontWeight: 800, color: "#a89a6f" }}>{L.orWord}</div>
           <button onClick={() => setSettleChoice((c) => c === "fair" ? null : "fair")}
-            style={{ flex: 1, background: "#fff", borderRadius: 14, padding: "19px 10px 15px", textAlign: "center", cursor: "pointer",
+            style={{ flex: 1, position: "relative", background: "#fff", borderRadius: 14, padding: "19px 10px 15px", textAlign: "center", cursor: "pointer",
               border: settleChoice === "equal" ? "1.5px solid rgba(120,95,20,0.2)" : "2px solid rgba(31,138,76,0.5)",
               boxShadow: settleChoice === "equal" ? "none" : "0 4px 14px -8px rgba(31,138,76,0.5)",
               opacity: settleChoice === "equal" ? 0.5 : 1 }}>
+            <span style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: "#1f8a4c", color: "#fff", fontSize: 10.5, fontWeight: 800, borderRadius: 10, padding: "3px 10px", whiteSpace: "nowrap" }}>{L.fairest}</span>
             <div style={{ fontSize: 23, marginBottom: 5 }}>⚖️</div>
             <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.3 }}>{L.splitWithFair}</div>
           </button>
