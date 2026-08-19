@@ -273,7 +273,7 @@ const MODUS_NAAM = {
   knopTekst: "#fff",
   tint: "rgba(90,106,148,0.16)", tekst: "#3b486a",
   randZacht: "rgba(90,106,148,0.55)", lijnZacht: "rgba(90,106,148,0.25)",
-  bladzij: "#eef1f8",
+  bladzij: "#e8ecf5",
 }
 const makeCode = () => Array.from({ length: 6 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("")
 type Cat = "Bier" | "BierAV" | "Frisdrank" | "Wijn" | "Cocktail" | "Mocktail" | "Longdrink" | "Shot" | "Warm" | "Eigen"
@@ -1918,6 +1918,9 @@ export default function PartyTest() {
   const [payVia, setPayVia] = useState<"self" | "pot" | "mix">("self")
   const [mixZelf, setMixZelf] = useState(0)
   const [mixPot, setMixPot] = useState(0)
+  // Welk mix-veld je aan het invullen bent: het vinkje kleurt en pulseert mee —
+  // potblauw bij het potveld, de moduskleur bij "zelf betaald".
+  const [mixFocus, setMixFocus] = useState<"zelf" | "pot">("zelf")
   // Het lijstje "wie betaalde wat" op de eindbalans: standaard dicht, één tik open.
   const [toonBetalers, setToonBetalers] = useState(false)
   // Huidig aantal aanwezigen (snelle rondjes). Start op 0 = "nog niet gekozen": de
@@ -5188,12 +5191,12 @@ export default function PartyTest() {
     btnP: { border: "none", background: koel ? MODUS_FAIR.knop : themaNaam ? MODUS_NAAM.knop : "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 14, padding: "16px 18px", fontSize: 18, fontWeight: 800, cursor: "pointer", width: "100%", boxShadow: koel ? `0 4px 12px -4px ${MODUS_FAIR.gloed}` : themaNaam ? `0 4px 12px -4px ${MODUS_NAAM.gloed}` : "0 4px 12px -4px rgba(224,138,0,0.6)" } as React.CSSProperties,
     input: { border: "1px solid rgba(120,95,20,0.22)", borderRadius: 10, padding: "11px 12px", fontSize: 17, color: "#4a3f1e", outline: "none", width: 84, textAlign: "right" } as React.CSSProperties,
     seg: (on: boolean) => ({ flex: 1, textAlign: "center", padding: "11px 6px", borderRadius: 10, fontSize: 15.5, fontWeight: 800, cursor: "pointer", background: on ? AAN : (koel ? "#e4f2f5" : VLAK3), color: on ? "#fff" : (koel ? "#5a8f99" : themaNaam ? "#5a6a94" : "#8a7d55") } as React.CSSProperties),
-    step: { width: 38, height: 38, borderRadius: 10, border: `1px solid ${groupId && settle ? "rgba(13,124,140,0.22)" : "rgba(120,95,20,0.18)"}`, background: groupId && settle ? "#e4f2f5" : VLAK3, color: groupId && settle ? MODUS_FAIR.tekst : "#8a5e0f", fontSize: 22, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
+    step: { width: 38, height: 38, borderRadius: 10, border: `1px solid ${koel ? "rgba(13,124,140,0.22)" : themaNaam ? "rgba(59,72,106,0.22)" : "rgba(120,95,20,0.18)"}`, background: koel ? "#e4f2f5" : VLAK3, color: koel ? MODUS_FAIR.tekst : themaNaam ? "#3b486a" : "#8a5e0f", fontSize: 22, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
     chip: (n: number) => ({ position: "relative", padding: "10px 14px", borderRadius: 20, fontSize: 16, fontWeight: 700, cursor: "pointer", userSelect: "none", border: n > 0 ? "1px solid rgba(240,165,0,0.5)" : "1px solid rgba(120,95,20,0.15)", background: n > 0 ? AAN : "#faf4e4", color: n > 0 ? "#fff" : "#8a7d55" } as React.CSSProperties),
     badge: { marginLeft: 5, background: "rgba(0,0,0,0.22)", borderRadius: 20, padding: "0 6px", fontSize: 13, fontWeight: 800 } as React.CSSProperties,
     pill: { fontSize: 13.5, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: "rgba(120,95,20,0.08)", color: "#8a7d55" } as React.CSSProperties,
     row: { display: "flex", alignItems: "center", gap: 10 } as React.CSSProperties,
-    tab: (on: boolean) => ({ padding: "9px 14px", borderRadius: 20, fontSize: 15.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", background: on ? "#4a3f1e" : VLAK3, color: on ? "#fff" : "#8a7d55" } as React.CSSProperties),
+    tab: (on: boolean) => ({ padding: "9px 14px", borderRadius: 20, fontSize: 15.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", background: on ? (themaNaam ? "#232c44" : "#4a3f1e") : VLAK3, color: on ? "#fff" : (themaNaam ? "#5a6a94" : "#8a7d55") } as React.CSSProperties),
     overlay: { position: "fixed", inset: 0, background: "rgba(38,32,14,0.62)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 14 } as React.CSSProperties,
     sheet: { background: "#fff", borderRadius: 20, padding: 20, width: "100%", maxWidth: 460, maxHeight: "86vh", overflowY: "auto", boxShadow: "0 10px 40px rgba(0,0,0,0.25)" } as React.CSSProperties,
   }
@@ -5931,8 +5934,8 @@ export default function PartyTest() {
         )}
       </div>
         {(!settle || walkIdx !== null) && (
-        <button onClick={startVoice} title={L.voiceBtn} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 13px", borderRadius: 10, cursor: "pointer", background: "#fffdf6", border: `1px solid ${settle ? MODUS_FAIR.randZacht : "rgba(240,165,0,0.5)"}` }}>
-          <MicroIcoon size={18} kleur={settle ? MODUS_FAIR.tekst : "#8a5e0f"} />
+        <button onClick={startVoice} title={L.voiceBtn} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 13px", borderRadius: 10, cursor: "pointer", background: themaNaam ? "#fbfcff" : "#fffdf6", border: `1px solid ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.5)" : "rgba(240,165,0,0.5)"}` }}>
+          <MicroIcoon size={18} kleur={settle ? MODUS_FAIR.tekst : themaNaam ? "#3b486a" : "#8a5e0f"} />
         </button>
         )}
     </div>
@@ -6007,7 +6010,7 @@ export default function PartyTest() {
             <div onClick={() => { if (!onboarding) setEditName(true) }} style={{ cursor: onboarding ? "default" : "pointer", fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {!settle && isAutoNaam(groupName) ? (
                 <span style={{ display: "block" }}>
-                  <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#c98a00" }}>✏️ {L.giveNameQ}</span>
+                  <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: themaNaam ? "#5a6a94" : "#c98a00" }}>✏️ {L.giveNameQ}</span>
                   <span style={{ display: "block", fontSize: 12.5, fontWeight: 400, color: "#a89a6f", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.nowWord} {groupName.trim()}</span>
                 </span>
               ) : <>{groupName.trim()}{!onboarding && <span style={{ fontSize: 12.5 }}> ✏️</span>}</>}
@@ -6028,7 +6031,7 @@ export default function PartyTest() {
               {isAutoNaam(groupName) ? (
                 /* Niet alleen de uitnodiging, ook wat de naam nú is — anders weet je
                    niet onder welke naam de groep straks in je lijst staat. */
-                <span style={{ color: "#c98a00", fontWeight: 700, fontSize: 14 }}>✏️ {L.giveNameQ} <span style={{ color: "#a89a6f", fontWeight: 400, fontSize: 12.5 }}>· {L.nowWord} {groupName.trim()}</span></span>
+                <span style={{ color: themaNaam ? "#5a6a94" : "#c98a00", fontWeight: 700, fontSize: 14 }}>✏️ {L.giveNameQ} <span style={{ color: "#a89a6f", fontWeight: 400, fontSize: 12.5 }}>· {L.nowWord} {groupName.trim()}</span></span>
               ) : (<>{groupName.trim()}{!onboarding && <span style={{ fontSize: 12 }}> ✏️</span>}</>)}
             </span>
           )}
@@ -6592,7 +6595,7 @@ export default function PartyTest() {
             })}
             {!zoekt && (
               <div onClick={() => { setShowAddDrink(true); setNdName("") }}
-                style={{ padding: "10px", borderRadius: 12, background: "#fffdf6", border: `1.5px dashed ${settle ? MODUS_FAIR.randZacht : "rgba(240,165,0,0.6)"}`, display: "flex", flexDirection: "column", justifyContent: "space-between", cursor: "pointer", color: settle ? MODUS_FAIR.tekst : "#c98a00" }}>
+                style={{ padding: "10px", borderRadius: 12, background: "#fffdf6", border: `1.5px dashed ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.6)" : "rgba(240,165,0,0.6)"}`, display: "flex", flexDirection: "column", justifyContent: "space-between", cursor: "pointer", color: settle ? MODUS_FAIR.tekst : themaNaam ? "#3b486a" : "#c98a00" }}>
                 <div style={{ fontSize: 15.5, fontWeight: 800, lineHeight: 1.25 }}>＋ {L.newDrinkTile}</div>
                 <div style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.8, marginTop: 7 }}>{L.notOnList}</div>
               </div>
@@ -6601,7 +6604,7 @@ export default function PartyTest() {
             {/* "Meer/minder" hangt centraal, half over de onderrand van de lijst. */}
             {!zoekt && !fullList && catDrinks.length > lijst.length && (
               <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
-                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(240,165,0,0.6)", color: "#c98a00", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
+                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: `1px solid ${themaNaam ? "rgba(90,106,148,0.55)" : "rgba(240,165,0,0.6)"}`, color: themaNaam ? "#3b486a" : "#c98a00", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
                   + {catDrinks.length - lijst.length} meer ▾
                 </span>
               </div>
@@ -7590,7 +7593,7 @@ export default function PartyTest() {
         {renderVoice()}
         {/* Het rondje als echte titel: groot links, het aantal drankjes rechts, met een
             gouden lijn eronder. Zo leest het als kop van wat volgt. */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, borderBottom: "2px solid rgba(240,165,0,0.5)", paddingBottom: 7, marginBottom: opNaam === true && !settle ? 0 : 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, borderBottom: `2px solid ${themaNaam ? "rgba(59,72,106,0.55)" : "rgba(240,165,0,0.5)"}`, paddingBottom: 7, marginBottom: opNaam === true && !settle ? 0 : 12 }}>
           <span style={{ fontSize: 23, fontWeight: 800, color: "#4a3f1e", letterSpacing: -0.3, minWidth: 0 }}>
             {L.roundWord} {roundNr}
             <span style={{ fontSize: 14, fontWeight: 600, color: "#a89a6f", letterSpacing: 0 }}> · {L.drinksCount(roundItems)}</span>
@@ -7609,7 +7612,7 @@ export default function PartyTest() {
                de titel, en het ▸ zegt eerlijk dat er een venster opent. */
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 11 }}>
               <button onClick={() => { setActiveCat(catsPresent[0]); setWalkIdx(0) }}
-                style={{ background: "#fffdf6", border: "1px solid rgba(240,165,0,0.5)", borderTop: "none", borderRadius: "0 0 12px 12px", padding: "8px 16px", fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", cursor: "pointer" }}>{L.perPersonPrompt} ▸</button>
+                style={{ background: themaNaam ? "#fbfcff" : "#fffdf6", border: `1px solid ${themaNaam ? "rgba(59,72,106,0.4)" : "rgba(240,165,0,0.5)"}`, borderTop: "none", borderRadius: "0 0 12px 12px", padding: "8px 16px", fontSize: 13.5, fontWeight: 800, color: themaNaam ? "#3b486a" : "#8a5e0f", cursor: "pointer" }}>{L.perPersonPrompt} ▸</button>
             </div>
           ) : null
           /* Snel opnemen toont hier bewust níets meer. De oude "⚖️ op naam noteren"-knop
@@ -7671,8 +7674,8 @@ export default function PartyTest() {
             const actief = activeCat === c
             return <span key={c} onClick={() => { setActiveCat(c); setFullList(false) }}
               style={{ flexShrink: 0, padding: "10px 17px", borderRadius: 22, fontSize: 16, fontWeight: actief ? 800 : 700, cursor: "pointer", whiteSpace: "nowrap",
-                       background: actief ? "#4a3f1e" : "#fff", color: actief ? "#fff" : "#8a7d55",
-                       border: actief ? "none" : "0.5px solid rgba(120,95,20,0.22)" }}>
+                       background: actief ? (themaNaam ? "#232c44" : "#4a3f1e") : "#fff", color: actief ? (themaNaam ? "#c9d3ec" : "#fff") : (themaNaam ? "#5a6a94" : "#8a7d55"),
+                       border: actief ? "none" : `0.5px solid ${themaNaam ? "rgba(59,72,106,0.3)" : "rgba(120,95,20,0.22)"}` }}>
               {CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: actief ? "#ffd27f" : "#e0685c", fontSize: 16 }}>●</span>}
             </span>
           })}
@@ -7712,8 +7715,8 @@ export default function PartyTest() {
                 const un = cartAnon[d.id] ?? 0
                 return (
                   <div key={d.id} onClick={() => { if (settle && !bezig) setGeenRondje(true) }}
-                    style={{ opacity: settle && !bezig ? 0.55 : 1, cursor: settle && !bezig ? "pointer" : "default", padding: "10px 10px", borderRadius: 12, background: tot > 0 ? "rgba(31,138,76,0.08)" : "#faf4e4", border: tot > 0 ? "1.5px solid rgba(31,138,76,0.5)" : "1px solid rgba(120,95,20,0.1)", boxShadow: tot > 0 ? "0 0 0 3px rgba(31,138,76,0.1)" : "none" }}>
-                    <div style={{ fontSize: 15.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#1f6b3a" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
+                    style={{ opacity: settle && !bezig ? 0.55 : 1, cursor: settle && !bezig ? "pointer" : "default", padding: "10px 10px", borderRadius: 12, background: tot > 0 ? "rgba(31,138,76,0.08)" : themaNaam ? "#e9edf6" : "#faf4e4", border: tot > 0 ? "1.5px solid rgba(31,138,76,0.5)" : `1px solid ${themaNaam ? "rgba(59,72,106,0.14)" : "rgba(120,95,20,0.1)"}`, boxShadow: tot > 0 ? "0 0 0 3px rgba(31,138,76,0.1)" : "none" }}>
+                    <div style={{ fontSize: 15.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#1f6b3a" : themaNaam ? "#2c3752" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
                     <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
                       <button style={{ ...S.step, opacity: tot > 0 ? 1 : 0.4 }} onClick={() => { if (settle && !bezig) { setGeenRondje(true); return } bumpDown(d.id) }}>−</button>
                       <span style={{ fontSize: 18, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}{settle && voorWie && tafel > tot ? <span style={{ fontSize: 12, color: "#a89a6f", fontWeight: 700 }}>/{tafel}</span> : null}</span>
@@ -7724,7 +7727,7 @@ export default function PartyTest() {
               })}
               {!zoekt && (
                 <div onClick={() => { setShowAddDrink(true); setNdName("") }}
-                  style={{ padding: "10px", borderRadius: 12, background: "#fffdf6", border: `1.5px dashed ${settle ? MODUS_FAIR.randZacht : "rgba(240,165,0,0.6)"}`, display: "flex", flexDirection: "column", justifyContent: "space-between", cursor: "pointer", color: settle ? MODUS_FAIR.tekst : "#c98a00" }}>
+                  style={{ padding: "10px", borderRadius: 12, background: "#fffdf6", border: `1.5px dashed ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.6)" : "rgba(240,165,0,0.6)"}`, display: "flex", flexDirection: "column", justifyContent: "space-between", cursor: "pointer", color: settle ? MODUS_FAIR.tekst : themaNaam ? "#3b486a" : "#c98a00" }}>
                   <div style={{ fontSize: 15.5, fontWeight: 800, lineHeight: 1.25 }}>＋ {L.newDrinkTile}</div>
                   <div style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.8, marginTop: 7 }}>{L.notOnList}</div>
                 </div>
@@ -7733,7 +7736,7 @@ export default function PartyTest() {
             {/* "Meer/minder" hangt centraal, half over de onderrand van de lijst. */}
             {!zoekt && !fullList && catDrinks.length > catVisible.length && (
               <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
-                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(240,165,0,0.6)", color: "#c98a00", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
+                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 13.5, fontWeight: 800, cursor: "pointer", background: "#fff", border: `1px solid ${themaNaam ? "rgba(90,106,148,0.55)" : "rgba(240,165,0,0.6)"}`, color: themaNaam ? "#3b486a" : "#c98a00", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
                   + {catDrinks.length - catVisible.length} meer ▾
                 </span>
               </div>
@@ -8250,7 +8253,7 @@ export default function PartyTest() {
                   color: payVia !== "pot" ? "#fff" : "#8a7d55", border: "none" }}
                   onClick={() => {
                     const r0 = rounds[idx]
-                    if (payVia === "pot") { setMixZelf(0); setMixPot(r0?.amount || 0); setPayVia("mix") }
+                    if (payVia === "pot") { setMixZelf(0); setMixPot(r0?.amount || 0); setMixFocus("zelf"); setPayVia("mix") }
                     else if (payVia === "mix") { qSetAmount(idx, Math.round(mixPot * 100) / 100); setPayVia("pot") }
                   }}>💶 {L.paidSelf}</button>
                 <button style={{ flex: 1, padding: "10px 6px", fontSize: 14.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
@@ -8259,7 +8262,7 @@ export default function PartyTest() {
                   onClick={() => {
                     if (potAvail <= 0.005 && payVia === "self") { setNotice(L.potEmptyNote); setShowPot(true); return }
                     const r0 = rounds[idx]
-                    if (payVia === "self") { setMixZelf(r0?.amount || 0); setMixPot(0); setPayVia("mix") }
+                    if (payVia === "self") { setMixZelf(r0?.amount || 0); setMixPot(0); setMixFocus("pot"); setPayVia("mix") }
                     else if (payVia === "mix") { qSetAmount(idx, Math.round(mixZelf * 100) / 100); setPayVia("self") }
                   }}>🫙 {L.paidPot}{potAvail > 0.005 && <span style={{ fontWeight: 800, opacity: payVia !== "self" ? 1 : 0.75 }}> · {euro(potAvail)}</span>}</button>
               </div>
@@ -8296,6 +8299,9 @@ export default function PartyTest() {
                 const potOver = mixPot > potAvail + 0.005
                 const zelfKleur = opNaam === true ? "#3b486a" : "#c88a1a"
                 const zelfRand = opNaam === true ? "#3b486a" : "#e08a00"
+                const vinkKleur = mixFocus === "pot"
+                  ? { hoofd: "#2f6fb5", pulse: "rundo-pulse-pot" }
+                  : { hoofd: zelfRand, pulse: opNaam === true ? "rundo-pulse-blauw" : "rundo-pulse-amber" }
                 return (
                   <>
                     <div style={{ ...S.row, gap: 7, marginBottom: 7 }}>
@@ -8304,7 +8310,8 @@ export default function PartyTest() {
                       <input style={{ ...S.input, flex: 1, minWidth: 50, fontSize: 17, fontWeight: 800, padding: "10px 10px", textAlign: "left", color: zelfKleur,
                         borderColor: mixZelf > 0.005 ? zelfRand : "rgba(120,95,20,0.22)" }}
                         type="text" inputMode="decimal" placeholder="0,00"
-                        {...bedragVeld(`hub-zelf-${idx}`, mixZelf, (v) => { setMixZelf(v); qSetAmount(idx, Math.round((v + mixPot) * 100) / 100) })} />
+                        onFocus={() => setMixFocus("zelf")}
+                        {...bedragVeld(`hub-zelf-${idx}`, mixZelf, (v) => { setMixFocus("zelf"); setMixZelf(v); qSetAmount(idx, Math.round((v + mixPot) * 100) / 100) })} />
                     </div>
                     <div style={{ ...S.row, gap: 7 }}>
                       <span style={{ flexShrink: 0, width: 98, fontSize: 13.5, fontWeight: 800, color: "#2f5693", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>🫙 {L.paidPot}</span>
@@ -8312,11 +8319,12 @@ export default function PartyTest() {
                       <input style={{ ...S.input, flex: 1, minWidth: 50, fontSize: 17, fontWeight: 800, padding: "10px 10px", textAlign: "left", color: "#2f5693",
                         borderColor: potOver ? "#c0554a" : mixPot > 0.005 ? "#2f6fb5" : "rgba(47,111,181,0.35)" }}
                         type="text" inputMode="decimal" placeholder="0,00"
-                        {...bedragVeld(`hub-pot-${idx}`, mixPot, (v) => { setMixPot(v); qSetAmount(idx, Math.round((mixZelf + v) * 100) / 100) })} />
-                      <button className={som > 0.005 && !potOver ? accentKleur.pulse : undefined} style={{ width: 54, height: 52, borderRadius: 13, fontSize: 25, fontWeight: 800, cursor: "pointer", flexShrink: 0,
+                        onFocus={() => setMixFocus("pot")}
+                        {...bedragVeld(`hub-pot-${idx}`, mixPot, (v) => { setMixFocus("pot"); setMixPot(v); qSetAmount(idx, Math.round((mixZelf + v) * 100) / 100) })} />
+                      <button className={som > 0.005 && !potOver ? vinkKleur.pulse : undefined} style={{ width: 54, height: 52, borderRadius: 13, fontSize: 25, fontWeight: 800, cursor: "pointer", flexShrink: 0,
                         background: som > 0.005 && !potOver ? "#fff" : "#e8e2d2",
-                        color: som > 0.005 && !potOver ? accentKleur.hoofd : "#b3a988",
-                        border: som > 0.005 && !potOver ? `2.5px solid ${accentKleur.hoofd}` : "none" }}
+                        color: som > 0.005 && !potOver ? vinkKleur.hoofd : "#b3a988",
+                        border: som > 0.005 && !potOver ? `2.5px solid ${vinkKleur.hoofd}` : "none" }}
                         onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (som > 0.005 && !potOver) confirmQuickPay() }}>✓</button>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 7 }}>
