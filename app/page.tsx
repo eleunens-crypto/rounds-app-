@@ -33,7 +33,7 @@ const T = {
       { iconen: ["💶"], label: "eerlijk\nverdeeld!" },
     ],
     start: "Starten",
-    pickFirst: "Kies eerst een mode",
+    pickFirst: "Kies Table of Party",
     pinOn: "Bewaren",
     pinOff: "Niet meer bewaren",
     maxPins: (n: number) => `Je kan maximaal ${n} groepen bewaren. Maak er eerst een los.`,
@@ -70,7 +70,7 @@ const T = {
       { iconen: ["💶"], label: "partagé\néquitablement !" },
     ],
     start: "Démarrer",
-    pickFirst: "Choisis d'abord un mode",
+    pickFirst: "Choisis Table ou Party",
     pinOn: "Enregistrer",
     pinOff: "Ne plus enregistrer",
     maxPins: (n: number) => `Tu peux garder ${n} groupes au maximum. Détaches-en un d'abord.`,
@@ -256,9 +256,14 @@ export default function Home() {
   // zonder dat er een extra kader bij hoeft.
   const cardState = (m: Mode): React.CSSProperties => ({
     opacity: pick === null || pick === m ? 1 : 0.45,
+    // Ruststand: een stevige witte rand op beide kaarten, zodat meteen leest dat ze
+    // tikbaar zijn. Bij het kiezen neemt de accentkleur het over (en dimt de buur) —
+    // vandaar wit hier, geen kleur: dat contrast is juist het signaal.
     border: pick === m
       ? `2px solid ${accent[m]}`
-      : `1px solid ${m === "party" ? "rgba(240,193,75,0.28)" : "rgba(91,159,214,0.28)"}`,
+      : pick === null
+        ? "1.5px solid rgba(255,255,255,0.4)"
+        : `1px solid ${m === "party" ? "rgba(240,193,75,0.28)" : "rgba(91,159,214,0.28)"}`,
     boxShadow: pick === m
       ? `0 18px 40px -18px ${m === "party" ? "rgba(240,193,75,0.45)" : "rgba(91,159,214,0.45)"}`
       : `0 12px 34px -18px ${m === "party" ? "rgba(240,193,75,0.25)" : "rgba(91,159,214,0.25)"}`,
@@ -385,7 +390,17 @@ export default function Home() {
             animation: pick === null ? "rundoKiesPuls 2s infinite" : "none",
             transition: "background .15s ease, color .15s ease, box-shadow .15s ease",
           }}>
-          {pick === null ? t.pickFirst : t.start}
+          {pick === null ? (
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9 }}>
+              {/* Emoji's kleuren niet mee, dus een getekend wit handje — zelfde
+                  lijnstijl als het bewaar-diskette-icoon. Het wipt omhoog, richting
+                  de twee kaarten waar de keuze valt. */}
+              <span style={{ display: "inline-flex", animation: "rundoKiesWip 1.2s infinite" }} aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M10 11V4.6a1.6 1.6 0 0 1 3.2 0V11" /><path d="M13.2 11.2c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6v.4c0-.8.7-1.5 1.5-1.5.9 0 1.6.7 1.6 1.6v2.6c0 3.7-2.4 6.7-6.2 6.7-3.2 0-4.6-1.5-6.3-4.4l-1.6-2.8a1.5 1.5 0 0 1 2.6-1.5l1.2 2V11" /></svg>
+              </span>
+              {t.pickFirst}
+            </span>
+          ) : t.start}
         </button>
 
         {/* Jouw open groepen, gesplitst per app — één tik en je zit erin. De Party-rij
@@ -483,6 +498,7 @@ export default function Home() {
 
       <style>{`
 @keyframes rundoKiesPuls{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,0.25)}50%{box-shadow:0 0 0 8px rgba(255,255,255,0)}}
+@keyframes rundoKiesWip{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
         * { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; background: #0e1119; }
         .rundo-card { transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease, opacity .15s ease; }
