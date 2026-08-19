@@ -37,6 +37,8 @@ const T = {
     pinOn: "Bewaren",
     pinOff: "Niet meer bewaren",
     maxPins: (n: number) => `Je kan maximaal ${n} groepen bewaren. Maak er eerst een los.`,
+    openChip: "🟡 open",
+    hiddenNote: (app: string) => `${app} verborgen`,
     footer: "Gratis · geen registratie · eerlijk splitten",
   },
   fr: {
@@ -67,6 +69,8 @@ const T = {
     pinOn: "Enregistrer",
     pinOff: "Ne plus enregistrer",
     maxPins: (n: number) => `Tu peux garder ${n} groupes au maximum. Détaches-en un d'abord.`,
+    openChip: "🟡 ouvert",
+    hiddenNote: (app: string) => `${app} masqué`,
     footer: "Gratuit · sans inscription · partage équitable",
   },
 }
@@ -296,7 +300,6 @@ export default function Home() {
             <div style={{ ...S.logoSub, color: "#3bbfc4", display: "flex", alignItems: "center", gap: 8 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/icon-table.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
-              <span>{t.tableSub}</span>
             </div>
             {flowRow("table", t.tableDesc, t.tableFlow)}
           </div>
@@ -319,7 +322,6 @@ export default function Home() {
             <div style={{ ...S.logoSub, color: "#f0a500", display: "flex", alignItems: "center", gap: 8 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/icon-party.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
-              <span>{t.partySub}</span>
             </div>
             {flowRow("party", t.partyDesc, t.partyFlow)}
           </div>
@@ -347,11 +349,11 @@ export default function Home() {
             zodra die bron gekoppeld is. */}
         {(groepen.length > 0 || tafels.length > 0) && (
           <div style={{ marginTop: 26 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: "#9aa2b8", letterSpacing: "0.05em", marginBottom: 9 }}>📂 {t.yourGroups}</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#9aa2b8", letterSpacing: "0.05em", marginBottom: 9 }}>📂 {t.yourGroups}{pick === "party" && tafels.length > 0 && <span style={{ fontWeight: 600, color: "#5d6478" }}> · {t.hiddenNote("Rundo Table")}</span>}{pick === "table" && groepen.length > 0 && <span style={{ fontWeight: 600, color: "#5d6478" }}> · {t.hiddenNote("Rundo Party")}</span>}</div>
             {melding && (
               <div style={{ fontSize: 12.5, fontWeight: 700, color: "#f2d9a0", background: "rgba(240,193,75,0.12)", border: "1px solid rgba(240,193,75,0.4)", borderRadius: 10, padding: "8px 11px", marginBottom: 8 }}>{melding}</div>
             )}
-            {groepen.length > 0 && (<>
+            {groepen.length > 0 && pick !== "table" && (<>
               <div style={{ fontSize: 12.5, fontWeight: 800, color: accent.party, marginBottom: 6 }}>🍻 Rundo Party</div>
               {groepen.map((g) => (
                 <div key={g.id} onClick={() => router.push(`/party?g=${g.id}`)}
@@ -364,13 +366,14 @@ export default function Home() {
                     <span style={{ display: "block", fontSize: 11, fontWeight: 800, color: "#d9c58a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.settle ? t.modeQr : t.modeZelf}</span>
                   </span>
                   {g.gast && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#d9c58a", background: "rgba(240,193,75,0.14)", borderRadius: 7, padding: "2px 7px" }}>{t.guestChip}</span>}
+                  {!g.af && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#f2d9a0", background: "rgba(240,193,75,0.14)", borderRadius: 7, padding: "2px 7px", whiteSpace: "nowrap" }}>{t.openChip}</span>}
                   {g.af && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#9fd6ae", background: "rgba(63,158,96,0.16)", borderRadius: 7, padding: "2px 7px", whiteSpace: "nowrap" }}>{t.closedChip}</span>}
                   {pinKnop(g)}
                   <span style={{ flexShrink: 0, color: accent.party, fontWeight: 800 }}>›</span>
                 </div>
               ))}
             </>)}
-            {tafels.length > 0 && (<>
+            {tafels.length > 0 && pick !== "party" && (<>
               <div style={{ fontSize: 12.5, fontWeight: 800, color: accent.table, margin: "10px 0 6px" }}>🧾 Rundo Table</div>
               {tafels.map((g) => (
                 <div key={g.id} onClick={() => { if (g.code) router.push(`/table?code=${g.code}`) }}
@@ -378,6 +381,7 @@ export default function Home() {
                   <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(91,159,214,0.14)" }}>🧾</span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: "#dfe7f2", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || "Rundo Table"}</span>
                   {g.gast && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#9cc6ec", background: "rgba(91,159,214,0.16)", borderRadius: 7, padding: "2px 7px" }}>{t.guestChip}</span>}
+                  {!g.af && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#9cc6ec", background: "rgba(91,159,214,0.16)", borderRadius: 7, padding: "2px 7px", whiteSpace: "nowrap" }}>{t.openChip}</span>}
                   {g.af && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#9fd6ae", background: "rgba(63,158,96,0.16)", borderRadius: 7, padding: "2px 7px", whiteSpace: "nowrap" }}>{t.closedChip}</span>}
                   {pinKnop(g)}
                   <span style={{ flexShrink: 0, color: accent.table, fontWeight: 800 }}>›</span>
