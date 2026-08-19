@@ -8181,9 +8181,7 @@ export default function PartyTest() {
           // kleuren mee. Het losse groene vinkje is daarmee overal weg.
           const accentKleur = payVia === "pot"
             ? { hoofd: "#2f6fb5", tekst: "#2f5693", pulse: "rundo-pulse-pot" }
-            : opNaam === true
-              ? { hoofd: "#3b486a", tekst: "#3b486a", pulse: "rundo-pulse-blauw" }
-              : { hoofd: "#e08a00", tekst: "#c88a1a", pulse: "rundo-pulse-amber" }
+            : { hoofd: "#e08a00", tekst: "#c88a1a", pulse: "rundo-pulse-amber" }
           return (
           <>
             {/* Kop met het rondje-nummer: bij rondje 2, 3, … is meteen duidelijk waar je mee
@@ -8285,7 +8283,7 @@ export default function PartyTest() {
                   pot. De pot is blauw — overal, geen groen meer. */}
               <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
                 <button style={{ flex: 1, padding: "10px 6px", fontSize: 14.5, fontWeight: 800, borderRadius: 10, cursor: "pointer",
-                  background: payVia !== "pot" ? (opNaam === true ? "linear-gradient(135deg,#5a6a94,#3b486a)" : AAN) : "#f7f1e2",
+                  background: payVia !== "pot" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f7f1e2",
                   color: payVia !== "pot" ? "#fff" : "#8a7d55", border: "none" }}
                   onClick={() => {
                     const r0 = rounds[idx]
@@ -8336,8 +8334,8 @@ export default function PartyTest() {
               {payVia === "mix" && (() => {
                 const som = Math.round((mixZelf + mixPot) * 100) / 100
                 const potOver = mixPot > potAvail + 0.005
-                const zelfKleur = opNaam === true ? "#3b486a" : "#c88a1a"
-                const zelfRand = opNaam === true ? "#3b486a" : "#e08a00"
+                const zelfKleur = "#c88a1a"
+                const zelfRand = "#e08a00"
                 // Beide velden gevuld = het tweekleurige vinkje: rand en ✓ in de
                 // zelf-kleur, de pulsgloed potblauw — "de pot doet mee". Eén bron
                 // gevuld = gewoon die ene kleur (via het veld dat je laatst aanraakte).
@@ -8345,7 +8343,7 @@ export default function PartyTest() {
                   ? { hoofd: zelfRand, pulse: "rundo-pulse-pot" }
                   : mixFocus === "pot"
                     ? { hoofd: "#2f6fb5", pulse: "rundo-pulse-pot" }
-                    : { hoofd: zelfRand, pulse: opNaam === true ? "rundo-pulse-blauw" : "rundo-pulse-amber" }
+                    : { hoofd: zelfRand, pulse: "rundo-pulse-amber" }
                 return (
                   <>
                     <div style={{ ...S.row, gap: 7, marginBottom: 7 }}>
@@ -9168,7 +9166,7 @@ export default function PartyTest() {
                                 if (c.bron === "mix") return { ...c, bron: "self", amount: Math.max(0, Math.round((c.amount - Math.min(c.potAmt, c.amount)) * 100) / 100), potAmt: 0 }
                                 return c
                               }) }}
-                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 13.5, fontWeight: 800, border: "none", cursor: "pointer", background: dr.bron !== "pot" ? AAN : "#f7f1e2", color: dr.bron !== "pot" ? "#fff" : "#8a7d55" }}>💶 {L.paidSelf}</button>
+                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 13.5, fontWeight: 800, border: "none", cursor: "pointer", background: dr.bron !== "pot" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f7f1e2", color: dr.bron !== "pot" ? "#fff" : "#8a7d55" }}>💶 {L.paidSelf}</button>
                             <button onClick={(e) => { e.stopPropagation(); if (potLeeg) return; setEditDraft((c) => {
                                 if (!c) return c
                                 if (c.bron === "self") return { ...c, bron: "mix", potAmt: 0 }
