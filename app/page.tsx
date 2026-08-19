@@ -372,13 +372,17 @@ export default function Home() {
         <button
           onClick={() => { if (pick) router.push(pick === "table" ? "/table" : "/party") }}
           disabled={pick === null}
+          // Zolang er niets gekozen is: witte tekst met een zachte witte puls — de balk
+          // is nu een uitnodiging in plaats van een gedimde knop die je makkelijk mist.
           style={{
-            width: "100%", marginTop: 4, padding: "17px 18px", borderRadius: 16, border: "none",
+            width: "100%", marginTop: 4, padding: "17px 18px", borderRadius: 16,
+            border: pick === null ? "1px solid rgba(255,255,255,0.25)" : "none",
             fontSize: 19, fontWeight: 800, fontFamily: "inherit",
             cursor: pick === null ? "default" : "pointer",
-            background: pick === null ? "rgba(255,255,255,0.07)" : accent[pick],
-            color: pick === null ? "#7e879c" : "#131826",
+            background: pick === null ? "rgba(255,255,255,0.09)" : accent[pick],
+            color: pick === null ? "#fff" : "#131826",
             boxShadow: pick === null ? "none" : `0 14px 30px -14px ${accent[pick]}`,
+            animation: pick === null ? "rundoKiesPuls 2s infinite" : "none",
             transition: "background .15s ease, color .15s ease, box-shadow .15s ease",
           }}>
           {pick === null ? t.pickFirst : t.start}
@@ -478,6 +482,7 @@ export default function Home() {
       </div>
 
       <style>{`
+@keyframes rundoKiesPuls{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,0.25)}50%{box-shadow:0 0 0 8px rgba(255,255,255,0)}}
         * { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; background: #0e1119; }
         .rundo-card { transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease, opacity .15s ease; }
