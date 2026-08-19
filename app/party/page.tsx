@@ -1044,6 +1044,9 @@ const T = {
     paidSelf: "Zelf betaald",
     paidPot: "Uit de pot",
     whoPaidWhat: "wie betaalde wat",
+    totalPaidShort: "Totaal betaald",
+    potShare: "waarvan uit de pot",
+    potShareAll: "volledig uit de pot",
     inRounds: (t: string) => `rondje ${t}`,
     mixSamen: (b: string) => `samen ${b}`,
     mixPotAvail: (b: string) => `${b} beschikbaar`,
@@ -1747,6 +1750,9 @@ const T = {
     finishRoundFirst: "Cl\u00f4ture d\u2019abord cette tourn\u00e9e — indique le montant ou appuie sur Passer.",
     paidSelf: "Pay\u00e9 soi-m\u00eame",
     whoPaidWhat: "qui a pay\u00e9 quoi",
+    totalPaidShort: "Total pay\u00e9",
+    potShare: "dont du pot",
+    potShareAll: "enti\u00e8rement du pot",
     inRounds: (t: string) => `tourn\u00e9e ${t}`,
     mixSamen: (b: string) => `ensemble ${b}`,
     mixPotAvail: (b: string) => `${b} disponible`,
@@ -6019,15 +6025,15 @@ export default function PartyTest() {
           </div>
         )}
       </div>
-      {/* Uitgebreid opnemen: de groepsnaam als zwevend naamplaatje tussen de kopregel
-          en de navigatieknoppen, met de pot-geldzak rechts op dezelfde hoogte — één vaste
-          plek op elk scherm. Het plaatje blijft optisch gecentreerd; 55% breedte houdt
-          lange namen van de geldzak weg. */}
+      {/* Uitgebreid opnemen: de groepsnaam als naamplaatje tussen de kopregel en de
+          navigatieknoppen, links uitgelijnd; de pot-geldzak houdt vast zijn plek rechts.
+          Gecentreerd botsten de twee bij lange namen — nu krimpt de naam netjes met …
+          en raken ze elkaar nooit. */}
       {uitgebreidLook && !!groupId && !kaal && (
-        <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", margin: "10px 0", minHeight: 38 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "10px 0", minHeight: 38 }}>
           {groupName.trim() && !editName && (
             <span onClick={() => { if (!onboarding) setEditName(true) }}
-              style={{ maxWidth: "62%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", cursor: onboarding ? "default" : "pointer", background: "#fff", border: "1.5px solid rgba(240,165,0,0.55)", borderRadius: 18, padding: "7px 16px", fontSize: 15, fontWeight: 800, color: "#4a3f1e", boxShadow: "0 2px 5px rgba(90,64,10,0.12)" }}>
+              style={{ flex: "0 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onboarding ? "default" : "pointer", background: "#fff", border: "1.5px solid rgba(240,165,0,0.55)", borderRadius: 18, padding: "7px 16px", fontSize: 15, fontWeight: 800, color: "#4a3f1e", boxShadow: "0 2px 5px rgba(90,64,10,0.12)" }}>
               {isAutoNaam(groupName) ? (
                 /* Niet alleen de uitnodiging, ook wat de naam nú is — anders weet je
                    niet onder welke naam de groep straks in je lijst staat. */
@@ -6035,7 +6041,7 @@ export default function PartyTest() {
               ) : (<>{groupName.trim()}{!onboarding && <span style={{ fontSize: 12 }}> ✏️</span>}</>)}
             </span>
           )}
-          <span style={{ position: "absolute", right: 0 }}>{potKnopje()}</span>
+          <span style={{ marginLeft: "auto", flexShrink: 0 }}>{potKnopje()}</span>
         </div>
       )}
       {/* De pot als brede balk onder de kop, zolang er nog niets in zit. Hij stond als
@@ -9140,31 +9146,39 @@ export default function PartyTest() {
                           )}
                         </>
                       ) : (
-                        <div style={{ ...S.row, justifyContent: "space-between" }}>
-                          <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>🫙 {L.paidWithQ}</span>
-                          {opNaam === true && !uitPot && geenBedrag ? (
-                            <span onClick={(e) => { e.stopPropagation(); startEditRound(r) }}
-                              style={{ fontSize: 15.5, fontWeight: 800, color: "#b0402f", textDecoration: "underline", cursor: "pointer" }}>{L.addPaymentBang}</span>
-                          ) : (
-                          <span style={{ fontSize: 15.5, fontWeight: 800, color: uitPot ? "#2f6fb5" : "#8a7d55" }}>{uitPot ? L.paidFromPot(euro(r.potPart || 0)) : L.paidSelf}</span>
+                        <>
+                          {/* Eerst het totaal, pas daaronder de bron: twee regels met
+                              allebei "betaald" erin lazen als twee bedragen. */}
+                          <div style={{ ...S.row, justifyContent: "space-between" }}>
+                            <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>💶 {L.totalPaidShort}</span>
+                            {opNaam === true && !uitPot && geenBedrag ? (
+                              <span onClick={(e) => { e.stopPropagation(); startEditRound(r) }}
+                                style={{ fontSize: 15.5, fontWeight: 800, color: "#b0402f", textDecoration: "underline", cursor: "pointer" }}>{L.addPaymentBang}</span>
+                            ) : (
+                              <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "—"}</span>
+                            )}
+                          </div>
+                          {uitPot && (
+                            <div style={{ ...S.row, justifyContent: "space-between", marginTop: 3, paddingLeft: 14 }}>
+                              <span style={{ fontSize: 13.5, fontWeight: 700, color: "#2f5693" }}>🫙 {(r.potPart || 0) >= (r.amount || 0) - 0.005 ? L.potShareAll : L.potShare}</span>
+                              <span style={{ fontSize: 14.5, fontWeight: 800, color: "#2f6fb5" }}>{euro(r.potPart || 0)}</span>
+                            </div>
                           )}
-                        </div>
+                        </>
                       )}
                     </div>
 
-                    <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
-                      <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>💶 {L.paidLabel}</span>
-                      {bewerk && dr ? (
+                    {bewerk && dr && (
+                      <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55" }}>💶 {L.paidLabel}</span>
                         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>€</span>
                           <input onClick={(e) => e.stopPropagation()} type="text" inputMode="decimal" placeholder="0,00"
                             {...bedragVeld(`edit-${r.id}`, dr.amount, (v) => setEditDraft((c) => c ? { ...c, amount: v } : c))}
                             style={{ ...S.input, width: 92, padding: "8px 10px", fontSize: 16, fontWeight: 800, color: "#c88a1a", textAlign: "right" }} />
                         </span>
-                      ) : (
-                        <span style={{ fontSize: 17, fontWeight: 800, color: "#c98a00" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "—"}</span>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
                     {bewerk && (
                       <div style={{ marginTop: 14 }}>
