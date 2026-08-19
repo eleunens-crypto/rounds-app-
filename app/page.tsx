@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useLang, LanguageToggle } from "@/lib/i18n"
 import { supabase } from "@/lib/supabase"
@@ -39,6 +39,11 @@ const T = {
     maxPins: (n: number) => `Je kan maximaal ${n} groepen bewaren. Maak er eerst een los.`,
     openChip: "🟡 open",
     hiddenNote: (app: string) => `${app} verborgen`,
+    wipeAll: "🗑 alles wissen",
+    wipeTitle: (n: number, app: string) => `${n} ${app}-groep${n === 1 ? "" : "en"} uit jouw lijst wissen?`,
+    wipeNote: "Ook de bewaarde. De groepen zelf blijven bestaan — wie de code of link heeft kan er nog in.",
+    wipeDo: "🗑 wissen",
+    cancelWord: "annuleer",
     footer: "Gratis · geen registratie · eerlijk splitten",
   },
   fr: {
@@ -71,6 +76,11 @@ const T = {
     maxPins: (n: number) => `Tu peux garder ${n} groupes au maximum. Détaches-en un d'abord.`,
     openChip: "🟡 ouvert",
     hiddenNote: (app: string) => `${app} masqué`,
+    wipeAll: "🗑 tout effacer",
+    wipeTitle: (n: number, app: string) => `Effacer ${n} groupe${n === 1 ? "" : "s"} ${app} de ta liste ?`,
+    wipeNote: "Aussi les enregistrés. Les groupes existent encore — le code ou le lien fonctionne toujours.",
+    wipeDo: "🗑 effacer",
+    cancelWord: "annuler",
     footer: "Gratuit · sans inscription · partage équitable",
   },
 }
@@ -114,6 +124,19 @@ export default function Home() {
   // het inkorten, want het plafond geldt voor alles, niet enkel wat hier zichtbaar is.
   const [pinTotaal, setPinTotaal] = useState<{ party: number; table: number }>({ party: 0, table: 0 })
   const [melding, setMelding] = useState<string | null>(null)
+  // Beide lijsten starten dichtgeklapt; elk kopje klapt apart open. Kies je bovenaan
+  // een app, dan klapt die lijst vanzelf mee open (zie het effect verderop).
+  const [klap, setKlap] = useState<{ party: boolean; table: boolean }>({ party: false, table: false })
+  // Wisbevestiging: welke app staat op het punt gewist te worden?
+  const [wisVraag, setWisVraag] = useState<null | "party" | "table">(null)
+  // Wissen = verbergen op dít toestel: de groep zelf blijft in de databank bestaan.
+  // De verborgen id's staan in localStorage; de laadroutine filtert ze eruit. Hier
+  // houden we ook de vólledige id-lijsten bij, want de zichtbare lijst is ingekort.
+  const alleIds = useRef<{ party: string[]; table: string[] }>({ party: [], table: [] })
+  const gewisteIds = (app: "party" | "table"): Set<string> => {
+    try { const raw = localStorage.getItem(`rundo_chooser_gewist_${app}`); if (raw) return new Set(JSON.parse(raw)) } catch { /* niets */ }
+    return new Set()
+  }
   useEffect(() => {
     if (typeof window === "undefined") return
     ;(async () => {
@@ -140,7 +163,9 @@ export default function Home() {
         }
         // Open groepen eerst — daar wil je naartoe. Afgesloten avonden blijven
         // raadpleegbaar (afrekening delen, terugkijken) en volgen gedimd eronder.
-        const alles = [...map.values()].sort((a, b) => b.last.localeCompare(a.last))
+        const weg = gewisteIds("party")
+        const alles = [...map.values()].filter((g) => !weg.has(g.id)).sort((a, b) => b.last.localeCompare(a.last))
+        alleIds.current.party = alles.map((g) => g.id)
         // Binnen de afgesloten groepen komen de bewaarde eerst: dat zijn de blijvers.
         const lijst = [...alles.filter((g) => !g.af).slice(0, 4), ...alles.filter((g) => g.af).sort((a, b) => (b.pin ? 1 : 0) - (a.pin ? 1 : 0)).slice(0, 3)]
         setGroepen(lijst)
@@ -166,7 +191,9 @@ export default function Home() {
             tafelMap.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", gast: true, af: !!g.finalized, pin: !!g.pinned, last: (g.created_at as string) || "", app: "table", code: (g.invite_code as string) || "" })
           }
         }
-        const allesT = [...tafelMap.values()].sort((a, b) => b.last.localeCompare(a.last))
+        const wegT = gewisteIds("table")
+        const allesT = [...tafelMap.values()].filter((g) => !wegT.has(g.id)).sort((a, b) => b.last.localeCompare(a.last))
+        alleIds.current.table = allesT.map((g) => g.id)
         const tafelLijst = [...allesT.filter((g) => !g.af).slice(0, 4), ...allesT.filter((g) => g.af).sort((a, b) => (b.pin ? 1 : 0) - (a.pin ? 1 : 0)).slice(0, 3)]
         setTafels(tafelLijst)
         setPinTotaal((v) => ({ ...v, table: allesT.filter((g) => !g.gast && g.pin).length }))
@@ -185,6 +212,16 @@ export default function Home() {
 
   // Accentkleur per modus — dezelfde die de kaart al gebruikt.
   const accent = { table: "#5b9fd6", party: "#f0c14b" }
+  useEffect(() => { if (pick) setKlap((k) => ({ ...k, [pick]: true })) }, [pick])
+  const wisAlles = (app: "party" | "table") => {
+    const weg = gewisteIds(app)
+    alleIds.current[app].forEach((id) => weg.add(id))
+    try { localStorage.setItem(`rundo_chooser_gewist_${app}`, JSON.stringify([...weg])) } catch { /* niets */ }
+    alleIds.current[app] = []
+    if (app === "party") setGroepen([]); else setTafels([])
+    setPinTotaal((v) => ({ ...v, [app]: 0 }))
+    setWisVraag(null)
+  }
 
   // Bewaren of losmaken zonder eerst de app in te moeten. Zelfde regels als daar:
   // enkel eigen groepen, maximaal drie per app. De melding verdwijnt vanzelf weer.
@@ -357,8 +394,13 @@ export default function Home() {
               <div style={{ fontSize: 12.5, fontWeight: 700, color: "#f2d9a0", background: "rgba(240,193,75,0.12)", border: "1px solid rgba(240,193,75,0.4)", borderRadius: 10, padding: "8px 11px", marginBottom: 8 }}>{melding}</div>
             )}
             {groepen.length > 0 && pick !== "table" && (<>
-              <div style={{ fontSize: 12.5, fontWeight: 800, color: accent.party, marginBottom: 6 }}>🍻 Rundo Party</div>
-              {groepen.map((g) => (
+              <div onClick={() => { setKlap((k) => ({ ...k, party: !k.party })); setWisVraag(null) }}
+                style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(240,193,75,0.3)", borderRadius: 12, padding: "11px 12px", marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: accent.party }}>🍻 Rundo Party</span>
+                <span style={{ fontSize: 10.5, fontWeight: 800, color: "#d9c58a", background: "rgba(240,193,75,0.14)", borderRadius: 8, padding: "2px 8px" }}>{groepen.length}</span>
+                <span style={{ marginLeft: "auto", color: accent.party, fontWeight: 800 }}>{klap.party ? "▾" : "▸"}</span>
+              </div>
+              {klap.party && groepen.map((g) => (
                 <div key={g.id} onClick={() => router.push(`/party?g=${g.id}`)}
                   style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: g.pin ? "1px solid rgba(240,193,75,0.55)" : "1px solid rgba(240,193,75,0.3)", borderRadius: 12, padding: "10px 12px", marginBottom: 6, opacity: g.af && !g.pin ? 0.6 : 1 }}>
                   <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(240,193,75,0.12)" }}>{g.settle ? "📱" : "✍️"}</span>
@@ -375,10 +417,29 @@ export default function Home() {
                   <span style={{ flexShrink: 0, color: accent.party, fontWeight: 800 }}>›</span>
                 </div>
               ))}
+              {klap.party && (wisVraag === "party" ? (
+                <div style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "10px 12px", margin: "2px 0 10px" }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#f0a89e", marginBottom: 6 }}>{t.wipeTitle(alleIds.current.party.length, "Party")}</div>
+                  <div style={{ fontSize: 11.5, color: "#c9a9a3", lineHeight: 1.45, marginBottom: 8 }}>{t.wipeNote}</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => setWisVraag(null)} style={{ flex: 1, background: "transparent", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 9, padding: "8px 4px", fontSize: 12.5, fontWeight: 800, color: "#e8e4d8", cursor: "pointer" }}>{t.cancelWord}</button>
+                    <button onClick={() => wisAlles("party")} style={{ flex: 1, background: "#c0554a", border: "none", borderRadius: 9, padding: "8px 4px", fontSize: 12.5, fontWeight: 800, color: "#fff", cursor: "pointer" }}>{t.wipeDo}</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ textAlign: "right", margin: "0 2px 10px" }}>
+                  <span onClick={() => setWisVraag("party")} style={{ fontSize: 11.5, fontWeight: 800, color: "#e0857a", cursor: "pointer" }}>{t.wipeAll}</span>
+                </div>
+              ))}
             </>)}
             {tafels.length > 0 && pick !== "party" && (<>
-              <div style={{ fontSize: 12.5, fontWeight: 800, color: accent.table, margin: "10px 0 6px" }}>🧾 Rundo Table</div>
-              {tafels.map((g) => (
+              <div onClick={() => { setKlap((k) => ({ ...k, table: !k.table })); setWisVraag(null) }}
+                style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(91,159,214,0.35)", borderRadius: 12, padding: "11px 12px", marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: accent.table }}>🧾 Rundo Table</span>
+                <span style={{ fontSize: 10.5, fontWeight: 800, color: "#9cc6ec", background: "rgba(91,159,214,0.16)", borderRadius: 8, padding: "2px 8px" }}>{tafels.length}</span>
+                <span style={{ marginLeft: "auto", color: accent.table, fontWeight: 800 }}>{klap.table ? "▾" : "▸"}</span>
+              </div>
+              {klap.table && tafels.map((g) => (
                 <div key={g.id} onClick={() => { if (g.code) router.push(`/table?code=${g.code}`) }}
                   style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: g.pin ? "1px solid rgba(91,159,214,0.6)" : "1px solid rgba(91,159,214,0.35)", borderRadius: 12, padding: "10px 12px", marginBottom: 6, opacity: g.af && !g.pin ? 0.6 : 1 }}>
                   <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(91,159,214,0.14)" }}>🧾</span>
@@ -388,6 +449,20 @@ export default function Home() {
                   {g.af && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#9fd6ae", background: "rgba(63,158,96,0.16)", borderRadius: 7, padding: "2px 7px", whiteSpace: "nowrap" }}>{t.closedChip}</span>}
                   {pinKnop(g)}
                   <span style={{ flexShrink: 0, color: accent.table, fontWeight: 800 }}>›</span>
+                </div>
+              ))}
+              {klap.table && (wisVraag === "table" ? (
+                <div style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "10px 12px", margin: "2px 0 10px" }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#f0a89e", marginBottom: 6 }}>{t.wipeTitle(alleIds.current.table.length, "Table")}</div>
+                  <div style={{ fontSize: 11.5, color: "#c9a9a3", lineHeight: 1.45, marginBottom: 8 }}>{t.wipeNote}</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => setWisVraag(null)} style={{ flex: 1, background: "transparent", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 9, padding: "8px 4px", fontSize: 12.5, fontWeight: 800, color: "#e8e4d8", cursor: "pointer" }}>{t.cancelWord}</button>
+                    <button onClick={() => wisAlles("table")} style={{ flex: 1, background: "#c0554a", border: "none", borderRadius: 9, padding: "8px 4px", fontSize: 12.5, fontWeight: 800, color: "#fff", cursor: "pointer" }}>{t.wipeDo}</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ textAlign: "right", margin: "0 2px 10px" }}>
+                  <span onClick={() => setWisVraag("table")} style={{ fontSize: 11.5, fontWeight: 800, color: "#e0857a", cursor: "pointer" }}>{t.wipeAll}</span>
                 </div>
               ))}
             </>)}
