@@ -2195,7 +2195,9 @@ export default function RundoTable() {
       const { data, error } = await supabase.from("table_groups").select("*").eq("id", id).single()
       if (error || !data) { setStartError(L.errGroupGone); removeMyGroup(id); void laadMijnGroepen(); rememberLastGroup(null); return }
       saveMyGroup(data, data.owner_id === getOrCreateOwnerId() ? "admin" : "gast"); void laadMijnGroepen(); rememberLastGroup(data.id)
-      setGroup(data); setMeId(getMeId(data.id)); await loadAll(data.id); setAdminTab(tab)
+      // Een afgesloten rekening open je om het resultaat te zien: meteen het
+      // verdeeloverzicht in plaats van het scan-tabblad.
+      setGroup(data); setMeId(getMeId(data.id)); await loadAll(data.id); setAdminTab(data.finalized ? "overview" : tab)
     } finally { setBusy(false) }
   }
 
