@@ -1007,7 +1007,7 @@ const T = {
     roundCostFor: (n: number) => `Hoeveel betaald voor rondje ${n}?`,
     withHowManyQ: "Met hoeveel personen was dit rondje?",
     orderedLabel: "Besteld",
-    barlistBtn: "handige barlijst",
+    barlistBtn: "handig barlijstje",
     potClamped: (b: string) => `De pot kon maar ${b} dekken — de rest van het rondje telt als zelf betaald.`,
     thanksClosed: "🍻 Bedankt en tot de volgende! Je avond blijft bewaard bij Opgeslagen groepen.",
     cancelledBy: (naam: string) => `✕ ${naam} annuleerde het rondje.`,
@@ -8166,11 +8166,12 @@ export default function PartyTest() {
                     twee links samen naar een tweede regel, rechts uitgelijnd. */}
                 <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "baseline", columnGap: 8, rowGap: 3, marginBottom: 9, paddingBottom: 9, borderBottom: "1px solid rgba(120,95,20,0.1)" }}>
                   <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 14, fontWeight: 800, color: "#8a7d55" }}>📋 {L.orderedLabel} <span style={{ fontWeight: 600, color: "#b3a988" }}>— {L.drinksCount(lijst.reduce((a, x) => a + x.n, 0))}</span></span>
-                  {/* De hele avond in één oogopslag: het zoomknopje opent de
-                      schermvullende barlijst. Alleen het icoon — de titelregel blijft
-                      zo op één lijn, hoe smal het scherm ook is. */}
-                  <span onClick={() => setShowBarlijst(true)} title={L.barlistBtn} aria-label={L.barlistBtn}
-                    style={{ marginLeft: "auto", flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34, height: 30, borderRadius: 9, border: "1px solid rgba(120,95,20,0.3)", background: "#fff", color: "#8a5e0f", fontSize: 15, cursor: "pointer" }}>🔍</span>
+                  {/* De hele avond in één oogopslag: label plus zoomknopje openen samen
+                      de schermvullende barlijst — het woordje ervoor zegt wat je krijgt. */}
+                  <span onClick={() => setShowBarlijst(true)} style={{ marginLeft: "auto", flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7, cursor: "pointer" }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: themaNaam ? "#5a6a94" : "#c98a00", whiteSpace: "nowrap" }}>{L.barlistBtn}</span>
+                    <span aria-label={L.barlistBtn} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34, height: 30, borderRadius: 9, border: `1px solid ${themaNaam ? "rgba(90,106,148,0.45)" : "rgba(120,95,20,0.3)"}`, background: "#fff", color: themaNaam ? "#3b486a" : "#8a5e0f", fontSize: 15 }}>🔍</span>
+                  </span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                   {lijst.map(({ d, n }) => (
