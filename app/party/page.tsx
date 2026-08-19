@@ -8299,9 +8299,14 @@ export default function PartyTest() {
                 const potOver = mixPot > potAvail + 0.005
                 const zelfKleur = opNaam === true ? "#3b486a" : "#c88a1a"
                 const zelfRand = opNaam === true ? "#3b486a" : "#e08a00"
-                const vinkKleur = mixFocus === "pot"
-                  ? { hoofd: "#2f6fb5", pulse: "rundo-pulse-pot" }
-                  : { hoofd: zelfRand, pulse: opNaam === true ? "rundo-pulse-blauw" : "rundo-pulse-amber" }
+                // Beide velden gevuld = het tweekleurige vinkje: rand en ✓ in de
+                // zelf-kleur, de pulsgloed potblauw — "de pot doet mee". Eén bron
+                // gevuld = gewoon die ene kleur (via het veld dat je laatst aanraakte).
+                const vinkKleur = mixZelf > 0.005 && mixPot > 0.005
+                  ? { hoofd: zelfRand, pulse: "rundo-pulse-pot" }
+                  : mixFocus === "pot"
+                    ? { hoofd: "#2f6fb5", pulse: "rundo-pulse-pot" }
+                    : { hoofd: zelfRand, pulse: opNaam === true ? "rundo-pulse-blauw" : "rundo-pulse-amber" }
                 return (
                   <>
                     <div style={{ ...S.row, gap: 7, marginBottom: 7 }}>
