@@ -1005,6 +1005,8 @@ const T = {
     removeWord: "Weghalen",
     barHandOut: "Uitdelen",
     roundCostFor: (n: number) => `Hoeveel betaald voor rondje ${n}?`,
+    paidForRoundQ: (n: number) => `Betaald voor rondje ${n}?`,
+    potTopUpPlus: "+ pot aanvullen",
     withHowManyQ: "Met hoeveel personen was dit rondje?",
     orderedLabel: "Besteld",
     barlistBtn: "handig barlijstje",
@@ -1715,6 +1717,8 @@ const T = {
     removeWord: "Retirer",
     barHandOut: "Distribuer",
     roundCostFor: (n: number) => `Combien pay\u00e9 pour la tourn\u00e9e ${n} ?`,
+    paidForRoundQ: (n: number) => `Pay\u00e9 pour la tourn\u00e9e ${n} ?`,
+    potTopUpPlus: "+ remplir le pot",
     withHowManyQ: "\u00c0 combien \u00e9tiez-vous pour cette tourn\u00e9e ?",
     orderedLabel: "Command\u00e9",
     barlistBtn: "liste bar pratique",
@@ -2700,6 +2704,20 @@ export default function PartyTest() {
   const mijnKeuze = meId ? drinks.reduce((a, d) => a + (cart[d.id]?.[meId] ?? 0), 0) : 0
   // Zodra er weer een rondje loopt, is het vorige haal-lijstje geschiedenis.
   useEffect(() => { if (openRoundId) setHaalInfo(null) }, [openRoundId])
+  // Nieuw rondje wacht op betaling en er zit geld in de pot? Start meteen met beide
+  // velden open — anders stond "Zelf betaald" alvast aan terwijl de pot klaarligt,
+  // en was combineren altijd een extra tik.
+  const laatsteRondeId = rounds.length > 0 ? rounds[rounds.length - 1].id : null
+  useEffect(() => {
+    if (!laatsteRondeId) return
+    const i = rounds.length - 1
+    const r0 = rounds[i]
+    if ((r0?.amount || 0) > 0.005 || (r0?.potPart || 0) > 0.005) return
+    if (payVia !== "self") return
+    if (Math.max(0, potAvailFor(i)) <= 0.005) return
+    setMixZelf(0); setMixPot(0); setMixFocus("zelf"); setPayVia("mix")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [laatsteRondeId, potContribTotal])
   useEffect(() => {
     if (showPot || potVulIntent.current === null) return
     const i = potVulIntent.current
@@ -8252,9 +8270,10 @@ export default function PartyTest() {
                   een verandering meteen opvalt in plaats van pas bij het afrekenen. */}
               {/* Bij uitgebreid opnemen liggen de gasten vast — dan is deze vraag zinloos
                   en staat het aantal automatisch juist. Enkel tonen bij snel opnemen. */}
-              {opNaam !== true && (<>
-              <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 6 }}>{L.withHowManyQ}</div>
-              <div style={{ ...S.row, justifyContent: "space-between", background: "#faf4e4", borderRadius: 10, padding: "8px 12px", marginBottom: 13 }}>
+              {opNaam !== true && (
+              <div style={{ background: VLAK1, border: `1px solid ${themaNaam ? "rgba(59,72,106,0.16)" : "rgba(120,95,20,0.14)"}`, borderRadius: 12, padding: 11, marginBottom: 10 }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 9, paddingBottom: 8, borderBottom: `1px solid ${themaNaam ? "rgba(59,72,106,0.14)" : "rgba(120,95,20,0.12)"}` }}>👥 {L.withHowManyQ}</div>
+              <div style={{ ...S.row, justifyContent: "space-between", background: "#fff", borderRadius: 10, padding: "8px 12px" }}>
                 <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a5e0f" }}>👤 {r?.headcount || 1} {L.people}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <button style={{ width: 30, height: 30, borderRadius: 8, background: "#fff", border: "1px solid rgba(120,95,20,0.25)", fontSize: 16, color: "#8a7d55", fontWeight: 800, cursor: "pointer", opacity: (r?.headcount || 1) > 1 ? 1 : 0.4 }}
@@ -8263,21 +8282,17 @@ export default function PartyTest() {
                     onClick={() => r && setRoundHeadcount(r.id, (r.headcount || 1) + 1)}>+</button>
                 </div>
               </div>
-              </>)}
-
-              {/* Staat vlak boven de knop "uit de pot", rechts uitgelijnd zodat de link
-                  duidelijk bij die knop hoort. */}
-              {/* Bron: zelf betaald of uit de pot. */}
-              <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 8 }}>{L.roundCostFor(idx + 1)}</div>
-              {/* Vlak boven de knop "uit de pot", zodat de link er zichtbaar bij hoort. */}
-              {(payVia === "pot" || potContribTotal > 0.005) && (
-                <div style={{ display: "flex", marginBottom: 7 }}>
-                  <span style={{ flex: 1 }} />
-                  <span style={{ flex: 1, textAlign: "center" }}>
-                    <span onClick={() => setShowPot(true)} style={{ display: "inline-block", fontSize: 13, fontWeight: 800, color: "#2f6fb5", cursor: "pointer", textDecoration: "underline", lineHeight: 1.2 }}>{L.addToPot}</span>
-                  </span>
-                </div>
+              </div>
               )}
+
+              {/* Eén paneel voor de hele betaalvraag: kopbalk met het "+ pot aanvullen"-
+                  linkje erin, knoppen, velden en overslaan er samen onder — zelfde stijl
+                  als het personenpaneel erboven, zodat het blok als één ding leest. */}
+              <div style={{ background: VLAK1, border: `1px solid ${themaNaam ? "rgba(59,72,106,0.16)" : "rgba(120,95,20,0.14)"}`, borderRadius: 12, padding: 11 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 9, paddingBottom: 8, borderBottom: `1px solid ${themaNaam ? "rgba(59,72,106,0.14)" : "rgba(120,95,20,0.12)"}` }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>💶 {L.paidForRoundQ(idx + 1)}</span>
+                <span onClick={() => setShowPot(true)} style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#2f6fb5", cursor: "pointer", textDecoration: "underline", lineHeight: 1.2 }}>{L.potTopUpPlus}</span>
+              </div>
               {/* Twee schakelaars in plaats van een of-of-keuze: elk met een eigen veld in
                   zijn eigen kleur eronder. Allebei aan = het rondje deels zelf, deels uit de
                   pot. De pot is blauw — overal, geen groen meer. */}
@@ -8401,6 +8416,7 @@ export default function PartyTest() {
                   </div>
                 )
               )}
+              </div>
             </div>
           </>
           )
