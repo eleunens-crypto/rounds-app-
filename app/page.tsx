@@ -323,7 +323,7 @@ export default function Home() {
         <div style={{ textAlign: "center", marginTop: 4, marginBottom: 30 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/rundo-logo.png" alt="Rundo" style={{ display: "block", height: 64, width: "auto", maxWidth: "90%", objectFit: "contain", margin: "0 auto 8px" }} />
-          <p style={{ color: "#f2e3a8", fontSize: 15, fontWeight: 600, margin: 0 }}>
+          <p style={{ color: "#f0c14b", fontSize: 15, fontWeight: 600, margin: 0 }}>
             {t.tagline}
           </p>
         </div>
@@ -349,6 +349,15 @@ export default function Home() {
           </div>
         </div>
 
+        {/* De keuzehint als "of"-lijn precies tussen de twee kaarten; na een keuze
+            verdwijnt hij en licht de startknop onderaan op. */}
+        {pick === null && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "2px 0" }}>
+            <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.18)" }} />
+            <span style={{ fontSize: 13.5, fontWeight: 800, color: "rgba(255,255,255,0.9)", whiteSpace: "nowrap" }}>{t.pickFirst}</span>
+            <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.18)" }} />
+          </div>
+        )}
         {/* PARTY-kaart — warm geel */}
         <div onClick={() => setPick("party")} style={{ ...S.modeCard, ...S.partyCard, ...cardState("party") }} className="rundo-card rundo-card-party">
           {vinkje("party")}
@@ -377,30 +386,20 @@ export default function Home() {
         <button
           onClick={() => { if (pick) router.push(pick === "table" ? "/table" : "/party") }}
           disabled={pick === null}
-          // Zolang er niets gekozen is: witte tekst met een zachte witte puls — de balk
-          // is nu een uitnodiging in plaats van een gedimde knop die je makkelijk mist.
+          // De keuzehint staat nu als lijn tússen de kaarten; hier wacht een gedimde
+          // "Starten" die op zijn plek oplicht en kleurt zodra er gekozen is — niets
+          // verspringt, je duim weet waar de reis eindigt.
           style={{
             width: "100%", marginTop: 4, padding: "17px 18px", borderRadius: 16,
-            border: pick === null ? "1px solid rgba(255,255,255,0.25)" : "none",
+            border: pick === null ? "1px solid rgba(255,255,255,0.12)" : "none",
             fontSize: 19, fontWeight: 800, fontFamily: "inherit",
             cursor: pick === null ? "default" : "pointer",
-            background: pick === null ? "rgba(255,255,255,0.09)" : accent[pick],
-            color: pick === null ? "#fff" : "#131826",
+            background: pick === null ? "rgba(255,255,255,0.05)" : accent[pick],
+            color: pick === null ? "#7e879c" : "#131826",
             boxShadow: pick === null ? "none" : `0 14px 30px -14px ${accent[pick]}`,
-            animation: pick === null ? "rundoKiesPuls 2s infinite" : "none",
             transition: "background .15s ease, color .15s ease, box-shadow .15s ease",
           }}>
-          {pick === null ? (
-            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9 }}>
-              {/* Emoji's kleuren niet mee, dus een getekend wit handje — zelfde
-                  lijnstijl als het bewaar-diskette-icoon. Het wipt omhoog, richting
-                  de twee kaarten waar de keuze valt. */}
-              <span style={{ display: "inline-flex", animation: "rundoKiesWip 1.2s infinite" }} aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M10 11V4.6a1.6 1.6 0 0 1 3.2 0V11" /><path d="M13.2 11.2c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6v.4c0-.8.7-1.5 1.5-1.5.9 0 1.6.7 1.6 1.6v2.6c0 3.7-2.4 6.7-6.2 6.7-3.2 0-4.6-1.5-6.3-4.4l-1.6-2.8a1.5 1.5 0 0 1 2.6-1.5l1.2 2V11" /></svg>
-              </span>
-              {t.pickFirst}
-            </span>
-          ) : t.start}
+          {t.start}
         </button>
 
         {/* Jouw open groepen, gesplitst per app — één tik en je zit erin. De Party-rij
@@ -490,7 +489,7 @@ export default function Home() {
 
         {/* Voetregel */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 28 }}>
-          <span style={{ fontSize: 13, color: "#9aa2b8", fontWeight: 600, textAlign: "center" }}>
+          <span style={{ fontSize: 13, color: "#b6bdcf", fontWeight: 600, textAlign: "center" }}>
             {t.footer}
           </span>
         </div>
