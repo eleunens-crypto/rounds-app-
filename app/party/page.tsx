@@ -275,6 +275,9 @@ const MODUS_NAAM = {
   randZacht: "rgba(90,106,148,0.55)", lijnZacht: "rgba(90,106,148,0.25)",
   bladzij: "#e8ecf5",
 }
+// Bekers- en munten-extra's staan tijdelijk uit beeld (setup én ⚙️ Groep). De logica
+// blijft slapend aanwezig; deze ene schakelaar brengt ze in een latere update terug.
+const TOON_EXTRAS = false
 const makeCode = () => Array.from({ length: 6 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("")
 type Cat = "Bier" | "BierAV" | "Frisdrank" | "Wijn" | "Cocktail" | "Mocktail" | "Longdrink" | "Shot" | "Warm" | "Eigen"
 type Drink = { id: string; name: string; emoji: string; cat: Cat; price: number; cup: boolean; fav: boolean; coins: number; custom?: boolean; by?: string }
@@ -477,6 +480,12 @@ const T = {
     tapYourSeatNow: "👇 Tik nu je plaats aan",
     potTogetherQ: "💰 Samen een pot leggen?",
     potLayBtn: "Pot leggen",
+    whoAreYouTitle: "Wie ben jij?",
+    yourNamePh2: "Jouw naam — nodig vóór de QR",
+    youWord: "jij",
+    optionalWord: "optioneel",
+    waitScan: (n: number) => n === 1 ? "1 gast wacht op QR-scan" : `${n} gasten wachten op QR-scan`,
+    allInPill: "✓ iedereen is erbij",
     potAddBtn: "+ inleggen",
     seatTaken: "Die plaats is net door iemand anders genomen. Kies een andere.",
     badCode: "Deze uitnodigingscode bestaat niet (meer).",
@@ -1189,6 +1198,12 @@ const T = {
     tapYourSeatNow: "👇 Touche maintenant ta place",
     potTogetherQ: "💰 Faire une cagnotte commune ?",
     potLayBtn: "Faire une cagnotte",
+    whoAreYouTitle: "Qui es-tu ?",
+    yourNamePh2: "Ton nom — requis avant le QR",
+    youWord: "toi",
+    optionalWord: "optionnel",
+    waitScan: (n: number) => n === 1 ? "1 invit\u00e9 attend le scan QR" : `${n} invit\u00e9s attendent le scan QR`,
+    allInPill: "✓ tout le monde est l\u00e0",
     potAddBtn: "+ verser",
     seatTaken: "Cette place vient d'être prise. Choisis-en une autre.",
     badCode: "Ce code d'invitation n'existe pas (plus).",
@@ -4067,6 +4082,55 @@ export default function PartyTest() {
     return people.filter((pp) => (per[pp.id] ?? 0) > 0).map((pp) => (per[pp.id] > 1 ? `${pp.name} ×${per[pp.id]}` : pp.name)).join(", ")
   }
 
+  // Het levende namenblok: kroonrij, groene ✅-rijen voor wie scande, de wachtende
+  // plaatsen in kolommen (het raster kiest zelf 2, 3 of meer kolommen naar de ruimte)
+  // en de tellende wacht-pill die groen wordt zodra iedereen binnen is. Wordt gedeeld
+  // door het instelscherm en het QR-scherm, zodat je overal hetzelfde ziet vollopen.
+  const renderNamenBlok = () => {
+    const mijnPlaats = people.find((p) => p.id === meId)
+    const anderen = people.filter((p) => p.id !== meId)
+    const geclaimd = anderen.filter((p) => p.claimedBy)
+    const wachtend = anderen.filter((p) => !p.claimedBy)
+    const mijnIdx = mijnPlaats ? people.indexOf(mijnPlaats) : -1
+    return (
+      <>
+        {mijnPlaats && anderen.length > 0 && (
+          <div style={{ ...S.row, gap: 8, padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: VLAK1, border: "1px solid rgba(13,124,140,0.25)" }}>
+            <span style={{ width: 24, height: 24, borderRadius: "50%", background: MODUS_FAIR.tint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><KroonIcoon size={13} kleur={MODUS_FAIR.tekst} /></span>
+            <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{isGuestDefault(mijnPlaats.name) ? `Gast ${mijnIdx + 1}` : mijnPlaats.name} <span style={{ fontWeight: 700, fontSize: 13, color: "#5a8f99" }}>({L.youWord})</span></span>
+          </div>
+        )}
+        {geclaimd.map((p) => (
+          <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: "rgba(31,138,76,0.06)", border: "1px solid rgba(31,138,76,0.35)" }}>
+            <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a3f1e" }}>✅ {p.name}</span>
+            <button onClick={() => releaseSeat(p.id)}
+              style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)", fontSize: 12, padding: "3px 8px" }}>
+              {L.freeUp}
+            </button>
+          </div>
+        ))}
+        {wachtend.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(118px, 1fr))", gap: 5 }}>
+            {wachtend.map((p) => (
+              <div key={p.id} style={{ background: VLAK1, border: "1px solid rgba(13,124,140,0.16)", borderRadius: 10, padding: "8px 10px", fontSize: 13.5, color: "#8aa8ad", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>👤 {isGuestDefault(p.name) ? `Gast ${people.indexOf(p) + 1}` : p.name}</div>
+            ))}
+          </div>
+        )}
+        {wachtend.length > 0 ? (
+          <div style={{ textAlign: "center", marginTop: 10 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 7, border: "1px solid rgba(13,124,140,0.4)", borderRadius: 15, padding: "6px 13px", fontSize: 13.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>
+              <span className="rundo-stip" style={{ width: 8, height: 8, borderRadius: "50%", background: MODUS_FAIR.rand, flexShrink: 0 }} />
+              {L.waitScan(wachtend.length)}
+            </span>
+          </div>
+        ) : anderen.length > 0 ? (
+          <div style={{ textAlign: "center", marginTop: 10 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 15, padding: "6px 13px", fontSize: 13.5, fontWeight: 800, color: "#1f6b3a", background: "rgba(31,138,76,0.1)" }}>{L.allInPill}</span>
+          </div>
+        ) : null}
+      </>
+    )
+  }
   const renderShare = () => {
     if (!canShare) return null
     const vrij = people.filter((p) => !p.claimedBy).length
@@ -4125,23 +4189,12 @@ export default function PartyTest() {
         {/* Wie scande al? Zo ziet de admin de groep vollopen zonder te moeten raden.
             De vrije plaatsen staan hier — niet meer bij de namenstap — want dit is het
             scherm waar je staat te wachten tot ze binnenkomen. */}
-        <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 14, paddingTop: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
-            <span style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", minWidth: 0 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</span>
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-            {people.map((p, idx) => {
-              const leeg = !p.claimedBy && !p.named
-              return (
-                <span key={p.id} style={{ fontSize: 14, fontWeight: 700, padding: "4px 10px", borderRadius: 16,
-                  background: p.claimedBy ? "rgba(31,138,76,0.12)" : "rgba(120,95,20,0.05)",
-                  color: p.claimedBy ? "#1f6b3a" : "#a89a6f",
-                  border: p.claimedBy ? "1px solid rgba(31,138,76,0.25)" : "1px dashed rgba(120,95,20,0.28)" }}>
-                  {!!ownerDevice && p.claimedBy === ownerDevice ? <><KroonIcoon size={11} kleur={p.claimedBy ? "#1f6b3a" : "#a89a6f"} />{" "}</> : p.claimedBy ? "📱 " : ""}{leeg ? L.seat(idx + 1) : p.name}
-                </span>
-              )
-            })}
-          </div>
+        {/* Wie scande al? Exact hetzelfde levende namenblok als op het instelscherm:
+            kroonrij, groene ✅-rijen, wachtende kolommen en de tellende pill — de admin
+            ziet de groep hier live vollopen, per scan. */}
+        <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 14, paddingTop: 12, marginBottom: 2 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", marginBottom: 8 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</div>
+          {renderNamenBlok()}
         </div>
         {/* De vraag op dit scherm is "mag ik al beginnen?" — vandaar het antwoord in de knop
             zelf. Wie later scant sluit gewoon aan, want de QR blijft bereikbaar. */}
@@ -6060,10 +6113,18 @@ export default function PartyTest() {
       {setupKop && (
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
           {potContribTotal > 0.005 ? potKnopje() : (
-            <button onClick={() => setShowPot(true)} style={{ border: "none", cursor: "pointer", background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", color: "#fff", borderRadius: 16, padding: "8px 14px", fontSize: 14, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 7 }}>
-              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 6.5 7.8 4.2A1 1 0 0 1 8.7 2.8h6.6a1 1 0 0 1 .9 1.4L15 6.5" fill="#f7cb5c" stroke="#b8860b" strokeWidth="1" /><path d="M15.2 6.5c3 1.9 4.8 4.9 4.8 8.1 0 4.2-3.6 6.6-8 6.6s-8-2.4-8-6.6c0-3.2 1.8-6.2 4.8-8.1z" fill="#f0c14b" stroke="#b8860b" strokeWidth="1" /><text x="12" y="16.8" fontSize="8.5" fontWeight="800" textAnchor="middle" fill="#7a5a08">€</text></svg>
-              {L.potLayBtn}
-            </button>
+            /* Dezelfde geldzakje-badge als in snel opnemen — alleen leest hij zolang de
+               pot leeg is "Pot leggen +" en wordt hij na de eerste inleg vanzelf het
+               saldo, op exact dezelfde plek. */
+            <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 9px", borderRadius: 22, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: "1px solid rgba(47,111,181,0.5)" }}>
+              <svg width="27" height="27" viewBox="0 0 40 40" style={{ display: "block" }}>
+                <path d="M16 13 L14 7 Q20 5 26 7 L24 13 Z" fill="#d99616" stroke="#b9821a" strokeWidth="1.2" strokeLinejoin="round" />
+                <path d="M13 14 Q20 11 27 14 Q33 19 32 27 Q31 35 20 35 Q9 35 8 27 Q7 19 13 14 Z" fill="#e8a821" stroke="#b9821a" strokeWidth="1.5" />
+                <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
+              </svg>
+              <span style={{ color: "#2f5693" }}>{L.potLayBtn}</span>
+              <span style={{ color: "#2f6fb5", fontWeight: 800 }}>+</span>
+            </span>
           )}
         </div>
       )}
@@ -7168,13 +7229,25 @@ export default function PartyTest() {
           </div>
         )}
         <div style={S.card}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{!settle && isAutoNaam(groupName) ? L.giveNameQ : L.groupNameEdit}</div>
-          <input value={!settle && isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={(e) => { if (!e.target.value.trim()) setGroupName(L.autoName()); persistSettings() }} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.autoName() : L.groupNameShortPh}
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: VLAK2 }} />
-          {!settle && isAutoNaam(groupName)
-            ? <div style={{ fontSize: 12.5, color: "#a89a6f", marginTop: 5, paddingLeft: 2 }}>{L.nowWord} {groupName.trim()}</div>
-            : groupName.trim() ? <div style={{ fontSize: 12.5, color: "#8aa5aa", marginTop: 5, paddingLeft: 2 }}>{L.tapToChange}</div> : null}
-          {settle && (<>
+          {/* De enige verplichte stap staat bovenaan: wie ben jij? De groepsnaam is
+              optioneel en zakte naar onder in dezelfde kaart. */}
+          {(() => {
+            const mijnPlaats = people.find((p) => p.id === meId)
+            const mijnIdx = mijnPlaats ? people.indexOf(mijnPlaats) : -1
+            return mijnPlaats ? (
+              <>
+                <div style={{ fontSize: 16.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 8 }}>👑 {L.whoAreYouTitle}</div>
+                <div style={{ ...S.row, gap: 8, marginBottom: 14 }}>
+                  <span style={{ width: 26, height: 26, borderRadius: "50%", background: MODUS_FAIR.tint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><KroonIcoon size={14} kleur={MODUS_FAIR.tekst} /></span>
+                  <input value={isGuestDefault(mijnPlaats.name) ? "" : mijnPlaats.name}
+                    placeholder={L.yourNamePh2}
+                    onChange={(e) => renamePerson(mijnPlaats.id, e.target.value === "" ? `Gast ${mijnIdx + 1}` : e.target.value)}
+                    style={{ ...S.input, flex: 1, minWidth: 0, padding: "10px 11px", fontSize: 16, fontWeight: 800, textAlign: "left", background: "#fff", border: "1.5px solid rgba(13,124,140,0.5)" }} />
+                </div>
+              </>
+            ) : null
+          })()}
+          {settle && TOON_EXTRAS && (<>
             <div onClick={() => setExtrasOpen((v) => !v)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, cursor: "pointer", borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 12, paddingTop: 11 }}>
               <span style={{ fontSize: 14.5, fontWeight: 700, color: "#8a7d55" }}>{L.extrasLine}</span>
               <span style={{ flexShrink: 0, border: "1.5px solid rgba(120,95,20,0.3)", color: "#8a7d55", borderRadius: 9, padding: "6px 11px", fontSize: 13, fontWeight: 800, whiteSpace: "nowrap" }}>{extrasOpen ? `${L.hideWord} ▴` : `${L.showWord} ▾`}</span>
@@ -7221,18 +7294,15 @@ export default function PartyTest() {
               </div>
             )}
           </>)}
-        {/* Naam, extra's en personen in één kaart: de hele setup in één oogopslag,
-            gescheiden door een dun lijntje in plaats van twee losse kaartkoppen. */}
-        <div style={{ borderTop: "1px solid rgba(13,124,140,0.14)", margin: "14px 0 13px" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <span style={{ fontSize: 16.5, fontWeight: 800, color: "#4a3f1e" }}>{L.peopleHeader(people.length)}</span>
+            <span style={{ fontSize: 16.5, fontWeight: 800, color: "#4a3f1e" }}>{L.peopleHeader(people.length)}{people.length === 1 && <span style={{ fontWeight: 700, fontSize: 14.5, color: "#5a8f99" }}> ({L.youWord})</span>}</span>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 11, flexShrink: 0 }}>
               <button style={{ ...S.step, width: 32, height: 32, fontSize: 18, opacity: people.length > 0 ? 1 : 0.4 }} onClick={removeLastPerson}>−</button>
               <span style={{ fontSize: 19, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#4a3f1e" }}>{people.length}</span>
               <button style={{ ...S.step, width: 32, height: 32, fontSize: 18, background: AAN, color: "#fff", border: "none" }} onClick={addPerson}>+</button>
             </span>
           </div>
-          <div style={{ fontSize: 14.5, color: "#5f5432", lineHeight: 1.45, marginBottom: 11 }}>📱 {L.peopleIntro()}</div>
+          <div style={{ fontSize: 13, color: "#8aa8ad", lineHeight: 1.45, marginBottom: 11 }}>📱 {L.peopleIntro()}</div>
 
           {/* Wie ben JIJ? Alleen relevant als de admin nog nergens zit — normaal is hij
               al Gast 1, dus dit blijft verborgen. Vangnet voor het randgeval. */}
@@ -7254,55 +7324,14 @@ export default function PartyTest() {
             </div>
           )}
 
-          {(() => {
-            const mijnPlaats = people.find((p) => p.id === meId)
-            // Iedereen behalve ikzelf: geclaimd (echte naam) of nog wachtend op scan.
-            const anderen = people.filter((p) => p.id !== meId)
-            const geclaimd = anderen.filter((p) => p.claimedBy)
-            const wachtend = anderen.filter((p) => !p.claimedBy)
-            const mijnIdx = mijnPlaats ? people.indexOf(mijnPlaats) : -1
-            return (
-              <>
-                {/* JOUW plaats — de enige die de admin standaard invult. */}
-                {mijnPlaats && (
-                  <div style={{ background: VLAK1, borderRadius: 10, padding: "10px 11px", marginBottom: geclaimd.length || wachtend.length ? 8 : 0, border: "1px solid rgba(31,138,76,0.25)" }}>
-                    <div style={{ ...S.row, gap: 8 }}>
-                      <span style={{ width: 26, height: 26, borderRadius: "50%", background: MODUS_FAIR.tint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><KroonIcoon size={14} kleur={MODUS_FAIR.tekst} /></span>
-                      <input value={isGuestDefault(mijnPlaats.name) ? "" : mijnPlaats.name}
-                        placeholder={L.yourNamePh}
-                        onChange={(e) => renamePerson(mijnPlaats.id, e.target.value === "" ? `Gast ${mijnIdx + 1}` : e.target.value)}
-                        style={{ ...S.input, flex: 1, minWidth: 0, padding: "9px 11px", fontSize: 16, fontWeight: 800, textAlign: "left", background: "#fff" }} />
-                    </div>
-                  </div>
-                )}
-
-                {/* Wie al scande — echte namen, compact. */}
-                {geclaimd.map((p) => {
-                  const bezet = true
-                  return (
-                    <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: VLAK1, border: "1px solid rgba(120,95,20,0.1)" }}>
-                      <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a3f1e" }}>📱 {p.name}</span>
-                      {bezet && (
-                        <button onClick={() => releaseSeat(p.id)}
-                          style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)", fontSize: 12, padding: "3px 8px" }}>
-                          {L.freeUp}
-                        </button>
-                      )}
-                    </div>
-                  )
-                })}
-
-                {/* Elke wachtende plaats is aantikbaar: wie niet gaat scannen, geef je hier
-                    gewoon een naam. Vroeger stond daar "+ zelf toevoegen", maar dat maakte
-                    een éxtra persoon aan — en dus veranderde het aantal, terwijl je alleen
-                    een naam wou zetten op een plaats die er al was. Wie later toch scant,
-                    tikt zijn naam gewoon aan en houdt alles wat je al voor hem aanduidde. */}
-                {/* De vrije plaatsen stonden hier, maar op dit scherm valt er niets over te
-                    beslissen: iedereen scant straks. Ze horen bij de QR-stap, waar je ook ziet
-                    wie er al is en waar je iemand kan toevoegen die niet scant. */}
-              </>
-            )
-          })()}
+          {renderNamenBlok()}
+          <div style={{ borderTop: "1px solid rgba(13,124,140,0.14)", margin: "14px 0 12px" }} />
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{!settle && isAutoNaam(groupName) ? L.giveNameQ : L.groupNameEdit} <span style={{ fontWeight: 600, color: "#a5b6ba" }}>— {L.optionalWord}</span></div>
+          <input value={!settle && isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={(e) => { if (!e.target.value.trim()) setGroupName(L.autoName()); persistSettings() }} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.autoName() : L.groupNameShortPh}
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: VLAK2 }} />
+          {!settle && isAutoNaam(groupName)
+            ? <div style={{ fontSize: 12.5, color: "#a89a6f", marginTop: 5, paddingLeft: 2 }}>{L.nowWord} {groupName.trim()}</div>
+            : null}
         </div>
 
         {/* Plakt onderaan: op kleine schermen mag de weg vooruit nooit onder de vouw
@@ -7388,7 +7417,7 @@ export default function PartyTest() {
           </div>
           {potChosen && potContribTotal <= 0.005 && <div style={{ marginTop: 8, textAlign: "right" }}><span onClick={() => setPotChosen(false)} style={{ fontSize: 14, color: "#c0554a", fontWeight: 700, cursor: "pointer" }}>✕ toch niet</span></div>}
 
-        {settle && (
+        {settle && TOON_EXTRAS && (
         <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(120,95,20,0.12)" }}>
           <div style={{ minWidth: 0 }}>
         <div style={{ marginBottom: 0 }}>
@@ -8373,7 +8402,7 @@ export default function PartyTest() {
 
               {/* Bedrag-veld met ✓ én Overslaan samen op één rij. Het vinkje pulseert groen
                   (omrand) zodra er een bedrag staat = "tik om te bevestigen". */}
-              <style>{`@keyframes rundoPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,138,76,0.45)}50%{box-shadow:0 0 0 7px rgba(31,138,76,0)}}.rundo-pulse{animation:rundoPulse 1.4s infinite}@keyframes rundoPulseAmber{0%,100%{box-shadow:0 0 0 0 rgba(224,138,0,0.5)}50%{box-shadow:0 0 0 7px rgba(224,138,0,0)}}.rundo-pulse-amber{animation:rundoPulseAmber 1.4s infinite}@keyframes rundoPulseBlauw{0%,100%{box-shadow:0 0 0 0 rgba(59,72,106,0.5)}50%{box-shadow:0 0 0 7px rgba(59,72,106,0)}}.rundo-pulse-blauw{animation:rundoPulseBlauw 1.4s infinite}@keyframes rundoPulsePot{0%,100%{box-shadow:0 0 0 0 rgba(47,111,181,0.5)}50%{box-shadow:0 0 0 7px rgba(47,111,181,0)}}.rundo-pulse-pot{animation:rundoPulsePot 1.4s infinite}`}</style>
+              <style>{`@keyframes rundoPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,138,76,0.45)}50%{box-shadow:0 0 0 7px rgba(31,138,76,0)}}.rundo-pulse{animation:rundoPulse 1.4s infinite}@keyframes rundoPulseAmber{0%,100%{box-shadow:0 0 0 0 rgba(224,138,0,0.5)}50%{box-shadow:0 0 0 7px rgba(224,138,0,0)}}.rundo-pulse-amber{animation:rundoPulseAmber 1.4s infinite}@keyframes rundoPulseBlauw{0%,100%{box-shadow:0 0 0 0 rgba(59,72,106,0.5)}50%{box-shadow:0 0 0 7px rgba(59,72,106,0)}}.rundo-pulse-blauw{animation:rundoPulseBlauw 1.4s infinite}@keyframes rundoPulsePot{0%,100%{box-shadow:0 0 0 0 rgba(47,111,181,0.5)}50%{box-shadow:0 0 0 7px rgba(47,111,181,0)}}.rundo-pulse-pot{animation:rundoPulsePot 1.4s infinite}@keyframes rundoStip{0%,100%{opacity:1}50%{opacity:0.25}}.rundo-stip{animation:rundoStip 1.4s infinite}`}</style>
               {payVia !== "mix" && (<>
               <div style={{ ...S.row, gap: 7 }}>
                 <span style={{ fontSize: 20, color: "#8a7d55", fontWeight: 700 }}>€</span>
