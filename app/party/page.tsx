@@ -481,6 +481,10 @@ const T = {
     potTogetherQ: "💰 Samen een pot leggen?",
     potLayBtn: "Pot leggen",
     whoAreYouTitle: "Wie ben jij?",
+    namePlichtTitle: "Geef je rondje of groep eerst een naam",
+    namePh3: "typ hier je groepsnaam",
+    naamGoBtn: "Verder →",
+    nameFirstNote: "Vul eerst je eigen naam en de groepsnaam in.",
     yourNamePh2: "Jouw naam — nodig vóór de QR",
     optionalWord: "optioneel",
     waitScan: (n: number) => n === 1 ? "1 gast wacht op QR-scan" : `${n} gasten wachten op QR-scan`,
@@ -1198,6 +1202,10 @@ const T = {
     potTogetherQ: "💰 Faire une cagnotte commune ?",
     potLayBtn: "Faire une cagnotte",
     whoAreYouTitle: "Qui es-tu ?",
+    namePlichtTitle: "Donne d'abord un nom \u00e0 ta tourn\u00e9e ou ton groupe",
+    namePh3: "\u00e9cris ici le nom du groupe",
+    naamGoBtn: "Continuer \u2192",
+    nameFirstNote: "Remplis d'abord ton nom et le nom du groupe.",
     yourNamePh2: "Ton nom — requis avant le QR",
     optionalWord: "optionnel",
     waitScan: (n: number) => n === 1 ? "1 invit\u00e9 attend le scan QR" : `${n} invit\u00e9s attendent le scan QR`,
@@ -1921,6 +1929,12 @@ export default function PartyTest() {
   // Kies je "nieuwe met eigen naam", dan vraagt dit venster om die naam. Het keuzescherm
   // heeft zelf geen naamveld — daar duik je normaal meteen in de drankjes.
   const [naamPrompt, setNaamPrompt] = useState<boolean | null>(null)
+  // Verplichte naam in snel opnemen: de eerste tik houdt halt tot er een naam staat.
+  const [naamPlicht, setNaamPlicht] = useState(false)
+  const [naamPlichtVeld, setNaamPlichtVeld] = useState("")
+  // Datum van de groep, alleen voor de grijze haakjesweergave achter de naam.
+  const [groepDatum, setGroepDatum] = useState<string | null>(null)
+  const datumKort = (iso?: string | null) => { if (!iso) return ""; const d = new Date(iso); return `${d.getDate()}/${d.getMonth() + 1}` }
   const [gastNaam, setGastNaam] = useState("")
   const [geenRondje, setGeenRondje] = useState(false)
   const [extrasOpen, setExtrasOpen] = useState(false)
@@ -3144,7 +3158,7 @@ export default function PartyTest() {
   const laatsteGeladenGid = useRef<string | null>(null)
   const loadParty = useCallback(async (gid: string) => {
     const [{ data: g }, { data: pp }, { data: rr }, { data: ii }, { data: pt }] = await Promise.all([
-      supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices,settle,ordering_open").eq("id", gid).single(),
+      supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices,settle,ordering_open,last_active").eq("id", gid).single(),
       supabase.from("party_people").select("id,seat,name,claimed_by,self_joined,settle_with").eq("group_id", gid).order("seat"),
       supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back,members,started_by,proposal,headcount").eq("group_id", gid).order("seq"),
       supabase.from("party_round_items").select("round_id,person_id,drink_key,qty").eq("group_id", gid),
@@ -3183,6 +3197,7 @@ export default function PartyTest() {
     else if (vorigeGid !== null && vorigeGid !== gid) setOpNaam(uitgebreidData ? true : false)
     else if (uitgebreidData) setOpNaam(true)
     if (vorigeGid !== null && vorigeGid !== gid) setFromQuick(false)
+    setGroepDatum((g as { last_active?: string } | null)?.last_active ?? null)
     setPeople((pp || []).map((r) => ({
       id: r.id, seat: r.seat,
       // named = de admin (of de gast zelf) gaf een echte naam. Een naamloze plaats
@@ -3686,17 +3701,6 @@ export default function PartyTest() {
     }
   }, [groupId, loadParty, slaapt])
 
-  // Doortellen tot een naam die nog nergens in de lijst staat (open én afgesloten
-  // tellen mee): "Rondje 4 augustus (2)", "(3)" … Zo hoef je niets te verzinnen.
-  const vrijeNaam = (basis: string) => {
-    const bezet = (n: string) => savedGroups.some((g) => g.name.trim().toLowerCase() === n.toLowerCase())
-    if (!bezet(basis)) return basis
-    let n = 2
-    let vrij = `${basis} (${n})`
-    while (bezet(vrij)) { n += 1; vrij = `${basis} (${n})` }
-    return vrij
-  }
-
   // "verder" in het waar-was-je-gebleven-venster: gewoon die groep openen — een
   // gastgroep opent als gast (openSavedGroup routeert naar de juiste weergave).
   const geblevenVerder = (id: string) => {
@@ -3736,7 +3740,8 @@ export default function PartyTest() {
     }
     // Namen blijven uniek in de lijst: bestaat de (auto)naam al — open of afgesloten,
     // eender welke modus — dan telt hij stil door naar "(2)".
-    if (savedGroups.some((g) => g.name.trim().toLowerCase() === naam.toLowerCase())) naam = vrijeNaam(naam)
+    // Dubbele namen mogen: elke groep heeft intern zijn eigen nummer, en de lijst
+    // toont de datum ernaast. Nooit meer "(2)"-telwoorden.
     if (busy) return
     setBusy(true)
     // Botsende codes zijn zeldzaam, maar niet onmogelijk (unique index vangt ze).
@@ -3916,6 +3921,9 @@ export default function PartyTest() {
   const catOrde: Cat[] = heeftEigen ? ["Eigen", ...CATS.filter((c) => c !== "Eigen")] : CATS
   const catsPresent = catOrde.filter((c) => c === "Eigen" || drinks.some((d) => d.cat === c))
   const bump1 = (did: string) => {
+    // Snel opnemen zonder echte groepsnaam: de tik wordt tegengehouden (dus nog níét
+    // genoteerd) en het naamvenster verschijnt. Na "Verder" tik je gewoon opnieuw.
+    if (!settle && opNaam !== true && isAutoNaam(groupName)) { setNaamPlichtVeld(""); setNaamPlicht(true); return }
     if (settle && voorWie) return bump(did, voorWie, 1)
     return bumpAnon(did, 1)
   }
@@ -5603,7 +5611,7 @@ export default function PartyTest() {
                   style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", border: "1.5px solid rgba(232,168,18,0.55)", background: "rgba(240,165,0,0.07)", borderRadius: 11, padding: "10px 11px", marginBottom: 7 }}>
                   <span style={{ flexShrink: 0, fontSize: 16 }}>{g.settle ? "📱" : "✍️"}</span>
                   <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</span>
+                    <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()} <span style={{ fontWeight: 700, color: "#a89a6f", fontSize: 12.5 }}>({datumKort(g.last_active)})</span></span>
                     <span style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: "#a89a6f" }}>{(() => { const d = new Date(g.last_active); return isNaN(d.getTime()) ? "" : `${d.getDate()}/${d.getMonth() + 1}` })()}{g.owned ? "" : ` · ${L.asGuest}`}</span>
                   </span>
                   <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#c98a00", whiteSpace: "nowrap" }}>{L.whereLeftGo} ›</span>
@@ -5927,6 +5935,20 @@ export default function PartyTest() {
           </div>
         </div>
       )}
+      {naamPlicht && (
+        <div style={{ ...S.overlay, zIndex: 72 }}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", marginBottom: 12 }}>📝 {L.namePlichtTitle}</div>
+            <input autoFocus value={naamPlichtVeld} onChange={(e) => setNaamPlichtVeld(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && naamPlichtVeld.trim()) { const nm = naamPlichtVeld.trim(); setGroupName(nm); persistSettings({ name: nm }); setNaamPlicht(false) } }}
+              placeholder={L.namePh3}
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, fontSize: 16, marginBottom: 12 }} />
+            <button disabled={!naamPlichtVeld.trim()}
+              style={{ ...S.btnP, width: "100%", opacity: naamPlichtVeld.trim() ? 1 : 0.45 }}
+              onClick={() => { const nm = naamPlichtVeld.trim(); if (!nm) return; setGroupName(nm); persistSettings({ name: nm }); setNaamPlicht(false) }}>{L.naamGoBtn}</button>
+          </div>
+        </div>
+      )}
       {naamPrompt !== null && (
         <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setNaamPrompt(null)}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
@@ -5934,7 +5956,7 @@ export default function PartyTest() {
             <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginBottom: 13 }}>{L.newGroupNameSub}</div>
             <input ref={groepNaamVeld} autoFocus value={groupName} onChange={(e) => setGroupName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && groupName.trim()) { const m = naamPrompt; setNaamPrompt(null); void startWithMode(undefined, m) } }}
-              placeholder={L.groupNamePh}
+              placeholder={L.namePh3}
               style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, marginBottom: 13 }} />
             <button disabled={!groupName.trim() || busy}
               onClick={() => { const m = naamPrompt; setNaamPrompt(null); void startWithMode(undefined, m) }}
@@ -6164,7 +6186,7 @@ export default function PartyTest() {
                   <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: themaNaam ? "#5a6a94" : "#c98a00" }}>✏️ {L.giveNameQ}</span>
                   <span style={{ display: "block", fontSize: 12.5, fontWeight: 400, color: "#a89a6f", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.nowWord} {groupName.trim()}</span>
                 </span>
-              ) : <>{groupName.trim()}{!onboarding && <span style={{ fontSize: 12.5 }}> ✏️</span>}</>}
+              ) : <>{groupName.trim()}{groepDatum && <span style={{ fontWeight: 700, color: "#a89a6f", fontSize: 13.5 }}> ({datumKort(groepDatum)})</span>}{!onboarding && <span style={{ fontSize: 12.5 }}> ✏️</span>}</>}
             </div>
             {settle && <div style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700, marginTop: 1, whiteSpace: "nowrap" }}>👥 {L.persShort(people.length)}</div>}
           </div>
@@ -6184,7 +6206,7 @@ export default function PartyTest() {
                 /* Niet alleen de uitnodiging, ook wat de naam nú is — anders weet je
                    niet onder welke naam de groep straks in je lijst staat. */
                 <span style={{ color: themaNaam ? "#5a6a94" : "#c98a00", fontWeight: 700, fontSize: 14 }}>✏️ {L.giveNameQ} <span style={{ color: "#a89a6f", fontWeight: 400, fontSize: 12.5 }}>· {L.nowWord} {groupName.trim()}</span></span>
-              ) : (<>{groupName.trim()}{!onboarding && <span style={{ fontSize: 12 }}> ✏️</span>}</>)}
+              ) : (<>{groupName.trim()}{groepDatum && <span style={{ fontWeight: 700, color: "#a89a6f", fontSize: 13 }}> ({datumKort(groepDatum)})</span>}{!onboarding && <span style={{ fontSize: 12 }}> ✏️</span>}</>)}
             </span>
           )}
           <span style={{ marginLeft: "auto", flexShrink: 0 }}>{potKnopje()}</span>
@@ -6948,7 +6970,7 @@ export default function PartyTest() {
                 {/* Aan de kleur en het icoon zie je in één oogopslag welke modus het was. */}
                 <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, background: g.settle ? MODUS_FAIR.tint : MODUS_SNEL.tint }}>{g.settle ? "⚖️" : g.uitgebreid ? "👥" : "🍻"}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</div>
+                  <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()} <span style={{ fontWeight: 700, color: "#a89a6f", fontSize: 13 }}>({datumKort(g.last_active)})</span></div>
                   <div style={{ fontSize: 13, color: "#a89a6f", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     <span style={{ color: g.settle ? MODUS_FAIR.tekst : MODUS_SNEL.tekst, fontWeight: 800 }}>{g.settle ? L.modeFairShort : g.uitgebreid ? L.modeNaamTitle : L.modeSnelTitle}</span> · {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
                   </div>
@@ -7234,6 +7256,11 @@ export default function PartyTest() {
               </>
             ) : null
           })()}
+          {/* De groepsnaam is voortaan verplicht: leeg veld zolang er alleen een
+              autonaam bestaat, en de QR-knop onderaan blijft gedimd tot hij gevuld is. */}
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>📝 {L.groupNameEdit}</div>
+          <input value={isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={(e) => { if (!e.target.value.trim()) setGroupName(settle ? L.autoNameQr() : L.autoName()); persistSettings() }} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.namePh3}
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: "10px 11px", borderRadius: 10, background: "#fff", border: "1.5px solid rgba(13,124,140,0.5)", marginBottom: 14 }} />
           {settle && TOON_EXTRAS && (<>
             <div onClick={() => setExtrasOpen((v) => !v)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, cursor: "pointer", borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 12, paddingTop: 11 }}>
               <span style={{ fontSize: 14.5, fontWeight: 700, color: "#8a7d55" }}>{L.extrasLine}</span>
@@ -7312,13 +7339,6 @@ export default function PartyTest() {
           )}
 
           {renderNamenBlok()}
-          <div style={{ borderTop: "1px solid rgba(13,124,140,0.14)", margin: "14px 0 12px" }} />
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#8a7d55", marginBottom: 6 }}>{!settle && isAutoNaam(groupName) ? L.giveNameQ : L.groupNameEdit} <span style={{ fontWeight: 600, color: "#a5b6ba" }}>— {L.optionalWord}</span></div>
-          <input value={!settle && isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={(e) => { if (!e.target.value.trim()) setGroupName(L.autoName()); persistSettings() }} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.autoName() : L.groupNameShortPh}
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: VLAK2 }} />
-          {!settle && isAutoNaam(groupName)
-            ? <div style={{ fontSize: 12.5, color: "#a89a6f", marginTop: 5, paddingLeft: 2 }}>{L.nowWord} {groupName.trim()}</div>
-            : null}
         </div>
 
         {/* Plakt onderaan: op kleine schermen mag de weg vooruit nooit onder de vouw
@@ -7329,7 +7349,7 @@ export default function PartyTest() {
               // Vul je eigen naam in vóór je deelt: anders sta jij als "Gast 1" tussen de
               // anderen en weet niemand — jijzelf incluis — welke rij van jou is.
               const mij = meId ? people.find((pp) => pp.id === meId) : null
-              if (settle && (!mij || isGuestDefault(mij.name) || !mij.name.trim())) { setNotice(L.yourNameFirst); return }
+              if (settle && (!mij || isGuestDefault(mij.name) || !mij.name.trim() || isAutoNaam(groupName) || !groupName.trim())) { setNotice(L.nameFirstNote); return }
               if (unfinishedRound) { resumeRound(); return }
               if (onboardedOnce) { setOpenRound(rounds.length - 1); setView("hub") } else if (bpSettle !== null) { applyBeginChoices() } else setBeginPrompt(true)
             }}>{unfinishedRound ? L.continueRound(roundNr) : L.toQrStep}</button>
