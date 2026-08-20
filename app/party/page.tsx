@@ -476,6 +476,7 @@ const T = {
     fillNameFirst: "Vul eerst je naam in.",
     tapYourSeatNow: "👇 Tik nu je plaats aan",
     potTogetherQ: "💰 Samen een pot leggen?",
+    potLayBtn: "Pot leggen",
     potAddBtn: "+ inleggen",
     seatTaken: "Die plaats is net door iemand anders genomen. Kies een andere.",
     badCode: "Deze uitnodigingscode bestaat niet (meer).",
@@ -1187,6 +1188,7 @@ const T = {
     fillNameFirst: "Entre d'abord ton nom.",
     tapYourSeatNow: "👇 Touche maintenant ta place",
     potTogetherQ: "💰 Faire une cagnotte commune ?",
+    potLayBtn: "Faire une cagnotte",
     potAddBtn: "+ verser",
     seatTaken: "Cette place vient d'être prise. Choisis-en une autre.",
     badCode: "Ce code d'invitation n'existe pas (plus).",
@@ -6031,11 +6033,41 @@ export default function PartyTest() {
     // rechts naast het logo, naamplaatje gecentreerd, pot-geldzak rechts ernaast.
     // Alleen Fair Split (QR) houdt zijn eigen kop met de gekleurde balk.
     const uitgebreidLook = alsUitgebreid || !settle || fromQuick
+    // Het QR-instelscherm krijgt één samengestelde kopbalk (logo + modus in degradé)
+    // in plaats van de losse teal balk, logo-rij en naam rechtsboven.
+    const setupKop = !!groupId && settle && view === "setup" && !kaal
     return (
     <div style={{ marginBottom: 12 }}>
       {/* Bij uitgebreid opnemen geen aparte statusbalk: de tekst staat rechts op de
           Rundo Party-regel. */}
-      {!!groupId && !kaal && !uitgebreidLook && (
+      {/* Degradé wit → teal: het logo staat links op zijn vertrouwde lichte ondergrond
+          in exact zijn eigen kleuren, en de balk loopt rechts vol teal uit onder de
+          modus-tekst. Eén balk in plaats van drie koplagen. */}
+      {setupKop && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, borderRadius: 14, padding: "9px 13px", marginBottom: 10, border: "1px solid rgba(13,124,140,0.35)", background: "linear-gradient(100deg,#ffffff 0%,#eefafc 34%,#159cb0 72%,#0d7c8c 100%)" }}>
+          <span onClick={goSiteHome} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <RundoLogo size={30} />
+            <span style={{ fontSize: 18, fontWeight: 800, color: "#3d3418", letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></span>
+          </span>
+          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: "#fff" }}>
+            <GsmIcoon size={17} kleur="#fff" qr />
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{L.modeFairShort}</span>
+          </span>
+        </div>
+      )}
+      {/* Rechts onder de balk: de pot — als blauwe "Pot leggen"-knop met het goudzakje
+          zolang hij leeg is, daarna gewoon de vertrouwde saldo-badge op dezelfde plek. */}
+      {setupKop && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+          {potContribTotal > 0.005 ? potKnopje() : (
+            <button onClick={() => setShowPot(true)} style={{ border: "none", cursor: "pointer", background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", color: "#fff", borderRadius: 16, padding: "8px 14px", fontSize: 14, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 7 }}>
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 6.5 7.8 4.2A1 1 0 0 1 8.7 2.8h6.6a1 1 0 0 1 .9 1.4L15 6.5" fill="#f7cb5c" stroke="#b8860b" strokeWidth="1" /><path d="M15.2 6.5c3 1.9 4.8 4.9 4.8 8.1 0 4.2-3.6 6.6-8 6.6s-8-2.4-8-6.6c0-3.2 1.8-6.2 4.8-8.1z" fill="#f0c14b" stroke="#b8860b" strokeWidth="1" /><text x="12" y="16.8" fontSize="8.5" fontWeight="800" textAnchor="middle" fill="#7a5a08">€</text></svg>
+              {L.potLayBtn}
+            </button>
+          )}
+        </div>
+      )}
+      {!!groupId && !kaal && !uitgebreidLook && !setupKop && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: modus.knop, borderRadius: "14px 14px 0 0", padding: "10px 15px", marginBottom: 10 }}>
           <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, flex: 1, minWidth: 0 }}>
             {settle ? (<>
@@ -6049,6 +6081,7 @@ export default function PartyTest() {
       {/* Logo met de pot eronder aan de linkerkant; de groepsnaam en het aantal personen
           rechtsboven. Zo staan "waar ben ik" en "hoeveel zit er nog in" naast elkaar in
           plaats van elkaar te verdringen op één regel. */}
+      {!setupKop && (
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
         <div style={{ minWidth: 0 }}>
         <div onClick={goSiteHome} style={{ cursor: "pointer", ...S.row, gap: 10 }}>
@@ -6089,6 +6122,7 @@ export default function PartyTest() {
           </div>
         )}
       </div>
+      )}
       {/* Uitgebreid opnemen: de groepsnaam als naamplaatje tussen de kopregel en de
           navigatieknoppen, links uitgelijnd; de pot-geldzak houdt vast zijn plek rechts.
           Gecentreerd botsten de twee bij lange namen — nu krimpt de naam netjes met …
@@ -6111,7 +6145,7 @@ export default function PartyTest() {
       {/* De pot als brede balk onder de kop, zolang er nog niets in zit. Hij stond als
           eigen kaart onderaan het QR-scherm, ver van de geldzak waar je hem zoekt.
           Zodra er ingelegd is, spreekt die geldzak voor zich en verdwijnt deze balk. */}
-      {!!groupId && settle && potContribTotal <= 0.005 && (
+      {!!groupId && settle && potContribTotal <= 0.005 && !setupKop && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: settle ? MODUS_FAIR.tint : "rgba(240,165,0,0.1)", border: `1px solid ${settle ? MODUS_FAIR.randZacht : "rgba(240,165,0,0.45)"}`, borderRadius: 11, padding: "10px 12px", marginTop: 10 }}>
           <span style={{ fontSize: 14.5, fontWeight: 800, color: settle ? MODUS_FAIR.tekst : "#8a5e0f", minWidth: 0 }}>{potIsCard ? `💳 ${L.drinkCard}` : L.potTogetherQ}</span>
           <button onClick={() => setShowPot(true)} style={{ flexShrink: 0, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", color: "#fff", borderRadius: 9, padding: "7px 13px", fontSize: 13.5, fontWeight: 800 }}>{L.potAddBtn}</button>
@@ -7187,10 +7221,9 @@ export default function PartyTest() {
               </div>
             )}
           </>)}
-        </div>
-        {/* Teller en personen stonden in twee kaarten met bijna dezelfde kop. Nu één
-            sectie: het aantal links, de knoppen rechts, en de uitleg als gewone tekst. */}
-        <div style={S.card}>
+        {/* Naam, extra's en personen in één kaart: de hele setup in één oogopslag,
+            gescheiden door een dun lijntje in plaats van twee losse kaartkoppen. */}
+        <div style={{ borderTop: "1px solid rgba(13,124,140,0.14)", margin: "14px 0 13px" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
             <span style={{ fontSize: 16.5, fontWeight: 800, color: "#4a3f1e" }}>{L.peopleHeader(people.length)}</span>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 11, flexShrink: 0 }}>
@@ -7272,8 +7305,10 @@ export default function PartyTest() {
           })()}
         </div>
 
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 24, marginBottom: 4 }}>
-          <button style={{ ...S.btnP, width: "80%" }} onClick={() => {
+        {/* Plakt onderaan: op kleine schermen mag de weg vooruit nooit onder de vouw
+            verdwijnen. De extra gloed houdt hem leesbaar over wat eronder doorschuift. */}
+        <div style={{ position: "sticky", bottom: 10, zIndex: 5, display: "flex", justifyContent: "center", marginTop: 24, marginBottom: 4 }}>
+          <button style={{ ...S.btnP, width: "80%", boxShadow: "0 6px 22px -6px rgba(13,124,140,0.6)" }} onClick={() => {
               if (people.length === 0) { setNotice(L.addPersonFirst); return }
               // Vul je eigen naam in vóór je deelt: anders sta jij als "Gast 1" tussen de
               // anderen en weet niemand — jijzelf incluis — welke rij van jou is.
