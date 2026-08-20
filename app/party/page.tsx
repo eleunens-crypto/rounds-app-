@@ -3182,6 +3182,7 @@ export default function PartyTest() {
     if (g && g.settle !== false) setOpNaam(false)
     else if (vorigeGid !== null && vorigeGid !== gid) setOpNaam(uitgebreidData ? true : false)
     else if (uitgebreidData) setOpNaam(true)
+    if (vorigeGid !== null && vorigeGid !== gid) setFromQuick(false)
     setPeople((pp || []).map((r) => ({
       id: r.id, seat: r.seat,
       // named = de admin (of de gast zelf) gaf een echte naam. Een naamloze plaats
@@ -5983,7 +5984,10 @@ export default function PartyTest() {
   // De drie tabbladen van de beheerder. Ze wijzen naar bestaande schermen, dus de
   // navigatie eronder verandert niet — alleen de vorm is nu gelijk aan die van de gast.
   const AdminTabs = () => {
-    if (!groupId || !isAdmin || !settle) return null
+    // Alleen in de echte QR-modus: een snel- of uitgebreid-sessie die via Fair Split
+    // afrekende, krijgt settle=true maar blijft een noteer-sessie — daar horen geen
+    // tabbladen met "Mijn stand".
+    if (!groupId || !isAdmin || !settle || fromQuick) return null
     const hier: "order" | "me" | "group" =
       view === "settings" ? "group" : (view === "hub" || view === "roundsOverview" || view === "confirmed") ? "me" : "order"
     const naar = (t: "order" | "me" | "group") => {
@@ -7509,7 +7513,7 @@ export default function PartyTest() {
             {rounds.length > 0 ? (
             // Er zijn afgeronde rondjes: overzicht + nieuw/verder.
             <div style={{ display: "flex", gap: 10 }}>
-              {!(settle && isAdmin) && <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (!settle) { setOverviewBackTo("hub"); setView("roundsOverview") } else { setOpenRound(rounds.length - 1); setView("hub") } }}>{L.roundsOverview}</button>}
+              {!(settle && !fromQuick && isAdmin) && <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (!settle || fromQuick) { setOverviewBackTo("hub"); setView("roundsOverview") } else { setOpenRound(rounds.length - 1); setView("hub") } }}>{L.roundsOverview}</button>}
               {/* Kwam je uit het bestelscherm, dan zegt de knop hierboven dit al. */}
               {echtOnafgerond
                 ? (settingsBackTo === "order" ? null : <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>)
@@ -7520,7 +7524,7 @@ export default function PartyTest() {
           ) : echtOnafgerond ? (
             // Nog geen afgerond rondje, maar wel bezig met rondje 1: verder of terug.
             <div style={{ display: "flex", gap: 10 }}>
-              <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (!settle) { setNotice(L.noRoundsYet); return } setQrGevraagd(true); setView("hub") }}>{settle ? L.showQr : L.roundsOverview}</button>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (!settle || fromQuick) { setNotice(L.noRoundsYet); return } setQrGevraagd(true); setView("hub") }}>{settle && !fromQuick ? L.showQr : L.roundsOverview}</button>
               {settingsBackTo !== "order" && <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>}
             </div>
           ) : (
@@ -7529,13 +7533,13 @@ export default function PartyTest() {
             // hetzelfde scherm, waarvan één "terug naar rondje 1" en één "naar 1e rondje".
             // De andere twee takken vingen dat al af; deze was vergeten.
             <div style={{ display: "flex", gap: 10 }}>
-              <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (settle) setQrGevraagd(true); setView("hub") }}>{settle ? L.showQr : L.roundsOverview}</button>
+              <button style={{ ...S.btn, flex: 1 }} onClick={() => { if (settle && !fromQuick) setQrGevraagd(true); setView("hub") }}>{settle && !fromQuick ? L.showQr : L.roundsOverview}</button>
               {settingsBackTo !== "order" && <button style={{ ...S.btnP, flex: 1 }} onClick={naarRondje}>{L.toFirstRound}</button>}
             </div>
           )}
             {/* Laatkomer? Ook als iedereen gescand heeft: je zet er een plaats bij en de
                 nieuwe scant alsnog. Daarom geen voorwaarde op vrije plaatsen. */}
-            {settle && rounds.length > 0 && (
+            {settle && !fromQuick && rounds.length > 0 && (
               <button style={{ ...S.btn, width: "100%", marginTop: 10, fontWeight: 800 }}
                 onClick={() => { setQrGevraagd(true); setView("hub") }}>{L.showQr}</button>
             )}
