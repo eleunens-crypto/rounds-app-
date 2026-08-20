@@ -548,17 +548,17 @@ const T = {
     persShort: (n: number) => `${n} pers.`,
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "persoon" : "personen"}`,
     peopleIntro: () => "Jij staat er al bij. De anderen komen erbij via QR scan.",
-    addNonScanner: "Iemand die niet scant?",
+    addNonScanner: "✍️ Naam zelf invullen",
     linkCopiedShort: "✓ Gekopieerd",
     linkLabel: "Link:",
     youPaste: "Je plakt dit:",
     joinInviteShort: (naam: string) => `Doe je mee met ${naam || "ons rondje"}? Scan of tik:`,
-    pasteAndShare: "Plak en deel in: WhatsApp · Messenger · sms · e-mail · …",
+    pasteAndShare: "✓ Gekopieerd — plak hem in jullie groepschat.",
     addPersonBtn: "+ persoon",
     sectionGroup: "DE GROEP",
     sectionExtras: "EXTRA’S",
-    startOrdering: "🍻 Beginnen met bestellen →",
-    startOrderingSub: "Wie later scant, kan nog aansluiten",
+    startOrdering: "Beginnen met bestellen",
+    startOrderingSub: "wie later scant, sluit gewoon aan",
     removeLastPerson: "Laatste persoon weghalen",
     showQr: "📱 QR-code tonen",
     toQrStep: "Naar de QR-code →",
@@ -1265,17 +1265,17 @@ const T = {
     persShort: (n: number) => `${n} pers.`,
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "personne" : "personnes"}`,
     peopleIntro: () => "Tu es déjà là. Les autres arrivent en scannant le QR.",
-    addNonScanner: "Quelqu’un qui ne scanne pas ?",
+    addNonScanner: "✍️ Écrire un nom soi-même",
     linkCopiedShort: "✓ Copié",
     linkLabel: "Lien :",
     youPaste: "Tu colles ceci :",
     joinInviteShort: (naam: string) => `Tu viens à ${naam || "notre tournée"} ? Scanne ou touche :`,
-    pasteAndShare: "Colle et partage dans : WhatsApp · Messenger · sms · e-mail · …",
+    pasteAndShare: "✓ Copi\u00e9 — colle-le dans votre chat de groupe.",
     addPersonBtn: "+ personne",
     sectionGroup: "LE GROUPE",
     sectionExtras: "EXTRAS",
-    startOrdering: "🍻 Commencer à commander →",
-    startOrderingSub: "Ceux qui scannent plus tard peuvent encore rejoindre",
+    startOrdering: "Commencer à commander",
+    startOrderingSub: "qui scanne plus tard rejoint simplement",
     removeLastPerson: "Retirer la dernière personne",
     showQr: "📱 Afficher le QR",
     toQrStep: "Vers le QR-code →",
@@ -4131,16 +4131,37 @@ export default function PartyTest() {
   }
   const renderShare = () => {
     if (!canShare) return null
-    const vrij = people.filter((p) => !p.claimedBy).length
-    // Sta je er alleen op, dan is er geen plaats om te scannen — en dat merk je pas als
-    // niemand erbij raakt.
     const alleen = people.length <= 1
     return (
+      <>
       <div style={{ ...S.card, border: `1.5px solid ${MODUS_FAIR.randZacht}` }}>
-        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 11 }}>{L.letGuestsScan}</h3>
-        <div style={{ background: MODUS_FAIR.vlak, border: `1.5px solid ${alleen ? "rgba(224,104,92,0.5)" : MODUS_FAIR.randZacht}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 15, fontWeight: 800, color: MODUS_FAIR.tekst, minWidth: 0 }}>{L.howManyAreYou}</span>
+        {/* De QR ís de uitnodiging: groot en centraal, meteen onder de kop. */}
+        <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10, textAlign: "center" }}>{L.letGuestsScan}</h3>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ display: "inline-block", background: "#fff", padding: 10, borderRadius: 14, border: "1px solid rgba(120,95,20,0.15)" }}>
+            <QRCodeSVG value={inviteLink} size={148} bgColor="#ffffff" fgColor="#4a3f1e" />
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <button style={{ ...S.btn, flex: 1, fontWeight: 800, padding: "12px 8px" }}
+            onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(`${L.joinInviteShort(groupName)} ${inviteLink}`); setLinkGekopieerd(true); setTimeout(() => setLinkGekopieerd(false), 6000) } }}>
+            {linkGekopieerd ? L.linkCopiedShort : L.copyLink}</button>
+          {people.some((p) => !p.claimedBy) && (
+            <button onClick={() => { const vrijP = people.find((p) => !p.claimedBy); if (vrijP) setZitNaam({ id: vrijP.id, nr: people.indexOf(vrijP) + 1 }) }}
+              style={{ ...S.btn, flex: 1, fontWeight: 800, padding: "12px 8px" }}>{L.addNonScanner}</button>
+          )}
+        </div>
+        {/* De volledige link staat niet meer permanent in beeld: hij verschijnt alleen
+            even als bevestiging na het kopiëren — mét de link in het klein, zodat je
+            ziet wat er op je klembord kwam. */}
+        {linkGekopieerd && (
+          <div style={{ marginTop: 7, background: "rgba(31,138,76,0.1)", border: "1px solid rgba(31,138,76,0.3)", borderRadius: 10, padding: "9px 11px", fontSize: 13.5, color: "#1f6b3a", lineHeight: 1.45 }}>{L.pasteAndShare}</div>
+        )}
+        {/* Teller + het levende namenblok. Het groene "plaatsen vrij"-regeltje is weg:
+            groen betekent voortaan alleen "binnen", het wachten vertelt de pill. */}
+        <div style={{ borderTop: "1px dashed rgba(13,124,140,0.25)", marginTop: 13, paddingTop: 11 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.peopleHeader(people.length)}</span>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 11, flexShrink: 0 }}>
               <button onClick={removeLastPerson} disabled={busy || people.length <= 1} title={L.removeLastPerson}
                 style={{ ...S.step, width: 32, height: 32, fontSize: 18, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
@@ -4149,63 +4170,27 @@ export default function PartyTest() {
                 style={{ ...S.step, width: 32, height: 32, fontSize: 18, background: MODUS_FAIR.knop, color: "#fff", border: "none" }}>+</button>
             </span>
           </div>
-          {alleen ? (
-            <div style={{ display: "flex", gap: 9, alignItems: "flex-start", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(224,104,92,0.25)" }}>
+          {alleen && (
+            <div style={{ display: "flex", gap: 9, alignItems: "flex-start", marginBottom: 8, background: "rgba(224,104,92,0.07)", border: "1px solid rgba(224,104,92,0.35)", borderRadius: 10, padding: "9px 11px" }}>
               <span style={{ flexShrink: 0, fontSize: 18 }}>⚠️</span>
-              <span style={{ fontSize: 15, color: "#b0402f", lineHeight: 1.45 }}><b>{L.noFreeSeatYet}</b> {L.scanNoUseAlone}</span>
+              <span style={{ fontSize: 14.5, color: "#b0402f", lineHeight: 1.45 }}><b>{L.noFreeSeatYet}</b> {L.scanNoUseAlone}</span>
             </div>
-          ) : vrij > 0 ? (
-            <div style={{ fontSize: 13, color: "#1f6b3a", fontWeight: 800, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${MODUS_FAIR.lijnZacht}` }}>✓ {L.freeToScan(vrij)}</div>
-          ) : null}
-        </div>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ display: "inline-block", background: "#fff", padding: 10, borderRadius: 14, border: "1px solid rgba(120,95,20,0.15)" }}>
-            <QRCodeSVG value={inviteLink} size={132} bgColor="#ffffff" fgColor="#4a3f1e" />
-          </div>
-        </div>
-        {/* Één knop: de systeem-deelknop gaf op veel toestellen toch alleen de link door.
-            Wat je kopieert staat eronder, zodat je ziet wát er op je klembord komt. */}
-        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <button style={{ ...S.btn, flex: 1, fontWeight: 800, padding: "12px 8px" }}
-            onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(`${L.joinInviteShort(groupName)} ${inviteLink}`); setLinkGekopieerd(true); setTimeout(() => setLinkGekopieerd(false), 4000) } }}>
-            {linkGekopieerd ? L.linkCopiedShort : L.copyLink}</button>
-          {people.some((p) => !p.claimedBy) && (
-            <button onClick={() => { const vrij = people.find((p) => !p.claimedBy); if (vrij) setZitNaam({ id: vrij.id, nr: people.indexOf(vrij) + 1 }) }}
-              style={{ ...S.btn, flex: 1, fontWeight: 800, padding: "12px 8px" }}>{L.addNonScanner}</button>
           )}
-        </div>
-        <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "flex-start", background: VLAK1, border: "1px solid rgba(120,95,20,0.18)", borderRadius: 10, padding: "9px 11px" }}>
-          <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#8a7d55" }}>{L.linkLabel}</span>
-          <span style={{ fontSize: 12.5, color: "#8a7d55", wordBreak: "break-all", lineHeight: 1.4 }}>{inviteLink}</span>
-        </div>
-        {linkGekopieerd && (
-          <div style={{ marginTop: 7, background: "rgba(31,138,76,0.1)", border: "1px solid rgba(31,138,76,0.3)", borderRadius: 10, padding: "9px 11px", fontSize: 13.5, color: "#1f6b3a", lineHeight: 1.45 }}>{L.pasteAndShare}</div>
-        )}
-        {/* Wat er precies op je klembord komt — niet alleen de kale link, maar een zin die
-            in een berichtenapp leesbaar is. */}
-        <div style={{ marginTop: 8, fontSize: 12, color: "#b3a988", lineHeight: 1.5 }}>{L.youPaste} <i>“{L.joinInviteShort(groupName)}”</i></div>
-        {/* Wie scande al? Zo ziet de admin de groep vollopen zonder te moeten raden.
-            De vrije plaatsen staan hier — niet meer bij de namenstap — want dit is het
-            scherm waar je staat te wachten tot ze binnenkomen. */}
-        {/* Wie scande al? Exact hetzelfde levende namenblok als op het instelscherm:
-            kroonrij, groene ✅-rijen, wachtende kolommen en de tellende pill — de admin
-            ziet de groep hier live vollopen, per scan. */}
-        <div style={{ borderTop: "1px solid rgba(120,95,20,0.12)", marginTop: 14, paddingTop: 12, marginBottom: 2 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", marginBottom: 8 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</div>
           {renderNamenBlok()}
         </div>
-        {/* De vraag op dit scherm is "mag ik al beginnen?" — vandaar het antwoord in de knop
-            zelf. Wie later scant sluit gewoon aan, want de QR blijft bereikbaar. */}
-        <button onClick={() => { void openBestellen(); setActiveCat(catsPresent[0]); setView("order") }}
-          style={{ width: "100%", marginTop: 14, cursor: "pointer", border: "none", borderRadius: 14, padding: "13px 12px", color: "#fff",
-            background: MODUS_FAIR.knop, boxShadow: `0 12px 28px -8px ${MODUS_FAIR.gloed}, 0 0 0 4px ${MODUS_FAIR.tint}` }}>
-          <span style={{ display: "block", fontSize: 17.5, fontWeight: 800 }}>{L.startOrdering}</span>
+      </div>
+      {/* De weg vooruit plakt onderaan en ademt zachtjes — onmiskenbaar dé volgende
+          stap, zonder te schreeuwen. Pijl-in-cirkel in plaats van de bieremoji. */}
+      <div style={{ position: "sticky", bottom: 10, zIndex: 5, marginTop: 4, marginBottom: 13 }}>
+        <button className="rundo-adem" onClick={() => { void openBestellen(); setActiveCat(catsPresent[0]); setView("order") }}
+          style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 14, padding: "13px 12px", color: "#fff", background: MODUS_FAIR.knop }}>
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9, fontSize: 17.5, fontWeight: 800 }}>{L.startOrdering}<span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 24, height: 24, borderRadius: "50%", background: "rgba(255,255,255,0.22)", fontSize: 14, fontWeight: 800, flexShrink: 0 }}>→</span></span>
           <span style={{ display: "block", fontSize: 12.5, opacity: 0.92, marginTop: 2 }}>{L.startOrderingSub}</span>
         </button>
       </div>
+      </>
     )
   }
-
   // ── Eigen drankje ───────────────────────────────────────────────────────────
   const MAX_EIGEN_PERSOON = 5
   const MAX_EIGEN_GROEP = 20
@@ -6086,7 +6071,7 @@ export default function PartyTest() {
     const uitgebreidLook = alsUitgebreid || !settle || fromQuick
     // Het QR-instelscherm krijgt één samengestelde kopbalk (logo + modus in degradé)
     // in plaats van de losse teal balk, logo-rij en naam rechtsboven.
-    const setupKop = !!groupId && settle && view === "setup" && !kaal
+    const setupKop = !!groupId && settle && !kaal && (view === "setup" || (view === "hub" && isAdmin && !fromQuick && rounds.length === 0))
     return (
     <div style={{ marginBottom: 12 }}>
       {/* Bij uitgebreid opnemen geen aparte statusbalk: de tekst staat rechts op de
@@ -8400,7 +8385,7 @@ export default function PartyTest() {
 
               {/* Bedrag-veld met ✓ én Overslaan samen op één rij. Het vinkje pulseert groen
                   (omrand) zodra er een bedrag staat = "tik om te bevestigen". */}
-              <style>{`@keyframes rundoPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,138,76,0.45)}50%{box-shadow:0 0 0 7px rgba(31,138,76,0)}}.rundo-pulse{animation:rundoPulse 1.4s infinite}@keyframes rundoPulseAmber{0%,100%{box-shadow:0 0 0 0 rgba(224,138,0,0.5)}50%{box-shadow:0 0 0 7px rgba(224,138,0,0)}}.rundo-pulse-amber{animation:rundoPulseAmber 1.4s infinite}@keyframes rundoPulseBlauw{0%,100%{box-shadow:0 0 0 0 rgba(59,72,106,0.5)}50%{box-shadow:0 0 0 7px rgba(59,72,106,0)}}.rundo-pulse-blauw{animation:rundoPulseBlauw 1.4s infinite}@keyframes rundoPulsePot{0%,100%{box-shadow:0 0 0 0 rgba(47,111,181,0.5)}50%{box-shadow:0 0 0 7px rgba(47,111,181,0)}}.rundo-pulse-pot{animation:rundoPulsePot 1.4s infinite}@keyframes rundoStip{0%,100%{opacity:1}50%{opacity:0.25}}.rundo-stip{animation:rundoStip 1.4s infinite}`}</style>
+              <style>{`@keyframes rundoPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,138,76,0.45)}50%{box-shadow:0 0 0 7px rgba(31,138,76,0)}}.rundo-pulse{animation:rundoPulse 1.4s infinite}@keyframes rundoPulseAmber{0%,100%{box-shadow:0 0 0 0 rgba(224,138,0,0.5)}50%{box-shadow:0 0 0 7px rgba(224,138,0,0)}}.rundo-pulse-amber{animation:rundoPulseAmber 1.4s infinite}@keyframes rundoPulseBlauw{0%,100%{box-shadow:0 0 0 0 rgba(59,72,106,0.5)}50%{box-shadow:0 0 0 7px rgba(59,72,106,0)}}.rundo-pulse-blauw{animation:rundoPulseBlauw 1.4s infinite}@keyframes rundoPulsePot{0%,100%{box-shadow:0 0 0 0 rgba(47,111,181,0.5)}50%{box-shadow:0 0 0 7px rgba(47,111,181,0)}}.rundo-pulse-pot{animation:rundoPulsePot 1.4s infinite}@keyframes rundoStip{0%,100%{opacity:1}50%{opacity:0.25}}.rundo-stip{animation:rundoStip 1.4s infinite}@keyframes rundoAdem{0%,100%{box-shadow:0 6px 20px rgba(13,124,140,0.45)}50%{box-shadow:0 6px 26px rgba(13,124,140,0.7),0 0 0 5px rgba(13,124,140,0.12)}}.rundo-adem{animation:rundoAdem 2.2s infinite}`}</style>
               {payVia !== "mix" && (<>
               <div style={{ ...S.row, gap: 7 }}>
                 <span style={{ fontSize: 20, color: "#8a7d55", fontWeight: 700 }}>€</span>
