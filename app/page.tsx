@@ -369,7 +369,7 @@ export default function Home() {
         {pick === null && (
           <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 22px" }}>
             <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.18)" }} />
-            <span style={{ fontSize: 16.5, fontWeight: 800, color: "rgba(255,255,255,0.92)", whiteSpace: "nowrap" }}>{t.pickFirst}</span>
+            <span style={{ fontSize: 16.5, fontWeight: 600, color: "rgba(255,255,255,0.78)", whiteSpace: "nowrap" }}>{t.pickFirst}</span>
             <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.18)" }} />
           </div>
         )}
