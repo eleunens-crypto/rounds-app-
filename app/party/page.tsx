@@ -9764,10 +9764,7 @@ export default function PartyTest() {
               <div style={{ ...S.row, justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
                 <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", paddingLeft: mist ? 0 : 20, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.roundSummary(idx + 1, items)}</span>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                  <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                  <input type="text" inputMode="decimal" placeholder="0,00"
-                    {...bedragVeld(`payer-${r.id}`, r.amount || 0, (v) => rSetAmount(idx, v))}
-                    style={{ ...S.input, width: 88, flexShrink: 0, padding: "8px 10px", fontSize: 16, fontWeight: 800, color: "#c88a1a", textAlign: "right" }} />
+                  <span style={{ flexShrink: 0, fontSize: 17, fontWeight: 800, color: "#c88a1a", whiteSpace: "nowrap" }}>{euro(r.amount || 0)}</span>
                 </span>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
