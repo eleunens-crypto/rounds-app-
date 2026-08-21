@@ -4654,6 +4654,13 @@ export default function PartyTest() {
       return
     }
     persistSettings({ fq: true })
+    const alleAantallen = rounds.map((r) => Math.max(1, r.headcount || 1))
+    const doelAantal = Math.max(1, splitPeople ?? (alleAantallen.length ? Math.max(...alleAantallen) : 1))
+    if (people.length < doelAantal && groupId) {
+      const bij = doelAantal - people.length
+      Promise.all(Array.from({ length: bij }, () => supabase.rpc("party_add_person", { p_group: groupId, p_name: "" })))
+        .then(() => loadParty(groupId))
+    }
     setFromQuick(true); setView("fairSetup")
   }
   // Terug naar de gelijke verdeling: de modus omzetten en de rondjes ongemoeid laten.
@@ -5483,13 +5490,13 @@ export default function PartyTest() {
           </div>
           <div style={{ ...S.row, gap: 6, marginBottom: 10 }}>
             <span style={{ fontSize: 14, color: "#8a7d55" }}>{L.ownAmount}</span>
-            <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 14, borderColor: everyoneChoice === "custom" ? "#2f6fb5" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="€" value={everyoneDraft} onChange={(e) => setEveryoneDraft(e.target.value.replace(/[^0-9.,]/g, ""))} />
+            <input style={{ ...S.input, width: 66, padding: "5px 8px", fontSize: 16, borderColor: everyoneChoice === "custom" ? "#2f6fb5" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="€" value={everyoneDraft} onChange={(e) => setEveryoneDraft(e.target.value.replace(/[^0-9.,]/g, ""))} />
             <button style={{ ...S.btn, padding: "5px 11px", fontSize: 14, opacity: (parseFloat(everyoneDraft.replace(",", ".")) || 0) > 0 ? 1 : 0.5 }} onClick={() => { const v = parseFloat(everyoneDraft.replace(",", ".")) || 0; if (v > 0) { setEveryoneChoice("custom"); setEveryoneAmt(v) } }}>toepassen</button>
           </div>
           {people.map((p) => (
             <div key={p.id} style={{ ...S.row, gap: 8, padding: "7px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
               <span style={{ fontSize: 15.5, fontWeight: 800, width: 112, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{contribOf(p.id) > 0 && <span style={{ fontSize: 13, fontWeight: 700, color: "#8a7d55" }}> · {euro(contribOf(p.id))}</span>}</span>
-              <input style={{ ...S.input, width: 58, padding: "5px 8px", fontSize: 14.5, flexShrink: 0 }} type="text" inputMode="decimal" placeholder="€" value={potDraft[p.id] ?? ""} onChange={(e) => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 })) }} />
+              <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 16, flexShrink: 0 }} type="text" inputMode="decimal" placeholder="€" value={potDraft[p.id] ?? ""} onChange={(e) => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 })) }} />
               <button style={{ ...S.btn, padding: "5px 9px", fontSize: 14, color: "#c0554a", flexShrink: 0 }} onClick={() => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: 0 })) }}>↺</button>
               <span style={{ fontSize: 15, fontWeight: 800, marginLeft: "auto", textAlign: "right", color: (potDraft[p.id] || 0) > 0 ? "#2f6fb5" : "#b3a988" }}>{(potDraft[p.id] || 0) > 0 ? "+" + euro(potDraft[p.id] || 0) : "+€0"}</span>
             </div>
@@ -7137,7 +7144,7 @@ export default function PartyTest() {
                 <div style={{ display: "flex", alignItems: "center", gap: 8, background: VLAK1, border: "1px solid rgba(120,95,20,0.18)", borderRadius: 11, padding: "8px 12px", marginBottom: 12 }}>
                   <span style={{ fontSize: 15, color: "#a89a6f" }}>🔍</span>
                   <input value={groepZoek} onChange={(e) => setGroepZoek(e.target.value)} placeholder={L.searchGroups}
-                    style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: 15.5, fontFamily: "inherit", color: "#4a3f1e" }} />
+                    style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: 16, fontFamily: "inherit", color: "#4a3f1e" }} />
                   {groepZoek && <span onClick={() => setGroepZoek("")} style={{ cursor: "pointer", fontSize: 15, color: "#a89a6f", padding: "0 2px" }}>✕</span>}
                 </div>
               )}
@@ -7479,7 +7486,7 @@ export default function PartyTest() {
                 return (
                   <div key={p.id} style={{ position: "relative" }}>
                     <input value={isGuestDefault(p.name) ? "" : p.name} placeholder={isGuestDefault(p.name) ? p.name : `Gast ${idx + 1}`} onChange={(e) => renamePerson(p.id, e.target.value === "" ? `Gast ${idx + 1}` : e.target.value)}
-                      style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: ikZelf ? "6px 42px 6px 9px" : "6px 8px", fontSize: 14.5, textAlign: "left", fontWeight: ikZelf ? 700 : 400,
+                      style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: ikZelf ? "5px 42px 5px 9px" : "5px 8px", fontSize: 16, textAlign: "left", fontWeight: ikZelf ? 700 : 400,
                         background: ikZelf ? MODUS_FAIR.vlak : undefined, border: ikZelf ? `1.5px solid ${MODUS_FAIR.rand}` : undefined, color: ikZelf ? MODUS_FAIR.tekst : undefined }} />
                     {ikZelf && <span style={{ position: "absolute", right: 5, top: "50%", transform: "translateY(-50%)", background: MODUS_FAIR.rand, color: "#fff", borderRadius: 9, padding: "2px 7px", fontSize: 10.5, fontWeight: 800, letterSpacing: "0.04em", pointerEvents: "none" }}>{L.youBadge}</span>}
                   </div>
@@ -9588,7 +9595,7 @@ export default function PartyTest() {
                       <span style={{ fontSize: 15, color: "#8a7d55", fontWeight: 700 }}>€</span>
                       <input type="text" inputMode="decimal" placeholder="0,00"
                         {...bedragVeld(`potnaam-${p.id}`, potNames[p.id] || 0, (v) => setPotNames((c) => ({ ...(c || {}), [p.id]: v })))}
-                        style={{ ...S.input, width: 82, padding: "7px 9px", fontSize: 15, fontWeight: 800 }} />
+                        style={{ ...S.input, width: 86, padding: "7px 9px", fontSize: 16, fontWeight: 800 }} />
                     </span>
                   </div>
                 ))}
