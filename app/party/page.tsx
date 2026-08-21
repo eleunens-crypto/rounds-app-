@@ -3962,19 +3962,23 @@ export default function PartyTest() {
   const editPotRound = (id: string) => { const r = potRounds.find((x) => x.id === id); if (!r) return; setEditPotId(id); setPotDraft({ ...r.amounts }); setEveryoneChoice(null); setEveryoneDraft("") }
   const saveEditPot = () => {
     if (editPotId === null) return
+    const oudeRonde = potRounds.find((x) => x.id === editPotId)
+    const oudTot = oudeRonde ? Object.values(oudeRonde.amounts).reduce((a, b) => a + (b || 0), 0) : 0
     if (potDraftTotal > 0.001) {
       supabase.from("party_pot").update({ amounts: potDraft }).eq("id", editPotId)
-        .then(({ error }) => { if (error) setNotice("Opslaan mislukt: " + error.message); else if (groupId) loadParty(groupId) })
+        .then(({ error }) => { if (error) setNotice("Opslaan mislukt: " + error.message); else klemPotDelenOp(potContribTotal - oudTot + potDraftTotal).then(() => { if (groupId) loadParty(groupId) }) })
     } else {
       // Alles op nul gezet = de inleg-ronde bestaat niet meer.
       supabase.from("party_pot").delete().eq("id", editPotId)
-        .then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
+        .then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message); else klemPotDelenOp(potContribTotal - oudTot).then(() => { if (groupId) loadParty(groupId) }) })
     }
     setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setPotBuilderOpen(false)
   }
   const cancelEditPot = () => { setEditPotId(null); setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setPotBuilderOpen(false) }
   const removePotRound = (id: string, label: string) => setConfirmDlg({ msg: L.removeContribConfirm(label), yes: L.yesCancel, onYes: () => {
-    supabase.from("party_pot").delete().eq("id", id).then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message); else if (groupId) loadParty(groupId) })
+    const weg = potRounds.find((r) => r.id === id)
+    const wegTot = weg ? Object.values(weg.amounts).reduce((a, b) => a + (b || 0), 0) : 0
+    supabase.from("party_pot").delete().eq("id", id).then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message); else klemPotDelenOp(potContribTotal - wegTot).then(() => { if (groupId) loadParty(groupId) }) })
     setPotRounds((rs) => rs.filter((r) => r.id !== id)); setConfirmDlg(null)
   } })
   // Zodra er een eigen drankje bestaat, springt ⭐ Eigen vooraan — dat is dan de
@@ -4699,24 +4703,24 @@ export default function PartyTest() {
   const potZonderNamen = potRounds.some((r) => Object.keys(r.amounts).some((k) => !people.some((p) => p.id === k)))
   // Bij het verdelen over namen voegen we de losse inlegrondes samen tot één rij: wie
   // wat inlegde is vanaf hier de vraag, niet in welke beurt het gebeurde.
+  const klemPotDelenOp = async (nieuwTotaal: number) => {
+    let vrij = Math.max(0, nieuwTotaal)
+    const geklemd = rounds.map((r) => {
+      const deel = Math.min(r.potPart || 0, vrij)
+      vrij -= deel
+      return Math.abs(deel - (r.potPart || 0)) > 0.004 ? { ...r, potPart: deel } : r
+    })
+    const gewijzigd = geklemd.filter((r, i) => r !== rounds[i])
+    if (gewijzigd.length > 0) await Promise.all(gewijzigd.map((r) => persistRound(r)))
+  }
   const bewaarPotPerPersoon = async (bedragen: Record<string, number>) => {
     if (!groupId || potRounds.length === 0) return
     const [eerste, ...rest] = potRounds
     const { error } = await supabase.from("party_pot").update({ amounts: bedragen }).eq("id", eerste.id)
     if (error) { setNotice("Pot opslaan mislukt: " + error.message); return }
     if (rest.length > 0) await supabase.from("party_pot").delete().in("id", rest.map((r) => r.id))
-    // Is de inleg omlaag gegaan terwijl rondjes al uit de pot betaald waren? Dan de
-    // toegewezen potdelen van voor naar achter afromen tot ze weer binnen de nieuwe
-    // inleg passen — een negatieve pot kan zo niet meer ontstaan.
-    const nieuwTotaal = Object.values(bedragen).reduce((a, b) => a + (b || 0), 0)
-    let rest2 = nieuwTotaal
-    const geklemd = rounds.map((r) => {
-      const deel = Math.min(r.potPart || 0, Math.max(0, rest2))
-      rest2 -= deel
-      return Math.abs(deel - (r.potPart || 0)) > 0.004 ? { ...r, potPart: deel } : r
-    })
-    const gewijzigd = geklemd.filter((r, i) => r !== rounds[i])
-    if (gewijzigd.length > 0) await Promise.all(gewijzigd.map((r) => persistRound(r)))
+    // Inleg omlaag terwijl rondjes al uit de pot betaald waren? Meekrimpen.
+    await klemPotDelenOp(Object.values(bedragen).reduce((a, b) => a + (b || 0), 0))
     setPotNames(null)
     loadParty(groupId)
   }
