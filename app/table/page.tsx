@@ -505,14 +505,16 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
   // Telefoons houden de ingezoomde stand vast over paginawissels heen (Table →
   // keuzescherm → Party bleef gezoomd staan). Bij binnenkomst zetten we de zoom
   // heel even vast op 1 en geven de viewport meteen weer vrij.
+  // Telefoons zoomen in op invoervelden en houden die stand vast, ook over
+  // paginawissels heen — en Android Chrome geeft hem met een meta-wissel niet
+  // terug. Daarom app-gedrag: de viewport staat permanent vast op schaal 1, dus
+  // invoer-autozoom bestaat niet meer. iOS laat knijpzoomen bij een echt gebaar
+  // gewoon toe (het negeert de limiet daarvoor), Android houdt alles strak op 100%.
   useEffect(() => {
     try {
       let m = document.querySelector('meta[name="viewport"]')
       if (!m) { m = document.createElement("meta"); m.setAttribute("name", "viewport"); document.head.appendChild(m) }
-      const oud = m.getAttribute("content") || "width=device-width, initial-scale=1"
-      m.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1")
-      const t = window.setTimeout(() => m?.setAttribute("content", oud.includes("maximum-scale") ? "width=device-width, initial-scale=1" : oud), 400)
-      return () => window.clearTimeout(t)
+      m.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no")
     } catch { /* niets */ }
   }, [])
   useEffect(() => {
