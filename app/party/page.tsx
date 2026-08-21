@@ -148,8 +148,9 @@ function KroonIcoon({ size = 15, kleur = "#0a6070", gevuld = false }: { size?: n
   )
 }
 
-function BonIcoon({ size = 16, kleur = "#8a7d55" }: { size?: number; kleur?: string }) {
-  // Kassabonnetje met kartelrand — kleurt mee met de knop waarin het staat.
+function BonKnopIcoon({ size = 16, kleur = "#8a7d55" }: { size?: number; kleur?: string }) {
+  // Klein kassabonnetje met kartelrand voor in knoppen — kleurt mee met zijn knop.
+  // (Niet te verwarren met BonIcoon, de grote getekende bon op de modekaarten.)
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={kleur} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
       <path d="M6 3h12v18l-2-1.4L14 21l-2-1.4L10 21l-2-1.4L6 21z" />
@@ -6266,13 +6267,13 @@ export default function PartyTest() {
               Afrekenen staat er links vooraan, met het getekende bonnetje. */}
           {!settle && opNaam !== true && rounds.length >= 1 && (
             !lastRoundHandled ? (
-              <div style={{ flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 800, borderRadius: 10, textAlign: "center", background: "#faf4e4", color: "#8a5e0f", border: "1px solid rgba(240,165,0,0.35)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, opacity: 0.75 }}><BonIcoon kleur="#8a5e0f" /> {L.quickSettleTitle}</div>
+              <div style={{ flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 800, borderRadius: 10, textAlign: "center", background: "#faf4e4", color: "#8a5e0f", border: "1px solid rgba(240,165,0,0.35)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, opacity: 0.75 }}><BonKnopIcoon kleur="#8a5e0f" /> {L.quickSettleTitle}</div>
             ) : (
               <button style={{ flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 700, borderRadius: 10, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
                 border: view === "quickSettle" ? "none" : "1px solid rgba(120,95,20,0.25)",
                 background: view === "quickSettle" ? AAN : "#fff",
                 color: view === "quickSettle" ? "#fff" : "#8a7d55" }}
-                onClick={goQuickSettle}><BonIcoon kleur={view === "quickSettle" ? "#fff" : "#8a7d55"} /> {L.quickSettleTitle}</button>
+                onClick={goQuickSettle}><BonKnopIcoon kleur={view === "quickSettle" ? "#fff" : "#8a7d55"} /> {L.quickSettleTitle}</button>
             )
           )}
           {!(!settle && opNaam !== true) && (
@@ -9462,7 +9463,7 @@ export default function PartyTest() {
               <button onClick={goQuickSettle}
                 style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 11, padding: "13px 6px", fontSize: 15, fontWeight: 800,
                   background: "rgba(59,72,106,0.06)", color: "#3b486a",
-                  border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}><BonIcoon kleur="#3b486a" /> {L.quickSettleTitle}</button>
+                  border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}><BonKnopIcoon kleur="#3b486a" /> {L.quickSettleTitle}</button>
               {laatsteRondjeKlaar() && (
                 <button onClick={nextRound}
                   style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 11, padding: "13px 6px", fontSize: 15, fontWeight: 800,
