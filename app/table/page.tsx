@@ -502,6 +502,19 @@ async function scanReceiptOCR(file: File, onProgress?: (p: number) => void): Pro
 function Toast({ message, onDone }: { message: string; onDone: () => void }) {
   const doneRef = useRef(onDone)
   doneRef.current = onDone
+  // Telefoons houden de ingezoomde stand vast over paginawissels heen (Table →
+  // keuzescherm → Party bleef gezoomd staan). Bij binnenkomst zetten we de zoom
+  // heel even vast op 1 en geven de viewport meteen weer vrij.
+  useEffect(() => {
+    try {
+      let m = document.querySelector('meta[name="viewport"]')
+      if (!m) { m = document.createElement("meta"); m.setAttribute("name", "viewport"); document.head.appendChild(m) }
+      const oud = m.getAttribute("content") || "width=device-width, initial-scale=1"
+      m.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1")
+      const t = window.setTimeout(() => m?.setAttribute("content", oud.includes("maximum-scale") ? "width=device-width, initial-scale=1" : oud), 400)
+      return () => window.clearTimeout(t)
+    } catch { /* niets */ }
+  }, [])
   useEffect(() => {
     const t = setTimeout(() => doneRef.current(), 2400)
     return () => clearTimeout(t)
@@ -3529,8 +3542,9 @@ export default function RundoTable() {
     return (
       <div style={S.page}>
         <div style={{ maxWidth: 420, margin: "40px auto" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <button onClick={goToChooser} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 16.5, fontWeight: 700, color: "#8a93a8", background: "none", border: "none", padding: 0, cursor: "pointer" }}>{L.backToRundo}</button>
+          {/* De weg terug naar het keuzescherm hoort niet als eerste regel te schreeuwen:
+              hij staat voortaan bescheiden onder de opgeslagen groepen. */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 14 }}>
             <div style={{ transform: "scale(1.25)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
           </div>
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginBottom: 8 }}>
@@ -3596,7 +3610,7 @@ export default function RundoTable() {
                     <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(16,24,40,0.03)", border: "1px solid rgba(16,24,40,0.12)", borderRadius: 11, padding: "8px 12px", marginBottom: 10 }}>
                       <span style={{ fontSize: 15, color: "#9aa0ab" }}>🔍</span>
                       <input value={groepZoek} onChange={(e) => setGroepZoek(e.target.value)} placeholder={L.searchGroups}
-                        style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: 15.5, fontFamily: "inherit", color: "#14213a" }} />
+                        style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: 16, fontFamily: "inherit", color: "#14213a" }} />
                       {groepZoek && <span onClick={() => setGroepZoek("")} style={{ cursor: "pointer", fontSize: 15, color: "#9aa0ab", padding: "0 2px" }}>✕</span>}
                     </div>
                   )}
@@ -3631,6 +3645,9 @@ export default function RundoTable() {
               })()}
             </div>
           )}
+          <div style={{ textAlign: "center", marginTop: 16, marginBottom: 6 }}>
+            <button onClick={goToChooser} style={{ fontSize: 14.5, fontWeight: 700, color: "#7d93a3", background: "none", border: "none", padding: 4, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }}>{L.backToRundo}</button>
+          </div>
         </div>
       </div>
     )
@@ -5496,7 +5513,7 @@ export default function RundoTable() {
                           <input type="text" inputMode="decimal" placeholder="0,00" value={it.unit_price || ""} onChange={(e) => { const raw = numFilter(e.target.value); setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, unit_price: parseFloat(raw.replace(",", ".")) || 0, quantity: 1 } : x)) }} style={{ ...S.input, width: 80, textAlign: "right", padding: "8px 8px" }} />
                           <button onClick={() => setScanPreview((cur) => cur.filter((_, j) => j !== i))} style={{ ...S.iconBtn, flexShrink: 0 }}>✕</button>
                         </div>
-                        <div style={{ fontSize: 15.5, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 4 }}>{L.howToSplit}</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 4 }}>{L.howToSplit}</div>
                         <div style={{ display: "flex", gap: 6, marginBottom: !overAll ? 8 : 0 }}>
                           <button onClick={() => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, distribute: "all" } : x))} style={{ flex: 1, fontSize: 16, fontWeight: 800, borderRadius: 10, padding: "8px 6px", cursor: "pointer", border: overAll ? "none" : "1px solid rgba(16,24,40,0.15)", background: overAll ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff", color: overAll ? "#fff" : "#5a6680" }}>{L.overWholeBill}</button>
                           <button onClick={() => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, distribute: JSON.stringify({ idx: baseRows.map((o) => o.j) }) } : x))} style={{ flex: 1, fontSize: 16, fontWeight: 800, borderRadius: 10, padding: "8px 6px", cursor: "pointer", border: !overAll ? "none" : "1px solid rgba(16,24,40,0.15)", background: !overAll ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff", color: !overAll ? "#fff" : "#5a6680" }}>{L.overCertainItems}{!overAll ? ` (${selIdx.length})` : ""}</button>
