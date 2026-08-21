@@ -634,6 +634,7 @@ const T = {
     stillNoName: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} nog zonder naam`,
     assignWhoSub: "Wijs toe wie wat dronk",
     canAlsoLater: "kan ook later",
+    nameLockedNote: "🔒 vast — de avond is afgesloten",
     editNamesBtn: "✏️ Namen aanpassen",
     doneNamesBtn: "✓ Klaar met namen",
     editNamesHint: "Pas de namen aan — ze veranderen overal mee, ook in al toegewezen drankjes.",
@@ -1367,6 +1368,7 @@ const T = {
     stillNoName: (n: number) => `${n} boisson${n === 1 ? "" : "s"} encore sans nom`,
     assignWhoSub: "Attribue qui a bu quoi",
     canAlsoLater: "peut aussi se faire plus tard",
+    nameLockedNote: "🔒 fig\u00e9 — la soir\u00e9e est cl\u00f4tur\u00e9e",
     editNamesBtn: "✏️ Modifier les noms",
     doneNamesBtn: "✓ Noms termin\u00e9s",
     editNamesHint: "Modifie les noms — ils changent partout, aussi dans les boissons d\u00e9j\u00e0 attribu\u00e9es.",
@@ -1989,6 +1991,9 @@ export default function PartyTest() {
   const [naamPlicht, setNaamPlicht] = useState(false)
   // Bewerkstand in het toewijzen-venster: naamknoppen worden even invulveldjes.
   const [assignNaamEdit, setAssignNaamEdit] = useState(false)
+  // "Avond afgesloten" is iets anders dan "afgerekend": pas na het afsluiten gaat
+  // de groepsnaam op slot. Tot dan mag alles nog aangepast worden, in elke modus.
+  const [groepDicht, setGroepDicht] = useState(false)
   const [naamPlichtVeld, setNaamPlichtVeld] = useState("")
   // Datum van de groep, alleen voor de grijze haakjesweergave achter de naam.
   const [groepDatum, setGroepDatum] = useState<string | null>(null)
@@ -3273,6 +3278,7 @@ export default function PartyTest() {
     if (vorigeGid !== null && vorigeGid !== gid) setFromQuick(false)
     if (fqVlag) setFromQuick(true)
     setGroepDatum((g as { last_active?: string } | null)?.last_active ?? null)
+    setGroepDicht(!!(g as { finalized?: boolean } | null)?.finalized)
     setPeople((pp || []).map((r) => ({
       id: r.id, seat: r.seat,
       // named = de admin (of de gast zelf) gaf een echte naam. Een naamloze plaats
@@ -6284,7 +6290,7 @@ export default function PartyTest() {
         )}
         {!uitgebreidLook && !!groupId && !kaal && groupName.trim() && !editName && (
           <div style={{ textAlign: "right", minWidth: 0, flexShrink: 0, maxWidth: "52%" }}>
-            <div onClick={() => { if (!onboarding) setEditName(true) }} style={{ cursor: onboarding ? "default" : "pointer", fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div onClick={() => { if (!onboarding && !groepDicht) setEditName(true) }} style={{ cursor: onboarding ? "default" : "pointer", fontSize: 17, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {!settle && isAutoNaam(groupName) ? (
                 <span style={{ display: "block" }}>
                   <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: themaNaam ? "#5a6a94" : "#c98a00" }}>✏️ {L.giveNameQ}</span>
@@ -6304,7 +6310,7 @@ export default function PartyTest() {
       {uitgebreidLook && !!groupId && !kaal && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "10px 0", minHeight: 38 }}>
           {groupName.trim() && !editName && (
-            <span onClick={() => { if (!onboarding) setEditName(true) }}
+            <span onClick={() => { if (!onboarding && !groepDicht) setEditName(true) }}
               style={{ flex: "0 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onboarding ? "default" : "pointer", background: "#fff", border: "1.5px solid rgba(240,165,0,0.55)", borderRadius: 18, padding: "7px 16px", fontSize: 15, fontWeight: 800, color: "#4a3f1e", boxShadow: "0 2px 5px rgba(90,64,10,0.12)" }}>
               {isAutoNaam(groupName) ? (
                 /* Niet alleen de uitnodiging, ook wat de naam nú is — anders weet je
@@ -7497,10 +7503,10 @@ export default function PartyTest() {
           <div style={{ fontSize: 11.5, fontWeight: 800, color: "#a89a6f", letterSpacing: "0.05em", marginBottom: 8 }}>{L.sectionGroup}</div>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
                 <span style={{ fontSize: 15.5, fontWeight: 800 }}>{!settle && isAutoNaam(groupName) ? L.giveNameQ : L.groupNamePlain}</span>
-            {hasSettled && <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>🔒 vast na afrekenen</span>}
+            {groepDicht && <span style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700 }}>{L.nameLockedNote}</span>}
           </div>
-          <input disabled={hasSettled} value={!settle && isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.groupNamePh : L.groupNameShortPh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: hasSettled ? "#efe8d6" : VLAK2, color: hasSettled ? "#8a7d55" : "#4a3f1e", cursor: hasSettled ? "not-allowed" : "text" }} />
-              {!hasSettled && (!settle && isAutoNaam(groupName)
+          <input disabled={groepDicht} value={!settle && isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.groupNamePh : L.groupNameShortPh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: groepDicht ? "#efe8d6" : VLAK2, color: groepDicht ? "#8a7d55" : "#4a3f1e", cursor: groepDicht ? "not-allowed" : "text" }} />
+              {!groepDicht && (!settle && isAutoNaam(groupName)
                 ? <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 6 }}>{L.nowWord} {groupName.trim()}</div>
                 : <div style={{ fontSize: 12.5, color: "#a89a6f", fontWeight: 700, marginTop: 6 }}>{L.tapToRename}</div>)}
         {(settle || opNaam) && !fromOnboarding && (
@@ -7819,11 +7825,17 @@ export default function PartyTest() {
                     background: "rgba(240,165,0,0.12)", border: `2px solid ${eigenNaamLeeg ? "#c0554a" : "#e8a812"}`, color: "#8a5e0f" }} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                {people.filter((pp) => pp.id !== meId).map((pp, idx) => (
-                  <input key={pp.id} value={isGuestDefault(pp.name) ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)}
-                    placeholder={`✏️ ${L.guestN(idx + 2)}`}
-                    style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: "9px 10px", fontSize: 16.5, textAlign: "left" }} />
-                ))}
+                {people.filter((pp) => pp.id !== meId).map((pp, idx) => {
+                  const leeg = isGuestDefault(pp.name)
+                  return (
+                    <span key={pp.id} style={{ position: "relative", display: "flex", minWidth: 0 }}>
+                      <input value={leeg ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)}
+                        placeholder={`${L.guestN(idx + 2)} · ${L.guestNamePh}`}
+                        style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: leeg ? "9px 30px 9px 10px" : "9px 10px", fontSize: 16, textAlign: "left" }} />
+                      {leeg && <span style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", display: "inline-flex" }}><PotloodIcoon /></span>}
+                    </span>
+                  )
+                })}
               </div>
               {people.length < 2 && <div style={{ fontSize: 15.5, color: "#b0402f", fontWeight: 700, marginTop: 8 }}>{L.needOneMore}</div>}
             </div>
