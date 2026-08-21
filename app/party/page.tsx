@@ -2462,6 +2462,15 @@ export default function PartyTest() {
   const potDraftTotal = Object.values(potDraft).reduce((a, b) => a + (b || 0), 0)
   const potSpent = rounds.reduce((s, r) => s + (r.potPart || 0), 0)
   const potRemaining = potContribTotal - potSpent
+  // Terwijl het betaalpaneel openstaat telt wat er richting de pot getypt is alvast
+  // zichtbaar mee: de badge en de pot-knop tonen wat er ná deze betaling overblijft.
+  // Pas bij "✓ ok" wordt het echt; wie het paneel verlaat, ziet de pot terugveren.
+  const rOpenBetaal = rounds.length > 0 ? rounds[rounds.length - 1] : null
+  const potInBewerking = rOpenBetaal && !lastRoundHandled && (rOpenBetaal.potPart || 0) <= 0.005
+    ? (payVia === "pot" ? Math.min(rOpenBetaal.amount || 0, Math.max(0, potRemaining))
+      : payVia === "mix" ? Math.min(Math.max(0, mixPot), Math.max(0, potRemaining)) : 0)
+    : 0
+  const potZicht = Math.max(0, potRemaining - potInBewerking)
   const cardLossPer = potIsCard && potRemaining > 0.005 && people.length > 0 ? potRemaining / people.length : 0
 
   // ── live cart helpers ───────────────────────────────────────────────────────
@@ -5428,7 +5437,7 @@ export default function PartyTest() {
     sheet: { background: "#fff", borderRadius: 20, padding: 20, width: "100%", maxWidth: 460, maxHeight: "86vh", overflowY: "auto", boxShadow: "0 10px 40px rgba(0,0,0,0.25)" } as React.CSSProperties,
   }
   const potTag = (
-    <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 6, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potRemaining > 0 ? "#1f8a4c" : "#8a7d55" }}>{potRemaining < -0.005 && <span style={{ color: "#c0554a" }}>⚠️ </span>}{potIsCard ? "💳 drankkaart " : "🫙 pot "}{euro(potRemaining)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+ toevoegen</span></span>
+    <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 6, background: potZicht > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potZicht > 0 ? "#1f8a4c" : "#8a7d55" }}>{potRemaining < -0.005 && <span style={{ color: "#c0554a" }}>⚠️ </span>}{potIsCard ? "💳 drankkaart " : "🫙 pot "}{euro(potZicht)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+ toevoegen</span></span>
   )
   const renderPotModal = () => (
     <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
@@ -6159,7 +6168,7 @@ export default function PartyTest() {
           <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
         </svg>
       )}
-      <span style={{ color: "#2f5693" }}>{euro(potRemaining)}</span>
+      <span style={{ color: "#2f5693" }}>{euro(potZicht)}</span>
       <span style={{ color: "#2f6fb5", fontWeight: 800 }}>+</span>
     </span>
   )
@@ -8562,7 +8571,7 @@ export default function PartyTest() {
                     if (payVia === "self") { setMixZelf(r0?.amount || 0); setMixPot(0); setMixFocus("pot"); setPayVia("mix") }
                     // Omgekeerd idem: tik "uit de pot" en zelf valt weg, potbedrag blijft.
                     else if (payVia === "mix") { qSetAmount(idx, Math.round(mixPot * 100) / 100); setPayVia("pot") }
-                  }}>🫙 {L.paidPot}{potAvail > 0.005 && <span style={{ fontWeight: 800, opacity: payVia !== "self" ? 1 : 0.75 }}> · {euro(potAvail)}</span>}</button>
+                  }}>🫙 {L.paidPot}{potAvail > 0.005 && <span style={{ fontWeight: 800, opacity: payVia !== "self" ? 1 : 0.75 }}> · {euro(Math.max(0, potAvail - potInBewerking))}</span>}</button>
               </div>
 
               {/* Bedrag-veld met ✓ én Overslaan samen op één rij. Het vinkje pulseert groen
