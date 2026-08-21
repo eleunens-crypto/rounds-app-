@@ -148,6 +148,16 @@ function KroonIcoon({ size = 15, kleur = "#0a6070", gevuld = false }: { size?: n
   )
 }
 
+function BonIcoon({ size = 16, kleur = "#8a7d55" }: { size?: number; kleur?: string }) {
+  // Kassabonnetje met kartelrand — kleurt mee met de knop waarin het staat.
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={kleur} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path d="M6 3h12v18l-2-1.4L14 21l-2-1.4L10 21l-2-1.4L6 21z" />
+      <path d="M9 8h6M9 11.5h6M9 15h3.5" />
+    </svg>
+  )
+}
+
 function GsmIcoon({ size = 44, kleur = "#4a3f1e", lijnen = false, qr = false, dof = false }:
   { size?: number; kleur?: string; lijnen?: boolean; qr?: boolean; dof?: boolean }) {
   return (
@@ -853,12 +863,12 @@ const T = {
     fairInfo: "⚖️ Eerlijk verdelen — wie weinig of goedkopere drankjes nam, betaalt niet mee voor de rest.",
     equalSplit: "iedereen evenveel",
     equalWouldBe: (v: string) => `Gelijk verdelen zou ${v} per persoon zijn.`,
-    equalColHead: "gelijk verdeeld",
+    equalColHead: "gelijk",
     getsWord: "krijgt",
     paysWord: "betaalt",
     fromWord2: "van",
     toWord2: "aan",
-    fairColHead: "Eerlijk verdeeld",
+    fairColHead: "Eerlijk",
     participantColHead: "Deelnemer",
     equalSplitWarn: "⚠️ Dit is een gelijke verdeling — niet volgens wat ieder dronk.",
     fairSplitInfo: "Gelijke verdeling = totaal ÷ aantal personen. Eerlijk verdelen kijkt naar het verbruik: wie weinig of niks dronk, betaalt niet mee voor wie veel dronk.",
@@ -1080,7 +1090,7 @@ const T = {
     tapToConfirm: "tik ✓ om te bevestigen",
     later: "Later",
     back: "Terug",
-    quickSettleTitle: "🧾 Afrekenen",
+    quickSettleTitle: "Afrekenen",
     quickTotalLabel: (n: number) => `Totaal van ${n} ${n === 1 ? "rondje" : "rondjes"}`,
     quickTotalOf: (t: number) => `(van in totaal ${t} ${t === 1 ? "rondje" : "rondjes"})`,
     andWord: "en",
@@ -1578,12 +1588,12 @@ const T = {
     fairInfo: "⚖️ Partage \u00e9quitable — qui a bu peu ou moins cher ne paie pas pour les autres.",
     equalSplit: "part égale",
     equalWouldBe: (v: string) => `Un partage égal ferait ${v} par personne.`,
-    equalColHead: "part égale",
+    equalColHead: "\u00e9gal",
     getsWord: "reçoit",
     paysWord: "paie",
     fromWord2: "de",
     toWord2: "à",
-    fairColHead: "Partage \u00e9quitable",
+    fairColHead: "\u00c9quitable",
     participantColHead: "Participant",
     equalSplitWarn: "⚠️ Ceci est une r\u00e9partition \u00e9gale — pas selon ce que chacun a bu.",
     fairSplitInfo: "R\u00e9partition \u00e9gale = total \u00f7 nombre de personnes. Le partage \u00e9quitable suit la consommation : qui a peu ou rien bu ne paie pas pour ceux qui ont beaucoup bu.",
@@ -1806,7 +1816,7 @@ const T = {
     tapToConfirm: "appuie sur ✓ pour confirmer",
     later: "Plus tard",
     back: "Retour",
-    quickSettleTitle: "🧾 R\u00e9gler",
+    quickSettleTitle: "R\u00e9gler",
     quickTotalLabel: (n: number) => `Total de ${n} tourn\u00e9e${n === 1 ? "" : "s"}`,
     quickTotalOf: (t: number) => `(sur ${t} au total)`,
     andWord: "et",
@@ -6252,7 +6262,22 @@ export default function PartyTest() {
       )}
       {!verbergNav && !onboarding && !(settle && isAdmin) && !(!settle && view === "order" && roundItems > 0) && !(!settle && view === "confirmed") && (
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+          {/* Snel opnemen: geen ⚙️ Groep meer (naam via de pill, pot via de badge) —
+              Afrekenen staat er links vooraan, met het getekende bonnetje. */}
+          {!settle && opNaam !== true && rounds.length >= 1 && (
+            !lastRoundHandled ? (
+              <div style={{ flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 800, borderRadius: 10, textAlign: "center", background: "#faf4e4", color: "#8a5e0f", border: "1px solid rgba(240,165,0,0.35)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, opacity: 0.75 }}><BonIcoon kleur="#8a5e0f" /> {L.quickSettleTitle}</div>
+            ) : (
+              <button style={{ flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 700, borderRadius: 10, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+                border: view === "quickSettle" ? "none" : "1px solid rgba(120,95,20,0.25)",
+                background: view === "quickSettle" ? AAN : "#fff",
+                color: view === "quickSettle" ? "#fff" : "#8a7d55" }}
+                onClick={goQuickSettle}><BonIcoon kleur={view === "quickSettle" ? "#fff" : "#8a7d55"} /> {L.quickSettleTitle}</button>
+            )
+          )}
+          {!(!settle && opNaam !== true) && (
           <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 14.5, fontWeight: 800, lineHeight: 1.15, borderRadius: 13 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupShort}</button>
+          )}
           {settle ? (
             <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 14.5, fontWeight: 800, borderRadius: 13, opacity: (view === "hub" || ((settle || opNaam) && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goHub() }}>{L.overview}</button>
           ) : (
@@ -6266,7 +6291,7 @@ export default function PartyTest() {
           {/* Op het rondjesoverzicht is de derde tab overbodig: het rondje is bevestigd
               en de afreken-knop staat daar al onderaan naast "Nieuw rondje" — dat geldt
               voor snel én uitgebreid, want die knoppenrij staat er in beide modi. */}
-          {!settle && rounds.length >= 1 && view !== "roundsOverview" && !(opNaam === true && view === "hub" && paidCount > 0 && laatsteRondjeKlaar() && unassignedAllRounds === 0) && (
+          {!settle && opNaam === true && rounds.length >= 1 && view !== "roundsOverview" && !(view === "hub" && paidCount > 0 && laatsteRondjeKlaar() && unassignedAllRounds === 0) && (
             !lastRoundHandled ? (
               // Bezig een rondje af te ronden op de hub: geen afreken-knop maar een rustig
               // label dat toont waar je bent. Niet klikbaar, niet opgelicht.
@@ -8943,6 +8968,7 @@ export default function PartyTest() {
             <span style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: "#e08a00", color: "#fff", fontSize: 10.5, fontWeight: 800, borderRadius: 10, padding: "3px 10px", whiteSpace: "nowrap" }}>{L.fastest}</span>
             <div style={{ fontSize: 23, marginBottom: 5 }}>👥</div>
             <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.3 }}>{L.splitEqually}</div>
+            <div style={{ fontSize: 12, color: "#a89a6f", marginTop: 3, lineHeight: 1.3 }}>{L.splitEqualSub}</div>
           </button>
           <div style={{ display: "flex", alignItems: "center", fontSize: 14, fontWeight: 800, color: "#a89a6f" }}>{L.orWord}</div>
           <button onClick={() => setSettleChoice((c) => c === "fair" ? null : "fair")}
@@ -8953,6 +8979,7 @@ export default function PartyTest() {
             <span style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: "#1f8a4c", color: "#fff", fontSize: 10.5, fontWeight: 800, borderRadius: 10, padding: "3px 10px", whiteSpace: "nowrap" }}>{L.fairest}</span>
             <div style={{ fontSize: 23, marginBottom: 5 }}>⚖️</div>
             <div style={{ fontSize: 14, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.3 }}>{L.splitWithFair}</div>
+            <div style={{ fontSize: 12, color: "#a89a6f", marginTop: 3, lineHeight: 1.3 }}>{L.splitFairSub}</div>
           </button>
         </div>
 
@@ -9435,7 +9462,7 @@ export default function PartyTest() {
               <button onClick={goQuickSettle}
                 style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 11, padding: "13px 6px", fontSize: 15, fontWeight: 800,
                   background: "rgba(59,72,106,0.06)", color: "#3b486a",
-                  border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a" }}>{L.quickSettleTitle}</button>
+                  border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}><BonIcoon kleur="#3b486a" /> {L.quickSettleTitle}</button>
               {laatsteRondjeKlaar() && (
                 <button onClick={nextRound}
                   style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 11, padding: "13px 6px", fontSize: 15, fontWeight: 800,
