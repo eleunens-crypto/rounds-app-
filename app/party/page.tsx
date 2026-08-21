@@ -7753,12 +7753,6 @@ export default function PartyTest() {
               </div>
             </div>
           )}
-          {aan && id === false && (
-            <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "rgba(255,255,255,0.78)", borderRadius: 10, padding: "9px 11px" }}>
-              <span style={{ flexShrink: 0 }}>💡</span>
-              <span style={{ fontSize: 15, color: "#8a5e0f", lineHeight: 1.45 }}>{L.fillInLater}</span>
-            </div>
-          )}
           {/* De startknop hoort bij de gekozen snel-kaart en staat er daarom binnenin:
               zo grenst de kaartrand altijd direct aan de "of" en landt die cirkel netjes
               op de twee kaartranden in plaats van half over de knop. */}
