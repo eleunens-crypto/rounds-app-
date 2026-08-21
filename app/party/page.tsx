@@ -148,6 +148,16 @@ function KroonIcoon({ size = 15, kleur = "#0a6070", gevuld = false }: { size?: n
   )
 }
 
+function PotloodIcoon({ size = 14, kleur = "#b3a988" }: { size?: number; kleur?: string }) {
+  // Klein potloodje rechts in een naamveld: "hier mag geschreven worden". Zelfde
+  // grijs als de placeholder; de wrapper verbergt hem zodra er een naam staat.
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={kleur} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path d="M17 3.5l3.5 3.5L8 19.5 4 20l.5-4z" />
+    </svg>
+  )
+}
+
 function BonKnopIcoon({ size = 16, kleur = "#8a7d55" }: { size?: number; kleur?: string }) {
   // Klein kassabonnetje met kartelrand voor in knoppen — kleurt mee met zijn knop.
   // (Niet te verwarren met BonIcoon, de grote getekende bon op de modekaarten.)
@@ -1176,7 +1186,7 @@ const T = {
     switchToFairBtn: "Naar Eerlijk verdelen",
     fairHintLine: "hierop verdeelt de app eerlijk — wie meer dronk, betaalt meer",
     fairSetupTitle: "⚖️ Wie was erbij?",
-    guestNamePh: "tik om naam te wijzigen",
+    guestNamePh: "naam optioneel",
     fairAddPerson: "+ Persoon toevoegen",
     fairSetupDone: "Naar drankjes toewijzen →",
     roundsOverviewTitle: "🧾 Rondjesoverzicht",
@@ -1901,7 +1911,7 @@ const T = {
     switchToFairBtn: "Vers le partage \u00e9quitable",
     fairHintLine: "l'app r\u00e9partit \u00e9quitablement sur cette base — qui boit plus, paie plus",
     fairSetupTitle: "⚖️ Qui \u00e9tait l\u00e0 ?",
-    guestNamePh: "touche pour renommer",
+    guestNamePh: "nom facultatif",
     fairAddPerson: "+ Ajouter une personne",
     fairSetupDone: "Vers l'attribution des boissons →",
     roundsOverviewTitle: "🧾 Aper\u00e7u des tourn\u00e9es",
@@ -9126,8 +9136,11 @@ export default function PartyTest() {
               return (
                 <div key={p.id} style={{ ...S.row, gap: 8 }}>
                   <span style={{ fontSize: 15, fontWeight: 800, color: "#b3a988", width: 20, textAlign: "center", flexShrink: 0 }}>{i + 1}</span>
-                  <input value={leeg ? "" : p.name} onChange={(e) => renamePerson(p.id, e.target.value)} placeholder={`${p.name} · ${L.guestNamePh}`}
-                    style={{ ...S.input, flex: 1, textAlign: "left", fontSize: 16, fontWeight: 700, padding: "11px 12px", borderRadius: 10, background: VLAK2, color: leeg ? "#b3a988" : "#4a3f1e" }} />
+                  <span style={{ position: "relative", flex: 1, minWidth: 0, display: "flex" }}>
+                    <input value={leeg ? "" : p.name} onChange={(e) => renamePerson(p.id, e.target.value)} placeholder={`${p.name} · ${L.guestNamePh}`}
+                      style={{ ...S.input, flex: 1, minWidth: 0, boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: leeg ? "11px 32px 11px 12px" : "11px 12px", borderRadius: 10, background: VLAK2, color: leeg ? "#b3a988" : "#4a3f1e" }} />
+                    {leeg && <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", display: "inline-flex" }}><PotloodIcoon /></span>}
+                  </span>
                   {people.length > 1 && (
                     <button onClick={() => removePerson(p.id)} style={{ ...S.btn, padding: "8px 11px", fontSize: 16, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)", flexShrink: 0 }}>✕</button>
                   )}
