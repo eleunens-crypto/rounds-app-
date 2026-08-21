@@ -6172,7 +6172,7 @@ export default function PartyTest() {
     // daar alleen uit halen, dus die verbergen we tot de omschakeling rond is.
     // De eindbalans hoort niet meer bij het traject van drie stappen: daar mag de gewone
     // navigatie weer verschijnen, ook al staat fromQuick nog aan voor de weg terug.
-    const onboarding = view === "setup" || view === "settings" || (fromQuick && view !== "final") || (view === "roundsOverview" && fillMode)
+    const onboarding = view === "setup" || view === "settings" || (view === "roundsOverview" && fillMode)
     // Eenmaal binnen stond nergens in welke modus je zit. Een gekleurde balk bovenaan zegt
     // dat zonder plaats te kosten, en bij Fair Split kan er rechts bij waar je zit in het
     // traject — die modus loopt door drie stappen, snelle rondjes niet.
@@ -6355,7 +6355,7 @@ export default function PartyTest() {
           {/* Op het rondjesoverzicht is de derde tab overbodig: het rondje is bevestigd
               en de afreken-knop staat daar al onderaan naast "Nieuw rondje" — dat geldt
               voor snel én uitgebreid, want die knoppenrij staat er in beide modi. */}
-          {!settle && opNaam === true && rounds.length >= 1 && view !== "roundsOverview" && !(view === "hub" && paidCount > 0 && laatsteRondjeKlaar() && unassignedAllRounds === 0) && (
+          {!settle && !fromQuick && opNaam === true && rounds.length >= 1 && view !== "roundsOverview" && !(view === "hub" && paidCount > 0 && laatsteRondjeKlaar() && unassignedAllRounds === 0) && (
             !lastRoundHandled ? (
               // Bezig een rondje af te ronden op de hub: geen afreken-knop maar een rustig
               // label dat toont waar je bent. Niet klikbaar, niet opgelicht.
