@@ -5410,7 +5410,7 @@ export default function PartyTest() {
     sheet: { background: "#fff", borderRadius: 20, padding: 20, width: "100%", maxWidth: 460, maxHeight: "86vh", overflowY: "auto", boxShadow: "0 10px 40px rgba(0,0,0,0.25)" } as React.CSSProperties,
   }
   const potTag = (
-    <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 6, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potRemaining > 0 ? "#1f8a4c" : "#8a7d55" }}>{potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️ </span>}{potIsCard ? "💳 drankkaart " : "🫙 pot "}{euro(potRemaining)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+ toevoegen</span></span>
+    <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 6, background: potRemaining > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potRemaining > 0 ? "#1f8a4c" : "#8a7d55" }}>{potRemaining < -0.005 && <span style={{ color: "#c0554a" }}>⚠️ </span>}{potIsCard ? "💳 drankkaart " : "🫙 pot "}{euro(potRemaining)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+ toevoegen</span></span>
   )
   const renderPotModal = () => (
     <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
@@ -6131,7 +6131,7 @@ export default function PartyTest() {
   // op het bestelscherm verhuist hij naar de rondje-titelregel.
   const potKnopje = () => (
     <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 9px", borderRadius: 22, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: potRemaining > 0.005 ? "1px solid rgba(47,111,181,0.5)" : "0.5px solid rgba(47,111,181,0.35)" }}>
-      {potContribTotal > 0 && potRemaining <= 0.005 && <span style={{ color: "#c0554a" }}>⚠️</span>}
+      {potRemaining < -0.005 && <span style={{ color: "#c0554a" }}>⚠️</span>}
       {potIsCard ? (
         <span style={{ fontSize: 20 }}>💳</span>
       ) : (
