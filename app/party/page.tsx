@@ -2471,6 +2471,11 @@ export default function PartyTest() {
       : payVia === "mix" ? Math.min(Math.max(0, mixPot), Math.max(0, potRemaining)) : 0)
     : 0
   const potZicht = Math.max(0, potRemaining - potInBewerking)
+  // Compacte "rest / ingelegd"-weergave voor de badges: het tweede getal zonder
+  // centen als het rond is, gedempt grijs zodat het restbedrag de hoofdrol houdt.
+  const potInlegKort = Number.isInteger(Math.round(potContribTotal * 100) / 100) && potContribTotal % 1 === 0
+    ? `\u20ac${Math.round(potContribTotal)}`
+    : euro(potContribTotal)
   const cardLossPer = potIsCard && potRemaining > 0.005 && people.length > 0 ? potRemaining / people.length : 0
 
   // ── live cart helpers ───────────────────────────────────────────────────────
@@ -5437,7 +5442,7 @@ export default function PartyTest() {
     sheet: { background: "#fff", borderRadius: 20, padding: 20, width: "100%", maxWidth: 460, maxHeight: "86vh", overflowY: "auto", boxShadow: "0 10px 40px rgba(0,0,0,0.25)" } as React.CSSProperties,
   }
   const potTag = (
-    <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 6, background: potZicht > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potZicht > 0 ? "#1f8a4c" : "#8a7d55" }}>{potRemaining < -0.005 && <span style={{ color: "#c0554a" }}>⚠️ </span>}{potIsCard ? "💳 drankkaart " : "🫙 pot "}{euro(potZicht)}<span style={{ color: "#c98a00", fontWeight: 800 }}>+ toevoegen</span></span>
+    <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 6, background: potZicht > 0 ? "rgba(31,138,76,0.14)" : "rgba(120,95,20,0.08)", color: potZicht > 0 ? "#1f8a4c" : "#8a7d55" }}>{potRemaining < -0.005 && <span style={{ color: "#c0554a" }}>⚠️ </span>}{potIsCard ? <>💳 drankkaart </> : <><ZakjeIcoon size={15} /> pot </>}{euro(potZicht)}<span style={{ color: "#8a93ad", fontWeight: 700 }}> / {potInlegKort}</span><span style={{ color: "#c98a00", fontWeight: 800 }}> + toevoegen</span></span>
   )
   const renderPotModal = () => (
     <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
@@ -6168,7 +6173,7 @@ export default function PartyTest() {
           <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
         </svg>
       )}
-      <span style={{ color: "#2f5693" }}>{euro(potZicht)}</span>
+      <span style={{ color: "#2f5693" }}>{euro(potZicht)}<span style={{ color: "#8a93ad", fontWeight: 700 }}> / {potInlegKort}</span></span>
       <span style={{ color: "#2f6fb5", fontWeight: 800 }}>+</span>
     </span>
   )
