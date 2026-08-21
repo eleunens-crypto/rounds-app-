@@ -2056,7 +2056,7 @@ export default function PartyTest() {
   const [busy, setBusy] = useState(false)        // groep aanmaken / plaats claimen
   // Opgeslagen groepen: alle groepen waar dit toestel bij hoort (zelf gemaakt of via
   // QR aan deelgenomen). Getoond op het startscherm zodat je kan terugkeren.
-  type SavedGroup = { id: string; name: string; last_active: string; finalized: boolean; owned: boolean; settle: boolean; pinned: boolean; uitgebreid: boolean }
+  type SavedGroup = { id: string; name: string; last_active: string; finalized: boolean; owned: boolean; settle: boolean; pinned: boolean; uitgebreid: boolean; fq: boolean }
   // Opruimbeleid. Een groep die een dag stilligt sluit zichzelf af; een afgesloten groep
   // verdwijnt na een maand, tenzij hij vastgezet is. Vastgezet blijft vastgezet — een pin
   // die na verloop van tijd toch wist, is geen pin maar uitstel. Wel suggereren we opruimen
@@ -3219,7 +3219,7 @@ export default function PartyTest() {
   const laatsteGeladenGid = useRef<string | null>(null)
   const loadParty = useCallback(async (gid: string) => {
     const [{ data: g }, { data: pp }, { data: rr }, { data: ii }, { data: pt }] = await Promise.all([
-      supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices,settle,ordering_open,last_active").eq("id", gid).single(),
+      supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices,settle,ordering_open,last_active,fq").eq("id", gid).single(),
       supabase.from("party_people").select("id,seat,name,claimed_by,self_joined,settle_with").eq("group_id", gid).order("seat"),
       supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back,members,started_by,proposal,headcount").eq("group_id", gid).order("seq"),
       supabase.from("party_round_items").select("round_id,person_id,drink_key,qty").eq("group_id", gid),
@@ -3254,10 +3254,12 @@ export default function PartyTest() {
     const uitgebreidData = !!g && g.settle === false && ((pp || []).length >= 2 || (pp || []).some((r) => !!(r.name || "").trim()))
     const vorigeGid = laatsteGeladenGid.current
     laatsteGeladenGid.current = gid
+    const fqVlag = !!(g as { fq?: boolean } | null)?.fq
     if (g && g.settle !== false) setOpNaam(false)
-    else if (vorigeGid !== null && vorigeGid !== gid) setOpNaam(uitgebreidData ? true : false)
-    else if (uitgebreidData) setOpNaam(true)
+    else if (vorigeGid !== null && vorigeGid !== gid) setOpNaam(uitgebreidData && !fqVlag ? true : false)
+    else if (uitgebreidData && !fqVlag) setOpNaam(true)
     if (vorigeGid !== null && vorigeGid !== gid) setFromQuick(false)
+    if (fqVlag) setFromQuick(true)
     setGroepDatum((g as { last_active?: string } | null)?.last_active ?? null)
     setPeople((pp || []).map((r) => ({
       id: r.id, seat: r.seat,
@@ -3411,19 +3413,19 @@ export default function PartyTest() {
   const loadSavedGroups = useCallback(async () => {
     const dev = me.current
     const [eigen, gast] = await Promise.all([
-      supabase.from("party_groups").select("id,name,last_active,finalized,owner_id,settle,pinned").eq("owner_id", dev),
+      supabase.from("party_groups").select("id,name,last_active,finalized,owner_id,settle,pinned,fq").eq("owner_id", dev),
       supabase.from("party_people").select("group_id").eq("claimed_by", dev),
     ])
     const map = new Map<string, SavedGroup>()
     for (const g of eigen.data ?? []) {
-      map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: true, settle: g.settle !== false, pinned: !!g.pinned, uitgebreid: false })
+      map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: true, settle: g.settle !== false, pinned: !!g.pinned, uitgebreid: false, fq: !!(g as { fq?: boolean }).fq })
     }
     // Gast-groepen die nog niet als eigen bekend zijn, apart ophalen voor hun details.
     const gastIds = [...new Set((gast.data ?? []).map((r) => r.group_id as string))].filter((id) => !map.has(id))
     if (gastIds.length > 0) {
-      const { data: extra } = await supabase.from("party_groups").select("id,name,last_active,finalized,settle,pinned").in("id", gastIds)
+      const { data: extra } = await supabase.from("party_groups").select("id,name,last_active,finalized,settle,pinned,fq").in("id", gastIds)
       for (const g of extra ?? []) {
-        map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: false, settle: g.settle !== false, pinned: !!g.pinned, uitgebreid: false })
+        map.set(g.id, { id: g.id, name: g.name || "", last_active: g.last_active, finalized: !!g.finalized, owned: false, settle: g.settle !== false, pinned: !!g.pinned, uitgebreid: false, fq: !!(g as { fq?: boolean }).fq })
       }
     }
     const lijst = [...map.values()].sort((a, b) => {
@@ -4643,12 +4645,15 @@ export default function PartyTest() {
     const betalersOk = rounds.every((r) => (r.amount || 0) <= 0.005 || (r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))
     if (namenOk && unassignedAllRounds === 0 && betalersOk) {
       setSettle(true)
-      persistSettings({ settle: true })
+      // fq = "begon als snel opnemen": zo blijft de sessie ook na herladen of op een
+      // ander toestel amber lezen met "Snel opnemen", in plaats van als QR-groep.
+      persistSettings({ settle: true, fq: true })
       setFromQuick(true)
       setHasSettled(true)
       setView("final")
       return
     }
+    persistSettings({ fq: true })
     setFromQuick(true); setView("fairSetup")
   }
   // Terug naar de gelijke verdeling: de modus omzetten en de rondjes ongemoeid laten.
@@ -6231,7 +6236,7 @@ export default function PartyTest() {
             {/* De submodus-titel in plaats van het algemene "Ik bestel voor de groep":
                 zelfde plek, zelfde stijl, maar je ziet meteen óf je snel óf uitgebreid
                 aan het noteren bent. */}
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{(opNaam || fromQuick) ? L.modeNaamTitle : L.modeSnelTitle}</span>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{opNaam ? L.modeNaamTitle : L.modeSnelTitle}</span>
           </div>
         )}
         {!uitgebreidLook && !!groupId && !kaal && groupName.trim() && !editName && (
@@ -7039,11 +7044,11 @@ export default function PartyTest() {
                   border: "1px solid rgba(120,95,20,0.15)",
                   borderLeft: `4px solid ${!g.finalized ? "#e8a812" : g.pinned ? "#c98a00" : "#9db8a4"}` }}>
                 {/* Aan de kleur en het icoon zie je in één oogopslag welke modus het was. */}
-                <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, background: g.settle ? MODUS_FAIR.tint : MODUS_SNEL.tint }}>{g.settle ? "⚖️" : g.uitgebreid ? "👥" : "🍻"}</span>
+                <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, background: g.settle && !g.fq ? MODUS_FAIR.tint : MODUS_SNEL.tint }}>{g.settle && !g.fq ? "⚖️" : g.uitgebreid ? "👥" : "🍻"}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()} <span style={{ fontWeight: 700, color: "#a89a6f", fontSize: 13 }}>({datumKort(g.last_active)})</span></div>
                   <div style={{ fontSize: 13, color: "#a89a6f", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    <span style={{ color: g.settle ? MODUS_FAIR.tekst : MODUS_SNEL.tekst, fontWeight: 800 }}>{g.settle ? L.modeFairShort : g.uitgebreid ? L.modeNaamTitle : L.modeSnelTitle}</span> · {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
+                    <span style={{ color: g.settle && !g.fq ? MODUS_FAIR.tekst : MODUS_SNEL.tekst, fontWeight: 800 }}>{g.settle && !g.fq ? L.modeFairShort : g.uitgebreid ? L.modeNaamTitle : L.modeSnelTitle}</span> · {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
                   </div>
                 </div>
                 <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, borderRadius: 9, padding: "3px 8px", whiteSpace: "nowrap",
