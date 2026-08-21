@@ -633,6 +633,11 @@ const T = {
     perPersonPrompt: "👥 Liever per persoon aantikken?",
     stillNoName: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} nog zonder naam`,
     assignWhoSub: "Wijs toe wie wat dronk",
+    canAlsoLater: "kan ook later",
+    editNamesBtn: "✏️ Namen aanpassen",
+    doneNamesBtn: "✓ Klaar met namen",
+    editNamesHint: "Pas de namen aan — ze veranderen overal mee, ook in al toegewezen drankjes.",
+    notAssignedCount: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} niet toegewezen`,
     inRoundTitle: "In dit rondje",
     backToOverview: "← Terug naar rondjesoverzicht",
     potTitel: "Pot",
@@ -1361,6 +1366,11 @@ const T = {
     perPersonPrompt: "👥 Plutôt cocher par personne ?",
     stillNoName: (n: number) => `${n} boisson${n === 1 ? "" : "s"} encore sans nom`,
     assignWhoSub: "Attribue qui a bu quoi",
+    canAlsoLater: "peut aussi se faire plus tard",
+    editNamesBtn: "✏️ Modifier les noms",
+    doneNamesBtn: "✓ Noms termin\u00e9s",
+    editNamesHint: "Modifie les noms — ils changent partout, aussi dans les boissons d\u00e9j\u00e0 attribu\u00e9es.",
+    notAssignedCount: (n: number) => `${n} boisson${n === 1 ? "" : "s"} non attribu\u00e9e${n === 1 ? "" : "s"}`,
     inRoundTitle: "Dans cette tournée",
     backToOverview: "← Retour à l’aperçu des tournées",
     potTitel: "Cagnotte",
@@ -1977,6 +1987,8 @@ export default function PartyTest() {
   const [naamPrompt, setNaamPrompt] = useState<boolean | null>(null)
   // Verplichte naam in snel opnemen: de eerste tik houdt halt tot er een naam staat.
   const [naamPlicht, setNaamPlicht] = useState(false)
+  // Bewerkstand in het toewijzen-venster: naamknoppen worden even invulveldjes.
+  const [assignNaamEdit, setAssignNaamEdit] = useState(false)
   const [naamPlichtVeld, setNaamPlichtVeld] = useState("")
   // Datum van de groep, alleen voor de grijze haakjesweergave achter de naam.
   const [groepDatum, setGroepDatum] = useState<string | null>(null)
@@ -4861,7 +4873,7 @@ export default function PartyTest() {
     }
     setShowClose(true)
   }
-  const goAssignFromWarning = () => { setShowClose(false); setShowAssignAll(true) }
+  const goAssignFromWarning = () => { setShowClose(false); setAssignNaamEdit(false); setShowAssignAll(true) }
   const commitRound = () => {
     // Nog drankjes zonder naam bij uitgebreid opnemen? Geen popup: de afsluiting met
     // betaalstap in de hub komt eerst, en daarna land je vanzelf in het rondjesoverzicht
@@ -8020,7 +8032,7 @@ export default function PartyTest() {
                 const un = cartAnon[d.id] ?? 0
                 return (
                   <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 6px 4px 10px", borderRadius: 20, fontSize: 14.5, fontWeight: 700, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.35)", color: "#4a3f1e" }}>
-                    <span style={{ cursor: settle ? "pointer" : "default" }} onClick={() => settle && setShowAssignAll(true)}>
+                    <span style={{ cursor: settle ? "pointer" : "default" }} onClick={() => { if (!settle) return; setAssignNaamEdit(false); setShowAssignAll(true) }}>
                       {d.emoji} {drinkTotal(d.id)}× {d.name}{settle && wieNam(d.id) && <span style={{ color: "#a89a6f", fontWeight: 600 }}> · {wieNam(d.id)}</span>}{settle && un > 0 && <span style={{ color: "#c0554a", fontWeight: 800, textDecoration: "underline" }}> toewijzen</span>}
                     </span>
                     {/* Meteen weghalen — handig als je je vertikte bij het bestellen. */}
@@ -8036,19 +8048,9 @@ export default function PartyTest() {
              Als smalle regel zie je hetzelfde in een derde van de hoogte; weghalen doe
              je op de tegel zelf. */
           <>
-          {opNaam && unassignedTotal > 0 && (
-            /* Geen foutmelding-look meer: een gewoon kaartje met teller, uitleg en een
-               echte knop. Rood blijft de signaalkleur, maar zonder onderstreepte link. */
-            <div onClick={() => setShowAssignAll(true)}
-              style={{ display: "flex", alignItems: "center", gap: 11, background: "rgba(224,104,92,0.09)", border: "1px solid rgba(224,104,92,0.4)", borderRadius: 12, padding: "10px 12px", marginBottom: 9, cursor: "pointer" }}>
-              <span style={{ flexShrink: 0, width: 34, height: 34, borderRadius: "50%", background: "rgba(224,104,92,0.22)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15.5, fontWeight: 800, color: "#8f2320" }}>{unassignedTotal}</span>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: "#8f2320", lineHeight: 1.35 }}>
-                <b>{L.stillNoName(unassignedTotal)}</b><br />{L.assignWhoSub}
-              </span>
-              <button onClick={(e) => { e.stopPropagation(); setShowAssignAll(true) }}
-                style={{ flexShrink: 0, background: "#b0402f", color: "#fff", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }}>{L.assign}</button>
-            </div>
-          )}
+          {/* De toewijzen-melding woont voortaan ín het rondje-kader hieronder: het
+              gaat over precies die drankjes, en rood-als-fout is vervangen door de
+              ambertint van het kader zelf — mét "kan ook later". */}
           {/* Hetzelfde kaartje voor snel én uitgebreid: duidelijke titel met teller en
               chips per drankje, elk met een ingetogen ✕ om het meteen weg te halen.
               De oude platte tekstregel van snel (zonder teller, zonder verwijderen)
@@ -8066,6 +8068,15 @@ export default function PartyTest() {
                   </span>
                 ))}
               </div>
+              {opNaam && unassignedTotal > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, borderTop: "1px dashed rgba(240,165,0,0.45)", marginTop: 9, paddingTop: 9 }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: "#8a5e0f", lineHeight: 1.35 }}>
+                    <b>{L.notAssignedCount(unassignedTotal)}</b><br /><span style={{ color: "#a89a6f", fontWeight: 600 }}>{L.assignWhoSub} — {L.canAlsoLater}</span>
+                  </span>
+                  <button onClick={() => { setAssignNaamEdit(false); setShowAssignAll(true) }}
+                    style={{ flexShrink: 0, background: "#fff", color: "#8a5e0f", border: "1.5px solid rgba(240,165,0,0.6)", borderRadius: 9, padding: "8px 13px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }}>{L.assign}</button>
+                </div>
+              )}
             </div>
           </>
           )
@@ -8105,6 +8116,33 @@ export default function PartyTest() {
                   <div style={{ ...S.seg(assignMode === "drink"), padding: "6px 10px", fontSize: 14, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("drink")}>per drank</div>
                 </div>
               </div>
+              {/* Namen vergeten in te vullen? Hier aanpassen, zonder het venster of je
+                  toewijzingen te verlaten — alles hangt aan nummers, dus de nieuwe naam
+                  verschijnt overal. */}
+              <div style={{ textAlign: "right", marginBottom: 8 }}>
+                <button onClick={() => setAssignNaamEdit((v) => !v)}
+                  style={assignNaamEdit
+                    ? { border: "none", background: MODUS_NAAM.knop, color: "#fff", borderRadius: 9, padding: "7px 12px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }
+                    : { background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a7d55", borderRadius: 9, padding: "7px 12px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }}>
+                  {assignNaamEdit ? L.doneNamesBtn : L.editNamesBtn}</button>
+              </div>
+              {assignNaamEdit && (<>
+                <div style={{ fontSize: 13, color: "#8a7d55", marginBottom: 10, lineHeight: 1.4 }}>{L.editNamesHint}</div>
+                {people.map((p, i) => {
+                  const leeg = isGuestDefault(p.name)
+                  return (
+                    <div key={p.id} style={{ ...S.row, gap: 8, marginBottom: 7 }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: "#b3a988", width: 18, textAlign: "center", flexShrink: 0 }}>{i + 1}</span>
+                      <span style={{ position: "relative", flex: 1, minWidth: 0, display: "flex" }}>
+                        <input value={leeg ? "" : p.name} onChange={(e) => renamePerson(p.id, e.target.value)} placeholder={`${p.name} · ${L.guestNamePh}`}
+                          style={{ ...S.input, flex: 1, minWidth: 0, boxSizing: "border-box", textAlign: "left", fontSize: 16, fontWeight: 700, padding: leeg ? "9px 32px 9px 11px" : "9px 11px", borderRadius: 10, background: VLAK2, color: leeg ? "#b3a988" : "#4a3f1e" }} />
+                        {leeg && <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", display: "inline-flex" }}><PotloodIcoon /></span>}
+                      </span>
+                    </div>
+                  )
+                })}
+              </>)}
+              {!assignNaamEdit && (<>
               {assignMode === "person" && unassignedTotal > 0 && <div style={{ fontSize: 14.5, fontWeight: 800, color: "#c0554a", marginBottom: 4 }}>🔴 {L.notAssignedYet(unassignedTotal)}</div>}
               <div style={{ fontSize: 13, color: "#8a7d55", marginBottom: 8, lineHeight: 1.4 }}>{L.assignAnyone}</div>
 
@@ -8140,6 +8178,7 @@ export default function PartyTest() {
                 })}
                 </div>
               )}
+              </>)}
               <button style={unassignedTotal === 0 ? { ...S.btnP, marginTop: 6, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 6 }} onClick={() => setShowAssignAll(false)}>{unassignedTotal === 0 ? "Klaar — alles toegewezen" : "Klaar"}</button>
             </div>
           </div>
@@ -8243,7 +8282,7 @@ export default function PartyTest() {
             <span style={{ fontSize: 15.5, fontWeight: 800, flexShrink: 0 }}>{L.total}: {items}</span>
           </div>
           {last && (() => { const un = drinks.reduce((a, d) => a + (last.anon[d.id] ?? 0), 0); return un > 0 ? (
-            <div onClick={() => { editOrder(); setShowAssignAll(true) }} style={{ marginTop: 8, background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "8px 11px", fontSize: 14.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>🔴 {L.notAssignedYet(un)} <u>{L.tapToAssign}</u></div>
+            <div onClick={() => { editOrder(); setAssignNaamEdit(false); setShowAssignAll(true) }} style={{ marginTop: 8, background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "8px 11px", fontSize: 14.5, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>🔴 {L.notAssignedYet(un)} <u>{L.tapToAssign}</u></div>
           ) : null })()}
         </div>
 
