@@ -2109,6 +2109,19 @@ export default function PartyTest() {
   const [potBuilderOpen, setPotBuilderOpen] = useState(false)
   // Bij elke nieuwe inleg opnieuw vragen met hoeveel personen er ingelegd wordt — zo
   // weet elke inleg apart voor hoeveel mensen hij gold (nodig voor een latere Fair Split).
+  // Telefoons houden de ingezoomde stand vast over paginawissels heen. Bij
+  // binnenkomst zetten we de zoom heel even vast op 1 en geven de viewport
+  // meteen weer vrij, zodat elke overgang op 100% begint.
+  useEffect(() => {
+    try {
+      let m = document.querySelector('meta[name="viewport"]')
+      if (!m) { m = document.createElement("meta"); m.setAttribute("name", "viewport"); document.head.appendChild(m) }
+      const oud = m.getAttribute("content") || "width=device-width, initial-scale=1"
+      m.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1")
+      const t = window.setTimeout(() => m?.setAttribute("content", oud.includes("maximum-scale") ? "width=device-width, initial-scale=1" : oud), 400)
+      return () => window.clearTimeout(t)
+    } catch { /* niets */ }
+  }, [])
   useEffect(() => {
     if (showPot) setPotJustAdded(false)
   }, [showPot])
