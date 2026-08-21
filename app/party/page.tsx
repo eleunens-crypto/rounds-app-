@@ -487,6 +487,7 @@ const T = {
     nameFirstNote: "Vul eerst je eigen naam en de groepsnaam in.",
     yourNamePh2: "Jouw naam — nodig vóór de QR",
     optionalWord: "optioneel",
+    backToRundo: "← naar het Rundo-startscherm",
     waitScan: (n: number) => n === 1 ? "1 gast wacht op QR-scan" : `${n} gasten wachten op QR-scan`,
     allInPill: "✓ iedereen is erbij",
     potAddBtn: "+ inleggen",
@@ -1208,6 +1209,7 @@ const T = {
     nameFirstNote: "Remplis d'abord ton nom et le nom du groupe.",
     yourNamePh2: "Ton nom — requis avant le QR",
     optionalWord: "optionnel",
+    backToRundo: "\u2190 retour \u00e0 l'accueil Rundo",
     waitScan: (n: number) => n === 1 ? "1 invit\u00e9 attend le scan QR" : `${n} invit\u00e9s attendent le scan QR`,
     allInPill: "✓ tout le monde est l\u00e0",
     potAddBtn: "+ verser",
@@ -2112,14 +2114,16 @@ export default function PartyTest() {
   // Telefoons houden de ingezoomde stand vast over paginawissels heen. Bij
   // binnenkomst zetten we de zoom heel even vast op 1 en geven de viewport
   // meteen weer vrij, zodat elke overgang op 100% begint.
+  // Telefoons zoomen in op invoervelden en houden die stand vast, ook over
+  // paginawissels heen — en Android Chrome geeft hem met een meta-wissel niet
+  // terug. Daarom app-gedrag: de viewport staat permanent vast op schaal 1, dus
+  // invoer-autozoom bestaat niet meer. iOS laat knijpzoomen bij een echt gebaar
+  // gewoon toe (het negeert de limiet daarvoor), Android houdt alles strak op 100%.
   useEffect(() => {
     try {
       let m = document.querySelector('meta[name="viewport"]')
       if (!m) { m = document.createElement("meta"); m.setAttribute("name", "viewport"); document.head.appendChild(m) }
-      const oud = m.getAttribute("content") || "width=device-width, initial-scale=1"
-      m.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1")
-      const t = window.setTimeout(() => m?.setAttribute("content", oud.includes("maximum-scale") ? "width=device-width, initial-scale=1" : oud), 400)
-      return () => window.clearTimeout(t)
+      m.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no")
     } catch { /* niets */ }
   }, [])
   useEffect(() => {
@@ -4003,12 +4007,7 @@ export default function PartyTest() {
       // 1 en de viewport meteen weer vrijgeven.
       try {
         ;(document.activeElement as HTMLElement | null)?.blur?.()
-        const m = document.querySelector('meta[name="viewport"]')
-        if (m) {
-          const oud = m.getAttribute("content") || "width=device-width, initial-scale=1"
-          m.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1")
-          window.setTimeout(() => m.setAttribute("content", oud), 400)
-        }
+        document.querySelector('meta[name="viewport"]')?.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no")
       } catch { /* niets */ }
       setView("start")
     }
@@ -7127,6 +7126,12 @@ export default function PartyTest() {
             </div>
           )
         })()}
+        {/* Eén trap hoger dan het logo: dit startscherm ís al de Party-keuze, dus de
+            link hier gaat naar het Rundo-keuzescherm (Table of Party) op de site-root.
+            De chooser zet bij binnenkomst zelf de zoom recht. */}
+        <div style={{ textAlign: "center", marginTop: 16 }}>
+          <button onClick={() => { window.location.href = "/" }} style={{ fontSize: 14.5, fontWeight: 700, color: "#a08d5f", background: "none", border: "none", padding: 4, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }}>{L.backToRundo}</button>
+        </div>
 
         {/* De testgroep zelf staat gewoon in de lijst hierboven en blijft daar staan.
             Deze regel maakt hem aan, of zet hem in één tik terug op nul. */}
