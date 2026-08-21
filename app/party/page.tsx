@@ -148,6 +148,17 @@ function KroonIcoon({ size = 15, kleur = "#0a6070", gevuld = false }: { size?: n
   )
 }
 
+function ZakjeIcoon({ size = 15 }: { size?: number }) {
+  // Het gouden geldzakje van de potbadge, klein genoeg voor in een tekstregel.
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true" style={{ flexShrink: 0, verticalAlign: "-2px" }}>
+      <path d="M16 13 L14 7 Q20 5 26 7 L24 13 Z" fill="#d99616" stroke="#b9821a" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M13 14 Q20 11 27 14 Q33 19 32 27 Q31 35 20 35 Q9 35 8 27 Q7 19 13 14 Z" fill="#e8a821" stroke="#b9821a" strokeWidth="1.5" />
+      <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
+    </svg>
+  )
+}
+
 function PotloodIcoon({ size = 14, kleur = "#b3a988" }: { size?: number; kleur?: string }) {
   // Klein potloodje rechts in een naamveld: "hier mag geschreven worden". Zelfde
   // grijs als de placeholder; de wrapper verbergt hem zodra er een naam staat.
@@ -1085,6 +1096,9 @@ const T = {
     potShare: "waarvan uit de pot",
     potSpentWord: "besteed",
     potLeftLong: "nog in de pot",
+    persPaidWord: "door personen betaald",
+    leaveSettleMsg: "Afrekenen loopt nog — toch naar het rondjesoverzicht? Wat je al invulde blijft bewaard.",
+    leaveSettleYes: "Ja, ga verder",
     potShareAll: "volledig uit de pot",
     inRounds: (t: string) => `rondje ${t}`,
     mixSamen: (b: string) => `samen ${b}`,
@@ -1810,6 +1824,9 @@ const T = {
     potShare: "dont du pot",
     potSpentWord: "d\u00e9pens\u00e9",
     potLeftLong: "encore dans le pot",
+    persPaidWord: "pay\u00e9 par les personnes",
+    leaveSettleMsg: "Le r\u00e8glement est en cours — quand m\u00eame vers l'aper\u00e7u des tourn\u00e9es ? Ce que tu as d\u00e9j\u00e0 rempli reste enregistr\u00e9.",
+    leaveSettleYes: "Oui, continuer",
     potShareAll: "enti\u00e8rement du pot",
     inRounds: (t: string) => `tourn\u00e9e ${t}`,
     mixSamen: (b: string) => `ensemble ${b}`,
@@ -6271,34 +6288,34 @@ export default function PartyTest() {
             style={{ ...S.input, width: "auto", minWidth: 180, maxWidth: "88%", textAlign: "center", fontSize: 17, fontWeight: 800, padding: "5px 13px", borderRadius: 16, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.8)" }} />
         </div>
       )}
-      {!verbergNav && !onboarding && !(settle && isAdmin) && !(!settle && view === "order" && roundItems > 0) && !(!settle && view === "confirmed") && (
+      {!verbergNav && !onboarding && !(settle && isAdmin && !fromQuick) && !(!settle && view === "order" && roundItems > 0) && !(!settle && view === "confirmed") && (
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
           {/* Snel opnemen: geen ⚙️ Groep meer (naam via de pill, pot via de badge) —
               Afrekenen staat er links vooraan, met het getekende bonnetje. */}
-          {!settle && opNaam !== true && rounds.length >= 1 && (
+          {(fromQuick || (!settle && opNaam !== true)) && rounds.length >= 1 && (
             !lastRoundHandled ? (
               <div style={{ flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 800, borderRadius: 10, textAlign: "center", background: "#faf4e4", color: "#8a5e0f", border: "1px solid rgba(240,165,0,0.35)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, opacity: 0.75 }}><BonKnopIcoon kleur="#8a5e0f" /> {L.quickSettleTitle}</div>
             ) : (
               <button style={{ flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 700, borderRadius: 10, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-                border: view === "quickSettle" ? "none" : "1px solid rgba(120,95,20,0.25)",
-                background: view === "quickSettle" ? AAN : "#fff",
-                color: view === "quickSettle" ? "#fff" : "#8a7d55" }}
-                onClick={goQuickSettle}><BonKnopIcoon kleur={view === "quickSettle" ? "#fff" : "#8a7d55"} /> {L.quickSettleTitle}</button>
+                border: (view === "quickSettle" || view === "final" || view === "payers" || view === "fairSetup") ? "none" : "1px solid rgba(120,95,20,0.25)",
+                background: (view === "quickSettle" || view === "final" || view === "payers" || view === "fairSetup") ? AAN : "#fff",
+                color: (view === "quickSettle" || view === "final" || view === "payers" || view === "fairSetup") ? "#fff" : "#8a7d55" }}
+                onClick={goQuickSettle}><BonKnopIcoon kleur={(view === "quickSettle" || view === "final" || view === "payers" || view === "fairSetup") ? "#fff" : "#8a7d55"} /> {L.quickSettleTitle}</button>
             )
           )}
-          {!(!settle && opNaam !== true) && (
+          {(opNaam === true || (settle && fromQuick)) && (
           <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 14.5, fontWeight: 800, lineHeight: 1.15, borderRadius: 13 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupShort}</button>
           )}
-          {settle ? (
+          {settle && !fromQuick ? (
             <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 14.5, fontWeight: 800, borderRadius: 13, opacity: (view === "hub" || ((settle || opNaam) && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goHub() }}>{L.overview}</button>
           ) : (
             <button style={{ flex: 1.2, padding: "11px 4px", fontSize: 15, fontWeight: 800, borderRadius: 10, cursor: "pointer",
               border: view === "roundsOverview" ? "none" : "1px solid rgba(120,95,20,0.25)",
               background: view === "roundsOverview" ? AAN : "#fff",
               color: view === "roundsOverview" ? "#fff" : "#8a7d55" }}
-              onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } if (rounds.length >= 1) { setOverviewBackTo(view === "order" ? "order" : "hub"); setView("roundsOverview") } else setNotice(L.noRoundsYet) }}>{L.roundsOverviewBtn}</button>
+              onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } if (view === "payers" || view === "fairSetup") { setConfirmDlg({ msg: L.leaveSettleMsg, yes: L.leaveSettleYes, onYes: () => { setConfirmDlg(null); setOverviewBackTo("hub"); setView("roundsOverview") } }); return } if (rounds.length >= 1) { setOverviewBackTo(view === "order" ? "order" : "hub"); setView("roundsOverview") } else setNotice(L.noRoundsYet) }}>{L.roundsOverviewBtn}</button>
           )}
-          {settle && <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 700, opacity: (view === "final" || ((settle || opNaam) && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goFinal() }}>{L.settleBtn}</button>}
+          {settle && !fromQuick && <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 15, fontWeight: 700, opacity: (view === "final" || ((settle || opNaam) && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goFinal() }}>{L.settleBtn}</button>}
           {/* Op het rondjesoverzicht is de derde tab overbodig: het rondje is bevestigd
               en de afreken-knop staat daar al onderaan naast "Nieuw rondje" — dat geldt
               voor snel én uitgebreid, want die knoppenrij staat er in beide modi. */}
@@ -9763,10 +9780,17 @@ export default function PartyTest() {
           <span style={{ fontWeight: 800 }}>{L.totalPaid}</span>
           <span style={{ fontWeight: 800, fontSize: 23 }}>{show(grandTotal)}</span>
         </div>
-        {potSpent > 0 && (
+        {/* Drieluik: uit de pot, door personen, en wat er nog in de pot zit — met het
+            goudzakje bij elke pot-regel en de potbedragen in het vertrouwde potblauw. */}
+        {(potSpent > 0.005 || potContribTotal > 0.005) && (
           <div style={{ marginTop: 6, borderTop: "1px dashed rgba(120,95,20,0.2)", paddingTop: 6 }}>
-            <div style={{ ...S.row, justifyContent: "space-between", fontSize: 16, color: "#6b5f3a", fontWeight: 700 }}><span>🫙 waarvan uit de pot</span><span style={{ fontWeight: 700, color: "#2f6fb5" }}>−{show(potSpent)}</span></div>
-            <div style={{ ...S.row, justifyContent: "space-between", fontSize: 16, color: "#6b5f3a", fontWeight: 700 }}><span>door personen betaald</span><span style={{ fontWeight: 700 }}>{show(grandTotal - potSpent)}</span></div>
+            {potSpent > 0.005 && (<>
+              <div style={{ ...S.row, justifyContent: "space-between", fontSize: 16, fontWeight: 700 }}><span style={{ color: "#2f5693", display: "inline-flex", alignItems: "center", gap: 6 }}><ZakjeIcoon /> {L.fromPot}</span><span style={{ fontWeight: 700, color: "#2f6fb5" }}>−{show(potSpent)}</span></div>
+              <div style={{ ...S.row, justifyContent: "space-between", fontSize: 16, color: "#6b5f3a", fontWeight: 700, marginTop: 2 }}><span>👤 {L.persPaidWord}</span><span style={{ fontWeight: 700 }}>{show(grandTotal - potSpent)}</span></div>
+            </>)}
+            {potContribTotal > 0.005 && (
+              <div style={{ ...S.row, justifyContent: "space-between", fontSize: 16, fontWeight: 700, marginTop: 4, borderTop: "1px dashed rgba(47,111,181,0.3)", paddingTop: 6 }}><span style={{ color: "#2f5693", display: "inline-flex", alignItems: "center", gap: 6 }}><ZakjeIcoon /> {L.potLeftLong}</span><span style={{ fontWeight: 800, color: "#2f6fb5" }}>{show(Math.max(0, potRemaining))}</span></div>
+            )}
           </div>
         )}
         {/* Wie betaalde wélke rondjes: het antwoord dat tot nu enkel per gast in de
@@ -9890,12 +9914,9 @@ export default function PartyTest() {
         </div>
         {people.map((p) => {
           const dronk = consumption(p.id), waarborg = cupOwn(p.id), zelf = paidByPerson(p.id), inpot = contribOf(p.id)
-          const owed = dronk + waarborg - zelf - inpot + cardLossPer
           const open = openFairAll || openFair[p.id]
-          const nettoLabel = Math.abs(owed) < 0.005 ? "staat gelijk" : owed > 0 ? `moet ${show(owed)} betalen` : `krijgt ${show(-owed)} terug`
           const mijnGroep = settleGroups.find((g) => g.leden.some((x) => x.id === p.id))
           const mijnTx = settlement.tx.filter((t) => t.from === mijnGroep?.label || t.to === mijnGroep?.label)
-          const nettoColor = Math.abs(owed) < 0.005 ? "#8a7d55" : owed > 0 ? "#b35309" : "#1f8a4c"
           return (
             <div key={p.id} style={{ borderBottom: "1px solid rgba(120,95,20,0.06)" }}>
               <div style={{ ...S.row, alignItems: "flex-start", justifyContent: "space-between", padding: "8px 0", cursor: "pointer" }} onClick={() => setOpenFair((o) => ({ ...o, [p.id]: !open }))}>
@@ -9943,19 +9964,8 @@ export default function PartyTest() {
                   })()}
                   {inpot > 0.005 && <div style={{ color: "#6b5f3a", padding: "2px 0" }}>{L.inPot} <b style={{ color: "#1f8a4c" }}>{show(inpot)}</b></div>}
                   {cardLossPer > 0.005 && <div style={{ color: "#6b5f3a", padding: "2px 0" }}>{L.cardLoss} <b style={{ color: "#4a3f1e" }}>{show(cardLossPer)}</b></div>}
-                  <div style={{ padding: "6px 0 0", marginTop: 4, borderTop: "1px dashed rgba(120,95,20,0.25)", fontWeight: 800, color: nettoColor }}>{nettoLabel}</div>
-                  {/* Niet alleen hoevéél, ook aan wíe: de overschrijvingen van deze persoon
-                      meteen bij zijn saldo, zodat je het kader onderaan niet hoeft te zoeken. */}
-                  {(() => {
-                    const lbl = settleGroups.find((g) => g.leden.some((x) => x.id === p.id))?.label
-                    if (!lbl) return null
-                    const mijn = settlement.tx.filter((t) => t.from === lbl || t.to === lbl)
-                    return mijn.map((t, k) => (
-                      <div key={k} style={{ fontSize: 13.5, fontWeight: 700, color: t.from === lbl ? "#b0402f" : "#1f8a4c", padding: "3px 0 0" }}>
-                        {t.from === lbl ? L.txPayTo(euro(t.amount), t.to) : L.txGetFrom(euro(t.amount), t.from)}
-                      </div>
-                    ))
-                  })()}
+                  {/* Geen saldo- of overschrijvingsherhaling meer hier: de regels onder
+                      de naam tonen al wie wat krijgt of betaalt, nog vóór je openklikt. */}
                 </div>
               )}
             </div>
@@ -9974,7 +9984,9 @@ export default function PartyTest() {
         )}
       </div>
 
-      {settlement.tx.length > 0 && (
+      {/* Uit beeld sinds de samenvattingsregels bij elke naam: dit kader herhaalde
+          elke overschrijving een derde keer. Terugzetten = false weghalen. */}
+      {false && settlement.tx.length > 0 && (
         <div style={S.card}>
           <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 3, fontSize: 19 }}>{L.whoPaysWho}</h3>
           <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 11, lineHeight: 1.45 }}>{L.shortestWay}</div>
