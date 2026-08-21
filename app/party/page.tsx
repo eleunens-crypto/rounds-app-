@@ -770,7 +770,7 @@ const T = {
     fromCard: "van de drankkaart",
     notPaidYet: "nog niet betaald",
     paidBy: "Betaald door",
-    roundingNote: "afrondingscent wordt in de Fair Split verrekend",
+    roundingNote: "afrondingscent wordt bij het eerlijk verdelen verrekend",
 
     // ── pot
     potMoney: "🫙 Pot (geld)",
@@ -846,11 +846,11 @@ const T = {
     // ── afrekenen
     finalBalance: "🧾 Eindbalans",
     totalPaid: "💰 Totaal betaald",
-    fairVsEqual: "⚖️ Fair Split vs Gelijk verdelen",
-    fairIsFairest: "Fair Split is het eerlijkst!",
+    fairVsEqual: "⚖️ Eerlijk verdelen vs Gelijk verdelen",
+    fairIsFairest: "Eerlijk verdelen is de eerlijkste keuze!",
     whoPaysWho: "🤝 Wie betaalt aan wie?",
     shortestWay: "Zo min mogelijk overschrijvingen — de app zoekt de kortste weg.",
-    fairInfo: "⚖️ Fair Split — Eerlijker dan gelijke verdeling. Wie weinig of goedkopere drankjes nam, betaalt niet mee voor de rest.",
+    fairInfo: "⚖️ Eerlijk verdelen — wie weinig of goedkopere drankjes nam, betaalt niet mee voor de rest.",
     equalSplit: "iedereen evenveel",
     equalWouldBe: (v: string) => `Gelijk verdelen zou ${v} per persoon zijn.`,
     equalColHead: "gelijk verdeeld",
@@ -858,12 +858,12 @@ const T = {
     paysWord: "betaalt",
     fromWord2: "van",
     toWord2: "aan",
-    fairColHead: "Fair Split",
+    fairColHead: "Eerlijk verdeeld",
     participantColHead: "Deelnemer",
-    equalSplitWarn: "⚠️ Dit is een gelijke verdeling, geen Fair Split.",
-    fairSplitInfo: "Gelijke verdeling = totaal ÷ aantal personen. Fair Split is eerlijker: wie weinig of niks dronk, betaalt niet mee voor wie veel dronk.",
+    equalSplitWarn: "⚠️ Dit is een gelijke verdeling — niet volgens wat ieder dronk.",
+    fairSplitInfo: "Gelijke verdeling = totaal ÷ aantal personen. Eerlijk verdelen kijkt naar het verbruik: wie weinig of niks dronk, betaalt niet mee voor wie veel dronk.",
     unassignedWarn: "Wijs de resterende drankjes toe, dan verdeelt de app eerlijk op wat elk verteerde.",
-    useFairSplit: "Toewijzen en Fair Split gebruiken",
+    useFairSplit: "Toewijzen en eerlijk verdelen",
     equalAnyway: "Toch gelijk verdelen",
     total: "Totaal",
     perPerson: "per persoon",
@@ -885,7 +885,7 @@ const T = {
     addedByYou: "Door jou toegevoegd",
     removeHint: "Verwijder wat je niet meer nodig hebt. Al besteld in een rondje? Dan blijft het staan.",
     nameYourDrink: "Geef je drankje een naam.",
-    needPrice: "Vul een richtprijs in — anders kan Fair Split dit drankje niet eerlijk verdelen.",
+    needPrice: "Vul een richtprijs in — anders kan dit drankje niet eerlijk verdeeld worden.",
     needAmountOrCancel: "Uit de pot betalen kan niet zonder bedrag. Vul een bedrag in, of kies Zelf betaald.",
     alreadyExists: (n: string) => `"${n}" staat al in de lijst.`,
     maxPerPerson: (n: number) => `Je kan maximaal ${n} eigen drankjes toevoegen.`,
@@ -980,7 +980,7 @@ const T = {
     modeFairSub: "Iedereen scant QR met eigen gsm",
     modeFairSub2: "Duidt aan wat hij of zij drinkt",
     modeFairLine: "Eerlijk betalen volgens wat je dronk",
-    modeSwitchLater: "Kies je snel noteren, dan kan je op het einde alsnog eerlijk per persoon verdelen via Fair Split.",
+    modeSwitchLater: "Kies je snel noteren, dan kan je op het einde alsnog eerlijk per persoon verdelen.",
     chooseHow: "Kies hoe je wil bestellen",
     youNoteSelf: "Jij noteert zelf voor iedereen",
     fairShareTag: "EERLIJK VERDELEN",
@@ -1089,20 +1089,22 @@ const T = {
     roundsNoAmountWhy: (n: number) => n === 1
       ? "Die telt niet mee in de verdeling hieronder. Vul aan of laat zo."
       : "Die tellen niet mee in de verdeling hieronder. Vul ze aan of laat ze zo.",
-    roundsNoAmountFair: "Fair Split verdeelt volgens wie wat dronk — daarvoor heeft elk rondje een bedrag nodig. Vul aan om verder te kunnen.",
+    roundsNoAmountFair: "Eerlijk verdelen gebeurt volgens wie wat dronk — daarvoor heeft elk rondje een bedrag nodig. Vul aan om verder te kunnen.",
     fillAmountsBtn: "Bedragen aanvullen ›",
     nothingToSplit: "Er valt nog niets te verdelen",
-    nothingToSplitWhy: "Geen enkel rondje heeft een bedrag. Vul de openstaande bedragen aan — daarna kan je gelijk verdelen of overstappen naar Fair Split.",
+    nothingToSplitWhy: "Geen enkel rondje heeft een bedrag. Vul de openstaande bedragen aan — daarna kan je gelijk of eerlijk verdelen.",
     noAmountBadge: "zonder bedrag",
     addPaymentBang: "Betaling toevoegen!",
     addAmountBtn: "€ Bedrag toevoegen",
     splitEqually: "Gelijk verdelen",
-    splitWithFair: "Verdeel met Fair Split",
+    splitWithFair: "Eerlijk verdelen",
+    splitFairSub: "wie meer dronk, betaalt meer",
+    splitEqualSub: "iedereen evenveel",
     fastest: "snelste",
     fairest: "eerlijkste",
     payersTitle: "Wie betaalde?",
     sameForAll: "Dezelfde betaler voor alle rondjes",
-    toFinal: "Fair Split Eindbalans",
+    toFinal: "Eindbalans — eerlijk verdeeld",
     missingPayer: (n: number) => `Nog ${n} ${n === 1 ? "rondje" : "rondjes"} zonder bedrag of betaler`,
     potNotSplit: "De pot staat op de groep, nog niet op namen.",
     potSpreadEven: "Gelijk verdelen",
@@ -1141,7 +1143,7 @@ const T = {
     busyWord: "bezig…",
     totalOf: (v: string) => `${v} totaal`,
     stillOpen: (v: string) => `${v} open`,
-    fairSplitExplain: "Liever eerlijk betalen volgens wat iedereen dronk (Fair Split!) Wijs drankjes en betalers hier toe.",
+    fairSplitExplain: "Liever eerlijk betalen volgens wat iedereen dronk? Wijs drankjes en betalers hier toe.",
     treatHint: "Rondje trakteren? Tik hieronder aan (telt dan niet mee in de verdeling)",
     roundWord: "Rondje",
     drinksCount: (n: number) => `${n} drankje${n === 1 ? "" : "s"}`,
@@ -1159,8 +1161,9 @@ const T = {
     perRoundTitle: "Per rondje verdeeld",
     plusTreat: (v: string) => `Jij trakteert ${v} extra`,
     payAllNote: "De hele rekening komt op jou:",
-    notFairSplitWhy: "Iedereen betaalt evenveel, ook wie minder dronk. Wil je dat wie meer dronk ook meer betaalt? Schakel over naar Fair Split.",
-    switchToFairBtn: "Naar Fair Split",
+    notFairSplitWhy: "Iedereen betaalt evenveel, ook wie minder dronk. Wil je dat wie meer dronk ook meer betaalt? Schakel over naar Eerlijk verdelen.",
+    switchToFairBtn: "Naar Eerlijk verdelen",
+    fairHintLine: "hierop verdeelt de app eerlijk — wie meer dronk, betaalt meer",
     fairSetupTitle: "⚖️ Wie was erbij?",
     guestNamePh: "tik om naam te wijzigen",
     fairAddPerson: "+ Persoon toevoegen",
@@ -1492,7 +1495,7 @@ const T = {
     fromCard: "de la carte boissons",
     notPaidYet: "pas encore payé",
     paidBy: "Payé par",
-    roundingNote: "le centime d'arrondi est réglé dans le Fair Split",
+    roundingNote: "le centime d'arrondi est r\u00e9gl\u00e9 dans le partage \u00e9quitable",
 
     // ── pot
     potMoney: "🫙 Pot (argent)",
@@ -1568,11 +1571,11 @@ const T = {
     // ── afrekenen
     finalBalance: "🧾 Bilan final",
     totalPaid: "💰 Total payé",
-    fairVsEqual: "⚖️ Fair Split vs partage égal",
-    fairIsFairest: "Le Fair Split est le plus équitable !",
+    fairVsEqual: "⚖️ Partage \u00e9quitable vs partage \u00e9gal",
+    fairIsFairest: "Le partage \u00e9quitable est le plus juste !",
     whoPaysWho: "🤝 Qui paie à qui ?",
     shortestWay: "Le moins de virements possible — l’appli cherche le chemin le plus court.",
-    fairInfo: "⚖️ Fair Split — Plus équitable qu’un partage égal. Qui a bu peu ou moins cher ne paie pas pour les autres.",
+    fairInfo: "⚖️ Partage \u00e9quitable — qui a bu peu ou moins cher ne paie pas pour les autres.",
     equalSplit: "part égale",
     equalWouldBe: (v: string) => `Un partage égal ferait ${v} par personne.`,
     equalColHead: "part égale",
@@ -1580,12 +1583,12 @@ const T = {
     paysWord: "paie",
     fromWord2: "de",
     toWord2: "à",
-    fairColHead: "Fair Split",
+    fairColHead: "Partage \u00e9quitable",
     participantColHead: "Participant",
-    equalSplitWarn: "⚠️ Ceci est une répartition égale, pas un Fair Split.",
-    fairSplitInfo: "Répartition égale = total ÷ nombre de personnes. Le Fair Split est plus juste : qui a peu ou rien bu ne paie pas pour ceux qui ont beaucoup bu.",
+    equalSplitWarn: "⚠️ Ceci est une r\u00e9partition \u00e9gale — pas selon ce que chacun a bu.",
+    fairSplitInfo: "R\u00e9partition \u00e9gale = total \u00f7 nombre de personnes. Le partage \u00e9quitable suit la consommation : qui a peu ou rien bu ne paie pas pour ceux qui ont beaucoup bu.",
     unassignedWarn: "Attribue les boissons restantes, puis l'app répartit selon ce que chacun a consommé.",
-    useFairSplit: "Attribuer et utiliser le Fair Split",
+    useFairSplit: "Attribuer et partager \u00e9quitablement",
     equalAnyway: "Répartir également quand même",
     total: "Total",
     perPerson: "par personne",
@@ -1607,7 +1610,7 @@ const T = {
     addedByYou: "Ajouté par toi",
     removeHint: "Supprime ce dont tu n'as plus besoin. Déjà commandé dans une tournée ? Alors ça reste.",
     nameYourDrink: "Donne un nom à ta boisson.",
-    needPrice: "Entre un prix indicatif — sinon le Fair Split ne peut pas répartir cette boisson.",
+    needPrice: "Entre un prix indicatif — sinon cette boisson ne peut pas \u00eatre r\u00e9partie \u00e9quitablement.",
     needAmountOrCancel: "Payer avec la cagnotte sans montant, ça ne va pas. Indique un montant, ou choisis Payé soi-même.",
     alreadyExists: (n: string) => `« ${n} » est déjà dans la liste.`,
     maxPerPerson: (n: number) => `Tu peux ajouter maximum ${n} boissons personnalisées.`,
@@ -1703,7 +1706,7 @@ const T = {
     modeFairSub: "Chacun scanne le QR sur son téléphone",
     modeFairSub2: "Coche ce qu’il ou elle boit",
     modeFairLine: "Payer équitablement selon ce que tu as bu",
-    modeSwitchLater: "Si tu notes en vitesse, tu peux encore répartir équitablement à la fin via Fair Split.",
+    modeSwitchLater: "Si tu notes en vitesse, tu peux encore r\u00e9partir \u00e9quitablement \u00e0 la fin.",
     chooseHow: "Choisissez comment commander",
     youNoteSelf: "Tu notes toi-même pour tous",
     fairShareTag: "PARTAGE ÉQUITABLE",
@@ -1812,20 +1815,22 @@ const T = {
     roundsNoAmountWhy: (n: number) => n === 1
       ? "Elle ne compte pas dans le partage ci-dessous. Complète-la ou laisse-la."
       : "Elles ne comptent pas dans le partage ci-dessous. Complète-les ou laisse-les.",
-    roundsNoAmountFair: "Fair Split répartit selon qui a bu quoi — chaque tournée doit donc avoir un montant. Complète pour continuer.",
+    roundsNoAmountFair: "Le partage \u00e9quitable suit qui a bu quoi — chaque tourn\u00e9e doit donc avoir un montant. Compl\u00e8te pour continuer.",
     fillAmountsBtn: "Compléter les montants ›",
     nothingToSplit: "Rien à répartir pour l'instant",
-    nothingToSplitWhy: "Aucune tournée n'a de montant. Complète les montants ouverts — ensuite tu pourras partager à parts égales ou passer à Fair Split.",
+    nothingToSplitWhy: "Aucune tourn\u00e9e n'a de montant. Compl\u00e8te les montants ouverts — ensuite tu pourras partager \u00e0 parts \u00e9gales ou \u00e9quitablement.",
     noAmountBadge: "sans montant",
     addPaymentBang: "Ajouter le paiement !",
     addAmountBtn: "€ Ajouter le montant",
     splitEqually: "R\u00e9partir \u00e9galement",
-    splitWithFair: "Partager avec Fair Split",
+    splitWithFair: "Partage \u00e9quitable",
+    splitFairSub: "qui boit plus, paie plus",
+    splitEqualSub: "la m\u00eame chose pour tous",
     fastest: "le plus rapide",
     fairest: "le plus juste",
     payersTitle: "Qui a payé ?",
     sameForAll: "Le même payeur pour toutes les tournées",
-    toFinal: "Bilan final Fair Split",
+    toFinal: "Bilan final — partage \u00e9quitable",
     missingPayer: (n: number) => `Encore ${n} tournée${n === 1 ? "" : "s"} sans montant ou sans payeur`,
     potNotSplit: "La cagnotte est sur le groupe, pas encore sur des noms.",
     potSpreadEven: "Répartir également",
@@ -1863,7 +1868,7 @@ const T = {
     busyWord: "en cours…",
     totalOf: (v: string) => `${v} au total`,
     stillOpen: (v: string) => `${v} ouvert`,
-    fairSplitExplain: "Tu préfères payer selon ce que chacun a bu (Fair Split !) Attribue ici les boissons et les payeurs.",
+    fairSplitExplain: "Tu pr\u00e9f\u00e8res payer selon ce que chacun a bu ? Attribue ici les boissons et les payeurs.",
     treatHint: "Tu offres une tourn\u00e9e ? Touche-la ci-dessous (elle ne compte pas dans le partage)",
     roundWord: "Tourn\u00e9e",
     drinksCount: (n: number) => `${n} boisson${n === 1 ? "" : "s"}`,
@@ -1881,8 +1886,9 @@ const T = {
     perRoundTitle: "R\u00e9parti par tourn\u00e9e",
     plusTreat: (v: string) => `Tu offres ${v} en plus`,
     payAllNote: "Toute l\u2019addition est pour toi :",
-    notFairSplitWhy: "Tout le monde paie pareil, m\u00eame ceux qui ont moins bu. Tu veux que ceux qui ont plus bu paient plus ? Passe au Fair Split.",
-    switchToFairBtn: "Vers Fair Split",
+    notFairSplitWhy: "Tout le monde paie pareil, m\u00eame ceux qui ont moins bu. Tu veux que ceux qui ont plus bu paient plus ? Passe au partage \u00e9quitable.",
+    switchToFairBtn: "Vers le partage \u00e9quitable",
+    fairHintLine: "l'app r\u00e9partit \u00e9quitablement sur cette base — qui boit plus, paie plus",
     fairSetupTitle: "⚖️ Qui \u00e9tait l\u00e0 ?",
     guestNamePh: "touche pour renommer",
     fairAddPerson: "+ Ajouter une personne",
@@ -4763,7 +4769,7 @@ export default function PartyTest() {
     if (anyUnassignedRounds) {
       const tot = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0)
       setConfirmDlg({
-        msg: `🔴 ${tot} drankje${tot === 1 ? "" : "s"} nog niet toegewezen.\n\nWijs toe → Fair Split: elk betaalt wat hij écht dronk.\nDoe je dat niet → gelijk verdeeld: iedereen evenveel.\n\nVoorbeeld: Jan 1 cola (€4), Tom 4 speciaalbieren (€20). Gelijk verdeeld betaalt elk €12 — Jan €8 te veel.`,
+        msg: `🔴 ${tot} drankje${tot === 1 ? "" : "s"} nog niet toegewezen.\n\nWijs toe → eerlijk verdeeld: elk betaalt wat hij écht dronk.\nDoe je dat niet → gelijk verdeeld: iedereen evenveel.\n\nVoorbeeld: Jan 1 cola (€4), Tom 4 speciaalbieren (€20). Gelijk verdeeld betaalt elk €12 — Jan €8 te veel.`,
         yes: L.equalAnyway,
         no: "Toewijzen",
         onYes: () => { setConfirmDlg(null); setHasSettled(true); setView("final") },
@@ -7184,7 +7190,7 @@ export default function PartyTest() {
                   <span style={{ position: "absolute", top: 0, left: 0, right: 0, height: 5, background: MODUS_FAIR.rand }} />
                   <div style={{ ...S.row, gap: 8, marginBottom: 3 }}>
                     <span style={{ fontSize: 21 }}>⚖️</span>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>Fair Split</span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{L.splitWithFair}</span>
                     {bpSettle === true && <span style={{ marginLeft: "auto", fontSize: 17, color: MODUS_FAIR.rand, fontWeight: 800 }}>✓</span>}
                   </div>
                   <div style={{ fontSize: 13.5, color: "#8a7d55", marginBottom: 13 }}>{L.modeFairSub}</div>
@@ -8176,7 +8182,7 @@ export default function PartyTest() {
             <span style={{ fontSize: 21, fontWeight: 800 }}>€</span>
             <input style={{ ...S.input, width: 120, fontSize: 23, textAlign: "center", fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00" value={amountDraft} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setAmountDraft(v); autoSplit(payPersons, payPot, v); setPaidConfirmed(false) }} />
           </div>
-          <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", marginBottom: 14 }}>ⓘ hierop verdeelt de app eerlijk (Fair Split)</div>
+          <div style={{ fontSize: 13.5, color: "#8a7d55", textAlign: "center", marginBottom: 14 }}>ⓘ {L.fairHintLine}</div>
 
           {(parseFloat(amountDraft.replace(",", ".")) || 0) > 0 ? (
           <>
