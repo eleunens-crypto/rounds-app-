@@ -4680,9 +4680,17 @@ export default function PartyTest() {
   // pid = null betekent: de pot draagt alles. Komt de pot tekort, dan klemt
   // rRedistribute het aandeel op wat er in zit en blijft de rest zichtbaar openstaan.
   const zelfdeBetalerVoorAlles = (pid: string | null) => {
-    const nieuwe = rounds.map((r, idx) => (r.amount || 0) > 0.005
-      ? rRedistribute(r, idx, pid === null, pid === null ? [] : [pid], r.amount)
-      : r)
+    let potVerbruikt = 0
+    const nieuwe = rounds.map((r, idx) => {
+      if ((r.amount || 0) <= 0.005) return r
+      if (pid !== null) return rRedistribute(r, idx, false, [pid], r.amount)
+      // De pot betaalt alles: cumulatief klemmen, zodat de rondjes samen nooit meer
+      // opnemen dan er in de pot zit — wat overblijft, blijft gewoon open staan.
+      const vrij = Math.max(0, potContribTotal - potVerbruikt)
+      const deel = Math.min(r.amount || 0, vrij)
+      potVerbruikt += deel
+      return { ...r, payers: {}, potPart: deel }
+    })
     setRounds(nieuwe)
     nieuwe.forEach((r) => persistRound(r))
   }
@@ -4697,6 +4705,18 @@ export default function PartyTest() {
     const { error } = await supabase.from("party_pot").update({ amounts: bedragen }).eq("id", eerste.id)
     if (error) { setNotice("Pot opslaan mislukt: " + error.message); return }
     if (rest.length > 0) await supabase.from("party_pot").delete().in("id", rest.map((r) => r.id))
+    // Is de inleg omlaag gegaan terwijl rondjes al uit de pot betaald waren? Dan de
+    // toegewezen potdelen van voor naar achter afromen tot ze weer binnen de nieuwe
+    // inleg passen — een negatieve pot kan zo niet meer ontstaan.
+    const nieuwTotaal = Object.values(bedragen).reduce((a, b) => a + (b || 0), 0)
+    let rest2 = nieuwTotaal
+    const geklemd = rounds.map((r) => {
+      const deel = Math.min(r.potPart || 0, Math.max(0, rest2))
+      rest2 -= deel
+      return Math.abs(deel - (r.potPart || 0)) > 0.004 ? { ...r, potPart: deel } : r
+    })
+    const gewijzigd = geklemd.filter((r, i) => r !== rounds[i])
+    if (gewijzigd.length > 0) await Promise.all(gewijzigd.map((r) => persistRound(r)))
     setPotNames(null)
     loadParty(groupId)
   }
