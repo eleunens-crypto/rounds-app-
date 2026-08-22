@@ -6962,8 +6962,9 @@ export default function PartyTest() {
                   ertussen. Stap 1 heeft twee manieren, vandaar twee iconen met "of". */}
               <div style={{ marginTop: 15, paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
                 {L.welkomFlow.map((st, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 13, padding: "9px 0",
+                  <div key={i} style={{ display: "flex", justifyContent: "center", padding: "9px 0",
                     borderBottom: i < L.welkomFlow.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 13, flexDirection: i % 2 === 1 ? "row-reverse" : "row" }}>
                       <span style={{ position: "relative", flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7 }}>
                         {st.ic.map((ic, k) => (
                           <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
@@ -6973,7 +6974,8 @@ export default function PartyTest() {
                         ))}
                         <span style={{ position: "absolute", top: -6, right: -7, width: 22, height: 22, borderRadius: "50%", background: "#f0c14b", color: "#131826", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
                       </span>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3, textAlign: "left" }}>{st.label}</span>
+                      <span style={{ fontSize: 17, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3 }}>{st.label}</span>
+                    </span>
                   </div>
                 ))}
               </div>
