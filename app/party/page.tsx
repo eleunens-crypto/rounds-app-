@@ -4070,7 +4070,7 @@ export default function PartyTest() {
   const bump1 = (did: string) => {
     // Snel opnemen zonder echte groepsnaam: de tik wordt tegengehouden (dus nog níét
     // genoteerd) en het naamvenster verschijnt. Na "Verder" tik je gewoon opnieuw.
-    if (!settle && opNaam !== true && isAutoNaam(groupName)) { setNaamPlichtVeld(""); setNaamPlicht(true); return }
+    if (!settle && isAutoNaam(groupName)) { setNaamPlichtVeld(""); setNaamPlicht(true); return }
     if (settle && voorWie) return bump(did, voorWie, 1)
     return bumpAnon(did, 1)
   }
@@ -4250,7 +4250,7 @@ export default function PartyTest() {
         )}
         {anderen.map((p) => (
           <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: "rgba(31,138,76,0.08)", border: "1px solid rgba(31,138,76,0.25)" }}>
-            <span style={{ fontSize: 17.5, fontWeight: 700, color: "#4a3f1e", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>✅ {p.name}</span>
+            <span style={{ fontSize: 17.5, fontWeight: 700, color: "#4a3f1e", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.claimedBy ? "✅" : "✍️"} {p.name}</span>
             {isAdmin && (
               <button onClick={() => removePerson(p.id)} title={L.removeWord}
                 style={{ flexShrink: 0, background: "#fff", border: "1px solid rgba(224,104,92,0.45)", color: "#c0554a", borderRadius: 8, padding: "4px 9px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
@@ -4265,7 +4265,6 @@ export default function PartyTest() {
   }
   const renderShare = () => {
     if (!canShare) return null
-    const alleen = people.length <= 1
     return (
       <>
       <div style={{ ...S.card, border: `1.5px solid ${MODUS_FAIR.randZacht}` }}>
@@ -4302,12 +4301,6 @@ export default function PartyTest() {
           <div style={{ marginBottom: 8 }}>
             <span style={{ fontSize: 17.5, fontWeight: 800, color: "#4a3f1e" }}>{L.whoIsInYet}</span>
           </div>
-          {false && alleen && (
-            <div style={{ display: "flex", gap: 9, alignItems: "flex-start", marginBottom: 8, background: "rgba(224,104,92,0.07)", border: "1px solid rgba(224,104,92,0.35)", borderRadius: 10, padding: "9px 11px" }}>
-              <span style={{ flexShrink: 0, fontSize: 20 }}>⚠️</span>
-              <span style={{ fontSize: 16, color: "#b0402f", lineHeight: 1.45 }}><b>{L.noFreeSeatYet}</b> {L.scanNoUseAlone}</span>
-            </div>
-          )}
           {renderNamenBlok()}
         </div>
       </div>
@@ -5144,8 +5137,10 @@ export default function PartyTest() {
     loadParty(groupId)
   }
 
+  // Alleen wat bevestigd is telt mee: anders staat er al bier in het lijstje van
+  // iemand die nog aan het kiezen is.
   const barTotalen = () => drinks
-    .map((d) => ({ id: d.id, naam: d.name, emoji: d.emoji, n: Object.values(cart[d.id] || {}).reduce((a, b) => a + (b || 0), 0) + (cartAnon[d.id] ?? 0) }))
+    .map((d) => ({ id: d.id, naam: d.name, emoji: d.emoji, n: Object.entries(cart[d.id] || {}).reduce((a, [pid, q]) => a + (isKlaar(pid) ? (q || 0) : 0), 0) + (cartAnon[d.id] ?? 0) }))
     .filter((x) => x.n > 0)
 
   const antwoordRondje = async (answer: "different" | "skip" | "same") => {
@@ -5461,7 +5456,7 @@ export default function PartyTest() {
     sub: { fontSize: 17.5, color: "#8a7d55", margin: "0 0 12px", lineHeight: 1.55 } as React.CSSProperties,
     btn: { border: `1px solid ${koel ? "rgba(13,124,140,0.24)" : themaNaam ? "rgba(59,72,106,0.22)" : "rgba(120,95,20,0.18)"}`, background: "#fff", color: koel ? MODUS_FAIR.tekst : themaNaam ? MODUS_NAAM.tekst : "#4a3f1e", borderRadius: 12, padding: "12px 16px", fontSize: 18, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
     btnP: { border: "none", background: koel ? MODUS_FAIR.knop : themaNaam ? MODUS_NAAM.knop : "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 14, padding: "16px 18px", fontSize: 20, fontWeight: 800, cursor: "pointer", width: "100%", boxShadow: koel ? `0 4px 12px -4px ${MODUS_FAIR.gloed}` : themaNaam ? `0 4px 12px -4px ${MODUS_NAAM.gloed}` : "0 4px 12px -4px rgba(224,138,0,0.6)" } as React.CSSProperties,
-    input: { border: "1px solid rgba(120,95,20,0.22)", borderRadius: 10, padding: "11px 12px", fontSize: 19, color: "#4a3f1e", outline: "none", width: 84, textAlign: "right" } as React.CSSProperties,
+    input: { border: "1px solid rgba(120,95,20,0.22)", borderRadius: 10, padding: "11px 12px", fontSize: 19, color: "#4a3f1e", outline: "none", width: 94, textAlign: "right" } as React.CSSProperties,
     seg: (on: boolean) => ({ flex: 1, textAlign: "center", padding: "11px 6px", borderRadius: 10, fontSize: 17.5, fontWeight: 800, cursor: "pointer", background: on ? AAN : (koel ? "#e4f2f5" : VLAK3), color: on ? "#fff" : (koel ? "#5a8f99" : themaNaam ? "#5a6a94" : "#8a7d55") } as React.CSSProperties),
     step: { width: 42, height: 42, borderRadius: 11, border: `1px solid ${koel ? "rgba(13,124,140,0.22)" : themaNaam ? "rgba(59,72,106,0.22)" : "rgba(120,95,20,0.18)"}`, background: koel ? "#e4f2f5" : VLAK3, color: koel ? MODUS_FAIR.tekst : themaNaam ? "#3b486a" : "#8a5e0f", fontSize: 24.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
     chip: (n: number) => ({ position: "relative", padding: "10px 14px", borderRadius: 20, fontSize: 18, fontWeight: 700, cursor: "pointer", userSelect: "none", border: n > 0 ? "1px solid rgba(240,165,0,0.5)" : "1px solid rgba(120,95,20,0.15)", background: n > 0 ? AAN : "#faf4e4", color: n > 0 ? "#fff" : "#8a7d55" } as React.CSSProperties),
@@ -5547,7 +5542,7 @@ export default function PartyTest() {
           </div>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
             <span style={{ fontSize: 17, fontWeight: 700 }}>{L.cardValue}</span>
-            <div style={{ ...S.row, gap: 4 }}><span style={{ fontSize: 17, color: "#8a7d55", fontWeight: 700 }}>€</span><input style={{ ...S.input, width: 70 }} type="text" inputMode="decimal" placeholder="15" value={cardValue} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setCardValue(v); if (settle) applyCard(cardPayers, v); else setPotDraft({ pot: parseFloat(v.replace(",", ".")) || 0 }) }} /></div>
+            <div style={{ ...S.row, gap: 4 }}><span style={{ fontSize: 17, color: "#8a7d55", fontWeight: 700 }}>€</span><input style={{ ...S.input, width: 80 }} type="text" inputMode="decimal" placeholder="15" value={cardValue} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setCardValue(v); if (settle) applyCard(cardPayers, v); else setPotDraft({ pot: parseFloat(v.replace(",", ".")) || 0 }) }} /></div>
           </div>
           {settle && <>
           <div style={{ fontSize: 15.5, color: "#8a7d55", fontWeight: 700, marginBottom: 6 }}>{L.whoBoughtCard}</div>
@@ -5577,13 +5572,13 @@ export default function PartyTest() {
           </div>
           <div style={{ ...S.row, gap: 6, marginBottom: 10 }}>
             <span style={{ fontSize: 15.5, color: "#8a7d55" }}>{L.ownAmount}</span>
-            <input style={{ ...S.input, width: 66, padding: "5px 8px", fontSize: 18, borderColor: everyoneChoice === "custom" ? "#2f6fb5" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="€" value={everyoneDraft} onChange={(e) => setEveryoneDraft(e.target.value.replace(/[^0-9.,]/g, ""))} />
+            <input style={{ ...S.input, width: 76, padding: "5px 8px", fontSize: 18, borderColor: everyoneChoice === "custom" ? "#2f6fb5" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="€" value={everyoneDraft} onChange={(e) => setEveryoneDraft(e.target.value.replace(/[^0-9.,]/g, ""))} />
             <button style={{ ...S.btn, padding: "5px 11px", fontSize: 15.5, opacity: (parseFloat(everyoneDraft.replace(",", ".")) || 0) > 0 ? 1 : 0.5 }} onClick={() => { const v = parseFloat(everyoneDraft.replace(",", ".")) || 0; if (v > 0) { setEveryoneChoice("custom"); setEveryoneAmt(v) } }}>toepassen</button>
           </div>
           {people.map((p) => (
             <div key={p.id} style={{ ...S.row, gap: 8, padding: "7px 0", borderBottom: "1px solid rgba(120,95,20,0.08)" }}>
               <span style={{ fontSize: 17.5, fontWeight: 800, width: 112, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{contribOf(p.id) > 0 && <span style={{ fontSize: 14.5, fontWeight: 700, color: "#8a7d55" }}> · {euro(contribOf(p.id))}</span>}</span>
-              <input style={{ ...S.input, width: 62, padding: "5px 8px", fontSize: 18, flexShrink: 0 }} type="text" inputMode="decimal" placeholder="€" value={potDraft[p.id] ?? ""} onChange={(e) => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 })) }} />
+              <input style={{ ...S.input, width: 71, padding: "5px 8px", fontSize: 18, flexShrink: 0 }} type="text" inputMode="decimal" placeholder="€" value={potDraft[p.id] ?? ""} onChange={(e) => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 })) }} />
               <button style={{ ...S.btn, padding: "5px 9px", fontSize: 15.5, color: "#c0554a", flexShrink: 0 }} onClick={() => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: 0 })) }}>↺</button>
               <span style={{ fontSize: 17, fontWeight: 800, marginLeft: "auto", textAlign: "right", color: (potDraft[p.id] || 0) > 0 ? "#2f6fb5" : "#b3a988" }}>{(potDraft[p.id] || 0) > 0 ? "+" + euro(potDraft[p.id] || 0) : "+€0"}</span>
             </div>
@@ -6175,14 +6170,14 @@ export default function PartyTest() {
     }
     const knop = (t: "order" | "me" | "group", tekst: string) => (
       <button onClick={() => naar(t)}
-        style={{ ...S.btn, flex: 1, minWidth: 0, padding: "13px 4px", fontSize: 17.5, fontWeight: 800, opacity: hier === t ? 1 : 0.6,
+        style={{ ...S.btn, flex: 1, minWidth: 0, padding: "13px 3px", fontSize: 16, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", opacity: hier === t ? 1 : 0.6,
           background: hier === t ? (settle ? MODUS_FAIR.vlak : "rgba(240,165,0,0.1)") : "#fff",
           borderColor: hier === t ? (settle ? MODUS_FAIR.rand : "#e08a00") : undefined,
           borderWidth: hier === t ? 1.5 : 1,
           color: hier === t ? (settle ? MODUS_FAIR.tekst : "#8a5e0f") : "#8a7d55" }}>{tekst}</button>
     )
     return (
-      <div style={{ display: "flex", gap: 7, marginBottom: 12 }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
         {knop("group", L.tabGroup)}
         {knop("order", L.tabOrder)}
         {knop("me", L.tabMe)}
@@ -6391,7 +6386,7 @@ export default function PartyTest() {
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
           {/* Snel opnemen: geen ⚙️ Groep meer (naam via de pill, pot via de badge) —
               Afrekenen staat er links vooraan, met het getekende bonnetje. */}
-          {(fromQuick || (!settle && opNaam !== true)) && rounds.length >= 1 && (
+          {(fromQuick || !settle) && rounds.length >= 1 && (
             !lastRoundHandled ? (
               <div style={{ flex: 1, padding: "11px 4px", fontSize: 17, fontWeight: 800, borderRadius: 10, textAlign: "center", background: "#faf4e4", color: "#8a5e0f", border: "1px solid rgba(240,165,0,0.35)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, opacity: 0.75 }}><BonKnopIcoon kleur="#8a5e0f" /> {L.quickSettleTitle}</div>
             ) : (
@@ -6418,7 +6413,7 @@ export default function PartyTest() {
           {/* Op het rondjesoverzicht is de derde tab overbodig: het rondje is bevestigd
               en de afreken-knop staat daar al onderaan naast "Nieuw rondje" — dat geldt
               voor snel én uitgebreid, want die knoppenrij staat er in beide modi. */}
-          {!settle && !fromQuick && opNaam === true && rounds.length >= 1 && view !== "roundsOverview" && !(view === "hub" && paidCount > 0 && laatsteRondjeKlaar() && unassignedAllRounds === 0) && (
+          {false && !settle && !fromQuick && rounds.length >= 1 && view !== "roundsOverview" && !(view === "hub" && paidCount > 0 && laatsteRondjeKlaar() && unassignedAllRounds === 0) && (
             !lastRoundHandled ? (
               // Bezig een rondje af te ronden op de hub: geen afreken-knop maar een rustig
               // label dat toont waar je bent. Niet klikbaar, niet opgelicht.
@@ -7415,7 +7410,7 @@ export default function PartyTest() {
                     <span style={{ fontSize: 16, fontWeight: 700, color: "#6b5f3a" }}>{L.depositPerCup}</span>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
                       {effDepositUnit === "eur" && <span style={{ fontSize: 17, fontWeight: 700, color: "#8a7d55" }}>€</span>}
-                      <input style={{ ...S.input, width: 62, padding: "7px 9px", fontSize: 18 }} type="text" inputMode="decimal" value={depositValue}
+                      <input style={{ ...S.input, width: 71, padding: "7px 9px", fontSize: 18 }} type="text" inputMode="decimal" value={depositValue}
                         onChange={(e) => setDepositValue(parseFloat(e.target.value.replace(",", ".")) || 0)} onBlur={() => persistSettings({ deposit_value: depositValue })} />
                       {effDepositUnit === "coin" && <span style={{ fontSize: 15.5, fontWeight: 700, color: "#c98a00" }}>coins</span>}
                     </span>
@@ -7434,7 +7429,7 @@ export default function PartyTest() {
                     <span style={{ fontSize: 16, fontWeight: 700, color: "#6b5f3a" }}>{L.oneCoinIs}</span>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
                       <span style={{ fontSize: 17, fontWeight: 700, color: "#8a7d55" }}>€</span>
-                      <input style={{ ...S.input, width: 62, padding: "7px 9px", fontSize: 18 }} type="text" inputMode="decimal" value={coinValue}
+                      <input style={{ ...S.input, width: 71, padding: "7px 9px", fontSize: 18 }} type="text" inputMode="decimal" value={coinValue}
                         onChange={(e) => setCoinValue(parseFloat(e.target.value.replace(",", ".")) || 0)} onBlur={() => persistSettings({ coin_value: coinValue })} />
                     </span>
                   </div>
@@ -7442,16 +7437,6 @@ export default function PartyTest() {
               </div>
             )}
           </>)}
-          {false && (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <span style={{ fontSize: 18.5, fontWeight: 800, color: "#4a3f1e" }}>{L.peopleHeader(people.length)}{people.length === 1 && <span style={{ fontWeight: 700, fontSize: 16, color: "#5a8f99" }}> ({L.youWord})</span>}</span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 11, flexShrink: 0 }}>
-              <button style={{ ...S.step, width: 32, height: 32, fontSize: 20, opacity: people.length > 0 ? 1 : 0.4 }} onClick={removeLastPerson}>−</button>
-              <span style={{ fontSize: 21.5, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#4a3f1e" }}>{people.length}</span>
-              <button style={{ ...S.step, width: 32, height: 32, fontSize: 20, background: AAN, color: "#fff", border: "none" }} onClick={addPerson}>+</button>
-            </span>
-          </div>
-          )}
           <div style={{ fontSize: 14.5, color: "#8aa8ad", lineHeight: 1.45, marginBottom: 11 }}>📱 {L.peopleIntro()}</div>
 
           {/* Wie ben JIJ? Alleen relevant als de admin nog nergens zit — normaal is hij
@@ -7585,7 +7570,7 @@ export default function PartyTest() {
                 <span style={{ fontSize: 17, fontWeight: 700 }}>{L.depositPerCup}</span>
                 <div style={{ ...S.row, gap: 4 }}>
                   {effDepositUnit === "eur" && <span style={{ fontSize: 17, fontWeight: 700, color: "#8a7d55" }}>€</span>}
-                  <input style={{ ...S.input, width: 56 }} type="text" inputMode="decimal" value={depositValue} onChange={(e) => setDepositValue(parseFloat(e.target.value.replace(",", ".")) || 0)} />
+                  <input style={{ ...S.input, width: 64 }} type="text" inputMode="decimal" value={depositValue} onChange={(e) => setDepositValue(parseFloat(e.target.value.replace(",", ".")) || 0)} />
                   {effDepositUnit === "coin" && <span style={{ fontSize: 16, fontWeight: 700, color: "#c98a00" }}>coins</span>}
                 </div>
               </div>
@@ -8256,13 +8241,13 @@ export default function PartyTest() {
               {payPot && (
                 <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 7 }}>
                   <span style={{ fontSize: 17, fontWeight: 700 }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
-                  <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 84, borderColor: st.potOver ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="0,00" value={potAmtDraft} onChange={(e) => { setPotAmtDraft(e.target.value.replace(/[^0-9.,]/g, "")); setPaidConfirmed(false) }} /></div>
+                  <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 97, borderColor: st.potOver ? "#e0685c" : "rgba(120,95,20,0.22)" }} type="text" inputMode="decimal" placeholder="0,00" value={potAmtDraft} onChange={(e) => { setPotAmtDraft(e.target.value.replace(/[^0-9.,]/g, "")); setPaidConfirmed(false) }} /></div>
                 </div>
               )}
               {payPersons.map((pid) => (
                 <div key={pid} style={{ ...S.row, justifyContent: "space-between", marginBottom: 7 }}>
                   <span style={{ fontSize: 17, fontWeight: 700 }}>👤 {people.find((p) => p.id === pid)?.name}</span>
-                  <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 84 }} type="text" inputMode="decimal" placeholder="0,00" value={payAmts[pid] ?? ""} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setPayAmts((m) => ({ ...m, [pid]: v })); setPaidConfirmed(false) }} /></div>
+                  <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 97 }} type="text" inputMode="decimal" placeholder="0,00" value={payAmts[pid] ?? ""} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setPayAmts((m) => ({ ...m, [pid]: v })); setPaidConfirmed(false) }} /></div>
                 </div>
               ))}
               <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", paddingTop: 8, fontSize: 15.5, fontWeight: 800, color: st.valid ? "#1f8a4c" : "#c0554a" }}>
@@ -8841,13 +8826,13 @@ export default function PartyTest() {
                             {(r.potPart || 0) > 0 && (
                               <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
                                 <span style={{ fontSize: 16, fontWeight: 700 }}>{potIsCard ? "💳 drankkaart" : "🫙 de pot"}</span>
-                                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 78, fontSize: 18 }} type="text" inputMode="decimal" value={r.potPart || ""} onChange={(e) => rSetPotAmt(idx, parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
+                                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 90, fontSize: 18 }} type="text" inputMode="decimal" value={r.potPart || ""} onChange={(e) => rSetPotAmt(idx, parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
                               </div>
                             )}
                             {sel.map((pid) => (
                               <div key={pid} style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
                                 <span style={{ fontSize: 16, fontWeight: 700 }}>👤 {people.find((p) => p.id === pid)?.name}</span>
-                                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 78, fontSize: 18 }} type="text" inputMode="decimal" value={r.payers[pid] || ""} onChange={(e) => rSetPayerAmt(idx, pid, parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
+                                <div style={S.row}><span style={{ color: "#8a7d55" }}>€</span><input style={{ ...S.input, width: 90, fontSize: 18 }} type="text" inputMode="decimal" value={r.payers[pid] || ""} onChange={(e) => rSetPayerAmt(idx, pid, parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
                               </div>
                             ))}
                             <div style={{ borderTop: "1px dashed rgba(120,95,20,0.25)", paddingTop: 7, fontSize: 15, fontWeight: 800, color: Math.abs(diff) <= 0.005 ? "#1f8a4c" : "#c0554a" }}>Samen {euro(sum)} van {euro(r.amount || 0)}{Math.abs(diff) <= 0.005 ? " ✓ klopt" : diff > 0 ? ` — er ontbreekt ${euro(diff)}` : ` — ${euro(-diff)} te veel`}</div>
@@ -9416,7 +9401,7 @@ export default function PartyTest() {
                           <span style={{ fontSize: 18, color: "#8a7d55", fontWeight: 700 }}>€</span>
                           <input onClick={(e) => e.stopPropagation()} type="text" inputMode="decimal" placeholder="0,00"
                             {...bedragVeld(`edit-${r.id}`, dr.amount, (v) => setEditDraft((c) => c ? { ...c, amount: v, potAmt: c.bron === "pot" ? v : c.potAmt } : c))}
-                            style={{ ...S.input, width: 92, padding: "8px 10px", fontSize: 18, fontWeight: 800, color: dr.bron === "pot" ? "#2f5693" : "#c88a1a", textAlign: "right", borderColor: dr.bron === "pot" ? "rgba(47,111,181,0.45)" : undefined }} />
+                            style={{ ...S.input, width: 106, padding: "8px 10px", fontSize: 18, fontWeight: 800, color: dr.bron === "pot" ? "#2f5693" : "#c88a1a", textAlign: "right", borderColor: dr.bron === "pot" ? "rgba(47,111,181,0.45)" : undefined }} />
                         </span>
                       </div>
                     )}
@@ -9432,7 +9417,7 @@ export default function PartyTest() {
                               <span style={{ fontSize: 17, color: "#8a7d55", fontWeight: 700 }}>€</span>
                               <input type="text" inputMode="decimal" placeholder="0,00"
                                 {...bedragVeld(`edit-zelf-${r.id}`, zelfDeel, (v) => setEditDraft((c) => c ? { ...c, amount: Math.round((v + Math.max(0, c.potAmt)) * 100) / 100 } : c))}
-                                style={{ ...S.input, width: 92, padding: "8px 10px", fontSize: 18, fontWeight: 800, color: "#c88a1a", textAlign: "right", borderColor: "rgba(240,165,0,0.5)" }} />
+                                style={{ ...S.input, width: 106, padding: "8px 10px", fontSize: 18, fontWeight: 800, color: "#c88a1a", textAlign: "right", borderColor: "rgba(240,165,0,0.5)" }} />
                             </span>
                           </div>
                           <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center" }}>
@@ -9441,7 +9426,7 @@ export default function PartyTest() {
                               <span style={{ fontSize: 17, color: "#8a7d55", fontWeight: 700 }}>€</span>
                               <input type="text" inputMode="decimal" placeholder="0,00"
                                 {...bedragVeld(`edit-pot-${r.id}`, Math.max(0, dr.potAmt), (v) => setEditDraft((c) => c ? { ...c, potAmt: v, amount: Math.round(((c.amount - Math.min(c.potAmt, c.amount)) + v) * 100) / 100 } : c))}
-                                style={{ ...S.input, width: 92, padding: "8px 10px", fontSize: 18, fontWeight: 800, color: "#2f5693", textAlign: "right", borderColor: potOver ? "#c0554a" : "rgba(47,111,181,0.5)" }} />
+                                style={{ ...S.input, width: 106, padding: "8px 10px", fontSize: 18, fontWeight: 800, color: "#2f5693", textAlign: "right", borderColor: potOver ? "#c0554a" : "rgba(47,111,181,0.5)" }} />
                             </span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 6 }}>
@@ -9595,7 +9580,7 @@ export default function PartyTest() {
                       <span style={{ fontSize: 17, color: "#8a7d55", fontWeight: 700 }}>€</span>
                       <input type="text" inputMode="decimal" placeholder="0,00"
                         {...bedragVeld(`potnaam-${p.id}`, potNames[p.id] || 0, (v) => setPotNames((c) => ({ ...(c || {}), [p.id]: v })))}
-                        style={{ ...S.input, width: 86, padding: "7px 9px", fontSize: 18, fontWeight: 800 }} />
+                        style={{ ...S.input, width: 99, padding: "7px 9px", fontSize: 18, fontWeight: 800 }} />
                     </span>
                   </div>
                 ))}
@@ -9865,7 +9850,7 @@ export default function PartyTest() {
                   <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 7 }}>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.id === meId && <span style={{ display: "inline-flex", verticalAlign: "middle", marginRight: 4 }}><KroonIcoon size={13} kleur="#8a5e0f" gevuld /></span>}{p.name}</span>
                     <input inputMode="decimal" {...bedragVeld(`potedit-${p.id}`, potEdit[p.id] || 0, (v) => setPotEdit((c) => ({ ...(c || {}), [p.id]: v })))}
-                      style={{ ...S.input, width: 92, boxSizing: "border-box", background: "#fff", padding: "8px 10px", fontSize: 18, textAlign: "right", borderColor: "rgba(47,111,181,0.45)" }} />
+                      style={{ ...S.input, width: 106, boxSizing: "border-box", background: "#fff", padding: "8px 10px", fontSize: 18, textAlign: "right", borderColor: "rgba(47,111,181,0.45)" }} />
                   </div>
                 ))}
                 <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed rgba(47,111,181,0.35)", paddingTop: 8, marginBottom: 10 }}>
