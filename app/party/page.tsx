@@ -520,6 +520,7 @@ const T = {
     yourNamePh2: "Jouw naam — nodig vóór de QR",
     optionalWord: "optioneel",
     backToRundo: "← naar het Rundo-startscherm",
+    tryTableLine: "Rekening splitsen in een restaurant? Probeer ook",
     waitScan: (n: number) => n === 1 ? "1 gast wacht op QR-scan" : `${n} gasten wachten op QR-scan`,
     allInPill: "✓ iedereen is erbij",
     potAddBtn: "+ inleggen",
@@ -1258,6 +1259,7 @@ const T = {
     yourNamePh2: "Ton nom — requis avant le QR",
     optionalWord: "optionnel",
     backToRundo: "\u2190 retour \u00e0 l'accueil Rundo",
+    tryTableLine: "Partager l'addition au restaurant\u00a0? Essaie aussi",
     waitScan: (n: number) => n === 1 ? "1 invit\u00e9 attend le scan QR" : `${n} invit\u00e9s attendent le scan QR`,
     allInPill: "✓ tout le monde est l\u00e0",
     potAddBtn: "+ verser",
@@ -2002,6 +2004,10 @@ export default function PartyTest() {
   // Het personenaantal per rondje staat ingeklapt: één grijs regeltje met "wijzig",
   // want meestal klopt het gewoon. Wie het opent, krijgt de vertrouwde teller.
   const [persOpen, setPersOpen] = useState(false)
+  // Rechtstreeks binnengekomen? Dan is dit een Party-only pagina: geen verwijzing
+  // naar het keuzescherm, enkel onderaan een tip over Table.
+  const [viaKiezer, setViaKiezer] = useState(false)
+  useEffect(() => { try { setViaKiezer(localStorage.getItem("rundo_via_kiezer") === "1") } catch { /* niets */ } }, [])
   // "Avond afgesloten" is iets anders dan "afgerekend": pas na het afsluiten gaat
   // de groepsnaam op slot. Tot dan mag alles nog aangepast worden, in elke modus.
   const [groepDicht, setGroepDicht] = useState(false)
@@ -7279,7 +7285,13 @@ export default function PartyTest() {
             link hier gaat naar het Rundo-keuzescherm (Table of Party) op de site-root.
             De chooser zet bij binnenkomst zelf de zoom recht. */}
         <div style={{ textAlign: "center", marginTop: 16 }}>
-          <button onClick={() => { window.location.href = "/" }} style={{ fontSize: 14.5, fontWeight: 700, color: "#a08d5f", background: "none", border: "none", padding: 4, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }}>{L.backToRundo}</button>
+          {viaKiezer ? (
+            <button onClick={() => { window.location.href = "/" }} style={{ fontSize: 14.5, fontWeight: 700, color: "#a08d5f", background: "none", border: "none", padding: 4, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }}>{L.backToRundo}</button>
+          ) : (
+            <span style={{ fontSize: 13.5, color: "#a89a6f", fontWeight: 600 }}>{L.tryTableLine}{" "}
+              <a href="/table" style={{ color: "#2f9bb5", fontWeight: 800, textDecoration: "underline" }}>Rundo Table →</a>
+            </span>
+          )}
         </div>
 
         {/* De testgroep zelf staat gewoon in de lijst hierboven en blijft daar staan.
