@@ -399,7 +399,7 @@ export default function Home() {
         {/* Eén startknop: hij kleurt mee met de gekozen kaart, en blijft rustig zolang
             er niets gekozen is. */}
         <button
-          onClick={() => { if (pick) router.push(pick === "table" ? "/table" : "/party") }}
+          onClick={() => { if (!pick) return; try { localStorage.setItem("rundo_via_kiezer", "1") } catch { /* niets */ } router.push(pick === "table" ? "/table" : "/party") }}
           disabled={pick === null}
           // De keuzehint staat nu als lijn tússen de kaarten; hier wacht een gedimde
           // "Starten" die op zijn plek oplicht en kleurt zodra er gekozen is — niets
@@ -434,7 +434,7 @@ export default function Home() {
                 <span style={{ marginLeft: "auto", color: accent.party, fontWeight: 800 }}>{klap.party ? "▾" : "▸"}</span>
               </div>
               {klap.party && groepen.map((g) => (
-                <div key={g.id} onClick={() => router.push(`/party?g=${g.id}`)}
+                <div key={g.id} onClick={() => { try { localStorage.setItem("rundo_via_kiezer", "1") } catch { /* niets */ } router.push(`/party?g=${g.id}`) }}
                   style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: g.pin ? "1px solid rgba(240,193,75,0.55)" : "1px solid rgba(240,193,75,0.3)", borderRadius: 12, padding: "10px 12px", marginBottom: 6, opacity: g.af && !g.pin ? 0.6 : 1 }}>
                   <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(240,193,75,0.12)" }}>{g.settle ? "📱" : "✍️"}</span>
                   <span style={{ flex: 1, minWidth: 0 }}>
@@ -473,7 +473,7 @@ export default function Home() {
                 <span style={{ marginLeft: "auto", color: accent.table, fontWeight: 800 }}>{klap.table ? "▾" : "▸"}</span>
               </div>
               {klap.table && tafels.map((g) => (
-                <div key={g.id} onClick={() => { if (g.code) router.push(`/table?code=${g.code}`) }}
+                <div key={g.id} onClick={() => { if (!g.code) return; try { localStorage.setItem("rundo_via_kiezer", "1") } catch { /* niets */ } router.push(`/table?code=${g.code}`) }}
                   style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: g.pin ? "1px solid rgba(91,159,214,0.6)" : "1px solid rgba(91,159,214,0.35)", borderRadius: 12, padding: "10px 12px", marginBottom: 6, opacity: g.af && !g.pin ? 0.6 : 1 }}>
                   <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(91,159,214,0.14)" }}>🧾</span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: "#dfe7f2", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || "Rundo Table"}</span>
