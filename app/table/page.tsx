@@ -535,7 +535,7 @@ const STRINGS = {
     errCantReadPhoto: "Kon de foto niet lezen",
     backToRundo: "← naar Rundo startscherm",
     welkomTagline: "Rondjes en rekeningen zonder gedoe!",
-    welkomSub: "Scan de rekening en verdeel in groep",
+    welkomSub: "Scan de rekening, verdeel in groep",
     welkomStart: "Starten →",
     welkomFlow: [
       { ic: "📷", label: "scan de rekening" },
@@ -1163,7 +1163,7 @@ const STRINGS = {
     errCantReadPhoto: "Impossible de lire la photo",
     backToRundo: "← retour à l'accueil Rundo",
     welkomTagline: "Tourn\u00e9es et additions sans prise de t\u00eate\u00a0!",
-    welkomSub: "Scanne l'addition et partage en groupe",
+    welkomSub: "Scanne l'addition, partage en groupe",
     welkomStart: "Commencer →",
     welkomFlow: [
       { ic: "📷", label: "scanne l'addition" },
@@ -3590,7 +3590,7 @@ export default function RundoTable() {
               </div>
               {/* De stappen lopen van boven naar beneden en wisselen om beurten van
                   kant; haarlijntjes houden ze uit elkaar zonder te schreeuwen. */}
-              <div style={{ marginTop: 15, paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+              <div style={{ marginTop: 20, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
                 {L.welkomFlow.map((st, i) => (
                   <div key={i} style={{ display: "flex", justifyContent: "center", padding: "9px 0",
                     borderBottom: i < L.welkomFlow.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
