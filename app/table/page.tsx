@@ -3599,7 +3599,7 @@ export default function RundoTable() {
                         {st.ic}
                         <span style={{ position: "absolute", top: -6, right: -7, width: 22, height: 22, borderRadius: "50%", background: "#5b9fd6", color: "#131826", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
                       </span>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3, textAlign: i % 2 === 1 ? "right" : "left" }}>{st.label}</span>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3, textAlign: "left" }}>{st.label}</span>
                   </div>
                 ))}
               </div>
