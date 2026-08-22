@@ -516,6 +516,9 @@ const T = {
     namePlichtTitle: "Geef rondje of groep een naam",
     persCountLabel: "Aantal personen",
     persNotNow: "hoeft niet nu — kan ook later",
+    forWhoTitle: "Voor wie tik je aan?",
+    forWhoSub: "Zet hier wie erbij is. Namen mogen leeg blijven.",
+    letsGoBtn: "Aan de slag →",
     namePh3: "typ hier je groepsnaam",
     naamGoBtn: "Verder →",
     nameFirstNote: "Vul eerst je eigen naam en de groepsnaam in.",
@@ -1273,6 +1276,9 @@ const T = {
     namePlichtTitle: "Donne un nom \u00e0 ta tourn\u00e9e ou ton groupe",
     persCountLabel: "Nombre de personnes",
     persNotNow: "pas obligatoire — possible plus tard aussi",
+    forWhoTitle: "Pour qui coches-tu\u00a0?",
+    forWhoSub: "Indique qui est l\u00e0. Les noms peuvent rester vides.",
+    letsGoBtn: "C'est parti →",
     namePh3: "\u00e9cris ici le nom du groupe",
     naamGoBtn: "Continuer \u2192",
     nameFirstNote: "Remplis d'abord ton nom et le nom du groupe.",
@@ -2042,6 +2048,9 @@ export default function PartyTest() {
   const [persOpen, setPersOpen] = useState(false)
   // Personen tellen is optioneel: zolang dit uit staat toont het venster "—".
   const [persGeteld, setPersGeteld] = useState(false)
+  // "Liever per persoon aantikken" opent eerst dit venster: met hoeveel zijn jullie,
+  // en optioneel de namen. Daarna start de doorloop per persoon.
+  const [persVenster, setPersVenster] = useState(false)
   // Rechtstreeks binnengekomen? Dan is dit een Party-only pagina: geen verwijzing
   // naar het keuzescherm, enkel onderaan een tip over Table.
   const [viaKiezer, setViaKiezer] = useState(false)
@@ -6123,6 +6132,48 @@ export default function PartyTest() {
           </div>
         </div>
       )}
+      {persVenster && (
+        <div style={{ ...S.overlay, zIndex: 72 }}>
+          <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#4a3f1e" }}>👥 {L.forWhoTitle}</div>
+            <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.4, marginTop: 5 }}>{L.forWhoSub}</div>
+            <div style={{ background: "#f7f4ec", borderRadius: 12, padding: "11px 12px", marginTop: 13 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: "#8a7d55" }}>{L.persCountLabel}</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
+                  <button onClick={() => { if (people.length > 2) removeLastPerson() }} disabled={busy || people.length <= 2}
+                    style={{ ...S.step, width: 34, height: 34, fontSize: 19, opacity: people.length > 2 ? 1 : 0.4 }}>−</button>
+                  <b style={{ fontSize: 18, color: "#4a3f1e", minWidth: 20, textAlign: "center" }}>{people.length}</b>
+                  <button onClick={addPerson} disabled={busy}
+                    style={{ ...S.step, width: 34, height: 34, fontSize: 19, background: AAN, color: "#fff", border: "none" }}>+</button>
+                </span>
+              </div>
+              <div style={{ marginTop: 9 }}>
+                {people.map((pp, idx) => {
+                  const ikZelf = pp.id === meId
+                  const leeg = isGuestDefault(pp.name)
+                  if (ikZelf) return (
+                    <div key={pp.id} style={{ position: "relative", display: "flex", marginBottom: 6 }}>
+                      <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><KroonIcoon size={17} kleur="#c98a00" /></span>
+                      <input value={leeg ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)} placeholder={L.yourNamePh}
+                        style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "9px 11px 9px 34px", fontSize: 16, textAlign: "left", fontWeight: 800, background: "rgba(240,165,0,0.1)", border: "1.5px solid rgba(240,165,0,0.5)", color: "#8a5e0f" }} />
+                    </div>
+                  )
+                  return (
+                    <div key={pp.id} style={{ position: "relative", display: "flex", marginBottom: 6 }}>
+                      <input value={leeg ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)} placeholder={`${L.guestN(idx + 1)} · ${L.guestNamePh}`}
+                        style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: leeg ? "9px 32px 9px 11px" : "9px 11px", fontSize: 16, textAlign: "left", background: "#fff" }} />
+                      {leeg && <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", display: "inline-flex" }}><PotloodIcoon /></span>}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            <button style={{ ...S.btnP, width: "100%", marginTop: 14 }}
+              onClick={() => { setPersVenster(false); setWalkIdx(0) }}>{L.letsGoBtn}</button>
+          </div>
+        </div>
+      )}
       {naamPlicht && (
         <div style={{ ...S.overlay, zIndex: 72 }}>
           <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
@@ -7884,7 +7935,7 @@ export default function PartyTest() {
                voor wie liever per persoon werkt. Het label hangt aan de gouden lijn van
                de titel, en het ▸ zegt eerlijk dat er een venster opent. */
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 11 }}>
-              <button onClick={() => { setActiveCat(catsPresent[0]); setWalkIdx(0) }}
+              <button onClick={() => { setActiveCat(catsPresent[0]); setPersGeteld(true); if (people.length < 2) addPerson(); setPersVenster(true) }}
                 style={{ background: themaNaam ? "#fbfcff" : "#fffdf6", border: `1px solid ${themaNaam ? "rgba(59,72,106,0.4)" : "rgba(240,165,0,0.5)"}`, borderTop: "none", borderRadius: "0 0 12px 12px", padding: "8px 16px", fontSize: 15, fontWeight: 800, color: themaNaam ? "#3b486a" : "#8a5e0f", cursor: "pointer" }}>{L.perPersonPrompt} ▸</button>
             </div>
           ) : null
