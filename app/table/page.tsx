@@ -538,10 +538,10 @@ const STRINGS = {
     welkomSub: "Scan de rekening en verdeel in groep",
     welkomStart: "Starten →",
     welkomFlow: [
-      { ic: "📷", label: "scan\nrekening" },
-      { ic: "📱", label: "deel QR" },
-      { ic: "👆", label: "tik aan\nwat je nam" },
-      { ic: "💶", label: "eerlijk\nverdeeld!" },
+      { ic: "📷", label: "scan de rekening" },
+      { ic: "📱", label: "deel de QR met de tafel" },
+      { ic: "👆", label: "tik aan wat je nam" },
+      { ic: "💶", label: "eerlijk verdeeld!" },
     ],
     tryPartyLine: "Rondjes noteren met vrienden? Probeer ook",
     tableTagline: "Scan de rekening en verdeel in groep",
@@ -1166,10 +1166,10 @@ const STRINGS = {
     welkomSub: "Scanne l'addition et partage en groupe",
     welkomStart: "Commencer →",
     welkomFlow: [
-      { ic: "📷", label: "scanne\nl'addition" },
-      { ic: "📱", label: "partage\nle QR" },
-      { ic: "👆", label: "coche ce\nque tu as pris" },
-      { ic: "💶", label: "partage\n\u00e9quitable\u00a0!" },
+      { ic: "📷", label: "scanne l'addition" },
+      { ic: "📱", label: "partage le QR" },
+      { ic: "👆", label: "coche ce que tu as pris" },
+      { ic: "💶", label: "partage \u00e9quitable\u00a0!" },
     ],
     tryPartyLine: "Noter des tourn\u00e9es entre amis\u00a0? Essaie aussi",
     tableTagline: "Scanne l'addition et partage en groupe",
@@ -3574,12 +3574,6 @@ export default function RundoTable() {
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
             <div style={{ transform: "scale(1.25)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
           </div>
-          <div style={{ textAlign: "center", margin: "10px 0 6px" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/rundo-logo.png" alt="Rundo" style={{ display: "block", height: 74, width: "auto", maxWidth: "90%", objectFit: "contain", margin: "0 auto" }} />
-          </div>
-          <p style={{ color: "#f0c14b", fontSize: 16.5, fontWeight: 600, textAlign: "center", margin: "0 0 22px" }}>{L.welkomTagline}</p>
-
           {/* Dezelfde kaart als op het keuzescherm, maar ruimer: hij heeft het
               scherm nu voor zich alleen. */}
           <div style={{ position: "relative", overflow: "hidden", borderRadius: 22, border: "1.5px solid rgba(91,159,214,0.55)", boxShadow: "0 18px 40px -22px rgba(0,0,0,0.9)" }}>
@@ -3594,14 +3588,19 @@ export default function RundoTable() {
                 <img src="/icon-table.png" alt="" style={{ height: 28, width: "auto", objectFit: "contain", flexShrink: 0 }} />
                 <span style={{ color: "#3bbfc4", fontSize: 17, fontWeight: 700, lineHeight: 1.3 }}>{L.welkomSub}</span>
               </div>
-              <div style={{ marginTop: 17, paddingTop: 15, borderTop: "1px solid rgba(255,255,255,0.15)", display: "flex", gap: 6 }}>
+              {/* De stappen lopen van boven naar beneden en wisselen om beurten van
+                  kant; haarlijntjes houden ze uit elkaar zonder te schreeuwen. */}
+              <div style={{ marginTop: 15, paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
                 {L.welkomFlow.map((st, i) => (
-                  <div key={i} style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
-                    <div style={{ position: "relative", display: "inline-flex", justifyContent: "center", alignItems: "center" }}>
-                      <span style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(91,159,214,0.14)", border: "1px solid rgba(91,159,214,0.45)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 21, flexShrink: 0 }}>{st.ic}</span>
-                      <span style={{ position: "absolute", top: -6, right: -8, width: 18, height: 18, borderRadius: "50%", background: "#5b9fd6", color: "#131826", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
-                    </div>
-                    <div style={{ marginTop: 7, fontSize: 13, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3, whiteSpace: "pre-line" }}>{st.label}</div>
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 0",
+                    flexDirection: i % 2 === 1 ? "row-reverse" : "row",
+                    textAlign: i % 2 === 1 ? "right" : "left",
+                    borderBottom: i < L.welkomFlow.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
+                    <span style={{ position: "relative", flexShrink: 0, width: 46, height: 46, borderRadius: "50%", background: "rgba(91,159,214,0.16)", border: "1px solid rgba(91,159,214,0.5)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 23 }}>
+                      {st.ic}
+                      <span style={{ position: "absolute", top: -6, right: -7, width: 20, height: 20, borderRadius: "50%", background: "#5b9fd6", color: "#131826", fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+                    </span>
+                    <span style={{ fontSize: 15, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.35 }}>{st.label}</span>
                   </div>
                 ))}
               </div>
@@ -3612,6 +3611,7 @@ export default function RundoTable() {
             style={{ width: "100%", marginTop: 18, padding: "18px", borderRadius: 16, border: "none", fontSize: 20, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", color: "#fff", background: "linear-gradient(135deg,#3db6cc,#2f9bb5)", boxShadow: "0 14px 30px -14px rgba(47,155,181,0.9)" }}>
             {L.welkomStart}
           </button>
+          <p style={{ color: "#f0c14b", fontSize: 15, fontWeight: 600, textAlign: "center", margin: "16px 0 0" }}>{L.welkomTagline}</p>
         </div>
       </div>
     )
