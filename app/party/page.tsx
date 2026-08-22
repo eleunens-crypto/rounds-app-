@@ -1177,6 +1177,10 @@ const T = {
     potShared: (tot: string, n: number) => `Pot ${tot} · verdeeld over ${n}`,
     changeWord: "wijzig",
     whoIsIn: "WIE DOET MEE",
+    inRoundNow: (n: number) => `In dit rondje · rondje ${n}`,
+    confirmedOf: (a: number, b: number) => `${a} van ${b} bevestigd`,
+    busyChoosing: "bezig met kiezen…",
+    togetherDrinks: (n: number) => `Samen ${n} drankje${n === 1 ? "" : "s"}`,
     remindInfo: "🔔 Een duwtje geven — wie nog niets koos, krijgt meteen een melding op zijn scherm. Handig als je klaar bent om te vertrekken.",
     toTheBar: "🍻 Naar de bar",
     showBig: "⛶ groot tonen",
@@ -1920,6 +1924,10 @@ const T = {
     potShared: (tot: string, n: number) => `Cagnotte ${tot} · répartie sur ${n}`,
     changeWord: "modifier",
     whoIsIn: "QUI PARTICIPE",
+    inRoundNow: (n: number) => `Dans cette tourn\u00e9e · tourn\u00e9e ${n}`,
+    confirmedOf: (a: number, b: number) => `${a} sur ${b} ont confirm\u00e9`,
+    busyChoosing: "en train de choisir…",
+    togetherDrinks: (n: number) => `${n} boisson${n === 1 ? "" : "s"} en tout`,
     remindInfo: "🔔 Un petit coup de pouce — ceux qui n’ont rien choisi reçoivent aussitôt un message. Pratique quand tu es prêt à partir.",
     showBig: "⛶ en grand",
     forTheBar: "POUR LE BAR",
@@ -2916,8 +2924,8 @@ export default function PartyTest() {
           <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 9 }}>
             <span style={{ flexShrink: 0, width: 38, height: 38, borderRadius: "50%", background: MODUS_FAIR.knop, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19 }}>🍻</span>
             <span style={{ minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.roundBusyYou}</span>
-              <span style={{ display: "block", fontSize: 12.5, color: allen ? "#1f6b3a" : "#5a8f99", fontWeight: allen ? 800 : 400, marginTop: 1 }}>{allen ? `✓ ${L.allChose}` : L.someChose(klaar.length, people.length)}</span>
+              <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.inRoundNow(roundNr)}</span>
+              <span style={{ display: "block", fontSize: 12.5, color: allen ? "#1f6b3a" : "#5a8f99", fontWeight: allen ? 800 : 400, marginTop: 1 }}>{allen ? `✓ ${L.allChose}` : L.confirmedOf(klaar.length, people.length)}</span>
             </span>
           </div>
           {/* Bovenaan en duidelijk: de haler rondt zelf af zodra hij terug is van de
@@ -2936,20 +2944,28 @@ export default function PartyTest() {
               </span>
             )}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: people.length > 4 ? "1fr 1fr" : "1fr", gap: "5px 10px", marginBottom: 11 }}>
-            {people.map((pp) => {
+          <div style={{ marginBottom: 10 }}>
+            {people.map((pp, pi) => {
               const zijne = drinks.filter((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)
               const slaOver = openAnswers[pp.id] === "skip"
               const isOk = isKlaar(pp.id)
               return (
-                <span key={pp.id} style={{ fontSize: 13.5, color: isOk ? "#1f6b3a" : "#a8c4c9", fontWeight: isOk ? 700 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {isOk ? "✓ " : ""}{pp.name}{" "}
-                  <span style={{ color: isOk ? "#5a8f99" : "#a8c4c9", fontWeight: 400, fontStyle: slaOver || !isOk ? "italic" : "normal" }}>
-                    {slaOver ? L.nothingWord : isOk && zijne.length > 0 ? zijne.map((d) => `${aQty(d.id, pp.id)}× ${d.name}`).join(", ") : L.busyWord}
+                <div key={pp.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, fontSize: 14.5, padding: "6px 0", borderBottom: pi < people.length - 1 ? `1px solid ${MODUS_FAIR.lijnZacht}` : "none" }}>
+                  <span style={{ flexShrink: 0, fontWeight: isOk ? 800 : 600, color: isOk ? "#1f6b3a" : "#a8c4c9", maxWidth: "45%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {isOk ? "✓ " : ""}{pp.name}{pp.id === meId ? ` (${L.youWord})` : ""}
                   </span>
-                </span>
+                  <span style={{ minWidth: 0, textAlign: "right", color: isOk ? "#6b5f3a" : "#a8c4c9", fontStyle: isOk ? "normal" : "italic", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {slaOver ? L.nothingWord : isOk && zijne.length > 0 ? zijne.map((d) => `${aQty(d.id, pp.id)}× ${d.name}`).join(" · ") : L.busyChoosing}
+                  </span>
+                </div>
               )
             })}
+            {/* Wat je straks aan de toog moet vragen, alvast opgeteld. */}
+            {barTotalen().length > 0 && (
+              <div style={{ background: MODUS_FAIR.tint, borderRadius: 10, padding: "8px 11px", marginTop: 9, fontSize: 13.5, color: MODUS_FAIR.tekst, lineHeight: 1.45 }}>
+                <b>{L.togetherDrinks(barTotalen().reduce((a, b) => a + b.n, 0))}</b> · {barTotalen().map((b) => `${b.n}× ${b.naam}`).join(", ")}
+              </div>
+            )}
           </div>
           {/* Het barlijstje hoort bij het hálen, niet bij het kiezen: het verschijnt pas
               op de bevestigingskaart, nadat op "Rondje afronden en halen" getikt is. */}
