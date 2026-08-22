@@ -5487,7 +5487,7 @@ export default function PartyTest() {
   const VLAK3 = koel ? "#e4f2f5" : themaNaam ? "#e6eaf4" : "#f3ead2"
   const S = {
     page: { minHeight: "100dvh", background: groupId ? (koel ? MODUS_FAIR.bladzij : themaNaam ? MODUS_NAAM.bladzij : MODUS_SNEL.bladzij) : "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
-    wrap: { maxWidth: 560, margin: "0 auto", padding: "16px 16px" } as React.CSSProperties,
+    wrap: { maxWidth: 560, margin: "0 auto", padding: "26px 16px 16px" } as React.CSSProperties,
     card: { background: "#fff", border: `1px solid ${koel ? "rgba(13,124,140,0.16)" : themaNaam ? "rgba(59,72,106,0.16)" : "rgba(120,95,20,0.14)"}`, borderRadius: 18, padding: 16, marginBottom: 13, boxShadow: koel ? "0 4px 16px -8px rgba(13,124,140,0.22)" : themaNaam ? "0 4px 16px -8px rgba(59,72,106,0.2)" : "0 4px 16px -8px rgba(120,95,20,0.25)" } as React.CSSProperties,
     h1: { fontSize: 26, fontWeight: 800, margin: "0 0 2px" } as React.CSSProperties,
     h3: { fontSize: 19.5, fontWeight: 800, margin: "0 0 10px" } as React.CSSProperties,
@@ -6428,7 +6428,7 @@ export default function PartyTest() {
           en raken ze elkaar nooit. */}
       {uitgebreidLook && !!groupId && !kaal && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "10px 0", minHeight: 38 }}>
-          {groupName.trim() && !editName && (
+          {groupName.trim() && !editName && !isAutoNaam(groupName) && (
             <span onClick={() => { if (!onboarding && !groepDicht) setEditName(true) }}
               style={{ flex: "0 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onboarding ? "default" : "pointer", background: "#fff", border: "1.5px solid rgba(240,165,0,0.55)", borderRadius: 18, padding: "7px 16px", fontSize: 17, fontWeight: 800, color: "#4a3f1e", boxShadow: "0 2px 5px rgba(90,64,10,0.12)" }}>
               {isAutoNaam(groupName) ? (
@@ -6437,6 +6437,14 @@ export default function PartyTest() {
                 <span style={{ color: themaNaam ? "#5a6a94" : "#c98a00", fontWeight: 700, fontSize: 15.5 }}>✏️ {L.giveNameQ} <span style={{ color: "#a89a6f", fontWeight: 400, fontSize: 14 }}>· {L.nowWord} {groupName.trim()}</span></span>
               ) : (<>{groupName.trim()}{groepDatum && <span style={{ fontWeight: 700, color: "#a89a6f", fontSize: 14.5 }}> ({datumKort(groepDatum)})</span>}{!onboarding && <span style={{ fontSize: 13.5 }}> ✏️</span>}</>)}
             </span>
+          )}
+          {/* Personen beheren zit voortaan in de kop: één tik opent hetzelfde venster
+              met de teller en de naamvelden. Daarmee is ⚙️ Groep hier overbodig. */}
+          {!settle && !kaal && (
+            <button onClick={() => { setNaamPlichtVeld(groupName.trim()); setPersGeteld(people.length > 1); setNaamPlicht(true) }}
+              style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, background: "#fff", border: "1px solid rgba(120,95,20,0.28)", borderRadius: 14, padding: "6px 11px", fontSize: 15, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", fontFamily: "inherit" }}>
+              👥 {people.length > 1 ? people.length : "+"}
+            </button>
           )}
           <span style={{ marginLeft: "auto", flexShrink: 0 }}>{potKnopje()}</span>
         </div>
@@ -6476,7 +6484,7 @@ export default function PartyTest() {
                 onClick={goQuickSettle}><BonKnopIcoon kleur={(view === "quickSettle" || view === "final" || view === "payers" || view === "fairSetup") ? "#fff" : "#8a7d55"} /> {L.quickSettleTitle}</button>
             )
           )}
-          {(opNaam === true || (settle && fromQuick)) && (
+          {settle && !fromQuick && (
           <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 16, fontWeight: 800, lineHeight: 1.15, borderRadius: 13 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupShort}</button>
           )}
           {settle && !fromQuick ? (
