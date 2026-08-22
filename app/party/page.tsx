@@ -6948,8 +6948,8 @@ export default function PartyTest() {
     return (
       <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 18px", boxSizing: "border-box" }}>
         <div style={{ maxWidth: 460, margin: "0 auto", padding: "18px 16px" }}>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
-            <div style={{ transform: "scale(1.25)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
+          <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, marginBottom: 42 }}>
+            <div style={{ transform: "scale(1.45)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
           </div>
           {/* Dezelfde kaart als op het keuzescherm, ruimer opgezet: hij heeft het
               scherm nu voor zich alleen. Daarna pas de keuze zelf noteren / QR. */}
@@ -6993,7 +6993,7 @@ export default function PartyTest() {
           </div>
 
           <button onClick={() => setWelkom(false)}
-            style={{ width: "100%", marginTop: 18, padding: "18px", borderRadius: 16, border: "none", fontSize: 20, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", color: "#4a3f1e", background: "linear-gradient(135deg,#f7cb5c,#eab117)", boxShadow: "0 14px 30px -14px rgba(240,193,75,0.9)" }}>
+            style={{ width: "100%", marginTop: 30, padding: "18px", borderRadius: 16, border: "none", fontSize: 20, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", color: "#4a3f1e", background: "linear-gradient(135deg,#f7cb5c,#eab117)", boxShadow: "0 14px 30px -14px rgba(240,193,75,0.9)" }}>
             {L.welkomStart}
           </button>
         </div>
