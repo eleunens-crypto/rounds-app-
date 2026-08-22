@@ -3960,7 +3960,7 @@ export default function PartyTest() {
     // daardoor overbodig geworden.
     // Eén zelf-noteer-modus: namen zijn overal optioneel, dus het onderscheid
     // snel/uitgebreid bestaat niet meer. modus === false = zelf noteren, true = QR.
-    if (modus === false) { setOpNaam(true); setNamenSetup(true) }
+    if (modus === false) { setOpNaam(true); setNamenSetup(false) }
     else if (modus === true) { setOpNaam(false); setNamenSetup(false) }
     const keuze = modus ?? bpSettle
     if (keuze === null || keuze === undefined) return
@@ -4140,7 +4140,6 @@ export default function PartyTest() {
   terugActie.current = () => {
     // Eerst één stap terug binnen de groep. Sta je al op het bestelscherm, dan pas naar
     // het startscherm — anders sprong je vanuit elke tussenpagina meteen naar buiten.
-    if (view === "order" && !settle && opNaam && namenSetup) { setNamenSetup(false); setOpNaam(false); return }
     // Snel opnemen: sta je op het bestelscherm terwijl er al rondjes zijn — bv. na
     // "Bestelling aanpassen" vanuit de hub — dan is één stap terug de hub. Vroeger viel
     // je hier door naar het startscherm met de keuzekaders, midden in je avond.
@@ -7785,57 +7784,6 @@ export default function PartyTest() {
   // Instelscherm na "jij noteert". Snel opnemen staat bovenaan en vraagt niets: dat is
   // de belofte van die kaart. Bij uitgebreid klappen groepsnaam, aantal en namen open,
   // want zonder die drie kan de eerlijke verdeling niet kloppen.
-  if (view === "order" && !settle && namenSetup) {
-    const ik = people.find((p) => p.id === meId)
-    const naamLeeg = isAutoNaam(groupName) || !groupName.trim()
-    const ster = <span style={{ color: "#c0554a" }}>*</span>
-    return (
-      <div style={S.page}><div style={S.wrap}>
-        <Header verbergNav kaal />
-        {renderDialogs()}
-        <div style={S.card}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: "#3d3418", marginBottom: 4 }}>{L.startTitle}</div>
-          <div style={{ fontSize: 17, color: "#8a7d55", lineHeight: 1.45, marginBottom: 15 }}>{L.startSub}</div>
-
-          <div style={{ fontSize: 17, fontWeight: 800, color: "#8a5e0f", marginBottom: 6 }}>📝 {L.groupNamePlain.toUpperCase()} {ster}</div>
-          <input value={isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()}
-            onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
-            placeholder={L.namePh3}
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: "12px 13px", fontSize: 19, textAlign: "left", fontWeight: 700,
-              border: `2px solid ${naamLeeg ? "rgba(240,165,0,0.5)" : "#e8a812"}` }} />
-
-          {/* Namen mogen leeg blijven: wie enkel wil turven, tikt gewoon door naar de
-              drankjes. Wie ze nu al kent, vult ze hier in — scheelt later werk. */}
-          <div style={{ fontSize: 17, fontWeight: 800, color: "#8a7d55", margin: "16px 0 6px" }}>👥 {L.namesLater}</div>
-          <div style={{ position: "relative", marginBottom: 8 }}>
-            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><KroonIcoon size={19} kleur="#c98a00" /></span>
-            <input value={ik && !isGuestDefault(ik.name) ? ik.name : ""} onChange={(e) => { if (meId) renamePerson(meId, e.target.value) }}
-              placeholder={L.yourNamePh}
-              style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "11px 12px 11px 40px", fontSize: 19, textAlign: "left", fontWeight: 800,
-                background: "rgba(240,165,0,0.12)", border: "2px solid rgba(232,168,18,0.5)", color: "#8a5e0f" }} />
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-            {people.filter((pp) => pp.id !== meId).map((pp, idx) => {
-              const leeg = isGuestDefault(pp.name)
-              return (
-                <span key={pp.id} style={{ position: "relative", display: "flex", minWidth: 0 }}>
-                  <input value={leeg ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)}
-                    placeholder={`${L.guestN(idx + 2)} · ${L.guestNamePh}`}
-                    style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: leeg ? "9px 30px 9px 10px" : "9px 10px", fontSize: 18, textAlign: "left" }} />
-                  {leeg && <span style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", display: "inline-flex" }}><PotloodIcoon /></span>}
-                </span>
-              )
-            })}
-            <button onClick={addPerson} disabled={busy}
-              style={{ background: "#fff", border: "1.5px dashed rgba(120,95,20,0.4)", borderRadius: 10, padding: "9px 10px", fontSize: 17, fontWeight: 800, color: "#8a7d55", cursor: "pointer", fontFamily: "inherit" }}>{L.addPersonBtn}</button>
-          </div>
-
-          <button onClick={() => { if (naamLeeg) { setNotice(L.groupNameRequired); return } setNamenSetup(false) }}
-            style={{ ...S.btnP, width: "100%", padding: "15px 0", fontSize: 19, fontWeight: 800, marginTop: 16, boxShadow: "none", opacity: naamLeeg ? 0.5 : 1 }}>{L.toDrinksBtn}</button>
-        </div>
-      </div></div>
-    )
-  }
 
 
   if (view === "order") {
