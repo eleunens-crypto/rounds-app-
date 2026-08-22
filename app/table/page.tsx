@@ -3593,7 +3593,6 @@ export default function RundoTable() {
               <div style={{ marginTop: 15, paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
                 {L.welkomFlow.map((st, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 13, padding: "9px 0",
-                    flexDirection: i % 2 === 1 ? "row-reverse" : "row",
                     borderBottom: i < L.welkomFlow.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
                       <span style={{ position: "relative", flexShrink: 0, width: 54, height: 54, borderRadius: "50%", background: "rgba(91,159,214,0.16)", border: "1px solid rgba(91,159,214,0.5)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 27 }}>
                         {st.ic}
