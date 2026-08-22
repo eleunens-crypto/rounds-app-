@@ -2234,6 +2234,13 @@ export default function PartyTest() {
       let m = document.querySelector('meta[name="viewport"]')
       if (!m) { m = document.createElement("meta"); m.setAttribute("name", "viewport"); document.head.appendChild(m) }
       m.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no")
+      // De witte rand op mobiel kwam van de standaardmarge én de witte body-kleur
+      // achter de pagina; en de pagina was net iets hoger dan het scherm (100vh telt
+      // de adresbalk niet mee), waardoor je kon swipen zonder inhoud. Beide dicht.
+      document.documentElement.style.margin = "0"
+      document.body.style.margin = "0"
+      document.body.style.background = "#fdf6e3"
+      document.body.style.overscrollBehaviorY = "none"
     } catch { /* niets */ }
   }, [])
   useEffect(() => {
@@ -5469,7 +5476,7 @@ export default function PartyTest() {
   const VLAK2 = koel ? "#f7fcfd" : themaNaam ? "#f7f9fc" : "#fdfaf2"
   const VLAK3 = koel ? "#e4f2f5" : themaNaam ? "#e6eaf4" : "#f3ead2"
   const S = {
-    page: { minHeight: "100vh", background: groupId ? (koel ? MODUS_FAIR.bladzij : themaNaam ? MODUS_NAAM.bladzij : MODUS_SNEL.bladzij) : "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
+    page: { minHeight: "100dvh", background: groupId ? (koel ? MODUS_FAIR.bladzij : themaNaam ? MODUS_NAAM.bladzij : MODUS_SNEL.bladzij) : "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
     wrap: { maxWidth: 560, margin: "0 auto", padding: "16px 16px" } as React.CSSProperties,
     card: { background: "#fff", border: `1px solid ${koel ? "rgba(13,124,140,0.16)" : themaNaam ? "rgba(59,72,106,0.16)" : "rgba(120,95,20,0.14)"}`, borderRadius: 18, padding: 16, marginBottom: 13, boxShadow: koel ? "0 4px 16px -8px rgba(13,124,140,0.22)" : themaNaam ? "0 4px 16px -8px rgba(59,72,106,0.2)" : "0 4px 16px -8px rgba(120,95,20,0.25)" } as React.CSSProperties,
     h1: { fontSize: 26, fontWeight: 800, margin: "0 0 2px" } as React.CSSProperties,
@@ -6939,7 +6946,7 @@ export default function PartyTest() {
 
   if (view === "start" && welkom && !groupId) {
     return (
-      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 40px" }}>
+      <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 18px", boxSizing: "border-box" }}>
         <div style={{ maxWidth: 460, margin: "0 auto", padding: "18px 16px" }}>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
             <div style={{ transform: "scale(1.25)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
