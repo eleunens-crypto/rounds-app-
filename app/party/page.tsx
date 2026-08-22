@@ -513,7 +513,9 @@ const T = {
     potTogetherQ: "💰 Samen een pot leggen?",
     potLayBtn: "Pot leggen",
     whoAreYouTitle: "Wie ben jij?",
-    namePlichtTitle: "Geef je rondje of groep eerst een naam",
+    namePlichtTitle: "Geef rondje of groep een naam",
+    persCountLabel: "Aantal personen",
+    persNotNow: "hoeft niet nu — kan ook later",
     namePh3: "typ hier je groepsnaam",
     naamGoBtn: "Verder →",
     nameFirstNote: "Vul eerst je eigen naam en de groepsnaam in.",
@@ -1268,7 +1270,9 @@ const T = {
     potTogetherQ: "💰 Faire une cagnotte commune ?",
     potLayBtn: "Faire une cagnotte",
     whoAreYouTitle: "Qui es-tu ?",
-    namePlichtTitle: "Donne d'abord un nom \u00e0 ta tourn\u00e9e ou ton groupe",
+    namePlichtTitle: "Donne un nom \u00e0 ta tourn\u00e9e ou ton groupe",
+    persCountLabel: "Nombre de personnes",
+    persNotNow: "pas obligatoire — possible plus tard aussi",
     namePh3: "\u00e9cris ici le nom du groupe",
     naamGoBtn: "Continuer \u2192",
     nameFirstNote: "Remplis d'abord ton nom et le nom du groupe.",
@@ -2036,6 +2040,8 @@ export default function PartyTest() {
   // Het personenaantal per rondje staat ingeklapt: één grijs regeltje met "wijzig",
   // want meestal klopt het gewoon. Wie het opent, krijgt de vertrouwde teller.
   const [persOpen, setPersOpen] = useState(false)
+  // Personen tellen is optioneel: zolang dit uit staat toont het venster "—".
+  const [persGeteld, setPersGeteld] = useState(false)
   // Rechtstreeks binnengekomen? Dan is dit een Party-only pagina: geen verwijzing
   // naar het keuzescherm, enkel onderaan een tip over Table.
   const [viaKiezer, setViaKiezer] = useState(false)
@@ -4095,6 +4101,11 @@ export default function PartyTest() {
   const heeftEigen = drinks.some((d) => d.cat === "Eigen")
   const catOrde: Cat[] = heeftEigen ? ["Eigen", ...CATS.filter((c) => c !== "Eigen")] : CATS
   const catsPresent = catOrde.filter((c) => c === "Eigen" || drinks.some((d) => d.cat === c))
+  const bewaarNaamPlicht = () => {
+    const nm = naamPlichtVeld.trim()
+    if (!nm) return
+    setGroupName(nm); persistSettings({ name: nm }); setNaamPlicht(false)
+  }
   const bump1 = (did: string) => {
     // Snel opnemen zonder echte groepsnaam: de tik wordt tegengehouden (dus nog níét
     // genoteerd) en het naamvenster verschijnt. Na "Verder" tik je gewoon opnieuw.
@@ -6114,15 +6125,56 @@ export default function PartyTest() {
       )}
       {naamPlicht && (
         <div style={{ ...S.overlay, zIndex: 72 }}>
-          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#4a3f1e", marginBottom: 12 }}>📝 {L.namePlichtTitle}</div>
+          <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#4a3f1e", marginBottom: 4 }}>📝 {L.namePlichtTitle} <span style={{ color: "#c0554a" }}>*</span></div>
             <input autoFocus value={naamPlichtVeld} onChange={(e) => setNaamPlichtVeld(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && naamPlichtVeld.trim()) { const nm = naamPlichtVeld.trim(); setGroupName(nm); persistSettings({ name: nm }); setNaamPlicht(false) } }}
+              onKeyDown={(e) => { if (e.key === "Enter" && naamPlichtVeld.trim()) bewaarNaamPlicht() }}
               placeholder={L.namePh3}
-              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, fontSize: 18, marginBottom: 12 }} />
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, fontSize: 18, marginTop: 8, border: "2px solid rgba(240,165,0,0.6)" }} />
+
+            {/* Personen zijn optioneel: het vlak blijft grijs met een streepje tot je
+                telt. De eerste tik zet jou plus één gast, en dan verschijnen meteen
+                de naamvelden — één plek voor alles wat "uitgebreid" was. */}
+            <div style={{ background: "#f7f4ec", borderRadius: 12, padding: "11px 12px", marginTop: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: persGeteld ? "#8a7d55" : "#a89a6f" }}>👥 {L.persCountLabel}</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
+                  <button onClick={() => { if (!persGeteld) return; if (people.length <= 2) { setPersGeteld(false); return } removeLastPerson() }}
+                    style={{ ...S.step, width: 34, height: 34, fontSize: 19, opacity: persGeteld ? 1 : 0.4 }}>−</button>
+                  <b style={{ fontSize: 18, color: persGeteld ? "#4a3f1e" : "#b3a988", minWidth: 20, textAlign: "center" }}>{persGeteld ? people.length : "—"}</b>
+                  <button onClick={() => { if (!persGeteld) { setPersGeteld(true); if (people.length < 2) addPerson() } else addPerson() }} disabled={busy}
+                    style={{ ...S.step, width: 34, height: 34, fontSize: 19, background: AAN, color: "#fff", border: "none" }}>+</button>
+                </span>
+              </div>
+              {!persGeteld ? (
+                <div style={{ fontSize: 15, color: "#a89a6f", marginTop: 8, fontWeight: 600 }}>{L.persNotNow}</div>
+              ) : (
+                <div style={{ marginTop: 9 }}>
+                  {people.map((pp, idx) => {
+                    const ikZelf = pp.id === meId
+                    const leeg = isGuestDefault(pp.name)
+                    if (ikZelf) return (
+                      <div key={pp.id} style={{ position: "relative", display: "flex", marginBottom: 6 }}>
+                        <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><KroonIcoon size={17} kleur="#c98a00" /></span>
+                        <input value={leeg ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)} placeholder={L.yourNamePh}
+                          style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "9px 11px 9px 34px", fontSize: 16, textAlign: "left", fontWeight: 800, background: "rgba(240,165,0,0.1)", border: "1.5px solid rgba(240,165,0,0.5)", color: "#8a5e0f" }} />
+                      </div>
+                    )
+                    return (
+                      <div key={pp.id} style={{ position: "relative", display: "flex", marginBottom: 6 }}>
+                        <input value={leeg ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)} placeholder={`${L.guestN(idx + 1)} · ${L.guestNamePh}`}
+                          style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: leeg ? "9px 32px 9px 11px" : "9px 11px", fontSize: 16, textAlign: "left", background: "#fff" }} />
+                        {leeg && <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", display: "inline-flex" }}><PotloodIcoon /></span>}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
             <button disabled={!naamPlichtVeld.trim()}
-              style={{ ...S.btnP, width: "100%", opacity: naamPlichtVeld.trim() ? 1 : 0.45 }}
-              onClick={() => { const nm = naamPlichtVeld.trim(); if (!nm) return; setGroupName(nm); persistSettings({ name: nm }); setNaamPlicht(false) }}>{L.naamGoBtn}</button>
+              style={{ ...S.btnP, width: "100%", marginTop: 14, opacity: naamPlichtVeld.trim() ? 1 : 0.45 }}
+              onClick={bewaarNaamPlicht}>{L.naamGoBtn}</button>
           </div>
         </div>
       )}
