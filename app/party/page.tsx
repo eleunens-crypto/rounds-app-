@@ -2804,18 +2804,35 @@ export default function PartyTest() {
               )
             })}
           </div>
-          <div style={{ display: "flex", gap: 7, marginBottom: 12 }}>
-            <button onClick={() => setWalkVol((v) => !v)}
-              style={{ ...S.btn, flex: 1, fontSize: 15.5, fontWeight: 800, padding: "10px 6px" }}>{walkVol ? L.shortListBtn : L.fullListBtn}</button>
-            <button onClick={() => setShowAddDrink(true)}
-              style={{ ...S.btn, flex: 1, fontSize: 15.5, fontWeight: 800, padding: "10px 6px" }}>{L.newDrinkTile}</button>
-          </div>
+          {/* Meer/minder als zwevende pill, net als op het bestelscherm — geen losse
+              knoppenrij meer. "Eigen drankje?" staat eronder. */}
+          {!walkZoekt && walkCat.length > lijst.length && (
+            <div style={{ textAlign: "center", marginTop: -9, marginBottom: 12 }}>
+              <span onClick={() => setWalkVol(true)}
+                style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#8a5e0f" }}>
+                + {walkCat.length - lijst.length} meer ▾
+              </span>
+            </div>
+          )}
+          {!walkZoekt && walkVol && (
+            <div style={{ textAlign: "center", marginTop: -9, marginBottom: 12 }}>
+              <span onClick={() => setWalkVol(false)}
+                style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f" }}>
+                ▴ {L.shortListBtn.replace("🔼 ", "")}
+              </span>
+            </div>
+          )}
+          <button onClick={() => setShowAddDrink(true)}
+            style={{ ...S.btn, width: "100%", fontSize: 15.5, fontWeight: 800, padding: "10px 6px", marginBottom: 12 }}>{L.newDrinkTile}</button>
           {zijne.length > 0 && (
             <div style={{ fontSize: 15.5, color: "#6b5f3a", marginBottom: 12, lineHeight: 1.5 }}>
               {zijne.map((d) => `${cart[d.id][p.id]}× ${d.name}`).join(" · ")}
             </div>
           )}
-          <button style={{ ...S.btnP, width: "100%" }} onClick={() => setWalkIdx(null)}>{L.walkDone}</button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={{ ...S.btn, flex: "0 0 auto", padding: "12px 18px", fontSize: 16, fontWeight: 800 }} onClick={() => setWalkIdx(null)}>{L.cancel}</button>
+            <button style={{ ...S.btnP, flex: 1 }} onClick={() => setWalkIdx(null)}>{L.walkDone}</button>
+          </div>
         </div>
       </div>
     )
@@ -6152,8 +6169,8 @@ export default function PartyTest() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                 <span style={{ fontSize: 15, fontWeight: 700, color: "#8a7d55" }}>{L.persCountLabel}</span>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
-                  <button onClick={() => { if (people.length > 2) removeLastPerson() }} disabled={busy || people.length <= 2}
-                    style={{ ...S.step, width: 34, height: 34, fontSize: 19, opacity: people.length > 2 ? 1 : 0.4 }}>−</button>
+                  <button onClick={() => { if (people.length > 1) removeLastPerson() }} disabled={busy || people.length <= 1}
+                    style={{ ...S.step, width: 34, height: 34, fontSize: 19, opacity: people.length > 1 ? 1 : 0.4 }}>−</button>
                   <b style={{ fontSize: 18, color: "#4a3f1e", minWidth: 20, textAlign: "center" }}>{people.length}</b>
                   <button onClick={addPerson} disabled={busy}
                     style={{ ...S.step, width: 34, height: 34, fontSize: 19, background: AAN, color: "#fff", border: "none" }}>+</button>
@@ -6201,10 +6218,10 @@ export default function PartyTest() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                 <span style={{ fontSize: 15, fontWeight: 700, color: persGeteld ? "#8a7d55" : "#a89a6f" }}>👥 {L.persCountLabel}</span>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
-                  <button onClick={() => { if (!persGeteld) return; if (people.length <= 2) { setPersGeteld(false); return } removeLastPerson() }}
+                  <button onClick={() => { if (!persGeteld) return; if (people.length <= 1) { setPersGeteld(false); return } removeLastPerson() }}
                     style={{ ...S.step, width: 34, height: 34, fontSize: 19, opacity: persGeteld ? 1 : 0.4 }}>−</button>
                   <b style={{ fontSize: 18, color: persGeteld ? "#4a3f1e" : "#b3a988", minWidth: 20, textAlign: "center" }}>{persGeteld ? people.length : "—"}</b>
-                  <button onClick={() => { if (!persGeteld) { setPersGeteld(true); if (people.length < 2) addPerson() } else addPerson() }} disabled={busy}
+                  <button onClick={() => { if (!persGeteld) { setPersGeteld(true); return } addPerson() }} disabled={busy}
                     style={{ ...S.step, width: 34, height: 34, fontSize: 19, background: AAN, color: "#fff", border: "none" }}>+</button>
                 </span>
               </div>
@@ -7946,7 +7963,7 @@ export default function PartyTest() {
                voor wie liever per persoon werkt. Het label hangt aan de gouden lijn van
                de titel, en het ▸ zegt eerlijk dat er een venster opent. */
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 11 }}>
-              <button onClick={() => eersteNaamDan(() => { setActiveCat(catsPresent[0]); setPersGeteld(true); if (people.length < 2) addPerson(); setPersVenster(true) })}
+              <button onClick={() => eersteNaamDan(() => { setActiveCat(catsPresent[0]); setPersGeteld(true); setPersVenster(true) })}
                 style={{ background: themaNaam ? "#fbfcff" : "#fffdf6", border: `1px solid ${themaNaam ? "rgba(59,72,106,0.4)" : "rgba(240,165,0,0.5)"}`, borderTop: "none", borderRadius: "0 0 12px 12px", padding: "8px 16px", fontSize: 15, fontWeight: 800, color: themaNaam ? "#3b486a" : "#8a5e0f", cursor: "pointer" }}>{L.perPersonPrompt} ▸</button>
             </div>
           ) : null
