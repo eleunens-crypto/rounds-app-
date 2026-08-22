@@ -150,6 +150,13 @@ export default function Home() {
       let m = document.querySelector('meta[name="viewport"]')
       if (!m) { m = document.createElement("meta"); m.setAttribute("name", "viewport"); document.head.appendChild(m) }
       m.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no")
+      // De witte rand op mobiel kwam van de standaardmarge én de witte body-kleur
+      // achter de pagina; en de pagina was net iets hoger dan het scherm (100vh telt
+      // de adresbalk niet mee), waardoor je kon swipen zonder inhoud. Beide dicht.
+      document.documentElement.style.margin = "0"
+      document.body.style.margin = "0"
+      document.body.style.background = "#131826"
+      document.body.style.overscrollBehaviorY = "none"
     } catch { /* niets */ }
   }, [])
   useEffect(() => {
@@ -527,7 +534,7 @@ const S: Record<string, React.CSSProperties> = {
   page: {
     fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     background: "radial-gradient(1200px 600px at 50% -10%, #1c2540 0%, #131826 55%, #0e1119 100%)",
-    minHeight: "100vh",
+    minHeight: "100dvh",
     color: "#fff",
     padding: "18px 22px",
     WebkitFontSmoothing: "antialiased",
