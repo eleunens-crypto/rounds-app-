@@ -526,9 +526,9 @@ const T = {
     welkomStart: "Starten →",
     orWordShort: "of",
     welkomFlow: [
-      { ic: ["✍️", "📱"], label: "neem zelf op\nof deel QR" },
-      { ic: ["👆"], label: "tik drankjes\naan" },
-      { ic: ["📋"], label: "handig barlijstje\nen afrekenen" },
+      { ic: ["✍️", "📱"], label: "neem zelf op of deel de QR" },
+      { ic: ["👆"], label: "tik de drankjes aan" },
+      { ic: ["📋"], label: "handig barlijstje en afrekenen" },
     ],
     waitScan: (n: number) => n === 1 ? "1 gast wacht op QR-scan" : `${n} gasten wachten op QR-scan`,
     allInPill: "✓ iedereen is erbij",
@@ -1281,9 +1281,9 @@ const T = {
     welkomStart: "Commencer →",
     orWordShort: "ou",
     welkomFlow: [
-      { ic: ["✍️", "📱"], label: "note toi-m\u00eame\nou partage le QR" },
-      { ic: ["👆"], label: "coche les\nboissons" },
-      { ic: ["📋"], label: "liste bar pratique\net r\u00e8glement" },
+      { ic: ["✍️", "📱"], label: "note toi-m\u00eame ou partage le QR" },
+      { ic: ["👆"], label: "coche les boissons" },
+      { ic: ["📋"], label: "liste bar pratique et r\u00e8glement" },
     ],
     waitScan: (n: number) => n === 1 ? "1 invit\u00e9 attend le scan QR" : `${n} invit\u00e9s attendent le scan QR`,
     allInPill: "✓ tout le monde est l\u00e0",
@@ -6944,12 +6944,6 @@ export default function PartyTest() {
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
             <div style={{ transform: "scale(1.25)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
           </div>
-          <div style={{ textAlign: "center", margin: "10px 0 6px" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/rundo-logo.png" alt="Rundo" style={{ display: "block", height: 74, width: "auto", maxWidth: "90%", objectFit: "contain", margin: "0 auto" }} />
-          </div>
-          <p style={{ color: "#f0c14b", fontSize: 16.5, fontWeight: 600, textAlign: "center", margin: "0 0 22px" }}>{L.welkomTagline}</p>
-
           {/* Dezelfde kaart als op het keuzescherm, ruimer opgezet: hij heeft het
               scherm nu voor zich alleen. Daarna pas de keuze zelf noteren / QR. */}
           <div style={{ position: "relative", overflow: "hidden", borderRadius: 22, border: "1.5px solid rgba(240,193,75,0.55)", boxShadow: "0 18px 40px -22px rgba(0,0,0,0.9)" }}>
@@ -6964,19 +6958,24 @@ export default function PartyTest() {
                 <img src="/icon-party.png" alt="" style={{ height: 28, width: "auto", objectFit: "contain", flexShrink: 0 }} />
                 <span style={{ color: "#f0c14b", fontSize: 17, fontWeight: 700, lineHeight: 1.3 }}>{L.welkomSub}</span>
               </div>
-              <div style={{ marginTop: 17, paddingTop: 15, borderTop: "1px solid rgba(255,255,255,0.15)", display: "flex", gap: 6 }}>
+              {/* Stappen onder elkaar, om beurten links en rechts, met haarlijntjes
+                  ertussen. Stap 1 heeft twee manieren, vandaar twee iconen met "of". */}
+              <div style={{ marginTop: 15, paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
                 {L.welkomFlow.map((st, i) => (
-                  <div key={i} style={{ flex: st.ic.length > 1 ? 1.6 : 1, minWidth: 0, textAlign: "center" }}>
-                    <div style={{ position: "relative", display: "inline-flex", justifyContent: "center", alignItems: "center", gap: 6 }}>
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 0",
+                    flexDirection: i % 2 === 1 ? "row-reverse" : "row",
+                    textAlign: i % 2 === 1 ? "right" : "left",
+                    borderBottom: i < L.welkomFlow.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
+                    <span style={{ position: "relative", flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6 }}>
                       {st.ic.map((ic, k) => (
-                        <span key={k} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          {k > 0 && <span style={{ fontSize: 12, fontWeight: 800, color: "#b9a67c" }}>{L.orWordShort}</span>}
-                          <span style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(240,193,75,0.14)", border: "1px solid rgba(240,193,75,0.45)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 21, flexShrink: 0 }}>{ic}</span>
+                        <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          {k > 0 && <span style={{ fontSize: 12.5, fontWeight: 800, color: "#b9a67c" }}>{L.orWordShort}</span>}
+                          <span style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(240,193,75,0.16)", border: "1px solid rgba(240,193,75,0.5)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 23, flexShrink: 0 }}>{ic}</span>
                         </span>
                       ))}
-                      <span style={{ position: "absolute", top: -6, right: -8, width: 18, height: 18, borderRadius: "50%", background: "#f0c14b", color: "#131826", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
-                    </div>
-                    <div style={{ marginTop: 7, fontSize: 13, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3, whiteSpace: "pre-line" }}>{st.label}</div>
+                      <span style={{ position: "absolute", top: -6, right: -7, width: 20, height: 20, borderRadius: "50%", background: "#f0c14b", color: "#131826", fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+                    </span>
+                    <span style={{ minWidth: 0, fontSize: 15, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.35 }}>{st.label}</span>
                   </div>
                 ))}
               </div>
@@ -6987,6 +6986,7 @@ export default function PartyTest() {
             style={{ width: "100%", marginTop: 18, padding: "18px", borderRadius: 16, border: "none", fontSize: 20, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", color: "#4a3f1e", background: "linear-gradient(135deg,#f7cb5c,#eab117)", boxShadow: "0 14px 30px -14px rgba(240,193,75,0.9)" }}>
             {L.welkomStart}
           </button>
+          <p style={{ color: "#f0c14b", fontSize: 15, fontWeight: 600, textAlign: "center", margin: "16px 0 0" }}>{L.welkomTagline}</p>
         </div>
       </div>
     )
