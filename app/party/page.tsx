@@ -6962,7 +6962,7 @@ export default function PartyTest() {
                   ertussen. Stap 1 heeft twee manieren, vandaar twee iconen met "of". */}
               <div style={{ marginTop: 15, paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
                 {L.welkomFlow.map((st, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: i % 2 === 1 ? "flex-end" : "flex-start", padding: "9px 0",
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 13, padding: "9px 0",
                     borderBottom: i < L.welkomFlow.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
                       <span style={{ position: "relative", flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7 }}>
                         {st.ic.map((ic, k) => (
