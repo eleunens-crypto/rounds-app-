@@ -532,9 +532,9 @@ const T = {
     notMe: "dit ben ik niet",
     notMeConfirm: (n: string) => `Ben jij niet ${n}? Dan geef je deze plaats vrij en kies je opnieuw.`,
     releaseSeat: "Plaats vrijgeven",
-    tabOrder: "🍺 Bestellen",
+    tabOrder: "🍺 Drankjes",
     tabMe: "🧾 Mijn stand",
-    tabGroup: "👥 Groep",
+    tabGroup: "👥 Groep & QR",
     groupTitle: "👥 In deze groep",
     peopleN: (n: number) => `${n} ${n === 1 ? "persoon" : "personen"}`,
     joinedOfTotal: (a: number, b: number) => `${a} van ${b} aangemeld`,
@@ -1274,9 +1274,9 @@ const T = {
     notMe: "ce n’est pas moi",
     notMeConfirm: (n: string) => `Tu n'es pas ${n} ? Tu libères cette place et tu choisis à nouveau.`,
     releaseSeat: "Libérer la place",
-    tabOrder: "🍺 Commander",
+    tabOrder: "🍺 Boissons",
     tabMe: "🧾 Mon compte",
-    tabGroup: "👥 Groupe",
+    tabGroup: "👥 Groupe & QR",
     groupTitle: "👥 Dans ce groupe",
     peopleN: (n: number) => `${n} ${n === 1 ? "personne" : "personnes"}`,
     joinedOfTotal: (a: number, b: number) => `${a} sur ${b} inscrits`,
@@ -6167,9 +6167,9 @@ export default function PartyTest() {
     )
     return (
       <div style={{ display: "flex", gap: 7, marginBottom: 12 }}>
+        {knop("group", L.tabGroup)}
         {knop("order", L.tabOrder)}
         {knop("me", L.tabMe)}
-        {knop("group", L.tabGroup)}
       </div>
     )
   }
@@ -6631,9 +6631,6 @@ export default function PartyTest() {
 
     // Wat de gast op dit moment staat. Zelfde helpers als de admin gebruikt, dus de
     // cijfers kunnen niet uit elkaar lopen.
-    const mijnVerbruik = consumption(meId) + cupOwn(meId)
-    const mijnBetaald = paidByPerson(meId) + contribOf(meId)
-    const mijnSaldo = mijnBetaald - mijnVerbruik
     // Ben ik gekoppeld aan iemand? Dan is de vereffening op het groepje, niet op mij.
     const mijnGroep = settleGroups.find((g) => g.leden.some((p) => p.id === meId))
     const mijnTx = settlement.tx.filter((t) => t.from === (mijnGroep?.label ?? "") || t.to === (mijnGroep?.label ?? ""))
@@ -6670,13 +6667,19 @@ export default function PartyTest() {
               <span style={{ background: "rgba(31,138,76,0.1)", border: "1px solid rgba(31,138,76,0.3)", borderRadius: 16, padding: "4px 11px", fontSize: 13, fontWeight: 800, color: "#1f6b3a", whiteSpace: "nowrap" }}>{L.potPaidIn(euro(contribOf(meId)))}</span>
             )}
             <button style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)" }}
-              onClick={() => setConfirmDlg({ msg: L.notMeConfirm(ik.name), yes: L.releaseSeat, onYes: () => { setConfirmDlg(null); releaseSeat(meId) } })}>
+              onClick={() => setConfirmDlg({ msg: L.notMeConfirm(ik.name), yes: L.releaseSeat, onYes: () => { setConfirmDlg(null); releaseSeat(meId); setZitNaam(null); setGuestTab("group") } })}>
               {L.notMe}
             </button>
           </div>
         </div>
 
         <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+          <button onClick={() => setGuestTab("group")}
+            style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 15.5, fontWeight: 800, opacity: guestTab === "group" ? 1 : 0.6,
+              background: guestTab === "group" ? MODUS_FAIR.vlak : "#fff",
+              borderColor: guestTab === "group" ? MODUS_FAIR.rand : undefined,
+              borderWidth: guestTab === "group" ? 1.5 : 1,
+              color: guestTab === "group" ? MODUS_FAIR.tekst : "#8a7d55" }}>{L.tabGroup}</button>
           <button onClick={() => setGuestTab("order")}
             style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 15.5, fontWeight: 800, opacity: guestTab === "order" ? 1 : 0.6,
               background: guestTab === "order" ? MODUS_FAIR.vlak : "#fff",
@@ -6689,12 +6692,6 @@ export default function PartyTest() {
               borderColor: guestTab === "me" ? MODUS_FAIR.rand : undefined,
               borderWidth: guestTab === "me" ? 1.5 : 1,
               color: guestTab === "me" ? MODUS_FAIR.tekst : "#8a7d55" }}>{L.tabMe}</button>
-          <button onClick={() => setGuestTab("group")}
-            style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 15.5, fontWeight: 800, opacity: guestTab === "group" ? 1 : 0.6,
-              background: guestTab === "group" ? MODUS_FAIR.vlak : "#fff",
-              borderColor: guestTab === "group" ? MODUS_FAIR.rand : undefined,
-              borderWidth: guestTab === "group" ? 1.5 : 1,
-              color: guestTab === "group" ? MODUS_FAIR.tekst : "#8a7d55" }}>{L.tabGroup}</button>
         </div>
 
         {guestTab === "group" && (
@@ -6749,58 +6746,13 @@ export default function PartyTest() {
 
         {guestTab === "me" && (
           <>
-            <div style={S.card}>
-              <h3 style={{ ...S.h3, marginTop: 0 }}>{L.myTab}</h3>
-              {rounds.length === 0 ? (
-                <div style={{ fontSize: 15, color: "#b3a988", textAlign: "center", padding: "14px 0" }}>
-                  {L.noRoundClosed}
-                </div>
-              ) : (
-                <>
-                  {/* Zolang de gastheer niet afsloot kunnen er nog rondjes bijkomen. Het
-                      bedrag klopt met wat er nu staat, maar het is nog niet definitief —
-                      en dat hoort erbij te staan, anders rekent iemand het al af. */}
-                  {!hasSettled && (
-                    <div style={{ background: "rgba(240,165,0,0.1)", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 11, padding: "10px 12px", marginBottom: 11, fontSize: 13.5, color: "#8a5e0f", lineHeight: 1.45 }}>{L.provisionalNote}</div>
-                  )}
-                  <div style={{ ...S.row, justifyContent: "space-between", padding: "6px 0" }}>
-                    <span style={{ fontSize: 15.5 }}>{L.whatYouDrank} <span style={{ fontSize: 13, color: "#8a7d55" }}>{L.yourShare}</span></span>
-                    <b style={{ fontSize: 16 }}>{euro(mijnVerbruik)}</b>
-                  </div>
-                  <div style={{ ...S.row, justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid rgba(120,95,20,0.1)" }}>
-                    <span style={{ fontSize: 15.5 }}>{L.whatYouPaid} {contribOf(meId) > 0 ? <span style={{ fontSize: 13, color: "#8a7d55" }}>{L.inclPot}</span> : null}</span>
-                    <b style={{ fontSize: 16 }}>{euro(mijnBetaald)}</b>
-                  </div>
-                  <div style={{ ...S.row, justifyContent: "space-between", padding: "11px 0 2px" }}>
-                    <span style={{ fontSize: 15.5, fontWeight: 800 }}>
-                      {Math.abs(mijnSaldo) < 0.005 ? L.youAreEven : mijnSaldo > 0 ? L.youGetBack : L.youStillPay}
-                    </span>
-                    <b style={{ fontSize: 20, color: Math.abs(mijnSaldo) < 0.005 ? "#1f8a4c" : mijnSaldo > 0 ? "#1f8a4c" : "#c0392b" }}>
-                      {euro(Math.abs(mijnSaldo))}
-                    </b>
-                  </div>
-                  <div style={{ fontSize: 13, color: "#8a7d55", marginTop: 10, lineHeight: 1.5 }}>
-                    {L.directionOnly}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {mijnTx.length > 0 && (
+            {/* Geen bedragen meer: het zijn richtprijzen. Wat telt is wat jij nam per
+                rondje en of dat rondje al betaald is. */}
+            {rounds.length === 0 ? (
+              <div style={{ ...S.card, fontSize: 15, color: "#b3a988", textAlign: "center", padding: "18px 0" }}>{L.noRoundClosed}</div>
+            ) : (
               <div style={S.card}>
-                <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 8 }}>{L.howYouSettle}</h3>
-                {mijnTx.map((t, i) => (
-                  <div key={i} style={{ ...S.row, justifyContent: "space-between", padding: "7px 0", borderBottom: i < mijnTx.length - 1 ? "1px solid rgba(120,95,20,0.08)" : "none" }}>
-                    <span style={{ fontSize: 15.5 }}><b>{t.from}</b> → {t.to}</span>
-                    <b style={{ fontSize: 16 }}>{euro(t.amount)}</b>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {rounds.length > 0 && (
-              <div style={S.card}>
-                <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 8 }}>{L.roundsTitle}</h3>
+                <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 8 }}>{L.myTab}</h3>
                 {rounds.map((r) => {
                   const mijne = drinks.filter((d) => (r.orders[d.id]?.[meId] ?? 0) > 0)
                   return (
