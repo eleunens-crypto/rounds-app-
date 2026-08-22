@@ -522,7 +522,7 @@ const T = {
     backToRundo: "← naar het Rundo-startscherm",
     tryTableLine: "Rekening splitsen in een restaurant? Probeer ook",
     welkomTagline: "Rondjes en rekeningen zonder gedoe!",
-    welkomSub: "Rondjes opnemen en splitten zonder gedoe",
+    welkomSub: "Rondjes opnemen en splitten\nzonder gedoe",
     welkomStart: "Starten →",
     orWordShort: "of",
     welkomFlow: [
@@ -1277,7 +1277,7 @@ const T = {
     backToRundo: "\u2190 retour \u00e0 l'accueil Rundo",
     tryTableLine: "Partager l'addition au restaurant\u00a0? Essaie aussi",
     welkomTagline: "Tourn\u00e9es et additions, sans prise de t\u00eate\u00a0!",
-    welkomSub: "Prendre les tourn\u00e9es et partager, sans prise de t\u00eate",
+    welkomSub: "Prendre et partager les tourn\u00e9es\nsans prise de t\u00eate",
     welkomStart: "Commencer →",
     orWordShort: "ou",
     welkomFlow: [
@@ -6956,23 +6956,26 @@ export default function PartyTest() {
               <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 11 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/icon-party.png" alt="" style={{ height: 32, width: "auto", objectFit: "contain", flexShrink: 0 }} />
-                <span style={{ color: "#f0c14b", fontSize: 19, fontWeight: 700, lineHeight: 1.3 }}>{L.welkomSub}</span>
+                <span style={{ color: "#f0c14b", fontSize: 19, fontWeight: 700, lineHeight: 1.3, whiteSpace: "pre-line" }}>{L.welkomSub}</span>
               </div>
               {/* Stappen onder elkaar, om beurten links en rechts, met haarlijntjes
                   ertussen. Stap 1 heeft twee manieren, vandaar twee iconen met "of". */}
-              <div style={{ marginTop: 15, paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+              <div style={{ marginTop: 20, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
                 {L.welkomFlow.map((st, i) => (
                   <div key={i} style={{ display: "flex", justifyContent: "center", padding: "9px 0",
                     borderBottom: i < L.welkomFlow.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 13, flexDirection: i % 2 === 1 ? "row-reverse" : "row" }}>
-                      <span style={{ position: "relative", flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7 }}>
+                      <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7 }}>
                         {st.ic.map((ic, k) => (
                           <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
                             {k > 0 && <span style={{ fontSize: 13.5, fontWeight: 800, color: "#b9a67c" }}>{L.orWordShort}</span>}
-                            <span style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(240,193,75,0.16)", border: "1px solid rgba(240,193,75,0.5)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 27, flexShrink: 0 }}>{ic}</span>
+                            <span style={{ position: "relative", width: 54, height: 54, borderRadius: "50%", background: "rgba(240,193,75,0.16)", border: "1px solid rgba(240,193,75,0.5)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 27, flexShrink: 0 }}>
+                              {ic}
+                              {/* Het nummer hoort bij het éérste icoon van de stap. */}
+                              {k === 0 && <span style={{ position: "absolute", top: -6, right: -7, width: 22, height: 22, borderRadius: "50%", background: "#f0c14b", color: "#131826", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>}
+                            </span>
                           </span>
                         ))}
-                        <span style={{ position: "absolute", top: -6, right: -7, width: 22, height: 22, borderRadius: "50%", background: "#f0c14b", color: "#131826", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
                       </span>
                       <span style={{ fontSize: 17, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3 }}>{st.label}</span>
                     </span>
