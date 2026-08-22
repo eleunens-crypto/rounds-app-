@@ -2051,6 +2051,7 @@ export default function PartyTest() {
   // "Liever per persoon aantikken" opent eerst dit venster: met hoeveel zijn jullie,
   // en optioneel de namen. Daarna start de doorloop per persoon.
   const [persVenster, setPersVenster] = useState(false)
+  const [naamPlichtNa, setNaamPlichtNa] = useState<null | (() => void)>(null)
   // Rechtstreeks binnengekomen? Dan is dit een Party-only pagina: geen verwijzing
   // naar het keuzescherm, enkel onderaan een tip over Table.
   const [viaKiezer, setViaKiezer] = useState(false)
@@ -4114,11 +4115,21 @@ export default function PartyTest() {
     const nm = naamPlichtVeld.trim()
     if (!nm) return
     setGroupName(nm); persistSettings({ name: nm }); setNaamPlicht(false)
+    // Ging je ergens heen toen de naam gevraagd werd? Dan nu alsnog.
+    const na = naamPlichtNa
+    setNaamPlichtNa(null)
+    if (na) na()
+  }
+  // Alles in een naamloze groep loopt hierlangs: is er nog geen echte naam, dan
+  // eerst het naamvenster; anders meteen doen wat je wilde.
+  const eersteNaamDan = (doe: () => void) => {
+    if (!settle && isAutoNaam(groupName)) { setNaamPlichtVeld(""); setNaamPlichtNa(() => doe); setNaamPlicht(true); return }
+    doe()
   }
   const bump1 = (did: string) => {
     // Snel opnemen zonder echte groepsnaam: de tik wordt tegengehouden (dus nog níét
     // genoteerd) en het naamvenster verschijnt. Na "Verder" tik je gewoon opnieuw.
-    if (!settle && isAutoNaam(groupName)) { setNaamPlichtVeld(""); setNaamPlicht(true); return }
+    if (!settle && isAutoNaam(groupName)) { setNaamPlichtVeld(""); setNaamPlichtNa(null); setNaamPlicht(true); return }
     if (settle && voorWie) return bump(did, voorWie, 1)
     return bumpAnon(did, 1)
   }
@@ -6480,21 +6491,21 @@ export default function PartyTest() {
       {uitgebreidLook && !!groupId && !kaal && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "10px 0", minHeight: 38 }}>
           {groupName.trim() && !editName && !isAutoNaam(groupName) && (
-            <span onClick={() => { if (!onboarding && !groepDicht) setEditName(true) }}
+            <span onClick={() => { if (onboarding || groepDicht) return; if (!settle) { setNaamPlichtVeld(groupName.trim()); setPersGeteld(people.length > 1); setNaamPlichtNa(null); setNaamPlicht(true) } else setEditName(true) }}
               style={{ flex: "0 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onboarding ? "default" : "pointer", background: "#fff", border: "1.5px solid rgba(240,165,0,0.55)", borderRadius: 18, padding: "7px 16px", fontSize: 17, fontWeight: 800, color: "#4a3f1e", boxShadow: "0 2px 5px rgba(90,64,10,0.12)" }}>
               {isAutoNaam(groupName) ? (
                 /* Niet alleen de uitnodiging, ook wat de naam nú is — anders weet je
                    niet onder welke naam de groep straks in je lijst staat. */
                 <span style={{ color: themaNaam ? "#5a6a94" : "#c98a00", fontWeight: 700, fontSize: 15.5 }}>✏️ {L.giveNameQ} <span style={{ color: "#a89a6f", fontWeight: 400, fontSize: 14 }}>· {L.nowWord} {groupName.trim()}</span></span>
-              ) : (<>{groupName.trim()}{groepDatum && <span style={{ fontWeight: 700, color: "#a89a6f", fontSize: 14.5 }}> ({datumKort(groepDatum)})</span>}{!onboarding && <span style={{ fontSize: 13.5 }}> ✏️</span>}</>)}
+              ) : (<>{groupName.trim()}{!settle && people.length > 1 && <span style={{ fontWeight: 700, color: "#a89a6f", fontSize: 14.5 }}> · 👥 {people.length}</span>}{groepDatum && <span style={{ fontWeight: 700, color: "#a89a6f", fontSize: 14.5 }}> ({datumKort(groepDatum)})</span>}{!onboarding && <span style={{ fontSize: 13.5 }}> ✏️</span>}</>)}
             </span>
           )}
-          {/* Personen beheren zit voortaan in de kop: één tik opent hetzelfde venster
-              met de teller en de naamvelden. Daarmee is ⚙️ Groep hier overbodig. */}
-          {!settle && !kaal && (
-            <button onClick={() => { setNaamPlichtVeld(groupName.trim()); setPersGeteld(people.length > 1); setNaamPlicht(true) }}
-              style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, background: "#fff", border: "1px solid rgba(120,95,20,0.28)", borderRadius: 14, padding: "6px 11px", fontSize: 15, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", fontFamily: "inherit" }}>
-              👥 {people.length > 1 ? people.length : "+"}
+          {/* Nog geen naam? Dan één pill die zowel de naam als de personen vraagt —
+              hetzelfde venster, dus alles zit op één plek. */}
+          {!settle && !kaal && isAutoNaam(groupName) && (
+            <button onClick={() => { setNaamPlichtVeld(""); setPersGeteld(people.length > 1); setNaamPlichtNa(null); setNaamPlicht(true) }}
+              style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 14, padding: "6px 12px", fontSize: 15, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", fontFamily: "inherit" }}>
+              ✏️ {L.giveNameQ}
             </button>
           )}
           <span style={{ marginLeft: "auto", flexShrink: 0 }}>{potKnopje()}</span>
@@ -7935,7 +7946,7 @@ export default function PartyTest() {
                voor wie liever per persoon werkt. Het label hangt aan de gouden lijn van
                de titel, en het ▸ zegt eerlijk dat er een venster opent. */
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 11 }}>
-              <button onClick={() => { setActiveCat(catsPresent[0]); setPersGeteld(true); if (people.length < 2) addPerson(); setPersVenster(true) }}
+              <button onClick={() => eersteNaamDan(() => { setActiveCat(catsPresent[0]); setPersGeteld(true); if (people.length < 2) addPerson(); setPersVenster(true) })}
                 style={{ background: themaNaam ? "#fbfcff" : "#fffdf6", border: `1px solid ${themaNaam ? "rgba(59,72,106,0.4)" : "rgba(240,165,0,0.5)"}`, borderTop: "none", borderRadius: "0 0 12px 12px", padding: "8px 16px", fontSize: 15, fontWeight: 800, color: themaNaam ? "#3b486a" : "#8a5e0f", cursor: "pointer" }}>{L.perPersonPrompt} ▸</button>
             </div>
           ) : null
