@@ -586,7 +586,7 @@ const T = {
     persShort: (n: number) => `${n} pers.`,
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "persoon" : "personen"}`,
     peopleIntro: () => "Jij staat er al bij. De anderen komen erbij via QR scan.",
-    addNonScanner: "✍️ Naam zelf invullen",
+    addNonScanner: "✍️ Zelf iemand toevoegen",
     linkCopiedShort: "✓ Gekopieerd",
     linkLabel: "Link:",
     youPaste: "Je plakt dit:",
@@ -719,6 +719,8 @@ const T = {
 
     // ── delen
     letGuestsScan: "📲 Laat je gasten scannen",
+    whoIsInYet: "Wie is er al bij",
+    scanToJoin: "Wie later scant, sluit gewoon aan.",
     copyLink: "Kopieer link",
 
     // ── startvragen
@@ -1325,7 +1327,7 @@ const T = {
     persShort: (n: number) => `${n} pers.`,
     peopleHeader: (n: number) => `👥 ${n} ${n === 1 ? "personne" : "personnes"}`,
     peopleIntro: () => "Tu es déjà là. Les autres arrivent en scannant le QR.",
-    addNonScanner: "✍️ Écrire un nom soi-même",
+    addNonScanner: "✍️ Ajouter quelqu'un soi-m\u00eame",
     linkCopiedShort: "✓ Copié",
     linkLabel: "Lien :",
     youPaste: "Tu colles ceci :",
@@ -1458,6 +1460,8 @@ const T = {
 
     // ── delen
     letGuestsScan: "📲 Fais scanner tes invités",
+    whoIsInYet: "Qui est d\u00e9j\u00e0 l\u00e0",
+    scanToJoin: "Ceux qui scannent plus tard rejoignent simplement.",
     copyLink: "Copier le lien",
 
     // ── startvragen
@@ -4214,47 +4218,30 @@ export default function PartyTest() {
   // en de tellende wacht-pill die groen wordt zodra iedereen binnen is. Wordt gedeeld
   // door het instelscherm en het QR-scherm, zodat je overal hetzelfde ziet vollopen.
   const renderNamenBlok = () => {
+    // Geen plaatsen meer om te reserveren of vrij te geven: wie scant en zijn naam
+    // invult, staat in de lijst. De admin kan iemand wegklikken met het kruisje.
     const mijnPlaats = people.find((p) => p.id === meId)
     const anderen = people.filter((p) => p.id !== meId)
-    const geclaimd = anderen.filter((p) => p.claimedBy)
-    const wachtend = anderen.filter((p) => !p.claimedBy)
-    const mijnIdx = mijnPlaats ? people.indexOf(mijnPlaats) : -1
     return (
       <>
-        {mijnPlaats && anderen.length > 0 && (
-          <div style={{ ...S.row, gap: 8, padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: VLAK1, border: "1px solid rgba(13,124,140,0.25)" }}>
-            <span style={{ width: 24, height: 24, borderRadius: "50%", background: MODUS_FAIR.tint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><KroonIcoon size={13} kleur={MODUS_FAIR.tekst} /></span>
-            <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{isGuestDefault(mijnPlaats.name) ? `Gast ${mijnIdx + 1}` : mijnPlaats.name} <span style={{ fontWeight: 700, fontSize: 13, color: "#5a8f99" }}>({L.youWord})</span></span>
+        {mijnPlaats && (
+          <div style={{ ...S.row, gap: 8, padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: VLAK1, border: "1px solid rgba(13,124,140,0.22)" }}>
+            <span style={{ width: 24, height: 24, borderRadius: "50%", background: MODUS_FAIR.tint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><KroonIcoon size={14} kleur={MODUS_FAIR.tekst} /></span>
+            <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{mijnPlaats.name} <span style={{ color: MODUS_FAIR.tekst, fontWeight: 700 }}>({L.youWord})</span></span>
           </div>
         )}
-        {geclaimd.map((p) => (
-          <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: "rgba(31,138,76,0.06)", border: "1px solid rgba(31,138,76,0.35)" }}>
-            <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a3f1e" }}>✅ {p.name}</span>
-            <button onClick={() => releaseSeat(p.id)}
-              style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(120,95,20,0.2)", fontSize: 12, padding: "3px 8px" }}>
-              {L.freeUp}
-            </button>
+        {anderen.map((p) => (
+          <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: "rgba(31,138,76,0.08)", border: "1px solid rgba(31,138,76,0.25)" }}>
+            <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a3f1e", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>✅ {p.name}</span>
+            {isAdmin && (
+              <button onClick={() => removePerson(p.id)} title={L.removeWord}
+                style={{ flexShrink: 0, background: "#fff", border: "1px solid rgba(224,104,92,0.45)", color: "#c0554a", borderRadius: 8, padding: "4px 9px", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
+            )}
           </div>
         ))}
-        {wachtend.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(118px, 1fr))", gap: 5 }}>
-            {wachtend.map((p) => (
-              <div key={p.id} style={{ background: VLAK1, border: "1px solid rgba(13,124,140,0.16)", borderRadius: 10, padding: "8px 10px", fontSize: 13.5, color: "#8aa8ad", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>👤 {isGuestDefault(p.name) ? `Gast ${people.indexOf(p) + 1}` : p.name}</div>
-            ))}
-          </div>
+        {anderen.length === 0 && (
+          <div style={{ textAlign: "center", marginTop: 8, fontSize: 13.5, color: "#5a8f99", fontWeight: 600 }}>{L.scanToJoin}</div>
         )}
-        {wachtend.length > 0 ? (
-          <div style={{ textAlign: "center", marginTop: 10 }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 7, border: "1px solid rgba(13,124,140,0.4)", borderRadius: 15, padding: "6px 13px", fontSize: 13.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>
-              <span className="rundo-stip" style={{ width: 8, height: 8, borderRadius: "50%", background: MODUS_FAIR.rand, flexShrink: 0 }} />
-              {L.waitScan(wachtend.length)}
-            </span>
-          </div>
-        ) : anderen.length > 0 ? (
-          <div style={{ textAlign: "center", marginTop: 10 }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 15, padding: "6px 13px", fontSize: 13.5, fontWeight: 800, color: "#1f6b3a", background: "rgba(31,138,76,0.1)" }}>{L.allInPill}</span>
-          </div>
-        ) : null}
       </>
     )
   }
@@ -4275,10 +4262,15 @@ export default function PartyTest() {
           <button style={{ ...S.btn, flex: 1, fontWeight: 800, padding: "12px 8px" }}
             onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(`${L.joinInviteShort(groupName)} ${inviteLink}`); setLinkGekopieerd(true); setTimeout(() => setLinkGekopieerd(false), 6000) } }}>
             {linkGekopieerd ? L.linkCopiedShort : L.copyLink}</button>
-          {people.some((p) => !p.claimedBy) && (
-            <button onClick={() => { const vrijP = people.find((p) => !p.claimedBy); if (vrijP) setZitNaam({ id: vrijP.id, nr: people.indexOf(vrijP) + 1 }) }}
-              style={{ ...S.btn, flex: 1, fontWeight: 800, padding: "12px 8px" }}>{L.addNonScanner}</button>
-          )}
+          <button onClick={async () => {
+              const vrijP = people.find((p) => !p.claimedBy && p.id !== meId)
+              if (vrijP) { setZitNaam({ id: vrijP.id, nr: people.indexOf(vrijP) + 1 }); return }
+              if (!groupId) return
+              const { data: pid } = await supabase.rpc("party_add_person", { p_group: groupId, p_name: "" })
+              await loadParty(groupId)
+              if (pid) setZitNaam({ id: pid as string, nr: people.length + 1 })
+            }}
+            style={{ ...S.btn, flex: 1, fontWeight: 800, padding: "12px 8px" }}>{L.addNonScanner}</button>
         </div>
         {/* De volledige link staat niet meer permanent in beeld: hij verschijnt alleen
             even als bevestiging na het kopiëren — mét de link in het klein, zodat je
@@ -4289,17 +4281,10 @@ export default function PartyTest() {
         {/* Teller + het levende namenblok. Het groene "plaatsen vrij"-regeltje is weg:
             groen betekent voortaan alleen "binnen", het wachten vertelt de pill. */}
         <div style={{ borderTop: "1px dashed rgba(13,124,140,0.25)", marginTop: 13, paddingTop: 11 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 8 }}>
-            <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.peopleHeader(people.length)}</span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 11, flexShrink: 0 }}>
-              <button onClick={removeLastPerson} disabled={busy || people.length <= 1} title={L.removeLastPerson}
-                style={{ ...S.step, width: 32, height: 32, fontSize: 18, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
-              <span style={{ fontSize: 19, fontWeight: 800, color: MODUS_FAIR.tekst, minWidth: 20, textAlign: "center" }}>{people.length}</span>
-              <button onClick={addPerson} disabled={busy} title={L.addPersonBtn}
-                style={{ ...S.step, width: 32, height: 32, fontSize: 18, background: MODUS_FAIR.knop, color: "#fff", border: "none" }}>+</button>
-            </span>
+          <div style={{ marginBottom: 8 }}>
+            <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a3f1e" }}>{L.whoIsInYet}</span>
           </div>
-          {alleen && (
+          {false && alleen && (
             <div style={{ display: "flex", gap: 9, alignItems: "flex-start", marginBottom: 8, background: "rgba(224,104,92,0.07)", border: "1px solid rgba(224,104,92,0.35)", borderRadius: 10, padding: "9px 11px" }}>
               <span style={{ flexShrink: 0, fontSize: 18 }}>⚠️</span>
               <span style={{ fontSize: 14.5, color: "#b0402f", lineHeight: 1.45 }}><b>{L.noFreeSeatYet}</b> {L.scanNoUseAlone}</span>
@@ -6340,7 +6325,7 @@ export default function PartyTest() {
                 </span>
               ) : <>{groupName.trim()}{groepDatum && <span style={{ fontWeight: 700, color: "#a89a6f", fontSize: 13.5 }}> ({datumKort(groepDatum)})</span>}{!onboarding && <span style={{ fontSize: 12.5 }}> ✏️</span>}</>}
             </div>
-            {settle && <div style={{ fontSize: 13, color: "#8a7d55", fontWeight: 700, marginTop: 1, whiteSpace: "nowrap" }}>👥 {L.persShort(people.length)}</div>}
+
           </div>
         )}
       </div>
@@ -7487,6 +7472,7 @@ export default function PartyTest() {
               </div>
             )}
           </>)}
+          {false && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
             <span style={{ fontSize: 16.5, fontWeight: 800, color: "#4a3f1e" }}>{L.peopleHeader(people.length)}{people.length === 1 && <span style={{ fontWeight: 700, fontSize: 14.5, color: "#5a8f99" }}> ({L.youWord})</span>}</span>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 11, flexShrink: 0 }}>
@@ -7495,6 +7481,7 @@ export default function PartyTest() {
               <button style={{ ...S.step, width: 32, height: 32, fontSize: 18, background: AAN, color: "#fff", border: "none" }} onClick={addPerson}>+</button>
             </span>
           </div>
+          )}
           <div style={{ fontSize: 13, color: "#8aa8ad", lineHeight: 1.45, marginBottom: 11 }}>📱 {L.peopleIntro()}</div>
 
           {/* Wie ben JIJ? Alleen relevant als de admin nog nergens zit — normaal is hij
