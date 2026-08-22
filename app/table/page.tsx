@@ -534,6 +534,7 @@ const STRINGS = {
       : `Er zijn nog ${n} vrije plaatsen. Vraag de beheerder om er bij te zetten als jullie met meer zijn.`,
     errCantReadPhoto: "Kon de foto niet lezen",
     backToRundo: "← naar Rundo startscherm",
+    tryPartyLine: "Rondjes noteren met vrienden? Probeer ook",
     tableTagline: "Scan de rekening en verdeel in groep",
     groupName: "Groepsnaam",
     groupNamePh: "bv. De Resto Buddies",
@@ -1152,6 +1153,7 @@ const STRINGS = {
       : `Il reste ${n} places libres. Demande à l’hôte d’en ajouter si vous êtes plus nombreux.`,
     errCantReadPhoto: "Impossible de lire la photo",
     backToRundo: "← retour à l'accueil Rundo",
+    tryPartyLine: "Noter des tourn\u00e9es entre amis\u00a0? Essaie aussi",
     tableTagline: "Scanne l'addition et partage en groupe",
     groupName: "Nom du groupe",
     groupNamePh: "p.ex. Les Resto Buddies",
@@ -2250,6 +2252,10 @@ export default function RundoTable() {
     }, { danger: true })
   }
 
+  // Rechtstreeks binnengekomen (bv. QR op een menukaart)? Dan is dit een Table-only
+  // pagina: geen verwijzing naar het keuzescherm, enkel onderaan een tip over Party.
+  const [viaKiezer, setViaKiezer] = useState(false)
+  useEffect(() => { try { setViaKiezer(localStorage.getItem("rundo_via_kiezer") === "1") } catch { /* niets */ } }, [])
   const goToChooser = () => {
     if (typeof window === "undefined") return
     try { sessionStorage.removeItem("rundo_table_session") } catch { /* ignore */ }
@@ -3648,7 +3654,13 @@ export default function RundoTable() {
             </div>
           )}
           <div style={{ textAlign: "center", marginTop: 16, marginBottom: 6 }}>
-            <button onClick={goToChooser} style={{ fontSize: 14.5, fontWeight: 700, color: "#7d93a3", background: "none", border: "none", padding: 4, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }}>{L.backToRundo}</button>
+            {viaKiezer ? (
+              <button onClick={goToChooser} style={{ fontSize: 14.5, fontWeight: 700, color: "#7d93a3", background: "none", border: "none", padding: 4, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }}>{L.backToRundo}</button>
+            ) : (
+              <span style={{ fontSize: 13.5, color: "#9aa0ab", fontWeight: 600 }}>{L.tryPartyLine}{" "}
+                <a href="/party" style={{ color: "#c98a00", fontWeight: 800, textDecoration: "underline" }}>Rundo Party →</a>
+              </span>
+            )}
           </div>
         </div>
       </div>
