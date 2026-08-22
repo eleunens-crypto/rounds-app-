@@ -515,6 +515,13 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
       let m = document.querySelector('meta[name="viewport"]')
       if (!m) { m = document.createElement("meta"); m.setAttribute("name", "viewport"); document.head.appendChild(m) }
       m.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no")
+      // De witte rand op mobiel kwam van de standaardmarge én de witte body-kleur
+      // achter de pagina; en de pagina was net iets hoger dan het scherm (100vh telt
+      // de adresbalk niet mee), waardoor je kon swipen zonder inhoud. Beide dicht.
+      document.documentElement.style.margin = "0"
+      document.body.style.margin = "0"
+      document.body.style.background = "#cfecf3"
+      document.body.style.overscrollBehaviorY = "none"
     } catch { /* niets */ }
   }, [])
   useEffect(() => {
@@ -3569,7 +3576,7 @@ export default function RundoTable() {
   // ═══════════════════════════════════════════════════════════════════════════
   if (!group && welkom && !viaLink) {
     return (
-      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 40px" }}>
+      <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 18px", boxSizing: "border-box" }}>
         <div style={{ maxWidth: 460, margin: "0 auto", padding: "18px 16px" }}>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
             <div style={{ transform: "scale(1.25)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
@@ -7011,7 +7018,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone: "nav
 }
 
 const S: Record<string, React.CSSProperties> = {
-  page: { padding: 14, fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", background: "linear-gradient(180deg,#e4f5f8 0%,#cfecf3 55%,#bfe4ee 100%)", minHeight: "100vh", color: "#1d2433", maxWidth: 720, margin: "0 auto", WebkitFontSmoothing: "antialiased", MozOsxFontSmoothing: "grayscale" },
+  page: { padding: 14, fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", background: "linear-gradient(180deg,#e4f5f8 0%,#cfecf3 55%,#bfe4ee 100%)", minHeight: "100dvh", color: "#1d2433", maxWidth: 720, margin: "0 auto", WebkitFontSmoothing: "antialiased", MozOsxFontSmoothing: "grayscale" },
   card: { background: "#ffffff", border: "1px solid rgba(16,24,40,0.04)", borderRadius: 22, padding: 18, boxShadow: "0 1px 2px rgba(16,24,40,0.03), 0 14px 30px -16px rgba(80,90,140,0.18)", marginBottom: 14 },
   btn: { border: "1px solid rgba(16,24,40,0.10)", background: "#ffffff", borderRadius: 12, padding: "14px 20px", cursor: "pointer", fontSize: 18, fontWeight: 600, color: "#1d2433", boxShadow: "0 1px 2px rgba(16,24,40,0.05)" },
   btnPrimary: { background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "white", border: "none", boxShadow: "0 6px 16px -6px rgba(20,153,176,0.55)" },
