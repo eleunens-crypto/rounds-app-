@@ -3580,27 +3580,27 @@ export default function RundoTable() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/table-image.png" alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
             <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #131e2b 0%, #131e2b 46%, rgba(19,30,43,0.94) 62%, rgba(19,30,43,0.8) 82%, rgba(19,30,43,0.62) 100%)" }} />
-            <div style={{ position: "relative", zIndex: 2, padding: "20px 18px" }}>
+            <div style={{ position: "relative", zIndex: 2, padding: "24px 20px" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/rundo-table-logo.png" alt="Rundo Table" style={{ display: "block", height: 56, width: "auto", maxWidth: "100%", objectFit: "contain" }} />
+              <img src="/rundo-table-logo.png" alt="Rundo Table" style={{ display: "block", height: 66, width: "auto", maxWidth: "100%", objectFit: "contain" }} />
               <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 11 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/icon-table.png" alt="" style={{ height: 28, width: "auto", objectFit: "contain", flexShrink: 0 }} />
-                <span style={{ color: "#3bbfc4", fontSize: 17, fontWeight: 700, lineHeight: 1.3 }}>{L.welkomSub}</span>
+                <img src="/icon-table.png" alt="" style={{ height: 32, width: "auto", objectFit: "contain", flexShrink: 0 }} />
+                <span style={{ color: "#3bbfc4", fontSize: 19, fontWeight: 700, lineHeight: 1.3 }}>{L.welkomSub}</span>
               </div>
               {/* De stappen lopen van boven naar beneden en wisselen om beurten van
                   kant; haarlijntjes houden ze uit elkaar zonder te schreeuwen. */}
               <div style={{ marginTop: 15, paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
                 {L.welkomFlow.map((st, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 0",
-                    flexDirection: i % 2 === 1 ? "row-reverse" : "row",
-                    textAlign: i % 2 === 1 ? "right" : "left",
+                  <div key={i} style={{ display: "flex", justifyContent: i % 2 === 1 ? "flex-end" : "flex-start", padding: "9px 0",
                     borderBottom: i < L.welkomFlow.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
-                    <span style={{ position: "relative", flexShrink: 0, width: 46, height: 46, borderRadius: "50%", background: "rgba(91,159,214,0.16)", border: "1px solid rgba(91,159,214,0.5)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 23 }}>
-                      {st.ic}
-                      <span style={{ position: "absolute", top: -6, right: -7, width: 20, height: 20, borderRadius: "50%", background: "#5b9fd6", color: "#131826", fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 13, flexDirection: i % 2 === 1 ? "row-reverse" : "row" }}>
+                      <span style={{ position: "relative", flexShrink: 0, width: 54, height: 54, borderRadius: "50%", background: "rgba(91,159,214,0.16)", border: "1px solid rgba(91,159,214,0.5)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 27 }}>
+                        {st.ic}
+                        <span style={{ position: "absolute", top: -6, right: -7, width: 22, height: 22, borderRadius: "50%", background: "#5b9fd6", color: "#131826", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+                      </span>
+                      <span style={{ fontSize: 17, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3 }}>{st.label}</span>
                     </span>
-                    <span style={{ fontSize: 15, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.35 }}>{st.label}</span>
                   </div>
                 ))}
               </div>
@@ -3611,7 +3611,6 @@ export default function RundoTable() {
             style={{ width: "100%", marginTop: 18, padding: "18px", borderRadius: 16, border: "none", fontSize: 20, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", color: "#fff", background: "linear-gradient(135deg,#3db6cc,#2f9bb5)", boxShadow: "0 14px 30px -14px rgba(47,155,181,0.9)" }}>
             {L.welkomStart}
           </button>
-          <p style={{ color: "#f0c14b", fontSize: 15, fontWeight: 600, textAlign: "center", margin: "16px 0 0" }}>{L.welkomTagline}</p>
         </div>
       </div>
     )
