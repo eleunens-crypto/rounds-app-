@@ -610,6 +610,9 @@ const T = {
     groupNamePlain: "Groepsnaam",
     voiceNotPerfect: "werkt nog niet altijd perfect",
     howNoteTitle: "Hoe drankjes noteren?",
+    startTitle: "Nieuwe groep",
+    startSub: "Namen invullen hoeft niet meteen — dat kan onderweg, of pas bij het afrekenen.",
+    namesLater: "Wie erbij is — mag later",
     howNoteSub: "✏️ Van snel naar op naam kan later nog.",
     noteQuickTitle: "⚡ Snel noteren",
     noteQuickExample: "3× Pintje · 2× Cola",
@@ -1035,7 +1038,7 @@ const T = {
     youNote1: "Jij tikt alle drankjes zelf aan",
     youNote2: "Handig barlijstje",
     youNote3: "Snel of eerlijk verdelen — jij kiest",
-    modeSnelTitle: "Snel opnemen",
+    modeSnelTitle: "Zelf noteren",
     modeNaamTitle: "Uitgebreid opnemen",
     modeNaamSub: "Alles van snel opnemen",
     tagline: "Rondjes opnemen en splitten zonder gedoe",
@@ -1060,6 +1063,7 @@ const T = {
     paidForRoundQ: (n: number) => `Betaald voor rondje ${n}?`,
     potTopUpPlus: "+ pot aanvullen",
     withHowManyQ: "Met hoeveel personen was dit rondje?",
+    persRoundShort: (n: number) => `👤 ${n} pers. in dit rondje`,
     orderedLabel: "Besteld",
     barlistBtn: "handig barlijstje",
     potClamped: (b: string) => `De pot kon maar ${b} dekken — de rest van het rondje telt als zelf betaald.`,
@@ -1344,6 +1348,9 @@ const T = {
     groupNamePlain: "Nom du groupe",
     voiceNotPerfect: "ne marche pas encore à tous les coups",
     howNoteTitle: "Comment noter les boissons ?",
+    startTitle: "Nouveau groupe",
+    startSub: "Pas besoin de noms tout de suite — plus tard ou au moment de r\u00e9gler, \u00e7a marche aussi.",
+    namesLater: "Qui est l\u00e0 — pour plus tard",
     howNoteSub: "✏️ Passer de rapide à au nom reste possible plus tard.",
     noteQuickTitle: "⚡ Noter vite",
     noteQuickExample: "3× Pintje · 2× Cola",
@@ -1770,7 +1777,7 @@ const T = {
     youNote1: "Tu coches toutes les boissons",
     youNote2: "Liste pratique pour le bar",
     youNote3: "Vite ou équitable — à toi de choisir",
-    modeSnelTitle: "Noter vite",
+    modeSnelTitle: "Je note moi-m\u00eame",
     modeNaamTitle: "Noter en détail",
     modeNaamSub: "Tout de « noter vite »",
     tagline: "Prendre les tournées et partager sans tracas",
@@ -1795,6 +1802,7 @@ const T = {
     paidForRoundQ: (n: number) => `Pay\u00e9 pour la tourn\u00e9e ${n} ?`,
     potTopUpPlus: "+ remplir le pot",
     withHowManyQ: "\u00c0 combien \u00e9tiez-vous pour cette tourn\u00e9e ?",
+    persRoundShort: (n: number) => `👤 ${n} pers. dans cette tourn\u00e9e`,
     orderedLabel: "Command\u00e9",
     barlistBtn: "liste bar pratique",
     potClamped: (b: string) => `La cagnotte n'a pu couvrir que ${b} — le reste de la tournée compte comme payé soi-même.`,
@@ -1991,6 +1999,9 @@ export default function PartyTest() {
   const [naamPlicht, setNaamPlicht] = useState(false)
   // Bewerkstand in het toewijzen-venster: naamknoppen worden even invulveldjes.
   const [assignNaamEdit, setAssignNaamEdit] = useState(false)
+  // Het personenaantal per rondje staat ingeklapt: één grijs regeltje met "wijzig",
+  // want meestal klopt het gewoon. Wie het opent, krijgt de vertrouwde teller.
+  const [persOpen, setPersOpen] = useState(false)
   // "Avond afgesloten" is iets anders dan "afgerekend": pas na het afsluiten gaat
   // de groepsnaam op slot. Tot dan mag alles nog aangepast worden, in elke modus.
   const [groepDicht, setGroepDicht] = useState(false)
@@ -3891,7 +3902,9 @@ export default function PartyTest() {
   const startWithMode = async (fallbackNaam?: string, modus?: boolean) => {
     // De keuze snel-of-op-naam staat al op het keuzescherm; het losse venster erna is
     // daardoor overbodig geworden.
-    if (modus === false) { setOpNaam(null); setNamenSetup(true) }
+    // Eén zelf-noteer-modus: namen zijn overal optioneel, dus het onderscheid
+    // snel/uitgebreid bestaat niet meer. modus === false = zelf noteren, true = QR.
+    if (modus === false) { setOpNaam(true); setNamenSetup(true) }
     else if (modus === true) { setOpNaam(false); setNamenSetup(false) }
     const keuze = modus ?? bpSettle
     if (keuze === null || keuze === undefined) return
@@ -5420,7 +5433,9 @@ export default function PartyTest() {
   // rekenlogica, maar de belevíng blijft zelf opnemen — dus kleuren we dan niet om.
   // Dat was precies de storende achtergrondwissel halverwege de avond.
   const themaTeal = !!groupId && settle && !fromQuick && opNaam !== true
-  const themaNaam = !!groupId && !themaTeal && opNaam === true
+  // Eén zelf-noteer-modus betekent ook één kleur: amber. Het aparte "uitgebreid"-
+  // thema (paars/slate) bestaat niet meer; MODUS_NAAM blijft alleen voor accenten.
+  const themaNaam = false
   const koel = themaTeal
   // De kleur van alles wat "aan" of "gekozen" is. Stond overal los in de code op goud,
   // waardoor vensters en tellers geel bleven in de QR-modus.
@@ -6306,7 +6321,7 @@ export default function PartyTest() {
             {/* De submodus-titel in plaats van het algemene "Ik bestel voor de groep":
                 zelfde plek, zelfde stijl, maar je ziet meteen óf je snel óf uitgebreid
                 aan het noteren bent. */}
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{opNaam ? L.modeNaamTitle : L.modeSnelTitle}</span>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{L.modeSnelTitle}</span>
           </div>
         )}
         {!uitgebreidLook && !!groupId && !kaal && groupName.trim() && !editName && (
@@ -7734,132 +7749,51 @@ export default function PartyTest() {
   // want zonder die drie kan de eerlijke verdeling niet kloppen.
   if (view === "order" && !settle && namenSetup) {
     const ik = people.find((p) => p.id === meId)
-    const eigenNaamLeeg = !ik || isGuestDefault(ik.name) || !ik.name.trim()
     const naamLeeg = isAutoNaam(groupName) || !groupName.trim()
-    const gekozen = opNaam !== null
-    const klaarOmDoor = gekozen && (opNaam === false || (!eigenNaamLeeg && !naamLeeg && people.length > 1))
     const ster = <span style={{ color: "#c0554a" }}>*</span>
-    const doorKnop = () => (
-      <button onClick={() => { if (!klaarOmDoor) { setNotice(eigenNaamLeeg ? L.yourNameRequired : naamLeeg ? L.groupNameRequired : L.needOneMore); return } setNamenSetup(false) }}
-        style={{ ...S.btnP, width: "100%", padding: "14px 0", fontSize: 16, fontWeight: 800, marginTop: 9, boxShadow: "none",
-          background: opNaam ? "linear-gradient(135deg,#8d5080,#7a3f6d)" : MODUS_SNEL.knop,
-          color: opNaam ? "#fff" : MODUS_SNEL.knopTekst }}>{L.toDrinksBtn}</button>
-    )
-    const kaart = (id: boolean, tag: string, titel: string, punten: string[], top: string, rand: string, vlak: string, teken: React.ReactNode, tekenKlein: React.ReactNode) => {
-      const aan = opNaam === id
-      // De gekozen kaart houdt zijn tekening en vinkjes zichtbaar, maar samengeperst tot
-      // een compact strookje — zo zie je nog steeds waarvoor je koos, terwijl er ruimte
-      // blijft voor de tip of het formulier eronder.
-      return (
-        <div onClick={() => setOpNaam(id)}
-          style={{ position: "relative", overflow: "hidden", cursor: "pointer", borderRadius: 14, padding: aan ? "14px 13px" : "14px 13px 15px",
-            background: aan ? vlak : "#fff", border: `${aan ? 2.5 : 1.5}px solid ${aan ? top : rand}`, borderTop: `4px solid ${top}`,
-            opacity: gekozen && !aan ? 0.62 : 1 }}>
-          <span style={{ position: "absolute", top: 0, right: 0, background: top, color: "#fff", borderRadius: "0 0 0 12px", padding: "5px 11px 6px 13px", fontSize: 11, fontWeight: 800 }}>{tag}</span>
-          {/* Het hoekvlag-label heeft ruimte nodig: vinkje en titel beginnen daarom lager. */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14, marginBottom: 12 }}>
-            <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
-              background: aan ? top : "transparent", border: aan ? "none" : `2.5px solid ${rand}`, color: "#fff" }}>{aan ? "✓" : ""}</span>
-            <span style={{ fontSize: 20, fontWeight: 800, color: top, lineHeight: 1.15, letterSpacing: -0.2 }}>{titel}</span>
-          </div>
-          {aan && (
-            <div style={{ display: "flex", gap: 11, alignItems: "center", background: "rgba(255,255,255,0.72)", borderRadius: 10, padding: "8px 11px", marginBottom: id === false ? 9 : 0 }}>
-              <span style={{ flexShrink: 0, display: "flex" }}>{tekenKlein}</span>
-              <div style={{ flex: 1, minWidth: 0, fontSize: 15.5, color: "#6b5f3a", lineHeight: 1.4 }}>
-                {punten.map((t, n2) => (
-                  <div key={n2} style={{ display: "flex", gap: 6, marginBottom: n2 < punten.length - 1 ? 3 : 0 }}>
-                    <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>{t}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {/* De startknop hoort bij de gekozen snel-kaart en staat er daarom binnenin:
-              zo grenst de kaartrand altijd direct aan de "of" en landt die cirkel netjes
-              op de twee kaartranden in plaats van half over de knop. */}
-          {aan && id === false && doorKnop()}
-          {!aan && (
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              {teken}
-              <div style={{ flex: 1, minWidth: 0, fontSize: 16.5, color: "#6b5f3a", lineHeight: 1.4 }}>
-                {punten.map((t, n2) => (
-                  <div key={n2} style={{ display: "flex", gap: 7, marginBottom: n2 < punten.length - 1 ? 4 : 0 }}>
-                    <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800 }}>✓</span>{t}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )
-    }
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header verbergNav kaal />
         {renderDialogs()}
         <div style={S.card}>
-          <div style={{ fontSize: 19, fontWeight: 800, color: "#3d3418", marginBottom: 13 }}>{L.howNoteTitle}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#3d3418", marginBottom: 4 }}>{L.startTitle}</div>
+          <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginBottom: 15 }}>{L.startSub}</div>
 
-          {kaart(false, L.fastestTag, L.modeSnelTitle, [L.qNoNames, L.qStep2, L.qStep3], "#e8a812", "rgba(232,168,18,0.5)", "rgba(240,165,0,0.09)",
-            <BonIcoon size={58} kleur="#e8a812" />, <BonIcoon size={44} kleur="#e8a812" />)}
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#8a5e0f", marginBottom: 6 }}>📝 {L.groupNamePlain.toUpperCase()} {ster}</div>
+          <input value={isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()}
+            onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
+            placeholder={L.namePh3}
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: "12px 13px", fontSize: 17, textAlign: "left", fontWeight: 700,
+              border: `2px solid ${naamLeeg ? "rgba(240,165,0,0.5)" : "#e8a812"}` }} />
 
-          {/* De "of" hangt half over de kaartranden in plaats van op een eigen regel:
-              dat spaart ruim dertig pixels en versterkt juist het keuzegevoel. */}
-          <div style={{ display: "flex", justifyContent: "center", margin: "-12px 0", position: "relative", zIndex: 2 }}>
-            <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: "50%", background: "#6b5f3a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff", border: "3px solid #fff", boxSizing: "content-box", boxShadow: "0 4px 12px -5px rgba(107,95,58,0.7)" }}>{L.orWord}</span>
+          {/* Namen mogen leeg blijven: wie enkel wil turven, tikt gewoon door naar de
+              drankjes. Wie ze nu al kent, vult ze hier in — scheelt later werk. */}
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#8a7d55", margin: "16px 0 6px" }}>👥 {L.namesLater}</div>
+          <div style={{ position: "relative", marginBottom: 8 }}>
+            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><KroonIcoon size={19} kleur="#c98a00" /></span>
+            <input value={ik && !isGuestDefault(ik.name) ? ik.name : ""} onChange={(e) => { if (meId) renamePerson(meId, e.target.value) }}
+              placeholder={L.yourNamePh}
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "11px 12px 11px 40px", fontSize: 17, textAlign: "left", fontWeight: 800,
+                background: "rgba(240,165,0,0.12)", border: "2px solid rgba(232,168,18,0.5)", color: "#8a5e0f" }} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+            {people.filter((pp) => pp.id !== meId).map((pp, idx) => {
+              const leeg = isGuestDefault(pp.name)
+              return (
+                <span key={pp.id} style={{ position: "relative", display: "flex", minWidth: 0 }}>
+                  <input value={leeg ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)}
+                    placeholder={`${L.guestN(idx + 2)} · ${L.guestNamePh}`}
+                    style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: leeg ? "9px 30px 9px 10px" : "9px 10px", fontSize: 16, textAlign: "left" }} />
+                  {leeg && <span style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", display: "inline-flex" }}><PotloodIcoon /></span>}
+                </span>
+              )
+            })}
+            <button onClick={addPerson} disabled={busy}
+              style={{ background: "#fff", border: "1.5px dashed rgba(120,95,20,0.4)", borderRadius: 10, padding: "9px 10px", fontSize: 15, fontWeight: 800, color: "#8a7d55", cursor: "pointer", fontFamily: "inherit" }}>{L.addPersonBtn}</button>
           </div>
 
-          {kaart(true, L.fairShareTag, L.modeNaamTitle, [L.modeNaamSub, L.nOnName, L.nStep3], "#7a3f6d", "rgba(122,63,109,0.42)", "rgba(122,63,109,0.09)",
-            <NamenIcoon size={104} kleur="#7a3f6d" />, <NamenIcoon size={76} kleur="#7a3f6d" />)}
-
-          {opNaam === true && (
-            <div style={{ border: "1.5px solid rgba(122,63,109,0.3)", background: "rgba(122,63,109,0.05)", borderRadius: 12, padding: 12, marginTop: 11 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 11 }}>
-                <div style={{ flexShrink: 0, fontSize: 15, fontWeight: 800, color: "#7a3f6d" }}>{L.groupNamePlain.toUpperCase()} {ster}</div>
-                <input value={isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()}
-                  placeholder={L.tapToChangePh}
-                  style={{ ...S.input, flex: 1, minWidth: 0, boxSizing: "border-box", background: "#fff", padding: "10px 11px", fontSize: 17, textAlign: "left" }} />
-              </div>
-
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#7a3f6d", marginBottom: 5 }}>{L.howManyLabel.toUpperCase()} {ster}</div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", borderRadius: 10, padding: "8px 11px", marginBottom: 11 }}>
-                <span style={{ fontSize: 16.5, fontWeight: 800, color: "#7a3f6d" }}>{L.howManyAreYou}</span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                  <button onClick={removeLastPerson} disabled={busy || people.length <= 1} style={{ ...S.step, width: 30, height: 30, opacity: people.length > 1 ? 1 : 0.35 }}>−</button>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e", minWidth: 20, textAlign: "center" }}>{people.length}</span>
-                  <button onClick={addPerson} disabled={busy} style={{ ...S.step, width: 30, height: 30, background: "#7a3f6d", color: "#fff", border: "none" }}>+</button>
-                </span>
-              </div>
-
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#7a3f6d", marginBottom: 6 }}>{L.yourNamePh.toUpperCase()} {ster}</div>
-              <div style={{ position: "relative", marginBottom: 9 }}>
-                <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><KroonIcoon size={19} kleur="#8a5e0f" gevuld /></span>
-                <input value={ik && !isGuestDefault(ik.name) ? ik.name : ""} onChange={(e) => { if (meId) renamePerson(meId, e.target.value) }}
-                  placeholder={L.yourNamePh}
-                  style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "11px 12px 11px 40px", fontSize: 17, textAlign: "left", fontWeight: 700,
-                    background: "rgba(240,165,0,0.12)", border: `2px solid ${eigenNaamLeeg ? "#c0554a" : "#e8a812"}`, color: "#8a5e0f" }} />
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                {people.filter((pp) => pp.id !== meId).map((pp, idx) => {
-                  const leeg = isGuestDefault(pp.name)
-                  return (
-                    <span key={pp.id} style={{ position: "relative", display: "flex", minWidth: 0 }}>
-                      <input value={leeg ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)}
-                        placeholder={`${L.guestN(idx + 2)} · ${L.guestNamePh}`}
-                        style={{ ...S.input, width: "100%", boxSizing: "border-box", background: "#fff", padding: leeg ? "9px 30px 9px 10px" : "9px 10px", fontSize: 16, textAlign: "left" }} />
-                      {leeg && <span style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", display: "inline-flex" }}><PotloodIcoon /></span>}
-                    </span>
-                  )
-                })}
-              </div>
-              {people.length < 2 && <div style={{ fontSize: 15.5, color: "#b0402f", fontWeight: 700, marginTop: 8 }}>{L.needOneMore}</div>}
-            </div>
-          )}
-          {opNaam === true && doorKnop()}
-
-          {!gekozen && (
-            <div style={{ background: "#f0ebdc", color: "#a89a6f", borderRadius: 12, padding: "14px 0", textAlign: "center", fontSize: 16, fontWeight: 800, marginTop: 12 }}>{L.pickOneFirst}</div>
-          )}
+          <button onClick={() => { if (naamLeeg) { setNotice(L.groupNameRequired); return } setNamenSetup(false) }}
+            style={{ ...S.btnP, width: "100%", padding: "15px 0", fontSize: 17, fontWeight: 800, marginTop: 16, boxShadow: "none", opacity: naamLeeg ? 0.5 : 1 }}>{L.toDrinksBtn}</button>
         </div>
       </div></div>
     )
@@ -8537,7 +8471,14 @@ export default function PartyTest() {
                   een verandering meteen opvalt in plaats van pas bij het afrekenen. */}
               {/* Bij uitgebreid opnemen liggen de gasten vast — dan is deze vraag zinloos
                   en staat het aantal automatisch juist. Enkel tonen bij snel opnemen. */}
-              {opNaam !== true && (
+              {!persOpen && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 14.5, color: "#8a7d55", fontWeight: 700 }}>{L.persRoundShort(r?.headcount || 1)}</span>
+                  <button onClick={() => setPersOpen(true)}
+                    style={{ background: "none", border: "none", padding: 4, fontSize: 14, fontWeight: 800, color: "#c98a00", textDecoration: "underline", cursor: "pointer", fontFamily: "inherit" }}>{L.changeWord}</button>
+                </div>
+              )}
+              {persOpen && (
               <div style={{ background: VLAK1, border: `1px solid ${themaNaam ? "rgba(59,72,106,0.16)" : "rgba(120,95,20,0.14)"}`, borderRadius: 12, padding: 11, marginBottom: 10 }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: "#4a3f1e", marginBottom: 9, paddingBottom: 8, borderBottom: `1px solid ${themaNaam ? "rgba(59,72,106,0.14)" : "rgba(120,95,20,0.12)"}` }}>👥 {L.withHowManyQ}</div>
               <div style={{ ...S.row, justifyContent: "space-between", background: "#fff", borderRadius: 10, padding: "8px 12px" }}>
