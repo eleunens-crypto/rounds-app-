@@ -534,6 +534,15 @@ const STRINGS = {
       : `Er zijn nog ${n} vrije plaatsen. Vraag de beheerder om er bij te zetten als jullie met meer zijn.`,
     errCantReadPhoto: "Kon de foto niet lezen",
     backToRundo: "← naar Rundo startscherm",
+    welkomTagline: "Rondjes en rekeningen zonder gedoe!",
+    welkomSub: "Scan de rekening en verdeel in groep",
+    welkomStart: "Starten →",
+    welkomFlow: [
+      { ic: "📷", label: "scan\nrekening" },
+      { ic: "📱", label: "deel QR" },
+      { ic: "👆", label: "tik aan\nwat je nam" },
+      { ic: "💶", label: "eerlijk\nverdeeld!" },
+    ],
     tryPartyLine: "Rondjes noteren met vrienden? Probeer ook",
     tableTagline: "Scan de rekening en verdeel in groep",
     groupName: "Groepsnaam",
@@ -1153,6 +1162,15 @@ const STRINGS = {
       : `Il reste ${n} places libres. Demande à l’hôte d’en ajouter si vous êtes plus nombreux.`,
     errCantReadPhoto: "Impossible de lire la photo",
     backToRundo: "← retour à l'accueil Rundo",
+    welkomTagline: "Tourn\u00e9es et additions sans prise de t\u00eate\u00a0!",
+    welkomSub: "Scanne l'addition et partage en groupe",
+    welkomStart: "Commencer →",
+    welkomFlow: [
+      { ic: "📷", label: "scanne\nl'addition" },
+      { ic: "📱", label: "partage\nle QR" },
+      { ic: "👆", label: "coche ce\nque tu as pris" },
+      { ic: "💶", label: "partage\n\u00e9quitable\u00a0!" },
+    ],
     tryPartyLine: "Noter des tourn\u00e9es entre amis\u00a0? Essaie aussi",
     tableTagline: "Scanne l'addition et partage en groupe",
     groupName: "Nom du groupe",
@@ -2255,6 +2273,9 @@ export default function RundoTable() {
   // Rechtstreeks binnengekomen (bv. QR op een menukaart)? Dan is dit een Table-only
   // pagina: geen verwijzing naar het keuzescherm, enkel onderaan een tip over Party.
   const [viaKiezer, setViaKiezer] = useState(false)
+  // Het welkomscherm met de Table-kaart: alleen bij een verse start. Wie via een
+  // scan-link of een lopende sessie binnenkomt, duikt meteen de app in.
+  const [welkom, setWelkom] = useState(true)
   useEffect(() => { try { setViaKiezer(localStorage.getItem("rundo_via_kiezer") === "1") } catch { /* niets */ } }, [])
   const goToChooser = () => {
     if (typeof window === "undefined") return
@@ -3546,6 +3567,56 @@ export default function RundoTable() {
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER: start
   // ═══════════════════════════════════════════════════════════════════════════
+  if (!group && welkom && !viaLink) {
+    return (
+      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 40px" }}>
+        <div style={{ maxWidth: 460, margin: "0 auto", padding: "18px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+            <div style={{ transform: "scale(1.25)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
+          </div>
+          <div style={{ textAlign: "center", margin: "10px 0 6px" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/rundo-logo.png" alt="Rundo" style={{ display: "block", height: 74, width: "auto", maxWidth: "90%", objectFit: "contain", margin: "0 auto" }} />
+          </div>
+          <p style={{ color: "#f0c14b", fontSize: 16.5, fontWeight: 600, textAlign: "center", margin: "0 0 22px" }}>{L.welkomTagline}</p>
+
+          {/* Dezelfde kaart als op het keuzescherm, maar ruimer: hij heeft het
+              scherm nu voor zich alleen. */}
+          <div style={{ position: "relative", overflow: "hidden", borderRadius: 22, border: "1.5px solid rgba(91,159,214,0.55)", boxShadow: "0 18px 40px -22px rgba(0,0,0,0.9)" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/table-image.png" alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+            <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #131e2b 0%, #131e2b 46%, rgba(19,30,43,0.94) 62%, rgba(19,30,43,0.8) 82%, rgba(19,30,43,0.62) 100%)" }} />
+            <div style={{ position: "relative", zIndex: 2, padding: "20px 18px" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/rundo-table-logo.png" alt="Rundo Table" style={{ display: "block", height: 56, width: "auto", maxWidth: "100%", objectFit: "contain" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 11 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/icon-table.png" alt="" style={{ height: 28, width: "auto", objectFit: "contain", flexShrink: 0 }} />
+                <span style={{ color: "#3bbfc4", fontSize: 17, fontWeight: 700, lineHeight: 1.3 }}>{L.welkomSub}</span>
+              </div>
+              <div style={{ marginTop: 17, paddingTop: 15, borderTop: "1px solid rgba(255,255,255,0.15)", display: "flex", gap: 6 }}>
+                {L.welkomFlow.map((st, i) => (
+                  <div key={i} style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
+                    <div style={{ position: "relative", display: "inline-flex", justifyContent: "center", alignItems: "center" }}>
+                      <span style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(91,159,214,0.14)", border: "1px solid rgba(91,159,214,0.45)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 21, flexShrink: 0 }}>{st.ic}</span>
+                      <span style={{ position: "absolute", top: -6, right: -8, width: 18, height: 18, borderRadius: "50%", background: "#5b9fd6", color: "#131826", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+                    </div>
+                    <div style={{ marginTop: 7, fontSize: 13, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3, whiteSpace: "pre-line" }}>{st.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <button onClick={() => setWelkom(false)}
+            style={{ width: "100%", marginTop: 18, padding: "18px", borderRadius: 16, border: "none", fontSize: 20, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", color: "#fff", background: "linear-gradient(135deg,#3db6cc,#2f9bb5)", boxShadow: "0 14px 30px -14px rgba(47,155,181,0.9)" }}>
+            {L.welkomStart}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   if (!group) {
     return (
       <div style={S.page}>
