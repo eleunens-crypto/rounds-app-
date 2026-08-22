@@ -521,6 +521,15 @@ const T = {
     optionalWord: "optioneel",
     backToRundo: "← naar het Rundo-startscherm",
     tryTableLine: "Rekening splitsen in een restaurant? Probeer ook",
+    welkomTagline: "Rondjes en rekeningen zonder gedoe!",
+    welkomSub: "Rondjes opnemen en splitten zonder gedoe",
+    welkomStart: "Starten →",
+    orWordShort: "of",
+    welkomFlow: [
+      { ic: ["✍️", "📱"], label: "neem zelf op\nof deel QR" },
+      { ic: ["👆"], label: "tik drankjes\naan" },
+      { ic: ["📋"], label: "handig barlijstje\nen afrekenen" },
+    ],
     waitScan: (n: number) => n === 1 ? "1 gast wacht op QR-scan" : `${n} gasten wachten op QR-scan`,
     allInPill: "✓ iedereen is erbij",
     potAddBtn: "+ inleggen",
@@ -1267,6 +1276,15 @@ const T = {
     optionalWord: "optionnel",
     backToRundo: "\u2190 retour \u00e0 l'accueil Rundo",
     tryTableLine: "Partager l'addition au restaurant\u00a0? Essaie aussi",
+    welkomTagline: "Tourn\u00e9es et additions, sans prise de t\u00eate\u00a0!",
+    welkomSub: "Prendre les tourn\u00e9es et partager, sans prise de t\u00eate",
+    welkomStart: "Commencer →",
+    orWordShort: "ou",
+    welkomFlow: [
+      { ic: ["✍️", "📱"], label: "note toi-m\u00eame\nou partage le QR" },
+      { ic: ["👆"], label: "coche les\nboissons" },
+      { ic: ["📋"], label: "liste bar pratique\net r\u00e8glement" },
+    ],
     waitScan: (n: number) => n === 1 ? "1 invit\u00e9 attend le scan QR" : `${n} invit\u00e9s attendent le scan QR`,
     allInPill: "✓ tout le monde est l\u00e0",
     potAddBtn: "+ verser",
@@ -2295,6 +2313,9 @@ export default function PartyTest() {
   const [beginPrompt, setBeginPrompt] = useState(false)
   const [potChosen, setPotChosen] = useState(false)
   const [bpSettle, setBpSettle] = useState<boolean | null>(null)
+  // Welkomscherm met de Party-kaart: alleen bij een verse start, vóór de keuze
+  // tussen zelf noteren en QR.
+  const [welkom, setWelkom] = useState(true)
   // De uitleg staat los van de keuze: lezen zonder te kiezen, kiezen zonder te lezen.
   // Eén tegelijk open, anders wordt het keuzescherm meteen twee schermen lang.
   const [modeInfo, setModeInfo] = useState<"quick" | "naam" | "fair" | null>(null)
@@ -6913,6 +6934,61 @@ export default function PartyTest() {
         </>
         )}
       </div></div>
+    )
+  }
+
+  if (view === "start" && welkom && !groupId) {
+    return (
+      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 40px" }}>
+        <div style={{ maxWidth: 460, margin: "0 auto", padding: "18px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+            <div style={{ transform: "scale(1.25)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
+          </div>
+          <div style={{ textAlign: "center", margin: "10px 0 6px" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/rundo-logo.png" alt="Rundo" style={{ display: "block", height: 74, width: "auto", maxWidth: "90%", objectFit: "contain", margin: "0 auto" }} />
+          </div>
+          <p style={{ color: "#f0c14b", fontSize: 16.5, fontWeight: 600, textAlign: "center", margin: "0 0 22px" }}>{L.welkomTagline}</p>
+
+          {/* Dezelfde kaart als op het keuzescherm, ruimer opgezet: hij heeft het
+              scherm nu voor zich alleen. Daarna pas de keuze zelf noteren / QR. */}
+          <div style={{ position: "relative", overflow: "hidden", borderRadius: 22, border: "1.5px solid rgba(240,193,75,0.55)", boxShadow: "0 18px 40px -22px rgba(0,0,0,0.9)" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/party-image.png" alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+            <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #1c1608 0%, #1c1608 46%, rgba(28,22,8,0.94) 62%, rgba(28,22,8,0.8) 82%, rgba(28,22,8,0.6) 100%)" }} />
+            <div style={{ position: "relative", zIndex: 2, padding: "20px 18px" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/rundo-party-logo.png" alt="Rundo Party" style={{ display: "block", height: 56, width: "auto", maxWidth: "100%", objectFit: "contain" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 11 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/icon-party.png" alt="" style={{ height: 28, width: "auto", objectFit: "contain", flexShrink: 0 }} />
+                <span style={{ color: "#f0c14b", fontSize: 17, fontWeight: 700, lineHeight: 1.3 }}>{L.welkomSub}</span>
+              </div>
+              <div style={{ marginTop: 17, paddingTop: 15, borderTop: "1px solid rgba(255,255,255,0.15)", display: "flex", gap: 6 }}>
+                {L.welkomFlow.map((st, i) => (
+                  <div key={i} style={{ flex: st.ic.length > 1 ? 1.6 : 1, minWidth: 0, textAlign: "center" }}>
+                    <div style={{ position: "relative", display: "inline-flex", justifyContent: "center", alignItems: "center", gap: 6 }}>
+                      {st.ic.map((ic, k) => (
+                        <span key={k} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          {k > 0 && <span style={{ fontSize: 12, fontWeight: 800, color: "#b9a67c" }}>{L.orWordShort}</span>}
+                          <span style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(240,193,75,0.14)", border: "1px solid rgba(240,193,75,0.45)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 21, flexShrink: 0 }}>{ic}</span>
+                        </span>
+                      ))}
+                      <span style={{ position: "absolute", top: -6, right: -8, width: 18, height: 18, borderRadius: "50%", background: "#f0c14b", color: "#131826", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+                    </div>
+                    <div style={{ marginTop: 7, fontSize: 13, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3, whiteSpace: "pre-line" }}>{st.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <button onClick={() => setWelkom(false)}
+            style={{ width: "100%", marginTop: 18, padding: "18px", borderRadius: 16, border: "none", fontSize: 20, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", color: "#4a3f1e", background: "linear-gradient(135deg,#f7cb5c,#eab117)", boxShadow: "0 14px 30px -14px rgba(240,193,75,0.9)" }}>
+            {L.welkomStart}
+          </button>
+        </div>
+      </div>
     )
   }
 
