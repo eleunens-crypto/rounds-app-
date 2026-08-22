@@ -3118,18 +3118,25 @@ export default function PartyTest() {
   const rUnassign = (idx: number, did: string, pid: string) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, orders: { ...r.orders, [did]: { ...(r.orders[did] ?? {}), [pid]: Math.max(0, (r.orders[did]?.[pid] ?? 0) - 1) } }, anon: { ...r.anon, [did]: (r.anon[did] ?? 0) + 1 } } : r)); persistItem(rounds[idx], did, pid, -1); persistItem(rounds[idx], did, null, 1); setDirtyRound(idx) }
   const rAssignFromAnon = (idx: number, did: string, pid: string) => { if ((rounds[idx]?.anon[did] ?? 0) > 0) { rBumpAnon(idx, did, -1); rBump(idx, did, pid, 1) } }
   const potAvailFor = (idx: number) => potContribTotal - (potSpent - (rounds[idx]?.potPart || 0))
-  const rRedistribute = (r: Round, idx: number, usePot: boolean, persons: string[], amount: number): Round => {
+  // potVast = "de pot betaalt dit vaste bedrag, raak het niet aan": alleen de rest
+  // wordt dan over de personen verdeeld. Zonder potVast blijft het oude gedrag
+  // (gelijk verdelen over pot + personen) gelden, bijvoorbeeld bij het aanzetten
+  // van de pot-chip.
+  const rRedistribute = (r: Round, idx: number, usePot: boolean, persons: string[], amount: number, potVast?: number): Round => {
     const n = persons.length + (usePot ? 1 : 0)
     if (n === 0 || amount <= 0) return { ...r, amount, payers: {}, potPart: 0 }
     const avail = Math.max(0, potAvailFor(idx))
     let potPart = 0, rest = amount
-    if (usePot) { potPart = Math.min(amount / n, avail); rest = amount - potPart }
+    if (usePot) {
+      potPart = potVast !== undefined ? Math.min(potVast, avail, amount) : Math.min(amount / n, avail)
+      rest = amount - potPart
+    }
     const per = persons.length ? rest / persons.length : 0
     const payers: Record<string, number> = {}
     persons.forEach((pid) => (payers[pid] = per))
     return { ...r, amount, payers, potPart }
   }
-  const rSetAmount = (idx: number, v: number) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, v) })); setDirtyRound(idx) }
+  const rSetAmount = (idx: number, v: number) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, v, usePot ? (r.potPart || 0) : undefined) })); setDirtyRound(idx) }
   const rTogglePot = (idx: number) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const persons = Object.keys(r.payers || {}); const usePot = !((r.potPart || 0) > 0); if (usePot && potAvailFor(idx) <= 0.005) { setNotice(L.potEmpty(potIsCard)); return r } return rRedistribute(r, idx, usePot, persons, r.amount) })); setDirtyRound(idx) }
   const rSetPayerAmt = (idx: number, pid: string, v: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, payers: { ...(r.payers || {}), [pid]: Math.max(0, v) } } : r)); setDirtyRound(idx) }
   const rSetPotAmt = (idx: number, v: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, potPart: Math.max(0, Math.min(v, Math.max(0, potAvailFor(idx)))) } : r)); setDirtyRound(idx) }
@@ -3178,7 +3185,7 @@ export default function PartyTest() {
     setLastRoundHandled(true); setPayVia("self"); setOverviewBackTo("hub"); setView("roundsOverview")
   }
   const rPaidSum = (r: Round) => (r.potPart || 0) + Object.values(r.payers || {}).reduce((a, b) => a + (b || 0), 0)
-  const rTogglePayer = (idx: number, pid: string) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const cur = Object.keys(r.payers || {}); const persons = cur.includes(pid) ? cur.filter((x) => x !== pid) : [...cur, pid]; const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, r.amount) })); setDirtyRound(idx) }
+  const rTogglePayer = (idx: number, pid: string) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const cur = Object.keys(r.payers || {}); const persons = cur.includes(pid) ? cur.filter((x) => x !== pid) : [...cur, pid]; const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, r.amount, usePot ? (r.potPart || 0) : undefined) })); setDirtyRound(idx) }
 
   // ── afgeleide bekers (uit rounds) ───────────────────────────────────────────
   const roundPicked = (r: Round, pid: string) => drinks.reduce((a, d) => a + (d.cup ? (r.orders[d.id]?.[pid] ?? 0) : 0), 0)
