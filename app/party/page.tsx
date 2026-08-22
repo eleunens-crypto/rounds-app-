@@ -938,12 +938,13 @@ const T = {
 
     confirmTitle: "Even bevestigen",
     walkTable: "👥 Rondje opnemen",
-    roundTogether: "🍻 Ik ga drankjes halen",
+    roundTogether: "🍻 Ik ga halen en betalen",
     roundWalkSelf: "✍️ Rondje zelf opnemen",
-    youFetchTitle: "Jij gaat drankjes halen",
+    youFetchTitle: "Jij haalt en betaalt dit rondje",
     fetchStep1: "Iedereen krijgt nu de melding",
     fetchStep2: "Ieder tikt op zijn eigen gsm aan wat hij wil",
     fetchStep3: "Jij krijgt het barlijstje zodra ze klaar zijn",
+    fetchStep4: "Jij betaalt aan de bar — je schiet dus voor",
     yesIFetch: "Ja, ik ga halen →",
     ratherNot: "Toch niet",
     someoneFetches: (naam: string) => `${naam} gaat drankjes halen`,
@@ -956,7 +957,7 @@ const T = {
     roundBusyX: (naam: string) => `Rondje bezig — ${naam} gaat halen`,
     someChose: (n: number, t: number) => `${n} van ${t} pers. zijn klaar`,
     chosenCount: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} gekozen`,
-    imDoneBtn: "Ik ben klaar ✓",
+    imDoneBtn: "✓ Bevestig mijn keuze",
     youAreDone: (n: number) => `✓ Jij bent klaar — ${n} ${n === 1 ? "drankje" : "drankjes"}`,
     allChose: "Iedereen heeft gekozen",
     pickBelow: "👇 Selecteer je drankjes",
@@ -1679,12 +1680,13 @@ const T = {
 
     confirmTitle: "Confirmation",
     walkTable: "👥 Faire le tour",
-    roundTogether: "🍻 Je vais chercher les boissons",
+    roundTogether: "🍻 Je vais chercher et payer",
     roundWalkSelf: "✍️ Prendre la tournée toi-même",
-    youFetchTitle: "Tu vas chercher les boissons",
+    youFetchTitle: "Tu ch\u00e8rches et paies cette tourn\u00e9e",
     fetchStep1: "Tout le monde reçoit l’info maintenant",
     fetchStep2: "Chacun coche sur son propre gsm ce qu’il veut",
     fetchStep3: "Tu reçois la liste pour le bar dès qu’ils ont fini",
+    fetchStep4: "Tu paies au bar — tu avances donc l'argent",
     yesIFetch: "Oui, j’y vais →",
     ratherNot: "Finalement non",
     someoneFetches: (naam: string) => `${naam} va chercher les boissons`,
@@ -1697,7 +1699,7 @@ const T = {
     roundBusyX: (naam: string) => `Tournée en cours — ${naam} y va`,
     someChose: (n: number, t: number) => `${n} sur ${t} pers. sont prêts`,
     chosenCount: (n: number) => `${n} boisson${n === 1 ? "" : "s"} choisie${n === 1 ? "" : "s"}`,
-    imDoneBtn: "J’ai fini ✓",
+    imDoneBtn: "✓ Confirmer mon choix",
     youAreDone: (n: number) => `✓ Tu as fini — ${n} boisson${n === 1 ? "" : "s"}`,
     allChose: "Tout le monde a choisi",
     pickBelow: "👇 Choisis tes boissons",
@@ -2943,7 +2945,7 @@ export default function PartyTest() {
                 <span key={pp.id} style={{ fontSize: 13.5, color: isOk ? "#1f6b3a" : "#a8c4c9", fontWeight: isOk ? 700 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {isOk ? "✓ " : ""}{pp.name}{" "}
                   <span style={{ color: isOk ? "#5a8f99" : "#a8c4c9", fontWeight: 400, fontStyle: slaOver || !isOk ? "italic" : "normal" }}>
-                    {slaOver ? L.nothingWord : zijne.length > 0 ? zijne.map((d) => `${aQty(d.id, pp.id)}× ${d.name}`).join(", ") : L.busyWord}
+                    {slaOver ? L.nothingWord : isOk && zijne.length > 0 ? zijne.map((d) => `${aQty(d.id, pp.id)}× ${d.name}`).join(", ") : L.busyWord}
                   </span>
                 </span>
               )
@@ -6032,8 +6034,8 @@ export default function PartyTest() {
             <div style={{ fontSize: 32, marginBottom: 5 }}>🍻</div>
             <div style={{ fontSize: 18.5, fontWeight: 800, color: "#4a3f1e", marginBottom: 12 }}>{L.youFetchTitle}</div>
             <div style={{ textAlign: "left", marginBottom: 14 }}>
-              {[L.fetchStep1, L.fetchStep2, L.fetchStep3].map((t, i) => (
-                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: i < 2 ? 9 : 0 }}>
+              {[L.fetchStep1, L.fetchStep2, L.fetchStep3, L.fetchStep4].map((t, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: i < 3 ? 9 : 0 }}>
                   <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 17 }}>✓</span>
                   <span style={{ fontSize: 16, color: "#4a3f1e", lineHeight: 1.45 }}>{t}</span>
                 </div>
@@ -6842,17 +6844,6 @@ export default function PartyTest() {
           </div>
         )}
 
-        <div style={{ display: zoekt ? "none" : "block", position: "relative", marginBottom: 8 }}>
-          <div ref={catScroll} onScroll={updateCatArrows} className="rundo-catscroll"
-            style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", padding: "0 8px 4px 0", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-            {catsPresent.map((c) => (
-              <span key={c} style={{ ...S.tab(activeCat === c), flexShrink: 0 }} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}</span>
-            ))}
-          </div>
-          {catMore.left && <CatPijl kant="links" />}
-          {catMore.right && <CatPijl kant="rechts" />}
-        </div>
-
         <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: 10 }}>
           <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
             <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🔍</span>
@@ -6863,6 +6854,17 @@ export default function PartyTest() {
                 style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8a7d55", padding: 4 }}>✕</button>
             )}
           </div>
+        </div>
+
+        <div style={{ display: zoekt ? "none" : "block", position: "relative", marginBottom: 8 }}>
+          <div ref={catScroll} onScroll={updateCatArrows} className="rundo-catscroll"
+            style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", padding: "0 8px 4px 0", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+            {catsPresent.map((c) => (
+              <span key={c} style={{ ...S.tab(activeCat === c), flexShrink: 0 }} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}</span>
+            ))}
+          </div>
+          {catMore.left && <CatPijl kant="links" />}
+          {catMore.right && <CatPijl kant="rechts" />}
         </div>
 
         {(lijst.length === 0 && (zoekt || activeCat !== "Eigen")) ? (<>
