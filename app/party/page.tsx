@@ -642,7 +642,7 @@ const T = {
     addThis: "Toevoegen",
     seatNameTitle: "Iemand die niet scant",
     seatNameSub: "Zet zijn naam erbij — scant hij later toch, dan tikt hij die gewoon aan.",
-    yourNamePh: "Jouw naam",
+    yourNamePh: "Jouw naam · optioneel",
     groupNameEdit: "Naam van deze groep",
     groupNamePh: "Typ je groepsnaam",
     groupNameShortPh: "Groepsnaam",
@@ -1427,7 +1427,7 @@ const T = {
     addThis: "Ajouter",
     seatNameTitle: "Quelqu’un qui ne scanne pas",
     seatNameSub: "Mets son nom — s’il scanne plus tard, il le touchera simplement.",
-    yourNamePh: "Ton nom",
+    yourNamePh: "Ton nom · optionnel",
     groupNameEdit: "Nom de ce groupe",
     groupNamePh: "Tape le nom de ton groupe",
     groupNameShortPh: "Nom du groupe",
@@ -6353,8 +6353,7 @@ export default function PartyTest() {
       {persVenster && (
         <div style={{ ...S.overlay, zIndex: 72 }}>
           <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#4a3f1e" }}>👥 {L.forWhoTitle}</div>
-            <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.4, marginTop: 5 }}>{L.forWhoSub}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#4a3f1e", marginBottom: 4 }}>👥 {L.forWhoTitle}</div>
             <div style={{ background: "#f7f4ec", borderRadius: 12, padding: "11px 12px", marginTop: 13 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                 <span style={{ fontSize: 15, fontWeight: 700, color: "#8a7d55" }}>{L.persCountLabel}</span>
