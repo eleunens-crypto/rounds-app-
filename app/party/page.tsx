@@ -4241,8 +4241,22 @@ export default function PartyTest() {
   // onbevestigd rondje eerst waarschuwen, zodat je geen werk verliest.
   // Weggaan uit een naamloze groep: eerst vragen om een naam, want zonder naam
   // is de groep straks niet terug te vinden in de lijst.
+  // Tabblad sluiten of wegnavigeren met de browserknop: de app kan dan geen eigen
+  // venster meer tonen, dus laten we de browser zijn standaardwaarschuwing geven.
+  const heeftInhoud = rounds.length > 0
+    || drinks.some((d) => (cartAnon[d.id] ?? 0) > 0 || Object.values(cart[d.id] || {}).some((q) => (q || 0) > 0))
+    || people.length > 1
+    || potContribTotal > 0.005
+  useEffect(() => {
+    const naamloos = !settle && !!groupId && heeftInhoud && isAutoNaam(groupName)
+    if (!naamloos) return
+    const waarschuw = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = "" }
+    window.addEventListener("beforeunload", waarschuw)
+    return () => window.removeEventListener("beforeunload", waarschuw)
+  }, [settle, groupId, heeftInhoud, groupName]) // eslint-disable-line
+
   const verlaatMetNaamcheck = (doe: () => void) => {
-    if (!settle && groupId && rounds.length > 0 && isAutoNaam(groupName)) { setVerlaatNaam(() => doe); return }
+    if (!settle && groupId && heeftInhoud && isAutoNaam(groupName)) { setVerlaatNaam(() => doe); return }
     doe()
   }
   const goSiteHome = () => {
@@ -6225,9 +6239,16 @@ export default function PartyTest() {
 
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 9 }}>
                 <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700 }}>{L.aanvulPaidBy}</span>
-                {potContribTotal > 0.005 && (
+                {potContribTotal > 0.005 ? (
                   <button onClick={() => setAanvulBetaler("pot")}
-                    style={{ border: aanvulBetaler === "pot" ? "none" : "1px solid rgba(47,111,181,0.4)", background: aanvulBetaler === "pot" ? "#2f6fb5" : "#fff", color: aanvulBetaler === "pot" ? "#fff" : "#2f5693", borderRadius: 10, padding: "7px 12px", fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>🪙 {L.potWord}</button>
+                    style={{ border: aanvulBetaler === "pot" ? "none" : "1px solid rgba(47,111,181,0.4)", background: aanvulBetaler === "pot" ? "#2f6fb5" : "#fff", color: aanvulBetaler === "pot" ? "#fff" : "#2f5693", borderRadius: 10, padding: "7px 12px", fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                    <ZakjeIcoon size={14} /> {L.potWord} <span style={{ fontWeight: 700, opacity: 0.8 }}>{euro(potZicht)}</span>
+                  </button>
+                ) : (
+                  <button onClick={() => setShowPot(true)}
+                    style={{ border: "1px dashed rgba(47,111,181,0.5)", background: "#f2f6fc", color: "#2f5693", borderRadius: 10, padding: "7px 12px", fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                    <ZakjeIcoon size={14} /> + {L.potWord}
+                  </button>
                 )}
                 {people.map((pp) => (
                   <button key={pp.id} onClick={() => setAanvulBetaler(pp.id)}
@@ -7581,7 +7602,7 @@ export default function PartyTest() {
             De chooser zet bij binnenkomst zelf de zoom recht. */}
         <div style={{ textAlign: "center", marginTop: 16 }}>
           {viaKiezer ? (
-            <button onClick={() => { window.location.href = "/" }} style={{ fontSize: 16, fontWeight: 700, color: "#a08d5f", background: "none", border: "none", padding: 4, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }}>{L.backToRundo}</button>
+            <button onClick={() => verlaatMetNaamcheck(() => { window.location.href = "/" })} style={{ fontSize: 16, fontWeight: 700, color: "#a08d5f", background: "none", border: "none", padding: 4, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }}>{L.backToRundo}</button>
           ) : (
             <span style={{ fontSize: 15, color: "#a89a6f", fontWeight: 600 }}>{L.tryTableLine}{" "}
               <a href="/table" style={{ color: "#2f9bb5", fontWeight: 800, textDecoration: "underline" }}>Rundo Table →</a>
@@ -8276,7 +8297,7 @@ export default function PartyTest() {
                   </span>
                 ))}
               </div>
-              {opNaam && unassignedTotal > 0 && (
+              {!settle && unassignedTotal > 0 && (
                 <div style={{ display: "flex", alignItems: "center", gap: 10, borderTop: "1px dashed rgba(240,165,0,0.45)", marginTop: 9, paddingTop: 9 }}>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 15, color: "#8a5e0f", lineHeight: 1.35 }}>
                     <b>{L.notAssignedCount(unassignedTotal)}</b><br /><span style={{ color: "#a89a6f", fontWeight: 600 }}>{L.assignWhoSub} — {L.canAlsoLater}</span>
