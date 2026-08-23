@@ -8754,7 +8754,7 @@ export default function PartyTest() {
                 </div>
                 {opNaam === true && (() => {
                   const anonTot = laatste ? drinks.reduce((s2, d) => s2 + (laatste.anon?.[d.id] ?? 0), 0) : 0
-                  return anonTot > 0 && <div style={{ fontSize: 15, fontWeight: 700, color: "#b0402f", marginTop: 8 }}>🔴 {L.notAssignedYet(anonTot)}</div>
+                  return anonTot > 0 && <div style={{ fontSize: 15, fontWeight: 700, color: "#8a5e0f", marginTop: 8 }}>🍺 {L.notAssignedYet(anonTot)}</div>
                 })()}
                 {/* Aanpassen hoort bij de aantallen die er net boven staan: rechts
                     onderaan, in de sectie zelf verwerkt — een gewone tekstlink, geen pil. */}
@@ -8961,7 +8961,7 @@ export default function PartyTest() {
         )}
         {/* Bij uitgebreid opnemen staat deze kaart tijdens het afsluiten al bovenaan,
             direct onder de drankjeslijst — dan niet nog eens onderaan herhalen. */}
-        {(settle || opNaam) && unassignedAllRounds > 0 && firstUnassignedIdx >= 0 && !(opNaam === true && !settle && !lastRoundHandled) && (
+        {settle && !fromQuick && unassignedAllRounds > 0 && firstUnassignedIdx >= 0 && (
           <div style={{ ...S.card, background: "rgba(224,104,92,0.08)", border: "1.5px solid rgba(224,104,92,0.45)" }}>
             {fromQuick && stapBalk(2)}
             <div style={{ fontSize: 17.5, fontWeight: 800, color: "#b0402f", marginBottom: 4 }}>{L.unassignedHub(unassignedAllRounds)}</div>
