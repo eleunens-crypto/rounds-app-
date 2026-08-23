@@ -536,8 +536,10 @@ const T = {
     sameAgainTitle: "🔁 Zelfde als vorig rondje",
     sameAgainTake: "Overnemen",
     sameAgainEdit: "daarna nog aanpasbaar",
-    leaveNoNameTitle: "Zonder naam gaat dit rondje verloren",
-    leaveNoNameSub: "Geef het een naam om het te bewaren, of ga weg zonder bewaren.",
+    leaveNoNameTitle: "Je verliest dit rondje",
+    leaveNoNameSub: "Zonder naam vind je deze groep straks niet meer terug. Geef hem een naam om alles te bewaren.",
+    leaveCount: (r: number, d: number) => `${r} rondje${r === 1 ? "" : "s"} · ${d} drankje${d === 1 ? "" : "s"} gaan verloren`,
+    saveAndStay: "Bewaren en hier blijven",
     leaveNoSaveBtn: "Weggaan zonder bewaren",
     saveAndLeave: "Bewaren en weggaan",
     forWhoSub: "Zet hier wie erbij is. Namen mogen leeg blijven.",
@@ -1319,8 +1321,10 @@ const T = {
     sameAgainTitle: "🔁 Comme la tourn\u00e9e pr\u00e9c\u00e9dente",
     sameAgainTake: "Reprendre",
     sameAgainEdit: "modifiable ensuite",
-    leaveNoNameTitle: "Sans nom, cette tourn\u00e9e sera perdue",
-    leaveNoNameSub: "Donne-lui un nom pour la garder, ou pars sans enregistrer.",
+    leaveNoNameTitle: "Tu vas perdre cette tourn\u00e9e",
+    leaveNoNameSub: "Sans nom, tu ne retrouveras plus ce groupe. Donne-lui un nom pour tout garder.",
+    leaveCount: (r: number, d: number) => `${r} tourn\u00e9e${r === 1 ? "" : "s"} · ${d} boisson${d === 1 ? "" : "s"} vont \u00eatre perdues`,
+    saveAndStay: "Enregistrer et rester ici",
     leaveNoSaveBtn: "Partir sans enregistrer",
     saveAndLeave: "Enregistrer et partir",
     forWhoSub: "Indique qui est l\u00e0. Les noms peuvent rester vides.",
@@ -6312,18 +6316,30 @@ export default function PartyTest() {
       {verlaatNaam && (
         <div style={{ ...S.overlay, zIndex: 74 }}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 19, fontWeight: 800, color: "#4a3f1e" }}>📝 {L.leaveNoNameTitle}</div>
-            <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 6 }}>{L.leaveNoNameSub}</div>
-            <input autoFocus value={verlaatVeld} onChange={(e) => setVerlaatVeld(e.target.value)}
-              placeholder={L.namePh3}
-              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, fontSize: 18, marginTop: 12, border: "2px solid rgba(240,165,0,0.6)" }} />
-            <button disabled={!verlaatVeld.trim()}
-              style={{ ...S.btnP, width: "100%", marginTop: 12, opacity: verlaatVeld.trim() ? 1 : 0.45 }}
-              onClick={() => { const nm = verlaatVeld.trim(); if (!nm) return; setGroupName(nm); persistSettings({ name: nm }); const doe = verlaatNaam; setVerlaatNaam(null); setVerlaatVeld(""); doe?.() }}>{L.saveAndLeave}</button>
-            <button style={{ ...S.btn, width: "100%", marginTop: 8, color: "#c0554a", borderColor: "rgba(224,104,92,0.45)" }}
-              onClick={() => { const doe = verlaatNaam; setVerlaatNaam(null); setVerlaatVeld(""); doe?.() }}>{L.leaveNoSaveBtn}</button>
-            <button style={{ ...S.btn, width: "100%", marginTop: 8 }}
-              onClick={() => { setVerlaatNaam(null); setVerlaatVeld("") }}>{L.cancel}</button>
+            {(() => {
+              const drankjesTot = rounds.reduce((a, r0) => a + Object.values(r0.orders || {}).reduce((x, m) => x + Object.values(m || {}).reduce((p, q) => p + (q || 0), 0), 0) + Object.values(r0.anon || {}).reduce((x, q) => x + (q || 0), 0), 0)
+              const bewaar = () => { const nm = verlaatVeld.trim(); if (!nm) return nm; setGroupName(nm); persistSettings({ name: nm }); return nm }
+              return (<>
+                <div style={{ fontSize: 21, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.25 }}>⚠️ {L.leaveNoNameTitle}</div>
+                {rounds.length > 0 && (
+                  <div style={{ fontSize: 15.5, fontWeight: 800, color: "#b0402f", marginTop: 6 }}>{L.leaveCount(rounds.length, drankjesTot)}</div>
+                )}
+                <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 6 }}>{L.leaveNoNameSub}</div>
+                <input autoFocus value={verlaatVeld} onChange={(e) => setVerlaatVeld(e.target.value)}
+                  placeholder={L.namePh3}
+                  style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, fontSize: 18, marginTop: 12, border: "2px solid rgba(240,165,0,0.6)" }} />
+                {/* Bewaren en weggaan, of bewaren en gewoon verder doen — dat laatste
+                    kon nergens anders. Zonder naam blijft alleen "toch weggaan" over. */}
+                <button disabled={!verlaatVeld.trim()}
+                  style={{ ...S.btnP, width: "100%", marginTop: 12, opacity: verlaatVeld.trim() ? 1 : 0.45 }}
+                  onClick={() => { if (!bewaar()) return; const doe = verlaatNaam; setVerlaatNaam(null); setVerlaatVeld(""); doe?.() }}>{L.saveAndLeave}</button>
+                <button disabled={!verlaatVeld.trim()}
+                  style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 16, fontWeight: 800, opacity: verlaatVeld.trim() ? 1 : 0.45 }}
+                  onClick={() => { if (!bewaar()) return; setVerlaatNaam(null); setVerlaatVeld("") }}>{L.saveAndStay}</button>
+                <button style={{ ...S.btn, width: "100%", marginTop: 8, color: "#c0554a", borderColor: "rgba(224,104,92,0.45)", fontSize: 16, fontWeight: 800 }}
+                  onClick={() => { const doe = verlaatNaam; setVerlaatNaam(null); setVerlaatVeld(""); doe?.() }}>{L.leaveNoSaveBtn}</button>
+              </>)
+            })()}
           </div>
         </div>
       )}
