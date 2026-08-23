@@ -5082,8 +5082,7 @@ export default function PartyTest() {
     if (!settle) setLastRoundHandled(false)
     setView(settle ? "confirmed" : "hub")
     setRoundNr(rounds.length + 1)
-    // Zelf noteren: meteen de kans om bedrag, betaler en toewijzing aan te vullen.
-    if (!settle) { setAanvulBedrag(""); setAanvulIdx(rounds.length) }
+
   }
   const persistPayment = (roundId: string, payers: Record<string, number>, potPart: number, total: number) => {
     supabase.from("party_rounds")
@@ -8511,7 +8510,10 @@ export default function PartyTest() {
             <span style={{ fontSize: 17.5, fontWeight: 800, flexShrink: 0 }}>{L.total}: {items}</span>
           </div>
           {last && (() => { const un = drinks.reduce((a, d) => a + (last.anon[d.id] ?? 0), 0); return un > 0 ? (
-            <div onClick={() => { editOrder(); setAssignNaamEdit(false); setShowAssignAll(true) }} style={{ marginTop: 8, background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "8px 11px", fontSize: 16, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>🔴 {L.notAssignedYet(un)} <u>{L.tapToAssign}</u></div>
+            <div onClick={() => { editOrder(); setAssignNaamEdit(false); setShowAssignAll(true) }} style={{ marginTop: 8, background: "#fffdf4", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 10, padding: "9px 11px", fontSize: 15.5, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+              <span>🍺 {L.notAssignedYet(un)}</span>
+              <span style={{ flexShrink: 0, border: "1.5px solid rgba(240,165,0,0.6)", borderRadius: 9, padding: "5px 10px", fontSize: 14 }}>{L.assign}</span>
+            </div>
           ) : null })()}
         </div>
 
