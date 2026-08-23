@@ -517,6 +517,20 @@ const T = {
     persCountLabel: "Aantal personen",
     persNotNow: "hoeft niet nu — kan ook later",
     forWhoTitle: "Voor wie tik je aan?",
+    aanvulTitle: (n: number, d: number) => `✓ Rondje ${n} genoteerd · ${d} drankje${d === 1 ? "" : "s"}`,
+    aanvulSub: "Vul aan voor een eerlijke verdeling — of sla over.",
+    aanvulCost: "💶 Wat kostte het?",
+    aanvulPaidBy: "betaald door",
+    aanvulAssign: "🍺 Drankjes toewijzen",
+    aanvulAssignSub: (n: number) => `${n} nog zonder naam`,
+    aanvulAssignOk: "alles toegewezen",
+    aanvulSave: "Bewaren",
+    aanvulSkip: "Alles overslaan — later invullen",
+    missAmount: "💶 bedrag?",
+    missAssign: "🍺 toewijzen",
+    missPayer: "💳 wie betaalde?",
+    missRoundsNote: (n: number) => `Nog ${n} rondje${n === 1 ? "" : "s"} aanvullen voor een eerlijke verdeling`,
+    fillNowBtn: "Nu aanvullen →",
     leaveNoNameTitle: "Zonder naam gaat dit rondje verloren",
     leaveNoNameSub: "Geef het een naam om het te bewaren, of ga weg zonder bewaren.",
     leaveNoSaveBtn: "Weggaan zonder bewaren",
@@ -1281,6 +1295,20 @@ const T = {
     persCountLabel: "Nombre de personnes",
     persNotNow: "pas obligatoire — possible plus tard aussi",
     forWhoTitle: "Pour qui coches-tu\u00a0?",
+    aanvulTitle: (n: number, d: number) => `✓ Tourn\u00e9e ${n} not\u00e9e · ${d} boisson${d === 1 ? "" : "s"}`,
+    aanvulSub: "Compl\u00e8te pour un partage \u00e9quitable — ou passe.",
+    aanvulCost: "💶 Combien \u00e7a a co\u00fbt\u00e9\u00a0?",
+    aanvulPaidBy: "pay\u00e9 par",
+    aanvulAssign: "🍺 Attribuer les boissons",
+    aanvulAssignSub: (n: number) => `${n} encore sans nom`,
+    aanvulAssignOk: "tout est attribu\u00e9",
+    aanvulSave: "Enregistrer",
+    aanvulSkip: "Tout passer — compl\u00e9ter plus tard",
+    missAmount: "💶 montant\u00a0?",
+    missAssign: "🍺 attribuer",
+    missPayer: "💳 qui a pay\u00e9\u00a0?",
+    missRoundsNote: (n: number) => `Encore ${n} tourn\u00e9e${n === 1 ? "" : "s"} \u00e0 compl\u00e9ter pour un partage \u00e9quitable`,
+    fillNowBtn: "Compl\u00e9ter maintenant →",
     leaveNoNameTitle: "Sans nom, cette tourn\u00e9e sera perdue",
     leaveNoNameSub: "Donne-lui un nom pour la garder, ou pars sans enregistrer.",
     leaveNoSaveBtn: "Partir sans enregistrer",
@@ -2062,6 +2090,11 @@ export default function PartyTest() {
   const [naamPlichtNa, setNaamPlichtNa] = useState<null | (() => void)>(null)
   const [verlaatNaam, setVerlaatNaam] = useState<null | (() => void)>(null)
   const [verlaatVeld, setVerlaatVeld] = useState("")
+  // Aanvulkaart na een afgerond rondje: bedrag, betaler en toewijzing. Alles mag
+  // overgeslagen worden — turven blijft turven.
+  const [aanvulIdx, setAanvulIdx] = useState<number | null>(null)
+  const [aanvulBedrag, setAanvulBedrag] = useState("")
+  const [aanvulBetaler, setAanvulBetaler] = useState<string | null>(null)
   // Rechtstreeks binnengekomen? Dan is dit een Party-only pagina: geen verwijzing
   // naar het keuzescherm, enkel onderaan een tip over Table.
   const [viaKiezer, setViaKiezer] = useState(false)
@@ -5035,6 +5068,8 @@ export default function PartyTest() {
     if (!settle) setLastRoundHandled(false)
     setView(settle ? "confirmed" : "hub")
     setRoundNr(rounds.length + 1)
+    // Zelf noteren: meteen de kans om bedrag, betaler en toewijzing aan te vullen.
+    if (!settle) { setAanvulBedrag(""); setAanvulIdx(rounds.length) }
   }
   const persistPayment = (roundId: string, payers: Record<string, number>, potPart: number, total: number) => {
     supabase.from("party_rounds")
@@ -6172,6 +6207,63 @@ export default function PartyTest() {
           </div>
         </div>
       )}
+      {aanvulIdx !== null && (() => {
+        const r = rounds[aanvulIdx]
+        const openDrankjes = unassignedAllRounds
+        return (
+          <div style={{ ...S.overlay, zIndex: 73 }}>
+            <div style={{ ...S.sheet, maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e" }}>{L.aanvulTitle(aanvulIdx + 1, r ? (Object.values(r.orders || {}).reduce((n, m) => n + Object.values(m || {}).reduce((a, b) => a + (b || 0), 0), 0) + Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0)) : 0)}</div>
+              <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 5 }}>{L.aanvulSub}</div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 14 }}>
+                <span style={{ fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>{L.aanvulCost}</span>
+                <input type="text" inputMode="decimal" placeholder="0,00" value={aanvulBedrag}
+                  onChange={(e) => setAanvulBedrag(e.target.value.replace(/[^0-9.,]/g, ""))}
+                  style={{ ...S.input, width: 96, fontSize: 17, fontWeight: 800, border: "1.5px solid rgba(240,165,0,0.55)" }} />
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 9 }}>
+                <span style={{ fontSize: 14, color: "#8a7d55", fontWeight: 700 }}>{L.aanvulPaidBy}</span>
+                {potContribTotal > 0.005 && (
+                  <button onClick={() => setAanvulBetaler("pot")}
+                    style={{ border: aanvulBetaler === "pot" ? "none" : "1px solid rgba(47,111,181,0.4)", background: aanvulBetaler === "pot" ? "#2f6fb5" : "#fff", color: aanvulBetaler === "pot" ? "#fff" : "#2f5693", borderRadius: 10, padding: "7px 12px", fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>🪙 {L.potWord}</button>
+                )}
+                {people.map((pp) => (
+                  <button key={pp.id} onClick={() => setAanvulBetaler(pp.id)}
+                    style={{ border: aanvulBetaler === pp.id ? "none" : "1px solid rgba(120,95,20,0.28)", background: aanvulBetaler === pp.id ? AAN : "#fff", color: aanvulBetaler === pp.id ? "#fff" : "#8a7d55", borderRadius: 10, padding: "7px 12px", fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                    {pp.id === meId ? `👑 ${L.youWord}` : pp.name}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ borderTop: "1px solid rgba(120,95,20,0.14)", marginTop: 13, paddingTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <b style={{ fontSize: 16, color: "#4a3f1e" }}>{L.aanvulAssign}</b><br />
+                  <span style={{ fontSize: 14, color: openDrankjes > 0 ? "#a89a6f" : "#1f8a4c", fontWeight: openDrankjes > 0 ? 400 : 700 }}>{openDrankjes > 0 ? L.aanvulAssignSub(openDrankjes) : L.aanvulAssignOk}</span>
+                </span>
+                <button onClick={() => { setAssignNaamEdit(false); setShowAssignAll(true) }}
+                  style={{ ...S.btn, flexShrink: 0, padding: "9px 14px", fontSize: 14.5, fontWeight: 800, borderColor: "rgba(240,165,0,0.6)", color: "#8a5e0f" }}>{L.assign} →</button>
+              </div>
+
+              <button style={{ ...S.btnP, width: "100%", marginTop: 14 }}
+                onClick={() => {
+                  const bedrag = parseFloat(aanvulBedrag.replace(",", ".")) || 0
+                  if (r && bedrag > 0) {
+                    const idx = aanvulIdx
+                    if (aanvulBetaler === "pot") setRounds((rs) => rs.map((x, i) => i === idx ? { ...x, amount: bedrag, potPart: Math.min(bedrag, Math.max(0, potAvailFor(idx))), payers: {} } : x))
+                    else if (aanvulBetaler) setRounds((rs) => rs.map((x, i) => i === idx ? { ...x, amount: bedrag, potPart: 0, payers: { [aanvulBetaler]: bedrag } } : x))
+                    else setRounds((rs) => rs.map((x, i) => i === idx ? { ...x, amount: bedrag } : x))
+                    setDirtyRound(idx)
+                  }
+                  setAanvulIdx(null); setAanvulBetaler(null); setAanvulBedrag("")
+                }}>{L.aanvulSave}</button>
+              <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 16, fontWeight: 800 }}
+                onClick={() => { setAanvulIdx(null); setAanvulBetaler(null); setAanvulBedrag("") }}>{L.aanvulSkip}</button>
+            </div>
+          </div>
+        )
+      })()}
       {verlaatNaam && (
         <div style={{ ...S.overlay, zIndex: 74 }}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
@@ -9209,6 +9301,20 @@ export default function PartyTest() {
           </button>
         </div>
 
+        {/* Ontbrekende stukjes voor een eerlijke verdeling: bedrag, toewijzing of
+            betaler. De kaarten hierboven blijven onaangeroerd. */}
+        {(() => {
+          const teVullen = rounds.filter((r) => (r.amount || 0) <= 0.005 || rPaidSum(r) + (r.potPart || 0) < (r.amount || 0) - 0.005).length
+          if (settle || teVullen === 0) return null
+          return (
+            <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.5)" }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#8a5e0f", lineHeight: 1.4 }}>{L.missRoundsNote(teVullen)}</div>
+              <button style={{ ...S.btnP, width: "100%", marginTop: 11 }}
+                onClick={() => { setOverviewBackTo("hub"); setView("roundsOverview") }}>{L.fillNowBtn}</button>
+            </div>
+          )
+        })()}
+
         {/* De uitleg verschijnt waar je tikte, met de overstap eronder. */}
         {settleChoice === "fair" && !nietsTeVerdelen && zonderBedrag.length === 0 && (
           <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
@@ -9474,6 +9580,24 @@ export default function PartyTest() {
                       ? <span style={{ color: "#2f5693", fontWeight: 700 }}> · 🫙 {L.paidFromPot(euro(r.potPart || 0))}</span>
                       : <span style={{ color: "#b3a988" }}> · {L.noPotUsed}</span>}
                   </div>
+                  {/* Wat mist er nog voor een eerlijke verdeling? Als knopjes, zodat je
+                      meteen ziet én kunt aanvullen wat ontbreekt. */}
+                  {!settle && editRoundId !== r.id && (() => {
+                    const geenBetaler = (r.amount || 0) > 0.005 && rPaidSum(r) + (r.potPart || 0) < (r.amount || 0) - 0.005
+                    const nogToe = Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0)
+                    if (!geenBedrag && !geenBetaler && nogToe === 0) return null
+                    const knop = (tekst: string, doe: () => void) => (
+                      <span onClick={(e) => { e.stopPropagation(); doe() }}
+                        style={{ border: "1px solid rgba(224,104,92,0.45)", color: "#c0554a", background: "#fff", borderRadius: 10, padding: "5px 10px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }}>{tekst}</span>
+                    )
+                    return (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                        {geenBedrag && knop(L.missAmount, () => setEditRoundId(r.id))}
+                        {nogToe > 0 && knop(L.missAssign, () => { setAssignNaamEdit(false); setShowAssignAll(true) })}
+                        {geenBetaler && knop(L.missPayer, () => setEditRoundId(r.id))}
+                      </div>
+                    )
+                  })()}
                   {/* Kwam je aanvullen? Dan hoef je niet eerst open te klappen. */}
                   {invulRij && (
                     <div style={{ textAlign: "right", marginTop: 7 }}>
