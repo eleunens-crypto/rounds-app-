@@ -531,6 +531,10 @@ const T = {
     missPayer: "💳 wie betaalde?",
     missRoundsNote: (n: number) => `Nog ${n} rondje${n === 1 ? "" : "s"} aanvullen voor een eerlijke verdeling`,
     fillNowBtn: "Nu aanvullen →",
+    klaarBtn: "Klaar →",
+    sameAgainTitle: "🔁 Zelfde als vorig rondje",
+    sameAgainTake: "Overnemen",
+    sameAgainEdit: "daarna nog aanpasbaar",
     leaveNoNameTitle: "Zonder naam gaat dit rondje verloren",
     leaveNoNameSub: "Geef het een naam om het te bewaren, of ga weg zonder bewaren.",
     leaveNoSaveBtn: "Weggaan zonder bewaren",
@@ -1309,6 +1313,10 @@ const T = {
     missPayer: "💳 qui a pay\u00e9\u00a0?",
     missRoundsNote: (n: number) => `Encore ${n} tourn\u00e9e${n === 1 ? "" : "s"} \u00e0 compl\u00e9ter pour un partage \u00e9quitable`,
     fillNowBtn: "Compl\u00e9ter maintenant →",
+    klaarBtn: "Termin\u00e9 →",
+    sameAgainTitle: "🔁 Comme la tourn\u00e9e pr\u00e9c\u00e9dente",
+    sameAgainTake: "Reprendre",
+    sameAgainEdit: "modifiable ensuite",
     leaveNoNameTitle: "Sans nom, cette tourn\u00e9e sera perdue",
     leaveNoNameSub: "Donne-lui un nom pour la garder, ou pars sans enregistrer.",
     leaveNoSaveBtn: "Partir sans enregistrer",
@@ -5149,6 +5157,18 @@ export default function PartyTest() {
     if (settle) { setSettle(false); persistSettings({ settle: false }) }
     setFromQuick(false)
   }
+  // Alles van het vorige rondje overnemen: per persoon toegewezen drankjes én de
+  // nog niet toegewezen exemplaren. Daarna kan je gewoon bijsturen.
+  const neemVorigeOver = async (vorig: Round) => {
+    for (const d of drinks) {
+      const perPersoon = vorig.orders[d.id] || {}
+      for (const [pid, n] of Object.entries(perPersoon)) {
+        if ((n || 0) > 0 && people.some((pp) => pp.id === pid)) await bump(d.id, pid, n || 0)
+      }
+      const los = vorig.anon[d.id] || 0
+      if (los > 0) await bumpAnon(d.id, los)
+    }
+  }
   const nextRound = () => {
     if (blockIfUnpaid()) return
     setActiveCat(catsPresent[0])
@@ -8023,7 +8043,7 @@ export default function PartyTest() {
               {echtOnafgerond
                 ? (settingsBackTo === "order" ? null : <button style={{ ...S.btnP, flex: 1 }} onClick={resumeRound}>{L.continueRound(roundNr)}</button>)
                 : magNieuw
-                ? <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{settle && openRoundId ? L.continueRound(roundNr) : L.newRoundBtn}</button>
+                ? <button style={{ ...S.btnP, flex: 1 }} onClick={nextRound}>{settle && openRoundId ? L.continueRound(roundNr) : (!settle ? L.klaarBtn : L.newRoundBtn)}</button>
                 : null}
             </div>
           ) : echtOnafgerond ? (
@@ -8228,6 +8248,25 @@ export default function PartyTest() {
               )}
             </div>
             {/* "Meer/minder" hangt centraal, half over de onderrand van de lijst. */}
+            {/* Nog niets aangetikt en er is een vorig rondje? Dan één tik om het over
+                te nemen — drankjes én toewijzing, daarna gewoon aanpasbaar. */}
+            {!settle && roundItems === 0 && rounds.length > 0 && (() => {
+              const vorig = rounds[rounds.length - 1]
+              const stukjes = drinks.map((d) => ({ d, n: drinkTotalRound(vorig, d.id) })).filter((x) => x.n > 0)
+              if (stukjes.length === 0) return null
+              return (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fffdf4", border: "1.5px solid rgba(240,165,0,0.55)", borderRadius: 12, padding: "10px 12px", marginBottom: 11 }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 800, color: "#8a5e0f", lineHeight: 1.3 }}>
+                    {L.sameAgainTitle}
+                    <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: "#a89a6f", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {stukjes.map((x) => `${x.n}× ${x.d.name}`).join(" · ")} — {L.sameAgainEdit}
+                    </span>
+                  </span>
+                  <button onClick={() => neemVorigeOver(vorig)}
+                    style={{ ...S.btnP, flexShrink: 0, padding: "9px 14px", fontSize: 14.5, fontWeight: 800 }}>{L.sameAgainTake}</button>
+                </div>
+              )
+            })()}
             {!zoekt && !fullList && catDrinks.length > catVisible.length && (
               <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
                 <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: "#fff", border: `1px solid ${themaNaam ? "rgba(90,106,148,0.55)" : "rgba(240,165,0,0.6)"}`, color: themaNaam ? "#3b486a" : "#c98a00", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
