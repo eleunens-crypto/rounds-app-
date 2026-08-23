@@ -6665,7 +6665,7 @@ export default function PartyTest() {
           {!settle && !kaal && isAutoNaam(groupName) && (
             <button onClick={() => { setNaamPlichtVeld(""); setPersGeteld(people.length > 1); setNaamPlichtNa(null); setNaamPlicht(true) }}
               style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 14, padding: "6px 12px", fontSize: 15, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", fontFamily: "inherit" }}>
-              ✏️ {L.giveNameQ}
+              ✏️ {L.giveNameQ}{people.length > 1 && <span style={{ color: "#a89a6f", fontWeight: 700 }}> · 👥 {people.length}</span>}
             </button>
           )}
           <span style={{ marginLeft: "auto", flexShrink: 0 }}>{potKnopje()}</span>
