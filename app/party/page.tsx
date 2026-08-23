@@ -7163,6 +7163,25 @@ export default function PartyTest() {
         </div>
 
         {(lijst.length === 0 && (zoekt || activeCat !== "Eigen")) ? (<>
+            {/* Nog niets aangetikt en er is een vorig rondje? Dan één tik om het over
+                te nemen — drankjes én toewijzing, daarna gewoon aanpasbaar. */}
+            {!settle && roundItems === 0 && rounds.length > 0 && (() => {
+              const vorig = rounds[rounds.length - 1]
+              const stukjes = drinks.map((d) => ({ d, n: drinkTotalRound(vorig, d.id) })).filter((x) => x.n > 0)
+              if (stukjes.length === 0) return null
+              return (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fffdf4", border: "1.5px solid rgba(240,165,0,0.55)", borderRadius: 12, padding: "10px 12px", marginBottom: 11 }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 800, color: "#8a5e0f", lineHeight: 1.3 }}>
+                    {L.sameAgainTitle}
+                    <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: "#a89a6f", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {stukjes.map((x) => `${x.n}× ${x.d.name}`).join(" · ")} — {L.sameAgainEdit}
+                    </span>
+                  </span>
+                  <button onClick={() => neemVorigeOver(vorig)}
+                    style={{ ...S.btnP, flexShrink: 0, padding: "9px 14px", fontSize: 14.5, fontWeight: 800 }}>{L.sameAgainTake}</button>
+                </div>
+              )
+            })()}
           {opNaam === true && !settle && renderZoekBlok()}
           <div style={{ ...S.card, textAlign: "center", color: "#b3a988", fontSize: 17, padding: "20px 0" }}>
             {!zoekt && !fullList ? (
@@ -8251,26 +8270,6 @@ export default function PartyTest() {
                 </div>
               )}
             </div>
-            {/* "Meer/minder" hangt centraal, half over de onderrand van de lijst. */}
-            {/* Nog niets aangetikt en er is een vorig rondje? Dan één tik om het over
-                te nemen — drankjes én toewijzing, daarna gewoon aanpasbaar. */}
-            {!settle && roundItems === 0 && rounds.length > 0 && (() => {
-              const vorig = rounds[rounds.length - 1]
-              const stukjes = drinks.map((d) => ({ d, n: drinkTotalRound(vorig, d.id) })).filter((x) => x.n > 0)
-              if (stukjes.length === 0) return null
-              return (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fffdf4", border: "1.5px solid rgba(240,165,0,0.55)", borderRadius: 12, padding: "10px 12px", marginBottom: 11 }}>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 800, color: "#8a5e0f", lineHeight: 1.3 }}>
-                    {L.sameAgainTitle}
-                    <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: "#a89a6f", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {stukjes.map((x) => `${x.n}× ${x.d.name}`).join(" · ")} — {L.sameAgainEdit}
-                    </span>
-                  </span>
-                  <button onClick={() => neemVorigeOver(vorig)}
-                    style={{ ...S.btnP, flexShrink: 0, padding: "9px 14px", fontSize: 14.5, fontWeight: 800 }}>{L.sameAgainTake}</button>
-                </div>
-              )
-            })()}
             {!zoekt && !fullList && catDrinks.length > catVisible.length && (
               <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
                 <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: "#fff", border: `1px solid ${themaNaam ? "rgba(90,106,148,0.55)" : "rgba(240,165,0,0.6)"}`, color: themaNaam ? "#3b486a" : "#c98a00", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
