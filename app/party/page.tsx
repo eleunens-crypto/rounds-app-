@@ -532,6 +532,7 @@ const T = {
     missRoundsNote: (n: number) => `Nog ${n} rondje${n === 1 ? "" : "s"} aanvullen voor een eerlijke verdeling`,
     fillNowBtn: "Nu aanvullen →",
     klaarBtn: "Klaar →",
+    openWord: "Openen",
     sameAgainTitle: "🔁 Zelfde als vorig rondje",
     sameAgainTake: "Overnemen",
     sameAgainEdit: "daarna nog aanpasbaar",
@@ -1314,6 +1315,7 @@ const T = {
     missRoundsNote: (n: number) => `Encore ${n} tourn\u00e9e${n === 1 ? "" : "s"} \u00e0 compl\u00e9ter pour un partage \u00e9quitable`,
     fillNowBtn: "Compl\u00e9ter maintenant →",
     klaarBtn: "Termin\u00e9 →",
+    openWord: "Ouvrir",
     sameAgainTitle: "🔁 Comme la tourn\u00e9e pr\u00e9c\u00e9dente",
     sameAgainTake: "Reprendre",
     sameAgainEdit: "modifiable ensuite",
@@ -8766,14 +8768,7 @@ export default function PartyTest() {
 
             {/* Bij uitgebreid opnemen hoort de toewijs-waarschuwing direct onder de
                 drankjeslijst waar het probleem zichtbaar is — niet pas helemaal onderaan. */}
-            {opNaam === true && unassignedAllRounds > 0 && firstUnassignedIdx >= 0 && (
-              <div style={{ ...S.card, background: "rgba(224,104,92,0.08)", border: "1.5px solid rgba(224,104,92,0.45)" }}>
-                <div style={{ fontSize: 17.5, fontWeight: 800, color: "#b0402f", marginBottom: 4 }}>{L.unassignedHub(unassignedAllRounds)}</div>
-                <div style={{ fontSize: 15.5, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 11 }}>{L.unassignedHubWhy}</div>
-                <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#e0725c,#c0554a)" }}
-                  onClick={() => { setAssignAllMode(true); setAssignIdx(firstUnassignedIdx) }}>{L.assignAllBtn}</button>
-              </div>
-            )}
+
 
             {/* Hoeveel betaald voor dit rondje. Kies eerst de bron (zelf/pot), vul één
                 bedrag in, en bevestig met ✓ (of sla over). Beide sluiten het rondje af. */}
@@ -8782,14 +8777,7 @@ export default function PartyTest() {
                   een verandering meteen opvalt in plaats van pas bij het afrekenen. */}
               {/* Bij uitgebreid opnemen liggen de gasten vast — dan is deze vraag zinloos
                   en staat het aantal automatisch juist. Enkel tonen bij snel opnemen. */}
-              {!persOpen && (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
-                  <span style={{ fontSize: 16, color: "#8a7d55", fontWeight: 700 }}>{L.persRoundShort(r?.headcount || 1)}</span>
-                  <button onClick={() => setPersOpen(true)}
-                    style={{ background: "none", border: "none", padding: 4, fontSize: 15.5, fontWeight: 800, color: "#c98a00", textDecoration: "underline", cursor: "pointer", fontFamily: "inherit" }}>{L.changeWord}</button>
-                </div>
-              )}
-              {persOpen && (
+              {false && (
               <div style={{ background: VLAK1, border: `1px solid ${themaNaam ? "rgba(59,72,106,0.16)" : "rgba(120,95,20,0.14)"}`, borderRadius: 12, padding: 11, marginBottom: 10 }}>
               <div style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", marginBottom: 9, paddingBottom: 8, borderBottom: `1px solid ${themaNaam ? "rgba(59,72,106,0.14)" : "rgba(120,95,20,0.12)"}` }}>👥 {L.withHowManyQ}</div>
               <div style={{ ...S.row, justifyContent: "space-between", background: "#fff", borderRadius: 10, padding: "8px 12px" }}>
@@ -8816,26 +8804,28 @@ export default function PartyTest() {
                   zijn eigen kleur eronder. Allebei aan = het rondje deels zelf, deels uit de
                   pot. De pot is blauw — overal, geen groen meer. */}
               <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-                <button style={{ flex: 1, padding: "10px 6px", fontSize: 16, fontWeight: 800, borderRadius: 10, cursor: "pointer",
-                  background: payVia !== "pot" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f7f1e2",
-                  color: payVia !== "pot" ? "#fff" : "#8a7d55", border: "none" }}
+                <button style={{ flex: 1, padding: "12px 6px", fontSize: 17.5, fontWeight: 800, borderRadius: 10, cursor: "pointer", textAlign: "center",
+                  background: payVia !== "pot" ? "rgba(240,165,0,0.12)" : "#fff",
+                  color: payVia !== "pot" ? "#8a5e0f" : "#a89a6f",
+                  border: payVia !== "pot" ? "2px solid #e8a812" : "1px solid rgba(120,95,20,0.25)" }}
                   onClick={() => {
                     const r0 = rounds[idx]
                     if (payVia === "pot") { setMixZelf(0); setMixPot(r0?.amount || 0); setMixFocus("zelf"); setPayVia("mix") }
                     // In de combinatiestand wint de knop waar je op tikt: tik "zelf
                     // betaald" en de pot valt weg — het zelf-bedrag blijft staan.
                     else if (payVia === "mix") { qSetAmount(idx, Math.round(mixZelf * 100) / 100); setPayVia("self") }
-                  }}>💶 {L.paidSelf}</button>
-                <button style={{ flex: 1, padding: "10px 6px", fontSize: 16, fontWeight: 800, borderRadius: 10, cursor: "pointer",
-                  background: payVia !== "self" ? "linear-gradient(135deg,#3f7fc4,#2f6fb5)" : "#f7f1e2",
-                  color: payVia !== "self" ? "#fff" : "#8a7d55", border: "none" }}
+                  }}>{L.paidSelf}</button>
+                <button style={{ flex: 1, padding: "12px 6px", fontSize: 17.5, fontWeight: 800, borderRadius: 10, cursor: "pointer", textAlign: "center",
+                  background: payVia !== "self" ? "#eef4fc" : "#fff",
+                  color: payVia !== "self" ? "#2f5693" : "#a89a6f",
+                  border: payVia !== "self" ? "2px solid #2f6fb5" : "1px solid rgba(47,111,181,0.3)" }}
                   onClick={() => {
                     if (potAvail <= 0.005 && payVia === "self") { potVulIntent.current = idx; meldPot(L.potEmptyNote); setShowPot(true); return }
                     const r0 = rounds[idx]
                     if (payVia === "self") { setMixZelf(r0?.amount || 0); setMixPot(0); setMixFocus("pot"); setPayVia("mix") }
                     // Omgekeerd idem: tik "uit de pot" en zelf valt weg, potbedrag blijft.
                     else if (payVia === "mix") { qSetAmount(idx, Math.round(mixPot * 100) / 100); setPayVia("pot") }
-                  }}>🫙 {L.paidPot}{potAvail > 0.005 && <span style={{ fontWeight: 800, opacity: payVia !== "self" ? 1 : 0.75 }}> · {euro(Math.max(0, potAvail - potInBewerking))}</span>}</button>
+                  }}>{L.paidPot}{potAvail > 0.005 && <span style={{ fontWeight: 700, opacity: 0.8, fontSize: 15 }}> · {euro(Math.max(0, potAvail - potInBewerking))}</span>}</button>
               </div>
 
               {/* Bedrag-veld met ✓ én Overslaan samen op één rij. Het vinkje pulseert groen
@@ -8856,7 +8846,7 @@ export default function PartyTest() {
                   color: amount > 0.005 ? (accentKleur ? accentKleur.hoofd : "#1f8a4c") : "#b3a988",
                   border: amount > 0.005 ? `2.5px solid ${accentKleur ? accentKleur.hoofd : "#1f8a4c"}` : "none" }}
                   onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}>✓</button>
-                <button style={{ padding: "0 14px", height: 56, borderRadius: 13, fontSize: 15, fontWeight: 800, cursor: "pointer", flexShrink: 0, background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a7d55", lineHeight: 1.25, width: 132, marginLeft: "auto" }} onClick={() => closeQuickRound(true)}>{L.skipPayment}</button>
+
               </div>
               {amount > 0.005 && (
                 <div style={{ fontSize: 15, color: accentKleur ? accentKleur.hoofd : "#1f8a4c", fontWeight: 800, textAlign: "right", marginTop: 7, paddingRight: 78 }}>{L.tapToConfirm}</div>
@@ -8936,6 +8926,19 @@ export default function PartyTest() {
                 )
               )}
               </div>
+              {/* Betaling overslaan hoort onder zijn eigen sectie, niet naast het veld. */}
+              <button style={{ ...S.btn, width: "100%", marginTop: 9, fontSize: 16, fontWeight: 800 }}
+                onClick={() => closeQuickRound(true)}>{L.skipPayment}</button>
+
+              {/* Toewijzen: compact, één regel met een knop. Het venster zelf laat je
+                  per drankje of per persoon werken. */}
+              {!settle && unassignedAllRounds > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid rgba(120,95,20,0.18)", borderRadius: 11, padding: "11px 12px", marginTop: 10 }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#4a3f1e" }}>🍺 {L.notAssignedYet(unassignedAllRounds)}</span>
+                  <button onClick={() => { setAssignNaamEdit(false); setShowAssignAll(true) }}
+                    style={{ flexShrink: 0, background: "#fff", border: "1.5px solid rgba(240,165,0,0.6)", color: "#8a5e0f", borderRadius: 9, padding: "8px 13px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.openWord}</button>
+                </div>
+              )}
             </div>
           </>
           )
