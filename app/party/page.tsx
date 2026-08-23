@@ -4257,16 +4257,23 @@ export default function PartyTest() {
   // is de groep straks niet terug te vinden in de lijst.
   // Tabblad sluiten of wegnavigeren met de browserknop: de app kan dan geen eigen
   // venster meer tonen, dus laten we de browser zijn standaardwaarschuwing geven.
-  const heeftInhoud = rounds.length > 0
-    || drinks.some((d) => (cartAnon[d.id] ?? 0) > 0 || Object.values(cart[d.id] || {}).some((q) => (q || 0) > 0))
-    || people.length > 1
-    || potContribTotal > 0.005
+  // Een naamloze groep is altijd het waarschuwen waard: ook zonder drankjes kan er
+  // al werk in zitten (namen, personen, pot) — en anders kost "toch weggaan" één tik.
+  const heeftInhoud = !!groupId
   useEffect(() => {
     const naamloos = !settle && !!groupId && heeftInhoud && isAutoNaam(groupName)
     if (!naamloos) return
     const waarschuw = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = "" }
     window.addEventListener("beforeunload", waarschuw)
-    return () => window.removeEventListener("beforeunload", waarschuw)
+    // De terugknop van de telefoon krijgt hetzelfde venster als het logo: we leggen
+    // een extra stap in de geschiedenis en vangen het terugstappen op.
+    const terug = () => {
+      history.pushState(null, "", location.href)
+      setVerlaatNaam(() => () => { window.location.href = "/" })
+    }
+    history.pushState(null, "", location.href)
+    window.addEventListener("popstate", terug)
+    return () => { window.removeEventListener("beforeunload", waarschuw); window.removeEventListener("popstate", terug) }
   }, [settle, groupId, heeftInhoud, groupName]) // eslint-disable-line
 
   const verlaatMetNaamcheck = (doe: () => void) => {
