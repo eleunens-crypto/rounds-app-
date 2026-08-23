@@ -517,6 +517,10 @@ const T = {
     persCountLabel: "Aantal personen",
     persNotNow: "hoeft niet nu — kan ook later",
     forWhoTitle: "Voor wie tik je aan?",
+    leaveNoNameTitle: "Zonder naam gaat dit rondje verloren",
+    leaveNoNameSub: "Geef het een naam om het te bewaren, of ga weg zonder bewaren.",
+    leaveNoSaveBtn: "Weggaan zonder bewaren",
+    saveAndLeave: "Bewaren en weggaan",
     forWhoSub: "Zet hier wie erbij is. Namen mogen leeg blijven.",
     letsGoBtn: "Aan de slag →",
     namePh3: "typ hier je groepsnaam",
@@ -1277,6 +1281,10 @@ const T = {
     persCountLabel: "Nombre de personnes",
     persNotNow: "pas obligatoire — possible plus tard aussi",
     forWhoTitle: "Pour qui coches-tu\u00a0?",
+    leaveNoNameTitle: "Sans nom, cette tourn\u00e9e sera perdue",
+    leaveNoNameSub: "Donne-lui un nom pour la garder, ou pars sans enregistrer.",
+    leaveNoSaveBtn: "Partir sans enregistrer",
+    saveAndLeave: "Enregistrer et partir",
     forWhoSub: "Indique qui est l\u00e0. Les noms peuvent rester vides.",
     letsGoBtn: "C'est parti →",
     namePh3: "\u00e9cris ici le nom du groupe",
@@ -2052,6 +2060,8 @@ export default function PartyTest() {
   // en optioneel de namen. Daarna start de doorloop per persoon.
   const [persVenster, setPersVenster] = useState(false)
   const [naamPlichtNa, setNaamPlichtNa] = useState<null | (() => void)>(null)
+  const [verlaatNaam, setVerlaatNaam] = useState<null | (() => void)>(null)
+  const [verlaatVeld, setVerlaatVeld] = useState("")
   // Rechtstreeks binnengekomen? Dan is dit een Party-only pagina: geen verwijzing
   // naar het keuzescherm, enkel onderaan een tip over Table.
   const [viaKiezer, setViaKiezer] = useState(false)
@@ -2256,7 +2266,7 @@ export default function PartyTest() {
       document.documentElement.style.margin = "0"
       document.body.style.margin = "0"
       document.body.style.background = "#fdf6e3"
-      document.body.style.overscrollBehaviorY = "none"
+      document.body.style.overscrollBehaviorY = "auto"
     } catch { /* niets */ }
   }, [])
   useEffect(() => {
@@ -4139,14 +4149,10 @@ export default function PartyTest() {
   }
   // Alles in een naamloze groep loopt hierlangs: is er nog geen echte naam, dan
   // eerst het naamvenster; anders meteen doen wat je wilde.
-  const eersteNaamDan = (doe: () => void) => {
-    if (!settle && isAutoNaam(groupName)) { setNaamPlichtVeld(""); setNaamPlichtNa(() => doe); setNaamPlicht(true); return }
-    doe()
-  }
+  const eersteNaamDan = (doe: () => void) => { doe() }
   const bump1 = (did: string) => {
     // Snel opnemen zonder echte groepsnaam: de tik wordt tegengehouden (dus nog níét
     // genoteerd) en het naamvenster verschijnt. Na "Verder" tik je gewoon opnieuw.
-    if (!settle && isAutoNaam(groupName)) { setNaamPlichtVeld(""); setNaamPlichtNa(null); setNaamPlicht(true); return }
     if (settle && voorWie) return bump(did, voorWie, 1)
     return bumpAnon(did, 1)
   }
@@ -4200,6 +4206,12 @@ export default function PartyTest() {
   }
   // Naar het echte beginscherm van de site (waar je Rundo Table of Party kiest). Bij een
   // onbevestigd rondje eerst waarschuwen, zodat je geen werk verliest.
+  // Weggaan uit een naamloze groep: eerst vragen om een naam, want zonder naam
+  // is de groep straks niet terug te vinden in de lijst.
+  const verlaatMetNaamcheck = (doe: () => void) => {
+    if (!settle && groupId && rounds.length > 0 && isAutoNaam(groupName)) { setVerlaatNaam(() => doe); return }
+    doe()
+  }
   const goSiteHome = () => {
     // Het logo brengt je naar het Party-startscherm — de keuzekaders plus je opgeslagen
     // groepen. Vroeger herlaadde dit de hele site-root: een lege pagina met alleen
@@ -6160,6 +6172,24 @@ export default function PartyTest() {
           </div>
         </div>
       )}
+      {verlaatNaam && (
+        <div style={{ ...S.overlay, zIndex: 74 }}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 19, fontWeight: 800, color: "#4a3f1e" }}>📝 {L.leaveNoNameTitle}</div>
+            <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 6 }}>{L.leaveNoNameSub}</div>
+            <input autoFocus value={verlaatVeld} onChange={(e) => setVerlaatVeld(e.target.value)}
+              placeholder={L.namePh3}
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, fontSize: 18, marginTop: 12, border: "2px solid rgba(240,165,0,0.6)" }} />
+            <button disabled={!verlaatVeld.trim()}
+              style={{ ...S.btnP, width: "100%", marginTop: 12, opacity: verlaatVeld.trim() ? 1 : 0.45 }}
+              onClick={() => { const nm = verlaatVeld.trim(); if (!nm) return; setGroupName(nm); persistSettings({ name: nm }); const doe = verlaatNaam; setVerlaatNaam(null); setVerlaatVeld(""); doe?.() }}>{L.saveAndLeave}</button>
+            <button style={{ ...S.btn, width: "100%", marginTop: 8, color: "#c0554a", borderColor: "rgba(224,104,92,0.45)" }}
+              onClick={() => { const doe = verlaatNaam; setVerlaatNaam(null); setVerlaatVeld(""); doe?.() }}>{L.leaveNoSaveBtn}</button>
+            <button style={{ ...S.btn, width: "100%", marginTop: 8 }}
+              onClick={() => { setVerlaatNaam(null); setVerlaatVeld("") }}>{L.cancel}</button>
+          </div>
+        </div>
+      )}
       {persVenster && (
         <div style={{ ...S.overlay, zIndex: 72 }}>
           <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
@@ -6415,7 +6445,7 @@ export default function PartyTest() {
           modus-tekst. Eén balk in plaats van drie koplagen. */}
       {setupKop && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, borderRadius: 14, padding: "9px 13px", marginBottom: 10, border: "1px solid rgba(13,124,140,0.35)", background: "linear-gradient(100deg,#ffffff 0%,#eefafc 34%,#159cb0 72%,#0d7c8c 100%)" }}>
-          <span onClick={goSiteHome} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <span onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <RundoLogo size={30} />
             <span style={{ fontSize: 20, fontWeight: 800, color: "#3d3418", letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></span>
           </span>
@@ -6462,7 +6492,7 @@ export default function PartyTest() {
       {!setupKop && (
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
         <div style={{ minWidth: 0 }}>
-        <div onClick={goSiteHome} style={{ cursor: "pointer", ...S.row, gap: 10 }}>
+        <div onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ cursor: "pointer", ...S.row, gap: 10 }}>
           <RundoLogo size={40} />
           <div style={{ ...S.h1, fontSize: 21, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo <span style={{ color: "#e08a00" }}>Party</span></div>
         </div>
@@ -7141,7 +7171,7 @@ export default function PartyTest() {
 
   if (view === "start") {
     return (
-      <div style={{ ...S.page, display: "flex", flexDirection: "column", justifyContent: "flex-start", padding: "0 0 40px" }}><div style={{ ...S.wrap, paddingTop: "calc(env(safe-area-inset-top, 0px) + 34px)" }}>
+      <div style={{ ...S.page, minHeight: "auto", padding: "0 0 40px" }}><div style={{ ...S.wrap, paddingTop: "calc(env(safe-area-inset-top, 0px) + 34px)" }}>
         {renderDialogs()}
         <style>{`@keyframes rundoWenk{0%,100%{transform:translateX(0);opacity:.6}50%{transform:translateX(3px);opacity:1}}
           @keyframes rundoLoop{from{width:0}to{width:100%}}
