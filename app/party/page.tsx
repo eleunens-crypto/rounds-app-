@@ -6361,6 +6361,8 @@ export default function PartyTest() {
             </div>
             <button style={{ ...S.btnP, width: "100%", marginTop: 14 }}
               onClick={() => { setPersVenster(false); setWalkIdx(0) }}>{L.letsGoBtn}</button>
+            <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 16, fontWeight: 800 }}
+              onClick={() => setPersVenster(false)}>{L.cancel}</button>
           </div>
         </div>
       )}
