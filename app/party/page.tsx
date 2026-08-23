@@ -5170,6 +5170,7 @@ export default function PartyTest() {
       const los = vorig.anon[d.id] || 0
       if (los > 0) await bumpAnon(d.id, los)
     }
+    setWalkIdx(null); setPersVenster(false); setShowAssignAll(false)
   }
   const nextRound = () => {
     if (blockIfUnpaid()) return
@@ -5179,6 +5180,8 @@ export default function PartyTest() {
     if (settle && openRoundId) { setView("order"); return }
     setRoundNr(rounds.length + 1)
     setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setRepeated(false)
+    // Nooit met een venster beginnen: je landt gewoon op de drankjes.
+    setWalkIdx(null); setPersVenster(false); setShowAssignAll(false)
     setView("order")
   }
   // Neemt de drankjes én de toewijzing van het laatste rondje over. Daarna nog gewoon aanpasbaar.
@@ -8765,6 +8768,17 @@ export default function PartyTest() {
               </div>
             ) })()}
 
+              {/* Toewijzen: compact, één regel met een knop. Het venster zelf laat je
+                  per drankje of per persoon werken. */}
+              {!settle && unassignedAllRounds > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid rgba(120,95,20,0.18)", borderRadius: 11, padding: "11px 12px", marginTop: 10 }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#4a3f1e" }}>🍺 {L.notAssignedYet(unassignedAllRounds)}</span>
+                  <button onClick={() => { setAssignAllMode(true); setAssignIdx(firstUnassignedIdx >= 0 ? firstUnassignedIdx : rounds.length - 1) }}
+                    style={{ flexShrink: 0, background: "#fff", border: "1.5px solid rgba(240,165,0,0.6)", color: "#8a5e0f", borderRadius: 9, padding: "8px 13px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.openWord}</button>
+                </div>
+              )}
+
+
             {/* Bij uitgebreid opnemen hoort de toewijs-waarschuwing direct onder de
                 drankjeslijst waar het probleem zichtbaar is — niet pas helemaal onderaan. */}
 
@@ -8898,9 +8912,7 @@ export default function PartyTest() {
                     </div>
                     {/* Ook combineren moet over te slaan zijn (getrakteerd, later invullen…):
                         dezelfde knop als in de enkel-veld-stand, gecentreerd onder het blok. */}
-                    <div style={{ textAlign: "center", marginTop: 10 }}>
-                      <button style={{ padding: "9px 14px", borderRadius: 11, fontSize: 15, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a7d55" }} onClick={() => closeQuickRound(true)}>{L.skipPayment}</button>
-                    </div>
+
                   </>
                 )
               })()}
@@ -8929,15 +8941,6 @@ export default function PartyTest() {
               <button style={{ ...S.btn, width: "100%", marginTop: 9, fontSize: 16, fontWeight: 800 }}
                 onClick={() => closeQuickRound(true)}>{L.skipPayment}</button>
 
-              {/* Toewijzen: compact, één regel met een knop. Het venster zelf laat je
-                  per drankje of per persoon werken. */}
-              {!settle && unassignedAllRounds > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid rgba(120,95,20,0.18)", borderRadius: 11, padding: "11px 12px", marginTop: 10 }}>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#4a3f1e" }}>🍺 {L.notAssignedYet(unassignedAllRounds)}</span>
-                  <button onClick={() => { setAssignNaamEdit(false); setShowAssignAll(true) }}
-                    style={{ flexShrink: 0, background: "#fff", border: "1.5px solid rgba(240,165,0,0.6)", color: "#8a5e0f", borderRadius: 9, padding: "8px 13px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.openWord}</button>
-                </div>
-              )}
             </div>
           </>
           )
