@@ -1108,7 +1108,8 @@ const T = {
     youNote2: "Handig barlijstje",
     youNote3: "Snel of eerlijk verdelen — jij kiest",
     modeSnelTitle: "Zelf noteren",
-    modeNaamTitle: "Uitgebreid opnemen",
+    modeNaamTitle: "Ik neem op voor de groep",
+    modeNaamShort: "Ik neem zelf op",
     modeNaamSub: "Alles van snel opnemen",
     tagline: "Rondjes opnemen en splitten zonder gedoe",
     showToFriend: "📱 QR-code van de groep",
@@ -1920,7 +1921,8 @@ const T = {
     youNote2: "Liste pratique pour le bar",
     youNote3: "Vite ou équitable — à toi de choisir",
     modeSnelTitle: "Je note moi-m\u00eame",
-    modeNaamTitle: "Noter en détail",
+    modeNaamTitle: "Je note pour le groupe",
+    modeNaamShort: "Je note pour tous",
     modeNaamSub: "Tout de « noter vite »",
     tagline: "Prendre les tournées et partager sans tracas",
     showToFriend: "📱 QR-code du groupe",
@@ -6841,7 +6843,7 @@ export default function PartyTest() {
               <GsmIcoon size={18} kleur="#fff" dof />
               <GsmIcoon size={22} kleur="#fff" qr />
             </>) : <GsmIcoon size={22} kleur="#fff" lijnen />}
-            <span style={{ fontSize: 17, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? L.modeFairShort : `${L.modeQuickShort} · ${opNaam ? L.modeNaamTitle : L.modeSnelTitle}`}</span>
+            <span style={{ fontSize: 17, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? L.modeFairShort : opNaam ? L.modeNaamTitle : `${L.modeQuickShort} · ${L.modeSnelTitle}`}</span>
           </span>
         </div>
       )}
@@ -7216,7 +7218,7 @@ export default function PartyTest() {
               <GsmIcoon size={18} kleur="#fff" dof />
               <GsmIcoon size={22} kleur="#fff" qr />
             </>) : <GsmIcoon size={22} kleur="#fff" lijnen />}
-            <span style={{ fontSize: 17, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? L.modeFairShort : `${L.modeQuickShort} · ${opNaam ? L.modeNaamTitle : L.modeSnelTitle}`}</span>
+            <span style={{ fontSize: 17, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? L.modeFairShort : opNaam ? L.modeNaamTitle : `${L.modeQuickShort} · ${L.modeSnelTitle}`}</span>
           </span>
           <LanguageToggle compact />
         </div>
@@ -7722,7 +7724,7 @@ export default function PartyTest() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 17.5, fontWeight: 800, color: "#4a3f1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()} <span style={{ fontWeight: 700, color: "#a89a6f", fontSize: 14.5 }}>({datumKort(g.last_active)})</span></div>
                   <div style={{ fontSize: 14.5, color: "#a89a6f", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    <span style={{ color: g.settle && !g.fq ? MODUS_FAIR.tekst : MODUS_SNEL.tekst, fontWeight: 800 }}>{g.settle && !g.fq ? L.modeFairShort : g.uitgebreid ? L.modeNaamTitle : L.modeSnelTitle}</span> · {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
+                    <span style={{ color: g.settle && !g.fq ? MODUS_FAIR.tekst : MODUS_SNEL.tekst, fontWeight: 800 }}>{g.settle && !g.fq ? L.modeFairShort : g.uitgebreid ? L.modeNaamShort : L.modeSnelTitle}</span> · {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
                   </div>
                 </div>
                 <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, borderRadius: 9, padding: "3px 8px", whiteSpace: "nowrap",
