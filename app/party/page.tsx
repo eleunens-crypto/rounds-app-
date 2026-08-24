@@ -538,6 +538,7 @@ const T = {
     fillWord: "Invullen",
     adjustOrder: "bestelling aanpassen",
     addPersonHere: "Persoon toevoegen",
+    personsAndNames: "Personen & namen",
     completeWord: "✓ compleet",
     missAmount: "💶 betaling toevoegen",
     missAssign: "🍺 drankjes toewijzen",
@@ -1336,6 +1337,7 @@ const T = {
     fillWord: "Remplir",
     adjustOrder: "modifier la commande",
     addPersonHere: "Ajouter une personne",
+    personsAndNames: "Personnes & noms",
     completeWord: "✓ complet",
     missAmount: "💶 ajouter le paiement",
     missAssign: "🍺 attribuer les boissons",
@@ -5650,7 +5652,7 @@ export default function PartyTest() {
   const VLAK3 = koel ? "#e4f2f5" : themaNaam ? "#e6eaf4" : "#f3ead2"
   const S = {
     page: { minHeight: "100dvh", background: groupId ? (koel ? MODUS_FAIR.bladzij : themaNaam ? MODUS_NAAM.bladzij : MODUS_SNEL.bladzij) : "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
-    wrap: { maxWidth: 560, margin: "0 auto", padding: "calc(env(safe-area-inset-top, 0px) + 46px) 16px 16px" } as React.CSSProperties,
+    wrap: { maxWidth: 560, margin: "0 auto", padding: "calc(env(safe-area-inset-top, 0px) + 58px) 16px 16px" } as React.CSSProperties,
     card: { background: "#fff", border: `1px solid ${koel ? "rgba(13,124,140,0.16)" : themaNaam ? "rgba(59,72,106,0.16)" : "rgba(120,95,20,0.14)"}`, borderRadius: 18, padding: 16, marginBottom: 13, boxShadow: koel ? "0 4px 16px -8px rgba(13,124,140,0.22)" : themaNaam ? "0 4px 16px -8px rgba(59,72,106,0.2)" : "0 4px 16px -8px rgba(120,95,20,0.25)" } as React.CSSProperties,
     h1: { fontSize: 26, fontWeight: 800, margin: "0 0 2px" } as React.CSSProperties,
     h3: { fontSize: 19.5, fontWeight: 800, margin: "0 0 10px" } as React.CSSProperties,
@@ -6750,7 +6752,7 @@ export default function PartyTest() {
           )}
           {settle && !fromQuick ? (
             <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 16, fontWeight: 800, borderRadius: 13, opacity: (view === "hub" || ((settle || opNaam) && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goHub() }}>{L.overview}</button>
-          ) : (
+          ) : rounds.length === 0 ? null : (
             <button style={{ flex: 1.2, padding: "11px 4px", fontSize: 17, fontWeight: 800, borderRadius: 10, cursor: "pointer",
               border: view === "roundsOverview" ? "none" : "1px solid rgba(120,95,20,0.25)",
               background: view === "roundsOverview" ? AAN : "#fff",
@@ -8207,7 +8209,7 @@ export default function PartyTest() {
 
                   </span>
                 </div>
-                {pilNaamId ? (
+                {false ? (
                   <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
                     <input autoFocus value={pilNaamVeld} onChange={(e) => setPilNaamVeld(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter") { renamePerson(pilNaamId, pilNaamVeld); setPilNaamId(null) } }}
@@ -8239,17 +8241,24 @@ export default function PartyTest() {
                           color: aan ? "#4a3f1e" : viaLink ? "#a89a6f" : "#4a3f1e",
                           opacity: aan ? 1 : viaLink ? 0.8 : 1 }}>
                         {pp.id === meId ? <KroonIcoon size={13} kleur={aan ? "#4a3f1e" : MODUS_FAIR.tekst} /> : viaLink ? "📱 " : ""}{pp.id === meId ? " " : ""}{pp.name}{pp.id === meId ? <span style={{ opacity: 0.75, fontSize: 13, marginLeft: 4 }}>{L.youBadge}</span> : null}
-                        {aan && !settle && <span onClick={(e) => { e.stopPropagation(); setPilNaamId(pp.id); setPilNaamVeld(isGuestDefault(pp.name) ? "" : pp.name) }} style={{ marginLeft: 6, fontSize: 13 }}>✏️</span>}
+
                       </button>
                     )
                   })}
-                  {!settle && (
+                  {false && (
                     <button onClick={() => { setPersGeteld(true); setNaamPlichtVeld(isAutoNaam(groupName) ? "" : groupName.trim()); setNaamPlichtNa(null); setNaamPlicht(true) }}
                       style={{ border: "2px solid rgba(47,111,181,0.55)", background: "#f2f6fc", color: "#2f5693", borderRadius: 11, padding: "8px 13px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>{L.addNameBtn}</button>
                   )}
                 </div>
                 )}
-                {!settle && <div style={{ fontSize: 13.5, color: "#a89a6f", marginTop: 6, lineHeight: 1.4 }}>{L.namesLaterToo}</div>}
+                {!settle && (
+                  <div style={{ textAlign: "center", marginTop: 11 }}>
+                    <button onClick={() => { setPersGeteld(true); setNaamPlichtVeld(isAutoNaam(groupName) ? "" : groupName.trim()); setNaamPlichtNa(null); setNaamPlicht(true) }}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 7, border: "2px solid rgba(47,111,181,0.55)", background: "#f2f6fc", color: "#2f5693", borderRadius: 12, padding: "10px 16px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                      👥 {L.personsAndNames} ✏️
+                    </button>
+                  </div>
+                )}
                 <div style={{ fontSize: 13.5, color: "#a89a6f", marginTop: 7, lineHeight: 1.45 }}>{L.qrTapsSelf}</div>
               </div>
             )}
@@ -8307,7 +8316,7 @@ export default function PartyTest() {
                     <div style={{ fontSize: 17.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#1f6b3a" : themaNaam ? "#2c3752" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
                     <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
                       <button style={{ ...S.step, opacity: tot > 0 ? 1 : 0.4 }} onClick={() => { if (settle && !bezig) { setGeenRondje(true); return } bumpDown(d.id) }}>−</button>
-                      <span style={{ fontSize: 20, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}{perPers && tafel > tot ? <span style={{ fontSize: 13.5, color: "#a89a6f", fontWeight: 700 }}>/{tafel}</span> : null}</span>
+                      <span style={{ fontSize: 20, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}{false && perPers && tafel > tot ? <span style={{ fontSize: 13.5, color: "#a89a6f", fontWeight: 700 }}>/{tafel}</span> : null}</span>
                       <button style={S.step} onClick={() => { if (settle && !bezig) { setGeenRondje(true); return } bump1(d.id) }}>+</button>
                     </div>
                   </div>
@@ -9757,8 +9766,7 @@ export default function PartyTest() {
                     )
                     return (
                       <div style={{ background: "#fffaeb", border: "2px solid rgba(240,165,0,0.65)", borderRadius: 12, padding: "11px 12px", marginTop: 11 }}>
-                        <span style={{ fontSize: 12, fontWeight: 800, background: "rgba(240,165,0,0.25)", color: "#8a5e0f", borderRadius: 8, padding: "3px 9px" }}>{L.nogNodigBadge}</span>
-                        <div style={{ fontSize: 16.5, fontWeight: 800, color: "#8a5e0f", marginTop: 7 }}>{L.stillToFill}</div>
+                        <span style={{ display: "inline-block", fontSize: 14.5, fontWeight: 800, background: "rgba(240,165,0,0.25)", color: "#8a5e0f", borderRadius: 20, padding: "7px 14px" }}>{L.nogNodigBadge} — {L.stillToFill}</span>
                         {(geenBedrag || geenBetaler) && regel(L.paidThisRoundQ, L.fillWord, () => setEditRoundId(r.id))}
                         {nogToe > 0 && regel(L.notAssignedYet(nogToe), L.openWord, () => { setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) })}
                       </div>
