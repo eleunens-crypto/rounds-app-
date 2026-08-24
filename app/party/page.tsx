@@ -6857,10 +6857,10 @@ export default function PartyTest() {
           </span>
           <div style={{ minWidth: 0 }}>
             <div onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ ...S.h1, fontSize: 21, lineHeight: 1.1, letterSpacing: "-0.02em", cursor: "pointer" }}>Rundo</div>
-            {!!groupId && !kaal && !uitgebreidLook && (
+            {!!groupId && !kaal && (
               <span style={{ marginTop: 3, display: "inline-flex", alignItems: "center", gap: 5, maxWidth: "100%", fontSize: 13, fontWeight: 800, color: themaNaam ? "#5a6a94" : "#8a5e0f", background: themaNaam ? "rgba(59,72,106,0.09)" : "#faf1dc", border: `1px solid ${themaNaam ? "rgba(59,72,106,0.28)" : "rgba(240,165,0,0.35)"}`, borderRadius: 999, padding: "3px 10px" }}>
                 <GsmIcoon size={14} kleur={themaNaam ? "#5a6a94" : "#8a5e0f"} lijnen={!settle} qr={settle} />
-                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{settle ? L.modeFairShort : opNaam ? L.modeNaamTitle : L.modeSnelTitle}</span>
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{settle && !fromQuick ? L.modeFairShort : opNaam ? L.modeNaamTitle : L.modeSnelTitle}</span>
               </span>
             )}
           </div>
@@ -6874,17 +6874,6 @@ export default function PartyTest() {
           </div>
         )}
         </div>
-        {/* Uitgebreid opnemen: rechts naast het Rundo-logo staat gewoon leesbaar wat je
-            aan het doen bent — geen aparte balk, geen fade. */}
-        {uitgebreidLook && !!groupId && !kaal && (
-          <div style={{ flexShrink: 1, minWidth: 0, marginTop: 11, display: "inline-flex", alignItems: "center", gap: 6, color: themaNaam ? "#5a6a94" : "#c98a00", fontSize: 14.5, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden" }}>
-            <GsmIcoon size={17} kleur={themaNaam ? "#5a6a94" : "#c98a00"} lijnen />
-            {/* De submodus-titel in plaats van het algemene "Ik bestel voor de groep":
-                zelfde plek, zelfde stijl, maar je ziet meteen óf je snel óf uitgebreid
-                aan het noteren bent. */}
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{L.modeSnelTitle}</span>
-          </div>
-        )}
         {!uitgebreidLook && !!groupId && !kaal && groupName.trim() && !editName && (
           <div style={{ textAlign: "right", minWidth: 0, flexShrink: 0, maxWidth: "52%" }}>
             <div onClick={() => { if (!onboarding && !groepDicht) setEditName(true) }} style={{ cursor: onboarding ? "default" : "pointer", fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
