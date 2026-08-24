@@ -5716,7 +5716,7 @@ export default function PartyTest() {
   const VLAK3 = koel ? "#e4f2f5" : themaNaam ? "#e6eaf4" : "#f3ead2"
   const S = {
     page: { minHeight: "100dvh", overflowX: "clip", maxWidth: "100vw", background: groupId ? (koel ? MODUS_FAIR.bladzij : themaNaam ? MODUS_NAAM.bladzij : MODUS_SNEL.bladzij) : "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
-    wrap: { maxWidth: 560, margin: "0 auto", padding: "calc(env(safe-area-inset-top, 0px) + 92px) 16px 16px" } as React.CSSProperties,
+    wrap: { maxWidth: 560, margin: "0 auto", padding: "calc(env(safe-area-inset-top, 0px) + 114px) 16px 16px" } as React.CSSProperties,
     card: { background: "#fff", border: `1px solid ${koel ? "rgba(13,124,140,0.16)" : themaNaam ? "rgba(59,72,106,0.16)" : "rgba(120,95,20,0.14)"}`, borderRadius: 18, padding: 16, marginBottom: 13, boxShadow: koel ? "0 4px 16px -8px rgba(13,124,140,0.22)" : themaNaam ? "0 4px 16px -8px rgba(59,72,106,0.2)" : "0 4px 16px -8px rgba(120,95,20,0.25)" } as React.CSSProperties,
     h1: { fontSize: 26, fontWeight: 800, margin: "0 0 2px" } as React.CSSProperties,
     h3: { fontSize: 19.5, fontWeight: 800, margin: "0 0 10px" } as React.CSSProperties,
@@ -6851,9 +6851,19 @@ export default function PartyTest() {
       {!setupKop && (
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
         <div style={{ minWidth: 0 }}>
-        <div onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ cursor: "pointer", ...S.row, gap: 10 }}>
-          <RundoLogo size={40} />
-          <div style={{ ...S.h1, fontSize: 21, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Rundo</div>
+        <div style={{ ...S.row, gap: 10, alignItems: "center" }}>
+          <span onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ cursor: "pointer", flexShrink: 0, display: "inline-flex" }}>
+            <RundoLogo size={40} />
+          </span>
+          <div style={{ minWidth: 0 }}>
+            <div onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ ...S.h1, fontSize: 21, lineHeight: 1.1, letterSpacing: "-0.02em", cursor: "pointer" }}>Rundo</div>
+            {!!groupId && !kaal && !uitgebreidLook && (
+              <span style={{ marginTop: 3, display: "inline-flex", alignItems: "center", gap: 5, maxWidth: "100%", fontSize: 13, fontWeight: 800, color: themaNaam ? "#5a6a94" : "#8a5e0f", background: themaNaam ? "rgba(59,72,106,0.09)" : "#faf1dc", border: `1px solid ${themaNaam ? "rgba(59,72,106,0.28)" : "rgba(240,165,0,0.35)"}`, borderRadius: 999, padding: "3px 10px" }}>
+                <GsmIcoon size={14} kleur={themaNaam ? "#5a6a94" : "#8a5e0f"} lijnen={!settle} qr={settle} />
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{settle ? L.modeFairShort : opNaam ? L.modeNaamTitle : L.modeSnelTitle}</span>
+              </span>
+            )}
+          </div>
         </div>
         {/* Op het instelscherm staat geen ondertitel: de tagline staat al op het
             startscherm, en hier telt elke pixel voor de twee keuzekaarten. */}
@@ -7554,7 +7564,7 @@ export default function PartyTest() {
 
   if (view === "start") {
     return (
-      <div style={{ ...S.page, minHeight: "auto", padding: "0 0 40px" }}><div style={{ ...S.wrap, paddingTop: "calc(env(safe-area-inset-top, 0px) + 52px)" }}>
+      <div style={{ ...S.page, minHeight: "auto", padding: "0 0 40px" }}><div style={{ ...S.wrap, paddingTop: "calc(env(safe-area-inset-top, 0px) + 70px)" }}>
         {renderDialogs()}
         <style>{`@keyframes rundoWenk{0%,100%{transform:translateX(0);opacity:.6}50%{transform:translateX(3px);opacity:1}}
           @keyframes rundoLoop{from{width:0}to{width:100%}}
