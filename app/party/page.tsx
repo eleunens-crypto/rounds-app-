@@ -2140,6 +2140,8 @@ export default function PartyTest() {
   // Naam van de actieve pil ter plekke aanpassen, zonder het drankjesscherm te verlaten.
   const [pilNaamId, setPilNaamId] = useState<string | null>(null)
   const [pilNaamVeld, setPilNaamVeld] = useState("")
+  // Kwam je binnen via "betaling toevoegen"? Dan springt het bedragveld naar voren.
+  const [bedragFocus, setBedragFocus] = useState(false)
   // "Liever per persoon aantikken" opent eerst dit venster: met hoeveel zijn jullie,
   // en optioneel de namen. Daarna start de doorloop per persoon.
   const [naamPlichtNa, setNaamPlichtNa] = useState<null | (() => void)>(null)
@@ -9765,8 +9767,12 @@ export default function PartyTest() {
                     const badge = (t: string) => <span style={{ fontSize: 13.5, fontWeight: 800, borderRadius: 10, padding: "5px 10px", background: "#fff", border: "1.5px solid rgba(224,104,92,0.5)", color: "#4a3f1e" }}>{t}</span>
                     return (
                       <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
-                        {(geenBedrag || geenBetaler2) && badge(L.missAmount)}
-                        {nogToe2 > 0 && badge(L.missAssign)}
+                        {(geenBedrag || geenBetaler2) && (
+                          <span onClick={(e) => { e.stopPropagation(); setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r); setBedragFocus(true) }}>{badge(L.missAmount)}</span>
+                        )}
+                        {nogToe2 > 0 && (
+                          <span onClick={(e) => { e.stopPropagation(); setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) }}>{badge(L.missAssign)}</span>
+                        )}
                       </div>
                     )
                   })()}
@@ -9784,7 +9790,7 @@ export default function PartyTest() {
                     return (
                       <div style={{ background: "#fffaeb", border: "2px solid rgba(240,165,0,0.65)", borderRadius: 12, padding: "11px 12px", marginTop: 11 }}>
                         <span style={{ display: "inline-block", fontSize: 14.5, fontWeight: 800, background: "rgba(240,165,0,0.25)", color: "#8a5e0f", borderRadius: 20, padding: "7px 14px" }}>{L.nogNodigBadge} — {L.stillToFill}</span>
-                        {(geenBedrag || geenBetaler) && regel(L.paidThisRoundQ, L.fillWord, () => setEditRoundId(r.id))}
+                        {(geenBedrag || geenBetaler) && regel(L.paidThisRoundQ, L.fillWord, () => { setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r); setBedragFocus(true) })}
                         {nogToe > 0 && regel(L.notAssignedYet(nogToe), L.openWord, () => { setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) })}
                       </div>
                     )
@@ -9921,7 +9927,7 @@ export default function PartyTest() {
                         <span style={{ fontSize: 17, fontWeight: 800, color: "#8a7d55" }}>💶 {L.paidLabel}</span>
                         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <span style={{ fontSize: 18, color: "#8a7d55", fontWeight: 700 }}>€</span>
-                          <input onClick={(e) => e.stopPropagation()} type="text" inputMode="decimal" placeholder="0,00"
+                          <input autoFocus={bedragFocus} onFocus={() => setBedragFocus(false)} onClick={(e) => e.stopPropagation()} type="text" inputMode="decimal" placeholder="0,00"
                             {...bedragVeld(`edit-${r.id}`, dr.amount, (v) => setEditDraft((c) => c ? { ...c, amount: v, potAmt: c.bron === "pot" ? v : c.potAmt } : c))}
                             style={{ ...S.input, width: 106, padding: "8px 10px", fontSize: 18, fontWeight: 800, color: dr.bron === "pot" ? "#2f5693" : "#c88a1a", textAlign: "right", borderColor: dr.bron === "pot" ? "rgba(47,111,181,0.45)" : undefined }} />
                         </span>
