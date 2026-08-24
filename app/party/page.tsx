@@ -536,8 +536,8 @@ const T = {
     paidThisRoundQ: "💶 Betaald voor dit rondje?",
     fillWord: "Invullen",
     completeWord: "✓ compleet",
-    missAmount: "💶 bedrag",
-    missAssign: "🍺 toewijzen",
+    missAmount: "💶 betaling toevoegen",
+    missAssign: "🍺 drankjes toewijzen",
     missPayer: "💳 wie betaalde?",
     missRoundsNote: (n: number) => `Nog ${n} rondje${n === 1 ? "" : "s"} aanvullen voor een eerlijke verdeling`,
     fillNowBtn: "Nu aanvullen →",
@@ -1331,8 +1331,8 @@ const T = {
     paidThisRoundQ: "💶 Pay\u00e9 pour cette tourn\u00e9e\u00a0?",
     fillWord: "Remplir",
     completeWord: "✓ complet",
-    missAmount: "💶 montant",
-    missAssign: "🍺 attribuer",
+    missAmount: "💶 ajouter le paiement",
+    missAssign: "🍺 attribuer les boissons",
     missPayer: "💳 qui a pay\u00e9\u00a0?",
     missRoundsNote: (n: number) => `Encore ${n} tourn\u00e9e${n === 1 ? "" : "s"} \u00e0 compl\u00e9ter pour un partage \u00e9quitable`,
     fillNowBtn: "Compl\u00e9ter maintenant →",
@@ -8271,7 +8271,8 @@ export default function PartyTest() {
                   en zelfde blok voor snel én uitgebreid opnemen. */}
               {!settle && <div style={{ gridColumn: "1 / -1" }}>{renderZoekBlok(true)}</div>}
               {catVisible.map((d) => {
-                const tot = (settle && voorWie) ? (cart[d.id]?.[voorWie] ?? 0) : drinkTotal(d.id)
+                const perPers = voorWie && (settle || (perPersoon && people.length > 1))
+                const tot = perPers ? (cart[d.id]?.[voorWie] ?? 0) : drinkTotal(d.id)
                 const tafel = drinkTotal(d.id)
                 const un = cartAnon[d.id] ?? 0
                 return (
@@ -8280,7 +8281,7 @@ export default function PartyTest() {
                     <div style={{ fontSize: 17.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#1f6b3a" : themaNaam ? "#2c3752" : "#6b5f3a", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
                     <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
                       <button style={{ ...S.step, opacity: tot > 0 ? 1 : 0.4 }} onClick={() => { if (settle && !bezig) { setGeenRondje(true); return } bumpDown(d.id) }}>−</button>
-                      <span style={{ fontSize: 20, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}{settle && voorWie && tafel > tot ? <span style={{ fontSize: 13.5, color: "#a89a6f", fontWeight: 700 }}>/{tafel}</span> : null}</span>
+                      <span style={{ fontSize: 20, fontWeight: 800, color: tot > 0 ? "#1f8a4c" : "#b3a988" }}>{tot}{perPers && tafel > tot ? <span style={{ fontSize: 13.5, color: "#a89a6f", fontWeight: 700 }}>/{tafel}</span> : null}</span>
                       <button style={S.step} onClick={() => { if (settle && !bezig) { setGeenRondje(true); return } bump1(d.id) }}>+</button>
                     </div>
                   </div>
@@ -9184,7 +9185,7 @@ export default function PartyTest() {
                 if (un === 0) return null
                 return (
                   <div onClick={() => { setAssignIdx(idx) }} style={{ margin: "0 14px 14px", background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "9px 11px", fontSize: 16, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>
-                    🔴 {L.notAssignedYet(un)} <u>{L.tapToAssign}</u>
+                    {settle ? <>🔴 {L.notAssignedYet(un)} <u>{L.tapToAssign}</u></> : null}
                   </div>
                 )
               })()}
@@ -9671,8 +9672,8 @@ export default function PartyTest() {
                   <div style={{ ...S.row, justifyContent: "space-between", gap: 8 }}>
                     <div style={{ ...S.row, gap: 8, minWidth: 0 }}>
                       <span style={{ fontSize: 17.5, fontWeight: 800, color: "#4a3f1e" }}>{editRoundId === r.id ? L.editRoundHead(nr) : L.roundSummary(nr, items)}</span>
-                      {geenBedrag && editRoundId !== r.id && (
-                        <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, borderRadius: 12, padding: "3px 9px", whiteSpace: "nowrap", color: (invulRij || opNaam === true) ? "#b0402f" : "#8a5e0f", background: (invulRij || opNaam === true) ? "rgba(224,104,92,0.14)" : "rgba(240,165,0,0.16)" }}>{opNaam === true ? L.addPaymentBang : L.noAmountBadge}</span>
+                      {settle && geenBedrag && editRoundId !== r.id && (
+                        <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, borderRadius: 12, padding: "3px 9px", whiteSpace: "nowrap", color: invulRij ? "#b0402f" : "#8a5e0f", background: invulRij ? "rgba(224,104,92,0.14)" : "rgba(240,165,0,0.16)" }}>{L.noAmountBadge}</span>
                       )}
                     </div>
                     <div style={{ ...S.row, gap: 9, flexShrink: 0 }}>
@@ -9701,7 +9702,7 @@ export default function PartyTest() {
                     if (!geenBedrag && !geenBetaler2 && nogToe2 === 0) {
                       return <div style={{ marginTop: 6 }}><span style={{ fontSize: 13, fontWeight: 800, borderRadius: 9, padding: "3px 8px", background: "rgba(31,138,76,0.12)", color: "#1f6b3a" }}>{L.completeWord}</span></div>
                     }
-                    const badge = (t: string) => <span style={{ fontSize: 13, fontWeight: 800, borderRadius: 9, padding: "3px 8px", background: "rgba(240,165,0,0.16)", color: "#8a5e0f" }}>{t}</span>
+                    const badge = (t: string) => <span style={{ fontSize: 13.5, fontWeight: 800, borderRadius: 10, padding: "5px 10px", background: "#fff", border: "1.5px solid rgba(224,104,92,0.5)", color: "#4a3f1e" }}>{t}</span>
                     return (
                       <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
                         {(geenBedrag || geenBetaler2) && badge(L.missAmount)}
@@ -9830,7 +9831,7 @@ export default function PartyTest() {
                         <>
                           {/* Eerst het totaal, pas daaronder de bron: twee regels met
                               allebei "betaald" erin lazen als twee bedragen. */}
-                          <div style={{ ...S.row, justifyContent: "space-between" }}>
+                          <div style={{ display: (r.amount || 0) > 0.005 ? "flex" : "none", justifyContent: "space-between", alignItems: "center" }}>
                             <span style={{ fontSize: 17, fontWeight: 800, color: "#8a7d55" }}>💶 {L.totalPaidShort}</span>
                             {opNaam === true && !uitPot && geenBedrag ? (
                               <span onClick={(e) => { e.stopPropagation(); startEditRound(r) }}
