@@ -2125,6 +2125,9 @@ export default function PartyTest() {
   // Personen tellen is optioneel: zolang dit uit staat toont het venster "—".
   const [persGeteld, setPersGeteld] = useState(false)
   const [perPersoon, setPerPersoon] = useState(false)
+  // Naam van de actieve pil ter plekke aanpassen, zonder het drankjesscherm te verlaten.
+  const [pilNaamId, setPilNaamId] = useState<string | null>(null)
+  const [pilNaamVeld, setPilNaamVeld] = useState("")
   // "Liever per persoon aantikken" opent eerst dit venster: met hoeveel zijn jullie,
   // en optioneel de namen. Daarna start de doorloop per persoon.
   const [naamPlichtNa, setNaamPlichtNa] = useState<null | (() => void)>(null)
@@ -6431,6 +6434,8 @@ export default function PartyTest() {
             <button disabled={!naamPlichtVeld.trim()}
               style={{ ...S.btnP, width: "100%", marginTop: 14, opacity: naamPlichtVeld.trim() ? 1 : 0.45 }}
               onClick={bewaarNaamPlicht}>{L.naamGoBtn}</button>
+            <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 16, fontWeight: 800 }}
+              onClick={() => { setNaamPlicht(false); setNaamPlichtNa(null) }}>{L.cancel}</button>
           </div>
         </div>
       )}
@@ -8179,9 +8184,10 @@ export default function PartyTest() {
               <div style={{ display: "flex", gap: 4, background: "#f4efe2", borderRadius: 12, padding: 3, marginBottom: 9 }}>
                 {[false, true].map((mode) => (
                   <button key={String(mode)} onClick={() => setPerPersoon(mode)}
-                    style={{ flex: 1, borderRadius: 10, padding: "9px 0", fontSize: 15.5, fontWeight: 800, cursor: "pointer", border: "none", fontFamily: "inherit",
-                      background: perPersoon === mode ? AAN : "transparent",
-                      color: perPersoon === mode ? "#fff" : "#a89a6f" }}>
+                    style={{ flex: 1, borderRadius: 10, padding: "9px 0", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
+                      background: perPersoon === mode ? AAN : "#fff",
+                      border: perPersoon === mode ? "none" : "1px solid rgba(120,95,20,0.2)",
+                      color: perPersoon === mode ? "#fff" : "#4a3f1e" }}>
                     {mode ? `👤 ${L.perPersonWord}` : `🍻 ${L.tikSamenWord}`}
                   </button>
                 ))}
@@ -8201,6 +8207,18 @@ export default function PartyTest() {
 
                   </span>
                 </div>
+                {pilNaamId ? (
+                  <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+                    <input autoFocus value={pilNaamVeld} onChange={(e) => setPilNaamVeld(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { renamePerson(pilNaamId, pilNaamVeld); setPilNaamId(null) } }}
+                      placeholder={L.guestNamePh}
+                      style={{ ...S.input, flex: 1, minWidth: 0, textAlign: "left", fontSize: 16, fontWeight: 800, border: "1.5px solid rgba(240,165,0,0.6)" }} />
+                    <button onClick={() => { renamePerson(pilNaamId, pilNaamVeld); setPilNaamId(null) }}
+                      style={{ ...S.btnP, flexShrink: 0, padding: "9px 13px", fontSize: 15 }}>✓</button>
+                    <button onClick={() => setPilNaamId(null)}
+                      style={{ background: "none", border: "none", fontSize: 14, fontWeight: 800, color: "#8a7d55", textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{L.cancel}</button>
+                  </div>
+                ) : (
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {[...people].sort((a, b) =>
                     (a.id === meId ? -1 : b.id === meId ? 1 : 0) || Number(!!a.claimedBy) - Number(!!b.claimedBy)
@@ -8221,6 +8239,7 @@ export default function PartyTest() {
                           color: aan ? "#4a3f1e" : viaLink ? "#a89a6f" : "#4a3f1e",
                           opacity: aan ? 1 : viaLink ? 0.8 : 1 }}>
                         {pp.id === meId ? <KroonIcoon size={13} kleur={aan ? "#4a3f1e" : MODUS_FAIR.tekst} /> : viaLink ? "📱 " : ""}{pp.id === meId ? " " : ""}{pp.name}{pp.id === meId ? <span style={{ opacity: 0.75, fontSize: 13, marginLeft: 4 }}>{L.youBadge}</span> : null}
+                        {aan && !settle && <span onClick={(e) => { e.stopPropagation(); setPilNaamId(pp.id); setPilNaamVeld(isGuestDefault(pp.name) ? "" : pp.name) }} style={{ marginLeft: 6, fontSize: 13 }}>✏️</span>}
                       </button>
                     )
                   })}
@@ -8229,6 +8248,7 @@ export default function PartyTest() {
                       style={{ border: "2px solid rgba(47,111,181,0.55)", background: "#f2f6fc", color: "#2f5693", borderRadius: 11, padding: "8px 13px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>{L.addNameBtn}</button>
                   )}
                 </div>
+                )}
                 {!settle && <div style={{ fontSize: 13.5, color: "#a89a6f", marginTop: 6, lineHeight: 1.4 }}>{L.namesLaterToo}</div>}
                 <div style={{ fontSize: 13.5, color: "#a89a6f", marginTop: 7, lineHeight: 1.45 }}>{L.qrTapsSelf}</div>
               </div>
