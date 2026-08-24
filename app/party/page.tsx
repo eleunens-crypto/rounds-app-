@@ -9955,7 +9955,7 @@ export default function PartyTest() {
           <>
             {/* Gelijkwaardig: doorgaan of stoppen. Goud voor het rondje, inktblauw voor
                 de afrekening — rood en oranje zouden als waarschuwing lezen. */}
-            {!settle && opNaam && unassignedAllRounds > 0 && (
+            {false && !settle && unassignedAllRounds > 0 && (
               <div onClick={goAssignUnassigned}
                 style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.4)", borderRadius: 10, padding: "10px 12px", marginTop: 14, fontSize: 15, fontWeight: 800, color: "#b0402f", textAlign: "center", cursor: "pointer" }}>
                 {L.someUnassigned(unassignedAllRounds)} — <u>{L.tapToAssign}</u>
