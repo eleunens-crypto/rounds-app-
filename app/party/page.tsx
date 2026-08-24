@@ -553,7 +553,11 @@ const T = {
     sameAgainTitle: "🔁 Zelfde als vorig rondje",
     sameAgainTake: "Overnemen",
     sameAgainEdit: "daarna nog aanpasbaar",
-    leaveNoNameTitle: "Je verliest dit rondje",
+    leaveNoNameTitle: "Zonder naam ben je alles kwijt",
+    leaveRoundLine: (n: number, d: number) => `Rondje ${n} · ${d} drankje${d === 1 ? "" : "s"}`,
+    closeNeedName: "Geef je groep een naam om ze te bewaren in je lijst.",
+    nameRequiredHint: "⚠️ verplicht om te bewaren",
+    closeAndSave: "Afsluiten en bewaren",
     leaveNoNameSub: "Zonder naam vind je deze groep straks niet meer terug. Geef hem een naam om alles te bewaren.",
     leaveCount: (r: number, d: number) => `${r} rondje${r === 1 ? "" : "s"} · ${d} drankje${d === 1 ? "" : "s"} gaan verloren`,
     saveAndStay: "Bewaren en hier blijven",
@@ -1357,7 +1361,11 @@ const T = {
     sameAgainTitle: "🔁 Comme la tourn\u00e9e pr\u00e9c\u00e9dente",
     sameAgainTake: "Reprendre",
     sameAgainEdit: "modifiable ensuite",
-    leaveNoNameTitle: "Tu vas perdre cette tourn\u00e9e",
+    leaveNoNameTitle: "Sans nom, tu perds tout",
+    leaveRoundLine: (n: number, d: number) => `Tourn\u00e9e ${n} \u00b7 ${d} boisson${d === 1 ? "" : "s"}`,
+    closeNeedName: "Donne un nom \u00e0 ton groupe pour le garder dans ta liste.",
+    nameRequiredHint: "⚠️ obligatoire pour enregistrer",
+    closeAndSave: "Cl\u00f4turer et enregistrer",
     leaveNoNameSub: "Sans nom, tu ne retrouveras plus ce groupe. Donne-lui un nom pour tout garder.",
     leaveCount: (r: number, d: number) => `${r} tourn\u00e9e${r === 1 ? "" : "s"} · ${d} boisson${d === 1 ? "" : "s"} vont \u00eatre perdues`,
     saveAndStay: "Enregistrer et rester ici",
@@ -2147,6 +2155,9 @@ export default function PartyTest() {
   const [naamPlichtNa, setNaamPlichtNa] = useState<null | (() => void)>(null)
   const [verlaatNaam, setVerlaatNaam] = useState<null | (() => void)>(null)
   const [verlaatVeld, setVerlaatVeld] = useState("")
+  // Afsluiten kan alleen met een naam: anders is de groep straks onvindbaar.
+  const [sluitNaam, setSluitNaam] = useState(false)
+  const [sluitNaamVeld, setSluitNaamVeld] = useState("")
   // Aanvulkaart na een afgerond rondje: bedrag, betaler en toewijzing. Alles mag
   // overgeslagen worden — turven blijft turven.
   const [aanvulIdx, setAanvulIdx] = useState<number | null>(null)
@@ -6367,20 +6378,44 @@ export default function PartyTest() {
           </div>
         )
       })()}
+      {sluitNaam && (
+        <div style={{ ...S.overlay, zIndex: 75 }}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#4a3f1e" }}>{L.closeEveBtn}</div>
+            <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 6 }}>{L.closeNeedName}</div>
+            <input autoFocus value={sluitNaamVeld} onChange={(e) => setSluitNaamVeld(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && sluitNaamVeld.trim()) { const nm = sluitNaamVeld.trim(); setGroupName(nm); persistSettings({ name: nm }); setSluitNaam(false); void sluitAvondAf() } }}
+              placeholder={L.namePh3}
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, fontSize: 18, marginTop: 11, border: "2px solid rgba(240,165,0,0.6)" }} />
+            <div style={{ fontSize: 14, color: "#c0554a", fontWeight: 700, marginTop: 8 }}>{L.nameRequiredHint}</div>
+            <button disabled={!sluitNaamVeld.trim()}
+              style={{ ...S.btnP, width: "100%", marginTop: 13, opacity: sluitNaamVeld.trim() ? 1 : 0.45 }}
+              onClick={() => { const nm = sluitNaamVeld.trim(); if (!nm) return; setGroupName(nm); persistSettings({ name: nm }); setSluitNaam(false); void sluitAvondAf() }}>{L.closeAndSave}</button>
+            <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 16, fontWeight: 800 }}
+              onClick={() => setSluitNaam(false)}>{L.cancel}</button>
+          </div>
+        </div>
+      )}
       {verlaatNaam && (
         <div style={{ ...S.overlay, zIndex: 74 }}>
-          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...S.sheet, padding: 0, overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
             {(() => {
               const drankjesTot = rounds.reduce((a: number, r0) => a
                 + Object.values(r0.orders || {}).reduce((x: number, m) => x + Object.values(m || {}).reduce((p: number, q) => p + Number(q || 0), 0), 0)
                 + Object.values(r0.anon || {}).reduce((x: number, q) => x + Number(q || 0), 0), 0)
               const bewaar = () => { const nm = verlaatVeld.trim(); if (!nm) return nm; setGroupName(nm); persistSettings({ name: nm }); return nm }
               return (<>
-                <div style={{ fontSize: 21, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.25 }}>⚠️ {L.leaveNoNameTitle}</div>
-                {rounds.length > 0 && (
-                  <div style={{ fontSize: 15.5, fontWeight: 800, color: "#b0402f", marginTop: 6 }}>{L.leaveCount(rounds.length, drankjesTot)}</div>
+                <div style={{ background: "linear-gradient(135deg,#e0725c,#c0554a)", color: "#fff", padding: "13px 16px", fontSize: 18, fontWeight: 800, lineHeight: 1.3 }}>⚠️ {L.leaveNoNameTitle}</div>
+                <div style={{ padding: "14px 16px 16px" }}>
+                {(rounds.length > 0 || potContribTotal > 0.005) && (
+                  <div style={{ background: "rgba(224,104,92,0.08)", border: "1px solid rgba(224,104,92,0.35)", borderRadius: 11, padding: "10px 12px", marginTop: 10, fontSize: 15, color: "#b0402f", fontWeight: 700, lineHeight: 1.7 }}>
+                    {rounds.map((r0, i0) => (
+                      <div key={r0.id}>{L.leaveRoundLine(i0 + 1, Object.values(r0.orders || {}).reduce((x: number, m) => x + Object.values(m || {}).reduce((a: number, b) => a + Number(b || 0), 0), 0) + Object.values(r0.anon || {}).reduce((a: number, b) => a + Number(b || 0), 0))}</div>
+                    ))}
+                    {potContribTotal > 0.005 && <div>🪙 {L.potWord} {euro(potContribTotal)}</div>}
+                  </div>
                 )}
-                <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 6 }}>{L.leaveNoNameSub}</div>
+                <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 10 }}>{L.leaveNoNameSub}</div>
                 <input autoFocus value={verlaatVeld} onChange={(e) => setVerlaatVeld(e.target.value)}
                   placeholder={L.namePh3}
                   style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, fontSize: 18, marginTop: 12, border: "2px solid rgba(240,165,0,0.6)" }} />
@@ -6394,6 +6429,7 @@ export default function PartyTest() {
                   onClick={() => { if (!bewaar()) return; setVerlaatNaam(null); setVerlaatVeld("") }}>{L.saveAndStay}</button>
                 <button style={{ ...S.btn, width: "100%", marginTop: 8, color: "#c0554a", borderColor: "rgba(224,104,92,0.45)", fontSize: 16, fontWeight: 800 }}
                   onClick={() => { const doe = verlaatNaam; setVerlaatNaam(null); setVerlaatVeld(""); doe?.() }}>{L.leaveNoSaveBtn}</button>
+                </div>
               </>)
             })()}
           </div>
@@ -10556,7 +10592,7 @@ export default function PartyTest() {
       {/* De avond dichtzetten kan vanaf elke eindbalans; bij de QR-modus enkel voor de
           admin — gasten sluiten andermans avond niet af. */}
       {!!groupId && (!settle || isAdmin) && (
-        <button onClick={() => { void sluitAvondAf() }}
+        <button onClick={() => { if (isAutoNaam(groupName)) { setSluitNaamVeld(""); setSluitNaam(true); return } void sluitAvondAf() }}
           style={{ width: "100%", marginTop: 10, padding: "12px 6px", borderRadius: 11, fontSize: 16, fontWeight: 800, cursor: "pointer", background: "#fff", color: "#3b486a", border: "1.5px dashed rgba(90,100,140,0.55)" }}>{L.closeEveBtn}</button>
       )}
 
