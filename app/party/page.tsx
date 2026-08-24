@@ -8509,11 +8509,10 @@ export default function PartyTest() {
             laat hem gewoon staan. Verschijnt alleen als er echt iemand gekozen is;
             bij "zonder namen" bestaat voorWie niet. */}
         {(settle || perPersoon) && voorWie && (
-          <div style={{ position: "sticky", top: 0, zIndex: 4, marginBottom: 9 }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#fff", border: "2px solid #e8a812", borderRadius: 999, padding: "6px 14px", fontSize: 14.5, fontWeight: 700, color: "#8a5e0f", maxWidth: "100%", boxShadow: "0 2px 8px rgba(120,95,20,0.13)" }}>
-              <span style={{ flexShrink: 0, width: 8, height: 8, borderRadius: "50%", background: "#e8a812" }} />
+          <div style={{ position: "sticky", top: 0, zIndex: 4, marginTop: 4, marginBottom: 9 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8, background: settle ? "#0a4f5b" : "#4a3f1e", borderRadius: 999, padding: "7px 17px", fontSize: 14.5, fontWeight: 700, color: settle ? "#9fd0d9" : "#d8cba8", maxWidth: "100%", boxShadow: settle ? "0 3px 10px rgba(10,79,91,0.3)" : "0 3px 10px rgba(74,63,30,0.28)" }}>
               <span style={{ flexShrink: 0 }}>{L.tapForStrip}</span>
-              <b style={{ fontWeight: 800, color: "#4a3f1e", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{people.find((pp) => pp.id === voorWie)?.name ?? ""}</b>
+              <b style={{ fontWeight: 800, fontSize: 16.5, color: settle ? "#7fe3f2" : "#ffcf5c", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{people.find((pp) => pp.id === voorWie)?.name ?? ""}</b>
             </span>
           </div>
         )}
