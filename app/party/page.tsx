@@ -8813,7 +8813,7 @@ export default function PartyTest() {
                 bezig bent. De flow zelf is voor elk rondje identiek. Bij uitgebreid opnemen
                 is dit de duidelijke afsluiting in de stijl van de Fair Split-flow — zónder
                 "iemand mag gaan halen", want jij noteert zelf. */}
-        {opNaam === true && r && <div style={{ ...S.row, justifyContent: "center", marginBottom: 9 }}>
+        {opNaam === true && r && <div style={{ ...S.row, justifyContent: "center", marginTop: 6, marginBottom: 11 }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 18.5, fontWeight: 800, color: "#8a5e0f", background: "linear-gradient(135deg,#fdf3dc,#fae9c2)", border: "1.5px solid rgba(240,165,0,0.45)", borderRadius: 18, padding: "7px 16px" }}>🍻 {L.roundConfirmed(idx + 1, drinksOf(r).reduce((a, x) => a + x.n, 0))}</span>
         </div>}
             {/* Drankjes van dit net-bevestigde rondje, met de aanpas-knop erin verwerkt. */}
@@ -8856,18 +8856,18 @@ export default function PartyTest() {
                 <div style={{ textAlign: "right", marginTop: 8, paddingTop: 8, borderTop: "1px dashed rgba(120,95,20,0.18)" }}>
                   <span onClick={editOrder} style={{ fontSize: 15, color: "#c98a00", fontWeight: 800, cursor: "pointer" }}>✏️ {settle ? L.editRoundBtn : L.editOrderPlain}</span>
                 </div>
+                {/* Wat nog zonder naam staat, hoort bij deze bestelling — dus hier, net
+                    onder het aanpassen. */}
+                {!settle && unassignedAllRounds > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.14)" }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#8a5e0f" }}>🍺 {L.notAssignedYet(unassignedAllRounds)}</span>
+                    <button onClick={() => { setAssignAllMode(true); setAssignIdx(firstUnassignedIdx >= 0 ? firstUnassignedIdx : rounds.length - 1) }}
+                      style={{ flexShrink: 0, background: "#fff", border: "1.5px solid rgba(240,165,0,0.6)", color: "#8a5e0f", borderRadius: 9, padding: "8px 13px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.openWord}</button>
+                  </div>
+                )}
               </div>
             ) })()}
 
-              {/* Toewijzen: compact, één regel met een knop. Het venster zelf laat je
-                  per drankje of per persoon werken. */}
-              {!settle && unassignedAllRounds > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid rgba(120,95,20,0.18)", borderRadius: 11, padding: "11px 12px", marginTop: 10 }}>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#4a3f1e" }}>🍺 {L.notAssignedYet(unassignedAllRounds)}</span>
-                  <button onClick={() => { setAssignAllMode(true); setAssignIdx(firstUnassignedIdx >= 0 ? firstUnassignedIdx : rounds.length - 1) }}
-                    style={{ flexShrink: 0, background: "#fff", border: "1.5px solid rgba(240,165,0,0.6)", color: "#8a5e0f", borderRadius: 9, padding: "8px 13px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.openWord}</button>
-                </div>
-              )}
 
 
             {/* Bij uitgebreid opnemen hoort de toewijs-waarschuwing direct onder de
