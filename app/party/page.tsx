@@ -540,6 +540,7 @@ const T = {
     addPersonHere: "Persoon toevoegen",
     personsAndNames: "Personen & namen",
     persWord: "Pers.",
+    persWordLow: "pers.",
     tapForStrip: "Je tikt aan voor",
     howNoteQ: "HOE NOTEER JE DIT RONDJE?",
     noteForCaps: "JE NOTEERT NU VOOR",
@@ -1350,6 +1351,7 @@ const T = {
     addPersonHere: "Ajouter une personne",
     personsAndNames: "Personnes & noms",
     persWord: "Pers.",
+    persWordLow: "pers.",
     tapForStrip: "Tu coches pour",
     howNoteQ: "COMMENT NOTES-TU CETTE TOURN\u00c9E\u00a0?",
     noteForCaps: "TU NOTES MAINTENANT POUR",
@@ -5706,7 +5708,7 @@ export default function PartyTest() {
   const VLAK2 = koel ? "#f7fcfd" : themaNaam ? "#f7f9fc" : "#fdfaf2"
   const VLAK3 = koel ? "#e4f2f5" : themaNaam ? "#e6eaf4" : "#f3ead2"
   const S = {
-    page: { minHeight: "100dvh", background: groupId ? (koel ? MODUS_FAIR.bladzij : themaNaam ? MODUS_NAAM.bladzij : MODUS_SNEL.bladzij) : "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
+    page: { minHeight: "100dvh", overflowX: "clip", maxWidth: "100vw", background: groupId ? (koel ? MODUS_FAIR.bladzij : themaNaam ? MODUS_NAAM.bladzij : MODUS_SNEL.bladzij) : "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
     wrap: { maxWidth: 560, margin: "0 auto", padding: "calc(env(safe-area-inset-top, 0px) + 74px) 16px 16px" } as React.CSSProperties,
     card: { background: "#fff", border: `1px solid ${koel ? "rgba(13,124,140,0.16)" : themaNaam ? "rgba(59,72,106,0.16)" : "rgba(120,95,20,0.14)"}`, borderRadius: 18, padding: 16, marginBottom: 13, boxShadow: koel ? "0 4px 16px -8px rgba(13,124,140,0.22)" : themaNaam ? "0 4px 16px -8px rgba(59,72,106,0.2)" : "0 4px 16px -8px rgba(120,95,20,0.25)" } as React.CSSProperties,
     h1: { fontSize: 26, fontWeight: 800, margin: "0 0 2px" } as React.CSSProperties,
@@ -6909,21 +6911,21 @@ export default function PartyTest() {
           {/* Eén pill: links de naam (tik = venster), rechts een tellertje dat meteen
               personen bij- of afzet. Beide volledig optioneel. */}
           {!settle && !kaal && isAutoNaam(groupName) && (
-            <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 15, padding: "6px 10px", fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>
+            <span style={{ flex: "1 1 auto", minWidth: 0, display: "inline-flex", alignItems: "center", gap: 9, background: "#fff", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 999, padding: "5px 6px 5px 14px", fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>
               <span onClick={() => { setNaamPlichtVeld(""); setPersGeteld(people.length > 1); setAlleenPers(false); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
-                style={{ display: "inline-flex", alignItems: "center", gap: 5, cursor: "pointer", minWidth: 0 }}>
-                <span style={{ color: "#c98a00" }}>✏️</span>
+                style={{ flex: "1 1 auto", display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", minWidth: 0 }}>
+                <span style={{ flexShrink: 0, color: "#c98a00" }}>✏️</span>
                 <span style={{ color: "#b3a988", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.namePh3}</span>
               </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, borderLeft: "1px solid rgba(120,95,20,0.2)", paddingLeft: 7, color: "#8a7d55" }}>
-                👥
-                <span onClick={() => { if (people.length > 1) removeLastPerson() }} style={{ width: 20, height: 20, borderRadius: 6, background: "#f4efe2", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
-                <b style={{ color: "#4a3f1e" }}>{people.length}</b>
-                <span onClick={() => { void addPerson() }} style={{ width: 20, height: 20, borderRadius: 6, background: AAN, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>＋</span>
+              <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 2, background: "#faf4e4", borderRadius: 999, padding: "3px 4px", color: "#8a7d55" }}>
+                <span onClick={() => { if (people.length > 1) removeLastPerson() }} style={{ width: 24, height: 24, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
+                <b style={{ color: "#4a3f1e", padding: "0 3px" }}>{people.length}</b>
+                <span style={{ color: "#a89a6f", fontWeight: 700, fontSize: 13, paddingRight: 4 }}>{L.persWordLow}</span>
+                <span onClick={() => { void addPerson() }} style={{ width: 24, height: 24, borderRadius: "50%", background: AAN, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer" }}>＋</span>
               </span>
             </span>
           )}
-          <span style={{ marginLeft: "auto", flexShrink: 0 }}>{potKnopje()}</span>
+          <span style={{ marginLeft: "auto", flexShrink: 0, maxWidth: "100%" }}>{potKnopje()}</span>
         </div>
       )}
       {/* De pot als brede balk onder de kop, zolang er nog niets in zit. Hij stond als
