@@ -2153,6 +2153,10 @@ export default function PartyTest() {
   // "Liever per persoon aantikken" opent eerst dit venster: met hoeveel zijn jullie,
   // en optioneel de namen. Daarna start de doorloop per persoon.
   const [naamPlichtNa, setNaamPlichtNa] = useState<null | (() => void)>(null)
+  // Alleen-personen-stand: hetzelfde venster, maar zonder het groepsnaamveld.
+  const [alleenPers, setAlleenPers] = useState(false)
+  // Stand bij het openen van het personenvenster, zodat "Annuleren" alles terugzet.
+  const [persSnap, setPersSnap] = useState<{ id: string; name: string }[] | null>(null)
   const [verlaatNaam, setVerlaatNaam] = useState<null | (() => void)>(null)
   const [verlaatVeld, setVerlaatVeld] = useState("")
   // Afsluiten kan alleen met een naam: anders is de groep straks onvindbaar.
@@ -4239,11 +4243,28 @@ export default function PartyTest() {
   const heeftEigen = drinks.some((d) => d.cat === "Eigen")
   const catOrde: Cat[] = heeftEigen ? ["Eigen", ...CATS.filter((c) => c !== "Eigen")] : CATS
   const catsPresent = catOrde.filter((c) => c === "Eigen" || drinks.some((d) => d.cat === c))
+  // Zet personen en namen terug zoals ze waren toen het venster openging.
+  const herstelPersonen = () => {
+    const snap = persSnap
+    setPersSnap(null)
+    if (!snap) return
+    const oudId = new Set(snap.map((x) => x.id))
+    people.forEach((pp) => {
+      if (!oudId.has(pp.id)) {
+        const heeftDrankjes = drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)
+        if (!heeftDrankjes) removePerson(pp.id)
+      }
+    })
+    snap.forEach((oud) => {
+      const nu = people.find((pp) => pp.id === oud.id)
+      if (nu && nu.name !== oud.name) renamePerson(oud.id, oud.name)
+    })
+  }
   const bewaarNaamPlicht = () => {
     const nm = naamPlichtVeld.trim()
     // Naam is optioneel: zonder naam sluiten we gewoon, de personen zijn al bewaard.
-    if (!nm) { setNaamPlicht(false); const na0 = naamPlichtNa; setNaamPlichtNa(null); if (na0) na0(); return }
-    setGroupName(nm); persistSettings({ name: nm }); setNaamPlicht(false)
+    if (!nm) { setNaamPlicht(false); setPersSnap(null); const na0 = naamPlichtNa; setNaamPlichtNa(null); if (na0) na0(); return }
+    setGroupName(nm); persistSettings({ name: nm }); setNaamPlicht(false); setPersSnap(null)
     // Ging je ergens heen toen de naam gevraagd werd? Dan nu alsnog.
     const na = naamPlichtNa
     setNaamPlichtNa(null)
@@ -6438,11 +6459,11 @@ export default function PartyTest() {
       {naamPlicht && (
         <div style={{ ...S.overlay, zIndex: 72 }}>
           <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#4a3f1e", marginBottom: 4 }}>📝 {L.namePlichtTitle}</div>
-            <input autoFocus value={naamPlichtVeld} onChange={(e) => setNaamPlichtVeld(e.target.value)}
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#4a3f1e", marginBottom: 4 }}>{alleenPers ? `👥 ${L.personsAndNames}` : `📝 ${L.namePlichtTitle}`}</div>
+            {!alleenPers && <input autoFocus value={naamPlichtVeld} onChange={(e) => setNaamPlichtVeld(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && naamPlichtVeld.trim()) bewaarNaamPlicht() }}
               placeholder={L.namePh3}
-              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, fontSize: 18, marginTop: 8, border: "2px solid rgba(240,165,0,0.6)" }} />
+              style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, fontSize: 18, marginTop: 8, border: "2px solid rgba(240,165,0,0.6)" }} />}
 
             {/* Personen zijn optioneel: het vlak blijft grijs met een streepje tot je
                 telt. De eerste tik zet jou plus één gast, en dan verschijnen meteen
@@ -6488,7 +6509,7 @@ export default function PartyTest() {
             <button style={{ ...S.btnP, width: "100%", marginTop: 14 }}
               onClick={bewaarNaamPlicht}>{L.naamGoBtn}</button>
             <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 16, fontWeight: 800 }}
-              onClick={() => { setNaamPlicht(false); setNaamPlichtNa(null) }}>{L.cancel}</button>
+              onClick={() => { herstelPersonen(); setNaamPlicht(false); setNaamPlichtNa(null) }}>{L.cancel}</button>
           </div>
         </div>
       )}
@@ -6765,7 +6786,7 @@ export default function PartyTest() {
               personen bij- of afzet. Beide volledig optioneel. */}
           {!settle && !kaal && isAutoNaam(groupName) && (
             <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 15, padding: "6px 10px", fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>
-              <span onClick={() => { setNaamPlichtVeld(""); setPersGeteld(people.length > 1); setNaamPlichtNa(null); setNaamPlicht(true) }}
+              <span onClick={() => { setNaamPlichtVeld(""); setPersGeteld(people.length > 1); setAlleenPers(false); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
                 style={{ display: "inline-flex", alignItems: "center", gap: 5, cursor: "pointer", minWidth: 0 }}>
                 <span style={{ color: "#c98a00" }}>✏️</span>
                 <span style={{ color: "#b3a988", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.namePh3}</span>
@@ -8234,7 +8255,7 @@ export default function PartyTest() {
             /* Zolang je alleen bent: één zachte uitnodiging om personen toe te voegen.
                Zodra ze er zijn, kies je hierboven tussen samen en per persoon. */
             <div style={{ display: people.length > 1 ? "none" : "flex", justifyContent: "center", marginBottom: 11 }}>
-              <button onClick={() => { setPerPersoon(true); setPersGeteld(true); if (people.length < 2) void addPerson() }}
+              <button onClick={() => { setPerPersoon(true); setPersGeteld(true) }}
                 style={{ background: themaNaam ? "#fbfcff" : "#fffdf6", border: `1px solid ${themaNaam ? "rgba(59,72,106,0.4)" : "rgba(240,165,0,0.5)"}`, borderTop: "none", borderRadius: "0 0 12px 12px", padding: "8px 16px", fontSize: 15, fontWeight: 800, color: themaNaam ? "#3b486a" : "#8a5e0f", cursor: "pointer" }}>{L.perPersonPrompt} ▸</button>
             </div>
           ) : null
@@ -8275,7 +8296,7 @@ export default function PartyTest() {
                         <span onClick={() => { if (people.length > 1) removeLastPerson() }} style={{ padding: "0 4px", cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
                         <b style={{ fontSize: 16 }}>{people.length}</b>
                         <span onClick={() => { void addPerson() }} style={{ padding: "0 4px", cursor: "pointer" }}>＋</span>
-                        <span onClick={() => { setPersGeteld(true); setNaamPlichtVeld(isAutoNaam(groupName) ? "" : groupName.trim()); setNaamPlichtNa(null); setNaamPlicht(true) }}
+                        <span onClick={() => { setPersGeteld(true); setAlleenPers(true); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
                           style={{ borderLeft: "1px solid rgba(47,111,181,0.3)", paddingLeft: 8, cursor: "pointer" }}>✏️</span>
                       </span>
                     </div>
@@ -8328,7 +8349,7 @@ export default function PartyTest() {
                     )
                   })}
                   {false && (
-                    <button onClick={() => { setPersGeteld(true); setNaamPlichtVeld(isAutoNaam(groupName) ? "" : groupName.trim()); setNaamPlichtNa(null); setNaamPlicht(true) }}
+                    <button onClick={() => { setPersGeteld(true); setAlleenPers(true); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
                       style={{ border: "2px solid rgba(47,111,181,0.55)", background: "#f2f6fc", color: "#2f5693", borderRadius: 11, padding: "8px 13px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>{L.addNameBtn}</button>
                   )}
                 </div>
@@ -9155,7 +9176,7 @@ export default function PartyTest() {
                 )}
                 {!settle && (
                   <div style={{ display: "flex", justifyContent: "center", margin: "4px 0 12px" }}>
-                    <button onClick={() => { setPersGeteld(true); setNaamPlichtVeld(isAutoNaam(groupName) ? "" : groupName.trim()); setNaamPlichtNa(null); setNaamPlicht(true) }}
+                    <button onClick={() => { setPersGeteld(true); setAlleenPers(true); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
                       style={{ display: "inline-flex", alignItems: "center", gap: 7, border: "2px solid rgba(47,111,181,0.55)", background: "#f2f6fc", color: "#2f5693", borderRadius: 12, padding: "10px 16px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
                       👥 {L.addPersonHere}
                     </button>
