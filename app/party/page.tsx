@@ -543,7 +543,6 @@ const T = {
     persWordLow: "pers.",
     tapForStrip: "Je tikt aan voor",
     howNoteQ: "HOE NOTEER JE DIT RONDJE?",
-    noteForCaps: "JE NOTEERT NU VOOR",
     togetherHint: "Tik drankjes aan voor iedereen — geen namen nodig.",
     completeWord: "✓ compleet",
     missAmount: "💶 betaling toevoegen",
@@ -1355,7 +1354,6 @@ const T = {
     persWordLow: "pers.",
     tapForStrip: "Tu coches pour",
     howNoteQ: "COMMENT NOTES-TU CETTE TOURN\u00c9E\u00a0?",
-    noteForCaps: "TU NOTES MAINTENANT POUR",
     togetherHint: "Coche les boissons pour tout le monde — sans noms.",
     completeWord: "✓ complet",
     missAmount: "💶 ajouter le paiement",
@@ -8407,22 +8405,7 @@ export default function PartyTest() {
                   ))}
                 </div>
                 {!perPersoon && <div style={{ fontSize: 14, color: "#a89a6f", marginTop: 9, lineHeight: 1.4 }}>{L.togetherHint}</div>}
-                {perPersoon && (
-                  <div style={{ borderTop: "1px solid rgba(240,165,0,0.35)", marginTop: 10, paddingTop: 9 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 7 }}>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f", letterSpacing: "0.03em" }}>{L.noteForCaps}</span>
-                      {/* Alleen tellen: hoeveel personen. Namen aanpassen gebeurt met de
-                          knop achter de namenrij hieronder, waar je toch al aan het tikken bent. */}
-                      <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7, border: "2px solid rgba(47,111,181,0.55)", background: "#f2f6fc", color: "#2f5693", borderRadius: 11, padding: "5px 7px", fontSize: 15, fontWeight: 800 }}>
-                        <span style={{ fontSize: 15 }}>👥</span>
-                        <span onClick={() => { if (people.length > 1) removeLastPerson() }} style={{ padding: "0 4px", cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
-                        <b style={{ fontSize: 16 }}>{people.length}</b>
-                        <span style={{ fontSize: 14, fontWeight: 800 }}>{L.persWord}</span>
-                        <span onClick={() => { void addPerson() }} style={{ padding: "0 4px", cursor: "pointer" }}>＋</span>
-                      </span>
-                    </div>
-                  </div>
-                )}
+
               </div>
             )}
             {(settle || perPersoon) && people.length > 0 && (
@@ -8430,7 +8413,6 @@ export default function PartyTest() {
                 <div style={{ fontSize: 14.5, fontWeight: 800, color: voorWie && voorWie !== meId ? "#8a5e0f" : "#8a7d55", marginBottom: 7 }}>
                   <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                     <span style={{ minWidth: 0 }}>{voorWie && voorWie !== meId ? L.nowTappingFor(people.find((pp) => pp.id === voorWie)?.name ?? "") : L.youTapFor}</span>
-
                   </span>
                 </div>
                 {false ? (
@@ -8469,6 +8451,7 @@ export default function PartyTest() {
                       </button>
                     )
                   })}
+                  {!settle && perPersoon && persTeller()}
                   {!settle && perPersoon && (
                     <button onClick={() => { setPersGeteld(true); setAlleenPers(true); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
                       title={L.editNamesBtn}
