@@ -535,6 +535,7 @@ const T = {
     perPersonWord: "per persoon",
     paidThisRoundQ: "💶 Betaald voor dit rondje?",
     fillWord: "Invullen",
+    adjustOrder: "bestelling aanpassen",
     completeWord: "✓ compleet",
     missAmount: "💶 betaling toevoegen",
     missAssign: "🍺 drankjes toewijzen",
@@ -1330,6 +1331,7 @@ const T = {
     perPersonWord: "par personne",
     paidThisRoundQ: "💶 Pay\u00e9 pour cette tourn\u00e9e\u00a0?",
     fillWord: "Remplir",
+    adjustOrder: "modifier la commande",
     completeWord: "✓ complet",
     missAmount: "💶 ajouter le paiement",
     missAssign: "🍺 attribuer les boissons",
@@ -9771,6 +9773,12 @@ export default function PartyTest() {
                         </div>
                         )
                       })}
+                      {!bewerk && (
+                        <div style={{ textAlign: "right", marginTop: 8, paddingTop: 7, borderTop: "1px dashed rgba(120,95,20,0.2)" }}>
+                          <span onClick={(e) => { e.stopPropagation(); startEditRound(r) }}
+                            style={{ fontSize: 14.5, fontWeight: 800, color: "#c98a00", textDecoration: "underline", cursor: "pointer" }}>✏️ {L.adjustOrder}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Bij uitgebreid opnemen liggen de gasten vast; het aantal staat dan
@@ -9901,8 +9909,8 @@ export default function PartyTest() {
                       </div>
                     )}
 
-                    {/* Aanpassen staat onderaan en enkel bij een open rondje — zo tik je er niet per ongeluk op. */}
-                    {!bewerk && (
+                    {/* Verplaatst naar onder de drankjeslijst; deze plek blijft leeg. */}
+                    {false && !bewerk && (
                       <div style={{ marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(120,95,20,0.12)", textAlign: "right" }}>
                         <span onClick={(e) => { e.stopPropagation(); startEditRound(r) }}
                           style={{ display: "inline-block", fontSize: 14.5, fontWeight: 800, color: "#c98a00", background: "#faf4e4", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 14, padding: "7px 14px", cursor: "pointer", whiteSpace: "nowrap" }}>✏️ {L.adjustWord}</span>
