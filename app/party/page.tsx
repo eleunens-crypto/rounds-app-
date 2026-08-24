@@ -8342,6 +8342,9 @@ export default function PartyTest() {
     const zoekt = normText(drinkSearch).length > 0
     const catDrinks = zoekt ? drinks.filter((d) => drinkMatches(d.name, drinkSearch)) : drinks.filter((d) => d.cat === activeCat)
     const catVisible = zoekt ? catDrinks : catDrinks.filter((d) => fullList || d.fav || drinkTotal(d.id) > 0)
+    // Voor wie tik je aan: als balk bovenin de drankjeskaart. Alleen als er echt iemand
+    // gekozen is — bij "zonder namen" bestaat voorWie niet.
+    const voorWieBalk = !!voorWie && (settle || perPersoon)
     const needCups = depositOn && (people.some((p) => pickedUpOf(p.id) > 0) || people.some((p) => cupsBal(p.id) !== 0))
     const gaveBackTotal = people.reduce((a, p) => a + (gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id))), 0)
     const cupsBlock = needCups && !cupsChecked
@@ -8481,19 +8484,6 @@ export default function PartyTest() {
           {catMore.right && <CatPijl kant="rechts" />}
         </div>
 
-        {/* Voor wie tik je aan — blijft plakken bij het scrollen door een lange
-            drankjeslijst. Staat ná de categorieënbalk, dus van categorie wisselen
-            laat hem gewoon staan. Verschijnt alleen als er echt iemand gekozen is;
-            bij "zonder namen" bestaat voorWie niet. */}
-        {(settle || perPersoon) && voorWie && (
-          <div style={{ position: "sticky", top: 0, zIndex: 4, marginTop: 4, marginBottom: 9 }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8, background: settle ? "#0a4f5b" : "#4a3f1e", borderRadius: 999, padding: "7px 17px", fontSize: 14.5, fontWeight: 700, color: settle ? "#9fd0d9" : "#d8cba8", maxWidth: "100%", boxShadow: settle ? "0 3px 10px rgba(10,79,91,0.3)" : "0 3px 10px rgba(74,63,30,0.28)" }}>
-              <span style={{ flexShrink: 0 }}>{L.tapForStrip}</span>
-              <b style={{ fontWeight: 800, fontSize: 16.5, color: settle ? "#7fe3f2" : "#ffcf5c", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{people.find((pp) => pp.id === voorWie)?.name ?? ""}</b>
-            </span>
-          </div>
-        )}
-
         {zoekt && (
           <div style={{ fontSize: 15, color: "#8a7d55", marginBottom: 8 }}>
             {catVisible.length === 0
@@ -8508,14 +8498,20 @@ export default function PartyTest() {
           </div>
         ) : (
           <div style={{ position: "relative" }}>
+            {voorWieBalk && (
+              <div style={{ position: "sticky", top: 0, zIndex: 4, display: "flex", alignItems: "center", gap: 10, background: settle ? "#0a4f5b" : "#4a3f1e", borderRadius: "18px 18px 0 0", padding: "8px 10px 8px 15px", fontSize: 15, fontWeight: 700, color: settle ? "#9fd0d9" : "#d8cba8" }}>
+                <span style={{ flexShrink: 0 }}>{L.tapForStrip}</span>
+                <b style={{ fontWeight: 800, fontSize: 17, color: settle ? "#08323b" : "#3d3418", background: settle ? "#7fe3f2" : "#ffcf5c", borderRadius: 999, padding: "4px 15px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{people.find((pp) => pp.id === voorWie)?.name ?? ""}</b>
+              </div>
+            )}
             {!zoekt && fullList && (
-              <div style={{ position: "absolute", left: "50%", top: -13, transform: "translateX(-50%)", whiteSpace: "nowrap", zIndex: 2 }}>
+              <div style={{ position: "absolute", left: "50%", top: voorWieBalk ? 26 : -13, transform: "translateX(-50%)", whiteSpace: "nowrap", zIndex: 2 }}>
                 <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
                   ▴ minder tonen
                 </span>
               </div>
             )}
-            <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12 }}>
+            <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12, ...(voorWieBalk ? { borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "none" } : {}) }}>
               {/* Zoeken + inspreken bovenin de kaart, onder de categorieën — zelfde plek
                   en zelfde blok voor snel én uitgebreid opnemen. */}
               {!settle && <div style={{ gridColumn: "1 / -1" }}>{renderZoekBlok(true)}</div>}
