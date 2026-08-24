@@ -532,8 +532,8 @@ const T = {
     onlyThisRound: "↩ Alleen dit rondje",
     allAmountsBtn: "💶 Alle bedragen invullen",
     tapForCaps: "JE TIKT AAN VOOR",
-    tikSamenWord: "samen",
-    perPersonWord: "per persoon",
+    tikSamenWord: "zonder namen",
+    perPersonWord: "met namen",
     paidThisRoundQ: "💶 Betaald voor dit rondje?",
     fillWord: "Invullen",
     adjustOrder: "bestelling aanpassen",
@@ -1340,8 +1340,8 @@ const T = {
     onlyThisRound: "↩ Seulement cette tourn\u00e9e",
     allAmountsBtn: "💶 Remplir tous les montants",
     tapForCaps: "TU COCHES POUR",
-    tikSamenWord: "ensemble",
-    perPersonWord: "par personne",
+    tikSamenWord: "sans noms",
+    perPersonWord: "avec noms",
     paidThisRoundQ: "💶 Pay\u00e9 pour cette tourn\u00e9e\u00a0?",
     fillWord: "Remplir",
     adjustOrder: "modifier la commande",
@@ -8282,7 +8282,7 @@ export default function PartyTest() {
                         background: perPersoon === mode ? AAN : "#fff",
                         border: perPersoon === mode ? "none" : "1px solid rgba(120,95,20,0.22)",
                         color: perPersoon === mode ? "#fff" : "#4a3f1e" }}>
-                      {mode ? `👤 ${L.perPersonWord}` : `🍻 ${L.tikSamenWord}`}
+                      {mode ? `👤 ${L.perPersonWord}` : L.tikSamenWord}
                     </button>
                   ))}
                 </div>
