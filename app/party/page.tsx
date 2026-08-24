@@ -539,6 +539,9 @@ const T = {
     adjustOrder: "bestelling aanpassen",
     addPersonHere: "Persoon toevoegen",
     personsAndNames: "Personen & namen",
+    howNoteQ: "HOE NOTEER JE DIT RONDJE?",
+    noteForCaps: "JE NOTEERT NU VOOR",
+    togetherHint: "Je tikt gewoon aan wat er besteld is — geen namen nodig.",
     completeWord: "✓ compleet",
     missAmount: "💶 betaling toevoegen",
     missAssign: "🍺 drankjes toewijzen",
@@ -1338,6 +1341,9 @@ const T = {
     adjustOrder: "modifier la commande",
     addPersonHere: "Ajouter une personne",
     personsAndNames: "Personnes & noms",
+    howNoteQ: "COMMENT NOTES-TU CETTE TOURN\u00c9E\u00a0?",
+    noteForCaps: "TU NOTES MAINTENANT POUR",
+    togetherHint: "Tu coches simplement ce qui est command\u00e9 — sans noms.",
     completeWord: "✓ complet",
     missAmount: "💶 ajouter le paiement",
     missAssign: "🍺 attribuer les boissons",
@@ -6418,14 +6424,15 @@ export default function PartyTest() {
                       <div key={pp.id} style={{ position: "relative", display: "flex", marginBottom: 6 }}>
                         <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><KroonIcoon size={17} kleur="#c98a00" /></span>
                         <input value={leeg ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)} placeholder={L.yourNamePh}
-                          style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "9px 11px 9px 34px", fontSize: 16, textAlign: "left", fontWeight: 800, background: "rgba(240,165,0,0.1)", border: "1.5px solid rgba(240,165,0,0.5)", color: "#8a5e0f" }} />
+                          style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "9px 38px 9px 34px", fontSize: 16, textAlign: "left", fontWeight: 800, background: "rgba(240,165,0,0.1)", border: "1.5px solid rgba(240,165,0,0.5)", color: "#8a5e0f" }} />
+                        <span style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", width: 24, height: 24, borderRadius: 8, background: "rgba(240,165,0,0.28)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>✏️</span>
                       </div>
                     )
                     return (
                       <div key={pp.id} style={{ position: "relative", display: "flex", marginBottom: 6 }}>
                         <input value={leeg ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)} placeholder={`${L.guestN(idx + 1)} · ${L.guestNamePh}`}
-                          style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: leeg ? "9px 32px 9px 11px" : "9px 11px", fontSize: 16, textAlign: "left", background: "#fff" }} />
-                        {leeg && <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", display: "inline-flex" }}><PotloodIcoon /></span>}
+                          style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "9px 38px 9px 11px", fontSize: 16, textAlign: "left", background: "#fff" }} />
+                        <span style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", width: 24, height: 24, borderRadius: 8, background: "rgba(240,165,0,0.2)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>✏️</span>
                       </div>
                     )
                   })}
@@ -8181,28 +8188,41 @@ export default function PartyTest() {
             {/* Voor wie tik je aan? Wie via de QR binnenkwam staat achteraan en gedimd:
                 die duidt normaal zelf aan. Aantikken kan wel, voor als er iets misloopt. */}
             {/* Samen turven of per persoon aantikken — wisselen mag altijd, en wat al
-                op naam staat blijft gewoon staan. */}
+                op naam staat blijft gewoon staan. Alles in één kader. */}
             {!settle && people.length > 1 && (
-              <div style={{ display: "flex", gap: 4, background: "#f4efe2", borderRadius: 12, padding: 3, marginBottom: 9 }}>
-                {[false, true].map((mode) => (
-                  <button key={String(mode)} onClick={() => setPerPersoon(mode)}
-                    style={{ flex: 1, borderRadius: 10, padding: "9px 0", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
-                      background: perPersoon === mode ? AAN : "#fff",
-                      border: perPersoon === mode ? "none" : "1px solid rgba(120,95,20,0.2)",
-                      color: perPersoon === mode ? "#fff" : "#4a3f1e" }}>
-                    {mode ? `👤 ${L.perPersonWord}` : `🍻 ${L.tikSamenWord}`}
-                  </button>
-                ))}
+              <div style={{ background: "#fff", border: perPersoon ? "2px solid #e8a812" : "1px solid rgba(120,95,20,0.25)", borderRadius: 13, padding: 11, marginBottom: 9 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "#8a7d55", letterSpacing: "0.03em", marginBottom: 8 }}>{L.howNoteQ}</div>
+                <div style={{ display: "flex", gap: 5 }}>
+                  {[false, true].map((mode) => (
+                    <button key={String(mode)} onClick={() => setPerPersoon(mode)}
+                      style={{ flex: 1, borderRadius: 10, padding: "10px 0", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
+                        background: perPersoon === mode ? AAN : "#fff",
+                        border: perPersoon === mode ? "none" : "1px solid rgba(120,95,20,0.22)",
+                        color: perPersoon === mode ? "#fff" : "#4a3f1e" }}>
+                      {mode ? `👤 ${L.perPersonWord}` : `🍻 ${L.tikSamenWord}`}
+                    </button>
+                  ))}
+                </div>
+                {!perPersoon && <div style={{ fontSize: 14, color: "#a89a6f", marginTop: 9, lineHeight: 1.4 }}>{L.togetherHint}</div>}
+                {perPersoon && (
+                  <div style={{ borderTop: "1px solid rgba(240,165,0,0.35)", marginTop: 10, paddingTop: 9 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 7 }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f", letterSpacing: "0.03em" }}>{L.noteForCaps}</span>
+                      {/* Snel tellen zonder venster; het potlood opent de namen. */}
+                      <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7, border: "2px solid rgba(47,111,181,0.55)", background: "#f2f6fc", color: "#2f5693", borderRadius: 11, padding: "5px 7px", fontSize: 15, fontWeight: 800 }}>
+                        <span onClick={() => { if (people.length > 1) removeLastPerson() }} style={{ padding: "0 4px", cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
+                        <b style={{ fontSize: 16 }}>{people.length}</b>
+                        <span onClick={() => { void addPerson() }} style={{ padding: "0 4px", cursor: "pointer" }}>＋</span>
+                        <span onClick={() => { setPersGeteld(true); setNaamPlichtVeld(isAutoNaam(groupName) ? "" : groupName.trim()); setNaamPlichtNa(null); setNaamPlicht(true) }}
+                          style={{ borderLeft: "1px solid rgba(47,111,181,0.3)", paddingLeft: 8, cursor: "pointer" }}>✏️</span>
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             {(settle || (perPersoon && people.length > 1)) && people.length > 0 && (
-              <div style={{ ...S.card, padding: "11px 12px", marginBottom: 8,
-                border: !settle ? "2px solid #e8a812" : undefined }}>
-                {!settle && (
-                  <div style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f", letterSpacing: "0.04em", marginBottom: 7 }}>
-                    {L.tapForCaps} <span style={{ fontSize: 15 }}>{(people.find((pp) => pp.id === voorWie)?.name || "").toUpperCase()}</span>
-                  </div>
-                )}
+              <div style={settle ? { ...S.card, padding: "11px 12px", marginBottom: 8 } : { marginTop: -17, marginBottom: 9, background: "#fff", border: "2px solid #e8a812", borderTop: "none", borderRadius: "0 0 13px 13px", padding: "0 11px 11px" }}>
                 <div style={{ fontSize: 14.5, fontWeight: 800, color: voorWie && voorWie !== meId ? "#8a5e0f" : "#8a7d55", marginBottom: 7 }}>
                   <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                     <span style={{ minWidth: 0 }}>{voorWie && voorWie !== meId ? L.nowTappingFor(people.find((pp) => pp.id === voorWie)?.name ?? "") : L.youTapFor}</span>
@@ -8251,15 +8271,8 @@ export default function PartyTest() {
                   )}
                 </div>
                 )}
-                {!settle && (
-                  <div style={{ textAlign: "center", marginTop: 11 }}>
-                    <button onClick={() => { setPersGeteld(true); setNaamPlichtVeld(isAutoNaam(groupName) ? "" : groupName.trim()); setNaamPlichtNa(null); setNaamPlicht(true) }}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 7, border: "2px solid rgba(47,111,181,0.55)", background: "#f2f6fc", color: "#2f5693", borderRadius: 12, padding: "10px 16px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
-                      👥 {L.personsAndNames} ✏️
-                    </button>
-                  </div>
-                )}
-                <div style={{ fontSize: 13.5, color: "#a89a6f", marginTop: 7, lineHeight: 1.45 }}>{L.qrTapsSelf}</div>
+
+                {settle && <div style={{ fontSize: 13.5, color: "#a89a6f", marginTop: 7, lineHeight: 1.45 }}>{L.qrTapsSelf}</div>}
               </div>
             )}
         <div style={{ display: zoekt ? "none" : "block", position: "relative", marginBottom: 10 }}>
@@ -8483,7 +8496,7 @@ export default function PartyTest() {
                       <span style={{ position: "relative", flex: 1, minWidth: 0, display: "flex" }}>
                         <input value={leeg ? "" : p.name} onChange={(e) => renamePerson(p.id, e.target.value)} placeholder={`${p.name} · ${L.guestNamePh}`}
                           style={{ ...S.input, flex: 1, minWidth: 0, boxSizing: "border-box", textAlign: "left", fontSize: 18, fontWeight: 700, padding: leeg ? "9px 32px 9px 11px" : "9px 11px", borderRadius: 10, background: VLAK2, color: leeg ? "#b3a988" : "#4a3f1e" }} />
-                        {leeg && <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", display: "inline-flex" }}><PotloodIcoon /></span>}
+                        <span style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", width: 24, height: 24, borderRadius: 8, background: "rgba(240,165,0,0.2)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>✏️</span>
                       </span>
                     </div>
                   )
