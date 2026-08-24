@@ -536,6 +536,7 @@ const T = {
     paidThisRoundQ: "💶 Betaald voor dit rondje?",
     fillWord: "Invullen",
     adjustOrder: "bestelling aanpassen",
+    addPersonHere: "Persoon toevoegen",
     completeWord: "✓ compleet",
     missAmount: "💶 betaling toevoegen",
     missAssign: "🍺 drankjes toewijzen",
@@ -1332,6 +1333,7 @@ const T = {
     paidThisRoundQ: "💶 Pay\u00e9 pour cette tourn\u00e9e\u00a0?",
     fillWord: "Remplir",
     adjustOrder: "modifier la commande",
+    addPersonHere: "Ajouter une personne",
     completeWord: "✓ complet",
     missAmount: "💶 ajouter le paiement",
     missAssign: "🍺 attribuer les boissons",
@@ -8438,7 +8440,7 @@ export default function PartyTest() {
                   style={assignNaamEdit
                     ? { border: "none", background: MODUS_NAAM.knop, color: "#fff", borderRadius: 9, padding: "7px 12px", fontSize: 15, fontWeight: 800, cursor: "pointer" }
                     : { background: "#fff", border: "1px solid rgba(120,95,20,0.3)", color: "#8a7d55", borderRadius: 9, padding: "7px 12px", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
-                  {assignNaamEdit ? L.doneNamesBtn : L.editNamesBtn}</button>
+                  {assignNaamEdit ? L.doneNamesBtn : `👥 ${L.addPersonHere}`}</button>
               </div>
               {assignNaamEdit && (<>
                 <div style={{ fontSize: 14.5, color: "#8a7d55", marginBottom: 10, lineHeight: 1.4 }}>{L.editNamesHint}</div>
@@ -9044,6 +9046,14 @@ export default function PartyTest() {
                     style={{ ...S.btn, width: "100%", marginBottom: 9, fontSize: 15, fontWeight: 800, borderColor: "rgba(240,165,0,0.6)", color: "#8a5e0f" }}>
                     {assignAllMode ? L.onlyThisRound : L.allRoundsBtn}
                   </button>
+                )}
+                {!settle && (
+                  <div style={{ display: "flex", justifyContent: "center", margin: "4px 0 12px" }}>
+                    <button onClick={() => { setPersGeteld(true); setNaamPlichtVeld(isAutoNaam(groupName) ? "" : groupName.trim()); setNaamPlichtNa(null); setNaamPlicht(true) }}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 7, border: "2px solid rgba(47,111,181,0.55)", background: "#f2f6fc", color: "#2f5693", borderRadius: 12, padding: "10px 16px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                      👥 {L.addPersonHere}
+                    </button>
+                  </div>
                 )}
                 <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, marginBottom: 8 }}>
                   <div style={{ ...S.seg(editAssignMode === "person"), padding: "5px 9px", fontSize: 15, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
