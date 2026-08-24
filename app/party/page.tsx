@@ -995,7 +995,7 @@ const T = {
     removeHint: "Verwijder wat je niet meer nodig hebt. Al besteld in een rondje? Dan blijft het staan.",
     nameYourDrink: "Geef je drankje een naam.",
     needPrice: "Vul een richtprijs in — anders kan dit drankje niet eerlijk verdeeld worden.",
-    needAmountOrCancel: "Uit de pot betalen kan niet zonder bedrag. Vul een bedrag in, of kies Zelf betaald.",
+    needAmountOrCancel: "Uit de pot betalen kan niet zonder bedrag. Vul een bedrag in, of kies Niet uit de pot.",
     alreadyExists: (n: string) => `"${n}" staat al in de lijst.`,
     maxPerPerson: (n: number) => `Je kan maximaal ${n} eigen drankjes toevoegen.`,
     maxPerGroup: (n: number) => `De groep zit aan het maximum van ${n} eigen drankjes.`,
@@ -1135,7 +1135,7 @@ const T = {
     persRoundShort: (n: number) => `👤 ${n} pers. in dit rondje`,
     orderedLabel: "Besteld",
     barlistBtn: "handig barlijstje",
-    potClamped: (b: string) => `De pot kon maar ${b} dekken — de rest van het rondje telt als zelf betaald.`,
+    potClamped: (b: string) => `De pot kon maar ${b} dekken — de rest van het rondje telt als niet uit de pot.`,
     thanksClosed: "🍻 Bedankt en tot de volgende! Je avond blijft bewaard bij Opgeslagen groepen.",
     cancelledBy: (naam: string) => `✕ ${naam} annuleerde het rondje.`,
     runnerDoneBtn: "🍻 Rondje afronden en halen",
@@ -1168,7 +1168,7 @@ const T = {
     skipCostWarn: "Je vulde al iets in bij dit rondje. Toch overslaan zonder het op te slaan?",
     skipCostYes: "Ja, overslaan",
     finishRoundFirst: "Rond eerst dit rondje af — vul in wat het kostte of tik Overslaan.",
-    paidSelf: "Zelf betaald",
+    paidSelf: "Niet uit de pot",
     paidPot: "Uit de pot",
     whoPaidWhat: "wie betaalde wat",
     totalPaidShort: "Totaal betaald",
@@ -1188,7 +1188,7 @@ const T = {
     potShortTitle: "Niet genoeg in de pot",
     potShortSimple: (inPot: string, kost: string) => `Nog ${inPot} in de pot, dit rondje kost ${kost}.`,
     potChoiceTopUp: "\ud83e\uded9 Toevoegen aan de pot",
-    potChoicePaySelf: "\ud83d\udcb6 Alles zelf betalen",
+    potChoicePaySelf: "\ud83d\udcb6 Alles buiten de pot",
     potWord: "pot",
     skipPayment: "Betaling overslaan",
     tapToConfirm: "tik ✓ om te bevestigen",
@@ -1947,7 +1947,7 @@ const T = {
     persRoundShort: (n: number) => `👤 ${n} pers. dans cette tourn\u00e9e`,
     orderedLabel: "Command\u00e9",
     barlistBtn: "liste bar pratique",
-    potClamped: (b: string) => `La cagnotte n'a pu couvrir que ${b} — le reste de la tournée compte comme payé soi-même.`,
+    potClamped: (b: string) => `La cagnotte n'a pu couvrir que ${b} — le reste de la tournée compte hors cagnotte.`,
     thanksClosed: "🍻 Merci et à la prochaine ! Ta soirée reste dans Groupes enregistrés.",
     cancelledBy: (naam: string) => `✕ ${naam} a annulé la tournée.`,
     runnerDoneBtn: "🍻 Clôturer la tournée et aller la chercher",
@@ -1980,7 +1980,7 @@ const T = {
     skipCostWarn: "Tu as d\u00e9j\u00e0 rempli quelque chose pour cette tourn\u00e9e. Passer quand m\u00eame sans enregistrer ?",
     skipCostYes: "Oui, passer",
     finishRoundFirst: "Cl\u00f4ture d\u2019abord cette tourn\u00e9e — indique le montant ou appuie sur Passer.",
-    paidSelf: "Pay\u00e9 soi-m\u00eame",
+    paidSelf: "Hors cagnotte",
     whoPaidWhat: "qui a pay\u00e9 quoi",
     totalPaidShort: "Total pay\u00e9",
     potShare: "dont du pot",
@@ -2000,7 +2000,7 @@ const T = {
     potShortTitle: "Pas assez dans la cagnotte",
     potShortSimple: (inPot: string, kost: string) => `Il reste ${inPot} dans la cagnotte, cette tourn\u00e9e co\u00fbte ${kost}.`,
     potChoiceTopUp: "\ud83e\uded9 Ajouter \u00e0 la cagnotte",
-    potChoicePaySelf: "\ud83d\udcb6 Tout payer soi-m\u00eame",
+    potChoicePaySelf: "\ud83d\udcb6 Tout hors cagnotte",
     potWord: "cagnotte",
     skipPayment: "Passer le paiement",
     tapToConfirm: "appuie sur ✓ pour confirmer",
@@ -4867,20 +4867,16 @@ export default function PartyTest() {
   // De eindsprong van uitgebreid: betalers registreren en naar de eindbalans, in de
   // eigen amber-stijl (de modus blijft uitgebreid).
   const naarEindbalans = () => {
-    // "Zelf betaald" registreerde tot nu enkel het bedrag, niet wíe betaalde. Voor een
-    // kloppende eindbalans zetten we de noteerder als betaler van het niet-pot-deel —
-    // en we bewaren dat ook echt, anders verdampt het bij een herlaadbeurt.
-    if (meId) {
-      const nieuw = rounds.flatMap((rr) => {
-        if ((rr.amount || 0) <= 0.005 || Object.keys(rr.payers || {}).length > 0) return []
-        const rest = Math.max(0, (rr.amount || 0) - (rr.potPart || 0))
-        return rest > 0.005 ? [{ ...rr, payers: { [meId]: rest } }] : []
-      })
-      if (nieuw.length > 0) {
-        setRounds((rs) => rs.map((rr) => nieuw.find((w) => w.id === rr.id) ?? rr))
-        nieuw.forEach((w) => persistRound(w))
-      }
-    }
+    // Een rondje met een bedrag maar zonder betaler kan de eindbalans niet uitrekenen:
+    // er staat geld op tafel waarvan niemand weet wie het voorschoot. Vroeger zette dit
+    // zulke rondjes stil op naam van de noteerder — handig, maar fout zodra iemand
+    // anders betaald had, en je zag het nergens. Nu gaat het langs het betalersscherm:
+    // dáár vul je in hoeveel er betaald werd en door wie, en pas als alles gedekt is
+    // laat dat scherm je door naar de eindbalans.
+    const ongedekt = rounds.some((rr) => (rr.amount || 0) > 0.005
+      && Math.max(0, (rr.amount || 0) - (rr.potPart || 0)) > 0.005
+      && Object.values(rr.payers || {}).reduce((a, b) => a + (b || 0), 0) <= 0.005)
+    if (ongedekt) { setView("payers"); return }
     setHasSettled(true)
     setView("final")
   }
@@ -9194,7 +9190,7 @@ export default function PartyTest() {
                 return (
                   <>
                     <div style={{ ...S.row, gap: 7, marginBottom: 7 }}>
-                      <span style={{ flexShrink: 0, width: 98, fontSize: 15, fontWeight: 800, color: zelfKleur, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>💶 {L.paidSelf}</span>
+                      <span style={{ flexShrink: 0, width: 124, fontSize: 15, fontWeight: 800, color: zelfKleur, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>💶 {L.paidSelf}</span>
                       <span style={{ fontSize: 19, color: "#8a7d55", fontWeight: 700 }}>€</span>
                       <input style={{ ...S.input, flex: 1, minWidth: 50, fontSize: 19, fontWeight: 800, padding: "10px 10px", textAlign: "left", color: zelfKleur,
                         borderColor: mixZelf > 0.005 ? zelfRand : "rgba(120,95,20,0.22)" }}
@@ -9583,7 +9579,7 @@ export default function PartyTest() {
         {/* Ontbrekende stukjes voor een eerlijke verdeling: bedrag, toewijzing of
             betaler. De kaarten hierboven blijven onaangeroerd. */}
         {(() => {
-          const teVullen = rounds.filter((r) => (r.amount || 0) <= 0.005 || rPaidSum(r) < (r.amount || 0) - 0.005).length
+          const teVullen = rounds.filter((r) => (r.amount || 0) <= 0.005).length
           if (settle || teVullen === 0) return null
           return (
             <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.5)" }}>
@@ -9862,15 +9858,14 @@ export default function PartyTest() {
                   {/* Dichtgeklapt: kleine badges met wat er nog nodig is. Open: één
                       sectie met volwaardige regels. */}
                   {!settle && editRoundId !== r.id && !isOpen(r) && (() => {
-                    const geenBetaler2 = (r.amount || 0) > 0.005 && rPaidSum(r) < (r.amount || 0) - 0.005
                     const nogToe2 = Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0)
-                    if (!geenBedrag && !geenBetaler2 && nogToe2 === 0) {
+                    if (!geenBedrag && nogToe2 === 0) {
                       return <div style={{ marginTop: 6 }}><span style={{ fontSize: 13.5, fontWeight: 800, borderRadius: 10, padding: "4px 10px", background: "rgba(31,138,76,0.12)", color: "#1f6b3a", border: "1px solid rgba(31,138,76,0.3)" }}>{L.completeWord}</span></div>
                     }
                     const badge = (t: string) => <span style={{ fontSize: 13.5, fontWeight: 800, borderRadius: 10, padding: "5px 10px", background: "#fff", border: "1.5px solid rgba(224,104,92,0.5)", color: "#4a3f1e" }}>{t}</span>
                     return (
                       <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
-                        {(geenBedrag || geenBetaler2) && (
+                        {geenBedrag && (
                           <span onClick={(e) => { e.stopPropagation(); setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r); setBedragFocus(true) }}>{badge(L.missAmount)}</span>
                         )}
                         {nogToe2 > 0 && (
@@ -9880,9 +9875,8 @@ export default function PartyTest() {
                     )
                   })()}
                   {!settle && editRoundId !== r.id && isOpen(r) && (() => {
-                    const geenBetaler = (r.amount || 0) > 0.005 && rPaidSum(r) < (r.amount || 0) - 0.005
                     const nogToe = Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0)
-                    if (!geenBedrag && !geenBetaler && nogToe === 0) return null
+                    if (!geenBedrag && nogToe === 0) return null
                     const regel = (tekst: string, knopTekst: string, doe: () => void) => (
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(240,165,0,0.3)" }}>
                         <span style={{ minWidth: 0, fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{tekst}</span>
@@ -9893,7 +9887,7 @@ export default function PartyTest() {
                     return (
                       <div style={{ background: "#fffaeb", border: "2px solid rgba(240,165,0,0.65)", borderRadius: 12, padding: "11px 12px", marginTop: 11 }}>
                         <span style={{ display: "inline-block", fontSize: 14.5, fontWeight: 800, background: "rgba(240,165,0,0.25)", color: "#8a5e0f", borderRadius: 20, padding: "7px 14px" }}>{L.nogNodigBadge} — {L.stillToFill}</span>
-                        {(geenBedrag || geenBetaler) && regel(L.paidThisRoundQ, L.fillWord, () => { setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r); setBedragFocus(true) })}
+                        {geenBedrag && regel(L.paidThisRoundQ, L.fillWord, () => { setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r); setBedragFocus(true) })}
                         {nogToe > 0 && regel(L.notAssignedYet(nogToe), L.openWord, () => { setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) })}
                       </div>
                     )
@@ -10152,7 +10146,7 @@ export default function PartyTest() {
   if (view === "payers") {
     // Gedekt = pot + personen samen komen aan het bedrag. Een rondje dat volledig uit
     // de pot ging heeft geen enkele persoon als betaler, en dat is prima.
-    const zonderBetaler = rounds.filter((r) => (r.amount || 0) <= 0.005 || rPaidSum(r) < (r.amount || 0) - 0.005)
+    const zonderBetaler = rounds.filter((r) => (r.amount || 0) > 0.005 && rPaidSum(r) < (r.amount || 0) - 0.005)
     const klaar = zonderBetaler.length === 0 && !potZonderNamen
     return (
       <div style={S.page}><div style={S.wrap}>
