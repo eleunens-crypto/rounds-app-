@@ -5183,8 +5183,9 @@ export default function PartyTest() {
   const neemVorigeOver = async (vorig: Round) => {
     for (const d of drinks) {
       const perPersoon = vorig.orders[d.id] || {}
-      for (const [pid, n] of Object.entries(perPersoon)) {
-        if ((n || 0) > 0 && people.some((pp) => pp.id === pid)) await bump(d.id, pid, n || 0)
+      for (const [pid, aantal] of Object.entries(perPersoon)) {
+        const n = Number(aantal || 0)
+        if (n > 0 && people.some((pp) => pp.id === pid)) await bump(d.id, pid, n)
       }
       const los = vorig.anon[d.id] || 0
       if (los > 0) await bumpAnon(d.id, los)
@@ -5319,7 +5320,7 @@ export default function PartyTest() {
   // Alleen wat bevestigd is telt mee: anders staat er al bier in het lijstje van
   // iemand die nog aan het kiezen is.
   const barTotalen = () => drinks
-    .map((d) => ({ id: d.id, naam: d.name, emoji: d.emoji, n: Object.entries(cart[d.id] || {}).reduce((a, [pid, q]) => a + (isKlaar(pid) ? (q || 0) : 0), 0) + (cartAnon[d.id] ?? 0) }))
+    .map((d) => ({ id: d.id, naam: d.name, emoji: d.emoji, n: Object.entries(cart[d.id] || {}).reduce((a: number, [pid, q]) => a + (isKlaar(pid) ? Number(q || 0) : 0), 0) + (cartAnon[d.id] ?? 0) }))
     .filter((x) => x.n > 0)
 
   const antwoordRondje = async (answer: "different" | "skip" | "same") => {
@@ -6270,7 +6271,7 @@ export default function PartyTest() {
         return (
           <div style={{ ...S.overlay, zIndex: 73 }}>
             <div style={{ ...S.sheet, maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e" }}>{L.aanvulTitle(aanvulIdx + 1, r ? (Object.values(r.orders || {}).reduce((n, m) => n + Object.values(m || {}).reduce((a, b) => a + (b || 0), 0), 0) + Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0)) : 0)}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e" }}>{L.aanvulTitle(aanvulIdx + 1, r ? (Object.values(r.orders || {}).reduce((n: number, m) => n + Object.values(m || {}).reduce((a: number, b) => a + Number(b || 0), 0), 0) + Object.values(r.anon || {}).reduce((a: number, b) => a + Number(b || 0), 0)) : 0)}</div>
               <div style={{ fontSize: 15, color: "#8a7d55", lineHeight: 1.45, marginTop: 5 }}>{L.aanvulSub}</div>
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 14 }}>
@@ -6332,7 +6333,9 @@ export default function PartyTest() {
         <div style={{ ...S.overlay, zIndex: 74 }}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             {(() => {
-              const drankjesTot = rounds.reduce((a, r0) => a + Object.values(r0.orders || {}).reduce((x, m) => x + Object.values(m || {}).reduce((p, q) => p + (q || 0), 0), 0) + Object.values(r0.anon || {}).reduce((x, q) => x + (q || 0), 0), 0)
+              const drankjesTot = rounds.reduce((a: number, r0) => a
+                + Object.values(r0.orders || {}).reduce((x: number, m) => x + Object.values(m || {}).reduce((p: number, q) => p + Number(q || 0), 0), 0)
+                + Object.values(r0.anon || {}).reduce((x: number, q) => x + Number(q || 0), 0), 0)
               const bewaar = () => { const nm = verlaatVeld.trim(); if (!nm) return nm; setGroupName(nm); persistSettings({ name: nm }); return nm }
               return (<>
                 <div style={{ fontSize: 21, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.25 }}>⚠️ {L.leaveNoNameTitle}</div>
@@ -9701,7 +9704,7 @@ export default function PartyTest() {
                         <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 7 }}>{L.stillToFill}</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                           {geenBedrag && knop(L.missAmount, () => setEditRoundId(r.id))}
-                          {nogToe > 0 && knop(L.missAssign, () => { setAssignAllMode(true); setAssignIdx(idx) })}
+                          {nogToe > 0 && knop(L.missAssign, () => { setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) })}
                           {geenBetaler && knop(L.missPayer, () => setEditRoundId(r.id))}
                         </div>
                       </div>
