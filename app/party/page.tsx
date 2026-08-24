@@ -526,7 +526,11 @@ const T = {
     aanvulAssignOk: "alles toegewezen",
     aanvulSave: "Bewaren",
     aanvulSkip: "Alles overslaan — later invullen",
-    missAmount: "💶 bedrag?",
+    stillToFill: "nog aanvullen voor eerlijk verdelen",
+    allRoundsBtn: "🍺 Alle rondjes in één keer",
+    onlyThisRound: "↩ Alleen dit rondje",
+    allAmountsBtn: "💶 Alle bedragen invullen",
+    missAmount: "💶 bedrag",
     missAssign: "🍺 toewijzen",
     missPayer: "💳 wie betaalde?",
     missRoundsNote: (n: number) => `Nog ${n} rondje${n === 1 ? "" : "s"} aanvullen voor een eerlijke verdeling`,
@@ -646,7 +650,7 @@ const T = {
     groupNameEdit: "Naam van deze groep",
     groupNamePh: "Typ je groepsnaam",
     groupNameShortPh: "Groepsnaam",
-    giveNameQ: "Naam geven?",
+    giveNameQ: "Groepsnaam? · optioneel",
     groupNamePlain: "Groepsnaam",
     voiceNotPerfect: "werkt nog niet altijd perfect",
     howNoteTitle: "Hoe drankjes noteren?",
@@ -1311,7 +1315,11 @@ const T = {
     aanvulAssignOk: "tout est attribu\u00e9",
     aanvulSave: "Enregistrer",
     aanvulSkip: "Tout passer — compl\u00e9ter plus tard",
-    missAmount: "💶 montant\u00a0?",
+    stillToFill: "\u00e0 compl\u00e9ter pour un partage \u00e9quitable",
+    allRoundsBtn: "🍺 Toutes les tourn\u00e9es d'un coup",
+    onlyThisRound: "↩ Seulement cette tourn\u00e9e",
+    allAmountsBtn: "💶 Remplir tous les montants",
+    missAmount: "💶 montant",
     missAssign: "🍺 attribuer",
     missPayer: "💳 qui a pay\u00e9\u00a0?",
     missRoundsNote: (n: number) => `Encore ${n} tourn\u00e9e${n === 1 ? "" : "s"} \u00e0 compl\u00e9ter pour un partage \u00e9quitable`,
@@ -1431,7 +1439,7 @@ const T = {
     groupNameEdit: "Nom de ce groupe",
     groupNamePh: "Tape le nom de ton groupe",
     groupNameShortPh: "Nom du groupe",
-    giveNameQ: "Donner un nom ?",
+    giveNameQ: "Nom du groupe ? · optionnel",
     groupNamePlain: "Nom du groupe",
     voiceNotPerfect: "ne marche pas encore à tous les coups",
     howNoteTitle: "Comment noter les boissons ?",
@@ -5620,7 +5628,7 @@ export default function PartyTest() {
   const VLAK3 = koel ? "#e4f2f5" : themaNaam ? "#e6eaf4" : "#f3ead2"
   const S = {
     page: { minHeight: "100dvh", background: groupId ? (koel ? MODUS_FAIR.bladzij : themaNaam ? MODUS_NAAM.bladzij : MODUS_SNEL.bladzij) : "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
-    wrap: { maxWidth: 560, margin: "0 auto", padding: "calc(env(safe-area-inset-top, 0px) + 34px) 16px 16px" } as React.CSSProperties,
+    wrap: { maxWidth: 560, margin: "0 auto", padding: "calc(env(safe-area-inset-top, 0px) + 46px) 16px 16px" } as React.CSSProperties,
     card: { background: "#fff", border: `1px solid ${koel ? "rgba(13,124,140,0.16)" : themaNaam ? "rgba(59,72,106,0.16)" : "rgba(120,95,20,0.14)"}`, borderRadius: 18, padding: 16, marginBottom: 13, boxShadow: koel ? "0 4px 16px -8px rgba(13,124,140,0.22)" : themaNaam ? "0 4px 16px -8px rgba(59,72,106,0.2)" : "0 4px 16px -8px rgba(120,95,20,0.25)" } as React.CSSProperties,
     h1: { fontSize: 26, fontWeight: 800, margin: "0 0 2px" } as React.CSSProperties,
     h3: { fontSize: 19.5, fontWeight: 800, margin: "0 0 10px" } as React.CSSProperties,
@@ -8780,7 +8788,7 @@ export default function PartyTest() {
                 </div>
                 {opNaam === true && (() => {
                   const anonTot = laatste ? drinks.reduce((s2, d) => s2 + (laatste.anon?.[d.id] ?? 0), 0) : 0
-                  return anonTot > 0 && <div style={{ fontSize: 15, fontWeight: 700, color: "#8a5e0f", marginTop: 8 }}>🍺 {L.notAssignedYet(anonTot)}</div>
+                  return null
                 })()}
                 {/* Aanpassen hoort bij de aantallen die er net boven staan: rechts
                     onderaan, in de sectie zelf verwerkt — een gewone tekstlink, geen pil. */}
@@ -9020,6 +9028,12 @@ export default function PartyTest() {
                   {assignAllMode ? L.assignAllSub(toonIdx.length) : L.roundXofY(assignIdx + 1, rounds.length)}
                 </div>
 
+                {rounds.length > 1 && (
+                  <button onClick={() => setAssignAllMode((v) => !v)}
+                    style={{ ...S.btn, width: "100%", marginBottom: 9, fontSize: 15, fontWeight: 800, borderColor: "rgba(240,165,0,0.6)", color: "#8a5e0f" }}>
+                    {assignAllMode ? L.onlyThisRound : L.allRoundsBtn}
+                  </button>
+                )}
                 <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, marginBottom: 8 }}>
                   <div style={{ ...S.seg(editAssignMode === "person"), padding: "5px 9px", fontSize: 15, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
                   <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 15, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>per drank</div>
@@ -9582,7 +9596,9 @@ export default function PartyTest() {
     // staat standaard open (als de gebruiker niks toggelde).
     const laatsteId = rounds.length ? rounds[rounds.length - 1].id : ""
     // Standaard staat alles dicht — je opent zelf wat je wil bekijken.
-    const isOpen = (r: Round) => openRounds.has(r.id)
+    // Het laatste rondje staat standaard open: daar ben je meestal mee bezig.
+    const laatsteId = rounds.length > 0 ? rounds[rounds.length - 1].id : null
+    const isOpen = (r: Round) => openRounds.has(r.id) || (openRounds.size === 0 && r.id === laatsteId)
     const toggle = (id: string) => setOpenRounds((prev) => {
       const n = new Set(prev)
       if (n.has(id)) n.delete(id); else n.add(id)
@@ -9679,13 +9695,16 @@ export default function PartyTest() {
                     if (!geenBedrag && !geenBetaler && nogToe === 0) return null
                     const knop = (tekst: string, doe: () => void) => (
                       <span onClick={(e) => { e.stopPropagation(); doe() }}
-                        style={{ border: "1px solid rgba(224,104,92,0.45)", color: "#c0554a", background: "#fff", borderRadius: 10, padding: "5px 10px", fontSize: 13.5, fontWeight: 800, cursor: "pointer" }}>{tekst}</span>
+                        style={{ border: "1.5px solid rgba(240,165,0,0.6)", color: "#8a5e0f", background: "#fff", borderRadius: 10, padding: "6px 11px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>{tekst}</span>
                     )
                     return (
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-                        {geenBedrag && knop(L.missAmount, () => setEditRoundId(r.id))}
-                        {nogToe > 0 && knop(L.missAssign, () => { setAssignNaamEdit(false); setShowAssignAll(true) })}
-                        {geenBetaler && knop(L.missPayer, () => setEditRoundId(r.id))}
+                      <div style={{ background: "#fffdf4", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 11, padding: "9px 10px", marginTop: 9 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 7 }}>{L.stillToFill}</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          {geenBedrag && knop(L.missAmount, () => setEditRoundId(r.id))}
+                          {nogToe > 0 && knop(L.missAssign, () => { setAssignAllMode(true); setAssignIdx(idx) })}
+                          {geenBetaler && knop(L.missPayer, () => setEditRoundId(r.id))}
+                        </div>
                       </div>
                     )
                   })()}
