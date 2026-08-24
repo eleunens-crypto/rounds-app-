@@ -5935,10 +5935,12 @@ export default function PartyTest() {
         </div>
       )}
       {showBarlijst && (() => {
-        // Tel de hele avond op: alle afgesloten rondjes samen, per drankje, grootste
-        // eerst. Grote letters — dit is de lijst die je aan de toog wil aflezen.
+        // Alleen dít rondje: dat is wat je aan de toog gaat bestellen. Bij een lopend
+        // rondje het mandje, anders het laatst afgeronde rondje.
         const totalen: Record<string, number> = {}
-        rounds.forEach((rr) => drinksOf(rr).forEach(({ d, n }) => { totalen[d.id] = (totalen[d.id] || 0) + n }))
+        const lopend = drinks.reduce((a, d) => a + drinkTotal(d.id), 0) > 0
+        if (lopend) drinks.forEach((d) => { const n = drinkTotal(d.id); if (n > 0) totalen[d.id] = n })
+        else { const laatste = rounds[rounds.length - 1]; if (laatste) drinksOf(laatste).forEach(({ d, n }) => { totalen[d.id] = n }) }
         const lijst = drinks.filter((d) => (totalen[d.id] || 0) > 0).map((d) => ({ d, n: totalen[d.id] })).sort((a, b) => b.n - a.n || a.d.name.localeCompare(b.d.name))
         const som = lijst.reduce((a, x) => a + x.n, 0)
         return (
