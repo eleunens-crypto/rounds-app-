@@ -6735,12 +6735,12 @@ export default function PartyTest() {
   // De pot-geldzak als losse functie: hij staat in de kop, en bij uitgebreid opnemen
   // op het bestelscherm verhuist hij naar de rondje-titelregel.
   const potKnopje = () => (
-    <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 9px", borderRadius: 22, fontSize: 18, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: potRemaining > 0.005 ? "1px solid rgba(47,111,181,0.5)" : "0.5px solid rgba(47,111,181,0.35)" }}>
+    <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "9px 15px 9px 11px", borderRadius: 999, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: potRemaining > 0.005 ? "1px solid rgba(47,111,181,0.5)" : "0.5px solid rgba(47,111,181,0.35)" }}>
       {potRemaining < -0.005 && <span style={{ color: "#c0554a" }}>⚠️</span>}
       {potIsCard ? (
         <span style={{ fontSize: 20 }}>💳</span>
       ) : (
-        <svg width="27" height="27" viewBox="0 0 40 40" style={{ display: "block" }}>
+        <svg width="23" height="23" viewBox="0 0 40 40" style={{ display: "block" }}>
           <path d="M16 13 L14 7 Q20 5 26 7 L24 13 Z" fill="#d99616" stroke="#b9821a" strokeWidth="1.2" strokeLinejoin="round"/>
           <path d="M13 14 Q20 11 27 14 Q33 19 32 27 Q31 35 20 35 Q9 35 8 27 Q7 19 13 14 Z" fill="#e8a821" stroke="#b9821a" strokeWidth="1.5"/>
           <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
@@ -6822,8 +6822,8 @@ export default function PartyTest() {
             /* Dezelfde geldzakje-badge als in snel opnemen — alleen leest hij zolang de
                pot leeg is "Pot leggen +" en wordt hij na de eerste inleg vanzelf het
                saldo, op exact dezelfde plek. */
-            <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 9px", borderRadius: 22, fontSize: 18, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: "1px solid rgba(47,111,181,0.5)" }}>
-              <svg width="27" height="27" viewBox="0 0 40 40" style={{ display: "block" }}>
+            <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "9px 15px 9px 11px", borderRadius: 999, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: "1px solid rgba(47,111,181,0.5)" }}>
+              <svg width="23" height="23" viewBox="0 0 40 40" style={{ display: "block" }}>
                 <path d="M16 13 L14 7 Q20 5 26 7 L24 13 Z" fill="#d99616" stroke="#b9821a" strokeWidth="1.2" strokeLinejoin="round" />
                 <path d="M13 14 Q20 11 27 14 Q33 19 32 27 Q31 35 20 35 Q9 35 8 27 Q7 19 13 14 Z" fill="#e8a821" stroke="#b9821a" strokeWidth="1.5" />
                 <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
@@ -6895,7 +6895,7 @@ export default function PartyTest() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "10px 0", minHeight: 38 }}>
           {groupName.trim() && !editName && !isAutoNaam(groupName) && (
             <span onClick={() => { if (onboarding || groepDicht) return; if (!settle) { setNaamPlichtVeld(groupName.trim()); setPersGeteld(people.length > 1); setNaamPlichtNa(null); setNaamPlicht(true) } else setEditName(true) }}
-              style={{ flex: "0 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onboarding ? "default" : "pointer", background: "#fff", border: "1.5px solid rgba(240,165,0,0.55)", borderRadius: 18, padding: "7px 16px", fontSize: 17, fontWeight: 800, color: "#4a3f1e", boxShadow: "0 2px 5px rgba(90,64,10,0.12)" }}>
+              style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onboarding ? "default" : "pointer", background: "#fff", border: "1px solid rgba(240,165,0,0.55)", borderRadius: 999, padding: "9px 15px", fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>
               {isAutoNaam(groupName) ? (
                 /* Niet alleen de uitnodiging, ook wat de naam nú is — anders weet je
                    niet onder welke naam de groep straks in je lijst staat. */
@@ -6908,7 +6908,7 @@ export default function PartyTest() {
           {/* Eén pill: links de naam (tik = venster), rechts een tellertje dat meteen
               personen bij- of afzet. Beide volledig optioneel. */}
           {!settle && !kaal && isAutoNaam(groupName) && (
-            <span style={{ flex: "1 1 auto", minWidth: 0, display: "inline-flex", alignItems: "center", gap: 9, background: "#fff", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 999, padding: "5px 6px 5px 14px", fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>
+            <span style={{ flex: "1 1 auto", minWidth: 0, display: "inline-flex", alignItems: "center", gap: 9, background: "#fff", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 999, padding: "9px 15px", fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>
               <span onClick={() => { setNaamPlichtVeld(""); setPersGeteld(people.length > 1); setAlleenPers(false); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
                 style={{ flex: "1 1 auto", display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", minWidth: 0 }}>
                 <span style={{ flexShrink: 0, color: "#c98a00" }}>✏️</span>
