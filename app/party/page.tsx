@@ -531,6 +531,8 @@ const T = {
     onlyThisRound: "↩ Alleen dit rondje",
     allAmountsBtn: "💶 Alle bedragen invullen",
     tapForCaps: "JE TIKT AAN VOOR",
+    tikSamenWord: "samen",
+    perPersonWord: "per persoon",
     paidThisRoundQ: "💶 Betaald voor dit rondje?",
     fillWord: "Invullen",
     completeWord: "✓ compleet",
@@ -1324,6 +1326,8 @@ const T = {
     onlyThisRound: "↩ Seulement cette tourn\u00e9e",
     allAmountsBtn: "💶 Remplir tous les montants",
     tapForCaps: "TU COCHES POUR",
+    tikSamenWord: "ensemble",
+    perPersonWord: "par personne",
     paidThisRoundQ: "💶 Pay\u00e9 pour cette tourn\u00e9e\u00a0?",
     fillWord: "Remplir",
     completeWord: "✓ complet",
@@ -2114,9 +2118,9 @@ export default function PartyTest() {
   const [persOpen, setPersOpen] = useState(false)
   // Personen tellen is optioneel: zolang dit uit staat toont het venster "—".
   const [persGeteld, setPersGeteld] = useState(false)
+  const [perPersoon, setPerPersoon] = useState(false)
   // "Liever per persoon aantikken" opent eerst dit venster: met hoeveel zijn jullie,
   // en optioneel de namen. Daarna start de doorloop per persoon.
-  const [persVenster, setPersVenster] = useState(false)
   const [naamPlichtNa, setNaamPlichtNa] = useState<null | (() => void)>(null)
   const [verlaatNaam, setVerlaatNaam] = useState<null | (() => void)>(null)
   const [verlaatVeld, setVerlaatVeld] = useState("")
@@ -4216,7 +4220,7 @@ export default function PartyTest() {
   const bump1 = (did: string) => {
     // Snel opnemen zonder echte groepsnaam: de tik wordt tegengehouden (dus nog níét
     // genoteerd) en het naamvenster verschijnt. Na "Verder" tik je gewoon opnieuw.
-    if (voorWie && (settle || people.length > 1)) return bump(did, voorWie, 1)
+    if (voorWie && (settle || (perPersoon && people.length > 1))) return bump(did, voorWie, 1)
     return bumpAnon(did, 1)
   }
   // Een drankje in één tik volledig uit de lopende bestelling halen — zowel de nog niet
@@ -4236,7 +4240,7 @@ export default function PartyTest() {
   const bumpDown = (did: string) => {
     // In Fair Split haal je weg bij wie je op dat moment aantikt; anders eerst de nog
     // niet toegewezen exemplaren, dan de rest.
-    if (voorWie && (settle || people.length > 1)) { if ((cart[did]?.[voorWie] ?? 0) > 0) bump(did, voorWie, -1); return }
+    if (voorWie && (settle || (perPersoon && people.length > 1))) { if ((cart[did]?.[voorWie] ?? 0) > 0) bump(did, voorWie, -1); return }
     if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); return }
     const entry = cart[did]; if (!entry) return
     const pid = Object.keys(entry).find((k) => (entry[k] ?? 0) > 0); if (pid) bump(did, pid, -1)
@@ -5198,7 +5202,7 @@ export default function PartyTest() {
       const los = vorig.anon[d.id] || 0
       if (los > 0) await bumpAnon(d.id, los)
     }
-    setWalkIdx(null); setPersVenster(false); setShowAssignAll(false)
+    setWalkIdx(null); setShowAssignAll(false)
   }
   const nextRound = () => {
     if (blockIfUnpaid()) return
@@ -5209,7 +5213,7 @@ export default function PartyTest() {
     setRoundNr(rounds.length + 1)
     setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setRepeated(false)
     // Nooit met een venster beginnen: je landt gewoon op de drankjes.
-    setWalkIdx(null); setPersVenster(false); setShowAssignAll(false)
+    setWalkIdx(null); setShowAssignAll(false)
     setView("order")
   }
   // Neemt de drankjes én de toewijzing van het laatste rondje over. Daarna nog gewoon aanpasbaar.
@@ -6366,49 +6370,6 @@ export default function PartyTest() {
                   onClick={() => { const doe = verlaatNaam; setVerlaatNaam(null); setVerlaatVeld(""); doe?.() }}>{L.leaveNoSaveBtn}</button>
               </>)
             })()}
-          </div>
-        </div>
-      )}
-      {persVenster && (
-        <div style={{ ...S.overlay, zIndex: 72 }}>
-          <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#4a3f1e", marginBottom: 4 }}>👥 {L.forWhoTitle}</div>
-            <div style={{ background: "#f7f4ec", borderRadius: 12, padding: "11px 12px", marginTop: 13 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: "#8a7d55" }}>{L.persCountLabel}</span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
-                  <button onClick={() => { if (people.length > 1) removeLastPerson() }} disabled={busy || people.length <= 1}
-                    style={{ ...S.step, width: 34, height: 34, fontSize: 19, opacity: people.length > 1 ? 1 : 0.4 }}>−</button>
-                  <b style={{ fontSize: 18, color: "#4a3f1e", minWidth: 20, textAlign: "center" }}>{people.length}</b>
-                  <button onClick={addPerson} disabled={busy}
-                    style={{ ...S.step, width: 34, height: 34, fontSize: 19, background: AAN, color: "#fff", border: "none" }}>+</button>
-                </span>
-              </div>
-              <div style={{ marginTop: 9 }}>
-                {people.map((pp, idx) => {
-                  const ikZelf = pp.id === meId
-                  const leeg = isGuestDefault(pp.name)
-                  if (ikZelf) return (
-                    <div key={pp.id} style={{ position: "relative", display: "flex", marginBottom: 6 }}>
-                      <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><KroonIcoon size={17} kleur="#c98a00" /></span>
-                      <input value={leeg ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)} placeholder={L.yourNamePh}
-                        style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: "9px 11px 9px 34px", fontSize: 16, textAlign: "left", fontWeight: 800, background: "rgba(240,165,0,0.1)", border: "1.5px solid rgba(240,165,0,0.5)", color: "#8a5e0f" }} />
-                    </div>
-                  )
-                  return (
-                    <div key={pp.id} style={{ position: "relative", display: "flex", marginBottom: 6 }}>
-                      <input value={leeg ? "" : pp.name} onChange={(e) => renamePerson(pp.id, e.target.value)} placeholder={`${L.guestN(idx + 1)} · ${L.guestNamePh}`}
-                        style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: leeg ? "9px 32px 9px 11px" : "9px 11px", fontSize: 16, textAlign: "left", background: "#fff" }} />
-                      {leeg && <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", display: "inline-flex" }}><PotloodIcoon /></span>}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-            <button style={{ ...S.btnP, width: "100%", marginTop: 14 }}
-              onClick={() => { setPersVenster(false); setWalkIdx(0) }}>{L.letsGoBtn}</button>
-            <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 16, fontWeight: 800 }}
-              onClick={() => setPersVenster(false)}>{L.cancel}</button>
           </div>
         </div>
       )}
@@ -8188,11 +8149,10 @@ export default function PartyTest() {
           opNaam ? (
             /* Twee gelijke, gecentreerde keuzes: snel aantikken (dit scherm — actief) of
                per persoon aantikken (opent de doorloop). Zo zie je meteen wat kan. */
-            /* Het scherm zelf ís snel aantikken; er blijft één zachte uitnodiging over
-               voor wie liever per persoon werkt. Het label hangt aan de gouden lijn van
-               de titel, en het ▸ zegt eerlijk dat er een venster opent. */
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 11 }}>
-              <button onClick={() => eersteNaamDan(() => { setActiveCat(catsPresent[0]); setPersGeteld(true); setPersVenster(true) })}
+            /* Zolang je alleen bent: één zachte uitnodiging om personen toe te voegen.
+               Zodra ze er zijn, kies je hierboven tussen samen en per persoon. */
+            <div style={{ display: people.length > 1 ? "none" : "flex", justifyContent: "center", marginBottom: 11 }}>
+              <button onClick={() => { setPerPersoon(true); setPersGeteld(true); setNaamPlichtVeld(isAutoNaam(groupName) ? "" : groupName.trim()); setNaamPlichtNa(null); setNaamPlicht(true) }}
                 style={{ background: themaNaam ? "#fbfcff" : "#fffdf6", border: `1px solid ${themaNaam ? "rgba(59,72,106,0.4)" : "rgba(240,165,0,0.5)"}`, borderTop: "none", borderRadius: "0 0 12px 12px", padding: "8px 16px", fontSize: 15, fontWeight: 800, color: themaNaam ? "#3b486a" : "#8a5e0f", cursor: "pointer" }}>{L.perPersonPrompt} ▸</button>
             </div>
           ) : null
@@ -8207,7 +8167,21 @@ export default function PartyTest() {
             inspreken staan onderaan: die gebruik je zelden en ze duwden de drankjes weg. */}
             {/* Voor wie tik je aan? Wie via de QR binnenkwam staat achteraan en gedimd:
                 die duidt normaal zelf aan. Aantikken kan wel, voor als er iets misloopt. */}
-            {(settle || people.length > 1) && people.length > 0 && (
+            {/* Samen turven of per persoon aantikken — wisselen mag altijd, en wat al
+                op naam staat blijft gewoon staan. */}
+            {!settle && people.length > 1 && (
+              <div style={{ display: "flex", gap: 4, background: "#f4efe2", borderRadius: 12, padding: 3, marginBottom: 9 }}>
+                {[false, true].map((mode) => (
+                  <button key={String(mode)} onClick={() => setPerPersoon(mode)}
+                    style={{ flex: 1, borderRadius: 10, padding: "9px 0", fontSize: 15.5, fontWeight: 800, cursor: "pointer", border: "none", fontFamily: "inherit",
+                      background: perPersoon === mode ? AAN : "transparent",
+                      color: perPersoon === mode ? "#fff" : "#a89a6f" }}>
+                    {mode ? `👤 ${L.perPersonWord}` : `🍻 ${L.tikSamenWord}`}
+                  </button>
+                ))}
+              </div>
+            )}
+            {(settle || (perPersoon && people.length > 1)) && people.length > 0 && (
               <div style={{ ...S.card, padding: "11px 12px", marginBottom: 8,
                 border: !settle ? "2px solid #e8a812" : undefined }}>
                 {!settle && (
