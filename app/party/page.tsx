@@ -540,9 +540,10 @@ const T = {
     addPersonHere: "Persoon toevoegen",
     personsAndNames: "Personen & namen",
     persWord: "Pers.",
+    tapForStrip: "Je tikt aan voor",
     howNoteQ: "HOE NOTEER JE DIT RONDJE?",
     noteForCaps: "JE NOTEERT NU VOOR",
-    togetherHint: "Je tikt gewoon aan wat er besteld is — geen namen nodig.",
+    togetherHint: "Tik drankjes aan voor iedereen — geen namen nodig.",
     completeWord: "✓ compleet",
     missAmount: "💶 betaling toevoegen",
     missAssign: "🍺 drankjes toewijzen",
@@ -1349,9 +1350,10 @@ const T = {
     addPersonHere: "Ajouter une personne",
     personsAndNames: "Personnes & noms",
     persWord: "Pers.",
+    tapForStrip: "Tu coches pour",
     howNoteQ: "COMMENT NOTES-TU CETTE TOURN\u00c9E\u00a0?",
     noteForCaps: "TU NOTES MAINTENANT POUR",
-    togetherHint: "Tu coches simplement ce qui est command\u00e9 — sans noms.",
+    togetherHint: "Coche les boissons pour tout le monde — sans noms.",
     completeWord: "✓ complet",
     missAmount: "💶 ajouter le paiement",
     missAssign: "🍺 attribuer les boissons",
@@ -8499,6 +8501,20 @@ export default function PartyTest() {
           {catMore.left && <CatPijl kant="links" />}
           {catMore.right && <CatPijl kant="rechts" />}
         </div>
+
+        {/* Voor wie tik je aan — blijft plakken bij het scrollen door een lange
+            drankjeslijst. Staat ná de categorieënbalk, dus van categorie wisselen
+            laat hem gewoon staan. Verschijnt alleen als er echt iemand gekozen is;
+            bij "zonder namen" bestaat voorWie niet. */}
+        {(settle || perPersoon) && voorWie && (
+          <div style={{ position: "sticky", top: 0, zIndex: 4, marginBottom: 9 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#fff", border: "2px solid #e8a812", borderRadius: 999, padding: "6px 14px", fontSize: 14.5, fontWeight: 700, color: "#8a5e0f", maxWidth: "100%", boxShadow: "0 2px 8px rgba(120,95,20,0.13)" }}>
+              <span style={{ flexShrink: 0, width: 8, height: 8, borderRadius: "50%", background: "#e8a812" }} />
+              <span style={{ flexShrink: 0 }}>{L.tapForStrip}</span>
+              <b style={{ fontWeight: 800, color: "#4a3f1e", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{people.find((pp) => pp.id === voorWie)?.name ?? ""}</b>
+            </span>
+          </div>
+        )}
 
         {zoekt && (
           <div style={{ fontSize: 15, color: "#8a7d55", marginBottom: 8 }}>
