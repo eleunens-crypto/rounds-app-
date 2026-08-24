@@ -526,7 +526,8 @@ const T = {
     aanvulAssignOk: "alles toegewezen",
     aanvulSave: "Bewaren",
     aanvulSkip: "Alles overslaan — later invullen",
-    stillToFill: "Nodig voor eerlijk verdelen",
+    stillToFill: "Voor eerlijk verdelen!",
+    nogNodigBadge: "NOG NODIG",
     allRoundsBtn: "🍺 Alle rondjes in één keer",
     onlyThisRound: "↩ Alleen dit rondje",
     allAmountsBtn: "💶 Alle bedragen invullen",
@@ -1323,7 +1324,8 @@ const T = {
     aanvulAssignOk: "tout est attribu\u00e9",
     aanvulSave: "Enregistrer",
     aanvulSkip: "Tout passer — compl\u00e9ter plus tard",
-    stillToFill: "N\u00e9cessaire pour un partage \u00e9quitable",
+    stillToFill: "Pour un partage \u00e9quitable\u00a0!",
+    nogNodigBadge: "ENCORE N\u00c9CESSAIRE",
     allRoundsBtn: "🍺 Toutes les tourn\u00e9es d'un coup",
     onlyThisRound: "↩ Seulement cette tourn\u00e9e",
     allAmountsBtn: "💶 Remplir tous les montants",
@@ -9194,10 +9196,10 @@ export default function PartyTest() {
               </div>
               {(() => {
                 const un = drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0)
-                if (un === 0) return null
+                if (un === 0 || !settle) return null
                 return (
                   <div onClick={() => { setAssignIdx(idx) }} style={{ margin: "0 14px 14px", background: "rgba(224,104,92,0.12)", border: "1px solid rgba(224,104,92,0.5)", borderRadius: 10, padding: "9px 11px", fontSize: 16, fontWeight: 800, color: "#b0402f", cursor: "pointer", textAlign: "center" }}>
-                    {settle ? <>🔴 {L.notAssignedYet(un)} <u>{L.tapToAssign}</u></> : null}
+                    🔴 {L.notAssignedYet(un)} <u>{L.tapToAssign}</u>
                   </div>
                 )
               })()}
@@ -9734,8 +9736,9 @@ export default function PartyTest() {
                       </div>
                     )
                     return (
-                      <div style={{ background: "#fffdf4", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 11, padding: "10px 11px", marginTop: 10 }}>
-                        <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f" }}>{L.stillToFill}</div>
+                      <div style={{ background: "#fffaeb", border: "2px solid rgba(240,165,0,0.65)", borderRadius: 12, padding: "11px 12px", marginTop: 11 }}>
+                        <span style={{ fontSize: 12, fontWeight: 800, background: "rgba(240,165,0,0.25)", color: "#8a5e0f", borderRadius: 8, padding: "3px 9px" }}>{L.nogNodigBadge}</span>
+                        <div style={{ fontSize: 16.5, fontWeight: 800, color: "#8a5e0f", marginTop: 7 }}>{L.stillToFill}</div>
                         {(geenBedrag || geenBetaler) && regel(L.paidThisRoundQ, L.fillWord, () => setEditRoundId(r.id))}
                         {nogToe > 0 && regel(L.notAssignedYet(nogToe), L.openWord, () => { setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) })}
                       </div>
