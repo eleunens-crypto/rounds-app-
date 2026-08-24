@@ -9597,7 +9597,6 @@ export default function PartyTest() {
     const laatsteId = rounds.length ? rounds[rounds.length - 1].id : ""
     // Standaard staat alles dicht — je opent zelf wat je wil bekijken.
     // Het laatste rondje staat standaard open: daar ben je meestal mee bezig.
-    const laatsteId = rounds.length > 0 ? rounds[rounds.length - 1].id : null
     const isOpen = (r: Round) => openRounds.has(r.id) || (openRounds.size === 0 && r.id === laatsteId)
     const toggle = (id: string) => setOpenRounds((prev) => {
       const n = new Set(prev)
