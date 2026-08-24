@@ -526,11 +526,14 @@ const T = {
     aanvulAssignOk: "alles toegewezen",
     aanvulSave: "Bewaren",
     aanvulSkip: "Alles overslaan — later invullen",
-    stillToFill: "nog aanvullen voor eerlijk verdelen",
+    stillToFill: "Nodig voor eerlijk verdelen",
     allRoundsBtn: "🍺 Alle rondjes in één keer",
     onlyThisRound: "↩ Alleen dit rondje",
     allAmountsBtn: "💶 Alle bedragen invullen",
     tapForCaps: "JE TIKT AAN VOOR",
+    paidThisRoundQ: "💶 Betaald voor dit rondje?",
+    fillWord: "Invullen",
+    completeWord: "✓ compleet",
     missAmount: "💶 bedrag",
     missAssign: "🍺 toewijzen",
     missPayer: "💳 wie betaalde?",
@@ -1316,11 +1319,14 @@ const T = {
     aanvulAssignOk: "tout est attribu\u00e9",
     aanvulSave: "Enregistrer",
     aanvulSkip: "Tout passer — compl\u00e9ter plus tard",
-    stillToFill: "\u00e0 compl\u00e9ter pour un partage \u00e9quitable",
+    stillToFill: "N\u00e9cessaire pour un partage \u00e9quitable",
     allRoundsBtn: "🍺 Toutes les tourn\u00e9es d'un coup",
     onlyThisRound: "↩ Seulement cette tourn\u00e9e",
     allAmountsBtn: "💶 Remplir tous les montants",
     tapForCaps: "TU COCHES POUR",
+    paidThisRoundQ: "💶 Pay\u00e9 pour cette tourn\u00e9e\u00a0?",
+    fillWord: "Remplir",
+    completeWord: "✓ complet",
     missAmount: "💶 montant",
     missAssign: "🍺 attribuer",
     missPayer: "💳 qui a pay\u00e9\u00a0?",
@@ -8371,6 +8377,23 @@ export default function PartyTest() {
               is daarmee weg — één look voor de gewone-rondjes-modi. */}
           <div style={{ ...S.card, padding: "11px 13px", marginBottom: 11, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.5)" }}>
               <div style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", marginBottom: 8 }}>📋 {L.inRoundTitle} <span style={{ color: "#c98a00" }}>· {L.drinksCount(roundItems)}</span></div>
+              {people.length > 1 && (
+                <div style={{ marginBottom: 9 }}>
+                  {people.map((pp) => {
+                    const zijne = drinks.map((d) => ({ d, n: cart[d.id]?.[pp.id] ?? 0 })).filter((x) => x.n > 0)
+                    return (
+                      <div key={pp.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14.5, padding: "3px 0" }}>
+                        <span style={{ flexShrink: 0, fontWeight: 800, color: zijne.length ? "#4a3f1e" : "#b3a988", maxWidth: "42%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {pp.id === meId ? "👑 " : ""}{pp.name}
+                        </span>
+                        <span style={{ minWidth: 0, textAlign: "right", color: zijne.length ? "#6b5f3a" : "#b3a988", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {zijne.length ? zijne.map((x) => `${x.n}× ${x.d.name}`).join(" · ") : "—"}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                 {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => (
                   <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 16, padding: "6px 8px 6px 12px", fontSize: 15.5, fontWeight: 700, color: "#4a3f1e" }}>
@@ -9607,8 +9630,7 @@ export default function PartyTest() {
     // staat standaard open (als de gebruiker niks toggelde).
     const laatsteId = rounds.length ? rounds[rounds.length - 1].id : ""
     // Standaard staat alles dicht — je opent zelf wat je wil bekijken.
-    // Het laatste rondje staat standaard open: daar ben je meestal mee bezig.
-    const isOpen = (r: Round) => openRounds.has(r.id) || (openRounds.size === 0 && r.id === laatsteId)
+    const isOpen = (r: Round) => openRounds.has(r.id)
     const toggle = (id: string) => setOpenRounds((prev) => {
       const n = new Set(prev)
       if (n.has(id)) n.delete(id); else n.add(id)
@@ -9697,24 +9719,38 @@ export default function PartyTest() {
                       ? <span style={{ color: "#2f5693", fontWeight: 700 }}> · 🫙 {L.paidFromPot(euro(r.potPart || 0))}</span>
                       : <span style={{ color: "#b3a988" }}> · {L.noPotUsed}</span>}
                   </div>
-                  {/* Wat mist er nog voor een eerlijke verdeling? Als knopjes, zodat je
-                      meteen ziet én kunt aanvullen wat ontbreekt. */}
-                  {!settle && editRoundId !== r.id && (() => {
+                  {/* Dichtgeklapt: kleine badges met wat er nog nodig is. Open: één
+                      sectie met volwaardige regels. */}
+                  {!settle && editRoundId !== r.id && !isOpen(r) && (() => {
+                    const geenBetaler2 = (r.amount || 0) > 0.005 && rPaidSum(r) + (r.potPart || 0) < (r.amount || 0) - 0.005
+                    const nogToe2 = Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0)
+                    if (!geenBedrag && !geenBetaler2 && nogToe2 === 0) {
+                      return <div style={{ marginTop: 6 }}><span style={{ fontSize: 13, fontWeight: 800, borderRadius: 9, padding: "3px 8px", background: "rgba(31,138,76,0.12)", color: "#1f6b3a" }}>{L.completeWord}</span></div>
+                    }
+                    const badge = (t: string) => <span style={{ fontSize: 13, fontWeight: 800, borderRadius: 9, padding: "3px 8px", background: "rgba(240,165,0,0.16)", color: "#8a5e0f" }}>{t}</span>
+                    return (
+                      <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
+                        {(geenBedrag || geenBetaler2) && badge(L.missAmount)}
+                        {nogToe2 > 0 && badge(L.missAssign)}
+                      </div>
+                    )
+                  })()}
+                  {!settle && editRoundId !== r.id && isOpen(r) && (() => {
                     const geenBetaler = (r.amount || 0) > 0.005 && rPaidSum(r) + (r.potPart || 0) < (r.amount || 0) - 0.005
                     const nogToe = Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0)
                     if (!geenBedrag && !geenBetaler && nogToe === 0) return null
-                    const knop = (tekst: string, doe: () => void) => (
-                      <span onClick={(e) => { e.stopPropagation(); doe() }}
-                        style={{ border: "1.5px solid rgba(240,165,0,0.6)", color: "#8a5e0f", background: "#fff", borderRadius: 10, padding: "6px 11px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>{tekst}</span>
+                    const regel = (tekst: string, knopTekst: string, doe: () => void) => (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(240,165,0,0.3)" }}>
+                        <span style={{ minWidth: 0, fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{tekst}</span>
+                        <span onClick={(e) => { e.stopPropagation(); doe() }}
+                          style={{ flexShrink: 0, border: "1.5px solid rgba(240,165,0,0.6)", color: "#8a5e0f", background: "#fff", borderRadius: 10, padding: "7px 12px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>{knopTekst}</span>
+                      </div>
                     )
                     return (
-                      <div style={{ background: "#fffdf4", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 11, padding: "9px 10px", marginTop: 9 }}>
-                        <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 7 }}>{L.stillToFill}</div>
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                          {geenBedrag && knop(L.missAmount, () => setEditRoundId(r.id))}
-                          {nogToe > 0 && knop(L.missAssign, () => { setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) })}
-                          {geenBetaler && knop(L.missPayer, () => setEditRoundId(r.id))}
-                        </div>
+                      <div style={{ background: "#fffdf4", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 11, padding: "10px 11px", marginTop: 10 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f" }}>{L.stillToFill}</div>
+                        {(geenBedrag || geenBetaler) && regel(L.paidThisRoundQ, L.fillWord, () => setEditRoundId(r.id))}
+                        {nogToe > 0 && regel(L.notAssignedYet(nogToe), L.openWord, () => { setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) })}
                       </div>
                     )
                   })()}
