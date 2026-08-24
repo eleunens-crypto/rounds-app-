@@ -897,7 +897,7 @@ const T = {
     roundsOverview: "📋 Rondjesoverzicht",
     overview: "📋 Overzicht",
     repeatRound: "🔁 Zelfde opnieuw",
-    repeatRoundSub: "zelfde drankjes, aanpasbaar",
+    repeatRoundSub: "aanpasbaar",
     settleBtnShort: "🧾 Afrekenen",
     proposalTitle: "🗳️ Weer hetzelfde rondje?",
     proposalWaiting: "Iedereen antwoordt op zijn scherm. Jij sluit af wanneer je wil.",
@@ -1701,7 +1701,7 @@ const T = {
     roundsOverview: "📋 Aperçu des tournées",
     overview: "📋 Aperçu",
     repeatRound: "🔁 La même",
-    repeatRoundSub: "mêmes boissons, modifiable",
+    repeatRoundSub: "modifiable",
     settleBtnShort: "🧾 Régler",
     proposalTitle: "🗳️ La même tournée ?",
     proposalWaiting: "Chacun répond sur son écran. Tu clôtures quand tu veux.",
@@ -10013,15 +10013,17 @@ export default function PartyTest() {
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
               {laatsteRondjeKlaar() && (
                 <button onClick={nextRound}
-                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "13px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
+                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "12px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
+                    display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", minHeight: 62,
                     background: "#fffdf4", color: "#8a5e0f", border: "2px solid rgba(240,165,0,0.7)" }}>{settle && openRoundId ? L.continueRound(roundNr) : L.newRoundBtn}</button>
               )}
               {rounds.length > 0 && laatsteRondjeKlaar() && (
                 <button onClick={repeatRound}
-                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "11px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
+                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "12px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", minHeight: 62,
                     background: "#fff", color: "#4a3f1e", border: "1px solid rgba(120,95,20,0.28)" }}>
-                  {L.repeatRound}
-                  <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#a89a6f", marginTop: 3 }}>{L.repeatRoundSub}</span>
+                  <span>{L.repeatRound}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#a89a6f", marginTop: 3 }}>{L.repeatRoundSub}</span>
                 </button>
               )}
             </div>
