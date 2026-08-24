@@ -896,7 +896,9 @@ const T = {
     // ── overzicht
     roundsOverview: "📋 Rondjesoverzicht",
     overview: "📋 Overzicht",
-    repeatRound: "🔁 Zelfde rondje opnieuw?",
+    repeatRound: "🔁 Zelfde opnieuw",
+    repeatRoundSub: "zelfde drankjes, aanpasbaar",
+    settleBtnShort: "🧾 Afrekenen",
     proposalTitle: "🗳️ Weer hetzelfde rondje?",
     proposalWaiting: "Iedereen antwoordt op zijn scherm. Jij sluit af wanneer je wil.",
     ansSame: "✅ hetzelfde",
@@ -1698,7 +1700,9 @@ const T = {
     // ── overzicht
     roundsOverview: "📋 Aperçu des tournées",
     overview: "📋 Aperçu",
-    repeatRound: "🔁 Refaire la même tournée ?",
+    repeatRound: "🔁 La même",
+    repeatRoundSub: "mêmes boissons, modifiable",
+    settleBtnShort: "🧾 Régler",
     proposalTitle: "🗳️ La même tournée ?",
     proposalWaiting: "Chacun répond sur son écran. Tu clôtures quand tu veux.",
     ansSame: "✅ pareil",
@@ -5658,7 +5662,7 @@ export default function PartyTest() {
   const VLAK3 = koel ? "#e4f2f5" : themaNaam ? "#e6eaf4" : "#f3ead2"
   const S = {
     page: { minHeight: "100dvh", background: groupId ? (koel ? MODUS_FAIR.bladzij : themaNaam ? MODUS_NAAM.bladzij : MODUS_SNEL.bladzij) : "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
-    wrap: { maxWidth: 560, margin: "0 auto", padding: "calc(env(safe-area-inset-top, 0px) + 58px) 16px 16px" } as React.CSSProperties,
+    wrap: { maxWidth: 560, margin: "0 auto", padding: "calc(env(safe-area-inset-top, 0px) + 74px) 16px 16px" } as React.CSSProperties,
     card: { background: "#fff", border: `1px solid ${koel ? "rgba(13,124,140,0.16)" : themaNaam ? "rgba(59,72,106,0.16)" : "rgba(120,95,20,0.14)"}`, borderRadius: 18, padding: 16, marginBottom: 13, boxShadow: koel ? "0 4px 16px -8px rgba(13,124,140,0.22)" : themaNaam ? "0 4px 16px -8px rgba(59,72,106,0.2)" : "0 4px 16px -8px rgba(120,95,20,0.25)" } as React.CSSProperties,
     h1: { fontSize: 26, fontWeight: 800, margin: "0 0 2px" } as React.CSSProperties,
     h3: { fontSize: 19.5, fontWeight: 800, margin: "0 0 10px" } as React.CSSProperties,
@@ -10004,33 +10008,26 @@ export default function PartyTest() {
             )}
             {/* Afrekenen links, nieuw rondje rechts: doorgaan staat aan de kant waar je
                 duim zit. */}
+            {/* Rustige rij: doorgaan-acties naast elkaar, afrekenen eronder. Geen
+                gevulde knoppen — één amber kader markeert de gewone volgende stap. */}
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-              <button onClick={goQuickSettle}
-                style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 11, padding: "13px 6px", fontSize: 17, fontWeight: 800,
-                  background: "rgba(59,72,106,0.06)", color: "#3b486a",
-                  border: "1.5px solid rgba(59,72,106,0.4)", borderTop: "3px solid #3b486a", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}><BonKnopIcoon kleur="#3b486a" /> {L.quickSettleTitle}</button>
               {laatsteRondjeKlaar() && (
                 <button onClick={nextRound}
-                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 11, padding: "13px 6px", fontSize: 17, fontWeight: 800,
-                    background: "rgba(240,165,0,0.07)", color: "#8a5e0f",
-                    border: "1.5px solid rgba(232,168,18,0.5)", borderTop: "3px solid #e8a812" }}>{settle && openRoundId ? L.continueRound(roundNr) : L.newRoundBtn}</button>
+                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "13px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
+                    background: "#fffdf4", color: "#8a5e0f", border: "2px solid rgba(240,165,0,0.7)" }}>{settle && openRoundId ? L.continueRound(roundNr) : L.newRoundBtn}</button>
+              )}
+              {rounds.length > 0 && laatsteRondjeKlaar() && (
+                <button onClick={repeatRound}
+                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "11px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
+                    background: "#fff", color: "#4a3f1e", border: "1px solid rgba(120,95,20,0.28)" }}>
+                  {L.repeatRound}
+                  <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#a89a6f", marginTop: 3 }}>{L.repeatRoundSub}</span>
+                </button>
               )}
             </div>
-            {rounds.length > 0 && laatsteRondjeKlaar() && (opNaam === true ? (
-              // Recht onder "Nieuw rondje", even groot, met dezelfde oranje balk erboven —
-              // maar met stippellijn zodat het als variant leest, niet als hoofdactie.
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <span style={{ flex: 1, minWidth: 0 }} />
-                <button onClick={repeatRound}
-                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 11, padding: "13px 6px", fontSize: 17, fontWeight: 800,
-                    background: "rgba(240,165,0,0.07)", color: "#8a5e0f",
-                    border: "1.5px dashed rgba(232,168,18,0.75)", borderTop: "3px solid #e8a812" }}>{L.repeatRound}</button>
-              </div>
-            ) : (
-              <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
-                <button style={{ width: "75%", border: "1.5px dashed rgba(240,165,0,0.6)", background: "rgba(240,165,0,0.08)", color: "#8a5e0f", borderRadius: 14, padding: "12px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer" }} onClick={repeatRound}>{L.repeatRound}</button>
-              </div>
-            ))}
+            <button onClick={goQuickSettle}
+              style={{ width: "100%", marginTop: 8, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "13px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit",
+                background: "#fff", color: "#4a3f1e", border: "1px solid rgba(120,95,20,0.28)" }}>{L.settleBtnShort}</button>
           </>
         )}
       </div></div>
