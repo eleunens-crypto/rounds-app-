@@ -5294,7 +5294,11 @@ export default function PartyTest() {
   // Neemt de drankjes én de toewijzing van het laatste rondje over. Daarna nog gewoon aanpasbaar.
   // Wie deed mee aan dit rondje? Wie het rondje niet meemaakte, betaalt niet mee.
   // Oude rondjes zonder members vallen terug op de hele groep.
-  const roundMembers = (r: Round) => (r.members.length > 0 ? r.members : people.map((p) => p.id))
+  const roundMembers = (r: Round) => {
+    const basis = r.members.length > 0 ? r.members : people.map((p) => p.id)
+    const metDrank = people.filter((p) => drinks.some((d) => (r.orders[d.id]?.[p.id] ?? 0) > 0)).map((p) => p.id)
+    return metDrank.every((id) => basis.includes(id)) ? basis : Array.from(new Set([...basis, ...metDrank]))
+  }
 
   // ── "Zelfde rondje opnieuw" met inspraak ──────────────────────────────────
   // Het voorstel leeft op het LAATSTE rondje (proposal jsonb). De haler start het,
@@ -5606,11 +5610,15 @@ export default function PartyTest() {
     // Zat deze persoon niet in dit rondje? Dan draagt hij er niets aan bij.
     if (!leden.includes(pid)) return 0
     const n = leden.length || 1
-    const kt = roundKeyTotal(r)
     const bedrag = roundValue(r)
+    // De deler telt alleen de drankjes van wie in dit rondje zat, plus de onbekende.
+    // Vroeger telde hij álle drankjes: stond er nog iets op naam van iemand die niet
+    // in het rondje zat, dan zat dat wél in de deler maar betaalde niemand het — en
+    // kwam de eerlijke verdeling samen lager uit dan het totaal van de avond.
+    const anon = drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0) * priceOf(d), 0)
+    const kt = leden.reduce((som, lid) => som + drinks.reduce((a, d) => a + (r.orders[d.id]?.[lid] ?? 0) * priceOf(d), 0), 0) + anon
     if (kt <= 0 || bedrag <= 0) return bedrag / n
     const own = drinks.reduce((a, d) => a + (r.orders[d.id]?.[pid] ?? 0) * priceOf(d), 0)
-    const anon = drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0) * priceOf(d), 0)
     return ((own + anon / n) / kt) * bedrag
   }
   const consumption = (pid: string) => rounds.reduce((s, r) => s + personRoundShare(r, pid), 0)
