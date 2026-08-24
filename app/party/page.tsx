@@ -513,7 +513,7 @@ const T = {
     potTogetherQ: "💰 Samen een pot leggen?",
     potLayBtn: "Pot leggen",
     whoAreYouTitle: "Wie ben jij?",
-    namePlichtTitle: "Geef rondje of groep een naam",
+    namePlichtTitle: "Groepsnaam & personen",
     persCountLabel: "Aantal personen",
     persNotNow: "hoeft niet nu — kan ook later",
     forWhoTitle: "Voor wie tik je aan?",
@@ -1317,7 +1317,7 @@ const T = {
     potTogetherQ: "💰 Faire une cagnotte commune ?",
     potLayBtn: "Faire une cagnotte",
     whoAreYouTitle: "Qui es-tu ?",
-    namePlichtTitle: "Donne un nom \u00e0 ta tourn\u00e9e ou ton groupe",
+    namePlichtTitle: "Nom du groupe & personnes",
     persCountLabel: "Nombre de personnes",
     persNotNow: "pas obligatoire — possible plus tard aussi",
     forWhoTitle: "Pour qui coches-tu\u00a0?",
@@ -4230,7 +4230,8 @@ export default function PartyTest() {
   const catsPresent = catOrde.filter((c) => c === "Eigen" || drinks.some((d) => d.cat === c))
   const bewaarNaamPlicht = () => {
     const nm = naamPlichtVeld.trim()
-    if (!nm) return
+    // Naam is optioneel: zonder naam sluiten we gewoon, de personen zijn al bewaard.
+    if (!nm) { setNaamPlicht(false); const na0 = naamPlichtNa; setNaamPlichtNa(null); if (na0) na0(); return }
     setGroupName(nm); persistSettings({ name: nm }); setNaamPlicht(false)
     // Ging je ergens heen toen de naam gevraagd werd? Dan nu alsnog.
     const na = naamPlichtNa
@@ -6401,7 +6402,7 @@ export default function PartyTest() {
       {naamPlicht && (
         <div style={{ ...S.overlay, zIndex: 72 }}>
           <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#4a3f1e", marginBottom: 4 }}>📝 {L.namePlichtTitle} <span style={{ color: "#c0554a" }}>*</span></div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#4a3f1e", marginBottom: 4 }}>📝 {L.namePlichtTitle}</div>
             <input autoFocus value={naamPlichtVeld} onChange={(e) => setNaamPlichtVeld(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && naamPlichtVeld.trim()) bewaarNaamPlicht() }}
               placeholder={L.namePh3}
@@ -6448,8 +6449,7 @@ export default function PartyTest() {
               )}
             </div>
 
-            <button disabled={!naamPlichtVeld.trim()}
-              style={{ ...S.btnP, width: "100%", marginTop: 14, opacity: naamPlichtVeld.trim() ? 1 : 0.45 }}
+            <button style={{ ...S.btnP, width: "100%", marginTop: 14 }}
               onClick={bewaarNaamPlicht}>{L.naamGoBtn}</button>
             <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 16, fontWeight: 800 }}
               onClick={() => { setNaamPlicht(false); setNaamPlichtNa(null) }}>{L.cancel}</button>
@@ -6713,16 +6713,34 @@ export default function PartyTest() {
                 /* Niet alleen de uitnodiging, ook wat de naam nú is — anders weet je
                    niet onder welke naam de groep straks in je lijst staat. */
                 <span style={{ color: themaNaam ? "#5a6a94" : "#c98a00", fontWeight: 700, fontSize: 15.5 }}>✏️ {L.giveNameQ} <span style={{ color: "#a89a6f", fontWeight: 400, fontSize: 14 }}>· {L.nowWord} {groupName.trim()}</span></span>
-              ) : (<>{groupName.trim()}{!settle && people.length > 1 && <span style={{ fontWeight: 700, color: "#a89a6f", fontSize: 14.5 }}> · 👥 {people.length}</span>}{groepDatum && <span style={{ fontWeight: 700, color: "#a89a6f", fontSize: 14.5 }}> ({datumKort(groepDatum)})</span>}{!onboarding && <span style={{ fontSize: 13.5 }}> ✏️</span>}</>)}
+              ) : (<>{groupName.trim()}{!onboarding && <span style={{ fontSize: 13.5 }}> ✏️</span>}{!settle && (
+                <span onClick={(e) => e.stopPropagation()} style={{ display: "inline-flex", alignItems: "center", gap: 5, borderLeft: "1px solid rgba(120,95,20,0.2)", paddingLeft: 7, marginLeft: 6, color: "#8a7d55", fontSize: 14.5 }}>
+                  👥
+                  <span onClick={() => { if (people.length > 1) removeLastPerson() }} style={{ width: 20, height: 20, borderRadius: 6, background: "#f4efe2", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
+                  <b style={{ color: "#4a3f1e" }}>{people.length}</b>
+                  <span onClick={() => { void addPerson() }} style={{ width: 20, height: 20, borderRadius: 6, background: AAN, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>＋</span>
+                </span>
+              )}</>)}
             </span>
           )}
           {/* Nog geen naam? Dan één pill die zowel de naam als de personen vraagt —
               hetzelfde venster, dus alles zit op één plek. */}
+          {/* Eén pill: links de naam (tik = venster), rechts een tellertje dat meteen
+              personen bij- of afzet. Beide volledig optioneel. */}
           {!settle && !kaal && isAutoNaam(groupName) && (
-            <button onClick={() => { setNaamPlichtVeld(""); setPersGeteld(people.length > 1); setNaamPlichtNa(null); setNaamPlicht(true) }}
-              style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 14, padding: "6px 12px", fontSize: 15, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", fontFamily: "inherit" }}>
-              ✏️ {L.giveNameQ}{people.length > 1 && <span style={{ color: "#a89a6f", fontWeight: 700 }}> · 👥 {people.length}</span>}
-            </button>
+            <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 15, padding: "6px 10px", fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>
+              <span onClick={() => { setNaamPlichtVeld(""); setPersGeteld(people.length > 1); setNaamPlichtNa(null); setNaamPlicht(true) }}
+                style={{ display: "inline-flex", alignItems: "center", gap: 5, cursor: "pointer", minWidth: 0 }}>
+                <span style={{ color: "#c98a00" }}>✏️</span>
+                <span style={{ color: "#b3a988", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.namePh3}</span>
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, borderLeft: "1px solid rgba(120,95,20,0.2)", paddingLeft: 7, color: "#8a7d55" }}>
+                👥
+                <span onClick={() => { if (people.length > 1) removeLastPerson() }} style={{ width: 20, height: 20, borderRadius: 6, background: "#f4efe2", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
+                <b style={{ color: "#4a3f1e" }}>{people.length}</b>
+                <span onClick={() => { void addPerson() }} style={{ width: 20, height: 20, borderRadius: 6, background: AAN, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>＋</span>
+              </span>
+            </span>
           )}
           <span style={{ marginLeft: "auto", flexShrink: 0 }}>{potKnopje()}</span>
         </div>
@@ -8180,7 +8198,7 @@ export default function PartyTest() {
             /* Zolang je alleen bent: één zachte uitnodiging om personen toe te voegen.
                Zodra ze er zijn, kies je hierboven tussen samen en per persoon. */
             <div style={{ display: people.length > 1 ? "none" : "flex", justifyContent: "center", marginBottom: 11 }}>
-              <button onClick={() => { setPerPersoon(true); setPersGeteld(true); setNaamPlichtVeld(isAutoNaam(groupName) ? "" : groupName.trim()); setNaamPlichtNa(null); setNaamPlicht(true) }}
+              <button onClick={() => { setPerPersoon(true); setPersGeteld(true); if (people.length < 2) void addPerson() }}
                 style={{ background: themaNaam ? "#fbfcff" : "#fffdf6", border: `1px solid ${themaNaam ? "rgba(59,72,106,0.4)" : "rgba(240,165,0,0.5)"}`, borderTop: "none", borderRadius: "0 0 12px 12px", padding: "8px 16px", fontSize: 15, fontWeight: 800, color: themaNaam ? "#3b486a" : "#8a5e0f", cursor: "pointer" }}>{L.perPersonPrompt} ▸</button>
             </div>
           ) : null
@@ -8862,10 +8880,10 @@ export default function PartyTest() {
                 </div>
                 {/* Wat nog zonder naam staat, hoort bij deze bestelling — dus hier, net
                     onder het aanpassen. */}
-                {!settle && unassignedAllRounds > 0 && (
+                {!settle && laatste && drinks.reduce((a, d) => a + (laatste.anon[d.id] ?? 0), 0) > 0 && (
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.14)" }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#8a5e0f" }}>🍺 {L.notAssignedYet(unassignedAllRounds)}</span>
-                    <button onClick={() => { setAssignAllMode(true); setAssignIdx(firstUnassignedIdx >= 0 ? firstUnassignedIdx : rounds.length - 1) }}
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#8a5e0f" }}>🍺 {L.notAssignedYet(drinks.reduce((a, d) => a + (laatste.anon[d.id] ?? 0), 0))}</span>
+                    <button onClick={() => { setAssignAllMode(false); setAssignIdx(idx) }}
                       style={{ flexShrink: 0, background: "#fff", border: "1.5px solid rgba(240,165,0,0.6)", color: "#8a5e0f", borderRadius: 9, padding: "8px 13px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.openWord}</button>
                   </div>
                 )}
