@@ -539,6 +539,7 @@ const T = {
     adjustOrder: "bestelling aanpassen",
     addPersonHere: "Persoon toevoegen",
     personsAndNames: "Personen & namen",
+    namesWord: "namen",
     howNoteQ: "HOE NOTEER JE DIT RONDJE?",
     noteForCaps: "JE NOTEERT NU VOOR",
     togetherHint: "Je tikt gewoon aan wat er besteld is — geen namen nodig.",
@@ -1347,6 +1348,7 @@ const T = {
     adjustOrder: "modifier la commande",
     addPersonHere: "Ajouter une personne",
     personsAndNames: "Personnes & noms",
+    namesWord: "noms",
     howNoteQ: "COMMENT NOTES-TU CETTE TOURN\u00c9E\u00a0?",
     noteForCaps: "TU NOTES MAINTENANT POUR",
     togetherHint: "Tu coches simplement ce qui est command\u00e9 — sans noms.",
@@ -8413,11 +8415,12 @@ export default function PartyTest() {
                       <span style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f", letterSpacing: "0.03em" }}>{L.noteForCaps}</span>
                       {/* Snel tellen zonder venster; het potlood opent de namen. */}
                       <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7, border: "2px solid rgba(47,111,181,0.55)", background: "#f2f6fc", color: "#2f5693", borderRadius: 11, padding: "5px 7px", fontSize: 15, fontWeight: 800 }}>
+                        <span style={{ fontSize: 15 }}>👥</span>
                         <span onClick={() => { if (people.length > 1) removeLastPerson() }} style={{ padding: "0 4px", cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
                         <b style={{ fontSize: 16 }}>{people.length}</b>
                         <span onClick={() => { void addPerson() }} style={{ padding: "0 4px", cursor: "pointer" }}>＋</span>
                         <span onClick={() => { setPersGeteld(true); setAlleenPers(true); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
-                          style={{ borderLeft: "1px solid rgba(47,111,181,0.3)", paddingLeft: 8, cursor: "pointer" }}>✏️</span>
+                          style={{ borderLeft: "1px solid rgba(47,111,181,0.3)", paddingLeft: 8, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 14 }}>✏️ {L.namesWord}</span>
                       </span>
                     </div>
                   </div>
