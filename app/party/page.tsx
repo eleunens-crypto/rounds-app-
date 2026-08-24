@@ -530,6 +530,7 @@ const T = {
     allRoundsBtn: "🍺 Alle rondjes in één keer",
     onlyThisRound: "↩ Alleen dit rondje",
     allAmountsBtn: "💶 Alle bedragen invullen",
+    tapForCaps: "JE TIKT AAN VOOR",
     missAmount: "💶 bedrag",
     missAssign: "🍺 toewijzen",
     missPayer: "💳 wie betaalde?",
@@ -1319,6 +1320,7 @@ const T = {
     allRoundsBtn: "🍺 Toutes les tourn\u00e9es d'un coup",
     onlyThisRound: "↩ Seulement cette tourn\u00e9e",
     allAmountsBtn: "💶 Remplir tous les montants",
+    tapForCaps: "TU COCHES POUR",
     missAmount: "💶 montant",
     missAssign: "🍺 attribuer",
     missPayer: "💳 qui a pay\u00e9\u00a0?",
@@ -4208,7 +4210,7 @@ export default function PartyTest() {
   const bump1 = (did: string) => {
     // Snel opnemen zonder echte groepsnaam: de tik wordt tegengehouden (dus nog níét
     // genoteerd) en het naamvenster verschijnt. Na "Verder" tik je gewoon opnieuw.
-    if (settle && voorWie) return bump(did, voorWie, 1)
+    if (voorWie && (settle || people.length > 1)) return bump(did, voorWie, 1)
     return bumpAnon(did, 1)
   }
   // Een drankje in één tik volledig uit de lopende bestelling halen — zowel de nog niet
@@ -4228,7 +4230,7 @@ export default function PartyTest() {
   const bumpDown = (did: string) => {
     // In Fair Split haal je weg bij wie je op dat moment aantikt; anders eerst de nog
     // niet toegewezen exemplaren, dan de rest.
-    if (settle && voorWie) { if ((cart[did]?.[voorWie] ?? 0) > 0) bump(did, voorWie, -1); return }
+    if (voorWie && (settle || people.length > 1)) { if ((cart[did]?.[voorWie] ?? 0) > 0) bump(did, voorWie, -1); return }
     if ((cartAnon[did] ?? 0) > 0) { bumpAnon(did, -1); return }
     const entry = cart[did]; if (!entry) return
     const pid = Object.keys(entry).find((k) => (entry[k] ?? 0) > 0); if (pid) bump(did, pid, -1)
@@ -8199,8 +8201,14 @@ export default function PartyTest() {
             inspreken staan onderaan: die gebruik je zelden en ze duwden de drankjes weg. */}
             {/* Voor wie tik je aan? Wie via de QR binnenkwam staat achteraan en gedimd:
                 die duidt normaal zelf aan. Aantikken kan wel, voor als er iets misloopt. */}
-            {settle && people.length > 0 && (
-              <div style={{ ...S.card, padding: "11px 12px", marginBottom: 8 }}>
+            {(settle || people.length > 1) && people.length > 0 && (
+              <div style={{ ...S.card, padding: "11px 12px", marginBottom: 8,
+                border: !settle ? "2px solid #e8a812" : undefined }}>
+                {!settle && (
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f", letterSpacing: "0.04em", marginBottom: 7 }}>
+                    {L.tapForCaps} <span style={{ fontSize: 15 }}>{(people.find((pp) => pp.id === voorWie)?.name || "").toUpperCase()}</span>
+                  </div>
+                )}
                 <div style={{ fontSize: 14.5, fontWeight: 800, color: voorWie && voorWie !== meId ? "#8a5e0f" : "#8a7d55", marginBottom: 7 }}>
                   <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                     <span style={{ minWidth: 0 }}>{voorWie && voorWie !== meId ? L.nowTappingFor(people.find((pp) => pp.id === voorWie)?.name ?? "") : L.youTapFor}</span>
@@ -8231,8 +8239,8 @@ export default function PartyTest() {
                     )
                   })}
                   {!settle && (
-                    <button onClick={() => { void addPerson(); setSettingsBackTo("order") }}
-                      style={{ border: "1.5px dashed rgba(240,165,0,0.6)", background: "none", color: "#c98a00", borderRadius: 9, padding: "6px 11px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>{L.addNameBtn}</button>
+                    <button onClick={() => { setPersGeteld(true); setNaamPlichtVeld(isAutoNaam(groupName) ? "" : groupName.trim()); setNaamPlichtNa(null); setNaamPlicht(true) }}
+                      style={{ border: "2px solid rgba(47,111,181,0.55)", background: "#f2f6fc", color: "#2f5693", borderRadius: 11, padding: "8px 13px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>{L.addNameBtn}</button>
                   )}
                 </div>
                 {!settle && <div style={{ fontSize: 13.5, color: "#a89a6f", marginTop: 6, lineHeight: 1.4 }}>{L.namesLaterToo}</div>}
