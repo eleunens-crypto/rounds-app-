@@ -6796,7 +6796,7 @@ export default function PartyTest() {
     // in plaats van de losse teal balk, logo-rij en naam rechtsboven.
     const setupKop = !!groupId && settle && !kaal && (view === "setup" || (view === "hub" && isAdmin && !fromQuick && rounds.length === 0))
     return (
-    <div style={{ marginBottom: 12 }}>
+    <div style={{ marginBottom: 12, paddingTop: 18 }}>
       {/* Bij uitgebreid opnemen geen aparte statusbalk: de tekst staat rechts op de
           Rundo-regel. */}
       {/* Degradé wit → teal: het logo staat links op zijn vertrouwde lichte ondergrond
@@ -6855,15 +6855,13 @@ export default function PartyTest() {
           <span onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ cursor: "pointer", flexShrink: 0, display: "inline-flex" }}>
             <RundoLogo size={40} />
           </span>
-          <div style={{ minWidth: 0 }}>
-            <div onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ ...S.h1, fontSize: 21, lineHeight: 1.1, letterSpacing: "-0.02em", cursor: "pointer" }}>Rundo</div>
-            {!!groupId && !kaal && (
-              <span style={{ marginTop: 3, display: "inline-flex", alignItems: "center", gap: 5, maxWidth: "100%", fontSize: 13, fontWeight: 800, color: themaNaam ? "#5a6a94" : "#8a5e0f", background: themaNaam ? "rgba(59,72,106,0.09)" : "#faf1dc", border: `1px solid ${themaNaam ? "rgba(59,72,106,0.28)" : "rgba(240,165,0,0.35)"}`, borderRadius: 999, padding: "3px 10px" }}>
-                <GsmIcoon size={14} kleur={themaNaam ? "#5a6a94" : "#8a5e0f"} lijnen={!settle} qr={settle} />
-                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{settle && !fromQuick ? L.modeFairShort : opNaam ? L.modeNaamTitle : L.modeSnelTitle}</span>
-              </span>
-            )}
-          </div>
+          <div onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ ...S.h1, fontSize: 21, lineHeight: 1.1, letterSpacing: "-0.02em", cursor: "pointer", flexShrink: 0 }}>Rundo</div>
+          {!!groupId && !kaal && (
+            <span style={{ minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 800, color: themaNaam ? "#5a6a94" : "#8a5e0f", background: themaNaam ? "rgba(59,72,106,0.09)" : "#faf1dc", border: `1px solid ${themaNaam ? "rgba(59,72,106,0.28)" : "rgba(240,165,0,0.35)"}`, borderRadius: 999, padding: "3px 10px" }}>
+              <GsmIcoon size={14} kleur={themaNaam ? "#5a6a94" : "#8a5e0f"} lijnen={!settle} qr={settle} />
+              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{settle && !fromQuick ? L.modeFairShort : opNaam ? L.modeNaamTitle : L.modeSnelTitle}</span>
+            </span>
+          )}
         </div>
         {/* Op het instelscherm staat geen ondertitel: de tagline staat al op het
             startscherm, en hier telt elke pixel voor de twee keuzekaarten. */}
