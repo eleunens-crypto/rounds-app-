@@ -2596,7 +2596,7 @@ export default function PartyTest() {
   // Elk bezoek aan het overzicht begint dicht — je opent zelf wat je wil zien.
   useEffect(() => { if (view === "roundsOverview") setOpenRounds(new Set<string>()) }, [view])
   // Onthoud vanwaar je naar het rondjesoverzicht ging, zodat "terug" daarheen keert.
-  const [overviewBackTo, setOverviewBackTo] = useState<"hub" | "order" | "final">("hub")
+  const [overviewBackTo, setOverviewBackTo] = useState<"hub" | "order" | "final" | "payers">("hub")
   // Waar je vandaan kwam toen je de instellingen opende. De instellingen hebben geen
   // kopbalk met navigatie, dus zonder dit weet je er niet meer hoe je terugkeert.
   const [settingsBackTo, setSettingsBackTo] = useState<"quickSettle" | "order" | "hub">("hub")
@@ -10146,7 +10146,8 @@ export default function PartyTest() {
   if (view === "payers") {
     // Gedekt = pot + personen samen komen aan het bedrag. Een rondje dat volledig uit
     // de pot ging heeft geen enkele persoon als betaler, en dat is prima.
-    const zonderBetaler = rounds.filter((r) => (r.amount || 0) > 0.005 && rPaidSum(r) < (r.amount || 0) - 0.005)
+    const zonderBedragHier = rounds.filter((r) => (r.amount || 0) <= 0.005)
+    const zonderBetaler = rounds.filter((r) => (r.amount || 0) <= 0.005 || rPaidSum(r) < (r.amount || 0) - 0.005)
     const klaar = zonderBetaler.length === 0 && !potZonderNamen
     return (
       <div style={S.page}><div style={S.wrap}>
@@ -10300,7 +10301,12 @@ export default function PartyTest() {
               <div style={{ ...S.row, justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
                 <span style={{ fontSize: 17.5, fontWeight: 800, color: "#4a3f1e", paddingLeft: mist ? 0 : 20, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.roundSummary(idx + 1, items)}</span>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                  <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#c88a1a", whiteSpace: "nowrap" }}>{euro(r.amount || 0)}</span>
+                  {geenBedrag ? (
+                    <span onClick={() => { setFillMode(true); setOverviewBackTo("payers"); setView("roundsOverview") }}
+                      style={{ flexShrink: 0, fontSize: 15, fontWeight: 800, color: "#b0402f", whiteSpace: "nowrap", border: "1.5px solid rgba(224,104,92,0.6)", borderRadius: 10, padding: "5px 11px", cursor: "pointer" }}>{L.missAmount}</span>
+                  ) : (
+                    <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#c88a1a", whiteSpace: "nowrap" }}>{euro(r.amount || 0)}</span>
+                  )}
                 </span>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -10350,7 +10356,14 @@ export default function PartyTest() {
           boxShadow: klaar ? "0 4px 12px -4px rgba(31,138,76,0.6)" : "none" }}
           onClick={() => {
             // Te vroeg getikt? Dan zeggen waarom er niets gebeurt, in plaats van niets doen.
-            if (!klaar) { setNotice(zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit); return }
+            if (!klaar) {
+              if (zonderBedragHier.length > 0) {
+                setNotice(L.fillAmountsFirst)
+                setFillMode(true); setOverviewBackTo("payers"); setView("roundsOverview")
+                return
+              }
+              setNotice(zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit); return
+            }
             // fromQuick blijft staan: zo kan je vanaf de eindbalans nog stap voor stap terug.
             setHasSettled(true); setView("final")
           }}>{L.toFinal}</button>
