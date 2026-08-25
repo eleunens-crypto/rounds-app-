@@ -3525,13 +3525,22 @@ export default function PartyTest() {
     }
     setLastRoundHandled(true); setPayVia("self"); setOverviewBackTo("hub"); setView("roundsOverview")
   }
+  const openGroepVenster = (metNaam: boolean) => {
+    setNaamPlichtVeld(metNaam && !isAutoNaam(groupName) ? groupName : "")
+    setPersGeteld(people.length > 1)
+    setAlleenPers(!metNaam)
+    setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name })))
+    setNaamPlichtNa(null)
+    setNaamPlicht(true)
+  }
+
   const kopTeller = () => (
-    <span onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 2, background: VLAK1, borderRadius: 999, padding: "2px 3px", color: "#5c5030", fontSize: 13, fontWeight: 800 }}>
-      <span onClick={() => { if (people.length > 1) removeLastPerson() }}
+    <span onClick={(e) => { e.stopPropagation(); openGroepVenster(false) }} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 2, background: VLAK1, borderRadius: 999, padding: "2px 3px", color: "#5c5030", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+      <span onClick={(e) => { e.stopPropagation(); if (people.length > 1) removeLastPerson() }}
         style={{ width: 22, height: 22, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 15, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
       <b style={{ color: RAND, padding: "0 2px" }}>{people.length}</b>
       <span style={{ color: "#8a7d55", fontSize: 11, paddingRight: 2 }}>{L.persWordLow}</span>
-      <span onClick={() => { void addPerson() }}
+      <span onClick={(e) => { e.stopPropagation(); void addPerson(); openGroepVenster(false) }}
         style={{ width: 22, height: 22, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 15, cursor: "pointer" }}>＋</span>
     </span>
   )
@@ -6975,11 +6984,11 @@ export default function PartyTest() {
           rechtsboven. Zo staan "waar ben ik" en "hoeveel zit er nog in" naast elkaar in
           plaats van elkaar te verdringen op één regel. */}
       {!setupKop && (
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#0E1A2E", borderRadius: 15, padding: "11px 13px", marginBottom: 11 }}>
         <div style={{ minWidth: 0, flex: "1 1 auto" }}>
         <div style={{ ...S.row, gap: 10, alignItems: "center" }}>
           <span onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ cursor: "pointer", flexShrink: 0, display: "inline-flex" }}>
-            <RundoLogo size={34} opDonker={false} />
+            <RundoLogo size={48} />
           </span>
         </div>
         {/* Op het instelscherm staat geen ondertitel: de tagline staat al op het
@@ -6992,13 +7001,13 @@ export default function PartyTest() {
         )}
         {!uitgebreidLook && !!groupId && !kaal && groupName.trim() && !editName && (
           <div style={{ textAlign: "right", minWidth: 0, flexShrink: 0, maxWidth: "52%" }}>
-            <div onClick={() => { if (!onboarding && !groepDicht) setEditName(true) }} style={{ cursor: onboarding ? "default" : "pointer", fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div onClick={() => { if (!onboarding && !groepDicht) setEditName(true) }} style={{ cursor: onboarding ? "default" : "pointer", fontSize: 19, fontWeight: 800, color: "#FFFFFF", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {!settle && isAutoNaam(groupName) ? (
                 <span style={{ display: "block" }}>
-                  <span style={{ display: "block", fontSize: 17, fontWeight: 700, color: themaNaam ? "#5a6a94" : "#c98a00" }}>✏️ {L.giveNameQ}</span>
-                  <span style={{ display: "block", fontSize: 14, fontWeight: 400, color: "#a89a6f", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.nowWord} {groupName.trim()}</span>
+                  <span style={{ display: "block", fontSize: 17, fontWeight: 700, color: "#F5B301" }}>✏️ {L.giveNameQ}</span>
+                  <span style={{ display: "block", fontSize: 14, fontWeight: 400, color: "#8b98ae", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.nowWord} {groupName.trim()}</span>
                 </span>
-              ) : <>{groupName.trim()}{groepDatum && <span style={{ fontWeight: 700, color: "#a89a6f", fontSize: 15 }}> ({datumKort(groepDatum)})</span>}{!onboarding && <span style={{ fontSize: 14 }}> ✏️</span>}</>}
+              ) : <>{groupName.trim()}{groepDatum && <span style={{ fontWeight: 700, color: "#8b98ae", fontSize: 15 }}> ({datumKort(groepDatum)})</span>}{!onboarding && <span style={{ fontSize: 14 }}> ✏️</span>}</>}
             </div>
 
           </div>
@@ -7027,10 +7036,10 @@ export default function PartyTest() {
               personen bij- of afzet. Beide volledig optioneel. */}
           {!settle && !kaal && isAutoNaam(groupName) && (
             <span style={{ flex: "1 1 auto", minWidth: 0, display: "inline-flex", alignItems: "center", gap: 9, background: "#fff", border: `1.5px solid ${RAND}`, borderRadius: 999, padding: "9px 15px", fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>
-              <span onClick={() => { setNaamPlichtVeld(""); setPersGeteld(people.length > 1); setAlleenPers(false); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
+              <span onClick={() => openGroepVenster(true)}
                 style={{ flex: "1 1 auto", display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", minWidth: 0 }}>
                 <span style={{ flexShrink: 0, color: "#c98a00" }}>✏️</span>
-                <span style={{ color: "#b3a988", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.namePh3}</span>
+                <span style={{ color: "#8a7d55", fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.namePh3}</span>
               </span>
               {!settle && kopTeller()}
             </span>
@@ -7997,7 +8006,10 @@ export default function PartyTest() {
             <button onClick={() => verlaatMetNaamcheck(() => { window.location.href = "/" })} style={{ fontSize: 16, fontWeight: 700, color: "#a08d5f", background: "none", border: "none", padding: 4, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }}>{L.backToRundo}</button>
           ) : (
             <span style={{ fontSize: 15, color: "#a89a6f", fontWeight: 600 }}>{L.tryTableLine}{" "}
-              <a href="/table" style={{ color: "#2f9bb5", fontWeight: 800, textDecoration: "underline" }}>Rundo Resto →</a>
+              <a href="/table" style={{ display: "inline-flex", alignItems: "center", gap: 6, verticalAlign: "middle", textDecoration: "none" }}>
+                <RundoLogo size={22} opDonker={false} resto />
+                <span style={{ color: "#2f9bb5", fontWeight: 800 }}>→</span>
+              </a>
             </span>
           )}
         </div>
