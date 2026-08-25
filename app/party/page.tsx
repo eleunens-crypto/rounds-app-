@@ -1177,7 +1177,7 @@ const T = {
     adjustWord: "Aanpassen",
     notSavedYet: "niet opgeslagen",
     saveWord: "Opslaan",
-    potTopUp: "Pot bijvullen",
+    potTopUp: "Pot aanvullen",
     emptyWord: "leeg",
     potEmptyFillFirst: "De pot is leeg — vul eerst bij om hieruit te betalen.",
     editRoundHead: (n: number) => `Rondje ${n} aanpassen`,
@@ -4233,6 +4233,7 @@ export default function PartyTest() {
       : { pot: totaal }
     const { error } = await supabase.rpc("party_add_pot", { p_group: groupId, p_amounts: bedragen, p_is_card: potIsCard, p_payers: cardPayers })
     if (error) { meldPot("Inleg opslaan mislukt: " + error.message); return }
+    setEditDraft((c) => (c && c.bron === "self") ? { ...c, bron: "pot", potAmt: c.amount } : c)
     setPotDraft({}); setPotPerMan(0); setEveryoneChoice(null); setEveryoneDraft("")
     setPotBuilderOpen(false)
     setPotJustAdded(true)
@@ -4244,6 +4245,7 @@ export default function PartyTest() {
       supabase.rpc("party_add_pot", { p_group: groupId, p_amounts: potDraft, p_is_card: potIsCard, p_payers: cardPayers })
         .then(({ error }) => { if (error) meldPot("Inleg opslaan mislukt: " + error.message); else loadParty(groupId) })
     }
+    if (added > 0) setEditDraft((c) => (c && c.bron === "self") ? { ...c, bron: "pot", potAmt: c.amount } : c)
     setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setEditPotId(null); setPotBuilderOpen(false); setShowPot(false)
     if (onbPotActive) {
       setOnbPotActive(false)
