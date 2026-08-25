@@ -1067,6 +1067,7 @@ const T = {
     openStep2: "Wie gaat halen, tikt dat aan boven de drankjes",
     openStep3: "Daarna tikt iedereen aan wat hij wil",
     okWord: "Begrepen",
+    okKort: "ok",
     stillBusy: "nog bezig…",
     youTapFor: "Je tikt aan voor:",
     youWord: "jij",
@@ -1885,6 +1886,7 @@ const T = {
     openStep2: "Celui qui y va le signale au-dessus des boissons",
     openStep3: "Ensuite chacun coche ce qu’il veut",
     okWord: "Compris",
+    okKort: "ok",
     stillBusy: "en cours…",
     toTheBar: "🍻 Au bar",
     youTapFor: "Tu coches pour :",
@@ -8759,15 +8761,6 @@ export default function PartyTest() {
                   )}
                 </>)
               })()}
-              {!settle && unassignedTotal > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, borderTop: "1px dashed rgba(240,165,0,0.45)", marginTop: 9, paddingTop: 9 }}>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 15, color: "#8a5e0f", lineHeight: 1.35 }}>
-                    <b>{L.notAssignedCount(unassignedTotal)}</b><br /><span style={{ color: "#a89a6f", fontWeight: 600 }}>{L.assignWhoSub} — {L.canAlsoLater}</span>
-                  </span>
-                  <button onClick={() => { setAssignNaamEdit(false); setShowAssignAll(true) }}
-                    style={{ flexShrink: 0, background: "#fff", color: "#8a5e0f", border: "1.5px solid rgba(240,165,0,0.6)", borderRadius: 9, padding: "8px 13px", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>{L.assign}</button>
-                </div>
-              )}
             </div>
           </>
           )
@@ -9235,10 +9228,10 @@ export default function PartyTest() {
                   zijn eigen kleur eronder. Allebei aan = het rondje deels zelf, deels uit de
                   pot. De pot is blauw — overal, geen groen meer. */}
               <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-                <button style={{ flex: 1, padding: "12px 6px", fontSize: 17.5, fontWeight: 800, borderRadius: 10, cursor: "pointer", textAlign: "center",
-                  background: payVia !== "pot" ? "rgba(240,165,0,0.12)" : "#fff",
-                  color: payVia !== "pot" ? "#8a5e0f" : "#a89a6f",
-                  border: payVia !== "pot" ? "2px solid #e8a812" : "1px solid rgba(120,95,20,0.25)" }}
+                <button style={{ flex: 1, padding: "12px 6px", fontSize: 16.5, fontWeight: 600, borderRadius: 999, cursor: "pointer", textAlign: "center",
+                  background: payVia !== "pot" ? "rgba(240,165,0,0.22)" : "#fff",
+                  color: payVia !== "pot" ? "#6b4a00" : "#6b5c35",
+                  border: payVia !== "pot" ? "1.5px solid rgba(200,138,0,0.75)" : "1.5px solid rgba(74,63,30,0.4)" }}
                   onClick={() => {
                     const r0 = rounds[idx]
                     if (payVia === "pot") { setMixZelf(0); setMixPot(r0?.amount || 0); setMixFocus("zelf"); setPayVia("mix") }
@@ -9246,10 +9239,10 @@ export default function PartyTest() {
                     // betaald" en de pot valt weg — het zelf-bedrag blijft staan.
                     else if (payVia === "mix") { qSetAmount(idx, Math.round(mixZelf * 100) / 100); setPayVia("self") }
                   }}>{L.paidSelf}</button>
-                <button style={{ flex: 1, padding: "12px 6px", fontSize: 17.5, fontWeight: 800, borderRadius: 10, cursor: "pointer", textAlign: "center",
-                  background: payVia !== "self" ? "#eef4fc" : "#fff",
-                  color: payVia !== "self" ? "#2f5693" : "#a89a6f",
-                  border: payVia !== "self" ? "2px solid #2f6fb5" : "1px solid rgba(47,111,181,0.3)" }}
+                <button style={{ flex: 1, padding: "12px 6px", fontSize: 16.5, fontWeight: 600, borderRadius: 999, cursor: "pointer", textAlign: "center",
+                  background: payVia !== "self" ? "rgba(47,86,147,0.16)" : "#fff",
+                  color: payVia !== "self" ? "#24476f" : "#6b5c35",
+                  border: payVia !== "self" ? "1.5px solid rgba(47,86,147,0.7)" : "1.5px solid rgba(74,63,30,0.4)" }}
                   onClick={() => {
                     if (potAvail <= 0.005 && payVia === "self") { potVulIntent.current = idx; meldPot(L.potEmptyNote); setShowPot(true); return }
                     const r0 = rounds[idx]
@@ -9272,11 +9265,11 @@ export default function PartyTest() {
                   type="text" inputMode="decimal" placeholder="0,00"
                   {...bedragVeld(`hub-${idx}`, amount, (v) => qSetAmount(idx, v))}
                   onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); if ((rounds[idx]?.amount || 0) > 0.005) confirmQuickPay() } }} />
-                <button className={amount > 0.005 ? (accentKleur ? accentKleur.pulse : "rundo-pulse") : undefined} style={{ width: 54, height: 56, borderRadius: 13, fontSize: 27, fontWeight: 800, cursor: "pointer", flexShrink: 0,
-                  background: amount > 0.005 ? "#fff" : "#e8e2d2",
-                  color: amount > 0.005 ? (accentKleur ? accentKleur.hoofd : "#1f8a4c") : "#b3a988",
-                  border: amount > 0.005 ? `2.5px solid ${accentKleur ? accentKleur.hoofd : "#1f8a4c"}` : "none" }}
-                  onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}>✓</button>
+                <button className={amount > 0.005 ? (accentKleur ? accentKleur.pulse : "rundo-pulse") : undefined} style={{ padding: "0 17px", height: 56, borderRadius: 999, fontSize: 16, fontWeight: 600, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "inherit",
+                  background: amount > 0.005 ? (accentKleur ? accentKleur.hoofd : "#1f8a4c") : (payVia === "pot" ? "rgba(47,86,147,0.16)" : "rgba(240,165,0,0.22)"),
+                  color: amount > 0.005 ? "#fff" : (payVia === "pot" ? "#24476f" : "#6b4a00"),
+                  border: `1.5px solid ${accentKleur ? accentKleur.hoofd : "#1f8a4c"}` }}
+                  onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}><span style={{ fontSize: 20 }}>✓</span> {L.okKort}</button>
 
               </div>
               {amount > 0.005 && (
@@ -9318,11 +9311,11 @@ export default function PartyTest() {
                         type="text" inputMode="decimal" placeholder="0,00"
                         onFocus={() => setMixFocus("pot")}
                         {...bedragVeld(`hub-pot-${idx}`, mixPot, (v) => { setMixFocus("pot"); setMixPot(v); qSetAmount(idx, Math.round((mixZelf + v) * 100) / 100) })} />
-                      <button className={som > 0.005 && !potOver ? vinkKleur.pulse : undefined} style={{ padding: "0 15px", height: 52, borderRadius: 13, fontSize: 18.5, fontWeight: 800, cursor: "pointer", flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap",
-                        background: som > 0.005 && !potOver ? "#fff" : "#e8e2d2",
-                        color: som > 0.005 && !potOver ? vinkKleur.hoofd : "#b3a988",
-                        border: som > 0.005 && !potOver ? `2.5px solid ${vinkKleur.hoofd}` : "none" }}
-                        onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (som > 0.005 && !potOver) confirmQuickPay() }}><span style={{ fontSize: 21 }}>✓</span> ok</button>
+                      <button className={som > 0.005 && !potOver ? vinkKleur.pulse : undefined} style={{ padding: "0 17px", height: 52, borderRadius: 999, fontSize: 16, fontWeight: 600, cursor: "pointer", flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", fontFamily: "inherit",
+                        background: som > 0.005 && !potOver ? vinkKleur.hoofd : "rgba(240,165,0,0.22)",
+                        color: som > 0.005 && !potOver ? "#fff" : "#6b4a00",
+                        border: `1.5px solid ${vinkKleur.hoofd}` }}
+                        onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (som > 0.005 && !potOver) confirmQuickPay() }}><span style={{ fontSize: 20 }}>✓</span> {L.okKort}</button>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 7 }}>
                       <span style={{ fontSize: 14.5, fontWeight: 700, color: potOver ? "#c0554a" : "#2f5693", minWidth: 0 }}>🫙 {potOver ? L.mixPotShort(euro(Math.max(0, potAvail))) : L.mixPotAvail(euro(Math.max(0, potAvail)))}</span>
