@@ -1019,7 +1019,7 @@ const T = {
     removeHint: "Verwijder wat je niet meer nodig hebt. Al besteld in een rondje? Dan blijft het staan.",
     nameYourDrink: "Geef je drankje een naam.",
     needPrice: "Vul een richtprijs in — anders kan dit drankje niet eerlijk verdeeld worden.",
-    needAmountOrCancel: "Uit de pot betalen kan niet zonder bedrag. Vul een bedrag in, of kies Niet uit de pot.",
+    needAmountOrCancel: "Uit de pot betalen kan niet zonder bedrag. Vul een bedrag in, of kies Geen pot gebruikt.",
     alreadyExists: (n: string) => `"${n}" staat al in de lijst.`,
     maxPerPerson: (n: number) => `Je kan maximaal ${n} eigen drankjes toevoegen.`,
     maxPerGroup: (n: number) => `De groep zit aan het maximum van ${n} eigen drankjes.`,
@@ -1161,7 +1161,7 @@ const T = {
     persRoundShort: (n: number) => `👤 ${n} pers. in dit rondje`,
     orderedLabel: "Besteld",
     barlistBtn: "handig barlijstje",
-    potClamped: (b: string) => `De pot kon maar ${b} dekken — de rest van het rondje telt als niet uit de pot.`,
+    potClamped: (b: string) => `De pot kon maar ${b} dekken — de rest van het rondje telt zonder pot.`,
     thanksClosed: "🍻 Bedankt en tot de volgende! Je avond blijft bewaard bij Opgeslagen groepen.",
     cancelledBy: (naam: string) => `✕ ${naam} annuleerde het rondje.`,
     runnerDoneBtn: "🍻 Rondje afronden en halen",
@@ -1197,8 +1197,10 @@ const T = {
     payFirstOne: (nr: number) => `Vul eerst de betaling van rondje ${nr} in, of sla ze over.`,
     payFirstMany: (n: number) => `Nog ${n} rondjes zonder bedrag. Vul ze in, of sla de betaling over.`,
     afterPayment: "na de betaling",
-    paidSelf: "Niet uit de pot",
-    paidPot: "Uit de pot",
+    paidSelf: "Geen pot gebruikt",
+    paidSelfShort: "Zonder pot",
+    paidPotShort: "Uit de pot",
+    paidPot: "Pot gebruikt",
     whoPaidWhat: "wie betaalde wat",
     totalPaidShort: "Totaal betaald",
     potShare: "waarvan uit de pot",
@@ -2021,7 +2023,9 @@ const T = {
     payFirstOne: (nr: number) => `Indique d'abord le paiement de la tourn\u00e9e ${nr}, ou passe-le.`,
     payFirstMany: (n: number) => `Encore ${n} tourn\u00e9es sans montant. Indique-les, ou passe le paiement.`,
     afterPayment: "apr\u00e8s le paiement",
-    paidSelf: "Hors cagnotte",
+    paidSelf: "Sans cagnotte",
+    paidSelfShort: "Sans cagnotte",
+    paidPotShort: "De la cagnotte",
     whoPaidWhat: "qui a pay\u00e9 quoi",
     totalPaidShort: "Total pay\u00e9",
     potShare: "dont du pot",
@@ -2035,7 +2039,7 @@ const T = {
     mixSamen: (b: string) => `ensemble ${b}`,
     mixPotAvail: (b: string) => `${b} disponible`,
     mixPotShort: (b: string) => `mais ${b} dans le pot`,
-    paidPot: "De la cagnotte",
+    paidPot: "Avec cagnotte",
     potEmptyNote: "La cagnotte est vide — ajoute d\u2019abord un montant.",
     potPayLeft: (bedrag: string, over: string) => `${bedrag} de la cagnotte → ${over} restant apr\u00e8s`,
     potShortTitle: "Pas assez dans la cagnotte",
@@ -8483,14 +8487,14 @@ export default function PartyTest() {
                 )}
 
                 {perPersoon && (<>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: VLAK1, borderRadius: 10, padding: "5px 7px", marginBottom: 9 }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "#5c5030", fontSize: 13, fontWeight: 800 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: VLAK1, borderRadius: 10, padding: "6px 7px", marginBottom: 9 }}>
+                    <span style={{ flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, color: "#5c5030", fontSize: 14.5, fontWeight: 800 }}>
                       <span onClick={() => { if (people.length > 1) removeLastPerson() }}
-                        style={{ width: 23, height: 23, borderRadius: "50%", background: "#fff", border: "1px solid rgba(120,95,20,0.3)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
-                      <b style={{ fontSize: 15, color: RAND }}>{people.length}</b>
-                      <span style={{ color: "#8a7d55", fontSize: 12.5 }}>{L.persWordLow}</span>
+                        style={{ width: 28, height: 28, borderRadius: "50%", background: "#fff", border: "1px solid rgba(120,95,20,0.3)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 18, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
+                      <b style={{ fontSize: 18, color: RAND }}>{people.length}</b>
+                      <span style={{ color: "#8a7d55", fontSize: 13.5 }}>{L.persWordLow}</span>
                       <span onClick={() => { void addPerson() }}
-                        style={{ width: 23, height: 23, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer" }}>＋</span>
+                        style={{ width: 28, height: 28, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 18, cursor: "pointer" }}>＋</span>
                     </span>
                     <button onClick={() => { setPersGeteld(true); setAlleenPers(true); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
                       style={{ flexShrink: 0, minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5, border: "none", borderLeft: "1px solid rgba(120,95,20,0.2)", background: "transparent", color: RAND, padding: "3px 4px 3px 10px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.editNamesBtn}</button>
@@ -9194,7 +9198,7 @@ export default function PartyTest() {
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.14)" }}>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#8a5e0f" }}>🍺 {L.notAssignedYet(drinks.reduce((a, d) => a + (laatste.anon[d.id] ?? 0), 0))}</span>
                     <button onClick={() => { setAssignAllMode(false); setAssignIdx(idx) }}
-                      style={{ flexShrink: 0, background: "#fff", border: "1.5px solid rgba(240,165,0,0.6)", color: "#8a5e0f", borderRadius: 9, padding: "8px 13px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.openWord}</button>
+                      style={{ flexShrink: 0, background: VLAK1, border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 999, padding: "8px 15px", fontSize: 14.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{L.assign}</button>
                   </div>
                 )}
               </div>
@@ -9307,7 +9311,7 @@ export default function PartyTest() {
                 return (
                   <>
                     <div style={{ ...S.row, gap: 7, marginBottom: 7 }}>
-                      <span style={{ flexShrink: 0, width: 124, fontSize: 15, fontWeight: 800, color: zelfKleur, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>💶 {L.paidSelf}</span>
+                      <span style={{ flexShrink: 0, width: 108, fontSize: 13.5, fontWeight: 700, color: zelfKleur, lineHeight: 1.2 }}>{L.paidSelfShort}</span>
                       <span style={{ fontSize: 19, color: "#8a7d55", fontWeight: 700 }}>€</span>
                       <input style={{ ...S.input, flex: 1, minWidth: 50, fontSize: 19, fontWeight: 800, padding: "10px 10px", textAlign: "left", color: zelfKleur,
                         borderColor: mixZelf > 0.005 ? zelfRand : "rgba(120,95,20,0.22)" }}
@@ -9316,7 +9320,7 @@ export default function PartyTest() {
                         {...bedragVeld(`hub-zelf-${idx}`, mixZelf, (v) => { setMixFocus("zelf"); setMixZelf(v); qSetAmount(idx, Math.round((v + mixPot) * 100) / 100) })} />
                     </div>
                     <div style={{ ...S.row, gap: 7 }}>
-                      <span style={{ flexShrink: 0, width: 98, fontSize: 15, fontWeight: 800, color: "#2f5693", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>🫙 {L.paidPot}</span>
+                      <span style={{ flexShrink: 0, width: 108, fontSize: 13.5, fontWeight: 700, color: "#2f5693", lineHeight: 1.2, display: "inline-flex", alignItems: "center", gap: 5 }}><ZakjeIcoon size={15} /> {L.paidPotShort}</span>
                       <span style={{ fontSize: 19, color: "#8a7d55", fontWeight: 700 }}>€</span>
                       <input style={{ ...S.input, flex: 1, minWidth: 50, fontSize: 19, fontWeight: 800, padding: "10px 10px", textAlign: "left", color: "#2f5693",
                         borderColor: potOver ? "#c0554a" : mixPot > 0.005 ? "#2f6fb5" : "rgba(47,111,181,0.35)" }}
@@ -9330,7 +9334,7 @@ export default function PartyTest() {
                         onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (som > 0.005 && !potOver) confirmQuickPay() }}><span style={{ fontSize: 20 }}>✓</span> {L.okKort}</button>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 7 }}>
-                      <span style={{ fontSize: 14.5, fontWeight: 700, color: potOver ? "#c0554a" : "#2f5693", minWidth: 0 }}>🫙 {potOver ? L.mixPotShort(euro(Math.max(0, potAvail))) : L.mixPotAvail(euro(Math.max(0, potAvail)))}</span>
+                      <span style={{ fontSize: 14.5, fontWeight: 700, color: potOver ? "#c0554a" : "#2f5693", minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5 }}><ZakjeIcoon size={15} /> {potOver ? L.mixPotShort(euro(Math.max(0, potAvail))) : L.mixPotAvail(euro(Math.max(0, potAvail)))}</span>
                       <span style={{ flexShrink: 0, fontSize: 15, fontWeight: 800, color: "#4a3f1e" }}>{L.mixSamen(euro(som))}</span>
                     </div>
                     {/* Ook combineren moet over te slaan zijn (getrakteerd, later invullen…):
@@ -10091,14 +10095,14 @@ export default function PartyTest() {
                                 if (c.bron === "mix") return { ...c, bron: "self", amount: Math.max(0, Math.round((c.amount - Math.min(c.potAmt, c.amount)) * 100) / 100), potAmt: 0 }
                                 return c
                               }) }}
-                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 15, fontWeight: 800, border: "none", cursor: "pointer", background: dr.bron !== "pot" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f7f1e2", color: dr.bron !== "pot" ? "#fff" : "#8a7d55" }}>💶 {L.paidSelf}</button>
+                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 15, fontWeight: 800, border: "none", cursor: "pointer", background: dr.bron !== "pot" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#f7f1e2", color: dr.bron !== "pot" ? "#fff" : "#8a7d55" }}>{L.paidSelf}</button>
                             <button onClick={(e) => { e.stopPropagation(); if (potLeeg) return; setEditDraft((c) => {
                                 if (!c) return c
                                 if (c.bron === "self") return { ...c, bron: "mix", potAmt: 0 }
                                 if (c.bron === "mix") return { ...c, bron: "pot", amount: Math.max(0, Math.round(Math.min(c.potAmt, c.amount) * 100) / 100), potAmt: Math.max(0, Math.round(Math.min(c.potAmt, c.amount) * 100) / 100) }
                                 return c
                               }) }}
-                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 15, fontWeight: 800, border: "none", cursor: potLeeg ? "not-allowed" : "pointer", opacity: potLeeg ? 0.5 : 1, background: dr.bron !== "self" ? "linear-gradient(135deg,#3f7fc4,#2f6fb5)" : "#f7f1e2", color: dr.bron !== "self" ? "#fff" : "#8a7d55" }}>🫙 {L.paidPot}<span style={{ fontWeight: 800, opacity: dr.bron !== "self" ? 1 : 0.75 }}> · {potLeeg ? L.emptyWord : euro(Math.max(0, potAvailFor(idx)))}</span></button>
+                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 15, fontWeight: 800, border: "none", cursor: potLeeg ? "not-allowed" : "pointer", opacity: potLeeg ? 0.5 : 1, background: dr.bron !== "self" ? "linear-gradient(135deg,#3f7fc4,#2f6fb5)" : "#f7f1e2", color: dr.bron !== "self" ? "#fff" : "#8a7d55" }}>{L.paidPot}<span style={{ fontWeight: 800, opacity: dr.bron !== "self" ? 1 : 0.75 }}> · {potLeeg ? L.emptyWord : euro(Math.max(0, potAvailFor(idx)))}</span></button>
                           </div>
                           {potLeeg && <div style={{ fontSize: 14, color: "#c0554a", fontWeight: 700, marginTop: 6 }}>{L.potEmptyFillFirst}</div>}
                           {/* Te weinig in de pot: binair — bijvullen of zelf betalen. */}
@@ -10154,7 +10158,7 @@ export default function PartyTest() {
                       return (
                         <div style={{ marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.12)" }} onClick={(e) => e.stopPropagation()}>
                           <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
-                            <span style={{ fontSize: 15, fontWeight: 800, color: "#c88a1a" }}>💶 {L.paidSelf}</span>
+                            <span style={{ fontSize: 15, fontWeight: 800, color: "#c88a1a" }}>{L.paidSelfShort}</span>
                             <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               <span style={{ fontSize: 17, color: "#8a7d55", fontWeight: 700 }}>€</span>
                               <input type="text" inputMode="decimal" placeholder="0,00"
@@ -10163,7 +10167,7 @@ export default function PartyTest() {
                             </span>
                           </div>
                           <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontSize: 15, fontWeight: 800, color: "#2f5693" }}>🫙 {L.paidPot}</span>
+                            <span style={{ fontSize: 15, fontWeight: 800, color: "#2f5693", display: "inline-flex", alignItems: "center", gap: 5 }}><ZakjeIcoon size={15} /> {L.paidPotShort}</span>
                             <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               <span style={{ fontSize: 17, color: "#8a7d55", fontWeight: 700 }}>€</span>
                               <input type="text" inputMode="decimal" placeholder="0,00"
@@ -10172,7 +10176,7 @@ export default function PartyTest() {
                             </span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 6 }}>
-                            <span style={{ fontSize: 14, fontWeight: 700, color: potOver ? "#c0554a" : "#2f5693", minWidth: 0 }}>🫙 {potOver ? L.mixPotShort(euro(avail)) : L.mixPotAvail(euro(avail))}</span>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: potOver ? "#c0554a" : "#2f5693", minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5 }}><ZakjeIcoon size={14} /> {potOver ? L.mixPotShort(euro(avail)) : L.mixPotAvail(euro(avail))}</span>
                             <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#4a3f1e" }}>{L.mixSamen(euro(dr.amount))}</span>
                           </div>
                         </div>
