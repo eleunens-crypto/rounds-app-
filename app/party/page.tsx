@@ -563,6 +563,7 @@ const T = {
     togetherHint: "Tik drankjes aan voor iedereen — geen namen nodig.",
     completeWord: "✓ compleet",
     missAmount: "💶 betaling toevoegen",
+    noAmountShort: "Nog geen bedrag",
     missAssign: "🍺 drankjes toewijzen",
     missPayer: "💳 wie betaalde?",
     missRoundsNote: (n: number) => `Nog ${n} rondje${n === 1 ? "" : "s"} aanvullen voor een eerlijke verdeling`,
@@ -1391,6 +1392,7 @@ const T = {
     togetherHint: "Coche les boissons pour tout le monde — sans noms.",
     completeWord: "✓ complet",
     missAmount: "💶 ajouter le paiement",
+    noAmountShort: "Pas encore de montant",
     missAssign: "🍺 attribuer les boissons",
     missPayer: "💳 qui a pay\u00e9\u00a0?",
     missRoundsNote: (n: number) => `Encore ${n} tourn\u00e9e${n === 1 ? "" : "s"} \u00e0 compl\u00e9ter pour un partage \u00e9quitable`,
@@ -9966,8 +9968,9 @@ export default function PartyTest() {
             const open = isOpen(r)
             const geenBedrag = (r.amount || 0) <= 0.005
             const invulRij = fillMode && geenBedrag && editRoundId !== r.id
+            const nogOpen = geenBedrag || Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0) > 0
             return (
-              <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden", ...(editRoundId === r.id ? { boxShadow: "inset 0 0 0 2px rgba(240,165,0,0.55)", background: "#fffdf3" } : invulRij ? { border: "2px solid rgba(224,104,92,0.65)", background: "rgba(224,104,92,0.05)" } : {}) }}>
+              <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden", ...(!settle && nogOpen && editRoundId !== r.id && !invulRij ? { border: "1.5px solid rgba(200,138,0,0.7)" } : {}), ...(editRoundId === r.id ? { boxShadow: "inset 0 0 0 2px rgba(240,165,0,0.55)", background: "#fffdf3" } : invulRij ? { border: "2px solid rgba(224,104,92,0.65)", background: "rgba(224,104,92,0.05)" } : {}) }}>
                 <div onClick={() => toggle(r.id)} style={{ padding: "12px 14px", cursor: "pointer", background: editRoundId === r.id ? "rgba(240,165,0,0.1)" : open ? "rgba(240,165,0,0.06)" : invulRij ? "rgba(224,104,92,0.07)" : "#fff" }}>
                   <div style={{ ...S.row, justifyContent: "space-between", gap: 8 }}>
                     <div style={{ ...S.row, gap: 8, minWidth: 0 }}>
@@ -10001,15 +10004,18 @@ export default function PartyTest() {
                     if (!geenBedrag && nogToe2 === 0) {
                       return <div style={{ marginTop: 6 }}><span style={{ fontSize: 13.5, fontWeight: 800, borderRadius: 10, padding: "4px 10px", background: "rgba(31,138,76,0.12)", color: "#1f6b3a", border: "1px solid rgba(31,138,76,0.3)" }}>{L.completeWord}</span></div>
                     }
-                    const badge = (t: string) => <span style={{ fontSize: 13.5, fontWeight: 800, borderRadius: 10, padding: "5px 10px", background: "#fff", border: "1.5px solid rgba(224,104,92,0.5)", color: "#4a3f1e" }}>{t}</span>
+                    const punt = (tekst: string, knop: string, doe: (e: React.MouseEvent) => void) => (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                        <span style={{ minWidth: 0, fontSize: 13, fontWeight: 700, color: "#6b4a00", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ flexShrink: 0, width: 7, height: 7, borderRadius: "50%", background: "#e08a00" }} />{tekst}
+                        </span>
+                        <span onClick={doe} style={{ flexShrink: 0, fontSize: 12, fontWeight: 800, color: "#6b4a00", border: "1.5px solid rgba(200,138,0,0.7)", borderRadius: 999, padding: "4px 11px", cursor: "pointer" }}>{knop}</span>
+                      </div>
+                    )
                     return (
-                      <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
-                        {geenBedrag && (
-                          <span onClick={(e) => { e.stopPropagation(); setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r); setBedragFocus(true) }}>{badge(L.missAmount)}</span>
-                        )}
-                        {nogToe2 > 0 && (
-                          <span onClick={(e) => { e.stopPropagation(); setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) }}>{badge(L.missAssign)}</span>
-                        )}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 7 }}>
+                        {geenBedrag && punt(L.noAmountShort, L.fillWord.toLowerCase(), (e) => { e.stopPropagation(); setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r); setBedragFocus(true) })}
+                        {nogToe2 > 0 && punt(L.notAssignedCount(nogToe2), L.assign.toLowerCase(), (e) => { e.stopPropagation(); setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) })}
                       </div>
                     )
                   })()}
@@ -10448,7 +10454,7 @@ export default function PartyTest() {
                 <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                   {geenBedrag ? (
                     <span onClick={() => { setFillMode(true); setOverviewBackTo("payers"); setView("roundsOverview") }}
-                      style={{ flexShrink: 0, fontSize: 15, fontWeight: 800, color: "#b0402f", whiteSpace: "nowrap", border: "1.5px solid rgba(224,104,92,0.6)", borderRadius: 10, padding: "5px 11px", cursor: "pointer" }}>{L.missAmount}</span>
+                      style={{ flexShrink: 0, fontSize: 15, fontWeight: 800, color: "#6b4a00", whiteSpace: "nowrap", border: "1.5px solid rgba(200,138,0,0.7)", borderRadius: 999, padding: "5px 13px", cursor: "pointer" }}>{L.missAmount}</span>
                   ) : (
                     <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#c88a1a", whiteSpace: "nowrap" }}>{euro(r.amount || 0)}</span>
                   )}
