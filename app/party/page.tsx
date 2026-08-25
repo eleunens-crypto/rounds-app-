@@ -3481,11 +3481,11 @@ export default function PartyTest() {
   // Het personen-tellertje zoals het rechts op de titelregel staat. Eén plek, zodat
   // het opnamescherm, het rondjesoverzicht en het afrekenscherm niet uit elkaar lopen.
   const persTeller = () => (
-    <span onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 2, background: "#faf4e4", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 999, padding: "3px 4px", color: "#8a7d55", fontSize: 14.5, fontWeight: 800 }}>
+    <span onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 2, background: VLAK1, border: `1.5px solid ${RAND}`, borderRadius: 999, padding: "3px 4px", color: "#5c5030", fontSize: 14.5, fontWeight: 800 }}>
       <span onClick={() => { if (people.length > 1) removeLastPerson() }} style={{ width: 24, height: 24, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
-      <b style={{ color: "#4a3f1e", padding: "0 3px" }}>{people.length}</b>
-      <span style={{ color: "#a89a6f", fontWeight: 700, fontSize: 13, paddingRight: 4 }}>{L.persWordLow}</span>
-      <span onClick={() => { void addPerson() }} style={{ width: 24, height: 24, borderRadius: "50%", background: AAN, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer" }}>＋</span>
+      <b style={{ color: RAND, padding: "0 3px" }}>{people.length}</b>
+      <span style={{ color: "#8a7d55", fontWeight: 700, fontSize: 13, paddingRight: 4 }}>{L.persWordLow}</span>
+      <span onClick={() => { void addPerson() }} style={{ width: 24, height: 24, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer" }}>＋</span>
     </span>
   )
 
@@ -5722,18 +5722,20 @@ export default function PartyTest() {
   // De kleur van alles wat "aan" of "gekozen" is. Stond overal los in de code op goud,
   // waardoor vensters en tellers geel bleven in de QR-modus.
   const AAN = koel ? MODUS_FAIR.knop : themaNaam ? MODUS_NAAM.knop : "linear-gradient(135deg,#f0a500,#e08a00)"
+  const RAND = koel ? "#0a4f5b" : themaNaam ? "#2b3450" : "#4a3f1e"
+  const RANDTEKST = koel ? "#7fe3f2" : themaNaam ? "#c3cbe4" : "#ffcf5c"
   const VLAK1 = koel ? "#f2fafb" : themaNaam ? "#f1f3f9" : "#faf7ec"
   const VLAK2 = koel ? "#f7fcfd" : themaNaam ? "#f7f9fc" : "#fdfaf2"
   const VLAK3 = koel ? "#e4f2f5" : themaNaam ? "#e6eaf4" : "#f3ead2"
   const S = {
     page: { minHeight: "100dvh", overflowX: "clip", maxWidth: "100vw", background: groupId ? (koel ? MODUS_FAIR.bladzij : themaNaam ? MODUS_NAAM.bladzij : MODUS_SNEL.bladzij) : "#fdf6e3", color: "#4a3f1e", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
     wrap: { maxWidth: 560, margin: "0 auto", padding: "calc(env(safe-area-inset-top, 0px) + 114px) 16px 16px" } as React.CSSProperties,
-    card: { background: "#fff", border: `1px solid ${koel ? "rgba(13,124,140,0.16)" : themaNaam ? "rgba(59,72,106,0.16)" : "rgba(120,95,20,0.14)"}`, borderRadius: 18, padding: 16, marginBottom: 13, boxShadow: koel ? "0 4px 16px -8px rgba(13,124,140,0.22)" : themaNaam ? "0 4px 16px -8px rgba(59,72,106,0.2)" : "0 4px 16px -8px rgba(120,95,20,0.25)" } as React.CSSProperties,
+    card: { background: "#fff", border: `1.5px solid ${koel ? "#0a4f5b" : themaNaam ? "#2b3450" : "#4a3f1e"}`, borderRadius: 18, padding: 16, marginBottom: 13, boxShadow: koel ? "0 4px 16px -8px rgba(13,124,140,0.22)" : themaNaam ? "0 4px 16px -8px rgba(59,72,106,0.2)" : "0 4px 16px -8px rgba(120,95,20,0.25)" } as React.CSSProperties,
     h1: { fontSize: 26, fontWeight: 800, margin: "0 0 2px" } as React.CSSProperties,
     h3: { fontSize: 19.5, fontWeight: 800, margin: "0 0 10px" } as React.CSSProperties,
     sub: { fontSize: 17.5, color: "#8a7d55", margin: "0 0 12px", lineHeight: 1.55 } as React.CSSProperties,
-    btn: { border: `1px solid ${koel ? "rgba(13,124,140,0.24)" : themaNaam ? "rgba(59,72,106,0.22)" : "rgba(120,95,20,0.18)"}`, background: "#fff", color: koel ? MODUS_FAIR.tekst : themaNaam ? MODUS_NAAM.tekst : "#4a3f1e", borderRadius: 12, padding: "12px 16px", fontSize: 18, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
-    btnP: { border: "none", background: koel ? MODUS_FAIR.knop : themaNaam ? MODUS_NAAM.knop : "linear-gradient(135deg,#f0a500,#e08a00)", color: "#fff", borderRadius: 14, padding: "16px 18px", fontSize: 20, fontWeight: 800, cursor: "pointer", width: "100%", boxShadow: koel ? `0 4px 12px -4px ${MODUS_FAIR.gloed}` : themaNaam ? `0 4px 12px -4px ${MODUS_NAAM.gloed}` : "0 4px 12px -4px rgba(224,138,0,0.6)" } as React.CSSProperties,
+    btn: { border: `1.5px solid ${koel ? "#0a4f5b" : themaNaam ? "#2b3450" : "#4a3f1e"}`, background: "#fff", color: koel ? MODUS_FAIR.tekst : themaNaam ? MODUS_NAAM.tekst : "#4a3f1e", borderRadius: 12, padding: "12px 16px", fontSize: 18, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
+    btnP: { border: "none", background: koel ? "#0a4f5b" : themaNaam ? "#2b3450" : "#4a3f1e", color: koel ? "#7fe3f2" : themaNaam ? "#c3cbe4" : "#ffcf5c", borderRadius: 14, padding: "16px 18px", fontSize: 20, fontWeight: 800, cursor: "pointer", width: "100%", boxShadow: koel ? `0 4px 14px -5px ${MODUS_FAIR.gloed}` : themaNaam ? `0 4px 14px -5px ${MODUS_NAAM.gloed}` : "0 4px 14px -5px rgba(74,63,30,0.55)" } as React.CSSProperties,
     input: { border: "1px solid rgba(120,95,20,0.22)", borderRadius: 10, padding: "11px 12px", fontSize: 19, color: "#4a3f1e", outline: "none", width: 94, textAlign: "right" } as React.CSSProperties,
     seg: (on: boolean) => ({ flex: 1, textAlign: "center", padding: "11px 6px", borderRadius: 10, fontSize: 17.5, fontWeight: 800, cursor: "pointer", background: on ? AAN : (koel ? "#e4f2f5" : VLAK3), color: on ? "#fff" : (koel ? "#5a8f99" : themaNaam ? "#5a6a94" : "#8a7d55") } as React.CSSProperties),
     step: { width: 42, height: 42, borderRadius: 11, border: `1px solid ${koel ? "rgba(13,124,140,0.22)" : themaNaam ? "rgba(59,72,106,0.22)" : "rgba(120,95,20,0.18)"}`, background: koel ? "#e4f2f5" : VLAK3, color: koel ? MODUS_FAIR.tekst : themaNaam ? "#3b486a" : "#8a5e0f", fontSize: 24.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
@@ -6746,7 +6748,7 @@ export default function PartyTest() {
   // De pot-geldzak als losse functie: hij staat in de kop, en bij uitgebreid opnemen
   // op het bestelscherm verhuist hij naar de rondje-titelregel.
   const potKnopje = () => (
-    <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "9px 15px 9px 11px", borderRadius: 999, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: potRemaining > 0.005 ? "1px solid rgba(47,111,181,0.5)" : "0.5px solid rgba(47,111,181,0.35)" }}>
+    <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "9px 15px 9px 11px", borderRadius: 999, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: `1.5px solid ${RAND}` }}>
       {potRemaining < -0.005 && <span style={{ color: "#c0554a" }}>⚠️</span>}
       {potIsCard ? (
         <span style={{ fontSize: 20 }}>💳</span>
@@ -6833,7 +6835,7 @@ export default function PartyTest() {
             /* Dezelfde geldzakje-badge als in snel opnemen — alleen leest hij zolang de
                pot leeg is "Pot leggen +" en wordt hij na de eerste inleg vanzelf het
                saldo, op exact dezelfde plek. */
-            <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "9px 15px 9px 11px", borderRadius: 999, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: "1px solid rgba(47,111,181,0.5)" }}>
+            <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "9px 15px 9px 11px", borderRadius: 999, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: `1.5px solid ${RAND}` }}>
               <svg width="23" height="23" viewBox="0 0 40 40" style={{ display: "block" }}>
                 <path d="M16 13 L14 7 Q20 5 26 7 L24 13 Z" fill="#d99616" stroke="#b9821a" strokeWidth="1.2" strokeLinejoin="round" />
                 <path d="M13 14 Q20 11 27 14 Q33 19 32 27 Q31 35 20 35 Q9 35 8 27 Q7 19 13 14 Z" fill="#e8a821" stroke="#b9821a" strokeWidth="1.5" />
@@ -6868,7 +6870,7 @@ export default function PartyTest() {
           </span>
           <div onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ ...S.h1, fontSize: 21, lineHeight: 1.1, letterSpacing: "-0.02em", cursor: "pointer", flexShrink: 0 }}>Rundo</div>
           {!!groupId && !kaal && (
-            <span style={{ minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 800, color: themaNaam ? "#c3cbe4" : "#ffcf5c", background: themaNaam ? "#3b486a" : "#4a3f1e", borderRadius: 999, padding: "4px 11px" }}>
+            <span style={{ minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: themaNaam ? "#c3cbe4" : "#ffcf5c", background: themaNaam ? "#3b486a" : "#4a3f1e", borderRadius: 999, padding: "4px 11px" }}>
               <GsmIcoon size={14} kleur={themaNaam ? "#c3cbe4" : "#ffcf5c"} lijnen={!settle} qr={settle} />
               <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{settle && !fromQuick ? L.modeFairShort : opNaam ? L.modeNaamTitle : L.modeSnelTitle}</span>
             </span>
@@ -6906,7 +6908,7 @@ export default function PartyTest() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "10px 0", minHeight: 38 }}>
           {groupName.trim() && !editName && !isAutoNaam(groupName) && (
             <span onClick={() => { if (onboarding || groepDicht) return; if (!settle) { setNaamPlichtVeld(groupName.trim()); setPersGeteld(people.length > 1); setNaamPlichtNa(null); setNaamPlicht(true) } else setEditName(true) }}
-              style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onboarding ? "default" : "pointer", background: "#fff", border: "1px solid rgba(240,165,0,0.55)", borderRadius: 999, padding: "9px 15px", fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>
+              style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onboarding ? "default" : "pointer", background: "#fff", border: `1.5px solid ${RAND}`, borderRadius: 999, padding: "9px 15px", fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>
               {isAutoNaam(groupName) ? (
                 /* Niet alleen de uitnodiging, ook wat de naam nú is — anders weet je
                    niet onder welke naam de groep straks in je lijst staat. */
@@ -6919,7 +6921,7 @@ export default function PartyTest() {
           {/* Eén pill: links de naam (tik = venster), rechts een tellertje dat meteen
               personen bij- of afzet. Beide volledig optioneel. */}
           {!settle && !kaal && isAutoNaam(groupName) && (
-            <span style={{ flex: "1 1 auto", minWidth: 0, display: "inline-flex", alignItems: "center", gap: 9, background: "#fff", border: "1px solid rgba(240,165,0,0.5)", borderRadius: 999, padding: "9px 15px", fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>
+            <span style={{ flex: "1 1 auto", minWidth: 0, display: "inline-flex", alignItems: "center", gap: 9, background: "#fff", border: `1.5px solid ${RAND}`, borderRadius: 999, padding: "9px 15px", fontSize: 16, fontWeight: 800, color: "#4a3f1e" }}>
               <span onClick={() => { setNaamPlichtVeld(""); setPersGeteld(people.length > 1); setAlleenPers(false); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
                 style={{ flex: "1 1 auto", display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", minWidth: 0 }}>
                 <span style={{ flexShrink: 0, color: "#c98a00" }}>✏️</span>
@@ -8424,7 +8426,7 @@ export default function PartyTest() {
                 </div>
 
                 {!perPersoon && (
-                  <div style={{ fontSize: 15, fontWeight: 800, color: "#f0e6d0", lineHeight: 1.35 }}>{L.togetherHint}</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: "#f0e6d0", lineHeight: 1.35 }}>{L.togetherHint}</div>
                 )}
 
                 {perPersoon && (<>
