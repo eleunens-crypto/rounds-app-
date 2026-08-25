@@ -710,6 +710,9 @@ const T = {
     addNameBtn: "+ naam",
     toDrinksBtn: "Naar de drankjes →",
     guestN: (n: number) => `Gast ${n}`,
+    jijNaam: "Jij",
+    youTag: "jij",
+    yourselfWord: "jezelf",
     yourNameRequired: "Vul eerst je eigen naam in — anders weet niemand van wie de drankjes zijn.",
     perPersonBtn: "👥 Per persoon aantikken",
     quickTapBtn: "👆 Snel aantikken",
@@ -1525,6 +1528,9 @@ const T = {
     addNameBtn: "+ nom",
     toDrinksBtn: "Vers les boissons →",
     guestN: (n: number) => `Invité ${n}`,
+    jijNaam: "Toi",
+    youTag: "toi",
+    yourselfWord: "toi-m\u00eame",
     yourNameRequired: "Indique d’abord ton nom — sinon on ne sait pas à qui sont les boissons.",
     perPersonBtn: "👥 Coche par personne",
     quickTapBtn: "👆 Coche rapide",
@@ -8492,7 +8498,10 @@ export default function PartyTest() {
                             background: aan ? k : "transparent",
                             border: `1.5px solid ${k}`,
                             color: aan ? "#2a1f06" : donkerder(k) }}>
-                          {pp.id === meId ? "♛ " : viaLink ? "📱 " : ""}{pp.name}
+                          {pp.id === meId ? "♛ " : viaLink ? "📱 " : ""}{pp.id === meId && !pp.named ? L.jijNaam : pp.name}
+                          {pp.id === meId && pp.named && (
+                            <span style={{ marginLeft: 5, borderRadius: 999, padding: "1px 6px", fontSize: 9.5, background: aan ? "rgba(42,31,6,0.18)" : `${k}33`, color: aan ? "#2a1f06" : donkerder(k) }}>{L.youTag}</span>
+                          )}
                         </button>
                       )
                     })}
@@ -8501,7 +8510,14 @@ export default function PartyTest() {
               </div>
               {heeftZin && (
                 <div style={{ background: donkerder(kleur, 0.34), borderLeft: `5px solid ${kleur}`, borderRadius: "0 0 13px 13px", padding: "10px 12px", marginBottom: 10, fontSize: 15, fontWeight: 600, color: "rgba(232,220,192,0.85)" }}>
-                  {L.tapForStrip} <b style={{ fontWeight: 800, fontSize: 19, color: lichter(kleur, 0.35) }}>{people.find((pp) => pp.id === voorWie)?.name ?? ""}</b>
+                  {(() => {
+                    const ik = people.find((pp) => pp.id === voorWie)
+                    const benIkHet = !!ik && ik.id === meId
+                    return (<>
+                      {L.tapForStrip} <b style={{ fontWeight: 800, fontSize: 19, color: lichter(kleur, 0.35) }}>{benIkHet && !ik.named ? L.yourselfWord : (ik?.name ?? "")}</b>
+                      {benIkHet && ik.named && <span style={{ fontSize: 12.5, opacity: 0.75 }}> — {L.yourselfWord}</span>}
+                    </>)
+                  })()}
                 </div>
               )}
               </>)
