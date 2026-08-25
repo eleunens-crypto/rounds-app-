@@ -718,6 +718,8 @@ const T = {
     notAssignedCount: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} niet toegewezen`,
     howNoteQ: "HOE NOTEER JE DIT RONDJE?",
     inRoundTitle: "In dit rondje",
+    weggehaald: (wat: string) => `${wat} weggehaald`,
+    undoWord: "Ongedaan maken",
     nogNiets: (namen: string) => `${namen} nog niets`,
     backToOverview: "← Terug naar rondjesoverzicht",
     potTitel: "Pot",
@@ -1531,6 +1533,8 @@ const T = {
     notAssignedCount: (n: number) => `${n} boisson${n === 1 ? "" : "s"} non attribu\u00e9e${n === 1 ? "" : "s"}`,
     howNoteQ: "COMMENT NOTES-TU CETTE TOURN\u00c9E\u00a0?",
     inRoundTitle: "Dans cette tournée",
+    weggehaald: (wat: string) => `${wat} retir\u00e9`,
+    undoWord: "Annuler",
     nogNiets: (namen: string) => `${namen}\u00a0: rien pour l'instant`,
     backToOverview: "← Retour à l’aperçu des tournées",
     potTitel: "Cagnotte",
@@ -2612,6 +2616,12 @@ export default function PartyTest() {
   useEffect(() => { if (view === "roundsOverview") setOpenRounds(new Set<string>()) }, [view])
   // Onthoud vanwaar je naar het rondjesoverzicht ging, zodat "terug" daarheen keert.
   const [overviewBackTo, setOverviewBackTo] = useState<"hub" | "order" | "final" | "payers">("hub")
+  const [laatstWeg, setLaatstWeg] = useState<{ did: string; pid: string | null; naam: string } | null>(null)
+  useEffect(() => {
+    if (!laatstWeg) return
+    const t = setTimeout(() => setLaatstWeg(null), 6000)
+    return () => clearTimeout(t)
+  }, [laatstWeg])
   // Waar je vandaan kwam toen je de instellingen opende. De instellingen hebben geen
   // kopbalk met navigatie, dus zonder dit weet je er niet meer hoe je terugkeert.
   const [settingsBackTo, setSettingsBackTo] = useState<"quickSettle" | "order" | "hub">("hub")
@@ -8674,43 +8684,57 @@ export default function PartyTest() {
                   moet worden afgekapt sneuvelt de naam en niet het drankje. Vanaf vier
                   regels twee kolommen, anders wordt het bij grote groepen te hoog.
                   Bij "voor iedereen" heeft dit geen zin: dan staat er niets op naam. */}
-              {people.length > 1 && (() => {
-                const metDrank = people.map((pp, i) => ({
-                  pp, i,
-                  zijne: drinks.map((d) => ({ d, n: cart[d.id]?.[pp.id] ?? 0 })).filter((x) => x.n > 0),
-                })).filter((x) => x.zijne.length > 0)
-                const zonder = people.filter((pp) => !metDrank.some((x) => x.pp.id === pp.id))
-                if (metDrank.length === 0) return null
-                const regels = metDrank.reduce((a, x) => a + x.zijne.length, 0)
-                return (
-                  <div style={{ marginBottom: 9 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: regels >= 4 ? "1fr 1fr" : "1fr", gap: regels >= 4 ? "0 12px" : 0 }}>
-                      {metDrank.flatMap((x) => x.zijne.map((y) => (
-                        <span key={`${x.pp.id}-${y.d.id}`} style={{ padding: "3px 0", borderBottom: "1px solid rgba(120,95,20,0.08)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          <span style={{ fontSize: 14.5, fontWeight: 800, color: "#4a3f1e" }}>{y.n}× {y.d.name}</span>
-                          <span style={{ fontSize: 11.5, fontWeight: 700, color: donkerder(gastKleur(x.i)) }}> ({x.pp.id === meId ? "👑 " : ""}{x.pp.name})</span>
-                        </span>
-                      )))}
-                    </div>
-                    {zonder.length > 0 && (
-                      <div style={{ marginTop: 7, paddingTop: 7, borderTop: "1px dashed rgba(120,95,20,0.2)", fontSize: 12, fontWeight: 700, color: "#b3a988" }}>
-                        {L.nogNiets(zonder.map((pp) => pp.name).join(", "))}
-                      </div>
-                    )}
+              {(() => {
+                type Pil = { key: string; d: typeof drinks[number]; n: number; pid: string | null; naam: string; kleur: string | null }
+                const pillen: Pil[] = []
+                drinks.filter((d) => drinkTotal(d.id) > 0).forEach((d) => {
+                  people.forEach((pp, i) => {
+                    const n = cart[d.id]?.[pp.id] ?? 0
+                    if (n > 0) pillen.push({ key: `${d.id}-${pp.id}`, d, n, pid: pp.id, naam: pp.name, kleur: gastKleur(i) })
+                  })
+                  const anon = cartAnon[d.id] ?? 0
+                  if (anon > 0) pillen.push({ key: `${d.id}-vrij`, d, n: anon, pid: null, naam: "", kleur: null })
+                })
+                const zonder = people.filter((pp) => !drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0))
+                return (<>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    {pillen.map((x) => (
+                      <span key={x.key}
+                        onClick={() => { setAssignNaamEdit(false); setShowAssignAll(true) }}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 5, cursor: "pointer",
+                          background: x.kleur ? `${x.kleur}2e` : "#fff",
+                          border: x.kleur ? `1px solid ${x.kleur}` : "1px dashed rgba(120,95,20,0.45)",
+                          borderRadius: 999, padding: "3px 4px 3px 10px", fontSize: 12.5, color: x.kleur ? "#4a3f1e" : "#8a7d55" }}>
+                        <span><b style={{ fontWeight: 800 }}>{x.d.emoji} {x.n}× {x.d.name}</b>{x.kleur && <span style={{ fontSize: 10.5, fontWeight: 800, color: donkerder(x.kleur) }}> ({x.naam})</span>}</span>
+                        {/* Eén exemplaar per tik; de pil verdwijnt zodra hij op nul komt.
+                            De strook onderaan biedt de weg terug bij een mistik. */}
+                        <button title={L.removeWord} onClick={(e) => {
+                          e.stopPropagation()
+                          setLaatstWeg({ did: x.d.id, pid: x.pid, naam: `1× ${x.d.name}` })
+                          if (x.pid) void bump(x.d.id, x.pid, -1); else void bumpAnon(x.d.id, -1)
+                        }}
+                          style={{ width: 19, height: 19, borderRadius: "50%", flexShrink: 0, border: "none", background: "rgba(120,95,20,0.12)", color: "#6b5c35", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}>✕</button>
+                      </span>
+                    ))}
                   </div>
-                )
+                  {people.length > 1 && zonder.length > 0 && zonder.length < people.length && (
+                    <div style={{ marginTop: 7, paddingTop: 7, borderTop: "1px dashed rgba(120,95,20,0.2)", fontSize: 12, fontWeight: 700, color: "#b3a988" }}>
+                      {L.nogNiets(zonder.map((pp) => pp.name).join(", "))}
+                    </div>
+                  )}
+                  {laatstWeg && (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: RAND, borderRadius: 10, padding: "7px 8px 7px 12px", marginTop: 8 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#e8dcc0" }}>{L.weggehaald(laatstWeg.naam)}</span>
+                      <button onClick={() => {
+                        const t = laatstWeg
+                        setLaatstWeg(null)
+                        if (t.pid) void bump(t.did, t.pid, 1); else void bumpAnon(t.did, 1)
+                      }}
+                        style={{ flexShrink: 0, background: RANDTEKST, color: "#3d3418", border: "none", borderRadius: 999, padding: "4px 12px", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.undoWord}</button>
+                    </div>
+                  )}
+                </>)
               })()}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => (
-                  <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 16, padding: "6px 8px 6px 12px", fontSize: 15.5, fontWeight: 700, color: "#4a3f1e" }}>
-                    {d.emoji} {drinkTotal(d.id)}× {d.name}
-                    {/* Verwijderen zonder te zoeken in het rooster — ingetogen knopje,
-                        gedempt amber-grijs in plaats van waarschuwingsrood. */}
-                    <button title={L.removeWord} onClick={() => clearDrink(d.id)}
-                      style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0, border: "none", background: "rgba(120,95,20,0.1)", color: "#8a7d55", fontSize: 13, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: 0 }}>✕</button>
-                  </span>
-                ))}
-              </div>
               {!settle && unassignedTotal > 0 && (
                 <div style={{ display: "flex", alignItems: "center", gap: 10, borderTop: "1px dashed rgba(240,165,0,0.45)", marginTop: 9, paddingTop: 9 }}>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 15, color: "#8a5e0f", lineHeight: 1.35 }}>
