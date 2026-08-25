@@ -208,7 +208,7 @@ function RundoLogo({ size = 40, opDonker = false }: { size?: number; opDonker?: 
   const letter = opDonker ? "#FFFFFF" : "#0E1A2E"
   return (
     <svg height={size} viewBox="0 0 229.5 107.3" role="img" aria-label="Rundo" style={{ display: "block", flexShrink: 0, width: "auto" }}>
-      <path d="M14.905 30.559A34.0 34.0 0 0 1 -33.979 -1.187A34.0 34.0 0 0 1 17.000 -29.445" fill="none" stroke="#F5B301" strokeWidth="5.5" strokeLinecap="round" transform="translate(52.75 53.873)"/><polygon points="28.258,-22.945 18.402,-37.873 10.402,-24.017" fill="#F5B301" transform="translate(52.75 53.873)"/><path d="M58.69 74.903 49.45 58.583H45.49V74.903H37.09V33.023H52.81Q57.67 33.023 61.09 34.733Q64.51 36.443 66.22 39.353Q67.93 42.263 67.93 45.863Q67.93 50.003 65.53 53.333Q63.13 56.663 58.39 57.923L68.41 74.903ZM45.49 52.283H52.51Q55.93 52.283 57.61 50.633Q59.29 48.983 59.29 46.043Q59.29 43.163 57.61 41.573Q55.93 39.983 52.51 39.983H45.49Z" fill={letter}/>
+      <path d="M14.905 30.559A34.0 34.0 0 0 1 -33.979 -1.187A34.0 34.0 0 0 1 17.000 -29.445" fill="none" stroke="#F5B301" strokeWidth="5.5" strokeLinecap="round" transform="translate(52.75 53.873)"/><polygon points="28.258,-22.945 18.402,-37.873 10.402,-24.017" fill="#F5B301" transform="translate(52.75 53.873)"/><path d="M58.69 74.903 49.45 58.583H45.49V74.903H37.09V33.023H52.81Q57.67 33.023 61.09 34.733Q64.51 36.443 66.22 39.353Q67.93 42.263 67.93 45.863Q67.93 50.003 65.53 53.333Q63.13 56.663 58.39 57.923L68.41 74.903ZM45.49 52.283H52.51Q55.93 52.283 57.61 50.633Q59.29 48.983 59.29 46.043Q59.29 43.163 57.61 41.573Q55.93 39.983 52.51 39.983H45.49Z" fill={letter}/><path d="M105.378 44.987V74.903H97.764V71.123Q96.306 73.067 93.957 74.174Q91.608 75.281 88.854 75.281Q85.344 75.281 82.644 73.796Q79.944 72.311 78.405 69.422Q76.866 66.533 76.866 62.537V44.987H84.426V61.457Q84.426 65.021 86.208 66.938Q87.99 68.855 91.068 68.855Q94.2 68.855 95.982 66.938Q97.764 65.021 97.764 61.457V44.987ZM140.742 57.353V74.903H133.182V58.379Q133.182 54.815 131.4 52.898Q129.618 50.981 126.54 50.981Q123.408 50.981 121.599 52.898Q119.79 54.815 119.79 58.379V74.903H112.23V44.987H119.79V48.713Q121.302 46.769 123.651 45.662Q126.0 44.555 128.808 44.555Q134.154 44.555 137.448 47.93Q140.742 51.305 140.742 57.353ZM159.096 44.501Q162.012 44.501 164.658 45.77Q167.304 47.039 168.87 49.145V34.943H176.538V74.903H168.87V70.475Q167.466 72.689 164.928 74.039Q162.39 75.389 159.042 75.389Q155.262 75.389 152.13 73.445Q148.998 71.501 147.189 67.964Q145.38 64.427 145.38 59.837Q145.38 55.301 147.189 51.791Q148.998 48.281 152.13 46.391Q155.262 44.501 159.096 44.501ZM160.986 51.143Q158.88 51.143 157.098 52.169Q155.316 53.195 154.209 55.166Q153.102 57.137 153.102 59.837Q153.102 62.537 154.209 64.562Q155.316 66.587 157.125 67.667Q158.934 68.747 160.986 68.747Q163.092 68.747 164.928 67.694Q166.764 66.641 167.844 64.67Q168.924 62.699 168.924 59.945Q168.924 57.191 167.844 55.22Q166.764 53.249 164.928 52.196Q163.092 51.143 160.986 51.143ZM181.446 59.945Q181.446 55.355 183.471 51.845Q185.496 48.335 189.006 46.418Q192.516 44.501 196.836 44.501Q201.156 44.501 204.666 46.418Q208.176 48.335 210.201 51.845Q212.226 55.355 212.226 59.945Q212.226 64.535 210.147 68.045Q208.068 71.555 204.531 73.472Q200.994 75.389 196.62 75.389Q192.3 75.389 188.844 73.472Q185.388 71.555 183.417 68.045Q181.446 64.535 181.446 59.945ZM204.45 59.945Q204.45 55.679 202.209 53.384Q199.968 51.089 196.728 51.089Q193.488 51.089 191.301 53.384Q189.114 55.679 189.114 59.945Q189.114 64.211 191.247 66.506Q193.38 68.801 196.62 68.801Q198.672 68.801 200.481 67.802Q202.29 66.803 203.37 64.805Q204.45 62.807 204.45 59.945Z" fill={letter}/><ellipse cx="196.84" cy="87.50" rx="12.5" ry="3.8" fill="#F5B301" fillOpacity="0.45"/>
     </svg>
   )
 }
@@ -6926,23 +6926,21 @@ export default function PartyTest() {
           rechtsboven. Zo staan "waar ben ik" en "hoeveel zit er nog in" naast elkaar in
           plaats van elkaar te verdringen op één regel. */}
       {!setupKop && (
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-        <div style={{ minWidth: 0 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+        <div style={{ minWidth: 0, flex: "1 1 auto" }}>
         <div style={{ ...S.row, gap: 10, alignItems: "center" }}>
           <span onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ cursor: "pointer", flexShrink: 0, display: "inline-flex" }}>
             <RundoLogo size={34} />
           </span>
-          {!!groupId && !kaal && <span style={{ marginLeft: "auto", flexShrink: 0, minWidth: 0 }}>{potKnopje()}</span>}
         </div>
         {/* Op het instelscherm staat geen ondertitel: de tagline staat al op het
             startscherm, en hier telt elke pixel voor de twee keuzekaarten. */}
-        {!!groupId && !kaal && !(settle && potContribTotal <= 0.005) && !uitgebreidLook && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginTop: 9 }}>
-            {/* Pot altijd binnen handbereik, rechtsboven — als geldzak. */}
-            {potKnopje()}
-          </div>
-        )}
         </div>
+        {/* Pot rechtsboven, in de buitenste rij: hij gaat over de hele avond en hoort
+            dus naast het logo, niet bij één rondje. */}
+        {!!groupId && !kaal && (
+          <span style={{ flexShrink: 0 }}>{potKnopje()}</span>
+        )}
         {!uitgebreidLook && !!groupId && !kaal && groupName.trim() && !editName && (
           <div style={{ textAlign: "right", minWidth: 0, flexShrink: 0, maxWidth: "52%" }}>
             <div onClick={() => { if (!onboarding && !groepDicht) setEditName(true) }} style={{ cursor: onboarding ? "default" : "pointer", fontSize: 19, fontWeight: 800, color: "#4a3f1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
