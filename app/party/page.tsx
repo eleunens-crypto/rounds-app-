@@ -716,7 +716,9 @@ const T = {
     doneNamesBtn: "✓ Klaar met namen",
     editNamesHint: "Pas de namen aan — ze veranderen overal mee, ook in al toegewezen drankjes.",
     notAssignedCount: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} niet toegewezen`,
+    howNoteQ: "HOE NOTEER JE DIT RONDJE?",
     inRoundTitle: "In dit rondje",
+    nogNiets: (namen: string) => `${namen} nog niets`,
     backToOverview: "← Terug naar rondjesoverzicht",
     potTitel: "Pot",
     potEvenIn: "gelijk ingelegd",
@@ -1527,7 +1529,9 @@ const T = {
     doneNamesBtn: "✓ Noms termin\u00e9s",
     editNamesHint: "Modifie les noms — ils changent partout, aussi dans les boissons d\u00e9j\u00e0 attribu\u00e9es.",
     notAssignedCount: (n: number) => `${n} boisson${n === 1 ? "" : "s"} non attribu\u00e9e${n === 1 ? "" : "s"}`,
+    howNoteQ: "COMMENT NOTES-TU CETTE TOURN\u00c9E\u00a0?",
     inRoundTitle: "Dans cette tournée",
+    nogNiets: (namen: string) => `${namen}\u00a0: rien pour l'instant`,
     backToOverview: "← Retour à l’aperçu des tournées",
     potTitel: "Cagnotte",
     potEvenIn: "mise égale",
@@ -8418,6 +8422,7 @@ export default function PartyTest() {
               <div style={{ background: "#fff", border: `1.5px solid ${RAND}`, borderLeft: `5px solid ${kleur}`, borderRadius: heeftZin ? "13px 13px 0 0" : 13, padding: 9, marginBottom: heeftZin ? 0 : 10 }}>
                 {/* Beide kanten zien er aantikbaar uit: de inactieve houdt een eigen rand
                     en heldere letters, zodat het een keuze blijft en niet iets uitgestaan. */}
+                <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.04em", color: "#4a3f1e", marginBottom: 8 }}>{L.howNoteQ}</div>
                 <div style={{ display: "flex", gap: 5, marginBottom: 9 }}>
                   {[false, true].map((mode) => {
                     const aan = perPersoon === mode
@@ -8664,23 +8669,38 @@ export default function PartyTest() {
               is daarmee weg — één look voor de gewone-rondjes-modi. */}
           <div style={{ ...S.card, padding: "11px 13px", marginBottom: 11, background: "#fffdf6", border: "1px solid rgba(240,165,0,0.5)" }}>
               <div style={{ fontSize: 17, fontWeight: 800, color: "#4a3f1e", marginBottom: 8 }}>📋 {L.inRoundTitle} <span style={{ color: "#c98a00" }}>· {L.drinksCount(roundItems)}</span></div>
-              {people.length > 1 && (
-                <div style={{ marginBottom: 9 }}>
-                  {people.map((pp) => {
-                    const zijne = drinks.map((d) => ({ d, n: cart[d.id]?.[pp.id] ?? 0 })).filter((x) => x.n > 0)
-                    return (
-                      <div key={pp.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14.5, padding: "3px 0" }}>
-                        <span style={{ flexShrink: 0, fontWeight: 800, color: zijne.length ? "#4a3f1e" : "#b3a988", maxWidth: "42%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {pp.id === meId ? "👑 " : ""}{pp.name}
+              {/* Alleen wie iets dronk krijgt een regel; wie nog niets had staat samen in
+                  één zin eronder. Het drankje komt eerst en de naam volgt tussen haakjes:
+                  zo neemt elke regel enkel de plaats die hij nodig heeft, en als er toch
+                  moet worden afgekapt sneuvelt de naam en niet het drankje. Vanaf vier
+                  regels twee kolommen, anders wordt het bij grote groepen te hoog.
+                  Bij "voor iedereen" heeft dit geen zin: dan staat er niets op naam. */}
+              {perPersoon && people.length > 1 && (() => {
+                const metDrank = people.map((pp, i) => ({
+                  pp, i,
+                  zijne: drinks.map((d) => ({ d, n: cart[d.id]?.[pp.id] ?? 0 })).filter((x) => x.n > 0),
+                })).filter((x) => x.zijne.length > 0)
+                const zonder = people.filter((pp) => !metDrank.some((x) => x.pp.id === pp.id))
+                if (metDrank.length === 0) return null
+                const regels = metDrank.reduce((a, x) => a + x.zijne.length, 0)
+                return (
+                  <div style={{ marginBottom: 9 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: regels >= 4 ? "1fr 1fr" : "1fr", gap: regels >= 4 ? "0 12px" : 0 }}>
+                      {metDrank.flatMap((x) => x.zijne.map((y) => (
+                        <span key={`${x.pp.id}-${y.d.id}`} style={{ padding: "3px 0", borderBottom: "1px solid rgba(120,95,20,0.08)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <span style={{ fontSize: 14.5, fontWeight: 800, color: "#4a3f1e" }}>{y.n}× {y.d.name}</span>
+                          <span style={{ fontSize: 11.5, fontWeight: 700, color: donkerder(gastKleur(x.i)) }}> ({x.pp.id === meId ? "👑 " : ""}{x.pp.name})</span>
                         </span>
-                        <span style={{ minWidth: 0, textAlign: "right", color: zijne.length ? "#6b5f3a" : "#b3a988", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {zijne.length ? zijne.map((x) => `${x.n}× ${x.d.name}`).join(" · ") : "—"}
-                        </span>
+                      )))}
+                    </div>
+                    {zonder.length > 0 && (
+                      <div style={{ marginTop: 7, paddingTop: 7, borderTop: "1px dashed rgba(120,95,20,0.2)", fontSize: 12, fontWeight: 700, color: "#b3a988" }}>
+                        {L.nogNiets(zonder.map((pp) => pp.name).join(", "))}
                       </div>
-                    )
-                  })}
-                </div>
-              )}
+                    )}
+                  </div>
+                )
+              })()}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                 {drinks.filter((d) => drinkTotal(d.id) > 0).map((d) => (
                   <span key={d.id} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(240,165,0,0.12)", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 16, padding: "6px 8px 6px 12px", fontSize: 15.5, fontWeight: 700, color: "#4a3f1e" }}>
