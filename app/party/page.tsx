@@ -287,8 +287,14 @@ const MODUS_SNEL = {
   randZacht: "rgba(232,168,18,0.6)", lijnZacht: "rgba(232,168,18,0.28)",
   bladzij: "#fdf6e3",
 }
-const GAST_KLEUREN = ["#ffcf5c", "#56b8c4", "#b98ac9", "#7fc47a", "#f0906b", "#9fb4e8", "#e8a0c0", "#c9c07a", "#e0705f", "#5f9ea0"]
+const GAST_KLEUREN = ["#ffcf5c", "#56b8c4", "#b98ac9", "#7fc47a", "#f0906b", "#9fb4e8", "#e8a0c0", "#c9c07a", "#b07d4f", "#5f9ea0"]
 const gastKleur = (i: number) => GAST_KLEUREN[((i % GAST_KLEUREN.length) + GAST_KLEUREN.length) % GAST_KLEUREN.length]
+const lichter = (hex: string, f = 0.35) => {
+  const h = hex.replace("#", "")
+  const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16)
+  const m = (v: number) => Math.round(v + (255 - v) * f)
+  return `rgb(${m((n >> 16) & 255)},${m((n >> 8) & 255)},${m(n & 255)})`
+}
 const donkerder = (hex: string, f = 0.55) => {
   const h = hex.replace("#", "")
   const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16)
@@ -8492,8 +8498,8 @@ export default function PartyTest() {
                 </>)}
               </div>
               {heeftZin && (
-                <div style={{ background: RAND, borderLeft: `5px solid ${kleur}`, borderRadius: "0 0 13px 13px", padding: "8px 12px", marginBottom: 10, fontSize: 13, fontWeight: 600, color: koel ? "#8fb9c2" : themaNaam ? "#9aa5c4" : "#a3947a" }}>
-                  {L.tapForStrip} <b style={{ fontWeight: 800, fontSize: 16, color: kleur }}>{people.find((pp) => pp.id === voorWie)?.name ?? ""}</b>
+                <div style={{ background: donkerder(kleur, 0.34), borderLeft: `5px solid ${kleur}`, borderRadius: "0 0 13px 13px", padding: "10px 12px", marginBottom: 10, fontSize: 15, fontWeight: 600, color: "rgba(232,220,192,0.85)" }}>
+                  {L.tapForStrip} <b style={{ fontWeight: 800, fontSize: 19, color: lichter(kleur, 0.35) }}>{people.find((pp) => pp.id === voorWie)?.name ?? ""}</b>
                 </div>
               )}
               </>)
