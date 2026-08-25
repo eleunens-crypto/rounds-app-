@@ -709,6 +709,7 @@ const T = {
     noteNamedTitle2: "👤 Op naam noteren",
     addNameBtn: "+ naam",
     toDrinksBtn: "Naar de drankjes →",
+    confirmedWord: "bevestigd",
     guestN: (n: number) => `Gast ${n}`,
     jijNaam: "Jij",
     youTag: "jij",
@@ -1292,7 +1293,7 @@ const T = {
     drinksCount: (n: number) => `${n} drankje${n === 1 ? "" : "s"}`,
     confirmRoundTitle: (n: number) => `\u2705 Rondje ${n} bevestigen`,
     confirmRoundBtn: (n: number) => `\u2705 Bevestig rondje (${n} drankje${n === 1 ? "" : "s"})`,
-    roundConfirmed: (nr: number, n: number) => `Rondje ${nr} bevestigd \u2014 ${n} drankje${n === 1 ? "" : "s"}`,
+    roundConfirmed: (nr: number, n: number) => `Rondje ${nr} bevestigd \u00b7 ${n} drankje${n === 1 ? "" : "s"}`,
     notAssignedYet: (n: number) => `${n} drankje${n === 1 ? "" : "s"} nog niet toegewezen.`,
     yourTreat: "jouw traktatie",
     eachPaysNote: "Ieder betaalt",
@@ -1528,6 +1529,7 @@ const T = {
     noteNamedTitle2: "👤 Noter au nom",
     addNameBtn: "+ nom",
     toDrinksBtn: "Vers les boissons →",
+    confirmedWord: "confirm\u00e9e",
     guestN: (n: number) => `Invité ${n}`,
     jijNaam: "Toi",
     youTag: "toi",
@@ -2111,7 +2113,7 @@ const T = {
     drinksCount: (n: number) => `${n} boisson${n === 1 ? "" : "s"}`,
     confirmRoundTitle: (n: number) => `\u2705 Confirmer la tourn\u00e9e ${n}`,
     confirmRoundBtn: (n: number) => `\u2705 Confirmer la tourn\u00e9e (${n} boisson${n === 1 ? "" : "s"})`,
-    roundConfirmed: (nr: number, n: number) => `Tourn\u00e9e ${nr} confirm\u00e9e \u2014 ${n} boisson${n === 1 ? "" : "s"}`,
+    roundConfirmed: (nr: number, n: number) => `Tourn\u00e9e ${nr} confirm\u00e9e \u00b7 ${n} boisson${n === 1 ? "" : "s"}`,
     notAssignedYet: (n: number) => `${n} boisson${n === 1 ? "" : "s"} pas encore attribu\u00e9e${n === 1 ? "" : "s"}.`,
     yourTreat: "ta tourn\u00e9e offerte",
     eachPaysNote: "Chacun paie",
@@ -6155,7 +6157,7 @@ export default function PartyTest() {
             <div style={{ maxWidth: 430, margin: "0 auto" }} onClick={(e) => e.stopPropagation()}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: "#4a3f1e" }}>🔍 {L.barlistTitle}</div>
-                <button onClick={() => setShowBarlijst(false)} style={{ border: "none", background: "rgba(120,95,20,0.08)", color: "#8a7d55", width: 36, height: 36, borderRadius: "50%", fontSize: 18, fontWeight: 800, cursor: "pointer" }}>✕</button>
+                <button onClick={() => setShowBarlijst(false)} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7, border: "none", background: RAND, color: RANDTEKST, height: 50, padding: "0 20px", borderRadius: 999, fontSize: 17, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 3px 10px -4px rgba(74,63,30,0.6)" }}><span style={{ fontSize: 19 }}>✕</span> {L.closeWord}</button>
               </div>
               <div style={{ fontSize: 15, color: "#8a7d55", fontWeight: 700, margin: "2px 0 14px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim() || L.autoName()} · {rounds.length} {L.roundWord.toLowerCase()}{rounds.length === 1 ? "" : "s"} · {L.drinksCount(som)}</div>
               <div style={{ ...S.card, padding: "6px 16px", background: "#fffdf6" }}>
@@ -6988,11 +6990,11 @@ export default function PartyTest() {
             !lastRoundHandled ? (
               <div style={{ flex: 1, padding: "11px 4px", fontSize: 17, fontWeight: 800, borderRadius: 10, textAlign: "center", background: "#faf4e4", color: "#8a5e0f", border: "1px solid rgba(240,165,0,0.35)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, opacity: 0.75 }}><BonKnopIcoon kleur="#8a5e0f" /> {L.quickSettleTitle}</div>
             ) : (
-              <button style={{ flex: 1, padding: "11px 4px", fontSize: 17, fontWeight: 700, borderRadius: 10, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-                border: (view === "quickSettle" || view === "final" || view === "payers" || view === "fairSetup") ? "none" : "1px solid rgba(120,95,20,0.25)",
-                background: (view === "quickSettle" || view === "final" || view === "payers" || view === "fairSetup") ? AAN : "#fff",
-                color: (view === "quickSettle" || view === "final" || view === "payers" || view === "fairSetup") ? "#fff" : "#8a7d55" }}
-                onClick={goQuickSettle}><BonKnopIcoon kleur={(view === "quickSettle" || view === "final" || view === "payers" || view === "fairSetup") ? "#fff" : "#8a7d55"} /> {L.quickSettleTitle}</button>
+              <button style={{ flex: 1, padding: "11px 4px", fontSize: 17, fontWeight: 700, borderRadius: 999, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "inherit",
+                border: `1.5px solid ${RAND}`,
+                background: (view === "quickSettle" || view === "final" || view === "payers" || view === "fairSetup") ? RAND : VLAK1,
+                color: (view === "quickSettle" || view === "final" || view === "payers" || view === "fairSetup") ? RANDTEKST : RAND }}
+                onClick={goQuickSettle}><BonKnopIcoon kleur={(view === "quickSettle" || view === "final" || view === "payers" || view === "fairSetup") ? RANDTEKST : RAND} /> {L.quickSettleTitle}</button>
             )
           )}
           {settle && !fromQuick && (
@@ -7001,10 +7003,10 @@ export default function PartyTest() {
           {settle && !fromQuick ? (
             <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 16, fontWeight: 800, borderRadius: 13, opacity: (view === "hub" || ((settle || opNaam) && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goHub() }}>{L.overview}</button>
           ) : rounds.length === 0 ? null : (
-            <button style={{ flex: 1.2, padding: "11px 4px", fontSize: 17, fontWeight: 800, borderRadius: 10, cursor: "pointer",
-              border: view === "roundsOverview" ? "none" : "1px solid rgba(120,95,20,0.25)",
-              background: view === "roundsOverview" ? AAN : "#fff",
-              color: view === "roundsOverview" ? "#fff" : "#8a7d55" }}
+            <button style={{ flex: 1.2, padding: "11px 4px", fontSize: 17, fontWeight: 700, borderRadius: 999, cursor: "pointer", fontFamily: "inherit",
+              border: `1.5px solid ${RAND}`,
+              background: view === "roundsOverview" ? RAND : "#fff",
+              color: view === "roundsOverview" ? RANDTEKST : RAND }}
               onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } if (view === "payers" || view === "fairSetup") { setConfirmDlg({ msg: L.leaveSettleMsg, yes: L.leaveSettleYes, onYes: () => { setConfirmDlg(null); setOverviewBackTo("hub"); setView("roundsOverview") } }); return } if (rounds.length >= 1) { setOverviewBackTo(view === "order" ? "order" : "hub"); setView("roundsOverview") } else setNotice(L.noRoundsYet) }}>{L.roundsOverviewBtn}</button>
           )}
           {settle && !fromQuick && <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 17, fontWeight: 700, opacity: (view === "final" || ((settle || opNaam) && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goFinal() }}>{L.settleBtn}</button>}
@@ -9134,7 +9136,7 @@ export default function PartyTest() {
                 is dit de duidelijke afsluiting in de stijl van de Fair Split-flow — zónder
                 "iemand mag gaan halen", want jij noteert zelf. */}
         {opNaam === true && r && <div style={{ ...S.row, justifyContent: "center", marginTop: 6, marginBottom: 11 }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 18.5, fontWeight: 800, color: "#8a5e0f", background: "linear-gradient(135deg,#fdf3dc,#fae9c2)", border: "1.5px solid rgba(240,165,0,0.45)", borderRadius: 18, padding: "7px 16px" }}>🍻 {L.roundConfirmed(idx + 1, drinksOf(r).reduce((a, x) => a + x.n, 0))}</span>
+              <span style={{ display: "block", width: "100%", fontSize: 15, fontWeight: 600, color: "#e8dcc0", background: RAND, borderRadius: 12, padding: "10px 14px" }}>✓ {L.roundWord} {idx + 1} {L.confirmedWord} · <b style={{ fontWeight: 800, color: RANDTEKST }}>{L.drinksCount(drinksOf(r).reduce((a, x) => a + x.n, 0))}</b></span>
         </div>}
             {/* Drankjes van dit net-bevestigde rondje, met de aanpas-knop erin verwerkt. */}
             {(() => { const laatste = rounds[idx]; const lijst = laatste ? drinksOf(laatste) : []; return lijst.length > 0 && (
@@ -9151,21 +9153,18 @@ export default function PartyTest() {
                     <span aria-label={L.barlistBtn} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34, height: 30, borderRadius: 9, border: `1px solid ${themaNaam ? "rgba(90,106,148,0.45)" : "rgba(120,95,20,0.3)"}`, background: "#fff", color: themaNaam ? "#3b486a" : "#8a5e0f", fontSize: 17 }}>🔍</span>
                   </span>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                  {lijst.map(({ d, n }) => (
-                    <div key={d.id} style={{ padding: "4px 0" }}>
-                      <div style={{ ...S.row, justifyContent: "space-between" }}>
-                        <span style={{ fontSize: 18, fontWeight: 800, color: "#4a3f1e" }}>{d.emoji} {d.name}</span>
-                        <span style={{ fontSize: 21.5, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
-                      </div>
-                      {/* Bij uitgebreid opnemen hoort erbij wíe het dronk — dat is de kern
-                          van deze modus, net als op het oude Fair Split-afsluitscherm. */}
-                      {opNaam === true && (() => {
-                        const who = people.filter((p) => (laatste!.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = laatste!.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
-                        return who.length > 0 && <div style={{ fontSize: 15, color: "#8a7d55", marginTop: 1 }}>→ {who.join(", ")}</div>
-                      })()}
-                    </div>
-                  ))}
+                <div style={{ display: "grid", gridTemplateColumns: lijst.length >= 4 ? "1fr 1fr" : "1fr", gap: "2px 12px" }}>
+                  {lijst.map(({ d, n }) => {
+                    const who = opNaam === true && laatste
+                      ? people.filter((p) => (laatste.orders[d.id]?.[p.id] ?? 0) > 0).map((p) => { const q = laatste.orders[d.id][p.id]; return q > 1 ? `${p.name} (${q})` : p.name })
+                      : []
+                    return (
+                      <span key={d.id} style={{ padding: "4px 0", borderBottom: "1px solid rgba(120,95,20,0.08)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: 14.5, fontWeight: 800, color: "#4a3f1e" }}>{d.emoji} {n}× {d.name}</span>
+                        {who.length > 0 && <span style={{ fontSize: 11.5, fontWeight: 700, color: "#8a7d55" }}> ({who.join(", ")})</span>}
+                      </span>
+                    )
+                  })}
                 </div>
                 {opNaam === true && (() => {
                   const anonTot = laatste ? drinks.reduce((s2, d) => s2 + (laatste.anon?.[d.id] ?? 0), 0) : 0
