@@ -3490,16 +3490,6 @@ export default function PartyTest() {
   const removePerson = (id: string) => { const pp = people.find((x) => x.id === id); if (personHasDrinks(id)) { setNotice(L.personHasDrinks(pp?.name || L.thisPerson)); return } supabase.from("party_people").delete().eq("id", id).then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message) }) }
   const removeLastPerson = () => { const last = people[people.length - 1]; if (!last) return; removePerson(last.id) }
 
-  // Het personen-tellertje zoals het rechts op de titelregel staat. Eén plek, zodat
-  // het opnamescherm, het rondjesoverzicht en het afrekenscherm niet uit elkaar lopen.
-  const persTeller = () => (
-    <span onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 2, background: VLAK1, border: `1.5px solid ${RAND}`, borderRadius: 999, padding: "3px 4px", color: "#5c5030", fontSize: 14.5, fontWeight: 800 }}>
-      <span onClick={() => { if (people.length > 1) removeLastPerson() }} style={{ width: 24, height: 24, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
-      <b style={{ color: RAND, padding: "0 3px" }}>{people.length}</b>
-      <span style={{ color: "#8a7d55", fontWeight: 700, fontSize: 13, paddingRight: 4 }}>{L.persWordLow}</span>
-      <span onClick={() => { void addPerson() }} style={{ width: 24, height: 24, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer" }}>＋</span>
-    </span>
-  )
 
   // ── Laden & live houden ─────────────────────────────────────────────────────
   // Eén select per tabel, enkel de kolommen die we tonen. Zelfde aanpak als Table:
@@ -8391,7 +8381,16 @@ export default function PartyTest() {
             <span style={{ fontSize: 15.5, fontWeight: 600, color: "#a89a6f", letterSpacing: 0 }}> · {L.drinksCount(roundItems)}</span>
             {repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}
           </span>
-          {!settle && persTeller()}
+          {!settle && !perPersoon && (
+            <span onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 3, background: VLAK1, border: `1.5px solid ${RAND}`, borderRadius: 999, padding: "2px 3px", color: "#5c5030", fontSize: 13.5, fontWeight: 800 }}>
+              <span onClick={() => { if (people.length > 1) removeLastPerson() }}
+                style={{ width: 23, height: 23, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
+              <b style={{ fontSize: 15, color: RAND, padding: "0 2px" }}>{people.length}</b>
+              <span style={{ color: "#8a7d55", fontSize: 12.5, paddingRight: 3 }}>{L.persWordLow}</span>
+              <span onClick={() => { void addPerson() }}
+                style={{ width: 23, height: 23, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer" }}>＋</span>
+            </span>
+          )}
         </div>
         {settle && renderRunnerBar()}
         {(settle || opNaam) && renderWalk()}
@@ -8675,7 +8674,7 @@ export default function PartyTest() {
                   moet worden afgekapt sneuvelt de naam en niet het drankje. Vanaf vier
                   regels twee kolommen, anders wordt het bij grote groepen te hoog.
                   Bij "voor iedereen" heeft dit geen zin: dan staat er niets op naam. */}
-              {perPersoon && people.length > 1 && (() => {
+              {people.length > 1 && (() => {
                 const metDrank = people.map((pp, i) => ({
                   pp, i,
                   zijne: drinks.map((d) => ({ d, n: cart[d.id]?.[pp.id] ?? 0 })).filter((x) => x.n > 0),
