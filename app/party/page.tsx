@@ -8438,9 +8438,9 @@ export default function PartyTest() {
                     return (
                       <button key={String(mode)} onClick={() => setPerPersoon(mode)}
                         style={{ flex: 1, borderRadius: 999, padding: "7px 0", fontSize: 13.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
-                          background: aan ? RAND : "transparent",
-                          border: aan ? `1.5px solid ${RAND}` : "1.5px solid rgba(120,95,20,0.35)",
-                          color: aan ? RANDTEKST : "#8a7d55" }}>
+                          background: aan ? RAND : "#faf4e4",
+                          border: aan ? `1.5px solid ${RAND}` : "1.5px solid rgba(74,63,30,0.55)",
+                          color: aan ? RANDTEKST : "#4a3f1e" }}>
                         {mode ? L.perPersonWord : L.tikSamenWord}{aan ? " ✓" : ""}
                       </button>
                     )
@@ -8452,17 +8452,17 @@ export default function PartyTest() {
                 )}
 
                 {perPersoon && (<>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 9 }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: VLAK1, border: `1.5px solid ${RAND}`, borderRadius: 999, padding: "2px 3px", color: "#5c5030", fontSize: 13.5, fontWeight: 800 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: VLAK1, borderRadius: 10, padding: "5px 7px", marginBottom: 9 }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "#5c5030", fontSize: 13, fontWeight: 800 }}>
                       <span onClick={() => { if (people.length > 1) removeLastPerson() }}
-                        style={{ width: 23, height: 23, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
-                      <b style={{ fontSize: 15, color: RAND, padding: "0 2px" }}>{people.length}</b>
-                      <span style={{ color: "#8a7d55", fontSize: 12.5, paddingRight: 3 }}>{L.persWordLow}</span>
+                        style={{ width: 23, height: 23, borderRadius: "50%", background: "#fff", border: "1px solid rgba(120,95,20,0.3)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
+                      <b style={{ fontSize: 15, color: RAND }}>{people.length}</b>
+                      <span style={{ color: "#8a7d55", fontSize: 12.5 }}>{L.persWordLow}</span>
                       <span onClick={() => { void addPerson() }}
                         style={{ width: 23, height: 23, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer" }}>＋</span>
                     </span>
                     <button onClick={() => { setPersGeteld(true); setAlleenPers(true); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
-                      style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, border: `1.5px solid ${RAND}`, background: "#fff", color: RAND, borderRadius: 999, padding: "5px 12px", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✏️ {L.namesWordShort}</button>
+                      style={{ flexShrink: 0, minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5, border: "none", borderLeft: "1px solid rgba(120,95,20,0.2)", background: "transparent", color: RAND, padding: "3px 4px 3px 10px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.editNamesBtn}</button>
                   </div>
                   {/* Namen breken over meerdere regels in plaats van zijwaarts te scrollen:
                       zo staat niemand verborgen en is er geen veeggebaar om te ontdekken. */}
