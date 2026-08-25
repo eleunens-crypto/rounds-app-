@@ -825,6 +825,7 @@ const T = {
     starting: "Bezig…",
     savedGroups: "Opgeslagen groepen",
     modeFairShort: "Iedereen tikt zelf aan",
+    shareLinkBelow: "deel de link hieronder",
     modeQuickShort: "Ik bestel voor de groep",
     pinOn: "Bewaren",
     pinOff: "Niet meer bewaren",
@@ -1654,6 +1655,7 @@ const T = {
     starting: "En cours…",
     savedGroups: "Groupes enregistrés",
     modeFairShort: "Chacun coche lui-même",
+    shareLinkBelow: "partage le lien ci-dessous",
     modeQuickShort: "Je commande pour le groupe",
     pinOn: "Enregistrer",
     pinOff: "Ne plus enregistrer",
@@ -6870,6 +6872,20 @@ export default function PartyTest() {
 
   // De pot-geldzak als losse functie: hij staat in de kop, en bij uitgebreid opnemen
   // op het bestelscherm verhuist hij naar de rondje-titelregel.
+  // "Pot leggen +" zolang de pot leeg is — zelfde vorm en plek als de saldobadge,
+  // zodat er bij de eerste inleg niets verspringt.
+  const potLegBadge = () => (
+      <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "9px 15px 9px 11px", borderRadius: 999, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: `1.5px solid ${RAND}` }}>
+      <svg width="23" height="23" viewBox="0 0 40 40" style={{ display: "block" }}>
+      <path d="M16 13 L14 7 Q20 5 26 7 L24 13 Z" fill="#d99616" stroke="#b9821a" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M13 14 Q20 11 27 14 Q33 19 32 27 Q31 35 20 35 Q9 35 8 27 Q7 19 13 14 Z" fill="#e8a821" stroke="#b9821a" strokeWidth="1.5" />
+      <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
+      </svg>
+      <span style={{ color: "#2f5693" }}>{L.potLayBtn}</span>
+      <span style={{ color: "#2f6fb5", fontWeight: 800 }}>+</span>
+      </span>
+  )
+
   const potKnopje = () => (
     <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "9px 15px 9px 11px", borderRadius: 999, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: `1.5px solid ${RAND}` }}>
       {potRemaining < -0.005 && <span style={{ color: "#c0554a" }}>⚠️</span>}
@@ -6939,34 +6955,19 @@ export default function PartyTest() {
           in exact zijn eigen kleuren, en de balk loopt rechts vol teal uit onder de
           modus-tekst. Eén balk in plaats van drie koplagen. */}
       {setupKop && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, borderRadius: 14, padding: "9px 13px", marginBottom: 10, border: "1px solid rgba(13,124,140,0.35)", background: "linear-gradient(100deg,#ffffff 0%,#eefafc 34%,#159cb0 72%,#0d7c8c 100%)" }}>
-          <span onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <RundoLogo size={32} opDonker={false} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10, background: RAND, borderRadius: 14, padding: "10px 12px", marginBottom: 9 }}>
+          <span onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ cursor: "pointer", display: "inline-flex", flexShrink: 0 }}>
+            <RundoLogo size={40} />
           </span>
-          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14.5, fontWeight: 700, color: "#fff" }}>
-            <GsmIcoon size={17} kleur="#fff" qr />
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{L.modeFairShort}</span>
-          </span>
+          <span style={{ marginLeft: "auto", flexShrink: 0 }}>{potContribTotal > 0.005 ? potKnopje() : potLegBadge()}</span>
         </div>
       )}
-      {/* Rechts onder de balk: de pot — als blauwe "Pot leggen"-knop met het goudzakje
-          zolang hij leeg is, daarna gewoon de vertrouwde saldo-badge op dezelfde plek. */}
+      {/* Wat er nu gebeurt en wat jij moet doen, op twee gecentreerde regels — dezelfde
+          rol als de "Je tikt aan voor"-strook op het aantikscherm. */}
       {setupKop && (
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
-          {potContribTotal > 0.005 ? potKnopje() : (
-            /* Dezelfde geldzakje-badge als in snel opnemen — alleen leest hij zolang de
-               pot leeg is "Pot leggen +" en wordt hij na de eerste inleg vanzelf het
-               saldo, op exact dezelfde plek. */
-            <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "9px 15px 9px 11px", borderRadius: 999, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: `1.5px solid ${RAND}` }}>
-              <svg width="23" height="23" viewBox="0 0 40 40" style={{ display: "block" }}>
-                <path d="M16 13 L14 7 Q20 5 26 7 L24 13 Z" fill="#d99616" stroke="#b9821a" strokeWidth="1.2" strokeLinejoin="round" />
-                <path d="M13 14 Q20 11 27 14 Q33 19 32 27 Q31 35 20 35 Q9 35 8 27 Q7 19 13 14 Z" fill="#e8a821" stroke="#b9821a" strokeWidth="1.5" />
-                <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
-              </svg>
-              <span style={{ color: "#2f5693" }}>{L.potLayBtn}</span>
-              <span style={{ color: "#2f6fb5", fontWeight: 800 }}>+</span>
-            </span>
-          )}
+        <div style={{ background: RAND, borderRadius: 12, padding: "11px 12px", marginBottom: 10, textAlign: "center", lineHeight: 1.4 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#e8f0f2" }}>{L.modeFairShort}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: RANDTEKST }}>{L.shareLinkBelow} ↓</div>
         </div>
       )}
       {!!groupId && !kaal && !uitgebreidLook && !setupKop && (
