@@ -1194,6 +1194,9 @@ const T = {
     skipCostWarn: "Je vulde al iets in bij dit rondje. Toch overslaan zonder het op te slaan?",
     skipCostYes: "Ja, overslaan",
     finishRoundFirst: "Rond eerst dit rondje af — vul in wat het kostte of tik Overslaan.",
+    payFirstOne: (nr: number) => `Vul eerst de betaling van rondje ${nr} in, of sla ze over.`,
+    payFirstMany: (n: number) => `Nog ${n} rondjes zonder bedrag. Vul ze in, of sla de betaling over.`,
+    afterPayment: "na de betaling",
     paidSelf: "Niet uit de pot",
     paidPot: "Uit de pot",
     whoPaidWhat: "wie betaalde wat",
@@ -2015,6 +2018,9 @@ const T = {
     skipCostWarn: "Tu as d\u00e9j\u00e0 rempli quelque chose pour cette tourn\u00e9e. Passer quand m\u00eame sans enregistrer ?",
     skipCostYes: "Oui, passer",
     finishRoundFirst: "Cl\u00f4ture d\u2019abord cette tourn\u00e9e — indique le montant ou appuie sur Passer.",
+    payFirstOne: (nr: number) => `Indique d'abord le paiement de la tourn\u00e9e ${nr}, ou passe-le.`,
+    payFirstMany: (n: number) => `Encore ${n} tourn\u00e9es sans montant. Indique-les, ou passe le paiement.`,
+    afterPayment: "apr\u00e8s le paiement",
     paidSelf: "Hors cagnotte",
     whoPaidWhat: "qui a pay\u00e9 quoi",
     totalPaidShort: "Total pay\u00e9",
@@ -6988,7 +6994,14 @@ export default function PartyTest() {
               Afrekenen staat er links vooraan, met het getekende bonnetje. */}
           {(fromQuick || !settle) && rounds.length >= 1 && (
             !lastRoundHandled ? (
-              <div style={{ flex: 1, padding: "11px 4px", fontSize: 17, fontWeight: 800, borderRadius: 10, textAlign: "center", background: "#faf4e4", color: "#8a5e0f", border: "1px solid rgba(240,165,0,0.35)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, opacity: 0.75 }}><BonKnopIcoon kleur="#8a5e0f" /> {L.quickSettleTitle}</div>
+              <button style={{ flex: 1, padding: "7px 4px", fontSize: 15, fontWeight: 700, borderRadius: 999, textAlign: "center", background: VLAK1, color: "#8a7d55", border: "1.5px dashed rgba(74,63,30,0.45)", lineHeight: 1.25, cursor: "pointer", fontFamily: "inherit" }}
+                onClick={() => {
+                  const open = rounds.filter((rr) => (rr.amount || 0) <= 0.005).length
+                  if (open > 1) { setNotice(L.payFirstMany(open)); setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview"); return }
+                  setNotice(L.payFirstOne(rounds.length))
+                }}>
+                {L.quickSettleTitle}<br /><span style={{ fontSize: 10.5, fontWeight: 400, color: "#a89a6f" }}>{L.afterPayment}</span>
+              </button>
             ) : (
               <button style={{ flex: 1, padding: "11px 4px", fontSize: 17, fontWeight: 700, borderRadius: 999, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "inherit",
                 border: `1.5px solid ${RAND}`,
