@@ -535,8 +535,8 @@ const T = {
     onlyThisRound: "↩ Alleen dit rondje",
     allAmountsBtn: "💶 Alle bedragen invullen",
     tapForCaps: "JE TIKT AAN VOOR",
-    tikSamenWord: "zonder namen",
-    perPersonWord: "met namen",
+    tikSamenWord: "voor iedereen",
+    perPersonWord: "per persoon",
     paidThisRoundQ: "💶 Betaald voor dit rondje?",
     fillWord: "Invullen",
     adjustOrder: "bestelling aanpassen",
@@ -699,7 +699,7 @@ const T = {
     yourNameRequired: "Vul eerst je eigen naam in — anders weet niemand van wie de drankjes zijn.",
     perPersonBtn: "👥 Per persoon aantikken",
     quickTapBtn: "👆 Snel aantikken",
-    perPersonPrompt: "👥 Liever per persoon aantikken?",
+    aloneHint: "Nog niemand toegevoegd",
     stillNoName: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} nog zonder naam`,
     assignWhoSub: "Wijs toe wie wat dronk",
     canAlsoLater: "kan ook later",
@@ -1346,8 +1346,8 @@ const T = {
     onlyThisRound: "↩ Seulement cette tourn\u00e9e",
     allAmountsBtn: "💶 Remplir tous les montants",
     tapForCaps: "TU COCHES POUR",
-    tikSamenWord: "sans noms",
-    perPersonWord: "avec noms",
+    tikSamenWord: "pour tous",
+    perPersonWord: "par personne",
     paidThisRoundQ: "💶 Pay\u00e9 pour cette tourn\u00e9e\u00a0?",
     fillWord: "Remplir",
     adjustOrder: "modifier la commande",
@@ -1510,7 +1510,7 @@ const T = {
     yourNameRequired: "Indique d’abord ton nom — sinon on ne sait pas à qui sont les boissons.",
     perPersonBtn: "👥 Coche par personne",
     quickTapBtn: "👆 Coche rapide",
-    perPersonPrompt: "👥 Plutôt cocher par personne ?",
+    aloneHint: "Personne d'autre pour l'instant",
     stillNoName: (n: number) => `${n} boisson${n === 1 ? "" : "s"} encore sans nom`,
     assignWhoSub: "Attribue qui a bu quoi",
     canAlsoLater: "peut aussi se faire plus tard",
@@ -8386,12 +8386,7 @@ export default function PartyTest() {
           opNaam ? (
             /* Twee gelijke, gecentreerde keuzes: snel aantikken (dit scherm — actief) of
                per persoon aantikken (opent de doorloop). Zo zie je meteen wat kan. */
-            /* Zolang je alleen bent: één zachte uitnodiging om personen toe te voegen.
-               Zodra ze er zijn, kies je hierboven tussen samen en per persoon. */
-            <div style={{ display: (perPersoon || people.length > 1) ? "none" : "flex", justifyContent: "center", marginBottom: 11 }}>
-              <button onClick={() => { setPerPersoon(true); setPersGeteld(true) }}
-                style={{ background: themaNaam ? "#fbfcff" : "#fffdf6", border: `1px solid ${themaNaam ? "rgba(59,72,106,0.4)" : "rgba(240,165,0,0.5)"}`, borderTop: "none", borderRadius: "0 0 12px 12px", padding: "8px 16px", fontSize: 15, fontWeight: 800, color: themaNaam ? "#3b486a" : "#8a5e0f", cursor: "pointer" }}>{L.perPersonPrompt} ▸</button>
-            </div>
+            null
           ) : null
           /* Snel opnemen toont hier bewust níets meer. De oude "⚖️ op naam noteren"-knop
              zette je met één (mis)tik in de uitgebreid-flow — met toewijzingsmeldingen en
@@ -8406,7 +8401,7 @@ export default function PartyTest() {
                 die duidt normaal zelf aan. Aantikken kan wel, voor als er iets misloopt. */}
             {/* Samen turven of per persoon aantikken — wisselen mag altijd, en wat al
                 op naam staat blijft gewoon staan. Alles in één kader. */}
-            {!settle && (perPersoon || people.length > 1) && (() => {
+            {!settle && (() => {
               const kleur = voorWieKleur
               const heeftZin = perPersoon && !!voorWie
               return (<>
@@ -8447,7 +8442,10 @@ export default function PartyTest() {
                   </div>
                   {/* Namen breken over meerdere regels in plaats van zijwaarts te scrollen:
                       zo staat niemand verborgen en is er geen veeggebaar om te ontdekken. */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "flex-end" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "flex-end", alignItems: "center" }}>
+                    {people.length <= 1 && (
+                      <span style={{ marginRight: "auto", fontSize: 13, fontWeight: 700, color: "#a3947a" }}>{L.aloneHint}</span>
+                    )}
                     {people.map((pp, i) => {
                       const aan = voorWie === pp.id
                       const k = gastKleur(i)
