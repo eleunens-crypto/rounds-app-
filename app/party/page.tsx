@@ -1213,6 +1213,9 @@ const T = {
     inRounds: (t: string) => `rondje ${t}`,
     mixSamen: (b: string) => `samen ${b}`,
     mixPotAvail: (b: string) => `${b} beschikbaar`,
+    potCoversOnly: (b: string) => `De pot dekt maar ${b}`,
+    restWithoutPot: "de rest zonder pot?",
+    splitWord: "Splitsen",
     mixPotShort: (b: string) => `maar ${b} in de pot`,
     potEmptyNote: "De pot is nog leeg — vul eerst iets in.",
     potPayLeft: (bedrag: string, over: string) => `${bedrag} uit de pot → ${over} over na dit rondje`,
@@ -2038,6 +2041,9 @@ const T = {
     inRounds: (t: string) => `tourn\u00e9e ${t}`,
     mixSamen: (b: string) => `ensemble ${b}`,
     mixPotAvail: (b: string) => `${b} disponible`,
+    potCoversOnly: (b: string) => `La cagnotte ne couvre que ${b}`,
+    restWithoutPot: "le reste sans cagnotte\u00a0?",
+    splitWord: "Partager",
     mixPotShort: (b: string) => `mais ${b} dans le pot`,
     paidPot: "Avec cagnotte",
     potEmptyNote: "La cagnotte est vide — ajoute d\u2019abord un montant.",
@@ -9249,22 +9255,18 @@ export default function PartyTest() {
                   color: payVia !== "pot" ? "#6b4a00" : "#6b5c35",
                   border: payVia !== "pot" ? "1.5px solid rgba(200,138,0,0.75)" : "1.5px solid rgba(74,63,30,0.4)" }}
                   onClick={() => {
-                    const r0 = rounds[idx]
-                    if (payVia === "pot") { setMixZelf(0); setMixPot(r0?.amount || 0); setMixFocus("zelf"); setPayVia("mix") }
-                    // In de combinatiestand wint de knop waar je op tikt: tik "zelf
-                    // betaald" en de pot valt weg — het zelf-bedrag blijft staan.
-                    else if (payVia === "mix") { qSetAmount(idx, Math.round(mixZelf * 100) / 100); setPayVia("self") }
+                    // Uit de combinatiestand blijft het zelf-bedrag staan; de rest vervalt.
+                    if (payVia === "mix") qSetAmount(idx, Math.round(mixZelf * 100) / 100)
+                    setPayVia("self")
                   }}>{L.paidSelf}</button>
                 <button style={{ flex: 1, padding: "12px 6px", fontSize: 16.5, fontWeight: 600, borderRadius: 999, cursor: "pointer", textAlign: "center",
                   background: payVia !== "self" ? "rgba(47,86,147,0.16)" : "#fff",
                   color: payVia !== "self" ? "#24476f" : "#6b5c35",
                   border: payVia !== "self" ? "1.5px solid rgba(47,86,147,0.7)" : "1.5px solid rgba(74,63,30,0.4)" }}
                   onClick={() => {
-                    if (potAvail <= 0.005 && payVia === "self") { potVulIntent.current = idx; meldPot(L.potEmptyNote); setShowPot(true); return }
-                    const r0 = rounds[idx]
-                    if (payVia === "self") { setMixZelf(r0?.amount || 0); setMixPot(0); setMixFocus("pot"); setPayVia("mix") }
-                    // Omgekeerd idem: tik "uit de pot" en zelf valt weg, potbedrag blijft.
-                    else if (payVia === "mix") { qSetAmount(idx, Math.round(mixPot * 100) / 100); setPayVia("pot") }
+                    if (potAvail <= 0.005) { potVulIntent.current = idx; meldPot(L.potEmptyNote); setShowPot(true); return }
+                    if (payVia === "mix") qSetAmount(idx, Math.round(mixPot * 100) / 100)
+                    setPayVia("pot")
                   }}>{L.paidPot}{potAvail > 0.005 && <span style={{ fontWeight: 700, opacity: 0.8, fontSize: 15 }}> · {euro(Math.max(0, potAvail - potInBewerking))}</span>}</button>
               </div>
 
@@ -9288,7 +9290,19 @@ export default function PartyTest() {
                   onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}><span style={{ fontSize: 20 }}>✓</span> {L.okKort}</button>
 
               </div>
-              {amount > 0.005 && (
+              {payVia === "pot" && amount > potAvail + 0.005 && potAvail > 0.005 ? (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 9, background: "#373f51", borderRadius: 11, padding: "9px 10px 9px 12px", marginTop: 9 }}>
+                  <span style={{ minWidth: 0, fontSize: 13, color: "#e8dcc0", lineHeight: 1.35 }}>
+                    {L.potCoversOnly(euro(Math.max(0, potAvail)))}<br /><span style={{ color: "#a3947a" }}>{L.restWithoutPot}</span>
+                  </span>
+                  <button onClick={() => {
+                    const potDeel = Math.round(Math.max(0, potAvail) * 100) / 100
+                    setMixPot(potDeel); setMixZelf(Math.round((amount - potDeel) * 100) / 100)
+                    setMixFocus("zelf"); setPayVia("mix")
+                  }}
+                    style={{ flexShrink: 0, background: "#c3d0f2", color: "#1e3b66", border: "none", borderRadius: 999, padding: "6px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.splitWord}</button>
+                </div>
+              ) : amount > 0.005 && (
                 <div style={{ fontSize: 15, color: accentKleur ? accentKleur.hoofd : "#1f8a4c", fontWeight: 800, textAlign: "right", marginTop: 7, paddingRight: 78 }}>{L.tapToConfirm}</div>
               )}
               </>)}
