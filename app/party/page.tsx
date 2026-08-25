@@ -717,7 +717,7 @@ const T = {
     yourNameRequired: "Vul eerst je eigen naam in — anders weet niemand van wie de drankjes zijn.",
     perPersonBtn: "👥 Per persoon aantikken",
     quickTapBtn: "👆 Snel aantikken",
-    aloneHint: "Nog niemand toegevoegd",
+    aloneHint: "Voorlopig alleen jij",
     stillNoName: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} nog zonder naam`,
     assignWhoSub: "Wijs toe wie wat dronk",
     canAlsoLater: "kan ook later",
@@ -1545,7 +1545,7 @@ const T = {
     yourNameRequired: "Indique d’abord ton nom — sinon on ne sait pas à qui sont les boissons.",
     perPersonBtn: "👥 Coche par personne",
     quickTapBtn: "👆 Coche rapide",
-    aloneHint: "Personne d'autre pour l'instant",
+    aloneHint: "Pour l'instant, juste toi",
     stillNoName: (n: number) => `${n} boisson${n === 1 ? "" : "s"} encore sans nom`,
     assignWhoSub: "Attribue qui a bu quoi",
     canAlsoLater: "peut aussi se faire plus tard",
@@ -8509,7 +8509,7 @@ export default function PartyTest() {
                       zo staat niemand verborgen en is er geen veeggebaar om te ontdekken. */}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
                     {people.length <= 1 && (
-                      <span style={{ marginRight: "auto", fontSize: 13, fontWeight: 700, color: "#a89a6f" }}>{L.aloneHint}</span>
+                      <span style={{ marginRight: "auto", fontSize: 14.5, fontWeight: 700, color: "#8a7d55" }}>{L.aloneHint}</span>
                     )}
                     {people.map((pp, i) => {
                       const aan = voorWie === pp.id
