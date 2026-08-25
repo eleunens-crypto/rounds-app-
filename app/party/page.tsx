@@ -9163,7 +9163,7 @@ export default function PartyTest() {
         </div>}
             {/* Drankjes van dit net-bevestigde rondje, met de aanpas-knop erin verwerkt. */}
             {(() => { const laatste = rounds[idx]; const lijst = laatste ? drinksOf(laatste) : []; return lijst.length > 0 && (
-              <div style={{ ...S.card, padding: "12px 14px", background: "#fffdf6" }}>
+              <div style={{ ...S.card, padding: "12px 14px", background: "#fffdf6", overflow: "hidden" }}>
                 {/* Variant C: beide acties in de titelregel — barlijst én aanpassen —
                     en de aparte voetregel eronder is weg. Op een smal scherm wrappen de
                     twee links samen naar een tweede regel, rechts uitgelijnd. */}
@@ -9172,7 +9172,7 @@ export default function PartyTest() {
                   {/* De hele avond in één oogopslag: label plus zoomknopje openen samen
                       de schermvullende barlijst — het woordje ervoor zegt wat je krijgt. */}
                   <span onClick={() => setShowBarlijst(true)} style={{ marginLeft: "auto", flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7, cursor: "pointer" }}>
-                    <span style={{ fontSize: 14.5, fontWeight: 800, color: themaNaam ? "#5a6a94" : "#c98a00", whiteSpace: "nowrap" }}>{L.barlistBtn}</span>
+                    <span style={{ fontSize: 15.5, fontWeight: 800, color: themaNaam ? "#5a6a94" : "#c98a00", whiteSpace: "nowrap" }}>{L.barlistBtn}</span>
                     <span aria-label={L.barlistBtn} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34, height: 30, borderRadius: 9, border: `1px solid ${themaNaam ? "rgba(90,106,148,0.45)" : "rgba(120,95,20,0.3)"}`, background: "#fff", color: themaNaam ? "#3b486a" : "#8a5e0f", fontSize: 17 }}>🔍</span>
                   </span>
                 </div>
@@ -9201,8 +9201,11 @@ export default function PartyTest() {
                 {/* Wat nog zonder naam staat, hoort bij deze bestelling — dus hier, net
                     onder het aanpassen. */}
                 {!settle && laatste && drinks.reduce((a, d) => a + (laatste.anon[d.id] ?? 0), 0) > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(120,95,20,0.14)" }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#8a5e0f" }}>🍺 {L.notAssignedYet(drinks.reduce((a, d) => a + (laatste.anon[d.id] ?? 0), 0))}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, marginLeft: -14, marginRight: -14, marginBottom: -12, padding: "11px 14px", background: "#fdf6e6", borderTop: `1.5px dashed ${themaNaam ? "rgba(59,72,106,0.35)" : "rgba(74,63,30,0.35)"}`, borderRadius: "0 0 16px 16px" }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 800, color: "#8a5e0f", lineHeight: 1.35 }}>
+                      {L.notAssignedYet(drinks.reduce((a, d) => a + (laatste.anon[d.id] ?? 0), 0))}
+                      <br /><span style={{ fontSize: 13, fontWeight: 600, color: "#8a7d55" }}>{L.canAlsoLater}</span>
+                    </span>
                     <button onClick={() => { setAssignAllMode(false); setAssignIdx(idx) }}
                       style={{ flexShrink: 0, background: VLAK1, border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 999, padding: "8px 15px", fontSize: 14.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{L.assign}</button>
                   </div>
