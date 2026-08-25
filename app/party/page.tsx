@@ -3470,6 +3470,17 @@ export default function PartyTest() {
     }
     setLastRoundHandled(true); setPayVia("self"); setOverviewBackTo("hub"); setView("roundsOverview")
   }
+  const kopTeller = () => (
+    <span onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 2, background: VLAK1, borderRadius: 999, padding: "2px 3px", color: "#5c5030", fontSize: 13, fontWeight: 800 }}>
+      <span onClick={() => { if (people.length > 1) removeLastPerson() }}
+        style={{ width: 22, height: 22, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 15, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
+      <b style={{ color: RAND, padding: "0 2px" }}>{people.length}</b>
+      <span style={{ color: "#8a7d55", fontSize: 11, paddingRight: 2 }}>{L.persWordLow}</span>
+      <span onClick={() => { void addPerson() }}
+        style={{ width: 22, height: 22, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 15, cursor: "pointer" }}>＋</span>
+    </span>
+  )
+
   const rPaidSum = (r: Round) => (r.potPart || 0) + Object.values(r.payers || {}).reduce((a, b) => a + (b || 0), 0)
   const rTogglePayer = (idx: number, pid: string) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const cur = Object.keys(r.payers || {}); const persons = cur.includes(pid) ? cur.filter((x) => x !== pid) : [...cur, pid]; const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, r.amount, usePot ? (r.potPart || 0) : undefined) })); setDirtyRound(idx) }
 
@@ -6917,12 +6928,7 @@ export default function PartyTest() {
             <RundoLogo size={40} />
           </span>
           <div onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ ...S.h1, fontSize: 21, lineHeight: 1.1, letterSpacing: "-0.02em", cursor: "pointer", flexShrink: 0 }}>Rundo</div>
-          {!!groupId && !kaal && (
-            <span style={{ minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: themaNaam ? "#c3cbe4" : "#ffcf5c", background: themaNaam ? "#3b486a" : "#4a3f1e", borderRadius: 999, padding: "4px 11px" }}>
-              <GsmIcoon size={14} kleur={themaNaam ? "#c3cbe4" : "#ffcf5c"} lijnen={!settle} qr={settle} />
-              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{settle && !fromQuick ? L.modeFairShort : opNaam ? L.modeNaamTitle : L.modeSnelTitle}</span>
-            </span>
-          )}
+          {!!groupId && !kaal && <span style={{ marginLeft: "auto", flexShrink: 0, minWidth: 0 }}>{potKnopje()}</span>}
         </div>
         {/* Op het instelscherm staat geen ondertitel: de tagline staat al op het
             startscherm, en hier telt elke pixel voor de twee keuzekaarten. */}
@@ -6975,9 +6981,12 @@ export default function PartyTest() {
                 <span style={{ flexShrink: 0, color: "#c98a00" }}>✏️</span>
                 <span style={{ color: "#b3a988", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.namePh3}</span>
               </span>
+              {!settle && kopTeller()}
             </span>
           )}
-          <span style={{ marginLeft: "auto", flexShrink: 0, maxWidth: "100%" }}>{potKnopje()}</span>
+          {!settle && !kaal && !isAutoNaam(groupName) && (
+            <span style={{ flexShrink: 0 }}>{kopTeller()}</span>
+          )}
         </div>
       )}
       {/* De pot als brede balk onder de kop, zolang er nog niets in zit. Hij stond als
@@ -8434,16 +8443,6 @@ export default function PartyTest() {
             <span style={{ fontSize: 15.5, fontWeight: 600, color: "#a89a6f", letterSpacing: 0 }}> · {L.drinksCount(roundItems)}</span>
             {repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}
           </span>
-          {!settle && !perPersoon && (
-            <span onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 3, background: VLAK1, border: `1.5px solid ${RAND}`, borderRadius: 999, padding: "2px 3px", color: "#5c5030", fontSize: 13.5, fontWeight: 800 }}>
-              <span onClick={() => { if (people.length > 1) removeLastPerson() }}
-                style={{ width: 23, height: 23, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
-              <b style={{ fontSize: 15, color: RAND, padding: "0 2px" }}>{people.length}</b>
-              <span style={{ color: "#8a7d55", fontSize: 12.5, paddingRight: 3 }}>{L.persWordLow}</span>
-              <span onClick={() => { void addPerson() }}
-                style={{ width: 23, height: 23, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer" }}>＋</span>
-            </span>
-          )}
         </div>
         {settle && renderRunnerBar()}
         {(settle || opNaam) && renderWalk()}
