@@ -230,7 +230,7 @@ function CheersIcon({ size = 18, color = "#4a3f1e" }: { size?: number; color?: s
 }
 
 // Een persoon is een PLAATS in de groep. De admin zet het aantal, de plaatsen bestaan
-// meteen, en gasten claimen er zelf een via de QR/link — net als in Rundo Table.
+// meteen, en gasten claimen er zelf een via de QR/link — net als in Rundo Resto.
 // Een vrije plaats heeft in de databank een lege naam; in de UI heet ze "Gast N",
 // waardoor de bestaande isGuestDefault-logica gewoon blijft werken.
 type Person = { id: string; name: string; seat: number; claimedBy?: string | null; selfJoined?: boolean; named?: boolean; settleWith?: string | null }
@@ -287,6 +287,9 @@ const MODUS_SNEL = {
   randZacht: "rgba(232,168,18,0.6)", lijnZacht: "rgba(232,168,18,0.28)",
   bladzij: "#fdf6e3",
 }
+const GAST_KLEUREN = ["#ffcf5c", "#56b8c4", "#b98ac9", "#7fc47a", "#f0906b", "#9fb4e8", "#e8a0c0", "#c9c07a", "#e0705f", "#5f9ea0"]
+const gastKleur = (i: number) => GAST_KLEUREN[((i % GAST_KLEUREN.length) + GAST_KLEUREN.length) % GAST_KLEUREN.length]
+
 const MODUS_FAIR = {
   rand: "#0d7c8c", vlak: "#eef8fa", paneel: "#f9fdfe",
   streep: "rgba(13,124,140,0.35)", lijn: "rgba(13,124,140,0.15)", label: "#4e94a0",
@@ -541,8 +544,8 @@ const T = {
     personsAndNames: "Personen & namen",
     persWord: "Pers.",
     persWordLow: "pers.",
+    namesWordShort: "namen",
     tapForStrip: "Je tikt aan voor",
-    howNoteQ: "HOE NOTEER JE DIT RONDJE?",
     togetherHint: "Tik drankjes aan voor iedereen — geen namen nodig.",
     completeWord: "✓ compleet",
     missAmount: "💶 betaling toevoegen",
@@ -1352,8 +1355,8 @@ const T = {
     personsAndNames: "Personnes & noms",
     persWord: "Pers.",
     persWordLow: "pers.",
+    namesWordShort: "noms",
     tapForStrip: "Tu coches pour",
-    howNoteQ: "COMMENT NOTES-TU CETTE TOURN\u00c9E\u00a0?",
     togetherHint: "Coche les boissons pour tout le monde — sans noms.",
     completeWord: "✓ complet",
     missAmount: "💶 ajouter le paiement",
@@ -4350,7 +4353,7 @@ export default function PartyTest() {
     if (view === "confirmed" || view === "quickSettle" || view === "payers" || view === "final") { setView("hub"); return }
     goStart()
   }
-  // Naar het echte beginscherm van de site (waar je Rundo Table of Party kiest). Bij een
+  // Naar het echte beginscherm van de site (waar je Rundo of Rundo Resto kiest). Bij een
   // onbevestigd rondje eerst waarschuwen, zodat je geen werk verliest.
   // Weggaan uit een naamloze groep: eerst vragen om een naam, want zonder naam
   // is de groep straks niet terug te vinden in de lijst.
@@ -6865,8 +6868,8 @@ export default function PartyTest() {
           </span>
           <div onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ ...S.h1, fontSize: 21, lineHeight: 1.1, letterSpacing: "-0.02em", cursor: "pointer", flexShrink: 0 }}>Rundo</div>
           {!!groupId && !kaal && (
-            <span style={{ minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 800, color: themaNaam ? "#5a6a94" : "#8a5e0f", background: themaNaam ? "rgba(59,72,106,0.09)" : "#faf1dc", border: `1px solid ${themaNaam ? "rgba(59,72,106,0.28)" : "rgba(240,165,0,0.35)"}`, borderRadius: 999, padding: "3px 10px" }}>
-              <GsmIcoon size={14} kleur={themaNaam ? "#5a6a94" : "#8a5e0f"} lijnen={!settle} qr={settle} />
+            <span style={{ minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 800, color: themaNaam ? "#c3cbe4" : "#ffcf5c", background: themaNaam ? "#3b486a" : "#4a3f1e", borderRadius: 999, padding: "4px 11px" }}>
+              <GsmIcoon size={14} kleur={themaNaam ? "#c3cbe4" : "#ffcf5c"} lijnen={!settle} qr={settle} />
               <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{settle && !fromQuick ? L.modeFairShort : opNaam ? L.modeNaamTitle : L.modeSnelTitle}</span>
             </span>
           )}
@@ -7880,7 +7883,7 @@ export default function PartyTest() {
             <button onClick={() => verlaatMetNaamcheck(() => { window.location.href = "/" })} style={{ fontSize: 16, fontWeight: 700, color: "#a08d5f", background: "none", border: "none", padding: 4, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }}>{L.backToRundo}</button>
           ) : (
             <span style={{ fontSize: 15, color: "#a89a6f", fontWeight: 600 }}>{L.tryTableLine}{" "}
-              <a href="/table" style={{ color: "#2f9bb5", fontWeight: 800, textDecoration: "underline" }}>Rundo Table →</a>
+              <a href="/table" style={{ color: "#2f9bb5", fontWeight: 800, textDecoration: "underline" }}>Rundo Resto →</a>
             </span>
           )}
         </div>
@@ -8352,7 +8355,9 @@ export default function PartyTest() {
     const catVisible = zoekt ? catDrinks : catDrinks.filter((d) => fullList || d.fav || drinkTotal(d.id) > 0)
     // Voor wie tik je aan: als balk bovenin de drankjeskaart. Alleen als er echt iemand
     // gekozen is — bij "zonder namen" bestaat voorWie niet.
-    const voorWieBalk = !!voorWie && (settle || perPersoon)
+    const voorWieIdx = people.findIndex((pp) => pp.id === voorWie)
+    const voorWieKleur = voorWieIdx >= 0 ? gastKleur(voorWieIdx) : "#ffcf5c"
+    const qrBalk = !!voorWie && settle
     const needCups = depositOn && (people.some((p) => pickedUpOf(p.id) > 0) || people.some((p) => cupsBal(p.id) !== 0))
     const gaveBackTotal = people.reduce((a, p) => a + (gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id))), 0)
     const cupsBlock = needCups && !cupsChecked
@@ -8401,25 +8406,77 @@ export default function PartyTest() {
                 die duidt normaal zelf aan. Aantikken kan wel, voor als er iets misloopt. */}
             {/* Samen turven of per persoon aantikken — wisselen mag altijd, en wat al
                 op naam staat blijft gewoon staan. Alles in één kader. */}
-            {!settle && (perPersoon || people.length > 1) && (
-              <div style={{ background: "#fff", border: perPersoon ? "2px solid #e8a812" : "1px solid rgba(120,95,20,0.25)", borderRadius: 13, padding: 11, marginBottom: 9 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "#8a7d55", letterSpacing: "0.03em", marginBottom: 8 }}>{L.howNoteQ}</div>
-                <div style={{ display: "flex", gap: 5 }}>
-                  {[false, true].map((mode) => (
-                    <button key={String(mode)} onClick={() => setPerPersoon(mode)}
-                      style={{ flex: 1, borderRadius: 10, padding: "10px 0", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
-                        background: perPersoon === mode ? AAN : "#fff",
-                        border: perPersoon === mode ? "none" : "1px solid rgba(120,95,20,0.22)",
-                        color: perPersoon === mode ? "#fff" : "#4a3f1e" }}>
-                      {mode ? `👤 ${L.perPersonWord}` : L.tikSamenWord}
-                    </button>
-                  ))}
+            {!settle && (perPersoon || people.length > 1) && (() => {
+              const kleur = voorWieKleur
+              const heeftZin = perPersoon && !!voorWie
+              return (<>
+              <div style={{ background: "#4a3f1e", borderLeft: `5px solid ${kleur}`, borderRadius: heeftZin ? "13px 13px 0 0" : 13, padding: 9, marginBottom: heeftZin ? 0 : 10 }}>
+                {/* Beide kanten zien er aantikbaar uit: de inactieve houdt een eigen rand
+                    en heldere letters, zodat het een keuze blijft en niet iets uitgestaan. */}
+                <div style={{ display: "flex", gap: 5, marginBottom: 9 }}>
+                  {[false, true].map((mode) => {
+                    const aan = perPersoon === mode
+                    return (
+                      <button key={String(mode)} onClick={() => setPerPersoon(mode)}
+                        style={{ flex: 1, borderRadius: 999, padding: "7px 0", fontSize: 13.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
+                          background: aan ? "#ffcf5c" : "transparent",
+                          border: aan ? "1.5px solid #ffcf5c" : "1.5px solid rgba(255,255,255,0.45)",
+                          color: aan ? "#3d3418" : "#f0e6d0" }}>
+                        {mode ? L.perPersonWord : L.tikSamenWord}{aan ? " ✓" : ""}
+                      </button>
+                    )
+                  })}
                 </div>
-                {!perPersoon && <div style={{ fontSize: 14, color: "#a89a6f", marginTop: 9, lineHeight: 1.4 }}>{L.togetherHint}</div>}
 
+                {!perPersoon && (
+                  <div style={{ fontSize: 15, fontWeight: 800, color: "#f0e6d0", lineHeight: 1.35 }}>{L.togetherHint}</div>
+                )}
+
+                {perPersoon && (<>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 9, paddingBottom: 9, borderBottom: "1px solid rgba(255,255,255,0.15)" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "#f0e6d0", fontSize: 14.5, fontWeight: 800 }}>
+                      <span onClick={() => { if (people.length > 1) removeLastPerson() }}
+                        style={{ width: 27, height: 27, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 17, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
+                      <b style={{ fontSize: 16.5, color: "#fff" }}>{people.length}</b>
+                      <span style={{ color: "#c8b896", fontSize: 13.5 }}>{L.persWordLow}</span>
+                      <span onClick={() => { void addPerson() }}
+                        style={{ width: 27, height: 27, borderRadius: "50%", background: "#ffcf5c", color: "#3d3418", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 17, cursor: "pointer" }}>＋</span>
+                    </span>
+                    <button onClick={() => { setPersGeteld(true); setAlleenPers(true); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
+                      style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, border: "1px solid rgba(255,255,255,0.4)", background: "transparent", color: "#e8dcc0", borderRadius: 999, padding: "5px 12px", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✏️ {L.namesWordShort}</button>
+                  </div>
+                  {/* Namen breken over meerdere regels in plaats van zijwaarts te scrollen:
+                      zo staat niemand verborgen en is er geen veeggebaar om te ontdekken. */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "flex-end" }}>
+                    {people.map((pp, i) => {
+                      const aan = voorWie === pp.id
+                      const k = gastKleur(i)
+                      const viaLink = !!pp.claimedBy && pp.id !== meId
+                      return (
+                        <button key={pp.id} onClick={() => {
+                          if (viaLink) { setConfirmDlg({ msg: L.tapForQrGuest(pp.name), yes: L.tapForQrYes, no: L.cancel, onYes: () => { setConfirmDlg(null); setVoorWieRaw(pp.id) } }); return }
+                          setVoorWieRaw(pp.id)
+                        }}
+                          style={{ borderRadius: 999, padding: aan ? "5px 12px" : "5px 11px", fontSize: aan ? 14 : 13.5, cursor: "pointer", fontFamily: "inherit",
+                            fontWeight: 800,
+                            background: aan ? k : "transparent",
+                            border: `1px solid ${k}`,
+                            color: aan ? "#2a1f06" : k }}>
+                          {pp.id === meId ? "♛ " : viaLink ? "📱 " : ""}{pp.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>)}
               </div>
-            )}
-            {(settle || perPersoon) && people.length > 0 && (
+              {heeftZin && (
+                <div style={{ background: "#3d3418", borderLeft: `5px solid ${kleur}`, borderRadius: "0 0 13px 13px", padding: "7px 12px", marginBottom: 10, fontSize: 13, fontWeight: 700, color: "#a3947a" }}>
+                  {L.tapForStrip} <b style={{ fontWeight: 800, fontSize: 16, color: kleur }}>{people.find((pp) => pp.id === voorWie)?.name ?? ""}</b>
+                </div>
+              )}
+              </>)
+            })()}
+            {settle && people.length > 0 && (
               <div style={settle ? { ...S.card, padding: "11px 12px", marginBottom: 8 } : { marginTop: -17, marginBottom: 9, background: "#fff", border: "2px solid #e8a812", borderTop: "none", borderRadius: "0 0 13px 13px", padding: "0 11px 11px" }}>
                 <div style={{ fontSize: 14.5, fontWeight: 800, color: voorWie && voorWie !== meId ? "#8a5e0f" : "#8a7d55", marginBottom: 7 }}>
                   <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
@@ -8462,12 +8519,6 @@ export default function PartyTest() {
                       </button>
                     )
                   })}
-                  {!settle && perPersoon && persTeller()}
-                  {!settle && perPersoon && (
-                    <button onClick={() => { setPersGeteld(true); setAlleenPers(true); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
-                      title={L.editNamesBtn}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 6, border: "2px solid rgba(47,111,181,0.55)", background: "#f2f6fc", color: "#2f5693", borderRadius: 999, padding: "8px 14px", fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.editNamesBtn}</button>
-                  )}
                 </div>
                 )}
 
@@ -8506,20 +8557,20 @@ export default function PartyTest() {
           </div>
         ) : (
           <div style={{ position: "relative" }}>
-            {voorWieBalk && (
-              <div style={{ position: "sticky", top: 0, zIndex: 4, display: "flex", alignItems: "center", gap: 10, background: settle ? "#0a4f5b" : "#4a3f1e", borderRadius: "18px 18px 0 0", padding: "8px 10px 8px 15px", fontSize: 15, fontWeight: 700, color: settle ? "#9fd0d9" : "#d8cba8" }}>
+            {qrBalk && (
+              <div style={{ position: "sticky", top: 0, zIndex: 4, display: "flex", alignItems: "center", gap: 10, background: "#0a4f5b", borderRadius: "18px 18px 0 0", padding: "8px 10px 8px 15px", fontSize: 15, fontWeight: 700, color: "#9fd0d9" }}>
                 <span style={{ flexShrink: 0 }}>{L.tapForStrip}</span>
-                <b style={{ fontWeight: 800, fontSize: 17, color: settle ? "#08323b" : "#3d3418", background: settle ? "#7fe3f2" : "#ffcf5c", borderRadius: 999, padding: "4px 15px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{people.find((pp) => pp.id === voorWie)?.name ?? ""}</b>
+                <b style={{ fontWeight: 800, fontSize: 17, color: "#08323b", background: "#7fe3f2", borderRadius: 999, padding: "4px 15px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{people.find((pp) => pp.id === voorWie)?.name ?? ""}</b>
               </div>
             )}
             {!zoekt && fullList && (
-              <div style={{ position: "absolute", left: "50%", top: voorWieBalk ? 26 : -13, transform: "translateX(-50%)", whiteSpace: "nowrap", zIndex: 2 }}>
+              <div style={{ position: "absolute", left: "50%", top: qrBalk ? 26 : -13, transform: "translateX(-50%)", whiteSpace: "nowrap", zIndex: 2 }}>
                 <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#a89a6f", boxShadow: "0 2px 6px rgba(120,95,20,0.14)" }}>
                   ▴ minder tonen
                 </span>
               </div>
             )}
-            <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12, ...(voorWieBalk ? { borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "none" } : {}) }}>
+            <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12, ...(qrBalk ? { borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "none" } : {}), ...(!settle && perPersoon && voorWie ? { borderLeft: `5px solid ${voorWieKleur}` } : {}) }}>
               {/* Zoeken + inspreken bovenin de kaart, onder de categorieën — zelfde plek
                   en zelfde blok voor snel én uitgebreid opnemen. */}
               {!settle && <div style={{ gridColumn: "1 / -1" }}>{renderZoekBlok(true)}</div>}
@@ -10050,7 +10101,13 @@ export default function PartyTest() {
 
                     {bewerk && (
                       <div style={{ marginTop: 14 }}>
-                        <button style={{ ...S.btnP, width: "100%" }} onClick={(e) => { e.stopPropagation(); saveEditRound(r) }}>💾 {L.saveWord}</button>
+                        {(() => {
+                          const uitPot = dr ? (dr.bron === "pot" || (dr.bron === "mix" && Math.max(0, dr.potAmt) > 0.005)) : false
+                          return (
+                            <button style={{ ...S.btnP, width: "100%", ...(uitPot ? { background: "linear-gradient(135deg,#3d86cc,#2f5693)", boxShadow: "0 4px 12px -4px rgba(47,86,147,0.6)" } : {}) }}
+                              onClick={(e) => { e.stopPropagation(); saveEditRound(r) }}>💾 {L.saveWord}</button>
+                          )
+                        })()}
                         <button style={{ width: "100%", marginTop: 8, padding: "9px 0", background: "none", border: "none", fontSize: 15.5, fontWeight: 700, color: "#a89a6f", cursor: "pointer" }}
                           onClick={(e) => { e.stopPropagation(); cancelEditRound() }}>✕ {L.cancel}</button>
                       </div>
