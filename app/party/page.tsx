@@ -9152,6 +9152,7 @@ export default function PartyTest() {
           const accentKleur = payVia === "pot"
             ? { hoofd: "#2f6fb5", tekst: "#2f5693", pulse: "rundo-pulse-pot" }
             : { hoofd: "#e08a00", tekst: "#c88a1a", pulse: "rundo-pulse-amber" }
+          const heeftBestelling = (rounds[idx] ? drinksOf(rounds[idx]).length : 0) > 0
           return (
           <>
             {/* Kop met het rondje-nummer: bij rondje 2, 3, … is meteen duidelijk waar je mee
@@ -9163,7 +9164,7 @@ export default function PartyTest() {
         </div>}
             {/* Drankjes van dit net-bevestigde rondje, met de aanpas-knop erin verwerkt. */}
             {(() => { const laatste = rounds[idx]; const lijst = laatste ? drinksOf(laatste) : []; return lijst.length > 0 && (
-              <div style={{ ...S.card, padding: "12px 14px", background: "#fffdf6", overflow: "hidden" }}>
+              <div style={{ ...S.card, padding: "12px 14px", background: "#fffdf6", overflow: "hidden", marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderBottom: "none" }}>
                 {/* Variant C: beide acties in de titelregel — barlijst én aanpassen —
                     en de aparte voetregel eronder is weg. Op een smal scherm wrappen de
                     twee links samen naar een tweede regel, rechts uitgelijnd. */}
@@ -9221,7 +9222,7 @@ export default function PartyTest() {
 
             {/* Hoeveel betaald voor dit rondje. Kies eerst de bron (zelf/pot), vul één
                 bedrag in, en bevestig met ✓ (of sla over). Beide sluiten het rondje af. */}
-            <div style={{ ...S.card }}>
+            <div style={{ ...S.card, ...(heeftBestelling ? { background: "#faf7ee", borderTopLeftRadius: 0, borderTopRightRadius: 0 } : {}) }}>
               {/* Aantal personen staat er gewoon bij: geen vraag, maar wel zichtbaar zodat
                   een verandering meteen opvalt in plaats van pas bij het afrekenen. */}
               {/* Bij uitgebreid opnemen liggen de gasten vast — dan is deze vraag zinloos
@@ -9381,11 +9382,11 @@ export default function PartyTest() {
                 )
               )}
               </div>
-              {/* Betaling overslaan hoort onder zijn eigen sectie, niet naast het veld. */}
-              <button style={{ ...S.btn, width: "100%", marginTop: 9, fontSize: 16, fontWeight: 800 }}
-                onClick={() => closeQuickRound(true)}>{L.skipPayment}</button>
-
             </div>
+            {/* Overslaan is geen manier van betalen maar de keuze om het nu niet te doen:
+                daarom een eigen knop onder de kaart, niet binnen de betaalafdeling. */}
+            <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 16, fontWeight: 800 }}
+              onClick={() => closeQuickRound(true)}>{L.skipPayment}</button>
           </>
           )
         })()}
