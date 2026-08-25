@@ -289,6 +289,14 @@ const MODUS_SNEL = {
 }
 const GAST_KLEUREN = ["#ffcf5c", "#56b8c4", "#b98ac9", "#7fc47a", "#f0906b", "#9fb4e8", "#e8a0c0", "#c9c07a", "#e0705f", "#5f9ea0"]
 const gastKleur = (i: number) => GAST_KLEUREN[((i % GAST_KLEUREN.length) + GAST_KLEUREN.length) % GAST_KLEUREN.length]
+const donkerder = (hex: string, f = 0.55) => {
+  const h = hex.replace("#", "")
+  const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16)
+  const r = Math.round(((n >> 16) & 255) * f)
+  const g = Math.round(((n >> 8) & 255) * f)
+  const b = Math.round((n & 255) * f)
+  return `rgb(${r},${g},${b})`
+}
 
 const MODUS_FAIR = {
   rand: "#0d7c8c", vlak: "#eef8fa", paneel: "#f9fdfe",
@@ -8407,7 +8415,7 @@ export default function PartyTest() {
               const kleur = voorWieKleur
               const heeftZin = perPersoon && !!voorWie
               return (<>
-              <div style={{ background: "#4a3f1e", borderLeft: `5px solid ${kleur}`, borderRadius: heeftZin ? "13px 13px 0 0" : 13, padding: 9, marginBottom: heeftZin ? 0 : 10 }}>
+              <div style={{ background: "#fff", border: `1.5px solid ${RAND}`, borderLeft: `5px solid ${kleur}`, borderRadius: heeftZin ? "13px 13px 0 0" : 13, padding: 9, marginBottom: heeftZin ? 0 : 10 }}>
                 {/* Beide kanten zien er aantikbaar uit: de inactieve houdt een eigen rand
                     en heldere letters, zodat het een keuze blijft en niet iets uitgestaan. */}
                 <div style={{ display: "flex", gap: 5, marginBottom: 9 }}>
@@ -8416,9 +8424,9 @@ export default function PartyTest() {
                     return (
                       <button key={String(mode)} onClick={() => setPerPersoon(mode)}
                         style={{ flex: 1, borderRadius: 999, padding: "7px 0", fontSize: 13.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
-                          background: aan ? "#ffcf5c" : "transparent",
-                          border: aan ? "1.5px solid #ffcf5c" : "1.5px solid rgba(255,255,255,0.45)",
-                          color: aan ? "#3d3418" : "#f0e6d0" }}>
+                          background: aan ? RAND : "transparent",
+                          border: aan ? `1.5px solid ${RAND}` : "1.5px solid rgba(120,95,20,0.35)",
+                          color: aan ? RANDTEKST : "#8a7d55" }}>
                         {mode ? L.perPersonWord : L.tikSamenWord}{aan ? " ✓" : ""}
                       </button>
                     )
@@ -8426,27 +8434,27 @@ export default function PartyTest() {
                 </div>
 
                 {!perPersoon && (
-                  <div style={{ fontSize: 15, fontWeight: 600, color: "#f0e6d0", lineHeight: 1.35 }}>{L.togetherHint}</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: "#6b5c35", lineHeight: 1.35 }}>{L.togetherHint}</div>
                 )}
 
                 {perPersoon && (<>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 9, paddingBottom: 9, borderBottom: "1px solid rgba(255,255,255,0.15)" }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "#f0e6d0", fontSize: 14.5, fontWeight: 800 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 9 }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: VLAK1, border: `1.5px solid ${RAND}`, borderRadius: 999, padding: "2px 3px", color: "#5c5030", fontSize: 13.5, fontWeight: 800 }}>
                       <span onClick={() => { if (people.length > 1) removeLastPerson() }}
-                        style={{ width: 27, height: 27, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 17, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
-                      <b style={{ fontSize: 16.5, color: "#fff" }}>{people.length}</b>
-                      <span style={{ color: "#c8b896", fontSize: 13.5 }}>{L.persWordLow}</span>
+                        style={{ width: 23, height: 23, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
+                      <b style={{ fontSize: 15, color: RAND, padding: "0 2px" }}>{people.length}</b>
+                      <span style={{ color: "#8a7d55", fontSize: 12.5, paddingRight: 3 }}>{L.persWordLow}</span>
                       <span onClick={() => { void addPerson() }}
-                        style={{ width: 27, height: 27, borderRadius: "50%", background: "#ffcf5c", color: "#3d3418", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 17, cursor: "pointer" }}>＋</span>
+                        style={{ width: 23, height: 23, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer" }}>＋</span>
                     </span>
                     <button onClick={() => { setPersGeteld(true); setAlleenPers(true); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
-                      style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, border: "1px solid rgba(255,255,255,0.4)", background: "transparent", color: "#e8dcc0", borderRadius: 999, padding: "5px 12px", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✏️ {L.namesWordShort}</button>
+                      style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, border: `1.5px solid ${RAND}`, background: "#fff", color: RAND, borderRadius: 999, padding: "5px 12px", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✏️ {L.namesWordShort}</button>
                   </div>
                   {/* Namen breken over meerdere regels in plaats van zijwaarts te scrollen:
                       zo staat niemand verborgen en is er geen veeggebaar om te ontdekken. */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "flex-end", alignItems: "center" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
                     {people.length <= 1 && (
-                      <span style={{ marginRight: "auto", fontSize: 13, fontWeight: 700, color: "#a3947a" }}>{L.aloneHint}</span>
+                      <span style={{ marginRight: "auto", fontSize: 13, fontWeight: 700, color: "#a89a6f" }}>{L.aloneHint}</span>
                     )}
                     {people.map((pp, i) => {
                       const aan = voorWie === pp.id
@@ -8460,8 +8468,8 @@ export default function PartyTest() {
                           style={{ borderRadius: 999, padding: aan ? "5px 12px" : "5px 11px", fontSize: aan ? 14 : 13.5, cursor: "pointer", fontFamily: "inherit",
                             fontWeight: 800,
                             background: aan ? k : "transparent",
-                            border: `1px solid ${k}`,
-                            color: aan ? "#2a1f06" : k }}>
+                            border: `1.5px solid ${k}`,
+                            color: aan ? "#2a1f06" : donkerder(k) }}>
                           {pp.id === meId ? "♛ " : viaLink ? "📱 " : ""}{pp.name}
                         </button>
                       )
@@ -8470,7 +8478,7 @@ export default function PartyTest() {
                 </>)}
               </div>
               {heeftZin && (
-                <div style={{ background: "#3d3418", borderLeft: `5px solid ${kleur}`, borderRadius: "0 0 13px 13px", padding: "7px 12px", marginBottom: 10, fontSize: 13, fontWeight: 700, color: "#a3947a" }}>
+                <div style={{ background: RAND, borderLeft: `5px solid ${kleur}`, borderRadius: "0 0 13px 13px", padding: "8px 12px", marginBottom: 10, fontSize: 13, fontWeight: 600, color: koel ? "#8fb9c2" : themaNaam ? "#9aa5c4" : "#a3947a" }}>
                   {L.tapForStrip} <b style={{ fontWeight: 800, fontSize: 16, color: kleur }}>{people.find((pp) => pp.id === voorWie)?.name ?? ""}</b>
                 </div>
               )}
