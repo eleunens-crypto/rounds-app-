@@ -7037,17 +7037,31 @@ export default function PartyTest() {
         {!!groupId && !kaal && (
           <span style={{ flexShrink: 0 }}>{potContribTotal > 0.005 ? potKnopje() : potLegBadge()}</span>
         )}
-        {!uitgebreidLook && !!groupId && !kaal && groupName.trim() && !editName && (
-          <div style={{ textAlign: "right", minWidth: 0, width: "100%", marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
-            <div onClick={() => { if (!onboarding && !groepDicht) setEditName(true) }} style={{ cursor: onboarding ? "default" : "pointer", fontSize: 19, fontWeight: 800, color: "#FFFFFF", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {!settle && isAutoNaam(groupName) ? (
-                <span style={{ display: "block" }}>
-                  <span style={{ display: "block", fontSize: 17, fontWeight: 700, color: "#F5B301" }}>✏️ {L.giveNameQ}</span>
-                  <span style={{ display: "block", fontSize: 14, fontWeight: 400, color: "#8b98ae", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.nowWord} {groupName.trim()}</span>
+        {!uitgebreidLook && !!groupId && !kaal && (
+          <div style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", marginTop: 11, marginLeft: -13, marginRight: -13, marginBottom: -11, padding: "10px 13px", background: "#f4fafb", borderRadius: "0 0 15px 15px", boxSizing: "content-box" }}>
+            {settle && !fromQuick && (
+              <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", background: "#dbeef0", borderRadius: 999, overflow: "hidden" }}>
+                <span onClick={() => { setSettingsBackTo(view === "order" ? "order" : "hub"); setView("settings") }}
+                  style={{ cursor: "pointer", padding: "6px 11px", display: "inline-flex", alignItems: "center" }}>⚙️</span>
+                <span style={{ width: 1, alignSelf: "stretch", background: "rgba(29,41,66,0.2)" }} />
+                <span onClick={() => { setQrGevraagd(true); setView("hub") }}
+                  style={{ cursor: "pointer", padding: "6px 12px", fontSize: 12.5, fontWeight: 800, color: RAND }}>QR</span>
+              </span>
+            )}
+            {groupName.trim() && !editName && (
+              <span onClick={() => { if (!onboarding && !groepDicht) setEditName(true) }}
+                style={{ marginLeft: "auto", minWidth: 0, cursor: onboarding ? "default" : "pointer", display: "inline-flex", alignItems: "center", gap: 7 }}>
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 19, fontWeight: 600, color: RAND }}>
+                  {!settle && isAutoNaam(groupName) ? L.giveNameQ : groupName.trim()}
                 </span>
-              ) : <>{groupName.trim()}{groepDatum && <span style={{ fontWeight: 700, color: "#8b98ae", fontSize: 15 }}> ({datumKort(groepDatum)})</span>}{!onboarding && <span style={{ fontSize: 14 }}> ✏️</span>}</>}
-            </div>
-
+                {groepDatum && <span style={{ flexShrink: 0, fontSize: 13, color: "#7d999d" }}>{datumKort(groepDatum)}</span>}
+                {!onboarding && (
+                  <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: RAND, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                    <PotloodIcoon size={12} kleur="#fff" />
+                  </span>
+                )}
+              </span>
+            )}
           </div>
         )}
       </div>
