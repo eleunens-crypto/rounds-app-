@@ -629,7 +629,8 @@ const T = {
     yourNamePh2: "Jouw naam — nodig vóór de QR",
     backToRundo: "← naar het Rundo-startscherm",
     tryTableLine: "Rekening splitsen in een restaurant? Probeer ook",
-    welkomSub: "Rondjes opnemen\n… en splitten zonder gedoe",
+    welkomSub1: "Rondjes opnemen",
+    welkomSub2: "… en splitten zonder gedoe!",
     welkomStart: "Starten →",
     orWordShort: "of",
     welkomFlow: [
@@ -1410,7 +1411,8 @@ const T = {
     yourNamePh2: "Ton nom — requis avant le QR",
     backToRundo: "\u2190 retour \u00e0 l'accueil Rundo",
     tryTableLine: "Partager l'addition au restaurant\u00a0? Essaie aussi",
-    welkomSub: "Prendre les tourn\u00e9es\n… et partager sans prise de t\u00eate",
+    welkomSub1: "Prendre les tourn\u00e9es",
+    welkomSub2: "… et partager sans prise de t\u00eate\u00a0!",
     welkomStart: "Commencer →",
     orWordShort: "ou",
     welkomFlow: [
@@ -7525,11 +7527,12 @@ export default function PartyTest() {
             <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #1c1608 0%, #1c1608 46%, rgba(28,22,8,0.94) 62%, rgba(28,22,8,0.8) 82%, rgba(28,22,8,0.6) 100%)" }} />
             <div style={{ position: "relative", zIndex: 2, padding: "24px 20px" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <RundoLogo size={64} />
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 9, marginTop: 11 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/icon-party.png" alt="" style={{ height: 32, width: "auto", objectFit: "contain", flexShrink: 0 }} />
-                <span style={{ color: "#f0c14b", fontSize: 19, fontWeight: 700, lineHeight: 1.3, whiteSpace: "pre-line" }}>{L.welkomSub}</span>
+              <div style={{ textAlign: "center" }}>
+                <RundoLogo size={66} />
+                <div style={{ display: "inline-flex", alignItems: "flex-start", gap: 9, marginTop: 13, textAlign: "left", fontSize: 19, fontWeight: 700, lineHeight: 1.35 }}>
+                  <span style={{ fontSize: 24, flexShrink: 0, lineHeight: 1.1 }}>🥂</span>
+                  <span style={{ color: "#fff" }}>{L.welkomSub1}<br /><span style={{ color: "#f0c14b" }}>{L.welkomSub2}</span></span>
+                </div>
               </div>
               {/* Stappen onder elkaar, om beurten links en rechts, met haarlijntjes
                   ertussen. Stap 1 heeft twee manieren, vandaar twee iconen met "of". */}
