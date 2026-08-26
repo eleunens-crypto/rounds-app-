@@ -1055,7 +1055,7 @@ const T = {
 
     confirmTitle: "Even bevestigen",
     walkTable: "👥 Rondje opnemen",
-    roundTogether: "🍻 Ik ga halen en betalen",
+    roundTogether: "Nieuw rondje starten",
     roundWalkSelf: "✍️ Rondje zelf opnemen",
     youFetchTitle: "Jij haalt dit rondje",
     theyTap: "Zij tikken aan",
@@ -1085,7 +1085,9 @@ const T = {
     youAreDone: (n: number) => `✓ Jij bent klaar — ${n} ${n === 1 ? "drankje" : "drankjes"}`,
     allChose: "Iedereen heeft gekozen",
     pickBelow: "👇 Selecteer je drankjes",
-    noRoundTitle: "Er loopt nog geen rondje",
+    noRoundTitle: "Nog geen rondje gestart",
+    noRoundBody: "Start er zelf \u00e9\u00e9n of wacht tot iemand anders start.",
+    justLooking: "Ik kijk nog even rond",
     extrasLine: "⚙️ Extra’s — bekers, coins",
     oneCoinIs: "1 coin =",
     laterLooking: "Later, ik kijk nog even",
@@ -1135,7 +1137,7 @@ const T = {
     reminderTitle: "⏰ Nog even jouw keuze",
     reminderBody: (naam: string) => `${naam} klaar om drankjes te halen. Tik aan wat je wil — of laat weten dat je niets neemt.`,
     reminderChoose: "Ik kies iets →",
-    everyoneTapsOwn: "📱 Iedereen tikt zelf aan op zijn gsm",
+    everyoneTapsOwn: "iedereen tikt zelf aan op zijn gsm",
     walkDone: "✓ Klaar",
     walkFor: (n: string) => `Wat wil ${n}?`,
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
@@ -1838,7 +1840,7 @@ const T = {
 
     confirmTitle: "Confirmation",
     walkTable: "👥 Faire le tour",
-    roundTogether: "🍻 Je vais chercher et payer",
+    roundTogether: "Lancer une tourn\u00e9e",
     roundWalkSelf: "✍️ Prendre la tournée toi-même",
     youFetchTitle: "Tu vas chercher cette tourn\u00e9e",
     theyTap: "Ils cochent",
@@ -1868,7 +1870,9 @@ const T = {
     youAreDone: (n: number) => `✓ Tu as fini — ${n} boisson${n === 1 ? "" : "s"}`,
     allChose: "Tout le monde a choisi",
     pickBelow: "👇 Choisis tes boissons",
-    noRoundTitle: "Aucune tournée en cours",
+    noRoundTitle: "Aucune tourn\u00e9e lanc\u00e9e",
+    noRoundBody: "Lance-en une toi-m\u00eame ou attends que quelqu'un d'autre commence.",
+    justLooking: "Je regarde encore un peu",
     extrasLine: "⚙️ Extras — gobelets, coins",
     oneCoinIs: "1 coin =",
     laterLooking: "Plus tard, je regarde encore",
@@ -1919,7 +1923,7 @@ const T = {
     reminderTitle: "⏰ Ton choix, vite",
     reminderBody: (naam: string) => `${naam} est prêt à aller chercher les boissons. Coche ce que tu veux — ou dis que tu ne prends rien.`,
     reminderChoose: "Je choisis →",
-    everyoneTapsOwn: "📱 Chacun coche sur son propre gsm",
+    everyoneTapsOwn: "chacun coche sur son propre t\u00e9l\u00e9phone",
     walkDone: "✓ Terminé",
     walkFor: (n: string) => `Que veut ${n} ?`,
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
@@ -3111,13 +3115,11 @@ export default function PartyTest() {
       // Twee wegen, elk met de uitleg in de knop zelf: de keuze gaat niet over "welke
       // knop" maar over wie er aantikt.
       return (
-        <div style={{ ...S.card, background: "rgba(240,165,0,0.08)", border: "1.5px solid rgba(240,165,0,0.4)" }}>
-          <button style={{ ...S.btnP, width: "100%", padding: "13px 10px", marginBottom: 9 }} onClick={() => setStartCheck(true)}>
-            <span style={{ display: "block", fontSize: 19, fontWeight: 800 }}>{L.roundTogether}</span>
-            <span style={{ display: "block", fontSize: 15.5, fontWeight: 600, opacity: 0.95, marginTop: 3 }}>{L.everyoneTapsOwn}</span>
-          </button>
-
-        </div>
+        <button onClick={() => setStartCheck(true)}
+          style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "12px 10px", textAlign: "center", lineHeight: 1.3, fontFamily: "inherit", color: "#fff", background: MODUS_FAIR.knop, boxShadow: `0 4px 14px -6px ${MODUS_FAIR.gloed}`, marginBottom: 11 }}>
+          <span style={{ display: "block", fontSize: 18, fontWeight: 600 }}>{L.roundTogether}</span>
+          <span style={{ display: "block", fontSize: 14, fontWeight: 500, color: "#d6f2f6", marginTop: 3 }}>📱 {L.everyoneTapsOwn}</span>
+        </button>
       )
     }
     if (ikHaal) {
@@ -6260,15 +6262,12 @@ export default function PartyTest() {
       {geenRondje && (
         <div style={{ ...S.overlay, zIndex: 75 }} onClick={() => setGeenRondje(false)}>
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 30, marginBottom: 5 }}>🍻</div>
-            <div style={{ fontSize: 19.5, fontWeight: 800, color: "#1d2942", marginBottom: 6 }}>{L.noRoundTitle}</div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", background: "rgba(240,165,0,0.13)", borderRadius: 11, padding: "10px 12px", marginBottom: 13, textAlign: "left" }}>
-              <span style={{ flexShrink: 0 }}>💰</span>
-              <span style={{ fontSize: 15, color: "#8a5e0f", lineHeight: 1.45 }}>{L.youAdvance}</span>
-            </div>
-            <button onClick={() => { setGeenRondje(false); setStartCheck(true) }} style={{ ...S.btnP, width: "100%", boxSizing: "border-box", padding: "13px 10px", fontSize: 17.5, fontWeight: 800, marginBottom: 8 }}>{L.roundTogether}</button>
-            {!settle && <button onClick={() => { setGeenRondje(false); setWalkCheck(true) }} style={{ ...S.btn, width: "100%", boxSizing: "border-box", padding: "13px 10px", fontSize: 17, fontWeight: 800, cursor: "pointer" }}>{L.roundWalkSelf}</button>}
-            <button onClick={() => setGeenRondje(false)} style={{ width: "100%", boxSizing: "border-box", marginTop: 8, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(29,41,66,0.25)", color: "#6b7484", borderRadius: 12, padding: "12px 10px", fontSize: 16, fontWeight: 800 }}>{L.laterLooking}</button>
+            <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 7 }}>{L.noRoundTitle}</div>
+            <div style={{ fontSize: 16, color: MODUS_FAIR.tekst, lineHeight: 1.5, marginBottom: 15, maxWidth: 290, marginLeft: "auto", marginRight: "auto" }}>{L.noRoundBody}</div>
+            <button onClick={() => { setGeenRondje(false); setStartCheck(true) }}
+              style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 10px", fontSize: 16.5, fontWeight: 600, fontFamily: "inherit", color: "#fff", background: MODUS_FAIR.knop, marginBottom: 8 }}>{L.roundTogether}</button>
+            <button onClick={() => setGeenRondje(false)}
+              style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#6b7484", borderRadius: 12, padding: "12px 10px", fontSize: 14.5, fontWeight: 600, fontFamily: "inherit" }}>{L.justLooking}</button>
           </div>
         </div>
       )}
@@ -6470,7 +6469,7 @@ export default function PartyTest() {
             <div style={{ textAlign: "center", marginBottom: 13 }}>
               <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 5 }}>{L.youFetchTitle}</div>
               <div style={{ fontSize: 15, color: MODUS_FAIR.tekst, lineHeight: 1.55 }}>
-                <b>{L.theyTap}</b> {L.theyTapRest}<br />
+📱 <b>{L.theyTap}</b> {L.theyTapRest}<br />
                 <b>{L.youPay}</b> {L.youPayRest}
               </div>
             </div>
@@ -8370,7 +8369,7 @@ export default function PartyTest() {
     // gekozen is — bij "zonder namen" bestaat voorWie niet.
     const voorWieIdx = people.findIndex((pp) => pp.id === voorWie)
     const voorWieKleur = voorWieIdx >= 0 ? gastKleur(voorWieIdx) : "#F5B301"
-    const qrBalk = !!voorWie && settle
+    const qrBalk = !!voorWie && settle && !!openRoundId
     const needCups = depositOn && (people.some((p) => pickedUpOf(p.id) > 0) || people.some((p) => cupsBal(p.id) !== 0))
     const gaveBackTotal = people.reduce((a, p) => a + (gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id))), 0)
     const cupsBlock = needCups && !cupsChecked
