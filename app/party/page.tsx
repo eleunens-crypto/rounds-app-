@@ -670,6 +670,14 @@ const T = {
     noRoundClosed: "Er is nog geen rondje afgesloten.",
     whatYouDrank: "Wat jij dronk",
     whatDidItCost: "WAT KOSTTE DIT RONDJE?",
+    fromPotQ: "Kwam er iets uit de pot?",
+    noSelfPaid: "nee, zelf betaald",
+    yesFromPot: "ja, uit de pot",
+    fromPotLabel: "Uit de pot",
+    notFromPotLabel: "Niet uit de pot",
+    wholeRoundFromPot: "Het hele rondje gaat uit de pot.",
+    potLeftAfter: "Daarna blijft er in de pot:",
+    confirmPayBtn: "Betaling bevestigen",
     howMuchFromPot: "Hoeveel uit de pot?",
     potNothing: "niets",
     potAll: "alles",
@@ -1430,6 +1438,14 @@ const T = {
     noRoundClosed: "Aucune tournée n'est encore clôturée.",
     whatYouDrank: "Ce que tu as bu",
     whatDidItCost: "COMBIEN A CO\u00dbT\u00c9 CETTE TOURN\u00c9E\u00a0?",
+    fromPotQ: "Une partie vient de la cagnotte\u00a0?",
+    noSelfPaid: "non, pay\u00e9 soi-m\u00eame",
+    yesFromPot: "oui, de la cagnotte",
+    fromPotLabel: "De la cagnotte",
+    notFromPotLabel: "Hors cagnotte",
+    wholeRoundFromPot: "Toute la tourn\u00e9e sort de la cagnotte.",
+    potLeftAfter: "Il restera dans la cagnotte\u00a0:",
+    confirmPayBtn: "Confirmer le paiement",
     howMuchFromPot: "Combien de la cagnotte\u00a0?",
     potNothing: "rien",
     potAll: "tout",
@@ -9145,79 +9161,92 @@ export default function PartyTest() {
                 <span style={{ fontSize: 17, fontWeight: 800, color: "#1d2942" }}>💶 {L.paidForRoundQ(idx + 1)}</span>
                 <span onClick={() => setShowPot(true)} style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#2f6fb5", cursor: "pointer", textDecoration: "underline", lineHeight: 1.2 }}>{L.potTopUpPlus}</span>
               </div>
-              {/* Eén bedrag, dan één vraag. De oude opzet had drie standen (zelf, pot, mix)
-                  waarbij je in het potveld nooit meer dan het saldo typte — waardoor het
-                  splitsvoorstel nooit verscheen. Nu vul je eerst in wat het rondje kostte
-                  en kies je daarna hoeveel daarvan uit de pot kwam: niets, alles, of een
-                  deel. Splitsen is geen aparte stand meer maar gewoon de derde knop. */}
+              {/* Eén bedrag, dan één vraag — en die tweede vraag pas als er iets in de pot
+                  zit. Bij een leeg bedrag toonde het scherm eerder al de hele potvraag met
+                  een tweede veld en een rekenregel, over geld dat er nog niet was. Nu klapt
+                  dat pas open wanneer het ergens over gaat. */}
               <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: "0.04em", color: "#1d2942", marginBottom: 9 }}>{L.whatDidItCost}</div>
-              <div style={{ display: "flex", gap: 7, alignItems: "center", marginBottom: potAvail > 0.005 ? 11 : 0 }}>
+              <div style={{ display: "flex", gap: 7, alignItems: "center", marginBottom: 12 }}>
                 <span style={{ fontSize: 17, fontWeight: 800, color: "#6b7484" }}>€</span>
                 <input {...bedragVeld(`hub-${idx}`, amount, (v) => qSetAmount(idx, v))}
                   onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
-                  style={{ ...S.input, flex: 1, minWidth: 0, textAlign: "left", fontSize: 19, fontWeight: 800, border: `1.5px solid ${amount > 0.005 ? RAND : "rgba(29,41,66,0.22)"}`, color: "#1d2942" }} />
-                {potAvail <= 0.005 && (
-                  <button className={amount > 0.005 ? "rundo-pulse-amber" : undefined}
-                    style={{ padding: "0 17px", height: 52, borderRadius: 999, fontSize: 16, fontWeight: 600, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "inherit",
-                      background: amount > 0.005 ? "#e08a00" : "rgba(240,165,0,0.22)", color: amount > 0.005 ? "#fff" : "#6b4a00", border: "1.5px solid rgba(200,138,0,0.75)" }}
-                    onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) { setPayVia("self"); confirmQuickPay() } }}>
-                    <span style={{ fontSize: 20 }}>✓</span> {L.okKort}</button>
-                )}
+                  style={{ ...S.input, flex: 1, minWidth: 0, textAlign: "left", fontSize: 19, fontWeight: 800, border: `1.5px solid ${amount > 0.005 ? RAND : "rgba(29,41,66,0.25)"}`, color: "#1d2942" }} />
               </div>
 
-              {/* Alleen vragen als er iets in de pot zit — anders is er niets te kiezen. */}
-              {potAvail > 0.005 && (() => {
+              {(() => {
                 const potdeel = payVia === "pot" ? amount : payVia === "mix" ? Math.max(0, Math.min(mixPot, amount)) : 0
-                const rest = Math.max(0, amount - potdeel)
-                const kiesNiets = () => { setPayVia("self"); setMixPot(0); setMixZelf(amount) }
-                const kiesAlles = () => { setPayVia("pot"); setMixPot(amount); setMixZelf(0) }
-                const kiesDeel = () => { const d = Math.round(Math.min(potAvail, amount) * 100) / 100; setMixPot(d); setMixZelf(Math.round((amount - d) * 100) / 100); setMixFocus("pot"); setPayVia("mix") }
-                const knop = (aan: boolean, tekst: string, doe: () => void) => (
+                const rest = Math.round(Math.max(0, amount - potdeel) * 100) / 100
+                const potNa = Math.round(Math.max(0, potAvail - potdeel) * 100) / 100
+                const teVeel = potdeel > potAvail + 0.005
+                const wissel = (aan: boolean, tekst: string, doe: () => void, kleur: string) => (
                   <button onClick={doe} style={{ flex: 1, textAlign: "center", cursor: "pointer", fontFamily: "inherit", border: "none",
-                    background: aan ? "#2f6fb5" : "transparent",
-                    boxShadow: aan ? "0 2px 6px -2px rgba(47,111,181,0.55)" : "none",
-                    color: aan ? "#fff" : "#1d2942", borderRadius: 999, padding: "9px 4px", fontSize: 14.5, fontWeight: 600 }}>{tekst}</button>
+                    background: aan ? kleur : "transparent", boxShadow: aan ? `0 2px 6px -2px ${kleur}99` : "none",
+                    color: aan ? (kleur === RAND ? RANDTEKST : "#fff") : "#1d2942",
+                    borderRadius: 999, padding: "9px 4px", fontSize: 13.5, fontWeight: 600 }}>{tekst}</button>
                 )
-                return (
-                  <div style={{ borderTop: "1px solid rgba(29,41,66,0.14)", paddingTop: 10 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                      <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1d2942" }}>{L.howMuchFromPot}</span>
-                      <span style={{ flexShrink: 0, fontSize: 11.5, fontWeight: 700, color: "#2f5693", display: "inline-flex", alignItems: "center", gap: 5 }}><ZakjeIcoon size={13} /> {L.mixPotAvail(euro(potAvail))}</span>
+                return (<>
+                  {/* Alleen vragen als er iets te halen valt. */}
+                  {potAvail > 0.005 && amount > 0.005 && (<>
+                    <div style={{ fontSize: 13.5, color: "#4a5567", marginBottom: 8 }}>{L.fromPotQ}</div>
+                    <div style={{ ...S.segBaan, marginBottom: 10 }}>
+                      {wissel(payVia === "self", L.noSelfPaid, () => { setPayVia("self"); setMixPot(0) }, RAND)}
+                      {wissel(payVia !== "self", L.yesFromPot, () => { const d = Math.round(Math.min(potAvail, amount) * 100) / 100; setMixPot(d); setPayVia(d >= amount - 0.005 ? "pot" : "mix") }, "#2f6fb5")}
                     </div>
-                    <div style={{ display: "flex", background: "#eef1f6", border: "1.5px solid rgba(29,41,66,0.28)", borderRadius: 999, padding: 3, marginBottom: 9 }}>
-                      {knop(payVia === "self", L.potNothing, kiesNiets)}
-                      {knop(payVia === "pot", L.potAll, kiesAlles)}
-                      {knop(payVia === "mix", L.potPart, kiesDeel)}
-                    </div>
-                    {payVia === "mix" && (
-                      <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8 }}>
-                        <span style={{ fontSize: 15, color: "#6b7484" }}>€</span>
-                        <input {...bedragVeld(`mixpot-${idx}`, mixPot, (v) => { const d = Math.max(0, Math.min(v, amount)); setMixPot(d); setMixZelf(Math.round((amount - d) * 100) / 100) })}
-                          style={{ ...S.input, flex: 1, minWidth: 0, textAlign: "left", fontSize: 17, fontWeight: 800, background: "#f2f6fc", border: "1.5px solid #2f6fb5", color: "#2f5693" }} />
+                  </>)}
+
+                  {potAvail > 0.005 && amount > 0.005 && payVia !== "self" && (
+                    <div style={{ background: "#eef4fb", border: "1px solid rgba(47,111,181,0.25)", borderRadius: 11, padding: 11, marginBottom: 12 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 9 }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 800, color: "#2f5693" }}>{L.howMuchFromPot}</span>
+                        <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 15, fontWeight: 800, color: "#2f5693", display: "inline-flex", alignItems: "center", gap: 4 }}><ZakjeIcoon size={14} /> {euro(potAvail)}</span>
+                          <span onClick={() => setShowPot(true)} style={{ fontSize: 12, fontWeight: 800, color: "#2f6fb5", textDecoration: "underline", cursor: "pointer", whiteSpace: "nowrap" }}>{L.potTopUpPlus}</span>
+                        </span>
                       </div>
-                    )}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                      <span style={{ minWidth: 0, fontSize: 12.5, fontWeight: 700, color: "#6b7484" }}>
-                        {L.restOutsidePot} <b style={{ color: rest > 0.005 ? "#c88a1a" : "#6b7484" }}>{euro(rest)}</b>
-                        {potdeel > potAvail + 0.005 && <span style={{ display: "block", color: "#b0402f", fontWeight: 800 }}>{L.potShortTitle}</span>}
-                      </span>
-                      <button className={amount > 0.005 && potdeel <= potAvail + 0.005 ? (potdeel > 0.005 ? "rundo-pulse-pot" : "rundo-pulse-amber") : undefined}
-                        style={{ flexShrink: 0, padding: "0 17px", height: 48, borderRadius: 999, fontSize: 15.5, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "inherit",
-                          background: amount > 0.005 ? (potdeel > 0.005 ? "#2f6fb5" : "#e08a00") : "rgba(240,165,0,0.22)",
-                          color: amount > 0.005 ? "#fff" : "#6b4a00",
-                          border: `1.5px solid ${potdeel > 0.005 ? "#2f6fb5" : "rgba(200,138,0,0.75)"}` }}
-                        onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}>
-                        <span style={{ fontSize: 19 }}>✓</span> {L.okKort}</button>
+                      <div style={{ ...S.segBaan, background: "#fff", marginBottom: 10 }}>
+                        {wissel(payVia === "pot", L.potAll, () => { setMixPot(amount); setPayVia("pot") }, "#2f6fb5")}
+                        {wissel(payVia === "mix", L.potPart, () => { const d = Math.round(Math.min(potAvail, amount) * 100) / 100; setMixPot(d); setPayVia("mix") }, "#2f6fb5")}
+                      </div>
+                      {payVia === "pot" ? (
+                        /* Alles uit de pot: geen rest, maar wél nuttig om te zeggen wat er
+                           daarna nog in de pot zit. */
+                        <div style={{ textAlign: "center", fontSize: 14.5, fontWeight: 700, color: "#2f5693", lineHeight: 1.5, padding: "2px 0" }}>
+                          {L.wholeRoundFromPot}<br />
+                          <span style={{ color: "#4a5567" }}>{L.potLeftAfter} <b style={{ fontSize: 17, color: "#2f5693" }}>{euro(potNa)}</b></span>
+                        </div>
+                      ) : (<>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0" }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#2f5693" }}>{L.fromPotLabel}</span>
+                          <input {...bedragVeld(`mixpot-${idx}`, mixPot, (v) => setMixPot(Math.max(0, Math.min(v, amount))))}
+                            style={{ ...S.input, width: 104, padding: "6px 11px", textAlign: "right", fontSize: 17, fontWeight: 800, background: "#fff", border: `1.5px solid ${teVeel ? "#b0402f" : "#2f6fb5"}`, color: "#2f5693" }} />
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0" }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#8a5e0f" }}>{L.notFromPotLabel}</span>
+                          <span style={{ fontSize: 18, fontWeight: 800, color: "#c88a1a" }}>+ {euro(rest)}</span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0 0", marginTop: 4, borderTop: "1.5px solid rgba(47,111,181,0.3)" }}>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: "#1d2942" }}>{L.togetherWord}</span>
+                          <span style={{ fontSize: 18, fontWeight: 800, color: "#1d2942" }}>{euro(amount)}</span>
+                        </div>
+                      </>)}
+                      {teVeel && <div style={{ fontSize: 13, fontWeight: 800, color: "#b0402f", marginTop: 8 }}>{L.potShortTitle}</div>}
                     </div>
-                  </div>
-                )
+                  )}
+
+                  <button className={amount > 0.005 && !teVeel ? (potdeel > 0.005 ? "rundo-pulse-pot" : "rundo-pulse-amber") : undefined}
+                    style={{ width: "100%", border: "none", borderRadius: 12, padding: "13px 0", fontSize: 16.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: "#fff",
+                      background: amount <= 0.005 ? "#b9c2cf" : potdeel > 0.005 ? "#2f6fb5" : "#e08a00",
+                      boxShadow: amount > 0.005 ? `0 3px 10px -3px ${potdeel > 0.005 ? "rgba(47,111,181,0.7)" : "rgba(224,138,0,0.7)"}` : "none" }}
+                    onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}>
+                    ✓ {L.confirmPayBtn}</button>
+                </>)
               })()}
 
               </div>
             </div>
             {/* Overslaan is geen manier van betalen maar de keuze om het nu niet te doen:
                 daarom een eigen knop onder de kaart, niet binnen de betaalafdeling. */}
-            <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 16, fontWeight: 800 }}
+            <button style={{ ...S.btn, width: "100%", marginTop: 10, padding: "12px 0", fontSize: 15.5, fontWeight: 600, borderRadius: 12, color: "#1d2942" }}
               onClick={() => closeQuickRound(true)}>{L.skipPayment}</button>
           </>
           )
