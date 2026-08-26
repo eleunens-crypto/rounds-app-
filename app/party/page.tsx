@@ -5805,13 +5805,6 @@ export default function PartyTest() {
           {potSpent > 0 && <span style={{ ...S.pill, background: "rgba(47,111,181,0.12)", color: "#2f6fb5", fontSize: 15.5, padding: "4px 10px" }}>besteed {euro(potSpent)}</span>}
           <span style={{ ...S.pill, background: potRemaining > 0 ? "rgba(47,111,181,0.14)" : "rgba(224,104,92,0.14)", color: potRemaining > 0 ? "#2f6fb5" : "#c0554a", fontSize: 15.5, padding: "4px 10px", fontWeight: 800 }}>nog {euro(potRemaining)}</span>
         </div>
-        {settle && !fromQuick && (
-        <div style={{ ...S.segBaan, marginBottom: 8 }}>
-          <div onClick={() => setPotIsCard(false)} style={{ ...S.seg(!potIsCard), padding: "8px 6px", fontSize: 15.5 }}>{L.potMoney}</div>
-          <div onClick={() => setPotIsCard(true)} style={{ ...S.seg(potIsCard), padding: "8px 6px", fontSize: 15.5 }}>{L.drinkCard}</div>
-        </div>
-        )}
-        {settle && <div style={{ fontSize: 15, color: "#6b7484", marginBottom: 12, lineHeight: 1.5 }}>{potIsCard ? "💳 Drankkaart van de groep — leg de kaartwaarde (bv. €15) in. Wat niet opgedronken wordt, is verloren en wordt gelijk over iedereen verdeeld." : <><ZakjeIcoon size={15} /> Echt geld — wat niet opgaat, krijgen de inleggers terug bij de afrekening.</>}</div>}
 
 
         {potRounds.map((r, i) => {
@@ -8030,7 +8023,7 @@ export default function PartyTest() {
             const mijnIdx = mijnPlaats ? people.indexOf(mijnPlaats) : -1
             return mijnPlaats ? (
               <>
-                <div style={{ fontSize: 18.5, fontWeight: 800, color: "#1d2942", marginBottom: 8 }}>👑 {L.whoAreYouTitle}</div>
+                <div style={{ fontSize: 18.5, fontWeight: 800, color: "#1d2942", marginBottom: 8 }}>{L.whoAreYouTitle}</div>
                 <div style={{ ...S.row, gap: 8, marginBottom: 14 }}>
                   <span style={{ width: 26, height: 26, borderRadius: "50%", background: MODUS_FAIR.tint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><KroonIcoon size={14} kleur={MODUS_FAIR.tekst} /></span>
                   <input value={isGuestDefault(mijnPlaats.name) ? "" : mijnPlaats.name}
@@ -8043,9 +8036,13 @@ export default function PartyTest() {
           })()}
           {/* De groepsnaam is voortaan verplicht: leeg veld zolang er alleen een
               autonaam bestaat, en de QR-knop onderaan blijft gedimd tot hij gevuld is. */}
-          <div style={{ fontSize: 15.5, fontWeight: 800, color: "#6b7484", marginBottom: 6 }}>📝 {L.groupNameEdit}</div>
+          <div style={{ borderTop: "1px solid rgba(29,41,66,0.14)", margin: "14px 0" }} />
+          <div style={{ fontSize: 18.5, fontWeight: 800, color: "#1d2942", marginBottom: 8 }}>{L.groupNameEdit}</div>
+          <div style={{ ...S.row, gap: 8 }}>
+            <span style={{ width: 26, height: 26, borderRadius: "50%", background: MODUS_FAIR.tint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>📝</span>
           <input value={isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={(e) => { if (!e.target.value.trim()) setGroupName(settle ? L.autoNameQr() : L.autoName()); persistSettings() }} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.namePh3}
             style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 18, fontWeight: 700, padding: "10px 11px", borderRadius: 10, background: "#fff", border: "1.5px solid rgba(13,124,140,0.5)", marginBottom: 14 }} />
+          </div>
           {settle && TOON_EXTRAS && (<>
             <div onClick={() => setExtrasOpen((v) => !v)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, cursor: "pointer", borderTop: "1px solid rgba(29,41,66,0.12)", marginTop: 12, paddingTop: 11 }}>
               <span style={{ fontSize: 16, fontWeight: 700, color: "#6b7484" }}>{L.extrasLine}</span>
