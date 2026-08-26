@@ -2236,13 +2236,9 @@ export default function PartyTest() {
   const [lang] = useLang()
   const L = T[(lang === "fr" ? "fr" : "nl") as "nl" | "fr"]
   const [view, setView] = useState<"start" | "setup" | "settings" | "order" | "confirmed" | "hub" | "final" | "quickSettle" | "fairSetup" | "roundsOverview" | "payers">("start")
-  const [payRaw, setPay] = useState<"eur" | "coin">("eur")
-  const pay: "eur" | "coin" = "eur"
-  void payRaw
+  const [pay, setPay] = useState<"eur" | "coin">("eur")
   const [coinValue, setCoinValue] = useState(3.9)
-  const [depositRaw, setDepositOn] = useState(false)
-  const depositOn = false
-  void depositRaw
+  const [depositOn, setDepositOn] = useState(false)
   const [depositValue, setDepositValue] = useState(1)
   const [depositUnit, setDepositUnit] = useState<"eur" | "coin">("eur")
   const [showPot, setShowPot] = useState(false)
@@ -3638,9 +3634,9 @@ export default function PartyTest() {
       setGroupName(g.name || "")
       setInviteCode(g.invite_code)
       setOwnerDevice(g.owner_id)
-      setPay(g.pay as "eur" | "coin")
+      setPay("eur")   // coins komen later; wat er in de groep staat negeren we
       setCoinValue(Number(g.coin_value))
-      setDepositOn(!!g.deposit_on)
+      setDepositOn(false)   // bekers komen later
       setDepositValue(Number(g.deposit_value))
       setDepositUnit(g.deposit_unit as "eur" | "coin")
       setPotIsCard(!!g.pot_is_card)
@@ -8627,10 +8623,10 @@ export default function PartyTest() {
                 {false ? (
                   <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
                     <input autoFocus value={pilNaamVeld} onChange={(e) => setPilNaamVeld(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") { renamePerson(pilNaamId, pilNaamVeld); setPilNaamId(null) } }}
+                      onKeyDown={(e) => { if (e.key === "Enter" && pilNaamId) { renamePerson(pilNaamId, pilNaamVeld); setPilNaamId(null) } }}
                       placeholder={L.guestNamePh}
                       style={{ ...S.input, flex: 1, minWidth: 0, textAlign: "left", fontSize: 16, fontWeight: 800, border: "1.5px solid rgba(240,165,0,0.6)" }} />
-                    <button onClick={() => { renamePerson(pilNaamId, pilNaamVeld); setPilNaamId(null) }}
+                    <button onClick={() => { if (pilNaamId) renamePerson(pilNaamId, pilNaamVeld); setPilNaamId(null) }}
                       style={{ ...S.btnP, flexShrink: 0, padding: "9px 13px", fontSize: 15 }}>✓</button>
                     <button onClick={() => setPilNaamId(null)}
                       style={{ background: "none", border: "none", fontSize: 14, fontWeight: 800, color: "#6b7484", textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{L.cancel}</button>
