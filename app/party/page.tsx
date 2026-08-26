@@ -2679,12 +2679,20 @@ export default function PartyTest() {
   // Zachte melding wanneer iemand nieuw aansluit. Vervaagt vanzelf; alleen de admin
   // krijgt een knop om het terug te draaien (voor als een vreemde de link kreeg).
   const [newcomer, setNewcomer] = useState<{ id: string; name: string } | null>(null)
-  // Puur ter info: na een paar tellen weg, zodat niemand hem hoeft weg te tikken.
+  // De melding dooft bij een gast pas na een paar seconden kíjken. Een gewone timer
+  // loopt door op een slapend scherm; dan zou hij hem nooit gezien hebben.
   useEffect(() => {
-    if (!newcomer) return
-    const t = setTimeout(() => setNewcomer(null), 5000)
-    return () => clearTimeout(t)
-  }, [newcomer])
+    if (!newcomer || isAdmin) return
+    let over = 5000
+    let sinds = document.visibilityState === "visible" ? Date.now() : 0
+    let t: ReturnType<typeof setTimeout> | null = null
+    const start = () => { sinds = Date.now(); t = setTimeout(() => setNewcomer(null), over) }
+    const pauze = () => { if (t) { clearTimeout(t); t = null; over -= Date.now() - sinds } }
+    const wissel = () => { if (document.visibilityState === "visible") start(); else pauze() }
+    if (sinds) start()
+    document.addEventListener("visibilitychange", wissel)
+    return () => { if (t) clearTimeout(t); document.removeEventListener("visibilitychange", wissel) }
+  }, [newcomer, isAdmin])
   const knownPeople = useRef<Set<string>>(new Set())
 
   // edit-in-hub
@@ -3535,7 +3543,6 @@ export default function PartyTest() {
       // plaats die net geclaimd werd. Niet mezelf.
       if (p.id !== meId && p.claimedBy && (isNieuwePersoon || netGeclaimd)) {
         setNewcomer({ id: p.id, name: p.name })
-        if (!isAdmin) setTimeout(() => setNewcomer((c) => (c && c.id === p.id ? null : c)), 7000)
       }
     }
   }, [people, meId])
