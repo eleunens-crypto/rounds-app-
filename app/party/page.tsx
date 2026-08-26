@@ -8915,20 +8915,21 @@ export default function PartyTest() {
 
         <div style={S.card}>
           {settle && (
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: "#6b7484", marginBottom: 8, textAlign: "center" }}>{L.whoPaidThis}</div>
-              <div style={{ display: "flex", gap: 9 }}>
-                <button onClick={() => { setPayPot(false); if (meId) { setPayPersons([meId]); autoSplit([meId], false) } }}
-                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 13, padding: "15px 8px", fontSize: 17.5, fontWeight: 800,
-                    background: !payPot && payPersons.length > 0 ? MODUS_FAIR.knop : "#fff",
-                    color: !payPot && payPersons.length > 0 ? "#fff" : MODUS_FAIR.tekst,
-                    border: !payPot && payPersons.length > 0 ? "none" : `1.5px solid ${MODUS_FAIR.randZacht}` }}>{L.iPaidBtn}</button>
-                <button onClick={() => { if (st.potAvail <= 0.005) { setNotice(L.potEmptyPay(potIsCard)); return } setPayPersons([]); setPayPot(true); autoSplit([], true) }}
-                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 13, padding: "15px 8px", fontSize: 17.5, fontWeight: 800,
-                    opacity: st.potAvail <= 0.005 ? 0.5 : 1,
-                    background: payPot ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#fff",
-                    color: payPot ? "#fff" : "#8a5e0f",
-                    border: payPot ? "none" : "1.5px solid rgba(240,165,0,0.5)" }}>{potIsCard ? L.fromCardBtn : L.fromPotBtn}</button>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13.5, color: "#4a5567", marginBottom: 8 }}>{L.whoPaidThis}</div>
+              <div style={{ ...S.segBaan }}>
+                {(() => {
+                  const ikBetaalde = !payPot && payPersons.length > 0
+                  const knop = (aan: boolean, tekst: string, doe: () => void, kleur: string) => (
+                    <button onClick={doe} style={{ flex: 1, textAlign: "center", cursor: "pointer", fontFamily: "inherit", border: "none",
+                      background: aan ? kleur : "transparent", boxShadow: aan ? `0 2px 6px -2px ${kleur}99` : "none",
+                      color: aan ? "#fff" : "#1d2942", borderRadius: 999, padding: "10px 4px", fontSize: 14.5, fontWeight: 600 }}>{tekst}</button>
+                  )
+                  return (<>
+                    {knop(ikBetaalde, L.iPaidBtn, () => { setPayPot(false); if (meId) { setPayPersons([meId]); autoSplit([meId], false) } }, MODUS_FAIR.rand)}
+                    {knop(payPot, potIsCard ? L.fromCardBtn : L.fromPotBtn, () => { if (st.potAvail <= 0.005) { setNotice(L.potEmptyPay(potIsCard)); return } setPayPersons([]); setPayPot(true); autoSplit([], true) }, "#0f7d90")}
+                  </>)
+                })()}
               </div>
             </div>
           )}
