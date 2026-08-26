@@ -90,7 +90,7 @@ function BewaarIcoon({ aan, size = 19 }: { aan: boolean; size?: number }) {
       <path d="M8.4 13.4h7.2v5.2H8.4z" fill="#fff" />
       {!aan && (<>
         <path d="M3.4 20.6L20.6 3.4" stroke="#fff" strokeWidth="3.6" strokeLinecap="round" />
-        <path d="M3.4 20.6L20.6 3.4" stroke="#5a6680" strokeWidth="1.7" strokeLinecap="round" />
+        <path d="M3.4 20.6L20.6 3.4" stroke="#4a6e73" strokeWidth="1.7" strokeLinecap="round" />
       </>)}
     </svg>
   )
@@ -115,7 +115,7 @@ const MAX_PINS = 3
 // de schreefloze naam leest als een handgeschreven aantekening: het valt op zonder te
 // schreeuwen, en het neemt weinig breedte in naast lange namen.
 const S_BEHEERDER: React.CSSProperties = {
-  color: "#1499b0", fontFamily: "Georgia, 'Times New Roman', serif",
+  color: "#0f7d90", fontFamily: "Georgia, 'Times New Roman', serif",
   fontStyle: "italic", fontWeight: 600, whiteSpace: "nowrap",
 }
 
@@ -2731,11 +2731,11 @@ export default function RundoTable() {
             <div key={p.id} onClick={() => { if (clickMine) { setClaimMode("person"); setClaimPid(p.id) } }}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 5px", borderRadius: 7, background: bg, cursor: clickMine ? "pointer" : "default", minWidth: 0 }}>
               <span style={{ fontSize: 16, flexShrink: 0 }}>{icon}</span>
-              <b style={{ flex: 1, minWidth: 0, fontSize: 16, color: st.kind === "free" ? "#9aa0ab" : "#14213a", fontWeight: st.kind === "free" ? 600 : 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <b style={{ flex: 1, minWidth: 0, fontSize: 16, color: st.kind === "free" ? "#8aa3a6" : "#123a42", fontWeight: st.kind === "free" ? 600 : 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {st.kind === "free" ? L.freeSpot : p.name}
-                {(p.seats ?? 1) > 1 && <span style={{ fontSize: 15, fontWeight: 700, color: "#9aa0ab" }}> · {p.seats}p.</span>}
+                {(p.seats ?? 1) > 1 && <span style={{ fontSize: 15, fontWeight: 700, color: "#8aa3a6" }}> · {p.seats}p.</span>}
               </b>
-              <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: rightRed ? 800 : 600, color: rightRed ? "#c0392b" : st.kind === "free" ? "#c3c8d2" : "#9aa0ab" }}>{right}</span>
+              <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: rightRed ? 800 : 600, color: rightRed ? "#c0392b" : st.kind === "free" ? "#b6cacc" : "#8aa3a6" }}>{right}</span>
             </div>
           )
         })}
@@ -3488,9 +3488,9 @@ export default function RundoTable() {
       const p = participants.find((x) => x.id === pid)
       const billFullyAssigned = openUnits === 0 && undecidedShared.length === 0
       if (p && !p.self_joined && billFullyAssigned) return { label: L.statusConfirmed, color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
-      return { label: L.statusBusy, color: "#1499b0", bg: "rgba(90,108,166,0.12)" }
+      return { label: L.statusBusy, color: "#0f7d90", bg: "rgba(90,108,166,0.12)" }
     }
-    return { label: L.statusNothing, color: "#9aa0ab", bg: "rgba(16,24,40,0.05)" }
+    return { label: L.statusNothing, color: "#8aa3a6", bg: "rgba(18,58,66,0.05)" }
   }
 
   const cooldownLeft = Math.max(0, Math.ceil((cooldownUntil - nowTs) / 1000))
@@ -3584,21 +3584,21 @@ export default function RundoTable() {
     const iemandIngevuld = participants.some((p) => p.id !== ownerPid && !isFreeSpot(p))
     // Kleur volgt de fase: compleet = groen, bezig-met-gaten = zacht oranje,
     // net begonnen = neutraal grijs. Nooit rood — lege plekken zijn normaal.
-    const kleur = vrij === 0 ? "#1f8a4c" : iemandIngevuld ? "#b5591a" : "#5a6680"
+    const kleur = vrij === 0 ? "#1f8a4c" : iemandIngevuld ? "#b5591a" : "#4a6e73"
     return (
       <button onClick={() => setShowGroupPeek((v) => !v)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: kleur, padding: "4px 4px", display: "inline-flex", alignItems: "center", gap: 7 }}>
         👥 {L.groupWord}{vrij === 0
           ? <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 12, padding: "2px 9px" }}>✓ {totalPersons}</span>
           : iemandIngevuld
           ? <span style={{ fontSize: 13.5, fontWeight: 800, color: "#b5591a", background: "rgba(243,156,18,0.14)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 12, padding: "2px 9px" }}>{L.nStillFree(vrij)}</span>
-          : <span style={{ fontSize: 13.5, fontWeight: 800, color: "#5a6680", background: "rgba(16,24,40,0.06)", borderRadius: 12, padding: "2px 9px" }}>{totalPersons}</span>} {showGroupPeek ? "▴" : "▾"}
+          : <span style={{ fontSize: 13.5, fontWeight: 800, color: "#4a6e73", background: "rgba(18,58,66,0.06)", borderRadius: 12, padding: "2px 9px" }}>{totalPersons}</span>} {showGroupPeek ? "▴" : "▾"}
       </button>
     )
   }
   const groepPeekLijst = () => {
     const iemandIngevuld = participants.some((q) => q.id !== ownerPid && !isFreeSpot(q))
     return (
-    <div style={{ border: "1px solid rgba(16,24,40,0.12)", borderRadius: 12, padding: "10px 12px", marginTop: 8 }}>
+    <div style={{ border: "1px solid rgba(18,58,66,0.12)", borderRadius: 12, padding: "10px 12px", marginTop: 8 }}>
       {participants.map((p) => {
         const isAdminSpot = p.id === ownerPid
         const vrij = isFreeSpot(p) && !p.self_joined
@@ -3614,13 +3614,13 @@ export default function RundoTable() {
           : vrij
           ? (iemandIngevuld
               ? { icon: "⏳", label: L.tagFree, color: "#b5591a", bg: "rgba(243,156,18,0.14)", brd: "rgba(243,156,18,0.45)" }
-              : { icon: "⏳", label: L.tagFree, color: "#8a93a3", bg: "rgba(16,24,40,0.05)", brd: "transparent" })
+              : { icon: "⏳", label: L.tagFree, color: "#7d999d", bg: "rgba(18,58,66,0.05)", brd: "transparent" })
           : ikDuidAan
           ? { icon: "✍️", label: L.tagByYou, color: "#8a5e0f", bg: "rgba(243,156,18,0.14)", brd: "transparent" }
-          : { icon: "✓", label: L.tagAdded, color: "#5a6680", bg: "rgba(16,24,40,0.06)", brd: "transparent" }
+          : { icon: "✓", label: L.tagAdded, color: "#4a6e73", bg: "rgba(18,58,66,0.06)", brd: "transparent" }
         return (
           <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: vrij ? "#9aa0ab" : "#14213a", fontStyle: vrij ? "italic" : "normal", display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: vrij ? "#8aa3a6" : "#123a42", fontStyle: vrij ? "italic" : "normal", display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
               <span style={{ flexShrink: 0 }}>{cat.icon}</span>
               <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{vrij ? L.freeSpotName : p.name}{!vrij && (p.seats ?? 1) > 1 ? ` · ${p.seats}p.` : ""}</span>
             </span>
@@ -3698,11 +3698,11 @@ export default function RundoTable() {
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 7, margin: "0 0 24px" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icon-table.png" alt="" style={{ height: 20, width: "auto", objectFit: "contain", display: "block" }} />
-            <span style={{ color: "#1499b0", fontSize: 18, fontWeight: 700 }}>{L.tableTagline}</span>
+            <span style={{ color: "#0f7d90", fontSize: 18, fontWeight: 700 }}>{L.tableTagline}</span>
           </div>
 
           <div style={S.card}>
-            <div style={{ fontSize: 16.5, color: "#5a6680", fontWeight: 600, marginBottom: 6 }}>{L.groupName} <span style={{ color: "#c0392b" }}>*</span></div>
+            <div style={{ fontSize: 16.5, color: "#4a6e73", fontWeight: 600, marginBottom: 6 }}>{L.groupName} <span style={{ color: "#c0392b" }}>*</span></div>
             <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && createGroup()} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 14 }} />
             <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 19, fontWeight: 700 }} onClick={createGroup} disabled={busy}>{busy ? L.loading : L.startGroup}</button>
           </div>
@@ -3714,8 +3714,8 @@ export default function RundoTable() {
           {myGroups.length > 0 && (
             <div style={{ ...S.card, marginTop: 14 }}>
               <div onClick={() => setShowSaved((v) => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-                <span style={{ fontSize: 16.5, fontWeight: 800, color: "#3b486a" }}>{L.savedGroups} <span style={{ color: "#9aa0ab", fontWeight: 700 }}>({myGroups.length})</span></span>
-                <span style={{ fontSize: 16, color: "#9aa0ab", fontWeight: 700 }}>{showSaved ? L.hide : L.show}</span>
+                <span style={{ fontSize: 16.5, fontWeight: 800, color: "#2b4f56" }}>{L.savedGroups} <span style={{ color: "#8aa3a6", fontWeight: 700 }}>({myGroups.length})</span></span>
+                <span style={{ fontSize: 16, color: "#8aa3a6", fontWeight: 700 }}>{showSaved ? L.hide : L.show}</span>
               </div>
               {showSaved && (() => {
                 const zoek = groepZoek.trim().toLowerCase()
@@ -3733,27 +3733,27 @@ export default function RundoTable() {
                   <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                     <button onClick={() => openSavedGroup(g.id)} disabled={busy} style={{ ...S.btn, flex: 1, minWidth: 0, textAlign: "left", padding: "11px 13px", fontWeight: 700 }}>
                       <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}</span>
-                      <span style={{ fontSize: 15.5, fontWeight: 700, color: g.role === "admin" ? "#1499b0" : "#9aa0ab" }}>
+                      <span style={{ fontSize: 15.5, fontWeight: 700, color: g.role === "admin" ? "#0f7d90" : "#8aa3a6" }}>
                         {g.role === "admin" ? L.roleAdmin : L.roleGuest}{fmtDate(g.created_at ?? g.savedAt, lang) ? ` · ${fmtDate(g.created_at ?? g.savedAt, lang)}` : ""}
                         {g.role === "admin" && !g.pinned && <span style={{ color: "#c0392b" }}> · {L.daysLeft(dagenOver(g))}</span>}
                       </span>
                     </button>
                     {g.role === "admin" && (
                       <button onClick={() => togglePin(g)} title={g.pinned ? L.unpinTitle : L.pinTitle}
-                        style={{ ...S.iconBtn, flexShrink: 0, color: g.pinned ? "#0f7488" : "#8a93a3", background: g.pinned ? "rgba(20,153,176,0.12)" : "#fff", border: g.pinned ? "1px solid rgba(20,153,176,0.45)" : "1px solid rgba(16,24,40,0.2)" }}><BewaarIcoon aan={!!g.pinned} /></button>
+                        style={{ ...S.iconBtn, flexShrink: 0, color: g.pinned ? "#0f7488" : "#7d999d", background: g.pinned ? "rgba(20,153,176,0.12)" : "#fff", border: g.pinned ? "1px solid rgba(20,153,176,0.45)" : "1px solid rgba(18,58,66,0.2)" }}><BewaarIcoon aan={!!g.pinned} /></button>
                     )}
                     <button onClick={() => forgetSavedGroup(g.id)} title={L.deletePermanently}
-                      style={{ ...S.iconBtn, flexShrink: 0, color: "#5a6680" }}><WisIcoon /></button>
+                      style={{ ...S.iconBtn, flexShrink: 0, color: "#4a6e73" }}><WisIcoon /></button>
                   </div>
                 )
                 return (
                 <div style={{ marginTop: 10 }}>
                   {myGroups.length > 4 && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(16,24,40,0.03)", border: "1px solid rgba(16,24,40,0.12)", borderRadius: 11, padding: "8px 12px", marginBottom: 10 }}>
-                      <span style={{ fontSize: 15, color: "#9aa0ab" }}>🔍</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(18,58,66,0.03)", border: "1px solid rgba(18,58,66,0.12)", borderRadius: 11, padding: "8px 12px", marginBottom: 10 }}>
+                      <span style={{ fontSize: 15, color: "#8aa3a6" }}>🔍</span>
                       <input value={groepZoek} onChange={(e) => setGroepZoek(e.target.value)} placeholder={L.searchGroups}
-                        style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: 16, fontFamily: "inherit", color: "#14213a" }} />
-                      {groepZoek && <span onClick={() => setGroepZoek("")} style={{ cursor: "pointer", fontSize: 15, color: "#9aa0ab", padding: "0 2px" }}>✕</span>}
+                        style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: 16, fontFamily: "inherit", color: "#123a42" }} />
+                      {groepZoek && <span onClick={() => setGroepZoek("")} style={{ cursor: "pointer", fontSize: 15, color: "#8aa3a6", padding: "0 2px" }}>✕</span>}
                     </div>
                   )}
                   {bewaard.length > 0 && (
@@ -3766,17 +3766,17 @@ export default function RundoTable() {
                   )}
                   {recent.length > 0 && (
                     <div>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: "#9aa0ab", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>{L.groupsRecent}</div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#8aa3a6", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>{L.groupsRecent}</div>
                       {recent.map(rij)}
                     </div>
                   )}
                   {bewaard.length + recent.length === 0 && (
-                    <div style={{ fontSize: 15, color: "#9aa0ab", textAlign: "center", padding: "14px 0" }}>{L.noSearchHit}</div>
+                    <div style={{ fontSize: 15, color: "#8aa3a6", textAlign: "center", padding: "14px 0" }}>{L.noSearchHit}</div>
                   )}
                   {/* Opruimen in één keer. Bewaarde rekeningen blijven staan — anders is die
                       bewaarknop zinloos — en de bevestiging zegt hoeveel er weggaat. */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, borderTop: "1px solid rgba(16,24,40,0.08)", marginTop: 12, paddingTop: 11 }}>
-                    <span style={{ fontSize: 14, color: "#9aa0ab", lineHeight: 1.45, minWidth: 0 }}>{L.retentionNote}</span>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, borderTop: "1px solid rgba(18,58,66,0.08)", marginTop: 12, paddingTop: 11 }}>
+                    <span style={{ fontSize: 14, color: "#8aa3a6", lineHeight: 1.45, minWidth: 0 }}>{L.retentionNote}</span>
                     {wisbaar.length > 0 && (
                       <button onClick={() => askConfirm(L.wipeAllBody(wisbaar.length, bewaardTotaal), L.wipeAllYes(wisbaar.length), () => { void wisAlleGroepen(wisbaar) }, { title: L.wipeAllTitle, danger: true })}
                         style={{ flexShrink: 0, border: "1px solid rgba(224,107,94,0.4)", color: "#c0392b", background: "#fff", borderRadius: 10, padding: "7px 11px", fontSize: 13.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{L.wipeAll}</button>
@@ -3791,7 +3791,7 @@ export default function RundoTable() {
             {viaKiezer ? (
               <button onClick={goToChooser} style={{ fontSize: 14.5, fontWeight: 700, color: "#7d93a3", background: "none", border: "none", padding: 4, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }}>{L.backToRundo}</button>
             ) : (
-              <span style={{ fontSize: 13.5, color: "#9aa0ab", fontWeight: 600 }}>{L.tryPartyLine}{" "}
+              <span style={{ fontSize: 13.5, color: "#8aa3a6", fontWeight: 600 }}>{L.tryPartyLine}{" "}
                 <a href="/party" style={{ color: "#c98a00", fontWeight: 800, textDecoration: "underline" }}>Rundo Party →</a>
               </span>
             )}
@@ -3834,15 +3834,15 @@ export default function RundoTable() {
                     <button key={q.id} disabled={adminPlek}
                       onClick={() => { if (adminPlek) return; if (free) { setClaimSpot(q.id); setClaimSeats(Math.max(1, q.seats ?? 1)); setClaimNames([""]) } else pickMe(q.id) }}
                       style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, textAlign: "left", marginBottom: 7, cursor: adminPlek ? "default" : "pointer", borderRadius: 11, padding: "11px 12px",
-                        border: free ? "1.5px dashed rgba(20,153,176,0.6)" : "1px solid rgba(16,24,40,0.12)",
+                        border: free ? "1.5px dashed rgba(20,153,176,0.6)" : "1px solid rgba(18,58,66,0.12)",
                         opacity: adminPlek ? 0.75 : 1,
-                        background: free ? "rgba(20,153,176,0.05)" : "rgba(16,24,40,0.02)" }}>
+                        background: free ? "rgba(20,153,176,0.05)" : "rgba(18,58,66,0.02)" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                        <span style={{ fontSize: 18, fontWeight: 800, color: free ? "#1499b0" : "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{free ? L.freeSpotLabel : q.name}</span>
+                        <span style={{ fontSize: 18, fontWeight: 800, color: free ? "#0f7d90" : "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{free ? L.freeSpotLabel : q.name}</span>
                         {adminPlek && <span style={{ flexShrink: 0, color: "#c0392b", fontWeight: 800, fontSize: 16.5 }}>*</span>}
-                        {!free && !adminPlek && (q.seats ?? 1) > 1 && <span style={{ fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>· {q.seats}p.</span>}
+                        {!free && !adminPlek && (q.seats ?? 1) > 1 && <span style={{ fontSize: 15.5, fontWeight: 700, color: "#8aa3a6" }}>· {q.seats}p.</span>}
                       </span>
-                      <span style={{ fontSize: 15.5, fontWeight: 700, color: adminPlek ? "#9aa0ab" : free ? "#1499b0" : "#9aa0ab", flexShrink: 0 }}>{adminPlek ? L.adminSpotLabel : free ? L.tapToPick : L.imThisOne}</span>
+                      <span style={{ fontSize: 15.5, fontWeight: 700, color: adminPlek ? "#8aa3a6" : free ? "#0f7d90" : "#8aa3a6", flexShrink: 0 }}>{adminPlek ? L.adminSpotLabel : free ? L.tapToPick : L.imThisOne}</span>
                     </button>
                   )
                   return (
@@ -3852,12 +3852,12 @@ export default function RundoTable() {
                       {vrijeLijst.length > 0 && (
                         <div style={{ background: "rgba(20,153,176,0.08)", border: "1.5px solid rgba(20,153,176,0.35)", borderRadius: 12, padding: "13px 14px", margin: "2px 0 16px" }}>
                           <div style={{ fontSize: 20, fontWeight: 800, color: "#0f7d91", lineHeight: 1.35, marginBottom: 4 }}>{naamLijst.length > 0 ? L.pickFreeSpotTitleOrName : L.pickFreeSpotTitle}</div>
-                          <div style={{ fontSize: 16.5, color: "#3b486a", lineHeight: 1.5 }}>{L.pickFreeSpot}</div>
+                          <div style={{ fontSize: 16.5, color: "#2b4f56", lineHeight: 1.5 }}>{L.pickFreeSpot}</div>
                         </div>
                       )}
-                      {vrijeLijst.length > 0 && <div style={{ ...kop, color: "#1499b0" }}>{L.freeSpotsHead}</div>}
+                      {vrijeLijst.length > 0 && <div style={{ ...kop, color: "#0f7d90" }}>{L.freeSpotsHead}</div>}
                       {vrijeLijst.map((q) => rij(q, true, false))}
-                      {naamLijst.length > 0 && <div style={{ ...kop, color: "#9aa0ab", marginTop: vrijeLijst.length > 0 ? 16 : 0 }}>{L.yourNameHead}</div>}
+                      {naamLijst.length > 0 && <div style={{ ...kop, color: "#8aa3a6", marginTop: vrijeLijst.length > 0 ? 16 : 0 }}>{L.yourNameHead}</div>}
                       {naamLijst.map((q) => rij(q, false, false))}
                       {adminRij.map((q) => rij(q, false, true))}
                     </>
@@ -3867,12 +3867,12 @@ export default function RundoTable() {
                 {/* Vroeger stond hier "+ Extra plaats toevoegen". Daarmee kon een gast het
                     aantal personen aan tafel verhogen, en dat hoort alleen de beheerder te
                     kunnen. Nu een regel die zegt bij wie je moet zijn. */}
-                <div style={{ marginTop: 8, fontSize: 15.5, color: "#9aa0ab", lineHeight: 1.45, textAlign: "center" }}>{L.askAdminForSpot}</div>
+                <div style={{ marginTop: 8, fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.45, textAlign: "center" }}>{L.askAdminForSpot}</div>
               </>
             ) : (
               <>
-                <div style={{ fontSize: 19, fontWeight: 800, color: "#14213a", marginBottom: 4, lineHeight: 1.35 }}>{L.howManyPersons}</div>
-                <div style={{ fontSize: 16, color: "#9aa0ab", lineHeight: 1.5, marginBottom: 10 }}>{L.payTogetherShort}</div>
+                <div style={{ fontSize: 19, fontWeight: 800, color: "#123a42", marginBottom: 4, lineHeight: 1.35 }}>{L.howManyPersons}</div>
+                <div style={{ fontSize: 16, color: "#8aa3a6", lineHeight: 1.5, marginBottom: 10 }}>{L.payTogetherShort}</div>
                 <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
                   {[1, 2, 3].map((n) => {
                     const on = n === 3 ? claimSeats >= 3 : claimSeats === n
@@ -3884,11 +3884,11 @@ export default function RundoTable() {
                         if (n > maxClaimSeats) { setToast(L.seatsCappedGuest(maxClaimSeats)); return }
                         const v = n === 3 ? Math.max(3, claimSeats) : n; setClaimSeats(v); setClaimNames((cur) => Array.from({ length: v }, (_, i) => cur[i] ?? ""))
                       }}
-                        style={{ flex: 1, padding: "9px 4px", borderRadius: 10, cursor: "pointer", opacity: n <= maxClaimSeats ? 1 : 0.55, color: n <= maxClaimSeats ? "#14213a" : "#b9bfca", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>
+                        style={{ flex: 1, padding: "9px 4px", borderRadius: 10, cursor: "pointer", opacity: n <= maxClaimSeats ? 1 : 0.55, color: n <= maxClaimSeats ? "#123a42" : "#b9bfca", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(18,58,66,0.15)" }}>
                         <span style={{ display: "block", fontSize: 15, fontWeight: 800 }}>{label}</span>
                         {/* Zonder dit onderschrift is "Met 2" alleen een aantal; het zegt niet
                             dat die twee één plaats delen en samen één bedrag krijgen. */}
-                        <span style={{ display: "block", fontSize: 12, fontWeight: 600, marginTop: 2, color: on ? "#6b5a2a" : "#5a6680" }}>{n === 1 ? L.aloneSub : L.togetherSub}</span>
+                        <span style={{ display: "block", fontSize: 12, fontWeight: 600, marginTop: 2, color: on ? "#6b5a2a" : "#4a6e73" }}>{n === 1 ? L.aloneSub : L.togetherSub}</span>
                       </button>
                     )
                   })}
@@ -3896,7 +3896,7 @@ export default function RundoTable() {
                 {claimSeats >= 3 && (
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginBottom: 12 }}>
                     <button onClick={() => { const v = Math.max(3, claimSeats - 1); setClaimSeats(v); setClaimNames((c) => c.slice(0, v)) }} style={{ ...S.iconBtn, width: 30, height: 30, fontSize: 20 }}>−</button>
-                    <b style={{ fontSize: 19, color: "#14213a" }}>{claimSeats}</b>
+                    <b style={{ fontSize: 19, color: "#123a42" }}>{claimSeats}</b>
                     <button onClick={() => {
                       if (claimSeats >= maxClaimSeats) { setToast(L.seatsCappedGuest(maxClaimSeats)); return }
                       const v = Math.min(8, claimSeats + 1); setClaimSeats(v); setClaimNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? ""))
@@ -3904,7 +3904,7 @@ export default function RundoTable() {
                   </div>
                 )}
 
-                <div style={{ fontSize: 18, fontWeight: 800, color: "#14213a", marginBottom: 8 }}>{claimSeats > 1 ? L.yourNamesQ : L.yourNameQ}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: "#123a42", marginBottom: 8 }}>{claimSeats > 1 ? L.yourNamesQ : L.yourNameQ}</div>
                 {Array.from({ length: claimSeats }, (_, i) => i).map((i) => (
                   <input key={i} value={claimNames[i] ?? ""} onChange={(e) => setClaimNames((c) => { const n = [...c]; n[i] = e.target.value; return n })}
                     onKeyDown={(e) => { if (e.key === "Enter") confirmClaimSpot() }}
@@ -3912,7 +3912,7 @@ export default function RundoTable() {
                     style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 7 }} autoFocus={i === 0} />
                 ))}
                 {claimSeats > 1 && claimNames.filter((n) => n.trim()).length > 0 && (
-                  <div style={{ fontSize: 15.5, color: "#9aa0ab", marginBottom: 10 }}>{L.showsAsOne} <b style={{ color: "#14213a" }}>{claimNames.filter((n) => n.trim()).join(" & ")}</b></div>
+                  <div style={{ fontSize: 15.5, color: "#8aa3a6", marginBottom: 10 }}>{L.showsAsOne} <b style={{ color: "#123a42" }}>{claimNames.filter((n) => n.trim()).join(" & ")}</b></div>
                 )}
 
                 <button onClick={confirmClaimSpot} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{claimSeats > 1 ? L.thatsUs : L.thatsMe}</button>
@@ -3921,9 +3921,9 @@ export default function RundoTable() {
                     je de verkeerde aantikte. */}
                 {meId && claimSpot === meId && (
                   <button onClick={() => { setClaimSpot(null); switchPerson() }}
-                    style={{ width: "100%", marginTop: 8, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(20,153,176,0.45)", color: "#1499b0", borderRadius: 11, padding: "11px 0", fontSize: 15.5, fontWeight: 800 }}>{L.switchPersonBtn}</button>
+                    style={{ width: "100%", marginTop: 8, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(20,153,176,0.45)", color: "#0f7d90", borderRadius: 11, padding: "11px 0", fontSize: 15.5, fontWeight: 800 }}>{L.switchPersonBtn}</button>
                 )}
-                <button onClick={() => setClaimSpot(null)} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#9aa0ab" }}>{L.backToSpots}</button>
+                <button onClick={() => setClaimSpot(null)} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#8aa3a6" }}>{L.backToSpots}</button>
               </>
             )}
           </div>
@@ -3953,7 +3953,7 @@ export default function RundoTable() {
       )}
 
       {asleep && (
-        <div onClick={() => { lastActive.current = Date.now(); setAsleep(false) }} style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 3000, background: "rgba(20,33,58,0.92)", color: "#fff", padding: "9px 16px", borderRadius: 999, fontSize: 16.5, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,24,40,0.3)", whiteSpace: "nowrap" }}>
+        <div onClick={() => { lastActive.current = Date.now(); setAsleep(false) }} style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 3000, background: "rgba(18,58,66,0.92)", color: "#fff", padding: "9px 16px", borderRadius: 999, fontSize: 16.5, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(18,58,66,0.3)", whiteSpace: "nowrap" }}>
           {L.sleepBanner}
         </div>
       )}
@@ -3984,7 +3984,7 @@ export default function RundoTable() {
                   <b>{d.name}</b>{d.comment ? <span>: “{d.comment}”</span> : ""}
                   {d.resolved && <span style={{ marginLeft: 6, fontSize: 15.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 6, padding: "3px 6px", textDecoration: "none", display: "inline-block" }}>{L.resolved}</span>}
                 </div>
-                <button onClick={() => resolveDispute(d.name, !d.resolved)} style={{ flexShrink: 0, border: d.resolved ? "1px solid rgba(16,24,40,0.2)" : "none", background: d.resolved ? "#fff" : "linear-gradient(135deg,#1f8a4c,#27ae60)", color: d.resolved ? "#5a6680" : "#fff", borderRadius: 9, padding: "7px 12px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
+                <button onClick={() => resolveDispute(d.name, !d.resolved)} style={{ flexShrink: 0, border: d.resolved ? "1px solid rgba(18,58,66,0.2)" : "none", background: d.resolved ? "#fff" : "linear-gradient(135deg,#1f8a4c,#27ae60)", color: d.resolved ? "#4a6e73" : "#fff", borderRadius: 9, padding: "7px 12px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
                   {d.resolved ? L.reopenRemark : L.markResolved}
                 </button>
               </div>
@@ -4017,7 +4017,7 @@ export default function RundoTable() {
                       <b>{d.name}</b>{d.comment ? <span>: “{d.comment}”</span> : ""}
                       {d.resolved && <span style={{ marginLeft: 6, fontSize: 15.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 6, padding: "3px 6px", textDecoration: "none", display: "inline-block" }}>{L.resolved}</span>}
                     </div>
-                    <button onClick={() => resolveDispute(d.name, !d.resolved)} style={{ flexShrink: 0, border: d.resolved ? "1px solid rgba(16,24,40,0.2)" : "none", background: d.resolved ? "#fff" : "linear-gradient(135deg,#1f8a4c,#27ae60)", color: d.resolved ? "#5a6680" : "#fff", borderRadius: 9, padding: "7px 12px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
+                    <button onClick={() => resolveDispute(d.name, !d.resolved)} style={{ flexShrink: 0, border: d.resolved ? "1px solid rgba(18,58,66,0.2)" : "none", background: d.resolved ? "#fff" : "linear-gradient(135deg,#1f8a4c,#27ae60)", color: d.resolved ? "#4a6e73" : "#fff", borderRadius: 9, padding: "7px 12px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
                       {d.resolved ? L.reopenRemark : L.markResolved}
                     </button>
                   </div>
@@ -4052,8 +4052,8 @@ export default function RundoTable() {
             }} style={{
               flex: 1, border: "none", borderRadius: 12, padding: "13px 4px", fontSize: 18, cursor: "pointer", lineHeight: 1.15,
               fontWeight: adminTab === t.id ? 800 : 700,
-              background: adminTab === t.id ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#eaf6f9",
-              color: adminTab === t.id ? "#fff" : "#1499b0",
+              background: adminTab === t.id ? "linear-gradient(135deg,#0f7d90,#3ec9d8)" : "#eaf6f9",
+              color: adminTab === t.id ? "#fff" : "#0f7d90",
               boxShadow: adminTab === t.id ? "0 3px 10px -3px rgba(20,153,176,0.5)" : "none",
               transition: "all 0.15s",
             }}>{t.label}</button>
@@ -4067,7 +4067,7 @@ export default function RundoTable() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             {adminTab === "overview" && groepPeekKnop()}
             {group.receipt_url && (
-              <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#1499b0", padding: "4px 4px" }}>{L.viewReceipt}{(group.receipt_url!.split(/\s+/).filter(Boolean).length > 1) ? ` (${group.receipt_url!.split(/\s+/).filter(Boolean).length})` : ""}</button>
+              <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#0f7d90", padding: "4px 4px" }}>{L.viewReceipt}{(group.receipt_url!.split(/\s+/).filter(Boolean).length > 1) ? ` (${group.receipt_url!.split(/\s+/).filter(Boolean).length})` : ""}</button>
             )}
           </div>
           {adminTab === "overview" && showGroupPeek && groepPeekLijst()}
@@ -4079,8 +4079,8 @@ export default function RundoTable() {
         <div>
           {group.receipt_url ? (
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 16, marginBottom: 10, marginTop: -4 }}>
-              <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#1499b0", padding: "4px 4px" }}>{L.viewReceipt}{(group.receipt_url!.split(/\s+/).filter(Boolean).length > 1) ? ` (${group.receipt_url!.split(/\s+/).filter(Boolean).length})` : ""}</button>
-              <button onClick={startRescan} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#9aa0ab", padding: "4px 4px" }}>{L.rescan}</button>
+              <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#0f7d90", padding: "4px 4px" }}>{L.viewReceipt}{(group.receipt_url!.split(/\s+/).filter(Boolean).length > 1) ? ` (${group.receipt_url!.split(/\s+/).filter(Boolean).length})` : ""}</button>
+              <button onClick={startRescan} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#8aa3a6", padding: "4px 4px" }}>{L.rescan}</button>
             </div>
           ) : (
             <button onClick={() => setShowScan(true)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 18, fontWeight: 700, marginBottom: 12 }}>{L.startScan}</button>
@@ -4088,7 +4088,7 @@ export default function RundoTable() {
 
           {/* Scan-label bovenaan: vinkje bij AI-succes; duidelijke waarschuwing + retry bij lokale terugval */}
           {items.length > 0 && scanSource === "ai" && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 10px", padding: "8px 12px", borderRadius: 10, fontSize: 16, fontWeight: 700, background: "rgba(16,24,40,0.04)", border: "1px solid rgba(16,24,40,0.1)", color: "#5a6680" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 10px", padding: "8px 12px", borderRadius: 10, fontSize: 16, fontWeight: 700, background: "rgba(18,58,66,0.04)", border: "1px solid rgba(18,58,66,0.1)", color: "#4a6e73" }}>
               <span>{L.scanOk} <span style={{ color: "#1f8a4c", fontWeight: 800 }}>✓</span></span>
             </div>
           )}
@@ -4124,7 +4124,7 @@ export default function RundoTable() {
             // nodigt uit. Groen verschijnt pas ná de bevestiging — nooit ervoor.
             const jaBtn = { border: "none", background: "#27ae60", color: "#fff", borderRadius: 10, padding: "12px 24px", fontSize: 18, fontWeight: 800, cursor: "pointer" }
             // Vóór de bevestiging zien Ja en Neen er identiek uit — geen van beide "voorgekozen".
-            const keuzeBtn = { border: "2px solid rgba(20,33,58,0.28)", background: "#fff", color: "#3b486a", borderRadius: 10, padding: "11px 24px", fontSize: 18, fontWeight: 800, cursor: "pointer" }
+            const keuzeBtn = { border: "2px solid rgba(18,58,66,0.28)", background: "#fff", color: "#2b4f56", borderRadius: 10, padding: "11px 24px", fontSize: 18, fontWeight: 800, cursor: "pointer" }
             const actieBtn = { border: "2px solid #e07b28", background: "#fff", color: "#c25f10", borderRadius: 10, padding: "11px 24px", fontSize: 18, fontWeight: 800, cursor: "pointer" }
             const jaNeen = (
               <span style={{ display: "inline-flex", gap: 8 }}>
@@ -4133,8 +4133,8 @@ export default function RundoTable() {
                 {!greenState && <button onPointerDown={tikBevestig} style={{ ...keuzeBtn }}>{L.yes}</button>}
                 <button onPointerDown={(e) => { e.preventDefault(); setReceiptEditing(true); setReceiptConfirmed(false); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }}
                   style={greenState
-                    ? { border: "none", background: "transparent", color: "#5a6680", borderRadius: 10, padding: "11px 14px", fontSize: 16, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }
-                    : { ...keuzeBtn, ...(receiptEditing ? { borderColor: "#1499b0", color: "#1499b0" } : {}) }}>{greenState ? L.changeAmount : L.no}</button>
+                    ? { border: "none", background: "transparent", color: "#4a6e73", borderRadius: 10, padding: "11px 14px", fontSize: 16, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }
+                    : { ...keuzeBtn, ...(receiptEditing ? { borderColor: "#0f7d90", color: "#0f7d90" } : {}) }}>{greenState ? L.changeAmount : L.no}</button>
               </span>
             )
             return (
@@ -4152,7 +4152,7 @@ export default function RundoTable() {
                   </div>
                 )}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 16.5, fontWeight: 700, color: "#5a6680" }}>{L.receiptTotalLabel}</span>
+                  <span style={{ fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>{L.receiptTotalLabel}</span>
                   <input ref={receiptInputRef} type="text" inputMode="decimal" defaultValue={entered != null ? entered.toFixed(2).replace(".", ",") : ""} key={entered ?? "leeg"} placeholder={L.amountPlaceholder}
                     onInput={(e) => { e.currentTarget.value = numFilter(e.currentTarget.value) }}
                     onBlur={saveTotal}
@@ -4191,13 +4191,13 @@ export default function RundoTable() {
                           tegen te spreken. */}
                       <div style={{ fontSize: 16.5, fontWeight: 800, color: "#8a4514", marginBottom: 10 }}>⚠ {L.itemListOff}</div>
                       <div style={{ background: "#fff", borderRadius: 9, padding: "11px 12px", marginBottom: 10 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, color: "#5a6680", marginBottom: 5 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, color: "#4a6e73", marginBottom: 5 }}>
                           <span>{L.receiptConfirmedLabel}</span><span style={{ fontWeight: 700 }}>€{(entered ?? 0).toFixed(2).replace(".", ",")}</span>
                         </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, color: "#5a6680", marginBottom: 7 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, color: "#4a6e73", marginBottom: 7 }}>
                           <span>{L.itemsBelowLabel}</span><span style={{ fontWeight: 700 }}>€{billTotal.toFixed(2).replace(".", ",")}</span>
                         </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", borderTop: "1px solid rgba(20,33,58,0.12)", paddingTop: 7 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", borderTop: "1px solid rgba(18,58,66,0.12)", paddingTop: 7 }}>
                           <span style={{ fontSize: 16, fontWeight: 800, color: "#8a4514" }}>{higher ? L.tooMuchInList : L.tooLittleInList}</span>
                           <span style={{ fontSize: 21, fontWeight: 800, color: "#e07b28" }}>€{diffTxt}</span>
                         </div>
@@ -4213,12 +4213,12 @@ export default function RundoTable() {
                       {rounding && (
                         <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 9, background: "rgba(255,255,255,0.75)", border: "1px solid rgba(90,108,166,0.28)", borderRadius: 9, padding: "9px 10px" }}>
                           <span style={{ flexShrink: 0, fontSize: 18 }}>🧮</span>
-                          <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, color: "#3b486a", lineHeight: 1.4 }}>
+                          <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, color: "#2b4f56", lineHeight: 1.4 }}>
                             <b>{L.roundingTitle}</b><br />
-                            <span style={{ color: "#8a93a3" }}>{L.roundingSub}</span>
+                            <span style={{ color: "#7d999d" }}>{L.roundingSub}</span>
                           </span>
                           <button onClick={() => setRoundingOk(true)} title={L.roundingSub}
-                            style={{ flexShrink: 0, width: 40, height: 23, background: "#c3c8d2", borderRadius: 20, border: "none", position: "relative", cursor: "pointer", padding: 0 }}>
+                            style={{ flexShrink: 0, width: 40, height: 23, background: "#b6cacc", borderRadius: 20, border: "none", position: "relative", cursor: "pointer", padding: 0 }}>
                             <span style={{ position: "absolute", top: 2.5, left: 2.5, width: 18, height: 18, background: "#fff", borderRadius: "50%" }} />
                           </button>
                         </div>
@@ -4258,7 +4258,7 @@ export default function RundoTable() {
                 {/* Zonder deze regel lijkt het alsof de toeslagen niet doorkomen bij de
                     gasten — terwijl ze bewust pas bij het afsluiten verdeeld worden. */}
                 {taxItems.length > 0 && !group?.finalized && (
-                  <div style={{ fontSize: 14.5, color: "#5a6680", lineHeight: 1.45, background: "rgba(90,108,166,0.07)", borderRadius: 10, padding: "9px 11px", marginBottom: 4 }}>{L.taxAfterCloseNote}</div>
+                  <div style={{ fontSize: 14.5, color: "#4a6e73", lineHeight: 1.45, background: "rgba(90,108,166,0.07)", borderRadius: 10, padding: "9px 11px", marginBottom: 4 }}>{L.taxAfterCloseNote}</div>
                 )}
                 {taxItems.map((t) => {
                   const overAll = t.distribute === "all"
@@ -4272,7 +4272,7 @@ export default function RundoTable() {
                           onBlur={(e) => { if (group?.finalized) { setToast(L.reopenFirst); loadAll(group.id); return } supabase.from("table_items").update({ name: e.target.value }).eq("id", t.id).then(() => loadAll(group.id)) }}
                           style={{ ...S.input, flex: 1, minWidth: 0, fontWeight: 700, padding: "8px 10px" }} />
                         {t.tax_rate ? (
-                          <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a", whiteSpace: "nowrap" }}>€{taxAmount(t).toFixed(2).replace(".", ",")}</span>
+                          <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42", whiteSpace: "nowrap" }}>€{taxAmount(t).toFixed(2).replace(".", ",")}</span>
                         ) : (
                           <>
                             <span style={{ color: "#999", fontSize: 16.5 }}>€</span>
@@ -4281,16 +4281,16 @@ export default function RundoTable() {
                               style={{ ...S.input, width: 78, textAlign: "right", padding: "8px 8px" }} />
                           </>
                         )}
-                        <button style={{ ...S.iconBtn, background: open ? "rgba(90,108,166,0.18)" : "rgba(16,24,40,0.05)" }} onClick={() => setTaxConfig(open ? null : t.id)} title={L.taxConfigTitle}>⚙️</button>
+                        <button style={{ ...S.iconBtn, background: open ? "rgba(90,108,166,0.18)" : "rgba(18,58,66,0.05)" }} onClick={() => setTaxConfig(open ? null : t.id)} title={L.taxConfigTitle}>⚙️</button>
                         <button style={S.iconBtn} onClick={() => deleteItem(t.id)} title={L.deleteTitle}>🗑️</button>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6, marginLeft: 25, flexWrap: "wrap" }}>
                         {[6, 12, 21].map((r) => (
-                          <button key={r} onClick={() => setTaxRate(t, r)} style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 9, padding: "6px 11px", cursor: "pointer", border: t.tax_rate === r ? "none" : "1px solid rgba(16,24,40,0.14)", background: t.tax_rate === r ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff", color: t.tax_rate === r ? "#fff" : "#5a6680" }}>{r}%</button>
+                          <button key={r} onClick={() => setTaxRate(t, r)} style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 9, padding: "6px 11px", cursor: "pointer", border: t.tax_rate === r ? "none" : "1px solid rgba(18,58,66,0.14)", background: t.tax_rate === r ? "linear-gradient(135deg,#0f7d90,#3ec9d8)" : "#fff", color: t.tax_rate === r ? "#fff" : "#4a6e73" }}>{r}%</button>
                         ))}
-                        <button onClick={() => setTaxRate(t, null)} style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 9, padding: "6px 11px", cursor: "pointer", border: !t.tax_rate ? "none" : "1px solid rgba(16,24,40,0.14)", background: !t.tax_rate ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff", color: !t.tax_rate ? "#fff" : "#5a6680" }}>{L.fixedAmount}</button>
+                        <button onClick={() => setTaxRate(t, null)} style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 9, padding: "6px 11px", cursor: "pointer", border: !t.tax_rate ? "none" : "1px solid rgba(18,58,66,0.14)", background: !t.tax_rate ? "linear-gradient(135deg,#0f7d90,#3ec9d8)" : "#fff", color: !t.tax_rate ? "#fff" : "#4a6e73" }}>{L.fixedAmount}</button>
                       </div>
-                      <div style={{ fontSize: 15.5, color: "#9aa0ab", marginTop: 4, marginLeft: 25, overflowWrap: "anywhere" }}>
+                      <div style={{ fontSize: 15.5, color: "#8aa3a6", marginTop: 4, marginLeft: 25, overflowWrap: "anywhere" }}>
                         {t.tax_rate ? `${t.tax_rate}% ` : ""}{L.distributedWord} {overAll ? L.overWholeBillShort : L.overNItems(targetCount)}{L.tapGearToChange}
                       </div>
                       <div style={{ marginLeft: 25, marginTop: 4 }}>
@@ -4298,10 +4298,10 @@ export default function RundoTable() {
                       </div>
                       {open && (
                         <div style={{ marginLeft: 25, marginTop: 8, padding: 10, borderRadius: 12, background: "#fbfaff", border: "1px solid rgba(90,108,166,0.2)" }}>
-                          <div style={{ fontSize: 15.5, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 5 }}>{L.howToSplit}</div>
+                          <div style={{ fontSize: 15.5, fontWeight: 800, color: "#7d999d", textTransform: "uppercase", marginBottom: 5 }}>{L.howToSplit}</div>
                           <div style={{ display: "flex", gap: 6, marginBottom: overAll ? 0 : 8 }}>
-                            <button onClick={() => setDistribute(t, "all")} style={{ flex: 1, fontSize: 16, fontWeight: 800, borderRadius: 10, padding: "9px 6px", cursor: "pointer", border: overAll ? "none" : "1px solid rgba(16,24,40,0.15)", background: overAll ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff", color: overAll ? "#fff" : "#5a6680" }}>{L.overWholeBill}</button>
-                            <button onClick={() => { if (overAll) setDistribute(t, JSON.stringify(baseItems.map((i) => i.id))) }} style={{ flex: 1, fontSize: 16, fontWeight: 800, borderRadius: 10, padding: "9px 6px", cursor: "pointer", border: !overAll ? "none" : "1px solid rgba(16,24,40,0.15)", background: !overAll ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff", color: !overAll ? "#fff" : "#5a6680" }}>{L.overCertainItems}{!overAll ? ` (${targetCount})` : ""}</button>
+                            <button onClick={() => setDistribute(t, "all")} style={{ flex: 1, fontSize: 16, fontWeight: 800, borderRadius: 10, padding: "9px 6px", cursor: "pointer", border: overAll ? "none" : "1px solid rgba(18,58,66,0.15)", background: overAll ? "linear-gradient(135deg,#0f7d90,#3ec9d8)" : "#fff", color: overAll ? "#fff" : "#4a6e73" }}>{L.overWholeBill}</button>
+                            <button onClick={() => { if (overAll) setDistribute(t, JSON.stringify(baseItems.map((i) => i.id))) }} style={{ flex: 1, fontSize: 16, fontWeight: 800, borderRadius: 10, padding: "9px 6px", cursor: "pointer", border: !overAll ? "none" : "1px solid rgba(18,58,66,0.15)", background: !overAll ? "linear-gradient(135deg,#0f7d90,#3ec9d8)" : "#fff", color: !overAll ? "#fff" : "#4a6e73" }}>{L.overCertainItems}{!overAll ? ` (${targetCount})` : ""}</button>
                           </div>
                           {!overAll && (() => {
                             let ids: string[] = []
@@ -4311,14 +4311,14 @@ export default function RundoTable() {
                             <div style={{ borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: 8 }}>
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
                                 <div style={{ fontSize: 15.5, fontWeight: 700, color: "#a06b00" }}>{L.tapItemsForCost}</div>
-                                <button onClick={() => setDistribute(t, allOn ? "[]" : JSON.stringify(baseItems.map((i) => i.id)))} style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 8, padding: "5px 9px", cursor: "pointer", border: "1px solid rgba(90,108,166,0.3)", background: "#fff", color: "#1499b0", whiteSpace: "nowrap", flexShrink: 0 }}>{allOn ? "alles uit" : "alles aan"}</button>
+                                <button onClick={() => setDistribute(t, allOn ? "[]" : JSON.stringify(baseItems.map((i) => i.id)))} style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 8, padding: "5px 9px", cursor: "pointer", border: "1px solid rgba(90,108,166,0.3)", background: "#fff", color: "#0f7d90", whiteSpace: "nowrap", flexShrink: 0 }}>{allOn ? "alles uit" : "alles aan"}</button>
                               </div>
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                                 {baseItems.map((bi) => {
                                   const on = ids.includes(bi.id)
                                   return (
                                     <button key={bi.id} onClick={() => { const next = on ? ids.filter((x) => x !== bi.id) : [...ids, bi.id]; setDistribute(t, JSON.stringify(next)) }}
-                                      style={{ fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "7px 11px", cursor: "pointer", border: on ? "none" : "1px solid rgba(16,24,40,0.12)", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", color: on ? "#5a4a1a" : "#8b93a8" }}>{on ? "✓ " : "+ "}{showTip(bi.name, L)}</button>
+                                      style={{ fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "7px 11px", cursor: "pointer", border: on ? "none" : "1px solid rgba(18,58,66,0.12)", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", color: on ? "#5a4a1a" : "#8b93a8" }}>{on ? "✓ " : "+ "}{showTip(bi.name, L)}</button>
                                   )
                                 })}
                               </div>
@@ -4334,7 +4334,7 @@ export default function RundoTable() {
                   <button onClick={() => { if (!requireTotal()) return; setTaxModal({ kind: "cost", mode: "amount", pct: "21", name: L.wordCost, amount: "", scope: "all", ids: [] }) }}
                     style={{ alignSelf: "flex-end", width: "auto", maxWidth: "100%", minWidth: 190, boxSizing: "border-box", background: "rgba(20,153,176,0.12)", color: "#0f7d90", border: "1px solid rgba(20,153,176,0.4)", borderRadius: 12, padding: "11px 16px", fontSize: 16, fontWeight: 800, cursor: "pointer", whiteSpace: "normal", lineHeight: 1.3, textAlign: "center" }}>{L.taxAddBtn}</button>
                   <button onClick={() => setShowTaxInfo(true)} title={L.explainTooltip}
-                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#5a6680", textDecoration: "underline", padding: 0 }}>ⓘ {L.whatIsThis}</button>
+                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#4a6e73", textDecoration: "underline", padding: 0 }}>ⓘ {L.whatIsThis}</button>
                 </div>
               </div>
             }
@@ -4357,21 +4357,21 @@ export default function RundoTable() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 4 }}>
               <h3 style={{ ...S.h3, marginBottom: 0, minWidth: 0 }}>{L.howManyGroupTitle}</h3>
             </div>
-            <div style={{ marginTop: 4, marginBottom: 2, fontSize: 16, color: "#9aa0ab", lineHeight: 1.5 }}>{L.howManyGroupSub}</div>
+            <div style={{ marginTop: 4, marginBottom: 2, fontSize: 16, color: "#8aa3a6", lineHeight: 1.5 }}>{L.howManyGroupSub}</div>
 
             <div id="persons-counter" style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, ...(personsSet ? {} : { border: "1.5px dashed rgba(192,57,43,0.5)" }), background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: "11px 12px" }}>
-              <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a" }}>{L.personsWord}</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42" }}>{L.personsWord}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <button onClick={() => setGuestCount(totalPersons - 1)} disabled={!personsSet || totalPersons <= 0} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(16,24,40,0.05)", color: "#5a6680", fontSize: 22, fontWeight: 800, cursor: totalPersons > 0 ? "pointer" : "default", opacity: totalPersons > 0 ? 1 : 0.4 }}>−</button>
-                <b style={{ minWidth: 20, textAlign: "center", fontSize: 22, color: personsSet ? "#14213a" : "#c3c8d2" }}>{personsSet ? totalPersons : "—"}</b>
-                <button onClick={() => setGuestCount(totalPersons + 1)} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(27,42,74,0.12)", color: "#14213a", fontSize: 22, fontWeight: 800, cursor: "pointer" }}>+</button>
+                <button onClick={() => setGuestCount(totalPersons - 1)} disabled={!personsSet || totalPersons <= 0} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(18,58,66,0.05)", color: "#4a6e73", fontSize: 22, fontWeight: 800, cursor: totalPersons > 0 ? "pointer" : "default", opacity: totalPersons > 0 ? 1 : 0.4 }}>−</button>
+                <b style={{ minWidth: 20, textAlign: "center", fontSize: 22, color: personsSet ? "#123a42" : "#b6cacc" }}>{personsSet ? totalPersons : "—"}</b>
+                <button onClick={() => setGuestCount(totalPersons + 1)} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(27,42,74,0.12)", color: "#123a42", fontSize: 22, fontWeight: 800, cursor: "pointer" }}>+</button>
               </div>
             </div>
             {!personsSet && (
               <div style={{ fontSize: 15.5, color: "#c0392b", fontWeight: 700, marginTop: 8 }}>{L.personsFirst}</div>
             )}
             {personsSet && (
-            <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
+            <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(18,58,66,0.08)" }}>
               {(() => {
                 const me = participants.find((x) => x.id === meId) || participants[0]
                 if (!me) return null
@@ -4384,8 +4384,8 @@ export default function RundoTable() {
                         niet met een rode ster erbij. Klaar is klaar. */}
                     {isPh && (
                       <>
-                        <div style={{ fontSize: 18, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.yourselfStepTitle} <span style={{ color: "#c0392b" }}>*</span></div>
-                        <div style={{ fontSize: 15.5, color: "#5a6680", lineHeight: 1.45, marginBottom: 11 }}>{L.yourselfStepSub}</div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: "#123a42", marginBottom: 3 }}>{L.yourselfStepTitle} <span style={{ color: "#c0392b" }}>*</span></div>
+                        <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45, marginBottom: 11 }}>{L.yourselfStepSub}</div>
                       </>
                     )}
                     {isPh ? (
@@ -4394,12 +4394,12 @@ export default function RundoTable() {
                     ) : (
                       <div onClick={openPopup} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", borderRadius: 12, background: "rgba(90,108,166,0.06)", padding: "13px 14px" }}>
                         <span style={{ minWidth: 0 }}>
-                          <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {me.name} <span style={{ ...S_BEHEERDER, fontSize: 16 }}>· {seats > 1 ? L.adminsWord : L.adminWord}</span>
                           </span>
-                          <span style={{ fontSize: 15, color: "#5a6680" }}>{seats} {seats === 1 ? L.person : L.persons}</span>
+                          <span style={{ fontSize: 15, color: "#4a6e73" }}>{seats} {seats === 1 ? L.person : L.persons}</span>
                         </span>
-                        <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#1499b0" }}>✏️ ›</span>
+                        <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#0f7d90" }}>✏️ ›</span>
                       </div>
                     )}
                   </>
@@ -4425,26 +4425,26 @@ export default function RundoTable() {
                 setShowGuestModal(true)
               }
               return (
-                <div style={{ marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
+                <div style={{ marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(18,58,66,0.08)" }}>
                   {/* De hele balk klapt open en dicht. Een los pijltje van tien pixels naast
                       een titel leest niet als "hier zit iets onder"; een omrande balk wel,
                       en die maakt meteen zichtbaar waar je mag tikken. */}
                   <button onClick={() => setShowNamesBlock((v) => !v)}
                     style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", textAlign: "left",
                       background: "rgba(90,108,166,0.06)", border: "none", borderRadius: 12, padding: "10px 12px" }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#14213a" }}>
-                      {L.whoAtTableTitle} <span style={{ color: "#9aa0ab", fontWeight: 700, fontSize: 14 }}>{L.optionalWord}</span>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#123a42" }}>
+                      {L.whoAtTableTitle} <span style={{ color: "#8aa3a6", fontWeight: 700, fontSize: 14 }}>{L.optionalWord}</span>
                     </span>
                     {/* Grijs zolang er plaatsen vrij zijn: dat is een stand van zaken, geen
                         probleem. Groen pas als alles bezet is — daar is het een afvinking. */}
-                    <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: vrijeZit > 0 ? "#5a6680" : "#1f8a4c", background: vrijeZit > 0 ? "rgba(255,255,255,0.85)" : "rgba(39,174,96,0.16)", borderRadius: 12, padding: "3px 10px" }}>
+                    <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: vrijeZit > 0 ? "#4a6e73" : "#1f8a4c", background: vrijeZit > 0 ? "rgba(255,255,255,0.85)" : "rgba(39,174,96,0.16)", borderRadius: 12, padding: "3px 10px" }}>
                       👥 {L.seatsSummary(totalPersons, vrijeZit)}
                     </span>
-                    <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#5a6680", lineHeight: 1 }}>{showNamesBlock ? "▴" : "▾"}</span>
+                    <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#4a6e73", lineHeight: 1 }}>{showNamesBlock ? "▴" : "▾"}</span>
                   </button>
                   <div style={{ marginTop: 8, borderLeft: "3px solid rgba(20,153,176,0.5)", padding: "2px 0 2px 10px", fontSize: 14.5, fontWeight: 700, color: "#0f7488", lineHeight: 1.4 }}>{L.noNeedUpfront}</div>
                   {showNamesBlock && (
-                    <div style={{ marginTop: 8, border: "1px solid rgba(16,24,40,0.12)", borderRadius: 12, overflow: "hidden" }}>
+                    <div style={{ marginTop: 8, border: "1px solid rgba(18,58,66,0.12)", borderRadius: 12, overflow: "hidden" }}>
                       {participants.map((q, i) => {
                         const ikZelf = q.id === meId
                         const leeg = isFreeSpot(q) && !q.self_joined
@@ -4460,7 +4460,7 @@ export default function RundoTable() {
                                   jij zet de naam. Beide vermelden, anders belooft één regel iets
                                   wat misschien nooit gebeurt. */}
                               <span style={{ minWidth: 0 }}>
-                                <span style={{ display: "block", fontSize: 16, fontWeight: 700, color: leeg ? "#9aa0ab" : "#14213a", fontStyle: leeg ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                <span style={{ display: "block", fontSize: 16, fontWeight: 700, color: leeg ? "#8aa3a6" : "#123a42", fontStyle: leeg ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                   {leeg ? L.freeSpotName : q.name}{!leeg && zit > 1 ? ` · ${zit}p.` : ""}
                                   {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> · {zit > 1 ? L.adminsWord : L.adminWord}</span>}
                                 </span>
@@ -4470,8 +4470,8 @@ export default function RundoTable() {
                             {ikZelf
                               ? <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 10px", whiteSpace: "nowrap" }}>{L.tagAdmin}</span>
                               : leeg
-                              ? <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{L.addNameRow} <span style={{ fontWeight: 700, color: "#9aa0ab" }}>{L.optionalWord}</span></span>
-                              : <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>✏️</span>}
+                              ? <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#0f7d90", whiteSpace: "nowrap" }}>{L.addNameRow} <span style={{ fontWeight: 700, color: "#8aa3a6" }}>{L.optionalWord}</span></span>
+                              : <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#0f7d90", whiteSpace: "nowrap" }}>✏️</span>}
                           </button>
                         )
                       })}
@@ -4483,7 +4483,7 @@ export default function RundoTable() {
                     const ingevuldZit = totalPersons - vrijeZit
                     const volledig = vrijeZit === 0
                     return (
-                      <div style={{ marginTop: 9, fontSize: 14.5, fontWeight: 800, color: volledig ? "#1f8a4c" : "#14213a" }}>
+                      <div style={{ marginTop: 9, fontSize: 14.5, fontWeight: 800, color: volledig ? "#1f8a4c" : "#123a42" }}>
                         👥 {L.seatsFilledOf(ingevuldZit, totalPersons)}{volledig ? " ✓" : ""}
                       </div>
                     )
@@ -4496,7 +4496,7 @@ export default function RundoTable() {
 
           <div style={{ ...S.card, order: 2, border: "1.5px solid rgba(20,153,176,0.4)", ...((!personsSet || !adminNamed) ? { opacity: 0.5 } : {}) }}>
             {(!personsSet || !adminNamed) ? (
-              <div style={{ background: "rgba(16,24,40,0.05)", borderRadius: 10, padding: "12px 10px", textAlign: "center", fontSize: 16, fontWeight: 700, color: "#9aa0ab" }}>
+              <div style={{ background: "rgba(18,58,66,0.05)", borderRadius: 10, padding: "12px 10px", textAlign: "center", fontSize: 16, fontWeight: 700, color: "#8aa3a6" }}>
                 {!personsSet ? L.lockedPersons : L.lockedName}
               </div>
             ) : (() => {
@@ -4504,7 +4504,7 @@ export default function RundoTable() {
               return (
                 <>
                   <h3 style={{ ...S.h3, marginBottom: 3 }}>{L.shareStepTitle}</h3>
-                  <div style={{ fontSize: 15.5, color: "#5a6680", lineHeight: 1.5, marginBottom: 13 }}>{L.shareStepSub}</div>
+                  <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.5, marginBottom: 13 }}>{L.shareStepSub}</div>
                 </>
               )
             })()}
@@ -4527,22 +4527,22 @@ export default function RundoTable() {
                   <div style={{ textAlign: "center", marginBottom: 12 }}>
                     <div style={{ display: "inline-block", padding: 14, background: "#f4fbfc", border: "2px solid rgba(20,153,176,0.35)", borderRadius: 16 }}>
                       <div style={{ background: "#fff", padding: 8, borderRadius: 10, display: "inline-block" }}>
-                        <QRCodeSVG value={link} size={150} bgColor="#ffffff" fgColor="#1b2a4a" />
+                        <QRCodeSVG value={link} size={150} bgColor="#ffffff" fgColor="#123a42" />
                       </div>
                       <div style={{ fontSize: 15.5, fontWeight: 800, color: "#0f7488", marginTop: 10 }}>👆 {L.scanThis}</div>
                     </div>
                   </div>
 
-                  <div style={{ borderTop: "1px solid rgba(16,24,40,0.08)", paddingTop: 13 }}>
-                    <div style={{ fontSize: 15.5, fontWeight: 800, color: "#14213a", marginBottom: 8 }}>{L.orSendLinkTitle}</div>
+                  <div style={{ borderTop: "1px solid rgba(18,58,66,0.08)", paddingTop: 13 }}>
+                    <div style={{ fontSize: 15.5, fontWeight: 800, color: "#123a42", marginBottom: 8 }}>{L.orSendLinkTitle}</div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6, background: "rgba(16,24,40,0.04)", border: "1px solid rgba(16,24,40,0.12)", borderRadius: 10, padding: "11px 12px" }}>
-                        <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#9aa0ab" }}>{L.linkWord}</span>
-                        <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: "#5a6680", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{link}</span>
+                      <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6, background: "rgba(18,58,66,0.04)", border: "1px solid rgba(18,58,66,0.12)", borderRadius: 10, padding: "11px 12px" }}>
+                        <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#8aa3a6" }}>{L.linkWord}</span>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: "#4a6e73", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{link}</span>
                       </div>
                       <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (requireName()) void kopieer() }}
                         style={{ flexShrink: 0, border: "none", cursor: "pointer", borderRadius: 10, padding: "11px 15px", fontSize: 15, fontWeight: 800, whiteSpace: "nowrap",
-                          background: linkCopied ? "rgba(39,174,96,0.14)" : "#1499b0", color: linkCopied ? "#1f8a4c" : "#fff" }}>
+                          background: linkCopied ? "rgba(39,174,96,0.14)" : "#0f7d90", color: linkCopied ? "#1f8a4c" : "#fff" }}>
                         {linkCopied ? `✓ ${L.copiedWord}` : `📋 ${L.copyWord}`}
                       </button>
                     </div>
@@ -4551,11 +4551,11 @@ export default function RundoTable() {
                     {linkCopied && (
                       <div style={{ background: "rgba(39,174,96,0.08)", borderRadius: 10, padding: "11px 12px", marginTop: 9 }}>
                         <div style={{ fontSize: 14.5, color: "#1f6b3a", fontWeight: 800, marginBottom: 5 }}>{L.pasteAndShare}</div>
-                        <div style={{ fontSize: 14.5, color: "#5a6680", lineHeight: 1.6 }}>
+                        <div style={{ fontSize: 14.5, color: "#4a6e73", lineHeight: 1.6 }}>
                           {["WhatsApp", "Messenger", "sms", "e-mail"].map((naam, i) => (
-                            <span key={naam}>{i > 0 && <span style={{ color: "#9aa0ab", fontWeight: 800, margin: "0 9px" }}>•</span>}{naam}</span>
+                            <span key={naam}>{i > 0 && <span style={{ color: "#8aa3a6", fontWeight: 800, margin: "0 9px" }}>•</span>}{naam}</span>
                           ))}
-                          <span style={{ color: "#9aa0ab", fontWeight: 800, margin: "0 9px" }}>•</span>…
+                          <span style={{ color: "#8aa3a6", fontWeight: 800, margin: "0 9px" }}>•</span>…
                         </div>
                       </div>
                     )}
@@ -4593,7 +4593,7 @@ export default function RundoTable() {
                         placeholder={p.id === meId && i === 0 ? L.ownNamePlaceholder : seats > 1 ? (i === 0 ? L.firstName : i === 1 ? L.secondName : L.extraName(i + 1)) : (isPlaceholderName(p) ? p.name : L.namePlaceholder)}
                         onBlur={(e) => commit(i, e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
-                        style={{ width: "100%", border: "none", borderBottom: "1px dashed rgba(16,24,40,0.22)", background: "transparent", fontSize, fontWeight: 600, color: "#14213a", padding: "6px 2px", outline: "none" }} />
+                        style={{ width: "100%", border: "none", borderBottom: "1px dashed rgba(18,58,66,0.22)", background: "transparent", fontSize, fontWeight: 600, color: "#123a42", padding: "6px 2px", outline: "none" }} />
                     ))}
                   </div>
                 )
@@ -4616,7 +4616,7 @@ export default function RundoTable() {
                 const badge = isMe ? { label: `${L.badgeMe} · ${L.adminBadge}`, color: "#1f8a4c", bg: "rgba(39,174,96,0.15)" } : origin
                 if (twoCol) {
                   return (
-                    <div key={p.id} style={{ border: isMe ? "1.5px solid rgba(39,174,96,0.45)" : "1px solid rgba(16,24,40,0.08)", borderRadius: 12, padding: "9px 8px", background: isMe ? "rgba(39,174,96,0.07)" : "#fff" }}>
+                    <div key={p.id} style={{ border: isMe ? "1.5px solid rgba(39,174,96,0.45)" : "1px solid rgba(18,58,66,0.08)", borderRadius: 12, padding: "9px 8px", background: isMe ? "rgba(39,174,96,0.07)" : "#fff" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                         {namesBlock(p, 13.5)}
                         <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
@@ -4738,7 +4738,7 @@ export default function RundoTable() {
 
       {adminTab === "overview" && baseItems.some((it) => it.is_shared) && (
         <div id="gedeelde-items" style={{ ...S.card, padding: 12 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "#3b486a", marginBottom: 9, display: "flex", alignItems: "center", gap: 6 }}><ShareIcon on size={14} /> {L.sharedOverviewTitle}</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "#2b4f56", marginBottom: 9, display: "flex", alignItems: "center", gap: 6 }}><ShareIcon on size={14} /> {L.sharedOverviewTitle}</div>
           {baseItems.filter((it) => it.is_shared).map((it) => {
             const st = sharedStatus(it)
             const names = claims.filter((c) => c.item_id === it.id && c.quantity > 0).map((c) => {
@@ -4753,11 +4753,11 @@ export default function RundoTable() {
             return (
               <div key={it.id} style={{ marginBottom: 8, padding: "8px 10px", borderRadius: 10, background: st.warn === "many" ? "rgba(224,107,94,0.09)" : st.warn ? "rgba(243,156,18,0.08)" : "rgba(39,174,96,0.06)", border: st.warn ? "1px solid rgba(243,156,18,0.45)" : "1px solid rgba(39,174,96,0.35)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
-                  <span style={{ fontSize: 16.5, fontWeight: 800, color: "#14213a" }}>{it.name}</span>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: "#5a6680", flexShrink: 0 }}>€{itemTotal(it).toFixed(2).replace(".", ",")}{it.share_expected ? ` · ${L.expectedShort(it.share_expected)}` : ""}</span>
+                  <span style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>{it.name}</span>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: "#4a6e73", flexShrink: 0 }}>€{itemTotal(it).toFixed(2).replace(".", ",")}{it.share_expected ? ` · ${L.expectedShort(it.share_expected)}` : ""}</span>
                 </div>
-                <div style={{ fontSize: 15.5, color: "#5a6680", marginTop: 3, lineHeight: 1.45 }}>
-                  {st.heads > 0 ? <>{L.sharedByLabel} <b style={{ color: "#14213a" }}>{st.heads}</b>: {names}</> : L.nobodyShared}
+                <div style={{ fontSize: 15.5, color: "#4a6e73", marginTop: 3, lineHeight: 1.45 }}>
+                  {st.heads > 0 ? <>{L.sharedByLabel} <b style={{ color: "#123a42" }}>{st.heads}</b>: {names}</> : L.nobodyShared}
                 </div>
                 {st.warn === "few" && <div style={{ fontSize: 15.5, fontWeight: 700, color: "#b5591a", marginTop: 4 }}>{L.tooFewShared(st.heads, it.share_expected as number)}</div>}
                 {st.warn === "one" && <div style={{ fontSize: 15.5, fontWeight: 700, color: "#b5591a", marginTop: 4 }}>{L.onlyOneShares}</div>}
@@ -4799,19 +4799,19 @@ export default function RundoTable() {
                   <div onClick={() => setExpandedPeople((cur) => { const n = new Set(cur); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n })}
                     style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 4px", cursor: "pointer" }}>
                     <span style={{ fontWeight: 700, fontSize: 18, display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-                      <span style={{ fontSize: 15.5, color: "#9aa0ab", width: 12, display: "inline-block", flexShrink: 0 }}>{open ? "▼" : "▶"}</span>
+                      <span style={{ fontSize: 15.5, color: "#8aa3a6", width: 12, display: "inline-block", flexShrink: 0 }}>{open ? "▼" : "▶"}</span>
                       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
                       <span style={{ fontSize: 15, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 8, padding: "3px 7px", flexShrink: 0 }}>{st.label}</span>
                     </span>
-                    <span style={{ fontWeight: 800, fontSize: 19, color: "#14213a", flexShrink: 0, marginLeft: 8 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</span>
+                    <span style={{ fontWeight: 800, fontSize: 19, color: "#123a42", flexShrink: 0, marginLeft: 8 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</span>
                   </div>
                   {open && (
                     <div style={{ padding: "2px 4px 12px 23px" }}>
                       {detail.length === 0 && <div style={{ fontSize: 16, color: "#aaa" }}>{L.nothingTapped}</div>}
                       {detail.map((d, k) => (
-                        <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 16, color: "#5a6680", padding: "2px 0" }}>
+                        <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 16, color: "#4a6e73", padding: "2px 0" }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{showTip(d.name, L)}{d.shared ? (d.revealed ? ((p.seats ?? 1) > 1 ? L.sharedNPers(d.myHeads) : L.sharedPart) : L.sharedByN(d.sharers)) : ""}</span>
-                          <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>
+                          <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#123a42" }}>
                             {d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}
                           </span>
                         </div>
@@ -4827,7 +4827,7 @@ export default function RundoTable() {
               const allAssigned = openUnits === 0 && undecidedShared.length === 0
               const todo = openUnits + undecidedShared.length
               return (
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1.5px solid rgba(16,24,40,0.08)" }}>
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1.5px solid rgba(18,58,66,0.08)" }}>
                   {allAssigned ? (
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.55)", borderRadius: 12, padding: "10px 14px" }}>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 17.5, fontWeight: 800, color: "#1f8a4c" }}>{L.allAssigned}</span>
@@ -4835,11 +4835,11 @@ export default function RundoTable() {
                     </div>
                   ) : (
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                      <span style={{ fontSize: 16.5, fontWeight: 700, color: "#5a6680" }}>{L.assignedLabel}{" "}
+                      <span style={{ fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>{L.assignedLabel}{" "}
                         <span onClick={() => { setShowTodo(true); setTimeout(() => { if (typeof document !== "undefined") document.getElementById("nog-te-doen")?.scrollIntoView({ behavior: "smooth", block: "start" }) }, 50) }}
                           style={{ color: "#c0392b", fontWeight: 800, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>{L.todoLeft(todo)}</span>
                       </span>
-                      <span style={{ fontSize: 19, fontWeight: 800, color: "#14213a" }}>€{assignedSum.toFixed(2).replace(".", ",")} <span style={{ fontSize: 16, color: "#9aa0ab", fontWeight: 700 }}>/ €{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</span></span>
+                      <span style={{ fontSize: 19, fontWeight: 800, color: "#123a42" }}>€{assignedSum.toFixed(2).replace(".", ",")} <span style={{ fontSize: 16, color: "#8aa3a6", fontWeight: 700 }}>/ €{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</span></span>
                     </div>
                   )}
                   {(() => {
@@ -4858,10 +4858,10 @@ export default function RundoTable() {
                       <>
                       {apart && (
                         <>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8, paddingTop: 8, borderTop: "1px dashed rgba(16,24,40,0.12)" }}>
-                            <span style={{ fontSize: 16, fontWeight: 700, color: "#5a6680" }}>{L.itemsOnBill}</span>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8, paddingTop: 8, borderTop: "1px dashed rgba(18,58,66,0.12)" }}>
+                            <span style={{ fontSize: 16, fontWeight: 700, color: "#4a6e73" }}>{L.itemsOnBill}</span>
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
-                              <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a" }}>€{vergelijk.toFixed(2).replace(".", ",")}</span>
+                              <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42" }}>€{vergelijk.toFixed(2).replace(".", ",")}</span>
                               {!ok && (
                                 <span style={{ fontSize: 15.5, fontWeight: 800, color: "#b5591a", background: "rgba(243,156,18,0.12)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 7, padding: "4px 7px", whiteSpace: "nowrap" }}>{L.totalsDiff(diff)}</span>
                               )}
@@ -4869,27 +4869,27 @@ export default function RundoTable() {
                           </div>
                           {taxItems.map((t) => (
                             <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 6 }}>
-                              <span style={{ fontSize: 15, color: "#5a6680", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>🧮 {t.name}</span>
-                              <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 700, color: "#5a6680" }}>{taxAmount(t) < 0 ? "−" : ""}€{Math.abs(taxAmount(t)).toFixed(2).replace(".", ",")}</span>
+                              <span style={{ fontSize: 15, color: "#4a6e73", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>🧮 {t.name}</span>
+                              <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 700, color: "#4a6e73" }}>{taxAmount(t) < 0 ? "−" : ""}€{Math.abs(taxAmount(t)).toFixed(2).replace(".", ",")}</span>
                             </div>
                           ))}
                         </>
                       )}
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8, paddingTop: 8, borderTop: apart ? "1px solid rgba(16,24,40,0.1)" : "1px dashed rgba(16,24,40,0.12)" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8, paddingTop: 8, borderTop: apart ? "1px solid rgba(18,58,66,0.1)" : "1px dashed rgba(18,58,66,0.12)" }}>
                         <span style={{ minWidth: 0 }}>
-                          <span style={{ display: "block", fontSize: 16, fontWeight: apart ? 800 : 700, color: apart ? "#14213a" : "#5a6680" }}>{L.billTotalLabel}</span>
+                          <span style={{ display: "block", fontSize: 16, fontWeight: apart ? 800 : 700, color: apart ? "#123a42" : "#4a6e73" }}>{L.billTotalLabel}</span>
                           {tipTotal > 0.005 && (
-                            <span style={{ display: "block", fontSize: 15.5, fontWeight: 700, color: "#5a6680", marginTop: 2 }}>{L.tipInclLabel(tipTotal.toFixed(2).replace(".", ","))}</span>
+                            <span style={{ display: "block", fontSize: 15.5, fontWeight: 700, color: "#4a6e73", marginTop: 2 }}>{L.tipInclLabel(tipTotal.toFixed(2).replace(".", ","))}</span>
                           )}
                         </span>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
-                          <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a" }}>€{billSum.toFixed(2).replace(".", ",")}</span>
+                          <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42" }}>€{billSum.toFixed(2).replace(".", ",")}</span>
                           {!ok && !apart && (
                             <span style={{ fontSize: 15.5, fontWeight: 800, color: "#b5591a", background: "rgba(243,156,18,0.12)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 7, padding: "4px 7px", whiteSpace: "nowrap" }}>{L.totalsDiff(diff)}</span>
                           )}
                         </span>
                       </div>
-                      {apart && <div style={{ fontSize: 13.5, color: "#9aa0ab", lineHeight: 1.45, marginTop: 7 }}>{L.taxSplitAtClose}</div>}
+                      {apart && <div style={{ fontSize: 13.5, color: "#8aa3a6", lineHeight: 1.45, marginTop: 7 }}>{L.taxSplitAtClose}</div>}
                       </>
                     )
                   })()}
@@ -4932,15 +4932,15 @@ export default function RundoTable() {
                     })
                   }
                   return (
-                    <div style={{ marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
-                      <div style={{ fontSize: 15.5, fontWeight: 800, color: "#3b486a", marginBottom: 2 }}>{L.whoPaysTip}</div>
-                      <div style={{ fontSize: 14, color: "#9aa0ab", marginBottom: 8, lineHeight: 1.4 }}>{L.whoPaysTipSub}</div>
+                    <div style={{ marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(18,58,66,0.08)" }}>
+                      <div style={{ fontSize: 15.5, fontWeight: 800, color: "#2b4f56", marginBottom: 2 }}>{L.whoPaysTip}</div>
+                      <div style={{ fontSize: 14, color: "#8aa3a6", marginBottom: 8, lineHeight: 1.4 }}>{L.whoPaysTipSub}</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         {participants.map((q) => {
                           const aan = doetMee(q.id)
                           return (
                             <button key={q.id} onClick={() => zet(q.id, !aan)}
-                              style={{ fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "9px 13px", cursor: "pointer", color: aan ? "#15703f" : "#9aa0ab", background: aan ? "rgba(39,174,96,0.12)" : "#fff", border: aan ? "1.5px solid rgba(39,174,96,0.5)" : "1.5px solid rgba(16,24,40,0.15)", textDecoration: aan ? "none" : "line-through" }}>
+                              style={{ fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "9px 13px", cursor: "pointer", color: aan ? "#15703f" : "#8aa3a6", background: aan ? "rgba(39,174,96,0.12)" : "#fff", border: aan ? "1.5px solid rgba(39,174,96,0.5)" : "1.5px solid rgba(18,58,66,0.15)", textDecoration: aan ? "none" : "line-through" }}>
                               {aan ? "✓ " : ""}{q.name}
                             </button>
                           )
@@ -4952,15 +4952,15 @@ export default function RundoTable() {
                 </>
               ) : (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 16.5, fontWeight: 800, color: "#3b486a", flexShrink: 0 }}>{L.tipHeader}</span>
-                  <div style={{ display: "inline-flex", alignItems: "center", flexShrink: 0, border: "1px solid rgba(20,33,58,0.15)", borderRadius: 10, background: "#fff", overflow: "hidden" }}>
-                    <span style={{ fontSize: 18, fontWeight: 700, color: "#5a6680", padding: "0 1px 0 10px" }}>€</span>
+                  <span style={{ fontSize: 16.5, fontWeight: 800, color: "#2b4f56", flexShrink: 0 }}>{L.tipHeader}</span>
+                  <div style={{ display: "inline-flex", alignItems: "center", flexShrink: 0, border: "1px solid rgba(18,58,66,0.15)", borderRadius: 10, background: "#fff", overflow: "hidden" }}>
+                    <span style={{ fontSize: 18, fontWeight: 700, color: "#4a6e73", padding: "0 1px 0 10px" }}>€</span>
                     <input type="text" inputMode="decimal" value={tipInput} onChange={(e) => setTipInput(numFilter(e.target.value, true))} onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); addTip() } }} placeholder="0,00" style={{ width: 62, border: "none", outline: "none", background: "transparent", textAlign: "right", padding: "8px 10px 8px 2px", fontSize: 18 }} />
                   </div>
                   {/* pointerdown: reageert vóór het toetsenbord sluit en de pagina verspringt,
                       anders gaat de eerste tik verloren. */}
                   <button onPointerDown={(e) => { e.preventDefault(); (document.activeElement as HTMLElement)?.blur?.(); addTip() }} style={{ ...S.btn, ...S.btnPrimary, fontSize: 16, fontWeight: 700, padding: "8px 14px", flexShrink: 0 }}>{L.addTipShort}</button>
-                  <span style={{ fontSize: 15.5, color: "#9aa0ab", width: "100%", marginTop: 2 }}>{L.tipOptional}</span>
+                  <span style={{ fontSize: 15.5, color: "#8aa3a6", width: "100%", marginTop: 2 }}>{L.tipOptional}</span>
                 </div>
               )}
             </div>
@@ -5003,7 +5003,7 @@ export default function RundoTable() {
               {L.finalizeBtn}
             </button>
           )}
-          <div style={{ fontSize: 15.5, color: "#9aa0ab", textAlign: "center", marginTop: 6, marginBottom: 4 }}>
+          <div style={{ fontSize: 15.5, color: "#8aa3a6", textAlign: "center", marginTop: 6, marginBottom: 4 }}>
             {group.finalized ? L.finalizedNote : L.notFinalizedNote}
           </div>
           <div style={{ textAlign: "center", marginTop: 10 }}>
@@ -5034,9 +5034,9 @@ export default function RundoTable() {
           return (
             <button key={k} onClick={() => setTaxModal({ ...tm, kind: k, name: kindWord(k), mode: k === "vat" ? tm.mode : "amount" })}
               style={{ flex: 1, textAlign: "center", borderRadius: 10, padding: "9px 4px", fontSize: 16, fontWeight: 800, cursor: "pointer",
-                color: on ? "#fff" : "#5a6680",
-                background: on ? (danger ? "linear-gradient(135deg,#e07a5f,#c0392b)" : "linear-gradient(135deg,#1499b0,#22b8cf)") : "#fff",
-                border: on ? "1px solid transparent" : "1px solid rgba(16,24,40,0.15)" }}>{label}</button>
+                color: on ? "#fff" : "#4a6e73",
+                background: on ? (danger ? "linear-gradient(135deg,#e07a5f,#c0392b)" : "linear-gradient(135deg,#0f7d90,#3ec9d8)") : "#fff",
+                border: on ? "1px solid transparent" : "1px solid rgba(18,58,66,0.15)" }}>{label}</button>
           )
         }
         return (
@@ -5051,25 +5051,25 @@ export default function RundoTable() {
             </div>
 
             {isVat && (
-              <div style={{ display: "flex", gap: 5, background: "rgba(16,24,40,0.05)", borderRadius: 11, padding: 3, marginBottom: 13 }}>
+              <div style={{ display: "flex", gap: 5, background: "rgba(18,58,66,0.05)", borderRadius: 11, padding: 3, marginBottom: 13 }}>
                 {(["pct", "amount"] as const).map((m) => (
                   <button key={m} onClick={() => setTaxModal({ ...tm, mode: m })}
                     style={{ flex: 1, textAlign: "center", borderRadius: 9, padding: "8px 4px", fontSize: 16, fontWeight: 800, cursor: "pointer", border: "none",
-                      color: tm.mode === m ? "#14213a" : "#8a93a3",
+                      color: tm.mode === m ? "#123a42" : "#7d999d",
                       background: tm.mode === m ? "#fff" : "transparent",
-                      boxShadow: tm.mode === m ? "0 1px 3px rgba(16,24,40,0.08)" : "none" }}>{m === "pct" ? L.modePct : L.modeAmount}</button>
+                      boxShadow: tm.mode === m ? "0 1px 3px rgba(18,58,66,0.08)" : "none" }}>{m === "pct" ? L.modePct : L.modeAmount}</button>
                 ))}
               </div>
             )}
 
             <input value={tm.name} onChange={(e) => setTaxModal({ ...tm, name: e.target.value })} placeholder={ph}
-              style={{ width: "100%", boxSizing: "border-box", border: "1px solid rgba(16,24,40,0.15)", borderRadius: 10, padding: "9px 11px", fontSize: 18, color: "#14213a", marginBottom: 6 }} />
+              style={{ width: "100%", boxSizing: "border-box", border: "1px solid rgba(18,58,66,0.15)", borderRadius: 10, padding: "9px 11px", fontSize: 18, color: "#123a42", marginBottom: 6 }} />
             {/* Eén tik en de omschrijving staat er — en passant zie je dat het veld aanpasbaar is. */}
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
               {suggestions.map((sug) => (
                 <button key={sug} onClick={() => setTaxModal({ ...tm, name: sug })}
                   style={{ fontSize: 15.5, fontWeight: 700, borderRadius: 7, padding: "6px 8px", cursor: "pointer", border: "none",
-                    color: tm.name === sug ? "#0f7d90" : "#5a6680",
+                    color: tm.name === sug ? "#0f7d90" : "#4a6e73",
                     background: tm.name === sug ? "rgba(20,153,176,0.14)" : "rgba(90,108,166,0.09)" }}>{sug}</button>
               ))}
             </div>
@@ -5082,43 +5082,43 @@ export default function RundoTable() {
                     return (
                       <button key={r} onClick={() => setTaxModal({ ...tm, pct: r })}
                         style={{ flex: 1, textAlign: "center", borderRadius: 10, padding: "9px 3px", fontSize: 16.5, fontWeight: 800, cursor: "pointer",
-                          color: on ? "#fff" : "#5a6680", background: on ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff",
-                          border: on ? "1px solid transparent" : "1px solid rgba(16,24,40,0.15)" }}>{r}%</button>
+                          color: on ? "#fff" : "#4a6e73", background: on ? "linear-gradient(135deg,#0f7d90,#3ec9d8)" : "#fff",
+                          border: on ? "1px solid transparent" : "1px solid rgba(18,58,66,0.15)" }}>{r}%</button>
                     )
                   })}
                   <button onClick={() => setTaxModal({ ...tm, pct: "" })}
                     style={{ flex: 1, textAlign: "center", borderRadius: 10, padding: "9px 3px", fontSize: 16, fontWeight: 800, cursor: "pointer",
-                      color: !["6", "12", "21"].includes(tm.pct) ? "#fff" : "#8a93a3",
-                      background: !["6", "12", "21"].includes(tm.pct) ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff",
-                      border: !["6", "12", "21"].includes(tm.pct) ? "1px solid transparent" : "1.5px dashed rgba(16,24,40,0.2)" }}>{L.pctOther}</button>
+                      color: !["6", "12", "21"].includes(tm.pct) ? "#fff" : "#7d999d",
+                      background: !["6", "12", "21"].includes(tm.pct) ? "linear-gradient(135deg,#0f7d90,#3ec9d8)" : "#fff",
+                      border: !["6", "12", "21"].includes(tm.pct) ? "1px solid transparent" : "1.5px dashed rgba(18,58,66,0.2)" }}>{L.pctOther}</button>
                 </div>
                 {!["6", "12", "21"].includes(tm.pct) && (
                   <div style={{ display: "flex", alignItems: "center", gap: 5, border: "1.5px solid rgba(20,153,176,0.5)", borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
                     <input type="text" inputMode="decimal" autoFocus value={tm.pct} onChange={(e) => setTaxModal({ ...tm, pct: e.target.value })}
-                      placeholder="9,5" style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: 18, fontWeight: 700, color: "#14213a", background: "transparent" }} />
+                      placeholder="9,5" style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: 18, fontWeight: 700, color: "#123a42", background: "transparent" }} />
                     <span style={{ fontSize: 18, fontWeight: 800, color: "#0f7d90" }}>%</span>
                   </div>
                 )}
               </>
             ) : (
               <>
-                <div style={{ display: "flex", alignItems: "center", gap: 5, border: `1px solid ${isDisc ? "rgba(192,57,43,0.4)" : "rgba(16,24,40,0.15)"}`, background: isDisc ? "rgba(192,57,43,0.04)" : "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: isDisc ? "#c0392b" : "#5a6680" }}>{isDisc ? "−€" : "€"}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, border: `1px solid ${isDisc ? "rgba(192,57,43,0.4)" : "rgba(18,58,66,0.15)"}`, background: isDisc ? "rgba(192,57,43,0.04)" : "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: isDisc ? "#c0392b" : "#4a6e73" }}>{isDisc ? "−€" : "€"}</span>
                   <input type="text" inputMode="decimal" value={tm.amount} onChange={(e) => setTaxModal({ ...tm, amount: e.target.value })} placeholder="0,00"
-                    style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 17.5, fontWeight: 700, color: "#14213a" }} />
+                    style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 17.5, fontWeight: 700, color: "#123a42" }} />
                 </div>
               </>
             )}
 
-            <div style={{ fontSize: 15.5, fontWeight: 800, color: "#3b486a", marginBottom: 5 }}>{L.appliesTo}</div>
+            <div style={{ fontSize: 15.5, fontWeight: 800, color: "#2b4f56", marginBottom: 5 }}>{L.appliesTo}</div>
             <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
               {(["all", "items"] as const).map((sc) => {
                 const on = tm.scope === sc
                 return (
                   <button key={sc} onClick={() => setTaxModal({ ...tm, scope: sc })}
                     style={{ flex: 1, textAlign: "center", borderRadius: 10, padding: "8px 4px", fontSize: 15.5, fontWeight: 800, cursor: "pointer",
-                      color: on ? "#0f7d90" : "#5a6680", background: on ? "rgba(20,153,176,0.1)" : "#fff",
-                      border: on ? "1px solid rgba(20,153,176,0.45)" : "1px solid rgba(16,24,40,0.15)" }}>
+                      color: on ? "#0f7d90" : "#4a6e73", background: on ? "rgba(20,153,176,0.1)" : "#fff",
+                      border: on ? "1px solid rgba(20,153,176,0.45)" : "1px solid rgba(18,58,66,0.15)" }}>
                     {sc === "all" ? L.scopeAll : (tm.ids.length > 0 ? L.scopeItemsN(tm.ids.length) : L.scopeItems)}
                   </button>
                 )
@@ -5126,16 +5126,16 @@ export default function RundoTable() {
             </div>
 
             {tm.scope === "items" && (
-              <div style={{ margin: "0 0 12px", maxHeight: 190, overflowY: "auto", border: "1px solid rgba(16,24,40,0.12)", borderRadius: 10 }}>
-                {baseItems.length === 0 && <div style={{ fontSize: 16, color: "#9aa0ab", padding: 10 }}>{L.noItemsYet}</div>}
+              <div style={{ margin: "0 0 12px", maxHeight: 190, overflowY: "auto", border: "1px solid rgba(18,58,66,0.12)", borderRadius: 10 }}>
+                {baseItems.length === 0 && <div style={{ fontSize: 16, color: "#8aa3a6", padding: 10 }}>{L.noItemsYet}</div>}
                 {baseItems.map((it) => {
                   const on = tm.ids.includes(it.id)
                   return (
                     <button key={it.id} onClick={() => setTaxModal({ ...tm, ids: on ? tm.ids.filter((x) => x !== it.id) : [...tm.ids, it.id] })}
-                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, textAlign: "left", padding: "9px 10px", background: "none", border: "none", borderBottom: "1px solid rgba(16,24,40,0.06)", cursor: "pointer" }}>
-                      <span style={{ width: 18, height: 18, borderRadius: 5, flexShrink: 0, border: on ? "none" : "1.5px solid rgba(16,24,40,0.25)", background: on ? "#1499b0" : "transparent", color: "#fff", fontSize: 16, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{on ? "✓" : ""}</span>
-                      <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 16.5, color: "#14213a" }}>{it.name}</span>
-                      <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 700, color: "#5a6680" }}>€{(it.unit_price * it.quantity).toFixed(2).replace(".", ",")}</span>
+                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, textAlign: "left", padding: "9px 10px", background: "none", border: "none", borderBottom: "1px solid rgba(18,58,66,0.06)", cursor: "pointer" }}>
+                      <span style={{ width: 18, height: 18, borderRadius: 5, flexShrink: 0, border: on ? "none" : "1.5px solid rgba(18,58,66,0.25)", background: on ? "#0f7d90" : "transparent", color: "#fff", fontSize: 16, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{on ? "✓" : ""}</span>
+                      <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 16.5, color: "#123a42" }}>{it.name}</span>
+                      <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 700, color: "#4a6e73" }}>€{(it.unit_price * it.quantity).toFixed(2).replace(".", ",")}</span>
                     </button>
                   )
                 })}
@@ -5144,15 +5144,15 @@ export default function RundoTable() {
 
             {isVat && tm.mode === "pct" && pctNum > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(90,108,166,0.07)", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
-                <span style={{ fontSize: 16, color: "#5a6680", fontWeight: 700 }}>{L.pctOfSum(tm.pct, base)}</span>
-                <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a" }}>€{computed.toFixed(2).replace(".", ",")}</span>
+                <span style={{ fontSize: 16, color: "#4a6e73", fontWeight: 700 }}>{L.pctOfSum(tm.pct, base)}</span>
+                <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42" }}>€{computed.toFixed(2).replace(".", ",")}</span>
               </div>
             )}
 
             {computed > 0 && (
-              <div style={{ fontSize: 15.5, fontWeight: 700, color: isDisc ? "#c0392b" : "#5a6680", marginBottom: 10 }}>{isDisc ? L.subtracts : L.addsUp}</div>
+              <div style={{ fontSize: 15.5, fontWeight: 700, color: isDisc ? "#c0392b" : "#4a6e73", marginBottom: 10 }}>{isDisc ? L.subtracts : L.addsUp}</div>
             )}
-            {isVat && <div style={{ fontSize: 15.5, color: "#8a93a3", lineHeight: 1.45, marginBottom: 10 }}>{L.vatOnlyIfNotIncluded}</div>}
+            {isVat && <div style={{ fontSize: 15.5, color: "#7d999d", lineHeight: 1.45, marginBottom: 10 }}>{L.vatOnlyIfNotIncluded}</div>}
 
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setTaxModal(null)}>{L.cancel}</button>
@@ -5172,14 +5172,14 @@ export default function RundoTable() {
           <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowShareWarn(false)}>
             <div style={{ ...S.modal, width: "min(350px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ marginTop: 0, marginBottom: 8, fontSize: 20, fontWeight: 800, color: "#c0392b" }}>{L.totalsMismatchTitle}{diff != null ? L.diffSuffix(diff.toFixed(2).replace(".", ",")) : ""}</h3>
-              <p style={{ fontSize: 16.5, color: "#5a6680", lineHeight: 1.5, margin: "0 0 8px" }}>{entered == null ? L.warnFillTotal : L.warnCheckItems}</p>
-              <ul style={{ margin: "0 0 14px", paddingLeft: 20, fontSize: 16.5, color: "#5a6680", lineHeight: 1.6 }}>
+              <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 8px" }}>{entered == null ? L.warnFillTotal : L.warnCheckItems}</p>
+              <ul style={{ margin: "0 0 14px", paddingLeft: 20, fontSize: 16.5, color: "#4a6e73", lineHeight: 1.6 }}>
                 <li>{L.checkPricesQty}</li>
                 <li>{L.checkTaxAdded}</li>
                 <li>{L.checkSharedMarked}</li>
               </ul>
               <button onClick={() => { setShowShareWarn(false); setAdminTab("scan"); scrollTop() }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>{L.backToBill}</button>
-              <button onClick={() => { setBillMismatchAck(true); setShowShareWarn(false); setAdminTab("guests"); scrollTop() }} style={{ ...S.btn, width: "100%", padding: "9px 0", marginTop: 8, fontSize: 16, fontWeight: 700, color: "#9aa0ab", background: "transparent", border: "none" }}>{L.continueAnyway}</button>
+              <button onClick={() => { setBillMismatchAck(true); setShowShareWarn(false); setAdminTab("guests"); scrollTop() }} style={{ ...S.btn, width: "100%", padding: "9px 0", marginTop: 8, fontSize: 16, fontWeight: 700, color: "#8aa3a6", background: "transparent", border: "none" }}>{L.continueAnyway}</button>
             </div>
           </div>
         )
@@ -5188,11 +5188,11 @@ export default function RundoTable() {
       {showInviteModal && (
         <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowInviteModal(false)}>
           <div style={{ ...S.modal, width: "min(360px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, marginBottom: 8, fontSize: 20, fontWeight: 800, color: "#14213a" }}>{L.inviteModalTitle}</h3>
-            <div style={{ fontSize: 16.5, color: "#5a6680", lineHeight: 1.5, marginBottom: 12 }}>{L.inviteModalMsg}</div>
-            <div style={{ background: "#f4f6fb", border: "1px solid rgba(20,33,58,0.12)", borderRadius: 12, padding: "11px 13px", fontSize: 16.5, color: "#14213a", lineHeight: 1.5, wordBreak: "break-word", whiteSpace: "pre-wrap", marginBottom: 14, userSelect: "text" }}>{inviteModalText}</div>
+            <h3 style={{ marginTop: 0, marginBottom: 8, fontSize: 20, fontWeight: 800, color: "#123a42" }}>{L.inviteModalTitle}</h3>
+            <div style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, marginBottom: 12 }}>{L.inviteModalMsg}</div>
+            <div style={{ background: "#f4f6fb", border: "1px solid rgba(18,58,66,0.12)", borderRadius: 12, padding: "11px 13px", fontSize: 16.5, color: "#123a42", lineHeight: 1.5, wordBreak: "break-word", whiteSpace: "pre-wrap", marginBottom: 14, userSelect: "text" }}>{inviteModalText}</div>
             <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (navigator.clipboard) { navigator.clipboard.writeText(inviteModalText); setToast(L.toastInviteCopied) } }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800, marginBottom: 8 }}>{L.inviteModalCopy}</button>
-            <button onClick={() => setShowInviteModal(false)} style={{ ...S.btn, width: "100%", padding: "10px 0", fontSize: 16.5, fontWeight: 700, color: "#9aa0ab", background: "transparent", border: "none" }}>{L.inviteModalClose}</button>
+            <button onClick={() => setShowInviteModal(false)} style={{ ...S.btn, width: "100%", padding: "10px 0", fontSize: 16.5, fontWeight: 700, color: "#8aa3a6", background: "transparent", border: "none" }}>{L.inviteModalClose}</button>
           </div>
         </div>
       )}
@@ -5201,12 +5201,12 @@ export default function RundoTable() {
       {showTipReminder && (
         <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowTipReminder(false)}>
           <div style={{ ...S.modal, width: "min(350px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, marginBottom: 7, fontSize: 20, fontWeight: 800, color: "#14213a" }}>{L.tipTitleNew}</h3>
-            <div style={{ fontSize: 16.5, color: "#5a6680", lineHeight: 1.55, marginBottom: 15 }}>{L.tipBodyNew}</div>
+            <h3 style={{ marginTop: 0, marginBottom: 7, fontSize: 20, fontWeight: 800, color: "#123a42" }}>{L.tipTitleNew}</h3>
+            <div style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.55, marginBottom: 15 }}>{L.tipBodyNew}</div>
             <div style={{ background: "rgba(90,108,166,0.07)", borderRadius: 11, padding: "11px 13px", marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 16, color: "#5a6680", fontWeight: 700 }}>{L.tipTotalLabel}</span>
-                <span style={{ fontSize: 21, fontWeight: 800, color: "#14213a" }}>€{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</span>
+                <span style={{ fontSize: 16, color: "#4a6e73", fontWeight: 700 }}>{L.tipTotalLabel}</span>
+                <span style={{ fontSize: 21, fontWeight: 800, color: "#123a42" }}>€{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</span>
               </div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -5225,9 +5225,9 @@ export default function RundoTable() {
           <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowFinalizeWarn(false)}>
             <div style={{ ...S.modal, width: "min(350px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ marginTop: 0, marginBottom: 8, fontSize: 20, fontWeight: 800, color: "#c0392b" }}>{L.sureTitle}{diff != null ? L.sureDiff(diff.toFixed(2).replace(".", ",")) : L.sureNoTotal}</h3>
-              <p style={{ fontSize: 16.5, color: "#5a6680", lineHeight: 1.5, margin: "0 0 14px" }}>{L.finalizeWarnBody}</p>
+              <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 14px" }}>{L.finalizeWarnBody}</p>
               <button onClick={() => setShowFinalizeWarn(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>{L.backToBill}</button>
-              <button onClick={() => { setShowFinalizeWarn(false); finalizeBill(true) }} style={{ ...S.btn, width: "100%", padding: "9px 0", marginTop: 8, fontSize: 16, fontWeight: 700, color: "#9aa0ab", background: "transparent", border: "none" }}>{L.finalizeAnyway}</button>
+              <button onClick={() => { setShowFinalizeWarn(false); finalizeBill(true) }} style={{ ...S.btn, width: "100%", padding: "9px 0", marginTop: 8, fontSize: 16, fontWeight: 700, color: "#8aa3a6", background: "transparent", border: "none" }}>{L.finalizeAnyway}</button>
             </div>
           </div>
         )
@@ -5237,12 +5237,12 @@ export default function RundoTable() {
       {centerNote && (
         <div style={{ ...S.overlay, zIndex: 3200 }} onClick={() => setCenterNote(null)}>
           <div style={{ ...S.modal, width: "min(340px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
-            {centerNote.title && <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: 20, fontWeight: 800, color: "#14213a" }}>{centerNote.title}</h3>}
-            <p style={{ fontSize: 18, color: "#3b486a", lineHeight: 1.55, margin: "0 0 16px", whiteSpace: "pre-line" }}>{centerNote.body}</p>
+            {centerNote.title && <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: 20, fontWeight: 800, color: "#123a42" }}>{centerNote.title}</h3>}
+            <p style={{ fontSize: 18, color: "#2b4f56", lineHeight: 1.55, margin: "0 0 16px", whiteSpace: "pre-line" }}>{centerNote.body}</p>
             {centerNote.actionLabel && centerNote.onAction && (
               <button onClick={() => { const fn = centerNote.onAction!; setCenterNote(null); fn() }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontWeight: 800, fontSize: 18, marginBottom: 8 }}>{centerNote.actionLabel}</button>
             )}
-            <button onClick={() => setCenterNote(null)} style={centerNote.actionLabel ? { width: "100%", padding: "10px 0", background: "none", border: "none", fontSize: 15.5, fontWeight: 700, color: "#9aa0ab", cursor: "pointer" } : { ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 18 }}>{centerNote.dismissLabel ?? (centerNote.actionLabel ? L.addAnother : "OK")}</button>
+            <button onClick={() => setCenterNote(null)} style={centerNote.actionLabel ? { width: "100%", padding: "10px 0", background: "none", border: "none", fontSize: 15.5, fontWeight: 700, color: "#8aa3a6", cursor: "pointer" } : { ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 18 }}>{centerNote.dismissLabel ?? (centerNote.actionLabel ? L.addAnother : "OK")}</button>
           </div>
         </div>
       )}
@@ -5304,8 +5304,8 @@ export default function RundoTable() {
           <div style={{ ...S.overlay, zIndex: 3100 }}>
             <div style={{ ...S.modal, width: "min(400px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 3 }}>{L.addNameTitle}</h3>
-              <div style={{ fontSize: 15, color: "#9aa0ab", lineHeight: 1.45, marginBottom: 13 }}>{L.addNameSub}</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: "#14213a", marginBottom: 7 }}>{L.howManyPersonsQ}</div>
+              <div style={{ fontSize: 15, color: "#8aa3a6", lineHeight: 1.45, marginBottom: 13 }}>{L.addNameSub}</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#123a42", marginBottom: 7 }}>{L.howManyPersonsQ}</div>
               <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
                 {[1, 2, 3].map((n) => {
                   const aan = n === 3 ? guestSeats >= 3 : guestSeats === n
@@ -5320,9 +5320,9 @@ export default function RundoTable() {
                       const v = n === 3 ? Math.max(3, guestSeats) : n
                       setGuestSeats(v); setGuestNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? ""))
                     }}
-                      style={{ flex: 1, padding: "10px 4px", borderRadius: 10, cursor: "pointer", color: kan ? "#14213a" : "#b9bfca", opacity: kan ? 1 : 0.6, background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>
+                      style={{ flex: 1, padding: "10px 4px", borderRadius: 10, cursor: "pointer", color: kan ? "#123a42" : "#b9bfca", opacity: kan ? 1 : 0.6, background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(18,58,66,0.15)" }}>
                       <span style={{ display: "block", fontSize: 15, fontWeight: 800 }}>{label}</span>
-                      <span style={{ display: "block", fontSize: 12, fontWeight: 600, marginTop: 2, color: !kan ? "#b9bfca" : aan ? "#6b5a2a" : "#5a6680" }}>{n === 1 ? L.aloneSub : L.togetherSub}</span>
+                      <span style={{ display: "block", fontSize: 12, fontWeight: 600, marginTop: 2, color: !kan ? "#b9bfca" : aan ? "#6b5a2a" : "#4a6e73" }}>{n === 1 ? L.aloneSub : L.togetherSub}</span>
                     </button>
                   )
                 })}
@@ -5335,21 +5335,21 @@ export default function RundoTable() {
                   <span style={{ flexShrink: 0, fontSize: 20, lineHeight: 1.2 }}>{guestSeats === 2 ? "👫" : "👥"}</span>
                   <span style={{ minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#0f7488", marginBottom: 2 }}>{L.togetherTitle(guestSeats)}</span>
-                    <span style={{ display: "block", fontSize: 14.5, color: "#3b486a", lineHeight: 1.45 }}>{L.togetherWhat(guestSeats)}</span>
+                    <span style={{ display: "block", fontSize: 14.5, color: "#2b4f56", lineHeight: 1.45 }}>{L.togetherWhat(guestSeats)}</span>
                   </span>
                 </div>
               )}
               {guestSeats >= 3 && (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginBottom: 12 }}>
                   <button onClick={() => { const v = Math.max(3, guestSeats - 1); setGuestSeats(v); setGuestNames((c) => c.slice(0, v)) }} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 20 }}>−</button>
-                  <b style={{ fontSize: 19, color: "#14213a" }}>{guestSeats}</b>
+                  <b style={{ fontSize: 19, color: "#123a42" }}>{guestSeats}</b>
                   <button onClick={() => {
                     if (guestSeats >= maxZitplaatsen) { setToast(L.seatsCapped(maxZitplaatsen)); return }
                     const v = Math.min(8, guestSeats + 1); setGuestSeats(v); setGuestNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? ""))
                   }} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 20, background: "rgba(27,42,74,0.12)", opacity: guestSeats >= maxZitplaatsen ? 0.45 : 1 }}>+</button>
                 </div>
               )}
-              <div style={{ fontSize: 18, fontWeight: 800, color: "#14213a", marginBottom: 8 }}>{guestSeats > 1 ? L.theirNamesQ : L.theirNameQ}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#123a42", marginBottom: 8 }}>{guestSeats > 1 ? L.theirNamesQ : L.theirNameQ}</div>
               {Array.from({ length: guestSeats }, (_, i) => i).map((i) => (
                 <input key={i} value={guestNames[i] ?? ""} onChange={(e) => setGuestNames((c) => { const n = [...c]; n[i] = e.target.value; return n })}
                   onKeyDown={(e) => { if (e.key === "Enter") bewaar() }}
@@ -5357,8 +5357,8 @@ export default function RundoTable() {
                   style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 7 }} autoFocus={i === 0} />
               ))}
               {guestSeats > 1 && guestNames.filter((n) => n.trim()).length > 0 && (
-                <div style={{ fontSize: 15, color: "#3b486a", background: "rgba(16,24,40,0.03)", borderRadius: 10, padding: "9px 11px", marginBottom: 10, lineHeight: 1.45 }}>
-                  {L.showsAsOne} <b style={{ color: "#14213a" }}>{guestNames.filter((n) => n.trim()).join(" & ")}</b>
+                <div style={{ fontSize: 15, color: "#2b4f56", background: "rgba(18,58,66,0.03)", borderRadius: 10, padding: "9px 11px", marginBottom: 10, lineHeight: 1.45 }}>
+                  {L.showsAsOne} <b style={{ color: "#123a42" }}>{guestNames.filter((n) => n.trim()).join(" & ")}</b>
                 </div>
               )}
               <button onClick={bewaar} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{L.addThisGuest}</button>
@@ -5378,7 +5378,7 @@ export default function RundoTable() {
                 }}
                   style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#c0392b" }}>{L.clearNameBtn}</button>
               )}
-              <button onClick={() => { setShowGuestModal(false); setGuestTarget(null) }} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#9aa0ab" }}>{L.cancel}</button>
+              <button onClick={() => { setShowGuestModal(false); setGuestTarget(null) }} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#8aa3a6" }}>{L.cancel}</button>
             </div>
           </div>
         )
@@ -5400,16 +5400,16 @@ export default function RundoTable() {
           <div style={{ ...S.overlay, zIndex: 3100 }}>
             <div style={{ ...S.modal, width: "min(400px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 3 }}>{L.howManyAdminQ}</h3>
-              <div style={{ fontSize: 15.5, color: "#9aa0ab", lineHeight: 1.45, marginBottom: 13 }}>{L.howManyAdminSub}</div>
+              <div style={{ fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.45, marginBottom: 13 }}>{L.howManyAdminSub}</div>
               <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
                 {[1, 2, 3].map((n) => {
                   const aan = n === 3 ? selfSeats >= 3 : selfSeats === n
                   const label = n === 1 ? L.onePerson : n === 2 ? L.twoPersons : L.threePlus
                   return (
                     <button key={n} onClick={() => { const v = n === 3 ? Math.max(3, selfSeats) : n; setSelfSeats(v); setSelfNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? "")) }}
-                      style={{ flex: 1, padding: "10px 4px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)" }}>
+                      style={{ flex: 1, padding: "10px 4px", borderRadius: 10, cursor: "pointer", color: "#123a42", background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(18,58,66,0.15)" }}>
                       <span style={{ display: "block", fontSize: 15, fontWeight: 800 }}>{label}</span>
-                      <span style={{ display: "block", fontSize: 12, fontWeight: 600, marginTop: 2, color: aan ? "#6b5a2a" : "#5a6680" }}>{n === 1 ? L.aloneSub : L.togetherSub}</span>
+                      <span style={{ display: "block", fontSize: 12, fontWeight: 600, marginTop: 2, color: aan ? "#6b5a2a" : "#4a6e73" }}>{n === 1 ? L.aloneSub : L.togetherSub}</span>
                     </button>
                   )
                 })}
@@ -5417,11 +5417,11 @@ export default function RundoTable() {
               {selfSeats >= 3 && (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginBottom: 12 }}>
                   <button onClick={() => { const v = Math.max(3, selfSeats - 1); setSelfSeats(v); setSelfNames((c) => c.slice(0, v)) }} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 20 }}>−</button>
-                  <b style={{ fontSize: 19, color: "#14213a" }}>{selfSeats}</b>
+                  <b style={{ fontSize: 19, color: "#123a42" }}>{selfSeats}</b>
                   <button onClick={() => { const v = Math.min(8, selfSeats + 1); setSelfSeats(v); setSelfNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? "")) }} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 20, background: "rgba(27,42,74,0.12)" }}>+</button>
                 </div>
               )}
-              <div style={{ fontSize: 18, fontWeight: 800, color: "#14213a", marginBottom: 8 }}>{selfSeats > 1 ? L.yourNamesQ : L.yourNameQ}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#123a42", marginBottom: 8 }}>{selfSeats > 1 ? L.yourNamesQ : L.yourNameQ}</div>
               {Array.from({ length: selfSeats }, (_, i) => i).map((i) => (
                 <input key={i} value={selfNames[i] ?? ""} onChange={(e) => setSelfNames((c) => { const n = [...c]; n[i] = e.target.value; return n })}
                   onKeyDown={(e) => { if (e.key === "Enter") bewaar() }}
@@ -5429,10 +5429,10 @@ export default function RundoTable() {
                   style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 7 }} autoFocus={i === 0} />
               ))}
               {selfSeats > 1 && selfNames.filter((n) => n.trim()).length > 0 && (
-                <div style={{ fontSize: 15.5, color: "#9aa0ab", marginBottom: 10 }}>{L.showsAsOne} <b style={{ color: "#14213a" }}>{selfNames.filter((n) => n.trim()).join(" & ")}</b></div>
+                <div style={{ fontSize: 15.5, color: "#8aa3a6", marginBottom: 10 }}>{L.showsAsOne} <b style={{ color: "#123a42" }}>{selfNames.filter((n) => n.trim()).join(" & ")}</b></div>
               )}
               <button onClick={bewaar} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{selfSeats > 1 ? L.thatsUs : L.thatsMe}</button>
-              <button onClick={() => setShowSelfModal(false)} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#9aa0ab" }}>{L.cancel}</button>
+              <button onClick={() => setShowSelfModal(false)} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#8aa3a6" }}>{L.cancel}</button>
             </div>
           </div>
         )
@@ -5442,10 +5442,10 @@ export default function RundoTable() {
       {confirmDlg && (
         <div style={{ ...S.overlay, zIndex: 3200 }} onClick={() => setConfirmDlg(null)}>
           <div style={{ ...S.modal, width: "min(340px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
-            {confirmDlg.title && <h3 style={{ marginTop: 0, marginBottom: 9, fontSize: 20, fontWeight: 800, color: confirmDlg.danger ? "#c0392b" : "#14213a" }}>{confirmDlg.title}</h3>}
-            <p style={{ fontSize: 18, color: "#3b486a", lineHeight: 1.55, margin: "0 0 16px", whiteSpace: "pre-line" }}>{confirmDlg.body}</p>
+            {confirmDlg.title && <h3 style={{ marginTop: 0, marginBottom: 9, fontSize: 20, fontWeight: 800, color: confirmDlg.danger ? "#c0392b" : "#123a42" }}>{confirmDlg.title}</h3>}
+            <p style={{ fontSize: 18, color: "#2b4f56", lineHeight: 1.55, margin: "0 0 16px", whiteSpace: "pre-line" }}>{confirmDlg.body}</p>
             <button onClick={() => { const fn = confirmDlg.onYes; setConfirmDlg(null); fn() }} style={{ ...S.btn, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 18, border: "none", color: "#fff", background: confirmDlg.danger ? "linear-gradient(135deg,#e74c3c,#c0392b)" : "linear-gradient(135deg,#1f8a4c,#27ae60)" }}>{confirmDlg.yes}</button>
-            <button onClick={() => setConfirmDlg(null)} style={{ ...S.btn, width: "100%", padding: "10px 0", marginTop: 8, fontSize: 17.5, fontWeight: 700, color: "#5a6680", background: "transparent", border: "none" }}>{L.cancel}</button>
+            <button onClick={() => setConfirmDlg(null)} style={{ ...S.btn, width: "100%", padding: "10px 0", marginTop: 8, fontSize: 17.5, fontWeight: 700, color: "#4a6e73", background: "transparent", border: "none" }}>{L.cancel}</button>
           </div>
         </div>
       )}
@@ -5457,7 +5457,7 @@ export default function RundoTable() {
             <div style={{ textAlign: "center", marginBottom: 12 }}>
               <div style={{ fontSize: 40, marginBottom: 4 }}>✅</div>
               <h3 style={{ fontSize: 21, fontWeight: 800, color: "#1f8a4c", margin: "0 0 4px" }}>{L.billClosedTitle}</h3>
-              <p style={{ fontSize: 16.5, color: "#5a6680", lineHeight: 1.5, margin: 0 }}>{L.billClosedBody}</p>
+              <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: 0 }}>{L.billClosedBody}</p>
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
               <button onClick={() => setExpandedPeople((cur) => cur.size >= participants.length && participants.length > 0 ? new Set() : new Set(participants.map((p) => p.id)))}
@@ -5474,19 +5474,19 @@ export default function RundoTable() {
                   <div key={p.id} style={{ background: "rgba(20,153,176,0.06)", borderRadius: 11, overflow: "hidden" }}>
                     <div onClick={() => setExpandedPeople((cur) => { const n = new Set(cur); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n })}
                       style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "12px 13px", cursor: "pointer" }}>
-                      <span style={{ fontSize: 18, fontWeight: 700, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name} <span style={{ fontSize: 15.5, color: "#9aa0ab" }}>{open ? "▾" : "▸"}</span></span>
-                      <span style={{ fontSize: 18, fontWeight: 800, color: "#1499b0", flexShrink: 0 }}>€{pt.settled.toFixed(2).replace(".", ",")}</span>
+                      <span style={{ fontSize: 18, fontWeight: 700, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name} <span style={{ fontSize: 15.5, color: "#8aa3a6" }}>{open ? "▾" : "▸"}</span></span>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: "#0f7d90", flexShrink: 0 }}>€{pt.settled.toFixed(2).replace(".", ",")}</span>
                     </div>
                     {open && (
                       <div style={{ padding: "0 13px 11px", borderTop: "1px solid rgba(20,153,176,0.15)" }}>
-                        {lines.length === 0 && <div style={{ fontSize: 16, color: "#9aa0ab", paddingTop: 8 }}>{L.nothingAssigned}</div>}
+                        {lines.length === 0 && <div style={{ fontSize: 16, color: "#8aa3a6", paddingTop: 8 }}>{L.nothingAssigned}</div>}
                         {lines.map((ln, k) => (
                           <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 8, paddingTop: 7 }}>
-                            <span style={{ flex: 1, minWidth: 0, fontSize: 16, color: "#5a6680", lineHeight: 1.4 }}>
+                            <span style={{ flex: 1, minWidth: 0, fontSize: 16, color: "#4a6e73", lineHeight: 1.4 }}>
                               {ln.label}
-                              {ln.sharedWith != null && <span style={{ fontSize: 15.5, color: "#9aa0ab" }}> · {L.sharedWithN(ln.sharedWith)}</span>}
+                              {ln.sharedWith != null && <span style={{ fontSize: 15.5, color: "#8aa3a6" }}> · {L.sharedWithN(ln.sharedWith)}</span>}
                             </span>
-                            <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 700, color: "#5a6680" }}>€{ln.amount.toFixed(2).replace(".", ",")}</span>
+                            <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 700, color: "#4a6e73" }}>€{ln.amount.toFixed(2).replace(".", ",")}</span>
                           </div>
                         ))}
                       </div>
@@ -5494,10 +5494,10 @@ export default function RundoTable() {
                   </div>
                 )
               })}
-              {participants.length === 0 && <div style={{ fontSize: 16.5, color: "#9aa0ab", textAlign: "center", padding: 10 }}>{L.noGuestsYet}</div>}
+              {participants.length === 0 && <div style={{ fontSize: 16.5, color: "#8aa3a6", textAlign: "center", padding: 10 }}>{L.noGuestsYet}</div>}
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 11, borderTop: "1.5px solid rgba(16,24,40,0.1)" }}>
-              <span style={{ fontSize: 17.5, fontWeight: 800, color: "#14213a" }}>{L.totalTogether}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 11, borderTop: "1.5px solid rgba(18,58,66,0.1)" }}>
+              <span style={{ fontSize: 17.5, fontWeight: 800, color: "#123a42" }}>{L.totalTogether}</span>
               <span style={{ fontSize: 20, fontWeight: 800, color: "#1f8a4c" }}>€{participants.reduce((a, p) => a + personTotal(p.id).settled, 0).toFixed(2).replace(".", ",")}</span>
             </div>
             <button onClick={() => setAdminFinalPopup(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 14, padding: "12px 0", fontWeight: 800 }}>{L.closeWord}</button>
@@ -5531,8 +5531,8 @@ export default function RundoTable() {
                       </label>
                     </div>
                     <div style={{ border: "1px dashed rgba(20,153,176,0.45)", background: "rgba(20,153,176,0.04)", borderRadius: 10, padding: "9px 11px", textAlign: "center", marginBottom: 14 }}>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: "#1499b0" }}>{L.longBillTitle}</div>
-                      <div style={{ fontSize: 15.5, color: "#9aa0ab", marginTop: 2 }}>{L.longBillSub}</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: "#0f7d90" }}>{L.longBillTitle}</div>
+                      <div style={{ fontSize: 15.5, color: "#8aa3a6", marginTop: 2 }}>{L.longBillSub}</div>
                     </div>
                   </>
                 ) : (
@@ -5544,14 +5544,14 @@ export default function RundoTable() {
                           {/* Groen vinkje: deze foto staat klaar. Geen foutmelding, een bevestiging. */}
                           <span style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", width: 20, height: 20, background: "#27ae60", color: "#fff", borderRadius: "50%", fontSize: 15.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }}>✓</span>
                           {/* Verwijderen is geen fout, dus een rustig grijs kruisje. */}
-                          <button onClick={() => removePhoto(i)} title={L.retakePhoto} style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: "#fff", border: "1px solid rgba(16,24,40,0.2)", color: "#8a93a3", fontSize: 15, fontWeight: 700, lineHeight: 1, cursor: "pointer", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                          <button onClick={() => removePhoto(i)} title={L.retakePhoto} style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: "#fff", border: "1px solid rgba(18,58,66,0.2)", color: "#7d999d", fontSize: 15, fontWeight: 700, lineHeight: 1, cursor: "pointer", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
                         </div>
                       ))}
                       {photos.length < 2 && (
                         <label style={{ width: 92, minHeight: 74, borderRadius: 10, border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.04)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, padding: "6px 6px", gap: 1 }}>
-                          <span style={{ fontSize: 20, color: "#1499b0", lineHeight: 1 }}>＋</span>
-                          <span style={{ fontSize: 13, color: "#1499b0", fontWeight: 800, textAlign: "center", lineHeight: 1.15 }}>{L.addSecondHalf}</span>
-                          <span style={{ fontSize: 11, color: "#9aa0ab", fontWeight: 700, textAlign: "center", lineHeight: 1.15 }}>{L.addSecondHalfHint}</span>
+                          <span style={{ fontSize: 20, color: "#0f7d90", lineHeight: 1 }}>＋</span>
+                          <span style={{ fontSize: 13, color: "#0f7d90", fontWeight: 800, textAlign: "center", lineHeight: 1.15 }}>{L.addSecondHalf}</span>
+                          <span style={{ fontSize: 11, color: "#8aa3a6", fontWeight: 700, textAlign: "center", lineHeight: 1.15 }}>{L.addSecondHalfHint}</span>
                           <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => addPhoto(e.target.files?.[0])} />
                         </label>
                       )}
@@ -5559,8 +5559,8 @@ export default function RundoTable() {
                     {scanFail?.reason !== "unavailable" && (
                       <>
                         <button onClick={scanPhotos} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800 }}>{photos.length > 1 ? L.readBillBtn2 : L.readBillBtn}</button>
-                        <div style={{ fontSize: 16, color: "#8a93a3", textAlign: "center", marginTop: 8, lineHeight: 1.45 }}>{L.scanSubNote}</div>
-                        {photos.length > 1 && <div style={{ fontSize: 15.5, color: "#9aa0ab", textAlign: "center", marginTop: 6 }}>{L.countsAsOne}</div>}
+                        <div style={{ fontSize: 16, color: "#7d999d", textAlign: "center", marginTop: 8, lineHeight: 1.45 }}>{L.scanSubNote}</div>
+                        {photos.length > 1 && <div style={{ fontSize: 15.5, color: "#8aa3a6", textAlign: "center", marginTop: 6 }}>{L.countsAsOne}</div>}
                       </>
                     )}
                   </div>
@@ -5570,10 +5570,10 @@ export default function RundoTable() {
 
             {scanning && (
               <div style={{ marginBottom: 14 }}>
-                <div style={{ height: 8, background: "rgba(20,33,58,0.08)", borderRadius: 4, overflow: "hidden" }}>
-                  <div style={{ width: `${Math.round(scanProgress * 100)}%`, height: "100%", background: "linear-gradient(90deg,#1499b0,#22b8cf)", borderRadius: 4, transition: "width 0.2s" }} />
+                <div style={{ height: 8, background: "rgba(18,58,66,0.08)", borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{ width: `${Math.round(scanProgress * 100)}%`, height: "100%", background: "linear-gradient(90deg,#0f7d90,#3ec9d8)", borderRadius: 4, transition: "width 0.2s" }} />
                 </div>
-                <div style={{ fontSize: 15.5, color: "#8a93a3", textAlign: "center", marginTop: 6 }}>{L.scanProgress}</div>
+                <div style={{ fontSize: 15.5, color: "#7d999d", textAlign: "center", marginTop: 6 }}>{L.scanProgress}</div>
               </div>
             )}
 
@@ -5603,15 +5603,15 @@ export default function RundoTable() {
                     <div style={{ fontSize: 18, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>{L.quotaDayTitle}</div>
                     <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.quotaDayBody}</div>
                     <button onClick={runLocalScan} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800 }}>{L.quotaDayQuickScan}</button>
-                    <div style={{ fontSize: 15.5, color: "#9aa0ab", textAlign: "center", marginTop: 8, lineHeight: 1.45 }}>{L.quotaDayOrManual}</div>
-                    {scanFail.status ? <div style={{ fontSize: 15.5, color: "#9aa0ab", marginTop: 8, wordBreak: "break-word" }}>technisch: {scanFail.status}{scanFail.detail ? " — " + scanFail.detail : ""}</div> : null}
+                    <div style={{ fontSize: 15.5, color: "#8aa3a6", textAlign: "center", marginTop: 8, lineHeight: 1.45 }}>{L.quotaDayOrManual}</div>
+                    {scanFail.status ? <div style={{ fontSize: 15.5, color: "#8aa3a6", marginTop: 8, wordBreak: "break-word" }}>technisch: {scanFail.status}{scanFail.detail ? " — " + scanFail.detail : ""}</div> : null}
                   </>
                 ) : scanFail.reason === "unavailable" ? (
                   <>
                     <div style={{ fontSize: 18, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>{L.scanFailUnavailTitle}</div>
                     <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.scanFailUnavailBody}</div>
                     <button onClick={retryAiScan} disabled={cooldownLeft > 0} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800, opacity: cooldownLeft > 0 ? 0.55 : 1, cursor: cooldownLeft > 0 ? "default" : "pointer" }}>{cooldownLeft > 0 ? L.retryIn(cooldownLeft) : L.retryNow}</button>
-                    {scanFail.status ? <div style={{ fontSize: 15.5, color: "#9aa0ab", marginTop: 8, wordBreak: "break-word" }}>technisch: {scanFail.status}{scanFail.detail ? " — " + scanFail.detail : ""}</div> : null}
+                    {scanFail.status ? <div style={{ fontSize: 15.5, color: "#8aa3a6", marginTop: 8, wordBreak: "break-word" }}>technisch: {scanFail.status}{scanFail.detail ? " — " + scanFail.detail : ""}</div> : null}
                   </>
                 ) : (
                   <>
@@ -5623,13 +5623,13 @@ export default function RundoTable() {
                     </label>
                   </>
                 )}
-                <button onClick={runLocalScan} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#9aa0ab", textDecoration: "underline", textUnderlineOffset: 2 }}>{L.useQuickScan}</button>
+                <button onClick={runLocalScan} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#8aa3a6", textDecoration: "underline", textUnderlineOffset: 2 }}>{L.useQuickScan}</button>
               </div>
             )}
 
             {scanPhotoUrl && scanPreview.length > 0 && (
               <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 15.5, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 6 }}>{L.yourPhoto}</div>
+                <div style={{ fontSize: 15.5, fontWeight: 800, color: "#7d999d", textTransform: "uppercase", marginBottom: 6 }}>{L.yourPhoto}</div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={scanPhotoUrl} alt={L.scannedReceiptAlt} onClick={() => setViewReceipt(scanPhotoUrl)} style={{ width: "100%", maxHeight: 220, objectFit: "contain", borderRadius: 12, border: "1px solid rgba(0,0,0,0.1)", background: "#faf9f5", cursor: "zoom-in" }} />
               </div>
@@ -5661,10 +5661,10 @@ export default function RundoTable() {
                           <input type="text" inputMode="decimal" placeholder="0,00" value={it.unit_price || ""} onChange={(e) => { const raw = numFilter(e.target.value); setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, unit_price: parseFloat(raw.replace(",", ".")) || 0, quantity: 1 } : x)) }} style={{ ...S.input, width: 80, textAlign: "right", padding: "8px 8px" }} />
                           <button onClick={() => setScanPreview((cur) => cur.filter((_, j) => j !== i))} style={{ ...S.iconBtn, flexShrink: 0 }}>✕</button>
                         </div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: "#8a93a3", textTransform: "uppercase", marginBottom: 4 }}>{L.howToSplit}</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: "#7d999d", textTransform: "uppercase", marginBottom: 4 }}>{L.howToSplit}</div>
                         <div style={{ display: "flex", gap: 6, marginBottom: !overAll ? 8 : 0 }}>
-                          <button onClick={() => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, distribute: "all" } : x))} style={{ flex: 1, fontSize: 16, fontWeight: 800, borderRadius: 10, padding: "8px 6px", cursor: "pointer", border: overAll ? "none" : "1px solid rgba(16,24,40,0.15)", background: overAll ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff", color: overAll ? "#fff" : "#5a6680" }}>{L.overWholeBill}</button>
-                          <button onClick={() => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, distribute: JSON.stringify({ idx: baseRows.map((o) => o.j) }) } : x))} style={{ flex: 1, fontSize: 16, fontWeight: 800, borderRadius: 10, padding: "8px 6px", cursor: "pointer", border: !overAll ? "none" : "1px solid rgba(16,24,40,0.15)", background: !overAll ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff", color: !overAll ? "#fff" : "#5a6680" }}>{L.overCertainItems}{!overAll ? ` (${selIdx.length})` : ""}</button>
+                          <button onClick={() => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, distribute: "all" } : x))} style={{ flex: 1, fontSize: 16, fontWeight: 800, borderRadius: 10, padding: "8px 6px", cursor: "pointer", border: overAll ? "none" : "1px solid rgba(18,58,66,0.15)", background: overAll ? "linear-gradient(135deg,#0f7d90,#3ec9d8)" : "#fff", color: overAll ? "#fff" : "#4a6e73" }}>{L.overWholeBill}</button>
+                          <button onClick={() => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, distribute: JSON.stringify({ idx: baseRows.map((o) => o.j) }) } : x))} style={{ flex: 1, fontSize: 16, fontWeight: 800, borderRadius: 10, padding: "8px 6px", cursor: "pointer", border: !overAll ? "none" : "1px solid rgba(18,58,66,0.15)", background: !overAll ? "linear-gradient(135deg,#0f7d90,#3ec9d8)" : "#fff", color: !overAll ? "#fff" : "#4a6e73" }}>{L.overCertainItems}{!overAll ? ` (${selIdx.length})` : ""}</button>
                         </div>
                         {!overAll && (
                           <div style={{ borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: 7 }}>
@@ -5674,13 +5674,13 @@ export default function RundoTable() {
                                 const on = selIdx.includes(j)
                                 return (
                                   <button key={j} onClick={() => { const next = on ? selIdx.filter((v) => v !== j) : [...selIdx, j]; setScanPreview((cur) => cur.map((y, k) => k === i ? { ...y, distribute: JSON.stringify({ idx: next }) } : y)) }}
-                                    style={{ fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "6px 10px", cursor: "pointer", border: on ? "none" : "1px solid rgba(16,24,40,0.12)", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", color: on ? "#5a4a1a" : "#8b93a8" }}>{on ? "✓ " : "+ "}{x.name || "?"}</button>
+                                    style={{ fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "6px 10px", cursor: "pointer", border: on ? "none" : "1px solid rgba(18,58,66,0.12)", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", color: on ? "#5a4a1a" : "#8b93a8" }}>{on ? "✓ " : "+ "}{x.name || "?"}</button>
                                 )
                               })}
                             </div>
                           </div>
                         )}
-                        <div style={{ fontSize: 15.5, color: "#1499b0", fontWeight: 700, marginTop: 8, lineHeight: 1.4 }}>{L.saveHint}</div>
+                        <div style={{ fontSize: 15.5, color: "#0f7d90", fontWeight: 700, marginTop: 8, lineHeight: 1.4 }}>{L.saveHint}</div>
                       </div>
                     )
                   }
@@ -5689,7 +5689,7 @@ export default function RundoTable() {
                       {it._isNew && <div style={{ fontSize: 15.5, fontWeight: 800, color: "#a06b00", marginBottom: 6 }}>{L.justAddedScan}</div>}
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                         <input value={it.name} onChange={(e) => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} style={{ ...S.input, flex: 1, minWidth: 0 }} />
-                        <button title={it.is_shared ? L.shareToggleOn : L.shareToggleOff} onClick={() => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, is_shared: !x.is_shared } : x))} style={{ ...S.iconBtn, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: it.is_shared ? "rgba(233,196,95,0.3)" : "rgba(16,24,40,0.05)" }}><ShareIcon on={it.is_shared} /></button>
+                        <button title={it.is_shared ? L.shareToggleOn : L.shareToggleOff} onClick={() => setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, is_shared: !x.is_shared } : x))} style={{ ...S.iconBtn, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: it.is_shared ? "rgba(233,196,95,0.3)" : "rgba(18,58,66,0.05)" }}><ShareIcon on={it.is_shared} /></button>
                         <button onClick={() => setScanPreview((cur) => cur.filter((_, j) => j !== i))} style={{ ...S.iconBtn, flexShrink: 0 }}>✕</button>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -5717,7 +5717,7 @@ export default function RundoTable() {
                           <span style={{ fontSize: 16, color: "#888" }}>{L.perPiece}</span>
                           <input type="text" inputMode="decimal" placeholder="0,00" value={it.unit_price || ""} onChange={(e) => { const raw = numFilter(e.target.value); setScanPreview((cur) => cur.map((x, j) => j === i ? { ...x, unit_price: parseFloat(raw.replace(",", ".")) || 0 } : x)) }} style={{ ...S.input, width: 84, padding: "8px 8px" }} />
                         </div>
-                        <span style={{ marginLeft: "auto", fontSize: 16.5, fontWeight: 800, color: scanMatch ? "#1f8a4c" : "#14213a", whiteSpace: "nowrap" }}>= €{lineTotal.toFixed(2).replace(".", ",")}</span>
+                        <span style={{ marginLeft: "auto", fontSize: 16.5, fontWeight: 800, color: scanMatch ? "#1f8a4c" : "#123a42", whiteSpace: "nowrap" }}>= €{lineTotal.toFixed(2).replace(".", ",")}</span>
                       </div>
                       {it.is_shared && (
                         <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 7, fontSize: 15.5, color: "#a06b00", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.45)", borderRadius: 9, padding: "8px 10px", lineHeight: 1.4 }}>
@@ -5748,23 +5748,23 @@ export default function RundoTable() {
               const diff = hasBill ? +(computed - billTotalScan).toFixed(2).replace(".", ",") : 0
               const ok = hasBill && Math.abs(diff) < 0.01
               return (
-                <div style={{ marginBottom: 14, border: `1.5px solid ${ok ? "rgba(39,174,96,0.4)" : hasBill ? "rgba(224,107,94,0.4)" : "rgba(16,24,40,0.1)"}`, borderRadius: 12, padding: "11px 13px", background: ok ? "rgba(39,174,96,0.06)" : hasBill ? "rgba(224,107,94,0.05)" : "#fafbff" }}>
+                <div style={{ marginBottom: 14, border: `1.5px solid ${ok ? "rgba(39,174,96,0.4)" : hasBill ? "rgba(224,107,94,0.4)" : "rgba(18,58,66,0.1)"}`, borderRadius: 12, padding: "11px 13px", background: ok ? "rgba(39,174,96,0.06)" : hasBill ? "rgba(224,107,94,0.05)" : "#fafbff" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 16, fontWeight: 600, color: "#8a93a3" }}>{L.itemsWord}</span>
-                    <span style={{ fontSize: 16.5, fontWeight: 700, color: "#5a6680" }}>€{itemsSum.toFixed(2).replace(".", ",")}</span>
+                    <span style={{ fontSize: 16, fontWeight: 600, color: "#7d999d" }}>{L.itemsWord}</span>
+                    <span style={{ fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>€{itemsSum.toFixed(2).replace(".", ",")}</span>
                   </div>
                   {taxSum > 0 && (
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 3 }}>
-                      <span style={{ fontSize: 16, fontWeight: 600, color: "#8a93a3" }}>{L.taxWord}</span>
-                      <span style={{ fontSize: 16.5, fontWeight: 700, color: "#5a6680" }}>€{taxSum.toFixed(2).replace(".", ",")}</span>
+                      <span style={{ fontSize: 16, fontWeight: 600, color: "#7d999d" }}>{L.taxWord}</span>
+                      <span style={{ fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>€{taxSum.toFixed(2).replace(".", ",")}</span>
                     </div>
                   )}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, paddingTop: 6, borderTop: "1px solid rgba(16,24,40,0.08)" }}>
-                    <span style={{ fontSize: 16.5, fontWeight: 800, color: "#14213a" }}>{L.calcTotal}</span>
-                    <span style={{ fontSize: 20, fontWeight: 800, color: "#14213a" }}>€{computed.toFixed(2).replace(".", ",")}</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, paddingTop: 6, borderTop: "1px solid rgba(18,58,66,0.08)" }}>
+                    <span style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>{L.calcTotal}</span>
+                    <span style={{ fontSize: 20, fontWeight: 800, color: "#123a42" }}>€{computed.toFixed(2).replace(".", ",")}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 8 }}>
-                    <span style={{ fontSize: 16.5, fontWeight: 700, color: "#5a6680" }}>{L.totalOnBill}</span>
+                    <span style={{ fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>{L.totalOnBill}</span>
                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <span style={{ color: "#999" }}>€</span>
                       <input type="text" inputMode="decimal" placeholder="0,00" value={scanTotal} onChange={(e) => setScanTotal(numFilter(e.target.value))} style={{ ...S.input, width: 90, textAlign: "right", padding: "8px 8px" }} />
@@ -5778,7 +5778,7 @@ export default function RundoTable() {
                     </div>
                   )}
                   {!hasBill && (
-                    <div style={{ marginTop: 8, fontSize: 15.5, color: "#9aa0ab" }}>{L.enterBillLive}</div>
+                    <div style={{ marginTop: 8, fontSize: 15.5, color: "#8aa3a6" }}>{L.enterBillLive}</div>
                   )}
                 </div>
               )
@@ -5853,14 +5853,14 @@ export default function RundoTable() {
             <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 13 }}>
               <button onClick={() => setEditItem((cur) => cur ? { ...cur, is_shared: !cur.is_shared } : cur)}
                 style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, padding: "8px 9px", cursor: "pointer",
-                  border: editItem.is_shared ? "1px solid rgba(196,152,32,0.55)" : "1px solid rgba(16,24,40,0.15)",
+                  border: editItem.is_shared ? "1px solid rgba(196,152,32,0.55)" : "1px solid rgba(18,58,66,0.15)",
                   background: editItem.is_shared ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff" }}>
                 <ShareIcon on={editItem.is_shared} size={14} />
-                <span style={{ fontSize: 15.5, fontWeight: editItem.is_shared ? 800 : 700, color: editItem.is_shared ? "#5c4200" : "#5a6680" }}>
+                <span style={{ fontSize: 15.5, fontWeight: editItem.is_shared ? 800 : 700, color: editItem.is_shared ? "#5c4200" : "#4a6e73" }}>
                   {editItem.is_shared ? L.sharedOnShort : L.makeSharedShort}
                 </span>
               </button>
-              <span style={{ fontSize: 15.5, color: editItem.is_shared ? "#5a6680" : "#9aa0ab", lineHeight: 1.4 }}>
+              <span style={{ fontSize: 15.5, color: editItem.is_shared ? "#4a6e73" : "#8aa3a6", lineHeight: 1.4 }}>
                 {editItem.is_shared ? L.sharedHintOn : L.sharedHintOff}
               </span>
             </div>
@@ -5909,7 +5909,7 @@ export default function RundoTable() {
         <div style={S.overlay} onClick={() => setShowTaxInfo(false)}>
           <div style={{ ...S.modal, width: "min(380px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginBottom: 12, fontSize: 21, fontWeight: 800 }}>{L.taxWord}</h3>
-            <div style={{ fontSize: 17.5, color: "#3b486a", lineHeight: 1.6 }}>
+            <div style={{ fontSize: 17.5, color: "#2b4f56", lineHeight: 1.6 }}>
               <p style={{ marginTop: 0, marginBottom: 0 }}>{L.taxInfoBody}</p>
             </div>
             <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, fontWeight: 700 }} onClick={() => setShowTaxInfo(false)}>{L.understood}</button>
@@ -5922,10 +5922,10 @@ export default function RundoTable() {
         <div style={S.overlay} onClick={() => setShareConfirm(null)}>
           <div style={{ ...S.card, maxWidth: 380, width: "100%", margin: 0 }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ ...S.h3, marginBottom: 6 }}>{shareConfirm.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}</h3>
-            <div style={{ fontSize: 17.5, color: "#14213a", fontWeight: 700, marginBottom: 6 }}>{shareConfirm.quantity}× {shareConfirm.name}</div>
-            <div style={{ fontSize: 16.5, color: "#5a6680", lineHeight: 1.5, marginBottom: 8 }}>{shareConfirm.is_shared ? L.makeUnsharedBody : L.makeSharedBody}</div>
+            <div style={{ fontSize: 17.5, color: "#123a42", fontWeight: 700, marginBottom: 6 }}>{shareConfirm.quantity}× {shareConfirm.name}</div>
+            <div style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, marginBottom: 8 }}>{shareConfirm.is_shared ? L.makeUnsharedBody : L.makeSharedBody}</div>
             {!shareConfirm.is_shared && shareConfirm.quantity > 1 && (
-              <div style={{ fontSize: 16, color: "#14213a", background: "rgba(20,153,176,0.08)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 10, padding: "9px 11px", marginBottom: 8, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 16, color: "#123a42", background: "rgba(20,153,176,0.08)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 10, padding: "9px 11px", marginBottom: 8, lineHeight: 1.5 }}>
                 {L.multiQtyShareHint(shareConfirm.quantity, shareConfirm.unit_price * shareConfirm.quantity)}
               </div>
             )}
@@ -5976,21 +5976,19 @@ function TopBar({ group, isAdmin, onHome, totalPersons, status }: { group: Group
   const L = STRINGS[lang]
   return (
     <div style={{ marginBottom: 14, padding: "6px 2px" }}>
-      {/* Logo links, groep rechts op één regel: scheelt een hele regel schermhoogte, en
-          allebei beantwoorden ze dezelfde vraag — waar ben ik. Het aantal personen wordt
-          afgekort tot "4 pers." zodat de datum er nog naast past. */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, borderBottom: "1px solid rgba(16,24,40,0.08)", paddingBottom: 9 }}>
-        <div onClick={isAdmin ? onHome : undefined} title={isAdmin ? L.toTableHome : undefined} style={{ display: "flex", alignItems: "center", gap: 7, cursor: isAdmin ? "pointer" : "default", flexShrink: 0 }}>
-          <RundoLogo size={30} opDonker={false} resto />
-        </div>
-        <div style={{ textAlign: "right", minWidth: 0 }}>
-          <div style={{ fontSize: 16.5, fontWeight: 800, color: "#1b2a4a", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{group.name}</div>
-          <div style={{ fontSize: 12.5, color: "#8a93a3", fontWeight: 700, whiteSpace: "nowrap" }}>
-            {totalPersons != null && totalPersons > 0 ? `👥 ${L.persShort(totalPersons)}` : ""}
-            {totalPersons != null && totalPersons > 0 && fmtDate(group.created_at, lang) ? " · " : ""}
-            {fmtDate(group.created_at, lang)}
-          </div>
-        </div>
+      {/* Donkere kopbalk met het logo, en daaronder de tafel als titel met het aantal
+          personen ernaast — dezelfde opbouw als Rundo, in Resto's eigen turquoise. */}
+      <div onClick={isAdmin ? onHome : undefined} title={isAdmin ? L.toTableHome : undefined}
+        style={{ background: "#123a42", borderRadius: 15, padding: "11px 13px", display: "flex", alignItems: "center", gap: 10, marginBottom: 11, cursor: isAdmin ? "pointer" : "default" }}>
+        <RundoLogo size={42} resto />
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 8, borderBottom: "1.5px solid rgba(18,58,66,0.2)" }}>
+        <span style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 20, fontWeight: 800, color: "#123a42" }}>{group.name}</span>
+        {totalPersons != null && totalPersons > 0 && (
+          <span style={{ flexShrink: 0, borderLeft: "1px solid rgba(18,58,66,0.18)", paddingLeft: 11, fontSize: 14, fontWeight: 800, color: "#4a6e73", whiteSpace: "nowrap" }}>
+            {L.persShort(totalPersons)}
+          </span>
+        )}
       </div>
       {/* De twee vragen die een beheerder de hele avond heeft: klopt de bon, en staat er nog
           iets open? Die stonden elk in hun eigen tabblad, dus je moest ernaartoe om te kijken. */}
@@ -6040,13 +6038,13 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
           <h3 id="items-op-de-bon" style={{ ...S.h3, marginBottom: 0, minWidth: 0, display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>{L.itemsOnBill}{!billOk && <span style={{ fontSize: 16.5, fontWeight: 800, color: "#c0392b" }}>{L.checkExcl}</span>}</h3>
         )}
         {onViewReceipt && (
-          <button onClick={onViewReceipt} style={{ flexShrink: 0, marginTop: 3, border: "1.5px solid rgba(20,153,176,0.4)", background: "#fff", borderRadius: 10, padding: "7px 11px", cursor: "pointer", fontSize: 14.5, fontWeight: 800, color: "#1499b0", whiteSpace: "nowrap" }}>{L.viewReceipt}</button>
+          <button onClick={onViewReceipt} style={{ flexShrink: 0, marginTop: 3, border: "1.5px solid rgba(20,153,176,0.4)", background: "#fff", borderRadius: 10, padding: "7px 11px", cursor: "pointer", fontSize: 14.5, fontWeight: 800, color: "#0f7d90", whiteSpace: "nowrap" }}>{L.viewReceipt}</button>
         )}
       </div>
       {items.length > 0 && (
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, background: "rgba(90,108,166,0.06)", borderRadius: 10, padding: "9px 11px" }}>
           <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, padding: "8px 9px", background: "linear-gradient(135deg,#f3d27c,#ecc564)", border: "1px solid rgba(196,152,32,0.55)" }}><ShareIcon on size={14} /><span style={{ fontSize: 15.5, fontWeight: 800, color: "#5c4200" }}>{L.makeSharedShort}</span></span>
-          <span style={{ fontSize: 15.5, color: "#5a6680", lineHeight: 1.5 }}>{L.legendShare}</span>
+          <span style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.5 }}>{L.legendShare}</span>
         </div>
       )}
       {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 16.5 }}>{L.noItemsScan}</div>}
@@ -6069,17 +6067,17 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                   )}
                 </div>
                 <div style={{ flexShrink: 0, textAlign: "right", lineHeight: 1.2 }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: zeroPrice ? "#c0392b" : "#1499b0" }}>€{(it.unit_price * it.quantity).toFixed(2).replace(".", ",")}</div>
-                  <div style={{ fontSize: 15.5, fontWeight: 600, color: zeroPrice ? "#c0392b" : "#9aa0ab" }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: zeroPrice ? "#c0392b" : "#0f7d90" }}>€{(it.unit_price * it.quantity).toFixed(2).replace(".", ",")}</div>
+                  <div style={{ fontSize: 15.5, fontWeight: 600, color: zeroPrice ? "#c0392b" : "#8aa3a6" }}>
                     {zeroPrice ? L.zeroPriceShort : it.is_shared ? (it.quantity > 1 ? L.sharedMultiQty(it.quantity, it.unit_price * it.quantity) : L.sharedWord) : `€${it.unit_price.toFixed(2).replace(".", ",")}${L.perPieceSuffix}`}
                   </div>
                 </div>
               </div>
               <button onClick={() => onToggleShared(it)} title={it.is_shared ? L.shareToggleOn : L.shareToggleOff}
                 style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, fontSize: 15.5, fontWeight: 800, padding: "7px 9px", borderRadius: 8, cursor: "pointer",
-                  color: it.is_shared ? "#7a5300" : "#5a6680",
+                  color: it.is_shared ? "#7a5300" : "#4a6e73",
                   background: it.is_shared ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
-                  border: it.is_shared ? "1px solid rgba(196,152,32,0.5)" : "1px solid rgba(16,24,40,0.15)" }}>
+                  border: it.is_shared ? "1px solid rgba(196,152,32,0.5)" : "1px solid rgba(18,58,66,0.15)" }}>
                 <ShareIcon on={it.is_shared} size={12} />{it.is_shared ? L.sharedOnShort : L.makeSharedShort}
               </button>
               <button style={S.iconBtn} onClick={() => onEdit(it)}>✏️</button>
@@ -6102,7 +6100,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
             {!bareBill && !it.is_shared && participants.length > 0 && (who.length > 0 || open > 0) && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 26 }}>
                 {who.map((w, i) => (
-                  <span key={i} style={{ fontSize: 15.5, fontWeight: 600, color: "#14213a", background: "rgba(90,108,166,0.1)", borderRadius: 10, padding: "4px 9px" }}>{w.name} ×{w.qty}</span>
+                  <span key={i} style={{ fontSize: 15.5, fontWeight: 600, color: "#123a42", background: "rgba(90,108,166,0.1)", borderRadius: 10, padding: "4px 9px" }}>{w.name} ×{w.qty}</span>
                 ))}
                 {open > 0 && (
                   <span style={{ fontSize: 15.5, fontWeight: 700, color: "#e0685c", background: "rgba(224,107,94,0.1)", borderRadius: 10, padding: "4px 9px" }}>{open} {L.notAssignedYet}</span>
@@ -6111,13 +6109,13 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
             )}
             {it.is_shared && onSetExpected && (
               <div style={{ marginTop: 7, marginLeft: 26, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: "rgba(90,108,166,0.06)", borderRadius: 9, padding: "9px 10px" }}>
-                <span style={{ fontSize: 15.5, fontWeight: 700, color: "#5a6680" }}>{L.expectedSharers}</span>
+                <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a6e73" }}>{L.expectedSharers}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                   <button onClick={() => onSetExpected(it.id, Math.max(0, (it.share_expected ?? 0) - 1) || null)} style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 18 }}>−</button>
-                  <b style={{ minWidth: 16, textAlign: "center", fontSize: 18, color: it.share_expected ? "#14213a" : "#c3c8d2" }}>{it.share_expected ?? "–"}</b>
+                  <b style={{ minWidth: 16, textAlign: "center", fontSize: 18, color: it.share_expected ? "#123a42" : "#b6cacc" }}>{it.share_expected ?? "–"}</b>
                   <button onClick={() => onSetExpected(it.id, (it.share_expected ?? 0) + 1)} style={{ ...S.iconBtn, width: 26, height: 26, fontSize: 18, background: "rgba(27,42,74,0.12)" }}>+</button>
                 </div>
-                <span style={{ fontSize: 15.5, color: "#9aa0ab", flex: 1, minWidth: 150, lineHeight: 1.4 }}>{L.expectedHint}</span>
+                <span style={{ fontSize: 15.5, color: "#8aa3a6", flex: 1, minWidth: 150, lineHeight: 1.4 }}>{L.expectedHint}</span>
               </div>
             )}
             {bareBill && it.is_shared && (
@@ -6139,9 +6137,9 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                     {sh.length > 0 && (
                       <button onClick={() => setShareFixed(it, !fixed)} style={{
                         fontSize: 15.5, fontWeight: 800, borderRadius: 9, padding: "5px 9px", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
-                        border: fixed ? "none" : "1px solid rgba(16,24,40,0.12)",
-                        background: fixed ? "linear-gradient(135deg,#1499b0,#22b8cf)" : "#fff",
-                        color: fixed ? "#fff" : "#5a6680",
+                        border: fixed ? "none" : "1px solid rgba(18,58,66,0.12)",
+                        background: fixed ? "linear-gradient(135deg,#0f7d90,#3ec9d8)" : "#fff",
+                        color: fixed ? "#fff" : "#4a6e73",
                       }}>{fixed ? L.shareFixedBtn : L.shareFixBtn}</button>
                     )}
                   </div>
@@ -6154,7 +6152,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                           return (
                             <button key={p.id} onClick={() => toggleShareClaim(it.id, p.id)} style={{
                               fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "5px 10px", cursor: "pointer",
-                              border: on ? "none" : "1px solid rgba(16,24,40,0.12)",
+                              border: on ? "none" : "1px solid rgba(18,58,66,0.12)",
                               background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
                               color: on ? "#5a4a1a" : "#8b93a8",
                             }}>{on ? "✓ " : ""}{p.name}</button>
@@ -6162,7 +6160,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                         })}
                       </div>
                     )}
-                  <div style={{ fontSize: 15.5, color: "#9aa0ab", marginTop: 5, lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 15.5, color: "#8aa3a6", marginTop: 5, lineHeight: 1.4 }}>
                     {fixed
                       ? L.shareFixedNote
                       : L.shareLiveNote}
@@ -6182,13 +6180,13 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         const sum = items.reduce((s, it) => s + it.unit_price * it.quantity, 0)
         const tax = (taxLines || []).reduce((s, t) => s + t.amount, 0)
         return (
-          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1.5px solid rgba(16,24,40,0.08)" }}>
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1.5px solid rgba(18,58,66,0.08)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <span style={{ fontSize: 16.5, fontWeight: 700, color: "#5a6680" }}>{L.orderedItems}{units}{tax > 0 ? ` · €${sum.toFixed(2).replace(".", ",")} + ${L.taxShort} €${tax.toFixed(2).replace(".", ",")}` : ""}</span>
+              <span style={{ fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>{L.orderedItems}{units}{tax > 0 ? ` · €${sum.toFixed(2).replace(".", ",")} + ${L.taxShort} €${tax.toFixed(2).replace(".", ",")}` : ""}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 7, paddingTop: 7, borderTop: tax > 0 ? "1px solid rgba(16,24,40,0.06)" : "none" }}>
-              <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a" }}>{L.totalWord}</span>
-              <span style={{ fontSize: 21, fontWeight: 800, color: "#14213a" }}>€{(sum + tax).toFixed(2).replace(".", ",")}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 7, paddingTop: 7, borderTop: tax > 0 ? "1px solid rgba(18,58,66,0.06)" : "none" }}>
+              <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42" }}>{L.totalWord}</span>
+              <span style={{ fontSize: 21, fontWeight: 800, color: "#123a42" }}>€{(sum + tax).toFixed(2).replace(".", ",")}</span>
             </div>
             {billOverBy != null && Math.abs(billOverBy) >= 0.005 && (
               <div style={{ textAlign: "right", marginTop: 4, fontSize: 15, fontWeight: 800, color: "#c0392b" }}>
@@ -6229,8 +6227,8 @@ function AssignPicker({ participants, itemId, isShared, confirmedFn, onAssign, o
   return (
     <div style={{ marginTop: 8, marginLeft: 25, padding: 10, borderRadius: 12, background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.2)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ fontSize: 15.5, fontWeight: 800, color: "#5a6680" }}>{L.assignToWhom}</span>
-        <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16.5, color: "#9aa0ab", fontWeight: 800 }}>✕</button>
+        <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a6e73" }}>{L.assignToWhom}</span>
+        <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16.5, color: "#8aa3a6", fontWeight: 800 }}>✕</button>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
         {gesorteerd.map((p, i) => {
@@ -6239,13 +6237,13 @@ function AssignPicker({ participants, itemId, isShared, confirmedFn, onAssign, o
           return (
             <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
               {i === eersteViaLink && eersteViaLink > 0 && (
-                <span style={{ width: 1, height: 24, background: "rgba(16,24,40,0.12)", marginRight: 2 }} />
+                <span style={{ width: 1, height: 24, background: "rgba(18,58,66,0.12)", marginRight: 2 }} />
               )}
               <button onClick={() => onAssign(p.id, klaar)} style={{
                 fontSize: 16, fontWeight: viaQr ? 700 : 800, borderRadius: 10, padding: "7px 11px", cursor: "pointer",
-                border: viaQr ? "1.5px solid rgba(16,24,40,0.12)" : "1.5px solid rgba(20,153,176,0.45)",
+                border: viaQr ? "1.5px solid rgba(18,58,66,0.12)" : "1.5px solid rgba(20,153,176,0.45)",
                 background: viaQr ? "#fff" : "rgba(20,153,176,0.06)",
-                color: viaQr ? "#9aa0ab" : "#14213a", opacity: klaar ? 0.75 : viaQr ? 0.8 : 1,
+                color: viaQr ? "#8aa3a6" : "#123a42", opacity: klaar ? 0.75 : viaQr ? 0.8 : 1,
               }}>{viaQr && "📱 "}{p.name}{klaar && " ✓"}</button>
             </span>
           )
@@ -6304,10 +6302,10 @@ function ClaimScreen(props: {
   // Eén vorm voor de vier blokken. Het bolletje vertelt de stand: groen met een vinkje als
   // die stap gedaan is, grijs met zijn cijfer als hij nog moet of enkel naslagwerk is.
   const blokBol = (nr: number, klaar: boolean) => (
-    <span style={{ flexShrink: 0, width: 23, height: 23, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, background: klaar ? "#1f8a4c" : "rgba(16,24,40,0.1)", color: klaar ? "#fff" : "#5a6680" }}>{klaar ? "✓" : nr}</span>
+    <span style={{ flexShrink: 0, width: 23, height: 23, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, background: klaar ? "#1f8a4c" : "rgba(18,58,66,0.1)", color: klaar ? "#fff" : "#4a6e73" }}>{klaar ? "✓" : nr}</span>
   )
   const toonKnop = (open: boolean) => (
-    <span style={{ flexShrink: 0, border: "1.5px solid rgba(20,153,176,0.4)", color: "#1499b0", borderRadius: 9, padding: "6px 11px", fontSize: 14, fontWeight: 800, whiteSpace: "nowrap" }}>{open ? `${L.hideAll} ▴` : `${L.showAll} ▾`}</span>
+    <span style={{ flexShrink: 0, border: "1.5px solid rgba(20,153,176,0.4)", color: "#0f7d90", borderRadius: 9, padding: "6px 11px", fontSize: 14, fontWeight: 800, whiteSpace: "nowrap" }}>{open ? `${L.hideAll} ▴` : `${L.showAll} ▾`}</span>
   )
   useEffect(() => { if (finalized) { setGastItemsOpen(false); setGastBevestigdOpen(false) } }, [finalized])
   // Twee momenten waarop een gast uitleg nodig heeft: net na zijn bevestiging (wat nu?)
@@ -6387,10 +6385,10 @@ function ClaimScreen(props: {
   const shareBtn = (it: BillItem) => (
     <button onClick={() => onToggleShared(it)} title={it.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}
       style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 9, padding: "7px 8px", cursor: "pointer",
-        border: it.is_shared ? "1px solid rgba(196,152,32,0.5)" : "1px solid rgba(16,24,40,0.15)",
+        border: it.is_shared ? "1px solid rgba(196,152,32,0.5)" : "1px solid rgba(18,58,66,0.15)",
         background: it.is_shared ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff" }}>
       <ShareIcon on={it.is_shared} size={13} />
-      <span style={{ fontSize: 15.5, fontWeight: it.is_shared ? 800 : 700, color: it.is_shared ? "#7a5300" : "#5a6680" }}>
+      <span style={{ fontSize: 15.5, fontWeight: it.is_shared ? 800 : 700, color: it.is_shared ? "#7a5300" : "#4a6e73" }}>
         {it.is_shared ? L.sharedOnShort : L.makeSharedShort}
       </span>
     </button>
@@ -6413,7 +6411,7 @@ function ClaimScreen(props: {
         <div style={S.card}>
           <div onClick={isAdmin && !(warnCount && warnCount > 0) ? () => setClaimCollapsed((v) => !v) : undefined} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, cursor: isAdmin ? "pointer" : "default", marginBottom: (isAdmin && claimCollapsed) ? 0 : 10 }}>
             <h3 style={{ ...S.h3, marginBottom: 0 }}>{L.claimTitle}</h3>
-            {isAdmin && !(warnCount && warnCount > 0) && <span style={{ fontSize: 16, color: "#9aa0ab", fontWeight: 700, flexShrink: 0 }}>{claimCollapsed ? L.collapseOpen : L.collapseClose}</span>}
+            {isAdmin && !(warnCount && warnCount > 0) && <span style={{ fontSize: 16, color: "#8aa3a6", fontWeight: 700, flexShrink: 0 }}>{claimCollapsed ? L.collapseOpen : L.collapseClose}</span>}
           </div>
           {isAdmin && claimCollapsed && !(warnCount && warnCount > 0)
             ? <div onClick={() => setClaimCollapsed(false)} style={{ cursor: "pointer", fontSize: 16, color: "#1f8a4c", fontWeight: 700, padding: "4px 2px" }}>{L.allAssignedTapReview}</div>
@@ -6448,11 +6446,11 @@ function ClaimScreen(props: {
                         </div>
                         {onSetExpected && (
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 7, marginLeft: 25, background: "rgba(90,108,166,0.06)", borderRadius: 9, padding: "9px 9px" }}>
-                            <span style={{ fontSize: 15.5, fontWeight: 700, color: "#5a6680" }}>{L.expectedSharers}</span>
+                            <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a6e73" }}>{L.expectedSharers}</span>
                             <button onClick={() => onSetExpected(it.id, Math.max(0, (it.share_expected ?? 0) - 1) || null)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5 }}>−</button>
-                            <b style={{ minWidth: 14, textAlign: "center", fontSize: 16.5, color: it.share_expected ? "#14213a" : "#c3c8d2" }}>{it.share_expected ?? "–"}</b>
+                            <b style={{ minWidth: 14, textAlign: "center", fontSize: 16.5, color: it.share_expected ? "#123a42" : "#b6cacc" }}>{it.share_expected ?? "–"}</b>
                             <button onClick={() => onSetExpected(it.id, (it.share_expected ?? 0) + 1)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5, background: "rgba(27,42,74,0.12)" }}>+</button>
-                            <span style={{ flexBasis: "100%", fontSize: 15, color: "#9aa0ab", lineHeight: 1.4 }}>{L.expectedHint}</span>
+                            <span style={{ flexBasis: "100%", fontSize: 15, color: "#8aa3a6", lineHeight: 1.4 }}>{L.expectedHint}</span>
                           </div>
                         )}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25 }}>
@@ -6469,16 +6467,16 @@ function ClaimScreen(props: {
                                 return (
                                   <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                                     {i === eersteLinkGast && eersteLinkGast > 0 && (
-                                      <span style={{ width: 1, height: 22, background: "rgba(16,24,40,0.12)", marginRight: 2 }} />
+                                      <span style={{ width: 1, height: 22, background: "rgba(18,58,66,0.12)", marginRight: 2 }} />
                                     )}
                                     <button onClick={() => {
                                       if (!on && explicitConfirmed(p.id)) { askConfirm(L.notSelectedShare(p.name), L.yes, () => toggleShareClaim(it.id, p.id)); return }
                                       toggleShareClaim(it.id, p.id)
                                     }} style={{
                                       fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "5px 10px", cursor: "pointer",
-                                      border: on ? "none" : viaLink ? "1px solid rgba(16,24,40,0.12)" : "1.5px solid rgba(20,153,176,0.45)",
+                                      border: on ? "none" : viaLink ? "1px solid rgba(18,58,66,0.12)" : "1.5px solid rgba(20,153,176,0.45)",
                                       background: on ? (p.id === adminPid ? "rgba(233,196,95,0.5)" : "linear-gradient(135deg,#f3d27c,#ecc564)") : viaLink ? "#fff" : "rgba(20,153,176,0.06)",
-                                      color: on ? "#5a4a1a" : viaLink ? "#9aa0ab" : "#14213a",
+                                      color: on ? "#5a4a1a" : viaLink ? "#8aa3a6" : "#123a42",
                                       opacity: on ? 1 : viaLink ? 0.8 : 1,
                                     }}>{on ? "✓ " : ""}{viaLink && !on ? "📱 " : ""}{p.name}{on && pSeats > 1 ? ` ×${pHeads}` : ""}</button>
                                   </span>
@@ -6502,13 +6500,13 @@ function ClaimScreen(props: {
                           return (
                             <div key={key} style={{ marginTop: 9, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.3)", borderRadius: 12, padding: "11px 12px" }}>
                               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 9 }}>
-                                <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#14213a" }}>🍴 {L.whoSharedOf(p.name, pSeats)}</span>
+                                <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>🍴 {L.whoSharedOf(p.name, pSeats)}</span>
                                 <button onClick={setAll} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#0f7d90", background: "rgba(20,153,176,0.1)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 9, padding: "7px 9px", cursor: "pointer" }}>
                                   {allOn ? L.clearAll : L.allOfThem(pSeats)}
                                 </button>
                                 {/* Zonder deze knop raakte je dit venster niet kwijt: het sloot
                                     alleen door opnieuw op de naamknop erboven te tikken. */}
-                                <button onClick={() => sluitSharePicker(it.id, p.id)} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#5a6680", background: "#fff", border: "1px solid rgba(16,24,40,0.15)", borderRadius: 9, padding: "7px 10px", cursor: "pointer" }}>{L.pickerDone}</button>
+                                <button onClick={() => sluitSharePicker(it.id, p.id)} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#4a6e73", background: "#fff", border: "1px solid rgba(18,58,66,0.15)", borderRadius: 9, padding: "7px 10px", cursor: "pointer" }}>{L.pickerDone}</button>
                               </div>
                               <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                                 {Array.from({ length: pSeats }, (_, i) => i).map((i) => {
@@ -6516,14 +6514,14 @@ function ClaimScreen(props: {
                                   return (
                                     <button key={i} onClick={() => toggle(i)} style={{
                                       flex: 1, minWidth: 80, fontSize: 16.5, fontWeight: 800, borderRadius: 10, padding: "10px 8px", cursor: "pointer",
-                                      border: on ? "none" : "1px solid rgba(16,24,40,0.15)",
+                                      border: on ? "none" : "1px solid rgba(18,58,66,0.15)",
                                       background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
-                                      color: on ? "#5c4200" : "#14213a",
+                                      color: on ? "#5c4200" : "#123a42",
                                     }}>{on ? "✓ " : ""}{parts[i] || `${L.personWord} ${i + 1}`}</button>
                                   )
                                 })}
                               </div>
-                              <div style={{ fontSize: 15.5, color: "#5a6680", marginTop: 8, lineHeight: 1.4 }}>{L.pickWhoShared}</div>
+                              <div style={{ fontSize: 15.5, color: "#4a6e73", marginTop: 8, lineHeight: 1.4 }}>{L.pickWhoShared}</div>
                             </div>
                           )
                         })}
@@ -6550,7 +6548,7 @@ function ClaimScreen(props: {
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25, alignItems: "center" }}>
                         {who.map(({ p, q: pq }) => (
-                          <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "2px 4px 2px 9px", color: p.id === adminPid ? "#5a4a1a" : "#5a6680", background: p.id === adminPid ? "rgba(233,196,95,0.5)" : "rgba(90,108,166,0.1)" }}>
+                          <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "2px 4px 2px 9px", color: p.id === adminPid ? "#5a4a1a" : "#4a6e73", background: p.id === adminPid ? "rgba(233,196,95,0.5)" : "rgba(90,108,166,0.1)" }}>
                             {p.name} ×{pq}
                             <button onClick={() => setClaim(it.id, p.id, Math.max(0, pq - 1))} title={L.removeOne} style={{ border: "2px solid #2b2f38", background: "#fff", color: "#c0392b", borderRadius: 6, width: 26, height: 22, cursor: "pointer", fontSize: 18, fontWeight: 800, lineHeight: 1 }}>−</button>
                           </span>
@@ -6569,18 +6567,18 @@ function ClaimScreen(props: {
             )}
 
           {items.length > 0 && (
-            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1.5px solid rgba(16,24,40,0.08)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16.5, fontWeight: 700, color: "#5a6680" }}>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1.5px solid rgba(18,58,66,0.08)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>
                 <span>{L.unitsClaimed}</span>
                 <span style={{ color: claimedUnits >= totalUnits ? "#1f8a4c" : "#c0392b" }}>{claimedUnits}/{totalUnits}{totalUnits > 0 && claimedUnits >= totalUnits ? " ✓" : ""}</span>
               </div>
               {sharedItems.length > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16.5, fontWeight: 700, color: "#5a6680", marginTop: 4 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16.5, fontWeight: 700, color: "#4a6e73", marginTop: 4 }}>
                   <span>{L.sharedItemsHandled}</span>
                   <span style={{ color: sharedDecided >= sharedItems.length ? "#1f8a4c" : "#c0392b" }}>{sharedDecided}/{sharedItems.length}{sharedDecided >= sharedItems.length ? " ✓" : ""}</span>
                 </div>
               )}
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 800, color: "#14213a", marginTop: 6 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 800, color: "#123a42", marginTop: 6 }}>
                 <span>{L.billTotalLabel}</span>
                 <span>€{billSum.toFixed(2).replace(".", ",")}</span>
               </div>
@@ -6623,7 +6621,7 @@ function ClaimScreen(props: {
         if (!me) return null
         return (
           <div style={{ marginBottom: 12, padding: "2px", display: "flex", alignItems: "center", gap: 11 }}>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 19, fontWeight: 800, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.helloName(me.name)} 👋</span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 19, fontWeight: 800, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.helloName(me.name)} 👋</span>
             <button onClick={() => onEditMe(me.id)}
               style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#0f7d90", background: "transparent", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 9, padding: "7px 11px", cursor: "pointer" }}>{L.editMe}</button>
           </div>
@@ -6634,13 +6632,13 @@ function ClaimScreen(props: {
           style={{ ...S.h3, marginBottom: gastItemsOpen ? 14 : 0, cursor: "pointer", justifyContent: "space-between", gap: 10 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
             {blokBol(1, iConfirmed)}
-            <span style={{ fontSize: 16.5, fontWeight: 800, color: iConfirmed ? "#1f8a4c" : "#3b486a" }}>1 · {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</span>
+            <span style={{ fontSize: 16.5, fontWeight: 800, color: iConfirmed ? "#1f8a4c" : "#2b4f56" }}>1 · {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</span>
           </span>
           {toonKnop(gastItemsOpen)}
         </h3>
         {gastItemsOpen && (<>
         {items.length > 0 && (
-          <div style={{ fontSize: 15.5, color: "#5a6680", background: "rgba(90,108,166,0.06)", borderRadius: 9, padding: "8px 10px", marginBottom: 11, lineHeight: 1.45 }}>💡 {L.assignShareHint}</div>
+          <div style={{ fontSize: 15.5, color: "#4a6e73", background: "rgba(90,108,166,0.06)", borderRadius: 9, padding: "8px 10px", marginBottom: 11, lineHeight: 1.45 }}>💡 {L.assignShareHint}</div>
         )}
         {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 16.5 }}>{L.noItemsWaitScan}</div>}
 
@@ -6672,7 +6670,7 @@ function ClaimScreen(props: {
                   </div>
                   {/* De sleutel is "item:persoon"; met enkel het item-id stond deze knop soms
                       op "ja" terwijl er niets gekozen was, of omgekeerd. */}
-                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...((iShare || (meId ? sharePickerOpen(it.id, meId) : false)) ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a", border: "none" } : {}) }}>{(iShare || (meId ? sharePickerOpen(it.id, meId) : false)) ? L.iShareYes : L.iShareNo}</button>
+                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...((iShare || (meId ? sharePickerOpen(it.id, meId) : false)) ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#123a42", border: "none" } : {}) }}>{(iShare || (meId ? sharePickerOpen(it.id, meId) : false)) ? L.iShareYes : L.iShareNo}</button>
                 </div>
                 {meId && sharePickerOpen(it.id, meId) && mySeats > 1 && !fixed && (() => {
                   // Geen voorselectie: je tikt gewoon aan wie meedeelde. Eén tik volstaat,
@@ -6687,27 +6685,27 @@ function ClaimScreen(props: {
                   return (
                     <div style={{ marginTop: 9, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.35)", borderRadius: 12, padding: "10px 11px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                        <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#14213a" }}>{L.withHowMany(mySeats)}</span>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>{L.withHowMany(mySeats)}</span>
                         {wide && (
-                          <button onClick={setAll} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: allOn ? "#5a6680" : "#0f7d90", background: allOn ? "#fff" : "rgba(20,153,176,0.1)", border: allOn ? "1px solid rgba(16,24,40,0.2)" : "1px solid rgba(20,153,176,0.45)", borderRadius: 8, padding: "6px 9px", cursor: "pointer" }}>{allOn ? L.clearAll : L.allOfThem(mySeats)}</button>
+                          <button onClick={setAll} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: allOn ? "#4a6e73" : "#0f7d90", background: allOn ? "#fff" : "rgba(20,153,176,0.1)", border: allOn ? "1px solid rgba(18,58,66,0.2)" : "1px solid rgba(20,153,176,0.45)", borderRadius: 8, padding: "6px 9px", cursor: "pointer" }}>{allOn ? L.clearAll : L.allOfThem(mySeats)}</button>
                         )}
                         {/* Ook hier: zonder sluitknop bleef dit venster staan zodra je niemand
                             selecteerde, en raakte je het alleen kwijt via de knop erboven. */}
-                        {meId && <button onClick={() => sluitSharePicker(it.id, meId)} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#5a6680", background: "#fff", border: "1px solid rgba(16,24,40,0.15)", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>{L.pickerDone}</button>}
+                        {meId && <button onClick={() => sluitSharePicker(it.id, meId)} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#4a6e73", background: "#fff", border: "1px solid rgba(18,58,66,0.15)", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>{L.pickerDone}</button>}
                       </div>
                       <div style={{ display: "flex", gap: wide ? 6 : 7, flexWrap: "wrap" }}>
                         {Array.from({ length: mySeats }, (_, i) => i).map((i) => {
                           const on = sel.includes(i)
                           const label = parts[i] || `${L.personWord} ${i + 1}`
                           return (
-                            <button key={i} onClick={() => toggle(i)} style={{ flex: 1, minWidth: wide ? 70 : 90, fontSize: wide ? 12.5 : 13, fontWeight: 800, padding: wide ? "9px 5px" : "10px 6px", borderRadius: 10, cursor: "pointer", color: "#14213a", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(16,24,40,0.15)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{on ? "✓ " : ""}{label}</button>
+                            <button key={i} onClick={() => toggle(i)} style={{ flex: 1, minWidth: wide ? 70 : 90, fontSize: wide ? 12.5 : 13, fontWeight: 800, padding: wide ? "9px 5px" : "10px 6px", borderRadius: 10, cursor: "pointer", color: "#123a42", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(18,58,66,0.15)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{on ? "✓ " : ""}{label}</button>
                           )
                         })}
                         {!wide && (
-                          <button onClick={setAll} style={{ flex: 1, minWidth: 90, fontSize: 16, fontWeight: 800, padding: "10px 6px", borderRadius: 10, cursor: "pointer", color: allOn ? "#5a6680" : "#0f7d90", background: allOn ? "#fff" : "rgba(20,153,176,0.08)", border: allOn ? "1.5px solid rgba(16,24,40,0.2)" : "1.5px solid rgba(20,153,176,0.45)" }}>{allOn ? L.clearAll : L.allOfThem(mySeats)}</button>
+                          <button onClick={setAll} style={{ flex: 1, minWidth: 90, fontSize: 16, fontWeight: 800, padding: "10px 6px", borderRadius: 10, cursor: "pointer", color: allOn ? "#4a6e73" : "#0f7d90", background: allOn ? "#fff" : "rgba(20,153,176,0.08)", border: allOn ? "1.5px solid rgba(18,58,66,0.2)" : "1.5px solid rgba(20,153,176,0.45)" }}>{allOn ? L.clearAll : L.allOfThem(mySeats)}</button>
                         )}
                       </div>
-                      <div style={{ fontSize: 15.5, color: sel.length > 0 ? "#5a6680" : "#9aa0ab", marginTop: 8, lineHeight: 1.45 }}>
+                      <div style={{ fontSize: 15.5, color: sel.length > 0 ? "#4a6e73" : "#8aa3a6", marginTop: 8, lineHeight: 1.45 }}>
                         {sel.length > 0 ? L.sharesInstead(sel.length, mySeats) : L.pickWhoShared}
                       </div>
                     </div>
@@ -6741,16 +6739,16 @@ function ClaimScreen(props: {
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{ flexShrink: 0, fontSize: 16.5 }}>{isOver ? "🚫" : isDone ? "✅" : "👥"}</span>
                         <span style={{ fontSize: 16, lineHeight: 1.45, fontWeight: isError || isOver ? 700 : 400,
-                          color: isOver ? "#c0392b" : isError ? "#b5591a" : isDone ? "#1f8a4c" : "#3b486a" }}>{msg}</span>
+                          color: isOver ? "#c0392b" : isError ? "#b5591a" : isDone ? "#1f8a4c" : "#2b4f56" }}>{msg}</span>
                       </div>
                       {isOver && who && (
                         <div style={{ fontSize: 15.5, color: "#a5443a", marginTop: 4, lineHeight: 1.4 }}>{L.sharedBy}{who}</div>
                       )}
                       {onSetExpected && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 8, paddingTop: 7, borderTop: "1px dashed rgba(16,24,40,0.12)" }}>
-                          <span style={{ fontSize: 15.5, fontWeight: 700, color: "#5a6680" }}>{L.expectedSharers}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 8, paddingTop: 7, borderTop: "1px dashed rgba(18,58,66,0.12)" }}>
+                          <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a6e73" }}>{L.expectedSharers}</span>
                           <button onClick={() => onSetExpected(it.id, Math.max(0, (it.share_expected ?? 0) - 1) || null)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5 }}>−</button>
-                          <b style={{ minWidth: 14, textAlign: "center", fontSize: 16.5, color: it.share_expected ? "#14213a" : "#c3c8d2" }}>{it.share_expected ?? "–"}</b>
+                          <b style={{ minWidth: 14, textAlign: "center", fontSize: 16.5, color: it.share_expected ? "#123a42" : "#b6cacc" }}>{it.share_expected ?? "–"}</b>
                           <button onClick={() => onSetExpected(it.id, (it.share_expected ?? 0) + 1)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5, background: "rgba(27,42,74,0.12)" }}>+</button>
                         </div>
                       )}
@@ -6758,7 +6756,7 @@ function ClaimScreen(props: {
                   )
                 })()}
                 {!iShare && (
-                  <div style={{ marginTop: 6, fontSize: 15.5, color: "#9aa0ab", lineHeight: 1.4 }}>{L.tapShareHint}</div>
+                  <div style={{ marginTop: 6, fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.4 }}>{L.tapShareHint}</div>
                 )}
               </div>
             )
@@ -6768,12 +6766,12 @@ function ClaimScreen(props: {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.name}</span>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: it.unit_price <= 0.0001 ? "#c0392b" : "#1499b0", flexShrink: 0 }}>€{it.unit_price.toFixed(2).replace(".", ",")}</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: it.unit_price <= 0.0001 ? "#c0392b" : "#0f7d90", flexShrink: 0 }}>€{it.unit_price.toFixed(2).replace(".", ",")}</span>
                   <button onClick={() => onToggleShared(it)} title={it.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}
                     style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, fontSize: 15.5, fontWeight: 800, padding: "7px 9px", borderRadius: 8, cursor: "pointer",
-                      color: it.is_shared ? "#7a5300" : "#5a6680",
+                      color: it.is_shared ? "#7a5300" : "#4a6e73",
                       background: it.is_shared ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
-                      border: it.is_shared ? "1px solid rgba(196,152,32,0.5)" : "1px solid rgba(16,24,40,0.15)" }}>
+                      border: it.is_shared ? "1px solid rgba(196,152,32,0.5)" : "1px solid rgba(18,58,66,0.15)" }}>
                     <ShareIcon on={it.is_shared} size={12} />{it.is_shared ? L.sharedOnShort : L.makeSharedShort}
                   </button>
                 </div>
@@ -6800,7 +6798,7 @@ function ClaimScreen(props: {
           style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: gastBevestigdOpen ? 10 : 0 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
             {blokBol(2, iConfirmed)}
-            <span style={{ fontSize: 16.5, fontWeight: 800, color: iConfirmed ? "#1f8a4c" : "#3b486a" }}>2 · {iConfirmed ? L.whatIConfirmed : L.aboutToConfirmTitle}</span>
+            <span style={{ fontSize: 16.5, fontWeight: 800, color: iConfirmed ? "#1f8a4c" : "#2b4f56" }}>2 · {iConfirmed ? L.whatIConfirmed : L.aboutToConfirmTitle}</span>
           </span>
           {toonKnop(gastBevestigdOpen)}
         </div>
@@ -6811,9 +6809,9 @@ function ClaimScreen(props: {
             <div style={{ marginBottom: 12 }}>
               {mine.length === 0 && <div style={{ fontSize: 16.5, color: "#aaa" }}>{L.nothingTappedYet}</div>}
               {mine.map((d, k) => (
-                <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 16.5, padding: "3px 0", color: "#3b486a" }}>
+                <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 16.5, padding: "3px 0", color: "#2b4f56" }}>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{showTip(d.name, L)}{d.shared ? (d.revealed ? (meId && seatsOf(meId) > 1 ? L.sharedNPers(d.myHeads) : L.sharedPart) : L.sharedByN(d.sharers)) : ""}</span>
-                  <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>
+                  <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#123a42" }}>
                     {d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}
                   </span>
                 </div>
@@ -6826,7 +6824,7 @@ function ClaimScreen(props: {
         {!finalized && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", border: "2px solid rgba(20,153,176,0.45)", borderRadius: 14, padding: "13px 15px", marginTop: 4, boxShadow: "0 4px 14px -8px rgba(20,153,176,0.6)" }}>
             <span style={{ fontSize: 18, fontWeight: 800, color: "#0f7488", minWidth: 0 }}>{L.yourTotal}</span>
-            <span style={{ fontSize: 32, fontWeight: 800, color: "#14213a", flexShrink: 0, letterSpacing: -0.5 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</span>
+            <span style={{ fontSize: 32, fontWeight: 800, color: "#123a42", flexShrink: 0, letterSpacing: -0.5 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</span>
           </div>
         )}
         {t.pendingShared && (
@@ -6844,14 +6842,14 @@ function ClaimScreen(props: {
               <span style={{ fontSize: 16.5, fontWeight: 800, color: "#1f8a4c" }}>3 · {L.finalSplitTitle}</span>
             </div>
             {personItems(meId).map((r, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "4px 0", borderBottom: "1px solid rgba(16,24,40,0.06)", fontSize: 16, color: "#3b486a" }}>
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "4px 0", borderBottom: "1px solid rgba(18,58,66,0.06)", fontSize: 16, color: "#2b4f56" }}>
                 <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{r.qty > 1 ? `${r.qty}× ` : ""}{r.name}</span>
-                <span style={{ flexShrink: 0, fontWeight: 700, color: "#14213a" }}>€{r.amount.toFixed(2).replace(".", ",")}</span>
+                <span style={{ flexShrink: 0, fontWeight: 700, color: "#123a42" }}>€{r.amount.toFixed(2).replace(".", ",")}</span>
               </div>
             ))}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", border: "2px solid rgba(20,153,176,0.45)", borderRadius: 14, padding: "13px 15px", margin: "11px 0 14px", boxShadow: "0 4px 14px -8px rgba(20,153,176,0.6)" }}>
               <span style={{ fontSize: 18, fontWeight: 800, color: "#0f7488", minWidth: 0 }}>{L.yourShareWord}</span>
-              <span style={{ fontSize: 32, fontWeight: 800, color: "#14213a", flexShrink: 0, letterSpacing: -0.5 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</span>
+              <span style={{ fontSize: 32, fontWeight: 800, color: "#123a42", flexShrink: 0, letterSpacing: -0.5 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</span>
             </div>
             <div style={{ paddingTop: 12, borderTop: "1px solid rgba(90,108,166,0.18)" }}>
             {/* De verdeling van de hele tafel is naslagwerk — dicht dus, tenzij je ze wil
@@ -6866,11 +6864,11 @@ function ClaimScreen(props: {
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
                 {blokBol(4, false)}
-                <span style={{ fontSize: 16.5, fontWeight: 800, color: "#5a6680" }}>👥 {L.everyoneSplitTitle}</span>
+                <span style={{ fontSize: 16.5, fontWeight: 800, color: "#4a6e73" }}>👥 {L.everyoneSplitTitle}</span>
               </span>
               {toonKnop(gastVerdelingOpen)}
             </div>
-            {gastVerdelingOpen && <div style={{ fontSize: 15.5, color: "#8a93a3", marginTop: 4, marginBottom: 8 }}>{L.fullBillInfo}</div>}
+            {gastVerdelingOpen && <div style={{ fontSize: 15.5, color: "#7d999d", marginTop: 4, marginBottom: 8 }}>{L.fullBillInfo}</div>}
             {gastVerdelingOpen && (<>
             {participants.map((p) => {
               const pt = personTotal(p.id)
@@ -6882,18 +6880,18 @@ function ClaimScreen(props: {
                   <div onClick={() => setOpenGuestRows((cur) => { const n = new Set(cur); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n })}
                     style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 8px", cursor: "pointer" }}>
                     <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                      <span style={{ fontSize: 15.5, color: "#9aa0ab", width: 12, flexShrink: 0 }}>{rowOpen ? "▼" : "▶"}</span>
-                      <span style={{ fontSize: 17.5, fontWeight: isMe ? 800 : 600, color: "#14213a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{isMe ? L.youSuffix : ""}</span>
+                      <span style={{ fontSize: 15.5, color: "#8aa3a6", width: 12, flexShrink: 0 }}>{rowOpen ? "▼" : "▶"}</span>
+                      <span style={{ fontSize: 17.5, fontWeight: isMe ? 800 : 600, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{isMe ? L.youSuffix : ""}</span>
                     </span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a", flexShrink: 0, marginLeft: 8 }}>€{pt.settled.toFixed(2).replace(".", ",")}{pt.pendingShared ? "+" : ""}</span>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42", flexShrink: 0, marginLeft: 8 }}>€{pt.settled.toFixed(2).replace(".", ",")}{pt.pendingShared ? "+" : ""}</span>
                   </div>
                   {rowOpen && (
                     <div style={{ padding: "0 8px 10px 26px" }}>
                       {detail.length === 0 && <div style={{ fontSize: 16, color: "#aaa" }}>{L.nothingTapped2}</div>}
                       {detail.map((d, k) => (
-                        <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 16, color: "#5a6680", padding: "2px 0" }}>
+                        <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 16, color: "#4a6e73", padding: "2px 0" }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{showTip(d.name, L)}{d.shared ? (d.revealed ? L.sharedPart : L.sharedByN(d.sharers)) : ""}</span>
-                          <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#14213a" }}>{d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}</span>
+                          <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#123a42" }}>{d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}</span>
                         </div>
                       ))}
                     </div>
@@ -6901,9 +6899,9 @@ function ClaimScreen(props: {
                 </div>
               )
             })}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(16,24,40,0.1)" }}>
-              <span style={{ fontSize: 16.5, fontWeight: 700, color: "#5a6680" }}>{L.billTotalLabel}</span>
-              <span style={{ fontSize: 18, fontWeight: 800, color: "#14213a" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2).replace(".", ",")}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(18,58,66,0.1)" }}>
+              <span style={{ fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>{L.billTotalLabel}</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2).replace(".", ",")}</span>
             </div>
             </>)}
             </div>
@@ -6918,13 +6916,13 @@ function ClaimScreen(props: {
                 const eerst = !iConfirmed
                 const ok = await confirmMe()
                 if (eerst && ok !== false) setShowConfirmInfo(true)
-              }} style={{ ...S.btn, flex: 3, padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none", ...(iConfirmed ? { background: "rgba(39,174,96,0.12)", color: "#1f8a4c" } : { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#14213a" }) }}>
+              }} style={{ ...S.btn, flex: 3, padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none", ...(iConfirmed ? { background: "rgba(39,174,96,0.12)", color: "#1f8a4c" } : { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#123a42" }) }}>
                 {iConfirmed ? L.confirmedTapEdit : L.confirmMyOrder}
               </button>
               {/* Pas na het bevestigen: deze uitleg gaat over wat er dan gebeurt. */}
               {!isAdmin && iConfirmed && (
                 <button onClick={() => setShowConfirmInfo(true)}
-                  style={{ ...S.btn, flex: 1, minWidth: 0, padding: "14px 4px", fontSize: 16, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(20,153,176,0.45)", color: "#1499b0", whiteSpace: "nowrap" }}>{L.whatNowBtn}</button>
+                  style={{ ...S.btn, flex: 1, minWidth: 0, padding: "14px 4px", fontSize: 16, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(20,153,176,0.45)", color: "#0f7d90", whiteSpace: "nowrap" }}>{L.whatNowBtn}</button>
               )}
             </div>
           </>
@@ -6936,17 +6934,17 @@ function ClaimScreen(props: {
             <div style={{ ...S.modal, width: "min(460px, 94vw)", padding: 22 }} onClick={(e) => e.stopPropagation()}>
               <div style={{ textAlign: "center", marginBottom: 20 }}>
                 <div style={{ width: 62, height: 62, borderRadius: "50%", background: "rgba(39,174,96,0.14)", color: "#1f8a4c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34, margin: "0 auto 12px" }}>✓</div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: "#14213a" }}>{L.confirmDoneTitle}</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: "#123a42" }}>{L.confirmDoneTitle}</div>
               </div>
               {[{ n: "✓", t: L.confirmStep1, klaar: true }, { n: "2", t: L.confirmStep2, klaar: false }, { n: "3", t: L.confirmStep3, klaar: false }, { n: "4", t: L.confirmStep4, klaar: false, ster: true }].map((st, i) => (
                 <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: st.ster ? 5 : 14 }}>
-                  <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15.5, fontWeight: 800, background: st.klaar ? "#1f8a4c" : "rgba(16,24,40,0.08)", color: st.klaar ? "#fff" : "#5a6680" }}>{st.n}</span>
-                  <span style={{ fontSize: 17.5, lineHeight: 1.45, color: st.klaar ? "#14213a" : "#5a6680", fontWeight: st.klaar ? 700 : 400 }}>{st.t}{st.ster && <span style={{ color: "#1499b0", fontWeight: 800 }}>*</span>}</span>
+                  <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15.5, fontWeight: 800, background: st.klaar ? "#1f8a4c" : "rgba(18,58,66,0.08)", color: st.klaar ? "#fff" : "#4a6e73" }}>{st.n}</span>
+                  <span style={{ fontSize: 17.5, lineHeight: 1.45, color: st.klaar ? "#123a42" : "#4a6e73", fontWeight: st.klaar ? 700 : 400 }}>{st.t}{st.ster && <span style={{ color: "#0f7d90", fontWeight: 800 }}>*</span>}</span>
                 </div>
               ))}
               {/* Wat er nog bij komt bovenop je items — klein, want het is een terzijde. */}
-              <div style={{ fontSize: 14, color: "#9aa0ab", lineHeight: 1.4, margin: "0 0 18px 42px" }}>
-                <span style={{ color: "#1499b0", fontWeight: 800 }}>*</span> {L.confirmStepNote}
+              <div style={{ fontSize: 14, color: "#8aa3a6", lineHeight: 1.4, margin: "0 0 18px 42px" }}>
+                <span style={{ color: "#0f7d90", fontWeight: 800 }}>*</span> {L.confirmStepNote}
               </div>
               <button onClick={() => setShowConfirmInfo(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{L.closeWord}</button>
             </div>
@@ -6957,17 +6955,17 @@ function ClaimScreen(props: {
         {showFinalPopup && meId && (
           <div style={{ ...S.overlay, zIndex: 3200 }} onClick={() => setShowFinalPopup(false)}>
             <div style={{ ...S.modal, width: "min(400px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ fontSize: 21, fontWeight: 800, color: "#14213a", marginBottom: 3 }}>{L.finalPopupTitle}</div>
-              <div style={{ fontSize: 15.5, color: "#9aa0ab", lineHeight: 1.45, marginBottom: 14 }}>{L.finalPopupSub}</div>
+              <div style={{ fontSize: 21, fontWeight: 800, color: "#123a42", marginBottom: 3 }}>{L.finalPopupTitle}</div>
+              <div style={{ fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.45, marginBottom: 14 }}>{L.finalPopupSub}</div>
               {personItems(meId).map((r, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "6px 0", borderBottom: "1px solid rgba(16,24,40,0.07)", fontSize: 15.5, color: "#3b486a" }}>
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "6px 0", borderBottom: "1px solid rgba(18,58,66,0.07)", fontSize: 15.5, color: "#2b4f56" }}>
                   <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{r.qty > 1 ? `${r.qty}× ` : ""}{r.name}</span>
-                  <span style={{ flexShrink: 0, fontWeight: 700, color: "#14213a" }}>€{r.amount.toFixed(2).replace(".", ",")}</span>
+                  <span style={{ flexShrink: 0, fontWeight: 700, color: "#123a42" }}>€{r.amount.toFixed(2).replace(".", ",")}</span>
                 </div>
               ))}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", border: "2px solid rgba(20,153,176,0.45)", borderRadius: 14, padding: "13px 15px", marginTop: 12 }}>
                 <span style={{ fontSize: 17, fontWeight: 800, color: "#0f7488" }}>{L.yourTotal}</span>
-                <span style={{ fontSize: 28, fontWeight: 800, color: "#14213a" }}>€{personTotal(meId).settled.toFixed(2).replace(".", ",")}</span>
+                <span style={{ fontSize: 28, fontWeight: 800, color: "#123a42" }}>€{personTotal(meId).settled.toFixed(2).replace(".", ",")}</span>
               </div>
               {/* Alleen sluiten: de verdeling van de hele tafel bereik je via de balk. */}
               <button onClick={() => setShowFinalPopup(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, marginTop: 12 }}>{L.closeWord}</button>
@@ -6980,11 +6978,11 @@ function ClaimScreen(props: {
       <div style={{ marginTop: 14 }}>
           {disputeOpen ? (
             <div style={{ background: "rgba(90,108,166,0.06)", border: "1px solid rgba(90,108,166,0.2)", borderRadius: 12, padding: 12 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "#5a6680", marginBottom: 7 }}>{L.whatWrong}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#4a6e73", marginBottom: 7 }}>{L.whatWrong}</div>
               <textarea value={disputeText} onChange={(e) => setDisputeText(e.target.value)} placeholder={L.disputePlaceholder} rows={2} style={{ ...S.input, width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                 <button onClick={() => { setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 16.5 }}>{L.cancel}</button>
-                <button onClick={() => { onToggleDispute(true, disputeText); setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 16.5, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "#fff" }}>{L.send}</button>
+                <button onClick={() => { onToggleDispute(true, disputeText); setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 16.5, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#0f7d90,#3ec9d8)", color: "#fff" }}>{L.send}</button>
               </div>
             </div>
           ) : iResolved ? (
@@ -6992,7 +6990,7 @@ function ClaimScreen(props: {
               {L.remarkResolved}
               {iComment && <div style={{ marginTop: 6, fontWeight: 600, fontStyle: "italic", color: "#1f8a4c", opacity: 0.85 }}>{L.yourRemark}“{iComment}”</div>}
               <div style={{ marginTop: 8 }}>
-                <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "8px 16px", fontSize: 16, fontWeight: 700, background: "#fff", border: "1px solid rgba(20,33,58,0.18)", color: "#5a6680" }}>{L.addAnotherRemark}</button>
+                <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "8px 16px", fontSize: 16, fontWeight: 700, background: "#fff", border: "1px solid rgba(18,58,66,0.18)", color: "#4a6e73" }}>{L.addAnotherRemark}</button>
               </div>
             </div>
           ) : iDispute ? (
@@ -7000,12 +6998,12 @@ function ClaimScreen(props: {
               {L.remarkReceived}
               {iComment && <div style={{ marginTop: 6, fontWeight: 600, fontStyle: "italic", color: "#a06b00", opacity: 0.9 }}>{L.yourRemark}“{iComment}”</div>}
               <div style={{ marginTop: 6 }}>
-                <button onClick={() => { onToggleDispute(false); setDisputeOpen(false); setDisputeText("") }} style={{ background: "none", border: "none", padding: 0, color: "#1499b0", fontSize: 16, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>{L.withdraw}</button>
+                <button onClick={() => { onToggleDispute(false); setDisputeOpen(false); setDisputeText("") }} style={{ background: "none", border: "none", padding: 0, color: "#0f7d90", fontSize: 16, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>{L.withdraw}</button>
               </div>
             </div>
           ) : (
             <div style={{ textAlign: "center" }}>
-              <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "10px 18px", fontSize: 16.5, fontWeight: 700, background: "#fff", border: "1px solid rgba(20,33,58,0.18)", color: "#5a6680" }}>
+              <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "10px 18px", fontSize: 16.5, fontWeight: 700, background: "#fff", border: "1px solid rgba(18,58,66,0.18)", color: "#4a6e73" }}>
                 {L.somethingWrong}
               </button>
             </div>
@@ -7020,9 +7018,9 @@ function ShareIcon({ on, size = 20 }: { on?: boolean; size?: number }) {
   if (!on) {
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: "block" }}>
-        <circle cx="8" cy="13" r="5" fill="none" stroke="#5a6680" strokeWidth="2.2" />
-        <circle cx="16" cy="13" r="5" fill="none" stroke="#5a6680" strokeWidth="2.2" />
-        <circle cx="12" cy="9" r="5" fill="none" stroke="#5a6680" strokeWidth="2.2" />
+        <circle cx="8" cy="13" r="5" fill="none" stroke="#4a6e73" strokeWidth="2.2" />
+        <circle cx="16" cy="13" r="5" fill="none" stroke="#4a6e73" strokeWidth="2.2" />
+        <circle cx="12" cy="9" r="5" fill="none" stroke="#4a6e73" strokeWidth="2.2" />
       </svg>
     )
   }
@@ -7047,9 +7045,9 @@ function SeatsControl({ n, onChange, max, size = 15, showLabel = false, compact 
     <span onClick={(e) => e.stopPropagation()} style={{ display: "inline-flex", alignItems: "center", gap: compact ? 3 : 5, background: "rgba(90,108,166,0.1)", borderRadius: 9, padding: compact ? "2px 4px" : "2px 5px 2px 8px", flexShrink: 0 }} title={L.seatsControlTitle}>
       <span style={{ display: "inline-flex", alignItems: "center", gap: 1, fontSize: compact ? 12 : size, lineHeight: 1 }}>
         {Array.from({ length: icons }).map((_, i) => <span key={i}>👤</span>)}
-        {seats > capIcons && <span style={{ fontSize: compact ? 9.5 : 11, fontWeight: 800, color: "#5a6680", marginLeft: 1 }}>+{seats - capIcons}</span>}
+        {seats > capIcons && <span style={{ fontSize: compact ? 9.5 : 11, fontWeight: 800, color: "#4a6e73", marginLeft: 1 }}>+{seats - capIcons}</span>}
       </span>
-      {(showLabel || compact) && <span style={{ fontSize: compact ? 10.5 : 11.5, fontWeight: 700, color: "#5a6680", whiteSpace: "nowrap" }}>{seats} p.</span>}
+      {(showLabel || compact) && <span style={{ fontSize: compact ? 10.5 : 11.5, fontWeight: 700, color: "#4a6e73", whiteSpace: "nowrap" }}>{seats} p.</span>}
       <button onClick={(e) => { e.stopPropagation(); onChange(Math.max(1, seats - 1)) }} disabled={seats <= 1} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: bw, height: bw, cursor: seats <= 1 ? "default" : "pointer", fontSize: compact ? 11 : 12, lineHeight: 1, opacity: seats <= 1 ? 0.4 : 1 }}>−</button>
       <button onClick={(e) => { e.stopPropagation(); if (!atMax) onChange(seats + 1) }} disabled={atMax} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: bw, height: bw, cursor: atMax ? "default" : "pointer", fontSize: compact ? 11 : 12, lineHeight: 1, opacity: atMax ? 0.4 : 1 }}>+</button>
     </span>
@@ -7058,7 +7056,7 @@ function SeatsControl({ n, onChange, max, size = 15, showLabel = false, compact 
 
 function Stat({ label, value, tone }: { label: string; value: string; tone: "navy" | "green" | "red" | "gold" }) {
   const colors = {
-    navy: { bg: "rgba(20,33,58,0.05)", fg: "#14213a" },
+    navy: { bg: "rgba(18,58,66,0.05)", fg: "#123a42" },
     green: { bg: "rgba(39,174,96,0.1)", fg: "#27ae60" },
     red: { bg: "rgba(224,107,94,0.1)", fg: "#e0685c" },
     gold: { bg: "rgba(233,196,95,0.16)", fg: "#a06b00" },
@@ -7073,19 +7071,19 @@ function Stat({ label, value, tone }: { label: string; value: string; tone: "nav
 
 const S: Record<string, React.CSSProperties> = {
   page: { padding: 14, fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", background: "linear-gradient(180deg,#e4f5f8 0%,#cfecf3 55%,#bfe4ee 100%)", minHeight: "100dvh", color: "#1d2433", maxWidth: 720, margin: "0 auto", WebkitFontSmoothing: "antialiased", MozOsxFontSmoothing: "grayscale" },
-  card: { background: "#ffffff", border: "1px solid rgba(16,24,40,0.04)", borderRadius: 22, padding: 18, boxShadow: "0 1px 2px rgba(16,24,40,0.03), 0 14px 30px -16px rgba(80,90,140,0.18)", marginBottom: 14 },
-  btn: { border: "1px solid rgba(16,24,40,0.10)", background: "#ffffff", borderRadius: 12, padding: "14px 20px", cursor: "pointer", fontSize: 18, fontWeight: 600, color: "#1d2433", boxShadow: "0 1px 2px rgba(16,24,40,0.05)" },
-  btnPrimary: { background: "linear-gradient(135deg,#1499b0,#22b8cf)", color: "white", border: "none", boxShadow: "0 6px 16px -6px rgba(20,153,176,0.55)" },
-  smallBtn: { border: "1px solid rgba(16,24,40,0.10)", background: "#fff", borderRadius: 10, padding: "11px 16px", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#5a6680" },
-  iconBtn: { border: "none", background: "rgba(16,24,40,0.05)", borderRadius: 12, width: 46, height: 46, fontSize: 18, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  input: { border: "1.5px solid rgba(16,24,40,0.12)", borderRadius: 12, padding: "15px 16px", fontSize: 18, outline: "none", background: "#fff", color: "#1d2433" },
+  card: { background: "#ffffff", border: "1px solid rgba(18,58,66,0.04)", borderRadius: 22, padding: 18, boxShadow: "0 1px 2px rgba(18,58,66,0.03), 0 14px 30px -16px rgba(80,90,140,0.18)", marginBottom: 14 },
+  btn: { border: "1px solid rgba(18,58,66,0.10)", background: "#ffffff", borderRadius: 12, padding: "14px 20px", cursor: "pointer", fontSize: 18, fontWeight: 600, color: "#1d2433", boxShadow: "0 1px 2px rgba(18,58,66,0.05)" },
+  btnPrimary: { background: "linear-gradient(135deg,#0f7d90,#3ec9d8)", color: "white", border: "none", boxShadow: "0 6px 16px -6px rgba(20,153,176,0.55)" },
+  smallBtn: { border: "1px solid rgba(18,58,66,0.10)", background: "#fff", borderRadius: 10, padding: "11px 16px", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#4a6e73" },
+  iconBtn: { border: "none", background: "rgba(18,58,66,0.05)", borderRadius: 12, width: 46, height: 46, fontSize: 18, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  input: { border: "1.5px solid rgba(18,58,66,0.12)", borderRadius: 12, padding: "15px 16px", fontSize: 18, outline: "none", background: "#fff", color: "#1d2433" },
   lbl: { fontSize: 16, color: "#888", fontWeight: 600, display: "block", marginBottom: 4 },
   h1: { fontSize: 32, fontWeight: 800, letterSpacing: -0.7, marginBottom: 4, color: "#2f3c5e" },
-  h3: { fontSize: 21, fontWeight: 800, marginBottom: 14, letterSpacing: -0.3, color: "#3b486a", display: "flex", alignItems: "center", gap: 9 },
+  h3: { fontSize: 21, fontWeight: 800, marginBottom: 14, letterSpacing: -0.3, color: "#2b4f56", display: "flex", alignItems: "center", gap: 9 },
   topBar: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, padding: "6px 2px" },
-  tabBar: { display: "flex", gap: 4, background: "#edeef6", borderRadius: 16, padding: 5, marginBottom: 18, boxShadow: "inset 0 1px 2px rgba(16,24,40,0.04)" },
-  overlay: { position: "fixed", inset: 0, background: "rgba(16,24,40,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", padding: 16 },
-  modal: { background: "#fff", borderRadius: 24, padding: 24, width: "min(380px, 92vw)", boxShadow: "0 24px 70px -12px rgba(16,24,40,0.35)", maxHeight: "85vh", overflowY: "auto", border: "1px solid rgba(16,24,40,0.06)" },
-  toast: { position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)", background: "#1d2433", color: "#fff", padding: "11px 22px", borderRadius: 40, fontSize: 18, fontWeight: 600, zIndex: 2000, boxShadow: "0 10px 30px rgba(16,24,40,0.3)", whiteSpace: "nowrap", maxWidth: "90vw", textAlign: "center" },
+  tabBar: { display: "flex", gap: 4, background: "#edeef6", borderRadius: 16, padding: 5, marginBottom: 18, boxShadow: "inset 0 1px 2px rgba(18,58,66,0.04)" },
+  overlay: { position: "fixed", inset: 0, background: "rgba(18,58,66,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", padding: 16 },
+  modal: { background: "#fff", borderRadius: 24, padding: 24, width: "min(380px, 92vw)", boxShadow: "0 24px 70px -12px rgba(18,58,66,0.35)", maxHeight: "85vh", overflowY: "auto", border: "1px solid rgba(18,58,66,0.06)" },
+  toast: { position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)", background: "#1d2433", color: "#fff", padding: "11px 22px", borderRadius: 40, fontSize: 18, fontWeight: 600, zIndex: 2000, boxShadow: "0 10px 30px rgba(18,58,66,0.3)", whiteSpace: "nowrap", maxWidth: "90vw", textAlign: "center" },
   errorBanner: { background: "#fef2f2", border: "1px solid #fecaca", color: "#c0392b", borderRadius: 14, padding: "11px 16px", marginBottom: 14, display: "flex", alignItems: "center", fontSize: 18 },
 }
