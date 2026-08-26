@@ -875,6 +875,14 @@ const T = {
     coinPricesInfo: "Standaard festival-coins per drankje. Pas aan met − / + (stapjes van 0,1).",
     potTitle: "Pot",
     withHowMany: "Met hoeveel zijn jullie?",
+    groupPutIn: (b: string) => `De groep legde samen ${b} in`,
+    thatIsEach: (b: string) => `Dat is ${b} per persoon. Doe je mee, dan drink je gewoon mee uit de pot.`,
+    whoPutWhat: "Wie legde wat in?",
+    potShiftedToSelf: (n: number, b: string) => `\u26a0\ufe0f De pot dekt niet alles meer: ${n} rondje${n === 1 ? "" : "s"} (${b}) wordt nu zelf betaald.`,
+    iPutIn: (b: string) => `Ik leg ${b} in`,
+    settleApart: "Nee, ik reken apart af",
+    joinedPot: (n: string, b: string) => `${n} legde ${b} in de pot`,
+    eachPutsIn: "Hoeveel legt ieder in?",
     seatsFillLater: "Wie scant, neemt een plaats in.",
     potHowManyQ: "Met hoeveel personen leggen jullie in?",
     fillCoinValue: "Vul de coin-waarde in (1 coin = €…) — of zet coins op 'uit'.",
@@ -1659,6 +1667,14 @@ const T = {
     coinPricesInfo: "Jetons festival par défaut. Ajuste avec − / + (pas de 0,1).",
     potTitle: "Pot",
     withHowMany: "Vous \u00eates combien\u00a0?",
+    groupPutIn: (b: string) => `Le groupe a mis ${b} en commun`,
+    thatIsEach: (b: string) => `Soit ${b} par personne. Si tu participes, tu bois aussi de la cagnotte.`,
+    whoPutWhat: "Qui a mis quoi\u00a0?",
+    potShiftedToSelf: (n: number, b: string) => `\u26a0\ufe0f La cagnotte ne couvre plus tout\u00a0: ${n} tourn\u00e9e${n === 1 ? "" : "s"} (${b}) \u00e0 payer soi-m\u00eame.`,
+    iPutIn: (b: string) => `Je mets ${b}`,
+    settleApart: "Non, je paie s\u00e9par\u00e9ment",
+    joinedPot: (n: string, b: string) => `${n} a mis ${b} dans la cagnotte`,
+    eachPutsIn: "Combien met chacun\u00a0?",
     seatsFillLater: "Chacun prend une place en scannant.",
     potHowManyQ: "Vous \u00eates combien \u00e0 mettre au pot ?",
     fillCoinValue: "Entre la valeur du jeton (1 jeton = €…) — ou désactive les jetons.",
@@ -2372,6 +2388,12 @@ export default function PartyTest() {
   const [everyoneChoice, setEveryoneChoice] = useState<number | "custom" | null>(null)
   const [editPotId, setEditPotId] = useState<string | null>(null)
   const [potBuilderOpen, setPotBuilderOpen] = useState(false)
+  // Wie aanschuift terwijl er al een pot is, staat daar nog niet in: de beheerder
+  // vulde de bestaande plaatsen in, en deze plaats bestond toen nog niet. Eén keer
+  // vragen of hij meedoet; daarna niet meer.
+  const [potVraag, setPotVraag] = useState<null | { voorstel: number }>(null)
+  const [potVraagBedrag, setPotVraagBedrag] = useState("")
+  const [potVraagOpen, setPotVraagOpen] = useState(false)
   // Bij elke nieuwe inleg opnieuw vragen met hoeveel personen er ingelegd wordt — zo
   // weet elke inleg apart voor hoeveel mensen hij gold (nodig voor een latere Fair Split).
   // Telefoons houden de ingezoomde stand vast over paginawissels heen. Bij
@@ -4214,6 +4236,15 @@ export default function PartyTest() {
     loadParty(groupId)
   }
 
+  const joinPot = async (bedrag: number) => {
+    if (!groupId || !meId || bedrag <= 0.005) return
+    const { error } = await supabase.from("party_pot")
+      .insert({ group_id: groupId, seq: potRounds.length + 1, amounts: { [meId]: Math.round(bedrag * 100) / 100 }, is_card: false })
+    if (error) { setNotice("Inleggen mislukt: " + error.message); return }
+    loadParty(groupId)
+    const naam = people.find((pp) => pp.id === meId)?.name ?? ""
+    try { void kanaalRef.current?.send({ type: "broadcast", event: "melding", payload: { tekst: L.joinedPot(naam, euro(bedrag)) } }) } catch { /* niets */ }
+  }
   const claimSeat = async (personId: string, naam: string) => {
     if (busy) return
     setBusy(true)
@@ -4226,6 +4257,22 @@ export default function PartyTest() {
     if (error) { setNotice("Aanmelden mislukt: " + error.message); return }
     if (!data || data.length === 0) { setNotice(L.seatTaken); return }
     if (groupId) loadParty(groupId)
+    if (!isAdmin && potContribTotal > 0.005) {
+      const eigen = potRounds.reduce((t, r) => t + (r.amounts[personId] || 0), 0)
+      if (eigen <= 0.005) {
+        // Het bedrag dat de meesten legden is een eerlijker voorstel dan het
+        // gemiddelde: één grote inleg zou dat anders scheeftrekken.
+        const per: number[] = []
+        people.forEach((pp) => { const a = potRounds.reduce((t, r) => t + (r.amounts[pp.id] || 0), 0); if (a > 0.005) per.push(Math.round(a * 100) / 100) })
+        const telling = new Map<number, number>()
+        per.forEach((v) => telling.set(v, (telling.get(v) || 0) + 1))
+        let voorstel = per.length ? [...telling.entries()].sort((x, y) => y[1] - x[1] || y[0] - x[0])[0][0] : 0
+        if (!voorstel) voorstel = Math.round((potContribTotal / Math.max(1, people.length)) * 100) / 100
+        setPotVraagBedrag(voorstel.toFixed(2).replace(".", ","))
+        setPotVraagOpen(false)
+        setPotVraag({ voorstel })
+      }
+    }
   }
   const setEveryoneAmt = (v: number) => setPotDraft(Object.fromEntries(people.map((p) => [p.id, v])))
   const resetPotDraft = () => { setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft("") }
@@ -5045,7 +5092,12 @@ export default function PartyTest() {
       return Math.abs(deel - (r.potPart || 0)) > 0.004 ? { ...r, potPart: deel } : r
     })
     const gewijzigd = geklemd.filter((r, i) => r !== rounds[i])
-    if (gewijzigd.length > 0) await Promise.all(gewijzigd.map((r) => persistRound(r)))
+    if (gewijzigd.length > 0) {
+      // Vergelijk index voor index: wat er minder uit de pot komt, betaalt iemand zelf.
+      const bedrag = geklemd.reduce((s, r, i) => s + Math.max(0, (rounds[i].potPart || 0) - (r.potPart || 0)), 0)
+      await Promise.all(gewijzigd.map((r) => persistRound(r)))
+      if (bedrag > 0.005) setNotice(L.potShiftedToSelf(gewijzigd.length, euro(bedrag)))
+    }
   }
   const bewaarPotPerPersoon = async (bedragen: Record<string, number>) => {
     if (!groupId || potRounds.length === 0) return
@@ -5864,27 +5916,28 @@ export default function PartyTest() {
           {settle ? (
           <>
           {settle && (
-            <div style={{ ...S.row, justifyContent: "space-between", gap: 10, background: MODUS_FAIR.vlak, borderRadius: 11, padding: "9px 11px", marginBottom: 10 }}>
-              <span style={{ minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.withHowMany}</span>
-                <span style={{ display: "block", fontSize: 12, color: MODUS_FAIR.label, marginTop: 1 }}>{L.seatsFillLater}</span>
-              </span>
-              <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5 }}>
-                <button onClick={() => { const laatste = [...people].reverse().find((pp) => !pp.claimedBy && !pp.named); if (laatste) removePerson(laatste.id) }}
-                  style={{ width: 30, height: 30, borderRadius: "50%", background: "#fff", border: `1px solid ${MODUS_FAIR.randZacht}`, fontSize: 19, cursor: "pointer", fontFamily: "inherit", color: MODUS_FAIR.tekst,
-                    opacity: people.some((pp) => !pp.claimedBy && !pp.named) ? 1 : 0.35 }}>−</button>
-                <b style={{ fontSize: 19, color: "#1d2942", minWidth: 20, textAlign: "center" }}>{people.length}</b>
-                <button onClick={() => void addPerson()}
-                  style={{ width: 30, height: 30, borderRadius: "50%", background: MODUS_FAIR.rand, border: "none", color: "#fff", fontSize: 19, cursor: "pointer", fontFamily: "inherit" }}>＋</button>
-              </span>
+            <div style={{ background: MODUS_FAIR.vlak, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: MODUS_FAIR.tekst, minWidth: 0 }}>{L.withHowMany}</span>
+                <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <button onClick={() => { const laatste = [...people].reverse().find((pp) => !pp.claimedBy && !pp.named); if (laatste) removePerson(laatste.id) }}
+                    style={{ width: 32, height: 32, borderRadius: "50%", background: "#fff", border: `1px solid ${MODUS_FAIR.randZacht}`, fontSize: 20, cursor: "pointer", fontFamily: "inherit", color: MODUS_FAIR.tekst,
+                      opacity: people.some((pp) => !pp.claimedBy && !pp.named) ? 1 : 0.35 }}>−</button>
+                  <b style={{ fontSize: 21, color: "#1d2942", minWidth: 20, textAlign: "center" }}>{people.length}</b>
+                  <span style={{ fontSize: 13, color: MODUS_FAIR.label }}>{L.persWordLow}</span>
+                  <button onClick={() => void addPerson()}
+                    style={{ width: 32, height: 32, borderRadius: "50%", background: MODUS_FAIR.rand, border: "none", color: "#fff", fontSize: 20, cursor: "pointer", fontFamily: "inherit" }}>＋</button>
+                </span>
+              </div>
+              <div style={{ fontSize: 12.5, color: MODUS_FAIR.label, marginTop: 4 }}>{L.seatsFillLater}</div>
             </div>
           )}
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-            <span style={{ fontSize: 15.5, color: "#6b7484", fontWeight: 700 }}>{L.equalSplit}</span>
+            <span style={{ fontSize: 15, color: "#1d2942", fontWeight: 800 }}>{L.eachPutsIn}</span>
             <span style={{ fontSize: 15, color: "#c0554a", fontWeight: 700, cursor: "pointer" }} onClick={resetPotDraft}>{L.resetContrib}</span>
           </div>
           <div style={{ ...S.row, gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
-            {[5, 10, 20, 30].map((v) => {
+            {(settle ? [10, 20, 30, 40, 50] : [5, 10, 20, 30]).map((v) => {
               const on = everyoneChoice === v
               return <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 17, background: on ? "linear-gradient(135deg,#3f7fc4,#2f6fb5)" : "#fff", color: on ? "#fff" : "#1d2942", border: on ? "none" : "1px solid rgba(29,41,66,0.18)" }} onClick={() => { setEveryoneChoice(v); setEveryoneDraft(""); setEveryoneAmt(v) }}>€{v}</button>
             })}
@@ -6268,6 +6321,51 @@ export default function PartyTest() {
       {/* Wie gaat halen bevestigt eerst; pas daarna weet de rest ervan. */}
       {/* Tikte je op een drankje terwijl er geen rondje loopt? Dan legt dit uit waarom er
           niets gebeurt, en staat de weg vooruit meteen in hetzelfde venster. */}
+      {potVraag && meId && (() => {
+        const bedrag = Math.max(0, parseFloat(potVraagBedrag.replace(",", ".")) || 0)
+        const inleggers = people.map((pp) => ({ pp, a: potRounds.reduce((t, r) => t + (r.amounts[pp.id] || 0), 0) })).filter((x) => x.a > 0.005)
+        return (
+        <div style={{ ...S.overlay, zIndex: 78 }}>
+          <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 30, marginBottom: 7 }}>🪙</div>
+            <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 6 }}>{L.groupPutIn(euro(potContribTotal))}</div>
+            <div style={{ fontSize: 15, color: MODUS_FAIR.tekst, lineHeight: 1.55, marginBottom: 13 }}>{L.thatIsEach(euro(potVraag.voorstel))}</div>
+
+            {/* Wie wat legde, dicht tenzij je het wil zien — en meteen de plek om je
+                eigen bedrag te zetten als je iets anders bijlegt. */}
+            <div onClick={() => setPotVraagOpen((v) => !v)}
+              style={{ cursor: "pointer", border: `1px solid ${MODUS_FAIR.lijnZacht}`, borderRadius: 10, padding: "9px 12px", marginBottom: 13, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13.5, color: "#1d2942" }}>
+              <span style={{ fontWeight: potVraagOpen ? 700 : 400 }}>{L.whoPutWhat}</span>
+              <span style={{ color: MODUS_FAIR.label }}>{potVraagOpen ? "▴" : "▾"}</span>
+            </div>
+            {potVraagOpen && (
+              <div style={{ textAlign: "left", border: `1px solid ${MODUS_FAIR.lijnZacht}`, borderRadius: 10, padding: "4px 12px 11px", marginTop: -8, marginBottom: 13 }}>
+                {inleggers.map(({ pp, a }) => (
+                  <div key={pp.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid rgba(29,41,66,0.08)", fontSize: 14.5 }}>
+                    <span style={{ color: "#1d2942", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pp.name}</span>
+                    <b style={{ color: MODUS_FAIR.rand, flexShrink: 0 }}>{euro(a)}</b>
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 9, marginTop: 5, borderTop: `1.5px solid ${MODUS_FAIR.randZacht}` }}>
+                  <span style={{ fontSize: 14.5, fontWeight: 800, color: "#1d2942" }}>{L.jijNaam}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 14, color: MODUS_FAIR.label }}>€</span>
+                    <input value={potVraagBedrag} onChange={(e) => setPotVraagBedrag(e.target.value)} type="text" inputMode="decimal"
+                      style={{ ...S.input, width: 78, padding: "6px 10px", textAlign: "right", fontSize: 16, fontWeight: 800, color: MODUS_FAIR.rand, border: `1.5px solid ${MODUS_FAIR.rand}` }} />
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <button disabled={bedrag <= 0.005} onClick={() => { void joinPot(bedrag); setPotVraag(null) }}
+              style={{ width: "100%", boxSizing: "border-box", cursor: bedrag > 0.005 ? "pointer" : "not-allowed", border: "none", borderRadius: 12, padding: "13px 10px", fontSize: 16, fontWeight: 600, fontFamily: "inherit", color: "#fff", background: MODUS_FAIR.knop, opacity: bedrag > 0.005 ? 1 : 0.5, marginBottom: 8 }}>
+              {L.iPutIn(euro(bedrag))}</button>
+            <button onClick={() => setPotVraag(null)}
+              style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#6b7484", borderRadius: 12, padding: "12px 10px", fontSize: 14.5, fontWeight: 600, fontFamily: "inherit" }}>{L.settleApart}</button>
+          </div>
+        </div>
+        )
+      })()}
       {geenRondje && (
         <div style={{ ...S.overlay, zIndex: 75 }} onClick={() => setGeenRondje(false)}>
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
@@ -6877,17 +6975,6 @@ export default function PartyTest() {
       )}
       {/* Wat er nu gebeurt en wat jij moet doen, op twee gecentreerde regels — dezelfde
           rol als de "Je tikt aan voor"-strook op het aantikscherm. */}
-      {!!groupId && !kaal && !uitgebreidLook && !setupKop && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: modus.knop, borderRadius: "14px 14px 0 0", padding: "10px 15px", marginBottom: 10 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, flex: 1, minWidth: 0 }}>
-            {settle ? (<>
-              <GsmIcoon size={18} kleur="#fff" dof />
-              <GsmIcoon size={22} kleur="#fff" qr />
-            </>) : <GsmIcoon size={22} kleur="#fff" lijnen />}
-            <span style={{ fontSize: 17, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? L.modeFairShort : opNaam ? L.modeNaamTitle : `${L.modeQuickShort} · ${L.modeSnelTitle}`}</span>
-          </span>
-        </div>
-      )}
       {/* Logo met de pot eronder aan de linkerkant; de groepsnaam en het aantal personen
           rechtsboven. Zo staan "waar ben ik" en "hoeveel zit er nog in" naast elkaar in
           plaats van elkaar te verdringen op één regel. */}
