@@ -714,7 +714,6 @@ const T = {
     startOrdering: "Beginnen met bestellen",
     startOrderingSub: "wie later scant, sluit gewoon aan",
     everyoneTapsNow: "iedereen kan aantikken",
-    removeLastPerson: "Laatste persoon weghalen",
     showQr: "📱 QR-code tonen",
     toQrStep: "Naar de QR-code →",
     addThis: "Toevoegen",
@@ -728,7 +727,6 @@ const T = {
     groupNamePlain: "Groepsnaam",
     voiceNotPerfect: "werkt nog niet altijd perfect",
     howNoteTitle: "Hoe drankjes noteren?",
-    namesLater: "Wie erbij is — mag later",
     howNoteSub: "✏️ Van snel naar op naam kan later nog.",
     noteQuickTitle: "⚡ Snel noteren",
     noteQuickExample: "3× Pintje · 2× Cola",
@@ -990,7 +988,6 @@ const T = {
     everyoneCanTapNow: "Iedereen kan nu aantikken",
     orderingOpenBody: (naam: string) => `${naam || "De gastheer"} heeft de kaart geopend.`,
     goingToDrinks: "Naar de drankjes →",
-    tapToChange: "✏️ tik om te wijzigen",
     collapseAll: "Alles verbergen",
     settleBtn: "🧾 Afrekenen",
     nothingToSettle: "Er zijn nog geen afgeronde rondjes om af te rekenen.",
@@ -1040,7 +1037,6 @@ const T = {
     namePh: "bv. Trappist van Jos",
     priceLabel: "Richtprijs",
     priceHint: "Nodig om de rekening achteraf eerlijk te verdelen. Een schatting volstaat.",
-    coinsAuto: "{L.coinsAuto}",
     addBtn: "Toevoegen",
     remaining: (n: number, max: number) => `Nog ${n} van je ${max} eigen drankjes over`,
     addedByYou: "Door jou toegevoegd",
@@ -1499,7 +1495,6 @@ const T = {
     startOrdering: "Commencer à commander",
     startOrderingSub: "qui scanne plus tard rejoint simplement",
     everyoneTapsNow: "chacun peut cocher",
-    removeLastPerson: "Retirer la dernière personne",
     showQr: "📱 Afficher le QR",
     toQrStep: "Vers le QR-code →",
     addThis: "Ajouter",
@@ -1513,7 +1508,6 @@ const T = {
     groupNamePlain: "Nom du groupe",
     voiceNotPerfect: "ne marche pas encore à tous les coups",
     howNoteTitle: "Comment noter les boissons ?",
-    namesLater: "Qui est l\u00e0 — pour plus tard",
     howNoteSub: "✏️ Passer de rapide à au nom reste possible plus tard.",
     noteQuickTitle: "⚡ Noter vite",
     noteQuickExample: "3× Pintje · 2× Cola",
@@ -1775,7 +1769,6 @@ const T = {
     everyoneCanTapNow: "Chacun peut cocher maintenant",
     orderingOpenBody: (naam: string) => `${naam || "L’hôte"} a ouvert la carte.`,
     goingToDrinks: "Vers les boissons →",
-    tapToChange: "✏️ touche pour modifier",
     collapseAll: "Tout masquer",
     settleBtn: "🧾 Régler",
     nothingToSettle: "Aucune tournée terminée à régler.",
@@ -1825,7 +1818,6 @@ const T = {
     namePh: "p.ex. Trappiste de Jos",
     priceLabel: "Prix indicatif",
     priceHint: "Nécessaire pour répartir la note équitablement. Une estimation suffit.",
-    coinsAuto: "(vide = automatique)",
     addBtn: "Ajouter",
     remaining: (n: number, max: number) => `Encore ${n} de tes ${max} boissons personnalisées`,
     addedByYou: "Ajouté par toi",
@@ -2493,6 +2485,9 @@ export default function PartyTest() {
   const [activeCat, setActiveCat] = useState<Cat>("Bier")
   const [drinkSearch, setDrinkSearch] = useState("")
   const [guestTab, setGuestTab] = useState<"order" | "me" | "group">("order")
+  // Dezelfde indeling voor de beheerder in Fair Split; "order" bestaat daar als eigen
+  // weergave, dus die tab navigeert in plaats van te wisselen.
+  const [hubTab, setHubTab] = useState<"group" | "rounds">("group")
   // De haler mag tijdens zíjn rondje ook voor anderen aantikken ("doe mij ook eentje"
   // aan de toog). Gewone gasten blijven enkel zichzelf aantikken.
   const [halerVoor, setHalerVoor] = useState<string | null>(null)
@@ -2591,6 +2586,11 @@ export default function PartyTest() {
   const [cart, setCart] = useState<Assign>({})
   const [cartAnon, setCartAnon] = useState<Anon>({})
   const [rounds, setRounds] = useState<Round[]>([])
+  const eersteRondjeGezien = useRef(false)
+  useEffect(() => {
+    if (rounds.length > 0 && !eersteRondjeGezien.current) { eersteRondjeGezien.current = true; setHubTab("rounds") }
+    if (rounds.length === 0) eersteRondjeGezien.current = false
+  }, [rounds.length])
   const [gaveBackDraft, setGaveBackDraft] = useState<Record<string, number>>({})
   const [displayUnit, setDisplayUnit] = useState<"eur" | "coin">("eur")
   const [showEqual, setShowEqual] = useState(true)
@@ -9034,6 +9034,19 @@ export default function PartyTest() {
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header />
+        {settle && isAdmin && !fromQuick && (rounds.length > 0 || openRoundId) && (
+          <div style={{ ...S.segBaan, marginBottom: 12 }}>
+            {([["group", L.tabGroup], ["order", L.tabOrder], ["rounds", L.tabMe]] as const).map(([t, tekst]) => {
+              const aan = t === "order" ? false : hubTab === t
+              return (
+                <button key={t} onClick={() => { if (t === "order") { setActiveCat(catsPresent[0]); setView("order") } else setHubTab(t) }}
+                  style={{ flex: 1, textAlign: "center", cursor: "pointer", fontFamily: "inherit", border: "none",
+                    background: aan ? RAND : "transparent", boxShadow: aan ? `0 2px 6px -2px ${RAND}73` : "none",
+                    color: aan ? RANDTEKST : "#1d2942", borderRadius: 999, padding: "9px 3px", fontSize: 12.5, fontWeight: 600 }}>{tekst}</button>
+              )
+            })}
+          </div>
+        )}
         {showPot && renderPotModal()}
         {renderDialogs()}
         <AdminTabs />
@@ -9065,7 +9078,7 @@ export default function PartyTest() {
             niet: die leiden je weg uit een traject van drie stappen. */}
         {/* Het potblok stond hier als eigen kaart onderaan. Het staat nu als brede balk
             onder de kop — dichter bij de geldzak, en dit scherm gaat over de QR. */}
-        {!fromQuick && (rounds.length === 0 || qrGevraagd) && renderShare()}
+        {!fromQuick && (rounds.length === 0 || qrGevraagd) && (!(settle && isAdmin && (rounds.length > 0 || openRoundId)) || hubTab === "group") && renderShare()}
         {/* Het potblok stond hier onderaan het QR-scherm. Het staat nu als brede balk
             onder de kop, dichter bij de geldzak waar je het zoekt. */}
         {!settle && rounds.length === 0 && !openRoundId && (
@@ -9333,7 +9346,8 @@ export default function PartyTest() {
         {/* Zolang er nog geen rondje is, is dit het QR-scherm: alleen delen en de pot.
             Een leeg rondjesoverzicht of een "start je eerste rondje"-blok hoort hier niet;
             dat komt vanzelf zodra de eerste bestelling er is. */}
-        {fromQuick || (settle && rounds.length === 0) ? null : settle && paidCount === 0 ? (
+        {settle && isAdmin && !fromQuick && (rounds.length > 0 || openRoundId) && hubTab === "group" ? null
+         : fromQuick || (settle && rounds.length === 0) ? null : settle && paidCount === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
             <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
             <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>{L.noRoundsDone}</div>
