@@ -6894,7 +6894,7 @@ export default function PartyTest() {
       <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
       </svg>
       <span style={{ color: "#c3cbd8" }}>{L.potLayBtn}</span>
-      <span style={{ color: "#2f6fb5", fontWeight: 800 }}>+</span>
+      <span style={{ color: "#F5B301", fontWeight: 800 }}>+</span>
       </span>
   )
 
@@ -6911,7 +6911,7 @@ export default function PartyTest() {
         </svg>
       )}
       <span style={{ color: "#2f5693" }}>{euro(potZicht)}<span style={{ color: "#8a93ad", fontWeight: 700 }}> / {potInlegKort}</span></span>
-      <span style={{ color: "#2f6fb5", fontWeight: 800 }}>+</span>
+      <span style={{ color: "#F5B301", fontWeight: 800 }}>+</span>
     </span>
   )
   // Zoekveld met microfoon: bij uitgebreid opnemen ingebouwd bovenin de drankjeskaart
