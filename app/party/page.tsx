@@ -2493,7 +2493,6 @@ export default function PartyTest() {
   const [guestTab, setGuestTab] = useState<"order" | "me" | "group">("order")
   // Dezelfde indeling voor de beheerder in Fair Split; "order" bestaat daar als eigen
   // weergave, dus die tab navigeert in plaats van te wisselen.
-  const [hubTab, setHubTab] = useState<"group" | "rounds">("group")
   // De haler mag tijdens zíjn rondje ook voor anderen aantikken ("doe mij ook eentje"
   // aan de toog). Gewone gasten blijven enkel zichzelf aantikken.
   const [halerVoor, setHalerVoor] = useState<string | null>(null)
@@ -2592,11 +2591,6 @@ export default function PartyTest() {
   const [cart, setCart] = useState<Assign>({})
   const [cartAnon, setCartAnon] = useState<Anon>({})
   const [rounds, setRounds] = useState<Round[]>([])
-  const eersteRondjeGezien = useRef(false)
-  useEffect(() => {
-    if (rounds.length > 0 && !eersteRondjeGezien.current) { eersteRondjeGezien.current = true; setHubTab("rounds") }
-    if (rounds.length === 0) eersteRondjeGezien.current = false
-  }, [rounds.length])
   const [gaveBackDraft, setGaveBackDraft] = useState<Record<string, number>>({})
   const [displayUnit, setDisplayUnit] = useState<"eur" | "coin">("eur")
   const [showEqual, setShowEqual] = useState(true)
@@ -6763,7 +6757,7 @@ export default function PartyTest() {
     // Alleen in de echte QR-modus: een snel- of uitgebreid-sessie die via Fair Split
     // afrekende, krijgt settle=true maar blijft een noteer-sessie — daar horen geen
     // tabbladen met "Mijn stand".
-    if (!groupId || !isAdmin || !settle || fromQuick) return null
+    if (!groupId || !isAdmin || !settle || fromQuick || rounds.length === 0) return null
     const hier: "order" | "me" | "group" =
       view === "settings" ? "group" : (view === "hub" || view === "roundsOverview" || view === "confirmed") ? "me" : "order"
     const naar = (t: "order" | "me" | "group") => {
@@ -7233,26 +7227,24 @@ export default function PartyTest() {
         {renderAddDrink()}
         {renderVoice()}
 
-        {/* Dezelfde modusbalk als de beheerder ziet: ook een gast mag weten waar hij zit. */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: (settle ? MODUS_FAIR : MODUS_SNEL).knop, borderRadius: "14px 14px 0 0", padding: "10px 15px", marginBottom: 10 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, flex: 1, minWidth: 0 }}>
-            {settle ? (<>
-              <GsmIcoon size={18} kleur="#fff" dof />
-              <GsmIcoon size={22} kleur="#fff" qr />
-            </>) : <GsmIcoon size={22} kleur="#fff" lijnen />}
-            <span style={{ fontSize: 17, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{settle ? L.modeFairShort : opNaam ? L.modeNaamTitle : `${L.modeQuickShort} · ${L.modeSnelTitle}`}</span>
-          </span>
-          <LanguageToggle compact />
+        {/* Logo boven, groep en jouw naam eronder — dezelfde kop als de beheerder ziet. */}
+        <div style={{ background: MODUS_FAIR.rand, borderRadius: 15, padding: "11px 13px", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <RundoLogo size={36} />
+            <span style={{ marginLeft: "auto", flexShrink: 0 }}><LanguageToggle compact /></span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+            <span style={{ fontSize: 18, fontWeight: 600, color: "#fff", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName}</span>
+            <span onClick={() => setNaamWijzig(ik.name)}
+              style={{ flexShrink: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.32)", borderRadius: 999, padding: "4px 13px 4px 7px", fontSize: 17, fontWeight: 600, color: "#fff", maxWidth: 180 }}>
+              <span style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.9)", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <PotloodIcoon size={12} kleur={MODUS_FAIR.rand} />
+              </span>
+              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ik.name}</span>
+            </span>
+          </div>
         </div>
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
-          <div>
-            <div style={{ fontSize: 21.5, fontWeight: 800 }}>🍻 {groupName}</div>
-            <div style={{ fontSize: 15.5, color: "#6b7484" }}>
-              {L.youAre}{" "}
-              <b onClick={() => setNaamWijzig(ik.name)} style={{ color: MODUS_FAIR.tekst, cursor: "pointer", textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: 3 }}>{ik.name} ✏️</b>
-              {pay === "coin" ? ` · coins (1 = ${euro(coinValue)})` : ""}
-            </div>
-          </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5, flexShrink: 0 }}>
             {/* Wat je in de pot stopte hoort bovenaan: het is het enige bedrag dat al vaststaat. */}
             {contribOf(meId) > 0.005 && (
@@ -9054,19 +9046,6 @@ export default function PartyTest() {
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header />
-        {settle && isAdmin && !fromQuick && rounds.length > 0 && (
-          <div style={{ ...S.segBaan, marginBottom: 12 }}>
-            {([["group", L.tabGroup], ["order", L.tabOrder], ["rounds", L.tabMe]] as const).map(([t, tekst]) => {
-              const aan = t === "order" ? false : hubTab === t
-              return (
-                <button key={t} onClick={() => { if (t === "order") { setActiveCat(catsPresent[0]); setView("order") } else setHubTab(t) }}
-                  style={{ flex: 1, textAlign: "center", cursor: "pointer", fontFamily: "inherit", border: "none",
-                    background: aan ? RAND : "transparent", boxShadow: aan ? `0 2px 6px -2px ${RAND}73` : "none",
-                    color: aan ? RANDTEKST : "#1d2942", borderRadius: 999, padding: "9px 3px", fontSize: 12.5, fontWeight: 600 }}>{tekst}</button>
-              )
-            })}
-          </div>
-        )}
         {showPot && renderPotModal()}
         {renderDialogs()}
         <AdminTabs />
@@ -9098,7 +9077,7 @@ export default function PartyTest() {
             niet: die leiden je weg uit een traject van drie stappen. */}
         {/* Het potblok stond hier als eigen kaart onderaan. Het staat nu als brede balk
             onder de kop — dichter bij de geldzak, en dit scherm gaat over de QR. */}
-        {!fromQuick && (rounds.length === 0 || qrGevraagd) && (!(settle && isAdmin && rounds.length > 0) || hubTab === "group") && renderShare()}
+        {!fromQuick && (rounds.length === 0 || qrGevraagd) && renderShare()}
         {/* Het potblok stond hier onderaan het QR-scherm. Het staat nu als brede balk
             onder de kop, dichter bij de geldzak waar je het zoekt. */}
         {!settle && rounds.length === 0 && !openRoundId && (
@@ -9366,8 +9345,7 @@ export default function PartyTest() {
         {/* Zolang er nog geen rondje is, is dit het QR-scherm: alleen delen en de pot.
             Een leeg rondjesoverzicht of een "start je eerste rondje"-blok hoort hier niet;
             dat komt vanzelf zodra de eerste bestelling er is. */}
-        {settle && isAdmin && !fromQuick && rounds.length > 0 && hubTab === "group" ? null
-         : fromQuick || (settle && rounds.length === 0) ? null : settle && paidCount === 0 ? (
+        {fromQuick || (settle && rounds.length === 0) ? null : settle && paidCount === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
             <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
             <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>{L.noRoundsDone}</div>
