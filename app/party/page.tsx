@@ -647,7 +647,9 @@ const T = {
     notMeConfirm: (n: string) => `Ben jij niet ${n}? Dan geef je deze plaats vrij en kies je opnieuw.`,
     releaseSeat: "Plaats vrijgeven",
     tabOrder: "🍺 Drankjes",
-    tabMe: "🧾 Mijn stand",
+    tabMe: "📋 Rondjes",
+    youTookLabel: "jij nam:",
+    backToDrinks: "\u2190 Terug naar drankjes",
     tabGroup: "👥 Groep & QR",
     groupTitle: "👥 In deze groep",
     peopleN: (n: number) => `${n} ${n === 1 ? "persoon" : "personen"}`,
@@ -711,6 +713,7 @@ const T = {
     sectionExtras: "EXTRA’S",
     startOrdering: "Beginnen met bestellen",
     startOrderingSub: "wie later scant, sluit gewoon aan",
+    everyoneTapsNow: "iedereen kan aantikken",
     removeLastPerson: "Laatste persoon weghalen",
     showQr: "📱 QR-code tonen",
     toQrStep: "Naar de QR-code →",
@@ -984,8 +987,9 @@ const T = {
     pricePh: "prijs per stuk",
     notOnList: "staat er niet bij?",
     orderingOpenTitle: "Het bestellen is open!",
+    everyoneCanTapNow: "Iedereen kan nu aantikken",
     orderingOpenBody: (naam: string) => `${naam || "De gastheer"} heeft de kaart geopend.`,
-    goingToDrinks: "je gaat vanzelf naar de drankjes…",
+    goingToDrinks: "Naar de drankjes →",
     tapToChange: "✏️ tik om te wijzigen",
     collapseAll: "Alles verbergen",
     settleBtn: "🧾 Afrekenen",
@@ -1053,7 +1057,15 @@ const T = {
     walkTable: "👥 Rondje opnemen",
     roundTogether: "🍻 Ik ga halen en betalen",
     roundWalkSelf: "✍️ Rondje zelf opnemen",
-    youFetchTitle: "Jij haalt en betaalt dit rondje",
+    youFetchTitle: "Jij haalt dit rondje",
+    theyTap: "Zij tikken aan",
+    theyTapRest: "op hun gsm.",
+    youPay: "Jij betaalt",
+    youPayRest: "aan de bar \u2014 achteraf verrekend.",
+    lastRoundWas: (wat: string) => `Vorige was ${wat}`,
+    sameAgainShort: "\u21bb zelfde opnieuw",
+    notMeShort: "Toch niet",
+    iFetchShort: "Ik ga halen \u2192",
     fetchStep1: "Iedereen krijgt nu de melding",
     fetchStep2: "Ieder tikt op zijn eigen gsm aan wat hij wil",
     fetchStep3: "Jij krijgt het barlijstje zodra ze klaar zijn",
@@ -1418,7 +1430,9 @@ const T = {
     notMeConfirm: (n: string) => `Tu n'es pas ${n} ? Tu libères cette place et tu choisis à nouveau.`,
     releaseSeat: "Libérer la place",
     tabOrder: "🍺 Boissons",
-    tabMe: "🧾 Mon compte",
+    tabMe: "📋 Tourn\u00e9es",
+    youTookLabel: "toi\u00a0:",
+    backToDrinks: "\u2190 Retour aux boissons",
     tabGroup: "👥 Groupe & QR",
     groupTitle: "👥 Dans ce groupe",
     peopleN: (n: number) => `${n} ${n === 1 ? "personne" : "personnes"}`,
@@ -1482,6 +1496,7 @@ const T = {
     sectionExtras: "EXTRAS",
     startOrdering: "Commencer à commander",
     startOrderingSub: "qui scanne plus tard rejoint simplement",
+    everyoneTapsNow: "chacun peut cocher",
     removeLastPerson: "Retirer la dernière personne",
     showQr: "📱 Afficher le QR",
     toQrStep: "Vers le QR-code →",
@@ -1755,8 +1770,9 @@ const T = {
     pricePh: "prix à la pièce",
     notOnList: "pas dans la liste ?",
     orderingOpenTitle: "Les commandes sont ouvertes !",
+    everyoneCanTapNow: "Chacun peut cocher maintenant",
     orderingOpenBody: (naam: string) => `${naam || "L’hôte"} a ouvert la carte.`,
-    goingToDrinks: "tu arrives aux boissons…",
+    goingToDrinks: "Vers les boissons →",
     tapToChange: "✏️ touche pour modifier",
     collapseAll: "Tout masquer",
     settleBtn: "🧾 Régler",
@@ -1824,7 +1840,15 @@ const T = {
     walkTable: "👥 Faire le tour",
     roundTogether: "🍻 Je vais chercher et payer",
     roundWalkSelf: "✍️ Prendre la tournée toi-même",
-    youFetchTitle: "Tu ch\u00e8rches et paies cette tourn\u00e9e",
+    youFetchTitle: "Tu vas chercher cette tourn\u00e9e",
+    theyTap: "Ils cochent",
+    theyTapRest: "sur leur t\u00e9l\u00e9phone.",
+    youPay: "Tu paies",
+    youPayRest: "au bar \u2014 r\u00e9gl\u00e9 apr\u00e8s.",
+    lastRoundWas: (wat: string) => `Pr\u00e9c\u00e9dente\u00a0: ${wat}`,
+    sameAgainShort: "\u21bb la m\u00eame",
+    notMeShort: "Pas moi",
+    iFetchShort: "J'y vais \u2192",
     fetchStep1: "Tout le monde reçoit l’info maintenant",
     fetchStep2: "Chacun coche sur son propre gsm ce qu’il veut",
     fetchStep3: "Tu reçois la liste pour le bar dès qu’ils ont fini",
@@ -4567,9 +4591,10 @@ export default function PartyTest() {
       <div style={{ position: "sticky", bottom: 10, zIndex: 5, marginTop: 4, marginBottom: 13 }}>
         <button className="rundo-adem" onClick={() => { void openBestellen(); setActiveCat(catsPresent[0]); setView("order") }}
           style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 14, padding: "13px 12px", color: "#fff", background: MODUS_FAIR.knop }}>
-          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9, fontSize: 19.5, fontWeight: 800 }}>{L.startOrdering}<span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 24, height: 24, borderRadius: "50%", background: "rgba(255,255,255,0.22)", fontSize: 15.5, fontWeight: 800, flexShrink: 0 }}>→</span></span>
-          <span style={{ display: "block", fontSize: 14, opacity: 0.92, marginTop: 2 }}>{L.startOrderingSub}</span>
+          <span style={{ display: "block", fontSize: 18.5, fontWeight: 800 }}>{L.startOrdering}</span>
+          <span style={{ display: "block", fontSize: 15, fontWeight: 600, color: "#d6f2f6", marginTop: 2 }}>{L.everyoneTapsNow}</span>
         </button>
+        <div style={{ textAlign: "center", fontSize: 14.5, fontWeight: 600, color: MODUS_FAIR.tekst, marginTop: 9 }}>{L.startOrderingSub}</div>
       </div>
       </>
     )
@@ -6277,13 +6302,9 @@ export default function PartyTest() {
       {openMelding && (
         <div style={{ ...S.overlay, zIndex: 77 }} onClick={() => setOpenMelding(false)}>
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 30, marginBottom: 5 }}>🍻</div>
-            <div style={{ fontSize: 20.5, fontWeight: 800, color: MODUS_FAIR.tekst, marginBottom: 6 }}>{L.orderingOpenTitle}</div>
-            <div style={{ fontSize: 16, color: "#5a8f99", lineHeight: 1.5, marginBottom: 13 }}>{L.orderingOpenBody(people.find((p) => !!ownerDevice && p.claimedBy === ownerDevice)?.name ?? "")}</div>
-            <div style={{ height: 4, borderRadius: 3, background: MODUS_FAIR.lijnZacht, overflow: "hidden", marginBottom: 8 }}>
-              <div style={{ height: "100%", background: MODUS_FAIR.knop, animation: "rundoLoop 4s linear forwards" }} />
-            </div>
-            <div style={{ fontSize: 14, color: "#8aa5aa" }}>{L.goingToDrinks}</div>
+            <div style={{ fontSize: 30, marginBottom: 6 }}>🍻</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: MODUS_FAIR.tekst, marginBottom: 14 }}>{L.everyoneCanTapNow}</div>
+            <button onClick={() => setOpenMelding(false)} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 600 }}>{L.goingToDrinks}</button>
           </div>
         </div>
       )}
@@ -6439,32 +6460,38 @@ export default function PartyTest() {
           </div>
         </div>
       )}
-      {startCheck && (
+      {startCheck && (() => {
+        const vorige = rounds[rounds.length - 1]
+        const stuks = vorige ? drinks.map((d) => ({ d, n: drinkTotalRound(vorige, d.id) })).filter((x) => x.n > 0) : []
+        const herhaalbaar = stuks.length > 0
+        const herhaalTekst = stuks.slice(0, 2).map((x) => `${x.n}× ${x.d.name}`).join(", ") + (stuks.length > 2 ? "…" : "")
+        return (
         <div style={{ ...S.overlay, zIndex: 74 }} onClick={() => setStartCheck(false)}>
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 32, marginBottom: 5 }}>🍻</div>
-            <div style={{ fontSize: 20.5, fontWeight: 800, color: "#1d2942", marginBottom: 12 }}>{L.youFetchTitle}</div>
-            <div style={{ textAlign: "left", marginBottom: 14 }}>
-              {[L.fetchStep1, L.fetchStep2, L.fetchStep3, L.fetchStep4].map((t, i) => (
-                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: i < 3 ? 9 : 0 }}>
-                  <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 19 }}>✓</span>
-                  <span style={{ fontSize: 18, color: "#1d2942", lineHeight: 1.45 }}>{t}</span>
-                </div>
-              ))}
+            <div style={{ textAlign: "center", marginBottom: 13 }}>
+              <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 5 }}>{L.youFetchTitle}</div>
+              <div style={{ fontSize: 15, color: MODUS_FAIR.tekst, lineHeight: 1.55 }}>
+                <b>{L.theyTap}</b> {L.theyTapRest}<br />
+                <b>{L.youPay}</b> {L.youPayRest}
+              </div>
             </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", background: "rgba(240,165,0,0.13)", borderRadius: 11, padding: "10px 12px", marginBottom: 13, textAlign: "left" }}>
-              <span style={{ flexShrink: 0 }}>💰</span>
-              <span style={{ fontSize: 15, color: "#8a5e0f", lineHeight: 1.45 }}>{L.youAdvance}</span>
-            </div>
+            {herhaalbaar && (
+              <div style={{ background: MODUS_FAIR.vlak, border: `1px dashed ${MODUS_FAIR.randZacht}`, borderRadius: 11, padding: "10px 12px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 9 }}>
+                <span style={{ fontSize: 12.5, color: MODUS_FAIR.tekst, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.lastRoundWas(herhaalTekst)}</span>
+                <button onClick={() => { setStartCheck(false); repeatRound(); void startAsRunner() }}
+                  style={{ flexShrink: 0, cursor: "pointer", border: "none", background: MODUS_FAIR.rand, color: "#fff", borderRadius: 999, padding: "7px 13px", fontSize: 12.5, fontWeight: 600, fontFamily: "inherit" }}>{L.sameAgainShort}</button>
+              </div>
+            )}
             <div style={{ display: "flex", gap: 9 }}>
               <button onClick={() => setStartCheck(false)}
-                style={{ flex: 1, minWidth: 0, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#6b7484", borderRadius: 12, padding: "13px 6px", fontSize: 17, fontWeight: 800 }}>{L.ratherNot}</button>
+                style={{ flex: 1, minWidth: 0, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#6b7484", borderRadius: 12, padding: "13px 6px", fontSize: 15, fontWeight: 600, fontFamily: "inherit" }}>{L.notMeShort}</button>
               <button onClick={() => { setStartCheck(false); void startAsRunner() }}
-                style={{ ...S.btnP, flex: 1.6, minWidth: 0, padding: "13px 6px", fontSize: 17.5, fontWeight: 800 }}>{L.yesIFetch}</button>
+                style={{ ...S.btnP, flex: 1.6, minWidth: 0, padding: "13px 6px", fontSize: 16.5, fontWeight: 600 }}>{L.iFetchShort}</button>
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
       {/* En de anderen krijgen te horen wie gaat en wat er van hen verwacht wordt. */}
       {rondjeMelding && (
         <div style={{ ...S.overlay, zIndex: 74 }} onClick={() => setRondjeMelding(null)}>
@@ -7309,25 +7336,32 @@ export default function PartyTest() {
             {rounds.length === 0 ? (
               <div style={{ ...S.card, fontSize: 17, color: "#9aa3b2", textAlign: "center", padding: "18px 0" }}>{L.noRoundClosed}</div>
             ) : (
-              <div style={S.card}>
-                <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 8 }}>{L.myTab}</h3>
-                {rounds.map((r) => {
+              <>
+                {[...rounds].reverse().map((r) => {
                   const mijne = drinks.filter((d) => (r.orders[d.id]?.[meId] ?? 0) > 0)
+                  const alles = drinks.map((d) => ({ d, n: drinkTotalRound(r, d.id) })).filter((x) => x.n > 0)
                   return (
-                    <div key={r.id} style={{ padding: "8px 0", borderBottom: "1px solid rgba(29,41,66,0.08)" }}>
-                      <div style={{ ...S.row, justifyContent: "space-between" }}>
-                        <span style={{ fontSize: 17, fontWeight: 800 }}>{L.roundN(r.seq)}</span>
-                        <span style={{ fontSize: 15, color: "#6b7484" }}>{paidLabel(r)}</span>
+                    <div key={r.id} style={{ ...S.card, padding: 11, marginBottom: 9 }}>
+                      <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <span style={{ fontSize: 15.5, fontWeight: 800, color: "#1d2942" }}>{L.roundN(r.seq)}</span>
+                        <span style={{ fontSize: 16, fontWeight: 800, color: (r.amount || 0) > 0.005 ? "#c88a1a" : "#9aa3b2" }}>
+                          {(r.amount || 0) > 0.005 ? euro(r.amount) : paidLabel(r)}
+                        </span>
                       </div>
-                      <div style={{ fontSize: 15.5, color: mijne.length ? "#4a5567" : "#9aa3b2", marginTop: 3 }}>
+                      <div style={{ fontSize: 13, color: "#6b7484", lineHeight: 1.45 }}>
+                        {alles.map((x) => `${x.n}× ${x.d.name}`).join(" · ")}
+                      </div>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: mijne.length ? MODUS_FAIR.rand : "#9aa3b2", marginTop: 5 }}>
                         {mijne.length
-                          ? mijne.map((d) => `${r.orders[d.id][meId]}× ${d.name}`).join(" · ")
+                          ? `${L.youTookLabel} ${mijne.map((d) => `${r.orders[d.id][meId]}× ${d.name}`).join(" · ")}`
                           : L.nothingThisRound}
                       </div>
                     </div>
                   )
                 })}
-              </div>
+                <button onClick={() => setGuestTab("order")}
+                  style={{ ...S.btn, width: "100%", padding: "11px 0", borderRadius: 12, fontSize: 15, fontWeight: 600, color: "#1d2942" }}>{L.backToDrinks}</button>
+              </>
             )}
           </>
         )}
