@@ -1026,6 +1026,8 @@ const T = {
     settleBtn: "🧾 Afrekenen",
     nothingToSettle: "Er zijn nog geen afgeronde rondjes om af te rekenen.",
     fillAmountsFirst: "€0 — vul eerst het bedrag van je rondjes in. Daarna kan je afrekenen.",
+    provisionalTitle: "Voorlopige balans",
+    provisionalWhy: (n: number) => `${n} ${n === 1 ? "rondje heeft" : "rondjes hebben"} nog geen bedrag, dus dit totaal klopt nog niet.`,
     zeroRoundsNote: (n: number) => `${n} rondje${n === 1 ? "" : "s"} zonder bedrag — telt als €0 (bv. getrakteerd). Klopt dat niet?`,
     roundUnfinished: (n: number) => `Rondje ${n} is nog bezig — bevestig en betaal het eerst voor je afrekent.`,
     roundUnpaid: (n: number) => `Ronde ${n} is nog niet betaald. Rond die betaling eerst af.`,
@@ -1863,6 +1865,8 @@ const T = {
     settleBtn: "🧾 Régler",
     nothingToSettle: "Aucune tournée terminée à régler.",
     fillAmountsFirst: "0 € — indique d'abord le montant de tes tournées. Ensuite tu peux régler.",
+    provisionalTitle: "Bilan provisoire",
+    provisionalWhy: (n: number) => `${n} tournée${n === 1 ? "" : "s"} sans montant : ce total n'est pas encore juste.`,
     zeroRoundsNote: (n: number) => `${n} tournée${n === 1 ? "" : "s"} sans montant — compte comme 0 € (p.ex. offerte). Ce n'est pas ça ?`,
     roundUnfinished: (n: number) => `La tournée ${n} est en cours — confirme et paie-la avant de régler.`,
     roundUnpaid: (n: number) => `La tournée ${n} n'est pas payée. Règle d'abord ce paiement.`,
@@ -10487,21 +10491,18 @@ export default function PartyTest() {
           </div>
         )}
 
-        {/* Groen = alles staat klaar. Zolang er iets ontbreekt blijft de knop grijs, maar
-            wel aantikbaar: de melding eronder zegt dan wat er nog mist. */}
+        {/* De knop laat altijd door: ontbreekt er iets, dan verschijnt een melding die
+            zegt wát, en zie je de balans alvast in zijn voorlopige vorm. */}
         <button style={{ ...S.btnP, width: "100%",
           background: RAND,
           color: RANDTEKST,
           boxShadow: `0 4px 12px -4px ${RAND}99` }}
           onClick={() => {
-            // Te vroeg getikt? Dan zeggen waarom er niets gebeurt, in plaats van niets doen.
+            // Ontbreekt er nog iets? Dan zeggen wát, maar wel doorlaten — je mag kijken
+            // hoe het ervoor staat. Afsluiten kan pas als alles rond is.
             if (!klaar) {
-              if (zonderBedragHier.length > 0) {
-                setNotice(L.fillAmountsFirst)
-                setFillMode(true); setOverviewBackTo("payers"); setView("roundsOverview")
-                return
-              }
-              setNotice(zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit); return
+              setNotice(zonderBedragHier.length > 0 ? L.fillAmountsFirst
+                : zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit)
             }
             // fromQuick blijft staan: zo kan je vanaf de eindbalans nog stap voor stap terug.
             setHasSettled(true); setView("final")
@@ -10657,6 +10658,18 @@ export default function PartyTest() {
         <div style={{ marginBottom: 10 }}>
           <button onClick={() => { setOpenFairAll((v) => !v); setOpenFair({}) }} style={{ ...S.btn, padding: "7px 14px", fontSize: 16, fontWeight: 800, color: "#8a5e0f" }}>{openFairAll ? "▴ Sluit details" : "▾ Bekijk details"}</button>
         </div>
+        {(() => {
+          const zonder = rounds.filter((rr) => (rr.amount || 0) <= 0.005).length
+          if (zonder === 0) return null
+          return (
+            <div style={{ background: "rgba(240,165,0,0.14)", border: "1.5px solid rgba(200,138,0,0.6)", borderRadius: 12, padding: "11px 12px", marginBottom: 10 }}>
+              <div style={{ fontSize: 15.5, fontWeight: 800, color: "#6b4a00", marginBottom: 3 }}>{L.provisionalTitle}</div>
+              <div style={{ fontSize: 14, color: "#6b7484", lineHeight: 1.5, marginBottom: 9 }}>{L.provisionalWhy(zonder)}</div>
+              <button style={{ ...S.btn, width: "100%", padding: "10px 0", fontSize: 16, fontWeight: 800 }}
+                onClick={() => { setFillMode(true); setOverviewBackTo("final"); setView("roundsOverview") }}>{L.fillWord}</button>
+            </div>
+          )
+        })()}
         {anyUnassignedRounds && (
           <div style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "11px 12px", marginBottom: 10 }}>
             <div style={{ fontSize: 17, fontWeight: 800, color: "#b0402f", marginBottom: 3 }}>{L.equalSplitWarn}</div>
