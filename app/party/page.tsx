@@ -375,7 +375,6 @@ const MODUS_NAAM = {
 }
 // Bekers- en munten-extra's staan tijdelijk uit beeld (setup én ⚙️ Groep). De logica
 // blijft slapend aanwezig; deze ene schakelaar brengt ze in een latere update terug.
-const TOON_EXTRAS = false
 const makeCode = () => Array.from({ length: 6 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("")
 type Cat = "Bier" | "BierAV" | "Frisdrank" | "Wijn" | "Cocktail" | "Mocktail" | "Longdrink" | "Shot" | "Warm" | "Eigen"
 type Drink = { id: string; name: string; emoji: string; cat: Cat; price: number; cup: boolean; fav: boolean; coins: number; custom?: boolean; by?: string }
@@ -874,6 +873,12 @@ const T = {
     coinPrices: "🎟️ coin-prijzen per drankje",
     coinPricesInfo: "Standaard festival-coins per drankje. Pas aan met − / + (stapjes van 0,1).",
     potTitle: "Pot",
+    noPotYet: "Nog geen pot",
+    potSummary: (n: number, over: string) => `${n} inlegger${n === 1 ? "" : "s"} \u00b7 ${over} nog over`,
+    detailsWord: "details",
+    alreadySpent: "al besteed",
+    stillLeft: (b: string) => `nog ${b}`,
+    potAdjust: "Pot aanpassen",
     withHowMany: "Met hoeveel zijn jullie?",
     groupPutIn: (b: string) => `De groep legde samen ${b} in`,
     thatIsEach: (b: string) => `Dat is ${b} per persoon. Doe je mee, dan drink je gewoon mee uit de pot.`,
@@ -1670,6 +1675,12 @@ const T = {
     coinPrices: "🎟️ prix en jetons par boisson",
     coinPricesInfo: "Jetons festival par défaut. Ajuste avec − / + (pas de 0,1).",
     potTitle: "Pot",
+    noPotYet: "Pas encore de cagnotte",
+    potSummary: (n: number, over: string) => `${n} participant${n === 1 ? "" : "s"} \u00b7 ${over} restant`,
+    detailsWord: "d\u00e9tails",
+    alreadySpent: "d\u00e9j\u00e0 d\u00e9pens\u00e9",
+    stillLeft: (b: string) => `reste ${b}`,
+    potAdjust: "Ajuster la cagnotte",
     withHowMany: "Vous \u00eates combien\u00a0?",
     groupPutIn: (b: string) => `Le groupe a mis ${b} en commun`,
     thatIsEach: (b: string) => `Soit ${b} par personne. Si tu participes, tu bois aussi de la cagnotte.`,
@@ -2396,6 +2407,7 @@ export default function PartyTest() {
   const [everyoneChoice, setEveryoneChoice] = useState<number | "custom" | null>(null)
   const [editPotId, setEditPotId] = useState<string | null>(null)
   const [potBuilderOpen, setPotBuilderOpen] = useState(false)
+  const [potDetails, setPotDetails] = useState(false)
   // Wie aanschuift terwijl er al een pot is, staat daar nog niet in: de beheerder
   // vulde de bestaande plaatsen in, en deze plaats bestond toen nog niet. Eén keer
   // vragen of hij meedoet; daarna niet meer.
@@ -8200,74 +8212,6 @@ export default function PartyTest() {
           <input value={isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={(e) => { if (!e.target.value.trim()) setGroupName(settle ? L.autoNameQr() : L.autoName()); persistSettings() }} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.namePh3}
             style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 18, fontWeight: 700, padding: "10px 11px", borderRadius: 10, background: "#fff", border: "1.5px solid rgba(13,124,140,0.5)", marginBottom: 14 }} />
           </div>
-          {settle && TOON_EXTRAS && (<>
-            <div onClick={() => setExtrasOpen((v) => !v)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, cursor: "pointer", borderTop: "1px solid rgba(29,41,66,0.12)", marginTop: 12, paddingTop: 11 }}>
-              <span style={{ fontSize: 16, fontWeight: 700, color: "#6b7484" }}>{L.extrasLine}</span>
-              <span style={{ flexShrink: 0, border: "1.5px solid rgba(29,41,66,0.3)", color: "#6b7484", borderRadius: 9, padding: "6px 11px", fontSize: 14.5, fontWeight: 800, whiteSpace: "nowrap" }}>{extrasOpen ? `${L.hideWord} ▴` : `${L.showWord} ▾`}</span>
-            </div>
-            {extrasOpen && (
-              <div style={{ marginTop: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: "1px solid rgba(29,41,66,0.08)" }}>
-                  <span style={{ fontSize: 17, fontWeight: 800, color: "#1d2942" }}>{L.cupsTitle} <span onClick={(e) => { e.stopPropagation(); setDepositInfo((v) => !v); setCoinInfo(false) }} style={{ color: "#c98a00", cursor: "pointer" }}>ⓘ</span></span>
-                  <button onClick={() => { const n = !depositOn; setDepositOn(n); persistSettings({ deposit_on: n }) }}
-                    style={{ flexShrink: 0, width: 46, height: 26, borderRadius: 14, border: "none", cursor: "pointer", padding: "0 3px", display: "flex", alignItems: "center", justifyContent: depositOn ? "flex-end" : "flex-start", background: depositOn ? "#1f8a4c" : "rgba(16,24,40,0.14)" }}>
-                    <span style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", display: "block" }} />
-                  </button>
-                </div>
-                {depositInfo && <div style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", margin: "8px 0", fontSize: 15, color: "#4a5567", lineHeight: 1.5 }}>♻️{L.cupsInfo}</div>}
-                {depositOn && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 0 9px 14px", borderBottom: "1px solid rgba(29,41,66,0.08)" }}>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: "#4a5567" }}>{L.depositPerCup}</span>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-                      {effDepositUnit === "eur" && <span style={{ fontSize: 17, fontWeight: 700, color: "#6b7484" }}>€</span>}
-                      <input style={{ ...S.input, width: 71, padding: "7px 9px", fontSize: 18 }} type="text" inputMode="decimal" value={depositValue}
-                        onChange={(e) => setDepositValue(parseFloat(e.target.value.replace(",", ".")) || 0)} onBlur={() => persistSettings({ deposit_value: depositValue })} />
-                      {effDepositUnit === "coin" && <span style={{ fontSize: 15.5, fontWeight: 700, color: "#c98a00" }}>coins</span>}
-                    </span>
-                  </div>
-                )}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 0" }}>
-                  <span style={{ fontSize: 17, fontWeight: 800, color: "#1d2942" }}>{L.coinsTitle} <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ color: "#c98a00", cursor: "pointer" }}>ⓘ</span></span>
-                  <button onClick={() => { const n = pay === "coin" ? "eur" : "coin"; setPay(n); persistSettings({ pay: n }) }}
-                    style={{ flexShrink: 0, width: 46, height: 26, borderRadius: 14, border: "none", cursor: "pointer", padding: "0 3px", display: "flex", alignItems: "center", justifyContent: pay === "coin" ? "flex-end" : "flex-start", background: pay === "coin" ? "#1f8a4c" : "rgba(16,24,40,0.14)" }}>
-                    <span style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", display: "block" }} />
-                  </button>
-                </div>
-                {coinInfo && <div style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 8, fontSize: 15, color: "#4a5567", lineHeight: 1.5 }}>🎟️{L.coinsInfo}</div>}
-                {pay === "coin" && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 0 0 14px" }}>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: "#4a5567" }}>{L.oneCoinIs}</span>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-                      <span style={{ fontSize: 17, fontWeight: 700, color: "#6b7484" }}>€</span>
-                      <input style={{ ...S.input, width: 71, padding: "7px 9px", fontSize: 18 }} type="text" inputMode="decimal" value={coinValue}
-                        onChange={(e) => setCoinValue(parseFloat(e.target.value.replace(",", ".")) || 0)} onBlur={() => persistSettings({ coin_value: coinValue })} />
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-          </>)}
-
-
-          {/* Wie ben JIJ? Alleen relevant als de admin nog nergens zit — normaal is hij
-              al Gast 1, dus dit blijft verborgen. Vangnet voor het randgeval. */}
-          {!meId && people.length > 0 && (
-            <div style={{ background: "#fff8e8", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 12, padding: "11px 12px", marginBottom: 12 }}>
-              <div style={{ fontSize: 17, fontWeight: 800, color: "#8a5e0f", marginBottom: 3 }}>⭐ {L.whichAreYou}</div>
-              <div style={{ fontSize: 14.5, color: "#6b7484", marginBottom: 9, lineHeight: 1.45 }}>{L.pickYourName}</div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {people.filter((p) => !p.claimedBy).map((p) => {
-                  const idx = people.indexOf(p)
-                  return (
-                    <button key={p.id} disabled={busy} onClick={() => claimSeat(p.id, isGuestDefault(p.name) ? `Gast ${idx + 1}` : p.name)}
-                      style={{ ...S.pill, cursor: "pointer", border: "1px solid rgba(240,165,0,0.5)", background: "#fff", color: "#1d2942", fontWeight: 800, opacity: busy ? 0.5 : 1 }}>
-                      {isGuestDefault(p.name) ? `Gast ${idx + 1}` : p.name}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
 
         </div>
 
@@ -8308,6 +8252,52 @@ export default function PartyTest() {
               {!groepDicht && (!settle && isAutoNaam(groupName)
                 ? <div style={{ fontSize: 14, color: "#8b93a3", fontWeight: 700, marginTop: 6 }}>{L.nowWord} {groupName.trim()}</div>
                 : <div style={{ fontSize: 14, color: "#8b93a3", fontWeight: 700, marginTop: 6 }}>{L.tapToRename}</div>)}
+        {settle && !fromOnboarding && (() => {
+          const inleggers = people.map((pp) => ({ pp, a: potRounds.reduce((t, r) => t + (r.amounts[pp.id] || 0), 0) })).filter((x) => x.a > 0.005)
+          const leeg = potContribTotal <= 0.005
+          return (
+            <div style={{ marginTop: 13, background: "#f4fafb", border: "1px solid rgba(13,63,73,0.18)", borderRadius: 12, padding: "11px 12px" }}>
+              {leeg ? (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    <ZakjeIcoon size={16} /><span style={{ fontSize: 15, color: MODUS_FAIR.label }}>{L.noPotYet}</span>
+                  </span>
+                  <button onClick={() => setShowPot(true)}
+                    style={{ flexShrink: 0, cursor: "pointer", background: "#dbeef0", border: "none", color: RAND, borderRadius: 999, padding: "7px 14px", fontSize: 13.5, fontWeight: 700, fontFamily: "inherit" }}>{L.potLayBtn} +</button>
+                </div>
+              ) : (<>
+                <div onClick={() => setPotDetails((v) => !v)} style={{ cursor: "pointer" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                      <ZakjeIcoon size={16} /><span style={{ fontSize: 17, fontWeight: 800, color: RAND }}>{L.potTitle}</span>
+                    </span>
+                    <b style={{ flexShrink: 0, fontSize: 18, color: RAND }}>{euro(potContribTotal)}</b>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, paddingTop: 8, borderTop: "1px solid rgba(13,63,73,0.15)" }}>
+                    <span style={{ fontSize: 12.5, color: MODUS_FAIR.label, minWidth: 0 }}>{L.potSummary(inleggers.length, euro(Math.max(0, potRemaining)))}</span>
+                    <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 700, color: MODUS_FAIR.rand }}>{L.detailsWord} {potDetails ? "▴" : "▾"}</span>
+                  </div>
+                </div>
+                {potDetails && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(13,63,73,0.15)" }}>
+                    {inleggers.map(({ pp, a }) => (
+                      <div key={pp.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(13,63,73,0.08)", fontSize: 14 }}>
+                        <span style={{ color: RAND, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pp.name}</span>
+                        <b style={{ flexShrink: 0, color: MODUS_FAIR.rand }}>{euro(a)}</b>
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 9, marginTop: 4, borderTop: `1.5px solid ${MODUS_FAIR.randZacht}` }}>
+                      <span style={{ fontSize: 13, color: MODUS_FAIR.label }}>{L.alreadySpent} <b style={{ color: "#c88a1a" }}>{euro(potSpent)}</b></span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: RAND }}>{L.stillLeft(euro(Math.max(0, potRemaining)))}</span>
+                    </div>
+                    <button onClick={() => setShowPot(true)}
+                      style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", border: "none", borderRadius: 11, padding: "10px 8px", fontSize: 14.5, fontWeight: 600, fontFamily: "inherit", color: "#fff", background: MODUS_FAIR.knop, marginTop: 11 }}>{L.potAdjust}</button>
+                  </div>
+                )}
+              </>)}
+            </div>
+          )
+        })()}
         {(settle || opNaam) && !fromOnboarding && (
         <div style={{ borderTop: "1px solid rgba(29,41,66,0.12)", marginTop: 12, paddingTop: 11 }}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: people.length > 0 ? 10 : 0 }}>
@@ -8354,89 +8344,6 @@ export default function PartyTest() {
           </div>
           {potChosen && potContribTotal <= 0.005 && <div style={{ marginTop: 8, textAlign: "right" }}><span onClick={() => setPotChosen(false)} style={{ fontSize: 15.5, color: "#c0554a", fontWeight: 700, cursor: "pointer" }}>✕ toch niet</span></div>}
 
-        {settle && TOON_EXTRAS && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(29,41,66,0.12)" }}>
-          <div style={{ minWidth: 0 }}>
-        <div style={{ marginBottom: 0 }}>
-          <h3 style={{ ...S.h3, margin: 0, fontSize: 17.5, lineHeight: 1.3, textAlign: "center" }}>{L.cupsTitle} <span onClick={(e) => { e.stopPropagation(); setDepositInfo((v) => !v); setCoinInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 13.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
-          <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "center" }}>
-            <div style={{ ...S.seg(!depositOn), padding: "6px 8px" }} onClick={() => setDepositOn(false)}>uit</div>
-            <div style={{ ...S.seg(depositOn), padding: "6px 8px" }} onClick={() => setDepositOn(true)}>aan</div>
-          </div>
-          {depositInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 15.5, color: "#4a5567", lineHeight: 1.5 }}>♻️ <b>Herbruikbare bekers?</b>{L.cupsInfo}</div>}
-          {depositOn && (
-            <div style={{ marginTop: 10 }}>
-              {pay === "coin" && (
-                <>
-                  <div style={{ ...S.row, gap: 6, marginBottom: 6 }}>
-                    <div style={{ ...S.seg(depositUnit === "coin"), padding: "6px 6px", fontSize: 15.5 }} onClick={() => setDepositUnit("coin")}>in coins</div>
-                    <div style={{ ...S.seg(depositUnit === "eur"), padding: "6px 6px", fontSize: 15.5 }} onClick={() => setDepositUnit("eur")}>in €</div>
-                  </div>
-                  <div style={{ fontSize: 14.5, color: "#c98a00", marginBottom: 8, lineHeight: 1.4 }}>💡 Coins staat aan — kies of de waarborg in <b>coins</b> of <b>€</b> is.</div>
-                </>
-              )}
-              <div style={{ ...S.row, justifyContent: "space-between" }}>
-                <span style={{ fontSize: 17, fontWeight: 700 }}>{L.depositPerCup}</span>
-                <div style={{ ...S.row, gap: 4 }}>
-                  {effDepositUnit === "eur" && <span style={{ fontSize: 17, fontWeight: 700, color: "#6b7484" }}>€</span>}
-                  <input style={{ ...S.input, width: 64 }} type="text" inputMode="decimal" value={depositValue} onChange={(e) => setDepositValue(parseFloat(e.target.value.replace(",", ".")) || 0)} />
-                  {effDepositUnit === "coin" && <span style={{ fontSize: 16, fontWeight: 700, color: "#c98a00" }}>coins</span>}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-          </div>
-          <div style={{ minWidth: 0, borderTop: "1px solid rgba(29,41,66,0.1)", paddingTop: 13 }}>
-        <div style={{ marginBottom: 0 }}>
-          <h3 style={{ ...S.h3, margin: 0, fontSize: 17.5, lineHeight: 1.3, textAlign: "center" }}>{L.coinsTitle} <span onClick={(e) => { e.stopPropagation(); setCoinInfo((v) => !v); setDepositInfo(false) }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 13.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, verticalAlign: "middle" }}>i</span></h3>
-          <div style={{ ...S.row, gap: 6, marginTop: 8, justifyContent: "center" }}>
-            <div onClick={() => { const on = pay !== "coin"; setPay(on ? "coin" : "eur"); setDepositUnit(on ? "coin" : "eur") }} style={{ width: 44, height: 26, borderRadius: 20, background: pay === "coin" ? AAN : "#d9cdb0", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .15s" }}>
-              <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: pay === "coin" ? 21 : 3, transition: "left .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
-            </div>
-          </div>
-          {coinInfo && <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(240,165,0,0.08)", border: "1px solid rgba(240,165,0,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 10, fontSize: 15.5, color: "#4a5567", lineHeight: 1.5 }}>🎟️ <b>Coins?</b>{L.coinsInfo}</div>}
-          {pay === "coin" && (
-            <div style={{ marginTop: 12 }}>
-              <div style={{ ...S.row, justifyContent: "space-between" }}>
-                <span style={{ fontSize: 17.5, fontWeight: 700 }}>1 coin =</span>
-                <div style={S.row}><span style={{ color: "#6b7484" }}>€</span><input style={S.input} type="text" inputMode="decimal" value={coinValue} onChange={(e) => setCoinValue(parseFloat(e.target.value.replace(",", ".")) || 0)} /></div>
-              </div>
-              <button style={{ ...S.btn, width: "100%", marginTop: 10, fontSize: 16 }} onClick={() => setShowCoins((v) => !v)}>{showCoins ? "▴ verberg coin-prijzen" : L.coinPrices}</button>
-              {showCoins && (() => {
-                const cd = drinks.filter((d) => d.cat === coinCat)
-                const vis = cd.filter((d) => coinFull || d.fav)
-                return (
-                  <div style={{ marginTop: 10 }}>
-                    <p style={{ ...S.sub, marginBottom: 8 }}>{L.coinPricesInfo}</p>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-                      {catsPresent.map((cc) => <span key={cc} style={{ ...S.tab(coinCat === cc), padding: "6px 10px", fontSize: 15.5 }} onClick={() => setCoinCat(cc)}>{CAT_LABEL[cc]}</span>)}
-                    </div>
-                    <div style={{ ...S.row, gap: 8, marginBottom: 8 }}>
-                      <div style={{ ...S.seg(!coinFull), padding: "7px 6px", fontSize: 16 }} onClick={() => setCoinFull(false)}>{L.shortList}</div>
-                      <div style={{ ...S.seg(coinFull), padding: "7px 6px", fontSize: 16 }} onClick={() => setCoinFull(true)}>{L.fullListBtn}</div>
-                    </div>
-                    {vis.length === 0 ? (
-                      <div style={{ fontSize: 16, color: "#6b7484", textAlign: "center", padding: "10px 0" }}>{L.noFavsHere} <span style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }} onClick={() => setCoinFull(true)}>{L.showAll}</span></div>
-                    ) : vis.map((d) => (
-                      <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid rgba(29,41,66,0.06)" }}>
-                        <span style={{ fontSize: 17 }}>{d.emoji} {d.name}</span>
-                        <div style={{ ...S.row, gap: 5 }}>
-                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 19 }} onClick={() => setCoinPrice(d.id, d.coins - 0.1)}>−</button>
-                          <span style={{ minWidth: 46, textAlign: "center", fontSize: 16, fontWeight: 800 }}>{d.coins.toFixed(1)} c</span>
-                          <button style={{ ...S.step, width: 26, height: 26, fontSize: 19 }} onClick={() => setCoinPrice(d.id, d.coins + 0.1)}>+</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
-              })()}
-            </div>
-          )}
-        </div>
-          </div>
-        </div>
-        )}
         </div>
         <div style={{ marginTop: 24 }}>
           {(() => {
