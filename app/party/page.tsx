@@ -5741,7 +5741,7 @@ export default function PartyTest() {
     // keuze leest en niet als losse knoppen die je allebei kan aanzetten.
     segBaan: { display: "flex", background: "#eef1f6", border: "1.5px solid rgba(29,41,66,0.28)", borderRadius: 999, padding: 3 } as React.CSSProperties,
     step: { width: 42, height: 42, borderRadius: 11, border: `1px solid ${koel ? "rgba(13,124,140,0.22)" : themaNaam ? "rgba(59,72,106,0.22)" : "rgba(29,41,66,0.18)"}`, background: koel ? "#e4f2f5" : VLAK3, color: koel ? MODUS_FAIR.tekst : themaNaam ? "#3b486a" : "#8a5e0f", fontSize: 24.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
-    chip: (n: number) => ({ position: "relative", padding: "10px 14px", borderRadius: 20, fontSize: 18, fontWeight: 700, cursor: "pointer", userSelect: "none", border: n > 0 ? "1px solid rgba(240,165,0,0.5)" : "1px solid rgba(29,41,66,0.15)", background: n > 0 ? AAN : "#eef1f6", color: n > 0 ? "#fff" : "#6b7484" } as React.CSSProperties),
+    chip: (n: number) => ({ position: "relative", padding: "7px 13px", borderRadius: 999, fontSize: 13.5, fontWeight: 600, cursor: "pointer", userSelect: "none", border: n > 0 ? `1.5px solid ${RAND}` : "1.5px solid rgba(29,41,66,0.4)", background: n > 0 ? RAND : "#fff", color: n > 0 ? RANDTEKST : "#1d2942" } as React.CSSProperties),
     badge: { marginLeft: 5, background: "rgba(0,0,0,0.22)", borderRadius: 20, padding: "0 6px", fontSize: 14.5, fontWeight: 800 } as React.CSSProperties,
     pill: { fontSize: 15, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: "rgba(29,41,66,0.08)", color: "#6b7484" } as React.CSSProperties,
     row: { display: "flex", alignItems: "center", gap: 10 } as React.CSSProperties,
@@ -8941,15 +8941,15 @@ export default function PartyTest() {
 
           {(parseFloat(amountDraft.replace(",", ".")) || 0) > 0 ? (
           <>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "#6b7484", marginBottom: 7 }}>{L.paidBy} <span style={{ fontWeight: 600, color: "#9aa3b2" }}>{L.multiplePossible}</span></div>
+          <div style={{ fontSize: 13.5, color: "#4a5567", marginBottom: 8 }}>{L.whoPutMoney} <span style={{ color: "#8b93a3" }}>{L.multiplePossible}</span></div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
             <span style={{ ...S.chip(payPot ? 1 : 0), opacity: st.potAvail <= 0.005 ? 0.45 : 1 }} onClick={() => { if (!payPot && st.potAvail <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg (€0). Tik rechtsboven op “${potIsCard ? "drankkaart" : "pot"} + toevoegen” om eerst in te leggen.`); return } const nextPot = !payPot; setPayPot(nextPot); autoSplit(payPersons, nextPot); setPaidConfirmed(false) }}>{potIsCard ? "💳 drankkaart" : L.thePot}</span>
             {people.map((p) => <span key={p.id} style={S.chip(payPersons.includes(p.id) ? 1 : 0)} onClick={() => togglePayPerson(p.id)}>{p.name}</span>)}
           </div>
 
           {st.multi && (
-            <div style={{ background: "#eef1f6", borderRadius: 12, padding: "10px 12px", marginTop: 10 }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#6b7484", marginBottom: 8 }}>{L.splitEvenNote}</div>
+            <div style={{ background: "#eef4fb", border: "1px solid rgba(47,111,181,0.25)", borderRadius: 11, padding: 11, marginTop: 10 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: "#2f5693", marginBottom: 9 }}>{L.splitEvenNote}</div>
               {payPot && (
                 <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 7 }}>
                   <span style={{ fontSize: 17, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}>{potIsCard ? "💳" : <ZakjeIcoon size={17} />} {potIsCard ? L.cardWord : L.potWord}</span>
@@ -10342,8 +10342,8 @@ export default function PartyTest() {
                 {/* De pot is een betaler zoals een persoon: hij heeft geld en geeft het uit. */}
                 {potContribTotal > 0.005 && (
                   <span onClick={() => { if (geenBedrag) { setNotice(L.fillAmountFirst); return } rTogglePot(idx) }}
-                    style={{ ...S.chip(uitPot ? 1 : 0), fontSize: 16, padding: "6px 11px", opacity: geenBedrag ? 0.5 : 1,
-                      ...(uitPot ? { background: "#2f6fb5", border: "1px solid #2f6fb5", color: "#fff" } : {}) }}>
+                    style={{ ...S.chip(uitPot ? 1 : 0), opacity: geenBedrag ? 0.5 : 1,
+                      ...(uitPot ? { background: "#2f6fb5", border: "1.5px solid #2f6fb5", color: "#fff" } : {}) }}>
                     {/* Gekozen: wat de pot voor dít rondje draagt. Niet gekozen: wat er nog
                         beschikbaar is. Zonder dat onderscheid lijken beide getallen hetzelfde. */}
                     <ZakjeIcoon size={15} /> {L.potWord}<span style={{ fontWeight: 600, opacity: 0.85 }}> · {uitPot ? euro(r.potPart || 0) : L.potFree(euro(Math.max(0, potAvailFor(idx))))}</span>
@@ -10353,7 +10353,7 @@ export default function PartyTest() {
                   const on = (r.payers?.[p.id] || 0) > 0.005
                   return (
                     <span key={p.id} onClick={() => { if (geenBedrag) { setNotice(L.fillAmountFirst); return } rTogglePayer(idx, p.id) }} title={p.name}
-                      style={{ ...S.chip(on ? 1 : 0), fontSize: 16, padding: "6px 11px", opacity: geenBedrag ? 0.5 : 1 }}>
+                      style={{ ...S.chip(on ? 1 : 0), opacity: geenBedrag ? 0.5 : 1 }}>
                       {p.name}{on && (gekozen.length > 1 || uitPot) && <span style={S.badge}>{euro(r.payers[p.id])}</span>}
                     </span>
                   )
