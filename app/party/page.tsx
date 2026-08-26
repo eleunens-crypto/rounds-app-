@@ -8527,19 +8527,20 @@ export default function PartyTest() {
               const heeftZin = perPersoon && !!voorWie
               return (<>
               <div style={{ background: "#fff", border: `1.5px solid ${RAND}`, borderLeft: `5px solid ${kleur}`, borderRadius: heeftZin ? "13px 13px 0 0" : 13, padding: 9, marginBottom: heeftZin ? 0 : 10 }}>
-                {/* Beide kanten zien er aantikbaar uit: de inactieve houdt een eigen rand
-                    en heldere letters, zodat het een keuze blijft en niet iets uitgestaan. */}
+                {/* Eén baan met twee standen: alleen de gekozen helft krijgt een vlak, de
+                    andere ligt er zichtbaar naast. Twee losse pillen lazen als twee acties
+                    die je allebei kon aantikken — dit is duidelijk één keuze. */}
                 <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.04em", color: "#1d2942", marginBottom: 8 }}>{L.howNoteQ}</div>
-                <div style={{ display: "flex", gap: 5, marginBottom: 9 }}>
+                <div style={{ display: "flex", background: "#eef1f6", border: "1.5px solid rgba(29,41,66,0.28)", borderRadius: 999, padding: 3, marginBottom: 9 }}>
                   {[false, true].map((mode) => {
                     const aan = perPersoon === mode
                     return (
                       <button key={String(mode)} onClick={() => setPerPersoon(mode)}
-                        style={{ flex: 1, borderRadius: 999, padding: "7px 0", fontSize: 13.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
-                          background: aan ? RAND : "#eef1f6",
-                          border: aan ? `1.5px solid ${RAND}` : "1.5px solid rgba(29,41,66,0.55)",
+                        style={{ flex: 1, borderRadius: 999, padding: "10px 0", fontSize: 15.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", border: "none",
+                          background: aan ? RAND : "transparent",
+                          boxShadow: aan ? "0 2px 6px -2px rgba(29,41,66,0.45)" : "none",
                           color: aan ? RANDTEKST : "#1d2942" }}>
-                        {mode ? L.perPersonWord : L.tikSamenWord}{aan ? " ✓" : ""}
+                        {mode ? L.perPersonWord : L.tikSamenWord}
                       </button>
                     )
                   })}
@@ -9335,10 +9336,10 @@ export default function PartyTest() {
                 const kiesAlles = () => { setPayVia("pot"); setMixPot(amount); setMixZelf(0) }
                 const kiesDeel = () => { const d = Math.round(Math.min(potAvail, amount) * 100) / 100; setMixPot(d); setMixZelf(Math.round((amount - d) * 100) / 100); setMixFocus("pot"); setPayVia("mix") }
                 const knop = (aan: boolean, tekst: string, doe: () => void) => (
-                  <button onClick={doe} style={{ flex: 1, textAlign: "center", cursor: "pointer", fontFamily: "inherit",
-                    background: aan ? "rgba(47,86,147,0.16)" : "#fff",
-                    border: `1.5px solid ${aan ? "rgba(47,86,147,0.7)" : "rgba(29,41,66,0.4)"}`,
-                    color: aan ? "#24476f" : "#4a5567", borderRadius: 999, padding: "7px 4px", fontSize: 12.5, fontWeight: 700 }}>{tekst}{aan ? " ✓" : ""}</button>
+                  <button onClick={doe} style={{ flex: 1, textAlign: "center", cursor: "pointer", fontFamily: "inherit", border: "none",
+                    background: aan ? "#2f6fb5" : "transparent",
+                    boxShadow: aan ? "0 2px 6px -2px rgba(47,111,181,0.55)" : "none",
+                    color: aan ? "#fff" : "#1d2942", borderRadius: 999, padding: "9px 4px", fontSize: 14.5, fontWeight: 600 }}>{tekst}</button>
                 )
                 return (
                   <div style={{ borderTop: "1px solid rgba(29,41,66,0.14)", paddingTop: 10 }}>
@@ -9346,7 +9347,7 @@ export default function PartyTest() {
                       <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1d2942" }}>{L.howMuchFromPot}</span>
                       <span style={{ flexShrink: 0, fontSize: 11.5, fontWeight: 700, color: "#2f5693", display: "inline-flex", alignItems: "center", gap: 5 }}><ZakjeIcoon size={13} /> {L.mixPotAvail(euro(potAvail))}</span>
                     </div>
-                    <div style={{ display: "flex", gap: 5, marginBottom: 9 }}>
+                    <div style={{ display: "flex", background: "#eef1f6", border: "1.5px solid rgba(29,41,66,0.28)", borderRadius: 999, padding: 3, marginBottom: 9 }}>
                       {knop(payVia === "self", L.potNothing, kiesNiets)}
                       {knop(payVia === "pot", L.potAll, kiesAlles)}
                       {knop(payVia === "mix", L.potPart, kiesDeel)}
@@ -10103,7 +10104,7 @@ export default function PartyTest() {
                             <span style={{ fontSize: 15, color: "#6b7484", fontWeight: 800 }}><ZakjeIcoon size={15} /> {L.paidWithQ}</span>
                             <span onClick={(e) => { e.stopPropagation(); setShowPot(true) }} style={{ fontSize: 14.5, fontWeight: 800, color: "#2f6fb5", textDecoration: "underline", cursor: "pointer" }}>{L.potTopUp}</span>
                           </div>
-                          <div style={{ display: "flex", gap: 6 }}>
+                          <div style={{ display: "flex", background: "#eef1f6", border: "1.5px solid rgba(29,41,66,0.28)", borderRadius: 999, padding: 3 }}>
                             {([["self", L.potNothing], ["pot", L.potAll], ["mix", L.potPart]] as const).map(([b, tekst]) => {
                               const aan = dr.bron === b
                               return (
@@ -10114,10 +10115,10 @@ export default function PartyTest() {
                                     const d = Math.round(Math.min(Math.max(0, potAvailFor(idx)), c.amount) * 100) / 100
                                     return { ...c, bron: "mix", potAmt: d }
                                   }) }}
-                                  style={{ flex: 1, padding: "8px 4px", borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: b !== "self" && potLeeg ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: b !== "self" && potLeeg ? 0.5 : 1,
-                                    background: aan ? (b === "self" ? "rgba(240,165,0,0.22)" : "rgba(47,86,147,0.16)") : "#fff",
-                                    border: `1.5px solid ${aan ? (b === "self" ? "rgba(200,138,0,0.75)" : "rgba(47,86,147,0.7)") : "rgba(29,41,66,0.4)"}`,
-                                    color: aan ? (b === "self" ? "#6b4a00" : "#24476f") : "#4a5567" }}>{tekst}{aan ? " ✓" : ""}</button>
+                                  style={{ flex: 1, padding: "9px 4px", borderRadius: 999, fontSize: 14, fontWeight: 600, cursor: b !== "self" && potLeeg ? "not-allowed" : "pointer", fontFamily: "inherit", border: "none", opacity: b !== "self" && potLeeg ? 0.5 : 1,
+                                    background: aan ? (b === "self" ? "#e08a00" : "#2f6fb5") : "transparent",
+                                    boxShadow: aan ? `0 2px 6px -2px ${b === "self" ? "rgba(224,138,0,0.55)" : "rgba(47,111,181,0.55)"}` : "none",
+                                    color: aan ? "#fff" : "#1d2942" }}>{tekst}</button>
                               )
                             })}
                           </div>
