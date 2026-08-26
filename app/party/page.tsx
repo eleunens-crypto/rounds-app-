@@ -2906,7 +2906,7 @@ export default function PartyTest() {
           {!walkZoekt && walkCat.length > lijst.length && (
             <div style={{ textAlign: "center", marginTop: -9, marginBottom: 12 }}>
               <span onClick={() => setWalkVol(true)}
-                style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#8a5e0f" }}>
+                style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: RAND, border: "none", color: "#8a5e0f" }}>
                 + {walkCat.length - lijst.length} meer ▾
               </span>
             </div>
@@ -2914,7 +2914,7 @@ export default function PartyTest() {
           {!walkZoekt && walkVol && (
             <div style={{ textAlign: "center", marginTop: -9, marginBottom: 12 }}>
               <span onClick={() => setWalkVol(false)}
-                style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#8b93a3" }}>
+                style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: RAND, border: "none", color: RANDTEKST }}>
                 ▴ {L.shortListBtn.replace("🔼 ", "")}
               </span>
             </div>
@@ -6882,14 +6882,6 @@ export default function PartyTest() {
               <span style={{ flexShrink: 0, borderLeft: `1px solid ${RAND}2e`, paddingLeft: 11 }}>{kopTeller()}</span>
             </div>
           )}
-      {/* Uitgebreid opnemen: de groepsnaam als naamplaatje tussen de kopregel en de
-          navigatieknoppen, links uitgelijnd; de pot-geldzak houdt vast zijn plek rechts.
-          Gecentreerd botsten de twee bij lange namen — nu krimpt de naam netjes met …
-          en raken ze elkaar nooit. */}
-      {uitgebreidLook && !!groupId && !kaal && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "10px 0", minHeight: 38 }}>
-        </div>
-      )}
       {/* De pot als brede balk onder de kop, zolang er nog niets in zit. Hij stond als
           eigen kaart onderaan het QR-scherm, ver van de geldzak waar je hem zoekt.
           Zodra er ingelegd is, spreekt die geldzak voor zich en verdwijnt deze balk. */}
@@ -7393,7 +7385,7 @@ export default function PartyTest() {
           <div style={{ position: "relative" }}>
             {!zoekt && fullList && (
               <div style={{ position: "absolute", left: "50%", top: -13, transform: "translateX(-50%)", whiteSpace: "nowrap", zIndex: 2 }}>
-                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#8b93a3", boxShadow: "0 2px 6px rgba(29,41,66,0.14)" }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: "pointer", background: RAND, border: "none", color: RANDTEKST, boxShadow: `0 2px 8px -2px ${RAND}80` }}>
                   ▴ minder tonen
                 </span>
               </div>
@@ -7447,14 +7439,14 @@ export default function PartyTest() {
             {/* "Meer/minder" hangt centraal, half over de onderrand van de lijst. */}
             {!zoekt && !fullList && catDrinks.length > lijst.length && (
               <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
-                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: "#fff", border: `1px solid ${themaNaam ? "rgba(90,106,148,0.55)" : "rgba(240,165,0,0.6)"}`, color: themaNaam ? "#3b486a" : "#c98a00", boxShadow: "0 2px 6px rgba(29,41,66,0.14)" }}>
+                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: "pointer", background: RAND, border: "none", color: RANDTEKST, boxShadow: `0 2px 8px -2px ${RAND}80` }}>
                   + {catDrinks.length - lijst.length} meer ▾
                 </span>
               </div>
             )}
             {!zoekt && fullList && (
               <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
-                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#8b93a3", boxShadow: "0 2px 6px rgba(29,41,66,0.14)" }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: "pointer", background: RAND, border: "none", color: RANDTEKST, boxShadow: `0 2px 8px -2px ${RAND}80` }}>
                   ▴ minder tonen
                 </span>
               </div>
@@ -8541,7 +8533,7 @@ export default function PartyTest() {
             )}
             {!zoekt && fullList && (
               <div style={{ position: "absolute", left: "50%", top: qrBalk ? 26 : -13, transform: "translateX(-50%)", whiteSpace: "nowrap", zIndex: 2 }}>
-                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#8b93a3", boxShadow: "0 2px 6px rgba(29,41,66,0.14)" }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: "pointer", background: RAND, border: "none", color: RANDTEKST, boxShadow: `0 2px 8px -2px ${RAND}80` }}>
                   ▴ minder tonen
                 </span>
               </div>
@@ -8577,14 +8569,14 @@ export default function PartyTest() {
             </div>
             {!zoekt && !fullList && catDrinks.length > catVisible.length && (
               <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
-                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: "#fff", border: `1px solid ${themaNaam ? "rgba(90,106,148,0.55)" : "rgba(240,165,0,0.6)"}`, color: themaNaam ? "#3b486a" : "#c98a00", boxShadow: "0 2px 6px rgba(29,41,66,0.14)" }}>
+                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: "pointer", background: RAND, border: "none", color: RANDTEKST, boxShadow: `0 2px 8px -2px ${RAND}80` }}>
                   + {catDrinks.length - catVisible.length} meer ▾
                 </span>
               </div>
             )}
             {!zoekt && fullList && (
               <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
-                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1px solid rgba(200,160,90,0.5)", color: "#8b93a3", boxShadow: "0 2px 6px rgba(29,41,66,0.14)" }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: "pointer", background: RAND, border: "none", color: RANDTEKST, boxShadow: `0 2px 8px -2px ${RAND}80` }}>
                   ▴ minder tonen
                 </span>
               </div>
