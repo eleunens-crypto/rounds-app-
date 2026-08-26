@@ -1279,6 +1279,7 @@ const T = {
     potPayLeft: (bedrag: string, over: string) => `${bedrag} uit de pot → ${over} over na dit rondje`,
     potShortTitle: "Niet genoeg in de pot",
     potShortSimple: (inPot: string, kost: string) => `Nog ${inPot} in de pot, dit rondje kost ${kost}.`,
+    tryPartHint: "Kies \u201ceen deel\u201d om de rest zelf te betalen.",
     potChoiceTopUp: "\ud83e\uded9 Toevoegen aan de pot",
     potChoicePaySelf: "\ud83d\udcb6 Alles buiten de pot",
     potWord: "pot",
@@ -2117,6 +2118,7 @@ const T = {
     potPayLeft: (bedrag: string, over: string) => `${bedrag} de la cagnotte → ${over} restant apr\u00e8s`,
     potShortTitle: "Pas assez dans la cagnotte",
     potShortSimple: (inPot: string, kost: string) => `Il reste ${inPot} dans la cagnotte, cette tourn\u00e9e co\u00fbte ${kost}.`,
+    tryPartHint: "Choisis \u00ab une partie \u00bb pour payer le reste toi-m\u00eame.",
     potChoiceTopUp: "\ud83e\uded9 Ajouter \u00e0 la cagnotte",
     potChoicePaySelf: "\ud83d\udcb6 Tout hors cagnotte",
     potWord: "cagnotte",
@@ -10028,7 +10030,7 @@ export default function PartyTest() {
                   {invulRij && (
                     <div style={{ textAlign: "right", marginTop: 7 }}>
                       <span onClick={(e) => { e.stopPropagation(); setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r) }}
-                        style={{ fontSize: 15, fontWeight: 800, color: "#b0402f", cursor: "pointer", textDecoration: "underline", whiteSpace: "nowrap" }}>{L.addAmountBtn}</span>
+                        style={{ fontSize: 15, fontWeight: 800, color: "#6b4a00", cursor: "pointer", textDecoration: "underline", whiteSpace: "nowrap" }}>{L.addAmountBtn}</span>
                     </div>
                   )}
                 </div>
@@ -10120,13 +10122,8 @@ export default function PartyTest() {
                           {potLeeg && <div style={{ fontSize: 14, color: "#c0554a", fontWeight: 700, marginTop: 6 }}>{L.potEmptyFillFirst}</div>}
                           {/* Te weinig in de pot: binair — bijvullen of zelf betalen. */}
                           {!potLeeg && dr.bron === "pot" && dr.amount > Math.max(0, potAvailFor(idx)) + 0.005 && (
-                            <div style={{ background: "rgba(224,104,92,0.08)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 10, padding: "10px 11px", marginTop: 9 }}>
-                              <div style={{ fontSize: 15, fontWeight: 800, color: "#b0402f", marginBottom: 3 }}>⚠️ {L.potShortTitle}</div>
-                              <div style={{ fontSize: 14, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 9 }}>{L.potShortSimple(euro(Math.max(0, potAvailFor(idx))), euro(dr.amount))}</div>
-                              <div style={{ display: "flex", gap: 6 }}>
-                                <button style={{ ...S.btn, flex: 1, fontSize: 14.5, fontWeight: 800, padding: "9px 6px" }} onClick={(e) => { e.stopPropagation(); setShowPot(true) }}>{L.potChoiceTopUp}</button>
-                                <button style={{ ...S.btn, flex: 1, fontSize: 14.5, fontWeight: 800, padding: "9px 6px" }} onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, bron: "self", potAmt: 0 } : c) }}>{L.potChoicePaySelf}</button>
-                              </div>
+                            <div style={{ marginTop: 8, fontSize: 13.5, fontWeight: 700, color: "#6b4a00", lineHeight: 1.45 }}>
+                              {L.potShortSimple(euro(Math.max(0, potAvailFor(idx))), euro(dr.amount))} <span style={{ color: "#24476f" }}>{L.tryPartHint}</span>
                             </div>
                           )}
                         </>
