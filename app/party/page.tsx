@@ -5869,21 +5869,6 @@ export default function PartyTest() {
           </div>
           {settle ? (
           <>
-          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-            <span style={{ fontSize: 15.5, color: "#6b7484", fontWeight: 700 }}>{L.equalSplit}</span>
-            <span style={{ fontSize: 15, color: "#c0554a", fontWeight: 700, cursor: "pointer" }} onClick={resetPotDraft}>{L.resetContrib}</span>
-          </div>
-          <div style={{ ...S.row, gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
-            {[5, 10, 20, 30].map((v) => {
-              const on = everyoneChoice === v
-              return <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 17, background: on ? "linear-gradient(135deg,#3f7fc4,#2f6fb5)" : "#fff", color: on ? "#fff" : "#1d2942", border: on ? "none" : "1px solid rgba(29,41,66,0.18)" }} onClick={() => { setEveryoneChoice(v); setEveryoneDraft(""); setEveryoneAmt(v) }}>€{v}</button>
-            })}
-          </div>
-          <div style={{ ...S.row, gap: 6, marginBottom: 10 }}>
-            <span style={{ fontSize: 15.5, color: "#6b7484" }}>{L.ownAmount}</span>
-            <input style={{ ...S.input, width: 76, padding: "5px 8px", fontSize: 18, borderColor: everyoneChoice === "custom" ? "#2f6fb5" : "rgba(29,41,66,0.22)" }} type="text" inputMode="decimal" placeholder="€" value={everyoneDraft} onChange={(e) => setEveryoneDraft(e.target.value.replace(/[^0-9.,]/g, ""))} />
-            <button style={{ ...S.btn, padding: "5px 11px", fontSize: 15.5, opacity: (parseFloat(everyoneDraft.replace(",", ".")) || 0) > 0 ? 1 : 0.5 }} onClick={() => { const v = parseFloat(everyoneDraft.replace(",", ".")) || 0; if (v > 0) { setEveryoneChoice("custom"); setEveryoneAmt(v) } }}>toepassen</button>
-          </div>
           {settle && (
             <div style={{ ...S.row, justifyContent: "space-between", gap: 10, background: MODUS_FAIR.vlak, borderRadius: 11, padding: "9px 11px", marginBottom: 10 }}>
               <span style={{ minWidth: 0 }}>
@@ -5900,7 +5885,22 @@ export default function PartyTest() {
               </span>
             </div>
           )}
-          {people.map((p) => (
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
+            <span style={{ fontSize: 15.5, color: "#6b7484", fontWeight: 700 }}>{L.equalSplit}</span>
+            <span style={{ fontSize: 15, color: "#c0554a", fontWeight: 700, cursor: "pointer" }} onClick={resetPotDraft}>{L.resetContrib}</span>
+          </div>
+          <div style={{ ...S.row, gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+            {[5, 10, 20, 30].map((v) => {
+              const on = everyoneChoice === v
+              return <button key={v} style={{ ...S.btn, padding: "5px 12px", fontSize: 17, background: on ? "linear-gradient(135deg,#3f7fc4,#2f6fb5)" : "#fff", color: on ? "#fff" : "#1d2942", border: on ? "none" : "1px solid rgba(29,41,66,0.18)" }} onClick={() => { setEveryoneChoice(v); setEveryoneDraft(""); setEveryoneAmt(v) }}>€{v}</button>
+            })}
+          </div>
+          <div style={{ ...S.row, gap: 6, marginBottom: 10 }}>
+            <span style={{ fontSize: 15.5, color: "#6b7484" }}>{L.ownAmount}</span>
+            <input style={{ ...S.input, width: 76, padding: "5px 8px", fontSize: 18, borderColor: everyoneChoice === "custom" ? "#2f6fb5" : "rgba(29,41,66,0.22)" }} type="text" inputMode="decimal" placeholder="€" value={everyoneDraft} onChange={(e) => setEveryoneDraft(e.target.value.replace(/[^0-9.,]/g, ""))} />
+            <button style={{ ...S.btn, padding: "5px 11px", fontSize: 15.5, opacity: (parseFloat(everyoneDraft.replace(",", ".")) || 0) > 0 ? 1 : 0.5 }} onClick={() => { const v = parseFloat(everyoneDraft.replace(",", ".")) || 0; if (v > 0) { setEveryoneChoice("custom"); setEveryoneAmt(v) } }}>toepassen</button>
+          </div>
+          {(!settle || people.filter((p) => p.claimedBy || p.named).length > 1) && people.map((p) => (
             <div key={p.id} style={{ ...S.row, gap: 8, padding: "7px 0", borderBottom: "1px solid rgba(29,41,66,0.08)" }}>
               <span style={{ fontSize: 17.5, fontWeight: 800, width: 112, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{contribOf(p.id) > 0 && <span style={{ fontSize: 14.5, fontWeight: 700, color: "#6b7484" }}> · {euro(contribOf(p.id))}</span>}</span>
               <input style={{ ...S.input, width: 71, padding: "5px 8px", fontSize: 18, flexShrink: 0 }} type="text" inputMode="decimal" placeholder="€" value={potDraft[p.id] ?? ""} onChange={(e) => { setEveryoneChoice(null); setPotDraft((c) => ({ ...c, [p.id]: parseFloat(e.target.value.replace(",", ".")) || 0 })) }} />
@@ -9054,7 +9054,7 @@ export default function PartyTest() {
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header />
-        {settle && isAdmin && !fromQuick && (rounds.length > 0 || openRoundId) && (
+        {settle && isAdmin && !fromQuick && rounds.length > 0 && (
           <div style={{ ...S.segBaan, marginBottom: 12 }}>
             {([["group", L.tabGroup], ["order", L.tabOrder], ["rounds", L.tabMe]] as const).map(([t, tekst]) => {
               const aan = t === "order" ? false : hubTab === t
@@ -9098,7 +9098,7 @@ export default function PartyTest() {
             niet: die leiden je weg uit een traject van drie stappen. */}
         {/* Het potblok stond hier als eigen kaart onderaan. Het staat nu als brede balk
             onder de kop — dichter bij de geldzak, en dit scherm gaat over de QR. */}
-        {!fromQuick && (rounds.length === 0 || qrGevraagd) && (!(settle && isAdmin && (rounds.length > 0 || openRoundId)) || hubTab === "group") && renderShare()}
+        {!fromQuick && (rounds.length === 0 || qrGevraagd) && (!(settle && isAdmin && rounds.length > 0) || hubTab === "group") && renderShare()}
         {/* Het potblok stond hier onderaan het QR-scherm. Het staat nu als brede balk
             onder de kop, dichter bij de geldzak waar je het zoekt. */}
         {!settle && rounds.length === 0 && !openRoundId && (
@@ -9366,7 +9366,7 @@ export default function PartyTest() {
         {/* Zolang er nog geen rondje is, is dit het QR-scherm: alleen delen en de pot.
             Een leeg rondjesoverzicht of een "start je eerste rondje"-blok hoort hier niet;
             dat komt vanzelf zodra de eerste bestelling er is. */}
-        {settle && isAdmin && !fromQuick && (rounds.length > 0 || openRoundId) && hubTab === "group" ? null
+        {settle && isAdmin && !fromQuick && rounds.length > 0 && hubTab === "group" ? null
          : fromQuick || (settle && rounds.length === 0) ? null : settle && paidCount === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
             <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
