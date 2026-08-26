@@ -570,8 +570,8 @@ const T = {
     fillNameSeat: "Vul je naam in en neem een plaats.",
     yourName: "Je naam",
     seat: (n: number) => `Plaats ${n}`,
-    allSeatsTaken: "Alle plaatsen zijn ingenomen — maar je kan er zelf een bijzetten.",
-    joinAddSeat: "Erbij komen",
+    allSeatsTaken: "Alle plaatsen zijn bezet — er is nog plaats voor jou.",
+    joinAddSeat: "Kom erbij",
     someoneJoined: (n: string) => `${n} is erbij gekomen`,
     alreadyJoined: "Al aangemeld",
     fillNameFirst: "Vul eerst je naam in.",
@@ -1105,6 +1105,10 @@ const T = {
     walkStep3: "Daarna krijg je het barlijstje",
     yesIWalk: "Ja, ik neem op →",
     potInPot: "💰 In de pot",
+    peopleInGroup: "Aantal personen in de groep",
+    putInPot: (b: string) => `legde ${b} in de pot`,
+    notRightBtn: "Klopt niet",
+    removeJoinerQ: (n: string) => `${n} verwijderen? Zijn plaats verdwijnt en wat hij in de pot legde wordt teruggedraaid.`,
     waitTitle: "Je zit erbij — even wachten",
     waitForHost: (naam: string) => `Zodra ${naam || "de gastheer"} het bestellen opent, kunnen we starten.`,
     openStep1: "Vanaf nu kan er besteld worden",
@@ -1897,6 +1901,10 @@ const T = {
     walkStep3: "Ensuite tu reçois la liste pour le bar",
     yesIWalk: "Oui, je prends →",
     potInPot: "💰 Dans la cagnotte",
+    peopleInGroup: "Nombre de personnes dans le groupe",
+    putInPot: (b: string) => `a mis ${b} dans la cagnotte`,
+    notRightBtn: "Pas correct",
+    removeJoinerQ: (n: string) => `Retirer ${n}\u00a0? Sa place dispara\u00eet et sa mise dans la cagnotte est annul\u00e9e.`,
     waitTitle: "Tu es dans le groupe — un instant",
     waitForHost: (naam: string) => `Dès que ${naam || "l’hôte"} ouvre les commandes, on peut commencer.`,
     openStep1: "À partir de maintenant on peut commander",
@@ -3527,12 +3535,26 @@ export default function PartyTest() {
       // plaats die net geclaimd werd. Niet mezelf.
       if (p.id !== meId && p.claimedBy && (isNieuwePersoon || netGeclaimd)) {
         setNewcomer({ id: p.id, name: p.name })
-        setTimeout(() => setNewcomer((c) => (c && c.id === p.id ? null : c)), 7000)
+        if (!isAdmin) setTimeout(() => setNewcomer((c) => (c && c.id === p.id ? null : c)), 7000)
       }
     }
   }, [people, meId])
 
   const removePerson = (id: string) => { const pp = people.find((x) => x.id === id); if (personHasDrinks(id)) { setNotice(L.personHasDrinks(pp?.name || L.thisPerson)); return } supabase.from("party_people").delete().eq("id", id).then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message) }) }
+  // Iemand wegnemen die al in de pot zat: zijn inleg moet mee, anders blijft dat geld
+  // in het totaal staan zonder eigenaar en klopt de eindverdeling niet meer.
+  const removePersonEnPot = async (id: string) => {
+    if (personHasDrinks(id)) { setNotice(L.personHasDrinks(people.find((x) => x.id === id)?.name || L.thisPerson)); return }
+    const raakt = potRounds.filter((r) => (r.amounts[id] || 0) > 0.005)
+    for (const r of raakt) {
+      const rest = Object.fromEntries(Object.entries(r.amounts).filter(([k]) => k !== id))
+      const over = Object.values(rest).reduce((a, b) => a + (b || 0), 0)
+      if (over > 0.005) await supabase.from("party_pot").update({ amounts: rest }).eq("id", r.id)
+      else await supabase.from("party_pot").delete().eq("id", r.id)
+    }
+    if (raakt.length > 0) await klemPotDelenOp(potContribTotal - raakt.reduce((s2, r) => s2 + (r.amounts[id] || 0), 0))
+    removePerson(id)
+  }
   const removeLastPerson = () => { const last = people[people.length - 1]; if (!last) return; removePerson(last.id) }
 
 
@@ -6833,20 +6855,34 @@ export default function PartyTest() {
           </div>
         </div>
       )}
-      {newcomer && (
-        <div style={{ position: "fixed", left: 0, right: 0, bottom: 18, display: "flex", justifyContent: "center", zIndex: 60, pointerEvents: "none", padding: "0 12px" }}>
-          <div style={{ pointerEvents: "auto", background: "#1f6b3a", color: "#fff", borderRadius: 16, padding: "12px 16px", boxShadow: "0 8px 24px rgba(0,0,0,0.22)", maxWidth: "94%", minWidth: 240 }}>
+      {newcomer && (() => {
+        const ingelegd = potRounds.reduce((t, r) => t + (r.amounts[newcomer.id] || 0), 0)
+        return (
+        <div style={{ position: "fixed", left: 0, right: 0, bottom: 18, display: "flex", justifyContent: "center", zIndex: 60, pointerEvents: "none", padding: "0 14px" }}>
+          <div style={{ pointerEvents: "auto", background: "#1f6b3a", color: "#fff", borderRadius: 16, padding: "13px 15px", boxShadow: "0 8px 24px rgba(0,0,0,0.2)", maxWidth: 380, width: "100%" }}>
             <div style={{ ...S.row, justifyContent: "space-between", gap: 10 }}>
-              <span style={{ fontSize: 18, fontWeight: 800 }}>👋 {L.someoneJoined(newcomer.name)}</span>
-              <button onClick={() => setNewcomer(null)}
-                style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: 21.5, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>✕</button>
+              <span style={{ fontSize: 17, fontWeight: 800, minWidth: 0 }}>👋 {L.someoneJoined(newcomer.name)}</span>
+              {!isAdmin && (
+                <button onClick={() => setNewcomer(null)}
+                  style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: 21.5, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>✕</button>
+              )}
             </div>
-            <div style={{ fontSize: 15.5, color: "rgba(255,255,255,0.85)", fontWeight: 700, marginTop: 3 }}>
-              📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}
+            <div style={{ fontSize: 13.5, color: "rgba(255,255,255,0.85)", fontWeight: 600, marginTop: 3 }}>
+              {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}
+              {ingelegd > 0.005 && <> · {L.putInPot(euro(ingelegd))}</>}
             </div>
+            {isAdmin && (
+              <div style={{ display: "flex", gap: 8, marginTop: 11 }}>
+                <button onClick={() => { setConfirmDlg({ variant: "danger", msg: L.removeJoinerQ(newcomer.name), yes: L.removeWord, onYes: () => { setConfirmDlg(null); void removePersonEnPot(newcomer.id); setNewcomer(null) } }) }}
+                  style={{ flex: 1, cursor: "pointer", background: "rgba(255,255,255,0.16)", border: "1px solid rgba(255,255,255,0.35)", color: "#fff", borderRadius: 10, padding: "9px 6px", fontSize: 13.5, fontWeight: 600, fontFamily: "inherit" }}>{L.notRightBtn}</button>
+                <button onClick={() => setNewcomer(null)}
+                  style={{ flex: 1.4, cursor: "pointer", background: "#fff", border: "none", color: "#1f6b3a", borderRadius: 10, padding: "9px 6px", fontSize: 14, fontWeight: 700, fontFamily: "inherit" }}>{L.okKort}</button>
+              </div>
+            )}
           </div>
         </div>
-      )}
+        )
+      })()}
     </>
   )
   // De drie tabbladen van de beheerder. Ze wijzen naar bestaande schermen, dus de
@@ -7217,36 +7253,37 @@ export default function PartyTest() {
     return (
       <div style={{ ...S.wrap, maxWidth: 430 }}>
         {renderDialogs()}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: MODUS_FAIR.knop, borderRadius: "14px 14px 0 0", padding: "9px 13px", marginBottom: 12 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-            <GsmIcoon size={18} kleur="#fff" dof />
-            <GsmIcoon size={22} kleur="#fff" qr />
-            <span style={{ fontSize: 16, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.modeFairShort}</span>
-          </span>
-          <span style={{ flexShrink: 0, fontSize: 14, color: "rgba(255,255,255,0.92)" }}>{L.youAre} {ik?.name}</span>
-        </div>
-        {/* Dezelfde kop als op het startscherm: zo weet je dat je in Rundo zit en niet op
-            een of andere losse pagina. */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 14 }}>
-          <div style={{ ...S.row, gap: 10 }}>
-            <RundoLogo size={50} opDonker={false} />
+        <div style={{ background: MODUS_FAIR.rand, borderRadius: 15, padding: "11px 13px", marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <RundoLogo size={36} />
+            <span style={{ marginLeft: "auto", flexShrink: 0 }}><LanguageToggle compact /></span>
           </div>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 7 }}>
-            <KlinkIcoon size={24} />
-            <span style={{ fontSize: 15, color: "#5a8f99", lineHeight: 1.4 }}>{L.tagline}</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+            <span style={{ fontSize: 18, fontWeight: 600, color: "#fff", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName}</span>
+            <span onClick={() => ik && setNaamWijzig(ik.name)}
+              style={{ flexShrink: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.32)", borderRadius: 999, padding: "4px 13px 4px 7px", fontSize: 17, fontWeight: 600, color: "#fff", maxWidth: 180 }}>
+              <span style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.9)", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <PotloodIcoon size={12} kleur={MODUS_FAIR.rand} />
+              </span>
+              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ik?.name}</span>
+            </span>
           </div>
         </div>
         <div style={{ ...S.card }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, marginBottom: 11 }}>
-            <span style={{ fontSize: 20, fontWeight: 800, color: MODUS_FAIR.tekst, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName}</span>
-            <span style={{ flexShrink: 0, fontSize: 14.5, color: "#6b7484", fontWeight: 700 }}>👥 {people.length}</span>
-          </div>
-          {potContribTotal > 0.005 && (
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: MODUS_FAIR.tint, border: `1px solid ${MODUS_FAIR.randZacht}`, borderRadius: 11, padding: "9px 12px", marginBottom: 12 }}>
-              <span style={{ fontSize: 15.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.potInPot}</span>
-              <b style={{ fontSize: 18, color: "#1d2942" }}>{euro(potContribTotal)}</b>
+          <div style={{ background: MODUS_FAIR.tint, borderRadius: 11, padding: 11, marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10,
+              paddingBottom: potContribTotal > 0.005 ? 8 : 0,
+              borderBottom: potContribTotal > 0.005 ? `1px solid ${MODUS_FAIR.lijnZacht}` : "none" }}>
+              <span style={{ fontSize: 14.5, color: MODUS_FAIR.tekst }}>{L.peopleInGroup}</span>
+              <b style={{ fontSize: 19, color: "#1d2942" }}>{people.length}</b>
             </div>
-          )}
+            {potContribTotal > 0.005 && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, paddingTop: 8 }}>
+                <span style={{ fontSize: 14.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.potInPot}</span>
+                <b style={{ fontSize: 19, color: "#1d2942" }}>{euro(potContribTotal)}</b>
+              </div>
+            )}
+          </div>
           <div style={{ fontSize: 14, fontWeight: 800, color: "#1f6b3a", marginBottom: 7 }}>📱 {L.joinedOfTotal(aangemeld, people.length)}</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 13 }}>
             {people.map((p) => {
