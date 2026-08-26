@@ -5854,7 +5854,10 @@ export default function PartyTest() {
     btn: { border: `1.5px solid ${koel ? "#0a4f5b" : themaNaam ? "#2b3450" : "#1d2942"}`, background: "#fff", color: koel ? MODUS_FAIR.tekst : themaNaam ? MODUS_NAAM.tekst : "#1d2942", borderRadius: 12, padding: "12px 16px", fontSize: 18, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
     btnP: { border: "none", background: koel ? "#0a4f5b" : themaNaam ? "#2b3450" : "#1d2942", color: koel ? "#7fe3f2" : themaNaam ? "#c3cbe4" : "#F5B301", borderRadius: 14, padding: "16px 18px", fontSize: 20, fontWeight: 800, cursor: "pointer", width: "100%", boxShadow: koel ? `0 4px 14px -5px ${MODUS_FAIR.gloed}` : themaNaam ? `0 4px 14px -5px ${MODUS_NAAM.gloed}` : "0 4px 14px -5px rgba(29,41,66,0.55)" } as React.CSSProperties,
     input: { border: "1px solid rgba(29,41,66,0.22)", borderRadius: 10, padding: "11px 12px", fontSize: 19, color: "#1d2942", outline: "none", width: 94, textAlign: "right" } as React.CSSProperties,
-    seg: (on: boolean) => ({ flex: 1, textAlign: "center", padding: "11px 6px", borderRadius: 10, fontSize: 17.5, fontWeight: 800, cursor: "pointer", background: on ? AAN : (koel ? "#e4f2f5" : VLAK3), color: on ? "#fff" : (koel ? "#5a8f99" : themaNaam ? "#5a6a94" : "#6b7484") } as React.CSSProperties),
+    seg: (on: boolean) => ({ flex: 1, textAlign: "center", padding: "10px 6px", borderRadius: 999, fontSize: 15.5, fontWeight: 600, cursor: "pointer", background: on ? RAND : "transparent", boxShadow: on ? `0 2px 6px -2px ${RAND}73` : "none", color: on ? RANDTEKST : "#1d2942" } as React.CSSProperties),
+    // De baan waarin twee of drie segmenten liggen: één object, zodat het als één
+    // keuze leest en niet als losse knoppen die je allebei kan aanzetten.
+    segBaan: { display: "flex", background: "#eef1f6", border: "1.5px solid rgba(29,41,66,0.28)", borderRadius: 999, padding: 3 } as React.CSSProperties,
     step: { width: 42, height: 42, borderRadius: 11, border: `1px solid ${koel ? "rgba(13,124,140,0.22)" : themaNaam ? "rgba(59,72,106,0.22)" : "rgba(29,41,66,0.18)"}`, background: koel ? "#e4f2f5" : VLAK3, color: koel ? MODUS_FAIR.tekst : themaNaam ? "#3b486a" : "#8a5e0f", fontSize: 24.5, fontWeight: 800, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
     chip: (n: number) => ({ position: "relative", padding: "10px 14px", borderRadius: 20, fontSize: 18, fontWeight: 700, cursor: "pointer", userSelect: "none", border: n > 0 ? "1px solid rgba(240,165,0,0.5)" : "1px solid rgba(29,41,66,0.15)", background: n > 0 ? AAN : "#eef1f6", color: n > 0 ? "#fff" : "#6b7484" } as React.CSSProperties),
     badge: { marginLeft: 5, background: "rgba(0,0,0,0.22)", borderRadius: 20, padding: "0 6px", fontSize: 14.5, fontWeight: 800 } as React.CSSProperties,
@@ -5891,9 +5894,9 @@ export default function PartyTest() {
           <span style={{ ...S.pill, background: potRemaining > 0 ? "rgba(47,111,181,0.14)" : "rgba(224,104,92,0.14)", color: potRemaining > 0 ? "#2f6fb5" : "#c0554a", fontSize: 15.5, padding: "4px 10px", fontWeight: 800 }}>nog {euro(potRemaining)}</span>
         </div>
         {settle && !fromQuick && (
-        <div style={{ ...S.row, gap: 6, marginBottom: 8 }}>
-          <div onClick={() => setPotIsCard(false)} style={{ ...S.seg(!potIsCard), padding: "7px 6px", fontSize: 16, opacity: !potIsCard ? 1 : 0.5 }}>{L.potMoney}</div>
-          <div onClick={() => setPotIsCard(true)} style={{ ...S.seg(potIsCard), padding: "7px 6px", fontSize: 16, opacity: potIsCard ? 1 : 0.5 }}>{L.drinkCard}</div>
+        <div style={{ ...S.segBaan, marginBottom: 8 }}>
+          <div onClick={() => setPotIsCard(false)} style={{ ...S.seg(!potIsCard), padding: "8px 6px", fontSize: 15.5 }}>{L.potMoney}</div>
+          <div onClick={() => setPotIsCard(true)} style={{ ...S.seg(potIsCard), padding: "8px 6px", fontSize: 15.5 }}>{L.drinkCard}</div>
         </div>
         )}
         {settle && <div style={{ fontSize: 15, color: "#6b7484", marginBottom: 12, lineHeight: 1.5 }}>{potIsCard ? "💳 Drankkaart van de groep — leg de kaartwaarde (bv. €15) in. Wat niet opgedronken wordt, is verloren en wordt gelijk over iedereen verdeeld." : "<ZakjeIcoon size={15} /> Echt geld — wat niet opgaat, krijgen de inleggers terug bij de afrekening."}</div>}
@@ -6107,8 +6110,8 @@ export default function PartyTest() {
                     </button>
                   </div>
                 )}
-                <div style={{ ...S.row, justifyContent: "flex-end", gap: 4, marginBottom: 8 }}>
-                  <div style={{ ...S.seg(editAssignMode === "person"), padding: "5px 9px", fontSize: 15, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
+                <div style={{ ...S.segBaan, marginLeft: "auto", marginBottom: 8, width: "fit-content" }}>
+                  <div style={{ ...S.seg(editAssignMode === "person"), padding: "6px 12px", fontSize: 14.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
                   <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 15, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>per drank</div>
                 </div>
 
@@ -8858,8 +8861,8 @@ export default function PartyTest() {
             <div style={{ ...S.sheet, maxHeight: "82vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
               <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
                 <h3 style={{ ...S.h3, margin: 0, fontSize: 21.5 }}>{L.assign}</h3>
-                <div style={{ ...S.row, gap: 4 }}>
-                  <div style={{ ...S.seg(assignMode === "person"), padding: "6px 10px", fontSize: 15.5, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("person")}>{L.perPerson}</div>
+                <div style={{ ...S.segBaan }}>
+                  <div style={{ ...S.seg(assignMode === "person"), padding: "6px 12px", fontSize: 14.5, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("person")}>{L.perPerson}</div>
                   <div style={{ ...S.seg(assignMode === "drink"), padding: "6px 10px", fontSize: 15.5, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("drink")}>per drank</div>
                 </div>
               </div>
