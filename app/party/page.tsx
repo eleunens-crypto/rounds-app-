@@ -1222,6 +1222,7 @@ const T = {
     later: "Later",
     back: "Terug",
     quickSettleTitle: "Afrekenen",
+    fairSubtitle: "eerlijk verdelen",
     quickTotalLabel: (n: number) => `Totaal van ${n} ${n === 1 ? "rondje" : "rondjes"}`,
     quickTotalOf: (t: number) => `(van in totaal ${t} ${t === 1 ? "rondje" : "rondjes"})`,
     andWord: "en",
@@ -1993,6 +1994,7 @@ const T = {
     later: "Plus tard",
     back: "Retour",
     quickSettleTitle: "R\u00e9gler",
+    fairSubtitle: "r\u00e9partition \u00e9quitable",
     quickTotalLabel: (n: number) => `Total de ${n} tourn\u00e9e${n === 1 ? "" : "s"}`,
     quickTotalOf: (t: number) => `(sur ${t} au total)`,
     andWord: "et",
@@ -8307,8 +8309,11 @@ export default function PartyTest() {
                 onClick={() => { setQrGevraagd(true); setView("hub") }}>{L.showQr}</button>
             )}
             {kanAfrekenen && (
-              <button style={{ ...S.btn, width: "100%", marginTop: 10, fontWeight: 800 }}
-                onClick={() => { if (settle) goFinal(); else goQuickSettle() }}>{settle ? L.settleBtn : L.quickSettleTitle}</button>
+              <button style={{ ...S.btn, width: "100%", marginTop: 10, padding: "11px 8px", borderRadius: 12, background: RAND, border: "none", color: RANDTEKST, lineHeight: 1.3 }}
+                onClick={() => { if (settle) goFinal(); else goQuickSettle() }}>
+                <span style={{ display: "block", fontSize: 18, fontWeight: 600 }}>📋 {settle ? L.settleBtn : L.quickSettleTitle}</span>
+                <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: koel ? "#a8c8cd" : "#c9d2de" }}>{L.fairSubtitle}</span>
+              </button>
             )}
             </>
           )
