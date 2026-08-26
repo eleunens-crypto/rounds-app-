@@ -3549,13 +3549,13 @@ export default function PartyTest() {
   }
 
   const kopTeller = () => (
-    <span onClick={(e) => { e.stopPropagation(); openGroepVenster(false) }} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 2, background: VLAK1, borderRadius: 999, padding: "2px 3px", color: "#3a4459", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+    <span onClick={(e) => { e.stopPropagation(); openGroepVenster(false) }} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, color: "#3a4459", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
       <span onClick={(e) => { e.stopPropagation(); if (people.length > 1) removeLastPerson() }}
-        style={{ width: 22, height: 22, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 15, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
-      <b style={{ color: RAND, padding: "0 2px" }}>{people.length}</b>
-      <span style={{ color: "#6b7484", fontSize: 11, paddingRight: 2 }}>{L.persWordLow}</span>
+        style={{ width: 28, height: 28, borderRadius: "50%", background: "#fff", border: `1px solid ${RAND}33`, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 19, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
+      <b style={{ color: RAND, fontSize: 18, padding: "0 2px" }}>{people.length}</b>
+      <span style={{ color: "#6b7484", fontSize: 13 }}>{L.persWordLow}</span>
       <span onClick={(e) => { e.stopPropagation(); void addPerson(); openGroepVenster(false) }}
-        style={{ width: 22, height: 22, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 15, cursor: "pointer" }}>＋</span>
+        style={{ width: 28, height: 28, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 19, cursor: "pointer" }}>＋</span>
     </span>
   )
 
@@ -6887,13 +6887,13 @@ export default function PartyTest() {
   // "Pot leggen +" zolang de pot leeg is — zelfde vorm en plek als de saldobadge,
   // zodat er bij de eerste inleg niets verspringt.
   const potLegBadge = () => (
-      <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "9px 15px 9px 11px", borderRadius: 999, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: `1.5px solid ${RAND}` }}>
+      <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 10px", borderRadius: 999, fontSize: 15, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "rgba(255,255,255,0.1)", border: "1.5px dashed rgba(255,255,255,0.42)" }}>
       <svg width="23" height="23" viewBox="0 0 40 40" style={{ display: "block" }}>
       <path d="M16 13 L14 7 Q20 5 26 7 L24 13 Z" fill="#d99616" stroke="#b9821a" strokeWidth="1.2" strokeLinejoin="round" />
       <path d="M13 14 Q20 11 27 14 Q33 19 32 27 Q31 35 20 35 Q9 35 8 27 Q7 19 13 14 Z" fill="#e8a821" stroke="#b9821a" strokeWidth="1.5" />
       <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
       </svg>
-      <span style={{ color: "#2f5693" }}>{L.potLayBtn}</span>
+      <span style={{ color: "#c3cbd8" }}>{L.potLayBtn}</span>
       <span style={{ color: "#2f6fb5", fontWeight: 800 }}>+</span>
       </span>
   )
@@ -7010,7 +7010,7 @@ export default function PartyTest() {
         {/* Pot rechtsboven, in de buitenste rij: hij gaat over de hele avond en hoort
             dus naast het logo, niet bij één rondje. */}
         {!!groupId && !kaal && (
-          <span style={{ flexShrink: 0 }}>{potKnopje()}</span>
+          <span style={{ flexShrink: 0 }}>{potContribTotal > 0.005 ? potKnopje() : potLegBadge()}</span>
         )}
         {!uitgebreidLook && !!groupId && !kaal && groupName.trim() && !editName && (
           <div style={{ textAlign: "right", minWidth: 0, flexShrink: 0, maxWidth: "52%" }}>
@@ -7027,12 +7027,6 @@ export default function PartyTest() {
         )}
       </div>
       )}
-      {/* Uitgebreid opnemen: de groepsnaam als naamplaatje tussen de kopregel en de
-          navigatieknoppen, links uitgelijnd; de pot-geldzak houdt vast zijn plek rechts.
-          Gecentreerd botsten de twee bij lange namen — nu krimpt de naam netjes met …
-          en raken ze elkaar nooit. */}
-      {uitgebreidLook && !!groupId && !kaal && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "10px 0", minHeight: 38 }}>
           {!settle && !kaal && (
             <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 8, borderBottom: `1.5px solid ${RAND}33`, marginBottom: 10 }}>
               <span onClick={() => { if (onboarding || groepDicht) return; openGroepVenster(true) }}
@@ -7043,6 +7037,12 @@ export default function PartyTest() {
               <span style={{ flexShrink: 0, borderLeft: `1px solid ${RAND}2e`, paddingLeft: 11 }}>{kopTeller()}</span>
             </div>
           )}
+      {/* Uitgebreid opnemen: de groepsnaam als naamplaatje tussen de kopregel en de
+          navigatieknoppen, links uitgelijnd; de pot-geldzak houdt vast zijn plek rechts.
+          Gecentreerd botsten de twee bij lange namen — nu krimpt de naam netjes met …
+          en raken ze elkaar nooit. */}
+      {uitgebreidLook && !!groupId && !kaal && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "10px 0", minHeight: 38 }}>
         </div>
       )}
       {/* De pot als brede balk onder de kop, zolang er nog niets in zit. Hij stond als
@@ -7638,7 +7638,7 @@ export default function PartyTest() {
             <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #1c1608 0%, #1c1608 46%, rgba(28,22,8,0.94) 62%, rgba(28,22,8,0.8) 82%, rgba(28,22,8,0.6) 100%)" }} />
             <div style={{ position: "relative", zIndex: 2, padding: "24px 20px" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/rundo-party-logo.png" alt="Rundo" style={{ display: "block", height: 66, width: "auto", maxWidth: "100%", objectFit: "contain" }} />
+              <RundoLogo size={64} />
               <div style={{ display: "flex", alignItems: "flex-start", gap: 9, marginTop: 11 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/icon-party.png" alt="" style={{ height: 32, width: "auto", objectFit: "contain", flexShrink: 0 }} />
