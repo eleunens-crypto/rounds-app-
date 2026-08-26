@@ -1239,7 +1239,6 @@ const T = {
     adjustWord: "Aanpassen",
     notSavedYet: "niet opgeslagen",
     saveWord: "Opslaan",
-    potWord: "de pot",
     cardWord: "drankkaart",
     potTopUp: "Pot aanvullen",
     emptyWord: "leeg",
@@ -2072,7 +2071,6 @@ const T = {
     adjustWord: "Modifier",
     notSavedYet: "non enregistr\u00e9",
     saveWord: "Enregistrer",
-    potWord: "la cagnotte",
     cardWord: "carte boissons",
     potTopUp: "Compl\u00e9ter la cagnotte",
     emptyWord: "vide",
@@ -2238,9 +2236,13 @@ export default function PartyTest() {
   const [lang] = useLang()
   const L = T[(lang === "fr" ? "fr" : "nl") as "nl" | "fr"]
   const [view, setView] = useState<"start" | "setup" | "settings" | "order" | "confirmed" | "hub" | "final" | "quickSettle" | "fairSetup" | "roundsOverview" | "payers">("start")
-  const [pay, setPay] = useState<"eur" | "coin">("eur")
+  const [payRaw, setPay] = useState<"eur" | "coin">("eur")
+  const pay: "eur" | "coin" = "eur"
+  void payRaw
   const [coinValue, setCoinValue] = useState(3.9)
-  const [depositOn, setDepositOn] = useState(false)
+  const [depositRaw, setDepositOn] = useState(false)
+  const depositOn = false
+  void depositRaw
   const [depositValue, setDepositValue] = useState(1)
   const [depositUnit, setDepositUnit] = useState<"eur" | "coin">("eur")
   const [showPot, setShowPot] = useState(false)
@@ -7026,8 +7028,8 @@ export default function PartyTest() {
       {uitgebreidLook && !!groupId && !kaal && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "10px 0", minHeight: 38 }}>
           {groupName.trim() && !editName && !isAutoNaam(groupName) && (
-            <span onClick={() => { if (onboarding || groepDicht) return; if (!settle) { setNaamPlichtVeld(groupName.trim()); setPersGeteld(people.length > 1); setNaamPlichtNa(null); setNaamPlicht(true) } else setEditName(true) }}
-              style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onboarding ? "default" : "pointer", background: "#fff", border: `1.5px solid ${RAND}`, borderRadius: 999, padding: "9px 15px", fontSize: 16, fontWeight: 800, color: "#1d2942" }}>
+            <span onClick={() => { if (onboarding || groepDicht) return; if (!settle) openGroepVenster(true); else setEditName(true) }}
+              style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onboarding ? "default" : "pointer", background: "#fff", border: `1.5px solid ${RAND}`, borderRadius: 999, padding: "9px 15px", fontSize: 18.5, fontWeight: 800, color: "#1d2942" }}>
               {isAutoNaam(groupName) ? (
                 /* Niet alleen de uitnodiging, ook wat de naam nú is — anders weet je
                    niet onder welke naam de groep straks in je lijst staat. */
@@ -10557,10 +10559,10 @@ export default function PartyTest() {
 
         {/* Verdeeld? Dan volstaat één regel, met een weg terug als je wil bijstellen. */}
         {potContribTotal > 0.005 && !potZonderNamen && potNames === null && (
-          <div style={{ ...S.row, justifyContent: "space-between", gap: 8, background: "#f4faf6", border: "1px solid rgba(31,138,76,0.3)", borderRadius: 13, padding: "9px 12px", marginBottom: 13 }}>
-            <span style={{ fontSize: 14.5, color: "#1f6b3a", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>💰 {L.potShared(euro(potContribTotal), people.filter((pp) => contribOf(pp.id) > 0.005).length)}</span>
+          <div style={{ ...S.row, justifyContent: "space-between", gap: 8, background: RAND, borderRadius: 13, padding: "9px 12px", marginBottom: 13 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14.5, color: "#e8f0f2", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><ZakjeIcoon size={15} /> {L.potShared(euro(potContribTotal), people.filter((pp) => contribOf(pp.id) > 0.005).length)}</span>
             <span onClick={() => { const n: Record<string, number> = {}; people.forEach((pp) => { n[pp.id] = Math.round(contribOf(pp.id) * 100) / 100 }); setPotNames(n) }}
-              style={{ flexShrink: 0, fontSize: 14, color: "#5a9a75", textDecoration: "underline", cursor: "pointer", fontWeight: 800 }}>{L.changeWord}</span>
+              style={{ flexShrink: 0, fontSize: 14, color: RANDTEKST, textDecoration: "underline", cursor: "pointer", fontWeight: 800 }}>{L.changeWord}</span>
           </div>
         )}
 
