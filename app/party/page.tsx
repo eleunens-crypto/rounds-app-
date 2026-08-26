@@ -6871,9 +6871,8 @@ export default function PartyTest() {
       {/* Wat er nu gebeurt en wat jij moet doen, op twee gecentreerde regels — dezelfde
           rol als de "Je tikt aan voor"-strook op het aantikscherm. */}
       {setupKop && (
-        <div style={{ background: RAND, borderRadius: 12, padding: "11px 12px", marginBottom: 10, textAlign: "center", lineHeight: 1.4 }}>
+        <div style={{ background: RAND, borderRadius: 12, padding: "10px 12px", marginBottom: 10, textAlign: "center" }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: "#e8f0f2" }}>{L.modeFairShort}</div>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: RANDTEKST }}>{L.shareLinkBelow} ↓</div>
         </div>
       )}
       {!!groupId && !kaal && !uitgebreidLook && !setupKop && (
@@ -7258,6 +7257,7 @@ export default function PartyTest() {
           </div>
         </div>
 
+        {(orderingOpen || rounds.length > 0) && (
         <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
           <button onClick={() => setGuestTab("group")}
             style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 17.5, fontWeight: 800, opacity: guestTab === "group" ? 1 : 0.6,
@@ -7278,8 +7278,9 @@ export default function PartyTest() {
               borderWidth: guestTab === "me" ? 1.5 : 1,
               color: guestTab === "me" ? MODUS_FAIR.tekst : "#6b7484" }}>{L.tabMe}</button>
         </div>
+        )}
 
-        {guestTab === "group" && (
+        {(guestTab === "group" || !(orderingOpen || rounds.length > 0)) && (
           <div style={S.card}>
             <div style={{ marginBottom: 12 }}>
               <div style={{ ...S.row, justifyContent: "space-between", alignItems: "baseline" }}>
@@ -7329,7 +7330,7 @@ export default function PartyTest() {
           </div>
         )}
 
-        {guestTab === "me" && (
+        {guestTab === "me" && (orderingOpen || rounds.length > 0) && (
           <>
             {/* Geen bedragen meer: het zijn richtprijzen. Wat telt is wat jij nam per
                 rondje en of dat rondje al betaald is. */}
@@ -7366,7 +7367,7 @@ export default function PartyTest() {
           </>
         )}
 
-        {guestTab === "order" && (
+        {guestTab === "order" && (orderingOpen || rounds.length > 0) && (
         <>
         {settle && renderRunnerBar()}
         {/* De losse "niets voor mij"-knop en de statusbalk stonden hier. Ze zitten nu in
