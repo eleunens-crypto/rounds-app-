@@ -1254,7 +1254,6 @@ const T = {
     finishRoundFirst: "Rond eerst dit rondje af — vul in wat het kostte of tik Overslaan.",
     payFirstOne: (nr: number) => `Vul eerst de betaling van rondje ${nr} in, of sla ze over.`,
     payFirstMany: (n: number) => `Nog ${n} rondjes zonder bedrag. Vul ze in, of sla de betaling over.`,
-    afterPayment: "na de betaling",
     paidSelf: "Geen pot gebruikt",
     paidSelfShort: "Zonder pot",
     paidPotShort: "Uit de pot",
@@ -2093,7 +2092,6 @@ const T = {
     finishRoundFirst: "Cl\u00f4ture d\u2019abord cette tourn\u00e9e — indique le montant ou appuie sur Passer.",
     payFirstOne: (nr: number) => `Indique d'abord le paiement de la tourn\u00e9e ${nr}, ou passe-le.`,
     payFirstMany: (n: number) => `Encore ${n} tourn\u00e9es sans montant. Indique-les, ou passe le paiement.`,
-    afterPayment: "apr\u00e8s le paiement",
     paidSelf: "Sans cagnotte",
     paidSelfShort: "Sans cagnotte",
     paidPotShort: "De la cagnotte",
@@ -7069,13 +7067,13 @@ export default function PartyTest() {
               Afrekenen staat er links vooraan, met het getekende bonnetje. */}
           {(fromQuick || !settle) && rounds.length >= 1 && (
             !lastRoundHandled ? (
-              <button style={{ flex: 1, padding: "7px 4px", fontSize: 15, fontWeight: 700, borderRadius: 999, textAlign: "center", background: VLAK1, color: "#6b7484", border: "1.5px dashed rgba(29,41,66,0.45)", lineHeight: 1.25, cursor: "pointer", fontFamily: "inherit" }}
+              <button style={{ flex: 1, padding: "11px 4px", fontSize: 17, fontWeight: 700, borderRadius: 999, textAlign: "center", background: VLAK1, color: "#6b7484", border: "1.5px dashed rgba(29,41,66,0.45)", cursor: "pointer", fontFamily: "inherit" }}
                 onClick={() => {
                   const open = rounds.filter((rr) => (rr.amount || 0) <= 0.005).length
                   if (open > 1) { setNotice(L.payFirstMany(open)); setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview"); return }
                   setNotice(L.payFirstOne(rounds.length))
                 }}>
-                {L.quickSettleTitle}<br /><span style={{ fontSize: 10.5, fontWeight: 400, color: "#8b93a3" }}>{L.afterPayment}</span>
+                {L.quickSettleTitle}
               </button>
             ) : (
               <button style={{ flex: 1, padding: "11px 4px", fontSize: 17, fontWeight: 700, borderRadius: 999, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "inherit",
@@ -10444,7 +10442,9 @@ export default function PartyTest() {
                     <span onClick={() => { setFillMode(true); setOverviewBackTo("payers"); setView("roundsOverview") }}
                       style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#6b4a00", whiteSpace: "nowrap", cursor: "pointer" }}>{L.fillWord} ›</span>
                   ) : (
-                    <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#c88a1a", whiteSpace: "nowrap" }}>{euro(r.amount || 0)}</span>
+                    <span onClick={() => { setFillMode(false); setOverviewBackTo("payers"); setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r); setView("roundsOverview") }}
+                      style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 18, fontWeight: 800, color: "#c88a1a", whiteSpace: "nowrap", cursor: "pointer", border: "1.5px solid rgba(200,138,0,0.55)", borderRadius: 999, padding: "4px 12px" }}>
+                      {euro(r.amount || 0)} <span style={{ fontSize: 12 }}>✏️</span></span>
                   )}
                 </span>
               </div>
@@ -10453,7 +10453,7 @@ export default function PartyTest() {
                 {potContribTotal > 0.005 && (
                   <span onClick={() => { if (geenBedrag) { setNotice(L.fillAmountFirst); return } rTogglePot(idx) }}
                     style={{ ...S.chip(uitPot ? 1 : 0), fontSize: 16, padding: "6px 11px", opacity: geenBedrag ? 0.5 : 1,
-                      ...(uitPot ? { background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", border: "1px solid rgba(31,138,76,0.5)" } : {}) }}>
+                      ...(uitPot ? { background: "#2f6fb5", border: "1px solid #2f6fb5", color: "#fff" } : {}) }}>
                     {/* Gekozen: wat de pot voor dít rondje draagt. Niet gekozen: wat er nog
                         beschikbaar is. Zonder dat onderscheid lijken beide getallen hetzelfde. */}
                     <ZakjeIcoon size={15} /> {L.potWord}<span style={{ fontWeight: 600, opacity: 0.85 }}> · {uitPot ? euro(r.potPart || 0) : L.potFree(euro(Math.max(0, potAvailFor(idx))))}</span>
