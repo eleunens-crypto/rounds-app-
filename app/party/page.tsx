@@ -874,6 +874,8 @@ const T = {
     coinPrices: "🎟️ coin-prijzen per drankje",
     coinPricesInfo: "Standaard festival-coins per drankje. Pas aan met − / + (stapjes van 0,1).",
     potTitle: "Pot",
+    withHowMany: "Met hoeveel zijn jullie?",
+    seatsFillLater: "Wie scant, neemt een plaats in.",
     potHowManyQ: "Met hoeveel personen leggen jullie in?",
     fillCoinValue: "Vul de coin-waarde in (1 coin = €…) — of zet coins op 'uit'.",
     fillDeposit: "Vul het waarborgbedrag per beker in — of zet bekers op 'uit'.",
@@ -1656,6 +1658,8 @@ const T = {
     coinPrices: "🎟️ prix en jetons par boisson",
     coinPricesInfo: "Jetons festival par défaut. Ajuste avec − / + (pas de 0,1).",
     potTitle: "Pot",
+    withHowMany: "Vous \u00eates combien\u00a0?",
+    seatsFillLater: "Chacun prend une place en scannant.",
     potHowManyQ: "Vous \u00eates combien \u00e0 mettre au pot ?",
     fillCoinValue: "Entre la valeur du jeton (1 jeton = €…) — ou désactive les jetons.",
     fillDeposit: "Entre le montant de la caution par gobelet — ou désactive les gobelets.",
@@ -5880,6 +5884,22 @@ export default function PartyTest() {
             <input style={{ ...S.input, width: 76, padding: "5px 8px", fontSize: 18, borderColor: everyoneChoice === "custom" ? "#2f6fb5" : "rgba(29,41,66,0.22)" }} type="text" inputMode="decimal" placeholder="€" value={everyoneDraft} onChange={(e) => setEveryoneDraft(e.target.value.replace(/[^0-9.,]/g, ""))} />
             <button style={{ ...S.btn, padding: "5px 11px", fontSize: 15.5, opacity: (parseFloat(everyoneDraft.replace(",", ".")) || 0) > 0 ? 1 : 0.5 }} onClick={() => { const v = parseFloat(everyoneDraft.replace(",", ".")) || 0; if (v > 0) { setEveryoneChoice("custom"); setEveryoneAmt(v) } }}>toepassen</button>
           </div>
+          {settle && (
+            <div style={{ ...S.row, justifyContent: "space-between", gap: 10, background: MODUS_FAIR.vlak, borderRadius: 11, padding: "9px 11px", marginBottom: 10 }}>
+              <span style={{ minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.withHowMany}</span>
+                <span style={{ display: "block", fontSize: 12, color: MODUS_FAIR.label, marginTop: 1 }}>{L.seatsFillLater}</span>
+              </span>
+              <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                <button onClick={() => { const laatste = [...people].reverse().find((pp) => !pp.claimedBy && !pp.named); if (laatste) removePerson(laatste.id) }}
+                  style={{ width: 30, height: 30, borderRadius: "50%", background: "#fff", border: `1px solid ${MODUS_FAIR.randZacht}`, fontSize: 19, cursor: "pointer", fontFamily: "inherit", color: MODUS_FAIR.tekst,
+                    opacity: people.some((pp) => !pp.claimedBy && !pp.named) ? 1 : 0.35 }}>−</button>
+                <b style={{ fontSize: 19, color: "#1d2942", minWidth: 20, textAlign: "center" }}>{people.length}</b>
+                <button onClick={() => void addPerson()}
+                  style={{ width: 30, height: 30, borderRadius: "50%", background: MODUS_FAIR.rand, border: "none", color: "#fff", fontSize: 19, cursor: "pointer", fontFamily: "inherit" }}>＋</button>
+              </span>
+            </div>
+          )}
           {people.map((p) => (
             <div key={p.id} style={{ ...S.row, gap: 8, padding: "7px 0", borderBottom: "1px solid rgba(29,41,66,0.08)" }}>
               <span style={{ fontSize: 17.5, fontWeight: 800, width: 112, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{contribOf(p.id) > 0 && <span style={{ fontSize: 14.5, fontWeight: 700, color: "#6b7484" }}> · {euro(contribOf(p.id))}</span>}</span>
