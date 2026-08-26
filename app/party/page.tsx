@@ -344,12 +344,6 @@ const MODUS_SNEL = {
 }
 const GAST_KLEUREN = ["#ffcf5c", "#56b8c4", "#b98ac9", "#7fc47a", "#f0906b", "#9fb4e8", "#e8a0c0", "#c9c07a", "#b07d4f", "#5f9ea0"]
 const gastKleur = (i: number) => GAST_KLEUREN[((i % GAST_KLEUREN.length) + GAST_KLEUREN.length) % GAST_KLEUREN.length]
-const lichter = (hex: string, f = 0.35) => {
-  const h = hex.replace("#", "")
-  const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16)
-  const m = (v: number) => Math.round(v + (255 - v) * f)
-  return `rgb(${m((n >> 16) & 255)},${m((n >> 8) & 255)},${m(n & 255)})`
-}
 const donkerder = (hex: string, f = 0.55) => {
   const h = hex.replace("#", "")
   const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16)
@@ -640,7 +634,7 @@ const T = {
     saveAndLeave: "Bewaren en weggaan",
     forWhoSub: "Zet hier wie erbij is. Namen mogen leeg blijven.",
     letsGoBtn: "Aan de slag →",
-    namePh3: "typ hier je groepsnaam",
+    namePh3: "Typ je groepsnaam",
     naamGoBtn: "Verder →",
     nameFirstNote: "Vul eerst je eigen naam en de groepsnaam in.",
     yourNamePh2: "Jouw naam — nodig vóór de QR",
@@ -1471,7 +1465,7 @@ const T = {
     saveAndLeave: "Enregistrer et partir",
     forWhoSub: "Indique qui est l\u00e0. Les noms peuvent rester vides.",
     letsGoBtn: "C'est parti →",
-    namePh3: "\u00e9cris ici le nom du groupe",
+    namePh3: "Nomme ton groupe",
     naamGoBtn: "Continuer \u2192",
     nameFirstNote: "Remplis d'abord ton nom et le nom du groupe.",
     yourNamePh2: "Ton nom — requis avant le QR",
@@ -7023,32 +7017,15 @@ export default function PartyTest() {
           en raken ze elkaar nooit. */}
       {uitgebreidLook && !!groupId && !kaal && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "10px 0", minHeight: 38 }}>
-          {groupName.trim() && !editName && !isAutoNaam(groupName) && (
-            <span onClick={() => { if (onboarding || groepDicht) return; if (!settle) openGroepVenster(true); else setEditName(true) }}
-              style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onboarding ? "default" : "pointer", background: "#fff", border: `1.5px solid ${RAND}`, borderRadius: 999, padding: "9px 15px", fontSize: 18.5, fontWeight: 800, color: "#1d2942" }}>
-              {isAutoNaam(groupName) ? (
-                /* Niet alleen de uitnodiging, ook wat de naam nú is — anders weet je
-                   niet onder welke naam de groep straks in je lijst staat. */
-                <span style={{ color: themaNaam ? "#5a6a94" : "#c98a00", fontWeight: 700, fontSize: 15.5 }}>✏️ {L.giveNameQ} <span style={{ color: "#8b93a3", fontWeight: 400, fontSize: 14 }}>· {L.nowWord} {groupName.trim()}</span></span>
-              ) : (<>{groupName.trim()}{!onboarding && <span style={{ fontSize: 13.5 }}> ✏️</span>}</>)}
-            </span>
-          )}
-          {/* Nog geen naam? Dan één pill die zowel de naam als de personen vraagt —
-              hetzelfde venster, dus alles zit op één plek. */}
-          {/* Eén pill: links de naam (tik = venster), rechts een tellertje dat meteen
-              personen bij- of afzet. Beide volledig optioneel. */}
-          {!settle && !kaal && isAutoNaam(groupName) && (
-            <span style={{ flex: "1 1 auto", minWidth: 0, display: "inline-flex", alignItems: "center", gap: 9, background: "#fff", border: `1.5px solid ${RAND}`, borderRadius: 999, padding: "9px 15px", fontSize: 16, fontWeight: 800, color: "#1d2942" }}>
-              <span onClick={() => openGroepVenster(true)}
-                style={{ flex: "1 1 auto", display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", minWidth: 0 }}>
-                <span style={{ flexShrink: 0, color: "#c98a00" }}>✏️</span>
-                <span style={{ color: "#6b7484", fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.namePh3}</span>
+          {!settle && !kaal && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 8, borderBottom: `1.5px solid ${RAND}33`, marginBottom: 10 }}>
+              <span onClick={() => { if (onboarding || groepDicht) return; openGroepVenster(true) }}
+                style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onboarding ? "default" : "pointer", fontSize: 20, fontWeight: 800, color: isAutoNaam(groupName) ? "#9aa3b2" : "#1d2942" }}>
+                {isAutoNaam(groupName) ? L.namePh3 : groupName.trim()}
+                {!onboarding && <span style={{ fontSize: 13, color: "#6b7484" }}> ✏️</span>}
               </span>
-              {!settle && kopTeller()}
-            </span>
-          )}
-          {!settle && !kaal && !isAutoNaam(groupName) && (
-            <span style={{ flexShrink: 0 }}>{kopTeller()}</span>
+              <span style={{ flexShrink: 0, borderLeft: `1px solid ${RAND}2e`, paddingLeft: 11 }}>{kopTeller()}</span>
+            </div>
           )}
         </div>
       )}
@@ -8600,12 +8577,12 @@ export default function PartyTest() {
                 </>)}
               </div>
               {heeftZin && (
-                <div style={{ background: donkerder(kleur, 0.34), borderLeft: `5px solid ${kleur}`, borderRadius: "0 0 13px 13px", padding: "10px 12px", marginBottom: 10, fontSize: 15, fontWeight: 600, color: "rgba(232,220,192,0.85)" }}>
+                <div style={{ background: RAND, borderLeft: `5px solid ${kleur}`, borderRadius: "0 0 13px 13px", padding: "10px 12px", marginBottom: 10, fontSize: 15, fontWeight: 600, color: "#c3cbd8" }}>
                   {(() => {
                     const ik = people.find((pp) => pp.id === voorWie)
                     const benIkHet = !!ik && ik.id === meId
                     return (<>
-                      {L.tapForStrip} <b style={{ fontWeight: 800, fontSize: 19, color: lichter(kleur, 0.35) }}>{benIkHet && !ik.named ? L.yourselfWord : (ik?.name ?? "")}</b>
+                      {L.tapForStrip} <b style={{ fontWeight: 800, fontSize: 19, color: kleur }}>{benIkHet && !ik.named ? L.yourselfWord : (ik?.name ?? "")}</b>
                       {benIkHet && ik.named && <span style={{ fontSize: 12.5, opacity: 0.75 }}> — {L.yourselfWord}</span>}
                     </>)
                   })()}
