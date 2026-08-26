@@ -4594,7 +4594,6 @@ export default function PartyTest() {
           <span style={{ display: "block", fontSize: 18.5, fontWeight: 800 }}>{L.startOrdering}</span>
           <span style={{ display: "block", fontSize: 15, fontWeight: 600, color: "#d6f2f6", marginTop: 2 }}>{L.everyoneTapsNow}</span>
         </button>
-        <div style={{ textAlign: "center", fontSize: 14.5, fontWeight: 600, color: MODUS_FAIR.tekst, marginTop: 9 }}>{L.startOrderingSub}</div>
       </div>
       </>
     )
@@ -6870,11 +6869,6 @@ export default function PartyTest() {
       )}
       {/* Wat er nu gebeurt en wat jij moet doen, op twee gecentreerde regels — dezelfde
           rol als de "Je tikt aan voor"-strook op het aantikscherm. */}
-      {setupKop && (
-        <div style={{ background: RAND, borderRadius: 12, padding: "10px 12px", marginBottom: 10, textAlign: "center" }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: "#e8f0f2" }}>{L.modeFairShort}</div>
-        </div>
-      )}
       {!!groupId && !kaal && !uitgebreidLook && !setupKop && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: modus.knop, borderRadius: "14px 14px 0 0", padding: "10px 15px", marginBottom: 10 }}>
           <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, flex: 1, minWidth: 0 }}>
@@ -6890,7 +6884,7 @@ export default function PartyTest() {
           rechtsboven. Zo staan "waar ben ik" en "hoeveel zit er nog in" naast elkaar in
           plaats van elkaar te verdringen op één regel. */}
       {!setupKop && (
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: RAND, borderRadius: 15, padding: "11px 13px", marginBottom: 11 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10, background: RAND, borderRadius: 15, padding: "11px 13px", marginBottom: 11 }}>
         <div style={{ minWidth: 0, flex: "1 1 auto" }}>
         <div style={{ ...S.row, gap: 10, alignItems: "center" }}>
           <span onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ cursor: "pointer", flexShrink: 0, display: "inline-flex" }}>
@@ -6906,7 +6900,7 @@ export default function PartyTest() {
           <span style={{ flexShrink: 0 }}>{potContribTotal > 0.005 ? potKnopje() : potLegBadge()}</span>
         )}
         {!uitgebreidLook && !!groupId && !kaal && groupName.trim() && !editName && (
-          <div style={{ textAlign: "right", minWidth: 0, flexShrink: 0, maxWidth: "52%" }}>
+          <div style={{ textAlign: "right", minWidth: 0, width: "100%", marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
             <div onClick={() => { if (!onboarding && !groepDicht) setEditName(true) }} style={{ cursor: onboarding ? "default" : "pointer", fontSize: 19, fontWeight: 800, color: "#FFFFFF", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {!settle && isAutoNaam(groupName) ? (
                 <span style={{ display: "block" }}>
