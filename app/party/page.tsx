@@ -684,6 +684,12 @@ const T = {
     myTab: "🧾 Mijn stand",
     noRoundClosed: "Er is nog geen rondje afgesloten.",
     whatYouDrank: "Wat jij dronk",
+    whatDidItCost: "WAT KOSTTE DIT RONDJE?",
+    howMuchFromPot: "Hoeveel uit de pot?",
+    potNothing: "niets",
+    potAll: "alles",
+    potPart: "een deel",
+    restOutsidePot: "Rest buiten de pot:",
     yourShare: "(jouw deel)",
     provisionalNote: "⏳ Voorlopig — de gastheer sloot nog niet af. Er kunnen nog rondjes bijkomen, dus dit bedrag kan nog wijzigen.",
     potPaidIn: (bedrag: string) => `💰 ingelegd ${bedrag}`,
@@ -1515,6 +1521,12 @@ const T = {
     myTab: "🧾 Mon compte",
     noRoundClosed: "Aucune tournée n'est encore clôturée.",
     whatYouDrank: "Ce que tu as bu",
+    whatDidItCost: "COMBIEN A CO\u00dbT\u00c9 CETTE TOURN\u00c9E\u00a0?",
+    howMuchFromPot: "Combien de la cagnotte\u00a0?",
+    potNothing: "rien",
+    potAll: "tout",
+    potPart: "une partie",
+    restOutsidePot: "Reste hors cagnotte\u00a0:",
     yourShare: "(ta part)",
     provisionalNote: "⏳ Provisoire — l’hôte n’a pas encore clôturé. D’autres tournées peuvent suivre, ce montant peut donc changer.",
     potPaidIn: (bedrag: string) => `💰 versé ${bedrag}`,
@@ -2316,11 +2328,11 @@ export default function PartyTest() {
   // "mix" = beide bronnen tegelijk: een deel zelf, een deel uit de pot — elk met een
   // eigen veld in zijn eigen kleur, zodat combineren niet meer via één gedeeld veld hoeft.
   const [payVia, setPayVia] = useState<"self" | "pot" | "mix">("self")
-  const [mixZelf, setMixZelf] = useState(0)
+  const [, setMixZelf] = useState(0)
   const [mixPot, setMixPot] = useState(0)
   // Welk mix-veld je aan het invullen bent: het vinkje kleurt en pulseert mee —
   // potblauw bij het potveld, de moduskleur bij "zelf betaald".
-  const [mixFocus, setMixFocus] = useState<"zelf" | "pot">("zelf")
+  const [, setMixFocus] = useState<"zelf" | "pot">("zelf")
   // Tikte je op "Uit de pot" terwijl de pot leeg was, dan opent het inlegvenster. Dit
   // ref onthoudt voor welk rondje dat was: zodra er geld in de pot zit, schakelt de
   // potbron alsnog aan — anders bleef de knop na het inleggen gewoon uit staan.
@@ -9291,137 +9303,74 @@ export default function PartyTest() {
                 <span style={{ fontSize: 17, fontWeight: 800, color: "#1d2942" }}>💶 {L.paidForRoundQ(idx + 1)}</span>
                 <span onClick={() => setShowPot(true)} style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#2f6fb5", cursor: "pointer", textDecoration: "underline", lineHeight: 1.2 }}>{L.potTopUpPlus}</span>
               </div>
-              {/* Twee schakelaars in plaats van een of-of-keuze: elk met een eigen veld in
-                  zijn eigen kleur eronder. Allebei aan = het rondje deels zelf, deels uit de
-                  pot. De pot is blauw — overal, geen groen meer. */}
-              <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-                <button style={{ flex: 1, padding: "12px 6px", fontSize: 16.5, fontWeight: 600, borderRadius: 999, cursor: "pointer", textAlign: "center",
-                  background: payVia !== "pot" ? "rgba(240,165,0,0.22)" : "#fff",
-                  color: payVia !== "pot" ? "#6b4a00" : "#4a5567",
-                  border: payVia !== "pot" ? "1.5px solid rgba(200,138,0,0.75)" : "1.5px solid rgba(29,41,66,0.4)" }}
-                  onClick={() => {
-                    // Uit de combinatiestand blijft het zelf-bedrag staan; de rest vervalt.
-                    if (payVia === "mix") qSetAmount(idx, Math.round(mixZelf * 100) / 100)
-                    setPayVia("self")
-                  }}>{L.paidSelf}</button>
-                <button style={{ flex: 1, padding: "12px 6px", fontSize: 16.5, fontWeight: 600, borderRadius: 999, cursor: "pointer", textAlign: "center",
-                  background: payVia !== "self" ? "rgba(47,86,147,0.16)" : "#fff",
-                  color: payVia !== "self" ? "#24476f" : "#4a5567",
-                  border: payVia !== "self" ? "1.5px solid rgba(47,86,147,0.7)" : "1.5px solid rgba(29,41,66,0.4)" }}
-                  onClick={() => {
-                    if (potAvail <= 0.005) { potVulIntent.current = idx; meldPot(L.potEmptyNote); setShowPot(true); return }
-                    if (payVia === "mix") qSetAmount(idx, Math.round(mixPot * 100) / 100)
-                    setPayVia("pot")
-                  }}>{L.paidPot}{potAvail > 0.005 && <span style={{ fontWeight: 700, opacity: 0.8, fontSize: 15 }}> · {euro(Math.max(0, potAvail - potInBewerking))}</span>}</button>
+              {/* Eén bedrag, dan één vraag. De oude opzet had drie standen (zelf, pot, mix)
+                  waarbij je in het potveld nooit meer dan het saldo typte — waardoor het
+                  splitsvoorstel nooit verscheen. Nu vul je eerst in wat het rondje kostte
+                  en kies je daarna hoeveel daarvan uit de pot kwam: niets, alles, of een
+                  deel. Splitsen is geen aparte stand meer maar gewoon de derde knop. */}
+              <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: "0.04em", color: "#1d2942", marginBottom: 9 }}>{L.whatDidItCost}</div>
+              <div style={{ display: "flex", gap: 7, alignItems: "center", marginBottom: potAvail > 0.005 ? 11 : 0 }}>
+                <span style={{ fontSize: 17, fontWeight: 800, color: "#6b7484" }}>€</span>
+                <input {...bedragVeld(`hub-${idx}`, amount, (v) => qSetAmount(idx, v))}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
+                  style={{ ...S.input, flex: 1, minWidth: 0, textAlign: "left", fontSize: 19, fontWeight: 800, border: `1.5px solid ${amount > 0.005 ? RAND : "rgba(29,41,66,0.22)"}`, color: "#1d2942" }} />
+                {potAvail <= 0.005 && (
+                  <button className={amount > 0.005 ? "rundo-pulse-amber" : undefined}
+                    style={{ padding: "0 17px", height: 52, borderRadius: 999, fontSize: 16, fontWeight: 600, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "inherit",
+                      background: amount > 0.005 ? "#e08a00" : "rgba(240,165,0,0.22)", color: amount > 0.005 ? "#fff" : "#6b4a00", border: "1.5px solid rgba(200,138,0,0.75)" }}
+                    onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) { setPayVia("self"); confirmQuickPay() } }}>
+                    <span style={{ fontSize: 20 }}>✓</span> {L.okKort}</button>
+                )}
               </div>
 
-              {/* Bedrag-veld met ✓ én Overslaan samen op één rij. Het vinkje pulseert groen
-                  (omrand) zodra er een bedrag staat = "tik om te bevestigen". */}
-              <style>{`@keyframes rundoPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,138,76,0.45)}50%{box-shadow:0 0 0 7px rgba(31,138,76,0)}}.rundo-pulse{animation:rundoPulse 1.4s infinite}@keyframes rundoPulseAmber{0%,100%{box-shadow:0 0 0 0 rgba(224,138,0,0.5)}50%{box-shadow:0 0 0 7px rgba(224,138,0,0)}}.rundo-pulse-amber{animation:rundoPulseAmber 1.4s infinite}@keyframes rundoPulseBlauw{0%,100%{box-shadow:0 0 0 0 rgba(59,72,106,0.5)}50%{box-shadow:0 0 0 7px rgba(59,72,106,0)}}.rundo-pulse-blauw{animation:rundoPulseBlauw 1.4s infinite}@keyframes rundoPulsePot{0%,100%{box-shadow:0 0 0 0 rgba(47,111,181,0.5)}50%{box-shadow:0 0 0 7px rgba(47,111,181,0)}}.rundo-pulse-pot{animation:rundoPulsePot 1.4s infinite}@keyframes rundoStip{0%,100%{opacity:1}50%{opacity:0.25}}.rundo-stip{animation:rundoStip 1.4s infinite}@keyframes rundoAdem{0%,100%{box-shadow:0 6px 20px rgba(13,124,140,0.45)}50%{box-shadow:0 6px 26px rgba(13,124,140,0.7),0 0 0 5px rgba(13,124,140,0.12)}}.rundo-adem{animation:rundoAdem 2.2s infinite}`}</style>
-              {payVia !== "mix" && (<>
-              <div style={{ ...S.row, gap: 7 }}>
-                <span style={{ fontSize: 20, color: "#6b7484", fontWeight: 700 }}>€</span>
-                <input style={{ ...S.input, flex: 1, minWidth: 60, fontSize: 21.5, fontWeight: 800, padding: "12px 10px", textAlign: "left",
-                  color: accentKleur ? accentKleur.tekst : "#c88a1a",
-                  borderColor: amount > 0.005 ? (accentKleur ? accentKleur.hoofd : "#e08a00") : "rgba(29,41,66,0.22)",
-                  background: amount > 0.005 ? "#fff" : VLAK2 }}
-                  type="text" inputMode="decimal" placeholder="0,00"
-                  {...bedragVeld(`hub-${idx}`, amount, (v) => qSetAmount(idx, v))}
-                  onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); if ((rounds[idx]?.amount || 0) > 0.005) confirmQuickPay() } }} />
-                <button className={amount > 0.005 ? (accentKleur ? accentKleur.pulse : "rundo-pulse") : undefined} style={{ padding: "0 17px", height: 56, borderRadius: 999, fontSize: 16, fontWeight: 600, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "inherit",
-                  background: amount > 0.005 ? (accentKleur ? accentKleur.hoofd : "#1f8a4c") : (payVia === "pot" ? "rgba(47,86,147,0.16)" : "rgba(240,165,0,0.22)"),
-                  color: amount > 0.005 ? "#fff" : (payVia === "pot" ? "#24476f" : "#6b4a00"),
-                  border: `1.5px solid ${accentKleur ? accentKleur.hoofd : "#1f8a4c"}` }}
-                  onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}><span style={{ fontSize: 20 }}>✓</span> {L.okKort}</button>
-
-              </div>
-              {payVia === "pot" && amount > potAvail + 0.005 && potAvail > 0.005 ? (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 9, background: "#373f51", borderRadius: 11, padding: "9px 10px 9px 12px", marginTop: 9 }}>
-                  <span style={{ minWidth: 0, fontSize: 13, color: "#e8dcc0", lineHeight: 1.35 }}>
-                    {L.potCoversOnly(euro(Math.max(0, potAvail)))}<br /><span style={{ color: "#a3947a" }}>{L.restWithoutPot}</span>
-                  </span>
-                  <button onClick={() => {
-                    const potDeel = Math.round(Math.max(0, potAvail) * 100) / 100
-                    setMixPot(potDeel); setMixZelf(Math.round((amount - potDeel) * 100) / 100)
-                    setMixFocus("zelf"); setPayVia("mix")
-                  }}
-                    style={{ flexShrink: 0, background: "#c3d0f2", color: "#1e3b66", border: "none", borderRadius: 999, padding: "6px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.splitWord}</button>
-                </div>
-              ) : amount > 0.005 && (
-                <div style={{ fontSize: 15, color: accentKleur ? accentKleur.hoofd : "#1f8a4c", fontWeight: 800, textAlign: "right", marginTop: 7, paddingRight: 78 }}>{L.tapToConfirm}</div>
-              )}
-              </>)}
-
-              {/* Combineren: twee velden onder elkaar, elk in de kleur van zijn bron —
-                  zelf in de moduskleur, pot in potblauw. Het vinkje bevestigt de som. */}
-              {payVia === "mix" && (() => {
-                const som = Math.round((mixZelf + mixPot) * 100) / 100
-                const potOver = mixPot > potAvail + 0.005
-                const zelfKleur = "#c88a1a"
-                const zelfRand = "#e08a00"
-                // Beide velden gevuld = het tweekleurige vinkje: rand en ✓ in de
-                // zelf-kleur, de pulsgloed potblauw — "de pot doet mee". Eén bron
-                // gevuld = gewoon die ene kleur (via het veld dat je laatst aanraakte).
-                const vinkKleur = mixZelf > 0.005 && mixPot > 0.005
-                  ? { hoofd: zelfRand, pulse: "rundo-pulse-pot" }
-                  : mixFocus === "pot"
-                    ? { hoofd: "#2f6fb5", pulse: "rundo-pulse-pot" }
-                    : { hoofd: zelfRand, pulse: "rundo-pulse-amber" }
+              {/* Alleen vragen als er iets in de pot zit — anders is er niets te kiezen. */}
+              {potAvail > 0.005 && (() => {
+                const potdeel = payVia === "pot" ? amount : payVia === "mix" ? Math.max(0, Math.min(mixPot, amount)) : 0
+                const rest = Math.max(0, amount - potdeel)
+                const kiesNiets = () => { setPayVia("self"); setMixPot(0); setMixZelf(amount) }
+                const kiesAlles = () => { setPayVia("pot"); setMixPot(amount); setMixZelf(0) }
+                const kiesDeel = () => { const d = Math.round(Math.min(potAvail, amount) * 100) / 100; setMixPot(d); setMixZelf(Math.round((amount - d) * 100) / 100); setMixFocus("pot"); setPayVia("mix") }
+                const knop = (aan: boolean, tekst: string, doe: () => void) => (
+                  <button onClick={doe} style={{ flex: 1, textAlign: "center", cursor: "pointer", fontFamily: "inherit",
+                    background: aan ? "rgba(47,86,147,0.16)" : "#fff",
+                    border: `1.5px solid ${aan ? "rgba(47,86,147,0.7)" : "rgba(29,41,66,0.4)"}`,
+                    color: aan ? "#24476f" : "#4a5567", borderRadius: 999, padding: "7px 4px", fontSize: 12.5, fontWeight: 700 }}>{tekst}{aan ? " ✓" : ""}</button>
+                )
                 return (
-                  <>
-                    <div style={{ ...S.row, gap: 7, marginBottom: 7 }}>
-                      <span style={{ flexShrink: 0, width: 108, fontSize: 13.5, fontWeight: 700, color: zelfKleur, lineHeight: 1.2 }}>{L.paidSelfShort}</span>
-                      <span style={{ fontSize: 19, color: "#6b7484", fontWeight: 700 }}>€</span>
-                      <input style={{ ...S.input, flex: 1, minWidth: 50, fontSize: 19, fontWeight: 800, padding: "10px 10px", textAlign: "left", color: zelfKleur,
-                        borderColor: mixZelf > 0.005 ? zelfRand : "rgba(29,41,66,0.22)" }}
-                        type="text" inputMode="decimal" placeholder="0,00"
-                        onFocus={() => setMixFocus("zelf")}
-                        {...bedragVeld(`hub-zelf-${idx}`, mixZelf, (v) => { setMixFocus("zelf"); setMixZelf(v); qSetAmount(idx, Math.round((v + mixPot) * 100) / 100) })} />
+                  <div style={{ borderTop: "1px solid rgba(29,41,66,0.14)", paddingTop: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1d2942" }}>{L.howMuchFromPot}</span>
+                      <span style={{ flexShrink: 0, fontSize: 11.5, fontWeight: 700, color: "#2f5693", display: "inline-flex", alignItems: "center", gap: 5 }}><ZakjeIcoon size={13} /> {L.mixPotAvail(euro(potAvail))}</span>
                     </div>
-                    <div style={{ ...S.row, gap: 7 }}>
-                      <span style={{ flexShrink: 0, width: 108, fontSize: 13.5, fontWeight: 700, color: "#2f5693", lineHeight: 1.2, display: "inline-flex", alignItems: "center", gap: 5 }}><ZakjeIcoon size={15} /> {L.paidPotShort}</span>
-                      <span style={{ fontSize: 19, color: "#6b7484", fontWeight: 700 }}>€</span>
-                      <input style={{ ...S.input, flex: 1, minWidth: 50, fontSize: 19, fontWeight: 800, padding: "10px 10px", textAlign: "left", color: "#2f5693",
-                        borderColor: potOver ? "#c0554a" : mixPot > 0.005 ? "#2f6fb5" : "rgba(47,111,181,0.35)" }}
-                        type="text" inputMode="decimal" placeholder="0,00"
-                        onFocus={() => setMixFocus("pot")}
-                        {...bedragVeld(`hub-pot-${idx}`, mixPot, (v) => { setMixFocus("pot"); setMixPot(v); qSetAmount(idx, Math.round((mixZelf + v) * 100) / 100) })} />
-                      <button className={som > 0.005 && !potOver ? vinkKleur.pulse : undefined} style={{ padding: "0 17px", height: 52, borderRadius: 999, fontSize: 16, fontWeight: 600, cursor: "pointer", flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", fontFamily: "inherit",
-                        background: som > 0.005 && !potOver ? vinkKleur.hoofd : "rgba(240,165,0,0.22)",
-                        color: som > 0.005 && !potOver ? "#fff" : "#6b4a00",
-                        border: `1.5px solid ${vinkKleur.hoofd}` }}
-                        onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (som > 0.005 && !potOver) confirmQuickPay() }}><span style={{ fontSize: 20 }}>✓</span> {L.okKort}</button>
+                    <div style={{ display: "flex", gap: 5, marginBottom: 9 }}>
+                      {knop(payVia === "self", L.potNothing, kiesNiets)}
+                      {knop(payVia === "pot", L.potAll, kiesAlles)}
+                      {knop(payVia === "mix", L.potPart, kiesDeel)}
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 7 }}>
-                      <span style={{ fontSize: 14.5, fontWeight: 700, color: potOver ? "#c0554a" : "#2f5693", minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5 }}><ZakjeIcoon size={15} /> {potOver ? L.mixPotShort(euro(Math.max(0, potAvail))) : L.mixPotAvail(euro(Math.max(0, potAvail)))}</span>
-                      <span style={{ flexShrink: 0, fontSize: 15, fontWeight: 800, color: "#1d2942" }}>{L.mixSamen(euro(som))}</span>
+                    {payVia === "mix" && (
+                      <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8 }}>
+                        <span style={{ fontSize: 15, color: "#6b7484" }}>€</span>
+                        <input {...bedragVeld(`mixpot-${idx}`, mixPot, (v) => { const d = Math.max(0, Math.min(v, amount)); setMixPot(d); setMixZelf(Math.round((amount - d) * 100) / 100) })}
+                          style={{ ...S.input, flex: 1, minWidth: 0, textAlign: "left", fontSize: 17, fontWeight: 800, background: "#f2f6fc", border: "1.5px solid #2f6fb5", color: "#2f5693" }} />
+                      </div>
+                    )}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                      <span style={{ minWidth: 0, fontSize: 12.5, fontWeight: 700, color: "#6b7484" }}>
+                        {L.restOutsidePot} <b style={{ color: rest > 0.005 ? "#c88a1a" : "#6b7484" }}>{euro(rest)}</b>
+                        {potdeel > potAvail + 0.005 && <span style={{ display: "block", color: "#b0402f", fontWeight: 800 }}>{L.potShortTitle}</span>}
+                      </span>
+                      <button className={amount > 0.005 && potdeel <= potAvail + 0.005 ? (potdeel > 0.005 ? "rundo-pulse-pot" : "rundo-pulse-amber") : undefined}
+                        style={{ flexShrink: 0, padding: "0 17px", height: 48, borderRadius: 999, fontSize: 15.5, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "inherit",
+                          background: amount > 0.005 ? (potdeel > 0.005 ? "#2f6fb5" : "#e08a00") : "rgba(240,165,0,0.22)",
+                          color: amount > 0.005 ? "#fff" : "#6b4a00",
+                          border: `1.5px solid ${potdeel > 0.005 ? "#2f6fb5" : "rgba(200,138,0,0.75)"}` }}
+                        onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}>
+                        <span style={{ fontSize: 19 }}>✓</span> {L.okKort}</button>
                     </div>
-                    {/* Ook combineren moet over te slaan zijn (getrakteerd, later invullen…):
-                        dezelfde knop als in de enkel-veld-stand, gecentreerd onder het blok. */}
-
-                  </>
+                  </div>
                 )
               })()}
 
-              {/* Pot-context (variant A). Genoeg in pot → toon wat overblijft. Te weinig →
-                  toon automatische verdeling (pot + zelf) met een knopje om aan te vullen. */}
-              {payVia === "pot" && amount > 0.005 && (
-                amount <= potAvail + 0.005 ? (
-                  <div style={{ fontSize: 15.5, color: "#2f5693", fontWeight: 700, marginTop: 9 }}>
-                    <ZakjeIcoon size={15} /> {L.potPayLeft(euro(amount), euro(potAvail - amount))}
-                  </div>
-                ) : (
-                  // Te weinig in de pot: geen mengvorm. Ofwel bijvullen, ofwel zelf betalen.
-                  <div style={{ background: "rgba(224,104,92,0.08)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 10, padding: "11px 12px", marginTop: 10 }}>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: "#b0402f", marginBottom: 3 }}>⚠️ {L.potShortTitle}</div>
-                    <div style={{ fontSize: 15, color: "#8a6b5f", lineHeight: 1.5, marginBottom: 10 }}>{L.potShortSimple(euro(potAvail), euro(amount))}</div>
-                    <div style={{ display: "flex", gap: 7 }}>
-                      <button style={{ ...S.btn, flex: 1, fontSize: 15.5, fontWeight: 800, padding: "10px 6px" }} onClick={() => setShowPot(true)}>{L.potChoiceTopUp}</button>
-                      <button style={{ ...S.btn, flex: 1, fontSize: 15.5, fontWeight: 800, padding: "10px 6px" }} onClick={() => setPayVia("self")}>{L.potChoicePaySelf}</button>
-                    </div>
-                  </div>
-                )
-              )}
               </div>
             </div>
             {/* Overslaan is geen manier van betalen maar de keuze om het nu niet te doen:
@@ -10151,20 +10100,22 @@ export default function PartyTest() {
                             <span onClick={(e) => { e.stopPropagation(); setShowPot(true) }} style={{ fontSize: 14.5, fontWeight: 800, color: "#2f6fb5", textDecoration: "underline", cursor: "pointer" }}>{L.potTopUp}</span>
                           </div>
                           <div style={{ display: "flex", gap: 6 }}>
-                            <button onClick={(e) => { e.stopPropagation(); setEditDraft((c) => {
-                                if (!c) return c
-                                if (c.bron === "pot") return { ...c, bron: "mix", potAmt: c.amount }
-                                if (c.bron === "mix") return { ...c, bron: "self", amount: Math.max(0, Math.round((c.amount - Math.min(c.potAmt, c.amount)) * 100) / 100), potAmt: 0 }
-                                return c
-                              }) }}
-                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 15, fontWeight: 800, border: "none", cursor: "pointer", background: dr.bron !== "pot" ? "linear-gradient(135deg,#f0a500,#e08a00)" : "#eef1f6", color: dr.bron !== "pot" ? "#fff" : "#6b7484" }}>{L.paidSelf}</button>
-                            <button onClick={(e) => { e.stopPropagation(); if (potLeeg) return; setEditDraft((c) => {
-                                if (!c) return c
-                                if (c.bron === "self") return { ...c, bron: "mix", potAmt: 0 }
-                                if (c.bron === "mix") return { ...c, bron: "pot", amount: Math.max(0, Math.round(Math.min(c.potAmt, c.amount) * 100) / 100), potAmt: Math.max(0, Math.round(Math.min(c.potAmt, c.amount) * 100) / 100) }
-                                return c
-                              }) }}
-                              style={{ flex: 1, padding: "9px 6px", borderRadius: 9, fontSize: 15, fontWeight: 800, border: "none", cursor: potLeeg ? "not-allowed" : "pointer", opacity: potLeeg ? 0.5 : 1, background: dr.bron !== "self" ? "linear-gradient(135deg,#3f7fc4,#2f6fb5)" : "#eef1f6", color: dr.bron !== "self" ? "#fff" : "#6b7484" }}>{L.paidPot}<span style={{ fontWeight: 800, opacity: dr.bron !== "self" ? 1 : 0.75 }}> · {potLeeg ? L.emptyWord : euro(Math.max(0, potAvailFor(idx)))}</span></button>
+                            {([["self", L.potNothing], ["pot", L.potAll], ["mix", L.potPart]] as const).map(([b, tekst]) => {
+                              const aan = dr.bron === b
+                              return (
+                                <button key={b} onClick={(e) => { e.stopPropagation(); if (b !== "self" && potLeeg) return; setEditDraft((c) => {
+                                    if (!c) return c
+                                    if (b === "self") return { ...c, bron: "self", potAmt: 0 }
+                                    if (b === "pot") return { ...c, bron: "pot", potAmt: c.amount }
+                                    const d = Math.round(Math.min(Math.max(0, potAvailFor(idx)), c.amount) * 100) / 100
+                                    return { ...c, bron: "mix", potAmt: d }
+                                  }) }}
+                                  style={{ flex: 1, padding: "8px 4px", borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: b !== "self" && potLeeg ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: b !== "self" && potLeeg ? 0.5 : 1,
+                                    background: aan ? (b === "self" ? "rgba(240,165,0,0.22)" : "rgba(47,86,147,0.16)") : "#fff",
+                                    border: `1.5px solid ${aan ? (b === "self" ? "rgba(200,138,0,0.75)" : "rgba(47,86,147,0.7)") : "rgba(29,41,66,0.4)"}`,
+                                    color: aan ? (b === "self" ? "#6b4a00" : "#24476f") : "#4a5567" }}>{tekst}{aan ? " ✓" : ""}</button>
+                              )
+                            })}
                           </div>
                           {potLeeg && <div style={{ fontSize: 14, color: "#c0554a", fontWeight: 700, marginTop: 6 }}>{L.potEmptyFillFirst}</div>}
                           {/* Te weinig in de pot: binair — bijvullen of zelf betalen. */}
