@@ -7783,11 +7783,11 @@ export default function PartyTest() {
                 ))}
               </div>
             </div>
-          </div>
           <button onClick={() => setWelkom(false)}
             style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "17px", border: "none", fontSize: 20, fontWeight: 800, color: "#2a2110", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#f5c451,#e0a020)" }}>
             {L.welkomStart}
           </button>
+          </div>
           {renderRestoVerwijzing(true)}
         </div>
       </div>
