@@ -7745,11 +7745,9 @@ export default function PartyTest() {
         <style>{`@keyframes rundoWenk{0%,100%{transform:translateX(0);opacity:.6}50%{transform:translateX(3px);opacity:1}}
           @keyframes rundoLoop{from{width:0}to{width:100%}}
           input::placeholder,textarea::placeholder{color:#a7b0bf;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
-        <div style={{ textAlign: "center", marginBottom: 13 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 10, background: RAND, borderRadius: 999, padding: "9px 18px 9px 12px" }}>
-            <RundoMerk size={26} />
-            <span style={{ fontSize: 17, fontWeight: 800, color: "#fff" }}>{L.chooseHow}</span>
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, background: RAND, borderRadius: 14, padding: "13px 16px", marginBottom: 13 }}>
+          <RundoMerk size={27} />
+          <span style={{ fontSize: 20, fontWeight: 500, color: "#fff", letterSpacing: "0.01em" }}>{L.chooseHow}</span>
         </div>
 
         <div style={{ ...S.card, padding: "14px 13px" }}>
