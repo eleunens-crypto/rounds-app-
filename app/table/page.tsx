@@ -3616,6 +3616,50 @@ export default function RundoTable() {
       </button>
     )
   }
+  // Verwijzing naar de zusterapp. Dicht is het een strook; open toont het
+  // welkomscherm van Rundo, met vanaf daar pas de stap naar de app zelf.
+  const renderPartyVerwijzing = () => (
+          <div style={{ marginTop: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(240,193,75,0.4)", borderRadius: 14, padding: 13 }}>
+            {!partyInfo ? (
+              <div onClick={() => setPartyInfo(true)} style={{ cursor: "pointer" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9 }}>
+                  <span style={{ fontSize: 13.5, color: "#9fb0b3", minWidth: 0, lineHeight: 1.35 }}>{L.cafeAfterQ}</span>
+                  <span style={{ marginLeft: "auto", flexShrink: 0 }}><RundoLogo size={26} /></span>
+                </div>
+                <div style={{ borderTop: "1px solid rgba(240,193,75,0.25)", paddingTop: 9, textAlign: "center", fontSize: 13, color: "#f0c14b", fontWeight: 700 }}>{L.seeWhatItDoes} ▾</div>
+              </div>
+            ) : (
+              <div style={{ background: "linear-gradient(140deg,#1c1608,#241d0e 60%,#2a2110)", border: "1px solid rgba(240,193,75,0.5)", borderRadius: 14, padding: 14, margin: -13, position: "relative" }}>
+                <button onClick={() => setPartyInfo(false)}
+                  style={{ position: "absolute", top: 10, right: 11, width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "none", color: "#cbbf9e", fontSize: 15, cursor: "pointer", fontFamily: "inherit", lineHeight: 1 }}>✕</button>
+                <span style={{ display: "block", marginBottom: 10 }}><RundoLogo size={40} /></span>
+                <div style={{ color: "#f0c14b", fontSize: 15, fontWeight: 700, lineHeight: 1.4, marginBottom: 4 }}>
+                  {L.partyTagline1}<br />{L.partyTagline2}
+                </div>
+                <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+                  {[["\u270d\ufe0f", L.partyStep1], ["\ud83d\udc46", L.partyStep2], ["\ud83d\udccb", L.partyStep3]].map(([icoon, tekst], n, rij) => (
+                    <div key={n} style={{ display: "flex", justifyContent: "center", padding: "8px 0",
+                      borderBottom: n < rij.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 12, flexDirection: n % 2 === 1 ? "row-reverse" : "row" }}>
+                        <span style={{ position: "relative", flexShrink: 0, width: 46, height: 46, borderRadius: "50%", background: "rgba(240,179,1,0.14)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
+                          {icoon}
+                          <span style={{ position: "absolute", top: -5, right: -6, width: 21, height: 21, borderRadius: "50%", background: "#f0c14b", color: "#2a2110", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11.5, fontWeight: 800 }}>{n + 1}</span>
+                        </span>
+                        <span style={{ fontSize: 15, fontWeight: 500, color: "#d9d2bd" }}>{tekst}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 13 }}>
+                  <button onClick={() => setPartyInfo(false)}
+                    style={{ flex: 1, cursor: "pointer", background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 12, padding: 11, fontSize: 14, fontWeight: 600, color: "#cbbf9e", fontFamily: "inherit" }}>{L.closeBtn}</button>
+                  <a href={PARTY_URL} style={{ flex: 1.5, textDecoration: "none", background: "linear-gradient(135deg,#f5c451,#e0a020)", borderRadius: 12, padding: 11, fontSize: 15, fontWeight: 700, color: "#2a2110", textAlign: "center" }}>{L.tryItOut} →</a>
+                </div>
+              </div>
+            )}
+          </div>
+  )
+
   const groepPeekLijst = () => {
     const iemandIngevuld = participants.some((q) => q.id !== ownerPid && !isFreeSpot(q))
     return (
@@ -3698,47 +3742,7 @@ export default function RundoTable() {
             {L.welkomStart}
           </button>
           </div>
-        {/* Verwijzing naar de zusterapp, uitklapbaar zodat niemand uitleg krijgt
-            die hij niet vroeg. */}
-        <div style={{ marginTop: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(240,193,75,0.4)", borderRadius: 14, padding: 13 }}>
-          {!partyInfo ? (
-            <div onClick={() => setPartyInfo(true)} style={{ cursor: "pointer" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9 }}>
-                <span style={{ fontSize: 13.5, color: "#9fb0b3", minWidth: 0, lineHeight: 1.35 }}>{L.cafeAfterQ}</span>
-                <span style={{ marginLeft: "auto", flexShrink: 0 }}><RundoLogo size={26} /></span>
-              </div>
-              <div style={{ borderTop: "1px solid rgba(240,193,75,0.25)", paddingTop: 9, textAlign: "center", fontSize: 13, color: "#f0c14b", fontWeight: 700 }}>{L.seeWhatItDoes} ▾</div>
-            </div>
-          ) : (
-            <div style={{ background: "linear-gradient(140deg,#1c1608,#241d0e 60%,#2a2110)", border: "1px solid rgba(240,193,75,0.5)", borderRadius: 14, padding: 14, margin: -13, position: "relative" }}>
-              <button onClick={() => setPartyInfo(false)}
-                style={{ position: "absolute", top: 10, right: 11, width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "none", color: "#cbbf9e", fontSize: 15, cursor: "pointer", fontFamily: "inherit", lineHeight: 1 }}>✕</button>
-              <span style={{ display: "block", marginBottom: 10 }}><RundoLogo size={40} /></span>
-              <div style={{ color: "#f0c14b", fontSize: 15, fontWeight: 700, lineHeight: 1.4, marginBottom: 4 }}>
-                {L.partyTagline1}<br />{L.partyTagline2}
-              </div>
-              <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
-                {[["\u270d\ufe0f", L.partyStep1], ["\ud83d\udc46", L.partyStep2], ["\ud83d\udccb", L.partyStep3]].map(([icoon, tekst], n, rij) => (
-                  <div key={n} style={{ display: "flex", justifyContent: "center", padding: "8px 0",
-                    borderBottom: n < rij.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 12, flexDirection: n % 2 === 1 ? "row-reverse" : "row" }}>
-                      <span style={{ position: "relative", flexShrink: 0, width: 46, height: 46, borderRadius: "50%", background: "rgba(240,179,1,0.14)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
-                        {icoon}
-                        <span style={{ position: "absolute", top: -5, right: -6, width: 21, height: 21, borderRadius: "50%", background: "#f0c14b", color: "#2a2110", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11.5, fontWeight: 800 }}>{n + 1}</span>
-                      </span>
-                      <span style={{ fontSize: 15, fontWeight: 500, color: "#d9d2bd" }}>{tekst}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 13 }}>
-                <button onClick={() => setPartyInfo(false)}
-                  style={{ flex: 1, cursor: "pointer", background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 12, padding: 11, fontSize: 14, fontWeight: 600, color: "#cbbf9e", fontFamily: "inherit" }}>{L.closeBtn}</button>
-                <a href={PARTY_URL} style={{ flex: 1.5, textDecoration: "none", background: "linear-gradient(135deg,#f5c451,#e0a020)", borderRadius: 12, padding: 11, fontSize: 15, fontWeight: 700, color: "#2a2110", textAlign: "center" }}>{L.tryItOut} →</a>
-              </div>
-            </div>
-          )}
-        </div>
+        {renderPartyVerwijzing()}
         </div>
       </div>
     )
@@ -5562,6 +5566,7 @@ export default function RundoTable() {
               <span style={{ fontSize: 20, fontWeight: 800, color: "#1f8a4c" }}>€{participants.reduce((a, p) => a + personTotal(p.id).settled, 0).toFixed(2).replace(".", ",")}</span>
             </div>
             <button onClick={() => setAdminFinalPopup(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 14, padding: "12px 0", fontWeight: 800 }}>{L.closeWord}</button>
+              <div style={{ marginTop: 12 }}>{renderPartyVerwijzing()}</div>
           </div>
         </div>
       )}
