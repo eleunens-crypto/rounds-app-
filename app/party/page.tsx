@@ -5950,10 +5950,6 @@ export default function PartyTest() {
         </div>
         ) : (
         <div style={{ background: "rgba(47,111,181,0.06)", border: "1px dashed rgba(47,111,181,0.45)", borderRadius: 12, padding: 11, marginTop: 4 }}>
-          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 17, fontWeight: 800, color: "#2f5693" }}>{editPotId !== null ? "✏️ inleg wijzigen" : (potRounds.length === 0 ? `➕ ${L.firstDeposit}` : `➕ ${L.addToPot}`)}</span>
-            {potDraftTotal > 0 && <span style={{ fontSize: 16, fontWeight: 800, color: "#2f6fb5" }}>+{euro(potDraftTotal)}</span>}
-          </div>
           {settle ? (
           <>
           {settle && (
@@ -5973,8 +5969,12 @@ export default function PartyTest() {
               <div style={{ fontSize: 12.5, color: MODUS_FAIR.label, marginTop: 4 }}>{L.seatsFillLater}</div>
             </div>
           )}
+          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 15, fontWeight: 800, color: "#1d2942" }}>{editPotId !== null ? "✏️ inleg wijzigen" : (potRounds.length === 0 ? `➕ ${L.firstDeposit}` : `➕ ${L.addToPot}`)}</span>
+            {potDraftTotal > 0 && <span style={{ fontSize: 16, fontWeight: 800, color: "#2f6fb5" }}>+{euro(potDraftTotal)}</span>}
+          </div>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-            <span style={{ fontSize: 15, color: "#1d2942", fontWeight: 800 }}>{L.eachPutsIn}</span>
+            <span style={{ fontSize: 15, color: "#1d2942", fontWeight: 800 }}>{L.equalSplit}</span>
             <span style={{ fontSize: 15, color: "#c0554a", fontWeight: 700, cursor: "pointer" }} onClick={resetPotDraft}>{L.resetContrib}</span>
           </div>
           <div style={{ ...S.row, gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
