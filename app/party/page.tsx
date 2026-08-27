@@ -600,7 +600,7 @@ const T = {
     perPersonWord: "per persoon",
     fillWord: "Bedrag toevoegen",
     adjustOrder: "bestelling aanpassen",
-    addPersonHere: "Persoon toevoegen",
+    addPersonHere: "Persoon / naam toevoegen",
     personsAndNames: "Personen & namen",
     persWord: "Pers.",
     persWordLow: "pers.",
@@ -681,6 +681,8 @@ const T = {
     fromPotQ: "Kwam er iets uit de pot?",
     noSelfPaid: "nee, zelf betaald",
     yesFromPot: "ja, uit de pot",
+    selfPaidShort: "zelf betaald",
+    fromPotShort: "uit de pot",
     fromPotLabel: "Uit de pot",
     notFromPotLabel: "Niet uit de pot",
     wholeRoundFromPot: "Het hele rondje gaat uit de pot.",
@@ -1419,7 +1421,7 @@ const T = {
     perPersonWord: "par personne",
     fillWord: "Ajouter le montant",
     adjustOrder: "modifier la commande",
-    addPersonHere: "Ajouter une personne",
+    addPersonHere: "Ajouter personne / nom",
     personsAndNames: "Personnes & noms",
     persWord: "Pers.",
     persWordLow: "pers.",
@@ -1500,6 +1502,8 @@ const T = {
     fromPotQ: "Une partie vient de la cagnotte\u00a0?",
     noSelfPaid: "non, pay\u00e9 soi-m\u00eame",
     yesFromPot: "oui, de la cagnotte",
+    selfPaidShort: "pay\u00e9 soi-m\u00eame",
+    fromPotShort: "de la cagnotte",
     fromPotLabel: "De la cagnotte",
     notFromPotLabel: "Hors cagnotte",
     wholeRoundFromPot: "Toute la tourn\u00e9e sort de la cagnotte.",
@@ -6202,18 +6206,18 @@ export default function PartyTest() {
                     {assignAllMode ? L.onlyThisRound : L.allRoundsBtn}
                   </button>
                 )}
+                <div style={{ ...S.segBaan, marginLeft: "auto", marginBottom: 8, width: "fit-content" }}>
+                  <div style={{ ...S.seg(editAssignMode === "person"), padding: "6px 12px", fontSize: 14.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
+                  <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 15, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>{L.perDrink}</div>
+                </div>
                 {!settle && (
-                  <div style={{ display: "flex", justifyContent: "center", margin: "4px 0 12px" }}>
+                  <div style={{ display: "flex", justifyContent: "flex-end", margin: "0 0 10px" }}>
                     <button onClick={() => { setPersGeteld(true); setAlleenPers(true); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
                       style={{ display: "inline-flex", alignItems: "center", gap: 7, border: "2px solid rgba(47,111,181,0.55)", background: "#f2f6fc", color: "#2f5693", borderRadius: 12, padding: "10px 16px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
                       👥 {L.addPersonHere}
                     </button>
                   </div>
                 )}
-                <div style={{ ...S.segBaan, marginLeft: "auto", marginBottom: 8, width: "fit-content" }}>
-                  <div style={{ ...S.seg(editAssignMode === "person"), padding: "6px 12px", fontSize: 14.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
-                  <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 15, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>{L.perDrink}</div>
-                </div>
 
                 {toonIdx.map((idx) => {
                   const r = rounds[idx]
@@ -7810,7 +7814,7 @@ export default function PartyTest() {
 
   if (view === "start") {
     return (
-      <div style={{ ...S.page, minHeight: "auto", padding: "0 0 40px" }}><div style={{ ...S.wrap, paddingTop: "calc(env(safe-area-inset-top, 0px) + 70px)" }}>
+      <div style={{ ...S.page, minHeight: "auto", padding: "0 0 40px" }}><div style={{ ...S.wrap, paddingTop: "calc(env(safe-area-inset-top, 0px) + 32px)" }}>
         {renderDialogs()}
         <style>{`@keyframes rundoWenk{0%,100%{transform:translateX(0);opacity:.6}50%{transform:translateX(3px);opacity:1}}
           @keyframes rundoLoop{from{width:0}to{width:100%}}
@@ -8883,9 +8887,9 @@ export default function PartyTest() {
           <div style={S.overlay} onClick={() => setShowAssignAll(false)}>
             <div style={{ ...S.sheet, maxHeight: "82vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                 <h3 style={{ ...S.h3, margin: "0 0 10px", fontSize: 21.5, textAlign: "center" }}>{L.assign}</h3>
-                <div style={{ ...S.segBaan, marginBottom: 10 }}>
-                  <div style={{ ...S.seg(assignMode === "person"), flex: 1, padding: "10px 8px", fontSize: 15.5, textAlign: "center" }} onClick={() => setAssignMode("person")}>{L.perPerson}</div>
-                  <div style={{ ...S.seg(assignMode === "drink"), flex: 1, padding: "10px 8px", fontSize: 15.5, textAlign: "center" }} onClick={() => setAssignMode("drink")}>{L.perDrink}</div>
+                <div style={{ ...S.segBaan, marginLeft: "auto", marginBottom: 8, width: "fit-content" }}>
+                  <div style={{ ...S.seg(assignMode === "person"), padding: "6px 12px", fontSize: 14.5, minWidth: 78, textAlign: "center" }} onClick={() => setAssignMode("person")}>{L.perPerson}</div>
+                  <div style={{ ...S.seg(assignMode === "drink"), padding: "5px 9px", fontSize: 15, minWidth: 78, textAlign: "center" }} onClick={() => setAssignMode("drink")}>{L.perDrink}</div>
                 </div>
               {/* Namen vergeten in te vullen? Hier aanpassen, zonder het venster of je
                   toewijzingen te verlaten — alles hangt aan nummers, dus de nieuwe naam
@@ -10166,8 +10170,8 @@ export default function PartyTest() {
                             )
                             return (<>
                               <div style={{ ...S.segBaan }}>
-                                {wissel(!uitDePot, L.noSelfPaid, () => setEditDraft((c) => c ? { ...c, bron: "self", potAmt: 0 } : c), RAND)}
-                                {wissel(uitDePot, L.yesFromPot, () => { if (potLeeg) return; setEditDraft((c) => {
+                                {wissel(!uitDePot, L.selfPaidShort, () => setEditDraft((c) => c ? { ...c, bron: "self", potAmt: 0 } : c), RAND)}
+                                {wissel(uitDePot, L.fromPotShort, () => { if (potLeeg) return; setEditDraft((c) => {
                                   if (!c) return c
                                   const d = Math.round(Math.min(beschikbaar, c.amount) * 100) / 100
                                   return { ...c, bron: d >= c.amount - 0.005 ? "pot" : "mix", potAmt: d }
