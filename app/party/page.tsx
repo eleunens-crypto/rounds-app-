@@ -220,17 +220,6 @@ const LETTER_R = "M58.69 74.9 49.45 58.58H45.49V74.9H37.09V33.02H52.81Q57.67 33.
 const WOORD_UNDO = "M105.38 44.98V74.9H97.76V71.12Q96.31 73.06 93.96 74.17Q91.61 75.28 88.85 75.28Q85.34 75.28 82.64 73.79Q79.94 72.31 78.41 69.42Q76.87 66.53 76.87 62.53V44.98H84.43V61.45Q84.43 65.02 86.21 66.94Q87.99 68.85 91.07 68.85Q94.2 68.85 95.98 66.94Q97.76 65.02 97.76 61.45V44.98ZM140.74 57.35V74.9H133.18V58.38Q133.18 54.81 131.4 52.9Q129.62 50.98 126.54 50.98Q123.41 50.98 121.6 52.9Q119.79 54.81 119.79 58.38V74.9H112.23V44.98H119.79V48.71Q121.3 46.77 123.65 45.66Q126 44.55 128.81 44.55Q134.15 44.55 137.45 47.93Q140.74 51.3 140.74 57.35ZM159.1 44.5Q162.01 44.5 164.66 45.77Q167.3 47.04 168.87 49.14V34.94H176.54V74.9H168.87V70.47Q167.47 72.69 164.93 74.04Q162.39 75.39 159.04 75.39Q155.26 75.39 152.13 73.44Q149 71.5 147.19 67.96Q145.38 64.42 145.38 59.83Q145.38 55.3 147.19 51.79Q149 48.28 152.13 46.39Q155.26 44.5 159.1 44.5ZM160.99 51.14Q158.88 51.14 157.1 52.17Q155.32 53.19 154.21 55.16Q153.1 57.13 153.1 59.83Q153.1 62.53 154.21 64.56Q155.32 66.58 157.12 67.66Q158.93 68.74 160.99 68.74Q163.09 68.74 164.93 67.69Q166.76 66.64 167.84 64.67Q168.92 62.7 168.92 59.94Q168.92 57.19 167.84 55.22Q166.76 53.25 164.93 52.19Q163.09 51.14 160.99 51.14ZM181.45 59.94Q181.45 55.35 183.47 51.84Q185.5 48.33 189.01 46.42Q192.52 44.5 196.84 44.5Q201.16 44.5 204.67 46.42Q208.18 48.33 210.2 51.84Q212.23 55.35 212.23 59.94Q212.23 64.53 210.15 68.04Q208.07 71.55 204.53 73.47Q200.99 75.39 196.62 75.39Q192.3 75.39 188.84 73.47Q185.39 71.55 183.42 68.04Q181.45 64.53 181.45 59.94ZM204.45 59.94Q204.45 55.68 202.21 53.38Q199.97 51.09 196.73 51.09Q193.49 51.09 191.3 53.38Q189.11 55.68 189.11 59.94Q189.11 64.21 191.25 66.5Q193.38 68.8 196.62 68.8Q198.67 68.8 200.48 67.8Q202.29 66.8 203.37 64.8Q204.45 62.8 204.45 59.94Z"
 const WOORD_RESTO = "M249.48 74.9 241.16 60.21H237.6V74.9H230.04V37.21H244.19Q248.56 37.21 251.64 38.75Q254.72 40.29 256.26 42.91Q257.8 45.52 257.8 48.76Q257.8 52.49 255.64 55.49Q253.48 58.48 249.21 59.62L258.23 74.9ZM237.6 54.54H243.92Q247 54.54 248.51 53.06Q250.02 51.57 250.02 48.93Q250.02 46.33 248.51 44.9Q247 43.47 243.92 43.47H237.6ZM291.65 62.21H269.78Q270.05 65.45 272.05 67.29Q274.04 69.12 276.96 69.12Q281.17 69.12 282.95 65.5H291.11Q289.81 69.82 286.14 72.61Q282.47 75.39 277.12 75.39Q272.8 75.39 269.37 73.47Q265.94 71.55 264.03 68.04Q262.11 64.53 262.11 59.94Q262.11 55.3 264 51.79Q265.89 48.28 269.29 46.39Q272.69 44.5 277.12 44.5Q281.39 44.5 284.76 46.33Q288.14 48.17 290 51.55Q291.86 54.92 291.86 59.29Q291.86 60.91 291.65 62.21ZM284.03 57.13Q283.98 54.22 281.93 52.46Q279.88 50.71 276.91 50.71Q274.1 50.71 272.18 52.41Q270.26 54.11 269.83 57.13ZM295.15 65.45H302.77Q302.98 67.18 304.47 68.31Q305.95 69.45 308.17 69.45Q310.33 69.45 311.54 68.58Q312.76 67.72 312.76 66.37Q312.76 64.91 311.27 64.18Q309.79 63.45 306.55 62.59Q303.2 61.78 301.06 60.91Q298.93 60.05 297.39 58.27Q295.85 56.49 295.85 53.46Q295.85 50.98 297.28 48.93Q298.72 46.87 301.39 45.69Q304.06 44.5 307.68 44.5Q313.03 44.5 316.21 47.17Q319.4 49.84 319.72 54.38H312.49Q312.32 52.6 311 51.55Q309.68 50.49 307.46 50.49Q305.41 50.49 304.3 51.25Q303.2 52 303.2 53.35Q303.2 54.87 304.71 55.65Q306.22 56.43 309.41 57.24Q312.65 58.05 314.75 58.92Q316.86 59.78 318.4 61.59Q319.94 63.4 319.99 66.37Q319.99 68.96 318.56 71.01Q317.13 73.06 314.46 74.23Q311.78 75.39 308.22 75.39Q304.55 75.39 301.63 74.06Q298.72 72.74 297.01 70.47Q295.31 68.2 295.15 65.45ZM334.4 51.19V65.67Q334.4 67.18 335.13 67.85Q335.86 68.53 337.59 68.53H341.1V74.9H336.35Q326.79 74.9 326.79 65.61V51.19H323.23V44.98H326.79V37.59H334.4V44.98H341.1V51.19ZM344.06 59.94Q344.06 55.35 346.09 51.84Q348.11 48.33 351.62 46.42Q355.13 44.5 359.45 44.5Q363.77 44.5 367.28 46.42Q370.79 48.33 372.82 51.84Q374.84 55.35 374.84 59.94Q374.84 64.53 372.76 68.04Q370.69 71.55 367.15 73.47Q363.61 75.39 359.24 75.39Q354.92 75.39 351.46 73.47Q348.01 71.55 346.03 68.04Q344.06 64.53 344.06 59.94ZM367.07 59.94Q367.07 55.68 364.83 53.38Q362.59 51.09 359.35 51.09Q356.11 51.09 353.92 53.38Q351.73 55.68 351.73 59.94Q351.73 64.21 353.86 66.5Q356 68.8 359.24 68.8Q361.29 68.8 363.1 67.8Q364.91 66.8 365.99 64.8Q367.07 62.8 367.07 59.94Z"
 
-function RundoMerk({ size = 28 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 107 107" style={{ display: "block", flexShrink: 0 }}>
-      <g transform="translate(53.5 53.5)">
-        <path d="M14.90 30.56A34.0 34.0 0 0 1 -33.98 -1.19A34.0 34.0 0 0 1 17.00 -29.44" fill="none" stroke="#F5B301" strokeWidth="8" strokeLinecap="round" />
-        <polygon points="28.26,-22.94 18.40,-37.87 10.40,-24.02" fill="#F5B301" />
-        <text x="-1" y="15" fontSize="48" fontWeight="800" fill="#fff" textAnchor="middle" style={{ fontFamily: "inherit" }}>R</text>
-      </g>
-    </svg>
-  )
-}
 function RundoLogo({
   size = 40,
   opDonker = true,
@@ -395,6 +384,8 @@ const CAT_LABEL: Record<Cat, string> = { Bier: "🍺 Bier", BierAV: "🌿 0,0%-b
 const CAT_EMOJI: Record<Cat, string> = { Bier: "🍺", BierAV: "🌿", Frisdrank: "🥤", Wijn: "🍷", Cocktail: "🍸", Mocktail: "🍹", Longdrink: "🥃", Shot: "🔥", Warm: "☕", Eigen: "⭐" }
 const CUPCAT: Record<Cat, boolean> = { Bier: true, BierAV: true, Frisdrank: true, Wijn: true, Cocktail: true, Mocktail: true, Longdrink: false, Shot: false, Warm: false, Eigen: true }
 
+// Waar Rundo Resto draait. Pas dit aan als het adres wijzigt.
+const RESTO_URL = "/resto"
 const DATA: [Cat, string, number][] = [
   ["Bier", "Pintje", 3.2], ["Bier", "Duvel", 5], ["Bier", "Chimay Blauw", 5.5], ["Bier", "Cornet", 5], ["Bier", "Geuze", 5], ["Bier", "Hoegaarden Wit", 4], ["Bier", "Kriek", 4.5], ["Bier", "La Chouffe", 5], ["Bier", "Leffe Blond", 4.5], ["Bier", "Tripel Karmeliet", 5.5], ["Bier", "Vedett Extra Blond", 4], ["Bier", "Westmalle Tripel", 5],
   ["BierAV", "Jupiler 0.0", 3], ["BierAV", "Stella Artois 0.0", 3], ["BierAV", "Carlsberg 0.0", 3], ["BierAV", "Corona Cero", 3.5], ["BierAV", "Hoegaarden 0.0", 3.5], ["BierAV", "La Chouffe 0.0", 4], ["BierAV", "Leffe Blond 0.0", 3.5], ["BierAV", "Sportzot", 3.5], ["BierAV", "Cornet 0.0", 4], ["BierAV", "Vedett 0.0", 3.5], ["BierAV", "Cristal 0.0", 3], ["BierAV", "Maes 0.0", 3], ["BierAV", "Palm 0.0", 3.5], ["BierAV", "Kriek 0.0", 3.5], ["BierAV", "Duvel 0.0", 4],
@@ -1182,6 +1173,13 @@ const T = {
     modeFairLine: "Eerlijk betalen volgens wat je dronk",
     modeSwitchLater: "Kies je snel noteren, dan kan je op het einde alsnog eerlijk per persoon verdelen.",
     chooseHow: "Kies hoe je wil bestellen",
+    atRestaurantQ: "Op restaurant?",
+    restoTagline: "Scan de rekening, verdeel in groep",
+    restoStep1: "scan de rekening",
+    restoStep2: "deel QR met de groep",
+    restoStep3: "tik aan wat je nam",
+    restoStep4: "eerlijk verdeeld!",
+    tryItBtn: "Probeer het eens",
     youNoteSelf: "Neem zelf op",
     youNote1: "Jij tikt alle drankjes zelf aan",
     youNote2: "Handig barlijstje",
@@ -1987,6 +1985,13 @@ const T = {
     modeFairLine: "Payer équitablement selon ce que tu as bu",
     modeSwitchLater: "Si tu notes en vitesse, tu peux encore r\u00e9partir \u00e9quitablement \u00e0 la fin.",
     chooseHow: "Choisissez comment commander",
+    atRestaurantQ: "Au restaurant\u00a0?",
+    restoTagline: "Scanne l'addition, partage en groupe",
+    restoStep1: "scanne l'addition",
+    restoStep2: "partage le QR",
+    restoStep3: "coche ce que tu as pris",
+    restoStep4: "partag\u00e9 \u00e9quitablement\u00a0!",
+    tryItBtn: "Essaie-le",
     youNoteSelf: "Note toi-même",
     youNote1: "Tu coches toutes les boissons",
     youNote2: "Liste pratique pour le bar",
@@ -2423,6 +2428,7 @@ export default function PartyTest() {
   const [editPotId, setEditPotId] = useState<string | null>(null)
   const [potBuilderOpen, setPotBuilderOpen] = useState(false)
   const [potDetails, setPotDetails] = useState(false)
+  const [restoInfo, setRestoInfo] = useState(false)
   // Wie aanschuift terwijl er al een pot is, staat daar nog niet in: de beheerder
   // vulde de bestaande plaatsen in, en deze plaats bestond toen nog niet. Eén keer
   // vragen of hij meedoet; daarna niet meer.
@@ -7745,9 +7751,10 @@ export default function PartyTest() {
         <style>{`@keyframes rundoWenk{0%,100%{transform:translateX(0);opacity:.6}50%{transform:translateX(3px);opacity:1}}
           @keyframes rundoLoop{from{width:0}to{width:100%}}
           input::placeholder,textarea::placeholder{color:#a7b0bf;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, background: RAND, borderRadius: 14, padding: "13px 16px", marginBottom: 13 }}>
-          <RundoMerk size={27} />
-          <span style={{ fontSize: 20, fontWeight: 500, color: "#fff", letterSpacing: "0.01em" }}>{L.chooseHow}</span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "#0E1A2E", borderRadius: 14, padding: "13px 14px", marginBottom: 13 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/rundo-merk.png" alt="" height={44} style={{ width: "auto", flexShrink: 0, display: "block" }} />
+          <span style={{ fontSize: 22, fontWeight: 500, color: "#fff" }}>{L.chooseHow}</span>
         </div>
 
         <div style={{ ...S.card, padding: "14px 13px" }}>
@@ -8079,6 +8086,41 @@ export default function PartyTest() {
           </span>
           )}
         </div>
+          {/* Verwijzing naar de zusterapp: uitklapbaar, zodat niemand uitleg krijgt
+              die hij niet vroeg. */}
+          <div style={{ marginTop: 12, background: "#fff", border: "1.5px solid rgba(79,209,197,0.6)", borderRadius: 14, padding: 13 }}>
+            {!restoInfo ? (
+              <div onClick={() => setRestoInfo(true)} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 13.5, color: "#4a6e73", flexShrink: 0 }}>{L.atRestaurantQ}</span>
+                <span style={{ marginLeft: "auto" }}><RundoLogo size={19} resto opDonker={false} /></span>
+                <span style={{ flexShrink: 0, fontSize: 12.5, color: "#0f7d90", fontWeight: 700 }}>{L.whatIsThis} ▾</span>
+              </div>
+            ) : (
+              <div style={{ background: "#0d1520", borderRadius: 14, padding: 14, margin: -13, position: "relative" }}>
+                <button onClick={() => setRestoInfo(false)}
+                  style={{ position: "absolute", top: 10, right: 11, width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "none", color: "#9fb8bd", fontSize: 15, cursor: "pointer", fontFamily: "inherit", lineHeight: 1 }}>✕</button>
+                <span style={{ display: "block", marginBottom: 9 }}><RundoLogo size={28} resto /></span>
+                <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 4 }}>
+                  <span style={{ fontSize: 17 }}>🧾</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: "#4FD1C5" }}>{L.restoTagline}</span>
+                </div>
+                {[["📷", L.restoStep1], ["📱", L.restoStep2], ["👆", L.restoStep3], ["💶", L.restoStep4]].map(([icoon, tekst], n) => (
+                  <div key={n} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                    <span style={{ position: "relative", width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.07)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 21, flexShrink: 0 }}>
+                      {icoon}
+                      <span style={{ position: "absolute", top: -4, right: -4, width: 20, height: 20, borderRadius: "50%", background: "#4FD1C5", color: "#0d1520", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800 }}>{n + 1}</span>
+                    </span>
+                    <span style={{ fontSize: 14.5, color: "#cfe3e6" }}>{tekst}</span>
+                  </div>
+                ))}
+                <div style={{ display: "flex", gap: 8, marginTop: 13 }}>
+                  <button onClick={() => setRestoInfo(false)}
+                    style={{ flex: 1, cursor: "pointer", background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 12, padding: 11, fontSize: 14, fontWeight: 600, color: "#9fb8bd", fontFamily: "inherit" }}>{L.closeWord}</button>
+                  <a href={RESTO_URL} style={{ flex: 1.5, textDecoration: "none", background: "linear-gradient(135deg,#4FD1C5,#0d7c8c)", borderRadius: 12, padding: 11, fontSize: 15, fontWeight: 700, color: "#08313a", textAlign: "center" }}>{L.tryItBtn} →</a>
+                </div>
+              </div>
+            )}
+          </div>
       </div></div>
     )
   }
