@@ -752,6 +752,8 @@ const T = {
     yourselfWord: "jezelf",
     aloneHint: "Voorlopig alleen jij",
     canAlsoLater: "Kan ook later",
+    backToOverviewHint: "Er zijn nog rondjes om af te werken.",
+    toRoundsOverview: "Naar het rondjesoverzicht",
     nameLockedNote: "🔒 vast — de avond is afgesloten",
     editNamesBtn: "✏️ Namen aanpassen",
     doneNamesBtn: "✓ Klaar met namen",
@@ -1568,6 +1570,8 @@ const T = {
     yourselfWord: "toi-m\u00eame",
     aloneHint: "Pour l'instant, juste toi",
     canAlsoLater: "Ça peut attendre",
+    backToOverviewHint: "Il reste des tourn\u00e9es \u00e0 finaliser.",
+    toRoundsOverview: "Vers l'aper\u00e7u des tourn\u00e9es",
     nameLockedNote: "🔒 fig\u00e9 — la soir\u00e9e est cl\u00f4tur\u00e9e",
     editNamesBtn: "✏️ Modifier les noms",
     doneNamesBtn: "✓ Noms termin\u00e9s",
@@ -6278,7 +6282,7 @@ export default function PartyTest() {
                   </>
                 ) : (
                   <button style={done ? { ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 10 }}
-                    onClick={() => { if (naarVolgende) setAssignIdx(volgende); else { setAssignIdx(null); setAssignAllMode(false); if (settleNaToewijzen.current) { settleNaToewijzen.current = false; if (done) goQuickSettle() } } }}>
+                    onClick={() => { if (naarVolgende) setAssignIdx(volgende); else { setAssignIdx(null); setAssignAllMode(false); if (settleNaToewijzen.current) { settleNaToewijzen.current = false; if (done) goQuickSettle(); else { setFromQuick(false); setView("roundsOverview") } } } }}>
                     {naarVolgende ? L.nextRoundAssign(volgende + 1) : L.ready}
                   </button>
                 )}
@@ -9450,6 +9454,12 @@ export default function PartyTest() {
         {/* Zolang er nog geen rondje is, is dit het QR-scherm: alleen delen en de pot.
             Een leeg rondjesoverzicht of een "start je eerste rondje"-blok hoort hier niet;
             dat komt vanzelf zodra de eerste bestelling er is. */}
+        {fromQuick && rounds.length > 0 && (
+          <div style={{ ...S.card, textAlign: "center", padding: "22px 18px" }}>
+            <div style={{ fontSize: 16, color: "#6b7484", marginBottom: 14, lineHeight: 1.5 }}>{L.backToOverviewHint}</div>
+            <button style={{ ...S.btnP, width: "100%" }} onClick={() => { setFromQuick(false); setView("roundsOverview") }}>{L.toRoundsOverview}</button>
+          </div>
+        )}
         {fromQuick || (settle && rounds.length === 0) ? null : settle && paidCount === 0 ? (
           <div style={{ ...S.card, textAlign: "center", padding: "28px 18px" }}>
             <div style={{ fontSize: 34, marginBottom: 8 }}>🍻</div>
