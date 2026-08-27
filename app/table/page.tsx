@@ -3619,7 +3619,7 @@ export default function RundoTable() {
   // Verwijzing naar de zusterapp. Dicht is het een strook; open toont het
   // welkomscherm van Rundo, met vanaf daar pas de stap naar de app zelf.
   const renderPartyVerwijzing = () => (
-          <div style={{ marginTop: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(240,193,75,0.4)", borderRadius: 14, padding: 13 }}>
+          <div style={{ marginTop: 32, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(240,193,75,0.4)", borderRadius: 14, padding: 13 }}>
             {!partyInfo ? (
               <div onClick={() => setPartyInfo(true)} style={{ cursor: "pointer" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9 }}>
