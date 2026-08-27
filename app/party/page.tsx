@@ -3084,7 +3084,7 @@ export default function PartyTest() {
   // "Per man × hoeveel man": bij uitgebreid is dat het vaste aantal gasten. (Staat hier
   // omdat de const pas ná de opNaam-declaratie mag rekenen — functies mogen dat wel
   // eerder, directe expressies niet.)
-  const potHoofden = opNaam === true && !settle ? Math.max(1, people.length, headcount) : Math.max(1, headcount)
+  const potHoofden = opNaam === true && !settle ? Math.max(1, people.length) : Math.max(1, headcount)
   const [noteerKeuze, setNoteerKeuze] = useState(false)
   // Koos je "op naam", dan zet je eerst de namen. Daarna verdwijnt dit scherm.
   const [namenSetup, setNamenSetup] = useState(false)
@@ -6041,10 +6041,10 @@ export default function PartyTest() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#eef1f6", borderRadius: 12, padding: 12, marginBottom: 12 }}>
                   <span style={{ fontSize: 15, fontWeight: 800, color: "#1d2942" }}>{L.potHowManyQ}</span>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <button style={{ width: 32, height: 32, borderRadius: "50%", background: "#fff", border: "1px solid rgba(29,41,66,0.25)", fontSize: 20, color: "#6b7484", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
-              <span style={{ fontSize: 21, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#1d2942" }}>{headcount < 1 ? 1 : headcount}</span>
+              <button style={{ width: 32, height: 32, borderRadius: "50%", background: "#fff", border: "1px solid rgba(29,41,66,0.25)", fontSize: 20, color: "#6b7484", fontWeight: 800, cursor: "pointer", opacity: potHoofden > 1 ? 1 : 0.4 }} onClick={() => { if (opNaam === true && !settle) { const laatste = [...people].reverse().find((pp) => !pp.named); if (laatste && people.length > 1) removePerson(laatste.id) } else setHeadcount((n) => Math.max(1, n - 1)) }}>−</button>
+              <span style={{ fontSize: 21, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#1d2942" }}>{potHoofden}</span>
                     <span style={{ fontSize: 13, color: "#6b7484" }}>{L.persWordLow}</span>
-              <button style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", border: "none", fontSize: 20, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 2 : n + 1)}>+</button>
+              <button style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", border: "none", fontSize: 20, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => { if (opNaam === true && !settle) void addPerson(); else setHeadcount((n) => n < 1 ? 2 : n + 1) }}>+</button>
                   </span>
           </div>
           <div style={{ ...S.row, gap: 8, marginBottom: 10 }}>
@@ -6054,7 +6054,7 @@ export default function PartyTest() {
             <span style={{ fontSize: 17, color: "#6b7484", fontWeight: 700, whiteSpace: "nowrap" }}>{L.perManShort}</span>
           </div>
           <div style={{ ...S.row, gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-            {[5, 10, 20].map((v) => (
+            {[10, 20, 30, 40, 50].map((v) => (
               <button key={v} style={{ ...S.btn, flex: 1, padding: "8px 6px", fontSize: 17, fontWeight: 800, background: potPerMan === v ? "linear-gradient(135deg,#3f7fc4,#2f6fb5)" : "#fff", color: potPerMan === v ? "#fff" : "#1d2942", border: potPerMan === v ? "none" : "1px solid rgba(29,41,66,0.18)" }} onClick={() => setPotPerMan(v)}>€{v}</button>
             ))}
             <button style={{ ...S.btn, padding: "8px 11px", fontSize: 15.5, color: "#c0554a" }} onClick={() => setPotPerMan(0)}>↺</button>
