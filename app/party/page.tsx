@@ -688,9 +688,9 @@ const T = {
     confirmPayBtn: "Betaling bevestigen",
     fillAmountHint: "Vul betaalde bedrag in",
     confirmShort: "bevestigen",
-    howMuchFromPot: "Hoeveel uit de pot?",
-    potAll: "alles",
-    potPart: "een deel",
+    potPaysWholeQ: "Betaalt de pot het hele rondje?",
+    yesWord: "ja",
+    noPartOnly: "nee, een deel",
     restOutsidePot: "Rest buiten de pot:",
     potPaidIn: (bedrag: string) => `💰 ingelegd ${bedrag}`,
     roundN: (n: number) => `Ronde ${n}`,
@@ -1506,9 +1506,9 @@ const T = {
     confirmPayBtn: "Confirmer le paiement",
     fillAmountHint: "Indique le montant pay\u00e9",
     confirmShort: "confirmer",
-    howMuchFromPot: "Combien de la cagnotte\u00a0?",
-    potAll: "tout",
-    potPart: "une partie",
+    potPaysWholeQ: "La cagnotte paie toute la tourn\u00e9e\u00a0?",
+    yesWord: "oui",
+    noPartOnly: "non, une partie",
     restOutsidePot: "Reste hors cagnotte\u00a0:",
     potPaidIn: (bedrag: string) => `💰 versé ${bedrag}`,
     roundN: (n: number) => `Tournée ${n}`,
@@ -9350,15 +9350,15 @@ export default function PartyTest() {
                   {potAvail > 0.005 && amount > 0.005 && payVia !== "self" && (
                     <div style={{ background: "#eef4fb", border: "1px solid rgba(47,111,181,0.25)", borderRadius: 11, padding: 11, marginBottom: 12 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 9 }}>
-                        <span style={{ fontSize: 12.5, fontWeight: 800, color: "#2f5693" }}>{L.howMuchFromPot}</span>
+                        <span style={{ fontSize: 13.5, fontWeight: 800, color: "#2f5693", minWidth: 0 }}>{L.potPaysWholeQ}</span>
                         <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6 }}>
                           <span style={{ fontSize: 15, fontWeight: 800, color: "#2f5693", display: "inline-flex", alignItems: "center", gap: 4 }}><ZakjeIcoon size={14} /> {euro(potAvail)}</span>
                           <span onClick={() => setShowPot(true)} style={{ fontSize: 12, fontWeight: 800, color: "#2f6fb5", textDecoration: "underline", cursor: "pointer", whiteSpace: "nowrap" }}>{L.potTopUpPlus}</span>
                         </span>
                       </div>
                       <div style={{ ...S.segBaan, background: "#fff", marginBottom: 10 }}>
-                        {wissel(payVia === "pot", L.potAll, () => { setMixPot(amount); setPayVia("pot") }, "#2f6fb5")}
-                        {wissel(payVia === "mix", L.potPart, () => { const d = Math.round(Math.min(potAvail, amount) * 100) / 100; setMixPot(d); setPayVia("mix") }, "#2f6fb5")}
+                        {wissel(payVia === "pot", `${L.yesWord}, ${euro(amount)}`, () => { setMixPot(amount); setPayVia("pot") }, "#2f6fb5")}
+                        {wissel(payVia === "mix", L.noPartOnly, () => { const d = Math.round(Math.min(potAvail, amount) * 100) / 100; setMixPot(d); setPayVia("mix") }, "#2f6fb5")}
                       </div>
                       {payVia === "pot" ? (
                         /* Alles uit de pot: geen rest, maar wél nuttig om te zeggen wat er
@@ -10182,9 +10182,10 @@ export default function PartyTest() {
                               </div>
                               {uitDePot && (
                                 <div style={{ background: "#eef4fb", border: "1px solid rgba(47,111,181,0.25)", borderRadius: 11, padding: 11, marginTop: 9 }}>
+                                  <div style={{ fontSize: 13.5, fontWeight: 800, color: "#2f5693", marginBottom: 9 }}>{L.potPaysWholeQ}</div>
                                   <div style={{ ...S.segBaan, background: "#fff", marginBottom: 10 }}>
-                                    {wissel(dr.bron === "pot", L.potAll, () => setEditDraft((c) => c ? { ...c, bron: "pot", potAmt: c.amount } : c), "#2f6fb5")}
-                                    {wissel(dr.bron === "mix", L.potPart, () => setEditDraft((c) => c ? { ...c, bron: "mix", potAmt: Math.round(Math.min(beschikbaar, c.amount) * 100) / 100 } : c), "#2f6fb5")}
+                                    {wissel(dr.bron === "pot", `${L.yesWord}, ${euro(dr.amount || 0)}`, () => setEditDraft((c) => c ? { ...c, bron: "pot", potAmt: c.amount } : c), "#2f6fb5")}
+                                    {wissel(dr.bron === "mix", L.noPartOnly, () => setEditDraft((c) => c ? { ...c, bron: "mix", potAmt: Math.round(Math.min(beschikbaar, c.amount) * 100) / 100 } : c), "#2f6fb5")}
                                   </div>
                                   {dr.bron === "pot" ? (
                                     <div style={{ textAlign: "center", fontSize: 14, fontWeight: 700, color: "#2f5693", lineHeight: 1.5 }}>
