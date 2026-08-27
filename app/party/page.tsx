@@ -8319,23 +8319,6 @@ export default function PartyTest() {
         </div>
         )}
         </div>
-        <div style={{ ...S.card, marginBottom: 10 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: "#8b93a3", letterSpacing: "0.05em", marginBottom: 10 }}>{L.sectionExtras}</div>
-          <div style={{ ...S.row, justifyContent: "space-between", gap: 10 }}>
-            <span style={{ fontSize: 17.5, fontWeight: 700 }}>{potIsCard ? L.drinkCard : L.potTitle} <span style={{ fontSize: 15.5, fontWeight: 600, color: "#6b7484" }}>— optioneel</span></span>
-            {potContribTotal > 0.005 ? (
-              // Twee cijfers die er echt toe doen: wat erin ging, en wat er nu nog is.
-              <button style={{ ...S.btn, padding: "8px 13px", textAlign: "right", lineHeight: 1.3, flexShrink: 0 }} onClick={() => setShowPot(true)}>
-                <span style={{ display: "block", fontSize: 15, color: "#6b7484", fontWeight: 700 }}>{L.potInShort} {euro(potContribTotal)}</span>
-                <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: potRemaining > 0.005 ? "#1f8a4c" : "#c0554a" }}>{L.potStillIn} {euro(Math.max(0, potRemaining))}</span>
-              </button>
-            ) : (
-              <button style={{ ...S.btn, padding: "6px 12px", fontSize: 17, flexShrink: 0 }} onClick={() => setShowPot(true)}>+ inleggen</button>
-            )}
-          </div>
-          {potChosen && potContribTotal <= 0.005 && <div style={{ marginTop: 8, textAlign: "right" }}><span onClick={() => setPotChosen(false)} style={{ fontSize: 15.5, color: "#c0554a", fontWeight: 700, cursor: "pointer" }}>✕ toch niet</span></div>}
-
-        </div>
         <div style={{ marginTop: 24 }}>
           {(() => {
             // In snelle rondjes telt een rondje als "afgehandeld" zodra het bevestigd of
