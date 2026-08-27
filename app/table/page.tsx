@@ -3734,7 +3734,7 @@ export default function RundoTable() {
               <div style={{ display: "flex", gap: 8, marginTop: 13 }}>
                 <button onClick={() => setPartyInfo(false)}
                   style={{ flex: 1, cursor: "pointer", background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 12, padding: 11, fontSize: 14, fontWeight: 600, color: "#cbbf9e", fontFamily: "inherit" }}>{L.closeBtn}</button>
-                <a href={PARTY_URL} style={{ flex: 1.5, textDecoration: "none", background: "linear-gradient(135deg,#f5c451,#e0a020)", borderRadius: 12, padding: 11, fontSize: 15, fontWeight: 700, color: "#2a2110", textAlign: "center" }}>{L.tryItOut} \u2192</a>
+                <a href={PARTY_URL} style={{ flex: 1.5, textDecoration: "none", background: "linear-gradient(135deg,#f5c451,#e0a020)", borderRadius: 12, padding: 11, fontSize: 15, fontWeight: 700, color: "#2a2110", textAlign: "center" }}>{L.tryItOut} →</a>
               </div>
             </div>
           )}
