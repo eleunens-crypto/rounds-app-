@@ -8069,25 +8069,6 @@ export default function PartyTest() {
           )}
         </div>
 
-        {/* De testgroep zelf staat gewoon in de lijst hierboven en blijft daar staan.
-            Deze regel maakt hem aan, of zet hem in één tik terug op nul. */}
-        <div style={{ textAlign: "center", marginTop: 20 }}>
-          {typeof window !== "undefined" && window.location.hostname === "localhost" && (
-          <span
-            onClick={() => {
-              if (busy) return
-              if (!testGroep) { maakTestgroep(); return }
-              setConfirmDlg({
-                msg: "Testgroep opnieuw opzetten? Alles wat er nu in staat gaat weg.",
-                yes: "Opnieuw opzetten", no: L.cancel, variant: "danger",
-                onYes: () => { setConfirmDlg(null); maakTestgroep() },
-              })
-            }}
-            style={{ display: "inline-block", padding: "7px 15px", borderRadius: 20, fontSize: 14, fontWeight: 700, cursor: "pointer", background: "#fff", border: "1px dashed rgba(29,41,66,0.3)", color: "#8b93a3", opacity: busy ? 0.5 : 1 }}>
-            {testGroep ? "↺ Testgroep opnieuw opzetten" : "🧪 Testgroep aanmaken"}
-          </span>
-          )}
-        </div>
           {/* Verwijzing naar de zusterapp: uitklapbaar, zodat niemand uitleg krijgt
               die hij niet vroeg. */}
           <div style={{ marginTop: 12, background: "#fff", border: "1.5px solid rgba(79,209,197,0.6)", borderRadius: 14, padding: 13 }}>
@@ -8132,6 +8113,25 @@ export default function PartyTest() {
               </div>
             )}
           </div>
+        {/* De testgroep zelf staat gewoon in de lijst hierboven en blijft daar staan.
+            Deze regel maakt hem aan, of zet hem in één tik terug op nul. */}
+        <div style={{ textAlign: "center", marginTop: 20 }}>
+          {typeof window !== "undefined" && window.location.hostname === "localhost" && (
+          <span
+            onClick={() => {
+              if (busy) return
+              if (!testGroep) { maakTestgroep(); return }
+              setConfirmDlg({
+                msg: "Testgroep opnieuw opzetten? Alles wat er nu in staat gaat weg.",
+                yes: "Opnieuw opzetten", no: L.cancel, variant: "danger",
+                onYes: () => { setConfirmDlg(null); maakTestgroep() },
+              })
+            }}
+            style={{ display: "inline-block", padding: "7px 15px", borderRadius: 20, fontSize: 14, fontWeight: 700, cursor: "pointer", background: "#fff", border: "1px dashed rgba(29,41,66,0.3)", color: "#8b93a3", opacity: busy ? 0.5 : 1 }}>
+            {testGroep ? "↺ Testgroep opnieuw opzetten" : "🧪 Testgroep aanmaken"}
+          </span>
+          )}
+        </div>
       </div></div>
     )
   }
