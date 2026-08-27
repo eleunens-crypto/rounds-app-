@@ -686,6 +686,8 @@ const T = {
     wholeRoundFromPot: "Het hele rondje gaat uit de pot.",
     potLeftAfter: "Daarna blijft er in de pot:",
     confirmPayBtn: "Betaling bevestigen",
+    fillAmountHint: "Vul betaalde bedrag in",
+    confirmShort: "bevestigen",
     howMuchFromPot: "Hoeveel uit de pot?",
     potAll: "alles",
     potPart: "een deel",
@@ -1500,6 +1502,8 @@ const T = {
     wholeRoundFromPot: "Toute la tourn\u00e9e sort de la cagnotte.",
     potLeftAfter: "Il restera dans la cagnotte\u00a0:",
     confirmPayBtn: "Confirmer le paiement",
+    fillAmountHint: "Indique le montant pay\u00e9",
+    confirmShort: "confirmer",
     howMuchFromPot: "Combien de la cagnotte\u00a0?",
     potAll: "tout",
     potPart: "une partie",
@@ -9139,6 +9143,8 @@ export default function PartyTest() {
   if (view === "hub") {
     return (
       <div style={S.page}><div style={S.wrap}>
+        <style>{`@keyframes rundoVeldWenk{0%,100%{border-color:rgba(224,138,0,0.4);box-shadow:0 0 0 0 rgba(224,138,0,0)}50%{border-color:rgba(224,138,0,0.9);box-shadow:0 0 0 4px rgba(224,138,0,0.13)}}
+          .rundo-veld-wenk{animation:rundoVeldWenk 2s ease-in-out infinite}`}</style>
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
@@ -9311,7 +9317,7 @@ export default function PartyTest() {
                   dat pas open wanneer het ergens over gaat. */}
               <div style={{ display: "flex", gap: 7, alignItems: "center", marginBottom: 12 }}>
                 <span style={{ fontSize: 17, fontWeight: 800, color: "#6b7484" }}>€</span>
-                <input {...bedragVeld(`hub-${idx}`, amount, (v) => qSetAmount(idx, v))}
+                <input className={amount <= 0.005 ? "rundo-veld-wenk" : undefined} {...bedragVeld(`hub-${idx}`, amount, (v) => qSetAmount(idx, v))}
                   onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
                   style={{ ...S.input, flex: 1, minWidth: 0, textAlign: "left", fontSize: 19, fontWeight: 800, border: `1.5px solid ${amount > 0.005 ? RAND : "rgba(29,41,66,0.25)"}`, color: "#1d2942" }} />
               </div>
@@ -9377,21 +9383,23 @@ export default function PartyTest() {
                   )}
 
                   <button className={amount > 0.005 && !teVeel ? (potdeel > 0.005 ? "rundo-pulse-pot" : "rundo-pulse-amber") : undefined}
-                    style={{ width: "100%", border: "none", borderRadius: 12, padding: "13px 0", fontSize: 16.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: "#fff",
-                      background: amount <= 0.005 ? "#b9c2cf" : potdeel > 0.005 ? "#2f6fb5" : "#e08a00",
+                    style={{ width: "100%", boxSizing: "border-box", borderRadius: 12, padding: "13px 0", fontSize: 16, fontWeight: 700, cursor: amount > 0.005 ? "pointer" : "default", fontFamily: "inherit",
+                      border: amount <= 0.005 ? "1.5px dashed rgba(224,138,0,0.55)" : "1.5px solid transparent",
+                      color: amount <= 0.005 ? "#a8720a" : "#fff",
+                      background: amount <= 0.005 ? "rgba(240,165,0,0.1)" : potdeel > 0.005 ? "#2f6fb5" : "#e08a00",
                       boxShadow: amount > 0.005 ? `0 3px 10px -3px ${potdeel > 0.005 ? "rgba(47,111,181,0.7)" : "rgba(224,138,0,0.7)"}` : "none" }}
                     onClick={() => { (document.activeElement as HTMLElement)?.blur?.(); if (amount > 0.005) confirmQuickPay() }}>
-                    ✓ {L.confirmPayBtn}</button>
+                    {amount <= 0.005 ? <>{L.fillAmountHint}&nbsp;&nbsp;&nbsp;↑</> : <>✓ {euro(amount)} {L.confirmShort}</>}</button>
                 </>)
               })()}
 
                 {/* Overslaan hoort bij de betaalkaart, niet eronder: anders lijkt een
-                    bedrag invullen de enige weg. Zelfde amber en stippellijn als de
-                    strook over niet-toegewezen drankjes erboven. */}
-                <div style={{ background: "rgba(240,165,0,0.09)", borderTop: "1.5px dashed rgba(240,165,0,0.5)", margin: "13px -13px -13px", padding: "11px 13px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", minWidth: 0 }}>{L.canAlsoLater}</span>
+                    bedrag invullen de enige weg. De zin staat tegen de knop aan, zodat
+                    de nabijheid het verband legt. */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 9, marginTop: 11 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "#8b7d5e" }}>{L.canAlsoLater}</span>
                   <button onClick={() => closeQuickRound(true)}
-                    style={{ flexShrink: 0, cursor: "pointer", background: "#fff", border: "1px solid rgba(29,41,66,0.25)", borderRadius: 10, padding: "9px 15px", fontSize: 14, fontWeight: 700, color: "#4a5567", fontFamily: "inherit" }}>{L.skipWord}</button>
+                    style={{ flexShrink: 0, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", borderRadius: 11, padding: "9px 15px", fontSize: 14, fontWeight: 700, color: "#1d2942", fontFamily: "inherit" }}>{L.skipWord}</button>
                 </div>
               </div>
             </div>
