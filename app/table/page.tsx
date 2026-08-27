@@ -3703,6 +3703,7 @@ export default function RundoTable() {
   if (!group && welkom && !viaLink) {
     return (
       <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 18px", boxSizing: "border-box" }}>
+        <style>{`@keyframes rundoStartWenk{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.022);filter:brightness(1.07)}}`}</style>
         <div style={{ maxWidth: 460, margin: "0 auto", padding: "18px 16px" }}>
           <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, marginBottom: 42 }}>
             <div style={{ transform: "scale(1.45)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
@@ -3738,7 +3739,7 @@ export default function RundoTable() {
               </div>
             </div>
           <button onClick={() => setWelkom(false)}
-            style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "17px", border: "none", fontSize: 20, fontWeight: 800, color: "#fff", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#3bbfc4,#0d7c8c)" }}>
+            style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "21px", border: "none", fontSize: 22, fontWeight: 800, animation: "rundoStartWenk 2.2s ease-in-out infinite", color: "#fff", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#3bbfc4,#0d7c8c)" }}>
             {L.welkomStart}
           </button>
           </div>
