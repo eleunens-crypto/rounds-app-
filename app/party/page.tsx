@@ -6115,6 +6115,53 @@ export default function PartyTest() {
       </div>
     </div>
   )
+  // Verwijzing naar de zusterapp. Dicht is het een strook; open toont ze het
+  // welkomscherm van Resto, met vanaf daar pas de stap naar de app zelf.
+  const renderRestoVerwijzing = (opDonker = true) => (
+            <div style={{ marginTop: 12, background: opDonker ? "rgba(255,255,255,0.04)" : "#fff", border: `1${opDonker ? "px" : ".5px"} solid rgba(79,209,197,0.${opDonker ? "45" : "6"})`, borderRadius: 14, padding: 13 }}>
+              {!restoInfo ? (
+                <div onClick={() => setRestoInfo(true)} style={{ cursor: "pointer" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9 }}>
+                    <span style={{ fontSize: 13.5, color: opDonker ? "#9fb0b3" : "#4a6e73", minWidth: 0, lineHeight: 1.35 }}>{L.atRestaurantQ}</span>
+                    <span style={{ marginLeft: "auto", flexShrink: 0 }}><RundoLogo size={26} resto opDonker={opDonker} /></span>
+                  </div>
+                  <div style={{ borderTop: "1px solid rgba(79,209,197,0.3)", paddingTop: 9, textAlign: "center", fontSize: 13, color: opDonker ? "#4FD1C5" : "#0f7d90", fontWeight: 700 }}>{L.seeWhatRestoDoes} ▾</div>
+                </div>
+              ) : (
+                <div style={{ background: "#0d1520", borderRadius: 14, padding: 14, margin: -13, position: "relative" }}>
+                  <button onClick={() => setRestoInfo(false)}
+                    style={{ position: "absolute", top: 10, right: 11, width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "none", color: "#9fb8bd", fontSize: 15, cursor: "pointer", fontFamily: "inherit", lineHeight: 1 }}>✕</button>
+                  <span style={{ display: "block", marginBottom: 10 }}><RundoLogo size={40} resto /></span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 4 }}>
+                    <span style={{ fontSize: 17 }}>🧾</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: "#4FD1C5" }}>{L.restoTagline}</span>
+                  </div>
+                  {/* Om beurten links en rechts, net als op het echte welkomscherm van
+                      Resto: dat leest als een pad in plaats van een lijst. */}
+                  <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+                    {[["📷", L.restoStep1], ["📱", L.restoStep2], ["👆", L.restoStep3], ["💶", L.restoStep4]].map(([icoon, tekst], n, rij) => (
+                      <div key={n} style={{ display: "flex", justifyContent: "center", padding: "8px 0",
+                        borderBottom: n < rij.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 12, flexDirection: n % 2 === 1 ? "row-reverse" : "row" }}>
+                          <span style={{ position: "relative", flexShrink: 0, width: 46, height: 46, borderRadius: "50%", background: "rgba(91,159,214,0.16)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
+                            {icoon}
+                            <span style={{ position: "absolute", top: -5, right: -6, width: 21, height: 21, borderRadius: "50%", background: "#5b9fd6", color: "#0f1c26", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11.5, fontWeight: 800 }}>{n + 1}</span>
+                          </span>
+                          <span style={{ fontSize: 15, fontWeight: 500, color: "#d9d2bd" }}>{tekst}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 13 }}>
+                    <button onClick={() => setRestoInfo(false)}
+                      style={{ flex: 1, cursor: "pointer", background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 12, padding: 11, fontSize: 14, fontWeight: 600, color: "#9fb8bd", fontFamily: "inherit" }}>{L.closeWord}</button>
+                    <a href={RESTO_URL} style={{ flex: 1.5, textDecoration: "none", background: "linear-gradient(135deg,#4FD1C5,#0d7c8c)", borderRadius: 12, padding: 11, fontSize: 15, fontWeight: 700, color: "#08313a", textAlign: "center" }}>{L.tryItBtn} →</a>
+                  </div>
+                </div>
+              )}
+            </div>
+  )
+
   const renderDialogs = () => (
     <>
         {assignIdx !== null && rounds[assignIdx] && (() => {
@@ -6242,6 +6289,7 @@ export default function PartyTest() {
               <button style={{ ...S.btn, flex: 1, fontSize: 15.5, fontWeight: 800 }} onClick={() => { void deelAfrekening() }}>{L.shareBillBtn}</button>
               <button style={{ ...S.btnP, flex: 1, fontSize: 15.5, fontWeight: 800 }} onClick={() => { setAfsluitKaart(false); setNotice(L.thanksClosed); goSiteHome() }}>{L.ready}</button>
             </div>
+              <div style={{ marginTop: 12 }}>{renderRestoVerwijzing(false)}</div>
           </div>
         </div>
       )}
@@ -7741,50 +7789,7 @@ export default function PartyTest() {
             {L.welkomStart}
           </button>
         </div>
-          {/* Verwijzing naar de zusterapp: uitklapbaar, zodat niemand uitleg krijgt
-              die hij niet vroeg. */}
-          <div style={{ marginTop: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(79,209,197,0.45)", borderRadius: 14, padding: 13 }}>
-            {!restoInfo ? (
-              <div onClick={() => setRestoInfo(true)} style={{ cursor: "pointer" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9 }}>
-                  <span style={{ fontSize: 13.5, color: "#9fb0b3", minWidth: 0, lineHeight: 1.35 }}>{L.atRestaurantQ}</span>
-                  <span style={{ marginLeft: "auto", flexShrink: 0 }}><RundoLogo size={26} resto /></span>
-                </div>
-                <div style={{ borderTop: "1px solid rgba(79,209,197,0.3)", paddingTop: 9, textAlign: "center", fontSize: 13, color: "#4FD1C5", fontWeight: 700 }}>{L.seeWhatRestoDoes} ▾</div>
-              </div>
-            ) : (
-              <div style={{ background: "#0d1520", borderRadius: 14, padding: 14, margin: -13, position: "relative" }}>
-                <button onClick={() => setRestoInfo(false)}
-                  style={{ position: "absolute", top: 10, right: 11, width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "none", color: "#9fb8bd", fontSize: 15, cursor: "pointer", fontFamily: "inherit", lineHeight: 1 }}>✕</button>
-                <span style={{ display: "block", marginBottom: 10 }}><RundoLogo size={40} resto /></span>
-                <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 4 }}>
-                  <span style={{ fontSize: 17 }}>🧾</span>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: "#4FD1C5" }}>{L.restoTagline}</span>
-                </div>
-                {/* Om beurten links en rechts, net als op het echte welkomscherm van
-                    Resto: dat leest als een pad in plaats van een lijst. */}
-                <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
-                  {[["📷", L.restoStep1], ["📱", L.restoStep2], ["👆", L.restoStep3], ["💶", L.restoStep4]].map(([icoon, tekst], n, rij) => (
-                    <div key={n} style={{ display: "flex", justifyContent: "center", padding: "8px 0",
-                      borderBottom: n < rij.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 12, flexDirection: n % 2 === 1 ? "row-reverse" : "row" }}>
-                        <span style={{ position: "relative", flexShrink: 0, width: 46, height: 46, borderRadius: "50%", background: "rgba(91,159,214,0.16)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
-                          {icoon}
-                          <span style={{ position: "absolute", top: -5, right: -6, width: 21, height: 21, borderRadius: "50%", background: "#5b9fd6", color: "#0f1c26", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11.5, fontWeight: 800 }}>{n + 1}</span>
-                        </span>
-                        <span style={{ fontSize: 15, fontWeight: 500, color: "#d9d2bd" }}>{tekst}</span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ display: "flex", gap: 8, marginTop: 13 }}>
-                  <button onClick={() => setRestoInfo(false)}
-                    style={{ flex: 1, cursor: "pointer", background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 12, padding: 11, fontSize: 14, fontWeight: 600, color: "#9fb8bd", fontFamily: "inherit" }}>{L.closeWord}</button>
-                  <a href={RESTO_URL} style={{ flex: 1.5, textDecoration: "none", background: "linear-gradient(135deg,#4FD1C5,#0d7c8c)", borderRadius: 12, padding: 11, fontSize: 15, fontWeight: 700, color: "#08313a", textAlign: "center" }}>{L.tryItBtn} →</a>
-                </div>
-              </div>
-            )}
-          </div>
+          {renderRestoVerwijzing(true)}
       </div>
     )
   }
