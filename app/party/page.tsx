@@ -3084,7 +3084,7 @@ export default function PartyTest() {
   // "Per man × hoeveel man": bij uitgebreid is dat het vaste aantal gasten. (Staat hier
   // omdat de const pas ná de opNaam-declaratie mag rekenen — functies mogen dat wel
   // eerder, directe expressies niet.)
-  const potHoofden = opNaam === true && !settle ? Math.max(1, people.length) : Math.max(1, headcount)
+  const potHoofden = opNaam === true && !settle ? Math.max(1, people.length, headcount) : Math.max(1, headcount)
   const [noteerKeuze, setNoteerKeuze] = useState(false)
   // Koos je "op naam", dan zet je eerst de namen. Daarna verdwijnt dit scherm.
   const [namenSetup, setNamenSetup] = useState(false)
