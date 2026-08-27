@@ -673,7 +673,8 @@ const T = {
     myTab: "🧾 Mijn stand",
     noRoundClosed: "Er is nog geen rondje afgesloten.",
     whatYouDrank: "Wat jij dronk",
-    whatDidItCost: "WAT KOSTTE DIT RONDJE?",
+    whatDidItCost: "Wat kostte dit rondje?",
+    costLabel: "WAT KOSTTE DIT RONDJE?",
     whoPutMoney: "Wie legde het geld neer?",
     pickWhoPaid: "Kies wie betaalde.",
     splitEvenNote: "Gelijk verdeeld \u2014 pas aan per persoon indien nodig",
@@ -748,7 +749,7 @@ const T = {
     youTag: "jij",
     yourselfWord: "jezelf",
     aloneHint: "Voorlopig alleen jij",
-    canAlsoLater: "kan ook later",
+    canAlsoLater: "Kan ook later",
     nameLockedNote: "🔒 vast — de avond is afgesloten",
     editNamesBtn: "✏️ Namen aanpassen",
     doneNamesBtn: "✓ Klaar met namen",
@@ -1261,6 +1262,7 @@ const T = {
     tryPartHint: "Kies \u201ceen deel\u201d om de rest zelf te betalen.",
     potWord: "pot",
     skipPayment: "Betaling overslaan",
+    skipWord: "Overslaan",
     later: "Later",
     back: "Terug",
     quickSettleTitle: "Afrekenen",
@@ -1485,7 +1487,8 @@ const T = {
     myTab: "🧾 Mon compte",
     noRoundClosed: "Aucune tournée n'est encore clôturée.",
     whatYouDrank: "Ce que tu as bu",
-    whatDidItCost: "COMBIEN A CO\u00dbT\u00c9 CETTE TOURN\u00c9E\u00a0?",
+    whatDidItCost: "Combien a co\u00fbt\u00e9 cette tourn\u00e9e\u00a0?",
+    costLabel: "COMBIEN A CO\u00dbT\u00c9 CETTE TOURN\u00c9E\u00a0?",
     whoPutMoney: "Qui a avanc\u00e9 l'argent\u00a0?",
     pickWhoPaid: "Choisis qui a pay\u00e9.",
     splitEvenNote: "R\u00e9parti \u00e9galement \u2014 ajuste par personne si besoin",
@@ -1560,7 +1563,7 @@ const T = {
     youTag: "toi",
     yourselfWord: "toi-m\u00eame",
     aloneHint: "Pour l'instant, juste toi",
-    canAlsoLater: "peut aussi se faire plus tard",
+    canAlsoLater: "Ça peut attendre",
     nameLockedNote: "🔒 fig\u00e9 — la soir\u00e9e est cl\u00f4tur\u00e9e",
     editNamesBtn: "✏️ Modifier les noms",
     doneNamesBtn: "✓ Noms termin\u00e9s",
@@ -2074,6 +2077,7 @@ const T = {
     tryPartHint: "Choisis \u00ab une partie \u00bb pour payer le reste toi-m\u00eame.",
     potWord: "cagnotte",
     skipPayment: "Passer le paiement",
+    skipWord: "Passer",
     later: "Plus tard",
     back: "Retour",
     quickSettleTitle: "R\u00e9gler",
@@ -6118,7 +6122,7 @@ export default function PartyTest() {
   // Verwijzing naar de zusterapp. Dicht is het een strook; open toont ze het
   // welkomscherm van Resto, met vanaf daar pas de stap naar de app zelf.
   const renderRestoVerwijzing = (opDonker = true) => (
-            <div style={{ marginTop: 12, background: opDonker ? "rgba(255,255,255,0.04)" : "#fff", border: `1${opDonker ? "px" : ".5px"} solid rgba(79,209,197,0.${opDonker ? "45" : "6"})`, borderRadius: 14, padding: 13 }}>
+            <div style={{ marginTop: 32, background: opDonker ? "rgba(255,255,255,0.04)" : "#fff", border: `1${opDonker ? "px" : ".5px"} solid rgba(79,209,197,0.${opDonker ? "45" : "6"})`, borderRadius: 14, padding: 13 }}>
               {!restoInfo ? (
                 <div onClick={() => setRestoInfo(true)} style={{ cursor: "pointer" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9 }}>
@@ -9298,14 +9302,13 @@ export default function PartyTest() {
                   als het personenpaneel erboven, zodat het blok als één ding leest. */}
               <div style={{ background: VLAK1, border: `1px solid ${themaNaam ? "rgba(59,72,106,0.16)" : "rgba(29,41,66,0.14)"}`, borderRadius: 12, padding: 11 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 9, paddingBottom: 8, borderBottom: `1px solid ${themaNaam ? "rgba(59,72,106,0.14)" : "rgba(29,41,66,0.12)"}` }}>
-                <span style={{ fontSize: 17, fontWeight: 800, color: "#1d2942" }}>💶 {L.paidForRoundQ(idx + 1)}</span>
+                <span style={{ fontSize: 17, fontWeight: 800, color: "#1d2942" }}>💶 {L.whatDidItCost}</span>
                 <span onClick={() => setShowPot(true)} style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#2f6fb5", cursor: "pointer", textDecoration: "underline", lineHeight: 1.2 }}>{L.potTopUpPlus}</span>
               </div>
               {/* Eén bedrag, dan één vraag — en die tweede vraag pas als er iets in de pot
                   zit. Bij een leeg bedrag toonde het scherm eerder al de hele potvraag met
                   een tweede veld en een rekenregel, over geld dat er nog niet was. Nu klapt
                   dat pas open wanneer het ergens over gaat. */}
-              <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: "0.04em", color: "#1d2942", marginBottom: 9 }}>{L.whatDidItCost}</div>
               <div style={{ display: "flex", gap: 7, alignItems: "center", marginBottom: 12 }}>
                 <span style={{ fontSize: 17, fontWeight: 800, color: "#6b7484" }}>€</span>
                 <input {...bedragVeld(`hub-${idx}`, amount, (v) => qSetAmount(idx, v))}
@@ -9382,12 +9385,16 @@ export default function PartyTest() {
                 </>)
               })()}
 
+                {/* Overslaan hoort bij de betaalkaart, niet eronder: anders lijkt een
+                    bedrag invullen de enige weg. Zelfde amber en stippellijn als de
+                    strook over niet-toegewezen drankjes erboven. */}
+                <div style={{ background: "rgba(240,165,0,0.09)", borderTop: "1.5px dashed rgba(240,165,0,0.5)", margin: "13px -13px -13px", padding: "11px 13px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 800, color: "#8a5e0f", minWidth: 0 }}>{L.canAlsoLater}</span>
+                  <button onClick={() => closeQuickRound(true)}
+                    style={{ flexShrink: 0, cursor: "pointer", background: "#fff", border: "1px solid rgba(29,41,66,0.25)", borderRadius: 10, padding: "9px 15px", fontSize: 14, fontWeight: 700, color: "#4a5567", fontFamily: "inherit" }}>{L.skipWord}</button>
+                </div>
               </div>
             </div>
-            {/* Overslaan is geen manier van betalen maar de keuze om het nu niet te doen:
-                daarom een eigen knop onder de kaart, niet binnen de betaalafdeling. */}
-            <button style={{ ...S.btn, width: "100%", marginTop: 10, padding: "12px 0", fontSize: 15.5, fontWeight: 600, borderRadius: 12, color: "#1d2942" }}
-              onClick={() => closeQuickRound(true)}>{L.skipPayment}</button>
           </>
           )
         })()}
@@ -9513,7 +9520,7 @@ export default function PartyTest() {
 
                   {editPay && (
                     <div style={{ marginTop: 10, background: "#eef1f6", borderRadius: 12, padding: 10 }}>
-                      <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: "0.04em", color: "#1d2942", marginBottom: 9 }}>{L.whatDidItCost}</div>
+                      <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: "0.04em", color: "#1d2942", marginBottom: 9 }}>{L.costLabel}</div>
                       <div style={{ ...S.row, gap: 8, marginBottom: 12 }}>
                         <span style={{ fontSize: 17, fontWeight: 800, color: "#6b7484" }}>€</span>
                         <input style={{ ...S.input, width: 110, fontSize: 19, borderColor: (r.amount || 0) <= 0 ? "#e0685c" : "rgba(29,41,66,0.22)" }} type="text" inputMode="decimal" value={r.amount || ""} onChange={(e) => rSetAmount(idx, parseFloat(e.target.value.replace(",", ".")) || 0)} />
