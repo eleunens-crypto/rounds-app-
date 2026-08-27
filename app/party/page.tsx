@@ -1050,6 +1050,7 @@ const T = {
     equalAnyway: "Toch gelijk verdelen",
     total: "Totaal",
     perPerson: "per persoon",
+    perDrink: "per drankje",
     drank: "dronk",
     togetherDrank: "Totaal",
     depositAdvanced: "waarborg (voorgeschoten)",
@@ -1868,6 +1869,7 @@ const T = {
     equalAnyway: "Répartir également quand même",
     total: "Total",
     perPerson: "par personne",
+    perDrink: "par boisson",
     drank: "a bu",
     togetherDrank: "Total",
     depositAdvanced: "caution (avancée)",
@@ -6210,7 +6212,7 @@ export default function PartyTest() {
                 )}
                 <div style={{ ...S.segBaan, marginLeft: "auto", marginBottom: 8, width: "fit-content" }}>
                   <div style={{ ...S.seg(editAssignMode === "person"), padding: "6px 12px", fontSize: 14.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
-                  <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 15, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>per drank</div>
+                  <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 15, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>{L.perDrink}</div>
                 </div>
 
                 {toonIdx.map((idx) => {
@@ -8880,13 +8882,11 @@ export default function PartyTest() {
         {showAssignAll && (
           <div style={S.overlay} onClick={() => setShowAssignAll(false)}>
             <div style={{ ...S.sheet, maxHeight: "82vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
-                <h3 style={{ ...S.h3, margin: 0, fontSize: 21.5 }}>{L.assign}</h3>
-                <div style={{ ...S.segBaan }}>
-                  <div style={{ ...S.seg(assignMode === "person"), padding: "6px 12px", fontSize: 14.5, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("person")}>{L.perPerson}</div>
-                  <div style={{ ...S.seg(assignMode === "drink"), padding: "6px 10px", fontSize: 15.5, minWidth: 82, textAlign: "center" }} onClick={() => setAssignMode("drink")}>per drank</div>
+                <h3 style={{ ...S.h3, margin: "0 0 10px", fontSize: 21.5, textAlign: "center" }}>{L.assign}</h3>
+                <div style={{ ...S.segBaan, marginBottom: 10 }}>
+                  <div style={{ ...S.seg(assignMode === "person"), flex: 1, padding: "10px 8px", fontSize: 15.5, textAlign: "center" }} onClick={() => setAssignMode("person")}>{L.perPerson}</div>
+                  <div style={{ ...S.seg(assignMode === "drink"), flex: 1, padding: "10px 8px", fontSize: 15.5, textAlign: "center" }} onClick={() => setAssignMode("drink")}>{L.perDrink}</div>
                 </div>
-              </div>
               {/* Namen vergeten in te vullen? Hier aanpassen, zonder het venster of je
                   toewijzingen te verlaten — alles hangt aan nummers, dus de nieuwe naam
                   verschijnt overal. */}
@@ -10076,13 +10076,6 @@ export default function PartyTest() {
                       </div>
                     )
                   })()}
-                  {/* Kwam je aanvullen? Dan hoef je niet eerst open te klappen. */}
-                  {invulRij && (
-                    <div style={{ textAlign: "right", marginTop: 7 }}>
-                      <span onClick={(e) => { e.stopPropagation(); setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r) }}
-                        style={{ fontSize: 15, fontWeight: 800, color: "#6b4a00", cursor: "pointer", textDecoration: "underline", whiteSpace: "nowrap" }}>{L.addAmountBtn}</span>
-                    </div>
-                  )}
                 </div>
                 {open && (() => {
                   const idx = rounds.indexOf(r)
