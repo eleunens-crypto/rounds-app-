@@ -607,7 +607,6 @@ const T = {
     persWord: "Pers.",
     persWordLow: "pers.",
     tapForStrip: "Je tikt aan voor",
-    togetherHint: "Tik drankjes aan voor iedereen — geen namen nodig.",
     completeWord: "✓ compleet",
     noAmountShort: "Nog geen bedrag",
     missRoundsNote: (n: number) => `Nog ${n} rondje${n === 1 ? "" : "s"} aanvullen voor een eerlijke verdeling`,
@@ -1278,6 +1277,7 @@ const T = {
     quickSettleTitle: "Afrekenen",
     fairSubtitle: "eerlijk verdelen",
     quickTotalLabel: (n: number) => `Totaal van ${n} ${n === 1 ? "rondje" : "rondjes"}`,
+    noAmountsYet: "Nog geen bedragen ingevuld",
     quickTotalOf: (t: number) => `(van in totaal ${t} ${t === 1 ? "rondje" : "rondjes"})`,
     andWord: "en",
     roundsNoAmountNamed: (lijst: string) => `Rondje ${lijst} zonder bedrag`,
@@ -1299,6 +1299,9 @@ const T = {
     fastest: "snelste",
     fairest: "eerlijkste",
     payersTitle: "Wie betaalde?",
+    roundCount: (n: number) => `${n} ${n === 1 ? "rondje" : "rondjes"}`,
+    stillToAssign: (v: string) => `${v} nog toe te wijzen`,
+    whoPaidThisRound: "Wie betaalde dit rondje?",
     sameForAll: "Dezelfde betaler voor alle rondjes",
     toFinal: "Eindbalans — eerlijk verdeeld",
     missingPayer: (n: number) => `Nog ${n} ${n === 1 ? "rondje" : "rondjes"} zonder bedrag of betaler`,
@@ -1318,7 +1321,6 @@ const T = {
     splitEvenShort: (n: number) => `Gelijk over ${n}`,
     perPersonShort: "Per persoon",
     toStep3: "Naar stap 3 · wie betaalde →",
-    notCovered: (v: string) => `Nog ${v} niet gedekt`,
     potFree: (v: string) => `${v} vrij`,
     potUsedFree: (g: string, v: string) => `${g} gebruikt · ${v} vrij`,
     potShared: (tot: string, n: number) => `Pot ${tot} · verdeeld over ${n}`,
@@ -1433,7 +1435,6 @@ const T = {
     persWord: "Pers.",
     persWordLow: "pers.",
     tapForStrip: "Tu coches pour",
-    togetherHint: "Coche les boissons pour tout le monde — sans noms.",
     completeWord: "✓ complet",
     noAmountShort: "Pas encore de montant",
     missRoundsNote: (n: number) => `Encore ${n} tourn\u00e9e${n === 1 ? "" : "s"} \u00e0 compl\u00e9ter pour un partage \u00e9quitable`,
@@ -2105,6 +2106,7 @@ const T = {
     quickSettleTitle: "R\u00e9gler",
     fairSubtitle: "r\u00e9partition \u00e9quitable",
     quickTotalLabel: (n: number) => `Total de ${n} tourn\u00e9e${n === 1 ? "" : "s"}`,
+    noAmountsYet: "Aucun montant encore saisi",
     quickTotalOf: (t: number) => `(sur ${t} au total)`,
     andWord: "et",
     roundsNoAmountNamed: (lijst: string) => `Tournée ${lijst} sans montant`,
@@ -2126,6 +2128,9 @@ const T = {
     fastest: "le plus rapide",
     fairest: "le plus juste",
     payersTitle: "Qui a payé ?",
+    roundCount: (n: number) => `${n} ${n === 1 ? "tourn\u00e9e" : "tourn\u00e9es"}`,
+    stillToAssign: (v: string) => `${v} \u00e0 attribuer`,
+    whoPaidThisRound: "Qui a pay\u00e9 cette tourn\u00e9e\u00a0?",
     sameForAll: "Le même payeur pour toutes les tournées",
     toFinal: "Bilan final — partage \u00e9quitable",
     missingPayer: (n: number) => `Encore ${n} tournée${n === 1 ? "" : "s"} sans montant ou sans payeur`,
@@ -2145,7 +2150,6 @@ const T = {
     splitEvenShort: (n: number) => `Également sur ${n}`,
     perPersonShort: "Par personne",
     toStep3: "Vers l'étape 3 · qui a payé →",
-    notCovered: (v: string) => `Encore ${v} non couvert`,
     potFree: (v: string) => `${v} libre`,
     potUsedFree: (g: string, v: string) => `${g} utilisé · ${v} libre`,
     potShared: (tot: string, n: number) => `Cagnotte ${tot} · répartie sur ${n}`,
@@ -5008,6 +5012,13 @@ export default function PartyTest() {
   // zichzelf later op (tenzij verlengd). Idempotent — nogmaals tikken kan geen kwaad.
   const sluitAvondAf = async () => {
     if (!groupId) return
+    // Een rondje zonder bedrag verdwijnt uit de verdeling; een rondje zonder betaler
+    // maakt dat de saldi niet op nul uitkomen. Allebei leggen ze een foute eindbalans
+    // vast, dus afsluiten kan pas als alles ingevuld is.
+    const nietRond = rounds.some((rr) => (rr.amount || 0) <= 0.005
+      || (Math.max(0, (rr.amount || 0) - (rr.potPart || 0)) > 0.005
+        && Object.values(rr.payers || {}).reduce((a, b) => a + (b || 0), 0) <= 0.005))
+    if (nietRond) { setNotice(L.fillAmountsFirst); setOverviewBackTo("final"); setView("payers"); return }
     // Kwam de Fair Split hier via de overstap vanuit zelf opnemen (fromQuick), dan is
     // "settle" enkel geleend geweest voor de afrekening — de groep wás en blijft een
     // zelf-opgenomen avond. Zonder deze terugzetting bestempelden de lijsten hem
@@ -5042,9 +5053,9 @@ export default function PartyTest() {
     // anders betaald had, en je zag het nergens. Nu gaat het langs het betalersscherm:
     // dáár vul je in hoeveel er betaald werd en door wie, en pas als alles gedekt is
     // laat dat scherm je door naar de eindbalans.
-    const ongedekt = rounds.some((rr) => (rr.amount || 0) > 0.005
-      && Math.max(0, (rr.amount || 0) - (rr.potPart || 0)) > 0.005
-      && Object.values(rr.payers || {}).reduce((a, b) => a + (b || 0), 0) <= 0.005)
+    const ongedekt = rounds.some((rr) => (rr.amount || 0) <= 0.005
+      || (Math.max(0, (rr.amount || 0) - (rr.potPart || 0)) > 0.005
+        && Object.values(rr.payers || {}).reduce((a, b) => a + (b || 0), 0) <= 0.005))
     if (ongedekt) { setView("payers"); return }
     setHasSettled(true)
     setView("final")
@@ -5086,7 +5097,7 @@ export default function PartyTest() {
       // dan eerst de bedragen, met de invul-stand van het overzicht erbij.
       // De eindbalans zelf toont een regel voor €0-rondjes, met de aanvul-knop.
       const zonderBedrag = rounds.filter((rr) => (rr.amount || 0) <= 0.005).length
-      if (zonderBedrag === rounds.length) {
+      if (zonderBedrag > 0) {
         setNotice(L.fillAmountsFirst)
         setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview")
         return
@@ -7767,7 +7778,10 @@ export default function PartyTest() {
   if (view === "start" && welkom && !groupId && !onboardedOnce) {
     return (
       <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 18px", boxSizing: "border-box" }}>
-        <style>{`@keyframes rundoStartWenk{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.022);filter:brightness(1.07)}}`}</style>
+        <style>{`@keyframes rundoStartWenk{0%,100%{filter:brightness(1)}50%{filter:brightness(1.16)}}
+          @keyframes rundoStartGlans{0%{background-position:-140% 0}55%,100%{background-position:240% 0}}
+          .rundo-startknop{position:relative;overflow:hidden;animation:rundoStartWenk 2.4s ease-in-out infinite}
+          .rundo-startknop::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,0.55) 50%,transparent 62%);background-size:220% 100%;animation:rundoStartGlans 2.8s ease-in-out infinite;pointer-events:none}`}</style>
         <div style={{ maxWidth: 460, margin: "0 auto", padding: "18px 16px" }}>
           <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, marginBottom: 42 }}>
             <div style={{ transform: "scale(1.45)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
@@ -7812,8 +7826,8 @@ export default function PartyTest() {
                 ))}
               </div>
             </div>
-          <button onClick={() => setWelkom(false)}
-            style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "21px", border: "none", fontSize: 22, fontWeight: 800, animation: "rundoStartWenk 2.2s ease-in-out infinite", color: "#2a2110", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#f5c451,#e0a020)" }}>
+          <button onClick={() => setWelkom(false)} className="rundo-startknop"
+            style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "21px", border: "none", fontSize: 22, fontWeight: 800, color: "#2a2110", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#f5c451,#e0a020)" }}>
             {L.welkomStart}
           </button>
           </div>
@@ -8573,9 +8587,6 @@ export default function PartyTest() {
                   <span style={{ fontSize: 16.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35 }}>{perPersoon ? L.hintPerPerson : L.hintTogether}</span>
                 </div>
 
-                {!perPersoon && (
-                  <div style={{ fontSize: 15, fontWeight: 600, color: "#4a5567", lineHeight: 1.35 }}>{L.togetherHint}</div>
-                )}
 
                 {perPersoon && (<>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, background: VLAK1, borderRadius: 10, padding: "6px 7px", marginBottom: 9 }}>
@@ -8598,9 +8609,6 @@ export default function PartyTest() {
                   {/* Namen breken over meerdere regels in plaats van zijwaarts te scrollen:
                       zo staat niemand verborgen en is er geen veeggebaar om te ontdekken. */}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
-                    {people.length <= 1 && (
-                      <span style={{ marginRight: "auto", fontSize: 14.5, fontWeight: 700, color: "#6b7484" }}>{L.aloneHint}</span>
-                    )}
                     {people.map((pp, i) => {
                       const aan = voorWie === pp.id
                       const k = gastKleur(i)
@@ -8625,6 +8633,9 @@ export default function PartyTest() {
                         </button>
                       )
                     })}
+                        {people.length <= 1 && (
+                          <span style={{ fontSize: 14.5, fontWeight: 700, color: "#6b7484" }}>{L.aloneHint}</span>
+                        )}
                   </div>
                 </>)}
               </div>
@@ -9731,8 +9742,8 @@ export default function PartyTest() {
               telt álle rondjes. Zie je een verschil, dan zegt de melding eronder welk
               rondje er nog geen bedrag heeft. */}
           <div style={{ fontSize: 16, fontWeight: 700, color: "#6b7484", marginBottom: 4 }}>
-            {L.quickTotalLabel(betaalde.length)}
-            {rounds.length > betaalde.length && <span style={{ fontWeight: 600, color: "#8b93a3" }}> {L.quickTotalOf(rounds.length)}</span>}
+            {betaalde.length === 0 ? L.noAmountsYet : L.quickTotalLabel(betaalde.length)}
+            {betaalde.length > 0 && rounds.length > betaalde.length && <span style={{ fontWeight: 600, color: "#8b93a3" }}> {L.quickTotalOf(rounds.length)}</span>}
           </div>
           <div style={{ fontSize: 30, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</div>
           {wisselde && (
@@ -10004,8 +10015,8 @@ export default function PartyTest() {
         {/* Geen kader: het totaal hoort bij de lijst eronder, niet als losse knop. */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "0 4px 12px", marginBottom: 4, borderBottom: "1px solid rgba(29,41,66,0.18)" }}>
           <span style={{ fontSize: 15.5, fontWeight: 800, color: "#6b7484" }}>
-            {L.quickTotalLabel(metBedrag)}
-            {rounds.length > metBedrag && <span style={{ fontWeight: 700, color: "#8b93a3" }}> {L.quickTotalOf(rounds.length)}</span>}
+            {metBedrag === 0 ? L.noAmountsYet : L.quickTotalLabel(metBedrag)}
+            {metBedrag > 0 && rounds.length > metBedrag && <span style={{ fontWeight: 700, color: "#8b93a3" }}> {L.quickTotalOf(rounds.length)}</span>}
           </span>
           <span style={{ fontSize: 24, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</span>
         </div>
@@ -10383,10 +10394,10 @@ export default function PartyTest() {
           const openstaand = Math.max(0, totaalRondjes - potSpent - doorPersonen)
           return (
             <div style={{ ...S.row, justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "0 4px 11px", borderBottom: "1px solid rgba(29,41,66,0.18)", marginBottom: 12 }}>
-              <span style={{ fontSize: 15.5, color: "#6b7484", fontWeight: 800 }}>{L.totalOf(euro(totaalRondjes))}</span>
+              <span style={{ fontSize: 15.5, color: "#6b7484", fontWeight: 800 }}>{openstaand > 0.005 ? L.roundCount(rounds.length) : L.totalOf(euro(totaalRondjes))}</span>
               {/* Staat er niets meer open, dan zeggen de vinkjes bij de rondjes het al.
                   Een "alles gedekt" naast een leeg scherm bevestigt niets. */}
-              {openstaand > 0.005 && <span style={{ fontSize: 21.5, fontWeight: 800, color: "#b0402f" }}>{L.stillOpen(euro(openstaand))}</span>}
+              {openstaand > 0.005 && <span style={{ fontSize: 21.5, fontWeight: 800, color: "#b0402f" }}>{L.stillToAssign(euro(openstaand))}</span>}
             </div>
           )
         })()}
@@ -10528,6 +10539,9 @@ export default function PartyTest() {
                   )}
                 </span>
               </div>
+                {!geenBedrag && tekort > 0.005 && (
+                  <div style={{ fontSize: 14.5, fontWeight: 800, color: "#a8720a", marginBottom: 9 }}>👆 {L.whoPaidThisRound}</div>
+                )}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {/* De pot is een betaler zoals een persoon: hij heeft geld en geeft het uit. */}
                 {potContribTotal > 0.005 && (
@@ -10549,10 +10563,6 @@ export default function PartyTest() {
                   )
                 })}
               </div>
-              {/* Dekt de pot het niet helemaal, dan moet er iemand bijspringen. */}
-              {!geenBedrag && tekort > 0.005 && (
-                <div style={{ fontSize: 14, color: "#b0402f", fontWeight: 800, marginTop: 8 }}>⚠️ {L.notCovered(euro(tekort))}</div>
-              )}
             </div>
           )
         })}
@@ -10568,21 +10578,24 @@ export default function PartyTest() {
         )}
 
         {/* De knop laat altijd door: ontbreekt er iets, dan verschijnt een melding die
-            zegt wát, en zie je de balans alvast in zijn voorlopige vorm. */}
-        <button style={{ ...S.btnP, width: "100%",
-          background: RAND,
-          color: RANDTEKST,
-          boxShadow: `0 4px 12px -4px ${RAND}99` }}
-          onClick={() => {
-            // Ontbreekt er nog iets? Dan zeggen wát, maar wel doorlaten — je mag kijken
-            // hoe het ervoor staat. Afsluiten kan pas als alles rond is.
-            if (!klaar) {
-              setNotice(zonderBedragHier.length > 0 ? L.fillAmountsFirst
-                : zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit)
-            }
-            // fromQuick blijft staan: zo kan je vanaf de eindbalans nog stap voor stap terug.
-            setHasSettled(true); setView("final")
-          }}>{L.toFinal}</button>
+               zegt wát er nog ontbreekt en blijft de knop dof. */}
+            <button disabled={!klaar}
+              style={{ ...S.btnP, width: "100%",
+                background: klaar ? RAND : "#c3c9d4",
+                color: klaar ? RANDTEKST : "#fff",
+                cursor: klaar ? "pointer" : "default",
+                boxShadow: klaar ? `0 4px 12px -4px ${RAND}99` : "none" }}
+              onClick={() => {
+                if (!klaar) return
+                // fromQuick blijft staan: zo kan je vanaf de eindbalans nog stap voor stap terug.
+                setHasSettled(true); setView("final")
+              }}>{L.toFinal}</button>
+            {!klaar && (
+              <div style={{ textAlign: "center", fontSize: 13, fontWeight: 700, color: "#a8720a", marginTop: 7, lineHeight: 1.4 }}>
+                {zonderBedragHier.length > 0 ? L.fillAmountsFirst
+                  : zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit}
+              </div>
+            )}
         {fromQuick && (
           <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 17, fontWeight: 700, color: "#6b7484" }}
             onClick={() => { setAssignAllMode(true); setAssignIdx(0); setView("hub") }}>{L.backToAssign}</button>
