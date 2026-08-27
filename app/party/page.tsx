@@ -845,6 +845,8 @@ const T = {
     nowAdding: "Nu erbij",
     newPotTotal: "Nieuw totaal",
     firstDeposit: "1e inleg",
+    addDeposit: "extra inleg",
+    editDeposit: "inleg wijzigen",
     addToPot: "Toevoegen aan de pot",
     potFillAmount: "Vul eerst een bedrag in.",
     setPotTo: (v: string) => `Pot op ${v} zetten`,
@@ -879,7 +881,7 @@ const T = {
     alreadySpent: "al besteed",
     stillLeft: (b: string) => `nog ${b}`,
     potAdjust: "Pot aanpassen",
-    withHowMany: "Met hoeveel zijn jullie?",
+    withHowMany: "Met hoeveel?",
     groupPutIn: (b: string) => `De groep legde samen ${b} in`,
     thatIsEach: (b: string) => `Dat is ${b} per persoon. Doe je mee, dan drink je gewoon mee uit de pot.`,
     whoPutWhat: "Wie legde wat in?",
@@ -889,7 +891,7 @@ const T = {
     joinedPot: (n: string, b: string) => `${n} legde ${b} in de pot`,
     eachPutsIn: "Hoeveel legt ieder in?",
     seatsFillLater: "Wie scant, neemt een plaats in.",
-    potHowManyQ: "Met hoeveel personen leggen jullie in?",
+    potHowManyQ: "Met hoeveel?",
     fillCoinValue: "Vul de coin-waarde in (1 coin = €…) — of zet coins op 'uit'.",
     fillDeposit: "Vul het waarborgbedrag per beker in — of zet bekers op 'uit'.",
 
@@ -1647,6 +1649,8 @@ const T = {
     nowAdding: "Ajout\u00e9 maintenant",
     newPotTotal: "Nouveau total",
     firstDeposit: "1re mise",
+    addDeposit: "mise suppl\u00e9mentaire",
+    editDeposit: "modifier la mise",
     addToPot: "Ajouter \u00e0 la cagnotte",
     potFillAmount: "Entre d\u2019abord un montant.",
     setPotTo: (v: string) => `Mettre la cagnotte \u00e0 ${v}`,
@@ -1681,7 +1685,7 @@ const T = {
     alreadySpent: "d\u00e9j\u00e0 d\u00e9pens\u00e9",
     stillLeft: (b: string) => `reste ${b}`,
     potAdjust: "Ajuster la cagnotte",
-    withHowMany: "Vous \u00eates combien\u00a0?",
+    withHowMany: "Vous êtes combien ?",
     groupPutIn: (b: string) => `Le groupe a mis ${b} en commun`,
     thatIsEach: (b: string) => `Soit ${b} par personne. Si tu participes, tu bois aussi de la cagnotte.`,
     whoPutWhat: "Qui a mis quoi\u00a0?",
@@ -1691,7 +1695,7 @@ const T = {
     joinedPot: (n: string, b: string) => `${n} a mis ${b} dans la cagnotte`,
     eachPutsIn: "Combien met chacun\u00a0?",
     seatsFillLater: "Chacun prend une place en scannant.",
-    potHowManyQ: "Vous \u00eates combien \u00e0 mettre au pot ?",
+    potHowManyQ: "Vous êtes combien ?",
     fillCoinValue: "Entre la valeur du jeton (1 jeton = €…) — ou désactive les jetons.",
     fillDeposit: "Entre le montant de la caution par gobelet — ou désactive les gobelets.",
 
@@ -5878,7 +5882,13 @@ export default function PartyTest() {
       <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
         <div style={{ ...S.row, justifyContent: "space-between", margin: "0 0 8px" }}>
           <h3 style={{ ...S.h3, fontSize: 21.5, margin: 0, display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span>{potIsCard ? L.drinkCard : L.potTitle}</span>
+            <span>{potIsCard ? L.drinkCard : L.potTitle}
+              {(potRounds.length === 0 || potBuilderOpen || editPotId !== null) && (
+                <span style={{ fontSize: 14, fontWeight: 700, color: "#6b7484", marginLeft: 8 }}>
+                  · {editPotId !== null ? L.editDeposit : (potRounds.length === 0 ? L.firstDeposit : L.addDeposit)}
+                </span>
+              )}
+            </span>
             {/* Meteen zichtbaar wat er nu in zit — dat is waarom je dit venster opent. */}
             <span style={{ fontSize: 18, fontWeight: 800, color: potRemaining > 0.005 ? "#2f6fb5" : "#c0554a" }}>{euro(potRemaining)}</span>
           </h3>
@@ -5969,10 +5979,6 @@ export default function PartyTest() {
               <div style={{ fontSize: 12.5, color: MODUS_FAIR.label, marginTop: 4 }}>{L.seatsFillLater}</div>
             </div>
           )}
-          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 15, fontWeight: 800, color: "#1d2942" }}>{editPotId !== null ? "✏️ inleg wijzigen" : (potRounds.length === 0 ? `➕ ${L.firstDeposit}` : `➕ ${L.addToPot}`)}</span>
-            {potDraftTotal > 0 && <span style={{ fontSize: 16, fontWeight: 800, color: "#2f6fb5" }}>+{euro(potDraftTotal)}</span>}
-          </div>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
             <span style={{ fontSize: 15, color: "#1d2942", fontWeight: 800 }}>{L.equalSplit}</span>
             <span style={{ fontSize: 15, color: "#c0554a", fontWeight: 700, cursor: "pointer" }} onClick={resetPotDraft}>{L.resetContrib}</span>
@@ -6001,13 +6007,14 @@ export default function PartyTest() {
           <>
           {/* Snelle rondjes: iedereen legt hetzelfde in. Totaal = per man × aantal.
               Het aantal staat hier, zodat elke inleg weet voor hoeveel mensen hij gold. */}
-          <div style={{ ...S.row, justifyContent: "space-between", background: "#eef1f6", borderRadius: 12, padding: "10px 13px", marginBottom: 12 }}>
-            <span style={{ fontSize: 17, fontWeight: 800, color: "#1d2942" }}>👤 {L.potHowManyQ}</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <button style={{ width: 34, height: 34, borderRadius: 9, background: "#eef1f6", border: "1px solid rgba(29,41,66,0.2)", fontSize: 20, color: "#6b7484", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
-              <span style={{ fontSize: 20, fontWeight: 800, minWidth: 26, textAlign: "center", color: "#1d2942" }}>{headcount < 1 ? 1 : headcount}</span>
-              <button style={{ width: 34, height: 34, borderRadius: 9, background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", border: "none", fontSize: 20, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 2 : n + 1)}>+</button>
-            </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#eef1f6", borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: "#1d2942" }}>{L.potHowManyQ}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <button style={{ width: 32, height: 32, borderRadius: "50%", background: "#fff", border: "1px solid rgba(29,41,66,0.25)", fontSize: 20, color: "#6b7484", fontWeight: 800, cursor: "pointer", opacity: headcount > 1 ? 1 : 0.4 }} onClick={() => setHeadcount((n) => Math.max(1, n - 1))}>−</button>
+              <span style={{ fontSize: 21, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#1d2942" }}>{headcount < 1 ? 1 : headcount}</span>
+                    <span style={{ fontSize: 13, color: "#6b7484" }}>{L.persWordLow}</span>
+              <button style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", border: "none", fontSize: 20, color: "#fff", fontWeight: 800, cursor: "pointer" }} onClick={() => setHeadcount((n) => n < 1 ? 2 : n + 1)}>+</button>
+                  </span>
           </div>
           <div style={{ ...S.row, gap: 8, marginBottom: 10 }}>
             <span style={{ fontSize: 21, color: "#6b7484", fontWeight: 700 }}>€</span>
