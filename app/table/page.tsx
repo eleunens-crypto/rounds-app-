@@ -543,8 +543,8 @@ const STRINGS = {
     backToRundo: "← naar Rundo startscherm",
     welkomTagline: "Rondjes en rekeningen zonder gedoe!",
     welkomSub: "Scan de rekening, verdeel in groep",
-    cafeAfterQ: "Nog een caf\u00e9 erna?",
-    whatIsThisQ: "wat is dit?",
+    cafeAfterQ: "Ook rondjes bijhouden op caf\u00e9?",
+    seeWhatItDoes: "Bekijk wat Rundo doet",
     partyTagline1: "Rondjes opnemen",
     partyTagline2: "\u2026 en splitten zonder gedoe!",
     partyStep1: "neem zelf op of deel de QR",
@@ -1180,8 +1180,8 @@ const STRINGS = {
     backToRundo: "← retour à l'accueil Rundo",
     welkomTagline: "Tourn\u00e9es et additions sans prise de t\u00eate\u00a0!",
     welkomSub: "Scanne l'addition, partage en groupe",
-    cafeAfterQ: "Un caf\u00e9 apr\u00e8s\u00a0?",
-    whatIsThisQ: "c'est quoi\u00a0?",
+    cafeAfterQ: "Suivre les tourn\u00e9es au caf\u00e9\u00a0?",
+    seeWhatItDoes: "D\u00e9couvre ce que fait Rundo",
     partyTagline1: "Prendre les tourn\u00e9es",
     partyTagline2: "\u2026 et partager sans prise de t\u00eate\u00a0!",
     partyStep1: "note toi-m\u00eame ou partage le QR",
@@ -3669,7 +3669,7 @@ export default function RundoTable() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/table-image.png" alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
             <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg, #131e2b 0%, #131e2b 46%, rgba(19,30,43,0.94) 62%, rgba(19,30,43,0.8) 82%, rgba(19,30,43,0.62) 100%)" }} />
-            <div style={{ position: "relative", zIndex: 2, padding: "24px 20px" }}>
+            <div style={{ position: "relative", zIndex: 2, padding: "24px 20px 16px" }}>
               <RundoLogo size={62} resto />
               <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 11 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -3693,38 +3693,44 @@ export default function RundoTable() {
                 ))}
               </div>
             </div>
-          </div>
-
           <button onClick={() => setWelkom(false)}
-            style={{ width: "100%", marginTop: 30, padding: "18px", borderRadius: 16, border: "none", fontSize: 20, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", color: "#fff", background: "linear-gradient(135deg,#3db6cc,#2f9bb5)", boxShadow: "0 14px 30px -14px rgba(47,155,181,0.9)" }}>
+            style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "17px", border: "none", fontSize: 20, fontWeight: 800, color: "#fff", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#3bbfc4,#0d7c8c)" }}>
             {L.welkomStart}
           </button>
+          </div>
         {/* Verwijzing naar de zusterapp, uitklapbaar zodat niemand uitleg krijgt
             die hij niet vroeg. */}
         <div style={{ marginTop: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(240,193,75,0.4)", borderRadius: 14, padding: 13 }}>
           {!partyInfo ? (
-            <div onClick={() => setPartyInfo(true)} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 13.5, color: "#9fb0b3", flexShrink: 0 }}>{L.cafeAfterQ}</span>
-              <span style={{ marginLeft: "auto" }}><RundoLogo size={19} /></span>
-              <span style={{ flexShrink: 0, fontSize: 12.5, color: "#f0c14b", fontWeight: 700 }}>{L.whatIsThisQ} ▾</span>
+            <div onClick={() => setPartyInfo(true)} style={{ cursor: "pointer" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9 }}>
+                <span style={{ fontSize: 13.5, color: "#9fb0b3", minWidth: 0, lineHeight: 1.35 }}>{L.cafeAfterQ}</span>
+                <span style={{ marginLeft: "auto", flexShrink: 0 }}><RundoLogo size={26} /></span>
+              </div>
+              <div style={{ borderTop: "1px solid rgba(240,193,75,0.25)", paddingTop: 9, textAlign: "center", fontSize: 13, color: "#f0c14b", fontWeight: 700 }}>{L.seeWhatItDoes} ▾</div>
             </div>
           ) : (
             <div style={{ background: "linear-gradient(140deg,#1c1608,#241d0e 60%,#2a2110)", border: "1px solid rgba(240,193,75,0.5)", borderRadius: 14, padding: 14, margin: -13, position: "relative" }}>
               <button onClick={() => setPartyInfo(false)}
                 style={{ position: "absolute", top: 10, right: 11, width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "none", color: "#cbbf9e", fontSize: 15, cursor: "pointer", fontFamily: "inherit", lineHeight: 1 }}>✕</button>
-              <span style={{ display: "block", marginBottom: 9 }}><RundoLogo size={28} /></span>
+              <span style={{ display: "block", marginBottom: 10 }}><RundoLogo size={40} /></span>
               <div style={{ color: "#f0c14b", fontSize: 15, fontWeight: 700, lineHeight: 1.4, marginBottom: 4 }}>
                 {L.partyTagline1}<br />{L.partyTagline2}
               </div>
-              {[["\u270d\ufe0f", L.partyStep1], ["\ud83d\udc46", L.partyStep2], ["\ud83d\udccb", L.partyStep3]].map(([icoon, tekst], n) => (
-                <div key={n} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-                  <span style={{ position: "relative", width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.07)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 21, flexShrink: 0 }}>
-                    {icoon}
-                    <span style={{ position: "absolute", top: -4, right: -4, width: 20, height: 20, borderRadius: "50%", background: "#f0c14b", color: "#2a2110", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800 }}>{n + 1}</span>
-                  </span>
-                  <span style={{ fontSize: 14.5, color: "#e8dcc0" }}>{tekst}</span>
-                </div>
-              ))}
+              <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+                {[["\u270d\ufe0f", L.partyStep1], ["\ud83d\udc46", L.partyStep2], ["\ud83d\udccb", L.partyStep3]].map(([icoon, tekst], n, rij) => (
+                  <div key={n} style={{ display: "flex", justifyContent: "center", padding: "8px 0",
+                    borderBottom: n < rij.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 12, flexDirection: n % 2 === 1 ? "row-reverse" : "row" }}>
+                      <span style={{ position: "relative", flexShrink: 0, width: 46, height: 46, borderRadius: "50%", background: "rgba(240,179,1,0.14)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
+                        {icoon}
+                        <span style={{ position: "absolute", top: -5, right: -6, width: 21, height: 21, borderRadius: "50%", background: "#f0c14b", color: "#2a2110", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11.5, fontWeight: 800 }}>{n + 1}</span>
+                      </span>
+                      <span style={{ fontSize: 15, fontWeight: 500, color: "#d9d2bd" }}>{tekst}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
               <div style={{ display: "flex", gap: 8, marginTop: 13 }}>
                 <button onClick={() => setPartyInfo(false)}
                   style={{ flex: 1, cursor: "pointer", background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 12, padding: 11, fontSize: 14, fontWeight: 600, color: "#cbbf9e", fontFamily: "inherit" }}>{L.closeBtn}</button>
