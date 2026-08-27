@@ -1342,6 +1342,8 @@ const T = {
     treatHint: "Rondje trakteren? Tik hieronder aan (telt dan niet mee in de verdeling)",
     roundWord: "Rondje",
     drinksCount: (n: number) => `${n} drankje${n === 1 ? "" : "s"}`,
+    stillEmpty: "nog leeg",
+    someHaveDrinks: (n: number, tot: number) => `${n} van ${tot} hebben al iets`,
     confirmRoundTitle: (n: number) => `\u2705 Rondje ${n} bevestigen`,
     confirmRoundBtn: (n: number) => `\u2705 Bevestig rondje (${n} drankje${n === 1 ? "" : "s"})`,
     roundConfirmed: (nr: number, n: number) => `Rondje ${nr} bevestigd \u00b7 ${n} drankje${n === 1 ? "" : "s"}`,
@@ -2163,6 +2165,8 @@ const T = {
     treatHint: "Tu offres une tourn\u00e9e ? Touche-la ci-dessous (elle ne compte pas dans le partage)",
     roundWord: "Tourn\u00e9e",
     drinksCount: (n: number) => `${n} boisson${n === 1 ? "" : "s"}`,
+    stillEmpty: "encore vide",
+    someHaveDrinks: (n: number, tot: number) => `${n} sur ${tot} ont d\u00e9j\u00e0 quelque chose`,
     confirmRoundTitle: (n: number) => `\u2705 Confirmer la tourn\u00e9e ${n}`,
     confirmRoundBtn: (n: number) => `\u2705 Confirmer la tourn\u00e9e (${n} boisson${n === 1 ? "" : "s"})`,
     roundConfirmed: (nr: number, n: number) => `Tourn\u00e9e ${nr} confirm\u00e9e \u00b7 ${n} boisson${n === 1 ? "" : "s"}`,
@@ -8506,9 +8510,11 @@ export default function PartyTest() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, borderBottom: `1px solid ${themaNaam ? "rgba(59,72,106,0.22)" : "rgba(29,41,66,0.18)"}`, paddingBottom: 9, marginBottom: opNaam === true && !settle ? 0 : 12 }}>
           <span style={{ fontSize: 23, fontWeight: 800, color: "#1d2942", letterSpacing: -0.3, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {L.roundWord} {roundNr}
-            <span style={{ fontSize: 15.5, fontWeight: 600, color: "#8b93a3", letterSpacing: 0 }}> · {L.drinksCount(roundItems)}</span>
             {repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}
           </span>
+                {roundItems > 0
+                  ? <span style={{ flexShrink: 0, background: "rgba(240,165,0,0.14)", border: "1.5px solid rgba(224,138,0,0.5)", color: "#a8720a", borderRadius: 999, padding: "5px 13px", fontSize: 14.5, fontWeight: 800, whiteSpace: "nowrap" }}>{L.drinksCount(roundItems)}</span>
+                  : <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 600, color: "#8b93a3" }}>{L.stillEmpty}</span>}
         </div>
         {settle && renderRunnerBar()}
         {(settle || opNaam) && renderWalk()}
@@ -8573,6 +8579,11 @@ export default function PartyTest() {
                     <button onClick={() => { setPersGeteld(true); setAlleenPers(true); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
                       style={{ flexShrink: 0, minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5, border: "none", borderLeft: "1px solid rgba(29,41,66,0.2)", background: "transparent", color: RAND, padding: "3px 4px 3px 10px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.editNamesBtn}</button>
                   </div>
+                {(() => {
+                  if (people.length < 3 || roundItems === 0) return null
+                  const klaar = people.filter((pp) => drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)).length
+                  return <div style={{ fontSize: 13, fontWeight: 700, color: "#8a5e0f", marginBottom: 8 }}>{L.someHaveDrinks(klaar, people.length)}</div>
+                })()}
                   {/* Namen breken over meerdere regels in plaats van zijwaarts te scrollen:
                       zo staat niemand verborgen en is er geen veeggebaar om te ontdekken. */}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
@@ -8594,6 +8605,9 @@ export default function PartyTest() {
                             border: `1.5px solid ${k}`,
                             color: aan ? "#2a1f06" : donkerder(k) }}>
                           {pp.id === meId ? "♛ " : viaLink ? "📱 " : ""}{pp.id === meId && !pp.named ? L.jijNaam : pp.name}
+                        {(() => { const n = drinks.reduce((a, d) => a + (cart[d.id]?.[pp.id] ?? 0), 0); return n > 0 ? (
+                          <span style={{ marginLeft: 5, borderRadius: 999, minWidth: 17, height: 17, padding: "0 4px", fontSize: 10.5, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", background: aan ? "rgba(42,31,6,0.85)" : donkerder(k), color: aan ? k : "#fff" }}>{n}</span>
+                        ) : null })()}
                           {pp.id === meId && pp.named && (
                             <span style={{ marginLeft: 5, borderRadius: 999, padding: "1px 6px", fontSize: 9.5, background: aan ? "rgba(42,31,6,0.18)" : `${k}33`, color: aan ? "#2a1f06" : donkerder(k) }}>{L.youTag}</span>
                           )}
