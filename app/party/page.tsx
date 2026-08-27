@@ -597,6 +597,8 @@ const T = {
     allRoundsBtn: "🍺 Alle rondjes in één keer",
     onlyThisRound: "↩ Alleen dit rondje",
     tikSamenWord: "voor iedereen",
+    hintTogether: "Tik alle drankjes meteen aan voor de hele groep",
+    hintPerPerson: "Tik eerst een naam aan, dan het drankje",
     perPersonWord: "per persoon",
     fillWord: "Bedrag toevoegen",
     adjustOrder: "bestelling aanpassen",
@@ -676,6 +678,7 @@ const T = {
     whatDidItCost: "Wat kostte dit rondje?",
     costLabel: "WAT KOSTTE DIT RONDJE?",
     whoPutMoney: "Wie legde het geld neer?",
+    whoPaidTapIt: "Wie betaalde dit rondje? Tik aan!",
     pickWhoPaid: "Kies wie betaalde.",
     splitEvenNote: "Gelijk verdeeld \u2014 pas aan per persoon indien nodig",
     fromPotQ: "Kwam er iets uit de pot?",
@@ -1420,6 +1423,8 @@ const T = {
     allRoundsBtn: "🍺 Toutes les tourn\u00e9es d'un coup",
     onlyThisRound: "↩ Seulement cette tourn\u00e9e",
     tikSamenWord: "pour tous",
+    hintTogether: "Coche toutes les boissons d'un coup pour tout le groupe",
+    hintPerPerson: "Coche d'abord un nom, puis la boisson",
     perPersonWord: "par personne",
     fillWord: "Ajouter le montant",
     adjustOrder: "modifier la commande",
@@ -1499,6 +1504,7 @@ const T = {
     whatDidItCost: "Combien a co\u00fbt\u00e9 cette tourn\u00e9e\u00a0?",
     costLabel: "COMBIEN A CO\u00dbT\u00c9 CETTE TOURN\u00c9E\u00a0?",
     whoPutMoney: "Qui a avanc\u00e9 l'argent\u00a0?",
+    whoPaidTapIt: "Qui a pay\u00e9 cette tourn\u00e9e\u00a0? Coche\u00a0!",
     pickWhoPaid: "Choisis qui a pay\u00e9.",
     splitEvenNote: "R\u00e9parti \u00e9galement \u2014 ajuste par personne si besoin",
     fromPotQ: "Une partie vient de la cagnotte\u00a0?",
@@ -7761,6 +7767,7 @@ export default function PartyTest() {
   if (view === "start" && welkom && !groupId && !onboardedOnce) {
     return (
       <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 18px", boxSizing: "border-box" }}>
+        <style>{`@keyframes rundoStartWenk{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.022);filter:brightness(1.07)}}`}</style>
         <div style={{ maxWidth: 460, margin: "0 auto", padding: "18px 16px" }}>
           <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, marginBottom: 42 }}>
             <div style={{ transform: "scale(1.45)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
@@ -7806,7 +7813,7 @@ export default function PartyTest() {
               </div>
             </div>
           <button onClick={() => setWelkom(false)}
-            style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "17px", border: "none", fontSize: 20, fontWeight: 800, color: "#2a2110", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#f5c451,#e0a020)" }}>
+            style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "21px", border: "none", fontSize: 22, fontWeight: 800, animation: "rundoStartWenk 2.2s ease-in-out infinite", color: "#2a2110", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#f5c451,#e0a020)" }}>
             {L.welkomStart}
           </button>
           </div>
@@ -7818,15 +7825,15 @@ export default function PartyTest() {
 
   if (view === "start") {
     return (
-      <div style={{ ...S.page, minHeight: "auto", padding: "0 0 40px" }}><div style={{ ...S.wrap, paddingTop: "calc(env(safe-area-inset-top, 0px) + 32px)" }}>
+      <div style={{ ...S.page, minHeight: "auto", padding: "0 0 40px" }}><div style={{ ...S.wrap, paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)" }}>
         {renderDialogs()}
         <style>{`@keyframes rundoWenk{0%,100%{transform:translateX(0);opacity:.6}50%{transform:translateX(3px);opacity:1}}
           @keyframes rundoLoop{from{width:0}to{width:100%}}
           input::placeholder,textarea::placeholder{color:#a7b0bf;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "#0E1A2E", borderRadius: 14, padding: "13px 14px", marginBottom: 13 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/rundo-merk.png" alt="" height={44} style={{ width: "auto", flexShrink: 0, display: "block" }} />
-          <span style={{ fontSize: 22, fontWeight: 500, color: "#fff" }}>{L.chooseHow}</span>
+          <img src="/rundo-merk.png" alt="" height={36} style={{ width: "auto", flexShrink: 0, display: "block" }} />
+          <span style={{ fontSize: 20, fontWeight: 500, color: "#fff" }}>{L.chooseHow}</span>
         </div>
 
         <div style={{ ...S.card, padding: "14px 13px" }}>
@@ -7846,7 +7853,7 @@ export default function PartyTest() {
                   background: bpSettle === false ? MODUS_SNEL.rand : "transparent",
                   border: bpSettle === false ? "none" : `2.5px solid ${MODUS_SNEL.randZacht}`, color: "#fff" }}>{bpSettle === false ? "✓" : ""}</span>
                 <span style={{ display: "flex", justifyContent: "center", marginTop: 9, marginBottom: 9 }}>
-                  <NoteerIcoon size={74} kleur={MODUS_SNEL.rand} />
+                  <NoteerIcoon size={58} kleur={MODUS_SNEL.rand} />
                 </span>
                 <span style={{ display: "block", fontSize: 21, fontWeight: 800, color: "#16203a", lineHeight: 1.18, letterSpacing: -0.3 }}>{L.youNoteSelf}</span>
                 <span style={{ display: "block", textAlign: "left", marginTop: 12, paddingLeft: 6 }}>
@@ -7899,12 +7906,12 @@ export default function PartyTest() {
                 {/* Drie toestellen, de middelste met een QR: het verschil met de andere
                     kaart is dat er méér telefoons in het spel zijn. */}
                 <span style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 4, marginTop: 5, marginBottom: 8 }}>
-                  <GsmIcoon size={29} kleur={MODUS_FAIR.rand} dof />
+                  <GsmIcoon size={24} kleur={MODUS_FAIR.rand} dof />
                   <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center" }}>
-                    <GsmIcoon size={46} kleur={MODUS_FAIR.rand} qr />
+                    <GsmIcoon size={38} kleur={MODUS_FAIR.rand} qr />
                     <span style={{ fontSize: 13, fontWeight: 800, color: MODUS_FAIR.rand, letterSpacing: "0.08em", marginTop: 2 }}>QR</span>
                   </span>
-                  <GsmIcoon size={29} kleur={MODUS_FAIR.rand} dof />
+                  <GsmIcoon size={24} kleur={MODUS_FAIR.rand} dof />
                 </span>
                 <span style={{ display: "block", fontSize: 24, fontWeight: 800, color: "#16203a", lineHeight: 1.14, letterSpacing: -0.4 }}>{L.modeTitle}</span>
                 <span style={{ display: "block", textAlign: "left", marginTop: 11, paddingLeft: 6 }}>
@@ -8561,6 +8568,10 @@ export default function PartyTest() {
                     )
                   })}
                 </div>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 9, background: "#eef1f6", borderRadius: 12, padding: "11px 13px" }}>
+                  <span style={{ fontSize: 21, flexShrink: 0 }}>{perPersoon ? "👆" : "👥"}</span>
+                  <span style={{ fontSize: 16.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35 }}>{perPersoon ? L.hintPerPerson : L.hintTogether}</span>
+                </div>
 
                 {!perPersoon && (
                   <div style={{ fontSize: 15, fontWeight: 600, color: "#4a5567", lineHeight: 1.35 }}>{L.togetherHint}</div>
@@ -8889,12 +8900,13 @@ export default function PartyTest() {
             </div>
           </div>
         ) : (settle || roundItems > 0) && (
-        <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1 }} onClick={() => { if (roundItems === 0) return; if (settle) openClose(); else commitRound() }}>{settle ? L.confirmRoundTitle(roundNr) : L.doneWithRound}{roundItems > 0 && <span style={{ fontSize: 16, fontWeight: 600, opacity: 0.85 }}> — {L.drinksCount(roundItems)}</span>}</button>
+        <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1, ...(roundItems > 0 ? { position: "fixed", left: "50%", transform: "translateX(-50%)", width: "min(528px, calc(100vw - 32px))", bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)", zIndex: 40, borderRadius: 999, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, fontWeight: 600, boxShadow: "0 8px 22px -8px rgba(29,41,66,0.75)" } : null) }} onClick={() => { if (roundItems === 0) return; if (settle) openClose(); else commitRound() }}>{settle ? L.confirmRoundTitle(roundNr) : L.doneWithRound}{roundItems > 0 && <span style={{ flexShrink: 0, background: "#F5B301", color: "#2a2110", borderRadius: 999, minWidth: 23, height: 23, padding: "0 6px", fontSize: 13, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", order: -1 }}>{roundItems}</span>}</button>
         )}
         {settle
           ? (roundItems > 0 && !(startedBy && meId && startedBy !== meId) && <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>)
           : <button style={{ width: "100%", boxSizing: "border-box", marginTop: 11, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(29,41,66,0.28)", borderRadius: 12, fontSize: 17, fontWeight: 800, color: "#b0402f", padding: "12px 8px" }}
               onClick={() => { if (roundItems === 0) { setOverviewBackTo("hub"); setView("roundsOverview"); return } cancelOrder() }}>{L.cancelRoundShort}</button>}
+        {roundItems > 0 && <div style={{ height: 66 }} />}
 
 
         {showAssignAll && (
@@ -9107,11 +9119,16 @@ export default function PartyTest() {
 
           {(parseFloat(amountDraft.replace(",", ".")) || 0) > 0 ? (
           <>
-          <div style={{ fontSize: 13.5, color: "#4a5567", marginBottom: 8 }}>{L.whoPutMoney} <span style={{ color: "#8b93a3" }}>{L.multiplePossible}</span></div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                  <div style={{ background: payPersons.length === 0 && !payPot ? "rgba(240,165,0,0.09)" : "transparent",
+                    border: payPersons.length === 0 && !payPot ? "1.5px dashed rgba(224,138,0,0.55)" : "1.5px solid transparent",
+                    borderRadius: 13, padding: payPersons.length === 0 && !payPot ? 12 : 0, marginBottom: 4, transition: "background .2s" }}>
+                    <div style={{ fontSize: 15.5, fontWeight: 800, color: payPersons.length === 0 && !payPot ? "#a8720a" : "#1d2942", marginBottom: 9 }}>
+                      {payPersons.length === 0 && !payPot ? <>👆 {L.whoPaidTapIt}</> : L.whoPutMoney}</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
             <span style={{ ...S.chip(payPot ? 1 : 0), opacity: st.potAvail <= 0.005 ? 0.45 : 1 }} onClick={() => { if (!payPot && st.potAvail <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg (€0). Tik rechtsboven op “${potIsCard ? "drankkaart" : "pot"} + toevoegen” om eerst in te leggen.`); return } const nextPot = !payPot; setPayPot(nextPot); autoSplit(payPersons, nextPot); setPaidConfirmed(false) }}>{potIsCard ? "💳 drankkaart" : L.thePot}</span>
             {people.map((p) => <span key={p.id} style={S.chip(payPersons.includes(p.id) ? 1 : 0)} onClick={() => togglePayPerson(p.id)}>{p.name}</span>)}
           </div>
+                  </div>
 
           {st.multi && (
             <div style={{ background: "#eef4fb", border: "1px solid rgba(47,111,181,0.25)", borderRadius: 11, padding: 11, marginTop: 10 }}>
