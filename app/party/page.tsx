@@ -2695,7 +2695,7 @@ export default function PartyTest() {
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const el = perPersoon
         ? (telRij.current || namenRij.current || hintBlok.current || catRij.current)
-        : (strookRij.current || catRij.current)
+        : (catRij.current || strookRij.current)
       if (!el) return
       el.scrollIntoView({ behavior: "smooth", block: "start" })
     }))
