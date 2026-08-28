@@ -3706,7 +3706,9 @@ export default function RundoTable() {
         <style>{`@keyframes rundoStartWenk{0%,100%{box-shadow:0 6px 16px -8px rgba(0,0,0,0.6)}50%{box-shadow:0 14px 30px -8px rgba(60,200,210,0.55)}}
           @keyframes rundoStartHelder{0%,100%{filter:brightness(1)}50%{filter:brightness(1.09)}}
           @keyframes rundoStartPijl{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+          @keyframes rundoStartWoord{0%{text-shadow:0 0 0 rgba(255,255,255,0)}7%{text-shadow:0 0 14px rgba(255,255,255,0.9),0 0 26px rgba(255,240,190,0.7)}24%{text-shadow:0 0 0 rgba(255,255,255,0)}100%{text-shadow:0 0 0 rgba(255,255,255,0)}}
           .rundo-startknop{animation:rundoStartWenk 2s ease-in-out infinite,rundoStartHelder 2s ease-in-out infinite}
+          .rundo-startwoord{display:inline-block;animation:rundoStartWoord 8s ease-in-out 6.6s 3}
           .rundo-startpijl{display:inline-block;animation:rundoStartPijl 1.6s ease-in-out infinite}`}</style>
         <div style={{ maxWidth: 460, margin: "0 auto", padding: "18px 16px" }}>
           <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, marginBottom: 42 }}>
@@ -3737,11 +3739,11 @@ export default function RundoTable() {
                     {i < L.welkomFlow.length - 1 && (
                       <>
                         <span style={{ position: "absolute", left: 13, top: 45, width: 2, height: 40, background: "linear-gradient(180deg,rgba(91,159,214,0.25),rgba(91,159,214,0))" }} />
-                        <span style={{ position: "absolute", left: 13, top: 45, width: 2, height: 40, transformOrigin: "top", background: "linear-gradient(180deg,rgba(91,159,214,0.95),rgba(91,159,214,0))", animation: `rundoFlowVul 6s ease-in-out ${0.36 + i * 1.65}s 3` }} />
+                        <span style={{ position: "absolute", left: 13, top: 45, width: 2, height: 40, transformOrigin: "top", background: "linear-gradient(180deg,rgba(91,159,214,0.95),rgba(91,159,214,0))", animation: `rundoFlowVul 8s ease-in-out ${0.36 + i * 1.65}s 3` }} />
                       </>
                     )}
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span style={{ width: 28, height: 28, borderRadius: "50%", background: "#5b9fd6", color: "#0b1220", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, animation: `rundoFlowTik 6s ease-in-out ${i * 1.65}s 3` }}>{i + 1}</span>
+                      <span style={{ width: 28, height: 28, borderRadius: "50%", background: "#5b9fd6", color: "#0b1220", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, animation: `rundoFlowTik 8s ease-in-out ${i * 1.65}s 3` }}>{i + 1}</span>
                       <span style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(91,159,214,0.16)", border: "1px solid rgba(91,159,214,0.5)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 21, flexShrink: 0 }}>{st.ic}</span>
                       <span style={{ fontSize: 16.5, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3 }}>{st.label}</span>
                     </div>
@@ -3751,7 +3753,7 @@ export default function RundoTable() {
             </div>
           <button onClick={() => setWelkom(false)} className="rundo-startknop"
             style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "21px", border: "none", fontSize: 22, fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: "#fff", cursor: "pointer", fontFamily: "system-ui,-apple-system,'Segoe UI',Roboto,sans-serif", background: "linear-gradient(135deg,#3bbfc4,#0d7c8c)" }}>
-            {L.welkomStart}<span className="rundo-startpijl">→</span>
+            <span className="rundo-startwoord">{L.welkomStart}</span><span className="rundo-startpijl">→</span>
           </button>
           </div>
         {renderPartyVerwijzing()}
