@@ -754,6 +754,8 @@ const T = {
     jijNaam: "Jij",
     youTag: "jij",
     yourselfWord: "jezelf",
+    everyoneWord: "iedereen",
+    forWord: "Voor",
     aloneHint: "Voorlopig alleen jij",
     canAlsoLater: "Kan ook later",
     backToOverviewHint: "Er zijn nog rondjes om af te werken.",
@@ -763,7 +765,7 @@ const T = {
     doneNamesBtn: "✓ Klaar met namen",
     editNamesHint: "Pas de namen aan — ze veranderen overal mee, ook in al toegewezen drankjes.",
     notAssignedCount: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} niet toegewezen`,
-    howNoteQ: "HOE NOTEER JE DIT RONDJE?",
+    howNoteQ: "Hoe noteer je dit rondje?",
     inRoundTitle: "In dit rondje",
     weggehaald: (wat: string) => `${wat} weggehaald`,
     undoWord: "Ongedaan maken",
@@ -1582,6 +1584,8 @@ const T = {
     jijNaam: "Toi",
     youTag: "toi",
     yourselfWord: "toi-m\u00eame",
+    everyoneWord: "tout le monde",
+    forWord: "Pour",
     aloneHint: "Pour l'instant, juste toi",
     canAlsoLater: "Ça peut attendre",
     backToOverviewHint: "Il reste des tourn\u00e9es \u00e0 finaliser.",
@@ -1591,7 +1595,7 @@ const T = {
     doneNamesBtn: "✓ Noms termin\u00e9s",
     editNamesHint: "Modifie les noms — ils changent partout, aussi dans les boissons d\u00e9j\u00e0 attribu\u00e9es.",
     notAssignedCount: (n: number) => `${n} boisson${n === 1 ? "" : "s"} non attribu\u00e9e${n === 1 ? "" : "s"}`,
-    howNoteQ: "COMMENT NOTES-TU CETTE TOURN\u00c9E\u00a0?",
+    howNoteQ: "Comment notes-tu cette tourn\u00e9e\u00a0?",
     inRoundTitle: "Dans cette tournée",
     weggehaald: (wat: string) => `${wat} retir\u00e9`,
     undoWord: "Annuler",
@@ -2661,6 +2665,19 @@ export default function PartyTest() {
   // Pijltjes bij de categorierij: ze tonen dat er links of rechts nog meer staat,
   // want een halve pil aan de rand leest als een afsnijfout en niet als een uitnodiging.
   const catScroll = useRef<HTMLDivElement | null>(null)
+  // De kop "Rondje X" is het echte begin van dit scherm. Bij het kiezen van een
+  // noteermodus schuiven we daarheen, zodat de drankjes meteen in beeld staan in
+  // plaats van onder de vouw. Staat de kop al bovenaan, dan gebeurt er niets —
+  // anders springt het scherm bij elke tik.
+  const rondjeKop = useRef<HTMLDivElement | null>(null)
+  const naarRondjeKop = () => {
+    requestAnimationFrame(() => {
+      const el = rondjeKop.current
+      if (!el) return
+      if (el.getBoundingClientRect().top <= 8) return
+      el.scrollIntoView({ behavior: "smooth", block: "start" })
+    })
+  }
   // Het pijltje aan de rand van de categorieën. Zonder teken weet niemand dat de rij
   // verder loopt; het wenkt daarom zachtjes naar de kant waar meer staat.
   const CatPijl = ({ kant }: { kant: "links" | "rechts" }) => {
@@ -7090,11 +7107,23 @@ export default function PartyTest() {
       const ik = idx >= 0 ? people[idx] : null
       if (!ik || settle) return null
       const benIkHet = ik.id === meId
-      const k = gastKleur(idx)
+      // In de samen-stand tik je niet voor één iemand aan maar voor de hele groep;
+      // daar stond ten onrechte "jezelf". De strook draagt dan de moduskleur in plaats
+      // van een persoonskleur, want ze slaat op niemand in het bijzonder.
+      const samen = !perPersoon
+      const wie = samen ? L.everyoneWord : (benIkHet && !ik.named ? L.yourselfWord : ik.name)
+      const k = samen ? RAND : gastKleur(idx)
+      const tekstK = samen ? RANDTEKST : donkerder(gastKleur(idx))
+      // Één regel, altijd: past de volle zin niet, dan valt "Je tikt aan" weg en blijft
+      // de naam even groot staan. Afbreken zou de strook twee regels hoog maken, en dat
+      // is net de ruimte die de drankjes nodig hebben.
+      const kort = wie.length > 12
       return (
         <div style={{ position: "sticky", top: 0, zIndex: 5, display: "flex", justifyContent: "center", marginBottom: 8 }}>
-          <span style={{ background: k, borderRadius: 999, padding: "5px 15px", fontSize: 13.5, fontWeight: 800, color: donkerder(k), boxShadow: "0 4px 12px -4px rgba(29,41,66,0.5)" }}>
-            👇 {L.tapForStrip} {benIkHet && !ik.named ? L.yourselfWord : ik.name}
+          <span style={{ background: k, borderRadius: 999, padding: "9px 18px", display: "inline-flex", alignItems: "center", gap: 7, maxWidth: "100%", whiteSpace: "nowrap", color: tekstK, boxShadow: "0 4px 12px -4px rgba(29,41,66,0.5)" }}>
+            <span style={{ fontSize: kort ? 14 : 16, fontWeight: 700, flexShrink: 0 }}>{kort ? L.forWord : L.tapForStrip}</span>
+            <b style={{ fontSize: 19, fontWeight: 800, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{wie}</b>
+            <span style={{ fontSize: 18, flexShrink: 0 }}>👇</span>
           </span>
         </div>
       )
@@ -8501,7 +8530,7 @@ export default function PartyTest() {
         {renderVoice()}
         {/* Het rondje als echte titel: groot links, het aantal drankjes rechts, met een
             gouden lijn eronder. Zo leest het als kop van wat volgt. */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, borderBottom: `1px solid ${themaNaam ? "rgba(59,72,106,0.22)" : "rgba(29,41,66,0.18)"}`, paddingBottom: 9, marginBottom: opNaam === true && !settle ? 0 : 12 }}>
+        <div ref={rondjeKop} style={{ scrollMarginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, borderBottom: `1px solid ${themaNaam ? "rgba(59,72,106,0.22)" : "rgba(29,41,66,0.18)"}`, paddingBottom: 9, marginBottom: opNaam === true && !settle ? 0 : 12 }}>
           <span style={{ fontSize: 23, fontWeight: 800, color: "#1d2942", letterSpacing: -0.3, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {L.roundWord} {roundNr}
             {repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}
@@ -8540,20 +8569,29 @@ export default function PartyTest() {
                 {/* Eén baan met twee standen: alleen de gekozen helft krijgt een vlak, de
                     andere ligt er zichtbaar naast. Twee losse pillen lazen als twee acties
                     die je allebei kon aantikken — dit is duidelijk één keuze. */}
-                <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.04em", color: "#1d2942", marginBottom: 8 }}>{L.howNoteQ}</div>
-                <div style={{ display: "flex", background: "#eef1f6", border: "1.5px solid rgba(29,41,66,0.28)", borderRadius: 999, padding: 3, marginBottom: 9 }}>
-                  {[false, true].map((mode) => {
-                    const aan = perPersoon === mode
-                    return (
-                      <button key={String(mode)} onClick={() => setPerPersoon(mode)}
-                        style={{ flex: 1, borderRadius: 999, padding: "10px 0", fontSize: 15.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", border: "none",
-                          background: aan ? RAND : "transparent",
-                          boxShadow: aan ? "0 2px 6px -2px rgba(29,41,66,0.45)" : "none",
-                          color: aan ? RANDTEKST : "#1d2942" }}>
-                        {mode ? L.perPersonWord : L.tikSamenWord}
-                      </button>
-                    )
-                  })}
+                {/* De vraag hing als klein kapitaaltje boven de baan en werd daardoor
+                    gelezen als rubriekje. Nu is ze de titel van het kader eromheen: gewone
+                    zinsgrootte, over de rand heen, met lucht tussen haar en de knoppen. */}
+                <div style={{ position: "relative", border: "1px solid rgba(29,41,66,0.18)", borderRadius: 11, padding: "18px 10px 11px", marginTop: 10, marginBottom: 9 }}>
+                  <span style={{ position: "absolute", top: -11, left: 12, background: "#fff", padding: "0 7px", fontSize: 17, fontWeight: 700, color: "#1d2942", whiteSpace: "nowrap" }}>{L.howNoteQ}</span>
+                  {/* Donkerdere gleuf, lichte duim: dat is wat een baan als schuifbalk laat
+                      lezen. Het icoon draagt de betekenis mee — meerdere poppetjes tegenover
+                      één — zodat je de keuze in een halve seconde ziet. */}
+                  <div style={{ display: "flex", background: "#e7ebf3", border: "1px solid rgba(29,41,66,0.14)", borderRadius: 999, padding: 4 }}>
+                    {[false, true].map((mode) => {
+                      const aan = perPersoon === mode
+                      return (
+                        <button key={String(mode)} onClick={() => { setPerPersoon(mode); naarRondjeKop() }}
+                          style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 999, padding: "10px 0", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                            background: aan ? "#fff" : "transparent",
+                            border: aan ? `1.5px solid ${RAND}` : "1.5px solid transparent",
+                            color: aan ? RAND : "#5c667d" }}>
+                          <span style={{ fontSize: 16 }}>{mode ? "\u{1F464}" : "\u{1F465}"}</span>
+                          {mode ? L.perPersonWord : L.tikSamenWord}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 9, background: "#eef1f6", borderRadius: 12, padding: "11px 13px" }}>
                   <span style={{ fontSize: 21, flexShrink: 0 }}>{perPersoon ? "👇" : "👥"}</span>
@@ -8701,17 +8739,31 @@ export default function PartyTest() {
                 <b style={{ fontWeight: 800, fontSize: 17, color: "#08323b", background: "#7fe3f2", borderRadius: 999, padding: "4px 15px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{people.find((pp) => pp.id === voorWie)?.name ?? ""}</b>
               </div>
             )}
-            {!zoekt && fullList && (
+            {!zoekt && fullList && settle && (
               <div style={{ position: "absolute", left: "50%", top: qrBalk ? 26 : -13, transform: "translateX(-50%)", whiteSpace: "nowrap", zIndex: 2 }}>
                 <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: "pointer", background: RAND, border: "none", color: RANDTEKST, boxShadow: `0 2px 8px -2px ${RAND}80` }}>
                   ▴ minder tonen
                 </span>
               </div>
             )}
-            <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12, ...(qrBalk ? { borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "none" } : {}), ...(!settle && perPersoon && voorWie ? { borderLeft: `5px solid ${voorWieKleur}` } : {}) }}>
+            <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList && settle) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12, ...(qrBalk ? { borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "none" } : {}), ...(!settle && perPersoon && voorWie ? { borderLeft: `5px solid ${voorWieKleur}` } : {}) }}>
               {/* Zoeken + inspreken bovenin de kaart, onder de categorieën — zelfde plek
                   en zelfde blok voor snel én uitgebreid opnemen. */}
-              {!settle && <div style={{ gridColumn: "1 / -1" }}>{renderZoekBlok(true)}</div>}
+                {/* "Minder tonen" hing bovenaan de kaart, boven het zoekveld — ver van de
+                    lijst die hij inklapt. Nu zit hij op de naad tussen het zoekveld en het
+                    eerste drankje, met een witte achtergrond zodat hij leesbaar blijft
+                    waar hij over de lijst valt. */}
+                {!settle && (
+                  <div style={{ gridColumn: "1 / -1", position: "relative", marginBottom: (!zoekt && fullList) ? 11 : 0 }}>
+                    {renderZoekBlok(true)}
+                    {!zoekt && fullList && (
+                      <span onClick={() => setFullList(false)}
+                        style={{ position: "absolute", right: 2, bottom: -19, zIndex: 3, display: "inline-block", padding: "5px 14px", borderRadius: 999, fontSize: 13.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", background: "#fff", border: `1px solid ${RAND}`, color: RAND, boxShadow: "0 2px 8px -4px rgba(29,41,66,0.5)" }}>
+                        {L.lessGroups}
+                      </span>
+                    )}
+                  </div>
+                )}
               {catVisible.map((d) => {
                 const perPers = voorWie && (settle || perPersoon)
                 const tot = perPers ? (cart[d.id]?.[voorWie] ?? 0) : drinkTotal(d.id)
