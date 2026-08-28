@@ -7103,6 +7103,11 @@ export default function PartyTest() {
       <span style={{ color: "#F5B301", fontWeight: 800 }}>+</span>
     </span>
   )
+  // Per persoon noteren terwijl je de enige bent: dan valt er niets te verdelen en
+  // belanden alle drankjes stilzwijgend bij jou. De lijst gaat op slot tot er iemand
+  // bij is — een waarschuwing alleen kun je wegtikken, dit niet. Staat hier en niet
+  // in de render-functie, want zowel de strook als de lijst moeten erbij kunnen.
+  const alleenJij = !settle && perPersoon && people.length < 2
   // Zoekveld met microfoon: bij uitgebreid opnemen ingebouwd bovenin de drankjeskaart
   // (inKaart), bij de andere modi op zijn vertrouwde plek onder de lijst.
   const renderZoekBlok = (inKaart = false) => (<>
@@ -8519,11 +8524,7 @@ export default function PartyTest() {
     const catVisible = zoekt ? catDrinks : catDrinks.filter((d) => fullList || d.fav || drinkTotal(d.id) > 0)
     // Voor wie tik je aan: als balk bovenin de drankjeskaart. Alleen als er echt iemand
     // gekozen is — bij "zonder namen" bestaat voorWie niet.
-    // Per persoon noteren terwijl je de enige bent: dan valt er niets te verdelen en
-  // belanden alle drankjes stilzwijgend bij jou. De lijst gaat op slot tot er iemand
-  // bij is — een waarschuwing alleen kun je wegtikken, dit niet.
-  const alleenJij = !settle && perPersoon && people.length < 2
-  const voorWieIdx = people.findIndex((pp) => pp.id === voorWie)
+    const voorWieIdx = people.findIndex((pp) => pp.id === voorWie)
     const voorWieKleur = voorWieIdx >= 0 ? gastKleur(voorWieIdx) : "#F5B301"
     const qrBalk = !!voorWie && settle && !!openRoundId && isAdmin
     const needCups = depositOn && (people.some((p) => pickedUpOf(p.id) > 0) || people.some((p) => cupsBal(p.id) !== 0))
