@@ -592,7 +592,7 @@ const T = {
     aanvulAssignOk: "alles toegewezen",
     aanvulSave: "Bewaren",
     aanvulSkip: "Alles overslaan — later invullen",
-    stillToFill: "Voor eerlijk verdelen!",
+    stillToFill: "Nog aanvullen voor eerlijk verdelen",
     nogNodigBadge: "NOG NODIG",
     allRoundsBtn: "🍺 Alle rondjes in één keer",
     onlyThisRound: "↩ Alleen dit rondje",
@@ -1300,6 +1300,8 @@ const T = {
     roundCount: (n: number) => `${n} ${n === 1 ? "rondje" : "rondjes"}`,
     stillToAssign: (v: string) => `${v} nog toe te wijzen`,
     whoPaidThisRound: "Wie betaalde dit rondje?",
+    tapNameBelow: "Wie betaalde dit rondje? Tik een naam aan",
+    fillAmountFirstShort: "Vul eerst het bedrag in",
     sameForAll: "Dezelfde betaler voor alle rondjes",
     toFinal: "Eindbalans — eerlijk verdeeld",
     missingPayer: (n: number) => `Nog ${n} ${n === 1 ? "rondje" : "rondjes"} zonder bedrag of betaler`,
@@ -1418,7 +1420,7 @@ const T = {
     aanvulAssignOk: "tout est attribu\u00e9",
     aanvulSave: "Enregistrer",
     aanvulSkip: "Tout passer — compl\u00e9ter plus tard",
-    stillToFill: "Pour un partage \u00e9quitable\u00a0!",
+    stillToFill: "\u00c0 compl\u00e9ter pour un partage \u00e9quitable",
     nogNodigBadge: "ENCORE N\u00c9CESSAIRE",
     allRoundsBtn: "🍺 Toutes les tourn\u00e9es d'un coup",
     onlyThisRound: "↩ Seulement cette tourn\u00e9e",
@@ -2127,6 +2129,8 @@ const T = {
     roundCount: (n: number) => `${n} ${n === 1 ? "tourn\u00e9e" : "tourn\u00e9es"}`,
     stillToAssign: (v: string) => `${v} \u00e0 attribuer`,
     whoPaidThisRound: "Qui a pay\u00e9 cette tourn\u00e9e\u00a0?",
+    tapNameBelow: "Qui a pay\u00e9\u00a0? Coche un nom ci-dessous",
+    fillAmountFirstShort: "Indique d'abord le montant",
     sameForAll: "Le même payeur pour toutes les tournées",
     toFinal: "Bilan final — partage \u00e9quitable",
     missingPayer: (n: number) => `Encore ${n} tournée${n === 1 ? "" : "s"} sans montant ou sans payeur`,
@@ -10036,12 +10040,12 @@ export default function PartyTest() {
                     </div>
                   </div>
                   {/* Betaald-melding net onder de titel — leesbaar, geen invulveld meer. */}
-                  <div style={{ fontSize: 15.5, color: "#6b7484", fontWeight: 600, marginTop: 4 }}>
+                  {!geenBedrag && <div style={{ fontSize: 15.5, color: "#6b7484", fontWeight: 600, marginTop: 4 }}>
                     {(r.amount || 0) > 0.005 ? L.paidNote(euro(r.amount)) : L.noAmountNote}
                     {(r.potPart || 0) > 0.005
                       ? <span style={{ color: "#2f5693", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}> · <ZakjeIcoon size={14} /> {L.paidFromPot(euro(r.potPart || 0))}</span>
                       : <span style={{ color: "#9aa3b2" }}> · {L.noPotUsed}</span>}
-                  </div>
+                  </div>}
                   {/* Dichtgeklapt: kleine badges met wat er nog nodig is. Open: één
                       sectie met volwaardige regels. */}
                   {!settle && editRoundId !== r.id && !isOpen(r) && (() => {
@@ -10054,13 +10058,13 @@ export default function PartyTest() {
                         <span style={{ minWidth: 0, fontSize: 13, fontWeight: 700, color: "#6b4a00", display: "inline-flex", alignItems: "center", gap: 6 }}>
                           <span style={{ flexShrink: 0, width: 7, height: 7, borderRadius: "50%", background: "#e08a00" }} />{tekst}
                         </span>
-                        <span onClick={doe} style={{ flexShrink: 0, fontSize: 12, fontWeight: 800, color: "#6b4a00", border: "1.5px solid rgba(200,138,0,0.7)", borderRadius: 999, padding: "4px 11px", cursor: "pointer" }}>{knop}</span>
+                        <span onClick={doe} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#fff", background: "#e08a00", border: "none", borderRadius: 999, padding: "7px 15px", cursor: "pointer", boxShadow: "0 3px 9px -3px rgba(224,138,0,0.8)" }}>{knop}</span>
                       </div>
                     )
                     return (
                       <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 7 }}>
-                        {geenBedrag && punt(L.noAmountShort, L.fillWord.toLowerCase(), (e) => { e.stopPropagation(); setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r); setBedragFocus(true) })}
                         {nogToe2 > 0 && punt(L.notAssignedCount(nogToe2), L.assign.toLowerCase(), (e) => { e.stopPropagation(); setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) })}
+                        {geenBedrag && punt(L.noAmountShort, L.fillWord.toLowerCase(), (e) => { e.stopPropagation(); setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r); setBedragFocus(true) })}
                       </div>
                     )
                   })()}
@@ -10078,6 +10082,7 @@ export default function PartyTest() {
                       <div style={{ background: "#fffaeb", border: "2px solid rgba(240,165,0,0.65)", borderRadius: 12, padding: "11px 12px", marginTop: 11 }}>
                         <span style={{ display: "inline-block", fontSize: 14.5, fontWeight: 800, background: "rgba(240,165,0,0.25)", color: "#8a5e0f", borderRadius: 20, padding: "7px 14px" }}>{L.nogNodigBadge} — {L.stillToFill}</span>
                         {nogToe > 0 && regel(L.notAssignedYet(nogToe), L.openWord, () => { setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) })}
+                        {geenBedrag && regel(L.noAmountShort, L.fillWord, () => { startEditRound(r); setBedragFocus(true) })}
                       </div>
                     )
                   })()}
@@ -10488,19 +10493,22 @@ export default function PartyTest() {
               <div style={{ ...S.row, justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
                 <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1d2942", paddingLeft: mist ? 0 : 20, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.roundSummary(idx + 1, items)}</span>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                  {geenBedrag ? (
-                    <span onClick={() => { setFillMode(true); setOverviewBackTo("payers"); setView("roundsOverview") }}
-                      style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#6b4a00", whiteSpace: "nowrap", cursor: "pointer" }}>{L.fillWord} ›</span>
-                  ) : (
+                      {geenBedrag ? null : (
                     <span onClick={() => { setFillMode(false); setOverviewBackTo("payers"); setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r); setView("roundsOverview") }}
                       style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 18, fontWeight: 800, color: "#c88a1a", whiteSpace: "nowrap", cursor: "pointer", border: "1.5px solid rgba(200,138,0,0.55)", borderRadius: 999, padding: "4px 12px" }}>
                       {euro(r.amount || 0)} <span style={{ fontSize: 12 }}>✏️</span></span>
                   )}
                 </span>
               </div>
-                {!geenBedrag && tekort > 0.005 && (
-                  <div style={{ fontSize: 14.5, fontWeight: 800, color: "#a8720a", marginBottom: 9 }}>👆 {L.whoPaidThisRound}</div>
-                )}
+                  {geenBedrag ? (
+                    <div onClick={() => { setFillMode(true); setOverviewBackTo("payers"); setView("roundsOverview") }}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 9, cursor: "pointer", background: "rgba(240,165,0,0.1)", border: "1.5px dashed rgba(224,138,0,0.55)", borderRadius: 12, padding: "10px 12px", marginBottom: 9 }}>
+                      <span style={{ fontSize: 14.5, fontWeight: 800, color: "#a8720a", minWidth: 0 }}>👆 {L.fillAmountFirstShort}</span>
+                      <span style={{ flexShrink: 0, background: "#e08a00", color: "#fff", borderRadius: 999, padding: "7px 15px", fontSize: 13.5, fontWeight: 800 }}>{L.fillWord}</span>
+                    </div>
+                  ) : tekort > 0.005 ? (
+                    <div style={{ fontSize: 14.5, fontWeight: 800, color: "#a8720a", marginBottom: 9 }}>👆 {L.tapNameBelow}</div>
+                  ) : null}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {/* De pot is een betaler zoals een persoon: hij heeft geld en geeft het uit. */}
                 {potContribTotal > 0.005 && (
@@ -10516,7 +10524,8 @@ export default function PartyTest() {
                   const on = (r.payers?.[p.id] || 0) > 0.005
                   return (
                     <span key={p.id} onClick={() => { if (geenBedrag) { setNotice(L.fillAmountFirst); return } rTogglePayer(idx, p.id) }} title={p.name}
-                      style={{ ...S.chip(on ? 1 : 0), opacity: geenBedrag ? 0.5 : 1 }}>
+                      style={{ ...S.chip(on ? 1 : 0), opacity: geenBedrag ? 0.45 : 1, padding: on ? "9px 9px 9px 15px" : "10px 16px", fontSize: 15,
+                        ...(!on && !geenBedrag && tekort > 0.005 ? { border: "2px solid rgba(224,138,0,0.6)", background: "rgba(240,165,0,0.07)", color: "#8a5e0f" } : {}) }}>
                       {p.name}{on && (gekozen.length > 1 || uitPot) && <span style={{ marginLeft: 6, background: RANDTEKST, color: RAND, borderRadius: 999, padding: "1px 8px", fontSize: 12.5, fontWeight: 800, flexShrink: 0 }}>{euro(r.payers[p.id])}</span>}
                     </span>
                   )
