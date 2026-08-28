@@ -2674,11 +2674,25 @@ export default function PartyTest() {
   // plaats van onder de vouw. Staat de kop al bovenaan, dan gebeurt er niets —
   // anders springt het scherm bij elke tik.
   const rondjeKop = useRef<HTMLDivElement | null>(null)
+  // Zodra het eerste drankje van een rondje binnen is, heb je het keuzeblok niet meer
+  // nodig: je bent aan het aantikken. Het scherm schuift dan door naar de categorieën
+  // (samen) of naar de melding met de naam-instructie (per persoon), zodat de lijst
+  // het scherm vult. Alles erboven blijft bereikbaar door omhoog te vegen.
+  const catRij = useRef<HTMLDivElement | null>(null)
+  const hintBlok = useRef<HTMLDivElement | null>(null)
+  const sprongGedaan = useRef(false)
   const naarRondjeKop = () => {
     requestAnimationFrame(() => {
       const el = rondjeKop.current
       if (!el) return
       if (el.getBoundingClientRect().top <= 8) return
+      el.scrollIntoView({ behavior: "smooth", block: "start" })
+    })
+  }
+  const naarLijst = () => {
+    requestAnimationFrame(() => {
+      const el = perPersoon ? (hintBlok.current || catRij.current) : catRij.current
+      if (!el) return
       el.scrollIntoView({ behavior: "smooth", block: "start" })
     })
   }
@@ -3406,6 +3420,16 @@ export default function PartyTest() {
   const eachOne = (did: string) => { const hi = people.filter((p) => (cart[did]?.[p.id] ?? 0) >= 2).map((p) => p.name); if (hi.length > 0) { setConfirmDlg({ msg: L.eachOneConfirm(hi.join(" en "), hi.length > 1), yes: L.yesEachOne, onYes: () => { setEachOne(did); setConfirmDlg(null) } }) } else setEachOne(did) }
   const drinkTotal = (did: string) => Object.values(cart[did] ?? {}).reduce((a, b) => a + b, 0) + (cartAnon[did] ?? 0)
   const roundItems = useMemo(() => drinks.reduce((s, d) => s + drinkTotal(d.id), 0), [cart, cartAnon, drinks]) // eslint-disable-line
+  // Aan het aantal drankjes gehangen en niet aan de plusknop, zodat de sprong ook
+  // volgt als het eerste drankje via zoeken of inspreken binnenkomt. Eén keer per
+  // rondje: loopt het rondje leeg of begint er een nieuw, dan mag hij opnieuw.
+  useEffect(() => {
+    if (settle) return
+    if (roundItems === 0) { sprongGedaan.current = false; return }
+    if (sprongGedaan.current) return
+    sprongGedaan.current = true
+    naarLijst()
+  }, [roundItems, settle]) // eslint-disable-line
   const resumeRound = () => { if (blockIfUnpaid()) return; setActiveCat(catsPresent[0]); setView("order") }
   const unfinishedRound = roundItems > 0 && rounds.length < roundNr
   // Snelle rondjes kennen geen betalers: daar telt een rondje als afgehandeld zodra er
@@ -8619,7 +8643,7 @@ export default function PartyTest() {
                     </button>
                   </div>
                 ) : (
-                <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 9, background: "#eef1f6", borderRadius: 12, padding: "11px 13px" }}>
+                <div ref={hintBlok} style={{ scrollMarginTop: 8, display: "flex", gap: 10, alignItems: "center", marginTop: 9, background: "#eef1f6", borderRadius: 12, padding: "11px 13px" }}>
                   {/* Eén poppetje tegenover meerdere: hetzelfde onderscheid als de knop
                       erboven. Er stond hier een vingertje bij per persoon, en dat is een
                       ander soort teken — een aanwijzing in plaats van een wie. */}
@@ -8731,7 +8755,7 @@ export default function PartyTest() {
                 {settle && <div style={{ fontSize: 13.5, color: "#8b93a3", marginTop: 7, lineHeight: 1.45 }}>{L.qrTapsSelf}</div>}
               </div>
             )}
-        <div style={{ display: zoekt ? "none" : "block", position: "relative", marginBottom: 10 }}>
+        <div ref={catRij} style={{ scrollMarginTop: 8, display: zoekt ? "none" : "block", position: "relative", marginBottom: 10 }}>
           <div ref={catScroll} onScroll={updateCatArrows} className="rundo-catscroll" style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", padding: "0 8px 9px 0", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
           <style>{`.rundo-catscroll::-webkit-scrollbar{display:none}`}</style>
           {catsPresent.map((c) => {
