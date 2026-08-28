@@ -7892,29 +7892,41 @@ export default function PartyTest() {
                   <span style={{ color: "#fff" }}>{L.welkomSub1}<br /><span style={{ color: "#f0c14b" }}>{L.welkomSub2}</span></span>
                 </div>
               </div>
-              {/* Stappen onder elkaar, om beurten links en rechts, met haarlijntjes
-                  ertussen. Stap 1 heeft twee manieren, vandaar twee iconen met "of". */}
+              {/* De stappen stonden om beurten links en rechts, waardoor je oog per rij
+                  opnieuw moest zoeken waar het nummer stond. Nu vormen de cijfers zelf een
+                  linkerkolom, met een draadje ertussen dat uitdooft voor het volgende
+                  cijfer. Het cijfer tikt op en de draad loopt door naar de volgende stap:
+                  drie keer, dan is het stil — een startscherm hoeft niet eeuwig te pulseren.
+                  Stap 1 heeft twee manieren, vandaar twee iconen met "of"; die tekst zakt
+                  daar naar de regel eronder. */}
+              <style>{`@keyframes rundoFlowVul{0%{transform:scaleY(0);opacity:1}14%{transform:scaleY(1);opacity:1}72%{transform:scaleY(1);opacity:1}84%{opacity:0}100%{transform:scaleY(0);opacity:0}}
+                @keyframes rundoFlowTik{0%{box-shadow:0 0 0 0 rgba(240,193,75,0.5);transform:scale(1)}7%{box-shadow:0 0 0 7px rgba(240,193,75,0);transform:scale(1.14)}16%{box-shadow:0 0 0 0 rgba(240,193,75,0);transform:scale(1)}100%{transform:scale(1)}}`}</style>
               <div style={{ marginTop: 20, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
-                {L.welkomFlow.map((st, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "center", padding: "9px 0",
-                    borderBottom: i < L.welkomFlow.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 13, flexDirection: i % 2 === 1 ? "row-reverse" : "row" }}>
-                      <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7 }}>
+                {L.welkomFlow.map((st, i) => {
+                  const laatste = i === L.welkomFlow.length - 1
+                  const breed = st.ic.length > 1
+                  return (
+                    <div key={i} style={{ position: "relative", padding: "7px 0" }}>
+                      {!laatste && (
+                        <>
+                          <span style={{ position: "absolute", left: 13, top: 45, width: 2, height: breed ? 64 : 40, background: "linear-gradient(180deg,rgba(240,193,75,0.22),rgba(240,193,75,0))" }} />
+                          <span style={{ position: "absolute", left: 13, top: 45, width: 2, height: breed ? 64 : 40, transformOrigin: "top", background: "linear-gradient(180deg,rgba(240,193,75,0.95),rgba(240,193,75,0))", animation: `rundoFlowVul 4.8s ease-in-out ${0.12 + i * 0.55}s 3` }} />
+                        </>
+                      )}
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <span style={{ width: 28, height: 28, borderRadius: "50%", background: "#f0c14b", color: "#131826", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, animation: `rundoFlowTik 4.8s ease-in-out ${i * 0.55}s 3` }}>{i + 1}</span>
                         {st.ic.map((ic, k) => (
-                          <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-                            {k > 0 && <span style={{ fontSize: 13.5, fontWeight: 800, color: "#b9a67c" }}>{L.orWordShort}</span>}
-                            <span style={{ position: "relative", width: 54, height: 54, borderRadius: "50%", background: "rgba(240,193,75,0.16)", border: "1px solid rgba(240,193,75,0.5)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 27, flexShrink: 0 }}>
-                              {ic}
-                              {/* Het nummer hoort bij het éérste icoon van de stap. */}
-                              {k === 0 && <span style={{ position: "absolute", top: -6, right: -7, width: 22, height: 22, borderRadius: "50%", background: "#f0c14b", color: "#131826", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>}
-                            </span>
+                          <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                            {k > 0 && <span style={{ fontSize: 13, fontWeight: 800, color: "#b9a67c" }}>{L.orWordShort}</span>}
+                            <span style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(240,193,75,0.16)", border: "1px solid rgba(240,193,75,0.5)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 21, flexShrink: 0 }}>{ic}</span>
                           </span>
                         ))}
-                      </span>
-                      <span style={{ fontSize: 17, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3 }}>{st.label}</span>
-                    </span>
-                  </div>
-                ))}
+                        {!breed && <span style={{ fontSize: 16.5, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3 }}>{st.label}</span>}
+                      </div>
+                      {breed && <div style={{ fontSize: 16.5, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3, paddingLeft: 40, marginTop: 2 }}>{st.label}</div>}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           <button onClick={() => setWelkom(false)} className="rundo-startknop"
