@@ -3725,19 +3725,26 @@ export default function RundoTable() {
                 <img src="/icon-table.png" alt="" style={{ height: 32, width: "auto", objectFit: "contain", flexShrink: 0 }} />
                 <span style={{ color: "#3bbfc4", fontSize: 19, fontWeight: 700, lineHeight: 1.3 }}>{L.welkomSub}</span>
               </div>
-              {/* De stappen lopen van boven naar beneden en wisselen om beurten van
-                  kant; haarlijntjes houden ze uit elkaar zonder te schreeuwen. */}
+              {/* Dezelfde opbouw als in Rundo: de cijfers vormen een linkerkolom en een
+                  draadje verbindt ze, dat uitdooft voor het volgende cijfer. Het cijfer tikt
+                  op en de draad loopt door — drie keer, dan is het stil. Elke stap heeft hier
+                  één icoon, dus elke rij blijft één regel hoog. */}
+              <style>{`@keyframes rundoFlowVul{0%{transform:scaleY(0);opacity:1}14%{transform:scaleY(1);opacity:1}72%{transform:scaleY(1);opacity:1}84%{opacity:0}100%{transform:scaleY(0);opacity:0}}
+                @keyframes rundoFlowTik{0%{box-shadow:0 0 0 0 rgba(91,159,214,0.5);transform:scale(1)}7%{box-shadow:0 0 0 7px rgba(91,159,214,0);transform:scale(1.14)}16%{box-shadow:0 0 0 0 rgba(91,159,214,0);transform:scale(1)}100%{transform:scale(1)}}`}</style>
               <div style={{ marginTop: 20, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
                 {L.welkomFlow.map((st, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "center", padding: "9px 0",
-                    borderBottom: i < L.welkomFlow.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 13, flexDirection: i % 2 === 1 ? "row-reverse" : "row" }}>
-                      <span style={{ position: "relative", flexShrink: 0, width: 54, height: 54, borderRadius: "50%", background: "rgba(91,159,214,0.16)", border: "1px solid rgba(91,159,214,0.5)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 27 }}>
-                        {st.ic}
-                        <span style={{ position: "absolute", top: -6, right: -7, width: 22, height: 22, borderRadius: "50%", background: "#5b9fd6", color: "#131826", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
-                      </span>
-                      <span style={{ fontSize: 17, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3 }}>{st.label}</span>
-                    </span>
+                  <div key={i} style={{ position: "relative", padding: "7px 0" }}>
+                    {i < L.welkomFlow.length - 1 && (
+                      <>
+                        <span style={{ position: "absolute", left: 13, top: 45, width: 2, height: 40, background: "linear-gradient(180deg,rgba(91,159,214,0.25),rgba(91,159,214,0))" }} />
+                        <span style={{ position: "absolute", left: 13, top: 45, width: 2, height: 40, transformOrigin: "top", background: "linear-gradient(180deg,rgba(91,159,214,0.95),rgba(91,159,214,0))", animation: `rundoFlowVul 4.8s ease-in-out ${0.12 + i * 0.55}s 3` }} />
+                      </>
+                    )}
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <span style={{ width: 28, height: 28, borderRadius: "50%", background: "#5b9fd6", color: "#0b1220", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, animation: `rundoFlowTik 4.8s ease-in-out ${i * 0.55}s 3` }}>{i + 1}</span>
+                      <span style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(91,159,214,0.16)", border: "1px solid rgba(91,159,214,0.5)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 21, flexShrink: 0 }}>{st.ic}</span>
+                      <span style={{ fontSize: 16.5, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3 }}>{st.label}</span>
+                    </div>
                   </div>
                 ))}
               </div>
