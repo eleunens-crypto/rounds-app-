@@ -2678,6 +2678,9 @@ export default function PartyTest() {
   // het scherm vult. Alles erboven blijft bereikbaar door omhoog te vegen.
   const catRij = useRef<HTMLDivElement | null>(null)
   const hintBlok = useRef<HTMLDivElement | null>(null)
+  const telRij = useRef<HTMLDivElement | null>(null)
+  const namenRij = useRef<HTMLDivElement | null>(null)
+  const strookRij = useRef<HTMLDivElement | null>(null)
   const sprongGedaan = useRef(false)
   const modusVorig = useRef(perPersoon)
   const naarRondjeKop = () => {
@@ -2690,7 +2693,9 @@ export default function PartyTest() {
   }
   const naarLijst = () => {
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      const el = perPersoon ? (hintBlok.current || catRij.current) : catRij.current
+      const el = perPersoon
+        ? (telRij.current || namenRij.current || hintBlok.current || catRij.current)
+        : (strookRij.current || catRij.current)
       if (!el) return
       el.scrollIntoView({ behavior: "smooth", block: "start" })
     }))
@@ -3585,9 +3590,10 @@ export default function PartyTest() {
     }
     setLastRoundHandled(true); setPayVia("self"); setOverviewBackTo("hub"); setView("roundsOverview")
   }
-  const openGroepVenster = (metNaam: boolean) => {
+  const openGroepVenster = (metNaam: boolean, vulAan = false) => {
     setNaamPlichtVeld(metNaam && !isAutoNaam(groupName) ? groupName : "")
-    setPersGeteld(people.length > 1)
+    setPersGeteld(!metNaam || people.length > 1)
+    if (vulAan && people.length < 2) void addPerson()
     setAlleenPers(!metNaam)
     setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name })))
     setNaamPlichtNa(null)
@@ -3595,7 +3601,7 @@ export default function PartyTest() {
   }
 
   const kopTeller = () => (
-    <span onClick={(e) => { e.stopPropagation(); openGroepVenster(false) }} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, color: "#3a4459", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
+    <span onClick={(e) => { e.stopPropagation(); openGroepVenster(false, true) }} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, color: "#3a4459", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
       <span onClick={(e) => { e.stopPropagation(); if (people.length > 1) removeLastPerson() }}
         style={{ width: 28, height: 28, borderRadius: "50%", background: "#fff", border: `1px solid ${RAND}33`, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 19, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
       <b style={{ color: RAND, fontSize: 18, padding: "0 2px" }}>{people.length}</b>
@@ -7162,7 +7168,7 @@ export default function PartyTest() {
       // is net de ruimte die de drankjes nodig hebben.
       const kort = wie.length > 12
       return (
-        <div style={{ ...(inRaster ? { gridColumn: "1 / -1" } : null), position: "sticky", top: 0, zIndex: 5, display: "flex", justifyContent: "center", marginBottom: 8 }}>
+        <div ref={inRaster ? strookRij : undefined} style={{ ...(inRaster ? { gridColumn: "1 / -1" } : null), scrollMarginTop: 8, position: "sticky", top: 0, zIndex: 5, display: "flex", justifyContent: "center", marginBottom: 8 }}>
           <span style={{ background: "#fff", border: `2px solid ${k}`, borderRadius: 999, padding: "8px 17px", display: "inline-flex", alignItems: "center", gap: 7, maxWidth: "100%", whiteSpace: "nowrap", color: "#1a1a1a", boxShadow: "0 3px 10px -5px rgba(29,41,66,0.5)" }}>
             <span style={{ fontSize: kort ? 14 : 16, fontWeight: 700, flexShrink: 0 }}>{kort ? L.forWord : L.tapForStrip}</span>
             <b style={{ fontSize: 19, fontWeight: 800, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{wie}</b>
@@ -8688,13 +8694,13 @@ export default function PartyTest() {
                       style={{ flexShrink: 0, minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5, border: "none", borderLeft: "1px solid rgba(29,41,66,0.2)", background: "transparent", color: RAND, padding: "3px 4px 3px 10px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.editNamesBtn}</button>
                   </div>
                 {(() => {
-                  if (people.length < 3 || roundItems === 0) return null
+                  if (people.length < 2 || roundItems === 0) return null
                   const klaar = people.filter((pp) => drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)).length
-                  return <div style={{ fontSize: 13, fontWeight: 700, color: "#8a5e0f", marginBottom: 8 }}>{L.someHaveDrinks(klaar, people.length)}</div>
+                  return <div ref={telRij} style={{ scrollMarginTop: 8, fontSize: 13, fontWeight: 700, color: "#8a5e0f", marginBottom: 8 }}>{L.someHaveDrinks(klaar, people.length)}</div>
                 })()}
                   {/* Namen breken over meerdere regels in plaats van zijwaarts te scrollen:
                       zo staat niemand verborgen en is er geen veeggebaar om te ontdekken. */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
+                  <div ref={namenRij} style={{ scrollMarginTop: 8, display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
                     {people.map((pp, i) => {
                       const aan = voorWie === pp.id
                       const k = gastKleur(i)
