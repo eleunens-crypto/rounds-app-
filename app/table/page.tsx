@@ -3704,8 +3704,9 @@ export default function RundoTable() {
     return (
       <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 18px", boxSizing: "border-box" }}>
         <style>{`@keyframes rundoStartWenk{0%,100%{box-shadow:0 6px 16px -8px rgba(0,0,0,0.6)}50%{box-shadow:0 14px 30px -8px rgba(60,200,210,0.55)}}
+          @keyframes rundoStartHelder{0%,100%{filter:brightness(1)}50%{filter:brightness(1.09)}}
           @keyframes rundoStartPijl{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
-          .rundo-startknop{animation:rundoStartWenk 2s ease-in-out infinite}
+          .rundo-startknop{animation:rundoStartWenk 2s ease-in-out infinite,rundoStartHelder 2s ease-in-out infinite}
           .rundo-startpijl{display:inline-block;animation:rundoStartPijl 1.6s ease-in-out infinite}`}</style>
         <div style={{ maxWidth: 460, margin: "0 auto", padding: "18px 16px" }}>
           <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, marginBottom: 42 }}>
@@ -3742,7 +3743,7 @@ export default function RundoTable() {
               </div>
             </div>
           <button onClick={() => setWelkom(false)} className="rundo-startknop"
-            style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "21px", border: "none", fontSize: 25, fontWeight: 800, letterSpacing: "0.01em", color: "#fff", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#3bbfc4,#0d7c8c)" }}>
+            style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "21px", border: "none", fontSize: 26, fontWeight: 700, letterSpacing: "0.03em", color: "#fff", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#3bbfc4,#0d7c8c)" }}>
             {L.welkomStart}<span className="rundo-startpijl">→</span>
           </button>
           </div>
