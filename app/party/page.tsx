@@ -633,7 +633,7 @@ const T = {
     tryTableLine: "Rekening splitsen in een restaurant? Probeer ook",
     welkomSub1: "Rondjes opnemen",
     welkomSub2: "… en splitten zonder gedoe!",
-    welkomStart: "Starten →",
+    welkomStart: "Starten ",
     orWordShort: "of",
     welkomFlow: [
       { ic: ["✍️", "📱"], label: "neem zelf op of deel de QR" },
@@ -755,6 +755,8 @@ const T = {
     youTag: "jij",
     yourselfWord: "jezelf",
     everyoneWord: "iedereen",
+    fromTwoOn: "Beschikbaar vanaf 2 personen \u2014 nu ben jij de enige.",
+    addPersonBtn: "Persoon toevoegen",
     forWord: "Voor",
     aloneHint: "Voorlopig alleen jij",
     canAlsoLater: "Kan ook later",
@@ -1463,7 +1465,7 @@ const T = {
     tryTableLine: "Partager l'addition au restaurant\u00a0? Essaie aussi",
     welkomSub1: "Prendre les tourn\u00e9es",
     welkomSub2: "… et partager sans prise de t\u00eate\u00a0!",
-    welkomStart: "Commencer →",
+    welkomStart: "Commencer ",
     orWordShort: "ou",
     welkomFlow: [
       { ic: ["✍️", "📱"], label: "note toi-m\u00eame ou partage le QR" },
@@ -1585,6 +1587,8 @@ const T = {
     youTag: "toi",
     yourselfWord: "toi-m\u00eame",
     everyoneWord: "tout le monde",
+    fromTwoOn: "Disponible \u00e0 partir de 2 personnes \u2014 tu es seul pour l'instant.",
+    addPersonBtn: "Ajouter une personne",
     forWord: "Pour",
     aloneHint: "Pour l'instant, juste toi",
     canAlsoLater: "Ça peut attendre",
@@ -7105,7 +7109,7 @@ export default function PartyTest() {
     {(() => {
       const idx = people.findIndex((pp) => pp.id === voorWie)
       const ik = idx >= 0 ? people[idx] : null
-      if (!ik || settle) return null
+      if (!ik || settle || alleenJij) return null
       const benIkHet = ik.id === meId
       // In de samen-stand tik je niet voor één iemand aan maar voor de hele groep;
       // daar stond ten onrechte "jezelf". De strook draagt dan de moduskleur in plaats
@@ -7113,14 +7117,13 @@ export default function PartyTest() {
       const samen = !perPersoon
       const wie = samen ? L.everyoneWord : (benIkHet && !ik.named ? L.yourselfWord : ik.name)
       const k = samen ? RAND : gastKleur(idx)
-      const tekstK = samen ? RANDTEKST : donkerder(gastKleur(idx))
       // Één regel, altijd: past de volle zin niet, dan valt "Je tikt aan" weg en blijft
       // de naam even groot staan. Afbreken zou de strook twee regels hoog maken, en dat
       // is net de ruimte die de drankjes nodig hebben.
       const kort = wie.length > 12
       return (
         <div style={{ position: "sticky", top: 0, zIndex: 5, display: "flex", justifyContent: "center", marginBottom: 8 }}>
-          <span style={{ background: k, borderRadius: 999, padding: "9px 18px", display: "inline-flex", alignItems: "center", gap: 7, maxWidth: "100%", whiteSpace: "nowrap", color: tekstK, boxShadow: "0 4px 12px -4px rgba(29,41,66,0.5)" }}>
+          <span style={{ background: "#fff", border: `2px solid ${k}`, borderRadius: 999, padding: "8px 17px", display: "inline-flex", alignItems: "center", gap: 7, maxWidth: "100%", whiteSpace: "nowrap", color: "#1a1a1a", boxShadow: "0 3px 10px -5px rgba(29,41,66,0.5)" }}>
             <span style={{ fontSize: kort ? 14 : 16, fontWeight: 700, flexShrink: 0 }}>{kort ? L.forWord : L.tapForStrip}</span>
             <b style={{ fontSize: 19, fontWeight: 800, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{wie}</b>
             <span style={{ fontSize: 18, flexShrink: 0 }}>👇</span>
@@ -7822,8 +7825,10 @@ export default function PartyTest() {
   if (view === "start" && welkom && !groupId && !onboardedOnce) {
     return (
       <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 18px", boxSizing: "border-box" }}>
-        <style>{`@keyframes rundoStartWenk{0%,100%{transform:scale(1);box-shadow:inset 0 0 0 0 rgba(255,255,255,0);filter:brightness(1)}50%{transform:scale(0.972);box-shadow:inset 0 0 26px 4px rgba(255,255,255,0.28);filter:brightness(1.07)}}
-          .rundo-startknop{animation:rundoStartWenk 1.9s ease-in-out infinite;transform-origin:center}`}</style>
+        <style>{`@keyframes rundoStartWenk{0%,100%{box-shadow:0 6px 16px -8px rgba(0,0,0,0.6)}50%{box-shadow:0 14px 30px -8px rgba(240,190,70,0.55)}}
+          @keyframes rundoStartPijl{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+          .rundo-startknop{animation:rundoStartWenk 2s ease-in-out infinite}
+          .rundo-startpijl{display:inline-block;animation:rundoStartPijl 1.6s ease-in-out infinite}`}</style>
         <div style={{ maxWidth: 460, margin: "0 auto", padding: "18px 16px" }}>
           <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, marginBottom: 42 }}>
             <div style={{ transform: "scale(1.45)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
@@ -7870,7 +7875,7 @@ export default function PartyTest() {
             </div>
           <button onClick={() => setWelkom(false)} className="rundo-startknop"
             style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "21px", border: "none", fontSize: 25, fontWeight: 800, letterSpacing: "0.01em", color: "#2a2110", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#f5c451,#e0a020)" }}>
-            {L.welkomStart}
+            {L.welkomStart}<span className="rundo-startpijl">→</span>
           </button>
           </div>
           {renderRestoVerwijzing(true)}
@@ -8514,7 +8519,11 @@ export default function PartyTest() {
     const catVisible = zoekt ? catDrinks : catDrinks.filter((d) => fullList || d.fav || drinkTotal(d.id) > 0)
     // Voor wie tik je aan: als balk bovenin de drankjeskaart. Alleen als er echt iemand
     // gekozen is — bij "zonder namen" bestaat voorWie niet.
-    const voorWieIdx = people.findIndex((pp) => pp.id === voorWie)
+    // Per persoon noteren terwijl je de enige bent: dan valt er niets te verdelen en
+  // belanden alle drankjes stilzwijgend bij jou. De lijst gaat op slot tot er iemand
+  // bij is — een waarschuwing alleen kun je wegtikken, dit niet.
+  const alleenJij = !settle && perPersoon && people.length < 2
+  const voorWieIdx = people.findIndex((pp) => pp.id === voorWie)
     const voorWieKleur = voorWieIdx >= 0 ? gastKleur(voorWieIdx) : "#F5B301"
     const qrBalk = !!voorWie && settle && !!openRoundId && isAdmin
     const needCups = depositOn && (people.some((p) => pickedUpOf(p.id) > 0) || people.some((p) => cupsBal(p.id) !== 0))
@@ -8572,7 +8581,7 @@ export default function PartyTest() {
                 {/* De vraag hing als klein kapitaaltje boven de baan en werd daardoor
                     gelezen als rubriekje. Nu is ze de titel van het kader eromheen: gewone
                     zinsgrootte, over de rand heen, met lucht tussen haar en de knoppen. */}
-                <div style={{ position: "relative", overflow: "hidden", border: "1px solid rgba(29,41,66,0.18)", borderRadius: 11, padding: "18px 0 0", marginTop: 10, marginBottom: 9 }}>
+                <div style={{ position: "relative", border: "1px solid rgba(29,41,66,0.18)", borderRadius: 11, padding: "18px 0 0", marginTop: 12, marginBottom: 9 }}>
                   <span style={{ position: "absolute", top: -11, left: 12, background: "#fff", padding: "0 7px", fontSize: 17, fontWeight: 700, color: "#1d2942", whiteSpace: "nowrap" }}>{L.howNoteQ}</span>
                   {/* Donkerdere gleuf, lichte duim: dat is wat een baan als schuifbalk laat
                       lezen. De baan loopt tot tegen de kaderrand en vult de onderkant ervan —
@@ -8580,21 +8589,34 @@ export default function PartyTest() {
                       "par personne" nodig hadden om niet tegen de duimrand te duwen. De
                       poppetjes staan niet hier maar in de melding eronder, zodat de baan een
                       rustige schakelaar blijft. */}
-                  <div style={{ display: "flex", background: "#e7ebf3", borderTop: "1px solid rgba(29,41,66,0.14)", padding: 4 }}>
+                  <div style={{ display: "flex", background: "#e7ebf3", borderTop: "1px solid rgba(29,41,66,0.14)", borderRadius: "0 0 10px 10px", padding: 4 }}>
                     {[false, true].map((mode) => {
                       const aan = perPersoon === mode
                       return (
                         <button key={String(mode)} onClick={() => { setPerPersoon(mode); naarRondjeKop() }}
-                          style={{ flex: 1, textAlign: "center", borderRadius: 999, padding: "10px 0", fontSize: 15.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                            background: aan ? "#fff" : "transparent",
-                            border: aan ? `1.5px solid ${RAND}` : "1.5px solid transparent",
-                            color: aan ? RAND : "#5c667d" }}>
+                          style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 999, padding: "10px 0", fontSize: 15.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                            background: aan ? "#fdf3d8" : "transparent",
+                            border: aan ? "2px solid #e0a020" : "2px solid transparent",
+                            color: aan ? "#6b5b28" : "#5c667d" }}>
+                          {aan && <span style={{ fontSize: 14 }}>✓</span>}
                           {mode ? L.perPersonWord : L.tikSamenWord}
                         </button>
                       )
                     })}
                   </div>
                 </div>
+                {alleenJij ? (
+                  <div style={{ marginTop: 9, background: "#fdf6e4", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "11px 12px" }}>
+                    <div style={{ display: "flex", gap: 9, alignItems: "flex-start", marginBottom: 10 }}>
+                      <span style={{ fontSize: 20, flexShrink: 0 }}>{"\u{1F465}"}</span>
+                      <span style={{ fontSize: 15.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35 }}>{L.fromTwoOn}</span>
+                    </div>
+                    <button onClick={() => { void addPerson() }}
+                      style={{ display: "block", width: "100%", padding: "11px 0", borderRadius: 11, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", background: RAND, color: RANDTEKST }}>
+                      + {L.addPersonBtn}
+                    </button>
+                  </div>
+                ) : (
                 <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 9, background: "#eef1f6", borderRadius: 12, padding: "11px 13px" }}>
                   {/* Eén poppetje tegenover meerdere: hetzelfde onderscheid als de knop
                       erboven. Er stond hier een vingertje bij per persoon, en dat is een
@@ -8602,6 +8624,7 @@ export default function PartyTest() {
                   <span style={{ fontSize: 21, flexShrink: 0 }}>{perPersoon ? "\u{1F464}" : "\u{1F465}"}</span>
                   <span style={{ fontSize: 16.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35 }}>{perPersoon ? L.hintPerPerson : L.hintTogether}</span>
                 </div>
+                )}
 
 
                 {perPersoon && (<>
@@ -8776,7 +8799,7 @@ export default function PartyTest() {
                 const un = cartAnon[d.id] ?? 0
                 return (
                   <div key={d.id} onClick={() => { if (settle && !bezig) setGeenRondje(true) }}
-                    style={{ opacity: settle && !bezig ? 0.55 : 1, cursor: settle && !bezig ? "pointer" : "default", padding: "10px 10px", borderRadius: 12, background: tot > 0 ? "rgba(31,138,76,0.08)" : themaNaam ? "#e9edf6" : "#eef1f6", border: tot > 0 ? "1.5px solid rgba(31,138,76,0.5)" : `1px solid ${themaNaam ? "rgba(59,72,106,0.14)" : "rgba(29,41,66,0.1)"}`, boxShadow: tot > 0 ? "0 0 0 3px rgba(31,138,76,0.1)" : "none" }}>
+                    style={{ opacity: alleenJij ? 0.45 : settle && !bezig ? 0.55 : 1, pointerEvents: alleenJij ? "none" : "auto", cursor: settle && !bezig ? "pointer" : "default", padding: "10px 10px", borderRadius: 12, background: tot > 0 ? "rgba(31,138,76,0.08)" : themaNaam ? "#e9edf6" : "#eef1f6", border: tot > 0 ? "1.5px solid rgba(31,138,76,0.5)" : `1px solid ${themaNaam ? "rgba(59,72,106,0.14)" : "rgba(29,41,66,0.1)"}`, boxShadow: tot > 0 ? "0 0 0 3px rgba(31,138,76,0.1)" : "none" }}>
                     <div style={{ fontSize: 17.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#1f6b3a" : themaNaam ? "#2c3752" : "#4a5567", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
                     <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
                       <button style={{ ...S.step, opacity: tot > 0 ? 1 : 0.4 }} onClick={() => { if (settle && !bezig) { setGeenRondje(true); return } bumpDown(d.id) }}>−</button>
@@ -8787,10 +8810,10 @@ export default function PartyTest() {
                 )
               })}
               {!zoekt && (
-                <div onClick={() => { setShowAddDrink(true); setNdName("") }}
-                  style={{ padding: "10px", borderRadius: 12, background: "#fcfdfe", border: `1.5px dashed ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.6)" : "rgba(240,165,0,0.6)"}`, display: "flex", flexDirection: "column", justifyContent: "space-between", cursor: "pointer", color: settle ? MODUS_FAIR.tekst : themaNaam ? "#3b486a" : "#c98a00" }}>
-                  <div style={{ fontSize: 17.5, fontWeight: 800, lineHeight: 1.25 }}>＋ {L.newDrinkTile}</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, opacity: 0.8, marginTop: 7 }}>{L.notOnList}</div>
+                <div onClick={() => { if (alleenJij) return; setShowAddDrink(true); setNdName("") }}
+                  style={{ opacity: alleenJij ? 0.45 : 1, pointerEvents: alleenJij ? "none" : "auto", padding: "10px", borderRadius: 12, background: "#fff", border: `1.5px dashed ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.6)" : "rgba(224,138,0,0.75)"}`, display: "flex", flexDirection: "column", justifyContent: "space-between", cursor: "pointer", color: themaNaam ? "#2c3752" : "#4a5567" }}>
+                  <div style={{ fontSize: 17.5, fontWeight: 600, lineHeight: 1.25 }}>＋ {L.newDrinkTile}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "#8b93a3", marginTop: 7 }}>{L.notOnList}</div>
                 </div>
               )}
             </div>
