@@ -755,8 +755,7 @@ const T = {
     youTag: "jij",
     yourselfWord: "jezelf",
     everyoneWord: "iedereen",
-    fromTwoOn: "Beschikbaar vanaf 2 personen \u2014 nu ben jij de enige.",
-    addPersonBtn: "Persoon toevoegen",
+    fromTwoOn: "Beschikbaar vanaf 2 personen \u2014 voeg er hieronder \u00e9\u00e9n toe.",
     forWord: "Voor",
     aloneHint: "Voorlopig alleen jij",
     canAlsoLater: "Kan ook later",
@@ -1587,8 +1586,7 @@ const T = {
     youTag: "toi",
     yourselfWord: "toi-m\u00eame",
     everyoneWord: "tout le monde",
-    fromTwoOn: "Disponible \u00e0 partir de 2 personnes \u2014 tu es seul pour l'instant.",
-    addPersonBtn: "Ajouter une personne",
+    fromTwoOn: "Disponible \u00e0 partir de 2 personnes \u2014 ajoutes-en une ci-dessous.",
     forWord: "Pour",
     aloneHint: "Pour l'instant, juste toi",
     canAlsoLater: "Ça peut attendre",
@@ -2681,6 +2679,7 @@ export default function PartyTest() {
   const catRij = useRef<HTMLDivElement | null>(null)
   const hintBlok = useRef<HTMLDivElement | null>(null)
   const sprongGedaan = useRef(false)
+  const modusVorig = useRef(perPersoon)
   const naarRondjeKop = () => {
     requestAnimationFrame(() => {
       const el = rondjeKop.current
@@ -2690,11 +2689,11 @@ export default function PartyTest() {
     })
   }
   const naarLijst = () => {
-    requestAnimationFrame(() => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
       const el = perPersoon ? (hintBlok.current || catRij.current) : catRij.current
       if (!el) return
       el.scrollIntoView({ behavior: "smooth", block: "start" })
-    })
+    }))
   }
   // Het pijltje aan de rand van de categorieën. Zonder teken weet niemand dat de rij
   // verder loopt; het wenkt daarom zachtjes naar de kant waar meer staat.
@@ -3425,11 +3424,16 @@ export default function PartyTest() {
   // rondje: loopt het rondje leeg of begint er een nieuw, dan mag hij opnieuw.
   useEffect(() => {
     if (settle) return
+    if (modusVorig.current !== perPersoon) {
+      modusVorig.current = perPersoon
+      sprongGedaan.current = false
+      return
+    }
     if (roundItems === 0) { sprongGedaan.current = false; return }
     if (sprongGedaan.current) return
     sprongGedaan.current = true
     naarLijst()
-  }, [roundItems, settle]) // eslint-disable-line
+  }, [roundItems, perPersoon, settle]) // eslint-disable-line
   const resumeRound = () => { if (blockIfUnpaid()) return; setActiveCat(catsPresent[0]); setView("order") }
   const unfinishedRound = roundItems > 0 && rounds.length < roundNr
   // Snelle rondjes kennen geen betalers: daar telt een rondje als afgehandeld zodra er
@@ -8639,15 +8643,9 @@ export default function PartyTest() {
                   </div>
                 </div>
                 {alleenJij ? (
-                  <div style={{ marginTop: 9, background: "#fdf6e4", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "11px 12px" }}>
-                    <div style={{ display: "flex", gap: 9, alignItems: "flex-start", marginBottom: 10 }}>
-                      <span style={{ fontSize: 20, flexShrink: 0 }}>{"\u{1F465}"}</span>
-                      <span style={{ fontSize: 15.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35 }}>{L.fromTwoOn}</span>
-                    </div>
-                    <button onClick={() => { void addPerson() }}
-                      style={{ display: "block", width: "100%", padding: "11px 0", borderRadius: 11, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", background: RAND, color: RANDTEKST }}>
-                      + {L.addPersonBtn}
-                    </button>
+                  <div style={{ display: "flex", gap: 9, alignItems: "flex-start", marginTop: 9, background: "#fdf6e4", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "11px 12px" }}>
+                    <span style={{ fontSize: 20, flexShrink: 0 }}>{"\u{1F465}"}</span>
+                    <span style={{ fontSize: 15.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35 }}>{L.fromTwoOn}</span>
                   </div>
                 ) : (
                 <div ref={hintBlok} style={{ scrollMarginTop: 8, display: "flex", gap: 10, alignItems: "center", marginTop: 9, background: "#eef1f6", borderRadius: 12, padding: "11px 13px" }}>
