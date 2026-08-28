@@ -3737,11 +3737,11 @@ export default function RundoTable() {
                     {i < L.welkomFlow.length - 1 && (
                       <>
                         <span style={{ position: "absolute", left: 13, top: 45, width: 2, height: 40, background: "linear-gradient(180deg,rgba(91,159,214,0.25),rgba(91,159,214,0))" }} />
-                        <span style={{ position: "absolute", left: 13, top: 45, width: 2, height: 40, transformOrigin: "top", background: "linear-gradient(180deg,rgba(91,159,214,0.95),rgba(91,159,214,0))", animation: `rundoFlowVul 4.8s ease-in-out ${0.12 + i * 0.55}s 3` }} />
+                        <span style={{ position: "absolute", left: 13, top: 45, width: 2, height: 40, transformOrigin: "top", background: "linear-gradient(180deg,rgba(91,159,214,0.95),rgba(91,159,214,0))", animation: `rundoFlowVul 6s ease-in-out ${0.36 + i * 1.65}s 3` }} />
                       </>
                     )}
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span style={{ width: 28, height: 28, borderRadius: "50%", background: "#5b9fd6", color: "#0b1220", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, animation: `rundoFlowTik 4.8s ease-in-out ${i * 0.55}s 3` }}>{i + 1}</span>
+                      <span style={{ width: 28, height: 28, borderRadius: "50%", background: "#5b9fd6", color: "#0b1220", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, animation: `rundoFlowTik 6s ease-in-out ${i * 1.65}s 3` }}>{i + 1}</span>
                       <span style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(91,159,214,0.16)", border: "1px solid rgba(91,159,214,0.5)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 21, flexShrink: 0 }}>{st.ic}</span>
                       <span style={{ fontSize: 16.5, fontWeight: 500, color: "#d9d2bd", lineHeight: 1.3 }}>{st.label}</span>
                     </div>
