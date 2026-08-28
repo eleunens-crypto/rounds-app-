@@ -7080,7 +7080,21 @@ export default function PartyTest() {
   )
   // Zoekveld met microfoon: bij uitgebreid opnemen ingebouwd bovenin de drankjeskaart
   // (inKaart), bij de andere modi op zijn vertrouwde plek onder de lijst.
-  const renderZoekBlok = (inKaart = false) => (
+  const renderZoekBlok = (inKaart = false) => (<>
+    {(() => {
+      const idx = people.findIndex((pp) => pp.id === voorWie)
+      const ik = idx >= 0 ? people[idx] : null
+      if (!ik || settle) return null
+      const benIkHet = ik.id === meId
+      const k = gastKleur(idx)
+      return (
+        <div style={{ position: "sticky", top: 0, zIndex: 5, display: "flex", justifyContent: "center", marginBottom: 8 }}>
+          <span style={{ background: k, borderRadius: 999, padding: "5px 15px", fontSize: 13.5, fontWeight: 800, color: donkerder(k), boxShadow: "0 4px 12px -4px rgba(29,41,66,0.5)" }}>
+            👇 {L.tapForStrip} {benIkHet && !ik.named ? L.yourselfWord : ik.name}
+          </span>
+        </div>
+      )
+    })()}
     <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: inKaart ? 2 : 10 }}>
       <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
         <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 18, pointerEvents: "none" }}>🔍</span>
@@ -7098,7 +7112,7 @@ export default function PartyTest() {
         </button>
         )}
     </div>
-  )
+  </>)
   const Header = ({ verbergNav = false, kaal = false }: { verbergNav?: boolean; kaal?: boolean }) => {
     // Onderweg van gelijk verdelen naar Fair Split is er maar één route: namen,
     // toewijzen, pot, betalers, eindbalans. Instellingen en overzichten zouden je
@@ -8594,18 +8608,6 @@ export default function PartyTest() {
                   </div>
                 </>)}
               </div>
-              {heeftZin && (
-                <div style={{ background: RAND, borderLeft: `5px solid ${kleur}`, borderRadius: "0 0 13px 13px", padding: "10px 12px", marginBottom: 10, fontSize: 15, fontWeight: 600, color: "#c3cbd8" }}>
-                  {(() => {
-                    const ik = people.find((pp) => pp.id === voorWie)
-                    const benIkHet = !!ik && ik.id === meId
-                    return (<>
-                      {L.tapForStrip} <b style={{ fontWeight: 800, fontSize: 19, color: kleur }}>{benIkHet && !ik.named ? L.yourselfWord : (ik?.name ?? "")}</b>
-                      {benIkHet && ik.named && <span style={{ fontSize: 12.5, opacity: 0.75 }}> — {L.yourselfWord}</span>}
-                    </>)
-                  })()}
-                </div>
-              )}
               </>)
             })()}
             {settle && people.length > 0 && (
