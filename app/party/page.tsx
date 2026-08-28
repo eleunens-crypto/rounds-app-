@@ -7910,11 +7910,11 @@ export default function PartyTest() {
                       {!laatste && (
                         <>
                           <span style={{ position: "absolute", left: 13, top: 45, width: 2, height: breed ? 64 : 40, background: "linear-gradient(180deg,rgba(240,193,75,0.22),rgba(240,193,75,0))" }} />
-                          <span style={{ position: "absolute", left: 13, top: 45, width: 2, height: breed ? 64 : 40, transformOrigin: "top", background: "linear-gradient(180deg,rgba(240,193,75,0.95),rgba(240,193,75,0))", animation: `rundoFlowVul 4.8s ease-in-out ${0.12 + i * 0.55}s 3` }} />
+                          <span style={{ position: "absolute", left: 13, top: 45, width: 2, height: breed ? 64 : 40, transformOrigin: "top", background: "linear-gradient(180deg,rgba(240,193,75,0.95),rgba(240,193,75,0))", animation: `rundoFlowVul 6s ease-in-out ${0.36 + i * 1.65}s 3` }} />
                         </>
                       )}
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <span style={{ width: 28, height: 28, borderRadius: "50%", background: "#f0c14b", color: "#131826", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, animation: `rundoFlowTik 4.8s ease-in-out ${i * 0.55}s 3` }}>{i + 1}</span>
+                        <span style={{ width: 28, height: 28, borderRadius: "50%", background: "#f0c14b", color: "#131826", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, animation: `rundoFlowTik 6s ease-in-out ${i * 1.65}s 3` }}>{i + 1}</span>
                         {st.ic.map((ic, k) => (
                           <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
                             {k > 0 && <span style={{ fontSize: 13, fontWeight: 800, color: "#b9a67c" }}>{L.orWordShort}</span>}
