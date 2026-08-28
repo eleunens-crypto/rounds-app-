@@ -8572,21 +8572,23 @@ export default function PartyTest() {
                 {/* De vraag hing als klein kapitaaltje boven de baan en werd daardoor
                     gelezen als rubriekje. Nu is ze de titel van het kader eromheen: gewone
                     zinsgrootte, over de rand heen, met lucht tussen haar en de knoppen. */}
-                <div style={{ position: "relative", border: "1px solid rgba(29,41,66,0.18)", borderRadius: 11, padding: "18px 10px 11px", marginTop: 10, marginBottom: 9 }}>
+                <div style={{ position: "relative", overflow: "hidden", border: "1px solid rgba(29,41,66,0.18)", borderRadius: 11, padding: "18px 0 0", marginTop: 10, marginBottom: 9 }}>
                   <span style={{ position: "absolute", top: -11, left: 12, background: "#fff", padding: "0 7px", fontSize: 17, fontWeight: 700, color: "#1d2942", whiteSpace: "nowrap" }}>{L.howNoteQ}</span>
                   {/* Donkerdere gleuf, lichte duim: dat is wat een baan als schuifbalk laat
-                      lezen. Het icoon draagt de betekenis mee — meerdere poppetjes tegenover
-                      één — zodat je de keuze in een halve seconde ziet. */}
-                  <div style={{ display: "flex", background: "#e7ebf3", border: "1px solid rgba(29,41,66,0.14)", borderRadius: 999, padding: 4 }}>
+                      lezen. De baan loopt tot tegen de kaderrand en vult de onderkant ervan —
+                      dat wint twintig pixels, precies wat "voor iedereen" en het Franse
+                      "par personne" nodig hadden om niet tegen de duimrand te duwen. De
+                      poppetjes staan niet hier maar in de melding eronder, zodat de baan een
+                      rustige schakelaar blijft. */}
+                  <div style={{ display: "flex", background: "#e7ebf3", borderTop: "1px solid rgba(29,41,66,0.14)", padding: 4 }}>
                     {[false, true].map((mode) => {
                       const aan = perPersoon === mode
                       return (
                         <button key={String(mode)} onClick={() => { setPerPersoon(mode); naarRondjeKop() }}
-                          style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 999, padding: "10px 0", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                          style={{ flex: 1, textAlign: "center", borderRadius: 999, padding: "10px 0", fontSize: 15.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                             background: aan ? "#fff" : "transparent",
                             border: aan ? `1.5px solid ${RAND}` : "1.5px solid transparent",
                             color: aan ? RAND : "#5c667d" }}>
-                          <span style={{ fontSize: 16 }}>{mode ? "\u{1F464}" : "\u{1F465}"}</span>
                           {mode ? L.perPersonWord : L.tikSamenWord}
                         </button>
                       )
@@ -8594,7 +8596,10 @@ export default function PartyTest() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 9, background: "#eef1f6", borderRadius: 12, padding: "11px 13px" }}>
-                  <span style={{ fontSize: 21, flexShrink: 0 }}>{perPersoon ? "👇" : "👥"}</span>
+                  {/* Eén poppetje tegenover meerdere: hetzelfde onderscheid als de knop
+                      erboven. Er stond hier een vingertje bij per persoon, en dat is een
+                      ander soort teken — een aanwijzing in plaats van een wie. */}
+                  <span style={{ fontSize: 21, flexShrink: 0 }}>{perPersoon ? "\u{1F464}" : "\u{1F465}"}</span>
                   <span style={{ fontSize: 16.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35 }}>{perPersoon ? L.hintPerPerson : L.hintTogether}</span>
                 </div>
 
@@ -8758,7 +8763,7 @@ export default function PartyTest() {
                     {renderZoekBlok(true)}
                     {!zoekt && fullList && (
                       <span onClick={() => setFullList(false)}
-                        style={{ position: "absolute", right: 2, bottom: -19, zIndex: 3, display: "inline-block", padding: "5px 14px", borderRadius: 999, fontSize: 13.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", background: "#fff", border: `1px solid ${RAND}`, color: RAND, boxShadow: "0 2px 8px -4px rgba(29,41,66,0.5)" }}>
+                        style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", bottom: -19, zIndex: 3, display: "inline-block", padding: "5px 14px", borderRadius: 999, fontSize: 13.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", background: "#fff", border: `1px solid ${RAND}`, color: RAND, boxShadow: "0 2px 8px -4px rgba(29,41,66,0.5)" }}>
                         {L.lessGroups}
                       </span>
                     )}
