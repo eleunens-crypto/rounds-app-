@@ -7134,8 +7134,12 @@ export default function PartyTest() {
   const alleenJij = !settle && perPersoon && people.length < 2
   // Zoekveld met microfoon: bij uitgebreid opnemen ingebouwd bovenin de drankjeskaart
   // (inKaart), bij de andere modi op zijn vertrouwde plek onder de lijst.
-  const renderZoekBlok = (inKaart = false) => (<>
-    {(() => {
+  // De strook staat los van het zoekblok. Ze plakte namelijk vast binnen dat blok, en
+  // een sticky element komt nooit voorbij de onderrand van zijn eigen ouder — dus
+  // verdween ze zodra je voorbij het zoekveld scrolde. Als eigen kind van de
+  // drankjeskaart heeft ze de hele lijst als speelveld en blijft ze staan.
+  const renderVoorWieStrook = (inRaster = false) => (
+    (() => {
       const idx = people.findIndex((pp) => pp.id === voorWie)
       const ik = idx >= 0 ? people[idx] : null
       if (!ik || settle || alleenJij) return null
@@ -7151,7 +7155,7 @@ export default function PartyTest() {
       // is net de ruimte die de drankjes nodig hebben.
       const kort = wie.length > 12
       return (
-        <div style={{ position: "sticky", top: 0, zIndex: 5, display: "flex", justifyContent: "center", marginBottom: 8 }}>
+        <div style={{ ...(inRaster ? { gridColumn: "1 / -1" } : null), position: "sticky", top: 0, zIndex: 5, display: "flex", justifyContent: "center", marginBottom: 8 }}>
           <span style={{ background: "#fff", border: `2px solid ${k}`, borderRadius: 999, padding: "8px 17px", display: "inline-flex", alignItems: "center", gap: 7, maxWidth: "100%", whiteSpace: "nowrap", color: "#1a1a1a", boxShadow: "0 3px 10px -5px rgba(29,41,66,0.5)" }}>
             <span style={{ fontSize: kort ? 14 : 16, fontWeight: 700, flexShrink: 0 }}>{kort ? L.forWord : L.tapForStrip}</span>
             <b style={{ fontSize: 19, fontWeight: 800, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{wie}</b>
@@ -7159,7 +7163,10 @@ export default function PartyTest() {
           </span>
         </div>
       )
-    })()}
+    })()
+  )
+  const renderZoekBlok = (inKaart = false) => (<>
+    {!inKaart && renderVoorWieStrook()}
     <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: inKaart ? 2 : 10 }}>
       <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
         <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 18, pointerEvents: "none" }}>🔍</span>
@@ -8807,12 +8814,13 @@ export default function PartyTest() {
                     lijst die hij inklapt. Nu zit hij op de naad tussen het zoekveld en het
                     eerste drankje, met een witte achtergrond zodat hij leesbaar blijft
                     waar hij over de lijst valt. */}
+                {!settle && renderVoorWieStrook(true)}
                 {!settle && (
                   <div style={{ gridColumn: "1 / -1", position: "relative", marginBottom: (!zoekt && fullList) ? 11 : 0 }}>
                     {renderZoekBlok(true)}
                     {!zoekt && fullList && (
                       <span onClick={() => setFullList(false)}
-                        style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", bottom: -19, zIndex: 3, display: "inline-block", padding: "5px 14px", borderRadius: 999, fontSize: 13.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", background: "#fff", border: `1px solid ${RAND}`, color: RAND, boxShadow: "0 2px 8px -4px rgba(29,41,66,0.5)" }}>
+                        style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", bottom: -19, zIndex: 3, display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", background: RAND, border: "none", color: RANDTEKST, boxShadow: `0 2px 8px -2px ${RAND}80` }}>
                         {L.lessGroups}
                       </span>
                     )}
