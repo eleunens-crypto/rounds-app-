@@ -552,7 +552,7 @@ const STRINGS = {
     partyStep3: "handig barlijstje en afrekenen",
     closeBtn: "Sluiten",
     tryItOut: "Probeer het eens",
-    welkomStart: "Starten →",
+    welkomStart: "Starten ",
     welkomFlow: [
       { ic: "📷", label: "scan de rekening" },
       { ic: "📱", label: "deel QR met groep" },
@@ -1189,7 +1189,7 @@ const STRINGS = {
     partyStep3: "ardoise pratique et r\u00e8glement",
     closeBtn: "Fermer",
     tryItOut: "Essaie-le",
-    welkomStart: "Commencer →",
+    welkomStart: "Commencer ",
     welkomFlow: [
       { ic: "📷", label: "scanne l'addition" },
       { ic: "📱", label: "partage le QR au groupe" },
@@ -3703,10 +3703,10 @@ export default function RundoTable() {
   if (!group && welkom && !viaLink) {
     return (
       <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 18px", boxSizing: "border-box" }}>
-        <style>{`@keyframes rundoStartWenk{0%,100%{filter:brightness(1)}50%{filter:brightness(1.16)}}
-          @keyframes rundoStartGlans{0%{background-position:-140% 0}55%,100%{background-position:240% 0}}
-          .rundo-startknop{position:relative;overflow:hidden;animation:rundoStartWenk 2.4s ease-in-out infinite}
-          .rundo-startknop::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,0.55) 50%,transparent 62%);background-size:220% 100%;animation:rundoStartGlans 2.8s ease-in-out infinite;pointer-events:none}`}</style>
+        <style>{`@keyframes rundoStartWenk{0%,100%{box-shadow:0 6px 16px -8px rgba(0,0,0,0.6)}50%{box-shadow:0 14px 30px -8px rgba(60,200,210,0.55)}}
+          @keyframes rundoStartPijl{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+          .rundo-startknop{animation:rundoStartWenk 2s ease-in-out infinite}
+          .rundo-startpijl{display:inline-block;animation:rundoStartPijl 1.6s ease-in-out infinite}`}</style>
         <div style={{ maxWidth: 460, margin: "0 auto", padding: "18px 16px" }}>
           <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, marginBottom: 42 }}>
             <div style={{ transform: "scale(1.45)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
@@ -3742,8 +3742,8 @@ export default function RundoTable() {
               </div>
             </div>
           <button onClick={() => setWelkom(false)} className="rundo-startknop"
-            style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "21px", border: "none", fontSize: 22, fontWeight: 800, color: "#fff", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#3bbfc4,#0d7c8c)" }}>
-            {L.welkomStart}
+            style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "21px", border: "none", fontSize: 25, fontWeight: 800, letterSpacing: "0.01em", color: "#fff", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#3bbfc4,#0d7c8c)" }}>
+            {L.welkomStart}<span className="rundo-startpijl">→</span>
           </button>
           </div>
         {renderPartyVerwijzing()}
