@@ -1175,8 +1175,6 @@ const T = {
     modeTitleSub2: "Betaalt eerlijk volgens wat hij of zij dronk",
     modeQuick: "Ik bestel voor de groep",
     modeQuickSub: "Jij tikt zelf alle drankjes aan.",
-    whatIsThis: "Wat is dit?",
-    modeFairWhat: "Jouw drankjes, jouw bedrag. Geen oneerlijke gelijke verdeling maar betalen volgens wat je dronk — de app rekent het uit.",
     orWord: "of",
     modeFairSub: "Iedereen scant QR met eigen gsm",
     modeFairSub2: "Duidt aan wat hij of zij drinkt",
@@ -2004,8 +2002,6 @@ const T = {
     modeTitleSub2: "Paie équitablement selon ce qu’il ou elle a bu",
     modeQuick: "Je commande pour le groupe",
     modeQuickSub: "Tu coches toutes les boissons toi-même.",
-    whatIsThis: "C’est quoi ?",
-    modeFairWhat: "Tes boissons, ton montant. Pas de partage égal injuste mais payer selon ce que tu as bu — l’appli le calcule.",
     orWord: "ou",
     modeFairSub: "Chacun scanne le QR sur son téléphone",
     modeFairSub2: "Coche ce qu’il ou elle boit",
@@ -2575,7 +2571,6 @@ export default function PartyTest() {
   const [welkom, setWelkom] = useState(true)
   // De uitleg staat los van de keuze: lezen zonder te kiezen, kiezen zonder te lezen.
   // Eén tegelijk open, anders wordt het keuzescherm meteen twee schermen lang.
-  const [modeInfo, setModeInfo] = useState<"quick" | "naam" | "fair" | null>(null)
   const [fromOnboarding, setFromOnboarding] = useState(false)
   const [onboardedOnce, setOnboardedOnce] = useState(false)
   // Als je een verse groep (nog geen rondjes) heropent, land je op de kaders om de modus
@@ -6227,9 +6222,11 @@ export default function PartyTest() {
                     {assignAllMode ? L.onlyThisRound : L.allRoundsBtn}
                   </button>
                 )}
-                <div style={{ ...S.segBaan, marginLeft: "auto", marginBottom: 8, width: "fit-content" }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+                  <div style={{ ...S.segBaan }}>
                   <div style={{ ...S.seg(editAssignMode === "person"), padding: "6px 12px", fontSize: 14.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
                   <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 15, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>{L.perDrink}</div>
+                  </div>
                 </div>
                 {!settle && (
                   <div style={{ display: "flex", justifyContent: "flex-end", margin: "0 0 10px" }}>
@@ -6372,7 +6369,7 @@ export default function PartyTest() {
           <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "#fbf3e4", overflowY: "auto", padding: "18px 16px 28px" }} onClick={() => setShowBarlijst(false)}>
             <div style={{ maxWidth: 430, margin: "0 auto" }} onClick={(e) => e.stopPropagation()}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "#1d2942" }}>🔍 {L.barlistTitle}</div>
+                <div style={{ fontSize: 25, fontWeight: 800, letterSpacing: "0.01em", color: "#1d2942" }}>🔍 {L.barlistTitle}</div>
                 <button onClick={() => setShowBarlijst(false)} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7, border: "none", background: RAND, color: RANDTEKST, height: 50, padding: "0 20px", borderRadius: 999, fontSize: 17, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 3px 10px -4px rgba(29,41,66,0.6)" }}><span style={{ fontSize: 19 }}>✕</span> {L.closeWord}</button>
               </div>
               <div style={{ fontSize: 15, color: "#6b7484", fontWeight: 700, margin: "2px 0 14px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim() || L.autoName()} · {rounds.length} {L.roundWord.toLowerCase()}{rounds.length === 1 ? "" : "s"} · {L.drinksCount(som)}</div>
@@ -7778,10 +7775,8 @@ export default function PartyTest() {
   if (view === "start" && welkom && !groupId && !onboardedOnce) {
     return (
       <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 18px", boxSizing: "border-box" }}>
-        <style>{`@keyframes rundoStartWenk{0%,100%{filter:brightness(1)}50%{filter:brightness(1.16)}}
-          @keyframes rundoStartGlans{0%{background-position:-140% 0}55%,100%{background-position:240% 0}}
-          .rundo-startknop{position:relative;overflow:hidden;animation:rundoStartWenk 2.4s ease-in-out infinite}
-          .rundo-startknop::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,0.55) 50%,transparent 62%);background-size:220% 100%;animation:rundoStartGlans 2.8s ease-in-out infinite;pointer-events:none}`}</style>
+        <style>{`@keyframes rundoStartWenk{0%,100%{transform:scale(1);box-shadow:inset 0 0 0 0 rgba(255,255,255,0);filter:brightness(1)}50%{transform:scale(0.972);box-shadow:inset 0 0 26px 4px rgba(255,255,255,0.28);filter:brightness(1.07)}}
+          .rundo-startknop{animation:rundoStartWenk 1.9s ease-in-out infinite;transform-origin:center}`}</style>
         <div style={{ maxWidth: 460, margin: "0 auto", padding: "18px 16px" }}>
           <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, marginBottom: 42 }}>
             <div style={{ transform: "scale(1.45)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
@@ -7827,7 +7822,7 @@ export default function PartyTest() {
               </div>
             </div>
           <button onClick={() => setWelkom(false)} className="rundo-startknop"
-            style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "21px", border: "none", fontSize: 22, fontWeight: 800, color: "#2a2110", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#f5c451,#e0a020)" }}>
+            style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "21px", border: "none", fontSize: 25, fontWeight: 800, letterSpacing: "0.01em", color: "#2a2110", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#f5c451,#e0a020)" }}>
             {L.welkomStart}
           </button>
           </div>
@@ -7890,12 +7885,12 @@ export default function PartyTest() {
 
 
             {/* Duidelijk dat er een tweede, andere keuze volgt. */}
-            <div style={{ display: "flex", alignItems: "center", gap: 11, margin: "15px 0" }}>
-              <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(29,41,66,0.25)" }} />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 11, margin: "15px 0" }}>
+              <span style={{ width: 64, height: 2, borderRadius: 2, background: "rgba(29,41,66,0.25)" }} />
               {/* Donkerbruin: het rondje hoort bij geen van beide kaarten, en leest daardoor
                   als het scharnierpunt tussen twee keuzes. */}
               <span style={{ flexShrink: 0, width: 46, height: 46, borderRadius: "50%", background: "#4a5567", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: "#fff", boxShadow: "0 4px 12px -5px rgba(107,95,58,0.7)" }}>{L.orWord}</span>
-              <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(29,41,66,0.25)" }} />
+              <span style={{ width: 64, height: 2, borderRadius: 2, background: "rgba(29,41,66,0.25)" }} />
             </div>
 
             <div style={{ opacity: bpSettle === false ? 0.6 : 1 }}>
@@ -7903,7 +7898,7 @@ export default function PartyTest() {
               boxShadow: bpSettle === true ? `0 16px 34px -20px ${MODUS_FAIR.gloed}` : "0 8px 22px -18px rgba(29,41,66,0.5)" }}>
               {/* Kleurbalk als vlag: nog vóór je de tekst leest weet je welke modus dit is. */}
               <div style={{ height: 6, background: MODUS_FAIR.rand }} />
-              <button onClick={() => { setBpSettle(true); setModeInfo((m) => m === "fair" ? m : null) }}
+              <button onClick={() => setBpSettle(true)}
                 style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "14px 14px 13px", border: "none", cursor: "pointer",
                   borderBottom: `1px solid ${MODUS_FAIR.lijnZacht}`,
                   background: bpSettle === true ? MODUS_FAIR.vlak : "linear-gradient(180deg,#fdfcfa,#fff)" }}>
@@ -7913,10 +7908,6 @@ export default function PartyTest() {
                   background: bpSettle === true ? MODUS_FAIR.rand : "transparent",
                   border: bpSettle === true ? "none" : `2.5px solid ${MODUS_FAIR.randZacht}`,
                   color: "#fff" }}>{bpSettle === true ? "✓" : ""}</span>
-                <span onClick={(e) => { e.stopPropagation(); setBpSettle(true); setModeInfo((m) => m === "fair" ? null : "fair") }}
-                  style={{ position: "absolute", top: 0, right: 0, borderRadius: "0 0 0 16px", padding: "10px 15px 11px 17px", fontSize: 17, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap",
-                    background: modeInfo === "fair" ? MODUS_FAIR.rand : MODUS_FAIR.tint,
-                    color: modeInfo === "fair" ? "#fff" : MODUS_FAIR.tekst }}>{L.whatIsThis} <span style={{ fontSize: 18 }}>{modeInfo === "fair" ? "▴" : "▾"}</span></span>
                 {/* Drie toestellen, de middelste met een QR: het verschil met de andere
                     kaart is dat er méér telefoons in het spel zijn. */}
                 <span style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 4, marginTop: 5, marginBottom: 8 }}>
@@ -7937,42 +7928,6 @@ export default function PartyTest() {
                   ))}
                 </span>
               </button>
-              {modeInfo === "fair" && (
-              <div style={{ padding: "0 16px 14px", background: bpSettle === true ? MODUS_FAIR.vlak : "#fff" }}>
-                <div style={{ borderTop: `1px solid ${bpSettle === true ? MODUS_FAIR.streep : MODUS_FAIR.lijnZacht}`, paddingTop: 11 }}>
-                <div>
-                  <div style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}>
-                    <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: MODUS_FAIR.tint, color: MODUS_FAIR.tekst, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14.5, fontWeight: 800, fontStyle: "italic" }}>i</span>
-                    <span style={{ fontSize: 16, color: "#4a5567", lineHeight: 1.5 }}>{L.modeFairWhat}</span>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4, textAlign: "center" }}>
-                    {/* De QR staat vooraan: scannen is de eerste stap, zonder scan geen Fair Split. */}
-                    <div>
-                      <div style={{ height: 58, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <span style={{ display: "inline-flex", padding: 3, borderRadius: 7, background: "#fff", border: "1px solid rgba(29,41,66,0.35)" }}>
-                          <QRCodeSVG value="rundo-party" size={40} bgColor="transparent" fgColor="#1d2942" />
-                        </span>
-                      </div>
-                      <div style={{ fontSize: 14.5, marginTop: 4, color: "#1d2942", fontWeight: 800 }}>QR scannen</div>
-                    </div>
-                    {[{ drank: "🍺", munten: 1, naam: "Tom" }, { drank: "🍷🍷", munten: 3, naam: "Els" }, { drank: "🍻", munten: 2, naam: "Bart" }].map((x) => (
-                      <div key={x.naam}>
-                        <div style={{ fontSize: 23, height: 30, whiteSpace: "nowrap", letterSpacing: -3 }}>{x.drank}</div>
-                        <div style={{ height: 24, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
-                          {Array.from({ length: x.munten }).map((_, k) => (
-                            <span key={k} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#FAC775", color: "#412402", fontSize: 13, fontWeight: 800 }}>€</span>
-                          ))}
-                        </div>
-                        <div style={{ fontSize: 14.5, marginTop: 4, color: "#6b7484", fontWeight: 700 }}>{x.naam}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                </div>
-                </div>
-              </div>
-              )}
               <div style={{ padding: "12px 12px 14px", background: bpSettle === true ? MODUS_FAIR.vlak : "#fff" }}>
                 <button disabled={busy} onClick={() => { setBpSettle(true); startWithMode(undefined, true) }}
                   style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 19.5, fontWeight: 800, cursor: "pointer", borderRadius: 14, border: "none",
@@ -8583,7 +8538,7 @@ export default function PartyTest() {
                   })}
                 </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 9, background: "#eef1f6", borderRadius: 12, padding: "11px 13px" }}>
-                  <span style={{ fontSize: 21, flexShrink: 0 }}>{perPersoon ? "👆" : "👥"}</span>
+                  <span style={{ fontSize: 21, flexShrink: 0 }}>{perPersoon ? "👇" : "👥"}</span>
                   <span style={{ fontSize: 16.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35 }}>{perPersoon ? L.hintPerPerson : L.hintTogether}</span>
                 </div>
 
@@ -8618,14 +8573,14 @@ export default function PartyTest() {
                           if (viaLink) { setConfirmDlg({ msg: L.tapForQrGuest(pp.name), yes: L.tapForQrYes, no: L.cancel, onYes: () => { setConfirmDlg(null); setVoorWieRaw(pp.id) } }); return }
                           setVoorWieRaw(pp.id)
                         }}
-                          style={{ borderRadius: 999, padding: aan ? "5px 12px" : "5px 11px", fontSize: aan ? 14 : 13.5, cursor: "pointer", fontFamily: "inherit",
+                          style={{ borderRadius: 999, padding: aan ? "9px 16px" : "9px 15px", fontSize: aan ? 16.5 : 16, cursor: "pointer", fontFamily: "inherit",
                             fontWeight: 800,
                             background: aan ? k : "transparent",
                             border: `1.5px solid ${k}`,
                             color: aan ? "#2a1f06" : donkerder(k) }}>
                           {pp.id === meId ? "♛ " : viaLink ? "📱 " : ""}{pp.id === meId && !pp.named ? L.jijNaam : pp.name}
                         {(() => { const n = drinks.reduce((a, d) => a + (cart[d.id]?.[pp.id] ?? 0), 0); return n > 0 ? (
-                          <span style={{ marginLeft: 5, borderRadius: 999, minWidth: 17, height: 17, padding: "0 4px", fontSize: 10.5, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", background: aan ? "rgba(42,31,6,0.85)" : donkerder(k), color: aan ? k : "#fff" }}>{n}</span>
+                          <span style={{ marginLeft: 6, borderRadius: 999, minWidth: 20, height: 20, padding: "0 5px", fontSize: 12, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", background: aan ? "rgba(42,31,6,0.85)" : donkerder(k), color: aan ? k : "#fff" }}>{n}</span>
                         ) : null })()}
                           {pp.id === meId && pp.named && (
                             <span style={{ marginLeft: 5, borderRadius: 999, padding: "1px 6px", fontSize: 9.5, background: aan ? "rgba(42,31,6,0.18)" : `${k}33`, color: aan ? "#2a1f06" : donkerder(k) }}>{L.youTag}</span>
@@ -8924,9 +8879,11 @@ export default function PartyTest() {
           <div style={S.overlay} onClick={() => setShowAssignAll(false)}>
             <div style={{ ...S.sheet, maxHeight: "82vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                 <h3 style={{ ...S.h3, margin: "0 0 10px", fontSize: 21.5, textAlign: "center" }}>{L.assign}</h3>
-                <div style={{ ...S.segBaan, marginLeft: "auto", marginBottom: 8, width: "fit-content" }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+                  <div style={{ ...S.segBaan }}>
                   <div style={{ ...S.seg(assignMode === "person"), padding: "6px 12px", fontSize: 14.5, minWidth: 78, textAlign: "center" }} onClick={() => setAssignMode("person")}>{L.perPerson}</div>
                   <div style={{ ...S.seg(assignMode === "drink"), padding: "5px 9px", fontSize: 15, minWidth: 78, textAlign: "center" }} onClick={() => setAssignMode("drink")}>{L.perDrink}</div>
+                  </div>
                 </div>
               {/* Namen vergeten in te vullen? Hier aanpassen, zonder het venster of je
                   toewijzingen te verlaten — alles hangt aan nummers, dus de nieuwe naam
