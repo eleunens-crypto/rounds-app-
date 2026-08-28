@@ -10058,7 +10058,7 @@ export default function PartyTest() {
                         <span style={{ minWidth: 0, fontSize: 13, fontWeight: 700, color: "#6b4a00", display: "inline-flex", alignItems: "center", gap: 6 }}>
                           <span style={{ flexShrink: 0, width: 7, height: 7, borderRadius: "50%", background: "#e08a00" }} />{tekst}
                         </span>
-                        <span onClick={doe} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#fff", background: "#e08a00", border: "none", borderRadius: 999, padding: "7px 15px", cursor: "pointer", boxShadow: "0 3px 9px -3px rgba(224,138,0,0.8)" }}>{knop}</span>
+                        <span onClick={doe} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#8a4436", background: "#fff", border: "1.5px solid rgba(176,64,47,0.55)", borderRadius: 999, padding: "7px 15px", cursor: "pointer" }}>{knop}</span>
                       </div>
                     )
                     return (
@@ -10343,6 +10343,8 @@ export default function PartyTest() {
     const klaar = zonderBetaler.length === 0 && !potZonderNamen
     return (
       <div style={S.page}><div style={S.wrap}>
+        <style>{`@keyframes rundoPilWenk{0%,100%{border-color:rgba(224,138,0,0.35);box-shadow:0 0 0 0 rgba(224,138,0,0)}50%{border-color:rgba(224,138,0,0.95);box-shadow:0 0 0 4px rgba(224,138,0,0.13)}}
+          .rundo-pil-wenk{animation:rundoPilWenk 1.9s ease-in-out infinite}`}</style>
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
@@ -10502,12 +10504,12 @@ export default function PartyTest() {
               </div>
                   {geenBedrag ? (
                     <div onClick={() => { setFillMode(true); setOverviewBackTo("payers"); setView("roundsOverview") }}
-                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 9, cursor: "pointer", background: "rgba(240,165,0,0.1)", border: "1.5px dashed rgba(224,138,0,0.55)", borderRadius: 12, padding: "10px 12px", marginBottom: 9 }}>
-                      <span style={{ fontSize: 14.5, fontWeight: 800, color: "#a8720a", minWidth: 0 }}>👆 {L.fillAmountFirstShort}</span>
-                      <span style={{ flexShrink: 0, background: "#e08a00", color: "#fff", borderRadius: 999, padding: "7px 15px", fontSize: 13.5, fontWeight: 800 }}>{L.fillWord}</span>
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 9, cursor: "pointer", background: "rgba(240,165,0,0.1)", border: "1.5px dashed rgba(176,64,47,0.5)", borderRadius: 12, padding: "10px 12px", marginBottom: 9 }}>
+                      <span style={{ fontSize: 14.5, fontWeight: 800, color: "#8a4436", minWidth: 0 }}>{L.fillAmountFirstShort}</span>
+                      <span style={{ flexShrink: 0, background: "#fff", color: "#8a4436", border: "1.5px solid rgba(176,64,47,0.55)", borderRadius: 999, padding: "7px 15px", fontSize: 13.5, fontWeight: 800 }}>{L.fillWord}</span>
                     </div>
                   ) : tekort > 0.005 ? (
-                    <div style={{ fontSize: 14.5, fontWeight: 800, color: "#a8720a", marginBottom: 9 }}>👆 {L.tapNameBelow}</div>
+                    <div style={{ fontSize: 14.5, fontWeight: 800, color: "#a8720a", marginBottom: 9 }}>{L.tapNameBelow} 👇</div>
                   ) : null}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {/* De pot is een betaler zoals een persoon: hij heeft geld en geeft het uit. */}
@@ -10523,10 +10525,10 @@ export default function PartyTest() {
                 {people.map((p) => {
                   const on = (r.payers?.[p.id] || 0) > 0.005
                   return (
-                    <span key={p.id} onClick={() => { if (geenBedrag) { setNotice(L.fillAmountFirst); return } rTogglePayer(idx, p.id) }} title={p.name}
+                    <span key={p.id} className={!on && !geenBedrag && tekort > 0.005 ? "rundo-pil-wenk" : undefined} onClick={() => { if (geenBedrag) { setNotice(L.fillAmountFirst); return } rTogglePayer(idx, p.id) }} title={p.name}
                       style={{ ...S.chip(on ? 1 : 0), opacity: geenBedrag ? 0.45 : 1, padding: on ? "9px 9px 9px 15px" : "10px 16px", fontSize: 15,
                         ...(!on && !geenBedrag && tekort > 0.005 ? { border: "2px solid rgba(224,138,0,0.6)", background: "rgba(240,165,0,0.07)", color: "#8a5e0f" } : {}) }}>
-                      {p.name}{on && (gekozen.length > 1 || uitPot) && <span style={{ marginLeft: 6, background: RANDTEKST, color: RAND, borderRadius: 999, padding: "1px 8px", fontSize: 12.5, fontWeight: 800, flexShrink: 0 }}>{euro(r.payers[p.id])}</span>}
+                      {p.name}{on && <span style={{ marginLeft: 6, background: RANDTEKST, color: RAND, borderRadius: 999, padding: "1px 8px", fontSize: 12.5, fontWeight: 800, flexShrink: 0 }}>{euro(r.payers[p.id])}</span>}
                     </span>
                   )
                 })}
