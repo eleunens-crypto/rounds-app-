@@ -7871,7 +7871,9 @@ export default function PartyTest() {
         <style>{`@keyframes rundoStartWenk{0%,100%{box-shadow:0 6px 16px -8px rgba(0,0,0,0.6)}50%{box-shadow:0 14px 30px -8px rgba(240,190,70,0.55)}}
           @keyframes rundoStartHelder{0%,100%{filter:brightness(1)}50%{filter:brightness(1.09)}}
           @keyframes rundoStartPijl{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+          @keyframes rundoStartWoord{0%{text-shadow:0 0 0 rgba(255,255,255,0)}7%{text-shadow:0 0 14px rgba(255,255,255,0.9),0 0 26px rgba(255,240,190,0.7)}24%{text-shadow:0 0 0 rgba(255,255,255,0)}100%{text-shadow:0 0 0 rgba(255,255,255,0)}}
           .rundo-startknop{animation:rundoStartWenk 2s ease-in-out infinite,rundoStartHelder 2s ease-in-out infinite}
+          .rundo-startwoord{display:inline-block;animation:rundoStartWoord 6s ease-in-out 4.95s 3}
           .rundo-startpijl{display:inline-block;animation:rundoStartPijl 1.6s ease-in-out infinite}`}</style>
         <div style={{ maxWidth: 460, margin: "0 auto", padding: "18px 16px" }}>
           <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, marginBottom: 42 }}>
@@ -7931,7 +7933,7 @@ export default function PartyTest() {
             </div>
           <button onClick={() => setWelkom(false)} className="rundo-startknop"
             style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "21px", border: "none", fontSize: 22, fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: "#2a2110", cursor: "pointer", fontFamily: "system-ui,-apple-system,'Segoe UI',Roboto,sans-serif", background: "linear-gradient(135deg,#f5c451,#e0a020)" }}>
-            {L.welkomStart}<span className="rundo-startpijl">→</span>
+            <span className="rundo-startwoord">{L.welkomStart}</span><span className="rundo-startpijl">→</span>
           </button>
           </div>
           {renderRestoVerwijzing(true)}
