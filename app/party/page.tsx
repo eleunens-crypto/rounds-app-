@@ -2704,8 +2704,11 @@ export default function PartyTest() {
         style={{ position: "absolute", [rechts ? "right" : "left"]: 0, top: 0, bottom: 4, width: 42, display: "flex", alignItems: "center",
           justifyContent: rechts ? "flex-end" : "flex-start", cursor: "pointer",
           background: `linear-gradient(${rechts ? "90deg" : "270deg"}, rgba(253,246,227,0), ${themaTeal ? MODUS_FAIR.bladzij : themaNaam ? MODUS_NAAM.bladzij : "#fdf6e3"} 55%)` }}>
-        <span style={{ width: 26, height: 26, borderRadius: "50%", background: themaTeal ? MODUS_FAIR.rand : themaNaam ? MODUS_NAAM.rand : "#e08a00", color: "#fff",
-          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, lineHeight: 1,
+        <span style={{ width: 34, height: 34, borderRadius: "50%", background: themaTeal ? MODUS_FAIR.vlak : themaNaam ? MODUS_NAAM.vlak : "#e8b84b",
+          border: `2px solid ${themaTeal ? MODUS_FAIR.rand : themaNaam ? MODUS_NAAM.rand : "#1d2942"}`,
+          color: themaTeal ? MODUS_FAIR.rand : themaNaam ? MODUS_NAAM.rand : "#1d2942",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, fontWeight: 700, lineHeight: 1, paddingBottom: 2,
+          boxShadow: "0 2px 8px -3px rgba(29,41,66,0.6)",
           animation: "rundoWenk 1.6s ease-in-out infinite" }}>{rechts ? "›" : "‹"}</span>
       </div>
     )
@@ -4486,7 +4489,7 @@ export default function PartyTest() {
   // blijft ze achteraan staan en duwt ze de gewone lijst niet opzij.
   const heeftEigen = drinks.some((d) => d.cat === "Eigen")
   const catOrde: Cat[] = heeftEigen ? ["Eigen", ...CATS.filter((c) => c !== "Eigen")] : CATS
-  const catsPresent = catOrde.filter((c) => c === "Eigen" || drinks.some((d) => d.cat === c))
+  const catsPresent = catOrde.filter((c) => drinks.some((d) => d.cat === c))
   // Zet personen en namen terug zoals ze waren toen het venster openging.
   const herstelPersonen = () => {
     const snap = persSnap
@@ -7748,9 +7751,9 @@ export default function PartyTest() {
 
         <div style={{ display: zoekt ? "none" : "block", position: "relative", marginBottom: 8 }}>
           <div ref={catScroll} onScroll={updateCatArrows} className="rundo-catscroll"
-            style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", padding: "0 8px 4px 0", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+            style={{ display: "grid", gridAutoFlow: "column", gridTemplateRows: "repeat(2, auto)", gap: 6, justifyContent: "start", overflowX: "auto", padding: "0 8px 4px 0", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
             {catsPresent.map((c) => (
-              <span key={c} style={{ ...S.tab(activeCat === c), flexShrink: 0 }} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}</span>
+              <span key={c} style={{ ...S.tab(activeCat === c), flexShrink: 0, textAlign: "center" }} onClick={() => setActiveCat(c)}>{CAT_LABEL[c]}</span>
             ))}
           </div>
           {catMore.left && <CatPijl kant="links" />}
@@ -8761,13 +8764,13 @@ export default function PartyTest() {
               </div>
             )}
         <div ref={catRij} style={{ scrollMarginTop: 8, display: zoekt ? "none" : "block", position: "relative", marginBottom: 10 }}>
-          <div ref={catScroll} onScroll={updateCatArrows} className="rundo-catscroll" style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", padding: "0 8px 9px 0", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+          <div ref={catScroll} onScroll={updateCatArrows} className="rundo-catscroll" style={{ display: "grid", gridAutoFlow: "column", gridTemplateRows: "repeat(2, auto)", gap: 6, justifyContent: "start", overflowX: "auto", padding: "0 8px 9px 0", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
           <style>{`.rundo-catscroll::-webkit-scrollbar{display:none}`}</style>
           {catsPresent.map((c) => {
             const openHere = drinks.some((d) => d.cat === c && (cartAnon[d.id] ?? 0) > 0)
             const actief = activeCat === c
             return <span key={c} onClick={() => { setActiveCat(c); setFullList(false) }}
-              style={{ flexShrink: 0, padding: "10px 17px", borderRadius: 22, fontSize: 18, fontWeight: actief ? 800 : 700, cursor: "pointer", whiteSpace: "nowrap",
+              style={{ flexShrink: 0, textAlign: "center", padding: "10px 17px", borderRadius: 22, fontSize: 18, fontWeight: actief ? 800 : 700, cursor: "pointer", whiteSpace: "nowrap",
                        background: actief ? (themaNaam ? "#232c44" : "#1d2942") : "#fff", color: actief ? (themaNaam ? "#c9d3ec" : "#fff") : (themaNaam ? "#5a6a94" : "#6b7484"),
                        border: actief ? "none" : `0.5px solid ${themaNaam ? "rgba(59,72,106,0.3)" : "rgba(29,41,66,0.22)"}` }}>
               {CAT_LABEL[c]}{openHere && <span style={{ marginLeft: 5, color: actief ? "#ffd27f" : "#e0685c", fontSize: 18 }}>●</span>}
