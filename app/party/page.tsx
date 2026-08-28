@@ -8598,9 +8598,9 @@ export default function PartyTest() {
             {L.roundWord} {roundNr}
             {repeated && roundItems > 0 && <span style={{ ...S.pill, marginLeft: 7, background: "rgba(31,138,76,0.14)", color: "#1f8a4c" }}>overgenomen ✓</span>}
           </span>
-                {roundItems > 0
-                  ? <span style={{ flexShrink: 0, background: "rgba(240,165,0,0.14)", border: "1.5px solid rgba(224,138,0,0.5)", color: "#a8720a", borderRadius: 999, padding: "5px 13px", fontSize: 14.5, fontWeight: 800, whiteSpace: "nowrap" }}>{L.drinksCount(roundItems)}</span>
-                  : <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 600, color: "#8b93a3" }}>{L.stillEmpty}</span>}
+                {roundItems > 0 && (
+                  <span style={{ flexShrink: 0, background: "rgba(240,165,0,0.14)", border: "1.5px solid rgba(224,138,0,0.5)", color: "#a8720a", borderRadius: 999, padding: "5px 13px", fontSize: 14.5, fontWeight: 800, whiteSpace: "nowrap" }}>{L.drinksCount(roundItems)}</span>
+                )}
         </div>
         {settle && renderRunnerBar()}
         {(settle || opNaam) && renderWalk()}
@@ -8626,9 +8626,8 @@ export default function PartyTest() {
                 op naam staat blijft gewoon staan. Alles in één kader. */}
             {!settle && (() => {
               const kleur = voorWieKleur
-              const heeftZin = perPersoon && !!voorWie
               return (<>
-              <div style={{ background: "#fff", border: perPersoon ? `2.5px solid ${donkerder(kleur, 0.82)}` : `1.5px solid ${RAND}`, borderRadius: heeftZin ? "13px 13px 0 0" : 13, padding: 9, marginBottom: heeftZin ? 0 : 14 }}>
+              <div style={{ background: "#fff", border: perPersoon ? `2.5px solid ${donkerder(kleur, 0.82)}` : `1.5px solid ${RAND}`, borderRadius: 13, padding: 9, marginBottom: 16 }}>
                 {/* Eén baan met twee standen: alleen de gekozen helft krijgt een vlak, de
                     andere ligt er zichtbaar naast. Twee losse pillen lazen als twee acties
                     die je allebei kon aantikken — dit is duidelijk één keuze. */}
@@ -8729,7 +8728,7 @@ export default function PartyTest() {
               </>)
             })()}
             {settle && people.length > 0 && (
-              <div style={settle ? { ...S.card, padding: "11px 12px", marginBottom: 8 } : { marginTop: -17, marginBottom: 14, background: "#fff", border: `2.5px solid ${donkerder(voorWieKleur, 0.82)}`, borderTop: "none", borderRadius: "0 0 13px 13px", padding: "0 11px 11px" }}>
+              <div style={settle ? { ...S.card, padding: "11px 12px", marginBottom: 8 } : { marginTop: -17, marginBottom: 18, background: "#fff", border: `2.5px solid ${donkerder(voorWieKleur, 0.82)}`, borderTop: "none", borderRadius: "0 0 13px 13px", padding: "0 11px 13px" }}>
                 <div style={{ fontSize: 14.5, fontWeight: 800, color: voorWie && voorWie !== meId ? "#8a5e0f" : "#6b7484", marginBottom: 7 }}>
                   <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                     <span style={{ minWidth: 0 }}>{voorWie && voorWie !== meId ? L.nowTappingFor(people.find((pp) => pp.id === voorWie)?.name ?? "") : L.youTapFor}</span>
