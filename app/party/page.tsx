@@ -8005,19 +8005,18 @@ export default function PartyTest() {
                 uitgebreid kies je pas op het instelscherm erna. */}
             <div style={{ opacity: bpSettle === true ? 0.6 : 1 }}>
             <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", border: bpSettle === false ? `2px solid ${MODUS_SNEL.rand}` : `1px solid rgba(29,41,66,0.16)`,
-              boxShadow: bpSettle === false ? `0 16px 34px -20px ${MODUS_SNEL.gloed}` : "0 8px 22px -18px rgba(29,41,66,0.5)" }}>
-              <div style={{ height: 6, background: MODUS_SNEL.rand }} />
+              boxShadow: bpSettle === false ? `0 16px 34px -18px ${MODUS_SNEL.gloed}, 0 3px 8px -4px rgba(29,41,66,0.35)` : "0 14px 30px -14px rgba(29,41,66,0.85), 0 3px 8px -4px rgba(29,41,66,0.35)" }}>
+              <div style={{ height: 34, background: MODUS_SNEL.rand }} />
               <button onClick={() => setBpSettle(false)}
                 style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "14px 14px 13px", cursor: "pointer", border: "none",
                   borderBottom: `1px solid ${MODUS_SNEL.randZacht}`,
                   background: bpSettle === false ? MODUS_SNEL.vlak : "linear-gradient(180deg,#fcfdfe,#fff)" }}>
-                <span style={{ position: "absolute", top: 9, left: 9, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15.5, fontWeight: 800,
-                  background: bpSettle === false ? MODUS_SNEL.rand : "transparent",
-                  border: bpSettle === false ? "none" : `2.5px solid ${MODUS_SNEL.randZacht}`, color: "#fff" }}>{bpSettle === false ? "✓" : ""}</span>
-                <span style={{ display: "flex", justifyContent: "center", marginTop: 9, marginBottom: 9 }}>
-                  <NoteerIcoon size={58} kleur={MODUS_SNEL.rand} />
+                <span style={{ display: "flex", justifyContent: "center", marginTop: -38, marginBottom: 7 }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 74, height: 74, borderRadius: "50%", background: "#fff", border: `2px solid ${MODUS_SNEL.rand}` }}>
+                    <NoteerIcoon size={48} kleur={MODUS_SNEL.rand} />
+                  </span>
                 </span>
-                <span style={{ display: "block", fontSize: 21, fontWeight: 800, color: "#16203a", lineHeight: 1.18, letterSpacing: -0.3 }}>{L.youNoteSelf}</span>
+                <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: "#16203a", lineHeight: 1.18, letterSpacing: -0.3 }}>{L.youNoteSelf}</span>
                 <span style={{ display: "block", textAlign: "left", marginTop: 12, paddingLeft: 6 }}>
                   {[L.youNote1, L.youNote2, L.youNote3].map((t, i2) => (
                     <span key={i2} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i2 < 2 ? 5 : 0 }}>
@@ -8038,40 +8037,36 @@ export default function PartyTest() {
 
 
             {/* Duidelijk dat er een tweede, andere keuze volgt. */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 11, margin: "15px 0" }}>
-              <span style={{ width: 64, height: 2, borderRadius: 2, background: "rgba(29,41,66,0.25)" }} />
-              {/* Donkerbruin: het rondje hoort bij geen van beide kaarten, en leest daardoor
-                  als het scharnierpunt tussen twee keuzes. */}
-              <span style={{ flexShrink: 0, width: 46, height: 46, borderRadius: "50%", background: "#4a5567", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: "#fff", boxShadow: "0 4px 12px -5px rgba(107,95,58,0.7)" }}>{L.orWord}</span>
-              <span style={{ width: 64, height: 2, borderRadius: 2, background: "rgba(29,41,66,0.25)" }} />
+            {/* De pil hoort bij geen van beide kaarten en heeft daarom de neutrale
+                donkerblauwe rand van het scherm zelf. Geen lijnen ernaast: die zouden de
+                twee kaarten weer aan elkaar knopen. */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", margin: "17px 0" }}>
+              <span style={{ flexShrink: 0, background: "#fff", border: "2.5px solid #1d2942", color: "#1d2942", borderRadius: 999, padding: "6px 22px", fontSize: 15, fontWeight: 800, letterSpacing: "0.06em" }}>{L.orWord}</span>
             </div>
 
             <div style={{ opacity: bpSettle === false ? 0.6 : 1 }}>
             <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", border: bpSettle === true ? `2px solid ${MODUS_FAIR.rand}` : `1.5px solid ${MODUS_FAIR.randZacht}`,
-              boxShadow: bpSettle === true ? `0 16px 34px -20px ${MODUS_FAIR.gloed}` : "0 8px 22px -18px rgba(29,41,66,0.5)" }}>
-              {/* Kleurbalk als vlag: nog vóór je de tekst leest weet je welke modus dit is. */}
-              <div style={{ height: 6, background: MODUS_FAIR.rand }} />
+              boxShadow: bpSettle === true ? `0 16px 34px -18px ${MODUS_FAIR.gloed}, 0 3px 8px -4px rgba(29,41,66,0.35)` : "0 14px 30px -14px rgba(29,41,66,0.85), 0 3px 8px -4px rgba(29,41,66,0.35)" }}>
+              {/* Kleurbalk als vlag: nog vóór je de tekst leest weet je welke modus dit is.
+                  Het icoon hangt er in een wit rondje half overheen. */}
+              <div style={{ height: 34, background: MODUS_FAIR.rand }} />
               <button onClick={() => setBpSettle(true)}
                 style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "14px 14px 13px", border: "none", cursor: "pointer",
                   borderBottom: `1px solid ${MODUS_FAIR.lijnZacht}`,
                   background: bpSettle === true ? MODUS_FAIR.vlak : "linear-gradient(180deg,#fdfcfa,#fff)" }}>
-                {/* Gekozen of niet: een gevuld rondje met vinkje tegenover een leeg rondje.
-                    Samen lezen de twee kaarten zo als één keuze. */}
-                <span style={{ position: "absolute", top: 9, left: 9, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, pointerEvents: "none",
-                  background: bpSettle === true ? MODUS_FAIR.rand : "transparent",
-                  border: bpSettle === true ? "none" : `2.5px solid ${MODUS_FAIR.randZacht}`,
-                  color: "#fff" }}>{bpSettle === true ? "✓" : ""}</span>
                 {/* Drie toestellen, de middelste met een QR: het verschil met de andere
                     kaart is dat er méér telefoons in het spel zijn. */}
-                <span style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 4, marginTop: 5, marginBottom: 8 }}>
-                  <GsmIcoon size={24} kleur={MODUS_FAIR.rand} dof />
-                  <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center" }}>
-                    <GsmIcoon size={38} kleur={MODUS_FAIR.rand} qr />
-                    <span style={{ fontSize: 13, fontWeight: 800, color: MODUS_FAIR.rand, letterSpacing: "0.08em", marginTop: 2 }}>QR</span>
+                <span style={{ display: "flex", justifyContent: "center", marginTop: -38, marginBottom: 7 }}>
+                  <span style={{ display: "inline-flex", alignItems: "flex-end", justifyContent: "center", gap: 3, width: 74, height: 74, borderRadius: "50%", background: "#fff", border: `2px solid ${MODUS_FAIR.rand}`, paddingBottom: 12, boxSizing: "border-box" }}>
+                    <GsmIcoon size={18} kleur={MODUS_FAIR.rand} dof />
+                    <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center" }}>
+                      <GsmIcoon size={30} kleur={MODUS_FAIR.rand} qr />
+                      <span style={{ fontSize: 10.5, fontWeight: 800, color: MODUS_FAIR.rand, letterSpacing: "0.08em", marginTop: 1 }}>QR</span>
+                    </span>
+                    <GsmIcoon size={18} kleur={MODUS_FAIR.rand} dof />
                   </span>
-                  <GsmIcoon size={24} kleur={MODUS_FAIR.rand} dof />
                 </span>
-                <span style={{ display: "block", fontSize: 24, fontWeight: 800, color: "#16203a", lineHeight: 1.14, letterSpacing: -0.4 }}>{L.modeTitle}</span>
+                <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: "#16203a", lineHeight: 1.18, letterSpacing: -0.3 }}>{L.modeTitle}</span>
                 <span style={{ display: "block", textAlign: "left", marginTop: 11, paddingLeft: 6 }}>
                   {[L.modeFairSub, L.modeFairSub2, L.modeTitleSub2].map((t, i) => (
                     <span key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i < 2 ? 5 : 0 }}>
