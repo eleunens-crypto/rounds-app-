@@ -10150,8 +10150,7 @@ export default function PartyTest() {
   if (view === "roundsOverview") {
     // Hoeveel rondjes tellen echt mee in het totaal: die met een bedrag erop.
     const metBedrag = rounds.filter((r) => (r.amount || 0) > 0.005).length
-    // Nieuwste rondje bovenaan. Open als het in openRounds zit; het laatste rondje
-    // staat standaard open (als de gebruiker niks toggelde).
+    // Oudste rondje bovenaan, zoals je ze besteld hebt. Open als het in openRounds zit.
     const laatsteId = rounds.length ? rounds[rounds.length - 1].id : ""
     // Standaard staat alles dicht — je opent zelf wat je wil bekijken.
     const isOpen = (r: Round) => openRounds.has(r.id)
@@ -10181,6 +10180,13 @@ export default function PartyTest() {
           <span style={{ fontSize: 24, fontWeight: 800, color: metBedrag === 0 ? "#b9c0cc" : "#c98a00" }}>{euro(totalCost)}</span>
         </div>
 
+        {!settle && rounds.length > 0 && rounds.some((r) => (r.amount || 0) <= 0.005 || Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0) > 0) && (
+          <div style={{ display: "flex", gap: 10, alignItems: "center", background: "#fff", border: "1.5px solid rgba(29,41,66,0.2)", borderRadius: 12, padding: 12, marginTop: 12 }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: "#1d2942", lineHeight: 1.35 }}><b>⚖️ {L.fairAskShort}</b> {L.fairNudge}</span>
+            <button onClick={() => setOpenRounds(new Set(rounds.map((r) => r.id)))}
+              style={{ flexShrink: 0, background: "#fdf3d8", border: "1.5px solid rgba(224,138,0,0.6)", color: "#8a5e0f", borderRadius: 999, padding: "8px 13px", fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", cursor: "pointer", fontFamily: "inherit" }}>{L.fairNudgeBtn}</button>
+          </div>
+        )}
         {/* Elk rondje, nieuwste bovenaan. Klik de kop om open/dicht te klappen.
             De toon/verberg-pil hangt half over de rand, boven én onder. */}
         <div style={{ position: "relative" }}>
@@ -10208,7 +10214,7 @@ export default function PartyTest() {
             )
           })()}
           <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: rounds.length > 0 ? 14 : 0, paddingBottom: (rounds.length > 0 && openRounds.size >= rounds.length) ? 14 : 0 }}>
-          {rounds.slice().reverse().map((r) => {
+          {rounds.map((r) => {
             const nr = rounds.indexOf(r) + 1
             const items = drinksOf(r).reduce((a, x) => a + x.n, 0)
             const open = isOpen(r)
@@ -10243,46 +10249,6 @@ export default function PartyTest() {
                       ? <span style={{ color: "#2f5693", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}> · <ZakjeIcoon size={14} /> {L.paidFromPot(euro(r.potPart || 0))}</span>
                       : <span style={{ color: "#9aa3b2" }}> · {L.noPotUsed}</span>}
                   </div>}
-                  {/* Dichtgeklapt: kleine badges met wat er nog nodig is. Open: één
-                      sectie met volwaardige regels. */}
-                  {!settle && editRoundId !== r.id && !isOpen(r) && (() => {
-                    const nogToe2 = Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0)
-                    if (!geenBedrag && nogToe2 === 0) {
-                      return <div style={{ marginTop: 6 }}><span style={{ fontSize: 13.5, fontWeight: 800, borderRadius: 10, padding: "4px 10px", background: "rgba(31,138,76,0.12)", color: "#1f6b3a", border: "1px solid rgba(31,138,76,0.3)" }}>{L.completeWord}</span></div>
-                    }
-                    const punt = (tekst: string, knop: string, doe: (e: React.MouseEvent) => void) => (
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                        <span style={{ minWidth: 0, fontSize: 13, fontWeight: 700, color: "#6b4a00", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ flexShrink: 0, width: 7, height: 7, borderRadius: "50%", background: "#e08a00" }} />{tekst}
-                        </span>
-                        <span onClick={doe} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#8a4436", background: "#fff", border: "1.5px solid rgba(176,64,47,0.55)", borderRadius: 999, padding: "7px 15px", cursor: "pointer" }}>{knop}</span>
-                      </div>
-                    )
-                    return (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 7 }}>
-                        {nogToe2 > 0 && punt(L.notAssignedCount(nogToe2), L.assign.toLowerCase(), (e) => { e.stopPropagation(); setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) })}
-                        {geenBedrag && punt(L.noAmountShort, L.fillWord.toLowerCase(), (e) => { e.stopPropagation(); setOpenRounds((prev) => new Set(prev).add(r.id)); startEditRound(r); setBedragFocus(true) })}
-                      </div>
-                    )
-                  })()}
-                  {!settle && editRoundId !== r.id && isOpen(r) && (() => {
-                    const nogToe = Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0)
-                    if (!geenBedrag && nogToe === 0) return null
-                    const regel = (tekst: string, knopTekst: string, doe: () => void) => (
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(240,165,0,0.3)" }}>
-                        <span style={{ minWidth: 0, fontSize: 15, fontWeight: 800, color: "#1d2942" }}>{tekst}</span>
-                        <span onClick={(e) => { e.stopPropagation(); doe() }}
-                          style={{ flexShrink: 0, border: "1.5px solid rgba(240,165,0,0.6)", color: "#8a5e0f", background: "#fff", borderRadius: 10, padding: "7px 12px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>{knopTekst}</span>
-                      </div>
-                    )
-                    return (
-                      <div style={{ background: "#fffaeb", border: "2px solid rgba(240,165,0,0.65)", borderRadius: 12, padding: "11px 12px", marginTop: 11 }}>
-                        <span style={{ display: "inline-block", fontSize: 14.5, fontWeight: 800, background: "rgba(240,165,0,0.25)", color: "#8a5e0f", borderRadius: 20, padding: "7px 14px" }}>{L.nogNodigBadge} — {L.stillToFill}</span>
-                        {nogToe > 0 && regel(L.notAssignedYet(nogToe), L.openWord, () => { setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) })}
-                        {geenBedrag && regel(L.noAmountShort, L.fillWord, () => { startEditRound(r); setBedragFocus(true) })}
-                      </div>
-                    )
-                  })()}
                 </div>
                 {open && (() => {
                   const idx = rounds.indexOf(r)
@@ -10326,6 +10292,27 @@ export default function PartyTest() {
                       )}
                     </div>
 
+                    {/* Wat er nog moet gebeuren staat ná de drankjes: eerst zie je wat er
+                        besteld is, dan pas wat er nog ontbreekt. Dichtgeklapt toont de kaart
+                        hier niets van — dan is het een rustige regel met nummer en bedrag. */}
+                  {!settle && editRoundId !== r.id && isOpen(r) && (() => {
+                    const nogToe = Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0)
+                    if (!geenBedrag && nogToe === 0) return null
+                    const regel = (tekst: string, knopTekst: string, doe: () => void) => (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(240,165,0,0.3)" }}>
+                        <span style={{ minWidth: 0, fontSize: 15, fontWeight: 800, color: "#1d2942" }}>{tekst}</span>
+                        <span onClick={(e) => { e.stopPropagation(); doe() }}
+                          style={{ flexShrink: 0, border: "1.5px solid rgba(240,165,0,0.6)", color: "#8a5e0f", background: "#fff", borderRadius: 10, padding: "7px 12px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>{knopTekst}</span>
+                      </div>
+                    )
+                    return (
+                      <div style={{ background: "#fffaeb", border: "2px solid rgba(240,165,0,0.65)", borderRadius: 12, padding: "11px 12px", marginTop: 11 }}>
+                        <span style={{ display: "inline-block", fontSize: 14.5, fontWeight: 800, background: "rgba(240,165,0,0.25)", color: "#8a5e0f", borderRadius: 20, padding: "7px 14px" }}>{L.nogNodigBadge} — {L.stillToFill}</span>
+                        {nogToe > 0 && regel(L.notAssignedYet(nogToe), L.openWord, () => { setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) })}
+                        {geenBedrag && regel(L.noAmountShort, L.fillWord, () => { startEditRound(r); setBedragFocus(true) })}
+                      </div>
+                    )
+                  })()}
                     {/* Bij uitgebreid opnemen liggen de gasten vast; het aantal staat dan
                         automatisch juist en hoeft hier niet getoond of bewerkt. */}
                     {opNaam !== true && <div style={{ ...S.row, justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(29,41,66,0.12)" }}>
@@ -10502,13 +10489,6 @@ export default function PartyTest() {
                 duim zit. */}
             {/* Rustige rij: doorgaan-acties naast elkaar, afrekenen eronder. Geen
                 gevulde knoppen — één amber kader markeert de gewone volgende stap. */}
-            {!settle && rounds.length > 0 && rounds.some((r) => (r.amount || 0) <= 0.005 || Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0) > 0) && (
-              <div style={{ background: "#fff", border: "1.5px solid rgba(29,41,66,0.2)", borderRadius: 12, padding: 12, marginTop: 14 }}>
-                <div style={{ fontSize: 14.5, color: "#1d2942", lineHeight: 1.4 }}><b>⚖️ {L.fairAskShort}</b> {L.fairNudge}</div>
-                <button onClick={() => setOpenRounds(new Set(rounds.map((r) => r.id)))}
-                  style={{ display: "block", width: "100%", marginTop: 10, background: "#fdf3d8", border: "1.5px solid rgba(224,138,0,0.6)", color: "#8a5e0f", borderRadius: 11, padding: "10px 8px", fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.fairNudgeBtn} →</button>
-              </div>
-            )}
             <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingTop: 14, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)", background: "linear-gradient(180deg,rgba(250,247,236,0),#faf7ec 22%)" }}>
             <div style={{ display: "flex", gap: 8 }}>
               {laatsteRondjeKlaar() && (
