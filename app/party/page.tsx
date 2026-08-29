@@ -6461,6 +6461,7 @@ export default function PartyTest() {
         }
         const naarOverzicht = (openKlappen: boolean) => {
           sluitBar()
+          setLastRoundHandled(true)
           if (openKlappen) setOpenRound(Math.max(0, rounds.length - 1))
           setEditCups(false); setEditPay(false)
           setOverviewBackTo("hub"); setView("roundsOverview")
@@ -10149,15 +10150,7 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10, gap: 8 }}>
-          <div style={{ display: "flex", gap: 7, minWidth: 0, flexWrap: "wrap" }}>
-            {!settle && rounds.length > 0 && (<>
-              <button style={{ ...S.btn, fontSize: 15, fontWeight: 800, padding: "8px 13px" }}
-                onClick={() => { setOverviewBackTo("hub"); nextRound() }}>{L.newRoundBtn}</button>
-              <button style={{ ...S.btn, fontSize: 15, fontWeight: 800, padding: "8px 13px" }}
-                onClick={() => { const vorig = rounds[rounds.length - 1]; setOverviewBackTo("hub"); nextRound(); if (vorig) void neemVorigeOver(vorig) }}>{L.sameAgainShort}</button>
-            </>)}
-          </div>
+        <div style={{ ...S.row, justifyContent: "flex-end", marginBottom: 6, gap: 8 }}>
           <div style={{ display: "flex", gap: 7, flexShrink: 0 }}>
             {settle && <button style={{ ...S.btn, fontSize: 15.5, fontWeight: 700, padding: "7px 12px" }} onClick={() => { if (overviewBackTo === "order") { setActiveCat(catsPresent[0]); setView("order") } else setView(overviewBackTo) }}>← {L.back}</button>}
           </div>
@@ -10494,7 +10487,8 @@ export default function PartyTest() {
                 duim zit. */}
             {/* Rustige rij: doorgaan-acties naast elkaar, afrekenen eronder. Geen
                 gevulde knoppen — één amber kader markeert de gewone volgende stap. */}
-            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+            <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingTop: 14, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)", background: "linear-gradient(180deg,rgba(250,247,236,0),#faf7ec 22%)" }}>
+            <div style={{ display: "flex", gap: 8 }}>
               {laatsteRondjeKlaar() && (
                 <button onClick={nextRound}
                   style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "12px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
@@ -10514,6 +10508,7 @@ export default function PartyTest() {
             <button onClick={goQuickSettle}
               style={{ width: "100%", marginTop: 8, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "13px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit",
                 background: "#fff", color: "#1d2942", border: "1px solid rgba(29,41,66,0.28)" }}>{L.settleBtnShort}</button>
+            </div>
           </>
         )}
       </div></div>
