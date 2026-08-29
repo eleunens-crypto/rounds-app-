@@ -8059,13 +8059,13 @@ export default function PartyTest() {
                 {/* Drie toestellen, de middelste met een QR: het verschil met de andere
                     kaart is dat er méér telefoons in het spel zijn. */}
                 <span style={{ display: "flex", justifyContent: "center", marginTop: -38, marginBottom: 7 }}>
-                  <span style={{ display: "inline-flex", alignItems: "flex-end", justifyContent: "center", gap: 3, width: 74, height: 74, borderRadius: "50%", background: "#fff", border: `2px solid ${MODUS_FAIR.rand}`, paddingBottom: 12, boxSizing: "border-box" }}>
-                    <GsmIcoon size={18} kleur={MODUS_FAIR.rand} dof />
-                    <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center" }}>
-                      <GsmIcoon size={30} kleur={MODUS_FAIR.rand} qr />
-                      <span style={{ fontSize: 10.5, fontWeight: 800, color: MODUS_FAIR.rand, letterSpacing: "0.08em", marginTop: 1 }}>QR</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 2, width: 74, height: 74, borderRadius: "50%", background: "#fff", border: `2px solid ${MODUS_FAIR.rand}`, boxSizing: "border-box" }}>
+                    <GsmIcoon size={13} kleur={MODUS_FAIR.rand} dof />
+                    <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", marginTop: 2 }}>
+                      <GsmIcoon size={24} kleur={MODUS_FAIR.rand} qr />
+                      <span style={{ fontSize: 9.5, fontWeight: 800, color: MODUS_FAIR.rand, letterSpacing: "0.06em", marginTop: 1 }}>QR</span>
                     </span>
-                    <GsmIcoon size={18} kleur={MODUS_FAIR.rand} dof />
+                    <GsmIcoon size={13} kleur={MODUS_FAIR.rand} dof />
                   </span>
                 </span>
                 <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: "#16203a", lineHeight: 1.18, letterSpacing: -0.3 }}>{L.modeTitle}</span>
