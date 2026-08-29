@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // RUNDO PARTY — TESTPAGINA v7
 // - Betaling bevestigen -> rondjes-hub (overzicht) -> nieuw rondje / afrekenen
-// - Bewerken (toewijzen + bekers) in het overzicht; app herberekent automatisch
+// - Bewerken (toewijzen + bekers) in het overzicht; app herberekent automatics
 // - Home-knop op elk scherm (geen reset); coin-prijzen zichtbaar/aanpasbaar
 // Richtprijzen blijven ONZICHTBAAR bij bestellen. Volledig lokaal. app/party-test/page.tsx
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3468,7 +3468,7 @@ export default function PartyTest() {
     return laatsteRondjeKlaar() ? -1 : rounds.length - 1
   }
   const paidCount = rounds.filter(roundIsPaid).length
-  const blockIfUnpaid = () => { const i = unpaidIdx(); if (i < 0) return false; setNotice(settle ? L.roundUnpaid(i + 1) : L.finishRoundFirst); if (settle) setView("confirmed"); return true }
+  const blockIfUnpaid = () => { if (!settle) return false; const i = unpaidIdx(); if (i < 0) return false; setNotice(L.roundUnpaid(i + 1)); setView("confirmed"); return true }
   const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon, drinks]) // eslint-disable-line
   const pickedUpOf = (pid: string) => drinks.reduce((a, d) => a + (d.cup ? aQty(d.id, pid) : 0), 0)
 
@@ -7389,7 +7389,7 @@ export default function PartyTest() {
               border: `1.5px solid ${RAND}`,
               background: view === "roundsOverview" ? RAND : "#fff",
               color: view === "roundsOverview" ? RANDTEKST : RAND }}
-              onClick={() => { if (!lastRoundHandled) { setNotice(L.finishRoundFirst); return } if (view === "payers" || view === "fairSetup") { setConfirmDlg({ msg: L.leaveSettleMsg, yes: L.leaveSettleYes, onYes: () => { setConfirmDlg(null); setOverviewBackTo("hub"); setView("roundsOverview") } }); return } if (rounds.length >= 1) { setOverviewBackTo(view === "order" ? "order" : "hub"); setView("roundsOverview") } else setNotice(L.noRoundsYet) }}>{L.roundsOverviewBtn}</button>
+              onClick={() => { if (view === "payers" || view === "fairSetup") { setConfirmDlg({ msg: L.leaveSettleMsg, yes: L.leaveSettleYes, onYes: () => { setConfirmDlg(null); setOverviewBackTo("hub"); setView("roundsOverview") } }); return } if (rounds.length >= 1) { setOverviewBackTo(view === "order" ? "order" : "hub"); setView("roundsOverview") } else setNotice(L.noRoundsYet) }}>{L.roundsOverviewBtn}</button>
           )}
           {settle && !fromQuick && <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 17, fontWeight: 700, opacity: (view === "final" || ((settle || opNaam) && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goFinal() }}>{L.settleBtn}</button>}
           {/* Op het rondjesoverzicht is de derde tab overbodig: het rondje is bevestigd
