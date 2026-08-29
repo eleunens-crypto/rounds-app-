@@ -6447,6 +6447,18 @@ export default function PartyTest() {
         // gaat ermee naar de toog. Vandaar geen sluitknop en geen wegtikken op de
         // achtergrond — één van beide knoppen onderaan brengt je verder.
         const sluitBar = () => { setShowBarlijst(false); setBarNaRondje(null) }
+        const naarDrankjes = async () => {
+          const laatste = rounds[rounds.length - 1]
+          sluitBar()
+          if (!laatste) { setActiveCat(catsPresent[0]); setView("order"); return }
+          const { error } = await supabase.from("party_rounds").update({ status: "open", closed_at: null }).eq("id", laatste.id)
+          if (error) { setNotice("Rondje heropenen mislukt: " + error.message); return }
+          setRoundNr(rounds.length)
+          setLastRoundHandled(true)
+          setActiveCat(catsPresent[0])
+          if (groupId) await loadParty(groupId)
+          setView("order")
+        }
         const naarOverzicht = (openKlappen: boolean) => {
           sluitBar()
           if (openKlappen) setOpenRound(Math.max(0, rounds.length - 1))
@@ -6454,7 +6466,7 @@ export default function PartyTest() {
           setOverviewBackTo("hub"); setView("roundsOverview")
         }
         return (
-          <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "#fbf3e4", overflowY: "auto", padding: barNaRondje ? "18px 16px 104px" : "18px 16px 28px" }} onClick={() => { if (!barNaRondje) sluitBar() }}>
+          <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "#fbf3e4", overflowY: "auto", padding: "18px 16px 28px" }} onClick={() => { if (!barNaRondje) sluitBar() }}>
             <div style={{ maxWidth: 430, margin: "0 auto" }} onClick={(e) => e.stopPropagation()}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                 <div style={{ fontSize: 25, fontWeight: 800, letterSpacing: "0.01em", color: "#1d2942" }}>🔍 {L.barlistTitle}</div>
@@ -6472,12 +6484,13 @@ export default function PartyTest() {
                 ))}
               </div>
             </div>
-            {/* De knoppen blijven onderaan plakken: bij een lang rondje scrol je door de
-                lijst en moet je niet eerst terug naar beneden om verder te kunnen. */}
+            {/* Sticky, niet fixed: bij een kort lijstje staan de knoppen er meteen onder
+                in plaats van een half scherm lager, en bij een lang rondje plakken ze
+                alsnog onderaan zodat je niet eerst terug moet scrollen. */}
             {barNaRondje && (
-              <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, padding: "20px 16px calc(env(safe-area-inset-bottom, 0px) + 14px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 32%)" }}>
-                <div style={{ maxWidth: 430, margin: "0 auto", display: "flex", gap: 9 }}>
-                  <button onClick={() => naarOverzicht(true)} style={{ flex: 1, background: "#fff", border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.barlistAdjust}</button>
+              <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 22%)" }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ maxWidth: 430, margin: "0 auto", display: "flex", gap: 9, paddingTop: 14 }}>
+                  <button onClick={naarDrankjes} style={{ flex: 1, background: "#fff", border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.barlistAdjust}</button>
                   <button onClick={() => naarOverzicht(false)} style={{ flex: 1.3, background: RAND, border: "none", color: RANDTEKST, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.barlistDone} →</button>
                 </div>
               </div>
@@ -10136,7 +10149,15 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
-        <div style={{ ...S.row, justifyContent: "flex-end", marginBottom: 6, gap: 8 }}>
+        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10, gap: 8 }}>
+          <div style={{ display: "flex", gap: 7, minWidth: 0, flexWrap: "wrap" }}>
+            {!settle && rounds.length > 0 && (<>
+              <button style={{ ...S.btn, fontSize: 15, fontWeight: 800, padding: "8px 13px" }}
+                onClick={() => { setOverviewBackTo("hub"); nextRound() }}>{L.newRoundBtn}</button>
+              <button style={{ ...S.btn, fontSize: 15, fontWeight: 800, padding: "8px 13px" }}
+                onClick={() => { const vorig = rounds[rounds.length - 1]; setOverviewBackTo("hub"); nextRound(); if (vorig) void neemVorigeOver(vorig) }}>{L.sameAgainShort}</button>
+            </>)}
+          </div>
           <div style={{ display: "flex", gap: 7, flexShrink: 0 }}>
             {settle && <button style={{ ...S.btn, fontSize: 15.5, fontWeight: 700, padding: "7px 12px" }} onClick={() => { if (overviewBackTo === "order") { setActiveCat(catsPresent[0]); setView("order") } else setView(overviewBackTo) }}>← {L.back}</button>}
           </div>
