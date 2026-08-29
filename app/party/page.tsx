@@ -8929,9 +8929,10 @@ export default function PartyTest() {
               })}
               {!zoekt && (
                 <div onClick={() => { if (alleenJij) return; setShowAddDrink(true); setNdName("") }}
-                  style={{ opacity: alleenJij ? 0.45 : 1, pointerEvents: alleenJij ? "none" : "auto", padding: "10px", borderRadius: 12, background: "#fff", border: `1.5px dashed ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.6)" : "rgba(224,138,0,0.75)"}`, display: "flex", flexDirection: "column", justifyContent: "space-between", cursor: "pointer", color: themaNaam ? "#2c3752" : "#4a5567" }}>
-                  <div style={{ fontSize: 17.5, fontWeight: 600, lineHeight: 1.25 }}>＋ {L.newDrinkTile}</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#8b93a3", marginTop: 7 }}>{L.notOnList}</div>
+                  style={{ opacity: alleenJij ? 0.45 : 1, pointerEvents: alleenJij ? "none" : "auto", padding: "10px", borderRadius: 12, background: "#fff", border: `1.5px dashed ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.6)" : "rgba(224,138,0,0.75)"}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", cursor: "pointer", color: themaNaam ? "#2c3752" : "#4a5567" }}>
+                  <div style={{ width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, background: settle ? MODUS_FAIR.vlak : themaNaam ? MODUS_NAAM.vlak : "#fdf3d8", border: `1.5px solid ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.6)" : "rgba(224,138,0,0.6)"}`, color: settle ? MODUS_FAIR.rand : themaNaam ? "#3b486a" : "#8a5e0f" }}>＋</div>
+                  <div style={{ fontSize: 16.5, fontWeight: 600, lineHeight: 1.25, marginTop: 6 }}>{L.newDrinkTile}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "#8b93a3", marginTop: 3 }}>{L.notOnList}</div>
                 </div>
               )}
             </div>
