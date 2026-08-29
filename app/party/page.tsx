@@ -7992,13 +7992,14 @@ export default function PartyTest() {
         <style>{`@keyframes rundoWenk{0%,100%{transform:translateX(0);opacity:.6}50%{transform:translateX(3px);opacity:1}}
           @keyframes rundoLoop{from{width:0}to{width:100%}}
           input::placeholder,textarea::placeholder{color:#a7b0bf;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "#0E1A2E", borderRadius: 14, padding: "13px 14px", marginBottom: 13 }}>
+        <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "#0E1A2E", padding: "13px 14px" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/rundo-merk.png" alt="" height={36} style={{ width: "auto", flexShrink: 0, display: "block" }} />
           <span style={{ fontSize: 20, fontWeight: 500, color: "#fff" }}>{L.chooseHow}</span>
         </div>
 
-        <div style={{ ...S.card, padding: "14px 13px" }}>
+        <div style={{ padding: "14px 13px" }}>
 
           <div>
             {/* Eén kaart: de eerste vraag gaat over wíe aantikt, niet over hoe. Snel of
@@ -8037,11 +8038,12 @@ export default function PartyTest() {
 
 
             {/* Duidelijk dat er een tweede, andere keuze volgt. */}
-            {/* De pil hoort bij geen van beide kaarten en heeft daarom de neutrale
-                donkerblauwe rand van het scherm zelf. Geen lijnen ernaast: die zouden de
-                twee kaarten weer aan elkaar knopen. */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", margin: "17px 0" }}>
-              <span style={{ flexShrink: 0, background: "#fff", border: "2.5px solid #1d2942", color: "#1d2942", borderRadius: 999, padding: "6px 22px", fontSize: 15, fontWeight: 800, letterSpacing: "0.06em" }}>{L.orWord}</span>
+            {/* Lijnen die naar de randen uitvagen, met het woord in kleine kapitalen: een
+                scheiding die je ziet zonder dat ze zelf een knop lijkt. */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "16px 2px" }}>
+              <span style={{ flex: 1, height: 2, borderRadius: 2, background: "linear-gradient(90deg,rgba(29,41,66,0),rgba(29,41,66,0.45))" }} />
+              <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, letterSpacing: "0.24em", color: "#1d2942", textTransform: "uppercase" }}>{L.orWord}</span>
+              <span style={{ flex: 1, height: 2, borderRadius: 2, background: "linear-gradient(90deg,rgba(29,41,66,0.45),rgba(29,41,66,0))" }} />
             </div>
 
             <div style={{ opacity: bpSettle === false ? 0.6 : 1 }}>
@@ -8085,6 +8087,7 @@ export default function PartyTest() {
             </div>
             </div>
           </div>
+        </div>
         </div>
 
         {savedGroups.length > 0 && (() => {
