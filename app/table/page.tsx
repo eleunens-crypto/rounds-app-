@@ -3703,11 +3703,10 @@ export default function RundoTable() {
   if (!group && welkom && !viaLink) {
     return (
       <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 18px", boxSizing: "border-box" }}>
-        <style>{`@keyframes rundoStartWenk{0%,100%{box-shadow:0 6px 16px -8px rgba(0,0,0,0.6)}50%{box-shadow:0 14px 30px -8px rgba(60,200,210,0.55)}}
-          @keyframes rundoStartHelder{0%,100%{filter:brightness(1)}50%{filter:brightness(1.09)}}
+        <style>{`@keyframes rundoStartWenk{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
           @keyframes rundoStartPijl{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
           @keyframes rundoStartWoord{0%{text-shadow:0 0 0 rgba(255,255,255,0)}7%{text-shadow:0 0 14px rgba(255,255,255,0.9),0 0 26px rgba(255,240,190,0.7)}24%{text-shadow:0 0 0 rgba(255,255,255,0)}100%{text-shadow:0 0 0 rgba(255,255,255,0)}}
-          .rundo-startknop{animation:rundoStartWenk 2s ease-in-out infinite,rundoStartHelder 2s ease-in-out infinite}
+          .rundo-startknop{animation:rundoStartWenk 5s ease-in-out infinite}
           .rundo-startwoord{display:inline-block;animation:rundoStartWoord 8s ease-in-out 6.6s 3}
           .rundo-startpijl{display:inline-block;animation:rundoStartPijl 1.6s ease-in-out infinite}`}</style>
         <div style={{ maxWidth: 460, margin: "0 auto", padding: "18px 16px" }}>
@@ -3752,7 +3751,7 @@ export default function RundoTable() {
               </div>
             </div>
           <button onClick={() => setWelkom(false)} className="rundo-startknop"
-            style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "21px", border: "none", fontSize: 22, fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: "#fff", cursor: "pointer", fontFamily: "system-ui,-apple-system,'Segoe UI',Roboto,sans-serif", background: "linear-gradient(135deg,#3bbfc4,#0d7c8c)" }}>
+            style={{ position: "relative", zIndex: 2, width: "100%", display: "block", padding: "21px", border: "none", fontSize: 27, fontWeight: 800, letterSpacing: "0.005em", color: "#fff", cursor: "pointer", fontFamily: "system-ui,-apple-system,'Segoe UI',Roboto,sans-serif", background: `linear-gradient(100deg,#0d7c8c 0%,#3fd3e0 45%,#0d7c8c 90%)`, backgroundSize: "260% 100%" }}>
             <span className="rundo-startwoord">{L.welkomStart}</span><span className="rundo-startpijl">→</span>
           </button>
           </div>
