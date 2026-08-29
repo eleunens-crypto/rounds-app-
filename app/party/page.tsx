@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // RUNDO PARTY — TESTPAGINA v7
 // - Betaling bevestigen -> rondjes-hub (overzicht) -> nieuw rondje / afrekenen
-// - Bewerken (toewijzen + bekers) in het overzicht; app herberekent automatics
+// - Bewerken (toewijzen + bekers) in het overzicht; app herberekent automatisch
 // - Home-knop op elk scherm (geen reset); coin-prijzen zichtbaar/aanpasbaar
 // Richtprijzen blijven ONZICHTBAAR bij bestellen. Volledig lokaal. app/party-test/page.tsx
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1282,6 +1282,11 @@ const T = {
     fairSubtitle: "eerlijk verdelen",
     quickTotalLabel: (n: number) => `Totaal van ${n} ${n === 1 ? "rondje" : "rondjes"}`,
     noAmountsYet: "Nog geen bedragen ingevuld",
+    roundsOnly: (n: number) => `${n} ${n === 1 ? "rondje" : "rondjes"}`,
+    fairAskShort: "Eerlijk verdelen?",
+    roundCancelledNote: (n: number) => `Rondje ${n} is geannuleerd. Je kan meteen opnieuw beginnen.`,
+    fairNudge: "Wijs de drankjes toe en vul de bedragen in.",
+    fairNudgeBtn: "Nu aanvullen",
     quickTotalOf: (t: number) => `(van in totaal ${t} ${t === 1 ? "rondje" : "rondjes"})`,
     andWord: "en",
     roundsNoAmountNamed: (lijst: string) => `Rondje ${lijst} zonder bedrag`,
@@ -2117,6 +2122,11 @@ const T = {
     fairSubtitle: "r\u00e9partition \u00e9quitable",
     quickTotalLabel: (n: number) => `Total de ${n} tourn\u00e9e${n === 1 ? "" : "s"}`,
     noAmountsYet: "Aucun montant encore saisi",
+    roundsOnly: (n: number) => `${n} tourn\u00e9e${n === 1 ? "" : "s"}`,
+    fairAskShort: "Partage \u00e9quitable\u00a0?",
+    roundCancelledNote: (n: number) => `La tourn\u00e9e ${n} est annul\u00e9e. Tu peux recommencer tout de suite.`,
+    fairNudge: "Attribue les boissons et saisis les montants.",
+    fairNudgeBtn: "Compl\u00e9ter",
     quickTotalOf: (t: number) => `(sur ${t} au total)`,
     andWord: "et",
     roundsNoAmountNamed: (lijst: string) => `Tournée ${lijst} sans montant`,
@@ -2692,10 +2702,10 @@ export default function PartyTest() {
   const strookRij = useRef<HTMLDivElement | null>(null)
   const sprongGedaan = useRef(false)
   const modusVorig = useRef(perPersoon)
-  const naarRondjeKop = () => {
+  const naarRondjeKop = (herkans = true) => {
     requestAnimationFrame(() => {
       const el = rondjeKop.current
-      if (!el) return
+      if (!el) { if (herkans) setTimeout(() => naarRondjeKop(false), 130); return }
       if (el.getBoundingClientRect().top <= 8) return
       el.scrollIntoView({ behavior: "smooth", block: "start" })
     })
@@ -5511,7 +5521,10 @@ export default function PartyTest() {
       // enkel via het rondjesoverzicht.
       setRoundNr(rounds.length + 1)
       setLastRoundHandled(true)
-      setView("hub")
+      setNotice(L.roundCancelledNote(roundNr))
+      setActiveCat(catsPresent[0])
+      setView("order")
+      naarRondjeKop()
     },
   })
   const cancelRound = () => setConfirmDlg({ msg: `Het volledige rondje ${roundNr} annuleren? Alle drankjes en bekers van dit rondje worden verwijderd. Dit kan niet ongedaan gemaakt worden.`, yes: L.yesCancel, onYes: () => { const remaining = rounds.length - 1; setRounds((rs) => rs.slice(0, -1)); setPaidConfirmed(false); setConfirmDlg(null); if (remaining > 0) { setOpenRound(remaining - 1); setView("hub") } else setView("order") } })
@@ -5546,6 +5559,7 @@ export default function PartyTest() {
     // Nooit met een venster beginnen: je landt gewoon op de drankjes.
     setWalkIdx(null); setShowAssignAll(false)
     setView("order")
+    naarRondjeKop()
   }
   // Neemt de drankjes én de toewijzing van het laatste rondje over. Daarna nog gewoon aanpasbaar.
   // Wie deed mee aan dit rondje? Wie het rondje niet meemaakte, betaalt niet mee.
@@ -5818,6 +5832,7 @@ export default function PartyTest() {
     setRepeated(true)
     setActiveCat(catsPresent[0])
     setView("order")
+    naarRondjeKop()
     // En wegschrijven, want anders staat dit rondje alleen op jouw scherm: een gast zag
     // een leeg rondje en kon dus niets bijsturen, en zijn eerste tik overschreef jouw
     // kopie bij het volgende laden.
@@ -10160,10 +10175,10 @@ export default function PartyTest() {
         {/* Geen kader: het totaal hoort bij de lijst eronder, niet als losse knop. */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "0 4px 12px", marginBottom: 4, borderBottom: "1px solid rgba(29,41,66,0.18)" }}>
           <span style={{ fontSize: 21.5, fontWeight: 800, color: "#1d2942" }}>
-            {metBedrag === 0 ? L.noAmountsYet : L.quickTotalLabel(metBedrag)}
+            {metBedrag === 0 ? L.roundsOnly(rounds.length) : L.quickTotalLabel(metBedrag)}
             {metBedrag > 0 && rounds.length > metBedrag && <span style={{ fontWeight: 700, color: "#8b93a3" }}> {L.quickTotalOf(rounds.length)}</span>}
           </span>
-          <span style={{ fontSize: 24, fontWeight: 800, color: "#c98a00" }}>{euro(totalCost)}</span>
+          <span style={{ fontSize: 24, fontWeight: 800, color: metBedrag === 0 ? "#b9c0cc" : "#c98a00" }}>{euro(totalCost)}</span>
         </div>
 
         {/* Elk rondje, nieuwste bovenaan. Klik de kop om open/dicht te klappen.
@@ -10216,7 +10231,7 @@ export default function PartyTest() {
                       ) : (
                         <>
                           <span style={{ fontSize: 17.5, fontWeight: 800, color: (r.amount || 0) > 0 ? "#c98a00" : "#a7b0bf" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "€ —"}</span>
-                          <span style={{ fontSize: opNaam === true ? 20 : 15, fontWeight: opNaam === true ? 800 : undefined, color: opNaam === true ? "#8a5e0f" : "#6b7484", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
+                          <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
                         </>
                       )}
                     </div>
@@ -10487,6 +10502,13 @@ export default function PartyTest() {
                 duim zit. */}
             {/* Rustige rij: doorgaan-acties naast elkaar, afrekenen eronder. Geen
                 gevulde knoppen — één amber kader markeert de gewone volgende stap. */}
+            {!settle && rounds.length > 0 && rounds.some((r) => (r.amount || 0) <= 0.005 || Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0) > 0) && (
+              <div style={{ background: "#fff", border: "1.5px solid rgba(29,41,66,0.2)", borderRadius: 12, padding: 12, marginTop: 14 }}>
+                <div style={{ fontSize: 14.5, color: "#1d2942", lineHeight: 1.4 }}><b>⚖️ {L.fairAskShort}</b> {L.fairNudge}</div>
+                <button onClick={() => setOpenRounds(new Set(rounds.map((r) => r.id)))}
+                  style={{ display: "block", width: "100%", marginTop: 10, background: "#fdf3d8", border: "1.5px solid rgba(224,138,0,0.6)", color: "#8a5e0f", borderRadius: 11, padding: "10px 8px", fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.fairNudgeBtn} →</button>
+              </div>
+            )}
             <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingTop: 14, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)", background: "linear-gradient(180deg,rgba(250,247,236,0),#faf7ec 22%)" }}>
             <div style={{ display: "flex", gap: 8 }}>
               {laatsteRondjeKlaar() && (
