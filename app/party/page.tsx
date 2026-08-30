@@ -673,6 +673,7 @@ const T = {
     shortList: "⚡ Korte lijst",
     fullListBtn: "📖 Volledige lijst",
     nothingFound: "Niets gevonden — probeer een ander woord.",
+    clearSearch: "Zoekopdracht wissen",
 
     myTab: "🧾 Mijn stand",
     noRoundClosed: "Er is nog geen rondje afgesloten.",
@@ -1515,6 +1516,7 @@ const T = {
     shortList: "⚡ Liste courte",
     fullListBtn: "📖 Liste complète",
     nothingFound: "Rien trouvé — essaie un autre mot.",
+    clearSearch: "Effacer la recherche",
 
     myTab: "🧾 Mon compte",
     noRoundClosed: "Aucune tournée n'est encore clôturée.",
@@ -8879,7 +8881,7 @@ export default function PartyTest() {
           </div>
         )}
 
-        {(catVisible.length === 0 && (zoekt || activeCat !== "Eigen")) ? (
+        {(catVisible.length === 0 && !zoekt && activeCat !== "Eigen") ? (
           <div style={{ ...S.card, textAlign: "center", padding: "18px 12px", fontSize: 17, color: "#6b7484" }}>
             Geen favorieten in {CAT_LABEL[activeCat]}. <span style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }} onClick={() => setFullList(true)}>{L.showAll}</span>
           </div>
@@ -8917,6 +8919,16 @@ export default function PartyTest() {
                     )}
                   </div>
                 )}
+              {/* Niets gevonden: de melding hoort in de kaart, want het zoekveld erboven is
+                  precies wat je nodig hebt om verder te kunnen. "Geen favorieten in Bier"
+                  klopte ook niet — zoeken gaat over alle categorieën heen. */}
+              {zoekt && catVisible.length === 0 && (
+                <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "16px 10px 6px", fontSize: 16, color: "#6b7484" }}>
+                  {L.nothingFound}
+                  <div onClick={() => setDrinkSearch("")}
+                    style={{ marginTop: 10, display: "inline-block", background: "#fff", border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 999, padding: "8px 16px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>{L.clearSearch}</div>
+                </div>
+              )}
               {catVisible.map((d) => {
                 const perPers = voorWie && (settle || perPersoon)
                 const tot = perPers ? (cart[d.id]?.[voorWie] ?? 0) : drinkTotal(d.id)
