@@ -2707,6 +2707,7 @@ export default function PartyTest() {
   const hintBlok = useRef<HTMLDivElement | null>(null)
   const telRij = useRef<HTMLDivElement | null>(null)
   const namenRij = useRef<HTMLDivElement | null>(null)
+  const rondjesLijst = useRef<HTMLDivElement | null>(null)
   const strookRij = useRef<HTMLDivElement | null>(null)
   const sprongGedaan = useRef(false)
   const modusVorig = useRef(perPersoon)
@@ -10200,16 +10201,16 @@ export default function PartyTest() {
           <span style={{ fontSize: 24, fontWeight: 800, color: metBedrag === 0 ? "#b9c0cc" : "#c98a00" }}>{euro(totalCost)}</span>
         </div>
 
-        {!settle && rounds.length > 0 && rounds.some((r) => (r.amount || 0) <= 0.005 || Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0) > 0) && (
+        {!settle && rounds.length > 0 && openRounds.size === 0 && rounds.some((r) => (r.amount || 0) <= 0.005 || Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0) > 0) && (
           <div style={{ display: "flex", gap: 10, alignItems: "center", background: "#fff", border: "1.5px solid rgba(29,41,66,0.2)", borderRadius: 12, padding: 12, marginTop: 12 }}>
             <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: "#1d2942", lineHeight: 1.35 }}><b>⚖️ {L.fairAskShort}</b> {L.fairNudge}</span>
-            <button onClick={() => setOpenRounds(new Set(rounds.map((r) => r.id)))}
+            <button onClick={() => { setOpenRounds(new Set(rounds.map((r) => r.id))); requestAnimationFrame(() => requestAnimationFrame(() => rondjesLijst.current?.scrollIntoView({ behavior: "smooth", block: "start" }))) }}
               style={{ flexShrink: 0, background: "#fdf3d8", border: "1.5px solid rgba(224,138,0,0.6)", color: "#8a5e0f", borderRadius: 999, padding: "8px 13px", fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", cursor: "pointer", fontFamily: "inherit" }}>{L.fairNudgeBtn}</button>
           </div>
         )}
         {/* Elk rondje, nieuwste bovenaan. Klik de kop om open/dicht te klappen.
             De toon/verberg-pil hangt half over de rand, boven én onder. */}
-        <div style={{ position: "relative" }}>
+        <div ref={rondjesLijst} style={{ position: "relative", scrollMarginTop: 8 }}>
           {rounds.length > 0 && (() => {
             const allesOpen = openRounds.size >= rounds.length
             const pil = {
@@ -10219,21 +10220,12 @@ export default function PartyTest() {
             }
             const klik = () => setOpenRounds(allesOpen ? new Set<string>() : new Set(rounds.map((r) => r.id)))
             return (
-              <>
-                <div style={{ position: "absolute", left: "50%", top: -13, transform: "translateX(-50%)", zIndex: 2 }}>
-                  <span onClick={klik} style={pil}>{allesOpen ? `▴ ${L.hideDetails}` : `▾ ${L.showDetails}`}</span>
-                </div>
-                {/* Onderaan pas nodig zodra alles openstaat: dan is de lijst lang en wil je
-                    niet terug naar boven scrollen om ze weer dicht te klappen. */}
-                {allesOpen && (
-                  <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", zIndex: 2 }}>
-                    <span onClick={klik} style={pil}>▴ {L.hideDetails}</span>
-                  </div>
-                )}
-              </>
+              <div style={{ position: "sticky", top: 6, zIndex: 6, display: "flex", justifyContent: "center", marginBottom: -13, pointerEvents: "none" }}>
+                <span onClick={klik} style={{ ...pil, pointerEvents: "auto" }}>{allesOpen ? `▴ ${L.hideDetails}` : `▾ ${L.showDetails}`}</span>
+              </div>
             )
           })()}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: rounds.length > 0 ? 14 : 0, paddingBottom: (rounds.length > 0 && openRounds.size >= rounds.length) ? 14 : 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: rounds.length > 0 ? 14 : 0 }}>
           {rounds.map((r) => {
             const nr = rounds.indexOf(r) + 1
             const items = drinksOf(r).reduce((a, x) => a + x.n, 0)
