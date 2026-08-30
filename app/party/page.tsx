@@ -385,7 +385,7 @@ const CAT_EMOJI: Record<Cat, string> = { Bier: "🍺", BierAV: "🌿", Frisdrank
 const CUPCAT: Record<Cat, boolean> = { Bier: true, BierAV: true, Frisdrank: true, Wijn: true, Cocktail: true, Mocktail: true, Longdrink: false, Shot: false, Warm: false, Eigen: true }
 
 // Waar Rundo Resto draait. Pas dit aan als het adres wijzigt.
-const RESTO_URL = "/resto"
+const RESTO_URL = "/table"
 const DATA: [Cat, string, number][] = [
   ["Bier", "Pintje", 3.2], ["Bier", "Duvel", 5], ["Bier", "Chimay Blauw", 5.5], ["Bier", "Cornet", 5], ["Bier", "Geuze", 5], ["Bier", "Hoegaarden Wit", 4], ["Bier", "Kriek", 4.5], ["Bier", "La Chouffe", 5], ["Bier", "Leffe Blond", 4.5], ["Bier", "Tripel Karmeliet", 5.5], ["Bier", "Vedett Extra Blond", 4], ["Bier", "Westmalle Tripel", 5],
   ["BierAV", "Jupiler 0.0", 3], ["BierAV", "Stella Artois 0.0", 3], ["BierAV", "Carlsberg 0.0", 3], ["BierAV", "Corona Cero", 3.5], ["BierAV", "Hoegaarden 0.0", 3.5], ["BierAV", "La Chouffe 0.0", 4], ["BierAV", "Leffe Blond 0.0", 3.5], ["BierAV", "Sportzot", 3.5], ["BierAV", "Cornet 0.0", 4], ["BierAV", "Vedett 0.0", 3.5], ["BierAV", "Cristal 0.0", 3], ["BierAV", "Maes 0.0", 3], ["BierAV", "Palm 0.0", 3.5], ["BierAV", "Kriek 0.0", 3.5], ["BierAV", "Duvel 0.0", 4],
@@ -592,9 +592,11 @@ const T = {
     aanvulAssignOk: "alles toegewezen",
     aanvulSave: "Bewaren",
     aanvulSkip: "Alles overslaan — later invullen",
-    stillToFill: "Nog aanvullen voor eerlijk verdelen",
+    stillToFill: "NOG NODIG VOOR EERLIJK AFREKENEN",
     nogNodigBadge: "NOG NODIG",
     allRoundsBtn: "🍺 Alle rondjes in één keer",
+    allRoundsSeg: "alle rondjes",
+    thisRoundSeg: "dit rondje",
     onlyThisRound: "↩ Alleen dit rondje",
     tikSamenWord: "voor iedereen",
     hintTogether: "Tik alle drankjes meteen aan voor de hele groep",
@@ -608,15 +610,16 @@ const T = {
     persWordLow: "pers.",
     tapForStrip: "Je tikt aan voor",
     completeWord: "✓ compleet",
-    noAmountShort: "Nog geen bedrag",
+    noAmountShort: "Hoeveel betaald?",
     missRoundsNote: (n: number) => `Nog ${n} rondje${n === 1 ? "" : "s"} aanvullen voor een eerlijke verdeling`,
     fillNowBtn: "Nu aanvullen →",
     klaarBtn: "Klaar →",
-    openWord: "Openen",
+    openWord: "Wijs toe",
     sameAgainTitle: "🔁 Zelfde als vorig rondje",
     sameAgainTake: "Overnemen",
     sameAgainEdit: "daarna nog aanpasbaar",
-    leaveNoNameTitle: "Zonder naam ben je alles kwijt",
+    leaveNoNameTitle: "Deze avond bewaren?",
+    leaveAutoSub: "We noemen hem naar de datum, tenzij je zelf iets typt.",
     leaveRoundLine: (n: number, d: number) => `Rondje ${n} · ${d} drankje${d === 1 ? "" : "s"}`,
     closeNeedName: "Geef je groep een naam om ze te bewaren in je lijst.",
     nameRequiredHint: "⚠️ verplicht om te bewaren",
@@ -868,7 +871,7 @@ const T = {
     unassignedHubWhy: "Zonder naam worden ze gelijk verdeeld — niet eerlijk. Wijs ze toe zodat elk betaalt wat hij dronk.",
     assignAllBtn: "Naar toewijzen drankjes",
     assignFirstNote: "Wijs eerst alle drankjes toe aan iemand. Daarna kan je verder.",
-    assignTitle: "Toewijzen",
+    assignTitle: "Toewijzen drankjes",
     roundXofY: (a: number, b: number) => `Rondje ${a} van ${b}`,
     assignAllSub: (n: number) => `Alle ${n} rondjes in \u00e9\u00e9n keer`,
     roundDoneNext: "Dit rondje is rond",
@@ -1431,9 +1434,11 @@ const T = {
     aanvulAssignOk: "tout est attribu\u00e9",
     aanvulSave: "Enregistrer",
     aanvulSkip: "Tout passer — compl\u00e9ter plus tard",
-    stillToFill: "\u00c0 compl\u00e9ter pour un partage \u00e9quitable",
+    stillToFill: "N\u00c9CESSAIRE POUR UN PARTAGE \u00c9QUITABLE",
     nogNodigBadge: "ENCORE N\u00c9CESSAIRE",
     allRoundsBtn: "🍺 Toutes les tourn\u00e9es d'un coup",
+    allRoundsSeg: "toutes",
+    thisRoundSeg: "cette tourn\u00e9e",
     onlyThisRound: "↩ Seulement cette tourn\u00e9e",
     tikSamenWord: "pour tous",
     hintTogether: "Coche toutes les boissons d'un coup pour tout le groupe",
@@ -1447,15 +1452,16 @@ const T = {
     persWordLow: "pers.",
     tapForStrip: "Tu coches pour",
     completeWord: "✓ complet",
-    noAmountShort: "Pas encore de montant",
+    noAmountShort: "Combien pay\u00e9\u00a0?",
     missRoundsNote: (n: number) => `Encore ${n} tourn\u00e9e${n === 1 ? "" : "s"} \u00e0 compl\u00e9ter pour un partage \u00e9quitable`,
     fillNowBtn: "Compl\u00e9ter maintenant →",
     klaarBtn: "Termin\u00e9 →",
-    openWord: "Ouvrir",
+    openWord: "Attribuer",
     sameAgainTitle: "🔁 Comme la tourn\u00e9e pr\u00e9c\u00e9dente",
     sameAgainTake: "Reprendre",
     sameAgainEdit: "modifiable ensuite",
-    leaveNoNameTitle: "Sans nom, tu perds tout",
+    leaveNoNameTitle: "Garder cette soir\u00e9e\u00a0?",
+    leaveAutoSub: "On la nomme d\u2019apr\u00e8s la date, sauf si tu tapes autre chose.",
     leaveRoundLine: (n: number, d: number) => `Tourn\u00e9e ${n} \u00b7 ${d} boisson${d === 1 ? "" : "s"}`,
     closeNeedName: "Donne un nom \u00e0 ton groupe pour le garder dans ta liste.",
     nameRequiredHint: "⚠️ obligatoire pour enregistrer",
@@ -1707,7 +1713,7 @@ const T = {
     unassignedHubWhy: "Sans nom, elles sont partagées également — pas équitable. Attribue-les pour que chacun paie ce qu'il a bu.",
     assignAllBtn: "Vers l'attribution des boissons",
     assignFirstNote: "Attribue d\u2019abord toutes les boissons. Ensuite tu peux continuer.",
-    assignTitle: "Attribuer",
+    assignTitle: "Attribuer les boissons",
     roundXofY: (a: number, b: number) => `Tourn\u00e9e ${a} sur ${b}`,
     assignAllSub: (n: number) => `Les ${n} tourn\u00e9es d\u2019un coup`,
     roundDoneNext: "Cette tourn\u00e9e est compl\u00e8te",
@@ -4617,6 +4623,7 @@ export default function PartyTest() {
     // een extra stap in de geschiedenis en vangen het terugstappen op.
     const terug = () => {
       history.pushState(null, "", location.href)
+      setVerlaatVeld((v) => v || L.autoName())
       setVerlaatNaam(() => () => { window.location.href = "/" })
     }
     history.pushState(null, "", location.href)
@@ -4625,7 +4632,7 @@ export default function PartyTest() {
   }, [settle, groupId, heeftInhoud, groupName]) // eslint-disable-line
 
   const verlaatMetNaamcheck = (doe: () => void) => {
-    if (!settle && groupId && heeftInhoud && isAutoNaam(groupName)) { setVerlaatNaam(() => doe); return }
+    if (!settle && groupId && heeftInhoud && isAutoNaam(groupName)) { setVerlaatVeld((v) => v || L.autoName()); setVerlaatNaam(() => doe); return }
     doe()
   }
   const goSiteHome = () => {
@@ -6307,23 +6314,24 @@ export default function PartyTest() {
                   {assignAllMode ? L.assignAllSub(toonIdx.length) : L.roundXofY(assignIdx + 1, rounds.length)}
                 </div>
 
-                {rounds.length > 1 && (
-                  <button onClick={() => setAssignAllMode((v) => !v)}
-                    style={{ ...S.btn, width: "100%", marginBottom: 9, fontSize: 15, fontWeight: 800, borderColor: "rgba(240,165,0,0.6)", color: "#8a5e0f" }}>
-                    {assignAllMode ? L.onlyThisRound : L.allRoundsBtn}
-                  </button>
-                )}
-                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-                  <div style={{ ...S.segBaan }}>
-                  <div style={{ ...S.seg(editAssignMode === "person"), padding: "6px 12px", fontSize: 14.5, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
-                  <div style={{ ...S.seg(editAssignMode === "drink"), padding: "5px 9px", fontSize: 15, minWidth: 78, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>{L.perDrink}</div>
-                  </div>
+                {/* Twee schakelaars onder elkaar: eerst hoe je toewijst, dan waarop. De
+                    tweede stond eerst als knop met wisselende tekst, en dan moest je lezen
+                    wat er zou gebeuren in plaats van te zien waar je staat. */}
+                <div style={{ ...S.segBaan, display: "flex", marginBottom: 8 }}>
+                  <div style={{ ...S.seg(editAssignMode === "person"), flex: 1, padding: "8px 6px", fontSize: 15, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
+                  <div style={{ ...S.seg(editAssignMode === "drink"), flex: 1, padding: "8px 6px", fontSize: 15, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>{L.perDrink}</div>
                 </div>
+                {rounds.length > 1 && (
+                  <div style={{ ...S.segBaan, display: "flex", marginBottom: 10 }}>
+                    <div style={{ ...S.seg(assignAllMode), flex: 1, padding: "8px 6px", fontSize: 15, textAlign: "center" }} onClick={() => setAssignAllMode(true)}>{L.allRoundsSeg}</div>
+                    <div style={{ ...S.seg(!assignAllMode), flex: 1, padding: "8px 6px", fontSize: 15, textAlign: "center" }} onClick={() => setAssignAllMode(false)}>{L.thisRoundSeg}</div>
+                  </div>
+                )}
                 {!settle && (
                   <div style={{ display: "flex", justifyContent: "flex-end", margin: "0 0 10px" }}>
                     <button onClick={() => { setPersGeteld(true); setAlleenPers(true); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 7, border: "2px solid rgba(47,111,181,0.55)", background: "#f2f6fc", color: "#2f5693", borderRadius: 12, padding: "10px 16px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
-                      👥 {L.addPersonHere}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 7, border: "2px solid rgba(47,111,181,0.55)", background: "#f2f6fc", color: "#2f5693", borderRadius: 999, padding: "8px 14px", fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                      ＋ {L.addPersonHere}
                     </button>
                   </div>
                 )}
@@ -6998,7 +7006,7 @@ export default function PartyTest() {
                     {potContribTotal > 0.005 && <div>🪙 {L.potWord} {euro(potContribTotal)}</div>}
                   </div>
                 )}
-                <div style={{ fontSize: 15, color: "#6b7484", lineHeight: 1.45, marginTop: 10 }}>{L.leaveNoNameSub}</div>
+                <div style={{ fontSize: 15, color: "#6b7484", lineHeight: 1.45, marginTop: 10 }}>{L.leaveAutoSub}</div>
                 <input autoFocus value={verlaatVeld} onChange={(e) => setVerlaatVeld(e.target.value)}
                   placeholder={L.namePh3}
                   style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, fontSize: 18, marginTop: 12, border: "2px solid rgba(240,165,0,0.6)" }} />
@@ -7007,11 +7015,10 @@ export default function PartyTest() {
                 <button disabled={!verlaatVeld.trim()}
                   style={{ ...S.btnP, width: "100%", marginTop: 12, opacity: verlaatVeld.trim() ? 1 : 0.45 }}
                   onClick={() => { if (!bewaar()) return; const doe = verlaatNaam; setVerlaatNaam(null); setVerlaatVeld(""); doe?.() }}>{L.saveAndLeave}</button>
-                <button disabled={!verlaatVeld.trim()}
-                  style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 16, fontWeight: 800, opacity: verlaatVeld.trim() ? 1 : 0.45 }}
-                  onClick={() => { if (!bewaar()) return; setVerlaatNaam(null); setVerlaatVeld("") }}>{L.saveAndStay}</button>
-                <button style={{ ...S.btn, width: "100%", marginTop: 8, color: "#c0554a", borderColor: "rgba(224,104,92,0.45)", fontSize: 16, fontWeight: 800 }}
-                  onClick={() => { const doe = verlaatNaam; setVerlaatNaam(null); setVerlaatVeld(""); doe?.() }}>{L.leaveNoSaveBtn}</button>
+                {/* Weggaan zonder bewaren blijft mogelijk, maar als kleine link: het is de
+                    uitzondering, niet een van drie gelijkwaardige keuzes. */}
+                <div onClick={() => { const doe = verlaatNaam; setVerlaatNaam(null); setVerlaatVeld(""); doe?.() }}
+                  style={{ textAlign: "center", marginTop: 13, fontSize: 13.5, fontWeight: 700, color: "#8b93a3", textDecoration: "underline", cursor: "pointer" }}>{L.leaveNoSaveBtn}</div>
                 </div>
               </>)
             })()}
@@ -8891,7 +8898,7 @@ export default function PartyTest() {
                 </span>
               </div>
             )}
-            <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList && settle) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12, ...(qrBalk ? { borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "none" } : {}), ...(!settle && perPersoon && voorWie ? { borderLeft: `5px solid ${voorWieKleur}` } : {}) }}>
+            <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 12, paddingTop: (!zoekt && fullList && settle) ? 26 : 12, paddingBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 26 : 12, ...(qrBalk ? { borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "none" } : {}), ...(!settle && perPersoon && voorWie ? { border: `2.5px solid ${donkerder(voorWieKleur, 0.82)}` } : {}) }}>
               {/* Zoeken + inspreken bovenin de kaart, onder de categorieën — zelfde plek
                   en zelfde blok voor snel én uitgebreid opnemen. */}
                 {/* "Minder tonen" hing bovenaan de kaart, boven het zoekveld — ver van de
@@ -10308,7 +10315,7 @@ export default function PartyTest() {
                     )
                     return (
                       <div style={{ background: "#fffaeb", border: "2px solid rgba(240,165,0,0.65)", borderRadius: 12, padding: "11px 12px", marginTop: 11 }}>
-                        <span style={{ display: "inline-block", fontSize: 14.5, fontWeight: 800, background: "rgba(240,165,0,0.25)", color: "#8a5e0f", borderRadius: 20, padding: "7px 14px" }}>{L.nogNodigBadge} — {L.stillToFill}</span>
+                        <span style={{ display: "inline-block", fontSize: 13, fontWeight: 800, letterSpacing: "0.05em", background: "rgba(240,165,0,0.25)", color: "#8a5e0f", borderRadius: 20, padding: "7px 14px" }}>{L.nogNodigBadge} — {L.stillToFill}</span>
                         {nogToe > 0 && regel(L.notAssignedYet(nogToe), L.openWord, () => { setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) })}
                         {geenBedrag && regel(L.noAmountShort, L.fillWord, () => { startEditRound(r); setBedragFocus(true) })}
                       </div>
@@ -10492,12 +10499,6 @@ export default function PartyTest() {
                 gevulde knoppen — één amber kader markeert de gewone volgende stap. */}
             <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingTop: 14, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)", background: "linear-gradient(180deg,rgba(250,247,236,0),#faf7ec 22%)" }}>
             <div style={{ display: "flex", gap: 8 }}>
-              {laatsteRondjeKlaar() && (
-                <button onClick={nextRound}
-                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "12px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
-                    display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", minHeight: 62,
-                    background: "#fffdf4", color: "#8a5e0f", border: "2px solid rgba(240,165,0,0.7)" }}>{settle && openRoundId ? L.continueRound(roundNr) : L.newRoundBtn}</button>
-              )}
               {rounds.length > 0 && laatsteRondjeKlaar() && (
                 <button onClick={repeatRound}
                   style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "12px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
@@ -10506,6 +10507,12 @@ export default function PartyTest() {
                   <span>{L.repeatRound}</span>
                   <span style={{ fontSize: 13, fontWeight: 600, color: "#8b93a3", marginTop: 3 }}>{L.repeatRoundSub}</span>
                 </button>
+              )}
+              {laatsteRondjeKlaar() && (
+                <button onClick={nextRound}
+                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "12px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
+                    display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", minHeight: 62,
+                    background: "#fffdf4", color: "#8a5e0f", border: "2px solid rgba(240,165,0,0.7)" }}>{settle && openRoundId ? L.continueRound(roundNr) : L.newRoundBtn}</button>
               )}
             </div>
             <button onClick={goQuickSettle}
