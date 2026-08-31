@@ -447,9 +447,9 @@ export default function Home() {
 
   return (
     <div style={S.page}>
-      <div style={{ maxWidth: 360, margin: "0 auto", padding: "8px 0 28px" }}>
+      <div style={{ maxWidth: 360, margin: "0 auto", paddingTop: "max(18px, env(safe-area-inset-top))", paddingBottom: 28 }}>
         {/* Taalkeuze rechtsboven */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 2 }}>
           <LanguageToggle />
         </div>
 
@@ -458,9 +458,9 @@ export default function Home() {
             taalpil rechtsboven te zitten, en die twee vechten dan om dezelfde hoek. De
             inspringing houdt het logo van de rand af en lijnt het ongeveer uit met de
             tekst binnen de kaarten, die ook padding hebben. */}
-        <div style={{ textAlign: "left", marginTop: 4, marginBottom: 13, paddingLeft: 34 }}>
-          <span style={{ display: "inline-block", marginBottom: 8 }}><RundoLogo size={60} /></span>
-          <p style={{ color: "#f0c14b", fontSize: 15, fontWeight: 600, margin: 0 }}>
+        <div style={{ textAlign: "left", marginTop: 2, marginBottom: 24, paddingLeft: 34 }}>
+          <span style={{ display: "inline-block", marginBottom: 8 }}><RundoLogo size={80} /></span>
+          <p style={{ color: "#f0c14b", fontSize: 17, fontWeight: 600, margin: 0 }}>
             {t.tagline}
           </p>
         </div>
