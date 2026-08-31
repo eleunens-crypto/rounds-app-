@@ -1214,6 +1214,7 @@ const T = {
     barList: "📋 Bestelling",
     tapToRename: "tik om de naam te wijzigen",
     removeWord: "Weghalen",
+    removeAssignedQ: (drank: string, gast: string) => `${drank} weghalen bij ${gast}?`,
     barHandOut: "Uitdelen",
     paidForRoundQ: (n: number) => `Betaald voor rondje ${n}?`,
     potTopUpPlus: "+ pot aanvullen",
@@ -2062,6 +2063,7 @@ const T = {
     barList: "📋 Commande",
     tapToRename: "touche pour renommer",
     removeWord: "Retirer",
+    removeAssignedQ: (drank: string, gast: string) => `Retirer ${drank} chez ${gast}\u00a0?`,
     barHandOut: "Distribuer",
     paidForRoundQ: (n: number) => `Pay\u00e9 pour la tourn\u00e9e ${n} ?`,
     potTopUpPlus: "+ remplir le pot",
@@ -2549,9 +2551,10 @@ export default function PartyTest() {
   // dus we onthouden hier wélk rondje het was en handelen het af zodra er geld is.
   const [potVulVoorRonde, setPotVulVoorRonde] = useState<string | null>(null)
   // Wijzigingen houden we eerst hier bij; pas op "Opslaan" gaan ze naar de rekening.
-  // bron "mix" = deels zelf, deels uit de pot — potAmt is dan het potdeel; bij "pot"
-  // volgt het potdeel gewoon het volledige bedrag, bij "self" is het nul.
-  const [editDraft, setEditDraft] = useState<{ drinks: Record<string, number>; amount: number; headcount: number; bron: "self" | "pot" | "mix"; potAmt: number } | null>(null)
+  // Ook wie betaalde hoort hier: tik je een pil aan terwijl je het bedrag nog aan het
+  // typen bent, dan is r.amount nog nul en wiste rRedistribute de keuze meteen weer.
+  // Nu blijft de keuze in het concept staan en wordt ze pas bij Opslaan verrekend.
+  const [editDraft, setEditDraft] = useState<{ drinks: Record<string, number>; amount: number; headcount: number; payers: string[]; usePot: boolean } | null>(null)
   // Staat de kiezer voor "+ drankje toevoegen" open? Één rondje tegelijk in de
   // bewerkstand, dus één schakelaar volstaat.
   const [addDrinkOpen, setAddDrinkOpen] = useState(false)
@@ -2559,9 +2562,9 @@ export default function PartyTest() {
     setAddDrinkOpen(false)
     const d: Record<string, number> = {}
     drinksOf(r).forEach(({ d: dr, n }) => { d[dr.id] = n })
-    const potNu = r.potPart || 0
-    const totNu = r.amount || 0
-    setEditDraft({ drinks: d, amount: totNu, headcount: Math.max(1, r.headcount || 1), bron: potNu > 0.005 ? (potNu >= totNu - 0.005 ? "pot" : "mix") : "self", potAmt: potNu })
+    setEditDraft({ drinks: d, amount: r.amount || 0, headcount: Math.max(1, r.headcount || 1),
+      payers: Object.keys(r.payers || {}).filter((pid) => people.some((pp) => pp.id === pid)),
+      usePot: (r.potPart || 0) > 0.005 })
     setEditRoundId(r.id)
   }
   const cancelEditRound = () => { setEditDraft(null); setEditRoundId(null); setAddDrinkOpen(false) }
@@ -2571,35 +2574,28 @@ export default function PartyTest() {
     // Uit de pot betalen zonder bedrag kan niet: er zou nul uit de pot gaan terwijl het
     // rondje wél als betaald geldt. Een bedrag wissen mag wél — dan valt het rondje
     // terug op "geen bedrag ingevuld", wat een geldige toestand is.
-    // De bron (zelf / pot) stellen we niet meer in de bewerkstand in, maar met de
-    // potpil bij "wie betaalde?". Die schrijft rechtstreeks naar het rondje, dus
-    // lezen we hem hier vers uit — het concept kan intussen verouderd zijn.
-    const live = rounds[rounds.indexOf(r)] || r
-    const potNu = live.potPart || 0
-    const bron: "self" | "pot" | "mix" = potNu <= 0.005 ? "self" : potNu >= (live.amount || 0) - 0.005 ? "pot" : "mix"
-    if (bron !== "self" && (editDraft.amount || 0) <= 0.005) { setNotice(L.needAmountOrCancel); return }
+    if (editDraft.usePot && (editDraft.amount || 0) <= 0.005) { setNotice(L.needAmountOrCancel); return }
     const idx = rounds.indexOf(r)
     const huidig: Record<string, number> = {}
     drinksOf(r).forEach(({ d, n }) => { huidig[d.id] = n })
     Object.entries(editDraft.drinks).forEach(([did, n]) => {
       const delta = (n || 0) - (huidig[did] || 0)
-      if (delta !== 0) rBumpAnon(idx, did, delta)
+      if (delta > 0) rBumpAnon(idx, did, delta)
+      else if (delta < 0) rRemoveUnits(idx, did, -delta)
     })
     const beschikbaar = Math.max(0, potAvailFor(idx))
     // Pot te kort voor het nieuwe bedrag? Niet meer blokkeren: de pot dekt wat hij kan,
     // de rest telt als zelf betaald. Vroeger werd de hele wijziging stil geweigerd — het
     // veld sprong terug naar het oude bedrag en het totaal bovenaan bewoog niet mee.
-    const potDeel = bron === "pot" ? Math.min(editDraft.amount, beschikbaar)
-      : bron === "mix" ? Math.min(Math.max(0, potNu), editDraft.amount, beschikbaar) : 0
-    const potTekort = bron === "pot" ? editDraft.amount > beschikbaar + 0.005
-      : bron === "mix" ? potNu > beschikbaar + 0.005 : false
+    const potDeel = editDraft.usePot ? Math.min(editDraft.amount, beschikbaar) : 0
+    const potTekort = editDraft.usePot && editDraft.amount > beschikbaar + 0.005
     // Heeft dit rondje al betalers (via het betalers-scherm van de Fair Split-overstap,
     // of uitgebreid opnemen)? Dan moet hun verdeling mee met het nieuwe bedrag. Vroeger
     // bleef `payers` op de oude bedragen staan: de eindbalans toonde "al betaald in
     // ronde x" met het vórige bedrag, en "krijgt terug" en de overschrijvingen rekenden
     // met geld dat niet meer bestond. Zelfde betalers, nieuw bedrag, gelijk herverdeeld
     // en het pot-aandeel geklemd — precies zoals het betalers-scherm zelf rekent.
-    const betalers = Object.keys(r.payers || {}).filter((pid) => (r.payers[pid] || 0) > 0.005)
+    const betalers = editDraft.payers.filter((pid) => people.some((pp) => pp.id === pid))
     if (betalers.length > 0) {
       // Niet via rRedistribute: die geeft de pot maar één déél (bedrag ÷ aantal),
       // terwijl "uit de pot" hier betekent dat de pot het rondje draagt zover hij
@@ -3573,6 +3569,30 @@ export default function PartyTest() {
   const rBumpAnon = (idx: number, did: string, delta: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, anon: { ...r.anon, [did]: Math.max(0, (r.anon[did] ?? 0) + delta) } } : r)); persistItem(rounds[idx], did, null, delta); setDirtyRound(idx) }
   const rSetGaveBack = (idx: number, pid: string, v: number) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, gaveBack: { ...r.gaveBack, [pid]: Math.max(0, v) } } : r)); setDirtyRound(idx) }
   const rUnassign = (idx: number, did: string, pid: string) => { setRounds((rs) => rs.map((r, i) => i === idx ? { ...r, orders: { ...r.orders, [did]: { ...(r.orders[did] ?? {}), [pid]: Math.max(0, (r.orders[did]?.[pid] ?? 0) - 1) } }, anon: { ...r.anon, [did]: (r.anon[did] ?? 0) + 1 } } : r)); persistItem(rounds[idx], did, pid, -1); persistItem(rounds[idx], did, null, 1); setDirtyRound(idx) }
+  // Wie raakt dit drankje kwijt als je er één weghaalt? Eerst het onbenoemde restant,
+  // daarna de gast die er de meeste van heeft.
+  const wieVerliest = (r: Round, did: string) => {
+    if ((r.anon[did] ?? 0) > 0) return null
+    const kand = people.map((pp) => ({ pp, n: r.orders[did]?.[pp.id] ?? 0 })).filter((x) => x.n > 0)
+    return kand.length ? kand.sort((a, b) => b.n - a.n)[0].pp : null
+  }
+  // Aantallen omlaag: eerst uit het onbenoemde restant, pas daarna bij de gasten zelf.
+  // Vroeger ging alles via rBumpAnon, die op nul klemt — stond een drankje al op naam,
+  // dan deed de minknop gewoon niets.
+  const rRemoveUnits = (idx: number, did: string, aantal: number) => {
+    const r = rounds[idx]
+    if (!r) return
+    let over = aantal
+    const uitAnon = Math.min(over, r.anon[did] ?? 0)
+    if (uitAnon > 0) { rBumpAnon(idx, did, -uitAnon); over -= uitAnon }
+    if (over <= 0) return
+    const kand = people.map((pp) => ({ id: pp.id, n: r.orders[did]?.[pp.id] ?? 0 })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n)
+    for (const k of kand) {
+      const weg = Math.min(over, k.n)
+      if (weg > 0) { rBump(idx, did, k.id, -weg); over -= weg }
+      if (over <= 0) break
+    }
+  }
   const rAssignFromAnon = (idx: number, did: string, pid: string) => { if ((rounds[idx]?.anon[did] ?? 0) > 0) { rBumpAnon(idx, did, -1); rBump(idx, did, pid, 1) } }
   const potAvailFor = (idx: number) => potContribTotal - (potSpent - (rounds[idx]?.potPart || 0))
   // potVast = "de pot betaalt dit vaste bedrag, raak het niet aan": alleen de rest
@@ -3669,12 +3689,19 @@ export default function PartyTest() {
   // ook uit, ook als rTogglePot niets kon doen — anders blijft dit rondzingen.
   useEffect(() => {
     if (!potVulVoorRonde) return
+    // Zit dat rondje nog in de bewerkstand, dan hoort de keuze in het concept: anders
+    // zet saveEditRound het potdeel bij het opslaan meteen weer op nul.
+    if (editRoundId === potVulVoorRonde && editDraft) {
+      setEditDraft((c) => c ? { ...c, usePot: true } : c)
+      setPotVulVoorRonde(null)
+      return
+    }
     const idx = rounds.findIndex((r) => r.id === potVulVoorRonde)
     if (idx < 0 || (rounds[idx].potPart || 0) > 0.005) { setPotVulVoorRonde(null); return }
     if (potAvailFor(idx) <= 0.005) return
     rTogglePot(idx)
     setPotVulVoorRonde(null)
-  }, [potVulVoorRonde, rounds, potContribTotal, potSpent])
+  }, [potVulVoorRonde, rounds, potContribTotal, potSpent, editRoundId, editDraft])
 
   // ── afgeleide bekers (uit rounds) ───────────────────────────────────────────
   const roundPicked = (r: Round, pid: string) => drinks.reduce((a, d) => a + (d.cup ? (r.orders[d.id]?.[pid] ?? 0) : 0), 0)
@@ -10327,6 +10354,7 @@ export default function PartyTest() {
                   const bewerk = editRoundId === r.id && editDraft !== null
                   const dr = editDraft
                   const uitPot = (r.potPart || 0) > 0.005
+                  const potAan = bewerk && dr ? dr.usePot : uitPot
                   // In de bewerkstand tellen ook drankjes mee die je zonet toevoegde en
                   // die dus nog nul keer in het rondje staan.
                   const basisRijen = drinksOf(r)
@@ -10354,7 +10382,16 @@ export default function PartyTest() {
                           {bewerk ? (
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
                               <button style={{ width: 30, height: 30, borderRadius: 8, background: "#eef1f6", border: "1px solid rgba(29,41,66,0.2)", fontSize: 18, color: "#6b7484", fontWeight: 800, cursor: "pointer" }}
-                                onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, drinks: { ...c.drinks, [d.id]: Math.max(0, (c.drinks[d.id] ?? n) - 1) } } : c) }}>−</button>
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  const omlaag = () => setEditDraft((c) => c ? { ...c, drinks: { ...c.drinks, [d.id]: Math.max(0, (c.drinks[d.id] ?? n) - 1) } } : c)
+                                  if (val <= 0) return
+                                  // Zit het onbenoemde restant er al af, dan haal je het bij iemand weg.
+                                  const toegewezen = n - (r.anon[d.id] ?? 0)
+                                  const wie = val - 1 < toegewezen ? wieVerliest({ ...r, anon: { ...r.anon, [d.id]: 0 } }, d.id) : null
+                                  if (!wie) { omlaag(); return }
+                                  setConfirmDlg({ variant: "danger", msg: L.removeAssignedQ(d.name, wie.name), yes: L.removeWord, onYes: () => { setConfirmDlg(null); omlaag() } })
+                                }}>−</button>
                               <span style={{ fontSize: 19, fontWeight: 800, color: "#c98a00", minWidth: 28, textAlign: "center" }}>{val}×</span>
                               <button style={{ width: 30, height: 30, borderRadius: 8, background: AAN, border: "none", fontSize: 18, color: "#fff", fontWeight: 800, cursor: "pointer" }}
                                 onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, drinks: { ...c.drinks, [d.id]: (c.drinks[d.id] ?? n) + 1 } } : c) }}>+</button>
@@ -10467,17 +10504,26 @@ export default function PartyTest() {
                         )}
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        <span onClick={(e) => { e.stopPropagation(); rTogglePot(idx) }}
+                        <span onClick={(e) => {
+                            e.stopPropagation()
+                            if (!(bewerk && dr)) { rTogglePot(idx); return }
+                            if (!dr.usePot && potAvailFor(idx) <= 0.005) { setNotice(L.potEmpty(potIsCard)); return }
+                            setEditDraft((c) => c ? { ...c, usePot: !c.usePot } : c)
+                          }}
                           style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", borderRadius: 999, padding: "7px 13px", fontSize: 13.5, fontWeight: 600,
-                            background: (r.potPart || 0) > 0 ? "#2f6fb5" : "#fff",
-                            border: (r.potPart || 0) > 0 ? "1.5px solid #2f6fb5" : "1.5px solid rgba(29,41,66,0.4)",
-                            color: (r.potPart || 0) > 0 ? "#fff" : "#1d2942" }}>
-                          {potIsCard ? <>💳 {L.cardWord}</> : <><ZakjeIcoon size={14} /> {L.potWord}</>}{(r.potPart || 0) > 0 ? " ✓" : ""}
+                            background: potAan ? "#2f6fb5" : "#fff",
+                            border: potAan ? "1.5px solid #2f6fb5" : "1.5px solid rgba(29,41,66,0.4)",
+                            color: potAan ? "#fff" : "#1d2942" }}>
+                          {potIsCard ? <>💳 {L.cardWord}</> : <><ZakjeIcoon size={14} /> {L.potWord}</>}{potAan ? " ✓" : ""}
                         </span>
                         {people.map((p) => {
-                          const aan = (r.payers?.[p.id] || 0) > 0
+                          const aan = bewerk && dr ? dr.payers.includes(p.id) : (r.payers?.[p.id] || 0) > 0
                           return (
-                            <span key={p.id} onClick={(e) => { e.stopPropagation(); rTogglePayer(idx, p.id) }}
+                            <span key={p.id} onClick={(e) => {
+                                e.stopPropagation()
+                                if (!(bewerk && dr)) { rTogglePayer(idx, p.id); return }
+                                setEditDraft((c) => c ? { ...c, payers: c.payers.includes(p.id) ? c.payers.filter((x) => x !== p.id) : [...c.payers, p.id] } : c)
+                              }}
                               style={{ cursor: "pointer", borderRadius: 999, padding: "7px 13px", fontSize: 13.5, fontWeight: 600,
                                 background: aan ? RAND : "#fff",
                                 border: aan ? `1.5px solid ${RAND}` : "1.5px solid rgba(29,41,66,0.4)",
@@ -10488,6 +10534,9 @@ export default function PartyTest() {
                       {(() => {
                         // Klopt de som niet met het bedrag, dan zeggen we dat hier — stil
                         // laten staan zou de eindbalans laten rekenen met geld dat er niet is.
+                        // Tijdens het bewerken klopt de som per definitie: bij Opslaan wordt het
+                        // bedrag opnieuw over de gekozen pillen verdeeld.
+                        if (bewerk) return null
                         const sel = Object.keys(r.payers || {}).filter((pid) => (r.payers[pid] || 0) > 0.005 && people.some((p) => p.id === pid))
                         const nPay = sel.length + ((r.potPart || 0) > 0.005 ? 1 : 0)
                         if (nPay === 0 || (r.amount || 0) <= 0.005) return null
