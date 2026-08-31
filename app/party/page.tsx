@@ -8825,7 +8825,7 @@ export default function PartyTest() {
                       @media (prefers-reduced-motion: reduce){.rundo-wijs{animation:none}}`}</style>
                     <div style={{ display: "flex", gap: 9, alignItems: "center", justifyContent: "center", marginTop: 10, padding: "4px 2px" }}>
                       <span className="rundo-wijs" style={{ fontSize: 20, flexShrink: 0 }}>{"\u261D\uFE0F"}</span>
-                      <span style={{ fontSize: 15.5, color: "#8a5e0f", fontWeight: 700, lineHeight: 1.35, textAlign: "center" }}>{L.chooseFirst}</span>
+                      <span style={{ fontSize: 16, color: "#8a5e0f", fontWeight: 900, lineHeight: 1.35, textAlign: "center" }}>{L.chooseFirst}</span>
                       <span className="rundo-wijs rundo-wijs2" style={{ fontSize: 20, flexShrink: 0 }}>{"\u261D\uFE0F"}</span>
                     </div>
                   </>
@@ -8947,7 +8947,11 @@ export default function PartyTest() {
                 {settle && <div style={{ fontSize: 13.5, color: "#8b93a3", marginTop: 7, lineHeight: 1.45 }}>{L.qrTapsSelf}</div>}
               </div>
             )}
-        <div ref={catRij} style={{ scrollMarginTop: 8, display: zoekt ? "none" : "block", position: "relative", marginBottom: 10 }}>
+        {/* Zolang de opnamewijze niet gekozen is, staan de drankjes al vaag en dood.
+            De categorieën hoorden daarbij: anders lijkt de bovenste helft van het
+            scherm bruikbaar terwijl er niets gebeurt als je erop tikt. */}
+        <div ref={catRij} style={{ scrollMarginTop: 8, display: zoekt ? "none" : "block", position: "relative", marginBottom: 10,
+          opacity: nogKiezen ? 0.4 : 1, pointerEvents: nogKiezen ? "none" : "auto" }}>
           <div ref={catScroll} onScroll={updateCatArrows} className="rundo-catscroll" style={{ display: "grid", gridAutoFlow: "column", gridTemplateRows: "repeat(2, auto)", gap: 6, justifyContent: "start", overflowX: "auto", padding: "0 8px 9px 0", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
           <style>{`.rundo-catscroll::-webkit-scrollbar{display:none}`}</style>
           {catsPresent.map((c) => {
