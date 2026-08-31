@@ -577,7 +577,6 @@ const T = {
     alreadyJoined: "Al aangemeld",
     fillNameFirst: "Vul eerst je naam in.",
     tapYourSeatNow: "👇 Tik nu je plaats aan",
-    potTogetherQ: "💰 Samen een pot leggen?",
     potLayBtn: "Pot leggen",
     whoAreYouTitle: "Wie ben jij?",
     namePlichtTitle: "Groepsnaam & personen",
@@ -593,24 +592,18 @@ const T = {
     aanvulSave: "Bewaren",
     aanvulSkip: "Alles overslaan — later invullen",
     stillToFill: "NOG NODIG VOOR EERLIJK AFREKENEN",
-    nogNodigBadge: "NOG NODIG",
-    allRoundsBtn: "🍺 Alle rondjes in één keer",
     allRoundsSeg: "alle rondjes",
     thisRoundSeg: "dit rondje",
-    onlyThisRound: "↩ Alleen dit rondje",
     tikSamenWord: "voor iedereen",
     chooseFirst: "Kies hoe je dit rondje opneemt",
     hintTogether: "Tik alle drankjes meteen aan voor de hele groep",
     hintPerPerson: "Tik eerst een naam aan, dan het drankje",
     perPersonWord: "per persoon",
     fillWord: "Bedrag toevoegen",
-    adjustOrder: "bestelling aanpassen",
     addPersonHere: "Persoon / naam toevoegen",
     personsAndNames: "Personen & namen",
-    persWord: "Pers.",
     persWordLow: "pers.",
     tapForStrip: "Je tikt aan voor",
-    completeWord: "✓ compleet",
     noAmountShort: "Hoeveel betaald?",
     missRoundsNote: (n: number) => `Nog ${n} rondje${n === 1 ? "" : "s"} aanvullen voor een eerlijke verdeling`,
     fillNowBtn: "Nu aanvullen →",
@@ -625,8 +618,6 @@ const T = {
     closeNeedName: "Geef je groep een naam om ze te bewaren in je lijst.",
     nameRequiredHint: "⚠️ verplicht om te bewaren",
     closeAndSave: "Afsluiten en bewaren",
-    leaveNoNameSub: "Zonder naam vind je deze groep straks niet meer terug. Geef hem een naam om alles te bewaren.",
-    saveAndStay: "Bewaren en hier blijven",
     leaveNoSaveBtn: "Weggaan zonder bewaren",
     saveAndLeave: "Bewaren en weggaan",
     namePh3: "Typ je groepsnaam",
@@ -644,12 +635,10 @@ const T = {
       { ic: ["👆"], label: "tik de drankjes aan" },
       { ic: ["📋"], label: "handig barlijstje en afrekenen" },
     ],
-    potAddBtn: "+ inleggen",
     seatTaken: "Die plaats is net door iemand anders genomen. Kies een andere.",
     badCode: "Deze uitnodigingscode bestaat niet (meer).",
     loading: "Even laden…",
 
-    youAre: "Jij bent",
     notMe: "dit ben ik niet",
     notMeConfirm: (n: string) => `Ben jij niet ${n}? Dan geef je deze plaats vrij en kies je opnieuw.`,
     releaseSeat: "Plaats vrijgeven",
@@ -671,19 +660,14 @@ const T = {
     inviteMore: "Nodig meer mensen uit — laat ze de code scannen.",
     roundWhatYouWant: (n: number) => `🛒 Ronde ${n} — wat jij wil`,
     searchDrink: "Zoek een drankje…",
-    shortList: "⚡ Korte lijst",
-    fullListBtn: "📖 Volledige lijst",
     nothingFound: "Niets gevonden — probeer een ander woord.",
     clearSearch: "Zoekopdracht wissen",
 
-    myTab: "🧾 Mijn stand",
     noRoundClosed: "Er is nog geen rondje afgesloten.",
     whatYouDrank: "Wat jij dronk",
     whatDidItCost: "Wat kostte dit rondje?",
-    costLabel: "WAT KOSTTE DIT RONDJE?",
     whoPutMoney: "Wie betaalde?",
     whoPaidTapIt: "Wie betaalde dit rondje? Tik aan!",
-    pickWhoPaid: "Kies wie betaalde.",
     splitEvenNote: "Gelijk verdeeld \u2014 pas aan per persoon indien nodig",
     fromPotQ: "Kwam er iets uit de pot?",
     noSelfPaid: "nee, zelf betaald",
@@ -692,13 +676,11 @@ const T = {
     notFromPotLabel: "Niet uit de pot",
     wholeRoundFromPot: "Het hele rondje gaat uit de pot.",
     potLeftAfter: "Daarna blijft er in de pot:",
-    confirmPayBtn: "Betaling bevestigen",
     fillAmountHint: "Vul betaalde bedrag in",
     confirmShort: "bevestigen",
     potPaysWholeQ: "Betaalt de pot het hele rondje?",
     yesWord: "ja",
     noPartOnly: "nee, een deel",
-    restOutsidePot: "Rest buiten de pot:",
     potPaidIn: (bedrag: string) => `💰 ingelegd ${bedrag}`,
     roundN: (n: number) => `Ronde ${n}`,
     nothingThisRound: "jij had niets in dit rondje",
@@ -722,9 +704,7 @@ const T = {
     joinInviteShort: (naam: string) => `Doe je mee met ${naam || "ons rondje"}? Scan of tik:`,
     pasteAndShare: "✓ Gekopieerd — plak hem in jullie groepschat.",
     sectionGroup: "DE GROEP",
-    sectionExtras: "EXTRA’S",
     startOrdering: "Beginnen met bestellen",
-    startOrderingSub: "wie later scant, sluit gewoon aan",
     everyoneTapsNow: "iedereen kan aantikken",
     showQr: "📱 QR-code tonen",
     toQrStep: "Naar de QR-code →",
@@ -768,20 +748,11 @@ const T = {
     editNamesBtn: "✏️ Namen aanpassen",
     doneNamesBtn: "✓ Klaar met namen",
     editNamesHint: "Pas de namen aan — ze veranderen overal mee, ook in al toegewezen drankjes.",
-    notAssignedCount: (n: number) => `${n} ${n === 1 ? "drankje" : "drankjes"} niet toegewezen`,
     howNoteQ: "Hoe noteer je dit rondje?",
     inRoundTitle: "In dit rondje",
     weggehaald: (wat: string) => `${wat} weggehaald`,
     undoWord: "Ongedaan maken",
     nogNiets: (namen: string) => `${namen} nog niets`,
-    potTitel: "Pot",
-    potEvenIn: "gelijk ingelegd",
-    potIn: "ingelegd",
-    potOtherBtn: "Anders verdeeld?",
-    potWhoFrom: (b: string) => `Van wie komt de ${b} in de pot?`,
-    mustBeTot: (b: string) => `moet ${b} zijn`,
-    potStayEqual: "Toch gelijk",
-    cancelEdit: "Annuleer",
     guestsWhoTitle: "Wie waren de gasten?",
     guestsWhoSub: "Alles klopt al — alleen deze namen ontbreken nog voor een leesbare afrekening.",
     leaveAsIs: "Zo laten",
@@ -810,8 +781,6 @@ const T = {
     starting: "Bezig…",
     savedGroups: "Opgeslagen groepen",
     modeFairShort: "Iedereen tikt zelf aan",
-    shareLinkBelow: "deel de link hieronder",
-    modeQuickShort: "Ik bestel voor de groep",
     pinOn: "Bewaren",
     pinOff: "Niet meer bewaren",
     maxPins: (n: number) => `Je kan maximaal ${n} groepen vastzetten. Maak er eerst een los.`,
@@ -838,9 +807,7 @@ const T = {
 
     peopleTitle: "Personen",
     addPersonFirst: "Voeg eerst minstens één persoon toe.",
-    whichAreYou: "Welke ben jij?",
     assignAnyone: "Je kan aan iedereen toewijzen — ook wie zelf scande.",
-    pickYourName: "Tik je naam aan — de rest duid je zelf aan tijdens het bestellen.",
     personHasDrinks: (n: string) => `${n} heeft al drankjes in een rondje en kan niet verwijderd worden. Verwijder eerst die drankjes.`,
     thisPerson: "Deze persoon",
 
@@ -856,15 +823,12 @@ const T = {
     settingsLater: "Pot, bekers of coins nodig? Die zet je aan via ⚙️ Groep — hoeft nu niet.",
     perManShort: "p.p.",
     potTotalIn: "Totaal in de pot:",
-    potInShort: "ingelegd",
-    potStillIn: "nog in pot",
     alreadyInPot: "Al in de pot",
     nowAdding: "Nu erbij",
     newPotTotal: "Nieuw totaal",
     firstDeposit: "1e inleg",
     addDeposit: "extra inleg",
     editDeposit: "inleg wijzigen",
-    addToPot: "Toevoegen aan de pot",
     potFillAmount: "Vul eerst een bedrag in.",
     setPotTo: (v: string) => `Pot op ${v} zetten`,
     unassignedHub: (n: number) => `🔴 ${n} drankje${n === 1 ? "" : "s"} nog niet toegewezen`,
@@ -884,13 +848,6 @@ const T = {
 
     // ── instellingen
     groupShort: "⚙️ Groep",
-    cupsTitle: "♻️ Herbruikbare bekers",
-    cupsInfo: "Voor events met waarborg per beker die je terugkrijgt bij inleveren. Zet aan om de borg mee te verrekenen.",
-    depositPerCup: "Waarborg/beker",
-    coinsTitle: "🎟️ Coins",
-    coinsInfo: "Betaal je met coins i.p.v. euro's? Stel de coin-waarde en prijzen in; de app verdeelt eerlijk.",
-    coinPrices: "🎟️ coin-prijzen per drankje",
-    coinPricesInfo: "Standaard festival-coins per drankje. Pas aan met − / + (stapjes van 0,1).",
     potTitle: "Pot",
     noPotYet: "Nog geen pot",
     potSummary: (n: number, over: string) => `${n} inlegger${n === 1 ? "" : "s"} \u00b7 ${over} nog over`,
@@ -906,7 +863,6 @@ const T = {
     iPutIn: (b: string) => `Ik leg ${b} in`,
     settleApart: "Nee, ik reken apart af",
     joinedPot: (n: string, b: string) => `${n} legde ${b} in de pot`,
-    eachPutsIn: "Hoeveel legt ieder in?",
     seatsFillLater: "Wie scant, neemt een plaats in.",
     potHowManyQ: "Met hoeveel?",
     fillCoinValue: "Vul de coin-waarde in (1 coin = €…) — of zet coins op 'uit'.",
@@ -915,11 +871,9 @@ const T = {
     // ── bestellen
     inThisRound: "🛒 In dit rondje",
     someoneCanGo: "👉 Iemand mag gaan halen!",
-    noFavsHere: "Geen favorieten hier.",
     showAll: "📖 toon alles",
     assign: "Toewijzen",
     assignHint: "— tik om toe te wijzen",
-    assigned: "✓ toegewezen",
     eachOne: "👥 elk 1",
     eachOneConfirm: (n: string, meer: boolean) => `${n} ${meer ? "hebben" : "heeft"} er nu al 2 of meer. Met "elk 1" krijgt iedereen er precies één — ${n} ${meer ? "gaan" : "gaat"} dus terug naar 1.`,
     yesEachOne: "Ja, iedereen op 1",
@@ -957,11 +911,9 @@ const T = {
     fromPot: "uit de pot",
     fromCard: "van de drankkaart",
     notPaidYet: "nog niet betaald",
-    paidBy: "Betaald door",
     roundingNote: "afrondingscent wordt bij het eerlijk verdelen verrekend",
 
     // ── pot
-    potMoney: "Pot (geld)",
     drinkCard: "💳 Drankkaart",
     addPotContrib: "➕ Inleg pot toevoegen",
     addMoreToPot: "\u2795 Nog extra inleggen",
@@ -1018,9 +970,7 @@ const T = {
     saveName: "Bewaren",
     pricePh: "prijs per stuk",
     notOnList: "staat er niet bij?",
-    orderingOpenTitle: "Het bestellen is open!",
     everyoneCanTapNow: "Iedereen kan nu aantikken",
-    orderingOpenBody: (naam: string) => `${naam || "De gastheer"} heeft de kaart geopend.`,
     goingToDrinks: "Naar de drankjes →",
     collapseAll: "Alles verbergen",
     settleBtn: "🧾 Afrekenen",
@@ -1036,10 +986,8 @@ const T = {
     nothingToRepeat: "Er is nog geen rondje om te herhalen.",
 
     // ── afrekenen
-    finalBalance: "🧾 Eindbalans",
     totalPaid: "💰 Totaal betaald",
     fairVsEqual: "⚖️ Eerlijk verdelen vs Gelijk verdelen",
-    fairIsFairest: "Eerlijk verdelen is de eerlijkste keuze!",
     whoPaysWho: "🤝 Wie betaalt aan wie?",
     shortestWay: "Zo min mogelijk overschrijvingen — de app zoekt de kortste weg.",
     fairInfo: "⚖️ Eerlijk — wie weinig of goedkopere drankjes nam, betaalt niet mee voor de rest!",
@@ -1087,7 +1035,6 @@ const T = {
     confirmTitle: "Even bevestigen",
     walkTable: "👥 Rondje opnemen",
     roundTogether: "Nieuw rondje starten",
-    roundWalkSelf: "✍️ Rondje zelf opnemen",
     youFetchTitle: "Jij haalt dit rondje",
     theyTap: "Zij tikken aan",
     theyTapRest: "op hun gsm.",
@@ -1097,11 +1044,6 @@ const T = {
     sameAgainShort: "\u21bb zelfde opnieuw",
     notMeShort: "Toch niet",
     iFetchShort: "Ik ga halen \u2192",
-    fetchStep1: "Iedereen krijgt nu de melding",
-    fetchStep2: "Ieder tikt op zijn eigen gsm aan wat hij wil",
-    fetchStep3: "Jij krijgt het barlijstje zodra ze klaar zijn",
-    fetchStep4: "Jij betaalt aan de bar — je schiet dus voor",
-    yesIFetch: "Ja, ik ga halen →",
     ratherNot: "Toch niet",
     someoneFetches: (naam: string) => `${naam} gaat drankjes halen`,
     gFetchStep1: "Tik aan wat jij wil drinken",
@@ -1119,9 +1061,6 @@ const T = {
     noRoundTitle: "Nog geen rondje gestart",
     noRoundBody: "Start er zelf \u00e9\u00e9n of wacht tot iemand anders start.",
     justLooking: "Ik kijk nog even rond",
-    extrasLine: "⚙️ Extra’s — bekers, coins",
-    oneCoinIs: "1 coin =",
-    laterLooking: "Later, ik kijk nog even",
     youAdvance: "Jij schiet voor (of via de pot) — wordt achteraf verrekend in deze app",
     youWalkTitle: "Jij neemt het rondje op",
     walkStep1: "Je gaat de tafel rond, persoon per persoon",
@@ -1199,9 +1138,7 @@ const T = {
     youNote2: "Handig barlijstje",
     youNote3: "Snel of eerlijk verdelen — jij kiest",
     modeSnelTitle: "Zelf noteren",
-    modeNaamTitle: "Ik neem op voor de groep",
     modeNaamShort: "Ik neem zelf op",
-    tagline: "Rondjes opnemen en splitten zonder gedoe",
     showToFriend: "📱 QR-code van de groep",
     shareWithMore: "Deel gerust met wie er nog wil bijkomen",
     seatsFullGuest: "Alle plaatsen zijn bezet — de gastheer kan er eentje bijzetten.",
@@ -1215,8 +1152,8 @@ const T = {
     tapToRename: "tik om de naam te wijzigen",
     removeWord: "Weghalen",
     removeAssignedQ: (drank: string, gast: string) => `${drank} weghalen bij ${gast}?`,
+    removeFromWho: (drank: string) => `Bij wie haal je ${drank} weg?`,
     barHandOut: "Uitdelen",
-    paidForRoundQ: (n: number) => `Betaald voor rondje ${n}?`,
     potTopUpPlus: "+ pot aanvullen",
     withHowManyQ: "Met hoeveel personen was dit rondje?",
     orderedLabel: "Besteld",
@@ -1243,11 +1180,8 @@ const T = {
     notSavedYet: "niet opgeslagen",
     saveWord: "Opslaan",
     cardWord: "drankkaart",
-    potTopUp: "Pot aanvullen",
-    potEmptyFillFirst: "De pot is leeg — vul eerst bij om hieruit te betalen.",
     editRoundHead: (n: number) => `Rondje ${n} aanpassen`,
     paidNote: (v: string) => `Betaald ${v}`,
-    noAmountNote: "Geen bedrag ingevuld",
     noPotUsed: "geen pot gebruikt",
     paidFromPot: (v: string) => `${v} uit de pot`,
     skipCostWarn: "Je vulde al iets in bij dit rondje. Toch overslaan zonder het op te slaan?",
@@ -1255,26 +1189,15 @@ const T = {
     finishRoundFirst: "Rond eerst dit rondje af — vul in wat het kostte of tik Overslaan.",
     payFirstOne: (nr: number) => `Vul eerst de betaling van rondje ${nr} in, of sla ze over.`,
     payFirstMany: (n: number) => `Nog ${n} rondjes zonder bedrag. Vul ze in, of sla de betaling over.`,
-    paidSelf: "Geen pot gebruikt",
-    paidSelfShort: "Zonder pot",
-    paidPotShort: "Uit de pot",
-    paidPot: "Pot gebruikt",
-    whoPaidWhat: "wie betaalde wat",
     totalPaidShort: "Totaal betaald",
     potShare: "waarvan uit de pot",
-    potSpentWord: "besteed",
     potLeftLong: "nog in de pot",
     persPaidWord: "betaald",
     leaveSettleMsg: "Afrekenen loopt nog — toch naar het rondjesoverzicht? Wat je al invulde blijft bewaard.",
     leaveSettleYes: "Ja, ga verder",
     potShareAll: "volledig uit de pot",
-    inRounds: (t: string) => `rondje ${t}`,
-    mixSamen: (b: string) => `samen ${b}`,
-    mixPotAvail: (b: string) => `${b} beschikbaar`,
-    mixPotShort: (b: string) => `maar ${b} in de pot`,
     potShortTitle: "Niet genoeg in de pot",
     potWord: "pot",
-    skipPayment: "Betaling overslaan",
     skipWord: "Overslaan",
     later: "Later",
     back: "Terug",
@@ -1298,9 +1221,6 @@ const T = {
     fillAmountsBtn: "Bedragen aanvullen ›",
     nothingToSplit: "Er valt nog niets te verdelen",
     nothingToSplitWhy: "Geen enkel rondje heeft een bedrag. Vul de openstaande bedragen aan — daarna kan je gelijk of eerlijk verdelen.",
-    noAmountBadge: "zonder bedrag",
-    addPaymentBang: "Betaling toevoegen!",
-    addAmountBtn: "€ Bedrag toevoegen",
     splitEqually: "Gelijk verdelen",
     splitWithFair: "Eerlijk verdelen",
     splitFairSub: "wie meer dronk, betaalt meer",
@@ -1310,7 +1230,6 @@ const T = {
     payersTitle: "Wie betaalde?",
     roundCount: (n: number) => `${n} ${n === 1 ? "rondje" : "rondjes"}`,
     stillToAssign: (v: string) => `${v} nog toe te wijzen`,
-    whoPaidThisRound: "Wie betaalde dit rondje?",
     tapNameBelow: "Wie betaalde dit rondje? Tik een naam aan",
     fillAmountFirstShort: "Vul eerst het bedrag in",
     sameForAll: "Dezelfde betaler voor alle rondjes",
@@ -1353,12 +1272,10 @@ const T = {
     provisionalStand: "Voorlopig. Wat je uiteindelijk betaalt of terugkrijgt, hangt af van wie wat voorschoot en van de pot — dat komt bij het afrekenen.",
     nothingWord: "neemt niets",
     totalOf: (v: string) => `${v} totaal`,
-    stillOpen: (v: string) => `${v} open`,
     fairSplitExplain: "Liever eerlijk betalen volgens wat iedereen dronk? Wijs drankjes en betalers hier toe.",
     treatHint: "Rondje trakteren? Tik hieronder aan (telt dan niet mee in de verdeling)",
     roundWord: "Rondje",
     drinksCount: (n: number) => `${n} drankje${n === 1 ? "" : "s"}`,
-    stillEmpty: "nog leeg",
     someHaveDrinks: (n: number, tot: number) => `${n} van ${tot} hebben al iets`,
     confirmRoundTitle: (n: number) => `\u2705 Rondje ${n} bevestigen`,
     confirmRoundBtn: (n: number) => `\u2705 Bevestig rondje (${n} drankje${n === 1 ? "" : "s"})`,
@@ -1381,7 +1298,6 @@ const T = {
     guestNamePh: "naam optioneel",
     fairAddPerson: "+ Persoon toevoegen",
     fairSetupDone: "Naar drankjes toewijzen →",
-    roundsOverviewTitle: "🧾 Rondjesoverzicht",
     payersSumOf: (a: string, b: string) => `Samen ${a} van ${b} — dat klopt nog niet`,
     addDrinkBtn: "+ drankje toevoegen",
     addDrinkPick: "Welk drankje erbij?",
@@ -1423,7 +1339,6 @@ const T = {
     alreadyJoined: "Déjà inscrits",
     fillNameFirst: "Entre d'abord ton nom.",
     tapYourSeatNow: "👇 Touche maintenant ta place",
-    potTogetherQ: "💰 Faire une cagnotte commune ?",
     potLayBtn: "Faire une cagnotte",
     whoAreYouTitle: "Qui es-tu ?",
     namePlichtTitle: "Nom du groupe & personnes",
@@ -1439,24 +1354,18 @@ const T = {
     aanvulSave: "Enregistrer",
     aanvulSkip: "Tout passer — compl\u00e9ter plus tard",
     stillToFill: "N\u00c9CESSAIRE POUR UN PARTAGE \u00c9QUITABLE",
-    nogNodigBadge: "ENCORE N\u00c9CESSAIRE",
-    allRoundsBtn: "🍺 Toutes les tourn\u00e9es d'un coup",
     allRoundsSeg: "toutes",
     thisRoundSeg: "cette tourn\u00e9e",
-    onlyThisRound: "↩ Seulement cette tourn\u00e9e",
     tikSamenWord: "pour tous",
     chooseFirst: "Choisis comment tu notes cette tourn\u00e9e",
     hintTogether: "Coche toutes les boissons d'un coup pour tout le groupe",
     hintPerPerson: "Coche d'abord un nom, puis la boisson",
     perPersonWord: "par personne",
     fillWord: "Ajouter le montant",
-    adjustOrder: "modifier la commande",
     addPersonHere: "Ajouter personne / nom",
     personsAndNames: "Personnes & noms",
-    persWord: "Pers.",
     persWordLow: "pers.",
     tapForStrip: "Tu coches pour",
-    completeWord: "✓ complet",
     noAmountShort: "Combien pay\u00e9\u00a0?",
     missRoundsNote: (n: number) => `Encore ${n} tourn\u00e9e${n === 1 ? "" : "s"} \u00e0 compl\u00e9ter pour un partage \u00e9quitable`,
     fillNowBtn: "Compl\u00e9ter maintenant →",
@@ -1471,8 +1380,6 @@ const T = {
     closeNeedName: "Donne un nom \u00e0 ton groupe pour le garder dans ta liste.",
     nameRequiredHint: "⚠️ obligatoire pour enregistrer",
     closeAndSave: "Cl\u00f4turer et enregistrer",
-    leaveNoNameSub: "Sans nom, tu ne retrouveras plus ce groupe. Donne-lui un nom pour tout garder.",
-    saveAndStay: "Enregistrer et rester ici",
     leaveNoSaveBtn: "Partir sans enregistrer",
     saveAndLeave: "Enregistrer et partir",
     namePh3: "Nomme ton groupe",
@@ -1490,12 +1397,10 @@ const T = {
       { ic: ["👆"], label: "coche les boissons" },
       { ic: ["📋"], label: "liste bar pratique et r\u00e8glement" },
     ],
-    potAddBtn: "+ verser",
     seatTaken: "Cette place vient d'être prise. Choisis-en une autre.",
     badCode: "Ce code d'invitation n'existe pas (plus).",
     loading: "Chargement…",
 
-    youAre: "Tu es",
     notMe: "ce n’est pas moi",
     notMeConfirm: (n: string) => `Tu n'es pas ${n} ? Tu libères cette place et tu choisis à nouveau.`,
     releaseSeat: "Libérer la place",
@@ -1517,19 +1422,14 @@ const T = {
     inviteMore: "Invite plus de monde — fais scanner le code.",
     roundWhatYouWant: (n: number) => `🛒 Tournée ${n} — ce que tu veux`,
     searchDrink: "Chercher une boisson…",
-    shortList: "⚡ Liste courte",
-    fullListBtn: "📖 Liste complète",
     nothingFound: "Rien trouvé — essaie un autre mot.",
     clearSearch: "Effacer la recherche",
 
-    myTab: "🧾 Mon compte",
     noRoundClosed: "Aucune tournée n'est encore clôturée.",
     whatYouDrank: "Ce que tu as bu",
     whatDidItCost: "Combien a co\u00fbt\u00e9 cette tourn\u00e9e\u00a0?",
-    costLabel: "COMBIEN A CO\u00dbT\u00c9 CETTE TOURN\u00c9E\u00a0?",
     whoPutMoney: "Qui a pay\u00e9\u00a0?",
     whoPaidTapIt: "Qui a pay\u00e9 cette tourn\u00e9e\u00a0? Coche\u00a0!",
-    pickWhoPaid: "Choisis qui a pay\u00e9.",
     splitEvenNote: "R\u00e9parti \u00e9galement \u2014 ajuste par personne si besoin",
     fromPotQ: "Une partie vient de la cagnotte\u00a0?",
     noSelfPaid: "non, pay\u00e9 soi-m\u00eame",
@@ -1538,13 +1438,11 @@ const T = {
     notFromPotLabel: "Hors cagnotte",
     wholeRoundFromPot: "Toute la tourn\u00e9e sort de la cagnotte.",
     potLeftAfter: "Il restera dans la cagnotte\u00a0:",
-    confirmPayBtn: "Confirmer le paiement",
     fillAmountHint: "Indique le montant pay\u00e9",
     confirmShort: "confirmer",
     potPaysWholeQ: "La cagnotte paie toute la tourn\u00e9e\u00a0?",
     yesWord: "oui",
     noPartOnly: "non, une partie",
-    restOutsidePot: "Reste hors cagnotte\u00a0:",
     potPaidIn: (bedrag: string) => `💰 versé ${bedrag}`,
     roundN: (n: number) => `Tournée ${n}`,
     nothingThisRound: "tu n'avais rien dans cette tournée",
@@ -1568,9 +1466,7 @@ const T = {
     joinInviteShort: (naam: string) => `Tu viens à ${naam || "notre tournée"} ? Scanne ou touche :`,
     pasteAndShare: "✓ Copi\u00e9 — colle-le dans votre chat de groupe.",
     sectionGroup: "LE GROUPE",
-    sectionExtras: "EXTRAS",
     startOrdering: "Commencer à commander",
-    startOrderingSub: "qui scanne plus tard rejoint simplement",
     everyoneTapsNow: "chacun peut cocher",
     showQr: "📱 Afficher le QR",
     toQrStep: "Vers le QR-code →",
@@ -1614,20 +1510,11 @@ const T = {
     editNamesBtn: "✏️ Modifier les noms",
     doneNamesBtn: "✓ Noms termin\u00e9s",
     editNamesHint: "Modifie les noms — ils changent partout, aussi dans les boissons d\u00e9j\u00e0 attribu\u00e9es.",
-    notAssignedCount: (n: number) => `${n} boisson${n === 1 ? "" : "s"} non attribu\u00e9e${n === 1 ? "" : "s"}`,
     howNoteQ: "Comment notes-tu cette tourn\u00e9e\u00a0?",
     inRoundTitle: "Dans cette tournée",
     weggehaald: (wat: string) => `${wat} retir\u00e9`,
     undoWord: "Annuler",
     nogNiets: (namen: string) => `${namen}\u00a0: rien pour l'instant`,
-    potTitel: "Cagnotte",
-    potEvenIn: "mise égale",
-    potIn: "mise",
-    potOtherBtn: "Réparti autrement ?",
-    potWhoFrom: (b: string) => `Qui a mis les ${b} dans la cagnotte ?`,
-    mustBeTot: (b: string) => `doit être ${b}`,
-    potStayEqual: "Rester égal",
-    cancelEdit: "Annuler",
     guestsWhoTitle: "Qui étaient les invités ?",
     guestsWhoSub: "Tout est déjà bon — seuls ces noms manquent pour un décompte lisible.",
     leaveAsIs: "Laisser ainsi",
@@ -1656,8 +1543,6 @@ const T = {
     starting: "En cours…",
     savedGroups: "Groupes enregistrés",
     modeFairShort: "Chacun coche lui-même",
-    shareLinkBelow: "partage le lien ci-dessous",
-    modeQuickShort: "Je commande pour le groupe",
     pinOn: "Enregistrer",
     pinOff: "Ne plus enregistrer",
     maxPins: (n: number) => `Tu peux épingler ${n} groupes au maximum. Détaches-en un d'abord.`,
@@ -1684,9 +1569,7 @@ const T = {
 
     peopleTitle: "Personnes",
     addPersonFirst: "Ajoute d'abord au moins une personne.",
-    whichAreYou: "Lequel es-tu ?",
     assignAnyone: "Tu peux attribuer à tout le monde — même à ceux qui ont scanné.",
-    pickYourName: "Touche ton nom — le reste, tu le coches toi-même en commandant.",
     personHasDrinks: (n: string) => `${n} a déjà des boissons dans une tournée et ne peut pas être supprimé. Supprime d'abord ces boissons.`,
     thisPerson: "Cette personne",
 
@@ -1702,15 +1585,12 @@ const T = {
     settingsLater: "Besoin d'un pot, de gobelets ou de jetons ? Ça s'active via ⚙️ Groupe — pas maintenant.",
     perManShort: "p.p.",
     potTotalIn: "Total dans la cagnotte :",
-    potInShort: "vers\u00e9",
-    potStillIn: "reste",
     alreadyInPot: "D\u00e9j\u00e0 dans la cagnotte",
     nowAdding: "Ajout\u00e9 maintenant",
     newPotTotal: "Nouveau total",
     firstDeposit: "1re mise",
     addDeposit: "mise suppl\u00e9mentaire",
     editDeposit: "modifier la mise",
-    addToPot: "Ajouter \u00e0 la cagnotte",
     potFillAmount: "Entre d\u2019abord un montant.",
     setPotTo: (v: string) => `Mettre la cagnotte \u00e0 ${v}`,
     unassignedHub: (n: number) => `🔴 ${n} boisson${n === 1 ? "" : "s"} pas encore attribuée${n === 1 ? "" : "s"}`,
@@ -1730,13 +1610,6 @@ const T = {
 
     // ── instellingen
     groupShort: "⚙️ Groupe",
-    cupsTitle: "♻️ Gobelets réutilisables",
-    cupsInfo: "Pour les events avec caution par gobelet, remboursée au retour. Active pour l'inclure dans le décompte.",
-    depositPerCup: "Caution/gobelet",
-    coinsTitle: "🎟️ Jetons",
-    coinsInfo: "Tu paies en jetons plutôt qu'en euros ? Règle la valeur et les prix ; l'app répartit équitablement.",
-    coinPrices: "🎟️ prix en jetons par boisson",
-    coinPricesInfo: "Jetons festival par défaut. Ajuste avec − / + (pas de 0,1).",
     potTitle: "Pot",
     noPotYet: "Pas encore de cagnotte",
     potSummary: (n: number, over: string) => `${n} participant${n === 1 ? "" : "s"} \u00b7 ${over} restant`,
@@ -1752,7 +1625,6 @@ const T = {
     iPutIn: (b: string) => `Je mets ${b}`,
     settleApart: "Non, je paie s\u00e9par\u00e9ment",
     joinedPot: (n: string, b: string) => `${n} a mis ${b} dans la cagnotte`,
-    eachPutsIn: "Combien met chacun\u00a0?",
     seatsFillLater: "Chacun prend une place en scannant.",
     potHowManyQ: "Vous êtes combien ?",
     fillCoinValue: "Entre la valeur du jeton (1 jeton = €…) — ou désactive les jetons.",
@@ -1761,11 +1633,9 @@ const T = {
     // ── bestellen
     inThisRound: "🛒 Dans cette tournée",
     someoneCanGo: "👉 Quelqu'un peut aller chercher !",
-    noFavsHere: "Aucun favori ici.",
     showAll: "📖 tout afficher",
     assign: "Attribuer",
     assignHint: "— touche pour attribuer",
-    assigned: "✓ attribué",
     eachOne: "👥 1 chacun",
     eachOneConfirm: (n: string, meer: boolean) => `${n} ${meer ? "en ont" : "en a"} déjà 2 ou plus. Avec « 1 chacun », tout le monde en reçoit exactement un — ${n} ${meer ? "redescendent" : "redescend"} donc à 1.`,
     yesEachOne: "Oui, 1 pour tous",
@@ -1803,11 +1673,9 @@ const T = {
     fromPot: "du pot",
     fromCard: "de la carte boissons",
     notPaidYet: "pas encore payé",
-    paidBy: "Payé par",
     roundingNote: "le centime d'arrondi est r\u00e9gl\u00e9 dans le partage \u00e9quitable",
 
     // ── pot
-    potMoney: "Pot (argent)",
     drinkCard: "💳 Carte boissons",
     addPotContrib: "➕ Ajouter une mise au pot",
     addMoreToPot: "\u2795 Ajouter encore",
@@ -1864,9 +1732,7 @@ const T = {
     saveName: "Enregistrer",
     pricePh: "prix à la pièce",
     notOnList: "pas dans la liste ?",
-    orderingOpenTitle: "Les commandes sont ouvertes !",
     everyoneCanTapNow: "Chacun peut cocher maintenant",
-    orderingOpenBody: (naam: string) => `${naam || "L’hôte"} a ouvert la carte.`,
     goingToDrinks: "Vers les boissons →",
     collapseAll: "Tout masquer",
     settleBtn: "🧾 Régler",
@@ -1882,10 +1748,8 @@ const T = {
     nothingToRepeat: "Aucune tournée à refaire.",
 
     // ── afrekenen
-    finalBalance: "🧾 Bilan final",
     totalPaid: "💰 Total payé",
     fairVsEqual: "⚖️ Partage \u00e9quitable vs partage \u00e9gal",
-    fairIsFairest: "Le partage \u00e9quitable est le plus juste !",
     whoPaysWho: "🤝 Qui paie à qui ?",
     shortestWay: "Le moins de virements possible — l’appli cherche le chemin le plus court.",
     fairInfo: "⚖️ \u00c9quitable — qui a bu peu ou moins cher ne paie pas pour les autres\u00a0!",
@@ -1933,7 +1797,6 @@ const T = {
     confirmTitle: "Confirmation",
     walkTable: "👥 Faire le tour",
     roundTogether: "Lancer une tourn\u00e9e",
-    roundWalkSelf: "✍️ Prendre la tournée toi-même",
     youFetchTitle: "Tu vas chercher cette tourn\u00e9e",
     theyTap: "Ils cochent",
     theyTapRest: "sur leur t\u00e9l\u00e9phone.",
@@ -1943,11 +1806,6 @@ const T = {
     sameAgainShort: "\u21bb la m\u00eame",
     notMeShort: "Pas moi",
     iFetchShort: "J'y vais \u2192",
-    fetchStep1: "Tout le monde reçoit l’info maintenant",
-    fetchStep2: "Chacun coche sur son propre gsm ce qu’il veut",
-    fetchStep3: "Tu reçois la liste pour le bar dès qu’ils ont fini",
-    fetchStep4: "Tu paies au bar — tu avances donc l'argent",
-    yesIFetch: "Oui, j’y vais →",
     ratherNot: "Finalement non",
     someoneFetches: (naam: string) => `${naam} va chercher les boissons`,
     gFetchStep1: "Coche ce que tu veux boire",
@@ -1965,9 +1823,6 @@ const T = {
     noRoundTitle: "Aucune tourn\u00e9e lanc\u00e9e",
     noRoundBody: "Lance-en une toi-m\u00eame ou attends que quelqu'un d'autre commence.",
     justLooking: "Je regarde encore un peu",
-    extrasLine: "⚙️ Extras — gobelets, coins",
-    oneCoinIs: "1 coin =",
-    laterLooking: "Plus tard, je regarde encore",
     youAdvance: "Tu avances (ou via la cagnotte) — tout est réglé ensuite dans l’appli",
     youWalkTitle: "Tu prends la tournée",
     walkStep1: "Tu fais le tour de la table, personne par personne",
@@ -2046,9 +1901,7 @@ const T = {
     youNote2: "Liste pratique pour le bar",
     youNote3: "Vite ou équitable — à toi de choisir",
     modeSnelTitle: "Je note moi-m\u00eame",
-    modeNaamTitle: "Je note pour le groupe",
     modeNaamShort: "Je note pour tous",
-    tagline: "Prendre les tournées et partager sans tracas",
     showToFriend: "📱 QR-code du groupe",
     shareWithMore: "Partage-le avec qui veut encore se joindre",
     seatsFullGuest: "Toutes les places sont prises — l’hôte peut en ajouter une.",
@@ -2062,8 +1915,8 @@ const T = {
     tapToRename: "touche pour renommer",
     removeWord: "Retirer",
     removeAssignedQ: (drank: string, gast: string) => `Retirer ${drank} chez ${gast}\u00a0?`,
+    removeFromWho: (drank: string) => `Chez qui retirer ${drank}\u00a0?`,
     barHandOut: "Distribuer",
-    paidForRoundQ: (n: number) => `Pay\u00e9 pour la tourn\u00e9e ${n} ?`,
     potTopUpPlus: "+ remplir le pot",
     withHowManyQ: "\u00c0 combien \u00e9tiez-vous pour cette tourn\u00e9e ?",
     orderedLabel: "Command\u00e9",
@@ -2090,11 +1943,8 @@ const T = {
     notSavedYet: "non enregistr\u00e9",
     saveWord: "Enregistrer",
     cardWord: "carte boissons",
-    potTopUp: "Compl\u00e9ter la cagnotte",
-    potEmptyFillFirst: "La cagnotte est vide \u2014 compl\u00e8te-la d\u2019abord pour payer avec.",
     editRoundHead: (n: number) => `Modifier la tourn\u00e9e ${n}`,
     paidNote: (v: string) => `Pay\u00e9 ${v}`,
-    noAmountNote: "Aucun montant indiqu\u00e9",
     noPotUsed: "sans cagnotte",
     paidFromPot: (v: string) => `${v} de la cagnotte`,
     skipCostWarn: "Tu as d\u00e9j\u00e0 rempli quelque chose pour cette tourn\u00e9e. Passer quand m\u00eame sans enregistrer ?",
@@ -2102,26 +1952,15 @@ const T = {
     finishRoundFirst: "Cl\u00f4ture d\u2019abord cette tourn\u00e9e — indique le montant ou appuie sur Passer.",
     payFirstOne: (nr: number) => `Indique d'abord le paiement de la tourn\u00e9e ${nr}, ou passe-le.`,
     payFirstMany: (n: number) => `Encore ${n} tourn\u00e9es sans montant. Indique-les, ou passe le paiement.`,
-    paidSelf: "Sans cagnotte",
-    paidSelfShort: "Sans cagnotte",
-    paidPotShort: "De la cagnotte",
-    whoPaidWhat: "qui a pay\u00e9 quoi",
     totalPaidShort: "Total pay\u00e9",
     potShare: "dont du pot",
-    potSpentWord: "d\u00e9pens\u00e9",
     potLeftLong: "encore dans le pot",
     persPaidWord: "pay\u00e9",
     leaveSettleMsg: "Le r\u00e8glement est en cours — quand m\u00eame vers l'aper\u00e7u des tourn\u00e9es ? Ce que tu as d\u00e9j\u00e0 rempli reste enregistr\u00e9.",
     leaveSettleYes: "Oui, continuer",
     potShareAll: "enti\u00e8rement du pot",
-    inRounds: (t: string) => `tourn\u00e9e ${t}`,
-    mixSamen: (b: string) => `ensemble ${b}`,
-    mixPotAvail: (b: string) => `${b} disponible`,
-    mixPotShort: (b: string) => `mais ${b} dans le pot`,
-    paidPot: "Avec cagnotte",
     potShortTitle: "Pas assez dans la cagnotte",
     potWord: "cagnotte",
-    skipPayment: "Passer le paiement",
     skipWord: "Passer",
     later: "Plus tard",
     back: "Retour",
@@ -2145,9 +1984,6 @@ const T = {
     fillAmountsBtn: "Compléter les montants ›",
     nothingToSplit: "Rien à répartir pour l'instant",
     nothingToSplitWhy: "Aucune tourn\u00e9e n'a de montant. Compl\u00e8te les montants ouverts — ensuite tu pourras partager \u00e0 parts \u00e9gales ou \u00e9quitablement.",
-    noAmountBadge: "sans montant",
-    addPaymentBang: "Ajouter le paiement !",
-    addAmountBtn: "€ Ajouter le montant",
     splitEqually: "R\u00e9partir \u00e9galement",
     splitWithFair: "Partage \u00e9quitable",
     splitFairSub: "qui boit plus, paie plus",
@@ -2157,7 +1993,6 @@ const T = {
     payersTitle: "Qui a payé ?",
     roundCount: (n: number) => `${n} ${n === 1 ? "tourn\u00e9e" : "tourn\u00e9es"}`,
     stillToAssign: (v: string) => `${v} \u00e0 attribuer`,
-    whoPaidThisRound: "Qui a pay\u00e9 cette tourn\u00e9e\u00a0?",
     tapNameBelow: "Qui a pay\u00e9\u00a0? Coche un nom ci-dessous",
     fillAmountFirstShort: "Indique d'abord le montant",
     sameForAll: "Le même payeur pour toutes les tournées",
@@ -2199,12 +2034,10 @@ const T = {
     provisionalStand: "Provisoire. Ce que tu paieras ou récupéreras dépend de qui a avancé et de la cagnotte — tout se règle au décompte.",
     nothingWord: "ne prend rien",
     totalOf: (v: string) => `${v} au total`,
-    stillOpen: (v: string) => `${v} ouvert`,
     fairSplitExplain: "Tu pr\u00e9f\u00e8res payer selon ce que chacun a bu ? Attribue ici les boissons et les payeurs.",
     treatHint: "Tu offres une tourn\u00e9e ? Touche-la ci-dessous (elle ne compte pas dans le partage)",
     roundWord: "Tourn\u00e9e",
     drinksCount: (n: number) => `${n} boisson${n === 1 ? "" : "s"}`,
-    stillEmpty: "encore vide",
     someHaveDrinks: (n: number, tot: number) => `${n} sur ${tot} ont d\u00e9j\u00e0 quelque chose`,
     confirmRoundTitle: (n: number) => `\u2705 Confirmer la tourn\u00e9e ${n}`,
     confirmRoundBtn: (n: number) => `\u2705 Confirmer la tourn\u00e9e (${n} boisson${n === 1 ? "" : "s"})`,
@@ -2227,7 +2060,6 @@ const T = {
     guestNamePh: "nom facultatif",
     fairAddPerson: "+ Ajouter une personne",
     fairSetupDone: "Vers l'attribution des boissons →",
-    roundsOverviewTitle: "🧾 Aper\u00e7u des tourn\u00e9es",
     payersSumOf: (a: string, b: string) => `Ensemble ${a} sur ${b} \u2014 \u00e7a ne colle pas`,
     addDrinkBtn: "+ ajouter une boisson",
     addDrinkPick: "Quelle boisson\u00a0?",
@@ -2550,20 +2382,22 @@ export default function PartyTest() {
   // Ook wie betaalde hoort hier: tik je een pil aan terwijl je het bedrag nog aan het
   // typen bent, dan is r.amount nog nul en wiste rRedistribute de keuze meteen weer.
   // Nu blijft de keuze in het concept staan en wordt ze pas bij Opslaan verrekend.
-  const [editDraft, setEditDraft] = useState<{ drinks: Record<string, number>; amount: number; headcount: number; payers: string[]; usePot: boolean } | null>(null)
+  const [editDraft, setEditDraft] = useState<{ drinks: Record<string, number>; amount: number; headcount: number; payers: string[]; usePot: boolean; weg: Record<string, string[]> } | null>(null)
   // Staat de kiezer voor "+ drankje toevoegen" open? Één rondje tegelijk in de
   // bewerkstand, dus één schakelaar volstaat.
   const [addDrinkOpen, setAddDrinkOpen] = useState(false)
+  // Welk drankje staat op het punt bij iemand weggehaald te worden, en bij wie kan dat?
+  const [kiesWeg, setKiesWeg] = useState<{ did: string; naam: string; opties: { id: string; naam: string; n: number }[] } | null>(null)
   const startEditRound = (r: Round) => {
     setAddDrinkOpen(false)
     const d: Record<string, number> = {}
     drinksOf(r).forEach(({ d: dr, n }) => { d[dr.id] = n })
     setEditDraft({ drinks: d, amount: r.amount || 0, headcount: Math.max(1, r.headcount || 1),
       payers: Object.keys(r.payers || {}).filter((pid) => people.some((pp) => pp.id === pid)),
-      usePot: (r.potPart || 0) > 0.005 })
+      usePot: (r.potPart || 0) > 0.005, weg: {} })
     setEditRoundId(r.id)
   }
-  const cancelEditRound = () => { setEditDraft(null); setEditRoundId(null); setAddDrinkOpen(false) }
+  const cancelEditRound = () => { setEditDraft(null); setEditRoundId(null); setAddDrinkOpen(false); setKiesWeg(null) }
   // Alles in één keer wegschrijven: aantallen als verschil, bedrag, personen en bron.
   const saveEditRound = async (r: Round) => {
     if (!editDraft) { cancelEditRound(); return }
@@ -2577,7 +2411,21 @@ export default function PartyTest() {
     Object.entries(editDraft.drinks).forEach(([did, n]) => {
       const delta = (n || 0) - (huidig[did] || 0)
       if (delta > 0) rBumpAnon(idx, did, delta)
-      else if (delta < 0) rRemoveUnits(idx, did, -delta)
+      else if (delta < 0) {
+        // Per gast optellen en één keer wegschrijven: rBump geeft een delta door aan de
+        // server met de rónde uit de vorige render, dus twee losse aanroepen voor dezelfde
+        // gast zouden op een verouderd tussenstandje rekenen.
+        const lijst = (editDraft.weg[did] ?? []).slice(0, -delta)
+        const perGast: Record<string, number> = {}
+        lijst.forEach((pid) => { perGast[pid] = (perGast[pid] ?? 0) + 1 })
+        Object.entries(perGast).forEach(([pid, aantal]) => {
+          if (pid === "") rBumpAnon(idx, did, -aantal)
+          else rBump(idx, did, pid, -aantal)
+        })
+        // Meer weggehaald dan we onthielden? Dan vult de oude regel de rest aan.
+        const rest = -delta - lijst.length
+        if (rest > 0) rRemoveUnits(idx, did, rest)
+      }
     })
     const beschikbaar = Math.max(0, potAvailFor(idx))
     // Pot te kort voor het nieuwe bedrag? Niet meer blokkeren: de pot dekt wat hij kan,
@@ -2627,10 +2475,15 @@ export default function PartyTest() {
   // uitleg wel. Bewust uit de URL en niet uit localStorage: die vlag wordt nooit gewist,
   // en een welkomscherm dat voorgoed verdwijnt na één bezoek via de kiezer is erger dan
   // een welkomscherm te veel.
+  // Pas als we de URL gelezen hebben, weten we of het welkomscherm mag. Tot dan tonen we
+  // hieronder een leeg vlak in plaats van het scherm alvast te tekenen — anders flitst het
+  // één frame in beeld bij wie via de kiezer binnenkomt.
+  const [herkomstGelezen, setHerkomstGelezen] = useState(false)
   useEffect(() => {
     try {
       if (new URLSearchParams(window.location.search).get("via") === "kiezer") setWelkom(false)
     } catch { /* niets */ }
+    setHerkomstGelezen(true)
   }, [])
   // De uitleg staat los van de keuze: lezen zonder te kiezen, kiezen zonder te lezen.
   // Eén tegelijk open, anders wordt het keuzescherm meteen twee schermen lang.
@@ -2858,11 +2711,8 @@ export default function PartyTest() {
   const knownPeople = useRef<Set<string>>(new Set())
 
   // edit-in-hub
-  const [editOpen, setEditOpen] = useState(false)
   const [assignIdx, setAssignIdx] = useState<number | null>(null)
   const [editAssignMode, setEditAssignMode] = useState<"drink" | "person">("person")
-  const [editCups, setEditCups] = useState(false)
-  const [editPay, setEditPay] = useState(false)
 
   const priceOf = (d: Drink) => (pay === "coin" ? d.coins : d.price)
   const effDepositUnit: "eur" | "coin" = pay === "eur" ? "eur" : depositUnit
@@ -4669,7 +4519,7 @@ export default function PartyTest() {
     // Snel opnemen: sta je op het bestelscherm terwijl er al rondjes zijn — bv. na
     // "Bestelling aanpassen" vanuit de hub — dan is één stap terug de hub. Vroeger viel
     // je hier door naar het startscherm met de keuzekaders, midden in je avond.
-    if (view === "order" && !settle && rounds.length > 0) { setOpenRound(rounds.length - 1); setEditCups(false); setEditPay(false); setView("hub"); return }
+    if (view === "order" && !settle && rounds.length > 0) { setOpenRound(rounds.length - 1); setView("hub"); return }
     if (view === "settings") { setView(settingsBackTo === "order" ? "order" : "hub"); return }
     if (view === "roundsOverview") { setView(overviewBackTo === "order" ? "order" : overviewBackTo); return }
     if (view === "final" && opNaam === true) { terugNaarUitgebreid(); setOverviewBackTo("hub"); setView("roundsOverview"); return }
@@ -4773,7 +4623,7 @@ export default function PartyTest() {
     setPaidConfirmed(false)
   }
   const togglePayPerson = (pid: string) => { const next = payPersons.includes(pid) ? payPersons.filter((x) => x !== pid) : [...payPersons, pid]; setPayPersons(next); autoSplit(next, payPot); setPaidConfirmed(false) }
-  const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setEditCups(false); setEditPay(false); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); to() } }); else to() }
+  const goHub = () => { const to = () => { setOpenRound(rounds.length - 1); setView("hub") }; if (view === "confirmed") setConfirmDlg({ variant: "danger", msg: L.unfinishedWarn, yes: L.leaveAnyway, onYes: () => { setConfirmDlg(null); dropUnpaidRound(); to() } }); else to() }
   // Instellingen van het feest wegschrijven. Zonder dit ziet een gast die scant de
   // verkeerde modus: euro's terwijl de rest met coins werkt, of geen waarborg.
   const persistSettings = (extra?: Record<string, unknown>) => {
@@ -5236,7 +5086,7 @@ export default function PartyTest() {
       // het afrekenscherm willen. (setShowAssignAll werkte hier niet: dat venster
       // bestaat alleen op het bestelscherm.)
       const fr = rounds.findIndex((rr) => drinks.some((d) => (rr.anon[d.id] ?? 0) > 0))
-      if (fr >= 0) { settleNaToewijzen.current = true; setOpenRound(fr); setAllRoundsOpen(false); setEditCups(false); setEditPay(false); setAssignAllMode(true); setAssignIdx(fr); setView("hub") }
+      if (fr >= 0) { settleNaToewijzen.current = true; setOpenRound(fr); setAllRoundsOpen(false); setAssignAllMode(true); setAssignIdx(fr); setView("hub") }
       return
     }
     // Uitgebreid opnemen loopt nooit meer door de drie Fair Split-stappen: elk gat
@@ -5459,7 +5309,7 @@ export default function PartyTest() {
   const goAssignUnassigned = () => {
     const fr = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0))
     if (fr < 0) return
-    setOpenRound(fr); setAllRoundsOpen(false); setEditCups(false); setEditPay(false); setView("hub"); setAssignIdx(fr)
+    setOpenRound(fr); setAllRoundsOpen(false); setView("hub"); setAssignIdx(fr)
   }
   // Welke rondjes missen een bedrag of een betaler? Zonder die twee klopt de verdeling
   // niet, en dan mag de eindafrekening niet.
@@ -5581,7 +5431,7 @@ export default function PartyTest() {
   const closeRound = () => {
     const st = paymentState()
     if (!st.valid) { setNotice(st.reason || L.confirmPaymentFirst); return }
-    if (!paidConfirmed) { setNotice(L.confirmPaymentFirst); return } setOpenRound(rounds.length - 1); setEditCups(false); setEditPay(false); setView("hub") }
+    if (!paidConfirmed) { setNotice(L.confirmPaymentFirst); return } setOpenRound(rounds.length - 1); setView("hub") }
   const cancelOrder = () => setConfirmDlg({
     msg: L.cancelRoundConfirm(roundNr),
     yes: L.yesCancel,
@@ -6572,7 +6422,6 @@ export default function PartyTest() {
           sluitBar()
           setLastRoundHandled(true)
           if (openKlappen) setOpenRound(Math.max(0, rounds.length - 1))
-          setEditCups(false); setEditPay(false)
           setOverviewBackTo("hub"); setView("roundsOverview")
         }
         return (
@@ -6639,6 +6488,34 @@ export default function PartyTest() {
           </div>
         </div>
       )}
+      {kiesWeg && (() => {
+        // Meer dan één gast heeft dit drankje staan, dus vragen we bij wie het weg mag in
+        // plaats van er zelf een aan te wijzen. Alleen de aftrek wordt onthouden; opslaan
+        // gebeurt pas met de knop onderaan de kaart.
+        const k = kiesWeg
+        return (
+          <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setKiesWeg(null)}>
+            <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ ...S.h3, fontSize: 20 }}>{L.removeFromWho(k.naam)}</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+                {k.opties.map((o) => (
+                  <button key={o.id} style={{ ...S.btn, fontSize: 17, padding: "12px 14px", textAlign: "left" }}
+                    onClick={() => {
+                      setEditDraft((c) => c ? {
+                        ...c,
+                        drinks: { ...c.drinks, [k.did]: Math.max(0, (c.drinks[k.did] ?? 0) - 1) },
+                        weg: { ...c.weg, [k.did]: [...(c.weg[k.did] ?? []), o.id] },
+                      } : c)
+                      setKiesWeg(null)
+                    }}>{o.naam}{o.n > 1 ? ` (${o.n}\u00d7)` : ""}</button>
+                ))}
+              </div>
+              <button style={{ background: "none", border: "none", width: "100%", fontSize: 16, color: "#6b7484", fontWeight: 700, cursor: "pointer" }}
+                onClick={() => setKiesWeg(null)}>{L.cancel}</button>
+            </div>
+          </div>
+        )
+      })()}
       {confirmDlg && (
         <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setConfirmDlg(null)}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
@@ -8032,6 +7909,10 @@ export default function PartyTest() {
         )}
       </div></div>
     )
+  }
+
+  if (view === "start" && !herkomstGelezen && !groupId && !onboardedOnce) {
+    return <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)" }} />
   }
 
   if (view === "start" && welkom && !groupId && !onboardedOnce) {
@@ -9829,7 +9710,7 @@ export default function PartyTest() {
           const roundDrinks = drinks.filter((d) => drinkTotalRound(r, d.id) > 0)
           return (
             <div key={idx} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-              <div style={{ cursor: "pointer", padding: 14 }} onClick={() => { if (allRoundsOpen) { setAllRoundsOpen(false); setOpenRound(idx) } else { setOpenRound(open ? null : idx) } setEditOpen(false); setEditCups(false); setEditPay(false) }}>
+              <div style={{ cursor: "pointer", padding: 14 }} onClick={() => { if (allRoundsOpen) { setAllRoundsOpen(false); setOpenRound(idx) } else { setOpenRound(open ? null : idx) }  }}>
                 <div style={{ ...S.row, justifyContent: "space-between", gap: 8 }}>
                   {/* Zelfde kop als in het rondjesoverzicht: nummer plus statuspillen links,
                       bedrag en pijl rechts. Het aantal drankjes zakt naar de regel eronder. */}
@@ -9934,9 +9815,9 @@ export default function PartyTest() {
                   {/* Geen tussenmenu meer: toewijzen doet wat het zegt, en aanpassen opent
                       het rondje meteen in de bewerkstand van het rondjesoverzicht. */}
                   <div style={{ ...S.row, justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
-                    <button style={{ ...S.btn, fontSize: 15.5, padding: "5px 12px", fontWeight: 800 }} onClick={() => { setEditCups(false); setEditPay(false); setAssignIdx(idx) }}>toewijzen{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ color: "#1f8a4c", fontWeight: 800 }}> ✓</span>}</button>
+                    <button style={{ ...S.btn, fontSize: 15.5, padding: "5px 12px", fontWeight: 800 }} onClick={() => { setAssignIdx(idx) }}>toewijzen{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ color: "#1f8a4c", fontWeight: 800 }}> ✓</span>}</button>
                     <button style={{ ...S.btn, fontSize: 15.5, padding: "5px 12px", fontWeight: 800, color: "#8a5e0f" }}
-                      onClick={() => { setEditOpen(false); setEditCups(false); setEditPay(false); setFillMode(false); setOverviewBackTo("hub"); setOpenRounds(new Set([r.id])); startEditRound(r); setView("roundsOverview") }}>✏️ {L.adjustLower}</button>
+                      onClick={() => { setFillMode(false); setOverviewBackTo("hub"); setOpenRounds(new Set([r.id])); startEditRound(r); setView("roundsOverview") }}>✏️ {L.adjustLower}</button>
                   </div>
                 </div>
               )}
@@ -10413,17 +10294,41 @@ export default function PartyTest() {
                               <button style={{ width: 30, height: 30, borderRadius: 8, background: "#eef1f6", border: "1px solid rgba(29,41,66,0.2)", fontSize: 18, color: "#6b7484", fontWeight: 800, cursor: "pointer" }}
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  const omlaag = () => setEditDraft((c) => c ? { ...c, drinks: { ...c.drinks, [d.id]: Math.max(0, (c.drinks[d.id] ?? n) - 1) } } : c)
                                   if (val <= 0) return
-                                  // Zit het onbenoemde restant er al af, dan haal je het bij iemand weg.
-                                  const toegewezen = n - (r.anon[d.id] ?? 0)
-                                  const wie = val - 1 < toegewezen ? wieVerliest({ ...r, anon: { ...r.anon, [d.id]: 0 } }, d.id) : null
-                                  if (!wie) { omlaag(); return }
-                                  setConfirmDlg({ variant: "danger", msg: L.removeAssignedQ(d.name, wie.name), yes: L.removeWord, onYes: () => { setConfirmDlg(null); omlaag() } })
+                                  // "weg" onthoudt per drankje bij wie elke aftrek vandaan komt: een lege
+                                  // string is het onbenoemde restant, anders het id van de gast. Zo weet
+                                  // saveEditRound het precies en draait Annuleren ook de keuze terug.
+                                  const omlaag = (pid: string) => setEditDraft((c) => c ? {
+                                    ...c,
+                                    drinks: { ...c.drinks, [d.id]: Math.max(0, (c.drinks[d.id] ?? n) - 1) },
+                                    weg: { ...c.weg, [d.id]: [...(c.weg[d.id] ?? []), pid] },
+                                  } : c)
+                                  // Eerst het onbenoemde restant opmaken; pas daarna raak je iemands naam.
+                                  const alWeg = dr?.weg[d.id] ?? []
+                                  const anonOver = (r.anon[d.id] ?? 0) - alWeg.filter((x) => x === "").length
+                                  if (anonOver > 0) { omlaag(""); return }
+                                  const opties = people
+                                    .map((pp) => ({ id: pp.id, naam: pp.name, n: (r.orders[d.id]?.[pp.id] ?? 0) - alWeg.filter((x) => x === pp.id).length }))
+                                    .filter((x) => x.n > 0)
+                                  if (opties.length === 0) { omlaag(""); return }
+                                  if (opties.length === 1) {
+                                    setConfirmDlg({ variant: "danger", msg: L.removeAssignedQ(d.name, opties[0].naam), yes: L.removeWord, onYes: () => { setConfirmDlg(null); omlaag(opties[0].id) } })
+                                    return
+                                  }
+                                  // Meer dan één gast heeft dit drankje: dan mag jij zeggen bij wie.
+                                  setKiesWeg({ did: d.id, naam: d.name, opties })
                                 }}>−</button>
                               <span style={{ fontSize: 19, fontWeight: 800, color: "#c98a00", minWidth: 28, textAlign: "center" }}>{val}×</span>
                               <button style={{ width: 30, height: 30, borderRadius: 8, background: AAN, border: "none", fontSize: 18, color: "#fff", fontWeight: 800, cursor: "pointer" }}
-                                onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, drinks: { ...c.drinks, [d.id]: (c.drinks[d.id] ?? n) + 1 } } : c) }}>+</button>
+                                onClick={(e) => { e.stopPropagation(); setEditDraft((c) => {
+                                  if (!c) return c
+                                  // Stond er nog een aftrek open, dan neem je die terug in plaats van er
+                                  // een nieuw drankje bovenop te zetten — anders klopt "weg" niet meer.
+                                  const lijst = c.weg[d.id] ?? []
+                                  return { ...c,
+                                    drinks: { ...c.drinks, [d.id]: (c.drinks[d.id] ?? n) + 1 },
+                                    weg: lijst.length > 0 ? { ...c.weg, [d.id]: lijst.slice(0, -1) } : c.weg }
+                                }) }}>+</button>
                             </span>
                           ) : (
                             <span style={{ fontSize: 19, fontWeight: 800, color: "#c98a00" }}>{n}×</span>
