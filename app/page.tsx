@@ -460,7 +460,7 @@ export default function Home() {
             tekst binnen de kaarten, die ook padding hebben. De negatieve bovenmarge trekt
             de kop op tot naast de taalpil: die staat rechts, het logo links, dus ze zitten
             elkaar niet in de weg en we winnen de hele hoogte van die rij. */}
-        <div style={{ textAlign: "left", marginTop: -30, marginBottom: 20, paddingLeft: 28 }}>
+        <div style={{ textAlign: "left", marginTop: -30, marginBottom: 20, paddingLeft: 20 }}>
           <span style={{ display: "inline-block", marginBottom: 8 }}><RundoLogo size={88} /></span>
           <p style={{ color: "#f0c14b", fontSize: 18, fontWeight: 600, margin: 0 }}>
             {t.tagline}
@@ -657,7 +657,7 @@ const S: Record<string, React.CSSProperties> = {
     background: "radial-gradient(1200px 600px at 50% -10%, #1c2540 0%, #131826 55%, #0e1119 100%)",
     minHeight: "100dvh",
     color: "#fff",
-    padding: "18px 22px",
+    padding: "4px 18px 18px",
     WebkitFontSmoothing: "antialiased",
     MozOsxFontSmoothing: "grayscale",
   },
