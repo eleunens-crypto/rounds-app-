@@ -681,7 +681,7 @@ const T = {
     whatYouDrank: "Wat jij dronk",
     whatDidItCost: "Wat kostte dit rondje?",
     costLabel: "WAT KOSTTE DIT RONDJE?",
-    whoPutMoney: "Wie legde het geld neer?",
+    whoPutMoney: "Wie betaalde?",
     whoPaidTapIt: "Wie betaalde dit rondje? Tik aan!",
     pickWhoPaid: "Kies wie betaalde.",
     splitEvenNote: "Gelijk verdeeld \u2014 pas aan per persoon indien nodig",
@@ -1267,7 +1267,7 @@ const T = {
     potShare: "waarvan uit de pot",
     potSpentWord: "besteed",
     potLeftLong: "nog in de pot",
-    persPaidWord: "door gast(en) betaald",
+    persPaidWord: "betaald",
     leaveSettleMsg: "Afrekenen loopt nog — toch naar het rondjesoverzicht? Wat je al invulde blijft bewaard.",
     leaveSettleYes: "Ja, ga verder",
     potShareAll: "volledig uit de pot",
@@ -1525,7 +1525,7 @@ const T = {
     whatYouDrank: "Ce que tu as bu",
     whatDidItCost: "Combien a co\u00fbt\u00e9 cette tourn\u00e9e\u00a0?",
     costLabel: "COMBIEN A CO\u00dbT\u00c9 CETTE TOURN\u00c9E\u00a0?",
-    whoPutMoney: "Qui a avanc\u00e9 l'argent\u00a0?",
+    whoPutMoney: "Qui a pay\u00e9\u00a0?",
     whoPaidTapIt: "Qui a pay\u00e9 cette tourn\u00e9e\u00a0? Coche\u00a0!",
     pickWhoPaid: "Choisis qui a pay\u00e9.",
     splitEvenNote: "R\u00e9parti \u00e9galement \u2014 ajuste par personne si besoin",
@@ -2111,7 +2111,7 @@ const T = {
     potShare: "dont du pot",
     potSpentWord: "d\u00e9pens\u00e9",
     potLeftLong: "encore dans le pot",
-    persPaidWord: "pay\u00e9 par les invit\u00e9(s)",
+    persPaidWord: "pay\u00e9",
     leaveSettleMsg: "Le r\u00e8glement est en cours — quand m\u00eame vers l'aper\u00e7u des tourn\u00e9es ? Ce que tu as d\u00e9j\u00e0 rempli reste enregistr\u00e9.",
     leaveSettleYes: "Oui, continuer",
     potShareAll: "enti\u00e8rement du pot",
@@ -5910,6 +5910,19 @@ export default function PartyTest() {
   const consumption = (pid: string) => rounds.reduce((s, r) => s + personRoundShare(r, pid), 0)
   // In "gewoon rondjes" is er nooit een bedrag ingevuld -> toon de geschatte waarde.
   const grandTotal = useMemo(() => rounds.reduce((s, r) => s + roundValue(r), 0), [rounds]) // eslint-disable-line
+  const betalersOpen = useMemo(() => {
+    const per: Record<string, { bedrag: number; rondjes: number[] }> = {}
+    rounds.forEach((r, i) => {
+      Object.entries(r.payers || {}).forEach(([pid, bedrag]) => {
+        if ((bedrag || 0) <= 0.005) return
+        if (!per[pid]) per[pid] = { bedrag: 0, rondjes: [] }
+        per[pid].bedrag += bedrag || 0
+        per[pid].rondjes.push(i + 1)
+      })
+    })
+    const rij = people.filter((p) => per[p.id]).map((p) => ({ id: p.id, naam: p.name, bedrag: per[p.id].bedrag, rondjes: per[p.id].rondjes }))
+    return rij.length > 0 ? rij : null
+  }, [rounds, people]) // eslint-disable-line
   const isSchatting = useMemo(() => rounds.length > 0 && rounds.every((r) => r.amount <= 0.005), [rounds])
   const equalShare = people.length ? grandTotal / people.length : 0
 
@@ -10817,7 +10830,21 @@ export default function PartyTest() {
           <div style={{ marginTop: 6, borderTop: "1px dashed rgba(29,41,66,0.2)", paddingTop: 6 }}>
             {potSpent > 0.005 && (<>
               <div style={{ ...S.row, justifyContent: "space-between", fontSize: 18, fontWeight: 700 }}><span style={{ color: "#2f5693", display: "inline-flex", alignItems: "center", gap: 7 }}><ZakjeIcoon size={18} /> {L.fromPot}</span><span style={{ fontWeight: 700, color: "#2f6fb5" }}>−{show(potSpent)}</span></div>
-              <div style={{ ...S.row, justifyContent: "space-between", fontSize: 18, color: "#4a5567", fontWeight: 700, marginTop: 2 }}><span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><span style={{ fontSize: 18, lineHeight: 1 }}>👤</span> {L.persPaidWord}</span><span style={{ fontWeight: 700 }}>{show(grandTotal - potSpent)}</span></div>
+              <div style={{ ...S.row, justifyContent: "space-between", fontSize: 18, color: "#4a5567", fontWeight: 700, marginTop: 2 }}><span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><span style={{ fontSize: 18, lineHeight: 1 }}>👤</span> {L.persPaidWord}
+                {betalersOpen !== null && (
+                  <span onClick={() => setToonBetalers((v) => !v)}
+                    style={{ border: "1.5px solid rgba(29,41,66,0.3)", borderRadius: 999, padding: "3px 10px", fontSize: 12, fontWeight: 800, color: "#1d2942", whiteSpace: "nowrap", cursor: "pointer" }}>{L.detailsWord} {toonBetalers ? "▴" : "▾"}</span>
+                )}</span><span style={{ fontWeight: 700 }}>{show(grandTotal - potSpent)}</span></div>
+              {toonBetalers && betalersOpen !== null && (
+                <div style={{ background: "#f4f6fa", borderRadius: 10, padding: "9px 11px", marginTop: 8 }}>
+                  {betalersOpen.map((b, i) => (
+                    <div key={b.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14, color: "#3a4459", fontWeight: 700, padding: "4px 0", borderTop: i > 0 ? "1px solid rgba(29,41,66,0.08)" : "none" }}>
+                      <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{b.naam} <span style={{ color: "#8b93a3", fontWeight: 600 }}>· {L.roundWord.toLowerCase()} {b.rondjes.join(", ")}</span></span>
+                      <span style={{ flexShrink: 0 }}>{show(b.bedrag)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>)}
             {potContribTotal > 0.005 && (
               <div style={{ ...S.row, justifyContent: "space-between", fontSize: 18, fontWeight: 700, marginTop: 4, borderTop: "1px dashed rgba(47,111,181,0.3)", paddingTop: 6 }}><span style={{ color: "#2f5693", display: "inline-flex", alignItems: "center", gap: 7 }}><ZakjeIcoon size={18} /> {L.potLeftLong}</span><span style={{ fontWeight: 800, color: "#2f6fb5" }}>{show(Math.max(0, potRemaining))}</span></div>
