@@ -460,9 +460,9 @@ export default function Home() {
             tekst binnen de kaarten, die ook padding hebben. De negatieve bovenmarge trekt
             de kop op tot naast de taalpil: die staat rechts, het logo links, dus ze zitten
             elkaar niet in de weg en we winnen de hele hoogte van die rij. */}
-        <div style={{ textAlign: "left", marginTop: -20, marginBottom: 24, paddingLeft: 34 }}>
-          <span style={{ display: "inline-block", marginBottom: 8 }}><RundoLogo size={80} /></span>
-          <p style={{ color: "#f0c14b", fontSize: 17, fontWeight: 600, margin: 0 }}>
+        <div style={{ textAlign: "left", marginTop: -30, marginBottom: 20, paddingLeft: 28 }}>
+          <span style={{ display: "inline-block", marginBottom: 8 }}><RundoLogo size={88} /></span>
+          <p style={{ color: "#f0c14b", fontSize: 18, fontWeight: 600, margin: 0 }}>
             {t.tagline}
           </p>
         </div>
