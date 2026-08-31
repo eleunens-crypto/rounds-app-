@@ -19,6 +19,8 @@ const T = {
       { iconen: ["📋"], label: "handig barlijstje\nen afrekenen" },
     ],
     orWord: "of",
+    showMore: "toon meer",
+    showLess: "toon minder",
     yourGroups: "Jouw groepen",
     guestChip: "als gast",
     modeZelf: "Zelf opnemen",
@@ -56,6 +58,8 @@ const T = {
       { iconen: ["📋"], label: "liste bar pratique\net règlement" },
     ],
     orWord: "ou",
+    showMore: "voir plus",
+    showLess: "voir moins",
     yourGroups: "Tes groupes",
     guestChip: "invité",
     modeZelf: "Noter soi-même",
@@ -171,9 +175,15 @@ export default function Home() {
   const [lang] = useLang()
   const t = T[lang]
   const router = useRouter()
-  // Kiezen en starten zijn hier twee stappen: je duidt een kaart aan, leest desgewenst
-  // eerst de uitleg, en start dan pas. Zo tik je nooit ongewild een modus binnen.
-  const [pick, setPick] = useState<Mode | null>(null)
+  // Welke kaart staat open? De kaarten tonen dichtgeklapt alleen logo en ondertitel;
+  // "toon meer" vouwt de stappen uit. Er kan er maar één open staan, zodat er nooit
+  // twee even luide startknoppen tegelijk op het scherm staan.
+  const [uitgeklapt, setUitgeklapt] = useState<Mode | null>(null)
+  const klapUit = (m: Mode) => setUitgeklapt((v) => v === m ? null : m)
+  const starten = (m: Mode) => {
+    try { localStorage.setItem("rundo_via_kiezer", "1") } catch { /* niets */ }
+    router.push(m === "table" ? "/table" : "/party")
+  }
   // Je opgeslagen Party-groepen, rechtstreeks uit dezelfde bron als de app zelf: het
   // toestel-id in localStorage plus de twee groepsqueries (eigen + als gast). Alleen
   // open groepen — vanaf een startscherm wil je ergens naartoe, niet terugkijken.
@@ -295,7 +305,7 @@ export default function Home() {
 
   // Accentkleur per modus — dezelfde die de kaart al gebruikt.
   const accent = { table: "#5b9fd6", party: "#f0c14b" }
-  useEffect(() => { if (pick) setKlap((k) => ({ ...k, [pick]: true })) }, [pick])
+  useEffect(() => { if (uitgeklapt) setKlap((k) => ({ ...k, [uitgeklapt]: true })) }, [uitgeklapt])
   const wisAlles = (app: "party" | "table") => {
     const weg = gewisteIds(app)
     alleIds.current[app].forEach((id) => weg.add(id))
@@ -335,64 +345,100 @@ export default function Home() {
     )
   }
 
-  // Een niet-gekozen kaart dimmen zodra er een keuze is: dat maakt de selectie zichtbaar
-  // zonder dat er een extra kader bij hoeft.
+  // De dichte kaart houdt zijn witte rand — dat leest als "hier kan je tikken". De
+  // opengeklapte krijgt de accentkleur. De andere kaart dimmen we niet meer: je klapt
+  // uit om te lézen, niet om te kiezen, dus die blijft gewoon leesbaar.
   const cardState = (m: Mode): React.CSSProperties => ({
-    opacity: pick === null || pick === m ? 1 : 0.45,
-    // Ruststand: een stevige witte rand op beide kaarten, zodat meteen leest dat ze
-    // tikbaar zijn. Bij het kiezen neemt de accentkleur het over (en dimt de buur) —
-    // vandaar wit hier, geen kleur: dat contrast is juist het signaal.
-    border: pick === m
-      ? `2px solid ${accent[m]}`
-      : pick === null
-        ? "1.5px solid rgba(255,255,255,0.4)"
-        : `1px solid ${m === "party" ? "rgba(240,193,75,0.28)" : "rgba(91,159,214,0.28)"}`,
-    boxShadow: pick === m
+    border: uitgeklapt === m ? `2px solid ${accent[m]}` : "1.5px solid rgba(255,255,255,0.4)",
+    boxShadow: uitgeklapt === m
       ? `0 18px 40px -18px ${m === "party" ? "rgba(240,193,75,0.45)" : "rgba(91,159,214,0.45)"}`
       : `0 12px 34px -18px ${m === "party" ? "rgba(240,193,75,0.25)" : "rgba(91,159,214,0.25)"}`,
   })
 
-  // De stappenflow: genummerde bolletjes met de infozin als rustige kopregel erboven —
-  // zonder i-badge, in hetzelfde blok, zodat zin en tekeningen als één geheel lezen.
-  // Een stap kan twee iconen dragen — dan staat er een klein "of" tussen en delen ze
-  // één nummer, zodat duidelijk is dat het twee manieren voor dezelfde stap zijn.
-  // De uitlegzin bij het openklappen is weg: de ondertitel in de banner zegt het al,
-  // en de stappenrij hieronder toont de rest. Twee keer hetzelfde vertellen hoeft niet.
-  const flowRow = (m: Mode, stappen: { iconen: string[]; label: string }[]) => {
-    const bolBg = m === "party" ? "rgba(240,193,75,0.14)" : "rgba(91,159,214,0.14)"
-    const bolRand = m === "party" ? "rgba(240,193,75,0.45)" : "rgba(91,159,214,0.45)"
-    return pick !== m ? null : (
-      <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
-        <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
-          {stappen.map((st, i) => (
-            <div key={i} style={{ flex: st.iconen.length > 1 ? 1.6 : 1, minWidth: 0, textAlign: "center" }}>
-              <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", gap: 5, width: "max-content", margin: "0 auto" }}>
-                {st.iconen.map((ic, k) => (
-                  <span key={k} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    {k > 0 && <span style={{ fontSize: 10.5, fontWeight: 800, color: "#b9a67c" }}>{t.orWord}</span>}
-                    <span style={{ width: 34, height: 34, borderRadius: "50%", background: bolBg, border: `1px solid ${bolRand}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>{ic}</span>
-                  </span>
-                ))}
-                <span style={{ position: "absolute", top: -5, right: -7, width: 15, height: 15, borderRadius: "50%", background: accent[m], color: "#131826", fontSize: 9.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
-              </div>
-              <div style={{ marginTop: 5, fontSize: 11, fontWeight: 700, color: "#d9d2bd", lineHeight: 1.3, whiteSpace: "pre-line" }}>{st.label}</div>
-            </div>
-          ))}
-        </div>
+  // "toon meer" op de scheidingslijn onder de ondertitel: klein en grijs, zodat het
+  // nooit met de startknop concurreert. De lijn liep er al; het pilletje gaat erop.
+  const toonMeer = (m: Mode) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 13 }}>
+      <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.16)" }} />
+      <span onClick={(e) => { e.stopPropagation(); klapUit(m) }}
+        style={{ flexShrink: 0, cursor: "pointer", whiteSpace: "nowrap", fontSize: 12.5, fontWeight: 700,
+          padding: "4px 11px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.2)",
+          background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.62)", userSelect: "none" }}>
+        {uitgeklapt === m ? `${t.showLess} \u25B4` : `${t.showMore} \u25BE`}
+      </span>
+      <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.16)" }} />
+    </div>
+  )
+
+  // Dichtgeklapt draaien de stappen één voor één voorbij op dezelfde plek. Zo weet je
+  // wat er achter "toon meer" zit zonder te tikken, en kost het maar één regel hoogte.
+  // Bij twee iconen tonen we alleen het eerste — de "of"-nuance hoort in de volle lijst.
+  const voorproef = (m: Mode, stappen: { iconen: string[]; label: string }[]) => {
+    if (uitgeklapt === m) return null
+    const kleur = accent[m]
+    return (
+      <div className={`rundo-wissel rundo-wissel-${stappen.length}`}>
+        {stappen.map((st, i) => (
+          <div key={i}>
+            <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", background: `${kleur}2e`,
+              border: `1px solid ${kleur}80`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>{st.iconen[0]}</span>
+            <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#131826", background: kleur, borderRadius: 999, padding: "1px 7px" }}>{i + 1}</span>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: "#e5ddc7", textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}>{st.label.replace("\n", " ")}</span>
+          </div>
+        ))}
       </div>
     )
   }
 
-  const vinkje = (m: Mode) => (
-    pick === m ? (
-      <span style={{
-        position: "absolute", top: 14, right: 14, zIndex: 3, width: 30, height: 30, borderRadius: "50%",
-        background: accent[m], color: "#131826", fontSize: 17, fontWeight: 800,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
-      }}>✓</span>
-    ) : null
-  )
+  // De stappen staan onder elkaar in plaats van naast elkaar: zo mag het bijschrift
+  // voluit in plaats van afgebroken over twee regeltjes, en lees je van boven naar
+  // beneden mee met de volgorde. Een stap kan twee iconen dragen — dan staat er een
+  // klein "of" tussen en delen ze één nummer.
+  const stappenLijst = (m: Mode, stappen: { iconen: string[]; label: string }[]) => {
+    if (uitgeklapt !== m) return null
+    const kleur = accent[m]
+    return (
+      <div style={{ position: "relative", marginTop: 13 }}>
+        {/* Verbindingslijn door de nummers heen, zodat het als één route leest. */}
+        <span style={{ position: "absolute", left: 13, top: 22, bottom: 22, width: 1.5, background: `${kleur}4d` }} />
+        {stappen.map((st, i) => (
+          <div key={i} style={{ position: "relative", display: "flex", alignItems: "center", gap: 9, padding: "5px 0" }}>
+            <span style={{ flexShrink: 0, width: 27, height: 27, borderRadius: "50%", background: kleur, color: "#131826",
+              fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+            {st.iconen.map((ic, k) => (
+              <span key={k} style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                {k > 0 && <span style={{ fontSize: 10.5, fontWeight: 800, color: "#b9a67c" }}>{t.orWord}</span>}
+                <span style={{ flexShrink: 0, width: 32, height: 32, borderRadius: "50%", background: `${kleur}2e`,
+                  border: `1px solid ${kleur}80`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>{ic}</span>
+              </span>
+            ))}
+            {/* De labels dragen een \n voor de oude tweeregelige opmaak; hier past het op één regel.
+                De schaduw houdt de tekst leesbaar waar ze over de foto loopt. */}
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#efe8d6", lineHeight: 1.25,
+              textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}>{st.label.replace("\n", " ")}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // De startknop hoort bij de kaart en staat er altijd, ook dichtgeklapt — maar dan
+  // omlijnd. Vol gekleurd pas als de kaart openstaat, zodat er nooit twee even luide
+  // knoppen tegelijk staan te roepen. Fors gezet: dit is waar je naartoe wil.
+  const startKnop = (m: Mode) => {
+    const open = uitgeklapt === m
+    return (
+      <button onClick={(e) => { e.stopPropagation(); starten(m) }} className={`rundo-start-${m}`}
+        style={{ position: "relative", zIndex: 2, display: "block", width: "100%", padding: "17px 18px",
+          border: "none", borderTop: open ? "none" : `1.5px solid ${accent[m]}66`,
+          fontSize: 20, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", letterSpacing: 0.2,
+          background: open ? accent[m] : "rgba(255,255,255,0.06)",
+          color: open ? "#131826" : accent[m],
+          transition: "background .15s ease, color .15s ease" }}>
+        {t.start} →
+      </button>
+    )
+  }
 
   return (
     <div style={S.page}>
@@ -411,87 +457,68 @@ export default function Home() {
         </div>
 
         {/* TABLE-kaart — koel blauw */}
-        <div onClick={() => setPick("table")} style={{ ...S.modeCard, ...S.tableCard, ...cardState("table") }} className="rundo-card rundo-card-table">
-          {vinkje("table")}
+        <div onClick={() => klapUit("table")} style={{ ...S.modeCard, ...S.tableCard, ...cardState("table") }} className="rundo-card rundo-card-table">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/table-image.png" alt="" style={S.cardPhoto} />
           <div style={{ position: "absolute", inset: 0, zIndex: 1, transition: "background .2s ease",
-            background: pick === "table"
+            background: uitgeklapt === "table"
               ? "linear-gradient(90deg, #131e2b 0%, #131e2b 46%, rgba(19,30,43,0.94) 62%, rgba(19,30,43,0.78) 82%, rgba(19,30,43,0.6) 100%)"
               : "linear-gradient(90deg, #131e2b 0%, #131e2b 42%, rgba(19,30,43,0.85) 56%, rgba(19,30,43,0.35) 72%, rgba(19,30,43,0) 100%)" }} />
-          <div style={{ ...S.cardBody, maxWidth: pick === "table" ? "100%" : "74%" }}>
+          <div style={{ ...S.cardBody, paddingBottom: 16, maxWidth: uitgeklapt === "table" ? "100%" : "74%" }}>
             <span style={{ display: "block", marginBottom: 6 }}><RundoLogo size={44} resto /></span>
             <div style={{ ...S.logoSub, color: "#3bbfc4", display: "flex", alignItems: "center", gap: 8 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/icon-table.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
               <span>{t.tableSub}</span>
             </div>
-            {flowRow("table", t.tableFlow)}
+            {voorproef("table", t.tableFlow)}
+            {toonMeer("table")}
+            {stappenLijst("table", t.tableFlow)}
           </div>
+          {startKnop("table")}
         </div>
 
-        {/* De keuzehint als "of"-lijn precies tussen de twee kaarten; na een keuze
-            verdwijnt hij en licht de startknop onderaan op. */}
-        {pick === null && (
-          <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 22px" }}>
-            <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.18)" }} />
-            <span style={{ fontSize: 16.5, fontWeight: 600, color: "rgba(255,255,255,0.78)", whiteSpace: "nowrap" }}>{t.pickFirst}</span>
-            <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.18)" }} />
-          </div>
-        )}
+        {/* Je kíest hier niet meer — elke kaart heeft zijn eigen startknop. De lijn
+            blijft als scheiding tussen de twee, met een kaal "of" ertussen. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 22px" }}>
+          <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.18)" }} />
+          <span style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.55)", whiteSpace: "nowrap" }}>{t.orWord}</span>
+          <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.18)" }} />
+        </div>
         {/* PARTY-kaart — warm geel */}
-        <div onClick={() => setPick("party")} style={{ ...S.modeCard, ...S.partyCard, ...cardState("party") }} className="rundo-card rundo-card-party">
-          {vinkje("party")}
+        <div onClick={() => klapUit("party")} style={{ ...S.modeCard, ...S.partyCard, ...cardState("party") }} className="rundo-card rundo-card-party">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/party-image.png" alt="" style={S.cardPhoto} />
           {/* Warme gloed die de foto iets verlicht */}
           <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "62%", zIndex: 1, background: "radial-gradient(120% 90% at 88% 32%, rgba(255,214,130,0.42) 0%, rgba(255,190,90,0.16) 42%, rgba(255,190,90,0) 72%)", mixBlendMode: "screen", pointerEvents: "none" }} />
           <div style={{ position: "absolute", inset: 0, zIndex: 1, transition: "background .2s ease",
-            background: pick === "party"
+            background: uitgeklapt === "party"
               ? "linear-gradient(90deg, #211c14 0%, #211c14 46%, rgba(33,28,20,0.94) 62%, rgba(33,28,20,0.78) 82%, rgba(33,28,20,0.6) 100%)"
               : "linear-gradient(90deg, #211c14 0%, #211c14 42%, rgba(33,28,20,0.85) 56%, rgba(33,28,20,0.35) 72%, rgba(33,28,20,0) 100%)" }} />
-          <div style={{ ...S.cardBody, maxWidth: pick === "party" ? "100%" : "74%" }}>
+          <div style={{ ...S.cardBody, paddingBottom: 16, maxWidth: uitgeklapt === "party" ? "100%" : "74%" }}>
             <span style={{ display: "block", marginBottom: 6 }}><RundoLogo size={44} /></span>
             <div style={{ ...S.logoSub, color: "#f0a500", display: "flex", alignItems: "center", gap: 8 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/icon-party.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
               <span>{t.partySub}</span>
             </div>
-            {flowRow("party", t.partyFlow)}
+            {voorproef("party", t.partyFlow)}
+            {toonMeer("party")}
+            {stappenLijst("party", t.partyFlow)}
           </div>
+          {startKnop("party")}
         </div>
-
-        {/* Eén startknop: hij kleurt mee met de gekozen kaart, en blijft rustig zolang
-            er niets gekozen is. */}
-        <button
-          onClick={() => { if (!pick) return; try { localStorage.setItem("rundo_via_kiezer", "1") } catch { /* niets */ } router.push(pick === "table" ? "/table" : "/party") }}
-          disabled={pick === null}
-          // De keuzehint staat nu als lijn tússen de kaarten; hier wacht een gedimde
-          // "Starten" die op zijn plek oplicht en kleurt zodra er gekozen is — niets
-          // verspringt, je duim weet waar de reis eindigt.
-          style={{
-            width: "100%", marginTop: 4, padding: "17px 18px", borderRadius: 16,
-            border: pick === null ? "1px solid rgba(255,255,255,0.12)" : "none",
-            fontSize: 19, fontWeight: 800, fontFamily: "inherit",
-            cursor: pick === null ? "default" : "pointer",
-            background: pick === null ? "rgba(255,255,255,0.05)" : accent[pick],
-            color: pick === null ? "#7e879c" : "#131826",
-            boxShadow: pick === null ? "none" : `0 14px 30px -14px ${accent[pick]}`,
-            transition: "background .15s ease, color .15s ease, box-shadow .15s ease",
-          }}>
-          {t.start}
-        </button>
 
         {/* Jouw open groepen, gesplitst per app — één tik en je zit erin. De Rundo-rij
             linkt met ?g=, waar de app de groep meteen opent. De Table-kolom volgt
             zodra die bron gekoppeld is. */}
         {(groepen.length > 0 || tafels.length > 0) && (
           <div style={{ marginTop: 26 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: "#9aa2b8", letterSpacing: "0.05em", marginBottom: 9 }}>📂 {t.yourGroups}{pick === "party" && tafels.length > 0 && <span style={{ fontWeight: 600, color: "#5d6478" }}> · {t.hiddenNote("Rundo Resto")}</span>}{pick === "table" && groepen.length > 0 && <span style={{ fontWeight: 600, color: "#5d6478" }}> · {t.hiddenNote("Rundo")}</span>}</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#9aa2b8", letterSpacing: "0.05em", marginBottom: 9 }}>📂 {t.yourGroups}{uitgeklapt === "party" && tafels.length > 0 && <span style={{ fontWeight: 600, color: "#5d6478" }}> · {t.hiddenNote("Rundo Resto")}</span>}{uitgeklapt === "table" && groepen.length > 0 && <span style={{ fontWeight: 600, color: "#5d6478" }}> · {t.hiddenNote("Rundo")}</span>}</div>
             {melding && (
               <div style={{ fontSize: 12.5, fontWeight: 700, color: "#f2d9a0", background: "rgba(240,193,75,0.12)", border: "1px solid rgba(240,193,75,0.4)", borderRadius: 10, padding: "8px 11px", marginBottom: 8 }}>{melding}</div>
             )}
-            {groepen.length > 0 && pick !== "table" && (<>
+            {groepen.length > 0 && uitgeklapt !== "table" && (<>
               <div onClick={() => { setKlap((k) => ({ ...k, party: !k.party })); setWisVraag(null) }}
                 style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(240,193,75,0.3)", borderRadius: 12, padding: "11px 12px", marginBottom: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: 800, color: accent.party }}>🍻 Rundo</span>
@@ -530,7 +557,7 @@ export default function Home() {
                 </div>
               ))}
             </>)}
-            {tafels.length > 0 && pick !== "party" && (<>
+            {tafels.length > 0 && uitgeklapt !== "party" && (<>
               <div onClick={() => { setKlap((k) => ({ ...k, table: !k.table })); setWisVraag(null) }}
                 style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(91,159,214,0.35)", borderRadius: 12, padding: "11px 12px", marginBottom: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: 800, color: accent.table }}>🧾 Rundo Resto</span>
@@ -583,6 +610,31 @@ export default function Home() {
         .rundo-card { transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease, opacity .15s ease; }
         .rundo-card-party:hover { transform: translateY(-2px); border-color: rgba(240,193,75,0.55); }
         .rundo-card-table:hover { transform: translateY(-2px); border-color: rgba(91,159,214,0.55); }
+        /* Voorproef in de dichtgeklapte kaart: de stappen wisselen elkaar af op hun
+           plek, zodat je ziet wat er achter "toon meer" zit zonder te tikken. */
+        .rundo-wissel { position: relative; height: 34px; margin-top: 11px; }
+        .rundo-wissel > div { position: absolute; inset: 0; display: flex; align-items: center; gap: 8px; opacity: 0; }
+        .rundo-wissel-3 > div { animation: rundoBeurt3 9s infinite; }
+        .rundo-wissel-3 > div:nth-child(2) { animation-delay: 3s; }
+        .rundo-wissel-3 > div:nth-child(3) { animation-delay: 6s; }
+        .rundo-wissel-4 > div { animation: rundoBeurt4 12s infinite; }
+        .rundo-wissel-4 > div:nth-child(2) { animation-delay: 3s; }
+        .rundo-wissel-4 > div:nth-child(3) { animation-delay: 6s; }
+        .rundo-wissel-4 > div:nth-child(4) { animation-delay: 9s; }
+@keyframes rundoBeurt3{0%{opacity:0;transform:translateY(6px)}4%{opacity:1;transform:none}30%{opacity:1;transform:none}36%{opacity:0;transform:translateY(-6px)}100%{opacity:0}}
+@keyframes rundoBeurt4{0%{opacity:0;transform:translateY(6px)}3%{opacity:1;transform:none}22%{opacity:1;transform:none}27%{opacity:0;transform:translateY(-6px)}100%{opacity:0}}
+        /* Op een telefoon bestaat :hover niet. Zonder deze regel geeft de omlijnde
+           startknop geen enkel teken dat je hem raakte; nu vult hij bij het indrukken. */
+        .rundo-start-party:active { background: #f0c14b !important; color: #131826 !important; border-top-color: transparent !important; }
+        .rundo-start-table:active { background: #5b9fd6 !important; color: #131826 !important; border-top-color: transparent !important; }
+        @media (hover: hover) {
+          .rundo-start-party:hover { background: rgba(240,193,75,0.18); }
+          .rundo-start-table:hover { background: rgba(91,159,214,0.18); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .rundo-wissel > div { animation: none; }
+          .rundo-wissel > div:first-child { opacity: 1; }
+        }
       `}</style>
     </div>
   )
