@@ -180,9 +180,14 @@ export default function Home() {
   // twee even luide startknoppen tegelijk op het scherm staan.
   const [uitgeklapt, setUitgeklapt] = useState<Mode | null>(null)
   const klapUit = (m: Mode) => setUitgeklapt((v) => v === m ? null : m)
+  // ?via=kiezer zegt de doelpagina dat je de stappen híer al gelezen hebt, zodat die
+  // haar eigen introscherm mag overslaan. Bewust in de URL en niet in localStorage: die
+  // vlag hieronder wordt nooit gewist, en een intro die voorgoed verdwijnt omdat je ooit
+  // één keer via de kiezer binnenkwam, is erger dan een intro te veel. Wie via een QR
+  // binnenkomt heeft geen via-parameter en krijgt de uitleg dus gewoon.
   const starten = (m: Mode) => {
     try { localStorage.setItem("rundo_via_kiezer", "1") } catch { /* niets */ }
-    router.push(m === "table" ? "/table" : "/party")
+    router.push(m === "table" ? "/table?via=kiezer" : "/party?via=kiezer")
   }
   // Je opgeslagen Party-groepen, rechtstreeks uit dezelfde bron als de app zelf: het
   // toestel-id in localStorage plus de twee groepsqueries (eigen + als gast). Alleen
@@ -382,8 +387,8 @@ export default function Home() {
           <div key={i}>
             <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", background: `${kleur}2e`,
               border: `1px solid ${kleur}80`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>{st.iconen[0]}</span>
-            <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#131826", background: kleur, borderRadius: 999, padding: "1px 7px" }}>{i + 1}</span>
-            <span style={{ fontSize: 13.5, fontWeight: 700, color: "#e5ddc7", textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}>{st.label.replace("\n", " ")}</span>
+            <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 700, color: "#131826", background: kleur, borderRadius: 999, padding: "1px 7px" }}>{i + 1}</span>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: "#e8e2d4", textShadow: "0 1px 3px rgba(0,0,0,0.7)" }}>{st.label.replace("\n", " ")}</span>
           </div>
         ))}
       </div>
@@ -404,7 +409,7 @@ export default function Home() {
         {stappen.map((st, i) => (
           <div key={i} style={{ position: "relative", display: "flex", alignItems: "center", gap: 9, padding: "5px 0" }}>
             <span style={{ flexShrink: 0, width: 27, height: 27, borderRadius: "50%", background: kleur, color: "#131826",
-              fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+              fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
             {st.iconen.map((ic, k) => (
               <span key={k} style={{ display: "flex", alignItems: "center", gap: 9 }}>
                 {k > 0 && <span style={{ fontSize: 10.5, fontWeight: 800, color: "#b9a67c" }}>{t.orWord}</span>}
@@ -414,8 +419,8 @@ export default function Home() {
             ))}
             {/* De labels dragen een \n voor de oude tweeregelige opmaak; hier past het op één regel.
                 De schaduw houdt de tekst leesbaar waar ze over de foto loopt. */}
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#efe8d6", lineHeight: 1.25,
-              textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}>{st.label.replace("\n", " ")}</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#e8e2d4", lineHeight: 1.3,
+              textShadow: "0 1px 3px rgba(0,0,0,0.7)" }}>{st.label.replace("\n", " ")}</span>
           </div>
         ))}
       </div>
@@ -526,7 +531,7 @@ export default function Home() {
                 <span style={{ marginLeft: "auto", color: accent.party, fontWeight: 800 }}>{klap.party ? "▾" : "▸"}</span>
               </div>
               {klap.party && groepen.map((g) => (
-                <div key={g.id} onClick={() => { try { localStorage.setItem("rundo_via_kiezer", "1") } catch { /* niets */ } router.push(`/party?g=${g.id}`) }}
+                <div key={g.id} onClick={() => { try { localStorage.setItem("rundo_via_kiezer", "1") } catch { /* niets */ } router.push(`/party?g=${g.id}&via=kiezer`) }}
                   style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: g.pin ? "1px solid rgba(240,193,75,0.55)" : "1px solid rgba(240,193,75,0.3)", borderRadius: 12, padding: "10px 12px", marginBottom: 6, opacity: g.af && !g.pin ? 0.6 : 1 }}>
                   <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(240,193,75,0.12)" }}>{g.settle ? "📱" : "✍️"}</span>
                   <span style={{ flex: 1, minWidth: 0 }}>
@@ -565,7 +570,7 @@ export default function Home() {
                 <span style={{ marginLeft: "auto", color: accent.table, fontWeight: 800 }}>{klap.table ? "▾" : "▸"}</span>
               </div>
               {klap.table && tafels.map((g) => (
-                <div key={g.id} onClick={() => { if (!g.code) return; try { localStorage.setItem("rundo_via_kiezer", "1") } catch { /* niets */ } router.push(`/table?code=${g.code}`) }}
+                <div key={g.id} onClick={() => { if (!g.code) return; try { localStorage.setItem("rundo_via_kiezer", "1") } catch { /* niets */ } router.push(`/table?code=${g.code}&via=kiezer`) }}
                   style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: g.pin ? "1px solid rgba(91,159,214,0.6)" : "1px solid rgba(91,159,214,0.35)", borderRadius: 12, padding: "10px 12px", marginBottom: 6, opacity: g.af && !g.pin ? 0.6 : 1 }}>
                   <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(91,159,214,0.14)" }}>🧾</span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: "#dfe7f2", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || "Rundo Resto"}</span>
