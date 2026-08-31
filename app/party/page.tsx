@@ -1388,6 +1388,16 @@ const T = {
     fairSetupDone: "Naar drankjes toewijzen →",
     roundsOverviewTitle: "🧾 Rondjesoverzicht",
     peopleInRound: "personen in dit rondje",
+    sharedBy: (n: number) => `gedeeld door ${n}`,
+    sharedByWord: "gedeeld door",
+    payersSumOf: (a: string, b: string) => `Samen ${a} van ${b} — dat klopt nog niet`,
+    addDrinkBtn: "+ drankje toevoegen",
+    addDrinkPick: "Welk drankje erbij?",
+    allDrinksInRound: "Alles staat er al in.",
+    adjustLower: "aanpassen",
+    noNamePill: (n: number) => `${n} zonder naam`,
+    noAmountPill: "geen bedrag",
+    completePill: "✓ compleet",
     showDetails: "Toon details",
     hideDetails: "Verberg details",
     editRoundBtn: "Aanpassen",
@@ -2232,6 +2242,16 @@ const T = {
     fairSetupDone: "Vers l'attribution des boissons →",
     roundsOverviewTitle: "🧾 Aper\u00e7u des tourn\u00e9es",
     peopleInRound: "personnes dans cette tourn\u00e9e",
+    sharedBy: (n: number) => `partag\u00e9 par ${n}`,
+    sharedByWord: "partag\u00e9 par",
+    payersSumOf: (a: string, b: string) => `Ensemble ${a} sur ${b} \u2014 \u00e7a ne colle pas`,
+    addDrinkBtn: "+ ajouter une boisson",
+    addDrinkPick: "Quelle boisson\u00a0?",
+    allDrinksInRound: "Tout y est d\u00e9j\u00e0.",
+    adjustLower: "modifier",
+    noNamePill: (n: number) => `${n} sans nom`,
+    noAmountPill: "sans montant",
+    completePill: "\u2713 complet",
     showDetails: "Voir les détails",
     hideDetails: "Masquer les détails",
     editRoundBtn: "Modifier",
@@ -2542,7 +2562,11 @@ export default function PartyTest() {
   // bron "mix" = deels zelf, deels uit de pot — potAmt is dan het potdeel; bij "pot"
   // volgt het potdeel gewoon het volledige bedrag, bij "self" is het nul.
   const [editDraft, setEditDraft] = useState<{ drinks: Record<string, number>; amount: number; headcount: number; bron: "self" | "pot" | "mix"; potAmt: number } | null>(null)
+  // Staat de kiezer voor "+ drankje toevoegen" open? Één rondje tegelijk in de
+  // bewerkstand, dus één schakelaar volstaat.
+  const [addDrinkOpen, setAddDrinkOpen] = useState(false)
   const startEditRound = (r: Round) => {
+    setAddDrinkOpen(false)
     const d: Record<string, number> = {}
     drinksOf(r).forEach(({ d: dr, n }) => { d[dr.id] = n })
     const potNu = r.potPart || 0
@@ -2550,14 +2574,20 @@ export default function PartyTest() {
     setEditDraft({ drinks: d, amount: totNu, headcount: Math.max(1, r.headcount || 1), bron: potNu > 0.005 ? (potNu >= totNu - 0.005 ? "pot" : "mix") : "self", potAmt: potNu })
     setEditRoundId(r.id)
   }
-  const cancelEditRound = () => { setEditDraft(null); setEditRoundId(null) }
+  const cancelEditRound = () => { setEditDraft(null); setEditRoundId(null); setAddDrinkOpen(false) }
   // Alles in één keer wegschrijven: aantallen als verschil, bedrag, personen en bron.
   const saveEditRound = async (r: Round) => {
     if (!editDraft) { cancelEditRound(); return }
     // Uit de pot betalen zonder bedrag kan niet: er zou nul uit de pot gaan terwijl het
     // rondje wél als betaald geldt. Een bedrag wissen mag wél — dan valt het rondje
     // terug op "geen bedrag ingevuld", wat een geldige toestand is.
-    if (editDraft.bron !== "self" && (editDraft.amount || 0) <= 0.005) { setNotice(L.needAmountOrCancel); return }
+    // De bron (zelf / pot) stellen we niet meer in de bewerkstand in, maar met de
+    // potpil bij "wie betaalde?". Die schrijft rechtstreeks naar het rondje, dus
+    // lezen we hem hier vers uit — het concept kan intussen verouderd zijn.
+    const live = rounds[rounds.indexOf(r)] || r
+    const potNu = live.potPart || 0
+    const bron: "self" | "pot" | "mix" = potNu <= 0.005 ? "self" : potNu >= (live.amount || 0) - 0.005 ? "pot" : "mix"
+    if (bron !== "self" && (editDraft.amount || 0) <= 0.005) { setNotice(L.needAmountOrCancel); return }
     const idx = rounds.indexOf(r)
     const huidig: Record<string, number> = {}
     drinksOf(r).forEach(({ d, n }) => { huidig[d.id] = n })
@@ -2569,10 +2599,10 @@ export default function PartyTest() {
     // Pot te kort voor het nieuwe bedrag? Niet meer blokkeren: de pot dekt wat hij kan,
     // de rest telt als zelf betaald. Vroeger werd de hele wijziging stil geweigerd — het
     // veld sprong terug naar het oude bedrag en het totaal bovenaan bewoog niet mee.
-    const potDeel = editDraft.bron === "pot" ? Math.min(editDraft.amount, beschikbaar)
-      : editDraft.bron === "mix" ? Math.min(Math.max(0, editDraft.potAmt), editDraft.amount, beschikbaar) : 0
-    const potTekort = editDraft.bron === "pot" ? editDraft.amount > beschikbaar + 0.005
-      : editDraft.bron === "mix" ? editDraft.potAmt > beschikbaar + 0.005 : false
+    const potDeel = bron === "pot" ? Math.min(editDraft.amount, beschikbaar)
+      : bron === "mix" ? Math.min(Math.max(0, potNu), editDraft.amount, beschikbaar) : 0
+    const potTekort = bron === "pot" ? editDraft.amount > beschikbaar + 0.005
+      : bron === "mix" ? potNu > beschikbaar + 0.005 : false
     // Heeft dit rondje al betalers (via het betalers-scherm van de Fair Split-overstap,
     // of uitgebreid opnemen)? Dan moet hun verdeling mee met het nieuwe bedrag. Vroeger
     // bleef `payers` op de oude bedragen staan: de eindbalans toonde "al betaald in
@@ -9775,28 +9805,14 @@ export default function PartyTest() {
                     return <div key={d.id} style={{ fontSize: 17.5, marginBottom: 3 }}><b>{d.emoji} {drinkTotalRound(r, d.id)}× {d.name}</b>{wie.length > 0 && <span style={{ color: opNaam === true ? "#8a5e0f" : "#6b7484", fontWeight: opNaam === true ? 700 : undefined }}> → {wie.map((p, i2) => { const q = r.orders[d.id][p.id]; return <span key={p.id}>{i2 > 0 ? ", " : ""}{opNaam === true && p.id === meId && <span style={{ display: "inline-flex", verticalAlign: "middle", marginRight: 3 }}><KroonIcoon size={13} kleur="#8a5e0f" gevuld /></span>}{p.name}{q > 1 ? ` (${q})` : ""}</span> })}</span>}</div>
                   })}
 
-                  <div style={{ ...S.row, justifyContent: "flex-end", marginTop: 10 }}>
-                    <button style={{ ...S.btn, fontSize: 15.5, padding: "5px 12px", fontWeight: 800, color: "#8a5e0f" }} onClick={() => { const next = !editOpen; setEditOpen(next); if (!next) { setEditCups(false); setEditPay(false) } }}>{editOpen ? "▴ sluiten" : "✏️ aanpassen"}</button>
-                  </div>
-                  {editOpen && (
-                    <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                      <button style={{ ...S.btn, flex: 1, fontSize: 15, padding: "7px 0" }} onClick={() => { setEditCups(false); setEditPay(false); setAssignIdx(idx) }}>toewijzen{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ color: "#1f8a4c", fontWeight: 800 }}> ✓</span>}</button>
-                      <button style={{ ...S.btn, flex: 1, fontSize: 15, padding: "7px 0", ...(editPay ? { background: "rgba(240,165,0,0.16)", borderColor: "rgba(240,165,0,0.5)", fontWeight: 800 } : {}) }} onClick={() => { setEditPay((v) => !v); setEditCups(false) }}>{L.amountAndPayer}</button>
-                      {depositOn && <button style={{ ...S.btn, flex: 1, fontSize: 15, padding: "7px 0", ...(editCups ? { background: "rgba(240,165,0,0.16)", borderColor: "rgba(240,165,0,0.5)", fontWeight: 800 } : {}) }} onClick={() => { setEditCups((v) => !v); setEditPay(false) }}>bekers</button>}
+                  {/* Wie betaalde staat vast in beeld: dat hoort bij het rondje zelf en
+                      niet achter een tussenmenu. Rechts hoeveel mensen het deelden. */}
+                  <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(29,41,66,0.12)" }}>
+                    <div style={{ ...S.row, justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
+                      <span style={{ minWidth: 0, fontSize: 14.5, color: "#4a5567", fontWeight: 700 }}>{L.whoPutMoney} <span style={{ color: "#8b93a3", fontWeight: 600 }}>{L.multiplePossible}</span></span>
+                      <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#6b7484", whiteSpace: "nowrap" }}>👤 {L.sharedBy(Math.max(1, r.headcount || 1))}</span>
                     </div>
-                  )}
-
-
-                  {editPay && (
-                    <div style={{ marginTop: 10, background: "#eef1f6", borderRadius: 12, padding: 10 }}>
-                      <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: "0.04em", color: "#1d2942", marginBottom: 9 }}>{L.costLabel}</div>
-                      <div style={{ ...S.row, gap: 8, marginBottom: 12 }}>
-                        <span style={{ fontSize: 17, fontWeight: 800, color: "#6b7484" }}>€</span>
-                        <input style={{ ...S.input, width: 110, fontSize: 19, borderColor: (r.amount || 0) <= 0 ? "#e0685c" : "rgba(29,41,66,0.22)" }} type="text" inputMode="decimal" value={r.amount || ""} onChange={(e) => rSetAmount(idx, parseFloat(e.target.value.replace(",", ".")) || 0)} />
-
-                      </div>
-                      <div style={{ fontSize: 13.5, color: "#4a5567", marginBottom: 8 }}>{L.whoPutMoney} <span style={{ color: "#8b93a3" }}>{L.multiplePossible}</span></div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         <span onClick={() => rTogglePot(idx)}
                           style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", borderRadius: 999, padding: "7px 13px", fontSize: 13.5, fontWeight: 600,
                             background: (r.potPart || 0) > 0 ? "#2f6fb5" : "#fff",
@@ -9814,7 +9830,7 @@ export default function PartyTest() {
                                 color: aan ? RANDTEKST : "#1d2942" }}>{p.name}{aan ? " ✓" : ""}</span>
                           )
                         })}
-                      </div>
+                    </div>
                       {(() => {
                         const sel = Object.keys(r.payers || {}).filter((pid) => people.some((p) => p.id === pid))
                         const nPay = sel.length + ((r.potPart || 0) > 0 ? 1 : 0)
@@ -9839,27 +9855,15 @@ export default function PartyTest() {
                           </div>
                         )
                       })()}
-                    </div>
-                  )}
+                  </div>
 
-                  {editCups && depositOn && (
-                    <div style={{ marginTop: 10, background: "#eef1f6", borderRadius: 12, padding: 10 }}>
-                      {people.map((p) => {
-                        const nam = roundPicked(r, p.id), gb = r.gaveBack[p.id] || 0
-                        return (
-                          <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "5px 0" }}>
-                            <span style={{ fontSize: 17.5, fontWeight: 700 }}>{p.name} <span style={{ fontSize: 14.5, color: "#6b7484" }}>· nam {nam}</span></span>
-                            <div style={{ ...S.row, gap: 6 }}>
-                              <span style={{ fontSize: 14.5, color: "#6b7484" }}>{L.gaveBack}</span>
-                              <button style={{ ...S.step, width: 26, height: 26, fontSize: 19, opacity: gb === 0 ? 0.4 : 1 }} onClick={() => rSetGaveBack(idx, p.id, gb - 1)}>−</button>
-                              <span style={{ minWidth: 14, textAlign: "center", fontSize: 17.5, fontWeight: 800 }}>{gb}</span>
-                              <button style={{ ...S.step, width: 26, height: 26, fontSize: 19 }} onClick={() => rSetGaveBack(idx, p.id, gb + 1)}>+</button>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                  {/* Geen tussenmenu meer: toewijzen doet wat het zegt, en aanpassen opent
+                      het rondje meteen in de bewerkstand van het rondjesoverzicht. */}
+                  <div style={{ ...S.row, justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
+                    <button style={{ ...S.btn, fontSize: 15.5, padding: "5px 12px", fontWeight: 800 }} onClick={() => { setEditCups(false); setEditPay(false); setAssignIdx(idx) }}>toewijzen{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ color: "#1f8a4c", fontWeight: 800 }}> ✓</span>}</button>
+                    <button style={{ ...S.btn, fontSize: 15.5, padding: "5px 12px", fontWeight: 800, color: "#8a5e0f" }}
+                      onClick={() => { setEditOpen(false); setEditCups(false); setEditPay(false); setFillMode(false); setOverviewBackTo("hub"); setOpenRounds(new Set([r.id])); startEditRound(r); setView("roundsOverview") }}>✏️ {L.adjustLower}</button>
+                  </div>
                 </div>
               )}
             </div>
@@ -10260,11 +10264,22 @@ export default function PartyTest() {
               <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden", ...(!settle && nogOpen && editRoundId !== r.id && !invulRij ? { border: "1.5px solid rgba(200,138,0,0.7)" } : {}), ...(editRoundId === r.id ? { boxShadow: "inset 0 0 0 2px rgba(240,165,0,0.55)", background: "#fffdf3" } : invulRij ? { border: "2px solid rgba(224,104,92,0.65)", background: "rgba(224,104,92,0.05)" } : {}) }}>
                 <div onClick={() => toggle(r.id)} style={{ padding: "12px 14px", cursor: "pointer", background: editRoundId === r.id ? "rgba(240,165,0,0.1)" : open ? "rgba(240,165,0,0.06)" : invulRij ? "rgba(224,104,92,0.07)" : "#fff" }}>
                   <div style={{ ...S.row, justifyContent: "space-between", gap: 8 }}>
-                    <div style={{ ...S.row, gap: 8, minWidth: 0 }}>
-                      <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1d2942" }}>{editRoundId === r.id ? L.editRoundHead(nr) : L.roundSummary(nr, items)}</span>
-                      {settle && geenBedrag && editRoundId !== r.id && (
-                        <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, borderRadius: 12, padding: "3px 9px", whiteSpace: "nowrap", color: invulRij ? "#b0402f" : "#8a5e0f", background: invulRij ? "rgba(224,104,92,0.14)" : "rgba(240,165,0,0.16)" }}>{L.noAmountBadge}</span>
-                      )}
+                    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, minWidth: 0 }}>
+                      <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1d2942", whiteSpace: "nowrap" }}>{editRoundId === r.id ? L.editRoundHead(nr) : `${L.roundWord} ${nr}`}</span>
+                      {/* Twee losse pillen zeggen wát er mist; één teller zou je toch weer laten
+                          openklappen. Rood voor namen, amber voor het bedrag — dezelfde kleuren
+                          als het kader binnenin. */}
+                      {editRoundId !== r.id && (() => {
+                        const nogToe = Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0)
+                        const pil = (tekst: string, kleur: string, vlak: string) => (
+                          <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, borderRadius: 12, padding: "3px 9px", whiteSpace: "nowrap", color: kleur, background: vlak }}>{tekst}</span>
+                        )
+                        if (nogToe === 0 && !geenBedrag) return pil(L.completePill, "#1f8a4c", "rgba(31,138,76,0.12)")
+                        return (<>
+                          {nogToe > 0 && pil(L.noNamePill(nogToe), "#b0402f", "rgba(224,104,92,0.14)")}
+                          {geenBedrag && pil(L.noAmountPill, "#8a5e0f", "rgba(240,165,0,0.16)")}
+                        </>)
+                      })()}
                     </div>
                     <div style={{ ...S.row, gap: 9, flexShrink: 0 }}>
                       {editRoundId === r.id ? (
@@ -10278,32 +10293,44 @@ export default function PartyTest() {
                     </div>
                   </div>
                   {/* Betaald-melding net onder de titel — leesbaar, geen invulveld meer. */}
-                  {!geenBedrag && <div style={{ fontSize: 15.5, color: "#6b7484", fontWeight: 600, marginTop: 4 }}>
-                    {(r.amount || 0) > 0.005 ? L.paidNote(euro(r.amount)) : L.noAmountNote}
-                    {(r.potPart || 0) > 0.005
+                  {/* Altijd gevuld: het aantal drankjes stond vroeger in de titel, maar daar
+                      is nu plaats nodig voor de statuspillen. */}
+                  <div style={{ fontSize: 15.5, color: "#6b7484", fontWeight: 600, marginTop: 4 }}>
+                    {L.drinksCount(items)}
+                    {(r.amount || 0) > 0.005 && <> · {L.paidNote(euro(r.amount))}</>}
+                    {(r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005
                       ? <span style={{ color: "#2f5693", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}> · <ZakjeIcoon size={14} /> {L.paidFromPot(euro(r.potPart || 0))}</span>
-                      : <span style={{ color: "#9aa3b2" }}> · {L.noPotUsed}</span>}
-                  </div>}
+                      : <span style={{ color: "#9aa3b2" }}> · {L.noPotUsed}</span>)}
+                  </div>
                 </div>
                 {open && (() => {
                   const idx = rounds.indexOf(r)
                   const bewerk = editRoundId === r.id && editDraft !== null
                   const dr = editDraft
-                  const uitPot = bewerk && dr ? dr.bron !== "self" : (r.potPart || 0) > 0.005
-                  const potLeeg = Math.max(0, potAvailFor(idx)) <= 0.005
+                  const uitPot = (r.potPart || 0) > 0.005
+                  // In de bewerkstand tellen ook drankjes mee die je zonet toevoegde en
+                  // die dus nog nul keer in het rondje staan.
+                  const basisRijen = drinksOf(r)
+                  const rijen = bewerk && dr
+                    ? [...basisRijen, ...drinks.filter((d) => (dr.drinks[d.id] ?? 0) > 0 && !basisRijen.some((x) => x.d.id === d.id)).map((d) => ({ d, n: 0 }))]
+                    : basisRijen
+                  const resterend = bewerk && dr ? drinks.filter((d) => !rijen.some((x) => x.d.id === d.id)) : []
                   return (
                   <div style={{ padding: "4px 14px 14px" }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      {drinksOf(r).map(({ d, n }) => {
+                      {rijen.map(({ d, n }) => {
                         const val = bewerk && dr ? (dr.drinks[d.id] ?? n) : n
                         return (
                         <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "3px 0" }}>
-                          <span style={{ fontSize: 17.5, fontWeight: 700, minWidth: 0 }}>{d.emoji} {d.name}{opNaam === true && !bewerk && (() => {
-                            // De kern van uitgebreid opnemen: wíe dronk het. Amber, met het
-                            // kroontje bij je eigen naam; onbenoemde aantallen in het rood.
-                            const wie = people.filter((p) => (r.orders[d.id]?.[p.id] ?? 0) > 0)
+                          <span style={{ fontSize: 17.5, fontWeight: 700, minWidth: 0 }}>{d.emoji} {d.name}{!bewerk && (() => {
+                            // Wie dronk wat — ook bij "gewoon rondjes", want ook daar kan je
+                            // toewijzen. Amber, kroontje bij je eigen naam, onbenoemd in het rood.
+                            const alleWie = people.filter((p) => (r.orders[d.id]?.[p.id] ?? 0) > 0)
+                            // Meer dan drie namen duwt het aantal rechts van de kaart af.
+                            const wie = alleWie.slice(0, 3)
+                            const meer = alleWie.length - wie.length
                             const anon2 = r.anon?.[d.id] ?? 0
-                            return (wie.length > 0 || anon2 > 0) ? <span style={{ fontSize: 15, fontWeight: 700, color: "#8a5e0f" }}> → {wie.map((p, i2) => { const q = r.orders[d.id][p.id]; return <span key={p.id}>{i2 > 0 ? ", " : ""}{p.id === meId && <span style={{ display: "inline-flex", verticalAlign: "middle", marginRight: 3 }}><KroonIcoon size={12} kleur="#8a5e0f" gevuld /></span>}{p.name}{q > 1 ? ` (${q})` : ""}</span> })}{anon2 > 0 && <span style={{ color: "#b0402f" }}>{wie.length > 0 ? " · " : ""}{anon2}× ?</span>}</span> : null
+                            return (wie.length > 0 || anon2 > 0) ? <span style={{ fontSize: 15, fontWeight: 700, color: "#8a5e0f" }}> → {wie.map((p, i2) => { const q = r.orders[d.id][p.id]; return <span key={p.id}>{i2 > 0 ? ", " : ""}{p.id === meId && <span style={{ display: "inline-flex", verticalAlign: "middle", marginRight: 3 }}><KroonIcoon size={12} kleur="#8a5e0f" gevuld /></span>}{p.name}{q > 1 ? ` (${q})` : ""}</span> })}{meer > 0 && <span> +{meer}</span>}{anon2 > 0 && <span style={{ color: "#b0402f" }}>{wie.length > 0 ? " · " : ""}{anon2}× ?</span>}</span> : null
                           })()}</span>
                           {bewerk ? (
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
@@ -10319,10 +10346,33 @@ export default function PartyTest() {
                         </div>
                         )
                       })}
-                      {!bewerk && (
+                      {!bewerk ? (
                         <div style={{ textAlign: "right", marginTop: 9 }}>
                           <span onClick={(e) => { e.stopPropagation(); startEditRound(r) }}
-                            style={{ fontSize: 14.5, fontWeight: 500, color: "#c98a00", textDecoration: "underline", cursor: "pointer" }}>✏️ {L.adjustOrder}</span>
+                            style={{ fontSize: 14.5, fontWeight: 500, color: "#c98a00", textDecoration: "underline", cursor: "pointer" }}>✏️ {L.adjustLower}</span>
+                        </div>
+                      ) : (
+                        // Een drankje vergeten bij het opnemen? Dan moet je het hier kunnen
+                        // bijzetten, niet het hele rondje opnieuw hoeven doen.
+                        <div style={{ marginTop: 10 }}>
+                          {!addDrinkOpen ? (
+                            <span onClick={(e) => { e.stopPropagation(); setAddDrinkOpen(true) }}
+                              style={{ display: "inline-block", fontSize: 14.5, fontWeight: 800, color: "#8a5e0f", background: "#fffdf4", border: "1.5px solid rgba(240,165,0,0.6)", borderRadius: 999, padding: "7px 14px", cursor: "pointer" }}>{L.addDrinkBtn}</span>
+                          ) : (
+                            <div style={{ background: "#eef1f6", borderRadius: 12, padding: 10 }}>
+                              <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 8 }}>
+                                <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1d2942" }}>{L.addDrinkPick}</span>
+                                <span onClick={(e) => { e.stopPropagation(); setAddDrinkOpen(false) }} style={{ fontSize: 14, fontWeight: 800, color: "#8b93a3", cursor: "pointer" }}>✕</span>
+                              </div>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                {resterend.length === 0 && <span style={{ fontSize: 14, color: "#6b7484" }}>{L.allDrinksInRound}</span>}
+                                {resterend.map((d) => (
+                                  <span key={d.id} onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, drinks: { ...c.drinks, [d.id]: (c.drinks[d.id] ?? 0) + 1 } } : c); setAddDrinkOpen(false) }}
+                                    style={{ cursor: "pointer", borderRadius: 999, padding: "7px 13px", fontSize: 13.5, fontWeight: 700, background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#1d2942" }}>{d.emoji} {d.name}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -10348,22 +10398,8 @@ export default function PartyTest() {
                       </div>
                     )
                   })()}
-                    {/* Bij uitgebreid opnemen liggen de gasten vast; het aantal staat dan
-                        automatisch juist en hoeft hier niet getoond of bewerkt. */}
-                    {opNaam !== true && <div style={{ ...S.row, justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(29,41,66,0.12)" }}>
-                      <span style={{ fontSize: 17, fontWeight: 800, color: "#6b7484" }}>👤 {L.peopleInRound}</span>
-                      {bewerk && dr ? (
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <button style={{ width: 32, height: 32, borderRadius: 9, background: "#eef1f6", border: "1px solid rgba(29,41,66,0.2)", fontSize: 19, color: "#6b7484", fontWeight: 800, cursor: "pointer", opacity: dr.headcount > 1 ? 1 : 0.4 }}
-                            onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: Math.max(1, c.headcount - 1) } : c) }}>−</button>
-                          <span style={{ fontSize: 20, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#1d2942" }}>{dr.headcount}</span>
-                          <button style={{ width: 32, height: 32, borderRadius: 9, background: AAN, border: "none", fontSize: 19, color: "#fff", fontWeight: 800, cursor: "pointer" }}
-                            onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: c.headcount + 1 } : c) }}>+</button>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: 19, fontWeight: 800, color: "#c98a00" }}>{r.headcount || 1}</span>
-                      )}
-                    </div>}
+                    {/* De losse regel "personen in dit rondje" staat nu als
+                        "gedeeld door X" naast de betalerspillen verderop. */}
 
                     {bewerk && dr && (
                       <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(29,41,66,0.12)" }}>
@@ -10371,104 +10407,81 @@ export default function PartyTest() {
                         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <span style={{ fontSize: 18, color: "#6b7484", fontWeight: 700 }}>€</span>
                           <input autoFocus={bedragFocus} onFocus={() => setBedragFocus(false)} onClick={(e) => e.stopPropagation()} type="text" inputMode="decimal" placeholder="0,00"
-                            {...bedragVeld(`edit-${r.id}`, dr.amount, (v) => setEditDraft((c) => c ? { ...c, amount: v, potAmt: c.bron === "pot" ? v : c.potAmt } : c))}
-                            style={{ ...S.input, width: 106, padding: "8px 10px", fontSize: 18, fontWeight: 800, color: dr.bron === "pot" ? "#2f5693" : "#c88a1a", textAlign: "right", borderColor: dr.bron === "pot" ? "rgba(47,111,181,0.45)" : undefined }} />
+                            {...bedragVeld(`edit-${r.id}`, dr.amount, (v) => setEditDraft((c) => c ? { ...c, amount: v } : c))}
+                            style={{ ...S.input, width: 106, padding: "8px 10px", fontSize: 18, fontWeight: 800, color: uitPot ? "#2f5693" : "#c88a1a", textAlign: "right", borderColor: uitPot ? "rgba(47,111,181,0.45)" : undefined }} />
                         </span>
                       </div>
                     )}
-                    {/* Waarmee betaald? Ook achteraf nog te corrigeren. */}
+                    {/* Wat het kostte en wie het voorschoot, in één blok. De potpil hieronder
+                        zegt al of er pot-geld in zat — een aparte vraag "waarmee betaald?"
+                        met zelf/pot/gemengd vroeg hetzelfde nog eens. */}
                     <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(29,41,66,0.12)" }}>
-                      {bewerk && dr ? (
-                        <>
-                          <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 6 }}>
-                            <span style={{ fontSize: 15, color: "#6b7484", fontWeight: 800 }}><ZakjeIcoon size={15} /> {L.paidWithQ}</span>
-                            <span onClick={(e) => { e.stopPropagation(); setShowPot(true) }} style={{ fontSize: 14.5, fontWeight: 800, color: "#2f6fb5", textDecoration: "underline", cursor: "pointer" }}>{L.potTopUp}</span>
+                      {!bewerk && (<>
+                        <div style={{ display: (r.amount || 0) > 0.005 ? "flex" : "none", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 17, fontWeight: 500, color: "#6b7484" }}>💶 {L.totalPaidShort}</span>
+                          <span onClick={(e) => { e.stopPropagation(); startEditRound(r) }}
+                            style={{ fontSize: 19, fontWeight: 600, color: "#c98a00", cursor: "pointer" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "—"}</span>
+                        </div>
+                        {uitPot && (
+                          <div style={{ ...S.row, justifyContent: "space-between", marginTop: 3, paddingLeft: 14 }}>
+                            <span style={{ fontSize: 15, fontWeight: 500, color: "#2f5693", display: "inline-flex", alignItems: "center", gap: 5 }}><ZakjeIcoon size={15} /> {(r.potPart || 0) >= (r.amount || 0) - 0.005 ? L.potShareAll : L.potShare}</span>
+                            <span style={{ fontSize: 16, fontWeight: 600, color: "#2f6fb5" }}>{euro(r.potPart || 0)}</span>
                           </div>
-                          {(() => {
-                            const beschikbaar = Math.max(0, potAvailFor(idx))
-                            const uitDePot = dr.bron !== "self"
-                            const wissel = (aan: boolean, tekst: string, doe: () => void, kleur: string) => (
-                              <button onClick={(e) => { e.stopPropagation(); doe() }} style={{ flex: 1, textAlign: "center", cursor: "pointer", fontFamily: "inherit", border: "none",
-                                background: aan ? kleur : "transparent", boxShadow: aan ? `0 2px 6px -2px ${kleur}99` : "none",
-                                color: aan ? (kleur === RAND ? RANDTEKST : "#fff") : "#1d2942",
-                                borderRadius: 999, padding: "9px 4px", fontSize: 13.5, fontWeight: 600 }}>{tekst}</button>
-                            )
-                            return (<>
-                              <div style={{ ...S.segBaan }}>
-                                {wissel(!uitDePot, L.selfPaidShort, () => setEditDraft((c) => c ? { ...c, bron: "self", potAmt: 0 } : c), RAND)}
-                                {wissel(uitDePot, L.fromPotShort, () => { if (potLeeg) return; setEditDraft((c) => {
-                                  if (!c) return c
-                                  const d = Math.round(Math.min(beschikbaar, c.amount) * 100) / 100
-                                  return { ...c, bron: d >= c.amount - 0.005 ? "pot" : "mix", potAmt: d }
-                                }) }, "#2f6fb5")}
-                              </div>
-                              {uitDePot && (
-                                <div style={{ background: "#eef4fb", border: "1px solid rgba(47,111,181,0.25)", borderRadius: 11, padding: 11, marginTop: 9 }}>
-                                  <div style={{ fontSize: 13.5, fontWeight: 800, color: "#2f5693", marginBottom: 9 }}>{L.potPaysWholeQ}</div>
-                                  <div style={{ ...S.segBaan, background: "#fff", marginBottom: 10 }}>
-                                    {wissel(dr.bron === "pot", `${L.yesWord}, ${euro(dr.amount || 0)}`, () => setEditDraft((c) => c ? { ...c, bron: "pot", potAmt: c.amount } : c), "#2f6fb5")}
-                                    {wissel(dr.bron === "mix", L.noPartOnly, () => setEditDraft((c) => c ? { ...c, bron: "mix", potAmt: Math.round(Math.min(beschikbaar, c.amount) * 100) / 100 } : c), "#2f6fb5")}
-                                  </div>
-                                  {dr.bron === "pot" ? (
-                                    <div style={{ textAlign: "center", fontSize: 14, fontWeight: 700, color: "#2f5693", lineHeight: 1.5 }}>
-                                      {L.wholeRoundFromPot}<br />
-                                      <span style={{ color: "#4a5567" }}>{L.potLeftAfter} <b style={{ fontSize: 16.5, color: "#2f5693" }}>{euro(Math.max(0, beschikbaar - dr.amount))}</b></span>
-                                    </div>
-                                  ) : (<>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0" }}>
-                                      <span style={{ fontSize: 14, fontWeight: 700, color: "#2f5693" }}>{L.fromPotLabel}</span>
-                                      <input onClick={(e) => e.stopPropagation()} {...bedragVeld(`edit-pot-${r.id}`, dr.potAmt, (v) => setEditDraft((c) => c ? { ...c, potAmt: Math.max(0, Math.min(v, c.amount)) } : c))}
-                                        style={{ ...S.input, width: 104, padding: "6px 11px", textAlign: "right", fontSize: 17, fontWeight: 800, background: "#fff", border: "1.5px solid #2f6fb5", color: "#2f5693" }} />
-                                    </div>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0" }}>
-                                      <span style={{ fontSize: 14, fontWeight: 700, color: "#8a5e0f" }}>{L.notFromPotLabel}</span>
-                                      <span style={{ fontSize: 18, fontWeight: 800, color: "#c88a1a" }}>+ {euro(Math.max(0, dr.amount - Math.min(dr.potAmt, dr.amount)))}</span>
-                                    </div>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0 0", marginTop: 4, borderTop: "1.5px solid rgba(47,111,181,0.3)" }}>
-                                      <span style={{ fontSize: 14, fontWeight: 800, color: "#1d2942" }}>{L.togetherWord}</span>
-                                      <span style={{ fontSize: 18, fontWeight: 800, color: "#1d2942" }}>{euro(dr.amount)}</span>
-                                    </div>
-                                  </>)}
-                                </div>
-                              )}
-                            </>)
-                          })()}
-                          {potLeeg && <div style={{ fontSize: 14, color: "#c0554a", fontWeight: 700, marginTop: 6 }}>{L.potEmptyFillFirst}</div>}
-                          {/* Te weinig in de pot: binair — bijvullen of zelf betalen. */}
-                          {!potLeeg && dr.bron === "pot" && dr.amount > Math.max(0, potAvailFor(idx)) + 0.005 && (
-                            <div style={{ marginTop: 8, fontSize: 13.5, fontWeight: 700, color: "#6b4a00", lineHeight: 1.45 }}>
-                              {L.potShortSimple(euro(Math.max(0, potAvailFor(idx))), euro(dr.amount))} <span style={{ color: "#24476f" }}>{L.tryPartHint}</span>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          {/* Eerst het totaal, pas daaronder de bron: twee regels met
-                              allebei "betaald" erin lazen als twee bedragen. */}
-                          <div style={{ display: (r.amount || 0) > 0.005 ? "flex" : "none", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontSize: 17, fontWeight: 500, color: "#6b7484" }}>💶 {L.totalPaidShort}</span>
-                            {opNaam === true && !uitPot && geenBedrag ? (
-                              <span onClick={(e) => { e.stopPropagation(); startEditRound(r) }}
-                                style={{ fontSize: 17.5, fontWeight: 800, color: "#b0402f", textDecoration: "underline", cursor: "pointer" }}>{L.addPaymentBang}</span>
-                            ) : (
-                              <span style={{ fontSize: 19, fontWeight: 600, color: "#c98a00" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "—"}</span>
-                            )}
-                          </div>
-                          {uitPot && (
-                            <div style={{ ...S.row, justifyContent: "space-between", marginTop: 3, paddingLeft: 14 }}>
-                              <span style={{ fontSize: 15, fontWeight: 500, color: "#2f5693", display: "inline-flex", alignItems: "center", gap: 5 }}><ZakjeIcoon size={15} /> {(r.potPart || 0) >= (r.amount || 0) - 0.005 ? L.potShareAll : L.potShare}</span>
-                              <span style={{ fontSize: 16, fontWeight: 600, color: "#2f6fb5" }}>{euro(r.potPart || 0)}</span>
-                            </div>
-                          )}
-                        </>
-                      )}
+                        )}
+                      </>)}
+                      {/* Betalerspillen: altijd zichtbaar zodra het rondje openstaat, niet alleen
+                          in de bewerkstand. Rechts staat met hoeveel je het rondje deelde — dat
+                          verving de losse regel "personen in dit rondje". */}
+                      <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 11, marginBottom: 8 }}>
+                        <span style={{ minWidth: 0, fontSize: 14.5, color: "#4a5567", fontWeight: 700 }}>{L.whoPutMoney} <span style={{ color: "#8b93a3", fontWeight: 600 }}>{L.multiplePossible}</span></span>
+                        {opNaam !== true && bewerk && dr ? (
+                          <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7 }}>
+                            <span style={{ fontSize: 13.5, fontWeight: 700, color: "#6b7484", whiteSpace: "nowrap" }}>👤 {L.sharedByWord}</span>
+                            <button style={{ width: 28, height: 28, borderRadius: 8, background: "#eef1f6", border: "1px solid rgba(29,41,66,0.2)", fontSize: 17, color: "#6b7484", fontWeight: 800, cursor: "pointer", opacity: dr.headcount > 1 ? 1 : 0.4 }}
+                              onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: Math.max(1, c.headcount - 1) } : c) }}>−</button>
+                            <span style={{ fontSize: 18, fontWeight: 800, minWidth: 18, textAlign: "center", color: "#1d2942" }}>{dr.headcount}</span>
+                            <button style={{ width: 28, height: 28, borderRadius: 8, background: AAN, border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
+                              onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: c.headcount + 1 } : c) }}>+</button>
+                          </span>
+                        ) : (
+                          <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#6b7484", whiteSpace: "nowrap" }}>👤 {L.sharedBy(Math.max(1, (bewerk && dr ? dr.headcount : r.headcount) || 1))}</span>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        <span onClick={(e) => { e.stopPropagation(); rTogglePot(idx) }}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", borderRadius: 999, padding: "7px 13px", fontSize: 13.5, fontWeight: 600,
+                            background: (r.potPart || 0) > 0 ? "#2f6fb5" : "#fff",
+                            border: (r.potPart || 0) > 0 ? "1.5px solid #2f6fb5" : "1.5px solid rgba(29,41,66,0.4)",
+                            color: (r.potPart || 0) > 0 ? "#fff" : "#1d2942" }}>
+                          {potIsCard ? <>💳 {L.cardWord}</> : <><ZakjeIcoon size={14} /> {L.potWord}</>}{(r.potPart || 0) > 0 ? " ✓" : ""}
+                        </span>
+                        {people.map((p) => {
+                          const aan = (r.payers?.[p.id] || 0) > 0
+                          return (
+                            <span key={p.id} onClick={(e) => { e.stopPropagation(); rTogglePayer(idx, p.id) }}
+                              style={{ cursor: "pointer", borderRadius: 999, padding: "7px 13px", fontSize: 13.5, fontWeight: 600,
+                                background: aan ? RAND : "#fff",
+                                border: aan ? `1.5px solid ${RAND}` : "1.5px solid rgba(29,41,66,0.4)",
+                                color: aan ? RANDTEKST : "#1d2942" }}>{p.name}{aan ? " ✓" : ""}</span>
+                          )
+                        })}
+                      </div>
+                      {(() => {
+                        // Klopt de som niet met het bedrag, dan zeggen we dat hier — stil
+                        // laten staan zou de eindbalans laten rekenen met geld dat er niet is.
+                        const sel = Object.keys(r.payers || {}).filter((pid) => (r.payers[pid] || 0) > 0.005 && people.some((p) => p.id === pid))
+                        const nPay = sel.length + ((r.potPart || 0) > 0.005 ? 1 : 0)
+                        if (nPay === 0 || (r.amount || 0) <= 0.005) return null
+                        const sum = rPaidSum(r), diff = (r.amount || 0) - sum
+                        if (Math.abs(diff) <= 0.005) return nPay > 1 ? <div style={{ fontSize: 13, color: "#6b7484", marginTop: 7 }}>{L.splitEvenNote}</div> : null
+                        return <div style={{ fontSize: 13.5, fontWeight: 700, color: "#c0554a", marginTop: 7 }}>{L.payersSumOf(euro(sum), euro(r.amount || 0))}</div>
+                      })()}
                     </div>
 
 
                     {bewerk && (
                       <div style={{ marginTop: 14 }}>
                         {(() => {
-                          const uitPot = dr ? (dr.bron === "pot" || (dr.bron === "mix" && Math.max(0, dr.potAmt) > 0.005)) : false
                           return (
                             <button style={{ ...S.btnP, width: "100%", color: "#fff", ...(uitPot
                               ? { background: "linear-gradient(135deg,#3d86cc,#2f5693)", boxShadow: "0 4px 12px -4px rgba(47,86,147,0.6)" }
