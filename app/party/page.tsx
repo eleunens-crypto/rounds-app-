@@ -599,7 +599,7 @@ const T = {
     thisRoundSeg: "dit rondje",
     onlyThisRound: "↩ Alleen dit rondje",
     tikSamenWord: "voor iedereen",
-    chooseFirst: "Kies eerst hoe je noteert",
+    chooseFirst: "Kies hoe je dit rondje opneemt",
     hintTogether: "Tik alle drankjes meteen aan voor de hele groep",
     hintPerPerson: "Tik eerst een naam aan, dan het drankje",
     perPersonWord: "per persoon",
@@ -1447,7 +1447,7 @@ const T = {
     thisRoundSeg: "cette tourn\u00e9e",
     onlyThisRound: "↩ Seulement cette tourn\u00e9e",
     tikSamenWord: "pour tous",
-    chooseFirst: "Choisis d\u2019abord comment tu notes",
+    chooseFirst: "Choisis comment tu notes cette tourn\u00e9e",
     hintTogether: "Coche toutes les boissons d'un coup pour tout le groupe",
     hintPerPerson: "Coche d'abord un nom, puis la boisson",
     perPersonWord: "par personne",
@@ -8815,10 +8815,20 @@ export default function PartyTest() {
                   </div>
                 </div>
                 {!modusGekozen ? (
-                  <div style={{ display: "flex", gap: 9, alignItems: "center", marginTop: 9, background: "#fdf6e4", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "11px 12px" }}>
-                    <span style={{ fontSize: 20, flexShrink: 0 }}>{"\u{1F446}"}</span>
-                    <span style={{ fontSize: 15.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35 }}>{L.chooseFirst}</span>
-                  </div>
+                  <>
+                    {/* Bewust géén kader of vlak: met achtergrond en rand las dit als een derde
+                        knop onder de twee echte knoppen. Nu dragen de amberen tekst en de twee
+                        wippende vingers de aandacht, zonder iets te suggereren wat tikbaar is. */}
+                    <style>{`@keyframes rundoWijs{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+                      .rundo-wijs{display:inline-block;animation:rundoWijs 1.1s ease-in-out infinite}
+                      .rundo-wijs2{animation-delay:.12s}
+                      @media (prefers-reduced-motion: reduce){.rundo-wijs{animation:none}}`}</style>
+                    <div style={{ display: "flex", gap: 9, alignItems: "center", justifyContent: "center", marginTop: 10, padding: "4px 2px" }}>
+                      <span className="rundo-wijs" style={{ fontSize: 20, flexShrink: 0 }}>{"\u261D\uFE0F"}</span>
+                      <span style={{ fontSize: 15.5, color: "#8a5e0f", fontWeight: 700, lineHeight: 1.35, textAlign: "center" }}>{L.chooseFirst}</span>
+                      <span className="rundo-wijs rundo-wijs2" style={{ fontSize: 20, flexShrink: 0 }}>{"\u261D\uFE0F"}</span>
+                    </div>
+                  </>
                 ) : alleenJij ? (
                   <div style={{ display: "flex", gap: 9, alignItems: "flex-start", marginTop: 9, background: "#fdf6e4", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "11px 12px" }}>
                     <span style={{ fontSize: 20, flexShrink: 0 }}>{"\u{1F465}"}</span>
