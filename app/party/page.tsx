@@ -599,6 +599,7 @@ const T = {
     thisRoundSeg: "dit rondje",
     onlyThisRound: "↩ Alleen dit rondje",
     tikSamenWord: "voor iedereen",
+    chooseFirst: "Kies eerst hoe je noteert",
     hintTogether: "Tik alle drankjes meteen aan voor de hele groep",
     hintPerPerson: "Tik eerst een naam aan, dan het drankje",
     perPersonWord: "per persoon",
@@ -1266,7 +1267,7 @@ const T = {
     potShare: "waarvan uit de pot",
     potSpentWord: "besteed",
     potLeftLong: "nog in de pot",
-    persPaidWord: "door personen betaald",
+    persPaidWord: "door gast(en) betaald",
     leaveSettleMsg: "Afrekenen loopt nog — toch naar het rondjesoverzicht? Wat je al invulde blijft bewaard.",
     leaveSettleYes: "Ja, ga verder",
     potShareAll: "volledig uit de pot",
@@ -1442,6 +1443,7 @@ const T = {
     thisRoundSeg: "cette tourn\u00e9e",
     onlyThisRound: "↩ Seulement cette tourn\u00e9e",
     tikSamenWord: "pour tous",
+    chooseFirst: "Choisis d\u2019abord comment tu notes",
     hintTogether: "Coche toutes les boissons d'un coup pour tout le groupe",
     hintPerPerson: "Coche d'abord un nom, puis la boisson",
     perPersonWord: "par personne",
@@ -2109,7 +2111,7 @@ const T = {
     potShare: "dont du pot",
     potSpentWord: "d\u00e9pens\u00e9",
     potLeftLong: "encore dans le pot",
-    persPaidWord: "pay\u00e9 par les personnes",
+    persPaidWord: "pay\u00e9 par les invit\u00e9(s)",
     leaveSettleMsg: "Le r\u00e8glement est en cours — quand m\u00eame vers l'aper\u00e7u des tourn\u00e9es ? Ce que tu as d\u00e9j\u00e0 rempli reste enregistr\u00e9.",
     leaveSettleYes: "Oui, continuer",
     potShareAll: "enti\u00e8rement du pot",
@@ -2285,6 +2287,7 @@ export default function PartyTest() {
   // Personen tellen is optioneel: zolang dit uit staat toont het venster "—".
   const [persGeteld, setPersGeteld] = useState(false)
   const [perPersoon, setPerPersoon] = useState(false)
+  const [modusGekozen, setModusGekozen] = useState(false)
   // Naam van de actieve pil ter plekke aanpassen, zonder het drankjesscherm te verlaten.
   const [pilNaamId, setPilNaamId] = useState<string | null>(null)
   const [pilNaamVeld, setPilNaamVeld] = useState("")
@@ -5568,6 +5571,7 @@ export default function PartyTest() {
     setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setRepeated(false)
     // Nooit met een venster beginnen: je landt gewoon op de drankjes.
     setWalkIdx(null); setShowAssignAll(false)
+    setModusGekozen(false)
     setView("order")
     naarRondjeKop()
   }
@@ -5840,6 +5844,7 @@ export default function PartyTest() {
     setCart(orders); setCartAnon(anon)
     setCupsChecked(false); setCupsTouched(false)
     setRepeated(true)
+    setModusGekozen(true)
     setActiveCat(catsPresent[0])
     setView("order")
     naarRondjeKop()
@@ -7221,7 +7226,10 @@ export default function PartyTest() {
   // belanden alle drankjes stilzwijgend bij jou. De lijst gaat op slot tot er iemand
   // bij is — een waarschuwing alleen kun je wegtikken, dit niet. Staat hier en niet
   // in de render-functie, want zowel de strook als de lijst moeten erbij kunnen.
-  const alleenJij = !settle && perPersoon && people.length < 2
+  const alleenJij = !settle && modusGekozen && perPersoon && people.length < 2
+  // Zolang de noteerwijze niet gekozen is, ligt de lijst stil: anders tik je drankjes
+  // aan die stilzwijgend bij "voor iedereen" belanden.
+  const nogKiezen = !settle && !modusGekozen
   // Zoekveld met microfoon: bij uitgebreid opnemen ingebouwd bovenin de drankjeskaart
   // (inKaart), bij de andere modi op zijn vertrouwde plek onder de lijst.
   // De strook staat los van het zoekblok. Ze plakte namelijk vast binnen dat blok, en
@@ -7232,7 +7240,7 @@ export default function PartyTest() {
     (() => {
       const idx = people.findIndex((pp) => pp.id === voorWie)
       const ik = idx >= 0 ? people[idx] : null
-      if (!ik || settle || alleenJij) return null
+      if (!ik || settle || alleenJij || nogKiezen) return null
       const benIkHet = ik.id === meId
       // In de samen-stand tik je niet voor één iemand aan maar voor de hele groep;
       // daar stond ten onrechte "jezelf". De strook draagt dan de moduskleur in plaats
@@ -7246,7 +7254,7 @@ export default function PartyTest() {
       const kort = wie.length > 12
       return (
         <div ref={inRaster ? strookRij : undefined} style={{ ...(inRaster ? { gridColumn: "1 / -1" } : null), scrollMarginTop: 8, position: "sticky", top: 0, zIndex: 5, display: "flex", justifyContent: "center", marginBottom: 8 }}>
-          <span style={{ background: "#fff", border: `2px solid ${k}`, borderRadius: 999, padding: "8px 17px", display: "inline-flex", alignItems: "center", gap: 7, maxWidth: "100%", whiteSpace: "nowrap", color: "#1a1a1a", boxShadow: "0 3px 10px -5px rgba(29,41,66,0.5)" }}>
+          <span style={{ background: "#fff", border: `2px solid ${k}`, borderRadius: 999, padding: "8px 17px", display: "inline-flex", alignItems: "center", gap: 7, maxWidth: "100%", whiteSpace: "nowrap", color: "#1a1a1a", boxShadow: `0 0 0 5px ${k}44, 0 6px 18px -4px ${k}bb` }}>
             <span style={{ fontSize: kort ? 14 : 16, fontWeight: 700, flexShrink: 0 }}>{kort ? L.forWord : L.tapForStrip}</span>
             <b style={{ fontSize: 19, fontWeight: 800, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{wie}</b>
             <span style={{ fontSize: 18, flexShrink: 0 }}>👇</span>
@@ -8716,21 +8724,18 @@ export default function PartyTest() {
                     zinsgrootte, over de rand heen, met lucht tussen haar en de knoppen. */}
                 <div style={{ position: "relative", border: "1px solid rgba(29,41,66,0.18)", borderRadius: 11, padding: "18px 0 0", marginTop: 12, marginBottom: 9 }}>
                   <span style={{ position: "absolute", top: -11, left: 12, background: "#fff", padding: "0 7px", fontSize: 17, fontWeight: 700, color: "#1d2942", whiteSpace: "nowrap" }}>{L.howNoteQ}</span>
-                  {/* Donkerdere gleuf, lichte duim: dat is wat een baan als schuifbalk laat
-                      lezen. De baan loopt tot tegen de kaderrand en vult de onderkant ervan —
-                      dat wint twintig pixels, precies wat "voor iedereen" en het Franse
-                      "par personne" nodig hadden om niet tegen de duimrand te duwen. De
-                      poppetjes staan niet hier maar in de melding eronder, zodat de baan een
-                      rustige schakelaar blijft. */}
-                  <div style={{ display: "flex", background: "#e7ebf3", borderTop: "1px solid rgba(29,41,66,0.14)", borderRadius: "0 0 10px 10px", padding: 4 }}>
+                  {/* Twee gelijkwaardige knoppen in plaats van een baan met twee standen: een
+                      baan suggereert altijd dat er al één aan staat. Zolang je niets koos
+                      staan ze allebei kaal en blijft de drankjeslijst gedimd. */}
+                  <div style={{ display: "flex", background: "#e7ebf3", borderTop: "1px solid rgba(29,41,66,0.14)", borderRadius: "0 0 10px 10px", padding: 4, gap: 4 }}>
                     {[false, true].map((mode) => {
-                      const aan = perPersoon === mode
+                      const aan = modusGekozen && perPersoon === mode
                       return (
-                        <button key={String(mode)} onClick={() => { setPerPersoon(mode); naarRondjeKop() }}
+                        <button key={String(mode)} onClick={() => { setPerPersoon(mode); setModusGekozen(true); naarRondjeKop() }}
                           style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 999, padding: "10px 0", fontSize: 15.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                            background: aan ? "#fdf3d8" : "transparent",
-                            border: aan ? "2px solid #e0a020" : "2px solid transparent",
-                            color: aan ? "#6b5b28" : "#5c667d" }}>
+                            background: aan ? "#fdf3d8" : "#fff",
+                            border: aan ? "2px solid #e0a020" : "2px solid rgba(29,41,66,0.18)",
+                            color: aan ? "#6b5b28" : "#1d2942" }}>
                           {aan && <span style={{ fontSize: 14 }}>✓</span>}
                           {mode ? L.perPersonWord : L.tikSamenWord}
                         </button>
@@ -8738,7 +8743,12 @@ export default function PartyTest() {
                     })}
                   </div>
                 </div>
-                {alleenJij ? (
+                {!modusGekozen ? (
+                  <div style={{ display: "flex", gap: 9, alignItems: "center", marginTop: 9, background: "#fdf6e4", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "11px 12px" }}>
+                    <span style={{ fontSize: 20, flexShrink: 0 }}>{"\u{1F446}"}</span>
+                    <span style={{ fontSize: 15.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35 }}>{L.chooseFirst}</span>
+                  </div>
+                ) : alleenJij ? (
                   <div style={{ display: "flex", gap: 9, alignItems: "flex-start", marginTop: 9, background: "#fdf6e4", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "11px 12px" }}>
                     <span style={{ fontSize: 20, flexShrink: 0 }}>{"\u{1F465}"}</span>
                     <span style={{ fontSize: 15.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35 }}>{L.fromTwoOn}</span>
@@ -8937,7 +8947,7 @@ export default function PartyTest() {
                 const un = cartAnon[d.id] ?? 0
                 return (
                   <div key={d.id} onClick={() => { if (settle && !bezig) setGeenRondje(true) }}
-                    style={{ opacity: alleenJij ? 0.45 : settle && !bezig ? 0.55 : 1, pointerEvents: alleenJij ? "none" : "auto", cursor: settle && !bezig ? "pointer" : "default", padding: "10px 10px", borderRadius: 12, background: tot > 0 ? "rgba(31,138,76,0.08)" : themaNaam ? "#e9edf6" : "#eef1f6", border: tot > 0 ? "1.5px solid rgba(31,138,76,0.5)" : `1px solid ${themaNaam ? "rgba(59,72,106,0.14)" : "rgba(29,41,66,0.1)"}`, boxShadow: tot > 0 ? "0 0 0 3px rgba(31,138,76,0.1)" : "none" }}>
+                    style={{ opacity: (alleenJij || nogKiezen) ? 0.4 : settle && !bezig ? 0.55 : 1, pointerEvents: (alleenJij || nogKiezen) ? "none" : "auto", cursor: settle && !bezig ? "pointer" : "default", padding: "10px 10px", borderRadius: 12, background: tot > 0 ? "rgba(31,138,76,0.08)" : themaNaam ? "#e9edf6" : "#eef1f6", border: tot > 0 ? "1.5px solid rgba(31,138,76,0.5)" : `1px solid ${themaNaam ? "rgba(59,72,106,0.14)" : "rgba(29,41,66,0.1)"}`, boxShadow: tot > 0 ? "0 0 0 3px rgba(31,138,76,0.1)" : "none" }}>
                     <div style={{ fontSize: 17.5, fontWeight: tot > 0 ? 800 : 600, color: tot > 0 ? "#1f6b3a" : themaNaam ? "#2c3752" : "#4a5567", lineHeight: 1.25 }}>{d.emoji} {d.name}</div>
                     <div style={{ ...S.row, justifyContent: "space-between", marginTop: 7 }}>
                       <button style={{ ...S.step, opacity: tot > 0 ? 1 : 0.4 }} onClick={() => { if (settle && !bezig) { setGeenRondje(true); return } bumpDown(d.id) }}>−</button>
@@ -8948,8 +8958,8 @@ export default function PartyTest() {
                 )
               })}
               {!zoekt && (
-                <div onClick={() => { if (alleenJij) return; setShowAddDrink(true); setNdName("") }}
-                  style={{ opacity: alleenJij ? 0.45 : 1, pointerEvents: alleenJij ? "none" : "auto", padding: "10px", borderRadius: 12, background: "#fff", border: `1.5px dashed ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.6)" : "rgba(224,138,0,0.75)"}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", cursor: "pointer", color: themaNaam ? "#2c3752" : "#4a5567" }}>
+                <div onClick={() => { if (alleenJij || nogKiezen) return; setShowAddDrink(true); setNdName("") }}
+                  style={{ opacity: (alleenJij || nogKiezen) ? 0.4 : 1, pointerEvents: (alleenJij || nogKiezen) ? "none" : "auto", padding: "10px", borderRadius: 12, background: "#fff", border: `1.5px dashed ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.6)" : "rgba(224,138,0,0.75)"}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", cursor: "pointer", color: themaNaam ? "#2c3752" : "#4a5567" }}>
                   <div style={{ width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, background: settle ? MODUS_FAIR.vlak : themaNaam ? MODUS_NAAM.vlak : "#fdf3d8", border: `1.5px solid ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.6)" : "rgba(224,138,0,0.6)"}`, color: settle ? MODUS_FAIR.rand : themaNaam ? "#3b486a" : "#8a5e0f" }}>＋</div>
                   <div style={{ fontSize: 16.5, fontWeight: 600, lineHeight: 1.25, marginTop: 6 }}>{L.newDrinkTile}</div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "#8b93a3", marginTop: 3 }}>{L.notOnList}</div>
@@ -10319,7 +10329,7 @@ export default function PartyTest() {
                     )
                     return (
                       <div style={{ background: "#fffaeb", border: "2px solid rgba(240,165,0,0.65)", borderRadius: 12, padding: "11px 12px", marginTop: 11 }}>
-                        <span style={{ display: "inline-block", fontSize: 13, fontWeight: 800, letterSpacing: "0.05em", background: "rgba(240,165,0,0.25)", color: "#8a5e0f", borderRadius: 20, padding: "7px 14px" }}>{L.nogNodigBadge} — {L.stillToFill}</span>
+                        <span style={{ display: "inline-block", fontSize: 13, fontWeight: 800, letterSpacing: "0.05em", background: "rgba(240,165,0,0.25)", color: "#8a5e0f", borderRadius: 20, padding: "7px 14px" }}>{L.stillToFill}</span>
                         {nogToe > 0 && regel(L.notAssignedYet(nogToe), L.openWord, () => { setAssignAllMode(false); setAssignIdx(rounds.findIndex((x) => x.id === r.id)) })}
                         {geenBedrag && regel(L.noAmountShort, L.fillWord, () => { startEditRound(r); setBedragFocus(true) })}
                       </div>
