@@ -2365,6 +2365,9 @@ export default function RundoTable() {
   // scan-link of een lopende sessie binnenkomt, duikt meteen de app in.
   const [welkom, setWelkom] = useState(true)
   const [partyInfo, setPartyInfo] = useState(false)
+  // Tot de URL gelezen is weten we niet of het welkomscherm mag; zolang tonen we een leeg
+  // vlak in plaats van het scherm alvast te tekenen en meteen weer weg te halen.
+  const [herkomstGelezen, setHerkomstGelezen] = useState(false)
   useEffect(() => {
     try {
       const via = new URLSearchParams(window.location.search).get("via") === "kiezer"
@@ -2377,6 +2380,7 @@ export default function RundoTable() {
       // voorgoed verdwijnen, ook voor wie later een QR op een menukaart scant.
       if (via) setWelkom(false)
     } catch { /* niets */ }
+    setHerkomstGelezen(true)
   }, [])
   const goToChooser = () => {
     if (typeof window === "undefined") return
@@ -3712,6 +3716,10 @@ export default function RundoTable() {
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER: start
   // ═══════════════════════════════════════════════════════════════════════════
+  if (!group && !herkomstGelezen && !viaLink) {
+    return <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)" }} />
+  }
+
   if (!group && welkom && !viaLink) {
     return (
       <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 18px", boxSizing: "border-box" }}>
