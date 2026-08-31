@@ -1382,8 +1382,6 @@ const T = {
     fairAddPerson: "+ Persoon toevoegen",
     fairSetupDone: "Naar drankjes toewijzen →",
     roundsOverviewTitle: "🧾 Rondjesoverzicht",
-    sharedBy: (n: number) => `gedeeld door ${n}`,
-    sharedByWord: "gedeeld door",
     payersSumOf: (a: string, b: string) => `Samen ${a} van ${b} — dat klopt nog niet`,
     addDrinkBtn: "+ drankje toevoegen",
     addDrinkPick: "Welk drankje erbij?",
@@ -2230,8 +2228,6 @@ const T = {
     fairAddPerson: "+ Ajouter une personne",
     fairSetupDone: "Vers l'attribution des boissons →",
     roundsOverviewTitle: "🧾 Aper\u00e7u des tourn\u00e9es",
-    sharedBy: (n: number) => `partag\u00e9 par ${n}`,
-    sharedByWord: "partag\u00e9 par",
     payersSumOf: (a: string, b: string) => `Ensemble ${a} sur ${b} \u2014 \u00e7a ne colle pas`,
     addDrinkBtn: "+ ajouter une boisson",
     addDrinkPick: "Quelle boisson\u00a0?",
@@ -9885,11 +9881,10 @@ export default function PartyTest() {
                   })}
 
                   {/* Wie betaalde staat vast in beeld: dat hoort bij het rondje zelf en
-                      niet achter een tussenmenu. Rechts hoeveel mensen het deelden. */}
+                      niet achter een tussenmenu. */}
                   <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(29,41,66,0.12)" }}>
-                    <div style={{ ...S.row, justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
+                    <div style={{ ...S.row, alignItems: "center", marginBottom: 8 }}>
                       <span style={{ minWidth: 0, fontSize: 14.5, color: "#4a5567", fontWeight: 700 }}>{L.whoPutMoney} <span style={{ color: "#8b93a3", fontWeight: 600 }}>{L.multiplePossible}</span></span>
-                      <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#6b7484", whiteSpace: "nowrap" }}>👤 {L.sharedBy(Math.max(1, r.headcount || 1))}</span>
                     </div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         <span onClick={() => rTogglePot(idx)}
