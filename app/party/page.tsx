@@ -688,8 +688,6 @@ const T = {
     fromPotQ: "Kwam er iets uit de pot?",
     noSelfPaid: "nee, zelf betaald",
     yesFromPot: "ja, uit de pot",
-    selfPaidShort: "zelf betaald",
-    fromPotShort: "uit de pot",
     fromPotLabel: "Uit de pot",
     notFromPotLabel: "Niet uit de pot",
     wholeRoundFromPot: "Het hele rondje gaat uit de pot.",
@@ -950,7 +948,6 @@ const T = {
     howMuchYou: "💰 Hoeveel betaalde je zelf voor dit rondje?",
     howMuchPot: "💰 Hoeveel betaalde je uit de pot voor dit rondje?",
     potEmptyPay: (kaart: boolean) => `De ${kaart ? "drankkaart" : "pot"} is leeg — leg eerst iets in of kies "Jij".`,
-    amountAndPayer: "bedrag & betaler",
     whoPaid: "Kies wie betaalde.",
     multiplePossible: "(meerdere mogelijk)",
     fillAmountFirst: "Vul eerst het betaalde bedrag in — daarna kies je wie betaalde.",
@@ -1248,7 +1245,6 @@ const T = {
     potTopUp: "Pot aanvullen",
     potEmptyFillFirst: "De pot is leeg — vul eerst bij om hieruit te betalen.",
     editRoundHead: (n: number) => `Rondje ${n} aanpassen`,
-    paidWithQ: "Waarmee betaald?",
     paidNote: (v: string) => `Betaald ${v}`,
     noAmountNote: "Geen bedrag ingevuld",
     noPotUsed: "geen pot gebruikt",
@@ -1276,8 +1272,6 @@ const T = {
     mixPotAvail: (b: string) => `${b} beschikbaar`,
     mixPotShort: (b: string) => `maar ${b} in de pot`,
     potShortTitle: "Niet genoeg in de pot",
-    potShortSimple: (inPot: string, kost: string) => `Nog ${inPot} in de pot, dit rondje kost ${kost}.`,
-    tryPartHint: "Kies \u201ceen deel\u201d om de rest zelf te betalen.",
     potWord: "pot",
     skipPayment: "Betaling overslaan",
     skipWord: "Overslaan",
@@ -1387,7 +1381,6 @@ const T = {
     fairAddPerson: "+ Persoon toevoegen",
     fairSetupDone: "Naar drankjes toewijzen →",
     roundsOverviewTitle: "🧾 Rondjesoverzicht",
-    peopleInRound: "personen in dit rondje",
     sharedBy: (n: number) => `gedeeld door ${n}`,
     sharedByWord: "gedeeld door",
     payersSumOf: (a: string, b: string) => `Samen ${a} van ${b} — dat klopt nog niet`,
@@ -1542,8 +1535,6 @@ const T = {
     fromPotQ: "Une partie vient de la cagnotte\u00a0?",
     noSelfPaid: "non, pay\u00e9 soi-m\u00eame",
     yesFromPot: "oui, de la cagnotte",
-    selfPaidShort: "pay\u00e9 soi-m\u00eame",
-    fromPotShort: "de la cagnotte",
     fromPotLabel: "De la cagnotte",
     notFromPotLabel: "Hors cagnotte",
     wholeRoundFromPot: "Toute la tourn\u00e9e sort de la cagnotte.",
@@ -1804,7 +1795,6 @@ const T = {
     howMuchYou: "💰 Combien as-tu payé toi-même pour cette tournée ?",
     howMuchPot: "💰 Combien as-tu payé avec la cagnotte ?",
     potEmptyPay: (kaart: boolean) => `${kaart ? "La carte" : "La cagnotte"} est vide — remplis-la d’abord ou choisis « Toi ».`,
-    amountAndPayer: "montant & payeur",
     whoPaid: "Choisis qui a payé.",
     multiplePossible: "(plusieurs possibles)",
     fillAmountFirst: "Entre d'abord le montant payé — ensuite tu choisis qui a payé.",
@@ -2103,7 +2093,6 @@ const T = {
     potTopUp: "Compl\u00e9ter la cagnotte",
     potEmptyFillFirst: "La cagnotte est vide \u2014 compl\u00e8te-la d\u2019abord pour payer avec.",
     editRoundHead: (n: number) => `Modifier la tourn\u00e9e ${n}`,
-    paidWithQ: "Pay\u00e9 avec quoi ?",
     paidNote: (v: string) => `Pay\u00e9 ${v}`,
     noAmountNote: "Aucun montant indiqu\u00e9",
     noPotUsed: "sans cagnotte",
@@ -2131,8 +2120,6 @@ const T = {
     mixPotShort: (b: string) => `mais ${b} dans le pot`,
     paidPot: "Avec cagnotte",
     potShortTitle: "Pas assez dans la cagnotte",
-    potShortSimple: (inPot: string, kost: string) => `Il reste ${inPot} dans la cagnotte, cette tourn\u00e9e co\u00fbte ${kost}.`,
-    tryPartHint: "Choisis \u00ab une partie \u00bb pour payer le reste toi-m\u00eame.",
     potWord: "cagnotte",
     skipPayment: "Passer le paiement",
     skipWord: "Passer",
@@ -2241,7 +2228,6 @@ const T = {
     fairAddPerson: "+ Ajouter une personne",
     fairSetupDone: "Vers l'attribution des boissons →",
     roundsOverviewTitle: "🧾 Aper\u00e7u des tourn\u00e9es",
-    peopleInRound: "personnes dans cette tourn\u00e9e",
     sharedBy: (n: number) => `partag\u00e9 par ${n}`,
     sharedByWord: "partag\u00e9 par",
     payersSumOf: (a: string, b: string) => `Ensemble ${a} sur ${b} \u2014 \u00e7a ne colle pas`,
@@ -9774,18 +9760,37 @@ export default function PartyTest() {
           return (
             <div key={idx} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
               <div style={{ cursor: "pointer", padding: 14 }} onClick={() => { if (allRoundsOpen) { setAllRoundsOpen(false); setOpenRound(idx) } else { setOpenRound(open ? null : idx) } setEditOpen(false); setEditCups(false); setEditPay(false) }}>
-                <div style={{ ...S.row, justifyContent: "space-between" }}>
-                  <span style={{ fontSize: 19, fontWeight: 800 }}>{L.roundWord} {idx + 1} <span style={{ fontSize: 15.5, fontWeight: 600, color: "#6b7484" }}>· {L.drinksCount(items)} · {euro(r.amount)}</span>{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c", marginLeft: 6 }}>{L.assigned}</span>}</span>
-                  {opNaam === true ? (
-                    <span style={{ flexShrink: 0, fontSize: 20, fontWeight: 800, color: "#8a5e0f", lineHeight: 1 }}>{open ? "▲" : "▼"}</span>
-                  ) : (
-                  <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 8, fontSize: 15.5, fontWeight: 800,
-                    background: open ? (settle ? MODUS_FAIR.tint : "rgba(240,165,0,0.15)") : "transparent",
-                    border: `1.5px solid ${settle ? MODUS_FAIR.lijnZacht : "rgba(240,165,0,0.4)"}`,
-                    color: settle ? MODUS_FAIR.tekst : "#8a5e0f" }}>{open ? "▴" : "▾"}</span>
-                  )}
+                <div style={{ ...S.row, justifyContent: "space-between", gap: 8 }}>
+                  {/* Zelfde kop als in het rondjesoverzicht: nummer plus statuspillen links,
+                      bedrag en pijl rechts. Het aantal drankjes zakt naar de regel eronder. */}
+                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, minWidth: 0 }}>
+                    <span style={{ fontSize: 19, fontWeight: 800, whiteSpace: "nowrap" }}>{L.roundWord} {idx + 1}</span>
+                    {(() => {
+                      const nogToe = drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0)
+                      const zonderBedrag = (r.amount || 0) <= 0.005
+                      const pil = (tekst: string, kleur: string, vlak: string) => (
+                        <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, borderRadius: 12, padding: "3px 9px", whiteSpace: "nowrap", color: kleur, background: vlak }}>{tekst}</span>
+                      )
+                      if (nogToe === 0 && !zonderBedrag) return pil(L.completePill, "#1f8a4c", "rgba(31,138,76,0.12)")
+                      return (<>
+                        {nogToe > 0 && pil(L.noNamePill(nogToe), "#b0402f", "rgba(224,104,92,0.14)")}
+                        {zonderBedrag && pil(L.noAmountPill, "#8a5e0f", "rgba(240,165,0,0.16)")}
+                      </>)
+                    })()}
+                  </div>
+                  <div style={{ ...S.row, gap: 9, flexShrink: 0 }}>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: (r.amount || 0) > 0 ? "#c98a00" : "#a7b0bf" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "€ —"}</span>
+                    {opNaam === true ? (
+                      <span style={{ flexShrink: 0, fontSize: 20, fontWeight: 800, color: "#8a5e0f", lineHeight: 1 }}>{open ? "▲" : "▼"}</span>
+                    ) : (
+                    <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 8, fontSize: 15.5, fontWeight: 800,
+                      background: open ? (settle ? MODUS_FAIR.tint : "rgba(240,165,0,0.15)") : "transparent",
+                      border: `1.5px solid ${settle ? MODUS_FAIR.lijnZacht : "rgba(240,165,0,0.4)"}`,
+                      color: settle ? MODUS_FAIR.tekst : "#8a5e0f" }}>{open ? "▴" : "▾"}</span>
+                    )}
+                  </div>
                 </div>
-                <div style={{ fontSize: 15.5, fontWeight: 700, color: "#1f8a4c", marginTop: 3 }}>✓ betaald: {paidLabel(r)}</div>
+                <div style={{ fontSize: 15.5, fontWeight: 600, color: "#6b7484", marginTop: 4 }}>{L.drinksCount(items)} <span style={{ color: "#1f8a4c", fontWeight: 700 }}>· ✓ betaald: {paidLabel(r)}</span></div>
               </div>
               {(() => {
                 const un = drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0)
@@ -10259,9 +10264,8 @@ export default function PartyTest() {
             const open = isOpen(r)
             const geenBedrag = (r.amount || 0) <= 0.005
             const invulRij = fillMode && geenBedrag && editRoundId !== r.id
-            const nogOpen = geenBedrag || Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0) > 0
             return (
-              <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden", ...(!settle && nogOpen && editRoundId !== r.id && !invulRij ? { border: "1.5px solid rgba(200,138,0,0.7)" } : {}), ...(editRoundId === r.id ? { boxShadow: "inset 0 0 0 2px rgba(240,165,0,0.55)", background: "#fffdf3" } : invulRij ? { border: "2px solid rgba(224,104,92,0.65)", background: "rgba(224,104,92,0.05)" } : {}) }}>
+              <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden", ...(editRoundId === r.id ? { boxShadow: "inset 0 0 0 2px rgba(240,165,0,0.55)", background: "#fffdf3" } : invulRij ? { border: "2px solid rgba(224,104,92,0.65)", background: "rgba(224,104,92,0.05)" } : {}) }}>
                 <div onClick={() => toggle(r.id)} style={{ padding: "12px 14px", cursor: "pointer", background: editRoundId === r.id ? "rgba(240,165,0,0.1)" : open ? "rgba(240,165,0,0.06)" : invulRij ? "rgba(224,104,92,0.07)" : "#fff" }}>
                   <div style={{ ...S.row, justifyContent: "space-between", gap: 8 }}>
                     <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, minWidth: 0 }}>
