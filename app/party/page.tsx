@@ -8830,12 +8830,19 @@ export default function PartyTest() {
                     </div>
                   </>
                 ) : alleenJij ? (
-                  <div style={{ display: "flex", gap: 9, alignItems: "center", justifyContent: "center", marginTop: 9, background: "#fdf6e4", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "11px 12px" }}>
+                  <div style={{ position: "relative", display: "flex", gap: 9, alignItems: "center", justifyContent: "center", marginTop: 11, background: "#fdf6e4", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "11px 12px" }}>
+                    {/* Tandje op driekwart: deze balk verschijnt alleen bij "per persoon",
+                        dus hij wijst altijd naar de rechterknop. */}
+                    <span style={{ position: "absolute", top: -8, left: "75%", width: 14, height: 14, transform: "translateX(-50%) rotate(45deg)", background: "#fdf6e4", borderLeft: "1.5px solid rgba(224,138,0,0.6)", borderTop: "1.5px solid rgba(224,138,0,0.6)" }} />
                     <span style={{ fontSize: 20, flexShrink: 0 }}>{"\u{1F465}"}</span>
                     <span style={{ fontSize: 15.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35, textAlign: "center" }}>{L.fromTwoOn}</span>
                   </div>
                 ) : (
-                <div ref={hintBlok} style={{ scrollMarginTop: 8, display: "flex", gap: 10, alignItems: "center", justifyContent: "center", marginTop: 9, background: "#eef1f6", borderRadius: 12, padding: "11px 13px" }}>
+                <div ref={hintBlok} style={{ position: "relative", scrollMarginTop: 8, display: "flex", gap: 10, alignItems: "center", justifyContent: "center", marginTop: 11, background: "#eef1f6", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "11px 13px" }}>
+                  {/* De grijze vulling blijft, de amberen rand en het tandje maken duidelijk
+                      dat deze regel bij de zojuist gekozen knop hoort. Links of rechts naar
+                      gelang de keuze; een amberen vúlling zou botsen met de knop erboven. */}
+                  <span style={{ position: "absolute", top: -8, left: perPersoon ? "75%" : "25%", width: 14, height: 14, transform: "translateX(-50%) rotate(45deg)", background: "#eef1f6", borderLeft: "1.5px solid rgba(224,138,0,0.6)", borderTop: "1.5px solid rgba(224,138,0,0.6)" }} />
                   {/* Eén poppetje tegenover meerdere: hetzelfde onderscheid als de knop
                       erboven. Er stond hier een vingertje bij per persoon, en dat is een
                       ander soort teken — een aanwijzing in plaats van een wie. */}
