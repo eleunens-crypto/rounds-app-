@@ -457,8 +457,10 @@ export default function Home() {
             uitgelijnd met 34px inspringing: gecentreerd kwam de merknaam vlak onder de
             taalpil rechtsboven te zitten, en die twee vechten dan om dezelfde hoek. De
             inspringing houdt het logo van de rand af en lijnt het ongeveer uit met de
-            tekst binnen de kaarten, die ook padding hebben. */}
-        <div style={{ textAlign: "left", marginTop: 2, marginBottom: 24, paddingLeft: 34 }}>
+            tekst binnen de kaarten, die ook padding hebben. De negatieve bovenmarge trekt
+            de kop op tot naast de taalpil: die staat rechts, het logo links, dus ze zitten
+            elkaar niet in de weg en we winnen de hele hoogte van die rij. */}
+        <div style={{ textAlign: "left", marginTop: -20, marginBottom: 24, paddingLeft: 34 }}>
           <span style={{ display: "inline-block", marginBottom: 8 }}><RundoLogo size={80} /></span>
           <p style={{ color: "#f0c14b", fontSize: 17, fontWeight: 600, margin: 0 }}>
             {t.tagline}
