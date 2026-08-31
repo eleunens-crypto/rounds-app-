@@ -2544,6 +2544,10 @@ export default function PartyTest() {
   // Welk afgerond rondje staat in bewerkmodus? Buiten die modus is het overzicht
   // gewoon leesbaar, zodat je niets per ongeluk verandert.
   const [editRoundId, setEditRoundId] = useState<string | null>(null)
+  // Vul je de pot bij terwijl een rondje openstaat om te bewerken, dan hoort dat
+  // rondje daarna uit de pot betaald te zijn. De pot komt pas binnen na loadParty,
+  // dus we onthouden hier wélk rondje het was en handelen het af zodra er geld is.
+  const [potVulVoorRonde, setPotVulVoorRonde] = useState<string | null>(null)
   // Wijzigingen houden we eerst hier bij; pas op "Opslaan" gaan ze naar de rekening.
   // bron "mix" = deels zelf, deels uit de pot — potAmt is dan het potdeel; bij "pot"
   // volgt het potdeel gewoon het volledige bedrag, bij "self" is het nul.
@@ -3660,6 +3664,17 @@ export default function PartyTest() {
 
   const rPaidSum = (r: Round) => (r.potPart || 0) + Object.values(r.payers || {}).reduce((a, b) => a + (b || 0), 0)
   const rTogglePayer = (idx: number, pid: string) => { setRounds((rs) => rs.map((r, i) => { if (i !== idx) return r; const cur = Object.keys(r.payers || {}); const persons = cur.includes(pid) ? cur.filter((x) => x !== pid) : [...cur, pid]; const usePot = (r.potPart || 0) > 0; return rRedistribute(r, idx, usePot, persons, r.amount, usePot ? (r.potPart || 0) : undefined) })); setDirtyRound(idx) }
+  // Één poging zodra de bijgevulde pot binnen is: heeft het rondje nog geen potdeel
+  // en zit er nu geld in, dan zetten we de potpil aan. De vlag gaat daarna hoe dan
+  // ook uit, ook als rTogglePot niets kon doen — anders blijft dit rondzingen.
+  useEffect(() => {
+    if (!potVulVoorRonde) return
+    const idx = rounds.findIndex((r) => r.id === potVulVoorRonde)
+    if (idx < 0 || (rounds[idx].potPart || 0) > 0.005) { setPotVulVoorRonde(null); return }
+    if (potAvailFor(idx) <= 0.005) return
+    rTogglePot(idx)
+    setPotVulVoorRonde(null)
+  }, [potVulVoorRonde, rounds, potContribTotal, potSpent])
 
   // ── afgeleide bekers (uit rounds) ───────────────────────────────────────────
   const roundPicked = (r: Round, pid: string) => drinks.reduce((a, d) => a + (d.cup ? (r.orders[d.id]?.[pid] ?? 0) : 0), 0)
@@ -4487,7 +4502,7 @@ export default function PartyTest() {
       : { pot: totaal }
     const { error } = await supabase.rpc("party_add_pot", { p_group: groupId, p_amounts: bedragen, p_is_card: potIsCard, p_payers: cardPayers })
     if (error) { meldPot("Inleg opslaan mislukt: " + error.message); return }
-    setEditDraft((c) => (c && c.bron === "self") ? { ...c, bron: "pot", potAmt: c.amount } : c)
+    if (editRoundId) setPotVulVoorRonde(editRoundId)
     setPotDraft({}); setPotPerMan(0); setEveryoneChoice(null); setEveryoneDraft("")
     setPotBuilderOpen(false)
     setPotJustAdded(true)
@@ -4499,7 +4514,7 @@ export default function PartyTest() {
       supabase.rpc("party_add_pot", { p_group: groupId, p_amounts: potDraft, p_is_card: potIsCard, p_payers: cardPayers })
         .then(({ error }) => { if (error) meldPot("Inleg opslaan mislukt: " + error.message); else loadParty(groupId) })
     }
-    if (added > 0) setEditDraft((c) => (c && c.bron === "self") ? { ...c, bron: "pot", potAmt: c.amount } : c)
+    if (added > 0) if (editRoundId) setPotVulVoorRonde(editRoundId)
     setPotDraft({}); setEveryoneChoice(null); setEveryoneDraft(""); setEditPotId(null); setPotBuilderOpen(false); setShowPot(false)
     if (onbPotActive) {
       setOnbPotActive(false)
