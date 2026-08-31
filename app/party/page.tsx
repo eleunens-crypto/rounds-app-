@@ -10408,8 +10408,10 @@ export default function PartyTest() {
                             // Meer dan drie namen duwt het aantal rechts van de kaart af.
                             const wie = alleWie.slice(0, 3)
                             const meer = alleWie.length - wie.length
-                            const anon2 = r.anon?.[d.id] ?? 0
-                            return (wie.length > 0 || anon2 > 0) ? <span style={{ fontSize: 15, fontWeight: 700, color: "#8a5e0f" }}> → {wie.map((p, i2) => { const q = r.orders[d.id][p.id]; return <span key={p.id}>{i2 > 0 ? ", " : ""}{p.id === meId && <span style={{ display: "inline-flex", verticalAlign: "middle", marginRight: 3 }}><KroonIcoon size={12} kleur="#8a5e0f" gevuld /></span>}{p.name}{q > 1 ? ` (${q})` : ""}</span> })}{meer > 0 && <span> +{meer}</span>}{anon2 > 0 && <span style={{ color: "#b0402f" }}>{wie.length > 0 ? " · " : ""}{anon2}× ?</span>}</span> : null
+                            // Het rode "1× ?" stond hier vroeger achter: dat herhaalde alleen
+                            // wat het amberen kader onderaan al optelt, en op een rij van vier
+                            // drankjes las het als vier losse alarmen in plaats van één taak.
+                            return wie.length > 0 ? <span style={{ fontSize: 15, fontWeight: 700, color: "#8a5e0f" }}> → {wie.map((p, i2) => { const q = r.orders[d.id][p.id]; return <span key={p.id}>{i2 > 0 ? ", " : ""}{p.id === meId && <span style={{ display: "inline-flex", verticalAlign: "middle", marginRight: 3 }}><KroonIcoon size={12} kleur="#8a5e0f" gevuld /></span>}{p.name}{q > 1 ? ` (${q})` : ""}</span> })}{meer > 0 && <span> +{meer}</span>}</span> : null
                           })()}</span>
                           {bewerk ? (
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
@@ -10437,7 +10439,9 @@ export default function PartyTest() {
                       {!bewerk ? (
                         <div style={{ textAlign: "right", marginTop: 9 }}>
                           <span onClick={(e) => { e.stopPropagation(); startEditRound(r) }}
-                            style={{ fontSize: 14.5, fontWeight: 500, color: "#c98a00", textDecoration: "underline", cursor: "pointer" }}>✏️ {L.adjustLower}</span>
+                            // Geen onderlijning: die las te hard naast het potlood. De amberen kleur en het
+                            // icoon dragen de klikbaarheid, het zwaardere gewicht maakt het aanwijsbaar.
+                            style={{ fontSize: 14.5, fontWeight: 800, color: "#c98a00", cursor: "pointer" }}>✏️ {L.adjustLower}</span>
                         </div>
                       ) : (
                         // Een drankje vergeten bij het opnemen? Dan moet je het hier kunnen
@@ -10517,23 +10521,15 @@ export default function PartyTest() {
                           </div>
                         )}
                       </>)}
-                      {/* Betalerspillen: altijd zichtbaar zodra het rondje openstaat, niet alleen
-                          in de bewerkstand. Rechts staat met hoeveel je het rondje deelde — dat
-                          verving de losse regel "personen in dit rondje". */}
-                      <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 11, marginBottom: 8 }}>
+                      {/* Pas tonen als er een bedrag is. Zonder bedrag wist rRedistribute de
+                          keuze meteen weer — dan staat hier een rij knoppen die er klikbaar
+                          uitziet en niets doet. In de bewerkstand kijken we naar het getypte
+                          bedrag, zodat de pillen verschijnen zodra je het eerste cijfer zet.
+                          Rechts stond hier "gedeeld door X"; dat getal wordt pas bij het
+                          afsluiten berekend en stuurt bij opnemen op naam niets. */}
+                      {(bewerk && dr ? dr.amount > 0.005 : (r.amount || 0) > 0.005) && (<>
+                      <div style={{ ...S.row, alignItems: "center", marginTop: 11, marginBottom: 8 }}>
                         <span style={{ minWidth: 0, fontSize: 14.5, color: "#4a5567", fontWeight: 700 }}>{L.whoPutMoney} <span style={{ color: "#8b93a3", fontWeight: 600 }}>{L.multiplePossible}</span></span>
-                        {opNaam !== true && bewerk && dr ? (
-                          <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7 }}>
-                            <span style={{ fontSize: 13.5, fontWeight: 700, color: "#6b7484", whiteSpace: "nowrap" }}>👤 {L.sharedByWord}</span>
-                            <button style={{ width: 28, height: 28, borderRadius: 8, background: "#eef1f6", border: "1px solid rgba(29,41,66,0.2)", fontSize: 17, color: "#6b7484", fontWeight: 800, cursor: "pointer", opacity: dr.headcount > 1 ? 1 : 0.4 }}
-                              onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: Math.max(1, c.headcount - 1) } : c) }}>−</button>
-                            <span style={{ fontSize: 18, fontWeight: 800, minWidth: 18, textAlign: "center", color: "#1d2942" }}>{dr.headcount}</span>
-                            <button style={{ width: 28, height: 28, borderRadius: 8, background: AAN, border: "none", fontSize: 17, color: "#fff", fontWeight: 800, cursor: "pointer" }}
-                              onClick={(e) => { e.stopPropagation(); setEditDraft((c) => c ? { ...c, headcount: c.headcount + 1 } : c) }}>+</button>
-                          </span>
-                        ) : (
-                          <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: "#6b7484", whiteSpace: "nowrap" }}>👤 {L.sharedBy(Math.max(1, (bewerk && dr ? dr.headcount : r.headcount) || 1))}</span>
-                        )}
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         <span onClick={(e) => {
@@ -10576,6 +10572,7 @@ export default function PartyTest() {
                         if (Math.abs(diff) <= 0.005) return nPay > 1 ? <div style={{ fontSize: 13, color: "#6b7484", marginTop: 7 }}>{L.splitEvenNote}</div> : null
                         return <div style={{ fontSize: 13.5, fontWeight: 700, color: "#c0554a", marginTop: 7 }}>{L.payersSumOf(euro(sum), euro(r.amount || 0))}</div>
                       })()}
+                      </>)}
                     </div>
 
 
