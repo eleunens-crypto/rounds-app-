@@ -758,7 +758,7 @@ const T = {
     youTag: "jij",
     yourselfWord: "jezelf",
     everyoneWord: "iedereen",
-    fromTwoOn: "Beschikbaar vanaf 2 personen \u2014 voeg er hieronder \u00e9\u00e9n toe.",
+    fromTwoOn: "Vanaf 2 personen en meer. Voeg hieronder personen toe!",
     forWord: "Voor",
     aloneHint: "Voorlopig alleen jij",
     canAlsoLater: "Kan ook later",
@@ -1606,7 +1606,7 @@ const T = {
     youTag: "toi",
     yourselfWord: "toi-m\u00eame",
     everyoneWord: "tout le monde",
-    fromTwoOn: "Disponible \u00e0 partir de 2 personnes \u2014 ajoutes-en une ci-dessous.",
+    fromTwoOn: "\u00c0 partir de 2 personnes. Ajoute des personnes ci-dessous\u00a0!",
     forWord: "Pour",
     aloneHint: "Pour l'instant, juste toi",
     canAlsoLater: "Ça peut attendre",
@@ -8830,17 +8830,17 @@ export default function PartyTest() {
                     </div>
                   </>
                 ) : alleenJij ? (
-                  <div style={{ display: "flex", gap: 9, alignItems: "flex-start", marginTop: 9, background: "#fdf6e4", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "11px 12px" }}>
+                  <div style={{ display: "flex", gap: 9, alignItems: "center", justifyContent: "center", marginTop: 9, background: "#fdf6e4", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "11px 12px" }}>
                     <span style={{ fontSize: 20, flexShrink: 0 }}>{"\u{1F465}"}</span>
-                    <span style={{ fontSize: 15.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35 }}>{L.fromTwoOn}</span>
+                    <span style={{ fontSize: 15.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35, textAlign: "center" }}>{L.fromTwoOn}</span>
                   </div>
                 ) : (
-                <div ref={hintBlok} style={{ scrollMarginTop: 8, display: "flex", gap: 10, alignItems: "center", marginTop: 9, background: "#eef1f6", borderRadius: 12, padding: "11px 13px" }}>
+                <div ref={hintBlok} style={{ scrollMarginTop: 8, display: "flex", gap: 10, alignItems: "center", justifyContent: "center", marginTop: 9, background: "#eef1f6", borderRadius: 12, padding: "11px 13px" }}>
                   {/* Eén poppetje tegenover meerdere: hetzelfde onderscheid als de knop
                       erboven. Er stond hier een vingertje bij per persoon, en dat is een
                       ander soort teken — een aanwijzing in plaats van een wie. */}
                   <span style={{ fontSize: 21, flexShrink: 0 }}>{perPersoon ? "\u{1F464}" : "\u{1F465}"}</span>
-                  <span style={{ fontSize: 16.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35 }}>{perPersoon ? L.hintPerPerson : L.hintTogether}</span>
+                  <span style={{ fontSize: 16.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35, textAlign: "center" }}>{perPersoon ? L.hintPerPerson : L.hintTogether}</span>
                 </div>
                 )}
 
