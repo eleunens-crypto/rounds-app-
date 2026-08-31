@@ -2625,6 +2625,17 @@ export default function PartyTest() {
   // Welkomscherm met de Party-kaart: alleen bij een verse start, vóór de keuze
   // tussen zelf noteren en QR.
   const [welkom, setWelkom] = useState(true)
+  // Kom je van de kiezer, dan heb je die drie stappen daar net in de kaart gelezen en is
+  // dit welkomscherm dubbelop: dan meteen door naar de keuze zelf opnemen of QR. Wie via
+  // een QR of een rechtstreekse link binnenkomt heeft geen via-parameter en krijgt de
+  // uitleg wel. Bewust uit de URL en niet uit localStorage: die vlag wordt nooit gewist,
+  // en een welkomscherm dat voorgoed verdwijnt na één bezoek via de kiezer is erger dan
+  // een welkomscherm te veel.
+  useEffect(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get("via") === "kiezer") setWelkom(false)
+    } catch { /* niets */ }
+  }, [])
   // De uitleg staat los van de keuze: lezen zonder te kiezen, kiezen zonder te lezen.
   // Eén tegelijk open, anders wordt het keuzescherm meteen twee schermen lang.
   const [fromOnboarding, setFromOnboarding] = useState(false)
