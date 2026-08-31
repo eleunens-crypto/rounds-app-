@@ -2365,7 +2365,19 @@ export default function RundoTable() {
   // scan-link of een lopende sessie binnenkomt, duikt meteen de app in.
   const [welkom, setWelkom] = useState(true)
   const [partyInfo, setPartyInfo] = useState(false)
-  useEffect(() => { try { setViaKiezer(localStorage.getItem("rundo_via_kiezer") === "1") } catch { /* niets */ } }, [])
+  useEffect(() => {
+    try {
+      const via = new URLSearchParams(window.location.search).get("via") === "kiezer"
+      // De terugkeerlink mag op de onthouden vlag blijven varen: staat die verkeerd, dan
+      // wijst hoogstens één link de verkeerde kant op.
+      setViaKiezer(via || localStorage.getItem("rundo_via_kiezer") === "1")
+      // Het welkomscherm daarentegen hángt af van deze bezoekbeurt: de vier stappen die
+      // het toont, las je zonet al in de kaart van de kiezer. Daarom de URL en niet de
+      // vlag — die wordt nooit gewist, en dan zou dit scherm na één bezoek via de kiezer
+      // voorgoed verdwijnen, ook voor wie later een QR op een menukaart scant.
+      if (via) setWelkom(false)
+    } catch { /* niets */ }
+  }, [])
   const goToChooser = () => {
     if (typeof window === "undefined") return
     try { sessionStorage.removeItem("rundo_table_session") } catch { /* ignore */ }
