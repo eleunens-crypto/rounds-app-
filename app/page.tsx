@@ -447,14 +447,18 @@ export default function Home() {
 
   return (
     <div style={S.page}>
-      <div style={{ maxWidth: 360, margin: "0 auto", padding: "30px 0 40px" }}>
+      <div style={{ maxWidth: 360, margin: "0 auto", padding: "8px 0 28px" }}>
         {/* Taalkeuze rechtsboven */}
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
           <LanguageToggle />
         </div>
 
-        {/* Kop: algemeen Rundo-logo (symbool + naam in één), ondertitel eronder */}
-        <div style={{ textAlign: "center", marginTop: 4, marginBottom: 30 }}>
+        {/* Kop: algemeen Rundo-logo (symbool + naam in één), ondertitel eronder. Links
+            uitgelijnd met 34px inspringing: gecentreerd kwam de merknaam vlak onder de
+            taalpil rechtsboven te zitten, en die twee vechten dan om dezelfde hoek. De
+            inspringing houdt het logo van de rand af en lijnt het ongeveer uit met de
+            tekst binnen de kaarten, die ook padding hebben. */}
+        <div style={{ textAlign: "left", marginTop: 4, marginBottom: 13, paddingLeft: 34 }}>
           <span style={{ display: "inline-block", marginBottom: 8 }}><RundoLogo size={60} /></span>
           <p style={{ color: "#f0c14b", fontSize: 15, fontWeight: 600, margin: 0 }}>
             {t.tagline}
@@ -485,7 +489,7 @@ export default function Home() {
 
         {/* Je kíest hier niet meer — elke kaart heeft zijn eigen startknop. De lijn
             blijft als scheiding tussen de twee, met een kaal "of" ertussen. */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 22px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 14px" }}>
           <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.18)" }} />
           <span style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.55)", whiteSpace: "nowrap" }}>{t.orWord}</span>
           <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.18)" }} />
@@ -600,7 +604,7 @@ export default function Home() {
         )}
 
         {/* Voetregel */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 28 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 20 }}>
           <span style={{ fontSize: 13, color: "#b6bdcf", fontWeight: 600, textAlign: "center" }}>
             {t.footer}
           </span>
@@ -658,7 +662,7 @@ const S: Record<string, React.CSSProperties> = {
   modeCard: {
     position: "relative",
     borderRadius: 24,
-    marginBottom: 22,
+    marginBottom: 14,
     cursor: "pointer",
     overflow: "hidden",
   },
