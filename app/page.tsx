@@ -11,7 +11,6 @@ const T = {
     partySub: "Rondjes opnemen en splitten zonder gedoe",
     // De infozin staat zonder i-badge gecentreerd bóven de stappenflow — één blok:
     // de zin zegt wát je ermee kan, de bolletjes eronder hóe het loopt.
-    partyDesc: "Neem zelf op, of deel de QR en iedereen bestelt zelf.",
     // Stap 1 heeft twee manieren (zelf opnemen óf QR scannen), vandaar twee iconen.
     partyFlow: [
       { iconen: ["✍️", "📱"], label: "neem zelf op\nof deel QR" },
@@ -27,7 +26,6 @@ const T = {
     modeQr: "Via QR",
     closedChip: "afgesloten ✓",
     tableSub: "Scan de rekening en verdeel in groep",
-    tableDesc: "Scan de bon op restaurant of café — ieder betaalt z'n deel.",
     tableFlow: [
       { iconen: ["📷"], label: "scan\nrekening" },
       { iconen: ["📱"], label: "deel QR" },
@@ -35,7 +33,6 @@ const T = {
       { iconen: ["💶"], label: "eerlijk\nverdeeld!" },
     ],
     start: "Starten",
-    pickFirst: "Kies Rundo of Rundo Resto",
     pinOn: "Bewaren",
     pinOff: "Niet meer bewaren",
     maxPins: (n: number) => `Je kan maximaal ${n} groepen bewaren. Maak er eerst een los.`,
@@ -51,7 +48,6 @@ const T = {
   fr: {
     tagline: "Tournées et additions, sans prise de tête !",
     partySub: "Prendre les tournées et partager, sans prise de tête",
-    partyDesc: "Note toi-même, ou partage le QR et chacun commande.",
     partyFlow: [
       { iconen: ["✍️", "📱"], label: "note toi-même\nou partage le QR" },
       { iconen: ["👆"], label: "coche les\nboissons" },
@@ -66,7 +62,6 @@ const T = {
     modeQr: "Via QR",
     closedChip: "clôturé ✓",
     tableSub: "Scanne l'addition et partage en groupe",
-    tableDesc: "Scanne l'addition au resto ou au café — chacun paie sa part.",
     tableFlow: [
       { iconen: ["📷"], label: "scanne\nl'addition" },
       { iconen: ["📱"], label: "partage\nle QR" },
@@ -74,7 +69,6 @@ const T = {
       { iconen: ["💶"], label: "partagé\néquitablement !" },
     ],
     start: "Démarrer",
-    pickFirst: "Choisis Rundo ou Rundo Resto",
     pinOn: "Enregistrer",
     pinOff: "Ne plus enregistrer",
     maxPins: (n: number) => `Tu peux garder ${n} groupes au maximum. Détaches-en un d'abord.`,
@@ -461,7 +455,7 @@ export default function Home() {
             de kop op tot naast de taalpil: die staat rechts, het logo links, dus ze zitten
             elkaar niet in de weg en we winnen de hele hoogte van die rij. */}
         <div style={{ textAlign: "left", marginTop: -30, marginBottom: 20, paddingLeft: 20 }}>
-          <span style={{ display: "inline-block", marginBottom: 8 }}><RundoLogo size={88} /></span>
+          <span style={{ display: "inline-block", marginBottom: 8 }}><RundoLogo size={76} /></span>
           <p style={{ color: "#f0c14b", fontSize: 18, fontWeight: 600, margin: 0 }}>
             {t.tagline}
           </p>
@@ -698,14 +692,5 @@ const S: Record<string, React.CSSProperties> = {
     letterSpacing: -0.2,
     lineHeight: 1.2,
     fontFamily: "'Nunito', 'Baloo 2', 'DM Sans', -apple-system, 'Segoe UI', sans-serif",
-  },
-  goRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 6,
-    marginTop: 14,
-    fontSize: 14,
-    fontWeight: 800,
   },
 }
