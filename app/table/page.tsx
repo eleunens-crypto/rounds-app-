@@ -3848,8 +3848,15 @@ export default function RundoTable() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 14 }}>
             <div style={{ transform: "scale(1.25)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
           </div>
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginBottom: 8 }}>
-            <RundoLogo size={54} opDonker={false} resto />
+          {/* Het logo is gemaakt voor een donkere ondergrond: "Rundo" is daar wit en het
+              turkoois van "Resto" licht ertegen op. Op de lichte pagina werd "Rundo"
+              inktblauw en stonden er twee donkere kleuren naast elkaar te concurreren.
+              Vandaar dit blok — even breed als de kaart eronder, zodat alles op de pagina
+              op dezelfde twee randen uitlijnt, en het logo gecentreerd want dit vlak is er
+              alleen voor het merk. */}
+          <div style={{ background: "#123a42", borderRadius: 20, padding: "17px 18px", marginBottom: 9,
+            boxShadow: "0 6px 18px -8px rgba(18,58,66,0.5)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+            <RundoLogo size={58} resto />
           </div>
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 7, margin: "0 0 24px" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -3858,7 +3865,9 @@ export default function RundoTable() {
           </div>
 
           <div style={S.card}>
-            <div style={{ fontSize: 16.5, color: "#4a6e73", fontWeight: 600, marginBottom: 6 }}>{L.groupName} <span style={{ color: "#c0392b" }}>*</span></div>
+            {/* Dit is de titel van de kaart, niet het bijschrift van een veld: op dit scherm
+                is een groepsnaam typen het enige wat je te doen hebt. */}
+            <div style={{ fontSize: 24, color: "#123a42", fontWeight: 800, marginBottom: 9, lineHeight: 1.2 }}>{L.groupName} <span style={{ color: "#c0392b" }}>*</span></div>
             <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && createGroup()} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 14 }} />
             <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 19, fontWeight: 700 }} onClick={createGroup} disabled={busy}>{busy ? L.loading : L.startGroup}</button>
           </div>
@@ -6192,7 +6201,10 @@ function TopBar({ group, isAdmin, onHome, totalPersons, status }: { group: Group
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 8, borderBottom: "1.5px solid rgba(18,58,66,0.2)" }}>
         <span style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 20, fontWeight: 800, color: "#123a42" }}>{group.name}</span>
-        {totalPersons != null && totalPersons > 0 && (
+        {/* Het aantal personen stond hier altijd, ook op de scanpagina waar er nog niemand
+            is aangeduid — dan zegt "1 pers." alleen dat jij bestaat. Pas tonen zodra er
+            echt meer dan één aan tafel zit. */}
+        {totalPersons != null && totalPersons > 1 && (
           <span style={{ flexShrink: 0, borderLeft: "1px solid rgba(18,58,66,0.18)", paddingLeft: 11, fontSize: 14, fontWeight: 800, color: "#4a6e73", whiteSpace: "nowrap" }}>
             {L.persShort(totalPersons)}
           </span>
