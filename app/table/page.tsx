@@ -1897,6 +1897,11 @@ export default function RundoTable() {
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const lastActive = useRef(Date.now())
+  // Wacht dit scherm op gasten die nog moeten scannen? Dan niet in slaap vallen. Je legt
+  // je telefoon op tafel, de QR gaat rond en jij doet ondertussen niets — net het moment
+  // waarop het scherm anders zou pauzeren en je niemand ziet binnenkomen. Dezelfde
+  // uitzondering die de Party-app al had.
+  const wachtOpGasten = useRef(false)
 
   // Zorg dat het scherm op iPhone/Android altijd volledig toont en niet inzoomt bij het tikken
   // in een invoerveld (iOS zoomt anders in en toont niet alles). We forceren de juiste viewport.
@@ -2237,6 +2242,9 @@ export default function RundoTable() {
     lastActive.current = Date.now()
     setAsleep(false)
     const check = () => {
+      // Klok terugzetten in plaats van gewoon niets doen: anders slaapt het scherm alsnog
+      // meteen zodra de laatste vrije plaats ingevuld is.
+      if (wachtOpGasten.current) { lastActive.current = Date.now(); return }
       if (mounted.current && Date.now() - lastActive.current >= SLEEP_MS) setAsleep(true)
     }
     const markActive = () => { lastActive.current = Date.now(); setAsleep((a) => (a ? false : a)) }
@@ -2583,7 +2591,12 @@ export default function RundoTable() {
   // Een plaats is "vrij" zolang niemand er zijn naam op zette (naam is nog "Gast N" of "Ik").
   // De organisator is de eerste deelnemer: die plaats mag niemand overnemen via de link.
   const ownerPid = participants[0]?.id ?? null
+  // Bewust smal gehouden: alleen op de gasten-tab, en alleen zolang er echt nog een plaats
+  // leeg is. Breder maken zou betekenen dat het scherm nooit meer pauzeert.
   const isFreeSpot = (p: Participant) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName
+  // Elke render bijwerken, want adminTab en participants veranderen mee. Een ref en geen
+  // state: dit stuurt alleen de slaapcontrole aan en hoeft zelf niets te hertekenen.
+  wachtOpGasten.current = isAdmin && adminTab === "guests" && participants.some(isFreeSpot)
 
   // Neemt de gekozen plaats over: zet de naam (of namen, bij een koppel) en het aantal personen.
   const confirmClaimSpot = async () => {
