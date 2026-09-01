@@ -639,7 +639,7 @@ const STRINGS = {
     lockedPersons: "🔒 Eerst het aantal personen invullen",
     lockedName: "🔒 Vul eerst je eigen naam in",
     nowAssignTitle: "Wie nam wat?",
-    nowAssignSub: "Ga verder naar toewijzen",
+    nowAssignSub: "Ga nu verder naar toewijzen",
     goAssignBtn: "\ud83c\udf7d\ufe0f Toewijzen eten & drinken \u2192",
     howManyPersonsQ: "Voor hoeveel personen?",
     theirNameQ: "Hoe heet die persoon?",
@@ -661,7 +661,7 @@ const STRINGS = {
     howManyGroupSub: "Iedereen aan tafel — jezelf inbegrepen.",
     personsWord: "Aantal personen",
     shareStepTitle: "📱 Laat je gasten de QR scannen",
-    orSendLinkTitle: "Of stuur de link zelf door",
+    orSendLinkTitle: "Of stuur de link zelf door naar je gasten",
     linkWord: "Link",
     copyWord: "Kopieer",
     copiedWord: "Gekopieerd",
@@ -1276,7 +1276,7 @@ const STRINGS = {
     lockedPersons: "🔒 Indique d'abord le nombre de personnes",
     lockedName: "🔒 Indique d'abord ton propre nom",
     nowAssignTitle: "Qui a pris quoi ?",
-    nowAssignSub: "Passe à l’attribution",
+    nowAssignSub: "Passe maintenant à l’attribution",
     goAssignBtn: "\ud83c\udf7d\ufe0f Attribuer plats & boissons \u2192",
     howManyPersonsQ: "Pour combien de personnes ?",
     theirNameQ: "Comment s\u2019appelle cette personne ?",
@@ -1298,7 +1298,7 @@ const STRINGS = {
     howManyGroupSub: "Tout le monde à table — toi compris.",
     personsWord: "Nombre de personnes",
     shareStepTitle: "📱 Fais scanner le QR à tes invités",
-    orSendLinkTitle: "Ou envoie le lien toi-même",
+    orSendLinkTitle: "Ou envoie le lien toi-même à tes invités",
     linkWord: "Lien",
     copyWord: "Copier",
     copiedWord: "Copié",
@@ -3564,6 +3564,16 @@ export default function RundoTable() {
     if (tip > 0.005) out.push({ label: `💛 ${L.tipItemName}`, amount: tip, sharedWith: null })
     return out
   }
+  // Klopt alles ineens? Dan staat de groene knop naar Gasten onderaan de itemlijst, en
+  // die kan bij een lange bon ver buiten beeld liggen. Eén keer meescrollen zodra het
+  // omslaat — daarna niet meer, anders spring je weg terwijl je nog aan het nakijken bent.
+  const scrollAlKlaar = useRef(false)
+  useEffect(() => {
+    if (!isAdmin || !billOk || scrollAlKlaar.current) return
+    scrollAlKlaar.current = true
+    if (typeof window === "undefined") return
+    window.setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 220)
+  }, [isAdmin, billOk])
   const billDiff = Math.abs((group?.receipt_total ?? 0) - billTotal)
   // Waarschuw zolang de bon niet klopt én de gebruiker het verschil niet bewust aanvaardde.
   const warnMismatch = !billOk && !billMismatchAck
@@ -4042,7 +4052,20 @@ export default function RundoTable() {
           0%, 100% { box-shadow: 0 0 0 0 rgba(243,156,18,0.55); border-color: rgba(243,156,18,0.95); }
           50% { box-shadow: 0 0 0 9px rgba(243,156,18,0); border-color: rgba(243,156,18,0.55); }
         }
-        .rundo-needs-check { animation: rundoNeedsCheck 1.5s infinite; }`}</style>
+        .rundo-needs-check { animation: rundoNeedsCheck 1.5s infinite; }
+        @keyframes rundoKlaarPuls {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(31,138,76,0.55); }
+          50% { box-shadow: 0 0 0 12px rgba(31,138,76,0); }
+        }
+        .rundo-klaar-puls { animation: rundoKlaarPuls 1.6s ease-out infinite; }
+        @keyframes rundoQrPuls {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(20,153,176,0.5); border-color: rgba(20,153,176,0.9); }
+          50% { box-shadow: 0 0 0 11px rgba(20,153,176,0); border-color: rgba(20,153,176,0.45); }
+        }
+        .rundo-qr-puls { animation: rundoQrPuls 1.8s ease-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .rundo-klaar-puls, .rundo-qr-puls { animation: none; }
+        }`}</style>
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       {error && (
         <div style={S.errorBanner}>⚠️ {error}
@@ -4428,12 +4451,17 @@ export default function RundoTable() {
                     </div>
                   )
                 })}
+                {/* Kloppen de bon én de itemlijst, dan is er niets meer toe te voegen: de
+                    uitnodiging om BTW of korting in te voeren leidt dan alleen maar af van de
+                    knop naar Gasten. Al ingevoerde regels blijven hierboven gewoon staan. */}
+                {!billOk && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 7, alignItems: "flex-end", marginTop: 8, width: "100%" }}>
                   <button onClick={() => { if (!requireTotal()) return; setTaxModal({ kind: "cost", mode: "amount", pct: "21", name: L.wordCost, amount: "", scope: "all", ids: [] }) }}
                     style={{ alignSelf: "flex-end", width: "auto", maxWidth: "100%", minWidth: 190, boxSizing: "border-box", background: "rgba(20,153,176,0.12)", color: "#0f7d90", border: "1px solid rgba(20,153,176,0.4)", borderRadius: 12, padding: "11px 16px", fontSize: 16, fontWeight: 800, cursor: "pointer", whiteSpace: "normal", lineHeight: 1.3, textAlign: "center" }}>{L.taxAddBtn}</button>
                   <button onClick={() => setShowTaxInfo(true)} title={L.explainTooltip}
                     style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#4a6e73", textDecoration: "underline", padding: 0 }}>ⓘ {L.whatIsThis}</button>
                 </div>
+                )}
               </div>
             }
           />
@@ -4623,7 +4651,11 @@ export default function RundoTable() {
               return (
                 <>
                   <div style={{ textAlign: "center", marginBottom: 12 }}>
-                    <div style={{ display: "inline-block", padding: 14, background: "#f4fbfc", border: "2px solid rgba(20,153,176,0.35)", borderRadius: 16 }}>
+                    {/* Pas pulseren zodra je naam er staat: vóór dat moment stuurt de app je
+                        eerst naar het naamveld, en dan zou dit kader je de verkeerde kant op
+                        wijzen. Daarna is scannen wél wat er moet gebeuren. */}
+                    <div className={adminNamed ? "rundo-qr-puls" : undefined}
+                      style={{ display: "inline-block", padding: 14, background: "#f4fbfc", border: "2px solid rgba(20,153,176,0.35)", borderRadius: 16 }}>
                       <div style={{ background: "#fff", padding: 8, borderRadius: 10, display: "inline-block" }}>
                         <QRCodeSVG value={link} size={150} bgColor="#ffffff" fgColor="#123a42" />
                       </div>
@@ -6300,7 +6332,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
           <div style={{ ...S.card, marginTop: 16, background: "linear-gradient(160deg,#eafaf1,#d9f2e4)", border: "2px solid rgba(31,138,76,0.45)", padding: "18px 16px" }}>
             <div style={{ fontSize: 20, fontWeight: 800, color: "#15703f", marginBottom: 5, lineHeight: 1.25 }}>{L.allOkTitle}</div>
             <div style={{ fontSize: 16, color: "#3c6b51", lineHeight: 1.5, marginBottom: 14 }}>{L.allOkSub}</div>
-            <button onClick={onGoGuests} style={{ width: "100%", padding: "16px 0", fontSize: 18, fontWeight: 800, border: "none", borderRadius: 14, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 8px 20px -8px rgba(31,138,76,0.75)", cursor: "pointer" }}>{L.goGuestsBtn}</button>
+            <button onClick={onGoGuests} className="rundo-klaar-puls" style={{ width: "100%", padding: "16px 0", fontSize: 18, fontWeight: 800, border: "none", borderRadius: 14, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 8px 20px -8px rgba(31,138,76,0.75)", cursor: "pointer" }}>{L.goGuestsBtn}</button>
           </div>
         ) : (
           <button onClick={onGoGuests} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, padding: "14px 0", fontSize: 18, fontWeight: 800, boxShadow: "0 0 0 2px rgba(224,107,94,0.6), 0 8px 24px -6px rgba(224,107,94,0.65)" }}>{L.billCorrectGoGuests}</button>
