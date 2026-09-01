@@ -6341,7 +6341,12 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         )
       })}
       <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end", marginTop: 12, marginBottom: 2 }}>
+        {/* Klopt de lijst met de bon, dan valt er niets meer bij te zetten — elk item dat je
+            hier nog toevoegt maakt het saldo juist weer scheef. De knop verdwijnt dus samen
+            met die voor BTW en korting; via "aanpassen" bovenaan kan je er altijd terug. */}
+        {!billOk && (
         <button onClick={onAddManual} style={{ width: "62%", minWidth: 190, boxSizing: "border-box", background: "rgba(20,153,176,0.12)", color: "#0f7d90", border: "1px solid rgba(20,153,176,0.4)", borderRadius: 12, padding: "11px 10px", fontSize: 16.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{L.addItemBtn}</button>
+        )}
         {taxNode}
       </div>
       {items.length > 0 && (() => {
