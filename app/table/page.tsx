@@ -687,7 +687,8 @@ const STRINGS = {
     personWord: "Persoon",
     onlyOneShares: "⚠️ Maar 1 persoon deelt mee",
     expectedSharers: "Met hoeveel gedeeld?",
-    expectedHint: "Enkel invullen als je het zeker weet. De app waarschuwt dan als er te weinig personen toewijzen.",
+    expectedHint: "Optioneel. Vul je het in, dan waarschuwt de app als er te weinig of te veel personen aantikken — tegenhouden doet ze niets.",
+    expectedForGuest: (n: number) => `Aantal verwachte delers: ${n}`,
     expectedShort: (n: number) => `verwacht: ${n}`,
     tooFewShared: (have: number, want: number) => `⚠️ Pas ${have} van de ${want} personen duidden dit aan.`,
     tooManySharedAdmin: (have: number, want: number) => `⚠️ ${have} personen duidden dit aan, maar je verwachtte er ${want}.`,
@@ -1338,7 +1339,8 @@ const STRINGS = {
     personWord: "Personne",
     onlyOneShares: "⚠️ Une seule personne partage",
     expectedSharers: "Partagé à combien ?",
-    expectedHint: "À remplir uniquement si tu en es sûr. L'app prévient alors si trop peu de personnes l'indiquent.",
+    expectedHint: "Optionnel. Si tu le remplis, l'app prévient quand trop peu ou trop de personnes cochent — elle ne bloque rien.",
+    expectedForGuest: (n: number) => `Nombre de partageurs attendus : ${n}`,
     expectedShort: (n: number) => `attendu : ${n}`,
     tooFewShared: (have: number, want: number) => `⚠️ Seulement ${have} sur ${want} personnes l'ont indiqué.`,
     tooManySharedAdmin: (have: number, want: number) => `⚠️ ${have} personnes l'ont indiqué, mais tu en attendais ${want}.`,
@@ -3344,15 +3346,6 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
-  // Hoeveel delers er nog bij mogen. Is "met hoeveel gedeeld" ingevuld, dan is dat een
-  // harde grens: vroeger kon je gerust te veel mensen aanduiden en kleurde het achteraf
-  // rood. Wie er meer bij wil, past dat aantal aan — dat kan de beheerder zelf.
-  const shareRuimte = (itemId: string, pid: string): number | null => {
-    const it = items.find((x) => x.id === itemId)
-    const verwacht = it?.share_expected ?? null
-    if (verwacht == null || verwacht <= 0) return null
-    return Math.max(0, verwacht - (shareHeads(itemId) - myQty(itemId, pid)))
-  }
   const shareVerwacht = (itemId: string) => items.find((x) => x.id === itemId)?.share_expected ?? 0
 
   const sharePickerOpen = (itemId: string, pid: string) => {
@@ -3376,42 +3369,40 @@ export default function RundoTable() {
     const mine = myQty(itemId, pid)
     const seats = Math.max(1, participants.find((p) => p.id === pid)?.seats ?? 1)
     const vast = !!items.find((x) => x.id === itemId)?.share_fixed
-    const ruimte = shareRuimte(itemId, pid)
 
     // Meerdere personen op één plaats: deze knop opent en sluit het kiesvenster. Wie
     // meedeelt kies je daarbinnen per naam, en daar zet "Wis alles" ze ook weer af.
     // Vroeger wiste deze knop meteen alles, en dan kon je het venster niet meer openen.
+    // Het verwachte aantal delers is een controle, geen slot. Het hield vroeger iedereen
+    // tegen zodra het bereikt was: de gast kon niets meer aantikken en kon dat aantal ook
+    // niet zelf aanpassen, en de beheerder moest eerst de ± gaan zoeken. Aantikken lukt nu
+    // altijd; klopt het aantal achteraf niet, dan zegt het scherm dat en biedt het de
+    // correctie aan.
     if (seats > 1 && !vast) {
       if (sharePickerOpen(itemId, pid)) { sluitSharePicker(itemId, pid); return }
-      if (mine === 0 && ruimte !== null && ruimte <= 0) { setToast(L.shareFull(shareVerwacht(itemId))); return }
       openSharePicker(itemId, pid)
       return
     }
 
     // Één persoon, of een item met een vast aandeel: gewoon aan of uit.
     if (mine > 0) { await setClaim(itemId, pid, 0, []); return }
-    if (ruimte !== null && ruimte < seats) { setToast(L.shareFull(shareVerwacht(itemId))); return }
     await setClaim(itemId, pid, seats, Array.from({ length: seats }, (_, i) => i))
   }
 
-  // Één lid van een meerpersoonsplaats aan- of uitzetten, met dezelfde harde grens.
+  // Één lid van een meerpersoonsplaats aan- of uitzetten. Ook hier geen grens meer:
+  // betaal je voor twee, dan moet je allebei kunnen aanduiden zonder eerst een teller
+  // te moeten ophogen die je misschien nooit hebt ingesteld.
   const toggleShareMember = async (itemId: string, pid: string, i: number) => {
     const sel = claimMembers(itemId, pid)
     const aan = sel.includes(i)
-    if (!aan) {
-      const ruimte = shareRuimte(itemId, pid)
-      if (ruimte !== null && sel.length + 1 > ruimte) { setToast(L.shareFull(shareVerwacht(itemId))); return }
-    }
     const next = aan ? sel.filter((x) => x !== i) : [...sel, i]
     await setClaim(itemId, pid, next.length, next)
   }
 
-  // Iedereen van een plaats in één keer aan of uit, ook binnen de grens.
+  // Iedereen van een plaats in één keer aan of uit.
   const toggleShareAll = async (itemId: string, pid: string, seats: number) => {
     const sel = claimMembers(itemId, pid)
     if (sel.length === seats) { await setClaim(itemId, pid, 0, []); return }
-    const ruimte = shareRuimte(itemId, pid)
-    if (ruimte !== null && seats > ruimte) { setToast(L.shareFull(shareVerwacht(itemId))); return }
     await setClaim(itemId, pid, seats, Array.from({ length: seats }, (_, i) => i))
   }
 
@@ -6653,7 +6644,7 @@ function ClaimScreen(props: {
         <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 9, lineHeight: 1.3 }}>{L.closedByAdmin}</div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
           <span style={{ fontSize: 16, fontWeight: 700 }}>{L.yourShareWord}</span>
-          <span style={{ fontSize: 27, fontWeight: 800, whiteSpace: "nowrap" }}>€{mijn.settled.toFixed(2).replace(".", ",")}{mijn.pendingShared ? "+" : ""}</span>
+          <span style={{ fontSize: 27, fontWeight: 800, whiteSpace: "nowrap" }}>€{mijn.settled.toFixed(2).replace(".", ",")}</span>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => setShowFinalPopup(true)}
@@ -7089,6 +7080,14 @@ function ClaimScreen(props: {
                       </div>
                       {isOver && who && (
                         <div style={{ fontSize: 15.5, color: "#a5443a", marginTop: 4, lineHeight: 1.4 }}>{L.sharedBy}{who}</div>
+                      )}
+                      {/* Heeft de beheerder een aantal vastgelegd, dan mag de gast dat gewoon
+                          zien: hij kan het niet wijzigen, maar hij weet dan of er nog iemand
+                          moet aantikken. Zonder ingesteld aantal staat hier niets. */}
+                      {want != null && want > 0 && !onSetExpected && (
+                        <div style={{ fontSize: 15.5, color: "#4a6e73", marginTop: 5, paddingTop: 5, borderTop: "1px dashed rgba(18,58,66,0.12)", fontWeight: 700 }}>
+                          {L.expectedForGuest(want)}
+                        </div>
                       )}
                       {onSetExpected && (
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 8, paddingTop: 7, borderTop: "1px dashed rgba(18,58,66,0.12)" }}>
