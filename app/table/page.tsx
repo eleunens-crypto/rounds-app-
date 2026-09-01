@@ -132,6 +132,14 @@ function saveMyGroup(g: { id: string; name: string; invite_code: string; created
   list.unshift({ id: g.id, name: g.name, invite_code: g.invite_code, role, savedAt: Date.now(), created_at: g.created_at })
   localStorage.setItem(`rundo_table_groups_${getOrCreateOwnerId()}`, JSON.stringify(list.slice(0, 50)))
 }
+// De groepenlijst staat ook in localStorage, en die wordt bij het opstarten getoond
+// vóór de server geantwoord heeft. Zonder dit bleef de oude naam daar staan — en als
+// het ophalen mislukt, bleef hij er voorgoed staan.
+function renameMyGroup(id: string, name: string) {
+  if (typeof window === "undefined") return
+  const list = getMyGroups().map((x) => x.id === id ? { ...x, name } : x)
+  localStorage.setItem(`rundo_table_groups_${getOrCreateOwnerId()}`, JSON.stringify(list))
+}
 function removeMyGroup(id: string) {
   if (typeof window === "undefined") return
   const list = getMyGroups().filter((x) => x.id !== id)
@@ -2849,8 +2857,12 @@ export default function RundoTable() {
     const schoon = naam.trim()
     if (!schoon || schoon === group.name) return
     setGroup((cur) => cur ? { ...cur, name: schoon } : cur)
+    // Drie plekken houden een naam bij: het scherm, de bewaarde lijst en de server.
+    // Alle drie meteen, anders duikt de oude naam later ergens weer op.
+    setMyGroups((prev) => prev.map((x) => x.id === group.id ? { ...x, name: schoon } : x))
+    renameMyGroup(group.id, schoon)
     const { error } = await supabase.from("table_groups").update({ name: schoon }).eq("id", group.id)
-    if (error) { setError(error.message); await loadAll(group.id) }
+    if (error) { setError(error.message); await loadAll(group.id); void laadMijnGroepen() }
   }
   const renameGuest = async (id: string, name: string) => {
     if (!group) return
