@@ -6554,8 +6554,14 @@ function ClaimScreen(props: {
   // voor jezelf en voor wie niet scande — maar aantikken blijft mogelijk, want er loopt
   // wel eens iets mis.
   const named = participants.filter((p) => !isFreeName(p.name))
+  // Een plaats die nog "Gast" heet viel hierdoor uit de lijst. Gevolg: wees je iets toe
+  // aan zo'n plaats, dan verscheen er achteraf geen chip met een minknop en kon je het
+  // niet meer weghalen — alleen bij jezelf lukte dat nog, want jouw naam staat er wel.
+  // `named` blijft voor de vraag "is er al iemand met een naam"; toewijzen en afnemen
+  // gaat over iedereen die aan tafel zit.
+  const toewijsbaar = participants
     .sort((a, b) => Number(!!a.self_joined) - Number(!!b.self_joined))
-  const eersteLinkGast = named.findIndex((p) => p.self_joined)
+  const eersteLinkGast = toewijsbaar.findIndex((p) => p.self_joined)
   // Dezelfde deel-knop als op de bon: hier kan de admin een item alsnog op "gedeeld" zetten.
   const shareBtn = (it: BillItem) => (
     <button onClick={() => onToggleShared(it)} title={it.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}
@@ -6631,7 +6637,7 @@ function ClaimScreen(props: {
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25 }}>
                           {named.length === 0
                             ? <span style={{ fontSize: 15.5, color: "#aaa" }}>{L.addGuestsFirst}</span>
-                            : named.map((p, i) => {
+                            : toewijsbaar.map((p, i) => {
                                 // Ook oplichten wanneer het kiesvenster openstaat maar er nog
                                 // niemand gekozen is — anders lijkt de knop uit terwijl er
                                 // onderaan een venster van hem hangt dat je niet kwijtraakt.
@@ -6653,12 +6659,12 @@ function ClaimScreen(props: {
                                       background: on ? (p.id === adminPid ? "rgba(233,196,95,0.5)" : "linear-gradient(135deg,#f3d27c,#ecc564)") : viaLink ? "#fff" : "rgba(20,153,176,0.06)",
                                       color: on ? "#5a4a1a" : viaLink ? "#8aa3a6" : "#123a42",
                                       opacity: on ? 1 : viaLink ? 0.8 : 1,
-                                    }}>{on ? "✓ " : ""}{viaLink && !on ? "📱 " : ""}{p.name}{on && pSeats > 1 ? ` ×${pHeads}` : ""}</button>
+                                    }}>{on ? "✓ " : ""}{viaLink && !on ? "📱 " : ""}{naamVan(p)}{on && pSeats > 1 ? ` ×${pHeads}` : ""}</button>
                                   </span>
                                 )
                               })}
                         </div>
-                        {named.map((p) => {
+                        {toewijsbaar.map((p) => {
                           const pSeats = Math.max(1, p.seats ?? 1)
                           const key = `${it.id}:${p.id}`
                           // Bij een gast blijft dit venster staan zolang hij meedeelt; bij de
@@ -6703,7 +6709,7 @@ function ClaimScreen(props: {
                       </div>
                     )
                   }
-                  const who = named.map((p) => ({ p, q: myQty(it.id, p.id) })).filter((x) => x.q > 0)
+                  const who = toewijsbaar.map((p) => ({ p, q: myQty(it.id, p.id) })).filter((x) => x.q > 0)
                   const mineQ = adminPid ? myQty(it.id, adminPid) : 0
                   const ok = open === 0
                   const highlight = adminPid && mineQ > 0
