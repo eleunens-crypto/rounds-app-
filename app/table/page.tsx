@@ -556,9 +556,7 @@ const STRINGS = {
     seatsCappedGuest: (n: number) => n === 1
       ? "Er is nog maar één vrije plaats. Vraag de beheerder om er een bij te zetten als jullie met meer zijn."
       : `Er zijn nog ${n} vrije plaatsen. Vraag de beheerder om er bij te zetten als jullie met meer zijn.`,
-    errCantReadPhoto: "Kon de foto niet lezen",
     backToRundo: "← naar Rundo startscherm",
-    welkomTagline: "Rondjes en rekeningen zonder gedoe!",
     welkomSub: "Scan de rekening, verdeel in groep",
     cafeAfterQ: "Ook rondjes bijhouden op caf\u00e9?",
     seeWhatItDoes: "Bekijk wat Rundo doet",
@@ -650,8 +648,6 @@ const STRINGS = {
     howManyAdminQ: "Voor hoeveel personen betaal jij?",
     adminBadge: "admin",
     nameRequired: "Vul eerst je eigen naam in — anders weet niemand wie de rekening deelde.",
-    stAssigned: (n: number) => `${n} items`,
-    stNobody: "niemand",
     personsFirst: "⚠️ Vul eerst in met hoeveel jullie zijn.",
     lockedPersons: "🔒 Eerst het aantal personen invullen",
     lockedName: "🔒 Vul eerst je eigen naam in",
@@ -694,7 +690,6 @@ const STRINGS = {
     tooFewShared: (have: number, want: number) => `⚠️ Pas ${have} van de ${want} personen duidden dit aan.`,
     tooManySharedAdmin: (have: number, want: number) => `⚠️ ${have} personen duidden dit aan, maar je verwachtte er ${want}.`,
     pickerDone: "Klaar",
-    shareFull: (exp: number) => `Dit is voor ${exp} ${exp === 1 ? "persoon" : "personen"} gedeeld en die zijn al aangeduid. Verhoog eerst “Met hoeveel gedeeld?” als er meer bij moeten.`,
     tooManySharedGuest: (have: number, want: number) => `${have} personen duidden dit aan, maar het waren er ${want}. Tik opnieuw als jij dit niet deelde.`,
     sharedBy: "Aangeduid door: ",
     expectedFixTo: (n: number) => `Toch met ${n}`,
@@ -709,7 +704,6 @@ const STRINGS = {
     totalsDiff: (d: number) => `⚠️ €${d.toFixed(2).replace(".", ",")} verschil`,
     taxSplitAtClose: "Toeslagen worden bij het afsluiten over iedereen verdeeld.",
     ownNamePlaceholder: "Zet hier je eigen naam",
-    freeSpot: "vrije plaats",
     pickFreeSpotTitle: "👇 Tik hieronder op een vrije plaats",
     pickFreeSpotTitleOrName: "👇 Tik op een vrije plaats — of op je eigen naam",
     pickFreeSpot: "Daarna vul je je naam in, en met hoeveel jullie zijn.",
@@ -797,14 +791,10 @@ const STRINGS = {
     changeAmount: "bedrag aanpassen",
     confirmAmountTitle: "Bevestig dit bedrag",
     yes: "Ja",
-    no: "Neen",
-    checkPrices: "prijzen/aantallen van items correct?",
-    checkTax: "BTW / andere kosten / kortingen apart toegevoegd?",
     usuallyOneOf: "Meestal is het één van deze:",
     checkTaxShort: "BTW of korting",
     checkPricesShort: "prijs of aantal",
     checkSharedShort: "gedeeld item",
-    checkShared: "gedeelde items?",
     allOkTitle: "Alles klopt",
     allOkSub: "Ga verder naar het delen met je gasten.",
     goGuestsBtn: "Naar Gasten en delen \u2192",
@@ -975,7 +965,6 @@ const STRINGS = {
     spotReleased: "Plaats is weer vrij.",
     releaseTitle: "Plaats vrijgeven",
     allPerfect: "Bon en items kloppen perfect. Je kan verder naar Gasten & delen.",
-    itemListOff: "De itemlijst klopt nog niet",
     receiptConfirmedLabel: "Bon (bevestigd)",
     viaAdminTag: "(via admin)",
     yesMatches: "✓ Ja, klopt",
@@ -983,7 +972,6 @@ const STRINGS = {
     itemsBelowLabel: "Items hieronder",
     tooMuchInList: "Te veel in de lijst",
     tooLittleInList: "Te weinig in de lijst",
-    compareFix: "Vergelijk met de itemlijst hieronder en corrigeer!",
     goToItemList: "Ga naar de itemlijst",
     checkBelow: "\u2192 hieronder checken",
     roundingTitle: "Niets gevonden? Mogelijk afrondingsverschil",
@@ -1208,9 +1196,7 @@ const STRINGS = {
     seatsCappedGuest: (n: number) => n === 1
       ? "Il ne reste qu’une place libre. Demande à l’hôte d’en ajouter une si vous êtes plus nombreux."
       : `Il reste ${n} places libres. Demande à l’hôte d’en ajouter si vous êtes plus nombreux.`,
-    errCantReadPhoto: "Impossible de lire la photo",
     backToRundo: "← retour à l'accueil Rundo",
-    welkomTagline: "Tourn\u00e9es et additions sans prise de t\u00eate\u00a0!",
     welkomSub: "Scanne l'addition, partage en groupe",
     cafeAfterQ: "Suivre les tourn\u00e9es au caf\u00e9\u00a0?",
     seeWhatItDoes: "D\u00e9couvre ce que fait Rundo",
@@ -1302,8 +1288,6 @@ const STRINGS = {
     howManyAdminQ: "Pour combien de personnes paies-tu ?",
     adminBadge: "admin",
     nameRequired: "Indique d'abord ton nom — sinon personne ne sait qui a partagé l'addition.",
-    stAssigned: (n: number) => `${n} articles`,
-    stNobody: "personne",
     personsFirst: "⚠️ Indique d'abord combien vous êtes.",
     lockedPersons: "🔒 Indique d'abord le nombre de personnes",
     lockedName: "🔒 Indique d'abord ton propre nom",
@@ -1346,7 +1330,6 @@ const STRINGS = {
     tooFewShared: (have: number, want: number) => `⚠️ Seulement ${have} sur ${want} personnes l'ont indiqué.`,
     tooManySharedAdmin: (have: number, want: number) => `⚠️ ${have} personnes l'ont indiqué, mais tu en attendais ${want}.`,
     pickerDone: "Terminé",
-    shareFull: (exp: number) => `C'est partagé à ${exp} personne${exp === 1 ? "" : "s"} et elles sont déjà cochées. Augmente d'abord « Partagé à combien ? » s'il en faut plus.`,
     tooManySharedGuest: (have: number, want: number) => `${have} personnes l'ont indiqué, mais vous n'étiez que ${want}. Retire ta sélection si ce n'était pas toi.`,
     sharedBy: "Indiqué par : ",
     expectedFixTo: (n: number) => `Finalement à ${n}`,
@@ -1361,7 +1344,6 @@ const STRINGS = {
     totalsDiff: (d: number) => `⚠️ €${d.toFixed(2).replace(".", ",")} d'écart`,
     taxSplitAtClose: "Les suppléments sont répartis entre tous à la clôture.",
     ownNamePlaceholder: "Mets ton propre nom ici",
-    freeSpot: "place libre",
     pickFreeSpotTitle: "👇 Touche une place libre ci-dessous",
     pickFreeSpotTitleOrName: "👇 Touche une place libre — ou ton propre nom",
     pickFreeSpot: "Ensuite tu indiques ton nom et avec combien vous êtes.",
@@ -1449,14 +1431,10 @@ const STRINGS = {
     changeAmount: "modifier le montant",
     confirmAmountTitle: "Confirme ce montant",
     yes: "Oui",
-    no: "Non",
-    checkPrices: "prix/quantités des articles corrects ?",
-    checkTax: "TVA / autres frais / réductions ajoutés séparément ?",
     usuallyOneOf: "C’est généralement l’un de ceux-ci :",
     checkTaxShort: "TVA ou remise",
     checkPricesShort: "prix ou quantité",
     checkSharedShort: "article partagé",
-    checkShared: "articles partagés ?",
     allOkTitle: "Tout est correct",
     allOkSub: "Continue vers le partage avec tes invit\u00e9s.",
     goGuestsBtn: "Vers Invit\u00e9s et partage \u2192",
@@ -1627,7 +1605,6 @@ const STRINGS = {
     spotReleased: "La place est de nouveau libre.",
     releaseTitle: "Libérer la place",
     allPerfect: "L'addition et les articles correspondent. Tu peux continuer.",
-    itemListOff: "La liste d\u2019articles ne colle pas encore",
     receiptConfirmedLabel: "Ticket (confirm\u00e9)",
     viaAdminTag: "(via admin)",
     yesMatches: "✓ Oui, c’est bon",
@@ -1635,7 +1612,6 @@ const STRINGS = {
     itemsBelowLabel: "Articles ci-dessous",
     tooMuchInList: "En trop dans la liste",
     tooLittleInList: "Manque dans la liste",
-    compareFix: "Compare avec la liste d'articles ci-dessous et corrige !",
     goToItemList: "Vers la liste d\u2019articles",
     checkBelow: "\u2192 \u00e0 v\u00e9rifier ci-dessous",
     roundingTitle: "Rien trouvé ? Peut-être un écart d'arrondi",
@@ -2794,59 +2770,6 @@ export default function RundoTable() {
     return m
   })()
   const naamVan = (p: Participant) => vrijeNummers[p.id] ? `${L.guestWord} ${vrijeNummers[p.id]}` : p.name
-  // Status per plaats: heeft aangeduid / aangemeld maar niets / nog vrij / door admin geregeld.
-  const spotStatus = (p: Participant): { kind: "done" | "idle" | "free" | "mine"; count: number } => {
-    const count = claims.filter((c) => c.participant_id === p.id && c.quantity > 0).length
-    const nm = p.name.trim()
-    const isFree = new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(nm) || nm === L.adminName
-    if (isFree) return { kind: "free", count }
-    if (count > 0) return { kind: "done", count }
-    if (p.self_joined) return { kind: "idle", count }
-    return { kind: "mine", count }
-  }
-  // Tel personen, niet rijen: een koppel op één plaats telt voor 2.
-  const joinedCount = participants.filter((p) => spotStatus(p).kind !== "free").reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
-
-  // Overzicht "Wie doet al mee?" — op de gasten-tab ingeklapt, op de toewijs-tab open.
-  const joinedList = (opts: { clickable?: boolean; renamable?: boolean } = {}) => {
-    // Vanaf 5 personen twee kolommen, anders wordt de lijst onnodig lang.
-    const twoCol = participants.length > 4
-    return (
-      <div style={twoCol ? { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" } : undefined}>
-        {participants.map((p) => {
-          const st = spotStatus(p)
-          const icon = st.kind === "done" ? "✅" : st.kind === "idle" ? "🟡" : st.kind === "free" ? "⚪" : "✍️"
-          // Altijd het aantal items tonen — nul in het rood, zodat je meteen ziet wie nog moet.
-          const right = st.kind === "free" ? L.stNobody : L.stAssigned(st.count)
-          const rightRed = st.kind !== "free" && st.count === 0
-          const bg = st.kind === "idle" ? "rgba(243,156,18,0.07)" : st.kind === "mine" && opts.clickable ? "rgba(20,153,176,0.06)" : "transparent"
-          const clickMine = opts.clickable && st.kind === "mine"
-          return (
-            <div key={p.id} onClick={() => { if (clickMine) { setClaimMode("person"); setClaimPid(p.id) } }}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 5px", borderRadius: 7, background: bg, cursor: clickMine ? "pointer" : "default", minWidth: 0 }}>
-              <span style={{ fontSize: 16, flexShrink: 0 }}>{icon}</span>
-              {opts.renamable && st.kind === "free" ? (
-                // Een vrije plaats moet je hier meteen een naam kunnen geven: je hebt net
-                // gezien welke plaatsen nog leeg zijn, en dan is dit de plek waar je het
-                // wil oplossen — niet twee tabs verderop.
-                <input defaultValue="" placeholder={naamVan(p)} onClick={(e) => e.stopPropagation()}
-                  onBlur={(e) => { const v = e.target.value.trim(); if (v) void renameGuest(p.id, v) }}
-                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
-                  style={{ ...S.input, flex: 1, minWidth: 0, padding: "6px 9px", fontSize: 15.5, fontWeight: 700 }} />
-              ) : (
-              <b style={{ flex: 1, minWidth: 0, fontSize: 16, color: st.kind === "free" ? "#8aa3a6" : "#123a42", fontWeight: st.kind === "free" ? 600 : 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {st.kind === "free" ? naamVan(p) : p.name}
-                {(p.seats ?? 1) > 1 && <span style={{ fontSize: 15, fontWeight: 700, color: "#8aa3a6" }}> · {p.seats}p.</span>}
-              </b>
-              )}
-              <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: rightRed ? 800 : 600, color: rightRed ? "#c0392b" : st.kind === "free" ? "#b6cacc" : "#8aa3a6" }}>{right}</span>
-            </div>
-          )
-        })}
-      </div>
-    )
-  }
-
   const setGuestCount = async (target: number) => {
     setPersonsTouched(true)
     if (!group) return
