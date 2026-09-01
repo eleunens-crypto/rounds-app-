@@ -757,7 +757,11 @@ const STRINGS = {
     tagFree: "nog niemand",
     freeSpotName: "Nog vrij",
     rescan: "🔄 Bon opnieuw scannen",
-    startScan: "Start hier — Scan je rekening 📸",
+    startScan: "📸 Scan je rekening",
+    startHereTitle: "Start hier",
+    startStep1: "Scan rekening",
+    startStep2: "Items nakijken",
+    startStep3: "QR delen",
     scanOk: "Scan gelukt en items herkend",
     localScanTitle: "⚠️ Onnauwkeurige scan gebruikt — bevat bijna altijd fouten",
     localScanBody: "Controleer volgorde, namen en prijzen goed na, of doe een nieuwe AI-scan.",
@@ -1397,7 +1401,11 @@ const STRINGS = {
     tagFree: "personne",
     freeSpotName: "Encore libre",
     rescan: "🔄 Rescanner l'addition",
-    startScan: "Commence ici — scanne ton addition 📸",
+    startScan: "📸 Scanne ton ticket",
+    startHereTitle: "Commence ici",
+    startStep1: "Scanner le ticket",
+    startStep2: "Vérifier les articles",
+    startStep3: "Partager le QR",
     scanOk: "Scan réussi, articles reconnus",
     localScanTitle: "⚠️ Scan approximatif utilisé — contient presque toujours des erreurs",
     localScanBody: "Vérifie bien l'ordre, les noms et les prix, ou refais un scan IA.",
@@ -4244,7 +4252,28 @@ export default function RundoTable() {
               <button onClick={startRescan} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#8aa3a6", padding: "4px 4px" }}>{L.rescan}</button>
             </div>
           ) : (
-            <button onClick={() => setShowScan(true)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 18, fontWeight: 700, marginBottom: 12 }}>{L.startScan}</button>
+            /* Onder de knop stond een leeg scherm. Nu is het één kaart: kop, knop, de drie
+               stappen als balkje, en de foto als voet. Die foto draagt geen tekst — hij
+               zegt alleen waar je mee bezig bent, en vult de ruimte die er toch was. */
+            <div style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 12px rgba(18,58,66,0.09)", marginBottom: 12 }}>
+              <div style={{ padding: "16px 16px 14px" }}>
+                <div style={{ fontSize: 19, fontWeight: 800, color: "#123a42", marginBottom: 13 }}>{L.startHereTitle}</div>
+                <button onClick={() => setShowScan(true)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 18, fontWeight: 800 }}>{L.startScan}</button>
+                <div style={{ display: "flex", gap: 7, marginTop: 12 }}>
+                  {[L.startStep1, L.startStep2, L.startStep3].map((tekst, i2) => (
+                    <div key={i2} style={{ flex: 1, minWidth: 0, textAlign: "center", background: "rgba(20,153,176,0.07)", borderRadius: 11, padding: "9px 5px" }}>
+                      <span style={{ display: "inline-flex", width: 22, height: 22, borderRadius: "50%", background: "#2a8ba0", color: "#fff", fontSize: 11.5, fontWeight: 800, alignItems: "center", justifyContent: "center" }}>{i2 + 1}</span>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: "#2b4f56", lineHeight: 1.3, marginTop: 5 }}>{tekst}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ position: "relative", height: 250 }}>
+                <img src="/table-image.png" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                {/* Bovenaan bijna wit zodat de kaart naadloos overgaat in het beeld. */}
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(255,255,255,0.9) 0%,rgba(255,255,255,0.2) 40%,rgba(18,58,66,0.25) 100%)" }} />
+              </div>
+            </div>
           )}
 
           {/* Scan-label bovenaan: vinkje bij AI-succes; duidelijke waarschuwing + retry bij lokale terugval */}
