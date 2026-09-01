@@ -7207,7 +7207,13 @@ function ClaimScreen(props: {
             </div>
             {personItems(meId).map((r, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "4px 0", borderBottom: "1px solid rgba(18,58,66,0.06)", fontSize: 16, color: "#2b4f56" }}>
-                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{r.qty > 1 ? `${r.qty}× ` : ""}{r.name}{r.viaAdmin && <span style={{ fontSize: 13.5, fontWeight: 800, color: "#a06b00", marginLeft: 5 }}>{L.viaAdminTag}</span>}</span>
+                <span style={{ minWidth: 0, display: "flex", alignItems: "baseline", gap: 5 }}>
+                  {/* De naam mag over twee regels lopen — afkappen zou woorden opeten die je op
+                      een bon net nodig hebt om het gerecht te herkennen. Het label staat als
+                      eigen kind ernaast met flexShrink 0, dus dat wordt nooit weggeduwd. */}
+                  <span style={{ minWidth: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.35 }}>{r.qty > 1 ? `${r.qty}× ` : ""}{r.name}</span>
+                  {r.viaAdmin && <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#a06b00" }}>{L.viaAdminTag}</span>}
+                </span>
                 <span style={{ flexShrink: 0, fontWeight: 700, color: "#123a42" }}>€{r.amount.toFixed(2).replace(".", ",")}</span>
               </div>
             ))}
@@ -7323,7 +7329,13 @@ function ClaimScreen(props: {
               <div style={{ fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.45, marginBottom: 14 }}>{L.finalPopupSub}</div>
               {personItems(meId).map((r, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "6px 0", borderBottom: "1px solid rgba(18,58,66,0.07)", fontSize: 15.5, color: "#2b4f56" }}>
-                  <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{r.qty > 1 ? `${r.qty}× ` : ""}{r.name}{r.viaAdmin && <span style={{ fontSize: 13.5, fontWeight: 800, color: "#a06b00", marginLeft: 5 }}>{L.viaAdminTag}</span>}</span>
+                  <span style={{ minWidth: 0, display: "flex", alignItems: "baseline", gap: 5 }}>
+                  {/* De naam mag over twee regels lopen — afkappen zou woorden opeten die je op
+                      een bon net nodig hebt om het gerecht te herkennen. Het label staat als
+                      eigen kind ernaast met flexShrink 0, dus dat wordt nooit weggeduwd. */}
+                  <span style={{ minWidth: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.35 }}>{r.qty > 1 ? `${r.qty}× ` : ""}{r.name}</span>
+                  {r.viaAdmin && <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#a06b00" }}>{L.viaAdminTag}</span>}
+                </span>
                   <span style={{ flexShrink: 0, fontWeight: 700, color: "#123a42" }}>€{r.amount.toFixed(2).replace(".", ",")}</span>
                 </div>
               ))}
