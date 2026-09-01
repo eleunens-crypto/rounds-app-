@@ -646,9 +646,9 @@ const STRINGS = {
     theirNamesQ: "Hoe heten ze?",
     addThisGuest: "Toevoegen",
     enterGuestName: "Vul eerst een naam in.",
-    whoAtTableTitle: "Namen personen",
+    whoAtTableTitle: "Namen andere gasten",
     noNeedUpfront: "Vul alvast namen in, of deel meteen de QR.",
-    seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} vrij` : `${totaal}`,
+    seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${vrij} vrij` : "compleet",
     addNameRow: "+ naam",
     optionalWord: "(optioneel)",
     freeSpotSub: "scant zelf, of zet jij de naam",
@@ -1110,7 +1110,8 @@ const STRINGS = {
     tooSlowOne: "📷 Eén foto maken",
     tooSlowRetry: "🔄 Toch met twee",
     taxAddBtn: "BTW / kosten / korting toevoegen?",
-    legendShare: "Tik deze knop aan voor gedeelde items (fles wijn, water, dessert). De prijs verdeelt zich over wie meedeelt.",
+    legendShare: "Aantikken voor gedeelde items (water, wijn, dessert…). De prijs verdeelt zich over wie meedeelt.",
+    sharedItemsQ: "Gedeelde items?",
     shareLocked: "Vastgezet door de beheerder",
     sharingWaitReveal: "⏳ Je deelt mee. Het bedrag wordt verdeeld over iedereen die meedeelt — je deel en de namen verschijnen zodra iedereen klaar is met aantikken en bevestigen.",
     tapShareHint: 'Tik "meedelen" als jij hiervan mee at of dronk. De prijs wordt gedeeld door iedereen die meedeelt — je betaalt dus niet de hele prijs.',
@@ -1285,9 +1286,9 @@ const STRINGS = {
     theirNamesQ: "Comment s\u2019appellent-ils ?",
     addThisGuest: "Ajouter",
     enterGuestName: "Entre d\u2019abord un nom.",
-    whoAtTableTitle: "Noms des personnes",
+    whoAtTableTitle: "Noms des autres invités",
     noNeedUpfront: "Remplis déjà des noms, ou partage tout de suite le QR.",
-    seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${totaal} · ${vrij} libre${vrij === 1 ? "" : "s"}` : `${totaal}`,
+    seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${vrij} libre${vrij === 1 ? "" : "s"}` : "complet",
     addNameRow: "+ nom",
     optionalWord: "(facultatif)",
     freeSpotSub: "scanne lui-même, ou tu mets le nom",
@@ -1749,7 +1750,8 @@ const STRINGS = {
     tooSlowOne: "📷 Prendre une photo",
     tooSlowRetry: "🔄 Réessayer à deux",
     taxAddBtn: "Ajouter TVA / frais / remise ?",
-    legendShare: "Touche ce bouton pour les articles partagés (bouteille de vin, eau, dessert). Le prix se répartit entre ceux qui partagent.",
+    legendShare: "À cocher pour les articles partagés (eau, vin, dessert…). Le prix se répartit entre ceux qui partagent.",
+    sharedItemsQ: "Articles partagés ?",
     shareLocked: "Verrouillé par l'administrateur",
     sharingWaitReveal: "⏳ Tu participes. Le montant est réparti entre tous ceux qui en boivent — ta part et les noms apparaissent dès que tout le monde a coché et confirmé.",
     tapShareHint: "Coche « participer » si tu en as bu. Le prix est réparti entre tous ceux qui en boivent — tu ne paies donc pas le prix entier.",
@@ -4556,7 +4558,15 @@ export default function RundoTable() {
                       <button onClick={openPopup}
                         style={{ width: "100%", padding: "15px 0", fontSize: 17.5, fontWeight: 800, borderRadius: 12, border: "1.5px solid rgba(192,57,43,0.5)", background: "rgba(192,57,43,0.04)", color: "#c0392b", cursor: "pointer" }}>{L.addYourselfBtn}</button>
                     ) : (
-                      <div onClick={openPopup} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", borderRadius: 12, background: "rgba(90,108,166,0.06)", padding: "13px 14px" }}>
+                      /* Bovenste helft van één kader: hieronder sluit "Namen andere gasten"
+                         er naadloos op aan. Vroeger waren het twee losse vakken onder elkaar,
+                         alsof het over verschillende dingen ging. Onderrand en -hoeken vallen
+                         weg zodra dat tweede deel er staat. */
+                      <div onClick={openPopup} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer",
+                        border: "1px solid rgba(18,58,66,0.14)",
+                        borderBottom: adminNamed ? "none" : "1px solid rgba(18,58,66,0.14)",
+                        borderRadius: adminNamed ? "14px 14px 0 0" : 14,
+                        background: "rgba(39,174,96,0.07)", padding: "13px 14px" }}>
                         <span style={{ minWidth: 0 }}>
                           <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {me.name} <span style={{ ...S_BEHEERDER, fontSize: 16 }}>· {seats > 1 ? L.adminsWord : L.adminWord}</span>
@@ -4589,19 +4599,19 @@ export default function RundoTable() {
                 setShowGuestModal(true)
               }
               return (
-                <div style={{ marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(18,58,66,0.08)" }}>
-                  {/* De hele balk klapt open en dicht. Een los pijltje van tien pixels naast
-                      een titel leest niet als "hier zit iets onder"; een omrande balk wel,
-                      en die maakt meteen zichtbaar waar je mag tikken. */}
+                <div>
+                  {/* Onderste helft van hetzelfde kader: geen eigen vlak meer, want binnen een
+                      kader is al duidelijk dat je hier mag tikken. Alleen de scheidingslijn
+                      met de rij erboven blijft. */}
                   <button onClick={() => setShowNamesBlock((v) => !v)}
                     style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", textAlign: "left",
-                      background: "rgba(90,108,166,0.06)", border: "none", borderRadius: 12, padding: "10px 12px" }}>
+                      background: "#fff", border: "1px solid rgba(18,58,66,0.14)", borderRadius: "0 0 14px 14px", padding: "12px 12px" }}>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#123a42" }}>
                       {L.whoAtTableTitle} <span style={{ color: "#8aa3a6", fontWeight: 700, fontSize: 14 }}>{L.optionalWord}</span>
                     </span>
                     {/* Grijs zolang er plaatsen vrij zijn: dat is een stand van zaken, geen
                         probleem. Groen pas als alles bezet is — daar is het een afvinking. */}
-                    <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: vrijeZit > 0 ? "#4a6e73" : "#1f8a4c", background: vrijeZit > 0 ? "rgba(255,255,255,0.85)" : "rgba(39,174,96,0.16)", borderRadius: 12, padding: "3px 10px" }}>
+                    <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 800, whiteSpace: "nowrap", color: vrijeZit > 0 ? "#4a6e73" : "#1f8a4c", background: vrijeZit > 0 ? "rgba(18,58,66,0.06)" : "rgba(39,174,96,0.16)", borderRadius: 999, padding: "6px 13px" }}>
                       👥 {L.seatsSummary(totalPersons, vrijeZit)}
                     </span>
                     <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#4a6e73", lineHeight: 1 }}>{showNamesBlock ? "▴" : "▾"}</span>
@@ -6190,8 +6200,26 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   scanFlags?: Record<string, { note: string }>
 }) {
   const [openFlag, setOpenFlag] = useState<string | null>(null)
+  const [deelInfoOpen, setDeelInfoOpen] = useState(false)
   const [lang] = useLang()
   const L = STRINGS[lang]
+  // De uitleg over gedeelde items. Dichtgeklapt zie je alleen waar het over gaat en hoe
+  // de knop eruitziet — de zin erbij was voor wie hem al kent alleen ruis. Hij staat
+  // bovenaan zolang je de lijst nog nakijkt, en verhuist naar onder de items zodra alles
+  // klopt: dan scrolt de pagina naar beneden en zou je hem daarboven nooit meer zien.
+  const deelUitleg = (
+    <div style={{ background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: "11px 12px", marginBottom: 10 }}>
+      <div onClick={() => setDeelInfoOpen((v) => !v)}
+        style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", userSelect: "none" }}>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>{L.sharedItemsQ}</span>
+        <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, padding: "8px 9px", background: "linear-gradient(135deg,#f3d27c,#ecc564)", border: "1px solid rgba(196,152,32,0.55)" }}><ShareIcon on size={14} /><span style={{ fontSize: 15.5, fontWeight: 800, color: "#5c4200" }}>{L.makeSharedShort}</span></span>
+        <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, background: "#fff", border: "1px solid rgba(18,58,66,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, color: "#4a6e73" }}>{deelInfoOpen ? "▴" : "▾"}</span>
+      </div>
+      {deelInfoOpen && (
+        <div style={{ fontSize: 15, color: "#4a6e73", lineHeight: 1.5, marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(18,58,66,0.1)" }}>{L.legendShare}</div>
+      )}
+    </div>
+  )
   return (
     <div style={S.card}>
       {/* De knop staat buiten de twee kopvarianten. Zat hij binnen de gewone kop, dan
@@ -6210,12 +6238,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
           <button onClick={onViewReceipt} style={{ flexShrink: 0, marginTop: 3, border: "1.5px solid rgba(20,153,176,0.4)", background: "#fff", borderRadius: 10, padding: "7px 11px", cursor: "pointer", fontSize: 14.5, fontWeight: 800, color: "#0f7d90", whiteSpace: "nowrap" }}>{L.viewReceipt}</button>
         )}
       </div>
-      {items.length > 0 && (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, background: "rgba(90,108,166,0.06)", borderRadius: 10, padding: "9px 11px" }}>
-          <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, padding: "8px 9px", background: "linear-gradient(135deg,#f3d27c,#ecc564)", border: "1px solid rgba(196,152,32,0.55)" }}><ShareIcon on size={14} /><span style={{ fontSize: 15.5, fontWeight: 800, color: "#5c4200" }}>{L.makeSharedShort}</span></span>
-          <span style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.5 }}>{L.legendShare}</span>
-        </div>
-      )}
+      {items.length > 0 && !billOk && deelUitleg}
       {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 20, fontSize: 16.5 }}>{L.noItemsScan}</div>}
       {items.map((it) => {
         const open = it.quantity - claimedQty(it.id)
@@ -6349,6 +6372,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         )}
         {taxNode}
       </div>
+      {items.length > 0 && billOk && deelUitleg}
       {items.length > 0 && (() => {
         const units = items.reduce((s, it) => s + it.quantity, 0)
         const sum = items.reduce((s, it) => s + it.unit_price * it.quantity, 0)
