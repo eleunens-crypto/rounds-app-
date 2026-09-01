@@ -597,7 +597,7 @@ const T = {
     tikSamenWord: "voor iedereen",
     chooseFirst: "Kies hoe je dit rondje opneemt",
     hintTogether: "Tik alle drankjes meteen aan voor de hele groep",
-    hintPerPerson: "Tik eerst een naam aan, dan het drankje",
+    hintPerPerson: "vanaf 2 pers !\nTik eerst een naam aan, dan het drankje",
     perPersonWord: "per persoon",
     fillWord: "Bedrag toevoegen",
     addPersonHere: "Persoon / naam toevoegen",
@@ -738,7 +738,6 @@ const T = {
     youTag: "jij",
     yourselfWord: "jezelf",
     everyoneWord: "iedereen",
-    fromTwoOn: "Vanaf 2 personen en meer. Voeg hieronder personen toe!",
     forWord: "Voor",
     aloneHint: "Voorlopig alleen jij",
     canAlsoLater: "Kan ook later",
@@ -1359,7 +1358,7 @@ const T = {
     tikSamenWord: "pour tous",
     chooseFirst: "Choisis comment tu notes cette tourn\u00e9e",
     hintTogether: "Coche toutes les boissons d'un coup pour tout le groupe",
-    hintPerPerson: "Coche d'abord un nom, puis la boisson",
+    hintPerPerson: "\u00e0 partir de 2 pers\u00a0!\nCoche d\u2019abord un nom, puis la boisson",
     perPersonWord: "par personne",
     fillWord: "Ajouter le montant",
     addPersonHere: "Ajouter personne / nom",
@@ -1500,7 +1499,6 @@ const T = {
     youTag: "toi",
     yourselfWord: "toi-m\u00eame",
     everyoneWord: "tout le monde",
-    fromTwoOn: "\u00c0 partir de 2 personnes. Ajoute des personnes ci-dessous\u00a0!",
     forWord: "Pour",
     aloneHint: "Pour l'instant, juste toi",
     canAlsoLater: "Ça peut attendre",
@@ -5479,6 +5477,10 @@ export default function PartyTest() {
   const nextRound = () => {
     if (blockIfUnpaid()) return
     setActiveCat(catsPresent[0])
+    // Het zoekveld bleef staan uit het vorige rondje, met de gefilterde lijst en de
+    // regel erboven erbij — een nieuw rondje hoort te beginnen zoals het eerste.
+    setDrinkSearch("")
+    setFullList(false)
     // Loopt er nog een rondje? Dan is dit geen nieuw rondje maar gewoon terugkeren.
     // Vroeger telde het nummer bij elk bezoek op, ook zonder één bestelling.
     if (settle && openRoundId) { setView("order"); return }
@@ -5747,6 +5749,8 @@ export default function PartyTest() {
     if (blockIfUnpaid()) return
     const last = rounds[rounds.length - 1]
     if (!last) { setNotice(L.nothingToRepeat); return }
+    setDrinkSearch("")
+    setFullList(false)
     const orders: Assign = {}
     Object.entries(last.orders).forEach(([did, per]) => {
       const row: Record<string, number> = {}
@@ -8717,14 +8721,6 @@ export default function PartyTest() {
                       <span className="rundo-wijs rundo-wijs2" style={{ fontSize: 20, flexShrink: 0 }}>{"\u261D\uFE0F"}</span>
                     </div>
                   </>
-                ) : alleenJij ? (
-                  <div style={{ position: "relative", display: "flex", gap: 9, alignItems: "center", justifyContent: "center", marginTop: 11, background: "#fdf6e4", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "11px 12px" }}>
-                    {/* Tandje op driekwart: deze balk verschijnt alleen bij "per persoon",
-                        dus hij wijst altijd naar de rechterknop. */}
-                    <span style={{ position: "absolute", top: -8, left: "75%", width: 14, height: 14, transform: "translateX(-50%) rotate(45deg)", background: "#fdf6e4", borderLeft: "1.5px solid rgba(224,138,0,0.6)", borderTop: "1.5px solid rgba(224,138,0,0.6)" }} />
-                    <span style={{ fontSize: 20, flexShrink: 0 }}>{"\u{1F465}"}</span>
-                    <span style={{ fontSize: 15.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35, textAlign: "center" }}>{L.fromTwoOn}</span>
-                  </div>
                 ) : (
                 <div ref={hintBlok} style={{ position: "relative", scrollMarginTop: 8, display: "flex", gap: 10, alignItems: "center", justifyContent: "center", marginTop: 11, background: "#eef1f6", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "11px 13px" }}>
                   {/* De grijze vulling blijft, de amberen rand en het tandje maken duidelijk
@@ -8735,7 +8731,7 @@ export default function PartyTest() {
                       erboven. Er stond hier een vingertje bij per persoon, en dat is een
                       ander soort teken — een aanwijzing in plaats van een wie. */}
                   <span style={{ fontSize: 21, flexShrink: 0 }}>{perPersoon ? "\u{1F464}" : "\u{1F465}"}</span>
-                  <span style={{ fontSize: 16.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35, textAlign: "center" }}>{perPersoon ? L.hintPerPerson : L.hintTogether}</span>
+                  <span style={{ fontSize: 16.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35, textAlign: "center", whiteSpace: "pre-line" }}>{perPersoon ? L.hintPerPerson : L.hintTogether}</span>
                 </div>
                 )}
 
@@ -10175,7 +10171,7 @@ export default function PartyTest() {
 
         {/* Totaal — de som van alle rondjes. Eén blik op wat de avond kostte. */}
         {/* Geen kader: het totaal hoort bij de lijst eronder, niet als losse knop. */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "0 4px 12px", marginBottom: 4, borderBottom: "1px solid rgba(29,41,66,0.18)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "0 4px 9px", marginBottom: 0, borderBottom: "1px solid rgba(29,41,66,0.18)" }}>
           <span style={{ fontSize: 21.5, fontWeight: 800, color: "#1d2942" }}>
             {metBedrag === 0 ? L.roundsOnly(rounds.length) : L.quickTotalLabel(metBedrag)}
             {metBedrag > 0 && rounds.length > metBedrag && <span style={{ fontWeight: 700, color: "#8b93a3" }}> {L.quickTotalOf(rounds.length)}</span>}
@@ -10183,13 +10179,8 @@ export default function PartyTest() {
           <span style={{ fontSize: 24, fontWeight: 800, color: metBedrag === 0 ? "#b9c0cc" : "#c98a00" }}>{euro(totalCost)}</span>
         </div>
 
-        {!settle && rounds.length > 0 && openRounds.size === 0 && rounds.some((r) => (r.amount || 0) <= 0.005 || Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0) > 0) && (
-          <div style={{ display: "flex", gap: 10, alignItems: "center", background: "#fff", border: "1.5px solid rgba(29,41,66,0.2)", borderRadius: 12, padding: 12, marginTop: 12 }}>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: "#1d2942", lineHeight: 1.35 }}><b>⚖️ {L.fairAskShort}</b> {L.fairNudge}</span>
-            <button onClick={() => { setOpenRounds(new Set(rounds.map((r) => r.id))); requestAnimationFrame(() => requestAnimationFrame(() => rondjesLijst.current?.scrollIntoView({ behavior: "smooth", block: "start" }))) }}
-              style={{ flexShrink: 0, background: "#fdf3d8", border: "1.5px solid rgba(224,138,0,0.6)", color: "#8a5e0f", borderRadius: 999, padding: "8px 13px", fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", cursor: "pointer", fontFamily: "inherit" }}>{L.fairNudgeBtn}</button>
-          </div>
-        )}
+        {/* De regel "Eerlijk verdelen? — Nu aanvullen" stond hier; elk rondje toont in
+            zijn eigen amberen kader al wat er nog moet gebeuren. */}
         {/* Elk rondje, nieuwste bovenaan. Klik de kop om open/dicht te klappen.
             De toon/verberg-pil hangt half over de rand, boven én onder. */}
         <div ref={rondjesLijst} style={{ position: "relative", scrollMarginTop: 8 }}>
@@ -10202,12 +10193,12 @@ export default function PartyTest() {
             }
             const klik = () => setOpenRounds(allesOpen ? new Set<string>() : new Set(rounds.map((r) => r.id)))
             return (
-              <div style={{ position: "sticky", top: 6, zIndex: 6, display: "flex", justifyContent: "center", marginBottom: -13, pointerEvents: "none" }}>
+              <div style={{ position: "sticky", top: 6, zIndex: 6, display: "flex", justifyContent: "center", marginBottom: -15, pointerEvents: "none" }}>
                 <span onClick={klik} style={{ ...pil, pointerEvents: "auto" }}>{allesOpen ? `▴ ${L.hideDetails}` : `▾ ${L.showDetails}`}</span>
               </div>
             )
           })()}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: rounds.length > 0 ? 14 : 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: rounds.length > 0 ? 10 : 0 }}>
           {rounds.map((r) => {
             const nr = rounds.indexOf(r) + 1
             const items = drinksOf(r).reduce((a, x) => a + x.n, 0)
@@ -10552,9 +10543,7 @@ export default function PartyTest() {
                     background: "#fffdf4", color: "#8a5e0f", border: "2px solid rgba(240,165,0,0.7)" }}>{settle && openRoundId ? L.continueRound(roundNr) : L.newRoundBtn}</button>
               )}
             </div>
-            <button onClick={goQuickSettle}
-              style={{ width: "100%", marginTop: 8, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "13px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit",
-                background: "#fff", color: "#1d2942", border: "1px solid rgba(29,41,66,0.28)" }}>{L.settleBtnShort}</button>
+            {/* De afrekenknop stond hier ook onderaan; één keer bovenaan volstaat. */}
             </div>
           </>
         )}
