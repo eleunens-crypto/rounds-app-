@@ -33,6 +33,7 @@ type Claim = {
   participant_id: string
   quantity: number
   members?: string | null
+  created_by?: string | null
   created_at?: string
 }
 type Confirmation = { id: string; group_id: string; participant_id: string; confirmed_at?: string }
@@ -737,7 +738,6 @@ const STRINGS = {
     secondName: "Tweede naam…",
     extraName: (n: number) => `Naam ${n}…`,
     showsAsOne: "Verschijnt als één plaats:",
-    assignShareHint: "Was iets om te delen (fles wijn, water)? Tik ‘delen’ bij dat item.",
     confirmRemoveLast: (name: string, n: number) => `${name} heeft al ${n} ${n === 1 ? "item" : "items"} aangetikt. Die toewijzingen gaan verloren. Toch verwijderen?`,
     badgeSelf: "zelf aangemeld",
     badgeMe: "jij",
@@ -977,6 +977,7 @@ const STRINGS = {
     allPerfect: "Bon en items kloppen perfect. Je kan verder naar Gasten & delen.",
     itemListOff: "De itemlijst klopt nog niet",
     receiptConfirmedLabel: "Bon (bevestigd)",
+    viaAdminTag: "(via admin)",
     yesMatches: "✓ Ja, klopt",
     noAdjust: "Nee, aanpassen",
     itemsBelowLabel: "Items hieronder",
@@ -1389,7 +1390,6 @@ const STRINGS = {
     secondName: "Deuxième prénom…",
     extraName: (n: number) => `Prénom ${n}…`,
     showsAsOne: "Apparaît comme une seule place :",
-    assignShareHint: "Quelque chose à partager (bouteille de vin, eau) ? Touchez « partager » sur cet article.",
     confirmRemoveLast: (name: string, n: number) => `${name} a déjà sélectionné ${n} ${n === 1 ? "article" : "articles"}. Ces attributions seront perdues. Supprimer quand même ?`,
     badgeSelf: "inscrit via le lien",
     badgeMe: "toi",
@@ -1629,6 +1629,7 @@ const STRINGS = {
     allPerfect: "L'addition et les articles correspondent. Tu peux continuer.",
     itemListOff: "La liste d\u2019articles ne colle pas encore",
     receiptConfirmedLabel: "Ticket (confirm\u00e9)",
+    viaAdminTag: "(via admin)",
     yesMatches: "✓ Oui, c’est bon",
     noAdjust: "Non, modifier",
     itemsBelowLabel: "Articles ci-dessous",
@@ -3338,9 +3339,11 @@ export default function RundoTable() {
     if (qty <= 0) {
       if (existing) fout = (await supabase.from("table_claims").delete().eq("id", existing.id)).error?.message ?? null
     } else if (existing) {
-      fout = (await supabase.from("table_claims").update({ quantity: qty, members: mem }).eq("id", existing.id)).error?.message ?? null
+      // Ook bij een wijziging: wie er het laatst aan zat, is wie het nu op zijn naam heeft.
+      // Past de gast het zelf later aan, dan verdwijnt "via admin" vanzelf weer.
+      fout = (await supabase.from("table_claims").update({ quantity: qty, members: mem, created_by: getOrCreateOwnerId() }).eq("id", existing.id)).error?.message ?? null
     } else {
-      fout = (await supabase.from("table_claims").insert([{ group_id: group.id, item_id: itemId, participant_id: pid, quantity: qty, members: mem }])).error?.message ?? null
+      fout = (await supabase.from("table_claims").insert([{ group_id: group.id, item_id: itemId, participant_id: pid, quantity: qty, members: mem, created_by: getOrCreateOwnerId() }])).error?.message ?? null
     }
     if (fout) { setToast(L.claimFailed(fout)); return }
     await loadAll(group.id)
@@ -3549,8 +3552,16 @@ export default function RundoTable() {
 
   // metToeslagen=false geeft enkel wat de gast zelf aanduidde. Dat is wat er in "Wat ik
   // bevestigde" hoort te staan — btw en fooi koos hij niet, die komen er achteraf bij.
-  const personItems = (pid: string, metToeslagen = true): { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number }[] => {
-    const out: { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number }[] = []
+  // "viaAdmin": de regel is aangemaakt of laatst gewijzigd door de eigenaar van de groep,
+  // terwijl ze op naam van iemand anders staat. Dan vulde de beheerder ze in voor die gast,
+  // en dat mag die gast zien — hij weet dan welke regels hij zelf koos en welke niet.
+  const doorAdmin = (itemId: string, pid: string) => {
+    if (!group || pid === meId) return false
+    const c = claims.find((x) => x.item_id === itemId && x.participant_id === pid)
+    return !!c?.created_by && c.created_by === group.owner_id
+  }
+  const personItems = (pid: string, metToeslagen = true): { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number; viaAdmin?: boolean }[] => {
+    const out: { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number; viaAdmin?: boolean }[] = []
     for (const it of baseItems) {
       if (it.is_shared) {
         const sh = sharerIds(it.id)
@@ -3558,11 +3569,11 @@ export default function RundoTable() {
           const rev = sharedRevealed(it)
           const heads = shareHeads(it.id)
           const mine = myShareHeads(it.id, pid)
-          out.push({ name: it.name, qty: 1, amount: rev && heads > 0 ? itemTotal(it) * (mine / heads) : 0, shared: true, revealed: rev, sharers: sh.length, myHeads: mine })
+          out.push({ name: it.name, qty: 1, amount: rev && heads > 0 ? itemTotal(it) * (mine / heads) : 0, shared: true, revealed: rev, sharers: sh.length, myHeads: mine, viaAdmin: doorAdmin(it.id, pid) })
         }
       } else {
         const q = myQty(it.id, pid)
-        if (q > 0) out.push({ name: it.name, qty: q, amount: it.unit_price * q, shared: false, revealed: true, sharers: 0, myHeads: 0 })
+        if (q > 0) out.push({ name: it.name, qty: q, amount: it.unit_price * q, shared: false, revealed: true, sharers: 0, myHeads: 0, viaAdmin: doorAdmin(it.id, pid) })
       }
     }
     // Elke toeslag zijn eigen regel onder zijn eigen naam. Math.abs, want een korting is
@@ -5065,7 +5076,7 @@ export default function RundoTable() {
                       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
                       <span style={{ fontSize: 15, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 8, padding: "3px 7px", flexShrink: 0 }}>{st.label}</span>
                     </span>
-                    <span style={{ fontWeight: 800, fontSize: 19, color: "#123a42", flexShrink: 0, marginLeft: 8 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</span>
+                    <span style={{ fontWeight: 800, fontSize: 19, color: "#123a42", flexShrink: 0, marginLeft: 8 }}>€{t.settled.toFixed(2).replace(".", ",")}</span>
                   </div>
                   {open && (
                     <div style={{ padding: "2px 4px 12px 23px" }}>
@@ -6292,6 +6303,33 @@ function TopBar({ group, isAdmin, onHome, totalPersons, status, onRenameGroup }:
   )
 }
 
+// De uitleg over gedeelde items, op elk scherm waar je items aantikt: de itemlijst van
+// de beheerder, zijn toewijsscherm en dat van een gast. Vroeger stond op elk van die
+// drie een andere formulering van hetzelfde. Dichtgeklapt zie je alleen waar het over
+// gaat en hoe de knop eruitziet — de zin erbij was voor wie hem al kent alleen ruis.
+function DeelUitleg() {
+  const [deelInfoOpen, setDeelInfoOpen] = useState(false)
+  const [lang] = useLang()
+  const L = STRINGS[lang]
+  return (
+
+    <div style={{ background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: "11px 12px", marginBottom: 10 }}>
+      <div onClick={() => setDeelInfoOpen((v) => !v)}
+        style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", userSelect: "none" }}>
+        {/* De lege ruimte links in plaats van tussen titel en knop: zo staan de titel, de
+            voorbeeldknop en de echte deelknoppen op de regels eronder in één kolom rechts. */}
+        <span style={{ flex: 1, minWidth: 0 }} />
+        <span style={{ flexShrink: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>{L.sharedItemsQ}</span>
+        <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, padding: "8px 9px", background: "linear-gradient(135deg,#f3d27c,#ecc564)", border: "1px solid rgba(196,152,32,0.55)" }}><ShareIcon on size={14} /><span style={{ fontSize: 15.5, fontWeight: 800, color: "#5c4200" }}>{L.makeSharedShort}</span></span>
+        <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, background: "#fff", border: "1px solid rgba(18,58,66,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, color: "#4a6e73" }}>{deelInfoOpen ? "▴" : "▾"}</span>
+      </div>
+      {deelInfoOpen && (
+        <div style={{ fontSize: 15, color: "#4a6e73", lineHeight: 1.5, marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(18,58,66,0.1)" }}>{L.legendShare}</div>
+      )}
+    </div>
+  )
+}
+
 function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, shareHeads, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onSetExpected, onAddManual, bareBill, taxLines, taxNode, onViewReceipt, recentItemId, onGoGuests, billOk, billOverBy, scanFlags }: {
   items: BillItem[]; claimedQty: (id: string) => number
   participants: Participant[]; claimsForItem: (id: string) => { name: string; qty: number }[]
@@ -6309,29 +6347,9 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   scanFlags?: Record<string, { note: string }>
 }) {
   const [openFlag, setOpenFlag] = useState<string | null>(null)
-  const [deelInfoOpen, setDeelInfoOpen] = useState(false)
   const [lang] = useLang()
   const L = STRINGS[lang]
-  // De uitleg over gedeelde items. Dichtgeklapt zie je alleen waar het over gaat en hoe
-  // de knop eruitziet — de zin erbij was voor wie hem al kent alleen ruis. Hij staat
-  // bovenaan zolang je de lijst nog nakijkt, en verhuist naar onder de items zodra alles
-  // klopt: dan scrolt de pagina naar beneden en zou je hem daarboven nooit meer zien.
-  const deelUitleg = (
-    <div style={{ background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: "11px 12px", marginBottom: 10 }}>
-      <div onClick={() => setDeelInfoOpen((v) => !v)}
-        style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", userSelect: "none" }}>
-        {/* De lege ruimte links in plaats van tussen titel en knop: zo staan de titel, de
-            voorbeeldknop en de echte deelknoppen op de regels eronder in één kolom rechts. */}
-        <span style={{ flex: 1, minWidth: 0 }} />
-        <span style={{ flexShrink: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>{L.sharedItemsQ}</span>
-        <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, padding: "8px 9px", background: "linear-gradient(135deg,#f3d27c,#ecc564)", border: "1px solid rgba(196,152,32,0.55)" }}><ShareIcon on size={14} /><span style={{ fontSize: 15.5, fontWeight: 800, color: "#5c4200" }}>{L.makeSharedShort}</span></span>
-        <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, background: "#fff", border: "1px solid rgba(18,58,66,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, color: "#4a6e73" }}>{deelInfoOpen ? "▴" : "▾"}</span>
-      </div>
-      {deelInfoOpen && (
-        <div style={{ fontSize: 15, color: "#4a6e73", lineHeight: 1.5, marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(18,58,66,0.1)" }}>{L.legendShare}</div>
-      )}
-    </div>
-  )
+  const deelUitleg = <DeelUitleg />
   return (
     <div style={S.card}>
       {/* De knop staat buiten de twee kopvarianten. Zat hij binnen de gewone kop, dan
@@ -6594,7 +6612,7 @@ function ClaimScreen(props: {
   onEditMe?: (id: string) => void
   sharedStatus: (it: BillItem) => { heads: number; expected: number | null; warn: null | "none" | "few" | "one" | "many" }
   itemTotal: (it: BillItem) => number; personTotal: (pid: string) => { settled: number; pendingShared: boolean }
-  personItems: (pid: string, metToeslagen?: boolean) => { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number }[]
+  personItems: (pid: string, metToeslagen?: boolean) => { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number; viaAdmin?: boolean }[]
   sharedRevealed: (it: BillItem) => boolean; allConfirmed: boolean; isConfirmed: (pid: string) => boolean; explicitConfirmed: (pid: string) => boolean
   claimMode: "item" | "person"; setClaimMode: (m: "item" | "person") => void
   claimPid: string | null; setClaimPid: (id: string | null) => void
@@ -6747,8 +6765,9 @@ function ClaimScreen(props: {
             ? <div style={{ fontSize: 16, color: "#aaa", padding: 10 }}>{L.addGuestsInTab1}</div>
             : (
               <>
-                {/* Geen legende bovenaan: ze staat al in de kiezer die opengaat wanneer je
-                    een item toewijst, en daar is ze op het juiste moment. */}
+                {/* Dezelfde balk als in de itemlijst en op het gastenscherm: één uitleg over
+                    gedeelde items, overal in dezelfde woorden en met dezelfde knop erbij. */}
+                <DeelUitleg />
                 {items.map((it) => {
                   const claimed = claimedQty(it.id)
                   const open = it.quantity - claimed
@@ -6975,7 +6994,7 @@ function ClaimScreen(props: {
         </h3>
         {gastItemsOpen && (<>
         {items.length > 0 && (
-          <div style={{ fontSize: 15.5, color: "#4a6e73", background: "rgba(90,108,166,0.06)", borderRadius: 9, padding: "8px 10px", marginBottom: 11, lineHeight: 1.45 }}>💡 {L.assignShareHint}</div>
+          <DeelUitleg />
         )}
         {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 16.5 }}>{L.noItemsWaitScan}</div>}
 
@@ -7188,7 +7207,7 @@ function ClaimScreen(props: {
             </div>
             {personItems(meId).map((r, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "4px 0", borderBottom: "1px solid rgba(18,58,66,0.06)", fontSize: 16, color: "#2b4f56" }}>
-                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{r.qty > 1 ? `${r.qty}× ` : ""}{r.name}</span>
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{r.qty > 1 ? `${r.qty}× ` : ""}{r.name}{r.viaAdmin && <span style={{ fontSize: 13.5, fontWeight: 800, color: "#a06b00", marginLeft: 5 }}>{L.viaAdminTag}</span>}</span>
                 <span style={{ flexShrink: 0, fontWeight: 700, color: "#123a42" }}>€{r.amount.toFixed(2).replace(".", ",")}</span>
               </div>
             ))}
@@ -7228,7 +7247,7 @@ function ClaimScreen(props: {
                       <span style={{ fontSize: 15.5, color: "#8aa3a6", width: 12, flexShrink: 0 }}>{rowOpen ? "▼" : "▶"}</span>
                       <span style={{ fontSize: 17.5, fontWeight: isMe ? 800 : 600, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{isMe ? L.youSuffix : ""}</span>
                     </span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42", flexShrink: 0, marginLeft: 8 }}>€{pt.settled.toFixed(2).replace(".", ",")}{pt.pendingShared ? "+" : ""}</span>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42", flexShrink: 0, marginLeft: 8 }}>€{pt.settled.toFixed(2).replace(".", ",")}</span>
                   </div>
                   {rowOpen && (
                     <div style={{ padding: "0 8px 10px 26px" }}>
@@ -7304,7 +7323,7 @@ function ClaimScreen(props: {
               <div style={{ fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.45, marginBottom: 14 }}>{L.finalPopupSub}</div>
               {personItems(meId).map((r, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "6px 0", borderBottom: "1px solid rgba(18,58,66,0.07)", fontSize: 15.5, color: "#2b4f56" }}>
-                  <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{r.qty > 1 ? `${r.qty}× ` : ""}{r.name}</span>
+                  <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{r.qty > 1 ? `${r.qty}× ` : ""}{r.name}{r.viaAdmin && <span style={{ fontSize: 13.5, fontWeight: 800, color: "#a06b00", marginLeft: 5 }}>{L.viaAdminTag}</span>}</span>
                   <span style={{ flexShrink: 0, fontWeight: 700, color: "#123a42" }}>€{r.amount.toFixed(2).replace(".", ",")}</span>
                 </div>
               ))}
