@@ -1064,6 +1064,8 @@ const STRINGS = {
     fullyClaimed: "volledig",
     removeOne: "verwijder er één",
     notSelectedAdd: (name: string | undefined) => `${name} had dit zelf niet aangeduid. Toch toevoegen?`,
+    assignToQrGuest: (name: string | undefined) => `${name} kwam via de link binnen en duidt normaal zelf aan. Toch voor ${name} invullen?`,
+    assignToFreeSpot: (name: string | undefined) => `${name} is nog een vrije plaats zonder naam. Wat je hier toewijst, hoort straks bij wie die plaats inneemt. Doorgaan?`,
     unitsClaimed: "Stuks geclaimd",
     sharedItemsHandled: "Gedeelde items geregeld",
     billTotalLabel: "Totaal rekening",
@@ -1701,6 +1703,8 @@ const STRINGS = {
     fullyClaimed: "complet",
     removeOne: "en retirer un",
     notSelectedAdd: (name: string | undefined) => `${name} ne l'avait pas coché soi-même. L'ajouter quand même ?`,
+    assignToQrGuest: (name: string | undefined) => `${name} est arrivé via le lien et attribue normalement lui-même. Remplir quand même pour ${name} ?`,
+    assignToFreeSpot: (name: string | undefined) => `${name} est encore une place libre sans nom. Ce que tu attribues ici ira à celui qui prendra cette place. Continuer ?`,
     unitsClaimed: "Unités attribuées",
     sharedItemsHandled: "Articles partagés réglés",
     billTotalLabel: "Total de l'addition",
@@ -2737,6 +2741,16 @@ export default function RundoTable() {
     return false
   }
 
+  // Alle vrije plaatsen heten "Gast", dus in het toewijsscherm stonden er drie knoppen met
+  // exact dezelfde tekst. Hier nummeren we ze in de volgorde waarin ze bestaan; wie al een
+  // echte naam heeft, houdt die gewoon.
+  const vrijeNummers = (() => {
+    const m: Record<string, number> = {}
+    let n = 0
+    participants.forEach((p) => { if (isFreeSpot(p)) { n += 1; m[p.id] = n } })
+    return m
+  })()
+  const naamVan = (p: Participant) => vrijeNummers[p.id] ? `${L.guestWord} ${vrijeNummers[p.id]}` : p.name
   // Status per plaats: heeft aangeduid / aangemeld maar niets / nog vrij / door admin geregeld.
   const spotStatus = (p: Participant): { kind: "done" | "idle" | "free" | "mine"; count: number } => {
     const count = claims.filter((c) => c.participant_id === p.id && c.quantity > 0).length
@@ -2751,7 +2765,7 @@ export default function RundoTable() {
   const joinedCount = participants.filter((p) => spotStatus(p).kind !== "free").reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
 
   // Overzicht "Wie doet al mee?" — op de gasten-tab ingeklapt, op de toewijs-tab open.
-  const joinedList = (opts: { clickable?: boolean } = {}) => {
+  const joinedList = (opts: { clickable?: boolean; renamable?: boolean } = {}) => {
     // Vanaf 5 personen twee kolommen, anders wordt de lijst onnodig lang.
     const twoCol = participants.length > 4
     return (
@@ -2768,10 +2782,20 @@ export default function RundoTable() {
             <div key={p.id} onClick={() => { if (clickMine) { setClaimMode("person"); setClaimPid(p.id) } }}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 5px", borderRadius: 7, background: bg, cursor: clickMine ? "pointer" : "default", minWidth: 0 }}>
               <span style={{ fontSize: 16, flexShrink: 0 }}>{icon}</span>
+              {opts.renamable && st.kind === "free" ? (
+                // Een vrije plaats moet je hier meteen een naam kunnen geven: je hebt net
+                // gezien welke plaatsen nog leeg zijn, en dan is dit de plek waar je het
+                // wil oplossen — niet twee tabs verderop.
+                <input defaultValue="" placeholder={naamVan(p)} onClick={(e) => e.stopPropagation()}
+                  onBlur={(e) => { const v = e.target.value.trim(); if (v) void renameGuest(p.id, v) }}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+                  style={{ ...S.input, flex: 1, minWidth: 0, padding: "6px 9px", fontSize: 15.5, fontWeight: 700 }} />
+              ) : (
               <b style={{ flex: 1, minWidth: 0, fontSize: 16, color: st.kind === "free" ? "#8aa3a6" : "#123a42", fontWeight: st.kind === "free" ? 600 : 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {st.kind === "free" ? L.freeSpot : p.name}
+                {st.kind === "free" ? naamVan(p) : p.name}
                 {(p.seats ?? 1) > 1 && <span style={{ fontSize: 15, fontWeight: 700, color: "#8aa3a6" }}> · {p.seats}p.</span>}
               </b>
+              )}
               <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: rightRed ? 800 : 600, color: rightRed ? "#c0392b" : st.kind === "free" ? "#b6cacc" : "#8aa3a6" }}>{right}</span>
             </div>
           )
@@ -3713,9 +3737,19 @@ export default function RundoTable() {
           <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: vrij ? "#8aa3a6" : "#123a42", fontStyle: vrij ? "italic" : "normal", display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
               <span style={{ flexShrink: 0 }}>{cat.icon}</span>
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{vrij ? L.freeSpotName : p.name}{!vrij && (p.seats ?? 1) > 1 ? ` · ${p.seats}p.` : ""}</span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{vrij ? naamVan(p) : p.name}{!vrij && (p.seats ?? 1) > 1 ? ` · ${p.seats}p.` : ""}</span>
             </span>
+            {/* Je klapt deze lijst juist open om te zien wie er nog ontbreekt — dan moet je
+                hier ook meteen een naam kunnen zetten in plaats van naar de gasten-tab te
+                moeten. Alleen voor de beheerder, en alleen op plaatsen die nog vrij zijn. */}
+            {isAdmin && vrij ? (
+              <input defaultValue="" placeholder={L.addNameRow}
+                onBlur={(e) => { const v = e.target.value.trim(); if (v) void renameGuest(p.id, v) }}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+                style={{ ...S.input, flexShrink: 0, width: 132, padding: "6px 9px", fontSize: 14.5, fontWeight: 700 }} />
+            ) : (
             <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: cat.color, background: cat.bg, border: `1px solid ${cat.brd}`, borderRadius: 14, padding: "4px 10px", whiteSpace: "nowrap" }}>{cat.label}</span>
+            )}
           </div>
         )
       })}
@@ -4849,7 +4883,7 @@ export default function RundoTable() {
         <>
           <ClaimScreen
             items={baseItems} meId={meId} me={me} isAdmin={isAdmin}
-            participants={participants}
+            participants={participants} vrijFn={isFreeSpot} naamVan={naamVan}
             claimedQty={claimedQty} myQty={myQty} sharerIds={sharerIds}
             shareHeads={shareHeads} myShareHeads={myShareHeads} seatsOf={seatsOf} setSeats={setSeats}
             onRename={renameGuest}
@@ -6342,10 +6376,12 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   )
 }
 
-function AssignPicker({ participants, itemId, isShared, confirmedFn, onAssign, onClose }: {
+function AssignPicker({ participants, itemId, isShared, confirmedFn, vrijFn, naamVan, onAssign, onClose }: {
   participants: Participant[]; itemId: string; isShared?: boolean
   confirmedFn: (pid: string) => boolean
-  onAssign: (pid: string, warn: boolean) => void; onClose: () => void
+  vrijFn: (p: Participant) => boolean
+  naamVan: (p: Participant) => string
+  onAssign: (pid: string, reden: "bevestigd" | "qr" | "vrij" | null) => void; onClose: () => void
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
@@ -6365,17 +6401,21 @@ function AssignPicker({ participants, itemId, isShared, confirmedFn, onAssign, o
         {gesorteerd.map((p, i) => {
           const klaar = confirmedFn(p.id)
           const viaQr = !!p.self_joined
+          // Wie zelf aanduidde of via de link binnenkwam, verdient een vraag vóór je het
+          // voor hem invult. Een nog vrije plaats óók, maar één keer volstaat — daarna weet
+          // je het en zou het alleen nog in de weg zitten.
+          const reden: "bevestigd" | "qr" | "vrij" | null = klaar ? "bevestigd" : viaQr ? "qr" : vrijFn(p) ? "vrij" : null
           return (
             <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
               {i === eersteViaLink && eersteViaLink > 0 && (
                 <span style={{ width: 1, height: 24, background: "rgba(18,58,66,0.12)", marginRight: 2 }} />
               )}
-              <button onClick={() => onAssign(p.id, klaar)} style={{
+              <button onClick={() => onAssign(p.id, reden)} style={{
                 fontSize: 16, fontWeight: viaQr ? 700 : 800, borderRadius: 10, padding: "7px 11px", cursor: "pointer",
                 border: viaQr ? "1.5px solid rgba(18,58,66,0.12)" : "1.5px solid rgba(20,153,176,0.45)",
                 background: viaQr ? "#fff" : "rgba(20,153,176,0.06)",
                 color: viaQr ? "#8aa3a6" : "#123a42", opacity: klaar ? 0.75 : viaQr ? 0.8 : 1,
-              }}>{viaQr && "📱 "}{p.name}{klaar && " ✓"}</button>
+              }}>{viaQr && "📱 "}{naamVan(p)}{klaar && " ✓"}</button>
             </span>
           )
         })}
@@ -6388,6 +6428,8 @@ function AssignPicker({ participants, itemId, isShared, confirmedFn, onAssign, o
 function ClaimScreen(props: {
   items: BillItem[]; meId: string | null; me: Participant | null; isAdmin: boolean
   participants: Participant[]
+  vrijFn: (p: Participant) => boolean
+  naamVan: (p: Participant) => string
   claimedQty: (id: string) => number; myQty: (id: string, pid: string | null) => number; sharerIds: (id: string) => string[]
   shareHeads: (id: string) => number; myShareHeads: (id: string, pid: string) => number; seatsOf: (pid: string) => number
   setSeats: (pid: string, n: number) => void
@@ -6417,9 +6459,11 @@ function ClaimScreen(props: {
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const { items, meId, isAdmin, participants, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, sluitSharePicker, sharePickerOpen, onToggleShared, claimMembers, sharePicking, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onSetExpected, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
+  const { items, meId, isAdmin, participants, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, sluitSharePicker, sharePickerOpen, onToggleShared, claimMembers, sharePicking, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onSetExpected, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
   const adminPid = props.claimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
+  // De uitleg bij het invullen voor een nog vrije plaats hoeft maar één keer.
+  const [vrijeUitleg, setVrijeUitleg] = useState(false)
   const [disputeOpen, setDisputeOpen] = useState(false)
   const [disputeText, setDisputeText] = useState("")
   const [openGuestRows, setOpenGuestRows] = useState<Set<string>>(() => new Set())
@@ -6675,12 +6719,13 @@ function ClaimScreen(props: {
                         </div>
                         {open > 0
                           ? <button onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "5px 10px", cursor: "pointer", border: "none", color: "#c0392b", background: "rgba(224,107,94,0.14)" }}>{open} {L.openAssign}</button>
-                          : <span style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "4px 9px", color: "#1f8a4c", background: "rgba(39,174,96,0.12)" }}>{L.fullyClaimed}</span>}
+                          : <button onClick={() => setAssignItem(assignItem === it.id ? null : it.id)}
+                              style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "4px 9px", cursor: "pointer", border: "1px solid rgba(39,174,96,0.35)", color: "#1f8a4c", background: "rgba(39,174,96,0.12)" }}>{L.fullyClaimed} ✏️</button>}
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25, alignItems: "center" }}>
                         {who.map(({ p, q: pq }) => (
                           <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "2px 4px 2px 9px", color: p.id === adminPid ? "#5a4a1a" : "#4a6e73", background: p.id === adminPid ? "rgba(233,196,95,0.5)" : "rgba(90,108,166,0.1)" }}>
-                            {p.name} ×{pq}
+                            {naamVan(p)} ×{pq}
                             <button onClick={() => setClaim(it.id, p.id, Math.max(0, pq - 1))} title={L.removeOne} style={{ border: "2px solid #2b2f38", background: "#fff", color: "#c0392b", borderRadius: 6, width: 26, height: 22, cursor: "pointer", fontSize: 18, fontWeight: 800, lineHeight: 1 }}>−</button>
                           </span>
                         ))}
@@ -6688,7 +6733,17 @@ function ClaimScreen(props: {
                       </div>
                       {assignItem === it.id && (
                         <AssignPicker participants={participants} itemId={it.id} confirmedFn={explicitConfirmed}
-                          onAssign={(pid, warn) => { const doe = () => { setClaim(it.id, pid, myQty(it.id, pid) + 1); setAssignItem(null) }; if (warn) { askConfirm(L.notSelectedAdd(participants.find((x) => x.id === pid)?.name), L.yes, doe); return } doe() }}
+                          vrijFn={vrijFn} naamVan={naamVan}
+                          onAssign={(pid, reden) => {
+                            const wie = participants.find((x) => x.id === pid)
+                            const naam = wie ? naamVan(wie) : ""
+                            const doe = () => { setClaim(it.id, pid, myQty(it.id, pid) + 1); setAssignItem(null) }
+                            if (reden === "bevestigd") { askConfirm(L.notSelectedAdd(naam), L.yes, doe); return }
+                            if (reden === "qr") { askConfirm(L.assignToQrGuest(naam), L.yes, doe); return }
+                            // Voor een vrije plaats maar één keer per sessie: daarna weet je het.
+                            if (reden === "vrij" && !vrijeUitleg) { setVrijeUitleg(true); askConfirm(L.assignToFreeSpot(naam), L.yes, doe); return }
+                            doe()
+                          }}
                           onClose={() => setAssignItem(null)} />
                       )}
                     </div>
