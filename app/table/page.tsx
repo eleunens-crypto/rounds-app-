@@ -140,6 +140,14 @@ function renameMyGroup(id: string, name: string) {
   const list = getMyGroups().map((x) => x.id === id ? { ...x, name } : x)
   localStorage.setItem(`rundo_table_groups_${getOrCreateOwnerId()}`, JSON.stringify(list))
 }
+// Op een telefoon verliest een invoerveld zijn focus zodra je een knop aanraakt: het
+// toetsenbord schuift weg, de pagina verspringt en het 'click'-punt ligt dan naast de
+// knop. Resultaat: de eerste tik lijkt niets te doen. Door op 'pointerdown' te
+// reageren en het standaardgedrag te blokkeren telt die eerste aanraking wél. Dezelfde
+// oplossing die bij het bevestigen van het bontotaal al gebruikt werd.
+function tik(fn: () => void) {
+  return (e: React.PointerEvent) => { e.preventDefault(); fn() }
+}
 function removeMyGroup(id: string) {
   if (typeof window === "undefined") return
   const list = getMyGroups().filter((x) => x.id !== id)
@@ -3905,7 +3913,7 @@ export default function RundoTable() {
                 is een groepsnaam typen het enige wat je te doen hebt. */}
             <div style={{ fontSize: 24, color: "#123a42", fontWeight: 800, marginBottom: 9, lineHeight: 1.2 }}>{L.groupName} <span style={{ color: "#c0392b" }}>*</span></div>
             <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && createGroup()} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 14 }} />
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 19, fontWeight: 700 }} onClick={createGroup} disabled={busy}>{busy ? L.loading : L.startGroup}</button>
+            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 19, fontWeight: 700 }} onPointerDown={busy ? undefined : tik(createGroup)} disabled={busy}>{busy ? L.loading : L.startGroup}</button>
           </div>
 
           {startError && (
@@ -4116,7 +4124,7 @@ export default function RundoTable() {
                   <div style={{ fontSize: 15.5, color: "#8aa3a6", marginBottom: 10 }}>{L.showsAsOne} <b style={{ color: "#123a42" }}>{claimNames.filter((n) => n.trim()).join(" & ")}</b></div>
                 )}
 
-                <button onClick={confirmClaimSpot} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{claimSeats > 1 ? L.thatsUs : L.thatsMe}</button>
+                <button onPointerDown={tik(confirmClaimSpot)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{claimSeats > 1 ? L.thatsUs : L.thatsMe}</button>
                 {/* Stond vroeger als linkje in de kopbalk. Hier hoort het thuis: je bent net
                     je eigen naam aan het nakijken, dus dit is het moment waarop je merkt dat
                     je de verkeerde aantikte. */}
@@ -5694,7 +5702,7 @@ export default function RundoTable() {
               {selfSeats > 1 && selfNames.filter((n) => n.trim()).length > 0 && (
                 <div style={{ fontSize: 15.5, color: "#8aa3a6", marginBottom: 10 }}>{L.showsAsOne} <b style={{ color: "#123a42" }}>{selfNames.filter((n) => n.trim()).join(" & ")}</b></div>
               )}
-              <button onClick={bewaar} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{selfSeats > 1 ? L.thatsUs : L.thatsMe}</button>
+              <button onPointerDown={tik(bewaar)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{selfSeats > 1 ? L.thatsUs : L.thatsMe}</button>
               <button onClick={() => setShowSelfModal(false)} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#8aa3a6" }}>{L.cancel}</button>
             </div>
           </div>
@@ -6173,7 +6181,7 @@ export default function RundoTable() {
             </label>
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setNewItem(null)}>{L.cancel}</button>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={confirmNewItem}>{L.addBtn}</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onPointerDown={tik(confirmNewItem)}>{L.addBtn}</button>
             </div>
           </div>
         </div>
