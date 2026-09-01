@@ -790,7 +790,8 @@ const STRINGS = {
     scanModalTitle: "🧾 Rekening scannen",
     scanModalTitleAdded: "🧾 Rekening toegevoegd",
     scanModalIntro: "Maak een duidelijke foto van de rekening of kies er één uit je galerij.",
-    scanSubNote: "Daarna kan je herkende items nog nakijken en bijsturen.",
+    scanSubNote: "Haalt de items en bedragen van je bon. Daarna tikken jij en je gasten aan wie wat nam.",
+    backWord: "← Terug",
     scanProgress: "De tekst van je bon wordt herkend — even geduld.",
     scanningBusy: "⏳ Bezig met scannen — even geduld",
     longBillTitle: "📑 Te lange rekening? Neem 2 foto's!",
@@ -798,7 +799,7 @@ const STRINGS = {
     addSecondHalf: "2e foto",
     addSecondHalfHint: "optioneel",
     retakePhoto: "opnieuw nemen",
-    readBillBtn: "✨ Start AI Scan",
+    readBillBtn: "✨ Start AI scan",
     readBillBtn2: "✨ Scan 2 foto's samen",
     countsAsOne: "telt als één scan",
     scanningPhotoN: (i: number, n: number) => `✨ Foto ${i} van ${n} wordt gelezen…`,
@@ -1441,7 +1442,8 @@ const STRINGS = {
     addSecondHalf: "2e photo",
     retakePhoto: "reprendre",
     readBillBtn: "✨ Démarrer le scan IA",
-    scanSubNote: "Tu pourras ensuite vérifier et corriger les articles reconnus.",
+    scanSubNote: "Récupère les articles et les montants de ton ticket. Ensuite, toi et tes invités cochez qui a pris quoi.",
+    backWord: "← Retour",
     addSecondHalfHint: "facultatif",
     readBillBtn2: "✨ Scanner les 2 photos",
     countsAsOne: "compte pour un seul scan",
@@ -2840,6 +2842,16 @@ export default function RundoTable() {
     await wisLaatste()
   }
 
+  // De groepsnaam is het enige wat op elke pagina bovenaan staat, dus hier hoort hij ook
+  // aanpasbaar te zijn — niet alleen op het scherm waar je hem aanmaakte.
+  const renameGroup = async (naam: string) => {
+    if (!group) return
+    const schoon = naam.trim()
+    if (!schoon || schoon === group.name) return
+    setGroup((cur) => cur ? { ...cur, name: schoon } : cur)
+    const { error } = await supabase.from("table_groups").update({ name: schoon }).eq("id", group.id)
+    if (error) { setError(error.message); await loadAll(group.id) }
+  }
   const renameGuest = async (id: string, name: string) => {
     if (!group) return
     const finalName = name.trim()
@@ -3980,7 +3992,7 @@ export default function RundoTable() {
   if (needIdentity && !isAdmin) {
     return (
       <div style={S.page}>
-        <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
+        <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} onRenameGroup={isAdmin ? renameGroup : undefined} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
         <div style={{ maxWidth: 440, margin: "0 auto" }}>
           <div style={S.card}>
             {claimSpot === null ? (
@@ -4136,7 +4148,7 @@ export default function RundoTable() {
         </div>
       )}
 
-      <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)}
+      <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} onRenameGroup={isAdmin ? renameGroup : undefined} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)}
         status={isAdmin && adminTab === "overview" ? {
           bon: billOk ? L.statusBillOk(`€${billTotal.toFixed(2).replace(".", ",")}`) : L.statusBillCheck,
           bonOk: billOk,
@@ -5726,7 +5738,15 @@ export default function RundoTable() {
       {showScan && (
         <div style={S.overlay}>
           <div style={{ ...S.modal, width: "min(460px, 92vw)", maxHeight: "88vh" }}>
-            <h3 style={{ marginBottom: photos.length > 0 ? 14 : 4, fontSize: 21, fontWeight: 800 }}>{photos.length > 0 ? L.scanModalTitleAdded : L.scanModalTitle}</h3>
+            {/* Het vinkje hoort bij de titel, niet bij elke foto apart: één bevestiging dat
+                er iets klaarstaat volstaat. De kleine vinkjes op de miniaturen zijn daarom weg. */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: photos.length > 0 ? 14 : 4 }}>
+            <h3 style={{ margin: 0, fontSize: 21, fontWeight: 800 }}>{photos.length > 0 ? L.scanModalTitleAdded : L.scanModalTitle}</h3>
+              {photos.length > 0 && (
+                <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: "#27ae60", color: "#fff",
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800 }}>✓</span>
+              )}
+            </div>
             {photos.length === 0 && !scanning && scanPreview.length === 0 && (
               <p style={{ fontSize: 16, color: "#999", marginBottom: 14 }}>{L.scanModalIntro}</p>
             )}
@@ -5754,18 +5774,19 @@ export default function RundoTable() {
                   </>
                 ) : (
                   <div style={{ marginBottom: 14 }}>
+                    {/* Eén foto krijgt de ruimte die er is; komt er een tweede bij, dan moeten
+                        ze allebei krimpen om naast elkaar te passen op een smal scherm. Het
+                        bijzetvak blijft smaller dan de foto — dat is een uitnodiging, geen bon. */}
                     <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 16, paddingTop: 6 }}>
                       {photos.map((ph, i) => (
-                        <div key={i} style={{ position: "relative", width: 58, height: 74, borderRadius: 10, border: "2px solid #27ae60", boxSizing: "border-box", flexShrink: 0 }}>
+                        <div key={i} style={{ position: "relative", width: photos.length > 1 ? 96 : 132, height: photos.length > 1 ? 122 : 168, borderRadius: 12, border: "2px solid #27ae60", boxSizing: "border-box", flexShrink: 0 }}>
                           <img src={ph.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} />
-                          {/* Groen vinkje: deze foto staat klaar. Geen foutmelding, een bevestiging. */}
-                          <span style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", width: 20, height: 20, background: "#27ae60", color: "#fff", borderRadius: "50%", fontSize: 15.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }}>✓</span>
                           {/* Verwijderen is geen fout, dus een rustig grijs kruisje. */}
                           <button onClick={() => removePhoto(i)} title={L.retakePhoto} style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: "#fff", border: "1px solid rgba(18,58,66,0.2)", color: "#7d999d", fontSize: 15, fontWeight: 700, lineHeight: 1, cursor: "pointer", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
                         </div>
                       ))}
                       {photos.length < 2 && (
-                        <label style={{ width: 92, minHeight: 74, borderRadius: 10, border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.04)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, padding: "6px 6px", gap: 1 }}>
+                        <label style={{ width: photos.length > 0 ? 88 : 96, minHeight: photos.length > 0 ? 168 : 122, borderRadius: 12, border: "1.5px dashed rgba(20,153,176,0.5)", background: "rgba(20,153,176,0.04)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, padding: "6px 6px", gap: 1 }}>
                           <span style={{ fontSize: 20, color: "#0f7d90", lineHeight: 1 }}>＋</span>
                           <span style={{ fontSize: 13, color: "#0f7d90", fontWeight: 800, textAlign: "center", lineHeight: 1.15 }}>{L.addSecondHalf}</span>
                           <span style={{ fontSize: 11, color: "#8aa3a6", fontWeight: 700, textAlign: "center", lineHeight: 1.15 }}>{L.addSecondHalfHint}</span>
@@ -6002,7 +6023,7 @@ export default function RundoTable() {
             })()}
 
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, flex: 1 }} disabled={scanning} onClick={() => { setShowScan(false); setScanPreview([]); setScanTotal(""); setScanFail(null); setScanFile(null); if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) } }}>{scanPreview.length > 0 ? L.cancel : L.closeWord}</button>
+              <button style={{ ...S.btn, flex: 1 }} disabled={scanning} onClick={() => { setShowScan(false); setScanPreview([]); setScanTotal(""); setScanFail(null); setScanFile(null); if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) } }}>{scanPreview.length > 0 ? L.cancel : L.backWord}</button>
               {scanPreview.length > 0 && (
                 <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={() => confirmScan()} disabled={scanning}>{L.confirmAdd}</button>
               )}
@@ -6188,8 +6209,9 @@ export default function RundoTable() {
 // ═══════════════════════════════════════════════════════════════════════════
 // SUB-COMPONENTEN
 // ═══════════════════════════════════════════════════════════════════════════
-function TopBar({ group, isAdmin, onHome, totalPersons, status }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number; status?: { bon: string; bonOk: boolean; open: string; openOk: boolean } }) {
+function TopBar({ group, isAdmin, onHome, totalPersons, status, onRenameGroup }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number; onRenameGroup?: (naam: string) => void; status?: { bon: string; bonOk: boolean; open: string; openOk: boolean } }) {
   const [lang] = useLang()
+  const [naamBewerkt, setNaamBewerkt] = useState(false)
   const L = STRINGS[lang]
   return (
     <div style={{ marginBottom: 14, padding: "6px 2px" }}>
@@ -6200,7 +6222,19 @@ function TopBar({ group, isAdmin, onHome, totalPersons, status }: { group: Group
         <RundoLogo size={42} resto />
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 8, borderBottom: "1.5px solid rgba(18,58,66,0.2)" }}>
-        <span style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 20, fontWeight: 800, color: "#123a42" }}>{group.name}</span>
+        {/* Ter plekke aanpasbaar: tik op de naam en je typt erin. Een potloodje erachter
+            zegt dat het kan; een apart venster zou voor één woord te veel gedoe zijn. */}
+        {onRenameGroup && naamBewerkt ? (
+          <input autoFocus defaultValue={group.name}
+            onBlur={(e) => { onRenameGroup(e.target.value); setNaamBewerkt(false) }}
+            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setNaamBewerkt(false) }}
+            style={{ flex: "1 1 auto", minWidth: 0, fontSize: 20, fontWeight: 800, color: "#123a42", border: "1.5px solid rgba(20,153,176,0.5)", borderRadius: 9, padding: "4px 8px", background: "#fff", fontFamily: "inherit" }} />
+        ) : (
+          <span onClick={() => onRenameGroup && setNaamBewerkt(true)}
+            style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 20, fontWeight: 800, color: "#123a42", cursor: onRenameGroup ? "pointer" : "default" }}>
+            {group.name}{onRenameGroup && <span style={{ fontSize: 15, color: "#0f7d90", marginLeft: 6 }}>✏️</span>}
+          </span>
+        )}
         {/* Het aantal personen stond hier altijd, ook op de scanpagina waar er nog niemand
             is aangeduid — dan zegt "1 pers." alleen dat jij bestaat. Pas tonen zodra er
             echt meer dan één aan tafel zit. */}
