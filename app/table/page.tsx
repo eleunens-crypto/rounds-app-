@@ -635,9 +635,9 @@ const STRINGS = {
     namePlaceholder: "Naam",
     addBtn: "+ Toevoegen",
     howManyGroupTitle: "👥 Met hoeveel zijn jullie in de groep?",
-    yourselfStepTitle: "\u270d\ufe0f Voeg eerst jezelf toe",
+    yourselfStepTitle: "\u270d\ufe0f Voeg nu eerst jezelf toe",
     yourselfStepSub: "\u2026 en eventueel je partner en/of kinderen als jullie samen betalen.",
-    addYourselfBtn: "\u270d\ufe0f Vul je naam in",
+    addYourselfBtn: "Vul je naam in",
     howManyAdminQ: "Voor hoeveel personen betaal jij?",
     adminBadge: "admin",
     nameRequired: "Vul eerst je eigen naam in — anders weet niemand wie de rekening deelde.",
@@ -1286,9 +1286,9 @@ const STRINGS = {
     namePlaceholder: "Nom",
     addBtn: "+ Ajouter",
     howManyGroupTitle: "👥 Vous êtes combien dans le groupe ?",
-    yourselfStepTitle: "\u270d\ufe0f Ajoute-toi d\u2019abord",
+    yourselfStepTitle: "\u270d\ufe0f Ajoute-toi d\u2019abord maintenant",
     yourselfStepSub: "\u2026 et \u00e9ventuellement ton/ta partenaire et/ou tes enfants si vous payez ensemble.",
-    addYourselfBtn: "\u270d\ufe0f Remplis ton nom",
+    addYourselfBtn: "Remplis ton nom",
     howManyAdminQ: "Pour combien de personnes paies-tu ?",
     adminBadge: "admin",
     nameRequired: "Indique d'abord ton nom — sinon personne ne sait qui a partagé l'addition.",
@@ -4636,7 +4636,7 @@ export default function RundoTable() {
                     {isPh && (
                       <>
                         <div style={{ fontSize: 18, fontWeight: 800, color: "#123a42", marginBottom: 3 }}>{L.yourselfStepTitle} <span style={{ color: "#c0392b" }}>*</span></div>
-                        <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45, marginBottom: 11 }}>{L.yourselfStepSub}</div>
+                        <div style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, marginBottom: 12 }}>{L.yourselfStepSub}</div>
                       </>
                     )}
                     {isPh ? (
@@ -5663,7 +5663,7 @@ export default function RundoTable() {
           <div style={{ ...S.overlay, zIndex: 3100 }}>
             <div style={{ ...S.modal, width: "min(400px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 3 }}>{L.howManyAdminQ}</h3>
-              <div style={{ fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.45, marginBottom: 13 }}>{L.howManyAdminSub}</div>
+              <div style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, marginBottom: 14 }}>{L.howManyAdminSub}</div>
               <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
                 {[1, 2, 3].map((n) => {
                   const aan = n === 3 ? selfSeats >= 3 : selfSeats === n
@@ -5672,7 +5672,7 @@ export default function RundoTable() {
                     <button key={n} onClick={() => { const v = n === 3 ? Math.max(3, selfSeats) : n; setSelfSeats(v); setSelfNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? "")) }}
                       style={{ flex: 1, padding: "10px 4px", borderRadius: 10, cursor: "pointer", color: "#123a42", background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(18,58,66,0.15)" }}>
                       <span style={{ display: "block", fontSize: 15, fontWeight: 800 }}>{label}</span>
-                      <span style={{ display: "block", fontSize: 12, fontWeight: 600, marginTop: 2, color: aan ? "#6b5a2a" : "#4a6e73" }}>{n === 1 ? L.aloneSub : L.togetherSub}</span>
+                      <span style={{ display: "block", fontSize: 14, fontWeight: 700, marginTop: 3, lineHeight: 1.3, color: aan ? "#6b5a2a" : "#4a6e73" }}>{n === 1 ? L.aloneSub : L.togetherSub}</span>
                     </button>
                   )
                 })}
