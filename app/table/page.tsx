@@ -654,7 +654,7 @@ const STRINGS = {
     personsFirst: "⚠️ Vul eerst in met hoeveel jullie zijn.",
     lockedPersons: "🔒 Eerst het aantal personen invullen",
     lockedName: "🔒 Vul eerst je eigen naam in",
-    nowAssignTitle: "Wie nam wat?",
+    nowAssignTitle: "na QR > Wie nam wat?",
     nowAssignSub: "Ga nu verder naar toewijzen",
     goAssignBtn: "\ud83c\udf7d\ufe0f Toewijzen eten & drinken \u2192",
     howManyPersonsQ: "Voor hoeveel personen?",
@@ -1305,7 +1305,7 @@ const STRINGS = {
     personsFirst: "⚠️ Indique d'abord combien vous êtes.",
     lockedPersons: "🔒 Indique d'abord le nombre de personnes",
     lockedName: "🔒 Indique d'abord ton propre nom",
-    nowAssignTitle: "Qui a pris quoi ?",
+    nowAssignTitle: "après le QR > Qui a pris quoi ?",
     nowAssignSub: "Passe maintenant à l’attribution",
     goAssignBtn: "\ud83c\udf7d\ufe0f Attribuer plats & boissons \u2192",
     howManyPersonsQ: "Pour combien de personnes ?",
@@ -7170,7 +7170,7 @@ function ClaimScreen(props: {
         {!finalized && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", border: "2px solid rgba(20,153,176,0.45)", borderRadius: 14, padding: "13px 15px", marginTop: 4, boxShadow: "0 4px 14px -8px rgba(20,153,176,0.6)" }}>
             <span style={{ fontSize: 18, fontWeight: 800, color: "#0f7488", minWidth: 0 }}>{L.yourTotal}</span>
-            <span style={{ fontSize: 32, fontWeight: 800, color: "#123a42", flexShrink: 0, letterSpacing: -0.5 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</span>
+            <span style={{ fontSize: 32, fontWeight: 800, color: "#123a42", flexShrink: 0, letterSpacing: -0.5 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared && <span style={{ fontSize: 17, marginLeft: 5, verticalAlign: "super" }}>ℹ️</span>}</span>
           </div>
         )}
         {t.pendingShared && (
@@ -7195,7 +7195,7 @@ function ClaimScreen(props: {
             ))}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", border: "2px solid rgba(20,153,176,0.45)", borderRadius: 14, padding: "13px 15px", margin: "11px 0 14px", boxShadow: "0 4px 14px -8px rgba(20,153,176,0.6)" }}>
               <span style={{ fontSize: 18, fontWeight: 800, color: "#0f7488", minWidth: 0 }}>{L.yourShareWord}</span>
-              <span style={{ fontSize: 32, fontWeight: 800, color: "#123a42", flexShrink: 0, letterSpacing: -0.5 }}>€{t.settled.toFixed(2).replace(".", ",")}{t.pendingShared ? "+" : ""}</span>
+              <span style={{ fontSize: 32, fontWeight: 800, color: "#123a42", flexShrink: 0, letterSpacing: -0.5 }}>€{t.settled.toFixed(2).replace(".", ",")}</span>
             </div>
             <div style={{ paddingTop: 12, borderTop: "1px solid rgba(90,108,166,0.18)" }}>
             {/* De verdeling van de hele tafel is naslagwerk — dicht dus, tenzij je ze wil
