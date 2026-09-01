@@ -777,11 +777,11 @@ const STRINGS = {
     enterTotalPrefix: "Vul het totaal van de bon in — items: ",
     enterCorrectTotal: "Vul het correcte rekeningtotaal in zoals op de bon",
     totalMatches: "✓ Totaalbedrag klopt met de bon",
-    checkTotalPrompt: "Kijk op je bon — klopt dit totaalbedrag? Tik dan op Ja.",
-    checkTotalSub: "Vergelijk met het bedrag onderaan je bon en tik Ja of Neen.",
+    checkTotalPrompt: "Klopt dit rekeningtotaal?",
+    checkTotalSub: "Vergelijk met totaalbedrag van je bon!",
     checkTotalFirstTitle: "Eerst het bontotaal nakijken",
     checkTotalFirstBody: "Bevestig bovenaan of het totaal van de bon klopt. Zo weet je zeker dat de verdeling op het juiste bedrag gebeurt.",
-    receiptTotalLabel: "Rekeningtotaal op de bon: €",
+    receiptTotalLabel: "Rekeningtotaal op de bon:",
     amountPlaceholder: "bv. 65.90",
     totalConfirmedTitle: "Bon-totaal bevestigd",
     confirmAmount: "✓ Bevestig",
@@ -1428,11 +1428,11 @@ const STRINGS = {
     enterTotalPrefix: "Indique le total de l'addition — articles : ",
     enterCorrectTotal: "Indique le total exact tel qu'il figure sur l'addition",
     totalMatches: "✓ Le total correspond à l'addition",
-    checkTotalPrompt: "Regarde ton addition — ce total est-il correct ? Touche alors Oui.",
-    checkTotalSub: "Compare avec le montant en bas de ton ticket et touche Oui ou Non.",
+    checkTotalPrompt: "Ce total est-il correct ?",
+    checkTotalSub: "Compare avec le montant total de ton ticket !",
     checkTotalFirstTitle: "V\u00e9rifie d\u2019abord le total",
     checkTotalFirstBody: "Confirme en haut si le total du ticket est correct. Ainsi le partage se fait sur le bon montant.",
-    receiptTotalLabel: "Total sur l'addition : €",
+    receiptTotalLabel: "Total sur l'addition :",
     amountPlaceholder: "ex. 65,90",
     totalConfirmedTitle: "Total de l'addition confirmé",
     confirmAmount: "✓ Confirme",
@@ -4383,16 +4383,27 @@ export default function RundoTable() {
                 ) : (
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 20, fontWeight: 800, color: "#8a5a00", lineHeight: 1.35 }}>{L.checkTotalPrompt}</div>
-                    <div style={{ fontSize: 16, color: "#8a6a2a", marginTop: 5, lineHeight: 1.45 }}>{L.checkTotalSub}</div>
+                    {/* De opdracht in een eigen bandje met een bonnetje ervoor: het icoon zegt
+                        waar je moet kijken nog voor je de zin gelezen hebt, en het vlak zorgt
+                        dat de zin niet wegzakt onder de vraag erboven. */}
+                    <div style={{ marginTop: 9, background: "rgba(243,156,18,0.14)", borderRadius: 10, padding: "10px 12px", display: "flex", gap: 8, alignItems: "flex-start" }}>
+                      <span style={{ flexShrink: 0, fontSize: 18, lineHeight: 1.3 }}>🧾</span>
+                      <span style={{ fontSize: 17, fontWeight: 800, color: "#8a4514", lineHeight: 1.4 }}>{L.checkTotalSub}</span>
+                    </div>
                   </div>
                 )}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>{L.receiptTotalLabel}</span>
+                  {/* Het euroteken stond aan het eind van het label en raakte daar los van het
+                      bedrag zodra de regel afbrak. Nu plakt het tegen het invoerveld. */}
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: "#4a6e73" }}>€</span>
                   <input ref={receiptInputRef} type="text" inputMode="decimal" defaultValue={entered != null ? entered.toFixed(2).replace(".", ",") : ""} key={entered ?? "leeg"} placeholder={L.amountPlaceholder}
                     onInput={(e) => { e.currentTarget.value = numFilter(e.currentTarget.value) }}
                     onBlur={saveTotal}
                     onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
                     style={{ ...S.input, width: 118, padding: "10px 11px", fontSize: 21, fontWeight: 800 }} />
+                  </span>
                   {greenState && <span title={L.totalConfirmedTitle} style={{ color: "#1f8a4c", fontSize: 24, fontWeight: 800, lineHeight: 1 }}>✓</span>}
                   {receiptEditing && (
                     <button onPointerDown={tikBevestig} title={L.confirmAmountTitle} style={{ ...actieBtn }}>{L.confirmAmount}</button>
