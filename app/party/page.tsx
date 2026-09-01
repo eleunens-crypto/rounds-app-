@@ -2461,6 +2461,12 @@ export default function PartyTest() {
     }
     if (Math.max(1, r.headcount || 1) !== editDraft.headcount) await setRoundHeadcount(r.id, editDraft.headcount)
     if (potTekort) meldPot(L.potClamped(euro(beschikbaar)))
+    // Bedrag ingevuld én een betaler aangeduid? Dan is dit rondje rond en klapt de kaart
+    // dicht — je ziet meteen welke er nog openstaan in plaats van te scrollen langs werk
+    // dat af is. Ontbreekt er nog iets, dan blijft hij open staan waar je bezig was.
+    if (editDraft.amount > 0.005 && (editDraft.usePot || betalers.length > 0)) {
+      setOpenRounds((prev) => { const n = new Set(prev); n.delete(r.id); return n })
+    }
     cancelEditRound()
   }
   const [potIsCard, setPotIsCard] = useState(false)
@@ -10280,6 +10286,17 @@ export default function PartyTest() {
                   const dr = editDraft
                   const uitPot = (r.potPart || 0) > 0.005
                   const potAan = bewerk && dr ? dr.usePot : uitPot
+                  // Wat draagt één pil? Buiten de bewerkstand staat de verdeling al in het
+                  // rondje. In de bewerkstand bestaat ze nog niet, dus tonen we alvast wat het
+                  // wordt bij Opslaan: de pot neemt wat hij kan, de rest gaat gelijk over de
+                  // gekozen namen — net wat saveEditRound straks doet.
+                  const pilBedrag = (pid: string | null) => {
+                    if (!(bewerk && dr)) return pid === null ? (r.potPart || 0) : (r.payers?.[pid] || 0)
+                    const potDeel = dr.usePot ? Math.min(dr.amount, Math.max(0, potAvailFor(idx))) : 0
+                    if (pid === null) return potDeel
+                    const n = dr.payers.filter((x) => people.some((pp) => pp.id === x)).length
+                    return n > 0 ? Math.max(0, dr.amount - potDeel) / n : 0
+                  }
                   // In de bewerkstand tellen ook drankjes mee die je zonet toevoegde en
                   // die dus nog nul keer in het rondje staan.
                   const basisRijen = drinksOf(r)
@@ -10459,7 +10476,7 @@ export default function PartyTest() {
                             background: potAan ? "#2f6fb5" : "#fff",
                             border: potAan ? "1.5px solid #2f6fb5" : "1.5px solid rgba(29,41,66,0.4)",
                             color: potAan ? "#fff" : "#1d2942" }}>
-                          {potIsCard ? <>💳 {L.cardWord}</> : <><ZakjeIcoon size={14} /> {L.potWord}</>}{potAan ? " ✓" : ""}
+                          {potIsCard ? <>💳 {L.cardWord}</> : <><ZakjeIcoon size={14} /> {L.potWord}</>}{potAan && <span style={{ marginLeft: 6, fontWeight: 800 }}>{euro(pilBedrag(null))}</span>}
                         </span>
                         {people.map((p) => {
                           const aan = bewerk && dr ? dr.payers.includes(p.id) : (r.payers?.[p.id] || 0) > 0
@@ -10472,7 +10489,7 @@ export default function PartyTest() {
                               style={{ cursor: "pointer", borderRadius: 999, padding: "7px 13px", fontSize: 13.5, fontWeight: 600,
                                 background: aan ? RAND : "#fff",
                                 border: aan ? `1.5px solid ${RAND}` : "1.5px solid rgba(29,41,66,0.4)",
-                                color: aan ? RANDTEKST : "#1d2942" }}>{p.name}{aan ? " ✓" : ""}</span>
+                                color: aan ? RANDTEKST : "#1d2942" }}>{p.name}{aan && <span style={{ marginLeft: 6, fontWeight: 800 }}>{euro(pilBedrag(p.id))}</span>}</span>
                           )
                         })}
                       </div>
