@@ -791,6 +791,10 @@ const STRINGS = {
     no: "Neen",
     checkPrices: "prijzen/aantallen van items correct?",
     checkTax: "BTW / andere kosten / kortingen apart toegevoegd?",
+    usuallyOneOf: "Meestal is het één van deze:",
+    checkTaxShort: "BTW of korting",
+    checkPricesShort: "prijs of aantal",
+    checkSharedShort: "gedeeld item",
     checkShared: "gedeelde items?",
     allOkTitle: "Alles klopt",
     allOkSub: "Ga verder naar het delen met je gasten.",
@@ -964,6 +968,8 @@ const STRINGS = {
     allPerfect: "Bon en items kloppen perfect. Je kan verder naar Gasten & delen.",
     itemListOff: "De itemlijst klopt nog niet",
     receiptConfirmedLabel: "Bon (bevestigd)",
+    yesMatches: "✓ Ja, klopt",
+    noAdjust: "Nee, aanpassen",
     itemsBelowLabel: "Items hieronder",
     tooMuchInList: "Te veel in de lijst",
     tooLittleInList: "Te weinig in de lijst",
@@ -1436,6 +1442,10 @@ const STRINGS = {
     no: "Non",
     checkPrices: "prix/quantités des articles corrects ?",
     checkTax: "TVA / autres frais / réductions ajoutés séparément ?",
+    usuallyOneOf: "C’est généralement l’un de ceux-ci :",
+    checkTaxShort: "TVA ou remise",
+    checkPricesShort: "prix ou quantité",
+    checkSharedShort: "article partagé",
     checkShared: "articles partagés ?",
     allOkTitle: "Tout est correct",
     allOkSub: "Continue vers le partage avec tes invit\u00e9s.",
@@ -1609,6 +1619,8 @@ const STRINGS = {
     allPerfect: "L'addition et les articles correspondent. Tu peux continuer.",
     itemListOff: "La liste d\u2019articles ne colle pas encore",
     receiptConfirmedLabel: "Ticket (confirm\u00e9)",
+    yesMatches: "✓ Oui, c’est bon",
+    noAdjust: "Non, modifier",
     itemsBelowLabel: "Articles ci-dessous",
     tooMuchInList: "En trop dans la liste",
     tooLittleInList: "Manque dans la liste",
@@ -4353,11 +4365,11 @@ export default function RundoTable() {
               <span style={{ display: "inline-flex", gap: 8 }}>
                 {/* Eenmaal bevestigd verdwijnt "Ja" — anders lijkt het alsof je nóg eens
                     moet bevestigen. Enkel de weg terug (aanpassen) blijft staan. */}
-                {!greenState && <button onPointerDown={tikBevestig} style={{ ...keuzeBtn }}>{L.yes}</button>}
+                {!greenState && <button onPointerDown={tikBevestig} style={{ ...keuzeBtn, borderColor: "rgba(39,174,96,0.55)", color: "#1f8a4c" }}>{L.yesMatches}</button>}
                 <button onPointerDown={(e) => { e.preventDefault(); setReceiptEditing(true); setReceiptConfirmed(false); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }}
                   style={greenState
                     ? { border: "none", background: "transparent", color: "#4a6e73", borderRadius: 10, padding: "11px 14px", fontSize: 16, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }
-                    : { ...keuzeBtn, ...(receiptEditing ? { borderColor: "#0f7d90", color: "#0f7d90" } : {}) }}>{greenState ? L.changeAmount : L.no}</button>
+                    : { ...keuzeBtn, ...(receiptEditing ? { borderColor: "#0f7d90", color: "#0f7d90" } : {}) }}>{greenState ? L.changeAmount : L.noAdjust}</button>
               </span>
             )
             return (
@@ -4385,7 +4397,10 @@ export default function RundoTable() {
                   {receiptEditing && (
                     <button onPointerDown={tikBevestig} title={L.confirmAmountTitle} style={{ ...actieBtn }}>{L.confirmAmount}</button>
                   )}
-                  {entered != null && jaNeen}
+                  {/* Tijdens het aanpassen staat "Bevestig" er al; "Ja" deed daar hetzelfde en
+                      "Neen" bracht je naar het veld waar je al in stond. Eén stel knoppen per
+                      toestand: aanpassen → Bevestig, nakijken → Ja/Nee, bevestigd → aanpassen. */}
+                  {entered != null && !receiptEditing && jaNeen}
                 </div>
                 {receiptConfirmed && !receiptEditing && (() => {
                   const diffTxt = diff.toFixed(2).replace(".", ",")
@@ -4412,25 +4427,22 @@ export default function RundoTable() {
                       {/* Eigen kop: het bontotaal is bevestigd, maar de lijst eronder telt
                           anders op. Zonder die kop lijkt de groene en oranje melding elkaar
                           tegen te spreken. */}
-                      <div style={{ fontSize: 16.5, fontWeight: 800, color: "#8a4514", marginBottom: 10 }}>⚠ {L.itemListOff}</div>
-                      <div style={{ background: "#fff", borderRadius: 9, padding: "11px 12px", marginBottom: 10 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, color: "#4a6e73", marginBottom: 5 }}>
-                          <span>{L.receiptConfirmedLabel}</span><span style={{ fontWeight: 700 }}>€{(entered ?? 0).toFixed(2).replace(".", ",")}</span>
-                        </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, color: "#4a6e73", marginBottom: 7 }}>
-                          <span>{L.itemsBelowLabel}</span><span style={{ fontWeight: 700 }}>€{billTotal.toFixed(2).replace(".", ",")}</span>
-                        </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", borderTop: "1px solid rgba(18,58,66,0.12)", paddingTop: 7 }}>
-                          <span style={{ fontSize: 16, fontWeight: 800, color: "#8a4514" }}>{higher ? L.tooMuchInList : L.tooLittleInList}</span>
-                          <span style={{ fontSize: 21, fontWeight: 800, color: "#e07b28" }}>€{diffTxt}</span>
-                        </div>
+                      {/* Eén kader in plaats van een kader in een kader, en het verschil als kop:
+                          dat bedrag is waar het over gaat. De rekensom staat er als bijzin onder,
+                          en de drie controlepunten als pillen — als bullets namen ze drie regels
+                          en het gewicht van een instructie, terwijl het categorieën zijn. */}
+                      <div style={{ fontSize: 20, fontWeight: 800, color: "#8a4514", lineHeight: 1.3 }}>
+                        €{diffTxt} {higher ? L.tooMuchInList : L.tooLittleInList}
                       </div>
-                      <div style={{ fontSize: 17.5, fontWeight: 800, color: "#c0392b", marginBottom: 6 }}>{L.compareFix}</div>
-                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 15.5, color: "#8a4514", lineHeight: 1.65 }}>
-                        <li>{L.checkTax}</li>
-                        <li>{L.checkPrices}</li>
-                        <li>{L.checkShared}</li>
-                      </ul>
+                      <div style={{ fontSize: 15, color: "#8a6a2a", marginTop: 3 }}>
+                        {L.receiptConfirmedLabel} €{(entered ?? 0).toFixed(2).replace(".", ",")} · {L.itemsBelowLabel} €{billTotal.toFixed(2).replace(".", ",")}
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#8a5e0f", margin: "11px 0 6px" }}>{L.usuallyOneOf}</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {[L.checkTaxShort, L.checkPricesShort, L.checkSharedShort].map((tekst, i2) => (
+                          <span key={i2} style={{ background: "#fff", border: "1px solid rgba(240,165,0,0.5)", color: "#8a5e0f", borderRadius: 999, padding: "6px 11px", fontSize: 13.5, fontWeight: 800 }}>{tekst}</span>
+                        ))}
+                      </div>
                       <button onClick={() => { if (typeof document !== "undefined") document.getElementById("items-op-de-bon")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
                         style={{ marginTop: 11, display: "inline-flex", alignItems: "center", gap: 7, fontSize: 15, fontWeight: 800, color: "#fff", background: "#c0392b", border: "none", borderRadius: 10, padding: "10px 15px", cursor: "pointer" }}>⬇ {L.goToItemList}</button>
                       {rounding && (
@@ -6298,7 +6310,10 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
     <div style={{ background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: "11px 12px", marginBottom: 10 }}>
       <div onClick={() => setDeelInfoOpen((v) => !v)}
         style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", userSelect: "none" }}>
-        <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>{L.sharedItemsQ}</span>
+        {/* De lege ruimte links in plaats van tussen titel en knop: zo staan de titel, de
+            voorbeeldknop en de echte deelknoppen op de regels eronder in één kolom rechts. */}
+        <span style={{ flex: 1, minWidth: 0 }} />
+        <span style={{ flexShrink: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>{L.sharedItemsQ}</span>
         <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, padding: "8px 9px", background: "linear-gradient(135deg,#f3d27c,#ecc564)", border: "1px solid rgba(196,152,32,0.55)" }}><ShareIcon on size={14} /><span style={{ fontSize: 15.5, fontWeight: 800, color: "#5c4200" }}>{L.makeSharedShort}</span></span>
         <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, background: "#fff", border: "1px solid rgba(18,58,66,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, color: "#4a6e73" }}>{deelInfoOpen ? "▴" : "▾"}</span>
       </div>
