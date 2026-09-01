@@ -597,7 +597,8 @@ const T = {
     tikSamenWord: "voor iedereen",
     chooseFirst: "Kies hoe je dit rondje opneemt",
     hintTogether: "Tik alle drankjes meteen aan voor de hele groep",
-    hintPerPerson: "vanaf 2 pers !\nTik eerst een naam aan, dan het drankje",
+    hintPerPerson: "Tik eerst een naam aan, dan het drankje",
+    needTwoLine: "vanaf 2 pers !",
     perPersonWord: "per persoon",
     fillWord: "Bedrag toevoegen",
     addPersonHere: "Persoon / naam toevoegen",
@@ -1358,7 +1359,8 @@ const T = {
     tikSamenWord: "pour tous",
     chooseFirst: "Choisis comment tu notes cette tourn\u00e9e",
     hintTogether: "Coche toutes les boissons d'un coup pour tout le groupe",
-    hintPerPerson: "\u00e0 partir de 2 pers\u00a0!\nCoche d\u2019abord un nom, puis la boisson",
+    hintPerPerson: "Coche d\u2019abord un nom, puis la boisson",
+    needTwoLine: "\u00e0 partir de 2 pers\u00a0!",
     perPersonWord: "par personne",
     fillWord: "Ajouter le montant",
     addPersonHere: "Ajouter personne / nom",
@@ -2213,6 +2215,9 @@ export default function PartyTest() {
   const [showTreat, setShowTreat] = useState(false)
   // Loopt de beheerder alle rondjes in één keer af, of wijst hij er één toe?
   const [assignAllMode, setAssignAllMode] = useState(false)
+  // Welke afgewerkte rondjes heb je in het toewijsscherm weer opengeklapt? Een rondje
+  // zonder onbenoemde drankjes vouwt vanzelf dicht — anders scrol je door werk dat af is.
+  const [assignHeropend, setAssignHeropend] = useState<Set<string>>(new Set())
   // Kwam je bij het toewijzen via de Afrekenen-knop (uitgebreid opnemen)? Dan willen we
   // na "Klaar" meteen door naar het afrekenscherm in plaats van in de hub te blijven.
   const settleNaToewijzen = useRef(false)
@@ -3571,12 +3576,24 @@ export default function PartyTest() {
   // Het plaatsnummer wordt in Postgres bepaald, niet hier. Berekende je het in de
   // browser, dan lezen twee snelle tikken dezelfde lijst, komen ze op hetzelfde nummer
   // uit, en weigert de unique-index de tweede: "duplicate key value".
+  // Tik je twee keer snel op +, dan viel de tweede tik vroeger stil: de vlag hieronder
+  // liet hem meteen terugkeren terwijl de eerste nog onderweg was. Nu tellen de tikken
+  // op in een wachtrij en werkt één lus ze na elkaar af — één loadParty aan het eind.
+  const addQueue = useRef(0)
   const addPerson = async () => {
-    if (!groupId || addingPerson.current) return
+    if (!groupId) return
+    addQueue.current += 1
+    if (addingPerson.current) return
     addingPerson.current = true
-    const { error } = await supabase.rpc("party_add_person", { p_group: groupId, p_name: "" })
-    addingPerson.current = false
-    if (error) { setNotice("Persoon toevoegen mislukt: " + error.message); return }
+    try {
+      while (addQueue.current > 0) {
+        addQueue.current -= 1
+        const { error } = await supabase.rpc("party_add_person", { p_group: groupId, p_name: "" })
+        if (error) { addQueue.current = 0; setNotice("Persoon toevoegen mislukt: " + error.message); break }
+      }
+    } finally {
+      addingPerson.current = false
+    }
     loadParty(groupId)
   }
   const renamePerson = async (id: string, name: string) => {
@@ -3615,7 +3632,18 @@ export default function PartyTest() {
     }
   }, [people, meId])
 
-  const removePerson = (id: string) => { const pp = people.find((x) => x.id === id); if (personHasDrinks(id)) { setNotice(L.personHasDrinks(pp?.name || L.thisPerson)); return } supabase.from("party_people").delete().eq("id", id).then(({ error }) => { if (error) setNotice("Verwijderen mislukt: " + error.message) }) }
+  // Meteen lokaal wegnemen en pas daarna de server. Vroeger wachtte dit op het realtime-
+  // bericht: de teller bleef dan even staan, en een tweede tik op − pakte opnieuw
+  // dezelfde laatste persoon — die was lokaal immers nog niet weg. Loopt de verwijdering
+  // mis, dan halen we de groep opnieuw op zodat je hem terugziet.
+  const removePerson = (id: string) => {
+    const pp = people.find((x) => x.id === id)
+    if (personHasDrinks(id)) { setNotice(L.personHasDrinks(pp?.name || L.thisPerson)); return }
+    setPeople((ps) => ps.filter((x) => x.id !== id))
+    supabase.from("party_people").delete().eq("id", id).then(({ error }) => {
+      if (error) { setNotice("Verwijderen mislukt: " + error.message); if (groupId) loadParty(groupId) }
+    })
+  }
   // Iemand wegnemen die al in de pot zat: zijn inleg moet mee, anders blijft dat geld
   // in het totaal staan zonder eigenaar en klopt de eindverdeling niet meer.
   const removePersonEnPot = async (id: string) => {
@@ -6239,19 +6267,19 @@ export default function PartyTest() {
         {assignIdx !== null && rounds[assignIdx] && (() => {
           // "Alles meteen" toont elk rondje in één lijst; "per rondje" toont er precies één
           // en springt daarna door naar het volgende dat nog namen mist.
-          const toonIdx = assignAllMode
-            ? rounds.map((_, i) => i).filter((i) => drinks.some((d) => drinkTotalRound(rounds[i], d.id) > 0))
-            : [assignIdx]
+          // Altijd alle rondjes in één lijst. De schakelaar "alle rondjes / dit rondje"
+          // is weg: je kwam hier toch om alles rond te krijgen, en met afgewerkte rondjes
+          // die dichtklappen blijft de lijst even kort als toen je er één toonde.
+          const toonIdx = rounds.map((_, i) => i).filter((i) => drinks.some((d) => drinkTotalRound(rounds[i], d.id) > 0))
           const done = !toonIdx.some((i) => drinks.some((d) => (rounds[i].anon[d.id] ?? 0) > 0))
-          const volgende = assignAllMode ? -1 : rounds.findIndex((rr, i) => i !== assignIdx && drinks.some((d) => (rr.anon[d.id] ?? 0) > 0))
-          const naarVolgende = done && volgende >= 0
+          const naarVolgende = false
           const nogOpen = rounds.filter((rr) => drinks.some((d) => (rr.anon[d.id] ?? 0) > 0)).length
           return (
             <div style={S.overlay} onClick={() => { settleNaToewijzen.current = false; setAssignIdx(null); setAssignAllMode(false) }}>
               <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                 <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.assignTitle}</h3>
                 <div style={{ fontSize: 15, color: "#6b7484", fontWeight: 700, marginBottom: 10 }}>
-                  {assignAllMode ? L.assignAllSub(toonIdx.length) : L.roundXofY(assignIdx + 1, rounds.length)}
+                  {L.assignAllSub(toonIdx.length)}
                 </div>
 
                 {/* Twee schakelaars onder elkaar: eerst hoe je toewijst, dan waarop. De
@@ -6261,12 +6289,6 @@ export default function PartyTest() {
                   <div style={{ ...S.seg(editAssignMode === "person"), flex: 1, padding: "8px 6px", fontSize: 15, textAlign: "center" }} onClick={() => setEditAssignMode("person")}>{L.perPerson}</div>
                   <div style={{ ...S.seg(editAssignMode === "drink"), flex: 1, padding: "8px 6px", fontSize: 15, textAlign: "center" }} onClick={() => setEditAssignMode("drink")}>{L.perDrink}</div>
                 </div>
-                {rounds.length > 1 && (
-                  <div style={{ ...S.segBaan, display: "flex", marginBottom: 10 }}>
-                    <div style={{ ...S.seg(assignAllMode), flex: 1, padding: "8px 6px", fontSize: 15, textAlign: "center" }} onClick={() => setAssignAllMode(true)}>{L.allRoundsSeg}</div>
-                    <div style={{ ...S.seg(!assignAllMode), flex: 1, padding: "8px 6px", fontSize: 15, textAlign: "center" }} onClick={() => setAssignAllMode(false)}>{L.thisRoundSeg}</div>
-                  </div>
-                )}
                 {!settle && (
                   <div style={{ display: "flex", justifyContent: "flex-end", margin: "0 0 10px" }}>
                     <button onClick={() => { setPersGeteld(true); setAlleenPers(true); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
@@ -6280,14 +6302,17 @@ export default function PartyTest() {
                   const r = rounds[idx]
                   const roundDrinks = drinks.filter((d) => drinkTotalRound(r, d.id) > 0)
                   const un = roundDrinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0)
+                  const dicht = un === 0 && !assignHeropend.has(r.id)
                   return (
-                    <div key={r.id} style={{ marginBottom: toonIdx.length > 1 ? 16 : 0 }}>
+                    <div key={r.id} style={{ marginBottom: toonIdx.length > 1 ? (dicht ? 8 : 16) : 0 }}>
                       {toonIdx.length > 1 && (
-                        <div style={{ ...S.row, justifyContent: "space-between", background: un > 0 ? "rgba(224,104,92,0.1)" : MODUS_FAIR.tint, borderRadius: 9, padding: "7px 11px", marginBottom: 8 }}>
-                          <span style={{ fontSize: 16, fontWeight: 800, color: un > 0 ? "#b0402f" : MODUS_FAIR.tekst }}>{L.roundWord} {idx + 1} <span style={{ fontWeight: 600, opacity: 0.75 }}>· {L.drinksCount(roundDrinks.reduce((a, d) => a + drinkTotalRound(r, d.id), 0))}</span></span>
-                          <span style={{ fontSize: 15, fontWeight: 800, color: un > 0 ? "#b0402f" : MODUS_FAIR.rand }}>{un > 0 ? `🔴 ${un}` : "✓"}</span>
+                        <div onClick={() => un === 0 && setAssignHeropend((prev) => { const n = new Set(prev); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); return n })}
+                          style={{ ...S.row, justifyContent: "space-between", cursor: un === 0 ? "pointer" : "default", background: un > 0 ? "rgba(224,104,92,0.1)" : "rgba(31,138,76,0.12)", border: un > 0 ? "none" : "1.5px solid rgba(31,138,76,0.45)", borderRadius: 9, padding: "7px 11px", marginBottom: 8 }}>
+                          <span style={{ fontSize: 16, fontWeight: 800, color: un > 0 ? "#b0402f" : "#1f6b3a" }}>{L.roundWord} {idx + 1} <span style={{ fontWeight: 600, opacity: 0.75 }}>· {L.drinksCount(roundDrinks.reduce((a, d) => a + drinkTotalRound(r, d.id), 0))}</span></span>
+                          <span style={{ fontSize: 15, fontWeight: 800, color: un > 0 ? "#b0402f" : "#1f8a4c" }}>{un > 0 ? `🔴 ${un}` : dicht ? "✓ ▾" : "✓ ▴"}</span>
                         </div>
                       )}
+                      {!dicht && (<>
                       {toonIdx.length === 1 && un > 0 && editAssignMode === "person" && (
                         <div style={{ fontSize: 15.5, fontWeight: 800, color: "#c0554a", marginBottom: 8 }}>🔴 {L.notAssignedYet(un)}</div>
                       )}
@@ -6323,6 +6348,7 @@ export default function PartyTest() {
                           </div>
                         )
                       })}</div>)}
+                      </>)}
                     </div>
                   )
                 })}
@@ -6345,8 +6371,8 @@ export default function PartyTest() {
                   </>
                 ) : (
                   <button style={done ? { ...S.btnP, marginTop: 10, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)" } : { ...S.btnP, marginTop: 10 }}
-                    onClick={() => { if (naarVolgende) setAssignIdx(volgende); else { setAssignIdx(null); setAssignAllMode(false); if (settleNaToewijzen.current) { settleNaToewijzen.current = false; if (done) goQuickSettle(); else { setFromQuick(false); setView("roundsOverview") } } } }}>
-                    {naarVolgende ? L.nextRoundAssign(volgende + 1) : L.ready}
+                    onClick={() => { { setAssignIdx(null); setAssignAllMode(false); if (settleNaToewijzen.current) { settleNaToewijzen.current = false; if (done) goQuickSettle(); else { setFromQuick(false); setView("roundsOverview") } } } }}>
+                    {L.ready}
                   </button>
                 )}
               </div>
@@ -8731,7 +8757,7 @@ export default function PartyTest() {
                       erboven. Er stond hier een vingertje bij per persoon, en dat is een
                       ander soort teken — een aanwijzing in plaats van een wie. */}
                   <span style={{ fontSize: 21, flexShrink: 0 }}>{perPersoon ? "\u{1F464}" : "\u{1F465}"}</span>
-                  <span style={{ fontSize: 16.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35, textAlign: "center", whiteSpace: "pre-line" }}>{perPersoon ? L.hintPerPerson : L.hintTogether}</span>
+                  <span style={{ fontSize: 16.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35, textAlign: "center", whiteSpace: "pre-line" }}>{perPersoon ? (alleenJij ? `${L.needTwoLine}\n` : "") + L.hintPerPerson : L.hintTogether}</span>
                 </div>
                 )}
 
