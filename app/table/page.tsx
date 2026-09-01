@@ -3592,12 +3592,16 @@ export default function RundoTable() {
   // die kan bij een lange bon ver buiten beeld liggen. Eén keer meescrollen zodra het
   // omslaat — daarna niet meer, anders spring je weg terwijl je nog aan het nakijken bent.
   const scrollAlKlaar = useRef(false)
+  // Twee voorwaarden, niet één. billOk zegt alleen dat de bedragen op elkaar passen; het
+  // kan al waar zijn terwijl je bovenaan nog "klopt dit betaalbedrag?" moet beantwoorden.
+  // Scrollen vóór dat antwoord zou je wegduwen van de vraag die je eerst moet zien.
+  const alKlaarOmTeDelen = billOk && receiptConfirmed && !receiptEditing
   useEffect(() => {
-    if (!isAdmin || !billOk || scrollAlKlaar.current) return
+    if (!isAdmin || !alKlaarOmTeDelen || scrollAlKlaar.current) return
     scrollAlKlaar.current = true
     if (typeof window === "undefined") return
     window.setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 220)
-  }, [isAdmin, billOk])
+  }, [isAdmin, alKlaarOmTeDelen])
   const billDiff = Math.abs((group?.receipt_total ?? 0) - billTotal)
   // Waarschuw zolang de bon niet klopt én de gebruiker het verschil niet bewust aanvaardde.
   const warnMismatch = !billOk && !billMismatchAck
