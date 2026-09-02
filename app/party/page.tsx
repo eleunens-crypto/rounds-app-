@@ -1173,6 +1173,8 @@ const T = {
     showWhoChose: "Toon wie wat koos ▾",
     hideWhoChose: "Inklappen ▴",
     yourOwnNotConfirmed: "Jouw eigen keuze is nog niet bevestigd",
+    yourChoiceFixed: "Jouw keuze staat vast",
+    passedOnTo: (n: string) => `Doorgegeven aan ${n}`,
     adminOptions: "👑 Beheerdersopties",
     adminSheetTitle: "👑 Als beheerder",
     adminSheetSub: (n: string) => `${n} haalt dit rondje. Grijp alleen in als dat nodig is.`,
@@ -1959,6 +1961,8 @@ const T = {
     showWhoChose: "Voir qui a choisi quoi ▾",
     hideWhoChose: "Replier ▴",
     yourOwnNotConfirmed: "Ton propre choix n'est pas encore confirmé",
+    yourChoiceFixed: "Ton choix est confirmé",
+    passedOnTo: (n: string) => `Transmis à ${n}`,
     adminOptions: "👑 Options d'administrateur",
     adminSheetTitle: "👑 En tant qu'administrateur",
     adminSheetSub: (n: string) => `${n} va chercher cette tournée. N'interviens que si nécessaire.`,
@@ -3263,7 +3267,8 @@ export default function PartyTest() {
     setMixZelf(r0?.amount || 0); setMixPot(0); setMixFocus("pot"); setPayVia("mix")
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showPot, potContribTotal, payVia])
-  const renderRunnerBar = (compact = false) => {
+  // groen = ik bevestigde mijn keuze; mijnTekst = wat ik nam, om in de kop te tonen.
+  const renderRunnerBar = (compact = false, groen = false, mijnTekst = "") => {
     // Net afgerond: de bevestiging voor de haler, mét zijn lijstje en de vergrootknop.
     // De rest van de groep kreeg intussen de broadcast "Bestelling bevestigd — X haalt".
     if (!openRoundId && haalInfo) {
@@ -3313,10 +3318,6 @@ export default function PartyTest() {
               <span style={{ display: "block", fontSize: 14, color: allen ? "#1f6b3a" : "#5a8f99", fontWeight: allen ? 800 : 400, marginTop: 1 }}>{allen ? `✓ ${L.allChose}` : L.confirmedOf(klaar.length, people.length)}</span>
             </span>
           </div>
-          {/* Bovenaan en duidelijk: de haler rondt zelf af zodra hij terug is van de
-              toog. Het bedrag is niet zijn zorg — dat vult de admin straks in. */}
-          <button onClick={() => { if (nogNietGekozen().length > 0) { setAfsluitOpen(false); setAfsluitCheck(true) } else void runnerRondtAf() }} disabled={barTotalen().length === 0}
-            style={{ width: "100%", marginBottom: 11, cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 8px", fontSize: 17.5, fontWeight: 800, color: "#fff", background: MODUS_FAIR.knop, opacity: barTotalen().length === 0 ? 0.45 : 1 }}>{L.runnerDoneBtn}</button>
           {/* Alles over dit rondje in één kader: wie klaar is, wat je moet halen, en de
               twee handelingen. Ingeklapt moest je te veel tikken om te zien waar je aan
               toe was. */}
@@ -3387,6 +3388,10 @@ export default function PartyTest() {
               op de bevestigingskaart, nadat op "Rondje afronden en halen" getikt is. */}
           {/* Wie het rondje startte moet er ook makkelijk weer vanaf kunnen — óók na de
               waarschuwing van daarnet. Iedereen krijgt dan de melding met de naam erbij. */}
+          {/* De kaart leest van boven naar onder: wie doet mee, wat ze kozen, hoeveel het
+              samen is, en pas dan wat je ermee doet. */}
+          <button onClick={() => { if (nogNietGekozen().length > 0) { setAfsluitOpen(false); setAfsluitCheck(true) } else void runnerRondtAf() }} disabled={barTotalen().length === 0}
+            style={{ width: "100%", marginTop: 4, marginBottom: 9, cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 8px", fontSize: 17.5, fontWeight: 800, color: "#fff", background: MODUS_FAIR.knop, opacity: barTotalen().length === 0 ? 0.45 : 1 }}>{L.runnerDoneBtn}</button>
           <button onClick={annuleerRondje} style={{ width: "100%", cursor: "pointer", background: "none", border: "none", fontSize: 15, fontWeight: 700, color: "#b0402f" }}>{L.cancelRoundBtn}</button>
         </div>
       )
@@ -3394,14 +3399,21 @@ export default function PartyTest() {
     if (startedBy) {
       // Iemand anders haalt. Informatie — overnemen mag, maar rustig.
       return (
-        <div style={{ ...S.card, background: "#fff", border: `2px solid ${MODUS_FAIR.rand}`, boxShadow: `0 6px 18px -12px ${MODUS_FAIR.gloed}` }}>
+        <div style={{ ...S.card, background: groen ? "#f4fbf6" : "#fff", border: `2px solid ${groen ? "#1f8a4c" : MODUS_FAIR.rand}`, boxShadow: `0 6px 18px -12px ${MODUS_FAIR.gloed}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 10 }}>
-            <span style={{ flexShrink: 0, width: 38, height: 38, borderRadius: "50%", background: MODUS_FAIR.knop, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800 }}>{(runnerName() || "?").charAt(0).toUpperCase()}</span>
+            {/* Bevestigde je, dan wordt het schijfje een vinkje: je eigen toestand leest
+                van hier af, zonder naar de balk onderaan te moeten kijken. */}
+            <span style={{ flexShrink: 0, width: 38, height: 38, borderRadius: "50%", background: groen ? "#1f8a4c" : MODUS_FAIR.knop, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: groen ? 21 : 18, fontWeight: 800 }}>{groen ? "✓" : (runnerName() || "?").charAt(0).toUpperCase()}</span>
             <span style={{ minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.roundBusyX(runnerName())}</span>
+              <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: groen ? "#1f6b3a" : MODUS_FAIR.tekst }}>{L.roundBusyX(runnerName())}</span>
               <span style={{ display: "block", fontSize: 14, color: alGekozen >= people.length ? "#1f6b3a" : "#5a8f99", fontWeight: alGekozen >= people.length ? 800 : 400, marginTop: 1 }}>{alGekozen >= people.length ? `✓ ${L.allChose}` : L.someChose(alGekozen, people.length)}</span>
             </span>
           </div>
+          {groen && !!mijnTekst && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, paddingTop: 9, marginTop: -2, marginBottom: 2, borderTop: "1px solid rgba(31,138,76,0.22)" }}>
+              <span style={{ background: "#fff", border: "1px solid rgba(31,138,76,0.35)", borderRadius: 999, padding: "4px 11px", fontSize: 13, fontWeight: 800, color: "#1f6b3a" }}>{mijnTekst}</span>
+            </div>
+          )}
           {/* Wat er van jou verwacht wordt, met de uitweg ernaast. Koos je al iets, dan is
               die uitweg niet meer nodig. */}
           {/* In compacte modus staan deze twee knoppen in de zwevende onderbalk, binnen
@@ -7968,6 +7980,10 @@ export default function PartyTest() {
     const dichtMijn = dichtRonde ? drinks.map((d) => ({ d, n: dichtRonde.orders[d.id]?.[meId] ?? 0 })).filter((x) => x.n > 0) : []
     const dichtAantal = dichtMijn.reduce((a, x) => a + x.n, 0)
     const ikBenKlaar = openAnswers[meId] === "same" || openAnswers[meId] === "skip"
+    // Tot drie soorten voluit; daarboven volstaat het aantal, anders wordt de regel lang.
+    const mijnKort = mijn.length > 0 && mijn.length <= 3
+      ? mijn.map((d) => `${aQty(d.id, meId)}× ${d.name}`).join(" · ")
+      : L.youAreDone(mijnAantal)
     const ikNamNiets = openAnswers[meId] === "skip" && mijnAantal === 0
 
     // Wat de gast op dit moment staat. Zelfde helpers als de admin gebruikt, dus de
@@ -8125,7 +8141,7 @@ export default function PartyTest() {
             duimbereik — zie de zwevende balk onder de drankenlijst. */}
         {zweefRondje ? (
           <div ref={gastRondjeKop} style={{ position: "sticky", top: 0, zIndex: 8, paddingTop: 2, marginBottom: 10, scrollMarginTop: 0, background: MODUS_FAIR.bladzij }}>
-            {renderRunnerBar(true)}
+            {renderRunnerBar(true, ikBenKlaar, ikNamNiets ? "" : mijnKort)}
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: -4, marginBottom: 8 }}>
               {people.map((pp) => {
                 const ok = isKlaar(pp.id) || drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)
@@ -8314,16 +8330,16 @@ export default function PartyTest() {
           <div style={{ position: "sticky", bottom: 0, zIndex: 8, marginTop: 12, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)" }}>
             <div style={{ background: "#fff", border: `1.5px solid ${MODUS_FAIR.lijnZacht}`, borderRadius: 16, padding: 11, boxShadow: "0 -8px 20px -10px rgba(13,124,140,0.7)" }}>
               {ikBenKlaar ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 9, borderRadius: 11, padding: 9,
+                <div style={{ display: "flex", alignItems: "center", gap: 12, borderRadius: 13, padding: 14,
                   background: ikNamNiets ? "rgba(29,41,66,0.05)" : "rgba(31,138,76,0.1)",
-                  border: `1px solid ${ikNamNiets ? "rgba(29,41,66,0.16)" : "rgba(31,138,76,0.3)"}` }}>
-                  <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff", background: ikNamNiets ? "#8b93a3" : "#1f8a4c" }}>{ikNamNiets ? "—" : "✓"}</span>
+                  border: `1.5px solid ${ikNamNiets ? "rgba(29,41,66,0.16)" : "rgba(31,138,76,0.3)"}` }}>
+                  <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, fontWeight: 800, color: "#fff", background: ikNamNiets ? "#8b93a3" : "#1f8a4c" }}>{ikNamNiets ? "—" : "✓"}</span>
                   <span style={{ minWidth: 0, display: "flex", flexDirection: "column" }}>
-                    <b style={{ fontSize: 14.5, color: "#1d2942" }}>{ikNamNiets ? L.youTakeNothing : L.youAreDone(mijnAantal)}</b>
-                    <span style={{ fontSize: 12, color: "#6b7484", marginTop: 1 }}>{ikStartte ? L.roundWord + " " + roundNr : runnerName()}</span>
+                    <b style={{ fontSize: 16.5, color: "#1d2942" }}>{ikNamNiets ? L.youTakeNothing : ikStartte ? L.yourChoiceFixed : L.passedOnTo(runnerName())}</b>
+                    <span style={{ fontSize: 13.5, fontWeight: 700, color: ikNamNiets ? "#6b7484" : "#1f6b3a", marginTop: 2 }}>{ikNamNiets ? (ikStartte ? L.roundWord + " " + roundNr : runnerName()) : mijnKort}</span>
                   </span>
                   <button onClick={() => antwoordRondje("different")}
-                    style={{ marginLeft: "auto", flexShrink: 0, background: "#fff", border: "1px solid rgba(29,41,66,0.25)", color: "#1d2942", fontSize: 13, fontWeight: 800, padding: "7px 11px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit" }}>{L.changeWord}</button>
+                    style={{ marginLeft: "auto", flexShrink: 0, background: "#fff", border: "1px solid rgba(29,41,66,0.25)", color: "#1d2942", fontSize: 14, fontWeight: 800, padding: "10px 15px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit" }}>{L.changeWord}</button>
                 </div>
               ) : (
                 <>
@@ -9501,32 +9517,38 @@ export default function PartyTest() {
             <button style={{ ...S.btn, width: "100%" }} onClick={() => setShowCups(true)}>{L.cups}</button>
           </div>
         )}
-        {settle && startedBy && meId && startedBy !== meId ? (() => {
-          /* Iemand anders haalt dit rondje. De beheerder kiest dan gewoon zoals iedereen,
-             met dezelfde zwevende balk als een gast. Alles waarmee hij kan ingrijpen zit
-             achter één link eronder, zodat de duimzone niet volloopt. */
+        {settle && startedBy && meId ? (() => {
+          /* Er loopt een rondje. De beheerder kiest dan gewoon zoals iedereen, met dezelfde
+             zwevende balk als een gast — ook wanneer hij zélf haalt. Het afronden van het
+             rondje staat in de kaart bovenaan, zodat de balk hier altijd over jouw eigen
+             keuze gaat. Haalt iemand anders, dan komt de beheerderslink er nog onder. */
+          const ikHaalZelf = startedBy === meId
           const mijnN = drinks.reduce((a, d) => a + aQty(d.id, meId), 0)
           const ikKlaar = openAnswers[meId] === "same" || openAnswers[meId] === "skip"
           const ikNiets = openAnswers[meId] === "skip" && mijnN === 0
+          const mijneB = drinks.filter((d) => aQty(d.id, meId) > 0)
+          const mijnKortB = mijneB.length > 0 && mijneB.length <= 3
+            ? mijneB.map((d) => `${aQty(d.id, meId)}× ${d.name}`).join(" · ")
+            : L.youAreDone(mijnN)
           return (
           <div style={{ position: "sticky", bottom: 0, zIndex: 40, marginTop: 12, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)" }}>
             <div style={{ background: "#fff", border: `1.5px solid ${MODUS_FAIR.lijnZacht}`, borderRadius: 16, padding: 11, boxShadow: "0 -8px 20px -10px rgba(13,124,140,0.7)" }}>
               {ikKlaar ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 9, borderRadius: 11, padding: 9,
+                <div style={{ display: "flex", alignItems: "center", gap: 12, borderRadius: 13, padding: 14,
                   background: ikNiets ? "rgba(29,41,66,0.05)" : "rgba(31,138,76,0.1)",
-                  border: `1px solid ${ikNiets ? "rgba(29,41,66,0.16)" : "rgba(31,138,76,0.3)"}` }}>
-                  <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff", background: ikNiets ? "#8b93a3" : "#1f8a4c" }}>{ikNiets ? "—" : "✓"}</span>
+                  border: `1.5px solid ${ikNiets ? "rgba(29,41,66,0.16)" : "rgba(31,138,76,0.3)"}` }}>
+                  <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, fontWeight: 800, color: "#fff", background: ikNiets ? "#8b93a3" : "#1f8a4c" }}>{ikNiets ? "—" : "✓"}</span>
                   <span style={{ minWidth: 0, display: "flex", flexDirection: "column" }}>
-                    <b style={{ fontSize: 14.5, color: "#1d2942" }}>{ikNiets ? L.youTakeNothing : L.youAreDone(mijnN)}</b>
-                    <span style={{ fontSize: 12, color: "#6b7484", marginTop: 1 }}>{runnerName()}</span>
+                    <b style={{ fontSize: 16.5, color: "#1d2942" }}>{ikNiets ? L.youTakeNothing : ikHaalZelf ? L.yourChoiceFixed : L.passedOnTo(runnerName())}</b>
+                    <span style={{ fontSize: 13.5, fontWeight: 700, color: ikNiets ? "#6b7484" : "#1f6b3a", marginTop: 2 }}>{ikNiets ? (ikHaalZelf ? L.roundWord + " " + roundNr : runnerName()) : mijnKortB}</span>
                   </span>
                   <button onClick={() => antwoordRondje("different")}
-                    style={{ marginLeft: "auto", flexShrink: 0, background: "#fff", border: "1px solid rgba(29,41,66,0.25)", color: "#1d2942", fontSize: 13, fontWeight: 800, padding: "7px 11px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit" }}>{L.changeWord}</button>
+                    style={{ marginLeft: "auto", flexShrink: 0, background: "#fff", border: "1px solid rgba(29,41,66,0.25)", color: "#1d2942", fontSize: 14, fontWeight: 800, padding: "10px 15px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit" }}>{L.changeWord}</button>
                 </div>
               ) : (
                 <>
                   <div style={{ fontSize: 14, fontWeight: 800, color: "#8a5e0f", background: "rgba(240,165,0,0.14)", borderRadius: 10, padding: "9px 10px", marginBottom: 9, textAlign: "center", lineHeight: 1.35 }}>
-                    ☝️ {L.notPassedOn(runnerName())}
+                    ☝️ {ikHaalZelf ? L.yourOwnNotConfirmed : L.notPassedOn(runnerName())}
                   </div>
                   <div style={{ display: "flex", gap: 7 }}>
                     <button onClick={() => antwoordRondje("skip")}
@@ -9539,8 +9561,10 @@ export default function PartyTest() {
                   </div>
                 </>
               )}
-              <button onClick={() => setAdminBlad(true)}
-                style={{ display: "block", width: "100%", marginTop: 8, background: "none", border: "none", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", textDecoration: "underline", cursor: "pointer", fontFamily: "inherit" }}>{L.adminOptions}</button>
+              {!ikHaalZelf && (
+                <button onClick={() => setAdminBlad(true)}
+                  style={{ display: "block", width: "100%", marginTop: 8, background: "none", border: "none", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", textDecoration: "underline", cursor: "pointer", fontFamily: "inherit" }}>{L.adminOptions}</button>
+              )}
             </div>
           </div>
           )
