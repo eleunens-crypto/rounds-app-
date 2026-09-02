@@ -7467,7 +7467,12 @@ export default function PartyTest() {
     // Alleen in de echte QR-modus: een snel- of uitgebreid-sessie die via Fair Split
     // afrekende, krijgt settle=true maar blijft een noteer-sessie — daar horen geen
     // tabbladen met "Mijn stand".
-    if (!groupId || !isAdmin || !settle || fromQuick || rounds.length === 0) return null
+    if (!groupId || !isAdmin || !settle || fromQuick) return null
+    // Zelfde drempel als bij de gast: zodra het bestellen openstaat staan de drie
+    // tabbladen er, ook al is rondje 1 nog niet aangemaakt. Vroeger wachtte de
+    // beheerder op rounds.length > 0 en zag hij op het instelscherm én tijdens het
+    // eerste rondje een andere navigatie dan iedereen aan tafel.
+    if (!orderingOpen && rounds.length === 0) return null
     const hier: "order" | "me" | "group" =
       view === "settings" ? "group" : (view === "hub" || view === "roundsOverview" || view === "confirmed") ? "me" : "order"
     const naar = (t: "order" | "me" | "group") => {
@@ -7648,7 +7653,7 @@ export default function PartyTest() {
         )}
         {!uitgebreidLook && !!groupId && !kaal && (
           <div style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", marginTop: 11, marginLeft: -13, marginRight: -13, marginBottom: -11, padding: "10px 13px", background: "#f4fafb", borderRadius: "0 0 15px 15px", boxSizing: "content-box" }}>
-            {settle && !fromQuick && (
+            {settle && !fromQuick && !(isAdmin && (orderingOpen || rounds.length > 0)) && (
               <button onClick={() => { setSettingsBackTo(view === "order" ? "order" : "hub"); setView("settings") }}
                 style={{ flexShrink: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, background: "#dbeef0", border: "none", borderRadius: 999, padding: "7px 15px", fontSize: 13, fontWeight: 700, color: RAND, fontFamily: "inherit" }}>
                 {L.tabGroup}
