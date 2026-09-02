@@ -587,7 +587,6 @@ const T = {
     fillNameSeat: "Vul je naam in en neem een plaats.",
     yourName: "Je naam",
     seat: (n: number) => `Plaats ${n}`,
-    allSeatsTaken: "Alle plaatsen zijn bezet — er is nog plaats voor jou.",
     joinAddSeat: "Kom erbij",
     someoneJoined: (n: string) => `${n} is erbij gekomen`,
     alreadyJoined: "Al aangemeld",
@@ -654,9 +653,6 @@ const T = {
     badCode: "Deze uitnodigingscode bestaat niet (meer).",
     loading: "Even laden…",
 
-    notMe: "dit ben ik niet",
-    notMeConfirm: (n: string) => `Ben jij niet ${n}? Dan geef je deze plaats vrij en kies je opnieuw.`,
-    releaseSeat: "Plaats vrijgeven",
     tabOrder: "🍺 Drankjes",
     tabMe: "📋 Rondjes",
     youTookLabel: "jij nam:",
@@ -981,7 +977,6 @@ const T = {
     pricePh: "prijs per stuk",
     notOnList: "staat er niet bij?",
     everyoneCanTapNow: "Iedereen kan nu aantikken",
-    goingToDrinks: "Naar de drankjes →",
     collapseAll: "Alles verbergen",
     settleBtn: "🧾 Afrekenen",
     nothingToSettle: "Er zijn nog geen afgeronde rondjes om af te rekenen.",
@@ -1045,7 +1040,6 @@ const T = {
     confirmTitle: "Even bevestigen",
     walkTable: "👥 Rondje opnemen",
     roundTogether: "Nieuw rondje starten",
-    youFetchTitle: "Jij haalt dit rondje",
     roundForN: (n: number) => `Rondje voor ${n} ${n === 1 ? "persoon" : "personen"}?`,
     lastRoundCount: (n: number) => `Vorig rondje: ${n} ${n === 1 ? "drankje" : "drankjes"}`,
     theyTap: "Zij tikken aan",
@@ -1053,7 +1047,6 @@ const T = {
     youPay: "Jij haalt en betaalt",
     youPayRest: "aan de bar.",
     settledAfter: "Achteraf wordt alles verrekend!",
-    lastRoundWas: (wat: string) => `Vorige was ${wat}`,
     sameAgainShort: "\u21bb zelfde opnieuw",
     notMeShort: "Toch niet",
     iFetchShort: "Ik ga halen \u2192",
@@ -1083,7 +1076,6 @@ const T = {
     potInPot: "💰 In de pot",
     peopleInGroup: "Aantal personen in de groep",
     putInPot: (b: string) => `legde ${b} in de pot`,
-    notRightBtn: "Klopt niet",
     removeJoinerQ: (n: string) => `${n} verwijderen? Zijn plaats verdwijnt en wat hij in de pot legde wordt teruggedraaid.`,
     waitTitle: "Je zit erbij — even wachten",
     waitForHost: (naam: string) => `Zodra ${naam || "de gastheer"} het bestellen opent, kunnen we starten.`,
@@ -1091,7 +1083,6 @@ const T = {
     openStep2: "Wie gaat halen, tikt dat aan boven de drankjes",
     openStep3: "Daarna tikt iedereen aan wat hij wil",
     okWord: "Begrepen",
-    okKort: "ok",
     stillBusy: "nog bezig…",
     youTapFor: "Je tikt aan voor:",
     youWord: "jij",
@@ -1103,7 +1094,6 @@ const T = {
     nothingForMeBtn: "— Niets voor mij",
     youTakeNothing: "Je neemt niets deze ronde.",
     chooseAnyway: "toch iets kiezen",
-    remindBtn: "🔔 Herinner wie nog niet koos",
     remindTitle: "🔔 Een duwtje geven?",
     remindBody: (namen: string) => `${namen} ${namen.includes(",") ? "kozen" : "koos"} nog niets. Zij krijgen meteen een melding op hun scherm.`,
     remindYes: "Ja, stuur →",
@@ -1124,7 +1114,6 @@ const T = {
     reminderTitle: "⏰ Nog even jouw keuze",
     reminderBody: (naam: string) => `${naam} klaar om drankjes te halen. Tik aan wat je wil — of laat weten dat je niets neemt.`,
     reminderChoose: "Ik kies iets →",
-    everyoneTapsOwn: "iedereen tikt zelf aan op zijn gsm",
     walkDone: "✓ Klaar",
     walkFor: (n: string) => `Wat wil ${n}?`,
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
@@ -1154,7 +1143,6 @@ const T = {
     modeNaamShort: "Ik neem zelf op",
     showToFriend: "📱 QR-code van de groep",
     shareWithMore: "Deel gerust met wie er nog wil bijkomen",
-    seatsFullGuest: "Alle plaatsen zijn bezet — de gastheer kan er eentje bijzetten.",
     youBadge: "JIJ",
     orderWord: "Bestelling",
     howManyPeople: "Met hoeveel zijn jullie?",
@@ -1168,13 +1156,13 @@ const T = {
     confirmMine: "Bevestigen",
     repeatTitle: (n: string) => `${n} haalt hetzelfde rondje`,
     repeatIntro: "Jouw keuze van vorige keer staat al klaar:",
-    repeatFoot: "Bevestig hem hieronder, of wijzig wat je wil.",
     sameAsLastHint: "Zelfde als vorige keer — nog te bevestigen",
     repeatYours: "Jouw keuze van vorige keer:",
     repeatConfirmBtn: "Bevestig dit →",
     repeatOtherBtn: "Iets anders",
     toDrinksSoon: "Naar de drankjes…",
     notYetConfirmed: "nog te bevestigen",
+    pokeShort: "Porren",
     showWhoChose: "Toon wie wat koos ▾",
     hideWhoChose: "Inklappen ▴",
     yourOwnNotConfirmed: "Jouw eigen keuze is nog niet bevestigd",
@@ -1185,6 +1173,7 @@ const T = {
     adminRemindSub: (n: number) => `${n} ${n === 1 ? "persoon heeft" : "personen hebben"} nog niets doorgegeven`,
     adminTakeOver: "🍻 Rondje overnemen",
     adminTakeOverSub: "Jij wordt de haler en kan afsluiten. Alle drankjes blijven staan.",
+    fillPaySub: "Zelf het bedrag van dit rondje ingeven zonder te wachten.",
     adminCancel: "✕ Rondje annuleren",
     adminCancelSub: "Alles wat aangetikt is gaat weg, ook bij de anderen.",
     takenOverBy: (n: string) => `🍻 ${n} nam het rondje over — jij hoeft niet meer te halen.`,
@@ -1214,7 +1203,6 @@ const T = {
     haalSub: "Jij gaat halen — iedereen kreeg een seintje.",
     haalKlaar: "✓ Gehaald",
     runnerCloseFailed: "Afronden mislukt.",
-    adminRoundOf: (naam: string) => `rondje van ${naam}`,
     fillPayBtn: "💶 Bedrag & betaling invullen",
     tappedForYou: (naam: string) => `🍺 ${naam} duidt drankjes voor je aan — kijk even op je lijstje.`,
     editOrderPlain: "bestelling aanpassen",
@@ -1304,7 +1292,6 @@ const T = {
     confirmedOf: (a: number, b: number) => `${a} van ${b} bevestigd`,
     busyChoosing: "bezig met kiezen…",
     togetherDrinks: (n: number) => `Samen ${n} drankje${n === 1 ? "" : "s"}`,
-    remindInfo: "🔔 Een duwtje geven — wie nog niets koos, krijgt meteen een melding op zijn scherm. Handig als je klaar bent om te vertrekken.",
     toTheBar: "🍻 Naar de bar",
     showBig: "⛶ groot tonen",
     forTheBar: "VOOR DE TOOG",
@@ -1378,7 +1365,6 @@ const T = {
     fillNameSeat: "Entre ton nom et prends une place.",
     yourName: "Ton nom",
     seat: (n: number) => `Place ${n}`,
-    allSeatsTaken: "Toutes les places sont prises — mais tu peux en ajouter une.",
     joinAddSeat: "Me joindre",
     someoneJoined: (n: string) => `${n} a rejoint`,
     alreadyJoined: "Déjà inscrits",
@@ -1445,9 +1431,6 @@ const T = {
     badCode: "Ce code d'invitation n'existe pas (plus).",
     loading: "Chargement…",
 
-    notMe: "ce n’est pas moi",
-    notMeConfirm: (n: string) => `Tu n'es pas ${n} ? Tu libères cette place et tu choisis à nouveau.`,
-    releaseSeat: "Libérer la place",
     tabOrder: "🍺 Boissons",
     tabMe: "📋 Tourn\u00e9es",
     youTookLabel: "toi\u00a0:",
@@ -1772,7 +1755,6 @@ const T = {
     pricePh: "prix à la pièce",
     notOnList: "pas dans la liste ?",
     everyoneCanTapNow: "Chacun peut cocher maintenant",
-    goingToDrinks: "Vers les boissons →",
     collapseAll: "Tout masquer",
     settleBtn: "🧾 Régler",
     nothingToSettle: "Aucune tournée terminée à régler.",
@@ -1836,7 +1818,6 @@ const T = {
     confirmTitle: "Confirmation",
     walkTable: "👥 Faire le tour",
     roundTogether: "Lancer une tourn\u00e9e",
-    youFetchTitle: "Tu vas chercher cette tourn\u00e9e",
     roundForN: (n: number) => `Tournée pour ${n} ${n === 1 ? "personne" : "personnes"} ?`,
     lastRoundCount: (n: number) => `Tournée précédente : ${n} ${n === 1 ? "boisson" : "boissons"}`,
     theyTap: "Ils cochent",
@@ -1844,7 +1825,6 @@ const T = {
     youPay: "Tu vas chercher et payer",
     youPayRest: "au bar.",
     settledAfter: "Tout est régularisé après !",
-    lastRoundWas: (wat: string) => `Pr\u00e9c\u00e9dente\u00a0: ${wat}`,
     sameAgainShort: "\u21bb la m\u00eame",
     notMeShort: "Pas moi",
     iFetchShort: "J'y vais \u2192",
@@ -1874,7 +1854,6 @@ const T = {
     potInPot: "💰 Dans la cagnotte",
     peopleInGroup: "Nombre de personnes dans le groupe",
     putInPot: (b: string) => `a mis ${b} dans la cagnotte`,
-    notRightBtn: "Pas correct",
     removeJoinerQ: (n: string) => `Retirer ${n}\u00a0? Sa place dispara\u00eet et sa mise dans la cagnotte est annul\u00e9e.`,
     waitTitle: "Tu es dans le groupe — un instant",
     waitForHost: (naam: string) => `Dès que ${naam || "l’hôte"} ouvre les commandes, on peut commencer.`,
@@ -1882,7 +1861,6 @@ const T = {
     openStep2: "Celui qui y va le signale au-dessus des boissons",
     openStep3: "Ensuite chacun coche ce qu’il veut",
     okWord: "Compris",
-    okKort: "ok",
     stillBusy: "en cours…",
     toTheBar: "🍻 Au bar",
     youTapFor: "Tu coches pour :",
@@ -1895,7 +1873,6 @@ const T = {
     nothingForMeBtn: "— Rien pour moi",
     youTakeNothing: "Tu ne prends rien ce tour-ci.",
     chooseAnyway: "choisir quand même",
-    remindBtn: "🔔 Rappeler ceux qui n’ont pas choisi",
     remindTitle: "🔔 Donner un petit coup de pouce ?",
     remindBody: (namen: string) => `${namen} n’${namen.includes(",") ? "ont" : "a"} encore rien choisi. Un message apparaît aussitôt sur leur écran.`,
     remindYes: "Oui, envoie →",
@@ -1916,7 +1893,6 @@ const T = {
     reminderTitle: "⏰ Ton choix, vite",
     reminderBody: (naam: string) => `${naam} est prêt à aller chercher les boissons. Coche ce que tu veux — ou dis que tu ne prends rien.`,
     reminderChoose: "Je choisis →",
-    everyoneTapsOwn: "chacun coche sur son propre t\u00e9l\u00e9phone",
     walkDone: "✓ Terminé",
     walkFor: (n: string) => `Que veut ${n} ?`,
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
@@ -1946,7 +1922,6 @@ const T = {
     modeNaamShort: "Je note pour tous",
     showToFriend: "📱 QR-code du groupe",
     shareWithMore: "Partage-le avec qui veut encore se joindre",
-    seatsFullGuest: "Toutes les places sont prises — l’hôte peut en ajouter une.",
     youBadge: "TOI",
     orderWord: "Commande",
     howManyPeople: "Vous \u00eates combien ?",
@@ -1960,13 +1935,13 @@ const T = {
     confirmMine: "Confirmer",
     repeatTitle: (n: string) => `${n} reprend la même tournée`,
     repeatIntro: "Ton choix de la dernière fois est déjà prêt :",
-    repeatFoot: "Confirme-le ci-dessous, ou modifie ce que tu veux.",
     sameAsLastHint: "Comme la dernière fois — à confirmer",
     repeatYours: "Ton choix de la dernière fois :",
     repeatConfirmBtn: "Confirmer →",
     repeatOtherBtn: "Autre chose",
     toDrinksSoon: "Vers les boissons…",
     notYetConfirmed: "à confirmer",
+    pokeShort: "Rappel",
     showWhoChose: "Voir qui a choisi quoi ▾",
     hideWhoChose: "Replier ▴",
     yourOwnNotConfirmed: "Ton propre choix n'est pas encore confirmé",
@@ -1977,6 +1952,7 @@ const T = {
     adminRemindSub: (n: number) => `${n} ${n === 1 ? "personne n'a" : "personnes n'ont"} encore rien transmis`,
     adminTakeOver: "🍻 Reprendre la tournée",
     adminTakeOverSub: "Tu deviens le porteur et peux clôturer. Toutes les boissons restent.",
+    fillPaySub: "Saisir toi-même le montant de cette tournée sans attendre.",
     adminCancel: "✕ Annuler la tournée",
     adminCancelSub: "Tout ce qui est coché disparaît, aussi chez les autres.",
     takenOverBy: (n: string) => `🍻 ${n} a repris la tournée — tu n'as plus à y aller.`,
@@ -2006,7 +1982,6 @@ const T = {
     haalSub: "C'est toi qui vas la chercher — tout le monde est prévenu.",
     haalKlaar: "✓ Ramené",
     runnerCloseFailed: "Échec de la clôture.",
-    adminRoundOf: (naam: string) => `tournée de ${naam}`,
     fillPayBtn: "💶 Montant & paiement",
     tappedForYou: (naam: string) => `🍺 ${naam} coche des boissons pour toi — jette un œil à ta liste.`,
     editOrderPlain: "modifier la commande",
@@ -2096,7 +2071,6 @@ const T = {
     confirmedOf: (a: number, b: number) => `${a} sur ${b} ont confirm\u00e9`,
     busyChoosing: "en train de choisir…",
     togetherDrinks: (n: number) => `${n} boisson${n === 1 ? "" : "s"} en tout`,
-    remindInfo: "🔔 Un petit coup de pouce — ceux qui n’ont rien choisi reçoivent aussitôt un message. Pratique quand tu es prêt à partir.",
     showBig: "⛶ en grand",
     forTheBar: "POUR LE BAR",
     closeWord: "Fermer",
@@ -3333,14 +3307,18 @@ export default function PartyTest() {
               toe was. */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 9, borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, paddingTop: 10, marginBottom: 10 }}>
             <span style={{ fontSize: 14.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.04em" }}>{L.whoIsIn}</span>
+            {/* Korte pil met het aantal wachtenden. De namen staan al in de pillenrij
+                eronder, en in het bevestigingsvenster erna — hier volstaat het cijfer. */}
             {klaar.length < people.length && (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                <button onClick={vraagHerinnering} style={{ ...S.btn, padding: "6px 10px", fontSize: 14, fontWeight: 800, color: "#8a5e0f" }}>{L.remindBtn}</button>
-                <span onClick={() => setNotice(L.remindInfo)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 19, height: 19, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 13.5, fontWeight: 800, cursor: "pointer", flexShrink: 0, lineHeight: 1 }}>i</span>
-              </span>
+              <button onClick={vraagHerinnering}
+                style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(240,165,0,0.16)", border: "1px solid rgba(232,168,18,0.55)", color: "#8a5e0f", fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit" }}>
+                🔔 {L.pokeShort}
+                <span style={{ background: "#e8a812", color: "#2a2110", borderRadius: 999, minWidth: 17, height: 17, fontSize: 11, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{people.length - klaar.length}</span>
+              </button>
             )}
           </div>
-          {people.length > 4 && (
+          {/* De pillenrij staat er altijd: dit is de vraag die de haler het vaakst stelt. */}
+          {people.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
               {people.map((pp) => {
                 const slaOver = openAnswers[pp.id] === "skip"
@@ -5830,7 +5808,7 @@ export default function PartyTest() {
       const { error: e2 } = await supabase.from("party_rounds").update({ proposal: nieuwProp }).eq("id", openRoundId)
       if (e2) { setNotice(L.reminderFailed); return }
     }
-    setNotice(L.reminderSentTo(namen))
+    setVluchtig(L.reminderSentTo(namen))
     loadParty(groupId)
   }
 
@@ -6911,6 +6889,7 @@ export default function PartyTest() {
             <div style={{ fontSize: 13, color: "#6b7484", lineHeight: 1.45, marginBottom: 12 }}>{L.adminSheetSub(runnerName())}</div>
             {nogNiet.length > 0 && knop(L.adminRemind, L.adminRemindSub(nogNiet.length), () => { setAdminBlad(false); vraagHerinnering() })}
             {knop(L.adminTakeOver, L.adminTakeOverSub, () => { setAdminBlad(false); void takeOverRound() })}
+            {knop(L.fillPayBtn, L.fillPaySub, () => { setAdminBlad(false); openClose() })}
             {knop(L.adminCancel, L.adminCancelSub, () => { setAdminBlad(false); annuleerRondje() }, true)}
             <button onClick={() => setAdminBlad(false)}
               style={{ width: "100%", background: "none", border: "none", color: "#8b93a3", fontSize: 14, fontWeight: 800, marginTop: 3, cursor: "pointer", fontFamily: "inherit" }}>{L.closeWord2}</button>
@@ -8340,10 +8319,6 @@ export default function PartyTest() {
                   </div>
                 </>
               )}
-              {isAdmin && (
-                <button onClick={() => setAdminBlad(true)}
-                  style={{ display: "block", width: "100%", marginTop: 8, background: "none", border: "none", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", textDecoration: "underline", cursor: "pointer", fontFamily: "inherit" }}>{L.adminOptions}</button>
-              )}
             </div>
           </div>
         )}
@@ -9504,18 +9479,50 @@ export default function PartyTest() {
             <button style={{ ...S.btn, width: "100%" }} onClick={() => setShowCups(true)}>{L.cups}</button>
           </div>
         )}
-        {settle && startedBy && meId && startedBy !== meId ? (
-          /* Iemand anders haalt dit rondje: de haler rondt zelf af, dus de admin heeft
-             hier geen grote bevestigknop nodig. Wat overblijft is de noodingang — het
-             bedrag alvast invullen of het rondje annuleren als de haler verdween. */
-          <div style={{ border: "1.5px dashed rgba(90,143,153,0.5)", borderRadius: 12, padding: "10px 13px" }}>
-            <div style={{ fontSize: 14.5, fontWeight: 800, color: "#5a8f99", marginBottom: 8 }}>⚙️ {L.adminRoundOf(runnerName() || "?")}</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 18px" }}>
-              <span onClick={openClose} style={{ fontSize: 15, fontWeight: 800, color: "#3d7b86", cursor: "pointer" }}>{L.fillPayBtn}</span>
-              <span onClick={annuleerRondje} style={{ fontSize: 15, fontWeight: 800, color: "#b0402f", cursor: "pointer" }}>{L.cancelRoundBtn}</span>
+        {settle && startedBy && meId && startedBy !== meId ? (() => {
+          /* Iemand anders haalt dit rondje. De beheerder kiest dan gewoon zoals iedereen,
+             met dezelfde zwevende balk als een gast. Alles waarmee hij kan ingrijpen zit
+             achter één link eronder, zodat de duimzone niet volloopt. */
+          const mijnN = drinks.reduce((a, d) => a + aQty(d.id, meId), 0)
+          const ikKlaar = openAnswers[meId] === "same" || openAnswers[meId] === "skip"
+          const ikNiets = openAnswers[meId] === "skip" && mijnN === 0
+          return (
+          <div style={{ position: "sticky", bottom: 0, zIndex: 40, marginTop: 12, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)" }}>
+            <div style={{ background: "#fff", border: `1.5px solid ${MODUS_FAIR.lijnZacht}`, borderRadius: 16, padding: 11, boxShadow: "0 -8px 20px -10px rgba(13,124,140,0.7)" }}>
+              {ikKlaar ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 9, borderRadius: 11, padding: 9,
+                  background: ikNiets ? "rgba(29,41,66,0.05)" : "rgba(31,138,76,0.1)",
+                  border: `1px solid ${ikNiets ? "rgba(29,41,66,0.16)" : "rgba(31,138,76,0.3)"}` }}>
+                  <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff", background: ikNiets ? "#8b93a3" : "#1f8a4c" }}>{ikNiets ? "—" : "✓"}</span>
+                  <span style={{ minWidth: 0, display: "flex", flexDirection: "column" }}>
+                    <b style={{ fontSize: 14.5, color: "#1d2942" }}>{ikNiets ? L.youTakeNothing : L.youAreDone(mijnN)}</b>
+                    <span style={{ fontSize: 12, color: "#6b7484", marginTop: 1 }}>{runnerName()}</span>
+                  </span>
+                  <button onClick={() => antwoordRondje("different")}
+                    style={{ marginLeft: "auto", flexShrink: 0, background: "#fff", border: "1px solid rgba(29,41,66,0.25)", color: "#1d2942", fontSize: 13, fontWeight: 800, padding: "7px 11px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit" }}>{L.changeWord}</button>
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#8a5e0f", background: "rgba(240,165,0,0.14)", borderRadius: 10, padding: "9px 10px", marginBottom: 9, textAlign: "center", lineHeight: 1.35 }}>
+                    ☝️ {L.notPassedOn(runnerName())}
+                  </div>
+                  <div style={{ display: "flex", gap: 7 }}>
+                    <button onClick={() => antwoordRondje("skip")}
+                      style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(29,41,66,0.28)", color: "#6b7484", fontSize: 15, fontWeight: 800, padding: "15px 6px", borderRadius: 12, cursor: "pointer", fontFamily: "inherit" }}>{L.nothingForMeBtn}</button>
+                    <button onClick={() => antwoordRondje("same")} disabled={mijnN === 0}
+                      style={{ flex: 1.3, background: MODUS_FAIR.rand, border: "none", color: "#fff", fontSize: 16.5, fontWeight: 800, padding: "15px 6px", borderRadius: 12, cursor: mijnN === 0 ? "default" : "pointer", opacity: mijnN === 0 ? 0.45 : 1, fontFamily: "inherit", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                      {L.confirmMine}
+                      {mijnN > 0 && <span style={{ background: "#F5B301", color: "#2a2110", borderRadius: 999, minWidth: 23, height: 23, padding: "0 6px", fontSize: 13, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{mijnN}</span>}
+                    </button>
+                  </div>
+                </>
+              )}
+              <button onClick={() => setAdminBlad(true)}
+                style={{ display: "block", width: "100%", marginTop: 8, background: "none", border: "none", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", textDecoration: "underline", cursor: "pointer", fontFamily: "inherit" }}>{L.adminOptions}</button>
             </div>
           </div>
-        ) : (settle || roundItems > 0) && (
+          )
+        })() : (settle || roundItems > 0) && (
         <button style={{ ...S.btnP, opacity: roundItems === 0 ? 0.5 : 1, ...(roundItems > 0 ? { position: "fixed", left: "50%", transform: "translateX(-50%)", width: "min(528px, calc(100vw - 32px))", bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)", zIndex: 40, borderRadius: 999, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, fontWeight: 600, boxShadow: "0 8px 22px -8px rgba(29,41,66,0.75)" } : null) }} onClick={() => { if (roundItems === 0) return; if (settle) openClose(); else commitRound() }}>{settle ? L.confirmRoundTitle(roundNr) : L.doneWithRound}{roundItems > 0 && <span style={{ flexShrink: 0, background: "#F5B301", color: "#2a2110", borderRadius: 999, minWidth: 23, height: 23, padding: "0 6px", fontSize: 13, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", order: -1 }}>{roundItems}</span>}</button>
         )}
         {settle
