@@ -7486,8 +7486,7 @@ export default function PartyTest() {
     const naar = (t: "order" | "me" | "group") => {
       if (t === "order") { setActiveCat(catsPresent[0]); setView("order"); return }
       if (t === "group") { setSettingsBackTo(view === "order" ? "order" : "hub"); setView("settings"); return }
-      if (settle) { setOpenRound(Math.max(0, rounds.length - 1)); setView("hub") }
-      else { setOverviewBackTo("hub"); setView("roundsOverview") }
+      setOpenRound(Math.max(0, rounds.length - 1)); setView("hub")
     }
     // Vroeger stond elk niet-actief blad op 60% doorzichtig. Dat vervaagde ook de rand,
     // waardoor een blad waar je gewoon op kan tikken eruitzag als uitgeschakeld. Nu is
@@ -7498,12 +7497,12 @@ export default function PartyTest() {
       const leeg = t === "me" && rounds.length === 0
       return (
         <button onClick={() => naar(t)}
-          style={{ ...S.btn, flex: 1, minWidth: 0, padding: "13px 3px", fontSize: 16, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-            background: actief ? (settle ? MODUS_FAIR.vlak : "rgba(240,165,0,0.1)") : leeg ? "#f4f7f8" : "#fff",
+          style={{ ...S.btn, flex: 1, minWidth: 0, padding: "13px 4px", fontSize: 17.5, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            background: actief ? MODUS_FAIR.vlak : leeg ? "#f4f7f8" : "#fff",
             borderStyle: !actief && leeg ? "dashed" : "solid",
-            borderColor: actief ? (settle ? MODUS_FAIR.rand : "#e08a00") : leeg ? "rgba(29,41,66,0.2)" : (settle ? MODUS_FAIR.lijnZacht : "rgba(224,138,0,0.35)"),
+            borderColor: actief ? MODUS_FAIR.rand : leeg ? "rgba(29,41,66,0.2)" : MODUS_FAIR.lijnZacht,
             borderWidth: actief ? 1.5 : 1,
-            color: actief ? (settle ? MODUS_FAIR.tekst : "#8a5e0f") : leeg ? "#9aa3b2" : (settle ? "#0a4f5b" : "#8a5e0f") }}>{tekst}</button>
+            color: actief ? MODUS_FAIR.tekst : leeg ? "#9aa3b2" : "#0a4f5b" }}>{tekst}</button>
       )
     }
     return (
