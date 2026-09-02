@@ -1192,7 +1192,7 @@ const T = {
     theyPickOwn: "zij kiezen op hun eigen gsm",
     roundClosedTitle: (n: number) => `Rondje ${n} is afgesloten`,
     fetchesNow: (n: string) => `${n} gaat halen`,
-    youTookN: (n: number) => `jij nam ${n} drankjes`,
+    youTookN: (n: number) => `jij nam ${n} drankje${n === 1 ? "" : "s"}`,
     youTookNothingShort: "— jij nam niets",
     removePersonMsg: (n: string) => `${n} van de lijst halen?\nWie al scande, moet daarna opnieuw scannen om erbij te komen.`,
     removePersonYes: "Weghalen",
@@ -1828,12 +1828,12 @@ const T = {
     walkTable: "👥 Faire le tour",
     roundTogether: "Lancer une tourn\u00e9e",
     roundForN: (n: number) => `Tournée pour ${n} ${n === 1 ? "personne" : "personnes"} ?`,
-    lastRoundCount: (n: number) => `Tournée précédente : ${n} ${n === 1 ? "boisson" : "boissons"}`,
+    lastRoundCount: (n: number) => `Précédente : ${n} ${n === 1 ? "boisson" : "boissons"}`,
     theyTap: "Ils cochent",
     theyTapRest: "sur leur t\u00e9l\u00e9phone.",
     youPay: "Tu vas chercher et payer",
     youPayRest: "au bar.",
-    settledAfter: "Tout est régularisé après !",
+    settledAfter: "On règle tout après !",
     sameAgainShort: "\u21bb la m\u00eame",
     notMeShort: "Pas moi",
     iFetchShort: "J'y vais \u2192",
@@ -1950,7 +1950,7 @@ const T = {
     repeatOtherBtn: "Autre chose",
     toDrinksSoon: "Vers les boissons…",
     notYetConfirmed: "à confirmer",
-    pokeShort: "Rappel",
+    pokeShort: "Rappeler",
     closeRoundQ: "🍻 Clôturer la tournée ?",
     youFetchN: (n: number) => `Tu vas chercher ${n} boisson${n === 1 ? "" : "s"}`,
     showDrinksWord: "Voir ▾",
@@ -1963,24 +1963,24 @@ const T = {
     yourOwnNotConfirmed: "Ton propre choix n'est pas encore confirmé",
     yourChoiceFixed: "Ton choix est confirmé",
     passedOnTo: (n: string) => `Transmis à ${n}`,
-    adminOptions: "👑 Options d'administrateur",
+    adminOptions: "👑 Options admin",
     adminSheetTitle: "👑 En tant qu'administrateur",
     adminSheetSub: (n: string) => `${n} va chercher cette tournée. N'interviens que si nécessaire.`,
     adminRemind: "🔔 Rappeler ceux qui n'ont pas choisi",
     adminRemindSub: (n: number) => `${n} ${n === 1 ? "personne n'a" : "personnes n'ont"} encore rien transmis`,
     adminTakeOver: "🍻 Reprendre la tournée",
-    adminTakeOverSub: "Tu deviens le porteur et peux clôturer. Toutes les boissons restent.",
+    adminTakeOverSub: "C'est toi qui vas chercher et qui peux clôturer. Toutes les boissons restent.",
     fillPaySub: "Saisir toi-même le montant de cette tournée sans attendre.",
     adminCancel: "✕ Annuler la tournée",
     adminCancelSub: "Tout ce qui est coché disparaît, aussi chez les autres.",
-    takenOverBy: (n: string) => `🍻 ${n} a repris la tournée — tu n'as plus à y aller.`,
+    takenOverBy: (n: string) => `🍻 ${n} a repris la tournée — tu n'as plus besoin d'y aller.`,
     takenOverAll: (n: string, v: string) => `🍻 ${n} reprend la tournée de ${v}.`,
     closeWord2: "Fermer",
     newRoundForN: (n: number) => `Nouvelle tournée pour ${n} ${n === 1 ? "personne" : "personnes"} ?`,
-    theyPickOwn: "ils choisissent sur leur propre téléphone",
+    theyPickOwn: "ils choisissent sur leur téléphone",
     roundClosedTitle: (n: number) => `La tournée ${n} est clôturée`,
     fetchesNow: (n: string) => `${n} va chercher`,
-    youTookN: (n: number) => `tu as pris ${n} boissons`,
+    youTookN: (n: number) => `tu as pris ${n} boisson${n === 1 ? "" : "s"}`,
     youTookNothingShort: "— tu n'as rien pris",
     removePersonMsg: (n: string) => `Retirer ${n} de la liste ?\nUne personne qui a déjà scanné devra scanner à nouveau pour revenir.`,
     removePersonYes: "Retirer",
@@ -9086,6 +9086,16 @@ export default function PartyTest() {
     const needCups = depositOn && (people.some((p) => pickedUpOf(p.id) > 0) || people.some((p) => cupsBal(p.id) !== 0))
     const gaveBackTotal = people.reduce((a, p) => a + (gaveBackDraft[p.id] ?? Math.min(cupsBal(p.id), pickedUpOf(p.id))), 0)
     const cupsBlock = needCups && !cupsChecked
+    // Zelfde groene toestand als bij de gast: bevestigde de beheerder zijn eigen keuze,
+    // dan kleurt ook zijn kaart mee. Dit raakt alleen de kleuren — porren, afsluiten,
+    // annuleren en de beheerdersopties blijven staan waar ze staan.
+    const adminKlaar = !!meId && (openAnswers[meId] === "same" || openAnswers[meId] === "skip")
+    const adminMijne = meId ? drinks.filter((d) => aQty(d.id, meId) > 0) : []
+    const adminAantal = adminMijne.reduce((a, d) => a + aQty(d.id, meId!), 0)
+    const adminNiets = !!meId && openAnswers[meId] === "skip" && adminAantal === 0
+    const adminKort = adminNiets ? "" : adminMijne.length > 0 && adminMijne.length <= 3
+      ? adminMijne.map((d) => `${aQty(d.id, meId!)}× ${d.name}`).join(" · ")
+      : L.youAreDone(adminAantal)
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header />
@@ -9105,7 +9115,7 @@ export default function PartyTest() {
                   <span style={{ flexShrink: 0, background: "rgba(240,165,0,0.14)", border: "1.5px solid rgba(224,138,0,0.5)", color: "#a8720a", borderRadius: 999, padding: "5px 13px", fontSize: 14.5, fontWeight: 800, whiteSpace: "nowrap" }}>{L.drinksCount(roundItems)}</span>
                 )}
         </div>
-        {settle && renderRunnerBar()}
+        {settle && renderRunnerBar(false, adminKlaar, adminKort)}
         {(settle || opNaam) && renderWalk()}
 
         {!settle && (
