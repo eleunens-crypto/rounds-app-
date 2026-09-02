@@ -1165,6 +1165,10 @@ const T = {
     removeWord: "Weghalen",
     notPassedOn: (n: string) => `Nog niet doorgegeven aan ${n}`,
     confirmMine: "Bevestigen",
+    repeatTitle: (n: string) => `${n} haalt hetzelfde rondje`,
+    repeatIntro: "Jouw keuze van vorige keer staat al klaar:",
+    repeatFoot: "Bevestig hem hieronder, of wijzig wat je wil.",
+    sameAsLastHint: "Zelfde als vorige keer — nog te bevestigen",
     roundClosedTitle: (n: number) => `Rondje ${n} is afgesloten`,
     fetchesNow: (n: string) => `${n} gaat halen`,
     youTookN: (n: number) => `jij nam ${n} drankjes`,
@@ -1930,6 +1934,10 @@ const T = {
     removeWord: "Retirer",
     notPassedOn: (n: string) => `Pas encore transmis à ${n}`,
     confirmMine: "Confirmer",
+    repeatTitle: (n: string) => `${n} reprend la même tournée`,
+    repeatIntro: "Ton choix de la dernière fois est déjà prêt :",
+    repeatFoot: "Confirme-le ci-dessous, ou modifie ce que tu veux.",
+    sameAsLastHint: "Comme la dernière fois — à confirmer",
     roundClosedTitle: (n: number) => `La tournée ${n} est clôturée`,
     fetchesNow: (n: string) => `${n} va chercher`,
     youTookN: (n: number) => `tu as pris ${n} boissons`,
@@ -2949,6 +2957,10 @@ export default function PartyTest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRoundId, startedBy, meId])
   const [rondjeMelding, setRondjeMelding] = useState<string | null>(null)
+  // Tikte de haler op "Zelfde weer", dan staan mijn drankjes al ingevuld op het moment
+  // dat het rondje verschijnt. Dat onthouden we hier, want zodra ik zelf iets bijtik is
+  // het onderscheid weg — en juist die eerste toestand bepaalt wat er op het scherm hoort.
+  const herhaaldVoorMij = useRef(false)
   // De melding dat er een rondje loopt is een aankondiging, geen vraag: er valt niets
   // te beslissen. Na 2,5 seconden gaat het scherm vanzelf naar de drankjes. Tikken doet
   // hetzelfde, meteen. De teller loopt alleen als het scherm zichtbaar is, anders zou
@@ -2957,6 +2969,13 @@ export default function PartyTest() {
     setRondjeMelding(null); setGuestTab("order"); setActiveCat(catsPresent[0])
     setView((v) => (v !== "order" ? "order" : v))
   }, [catsPresent])
+  useEffect(() => {
+    // Alleen kijken op het moment dat het rondje opent: staan er dan al drankjes voor
+    // mij, dan is dit een herhaling. De deps zijn bewust beperkt tot het rondje zelf.
+    if (!openRoundId || !meId) { herhaaldVoorMij.current = false; return }
+    herhaaldVoorMij.current = drinks.some((d) => (cart[d.id]?.[meId] ?? 0) > 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openRoundId, meId])
   useEffect(() => {
     if (!rondjeMelding) return
     let over = 2500
@@ -6951,21 +6970,40 @@ export default function PartyTest() {
         )
       })()}
       {/* En de anderen krijgen te horen wie gaat en wat er van hen verwacht wordt. */}
-      {rondjeMelding && (
+      {rondjeMelding && (() => {
+        // Wat staat er op dit moment al voor mij ingevuld? Is dat iets, dan tikte de
+        // haler op "Zelfde weer" en hoef ik enkel nog te bevestigen.
+        const mijnAlKlaar = meId ? drinks.map((d) => ({ d, n: cart[d.id]?.[meId] ?? 0 })).filter((x) => x.n > 0) : []
+        return (
         <div style={{ ...S.overlay, zIndex: 74 }} onClick={naarDrankjes}>
           <div style={{ ...S.sheet, textAlign: "center", cursor: "pointer" }} onClick={naarDrankjes}>
-            <div style={{ fontSize: 32, marginBottom: 5 }}>🍻</div>
-            <div style={{ fontSize: 20.5, fontWeight: 800, color: "#1d2942", marginBottom: 12 }}>{rondjeMelding ? L.someoneFetches(rondjeMelding) : L.orderingOpen}</div>
-            <div style={{ textAlign: "left", marginBottom: 14 }}>
-              {(rondjeMelding
-                ? [L.gFetchStep1, L.gFetchStep2, L.gFetchStep3(rondjeMelding)]
-                : [L.openStep1, L.openStep2, L.openStep3]).map((t, i) => (
-                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: i < 2 ? 9 : 0 }}>
-                  <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 19 }}>✓</span>
-                  <span style={{ fontSize: 18, color: "#1d2942", lineHeight: 1.45 }}>{t}</span>
-                </div>
-              ))}
-            </div>
+            {/* Herhaalt de haler het vorige rondje, dan staan mijn drankjes al ingevuld.
+                Dan is de stappenlijst overbodig en moet er iets anders staan: wát er voor
+                mij klaarstaat, zodat ik weet dat één tik volstaat. */}
+            {mijnAlKlaar.length > 0 ? (<>
+              <div style={{ fontSize: 30, marginBottom: 4 }}>🔁</div>
+              <div style={{ fontSize: 20.5, fontWeight: 800, color: "#1d2942", marginBottom: 10 }}>{L.repeatTitle(rondjeMelding || runnerName())}</div>
+              <div style={{ fontSize: 15.5, color: "#6b7484", lineHeight: 1.5, marginBottom: 9 }}>{L.repeatIntro}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center", marginBottom: 10 }}>
+                {mijnAlKlaar.map((x) => (
+                  <span key={x.d.id} style={{ background: "#f4fbf6", border: "1px solid rgba(31,138,76,0.32)", borderRadius: 999, padding: "4px 12px", fontSize: 15, fontWeight: 800, color: "#1f6b3a" }}>{x.n}× {x.d.name}</span>
+                ))}
+              </div>
+              <div style={{ fontSize: 14, color: "#6b7484", lineHeight: 1.45, marginBottom: 13 }}>{L.repeatFoot}</div>
+            </>) : (<>
+              <div style={{ fontSize: 32, marginBottom: 5 }}>🍻</div>
+              <div style={{ fontSize: 20.5, fontWeight: 800, color: "#1d2942", marginBottom: 12 }}>{rondjeMelding ? L.someoneFetches(rondjeMelding) : L.orderingOpen}</div>
+              <div style={{ textAlign: "left", marginBottom: 14 }}>
+                {(rondjeMelding
+                  ? [L.gFetchStep1, L.gFetchStep2, L.gFetchStep3(rondjeMelding)]
+                  : [L.openStep1, L.openStep2, L.openStep3]).map((t, i) => (
+                  <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: i < 2 ? 9 : 0 }}>
+                    <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 19 }}>✓</span>
+                    <span style={{ fontSize: 18, color: "#1d2942", lineHeight: 1.45 }}>{t}</span>
+                  </div>
+                ))}
+              </div>
+            </>)}
             {/* Geen knop: er valt niets te bevestigen. Een dun balkje loopt leeg zodat
                 je ziet dat het scherm zo meteen zelf doorgaat. */}
             <style>{`@keyframes rundoAftel{from{width:100%}to{width:0%}}`}</style>
@@ -6974,7 +7012,8 @@ export default function PartyTest() {
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
       {aanvulIdx !== null && (() => {
         const r = rounds[aanvulIdx]
         const openDrankjes = unassignedAllRounds
@@ -8111,7 +8150,7 @@ export default function PartyTest() {
               ) : (
                 <>
                   <div style={{ fontSize: 13, fontWeight: 800, color: "#8a5e0f", background: "rgba(240,165,0,0.14)", borderRadius: 9, padding: "7px 9px", marginBottom: 8, textAlign: "center" }}>
-                    ☝️ {L.notPassedOn(runnerName())}
+                    ☝️ {herhaaldVoorMij.current ? L.sameAsLastHint : L.notPassedOn(runnerName())}
                   </div>
                   <div style={{ display: "flex", gap: 7 }}>
                     <button onClick={() => antwoordRondje("skip")}
