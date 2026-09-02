@@ -7489,14 +7489,23 @@ export default function PartyTest() {
       if (settle) { setOpenRound(Math.max(0, rounds.length - 1)); setView("hub") }
       else { setOverviewBackTo("hub"); setView("roundsOverview") }
     }
-    const knop = (t: "order" | "me" | "group", tekst: string) => (
-      <button onClick={() => naar(t)}
-        style={{ ...S.btn, flex: 1, minWidth: 0, padding: "13px 3px", fontSize: 16, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", opacity: hier === t ? 1 : 0.6,
-          background: hier === t ? (settle ? MODUS_FAIR.vlak : "rgba(240,165,0,0.1)") : "#fff",
-          borderColor: hier === t ? (settle ? MODUS_FAIR.rand : "#e08a00") : undefined,
-          borderWidth: hier === t ? 1.5 : 1,
-          color: hier === t ? (settle ? MODUS_FAIR.tekst : "#8a5e0f") : "#6b7484" }}>{tekst}</button>
-    )
+    // Vroeger stond elk niet-actief blad op 60% doorzichtig. Dat vervaagde ook de rand,
+    // waardoor een blad waar je gewoon op kan tikken eruitzag als uitgeschakeld. Nu is
+    // flets voorbehouden aan één geval: "Rondjes" terwijl er nog geen enkel rondje is.
+    // Dan zegt de stippellijn "hier valt nog niets te zien" — aantikken mag wel.
+    const knop = (t: "order" | "me" | "group", tekst: string) => {
+      const actief = hier === t
+      const leeg = t === "me" && rounds.length === 0
+      return (
+        <button onClick={() => naar(t)}
+          style={{ ...S.btn, flex: 1, minWidth: 0, padding: "13px 3px", fontSize: 16, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            background: actief ? (settle ? MODUS_FAIR.vlak : "rgba(240,165,0,0.1)") : leeg ? "#f4f7f8" : "#fff",
+            borderStyle: !actief && leeg ? "dashed" : "solid",
+            borderColor: actief ? (settle ? MODUS_FAIR.rand : "#e08a00") : leeg ? "rgba(29,41,66,0.2)" : (settle ? MODUS_FAIR.lijnZacht : "rgba(224,138,0,0.35)"),
+            borderWidth: actief ? 1.5 : 1,
+            color: actief ? (settle ? MODUS_FAIR.tekst : "#8a5e0f") : leeg ? "#9aa3b2" : (settle ? "#0a4f5b" : "#8a5e0f") }}>{tekst}</button>
+      )
+    }
     return (
       <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
         {knop("group", L.tabGroup)}
@@ -8137,24 +8146,21 @@ export default function PartyTest() {
 
         {(orderingOpen || rounds.length > 0) && (
         <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-          <button onClick={() => setGuestTab("group")}
-            style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 17.5, fontWeight: 800, opacity: guestTab === "group" ? 1 : 0.6,
-              background: guestTab === "group" ? MODUS_FAIR.vlak : "#fff",
-              borderColor: guestTab === "group" ? MODUS_FAIR.rand : undefined,
-              borderWidth: guestTab === "group" ? 1.5 : 1,
-              color: guestTab === "group" ? MODUS_FAIR.tekst : "#6b7484" }}>{L.tabGroup}</button>
-          <button onClick={() => setGuestTab("order")}
-            style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 17.5, fontWeight: 800, opacity: guestTab === "order" ? 1 : 0.6,
-              background: guestTab === "order" ? MODUS_FAIR.vlak : "#fff",
-              borderColor: guestTab === "order" ? MODUS_FAIR.rand : undefined,
-              borderWidth: guestTab === "order" ? 1.5 : 1,
-              color: guestTab === "order" ? MODUS_FAIR.tekst : "#6b7484" }}>{L.tabOrder}</button>
-          <button onClick={() => setGuestTab("me")}
-            style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 17.5, fontWeight: 800, opacity: guestTab === "me" ? 1 : 0.6,
-              background: guestTab === "me" ? MODUS_FAIR.vlak : "#fff",
-              borderColor: guestTab === "me" ? MODUS_FAIR.rand : undefined,
-              borderWidth: guestTab === "me" ? 1.5 : 1,
-              color: guestTab === "me" ? MODUS_FAIR.tekst : "#6b7484" }}>{L.tabMe}</button>
+          {/* Zelfde stelregel als bij de beheerder: een blad dat je kan openen ziet er
+              ook zo uit. Enkel "Mijn stand" staat gedempt zolang er geen rondje is. */}
+          {([["group", L.tabGroup], ["order", L.tabOrder], ["me", L.tabMe]] as const).map(([t, tekst]) => {
+            const actief = guestTab === t
+            const leeg = t === "me" && rounds.length === 0
+            return (
+              <button key={t} onClick={() => setGuestTab(t)}
+                style={{ ...S.btn, flex: 1, minWidth: 0, padding: "13px 4px", fontSize: 17.5, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                  background: actief ? MODUS_FAIR.vlak : leeg ? "#f4f7f8" : "#fff",
+                  borderStyle: !actief && leeg ? "dashed" : "solid",
+                  borderColor: actief ? MODUS_FAIR.rand : leeg ? "rgba(29,41,66,0.2)" : MODUS_FAIR.lijnZacht,
+                  borderWidth: actief ? 1.5 : 1,
+                  color: actief ? MODUS_FAIR.tekst : leeg ? "#9aa3b2" : "#0a4f5b" }}>{tekst}</button>
+            )
+          })}
         </div>
         )}
 
