@@ -7530,6 +7530,30 @@ export default function PartyTest() {
       <span style={{ color: "#F5B301", fontWeight: 800 }}>+</span>
     </span>
   )
+  // Dezelfde geldzak als bij de beheerder, maar dood: een gast legt niets in, hij wil
+  // enkel weten hoeveel er nog inzit. Staat op de donkere balk, dus wit met een dunne
+  // rand; is de pot op, dan kleurt hij rood zodat je niet doorbestelt in de veronder-
+  // stelling dat het betaald is.
+  const gastPotBadge = () => {
+    const op = potRemaining < 0.005
+    return (
+      <span style={{ padding: "5px 11px 5px 7px", borderRadius: 999, fontSize: 14, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", color: "#fff",
+        background: op ? "rgba(226,75,74,0.18)" : "rgba(255,255,255,0.1)",
+        border: `1.5px solid ${op ? "rgba(240,149,149,0.7)" : "rgba(255,255,255,0.28)"}` }}>
+        {potIsCard ? (
+          <span style={{ fontSize: 18 }}>💳</span>
+        ) : (
+          <svg width="19" height="19" viewBox="0 0 40 40" style={{ display: "block" }}>
+            <path d="M16 13 L14 7 Q20 5 26 7 L24 13 Z" fill="#d99616" stroke="#b9821a" strokeWidth="1.2" strokeLinejoin="round" />
+            <path d="M13 14 Q20 11 27 14 Q33 19 32 27 Q31 35 20 35 Q9 35 8 27 Q7 19 13 14 Z" fill="#e8a821" stroke="#b9821a" strokeWidth="1.5" />
+            <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
+          </svg>
+        )}
+        {euro(Math.max(0, potZicht))}
+        <span style={{ color: op ? "#f0c1c1" : "#9fbcc2", fontWeight: 700 }}> / {potInlegKort}</span>
+      </span>
+    )
+  }
   // Per persoon noteren terwijl je de enige bent: dan valt er niets te verdelen en
   // belanden alle drankjes stilzwijgend bij jou. De lijst gaat op slot tot er iemand
   // bij is — een waarschuwing alleen kun je wegtikken, dit niet. Staat hier en niet
@@ -7615,6 +7639,12 @@ export default function PartyTest() {
     // Het QR-instelscherm krijgt één samengestelde kopbalk (logo + modus in degradé)
     // in plaats van de losse teal balk, logo-rij en naam rechtsboven.
     const setupKop = !!groupId && settle && !kaal && (view === "setup" || (view === "hub" && isAdmin && !fromQuick && rounds.length === 0))
+    // Zodra het feest loopt draagt de beheerder dezelfde kop als iedereen aan tafel:
+    // donkere balk met het logo, daaronder de groepsnaam links en je eigen naam rechts.
+    // Enige verschil met de gast is wat er rechts in de balk hangt — bij hem de taalknop,
+    // hier de pot, want inleggen is beheerderswerk.
+    const qrKop = !!groupId && settle && !fromQuick && isAdmin && !kaal && !setupKop && (orderingOpen || rounds.length > 0)
+    const ikZelf = people.find((p) => p.id === meId)
     return (
     <div style={{ marginBottom: 12, paddingTop: 18 }}>
       {/* Bij uitgebreid opnemen geen aparte statusbalk: de tekst staat rechts op de
@@ -7635,7 +7665,41 @@ export default function PartyTest() {
       {/* Logo met de pot eronder aan de linkerkant; de groepsnaam en het aantal personen
           rechtsboven. Zo staan "waar ben ik" en "hoeveel zit er nog in" naast elkaar in
           plaats van elkaar te verdringen op één regel. */}
-      {!setupKop && (
+      {qrKop && (
+        <>
+          <div style={{ background: "#0a4f5b", borderRadius: 15, padding: "11px 13px", display: "flex", alignItems: "center", gap: 10 }}>
+            <span onClick={() => verlaatMetNaamcheck(goSiteHome)} style={{ cursor: "pointer", display: "inline-flex", flexShrink: 0 }}>
+              <RundoLogo size={40} />
+            </span>
+            <span style={{ marginLeft: "auto", flexShrink: 0 }}>{potContribTotal > 0.005 ? potKnopje() : potLegBadge()}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 3px 10px", borderBottom: `1.5px solid ${MODUS_FAIR.lijnZacht}`, marginBottom: 12 }}>
+            {!editName && (
+              <span onClick={() => { if (!groepDicht) setEditName(true) }}
+                style={{ minWidth: 0, cursor: groepDicht ? "default" : "pointer", display: "inline-flex", alignItems: "center", gap: 7 }}>
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 22, fontWeight: 800, color: "#0a4f5b" }}>
+                  {isAutoNaam(groupName) ? L.giveNameQ : groupName.trim()}
+                </span>
+                {!groepDicht && (
+                  <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: "50%", background: "#fff", border: `1px solid ${MODUS_FAIR.lijnZacht}`, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                    <PotloodIcoon size={12} kleur={MODUS_FAIR.rand} />
+                  </span>
+                )}
+              </span>
+            )}
+            {ikZelf && (
+              <span onClick={() => setNaamWijzig(ikZelf.name)}
+                style={{ marginLeft: "auto", flexShrink: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, background: MODUS_FAIR.tint, border: `1px solid ${MODUS_FAIR.lijnZacht}`, borderRadius: 999, padding: "4px 13px 4px 7px", fontSize: 17, fontWeight: 700, color: MODUS_FAIR.tekst, maxWidth: 170 }}>
+                <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <PotloodIcoon size={12} kleur={MODUS_FAIR.rand} />
+                </span>
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ikZelf.name}</span>
+              </span>
+            )}
+          </div>
+        </>
+      )}
+      {!setupKop && !qrKop && (
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10, background: RAND, borderRadius: 15, padding: "11px 13px", marginBottom: 11 }}>
         <div style={{ minWidth: 0, flex: "1 1 auto" }}>
         <div style={{ ...S.row, gap: 10, alignItems: "center" }}>
@@ -8034,7 +8098,11 @@ export default function PartyTest() {
         <div style={{ background: "#0a4f5b", borderRadius: 15, padding: "11px 13px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <RundoLogo size={40} />
-            <span style={{ marginLeft: "auto", flexShrink: 0 }}><LanguageToggle compact /></span>
+            {/* De pot hangt tussen het logo en de taalknop, niet op de naamregel: daar
+                zou hij bij een lange groepsnaam de naam wegdrukken. Leesbaar, niet
+                klikbaar — inleggen blijft werk van de beheerder. */}
+            {potContribTotal > 0.005 && <span style={{ marginLeft: "auto", flexShrink: 0 }}>{gastPotBadge()}</span>}
+            <span style={{ marginLeft: potContribTotal > 0.005 ? 0 : "auto", flexShrink: 0 }}><LanguageToggle compact /></span>
           </div>
         </div>
         {/* Groepsnaam en jouw naam staan onder de balk op de paginakleur, zoals in de
@@ -8487,10 +8555,13 @@ export default function PartyTest() {
           @keyframes rundoLoop{from{width:0}to{width:100%}}
           input::placeholder,textarea::placeholder{color:#a7b0bf;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
         <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "#0E1A2E", padding: "13px 14px" }}>
+        <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "#0E1A2E", padding: "13px 14px" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/rundo-merk.png" alt="" height={36} style={{ width: "auto", flexShrink: 0, display: "block" }} />
           <span style={{ fontSize: 20, fontWeight: 500, color: "#fff" }}>{L.chooseHow}</span>
+          {/* De taal kies je hier, vóór je een modus start: verderop draagt de kop van de
+              beheerder de pot op die plek, en dan is er geen ruimte meer voor NL/FR. */}
+          <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)" }}><LanguageToggle compact /></span>
         </div>
 
         <div style={{ padding: "14px 13px" }}>
