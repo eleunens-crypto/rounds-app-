@@ -1163,6 +1163,13 @@ const T = {
     toDrinksSoon: "Naar de drankjes…",
     notYetConfirmed: "nog te bevestigen",
     pokeShort: "Porren",
+    closeRoundQ: "🍻 Rondje afronden?",
+    youFetchN: (n: number) => `Je haalt ${n} drankje${n === 1 ? "" : "s"}`,
+    showWord: "Toon ▾",
+    hideWord: "Verberg ▴",
+    nobodyChoseYet: (namen: string, meer: boolean) => `⏳ ${namen} ${meer ? "kozen" : "koos"} nog niets`,
+    remindFirst: "🔔 Eerst porren",
+    closeAnyway: "Afsluiten →",
     showWhoChose: "Toon wie wat koos ▾",
     hideWhoChose: "Inklappen ▴",
     yourOwnNotConfirmed: "Jouw eigen keuze is nog niet bevestigd",
@@ -1942,6 +1949,13 @@ const T = {
     toDrinksSoon: "Vers les boissons…",
     notYetConfirmed: "à confirmer",
     pokeShort: "Rappel",
+    closeRoundQ: "🍻 Clôturer la tournée ?",
+    youFetchN: (n: number) => `Tu vas chercher ${n} boisson${n === 1 ? "" : "s"}`,
+    showWord: "Voir ▾",
+    hideWord: "Masquer ▴",
+    nobodyChoseYet: (namen: string, meer: boolean) => `⏳ ${namen} n'${meer ? "ont" : "a"} encore rien choisi`,
+    remindFirst: "🔔 Rappeler d'abord",
+    closeAnyway: "Clôturer →",
     showWhoChose: "Voir qui a choisi quoi ▾",
     hideWhoChose: "Replier ▴",
     yourOwnNotConfirmed: "Ton propre choix n'est pas encore confirmé",
@@ -2906,6 +2920,10 @@ export default function PartyTest() {
   // achter één link: zo blijft de duimzone van de beheerder even rustig als die van een
   // gast, en heeft hij toch een weg om in te grijpen.
   const [adminBlad, setAdminBlad] = useState(false)
+  // Het venster vóór het afsluiten, met de waarschuwing over wie nog niet koos en het
+  // aantal drankjes dat je meeneemt. Uitklapbaar, want meestal volstaat het cijfer.
+  const [afsluitCheck, setAfsluitCheck] = useState(false)
+  const [afsluitOpen, setAfsluitOpen] = useState(false)
   // Vanaf vijf personen wordt de namenlijst van de haler te lang: dan staat er een rij
   // pillen (wie is klaar, wie niet) en zit de detaillijst achter één tik.
   const [lijstOpen, setLijstOpen] = useState(false)
@@ -3300,7 +3318,7 @@ export default function PartyTest() {
           </div>
           {/* Bovenaan en duidelijk: de haler rondt zelf af zodra hij terug is van de
               toog. Het bedrag is niet zijn zorg — dat vult de admin straks in. */}
-          <button onClick={() => { void runnerRondtAf() }} disabled={barTotalen().length === 0}
+          <button onClick={() => { if (nogNietGekozen().length > 0) { setAfsluitOpen(false); setAfsluitCheck(true) } else void runnerRondtAf() }} disabled={barTotalen().length === 0}
             style={{ width: "100%", marginBottom: 11, cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 8px", fontSize: 17.5, fontWeight: 800, color: "#fff", background: MODUS_FAIR.knop, opacity: barTotalen().length === 0 ? 0.45 : 1 }}>{L.runnerDoneBtn}</button>
           {/* Alles over dit rondje in één kader: wie klaar is, wat je moet halen, en de
               twee handelingen. Ingeklapt moest je te veel tikken om te zien waar je aan
@@ -6873,6 +6891,50 @@ export default function PartyTest() {
       {/* Het beheerdersblad: drie ingrepen wanneer de haler niet reageert. Elk met één
           regel die zegt wat er gebeurt, want het verschil tussen overnemen en annuleren
           is precies wat je wil weten voor je tikt. */}
+      {/* Afsluiten terwijl er nog iemand kiest. Het aantal staat er altijd, de drankjes
+          zelf zitten achter "Toon" — meestal wil je alleen weten hoeveel glazen je moet
+          dragen. Links staat porren, want dat lost het probleem op in plaats van je
+          alleen terug te sturen. */}
+      {afsluitCheck && (() => {
+        const wachten = nogNietGekozen()
+        const items = barTotalen()
+        const totaal = items.reduce((a, b) => a + b.n, 0)
+        const namen = wachten.slice(0, 3).map((pp) => pp.name).join(", ") + (wachten.length > 3 ? ` +${wachten.length - 3}` : "")
+        return (
+        <div style={{ ...S.overlay, zIndex: 79 }} onClick={() => setAfsluitCheck(false)}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 11, textAlign: "center" }}>{L.closeRoundQ}</div>
+            <div style={{ background: MODUS_FAIR.vlak, border: `1px solid ${MODUS_FAIR.lijnZacht}`, borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                <span style={{ fontSize: 15, color: MODUS_FAIR.tekst, minWidth: 0 }}><b style={{ fontWeight: 800 }}>{L.youFetchN(totaal)}</b></span>
+                {items.length > 0 && (
+                  <button onClick={() => setAfsluitOpen((v) => !v)}
+                    style={{ marginLeft: "auto", flexShrink: 0, background: "#fff", border: `1px solid ${MODUS_FAIR.randZacht}`, color: MODUS_FAIR.tekst, fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit" }}>
+                    {afsluitOpen ? L.hideWord : L.showWord}
+                  </button>
+                )}
+              </div>
+              {afsluitOpen && items.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 9, paddingTop: 9, borderTop: `1px solid ${MODUS_FAIR.lijnZacht}` }}>
+                  {items.map((x) => (
+                    <span key={x.id} style={{ background: "#fff", border: `1px solid ${MODUS_FAIR.randZacht}`, borderRadius: 999, padding: "4px 11px", fontSize: 13.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{x.n}× {x.naam}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ background: "rgba(240,165,0,0.14)", border: "1px solid rgba(232,168,18,0.4)", borderRadius: 11, padding: 10, fontSize: 14, color: "#8a5e0f", textAlign: "center", marginBottom: 14, lineHeight: 1.4 }}>
+              {L.nobodyChoseYet(namen, wachten.length > 1)}
+            </div>
+            <div style={{ display: "flex", gap: 9 }}>
+              <button onClick={() => { setAfsluitCheck(false); vraagHerinnering() }}
+                style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(232,168,18,0.6)", color: "#8a5e0f", fontSize: 13.5, fontWeight: 800, padding: "13px 6px", borderRadius: 12, cursor: "pointer", fontFamily: "inherit" }}>{L.remindFirst}</button>
+              <button onClick={() => { setAfsluitCheck(false); void runnerRondtAf() }}
+                style={{ ...S.btnP, flex: 1.3, width: "auto", fontSize: 15, padding: "13px 6px" }}>{L.closeAnyway}</button>
+            </div>
+          </div>
+        </div>
+        )
+      })()}
       {adminBlad && (() => {
         const nogNiet = people.filter((pp) => !isKlaar(pp.id) && !drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0))
         const knop = (titel: string, uitleg: string, onClick: () => void, rood = false) => (
