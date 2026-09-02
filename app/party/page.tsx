@@ -180,8 +180,8 @@ function BonKnopIcoon({ size = 16, kleur = "#6b7484" }: { size?: number; kleur?:
   )
 }
 
-function GsmIcoon({ size = 44, kleur = "#1d2942", lijnen = false, qr = false, dof = false, streep = false }:
-  { size?: number; kleur?: string; lijnen?: boolean; qr?: boolean; dof?: boolean; streep?: boolean }) {
+function GsmIcoon({ size = 44, kleur = "#1d2942", lijnen = false, qr = false, dof = false }:
+  { size?: number; kleur?: string; lijnen?: boolean; qr?: boolean; dof?: boolean }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={kleur}
       strokeWidth={dof ? 1.9 : 1.7} strokeLinejoin="round" opacity={dof ? 0.5 : 1} aria-hidden="true">
@@ -196,8 +196,21 @@ function GsmIcoon({ size = 44, kleur = "#1d2942", lijnen = false, qr = false, do
         <rect x="13.8" y="12.8" width="1.8" height="1.8" fill={kleur} stroke="none" />
         <rect x="13.8" y="15.6" width="1.8" height="1.8" fill={kleur} stroke="none" />
       </>)}
-      {/* Doorstreept: deze persoon scande niet zelf, iemand zette hem erbij. */}
-      {streep && <path d="M4.2 21L19.8 3" strokeWidth={1.9} strokeLinecap="round" />}
+    </svg>
+  )
+}
+
+// Een doorstreepte gsm: deze persoon scande niet zelf, de gastheer zette hem erbij.
+// Bewust een eigen component en geen prop op GsmIcoon, zodat het gedeelde icoontje
+// dat de andere modi gebruiken onaangeroerd blijft. Alleen in de QR-modus in gebruik.
+function GsmDoorstreeptIcoon({ size = 13, kleur = "#8b93a3" }: { size?: number; kleur?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={kleur}
+      strokeWidth={1.7} strokeLinejoin="round" aria-hidden="true">
+      <rect x="5" y="1.5" width="14" height="21" rx="3.2" />
+      <path d="M10 3.9h4" strokeWidth={1.5} strokeLinecap="round" />
+      <circle cx="12" cy="20" r="0.9" fill={kleur} stroke="none" />
+      <path d="M4.2 21L19.8 3" strokeWidth={1.9} strokeLinecap="round" />
     </svg>
   )
 }
@@ -7636,7 +7649,7 @@ export default function PartyTest() {
                       lettertype — een vierde teken zou de rij onleesbaar maken. */}
                   {isHost ? <KroonIcoon size={13} kleur="#8a5e0f" />
                     : p.claimedBy ? <GsmIcoon size={13} kleur="#1f6b3a" />
-                    : <GsmIcoon size={13} kleur="#8b93a3" streep />}
+                    : <GsmDoorstreeptIcoon size={13} kleur="#8b93a3" />}
                   {leeg ? L.seat(p.seat) : p.name}
                 </span>
               )
