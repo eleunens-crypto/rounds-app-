@@ -1165,8 +1165,8 @@ const T = {
     pokeShort: "Porren",
     closeRoundQ: "🍻 Rondje afronden?",
     youFetchN: (n: number) => `Je haalt ${n} drankje${n === 1 ? "" : "s"}`,
-    showWord: "Toon ▾",
-    hideWord: "Verberg ▴",
+    showDrinksWord: "Toon ▾",
+    hideDrinksWord: "Verberg ▴",
     nobodyChoseYet: (namen: string, meer: boolean) => `⏳ ${namen} ${meer ? "kozen" : "koos"} nog niets`,
     remindFirst: "🔔 Eerst porren",
     closeAnyway: "Afsluiten →",
@@ -1951,8 +1951,8 @@ const T = {
     pokeShort: "Rappel",
     closeRoundQ: "🍻 Clôturer la tournée ?",
     youFetchN: (n: number) => `Tu vas chercher ${n} boisson${n === 1 ? "" : "s"}`,
-    showWord: "Voir ▾",
-    hideWord: "Masquer ▴",
+    showDrinksWord: "Voir ▾",
+    hideDrinksWord: "Masquer ▴",
     nobodyChoseYet: (namen: string, meer: boolean) => `⏳ ${namen} n'${meer ? "ont" : "a"} encore rien choisi`,
     remindFirst: "🔔 Rappeler d'abord",
     closeAnyway: "Clôturer →",
@@ -6861,7 +6861,7 @@ export default function PartyTest() {
                 {items.length > 0 && (
                   <button onClick={() => setAfsluitOpen((v) => !v)}
                     style={{ marginLeft: "auto", flexShrink: 0, background: "#fff", border: `1px solid ${MODUS_FAIR.randZacht}`, color: MODUS_FAIR.tekst, fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit" }}>
-                    {afsluitOpen ? L.hideWord : L.showWord}
+                    {afsluitOpen ? L.hideDrinksWord : L.showDrinksWord}
                   </button>
                 )}
               </div>
