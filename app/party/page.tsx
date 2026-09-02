@@ -1173,6 +1173,18 @@ const T = {
     repeatConfirmBtn: "Bevestig dit →",
     repeatOtherBtn: "Iets anders",
     toDrinksSoon: "Naar de drankjes…",
+    adminOptions: "👑 Beheerdersopties",
+    adminSheetTitle: "👑 Als beheerder",
+    adminSheetSub: (n: string) => `${n} haalt dit rondje. Grijp alleen in als dat nodig is.`,
+    adminRemind: "🔔 Herinner wie nog niet koos",
+    adminRemindSub: (n: number) => `${n} ${n === 1 ? "persoon heeft" : "personen hebben"} nog niets doorgegeven`,
+    adminTakeOver: "🍻 Rondje overnemen",
+    adminTakeOverSub: "Jij wordt de haler en kan afsluiten. Alle drankjes blijven staan.",
+    adminCancel: "✕ Rondje annuleren",
+    adminCancelSub: "Alles wat aangetikt is gaat weg, ook bij de anderen.",
+    takenOverBy: (n: string) => `🍻 ${n} nam het rondje over — jij hoeft niet meer te halen.`,
+    takenOverAll: (n: string, v: string) => `🍻 ${n} neemt het rondje over van ${v}.`,
+    closeWord2: "Sluiten",
     newRoundForN: (n: number) => `Nieuw rondje voor ${n} ${n === 1 ? "persoon" : "personen"}?`,
     theyPickOwn: "zij kiezen op hun eigen gsm",
     roundClosedTitle: (n: number) => `Rondje ${n} is afgesloten`,
@@ -1948,6 +1960,18 @@ const T = {
     repeatConfirmBtn: "Confirmer →",
     repeatOtherBtn: "Autre chose",
     toDrinksSoon: "Vers les boissons…",
+    adminOptions: "👑 Options d'administrateur",
+    adminSheetTitle: "👑 En tant qu'administrateur",
+    adminSheetSub: (n: string) => `${n} va chercher cette tournée. N'interviens que si nécessaire.`,
+    adminRemind: "🔔 Rappeler ceux qui n'ont pas choisi",
+    adminRemindSub: (n: number) => `${n} ${n === 1 ? "personne n'a" : "personnes n'ont"} encore rien transmis`,
+    adminTakeOver: "🍻 Reprendre la tournée",
+    adminTakeOverSub: "Tu deviens le porteur et peux clôturer. Toutes les boissons restent.",
+    adminCancel: "✕ Annuler la tournée",
+    adminCancelSub: "Tout ce qui est coché disparaît, aussi chez les autres.",
+    takenOverBy: (n: string) => `🍻 ${n} a repris la tournée — tu n'as plus à y aller.`,
+    takenOverAll: (n: string, v: string) => `🍻 ${n} reprend la tournée de ${v}.`,
+    closeWord2: "Fermer",
     newRoundForN: (n: number) => `Nouvelle tournée pour ${n} ${n === 1 ? "personne" : "personnes"} ?`,
     theyPickOwn: "ils choisissent sur leur propre téléphone",
     roundClosedTitle: (n: number) => `La tournée ${n} est clôturée`,
@@ -2842,6 +2866,14 @@ export default function PartyTest() {
   // blijven staan, alleen de haler wisselt.
   const takeOverRound = async () => {
     if (!meId || !openRoundId) return
+    // Wie tot nu toe ging halen hoort het persoonlijk: hij hoeft niet meer te vertrekken.
+    // De rest krijgt de gewone melding, zodat niemand bij de verkeerde persoon aanklopt.
+    const ik = people.find((pp) => pp.id === meId)?.name || "?"
+    const vorige = people.find((pp) => pp.id === startedBy)
+    if (vorige && vorige.id !== meId) {
+      try { void kanaalRef.current?.send({ type: "broadcast", event: "voorJou", payload: { voor: vorige.id, tekst: L.takenOverBy(ik) } }) } catch { /* niets */ }
+      try { void kanaalRef.current?.send({ type: "broadcast", event: "melding", payload: { tekst: L.takenOverAll(ik, vorige.name) } }) } catch { /* niets */ }
+    }
     setStartedBy(meId)
     const { error } = await supabase.rpc("party_take_over_round", { p_round: openRoundId, p_starter: meId })
     if (error) { setNotice("Overnemen mislukt: " + error.message); if (groupId) loadParty(groupId) }
@@ -2866,6 +2898,10 @@ export default function PartyTest() {
   // Bevestigen vóór het starten: wie op "ik ga halen" tikt, zet daarmee de hele tafel in
   // beweging. Eén scherm met wat er gaat gebeuren, en een uitweg.
   const [startCheck, setStartCheck] = useState(false)
+  // Het beheerdersblad tijdens een rondje van iemand anders. Het staat er altijd, maar
+  // achter één link: zo blijft de duimzone van de beheerder even rustig als die van een
+  // gast, en heeft hij toch een weg om in te grijpen.
+  const [adminBlad, setAdminBlad] = useState(false)
   const [walkCheck, setWalkCheck] = useState(false)
   const [naamWijzig, setNaamWijzig] = useState<string | null>(null)
   const [barFull, setBarFull] = useState(false)
@@ -6785,6 +6821,32 @@ export default function PartyTest() {
           </div>
         </div>
       )}
+      {/* Het beheerdersblad: drie ingrepen wanneer de haler niet reageert. Elk met één
+          regel die zegt wat er gebeurt, want het verschil tussen overnemen en annuleren
+          is precies wat je wil weten voor je tikt. */}
+      {adminBlad && (() => {
+        const nogNiet = people.filter((pp) => !isKlaar(pp.id) && !drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0))
+        const knop = (titel: string, uitleg: string, onClick: () => void, rood = false) => (
+          <button onClick={onClick}
+            style={{ display: "block", width: "100%", textAlign: "left", background: rood ? "#fff" : "#f2fafb", border: `1px solid ${rood ? "rgba(192,85,74,0.4)" : "rgba(13,124,140,0.25)"}`, color: rood ? "#c0554a" : MODUS_FAIR.tekst, padding: 11, borderRadius: 11, marginBottom: 7, cursor: "pointer", fontFamily: "inherit" }}>
+            <b style={{ display: "block", fontSize: 14.5, fontWeight: 800 }}>{titel}</b>
+            <span style={{ display: "block", fontSize: 12, fontWeight: 600, opacity: 0.8, marginTop: 2, lineHeight: 1.35 }}>{uitleg}</span>
+          </button>
+        )
+        return (
+        <div style={{ ...S.overlay, zIndex: 78 }} onClick={() => setAdminBlad(false)}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#1d2942", marginBottom: 3 }}>{L.adminSheetTitle}</div>
+            <div style={{ fontSize: 13, color: "#6b7484", lineHeight: 1.45, marginBottom: 12 }}>{L.adminSheetSub(runnerName())}</div>
+            {nogNiet.length > 0 && knop(L.adminRemind, L.adminRemindSub(nogNiet.length), () => { setAdminBlad(false); vraagHerinnering() })}
+            {knop(L.adminTakeOver, L.adminTakeOverSub, () => { setAdminBlad(false); void takeOverRound() })}
+            {knop(L.adminCancel, L.adminCancelSub, () => { setAdminBlad(false); annuleerRondje() }, true)}
+            <button onClick={() => setAdminBlad(false)}
+              style={{ width: "100%", background: "none", border: "none", color: "#8b93a3", fontSize: 14, fontWeight: 800, marginTop: 3, cursor: "pointer", fontFamily: "inherit" }}>{L.closeWord2}</button>
+          </div>
+        </div>
+        )
+      })()}
       {openMelding && (
         <div style={{ ...S.overlay, zIndex: 77 }} onClick={() => { setOpenMelding(false); naarDrankjes() }}>
           <div style={{ ...S.sheet, textAlign: "center", cursor: "pointer" }} onClick={() => { setOpenMelding(false); naarDrankjes() }}>
@@ -8192,6 +8254,10 @@ export default function PartyTest() {
                     </button>
                   </div>
                 </>
+              )}
+              {isAdmin && (
+                <button onClick={() => setAdminBlad(true)}
+                  style={{ display: "block", width: "100%", marginTop: 8, background: "none", border: "none", fontSize: 12.5, fontWeight: 800, color: "#8a5e0f", textDecoration: "underline", cursor: "pointer", fontFamily: "inherit" }}>{L.adminOptions}</button>
               )}
             </div>
           </div>
