@@ -4993,12 +4993,20 @@ export default function PartyTest() {
       </div>
       {/* De weg vooruit plakt onderaan en ademt zachtjes — onmiskenbaar dé volgende
           stap, zonder te schreeuwen. Pijl-in-cirkel in plaats van de bieremoji. */}
+      {/* Loopt het bestellen al? Dan kwam je hier via "QR-code tonen" om een laatkomer
+          binnen te halen, niet om te beginnen. "Beginnen met bestellen" zou je dan een
+          tweede keer door een deur duwen die al open staat; een terugknop hoort hier. */}
       <div style={{ position: "sticky", bottom: 10, zIndex: 5, marginTop: 4, marginBottom: 13 }}>
+        {(orderingOpen || rounds.length > 0) ? (
+          <button onClick={() => { setQrGevraagd(false); setActiveCat(catsPresent[0]); setView("order") }}
+            style={{ ...S.btnP, width: "100%" }}>{L.backToRound(roundNr)}</button>
+        ) : (
         <button className="rundo-adem" onClick={() => { void openBestellen(); setActiveCat(catsPresent[0]); setView("order") }}
           style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 14, padding: "13px 12px", color: "#fff", background: MODUS_FAIR.knop }}>
           <span style={{ display: "block", fontSize: 18.5, fontWeight: 800 }}>{L.startOrdering}</span>
           <span style={{ display: "block", fontSize: 15, fontWeight: 600, color: "#d6f2f6", marginTop: 2 }}>{L.everyoneTapsNow}</span>
         </button>
+        )}
       </div>
       </>
     )
@@ -9116,6 +9124,13 @@ export default function PartyTest() {
             const kanAfrekenen = (settle ? paidCount > 0 : rounds.length > 0) && settingsBackTo !== "quickSettle"
             return (
             <>
+            {/* Laatkomer? Ook als iedereen gescand heeft: je zet er een plaats bij en de
+                nieuwe scant alsnog. Daarom geen voorwaarde op vrije plaatsen. Staat boven
+                de terugknop: je komt hier om de QR te tonen, terug is de uitweg erna. */}
+            {settle && !fromQuick && rounds.length > 0 && (
+              <button style={{ ...S.btn, width: "100%", marginBottom: 10, fontWeight: 800 }}
+                onClick={() => { setQrGevraagd(true); setView("hub") }}>{L.showQr}</button>
+            )}
             {terug && (
               <button style={{ ...S.btnP, width: "100%", marginBottom: 10 }} onClick={terug.ga}>{terug.label}</button>
             )}
@@ -9146,12 +9161,6 @@ export default function PartyTest() {
               {settingsBackTo !== "order" && <button style={{ ...S.btnP, flex: 1 }} onClick={naarRondje}>{L.toFirstRound}</button>}
             </div>
           )}
-            {/* Laatkomer? Ook als iedereen gescand heeft: je zet er een plaats bij en de
-                nieuwe scant alsnog. Daarom geen voorwaarde op vrije plaatsen. */}
-            {settle && !fromQuick && rounds.length > 0 && (
-              <button style={{ ...S.btn, width: "100%", marginTop: 10, fontWeight: 800 }}
-                onClick={() => { setQrGevraagd(true); setView("hub") }}>{L.showQr}</button>
-            )}
             {kanAfrekenen && (
               <button style={{ ...S.btn, width: "100%", marginTop: 10, padding: "11px 8px", borderRadius: 12, background: RAND, border: "none", color: RANDTEKST, lineHeight: 1.3 }}
                 onClick={() => { if (settle) goFinal(); else goQuickSettle() }}>
