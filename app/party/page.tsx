@@ -180,8 +180,8 @@ function BonKnopIcoon({ size = 16, kleur = "#6b7484" }: { size?: number; kleur?:
   )
 }
 
-function GsmIcoon({ size = 44, kleur = "#1d2942", lijnen = false, qr = false, dof = false }:
-  { size?: number; kleur?: string; lijnen?: boolean; qr?: boolean; dof?: boolean }) {
+function GsmIcoon({ size = 44, kleur = "#1d2942", lijnen = false, qr = false, dof = false, streep = false }:
+  { size?: number; kleur?: string; lijnen?: boolean; qr?: boolean; dof?: boolean; streep?: boolean }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={kleur}
       strokeWidth={dof ? 1.9 : 1.7} strokeLinejoin="round" opacity={dof ? 0.5 : 1} aria-hidden="true">
@@ -196,6 +196,8 @@ function GsmIcoon({ size = 44, kleur = "#1d2942", lijnen = false, qr = false, do
         <rect x="13.8" y="12.8" width="1.8" height="1.8" fill={kleur} stroke="none" />
         <rect x="13.8" y="15.6" width="1.8" height="1.8" fill={kleur} stroke="none" />
       </>)}
+      {/* Doorstreept: deze persoon scande niet zelf, iemand zette hem erbij. */}
+      {streep && <path d="M4.2 21L19.8 3" strokeWidth={1.9} strokeLinecap="round" />}
     </svg>
   )
 }
@@ -4700,21 +4702,18 @@ export default function PartyTest() {
           </div>
         )}
         {anderen.map((p) => (
-          <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: "rgba(31,138,76,0.08)", border: "1px solid rgba(31,138,76,0.25)" }}>
-            <span style={{ ...S.row, gap: 7, minWidth: 0 }}>
-              <span style={{ fontSize: 17.5, fontWeight: 700, color: "#1d2942", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.claimedBy ? "" : "✍️ "}{p.name}</span>
-              {/* Wie zelf scande krijgt een gsm in een groen schijfje achter zijn naam.
-                  Dat vervangt het vinkje: het zegt niet alleen dát hij binnen is, maar
-                  ook hoe. Een handmatig toegevoegde naam houdt het potlood vooraan. */}
-              {p.claimedBy && (
-                <span style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(31,138,76,0.16)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <GsmIcoon size={13} kleur="#1f6b3a" />
-                </span>
-              )}
+          <div key={p.id} style={{ ...S.row, gap: 9, padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: "rgba(31,138,76,0.08)", border: "1px solid rgba(31,138,76,0.25)" }}>
+            {/* Het icoontje staat vooraan in een schijfje van 24px, even breed als het
+                kroontje op jouw eigen rij. Zo beginnen alle namen op dezelfde plek.
+                Gsm = scande zelf, potlood = jij zette hem erbij. */}
+            <span style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13,
+              background: p.claimedBy ? "rgba(31,138,76,0.16)" : "rgba(29,41,66,0.09)" }}>
+              {p.claimedBy ? <GsmIcoon size={13} kleur="#1f6b3a" /> : "✍️"}
             </span>
+            <span style={{ fontSize: 17.5, fontWeight: 700, color: "#1d2942", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
             {isAdmin && (
               <button onClick={() => setConfirmDlg({ variant: "danger", msg: L.removePersonMsg(p.name), yes: L.removePersonYes, onYes: () => { setConfirmDlg(null); removePerson(p.id) } })} title={L.removeWord}
-                style={{ flexShrink: 0, background: "#fff", border: "1px solid rgba(224,104,92,0.45)", color: "#c0554a", borderRadius: 8, padding: "4px 9px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
+                style={{ marginLeft: "auto", flexShrink: 0, background: "#fff", border: "1px solid rgba(224,104,92,0.45)", color: "#c0554a", borderRadius: 8, padding: "4px 9px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
             )}
           </div>
         ))}
@@ -7627,11 +7626,18 @@ export default function PartyTest() {
               const isIk = p.id === meId
               const isHost = !!ownerDevice && p.claimedBy === ownerDevice
               return (
-                <span key={p.id} style={{ borderRadius: 16, padding: "5px 11px", fontSize: 15, fontWeight: isIk || isHost ? 800 : 700,
-                  background: isHost ? "rgba(240,165,0,0.14)" : isIk ? "rgba(31,138,76,0.14)" : p.claimedBy ? "rgba(31,138,76,0.08)" : "transparent",
+                <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 16, padding: "5px 11px", fontSize: 15, fontWeight: isIk || isHost ? 800 : 700,
+                  background: isHost ? "rgba(240,165,0,0.14)" : isIk ? "rgba(31,138,76,0.14)" : p.claimedBy ? "rgba(31,138,76,0.08)" : "rgba(29,41,66,0.06)",
                   border: leeg ? "1px dashed rgba(29,41,66,0.28)" : "none",
                   color: isHost ? "#8a5e0f" : p.claimedBy || p.named ? "#1f6b3a" : "#8b93a3" }}>
-                  {isHost ? <><KroonIcoon size={12} kleur="#8a5e0f" />{" "}</> : isIk ? "● " : p.claimedBy ? "📱 " : ""}{leeg ? L.seat(p.seat) : p.name}
+                  {/* Drie tekens, één per manier van erbij komen: kroontje voor de gastheer,
+                      gsm voor wie zelf scande, doorstreepte gsm voor wie erbij gezet werd.
+                      Jouw eigen naam herken je aan de vollere achtergrond en het vette
+                      lettertype — een vierde teken zou de rij onleesbaar maken. */}
+                  {isHost ? <KroonIcoon size={13} kleur="#8a5e0f" />
+                    : p.claimedBy ? <GsmIcoon size={13} kleur="#1f6b3a" />
+                    : <GsmIcoon size={13} kleur="#8b93a3" streep />}
+                  {leeg ? L.seat(p.seat) : p.name}
                 </span>
               )
             })}
