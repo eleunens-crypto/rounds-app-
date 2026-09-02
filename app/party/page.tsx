@@ -1208,9 +1208,10 @@ const T = {
     cancelledBy: (naam: string) => `✕ ${naam} annuleerde het rondje.`,
     runnerDoneBtn: "🍻 Rondje afronden en halen",
     runnerDoneNote: (naam: string) => `✓ Bestelling bevestigd — ${naam} gaat halen. Proost!`,
-    haalTitel: "✓ Bestelling bevestigd",
-    haalSub: "Jij gaat halen — iedereen kreeg een seintje.",
-    haalKlaar: "✓ Gehaald",
+    haalSub: "iedereen kreeg een seintje",
+    haalKlaar: "✓ Klaar",
+    fillLater: "Later invullen",
+    fillAmountBtn: "💶 Bedrag invullen",
     runnerCloseFailed: "Afronden mislukt.",
     fillPayBtn: "💶 Bedrag & betaling invullen",
     tappedForYou: (naam: string) => `🍺 ${naam} duidt drankjes voor je aan — kijk even op je lijstje.`,
@@ -1996,9 +1997,10 @@ const T = {
     cancelledBy: (naam: string) => `✕ ${naam} a annulé la tournée.`,
     runnerDoneBtn: "🍻 Clôturer la tournée et aller la chercher",
     runnerDoneNote: (naam: string) => `✓ Commande confirmée — ${naam} va la chercher. Santé !`,
-    haalTitel: "✓ Commande confirmée",
-    haalSub: "C'est toi qui vas la chercher — tout le monde est prévenu.",
-    haalKlaar: "✓ Ramené",
+    haalSub: "tout le monde est prévenu",
+    haalKlaar: "✓ Terminé",
+    fillLater: "Remplir plus tard",
+    fillAmountBtn: "💶 Saisir le montant",
     runnerCloseFailed: "Échec de la clôture.",
     fillPayBtn: "💶 Montant & paiement",
     tappedForYou: (naam: string) => `🍺 ${naam} coche des boissons pour toi — jette un œil à ta liste.`,
@@ -2651,6 +2653,15 @@ export default function PartyTest() {
   // noteermodus schuiven we daarheen, zodat de drankjes meteen in beeld staan in
   // plaats van onder de vouw. Staat de kop al bovenaan, dan gebeurt er niets —
   // anders springt het scherm bij elke tik.
+  // ── Typen mag niet overschreven worden ──────────────────────────────────────
+  // Elk realtime-bericht (iemand tikt een drankje aan, iemand meldt zich aan) laat
+  // loadParty draaien, en die zet groupName en people opnieuw met wat de server op dat
+  // moment heeft. Typ je op dat ogenblik een naam, dan springt het veld terug naar de
+  // vorige waarde en lijken er letters weg te vallen. Deze wachtposten onthouden welk
+  // veld je aan het bewerken bent; loadParty laat dat veld dan met rust.
+  const TYPRUST = 3000
+  const groepNaamBezig = useRef(0)
+  const naamBezig = useRef<Record<string, number>>({})
   const rondjeKop = useRef<HTMLDivElement | null>(null)
   // Het zwevende rondjeblok op het gastscherm. Na "Kiezen maar" scrollen we hierheen,
   // zodat het blok meteen bovenaan staat en de drankenlijst er direct onder begint.
@@ -3274,18 +3285,21 @@ export default function PartyTest() {
     if (!openRoundId && haalInfo) {
       return (
         <div style={{ ...S.card, background: "#fff", border: `2px solid ${MODUS_FAIR.rand}`, boxShadow: `0 6px 18px -12px ${MODUS_FAIR.gloed}` }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: MODUS_FAIR.tekst, marginBottom: 2 }}>{L.haalTitel}</div>
-          <div style={{ fontSize: 15, color: "#1d2942", marginBottom: 10 }}>{L.haalSub}</div>
-          <div style={{ background: MODUS_FAIR.vlak, borderRadius: 11, padding: "10px 11px", marginBottom: 11 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 7 }}>
-              <span style={{ fontSize: 14.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.toTheBar}</span>
-              <button onClick={() => setBarFull(true)} style={{ ...S.btn, flexShrink: 0, padding: "5px 10px", fontSize: 13.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.showBig}</button>
-            </div>
-            <div style={{ fontSize: 16, color: "#1d2942", lineHeight: 1.6 }}>
-              {haalInfo.items.map((x, i) => <span key={x.id}>{i > 0 ? " · " : ""}<b>{x.n}×</b> {x.naam}</span>)}
-            </div>
+          {/* Eén taak: dit bestellen. De lijst staat groot, elke soort op een eigen regel,
+              zodat je hem aan de toog kan aflezen zonder te knijpen. */}
+          <div style={{ fontSize: 18, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.toTheBar}</div>
+          <div style={{ fontSize: 13.5, color: "#6b7484", margin: "2px 0 11px" }}>{L.roundWord} {rounds.length} · {L.haalSub}</div>
+          <div style={{ background: MODUS_FAIR.vlak, borderRadius: 11, padding: "10px 12px", marginBottom: 10 }}>
+            {haalInfo.items.map((x, i, arr) => (
+              <div key={x.id} style={{ fontSize: 17, fontWeight: 700, color: "#1d2942", padding: "5px 0", borderBottom: i < arr.length - 1 ? `1px solid ${MODUS_FAIR.lijnZacht}` : "none" }}>
+                <b style={{ color: MODUS_FAIR.tekst, marginRight: 6 }}>{x.n}×</b>{x.naam}
+              </div>
+            ))}
           </div>
-          <button onClick={() => setHaalInfo(null)} style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "12px 8px", fontSize: 17, fontWeight: 800, color: "#fff", background: MODUS_FAIR.knop }}>{L.haalKlaar}</button>
+          <button onClick={() => setBarFull(true)} style={{ width: "100%", cursor: "pointer", background: MODUS_FAIR.vlak, border: `1px solid ${MODUS_FAIR.lijnZacht}`, color: MODUS_FAIR.tekst, fontSize: 13.5, fontWeight: 800, padding: 10, borderRadius: 10, marginBottom: 9, fontFamily: "inherit" }}>{L.showBig}</button>
+          {/* "Klaar" brengt je meteen naar het bedrag: dat is de vraag die anders blijft
+              liggen tot aan de eindafrekening. */}
+          <button onClick={() => { setHaalInfo(null); openClose() }} style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 8px", fontSize: 17, fontWeight: 800, color: "#fff", background: MODUS_FAIR.knop }}>{L.haalKlaar}</button>
         </div>
       )
     }
@@ -3399,7 +3413,7 @@ export default function PartyTest() {
     if (startedBy) {
       // Iemand anders haalt. Informatie — overnemen mag, maar rustig.
       return (
-        <div style={{ ...S.card, background: groen ? "#f4fbf6" : "#fff", border: `2px solid ${groen ? "#1f8a4c" : MODUS_FAIR.rand}`, boxShadow: `0 6px 18px -12px ${MODUS_FAIR.gloed}` }}>
+        <div style={{ ...S.card, position: "sticky", top: 0, zIndex: 9, background: groen ? "#f4fbf6" : "#fff", border: `2px solid ${groen ? "#1f8a4c" : MODUS_FAIR.rand}`, boxShadow: `0 8px 20px -12px ${MODUS_FAIR.gloed}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 10 }}>
             {/* Bevestigde je, dan wordt het schijfje een vinkje: je eigen toestand leest
                 van hier af, zonder naar de balk onderaan te moeten kijken. */}
@@ -3435,10 +3449,10 @@ export default function PartyTest() {
               </>)}
             </div>
           )}
-          {/* Ook wie niet haalt kan annuleren, maar alleen de beheerder — nodig wanneer
-              de haler zijn gsm wegstak en het rondje eeuwig zou blijven openstaan. */}
-          {magAnnuleren && (
-            <button onClick={annuleerRondje} style={{ width: "100%", marginTop: 9, cursor: "pointer", background: "none", border: "none", fontSize: 15, fontWeight: 700, color: "#b0402f" }}>{L.cancelRoundBtn}</button>
+          {/* Annuleren staat hier niet meer: dat hoort bij de beheerdersopties onderaan,
+              samen met porren en overnemen. Wat hier telt is wat jij nu moet doen. */}
+          {compact && (
+            <div style={{ marginTop: 9, paddingTop: 9, borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, fontSize: 14.5, fontWeight: 700, color: MODUS_FAIR.tekst, textAlign: "center" }}>{L.pickBelow}</div>
           )}
         </div>
       )
@@ -3767,12 +3781,20 @@ export default function PartyTest() {
     }
     loadParty(groupId)
   }
-  const renamePerson = async (id: string, name: string) => {
+  // Per persoon één lopende timer, zodat snel typen niet één schrijfopdracht per letter
+  // wordt. Elke letter zet de klok opnieuw; een halve seconde na de laatste toets gaat
+  // de naam naar de databank.
+  const naamTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+  const renamePerson = (id: string, name: string) => {
     // Optimistisch: het invoerveld moet meteen meebewegen, niet pas na de rondreis.
-    setPeople((ps) => ps.map((x) => x.id === id ? { ...x, name } : x))
-    const clean = isGuestDefault(name) ? "" : name.trim()
-    const { error } = await supabase.from("party_people").update({ name: clean }).eq("id", id)
-    if (error) setNotice("Naam opslaan mislukt: " + error.message)
+    setPeople((ps) => ps.map((x) => x.id === id ? { ...x, name, named: !!name.trim() && !isGuestDefault(name) } : x))
+    naamBezig.current[id] = Date.now() + TYPRUST
+    if (naamTimers.current[id]) clearTimeout(naamTimers.current[id])
+    naamTimers.current[id] = setTimeout(async () => {
+      const clean = isGuestDefault(name) ? "" : name.trim()
+      const { error } = await supabase.from("party_people").update({ name: clean }).eq("id", id)
+      if (error) setNotice("Naam opslaan mislukt: " + error.message)
+    }, 500)
   }
   const personHasDrinks = (pid: string) => rounds.some((r) => Object.values(r.orders).some((o) => (o?.[pid] ?? 0) > 0)) || Object.values(cart).some((o) => (o?.[pid] ?? 0) > 0)
   // Merk op wanneer er iemand bijkomt die zichzelf aanmeldde. De eerste lading (bij
@@ -3849,7 +3871,8 @@ export default function PartyTest() {
     ])
     if (!mounted.current) return
     if (g) {
-      setGroupName(g.name || "")
+      // Ben je net in het groepsnaamveld aan het typen? Dan niet overschrijven.
+      if (Date.now() > groepNaamBezig.current) setGroupName(g.name || "")
       setInviteCode(g.invite_code)
       setOwnerDevice(g.owner_id)
       setPay("eur")   // coins komen later; wat er in de groep staat negeren we
@@ -3884,15 +3907,20 @@ export default function PartyTest() {
     if (fqVlag) setFromQuick(true)
     setGroepDatum((g as { last_active?: string } | null)?.last_active ?? null)
     setGroepDicht(!!(g as { finalized?: boolean } | null)?.finalized)
-    setPeople((pp || []).map((r) => ({
-      id: r.id, seat: r.seat,
+    setPeople((vorige) => (pp || []).map((r) => {
       // named = de admin (of de gast zelf) gaf een echte naam. Een naamloze plaats
       // heet "Gast N", zodat de bestaande placeholder-logica blijft werken.
-      named: !!(r.name || "").trim(),
-      name: (r.name || "").trim() || `Gast ${r.seat}`,
-      claimedBy: r.claimed_by, selfJoined: !!r.self_joined,
-      settleWith: r.settle_with,
-    })))
+      const serverNaam = (r.name || "").trim()
+      const bezig = (naamBezig.current[r.id] ?? 0) > Date.now()
+      const lokaal = bezig ? vorige.find((x) => x.id === r.id) : undefined
+      return {
+        id: r.id, seat: r.seat,
+        named: lokaal ? lokaal.named : !!serverNaam,
+        name: lokaal ? lokaal.name : (serverNaam || `Gast ${r.seat}`),
+        claimedBy: r.claimed_by, selfJoined: !!r.self_joined,
+        settleWith: r.settle_with,
+      }
+    }))
 
     // Drankjes per rondje uitsorteren: toegewezen in `orders`, de rest in `anon`.
     const perRound: Record<string, { orders: Assign; anon: Anon }> = {}
@@ -5763,7 +5791,6 @@ export default function PartyTest() {
 
   // Alleen wie het rondje startte en de beheerder mogen annuleren — anders blijft een
   // rondje eeuwig openstaan wanneer de haler zijn gsm wegstak.
-  const magAnnuleren = !!openRoundId && (isAdmin || (!!meId && startedBy === meId))
   // De haler rondt zelf af: status naar "pending" (bevestigd, bedrag volgt), leden
   // bevroren — exact wat de admin-bevestiging ook doet, zonder de betaalstap. Die
   // betaalstap blijft van de admin: bij het afrekenen leidt de bestaande
@@ -7366,7 +7393,7 @@ export default function PartyTest() {
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 20, fontWeight: 800, color: "#1d2942", marginBottom: 4 }}>{L.newGroupNameTitle}</div>
             <div style={{ fontSize: 17, color: "#6b7484", lineHeight: 1.45, marginBottom: 13 }}>{L.newGroupNameSub}</div>
-            <input ref={groepNaamVeld} autoFocus value={groupName} onChange={(e) => setGroupName(e.target.value)}
+            <input ref={groepNaamVeld} autoFocus value={groupName} onChange={(e) => { groepNaamBezig.current = Date.now() + TYPRUST; setGroupName(e.target.value) }}
               onKeyDown={(e) => { if (e.key === "Enter" && groupName.trim()) { const m = naamPrompt; setNaamPrompt(null); void startWithMode(undefined, m) } }}
               placeholder={L.namePh3}
               style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, marginBottom: 13 }} />
@@ -7660,7 +7687,7 @@ export default function PartyTest() {
       {groupName.trim() && editName && !onboarding && (
         <div style={{ marginTop: 9, textAlign: "center" }}>
           <input autoFocus value={groupName}
-            onChange={(e) => setGroupName(e.target.value)}
+            onChange={(e) => { groepNaamBezig.current = Date.now() + TYPRUST; setGroupName(e.target.value) }}
             onBlur={() => { setEditName(false); persistSettings() }}
             onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }}
             style={{ ...S.input, width: "auto", minWidth: 180, maxWidth: "88%", textAlign: "center", fontSize: 19, fontWeight: 800, padding: "5px 13px", borderRadius: 16, background: "#fcfdfe", border: "1px solid rgba(240,165,0,0.8)" }} />
@@ -8875,7 +8902,7 @@ export default function PartyTest() {
           <div style={{ fontSize: 18.5, fontWeight: 800, color: "#1d2942", marginBottom: 8 }}>{L.groupNameEdit}</div>
           <div style={{ ...S.row, gap: 8 }}>
             <span style={{ width: 26, height: 26, borderRadius: "50%", background: MODUS_FAIR.tint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>📝</span>
-          <input value={isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={(e) => { if (!e.target.value.trim()) setGroupName(settle ? L.autoNameQr() : L.autoName()); persistSettings() }} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.namePh3}
+          <input value={isAutoNaam(groupName) ? "" : groupName} onChange={(e) => { groepNaamBezig.current = Date.now() + TYPRUST; setGroupName(e.target.value) }} onBlur={(e) => { if (!e.target.value.trim()) setGroupName(settle ? L.autoNameQr() : L.autoName()); persistSettings() }} onFocus={(e) => e.currentTarget.select()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={L.namePh3}
             style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontSize: 18, fontWeight: 700, padding: "10px 11px", borderRadius: 10, background: "#fff", border: "1.5px solid rgba(13,124,140,0.5)", marginBottom: 14 }} />
           </div>
 
@@ -8914,7 +8941,7 @@ export default function PartyTest() {
                 <span style={{ fontSize: 17.5, fontWeight: 800 }}>{!settle && isAutoNaam(groupName) ? L.giveNameQ : L.groupNamePlain}</span>
             {groepDicht && <span style={{ fontSize: 14.5, color: "#6b7484", fontWeight: 700 }}>{L.nameLockedNote}</span>}
           </div>
-          <input disabled={groepDicht} value={!settle && isAutoNaam(groupName) ? "" : groupName} onChange={(e) => setGroupName(e.target.value)} onBlur={() => persistSettings()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.groupNamePh : L.groupNameShortPh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: groepDicht ? "#e6eaf0" : VLAK2, color: groepDicht ? "#6b7484" : "#1d2942", cursor: groepDicht ? "not-allowed" : "text" }} />
+          <input disabled={groepDicht} value={!settle && isAutoNaam(groupName) ? "" : groupName} onChange={(e) => { groepNaamBezig.current = Date.now() + TYPRUST; setGroupName(e.target.value) }} onBlur={() => persistSettings()} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur() }} placeholder={settle ? L.groupNamePh : L.groupNameShortPh} style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, background: groepDicht ? "#e6eaf0" : VLAK2, color: groepDicht ? "#6b7484" : "#1d2942", cursor: groepDicht ? "not-allowed" : "text" }} />
               {!groepDicht && (!settle && isAutoNaam(groupName)
                 ? <div style={{ fontSize: 14, color: "#8b93a3", fontWeight: 700, marginTop: 6 }}>{L.nowWord} {groupName.trim()}</div>
                 : <div style={{ fontSize: 14, color: "#8b93a3", fontWeight: 700, marginTop: 6 }}>{L.tapToRename}</div>)}
@@ -9300,6 +9327,10 @@ export default function PartyTest() {
                 {settle && <div style={{ fontSize: 13.5, color: "#8b93a3", marginTop: 7, lineHeight: 1.45 }}>{L.qrTapsSelf}</div>}
               </div>
             )}
+        {/* Zoeken en inspreken staan boven de categorieën, net als op het gastscherm:
+            eerst zoeken, dan filteren, dan de lijst. Vroeger stond dit onder de
+            drankjes, waar je het pas vond nadat je al gescrold had. */}
+        {settle && renderZoekBlok()}
         {/* Zolang de opnamewijze niet gekozen is, staan de drankjes al vaag en dood.
             De categorieën hoorden daarbij: anders lijkt de bovenste helft van het
             scherm bruikbaar terwijl er niets gebeurt als je erop tikt. */}
@@ -9420,9 +9451,6 @@ export default function PartyTest() {
             )}
           </div>
         )}
-        {/* Zoeken en inspreken: bij de gewone-rondjes-modi staat dit bovenin de
-            drankjeskaart; hier enkel nog voor Fair Split (QR). */}
-        {settle && renderZoekBlok()}
 
         {roundItems > 0 && (
           settle ? (
@@ -9851,6 +9879,12 @@ export default function PartyTest() {
         </div>
 
         {paidConfirmed && st.valid && <button style={S.btnP} onClick={closeRound}>{L.closeRound}</button>}
+        {/* Sta je nog met vijf glazen in je handen? Dan mag het bedrag wachten. Het rondje
+            blijft zichtbaar in het overzicht met een streepjesrand tot het ingevuld is. */}
+        {settle && !paidConfirmed && (
+          <button style={{ ...S.btn, width: "100%", marginTop: 10, padding: "14px 8px", fontSize: 16.5, fontWeight: 800, color: "#6b7484" }}
+            onClick={() => { setShowClose(false); setOverviewBackTo("hub"); setView("roundsOverview") }}>{L.fillLater}</button>
+        )}
         <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
           <button style={{ ...S.btn, flex: 1, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelRound}>{L.cancelRound}</button>
           <button style={{ ...S.btn, flex: 1, ...(settle ? {} : { padding: "14px 8px", fontSize: 17.5, fontWeight: 800 }) }} onClick={editOrder}>{settle ? L.editOrderOld : L.editOrderBtn}</button>
@@ -10707,8 +10741,11 @@ export default function PartyTest() {
             const open = isOpen(r)
             const geenBedrag = (r.amount || 0) <= 0.005
             const invulRij = fillMode && geenBedrag && editRoundId !== r.id
+            // Zonder bedrag een streepjesrand: dat leest als "hier ontbreekt nog iets" en
+            // niet als "hier is iets fout". In QR-modus tikt iedereen zijn eigen drankje
+            // aan, dus toewijzen speelt hier niet — alleen het bedrag ontbreekt nog.
             return (
-              <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden", ...(editRoundId === r.id ? { boxShadow: "inset 0 0 0 2px rgba(240,165,0,0.55)", background: "#fffdf3" } : invulRij ? { border: "2px solid rgba(224,104,92,0.65)", background: "rgba(224,104,92,0.05)" } : {}) }}>
+              <div key={r.id} style={{ ...S.card, padding: 0, overflow: "hidden", ...(editRoundId === r.id ? { boxShadow: "inset 0 0 0 2px rgba(240,165,0,0.55)", background: "#fffdf3" } : invulRij ? { border: "2px solid rgba(224,104,92,0.65)", background: "rgba(224,104,92,0.05)" } : settle && geenBedrag ? { border: "1.5px dashed rgba(224,138,0,0.7)", background: "#fffaf0" } : {}) }}>
                 <div onClick={() => toggle(r.id)} style={{ padding: "12px 14px", cursor: "pointer", background: editRoundId === r.id ? "rgba(240,165,0,0.1)" : open ? "rgba(240,165,0,0.06)" : invulRij ? "rgba(224,104,92,0.07)" : "#fff" }}>
                   <div style={{ ...S.row, justifyContent: "space-between", gap: 8 }}>
                     <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, minWidth: 0 }}>
@@ -10749,6 +10786,12 @@ export default function PartyTest() {
                       ? <span style={{ color: "#2f5693", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}> · <ZakjeIcoon size={14} /> {L.paidFromPot(euro(r.potPart || 0))}</span>
                       : <span style={{ color: "#9aa3b2" }}> · {L.noPotUsed}</span>)}
                   </div>
+                  {/* Meteen een weg naar het bedrag, in de kaart zelf: anders moet je
+                      eerst terug naar boven om het rondje te vinden. */}
+                  {settle && geenBedrag && !open && (
+                    <button onClick={(e) => { e.stopPropagation(); setFillMode(true); startEditRound(r) }}
+                      style={{ width: "100%", marginTop: 10, background: "#fff", border: "1.5px solid rgba(224,138,0,0.6)", color: "#a8720a", fontSize: 13.5, fontWeight: 800, padding: 10, borderRadius: 10, cursor: "pointer", fontFamily: "inherit" }}>{L.fillAmountBtn}</button>
+                  )}
                 </div>
                 {open && (() => {
                   const idx = rounds.indexOf(r)
