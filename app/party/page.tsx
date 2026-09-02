@@ -1169,6 +1169,12 @@ const T = {
     repeatIntro: "Jouw keuze van vorige keer staat al klaar:",
     repeatFoot: "Bevestig hem hieronder, of wijzig wat je wil.",
     sameAsLastHint: "Zelfde als vorige keer — nog te bevestigen",
+    repeatYours: "Jouw keuze van vorige keer:",
+    repeatConfirmBtn: "Bevestig dit →",
+    repeatOtherBtn: "Iets anders",
+    toDrinksSoon: "Naar de drankjes…",
+    newRoundForN: (n: number) => `Nieuw rondje voor ${n} ${n === 1 ? "persoon" : "personen"}?`,
+    theyPickOwn: "zij kiezen op hun eigen gsm",
     roundClosedTitle: (n: number) => `Rondje ${n} is afgesloten`,
     fetchesNow: (n: string) => `${n} gaat halen`,
     youTookN: (n: number) => `jij nam ${n} drankjes`,
@@ -1938,6 +1944,12 @@ const T = {
     repeatIntro: "Ton choix de la dernière fois est déjà prêt :",
     repeatFoot: "Confirme-le ci-dessous, ou modifie ce que tu veux.",
     sameAsLastHint: "Comme la dernière fois — à confirmer",
+    repeatYours: "Ton choix de la dernière fois :",
+    repeatConfirmBtn: "Confirmer →",
+    repeatOtherBtn: "Autre chose",
+    toDrinksSoon: "Vers les boissons…",
+    newRoundForN: (n: number) => `Nouvelle tournée pour ${n} ${n === 1 ? "personne" : "personnes"} ?`,
+    theyPickOwn: "ils choisissent sur leur propre téléphone",
     roundClosedTitle: (n: number) => `La tournée ${n} est clôturée`,
     fetchesNow: (n: string) => `${n} va chercher`,
     youTookN: (n: number) => `tu as pris ${n} boissons`,
@@ -2962,6 +2974,9 @@ export default function PartyTest() {
   // het onderscheid weg — en juist die eerste toestand bepaalt wat er op het scherm hoort.
   const herhaaldVoorMij = useRef(false)
   const [openMelding, setOpenMelding] = useState(false)
+  // naarDrankjes wordt pas verderop gemaakt (het heeft catsPresent nodig); via deze ref
+  // kan het effect hieronder er toch bij.
+  const naarDrankjesRef = useRef<() => void>(() => {})
   const wasOpen = useRef<boolean | null>(null)
   // Sloeg de gastheer het bestellen open? Dat is iets anders dan een rondje starten:
   // dit gebeurt één keer per avond, vlak na de QR.
@@ -2970,10 +2985,21 @@ export default function PartyTest() {
     wasOpen.current = orderingOpen
     if (settle && eerder === false && orderingOpen && meId && !isAdmin) setOpenMelding(true)
   }, [orderingOpen, meId, isAdmin])
+  // Ook dit is een aankondiging zonder keuze: na 2,5 seconden kijken gaat het scherm
+  // zelf naar de drankjes. De teller pauzeert bij een uitgeschakeld scherm, anders zou
+  // wie zijn gsm net wegstak de melding nooit gezien hebben.
   useEffect(() => {
     if (!openMelding) return
-    const t = setTimeout(() => setOpenMelding(false), 4000)
-    return () => clearTimeout(t)
+    let over = 2500
+    let sinds = document.visibilityState === "visible" ? Date.now() : 0
+    let t: ReturnType<typeof setTimeout> | null = null
+    const klaar = () => { setOpenMelding(false); naarDrankjesRef.current() }
+    const start = () => { sinds = Date.now(); t = setTimeout(klaar, over) }
+    const pauze = () => { if (t) { clearTimeout(t); t = null; over -= Date.now() - sinds } }
+    const wissel = () => { if (document.visibilityState === "visible") start(); else pauze() }
+    if (sinds) start()
+    document.addEventListener("visibilitychange", wissel)
+    return () => { if (t) clearTimeout(t); document.removeEventListener("visibilitychange", wissel) }
   }, [openMelding])
   const renderWalk = () => {
     if (walkIdx === null) return null
@@ -3206,11 +3232,12 @@ export default function PartyTest() {
       // Twee wegen, elk met de uitleg in de knop zelf: de keuze gaat niet over "welke
       // knop" maar over wie er aantikt.
       return (
+        <><style>{`@keyframes rundoStartAdem{0%,100%{box-shadow:0 0 0 0 rgba(13,124,140,0.5)}50%{box-shadow:0 0 0 8px rgba(13,124,140,0)}}`}</style>
         <button onClick={() => setStartCheck(true)}
-          style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "12px 10px", textAlign: "center", lineHeight: 1.3, fontFamily: "inherit", color: "#fff", background: MODUS_FAIR.knop, boxShadow: `0 4px 14px -6px ${MODUS_FAIR.gloed}`, marginBottom: 11 }}>
-          <span style={{ display: "block", fontSize: 18, fontWeight: 600 }}>{L.roundTogether}</span>
-          <span style={{ display: "block", fontSize: 14, fontWeight: 500, color: "#d6f2f6", marginTop: 3 }}>📱 {L.everyoneTapsOwn}</span>
-        </button>
+          style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "12px 10px", textAlign: "center", lineHeight: 1.3, fontFamily: "inherit", color: "#fff", background: MODUS_FAIR.knop, marginBottom: 11, animation: "rundoStartAdem 1.8s ease-in-out infinite" }}>
+          <span style={{ display: "block", fontSize: 18, fontWeight: 800 }}>{L.newRoundForN(people.length)}</span>
+          <span style={{ display: "block", fontSize: 14, fontWeight: 500, color: "#d6f2f6", marginTop: 3 }}>📱 {L.theyPickOwn}</span>
+        </button></>
       )
     }
     if (ikHaal) {
@@ -4516,6 +4543,7 @@ export default function PartyTest() {
     setRondjeMelding(null); setGuestTab("order"); setActiveCat(catsPresent[0])
     setView((v) => (v !== "order" ? "order" : v))
   }, [catsPresent])
+  naarDrankjesRef.current = naarDrankjes
   useEffect(() => {
     // Alleen kijken op het moment dat het rondje opent: staan er dan al drankjes voor
     // mij, dan is dit een herhaling. De deps zijn bewust beperkt tot het rondje zelf.
@@ -4523,18 +4551,6 @@ export default function PartyTest() {
     herhaaldVoorMij.current = drinks.some((d) => (cart[d.id]?.[meId] ?? 0) > 0)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRoundId, meId])
-  useEffect(() => {
-    if (!rondjeMelding) return
-    let over = 2500
-    let sinds = document.visibilityState === "visible" ? Date.now() : 0
-    let t: ReturnType<typeof setTimeout> | null = null
-    const start = () => { sinds = Date.now(); t = setTimeout(naarDrankjes, over) }
-    const pauze = () => { if (t) { clearTimeout(t); t = null; over -= Date.now() - sinds } }
-    const wissel = () => { if (document.visibilityState === "visible") start(); else pauze() }
-    if (sinds) start()
-    document.addEventListener("visibilitychange", wissel)
-    return () => { if (t) clearTimeout(t); document.removeEventListener("visibilitychange", wissel) }
-  }, [rondjeMelding, naarDrankjes])
   // Zet personen en namen terug zoals ze waren toen het venster openging.
   const herstelPersonen = () => {
     const snap = persSnap
@@ -6770,11 +6786,17 @@ export default function PartyTest() {
         </div>
       )}
       {openMelding && (
-        <div style={{ ...S.overlay, zIndex: 77 }} onClick={() => setOpenMelding(false)}>
-          <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ ...S.overlay, zIndex: 77 }} onClick={() => { setOpenMelding(false); naarDrankjes() }}>
+          <div style={{ ...S.sheet, textAlign: "center", cursor: "pointer" }} onClick={() => { setOpenMelding(false); naarDrankjes() }}>
             <div style={{ fontSize: 30, marginBottom: 6 }}>🍻</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: MODUS_FAIR.tekst, marginBottom: 14 }}>{L.everyoneCanTapNow}</div>
-            <button onClick={() => setOpenMelding(false)} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 600 }}>{L.goingToDrinks}</button>
+            {/* Geen knop: er valt niets te kiezen. De zin blijft wel staan, als tekst,
+                zodat je weet waar je zo dadelijk belandt. */}
+            <div style={{ fontSize: 14.5, color: "#6b7484", marginBottom: 10 }}>{L.toDrinksSoon}</div>
+            <style>{`@keyframes rundoAftel{from{width:100%}to{width:0%}}`}</style>
+            <div style={{ height: 4, borderRadius: 999, background: "rgba(13,124,140,0.15)", overflow: "hidden" }}>
+              <div style={{ height: "100%", background: MODUS_FAIR.rand, animation: "rundoAftel 2.5s linear forwards" }} />
+            </div>
           </div>
         </div>
       )}
@@ -6975,21 +6997,20 @@ export default function PartyTest() {
         // haler op "Zelfde weer" en hoef ik enkel nog te bevestigen.
         const mijnAlKlaar = meId ? drinks.map((d) => ({ d, n: cart[d.id]?.[meId] ?? 0 })).filter((x) => x.n > 0) : []
         return (
-        <div style={{ ...S.overlay, zIndex: 74 }} onClick={naarDrankjes}>
-          <div style={{ ...S.sheet, textAlign: "center", cursor: "pointer" }} onClick={naarDrankjes}>
+        <div style={{ ...S.overlay, zIndex: 74 }} onClick={() => setRondjeMelding(null)}>
+          <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
             {/* Herhaalt de haler het vorige rondje, dan staan mijn drankjes al ingevuld.
                 Dan is de stappenlijst overbodig en moet er iets anders staan: wát er voor
                 mij klaarstaat, zodat ik weet dat één tik volstaat. */}
             {mijnAlKlaar.length > 0 ? (<>
               <div style={{ fontSize: 30, marginBottom: 4 }}>🔁</div>
               <div style={{ fontSize: 20.5, fontWeight: 800, color: "#1d2942", marginBottom: 10 }}>{L.repeatTitle(rondjeMelding || runnerName())}</div>
-              <div style={{ fontSize: 15.5, color: "#6b7484", lineHeight: 1.5, marginBottom: 9 }}>{L.repeatIntro}</div>
+              <div style={{ fontSize: 15.5, color: "#6b7484", lineHeight: 1.5, marginBottom: 9 }}>{L.repeatYours}</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center", marginBottom: 10 }}>
                 {mijnAlKlaar.map((x) => (
                   <span key={x.d.id} style={{ background: "#f4fbf6", border: "1px solid rgba(31,138,76,0.32)", borderRadius: 999, padding: "4px 12px", fontSize: 15, fontWeight: 800, color: "#1f6b3a" }}>{x.n}× {x.d.name}</span>
                 ))}
               </div>
-              <div style={{ fontSize: 14, color: "#6b7484", lineHeight: 1.45, marginBottom: 13 }}>{L.repeatFoot}</div>
             </>) : (<>
               <div style={{ fontSize: 32, marginBottom: 5 }}>🍻</div>
               <div style={{ fontSize: 20.5, fontWeight: 800, color: "#1d2942", marginBottom: 12 }}>{rondjeMelding ? L.someoneFetches(rondjeMelding) : L.orderingOpen}</div>
@@ -7006,10 +7027,19 @@ export default function PartyTest() {
             </>)}
             {/* Geen knop: er valt niets te bevestigen. Een dun balkje loopt leeg zodat
                 je ziet dat het scherm zo meteen zelf doorgaat. */}
-            <style>{`@keyframes rundoAftel{from{width:100%}to{width:0%}}`}</style>
-            <div style={{ height: 4, borderRadius: 999, background: "rgba(13,124,140,0.15)", overflow: "hidden" }}>
-              <div style={{ height: "100%", background: MODUS_FAIR.rand, animation: "rundoAftel 2.5s linear forwards" }} />
-            </div>
+            {/* Hier moet je wél iets doen, dus geen aftelbalkje maar knoppen. Bij een
+                herhaling kan je meteen bevestigen zonder de drankenlijst te openen —
+                dat is precies waarom de haler op "Zelfde weer" tikte. */}
+            {mijnAlKlaar.length > 0 ? (
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={naarDrankjes}
+                  style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#6b7484", fontSize: 14, fontWeight: 800, padding: "12px 5px", borderRadius: 14, cursor: "pointer", fontFamily: "inherit" }}>{L.repeatOtherBtn}</button>
+                <button onClick={() => { setRondjeMelding(null); void antwoordRondje("same") }}
+                  style={{ ...S.btnP, flex: 1.4, width: "auto", fontSize: 15, padding: "12px 5px" }}>{L.repeatConfirmBtn}</button>
+              </div>
+            ) : (
+              <button onClick={naarDrankjes} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 18.5, fontWeight: 800 }}>{rondjeMelding ? L.letsChoose : L.okWord}</button>
+            )}
           </div>
         </div>
         )
