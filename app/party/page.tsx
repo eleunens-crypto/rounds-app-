@@ -1046,6 +1046,8 @@ const T = {
     walkTable: "👥 Rondje opnemen",
     roundTogether: "Nieuw rondje starten",
     youFetchTitle: "Jij haalt dit rondje",
+    roundForN: (n: number) => `Rondje voor ${n} ${n === 1 ? "persoon" : "personen"}?`,
+    lastRoundCount: (n: number) => `Vorig rondje: ${n} ${n === 1 ? "drankje" : "drankjes"}`,
     theyTap: "Zij tikken aan",
     theyTapRest: "op hun gsm.",
     youPay: "Jij betaalt",
@@ -1163,6 +1165,10 @@ const T = {
     removeWord: "Weghalen",
     notPassedOn: (n: string) => `Nog niet doorgegeven aan ${n}`,
     confirmMine: "Bevestigen",
+    roundClosedTitle: (n: number) => `Rondje ${n} is afgesloten`,
+    fetchesNow: (n: string) => `${n} gaat halen`,
+    youTookN: (n: number) => `jij nam ${n} drankjes`,
+    youTookNothingShort: "— jij nam niets",
     removePersonMsg: (n: string) => `${n} van de lijst halen?\nWie al scande, moet daarna opnieuw scannen om erbij te komen.`,
     removePersonYes: "Weghalen",
     removeAssignedQ: (drank: string, gast: string) => `${drank} weghalen bij ${gast}?`,
@@ -1804,6 +1810,8 @@ const T = {
     walkTable: "👥 Faire le tour",
     roundTogether: "Lancer une tourn\u00e9e",
     youFetchTitle: "Tu vas chercher cette tourn\u00e9e",
+    roundForN: (n: number) => `Tournée pour ${n} ${n === 1 ? "personne" : "personnes"} ?`,
+    lastRoundCount: (n: number) => `Tournée précédente : ${n} ${n === 1 ? "boisson" : "boissons"}`,
     theyTap: "Ils cochent",
     theyTapRest: "sur leur t\u00e9l\u00e9phone.",
     youPay: "Tu paies",
@@ -1922,6 +1930,10 @@ const T = {
     removeWord: "Retirer",
     notPassedOn: (n: string) => `Pas encore transmis à ${n}`,
     confirmMine: "Confirmer",
+    roundClosedTitle: (n: number) => `La tournée ${n} est clôturée`,
+    fetchesNow: (n: string) => `${n} va chercher`,
+    youTookN: (n: number) => `tu as pris ${n} boissons`,
+    youTookNothingShort: "— tu n'as rien pris",
     removePersonMsg: (n: string) => `Retirer ${n} de la liste ?\nUne personne qui a déjà scanné devra scanner à nouveau pour revenir.`,
     removePersonYes: "Retirer",
     removeAssignedQ: (drank: string, gast: string) => `Retirer ${drank} chez ${gast}\u00a0?`,
@@ -2707,14 +2719,15 @@ export default function PartyTest() {
   // Wacht dit scherm op gasten die nog moeten scannen? Dan niet in slaap vallen.
   const wachtOpScans = useRef(false)
   const laatsteActie = useRef<number>(Date.now())
-  // Zachte melding wanneer iemand nieuw aansluit. Vervaagt vanzelf; alleen de admin
-  // krijgt een knop om het terug te draaien (voor als een vreemde de link kreeg).
+  // Zachte melding wanneer iemand nieuw aansluit. Vervaagt vanzelf, ook bij de admin:
+  // hij kan iemand altijd nog weghalen in zijn eigen lijst, dus de melding hoeft daar
+  // niet te blijven staan met knoppen erbij.
   const [newcomer, setNewcomer] = useState<{ id: string; name: string } | null>(null)
-  // De melding dooft bij een gast pas na een paar seconden kíjken. Een gewone timer
-  // loopt door op een slapend scherm; dan zou hij hem nooit gezien hebben.
+  // De melding dooft pas na twee seconden kíjken. Een gewone timer loopt door op een
+  // slapend scherm; dan zou je hem nooit gezien hebben.
   useEffect(() => {
-    if (!newcomer || isAdmin) return
-    let over = 5000
+    if (!newcomer) return
+    let over = 2000
     let sinds = document.visibilityState === "visible" ? Date.now() : 0
     let t: ReturnType<typeof setTimeout> | null = null
     const start = () => { sinds = Date.now(); t = setTimeout(() => setNewcomer(null), over) }
@@ -2723,7 +2736,7 @@ export default function PartyTest() {
     if (sinds) start()
     document.addEventListener("visibilitychange", wissel)
     return () => { if (t) clearTimeout(t); document.removeEventListener("visibilitychange", wissel) }
-  }, [newcomer, isAdmin])
+  }, [newcomer])
   const knownPeople = useRef<Set<string>>(new Set())
 
   // edit-in-hub
@@ -2936,6 +2949,26 @@ export default function PartyTest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRoundId, startedBy, meId])
   const [rondjeMelding, setRondjeMelding] = useState<string | null>(null)
+  // De melding dat er een rondje loopt is een aankondiging, geen vraag: er valt niets
+  // te beslissen. Na 2,5 seconden gaat het scherm vanzelf naar de drankjes. Tikken doet
+  // hetzelfde, meteen. De teller loopt alleen als het scherm zichtbaar is, anders zou
+  // wie zijn gsm net wegstak de melding nooit gezien hebben.
+  const naarDrankjes = useCallback(() => {
+    setRondjeMelding(null); setGuestTab("order"); setActiveCat(catsPresent[0])
+    setView((v) => (v !== "order" ? "order" : v))
+  }, [catsPresent])
+  useEffect(() => {
+    if (!rondjeMelding) return
+    let over = 2500
+    let sinds = document.visibilityState === "visible" ? Date.now() : 0
+    let t: ReturnType<typeof setTimeout> | null = null
+    const start = () => { sinds = Date.now(); t = setTimeout(naarDrankjes, over) }
+    const pauze = () => { if (t) { clearTimeout(t); t = null; over -= Date.now() - sinds } }
+    const wissel = () => { if (document.visibilityState === "visible") start(); else pauze() }
+    if (sinds) start()
+    document.addEventListener("visibilitychange", wissel)
+    return () => { if (t) clearTimeout(t); document.removeEventListener("visibilitychange", wissel) }
+  }, [rondjeMelding, naarDrankjes])
   const [openMelding, setOpenMelding] = useState(false)
   const wasOpen = useRef<boolean | null>(null)
   // Sloeg de gastheer het bestellen open? Dat is iets anders dan een rondje starten:
@@ -6882,20 +6915,27 @@ export default function PartyTest() {
         const vorige = rounds[rounds.length - 1]
         const stuks = vorige ? drinks.map((d) => ({ d, n: drinkTotalRound(vorige, d.id) })).filter((x) => x.n > 0) : []
         const herhaalbaar = stuks.length > 0
-        const herhaalTekst = stuks.slice(0, 2).map((x) => `${x.n}× ${x.d.name}`).join(", ") + (stuks.length > 2 ? "…" : "")
+        // Een opsomming van drankjes paste niet op één regel en werd afgekapt; het aantal
+        // is genoeg om te beslissen of je hetzelfde nog eens wil.
+        const herhaalAantal = stuks.reduce((a, x) => a + x.n, 0)
         return (
         <div style={{ ...S.overlay, zIndex: 74 }} onClick={() => setStartCheck(false)}>
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ textAlign: "center", marginBottom: 13 }}>
-              <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 5 }}>{L.youFetchTitle}</div>
+              <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 5 }}>{L.roundForN(people.length)}</div>
               <div style={{ fontSize: 15, color: MODUS_FAIR.tekst, lineHeight: 1.55 }}>
 📱 <b>{L.theyTap}</b> {L.theyTapRest}<br />
-                <b>{L.youPay}</b> {L.youPayRest}
+                <span style={{ display: "inline-flex", verticalAlign: "-3px", marginRight: 2 }}>
+                  <svg viewBox="0 0 40 40" width="17" height="17" aria-hidden="true">
+                    <circle cx="20" cy="20" r="17" fill="#f3d27c" stroke="#d9a83c" strokeWidth="2.2" />
+                    <text x="20" y="26.5" fontSize="19" fontWeight="800" fill="#7a5a12" fontFamily="system-ui" textAnchor="middle">€</text>
+                  </svg>
+                </span> <b>{L.youPay}</b> {L.youPayRest}
               </div>
             </div>
             {herhaalbaar && (
               <div style={{ background: MODUS_FAIR.vlak, border: `1px dashed ${MODUS_FAIR.randZacht}`, borderRadius: 11, padding: "10px 12px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 9 }}>
-                <span style={{ fontSize: 12.5, color: MODUS_FAIR.tekst, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.lastRoundWas(herhaalTekst)}</span>
+                <span style={{ fontSize: 12.5, color: MODUS_FAIR.tekst, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.lastRoundCount(herhaalAantal)}</span>
                 <button onClick={() => { setStartCheck(false); repeatRound(); void startAsRunner() }}
                   style={{ flexShrink: 0, cursor: "pointer", border: "none", background: MODUS_FAIR.rand, color: "#fff", borderRadius: 999, padding: "7px 13px", fontSize: 12.5, fontWeight: 600, fontFamily: "inherit" }}>{L.sameAgainShort}</button>
               </div>
@@ -6912,8 +6952,8 @@ export default function PartyTest() {
       })()}
       {/* En de anderen krijgen te horen wie gaat en wat er van hen verwacht wordt. */}
       {rondjeMelding && (
-        <div style={{ ...S.overlay, zIndex: 74 }} onClick={() => setRondjeMelding(null)}>
-          <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ ...S.overlay, zIndex: 74 }} onClick={naarDrankjes}>
+          <div style={{ ...S.sheet, textAlign: "center", cursor: "pointer" }} onClick={naarDrankjes}>
             <div style={{ fontSize: 32, marginBottom: 5 }}>🍻</div>
             <div style={{ fontSize: 20.5, fontWeight: 800, color: "#1d2942", marginBottom: 12 }}>{rondjeMelding ? L.someoneFetches(rondjeMelding) : L.orderingOpen}</div>
             <div style={{ textAlign: "left", marginBottom: 14 }}>
@@ -6926,7 +6966,12 @@ export default function PartyTest() {
                 </div>
               ))}
             </div>
-            <button onClick={() => { setRondjeMelding(null); setGuestTab("order"); setActiveCat(catsPresent[0]); if (view !== "order") setView("order") }} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 18.5, fontWeight: 800 }}>{rondjeMelding ? L.letsChoose : L.okWord}</button>
+            {/* Geen knop: er valt niets te bevestigen. Een dun balkje loopt leeg zodat
+                je ziet dat het scherm zo meteen zelf doorgaat. */}
+            <style>{`@keyframes rundoAftel{from{width:100%}to{width:0%}}`}</style>
+            <div style={{ height: 4, borderRadius: 999, background: "rgba(13,124,140,0.15)", overflow: "hidden" }}>
+              <div style={{ height: "100%", background: MODUS_FAIR.rand, animation: "rundoAftel 2.5s linear forwards" }} />
+            </div>
           </div>
         </div>
       )}
@@ -7152,23 +7197,13 @@ export default function PartyTest() {
           <div style={{ pointerEvents: "auto", background: "#1f6b3a", color: "#fff", borderRadius: 16, padding: "13px 15px", boxShadow: "0 8px 24px rgba(0,0,0,0.2)", maxWidth: 380, width: "100%" }}>
             <div style={{ ...S.row, justifyContent: "space-between", gap: 10 }}>
               <span style={{ fontSize: 17, fontWeight: 800, minWidth: 0 }}>👋 {L.someoneJoined(newcomer.name)}</span>
-              {!isAdmin && (
-                <button onClick={() => setNewcomer(null)}
-                  style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: 21.5, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>✕</button>
-              )}
+              <button onClick={() => setNewcomer(null)}
+                style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: 21.5, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>✕</button>
             </div>
             <div style={{ fontSize: 13.5, color: "rgba(255,255,255,0.85)", fontWeight: 600, marginTop: 3 }}>
               {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}
               {ingelegd > 0.005 && <> · {L.putInPot(euro(ingelegd))}</>}
             </div>
-            {isAdmin && (
-              <div style={{ display: "flex", gap: 8, marginTop: 11 }}>
-                <button onClick={() => { setConfirmDlg({ variant: "danger", msg: L.removeJoinerQ(newcomer.name), yes: L.removeWord, onYes: () => { setConfirmDlg(null); void removePersonEnPot(newcomer.id); setNewcomer(null) } }) }}
-                  style={{ flex: 1, cursor: "pointer", background: "rgba(255,255,255,0.16)", border: "1px solid rgba(255,255,255,0.35)", color: "#fff", borderRadius: 10, padding: "9px 6px", fontSize: 13.5, fontWeight: 600, fontFamily: "inherit" }}>{L.notRightBtn}</button>
-                <button onClick={() => setNewcomer(null)}
-                  style={{ flex: 1.4, cursor: "pointer", background: "#fff", border: "none", color: "#1f6b3a", borderRadius: 10, padding: "9px 6px", fontSize: 14, fontWeight: 700, fontFamily: "inherit" }}>{L.okKort}</button>
-              </div>
-            )}
           </div>
         </div>
         )
@@ -7708,6 +7743,13 @@ export default function PartyTest() {
     // twee knoppen onderaan. Haal je zelf, dan blijft alles staan zoals het was —
     // die kaart bevat het barlijstje en het afronden, en hoort niet te zweven.
     const zweefRondje = settle && !!openRoundId && !!startedBy && startedBy !== meId
+    // Net afgesloten: geen open rondje meer, maar het laatste wacht nog op afhandeling.
+    // Dan blijft er één blok staan dat zegt wie haalt en wat jij nam — de toast die via
+    // het live-kanaal binnenkwam is dan al lang weg.
+    const laatste = rounds.length > 0 ? rounds[rounds.length - 1] : null
+    const dichtRonde = settle && !openRoundId && laatste && laatste.status === "pending" ? laatste : null
+    const dichtMijn = dichtRonde ? drinks.map((d) => ({ d, n: dichtRonde.orders[d.id]?.[meId] ?? 0 })).filter((x) => x.n > 0) : []
+    const dichtAantal = dichtMijn.reduce((a, x) => a + x.n, 0)
     const ikBenKlaar = openAnswers[meId] === "same" || openAnswers[meId] === "skip"
     const ikNamNiets = openAnswers[meId] === "skip" && mijnAantal === 0
 
@@ -7882,6 +7924,33 @@ export default function PartyTest() {
             </div>
           </div>
         ) : settle && renderRunnerBar()}
+
+        {dichtRonde && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 9, background: "#f4fbf6", border: "1.5px solid rgba(31,138,76,0.35)", borderRadius: 15, padding: 11, marginBottom: 11 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: "#1f8a4c", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800 }}>
+                {(runnerName() || "?").charAt(0).toUpperCase()}
+              </span>
+              <span style={{ minWidth: 0, display: "flex", flexDirection: "column" }}>
+                <b style={{ fontSize: 15, color: "#1d2942" }}>{L.roundClosedTitle(dichtRonde.seq)}</b>
+                <span style={{ fontSize: 12.5, color: "#6b7484", marginTop: 1 }}>{L.fetchesNow(runnerName())}</span>
+              </span>
+            </div>
+            {/* Tot drie soorten als losse chips; daarboven wordt het één regel, anders
+                groeit dit blok en zakt de drankenlijst eronder weg. */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, paddingTop: 9, borderTop: "1px solid rgba(31,138,76,0.2)" }}>
+              {dichtAantal === 0 ? (
+                <span style={{ background: "#fff", border: "1px solid rgba(29,41,66,0.22)", borderRadius: 999, padding: "4px 11px", fontSize: 13.5, fontWeight: 800, color: "#6b7484" }}>{L.youTookNothingShort}</span>
+              ) : dichtMijn.length <= 3 ? (
+                dichtMijn.map((x) => (
+                  <span key={x.d.id} style={{ background: "#fff", border: "1px solid rgba(31,138,76,0.32)", borderRadius: 999, padding: "4px 11px", fontSize: 13.5, fontWeight: 800, color: "#1f6b3a" }}>{x.n}× {x.d.name}</span>
+                ))
+              ) : (
+                <span style={{ background: "#fff", border: "1px solid rgba(31,138,76,0.32)", borderRadius: 999, padding: "4px 11px", fontSize: 13.5, fontWeight: 800, color: "#1f6b3a" }}>{L.youTookN(dichtAantal)}</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {mijnAantal > 0 && (
           <div style={{ ...S.card, background: MODUS_FAIR.vlak }}>
