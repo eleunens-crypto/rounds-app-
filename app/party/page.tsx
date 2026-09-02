@@ -7445,22 +7445,31 @@ export default function PartyTest() {
       <div style={S.page}><div style={S.wrap}>
         {renderDialogs()}
         <AdminTabs />
-        <div style={{ display: "flex", justifyContent: "flex-end" }}><LanguageToggle compact /></div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24, marginTop: 8 }}>
-          <div style={{ ...S.row, gap: 13 }}>
-            <RundoLogo size={62} opDonker={false} />
+        {/* Zelfde donkere balk als op het bestelscherm: de gast die scant valt meteen
+            binnen in de look & feel van Rundo, en niet op een los wit tussenscherm. */}
+        <div style={{ background: MODUS_FAIR.rand, borderRadius: 15, padding: "11px 13px", marginBottom: 18 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <RundoLogo size={44} />
+            <span style={{ marginLeft: "auto", flexShrink: 0 }}><LanguageToggle compact /></span>
           </div>
-          <div style={{ fontSize: 17.5, color: "#6b7484", marginTop: 10 }}>{L.invitedFor} <b style={{ color: "#1d2942" }}>{groupName}</b></div>
+          <div style={{ marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(255,255,255,0.15)", fontSize: 17.5, color: "rgba(255,255,255,0.72)" }}>
+            {L.invitedFor} <b style={{ color: "#fff", fontWeight: 700 }}>{groupName}</b>
+          </div>
         </div>
 
         <div style={S.card}>
-          <h3 style={{ ...S.h3, marginTop: 0, fontSize: 22 }}>{L.whoAreYou}</h3>
+          <div style={{ fontSize: 18.5, fontWeight: 800, color: "#1d2942", marginBottom: 8 }}>{L.whoAreYou}</div>
 
           {vrij.length === 0 ? (
             <>
-              <div style={{ fontSize: 16, color: "#6b7484", marginBottom: 10, lineHeight: 1.5 }}>{L.allSeatsTaken}</div>
-              <input id="latecomer-name" style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 19, marginBottom: 10 }}
-                placeholder={L.yourName} autoComplete="name" />
+              {/* Zelfde opbouw als het adminscherm: rond icoontje links, veld met de
+                  turkooizen rand ernaast. Zo herkent de gast de vorm die de gastheer
+                  net op zijn eigen toestel invulde. */}
+              <div style={{ ...S.row, gap: 8, marginBottom: 14 }}>
+                <span style={{ width: 26, height: 26, borderRadius: "50%", background: MODUS_FAIR.tint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><GsmIcoon size={15} kleur={MODUS_FAIR.tekst} /></span>
+                <input id="latecomer-name" style={{ ...S.input, flex: 1, minWidth: 0, padding: "10px 11px", fontSize: 18, fontWeight: 800, textAlign: "left", background: "#fff", border: `1.5px solid ${MODUS_FAIR.randZacht}` }}
+                  placeholder={L.yourName} autoComplete="name" />
+              </div>
               <button disabled={busy} style={{ ...S.btnP, width: "100%", opacity: busy ? 0.5 : 1 }}
                 onClick={() => {
                   const el = document.getElementById("latecomer-name") as HTMLInputElement | null
@@ -7488,10 +7497,13 @@ export default function PartyTest() {
                   <div style={{ fontSize: 18.5, color: "#4a5567", marginBottom: 10, lineHeight: 1.5 }}>
                     {metNaam.length > 0 ? L.notThere : L.fillNameSeat}
                   </div>
-                  <input id="guest-name" value={gastNaam} onChange={(e) => setGastNaam(e.target.value)}
-                    style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 20, padding: "13px 14px", textAlign: "left", marginBottom: 12,
-                      border: gastNaam.trim() ? `1.5px solid ${MODUS_FAIR.randZacht}` : undefined }}
-                    placeholder={L.yourName} autoComplete="name" />
+                  <div style={{ ...S.row, gap: 8, marginBottom: 12 }}>
+                    <span style={{ width: 26, height: 26, borderRadius: "50%", background: MODUS_FAIR.tint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><GsmIcoon size={15} kleur={MODUS_FAIR.tekst} /></span>
+                    <input id="guest-name" value={gastNaam} onChange={(e) => setGastNaam(e.target.value)}
+                      style={{ ...S.input, flex: 1, minWidth: 0, fontSize: 18, fontWeight: 800, padding: "10px 11px", textAlign: "left", background: "#fff",
+                        border: `1.5px solid ${MODUS_FAIR.randZacht}` }}
+                      placeholder={L.yourName} autoComplete="name" />
+                  </div>
                   {/* Zolang er geen naam staat zijn deze knoppen bleek: er valt nog niets te
                       kiezen. Zodra je typt worden ze groen met een gloed, en staat erboven
                       wat je nu moet doen. */}
@@ -7523,7 +7535,21 @@ export default function PartyTest() {
           <div style={S.card}>
             <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 8 }}>{L.alreadyJoined}</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {people.filter((p) => p.claimedBy).map((p) => <span key={p.id} style={S.pill}>📱 {p.name}</span>)}
+              {people.filter((p) => p.claimedBy).map((p) => {
+                // De gastheer springt eruit: turkooizen pil met kroontje, zoals hij
+                // elders in de app ook al aangeduid staat. De gasten blijven grijs,
+                // zo lees je in één oogopslag bij wie je moet zijn.
+                const isHost = !!ownerDevice && p.claimedBy === ownerDevice
+                return (
+                  <span key={p.id} style={{ ...S.pill, display: "inline-flex", alignItems: "center", gap: 5,
+                    background: isHost ? MODUS_FAIR.tint : "rgba(29,41,66,0.08)",
+                    color: isHost ? MODUS_FAIR.tekst : "#6b7484",
+                    border: isHost ? `1px solid ${MODUS_FAIR.lijnZacht}` : "none" }}>
+                    {isHost ? <KroonIcoon size={13} kleur={MODUS_FAIR.tekst} /> : "📱"} {p.name}
+                    {isHost && <span style={{ fontWeight: 700, opacity: 0.75 }}>(admin)</span>}
+                  </span>
+                )
+              })}
             </div>
           </div>
         )}
