@@ -4697,7 +4697,17 @@ export default function PartyTest() {
         )}
         {anderen.map((p) => (
           <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10, marginBottom: 6, background: "rgba(31,138,76,0.08)", border: "1px solid rgba(31,138,76,0.25)" }}>
-            <span style={{ fontSize: 17.5, fontWeight: 700, color: "#1d2942", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.claimedBy ? "✅" : "✍️"} {p.name}</span>
+            <span style={{ ...S.row, gap: 7, minWidth: 0 }}>
+              <span style={{ fontSize: 17.5, fontWeight: 700, color: "#1d2942", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.claimedBy ? "" : "✍️ "}{p.name}</span>
+              {/* Wie zelf scande krijgt een gsm in een groen schijfje achter zijn naam.
+                  Dat vervangt het vinkje: het zegt niet alleen dát hij binnen is, maar
+                  ook hoe. Een handmatig toegevoegde naam houdt het potlood vooraan. */}
+              {p.claimedBy && (
+                <span style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(31,138,76,0.16)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <GsmIcoon size={13} kleur="#1f6b3a" />
+                </span>
+              )}
+            </span>
             {isAdmin && (
               <button onClick={() => removePerson(p.id)} title={L.removeWord}
                 style={{ flexShrink: 0, background: "#fff", border: "1px solid rgba(224,104,92,0.45)", color: "#c0554a", borderRadius: 8, padding: "4px 9px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
@@ -7634,11 +7644,6 @@ export default function PartyTest() {
               <div style={{ display: "inline-block", background: "#fff", padding: 9, borderRadius: 13, border: `1px solid ${MODUS_FAIR.lijnZacht}` }}>
                 <QRCodeSVG value={inviteLink} size={112} bgColor="#ffffff" fgColor={MODUS_FAIR.tekst} />
               </div>
-              {/* Zit alles vol, dan levert scannen niets op — maar de code verbergen laat je
-                  in het ongewisse. Beter zeggen wat er moet gebeuren. */}
-              {!people.some((p) => !p.claimedBy) && (
-                <div style={{ fontSize: 14, color: "#8a5e0f", background: "rgba(240,165,0,0.12)", borderRadius: 10, padding: "8px 11px", marginTop: 9, lineHeight: 1.45 }}>{L.seatsFullGuest}</div>
-              )}
             </div>
           )}
         </div>
@@ -7762,11 +7767,6 @@ export default function PartyTest() {
                 <div style={{ display: "inline-block", background: "#fff", padding: 9, borderRadius: 13, border: `1px solid ${MODUS_FAIR.lijnZacht}` }}>
                   <QRCodeSVG value={inviteLink} size={112} bgColor="#ffffff" fgColor={MODUS_FAIR.tekst} />
                 </div>
-                {/* Zit alles vol, dan levert scannen niets op — maar de code verbergen laat je
-                    in het ongewisse. Beter zeggen wat er moet gebeuren. */}
-                {!people.some((p) => !p.claimedBy) && (
-                  <div style={{ fontSize: 14, color: "#8a5e0f", background: "rgba(240,165,0,0.12)", borderRadius: 10, padding: "8px 11px", marginTop: 9, lineHeight: 1.45 }}>{L.seatsFullGuest}</div>
-                )}
               </div>
             )}
           </div>
