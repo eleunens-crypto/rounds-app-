@@ -2961,33 +2961,6 @@ export default function PartyTest() {
   // dat het rondje verschijnt. Dat onthouden we hier, want zodra ik zelf iets bijtik is
   // het onderscheid weg — en juist die eerste toestand bepaalt wat er op het scherm hoort.
   const herhaaldVoorMij = useRef(false)
-  // De melding dat er een rondje loopt is een aankondiging, geen vraag: er valt niets
-  // te beslissen. Na 2,5 seconden gaat het scherm vanzelf naar de drankjes. Tikken doet
-  // hetzelfde, meteen. De teller loopt alleen als het scherm zichtbaar is, anders zou
-  // wie zijn gsm net wegstak de melding nooit gezien hebben.
-  const naarDrankjes = useCallback(() => {
-    setRondjeMelding(null); setGuestTab("order"); setActiveCat(catsPresent[0])
-    setView((v) => (v !== "order" ? "order" : v))
-  }, [catsPresent])
-  useEffect(() => {
-    // Alleen kijken op het moment dat het rondje opent: staan er dan al drankjes voor
-    // mij, dan is dit een herhaling. De deps zijn bewust beperkt tot het rondje zelf.
-    if (!openRoundId || !meId) { herhaaldVoorMij.current = false; return }
-    herhaaldVoorMij.current = drinks.some((d) => (cart[d.id]?.[meId] ?? 0) > 0)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openRoundId, meId])
-  useEffect(() => {
-    if (!rondjeMelding) return
-    let over = 2500
-    let sinds = document.visibilityState === "visible" ? Date.now() : 0
-    let t: ReturnType<typeof setTimeout> | null = null
-    const start = () => { sinds = Date.now(); t = setTimeout(naarDrankjes, over) }
-    const pauze = () => { if (t) { clearTimeout(t); t = null; over -= Date.now() - sinds } }
-    const wissel = () => { if (document.visibilityState === "visible") start(); else pauze() }
-    if (sinds) start()
-    document.addEventListener("visibilitychange", wissel)
-    return () => { if (t) clearTimeout(t); document.removeEventListener("visibilitychange", wissel) }
-  }, [rondjeMelding, naarDrankjes])
   const [openMelding, setOpenMelding] = useState(false)
   const wasOpen = useRef<boolean | null>(null)
   // Sloeg de gastheer het bestellen open? Dat is iets anders dan een rondje starten:
@@ -4535,6 +4508,33 @@ export default function PartyTest() {
   const heeftEigen = drinks.some((d) => d.cat === "Eigen")
   const catOrde: Cat[] = heeftEigen ? ["Eigen", ...CATS.filter((c) => c !== "Eigen")] : CATS
   const catsPresent = catOrde.filter((c) => drinks.some((d) => d.cat === c))
+  // De melding dat er een rondje loopt is een aankondiging, geen vraag: er valt niets
+  // te beslissen. Na 2,5 seconden gaat het scherm vanzelf naar de drankjes. Tikken doet
+  // hetzelfde, meteen. De teller loopt alleen als het scherm zichtbaar is, anders zou
+  // wie zijn gsm net wegstak de melding nooit gezien hebben.
+  const naarDrankjes = useCallback(() => {
+    setRondjeMelding(null); setGuestTab("order"); setActiveCat(catsPresent[0])
+    setView((v) => (v !== "order" ? "order" : v))
+  }, [catsPresent])
+  useEffect(() => {
+    // Alleen kijken op het moment dat het rondje opent: staan er dan al drankjes voor
+    // mij, dan is dit een herhaling. De deps zijn bewust beperkt tot het rondje zelf.
+    if (!openRoundId || !meId) { herhaaldVoorMij.current = false; return }
+    herhaaldVoorMij.current = drinks.some((d) => (cart[d.id]?.[meId] ?? 0) > 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openRoundId, meId])
+  useEffect(() => {
+    if (!rondjeMelding) return
+    let over = 2500
+    let sinds = document.visibilityState === "visible" ? Date.now() : 0
+    let t: ReturnType<typeof setTimeout> | null = null
+    const start = () => { sinds = Date.now(); t = setTimeout(naarDrankjes, over) }
+    const pauze = () => { if (t) { clearTimeout(t); t = null; over -= Date.now() - sinds } }
+    const wissel = () => { if (document.visibilityState === "visible") start(); else pauze() }
+    if (sinds) start()
+    document.addEventListener("visibilitychange", wissel)
+    return () => { if (t) clearTimeout(t); document.removeEventListener("visibilitychange", wissel) }
+  }, [rondjeMelding, naarDrankjes])
   // Zet personen en namen terug zoals ze waren toen het venster openging.
   const herstelPersonen = () => {
     const snap = persSnap
