@@ -1146,6 +1146,8 @@ const T = {
     barList: "📋 Bestelling",
     tapToRename: "tik om de naam te wijzigen",
     removeWord: "Weghalen",
+    removePersonMsg: (n: string) => `${n} van de lijst halen?\nWie al scande, moet daarna opnieuw scannen om erbij te komen.`,
+    removePersonYes: "Weghalen",
     removeAssignedQ: (drank: string, gast: string) => `${drank} weghalen bij ${gast}?`,
     removeFromWho: (drank: string) => `Bij wie haal je ${drank} weg?`,
     barHandOut: "Uitdelen",
@@ -1901,6 +1903,8 @@ const T = {
     barList: "📋 Commande",
     tapToRename: "touche pour renommer",
     removeWord: "Retirer",
+    removePersonMsg: (n: string) => `Retirer ${n} de la liste ?\nUne personne qui a déjà scanné devra scanner à nouveau pour revenir.`,
+    removePersonYes: "Retirer",
     removeAssignedQ: (drank: string, gast: string) => `Retirer ${drank} chez ${gast}\u00a0?`,
     removeFromWho: (drank: string) => `Chez qui retirer ${drank}\u00a0?`,
     barHandOut: "Distribuer",
@@ -4709,7 +4713,7 @@ export default function PartyTest() {
               )}
             </span>
             {isAdmin && (
-              <button onClick={() => removePerson(p.id)} title={L.removeWord}
+              <button onClick={() => setConfirmDlg({ variant: "danger", msg: L.removePersonMsg(p.name), yes: L.removePersonYes, onYes: () => { setConfirmDlg(null); removePerson(p.id) } })} title={L.removeWord}
                 style={{ flexShrink: 0, background: "#fff", border: "1px solid rgba(224,104,92,0.45)", color: "#c0554a", borderRadius: 8, padding: "4px 9px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
             )}
           </div>
@@ -7455,18 +7459,19 @@ export default function PartyTest() {
       <div style={S.page}><div style={S.wrap}>
         {renderDialogs()}
         <AdminTabs />
-        {/* Zelfde donkere balk als op het bestelscherm, maar hier met de kleuren
-            omgewisseld: de balk neemt het diepe #0a4f5b van de knop, de knop hieronder
-            het lichtere turkoois. Zo blijft de kop rustig en trekt de enige actie
-            op dit scherm de aandacht. Geldt alleen voor dit gastscherm. */}
-        <div style={{ background: "#0a4f5b", borderRadius: 15, padding: "11px 13px", marginBottom: 18 }}>
+        {/* Dezelfde opbouw als de snelle modus: de balk staat op zichzelf, de groepsnaam
+            zakt eronder op de paginakleur met een fijne lijn eronder. Het bovenschrift
+            "Je bent uitgenodigd voor" staat alleen hier — dit is het enige scherm waar
+            de gast nog moet weten waarom die naam er staat. Daarna kent hij de groep. */}
+        <div style={{ background: "#0a4f5b", borderRadius: 15, padding: "11px 13px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <RundoLogo size={44} />
             <span style={{ marginLeft: "auto", flexShrink: 0 }}><LanguageToggle compact /></span>
           </div>
-          <div style={{ marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(255,255,255,0.15)", fontSize: 17.5, color: "rgba(255,255,255,0.72)" }}>
-            {L.invitedFor} <b style={{ color: "#fff", fontWeight: 700 }}>{groupName}</b>
-          </div>
+        </div>
+        <div style={{ padding: "11px 3px 10px", borderBottom: `1.5px solid ${MODUS_FAIR.lijnZacht}`, marginBottom: 14 }}>
+          <span style={{ display: "block", fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#5a8f99" }}>{L.invitedFor}</span>
+          <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: "#0a4f5b", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName}</span>
         </div>
 
         <div style={S.card}>
@@ -7581,21 +7586,24 @@ export default function PartyTest() {
     return (
       <div style={{ ...S.wrap, maxWidth: 430 }}>
         {renderDialogs()}
-        <div style={{ background: MODUS_FAIR.rand, borderRadius: 15, padding: "11px 13px", marginBottom: 14 }}>
+        <div style={{ background: "#0a4f5b", borderRadius: 15, padding: "11px 13px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <RundoLogo size={36} />
+            <RundoLogo size={40} />
             <span style={{ marginLeft: "auto", flexShrink: 0 }}><LanguageToggle compact /></span>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
-            <span style={{ fontSize: 18, fontWeight: 600, color: "#fff", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName}</span>
-            <span onClick={() => ik && setNaamWijzig(ik.name)}
-              style={{ flexShrink: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.32)", borderRadius: 999, padding: "4px 13px 4px 7px", fontSize: 17, fontWeight: 600, color: "#fff", maxWidth: 180 }}>
-              <span style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.9)", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <PotloodIcoon size={12} kleur={MODUS_FAIR.rand} />
-              </span>
-              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ik?.name}</span>
+        </div>
+        {/* Groepsnaam en jouw naam staan onder de balk op de paginakleur, zoals in de
+            snelle modus. Het bovenschrift "Je bent uitgenodigd voor" hoort alleen op het
+            scanscherm: hier weet de gast al bij welke groep hij zit. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 3px 10px", borderBottom: `1.5px solid ${MODUS_FAIR.lijnZacht}`, marginBottom: 14 }}>
+          <span style={{ fontSize: 22, fontWeight: 800, color: "#0a4f5b", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName}</span>
+          <span onClick={() => ik && setNaamWijzig(ik.name)}
+            style={{ marginLeft: "auto", flexShrink: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, background: MODUS_FAIR.tint, border: `1px solid ${MODUS_FAIR.lijnZacht}`, borderRadius: 999, padding: "4px 13px 4px 7px", fontSize: 17, fontWeight: 700, color: MODUS_FAIR.tekst, maxWidth: 180 }}>
+            <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <PotloodIcoon size={12} kleur={MODUS_FAIR.rand} />
             </span>
-          </div>
+            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ik?.name}</span>
+          </span>
         </div>
         <div style={{ ...S.card }}>
           <div style={{ background: MODUS_FAIR.tint, borderRadius: 11, padding: 11, marginBottom: 12 }}>
@@ -7675,21 +7683,24 @@ export default function PartyTest() {
         {renderVoice()}
 
         {/* Logo boven, groep en jouw naam eronder — dezelfde kop als de beheerder ziet. */}
-        <div style={{ background: MODUS_FAIR.rand, borderRadius: 15, padding: "11px 13px", marginBottom: 12 }}>
+        <div style={{ background: "#0a4f5b", borderRadius: 15, padding: "11px 13px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <RundoLogo size={36} />
+            <RundoLogo size={40} />
             <span style={{ marginLeft: "auto", flexShrink: 0 }}><LanguageToggle compact /></span>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
-            <span style={{ fontSize: 18, fontWeight: 600, color: "#fff", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName}</span>
-            <span onClick={() => setNaamWijzig(ik.name)}
-              style={{ flexShrink: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.32)", borderRadius: 999, padding: "4px 13px 4px 7px", fontSize: 17, fontWeight: 600, color: "#fff", maxWidth: 180 }}>
-              <span style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.9)", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <PotloodIcoon size={12} kleur={MODUS_FAIR.rand} />
-              </span>
-              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ik.name}</span>
+        </div>
+        {/* Groepsnaam en jouw naam staan onder de balk op de paginakleur, zoals in de
+            snelle modus. Het bovenschrift "Je bent uitgenodigd voor" hoort alleen op het
+            scanscherm: hier weet de gast al bij welke groep hij zit. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 3px 10px", borderBottom: `1.5px solid ${MODUS_FAIR.lijnZacht}`, marginBottom: 12 }}>
+          <span style={{ fontSize: 22, fontWeight: 800, color: "#0a4f5b", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName}</span>
+          <span onClick={() => setNaamWijzig(ik.name)}
+            style={{ marginLeft: "auto", flexShrink: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, background: MODUS_FAIR.tint, border: `1px solid ${MODUS_FAIR.lijnZacht}`, borderRadius: 999, padding: "4px 13px 4px 7px", fontSize: 17, fontWeight: 700, color: MODUS_FAIR.tekst, maxWidth: 180 }}>
+            <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <PotloodIcoon size={12} kleur={MODUS_FAIR.rand} />
             </span>
-          </div>
+            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ik.name}</span>
+          </span>
         </div>
         <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5, flexShrink: 0 }}>
