@@ -2166,6 +2166,9 @@ export default function PartyTest() {
   const [depositValue, setDepositValue] = useState(1)
   const [depositUnit, setDepositUnit] = useState<"eur" | "coin">("eur")
   const [showPot, setShowPot] = useState(false)
+  // Het potvenster van de gast: hetzelfde verhaal als bij de beheerder, maar zonder
+  // knoppen om iets te veranderen. Aparte vlag, want showPot opent het bewerkvenster.
+  const [gastPotOpen, setGastPotOpen] = useState(false)
   // De volledige barlijst van de avond, schermvullend — leesbaar aan de toog.
   const [showBarlijst, setShowBarlijst] = useState(false)
   // Gevuld = de barlijst hoort bij een net bevestigd rondje: geen sluitknop, maar
@@ -7553,7 +7556,7 @@ export default function PartyTest() {
   const gastPotBadge = () => {
     const op = potRemaining < 0.005
     return (
-      <span style={{ padding: "5px 11px 5px 7px", borderRadius: 999, fontSize: 14, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", color: "#fff",
+      <span onClick={() => setGastPotOpen(true)} style={{ cursor: "pointer", padding: "5px 11px 5px 7px", borderRadius: 999, fontSize: 14, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", color: "#fff",
         background: op ? "rgba(226,75,74,0.18)" : "rgba(255,255,255,0.1)",
         border: `1.5px solid ${op ? "rgba(240,149,149,0.7)" : "rgba(255,255,255,0.28)"}` }}>
         {potIsCard ? (
@@ -7570,6 +7573,45 @@ export default function PartyTest() {
       </span>
     )
   }
+  // Het potvenster zoals de gast het ziet: wie hoeveel inlegde, wat er al af is en wat
+  // er nog in zit. Kijken mag, aanraken niet — inleggen, bewerken en wissen blijven bij
+  // de beheerder, want die staat aan de toog en houdt het geld bij.
+  const renderGastPot = () => (
+    <div style={{ ...S.overlay, zIndex: 60 }} onClick={() => setGastPotOpen(false)}>
+      <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+        <div style={{ ...S.row, justifyContent: "space-between", margin: "0 0 10px" }}>
+          <h3 style={{ ...S.h3, fontSize: 21.5, margin: 0 }}>{potIsCard ? L.drinkCard : L.potTitle}</h3>
+          <span style={{ fontSize: 18, fontWeight: 800, color: potRemaining > 0.005 ? "#2f6fb5" : "#c0554a" }}>{euro(potRemaining)}</span>
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+          <span style={{ ...S.pill, background: "rgba(29,41,66,0.08)", color: "#8a5e0f", fontSize: 15.5, padding: "4px 10px" }}>ingelegd {euro(potContribTotal)}</span>
+          {potSpent > 0 && <span style={{ ...S.pill, background: "rgba(47,111,181,0.12)", color: "#2f6fb5", fontSize: 15.5, padding: "4px 10px" }}>besteed {euro(potSpent)}</span>}
+          <span style={{ ...S.pill, background: potRemaining > 0 ? "rgba(47,111,181,0.14)" : "rgba(224,104,92,0.14)", color: potRemaining > 0 ? "#2f6fb5" : "#c0554a", fontSize: 15.5, padding: "4px 10px", fontWeight: 800 }}>nog {euro(potRemaining)}</span>
+        </div>
+        {potRounds.map((r, i) => {
+          const tot = Object.values(r.amounts).reduce((a, b) => a + (b || 0), 0)
+          const who = people.filter((pp) => (r.amounts[pp.id] || 0) > 0)
+          return (
+            <div key={r.id} style={{ background: "#eef4fb", borderRadius: 12, padding: "11px 13px", marginBottom: 8 }}>
+              <div style={{ ...S.row, justifyContent: "space-between" }}>
+                <div style={{ ...S.row, gap: 8 }}>
+                  <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#3f7fc4", color: "#fff", fontSize: 15.5, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</span>
+                  <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1d2942" }}>{L.nthDeposit(i + 1)}</span>
+                </div>
+                <span style={{ fontSize: 18, fontWeight: 800, color: "#2f6fb5" }}>{euro(tot)}</span>
+              </div>
+              {who.length > 0 && (
+                <div style={{ fontSize: 15.5, color: "#6b7484", marginTop: 5, paddingLeft: 30 }}>
+                  {who.map((pp) => `${pp.name}${pp.id === meId ? " (jij)" : ""} ${euro(r.amounts[pp.id] || 0)}`).join(" · ")}
+                </div>
+              )}
+            </div>
+          )
+        })}
+        <button style={{ ...S.btn, width: "100%", marginTop: 4 }} onClick={() => setGastPotOpen(false)}>{L.ready}</button>
+      </div>
+    </div>
+  )
   // Per persoon noteren terwijl je de enige bent: dan valt er niets te verdelen en
   // belanden alle drankjes stilzwijgend bij jou. De lijst gaat op slot tot er iemand
   // bij is — een waarschuwing alleen kun je wegtikken, dit niet. Staat hier en niet
@@ -8107,6 +8149,7 @@ export default function PartyTest() {
     return (
       <div style={S.page}><div style={{ ...S.wrap }}>
         {renderDialogs()}
+        {gastPotOpen && renderGastPot()}
         {renderAddDrink()}
         {renderVoice()}
 
@@ -8134,14 +8177,9 @@ export default function PartyTest() {
             <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ik.name}</span>
           </span>
         </div>
-        <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5, flexShrink: 0 }}>
-            {/* Wat je in de pot stopte hoort bovenaan: het is het enige bedrag dat al vaststaat. */}
-            {contribOf(meId) > 0.005 && (
-              <span style={{ background: "rgba(31,138,76,0.1)", border: "1px solid rgba(31,138,76,0.3)", borderRadius: 16, padding: "4px 11px", fontSize: 14.5, fontWeight: 800, color: "#1f6b3a", whiteSpace: "nowrap" }}>{L.potPaidIn(euro(contribOf(meId)))}</span>
-            )}
-          </div>
-        </div>
+        {/* Je eigen inleg stond hier als los groen pilletje. Dat bedrag hoort bij het
+            potverhaal, niet naast je naam: het staat nu in het potvenster dat opengaat
+            als je bovenaan op de geldzak tikt. */}
 
         {(orderingOpen || rounds.length > 0) && (
         <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
