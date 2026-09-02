@@ -1097,7 +1097,7 @@ const T = {
     remindTitle: "🔔 Een duwtje geven?",
     remindBody: (namen: string) => `${namen} ${namen.includes(",") ? "kozen" : "koos"} nog niets. Zij krijgen meteen een melding op hun scherm.`,
     remindYes: "Ja, stuur →",
-    reminderSentTo: (namen: string) => `✓ Herinnering verstuurd naar ${namen}.`,
+    reminderSent: "✓ Herinnering verstuurd naar",
     everyoneChoseAlready: "Iedereen heeft al gekozen — je kan vertrekken.",
     allChoseTitle: "Iedereen heeft gekozen",
     allChoseYou: "Je kan gaan halen. Dit heb je nodig:",
@@ -1883,7 +1883,7 @@ const T = {
     remindTitle: "🔔 Donner un petit coup de pouce ?",
     remindBody: (namen: string) => `${namen} n’${namen.includes(",") ? "ont" : "a"} encore rien choisi. Un message apparaît aussitôt sur leur écran.`,
     remindYes: "Oui, envoie →",
-    reminderSentTo: (namen: string) => `✓ Rappel envoyé à ${namen}.`,
+    reminderSent: "✓ Rappel envoyé à",
     everyoneChoseAlready: "Tout le monde a déjà choisi — tu peux y aller.",
     allChoseTitle: "Tout le monde a choisi",
     allChoseYou: "Tu peux y aller. Voici ce qu’il te faut :",
@@ -2770,9 +2770,12 @@ export default function PartyTest() {
   // niet in een venster met een OK-knop dat je moet wegtikken. Dit is een strookje dat
   // vanzelf verdwijnt.
   const [vluchtig, setVluchtig] = useState<string>("")
+  // Sommige meldingen gaan over een rij namen. Die zetten we als pilletjes onder de
+  // tekst: een opsomming met komma's wordt bij zes personen drie regels breed.
+  const [vluchtigNamen, setVluchtigNamen] = useState<string[]>([])
   useEffect(() => {
     if (!vluchtig) return
-    const t = setTimeout(() => setVluchtig(""), 4000)
+    const t = setTimeout(() => { setVluchtig(""); setVluchtigNamen([]) }, 4000)
     return () => clearTimeout(t)
   }, [vluchtig])
   // Slaapstand. De telefoon ligt bij een rondje vaak minutenlang open op tafel; zonder dit
@@ -2898,12 +2901,6 @@ export default function PartyTest() {
   }
 
   // "Toch niet ik": geef het rondje vrij. Een ander kan het dan oppakken.
-  const releaseRunner = async () => {
-    if (!openRoundId) return
-    setStartedBy(null)
-    const { error } = await supabase.rpc("party_take_over_round", { p_round: openRoundId, p_starter: null })
-    if (error) { setNotice("Vrijgeven mislukt: " + error.message); if (groupId) loadParty(groupId) }
-  }
 
   const runnerName = () => people.find((p) => p.id === startedBy)?.name ?? ""
 
@@ -5729,7 +5726,6 @@ export default function PartyTest() {
   const lastRound = rounds[rounds.length - 1] ?? null
   const activeProposal = lastRound && lastRound.proposal?.active ? lastRound.proposal : null
   const proposalRoundId = activeProposal ? lastRound!.id : null
-  const myAnswer = (activeProposal && meId) ? activeProposal.answers?.[meId] : undefined
   // Wie deed mee aan het rondje dat we herhalen? Dat zijn de mensen die mogen antwoorden.
   const proposalPeople = lastRound ? people.filter((p) => roundMembers(lastRound).includes(p.id)) : []
   // De haler (of admin) start een voorstel op basis van het laatste rondje.
@@ -5808,11 +5804,11 @@ export default function PartyTest() {
     setConfirmDlg({
       msg: `${L.remindTitle}\n\n${L.remindBody(wachten.map((pp) => pp.name).join(", "))}`,
       yes: L.remindYes, no: L.ratherNot,
-      onYes: () => { setConfirmDlg(null); void stuurHerinnering(wachten.map((pp) => pp.name).join(", ")) },
+      onYes: () => { setConfirmDlg(null); void stuurHerinnering(wachten.map((pp) => pp.name)) },
     })
   }
 
-  const stuurHerinnering = async (namen: string) => {
+  const stuurHerinnering = async (lijst: string[]) => {
     if (!openRoundId || !groupId) return
     const merk = `poke:${Date.now()}`
     const { error } = await supabase.rpc("party_answer_repeat", { p_round: openRoundId, p_person: merk, p_answer: "same" })
@@ -5826,7 +5822,7 @@ export default function PartyTest() {
       const { error: e2 } = await supabase.from("party_rounds").update({ proposal: nieuwProp }).eq("id", openRoundId)
       if (e2) { setNotice(L.reminderFailed); return }
     }
-    setVluchtig(L.reminderSentTo(namen))
+    setVluchtig(L.reminderSent); setVluchtigNamen(lijst)
     loadParty(groupId)
   }
 
@@ -5843,12 +5839,6 @@ export default function PartyTest() {
     if (error) { setNotice("Antwoord mislukt: " + error.message); if (groupId) loadParty(groupId) }
   }
 
-  const answerProposal = async (answer: "same" | "different" | "skip") => {
-    if (!proposalRoundId || !meId) return
-    const { error } = await supabase.rpc("party_answer_repeat", { p_round: proposalRoundId, p_person: meId, p_answer: answer })
-    if (error) { setNotice("Antwoord mislukt: " + error.message); return }
-    if (groupId) loadParty(groupId)
-  }
   // De haler sluit het voorstel af. Enkel wie "same" of "different" antwoordde, telt.
   const closeProposal = async () => {
     if (!proposalRoundId || !lastRound) return
@@ -5926,45 +5916,6 @@ export default function PartyTest() {
 
   // Het kaartje dat elke GAST ziet zolang een voorstel loopt. Drie keuzes; wie niks
   // kiest, zwijgt (en krijgt niets). "Iets anders" schakelt door naar het bestellen.
-  const renderProposalGuest = () => {
-    if (!activeProposal || !lastRound || !meId) return null
-    if (!roundMembers(lastRound).includes(meId)) return null
-    // Wat had ik vorige ronde? Toon dat, zodat "hetzelfde" concreet is.
-    const mijnVorige = drinks
-      .map((d) => ({ d, n: lastRound.orders[d.id]?.[meId] ?? 0 }))
-      .filter((x) => x.n > 0)
-    const gekozen = myAnswer
-    return (
-      <div style={{ ...S.card, border: "1.5px solid rgba(240,165,0,0.6)", background: "#fff8ec" }}>
-        <div style={{ fontSize: 18, fontWeight: 800, color: "#1d2942", marginBottom: 8 }}>{L.gProposalTitle}</div>
-        {mijnVorige.length > 0 && (
-          <div style={{ fontSize: 15.5, color: "#4a5567", marginBottom: 12, lineHeight: 1.5 }}>
-            {L.gProposalYourLast} {mijnVorige.map((x) => `${x.n}× ${x.d.name}`).join(" · ")}
-          </div>
-        )}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <button onClick={() => answerProposal("same")}
-            style={{ ...S.btnP, width: "100%", opacity: gekozen && gekozen !== "same" ? 0.5 : 1,
-              background: gekozen === "same" ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : undefined }}>
-            {L.gProposalSame}{gekozen === "same" && " ✓"}
-          </button>
-          <button onClick={() => { answerProposal("different"); setActiveCat(catsPresent[0]); setGuestTab("order") }}
-            style={{ ...S.btn, width: "100%", fontWeight: 800, opacity: gekozen && gekozen !== "different" ? 0.5 : 1,
-              border: gekozen === "different" ? "1.5px solid #e08a00" : undefined }}>
-            {L.gProposalDiff}{gekozen === "different" && " ✓"}
-          </button>
-          <button onClick={() => answerProposal("skip")}
-            style={{ ...S.btn, width: "100%", fontWeight: 700, fontSize: 17, opacity: gekozen && gekozen !== "skip" ? 0.5 : 1,
-              border: gekozen === "skip" ? "1.5px solid #8b93a3" : undefined, color: "#6b7484" }}>
-            {L.gProposalSkip}{gekozen === "skip" && " ✓"}
-          </button>
-        </div>
-        {gekozen && (
-          <div style={{ fontSize: 15, color: "#1f6b3a", fontWeight: 700, textAlign: "center", marginTop: 10 }}>{L.gProposalDone}</div>
-        )}
-      </div>
-    )
-  }
 
   const repeatRound = () => {
     if (blockIfUnpaid()) return
@@ -6165,7 +6116,7 @@ export default function PartyTest() {
   const VLAK3 = koel ? "#e4f2f5" : themaNaam ? "#e6eaf4" : "#f3ead2"
   const S = {
     page: { minHeight: "100dvh", overflowX: "clip", maxWidth: "100vw", background: groupId ? (koel ? MODUS_FAIR.bladzij : themaNaam ? MODUS_NAAM.bladzij : MODUS_SNEL.bladzij) : "#fdf6e3", color: "#1d2942", fontFamily: "system-ui,-apple-system,sans-serif", padding: "0 0 90px" } as React.CSSProperties,
-    wrap: { maxWidth: 560, margin: "0 auto", padding: "calc(env(safe-area-inset-top, 0px) + 114px) 16px 16px" } as React.CSSProperties,
+    wrap: { maxWidth: 560, margin: "0 auto", padding: "calc(env(safe-area-inset-top, 0px) + 14px) 16px 16px" } as React.CSSProperties,
     card: { background: "#fff", border: `1.5px solid ${koel ? "#0a4f5b" : themaNaam ? "#2b3450" : "#1d2942"}`, borderRadius: 18, padding: 16, marginBottom: 13, boxShadow: koel ? "0 4px 16px -8px rgba(13,124,140,0.22)" : themaNaam ? "0 4px 16px -8px rgba(59,72,106,0.2)" : "0 4px 16px -8px rgba(29,41,66,0.25)" } as React.CSSProperties,
     h1: { fontSize: 26, fontWeight: 800, margin: "0 0 2px" } as React.CSSProperties,
     h3: { fontSize: 19.5, fontWeight: 800, margin: "0 0 10px" } as React.CSSProperties,
@@ -6629,7 +6580,7 @@ export default function PartyTest() {
         // gaat ermee naar de toog. Vandaar geen sluitknop en geen wegtikken op de
         // achtergrond — één van beide knoppen onderaan brengt je verder.
         const sluitBar = () => { setShowBarlijst(false); setBarNaRondje(null) }
-        const naarDrankjes = async () => {
+        const heropenRondje = async () => {
           const laatste = rounds[rounds.length - 1]
           sluitBar()
           if (!laatste) { setActiveCat(catsPresent[0]); setView("order"); return }
@@ -6672,7 +6623,7 @@ export default function PartyTest() {
             {barNaRondje && (
               <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 22%)" }} onClick={(e) => e.stopPropagation()}>
                 <div style={{ maxWidth: 430, margin: "0 auto", display: "flex", gap: 9, paddingTop: 14 }}>
-                  <button onClick={naarDrankjes} style={{ flex: 1, background: "#fff", border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.barlistAdjust}</button>
+                  <button onClick={heropenRondje} style={{ flex: 1, background: "#fff", border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.barlistAdjust}</button>
                   <button onClick={() => naarOverzicht(false)} style={{ flex: 1.3, background: RAND, border: "none", color: RANDTEKST, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.barlistDone} →</button>
                 </div>
               </div>
@@ -7139,7 +7090,7 @@ export default function PartyTest() {
             <div style={{ textAlign: "center", marginBottom: 13 }}>
               <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 5 }}>{L.roundForN(people.length)}</div>
               <div style={{ fontSize: 15, color: MODUS_FAIR.tekst, lineHeight: 1.55 }}>
-📱 <b>{L.theyTap}</b> {L.theyTapRest}<br />
+<span style={{ display: "inline-flex", verticalAlign: "-3px", marginRight: 3 }}><GsmIcoon size={16} kleur={MODUS_FAIR.tekst} /></span> <b>{L.theyTap}</b> {L.theyTapRest}<br />
                 <span style={{ display: "inline-flex", verticalAlign: "-3px", marginRight: 2 }}>
                   <svg viewBox="0 0 40 40" width="17" height="17" aria-hidden="true">
                     <circle cx="20" cy="20" r="17" fill="#f3d27c" stroke="#d9a83c" strokeWidth="2.2" />
@@ -7417,7 +7368,16 @@ export default function PartyTest() {
       {vluchtig && (
         <div onClick={() => setVluchtig("")}
           style={{ position: "fixed", left: 14, right: 14, bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)", zIndex: 3200, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
-          <div style={{ pointerEvents: "auto", cursor: "pointer", maxWidth: 420, background: "rgba(29,41,66,0.94)", color: "#fff", borderRadius: 14, padding: "11px 15px", fontSize: 15.5, fontWeight: 700, lineHeight: 1.4, textAlign: "center", boxShadow: "0 8px 24px rgba(0,0,0,0.28)" }}>{vluchtig}</div>
+          <div style={{ pointerEvents: "auto", cursor: "pointer", maxWidth: 420, background: "rgba(29,41,66,0.94)", color: "#fff", borderRadius: 14, padding: "11px 15px", fontSize: 15.5, fontWeight: 700, lineHeight: 1.4, textAlign: "center", boxShadow: "0 8px 24px rgba(0,0,0,0.28)" }}>
+            {vluchtig}
+            {vluchtigNamen.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center", marginTop: 8 }}>
+                {vluchtigNamen.map((n) => (
+                  <span key={n} style={{ background: "rgba(255,255,255,0.16)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 999, padding: "3px 10px", fontSize: 13.5, fontWeight: 800 }}>{n}</span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
       {notice && (
@@ -7771,7 +7731,7 @@ export default function PartyTest() {
     const metNaam = vrij.filter((p) => p.named)
     const leeg = vrij.filter((p) => !p.named)
     return (
-      <div style={S.page}><div style={{ ...S.wrap, paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}>
+      <div style={S.page}><div style={{ ...S.wrap }}>
         {renderDialogs()}
         <AdminTabs />
         {/* Dezelfde opbouw als de snelle modus: de balk staat op zichzelf, de groepsnaam
@@ -7899,7 +7859,7 @@ export default function PartyTest() {
     const aangemeld = people.filter((p) => p.claimedBy).length
     const gastheer = people.find((p) => !!ownerDevice && p.claimedBy === ownerDevice)
     return (
-      <div style={{ ...S.wrap, maxWidth: 430, paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}>
+      <div style={{ ...S.wrap, maxWidth: 430 }}>
         {renderDialogs()}
         <div style={{ background: "#0a4f5b", borderRadius: 15, padding: "11px 13px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -8017,7 +7977,7 @@ export default function PartyTest() {
     const mijnTx = settlement.tx.filter((t) => t.from === (mijnGroep?.label ?? "") || t.to === (mijnGroep?.label ?? ""))
 
     return (
-      <div style={S.page}><div style={{ ...S.wrap, paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}>
+      <div style={S.page}><div style={{ ...S.wrap }}>
         {renderDialogs()}
         {renderAddDrink()}
         {renderVoice()}
