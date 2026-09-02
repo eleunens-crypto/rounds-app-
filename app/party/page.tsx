@@ -7445,9 +7445,11 @@ export default function PartyTest() {
       <div style={S.page}><div style={S.wrap}>
         {renderDialogs()}
         <AdminTabs />
-        {/* Zelfde donkere balk als op het bestelscherm: de gast die scant valt meteen
-            binnen in de look & feel van Rundo, en niet op een los wit tussenscherm. */}
-        <div style={{ background: MODUS_FAIR.rand, borderRadius: 15, padding: "11px 13px", marginBottom: 18 }}>
+        {/* Zelfde donkere balk als op het bestelscherm, maar hier met de kleuren
+            omgewisseld: de balk neemt het diepe #0a4f5b van de knop, de knop hieronder
+            het lichtere turkoois. Zo blijft de kop rustig en trekt de enige actie
+            op dit scherm de aandacht. Geldt alleen voor dit gastscherm. */}
+        <div style={{ background: "#0a4f5b", borderRadius: 15, padding: "11px 13px", marginBottom: 18 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <RundoLogo size={44} />
             <span style={{ marginLeft: "auto", flexShrink: 0 }}><LanguageToggle compact /></span>
@@ -7470,7 +7472,7 @@ export default function PartyTest() {
                 <input id="latecomer-name" style={{ ...S.input, flex: 1, minWidth: 0, padding: "10px 11px", fontSize: 18, fontWeight: 800, textAlign: "left", background: "#fff", border: `1.5px solid ${MODUS_FAIR.randZacht}` }}
                   placeholder={L.yourName} autoComplete="name" />
               </div>
-              <button disabled={busy} style={{ ...S.btnP, width: "100%", opacity: busy ? 0.5 : 1 }}
+              <button disabled={busy} style={{ ...S.btnP, width: "100%", background: MODUS_FAIR.rand, color: "#fff", opacity: busy ? 0.5 : 1 }}
                 onClick={() => {
                   const el = document.getElementById("latecomer-name") as HTMLInputElement | null
                   joinAsLatecomer((el?.value || "").trim())
