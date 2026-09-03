@@ -657,7 +657,7 @@ const T = {
     tabMe: "📋 Rondjes",
     youTookLabel: "jij nam:",
     backToDrinks: "\u2190 Terug naar drankjes",
-    tabGroup: "👥 Groep & QR",
+    tabGroup: "⚙️Groep & QR",
     groupTitle: "👥 In deze groep",
     peopleN: (n: number) => `${n} ${n === 1 ? "persoon" : "personen"}`,
     joinedOfTotal: (a: number, b: number) => `${a} van ${b} aangemeld`,
@@ -701,6 +701,22 @@ const T = {
     payCardTitle: "💳 Van de drankkaart",
     payPotSub: (bedrag: string) => `Nog ${bedrag} beschikbaar.`,
     paySkip: "Overslaan (kan ook later)",
+    payBackToList: "← Terug naar lijstje",
+    roundPaidBy: (wie: string) => `Betaald: ${wie}`,
+    youFetchedFillIn: "Jij haalde dit — vul het bedrag in",
+    viaQrTitle: "Scande zelf de QR-code",
+    howPaid: "Hoe betaald?",
+    paidSelfShort: "💶 Zelf",
+    paidPotShort: "💰 Uit de pot",
+    hostCanFix: "Vergissing? Wie de groep beheert kan het nadien rechtzetten.",
+    roundsNoAmount: (n: number) => n === 1 ? "1 rondje zonder bedrag." : `${n} rondjes zonder bedrag.`,
+    roundsNoAmountSub: "Zolang die openstaan klopt het totaal niet.",
+    youFetchedThis: (n: number) => `Jij haalde rondje ${n}.`,
+    youFetchedSub: "Vul in wat het kostte, dan klopt de afrekening.",
+    allChoseShort: "Iedereen heeft gekozen.",
+    allChoseCta: "Je kan het rondje nu afronden.",
+    orderLocked: "Bestelling bevestigd.",
+    orderLockedSub: (naam: string) => `${naam} gaat ze halen. Aanpassen kan niet meer.`,
     roundN: (n: number) => `Ronde ${n}`,
     nothingThisRound: "jij had niets in dit rondje",
 
@@ -1453,7 +1469,7 @@ const T = {
     tabMe: "📋 Tourn\u00e9es",
     youTookLabel: "toi\u00a0:",
     backToDrinks: "\u2190 Retour aux boissons",
-    tabGroup: "👥 Groupe & QR",
+    tabGroup: "⚙️Groupe & QR",
     groupTitle: "👥 Dans ce groupe",
     peopleN: (n: number) => `${n} ${n === 1 ? "personne" : "personnes"}`,
     joinedOfTotal: (a: number, b: number) => `${a} sur ${b} inscrits`,
@@ -1497,6 +1513,22 @@ const T = {
     payCardTitle: "💳 Sur la carte boissons",
     payPotSub: (bedrag: string) => `Encore ${bedrag} disponible.`,
     paySkip: "Passer (possible plus tard)",
+    payBackToList: "← Retour à la liste",
+    roundPaidBy: (wie: string) => `Payé : ${wie}`,
+    youFetchedFillIn: "Tu l’as cherchée — encode le montant",
+    viaQrTitle: "A scanné le QR lui-même",
+    howPaid: "Payé comment ?",
+    paidSelfShort: "💶 Soi-même",
+    paidPotShort: "💰 Cagnotte",
+    hostCanFix: "Erreur ? L’organisateur peut corriger après coup.",
+    roundsNoAmount: (n: number) => n === 1 ? "1 tournée sans montant." : `${n} tournées sans montant.`,
+    roundsNoAmountSub: "Tant qu’elles restent ouvertes, le total ne colle pas.",
+    youFetchedThis: (n: number) => `Tu as cherché la tournée ${n}.`,
+    youFetchedSub: "Encode ce que ça a coûté pour que le décompte soit juste.",
+    allChoseShort: "Tout le monde a choisi.",
+    allChoseCta: "Tu peux clôturer la tournée.",
+    orderLocked: "Commande confirmée.",
+    orderLockedSub: (naam: string) => `${naam} va les chercher. Plus moyen de changer.`,
     roundN: (n: number) => `Tournée ${n}`,
     nothingThisRound: "tu n'avais rien dans cette tournée",
 
@@ -2974,7 +3006,6 @@ export default function PartyTest() {
   // haler zelf — vandaar dat we onthouden welk rondje we al aankondigden.
   const [rondjeGemeld, setRondjeGemeld] = useState<string | null>(null)
   const [halerGemeld, setHalerGemeld] = useState<string | null>(null)
-  const [allenKlaar, setAllenKlaar] = useState(false)
   const [allenGemeld, setAllenGemeld] = useState<string | null>(null)
   // De antwoorden op het lópende rondje: wie koos niets, en het merkje van een
   // herinnering. Staat hier bovenaan omdat de effecten eronder ernaar kijken.
@@ -3037,7 +3068,10 @@ export default function PartyTest() {
       // meldde dit scherm "geannuleerd" terwijl de haler gewoon onderweg is.
       void (async () => {
         const { data } = await supabase.from("party_rounds").select("id").eq("id", weg.id).maybeSingle()
-        if (!data) setNotice(L.roundCancelled(weg.door))
+        // Bestaat het rondje nog, dan is het afgerond en niet geannuleerd. Dat is het
+        // moment waarop de rest het mag weten: pas nu ligt de bestelling vast.
+        if (data) { setGastBalk(weg.door); return }
+        setNotice(L.roundCancelled(weg.door))
       })()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3051,11 +3085,11 @@ export default function PartyTest() {
     if (allenGemeld === openRoundId) return
     if (alGekozen < people.length) return
     setAllenGemeld(openRoundId)
-    // Vroeger sprong hier een venster open met een knop erin. Dat onderbrak precies het
-    // moment waarop je juist naar je eigen kaart wil kijken. Nu volstaat een melding: de
-    // kaart "In dit rondje" staat er al, kleurt vanzelf groen, en daar staat de knop die
-    // het rondje echt vastzet.
-    setNotice(ikHaalNu ? L.allChoseYou : L.allChoseGuest(runnerName()))
+    // Alleen de starter hoort dit: hij is de enige die er iets mee moet. De rest verneemt
+    // het pas wanneer hij echt afrondt, anders denkt iedereen dat het al beslist is.
+    // Een balk boven de kaart, geen venster eroverheen: de knop eronder moet meteen
+    // aantikbaar zijn.
+    if (ikHaalNu) setStarterBalk(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alGekozen, openRoundId, meId, people.length])
 
@@ -3070,6 +3104,34 @@ export default function PartyTest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRoundId, startedBy, meId])
   const [rondjeMelding, setRondjeMelding] = useState<string | null>(null)
+  // Welk rondje de gast aan het invullen is, met wat hij tot nu tikte.
+  const [gastBedrag, setGastBedrag] = useState<{ id: string; tekst: string; pot: boolean } | null>(null)
+  // Twee balken die boven de halerkaart verschijnen. Ze zeggen allebei iets dat je één
+  // keer moet lezen, dus ze gaan vanzelf weg; het kruisje is er voor wie sneller is.
+  const [starterBalk, setStarterBalk] = useState(false)
+  const [gastBalk, setGastBalk] = useState<string | null>(null)
+  useEffect(() => {
+    if (!starterBalk) return
+    const t = setTimeout(() => setStarterBalk(false), 8000)
+    return () => clearTimeout(t)
+  }, [starterBalk])
+  useEffect(() => {
+    if (!gastBalk) return
+    const t = setTimeout(() => setGastBalk(null), 8000)
+    return () => clearTimeout(t)
+  }, [gastBalk])
+  // Wijzigt iemand na zijn bevestiging, dan zakt de groep terug onder volledig. De balk
+  // klopt dan niet meer en moet meteen weg. We wissen ook het geheugen van de melding,
+  // anders zou ze na de nieuwe bevestiging nooit meer komen — en dat is net het moment
+  // waarop de starter weer mag vertrekken.
+  useEffect(() => {
+    if (!settle || fromQuick) return
+    if (!openRoundId) return
+    if (alGekozen >= people.length) return
+    setStarterBalk(false)
+    setAllenGemeld((g) => (g === openRoundId ? null : g))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alGekozen, people.length, openRoundId])
   // Tikte de haler op "Zelfde weer", dan staan mijn drankjes al ingevuld op het moment
   // dat het rondje verschijnt. Dat onthouden we hier, want zodra ik zelf iets bijtik is
   // het onderscheid weg — en juist die eerste toestand bepaalt wat er op het scherm hoort.
@@ -3307,12 +3369,35 @@ export default function PartyTest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showPot, potContribTotal, payVia])
   // groen = ik bevestigde mijn keuze; mijnTekst = wat ik nam, om in de kop te tonen.
+  // De twee balken. Ze horen boven de kaart, want ze gaan over wat er in de kaart staat.
+  const renderBalk = (kleur: "groen" | "blauw", tekst: React.ReactNode, sluit: () => void) => {
+    const g = kleur === "groen"
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 9, borderRadius: 11, padding: "10px 12px", marginBottom: 10,
+        background: g ? "rgba(31,138,76,0.12)" : "rgba(13,124,140,0.12)",
+        border: `1px solid ${g ? "rgba(31,138,76,0.4)" : "rgba(13,124,140,0.4)"}` }}>
+        <span style={{ fontSize: 14, lineHeight: 1.4, color: g ? "#1f6b3a" : MODUS_FAIR.tekst }}>{tekst}</span>
+        <button onClick={sluit} aria-label={L.closeWord}
+          style={{ marginLeft: "auto", flexShrink: 0, background: "none", border: "none", cursor: "pointer", fontSize: 16, lineHeight: 1, color: g ? "#1f6b3a" : MODUS_FAIR.tekst, padding: 2 }}>✕</button>
+      </div>
+    )
+  }
+  // Precies de poort van AdminTabs. Schermen die zelf moeten weten of de tabbalk er
+  // staat — om bijvoorbeeld hun eigen terugknop weg te laten — lezen deze waarde.
+  const tabsHier = !!groupId && isAdmin && settle && !fromQuick && (orderingOpen || rounds.length > 0)
+  const allenBevestigd = people.length > 0 && alGekozen >= people.length
+  const balken = () => (
+    <>
+      {starterBalk && renderBalk("groen", <><b style={{ fontWeight: 800 }}>{L.allChoseShort}</b> {L.allChoseCta}</>, () => setStarterBalk(false))}
+      {gastBalk && renderBalk("blauw", <><b style={{ fontWeight: 800 }}>{L.orderLocked}</b> {L.orderLockedSub(gastBalk)}</>, () => setGastBalk(null))}
+    </>
+  )
   const renderRunnerBar = (compact = false, groen = false, mijnTekst = "") => {
     // Net afgerond: de bevestiging voor de haler, mét zijn lijstje en de vergrootknop.
     // De rest van de groep kreeg intussen de broadcast "Bestelling bevestigd — X haalt".
     if (!openRoundId && haalInfo) {
       return (
-        <div style={{ ...S.card, background: "#fff", border: `2px solid ${MODUS_FAIR.rand}`, boxShadow: `0 6px 18px -12px ${MODUS_FAIR.gloed}` }}>
+        <>{balken()}<div style={{ ...S.card, background: "#fff", border: `2px solid ${MODUS_FAIR.rand}`, boxShadow: `0 6px 18px -12px ${MODUS_FAIR.gloed}` }}>
           {/* Eén taak: dit bestellen. De lijst staat groot, elke soort op een eigen regel,
               zodat je hem aan de toog kan aflezen zonder te knijpen. */}
           <div style={{ fontSize: 18, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.toTheBar}</div>
@@ -3328,7 +3413,7 @@ export default function PartyTest() {
           {/* "Klaar" brengt je meteen naar het bedrag: dat is de vraag die anders blijft
               liggen tot aan de eindafrekening. */}
           <button onClick={() => { setHaalInfo(null); openClose() }} style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 8px", fontSize: 17, fontWeight: 800, color: "#fff", background: MODUS_FAIR.knop }}>{L.haalKlaar}</button>
-        </div>
+        </div></>
       )
     }
     const ikHaal = !!meId && startedBy === meId
@@ -3352,7 +3437,7 @@ export default function PartyTest() {
       const klaar = people.filter((pp) => isKlaar(pp.id))
       const allen = klaar.length >= people.length && people.length > 0
       return (
-        <div ref={halerKop} style={{ ...S.card, position: "sticky", top: 0, zIndex: 9, scrollMarginTop: 0, background: "#fff", border: `2px solid ${MODUS_FAIR.rand}`, boxShadow: `0 8px 20px -12px ${MODUS_FAIR.gloed}` }}>
+        <>{balken()}<div ref={halerKop} style={{ ...S.card, position: "sticky", top: 0, zIndex: 9, scrollMarginTop: 0, background: "#fff", border: `2px solid ${MODUS_FAIR.rand}`, boxShadow: `0 8px 20px -12px ${MODUS_FAIR.gloed}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 9 }}>
             <span style={{ flexShrink: 0, width: 38, height: 38, borderRadius: "50%", background: MODUS_FAIR.knop, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 21.5 }}>🍻</span>
             <span style={{ minWidth: 0 }}>
@@ -3432,16 +3517,21 @@ export default function PartyTest() {
               waarschuwing van daarnet. Iedereen krijgt dan de melding met de naam erbij. */}
           {/* De kaart leest van boven naar onder: wie doet mee, wat ze kozen, hoeveel het
               samen is, en pas dan wat je ermee doet. */}
-          <button onClick={() => { if (nogNietGekozen().length > 0) { setAfsluitOpen(false); setAfsluitCheck(true) } else void naarBar() }} disabled={barTotalen().length === 0}
-            style={{ width: "100%", marginTop: 4, marginBottom: 9, cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 8px", fontSize: 17.5, fontWeight: 800, color: "#fff", background: MODUS_FAIR.knop, opacity: barTotalen().length === 0 ? 0.45 : 1 }}>{L.runnerDoneBtn}</button>
+          {/* Koos en bevestigde iedereen, dan is dit de enige zinnige tik die er nog is.
+              De knop kleurt groen en pulseert zachtjes, zodat de starter niet hoeft te
+              zoeken. Zodra er iemand terugvalt naar "bezig", is hij weer gewoon turkoois. */}
+          <style>{`@keyframes rundoKlaarGloed{0%,100%{box-shadow:0 0 0 0 rgba(31,138,76,0.5)}50%{box-shadow:0 0 0 9px rgba(31,138,76,0)}}@media (prefers-reduced-motion: reduce){.rundo-klaar{animation:none!important;box-shadow:0 0 0 4px rgba(31,138,76,0.3)}}`}</style>
+          <button className={allenBevestigd ? "rundo-klaar" : undefined}
+            onClick={() => { if (nogNietGekozen().length > 0) { setAfsluitOpen(false); setAfsluitCheck(true) } else void naarBar() }} disabled={barTotalen().length === 0}
+            style={{ width: "100%", marginTop: 4, marginBottom: 9, cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 8px", fontSize: 17.5, fontWeight: 800, color: "#fff", background: allenBevestigd ? "linear-gradient(135deg,#22a35f,#158048)" : MODUS_FAIR.knop, opacity: barTotalen().length === 0 ? 0.45 : 1, animation: allenBevestigd ? "rundoKlaarGloed 1.9s ease-in-out infinite" : undefined }}>{L.runnerDoneBtn}</button>
           <button onClick={annuleerRondje} style={{ width: "100%", cursor: "pointer", background: "none", border: "none", fontSize: 15, fontWeight: 700, color: "#b0402f" }}>{L.cancelRoundBtn}</button>
-        </div>
+        </div></>
       )
     }
     if (startedBy) {
       // Iemand anders haalt. Informatie — overnemen mag, maar rustig.
       return (
-        <div style={{ ...S.card, position: "sticky", top: 0, zIndex: 9, background: groen ? "#f4fbf6" : "#fff", border: `2px solid ${groen ? "#1f8a4c" : MODUS_FAIR.rand}`, boxShadow: `0 8px 20px -12px ${MODUS_FAIR.gloed}` }}>
+        <>{balken()}<div style={{ ...S.card, position: "sticky", top: 0, zIndex: 9, background: groen ? "#f4fbf6" : "#fff", border: `2px solid ${groen ? "#1f8a4c" : MODUS_FAIR.rand}`, boxShadow: `0 8px 20px -12px ${MODUS_FAIR.gloed}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 10 }}>
             {/* Bevestigde je, dan wordt het schijfje een vinkje: je eigen toestand leest
                 van hier af, zonder naar de balk onderaan te moeten kijken. */}
@@ -3482,7 +3572,7 @@ export default function PartyTest() {
           {compact && (
             <div style={{ marginTop: 9, paddingTop: 9, borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, fontSize: 14.5, fontWeight: 700, color: MODUS_FAIR.tekst, textAlign: "center" }}>{L.pickBelow}</div>
           )}
-        </div>
+        </div></>
       )
     }
     // Er loopt een rondje, maar niemand claimde de haler-rol (bv. admin startte het).
@@ -3562,7 +3652,7 @@ export default function PartyTest() {
     sprongGedaan.current = true
     naarLijst()
   }, [roundItems, perPersoon, settle]) // eslint-disable-line
-  const resumeRound = () => { if (blockIfUnpaid()) return; setActiveCat(catsPresent[0]); setView("order") }
+  const resumeRound = () => { if (blokTenzijQR()) return; setActiveCat(catsPresent[0]); setView("order") }
   const unfinishedRound = roundItems > 0 && rounds.length < roundNr
   // Snelle rondjes kennen geen betalers: daar telt een rondje als afgehandeld zodra er
   // een bedrag op staat én je dat bewust bevestigde of oversloeg. Enkel een bedrag
@@ -3579,6 +3669,10 @@ export default function PartyTest() {
     return laatsteRondjeKlaar() ? -1 : rounds.length - 1
   }
   const paidCount = rounds.filter(roundIsPaid).length
+  // In QR loopt het anders: daar wil je aan de toog door kunnen met een volgend rondje,
+  // ook al ontbreekt er nog een bedrag. Het rondjesoverzicht meldt wat openstaat en daar
+  // vul je het aan. Buiten QR — zelf noteren en Fair Split — blijft de rem zoals hij was.
+  const blokTenzijQR = () => (settle && !fromQuick) ? false : blockIfUnpaid()
   const blockIfUnpaid = () => { if (!settle) return false; const i = unpaidIdx(); if (i < 0) return false; setNotice(L.roundUnpaid(i + 1)); setView("confirmed"); return true }
   const unassignedTotal = useMemo(() => drinks.reduce((s, d) => s + (cartAnon[d.id] ?? 0), 0), [cartAnon, drinks]) // eslint-disable-line
   const pickedUpOf = (pid: string) => drinks.reduce((a, d) => a + (d.cup ? aQty(d.id, pid) : 0), 0)
@@ -4705,7 +4799,9 @@ export default function PartyTest() {
     // Even wachten tot het scherm getekend is, dan naar het rondjeblok scrollen. De kop
     // met logo en groepsnaam schuift zo uit beeld en je begint meteen bij de drankjes.
     const scroll = (herkans = true) => requestAnimationFrame(() => {
-      const el = gastRondjeKop.current
+      // De gast heeft zijn eigen anker, de beheerder dat boven "Rondje N". Zonder deze
+      // terugval bleef de beheerder bovenaan staan terwijl elke gast meesprong.
+      const el = gastRondjeKop.current || rondjeKop.current
       if (!el) { if (herkans) setTimeout(() => scroll(false), 140); return }
       el.scrollIntoView({ behavior: "smooth", block: "start" })
     })
@@ -5610,6 +5706,27 @@ export default function PartyTest() {
       ok: (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005)) }))
     .filter((x) => !x.ok && !x.open).map((x) => x.nr)
 
+  // De haler vult zelf in wat zijn rondje kostte. Dit doet precies wat de beheerderstak
+  // van saveEditRound doet voor een rondje zonder bestaande betalers: bedrag zetten, het
+  // potdeel klemmen op wat er nog in de pot zit, en bij "zelf" de haler als voorschieter
+  // noteren. Meer niet — drankjes bijstellen en betalers herschikken blijft beheerderswerk.
+  const gastVultBedragIn = (r: Round, bedrag: number, uitPot: boolean) => {
+    const idx = rounds.indexOf(r)
+    if (idx < 0 || !meId) return
+    if (uitPot && bedrag <= 0.005) { setNotice(L.needAmountOrCancel); return }
+    const beschikbaar = Math.max(0, potAvailFor(idx))
+    const potDeel = uitPot ? Math.min(bedrag, beschikbaar) : 0
+    const rest = Math.max(0, bedrag - potDeel)
+    qSetAmount(idx, bedrag)
+    rSetPotAmt(idx, potDeel)
+    // Blijft er iets over na de pot, dan schoot de haler dat voor. Bij "zelf" is dat het
+    // hele bedrag; bij een pot die te klein was, het verschil.
+    setRounds((rs) => rs.map((rr, i) => i === idx ? { ...rr, payers: rest > 0.005 ? { [meId]: rest } : {} } : rr))
+    setDirtyRound(idx)
+    if (uitPot && bedrag > beschikbaar + 0.005) meldPot(L.potClamped(euro(beschikbaar)))
+    setOpenRounds((prev) => { const n = new Set(prev); n.delete(r.id); return n })
+    setGastBedrag(null)
+  }
   const goFinal = () => {
     if (unfinishedRound) { setNotice(L.roundUnfinished(roundNr)); setActiveCat(catsPresent[0]); setView("order"); return }
     // Naamloze plaatsen maken de verdeling onbetrouwbaar: je ziet dan "Plaats 3" op de
@@ -5788,7 +5905,7 @@ export default function PartyTest() {
     setWalkIdx(null); setShowAssignAll(false)
   }
   const nextRound = () => {
-    if (blockIfUnpaid()) return
+    if (blokTenzijQR()) return
     setActiveCat(catsPresent[0])
     // Het zoekveld bleef staan uit het vorige rondje, met de gefilterde lijst en de
     // regel erboven erbij — een nieuw rondje hoort te beginnen zoals het eerste.
@@ -5825,7 +5942,7 @@ export default function PartyTest() {
   const proposalPeople = lastRound ? people.filter((p) => roundMembers(lastRound).includes(p.id)) : []
   // De haler (of admin) start een voorstel op basis van het laatste rondje.
   const startProposal = async () => {
-    if (blockIfUnpaid()) return
+    if (blokTenzijQR()) return
     if (!lastRound) { setNotice(L.nothingToRepeat); return }
     const by = meId || (startedBy ?? null)
     const { error } = await supabase.rpc("party_propose_repeat", { p_round: lastRound.id, p_by: by })
@@ -6012,7 +6129,7 @@ export default function PartyTest() {
   // kiest, zwijgt (en krijgt niets). "Iets anders" schakelt door naar het bestellen.
 
   const repeatRound = () => {
-    if (blockIfUnpaid()) return
+    if (blokTenzijQR()) return
     const last = rounds[rounds.length - 1]
     if (!last) { setNotice(L.nothingToRepeat); return }
     setDrinkSearch("")
@@ -6929,11 +7046,15 @@ export default function PartyTest() {
             <span style={{ display: "block", fontSize: 13, color: "#6b7484", marginTop: 2, lineHeight: 1.4 }}>{uitleg}</span>
           </button>
         )
+        // De betaalpagina is view "confirmed": daar staat het bedragveld, de rij met wie
+        // betaalde en de bevestigknop. Eerder stond hier "hub", en dan kwam je op een
+        // scherm zonder bedragveld terecht.
         const naarBetaling = (via: "self" | "pot") => {
           setPayVia(via)
-          if (via === "pot") { setPayPot(true); setPayPersons([]) }
-          else { setPayPot(false); if (startedBy) { setPayPersons([startedBy]); autoSplit([startedBy], false) } }
-          setView("hub")
+          if (via === "pot") { setPayPot(true); setPayPersons([]); autoSplit([], true) }
+          else { setPayPot(false); const wie = startedBy ? [startedBy] : []; setPayPersons(wie); autoSplit(wie, false) }
+          setPaidConfirmed(false)
+          setView("confirmed")
         }
         return (
         <div style={{ ...S.overlay, zIndex: 81 }} onClick={() => setBetaalVraag(false)}>
@@ -6942,8 +7063,14 @@ export default function PartyTest() {
             <div style={{ fontSize: 14, color: "#6b7484", lineHeight: 1.45, marginBottom: 13 }}>{L.payNowSub}</div>
             {keuze(L.paySelfTitle, L.paySelfSub, () => naarBetaling("self"))}
             {keuze(potIsCard ? L.payCardTitle : L.payPotTitle, L.payPotSub(euro(Math.max(0, potRemaining))), () => naarBetaling("pot"))}
-            <button onClick={() => setBetaalVraag(false)}
-              style={{ ...S.btn, width: "100%", marginTop: 2, fontSize: 15, padding: "11px 6px", color: "#6b7484" }}>{L.paySkip}</button>
+            {/* Te snel op "Klaar" getikt en de bestelling nog niet kunnen doorgeven? Dan
+                wil je het lijstje terug, niet de betaalvraag. */}
+            <div style={{ display: "flex", gap: 8, marginTop: 2, paddingTop: 11, borderTop: "1px solid rgba(29,41,66,0.12)" }}>
+              <button onClick={() => { setBetaalVraag(false); setBarNaAfronden(true); setBarFull(true) }}
+                style={{ ...S.btn, flex: 1, fontSize: 14, padding: "11px 6px", color: MODUS_FAIR.tekst, borderColor: MODUS_FAIR.lijnZacht }}>{L.payBackToList}</button>
+              <button onClick={() => setBetaalVraag(false)}
+                style={{ ...S.btn, flex: 1, fontSize: 14, padding: "11px 6px", color: "#6b7484" }}>{L.paySkip}</button>
+            </div>
           </div>
         </div>
         )
@@ -7046,17 +7173,6 @@ export default function PartyTest() {
             <div style={{ height: 4, borderRadius: 999, background: "rgba(13,124,140,0.15)", overflow: "hidden" }}>
               <div style={{ height: "100%", background: MODUS_FAIR.rand, animation: "rundoAftel 2.5s linear forwards" }} />
             </div>
-          </div>
-        </div>
-      )}
-      {allenKlaar && (
-        <div style={{ ...S.overlay, zIndex: 75 }} onClick={() => setAllenKlaar(false)}>
-          <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 30, marginBottom: 5 }}>✅</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#1f6b3a", marginBottom: 6 }}>{L.allChoseTitle}</div>
-            <div style={{ fontSize: 16, color: "#5a8f99", lineHeight: 1.5, marginBottom: 13 }}>{ikHaalNu ? L.allChoseYou : L.allChoseGuest(runnerName())}</div>
-            {ikHaalNu && <div style={{ textAlign: "left", marginBottom: 13 }}>{renderBarLijst()}</div>}
-            <button onClick={() => { setAllenKlaar(false); if (ikHaalNu) naarBar() }} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800 }}>{ikHaalNu ? L.toTheBarBtn : L.okWord}</button>
           </div>
         </div>
       )}
@@ -7552,12 +7668,11 @@ export default function PartyTest() {
     // Alleen in de echte QR-modus: een snel- of uitgebreid-sessie die via Fair Split
     // afrekende, krijgt settle=true maar blijft een noteer-sessie — daar horen geen
     // tabbladen met "Mijn stand".
-    if (!groupId || !isAdmin || !settle || fromQuick) return null
     // Zelfde drempel als bij de gast: zodra het bestellen openstaat staan de drie
     // tabbladen er, ook al is rondje 1 nog niet aangemaakt. Vroeger wachtte de
     // beheerder op rounds.length > 0 en zag hij op het instelscherm én tijdens het
     // eerste rondje een andere navigatie dan iedereen aan tafel.
-    if (!orderingOpen && rounds.length === 0) return null
+    if (!tabsHier) return null
     const hier: "order" | "me" | "group" =
       view === "settings" ? "group" : (view === "hub" || view === "roundsOverview" || view === "confirmed") ? "me" : "order"
     const naar = (t: "order" | "me" | "group") => {
@@ -8283,6 +8398,42 @@ export default function PartyTest() {
                 <span style={{ ...S.pill, background: "rgba(29,41,66,0.08)", color: "#8a5e0f", flexShrink: 0 }}>{L.peopleN(people.length)}</span>
               </div>
               <div style={{ fontSize: 15.5, color: "#1f6b3a", fontWeight: 700, marginTop: 4 }}>📱 {L.joinedOfTotal(people.filter((p) => p.claimedBy).length, people.length)}</div>
+              {/* Dezelfde potkaart als de beheerder onder zijn groepsnaam heeft, maar dood:
+                  kijken en uitklappen mag, inleggen en bijstellen blijft bij wie de groep
+                  beheert. Zonder pot verschijnt er niets. */}
+              {potContribTotal > 0.005 && (
+                <div style={{ background: MODUS_FAIR.vlak, border: `1px solid ${MODUS_FAIR.lijnZacht}`, borderRadius: 12, padding: "10px 12px", marginTop: 11 }}>
+                  <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                      <ZakjeIcoon size={16} />
+                      <span style={{ fontSize: 16, fontWeight: 800, color: MODUS_FAIR.rand }}>{potIsCard ? L.drinkCard : L.potTitle}</span>
+                    </span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: "#1d2942" }}>{euro(potContribTotal)}</span>
+                  </div>
+                  <div onClick={() => setPotDetails((v) => !v)} style={{ ...S.row, justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 5, cursor: "pointer" }}>
+                    <span style={{ fontSize: 12.5, color: MODUS_FAIR.label, minWidth: 0 }}>{L.potSummary(people.filter((pp) => contribOf(pp.id) > 0.005).length, euro(Math.max(0, potRemaining)))}</span>
+                    <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 700, color: MODUS_FAIR.rand }}>{L.detailsWord} {potDetails ? "▴" : "▾"}</span>
+                  </div>
+                  {potDetails && (
+                    <div style={{ marginTop: 9, paddingTop: 9, borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, display: "flex", flexDirection: "column", gap: 5 }}>
+                      {potRounds.map((r, i) => {
+                        const tot = Object.values(r.amounts).reduce((a, b) => a + (b || 0), 0)
+                        const wie = people.filter((pp) => (r.amounts[pp.id] || 0) > 0)
+                        return (
+                          <div key={r.id} style={{ fontSize: 13, color: "#1d2942", lineHeight: 1.45 }}>
+                            <b style={{ fontWeight: 800 }}>{L.nthDeposit(i + 1)} · {euro(tot)}</b>
+                            {wie.length > 0 && <span style={{ color: MODUS_FAIR.label }}> — {wie.map((pp) => `${pp.name}${pp.id === meId ? ` (${L.youWord})` : ""} ${euro(r.amounts[pp.id] || 0)}`).join(" · ")}</span>}
+                          </div>
+                        )
+                      })}
+                      <div style={{ ...S.row, justifyContent: "space-between", marginTop: 3 }}>
+                        <span style={{ fontSize: 13, color: MODUS_FAIR.label }}>{L.alreadySpent} <b style={{ color: "#c88a1a" }}>{euro(potSpent)}</b></span>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: MODUS_FAIR.rand }}>{L.stillLeft(euro(Math.max(0, potRemaining)))}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {people.map((p) => {
@@ -8324,6 +8475,17 @@ export default function PartyTest() {
           <>
             {/* Geen bedragen meer: het zijn richtprijzen. Wat telt is wat jij nam per
                 rondje en of dat rondje al betaald is. */}
+            {/* Haalde jij een rondje waar nog geen bedrag op staat, dan zegt het scherm
+                dat meteen — jij bent de enige die weet wat het kostte. */}
+            {(() => {
+              const mijn = rounds.filter((r) => r.startedBy === meId && (r.amount || 0) <= 0.005)
+              if (mijn.length === 0) return null
+              return (
+                <div style={{ background: "rgba(224,138,0,0.12)", border: "1px solid rgba(224,138,0,0.5)", borderRadius: 11, padding: "10px 12px", marginBottom: 10, fontSize: 13.5, color: "#8a5e0f", lineHeight: 1.4 }}>
+                  <b style={{ fontWeight: 800 }}>{L.youFetchedThis(mijn[0].seq)}</b> {L.youFetchedSub}
+                </div>
+              )
+            })()}
             {rounds.length === 0 ? (
               <div style={{ ...S.card, fontSize: 17, color: "#9aa3b2", textAlign: "center", padding: "18px 0" }}>{L.noRoundClosed}</div>
             ) : (
@@ -8331,6 +8493,8 @@ export default function PartyTest() {
                 {[...rounds].reverse().map((r) => {
                   const mijne = drinks.filter((d) => (r.orders[d.id]?.[meId] ?? 0) > 0)
                   const alles = drinks.map((d) => ({ d, n: drinkTotalRound(r, d.id) })).filter((x) => x.n > 0)
+                  const open = openRounds.has(r.id)
+                  const ikHaalde = !!meId && r.startedBy === meId
                   return (
                     <div key={r.id} style={{ ...S.card, padding: 11, marginBottom: 9 }}>
                       <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -8347,11 +8511,68 @@ export default function PartyTest() {
                           ? `${L.youTookLabel} ${mijne.map((d) => `${r.orders[d.id][meId]}× ${d.name}`).join(" · ")}`
                           : L.nothingThisRound}
                       </div>
+                      {/* Uitklappen om te zien wie wat nam. Alleen kijken: een gast kan hier
+                          niets bijstellen, dat blijft werk van wie de groep beheert. */}
+                      <button onClick={() => setOpenRounds((prev) => { const n = new Set(prev); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); return n })}
+                        style={{ background: "none", border: "none", padding: "6px 0 0", cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, color: MODUS_FAIR.rand }}>
+                        {open ? `▴ ${L.hideDetails}` : `▾ ${L.showDetails}`}
+                      </button>
+                      {open && (
+                        <div style={{ marginTop: 7, paddingTop: 8, borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, display: "flex", flexDirection: "column", gap: 4 }}>
+                          {alles.map(({ d, n }) => {
+                            const wie = people.filter((p) => (r.orders[d.id]?.[p.id] ?? 0) > 0)
+                            return (
+                              <div key={d.id} style={{ fontSize: 13, color: "#1d2942", lineHeight: 1.45 }}>
+                                <b style={{ fontWeight: 800 }}>{n}× {d.emoji} {d.name}</b>
+                                {wie.length > 0 && (
+                                  <span style={{ color: "#8a5e0f", fontWeight: 700 }}> → {wie.map((p) => `${p.name}${p.id === meId ? ` (${L.youWord})` : ""}${r.orders[d.id][p.id] > 1 ? ` (${r.orders[d.id][p.id]})` : ""}`).join(", ")}</span>
+                                )}
+                              </div>
+                            )
+                          })}
+                          <div style={{ fontSize: 12.5, color: "#6b7484", marginTop: 3 }}>{L.roundPaidBy(paidLabel(r))}</div>
+                          {ikHaalde && (() => {
+                            const inv = gastBedrag?.id === r.id ? gastBedrag : { id: r.id, tekst: (r.amount || 0) > 0.005 ? String(r.amount).replace(".", ",") : "", pot: (r.potPart || 0) > 0.005 }
+                            const waarde = parseFloat(inv.tekst.replace(",", ".")) || 0
+                            return (
+                              <div style={{ background: "#fffdf4", border: "1.5px solid rgba(224,138,0,0.5)", borderRadius: 10, padding: 11, marginTop: 9 }}>
+                                <div style={{ fontSize: 12.5, fontWeight: 800, color: "#a8720a", marginBottom: 8 }}>{L.whatDidItCost}</div>
+                                <input inputMode="decimal" value={inv.tekst} placeholder="€ 0,00"
+                                  onChange={(e) => setGastBedrag({ ...inv, tekst: e.target.value })}
+                                  style={{ width: "100%", boxSizing: "border-box", background: "#fff", border: "1px solid rgba(29,41,66,0.22)", borderRadius: 9, padding: "8px 10px", fontSize: 15, color: "#1d2942", fontFamily: "inherit", marginBottom: 10 }} />
+                                <div style={{ fontSize: 12.5, fontWeight: 800, color: "#a8720a", marginBottom: 7 }}>{L.howPaid}</div>
+                                <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                                  {([[false, L.paidSelfShort], [true, L.paidPotShort]] as const).map(([potJa, tekst]) => (
+                                    <button key={String(potJa)} onClick={() => setGastBedrag({ ...inv, pot: potJa })}
+                                      style={{ flex: 1, cursor: "pointer", fontFamily: "inherit", borderRadius: 9, padding: "8px 4px", fontSize: 12.5, fontWeight: inv.pot === potJa ? 800 : 600,
+                                        background: inv.pot === potJa ? "#0a4f5b" : "#fff", color: inv.pot === potJa ? "#fff" : "#6b7484",
+                                        border: inv.pot === potJa ? "1px solid #0a4f5b" : "1px solid rgba(29,41,66,0.22)" }}>{tekst}</button>
+                                  ))}
+                                </div>
+                                <button onClick={() => gastVultBedragIn(r, waarde, inv.pot)} disabled={waarde <= 0.005}
+                                  style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 9, padding: 10, fontSize: 13.5, fontWeight: 800, color: "#fff", background: MODUS_FAIR.rand, opacity: waarde <= 0.005 ? 0.45 : 1, fontFamily: "inherit" }}>{L.saveWord}</button>
+                                <div style={{ fontSize: 11.5, color: "#8a7038", marginTop: 7, lineHeight: 1.4 }}>{L.hostCanFix}</div>
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      )}
+                      {/* Haalde jij dit rondje en staat er nog geen bedrag op, dan zegt de
+                          kaart dat zelf. Tikken klapt open en zet je bij het veld — niemand
+                          hoeft te weten dat het onder "toon details" verstopt zat. */}
+                      {ikHaalde && (r.amount || 0) <= 0.005 && !open && (
+                        <button onClick={() => { setOpenRounds((prev) => { const n = new Set(prev); n.add(r.id); return n }); setGastBedrag({ id: r.id, tekst: "", pot: false }) }}
+                          style={{ width: "100%", marginTop: 9, background: "#fff", border: "1.5px solid rgba(224,138,0,0.6)", color: "#a8720a", fontSize: 12.5, fontWeight: 800, padding: 9, borderRadius: 9, cursor: "pointer", fontFamily: "inherit" }}>{L.youFetchedFillIn}</button>
+                      )}
                     </div>
                   )
                 })}
-                <button onClick={() => setGuestTab("order")}
-                  style={{ ...S.btn, width: "100%", padding: "11px 0", borderRadius: 12, fontSize: 15, fontWeight: 600, color: "#1d2942" }}>{L.backToDrinks}</button>
+                {/* Zelfde afweging als bij de beheerder: de tabbalk staat er al. Alleen
+                    terwijl er een rondje loopt is deze knop een echte snelweg terug. */}
+                {!!openRoundId && (
+                  <button onClick={() => setGuestTab("order")}
+                    style={{ ...S.btn, width: "100%", padding: "11px 0", borderRadius: 12, fontSize: 15, fontWeight: 600, color: "#1d2942" }}>{L.backToDrinks}</button>
+                )}
               </>
             )}
           </>
@@ -9133,6 +9354,10 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
+        {/* Ook hier de drie tabbladen: dit ís het blad "Groep & QR". Zonder balk was de
+            terugknop onderaan de enige uitweg, en die staat er nu alleen nog tijdens een
+            lopend rondje. */}
+        <AdminTabs />
         <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 10 }}>⚙️ Groepsinstellingen</h3>
         {/* Naam en personen horen bij elkaar — ze zeggen allebei "welke groep is dit".
             De pot, bekers en coins zijn extra's en staan in een eigen kaart eronder. */}
@@ -9214,6 +9439,19 @@ export default function PartyTest() {
                       style={{ ...S.input, width: "100%", boxSizing: "border-box", padding: ikZelf ? "5px 42px 5px 9px" : "5px 8px", fontSize: 18, textAlign: "left", fontWeight: ikZelf ? 700 : 400,
                         background: ikZelf ? MODUS_FAIR.vlak : undefined, border: ikZelf ? `1.5px solid ${MODUS_FAIR.rand}` : undefined, color: ikZelf ? MODUS_FAIR.tekst : undefined }} />
                     {ikZelf && <span style={{ position: "absolute", right: 5, top: "50%", transform: "translateY(-50%)", background: MODUS_FAIR.rand, color: "#fff", borderRadius: 9, padding: "2px 7px", fontSize: 13, fontWeight: 800, letterSpacing: "0.04em", pointerEvents: "none" }}>{L.youBadge}</span>}
+                    {/* Scande deze persoon zelf de QR, dan zit hij op zijn eigen gsm en
+                        tikt hij zelf aan. Dat is iets anders dan een plaats die jij met de
+                        hand bijzette: die naam moet jij onderhouden. Het toestelletje zegt
+                        welke van de twee het is, zonder er woorden aan vuil te maken. */}
+                    {!ikZelf && !!p.claimedBy && (
+                      <span title={L.viaQrTitle} style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", display: "inline-flex" }}>
+                        <svg width="15" height="21" viewBox="0 0 15 21" aria-label={L.viaQrTitle} role="img">
+                          <rect x="0.9" y="0.9" width="13.2" height="19.2" rx="2.6" fill="none" stroke={MODUS_FAIR.rand} strokeWidth="1.7" />
+                          <line x1="5.4" y1="3.4" x2="9.6" y2="3.4" stroke={MODUS_FAIR.rand} strokeWidth="1.5" strokeLinecap="round" />
+                          <circle cx="7.5" cy="17.1" r="1.25" fill={MODUS_FAIR.rand} />
+                        </svg>
+                      </span>
+                    )}
                   </div>
                 )
               })}
@@ -9233,8 +9471,12 @@ export default function PartyTest() {
             const naarRondje = () => { setActiveCat(catsPresent[0]); setView("order") }
             // De instellingen tonen geen kopbalk, dus de weg terug moet hier staan — en
             // precies naar waar je vandaan kwam, niet naar een algemeen beginpunt.
+            // Staat de tabbalk erboven, dan is "terug" alleen nog zinvol als je middenin
+            // een rondje zit: dan is het een sprong terug naar waar je bezig was. Zonder
+            // open rondje brengen de tabbladen je overal, en is de knop een derde weg
+            // naar hetzelfde scherm.
             const terug = settingsBackTo === "quickSettle" ? { label: L.backToSettle, ga: () => setView("quickSettle") }
-              : settingsBackTo === "order" ? { label: L.backToRound(roundNr), ga: naarRondje }
+              : (settingsBackTo === "order" && (!tabsHier || !!openRoundId)) ? { label: L.backToRound(roundNr), ga: naarRondje }
               : null
             // Afrekenen is vanuit de instellingen altijd bereikbaar zodra er iets te
             // verdelen valt. Kwam je er net vandaan, dan doet de terugknop hierboven dat al.
@@ -10901,11 +11143,31 @@ export default function PartyTest() {
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
-        <div style={{ ...S.row, justifyContent: "flex-end", marginBottom: 6, gap: 8 }}>
-          <div style={{ display: "flex", gap: 7, flexShrink: 0 }}>
-            {settle && <button style={{ ...S.btn, fontSize: 15.5, fontWeight: 700, padding: "7px 12px" }} onClick={() => { if (overviewBackTo === "order") { setActiveCat(catsPresent[0]); setView("order") } else setView(overviewBackTo) }}>← {L.back}</button>}
+        {/* In QR draagt dit scherm dezelfde drie tabbladen als elk ander: "Rondjes" is
+            hier het actieve blad, en je gaat weg via "Drankjes" of "Groep & QR". De losse
+            terugpijl is dan overbodig. Toont AdminTabs niets — buiten QR, of nog vóór het
+            bestellen openging — dan is de pijl de enige uitweg en blijft hij staan. */}
+        <AdminTabs />
+        {/* Wat er nog openstaat, op een moment dat je er iets aan kan doen. Aan de toog
+            houdt niets je meer tegen; hier zie je wat er nog ingevuld moet. */}
+        {settle && !fromQuick && (() => {
+          const zonder = rondjesZonderBedrag()
+          if (zonder.length === 0) return null
+          const mijne = rounds.filter((r) => r.startedBy === meId && (r.amount || 0) <= 0.005)
+          return (
+            <div style={{ background: "rgba(224,138,0,0.12)", border: "1px solid rgba(224,138,0,0.5)", borderRadius: 11, padding: "10px 12px", marginBottom: 10, fontSize: 13.5, color: "#8a5e0f", lineHeight: 1.4 }}>
+              <b style={{ fontWeight: 800 }}>{L.roundsNoAmount(zonder.length)}</b> {L.roundsNoAmountSub}
+              {mijne.length > 0 && <div style={{ marginTop: 4 }}><b style={{ fontWeight: 800 }}>{L.youFetchedThis(mijne[0].seq)}</b> {L.youFetchedSub}</div>}
+            </div>
+          )
+        })()}
+        {settle && !tabsHier && (
+          <div style={{ ...S.row, justifyContent: "flex-end", marginBottom: 6, gap: 8 }}>
+            <div style={{ display: "flex", gap: 7, flexShrink: 0 }}>
+              <button style={{ ...S.btn, fontSize: 15.5, fontWeight: 700, padding: "7px 12px" }} onClick={() => { if (overviewBackTo === "order") { setActiveCat(catsPresent[0]); setView("order") } else setView(overviewBackTo) }}>← {L.back}</button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Totaal — de som van alle rondjes. Eén blik op wat de avond kostte. */}
         {/* Geen kader: het totaal hoort bij de lijst eronder, niet als losse knop. */}
@@ -11285,7 +11547,10 @@ export default function PartyTest() {
                 gevulde knoppen — één amber kader markeert de gewone volgende stap. */}
             <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingTop: 14, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)", background: "linear-gradient(180deg,rgba(250,247,236,0),#faf7ec 22%)" }}>
             <div style={{ display: "flex", gap: 8 }}>
-              {rounds.length > 0 && laatsteRondjeKlaar() && (
+              {/* "Zelfde opnieuw" wordt in QR al aangeboden op het moment dat je een rondje
+                  start: het startCheck-venster toont dan het gestippelde blokje met de
+                  vorige ronde erin. Hier nog eens is een tweede ingang naar dezelfde daad. */}
+              {rounds.length > 0 && laatsteRondjeKlaar() && !tabsHier && (
                 <button onClick={repeatRound}
                   style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "12px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
                     display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", minHeight: 62,
@@ -11294,7 +11559,11 @@ export default function PartyTest() {
                   <span style={{ fontSize: 13, fontWeight: 600, color: "#8b93a3", marginTop: 3 }}>{L.repeatRoundSub}</span>
                 </button>
               )}
-              {laatsteRondjeKlaar() && (
+              {/* In QR start je een rondje op het tabblad "Drankjes" — daar staat de grote
+                  banner "Nieuw rondje voor N personen?". Dezelfde knop hier maakt van dit
+                  overzicht een tweede startplek, en dan is er geen duidelijke plek meer.
+                  Buiten QR blijft hij staan: daar is er geen tabbalk om langs te gaan. */}
+              {laatsteRondjeKlaar() && !tabsHier && (
                 <button onClick={nextRound}
                   style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "12px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
                     display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", minHeight: 62,
