@@ -303,7 +303,9 @@ function CheersIcon({ size = 18, color = "#1d2942" }: { size?: number; color?: s
 // meteen, en gasten claimen er zelf een via de QR/link — net als in Rundo Resto.
 // Een vrije plaats heeft in de databank een lege naam; in de UI heet ze "Gast N",
 // waardoor de bestaande isGuestDefault-logica gewoon blijft werken.
-type Person = { id: string; name: string; seat: number; claimedBy?: string | null; selfJoined?: boolean; named?: boolean; settleWith?: string | null }
+// `left`: deze plaats is vertrokken maar blijft bestaan — ze had drankjes en telt nog
+// mee in de eindbalans. Anders dan removePerson, dat een plaats echt wist.
+type Person = { id: string; name: string; seat: number; claimedBy?: string | null; selfJoined?: boolean; named?: boolean; settleWith?: string | null; left?: boolean }
 
 // Dit toestel. Bepaalt of je de admin bent en welke plaats van jou is.
 function deviceId(): string {
@@ -482,7 +484,9 @@ type Anon = Record<string, number>
 // wat de app al kende. status: open = er wordt besteld, pending = besteld maar niet
 // betaald, closed = betaald.
 type Proposal = { active?: boolean; by?: string; answers?: Record<string, "same" | "different" | "skip"> }
-type Round = { id: string; seq: number; status: "open" | "pending" | "closed"; orders: Assign; anon: Anon; payers: Record<string, number>; amount: number; potPart: number; gaveBack: Record<string, number>; members: string[]; startedBy: string | null; proposal: Proposal; headcount: number }
+// leaveWaitFor: id van een gast die wil vertrekken en op het bedrag van dit rondje
+// wacht. Zet de haler en de beheerder een seintje; verdwijnt zodra het bedrag er is.
+type Round = { id: string; seq: number; status: "open" | "pending" | "closed"; orders: Assign; anon: Anon; payers: Record<string, number>; amount: number; potPart: number; gaveBack: Record<string, number>; members: string[]; startedBy: string | null; proposal: Proposal; headcount: number; leaveWaitFor?: string | null }
 
 const euro = (v: number) => "€" + v.toFixed(2).replace(".", ",")
 
@@ -1335,6 +1339,42 @@ const T = {
     doneWithRound: "✓ Klaar met dit rondje",
     cancelRoundShort: "✕ Rondje annuleren",
     provisionalStand: "Voorlopig. Wat je uiteindelijk betaalt of terugkrijgt, hangt af van wie wat voorschoot en van de pot — dat komt bij het afrekenen.",
+    guestSeeSettlement: "Afrekening bekijken",
+    guestSettlementTitle: "Afrekening",
+    guestSettlementIncomplete: (n: number) => `Nog niet volledig. ${n} rondje${n === 1 ? "" : "s"} ${n === 1 ? "heeft" : "hebben"} nog geen bedrag — de cijfers kunnen nog wijzigen.`,
+    getsFromGuest: (v: string, naam: string) => `krijgt ${v} van ${naam}`,
+    paysToGuest: (v: string, naam: string) => `betaalt ${v} aan ${naam}`,
+    allSquareGuest: "niets meer te verrekenen",
+    imLeaving: "Ik ga weg",
+    handoverTitle: "Beheer overdragen",
+    handoverSub: "Alleen wie al gescand heeft. Jij wordt daarna gewoon gast.",
+    handoverTo: (naam: string) => `Overdragen aan ${naam}`,
+    handoverNotScanned: "niet gescand",
+    handoverOfferTitle: (naam: string) => `${naam} geeft jou het beheer`,
+    handoverOfferBody: "Jij vult dan bedragen in en rekent af.",
+    handoverAccept: "Ok, ik neem het over",
+    handoverDecline: "Liever niet",
+    handoverDone: (naam: string) => `${naam} beheert de groep nu.`,
+    handoverDeclined: (naam: string) => `${naam} nam het beheer niet over.`,
+    leaveConfirmTitle: "Afgerekend, ik ga",
+    leaveAskTitle: "Zeker dat je weggaat?",
+    leaveAskBody: "Je komt niet meer voor in nieuwe rondjes. Wat je al dronk blijft staan, en je blijft zichtbaar in de groep. Terugkomen kan alleen de beheerder regelen.",
+    leaveAskYes: "Ja, ik ga",
+    leftListTitle: "Vertrokken",
+    bringBackBtn: "terugzetten",
+    leaveStayBtn: "Toch blijven",
+    leaveMissingTitle: "Nog één ding voor je gaat",
+    leaveMissingBody: (seq: number) => `Rondje ${seq} heeft nog geen bedrag, en jij nam daar iets. Zonder dat bedrag klopt jouw stand niet.`,
+    leaveWaitingSent: (namen: string) => `Seintje gestuurd naar ${namen}`,
+    leaveWaitingHint: "Zodra het bedrag er staat, verschijnt hier jouw stand.",
+    leaveResend: "Nog eens seinen",
+    leaveBackToRounds: "← Terug naar rondjes",
+    leaveResentNotice: "Nog eens geseind.",
+    leftBadge: "vertrokken",
+    leftSettledLine: (v: string, naam: string) => `✓ al afgerekend · ${v} aan ${naam}`,
+    adminLeaveBanner: (naam: string, seq: number) => `${naam} wil naar huis · wacht op rondje ${seq}`,
+    adminLeaveBannerBody: "Vul het bedrag in, dan kan die persoon afrekenen.",
+    fillAmountForLeaveBtn: (seq: number) => `Bedrag rondje ${seq} invullen`,
     nothingWord: "neemt niets",
     totalOf: (v: string) => `${v} totaal`,
     fairSplitExplain: "Liever eerlijk betalen volgens wat iedereen dronk? Wijs drankjes en betalers hier toe.",
@@ -2147,6 +2187,42 @@ const T = {
     doneWithRound: "✓ Terminé pour cette tournée",
     cancelRoundShort: "✕ Annuler la tournée",
     provisionalStand: "Provisoire. Ce que tu paieras ou récupéreras dépend de qui a avancé et de la cagnotte — tout se règle au décompte.",
+    guestSeeSettlement: "Voir le décompte",
+    guestSettlementTitle: "Décompte",
+    guestSettlementIncomplete: (n: number) => `Pas encore complet. ${n} tournée${n === 1 ? "" : "s"} sans montant — les chiffres peuvent encore changer.`,
+    getsFromGuest: (v: string, naam: string) => `reçoit ${v} de ${naam}`,
+    paysToGuest: (v: string, naam: string) => `doit ${v} à ${naam}`,
+    allSquareGuest: "rien à régler",
+    imLeaving: "Je m'en vais",
+    handoverTitle: "Transf\u00e9rer la gestion",
+    handoverSub: "Uniquement ceux qui ont scann\u00e9. Tu deviens ensuite un invit\u00e9.",
+    handoverTo: (naam: string) => `Transf\u00e9rer \u00e0 ${naam}`,
+    handoverNotScanned: "pas scann\u00e9",
+    handoverOfferTitle: (naam: string) => `${naam} te confie la gestion`,
+    handoverOfferBody: "Tu pourras saisir les montants et faire le d\u00e9compte.",
+    handoverAccept: "D'accord, je reprends",
+    handoverDecline: "Plut\u00f4t pas",
+    handoverDone: (naam: string) => `${naam} g\u00e8re le groupe maintenant.`,
+    handoverDeclined: (naam: string) => `${naam} n'a pas repris la gestion.`,
+    leaveConfirmTitle: "Réglé, je pars",
+    leaveAskTitle: "Tu pars vraiment ?",
+    leaveAskBody: "Tu ne figureras plus dans les nouvelles tournées. Ce que tu as bu reste, et tu restes visible dans le groupe. Seul le gestionnaire peut te réintégrer.",
+    leaveAskYes: "Oui, je pars",
+    leftListTitle: "Parti·e·s",
+    bringBackBtn: "réintégrer",
+    leaveStayBtn: "Finalement je reste",
+    leaveMissingTitle: "Encore une chose avant de partir",
+    leaveMissingBody: (seq: number) => `La tournée ${seq} n'a pas encore de montant, et tu y as pris quelque chose.`,
+    leaveWaitingSent: (namen: string) => `Signal envoyé à ${namen}`,
+    leaveWaitingHint: "Dès que le montant est là, ton solde s'affiche ici.",
+    leaveResend: "Renvoyer le signal",
+    leaveBackToRounds: "← Retour aux tournées",
+    leaveResentNotice: "Signal renvoyé.",
+    leftBadge: "parti·e",
+    leftSettledLine: (v: string, naam: string) => `✓ déjà réglé · ${v} à ${naam}`,
+    adminLeaveBanner: (naam: string, seq: number) => `${naam} veut rentrer · attend la tournée ${seq}`,
+    adminLeaveBannerBody: "Indique le montant pour que cette personne puisse régler.",
+    fillAmountForLeaveBtn: (seq: number) => `Montant tournée ${seq}`,
     nothingWord: "ne prend rien",
     totalOf: (v: string) => `${v} au total`,
     fairSplitExplain: "Tu pr\u00e9f\u00e8res payer selon ce que chacun a bu ? Attribue ici les boissons et les payeurs.",
@@ -2353,6 +2429,11 @@ export default function PartyTest() {
   const [ndPrice, setNdPrice] = useState("")
   const [inviteCode, setInviteCode] = useState<string>("")
   const [ownerDevice, setOwnerDevice] = useState<string>("")
+  // Aan wie biedt de beheerder het beheer aan? Het id van een pláats, niet van een
+  // toestel: pas als die persoon aanvaardt, gaat owner_id naar háár toestel. Zo landt
+  // het beheer nooit bij iemand die zijn telefoon in zijn zak heeft.
+  const [handoverTo, setHandoverTo] = useState<string | null>(null)
+  const [handoverOpen, setHandoverOpen] = useState(false)
   const [booting, setBooting] = useState(true)   // eerste laadbeurt (code uit de URL)
   const [busy, setBusy] = useState(false)        // groep aanmaken / plaats claimen
   // Opgeslagen groepen: alle groepen waar dit toestel bij hoort (zelf gemaakt of via
@@ -2409,6 +2490,10 @@ export default function PartyTest() {
   // Mijn eigen plaats: die waarop dit toestel zit. Nodig zodra gasten hun eigen
   // drankjes aantikken (blok 3).
   const meId = people.find((p) => p.claimedBy === me.current)?.id ?? null
+  // Wie er nu nog is. Alles wat over het lópende of een nieuw rondje gaat — namenkiezer,
+  // wie-moet-nog-kiezen, de haler — rekent hiermee. De volledige `people` blijft in
+  // gebruik voor oude rondjes en de eindbalans, want een vertrokken gast dronk wél mee.
+  const nogAanwezig = people.filter((p) => !p.left)
   // Herkent "Rondje 2 augustus" en "Tournée 2 août": de vorm die de app zelf verzint.
   const isAutoNaam = (naam: string) => /^(QR-rondje|Rondje|Tournée(?:\s+QR)?)\s+\d{1,2}\s+\p{L}+(\s+\d+)?(\s+\(\d+\))?$/u.test(naam.trim())
 
@@ -2585,6 +2670,7 @@ export default function PartyTest() {
     if (editDraft.amount > 0.005 && (editDraft.usePot || betalers.length > 0)) {
       setOpenRounds((prev) => { const n = new Set(prev); n.delete(r.id); return n })
     }
+    if (editDraft.amount > 0.005 && r.leaveWaitFor) clearLeaveWait(r.id)
     cancelEditRound()
   }
   const [potIsCard, setPotIsCard] = useState(false)
@@ -3106,6 +3192,10 @@ export default function PartyTest() {
   const [rondjeMelding, setRondjeMelding] = useState<string | null>(null)
   // Welk rondje de gast aan het invullen is, met wat hij tot nu tikte.
   const [gastBedrag, setGastBedrag] = useState<{ id: string; tekst: string; pot: boolean } | null>(null)
+  // De alleen-lezen afrekening bij de gast: dicht/open, en het vertrektraject apart —
+  // dat overlapt met "afrekening bekijken" maar heeft zijn eigen scherm en knoppen.
+  const [guestSettleOpen, setGuestSettleOpen] = useState(false)
+  const [leaveStep, setLeaveStep] = useState<null | "confirm" | "waiting">(null)
   // Twee balken die boven de halerkaart verschijnen. Ze zeggen allebei iets dat je één
   // keer moet lezen, dus ze gaan vanzelf weg; het kruisje is er voor wie sneller is.
   const [starterBalk, setStarterBalk] = useState(false)
@@ -3293,7 +3383,7 @@ export default function PartyTest() {
   const voorWie = voorWieRaw && people.some((p) => p.id === voorWieRaw) ? voorWieRaw : meId
   const renderStandLijst = () => (
     <div style={{ marginTop: 9, display: "flex", flexDirection: "column", gap: 5 }}>
-      {people.map((pp) => {
+      {nogAanwezig.map((pp) => {
         const zijne = drinks.filter((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)
         const slaOver = openAnswers[pp.id] === "skip" && zijne.length === 0
         const klaar = zijne.length > 0 || slaOver
@@ -3425,7 +3515,7 @@ export default function PartyTest() {
         <><style>{`@keyframes rundoStartAdem{0%,100%{box-shadow:0 0 0 0 rgba(13,124,140,0.5)}50%{box-shadow:0 0 0 8px rgba(13,124,140,0)}}`}</style>
         <button onClick={() => setStartCheck(true)}
           style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "12px 10px", textAlign: "center", lineHeight: 1.3, fontFamily: "inherit", color: "#fff", background: MODUS_FAIR.knop, marginBottom: 11, animation: "rundoStartAdem 1.8s ease-in-out infinite" }}>
-          <span style={{ display: "block", fontSize: 18, fontWeight: 800 }}>{L.newRoundForN(people.length)}</span>
+          <span style={{ display: "block", fontSize: 18, fontWeight: 800 }}>{L.newRoundForN(nogAanwezig.length)}</span>
           <span style={{ display: "block", fontSize: 14, fontWeight: 500, color: "#d6f2f6", marginTop: 3 }}>📱 {L.theyPickOwn}</span>
         </button></>
       )
@@ -3434,15 +3524,15 @@ export default function PartyTest() {
       // Bevestigd betekent bevestigd: alleen wie op de knop tikte telt mee. Vroeger
       // telde deze regel ook wie enkel drankjes had aangetikt, waardoor de teller
       // opliep terwijl de rij eronder nog "bezig met kiezen" zei.
-      const klaar = people.filter((pp) => isKlaar(pp.id))
-      const allen = klaar.length >= people.length && people.length > 0
+      const klaar = nogAanwezig.filter((pp) => isKlaar(pp.id))
+      const allen = klaar.length >= nogAanwezig.length && nogAanwezig.length > 0
       return (
         <>{balken()}<div ref={halerKop} style={{ ...S.card, position: "sticky", top: 0, zIndex: 9, scrollMarginTop: 0, background: "#fff", border: `2px solid ${MODUS_FAIR.rand}`, boxShadow: `0 8px 20px -12px ${MODUS_FAIR.gloed}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 9 }}>
             <span style={{ flexShrink: 0, width: 38, height: 38, borderRadius: "50%", background: MODUS_FAIR.knop, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 21.5 }}>🍻</span>
             <span style={{ minWidth: 0 }}>
               <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.inRoundNow(roundNr)}</span>
-              <span style={{ display: "block", fontSize: 14, color: allen ? "#1f6b3a" : "#5a8f99", fontWeight: allen ? 800 : 400, marginTop: 1 }}>{allen ? `✓ ${L.allChose}` : L.confirmedOf(klaar.length, people.length)}</span>
+              <span style={{ display: "block", fontSize: 14, color: allen ? "#1f6b3a" : "#5a8f99", fontWeight: allen ? 800 : 400, marginTop: 1 }}>{allen ? `✓ ${L.allChose}` : L.confirmedOf(klaar.length, nogAanwezig.length)}</span>
             </span>
           </div>
           {/* Alles over dit rondje in één kader: wie klaar is, wat je moet halen, en de
@@ -3452,7 +3542,7 @@ export default function PartyTest() {
             <span style={{ fontSize: 14.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.04em" }}>{L.whoIsIn}</span>
             {/* Korte pil met het aantal wachtenden. De namen staan al in de pillenrij
                 eronder, en in het bevestigingsvenster erna — hier volstaat het cijfer. */}
-            {klaar.length < people.length && (
+            {klaar.length < nogAanwezig.length && (
               <button onClick={vraagHerinnering}
                 style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(240,165,0,0.16)", border: "1px solid rgba(232,168,18,0.55)", color: "#8a5e0f", fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit" }}>
                 🔔 {L.pokeShort}
@@ -3461,9 +3551,9 @@ export default function PartyTest() {
             )}
           </div>
           {/* De pillenrij staat er altijd: dit is de vraag die de haler het vaakst stelt. */}
-          {people.length > 0 && (
+          {nogAanwezig.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
-              {people.map((pp) => {
+              {nogAanwezig.map((pp) => {
                 const slaOver = openAnswers[pp.id] === "skip"
                 const ok = isKlaar(pp.id)
                 return (
@@ -3974,6 +4064,45 @@ export default function PartyTest() {
     removePerson(id)
   }
   const removeLastPerson = () => { const last = people[people.length - 1]; if (!last) return; removePerson(last.id) }
+  // Vertrokken ≠ verwijderd: de plaats blijft bestaan, met alles wat ze al dronk. Ze
+  // verdwijnt uit de namenkiezer voor nieuwe rondjes maar blijft in de lijst en op de
+  // eindbalans staan, gemarkeerd. Zo klopt de verdeling nog voor iedereen die blijft.
+  const markPersonLeft = (id: string) => {
+    setPeople((ps) => ps.map((x) => x.id === id ? { ...x, left: true } : x))
+    supabase.from("party_people").update({ left: true }).eq("id", id).then(({ error }) => {
+      if (error) { setNotice("Markeren als vertrokken mislukt: " + error.message); if (groupId) loadParty(groupId) }
+    })
+  }
+  // Terugzetten kan alleen de beheerder: iemand die per ongeluk op "ik ga weg" tikte
+  // hoort weer gewoon mee te tellen voor nieuwe rondjes.
+  const unmarkPersonLeft = (id: string) => {
+    setPeople((ps) => ps.map((x) => x.id === id ? { ...x, left: false } : x))
+    supabase.from("party_people").update({ left: false }).eq("id", id).then(({ error }) => {
+      if (error) { setNotice("Terugzetten mislukt: " + error.message); if (groupId) loadParty(groupId) }
+    })
+  }
+  // Beheer overdragen. De beheerder biedt aan (stap 1), de ontvanger aanvaardt op zijn
+  // eigen toestel (stap 2). Pas dan verhuist owner_id — anders zou een groep stuurloos
+  // achterblijven bij iemand die niet kijkt.
+  const offerHandover = (personId: string) => {
+    if (!groupId) return
+    setHandoverTo(personId)
+    supabase.from("party_groups").update({ handover_to: personId }).eq("id", groupId).then(({ error }) => {
+      if (error) { setNotice("Overdragen mislukt: " + error.message); setHandoverTo(null) }
+    })
+    setHandoverOpen(false)
+  }
+  const acceptHandover = async () => {
+    if (!groupId || !meId) return
+    const { error } = await supabase.from("party_groups").update({ owner_id: me.current, handover_to: null }).eq("id", groupId)
+    if (error) { setNotice("Overnemen mislukt: " + error.message); return }
+    setOwnerDevice(me.current); setHandoverTo(null)
+  }
+  const declineHandover = () => {
+    if (!groupId) return
+    setHandoverTo(null)
+    supabase.from("party_groups").update({ handover_to: null }).eq("id", groupId)
+  }
 
 
   // ── Laden & live houden ─────────────────────────────────────────────────────
@@ -3985,9 +4114,9 @@ export default function PartyTest() {
   const laatsteGeladenGid = useRef<string | null>(null)
   const loadParty = useCallback(async (gid: string) => {
     const [{ data: g }, { data: pp }, { data: rr }, { data: ii }, { data: pt }] = await Promise.all([
-      supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices,settle,ordering_open,last_active,fq").eq("id", gid).single(),
-      supabase.from("party_people").select("id,seat,name,claimed_by,self_joined,settle_with").eq("group_id", gid).order("seat"),
-      supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back,members,started_by,proposal,headcount").eq("group_id", gid).order("seq"),
+      supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices,settle,ordering_open,last_active,fq,handover_to").eq("id", gid).single(),
+      supabase.from("party_people").select("id,seat,name,claimed_by,self_joined,settle_with,left").eq("group_id", gid).order("seat"),
+      supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back,members,started_by,proposal,headcount,leave_wait_for").eq("group_id", gid).order("seq"),
       supabase.from("party_round_items").select("round_id,person_id,drink_key,qty").eq("group_id", gid),
       supabase.from("party_pot").select("id,seq,amounts,is_card,card_payers").eq("group_id", gid).order("seq"),
     ])
@@ -3997,6 +4126,7 @@ export default function PartyTest() {
       if (Date.now() > groepNaamBezig.current) setGroupName(g.name || "")
       setInviteCode(g.invite_code)
       setOwnerDevice(g.owner_id)
+      setHandoverTo((g.handover_to ?? null) as string | null)
       setPay("eur")   // coins komen later; wat er in de groep staat negeren we
       setCoinValue(Number(g.coin_value))
       setDepositOn(false)   // bekers komen later
@@ -4040,7 +4170,7 @@ export default function PartyTest() {
         named: lokaal ? lokaal.named : !!serverNaam,
         name: lokaal ? lokaal.name : (serverNaam || `Gast ${r.seat}`),
         claimedBy: r.claimed_by, selfJoined: !!r.self_joined,
-        settleWith: r.settle_with,
+        settleWith: r.settle_with, left: !!r.left,
       }
     }))
 
@@ -4065,6 +4195,7 @@ export default function PartyTest() {
       startedBy: (r.started_by ?? null) as string | null,
       proposal: ((r.proposal ?? {}) as Proposal),
       headcount: Number(r.headcount ?? 2),
+      leaveWaitFor: (r.leave_wait_for ?? null) as string | null,
     }))
 
     // Het OPEN rondje is de mand; de rest is historiek.
@@ -5726,6 +5857,18 @@ export default function PartyTest() {
     if (uitPot && bedrag > beschikbaar + 0.005) meldPot(L.potClamped(euro(beschikbaar)))
     setOpenRounds((prev) => { const n = new Set(prev); n.delete(r.id); return n })
     setGastBedrag(null)
+    if (r.leaveWaitFor) clearLeaveWait(r.id)
+  }
+  // Zet of wist het seintje "iemand wacht om te vertrekken" op een rondje. Zichtbaar bij
+  // zowel de haler als de beheerder zodra hun scherm ververst, via dezelfde realtime-lijn
+  // als de rest van het rondje.
+  const setLeaveWait = (roundId: string, personId: string) => {
+    setRounds((rs) => rs.map((rr) => rr.id === roundId ? { ...rr, leaveWaitFor: personId } : rr))
+    supabase.from("party_rounds").update({ leave_wait_for: personId }).eq("id", roundId)
+  }
+  const clearLeaveWait = (roundId: string) => {
+    setRounds((rs) => rs.map((rr) => rr.id === roundId ? { ...rr, leaveWaitFor: null } : rr))
+    supabase.from("party_rounds").update({ leave_wait_for: null }).eq("id", roundId)
   }
   const goFinal = () => {
     if (unfinishedRound) { setNotice(L.roundUnfinished(roundNr)); setActiveCat(catsPresent[0]); setView("order"); return }
@@ -6901,6 +7044,21 @@ export default function PartyTest() {
           </div>
         )
       })()}
+      {/* Krijg jij het beheer aangeboden? Dan gaat dit venster open op jouw toestel,
+          waar je ook zit in de app. Pas na "ik neem het over" verhuist owner_id. */}
+      {handoverTo && meId === handoverTo && !isAdmin && (
+        <div style={{ ...S.overlay, zIndex: 75 }}>
+          <div style={S.sheet}>
+            <div style={{ fontSize: 19.5, fontWeight: 800, color: "#1d2942", marginBottom: 4 }}>
+              {L.handoverOfferTitle(people.find((p) => p.claimedBy === ownerDevice)?.name || "?")}
+            </div>
+            <div style={{ fontSize: 15, color: "#4a5560", lineHeight: 1.5, marginBottom: 14 }}>{L.handoverOfferBody}</div>
+            <button style={{ ...S.btnP, marginBottom: 9 }} onClick={acceptHandover}>{L.handoverAccept}</button>
+            <button style={{ width: "100%", background: "none", border: "none", padding: "6px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 14.5, fontWeight: 700, color: "#6b7484" }}
+              onClick={declineHandover}>{L.handoverDecline}</button>
+          </div>
+        </div>
+      )}
       {confirmDlg && (
         <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setConfirmDlg(null)}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
@@ -7441,7 +7599,7 @@ export default function PartyTest() {
                     <ZakjeIcoon size={14} /> + {L.potWord}
                   </button>
                 )}
-                {people.map((pp) => (
+                {nogAanwezig.map((pp) => (
                   <button key={pp.id} onClick={() => setAanvulBetaler(pp.id)}
                     style={{ border: aanvulBetaler === pp.id ? "none" : "1px solid rgba(29,41,66,0.28)", background: aanvulBetaler === pp.id ? AAN : "#fff", color: aanvulBetaler === pp.id ? "#fff" : "#6b7484", borderRadius: 10, padding: "7px 12px", fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
                     {pp.id === meId ? `👑 ${L.youWord}` : pp.name}
@@ -8442,15 +8600,15 @@ export default function PartyTest() {
                 const isHost = !!ownerDevice && p.claimedBy === ownerDevice
                 return (
                   <div key={p.id} style={{ ...S.row, justifyContent: "space-between", padding: "8px 11px", borderRadius: 10,
-                    background: benIkHet ? "rgba(31,138,76,0.08)" : VLAK1,
-                    border: benIkHet ? "1px solid rgba(31,138,76,0.3)" : "1px solid rgba(29,41,66,0.1)" }}>
-                    <span style={{ fontSize: 17.5, fontWeight: benIkHet ? 800 : 700, color: p.named ? "#1d2942" : "#9aa3b2" }}>
+                    background: p.left ? "rgba(29,41,66,0.05)" : benIkHet ? "rgba(31,138,76,0.08)" : VLAK1,
+                    border: p.left ? "1px dashed rgba(29,41,66,0.22)" : benIkHet ? "1px solid rgba(31,138,76,0.3)" : "1px solid rgba(29,41,66,0.1)" }}>
+                    <span style={{ fontSize: 17.5, fontWeight: benIkHet && !p.left ? 800 : 700, color: p.left ? "#6b7484" : p.named ? "#1d2942" : "#9aa3b2" }}>
                       {p.name}
-                      {benIkHet && <span style={{ fontSize: 14.5, color: "#1f6b3a", fontWeight: 800 }}> · {L.youMark}</span>}
+                      {benIkHet && !p.left && <span style={{ fontSize: 14.5, color: "#1f6b3a", fontWeight: 800 }}> · {L.youMark}</span>}
                       {isHost && !benIkHet && <span style={{ fontSize: 14.5, color: "#8a5e0f", fontWeight: 800 }}> · {L.hostMark}</span>}
                     </span>
-                    <span style={{ fontSize: 14.5, color: aangemeld ? "#8a5e0f" : "#9aa3b2", fontWeight: 700 }}>
-                      {aangemeld ? L.scannedSelf : L.notScannedYet}
+                    <span style={{ fontSize: 14.5, color: p.left ? "#6b7484" : aangemeld ? "#8a5e0f" : "#9aa3b2", fontWeight: 700 }}>
+                      {p.left ? L.leftBadge : aangemeld ? L.scannedSelf : L.notScannedYet}
                     </span>
                   </div>
                 )
@@ -8560,6 +8718,13 @@ export default function PartyTest() {
                       {/* Haalde jij dit rondje en staat er nog geen bedrag op, dan zegt de
                           kaart dat zelf. Tikken klapt open en zet je bij het veld — niemand
                           hoeft te weten dat het onder "toon details" verstopt zat. */}
+                      {/* Wacht er iemand op dít bedrag om te kunnen vertrekken, dan staat dat
+                          erbij — anders is "vul in" gewoon huiswerk dat kan wachten. */}
+                      {ikHaalde && (r.amount || 0) <= 0.005 && !!r.leaveWaitFor && r.leaveWaitFor !== meId && (
+                        <div style={{ background: "rgba(224,138,0,0.16)", borderRadius: 9, padding: "8px 9px", marginTop: 8, fontSize: 12, color: "#8a5e0f", lineHeight: 1.4 }}>
+                          <b style={{ fontWeight: 800 }}>{L.adminLeaveBanner(people.find((p) => p.id === r.leaveWaitFor)?.name || "?", r.seq)}</b> {L.adminLeaveBannerBody}
+                        </div>
+                      )}
                       {ikHaalde && (r.amount || 0) <= 0.005 && !open && (
                         <button onClick={() => { setOpenRounds((prev) => { const n = new Set(prev); n.add(r.id); return n }); setGastBedrag({ id: r.id, tekst: "", pot: false }) }}
                           style={{ width: "100%", marginTop: 9, background: "#fff", border: "1.5px solid rgba(224,138,0,0.6)", color: "#a8720a", fontSize: 12.5, fontWeight: 800, padding: 9, borderRadius: 9, cursor: "pointer", fontFamily: "inherit" }}>{L.youFetchedFillIn}</button>
@@ -8567,16 +8732,155 @@ export default function PartyTest() {
                     </div>
                   )
                 })}
+                {/* Alleen-lezen afrekening voor de gast: dezelfde settlement-berekening als
+                    de beheerder, zonder de knoppen om iets te wijzigen. Zolang een rondje
+                    geen bedrag heeft, blijven de cijfers voorlopig — met ± ervoor. */}
+                {meId && (() => {
+                  const zonder = rondjesZonderBedrag()
+                  const mijnGroep = settleGroups.find((g) => g.leden.some((x) => x.id === meId))
+                  const mijnTx = settlement.tx.filter((t) => t.from === mijnGroep?.label || t.to === mijnGroep?.label)
+                  const krijgt = mijnTx.filter((t) => t.to === mijnGroep?.label)
+                  const betaalt = mijnTx.filter((t) => t.to !== mijnGroep?.label)
+                  return (
+                    <div style={{ ...S.card, padding: 11, marginTop: 4 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+                        onClick={() => setGuestSettleOpen((v) => !v)}>
+                        <span style={{ fontSize: 15.5, fontWeight: 800, color: "#1d2942" }}>{L.guestSettlementTitle}</span>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: MODUS_FAIR.rand }}>{guestSettleOpen ? "▴" : "▾"}</span>
+                      </div>
+                      {guestSettleOpen && (
+                        <div style={{ marginTop: 9 }}>
+                          {zonder.length > 0 && (
+                            <div style={{ background: "rgba(224,138,0,0.12)", border: "1px solid rgba(224,138,0,0.5)", borderRadius: 10, padding: "8px 10px", marginBottom: 9, fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.4 }}>
+                              {L.guestSettlementIncomplete(zonder.length)}
+                            </div>
+                          )}
+                          <div style={{ border: "1px solid rgba(29,41,66,0.12)", borderRadius: 10, padding: "8px 9px" }}>
+                            {people.filter((p) => !p.left).map((p) => {
+                              const g = settleGroups.find((gg) => gg.leden.some((x) => x.id === p.id))
+                              const tx = settlement.tx.filter((t) => t.from === g?.label || t.to === g?.label)
+                              const kr = tx.filter((t) => t.to === g?.label)
+                              const bt = tx.filter((t) => t.to !== g?.label)
+                              const pre = zonder.length > 0 ? "± " : ""
+                              return (
+                                <div key={p.id} style={{ padding: "6px 0", borderBottom: "1px solid rgba(29,41,66,0.06)" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                                    <span style={{ fontWeight: p.id === meId ? 800 : 600 }}>{p.name}{p.id === meId ? ` · ${L.youWord}` : ""}</span>
+                                  </div>
+                                  {kr.length > 0 && <div style={{ fontSize: 12, color: "#1f6b3a", fontWeight: 700, marginTop: 1 }}>{kr.map((t) => `${L.getsFromGuest(pre + show(t.amount), t.from)}`).join(" · ")}</div>}
+                                  {bt.length > 0 && <div style={{ fontSize: 12, color: "#b35309", fontWeight: 700, marginTop: 1 }}>{bt.map((t) => `${L.paysToGuest(pre + show(t.amount), t.to)}`).join(" · ")}</div>}
+                                  {kr.length === 0 && bt.length === 0 && <div style={{ fontSize: 12, color: "#9aa3b2", marginTop: 1 }}>{L.allSquareGuest}</div>}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+
                 {/* Zelfde afweging als bij de beheerder: de tabbalk staat er al. Alleen
                     terwijl er een rondje loopt is deze knop een echte snelweg terug. */}
                 {!!openRoundId && (
                   <button onClick={() => setGuestTab("order")}
                     style={{ ...S.btn, width: "100%", padding: "11px 0", borderRadius: 12, fontSize: 15, fontWeight: 600, color: "#1d2942" }}>{L.backToDrinks}</button>
                 )}
+
+                {/* Vertrekken: alleen zinvol als je zelf een plaats hebt en nog niet als
+                    vertrokken staat. Lichte tekstknop — geen hoofdactie op dit scherm. */}
+                {meId && !people.find((p) => p.id === meId)?.left && (
+                  <button onClick={() => setLeaveStep("confirm")}
+                    style={{ width: "100%", background: "none", border: "none", padding: "10px 0 2px", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, color: "#6b7484" }}>
+                    {L.imLeaving}
+                  </button>
+                )}
               </>
             )}
           </>
         )}
+
+        {/* Vertrektraject: eerst checken of elk rondje waar je iets nam een bedrag heeft.
+            Ontbreekt er één, dan een seintje naar de haler én de beheerder en een
+            wachtscherm — geen route om zonder bedrag toch af te ronden. */}
+        {leaveStep && meId && (() => {
+          const mijnOpen = rounds.find((r) => (r.amount || 0) <= 0.005 && drinks.some((d) => (r.orders[d.id]?.[meId] ?? 0) > 0))
+          if (leaveStep === "confirm" && mijnOpen) {
+            const halers = [mijnOpen.startedBy, ownerDevice ? people.find((p) => p.claimedBy === ownerDevice)?.id : null]
+              .filter((v, i, arr): v is string => !!v && arr.indexOf(v) === i)
+            const namen = halers.map((pid) => people.find((p) => p.id === pid)?.name).filter(Boolean).join(" en ")
+            return (
+              <div style={{ ...S.overlay }} onClick={() => setLeaveStep(null)}>
+                <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 4 }}>{L.leaveMissingTitle}</div>
+                  <div style={{ fontSize: 14.5, color: "#4a5560", lineHeight: 1.45, marginBottom: 12 }}>{L.leaveMissingBody(mijnOpen.seq)}</div>
+                  <button onClick={() => { setLeaveWait(mijnOpen.id, meId); setLeaveStep("waiting") }}
+                    style={{ ...S.btnP, marginBottom: 8 }}>{L.leaveMissingTitle}</button>
+                  <button onClick={() => setLeaveStep(null)} style={{ ...S.btn, width: "100%" }}>{L.leaveBackToRounds}</button>
+                  <div style={{ fontSize: 11.5, color: "#9aa3b2", marginTop: 8, textAlign: "center" }}>{namen && `${L.adminLeaveBanner(namen, mijnOpen.seq)}`}</div>
+                </div>
+              </div>
+            )
+          }
+          if (leaveStep === "waiting" || (leaveStep === "confirm" && mijnOpen)) {
+            const wacht = rounds.find((r) => r.leaveWaitFor === meId)
+            if (wacht) {
+              const halers = [wacht.startedBy, ownerDevice ? people.find((p) => p.claimedBy === ownerDevice)?.id : null]
+                .filter((v, i, arr): v is string => !!v && arr.indexOf(v) === i)
+              const namen = halers.map((pid) => people.find((p) => p.id === pid)?.name).filter(Boolean).join(" en ") || "de beheerder"
+              return (
+                <div style={{ ...S.overlay }} onClick={() => setLeaveStep(null)}>
+                  <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 4 }}>{L.leaveMissingTitle}</div>
+                    <div style={{ fontSize: 14.5, color: "#4a5560", lineHeight: 1.45, marginBottom: 12 }}>{L.leaveMissingBody(wacht.seq)}</div>
+                    <div style={{ background: "#f4fbfc", border: "1.5px solid rgba(13,124,140,0.3)", borderRadius: 12, padding: 12, textAlign: "center", marginBottom: 10 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "#0a4f5b" }}>{L.leaveWaitingSent(namen)}</div>
+                      <div style={{ fontSize: 12, color: "#6b7484", marginTop: 4 }}>{L.leaveWaitingHint}</div>
+                    </div>
+                    <button onClick={() => { setLeaveWait(wacht.id, meId); setNotice(L.leaveResentNotice) }}
+                      style={{ ...S.btn, width: "100%", marginBottom: 8 }}>{L.leaveResend}</button>
+                    <button onClick={() => setLeaveStep(null)} style={{ width: "100%", background: "none", border: "none", padding: "6px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, color: "#0a4f5b" }}>{L.leaveBackToRounds}</button>
+                  </div>
+                </div>
+              )
+            }
+          }
+          // Alles compleet: de eigen stand tonen met de knop om echt af te ronden.
+          const mijnGroep = settleGroups.find((g) => g.leden.some((x) => x.id === meId))
+          const mijnTx = settlement.tx.filter((t) => t.from === mijnGroep?.label || t.to === mijnGroep?.label)
+          const krijgt = mijnTx.filter((t) => t.to === mijnGroep?.label)
+          const betaalt = mijnTx.filter((t) => t.to !== mijnGroep?.label)
+          return (
+            <div style={{ ...S.overlay }} onClick={() => setLeaveStep(null)}>
+              <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+                <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 10 }}>{L.guestSettlementTitle}</div>
+                <div style={{ background: "#f4fbfc", border: "1.5px solid rgba(13,124,140,0.3)", borderRadius: 12, padding: 14, textAlign: "center", marginBottom: 12 }}>
+                  {betaalt.length > 0 ? (
+                    <>
+                      <div style={{ fontSize: 13, color: "#6b7484" }}>{L.paysToGuest("", "").split(" ")[0]}</div>
+                      <div style={{ fontSize: 26, fontWeight: 800, color: "#0a4f5b", margin: "2px 0" }}>{show(betaalt.reduce((a, t) => a + t.amount, 0))}</div>
+                      <div style={{ fontSize: 12.5, color: "#b35309", fontWeight: 700 }}>{betaalt.map((t) => `→ ${t.to}`).join(" · ")}</div>
+                    </>
+                  ) : krijgt.length > 0 ? (
+                    <>
+                      <div style={{ fontSize: 26, fontWeight: 800, color: "#1f8a4c", margin: "2px 0" }}>{show(krijgt.reduce((a, t) => a + t.amount, 0))}</div>
+                      <div style={{ fontSize: 12.5, color: "#1f6b3a", fontWeight: 700 }}>{krijgt.map((t) => `← ${t.from}`).join(" · ")}</div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 15, color: "#6b7484", fontWeight: 700 }}>{L.allSquareGuest}</div>
+                  )}
+                </div>
+                <button onClick={() => setConfirmDlg({
+                    msg: `${L.leaveAskTitle}\n\n${L.leaveAskBody}`,
+                    yes: L.leaveAskYes, no: L.leaveStayBtn,
+                    onYes: () => { setConfirmDlg(null); markPersonLeft(meId); setLeaveStep(null) },
+                  })}
+                  style={{ ...S.btnP, marginBottom: 8 }}>{L.leaveConfirmTitle}</button>
+                <button onClick={() => setLeaveStep(null)} style={{ width: "100%", background: "none", border: "none", padding: "6px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, color: "#0a4f5b" }}>{L.leaveStayBtn}</button>
+              </div>
+            </div>
+          )
+        })()}
 
         {guestTab === "order" && (orderingOpen || rounds.length > 0) && (
         <>
@@ -8589,7 +8893,7 @@ export default function PartyTest() {
           <div ref={gastRondjeKop} style={{ position: "sticky", top: 0, zIndex: 8, paddingTop: 2, marginBottom: 10, scrollMarginTop: 0, background: MODUS_FAIR.bladzij }}>
             {!fromQuick && renderRunnerBar(true, ikBenKlaar, ikNamNiets ? "" : mijnKort)}
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: -4, marginBottom: 8 }}>
-              {people.map((pp) => {
+              {nogAanwezig.map((pp) => {
                 const ok = isKlaar(pp.id) || drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)
                 const niets = openAnswers[pp.id] === "skip"
                 return (
@@ -9526,6 +9830,40 @@ export default function PartyTest() {
                 <span style={{ display: "block", fontSize: 18, fontWeight: 600 }}>📋 {settle ? L.settleBtn : L.quickSettleTitle}</span>
                 <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: koel ? "#a8c8cd" : "#c9d2de" }}>{L.fairSubtitle}</span>
               </button>
+            )}
+            {/* Beheer overdragen: alleen in QR-modus, want alleen daar heeft iemand anders
+                een toestel dat het over kán nemen. */}
+            {isAdmin && settle && !fromQuick && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(29,41,66,0.12)" }}>
+                {handoverTo ? (
+                  <div style={{ background: "rgba(224,138,0,0.12)", border: "1px solid rgba(224,138,0,0.5)", borderRadius: 11, padding: "10px 12px", fontSize: 14, color: "#8a5e0f", lineHeight: 1.45 }}>
+                    {L.handoverTo(people.find((p) => p.id === handoverTo)?.name || "?")} — ⏳
+                    <button onClick={declineHandover} style={{ display: "block", marginTop: 7, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 800, color: "#a8720a", textDecoration: "underline" }}>{L.cancel}</button>
+                  </div>
+                ) : !handoverOpen ? (
+                  <button style={{ ...S.btn, width: "100%", fontSize: 16 }} onClick={() => setHandoverOpen(true)}>👑 {L.handoverTitle}</button>
+                ) : (
+                  <div style={{ background: "#fff", border: "1.5px solid rgba(29,41,66,0.18)", borderRadius: 12, padding: 12 }}>
+                    <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 2 }}>{L.handoverTitle}</div>
+                    <div style={{ fontSize: 13.5, color: "#6b7484", lineHeight: 1.45, marginBottom: 10 }}>{L.handoverSub}</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {people.filter((p) => !p.left && p.claimedBy !== ownerDevice).map((p) => {
+                        const kan = !!p.claimedBy
+                        return (
+                          <button key={p.id} disabled={!kan} onClick={() => kan && offerHandover(p.id)}
+                            style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", cursor: kan ? "pointer" : "default", fontFamily: "inherit", textAlign: "left",
+                              background: kan ? "#fff" : "#f7f7f7", border: kan ? "1px solid rgba(29,41,66,0.2)" : "1px dashed rgba(29,41,66,0.2)",
+                              borderRadius: 9, padding: "9px 11px", fontSize: 14.5, fontWeight: kan ? 800 : 600, color: kan ? "#1d2942" : "#9aa3b2" }}>
+                            <span>{p.name}</span>
+                            {!kan && <span style={{ fontSize: 12.5, fontWeight: 700 }}>{L.handoverNotScanned}</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <button onClick={() => setHandoverOpen(false)} style={{ width: "100%", marginTop: 9, background: "none", border: "none", padding: "5px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, color: "#6b7484" }}>{L.cancel}</button>
+                  </div>
+                )}
+              </div>
             )}
             </>
           )
@@ -10645,6 +10983,35 @@ export default function PartyTest() {
           {potTag}
         </div>
         )}
+        {/* Wie weg is, met een weg terug. Zonder deze regel zou een verkeerde tik op
+            "ik ga weg" alleen in de databank recht te zetten zijn. */}
+        {isAdmin && people.some((p) => p.left) && (
+          <div style={{ background: "rgba(29,41,66,0.05)", border: "1px dashed rgba(29,41,66,0.22)", borderRadius: 11, padding: "9px 11px", marginBottom: 10 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.03em", marginBottom: 5 }}>{L.leftListTitle.toUpperCase()}</div>
+            {people.filter((p) => p.left).map((p) => (
+              <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0" }}>
+                <span style={{ fontSize: 14.5, color: "#4a5560", fontWeight: 700 }}>{p.name}</span>
+                <button onClick={() => unmarkPersonLeft(p.id)}
+                  style={{ background: "none", border: "none", padding: "2px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: MODUS_FAIR.rand, textDecoration: "underline" }}>{L.bringBackBtn}</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Iemand wil vertrekken en wacht op een bedrag. Zichtbaar bij zowel de
+            beheerder als de haler zelf, ongeacht welk scherm ze open hebben staan. */}
+        {isAdmin && rounds.filter((r) => r.leaveWaitFor).map((r) => {
+          const naam = people.find((p) => p.id === r.leaveWaitFor)?.name || "?"
+          return (
+            <div key={r.id} style={{ background: "rgba(224,138,0,0.14)", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#8a5e0f" }}>{L.adminLeaveBanner(naam, r.seq)}</div>
+              <div style={{ fontSize: 13, color: "#6b4a00", lineHeight: 1.4, margin: "3px 0 9px" }}>{L.adminLeaveBannerBody}</div>
+              <button onClick={() => { const idx = rounds.indexOf(r); setAllRoundsOpen(false); setOpenRound(idx); startEditRound(r) }}
+                style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 9, padding: 10, fontSize: 13.5, fontWeight: 800, color: "#fff", background: "#a8720a", fontFamily: "inherit" }}>
+                {L.fillAmountForLeaveBtn(r.seq)}
+              </button>
+            </div>
+          )
+        })}
         {/* Zolang er nog geen rondje is, is dit het QR-scherm: alleen delen en de pot.
             Een leeg rondjesoverzicht of een "start je eerste rondje"-blok hoort hier niet;
             dat komt vanzelf zodra de eerste bestelling er is. */}
@@ -11942,7 +12309,9 @@ export default function PartyTest() {
             <div key={p.id} style={{ borderBottom: "1px solid rgba(29,41,66,0.06)" }}>
               <div style={{ ...S.row, alignItems: "flex-start", justifyContent: "space-between", padding: "8px 0", cursor: "pointer" }} onClick={() => setOpenFair((o) => ({ ...o, [p.id]: !open }))}>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 16, fontWeight: 700 }}>{open ? "▾" : "▸"} {p.name}</span>
+                  <span style={{ display: "block", fontSize: 16, fontWeight: 700, color: p.left ? "#6b7484" : undefined }}>{open ? "▾" : "▸"} {p.name}
+                    {p.left && <span style={{ fontSize: 13, fontWeight: 800, color: "#6b7484" }}> · {L.leftBadge}</span>}
+                  </span>
                   {/* Een zin in plaats van pillen: zo staat er meteen bij van wie of aan wie,
                       en blijft de rijhoogte voorspelbaar ook bij lange namen. */}
                   {(() => {
