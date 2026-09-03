@@ -7261,10 +7261,18 @@ export default function PartyTest() {
         return (
           <div style={{ position: "absolute", inset: 0, zIndex: 40, background: MODUS_FAIR.bladzij, minHeight: "100dvh" }}>
             <div style={{ maxWidth: 560, margin: "0 auto", padding: "calc(env(safe-area-inset-top, 0px) + 14px) 16px 40px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 12 }}>
-                <button onClick={() => setGuestSettlePage(false)}
-                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", fontSize: 20, color: MODUS_FAIR.rand, fontWeight: 800 }}>←</button>
-                <span style={{ fontSize: 21, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.guestSettlementTitle}</span>
+              {/* De tabbalk blijft staan: van hieruit spring je met één tik naar de
+                  drankjes of de rondjes. Geen tabblad staat actief — je bent op een
+                  pagina die er geen is, en Rondjes laten oplichten zou dat verbergen. */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                {([["group", L.tabGroup], ["order", L.tabOrder], ["me", L.tabMe]] as const).map(([t, tekst]) => (
+                  <button key={t} onClick={() => { setGuestSettlePage(false); setGuestTab(t) }}
+                    style={{ ...S.btn, flex: 1, minWidth: 0, padding: "13px 4px", fontSize: 17.5, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden",
+                      background: "#fff", borderColor: MODUS_FAIR.lijnZacht, borderWidth: 1, color: "#0a4f5b" }}>{tekst}</button>
+                ))}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 9, paddingBottom: 9, borderBottom: `1.5px solid ${MODUS_FAIR.lijnZacht}`, marginBottom: 12 }}>
+                <span style={{ fontSize: 20, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.guestSettlementTitle}</span>
                 {groepAf && <span style={{ marginLeft: "auto", background: "rgba(31,138,76,0.12)", borderRadius: 999, padding: "3px 10px", fontSize: 13, color: "#1f8a4c", fontWeight: 800 }}>{L.finalWord}</span>}
               </div>
 
@@ -7340,6 +7348,9 @@ export default function PartyTest() {
                   <span style={{ width: 64, textAlign: "right", fontSize: 14, fontWeight: 800, color: "#6b7484", flexShrink: 0 }}>{show(grandTotal)}</span>
                 </div>
               </div>
+              {/* Onderaan een echte knop: na een lange tabel wil je niet terugscrollen. */}
+              <button onClick={() => { setGuestSettlePage(false); setGuestTab("me") }}
+                style={{ ...S.btn, width: "100%", marginTop: 13, padding: "12px 0", fontSize: 16 }}>{L.leaveBackToRounds}</button>
             </div>
           </div>
         )
@@ -8122,7 +8133,7 @@ export default function PartyTest() {
   )
   // De drie tabbladen van de beheerder. Ze wijzen naar bestaande schermen, dus de
   // navigatie eronder verandert niet — alleen de vorm is nu gelijk aan die van de gast.
-  const AdminTabs = () => {
+  const AdminTabs = ({ geenActief = false }: { geenActief?: boolean } = {}) => {
     // Alleen in de echte QR-modus: een snel- of uitgebreid-sessie die via Fair Split
     // afrekende, krijgt settle=true maar blijft een noteer-sessie — daar horen geen
     // tabbladen met "Mijn stand".
@@ -8131,8 +8142,8 @@ export default function PartyTest() {
     // beheerder op rounds.length > 0 en zag hij op het instelscherm én tijdens het
     // eerste rondje een andere navigatie dan iedereen aan tafel.
     if (!tabsHier) return null
-    const hier: "order" | "me" | "group" =
-      view === "settings" ? "group" : (view === "hub" || view === "roundsOverview" || view === "confirmed") ? "me" : "order"
+    const hier: "order" | "me" | "group" | null = geenActief ? null
+      : view === "settings" ? "group" : (view === "hub" || view === "roundsOverview" || view === "confirmed") ? "me" : "order"
     const naar = (t: "order" | "me" | "group") => {
       if (t === "order") { setActiveCat(catsPresent[0]); setView("order"); return }
       if (t === "group") { setSettingsBackTo(view === "order" ? "order" : "hub"); setView("settings"); return }
@@ -12419,6 +12430,13 @@ export default function PartyTest() {
       <Header />
       {showPot && renderPotModal()}
         {renderDialogs()}
+      {/* Zelfde kop als bij de gast: de tabbalk brengt je met één tik weg, de titel zegt
+          waar je bent. Geen tabblad staat actief — de eindbalans is er geen. */}
+      {settle && !fromQuick && <AdminTabs geenActief />}
+      <div style={{ display: "flex", alignItems: "center", gap: 9, paddingBottom: 9, borderBottom: `1.5px solid ${koel ? MODUS_FAIR.lijnZacht : "rgba(29,41,66,0.15)"}`, marginBottom: 12 }}>
+        <span style={{ fontSize: 20, fontWeight: 800, color: koel ? MODUS_FAIR.tekst : "#1d2942" }}>{L.toFinal}</span>
+        {groepAf && <span style={{ marginLeft: "auto", background: "rgba(31,138,76,0.12)", borderRadius: 999, padding: "3px 10px", fontSize: 13, color: "#1f8a4c", fontWeight: 800 }}>{L.finalWord}</span>}
+      </div>
       {pay === "coin" && (
         <div style={{ ...S.row, justifyContent: "flex-end", gap: 6, marginBottom: 10 }}>
             <div style={{ ...S.seg(displayUnit === "eur"), flex: "none", padding: "6px 12px" }} onClick={() => setDisplayUnit("eur")}>€</div>
@@ -12636,6 +12654,12 @@ export default function PartyTest() {
       {!!groupId && (!settle || isAdmin) && (
         <button onClick={() => { if (isAutoNaam(groupName)) { setSluitNaamVeld(""); setSluitNaam(true); return } void sluitAvondAf() }}
           style={{ width: "100%", marginTop: 10, padding: "12px 6px", borderRadius: 11, fontSize: 16, fontWeight: 800, cursor: "pointer", background: "#fff", color: "#3b486a", border: "1.5px dashed rgba(90,100,140,0.55)" }}>{L.closeEveBtn}</button>
+      )}
+      {/* Terug naar de rondjes: na een lange tabel wil je niet omhoog scrollen naar de
+          tabbalk. Alleen in QR-modus — de andere modi hebben hun eigen slot hierboven. */}
+      {settle && !fromQuick && (
+        <button onClick={() => { setOverviewBackTo("hub"); setView("hub") }}
+          style={{ ...S.btn, width: "100%", marginTop: 11, padding: "12px 0", fontSize: 16 }}>{L.leaveBackToRounds}</button>
       )}
 
     </div></div>
