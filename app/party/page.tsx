@@ -6047,7 +6047,7 @@ export default function PartyTest() {
   const closeRound = () => {
     const st = paymentState()
     if (!st.valid) { setNotice(st.reason || L.confirmPaymentFirst); return }
-    if (!paidConfirmed) { setNotice(L.confirmPaymentFirst); return } setOpenRound(rounds.length - 1); setView("hub") }
+    if (!paidConfirmed) { setNotice(L.confirmPaymentFirst); return } setOpenRound(null); setView("hub") }
   const cancelOrder = () => setConfirmDlg({
     msg: L.cancelRoundConfirm(roundNr),
     yes: L.yesCancel,
@@ -8828,7 +8828,7 @@ export default function PartyTest() {
               <div style={{ ...S.card, fontSize: 17, color: "#9aa3b2", textAlign: "center", padding: "18px 0" }}>{L.noRoundClosed}</div>
             ) : (
               <>
-                {[...rounds].reverse().map((r) => {
+                {rounds.map((r) => {
                   const mijne = drinks.filter((d) => (r.orders[d.id]?.[meId] ?? 0) > 0)
                   const alles = drinks.map((d) => ({ d, n: drinkTotalRound(r, d.id) })).filter((x) => x.n > 0)
                   const open = openRounds.has(r.id)
@@ -10788,29 +10788,6 @@ export default function PartyTest() {
         {showPot && renderPotModal()}
         {renderDialogs()}
         <AdminTabs />
-        {settle && meId && rounds.length > 0 && (
-          <div style={S.card}>
-            <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 9, fontSize: 19 }}>{L.whatYouDrank}</h3>
-            {rounds.map((r, i) => {
-              const mijne = drinks.map((d) => ({ d, n: r.orders[d.id]?.[meId] ?? 0 })).filter((x) => x.n > 0)
-              if (mijne.length === 0) return null
-              return (
-                <div key={r.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "7px 0", borderBottom: "1px solid rgba(29,41,66,0.1)" }}>
-                  <span style={{ fontSize: 16, color: "#1d2942", minWidth: 0 }}>{L.roundWord} {i + 1} · {mijne.map((x) => `${x.n}× ${x.d.name}`).join(", ")}</span>
-                  <span style={{ flexShrink: 0, fontSize: 16, color: "#6b7484" }}>{show(personRoundShare(r, meId))}</span>
-                </div>
-              )
-            })}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "10px 0 4px" }}>
-              <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1d2942" }}>{L.togetherWord}</span>
-              <span style={{ fontSize: 19, fontWeight: 800, color: MODUS_FAIR.tekst }}>{show(consumption(meId))}</span>
-            </div>
-            <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "rgba(240,165,0,0.12)", borderRadius: 10, padding: "10px 11px", marginTop: 6 }}>
-              <span style={{ flexShrink: 0 }}>⏳</span>
-              <span style={{ fontSize: 14.5, color: "#8a5e0f", lineHeight: 1.45 }}>{L.provisionalStand}</span>
-            </div>
-          </div>
-        )}
         {/* Tijdens de omschakeling van snel naar Fair Split is de hub enkel het
             toewijsscherm. Rondjesoverzicht, nieuwe rondjes en afrekenen horen daar
             niet: die leiden je weg uit een traject van drie stappen. */}
@@ -11135,7 +11112,7 @@ export default function PartyTest() {
           </div>
         </div>
 
-        {rounds.map((r, idx) => ({ r, idx })).reverse().map(({ r, idx }) => {
+        {rounds.map((r, idx) => ({ r, idx })).map(({ r, idx }) => {
           if (!roundIsPaid(r)) return null
           const items = drinks.reduce((s, d) => s + drinkTotalRound(r, d.id), 0)
           const open = allRoundsOpen || openRound === idx
@@ -11195,6 +11172,7 @@ export default function PartyTest() {
 
                   {/* Wie betaalde staat vast in beeld: dat hoort bij het rondje zelf en
                       niet achter een tussenmenu. */}
+                  {(() => { const kaal = (r.amount || 0) <= 0.005 || (!((r.potPart || 0) > 0.005) && !Object.values(r.payers || {}).some((a) => (Number(a) || 0) > 0.005)); if (!kaal) return null; return (
                   <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(29,41,66,0.12)" }}>
                     <div style={{ ...S.row, alignItems: "center", marginBottom: 8 }}>
                       <span style={{ minWidth: 0, fontSize: 14.5, color: "#4a5567", fontWeight: 700 }}>{L.whoPutMoney} <span style={{ color: "#8b93a3", fontWeight: 600 }}>{L.multiplePossible}</span></span>
@@ -11243,6 +11221,7 @@ export default function PartyTest() {
                         )
                       })()}
                   </div>
+                  ) })()}
 
                   {/* Geen tussenmenu meer: toewijzen doet wat het zegt, en aanpassen opent
                       het rondje meteen in de bewerkstand van het rondjesoverzicht. */}
@@ -11317,9 +11296,6 @@ export default function PartyTest() {
               </div>
             )
           })()}
-          {!unfinishedRound && paidCount > 0 && activeProposal && (
-            <div style={{ marginTop: 10 }}>{renderProposalHost()}</div>
-          )}
         </>}
 
       </div></div>
