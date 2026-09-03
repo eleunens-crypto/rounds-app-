@@ -1362,6 +1362,8 @@ const T = {
     leaveAskYes: "Ja, ik ga",
     leftListTitle: "Vertrokken",
     stillHereTitle: "Wie is er nog",
+    leftSectionAsk: "Ging er iemand weg?",
+    leftSectionSome: (n: number) => `${n} vertrokken`,
     markLeftBtn: "ging weg",
     leftSelfSettled: "✓ zelf afgerekend",
     leftNotSettled: "nog niet afgerekend · staat op de eindbalans",
@@ -2223,6 +2225,8 @@ const T = {
     leaveAskYes: "Oui, je pars",
     leftListTitle: "Parti·e·s",
     stillHereTitle: "Qui est encore là",
+    leftSectionAsk: "Quelqu'un est parti ?",
+    leftSectionSome: (n: number) => `${n} parti·e·s`,
     markLeftBtn: "est parti·e",
     leftSelfSettled: "✓ a réglé lui-même",
     leftNotSettled: "pas encore réglé · figure au décompte",
@@ -2460,6 +2464,9 @@ export default function PartyTest() {
   // het beheer nooit bij iemand die zijn telefoon in zijn zak heeft.
   const [handoverTo, setHandoverTo] = useState<string | null>(null)
   const [handoverOpen, setHandoverOpen] = useState(false)
+  // De sectie "ging er iemand weg?" staat dicht: het gebeurt hooguit één keer op een avond
+  // en hoort niet boven de rondjes te staan die je de hele tijd nodig hebt.
+  const [wegSectie, setWegSectie] = useState(false)
   const [booting, setBooting] = useState(true)   // eerste laadbeurt (code uit de URL)
   const [busy, setBusy] = useState(false)        // groep aanmaken / plaats claimen
   // Opgeslagen groepen: alle groepen waar dit toestel bij hoort (zelf gemaakt of via
@@ -11079,39 +11086,6 @@ export default function PartyTest() {
           {potTag}
         </div>
         )}
-        {/* Wie weg is, met een weg terug — en wie er nog is, voor als iemand vertrok
-            zonder zelf te tikken. Dat laatste rekent niets af: dat staat er expliciet bij,
-            anders lijkt het geregeld terwijl het saldo nog openstaat. */}
-        {isAdmin && settle && !fromQuick && people.length > 1 && (
-          <div style={{ background: "rgba(29,41,66,0.05)", border: "1px dashed rgba(29,41,66,0.22)", borderRadius: 11, padding: "9px 11px", marginBottom: 10 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.03em", marginBottom: 5 }}>{L.stillHereTitle.toUpperCase()}</div>
-            {people.filter((p) => !p.left && p.id !== meId).map((p) => (
-              <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0" }}>
-                <span style={{ fontSize: 14.5, color: "#1d2942", fontWeight: 700 }}>{p.name}</span>
-                <button onClick={() => setConfirmDlg({ msg: L.markLeftAsk(p.name), yes: L.markLeftBtn, no: L.cancel,
-                    onYes: () => { setConfirmDlg(null); markPersonLeft(p.id, false) } })}
-                  style={{ background: "none", border: "none", padding: "2px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "#8a6560", textDecoration: "underline" }}>{L.markLeftBtn}</button>
-              </div>
-            ))}
-            {people.some((p) => p.left) && (
-              <div style={{ borderTop: "1px solid rgba(29,41,66,0.12)", marginTop: 8, paddingTop: 7 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.03em", marginBottom: 5 }}>{L.leftListTitle.toUpperCase()}</div>
-                {people.filter((p) => p.left).map((p) => (
-                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "3px 0", gap: 10 }}>
-                    <span style={{ minWidth: 0 }}>
-                      <span style={{ display: "block", fontSize: 14.5, color: "#4a5560", fontWeight: 700 }}>{p.name}</span>
-                      <span style={{ display: "block", fontSize: 12, color: p.leftSettled ? "#1f6b3a" : "#b35309", fontWeight: 700, marginTop: 1 }}>
-                        {p.leftSettled ? L.leftSelfSettled : L.leftNotSettled}
-                      </span>
-                    </span>
-                    <button onClick={() => unmarkPersonLeft(p.id)}
-                      style={{ flexShrink: 0, background: "none", border: "none", padding: "2px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: MODUS_FAIR.rand, textDecoration: "underline" }}>{L.bringBackBtn}</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
         {/* Iemand wil vertrekken en wacht op een bedrag. Zichtbaar bij zowel de
             beheerder als de haler zelf, ongeacht welk scherm ze open hebben staan. */}
         {isAdmin && rounds.filter((r) => r.leaveWaitFor).map((r) => {
@@ -11297,6 +11271,52 @@ export default function PartyTest() {
               {L.imLeaving}
             </button>
           )}
+          {/* Vertrok er iemand zonder zelf te tikken? Dicht tot je hem nodig hebt. Staat
+              er al iemand op vertrokken, dan zegt de kop dat meteen. */}
+          {isAdmin && settle && !fromQuick && people.length > 1 && (() => {
+            const weg = people.filter((p) => p.left)
+            return (
+              <div style={{ marginTop: 12 }}>
+                <button onClick={() => setWegSectie((v) => !v)}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", background: "none", border: "none", padding: "6px 2px", cursor: "pointer", fontFamily: "inherit" }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 800, color: weg.length > 0 ? "#8a6560" : "#6b7484" }}>
+                    {weg.length > 0 ? `${L.leftSectionSome(weg.length)} · ${weg.map((p) => p.name).join(", ")}` : L.leftSectionAsk}
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: "#8b93a3" }}>{wegSectie ? "▴" : "▾"}</span>
+                </button>
+                {wegSectie && (
+                  <div style={{ background: "rgba(29,41,66,0.05)", border: "1px dashed rgba(29,41,66,0.22)", borderRadius: 11, padding: "9px 11px", marginTop: 4 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.03em", marginBottom: 5 }}>{L.stillHereTitle.toUpperCase()}</div>
+                    {people.filter((p) => !p.left && p.id !== meId).map((p) => (
+                      <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0" }}>
+                        <span style={{ fontSize: 14.5, color: "#1d2942", fontWeight: 700 }}>{p.name}</span>
+                        <button onClick={() => setConfirmDlg({ msg: L.markLeftAsk(p.name), yes: L.markLeftBtn, no: L.cancel,
+                            onYes: () => { setConfirmDlg(null); markPersonLeft(p.id, false) } })}
+                          style={{ background: "none", border: "none", padding: "2px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "#8a6560", textDecoration: "underline" }}>{L.markLeftBtn}</button>
+                      </div>
+                    ))}
+                    {weg.length > 0 && (
+                      <div style={{ borderTop: "1px solid rgba(29,41,66,0.12)", marginTop: 8, paddingTop: 7 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.03em", marginBottom: 5 }}>{L.leftListTitle.toUpperCase()}</div>
+                        {weg.map((p) => (
+                          <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "3px 0", gap: 10 }}>
+                            <span style={{ minWidth: 0 }}>
+                              <span style={{ display: "block", fontSize: 14.5, color: "#4a5560", fontWeight: 700 }}>{p.name}</span>
+                              <span style={{ display: "block", fontSize: 12, color: p.leftSettled ? "#1f6b3a" : "#b35309", fontWeight: 700, marginTop: 1 }}>
+                                {p.leftSettled ? L.leftSelfSettled : L.leftNotSettled}
+                              </span>
+                            </span>
+                            <button onClick={() => unmarkPersonLeft(p.id)}
+                              style={{ flexShrink: 0, background: "none", border: "none", padding: "2px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: MODUS_FAIR.rand, textDecoration: "underline" }}>{L.bringBackBtn}</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
           {!unfinishedRound && paidCount > 0 && activeProposal && (
             <div style={{ marginTop: 10 }}>{renderProposalHost()}</div>
           )}
