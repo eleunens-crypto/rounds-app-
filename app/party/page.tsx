@@ -8366,7 +8366,7 @@ export default function PartyTest() {
             duimbereik — zie de zwevende balk onder de drankenlijst. */}
         {zweefRondje ? (
           <div ref={gastRondjeKop} style={{ position: "sticky", top: 0, zIndex: 8, paddingTop: 2, marginBottom: 10, scrollMarginTop: 0, background: MODUS_FAIR.bladzij }}>
-            {renderRunnerBar(true, ikBenKlaar, ikNamNiets ? "" : mijnKort)}
+            {!fromQuick && renderRunnerBar(true, ikBenKlaar, ikNamNiets ? "" : mijnKort)}
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: -4, marginBottom: 8 }}>
               {people.map((pp) => {
                 const ok = isKlaar(pp.id) || drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)
@@ -8381,7 +8381,7 @@ export default function PartyTest() {
               })}
             </div>
           </div>
-        ) : settle && renderRunnerBar()}
+        ) : settle && !fromQuick && renderRunnerBar()}
 
         {dichtRonde && (
           <div style={{ display: "flex", flexDirection: "column", gap: 9, background: "#f4fbf6", border: "1.5px solid rgba(31,138,76,0.35)", borderRadius: 15, padding: 11, marginBottom: 11 }}>
@@ -9344,7 +9344,7 @@ export default function PartyTest() {
                   <span style={{ flexShrink: 0, background: "rgba(240,165,0,0.14)", border: "1.5px solid rgba(224,138,0,0.5)", color: "#a8720a", borderRadius: 999, padding: "5px 13px", fontSize: 14.5, fontWeight: 800, whiteSpace: "nowrap" }}>{L.drinksCount(roundItems)}</span>
                 )}
         </div>
-        {settle && renderRunnerBar(false, adminKlaar, adminKort)}
+        {settle && !fromQuick && renderRunnerBar(false, adminKlaar, adminKort)}
         {(settle || opNaam) && renderWalk()}
 
         {!settle && (
