@@ -6994,11 +6994,15 @@ export default function PartyTest() {
             <span style={{ display: "block", fontSize: 13, color: "#6b7484", marginTop: 2, lineHeight: 1.4 }}>{uitleg}</span>
           </button>
         )
+        // De betaalpagina is view "confirmed": daar staat het bedragveld, de rij met wie
+        // betaalde en de bevestigknop. Eerder stond hier "hub", en dan kwam je op een
+        // scherm zonder bedragveld terecht.
         const naarBetaling = (via: "self" | "pot") => {
           setPayVia(via)
-          if (via === "pot") { setPayPot(true); setPayPersons([]) }
-          else { setPayPot(false); if (startedBy) { setPayPersons([startedBy]); autoSplit([startedBy], false) } }
-          setView("hub")
+          if (via === "pot") { setPayPot(true); setPayPersons([]); autoSplit([], true) }
+          else { setPayPot(false); const wie = startedBy ? [startedBy] : []; setPayPersons(wie); autoSplit(wie, false) }
+          setPaidConfirmed(false)
+          setView("confirmed")
         }
         return (
         <div style={{ ...S.overlay, zIndex: 81 }} onClick={() => setBetaalVraag(false)}>
