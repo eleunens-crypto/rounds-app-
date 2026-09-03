@@ -305,7 +305,7 @@ function CheersIcon({ size = 18, color = "#1d2942" }: { size?: number; color?: s
 // waardoor de bestaande isGuestDefault-logica gewoon blijft werken.
 // `left`: deze plaats is vertrokken maar blijft bestaan — ze had drankjes en telt nog
 // mee in de eindbalans. Anders dan removePerson, dat een plaats echt wist.
-type Person = { id: string; name: string; seat: number; claimedBy?: string | null; selfJoined?: boolean; named?: boolean; settleWith?: string | null; left?: boolean }
+type Person = { id: string; name: string; seat: number; claimedBy?: string | null; selfJoined?: boolean; named?: boolean; settleWith?: string | null; left?: boolean; leftSettled?: boolean }
 
 // Dit toestel. Bepaalt of je de admin bent en welke plaats van jou is.
 function deviceId(): string {
@@ -1361,6 +1361,19 @@ const T = {
     leaveAskBody: "Je komt niet meer voor in nieuwe rondjes. Wat je al dronk blijft staan, en je blijft zichtbaar in de groep. Terugkomen kan alleen de beheerder regelen.",
     leaveAskYes: "Ja, ik ga",
     leftListTitle: "Vertrokken",
+    stillHereTitle: "Wie is er nog",
+    markLeftBtn: "ging weg",
+    leftSelfSettled: "✓ zelf afgerekend",
+    leftNotSettled: "nog niet afgerekend · staat op de eindbalans",
+    markLeftAsk: (naam: string) => `${naam} als vertrokken zetten? Die persoon komt niet meer voor in nieuwe rondjes, maar rekende zelf niets af — het saldo blijft op de eindbalans staan.`,
+    adminLeaveWarnTitle: "Opgelet — jij beheert deze groep",
+    adminLeaveWarnBody: "Zonder beheerder kan niemand nog bedragen invullen of afrekenen. Geef het beheer eerst door.",
+    handoverPickHead: "GEEF HET DOOR AAN",
+    handoverWaitTitle: (naam: string) => `Wachten op ${naam}`,
+    handoverWaitBody: (naam: string) => `${naam} moet op zijn eigen toestel bevestigen. Tot dan blijf jij de beheerder — ga nog niet weg.`,
+    handoverPickOther: "Iemand anders kiezen",
+    handoverWithdraw: "Aanbod intrekken",
+    handoverAccepted: (naam: string) => `✓ ${naam} beheert de groep nu`,
     bringBackBtn: "terugzetten",
     leaveStayBtn: "Toch blijven",
     leaveMissingTitle: "Nog één ding voor je gaat",
@@ -2209,6 +2222,19 @@ const T = {
     leaveAskBody: "Tu ne figureras plus dans les nouvelles tournées. Ce que tu as bu reste, et tu restes visible dans le groupe. Seul le gestionnaire peut te réintégrer.",
     leaveAskYes: "Oui, je pars",
     leftListTitle: "Parti·e·s",
+    stillHereTitle: "Qui est encore là",
+    markLeftBtn: "est parti·e",
+    leftSelfSettled: "✓ a réglé lui-même",
+    leftNotSettled: "pas encore réglé · figure au décompte",
+    markLeftAsk: (naam: string) => `Marquer ${naam} comme parti·e ? Cette personne ne figurera plus dans les nouvelles tournées, mais n'a rien réglé — le solde reste au décompte.`,
+    adminLeaveWarnTitle: "Attention — c'est toi qui gères ce groupe",
+    adminLeaveWarnBody: "Sans gestionnaire, plus personne ne peut saisir de montants ni faire le décompte. Transmets d'abord la gestion.",
+    handoverPickHead: "TRANSMETTRE À",
+    handoverWaitTitle: (naam: string) => `En attente de ${naam}`,
+    handoverWaitBody: (naam: string) => `${naam} doit confirmer sur son propre appareil. D'ici là, tu restes le gestionnaire — ne pars pas encore.`,
+    handoverPickOther: "Choisir quelqu'un d'autre",
+    handoverWithdraw: "Retirer la proposition",
+    handoverAccepted: (naam: string) => `✓ ${naam} gère le groupe maintenant`,
     bringBackBtn: "réintégrer",
     leaveStayBtn: "Finalement je reste",
     leaveMissingTitle: "Encore une chose avant de partir",
@@ -3195,7 +3221,7 @@ export default function PartyTest() {
   // De alleen-lezen afrekening bij de gast: dicht/open, en het vertrektraject apart —
   // dat overlapt met "afrekening bekijken" maar heeft zijn eigen scherm en knoppen.
   const [guestSettleOpen, setGuestSettleOpen] = useState(false)
-  const [leaveStep, setLeaveStep] = useState<null | "confirm" | "waiting">(null)
+  const [leaveStep, setLeaveStep] = useState<null | "confirm" | "waiting" | "ask">(null)
   // Twee balken die boven de halerkaart verschijnen. Ze zeggen allebei iets dat je één
   // keer moet lezen, dus ze gaan vanzelf weg; het kruisje is er voor wie sneller is.
   const [starterBalk, setStarterBalk] = useState(false)
@@ -4067,17 +4093,19 @@ export default function PartyTest() {
   // Vertrokken ≠ verwijderd: de plaats blijft bestaan, met alles wat ze al dronk. Ze
   // verdwijnt uit de namenkiezer voor nieuwe rondjes maar blijft in de lijst en op de
   // eindbalans staan, gemarkeerd. Zo klopt de verdeling nog voor iedereen die blijft.
-  const markPersonLeft = (id: string) => {
-    setPeople((ps) => ps.map((x) => x.id === id ? { ...x, left: true } : x))
-    supabase.from("party_people").update({ left: true }).eq("id", id).then(({ error }) => {
+  // afgerekend = de persoon tikte zelf "afgerekend, ik ga". Zet de beheerder iemand weg
+  // omdat die het vergat, dan is dat níét zo: zijn saldo staat nog open op de eindbalans.
+  const markPersonLeft = (id: string, afgerekend = true) => {
+    setPeople((ps) => ps.map((x) => x.id === id ? { ...x, left: true, leftSettled: afgerekend } : x))
+    supabase.from("party_people").update({ left: true, left_settled: afgerekend }).eq("id", id).then(({ error }) => {
       if (error) { setNotice("Markeren als vertrokken mislukt: " + error.message); if (groupId) loadParty(groupId) }
     })
   }
   // Terugzetten kan alleen de beheerder: iemand die per ongeluk op "ik ga weg" tikte
   // hoort weer gewoon mee te tellen voor nieuwe rondjes.
   const unmarkPersonLeft = (id: string) => {
-    setPeople((ps) => ps.map((x) => x.id === id ? { ...x, left: false } : x))
-    supabase.from("party_people").update({ left: false }).eq("id", id).then(({ error }) => {
+    setPeople((ps) => ps.map((x) => x.id === id ? { ...x, left: false, leftSettled: false } : x))
+    supabase.from("party_people").update({ left: false, left_settled: false }).eq("id", id).then(({ error }) => {
       if (error) { setNotice("Terugzetten mislukt: " + error.message); if (groupId) loadParty(groupId) }
     })
   }
@@ -4092,6 +4120,16 @@ export default function PartyTest() {
     })
     setHandoverOpen(false)
   }
+  // Zag je jezelf net nog als beheerder en ben je het niet meer? Dan heeft je opvolger
+  // aanvaard. Eén melding, zodat je niet hoeft te raden of het gelukt is.
+  const wasAdmin = useRef(false)
+  useEffect(() => {
+    if (wasAdmin.current && !isAdmin && ownerDevice) {
+      const naam = people.find((p) => p.claimedBy === ownerDevice)?.name
+      if (naam) setNotice(L.handoverAccepted(naam))
+    }
+    wasAdmin.current = isAdmin
+  }, [isAdmin, ownerDevice]) // eslint-disable-line
   const acceptHandover = async () => {
     if (!groupId || !meId) return
     const { error } = await supabase.from("party_groups").update({ owner_id: me.current, handover_to: null }).eq("id", groupId)
@@ -4115,7 +4153,7 @@ export default function PartyTest() {
   const loadParty = useCallback(async (gid: string) => {
     const [{ data: g }, { data: pp }, { data: rr }, { data: ii }, { data: pt }] = await Promise.all([
       supabase.from("party_groups").select("id,name,invite_code,owner_id,pay,coin_value,deposit_on,deposit_value,deposit_unit,pot_on,pot_is_card,finalized,custom_drinks,coin_prices,settle,ordering_open,last_active,fq,handover_to").eq("id", gid).single(),
-      supabase.from("party_people").select("id,seat,name,claimed_by,self_joined,settle_with,left").eq("group_id", gid).order("seat"),
+      supabase.from("party_people").select("id,seat,name,claimed_by,self_joined,settle_with,left,left_settled").eq("group_id", gid).order("seat"),
       supabase.from("party_rounds").select("id,seq,status,amount,pot_part,payers,gave_back,members,started_by,proposal,headcount,leave_wait_for").eq("group_id", gid).order("seq"),
       supabase.from("party_round_items").select("round_id,person_id,drink_key,qty").eq("group_id", gid),
       supabase.from("party_pot").select("id,seq,amounts,is_card,card_payers").eq("group_id", gid).order("seq"),
@@ -4170,7 +4208,7 @@ export default function PartyTest() {
         named: lokaal ? lokaal.named : !!serverNaam,
         name: lokaal ? lokaal.name : (serverNaam || `Gast ${r.seat}`),
         claimedBy: r.claimed_by, selfJoined: !!r.self_joined,
-        settleWith: r.settle_with, left: !!r.left,
+        settleWith: r.settle_with, left: !!r.left, leftSettled: !!r.left_settled,
       }
     }))
 
@@ -7044,6 +7082,141 @@ export default function PartyTest() {
           </div>
         )
       })()}
+      {leaveStep && meId && (() => {
+        // De beheerder komt hier niet verder zonder opvolger: zonder hem kan niemand nog
+        // een bedrag invullen of afrekenen. Waarschuwing en keuze in één scherm — anders
+        // tik je twee keer voor dezelfde beslissing.
+        if (isAdmin) {
+          if (handoverTo) {
+            const naam = people.find((p) => p.id === handoverTo)?.name || "?"
+            return (
+              <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setLeaveStep(null)}>
+                <div style={{ ...S.sheet, border: "1.5px solid rgba(224,138,0,0.6)", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ fontSize: 26, marginBottom: 4 }}>⏳</div>
+                  <div style={{ fontSize: 18.5, fontWeight: 800, color: "#8a5e0f" }}>{L.handoverWaitTitle(naam)}</div>
+                  <div style={{ fontSize: 14.5, color: "#4a5560", lineHeight: 1.5, margin: "6px 0 14px" }}>{L.handoverWaitBody(naam)}</div>
+                  <button onClick={declineHandover} style={{ ...S.btn, width: "100%", marginBottom: 8 }}>{L.handoverPickOther}</button>
+                  <button onClick={() => { declineHandover(); setLeaveStep(null) }}
+                    style={{ width: "100%", background: "none", border: "none", padding: "6px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 800, color: "#a8720a", textDecoration: "underline" }}>{L.handoverWithdraw}</button>
+                </div>
+              </div>
+            )
+          }
+          return (
+            <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setLeaveStep(null)}>
+              <div style={{ ...S.sheet, border: "1.5px solid rgba(224,138,0,0.6)" }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ fontSize: 18.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 4 }}>{L.adminLeaveWarnTitle}</div>
+                <div style={{ fontSize: 14.5, color: "#4a5560", lineHeight: 1.5, marginBottom: 13 }}>{L.adminLeaveWarnBody}</div>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.03em", marginBottom: 6 }}>{L.handoverPickHead}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {people.filter((p) => !p.left && p.id !== meId).map((p) => {
+                    const kan = !!p.claimedBy
+                    return (
+                      <button key={p.id} disabled={!kan} onClick={() => kan && offerHandover(p.id)}
+                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", cursor: kan ? "pointer" : "default", fontFamily: "inherit", textAlign: "left",
+                          background: kan ? "#fff" : "#f7f7f7", border: kan ? "1px solid rgba(29,41,66,0.2)" : "1px dashed rgba(29,41,66,0.2)",
+                          borderRadius: 10, padding: "11px 12px", fontSize: 15.5, fontWeight: kan ? 800 : 600, color: kan ? "#1d2942" : "#9aa3b2" }}>
+                        <span>{p.name}</span>
+                        {!kan && <span style={{ fontSize: 13, fontWeight: 700 }}>{L.handoverNotScanned}</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+                <button onClick={() => setLeaveStep(null)} style={{ ...S.btn, width: "100%", marginTop: 12 }}>{L.leaveStayBtn}</button>
+              </div>
+            </div>
+          )
+        }
+        const mijnOpen = rounds.find((r) => (r.amount || 0) <= 0.005 && drinks.some((d) => (r.orders[d.id]?.[meId] ?? 0) > 0))
+        if (leaveStep === "confirm" && mijnOpen) {
+          const halers = [mijnOpen.startedBy, ownerDevice ? people.find((p) => p.claimedBy === ownerDevice)?.id : null]
+            .filter((v, i, arr): v is string => !!v && arr.indexOf(v) === i)
+          const namen = halers.map((pid) => people.find((p) => p.id === pid)?.name).filter(Boolean).join(" en ")
+          return (
+            <div style={{ ...S.overlay }} onClick={() => setLeaveStep(null)}>
+              <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+                <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 4 }}>{L.leaveMissingTitle}</div>
+                <div style={{ fontSize: 14.5, color: "#4a5560", lineHeight: 1.45, marginBottom: 12 }}>{L.leaveMissingBody(mijnOpen.seq)}</div>
+                <button onClick={() => { setLeaveWait(mijnOpen.id, meId); setLeaveStep("waiting") }}
+                  style={{ ...S.btnP, marginBottom: 8 }}>{L.leaveMissingTitle}</button>
+                <button onClick={() => setLeaveStep(null)} style={{ ...S.btn, width: "100%" }}>{L.leaveBackToRounds}</button>
+                <div style={{ fontSize: 11.5, color: "#9aa3b2", marginTop: 8, textAlign: "center" }}>{namen && `${L.adminLeaveBanner(namen, mijnOpen.seq)}`}</div>
+              </div>
+            </div>
+          )
+        }
+        if (leaveStep === "waiting" || (leaveStep === "confirm" && mijnOpen)) {
+          const wacht = rounds.find((r) => r.leaveWaitFor === meId)
+          if (wacht) {
+            const halers = [wacht.startedBy, ownerDevice ? people.find((p) => p.claimedBy === ownerDevice)?.id : null]
+              .filter((v, i, arr): v is string => !!v && arr.indexOf(v) === i)
+            const namen = halers.map((pid) => people.find((p) => p.id === pid)?.name).filter(Boolean).join(" en ") || "de beheerder"
+            return (
+              <div style={{ ...S.overlay }} onClick={() => setLeaveStep(null)}>
+                <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 4 }}>{L.leaveMissingTitle}</div>
+                  <div style={{ fontSize: 14.5, color: "#4a5560", lineHeight: 1.45, marginBottom: 12 }}>{L.leaveMissingBody(wacht.seq)}</div>
+                  <div style={{ background: "#f4fbfc", border: "1.5px solid rgba(13,124,140,0.3)", borderRadius: 12, padding: 12, textAlign: "center", marginBottom: 10 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#0a4f5b" }}>{L.leaveWaitingSent(namen)}</div>
+                    <div style={{ fontSize: 12, color: "#6b7484", marginTop: 4 }}>{L.leaveWaitingHint}</div>
+                  </div>
+                  <button onClick={() => { setLeaveWait(wacht.id, meId); setNotice(L.leaveResentNotice) }}
+                    style={{ ...S.btn, width: "100%", marginBottom: 8 }}>{L.leaveResend}</button>
+                  <button onClick={() => setLeaveStep(null)} style={{ width: "100%", background: "none", border: "none", padding: "6px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, color: "#0a4f5b" }}>{L.leaveBackToRounds}</button>
+                </div>
+              </div>
+            )
+          }
+        }
+        // Laatste stap: zeker weten? Blijven staat bovenaan en gevuld — dat is de
+        // veilige uitkomst wanneer iemand mistikt.
+        if (leaveStep === "ask") {
+          return (
+            <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setLeaveStep(null)}>
+              <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+                <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 4 }}>{L.leaveAskTitle}</div>
+                <div style={{ fontSize: 15, color: "#4a5560", lineHeight: 1.5, marginBottom: 14 }}>{L.leaveAskBody}</div>
+                <button onClick={() => setLeaveStep(null)} style={{ ...S.btnP, marginBottom: 9 }}>{L.leaveStayBtn}</button>
+                <button onClick={() => { markPersonLeft(meId); setLeaveStep(null) }}
+                  style={{ width: "100%", background: "#fff", border: "1.5px solid rgba(192,85,74,0.55)", color: "#b0402f", borderRadius: 12, padding: "12px 8px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                  {L.leaveAskYes}
+                </button>
+              </div>
+            </div>
+          )
+        }
+        // Alles compleet: de eigen stand tonen met de knop om echt af te ronden.
+        const mijnGroep = settleGroups.find((g) => g.leden.some((x) => x.id === meId))
+        const mijnTx = settlement.tx.filter((t) => t.from === mijnGroep?.label || t.to === mijnGroep?.label)
+        const krijgt = mijnTx.filter((t) => t.to === mijnGroep?.label)
+        const betaalt = mijnTx.filter((t) => t.to !== mijnGroep?.label)
+        return (
+          <div style={{ ...S.overlay }} onClick={() => setLeaveStep(null)}>
+            <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+              <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 10 }}>{L.guestSettlementTitle}</div>
+              <div style={{ background: "#f4fbfc", border: "1.5px solid rgba(13,124,140,0.3)", borderRadius: 12, padding: 14, textAlign: "center", marginBottom: 12 }}>
+                {betaalt.length > 0 ? (
+                  <>
+                    <div style={{ fontSize: 13, color: "#6b7484" }}>{L.paysToGuest("", "").split(" ")[0]}</div>
+                    <div style={{ fontSize: 26, fontWeight: 800, color: "#0a4f5b", margin: "2px 0" }}>{show(betaalt.reduce((a, t) => a + t.amount, 0))}</div>
+                    <div style={{ fontSize: 12.5, color: "#b35309", fontWeight: 700 }}>{betaalt.map((t) => `→ ${t.to}`).join(" · ")}</div>
+                  </>
+                ) : krijgt.length > 0 ? (
+                  <>
+                    <div style={{ fontSize: 26, fontWeight: 800, color: "#1f8a4c", margin: "2px 0" }}>{show(krijgt.reduce((a, t) => a + t.amount, 0))}</div>
+                    <div style={{ fontSize: 12.5, color: "#1f6b3a", fontWeight: 700 }}>{krijgt.map((t) => `← ${t.from}`).join(" · ")}</div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: 15, color: "#6b7484", fontWeight: 700 }}>{L.allSquareGuest}</div>
+                )}
+              </div>
+              <button onClick={() => setLeaveStep("ask")}
+                style={{ ...S.btnP, marginBottom: 8 }}>{L.leaveConfirmTitle}</button>
+              <button onClick={() => setLeaveStep(null)} style={{ ...S.btn, width: "100%" }}>{L.leaveStayBtn}</button>
+            </div>
+          </div>
+        )
+      })()}
       {/* Krijg jij het beheer aangeboden? Dan gaat dit venster open op jouw toestel,
           waar je ook zit in de app. Pas na "ik neem het over" verhuist owner_id. */}
       {handoverTo && meId === handoverTo && !isAdmin && (
@@ -8788,10 +8961,11 @@ export default function PartyTest() {
                 )}
 
                 {/* Vertrekken: alleen zinvol als je zelf een plaats hebt en nog niet als
-                    vertrokken staat. Lichte tekstknop — geen hoofdactie op dit scherm. */}
+                    vertrokken staat. Links en smaller dan de rest, rood omrand maar niet
+                    gevuld — zichtbaar zonder de hoofdactie te verdringen. */}
                 {meId && !people.find((p) => p.id === meId)?.left && (
                   <button onClick={() => setLeaveStep("confirm")}
-                    style={{ width: "100%", background: "none", border: "none", padding: "10px 0 2px", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, color: "#6b7484" }}>
+                    style={{ display: "block", marginTop: 9, background: "#fff", border: "1px solid rgba(29,41,66,0.18)", color: "#8a6560", borderRadius: 9, padding: "7px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                     {L.imLeaving}
                   </button>
                 )}
@@ -8803,84 +8977,6 @@ export default function PartyTest() {
         {/* Vertrektraject: eerst checken of elk rondje waar je iets nam een bedrag heeft.
             Ontbreekt er één, dan een seintje naar de haler én de beheerder en een
             wachtscherm — geen route om zonder bedrag toch af te ronden. */}
-        {leaveStep && meId && (() => {
-          const mijnOpen = rounds.find((r) => (r.amount || 0) <= 0.005 && drinks.some((d) => (r.orders[d.id]?.[meId] ?? 0) > 0))
-          if (leaveStep === "confirm" && mijnOpen) {
-            const halers = [mijnOpen.startedBy, ownerDevice ? people.find((p) => p.claimedBy === ownerDevice)?.id : null]
-              .filter((v, i, arr): v is string => !!v && arr.indexOf(v) === i)
-            const namen = halers.map((pid) => people.find((p) => p.id === pid)?.name).filter(Boolean).join(" en ")
-            return (
-              <div style={{ ...S.overlay }} onClick={() => setLeaveStep(null)}>
-                <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-                  <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 4 }}>{L.leaveMissingTitle}</div>
-                  <div style={{ fontSize: 14.5, color: "#4a5560", lineHeight: 1.45, marginBottom: 12 }}>{L.leaveMissingBody(mijnOpen.seq)}</div>
-                  <button onClick={() => { setLeaveWait(mijnOpen.id, meId); setLeaveStep("waiting") }}
-                    style={{ ...S.btnP, marginBottom: 8 }}>{L.leaveMissingTitle}</button>
-                  <button onClick={() => setLeaveStep(null)} style={{ ...S.btn, width: "100%" }}>{L.leaveBackToRounds}</button>
-                  <div style={{ fontSize: 11.5, color: "#9aa3b2", marginTop: 8, textAlign: "center" }}>{namen && `${L.adminLeaveBanner(namen, mijnOpen.seq)}`}</div>
-                </div>
-              </div>
-            )
-          }
-          if (leaveStep === "waiting" || (leaveStep === "confirm" && mijnOpen)) {
-            const wacht = rounds.find((r) => r.leaveWaitFor === meId)
-            if (wacht) {
-              const halers = [wacht.startedBy, ownerDevice ? people.find((p) => p.claimedBy === ownerDevice)?.id : null]
-                .filter((v, i, arr): v is string => !!v && arr.indexOf(v) === i)
-              const namen = halers.map((pid) => people.find((p) => p.id === pid)?.name).filter(Boolean).join(" en ") || "de beheerder"
-              return (
-                <div style={{ ...S.overlay }} onClick={() => setLeaveStep(null)}>
-                  <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-                    <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 4 }}>{L.leaveMissingTitle}</div>
-                    <div style={{ fontSize: 14.5, color: "#4a5560", lineHeight: 1.45, marginBottom: 12 }}>{L.leaveMissingBody(wacht.seq)}</div>
-                    <div style={{ background: "#f4fbfc", border: "1.5px solid rgba(13,124,140,0.3)", borderRadius: 12, padding: 12, textAlign: "center", marginBottom: 10 }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: "#0a4f5b" }}>{L.leaveWaitingSent(namen)}</div>
-                      <div style={{ fontSize: 12, color: "#6b7484", marginTop: 4 }}>{L.leaveWaitingHint}</div>
-                    </div>
-                    <button onClick={() => { setLeaveWait(wacht.id, meId); setNotice(L.leaveResentNotice) }}
-                      style={{ ...S.btn, width: "100%", marginBottom: 8 }}>{L.leaveResend}</button>
-                    <button onClick={() => setLeaveStep(null)} style={{ width: "100%", background: "none", border: "none", padding: "6px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, color: "#0a4f5b" }}>{L.leaveBackToRounds}</button>
-                  </div>
-                </div>
-              )
-            }
-          }
-          // Alles compleet: de eigen stand tonen met de knop om echt af te ronden.
-          const mijnGroep = settleGroups.find((g) => g.leden.some((x) => x.id === meId))
-          const mijnTx = settlement.tx.filter((t) => t.from === mijnGroep?.label || t.to === mijnGroep?.label)
-          const krijgt = mijnTx.filter((t) => t.to === mijnGroep?.label)
-          const betaalt = mijnTx.filter((t) => t.to !== mijnGroep?.label)
-          return (
-            <div style={{ ...S.overlay }} onClick={() => setLeaveStep(null)}>
-              <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
-                <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 10 }}>{L.guestSettlementTitle}</div>
-                <div style={{ background: "#f4fbfc", border: "1.5px solid rgba(13,124,140,0.3)", borderRadius: 12, padding: 14, textAlign: "center", marginBottom: 12 }}>
-                  {betaalt.length > 0 ? (
-                    <>
-                      <div style={{ fontSize: 13, color: "#6b7484" }}>{L.paysToGuest("", "").split(" ")[0]}</div>
-                      <div style={{ fontSize: 26, fontWeight: 800, color: "#0a4f5b", margin: "2px 0" }}>{show(betaalt.reduce((a, t) => a + t.amount, 0))}</div>
-                      <div style={{ fontSize: 12.5, color: "#b35309", fontWeight: 700 }}>{betaalt.map((t) => `→ ${t.to}`).join(" · ")}</div>
-                    </>
-                  ) : krijgt.length > 0 ? (
-                    <>
-                      <div style={{ fontSize: 26, fontWeight: 800, color: "#1f8a4c", margin: "2px 0" }}>{show(krijgt.reduce((a, t) => a + t.amount, 0))}</div>
-                      <div style={{ fontSize: 12.5, color: "#1f6b3a", fontWeight: 700 }}>{krijgt.map((t) => `← ${t.from}`).join(" · ")}</div>
-                    </>
-                  ) : (
-                    <div style={{ fontSize: 15, color: "#6b7484", fontWeight: 700 }}>{L.allSquareGuest}</div>
-                  )}
-                </div>
-                <button onClick={() => setConfirmDlg({
-                    msg: `${L.leaveAskTitle}\n\n${L.leaveAskBody}`,
-                    yes: L.leaveAskYes, no: L.leaveStayBtn,
-                    onYes: () => { setConfirmDlg(null); markPersonLeft(meId); setLeaveStep(null) },
-                  })}
-                  style={{ ...S.btnP, marginBottom: 8 }}>{L.leaveConfirmTitle}</button>
-                <button onClick={() => setLeaveStep(null)} style={{ width: "100%", background: "none", border: "none", padding: "6px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, color: "#0a4f5b" }}>{L.leaveStayBtn}</button>
-              </div>
-            </div>
-          )
-        })()}
 
         {guestTab === "order" && (orderingOpen || rounds.length > 0) && (
         <>
@@ -10983,18 +11079,37 @@ export default function PartyTest() {
           {potTag}
         </div>
         )}
-        {/* Wie weg is, met een weg terug. Zonder deze regel zou een verkeerde tik op
-            "ik ga weg" alleen in de databank recht te zetten zijn. */}
-        {isAdmin && people.some((p) => p.left) && (
+        {/* Wie weg is, met een weg terug — en wie er nog is, voor als iemand vertrok
+            zonder zelf te tikken. Dat laatste rekent niets af: dat staat er expliciet bij,
+            anders lijkt het geregeld terwijl het saldo nog openstaat. */}
+        {isAdmin && settle && !fromQuick && people.length > 1 && (
           <div style={{ background: "rgba(29,41,66,0.05)", border: "1px dashed rgba(29,41,66,0.22)", borderRadius: 11, padding: "9px 11px", marginBottom: 10 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.03em", marginBottom: 5 }}>{L.leftListTitle.toUpperCase()}</div>
-            {people.filter((p) => p.left).map((p) => (
+            <div style={{ fontSize: 12.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.03em", marginBottom: 5 }}>{L.stillHereTitle.toUpperCase()}</div>
+            {people.filter((p) => !p.left && p.id !== meId).map((p) => (
               <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0" }}>
-                <span style={{ fontSize: 14.5, color: "#4a5560", fontWeight: 700 }}>{p.name}</span>
-                <button onClick={() => unmarkPersonLeft(p.id)}
-                  style={{ background: "none", border: "none", padding: "2px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: MODUS_FAIR.rand, textDecoration: "underline" }}>{L.bringBackBtn}</button>
+                <span style={{ fontSize: 14.5, color: "#1d2942", fontWeight: 700 }}>{p.name}</span>
+                <button onClick={() => setConfirmDlg({ msg: L.markLeftAsk(p.name), yes: L.markLeftBtn, no: L.cancel,
+                    onYes: () => { setConfirmDlg(null); markPersonLeft(p.id, false) } })}
+                  style={{ background: "none", border: "none", padding: "2px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "#8a6560", textDecoration: "underline" }}>{L.markLeftBtn}</button>
               </div>
             ))}
+            {people.some((p) => p.left) && (
+              <div style={{ borderTop: "1px solid rgba(29,41,66,0.12)", marginTop: 8, paddingTop: 7 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.03em", marginBottom: 5 }}>{L.leftListTitle.toUpperCase()}</div>
+                {people.filter((p) => p.left).map((p) => (
+                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "3px 0", gap: 10 }}>
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: "block", fontSize: 14.5, color: "#4a5560", fontWeight: 700 }}>{p.name}</span>
+                      <span style={{ display: "block", fontSize: 12, color: p.leftSettled ? "#1f6b3a" : "#b35309", fontWeight: 700, marginTop: 1 }}>
+                        {p.leftSettled ? L.leftSelfSettled : L.leftNotSettled}
+                      </span>
+                    </span>
+                    <button onClick={() => unmarkPersonLeft(p.id)}
+                      style={{ flexShrink: 0, background: "none", border: "none", padding: "2px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: MODUS_FAIR.rand, textDecoration: "underline" }}>{L.bringBackBtn}</button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
         {/* Iemand wil vertrekken en wacht op een bedrag. Zichtbaar bij zowel de
@@ -11174,6 +11289,14 @@ export default function PartyTest() {
             <button style={{ ...S.btn, flex: 1 }} onClick={goFinal}>{L.settleBtn}</button>
             <button style={{ ...S.btnP, flex: 2 }} onClick={() => { if (unfinishedRound) resumeRound(); else nextRound() }}>{unfinishedRound ? L.continueRound(roundNr) : "➕ Nieuw rondje"}</button>
           </div>
+          {/* Ook de beheerder gaat ooit naar huis. Zelfde plek en stijl als bij de gast,
+              maar met de overdracht ervoor: zonder beheerder kan niemand nog afrekenen. */}
+          {isAdmin && settle && !fromQuick && meId && !people.find((p) => p.id === meId)?.left && (
+            <button onClick={() => setLeaveStep("confirm")}
+              style={{ display: "block", marginTop: 9, background: "#fff", border: "1px solid rgba(29,41,66,0.18)", color: "#8a6560", borderRadius: 9, padding: "7px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+              {L.imLeaving}
+            </button>
+          )}
           {!unfinishedRound && paidCount > 0 && activeProposal && (
             <div style={{ marginTop: 10 }}>{renderProposalHost()}</div>
           )}
@@ -12310,7 +12433,7 @@ export default function PartyTest() {
               <div style={{ ...S.row, alignItems: "flex-start", justifyContent: "space-between", padding: "8px 0", cursor: "pointer" }} onClick={() => setOpenFair((o) => ({ ...o, [p.id]: !open }))}>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: 16, fontWeight: 700, color: p.left ? "#6b7484" : undefined }}>{open ? "▾" : "▸"} {p.name}
-                    {p.left && <span style={{ fontSize: 13, fontWeight: 800, color: "#6b7484" }}> · {L.leftBadge}</span>}
+                    {p.left && <span style={{ fontSize: 13, fontWeight: 800, color: p.leftSettled ? "#1f6b3a" : "#b35309" }}> · {L.leftBadge}{p.leftSettled ? "" : " ⚠️"}</span>}
                   </span>
                   {/* Een zin in plaats van pillen: zo staat er meteen bij van wie of aan wie,
                       en blijft de rijhoogte voorspelbaar ook bij lange namen. */}
