@@ -693,6 +693,14 @@ const T = {
     yesWord: "ja",
     noPartOnly: "nee, een deel",
     potPaidIn: (bedrag: string) => `💰 ingelegd ${bedrag}`,
+    payNowTitle: (n: number) => `Betaling van rondje ${n}`,
+    payNowSub: "Nu ingeven of later? Later kan altijd nog via het overzicht.",
+    paySelfTitle: "💶 Zelf betaald",
+    paySelfSub: "Jij schoot voor — wordt verrekend bij de eindafrekening.",
+    payPotTitle: "💰 Uit de pot",
+    payCardTitle: "💳 Van de drankkaart",
+    payPotSub: (bedrag: string) => `Nog ${bedrag} beschikbaar.`,
+    paySkip: "Overslaan (kan ook later)",
     roundN: (n: number) => `Ronde ${n}`,
     nothingThisRound: "jij had niets in dit rondje",
 
@@ -1481,6 +1489,14 @@ const T = {
     yesWord: "oui",
     noPartOnly: "non, une partie",
     potPaidIn: (bedrag: string) => `💰 versé ${bedrag}`,
+    payNowTitle: (n: number) => `Paiement de la tournée ${n}`,
+    payNowSub: "Encoder maintenant ou plus tard ? Plus tard reste possible via l’aperçu.",
+    paySelfTitle: "💶 Payé soi-même",
+    paySelfSub: "Tu as avancé l’argent — ce sera régularisé au décompte final.",
+    payPotTitle: "💰 Depuis la cagnotte",
+    payCardTitle: "💳 Sur la carte boissons",
+    payPotSub: (bedrag: string) => `Encore ${bedrag} disponible.`,
+    paySkip: "Passer (possible plus tard)",
     roundN: (n: number) => `Tournée ${n}`,
     nothingThisRound: "tu n'avais rien dans cette tournée",
 
@@ -2945,6 +2961,11 @@ export default function PartyTest() {
   const [walkCheck, setWalkCheck] = useState(false)
   const [naamWijzig, setNaamWijzig] = useState<string | null>(null)
   const [barFull, setBarFull] = useState(false)
+  // Het grote lijstje kan op twee manieren opengaan: je tikt "toon groot" op de
+  // halerkaart, of je hebt zonet afgerond. Alleen in dat tweede geval leidt "Klaar"
+  // verder naar het overzicht met de betaalvraag — anders sta je gewoon weer waar je was.
+  const [barNaAfronden, setBarNaAfronden] = useState(false)
+  const [betaalVraag, setBetaalVraag] = useState(false)
   // Na "Rondje afronden en halen" is de mand leeg en het rondje pending — maar de haler
   // heeft zijn lijstje juist DAN nodig, aan de toog. Dus bewaren we het hier, tot hij
   // het zelf wegklikt of het volgende rondje start.
@@ -3030,7 +3051,11 @@ export default function PartyTest() {
     if (allenGemeld === openRoundId) return
     if (alGekozen < people.length) return
     setAllenGemeld(openRoundId)
-    setAllenKlaar(true)
+    // Vroeger sprong hier een venster open met een knop erin. Dat onderbrak precies het
+    // moment waarop je juist naar je eigen kaart wil kijken. Nu volstaat een melding: de
+    // kaart "In dit rondje" staat er al, kleurt vanzelf groen, en daar staat de knop die
+    // het rondje echt vastzet.
+    setNotice(ikHaalNu ? L.allChoseYou : L.allChoseGuest(runnerName()))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alGekozen, openRoundId, meId, people.length])
 
@@ -3381,7 +3406,7 @@ export default function PartyTest() {
                       nog kan wijzigen. */}
                   <span style={{ minWidth: 0, textAlign: "right", color: isOk ? "#4a5567" : "#8a5e0f", fontStyle: !isOk && zijne.length === 0 ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {slaOver ? L.nothingWord
-                      : zijne.length > 0 ? `${zijne.map((d) => `${aQty(d.id, pp.id)}× ${d.name}`).join(" · ")}${isOk ? "" : ` · ${L.notYetConfirmed}`}`
+                      : zijne.length > 0 ? `${zijne.map((d) => `${aQty(d.id, pp.id)}× ${d.name}`).join(" · ")}${isOk ? "" : ` · ${L.busyChoosing}`}`
                       : L.busyChoosing}
                   </span>
                 </div>
@@ -3407,7 +3432,7 @@ export default function PartyTest() {
               waarschuwing van daarnet. Iedereen krijgt dan de melding met de naam erbij. */}
           {/* De kaart leest van boven naar onder: wie doet mee, wat ze kozen, hoeveel het
               samen is, en pas dan wat je ermee doet. */}
-          <button onClick={() => { if (nogNietGekozen().length > 0) { setAfsluitOpen(false); setAfsluitCheck(true) } else void runnerRondtAf() }} disabled={barTotalen().length === 0}
+          <button onClick={() => { if (nogNietGekozen().length > 0) { setAfsluitOpen(false); setAfsluitCheck(true) } else void naarBar() }} disabled={barTotalen().length === 0}
             style={{ width: "100%", marginTop: 4, marginBottom: 9, cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 8px", fontSize: 17.5, fontWeight: 800, color: "#fff", background: MODUS_FAIR.knop, opacity: barTotalen().length === 0 ? 0.45 : 1 }}>{L.runnerDoneBtn}</button>
           <button onClick={annuleerRondje} style={{ width: "100%", cursor: "pointer", background: "none", border: "none", fontSize: 15, fontWeight: 700, color: "#b0402f" }}>{L.cancelRoundBtn}</button>
         </div>
@@ -5622,6 +5647,25 @@ export default function PartyTest() {
     setShowClose(true)
   }
   const goAssignFromWarning = () => { setShowClose(false); setAssignNaamEdit(false); setShowAssignAll(true) }
+  // "Op naar de bar", vanuit de melding dat iedereen gekozen heeft. Op dat moment is het
+  // rondje inhoudelijk rond: iedereen tikte aan of tikte bewust niets aan. De haler
+  // daarna nog eens door het afsluitvenster sturen is een tik om niets — dus sluiten we
+  // hier af en tonen meteen het grote lijstje voor aan de toog.
+  // Twee dingen kunnen dat wél tegenhouden: bekers die nog geteld moeten worden en
+  // drankjes zonder naam. Die horen thuis in het afsluitvenster, want daar staat de
+  // uitleg en de knop om ze op te lossen; in dat geval gaat dat venster alsnog open.
+  const naarBar = async () => {
+    await runnerRondtAf()
+    setBarNaAfronden(true); setBarFull(true)
+  }
+  // Het lijstje is gelezen, de drankjes staan op de toog. Nu pas de vraag over geld:
+  // eerder zou ze tussen jou en de bestelling in staan.
+  const sluitBarLijst = () => {
+    setBarFull(false)
+    if (!barNaAfronden) return
+    setBarNaAfronden(false)
+    setOverviewBackTo("hub"); setView("roundsOverview"); setBetaalVraag(true)
+  }
   const commitRound = () => {
     // Nog drankjes zonder naam bij uitgebreid opnemen? Geen popup: de afsluiting met
     // betaalstap in de hub komt eerst, en daarna land je vanzelf in het rondjesoverzicht
@@ -6874,8 +6918,38 @@ export default function PartyTest() {
           </div>
         </div>
       )}
+      {/* Vlak na het halen weet je het bedrag nog; een uur later niet meer. Daarom de
+          vraag hier, met de twee manieren die er in QR bestaan. Overslaan mag: het rondje
+          blijft dan met een streepjesrand in het overzicht staan tot het bedrag er is. */}
+      {betaalVraag && (() => {
+        const keuze = (titel: string, uitleg: string, ga: () => void) => (
+          <button onClick={() => { setBetaalVraag(false); ga() }}
+            style={{ display: "block", width: "100%", textAlign: "left", background: "#fff", border: `1.5px solid ${MODUS_FAIR.rand}`, borderRadius: 12, padding: "11px 12px", marginBottom: 8, cursor: "pointer", fontFamily: "inherit" }}>
+            <b style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{titel}</b>
+            <span style={{ display: "block", fontSize: 13, color: "#6b7484", marginTop: 2, lineHeight: 1.4 }}>{uitleg}</span>
+          </button>
+        )
+        const naarBetaling = (via: "self" | "pot") => {
+          setPayVia(via)
+          if (via === "pot") { setPayPot(true); setPayPersons([]) }
+          else { setPayPot(false); if (startedBy) { setPayPersons([startedBy]); autoSplit([startedBy], false) } }
+          setView("hub")
+        }
+        return (
+        <div style={{ ...S.overlay, zIndex: 81 }} onClick={() => setBetaalVraag(false)}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 18.5, fontWeight: 800, color: "#1d2942", marginBottom: 3 }}>{L.payNowTitle(rounds.length)}</div>
+            <div style={{ fontSize: 14, color: "#6b7484", lineHeight: 1.45, marginBottom: 13 }}>{L.payNowSub}</div>
+            {keuze(L.paySelfTitle, L.paySelfSub, () => naarBetaling("self"))}
+            {keuze(potIsCard ? L.payCardTitle : L.payPotTitle, L.payPotSub(euro(Math.max(0, potRemaining))), () => naarBetaling("pot"))}
+            <button onClick={() => setBetaalVraag(false)}
+              style={{ ...S.btn, width: "100%", marginTop: 2, fontSize: 15, padding: "11px 6px", color: "#6b7484" }}>{L.paySkip}</button>
+          </div>
+        </div>
+        )
+      })()}
       {barFull && (
-        <div style={{ ...S.overlay, zIndex: 80 }} onClick={() => setBarFull(false)}>
+        <div style={{ ...S.overlay, zIndex: 80 }} onClick={sluitBarLijst}>
           <div onClick={(e) => e.stopPropagation()}
             style={{ width: "100%", maxWidth: 420, background: MODUS_FAIR.tekst, borderRadius: 18, padding: "22px 18px", textAlign: "center" }}>
             <div style={{ fontSize: 14.5, fontWeight: 800, color: "rgba(255,255,255,0.7)", letterSpacing: "0.08em", marginBottom: 14 }}>{L.roundWord} {roundNr} · {L.forTheBar}</div>
@@ -6885,7 +6959,7 @@ export default function PartyTest() {
                 <span style={{ fontSize: 22, color: "#fff" }}>{x.emoji} {x.naam}</span>
               </div>
             ))}
-            <button onClick={() => setBarFull(false)} style={{ width: "100%", marginTop: 16, cursor: "pointer", border: "none", background: "#fff", color: MODUS_FAIR.tekst, borderRadius: 11, padding: "12px 0", fontSize: 17, fontWeight: 800 }}>{L.closeWord}</button>
+            <button onClick={sluitBarLijst} style={{ width: "100%", marginTop: 16, cursor: "pointer", border: "none", background: "#fff", color: MODUS_FAIR.tekst, borderRadius: 11, padding: "12px 0", fontSize: 17, fontWeight: 800 }}>{barNaAfronden ? L.ready : L.closeWord}</button>
           </div>
         </div>
       )}
@@ -6929,7 +7003,7 @@ export default function PartyTest() {
             <div style={{ display: "flex", gap: 9 }}>
               <button onClick={() => { setAfsluitCheck(false); vraagHerinnering() }}
                 style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(232,168,18,0.6)", color: "#8a5e0f", fontSize: 13.5, fontWeight: 800, padding: "13px 6px", borderRadius: 12, cursor: "pointer", fontFamily: "inherit" }}>{L.remindFirst}</button>
-              <button onClick={() => { setAfsluitCheck(false); void runnerRondtAf() }}
+              <button onClick={() => { setAfsluitCheck(false); void naarBar() }}
                 style={{ ...S.btnP, flex: 1.3, width: "auto", fontSize: 15, padding: "13px 6px" }}>{L.closeAnyway}</button>
             </div>
           </div>
@@ -6982,7 +7056,7 @@ export default function PartyTest() {
             <div style={{ fontSize: 20, fontWeight: 800, color: "#1f6b3a", marginBottom: 6 }}>{L.allChoseTitle}</div>
             <div style={{ fontSize: 16, color: "#5a8f99", lineHeight: 1.5, marginBottom: 13 }}>{ikHaalNu ? L.allChoseYou : L.allChoseGuest(runnerName())}</div>
             {ikHaalNu && <div style={{ textAlign: "left", marginBottom: 13 }}>{renderBarLijst()}</div>}
-            <button onClick={() => setAllenKlaar(false)} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800 }}>{ikHaalNu ? L.toTheBarBtn : L.okWord}</button>
+            <button onClick={() => { setAllenKlaar(false); if (ikHaalNu) naarBar() }} style={{ ...S.btnP, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800 }}>{ikHaalNu ? L.toTheBarBtn : L.okWord}</button>
           </div>
         </div>
       )}
