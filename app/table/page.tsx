@@ -704,11 +704,9 @@ const T = {
     payBackToList: "← Terug naar lijstje",
     roundPaidBy: (wie: string) => `Betaald: ${wie}`,
     youFetchedFillIn: "Jij haalde dit — vul het bedrag in",
-    whatDidItCost: "Wat kostte dit rondje?",
     howPaid: "Hoe betaald?",
     paidSelfShort: "💶 Zelf",
     paidPotShort: "💰 Uit de pot",
-    saveWord: "Bewaren",
     hostCanFix: "Vergissing? Wie de groep beheert kan het nadien rechtzetten.",
     roundsNoAmount: (n: number) => n === 1 ? "1 rondje zonder bedrag." : `${n} rondjes zonder bedrag.`,
     roundsNoAmountSub: "Zolang die openstaan klopt het totaal niet.",
@@ -1517,11 +1515,9 @@ const T = {
     payBackToList: "← Retour à la liste",
     roundPaidBy: (wie: string) => `Payé : ${wie}`,
     youFetchedFillIn: "Tu l’as cherchée — encode le montant",
-    whatDidItCost: "Combien a coûté cette tournée ?",
     howPaid: "Payé comment ?",
     paidSelfShort: "💶 Soi-même",
     paidPotShort: "💰 Cagnotte",
-    saveWord: "Enregistrer",
     hostCanFix: "Erreur ? L’organisateur peut corriger après coup.",
     roundsNoAmount: (n: number) => n === 1 ? "1 tournée sans montant." : `${n} tournées sans montant.`,
     roundsNoAmountSub: "Tant qu’elles restent ouvertes, le total ne colle pas.",
@@ -3128,6 +3124,7 @@ export default function PartyTest() {
   // anders zou ze na de nieuwe bevestiging nooit meer komen — en dat is net het moment
   // waarop de starter weer mag vertrekken.
   useEffect(() => {
+    if (!settle || fromQuick) return
     if (!openRoundId) return
     if (alGekozen >= people.length) return
     setStarterBalk(false)
@@ -11102,7 +11099,7 @@ export default function PartyTest() {
         <AdminTabs />
         {/* Wat er nog openstaat, op een moment dat je er iets aan kan doen. Aan de toog
             houdt niets je meer tegen; hier zie je wat er nog ingevuld moet. */}
-        {settle && (() => {
+        {settle && !fromQuick && (() => {
           const zonder = rondjesZonderBedrag()
           if (zonder.length === 0) return null
           const mijne = rounds.filter((r) => r.startedBy === meId && (r.amount || 0) <= 0.005)
