@@ -7261,7 +7261,17 @@ export default function PartyTest() {
         const r = [...rounds].reverse().find((x) => x.startedBy === meId) || rounds[rounds.length - 1]
         if (!r) return null
         const bedrag = Number((gastSluitTekst || "").replace(",", ".")) || 0
-        const naarRondjes = () => { setGastSluit(false); setGastSluitTekst(""); setGastSluitPot(false); setHaalInfo(null); setGuestTab("me") }
+        // Zelfde afloop als bij de beheerder: bedrag en potdeel leeg, rondje afgehandeld,
+        // en meteen naar het overzicht. Verder bestellen aan dit rondje kan niet meer —
+        // het is al gesloten voordat het barlijstje verscheen.
+        const naarRondjes = (wisBedrag = false) => {
+          if (wisBedrag) {
+            const idx = rounds.indexOf(r)
+            if (idx >= 0) { setRounds((rs) => rs.map((rr, i) => i === idx ? { ...rr, amount: 0, potPart: 0 } : rr)); setDirtyRound(idx) }
+          }
+          setLastRoundHandled(true)
+          setGastSluit(false); setGastSluitTekst(""); setGastSluitPot(false); setHaalInfo(null); setGuestTab("me")
+        }
         return (
           <div style={S.overlay} onClick={() => setGastSluit(false)}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
@@ -7286,7 +7296,7 @@ export default function PartyTest() {
                 style={{ ...S.btnP, opacity: bedrag <= 0.005 ? 0.5 : 1, marginBottom: 8 }}>{L.confirmRoundBtn(haalInfo ? haalInfo.items.reduce((n, x) => n + x.n, 0) : 0)}</button>
               {/* Overslaan laat het rondje zonder bedrag staan; het blijft in het
                   overzicht met zijn oranje label, zodat het later nog kan. */}
-              <button onClick={naarRondjes}
+              <button onClick={() => naarRondjes(true)}
                 style={{ width: "100%", background: "none", border: "none", padding: "6px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 800, color: "#6b7484", textDecoration: "underline" }}>{L.skipWord}</button>
             </div>
           </div>
