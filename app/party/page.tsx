@@ -3243,6 +3243,12 @@ export default function PartyTest() {
   const [rondjeMelding, setRondjeMelding] = useState<string | null>(null)
   // Welk rondje de gast aan het invullen is, met wat hij tot nu tikte.
   const [gastBedrag, setGastBedrag] = useState<{ id: string; tekst: string; pot: boolean } | null>(null)
+  // De gast wordt volledig apart gerenderd, dus het bevestigingsscherm van de beheerder
+  // bestaat niet op zijn toestel. Dit is zijn eigen versie: bedrag en pot, geen
+  // betalerskeuze — hij haalde het rondje zelf.
+  const [gastSluit, setGastSluit] = useState(false)
+  const [gastSluitTekst, setGastSluitTekst] = useState("")
+  const [gastSluitPot, setGastSluitPot] = useState(false)
   // De alleen-lezen afrekening bij de gast: dicht/open, en het vertrektraject apart —
   // dat overlapt met "afrekening bekijken" maar heeft zijn eigen scherm en knoppen.
   const [guestSettlePage, setGuestSettlePage] = useState(false)
@@ -3556,7 +3562,7 @@ export default function PartyTest() {
           <button onClick={() => setBarFull(true)} style={{ width: "100%", cursor: "pointer", background: MODUS_FAIR.vlak, border: `1px solid ${MODUS_FAIR.lijnZacht}`, color: MODUS_FAIR.tekst, fontSize: 13.5, fontWeight: 800, padding: 10, borderRadius: 10, marginBottom: 9, fontFamily: "inherit" }}>{L.showBig}</button>
           {/* "Klaar" brengt je meteen naar het bedrag: dat is de vraag die anders blijft
               liggen tot aan de eindafrekening. */}
-          <button onClick={() => { setHaalInfo(null); openClose() }} style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 8px", fontSize: 17, fontWeight: 800, color: "#fff", background: MODUS_FAIR.knop }}>{L.haalKlaar}</button>
+          <button onClick={() => { if (isAdmin) { setHaalInfo(null); openClose() } else setGastSluit(true) }} style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 8px", fontSize: 17, fontWeight: 800, color: "#fff", background: MODUS_FAIR.knop }}>{L.haalKlaar}</button>
         </div></>
       )
     }
@@ -3942,7 +3948,7 @@ export default function PartyTest() {
     const doeOverslaan = () => {
       setRounds((rs) => rs.map((rr, i) => i === idx ? { ...rr, amount: 0, potPart: 0 } : rr))
       if (r) setDirtyRound(idx)
-      setLastRoundHandled(true); setPayVia("self"); setOverviewBackTo("hub"); setView("roundsOverview")
+      setLastRoundHandled(true); setPayVia("self"); setHaalInfo(null); setOverviewBackTo("hub"); setView("roundsOverview")
     }
     if (skip && heeftIets) {
       setConfirmDlg({ variant: "danger", msg: L.skipCostWarn, yes: L.skipCostYes, onYes: () => { setConfirmDlg(null); doeOverslaan() } })
@@ -3970,7 +3976,7 @@ export default function PartyTest() {
     } else {
       rSetPotAmt(idx, 0)
     }
-    setLastRoundHandled(true); setPayVia("self"); setOverviewBackTo("hub"); setView("roundsOverview")
+    setLastRoundHandled(true); setPayVia("self"); setHaalInfo(null); setOverviewBackTo("hub"); setView("roundsOverview")
   }
   const openGroepVenster = (metNaam: boolean, vulAan = false) => {
     setNaamPlichtVeld(metNaam && !isAutoNaam(groupName) ? groupName : "")
@@ -5924,6 +5930,7 @@ export default function PartyTest() {
     if (uitPot && bedrag > beschikbaar + 0.005) meldPot(L.potClamped(euro(beschikbaar)))
     setOpenRounds((prev) => { const n = new Set(prev); n.delete(r.id); return n })
     setGastBedrag(null)
+    setHaalInfo(null)
     if (r.leaveWaitFor) clearLeaveWait(r.id)
   }
   // Zet of wist het seintje "iemand wacht om te vertrekken" op een rondje. Zichtbaar bij
@@ -6069,7 +6076,7 @@ export default function PartyTest() {
   const closeRound = () => {
     const st = paymentState()
     if (!st.valid) { setNotice(st.reason || L.confirmPaymentFirst); return }
-    if (!paidConfirmed) { setNotice(L.confirmPaymentFirst); return } setOpenRound(null); setView("hub") }
+    if (!paidConfirmed) { setNotice(L.confirmPaymentFirst); return } setOpenRound(null); setHaalInfo(null); setView("hub") }
   const cancelOrder = () => setConfirmDlg({
     msg: L.cancelRoundConfirm(roundNr),
     yes: L.yesCancel,
@@ -7242,6 +7249,43 @@ export default function PartyTest() {
               <button onClick={() => setLeaveStep("ask")}
                 style={{ ...S.btnP, marginBottom: 8 }}>{L.leaveConfirmTitle}</button>
               <button onClick={() => setLeaveStep(null)} style={{ ...S.btn, width: "100%" }}>{L.leaveStayBtn}</button>
+            </div>
+          </div>
+        )
+      })()}
+      {/* Net terug van de toog: hier vult de haler zijn bedrag in. Dezelfde vraag als bij
+          de beheerder, maar zonder betalerskeuze — hij schoot het zelf voor. */}
+      {gastSluit && (() => {
+        const r = [...rounds].reverse().find((x) => x.startedBy === meId) || rounds[rounds.length - 1]
+        if (!r) return null
+        const bedrag = Number((gastSluitTekst || "").replace(",", ".")) || 0
+        const naarRondjes = () => { setGastSluit(false); setGastSluitTekst(""); setGastSluitPot(false); setHaalInfo(null); setGuestTab("me") }
+        return (
+          <div style={S.overlay} onClick={() => setGastSluit(false)}>
+            <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ ...S.h3, fontSize: 21.5 }}>{L.confirmRoundTitle(r.seq)}</h3>
+              <div style={{ fontSize: 14.5, color: "#6b7484", lineHeight: 1.45, marginBottom: 12 }}>{L.youFetchedFillIn}</div>
+              <div style={{ background: MODUS_FAIR.vlak, border: `1px solid ${MODUS_FAIR.lijnZacht}`, borderRadius: 12, padding: 12, marginBottom: 10 }}>
+                <div style={{ fontSize: 13.5, color: "#6b7484", marginBottom: 5 }}>{L.whatDidItCost}</div>
+                <input value={gastSluitTekst} onChange={(e) => setGastSluitTekst(e.target.value)}
+                  inputMode="decimal" placeholder="0,00" autoFocus
+                  style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${MODUS_FAIR.rand}`, borderRadius: 10, padding: "11px 12px", fontSize: 21, fontWeight: 800, color: MODUS_FAIR.tekst, fontFamily: "inherit", background: "#fff" }} />
+              </div>
+              {potChosen && (
+                <button onClick={() => setGastSluitPot((v) => !v)}
+                  style={{ width: "100%", marginBottom: 10, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                    background: gastSluitPot ? "rgba(47,111,181,0.1)" : "#fff",
+                    border: `1.5px solid ${gastSluitPot ? "rgba(47,111,181,0.55)" : "rgba(29,41,66,0.2)"}`,
+                    borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 800, color: gastSluitPot ? "#2f5693" : "#4a5560" }}>
+                  {gastSluitPot ? "✓ " : ""}{L.fromPot}
+                </button>
+              )}
+              <button disabled={bedrag <= 0.005} onClick={() => { gastVultBedragIn(r, bedrag, gastSluitPot); naarRondjes() }}
+                style={{ ...S.btnP, opacity: bedrag <= 0.005 ? 0.5 : 1, marginBottom: 8 }}>{L.confirmRoundBtn(haalInfo ? haalInfo.items.reduce((n, x) => n + x.n, 0) : 0)}</button>
+              {/* Overslaan laat het rondje zonder bedrag staan; het blijft in het
+                  overzicht met zijn oranje label, zodat het later nog kan. */}
+              <button onClick={naarRondjes}
+                style={{ width: "100%", background: "none", border: "none", padding: "6px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 800, color: "#6b7484", textDecoration: "underline" }}>{L.skipWord}</button>
             </div>
           </div>
         )
@@ -11227,7 +11271,9 @@ export default function PartyTest() {
           </div>
         )}
         {rounds.map((r, idx) => ({ r, idx })).map(({ r, idx }) => {
-          if (!roundIsPaid(r)) return null
+          // Vroeger verdween een rondje zonder bedrag hier volledig, waardoor alleen de
+          // starter wist dat het bestond. Nu staat het er gewoon bij, met zijn status.
+          if (r.id === openRoundId) return null
           const items = drinks.reduce((s, d) => s + drinkTotalRound(r, d.id), 0)
           const open = allRoundsOpen || openRound === idx
           const roundDrinks = drinks.filter((d) => drinkTotalRound(r, d.id) > 0)
