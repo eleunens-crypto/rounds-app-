@@ -3561,8 +3561,10 @@ export default function PartyTest() {
           </div>
           <button onClick={() => setBarFull(true)} style={{ width: "100%", cursor: "pointer", background: MODUS_FAIR.vlak, border: `1px solid ${MODUS_FAIR.lijnZacht}`, color: MODUS_FAIR.tekst, fontSize: 13.5, fontWeight: 800, padding: 10, borderRadius: 10, marginBottom: 9, fontFamily: "inherit" }}>{L.showBig}</button>
           {/* "Klaar" brengt je meteen naar het bedrag: dat is de vraag die anders blijft
-              liggen tot aan de eindafrekening. */}
-          <button onClick={() => { if (isAdmin) { setHaalInfo(null); openClose() } else setGastSluit(true) }} style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 8px", fontSize: 17, fontWeight: 800, color: "#fff", background: MODUS_FAIR.knop }}>{L.haalKlaar}</button>
+              liggen tot aan de eindafrekening. Het lijstje blijft staan tot het rondje
+              écht is afgehandeld — tik je het bedragscherm weg, dan kan je aan de toog
+              nog altijd aflezen wat je moest bestellen. */}
+          <button onClick={() => { if (isAdmin) openClose(); else setGastSluit(true) }} style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 8px", fontSize: 17, fontWeight: 800, color: "#fff", background: MODUS_FAIR.knop }}>{L.haalKlaar}</button>
         </div></>
       )
     }
