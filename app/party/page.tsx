@@ -3502,6 +3502,17 @@ export default function PartyTest() {
   const mijnKeuze = meId ? drinks.reduce((a, d) => a + (cart[d.id]?.[meId] ?? 0), 0) : 0
   // Zodra er weer een rondje loopt, is het vorige haal-lijstje geschiedenis.
   useEffect(() => { if (openRoundId) setHaalInfo(null) }, [openRoundId])
+  // Rondje voorbij? Dan hoort ieders scherm leeg terug te staan, niet alleen dat van wie
+  // afrekende. De keuze van vorig rondje laten staan is misleidend: je zou denken dat ze
+  // nog meetelt. Dit vuurt bij iedereen, want openRoundId komt via dezelfde realtime-lijn.
+  const vorigOpenRondje = useRef<string | null>(null)
+  useEffect(() => {
+    if (vorigOpenRondje.current && !openRoundId) {
+      setCart({}); setCartAnon({}); setOpenAnswers({}); setStartedBy(null)
+      setRepeated(false); setDrinkSearch(""); setFullList(false)
+    }
+    vorigOpenRondje.current = openRoundId
+  }, [openRoundId]) // eslint-disable-line
   // Nieuw rondje wacht op betaling en er zit geld in de pot? Start meteen met beide
   // velden open — anders stond "Zelf betaald" alvast aan terwijl de pot klaarligt,
   // en was combineren altijd een extra tik.
