@@ -3247,6 +3247,11 @@ export default function PartyTest() {
   // bestaat niet op zijn toestel. Dit is zijn eigen versie: bedrag en pot, geen
   // betalerskeuze — hij haalde het rondje zelf.
   const [gastSluit, setGastSluit] = useState(false)
+  // De "wie doet mee"-sectie van de haler: ingeklapt zodra het rondje loopt. Openklappen
+  // toont wie er nog ontbreekt, plus de twee dingen die je met een hangend rondje kan
+  // doen — porren en annuleren. Annuleren zit daar bewust achter één tik: het gooit het
+  // rondje weg terwijl er mensen op wachten.
+  const [wieOpen, setWieOpen] = useState(false)
   const [gastSluitTekst, setGastSluitTekst] = useState("")
   const [gastSluitPot, setGastSluitPot] = useState(false)
   // De alleen-lezen afrekening bij de gast: dicht/open, en het vertrektraject apart —
@@ -3600,20 +3605,20 @@ export default function PartyTest() {
           {/* Alles over dit rondje in één kader: wie klaar is, wat je moet halen, en de
               twee handelingen. Ingeklapt moest je te veel tikken om te zien waar je aan
               toe was. */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 9, borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, paddingTop: 10, marginBottom: 10 }}>
-            <span style={{ fontSize: 14.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.04em" }}>{L.whoIsIn}</span>
+          <div onClick={() => setWieOpen((v) => !v)} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 9, borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, paddingTop: 10, marginBottom: 10 }}>
+            <span style={{ fontSize: 14.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.04em" }}>{wieOpen ? "\u25b4" : "\u25be"} {L.whoIsIn} \u00b7 {klaar.length}/{nogAanwezig.length}</span>
             {/* Korte pil met het aantal wachtenden. De namen staan al in de pillenrij
                 eronder, en in het bevestigingsvenster erna — hier volstaat het cijfer. */}
-            {klaar.length < nogAanwezig.length && (
-              <button onClick={vraagHerinnering}
+            {wieOpen && klaar.length < nogAanwezig.length && (
+              <button onClick={(e) => { e.stopPropagation(); vraagHerinnering() }}
                 style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(240,165,0,0.16)", border: "1px solid rgba(232,168,18,0.55)", color: "#8a5e0f", fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit" }}>
                 🔔 {L.pokeShort}
                 <span style={{ background: "#e8a812", color: "#2a2110", borderRadius: 999, minWidth: 17, height: 17, fontSize: 11, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{people.length - klaar.length}</span>
               </button>
             )}
           </div>
-          {/* De pillenrij staat er altijd: dit is de vraag die de haler het vaakst stelt. */}
-          {nogAanwezig.length > 0 && (
+          {/* Ingeklapt volstaat de teller in de kop; opengeklapt zie je de namen. */}
+          {wieOpen && nogAanwezig.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
               {nogAanwezig.map((pp) => {
                 const slaOver = openAnswers[pp.id] === "skip"
@@ -3628,7 +3633,7 @@ export default function PartyTest() {
               })}
             </div>
           )}
-          <div style={{ marginBottom: 10, display: people.length > 4 && !lijstOpen ? "none" : "block" }}>
+          <div style={{ marginBottom: 10, display: !wieOpen || (people.length > 4 && !lijstOpen) ? "none" : "block" }}>
             {people.map((pp, pi) => {
               const zijne = drinks.filter((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)
               const slaOver = openAnswers[pp.id] === "skip"
@@ -3657,10 +3662,19 @@ export default function PartyTest() {
               </div>
             )}
           </div>
-          {people.length > 4 && (
+          {wieOpen && people.length > 4 && (
             <button onClick={() => setLijstOpen((v) => !v)}
               style={{ width: "100%", background: MODUS_FAIR.vlak, border: `1px solid ${MODUS_FAIR.lijnZacht}`, color: MODUS_FAIR.tekst, fontSize: 13, fontWeight: 800, padding: 9, borderRadius: 10, marginBottom: 9, cursor: "pointer", fontFamily: "inherit" }}>
               {lijstOpen ? L.hideWhoChose : L.showWhoChose}
+            </button>
+          )}
+          {/* Annuleren staat hier, naast porren: de twee dingen die je met een hangend
+              rondje kan doen. Achter de tik waarmee je toch al kijkt wie er ontbreekt —
+              zo gooi je het rondje niet per ongeluk weg aan een drukke toog. */}
+          {wieOpen && (
+            <button onClick={annuleerRondje}
+              style={{ width: "100%", marginBottom: 10, cursor: "pointer", background: "#fff", border: "1px solid rgba(224,104,92,0.4)", color: "#c0554a", borderRadius: 10, padding: "9px 8px", fontSize: 14.5, fontWeight: 800, fontFamily: "inherit" }}>
+              {L.cancelRoundShort}
             </button>
           )}
           {/* Het barlijstje hoort bij het hálen, niet bij het kiezen: het verschijnt pas
@@ -3676,7 +3690,6 @@ export default function PartyTest() {
           <button className={allenBevestigd ? "rundo-klaar" : undefined}
             onClick={() => { if (nogNietGekozen().length > 0) { setAfsluitOpen(false); setAfsluitCheck(true) } else void naarBar() }} disabled={barTotalen().length === 0}
             style={{ width: "100%", marginTop: 4, marginBottom: 9, cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 8px", fontSize: 17.5, fontWeight: 800, color: "#fff", background: allenBevestigd ? "linear-gradient(135deg,#22a35f,#158048)" : MODUS_FAIR.knop, opacity: barTotalen().length === 0 ? 0.45 : 1, animation: allenBevestigd ? "rundoKlaarGloed 1.9s ease-in-out infinite" : undefined }}>{L.runnerDoneBtn}</button>
-          <button onClick={annuleerRondje} style={{ width: "100%", cursor: "pointer", background: "none", border: "none", fontSize: 15, fontWeight: 700, color: "#b0402f" }}>{L.cancelRoundBtn}</button>
         </div></>
       )
     }
@@ -6177,8 +6190,11 @@ export default function PartyTest() {
   const [herinnering, setHerinnering] = useState(false)
   // Wie koos er nog niets? Die namen staan in de vraag, zodat je weet wie je wakker
   // schudt — en of dat wel nodig is.
-  const nogNietGekozen = () => people.filter((pp) =>
-    !drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0) && openAnswers[pp.id] !== "skip" && pp.id !== startedBy)
+  // Wie nog niet klaar is met dit rondje. Iets in het mandje hebben telt níét als klaar:
+  // zonder bevestiging kan het nog wijzigen, en dan klopt je barlijstje straks niet.
+  // Vertrokken mensen tellen niet mee, en jezelf als starter ook niet.
+  const nogNietGekozen = () => nogAanwezig.filter((pp) =>
+    !isKlaar(pp.id) && openAnswers[pp.id] !== "skip" && pp.id !== startedBy)
 
   // Alleen wie het rondje startte en de beheerder mogen annuleren — anders blijft een
   // rondje eeuwig openstaan wanneer de haler zijn gsm wegstak.
@@ -9111,7 +9127,7 @@ export default function PartyTest() {
                 {meId && rounds.length > 0 && (
                   <button onClick={() => setGuestSettlePage(true)}
                     style={{ ...S.card, padding: "11px 12px", marginTop: 4, marginBottom: 9, width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", fontFamily: "inherit" }}>
-                    <span style={{ fontSize: 15.5, fontWeight: 800, color: "#1d2942" }}>{L.guestSettlementTitle}</span>
+                    <span style={{ fontSize: 15.5, fontWeight: 800, color: "#1d2942" }}>{L.settleBtn}</span>
                     <span style={{ fontSize: 14, fontWeight: 800, color: MODUS_FAIR.rand }}>→</span>
                   </button>
                 )}
@@ -9123,15 +9139,6 @@ export default function PartyTest() {
                     style={{ ...S.btn, width: "100%", padding: "11px 0", borderRadius: 12, fontSize: 15, fontWeight: 600, color: "#1d2942" }}>{L.backToDrinks}</button>
                 )}
 
-                {/* Vertrekken: alleen zinvol als je zelf een plaats hebt en nog niet als
-                    vertrokken staat. Links en smaller dan de rest, rood omrand maar niet
-                    gevuld — zichtbaar zonder de hoofdactie te verdringen. */}
-                {meId && !people.find((p) => p.id === meId)?.left && (
-                  <button onClick={() => setLeaveStep("confirm")}
-                    style={{ display: "block", marginTop: 10, background: "#fff", border: "1.5px solid rgba(192,85,74,0.6)", color: "#b0402f", borderRadius: 10, padding: "9px 16px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
-                    {L.imLeaving}
-                  </button>
-                )}
               </>
             )}
           </>
@@ -9371,6 +9378,16 @@ export default function PartyTest() {
         )}
 
         </>
+        )}
+        {/* Vertrekken hoort niet bij één tabblad: het staat op elk scherm onderaan links,
+            subtiel weg van alles waar je de hele avond op tikt. */}
+        {meId && !people.find((p) => p.id === meId)?.left && guestTab !== "order" && (
+          <div style={{ display: "flex", marginTop: 22 }}>
+            <button onClick={() => setLeaveStep("confirm")}
+              style={{ background: "none", border: "none", padding: "8px 2px", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, color: "#a08078", textDecoration: "underline" }}>
+              {L.imLeaving}
+            </button>
+          </div>
         )}
       </div></div>
     )
