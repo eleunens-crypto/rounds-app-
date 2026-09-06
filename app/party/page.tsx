@@ -6096,7 +6096,7 @@ export default function PartyTest() {
   const closeRound = () => {
     const st = paymentState()
     if (!st.valid) { setNotice(st.reason || L.confirmPaymentFirst); return }
-    if (!paidConfirmed) { setNotice(L.confirmPaymentFirst); return } setOpenRound(null); setHaalInfo(null); setView("hub") }
+    if (!paidConfirmed) { setNotice(L.confirmPaymentFirst); return } setOpenRound(null); setHaalInfo(null); setLastRoundHandled(true); setOverviewBackTo("hub"); setView("roundsOverview") }
   const cancelOrder = () => setConfirmDlg({
     msg: L.cancelRoundConfirm(roundNr),
     yes: L.yesCancel,
