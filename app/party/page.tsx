@@ -2867,6 +2867,9 @@ export default function PartyTest() {
   // (samen) of naar de melding met de naam-instructie (per persoon), zodat de lijst
   // het scherm vult. Alles erboven blijft bereikbaar door omhoog te vegen.
   const catRij = useRef<HTMLDivElement | null>(null)
+  // De categorierij bij de gast. Na "Kiezen" springen we hierheen, niet naar de kop van
+  // het rondje: wat je op dat moment nodig hebt is het zoekveld en de categorieën.
+  const gastCatRij = useRef<HTMLDivElement | null>(null)
   const hintBlok = useRef<HTMLDivElement | null>(null)
   const telRij = useRef<HTMLDivElement | null>(null)
   const namenRij = useRef<HTMLDivElement | null>(null)
@@ -5020,7 +5023,9 @@ export default function PartyTest() {
     const scroll = (herkans = true) => requestAnimationFrame(() => {
       // De gast heeft zijn eigen anker, de beheerder dat boven "Rondje N". Zonder deze
       // terugval bleef de beheerder bovenaan staan terwijl elke gast meesprong.
-      const el = gastRondjeKop.current || rondjeKop.current
+      // Mikken op de categorierij: dan staan zoekveld en categorieën bovenaan en kan je
+      // meteen kiezen. De rondjekop erboven is een terugval voor als die er nog niet is.
+      const el = gastCatRij.current || catRij.current || gastRondjeKop.current || rondjeKop.current
       if (!el) { if (herkans) setTimeout(() => scroll(false), 140); return }
       el.scrollIntoView({ behavior: "smooth", block: "start" })
     })
@@ -9229,7 +9234,7 @@ export default function PartyTest() {
           </div>
         </div>
 
-        <div style={{ display: zoekt ? "none" : "block", position: "relative", marginBottom: 8 }}>
+        <div ref={gastCatRij} style={{ scrollMarginTop: 8, display: zoekt ? "none" : "block", position: "relative", marginBottom: 8 }}>
           <div ref={catScroll} onScroll={updateCatArrows} className="rundo-catscroll"
             style={{ display: "grid", gridAutoFlow: "column", gridTemplateRows: "repeat(2, auto)", gap: 6, justifyContent: "start", overflowX: "auto", padding: "0 8px 4px 0", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
             {catsPresent.map((c) => (
