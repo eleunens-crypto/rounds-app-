@@ -9208,8 +9208,17 @@ export default function PartyTest() {
 
         {mijnAantal > 0 && (
           <div style={{ ...S.card, background: MODUS_FAIR.vlak }}>
-            <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", gap: 9, marginBottom: 10 }}>
               <span style={{ fontSize: 17.5, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.roundWhatYouWant(roundNr)}</span>
+              {/* Bevestigen kan ook hier, waar je keuze staat: anders moet je langs de
+                  hele drankenlijst naar beneden voor een knop die over dít blok gaat.
+                  Compact, want de volle knop staat onderaan al. */}
+              {!isKlaar(meId) && (
+                <button onClick={() => antwoordRondje("same")}
+                  style={{ flexShrink: 0, cursor: "pointer", border: "none", background: MODUS_FAIR.rand, color: "#fff", borderRadius: 9, padding: "7px 13px", fontSize: 14.5, fontWeight: 800, fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                  ✓ {L.confirmMine}
+                </button>
+              )}
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {mijn.map((d) => (
