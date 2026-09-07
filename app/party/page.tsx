@@ -12716,7 +12716,7 @@ export default function PartyTest() {
         {(potSpent > 0.005 || potContribTotal > 0.005) && (
           <div style={{ marginTop: 6, borderTop: "1px dashed rgba(29,41,66,0.2)", paddingTop: 6 }}>
             {potSpent > 0.005 && (<>
-              <div style={{ ...S.row, justifyContent: "space-between", fontSize: 18, fontWeight: 700 }}><span style={{ color: "#2f5693", display: "inline-flex", alignItems: "center", gap: 7 }}><ZakjeIcoon size={18} /> {L.fromPot}</span><span style={{ fontWeight: 700, color: "#2f6fb5" }}>−{show(potSpent)}</span></div>
+              <div style={{ ...S.row, justifyContent: "space-between", fontSize: 18, fontWeight: 700 }}><span style={{ color: "#2f5693", display: "inline-flex", alignItems: "center", gap: 7 }}>{potIsCard ? <span style={{ fontSize: 17 }}>💳</span> : <ZakjeIcoon size={18} />} {L.fromPot}</span><span style={{ fontWeight: 700, color: "#2f6fb5" }}>−{show(potSpent)}</span></div>
               <div style={{ ...S.row, justifyContent: "space-between", fontSize: 18, color: "#4a5567", fontWeight: 700, marginTop: 2 }}><span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><span style={{ fontSize: 18, lineHeight: 1 }}>👤</span> {L.persPaidWord}</span><span style={{ fontWeight: 700 }}>{show(grandTotal - potSpent)}</span></div>
             </>)}
             {potContribTotal > 0.005 && (
