@@ -1427,6 +1427,9 @@ const T = {
     switchToFairBtn: "Naar Eerlijk verdelen",
     fairHintLine: "hierop verdeelt de app eerlijk — wie meer dronk, betaalt meer",
     paidWithHead: "BETAALD MET",
+    someoneElse: "iemand anders",
+    tapForOtherWarn: "In deze modus tikt iedereen zelf aan op zijn eigen toestel. Alleen aantikken voor iemand anders als het niet anders kan — een lege batterij, een gsm in de jas.",
+    tapForOtherYes: "Toch aantikken",
     finishPrevFirst: (n: number) => `Rondje ${n} is nog niet afgerond. Vul eerst het bedrag in of sla het over — daarna kan je een nieuw rondje starten.`,
     paidSelfBtn: "zelf betaald",
     paidPotBtn: "uit de pot",
@@ -2309,6 +2312,9 @@ const T = {
     notFairSplitWhy: "Tout le monde paie pareil, m\u00eame ceux qui ont moins bu. Tu veux que ceux qui ont plus bu paient plus ? Passe au partage \u00e9quitable.",
     switchToFairBtn: "Vers le partage \u00e9quitable",
     paidWithHead: "PAYÉ AVEC",
+    someoneElse: "quelqu'un d'autre",
+    tapForOtherWarn: "Dans ce mode, chacun coche sur son propre appareil. À n'utiliser que si ça ne va pas autrement — batterie vide, téléphone dans la veste.",
+    tapForOtherYes: "Cocher quand même",
     finishPrevFirst: (n: number) => `La tournée ${n} n'est pas encore clôturée. Indique d'abord le montant ou passe-le — ensuite tu peux lancer une nouvelle tournée.`,
     paidSelfBtn: "avancé par toi",
     paidPotBtn: "avec la cagnotte",
@@ -3280,6 +3286,10 @@ export default function PartyTest() {
   // doen — porren en annuleren. Annuleren zit daar bewust achter één tik: het gooit het
   // rondje weg terwijl er mensen op wachten.
   const [wieOpen, setWieOpen] = useState(false)
+  // In QR-modus tikt iedereen zelf aan. De andere namen zitten daarom achter één pil
+  // "iemand anders" met een uitklaplijst: zichtbaar genoeg voor een noodgeval, niet zo
+  // prominent dat je het per ongeluk gewoonte maakt.
+  const [andersOpen, setAndersOpen] = useState(false)
   const [gastSluitTekst, setGastSluitTekst] = useState("")
   const [gastSluitPot, setGastSluitPot] = useState(false)
   // De alleen-lezen afrekening bij de gast: dicht/open, en het vertrektraject apart —
@@ -10441,10 +10451,13 @@ export default function PartyTest() {
                       style={{ background: "none", border: "none", fontSize: 14, fontWeight: 800, color: "#6b7484", textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{L.cancel}</button>
                   </div>
                 ) : (
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {[...people].sort((a, b) =>
+                <>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                  {/* In QR-modus alleen jezelf plus één pil voor de rest. Bij zelf noteren
+                      blijft de volledige rij staan: daar tikt de beheerder voor iedereen. */}
+                  {(settle && !fromQuick ? nogAanwezig.filter((pp) => pp.id === meId || voorWie === pp.id) : [...people].sort((a, b) =>
                     (a.id === meId ? -1 : b.id === meId ? 1 : 0) || Number(!!a.claimedBy) - Number(!!b.claimedBy)
-                  ).map((pp) => {
+                  )).map((pp) => {
                     const aan = voorWie === pp.id
                     const viaLink = !!pp.claimedBy && pp.id !== meId
                     return (
@@ -10460,15 +10473,40 @@ export default function PartyTest() {
                           border: aan ? "none" : viaLink ? "1px solid rgba(29,41,66,0.18)" : "1.5px solid rgba(240,165,0,0.45)",
                           color: aan ? "#1d2942" : viaLink ? "#8b93a3" : "#1d2942",
                           opacity: aan ? 1 : viaLink ? 0.8 : 1 }}>
-                        {pp.id === meId ? <KroonIcoon size={13} kleur={aan ? "#1d2942" : MODUS_FAIR.tekst} /> : viaLink ? "📱 " : ""}{pp.id === meId ? " " : ""}{pp.name}{pp.id === meId ? <span style={{ opacity: 0.75, fontSize: 13, marginLeft: 4 }}>{L.youBadge}</span> : null}
-
+                        {pp.id === meId ? <KroonIcoon size={13} kleur={aan ? "#1d2942" : MODUS_FAIR.tekst} /> : viaLink ? "📱 " : ""} {pp.id === meId ? L.youWord : pp.name}
                       </button>
                     )
                   })}
+                  {settle && !fromQuick && nogAanwezig.length > 1 && (
+                    <button onClick={() => setAndersOpen((v) => !v)}
+                      style={{ borderRadius: 11, padding: "8px 12px", fontSize: 15, cursor: "pointer", fontFamily: "inherit", fontWeight: 700,
+                        background: "#fff", border: "1px dashed rgba(29,41,66,0.28)", color: "#8b93a3" }}>
+                      {L.someoneElse} {andersOpen ? "▴" : "▾"}
+                    </button>
+                  )}
                 </div>
+                {/* Uitklaplijst met de rest. Elke naam vraagt eerst om bevestiging: in deze
+                    modus is aantikken voor een ander de uitzondering, niet de regel. */}
+                {settle && !fromQuick && andersOpen && (
+                  <div style={{ marginTop: 8, maxHeight: 172, overflowY: "auto", border: `1px solid ${MODUS_FAIR.lijnZacht}`, borderRadius: 11, padding: 7, background: MODUS_FAIR.vlak }}>
+                    <div style={{ fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.45, padding: "2px 4px 8px" }}>{L.qrTapsSelf}</div>
+                    {nogAanwezig.filter((pp) => pp.id !== meId).map((pp) => (
+                      <button key={pp.id} onClick={() => setConfirmDlg({
+                          msg: `${L.nowTappingFor(pp.name)}\n\n${L.tapForOtherWarn}`,
+                          yes: L.tapForOtherYes, no: L.cancel,
+                          onYes: () => { setConfirmDlg(null); setVoorWieRaw(pp.id); setAndersOpen(false) },
+                        })}
+                        style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", background: voorWie === pp.id ? "rgba(240,165,0,0.14)" : "#fff",
+                          border: "1px solid rgba(29,41,66,0.12)", borderRadius: 9, padding: "9px 11px", marginBottom: 4, cursor: "pointer", fontFamily: "inherit", fontSize: 15.5, fontWeight: 800, color: "#1d2942" }}>
+                        {pp.claimedBy ? "📱" : "👤"} {pp.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                </>
                 )}
 
-                {settle && <div style={{ fontSize: 13.5, color: "#8b93a3", marginTop: 7, lineHeight: 1.45 }}>{L.qrTapsSelf}</div>}
+                {settle && fromQuick && <div style={{ fontSize: 13.5, color: "#8b93a3", marginTop: 7, lineHeight: 1.45 }}>{L.qrTapsSelf}</div>}
               </div>
             )}
         {/* Zoeken en inspreken staan boven de categorieën, net als op het gastscherm:
