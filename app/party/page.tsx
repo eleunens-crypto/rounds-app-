@@ -2898,6 +2898,8 @@ export default function PartyTest() {
   // De categorierij bij de gast. Na "Kiezen" springen we hierheen, niet naar de kop van
   // het rondje: wat je op dat moment nodig hebt is het zoekveld en de categorieën.
   const gastCatRij = useRef<HTMLDivElement | null>(null)
+  // Het zoekveld: daar wil je staan zodra een rondje begint, niet bij de kop erboven.
+  const zoekRij = useRef<HTMLDivElement | null>(null)
   const hintBlok = useRef<HTMLDivElement | null>(null)
   const telRij = useRef<HTMLDivElement | null>(null)
   const namenRij = useRef<HTMLDivElement | null>(null)
@@ -3724,6 +3726,14 @@ export default function PartyTest() {
           {/* Annuleren staat hier, naast porren: de twee dingen die je met een hangend
               rondje kan doen. Achter de tik waarmee je toch al kijkt wie er ontbreekt —
               zo gooi je het rondje niet per ongeluk weg aan een drukke toog. */}
+          {!wieOpen && (
+            <div style={{ display: "flex", borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, marginTop: 9, paddingTop: 8, marginBottom: 2 }}>
+              <button onClick={annuleerRondje}
+                style={{ background: "none", border: "none", padding: "2px 0", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: "#c0554a", textDecoration: "underline" }}>
+                {L.cancelRoundShort}
+              </button>
+            </div>
+          )}
           {wieOpen && (
             <div style={{ display: "flex", gap: 7, marginBottom: 10 }}>
               {nogNietGekozen().length > 0 && (
@@ -5096,7 +5106,7 @@ export default function PartyTest() {
       // terugval bleef de beheerder bovenaan staan terwijl elke gast meesprong.
       // Mikken op de categorierij: dan staan zoekveld en categorieën bovenaan en kan je
       // meteen kiezen. De rondjekop erboven is een terugval voor als die er nog niet is.
-      const el = gastCatRij.current || catRij.current || gastRondjeKop.current || rondjeKop.current
+      const el = zoekRij.current || gastCatRij.current || catRij.current || gastRondjeKop.current || rondjeKop.current
       if (!el) { if (herkans) setTimeout(() => scroll(false), 140); return }
       el.scrollIntoView({ behavior: "smooth", block: "start" })
     })
@@ -8465,13 +8475,41 @@ export default function PartyTest() {
             <b style={{ fontSize: 19, fontWeight: 800, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{wie}</b>
             <span style={{ fontSize: 18, flexShrink: 0 }}>👇</span>
           </span>
+          {/* De keuze staat hier, waar ook de naam staat — niet nog eens in een aparte
+              kaart bovenaan. Alleen in QR-modus: bij zelf noteren tikt de beheerder
+              sowieso voor iedereen aan en staat de volle namenrij er al. */}
+          {settle && !fromQuick && isAdmin && nogAanwezig.length > 1 && (
+            <button onClick={() => setAndersOpen((v) => !v)}
+              style={{ flexShrink: 0, marginLeft: 7, background: "#fff", border: "1px dashed rgba(29,41,66,0.3)", borderRadius: 999, padding: "6px 12px", fontSize: 13.5, fontWeight: 700, color: "#6b7484", cursor: "pointer", fontFamily: "inherit" }}>
+              {L.someoneElse} {andersOpen ? "▴" : "▾"}
+            </button>
+          )}
+          {/* Uitklaplijst met de rest. Elke naam vraagt eerst om bevestiging: in deze
+              modus is aantikken voor een ander de uitzondering, niet de regel. */}
+          {settle && !fromQuick && andersOpen && (
+            <div style={{ marginTop: 8, maxHeight: 172, overflowY: "auto", border: `1px solid ${MODUS_FAIR.lijnZacht}`, borderRadius: 11, padding: 7, background: MODUS_FAIR.vlak }}>
+              <div style={{ fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.45, padding: "2px 4px 8px" }}>{L.qrTapsSelf}</div>
+              {nogAanwezig.filter((pp) => pp.id !== meId).map((pp) => (
+                <button key={pp.id} onClick={() => setConfirmDlg({
+                    msg: `${L.nowTappingFor(pp.name)}\n\n${L.tapForOtherWarn}`,
+                    yes: L.tapForOtherYes, no: L.cancel,
+                    onYes: () => { setConfirmDlg(null); setVoorWieRaw(pp.id); setAndersOpen(false) },
+                  })}
+                  style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", background: voorWie === pp.id ? "rgba(240,165,0,0.14)" : "#fff",
+                    border: "1px solid rgba(29,41,66,0.12)", borderRadius: 9, padding: "9px 11px", marginBottom: 4, cursor: "pointer", fontFamily: "inherit", fontSize: 15.5, fontWeight: 800, color: "#1d2942" }}>
+                  {pp.claimedBy ? "📱" : "👤"} {pp.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )
     })()
   )
   const renderZoekBlok = (inKaart = false) => (<>
     {!inKaart && renderVoorWieStrook()}
-    <div style={{ display: "flex", gap: 7, alignItems: "stretch", marginBottom: inKaart ? 2 : 10 }}>
+    {/* Anker voor het scrollen na "Kiezen": hierheen, zodat het zoekveld bovenaan staat. */}
+    <div ref={inKaart ? undefined : zoekRij} style={{ scrollMarginTop: 8, display: "flex", gap: 7, alignItems: "stretch", marginBottom: inKaart ? 2 : 10 }}>
       <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
         <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 18, pointerEvents: "none" }}>🔍</span>
         <input value={drinkSearch} onChange={(e) => setDrinkSearch(e.target.value)}
@@ -10439,7 +10477,7 @@ export default function PartyTest() {
               </div>
               </>)
             })()}
-            {settle && people.length > 0 && (
+            {settle && fromQuick && people.length > 0 && (
               <div style={settle ? { ...S.card, padding: "11px 12px", marginBottom: 8 } : { marginTop: -17, marginBottom: 18, background: "#fff", border: `2.5px solid ${donkerder(voorWieKleur, 0.82)}`, borderTop: "none", borderRadius: "0 0 13px 13px", padding: "0 11px 13px" }}>
                 <div style={{ fontSize: 14.5, fontWeight: 800, color: voorWie && voorWie !== meId ? "#8a5e0f" : "#6b7484", marginBottom: 7 }}>
                   <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
@@ -10492,24 +10530,6 @@ export default function PartyTest() {
                     </button>
                   )}
                 </div>
-                {/* Uitklaplijst met de rest. Elke naam vraagt eerst om bevestiging: in deze
-                    modus is aantikken voor een ander de uitzondering, niet de regel. */}
-                {settle && !fromQuick && andersOpen && (
-                  <div style={{ marginTop: 8, maxHeight: 172, overflowY: "auto", border: `1px solid ${MODUS_FAIR.lijnZacht}`, borderRadius: 11, padding: 7, background: MODUS_FAIR.vlak }}>
-                    <div style={{ fontSize: 12.5, color: "#8a5e0f", lineHeight: 1.45, padding: "2px 4px 8px" }}>{L.qrTapsSelf}</div>
-                    {nogAanwezig.filter((pp) => pp.id !== meId).map((pp) => (
-                      <button key={pp.id} onClick={() => setConfirmDlg({
-                          msg: `${L.nowTappingFor(pp.name)}\n\n${L.tapForOtherWarn}`,
-                          yes: L.tapForOtherYes, no: L.cancel,
-                          onYes: () => { setConfirmDlg(null); setVoorWieRaw(pp.id); setAndersOpen(false) },
-                        })}
-                        style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", background: voorWie === pp.id ? "rgba(240,165,0,0.14)" : "#fff",
-                          border: "1px solid rgba(29,41,66,0.12)", borderRadius: 9, padding: "9px 11px", marginBottom: 4, cursor: "pointer", fontFamily: "inherit", fontSize: 15.5, fontWeight: 800, color: "#1d2942" }}>
-                        {pp.claimedBy ? "📱" : "👤"} {pp.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
                 </>
                 )}
 
