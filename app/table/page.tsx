@@ -4382,41 +4382,44 @@ export default function RundoTable() {
                   // Elk verschil verdient dezelfde melding. Enkel bij een klein bedrag krijg je
                   // er een schakelaar bij: vind je niets, dan is het wellicht gewoon afronding.
                   return (
-                    <div style={{ marginTop: 8, background: "rgba(243,156,18,0.11)", border: "1.5px solid rgba(243,156,18,0.55)", borderRadius: 12, padding: "13px" }}>
-                      {/* Eigen kop: het bontotaal is bevestigd, maar de lijst eronder telt
-                          anders op. Zonder die kop lijkt de groene en oranje melding elkaar
-                          tegen te spreken. */}
-                      {/* Eén kader in plaats van een kader in een kader, en het verschil als kop:
-                          dat bedrag is waar het over gaat. De rekensom staat er als bijzin onder,
-                          en de drie controlepunten als pillen — als bullets namen ze drie regels
-                          en het gewicht van een instructie, terwijl het categorieën zijn. */}
-                      <div style={{ fontSize: 20, fontWeight: 800, color: "#8a4514", lineHeight: 1.3 }}>
-                        €{diffTxt} {higher ? L.tooMuchInList : L.tooLittleInList}
-                      </div>
-                      <div style={{ fontSize: 15, color: "#8a6a2a", marginTop: 3 }}>
-                        {L.receiptConfirmedLabel} €{(entered ?? 0).toFixed(2).replace(".", ",")} · {L.itemsBelowLabel} €{billTotal.toFixed(2).replace(".", ",")}
-                      </div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: "#8a5e0f", margin: "11px 0 6px" }}>{L.usuallyOneOf}</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {[L.checkTaxShort, L.checkPricesShort, L.checkSharedShort].map((tekst, i2) => (
-                          <span key={i2} style={{ background: "#fff", border: "1px solid rgba(240,165,0,0.5)", color: "#8a5e0f", borderRadius: 999, padding: "6px 11px", fontSize: 13.5, fontWeight: 800 }}>{tekst}</span>
-                        ))}
-                      </div>
-                      <button onClick={() => { if (typeof document !== "undefined") document.getElementById("items-op-de-bon")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
-                        style={{ marginTop: 11, display: "inline-flex", alignItems: "center", gap: 7, fontSize: 15, fontWeight: 800, color: "#fff", background: "#c0392b", border: "none", borderRadius: 10, padding: "10px 15px", cursor: "pointer" }}>⬇ {L.goToItemList}</button>
-                      {rounding && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 9, background: "rgba(255,255,255,0.75)", border: "1px solid rgba(90,108,166,0.28)", borderRadius: 9, padding: "9px 10px" }}>
-                          <span style={{ flexShrink: 0, fontSize: 18 }}>🧮</span>
-                          <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, color: "#2b4f56", lineHeight: 1.4 }}>
-                            <b>{L.roundingTitle}</b><br />
-                            <span style={{ color: "#7d999d" }}>{L.roundingSub}</span>
-                          </span>
-                          <button onClick={() => setRoundingOk(true)} title={L.roundingSub}
-                            style={{ flexShrink: 0, width: 40, height: 23, background: "#b6cacc", borderRadius: 20, border: "none", position: "relative", cursor: "pointer", padding: 0 }}>
-                            <span style={{ position: "absolute", top: 2.5, left: 2.5, width: 18, height: 18, background: "#fff", borderRadius: "50%" }} />
-                          </button>
+                    <div id="verschil-blok" style={{ marginTop: 8, background: "#fff", border: "1.5px solid rgba(224,107,94,0.35)", borderRadius: 14, overflow: "hidden" }}>
+                      {/* Rode kop over de eerste twee regels, witte rest eronder. Het bedrag
+                          is de melding; de oorzaken zijn naslag en hoeven niet te schreeuwen. */}
+                      <div style={{ background: "rgba(224,107,94,0.12)", padding: 13, borderBottom: "3px solid #e0685c" }}>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: "#c0392b", lineHeight: 1.3 }}>
+                          ⚠️ €{diffTxt} {higher ? L.tooMuchInList : L.tooLittleInList}
                         </div>
-                      )}
+                        <div style={{ fontSize: 15, color: "#c0392b", opacity: 0.9, marginTop: 4 }}>
+                          {L.receiptConfirmedLabel} €{(entered ?? 0).toFixed(2).replace(".", ",")} · {L.itemsBelowLabel} €{billTotal.toFixed(2).replace(".", ",")}
+                        </div>
+                      </div>
+                      <div style={{ padding: 13 }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: "#4a6e73", marginBottom: 8 }}>{L.usuallyOneOf}</div>
+                        {/* Het pijltje volgt de richting van het verschil: telt je lijst te weinig,
+                            dan staat een fout aantal of een foute prijs te laag, niet te hoog. */}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {[`${BON_STRINGS[lang].pillQty} ${higher ? "↑" : "↓"}`, `${BON_STRINGS[lang].pillPrice} ${higher ? "↑" : "↓"}`, L.checkTaxShort].map((tekst, i2) => (
+                            <span key={i2} style={{ background: "#fff", border: "1px solid rgba(18,58,66,0.16)", color: "#4a6e73", borderRadius: 999, padding: "6px 12px", fontSize: 14.5, fontWeight: 700 }}>{tekst}</span>
+                          ))}
+                        </div>
+                        <button onClick={() => { if (typeof document !== "undefined") document.getElementById("items-op-de-bon")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
+                          style={{ marginTop: 13, display: "inline-flex", alignItems: "center", gap: 7, fontSize: 15, fontWeight: 800, color: "#c0392b", background: "#fff", border: "1.5px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "11px 15px", cursor: "pointer" }}>
+                          ↓ {BON_STRINGS[lang].checkList}
+                        </button>
+                        {rounding && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 11, background: "rgba(18,58,66,0.04)", border: "1px solid rgba(18,58,66,0.10)", borderRadius: 12, padding: "10px 11px" }}>
+                            <span style={{ flexShrink: 0, fontSize: 18 }}>🧮</span>
+                            <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, color: "#2b4f56", lineHeight: 1.4 }}>
+                              <b>{L.roundingTitle}</b><br />
+                              <span style={{ color: "#7d999d" }}>{L.roundingSub}</span>
+                            </span>
+                            <button onClick={() => setRoundingOk(true)} title={L.roundingSub}
+                              style={{ flexShrink: 0, width: 40, height: 23, background: "#b6cacc", borderRadius: 20, border: "none", position: "relative", cursor: "pointer" }}>
+                              <span style={{ position: "absolute", top: 2.5, left: 2.5, width: 18, height: 18, background: "#fff", borderRadius: "50%" }} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )
                 })()}
@@ -4440,7 +4443,7 @@ export default function RundoTable() {
           <ItemList
             items={baseItems} claimedQty={claimedQty} participants={participants} claimsForItem={claimsForItem}
             sharerIds={sharerIds} shareHeads={shareHeads} toggleShareClaim={toggleShareClaim} setShareFixed={setShareFixed}
-            onEdit={(it) => { if (!requireTotal()) return; setTotalDraft(null); setEditItem(it) }} onToggleShared={(it) => { if (!requireTotal()) return; toggleShared(it) }} onDelete={(id) => { if (!requireTotal()) return; deleteItem(id) }} onAddManual={() => { if (!requireTotal()) return; openNewItem("bill") }} onToast={setToast} onAddTax={(kind) => { if (!requireTotal()) return; setTaxModal({ kind, mode: "amount", pct: "21", name: kind === "discount" ? L.wordDiscount : L.wordCost, amount: "", scope: "all", ids: [] }) }} bareBill
+            onEdit={(it) => { if (!requireTotal()) return; setTotalDraft(null); setEditItem(it) }} onToggleShared={(it) => { if (!requireTotal()) return; toggleShared(it) }} onDelete={(id) => { if (!requireTotal()) return; deleteItem(id) }} onAddManual={() => { if (!requireTotal()) return; openNewItem("bill") }} bareBill
             recentItemId={recentItemId} onGoGuests={goGuests}
             scanFlags={scanFlags}
             billOk={billOk}
@@ -6271,17 +6274,15 @@ function DeelUitleg() {
 
 const BON_STRINGS = {
   nl: {
-    checkTitle: "Klopt de lijst met je bon?",
-    checkSub: "Tik een item aan om het te veranderen",
-    over: (b: string) => `Je lijst telt ${b} hoger dan de bon`,
-    under: (b: string) => `Je lijst telt ${b} lager dan de bon`,
-    okBar: "Klopt met je bon",
-    compare: "Leg je papieren bon ernaast en check items en bedragen. Meest voorkomende fouten:",
-    findQty: "Verkeerde aantallen",
-    findDupes: "Dubbele items",
-    addTax: "Korting of btw toevoegen",
-    noQty: "Alle aantallen staan op 1",
-    noDupes: "Geen dubbele namen gevonden",
+    diffOver: (b: string) => `${b} hoger dan de bon`,
+    diffUnder: (b: string) => `${b} lager dan de bon`,
+    tapHint: "Tik items aan om te wijzigen",
+    causes: "oorzaken ↑",
+    panelIntro: "Tik een item aan en er verschijnt:",
+    panelShare: '"Delen" is voor gedeelde items (bv. fles water/wijn), bedrag wordt later over de delers verdeeld.',
+    pillQty: "aantallen",
+    pillPrice: "prijs",
+    checkList: "Itemlijst nakijken",
     sharedLabel: "gedeeld",
     sharedNote: "verdeeld over de delers",
     sharedNoteQty: (q: number) => `${q} stuks · verdeeld over de delers`,
@@ -6290,19 +6291,20 @@ const BON_STRINGS = {
     del: "wis",
     share: "delen",
     shareOff: "niet delen",
+    confirmShare: (b: string) => `Als gedeeld item wordt de volle ${b} verdeeld over wie meedeelt. Het aantal telt dan niet meer per stuk mee.`,
+    confirmNo: "Toch niet",
+    confirmYes: "Delen",
   },
   fr: {
-    checkTitle: "La liste correspond à l'addition ?",
-    checkSub: "Touchez un article pour le modifier",
-    over: (b: string) => `Votre liste dépasse l'addition de ${b}`,
-    under: (b: string) => `Votre liste est inférieure de ${b} à l'addition`,
-    okBar: "Correspond à l'addition",
-    compare: "Posez l'addition papier à côté et vérifiez articles et montants. Erreurs fréquentes :",
-    findQty: "Quantités erronées",
-    findDupes: "Articles en double",
-    addTax: "Ajouter remise ou TVA",
-    noQty: "Toutes les quantités sont à 1",
-    noDupes: "Aucun nom en double trouvé",
+    diffOver: (b: string) => `${b} de plus que l'addition`,
+    diffUnder: (b: string) => `${b} de moins que l'addition`,
+    tapHint: "Touchez un article pour le modifier",
+    causes: "causes ↑",
+    panelIntro: "Touchez un article et vous verrez :",
+    panelShare: "« Partager » sert aux articles partagés (p.ex. une bouteille d'eau ou de vin) ; le montant sera réparti entre les partageurs.",
+    pillQty: "quantités",
+    pillPrice: "prix",
+    checkList: "Vérifier la liste",
     sharedLabel: "partagé",
     sharedNote: "réparti entre les partageurs",
     sharedNoteQty: (q: number) => `${q} pièces · réparti entre les partageurs`,
@@ -6311,19 +6313,19 @@ const BON_STRINGS = {
     del: "suppr.",
     share: "partager",
     shareOff: "ne plus partager",
+    confirmShare: (b: string) => `En article partagé, la totalité de ${b} est répartie entre les partageurs. La quantité ne compte alors plus à la pièce.`,
+    confirmNo: "Annuler",
+    confirmYes: "Partager",
   },
 }
 
-// Indigo — dezelfde familie als je gastnaam-chips, rgba(90,108,166,…).
-// Wit vlak met indigo tekst, zodat het label leesbaar blijft op een groene rij.
-const INDIGO = { tekst: "#3f4a8a", rand: "rgba(90,108,166,0.45)", vlak: "rgba(90,108,166,0.10)" }
+// Indigo — dezelfde familie als de gastnaam-chips, rgba(90,108,166,…).
+// Het label krijgt een wit vlak zodat het ook op een groene rij leesbaar blijft.
+const INDIGO = { tekst: "#3f4a8a", rand: "rgba(90,108,166,0.45)", vlak: "rgba(90,108,166,0.09)", vol: "#4b5699" }
 
 const euro = (n: number) => `€${n.toFixed(2).replace(".", ",")}`
 
-
-// ─── 2. ITEMLIST ─────────────────────────────────────────────────────────────
-
-function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, shareHeads, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onAddManual, onAddTax, onToast, bareBill, taxLines, taxNode, onViewReceipt, recentItemId, onGoGuests, billOk, billOverBy, scanFlags }: {
+function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, shareHeads, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onAddManual, bareBill, taxLines, taxNode, onViewReceipt, recentItemId, onGoGuests, billOk, billOverBy, scanFlags }: {
   items: BillItem[]
   claimedQty: (id: string) => number
   participants: Participant[]
@@ -6336,8 +6338,6 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   onToggleShared: (it: BillItem) => void
   onDelete: (id: string) => void
   onAddManual: () => void
-  onAddTax?: (kind: "cost" | "discount") => void
-  onToast?: (bericht: string) => void
   bareBill?: boolean
   taxLines?: { name: string; amount: number }[]
   taxNode?: React.ReactNode
@@ -6350,66 +6350,43 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
 }) {
   const [openFlag, setOpenFlag] = useState<string | null>(null)
   const [openItem, setOpenItem] = useState<string | null>(null)
+  const [deelVraag, setDeelVraag] = useState<string | null>(null)
   const [panelOpen, setPanelOpen] = useState(false)
-  const [markIds, setMarkIds] = useState<string[]>([])
-  // De blauwe uitlegkaart verdwijnt zodra iemand voor het eerst een item heeft
-  // opengetikt. Daarna weet je het gebaar, en dan is ze alleen nog ballast.
-  const [uitlegGezien, setUitlegGezien] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false
-    return localStorage.getItem("rundo_bon_tikuitleg") === "1"
-  })
-  const rowRefs = useRef<Record<string, HTMLDivElement | null>>({})
-  const openScrollY = useRef(0)
+  const [alGetikt, setAlGetikt] = useState(false)
+  const [blokWeg, setBlokWeg] = useState(false)
   const [lang] = useLang()
   const L = STRINGS[lang]
   const B = BON_STRINGS[lang]
 
   const scheef = billOverBy != null && Math.abs(billOverBy) >= 0.005
 
-  // Het paneel klapt dicht zodra je begint te scrollen. Uitgeklapt is het zo'n 200px,
-  // en dat wil je niet permanent boven een lijst hebben hangen terwijl je bedragen
-  // afloopt. De drempel van 40px voorkomt dat één rubberband-beweging het al sluit.
+  // "oorzaken ↑" verschijnt pas wanneer het rode blok bovenaan echt uit beeld is.
+  // Staat het nog in zicht, dan is de knop overbodig.
+  useEffect(() => {
+    if (!scheef) return
+    const kijk = () => {
+      const blok = document.getElementById("verschil-blok")
+      if (!blok) { setBlokWeg(false); return }
+      setBlokWeg(blok.getBoundingClientRect().bottom < 8)
+    }
+    kijk()
+    window.addEventListener("scroll", kijk, { passive: true })
+    return () => window.removeEventListener("scroll", kijk)
+  }, [scheef])
+
+  // Het uitklapje sluit zodra je scrollt: het ligt over de lijst heen.
   useEffect(() => {
     if (!panelOpen) return
-    openScrollY.current = window.scrollY
-    const bijScroll = () => {
-      if (Math.abs(window.scrollY - openScrollY.current) > 40) setPanelOpen(false)
-    }
+    const start = window.scrollY
+    const bijScroll = () => { if (Math.abs(window.scrollY - start) > 40) setPanelOpen(false) }
     window.addEventListener("scroll", bijScroll, { passive: true })
     return () => window.removeEventListener("scroll", bijScroll)
   }, [panelOpen])
 
-  // De drie zoekknoppen staan er altijd wanneer het niet klopt — je moet dan sowieso
-  // gaan zoeken. Levert een zoekopdracht niets op, dan zegt de toast dat, want ook dat
-  // is bruikbaar: het schrapt een verdachte.
-  const idsMetAantal = items.filter((it) => it.quantity > 1).map((it) => it.id)
-  const idsDubbel = (() => {
-    const perNaam: Record<string, string[]> = {}
-    items.forEach((it) => {
-      const sleutel = (it.name || "").trim().toLowerCase()
-      if (!perNaam[sleutel]) perNaam[sleutel] = []
-      perNaam[sleutel].push(it.id)
-    })
-    return Object.values(perNaam).filter((rij) => rij.length > 1).flat()
-  })()
-
-  const zoek = (ids: string[], leegBericht: string) => {
-    if (ids.length === 0) { onToast?.(leegBericht); return }
-    setMarkIds(ids)
-    const eerste = rowRefs.current[ids[0]]
-    if (eerste) eerste.scrollIntoView({ behavior: "smooth", block: "center" })
-    window.setTimeout(() => setMarkIds([]), 2600)
-  }
-
-  const zoekKnop = (icoon: string, tekst: string, actie: () => void) => (
-    <button onClick={actie} style={{
-      display: "flex", alignItems: "center", gap: 10, width: "100%", boxSizing: "border-box",
-      height: 48, padding: "0 13px", marginBottom: 7, cursor: "pointer",
-      background: "#fff", border: "1px solid rgba(18,58,66,0.14)", borderRadius: 12,
-      fontSize: 16.5, fontWeight: 700, color: "#123a42", textAlign: "left",
-    }}>
-      <span style={{ fontSize: 19, flexShrink: 0 }}>{icoon}</span>
-      <span style={{ flex: 1, minWidth: 0 }}>{tekst}</span>
+  const actieKnop = (tekst: string, icoon: React.ReactNode, kleur: string, randKleur: string, actie: () => void) => (
+    <button onClick={(e) => { e.stopPropagation(); actie() }}
+      style={{ flex: 1, height: 44, border: `1px solid ${randKleur}`, background: "#fff", borderRadius: 10, cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: kleur, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+      {icoon}{tekst}
     </button>
   )
 
@@ -6422,62 +6399,39 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         )}
       </div>
 
-      {/* ─── Zwevende statusbalk ───────────────────────────────────────────────
-          Eén element met drie toestanden. Omdat hij blijft staan tijdens het
-          scrollen, zie je meteen dat het saldo terugspringt wanneer je bovenaan
-          iets wist — daarvoor moest je vroeger naar de voet van de lijst.
-          Let op: position:sticky breekt zodra een ouder overflow:hidden heeft.
-          Even nakijken op de containers boven S.card voor je dit live zet. */}
-      {/* ─── Blauwe uitlegkaart ────────────────────────────────────────────────
-          Leert het tikgebaar aan. Scrollt gewoon mee weg — alleen de statusbalk
-          eronder blijft zweven, want alleen het saldo is de moeite om permanent
-          in beeld te houden. */}
-      {items.length > 0 && !uitlegGezien && (
-        <div style={{ background: "rgba(20,153,176,0.10)", border: "1px solid rgba(20,153,176,0.30)", borderRadius: 12, padding: "12px 13px", marginBottom: 10 }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: "#0f6d7e" }}>{B.checkTitle}</div>
-          <div style={{ fontSize: 14.5, color: "#0f6d7e", opacity: 0.85, marginTop: 3 }}>{B.checkSub}</div>
-          <div style={{ display: "flex", gap: 7, marginTop: 10 }}>
-            <span style={{ flex: 1, height: 40, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, background: "#fff", border: "1px solid rgba(18,58,66,0.12)", borderRadius: 10, fontSize: 15, fontWeight: 700, color: "#4a6e73" }}>✏️ {B.edit}</span>
-            <span style={{ flex: 1, height: 40, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, background: "#fff", border: "1px solid rgba(192,57,43,0.28)", borderRadius: 10, fontSize: 15, fontWeight: 700, color: "#c0392b" }}>🗑️ {B.del}</span>
-            <span style={{ flex: 1, height: 40, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, background: "#fff", border: `1px solid ${INDIGO.rand}`, borderRadius: 10, fontSize: 15, fontWeight: 700, color: INDIGO.tekst }}>
-              <ShareIcon on size={13} />{B.share}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* De balk bestaat alleen wanneer er iets te melden valt: een verschil of een
-          kloppend totaal. Is er nog geen bontotaal ingevuld, dan is er geen saldo,
-          en dan draagt de blauwe kaart hierboven de boodschap. */}
-      {items.length > 0 && (scheef || billOk) && (
-        <div style={{ position: "sticky", top: 0, zIndex: 5, background: "#fff", margin: "0 -18px", padding: "0 18px 10px" }}>
-          <div style={{
-            borderRadius: 12,
-            background: scheef ? "rgba(224,107,94,0.10)" : "rgba(39,174,96,0.10)",
-            border: `1px solid ${scheef ? "rgba(224,107,94,0.45)" : "rgba(39,174,96,0.45)"}`,
-          }}>
+      {/* ─── Zwevende meldingsbalk ─────────────────────────────────────────────
+          Alleen bij een verschil. Klopt het totaal, dan zeggen de groene rijen
+          dat al en scheelt het weglaten van de balk een item schermruimte.
+          Let op: position:sticky breekt zodra een ouder overflow:hidden heeft. */}
+      {items.length > 0 && scheef && (
+        <div style={{ position: "sticky", top: 0, zIndex: 5, background: "#fff", margin: "0 -18px", padding: "0 18px 9px" }}>
+          <div style={{ borderRadius: 12, background: "rgba(224,107,94,0.10)", border: "1px solid rgba(224,107,94,0.45)" }}>
             <div onClick={() => setPanelOpen((v) => !v)}
-              style={{ display: "flex", alignItems: "center", gap: 9, padding: "11px 12px", cursor: "pointer", userSelect: "none" }}>
-              <span style={{ fontSize: 17, flexShrink: 0 }}>{scheef ? "⚠️" : "✅"}</span>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, lineHeight: 1.35, color: scheef ? "#c0392b" : "#15703f" }}>
-                {scheef
-                  ? (billOverBy! > 0 ? B.over(euro(billOverBy!)) : B.under(euro(Math.abs(billOverBy!))))
-                  : B.okBar}
-              </span>
-              {billOk && <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 800, color: "#15703f" }}>{euro(items.reduce((s, it) => s + it.unit_price * it.quantity, 0) + (taxLines || []).reduce((s, t) => s + t.amount, 0))}</span>}
-              <span style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 9, background: "#fff", border: "1px solid rgba(18,58,66,0.14)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#4a6e73" }}>{panelOpen ? "▴" : "▾"}</span>
+              style={{ display: "flex", alignItems: "center", gap: 9, padding: "10px 12px", cursor: "pointer", userSelect: "none" }}>
+              <span style={{ fontSize: 17, flexShrink: 0 }}>⚠️</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: "#c0392b", lineHeight: 1.3 }}>
+                  {billOverBy! > 0 ? B.diffOver(euro(billOverBy!)) : B.diffUnder(euro(Math.abs(billOverBy!)))}
+                </div>
+                {/* De tikuitleg blijft tot je voor het eerst een item aantikt — niet tot
+                    je scrollt, want dan verdwijnt ze net wanneer je bij de items aankomt. */}
+                {!alGetikt && <div style={{ fontSize: 14, color: "#c0392b", opacity: 0.85, marginTop: 2 }}>{B.tapHint}</div>}
+              </div>
+              {blokWeg && (
+                <button onClick={(e) => { e.stopPropagation(); document.getElementById("verschil-blok")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
+                  style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: "#c0392b", background: "#fff", border: "1px solid rgba(224,107,94,0.45)", borderRadius: 9, padding: "6px 10px", cursor: "pointer", whiteSpace: "nowrap" }}>{B.causes}</button>
+              )}
             </div>
 
             {panelOpen && (
-              <div style={{ background: "#fff", borderRadius: "0 0 11px 11px", padding: 12, borderTop: "1px solid rgba(18,58,66,0.08)" }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: 16, color: "#123a42", lineHeight: 1.5, marginBottom: 11 }}>
-                  <span style={{ fontSize: 18, flexShrink: 0 }}>🧾</span>
-                  <span>{B.compare}</span>
+              <div style={{ background: "#fff", borderRadius: "0 0 11px 11px", padding: 13, borderTop: "1px solid rgba(224,107,94,0.3)" }}>
+                <div style={{ fontSize: 16, color: "#123a42", lineHeight: 1.5 }}>{B.panelIntro}</div>
+                <div style={{ display: "flex", gap: 6, marginTop: 9 }}>
+                  <span style={{ flex: 1, height: 40, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, background: "#fff", border: "1px solid rgba(18,58,66,0.12)", borderRadius: 10, fontSize: 15, fontWeight: 700, color: "#4a6e73" }}>✏️ {B.edit}</span>
+                  <span style={{ flex: 1, height: 40, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, background: "#fff", border: "1px solid rgba(192,57,43,0.28)", borderRadius: 10, fontSize: 15, fontWeight: 700, color: "#c0392b" }}>🗑️ {B.del}</span>
+                  <span style={{ flex: 1, height: 40, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, background: "#fff", border: `1px solid ${INDIGO.rand}`, borderRadius: 10, fontSize: 15, fontWeight: 700, color: INDIGO.tekst }}><ShareIcon on size={13} />{B.share}</span>
                 </div>
-                {zoekKnop("🔢", B.findQty, () => zoek(idsMetAantal, B.noQty))}
-                {zoekKnop("📋", B.findDupes, () => zoek(idsDubbel, B.noDupes))}
-                {onAddTax && zoekKnop("🏷️", B.addTax, () => onAddTax(billOverBy != null && billOverBy > 0 ? "discount" : "cost"))}
-                <div style={{ fontSize: 15, color: "#4a6e73", lineHeight: 1.5, marginTop: 4 }}>{L.legendShare}</div>
+                <div style={{ fontSize: 15, color: "#4a6e73", lineHeight: 1.5, marginTop: 10 }}>{B.panelShare}</div>
               </div>
             )}
           </div>
@@ -6491,35 +6445,30 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         const who = claimsForItem(it.id)
         const isNew = recentItemId === it.id
         const zeroPrice = it.unit_price <= 0.0001
-        const gemarkeerd = markIds.includes(it.id)
         const uitgeklapt = openItem === it.id
+        const vraagt = deelVraag === it.id
 
         // De rijkleur zegt iets over de bon, niet over het item: rood bij een
-        // ontbrekende prijs, amber bij net toegevoegd, blauw als je er via de
-        // zoekknop naartoe gesprongen bent, groen als het totaal klopt.
-        // is_shared kleurt de rij niet meer — dat is nu het indigo label.
+        // ontbrekende prijs, amber bij net toegevoegd, groen als het totaal klopt.
+        // is_shared kleurt de rij niet — dat doet het indigo label.
         const vlak = zeroPrice ? "rgba(192,57,43,0.06)"
-          : gemarkeerd ? "rgba(20,153,176,0.10)"
           : isNew ? "rgba(233,196,95,0.16)"
           : billOk ? "rgba(39,174,96,0.06)"
           : uitgeklapt ? "rgba(18,58,66,0.04)"
           : "transparent"
         const rand = zeroPrice ? "1.5px solid rgba(192,57,43,0.5)"
-          : gemarkeerd ? "1.5px solid rgba(20,153,176,0.5)"
           : isNew ? "1.5px solid #ecc85a"
           : billOk ? "1.5px solid rgba(39,174,96,0.55)"
           : "1px solid transparent"
-        const omkaderd = zeroPrice || gemarkeerd || isNew || billOk || uitgeklapt
+        const omkaderd = zeroPrice || isNew || billOk || uitgeklapt
 
         return (
-          <div key={it.id} ref={(el) => { rowRefs.current[it.id] = el }}
+          <div key={it.id}
             onClick={() => {
-              setOpenItem(uitgeklapt ? null : it.id)
               setPanelOpen(false)
-              if (!uitgeklapt && !uitlegGezien) {
-                setUitlegGezien(true)
-                try { localStorage.setItem("rundo_bon_tikuitleg", "1") } catch { /* privémodus */ }
-              }
+              setDeelVraag(null)
+              setOpenItem(uitgeklapt ? null : it.id)
+              if (!uitgeklapt) setAlGetikt(true)
             }}
             style={{
               padding: "10px 8px", cursor: "pointer",
@@ -6527,12 +6476,11 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
               marginTop: omkaderd ? 4 : 0, marginBottom: omkaderd ? 6 : 0,
               background: vlak, border: rand,
               borderBottom: omkaderd ? rand : "1px solid rgba(0,0,0,0.05)",
-              transition: "background 140ms ease",
             }}>
             {isNew && <div style={{ fontSize: 15.5, fontWeight: 800, color: "#a06b00", marginBottom: 4 }}>{L.justAddedEdit}</div>}
 
-            {/* Naam en prijs op één regel. De naam mag over twee regels, daarna
-                afkappen — de volledige naam staat in het bewerkscherm. */}
+            {/* Naam en prijs op één regel; de naam mag over twee regels en kapt
+                daarna af — de volledige naam staat in het bewerkscherm. */}
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
               <div style={{
                 flex: 1, minWidth: 0, fontSize: 17, fontWeight: 700, lineHeight: 1.3, color: "#123a42",
@@ -6545,8 +6493,8 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
               </div>
             </div>
 
-            {/* Subregel. Bij aantal 1 valt "per stuk" weg: die zegt dan hetzelfde
-                als het bedrag ernaast en verdubbelde de hoogte van elke rij. */}
+            {/* Bij aantal 1 valt "per stuk" weg: dat zei hetzelfde als het bedrag
+                ernaast en verdubbelde de hoogte van elke rij. */}
             {it.is_shared ? (
               <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 6, flexWrap: "wrap" }}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13.5, fontWeight: 700, color: INDIGO.tekst, background: "#fff", border: `1px solid ${INDIGO.rand}`, borderRadius: 8, padding: "3px 8px" }}>
@@ -6567,18 +6515,32 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                 style={{ marginTop: 6, border: "none", background: "#f39c12", color: "#fff", borderRadius: 8, padding: "3px 9px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>?</button>
             )}
 
-            {/* Tikbalk. Verschijnt alleen bij het item dat je aantikte, en er kan er
-                maar één open staan, zodat de lijst nooit meer dan één rij groeit. */}
-            {uitgeklapt && (
-              <div style={{ display: "flex", gap: 6, marginTop: 10 }} onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => { setOpenItem(null); onEdit(it) }}
-                  style={{ flex: 1, height: 44, border: "1px solid rgba(18,58,66,0.14)", background: "#fff", borderRadius: 10, cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#4a6e73" }}>✏️ {B.edit}</button>
-                <button onClick={() => { setOpenItem(null); onDelete(it.id) }}
-                  style={{ flex: 1, height: 44, border: "1px solid rgba(192,57,43,0.3)", background: "#fff", borderRadius: 10, cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#c0392b" }}>🗑️ {B.del}</button>
-                <button onClick={() => { setOpenItem(null); onToggleShared(it) }}
-                  style={{ flex: 1, height: 44, borderRadius: 10, cursor: "pointer", fontSize: 15.5, fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, color: INDIGO.tekst, background: it.is_shared ? INDIGO.vlak : "#fff", border: `1px solid ${INDIGO.rand}` }}>
-                  <ShareIcon on={it.is_shared} size={13} />{it.is_shared ? B.shareOff : B.share}
-                </button>
+            {/* Tikbalk, of de deelbevestiging die haar tijdelijk vervangt. */}
+            {uitgeklapt && !vraagt && (
+              <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                {actieKnop(B.edit, <span>✏️</span>, "#4a6e73", "rgba(18,58,66,0.14)", () => { setOpenItem(null); onEdit(it) })}
+                {actieKnop(B.del, <span>🗑️</span>, "#c0392b", "rgba(192,57,43,0.3)", () => { setOpenItem(null); onDelete(it.id) })}
+                {/* Delen aanzetten vraagt een bevestiging met uitleg; uitzetten niet —
+                    dat is het herstel van een vergissing en hoeft geen drempel. */}
+                {actieKnop(it.is_shared ? B.shareOff : B.share, <ShareIcon on={it.is_shared} size={13} />, INDIGO.tekst, INDIGO.rand,
+                  () => { if (it.is_shared) { setOpenItem(null); onToggleShared(it) } else setDeelVraag(it.id) })}
+              </div>
+            )}
+
+            {uitgeklapt && vraagt && (
+              <div onClick={(e) => e.stopPropagation()}
+                style={{ background: INDIGO.vlak, border: `1px solid ${INDIGO.rand}`, borderRadius: 12, padding: 11, marginTop: 10 }}>
+                <div style={{ fontSize: 15.5, color: INDIGO.tekst, lineHeight: 1.5 }}>
+                  {B.confirmShare(euro(it.unit_price * it.quantity))}
+                </div>
+                <div style={{ display: "flex", gap: 7, marginTop: 11 }}>
+                  <button onClick={() => setDeelVraag(null)}
+                    style={{ flex: 1, height: 40, border: "1px solid rgba(18,58,66,0.14)", background: "#fff", borderRadius: 10, cursor: "pointer", fontSize: 15, fontWeight: 700, color: "#4a6e73" }}>{B.confirmNo}</button>
+                  <button onClick={() => { setDeelVraag(null); setOpenItem(null); onToggleShared(it) }}
+                    style={{ flex: 1, height: 40, border: "none", background: INDIGO.vol, borderRadius: 10, cursor: "pointer", fontSize: 15, fontWeight: 700, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                    <ShareIcon on size={13} />{B.confirmYes}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -6598,9 +6560,9 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
               </div>
             )}
 
-            {/* ─── Hieronder alleen voor het geval ItemList ooit buiten de bon-tab
-                gebruikt wordt (bareBill=false). Op de bon-tab draait geen van deze
-                blokken, want daar bestaan nog geen gasten. Ongewijzigd overgenomen. */}
+            {/* Hieronder alleen voor het geval ItemList ooit buiten de bon-tab wordt
+                gebruikt (bareBill=false). Op de bon-tab draait niets hiervan, want
+                daar bestaan nog geen gasten. Ongewijzigd overgenomen. */}
             {!bareBill && !it.is_shared && participants.length > 0 && (who.length > 0 || open > 0) && (
               <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6 }}>
                 {who.map((w, i) => (
@@ -6683,14 +6645,13 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         )
       })()}
 
-      {/* De groene kaart onderaan verloor zijn kop: die zei hetzelfde als de balk
-          die op dat moment boven in beeld zweeft. De knop blijft. */}
       {onGoGuests && billOk && (
         <button onClick={onGoGuests} className="rundo-klaar-puls" style={{ width: "100%", marginTop: 16, padding: "16px 0", fontSize: 18, fontWeight: 800, border: "none", borderRadius: 14, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 8px 20px -8px rgba(31,138,76,0.75)", cursor: "pointer" }}>{L.goGuestsBtn}</button>
       )}
     </div>
   )
 }
+
 function AssignPicker({ participants, itemId, isShared, confirmedFn, vrijFn, naamVan, onAssign, onClose }: {
   participants: Participant[]; itemId: string; isShared?: boolean
   confirmedFn: (pid: string) => boolean
