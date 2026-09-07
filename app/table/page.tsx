@@ -6339,7 +6339,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   onAddTax?: (kind: "cost" | "discount") => void
   onToast?: (bericht: string) => void
   bareBill?: boolean
-  taxLines?: { label: string; amount: number }[]
+  taxLines?: { name: string; amount: number }[]
   taxNode?: React.ReactNode
   onViewReceipt?: () => void
   recentItemId?: string | null
