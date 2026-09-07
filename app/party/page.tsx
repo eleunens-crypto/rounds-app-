@@ -1426,6 +1426,13 @@ const T = {
     notFairSplitWhy: "Iedereen betaalt evenveel, ook wie minder dronk. Wil je dat wie meer dronk ook meer betaalt? Schakel over naar Eerlijk verdelen.",
     switchToFairBtn: "Naar Eerlijk verdelen",
     fairHintLine: "hierop verdeelt de app eerlijk — wie meer dronk, betaalt meer",
+    paidWithHead: "BETAALD MET",
+    paidSelfBtn: "zelf betaald",
+    paidPotBtn: "uit de pot",
+    paidSelfHint: "ⓘ voorgeschoten — wordt later eerlijk verrekend volgens wie wat dronk",
+    paidPotHint: "ⓘ later eerlijk verrekend volgens wie wat dronk",
+    potLeftShort: (v: string) => `nog ${v}`,
+    potShortNote: (pot: string, rest: string) => `Er zit nog ${pot} in de pot. De resterende ${rest} staat op jou als voorgeschoten.`,
     fairSetupTitle: "⚖️ Wie was erbij?",
     guestNamePh: "naam optioneel",
     fairAddPerson: "+ Persoon toevoegen",
@@ -2300,6 +2307,13 @@ const T = {
     payAllNote: "Toute l\u2019addition est pour toi :",
     notFairSplitWhy: "Tout le monde paie pareil, m\u00eame ceux qui ont moins bu. Tu veux que ceux qui ont plus bu paient plus ? Passe au partage \u00e9quitable.",
     switchToFairBtn: "Vers le partage \u00e9quitable",
+    paidWithHead: "PAYÉ AVEC",
+    paidSelfBtn: "avancé par toi",
+    paidPotBtn: "avec la cagnotte",
+    paidSelfHint: "ⓘ avancé — sera réparti équitablement selon ce que chacun a bu",
+    paidPotHint: "ⓘ réparti équitablement selon ce que chacun a bu",
+    potLeftShort: (v: string) => `reste ${v}`,
+    potShortNote: (pot: string, rest: string) => `Il reste ${pot} dans la cagnotte. Les ${rest} restants sont avancés par toi.`,
     fairHintLine: "l'app r\u00e9partit \u00e9quitablement sur cette base — qui boit plus, paie plus",
     fairSetupTitle: "⚖️ Qui \u00e9tait l\u00e0 ?",
     guestNamePh: "nom facultatif",
@@ -10885,9 +10899,9 @@ export default function PartyTest() {
             )
           })()}
           <div style={{ ...S.row, justifyContent: "space-between", gap: 8, borderTop: "1px dashed rgba(29,41,66,0.25)", marginTop: 8, paddingTop: 8 }}>
-            {/* "Iemand mag gaan halen" hoort bij Fair Split, waar gasten zelf aantikken.
-                Bij snelle rondjes noteert de beheerder alles zelf. */}
-            {settle ? <span style={{ fontSize: 17, color: "#e08a00", fontWeight: 800 }}>{L.someoneCanGo}</span> : <span />}
+            {/* "Iemand mag gaan halen" hoort bij het moment vóór de toog. In QR-modus
+                sta je hier ná het barlijstje: de drankjes zijn al gehaald. */}
+            {settle && fromQuick ? <span style={{ fontSize: 17, color: "#e08a00", fontWeight: 800 }}>{L.someoneCanGo}</span> : <span />}
             <span style={{ fontSize: 17.5, fontWeight: 800, flexShrink: 0 }}>{L.total}: {items}</span>
           </div>
           {last && (() => { const un = drinks.reduce((a, d) => a + (last.anon[d.id] ?? 0), 0); return un > 0 ? (
@@ -10923,19 +10937,42 @@ export default function PartyTest() {
             <span style={{ fontSize: 21, fontWeight: 800 }}>€</span>
             <input style={{ ...S.input, width: 120, fontSize: 23, textAlign: "center", fontWeight: 800 }} type="text" inputMode="decimal" placeholder="0,00" value={amountDraft} onChange={(e) => { const v = e.target.value.replace(/[^0-9.,]/g, ""); setAmountDraft(v); autoSplit(payPersons, payPot, v); setPaidConfirmed(false) }} />
           </div>
-          <div style={{ fontSize: 15, color: "#6b7484", textAlign: "center", marginBottom: 14 }}>ⓘ {L.fairHintLine}</div>
+          <div style={{ height: 6 }} />
 
           {(parseFloat(amountDraft.replace(",", ".")) || 0) > 0 ? (
           <>
-                  <div style={{ background: payPersons.length === 0 && !payPot ? "rgba(240,165,0,0.09)" : "transparent",
-                    border: payPersons.length === 0 && !payPot ? "1.5px dashed rgba(224,138,0,0.55)" : "1.5px solid transparent",
-                    borderRadius: 13, padding: payPersons.length === 0 && !payPot ? 12 : 0, marginBottom: 4, transition: "background .2s" }}>
-                    <div style={{ fontSize: 15.5, fontWeight: 800, color: payPersons.length === 0 && !payPot ? "#a8720a" : "#1d2942", marginBottom: 9 }}>
-                      {payPersons.length === 0 && !payPot ? <>👆 {L.whoPaidTapIt}</> : L.whoPutMoney}</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-            <span style={{ ...S.chip(payPot ? 1 : 0), opacity: st.potAvail <= 0.005 ? 0.45 : 1 }} onClick={() => { if (!payPot && st.potAvail <= 0.005) { setNotice(`De ${potIsCard ? "drankkaart" : "pot"} is leeg (€0). Tik rechtsboven op “${potIsCard ? "drankkaart" : "pot"} + toevoegen” om eerst in te leggen.`); return } const nextPot = !payPot; setPayPot(nextPot); autoSplit(payPersons, nextPot); setPaidConfirmed(false) }}>{potIsCard ? "💳 drankkaart" : L.thePot}</span>
-            {people.map((p) => <span key={p.id} style={S.chip(payPersons.includes(p.id) ? 1 : 0)} onClick={() => togglePayPerson(p.id)}>{p.name}</span>)}
-          </div>
+                  {/* Twee vlakken in plaats van pillen: één ervan staat altijd aan, dus
+                      het is een keuze en geen aanzetknop. De namenrij is weg — wie het
+                      rondje haalde is de betaler, dat hoeft niemand nog aan te wijzen.
+                      Alleen bij "gewoon rondjes" mag je een ander aanwijzen. */}
+                  <div style={{ marginBottom: 4 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.04em", marginBottom: 7 }}>{L.paidWithHead}</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => { setPayPot(false); const wie = startedBy ? [startedBy] : (meId ? [meId] : []); setPayPersons(wie); autoSplit(wie, false) }}
+                        style={{ flex: 1, cursor: "pointer", fontFamily: "inherit", borderRadius: 12, padding: "13px 6px", textAlign: "center",
+                          background: !payPot ? MODUS_FAIR.tekst : "#fff", border: `2px solid ${!payPot ? MODUS_FAIR.tekst : "rgba(29,41,66,0.2)"}` }}>
+                        <span style={{ display: "block", fontSize: 21, marginBottom: 3 }}>💸</span>
+                        <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: !payPot ? "#fff" : "#4a5560" }}>{L.paidSelfBtn}</span>
+                      </button>
+                      {potChosen && st.potAvail > 0.005 && (
+                        <button onClick={() => { setPayPot(true); setPayPersons([]); autoSplit([], true) }}
+                          style={{ flex: 1, cursor: "pointer", fontFamily: "inherit", borderRadius: 12, padding: "13px 6px", textAlign: "center",
+                            background: payPot ? "#eef4fb" : "#fff", border: `2px solid ${payPot ? "#2f6fb5" : "rgba(47,111,181,0.3)"}` }}>
+                          <span style={{ display: "block", marginBottom: 3, lineHeight: 1 }}>{potIsCard ? <span style={{ fontSize: 21 }}>💳</span> : <ZakjeIcoon size={21} />}</span>
+                          <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#2f5693" }}>{potIsCard ? L.drinkCard : L.paidPotBtn}</span>
+                          <span style={{ display: "block", fontSize: 12, color: "#8b93a3", marginTop: 1 }}>{L.potLeftShort(euro(st.potAvail))}</span>
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#6b7484", lineHeight: 1.5, padding: "9px 2px 0" }}>
+                      {payPot ? L.paidPotHint : L.paidSelfHint}
+                    </div>
+                    {/* Pot te klein? Geen keuzewerk: de app deelt het en zegt wat er gebeurt. */}
+                    {payPot && st.total - st.potAvail > 0.005 && (
+                      <div style={{ background: "rgba(240,165,0,0.12)", border: "1px solid rgba(224,138,0,0.45)", borderRadius: 10, padding: "9px 11px", marginTop: 9, fontSize: 13.5, color: "#8a5e0f", lineHeight: 1.5 }}>
+                        {L.potShortNote(euro(st.potAvail), euro(st.total - st.potAvail))}
+                      </div>
+                    )}
                   </div>
 
           {st.multi && (
@@ -10984,10 +11021,15 @@ export default function PartyTest() {
           <button style={{ ...S.btn, width: "100%", marginTop: 10, padding: "14px 8px", fontSize: 16.5, fontWeight: 800, color: "#6b7484" }}
             onClick={() => { setShowClose(false); setOverviewBackTo("hub"); setView("roundsOverview") }}>{L.fillLater}</button>
         )}
+        {/* Annuleren en bestelling wijzigen horen niet meer op dit scherm: de drankjes
+            staan al op de toog. In QR-modus verdwijnen ze; bij zelf noteren blijven ze,
+            want daar is er nog geen bestelling gedaan. */}
+        {!(settle && !fromQuick) && (
         <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
           <button style={{ ...S.btn, flex: 1, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelRound}>{L.cancelRound}</button>
           <button style={{ ...S.btn, flex: 1, ...(settle ? {} : { padding: "14px 8px", fontSize: 17.5, fontWeight: 800 }) }} onClick={editOrder}>{settle ? L.editOrderOld : L.editOrderBtn}</button>
         </div>
+        )}
       </div></div>
     )
   }
