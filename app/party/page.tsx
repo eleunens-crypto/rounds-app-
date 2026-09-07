@@ -2963,6 +2963,9 @@ export default function PartyTest() {
   const [openRounds, setOpenRounds] = useState<Set<string>>(new Set())
   // Elk bezoek aan het overzicht begint dicht — je opent zelf wat je wil zien.
   useEffect(() => { if (view === "roundsOverview") setOpenRounds(new Set<string>()) }, [view])
+  // Ook bij de gast: kom je op het rondjes-tabblad, dan staat alles dicht. Anders bleef
+  // een kaart die je vorige keer opende openstaan, en scrol je langs oude details.
+  useEffect(() => { if (guestTab === "me") setOpenRounds(new Set<string>()) }, [guestTab])
   // Onthoud vanwaar je naar het rondjesoverzicht ging, zodat "terug" daarheen keert.
   const [overviewBackTo, setOverviewBackTo] = useState<"hub" | "order" | "final" | "payers">("hub")
   const [laatstWeg, setLaatstWeg] = useState<{ did: string; pid: string | null; naam: string } | null>(null)
@@ -9101,14 +9104,25 @@ export default function PartyTest() {
                   const ikHaalde = !!meId && r.startedBy === meId
                   return (
                     <div key={r.id} style={{ ...S.card, padding: 11, marginBottom: 9 }}>
-                      <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                        <span style={{ fontSize: 15.5, fontWeight: 800, color: "#1d2942" }}>{L.roundN(r.seq)}</span>
-                        <span style={{ fontSize: 16, fontWeight: 800, color: (r.amount || 0) > 0.005 ? "#c88a1a" : "#9aa3b2" }}>
-                          {(r.amount || 0) > 0.005 ? euro(r.amount) : paidLabel(r)}
+                      {/* Zelfde kop als bij de beheerder: nummer met statuspil, bedrag
+                          rechts, en eronder één regel met het aantal — niet de hele
+                          opsomming. Die staat achter "toon details". */}
+                      <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+                          <span style={{ fontSize: 15.5, fontWeight: 800, color: "#1d2942" }}>{L.roundN(r.seq)}</span>
+                          <span style={{ flexShrink: 0, borderRadius: 12, padding: "2px 9px", fontSize: 11.5, fontWeight: 800,
+                            background: (r.amount || 0) > 0.005 ? "rgba(31,138,76,0.12)" : "rgba(240,165,0,0.16)",
+                            color: (r.amount || 0) > 0.005 ? "#1f8a4c" : "#8a5e0f" }}>
+                            {(r.amount || 0) > 0.005 ? L.completePill : L.noAmountPill}
+                          </span>
+                        </span>
+                        <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 800, color: (r.amount || 0) > 0.005 ? "#c88a1a" : "#9aa3b2" }}>
+                          {(r.amount || 0) > 0.005 ? euro(r.amount) : "—"}
                         </span>
                       </div>
-                      <div style={{ fontSize: 13, color: "#6b7484", lineHeight: 1.45 }}>
-                        {alles.map((x) => `${x.n}× ${x.d.name}`).join(" · ")}
+                      <div style={{ fontSize: 13, color: "#6b7484", lineHeight: 1.45, marginTop: 4 }}>
+                        {L.drinksCount(alles.reduce((n, x) => n + x.n, 0))}
+                        {(r.amount || 0) > 0.005 && <span style={{ color: "#1f8a4c", fontWeight: 700 }}> · {paidLabel(r)}</span>}
                       </div>
                       <div style={{ fontSize: 12.5, fontWeight: 700, color: mijne.length ? MODUS_FAIR.rand : "#9aa3b2", marginTop: 5 }}>
                         {mijne.length
@@ -11510,7 +11524,9 @@ export default function PartyTest() {
                   {/* Geen tussenmenu meer: toewijzen doet wat het zegt, en aanpassen opent
                       het rondje meteen in de bewerkstand van het rondjesoverzicht. */}
                   <div style={{ ...S.row, justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
-                    <button style={{ ...S.btn, fontSize: 15.5, padding: "5px 12px", fontWeight: 800 }} onClick={() => { setAssignIdx(idx) }}>toewijzen{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ color: "#1f8a4c", fontWeight: 800 }}> ✓</span>}</button>
+                    {(!settle || fromQuick || drinks.some((d) => (r.anon[d.id] ?? 0) > 0)) && (
+                      <button style={{ ...S.btn, fontSize: 15.5, padding: "5px 12px", fontWeight: 800 }} onClick={() => { setAssignIdx(idx) }}>toewijzen{!drinks.some((d) => (r.anon[d.id] ?? 0) > 0) && <span style={{ color: "#1f8a4c", fontWeight: 800 }}> ✓</span>}</button>
+                    )}
                     <button style={{ ...S.btn, fontSize: 15.5, padding: "5px 12px", fontWeight: 800, color: "#8a5e0f" }}
                       onClick={() => { setFillMode(false); setOverviewBackTo("hub"); setOpenRounds(new Set([r.id])); startEditRound(r); setView("roundsOverview") }}>✏️ {L.adjustLower}</button>
                   </div>
