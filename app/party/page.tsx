@@ -1374,7 +1374,7 @@ const T = {
     leaveAskYes: "Ja, ik ga",
     leftListTitle: "Vertrokken",
     stillHereTitle: "Wie is er nog",
-    leftSectionAsk: "Ging er iemand weg?",
+    leftSectionAsk: "Iemand anders ging weg",
     leftSectionSome: (n: number) => `${n} vertrokken`,
     markLeftBtn: "ging weg",
     leftSelfSettled: "✓ zelf afgerekend",
@@ -1427,6 +1427,7 @@ const T = {
     switchToFairBtn: "Naar Eerlijk verdelen",
     fairHintLine: "hierop verdeelt de app eerlijk — wie meer dronk, betaalt meer",
     paidWithHead: "BETAALD MET",
+    finishPrevFirst: (n: number) => `Rondje ${n} is nog niet afgerond. Vul eerst het bedrag in of sla het over — daarna kan je een nieuw rondje starten.`,
     paidSelfBtn: "zelf betaald",
     paidPotBtn: "uit de pot",
     paidSelfHint: "ⓘ voorgeschoten — wordt later eerlijk verrekend volgens wie wat dronk",
@@ -2256,7 +2257,7 @@ const T = {
     leaveAskYes: "Oui, je pars",
     leftListTitle: "Parti·e·s",
     stillHereTitle: "Qui est encore là",
-    leftSectionAsk: "Quelqu'un est parti ?",
+    leftSectionAsk: "Quelqu'un d'autre est parti",
     leftSectionSome: (n: number) => `${n} parti·e·s`,
     markLeftBtn: "est parti·e",
     leftSelfSettled: "✓ a réglé lui-même",
@@ -2308,6 +2309,7 @@ const T = {
     notFairSplitWhy: "Tout le monde paie pareil, m\u00eame ceux qui ont moins bu. Tu veux que ceux qui ont plus bu paient plus ? Passe au partage \u00e9quitable.",
     switchToFairBtn: "Vers le partage \u00e9quitable",
     paidWithHead: "PAYÉ AVEC",
+    finishPrevFirst: (n: number) => `La tournée ${n} n'est pas encore clôturée. Indique d'abord le montant ou passe-le — ensuite tu peux lancer une nouvelle tournée.`,
     paidSelfBtn: "avancé par toi",
     paidPotBtn: "avec la cagnotte",
     paidSelfHint: "ⓘ avancé — sera réparti équitablement selon ce que chacun a bu",
@@ -3614,7 +3616,12 @@ export default function PartyTest() {
       // knop" maar over wie er aantikt.
       return (
         <><style>{`@keyframes rundoStartAdem{0%,100%{box-shadow:0 0 0 0 rgba(13,124,140,0.5)}50%{box-shadow:0 0 0 8px rgba(13,124,140,0)}}`}</style>
-        <button onClick={() => setStartCheck(true)}
+        <button onClick={() => {
+            // Eerst het vorige rondje afronden: anders lopen er twee open bedragen door
+            // elkaar en weet niemand meer welk rondje nog betaald moet worden.
+            if (!laatsteRondjeKlaar()) { setNotice(L.finishPrevFirst(rounds.length)); return }
+            setStartCheck(true)
+          }}
           style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "12px 10px", textAlign: "center", lineHeight: 1.3, fontFamily: "inherit", color: "#fff", background: MODUS_FAIR.knop, marginBottom: 11, animation: "rundoStartAdem 1.8s ease-in-out infinite" }}>
           <span style={{ display: "block", fontSize: 18, fontWeight: 800 }}>{L.newRoundForN(nogAanwezig.length)}</span>
           <span style={{ display: "block", fontSize: 14, fontWeight: 500, color: "#d6f2f6", marginTop: 3 }}>📱 {L.theyPickOwn}</span>
@@ -3870,7 +3877,17 @@ export default function PartyTest() {
     ? (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))
     : true
   // Het laatste rondje van een snelle avond is pas "klaar" na bevestigen of overslaan.
-  const laatsteRondjeKlaar = () => settle || lastRoundHandled || rounds.length === 0
+  // In QR-modus telde "settle" hier als altijd-klaar, waardoor je een nieuw rondje kon
+  // starten terwijl het vorige nog geen bedrag had. Nu is klaar écht klaar: bedrag
+  // ingevuld, uit de pot betaald, of bewust overgeslagen.
+  const laatsteRondjeKlaar = () => {
+    if (rounds.length === 0) return true
+    if (settle && !fromQuick) {
+      const laatste = rounds[rounds.length - 1]
+      return lastRoundHandled || roundIsPaid(laatste)
+    }
+    return settle || lastRoundHandled
+  }
   const unpaidIdx = () => {
     const i = rounds.findIndex((r) => !roundIsPaid(r))
     if (i >= 0) return i
@@ -11313,12 +11330,7 @@ export default function PartyTest() {
           </div>
         )}
 
-        {!fromQuick && settle && rounds.length > 0 && unassignedAllRounds === 0 && (
-        <div style={{ ...S.row, justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
-          <h3 style={{ ...S.h3, margin: 0 }}>{L.roundsOverview}</h3>
-          {potTag}
-        </div>
-        )}
+
         {/* Iemand wil vertrekken en wacht op een bedrag. Zichtbaar bij zowel de
             beheerder als de haler zelf, ongeacht welk scherm ze open hebben staan. */}
         {isAdmin && rounds.filter((r) => r.leaveWaitFor).map((r) => {
@@ -11520,23 +11532,25 @@ export default function PartyTest() {
           {/* Ook de beheerder gaat ooit naar huis. Zelfde plek en stijl als bij de gast,
               maar met de overdracht ervoor: zonder beheerder kan niemand nog afrekenen. */}
           {isAdmin && settle && !fromQuick && meId && !people.find((p) => p.id === meId)?.left && (
-            <button onClick={() => setLeaveStep("confirm")}
-              style={{ display: "block", marginTop: 10, background: "#fff", border: "1.5px solid rgba(192,85,74,0.6)", color: "#b0402f", borderRadius: 10, padding: "9px 16px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
-              {L.imLeaving}
-            </button>
+            <div style={{ display: "flex", marginTop: 26 }}>
+              <button onClick={() => setLeaveStep("confirm")}
+                style={{ background: "none", border: "none", padding: "8px 2px", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, color: "#a08078", textDecoration: "underline" }}>
+                {L.imLeaving}
+              </button>
+            </div>
           )}
           {/* Vertrok er iemand zonder zelf te tikken? Dicht tot je hem nodig hebt. Staat
               er al iemand op vertrokken, dan zegt de kop dat meteen. */}
           {isAdmin && settle && !fromQuick && people.length > 1 && (() => {
             const weg = people.filter((p) => p.left)
             return (
-              <div style={{ marginTop: 12 }}>
+              <div style={{ marginTop: 2 }}>
                 <button onClick={() => setWegSectie((v) => !v)}
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", background: "none", border: "none", padding: "6px 2px", cursor: "pointer", fontFamily: "inherit" }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 800, color: weg.length > 0 ? "#8a6560" : "#6b7484" }}>
+                  style={{ display: "flex", alignItems: "center", gap: 7, background: "none", border: "none", padding: "8px 2px", cursor: "pointer", fontFamily: "inherit" }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 700, textDecoration: "underline", color: weg.length > 0 ? "#8a6560" : "#a08078" }}>
                     {weg.length > 0 ? `${L.leftSectionSome(weg.length)} · ${weg.map((p) => p.name).join(", ")}` : L.leftSectionAsk}
                   </span>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: "#8b93a3" }}>{wegSectie ? "▴" : "▾"}</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "#a08078" }}>{wegSectie ? "▴" : "▾"}</span>
                 </button>
                 {wegSectie && (
                   <div style={{ background: "rgba(29,41,66,0.05)", border: "1px dashed rgba(29,41,66,0.22)", borderRadius: 11, padding: "9px 11px", marginTop: 4 }}>
