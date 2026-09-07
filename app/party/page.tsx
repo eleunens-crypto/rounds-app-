@@ -3652,8 +3652,8 @@ export default function PartyTest() {
               })}
             </div>
           )}
-          <div style={{ marginBottom: 10, display: !wieOpen || (people.length > 4 && !lijstOpen) ? "none" : "block" }}>
-            {people.map((pp, pi) => {
+          <div style={{ marginBottom: 10, display: !wieOpen || (nogAanwezig.length > 4 && !lijstOpen) ? "none" : "block" }}>
+            {nogAanwezig.map((pp, pi) => {
               const zijne = drinks.filter((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)
               const slaOver = openAnswers[pp.id] === "skip"
               const isOk = isKlaar(pp.id)
@@ -3681,7 +3681,7 @@ export default function PartyTest() {
               </div>
             )}
           </div>
-          {wieOpen && people.length > 4 && (
+          {wieOpen && nogAanwezig.length > 4 && (
             <button onClick={() => setLijstOpen((v) => !v)}
               style={{ width: "100%", background: MODUS_FAIR.vlak, border: `1px solid ${MODUS_FAIR.lijnZacht}`, color: MODUS_FAIR.tekst, fontSize: 13, fontWeight: 800, padding: 9, borderRadius: 10, marginBottom: 9, cursor: "pointer", fontFamily: "inherit" }}>
               {lijstOpen ? L.hideWhoChose : L.showWhoChose}
