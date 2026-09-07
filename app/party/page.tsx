@@ -7456,10 +7456,20 @@ export default function PartyTest() {
                 </div>
               )}
 
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "0 2px 10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "0 2px 4px" }}>
                 <span style={{ fontSize: 17.5, fontWeight: 800 }}>{L.totalPaid}</span>
                 <span style={{ fontSize: 20, fontWeight: 800 }}>{show(grandTotal)}</span>
               </div>
+              {/* De pot staat er ook bij: een gast wil zien wat er nog in zit en hoeveel
+                  er al uit ging. Alleen lezen — bijvullen blijft beheerderswerk. */}
+              {potChosen && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "0 2px 10px", fontSize: 14.5 }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#2f5693", fontWeight: 700 }}>
+                    {potIsCard ? "💳" : <ZakjeIcoon size={15} />} {potIsCard ? L.drinkCard : L.potTitle}
+                  </span>
+                  <span style={{ fontWeight: 800, color: potRemaining > 0.005 ? "#2f6fb5" : "#c0554a" }}>{euro(potRemaining)}</span>
+                </div>
+              )}
 
               <div style={{ ...S.card, padding: 12 }}>
                 <div style={{ fontSize: 16.5, fontWeight: 800, marginBottom: 8 }}>{L.fairVsEqual}</div>
@@ -9213,10 +9223,7 @@ export default function PartyTest() {
                     en leest ze rustig. De knop hieronder brengt je erheen. */}
                 {meId && rounds.length > 0 && (
                   <button onClick={() => setGuestSettlePage(true)}
-                    style={{ ...S.card, padding: "11px 12px", marginTop: 4, marginBottom: 9, width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", fontFamily: "inherit" }}>
-                    <span style={{ fontSize: 15.5, fontWeight: 800, color: "#1d2942" }}>{L.settleBtn}</span>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: MODUS_FAIR.rand }}>→</span>
-                  </button>
+                    style={{ ...S.btnP, marginTop: 4, marginBottom: 9, padding: "13px 10px", fontSize: 17 }}>{L.settleBtn}</button>
                 )}
 
                 {/* Zelfde afweging als bij de beheerder: de tabbalk staat er al. Alleen
