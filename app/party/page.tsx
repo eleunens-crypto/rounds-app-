@@ -1325,7 +1325,10 @@ const T = {
     potUsedFree: (g: string, v: string) => `${g} gebruikt · ${v} vrij`,
     potShared: (tot: string, n: number) => `Pot ${tot} · verdeeld over ${n}`,
     changeWord: "wijzig",
-    whoIsIn: "WIE DOET MEE",
+    whoIsIn: "Wie doet mee",
+    readyOfTotal: (a: number, b: number) => `${a} van ${b} klaar`,
+    closeDetails: "sluiten",
+    pokeName: (naam: string) => `🔔 ${naam} porren`,
     inRoundNow: (n: number) => `In dit rondje (rondje ${n})`,
     confirmedOf: (a: number, b: number) => `${a} van ${b} bevestigd`,
     busyChoosing: "bezig met kiezen…",
@@ -2198,7 +2201,10 @@ const T = {
     potUsedFree: (g: string, v: string) => `${g} utilisé · ${v} libre`,
     potShared: (tot: string, n: number) => `Cagnotte ${tot} · répartie sur ${n}`,
     changeWord: "modifier",
-    whoIsIn: "QUI PARTICIPE",
+    whoIsIn: "Qui participe",
+    readyOfTotal: (a: number, b: number) => `${a} sur ${b} prêts`,
+    closeDetails: "fermer",
+    pokeName: (naam: string) => `🔔 Relancer ${naam}`,
     inRoundNow: (n: number) => `Dans cette tourn\u00e9e (tourn\u00e9e ${n})`,
     confirmedOf: (a: number, b: number) => `${a} sur ${b} ont confirm\u00e9`,
     busyChoosing: "en train de choisir…",
@@ -3620,16 +3626,15 @@ export default function PartyTest() {
               twee handelingen. Ingeklapt moest je te veel tikken om te zien waar je aan
               toe was. */}
           <div onClick={() => setWieOpen((v) => !v)} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 9, borderTop: `1px solid ${MODUS_FAIR.lijnZacht}`, paddingTop: 10, marginBottom: 10 }}>
-            <span style={{ fontSize: 14.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.04em" }}>{wieOpen ? "\u25b4" : "\u25be"} {L.whoIsIn} \u00b7 {klaar.length}/{nogAanwezig.length}</span>
-            {/* Korte pil met het aantal wachtenden. De namen staan al in de pillenrij
-                eronder, en in het bevestigingsvenster erna — hier volstaat het cijfer. */}
-            {wieOpen && klaar.length < nogAanwezig.length && (
-              <button onClick={(e) => { e.stopPropagation(); vraagHerinnering() }}
-                style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(240,165,0,0.16)", border: "1px solid rgba(232,168,18,0.55)", color: "#8a5e0f", fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit" }}>
-                🔔 {L.pokeShort}
-                <span style={{ background: "#e8a812", color: "#2a2110", borderRadius: 999, minWidth: 17, height: 17, fontSize: 11, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{people.length - klaar.length}</span>
-              </button>
-            )}
+            <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: MODUS_FAIR.tekst }}>{L.whoIsIn}</span>
+              <span style={{ flexShrink: 0, background: allen ? "rgba(31,138,76,0.14)" : "rgba(240,165,0,0.16)", borderRadius: 999, padding: "2px 10px", fontSize: 13, fontWeight: 800, color: allen ? "#1f6b3a" : "#8a5e0f" }}>
+                {L.readyOfTotal(klaar.length, nogAanwezig.length)}
+              </span>
+            </span>
+            <span style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 4, color: MODUS_FAIR.rand, fontSize: 13, fontWeight: 800 }}>
+              {wieOpen ? L.closeDetails : L.detailsWord}<span style={{ fontSize: 11 }}>{wieOpen ? "▴" : "▾"}</span>
+            </span>
           </div>
           {/* Ingeklapt volstaat de teller in de kop; opengeklapt zie je de namen. */}
           {wieOpen && nogAanwezig.length > 0 && (
@@ -3686,11 +3691,22 @@ export default function PartyTest() {
               rondje kan doen. Achter de tik waarmee je toch al kijkt wie er ontbreekt —
               zo gooi je het rondje niet per ongeluk weg aan een drukke toog. */}
           {wieOpen && (
-            <button onClick={annuleerRondje}
-              style={{ width: "100%", marginBottom: 10, cursor: "pointer", background: "#fff", border: "1px solid rgba(224,104,92,0.4)", color: "#c0554a", borderRadius: 10, padding: "9px 8px", fontSize: 14.5, fontWeight: 800, fontFamily: "inherit" }}>
-              {L.cancelRoundShort}
-            </button>
+            <div style={{ display: "flex", gap: 7, marginBottom: 10 }}>
+              {nogNietGekozen().length > 0 && (
+                <button onClick={vraagHerinnering}
+                  style={{ flex: 1, cursor: "pointer", background: "rgba(240,165,0,0.14)", border: "1px solid rgba(240,165,0,0.45)", color: "#8a5e0f", borderRadius: 10, padding: "9px 6px", fontSize: 14, fontWeight: 800, fontFamily: "inherit" }}>
+                  {nogNietGekozen().length === 1 ? L.pokeName(nogNietGekozen()[0].name) : `🔔 ${L.pokeShort} (${nogNietGekozen().length})`}
+                </button>
+              )}
+              <button onClick={annuleerRondje}
+                style={{ flex: 1, cursor: "pointer", background: "#fff", border: "1px solid rgba(224,104,92,0.4)", color: "#c0554a", borderRadius: 10, padding: "9px 6px", fontSize: 14, fontWeight: 800, fontFamily: "inherit" }}>
+                {L.cancelRoundShort}
+              </button>
+            </div>
           )}
+          {/* Lucht tussen de sectie en "afronden en halen": die knop zat er zo dicht op
+              dat je hem raakte terwijl je de details wilde openklappen. */}
+          <div style={{ borderTop: "1px dashed rgba(29,41,66,0.15)", margin: "4px 0 12px" }} />
           {/* Het barlijstje hoort bij het hálen, niet bij het kiezen: het verschijnt pas
               op de bevestigingskaart, nadat op "Rondje afronden en halen" getikt is. */}
           {/* Wie het rondje startte moet er ook makkelijk weer vanaf kunnen — óók na de
