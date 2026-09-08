@@ -661,6 +661,7 @@ const STRINGS = {
     addThisGuest: "Toevoegen",
     enterGuestName: "Vul eerst een naam in.",
     seatsFreeTitle: (n: number) => n === 1 ? "Nog 1 plaats vrij" : `Nog ${n} plaatsen vrij`,
+    optionalShort: "optioneel",
     seatsAllNamed: "Alle plaatsen ingevuld ✓",
     autoJoinLine: "Wie de QR scant, verschijnt hier automatisch.",
     noPhoneLine: "Iemand zonder gsm? Tik een vrije plaats aan.",
@@ -1307,6 +1308,7 @@ const STRINGS = {
     addThisGuest: "Ajouter",
     enterGuestName: "Entre d\u2019abord un nom.",
     seatsFreeTitle: (n: number) => n === 1 ? "Encore 1 place libre" : `Encore ${n} places libres`,
+    optionalShort: "facultatif",
     seatsAllNamed: "Toutes les places sont remplies ✓",
     autoJoinLine: "Celui qui scanne le QR apparaît ici automatiquement.",
     noPhoneLine: "Quelqu'un sans gsm ? Touchez une place libre.",
@@ -2085,10 +2087,8 @@ export default function RundoTable() {
   const [photos, setPhotos] = useState<{ file: File; url: string }[]>([])
   const [scanStep, setScanStep] = useState<{ i: number; n: number } | null>(null)
   const [multiFails, setMultiFails] = useState(0)
-  const [sharePicking, setSharePicking] = useState<Set<string>>(new Set())
   // Welke kiesvensters je met "Klaar" hebt dichtgedaan. Zonder deze verzameling bleef het
   // venster openstaan zodra er iemand geselecteerd was — en deed die knop dus niets.
-  const [shareClosed, setShareClosed] = useState<Set<string>>(new Set())
   const [jumpToAssign, setJumpToAssign] = useState(0)
   const [personsTouched, setPersonsTouched] = useState(false)
   const [fillingSpots, setFillingSpots] = useState<string[]>([])  // vrije plaatsen die je nu een naam geeft
@@ -3300,22 +3300,6 @@ export default function RundoTable() {
 
   const shareVerwacht = (itemId: string) => items.find((x) => x.id === itemId)?.share_expected ?? 0
 
-  const sharePickerOpen = (itemId: string, pid: string) => {
-    const key = `${itemId}:${pid}`
-    if (shareClosed.has(key)) return false
-    return sharePicking.has(key) || myQty(itemId, pid) > 0
-  }
-  const sluitSharePicker = (itemId: string, pid: string) => {
-    const key = `${itemId}:${pid}`
-    setSharePicking((cur) => { const n = new Set(cur); n.delete(key); return n })
-    setShareClosed((cur) => new Set(cur).add(key))
-  }
-  const openSharePicker = (itemId: string, pid: string) => {
-    const key = `${itemId}:${pid}`
-    setShareClosed((cur) => { const n = new Set(cur); n.delete(key); return n })
-    setSharePicking((cur) => new Set(cur).add(key))
-  }
-
   const toggleShareClaim = async (itemId: string, pid: string) => {
     if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
     const mine = myQty(itemId, pid)
@@ -3330,13 +3314,10 @@ export default function RundoTable() {
     // niet zelf aanpassen, en de beheerder moest eerst de ± gaan zoeken. Aantikken lukt nu
     // altijd; klopt het aantal achteraf niet, dan zegt het scherm dat en biedt het de
     // correctie aan.
-    if (seats > 1 && !vast) {
-      if (sharePickerOpen(itemId, pid)) { sluitSharePicker(itemId, pid); return }
-      openSharePicker(itemId, pid)
-      return
-    }
-
-    // Één persoon, of een item met een vast aandeel: gewoon aan of uit.
+    // Ook bij een plaats met meerdere personen zet deze knop iedereen in één keer aan of
+    // uit. Vroeger opende hij een kiesvenster, waardoor je er alleen via "Wis alles" weer
+    // uit raakte — en waardoor je voor nul delers telde tot je namen had aangevinkt.
+    // De namen staan nu altijd onder het item; daar kies je wie precies meedeelt.
     if (mine > 0) { await setClaim(itemId, pid, 0, []); return }
     await setClaim(itemId, pid, seats, Array.from({ length: seats }, (_, i) => i))
   }
@@ -4971,7 +4952,7 @@ export default function RundoTable() {
             shareHeads={shareHeads} myShareHeads={myShareHeads} seatsOf={seatsOf} setSeats={setSeats}
             onRename={renameGuest}
             onEditMe={!isAdmin ? editMySpot : undefined}
-            setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} toggleShareAll={toggleShareAll} sluitSharePicker={sluitSharePicker} sharePickerOpen={sharePickerOpen} onToggleShared={toggleShared} claimMembers={claimMembers} sharePicking={sharePicking} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined} onSetExpected={isAdmin ? setShareExpected : undefined}
+            setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} toggleShareAll={toggleShareAll} onToggleShared={toggleShared} claimMembers={claimMembers} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined} onSetExpected={isAdmin ? setShareExpected : undefined}
             itemTotal={itemTotal} personTotal={personTotal} personItems={personItems}
             sharedRevealed={sharedRevealed} allConfirmed={allConfirmed} isConfirmed={isConfirmed} explicitConfirmed={explicitConfirmed}
             claimMode={claimMode} setClaimMode={setClaimMode} claimPid={claimPid} setClaimPid={setClaimPid}
@@ -6319,12 +6300,13 @@ function DeelUitleg() {
     <div style={{ background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: "11px 12px", marginBottom: 10 }}>
       <div onClick={() => setDeelInfoOpen((v) => !v)}
         style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", userSelect: "none" }}>
-        {/* De lege ruimte links in plaats van tussen titel en knop: zo staan de titel, de
-            voorbeeldknop en de echte deelknoppen op de regels eronder in één kolom rechts. */}
-        <span style={{ flex: 1, minWidth: 0 }} />
+        {/* Titel en voorbeeldknop links, pijltje rechts. De voorbeeldknop heeft dezelfde
+            stijl als de echte deelknoppen op de rijen — anders lijkt het voorbeeld niet
+            op wat het uitlegt. */}
         <span style={{ flexShrink: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>{L.sharedItemsQ}</span>
-        <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, padding: "8px 9px", background: "linear-gradient(135deg,#f3d27c,#ecc564)", border: "1px solid rgba(196,152,32,0.55)" }}><ShareIcon on size={14} /><span style={{ fontSize: 15.5, fontWeight: 800, color: "#5c4200" }}>{L.makeSharedShort}</span></span>
-        <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, background: "#fff", border: "1px solid rgba(18,58,66,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, color: "#4a6e73" }}>{deelInfoOpen ? "▴" : "▾"}</span>
+        <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 9, padding: "7px 10px", background: "#fff", border: `1.5px solid ${INDIGO.rand}` }}><ShareIcon size={14} kleur={INDIGO.tekst} /><span style={{ fontSize: 15.5, fontWeight: 800, color: INDIGO.tekst }}>{L.makeSharedShort}</span></span>
+        <span style={{ flex: 1, minWidth: 0 }} />
+        <span style={{ flexShrink: 0, fontSize: 17, fontWeight: 800, color: "#4a6e73" }}>{deelInfoOpen ? "▴" : "▾"}</span>
       </div>
       {deelInfoOpen && (
         <div style={{ fontSize: 15, color: "#4a6e73", lineHeight: 1.5, marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(18,58,66,0.1)" }}>{L.legendShare}</div>
@@ -6679,11 +6661,8 @@ function ClaimScreen(props: {
   setClaim: (itemId: string, pid: string, qty: number, members?: number[] | null) => void; toggleShareClaim: (itemId: string, pid: string) => void
   toggleShareMember: (itemId: string, pid: string, i: number) => void
   toggleShareAll: (itemId: string, pid: string, seats: number) => void
-  sluitSharePicker: (itemId: string, pid: string) => void
-  sharePickerOpen: (itemId: string, pid: string) => boolean
   onToggleShared: (it: BillItem) => void
   claimMembers: (itemId: string, pid: string) => number[]
-  sharePicking: Set<string>
   warnCount?: number
   jumpToAssign?: number
   onDeleteItem?: (id: string) => void
@@ -6702,7 +6681,7 @@ function ClaimScreen(props: {
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const { items, meId, isAdmin, participants, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, sluitSharePicker, sharePickerOpen, onToggleShared, claimMembers, sharePicking, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onSetExpected, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
+  const { items, meId, isAdmin, participants, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, onToggleShared, claimMembers, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onSetExpected, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
   const adminPid = props.claimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   // De uitleg bij het invullen voor een nog vrije plaats hoeft maar één keer.
@@ -6808,12 +6787,14 @@ function ClaimScreen(props: {
   // Dezelfde deel-knop als op de bon: hier kan de admin een item alsnog op "gedeeld" zetten.
   const shareBtn = (it: BillItem) => (
     <button onClick={() => onToggleShared(it)} title={it.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}
-      style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 9, padding: "7px 8px", cursor: "pointer",
-        border: it.is_shared ? "1px solid rgba(196,152,32,0.5)" : "1px solid rgba(18,58,66,0.15)",
-        background: it.is_shared ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff" }}>
-      <ShareIcon on={it.is_shared} size={13} />
-      <span style={{ fontSize: 15.5, fontWeight: it.is_shared ? 800 : 700, color: it.is_shared ? "#7a5300" : "#4a6e73" }}>
-        {it.is_shared ? L.sharedOnShort : L.makeSharedShort}
+      // De knop toont de stand én zet hem om: nog eens tikken maakt het item weer gewoon.
+      // Daarmee vervalt het aparte GEDEELD-label naast de naam, dat hetzelfde zei.
+      style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 9, padding: "7px 10px", cursor: "pointer",
+        border: `1.5px solid ${it.is_shared ? "rgba(90,108,166,0.55)" : INDIGO.rand}`,
+        background: it.is_shared ? INDIGO.vlak : "#fff" }}>
+      <ShareIcon on={it.is_shared} size={13} kleur={INDIGO.tekst} />
+      <span style={{ fontSize: 15.5, fontWeight: 800, color: INDIGO.tekst }}>
+        {it.is_shared ? `${L.sharedOnShort} ✓` : L.makeSharedShort}
       </span>
     </button>
   )
@@ -6871,7 +6852,7 @@ function ClaimScreen(props: {
                         </div>
                         {onSetExpected && (
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 7, marginLeft: 25, background: "rgba(90,108,166,0.06)", borderRadius: 9, padding: "9px 9px" }}>
-                            <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a6e73" }}>{L.expectedSharers}</span>
+                            <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a6e73" }}>{L.expectedSharers} <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8aa3a6", background: "rgba(18,58,66,0.05)", borderRadius: 12, padding: "3px 8px" }}>{L.optionalShort}</span></span>
                             <button onClick={() => onSetExpected(it.id, Math.max(0, (it.share_expected ?? 0) - 1) || null)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5 }}>−</button>
                             <b style={{ minWidth: 14, textAlign: "center", fontSize: 16.5, color: it.share_expected ? "#123a42" : "#b6cacc" }}>{it.share_expected ?? "–"}</b>
                             <button onClick={() => onSetExpected(it.id, (it.share_expected ?? 0) + 1)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5, background: "rgba(27,42,74,0.12)" }}>+</button>
@@ -6885,7 +6866,7 @@ function ClaimScreen(props: {
                                 // Ook oplichten wanneer het kiesvenster openstaat maar er nog
                                 // niemand gekozen is — anders lijkt de knop uit terwijl er
                                 // onderaan een venster van hem hangt dat je niet kwijtraakt.
-                                const on = sh.includes(p.id) || sharePickerOpen(it.id, p.id)
+                                const on = sh.includes(p.id)
                                 const pSeats = Math.max(1, p.seats ?? 1)
                                 const pHeads = myShareHeads(it.id, p.id)
                                 const viaLink = !!p.self_joined
@@ -6915,7 +6896,7 @@ function ClaimScreen(props: {
                           // beheerder verdween het zodra er iemand gekozen was. Daarom moest er
                           // een ±-knopje bij dat het aantal blind ophoogde — langs de grens
                           // heen én zonder te weten wíé het was. Nu overal hetzelfde venster.
-                          if (pSeats <= 1 || fixed || !sharePickerOpen(it.id, p.id)) return null
+                          if (pSeats <= 1 || fixed) return null
                           // Zelfde vraag als bij de gasten: wie van dit koppel deelde mee?
                           const parts = (p.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
                           const sel = claimMembers(it.id, p.id)
@@ -6931,7 +6912,6 @@ function ClaimScreen(props: {
                                 </button>
                                 {/* Zonder deze knop raakte je dit venster niet kwijt: het sloot
                                     alleen door opnieuw op de naamknop erboven te tikken. */}
-                                <button onClick={() => sluitSharePicker(it.id, p.id)} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#4a6e73", background: "#fff", border: "1px solid rgba(18,58,66,0.15)", borderRadius: 9, padding: "7px 10px", cursor: "pointer" }}>{L.pickerDone}</button>
                               </div>
                               <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                                 {Array.from({ length: pSeats }, (_, i) => i).map((i) => {
@@ -7100,34 +7080,25 @@ function ClaimScreen(props: {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                       <span>{it.name}</span>
-                      <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "0.04em", color: "#7a5300", background: "rgba(233,196,95,0.45)", border: "1px solid rgba(196,152,32,0.5)", borderRadius: 7, padding: "3px 7px" }}>{L.sharedBadge}</span>
                     </div>
                     <div style={{ fontSize: 15.5, color: it.unit_price <= 0.0001 ? "#c0392b" : "#999", fontWeight: it.unit_price <= 0.0001 ? 700 : 400 }}>{it.unit_price <= 0.0001 ? `⚠️ ${L.zeroPriceShort}` : `€${itemTotal(it).toFixed(2).replace(".", ",")}${L.totalSharedByDrinkers}${it.share_expected ? ` · ${L.sharedForN(it.share_expected)}` : ""}`}</div>
                   </div>
                   {/* De sleutel is "item:persoon"; met enkel het item-id stond deze knop soms
                       op "ja" terwijl er niets gekozen was, of omgekeerd. */}
-                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...((iShare || (meId ? sharePickerOpen(it.id, meId) : false)) ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#123a42", border: "none" } : {}) }}>{(iShare || (meId ? sharePickerOpen(it.id, meId) : false)) ? L.iShareYes : L.iShareNo}</button>
+                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...(iShare ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#123a42", border: "none" } : {}) }}>{iShare ? L.iShareYes : L.iShareNo}</button>
                 </div>
-                {meId && sharePickerOpen(it.id, meId) && mySeats > 1 && !fixed && (() => {
-                  // Geen voorselectie: je tikt gewoon aan wie meedeelde. Eén tik volstaat,
-                  // ook als dat enkel de tweede persoon is. "Allemaal" zet iedereen in één keer aan.
+                {meId && mySeats > 1 && !fixed && (() => {
+                  // Geen venster meer: de namen staan er altijd, je tikt aan wie meedeelde.
+                  // Daarmee vervallen "Klaar" en "Wis alles" — nog eens tikken zet je er weer uit.
                   const raw = participants.find((p) => p.id === meId)?.name ?? ""
                   const parts = raw.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
                   const sel = meId ? claimMembers(it.id, meId) : []
-                  const allOn = sel.length === mySeats
                   const toggle = (i: number) => { if (meId) toggleShareMember(it.id, meId, i) }
-                  const setAll = () => { if (meId) toggleShareAll(it.id, meId, mySeats) }
                   const wide = mySeats > 2
                   return (
                     <div style={{ marginTop: 9, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.35)", borderRadius: 12, padding: "10px 11px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
                         <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>{L.withHowMany(mySeats)}</span>
-                        {wide && (
-                          <button onClick={setAll} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: allOn ? "#4a6e73" : "#0f7d90", background: allOn ? "#fff" : "rgba(20,153,176,0.1)", border: allOn ? "1px solid rgba(18,58,66,0.2)" : "1px solid rgba(20,153,176,0.45)", borderRadius: 8, padding: "6px 9px", cursor: "pointer" }}>{allOn ? L.clearAll : L.allOfThem(mySeats)}</button>
-                        )}
-                        {/* Ook hier: zonder sluitknop bleef dit venster staan zodra je niemand
-                            selecteerde, en raakte je het alleen kwijt via de knop erboven. */}
-                        {meId && <button onClick={() => sluitSharePicker(it.id, meId)} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#4a6e73", background: "#fff", border: "1px solid rgba(18,58,66,0.15)", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>{L.pickerDone}</button>}
                       </div>
                       <div style={{ display: "flex", gap: wide ? 6 : 7, flexWrap: "wrap" }}>
                         {Array.from({ length: mySeats }, (_, i) => i).map((i) => {
@@ -7137,9 +7108,6 @@ function ClaimScreen(props: {
                             <button key={i} onClick={() => toggle(i)} style={{ flex: 1, minWidth: wide ? 70 : 90, fontSize: wide ? 12.5 : 13, fontWeight: 800, padding: wide ? "9px 5px" : "10px 6px", borderRadius: 10, cursor: "pointer", color: "#123a42", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(18,58,66,0.15)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{on ? "✓ " : ""}{label}</button>
                           )
                         })}
-                        {!wide && (
-                          <button onClick={setAll} style={{ flex: 1, minWidth: 90, fontSize: 16, fontWeight: 800, padding: "10px 6px", borderRadius: 10, cursor: "pointer", color: allOn ? "#4a6e73" : "#0f7d90", background: allOn ? "#fff" : "rgba(20,153,176,0.08)", border: allOn ? "1.5px solid rgba(18,58,66,0.2)" : "1.5px solid rgba(20,153,176,0.45)" }}>{allOn ? L.clearAll : L.allOfThem(mySeats)}</button>
-                        )}
                       </div>
                       <div style={{ fontSize: 15.5, color: sel.length > 0 ? "#4a6e73" : "#8aa3a6", marginTop: 8, lineHeight: 1.45 }}>
                         {sel.length > 0 ? L.sharesInstead(sel.length, mySeats) : L.pickWhoShared}
@@ -7190,7 +7158,7 @@ function ClaimScreen(props: {
                       )}
                       {onSetExpected && (
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 8, paddingTop: 7, borderTop: "1px dashed rgba(18,58,66,0.12)" }}>
-                          <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a6e73" }}>{L.expectedSharers}</span>
+                          <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a6e73" }}>{L.expectedSharers} <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8aa3a6", background: "rgba(18,58,66,0.05)", borderRadius: 12, padding: "3px 8px" }}>{L.optionalShort}</span></span>
                           <button onClick={() => onSetExpected(it.id, Math.max(0, (it.share_expected ?? 0) - 1) || null)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5 }}>−</button>
                           <b style={{ minWidth: 14, textAlign: "center", fontSize: 16.5, color: it.share_expected ? "#123a42" : "#b6cacc" }}>{it.share_expected ?? "–"}</b>
                           <button onClick={() => onSetExpected(it.id, (it.share_expected ?? 0) + 1)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5, background: "rgba(27,42,74,0.12)" }}>+</button>
@@ -7479,13 +7447,13 @@ function PotloodIcon({ size = 16, kleur = "#0f7d90" }: { size?: number; kleur?: 
   )
 }
 
-function ShareIcon({ on, size = 20 }: { on?: boolean; size?: number }) {
+function ShareIcon({ on, size = 20, kleur = "#4a6e73" }: { on?: boolean; size?: number; kleur?: string }) {
   if (!on) {
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: "block" }}>
-        <circle cx="8" cy="13" r="5" fill="none" stroke="#4a6e73" strokeWidth="2.2" />
-        <circle cx="16" cy="13" r="5" fill="none" stroke="#4a6e73" strokeWidth="2.2" />
-        <circle cx="12" cy="9" r="5" fill="none" stroke="#4a6e73" strokeWidth="2.2" />
+        <circle cx="8" cy="13" r="5" fill="none" stroke={kleur} strokeWidth="2.2" />
+        <circle cx="16" cy="13" r="5" fill="none" stroke={kleur} strokeWidth="2.2" />
+        <circle cx="12" cy="9" r="5" fill="none" stroke={kleur} strokeWidth="2.2" />
       </svg>
     )
   }
