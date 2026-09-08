@@ -825,9 +825,8 @@ const STRINGS = {
     quotaDayTitle: "🔒 Slimme scan is voor vandaag op",
     quotaDayBody: "De gratis AI-scan heeft een daglimiet en die is bereikt. Opnieuw proberen helpt vandaag niet meer — morgenochtend werkt ze weer.",
     quotaDayQuickScan: "⚡ Gebruik de snelle scan",
-    quotaDayOrManual: "Of voeg de items handmatig toe via “+ Item toevoegen”.",
     scanFailUnavailTitle: "😕 De slimme scan is even niet beschikbaar",
-    scanFailUnavailBody: "De AI-herkenning is overbelast of tijdelijk offline. De knop hieronder telt af tot je opnieuw kan proberen. Je foto blijft bewaard.",
+    scanFailUnavailBody: "De AI-herkenning is overbelast of tijdelijk offline. Je foto blijft bewaard — probeer het zo meteen opnieuw.",
     retryIn: (s: number) => `🔄 Opnieuw proberen over ${s}s`,
     retryNow: "🔄 Opnieuw proberen",
     scanFailEmptyTitle: "📷 Niets herkend op de foto",
@@ -1126,9 +1125,9 @@ const STRINGS = {
     whatIsThis: "Wat is dit?",
     photoOfN: (i: number, n: number) => `Foto ${i} van ${n}`,
     tooSlowTitle: "⚠️ Lezen duurde te lang",
-    tooSlowBody: "Twee foto's zijn zwaarder om te lezen — probeer toch één foto van heel de bon.",
-    tooSlowTip: "Recht erboven, goed licht, beeld vullen.",
-    tooSlowOne: "📷 Eén foto maken",
+    tooSlowBody: "De scan raakte niet door je foto's binnen de tijd. Probeer het gerust nog eens — je foto's blijven bewaard.",
+    tooSlowTip: "Blijft het mislukken? Twee foto's zijn zwaarder om te lezen. Eén foto van heel de bon werkt meestal beter — recht erboven, goed licht, beeld vullen.",
+    tooSlowOne: "📷 Toch 1 foto maken",
     tooSlowRetry: "🔄 Toch met twee",
     taxAddBtn: "BTW / kosten / korting toevoegen?",
     legendShare: "Aantikken voor gedeelde items (water, wijn, dessert…). De prijs verdeelt zich over wie meedeelt.",
@@ -1467,7 +1466,6 @@ const STRINGS = {
     quotaDayTitle: "🔒 Le scan intelligent est épuisé pour aujourd'hui",
     quotaDayBody: "Le scan IA gratuit a une limite journalière, atteinte pour aujourd'hui. Réessayer n'aidera plus — demain matin, ça refonctionne.",
     quotaDayQuickScan: "⚡ Utiliser le scan rapide",
-    quotaDayOrManual: "Ou ajoute les articles à la main via « + Ajouter un article ».",
     scanFailUnavailTitle: "😕 Le scan intelligent est momentanément indisponible",
     scanFailUnavailBody: "La reconnaissance IA est surchargée ou temporairement hors ligne. Le bouton ci-dessous décompte jusqu’à ce que tu puisses réessayer. Ta photo est conservée.",
     retryIn: (s: number) => `🔄 Réessayer dans ${s}s`,
@@ -5846,17 +5844,19 @@ export default function RundoTable() {
             {scanFail && !scanning && multiFails >= 2 && (
               <div style={{ background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.5)", borderRadius: 12, padding: "12px 13px", marginBottom: 12 }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: "#b5591a", marginBottom: 4 }}>{L.tooSlowTitle}</div>
-                <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 4 }}>{L.tooSlowBody}</div>
-                <div style={{ fontSize: 15.5, color: "#9a6a30", lineHeight: 1.45, marginBottom: 10 }}>💡 {L.tooSlowTip}</div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <label style={{ ...S.btn, ...S.btnPrimary, flex: 1, minWidth: 150, display: "block", textAlign: "center", cursor: "pointer", fontWeight: 800, fontSize: 16.5, padding: "11px 0" }}>
-                    {L.tooSlowOne}
-                    <input type="file" accept="image/*" capture="environment" style={{ display: "none" }}
-                      onChange={(e) => { for (const ph of photos) URL.revokeObjectURL(ph.url); setPhotos([]); setScanFail(null); setMultiFails(0); addPhoto(e.target.files?.[0]) }} />
-                  </label>
-                  <button onClick={() => { setScanFail(null); scanPhotos() }} disabled={cooldownLeft > 0}
-                    style={{ ...S.btn, flex: 1, minWidth: 130, fontWeight: 800, fontSize: 16.5, padding: "11px 0", opacity: cooldownLeft > 0 ? 0.5 : 1 }}>{cooldownLeft > 0 ? `${cooldownLeft}s` : L.tooSlowRetry}</button>
-                </div>
+                <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.tooSlowBody}</div>
+                {/* Opnieuw proberen lukt vaak al. Pas als dat blijft mislukken is een
+                    nieuwe foto zinvol — daarom staat de camera achter een lijn, als tweede keuze. */}
+                <button onClick={() => { setScanFail(null); scanPhotos() }} disabled={cooldownLeft > 0}
+                  style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 800, fontSize: 17.5, padding: "12px 0", opacity: cooldownLeft > 0 ? 0.55 : 1, cursor: cooldownLeft > 0 ? "default" : "pointer" }}>
+                  {cooldownLeft > 0 ? L.retryIn(cooldownLeft) : L.tooSlowRetry}
+                </button>
+                <div style={{ fontSize: 15.5, color: "#9a6a30", lineHeight: 1.45, marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(243,156,18,0.35)", marginBottom: 8 }}>{L.tooSlowTip}</div>
+                <label style={{ ...S.btn, width: "100%", boxSizing: "border-box", display: "block", textAlign: "center", cursor: "pointer", fontWeight: 800, fontSize: 16.5, padding: "11px 0" }}>
+                  {L.tooSlowOne}
+                  <input type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+                    onChange={(e) => { for (const ph of photos) URL.revokeObjectURL(ph.url); setPhotos([]); setScanFail(null); setMultiFails(0); addPhoto(e.target.files?.[0]) }} />
+                </label>
               </div>
             )}
             {scanFail && !scanning && (
@@ -5868,15 +5868,12 @@ export default function RundoTable() {
                     <div style={{ fontSize: 18, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>{L.quotaDayTitle}</div>
                     <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.quotaDayBody}</div>
                     <button onMouseDown={(e) => e.preventDefault()} onClick={runLocalScan} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800 }}>{L.quotaDayQuickScan}</button>
-                    <div style={{ fontSize: 15.5, color: "#8aa3a6", textAlign: "center", marginTop: 8, lineHeight: 1.45 }}>{L.quotaDayOrManual}</div>
-                    {scanFail.status ? <div style={{ fontSize: 15.5, color: "#8aa3a6", marginTop: 8, wordBreak: "break-word" }}>technisch: {scanFail.status}{scanFail.detail ? " — " + scanFail.detail : ""}</div> : null}
                   </>
                 ) : scanFail.reason === "unavailable" ? (
                   <>
                     <div style={{ fontSize: 18, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>{L.scanFailUnavailTitle}</div>
                     <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.scanFailUnavailBody}</div>
                     <button onClick={retryAiScan} disabled={cooldownLeft > 0} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800, opacity: cooldownLeft > 0 ? 0.55 : 1, cursor: cooldownLeft > 0 ? "default" : "pointer" }}>{cooldownLeft > 0 ? L.retryIn(cooldownLeft) : L.retryNow}</button>
-                    {scanFail.status ? <div style={{ fontSize: 15.5, color: "#8aa3a6", marginTop: 8, wordBreak: "break-word" }}>technisch: {scanFail.status}{scanFail.detail ? " — " + scanFail.detail : ""}</div> : null}
                   </>
                 ) : (
                   <>
