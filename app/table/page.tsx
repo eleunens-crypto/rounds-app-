@@ -884,6 +884,10 @@ const STRINGS = {
     pricePerLabel: "Prijs/stuk (€)",
     lineTotalLabel: "Regeltotaal (€)",
     priceHint: "Pas prijs/stuk óf regeltotaal aan — het andere rekent zichzelf uit.",
+    sharedItemWord: "Gedeeld item",
+    onWord: "aan",
+    offWord: "uit",
+    deleteThisItem: "Dit item wissen",
     editable: "pas aan",
     orEditThis: "of pas dit aan",
     sharedByOthers: (names: string) => `Dit item is al toegewezen aan ${names}. Vraag de admin om het aan te passen.`,
@@ -1525,6 +1529,10 @@ const STRINGS = {
     pricePerLabel: "Prix/pièce (€)",
     lineTotalLabel: "Total ligne (€)",
     priceHint: "Modifie le prix/pièce ou le total — l’autre se calcule tout seul.",
+    sharedItemWord: "Article partagé",
+    onWord: "activé",
+    offWord: "désactivé",
+    deleteThisItem: "Supprimer cet article",
     editable: "modifiable",
     orEditThis: "ou modifie ceci",
     sharedByOthers: (names: string) => `Cet article est déjà attribué à ${names}. Demande à l'hôte de le modifier.`,
@@ -6031,12 +6039,18 @@ export default function RundoTable() {
 
       {/* ─── Modal: item bewerken ─── */}
       {editItem && (
-        <div style={S.overlay}>
+        // Bovenaan verankerd in plaats van gecentreerd: op een telefoon verkleint het
+        // toetsenbord het zichtbare venster terwijl position:fixed het volledige venster
+        // blijft gebruiken, waardoor een gecentreerd venster onderuit zakt.
+        <div style={{ ...S.overlay, alignItems: "flex-start", paddingTop: "6vh" }}>
           <div style={{ ...S.modal, width: "min(360px, 92vw)" }}>
-            <h3 style={{ marginBottom: 14, fontSize: 21, fontWeight: 800 }}>{L.editItemTitle}</h3>
+            <h3 style={{ marginBottom: 5, fontSize: 21, fontWeight: 800 }}>{L.editItemTitle}</h3>
+            <div style={{ fontSize: 15, color: "#8aa3a6", lineHeight: 1.45, marginBottom: 14 }}>{L.priceHint}</div>
+
             <label style={S.lbl}>{L.nameLabel}</label>
-            <input value={editItem.name} onChange={(e) => setEditItem({ ...editItem, name: e.target.value })} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 10, flexWrap: "wrap" }}>
+            <input value={editItem.name} onChange={(e) => setEditItem({ ...editItem, name: e.target.value })} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 13 }} />
+
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
               <div>
                 <label style={S.lbl}>{L.qtyLabel}</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -6060,48 +6074,63 @@ export default function RundoTable() {
                   })}>+</button>
                 </div>
               </div>
-              <div style={{ flex: 1, minWidth: 90 }}>
-                <label style={{ ...S.lbl, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>{L.pricePerLabel} <span style={{ fontSize: 11.5, fontWeight: 800, color: "#0f7488", background: "rgba(20,153,176,0.12)", borderRadius: 20, padding: "2px 8px" }}>✏️ {L.editable}</span></label>
+              <div style={{ flex: 1, minWidth: 120 }}>
+                <label style={S.lbl}>{L.pricePerLabel}</label>
                 <input type="text" inputMode="decimal" placeholder="0,00"
                   value={priceDraft ?? (editItem.unit_price || "")}
                   onChange={(e) => { const raw = numFilter(e.target.value); setPriceDraft(raw); setEditItem((cur) => cur ? { ...cur, unit_price: parseFloat(raw.replace(",", ".")) || 0 } : cur) }}
                   onBlur={() => setPriceDraft(null)}
                   style={{ ...S.input, width: "100%", boxSizing: "border-box" }} />
               </div>
-              <div style={{ flex: 1, minWidth: 90 }}>
-                <label style={{ ...S.lbl, color: "#0f7d90", fontWeight: 800, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>{L.lineTotalLabel} <span style={{ fontSize: 11.5, fontWeight: 800, color: "#0f7488", background: "rgba(20,153,176,0.12)", borderRadius: 20, padding: "2px 8px" }}>✏️ {L.orEditThis}</span></label>
-                <input type="text" inputMode="decimal" placeholder="0,00"
-                  value={totalDraft ?? (editItem.quantity > 0 ? +((editItem.unit_price || 0) * editItem.quantity).toFixed(2) : "")}
-                  onChange={(e) => {
-                    // Toon precies wat je tikt; de stukprijs volgt meteen, maar stuurt het veld niet terug.
-                    const raw = numFilter(e.target.value)
-                    setTotalDraft(raw)
-                    const total = parseFloat(raw.replace(",", "."))
-                    const q = Math.max(1, editItem.quantity || 1)
-                    setEditItem((cur) => cur ? { ...cur, unit_price: isFinite(total) ? +(total / q).toFixed(4) : 0 } : cur)
-                  }}
-                  onBlur={() => setTotalDraft(null)}
-                  style={{ ...S.input, width: "100%", boxSizing: "border-box", fontWeight: 800, border: "1.5px solid rgba(20,153,176,0.55)", background: "rgba(20,153,176,0.05)" }} />
-              </div>
             </div>
-            <div style={{ fontSize: 15.5, fontWeight: 700, color: "#0f7d90", background: "rgba(20,153,176,0.1)", border: "1px solid rgba(20,153,176,0.3)", borderRadius: 9, padding: "8px 11px", marginTop: 2, marginBottom: 12 }}>💡 {L.priceHint}</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 13 }}>
-              <button onClick={() => setEditItem((cur) => cur ? { ...cur, is_shared: !cur.is_shared } : cur)}
-                style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, padding: "8px 9px", cursor: "pointer",
-                  border: editItem.is_shared ? "1px solid rgba(196,152,32,0.55)" : "1px solid rgba(18,58,66,0.15)",
-                  background: editItem.is_shared ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff" }}>
-                <ShareIcon on={editItem.is_shared} size={14} />
-                <span style={{ fontSize: 15.5, fontWeight: editItem.is_shared ? 800 : 700, color: editItem.is_shared ? "#5c4200" : "#4a6e73" }}>
-                  {editItem.is_shared ? L.sharedOnShort : L.makeSharedShort}
-                </span>
-              </button>
-              <span style={{ fontSize: 15.5, color: editItem.is_shared ? "#4a6e73" : "#8aa3a6", lineHeight: 1.4 }}>
-                {editItem.is_shared ? L.sharedHintOn : L.sharedHintOff}
+
+            {/* Totaalprijs krijgt meer gewicht: dat is het getal dat met de bon moet kloppen. */}
+            <div style={{ marginTop: 13 }}>
+              <label style={{ ...S.lbl, color: "#0f7d90", fontWeight: 800 }}>{L.lineTotalLabel}</label>
+              <input type="text" inputMode="decimal" placeholder="0,00"
+                value={totalDraft ?? (editItem.quantity > 0 ? +((editItem.unit_price || 0) * editItem.quantity).toFixed(2) : "")}
+                onChange={(e) => {
+                  // Toon precies wat je tikt; de stukprijs volgt meteen, maar stuurt het veld niet terug.
+                  const raw = numFilter(e.target.value)
+                  setTotalDraft(raw)
+                  const total = parseFloat(raw.replace(",", "."))
+                  const q = Math.max(1, editItem.quantity || 1)
+                  setEditItem((cur) => cur ? { ...cur, unit_price: isFinite(total) ? +(total / q).toFixed(4) : 0 } : cur)
+                }}
+                onBlur={() => setTotalDraft(null)}
+                style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 24, fontWeight: 800, color: "#0f7d90", border: "1.5px solid rgba(20,153,176,0.3)", background: "rgba(20,153,176,0.08)" }} />
+            </div>
+
+            {/* Zelfde indigo en zelfde icoon als het label op de rij in de lijst. */}
+            <button onClick={() => setEditItem((cur) => cur ? { ...cur, is_shared: !cur.is_shared } : cur)}
+              style={{
+                display: "flex", alignItems: "center", gap: 10, width: "100%", boxSizing: "border-box",
+                padding: 13, marginTop: 14, cursor: "pointer", borderRadius: 12,
+                border: `1.5px solid ${INDIGO.rand}`,
+                background: editItem.is_shared ? INDIGO.vlak : "#fff",
+                color: INDIGO.tekst, fontSize: 16.5, fontWeight: 800,
+              }}>
+              <ShareIcon on={editItem.is_shared} size={16} />
+              <span style={{ flex: 1, minWidth: 0, textAlign: "left" }}>{L.sharedItemWord}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: editItem.is_shared ? INDIGO.tekst : "#8aa3a6" }}>
+                {editItem.is_shared ? L.onWord : L.offWord}
               </span>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
+              <span onClick={(e) => { e.stopPropagation(); setToast(editItem.is_shared ? L.sharedHintOn : L.sharedHintOff) }}
+                style={{ flexShrink: 0, width: 22, height: 22, borderRadius: "50%", border: `1.5px solid ${INDIGO.rand}`, color: INDIGO.tekst, fontSize: 13, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>?</span>
+            </button>
+
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => { setTotalDraft(null); setEditItem(null) }}>{L.cancel}</button>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={saveItem}>{L.saveBtn}</button>
+              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1.4, fontWeight: 700 }} onClick={saveItem}>{L.saveBtn}</button>
+            </div>
+
+            {/* Wissen staat achter een lijn: het is geen manier om je wijziging op te slaan
+                maar een aparte beslissing, en het is het enige onomkeerbare hier. */}
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(18,58,66,0.08)" }}>
+              <button onClick={() => { const id = editItem.id; setTotalDraft(null); setEditItem(null); deleteItem(id) }}
+                style={{ display: "block", width: "100%", boxSizing: "border-box", textAlign: "center", border: "1.5px solid rgba(192,57,43,0.3)", background: "#fff", color: "#c0392b", borderRadius: 12, padding: "13px 0", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>
+                🗑️ {L.deleteThisItem}
+              </button>
             </div>
           </div>
         </div>
@@ -6287,26 +6316,14 @@ const BON_STRINGS = {
   nl: {
     diffOver: (b: string) => `${b} hoger dan de bon`,
     diffUnder: (b: string) => `${b} lager dan de bon`,
-    okBar: "Klopt met je bon",
-    watNu: "Wat nu?",
     waarom: "Waarom niet correct?",
-    voorbeeldLabel: "bij een aangetikt item",
-    panelIntro: "Check items met je papieren bon. Tik aan en wijzig waar nodig.",
-    panelShare: '"Delen" is voor gedeelde items (bv. fles water/wijn), bedrag wordt later over de delers verdeeld.',
+    checkZin: "Check met je papieren bon en wijzig waar nodig.",
     pillQty: "aantallen",
     pillPrice: "prijs",
     checkList: "Itemlijst nakijken",
     sharedLabel: "gedeeld",
     sharedNote: "verdeeld over de delers",
     perPiece: (b: string) => `${b} per stuk`,
-    sheetEdit: "Wijzigen",
-    editSub: (q: number, p: string) => `aantal ${q} · ${p} per stuk`,
-    sheetShare: "Delen met de tafel",
-    sheetUnshare: "Niet meer delen",
-    sheetDelete: "Wissen",
-    confirmShare: (b: string) => `Als gedeeld item wordt de volle ${b} verdeeld over wie meedeelt. Het aantal telt dan niet meer per stuk mee.`,
-    confirmNo: "Toch niet",
-    confirmYes: "Delen",
     edit: "wijzig",
     del: "wis",
     share: "delen",
@@ -6314,26 +6331,14 @@ const BON_STRINGS = {
   fr: {
     diffOver: (b: string) => `${b} de plus que l'addition`,
     diffUnder: (b: string) => `${b} de moins que l'addition`,
-    okBar: "Correspond à l'addition",
-    watNu: "Et maintenant ?",
     waarom: "Pourquoi ça ne correspond pas ?",
-    voorbeeldLabel: "sur un article touché",
-    panelIntro: "Vérifiez les articles avec votre addition papier. Touchez et corrigez si besoin.",
-    panelShare: "« Partager » sert aux articles partagés (p.ex. une bouteille d'eau ou de vin) ; le montant sera réparti entre les partageurs.",
+    checkZin: "Vérifiez avec votre addition papier et corrigez si besoin.", 
     pillQty: "quantités",
     pillPrice: "prix",
     checkList: "Vérifier la liste",
     sharedLabel: "partagé",
     sharedNote: "réparti entre les partageurs",
     perPiece: (b: string) => `${b} la pièce`,
-    sheetEdit: "Modifier",
-    editSub: (q: number, p: string) => `quantité ${q} · ${p} la pièce`,
-    sheetShare: "Partager avec la table",
-    sheetUnshare: "Ne plus partager",
-    sheetDelete: "Supprimer",
-    confirmShare: (b: string) => `En article partagé, la totalité de ${b} est répartie entre les partageurs. La quantité ne compte alors plus à la pièce.`,
-    confirmNo: "Annuler",
-    confirmYes: "Partager",
     edit: "modifier",
     del: "suppr.",
     share: "partager",
@@ -6370,49 +6375,12 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   scanFlags?: Record<string, { note: string }>
 }) {
   const [openFlag, setOpenFlag] = useState<string | null>(null)
-  const [blad, setBlad] = useState<BillItem | null>(null)
-  const [deelVraag, setDeelVraag] = useState(false)
-  const [panelOpen, setPanelOpen] = useState(false)
   const [ingedrukt, setIngedrukt] = useState<string | null>(null)
   const [lang] = useLang()
   const L = STRINGS[lang]
   const B = BON_STRINGS[lang]
 
   const scheef = billOverBy != null && Math.abs(billOverBy) >= 0.005
-
-  // Het uitklapje ligt over de lijst, dus het sluit zodra je begint te scrollen.
-  useEffect(() => {
-    if (!panelOpen) return
-    const start = window.scrollY
-    const bijScroll = () => { if (Math.abs(window.scrollY - start) > 40) setPanelOpen(false) }
-    window.addEventListener("scroll", bijScroll, { passive: true })
-    return () => window.removeEventListener("scroll", bijScroll)
-  }, [panelOpen])
-
-  const sluitBlad = () => { setBlad(null); setDeelVraag(false) }
-
-  useEffect(() => {
-    if (!blad) return
-    const bijToets = (e: KeyboardEvent) => { if (e.key === "Escape") sluitBlad() }
-    window.addEventListener("keydown", bijToets)
-    return () => window.removeEventListener("keydown", bijToets)
-  }, [blad])
-
-  const bladKnop = (tekst: string, icoon: React.ReactNode, kleur: string, randKleur: string, actie: () => void, pijl = true, sub?: string) => (
-    <button onClick={actie} style={{
-      display: "flex", alignItems: "center", gap: 11, width: "100%", boxSizing: "border-box",
-      minHeight: 54, padding: "9px 14px", marginBottom: 8, cursor: "pointer",
-      background: "#fff", border: `1px solid ${randKleur}`, borderRadius: 13,
-      fontSize: 17, fontWeight: 700, color: kleur, textAlign: "left",
-    }}>
-      {icoon}
-      <span style={{ flex: 1, minWidth: 0 }}>
-        {tekst}
-        {sub && <span style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#8aa3a6", marginTop: 2 }}>{sub}</span>}
-      </span>
-      {pijl && <span style={{ color: "#b6cacc", fontSize: 18 }}>›</span>}
-    </button>
-  )
 
   return (
     <div style={S.card}>
@@ -6423,43 +6391,16 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         )}
       </div>
 
-      {/* ─── Zwevende meldingsbalk ─────────────────────────────────────────────
-          Alleen bij een verschil. Klopt het totaal, dan zeggen de groene rijen dat
-          al en scheelt het weglaten van de balk een item schermruimte.
-          Let op: position:sticky breekt zodra een ouder overflow:hidden heeft. */}
+      {/* ─── Verschil met de bon ───────────────────────────────────────────────
+          Rood is de melding, de zin eronder is de instructie. Geen uitklap meer:
+          alles wat je hier moet weten past in twee regels. */}
       {items.length > 0 && scheef && (
-        <div style={{ position: "sticky", top: 0, zIndex: 5, background: "#fff", margin: "0 -18px", padding: "0 18px 9px" }}>
-          <div style={{ borderRadius: 12, background: "rgba(224,107,94,0.10)", border: "1px solid rgba(224,107,94,0.45)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "10px 12px" }}>
-              <span style={{ fontSize: 17, flexShrink: 0 }}>⚠️</span>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#c0392b", lineHeight: 1.3 }}>
-                {billOverBy! > 0 ? B.diffOver(euro(billOverBy!)) : B.diffUnder(euro(Math.abs(billOverBy!)))}
-              </span>
-              <button onClick={() => setPanelOpen((v) => !v)}
-                style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#c0392b", background: "#fff", border: "1px solid rgba(224,107,94,0.45)", borderRadius: 9, padding: "7px 11px", cursor: "pointer", whiteSpace: "nowrap" }}>
-                {B.watNu} {panelOpen ? "▴" : "▾"}
-              </button>
-            </div>
-
-            {panelOpen && (
-              <div style={{ background: "#fff", borderRadius: "0 0 11px 11px", padding: 13, borderTop: "1px solid rgba(224,107,94,0.3)" }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: 16, color: "#123a42", lineHeight: 1.5 }}>
-                  <span style={{ fontSize: 18, flexShrink: 0 }}>🧾</span>
-                  <span>{B.panelIntro}</span>
-                </div>
-                {/* Gestippeld kader: dit is een voorbeeld van wat verschijnt, geen knoppenrij. */}
-                <div style={{ position: "relative", border: "1px dashed rgba(18,58,66,0.22)", borderRadius: 11, padding: "11px 9px 9px", marginTop: 12 }}>
-                  <span style={{ position: "absolute", top: -9, left: 11, background: "#fff", padding: "0 6px", fontSize: 12.5, color: "#8aa3a6" }}>{B.voorbeeldLabel}</span>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <span style={{ flex: 1, height: 38, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, background: "#fff", border: "1px solid rgba(18,58,66,0.12)", borderRadius: 10, fontSize: 14.5, fontWeight: 700, color: "#4a6e73" }}>✏️ {B.edit}</span>
-                    <span style={{ flex: 1, height: 38, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, background: "#fff", border: `1px solid ${INDIGO.rand}`, borderRadius: 10, fontSize: 14.5, fontWeight: 700, color: INDIGO.tekst }}><ShareIcon on size={13} />{B.share}</span>
-                    <span style={{ flex: 1, height: 38, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, background: "#fff", border: "1px solid rgba(192,57,43,0.28)", borderRadius: 10, fontSize: 14.5, fontWeight: 700, color: "#c0392b" }}>🗑️ {B.del}</span>
-                  </div>
-                </div>
-                <div style={{ fontSize: 15, color: "#4a6e73", lineHeight: 1.5, marginTop: 11 }}>{B.panelShare}</div>
-              </div>
-            )}
+        <div style={{ background: "rgba(224,107,94,0.10)", border: "1px solid rgba(224,107,94,0.45)", borderRadius: 12, padding: "11px 12px", marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16.5, fontWeight: 800, color: "#c0392b" }}>
+            <span style={{ flexShrink: 0, fontSize: 17 }}>⚠️</span>
+            {billOverBy! > 0 ? B.diffOver(euro(billOverBy!)) : B.diffUnder(euro(Math.abs(billOverBy!)))}
           </div>
+          <div style={{ fontSize: 15, color: "#c0392b", opacity: 0.85, lineHeight: 1.45, marginTop: 7, textAlign: "center" }}>{B.checkZin}</div>
         </div>
       )}
 
@@ -6488,7 +6429,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
 
         return (
           <div key={it.id}
-            onClick={() => setBlad(it)}
+            onClick={() => onEdit(it)}
             onPointerDown={() => setIngedrukt(it.id)}
             onPointerUp={() => setIngedrukt(null)}
             onPointerLeave={() => setIngedrukt(null)}
@@ -6646,58 +6587,6 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         <button onClick={onGoGuests} className="rundo-klaar-puls" style={{ width: "100%", marginTop: 16, padding: "16px 0", fontSize: 18, fontWeight: 800, border: "none", borderRadius: 14, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 8px 20px -8px rgba(31,138,76,0.75)", cursor: "pointer" }}>{L.goGuestsBtn}</button>
       )}
 
-      {/* ─── Blad van onderaan ─────────────────────────────────────────────────
-          Eén tik op een rij opent dit. De kop herhaalt welk item je aantikte —
-          op een telefoon raak je geregeld de rij ernaast. */}
-      {blad && (
-        <div onClick={sluitBlad} style={{ position: "fixed", inset: 0, background: "rgba(18,58,66,0.45)", zIndex: 1000, display: "flex", alignItems: "flex-end", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", background: "#fff", borderRadius: "20px 20px 0 0", padding: 16, paddingBottom: 26, maxWidth: 520, margin: "0 auto" }}>
-            <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
-              <span style={{ flex: 1 }} />
-              <span style={{ width: 38, height: 4, borderRadius: 2, background: "rgba(18,58,66,0.18)" }} />
-              <span style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
-                <button onClick={sluitBlad} aria-label={L.closeWord}
-                  style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "rgba(18,58,66,0.06)", color: "#4a6e73", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>✕</button>
-              </span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, paddingBottom: 12, borderBottom: "1px solid rgba(18,58,66,0.08)", marginBottom: 13 }}>
-              <span style={{ fontSize: 17, fontWeight: 800, color: "#123a42", minWidth: 0 }}>{blad.quantity}× {showTip(blad.name, L)}</span>
-              <span style={{ fontSize: 17, fontWeight: 800, color: "#0f7d90", whiteSpace: "nowrap" }}>{euro(blad.unit_price * blad.quantity)}</span>
-            </div>
-
-            {!deelVraag ? (
-              <>
-                {bladKnop(
-                  B.sheetEdit,
-                  <span style={{ fontSize: 19 }}>✏️</span>,
-                  "#123a42", "rgba(18,58,66,0.14)",
-                  () => { const it = blad; sluitBlad(); onEdit(it) },
-                  true,
-                  blad.quantity > 1 ? B.editSub(blad.quantity, euro(blad.unit_price)) : undefined,
-                )}
-                {bladKnop(blad.is_shared ? B.sheetUnshare : B.sheetShare, <ShareIcon on={blad.is_shared} size={15} />, INDIGO.tekst, INDIGO.rand,
-                  () => { if (blad.is_shared) { const it = blad; sluitBlad(); onToggleShared(it) } else setDeelVraag(true) })}
-                {bladKnop(B.sheetDelete, <span style={{ fontSize: 19 }}>🗑️</span>, "#c0392b", "rgba(192,57,43,0.3)", () => { const it = blad; sluitBlad(); onDelete(it.id) }, false)}
-              </>
-            ) : (
-              // Delen aanzetten vraagt altijd een bevestiging met uitleg; uitzetten niet.
-              <div>
-                <div style={{ background: INDIGO.vlak, border: `1px solid ${INDIGO.rand}`, borderRadius: 13, padding: 13, fontSize: 16.5, color: INDIGO.tekst, lineHeight: 1.5 }}>
-                  {B.confirmShare(euro(blad.unit_price * blad.quantity))}
-                </div>
-                <div style={{ display: "flex", gap: 8, marginTop: 13 }}>
-                  <button onClick={() => setDeelVraag(false)}
-                    style={{ flex: 1, height: 48, border: "1px solid rgba(18,58,66,0.14)", background: "#fff", borderRadius: 12, cursor: "pointer", fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>{B.confirmNo}</button>
-                  <button onClick={() => { const it = blad; sluitBlad(); onToggleShared(it) }}
-                    style={{ flex: 1, height: 48, border: "none", background: INDIGO.vol, borderRadius: 12, cursor: "pointer", fontSize: 16.5, fontWeight: 700, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
-                    <ShareIcon on size={14} />{B.confirmYes}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
