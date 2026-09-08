@@ -4413,8 +4413,15 @@ export default function RundoTable() {
                             {BON_STRINGS[lang].waarom}
                           </span>
                         </div>
+                        {/* Haalt de schuld bij de gebruiker weg: niet jij hebt iets fout
+                            ingetikt, de scan is nu eenmaal niet onfeilbaar. */}
+                        <div style={{ fontSize: 14, color: "#8aa3a6", lineHeight: 1.45, textAlign: "center", marginTop: 9 }}>
+                          {BON_STRINGS[lang].scanZin}
+                        </div>
+                        {/* De derde pil volgt de richting: telt je lijst te veel, dan kan er iets
+                            dubbel staan; telt ze te weinig, dan ontbreekt er juist iets. */}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 7, justifyContent: "center", marginTop: 12 }}>
-                          {[BON_STRINGS[lang].pillQty, BON_STRINGS[lang].pillPrice, L.checkTaxShort].map((tekst, i2) => (
+                          {[BON_STRINGS[lang].pillQty, BON_STRINGS[lang].pillPrice, higher ? BON_STRINGS[lang].pillDouble : BON_STRINGS[lang].pillMissing, L.checkTaxShort].map((tekst, i2) => (
                             <span key={i2} style={{ background: "#fff", border: "1px solid rgba(18,58,66,0.16)", color: "#4a6e73", borderRadius: 999, padding: "7px 13px", fontSize: 14.5, fontWeight: 700 }}>{tekst} ?</span>
                           ))}
                         </div>
@@ -6319,6 +6326,9 @@ const BON_STRINGS = {
     waarom: "Waarom niet correct?",
     checkZin: "Check met je papieren bon en wijzig waar nodig.",
     pillQty: "aantallen",
+    pillDouble: "dubbels",
+    pillMissing: "ontbrekend item",
+    scanZin: "Een scan leest niet altijd alles juist.",
     pillPrice: "prijs",
     checkList: "Itemlijst nakijken",
     sharedLabel: "gedeeld",
@@ -6334,6 +6344,9 @@ const BON_STRINGS = {
     waarom: "Pourquoi ça ne correspond pas ?",
     checkZin: "Vérifiez avec votre addition papier et corrigez si besoin.", 
     pillQty: "quantités",
+    pillDouble: "doublons",
+    pillMissing: "article manquant",
+    scanZin: "Un scan ne lit pas toujours tout correctement.",
     pillPrice: "prix",
     checkList: "Vérifier la liste",
     sharedLabel: "partagé",
@@ -6473,7 +6486,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
                 <span style={{ fontSize: 14.5, color: "#8aa3a6" }}>{B.sharedNote}</span>
               </div>
             ) : it.quantity > 1 ? (
-              <div style={{ fontSize: 14.5, color: zeroPrice ? "#c0392b" : "#8aa3a6", marginTop: 3 }}>
+              <div style={{ fontSize: 14, color: zeroPrice ? "#c0392b" : "#8aa3a6", marginTop: 2 }}>
                 {B.perPiece(euro(it.unit_price))}
               </div>
             ) : null}
