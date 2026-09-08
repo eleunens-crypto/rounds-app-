@@ -405,9 +405,11 @@ function fileToBase64(file: File): Promise<string> {
 // Hoofd-scan: probeer eerst de AI-route (Gemini). Lukt dat niet (geen sleutel, fout, niets herkend),
 // dan valt hij automatisch terug op de lokale Tesseract-scan.
 // Hoelang wachten voor een nieuwe poging? Google geeft bij een 429 zelf een retryDelay op —
-// die is leidend. Zonder opgave nemen we 60s: het minuutvenster is 60 seconden lang, dus onze
-// oude vaste 30s liet dat venster vaak nog niet leeglopen. Plus 0-5s willekeur, zodat vier
-// gasten aan dezelfde tafel niet allemaal op exact dezelfde seconde opnieuw proberen.
+// die is leidend. Zonder opgave nemen we 60s: het venster van de dienst is zelf 60 seconden,
+// dus korter wachten levert vaak een tweede mislukking op en dan begint het aftellen opnieuw.
+// Tijdens het wachten staan de lokale scan en handmatig toevoegen ernaast, dus die minuut is
+// geen dood moment. Plus 0-5s willekeur, zodat vier gasten aan dezelfde tafel niet allemaal
+// op exact dezelfde seconde opnieuw proberen.
 function cooldownMs(retryAfter?: number | null): number {
   const base = retryAfter != null && retryAfter > 0 ? retryAfter : 60
   return Math.round((base + Math.random() * 5) * 1000)
@@ -2085,7 +2087,7 @@ export default function RundoTable() {
   const [fillingSpots, setFillingSpots] = useState<string[]>([])  // vrije plaatsen die je nu een naam geeft
   const [askSeats, setAskSeats] = useState(false)  // "voor hoeveel personen?" bij het toevoegen
   const [roundingOk, setRoundingOk] = useState(false)  // centenverschil bewust aanvaard
-  const [naarLijstGetikt, setNaarLijstGetikt] = useState(false)  // stopt het wippende pijltje na de eerste sprong
+  const [naarLijstGetikt, setNaarLijstGetikt] = useState(false)  // stopt het wippende pijltje
   const [totalDraft, setTotalDraft] = useState<string | null>(null)  // wat je intikt bij "regeltotaal"
   const [priceDraft, setPriceDraft] = useState<string | null>(null)  // idem voor de stukprijs
   const [billMismatchAck, setBillMismatchAck] = useState(false)  // bewust doorgegaan ondanks verschil
@@ -2751,6 +2753,18 @@ export default function RundoTable() {
     const nm = me.name.trim()
     return !(new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(nm) || nm === L.adminName || nm === "")
   })()
+
+  // Zodra je eigen naam er staat, wordt het groene blok onderaan actief. Zonder deze
+  // sprong staat het onder de QR-kaart, die op een telefoon bijna het hele scherm vult.
+  const naamWasGezet = useRef(false)
+  useEffect(() => {
+    if (!isAdmin || adminTab !== "guests") return
+    if (adminNamed && !naamWasGezet.current) {
+      naamWasGezet.current = true
+      window.setTimeout(() => document.getElementById("naar-toewijzen")?.scrollIntoView({ behavior: "smooth", block: "center" }), 250)
+    }
+    if (!adminNamed) naamWasGezet.current = false
+  }, [adminNamed, isAdmin, adminTab])
   // Het aantal personen is pas "ingevuld" als de organisator de teller bewust zette
   // (of als er al meer dan één persoon aan tafel zit, bv. bij een herladen groep).
   const personsSet = personsTouched || totalPersons > 1
@@ -4891,13 +4905,23 @@ export default function RundoTable() {
             })()}
           </div>
           )}
-          <div style={{ order: 3, marginTop: 14, ...S.card, background: "linear-gradient(160deg,#eafaf1,#d9f2e4)", border: "2px solid rgba(31,138,76,0.45)", padding: "18px 16px" }}>
+          {/* Groen en pulserend pas wanneer je er ook echt naartoe kan: zolang je eigen
+              naam ontbreekt is dit blok gedempt en de knop niet aanklikbaar. Anders staat
+              er een uitnodigende knop die bij een tik alleen een foutmelding geeft. */}
+          <div id="naar-toewijzen" style={{ order: 3, marginTop: 14, ...S.card, padding: "18px 16px",
+            background: adminNamed ? "linear-gradient(160deg,#eafaf1,#d9f2e4)" : "rgba(18,58,66,0.04)",
+            border: adminNamed ? "2px solid rgba(31,138,76,0.45)" : "2px solid rgba(18,58,66,0.10)",
+            opacity: adminNamed ? 1 : 0.55 }}>
             {/* "Toewijzen" alleen zegt niet wát je toewijst; dat staat nu in de knop.
                 De ondertitel herhaalde wat je een scherm verder toch te zien krijgt. */}
-            <div style={{ fontSize: 21, fontWeight: 800, color: "#15703f", marginBottom: 3, lineHeight: 1.25 }}>{L.nowAssignTitle}</div>
-            <div style={{ fontSize: 15.5, color: "#3c6b51", lineHeight: 1.45, marginBottom: 13 }}>{L.nowAssignSub}</div>
-            <button onClick={() => { if (warnMismatch) { setShowShareWarn(true); return } if (!requireName()) return; setAdminTab("overview"); scrollTop() }}
-              style={{ width: "100%", padding: "16px 0", fontSize: 19, fontWeight: 800, border: "none", borderRadius: 14, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 8px 20px -8px rgba(31,138,76,0.75)", cursor: "pointer" }}>{L.goAssignBtn}</button>
+            <div style={{ fontSize: 21, fontWeight: 800, color: adminNamed ? "#15703f" : "#8aa3a6", marginBottom: 3, lineHeight: 1.25 }}>{L.nowAssignTitle}</div>
+            <div style={{ fontSize: 15.5, color: adminNamed ? "#3c6b51" : "#8aa3a6", lineHeight: 1.45, marginBottom: 13 }}>{L.nowAssignSub}</div>
+            <button disabled={!adminNamed} className={adminNamed ? "rundo-klaar-puls" : undefined}
+              onClick={() => { if (warnMismatch) { setShowShareWarn(true); return } if (!requireName()) return; setAdminTab("overview"); scrollTop() }}
+              style={{ width: "100%", padding: "16px 0", fontSize: 19, fontWeight: 800, border: "none", borderRadius: 14, color: "#fff",
+                background: adminNamed ? "linear-gradient(135deg,#1f8a4c,#27ae60)" : "#b6cacc",
+                boxShadow: adminNamed ? "0 8px 20px -8px rgba(31,138,76,0.75)" : "none",
+                cursor: adminNamed ? "pointer" : "not-allowed" }}>{L.goAssignBtn}</button>
           </div>
         </div>
       )}
@@ -6579,8 +6603,8 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   )
 }
 
-function AssignPicker({ participants, itemId, isShared, confirmedFn, vrijFn, naamVan, onAssign, onClose }: {
-  participants: Participant[]; itemId: string; isShared?: boolean
+function AssignPicker({ participants, itemId, isShared, meId, confirmedFn, vrijFn, naamVan, onAssign, onClose }: {
+  participants: Participant[]; itemId: string; isShared?: boolean; meId: string | null
   confirmedFn: (pid: string) => boolean
   vrijFn: (p: Participant) => boolean
   naamVan: (p: Participant) => string
@@ -6607,7 +6631,8 @@ function AssignPicker({ participants, itemId, isShared, confirmedFn, vrijFn, naa
           // Wie zelf aanduidde of via de link binnenkwam, verdient een vraag vóór je het
           // voor hem invult. Een nog vrije plaats óók, maar één keer volstaat — daarna weet
           // je het en zou het alleen nog in de weg zitten.
-          const reden: "bevestigd" | "qr" | "vrij" | null = klaar ? "bevestigd" : viaQr ? "qr" : vrijFn(p) ? "vrij" : null
+          const reden: "bevestigd" | "qr" | "vrij" | null = p.id === meId ? null
+              : klaar ? "bevestigd" : viaQr ? "qr" : vrijFn(p) ? "vrij" : null
           return (
             <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
               {i === eersteViaLink && eersteViaLink > 0 && (
@@ -6835,15 +6860,6 @@ function ClaimScreen(props: {
                           <span style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "4px 9px", color: ok ? "#1f8a4c" : "#c0392b", background: ok ? "rgba(39,174,96,0.12)" : "rgba(224,107,94,0.12)" }}>{ok ? `${heads} ${heads === 1 ? L.person : L.persons}` : L.nobodyYet}</span>
                           {isAdmin && shareBtn(it)}
                         </div>
-                        {onSetExpected && (
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 7, marginLeft: 25, background: "rgba(90,108,166,0.06)", borderRadius: 9, padding: "9px 9px" }}>
-                            <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a6e73" }}>{L.expectedSharers} <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8aa3a6", background: "rgba(18,58,66,0.05)", borderRadius: 12, padding: "3px 8px" }}>{L.optionalShort}</span></span>
-                            <button onClick={() => onSetExpected(it.id, Math.max(0, (it.share_expected ?? 0) - 1) || null)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5 }}>−</button>
-                            <b style={{ minWidth: 14, textAlign: "center", fontSize: 16.5, color: it.share_expected ? "#123a42" : "#b6cacc" }}>{it.share_expected ?? "–"}</b>
-                            <button onClick={() => onSetExpected(it.id, (it.share_expected ?? 0) + 1)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5, background: "rgba(27,42,74,0.12)" }}>+</button>
-                            <span style={{ flexBasis: "100%", fontSize: 15, color: "#8aa3a6", lineHeight: 1.4 }}>{L.expectedHint}</span>
-                          </div>
-                        )}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25 }}>
                           {named.length === 0
                             ? <span style={{ fontSize: 15.5, color: "#aaa" }}>{L.addGuestsFirst}</span>
@@ -6861,7 +6877,11 @@ function ClaimScreen(props: {
                                       <span style={{ width: 1, height: 22, background: "rgba(18,58,66,0.12)", marginRight: 2 }} />
                                     )}
                                     <button onClick={() => {
-                                      if (!on && explicitConfirmed(p.id)) { askConfirm(L.notSelectedShare(p.name), L.yes, () => toggleShareClaim(it.id, p.id)); return }
+                                      if (!on && p.id !== meId) {
+                                        const doe = () => toggleShareClaim(it.id, p.id)
+                                        if (explicitConfirmed(p.id)) { askConfirm(L.notSelectedShare(p.name), L.yes, doe); return }
+                                        if (viaLink) { askConfirm(L.assignToQrGuest(naamVan(p)), L.yes, doe); return }
+                                      }
                                       toggleShareClaim(it.id, p.id)
                                     }} style={{
                                       fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "5px 10px", cursor: "pointer",
@@ -6874,6 +6894,15 @@ function ClaimScreen(props: {
                                 )
                               })}
                         </div>
+                        {onSetExpected && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 7, marginLeft: 25, background: "rgba(90,108,166,0.06)", borderRadius: 9, padding: "9px 9px" }}>
+                            <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a6e73" }}>{L.expectedSharers} <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8aa3a6", background: "rgba(18,58,66,0.05)", borderRadius: 12, padding: "3px 8px" }}>{L.optionalShort}</span></span>
+                            <button onClick={() => onSetExpected(it.id, Math.max(0, (it.share_expected ?? 0) - 1) || null)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5 }}>−</button>
+                            <b style={{ minWidth: 14, textAlign: "center", fontSize: 16.5, color: it.share_expected ? "#123a42" : "#b6cacc" }}>{it.share_expected ?? "–"}</b>
+                            <button onClick={() => onSetExpected(it.id, (it.share_expected ?? 0) + 1)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5, background: "rgba(27,42,74,0.12)" }}>+</button>
+                            <span style={{ flexBasis: "100%", fontSize: 15, color: "#8aa3a6", lineHeight: 1.4 }}>{L.expectedHint}</span>
+                          </div>
+                        )}
                         {toewijsbaar.map((p) => {
                           const pSeats = Math.max(1, p.seats ?? 1)
                           const key = `${it.id}:${p.id}`
@@ -6947,7 +6976,7 @@ function ClaimScreen(props: {
                         {who.length === 0 && open === 0 && <span style={{ fontSize: 15.5, color: "#aaa" }}>—</span>}
                       </div>
                       {assignItem === it.id && (
-                        <AssignPicker participants={participants} itemId={it.id} confirmedFn={explicitConfirmed}
+                        <AssignPicker participants={participants} itemId={it.id} meId={meId} confirmedFn={explicitConfirmed}
                           vrijFn={vrijFn} naamVan={naamVan}
                           onAssign={(pid, reden) => {
                             const wie = participants.find((x) => x.id === pid)
