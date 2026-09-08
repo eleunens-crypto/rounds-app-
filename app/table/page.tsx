@@ -596,7 +596,7 @@ const STRINGS = {
       ? "Er is nog één vrije plaats, dus dit kan alleen voor één persoon. Verhoog eerst het aantal personen bovenaan."
       : `Er zijn nog ${n} plaatsen vrij op deze plek. Verhoog eerst het aantal personen bovenaan als je er meer nodig hebt.`,
     addNameTitle: "Wie voeg je toe?",
-    addNameSub: "Deze naam staat straks klaar in de lijst — die persoon tikt hem na het scannen gewoon aan.",
+    addNameSub: "Hij tikt deze naam aan na het scannen, of jij duidt zelf aan wat hij nam.",
     togetherTitle: (n: number) => n === 2 ? "Samen op één plaats" : `Met ${n} op één plaats`,
     togetherWhat: (n: number) => n === 2
       ? "Deze twee betalen samen: ze nemen één plaats in aan tafel en krijgen op het einde één bedrag te zien, niet elk apart."
@@ -660,12 +660,13 @@ const STRINGS = {
     theirNamesQ: "Hoe heten ze?",
     addThisGuest: "Toevoegen",
     enterGuestName: "Vul eerst een naam in.",
-    whoAtTableTitle: "Namen andere gasten",
-    noNeedUpfront: "Vul alvast namen in, of deel meteen de QR.",
-    seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${vrij} vrij` : "compleet",
+    seatsFreeTitle: (n: number) => n === 1 ? "Nog 1 plaats vrij" : `Nog ${n} plaatsen vrij`,
+    seatsAllNamed: "Alle plaatsen ingevuld ✓",
+    autoJoinLine: "Wie de QR scant, verschijnt hier automatisch.",
+    noPhoneLine: "Iemand zonder gsm? Tik een vrije plaats aan.",
+    collapseSeats: "Plaatsen verbergen",
+    selfJoinedBadge: "✓ zelf gescand",
     addNameRow: "+ naam",
-    optionalWord: "(optioneel)",
-    freeSpotSub: "scant zelf, of zet jij de naam",
     needMoreSpotsTitle: "Er is een plaats te weinig",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Dit vraagt ${tekort} plaats${tekort === 1 ? "" : "en"} meer dan er vrij ${tekort === 1 ? "is" : "zijn"}. Zal ik het aantal personen op ${totaal} zetten?`,
     raiseTotalBtn: (totaal: number) => `Ja, personen op ${totaal} zetten`,
@@ -762,7 +763,6 @@ const STRINGS = {
     tagAdmin: "jij \u00b7 admin",
     adminWord: "Beheerder",
     adminsWord: "Beheerders",
-    seatsFilledOf: (ingevuld: number, totaal: number) => `${ingevuld} van de ${totaal} ${totaal === 1 ? "persoon" : "personen"}`,
     tagViaLink: "via de link",
     tagByYou: "admin duidt aan",
     tagAdded: "toegevoegd",
@@ -1306,12 +1306,13 @@ const STRINGS = {
     theirNamesQ: "Comment s\u2019appellent-ils ?",
     addThisGuest: "Ajouter",
     enterGuestName: "Entre d\u2019abord un nom.",
-    whoAtTableTitle: "Noms des autres invités",
-    noNeedUpfront: "Remplis déjà des noms, ou partage tout de suite le QR.",
-    seatsSummary: (totaal: number, vrij: number) => vrij > 0 ? `${vrij} libre${vrij === 1 ? "" : "s"}` : "complet",
+    seatsFreeTitle: (n: number) => n === 1 ? "Encore 1 place libre" : `Encore ${n} places libres`,
+    seatsAllNamed: "Toutes les places sont remplies ✓",
+    autoJoinLine: "Celui qui scanne le QR apparaît ici automatiquement.",
+    noPhoneLine: "Quelqu'un sans gsm ? Touchez une place libre.",
+    collapseSeats: "Masquer les places",
+    selfJoinedBadge: "✓ a scanné",
     addNameRow: "+ nom",
-    optionalWord: "(facultatif)",
-    freeSpotSub: "scanne lui-même, ou tu mets le nom",
     needMoreSpotsTitle: "Il manque une place",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Cela demande ${tekort} place${tekort === 1 ? "" : "s"} de plus qu’il n’y en a de libre. Je mets le nombre de personnes à ${totaal} ?`,
     raiseTotalBtn: (totaal: number) => `Oui, mettre à ${totaal} personnes`,
@@ -1408,7 +1409,6 @@ const STRINGS = {
     tagAdmin: "toi \u00b7 admin",
     adminWord: "Organisateur",
     adminsWord: "Organisateurs",
-    seatsFilledOf: (ingevuld: number, totaal: number) => `${ingevuld} sur ${totaal} ${totaal === 1 ? "personne" : "personnes"}`,
     tagViaLink: "via le lien",
     tagByYou: "l’hôte coche",
     tagAdded: "ajouté",
@@ -4583,7 +4583,7 @@ export default function RundoTable() {
       )}
       {isAdmin && adminTab === "guests" && (
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ ...S.card, order: 1 }}>
+          <div style={{ ...S.card, order: (personsSet && adminNamed) ? 2 : 1 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 4 }}>
               <h3 style={{ ...S.h3, marginBottom: 0, minWidth: 0 }}>{L.howManyGroupTitle}</h3>
             </div>
@@ -4667,72 +4667,77 @@ export default function RundoTable() {
                   {/* Onderste helft van hetzelfde kader: geen eigen vlak meer, want binnen een
                       kader is al duidelijk dat je hier mag tikken. Alleen de scheidingslijn
                       met de rij erboven blijft. */}
+                  {/* Ingeklapt zegt dit blok alleen wat er vanzelf gebeurt. De uitnodiging om
+                      zelf namen te zetten komt pas na het uitklappen — anders nodig je uit
+                      tot iets wat je meestal niet hoeft te doen. */}
                   <button onClick={() => setShowNamesBlock((v) => !v)}
-                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", textAlign: "left",
-                      background: "#fff", border: "1px solid rgba(18,58,66,0.14)", borderRadius: "0 0 14px 14px", padding: "12px 12px" }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#123a42" }}>
-                      {L.whoAtTableTitle} <span style={{ color: "#8aa3a6", fontWeight: 700, fontSize: 14 }}>{L.optionalWord}</span>
+                    style={{ width: "100%", display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer", textAlign: "left",
+                      background: "#fff", border: "1px solid rgba(18,58,66,0.14)", borderRadius: showNamesBlock ? "0" : "0 0 14px 14px", padding: "13px 12px" }}>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: vrijeZit > 0 ? "#123a42" : "#1f8a4c" }}>
+                        {vrijeZit > 0 ? L.seatsFreeTitle(vrijeZit) : L.seatsAllNamed}
+                      </span>
+                      {vrijeZit > 0 && <span style={{ display: "block", fontSize: 14, color: "#8aa3a6", lineHeight: 1.5, marginTop: 5 }}>{L.autoJoinLine}</span>}
                     </span>
-                    {/* Grijs zolang er plaatsen vrij zijn: dat is een stand van zaken, geen
-                        probleem. Groen pas als alles bezet is — daar is het een afvinking. */}
-                    <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 800, whiteSpace: "nowrap", color: vrijeZit > 0 ? "#4a6e73" : "#1f8a4c", background: vrijeZit > 0 ? "rgba(18,58,66,0.06)" : "rgba(39,174,96,0.16)", borderRadius: 999, padding: "6px 13px" }}>
-                      👥 {L.seatsSummary(totalPersons, vrijeZit)}
-                    </span>
-                    <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#4a6e73", lineHeight: 1 }}>{showNamesBlock ? "▴" : "▾"}</span>
+                    <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#4a6e73", lineHeight: 1, marginTop: 2 }}>{showNamesBlock ? "▴" : "▾"}</span>
                   </button>
-                  <div style={{ marginTop: 8, borderLeft: "3px solid rgba(20,153,176,0.5)", padding: "2px 0 2px 10px", fontSize: 14.5, fontWeight: 700, color: "#0f7488", lineHeight: 1.4 }}>{L.noNeedUpfront}</div>
+
                   {showNamesBlock && (
-                    <div style={{ marginTop: 8, border: "1px solid rgba(18,58,66,0.12)", borderRadius: 12, overflow: "hidden" }}>
-                      {participants.map((q, i) => {
+                    <div style={{ border: "1px solid rgba(18,58,66,0.14)", borderTop: "none", borderRadius: "0 0 14px 14px", overflow: "hidden" }}>
+                      {participants.map((q) => {
                         const ikZelf = q.id === meId
                         const leeg = isFreeSpot(q) && !q.self_joined
                         const zit = Math.max(1, q.seats ?? 1)
                         return (
                           <button key={q.id} onClick={() => ikZelf ? openZelfPopup() : openVoor(q)}
-                            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, textAlign: "left", cursor: "pointer", border: "none", padding: "11px 12px",
-                              borderTop: i === 0 ? "none" : "1px solid rgba(0,0,0,0.06)",
-                              background: leeg ? "rgba(20,153,176,0.04)" : "#fff" }}>
-                            <span style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-                              <span style={{ flexShrink: 0 }}>{ikZelf ? "👤" : leeg ? "📱" : q.self_joined ? "📱" : "✓"}</span>
-                              {/* Een lege plaats raakt op twee manieren ingevuld: de gast scant, of
-                                  jij zet de naam. Beide vermelden, anders belooft één regel iets
-                                  wat misschien nooit gebeurt. */}
-                              <span style={{ minWidth: 0 }}>
-                                <span style={{ display: "block", fontSize: 16, fontWeight: 700, color: leeg ? "#8aa3a6" : "#123a42", fontStyle: leeg ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                  {leeg ? L.freeSpotName : q.name}{!leeg && zit > 1 ? ` · ${zit}p.` : ""}
-                                  {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> · {zit > 1 ? L.adminsWord : L.adminWord}</span>}
-                                </span>
-                                {leeg && <span style={{ display: "block", fontSize: 12.5, color: "#b3bac6", lineHeight: 1.35 }}>{L.freeSpotSub}</span>}
-                              </span>
+                            style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, textAlign: "left", cursor: "pointer",
+                              border: "none", borderTop: "1px solid rgba(18,58,66,0.08)", padding: "11px 12px", background: "#fff" }}>
+                            {/* Een stippelrondje naast een gevuld rondje toont de reeks: hier zit
+                                iemand, daar hoort straks iemand. Dat werkt zonder tekst. */}
+                            <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
+                              ...(leeg
+                                ? { border: "1.5px dashed rgba(18,58,66,0.25)", color: "#b3bac6" }
+                                : { background: "rgba(20,153,176,0.14)", color: "#0f7d90" }) }}>
+                              {leeg ? "?" : (q.name || "?").trim().charAt(0).toUpperCase()}
                             </span>
-                            {ikZelf
-                              ? <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 10px", whiteSpace: "nowrap" }}>{L.tagAdmin}</span>
-                              : leeg
-                              ? <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#0f7d90", whiteSpace: "nowrap" }}>{L.addNameRow} <span style={{ fontWeight: 700, color: "#8aa3a6" }}>{L.optionalWord}</span></span>
-                              : <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#0f7d90", whiteSpace: "nowrap" }}>✏️</span>}
+                            <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: leeg ? "#8aa3a6" : "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {leeg ? L.freeSpotName : q.name}{!leeg && zit > 1 ? ` · ${zit}p.` : ""}
+                              {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> · {zit > 1 ? L.adminsWord : L.adminWord}</span>}
+                            </span>
+                            {q.self_joined && !ikZelf && (
+                              <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 9px", whiteSpace: "nowrap" }}>{L.selfJoinedBadge}</span>
+                            )}
+                            <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, background: "rgba(20,153,176,0.14)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                              <PotloodIcon />
+                            </span>
                           </button>
                         )
                       })}
+
+                      {vrijeZit > 0 && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(20,153,176,0.10)", borderTop: "1px solid rgba(18,58,66,0.08)", padding: "13px 12px" }}>
+                          <span style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 9, background: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                            <PotloodIcon size={19} kleur="#0f6d7e" />
+                          </span>
+                          <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 800, color: "#0f6d7e", lineHeight: 1.45 }}>{L.noPhoneLine}</span>
+                        </div>
+                      )}
+
+                      {/* Een tweede weg naar buiten: na een lijst van zes plaatsen staat de kop
+                          te ver weg om terug te scrollen. */}
+                      <button onClick={() => setShowNamesBlock(false)}
+                        style={{ width: "100%", border: "none", borderTop: "1px solid rgba(18,58,66,0.10)", background: "#fff", padding: "12px 0", cursor: "pointer", fontSize: 14.5, fontWeight: 800, color: "#4a6e73" }}>
+                        ▴ {L.collapseSeats}
+                      </button>
                     </div>
                   )}
-                  {/* Onder de lijst het totaal: hoeveel plaatsen een naam hebben van hoeveel
-                      er zijn. Groen zodra ze allemaal ingevuld zijn. */}
-                  {showNamesBlock && (() => {
-                    const ingevuldZit = totalPersons - vrijeZit
-                    const volledig = vrijeZit === 0
-                    return (
-                      <div style={{ marginTop: 9, fontSize: 14.5, fontWeight: 800, color: volledig ? "#1f8a4c" : "#123a42" }}>
-                        👥 {L.seatsFilledOf(ingevuldZit, totalPersons)}{volledig ? " ✓" : ""}
-                      </div>
-                    )
-                  })()}
                 </div>
               )
             })()}
 
           </div>
 
-          <div style={{ ...S.card, order: 2, border: "1.5px solid rgba(20,153,176,0.4)", ...((!personsSet || !adminNamed) ? { opacity: 0.5 } : {}) }}>
+          <div style={{ ...S.card, order: (personsSet && adminNamed) ? 1 : 2, border: "1.5px solid rgba(20,153,176,0.4)", ...((!personsSet || !adminNamed) ? { opacity: 0.5 } : {}) }}>
             {(!personsSet || !adminNamed) ? (
               <div style={{ background: "rgba(18,58,66,0.05)", borderRadius: 10, padding: "12px 10px", textAlign: "center", fontSize: 16, fontWeight: 700, color: "#8aa3a6" }}>
                 {!personsSet ? L.lockedPersons : L.lockedName}
@@ -7462,6 +7467,15 @@ function ClaimScreen(props: {
         </div>
       )}
     </div>
+  )
+}
+
+function PotloodIcon({ size = 16, kleur = "#0f7d90" }: { size?: number; kleur?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: "block" }}>
+      <path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 013 3L8 19l-4 1z" fill="none" stroke={kleur} strokeWidth="2" strokeLinejoin="round" />
+      <path d="M14.5 6.5l3 3" stroke={kleur} strokeWidth="2" strokeLinecap="round" />
+    </svg>
   )
 }
 
