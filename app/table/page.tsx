@@ -884,19 +884,13 @@ const STRINGS = {
     nameLabel: "Naam",
     qtyLabel: "Aantal",
     pricePerLabel: "Prijs/stuk (€)",
-    lineTotalLabel: "Regeltotaal (€)",
-    priceHint: "Pas prijs/stuk óf regeltotaal aan — het andere rekent zichzelf uit.",
-    sharedItemWord: "Gedeeld item",
-    sharedTapCta: "Tik aan!",
-    onWord: "aan",
-    offWord: "uit",
+    lineTotalLabel: "Totaalprijs (€)",
+    priceHint: "Pas prijs/stuk óf totaalprijs aan — het andere rekent zichzelf uit.",
     deleteThisItem: "Dit item wissen",
     editable: "pas aan",
     orEditThis: "of pas dit aan",
     sharedByOthers: (names: string) => `Dit item is al toegewezen aan ${names}. Vraag de admin om het aan te passen.`,
     editMe: "✏️ Wijzig",
-    sharedHintOn: "Bedrag wordt over de delers verdeeld; het aantal telt niet per stuk.",
-    sharedHintOff: "Bv. voor wijn, water, gedeeld dessert enz..",
     sharedCheckbox: "Gedeeld item (wijn, water...) — splitsen over wie meedeelt",
     saveBtn: "💾 Opslaan",
     newItemTitle: "➕ Nieuw item",
@@ -1534,17 +1528,11 @@ const STRINGS = {
     pricePerLabel: "Prix/pièce (€)",
     lineTotalLabel: "Total ligne (€)",
     priceHint: "Modifie le prix/pièce ou le total — l’autre se calcule tout seul.",
-    sharedItemWord: "Article partagé",
-    sharedTapCta: "Touchez ici !",
-    onWord: "activé",
-    offWord: "désactivé",
     deleteThisItem: "Supprimer cet article",
     editable: "modifiable",
     orEditThis: "ou modifie ceci",
     sharedByOthers: (names: string) => `Cet article est déjà attribué à ${names}. Demande à l'hôte de le modifier.`,
     editMe: "✏️ Modifier",
-    sharedHintOn: "Le montant est réparti entre les partageurs ; la quantité ne compte plus à la pièce.",
-    sharedHintOff: "Pour le vin, l'eau ou un plat de la table.",
     sharedCheckbox: "Article partagé (vin, eau…) — répartir entre ceux qui le partagent",
     saveBtn: "💾 Enregistrer",
     newItemTitle: "➕ Nouvel article",
@@ -3860,7 +3848,7 @@ export default function RundoTable() {
                 is een groepsnaam typen het enige wat je te doen hebt. */}
             <div style={{ fontSize: 24, color: "#123a42", fontWeight: 800, marginBottom: 9, lineHeight: 1.2 }}>{L.groupName} <span style={{ color: "#c0392b" }}>*</span></div>
             <input value={groupName} onChange={(e) => { setStartError(null); setGroupName(e.target.value) }} onKeyDown={(e) => e.key === "Enter" && createGroup()} placeholder={L.groupNamePh} style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 14 }} />
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 19, fontWeight: 700 }} onPointerDown={busy ? undefined : tik(createGroup)} disabled={busy}>{busy ? L.loading : L.startGroup}</button>
+            <button onMouseDown={(e) => e.preventDefault()} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 19, fontWeight: 700 }} onPointerDown={busy ? undefined : tik(createGroup)} disabled={busy}>{busy ? L.loading : L.startGroup}</button>
           </div>
 
           {startError && (
@@ -4071,7 +4059,7 @@ export default function RundoTable() {
                   <div style={{ fontSize: 15.5, color: "#8aa3a6", marginBottom: 10 }}>{L.showsAsOne} <b style={{ color: "#123a42" }}>{claimNames.filter((n) => n.trim()).join(" & ")}</b></div>
                 )}
 
-                <button onPointerDown={tik(confirmClaimSpot)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{claimSeats > 1 ? L.thatsUs : L.thatsMe}</button>
+                <button onMouseDown={(e) => e.preventDefault()} onPointerDown={tik(confirmClaimSpot)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{claimSeats > 1 ? L.thatsUs : L.thatsMe}</button>
                 {/* Stond vroeger als linkje in de kopbalk. Hier hoort het thuis: je bent net
                     je eigen naam aan het nakijken, dus dit is het moment waarop je merkt dat
                     je de verkeerde aantikte. */}
@@ -4291,7 +4279,7 @@ export default function RundoTable() {
             <div style={{ margin: "0 0 10px", padding: "11px 13px", borderRadius: 10, background: "rgba(224,107,94,0.08)", border: "1.5px solid rgba(224,107,94,0.55)" }}>
               <div style={{ fontSize: 16.5, fontWeight: 800, color: "#c0392b", marginBottom: 3 }}>{L.localScanTitle}</div>
               <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 9 }}>{L.localScanBody}</div>
-              <button onClick={improveWithAi} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontSize: 17.5, fontWeight: 800 }}>{L.improveAi}</button>
+              <button onMouseDown={(e) => e.preventDefault()} onClick={improveWithAi} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "11px 0", fontSize: 17.5, fontWeight: 800 }}>{L.improveAi}</button>
             </div>
           )}
 
@@ -5399,7 +5387,7 @@ export default function RundoTable() {
 
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setTaxModal(null)}>{L.cancel}</button>
-              <button disabled={!ready} onClick={() => confirmTaxModal(tm.scope)}
+              <button onMouseDown={(e) => e.preventDefault()} disabled={!ready} onClick={() => confirmTaxModal(tm.scope)}
                 style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 800, opacity: ready ? 1 : 0.45, cursor: ready ? "pointer" : "default" }}>{L.taxAddConfirm}</button>
             </div>
           </div>
@@ -5604,7 +5592,7 @@ export default function RundoTable() {
                   {L.showsAsOne} <b style={{ color: "#123a42" }}>{guestNames.filter((n) => n.trim()).join(" & ")}</b>
                 </div>
               )}
-              <button onClick={bewaar} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{L.addThisGuest}</button>
+              <button onMouseDown={(e) => e.preventDefault()} onClick={bewaar} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{L.addThisGuest}</button>
               {/* Een naam terugdraaien moest kunnen zonder de hele plaats te verliezen: hij
                   wordt weer een vrije plaats, en de personen die erop stonden komen vrij. */}
               {guestTarget && doelNu && !isFreeSpot(doelNu) && (
@@ -5674,7 +5662,7 @@ export default function RundoTable() {
               {selfSeats > 1 && selfNames.filter((n) => n.trim()).length > 0 && (
                 <div style={{ fontSize: 15.5, color: "#8aa3a6", marginBottom: 10 }}>{L.showsAsOne} <b style={{ color: "#123a42" }}>{selfNames.filter((n) => n.trim()).join(" & ")}</b></div>
               )}
-              <button onPointerDown={tik(bewaar)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{selfSeats > 1 ? L.thatsUs : L.thatsMe}</button>
+              <button onMouseDown={(e) => e.preventDefault()} onPointerDown={tik(bewaar)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 800, marginTop: 4 }}>{selfSeats > 1 ? L.thatsUs : L.thatsMe}</button>
               <button onClick={() => setShowSelfModal(false)} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#8aa3a6" }}>{L.cancel}</button>
             </div>
           </div>
@@ -5811,7 +5799,7 @@ export default function RundoTable() {
                     </div>
                     {scanFail?.reason !== "unavailable" && (
                       <>
-                        <button onClick={scanPhotos} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800 }}>{photos.length > 1 ? L.readBillBtn2 : L.readBillBtn}</button>
+                        <button onMouseDown={(e) => e.preventDefault()} onClick={scanPhotos} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800 }}>{photos.length > 1 ? L.readBillBtn2 : L.readBillBtn}</button>
                         <div style={{ fontSize: 16, color: "#7d999d", textAlign: "center", marginTop: 8, lineHeight: 1.45 }}>{L.scanSubNote}</div>
                         {photos.length > 1 && <div style={{ fontSize: 15.5, color: "#8aa3a6", textAlign: "center", marginTop: 6 }}>{L.countsAsOne}</div>}
                       </>
@@ -5855,7 +5843,7 @@ export default function RundoTable() {
                         Dus geen aftelklok die iets belooft wat niet gaat gebeuren, maar de weg vooruit. */}
                     <div style={{ fontSize: 18, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>{L.quotaDayTitle}</div>
                     <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.quotaDayBody}</div>
-                    <button onClick={runLocalScan} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800 }}>{L.quotaDayQuickScan}</button>
+                    <button onMouseDown={(e) => e.preventDefault()} onClick={runLocalScan} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800 }}>{L.quotaDayQuickScan}</button>
                     <div style={{ fontSize: 15.5, color: "#8aa3a6", textAlign: "center", marginTop: 8, lineHeight: 1.45 }}>{L.quotaDayOrManual}</div>
                     {scanFail.status ? <div style={{ fontSize: 15.5, color: "#8aa3a6", marginTop: 8, wordBreak: "break-word" }}>technisch: {scanFail.status}{scanFail.detail ? " — " + scanFail.detail : ""}</div> : null}
                   </>
@@ -6040,7 +6028,7 @@ export default function RundoTable() {
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1 }} disabled={scanning} onClick={() => { setShowScan(false); setScanPreview([]); setScanTotal(""); setScanFail(null); setScanFile(null); if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) } }}>{scanPreview.length > 0 ? L.cancel : L.backWord}</button>
               {scanPreview.length > 0 && (
-                <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={() => confirmScan()} disabled={scanning}>{L.confirmAdd}</button>
+                <button onMouseDown={(e) => e.preventDefault()} style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={() => confirmScan()} disabled={scanning}>{L.confirmAdd}</button>
               )}
             </div>
           </div>
@@ -6111,35 +6099,10 @@ export default function RundoTable() {
                 style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 24, fontWeight: 800, color: "#0f7d90", border: "1.5px solid rgba(20,153,176,0.3)", background: "rgba(20,153,176,0.08)" }} />
             </div>
 
-            {/* Een schakelaar is het enige element waarvan de stand meteen gelezen wordt.
-                De uitleg zit in de knop en verandert mee, zodat de tekst zelf bevestigt
-                dat je tik geregistreerd is. */}
-            <button onClick={() => setEditItem((cur) => cur ? { ...cur, is_shared: !cur.is_shared } : cur)}
-              style={{
-                display: "flex", alignItems: "flex-start", gap: 11, width: "100%", boxSizing: "border-box",
-                padding: 13, marginTop: 14, cursor: "pointer", borderRadius: 12, textAlign: "left",
-                border: `1.5px solid ${editItem.is_shared ? "rgba(90,108,166,0.6)" : "rgba(18,58,66,0.14)"}`,
-                background: editItem.is_shared ? INDIGO.vlak : "#fff",
-              }}>
-              <span style={{ flexShrink: 0, marginTop: 2 }}><ShareIcon on={editItem.is_shared} size={20} /></span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                {/* Bij aan vallen het vraagteken en de oproep weg: je kan niet blijven
-                    aanraden wat al gebeurd is — dan leest het als een knop die niet werkte. */}
-                <span style={{ fontSize: 16.5, fontWeight: 800, lineHeight: 1.3, color: editItem.is_shared ? INDIGO.tekst : "#4a6e73" }}>
-                  {editItem.is_shared ? L.sharedItemWord : `${L.sharedItemWord}? ${L.sharedTapCta}`}
-                </span>
-                <span style={{ display: "block", fontSize: 14, fontWeight: 600, lineHeight: 1.45, marginTop: 4, color: editItem.is_shared ? INDIGO.tekst : "#7d999d" }}>
-                  {editItem.is_shared ? L.sharedHintOn : L.sharedHintOff}
-                </span>
-              </span>
-              <span aria-hidden style={{ flexShrink: 0, alignSelf: "center", width: 46, height: 27, borderRadius: 20, position: "relative", background: editItem.is_shared ? INDIGO.vol : "rgba(18,58,66,0.18)" }}>
-                <span style={{ position: "absolute", top: 3, left: editItem.is_shared ? 22 : 3, width: 21, height: 21, background: "#fff", borderRadius: "50%" }} />
-              </span>
-            </button>
 
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => { setTotalDraft(null); setEditItem(null) }}>{L.cancel}</button>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1.4, fontWeight: 700 }} onClick={saveItem}>{L.saveBtn}</button>
+              <button onMouseDown={(e) => e.preventDefault()} style={{ ...S.btn, ...S.btnPrimary, flex: 1.4, fontWeight: 700 }} onClick={saveItem}>{L.saveBtn}</button>
             </div>
 
             {/* Wissen staat achter een lijn: het is geen manier om je wijziging op te slaan
@@ -6182,7 +6145,7 @@ export default function RundoTable() {
             </label>
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setNewItem(null)}>{L.cancel}</button>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onPointerDown={tik(confirmNewItem)}>{L.addBtn}</button>
+              <button onMouseDown={(e) => e.preventDefault()} style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onPointerDown={tik(confirmNewItem)}>{L.addBtn}</button>
             </div>
           </div>
         </div>
@@ -6194,7 +6157,7 @@ export default function RundoTable() {
             <div style={{ fontSize: 17.5, color: "#2b4f56", lineHeight: 1.6 }}>
               <p style={{ marginTop: 0, marginBottom: 0 }}>{L.taxInfoBody}</p>
             </div>
-            <button style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, fontWeight: 700 }} onClick={() => setShowTaxInfo(false)}>{L.understood}</button>
+            <button onMouseDown={(e) => e.preventDefault()} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 16, fontWeight: 700 }} onClick={() => setShowTaxInfo(false)}>{L.understood}</button>
           </div>
         </div>
       )}
@@ -6214,7 +6177,7 @@ export default function RundoTable() {
             <div style={{ fontSize: 16, color: "#b5591a", background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 10, padding: "8px 11px", lineHeight: 1.45, marginBottom: 14 }}>⚠️ {L.makeSharedWipe}</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...S.btn, flex: 1 }} onClick={() => setShareConfirm(null)}>{L.makeSharedCancel}</button>
-              <button style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 800 }} onClick={async () => { const it = shareConfirm; setShareConfirm(null); await applyToggleShared(it) }}>{shareConfirm.is_shared ? L.makeUnsharedTitle : L.makeSharedYes}</button>
+              <button onMouseDown={(e) => e.preventDefault()} style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 800 }} onClick={async () => { const it = shareConfirm; setShareConfirm(null); await applyToggleShared(it) }}>{shareConfirm.is_shared ? L.makeUnsharedTitle : L.makeSharedYes}</button>
             </div>
           </div>
         </div>
