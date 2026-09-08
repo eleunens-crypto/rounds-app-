@@ -1080,6 +1080,7 @@ const STRINGS = {
     totalLower: "totaal",
     nobodyYet: "nog niemand",
     notSelectedShare: (name: string | undefined) => `${name} had dit zelf niet aangeduid. Toch laten meedelen?`,
+    assignForOther: (name: string | undefined) => `Dit aanduiden voor ${name}?`,
     openAssign: "open — wijs toe ▾",
     fullyClaimed: "volledig",
     removeOne: "verwijder er één",
@@ -1721,6 +1722,7 @@ const STRINGS = {
     totalLower: "total",
     nobodyYet: "personne encore",
     notSelectedShare: (name: string | undefined) => `${name} ne l'avait pas coché soi-même. Le faire participer quand même ?`,
+    assignForOther: (name: string | undefined) => `Attribuer ceci à ${name} ?`,
     openAssign: "à prendre — attribuer ▾",
     fullyClaimed: "complet",
     removeOne: "en retirer un",
@@ -6605,7 +6607,7 @@ function AssignPicker({ participants, itemId, isShared, meId, confirmedFn, vrijF
   confirmedFn: (pid: string) => boolean
   vrijFn: (p: Participant) => boolean
   naamVan: (p: Participant) => string
-  onAssign: (pid: string, reden: "bevestigd" | "qr" | "vrij" | null) => void; onClose: () => void
+  onAssign: (pid: string, reden: "bevestigd" | "qr" | "vrij" | "ander" | null) => void; onClose: () => void
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
@@ -6628,8 +6630,8 @@ function AssignPicker({ participants, itemId, isShared, meId, confirmedFn, vrijF
           // Wie zelf aanduidde of via de link binnenkwam, verdient een vraag vóór je het
           // voor hem invult. Een nog vrije plaats óók, maar één keer volstaat — daarna weet
           // je het en zou het alleen nog in de weg zitten.
-          const reden: "bevestigd" | "qr" | "vrij" | null = p.id === meId ? null
-              : klaar ? "bevestigd" : viaQr ? "qr" : vrijFn(p) ? "vrij" : null
+          const reden: "bevestigd" | "qr" | "vrij" | "ander" | null = p.id === meId ? null
+              : klaar ? "bevestigd" : viaQr ? "qr" : vrijFn(p) ? "vrij" : "ander"
           return (
             <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
               {i === eersteViaLink && eersteViaLink > 0 && (
@@ -6874,10 +6876,14 @@ function ClaimScreen(props: {
                                       <span style={{ width: 1, height: 22, background: "rgba(18,58,66,0.12)", marginRight: 2 }} />
                                     )}
                                     <button onClick={() => {
+                                      // Aanduiden voor iemand anders vraagt altijd een bevestiging:
+                                      // het is zijn rekening, niet de jouwe. Alleen voor je eigen
+                                      // plaats gaat het meteen door.
                                       if (!on && p.id !== meId) {
                                         const doe = () => toggleShareClaim(it.id, p.id)
                                         if (explicitConfirmed(p.id)) { askConfirm(L.notSelectedShare(p.name), L.yes, doe); return }
                                         if (viaLink) { askConfirm(L.assignToQrGuest(naamVan(p)), L.yes, doe); return }
+                                        askConfirm(L.assignForOther(naamVan(p)), L.yes, doe); return
                                       }
                                       toggleShareClaim(it.id, p.id)
                                     }} style={{
@@ -6983,6 +6989,7 @@ function ClaimScreen(props: {
                             if (reden === "qr") { askConfirm(L.assignToQrGuest(naam), L.yes, doe); return }
                             // Voor een vrije plaats maar één keer per sessie: daarna weet je het.
                             if (reden === "vrij" && !vrijeUitleg) { setVrijeUitleg(true); askConfirm(L.assignToFreeSpot(naam), L.yes, doe); return }
+                            if (reden === "ander") { askConfirm(L.assignForOther(naam), L.yes, doe); return }
                             doe()
                           }}
                           onClose={() => setAssignItem(null)} />
