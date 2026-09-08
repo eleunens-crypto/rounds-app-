@@ -1243,7 +1243,7 @@ const STRINGS = {
       ? "Il ne reste qu’une place libre, donc ceci ne vaut que pour une personne. Augmente d’abord le nombre de personnes en haut."
       : `Il reste ${n} places disponibles ici. Augmente d’abord le nombre de personnes en haut s’il t’en faut plus.`,
     addNameTitle: "Qui ajoutes-tu ?",
-    addNameSub: "Ce nom apparaîtra dans la liste — cette personne n’aura qu’à le toucher après le scan.",
+    addNameSub: "Cette personne touchera ce nom après le scan, ou tu indiques toi-même ce qu'elle a pris.",
     togetherTitle: (n: number) => n === 2 ? "Ensemble sur une place" : `À ${n} sur une place`,
     togetherWhat: (n: number) => n === 2
       ? "Ces deux-là paient ensemble : ils occupent une seule place à table et verront un seul montant à la fin, pas chacun le sien."
@@ -1470,7 +1470,7 @@ const STRINGS = {
     quotaDayBody: "Le scan IA gratuit a une limite journalière, atteinte pour aujourd'hui. Réessayer n'aidera plus — demain matin, ça refonctionne.",
     quotaDayQuickScan: "⚡ Utiliser le scan rapide",
     scanFailUnavailTitle: "😕 Le scan intelligent est momentanément indisponible",
-    scanFailUnavailBody: "La reconnaissance IA est surchargée ou temporairement hors ligne. Le bouton ci-dessous décompte jusqu’à ce que tu puisses réessayer. Ta photo est conservée.",
+    scanFailUnavailBody: "La reconnaissance IA est surchargée ou temporairement hors ligne. Ta photo reste enregistrée — réessaie dans un instant.",
     retryIn: (s: number) => `🔄 Réessayer dans ${s}s`,
     retryNow: "🔄 Réessayer",
     scanFailEmptyTitle: "📷 Rien reconnu sur la photo",
@@ -1529,8 +1529,8 @@ const STRINGS = {
     nameLabel: "Nom",
     qtyLabel: "Quantité",
     pricePerLabel: "Prix/pièce (€)",
-    lineTotalLabel: "Total ligne (€)",
-    priceHint: "Modifie le prix/pièce ou le total — l’autre se calcule tout seul.",
+    lineTotalLabel: "Prix total (€)",
+    priceHint: "Modifie le prix/pièce ou le prix total — l’autre se calcule tout seul.",
     deleteThisItem: "Supprimer cet article",
     editable: "modifiable",
     orEditThis: "ou modifie ceci",
@@ -1770,9 +1770,9 @@ const STRINGS = {
     whatIsThis: "Qu'est-ce que c'est ?",
     photoOfN: (i: number, n: number) => `Photo ${i} sur ${n}`,
     tooSlowTitle: "⚠️ La lecture a pris trop de temps",
-    tooSlowBody: "Deux photos sont plus lourdes à lire — essaie plutôt une seule photo de toute l'addition.",
-    tooSlowTip: "Bien au-dessus, bonne lumière, remplis l'image.",
-    tooSlowOne: "📷 Prendre une photo",
+    tooSlowBody: "Le scan n'a pas réussi à lire tes photos à temps. Réessaie tranquillement — tes photos restent enregistrées.",
+    tooSlowTip: "Ça continue à échouer ? Deux photos sont plus lourdes à lire. Une seule photo de toute l'addition marche généralement mieux — bien au-dessus, bonne lumière, remplis l'image.",
+    tooSlowOne: "📷 Prendre quand même 1 photo",
     tooSlowRetry: "🔄 Réessayer à deux",
     taxAddBtn: "Ajouter TVA / frais / remise ?",
     legendShare: "À cocher pour les articles partagés (eau, vin, dessert…). Le prix se répartit entre ceux qui partagent.",
@@ -4424,9 +4424,21 @@ export default function RundoTable() {
                         </div>
                         {/* De derde pil volgt de richting: telt je lijst te veel, dan kan er iets
                             dubbel staan; telt ze te weinig, dan ontbreekt er juist iets. */}
+                        {/* Het vraagteken beloofde uitleg maar gaf ze niet. Nu opent een tik
+                            de bijhorende zin, zodat je weet waar je precies naar zoekt. */}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 7, justifyContent: "center", marginTop: 12 }}>
-                          {[BON_STRINGS[lang].pillQty, BON_STRINGS[lang].pillPrice, higher ? BON_STRINGS[lang].pillDouble : BON_STRINGS[lang].pillMissing, L.checkTaxShort].map((tekst, i2) => (
-                            <span key={i2} style={{ background: "#fff", border: "1px solid rgba(18,58,66,0.16)", color: "#4a6e73", borderRadius: 999, padding: "7px 13px", fontSize: 14.5, fontWeight: 700 }}>{tekst} ?</span>
+                          {[
+                            { tekst: BON_STRINGS[lang].pillQty, uitleg: BON_STRINGS[lang].uitlegQty },
+                            { tekst: BON_STRINGS[lang].pillPrice, uitleg: BON_STRINGS[lang].uitlegPrice },
+                            higher
+                              ? { tekst: BON_STRINGS[lang].pillDouble, uitleg: BON_STRINGS[lang].uitlegDouble }
+                              : { tekst: BON_STRINGS[lang].pillMissing, uitleg: BON_STRINGS[lang].uitlegMissing },
+                            { tekst: L.checkTaxShort, uitleg: BON_STRINGS[lang].uitlegTax },
+                          ].map((pil, i2) => (
+                            <button key={i2} onClick={() => setToast(pil.uitleg)}
+                              style={{ background: "#fff", border: "1px solid rgba(18,58,66,0.16)", color: "#4a6e73", borderRadius: 999, padding: "7px 13px", fontSize: 14.5, fontWeight: 700, cursor: "pointer" }}>
+                              {pil.tekst} <span style={{ fontWeight: 800, color: "#0f7d90" }}>?</span>
+                            </button>
                           ))}
                         </div>
                         {rounding && (
@@ -6327,6 +6339,11 @@ const BON_STRINGS = {
     diffUnder: (b: string) => `${b} lager dan de bon`,
     waarom: "Waarom niet correct?",
     checkZin: "Check met je papieren bon en wijzig waar nodig.",
+    uitlegQty: "De scan leest een aantal wel eens verkeerd — 2 wordt 1, of omgekeerd. Kijk vooral naar de regels met een aantal boven 1.",
+    uitlegPrice: "Soms leest de scan de stukprijs in plaats van het regelbedrag, of andersom. Vergelijk het bedrag rechts met wat er op je bon staat.",
+    uitlegDouble: "Staat er een regel twee keer? Dat gebeurt bij een bon van meerdere foto's, waar de overlap dubbel gelezen werd.",
+    uitlegMissing: "Onderaan een bon staan soms nog regels die de scan niet meepakte — een couvert, een rondje achteraf, een item op de achterkant.",
+    uitlegTax: "Btw, servicekosten of een korting staan apart op de bon en horen niet bij de items. Voeg ze toe met de knop onder de lijst.",
     pillQty: "aantallen",
     pillDouble: "dubbels",
     pillMissing: "ontbrekend item",
@@ -6345,6 +6362,11 @@ const BON_STRINGS = {
     diffUnder: (b: string) => `${b} de moins que l'addition`,
     waarom: "Pourquoi ça ne correspond pas ?",
     checkZin: "Vérifiez avec votre addition papier et corrigez si besoin.", 
+    uitlegQty: "Le scan lit parfois mal une quantité — 2 devient 1, ou l'inverse. Regarde surtout les lignes avec une quantité supérieure à 1.",
+    uitlegPrice: "Parfois le scan lit le prix à la pièce au lieu du total de la ligne, ou l'inverse. Compare le montant à droite avec ton addition.",
+    uitlegDouble: "Une ligne apparaît deux fois ? Ça arrive avec une addition en plusieurs photos, quand le chevauchement est lu deux fois.",
+    uitlegMissing: "En bas d'une addition il reste parfois des lignes que le scan n'a pas prises — un couvert, une tournée tardive, un article au verso.",
+    uitlegTax: "TVA, frais de service ou remise figurent à part sur l'addition et ne font pas partie des articles. Ajoute-les avec le bouton sous la liste.",
     pillQty: "quantités",
     pillDouble: "doublons",
     pillMissing: "article manquant",
