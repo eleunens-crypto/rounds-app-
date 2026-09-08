@@ -21,6 +21,7 @@ type BillItem = {
   is_shared: boolean
   share_fixed?: boolean
   share_expected?: number | null
+  shared_by?: string | null
   distribute?: string | null
   tax_rate?: number | null
   category: string | null
@@ -1136,6 +1137,7 @@ const STRINGS = {
     taxAddBtn: "BTW / kosten / korting toevoegen?",
     legendShare: "Aantikken voor gedeelde items (water, wijn, dessert…). De prijs verdeelt zich over wie meedeelt.",
     sharedItemsQ: "Gedeelde items?",
+    sharedByOther: "Alleen wie dit deelde of de beheerder kan het terugdraaien.",
     shareLocked: "Vastgezet door de beheerder",
     sharingWaitReveal: "⏳ Je deelt mee. Het bedrag wordt verdeeld over iedereen die meedeelt — je deel en de namen verschijnen zodra iedereen klaar is met aantikken en bevestigen.",
     tapShareHint: 'Tik "meedelen" als jij hiervan mee at of dronk. De prijs wordt gedeeld door iedereen die meedeelt — je betaalt dus niet de hele prijs.',
@@ -1783,6 +1785,7 @@ const STRINGS = {
     taxAddBtn: "Ajouter TVA / frais / remise ?",
     legendShare: "À cocher pour les articles partagés (eau, vin, dessert…). Le prix se répartit entre ceux qui partagent.",
     sharedItemsQ: "Articles partagés ?",
+    sharedByOther: "Seul celui qui l'a partagé ou l'organisateur peut l'annuler.",
     shareLocked: "Verrouillé par l'administrateur",
     sharingWaitReveal: "⏳ Tu participes. Le montant est réparti entre tous ceux qui en boivent — ta part et les noms apparaissent dès que tout le monde a coché et confirmé.",
     tapShareHint: "Coche « participer » si tu en as bu. Le prix est réparti entre tous ceux qui en boivent — tu ne paies donc pas le prix entier.",
@@ -3209,11 +3212,23 @@ export default function RundoTable() {
   }
   const applyToggleShared = async (it: BillItem) => {
     if (!group) return
-    // Toewijzingen van dit item wissen: "2 stuks" betekent iets anders dan "deelt mee met 2".
-    await supabase.from("table_claims").delete().eq("group_id", group.id).eq("item_id", it.id)
-    await supabase.from("table_items").update({ is_shared: !it.is_shared, share_fixed: false }).eq("id", it.id)
+    if (!it.is_shared) {
+      // Aanzetten: wie het al aangeduid had, wordt meteen deler. Het aantal gaat naar 1,
+      // want "2 stuks" betekent iets anders dan "deelt mee met 2".
+      const vanDitItem = claims.filter((c) => c.item_id === it.id && c.quantity > 0)
+      for (const c of vanDitItem) await setClaim(it.id, c.participant_id, 1, [0])
+      // Onthouden wie het deelde: alleen die persoon en de beheerder mogen het terugdraaien.
+      await supabase.from("table_items").update({ is_shared: true, share_fixed: false, shared_by: meId ?? null }).eq("id", it.id)
+    } else {
+      // Uitzetten: alles gaat weg, want delers zijn geen toewijzingen per stuk.
+      await supabase.from("table_claims").delete().eq("group_id", group.id).eq("item_id", it.id)
+      await supabase.from("table_items").update({ is_shared: false, share_fixed: false, shared_by: null }).eq("id", it.id)
+    }
     await loadAll(group.id)
   }
+
+  // Aanzetten mag iedereen; uitzetten alleen de beheerder en wie het deelde.
+  const magOntdelen = (it: BillItem) => !it.is_shared || isAdmin || (!!it.shared_by && it.shared_by === meId)
 
   const addTip = async () => {
     if (group?.finalized) { setToast(L.reopenFirst); return }
@@ -4952,7 +4967,7 @@ export default function RundoTable() {
             shareHeads={shareHeads} myShareHeads={myShareHeads} seatsOf={seatsOf} setSeats={setSeats}
             onRename={renameGuest}
             onEditMe={!isAdmin ? editMySpot : undefined}
-            setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} toggleShareAll={toggleShareAll} onToggleShared={toggleShared} claimMembers={claimMembers} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined} onSetExpected={isAdmin ? setShareExpected : undefined}
+            setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} toggleShareAll={toggleShareAll} magOntdelen={magOntdelen} onToggleShared={toggleShared} claimMembers={claimMembers} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined} onSetExpected={isAdmin ? setShareExpected : undefined}
             itemTotal={itemTotal} personTotal={personTotal} personItems={personItems}
             sharedRevealed={sharedRevealed} allConfirmed={allConfirmed} isConfirmed={isConfirmed} explicitConfirmed={explicitConfirmed}
             claimMode={claimMode} setClaimMode={setClaimMode} claimPid={claimPid} setClaimPid={setClaimPid}
@@ -6651,6 +6666,7 @@ function AssignPicker({ participants, itemId, isShared, confirmedFn, vrijFn, naa
 }
 
 function ClaimScreen(props: {
+  magOntdelen: (it: BillItem) => boolean
   items: BillItem[]; meId: string | null; me: Participant | null; isAdmin: boolean
   participants: Participant[]
   vrijFn: (p: Participant) => boolean
@@ -6681,7 +6697,7 @@ function ClaimScreen(props: {
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const { items, meId, isAdmin, participants, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, onToggleShared, claimMembers, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onSetExpected, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
+  const { items, meId, isAdmin, participants, magOntdelen, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, onToggleShared, claimMembers, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onSetExpected, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
   const adminPid = props.claimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   // De uitleg bij het invullen voor een nog vrije plaats hoeft maar één keer.
@@ -6785,7 +6801,13 @@ function ClaimScreen(props: {
     .sort((a, b) => Number(!!a.self_joined) - Number(!!b.self_joined))
   const eersteLinkGast = toewijsbaar.findIndex((p) => p.self_joined)
   // Dezelfde deel-knop als op de bon: hier kan de admin een item alsnog op "gedeeld" zetten.
-  const shareBtn = (it: BillItem) => (
+  const shareBtn = (it: BillItem) => !magOntdelen(it) ? (
+    <span title={L.sharedByOther}
+      style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 9, padding: "7px 10px",
+        background: INDIGO.vlak, color: INDIGO.tekst, fontSize: 15.5, fontWeight: 800 }}>
+      <ShareIcon on size={13} kleur={INDIGO.tekst} />{L.sharedOnShort}
+    </span>
+  ) : (
     <button onClick={() => onToggleShared(it)} title={it.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}
       // De knop toont de stand én zet hem om: nog eens tikken maakt het item weer gewoon.
       // Daarmee vervalt het aparte GEDEELD-label naast de naam, dat hetzelfde zei.
