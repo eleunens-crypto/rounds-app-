@@ -885,6 +885,7 @@ const STRINGS = {
     lineTotalLabel: "Regeltotaal (€)",
     priceHint: "Pas prijs/stuk óf regeltotaal aan — het andere rekent zichzelf uit.",
     sharedItemWord: "Gedeeld item",
+    sharedTapCta: "Tik aan!",
     onWord: "aan",
     offWord: "uit",
     deleteThisItem: "Dit item wissen",
@@ -1530,6 +1531,7 @@ const STRINGS = {
     lineTotalLabel: "Total ligne (€)",
     priceHint: "Modifie le prix/pièce ou le total — l’autre se calcule tout seul.",
     sharedItemWord: "Article partagé",
+    sharedTapCta: "Touchez ici !",
     onWord: "activé",
     offWord: "désactivé",
     deleteThisItem: "Supprimer cet article",
@@ -6120,8 +6122,10 @@ export default function RundoTable() {
               }}>
               <span style={{ flexShrink: 0, marginTop: 2 }}><ShareIcon on={editItem.is_shared} size={20} /></span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 16.5, fontWeight: 800, color: editItem.is_shared ? INDIGO.tekst : "#4a6e73" }}>
-                  {L.sharedItemWord} <span style={{ color: editItem.is_shared ? INDIGO.tekst : "#8aa3a6", fontWeight: 700 }}>?</span>
+                {/* Bij aan vallen het vraagteken en de oproep weg: je kan niet blijven
+                    aanraden wat al gebeurd is — dan leest het als een knop die niet werkte. */}
+                <span style={{ fontSize: 16.5, fontWeight: 800, lineHeight: 1.3, color: editItem.is_shared ? INDIGO.tekst : "#4a6e73" }}>
+                  {editItem.is_shared ? L.sharedItemWord : `${L.sharedItemWord}? ${L.sharedTapCta}`}
                 </span>
                 <span style={{ display: "block", fontSize: 14, fontWeight: 600, lineHeight: 1.45, marginTop: 4, color: editItem.is_shared ? INDIGO.tekst : "#7d999d" }}>
                   {editItem.is_shared ? L.sharedHintOn : L.sharedHintOff}
