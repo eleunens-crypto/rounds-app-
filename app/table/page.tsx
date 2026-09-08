@@ -1181,6 +1181,8 @@ const STRINGS = {
     remarkReceived: "💬 De beheerder heeft je opmerking ontvangen en bekijkt ze.",
     withdraw: "toch intrekken",
     somethingWrong: "🤔 Klopt iets niet? Laat het de beheerder weten",
+    assignFullMsg: "Alles is al toegewezen — haal eerst iemand weg.",
+    assignFullTap: "Alles toegewezen — tik een naam om weg te halen",
     assignToWhom: "Aan wie toewijzen?",
     seatsControlTitle: "Voor hoeveel personen telt deze naam (bij gedeelde items)",
     whoAreYou: "👋 Wie ben jij?",
@@ -1819,6 +1821,8 @@ const STRINGS = {
     remarkReceived: "💬 L'hôte a reçu ta remarque et l'examine.",
     withdraw: "retirer finalement",
     somethingWrong: "🤔 Quelque chose ne va pas ? Préviens l'hôte",
+    assignFullMsg: "Tout est déjà attribué — retire d'abord quelqu'un.",
+    assignFullTap: "Tout attribué — touchez un nom pour le retirer",
     assignToWhom: "À qui attribuer ?",
     seatsControlTitle: "Pour combien de personnes compte ce nom (pour les articles partagés)",
     whoAreYou: "👋 Qui es-tu ?",
@@ -6602,8 +6606,10 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   )
 }
 
-function AssignPicker({ participants, itemId, isShared, meId, confirmedFn, vrijFn, naamVan, onAssign, onClose }: {
-  participants: Participant[]; itemId: string; isShared?: boolean; meId: string | null
+function AssignPicker({ participants, itemId, isShared, meId, vol, qtyFn, confirmedFn, vrijFn, naamVan, onAssign, onRemove, onClose }: {
+  participants: Participant[]; itemId: string; isShared?: boolean; meId: string | null; vol?: boolean
+  qtyFn: (pid: string) => number
+  onRemove: (pid: string) => void
   confirmedFn: (pid: string) => boolean
   vrijFn: (p: Participant) => boolean
   naamVan: (p: Participant) => string
@@ -6620,13 +6626,14 @@ function AssignPicker({ participants, itemId, isShared, meId, confirmedFn, vrijF
   return (
     <div style={{ marginTop: 8, marginLeft: 25, padding: 10, borderRadius: 12, background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.2)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ fontSize: 15.5, fontWeight: 800, color: "#4a6e73" }}>{L.assignToWhom}</span>
+        <span style={{ fontSize: 15.5, fontWeight: 800, color: vol ? "#1f8a4c" : "#4a6e73" }}>{vol ? L.assignFullTap : L.assignToWhom}</span>
         <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16.5, color: "#8aa3a6", fontWeight: 800 }}>✕</button>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
         {gesorteerd.map((p, i) => {
           const klaar = confirmedFn(p.id)
           const viaQr = !!p.self_joined
+          const mij = qtyFn(p.id)   // hoeveel dit item al op zijn naam staat
           // Wie zelf aanduidde of via de link binnenkwam, verdient een vraag vóór je het
           // voor hem invult. Een nog vrije plaats óók, maar één keer volstaat — daarna weet
           // je het en zou het alleen nog in de weg zitten.
@@ -6637,12 +6644,14 @@ function AssignPicker({ participants, itemId, isShared, meId, confirmedFn, vrijF
               {i === eersteViaLink && eersteViaLink > 0 && (
                 <span style={{ width: 1, height: 24, background: "rgba(18,58,66,0.12)", marginRight: 2 }} />
               )}
-              <button onClick={() => onAssign(p.id, reden)} style={{
-                fontSize: 16, fontWeight: viaQr ? 700 : 800, borderRadius: 10, padding: "7px 11px", cursor: "pointer",
-                border: viaQr ? "1.5px solid rgba(18,58,66,0.12)" : "1.5px solid rgba(20,153,176,0.45)",
-                background: viaQr ? "#fff" : "rgba(20,153,176,0.06)",
-                color: viaQr ? "#8aa3a6" : "#123a42", opacity: klaar ? 0.75 : viaQr ? 0.8 : 1,
-              }}>{viaQr && "📱 "}{naamVan(p)}{klaar && " ✓"}</button>
+              <button disabled={vol && mij <= 0} onClick={() => mij > 0 ? onRemove(p.id) : onAssign(p.id, reden)} style={{
+                fontSize: 16, fontWeight: viaQr && mij <= 0 ? 700 : 800, borderRadius: 10, padding: "7px 11px",
+                cursor: (vol && mij <= 0) ? "not-allowed" : "pointer",
+                border: mij > 0 ? "1px solid rgba(196,152,32,0.5)" : viaQr ? "1.5px solid rgba(18,58,66,0.12)" : "1.5px solid rgba(20,153,176,0.45)",
+                background: mij > 0 ? "linear-gradient(135deg,#f3d27c,#ecc564)" : viaQr ? "#fff" : "rgba(20,153,176,0.06)",
+                color: mij > 0 ? "#5a4a1a" : viaQr ? "#8aa3a6" : "#123a42",
+                opacity: mij > 0 ? 1 : vol ? 0.45 : klaar ? 0.75 : viaQr ? 0.8 : 1,
+              }}>{mij <= 0 && viaQr && "📱 "}{naamVan(p)}{mij > 1 ? ` ×${mij}` : ""}{mij > 0 ? " −" : klaar ? " ✓" : ""}</button>
             </span>
           )
         })}
@@ -6969,6 +6978,9 @@ function ClaimScreen(props: {
                           : <button onClick={() => setAssignItem(assignItem === it.id ? null : it.id)}
                               style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "4px 9px", cursor: "pointer", border: "1px solid rgba(39,174,96,0.35)", color: "#1f8a4c", background: "rgba(39,174,96,0.12)" }}>{L.fullyClaimed} ✏️</button>}
                       </div>
+                      {/* Staat de kiezer open, dan staan dezelfde namen daar al — en dan
+                          zou je ze hier een tweede keer lezen. */}
+                      {assignItem !== it.id && (
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25, alignItems: "center" }}>
                         {who.map(({ p, q: pq }) => (
                           <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "2px 4px 2px 9px", color: p.id === adminPid ? "#5a4a1a" : "#4a6e73", background: p.id === adminPid ? "rgba(233,196,95,0.5)" : "rgba(90,108,166,0.1)" }}>
@@ -6978,10 +6990,16 @@ function ClaimScreen(props: {
                         ))}
                         {who.length === 0 && open === 0 && <span style={{ fontSize: 15.5, color: "#aaa" }}>—</span>}
                       </div>
+                      )}
                       {assignItem === it.id && (
-                        <AssignPicker participants={participants} itemId={it.id} meId={meId} confirmedFn={explicitConfirmed}
+                        <AssignPicker participants={participants} itemId={it.id} meId={meId} vol={open <= 0}
+                          qtyFn={(pid) => myQty(it.id, pid)} onRemove={(pid) => setClaim(it.id, pid, 0)}
+                          confirmedFn={explicitConfirmed}
                           vrijFn={vrijFn} naamVan={naamVan}
                           onAssign={(pid, reden) => {
+                            // Alles al toegewezen: nog iemand toevoegen zou meer stuks verdelen
+                            // dan er besteld zijn. Eerst iemand weghalen.
+                            if (open <= 0) return
                             const wie = participants.find((x) => x.id === pid)
                             const naam = wie ? naamVan(wie) : ""
                             const doe = () => { setClaim(it.id, pid, myQty(it.id, pid) + 1); setAssignItem(null) }
