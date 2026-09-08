@@ -892,8 +892,8 @@ const STRINGS = {
     orEditThis: "of pas dit aan",
     sharedByOthers: (names: string) => `Dit item is al toegewezen aan ${names}. Vraag de admin om het aan te passen.`,
     editMe: "✏️ Wijzig",
-    sharedHintOn: "De prijs verdeelt zich over wie meedeelt.",
-    sharedHintOff: "Gedeeld item (wijn, water…)? Tik de knop aan.",
+    sharedHintOn: "Bedrag wordt over de delers verdeeld; het aantal telt niet per stuk.",
+    sharedHintOff: "Bv. voor wijn, water, gedeeld dessert enz..",
     sharedCheckbox: "Gedeeld item (wijn, water...) — splitsen over wie meedeelt",
     saveBtn: "💾 Opslaan",
     newItemTitle: "➕ Nieuw item",
@@ -1537,8 +1537,8 @@ const STRINGS = {
     orEditThis: "ou modifie ceci",
     sharedByOthers: (names: string) => `Cet article est déjà attribué à ${names}. Demande à l'hôte de le modifier.`,
     editMe: "✏️ Modifier",
-    sharedHintOn: "Le prix se répartit entre ceux qui partagent.",
-    sharedHintOff: "Article partagé (vin, eau…) ? Touche le bouton.",
+    sharedHintOn: "Le montant est réparti entre les partageurs ; la quantité ne compte plus à la pièce.",
+    sharedHintOff: "Pour le vin, l'eau ou un plat de la table.",
     sharedCheckbox: "Article partagé (vin, eau…) — répartir entre ceux qui le partagent",
     saveBtn: "💾 Enregistrer",
     newItemTitle: "➕ Nouvel article",
@@ -6108,22 +6108,28 @@ export default function RundoTable() {
                 style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 24, fontWeight: 800, color: "#0f7d90", border: "1.5px solid rgba(20,153,176,0.3)", background: "rgba(20,153,176,0.08)" }} />
             </div>
 
-            {/* Zelfde indigo en zelfde icoon als het label op de rij in de lijst. */}
+            {/* Een schakelaar is het enige element waarvan de stand meteen gelezen wordt.
+                De uitleg zit in de knop en verandert mee, zodat de tekst zelf bevestigt
+                dat je tik geregistreerd is. */}
             <button onClick={() => setEditItem((cur) => cur ? { ...cur, is_shared: !cur.is_shared } : cur)}
               style={{
-                display: "flex", alignItems: "center", gap: 10, width: "100%", boxSizing: "border-box",
-                padding: 13, marginTop: 14, cursor: "pointer", borderRadius: 12,
-                border: `1.5px solid ${INDIGO.rand}`,
+                display: "flex", alignItems: "flex-start", gap: 11, width: "100%", boxSizing: "border-box",
+                padding: 13, marginTop: 14, cursor: "pointer", borderRadius: 12, textAlign: "left",
+                border: `1.5px solid ${editItem.is_shared ? "rgba(90,108,166,0.6)" : "rgba(18,58,66,0.14)"}`,
                 background: editItem.is_shared ? INDIGO.vlak : "#fff",
-                color: INDIGO.tekst, fontSize: 16.5, fontWeight: 800,
               }}>
-              <ShareIcon on={editItem.is_shared} size={16} />
-              <span style={{ flex: 1, minWidth: 0, textAlign: "left" }}>{L.sharedItemWord}</span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: editItem.is_shared ? INDIGO.tekst : "#8aa3a6" }}>
-                {editItem.is_shared ? L.onWord : L.offWord}
+              <span style={{ flexShrink: 0, marginTop: 2 }}><ShareIcon on={editItem.is_shared} size={20} /></span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 16.5, fontWeight: 800, color: editItem.is_shared ? INDIGO.tekst : "#4a6e73" }}>
+                  {L.sharedItemWord} <span style={{ color: editItem.is_shared ? INDIGO.tekst : "#8aa3a6", fontWeight: 700 }}>?</span>
+                </span>
+                <span style={{ display: "block", fontSize: 14, fontWeight: 600, lineHeight: 1.45, marginTop: 4, color: editItem.is_shared ? INDIGO.tekst : "#7d999d" }}>
+                  {editItem.is_shared ? L.sharedHintOn : L.sharedHintOff}
+                </span>
               </span>
-              <span onClick={(e) => { e.stopPropagation(); setToast(editItem.is_shared ? L.sharedHintOn : L.sharedHintOff) }}
-                style={{ flexShrink: 0, width: 22, height: 22, borderRadius: "50%", border: `1.5px solid ${INDIGO.rand}`, color: INDIGO.tekst, fontSize: 13, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>?</span>
+              <span aria-hidden style={{ flexShrink: 0, alignSelf: "center", width: 46, height: 27, borderRadius: 20, position: "relative", background: editItem.is_shared ? INDIGO.vol : "rgba(18,58,66,0.18)" }}>
+                <span style={{ position: "absolute", top: 3, left: editItem.is_shared ? 22 : 3, width: 21, height: 21, background: "#fff", borderRadius: "50%" }} />
+              </span>
             </button>
 
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
@@ -7467,9 +7473,9 @@ function ShareIcon({ on, size = 20 }: { on?: boolean; size?: number }) {
   }
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: "block" }}>
-      <circle cx="16" cy="13" r="5" fill="#62c75a" stroke="#fff" strokeWidth="1.4" />
-      <circle cx="12" cy="9" r="5" fill="#2bb0a3" stroke="#fff" strokeWidth="1.4" />
-      <circle cx="8" cy="13" r="5" fill="#4a7fd6" stroke="#fff" strokeWidth="1.4" />
+      <circle cx="16" cy="13" r="5" fill="#6472b8" stroke="#fff" strokeWidth="1.4" />
+      <circle cx="12" cy="9" r="5" fill="#3f4a8a" stroke="#fff" strokeWidth="1.4" />
+      <circle cx="8" cy="13" r="5" fill="#8e9bd4" stroke="#fff" strokeWidth="1.4" />
     </svg>
   )
 }
