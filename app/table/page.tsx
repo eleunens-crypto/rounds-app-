@@ -655,8 +655,8 @@ const STRINGS = {
     personsFirst: "⚠️ Vul eerst in met hoeveel jullie zijn.",
     lockedPersons: "🔒 Eerst het aantal personen invullen",
     lockedName: "🔒 Vul eerst je eigen naam in",
-    nowAssignTitle: "na QR > Wie nam wat?",
-    nowAssignSub: "Ga nu verder naar toewijzen",
+    nowAssignTitle: "Heeft iedereen gescand?",
+    nowAssignSub: "Dan kan je nu toewijzen wie wat nam.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Toewijzen eten & drinken \u2192",
     howManyPersonsQ: "Voor hoeveel personen?",
     theirNameQ: "Hoe heet die persoon?",
@@ -1299,8 +1299,8 @@ const STRINGS = {
     personsFirst: "⚠️ Indique d'abord combien vous êtes.",
     lockedPersons: "🔒 Indique d'abord le nombre de personnes",
     lockedName: "🔒 Indique d'abord ton propre nom",
-    nowAssignTitle: "après le QR > Qui a pris quoi ?",
-    nowAssignSub: "Passe maintenant à l’attribution",
+    nowAssignTitle: "Tout le monde a scanné ?",
+    nowAssignSub: "Tu peux maintenant attribuer qui a pris quoi.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Attribuer plats & boissons \u2192",
     howManyPersonsQ: "Pour combien de personnes ?",
     theirNameQ: "Comment s\u2019appelle cette personne ?",
@@ -2765,7 +2765,7 @@ export default function RundoTable() {
     if (!isAdmin || adminTab !== "guests") return
     if (adminNamed && !naamWasGezet.current) {
       naamWasGezet.current = true
-      window.setTimeout(() => document.getElementById("naar-toewijzen")?.scrollIntoView({ behavior: "smooth", block: "center" }), 250)
+      window.setTimeout(() => document.getElementById("qr-kaart")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250)
     }
     if (!adminNamed) naamWasGezet.current = false
   }, [adminNamed, isAdmin, adminTab])
@@ -4597,7 +4597,7 @@ export default function RundoTable() {
       )}
       {isAdmin && adminTab === "guests" && (
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ ...S.card, order: (personsSet && adminNamed) ? 2 : 1 }}>
+          <div style={{ ...S.card, order: 1 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 4 }}>
               <h3 style={{ ...S.h3, marginBottom: 0, minWidth: 0 }}>{L.howManyGroupTitle}</h3>
             </div>
@@ -4751,7 +4751,7 @@ export default function RundoTable() {
 
           </div>
 
-          <div style={{ ...S.card, order: (personsSet && adminNamed) ? 1 : 2, border: "1.5px solid rgba(20,153,176,0.4)", ...((!personsSet || !adminNamed) ? { opacity: 0.5 } : {}) }}>
+          <div id="qr-kaart" style={{ ...S.card, order: 2, border: "1.5px solid rgba(20,153,176,0.4)", ...((!personsSet || !adminNamed) ? { opacity: 0.5 } : {}) }}>
             {(!personsSet || !adminNamed) ? (
               <div style={{ background: "rgba(18,58,66,0.05)", borderRadius: 10, padding: "12px 10px", textAlign: "center", fontSize: 16, fontWeight: 700, color: "#8aa3a6" }}>
                 {!personsSet ? L.lockedPersons : L.lockedName}
