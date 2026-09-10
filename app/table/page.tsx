@@ -847,6 +847,7 @@ const STRINGS = {
     enterBillLive: "Vul het totaal van de bon in om live te zien of alles (incl. BTW) klopt.",
     cancel: "Annuleren",
     closeWord: "Sluiten",
+    whoPaysWhatBtn: "Wie betaalt wat?",
     confirmAdd: "✅ Bevestigen & toevoegen",
     itemsOnBill: "🧾 Items op de bon",
     checkExcl: "Checken!",
@@ -1099,6 +1100,7 @@ const STRINGS = {
     pickPersonHint: "Kies een persoon om voor te claimen (handig als jij voor iemand zonder gsm aantikt).",
     addGuestsInTab2: 'Voeg eerst gasten toe in de tab "Gasten".',
     closedByAdmin: "✅ Afgesloten — dit is de definitieve verdeling",
+    closedShort: "✅ Afgesloten",
     yourShareWord: "Jouw deel",
     myDetailsBtn: "🧾 Mijn details",
     everyoneBtn: "👥 Iedereen",
@@ -1495,6 +1497,7 @@ const STRINGS = {
     enterBillLive: "Indique le total de l'addition pour voir en direct si tout (TVA comprise) correspond.",
     cancel: "Annuler",
     closeWord: "Fermer",
+    whoPaysWhatBtn: "Qui paie quoi ?",
     confirmAdd: "✅ Confirmer et ajouter",
     itemsOnBill: "🧾 Articles sur l'addition",
     checkExcl: "À vérifier !",
@@ -1747,6 +1750,7 @@ const STRINGS = {
     pickPersonHint: "Choisis une personne pour cocher à sa place (pratique si tu coches pour quelqu'un sans téléphone).",
     addGuestsInTab2: "Ajoute d'abord des invités dans l'onglet « Invités ».",
     closedByAdmin: "✅ Clôturé — voici la répartition définitive",
+    closedShort: "✅ Clôturé",
     yourShareWord: "Ta part",
     myDetailsBtn: "🧾 Mes détails",
     everyoneBtn: "👥 Tout le monde",
@@ -6879,8 +6883,22 @@ function ClaimScreen(props: {
   const afgeslotenBalk = (plek: "boven" | "onder") => {
     if (!finalized || isAdmin || !meId) return null
     const mijn = personTotal(meId)
+      // Boven een dunne strook die meescrollt: "afgesloten" en je bedrag blijven zo in
+      // beeld zonder een blok van 130 pixels mee te slepen. De knoppen staan één keer,
+      // in de volledige balk onderaan.
+      if (plek === "boven") {
+        return (
+          <div style={{ position: "sticky", top: 0, zIndex: 5, width: "100%", marginBottom: 12, display: "flex", alignItems: "center", gap: 9,
+            padding: "10px 13px", borderRadius: 12, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 18px -8px rgba(31,138,76,0.8)" }}>
+            <span style={{ fontSize: 14.5, fontWeight: 800, flexShrink: 0 }}>{L.closedShort}</span>
+            <span style={{ flex: 1, minWidth: 0 }} />
+            <span style={{ fontSize: 14.5, fontWeight: 700, opacity: 0.9, flexShrink: 0 }}>{L.yourShareWord}</span>
+            <span style={{ fontSize: 19, fontWeight: 800, whiteSpace: "nowrap" }}>€{mijn.settled.toFixed(2).replace(".", ",")}</span>
+          </div>
+        )
+      }
     return (
-      <div style={{ width: "100%", margin: plek === "boven" ? "0 0 14px" : "14px 0 0", padding: "13px 14px", borderRadius: 14, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 18px -6px rgba(31,138,76,0.55)" }}>
+      <div style={{ width: "100%", margin: "14px 0 0", padding: "13px 14px", borderRadius: 14, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 18px -6px rgba(31,138,76,0.55)" }}>
         <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 9, lineHeight: 1.3 }}>{L.closedByAdmin}</div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
           <span style={{ fontSize: 16, fontWeight: 700 }}>{L.yourShareWord}</span>
@@ -7593,8 +7611,9 @@ function ClaimScreen(props: {
                 <span style={{ fontSize: 17, fontWeight: 800, color: "#0f7488" }}>{L.yourTotal}</span>
                 <span style={{ fontSize: 28, fontWeight: 800, color: "#123a42" }}>€{personTotal(meId).settled.toFixed(2).replace(".", ",")}</span>
               </div>
-              {/* Alleen sluiten: de verdeling van de hele tafel bereik je via de balk. */}
-              <button onClick={() => setShowFinalPopup(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, marginTop: 12 }}>{L.closeWord}</button>
+              {/* "Sluiten" zei wat de knop met het venster doet; dit zegt wat je erna ziet —
+                  de verdeling van de hele tafel staat eronder op de pagina. */}
+              <button onClick={() => setShowFinalPopup(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, marginTop: 12 }}>{L.whoPaysWhatBtn}</button>
             </div>
           </div>
         )}
