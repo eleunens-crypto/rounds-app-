@@ -4566,11 +4566,16 @@ export default function RundoTable() {
                         ? { background: "rgba(39,174,96,0.06)", border: "1.5px solid rgba(39,174,96,0.55)", borderRadius: 12, padding: "10px 8px", marginTop: 6, marginBottom: 4 }
                         : { borderTop: "1px solid rgba(0,0,0,0.05)", paddingTop: 9, marginTop: 9 }),
                     }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      {/* Naam op een eigen regel: samen met de emoji, het bedrag en de
+                          knoppen bleef er zo weinig breedte over dat je je eigen naam
+                          niet meer kon lezen. */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{ fontSize: 20, flexShrink: 0 }}>🧮</span>
                         <input value={t.name} onChange={(e) => setItems((cur) => cur.map((x) => x.id === t.id ? { ...x, name: e.target.value } : x))}
                           onBlur={(e) => { if (group?.finalized) { setToast(L.reopenFirst); loadAll(group.id); return } supabase.from("table_items").update({ name: e.target.value }).eq("id", t.id).then(() => loadAll(group.id)) }}
                           style={{ ...S.input, flex: 1, minWidth: 0, fontWeight: 700, padding: "8px 10px" }} />
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, marginLeft: 25, flexWrap: "wrap" }}>
                         {t.tax_rate ? (
                           <span style={{ fontSize: 18, fontWeight: 800, color: billOk ? "#15703f" : "#123a42", whiteSpace: "nowrap" }}>€{taxAmount(t).toFixed(2).replace(".", ",")}</span>
                         ) : (
@@ -4581,10 +4586,10 @@ export default function RundoTable() {
                               style={{ ...S.input, width: 78, textAlign: "right", padding: "8px 8px" }} />
                           </>
                         )}
+                        <span style={{ flex: 1, minWidth: 0 }} />
+                        <button style={{ ...S.iconBtn, background: open ? "rgba(90,108,166,0.18)" : "rgba(18,58,66,0.05)" }} onClick={() => setTaxConfig(open ? null : t.id)} title={L.taxConfigTitle}>⚙️</button>
                         <button onClick={() => askConfirm(L.removeTaxBody(t.name, taxAmount(t)), L.deleteTitle, () => void deleteItem(t.id), { title: L.removeTaxTitle, danger: true })}
                           style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, border: "1px solid rgba(192,57,43,0.3)", background: "rgba(192,57,43,0.06)", color: "#c0392b", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>✕</button>
-                        <button style={{ ...S.iconBtn, background: open ? "rgba(90,108,166,0.18)" : "rgba(18,58,66,0.05)" }} onClick={() => setTaxConfig(open ? null : t.id)} title={L.taxConfigTitle}>⚙️</button>
-                        <button style={S.iconBtn} onClick={() => deleteItem(t.id)} title={L.deleteTitle}>🗑️</button>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6, marginLeft: 25, flexWrap: "wrap" }}>
                         {[6, 12, 21].map((r) => (
@@ -7689,6 +7694,10 @@ const S: Record<string, React.CSSProperties> = {
   tabBar: { display: "flex", gap: 4, background: "#edeef6", borderRadius: 16, padding: 5, marginBottom: 18, boxShadow: "inset 0 1px 2px rgba(18,58,66,0.04)" },
   overlay: { position: "fixed", inset: 0, background: "rgba(18,58,66,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", padding: 16 },
   modal: { background: "#fff", borderRadius: 24, padding: 24, width: "min(380px, 92vw)", boxShadow: "0 24px 70px -12px rgba(18,58,66,0.35)", maxHeight: "85vh", overflowY: "auto", border: "1px solid rgba(18,58,66,0.06)" },
-  toast: { position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)", background: "#1d2433", color: "#fff", padding: "11px 22px", borderRadius: 40, fontSize: 18, fontWeight: 600, zIndex: 2000, boxShadow: "0 10px 30px rgba(18,58,66,0.3)", whiteSpace: "nowrap", maxWidth: "90vw", textAlign: "center" },
+  toast: { position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)", background: "#1d2433", color: "#fff", padding: "12px 20px", borderRadius: 18, fontSize: 17, fontWeight: 600, zIndex: 2000, boxShadow: "0 10px 30px rgba(18,58,66,0.3)", maxWidth: "90vw", textAlign: "center",
+    // Was nowrap: alles wat niet op één regel paste, viel gewoon weg. Meldingen met
+    // een itemnaam erin waren daardoor onleesbaar. Nu breekt de tekst af en groeit
+    // het vlak mee; de radius is kleiner zodat twee regels geen dikke ovaal worden.
+    lineHeight: 1.45, overflowWrap: "anywhere" },
   errorBanner: { background: "#fef2f2", border: "1px solid #fecaca", color: "#c0392b", borderRadius: 14, padding: "11px 16px", marginBottom: 14, display: "flex", alignItems: "center", fontSize: 18 },
 }
