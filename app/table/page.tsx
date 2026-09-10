@@ -890,6 +890,9 @@ const STRINGS = {
     priceHint: "Pas prijs/stuk óf totaalprijs aan — het andere rekent zichzelf uit.",
     removeTaxTitle: "🗑️ Regel verwijderen?",
     removeTaxBody: (naam: string, bedrag: number) => `"${naam}" van €${bedrag.toFixed(2).replace(".", ",")} verdwijnt van de rekening.`,
+    discardEditTitle: "Wijziging weggooien?",
+    discardEditBody: (naam: string) => `Je paste "${naam}" aan maar sloeg nog niets op.`,
+    discardWord: "Weggooien",
     turnIntoDiscount: "Dit is een korting, geen item",
     movedToDiscounts: (naam: string) => `"${naam}" staat nu onderaan bij de kortingen.`,
     deleteThisItem: "Dit item wissen",
@@ -1541,6 +1544,9 @@ const STRINGS = {
     priceHint: "Modifie le prix/pièce ou le prix total — l’autre se calcule tout seul.",
     removeTaxTitle: "🗑️ Supprimer cette ligne ?",
     removeTaxBody: (naam: string, bedrag: number) => `« ${naam} » de €${bedrag.toFixed(2).replace(".", ",")} disparaît de l'addition.`,
+    discardEditTitle: "Abandonner la modification ?",
+    discardEditBody: (naam: string) => `Tu as modifié « ${naam} » sans encore enregistrer.`,
+    discardWord: "Abandonner",
     turnIntoDiscount: "Ceci est une réduction, pas un article",
     movedToDiscounts: (naam: string) => `« ${naam} » figure maintenant en bas, dans les réductions.`,
     deleteThisItem: "Supprimer cet article",
@@ -2148,6 +2154,9 @@ export default function RundoTable() {
   const [showTaxInfo, setShowTaxInfo] = useState(false)
   const [taxConfig, setTaxConfig] = useState<string | null>(null)
   const [editItem, setEditItem] = useState<BillItem | null>(null)
+  // Het item zoals het was bij het openen. Zonder dit kan je niet zien of een tik
+  // naast het venster iets weggooit of niets.
+  const [editOrigineel, setEditOrigineel] = useState<BillItem | null>(null)
   const [newItem, setNewItem] = useState<{ name: string; unit_price: string; quantity: number; is_shared: boolean; target: "bill" | "scan" } | null>(null)
   // Venster om BTW/kosten/korting toe te voegen: stap 1 = naam + bedrag, stap 2 = verdeling kiezen.
   const [taxModal, setTaxModal] = useState<null | { kind: "cost" | "vat" | "discount"; mode: "amount" | "pct"; pct: string; name: string; amount: string; scope: "all" | "items"; ids: string[]; vanItem?: string }>(null)
@@ -3205,6 +3214,20 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
+  // Sluiten mag zonder vragen zolang je niets aanpaste; anders eerst bevestigen.
+  const sluitEditItem = () => {
+    const o = editOrigineel
+    const n = editItem
+    const gewijzigd = !!o && !!n && (
+      o.name !== n.name ||
+      o.quantity !== n.quantity ||
+      Math.abs((o.unit_price || 0) - (n.unit_price || 0)) >= 0.005
+    )
+    const doe = () => { setTotalDraft(null); setPriceDraft(null); setEditItem(null); setEditOrigineel(null) }
+    if (gewijzigd) { askConfirm(L.discardEditBody(n!.name), L.discardWord, doe, { title: L.discardEditTitle, danger: true }); return }
+    doe()
+  }
+
   const saveItem = async () => {
     if (!group || !editItem) return
     if (group.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
@@ -3213,7 +3236,7 @@ export default function RundoTable() {
       quantity: editItem.quantity, is_shared: editItem.is_shared,
     }).eq("id", editItem.id)
     if (error) { setError(L.errSave); return }
-    setTotalDraft(null); setEditItem(null); await loadAll(group.id)
+    setTotalDraft(null); setEditItem(null); setEditOrigineel(null); await loadAll(group.id)
   }
 
   const toggleShared = async (it: BillItem) => {
@@ -4548,7 +4571,7 @@ export default function RundoTable() {
           <ItemList
             items={baseItems} claimedQty={claimedQty} participants={participants} claimsForItem={claimsForItem}
             sharerIds={sharerIds} shareHeads={shareHeads} toggleShareClaim={toggleShareClaim} setShareFixed={setShareFixed}
-            onEdit={(it) => { if (!requireTotal()) return; setTotalDraft(null); setEditItem(it) }} onToggleShared={(it) => { if (!requireTotal()) return; toggleShared(it) }} onDelete={(id) => { if (!requireTotal()) return; deleteItem(id) }} onAddManual={() => { if (!requireTotal()) return; openNewItem("bill") }} bareBill
+            onEdit={(it) => { if (!requireTotal()) return; setTotalDraft(null); setEditOrigineel(it); setEditItem(it) }} onToggleShared={(it) => { if (!requireTotal()) return; toggleShared(it) }} onDelete={(id) => { if (!requireTotal()) return; deleteItem(id) }} onAddManual={() => { if (!requireTotal()) return; openNewItem("bill") }} bareBill
             recentItemId={recentItemId} onGoGuests={goGuests}
             scanFlags={scanFlags}
             billOk={billOk}
@@ -6172,9 +6195,13 @@ export default function RundoTable() {
         // Bovenaan verankerd in plaats van gecentreerd: op een telefoon verkleint het
         // toetsenbord het zichtbare venster terwijl position:fixed het volledige venster
         // blijft gebruiken, waardoor een gecentreerd venster onderuit zakt.
-        <div style={{ ...S.overlay, alignItems: "flex-start", paddingTop: "6vh" }}>
-          <div style={{ ...S.modal, width: "min(360px, 92vw)" }}>
-            <h3 style={{ marginBottom: 5, fontSize: 21, fontWeight: 800 }}>{L.editItemTitle}</h3>
+        <div style={{ ...S.overlay, alignItems: "flex-start", paddingTop: "6vh" }} onClick={sluitEditItem}>
+          <div style={{ ...S.modal, width: "min(360px, 92vw)", position: "relative" }} onClick={(e) => e.stopPropagation()}>
+            {/* Een kruisje rechtsboven en een klik naast het venster: je opent dit scherm
+                makkelijk per ongeluk, en dan moet weggaan even vanzelfsprekend zijn. */}
+            <button onClick={sluitEditItem} aria-label={L.cancel}
+              style={{ position: "absolute", top: 12, right: 12, width: 30, height: 30, borderRadius: "50%", border: "none", background: "rgba(18,58,66,0.06)", color: "#4a6e73", fontSize: 15, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            <h3 style={{ marginBottom: 5, fontSize: 21, fontWeight: 800, paddingRight: 34 }}>{L.editItemTitle}</h3>
             <div style={{ fontSize: 15, color: "#8aa3a6", lineHeight: 1.45, marginBottom: 14 }}>{L.priceHint}</div>
 
             <label style={S.lbl}>{L.nameLabel}</label>
@@ -6232,13 +6259,14 @@ export default function RundoTable() {
             </div>
 
 
-            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-              <button style={{ ...S.btn, flex: 1 }} onClick={() => { setTotalDraft(null); setEditItem(null) }}>{L.cancel}</button>
-              <button onMouseDown={(e) => e.preventDefault()} style={{ ...S.btn, ...S.btnPrimary, flex: 1.4, fontWeight: 700 }} onClick={saveItem}>{L.saveBtn}</button>
+            <div style={{ marginTop: 16 }}>
+              <button onMouseDown={(e) => e.preventDefault()} style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 700 }} onClick={saveItem}>{L.saveBtn}</button>
             </div>
 
-            {/* Wissen staat achter een lijn: het is geen manier om je wijziging op te slaan
-                maar een aparte beslissing, en het is het enige onomkeerbare hier. */}
+            {/* Korting en wissen zijn geen manier om je wijziging op te slaan maar aparte
+                beslissingen. Ze staan daarom gedempt onder een lijn, niet als knoppen
+                die met opslaan concurreren. */}
+            <div style={{ marginTop: 15, paddingTop: 6, borderTop: "1px solid rgba(18,58,66,0.10)" }}>
             {/* Een scan leest een kortingsregel vaak als gewoon item. Deze knop verhuist
                 hem naar het kortingsvenster, met naam en bedrag al ingevuld — daar kies
                 je nog of het over de hele rekening of over bepaalde items gaat. */}
@@ -6255,20 +6283,24 @@ export default function RundoTable() {
                 })
                 setTotalDraft(null)
                 setEditItem(null)
+                setEditOrigineel(null)
               }}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, marginTop: 13, cursor: "pointer",
-                  border: "1.5px solid rgba(243,156,18,0.45)", background: "rgba(243,156,18,0.08)", borderRadius: 11, padding: 11,
-                  fontSize: 14.5, fontWeight: 800, color: "#b5591a", textAlign: "left", lineHeight: 1.35 }}>
-                <span style={{ fontSize: 17 }}>🏷️</span>
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
+                  border: "none", borderBottom: "1px solid rgba(18,58,66,0.07)", background: "none", padding: "10px 2px",
+                  fontSize: 14.5, fontWeight: 700, color: "#b5591a", textAlign: "left", lineHeight: 1.35 }}>
+                <span style={{ fontSize: 15 }}>🏷️</span>
                 <span style={{ flex: 1, minWidth: 0 }}>{L.turnIntoDiscount}</span>
-                <span>›</span>
+                <span style={{ color: "#b3bac6" }}>›</span>
               </button>
             )}
 
-            <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(18,58,66,0.08)" }}>
-              <button onClick={() => { const id = editItem.id; setTotalDraft(null); setEditItem(null); deleteItem(id) }}
-                style={{ display: "block", width: "100%", boxSizing: "border-box", textAlign: "center", border: "1.5px solid rgba(192,57,43,0.3)", background: "#fff", color: "#c0392b", borderRadius: 12, padding: "13px 0", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>
-                🗑️ {L.deleteThisItem}
+              <button onClick={() => { const id = editItem.id; setTotalDraft(null); setEditItem(null); setEditOrigineel(null); deleteItem(id) }}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
+                  border: "none", background: "none", padding: "10px 2px",
+                  fontSize: 14.5, fontWeight: 700, color: "#c0392b", textAlign: "left", lineHeight: 1.35 }}>
+                <span style={{ fontSize: 15 }}>🗑️</span>
+                <span style={{ flex: 1, minWidth: 0 }}>{L.deleteThisItem}</span>
+                <span style={{ color: "#b3bac6" }}>›</span>
               </button>
             </div>
           </div>
