@@ -635,6 +635,7 @@ const STRINGS = {
     switchReleaseBody: (naam: string) => `De plaats van ${naam} komt weer vrij voor iemand anders. Wat je al aanduidde en bevestigde gaat mee weg.`,
     toTableHome: "Naar het Resto-startscherm",
     person: "persoon",
+    ofWord: "van",
     persons: "personen",
     inviteModalTitle: "Deel je uitnodiging",
     inviteModalMsg: "Plak deze uitnodiging in WhatsApp, Messenger, sms of een andere berichtenservice en stuur ze naar je groep.",
@@ -1291,6 +1292,7 @@ const STRINGS = {
     switchReleaseBody: (naam: string) => `La place de ${naam} redevient libre pour quelqu'un d'autre. Ce que tu as coché et confirmé disparaît aussi.`,
     toTableHome: "Vers l'accueil Resto",
     person: "personne",
+    ofWord: "sur",
     persons: "personnes",
     inviteModalTitle: "Partage ton invitation",
     inviteModalMsg: "Colle cette invitation dans WhatsApp, Messenger, SMS ou un autre service de messagerie et envoie-la à ton groupe.",
@@ -7103,6 +7105,7 @@ function ClaimScreen(props: {
                     const sh = sharerIds(it.id)
                     const ok = sh.length > 0
                     const heads = shareHeads(it.id)
+                    const verwacht = it.share_expected && it.share_expected > 0 ? it.share_expected : null
                     const perHead = heads > 0 ? itemTotal(it) / heads : 0
                     const fixed = !!it.share_fixed
                     const mine = adminPid ? sh.includes(adminPid) : false
@@ -7112,9 +7115,28 @@ function ClaimScreen(props: {
                           <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={18} /></span>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 18, fontWeight: 700 }}>{it.name} <span style={{ fontSize: 15.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 8, padding: "3px 6px" }}>{L.sharedWord}</span></div>
-                            <div style={{ fontSize: 15.5, color: "#999" }}>€{itemTotal(it).toFixed(2).replace(".", ",")} {L.totalLower}{ok ? ` · €${perHead.toFixed(2).replace(".", ",")} p.p.` : ""}</div>
+                            <div style={{ fontSize: 15.5, color: "#999" }}>€{itemTotal(it).toFixed(2).replace(".", ",")} {L.totalLower}</div>
+                            {/* Zelfde boodschap als de gast krijgt: wat je nu betaalt én wat het
+                                wordt. Een vast "p.p." toonde een bedrag dat meteen halveerde
+                                zodra de tweede deler zich aanduidde. */}
+                            {ok && (
+                              <div style={{ fontSize: 14.5, fontWeight: 700, marginTop: 2, color: verwacht != null && heads < verwacht ? "#b5591a" : "#1f8a4c" }}>
+                                {verwacht != null && heads !== verwacht
+                                  ? L.shareOfN(heads, verwacht, perHead, itemTotal(it) / verwacht)
+                                  : verwacht == null
+                                    ? L.shareOpen(heads, perHead)
+                                    : L.shareDone(heads, perHead)}
+                              </div>
+                            )}
                           </div>
-                          <span style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "4px 9px", color: ok ? "#1f8a4c" : "#c0392b", background: ok ? "rgba(39,174,96,0.12)" : "rgba(224,107,94,0.12)" }}>{ok ? `${heads} ${heads === 1 ? L.person : L.persons}` : L.nobodyYet}</span>
+                          <span style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "4px 9px", flexShrink: 0, whiteSpace: "nowrap",
+                            ...(!ok ? { color: "#c0392b", background: "rgba(224,107,94,0.12)" }
+                              : verwacht != null && heads !== verwacht ? { color: "#b5591a", background: "rgba(243,156,18,0.14)" }
+                              : { color: "#1f8a4c", background: "rgba(39,174,96,0.12)" }) }}>
+                            {!ok ? L.nobodyYet
+                              : verwacht != null ? `${heads} ${L.ofWord} ${verwacht}`
+                              : `${heads} ${heads === 1 ? L.person : L.persons}`}
+                          </span>
                           {isAdmin && shareBtn(it)}
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25 }}>
@@ -7155,7 +7177,15 @@ function ClaimScreen(props: {
                                       background: on ? (p.id === adminPid ? "rgba(233,196,95,0.5)" : "linear-gradient(135deg,#f3d27c,#ecc564)") : viaLink ? "#fff" : "rgba(20,153,176,0.06)",
                                       color: on ? "#5a4a1a" : viaLink ? "#8aa3a6" : "#123a42",
                                       opacity: on ? 1 : viaLink ? 0.8 : 1,
-                                    }}>{on ? "✓ " : ""}{viaLink && !on ? "📱 " : ""}{naamVan(p)}{on && pSeats > 1 ? ` ×${pHeads}` : ""}</button>
+                                    }}>
+                                {on ? "✓ " : ""}{viaLink && !on ? "📱 " : ""}{naamVan(p)}
+                                {/* Een plaats met meerdere personen telt voor meerdere delers. Zonder
+                                    deze teller zie je niet of er nul, één of allebei meedoen — en dan
+                                    klopt het totaal in de badge wel, maar weet je niet waarvandaan. */}
+                                {pSeats > 1 && (
+                                  <span style={{ fontWeight: 800, marginLeft: 5, opacity: pHeads > 0 ? 1 : 0.55 }}>{pHeads}/{pSeats}</span>
+                                )}
+                              </button>
                                   </span>
                                 )
                               })}
