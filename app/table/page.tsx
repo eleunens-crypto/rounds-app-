@@ -665,8 +665,7 @@ const STRINGS = {
     seatsFreeTitle: (n: number) => n === 1 ? "Nog 1 plaats vrij" : `Nog ${n} plaatsen vrij`,
     optionalShort: "optioneel",
     seatsAllNamed: "Alle plaatsen ingevuld ✓",
-    autoJoinLine: "Wie de QR scant, verschijnt hier automatisch.",
-    noPhoneLine: "Iemand zonder gsm? Tik een vrije plaats aan.",
+    freeSpotHow: "wacht op een scan · of vul zelf in",
     collapseSeats: "Plaatsen verbergen",
     selfJoinedBadge: "✓ zelf gescand",
     addNameRow: "+ naam",
@@ -1322,8 +1321,7 @@ const STRINGS = {
     seatsFreeTitle: (n: number) => n === 1 ? "Encore 1 place libre" : `Encore ${n} places libres`,
     optionalShort: "facultatif",
     seatsAllNamed: "Toutes les places sont remplies ✓",
-    autoJoinLine: "Celui qui scanne le QR apparaît ici automatiquement.",
-    noPhoneLine: "Quelqu'un sans gsm ? Touchez une place libre.",
+    freeSpotHow: "en attente d'un scan · ou remplis toi-même",
     collapseSeats: "Masquer les places",
     selfJoinedBadge: "✓ a scanné",
     addNameRow: "+ nom",
@@ -4811,8 +4809,7 @@ export default function RundoTable() {
                       <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: vrijeZit > 0 ? "#123a42" : "#1f8a4c" }}>
                         {vrijeZit > 0 ? L.seatsFreeTitle(vrijeZit) : L.seatsAllNamed}
                       </span>
-                      {vrijeZit > 0 && <span style={{ display: "block", fontSize: 14, color: "#8aa3a6", lineHeight: 1.5, marginTop: 5 }}>{L.autoJoinLine}</span>}
-                    </span>
+                            </span>
                     <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#4a6e73", lineHeight: 1, marginTop: 2 }}>{showNamesBlock ? "▴" : "▾"}</span>
                   </button>
 
@@ -4834,9 +4831,14 @@ export default function RundoTable() {
                                 : { background: "rgba(20,153,176,0.14)", color: "#0f7d90" }) }}>
                               {leeg ? "?" : (q.name || "?").trim().charAt(0).toUpperCase()}
                             </span>
-                            <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: leeg ? "#8aa3a6" : "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {leeg ? L.freeSpotName : q.name}{!leeg && zit > 1 ? ` · ${zit}p.` : ""}
-                              {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> · {zit > 1 ? L.adminsWord : L.adminWord}</span>}
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: leeg ? "#8aa3a6" : "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {leeg ? L.freeSpotName : q.name}{!leeg && zit > 1 ? ` · ${zit}p.` : ""}
+                                {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> · {zit > 1 ? L.adminsWord : L.adminWord}</span>}
+                              </span>
+                              {/* Beide wegen op de rij waar ze over gaan. Daardoor kunnen de uitlegregel
+                                  boven de lijst en de strook eronder weg. */}
+                              {leeg && <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#b3bac6", lineHeight: 1.35, marginTop: 2 }}>{L.freeSpotHow}</span>}
                             </span>
                             {q.self_joined && !ikZelf && (
                               <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 9px", whiteSpace: "nowrap" }}>{L.selfJoinedBadge}</span>
@@ -4848,14 +4850,6 @@ export default function RundoTable() {
                         )
                       })}
 
-                      {vrijeZit > 0 && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(20,153,176,0.10)", borderTop: "1px solid rgba(18,58,66,0.08)", padding: "13px 12px" }}>
-                          <span style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 9, background: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                            <PotloodIcon size={19} kleur="#0f6d7e" />
-                          </span>
-                          <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 800, color: "#0f6d7e", lineHeight: 1.45 }}>{L.noPhoneLine}</span>
-                        </div>
-                      )}
 
                       {/* Een tweede weg naar buiten: na een lijst van zes plaatsen staat de kop
                           te ver weg om terug te scrollen. */}
