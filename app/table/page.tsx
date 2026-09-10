@@ -1025,7 +1025,7 @@ const STRINGS = {
     reopenBillTip: "🔓 Rekening heropenen (gasten kunnen weer wijzigen)",
     finalizeBtn: "✅ Alles toegewezen?  Rekening afsluiten",
     finalizeConfirm: "De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.",
-    finalizedNote: "De rekening is afgesloten — iedereen ziet de definitieve verdeling.",
+    finalizedNote: "✅ Je gasten kregen zonet een melding met hun bedrag. Ze kunnen niets meer wijzigen tot je heropent.",
     notFinalizedNote: "Sluit pas af als alles is aangetikt en nagekeken. Gasten krijgen dan een melding.",
     backToTop: "↑ Terug naar boven",
     cantFinalizeTitle: "De rekening kan nog niet afgesloten worden:",
@@ -1076,7 +1076,7 @@ const STRINGS = {
     claimTitle: "Wie heeft wat genomen? Wijs hier toe!",
     collapseOpen: "▶ openen",
     collapseClose: "▼ inklappen",
-    allAssignedTapReview: "✅ Alles toegewezen — tik om opnieuw te bekijken",
+    reviewAgain: "Opnieuw bekijken",
     noItemsScanFirst: "Nog geen items — scan eerst de bon.",
     addGuestsInTab1: 'Voeg eerst gasten toe in de tab "Gasten & delen".',
     totalLower: "totaal",
@@ -1671,7 +1671,7 @@ const STRINGS = {
     reopenBillTip: "🔓 Rouvrir l'addition (les invités peuvent à nouveau modifier)",
     finalizeBtn: "✅ Tout attribué ?  Clôturer l'addition",
     finalizeConfirm: "Clôturer l'addition ? Les invités ne pourront plus rien cocher ni modifier jusqu'à ce que tu la rouvres.",
-    finalizedNote: "L'addition est clôturée — tout le monde voit la répartition définitive.",
+    finalizedNote: "✅ Tes invités viennent de recevoir une notification avec leur montant. Ils ne peuvent plus rien changer jusqu'à réouverture.",
     notFinalizedNote: "Ne clôture que lorsque tout est coché et vérifié. Les invités reçoivent alors une notification.",
     backToTop: "↑ Retour en haut",
     cantFinalizeTitle: "L'addition ne peut pas encore être clôturée :",
@@ -1722,7 +1722,7 @@ const STRINGS = {
     claimTitle: "Qui a pris quoi ? Répartis ici !",
     collapseOpen: "▶ ouvrir",
     collapseClose: "▼ réduire",
-    allAssignedTapReview: "✅ Tout attribué — touche pour revoir",
+    reviewAgain: "Revoir",
     noItemsScanFirst: "Aucun article — scanne d'abord l'addition.",
     addGuestsInTab1: "Ajoute d'abord des invités dans l'onglet « Invités et partage ».",
     totalLower: "total",
@@ -3695,7 +3695,7 @@ export default function RundoTable() {
   // Verwijzing naar de zusterapp. Dicht is het een strook; open toont het
   // welkomscherm van Rundo, met vanaf daar pas de stap naar de app zelf.
   const renderPartyVerwijzing = () => (
-          <div style={{ marginTop: 32, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(240,193,75,0.4)", borderRadius: 14, padding: 13 }}>
+          <div style={{ marginTop: 32, background: "linear-gradient(140deg,#1c1608,#241d0e 60%,#2a2110)", border: "1px solid rgba(240,193,75,0.4)", borderRadius: 14, padding: 13 }}>
             {!partyInfo ? (
               <div onClick={() => setPartyInfo(true)} style={{ cursor: "pointer" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9 }}>
@@ -3765,17 +3765,10 @@ export default function RundoTable() {
               <span style={{ flexShrink: 0 }}>{cat.icon}</span>
               <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{vrij ? naamVan(p) : p.name}{!vrij && (p.seats ?? 1) > 1 ? ` · ${p.seats}p.` : ""}</span>
             </span>
-            {/* Je klapt deze lijst juist open om te zien wie er nog ontbreekt — dan moet je
-                hier ook meteen een naam kunnen zetten in plaats van naar de gasten-tab te
-                moeten. Alleen voor de beheerder, en alleen op plaatsen die nog vrij zijn. */}
-            {isAdmin && vrij ? (
-              <input defaultValue="" placeholder={L.addNameRow}
-                onBlur={(e) => { const v = e.target.value.trim(); if (v) void renameGuest(p.id, v) }}
-                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
-                style={{ ...S.input, flexShrink: 0, width: 132, padding: "6px 9px", fontSize: 14.5, fontWeight: 700 }} />
-            ) : (
+            {/* Namen invullen gebeurt op de gasten-tab. Hier stond ook een veldje, maar
+                dat kon geen plaats voor twee personen aan, en dan heb je twee plekken
+                die hetzelfde half doen. Deze lijst toont nu alleen de stand. */}
             <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: cat.color, background: cat.bg, border: `1px solid ${cat.brd}`, borderRadius: 14, padding: "4px 10px", whiteSpace: "nowrap" }}>{cat.label}</span>
-            )}
           </div>
         )
       })}
@@ -5299,9 +5292,13 @@ export default function RundoTable() {
               {L.finalizeBtn}
             </button>
           )}
-          <div style={{ fontSize: 15.5, color: "#8aa3a6", textAlign: "center", marginTop: 6, marginBottom: 4 }}>
-            {group.finalized ? L.finalizedNote : L.notFinalizedNote}
-          </div>
+          {group.finalized ? (
+            <div style={{ background: "rgba(39,174,96,0.10)", border: "1px solid rgba(39,174,96,0.4)", borderRadius: 12, padding: "11px 12px", marginTop: 9, marginBottom: 4, fontSize: 15.5, color: "#1f8a4c", lineHeight: 1.5, textAlign: "center" }}>
+              {L.finalizedNote}
+            </div>
+          ) : (
+            <div style={{ fontSize: 15.5, color: "#8aa3a6", textAlign: "center", marginTop: 6, marginBottom: 4 }}>{L.notFinalizedNote}</div>
+          )}
           <div style={{ textAlign: "center", marginTop: 10 }}>
             <button onClick={() => { if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }) }} style={{ ...S.btn, fontSize: 16, fontWeight: 700, padding: "8px 16px" }}>{L.backToTop}</button>
           </div>
@@ -6885,7 +6882,17 @@ function ClaimScreen(props: {
             {isAdmin && !(warnCount && warnCount > 0) && <span style={{ fontSize: 16, color: "#8aa3a6", fontWeight: 700, flexShrink: 0 }}>{claimCollapsed ? L.collapseOpen : L.collapseClose}</span>}
           </div>
           {isAdmin && claimCollapsed && !(warnCount && warnCount > 0)
-            ? <div onClick={() => setClaimCollapsed(false)} style={{ cursor: "pointer", fontSize: 16, color: "#1f8a4c", fontWeight: 700, padding: "4px 2px" }}>{L.allAssignedTapReview}</div>
+            ? (
+              // Melding links, knop rechts: één groene regel die tegelijk mededeling
+              // en knop wil zijn, leest als geen van beide.
+              <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "4px 2px" }}>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#1f8a4c" }}>{L.allAssigned}</span>
+                <button onClick={() => setClaimCollapsed(false)}
+                  style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 15.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.12)", border: "1.5px solid rgba(39,174,96,0.45)", borderRadius: 11, padding: "9px 13px", cursor: "pointer" }}>
+                  {L.reviewAgain} ▾
+                </button>
+              </div>
+            )
             : items.length === 0
             ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 16.5 }}>{L.noItemsScanFirst}</div>
             : named.length === 0
