@@ -1195,6 +1195,9 @@ const STRINGS = {
     assignFullTap: "Alles toegewezen — tik een naam om weg te halen",
     assignToWhom: "Aan wie toewijzen?",
     seatsControlTitle: "Voor hoeveel personen telt deze naam (bij gedeelde items)",
+    youJoinPrefix: "Je sluit aan bij",
+    sharedByName: (naam: string) => `gedeeld door ${naam}`,
+    restoTagline: "Scan de rekening en verdeel ze in groep",
     whoAreYou: "👋 Wie ben jij?",
     enterYourName: "Vul je naam in om mee te doen.",
     errTipAdd: "Fooi toevoegen mislukt: ",
@@ -1845,6 +1848,9 @@ const STRINGS = {
     assignFullTap: "Tout attribué — touchez un nom pour le retirer",
     assignToWhom: "À qui attribuer ?",
     seatsControlTitle: "Pour combien de personnes compte ce nom (pour les articles partagés)",
+    youJoinPrefix: "Tu rejoins",
+    sharedByName: (naam: string) => `partagé par ${naam}`,
+    restoTagline: "Scanne l'addition et partage-la en groupe",
     whoAreYou: "👋 Qui es-tu ?",
     enterYourName: "Indique ton nom pour participer.",
     errTipAdd: "Échec de l'ajout du pourboire : ",
@@ -4034,6 +4040,25 @@ export default function RundoTable() {
       <div style={S.page}>
         <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} onRenameGroup={isAdmin ? renameGroup : undefined} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
         <div style={{ maxWidth: 440, margin: "0 auto" }}>
+          {claimSpot === null && (() => {
+            // Wie net gescand heeft, weet nog niet waar hij beland is. De groepsnaam
+            // stond wel bovenaan maar zonder uitleg; de beheerder eronder zet er een
+            // mens bij. De groepsnaam is verplicht bij het aanmaken, dus hij is er altijd.
+            const beheerder = participants.find((q) => q.id === ownerPid)
+            const groepNaam = (group.name || "").trim()
+            const eerste = (groepNaam || beheerder?.name || "?").trim().charAt(0).toUpperCase()
+            return (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(20,153,176,0.10)", border: "1px solid rgba(20,153,176,0.3)", borderRadius: 14, padding: "11px 12px", marginBottom: 10 }}>
+                <span style={{ flexShrink: 0, width: 34, height: 34, borderRadius: "50%", background: "rgba(20,153,176,0.2)", color: "#0f7488", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>{eerste}</span>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 15, color: "#123a42", lineHeight: 1.4 }}>
+                  {L.youJoinPrefix} <b>{groepNaam || beheerder?.name}</b>
+                  {beheerder?.name && groepNaam && (
+                    <span style={{ display: "block", fontSize: 12.5, color: "#4a6e73", marginTop: 2 }}>{L.sharedByName(beheerder.name)}</span>
+                  )}
+                </span>
+              </div>
+            )
+          })()}
           <div style={S.card}>
             {claimSpot === null ? (
               <>
@@ -6416,7 +6441,12 @@ function TopBar({ group, isAdmin, onHome, totalPersons, status, onRenameGroup }:
           personen ernaast — dezelfde opbouw als Rundo, in Resto's eigen turquoise. */}
       <div onClick={isAdmin ? onHome : undefined} title={isAdmin ? L.toTableHome : undefined}
         style={{ background: "#123a42", borderRadius: 15, padding: "11px 13px", display: "flex", alignItems: "center", gap: 10, marginBottom: 11, cursor: isAdmin ? "pointer" : "default" }}>
-        <RundoLogo size={42} resto />
+        <span style={{ minWidth: 0 }}>
+          <RundoLogo size={42} resto />
+          {/* Eén regel die zegt waar je terecht bent gekomen — vooral voor gasten die
+              via een QR binnenvallen zonder de app te kennen. */}
+          <span style={{ display: "block", fontSize: 12.5, color: "rgba(255,255,255,0.75)", marginTop: 3, lineHeight: 1.35 }}>{L.restoTagline}</span>
+        </span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 8, borderBottom: "1.5px solid rgba(18,58,66,0.2)" }}>
         {/* Ter plekke aanpasbaar: tik op de naam en je typt erin. Een potloodje erachter
