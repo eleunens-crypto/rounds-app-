@@ -1142,9 +1142,8 @@ const STRINGS = {
     shareLocked: "Vastgezet door de beheerder",
     sharingWaitReveal: "⏳ Je deelt mee. Het bedrag wordt verdeeld over iedereen die meedeelt — je deel en de namen verschijnen zodra iedereen klaar is met aantikken en bevestigen.",
     tapShareHint: 'Tik "meedelen" als jij hiervan mee at of dronk. De prijs wordt gedeeld door iedereen die meedeelt — je betaalt dus niet de hele prijs.',
-    orderedMid: "× besteld · ",
-    stillFree: (n: number) => `${n} nog vrij`,
-    allClaimedWord: "alles geclaimd",
+    stillFree: (n: number) => `nog ${n} vrij`,
+    allClaimedWord: "alles genomen",
     aboutToConfirmTitle: "Dit ga ik bevestigen",
     whatIConfirmed: "Wat ik bevestigde",
     helloName: (naam: string) => `Hallo ${naam}`,
@@ -1791,9 +1790,8 @@ const STRINGS = {
     shareLocked: "Verrouillé par l'administrateur",
     sharingWaitReveal: "⏳ Tu participes. Le montant est réparti entre tous ceux qui en boivent — ta part et les noms apparaissent dès que tout le monde a coché et confirmé.",
     tapShareHint: "Coche « participer » si tu en as bu. Le prix est réparti entre tous ceux qui en boivent — tu ne paies donc pas le prix entier.",
-    orderedMid: "× commandé · ",
-    stillFree: (n: number) => `${n} encore libre${n === 1 ? "" : "s"}`,
-    allClaimedWord: "tout attribué",
+    stillFree: (n: number) => `encore ${n} de libre`,
+    allClaimedWord: "tout est pris",
     aboutToConfirmTitle: "Ce que je vais confirmer",
     whatIConfirmed: "Ce que j’ai confirmé",
     helloName: (naam: string) => `Salut ${naam}`,
@@ -7354,7 +7352,7 @@ function ClaimScreen(props: {
             <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.name}</span>
+                  <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}><span style={{ color: "#0f7d90" }}>{total}×</span> {it.name}</span>
                   <span style={{ fontSize: 18, fontWeight: 800, color: it.unit_price <= 0.0001 ? "#c0392b" : "#0f7d90", flexShrink: 0 }}>€{it.unit_price.toFixed(2).replace(".", ",")}</span>
                   <button onClick={() => onToggleShared(it)} title={it.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}
                     style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, fontSize: 15.5, fontWeight: 800, padding: "7px 9px", borderRadius: 8, cursor: "pointer",
@@ -7369,7 +7367,7 @@ function ClaimScreen(props: {
                       <span style={{ fontSize: 15.5, color: "#c0392b", fontWeight: 700 }}>⚠️ {L.zeroPriceShort}</span>
                       {onDeleteItem && <button onClick={(e) => { e.stopPropagation(); onDeleteItem(it.id) }} style={{ fontSize: 15.5, fontWeight: 800, color: "#c0392b", background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.4)", borderRadius: 7, padding: "4px 8px", cursor: "pointer" }}>🗑️ {L.zeroPriceDelete}</button>}
                     </div>
-                  : <div style={{ fontSize: 15.5, color: open > 0 ? "#e0685c" : "#1f8a4c", fontWeight: 600 }}>{total}{L.orderedMid}{open > 0 ? L.stillFree(open) : L.allClaimedWord}</div>}
+                  : <div style={{ fontSize: 15.5, color: open > 0 ? "#e0685c" : "#1f8a4c", fontWeight: 600 }}>{open > 0 ? L.stillFree(open) : L.allClaimedWord}</div>}
               </div>
               <button style={{ width: 42, height: 34, fontSize: 22, fontWeight: 800, lineHeight: 1, borderRadius: 8, cursor: mine > 0 ? "pointer" : "default", color: mine > 0 ? "#c0392b" : "#c9ced8", background: "#fff", border: "2px solid " + (mine > 0 ? "#2b2f38" : "#e2e6ee") }} onClick={() => setClaim(it.id, meId, Math.max(0, mine - 1))} disabled={mine <= 0} title={L.removeOne}>−</button>
               <span style={{ fontSize: 19, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{mine}</span>
